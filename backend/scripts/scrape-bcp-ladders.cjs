@@ -106,7 +106,14 @@ function parseCards(body) {
 }
 
 const RUN_NOTE = /(?:#'?d?\s*(?:to|\/)\s*|numbered\s+to\s+|:\s*)([\d,]+)\s*(?:cop(?:y|ies))?\b|\(([\d,]+)\s*cop(?:y|ies)\)/i;
-const UMBRELLA = /(parallels|factory set|retail|club set)$/i;
+const UMBRELLA = /(parallels|factory set|retail|club set|variations?|short prints?|\bsps?\b|photo variations?|checklist)$/i;
+// CF-A-PLAYER-IS-NOT-A-RUNG (2026-08-29, B4 run 2). Older set pages list
+// per-player short-print and variation rosters inside the Parallels section
+// as bare <li>Jimmy Rollins</li> lines; the ladder parser took every one as a
+// rung, and 2008 Topps got 26 "parallels" of which 18 were players (661 rows
+// each). The base list is on the same page: any rung candidate that equals a
+// player name of this product is a roster line, not a rung.
+const foldName = (s) => String(s ?? "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 
 /** Everything the Parallels section names, deduped by slug, run kept when found. */
 // CF-THE-NAME-IS-NOT-THE-FOOTNOTE (Drew, 2026-08-29 "clean the names"). A
@@ -134,14 +141,16 @@ function splitAnnotation(rawName) {
   return { name, note, run };
 }
 
-function parseLadder(parallelsBody) {
+function parseLadder(parallelsBody, playerNames = new Set()) {
   const rungs = new Map();
+  let rosterLines = 0;
   const put = (rawName, run, rawNote) => {
     const split = splitAnnotation(rawName);
     const name = split.name, note = rawNote ?? split.note ?? null;
     run = run ?? split.run ?? null;
     const k = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
     if (!k) return;
+    if (playerNames.has(foldName(name))) { rosterLines++; return; }
     if (!rungs.has(k)) rungs.set(k, { name, printRun: run ?? null, note });
     else { const r = rungs.get(k); if (run && !r.printRun) r.printRun = run; if (note && !r.note) r.note = note; }
   };
@@ -173,7 +182,9 @@ function parseLadder(parallelsBody) {
     if (!note && name.split(" ").length > 4) continue;
     put(name, n && n >= 1 && n <= 100000 ? n : null, note ? note.replace(/^\(|\)$/g, "").trim() || null : null);
   }
-  return [...rungs.values()];
+  const out = [...rungs.values()];
+  out.rosterLines = rosterLines;
+  return out;
 }
 
 /**
@@ -201,7 +212,7 @@ function parseInserts(html) {
     // pass would read as a rung named after the insert itself. An insert is
     // not a parallel of itself.
     const selfSlug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
-    const ladder = parseLadder(sub).filter((r) => r.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") !== selfSlug);
+    const ladder = parseLadder(sub, new Set(cards.map((c) => foldName(c.player)))).filter((r) => r.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") !== selfSlug);
     out.push({ name, cards, ladder });
   }
   return out;
@@ -236,7 +247,8 @@ async function main() {
     const base = section(html, "Base_Set", 2);
     const par = section(html, "Parallels", 2);
     const cards = parseCards(base);
-    const ladder = parseLadder(par);
+    const ladder = parseLadder(par, new Set(cards.map((c) => foldName(c.player))));
+    if (ladder.rosterLines) console.log(`   ${ladder.rosterLines} roster line(s) in the Parallels section refused as rungs (player names of this set)`);
     if (!cards.length) { noCards++; console.log(`  ${title}: 0 base cards — layout not understood, SKIPPED (not emitted)`); continue; }
     if (!ladder.length) { noLadder++; console.log(`  ${title}: base ok (${cards.length}) but 0 rungs — nothing new to add`); continue; }
 
