@@ -82,15 +82,21 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   They also inflate "card-confirmed" (any number, any player in the set matches), so
   the 89.2% scorecard was partly propped by them and will drop, then be re-earned.
   `retire-exploded-checklist-rows` (#1371) computes the list at run time (>150
-  parallels or >2,000 card numbers per product+source); dry run on 4 slots running.
-  The ingest now refuses such a file whole (#1373).
+  parallels or >2,000 card numbers per product+source; sizing fixed #1376); dry run
+  on 4 slots running. checklistinsider is only PARTLY exploded (real rungs on every
+  card + a garbage tail), so it gets MODE=tail (#1375): retire a flagged product's
+  (product, parallel) groups with < 5 rows or card-line parallels, keep the rest;
+  tail dry run running. The ingest now refuses such a file whole (#1373).
 - ☐ B2 Retire the MIS-PARSED rows (83,838; 45,292 are 1990 Donruss, ~26k Leaf via
   checklistcenter) — `retire-exploded-checklist-rows` MODE=misparsed, after B1.
 - ◐ B3 Unify `topps-allen-ginter` → `topps-allen-and-ginter` (checklist-majority
-  form: 656k vs 71k checklist rows) via `rename-setkey` (#1372, ruling passed as
-  scope="baseball:topps-allen-ginter>topps-allen-and-ginter"); dry run on 4 slots.
-- ☐ B4 Re-scrape the exploded / mis-parsed bcp products through the fixed parser
-  (#1368) and ingest them clean.
+  form: 656k vs 71k checklist rows) via `rename-setkey` (#1372). Dry run: 191,521
+  rows — 175,521 move, 15,958 fold, 0 failed → APPLY running on 4 slots.
+- ◐ B4 Re-scrape the exploded / mis-parsed bcp products through the fixed parser
+  (#1368) and the explosion gate (#1373): the e2e bcp phase now takes years /
+  titles / phases from the runner (#1377); dispatched 13:18Z for 2005–2015 flagship
+  + the 17 exploded non-flagship titles (A&G, Gypsy Queen, Donruss, Score, UD
+  Premier, Co-Signers, Stadium Club …).
 
 **C. Rebuild passes on the clean spine**
 - ☐ C1 `conform-card-profile` — displayName/searchTokens re-derived from the id for
@@ -107,9 +113,10 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
 - ☐ C8 card_catalog RU 400k → 40k (floor)
 
 **D. Next builds**
-- ☐ D1 Rules-based `needs-parse` pre-parser: the checklist knows every player in a
-  product, so "which checklist name is in this title" is a lookup — drain the
-  1.46M parked sales without the AI parser
+- ◐ D1 `parse-player-from-checklist` (#1378) — BUILT. The 1,459,254 player-less
+  sales all carry a slug; (sport, year, setKey, cardNumber) → the checklist's
+  player(s) → the ONE in the title; exploded addresses skipped. 1/64 sample dry run
+  running for precision; full run after B1 retires the explosion.
 - ☐ D2 Identity triangulation harness: 200 cards × (sale, holding, search) must
   resolve to the SAME checklist-minted card — the acceptance line, as a number
 - ☐ D3 checklistcenter → canonical CSV converter (it produced 27,662 annotated and
