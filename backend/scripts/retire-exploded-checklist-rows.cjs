@@ -79,19 +79,35 @@ async function main() {
   // ---- the product list (exploded mode): computed, not hand-typed
   let products = [];
   if (MODE === "exploded" || MODE === "tail") {
+    // Grouping by parallel AND cardNumber returned millions of combos on the
+    // exploded source and aborted. Group by parallel only (bounded: products x
+    // rungs), then count distinct card numbers per product with a subquery --
+    // and only for products with more rows than NUM_MAX, since fewer rows
+    // cannot hold more numbers.
     const srcSql = SOURCES.map((_, i) => `c.source = @src${i}`).join(" OR ");
+    const srcParams = SOURCES.map((s, i) => ({ name: `@src${i}`, value: s }));
     const { resources } = await retry(() => cat.items.query({
-      query: `SELECT c.sport AS sp, c.year AS y, c.setKey AS k, c.source AS s, c.parallel AS p, c.cardNumber AS n, COUNT(1) AS rows FROM c WHERE NOT IS_DEFINED(c.gradeTier) AND (${srcSql}) GROUP BY c.sport, c.year, c.setKey, c.source, c.parallel, c.cardNumber`,
-      parameters: SOURCES.map((s, i) => ({ name: `@src${i}`, value: s })),
+      query: `SELECT c.sport AS sp, c.year AS y, c.setKey AS k, c.source AS s, c.parallel AS p, COUNT(1) AS rows FROM c WHERE NOT IS_DEFINED(c.gradeTier) AND (${srcSql}) GROUP BY c.sport, c.year, c.setKey, c.source, c.parallel`,
+      parameters: srcParams,
     }, { maxItemCount: 10000 }).fetchAll());
     const agg = new Map();
     for (const r of resources) {
       const key = `${r.sp}|${r.y}|${r.k}|${r.s}`;
       const a = agg.get(key) ?? { sport: r.sp, year: r.y, setKey: r.k, source: r.s, rows: 0, pars: new Set(), nums: new Set(), parCounts: new Map() };
-      a.rows += r.rows; a.pars.add(String(r.p ?? "")); a.nums.add(String(r.n ?? "")); agg.set(key, a);
+      a.rows += r.rows; a.pars.add(String(r.p ?? "")); agg.set(key, a);
       a.parCounts.set(String(r.p ?? ""), (a.parCounts.get(String(r.p ?? "")) ?? 0) + r.rows);
     }
-    products = [...agg.values()].filter((a) => a.pars.size > PAR_MAX || a.nums.size > NUM_MAX).sort((x, y) => y.rows - x.rows);
+    let numChecks = 0;
+    for (const a of agg.values()) {
+      if (a.pars.size > PAR_MAX || a.rows <= NUM_MAX) continue;
+      const { resources: cnt } = await retry(() => cat.items.query({
+        query: "SELECT VALUE COUNT(1) FROM (SELECT DISTINCT c.cardNumber FROM c WHERE c.sport = @sp AND c.year = @y AND c.setKey = @k AND c.source = @s AND NOT IS_DEFINED(c.gradeTier))",
+        parameters: [{ name: "@sp", value: a.sport }, { name: "@y", value: a.year }, { name: "@k", value: a.setKey }, { name: "@s", value: a.source }],
+      }).fetchAll());
+      a.numCount = Number(cnt[0] ?? 0); numChecks++;
+    }
+    products = [...agg.values()].filter((a) => a.pars.size > PAR_MAX || (a.numCount ?? 0) > NUM_MAX).sort((x, y) => y.rows - x.rows);
+    console.log(`  (${f(agg.size)} products grouped; ${f(numChecks)} distinct-number checks)`);
     const total = products.reduce((s, p) => s + p.rows, 0);
     console.log(`\nexploded products (sources=${SOURCES.join(",")}; >${PAR_MAX} parallels or >${NUM_MAX} card numbers): ${products.length} products, ${f(total)} identity rows`);
     for (const p of products.slice(0, 15)) console.log(`  ${String(f(p.rows)).padStart(10)}  ${p.sport} ${p.year} ${p.setKey} [${p.source}]  parallels=${p.pars.size} numbers=${p.nums.size}`);
