@@ -39,6 +39,7 @@
  *      USER (scope to one userId); LIMIT=0
  */
 const path = require("node:path");
+const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
 const backend = path.resolve(__dirname, "..");
 const { CosmosClient } = require("@azure/cosmos");
 const { catalogAuthorityOf } = require(path.join(backend, "dist/services/catalog/catalogAuthority.service.js"));
@@ -203,6 +204,10 @@ async function main() {
   console.log(`  legacy field cleared    ${f(legacyCleared)}`);
   console.log(`  unresolved (reported)   ${f(unresolved)}`);
   console.log(`  failed                  ${f(failed)}`);
+  // CF-EVERY-WRITE-JOB-RECONCILES: intended = every holding scanned; written =
+  // identities corrected (+ legacy fields cleared); skipped = agreed +
+  // unresolved + resolved-but-unchanged; failed declared. Disjoint by design.
+  if (APPLY) reportWrites({ job: "conform-holdings-to-catalog", intended: holdings, written: corrected + legacyCleared, skipped: holdings - corrected - legacyCleared - failed, failed });
   if (correctedEx.length) { console.log(`\n  corrections:`); for (const e of correctedEx) console.log(`     ${e}`); }
   if (unresolvedEx.length) { console.log(`\n  unresolved — the acquisition/ruling list:`); for (const e of unresolvedEx) console.log(`     ${e.slice(0, 110)}`); }
 }
