@@ -131,11 +131,19 @@ function run(script, args, env) {
     // cached WORKDIR once, converted to the canonical CSV with the rung guards,
     // and land through the same guarded ingest as every other source.
     try {
-      const hasCsv = fs.existsSync(clcDir) && fs.readdirSync(clcDir).some((n) => n.endsWith(".csv"));
-      if (!hasCsv || process.env.FORCE_ACQUIRE === "true") {
+      // CF-CACHE-THE-PAGES-NOT-THE-VERDICT (2026-08-29, D3 dry run #2). The
+      // bounded, polite part is the 531-page fetch; conversion is seconds and
+      // its guards keep improving (#1405 moved the explosion gate per subset).
+      // A cached CSV directory silently replayed the OLD converter's verdicts
+      // -- 36 refused products stayed refused with the fix merged. So: pages
+      // are cached (re-fetched only when absent or FORCE_ACQUIRE=true); the
+      // CSVs are rebuilt from the pages on every run.
+      const hasPages = fs.existsSync(clcPagesDir) && fs.readdirSync(clcPagesDir).length > 0;
+      if (!hasPages || process.env.FORCE_ACQUIRE === "true") {
         run("scrape-checklistcenter-products.cjs", [`--outDir=${clcPagesDir}`, "--delayMs=800", ...(process.env.YEARS ? [`--years=${process.env.YEARS}`] : [])]);
-        run("convertChecklistCenterToChecklistCsv.cjs", [`--pagesDir=${clcPagesDir}`, `--outDir=${clcDir}`, ...(process.env.YEARS ? [`--years=${process.env.YEARS}`] : [])]);
-      } else console.log("  clc-csv cached; skipping acquisition (FORCE_ACQUIRE=true to refresh)");
+      } else console.log("  clc pages cached; skipping the fetch (FORCE_ACQUIRE=true to refresh)");
+      if (fs.existsSync(clcDir)) for (const n of fs.readdirSync(clcDir)) if (n.endsWith(".csv") || n.endsWith(".json")) fs.unlinkSync(clcDir + "/" + n);
+      run("convertChecklistCenterToChecklistCsv.cjs", [`--pagesDir=${clcPagesDir}`, `--outDir=${clcDir}`, ...(process.env.YEARS ? [`--years=${process.env.YEARS}`] : [])]);
       done.push("clc-acquired");
     } catch (e) { console.error("  clc acquire failed: " + String(e.message).slice(0, 120)); }
   }
