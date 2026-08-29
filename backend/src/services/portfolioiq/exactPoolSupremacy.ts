@@ -290,6 +290,9 @@ export async function priceHoldingFromExactPool(
     excludeContributorUserId?: string | null;
     playerName?: string | null;
     cardYear?: number | null;
+    /** CF-ONE-VALUATION-PATH (D16): every tier of the returned curve at its
+     *  own density-chosen window, so the curve IS the headline per tier. */
+    perTierWindows?: boolean;
   },
 ): Promise<ExactPoolPrice | null> {
   const attempts = unifiedIdentityAttempts(h);
@@ -302,6 +305,7 @@ export async function priceHoldingFromExactPool(
       excludeContributorUserId: opts.excludeContributorUserId ?? null,
       playerName: opts.playerName ?? null,
       cardYear: opts.cardYear ?? null,
+      perTierWindows: opts.perTierWindows === true,
     });
     const canonical = u.marketValue ?? u.predictedPrice ?? u.fmv;
     if (canonical !== null && canonical > 0 && u.totalSampleCount >= 1) {
