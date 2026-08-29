@@ -81,6 +81,11 @@ const REPLACED_BY = MODE === "source" ? String(process.env.REPLACED_BY || (proce
 // parallel, printRun) keys on the normalised key; a product under the floor
 // is KEPT and printed with its coverage. Same measurement as
 // audit-source-coverage -- run that first, read the floor line, then APPLY.
+// CF-THE-LABEL-IS-NOT-THE-IDENTITY (2026-08-30, D3c): "covered" is the old
+// row's canonical id held by ANY checklist-authority source that is not being
+// retired (the merge keeps the earlier checklist row on a tie, so the
+// replacement's rows mostly carry bcp / insider / beckett labels);
+// COVER_BY=replacement narrows it back to the replacement label alone.
 const MIN_COVERAGE_PCT = Number(process.env.MIN_COVERAGE_PCT || 95);
 const { measureProductCoverage, coverageLine } = require("./lib/sourceCoverage.cjs");
 const PAR_MAX = Number(process.env.PAR_MAX || 150), NUM_MAX = Number(process.env.NUM_MAX || 2000), TAIL_MIN = Number(process.env.TAIL_MIN || 5);
