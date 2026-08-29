@@ -19,9 +19,16 @@
  *   un-numbered checklist row at `<id>`  -> FOLD the twin into it
  *   two or more numbered variants        -> LEAVE ALONE (which /N was it? --
  *                                           guessing is worse than the split)
- *   the un-numbered row is itself checklist-source -> LEAVE ALONE (the
- *                                           checklist lists both; numbered
- *                                           Base is checklist-defined)
+ *   the un-numbered row is itself checklist-source -> LEAVE ALONE in the
+ *                                           default mode -- EXCEPT a SuperFractor
+ *                                           or printing plate (1/1 by definition:
+ *                                           Drew, 2026-08-29 "superfractors are
+ *                                           1/1"), which folds into its /1
+ *   MODE=cross-source: a checklist twin whose SOURCE lists no numbered
+ *                      variant folds too -- one source omitted the print run
+ *                      another lists (only-improve); a source that lists both
+ *                      is describing two cards and is left alone.
+ * The decision itself lives in src/services/catalog/foldTwinRule.ts (tested).
  *
  * The fold goes through moveCatalogRow (#1417): the checklist row survives by
  * authority, vendorIds union, sales re-pointed BEFORE the twin is deleted,
@@ -40,12 +47,14 @@ const { CosmosClient } = require("@azure/cosmos");
 const backend = path.resolve(__dirname, "..");
 const { moveCatalogRow } = require(path.join(backend, "dist", "services", "catalog", "catalogRowOps.service.js"));
 const { catalogAuthorityOf } = require(path.join(backend, "dist", "services", "catalog", "catalogAuthority.service.js"));
+const { decideTwinFold } = require(path.join(backend, "dist", "services", "catalog", "foldTwinRule.js"));
 const { reportWrites } = require(path.join(backend, "dist", "services", "ops", "writeReconciliation.js"));
 
 const APPLY = process.env.BACKFILL_APPLY === "true" || process.env.APPLY === "true";
 const SLOT = Number(process.env.SLOT || 0), SLOTS = Number(process.env.SLOTS || 1);
 const RUN_MINUTES = Number(process.env.RUN_MINUTES || 140);
 const SPORT = String(process.env.SPORT || String(process.env.SPORTS || "").split(",")[0] || "").trim().toLowerCase(); // the runner exports SPORTS from its sports input
+const MODE = String(process.env.MODE || "vendor").trim().toLowerCase() === "cross-source" ? "cross-source" : "vendor";
 const LIMIT = Number(process.env.LIMIT || 0);
 const f = (n) => Number(n).toLocaleString();
 const shardOf = (id) => parseInt(crypto.createHash("sha1").update(String(id)).digest("hex").slice(0, 8), 16) % SLOTS;
@@ -60,7 +69,7 @@ async function main() {
   if (!conn) { console.error("FATAL: COSMOS_CONNECTION_STRING not set"); process.exit(1); }
   const db = new CosmosClient({ connectionString: conn, connectionPolicy: { retryOptions: { maxRetryAttemptsOnThrottledRequests: 30, maxWaitTimeInSeconds: 120 } } }).database("hobbyiq");
   const cat = db.container("card_catalog"), pool = db.container("sold_comps");
-  console.log(`fold-unnumbered-twins  ${APPLY ? "APPLY" : "REPORT ONLY"}  slot ${SLOT}/${SLOTS}  budget ${RUN_MINUTES}m${SPORT ? `  sport=${SPORT}` : ""}`);
+  console.log(`fold-unnumbered-twins  ${APPLY ? "APPLY" : "REPORT ONLY"}  mode=${MODE}  slot ${SLOT}/${SLOTS}  budget ${RUN_MINUTES}m${SPORT ? `  sport=${SPORT}` : ""}`);
 
   // Pass 1: every NUMBERED checklist identity row, grouped by its un-numbered
   // base id. Only groups with exactly one /N are candidates.
@@ -83,17 +92,18 @@ async function main() {
     }
     console.log(`  pass 1: ${f(n)} numbered identity rows read; ${f(numberedByBase.size)} base ids carry a checklist /N`);
   }
-  const unique = new Map();
-  for (const [base, list] of numberedByBase) if (new Set(list.map((x) => x.printRun)).size === 1) unique.set(base, list[0]);
-  console.log(`  ${f(unique.size)} of them have exactly ONE numbered variant (the rest are ambiguous and left alone)`);
+  let uniqueCount = 0;
+  for (const list of numberedByBase.values()) if (new Set(list.map((x) => x.printRun)).size === 1) uniqueCount++;
+  console.log(`  ${f(uniqueCount)} of them have exactly ONE numbered variant (ambiguous groups fold only when the parallel is 1/1 by definition)`);
+  const unique = numberedByBase;
 
   // Pass 2: for each candidate, does an un-numbered twin exist, and is it
   // NOT itself a checklist row? Point reads on the twin id (partition = id).
-  const stats = { candidates: 0, otherShard: 0, noTwin: 0, twinIsChecklist: 0, folded: 0, salesRepointed: 0, gradedRetired: 0, failed: 0, notReached: 0 };
+  const stats = { candidates: 0, otherShard: 0, noTwin: 0, ambiguous: 0, twinIsChecklist: 0, sameSourceListsBoth: 0, folded: 0, foldedVendor: 0, foldedOneOfOne: 0, foldedCrossSource: 0, salesRepointed: 0, gradedRetired: 0, failed: 0, notReached: 0 };
   const examples = [];
   let stopReason = null;
   let i = 0;
-  for (const [base, numbered] of unique) {
+  for (const [base, numberedList] of unique) {
     if (LIMIT && i >= LIMIT) { stats.notReached += unique.size - i; break; }
     if (budgetLeft() < 90000) { stopReason = `stopped at the ${RUN_MINUTES}-minute budget`; stats.notReached += unique.size - i; break; }
     i++;
@@ -102,11 +112,19 @@ async function main() {
     let twin = null;
     try { twin = (await retry(() => cat.item(base, base).read())).resource ?? null; } catch (e) { if (e?.code !== 404) { stats.failed++; continue; } }
     if (!twin) { stats.noTwin++; continue; }
-    if (isChecklist(twin.source)) { stats.twinIsChecklist++; continue; }
-    if (examples.length < 20) examples.push(`  ${base}  [${twin.source}] -> ${numbered.id}  [${numbered.source}]`);
+    const decision = decideTwinFold({ baseId: base, twinSource: String(twin.source ?? ""), twinIsChecklist: isChecklist(twin.source), numbered: numberedList, mode: MODE });
+    if (!decision.fold) {
+      if (decision.skip === "ambiguous") stats.ambiguous++;
+      else if (decision.skip === "same-source-lists-both") stats.sameSourceListsBoth++;
+      else stats.twinIsChecklist++;
+      continue;
+    }
+    const numbered = decision.target;
+    if (examples.length < 20) examples.push(`  ${base}  [${twin.source}] -> ${numbered.id}  [${numbered.source}]  (${decision.kind})`);
     try {
-      const res = await moveCatalogRow(cat, twin, numbered.id, { printRun: numbered.printRun }, { reason: "un-numbered twin folded into its one numbered checklist row (CF-A-KEY-NEEDS-BOTH-HALVES)", dryRun: !APPLY, salesContainer: pool, retry });
+      const res = await moveCatalogRow(cat, twin, numbered.id, { printRun: numbered.printRun }, { reason: decision.reason, dryRun: !APPLY, salesContainer: pool, retry });
       stats.folded++;
+      if (decision.kind === "vendor") stats.foldedVendor++; else if (decision.kind === "one-of-one") stats.foldedOneOfOne++; else stats.foldedCrossSource++;
       stats.salesRepointed += res?.salesRepointed ?? 0;
       stats.gradedRetired += res?.gradedChildrenRetired ?? 0;
     } catch (e) { stats.failed++; if (stats.failed <= 5) console.log(`  failed ${base}: ${String(e.message).slice(0, 100)}`); }
@@ -115,12 +133,15 @@ async function main() {
   console.log(`\n${APPLY ? "APPLIED" : "REPORT ONLY -- nothing written"}`);
   console.log(`  candidates (this slot)   ${f(stats.candidates)}   (${f(stats.otherShard)} belonging to other slots)`);
   console.log(`  no un-numbered twin      ${f(stats.noTwin)}`);
-  console.log(`  twin is checklist        ${f(stats.twinIsChecklist)}   <- the checklist lists both; left alone`);
+  console.log(`  ambiguous /N             ${f(stats.ambiguous)}   <- two print runs, neither 1/1 by definition; left alone`);
+  console.log(`  twin is checklist        ${f(stats.twinIsChecklist)}   <- left alone (MODE=cross-source folds these when the twin's source lists no /N)`);
+  console.log(`  same source lists both   ${f(stats.sameSourceListsBoth)}   <- two cards by that checklist; left alone`);
   console.log(`  ${APPLY ? "FOLDED" : "WOULD FOLD"}                   ${f(stats.folded)}   <- sales re-pointed ${f(stats.salesRepointed)}, graded children retired ${f(stats.gradedRetired)}`);
+  console.log(`    vendor/user twins      ${f(stats.foldedVendor)}   | 1/1 by definition ${f(stats.foldedOneOfOne)}   | cross-source ${f(stats.foldedCrossSource)}`);
   console.log(`  failed                   ${f(stats.failed)}`);
   console.log(`  not reached              ${f(stats.notReached)}`);
   if (examples.length) { console.log(`  examples:`); for (const e of examples) console.log(e); }
-  if (APPLY) reportWrites({ job: "fold-unnumbered-twins", intended: stats.candidates, written: stats.folded, skipped: stats.noTwin + stats.twinIsChecklist, failed: stats.failed });
+  if (APPLY) reportWrites({ job: "fold-unnumbered-twins", intended: stats.candidates, written: stats.folded, skipped: stats.noTwin + stats.ambiguous + stats.twinIsChecklist + stats.sameSourceListsBoth, failed: stats.failed });
   if (stopReason) console.log(`\n${stopReason}`);
 }
 
