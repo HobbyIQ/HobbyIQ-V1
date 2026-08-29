@@ -155,7 +155,26 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   query says base or names no finish (4 tests reproduce the baseline misses).
   Harness re-run #1 (33257676925) died on a Cosmos 429 — `sold_comps` sits at its
   10k floor under the fleets and the harness had no retry; #1402 gives every read
-  retry/backoff + SDK retry options. Re-run #2 = 33257941327 (in flight 14:34Z). **BASELINE (before the spine passes), baseball ≥2016, 200 cards:
+  retry/backoff + SDK retry options. **Re-run #2 (33257941327, 14:40Z), same 200
+  cards: sale 86.0% (flat), holding 90.5 → 96.5%, search 30.5 → 42.0%, ALL THREE
+  26.0 → 37.0%.** Two of the three search misses "#BD-143 Base" → base-cards and
+  "#TCA-ARU Base" → topps-chrome-black STILL reproduced on real rows while the
+  #1398 tests passed on synthetic ones. Diagnosed read-only against prod: the
+  number arm DID retrieve the right row (157 / 79 candidates, expected present)
+  and scoreCatalogRow DID rank it first (2.006 vs 1.539); the post-scoring
+  CF-SEARCH-PRODUCT-NARROWS step then dropped it — its vocabulary was
+  ANCHOR_STOPWORDS, which carries "baseball" and "base", so the query demanded
+  a set text containing the SPORT and the Beckett row (setName "Bowman Draft")
+  went. #1410: narrowToNamedProduct is a pure exported function over
+  PRODUCT_WORDS (brands + product lines only); 4 real-shape tests, mutation-
+  checked (3 fail under the old vocabulary). Re-run #3 = 33259153271.
+  Remaining shapes in the 63 misses: (iv) sale/holding both land on
+  `bowman-chrome:bcp-125` [not-found] for a `bowman:bcp-125` checklist card —
+  the family ladder (bowman-chrome → bowman) is not walked on a miss (D6);
+  (iii) wrong-product pool sales still present (a Score football title under
+  baseball bowman:53, UD hockey under topps-pristine:114, UEFA under
+  topps-chrome:2) — needs a pool-wide wrong-sport measurement, only-improve
+  cannot fix a wrong product. **BASELINE (before the spine passes), baseball ≥2016, 200 cards:
   sale → same card 86.0%, holding → 90.5%, search → 30.5%, ALL THREE 26.0%.**
   Findings, each its own fix: (i) SEARCH ranks a rarer parallel row above the
   base row the title names ("#217 X-Fractor" → platinum-anniversary refractor;
@@ -182,8 +201,16 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   count grows with the insert sets and says nothing about a cross-join, which
   still puts 600 "rungs" inside ONE category. #1405 scopes the gate per subset
   (converter) / per category (ingest); a category over the line is dropped and
-  the rest of the file lands. Dry run #2 = 33258360806 (14:43Z) → APPLY →
-  MODE=source retire. Also seen in the same run: the bcp ladders re-ingest now
+  the rest of the file lands. **Dry run #2 (33258360806) replayed dry run #1's refusals**:
+  the cached CSV directory skipped the converter, so the per-subset gate never
+  ran — #1407: pages are cached, CSVs rebuild from them every run. It also ran
+  as SHARD 0/16 (the runner's slots default) — dispatch with slots=1.
+  **Dry run #3 (33258751353) crashed the converter** (ReferenceError: #1405 had
+  removed the report-only sets the return line read; `node --check` is syntax,
+  not a smoke test) — #1411, smoke-run locally on 3 products (19,371 rows;
+  the html-only 2018 Donruss Optic page converted to 0 rows — look at html
+  card-list parsing after the xlsx-backed products land). Dry run #4 =
+  33259229904 (slots=1) → APPLY → MODE=source retire. Also seen in the same run: the bcp ladders re-ingest now
   skips 762,534 player-name-parallel rows (#1396 working as built).
   cached at c:/tmp/clc (ladders only, no card lists → bounded 547-page re-fetch);
   the old HTML ingester split ladders on commas (player names became rungs) and
@@ -223,6 +250,10 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   every enriched import (a vendor feed), `ebayReviewQueue` wrote a duplicate
   `user-verified:<sha>` row beside the canonical seed path; neither id was a slug,
   so no reader could find them. Guard test `noHashIdCatalogMinters.test.ts`.
+  **PR 8 ☑ #1408**: `checklistDiff` (admin pasted-checklist add) builds through
+  deriveCatalogEntry/upsertCatalogEntry with authoritativeSetKey; #1409 drops
+  the three converted files from the guard's debt list. PR 1 (guard rewrite)
+  and D4 PR 1/PR 3 are building in worktrees.
   Remaining, smallest first: PR 1 fix the guard (import-match, not text-match;
   extend WRITES to patch/replace/delete; pair TOUCHES+WRITES to one container
   var); PR 8 `checklistDiff` onto deriveCatalogEntry/upsertCatalogEntry; PR 2
