@@ -260,6 +260,73 @@ export async function autoCreateHoldingForPurchase(
     }));
   }
 
+  // CF-A-REAL-SALE-IS-IN-THE-POOL-ONCE (Drew, 2026-08-29, checklist D7a):
+  // "these are real sales, so we need to treat them as such but ensure there
+  // aren't duplicates in the system." The eBay ids travel onto the holding
+  // (they used to live only on the purchase entry, so every later comp path
+  // fell back to a holding:: key and could never dedupe by eBay id), and the
+  // purchase is written to the pool NOW through the one writer -- keyed by
+  // the eBay order line item id (else the item id), filed under the same
+  // checklist slug the holding was just pinned to. recordSoldComp dedupes on
+  // id and on content hash and returns the row's id; the holding links to it.
+  {
+    const h = holding as Record<string, unknown>;
+    if (purchase.ebayItemId) h.ebayItemId = purchase.ebayItemId;
+    if (purchase.ebayOrderId) h.ebayOrderId = purchase.ebayOrderId;
+    const slug = typeof h.cardId === "string" && h.cardId.startsWith("hiq:") ? h.cardId : null;
+    const price = typeof h.purchasePrice === "number" ? h.purchasePrice : Number(h.purchasePrice ?? 0);
+    const soldAt = String(h.purchaseDate ?? purchase.purchaseDate ?? "");
+    if (slug && price > 0 && soldAt && String(h.playerName ?? "").trim()) {
+      try {
+        const { recordSoldComp } = await import("./soldCompsStore.service.js");
+        const res = await recordSoldComp({
+          cardId: slug,
+          playerName: String(h.playerName),
+          cardYear: typeof h.cardYear === "number" ? h.cardYear : null,
+          setName: (h.setName as string | null) ?? null,
+          parallel: (h.parallel as string | null) ?? null,
+          cardNumber: (h.cardNumber as string | null) ?? null,
+          isAuto: h.isAuto === true,
+          gradeCompany: (h.gradeCompany as string | null) ?? null,
+          gradeValue: (h.gradeValue as number | null) ?? null,
+          sport: (h.sport as string | null) ?? null,
+          price,
+          soldAt,
+          source: "ebay-user-purchase",
+          sourceExternalId: purchase.ebayOrderId ?? purchase.ebayItemId ?? null,
+          contributorUserId: ((doc as { userId?: string }).userId ?? null) as string | null,
+          title: String(purchase.notes ?? "") || null,
+          imageUrl: (h.ebayImageUrl as string | null) ?? null,
+          sellerHandle: null,
+          verifiedByUser: false,
+          confidence: Number(h.parseConfidence ?? 0.7),
+        } as never);
+        if (res?.written) {
+          h.soldCompId = res.id ?? null;
+          h.soldCompDeduped = res.deduped === true;
+          if (res.hobbyiqCardId) h.soldCompSlug = res.hobbyiqCardId;
+        }
+        console.log(JSON.stringify({
+          event: "ebay_import_sale_recorded",
+          source: "ebayAutoHolding.service",
+          holdingId: holding.id,
+          slug,
+          sourceExternalId: purchase.ebayOrderId ?? purchase.ebayItemId ?? null,
+          written: res?.written ?? false,
+          deduped: res?.deduped ?? false,
+          reason: res?.reason ?? null,
+        }));
+      } catch (err) {
+        console.warn(JSON.stringify({
+          event: "ebay_import_sale_record_failed",
+          source: "ebayAutoHolding.service",
+          holdingId: holding.id,
+          error: (err as Error)?.message ?? String(err),
+        }));
+      }
+    }
+  }
+
   doc.holdings[holding.id] = holding;
   // Idempotent Set-union merge, symmetric with PATCH /link-holdings.
   const merged = new Set([...purchase.holdingIds, holding.id]);
