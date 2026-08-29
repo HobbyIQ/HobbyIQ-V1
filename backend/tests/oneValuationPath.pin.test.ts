@@ -232,4 +232,20 @@ describe("D17 pins — card-detail, card-panel, the bulk curves and the persist 
     const entry = stripComments(read("src/services/compiq/oneValuationPath.service.ts"));
     expect(entry).toMatch(/cardId: secondId && secondId !== slug \? secondId : null, printRun: identity\.printRun/);
   });
+
+  it("the price-alert evaluator prices the alert's CARD through valueIdentity — a catalog identity (cardId, else the snapshot's slug the catalog holds in exactly one form) — never the text engine", () => {
+    const src = stripComments(read("src/jobs/priceAlertEvaluator.job.ts"));
+    expect(src.includes("await valueIdentity(")).toBe(true);
+    for (const call of D17_ENGINE_CALLS) expect(src.includes(call), call).toBe(false);
+    expect(src.includes("compiqEstimate.service")).toBe(false);
+    expect(src.includes("CompIQEstimateRequest")).toBe(false);
+    // Fill-only, catalog-backed: the derived slug is adopted through
+    // catalogSlugIfExists, and only when exactly one form is held.
+    expect(src.includes("await catalogSlugIfExists(candidate)")).toBe(true);
+    expect(src).toMatch(/if \(held\.length === 1\) \{/);
+    expect(src).toMatch(/if \(held\.length > 1\) return \{ kind: "ambiguous-identity"/);
+    // The skip is counted, never priced.
+    expect(src).toMatch(/skippedNoIdentity/);
+    expect(src).toMatch(/skippedAmbiguousIdentity/);
+  });
 });
