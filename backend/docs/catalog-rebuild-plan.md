@@ -275,7 +275,46 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   — the html-only pages that converted to 0 rows; an acquisition list for the
   CLC converter's html path). #1460: the retire's self-relaunch forwards
   `sources` + `scope` (a child without them would FATAL on #1455's guard).
-  **APPLY ×8 dispatched 18:25Z** (33268119635 … 33268143439). Also seen in the same run: the bcp ladders re-ingest now
+  **APPLY ×8 dispatched 18:25Z** (33268119635 … 33268143439) — **CANCELLED
+  20:05Z** after three shards had deleted ~30k of the 1,096,118 old-CLC rows
+  (retired=15,014 / 10,005 / 5,005; the other five were still scanning).
+  Why: Drew's picker for 2025 Bowman Draft CPA-MWI showed no Gold, and the
+  read-only look found the new spine does not carry the Bowman colour ladder
+  at all — **checklistcenter-2026-08-29 has 18.6 parallels per card for 2025
+  Bowman Draft (only refractor / red refractor / superfractor of the plain
+  ladder) and 5.4 per card for 2025 Bowman Chrome, while 2025 Topps Chrome
+  converts with the full ladder (19.3 per card)**; for CPA-MWI the new source
+  has 13 rows (Wave / Lava / Gumball / Peanuts / plates) and no Gold Refractor
+  /50, Purple /250, Blue /150, Green /99 or Orange /25 — those live only under
+  bcp today. The #1458 replaced-by guard is PRODUCT-level (the product exists
+  under the replacement source) and says nothing about per-card coverage, so
+  any source retire can delete rows the replacement never re-minted. Two
+  follow-ups: (1) **D3b** (building, `feat/d3b`): the CLC converter expands
+  section-level parallel ladders per card (Bowman pages state the ladder once
+  per section; the per-line path only emits parallels that appear as their own
+  rows), fixture-tested on CPA-MWI, then `MODE=reingest`; (2) the retire's
+  guard becomes per-(cardNumber, parallel, printRun) coverage — a product is
+  retired only when the replacement covers ≥ 95% of its old keys, and the
+  uncovered keys are listed; a read-only old-vs-new coverage measurement over
+  the 60 largest old-CLC products landed 21:40Z: **the new source covers
+  126,390 of 551,845 old keys = 23%.** 2025 topps-chrome old 15,157 rows →
+  new 6,895 (20% — my earlier "Topps Chrome converts fine" counted OLD rows
+  under the `checklistcenter*` prefix); 2025 bowman-draft 8,591 → 3,658 (0%);
+  2026 donruss 13,778 → 2,431 (5%); 2025 panini-prizm 9,694 → 1,599 (6%);
+  2025 topps-finest 5,462 → 5,155 rows yet 0% keys; 2025 panini-select 9,892 →
+  10,015 rows yet 0% keys (old names carry glued subset prefixes — "set
+  concourse …", "prizms …", "auto crystal …", "paper …" — so exact keys
+  understate coverage; the raw row counts are the honest signal); 2024
+  leaf-metal, 2018 bowman, 2020 bowman → new has nothing. So the D3
+  re-ingest's 2,869,277 rows sit mostly in a few Leaf/Series products and the
+  flagship Topps/Bowman/Panini conversions are thin across the board — the
+  converter drops most of each product's ladders, not only Bowman's. D3b's
+  scope widened accordingly (Topps Chrome + Prizm pages in the diagnosis and
+  fixtures; `audit-source-coverage.cjs` as a runner probe with exact AND
+  prefix-normalized keys; the MODE=source guard becomes per-product coverage
+  ≥ 95%, kept products printed with their number). **The old-CLC retire stays
+  cancelled until a re-ingest passes that gate.** The cancelled runs printed
+  no budget marker, so nothing relaunched. Also seen in the same run: the bcp ladders re-ingest now
   skips 762,534 player-name-parallel rows (#1396 working as built).
   **D3b (2026-08-29 ~22:00Z, `feat/d3b`): the ladder was never lost — the LABEL was.**
   The brief: CLC lacks Bowman's plain colour ladder (2025 Bowman Draft CPA-MWI: 13 rows,
@@ -600,6 +639,75 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
     attempted, notify workflows assert `pushProviderConfigured` + print counts,
     cleanliness/publish workflows exit non-zero on nothing, Cardsight + verdict
     crons removed, a row-count axis on the freshness canary.
+  - **D13 — alert gates prove delivery** (built on `feat/d13`, 8 commits,
+    2026-08-29 ~21:00Z; tsc 0; every item pinned by a test AND a mutation
+    check that went red). The defect had one shape: a gate reads a field
+    nothing writes, a send result is discarded, or a job locks state as
+    "done" at zero sends — green while sending nothing. Each fix makes the
+    failure VISIBLE (non-zero exit / warn-level event / red workflow).
+    (1) *Cascade push*: `cascade-detect.yml` fetched no APNs env → null
+    provider → `pushSent:0`, exit 0 for six weeks. Now the five-variable
+    APNs block (as watchlist-digest.yml), `isPushProviderConfigured()`
+    exported from notification.service, the fan-out reports `optedInUsers`,
+    and the pure `cascadePushExitCode({newEvents, optedInUsers,
+    providerConfigured})` (in `portfolioiq/cascadeNotify.service.ts` — the
+    file lives there, not under `signals/`) is red iff events were owed to
+    opted-in users and the sender did not exist; test
+    `cascadePushExitCode.test.ts` (truth table + a null-provider sender
+    still surfaces owners); mutant: decision disabled → 2 red. (2)
+    *DailyIQ*: `markNotified(date)` ran even with no provider, so a re-run
+    skipped the day. Marks only when the provider is configured (zero
+    opted-in users still marks — a legitimate zero); otherwise warn-event
+    `dailyiq_push_provider_missing {date, optedInUsers}` and the day stays
+    unmarked; test `dailyiqMarksOnlyOnAttempt.test.ts`; mutant: always-mark
+    → 1 red. (3) *Divergence digest*: three swallows + a literal recipient
+    → `divergenceDigestSend.ts`: `sendDivergenceDigest` never throws,
+    returns `{delivered, reason, users, rows}`, emits
+    `cost_basis_digest_not_delivered {reason, users, rows}` (acs-
+    unconfigured / email-provider-failed / send-threw / email-module-
+    unavailable) or `cost_basis_digest_delivered`; recipient =
+    `OPS_ALERT_EMAIL` (trimmed) || the historical literal, never logged;
+    test `divergenceDigestSend.test.ts` incl. a structural pin that the
+    reprice site no longer calls sendEmail; mutant: result swallowed → 3
+    red. (4) *Notify workflows*: the three admin routes spread
+    `pushProviderConfigured` into `.summary`; watchlistDigestNotify /
+    gradeWorthyPushNotify results carry it and the two scripts exit 1 when
+    it is false on a scheduled run (`GITHUB_EVENT_NAME=schedule` or
+    `REQUIRE_PUSH_PROVIDER=1`; dispatch warns); grade-arbitrage / sell-side
+    / personal-prospect print `notify summary: candidates=N pushesSent=M
+    providerConfigured=…` every run and exit 1 on a scheduled non-dry-run
+    with `false` — read via jq `has()` because `//` treats false as missing;
+    an API without the field prints `unknown` and stays green; test
+    `notifyProviderGate.test.ts`; mutant: `exit 1`→`exit 0` → 1 red; the
+    block was run locally with a jq shim (schedule+false → 1; +true → 0;
+    dispatch → 0; dry-run → 0). (5) *nightly-cleanliness*: missing
+    `ADMIN_API_TOKEN` and an empty anomalies response were warn + exit 0 →
+    both exit 1; the four dispatches stay and print their backfill-runner
+    run URL; mutant: guard → exit 0 → 2 red. (6) *market-insights publish*:
+    200 with an empty snapshot was green → `publish summary: …` every run,
+    exit 1 when gainers+losers+notable == 0; mutant → 1 red. (7)
+    *Retired vendor*: `cardsight-pricing-nightly` schedule removed
+    (retired 2026-08-16; it was still writing 2–3 rows/day into sold_comps
+    — 08-24, 08-27), `verdict-flip-push-fanout` schedule removed (permanent
+    dry-run scaffold, `.cjs:68,149`), `cardsight` dropped from ingest-
+    health `KNOWN_SOURCES`; test `workflowAlertGates.test.ts` (pins 5, 6,
+    7); mutant: cron back → 1 red. (8) *Freshness canary*: `MIN_ROWS_24H`
+    per-source floor on the trailing-24h row COUNT (default off; 429
+    retry; both axes report before exit). Measured read-only 2026-08-29,
+    UTC days 08-22..08-28 — `tca-ebay` 100190 / 114513 / 108922 / 100966 /
+    9340 / 11911 / 9280 (min 9280); `cardhedge` 197620 / 36640 / 58927 /
+    96621 / 101911 / 58272 / 32422. Floor = ~25% of the minimum day →
+    `tca-ebay=2300` in the workflow; NOTE the 08-26 step-down 100k → 10k
+    is the very shape the axis exists for — an end-to-end read-only run
+    saw 441,477 `tca-ebay` rows in the trailing 24h (firehose flowing);
+    once a firehose-era week is confirmed, raise toward 25,000. Test
+    `freshnessCanaryRowFloor.test.ts`; mutant: floor never fails → 2 red.
+    **Deploy note**: `backend/src` changed (notification.service,
+    cascadeNotify, dailyiq.job, portfolioStore, divergenceDigestSend, the
+    three admin routes, two notify services, ingestHealth) → dispatch
+    "Daily 5AM ET Refresh & Deploy" after merge; until then the admin
+    routes lack `pushProviderConfigured` and the workflows print
+    `providerConfigured=unknown` (green by design).
   - *Cron + runner writers (group E):* 52 cron workflows, ~40 writers, **zero
     cron writers call reportWrites**; the reconciliation test is blind to 23
     patch-only writers, camelCase names, no-APPLY-token scripts and every
@@ -643,7 +751,37 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   price); (9) alert liveness → D13; (10) smoke v2 (rung + setKey + ±30% of
   canonical-fmv). Surface reductions first: the 9 always-empty CH/CS handlers,
   2 unmounted stubs, `/api/ops/cardsight-probe`, `bcp-sweep`.
-  **Mover validation (report-only, 140-min budget each, 20:10Z):**
+  **What Drew saw on the 2025 Bowman Draft CPA-MWI picker (20:20Z):** 102
+  un-graded rows across 11 sources for one card; the picker asked for 25 →
+  Gold fell off the end (**#1466**: 100 rows, the backend's cap); `2025 2025
+  Bowman Draft Baseball` (setName carries the year — fixed in the row, and a
+  vocabulary item: setName should not carry the year at all); `Max Williams,`
+  (beckett-checklist rows keep the trailing comma — a repair for the beckett
+  converter); 21 bcp rows whose "parallel" is another card (`BDC 17 Ethan
+  Conrad`) — the exploded-spine footnote shape the name-cleaning pass targets;
+  checklistinsider rows (`Gold Border /50`, `Gold Geometric Refractor /50`)
+  with `isAuto:false` on a CPA- card — that source's auto boundary is wrong
+  (isAuto is the card-number prefix); `gold:auto:num-50` AND
+  `gold-refractor:auto:num-50` both present (the Colour ≡ Refractor fold has
+  not reached this card); the row's right-hand number is a sales MEDIAN
+  (`salesSummary.median30d`) — now labelled `med` as a picking hint; the
+  picker should carry the exact-pool FMV instead (queued).
+  **Measured 21:55Z:** trailing-comma `playerName` = beckett-checklist 9,199 +
+  catalog-explode-actuals 507 + tcdb 97 + small others; checklistinsider rows
+  with `isAuto=false` on auto-prefixed card numbers (cpa-/bdc-/pa-/ra-) =
+  **98,382 of 4,092,438** (2025 bowman basketball 13,927; 2025 bowman-draft
+  9,528; 2024 bowman-draft 5,513; 2025 topps-chrome-platinum 5,487; 2026
+  bowman-chrome 5,058); `setName` starts with the year in EVERY source
+  (12.47M bcp, 4.09M checklistinsider, 1.71M new CLC …) — a display rule, not
+  a rewrite. → **D15** (building, `feat/d15`): `repair-trailing-comma-player-
+  names` (patch + search fields) and `repair-isauto-from-cardnumber-catalog`
+  (a mover through catalogRowOps; the product's auto prefixes decided by the
+  majority of its checklist sources, never by text). The `gold:auto:num-50` /
+  `gold-refractor:auto:num-50` twin is `merge-bare-colour-parallels`'s case —
+  dry run for 2025 dispatched 20:25Z (33273454220). Also identified:
+  `baseballcardpedia-ladders-2026-08-29` (725k rows) is the e2e ingest's
+  re-scraped bcp under the #1373 gate — the sane bcp, not the exploded one.
+    **Mover validation (report-only, 140-min budget each, 20:10Z):**
   clean-parallel-annotations dry — 30,564 rows this slot: 758 heal / 5,979
   move / 1,075 fold / 1,482 replace-a-derived-twin / 2,970 graded children /
   **3,076 failed** (dry-run failures are moveCatalogRow refusals — read the
@@ -681,9 +819,25 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   PR 5/6 deploy (33268395668 — landed, health serves the PR 5/6 sha); the
   reprice is queued behind the fleets (GitHub runs ~35 runner jobs at once and
   the relaunch children fill the slots); result and the re-audit recorded here
-  when it runs.** The fold → conform passes run again once fold-unnumbered-twins'
-  report-only run finishes (its pass 1 scans every numbered row at the RU
-  floor).
+  when it runs.** → **ran 19:20–19:40Z (33268405103): 12 users; Drew 45
+  requested / 37 repriced / 8 skipped (confidence gate + pending-review);
+  the flagged Marconi German Gold Refractor /50 now reads **$182.50
+  observed, `exact-pool-weighted-median`, our-pool, n=3** (was $1,109.44
+  sibling × 8.00× floor). The new gate withheld five estimates because an
+  exact pool existed (`estimate_withheld_exact_pool_exists`: a 1999 Black
+  Diamond base with 8 sales under the un-numbered twin, a 2005 Bowman Chrome
+  base with 5, a 2024 Bowman Draft CPA-TG Blue /150 with 2, a 2026 Bowman
+  CPA-BG Black X-Fractor with 2 under the un-numbered twin) and one
+  unidentified holding's price was withheld at write (Marek Houston,
+  cardsight-sourced, no slug). Those twins are exactly the fold →
+  conform chain's population. Re-audit (`audit-all-holdings`) after fold +
+  conform. The fold → conform passes run again once fold-unnumbered-twins'
+  report-only run finishes — **it did (33264277457): WOULD FOLD 1,091
+  un-numbered twins (6,915 sales re-pointed, 120 graded children), 20
+  refusals where the row's `setKey` field disagrees with its own slug
+  (`bowman` vs `bowman-chrome`/`bowman-paper` — conform-card-profile's
+  population). APPLY dispatched 20:22Z (33273328022); conform-holdings
+  APPLY follows it.** Web picker fix #1466 deployed (SWA run 33273147531).
 - ◐ D9 **The eBay import → holdings pipeline** (Drew, 2026-08-29 17:20Z: "we
   need to fix the whole ebay import to holdings process, bc it seems broken").
   The Marconi purchase IS the fixture. Real listing title (`purchase.notes`):

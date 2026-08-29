@@ -16,7 +16,7 @@ import { buildDailyBrief } from "../routes/dailyiq.routes.js";
 import { saveTopPlayers, markNotified, getTopPlayers } from "../repositories/dailyiq.repository.js";
 import { getAllDailyIQAlertPreferences } from "../repositories/alertPreferences.repository.js";
 import { getWatchlistSet } from "../services/dailyiq/watchlistStore.service.js";
-import { sendDailyIQNotification, FeaturedPlayer } from "../services/notification.service.js";
+import { sendDailyIQNotification, isPushProviderConfigured, FeaturedPlayer } from "../services/notification.service.js";
 import { runSingleFlight } from "./_singleFlight.js";
 
 function todayInTimezone(tz: string): string {
@@ -128,13 +128,19 @@ function toFeatured(p: RankedPlayer): FeaturedPlayer {
   };
 }
 
-export async function runDailyIQJob(opts?: { force?: boolean }): Promise<{
+export interface DailyIQJobResult {
   date: string;
   usersNotified: number;
   pushesSent: number;
   pushesFailed: number;
   removedTokens: number;
-}> {
+  /** D13: false when APNS_* is missing — every send above no-op'd. */
+  pushProviderConfigured: boolean;
+  /** D13: true only when the day was stamped notifiedAt (a push was attempted). */
+  marked: boolean;
+}
+
+export async function runDailyIQJob(opts?: { force?: boolean }): Promise<DailyIQJobResult> {
   const tz = process.env.DAILYIQ_JOB_TIMEZONE ?? "America/Los_Angeles";
   const date = yesterdayInTimezone(tz);
   console.log(`[dailyiq.job] runDailyIQJob start date=${date} tz=${tz}`);
@@ -154,7 +160,10 @@ export async function runDailyIQJob(opts?: { force?: boolean }): Promise<{
     const existing = await getTopPlayers(date);
     if (existing?.notifiedAt) {
       console.log(`[dailyiq.job] already notified today (${existing.notifiedAt}); skipping pushes`);
-      return { date, usersNotified: 0, pushesSent: 0, pushesFailed: 0, removedTokens: 0 };
+      return {
+        date, usersNotified: 0, pushesSent: 0, pushesFailed: 0, removedTokens: 0,
+        pushProviderConfigured: isPushProviderConfigured(), marked: true,
+      };
     }
   }
 
@@ -186,13 +195,34 @@ export async function runDailyIQJob(opts?: { force?: boolean }): Promise<{
     }),
   );
 
-  // 4) Mark brief as notified.
-  await markNotified(date);
+  // 4) Mark brief as notified — ONLY when a push was actually attempted.
+  //
+  // D13 (2026-08-29) — alert gates prove delivery. Before this, the day
+  // was stamped notifiedAt even when the APNs provider was missing: every
+  // send no-op'd, pushesSent=0, and the idempotency gate above then
+  // refused a re-run for the rest of the day. Zero opted-in users with a
+  // configured provider is a legitimate zero and still marks; a missing
+  // provider is not — warn at event level and leave the day unmarked so
+  // a fixed-config re-run can deliver.
+  const pushProviderConfigured = isPushProviderConfigured();
+  let marked = false;
+  if (pushProviderConfigured) {
+    await markNotified(date);
+    marked = true;
+  } else {
+    console.warn(JSON.stringify({
+      event: "dailyiq_push_provider_missing",
+      date,
+      optedInUsers: prefs.length,
+      pushesSent,
+      marked: false,
+    }));
+  }
 
   console.log(
-    `[dailyiq.job] done date=${date} usersNotified=${usersNotified} pushesSent=${pushesSent} failed=${pushesFailed} removedTokens=${removedTokens}`,
+    `[dailyiq.job] done date=${date} usersNotified=${usersNotified} pushesSent=${pushesSent} failed=${pushesFailed} removedTokens=${removedTokens} providerConfigured=${pushProviderConfigured} marked=${marked}`,
   );
-  return { date, usersNotified, pushesSent, pushesFailed, removedTokens };
+  return { date, usersNotified, pushesSent, pushesFailed, removedTokens, pushProviderConfigured, marked };
 }
 
 let _scheduleTimer: NodeJS.Timeout | null = null;

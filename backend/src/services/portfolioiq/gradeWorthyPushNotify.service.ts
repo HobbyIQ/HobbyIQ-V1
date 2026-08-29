@@ -9,7 +9,7 @@
 
 import { listUsersWithGradeWorthyOptIn } from "./portfolioStore.service.js";
 import { analyzeHoldingGradeWorthy } from "./gradeWorthyAnalyze.service.js";
-import { sendGradeWorthyNotification } from "../notification.service.js";
+import { sendGradeWorthyNotification, isPushProviderConfigured } from "../notification.service.js";
 import { shouldFireGradeWorthyPush } from "./gradeWorthyPushCompute.service.js";
 import type { PortfolioHolding } from "../../types/portfolioiq.types.js";
 
@@ -19,6 +19,8 @@ export interface GradeWorthyNotifyResult {
   holdingsFired: number;
   sent: number;
   failed: number;
+  /** D13 (2026-08-29): false → every send above no-op'd; the script goes red on a scheduled run. */
+  pushProviderConfigured: boolean;
 }
 
 /**
@@ -45,7 +47,7 @@ export async function sendGradeWorthyPushesForOptedInUsers(): Promise<GradeWorth
     console.error(
       `[gradeWorthyPushNotify] listUsersWithGradeWorthyOptIn failed: ${err?.message ?? err}`,
     );
-    return { usersScanned: 0, holdingsScanned: 0, holdingsFired: 0, sent: 0, failed: 0 };
+    return { usersScanned: 0, holdingsScanned: 0, holdingsFired: 0, sent: 0, failed: 0, pushProviderConfigured: isPushProviderConfigured() };
   }
 
   for (const user of users) {
@@ -86,7 +88,7 @@ export async function sendGradeWorthyPushesForOptedInUsers(): Promise<GradeWorth
     }
   }
 
-  return { usersScanned, holdingsScanned, holdingsFired, sent, failed };
+  return { usersScanned, holdingsScanned, holdingsFired, sent, failed, pushProviderConfigured: isPushProviderConfigured() };
 }
 
 /**
