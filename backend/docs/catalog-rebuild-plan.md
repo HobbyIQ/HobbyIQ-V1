@@ -44,14 +44,30 @@ user-owned cards may seed).
   `catalogUnplacedReason` for the rematch. Pre-merge runner shards kept
   minting for 30 minutes AFTER the deploy — cancel fleets by script identity,
   not dispatch time.
+- **A vendor search never mints a card either** (#1362): `persistVendorCatalog`
+  — fire-and-forget behind every CardHedge search hit — had written 117
+  `cardhedge::` rows at 09:53Z from the post-deploy cache warm. Refuses now
+  regardless of `PERSIST_VENDOR_CATALOG_ENABLED`. Two gates, one doctrine:
+  checklists mint, user-owned cards may seed, nothing else writes a card.
+- **Relaunch discipline** (#1361): a self-relaunch fires iff the script printed
+  its budget-stop line, never on cancel, and forwards slot/slots/mode/sports.
+  Overnight the rematch relaunch had dropped its slot (11 copies of slot 0/16),
+  the mapper/annotation/e2e chains looped on "did anything", and card_catalog
+  took ~650k 429s per half hour.
+- **Staging drained** by the one-pool emission (2026-08-29 morning):
+  awaiting-catalog 669,820 → 84, player-precision 340,942 → 42, anomaly
+  184,181 → 0, pending-manual 74,954 → 13; 1.46M player-less rows now sit in
+  `needs-parse` for the promoter's parser. Sales Index 15.97M → 16.10M
+  (66k of it from the emission; the parked sales were mostly already in the
+  pool under another id).
 - Internal holding resolver built (no vendor calls); dry-run: 31/92 resolved,
   12 corrections
 
 ## RUNNING (self-driving; each step fires on the last one's completion)
 
-1. **R5 rematch** — `reslugAllSoldComps`, 8 slots, dispatched 2026-08-29
-   02:31Z (only-improve; also re-resolves the 14.6k sales the retire unplaced)
-2. Baseball re-annotation v3 fleet draining → compile the final scorecard
+1. **R5 rematch** — `reslugAllSoldComps`, 8 slots, **re-dispatched 2026-08-29
+   10:40Z** under the fixed relaunch (the 02:31Z fleet gave 15/16 of the pool
+   one pass only). Unplaced pool rows 17,104 → 11,629 so far.
 4. → RU rollback (Drew's go given, after the rematch + emission drain):
    card_catalog 400k→~2.5k, **sold_comps 100k→8k** (raised 40k→100k TEMP
    2026-08-29 02:52Z — it was pinned at 100% with 24k 429s/5min under the
