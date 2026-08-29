@@ -40,7 +40,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const backend = path.resolve(__dirname, "..");
 const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
-const { upsertCatalogEntry } = require(path.join(backend, "dist/services/portfolioiq/cardCatalog.service.js"));
+const { upsertCatalogEntry, cleanPlayerName } = require(path.join(backend, "dist/services/portfolioiq/cardCatalog.service.js"));
 const { computeHobbyIqCardId, slugify, normalizeSetKey } = require(path.join(backend, "dist/services/portfolioiq/hobbyIqCardId.service.js"));
 const { catalogAuthorityOf } = require(path.join(backend, "dist/services/catalog/catalogAuthority.service.js"));
 const { CosmosClient } = require("@azure/cosmos");
@@ -209,7 +209,9 @@ async function main() {
     for (let i = 1; i < lines.length; i++) {
       const line = lines[i].trim();
       if (!line) continue;
-      const [category, cardNumber, parallel, isAuto, printRun, player, parallelNote] = splitCsv(line);
+      const [category, cardNumber, parallel, isAuto, printRun, rawPlayer, parallelNote] = splitCsv(line);
+      // CF-A-NAME-DOES-NOT-END-IN-A-COMMA: Beckett's cell is "Max Williams,".
+      const player = cleanPlayerName(rawPlayer);
       rows++;
       if (!cardNumber || !player) { skippedRow++; continue; }
       // CF-A-CARD-LINE-IS-NOT-A-RUNG (2026-08-29). "100 Mike Trout" in the
