@@ -70,18 +70,25 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
 **A. In flight**
 - ◐ A1 `clean-parallel-annotations` APPLY, 4 slots (dry run: 402,289 rows — 242,194 move,
   44,194 fold, 8,233 replace a sale-minted twin, 23,127 heal, 0 failed)
-- ◐ A2 `retire-autoseed-window` MODE=unconfirmed — dry run → APPLY (retires the
-  sale-minted rows no checklist confirms; card-confirmed ones stay)
+- ◐ A2 `retire-autoseed-window` MODE=unconfirmed — dry run: **383,803** rows, 238,640
+  with pointing sales, 0 failed → APPLY running on 8 slots (#1371 gave it shards +
+  a budget-gated relaunch)
 
 **B. Spine hygiene (before anything matches against it again)**
-- ☐ B1 Retire the EXPLODED checklist products — 2025 topps-allen-and-ginter
-  (baseballcardpedia) is 627,464 rows whose "parallel" column holds card lines
-  ("100 Mike Trout") cross-joined ×49; the spine-wide scan (>150 distinct
-  parallels per product) sizes the rest. Sales pointing at them → unplaced.
+- ◐ B1 Retire the EXPLODED checklist products — the spine-wide scan: **140 products,
+  11.49M rows, 51.8% of the spine** (10.0M from the old undated `baseballcardpedia`
+  scrape, 1.3M checklistinsider): cards cross-joined with players — 2012 Topps has
+  99,994 card numbers and "Adam Jones" as a parallel; 2025 Topps 162,763 numbers.
+  They also inflate "card-confirmed" (any number, any player in the set matches), so
+  the 89.2% scorecard was partly propped by them and will drop, then be re-earned.
+  `retire-exploded-checklist-rows` (#1371) computes the list at run time (>150
+  parallels or >2,000 card numbers per product+source); dry run on 4 slots running.
+  The ingest now refuses such a file whole (#1373).
 - ☐ B2 Retire the MIS-PARSED rows (83,838; 45,292 are 1990 Donruss, ~26k Leaf via
-  checklistcenter) — the rows themselves, not their products.
-- ☐ B3 Unify `topps-allen-ginter` → `topps-allen-and-ginter` (checklist-majority
-  form: 656k vs 71k checklist rows) via `apply-setkey-rulings`.
+  checklistcenter) — `retire-exploded-checklist-rows` MODE=misparsed, after B1.
+- ◐ B3 Unify `topps-allen-ginter` → `topps-allen-and-ginter` (checklist-majority
+  form: 656k vs 71k checklist rows) via `rename-setkey` (#1372, ruling passed as
+  scope="baseball:topps-allen-ginter>topps-allen-and-ginter"); dry run on 4 slots.
 - ☐ B4 Re-scrape the exploded / mis-parsed bcp products through the fixed parser
   (#1368) and ingest them clean.
 
