@@ -24,7 +24,10 @@
  *                                                mapping. No source we hold
  *                                                covers them.
  *
- * Copy-before-delete, sales re-pointed before the old row goes.
+ * The move is catalogRowOps.moveCatalogRow (D5 PR 2): copy before delete,
+ * sales re-pointed before the old row goes, graded children of the old slug
+ * retired, the searchable fields rebuilt, and a row already at the checklist
+ * slug decided by authority -- a derived row never outvotes the spine.
  *
  * Env: COSMOS_CONNECTION_STRING; APPLY/BACKFILL_APPLY; SLOT/SLOTS;
  *      CONCURRENCY=48; RUN_MINUTES=140; LIMIT=0
@@ -34,6 +37,7 @@ const backend = path.resolve(__dirname, "..");
 const { CosmosClient } = require("@azure/cosmos");
 const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
 const { catalogAuthorityOf } = require(path.join(backend, "dist/services/catalog/catalogAuthority.service.js"));
+const { moveCatalogRow, rebuildSearchFields } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
 
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
 const CONCURRENCY = Math.max(1, Number(process.env.CONCURRENCY || 48));
@@ -121,7 +125,7 @@ async function main() {
   console.log(`slot ${SLOT}/${SLOTS}  ${mine.length} of ${plan.length} mappable keys  ${APPLY ? "APPLY" : "REPORT ONLY"}`);
   console.log(`  ambiguous ${f(ambiguous)}   no-match ${f(noMatch)} keys / ${f(noMatchRows)} rows (acquisition)\n`);
 
-  let scanned = 0, moved = 0, folded = 0, redundant = 0, salesRepointed = 0, failed = 0, notReached = 0, malformed = 0, drifted = 0;
+  let scanned = 0, moved = 0, folded = 0, replaced = 0, redundant = 0, salesRepointed = 0, gradedRetired = 0, failed = 0, notReached = 0, malformed = 0, drifted = 0;
   let stopReason = null;
 
   for (const p of mine) {
@@ -151,55 +155,31 @@ async function main() {
             }
             if (from === to) {
               // The id already speaks the checklist vocabulary; only the
-              // FIELD is stale. Heal the field rather than skip the row.
+              // FIELD is stale. Heal the field (and the searchable fields
+              // built from it) rather than skip the row.
               if (d.setKey !== to && APPLY) {
-                await retry(() => cat.item(d.id, d.cardId ?? d.id).patch([{ op: "set", path: "/setKey", value: to }]));
+                const s = rebuildSearchFields({ ...d, setKey: to });
+                await retry(() => cat.item(d.id, d.cardId ?? d.id).patch([
+                  { op: "set", path: "/setKey", value: to },
+                  ...Object.entries(s).map(([k, v]) => ({ op: "set", path: `/${k}`, value: v })),
+                ]));
               }
               redundant++;
               return;
             }
             parts[3] = to;
-            const newSlug = parts.join(":");
-            if (!APPLY) { moved++; return; }
-
-            const { resource: existing } = await retry(() => cat.item(newSlug, newSlug).read()).catch(() => ({ resource: null }));
-            if (!existing) {
-              const { _rid, _self, _etag, _attachments, _ts, ...rest } = d;
-              await retry(() => cat.items.upsert({
-                ...rest, id: newSlug, cardId: newSlug, hobbyiqCardId: newSlug,
-                setKey: to,
-                mappedFrom: d.id, mappedReason: "pokemon setKey unified to checklist vocabulary",
-                mappedAt: new Date().toISOString(),
-              }));
-            } else {
-              // CF-FOLD-IS-A-MOVE (2026-08-29). The checklist row already exists,
-              // so nothing is upserted -- but the derived row is still deleted
-              // and its sales re-pointed below. That is a move, counted once
-              // as moved; folded is a slice of it, not a sibling path. Counting
-              // it as redundant too charged one row to two axes (OVER by 2,138).
-              folded++;
-            }
-
-            let sToken;
-            do {
-              const sp = await retry(() => comps.items.query({
-                query: "SELECT c.id, c.cardId FROM c WHERE c.hobbyiqCardId = @s",
-                parameters: [{ name: "@s", value: d.id }],
-              }, { maxItemCount: 200, continuationToken: sToken }).fetchNext());
-              sToken = sp.continuationToken;
-              for (const x of sp.resources) {
-                await retry(() => comps.item(x.id, x.cardId).patch([
-                  { op: "set", path: "/hobbyiqCardId", value: newSlug },
-                  { op: "set", path: "/normalizedSetKey", value: to },
-                  { op: "set", path: "/reslugedFrom", value: d.id },
-                  { op: "set", path: "/reslugedReason", value: "pokemon setKey unified" },
-                  { op: "set", path: "/reslugedAt", value: new Date().toISOString() },
-                ]));
-                salesRepointed++;
-              }
-            } while (sToken);
-
-            await retry(() => cat.item(d.id, d.cardId ?? d.id).delete()).catch((e) => { if (e.code !== 404) throw e; });
+            // CF-FOLD-IS-A-MOVE (2026-08-29). A fold (the checklist row keeps
+            // its address) and a replace (this row outranked the incumbent)
+            // are both a move -- the derived row is gone, its sales follow --
+            // counted once as moved; folded/replaced are slices, not siblings.
+            // Counting a fold as redundant too charged one row to two axes
+            // (OVER by 2,138).
+            const r = await moveCatalogRow(cat, d, parts.join(":"), { setKey: to }, {
+              reason: "pokemon setKey unified to checklist vocabulary", repointNormalizedSetKey: true, dryRun: !APPLY, salesContainer: comps, retry,
+            });
+            salesRepointed += r.salesRepointed; gradedRetired += r.gradedChildrenRetired;
+            if (r.action === "fold") folded++;
+            else if (r.action === "replace") { replaced++; if (replaced <= 3) console.log(`  replaced at ${r.newSlug.slice(0, 58)}: ${r.decision}`); }
             moved++;
           } catch (e) {
             failed++;
@@ -223,8 +203,10 @@ async function main() {
   console.log(`  derived rows scanned    ${f(scanned)}`);
   console.log(`  MOVED to checklist key  ${f(moved)}`);
   console.log(`  ...folded into existing ${f(folded)}   <- slice of MOVED`);
+  console.log(`  ...replaced existing    ${f(replaced)}   <- slice of MOVED; this row outranked it`);
   console.log(`  redundant (row existed) ${f(redundant)}`);
   console.log(`  sales re-pointed        ${f(salesRepointed)}`);
+  console.log(`  graded children retired ${f(gradedRetired)}`);
   console.log(`  malformed id (left)     ${f(malformed)}`);
   console.log(`  drifted, unmappable     ${f(drifted)}`);
   console.log(`  failed                  ${f(failed)}`);
