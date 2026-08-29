@@ -47,12 +47,19 @@ const CHECKLIST_SQL = "(c.source = 'bccp' OR STARTSWITH(c.source,'baseballcardpe
 const fold = (s) => String(s ?? "").normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase();
 const tokens = (s) => fold(s).replace(/[^a-z0-9]+/g, " ").trim().split(/\s+/).filter(Boolean);
 const SUFFIX = new Set(["jr", "sr", "ii", "iii", "iv"]);
+// Checklist player cells carry designation tags that are not part of the name:
+// "Elly De La Cruz RC", "Johnny Bench AS DP", "Bobby Dalbec FS", "Rogers
+// Hornsby 1991". Two such cells for one card made every match "ambiguous";
+// "Johnny Bench AS DP" never matched because "dp" was taken as the surname.
+const TAG = new Set(["rc", "as", "dp", "fs", "sp", "ssp", "hof", "mvp", "rr", "dk", "cl", "tc", "ll", "var", "variation", "sv", "uer", "err"]);
+const nameTokens = (player) => tokens(player).filter((t) => !SUFFIX.has(t) && !TAG.has(t) && !/^\d{2,4}$/.test(t));
+const nameKey = (player) => nameTokens(player).join(" ");
 
 /** Does this checklist player appear in the title? Last name must be a whole
  *  token; if the player has a first name, its first token must appear too
- *  (or its initial, for "B. Witt"). Suffixes are ignored. */
+ *  (or its initial, for "B. Witt"). Suffixes and designation tags are ignored. */
 function playerInTitle(player, titleTokens) {
-  const pt = tokens(player).filter((t) => !SUFFIX.has(t));
+  const pt = nameTokens(player);
   if (!pt.length) return false;
   const last = pt[pt.length - 1];
   if (last.length < 2 || !titleTokens.has(last)) return false;
@@ -119,7 +126,7 @@ async function main() {
           if (!cands2.length) { noChecklist++; return; }
           if (cands2.length > MAX_CANDIDATES) { exploded++; return; }
           const tt = new Set(tokens(title));
-          const hits = [...new Map(cands2.filter((c) => playerInTitle(c.player, tt)).map((c) => [fold(c.player), c])).values()];
+          const hits = [...new Map(cands2.filter((c) => playerInTitle(c.player, tt)).map((c) => [nameKey(c.player), c])).values()];
           if (hits.length === 0) { noMatch++; if (exNoMatch.length < PRINT_EXAMPLES) exNoMatch.push(`${title.slice(0, 70)}  |  slug ${d.hobbyiqCardId}  |  candidates: ${cands2.slice(0, 4).map((c) => c.player).join(", ")}`); return; }
           if (hits.length > 1) { ambiguous++; if (exAmbig.length < PRINT_EXAMPLES) exAmbig.push(`${title.slice(0, 70)}  |  ${hits.map((c) => c.player).join(" / ")}`); return; }
           const hit = hits[0];
