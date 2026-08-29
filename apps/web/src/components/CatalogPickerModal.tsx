@@ -78,7 +78,7 @@ export function CatalogPickerModal({
       setLoading(true);
       setError(null);
       try {
-        const res = await searchCatalog({ query: term, limit: 25, context: context ?? null });
+        const res = await searchCatalog({ query: term, limit: 100, context: context ?? null });
         if (mine !== seq.current) return;
         setHits(res.hits ?? []);
         setProvisional(Boolean(res.provisional));
@@ -174,9 +174,14 @@ export function CatalogPickerModal({
           )}
           <div className="space-y-1.5">
             {(hits ?? []).map((h) => {
+              // The checklist sources write the year into setName ("2025 Bowman Draft
+              // Baseball") and some write the player with a trailing comma; the row
+              // must not read "2025 2025 Bowman Draft" or "Max Williams,".
+              const setLabel = String(h.setName || h.setKey || "").replace(h.year ? new RegExp("^" + String(h.year) + "\s+") : /^$/, "").trim();
+              const playerLabel = String(h.playerName || "").replace(/[s,;]+$/, "").trim();
               const bits = [
                 h.year ? String(h.year) : null,
-                h.setName || h.setKey,
+                setLabel || null,
                 h.cardNumber ? `#${h.cardNumber}` : null,
               ].filter(Boolean).join(" ");
               const variant = [
@@ -195,7 +200,7 @@ export function CatalogPickerModal({
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="text-sm font-medium truncate">
-                        {h.playerName || "(unnamed)"}
+                        {playerLabel || "(unnamed)"}
                       </div>
                       <div className="text-xs text-[color:var(--color-muted)] truncate">{bits}</div>
                       {variant && (
@@ -204,7 +209,7 @@ export function CatalogPickerModal({
                     </div>
                     <div className="text-right shrink-0">
                       {med != null ? (
-                        <div className="text-sm font-medium tabular-nums">{formatUSD(med, { hideCents: med >= 100 })}</div>
+                        <div className="text-sm font-medium tabular-nums" title="Median of recent sales — a picking hint, not the FMV">{formatUSD(med, { hideCents: med >= 100 })}<span className="text-[10px] text-[color:var(--color-muted)] ml-1">med</span></div>
                       ) : (
                         <div className="text-xs text-[color:var(--color-muted)]">no comps</div>
                       )}
