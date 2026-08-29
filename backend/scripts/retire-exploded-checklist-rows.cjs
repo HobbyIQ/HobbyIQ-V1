@@ -1,0 +1,173 @@
+#!/usr/bin/env node
+/**
+ * retire-exploded-checklist-rows.cjs -- a checklist that lists 99,994 card
+ * numbers for a 660-card set is not a checklist.
+ *
+ * CF-EXPLODED-SPINE (Drew, 2026-08-29 "make a checklist and start executing").
+ * The spine-wide scan found 140 checklist products -- 11.49M rows, 51.8% of the
+ * spine -- whose parallel column is exploded: the old undated `baseballcardpedia`
+ * scrape cross-joined every card with every other card's player ("Adam Jones"
+ * as a parallel of 2012 Topps #1; 162,763 distinct card numbers on 2025 Topps;
+ * "DUO 100A Barry Bonds / Moises Alou" as a rung of 2006 Co-Signers). Sales
+ * can resolve onto those slugs, and every derived row with any number and any
+ * player in the set reads as "card-confirmed" against them -- the
+ * self-confirming trap in a new coat. The dated ladder scrapes
+ * (baseballcardpedia-ladders-*) are sane and are NOT touched.
+ *
+ * MODE=exploded (default): retire every identity row of a (sport, year, setKey,
+ *   source) product whose distinct parallel count exceeds PAR_MAX (150) or whose
+ *   distinct cardNumber count exceeds NUM_MAX (2,000), restricted to SOURCES
+ *   (default: baseballcardpedia -- the undated scrape). The product list is
+ *   computed at run time by the same GROUP BY the scan used, so the script and
+ *   the measurement cannot disagree.
+ * MODE=misparsed: retire the individual rows whose parallel holds player text or
+ *   page prose -- has "(" but does not end with ")" and is not a print-run note.
+ *
+ * Every pointing sale is stamped catalogMatched=false with a reason (the rematch
+ * re-resolves it onto whatever clean checklist lands); graded children are
+ * deleted (regenerable). Copy nothing: these rows have no clean twin to fold
+ * into -- the re-scrape mints the real ones.
+ *
+ * Env: COSMOS_CONNECTION_STRING; APPLY/BACKFILL_APPLY; MODE; SOURCES; PAR_MAX;
+ *      NUM_MAX; SLOT/SLOTS (hash of id); CONCURRENCY=32; RUN_MINUTES=140; LIMIT.
+ */
+"use strict";
+const path = require("path");
+const crypto = require("crypto");
+const { CosmosClient } = require("@azure/cosmos");
+const { reportWrites } = require(path.join(__dirname, "..", "dist", "services", "ops", "writeReconciliation.js"));
+
+const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
+const MODE = String(process.env.MODE || "").toLowerCase() === "misparsed" ? "misparsed" : "exploded";
+const SOURCES = String(process.env.SOURCES || "baseballcardpedia").split(",").map((s) => s.trim()).filter(Boolean);
+const PAR_MAX = Number(process.env.PAR_MAX || 150), NUM_MAX = Number(process.env.NUM_MAX || 2000);
+const SLOT = Number(process.env.SLOT ?? 0), SLOTS = Math.max(1, Number(process.env.SLOTS ?? 1));
+const CONCURRENCY = Math.max(1, Number(process.env.CONCURRENCY || 32));
+const RUN_MS = Number(process.env.RUN_MINUTES || 140) * 60000;
+const LIMIT = Number(process.env.LIMIT || 0);
+const STARTED = Date.now();
+const f = (n) => Number(n).toLocaleString();
+const shardOf = (id) => parseInt(crypto.createHash("sha1").update(String(id)).digest("hex").slice(0, 8), 16) % SLOTS;
+const CHECKLIST_SQL = "(c.source = 'bccp' OR STARTSWITH(c.source,'baseballcardpedia') OR STARTSWITH(c.source,'checklist') OR STARTSWITH(c.source,'beckett') OR STARTSWITH(c.source,'tcgdex') OR STARTSWITH(c.source,'cardboardchecklist'))";
+
+const retry = async (fn, tries = 8) => {
+  let wait = 500;
+  for (let a = 0; ; a++) {
+    try { return await fn(); }
+    catch (e) {
+      const msg = String(e?.message ?? e);
+      if (!/request rate|429|ETIMEDOUT|ECONNRESET|503/i.test(msg) || a >= tries) throw e;
+      await new Promise((r) => setTimeout(r, wait)); wait = Math.min(wait * 2, 15000);
+    }
+  }
+};
+
+async function main() {
+  const conn = process.env.COSMOS_CONNECTION_STRING;
+  if (!conn) { console.error("FATAL: COSMOS_CONNECTION_STRING not set"); process.exit(1); }
+  const db = new CosmosClient({ connectionString: conn, connectionPolicy: { retryOptions: { maxRetryAttemptsOnThrottledRequests: 30, maxWaitTimeInSeconds: 120 } } }).database("hobbyiq");
+  const cat = db.container("card_catalog"), pool = db.container("sold_comps");
+  console.log(`mode=${MODE}  slot ${SLOT}/${SLOTS}  ${APPLY ? "APPLY (deletes)" : "REPORT ONLY"}  budget ${RUN_MS / 60000}m`);
+
+  // ---- the product list (exploded mode): computed, not hand-typed
+  let products = [];
+  if (MODE === "exploded") {
+    const srcSql = SOURCES.map((_, i) => `c.source = @src${i}`).join(" OR ");
+    const { resources } = await retry(() => cat.items.query({
+      query: `SELECT c.sport AS sp, c.year AS y, c.setKey AS k, c.source AS s, c.parallel AS p, c.cardNumber AS n, COUNT(1) AS rows FROM c WHERE NOT IS_DEFINED(c.gradeTier) AND (${srcSql}) GROUP BY c.sport, c.year, c.setKey, c.source, c.parallel, c.cardNumber`,
+      parameters: SOURCES.map((s, i) => ({ name: `@src${i}`, value: s })),
+    }, { maxItemCount: 10000 }).fetchAll());
+    const agg = new Map();
+    for (const r of resources) {
+      const key = `${r.sp}|${r.y}|${r.k}|${r.s}`;
+      const a = agg.get(key) ?? { sport: r.sp, year: r.y, setKey: r.k, source: r.s, rows: 0, pars: new Set(), nums: new Set() };
+      a.rows += r.rows; a.pars.add(String(r.p ?? "")); a.nums.add(String(r.n ?? "")); agg.set(key, a);
+    }
+    products = [...agg.values()].filter((a) => a.pars.size > PAR_MAX || a.nums.size > NUM_MAX).sort((x, y) => y.rows - x.rows);
+    const total = products.reduce((s, p) => s + p.rows, 0);
+    console.log(`\nexploded products (sources=${SOURCES.join(",")}; >${PAR_MAX} parallels or >${NUM_MAX} card numbers): ${products.length} products, ${f(total)} identity rows`);
+    for (const p of products.slice(0, 15)) console.log(`  ${String(f(p.rows)).padStart(10)}  ${p.sport} ${p.year} ${p.setKey} [${p.source}]  parallels=${p.pars.size} numbers=${p.nums.size}`);
+    if (products.length > 15) console.log(`  ... +${products.length - 15} more`);
+    console.log("");
+  }
+
+  let scanned = 0, otherShards = 0, retired = 0, salesUnplaced = 0, gradedDeleted = 0, failed = 0, notReached = 0;
+  let stopReason = null;
+  const reason = MODE === "exploded" ? "exploded checklist product retired; awaiting a clean checklist" : "mis-parsed checklist row retired; awaiting a clean checklist";
+
+  const retireRow = async (d) => {
+    scanned++;
+    try {
+      if (!APPLY) { retired++; return; }
+      let sToken;
+      do {
+        const sp = await retry(() => pool.items.query({ query: "SELECT c.id, c.cardId FROM c WHERE c.hobbyiqCardId = @s", parameters: [{ name: "@s", value: d.id }] }, { maxItemCount: 200, continuationToken: sToken }).fetchNext());
+        sToken = sp.continuationToken;
+        for (const x of sp.resources) {
+          await retry(() => pool.item(x.id, x.cardId).patch([
+            { op: "set", path: "/catalogMatched", value: false },
+            { op: "set", path: "/catalogUnplacedReason", value: reason },
+            { op: "set", path: "/catalogUnplacedAt", value: new Date().toISOString() },
+          ]));
+          salesUnplaced++;
+        }
+      } while (sToken);
+      let gToken;
+      do {
+        const gp = await retry(() => cat.items.query({ query: "SELECT c.id, c.cardId FROM c WHERE STARTSWITH(c.id, @p) AND IS_DEFINED(c.gradeTier)", parameters: [{ name: "@p", value: d.id + ":" }] }, { maxItemCount: 200, continuationToken: gToken }).fetchNext());
+        gToken = gp.continuationToken;
+        for (const g of gp.resources) {
+          await retry(() => cat.item(g.id, g.cardId ?? g.id).delete()).catch((e) => { if (e.code !== 404) throw e; });
+          gradedDeleted++;
+        }
+      } while (gToken);
+      await retry(() => cat.item(d.id, d.cardId ?? d.id).delete()).catch((e) => { if (e.code !== 404) throw e; });
+      retired++;
+    } catch (e) {
+      failed++;
+      if (failed <= 5) console.error(`  failed ${String(d.id).slice(0, 70)}: ${String(e.message || e).slice(0, 70)}`);
+    }
+  };
+
+  const walk = async (query) => {
+    let token;
+    do {
+      const page = await retry(() => cat.items.query(query, { maxItemCount: 300, continuationToken: token }).fetchNext());
+      token = page.continuationToken;
+      const mine = page.resources.filter((d) => shardOf(d.id) === SLOT);
+      otherShards += page.resources.length - mine.length;
+      for (let i = 0; i < mine.length; i += CONCURRENCY) {
+        await Promise.all(mine.slice(i, i + CONCURRENCY).map(retireRow));
+        const processed = Math.min(i + CONCURRENCY, mine.length);
+        if (LIMIT && retired >= LIMIT) { stopReason = "limit"; notReached += mine.length - processed; return; }
+        if (Date.now() - STARTED > RUN_MS) { stopReason = "budget"; notReached += mine.length - processed; return; }
+      }
+      if (scanned && scanned % 5000 < CONCURRENCY) process.stderr.write(`\r  scanned=${f(scanned)} retired=${f(retired)} sales-unplaced=${f(salesUnplaced)} graded=${f(gradedDeleted)}   `);
+    } while (token);
+  };
+
+  if (MODE === "exploded") {
+    for (const p of products) {
+      if (stopReason) break;
+      await walk({
+        query: "SELECT c.id, c.cardId FROM c WHERE c.sport = @sp AND c.year = @y AND c.setKey = @k AND c.source = @s AND NOT IS_DEFINED(c.gradeTier)",
+        parameters: [{ name: "@sp", value: p.sport }, { name: "@y", value: p.year }, { name: "@k", value: p.setKey }, { name: "@s", value: p.source }],
+      });
+    }
+  } else {
+    await walk({ query: `SELECT c.id, c.cardId FROM c WHERE NOT IS_DEFINED(c.gradeTier) AND IS_DEFINED(c.parallel) AND CONTAINS(c.parallel, '(') AND NOT ENDSWITH(c.parallel, ')') AND NOT CONTAINS(LOWER(c.parallel), 'print run') AND ${CHECKLIST_SQL}` });
+  }
+  process.stderr.write("\n");
+
+  if (stopReason === "budget") console.log(`\nstopped at the ${RUN_MS / 60000}-minute budget — the relaunch continues from here`);
+  else if (stopReason === "limit") console.log(`\nstopped at LIMIT=${f(LIMIT)} — a bounded run`);
+  console.log(`\n${APPLY ? "APPLY" : "REPORT ONLY — nothing deleted"}`);
+  console.log(`  rows scanned (this slot)   ${f(scanned)}   (+${f(otherShards)} belonging to other slots)`);
+  console.log(`  RETIRED                    ${f(retired)}`);
+  console.log(`  sales stamped unplaced     ${f(salesUnplaced)}   <- the rematch owns them once a clean checklist lands`);
+  console.log(`  graded children deleted    ${f(gradedDeleted)}`);
+  console.log(`  failed                     ${f(failed)}`);
+  if (APPLY) reportWrites({ job: "retire-exploded-checklist-rows", intended: scanned, written: retired, skipped: notReached, failed });
+}
+
+main().catch((e) => { console.error("FATAL:", e?.stack || e?.message); process.exit(3); });
