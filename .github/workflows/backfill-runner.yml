@@ -145,6 +145,7 @@ on:
           - conform-holdings-to-catalog
           # D15 (2026-08-29): three catalog repairs on catalogRowOps.
           - repair-trailing-comma-player-names
+          - repair-isauto-from-cardnumber-catalog
       apply:
         description: "Actually write (true) or dry-run only (false)"
         required: true
@@ -921,6 +922,26 @@ jobs:
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (repaired=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-trailing-comma-player-names -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sources="${{ inputs.sources }}"
+          else
+            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (repaired=${N:-0}) — done, no re-dispatch."
+          fi
+
+      - name: Self-relaunch the isAuto-from-card-number repair until the slot is clean
+        # Stops at its own 140-minute budget and PRINTS its summary; a run killed
+        # by the 150-minute step ceiling prints nothing. CF-RELAUNCH-ONLY-ON-
+        # BUDGET (#1361): relaunch iff the marker printed, never on a count.
+        if: ${{ !cancelled() && inputs.script == 'repair-isauto-from-cardnumber-catalog' && inputs.apply == true }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        working-directory: backend
+        run: |
+          set +e
+          N=$(grep -aoE "^  REPAIRED +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          echo "repaired=${N:-0}"
+          if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
+            echo "::notice::budget hit (repaired=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-isauto-from-cardnumber-catalog -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sources="${{ inputs.sources }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (repaired=${N:-0}) — done, no re-dispatch."
           fi
