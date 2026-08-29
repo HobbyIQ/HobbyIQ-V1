@@ -376,6 +376,22 @@ export async function computeUnifiedPrice(
   const container = await getContainer();
   if (!container) return empty;
 
+  // CF-RAW-IS-A-TIER (D4 "one valuation path", PR 4 — 2026-08-29). Which
+  // tier the caller asked for:
+  //   undefined                    -> the curve only; nothing priced at the top
+  //   null, or a grade w/o company -> the Raw tier
+  //   { company, value }           -> that graded tier
+  // Every portfolio / fmv caller passes `grade: gCo ? {...} : null`, so a raw
+  // holding arrived here as null and — because the top-level fill below was
+  // gated on opts.grade?.company — never got a price: it fell through to the
+  // legacy engine while its graded siblings took the unified early exit. The
+  // raw pool is an exact-identity pool like any other tier and is priced the
+  // same way.
+  const requestedTier: string | null = opts.grade === undefined
+    ? null
+    : gradeLabel(opts.grade?.company ?? null, opts.grade?.value ?? null);
+  const requestedIsRaw = requestedTier === "Raw";
+
   // Adaptive window — start tight, widen until direct-grade density
   // supports the requested read. When opts.fixedWindowDays is passed
   // (grade-curve panel), skip the cascade and use exactly that window.
@@ -387,12 +403,11 @@ export async function computeUnifiedPrice(
   } else {
   for (const w of WINDOWS) {
     comps = await queryComps(container, cardId, opts.hobbyiqCardId ?? null, w.days, opts.excludeContributorUserId ?? null);
-    // If a specific grade was requested, measure density on THAT grade
+    // If a specific tier was requested, measure density on THAT tier
     // for cascade decision. Else use overall pool density.
     let densityCount = comps.length;
-    if (opts.grade?.company) {
-      const target = gradeLabel(opts.grade.company, opts.grade.value);
-      densityCount = comps.filter((r) => gradeLabel(r.gradeCompany, r.gradeValue) === target).length;
+    if (requestedTier) {
+      densityCount = comps.filter((r) => gradeLabel(r.gradeCompany, r.gradeValue) === requestedTier).length;
     }
     if (densityCount >= w.minDirect) {
       selectedWindow = w.days;
@@ -641,8 +656,8 @@ export async function computeUnifiedPrice(
   let trendDirection: "up" | "down" | "flat" = "flat";
   let selectedConfidence = 0;
   let rungLabel: UnifiedPriceResult["rungLabel"] = "no-basis";
-  if (opts.grade?.company) {
-    const target = gradeLabel(opts.grade.company, opts.grade.value);
+  if (requestedTier) {
+    const target = requestedTier;
     // CF-UNIFIED-GRADE-FALLBACK-CHAIN (Drew, 2026-08-04). When the requested
     // grade doesn't match any pool entry, fall back to the highest-sample
     // entry so we still return real market data. Common triggers:
@@ -682,7 +697,14 @@ export async function computeUnifiedPrice(
       // pool $1,713 was returning as-is for a PSA 10 request — the
       // wire needed raw × PSA 10 multiplier (~2.5-3× for a hot
       // prospect auto).
-      if (requestedButFallbackMatched && opts.grade?.company && opts.grade.value != null) {
+      //
+      // CF-RAW-IS-A-TIER: symmetric for a Raw request with no raw pool —
+      // the graded tier's premium is divided back out (toMult = 1.0), the
+      // same table in the other direction, still labelled cross-grade.
+      const requestedGraded = !requestedIsRaw && opts.grade?.company && opts.grade.value != null
+        ? { company: String(opts.grade.company), value: String(opts.grade.value) }
+        : null;
+      if (requestedButFallbackMatched && (requestedIsRaw || requestedGraded)) {
         try {
           const fromCompany = matched.gradeCompany;
           const fromValue = matched.gradeValue;
@@ -690,7 +712,9 @@ export async function computeUnifiedPrice(
           const fromMult = fromCompany
             ? getGraderPremium(fromCompany, String(fromValue ?? ""), fmv ?? null, "autograph", opts.cardYear ?? null, null, null, null)
             : 1.0;
-          const toMult = getGraderPremium(String(opts.grade.company), String(opts.grade.value), fmv ?? null, "autograph", opts.cardYear ?? null, null, null, null);
+          const toMult = requestedGraded
+            ? getGraderPremium(requestedGraded.company, requestedGraded.value, fmv ?? null, "autograph", opts.cardYear ?? null, null, null, null)
+            : 1.0;
           const rescale = fromMult > 0 && Number.isFinite(fromMult) ? (toMult / fromMult) : 1.0;
           if (Number.isFinite(rescale) && rescale > 0 && rescale !== 1.0) {
             if (fmv !== null) fmv = Math.round(fmv * rescale * 100) / 100;
