@@ -267,7 +267,15 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   retiring every old row would drop checklist coverage for the rest — #1458
   `REPLACED_BY` (default `checklistcenter-2026-08-29`; the runner's scope
   input doubles as it) retires only products present under the replacement
-  source and lists the kept ones. Dry run #3 = 33267576465 → APPLY. Also seen in the same run: the bcp ladders re-ingest now
+  source and lists the kept ones. **Dry run #3 (33267576465): 516 products in
+  the replacement source; retiring 356 of 428 old products (1,096,192 of
+  1,201,444 rows); KEPT 72 products / 105,249 rows the re-ingest does not
+  cover** (2024 Leaf Metal 8,435; 2018 Bowman 7,115; 2020 Bowman 5,441; 2018
+  Bowman Draft 5,387; 2018/2019 Stadium Club; 2026 Leaf; 2018 Donruss Optic …
+  — the html-only pages that converted to 0 rows; an acquisition list for the
+  CLC converter's html path). #1460: the retire's self-relaunch forwards
+  `sources` + `scope` (a child without them would FATAL on #1455's guard).
+  **APPLY ×8 dispatched 18:25Z** (33268119635 … 33268143439). Also seen in the same run: the bcp ladders re-ingest now
   skips 762,534 player-name-parallel rows (#1396 working as built).
   cached at c:/tmp/clc (ladders only, no card lists → bounded 547-page re-fetch);
   the old HTML ingester split ladders on commas (player names became rungs) and
@@ -477,6 +485,48 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   canonical-fmv, portfolio, DailyIQ, market movers, card-panel first). Step 2:
   build the top probes as one read-only `audit-app` family on the runner and
   keep their numbers here as the scorecard. Step 3: fix by doctrine, re-measure.
+  **First-pass findings (three of the inventory's slices landed 18:20–18:35Z;
+  the consolidated matrix is still assembling):**
+  - *Import / eBay / misc (group C):* user SALES from the eBay order poll are
+    written into the pool keyed by the holding's vendor `cardId`
+    (`portfolioStore:7324`), and so are user PURCHASES (`:2491`); the spreadsheet
+    import's resolver is a Wave-3b stub returning nothing (every non-round-trip
+    row "unresolved", round-trip ids taken verbatim, no `hobbyiqCardId`, no
+    pricing after commit, dedup skipped for null ids); the suggester can hand
+    back a CardHedge id as `suggestedCardId`; `createListing` publishes to eBay
+    without linking the listing to the holding (its sale can never be
+    matched); the listing composer prices `predictedPrice` ahead of FMV; the
+    flat wire shape carries NO rung/provenance (only the nested `pricing`
+    envelope, and that drops to null unless three fields agree), while
+    `quickSaleValue/premiumValue/suggestedListPrice` and the buy/hold/sell zones
+    are hardcoded multipliers (0.85 / 1.15 / 1.05 / 0.9). → **D12-a** (building,
+    `feat/d12a`) + **D12-b** (building, `feat/d12b`: the import resolves through
+    the catalog, round-trip ids must be existing hiq slugs, one identity, price
+    on commit).
+  - *Pricing engines (group A):* `withDerivedSlug` MINTS an hiq slug from free
+    text with no catalog read and OVERWRITES any existing slug, and
+    `priceFromOurPool` prices off it; `addHolding` adopts a 0.72 fuzzy match as
+    both ids when nothing is pinned, `updateHolding` writes `hobbyiqCardId`
+    ungated; a fifth headline chain (`:3805`) still reads `predictedPrice`
+    first; `computeUnifiedPrice` unions vendor-id and slug rows with no
+    print-run/parallel/title filter; `getGraderPremium`'s lower rungs are still
+    hardcoded tables (PSA 8 → 1.0; static GRADER_PREMIUMS; canonicalFmv's
+    gradeTierMultiplier table); the sibling fallback's ×8 / ÷8 PSA-10 constants
+    and `parallelPremiumFloors` (/1 → 100×, /50 → 8× …) — PR 5/6 in flight;
+    `hobbyIqFmv` returns a method string not in its own union. → D12-a covers
+    the identity items; the multiplier tables are D4 PR 6.
+  - *Analysis surfaces (group B):* none of the 15 analysis services touch a
+    pricing engine or an hiq slug — grade-worthy, timing forecast, parallel
+    ladder, missing parallels, sub-raw discovery price from `ch_daily_sales`
+    medians/means over (player, year, number) with every grade and parallel
+    mixed; `gradedMedianPrice` is a MEAN; the parallel ladder has no card-number
+    filter; missing-parallels compares CardHedge ids to Cardsight ids; four
+    different grading-cost constants (80 / 79.99 / 60 / 50); `createIfNotExists`
+    DDL runs on GET routes; the `/breakdown` analyzer reads `year`/`cost`/
+    `status` fields the wire shape never emits (vintage logic dead, ROI 0,
+    sold holdings counted); the yearbook applies a clamped portfolio
+    multiplier as a sold-value proxy; player-trend partitions key on the raw
+    name while ids are slugged. → probes + fixes queued after D12.
 - ◐ D10 **Look at all holdings for everyone** (Drew, 2026-08-29 17:15Z). The three
   defects under holding `ca7a150b` are not specific to it. **#1448
   `audit-all-holdings`** (read-only, runner-whitelisted): per holding —
