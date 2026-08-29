@@ -44,7 +44,12 @@ const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === 
 //   retire only the rows of a flagged product whose (product, parallel) group has
 //   fewer than TAIL_MIN rows, or whose parallel is a card line. A rung exists on
 //   many cards; a footnote or a joined card line exists on one.
-const MODE = ["misparsed", "tail"].includes(String(process.env.MODE || "").toLowerCase()) ? String(process.env.MODE).toLowerCase() : "exploded";
+// MODE=playerrung: across EVERY checklist source, retire rows whose parallel
+//   equals a player name of the same product -- a roster line the scraper took
+//   for a rung ("Jimmy Rollins" x 661 on 2008 Topps; "Adam Jones" on the old
+//   2012 Topps scrape). The product's own player list is the oracle.
+const MODE = ["misparsed", "tail", "playerrung"].includes(String(process.env.MODE || "").toLowerCase()) ? String(process.env.MODE).toLowerCase() : "exploded";
+const foldName = (v) => String(v ?? "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 const SOURCES = String(process.env.SOURCES || (MODE === "tail" ? "checklistinsider-2026-08-27,checklistcenter,bccp" : "baseballcardpedia")).split(",").map((s) => s.trim()).filter(Boolean);
 const PAR_MAX = Number(process.env.PAR_MAX || 150), NUM_MAX = Number(process.env.NUM_MAX || 2000), TAIL_MIN = Number(process.env.TAIL_MIN || 5);
 const CARD_LINE = /^\d+[a-z]?\s+[A-Za-z]/;
@@ -117,7 +122,7 @@ async function main() {
 
   let scanned = 0, otherShards = 0, retired = 0, salesUnplaced = 0, gradedDeleted = 0, failed = 0, notReached = 0, kept = 0;
   let stopReason = null;
-  const reason = MODE === "exploded" ? "exploded checklist product retired; awaiting a clean checklist" : "mis-parsed checklist row retired; awaiting a clean checklist";
+  const reason = MODE === "exploded" ? "exploded checklist product retired; awaiting a clean checklist" : MODE === "playerrung" ? "player-name parallel retired (a roster line, not a rung)" : "mis-parsed checklist row retired; awaiting a clean checklist";
 
   const retireRow = async (d) => {
     scanned++;
@@ -178,6 +183,26 @@ async function main() {
         parameters: [{ name: "@sp", value: p.sport }, { name: "@y", value: p.year }, { name: "@k", value: p.setKey }, { name: "@s", value: p.source }],
       });
     }
+  } else if (MODE === "playerrung") {
+    // every checklist product+source: parallels that equal one of its players
+    const { resources: prods } = await retry(() => cat.items.query({ query: `SELECT c.sport AS sp, c.year AS y, c.setKey AS k, c.source AS s, COUNT(1) AS rows FROM c WHERE NOT IS_DEFINED(c.gradeTier) AND ${CHECKLIST_SQL} GROUP BY c.sport, c.year, c.setKey, c.source` }, { maxItemCount: 10000 }).fetchAll());
+    console.log(`playerrung: ${f(prods.length)} checklist products to check`);
+    let checked = 0, hitProducts = 0;
+    for (const p of prods.sort((a, b) => b.rows - a.rows)) {
+      if (stopReason) break;
+      checked++;
+      const params = [{ name: "@sp", value: p.sp }, { name: "@y", value: p.y }, { name: "@k", value: p.k }, { name: "@s", value: p.s }];
+      const { resources: pars } = await retry(() => cat.items.query({ query: "SELECT DISTINCT c.parallel AS p FROM c WHERE c.sport = @sp AND c.year = @y AND c.setKey = @k AND c.source = @s AND NOT IS_DEFINED(c.gradeTier) AND IS_DEFINED(c.parallel)", parameters: params }, { maxItemCount: 5000 }).fetchAll());
+      if (!pars.length) continue;
+      const { resources: players } = await retry(() => cat.items.query({ query: "SELECT DISTINCT c.playerName AS n FROM c WHERE c.sport = @sp AND c.year = @y AND c.setKey = @k AND c.source = @s AND NOT IS_DEFINED(c.gradeTier) AND IS_DEFINED(c.playerName)", parameters: params }, { maxItemCount: 5000 }).fetchAll());
+      const names = new Set(players.map((r) => foldName(r.n)).filter(Boolean));
+      const bad = new Set(pars.map((r) => String(r.p ?? "")).filter((par) => par && names.has(foldName(par))));
+      if (!bad.size) continue;
+      hitProducts++;
+      console.log(`  ${p.sp} ${p.y} ${p.k} [${p.s}]: ${bad.size} player-name parallels (e.g. ${[...bad].slice(0, 3).join(", ")})`);
+      await walk({ query: "SELECT c.id, c.cardId, c.parallel FROM c WHERE c.sport = @sp AND c.year = @y AND c.setKey = @k AND c.source = @s AND NOT IS_DEFINED(c.gradeTier)", parameters: params }, (d) => bad.has(String(d.parallel ?? "")));
+    }
+    console.log(`playerrung: checked ${f(checked)} products, ${f(hitProducts)} carried player-name parallels`);
   } else if (MODE === "tail") {
     // Only the tail of a flagged product goes: a (product, parallel) group with
     // fewer than TAIL_MIN rows, or a card-line parallel. The rungs that exist on

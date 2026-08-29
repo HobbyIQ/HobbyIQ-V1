@@ -173,7 +173,8 @@ async function main() {
   // never reaching the tail.
   const REINGEST = String(process.env.REINGEST || "") === "true";
   let alreadyDone = 0;
-  let cardLineParallel = 0, explodedFiles = 0;
+  let cardLineParallel = 0, explodedFiles = 0, playerNameParallel = 0;
+  const foldName = (v) => String(v ?? "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
   const EXPLODED_PAR_MAX = Number(process.env.EXPLODED_PAR_MAX || 150), EXPLODED_NUM_MAX = Number(process.env.EXPLODED_NUM_MAX || 2000);
   if (!REINGEST) {
     const before = files.length;
@@ -200,6 +201,7 @@ async function main() {
 
     const lines = fs.readFileSync(csvPath, "utf8").split("\n");
     const batch = [];
+    const rawRows = [];
     for (let i = 1; i < lines.length; i++) {
       const line = lines[i].trim();
       if (!line) continue;
@@ -210,7 +212,20 @@ async function main() {
       // parallel column is a scraper joining a card line to a rung; it can
       // never name a parallel. Skipped per row, counted, never written.
       if (/^\d+[a-z]?\s+[A-Za-z]/.test(String(parallel || ""))) { cardLineParallel++; continue; }
+      rawRows.push({ category, cardNumber, parallel, isAuto, printRun, player, parallelNote });
+      continue;
       batch.push({ category, cardNumber, parallel, isAuto, printRun, player, parallelNote: parallelNote || null });
+    }
+
+    // CF-A-PLAYER-IS-NOT-A-RUNG (2026-08-29). A parallel equal to a player name
+    // of the same file is a roster line the scraper took for a rung ("Jimmy
+    // Rollins" x 661 rows on 2008 Topps). The file knows its own players.
+    {
+      const players = new Set(rawRows.map((r) => foldName(r.player)).filter(Boolean));
+      for (const r of rawRows) {
+        if (r.parallel && players.has(foldName(r.parallel))) { playerNameParallel++; continue; }
+        batch.push({ category: r.category, cardNumber: r.cardNumber, parallel: r.parallel, isAuto: r.isAuto, printRun: r.printRun, player: r.player, parallelNote: r.parallelNote || null });
+      }
     }
 
     // CF-EXPLODED-FILE-GATE (2026-08-29). The spine held 140 products / 11.49M
@@ -329,6 +344,7 @@ async function main() {
   console.log(`  files with no manifest ${f(noProduct)}   <- could not name the product`);
   console.log(`  files REFUSED, exploded ${f(explodedFiles)}   <- >${f(EXPLODED_PAR_MAX)} rungs or >${f(EXPLODED_NUM_MAX)} card numbers; a cross-join, not a checklist`);
   console.log(`  rows with card-line parallel ${f(cardLineParallel)}   <- "100 Mike Trout" is not a rung; skipped`);
+  console.log(`  rows with player-name parallel ${f(playerNameParallel)}   <- a roster line, not a rung; skipped`);
   console.log(`  csv rows read          ${f(rows)}`);
   console.log(`  catalog rows written   ${f(written)}`);
   {
