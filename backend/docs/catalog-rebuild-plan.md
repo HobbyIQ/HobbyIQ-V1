@@ -444,7 +444,27 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   sits under gold-refractor — the title names a MORE specific finish than the
   stamp (the colour pass only looks at titles that lack the colour word); a
   "title is more specific than the stamp" pass with the #1433 parser is the
-  next measurable repair. Also seen under the base sibling: "Yellow 21/75" filed as base
+  next measurable repair. **Where the $1,109 came from — traced as far as
+  the data allows:** the cross-setkey rung matches on year + number +
+  isAuto + sport and the row's `parallel` FIELD, any setKey; for this card
+  that is exactly three rows — the two real golds and a `2026:bowman:cpa-mg:
+  gold-refractor:auto:num-75` Cardsight row ("TRUE GOLD Rookie Auto", the
+  PAPER Bowman gold /75, $51) — i.e. it crossed the product boundary the
+  ladder refuses AND a print-run boundary. The pure next-sale projection on
+  those three still stays bounded ($234, bounds $168–$392), so the $1,109 is
+  not that rung's math either; the reprice with the #1432 engine (running)
+  is the answer that matters. **Identity gap underneath it:** the holding sits
+  at `…:cpa-mg:gold-refractor:auto` — a USER-SEEDED catalog row
+  (`ebay-user-purchase`, printRun null) — while the checklist row is
+  `…:gold-refractor:auto:num-50` [checklist, printRun 50]; the un-numbered
+  twin must fold into the numbered checklist row (sales re-pointed) and the
+  holding must re-derive to it (a key needs both halves). A REPORT-ONLY
+  `conform-holdings-to-catalog` (33263873824) shows whether the matcher
+  gets there on its own; the fold belongs to the C-chain's conform pass.
+  Also noted: COUNT(source = checklistcenter-2026-08-29) is 1,714,619 against
+  2,869,277 written — the authority contest keeps a higher-ranked existing
+  source on rows the CLC ingest merged into, so a source count understates
+  what an ingest touched ([[count-by-source-not-row-count]] cuts both ways). Also seen under the base sibling: "Yellow 21/75" filed as base
   (the numbered-refractor inference is a parser gap), and CH composed titles
   "2026 2026 Bowman …" (doubled year).
 - ☐ D7 **eBay import into the portfolio** (Drew, 2026-08-29): an imported eBay
