@@ -334,6 +334,79 @@ function tokenize(input: string): string[] {
 
 /** Direct catalog search. Returns hits sorted by token-overlap score
  *  descending, then by sales volume as tiebreaker. */
+/** The row's scoring, as a pure function so the identity triangulation
+ *  harness and its tests can hold it to account.
+ *
+ *  CF-CATALOG-SCORING-MULTI-FIELD (Drew, 2026-08-06): weighted matches across
+ *  playerName (3.0) / searchTokens (2.0) / setKey, year, parallel (1.5) /
+ *  cardNumber (1.0), normalised by tokens x 3.0.
+ *  CF-SEARCH-EXACT-CARD-WINS (Drew, 2026-08-16): an exact card number is an
+ *  identifier, +1.0; a named parallel word +0.15.
+ *  CF-SEARCH-SAYS-WHAT-IT-MEANS (2026-08-29, identity triangulation baseline:
+ *  search -> same card 30.5%). Three failures, one cause -- a row was rewarded
+ *  for words the query never said:
+ *    "#217 X-Fractor"   -> topps-chrome-PLATINUM-ANNIVERSARY ... topps-refractor
+ *    "#BD-143 Base"     -> base-cards, not Base
+ *    "#TCA-ARU Base"    -> topps-chrome-BLACK #CBA-MR
+ *  So: a set-key token the query does not name costs -0.25 each (cap -0.5); a
+ *  parallel word the query does not name costs -0.2 each (cap -0.4); a query
+ *  that says "base" or names no finish prefers the Base row (+0.3); and a
+ *  one-character token matches only by equality, never by substring. */
+export function scoreCatalogRow(
+  tokens: string[],
+  r: { playerName?: string | null; setKey?: string | null; setName?: string | null; setNameFromSet?: string | null; cardNumber?: string | null; year?: number | null; parallel?: string | null; parallelSlug?: string | null; searchTokens?: string[] | null },
+): { score: number; hitFields: number } | null {
+  const rowTokens = new Set((r.searchTokens ?? []).map((t) => String(t).toLowerCase()));
+  const rowPlayer = String(r.playerName ?? "").toLowerCase();
+  const rowSet = String(r.setKey || r.setName || r.setNameFromSet || "").toLowerCase();
+  const rowNumber = String(r.cardNumber ?? "").toLowerCase();
+  const rowYear = r.year != null ? String(r.year) : "";
+  const rowParallel = String(r.parallel ?? "").toLowerCase();
+  const rowParallelSlug = String(r.parallelSlug ?? "").toLowerCase();
+  const sub = (hay: string, t: string) => (t.length <= 1 ? hay === t || hay.split(/[\s-]+/).includes(t) : hay.includes(t));
+  let raw = 0;
+  let hitFields = 0;
+  for (const t of tokens) {
+    let tokenMax = 0;
+    if (rowPlayer && sub(rowPlayer, t)) tokenMax = Math.max(tokenMax, 3.0);
+    else if (rowPlayer && t.length > 1 && fuzzyIncludes(rowPlayer, t)) tokenMax = Math.max(tokenMax, 2.5);
+    if (rowTokens.has(t)) tokenMax = Math.max(tokenMax, 2.0);
+    if (rowSet && sub(rowSet, t)) tokenMax = Math.max(tokenMax, 1.5);
+    if (rowYear && rowYear === t) tokenMax = Math.max(tokenMax, 1.5);
+    if (rowParallel && sub(rowParallel, t)) tokenMax = Math.max(tokenMax, 1.5);
+    if (rowParallelSlug && sub(rowParallelSlug, t)) tokenMax = Math.max(tokenMax, 1.5);
+    if (rowNumber && sub(rowNumber, t)) tokenMax = Math.max(tokenMax, 1.0);
+    if (tokenMax > 0) hitFields++;
+    raw += tokenMax;
+  }
+  const maxPossible = tokens.length * 3.0;
+  let score = maxPossible > 0 ? raw / maxPossible : 0;
+  const numberIsExact = rowNumber.length > 0 && tokens.some((t) => t === rowNumber);
+  if (numberIsExact) score += 1.0;
+  const queryTokens = new Set(tokens);
+  const parallelWords = rowParallel ? rowParallel.split(/[\s-]+/).filter(Boolean) : [];
+  const isBaseRow = !rowParallel || rowParallel === "base";
+  if (parallelWords.length && tokens.some((t) => parallelWords.includes(t))) score += 0.15;
+  // words the query never said
+  const setWords = rowSet.split(/[\s-]+/).filter((w) => w && !/^\d{4}$/.test(w));
+  const querySaysSet = setWords.some((w) => queryTokens.has(w));
+  if (querySaysSet) {
+    const unnamedSet = setWords.filter((w) => !queryTokens.has(w)).length;
+    score -= Math.min(0.5, 0.25 * unnamedSet);
+  }
+  const FINISH_STOP = new Set(["base", "card", "cards", "rc", "rookie", "auto", "psa", "bgs", "sgc", "gem", "mint", "nm"]);
+  const unnamedParallel = parallelWords.filter((w) => !queryTokens.has(w) && !FINISH_STOP.has(w)).length;
+  if (!isBaseRow) score -= Math.min(0.4, 0.2 * unnamedParallel);
+  const queryNamesAFinish = tokens.some((t) => !FINISH_STOP.has(t) && CATALOG_FINISH_WORDS.has(t));
+  if (isBaseRow && (queryTokens.has("base") || !queryNamesAFinish)) score += 0.3;
+  if (hitFields < Math.max(1, Math.ceil(tokens.length / 2))) return null;
+  return { score, hitFields };
+}
+
+/** Finish vocabulary a query uses to name a parallel; when none is present the
+ *  Base row is what the query means. Kept short and obvious on purpose. */
+const CATALOG_FINISH_WORDS = new Set(["refractor", "refractors", "xfractor", "x", "fractor", "prizm", "mojo", "wave", "shimmer", "foil", "holo", "chrome", "sapphire", "superfractor", "black", "gold", "silver", "blue", "red", "green", "orange", "purple", "pink", "yellow", "aqua", "teal", "magenta", "fuchsia", "bronze", "platinum", "rainbow", "atomic", "lava", "laser", "crackle", "mini", "camo", "disco", "ice", "velocity", "hyper", "speckle", "sparkle", "glitter", "neon", "negative", "sepia", "printing", "plate", "plates", "geometric", "logofractor", "pulsar", "raywave", "fireworks", "tinsel", "diamante", "sandglitter"]);
+
 export async function searchCatalog(
   input: CatalogSearchInput,
 ): Promise<CatalogSearchResponse> {
@@ -810,64 +883,9 @@ export async function searchCatalog(
   // Score = sum(weighted matches) / max possible (tokens × 3.0).
   const scored: CatalogSearchHit[] = [];
   for (const r of rows) {
-    const rowTokens = new Set((r.searchTokens ?? []).map((t) => t.toLowerCase()));
-    const rowPlayer = String(r.playerName ?? "").toLowerCase();
-    // Pick whichever set field is populated: setKey → setName → c["set"].
-    // Rows differ across ingest sources (TCDB uses setName, tree cards use
-    // setKey, legacy Cardsight uses c["set"]).
-    const rowSet = String(r.setKey || r.setName || r.setNameFromSet || "").toLowerCase();
-    const rowNumber = String(r.cardNumber ?? "").toLowerCase();
-    const rowYear = r.year != null ? String(r.year) : "";
-    const rowParallel = String(r.parallel ?? "").toLowerCase();
-    const rowParallelSlug = String(r.parallelSlug ?? "").toLowerCase();
-    let raw = 0;
-    let hitFields = 0;
-    for (const t of tokens) {
-      let tokenMax = 0;
-      if (rowPlayer && rowPlayer.includes(t)) tokenMax = Math.max(tokenMax, 3.0);
-      // CF-SEARCH-FUZZY-PLAYER: a near-miss on the name still counts, just
-      // below an exact hit so correct spellings always outrank variants.
-      else if (rowPlayer && fuzzyIncludes(rowPlayer, t)) tokenMax = Math.max(tokenMax, 2.5);
-      if (rowTokens.has(t)) tokenMax = Math.max(tokenMax, 2.0);
-      if (rowSet && rowSet.includes(t)) tokenMax = Math.max(tokenMax, 1.5);
-      if (rowYear && rowYear === t) tokenMax = Math.max(tokenMax, 1.5);
-      if (rowParallel && rowParallel.includes(t)) tokenMax = Math.max(tokenMax, 1.5);
-      if (rowParallelSlug && rowParallelSlug.includes(t)) tokenMax = Math.max(tokenMax, 1.5);
-      if (rowNumber && rowNumber.includes(t)) tokenMax = Math.max(tokenMax, 1.0);
-      if (tokenMax > 0) hitFields++;
-      raw += tokenMax;
-    }
-    const maxPossible = tokens.length * 3.0;
-    let score = maxPossible > 0 ? raw / maxPossible : 0;
-
-    // CF-SEARCH-EXACT-CARD-WINS (Drew, 2026-08-16: "when it is a full card it
-    // picks the right one").
-    //
-    // Token overlap alone cannot express this. Every 2018 Topps Chrome Update
-    // Ohtani shares the year, the set and the player, so a query naming
-    // "hmt1" differs from its rivals by ONE token out of six — and #HMT32 beat
-    // #HMT1 on the remaining noise. Same for "blue refractor bcp-69", where
-    // Black Refractor outranked Blue.
-    //
-    // A card NUMBER is an exact identifier, not a keyword: when the query names
-    // one and the row IS it, that row is the answer and nothing that merely
-    // shares a set should outrank it. Substring is not enough either — "hmt1"
-    // is a substring of nothing useful, but "1" would be a substring of
-    // everything, which is why this is equality on the whole token.
-    //
-    // Parallel gets a smaller, non-decisive bump: naming "blue" should beat
-    // Black on a tie, but must not overrule the card number.
-    const numberIsExact = rowNumber.length > 0 && tokens.some((t) => t === rowNumber);
-    if (numberIsExact) score += 1.0;
-    if (rowParallel) {
-      const parallelWords = new Set(rowParallel.split(/[\s-]+/).filter(Boolean));
-      if (tokens.some((t) => parallelWords.has(t))) score += 0.15;
-    }
-    // Require at least half the tokens matched (any field) for
-    // multi-word queries. Prevents ranking noise where a lone
-    // "topps" match surfaces a card that has nothing to do with
-    // the query.
-    if (hitFields < Math.max(1, Math.ceil(tokens.length / 2))) continue;
+    const verdict = scoreCatalogRow(tokens, r);
+    if (!verdict) continue;
+    const score = verdict.score;
     scored.push({
       slug: r.id,
       // CF-ONE-NAME-FORMAT-FOR-EVERY-CARD (Drew, 2026-08-24: "we want the SAME
