@@ -558,15 +558,21 @@ function computeContentHash(input: {
 /** Score a doc for pickCanonical — higher = keep. Mirror the scoring
  *  in scripts/apply-sold-comps-dedup.cjs so pre-write dedup + nightly
  *  cleanup agree on which row wins. */
-function scoreForCanonical(row: {
+export function scoreForCanonical(row: {
   verifiedByUser?: boolean;
   sourceExternalId?: string | null;
   parallel?: string | null;
   observedAt?: string;
 }): number {
   const prefix = row.sourceExternalId ?? "";
-  const prefixScore = prefix.startsWith("holding::") ? 50
+  // CF-A-REAL-ID-OUTRANKS-A-SYNTHETIC-ONE (2026-08-29, checklist D7b). A row
+  // keyed by the eBay item / order id IS the transaction; a "holding::" key is
+  // our own stand-in for it. The old scoring (holding:: +50, real id 0) let a
+  // re-emit under the stand-in key DELETE the row that carried the real id.
+  // Mirrored in scripts/apply-sold-comps-dedup.cjs.
+  const prefixScore = prefix.startsWith("holding::") ? 25
     : prefix.startsWith("ch-daily::") ? 50
+    : prefix ? 60
     : 0;
   return (
     (row.verifiedByUser === true ? 100 : 0) +
@@ -574,6 +580,11 @@ function scoreForCanonical(row: {
     (row.parallel ? String(row.parallel).length : 0) +
     (row.observedAt ? new Date(row.observedAt).getTime() / 1e11 : 0)
   );
+}
+
+/** The row pickCanonical would keep: highest scoreForCanonical. */
+function bestOf<T extends { id?: string; verifiedByUser?: boolean; sourceExternalId?: string | null; parallel?: string | null; observedAt?: string }>(rows: T[]): T | undefined {
+  return rows.slice().sort((a, b) => scoreForCanonical(b) - scoreForCanonical(a))[0];
 }
 
 /**
@@ -596,6 +607,13 @@ function scoreForCanonical(row: {
  */
 export interface RecordSoldCompResult {
   written: boolean;
+  /** CF-THE-SALE-HAS-AN-ID (2026-08-29, checklist D7a). The pool row's id
+   *  when the sale is in the pool -- the row just written, or the row that
+   *  already held this sale (deduped: true). A holding can now link to its
+   *  sale, and a caller can tell "matched an existing sale" from "wrote". */
+  id?: string | null;
+  deduped?: boolean;
+  hobbyiqCardId?: string | null;
   /** Present when written is false. "catalog-unmatched" is the retryable one —
    *  the sale is real, we just have no checklist for its card yet. */
   reason?: "catalog-unmatched" | "invalid-input" | "error";
@@ -1215,7 +1233,7 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
             sampled: true,
           }));
         }
-        return { written: true };
+        return { written: true, deduped: true, id: bestOf(existing)?.id ?? null, hobbyiqCardId: doc.hobbyiqCardId ?? null };
       }
       // Incoming wins → delete existing dupes (cross- AND same-source)
       // before writing. Anything with the same contentHash in the
@@ -1304,7 +1322,7 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
             existingCardIds: crossPartitionExisting.map(e => e.cardId),
             bestExistingScore,
           }));
-          return { written: true };
+          return { written: true, deduped: true, id: bestOf(crossPartitionExisting)?.id ?? null, hobbyiqCardId: hobbyiqCardId ?? null };
         }
         // Incoming beats existing — delete the losers so we don't leave
         // stale duplicates under the other cardId partitions.
@@ -1515,7 +1533,7 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
   }
 
   // Reached only after the upsert succeeded — the sale is in the pool.
-  return { written: true };
+  return { written: true, deduped: false, id: doc.id, hobbyiqCardId: doc.hobbyiqCardId ?? null };
 }
 
 /** Monotonic counter of upsert failures across the process lifetime.

@@ -39,8 +39,10 @@ const RATE_MS = Number(process.env.DEDUP_RATE_MS ?? "50");
 function pickCanonical(rows) {
   const scored = rows.map((r) => {
     const prefix = r.sourceExternalId ?? "";
-    const prefixScore = prefix.startsWith("holding::") ? 50
+    // CF-A-REAL-ID-OUTRANKS-A-SYNTHETIC-ONE (2026-08-29): mirrors soldCompsStore.
+    const prefixScore = prefix.startsWith("holding::") ? 25
       : prefix.startsWith("ch-daily::") ? 50
+      : prefix ? 60
       : 0;
     return {
       row: r,

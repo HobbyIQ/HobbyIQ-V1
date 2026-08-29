@@ -6948,7 +6948,14 @@ export async function sellHolding(req: Request, res: Response) {
           price: unitSalePrice,
           soldAt,
           source: "ebay-user-sale",
-          sourceExternalId: (req.body?.ebayOrderId as string | undefined) ?? null,
+          // CF-A-REAL-SALE-IS-IN-THE-POOL-ONCE (2026-08-29, D7b): neither client
+          // sends ebayOrderId, so this was always null and the row keyed on a
+          // full-precision timestamp -- a re-submit made a second row. Fall back
+          // to the ids the holding carries.
+          sourceExternalId: (req.body?.ebayOrderId as string | undefined)
+            ?? (holding as { ebayOrderId?: string }).ebayOrderId
+            ?? (holding as { ebayItemId?: string }).ebayItemId
+            ?? null,
           contributorUserId: auth.userId,
           title: shimmedCardTitle(holding),
           imageUrl: (holding as any).ebayImageUrl ?? null,
