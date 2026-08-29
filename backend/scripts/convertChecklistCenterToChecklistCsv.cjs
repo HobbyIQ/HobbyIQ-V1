@@ -85,9 +85,14 @@ const decodeHtml = (s) => String(s).replace(/&#8211;|&ndash;/g, "-").replace(/&#
 const detag = (s) => decodeHtml(String(s).replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ").trim();
 const foldName = (s) => String(s ?? "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 const slugify = (s) => String(s ?? "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
-const PARALLEL_WORDS = new Set(["refractor","refractors","xfractor","x-fractor","fractor","prizm","prizms","mojo","wave","shimmer","foil","foilboard","holo","chrome","sapphire","superfractor","printing","plate","plates","black","gold","silver","blue","red","green","orange","purple","pink","yellow","aqua","teal","magenta","fuchsia","bronze","platinum","rainbow","atomic","lava","pattern","laser","crackle","mini","base","parallel","variation","variations","sp","ssp","auto","autograph","autographs","relic","patch","jersey","insert","inserts","checklist","1/1","numbered","border","camo","tie-dye","disco","cracked","ice","optic","velocity","hyper","speckle","sparkle","glitter","neon","negative","sepia","vintage","stock","paper","canvas","gilded","glossy","matte"]);
+const PARALLEL_WORDS = new Set(["refractor","refractors","xfractor","x-fractor","fractor","prizm","prizms","mojo","wave","shimmer","foil","foilboard","holo","chrome","sapphire","superfractor","printing","plate","plates","black","gold","silver","blue","red","green","orange","purple","pink","yellow","aqua","teal","magenta","fuchsia","bronze","platinum","rainbow","atomic","lava","pattern","laser","crackle","mini","base","parallel","variation","variations","sp","ssp","auto","autograph","autographs","relic","patch","jersey","insert","inserts","checklist","1/1","numbered","border","camo","tie-dye","disco","cracked","ice","optic","velocity","hyper","speckle","sparkle","glitter","neon","negative","sepia","vintage","stock","paper","canvas","gilded","glossy","matte","prismatic","crystal","super"]);
 const isPersonName = (v) => { const t = foldName(v).split(" ").filter(Boolean); return t.length >= 2 && t.length <= 5 && !t.some((w) => PARALLEL_WORDS.has(w)) && !/^\d/.test(t[0]); };
 const SPORTS = "baseball|football|basketball|hockey|soccer|wrestling|golf|racing|mma|pokemon";
+/** Colour and finish words: a name ENDING in one names a rung, never a set or
+ *  a card type ("Prizms Gold" is a finish; "Chrome Prospects", "Silver Packs"
+ *  and "1991 Gold Leaf Prospects" are not). */
+const RUNG_WORDS = new Set(["black","gold","silver","blue","red","green","orange","purple","pink","yellow","aqua","teal","magenta","fuchsia","bronze","platinum","white","rainbow","refractor","refractors","superfractor","xfractor","x-fractor","prizm","prizms","wave","shimmer","lava","mojo","holo","foil","foilboard","sapphire","speckle","sparkle","atomic","pulsar","ice","flash","geometric","raywave","sepia","negative","mini","plates","plate","printing","camo","disco","cracked","neon","vinyl","finite","laser","crackle","glitter","velocity","hyper","1/1"]);
+const endsInRung = (v) => RUNG_WORDS.has(String(v).trim().split(" ").pop().toLowerCase());
 
 /** name / note / printRun -- the clean-parallel-annotations rule: a parenthetical
  *  anywhere and an "Est. print run" tail are footnotes, never part of the name;
@@ -101,6 +106,9 @@ function clean(raw) {
   if (parens.length) note = [parens.join("; "), note].filter(Boolean).join("; ");
   name = name.replace(/\s+/g, " ").replace(/[-\u2013\u2014:]\s*$/, "").trim();
   let printRun = null;
+  // "Red #/25 or Less" (2020 Topps Series 1's auto sets): the qualifier sits
+  // AFTER the run, and stripping it last left "Red #/25" with no run at all.
+  name = name.replace(/\s+or less$/i, "").trim();
   // "SuperFractor 1/1", "Platinum 1/1", "Gold Vinyl 1/1": a print run of one.
   const oneOfOne = name.match(/^(.*?\S)\s+1\s*\/\s*1$/);
   if (oneOfOne) { printRun = 1; name = oneOfOne[1]; }
@@ -111,7 +119,6 @@ function clean(raw) {
     if (m) { printRun = Number(m[1].replace(/,/g, "")) || null; break; }
   }
   name = name.replace(/\s*#?\s*\/\s*-?\d[\d,]{0,6}\s*$/, "").trim();        // "Gold /50" -> "Gold", run kept
-  name = name.replace(/\s+or less$/i, "").trim();                           // "Red #/99 or Less" -> "Red"
   return { name, note, printRun };
 }
 
@@ -261,10 +268,103 @@ function parseXlsxRows(rows) {
 
 function parseXlsx(xlsxPath) { return parseXlsxRows(readXlsxRows(xlsxPath)); }
 
+/** CF-THE-SECTION-IS-THE-PLAIN-SET-VALUE (2026-08-30, D3c). A workbook
+ *  names a section by its plain Set cell -- "Base", "Home Run Challenge Code",
+ *  "Bomb Squad" -- and every parallel of it extends that cell: "Bomb Squad
+ *  Blue Ice". The first cut took the first TWO words as the section, so a
+ *  three-word section with no parallels became a parallel of its own first
+ *  two words: 2024 Topps Series 1 emitted "Challenge Code" on every Home Run
+ *  Challenge Code card and "Topps Baseball" on every Oversized 2024 Topps
+ *  Baseball card, 2025 Donruss "Recollection Collection" on the 1985 Donruss
+ *  Recollection Collection (23 rows under that "parallel" in Cosmos), 2025
+ *  Topps Update "Image Variation" on the Golden Mirror Image Variations, and
+ *  Leaf Metal "White" for Tritanium Prismatic White.
+ *  Readings, in order:
+ *   1. a "Base ..." value belongs to Base (the type qualifier -- "Rated
+ *      Prospects", "Set - Concourse", "Paper Prospects" -- comes off per card);
+ *   2. the SHORTEST other Set value that is a whole-word prefix of this one
+ *      ("Stars of MLB" for "Stars of MLB Chrome Black", not the longer "Stars
+ *      of MLB Chrome");
+ *   3. a value other values extend heads its own section ("Signature Tunes
+ *      Dual Autographs" heads "... Autographs Red"), finish blank -- a head
+ *      ending in a colour or finish word needs a ladder of at least two under
+ *      it ("Black Gold" heads Pink Foil / Blue Foil / ...; "Autographs Prizms
+ *      Gold" beside "... Gold Vinyl" alone is a finish of "Autographs");
+ *   4. with siblings under the same first two words, the words they all
+ *      share, less any finish words at the end ("Tritanium" for "Tritanium
+ *      Prismatic White" beside "Tritanium Prismatic Gold"; "Bowman Prospects
+ *      Mega" for "... Mega Autographs Chrome Gold Mojo Refractor"; "1991 Gold
+ *      Leaf Prospects" keeps its Gold; "Bursting With Talent" for Leaf's
+ *      "Bursting With Talent Base Laser Black" -- the Base/Auto marker comes
+ *      off below);
+ *   5. alone: a "... Variation(s)" whose numbers are all base numbers is a
+ *      Base finish (the variation IS the parallel); a tail of finish words
+ *      after the set words is the finish ("Mega Futures" + "Chrome Mojo";
+ *      "Tritanium" + "Red Flood" when other Tritanium values exist, else two
+ *      set words are needed); anything else is its own section, finish blank.
+ *  Returns Set value -> { section, finish }. */
+function sectionsOf(setValues, numbersOf = () => []) {
+  const values = [...setValues];
+  const out = new Map();
+  const wordsOf = (sv) => sv.split(" ");
+  const isRung = (w) => PARALLEL_WORDS.has(String(w).toLowerCase());
+  const byFirst = new Map(), byTwo = new Map();
+  for (const sv of values) {
+    const w = wordsOf(sv);
+    const k1 = w[0].toLowerCase(), k2 = w.slice(0, 2).join(" ").toLowerCase();
+    (byFirst.get(k1) ?? byFirst.set(k1, []).get(k1)).push(sv);
+    (byTwo.get(k2) ?? byTwo.set(k2, []).get(k2)).push(sv);
+  }
+  const baseNums = new Set(numbersOf(values.find((v) => /^base$/i.test(v)) ?? "").map(String));
+  const extensionsOf = (v) => values.filter((o) => o !== v && o.startsWith(v + " ")).length;
+  const isHead = (v) => !endsInRung(v) || extensionsOf(v) >= 2;
+  const split = (sv, section) => ({ section, finish: sv === section ? "" : sv.startsWith(section + " ") ? sv.slice(section.length + 1).trim() : sv });
+  for (const sv of values) {
+    const w = wordsOf(sv);
+    let section = null;
+    if (/^base(\s|$)/i.test(sv)) section = "Base";
+    // a head ending in a rung word needs a ladder under it: "Black Gold" heads
+    // Pink Foil / Blue Foil / Green Foil ..., while "Autographs Prizms Gold"
+    // listed beside "... Gold Vinyl" alone is a finish, not a section
+    if (!section) for (const cand of values) if (cand !== sv && sv.startsWith(cand + " ") && isHead(cand) && (!section || cand.length < section.length)) section = cand;
+    if (!section && isHead(sv) && extensionsOf(sv) > 0) section = sv;
+    if (!section) {
+      const group = byTwo.get(w.slice(0, 2).join(" ").toLowerCase()) ?? [sv];
+      if (group.length > 1) {
+        let k = 0;
+        while (k < w.length && group.every((g) => wordsOf(g)[k] === w[k])) k++;
+        // "... Manufactured Relic Autographs" beside "... Manufactured Relics":
+        // the words part at Relic/Relics, one set and its autographed twin,
+        // not a "Relic Autographs" finish of "... Manufactured"
+        const sib = (x, y) => x && y && x !== y && (x + "s" === y || y + "s" === x);
+        if (k < w.length && group.some((g) => sib(String(w[k]).toLowerCase(), String(wordsOf(g)[k] ?? "").toLowerCase()))) { out.set(sv, { section: sv, finish: "" }); continue; }
+        // a finish word every sibling shares is still a finish ("Tritanium
+        // Prismatic White" / "... Gold" share "Prismatic"); a set word that
+        // happens to be a colour is not ("1991 Gold Leaf Prospects ...")
+        while (k > 1 && isRung(w[k - 1])) k--;
+        section = w.slice(0, Math.max(1, k)).join(" ");
+      } else {
+        const nums = numbersOf(sv).map(String);
+        if (/variations?$/i.test(w[w.length - 1]) && nums.length && baseNums.size && nums.every((n) => baseNums.has(n))) { out.set(sv, { section: "Base", finish: sv }); continue; }
+        // "Tritanium Red Flood" beside "Tritanium Prismatic ..." names its set in
+        // one word; with no such sibling two set words are needed ("Black Gold"
+        // is an insert set, not a Black section)
+        const named = (byFirst.get(w[0].toLowerCase()) ?? []).length > 1;
+        const firstRung = w.findIndex((x, i) => i >= (named ? 1 : 2) && isRung(x));
+        // "Next Day Autographs" alone is the set's name, not an Autographs finish of "Next Day"
+        const tail = firstRung > 0 ? w.slice(firstRung) : [];
+        section = firstRung > 0 && !tail.every((x) => /^(auto|autos|autograph|autographs|autographed)$/i.test(x)) && (named || tail.every(isRung)) ? w.slice(0, firstRung).join(" ") : sv;
+      }
+    }
+    out.set(sv, split(sv, section));
+  }
+  return out;
+}
+
 function sectionSplit(setValue, sections) {
-  // sections: the distinct leading words shared across many Set values (e.g. "Base", "Chrome Prospects")
-  for (const sec of sections) if (setValue === sec) return { section: sec, finish: "" };
-  for (const sec of sections) if (setValue.startsWith(sec + " ")) return { section: sec, finish: setValue.slice(sec.length + 1).trim() };
+  // sections: Set value -> { section, finish } (sectionsOf)
+  const hit = sections instanceof Map ? sections.get(setValue) : null;
+  if (hit) return hit;
   return { section: setValue, finish: "" };
 }
 
@@ -365,7 +465,7 @@ function convertXlsx(rows2d, product) {
   const x = parseXlsxRows(rows2d);
   if (!x) return null;
   const setValues = [...x.bySet.keys()];
-  const sections = [...new Set(setValues.map((sv) => { const w1 = sv.split(" ")[0]; return /^base$/i.test(w1) ? "Base" : sv.split(" ").slice(0, 2).join(" "); }))];
+  const sections = sectionsOf(setValues, (sv) => (x.bySet.get(sv) ?? []).map((c) => c.num));
   // (section, num) -> { player, category, finishes: [{ name, note, printRun }] }
   const byCard = new Map();
   for (const [sv, cards] of x.bySet) {
@@ -392,7 +492,12 @@ function convertXlsx(rows2d, product) {
     // Prospects ..." and 20 "Mega Chrome Prospects ...": the mega-box family
     // keeps its own name, the card type still comes off the rest)
     const extendsOf = (t) => nonEmpty.filter((o) => o !== t && o.startsWith(t + " ")).length;
-    let qualifier = nonEmpty.length > 1 ? (nonEmpty.filter((t) => extendsOf(t) * 2 >= nonEmpty.length - 1).sort((p, q) => extendsOf(q) - extendsOf(p))[0] ?? null) : null;
+    // a label ending in a rung word is a finish, not a type: "Prizms Gold"
+    // beside "Prizms Gold Vinyl" must not turn Gold Vinyl into "Vinyl" (2025
+    // Prizm Prospect Dual Autographs). Chrome Prospects / Paper Prospects /
+    // Chrome Base Silver Packs (2022 Update) stay types.
+    const isType = (t) => !RUNG_WORDS.has(t.split(" ").pop().toLowerCase());
+    let qualifier = nonEmpty.length > 1 ? (nonEmpty.filter((t) => isType(t) && extendsOf(t) * 2 >= nonEmpty.length - 1).sort((p, q) => extendsOf(q) - extendsOf(p))[0] ?? null) : null;
     // rule 2: longest common leading words, none of them a parallel word
     if (!qualifier && nonEmpty.length > 1) {
       const words = nonEmpty.map((n) => n.split(" "));
@@ -408,6 +513,13 @@ function convertXlsx(rows2d, product) {
       if (qualifier) name = name === qualifier ? "" : name.startsWith(qualifier + " ") ? name.slice(qualifier.length + 1).replace(/^[-\u2013\u2014:]\s*/, "") : name;
       let isAuto = card.sectionAuto || (qualifier ? /\b(auto|autograph|signature)/i.test(qualifier) : false);
       if (AUTO_RX.test(name)) { isAuto = true; name = name.replace(AUTO_RX, "").trim(); }
+      // a finish that is only the auto word ("2023 Greatest Hits Autographs"
+      // under "2023 Greatest Hits") marks the row auto and names no parallel
+      if (/^(auto|autos|autograph|autographs)$/i.test(name)) { isAuto = true; name = ""; }
+      // Leaf writes the plain/auto marker INTO the finish ("Base Laser Black"
+      // beside "Auto Laser Black"): "Base" leading a finish is that marker,
+      // never a parallel word, and the parallel is what follows it.
+      if (/^base\s+\S/i.test(name)) name = name.replace(/^base\s+/i, "").trim();
       if (/autograph/i.test(name) && !isAuto) isAuto = true;
       if (!name) name = card.category === "base" ? "Base" : "";
       if (name) pars.add(name);
@@ -416,7 +528,7 @@ function convertXlsx(rows2d, product) {
     if (card.category === "base") baseEmitted = true;
   }
   if (!rowsOut.length) return null;
-  return { rows: rowsOut, rejected: [], stats: { sections: sections.length, laddersFound: 0, ladderRows: 0, refusedSubsets: 0, pars: pars.size, nums: nums.size, baseEmitted } };
+  return { rows: rowsOut, rejected: [], stats: { sections: new Set([...sections.values()].map((v) => v.section)).size, laddersFound: 0, ladderRows: 0, refusedSubsets: 0, pars: pars.size, nums: nums.size, baseEmitted } };
 }
 
 function main() {
@@ -448,6 +560,6 @@ function main() {
   console.log(`\n[clc-convert] ${REPORT ? "would write" : "written"}=${f(written)} (xlsx ${f(viaXlsx)}, html ${f(viaHtml)})  rows=${f(rows)}  ladderRows=${f(ladderRowsTotal)}  refused-or-empty=${f(refused)}  no page cached=${f(noPage)}  rung candidates rejected=${f(rejectedTotal)}`);
 }
 
-module.exports = { clean, splitRungs, ladderFamily, applyFamily, parseLadderText, parseLadders, parseHtml, convertHtml, parseXlsxRows, readXlsxRows, parseXlsx, convertXlsx, productMeta, categoryOf };
+module.exports = { clean, splitRungs, ladderFamily, applyFamily, parseLadderText, parseLadders, parseHtml, convertHtml, parseXlsxRows, readXlsxRows, parseXlsx, convertXlsx, sectionsOf, sectionSplit, productMeta, categoryOf };
 
 if (require.main === module) main();
