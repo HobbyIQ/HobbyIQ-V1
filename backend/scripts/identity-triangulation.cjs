@@ -41,34 +41,37 @@ let seed = SEED; const rnd = () => { seed = (seed * 1103515245 + 12345) & 0x7fff
 async function main() {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) { console.error("FATAL: COSMOS_CONNECTION_STRING not set"); process.exit(1); }
-  const db = new CosmosClient(conn).database("hobbyiq");
+  // sold_comps sits at its 10k RU floor while the spine fleets run; every read
+  // here retries on 429 instead of taking the whole measurement down.
+  const db = new CosmosClient({ connectionString: conn, connectionPolicy: { retryOptions: { maxRetryAttemptsOnThrottledRequests: 30, maxWaitTimeInSeconds: 120 } } }).database("hobbyiq");
+  const retry = async (fn, tries = 8) => { let wait = 500; for (let a = 0; ; a++) { try { return await fn(); } catch (e) { const msg = String(e?.message ?? e); if (!/request rate|429|ETIMEDOUT|ECONNRESET|503/i.test(msg) || a >= tries) throw e; await new Promise((r) => setTimeout(r, wait)); wait = Math.min(wait * 2, 15000); } } };
   const cat = db.container("card_catalog"), pool = db.container("sold_comps");
 
   // candidate checklist rows: a spread of products, then pick SAMPLE with sales
-  const { resources: rows } = await cat.items.query({
+  const { resources: rows } = await retry(() => cat.items.query({
     query: `SELECT TOP 4000 c.id, c.year, c.setKey, c.setName, c.cardNumber, c.playerName, c.parallel, c.isAuto, c.printRun FROM c WHERE c.sport = @sp AND c.year >= @y AND NOT IS_DEFINED(c.gradeTier) AND ${CHECKLIST_SQL} AND IS_DEFINED(c.playerName)`,
     parameters: [{ name: "@sp", value: SPORT }, { name: "@y", value: YEAR_MIN }],
-  }, { maxItemCount: 1000 }).fetchAll();
+  }, { maxItemCount: 1000 }).fetchAll());
   const shuffled = rows.map((r) => [rnd(), r]).sort((a, b) => a[0] - b[0]).map(([, r]) => r);
 
   const results = []; let tried = 0;
   for (const card of shuffled) {
     if (results.length >= SAMPLE) break;
     tried++;
-    const { resources: sales } = await pool.items.query({ query: "SELECT TOP 1 c.id, c.title, c.playerName, c.cardYear, c.setName, c.cardNumber, c.parallel, c.isAuto, c.sport FROM c WHERE c.hobbyiqCardId = @s", parameters: [{ name: "@s", value: card.id }] }).fetchAll();
+    const { resources: sales } = await retry(() => pool.items.query({ query: "SELECT TOP 1 c.id, c.title, c.playerName, c.cardYear, c.setName, c.cardNumber, c.parallel, c.isAuto, c.sport FROM c WHERE c.hobbyiqCardId = @s", parameters: [{ name: "@s", value: card.id }] }).fetchAll());
     if (!sales.length) continue;
     const sale = sales[0];
     const r = { id: card.id, title: String(sale.title ?? "").slice(0, 80) };
     try {
-      const a = await canonicalize({ sport: SPORT, year: Number(sale.cardYear ?? card.year), setName: String(sale.setName ?? card.setName ?? card.setKey), cardNumber: String(sale.cardNumber ?? card.cardNumber), parallel: sale.parallel ?? null, isAuto: Boolean(sale.isAuto ?? card.isAuto), player: sale.playerName ?? card.playerName, source: "harness" });
+      const a = await retry(() => canonicalize({ sport: SPORT, year: Number(sale.cardYear ?? card.year), setName: String(sale.setName ?? card.setName ?? card.setKey), cardNumber: String(sale.cardNumber ?? card.cardNumber), parallel: sale.parallel ?? null, isAuto: Boolean(sale.isAuto ?? card.isAuto), player: sale.playerName ?? card.playerName, source: "harness" }));
       r.sale = a.slug; r.saleBy = a.matchedBy;
     } catch (e) { r.sale = "ERR " + String(e.message).slice(0, 40); }
     try {
-      const h = await canonicalize({ sport: SPORT, year: card.year, setName: String(card.setName ?? card.setKey), cardNumber: String(card.cardNumber), parallel: card.parallel && card.parallel !== "Base" ? card.parallel : null, isAuto: Boolean(card.isAuto), printRun: card.printRun ?? null, player: card.playerName, source: "harness" });
+      const h = await retry(() => canonicalize({ sport: SPORT, year: card.year, setName: String(card.setName ?? card.setKey), cardNumber: String(card.cardNumber), parallel: card.parallel && card.parallel !== "Base" ? card.parallel : null, isAuto: Boolean(card.isAuto), printRun: card.printRun ?? null, player: card.playerName, source: "harness" }));
       r.holding = h.slug; r.holdingBy = h.matchedBy;
     } catch (e) { r.holding = "ERR " + String(e.message).slice(0, 40); }
     try {
-      const s = await searchCatalog({ query: String(sale.title ?? `${card.year} ${card.setName ?? card.setKey} ${card.playerName} #${card.cardNumber} ${card.parallel ?? ""}`), limit: 5 });
+      const s = await retry(() => searchCatalog({ query: String(sale.title ?? `${card.year} ${card.setName ?? card.setKey} ${card.playerName} #${card.cardNumber} ${card.parallel ?? ""}`), limit: 5 }));
       const top = s.hits?.[0];
       r.search = top ? String(top.id ?? top.cardId ?? top.slug ?? "") : "(no hit)";
     } catch (e) { r.search = "ERR " + String(e.message).slice(0, 40); }
