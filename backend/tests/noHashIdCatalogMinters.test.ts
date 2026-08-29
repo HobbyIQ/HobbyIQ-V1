@@ -10,8 +10,8 @@ const FILES = [
   "src/services/portfolioiq/ebayAutoHolding.service.ts",
   "src/services/portfolioiq/ebayReviewQueue.service.ts",
 ];
-const WRITES_CATALOG = new RegExp('container\("card_catalog"\)');
-const HASH_ID = new RegExp('"(ebay-browse|user-verified):"\s*\+');
+const WRITES_CATALOG = /container\("card_catalog"\)/;
+const HASH_ID = /"(ebay-browse|user-verified):"\s*\+/;
 
 describe("no hash-id catalog minters", () => {
   for (const f of FILES) {
