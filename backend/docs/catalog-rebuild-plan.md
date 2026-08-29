@@ -349,10 +349,22 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   annotations / rename-setkey relaunch children pick this code up at their
   next relaunch (`--ref main`), so REPORT-ONLY validation runs were
   dispatched first: clean slot 0/4 = 33262432618, rename slot 3/4 =
-  33262433937. Next: PR 7 (approveVendorUnmatched — NEEDS DREW), PR 4
-  (8 allowlisted movers), PR 5 (delete class (a): workflows reference
-  catalog-sales-synth.yml, tcdbBatchFill in catalog-gap-digest.yml, and 6
-  backfill-runner whitelist entries — remove those with the files).
+  33262433937. **PR 5 ☑ #1436**: 26 dead writers deleted (−6,162 lines) plus
+  the `catalog-sales-synth` workflow; runner whitelist 105 → 99 live scripts,
+  `min_sales` input gone; writer census 112 → 87, hand-rolled minters 54 → 29.
+  Held: the tiffany/product-line synthetic creators (ruling), the two
+  `*-product-structure` importers (D3), and 13 transitively-dead sweep
+  orchestrators / shell wrappers that spawn deleted files
+  (`baseballAlmanacSweep`, `baseballCardPediaSweep`, `beckettFullSweep`,
+  `checklistCenterSweep`, `cardsight-bulk/run-all-*`, `run-*-bulk-build.sh`,
+  `run-*-tree-*.sh`, `run-pool-resume-after-crash.sh`) — follow-up delete;
+  the Beckett/checklistcenter sweeps carry product-URL enumeration D3 may
+  want first. The other guard (`everyWriteJobReconciles`) had ONE pre-existing
+  red — `conform-holdings-to-catalog` wrote holdings without reconciling —
+  #1437 wires reportWrites (#1438 fixes the require order #1437 put above the
+  const it used; the smoke's FIRST line is the gate, not its exit code).
+  Next: PR 4 (8 allowlisted movers — building), PR 7 (approveVendorUnmatched —
+  NEEDS DREW), the orchestrator follow-up.
   Remaining, smallest first: PR 1 fix the guard (import-match, not text-match;
   extend WRITES to patch/replace/delete; pair TOUCHES+WRITES to one container
   var); PR 8 `checklistDiff` onto deriveCatalogEntry/upsertCatalogEntry; PR 2
@@ -493,7 +505,9 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   want the +7d read as the holding headline instead, say so — it is a
   one-line revert in portfolioStore, but then the tile and the card page must
   change too (one number, one computation).
-- **Cross-setkey rung ("same year+number+parallel, ANY setKey").** It
+- **Cross-setkey rung ("same year+number+parallel, ANY setKey")** — prices
+  **9 of the 92 holdings today** (Verlander 2005 BDP129 at $64 vs $259 cost;
+  the Marconi gold at $1,109 vs $187; Theo Gillen CPA-TG Blue at $697 …). It
   rescued fragmented ingest but it can cross to a different product's card
   with the same number in the same year. Ruling: keep it only within a
   product FAMILY (bowman ↔ bowman-chrome per the ladder) and require the
