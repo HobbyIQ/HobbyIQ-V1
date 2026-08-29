@@ -28,6 +28,36 @@ const PUSHABLE_SEVERITIES: ReadonlySet<CascadeEvent["severity"]> = new Set([
 export interface CascadeNotifyResult {
   sent: number;
   failed: number;
+  /**
+   * D13 (2026-08-29): opted-in owners found across the pushable events —
+   * the population a push was owed to. `sent` alone cannot distinguish
+   * "nobody to notify" from "provider missing, every send no-op'd".
+   */
+  optedInUsers: number;
+}
+
+/**
+ * D13 (2026-08-29) — alert gates prove delivery. The nightly cascade
+ * detect ran for six weeks with `pushSent: 0` and exit 0: the workflow
+ * never passed the APNs env, so the provider was null and every send
+ * silently no-op'd. This is the ONE decision the script makes about its
+ * own exit code, kept pure so a test can pin the truth table:
+ *
+ *   newEvents > 0 AND optedInUsers > 0 AND provider missing → 1 (red)
+ *   anything else                                            → 0
+ *
+ * A zero with nothing to send, or with a configured provider, is a
+ * legitimate zero. A zero because the sender does not exist is not.
+ */
+export function cascadePushExitCode(input: {
+  newEvents: number;
+  optedInUsers: number;
+  providerConfigured: boolean;
+}): 0 | 1 {
+  if (input.newEvents > 0 && input.optedInUsers > 0 && !input.providerConfigured) {
+    return 1;
+  }
+  return 0;
 }
 
 /**
@@ -44,6 +74,7 @@ export async function sendCascadeAlertsForNewEvents(
 ): Promise<CascadeNotifyResult> {
   let sent = 0;
   let failed = 0;
+  let optedInUsers = 0;
 
   for (const ev of events) {
     if (!PUSHABLE_SEVERITIES.has(ev.severity)) {
@@ -61,6 +92,7 @@ export async function sendCascadeAlertsForNewEvents(
     }
 
     if (owners.length === 0) continue;
+    optedInUsers += owners.length;
 
     for (const owner of owners) {
       try {
@@ -84,7 +116,7 @@ export async function sendCascadeAlertsForNewEvents(
     }
   }
 
-  return { sent, failed };
+  return { sent, failed, optedInUsers };
 }
 
 /** Exported for direct test coverage of the severity policy. */

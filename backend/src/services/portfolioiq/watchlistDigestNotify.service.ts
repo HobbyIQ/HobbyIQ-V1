@@ -10,7 +10,7 @@
 import { listUsersWithWatchlistOptIn } from "./portfolioStore.service.js";
 import { getWatchlistEntries } from "../dailyiq/watchlistStore.service.js";
 import { readPlayerTrend } from "./playerTrendStore.service.js";
-import { sendWatchlistDigestNotification } from "../notification.service.js";
+import { sendWatchlistDigestNotification, isPushProviderConfigured } from "../notification.service.js";
 import {
   computeWatchlistDigest,
   type WatchlistDigestInputRow,
@@ -22,6 +22,8 @@ export interface WatchlistDigestNotifyResult {
   usersWithMovers: number;
   sent: number;
   failed: number;
+  /** D13 (2026-08-29): false → every send above no-op'd; the script goes red on a scheduled run. */
+  pushProviderConfigured: boolean;
 }
 
 /**
@@ -42,7 +44,7 @@ export async function sendWatchlistDigestsForOptedInUsers(): Promise<WatchlistDi
     console.error(
       `[watchlistDigestNotify] listUsersWithWatchlistOptIn failed: ${err?.message ?? err}`,
     );
-    return { usersScanned: 0, usersWithMovers: 0, sent: 0, failed: 0 };
+    return { usersScanned: 0, usersWithMovers: 0, sent: 0, failed: 0, pushProviderConfigured: isPushProviderConfigured() };
   }
 
   for (const user of users) {
@@ -73,7 +75,7 @@ export async function sendWatchlistDigestsForOptedInUsers(): Promise<WatchlistDi
     }
   }
 
-  return { usersScanned, usersWithMovers, sent, failed };
+  return { usersScanned, usersWithMovers, sent, failed, pushProviderConfigured: isPushProviderConfigured() };
 }
 
 /**

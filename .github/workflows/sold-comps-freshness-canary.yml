@@ -10,6 +10,22 @@ name: Sold Comps Freshness Canary
 # tolerates one full inter-cron window plus slop; anything stale beyond
 # that means either the nightly TCA cron didn't run, ran silent, or
 # Cosmos writes are failing.
+#
+# D13 (2026-08-29) — the row-count axis. Staleness alone cannot tell the
+# firehose from the webhook trickle: while the nightly firehose is dead
+# the 30-minute webhook keeps observedAt fresh, so the 08-03 outage shape
+# read "OK" here. MIN_ROWS_24H fails when a source's trailing-24h row
+# count is below its floor and always prints the count.
+#
+# Measured 2026-08-29 (read-only GROUP BY source, day — UTC calendar
+# days 08-22..08-28):
+#   tca-ebay   100190 / 114513 / 108922 / 100966 /  9340 / 11911 /  9280   min  9280
+#   cardhedge  197620 /  36640 /  58927 /  96621 / 101911 / 58272 / 32422   min 32422
+# Floor = ~25% of the observed minimum day → tca-ebay=2300. The 08-26
+# step-down from ~100k/day to ~10k/day is itself the shape this axis
+# exists for: if the firehose is confirmed back, raise the floor toward
+# 25000 (25% of the firehose-era minimum). cardhedge stays off (runtime,
+# demand-driven; a quiet day is not an outage).
 
 on:
   schedule:
@@ -21,6 +37,11 @@ on:
         required: false
         type: string
         default: '25'
+      min_rows_24h:
+        description: 'Per-source 24h row floors, e.g. tca-ebay=2300,cardhedge=0 (0 = off). Default tca-ebay=2300.'
+        required: false
+        type: string
+        default: 'tca-ebay=2300'
 
 jobs:
   check-freshness:
@@ -64,4 +85,5 @@ jobs:
           COSMOS_CONNECTION_STRING="$COSMOS_CONNECTION_STRING" \
           COSMOS_DATABASE=hobbyiq \
           MAX_STALENESS_HOURS="${{ inputs.max_staleness_hours || '25' }}" \
+          MIN_ROWS_24H="${{ inputs.min_rows_24h || 'tca-ebay=2300' }}" \
           node scripts/checkSoldCompsFreshness.cjs
