@@ -109,13 +109,41 @@ const RUN_NOTE = /(?:#'?d?\s*(?:to|\/)\s*|numbered\s+to\s+|:\s*)([\d,]+)\s*(?:co
 const UMBRELLA = /(parallels|factory set|retail|club set)$/i;
 
 /** Everything the Parallels section names, deduped by slug, run kept when found. */
+// CF-THE-NAME-IS-NOT-THE-FOOTNOTE (Drew, 2026-08-29 "clean the names"). A
+// heading id like "Refractor_-_Est._print_run_~4,000_to_6,000" is a rung name
+// with the page's footnote glued on. The name is the text before the
+// footnote; the footnote is kept verbatim as the rung's note (7th CSV column)
+// and, when it is nothing but a print-run statement, as the print run. This
+// scraper alone had minted 53,181 such rows; the repair pass
+// (clean-parallel-annotations) moves the rows already written.
+function splitAnnotation(rawName) {
+  let name = String(rawName), note = null;
+  const est = name.match(/^(.*?)\s*[-\u2013\u2014]?\s*Est\.?\s*print run\b(.*)$/i);
+  if (est) { note = ("Est. print run" + est[2]).trim(); name = est[1]; }
+  const par = name.match(/^(.*?)\s*\(([^()]*)\)\s*$/);
+  if (par) { note = [par[2].trim(), note].filter(Boolean).join("; ") || null; name = par[1]; }
+  name = name.replace(/[-\u2013\u2014:]\s*$/, "").trim();
+  let run = null;
+  if (note) {
+    const m = note.match(/^(?:#\s*)?\/?\s*(\d[\d,]{0,6})\s*(?:copies|cards|made)?\.?$/i)
+      || note.match(/^(?:serial\s+)?numbered to\s*(\d[\d,]{0,6})\.?$/i)
+      || note.match(/^(?:series\s+\w+:\s*)?(\d[\d,]{0,6})\s*copies\.?$/i)
+      || note.match(/^\d+\s*\/\s*(\d[\d,]{0,6})$/);
+    if (m) run = Number(m[1].replace(/,/g, "")) || null;
+  }
+  return { name, note, run };
+}
+
 function parseLadder(parallelsBody) {
   const rungs = new Map();
-  const put = (name, run) => {
+  const put = (rawName, run, rawNote) => {
+    const split = splitAnnotation(rawName);
+    const name = split.name, note = rawNote ?? split.note ?? null;
+    run = run ?? split.run ?? null;
     const k = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
     if (!k) return;
-    if (!rungs.has(k)) rungs.set(k, { name, printRun: run ?? null });
-    else if (run && !rungs.get(k).printRun) rungs.get(k).printRun = run;
+    if (!rungs.has(k)) rungs.set(k, { name, printRun: run ?? null, note });
+    else { const r = rungs.get(k); if (run && !r.printRun) r.printRun = run; if (note && !r.note) r.note = note; }
   };
 
   // named-rung subsections; umbrella headings organize, they do not name a card
@@ -143,7 +171,7 @@ function parseLadder(parallelsBody) {
     // an un-noted bare <li> in this section is usually prose fragment; require
     // either a note or a short multi-wordless name that reads like a rung
     if (!note && name.split(" ").length > 4) continue;
-    put(name, n && n >= 1 && n <= 100000 ? n : null);
+    put(name, n && n >= 1 && n <= 100000 ? n : null, note ? note.replace(/^\(|\)$/g, "").trim() || null : null);
   }
   return [...rungs.values()];
 }
@@ -209,11 +237,11 @@ async function main() {
     if (!cards.length) { noCards++; console.log(`  ${title}: 0 base cards — layout not understood, SKIPPED (not emitted)`); continue; }
     if (!ladder.length) { noLadder++; console.log(`  ${title}: base ok (${cards.length}) but 0 rungs — nothing new to add`); continue; }
 
-    const lines = ["category,cardNumber,parallel,isAuto,printRun,player"];
+    const lines = ["category,cardNumber,parallel,isAuto,printRun,player,parallelNote"];
     for (const c of cards) {
       lines.push(["base", csvEsc(c.num), "Base", "false", "", csvEsc(c.player)].join(","));
       for (const r of ladder) {
-        lines.push(["base", csvEsc(c.num), csvEsc(r.name), "false", r.printRun ?? "", csvEsc(c.player)].join(","));
+        lines.push(["base", csvEsc(c.num), csvEsc(r.name), "false", r.printRun ?? "", csvEsc(c.player), csvEsc(r.note ?? "")].join(","));
       }
     }
     const inserts = parseInserts(html);
@@ -224,7 +252,7 @@ async function main() {
         lines.push([csvEsc(cat), csvEsc(c.num), "", "false", "", csvEsc(c.player)].join(","));
         insertRows++;
         for (const r of ins.ladder) {
-          lines.push([csvEsc(cat), csvEsc(c.num), csvEsc(r.name), "false", r.printRun ?? "", csvEsc(c.player)].join(","));
+          lines.push([csvEsc(cat), csvEsc(c.num), csvEsc(r.name), "false", r.printRun ?? "", csvEsc(c.player), csvEsc(r.note ?? "")].join(","));
           insertRows++;
         }
       }

@@ -81,7 +81,8 @@ function clean(parallel) {
   if (note) {
     const m = note.match(/^(?:#\s*)?\/?\s*(\d[\d,]{0,6})\s*(?:copies|cards|made)?\.?$/i)
       || note.match(/^(?:serial\s+)?numbered to\s*(\d[\d,]{0,6})\.?$/i)
-      || note.match(/^(?:series\s+\w+:\s*)?(\d[\d,]{0,6})\s*copies\.?$/i);
+      || note.match(/^(?:series\s+\w+:\s*)?(\d[\d,]{0,6})\s*copies\.?$/i)
+      || note.match(/^\d+\s*\/\s*(\d[\d,]{0,6})$/);
     if (m) printRun = Number(m[1].replace(/,/g, "")) || null;
   }
   return { name, note, printRun, shape };
