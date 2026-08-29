@@ -37,6 +37,8 @@ const CONCURRENCY = Math.max(1, Number(process.env.CONCURRENCY || 16));
 const RUN_MS = Number(process.env.RUN_MINUTES || 140) * 60000;
 const LIMIT = Number(process.env.LIMIT || 0);
 const MAX_CANDIDATES = Number(process.env.MAX_CANDIDATES || 40);
+const PRINT_EXAMPLES = Number(process.env.PRINT_EXAMPLES || 12);
+const exParsed = [], exNoMatch = [], exAmbig = [];
 const STARTED = Date.now();
 const f = (n) => Number(n).toLocaleString();
 const shardOf = (id) => parseInt(crypto.createHash("sha1").update(String(id)).digest("hex").slice(0, 8), 16) % SLOTS;
@@ -118,9 +120,10 @@ async function main() {
           if (cands2.length > MAX_CANDIDATES) { exploded++; return; }
           const tt = new Set(tokens(title));
           const hits = [...new Map(cands2.filter((c) => playerInTitle(c.player, tt)).map((c) => [fold(c.player), c])).values()];
-          if (hits.length === 0) { noMatch++; return; }
-          if (hits.length > 1) { ambiguous++; return; }
+          if (hits.length === 0) { noMatch++; if (exNoMatch.length < PRINT_EXAMPLES) exNoMatch.push(`${title.slice(0, 70)}  |  slug ${d.hobbyiqCardId}  |  candidates: ${cands2.slice(0, 4).map((c) => c.player).join(", ")}`); return; }
+          if (hits.length > 1) { ambiguous++; if (exAmbig.length < PRINT_EXAMPLES) exAmbig.push(`${title.slice(0, 70)}  |  ${hits.map((c) => c.player).join(" / ")}`); return; }
           const hit = hits[0];
+          if (exParsed.length < PRINT_EXAMPLES) exParsed.push(`${title.slice(0, 70)}  ->  ${hit.player}`);
           if (!APPLY) { parsed++; return; }
           await retry(() => stg.item(d.id, d.hobbyiqCardId).patch([
             { op: "set", path: "/clean", value: { playerName: hit.player, cardYear: year, setName: hit.setName ?? setKey, cardNumber, parallel: parallelSlug && parallelSlug !== "base" ? parallelSlug.replace(/-/g, " ") : null, sport, slug: d.hobbyiqCardId } },
@@ -156,6 +159,9 @@ async function main() {
   console.log(`  bad / unknown slug         ${f(badSlug)}`);
   console.log(`  no title                   ${f(noTitle)}`);
   console.log(`  failed                     ${f(failed)}`);
+  if (exParsed.length) { console.log("\n  parsed, examples:"); for (const e of exParsed) console.log("    " + e); }
+  if (exNoMatch.length) { console.log("\n  candidates but none in title, examples:"); for (const e of exNoMatch) console.log("    " + e); }
+  if (exAmbig.length) { console.log("\n  ambiguous, examples:"); for (const e of exAmbig) console.log("    " + e); }
   if (APPLY) reportWrites({ job: "parse-player-from-checklist", intended: scanned, written: parsed, skipped: noChecklist + noMatch + ambiguous + exploded + badSlug + noTitle + notReached, failed });
 }
 
