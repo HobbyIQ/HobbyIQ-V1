@@ -15,6 +15,7 @@
 // scripts.
 
 import { createHash } from "crypto";
+import { parallelTheTitleAllows } from "./titleOutranksVendorTag.js";
 import { CosmosClient, type Container } from "@azure/cosmos";
 import {
   parseListingIdentity,
@@ -502,7 +503,7 @@ export async function persistVendorSalesToPool(
   rows: VendorSaleRow[],
   identity: VendorPersistIdentityHint = {},
 ): Promise<VendorPersistResult> {
-  const result: VendorPersistResult = { inserted: 0, deduped: 0, skipped: 0, catalogUnmatched: 0, divertedToVerify: 0 };
+  const result: VendorPersistResult = { inserted: 0, deduped: 0, skipped: 0, catalogUnmatched: 0, vendorParallelOverruled: 0, divertedToVerify: 0 };
   if (!isPersistVendorLookupsEnabled()) return result;
   if (!Array.isArray(rows) || rows.length === 0) return result;
   const container = await getSoldCompsContainer();
@@ -764,7 +765,14 @@ export async function persistVendorSalesToPool(
     if (!cardNumber) { result.skipped++; continue; }
     // Rebind parsed so downstream code uses the hint values.
     parsed.cardNumber = cardNumber;
-    if (identity.parallel !== undefined && identity.parallel !== null) parsed.parallel = identity.parallel;
+    // CF-THE-TITLE-OUTRANKS-THE-VENDOR-TAG (Drew, 2026-08-29). The vendor's
+    // product tag used to overwrite the title parse here; it may not. See
+    // titleOutranksVendorTag.ts for the rule and the numbers.
+    {
+      const decision = parallelTheTitleAllows(parsed.parallel, identity.parallel);
+      parsed.parallel = decision.parallel;
+      if (decision.vendorTagOverruled) result.vendorParallelOverruled = (result.vendorParallelOverruled ?? 0) + 1;
+    }
     if (identity.isAuto !== undefined && identity.isAuto !== null) parsed.isAuto = identity.isAuto;
     if (identity.printRun !== undefined && identity.printRun !== null) parsed.printRun = identity.printRun;
     // CF-INGEST-TIME-CANONICALIZE (Drew, 2026-08-04). Normalize the
