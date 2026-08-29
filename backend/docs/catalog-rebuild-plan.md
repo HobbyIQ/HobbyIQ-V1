@@ -296,8 +296,25 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   guard becomes per-(cardNumber, parallel, printRun) coverage — a product is
   retired only when the replacement covers ≥ 95% of its old keys, and the
   uncovered keys are listed; a read-only old-vs-new coverage measurement over
-  the 60 largest old-CLC products is running (numbers below when it lands).
-  The cancelled runs printed no budget marker, so nothing relaunched. Also seen in the same run: the bcp ladders re-ingest now
+  the 60 largest old-CLC products landed 21:40Z: **the new source covers
+  126,390 of 551,845 old keys = 23%.** 2025 topps-chrome old 15,157 rows →
+  new 6,895 (20% — my earlier "Topps Chrome converts fine" counted OLD rows
+  under the `checklistcenter*` prefix); 2025 bowman-draft 8,591 → 3,658 (0%);
+  2026 donruss 13,778 → 2,431 (5%); 2025 panini-prizm 9,694 → 1,599 (6%);
+  2025 topps-finest 5,462 → 5,155 rows yet 0% keys; 2025 panini-select 9,892 →
+  10,015 rows yet 0% keys (old names carry glued subset prefixes — "set
+  concourse …", "prizms …", "auto crystal …", "paper …" — so exact keys
+  understate coverage; the raw row counts are the honest signal); 2024
+  leaf-metal, 2018 bowman, 2020 bowman → new has nothing. So the D3
+  re-ingest's 2,869,277 rows sit mostly in a few Leaf/Series products and the
+  flagship Topps/Bowman/Panini conversions are thin across the board — the
+  converter drops most of each product's ladders, not only Bowman's. D3b's
+  scope widened accordingly (Topps Chrome + Prizm pages in the diagnosis and
+  fixtures; `audit-source-coverage.cjs` as a runner probe with exact AND
+  prefix-normalized keys; the MODE=source guard becomes per-product coverage
+  ≥ 95%, kept products printed with their number). **The old-CLC retire stays
+  cancelled until a re-ingest passes that gate.** The cancelled runs printed
+  no budget marker, so nothing relaunched. Also seen in the same run: the bcp ladders re-ingest now
   skips 762,534 player-name-parallel rows (#1396 working as built).
   cached at c:/tmp/clc (ladders only, no card lists → bounded 547-page re-fetch);
   the old HTML ingester split ladders on commas (player names became rungs) and
@@ -678,8 +695,12 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   cardsight-sourced, no slug). Those twins are exactly the fold →
   conform chain's population. Re-audit (`audit-all-holdings`) after fold +
   conform. The fold → conform passes run again once fold-unnumbered-twins'
-  report-only run finishes (its pass 1 scans every numbered row at the RU
-  floor).
+  report-only run finishes — **it did (33264277457): WOULD FOLD 1,091
+  un-numbered twins (6,915 sales re-pointed, 120 graded children), 20
+  refusals where the row's `setKey` field disagrees with its own slug
+  (`bowman` vs `bowman-chrome`/`bowman-paper` — conform-card-profile's
+  population). APPLY dispatched 20:22Z (33273328022); conform-holdings
+  APPLY follows it.** Web picker fix #1466 deployed (SWA run 33273147531).
 - ◐ D9 **The eBay import → holdings pipeline** (Drew, 2026-08-29 17:20Z: "we
   need to fix the whole ebay import to holdings process, bc it seems broken").
   The Marconi purchase IS the fixture. Real listing title (`purchase.notes`):
