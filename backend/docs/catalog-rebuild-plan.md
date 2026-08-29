@@ -500,9 +500,49 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
     envelope, and that drops to null unless three fields agree), while
     `quickSaleValue/premiumValue/suggestedListPrice` and the buy/hold/sell zones
     are hardcoded multipliers (0.85 / 1.15 / 1.05 / 0.9). → **D12-a** (building,
-    `feat/d12a`) + **D12-b** (building, `feat/d12b`: the import resolves through
-    the catalog, round-trip ids must be existing hiq slugs, one identity, price
-    on commit).
+    `feat/d12a`) + **D12-b** (**delivered on branch `feat/d12b`, unmerged — 7
+    commits, tsc 0, the six import suites + the D9 eBay fixture green, a
+    mutation check per commit**). The import resolves through the catalog:
+    `importResolver.ts` point-reads a round-trip `hiq:` slug (an identity only
+    when the catalog holds it; a vendor id or a slug we do not hold is a HINT
+    on the envelope, `identityHint`, never persisted), otherwise resolves the
+    row's fields through holdingFieldNormalizer + the ONE derivation the eBay
+    import runs — `identityFromFields.ts`, lifted out of
+    `ebayAutoHolding.resolveImportIdentity` so both imports run one rule
+    (never an empty card number; number-by-player; the matcher asked with the
+    parallel + print run + player; the 0.9 bar) — with source `import`, which
+    never seeds. The print run is split out of the serial ("/50", "12/50") or
+    the parallel ("Gold Refractor /50"); the sport comes from a Sport /
+    Category column, the product, or a 4-sport probe (one confident answer
+    or `ambiguous`). A match BELOW the bar stays `unresolved` (no new bucket —
+    iOS keys its rendering on the five) with the suggestion on `resolution`;
+    committed anyway it is written with NO identity, `needsReview` + the
+    reason, the suggestion parked on `catalogMatchSlug` (the wire's
+    `proposedIdentity`) for accept-identity, which adopts AND prices it.
+    Commit writes ONE identity — `cardId = hobbyiqCardId =
+    catalogVerifiedSlug`, printRun, confidence / matchedBy, identityVerified
+    for exact / round-trip — after re-checking the slug at the persist site
+    (canonical AND still in the catalog: a row retired between preview and
+    commit is refused, not a 16th D10 orphan), then prices every holding it
+    added with an identity through `repriceOneHolding` → `autoPriceHolding`,
+    the add-card path with #1462's exact-pool gate inside: inline up to 5,
+    above that a `kind: "pricing"` import-job the client polls. No identity,
+    no price. The collision key is the resolved slug (+ grade / serial), and a
+    row with no slug is keyed by its title tuple — the old "no cardId → no
+    collision check possible" had let the entire unresolved population (every
+    arbitrary-sheet row, with the resolver stubbed) bypass dedup; two
+    identical rows in one file collide too. The export writes `hobbyiqCardId`
+    and the import treats it as the round-trip anchor. Two more defects found
+    on the way and fixed in their own commits: SheetJS's CSV reader turned a
+    Serial cell "/50" into 18264 (Excel's 1950-01-01) before any column
+    parser saw it (`raw: true`); the preview projected every user against
+    the free cap because it read `req.user.tier`, a field AuthUser never had
+    (it now reads effectivePlanFor + config/entitlements, the table commit
+    reads). Contract notes for iOS: envelope fields `resolution` /
+    `identityHint`, `pricing` on the commit result and `kind: "pricing"` job
+    docs are all additive; the `sport` column is import-only. Deploy: after
+    merge, dispatch "Daily 5AM ET Refresh & Deploy" (backend/src) and verify
+    the health sha.
   - *Pricing engines (group A):* `withDerivedSlug` MINTS an hiq slug from free
     text with no catalog read and OVERWRITES any existing slug, and
     `priceFromOurPool` prices off it; `addHolding` adopts a 0.72 fuzzy match as
