@@ -105,7 +105,7 @@ async function main() {
   console.log(`  RETIRED (sale-minted, unused) ${f(retired)}`);
   console.log(`  ...that a sale pointed at    ${f(keptHasSales)}   <- sale stamped unplaced; the rematch owns it`);
   console.log(`  failed                       ${f(failed)}`);
-  if (APPLY) reportWrites({ job: "retire-autoseed-window", intended: scanned, written: retired, skipped: keptHasSales + notReached, failed });
+  if (APPLY) reportWrites({ job: "retire-autoseed-window", intended: scanned, written: retired, skipped: notReached, failed });
 }
 
 if (require.main === module) {
