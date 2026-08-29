@@ -820,6 +820,26 @@ jobs:
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (repaired=${N:-0}) — done, no re-dispatch."
           fi
 
+      - name: Self-relaunch the parallel-from-title repair until the slot is clean
+        if: ${{ !cancelled() && inputs.script == 'fold-unnumbered-twins' && inputs.apply == true }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        working-directory: backend
+        run: |
+          set +e
+          N=$(grep -aoE "^  REPAIRED +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          echo "repaired=${N:-0}"
+          # CF-RELAUNCH-ONLY-ON-BUDGET (2026-08-29): relaunch iff the script stopped at its budget.
+          # The repair re-queries "parallel stamped, title silent" each run, so a relaunch
+          # resumes exactly where the rows still disagree -- nothing is re-patched.
+          if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
+            echo "::notice::budget hit (repaired=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} mode=${{ inputs.mode }} to continue"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=fold-unnumbered-twins -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}"
+          else
+            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (repaired=${N:-0}) — done, no re-dispatch."
+          fi
+
       - name: Self-relaunch the ruled setKey rename until the slot is clean
         if: ${{ !cancelled() && inputs.script == 'rename-setkey' && inputs.apply == true }}
         env:
