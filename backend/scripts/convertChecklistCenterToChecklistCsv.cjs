@@ -52,6 +52,8 @@ const decodeHtml = (s) => String(s).replace(/&#8211;|&ndash;/g, "-").replace(/&#
 const detag = (s) => decodeHtml(String(s).replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ").trim();
 const foldName = (s) => String(s ?? "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 const slugify = (s) => String(s ?? "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+const PARALLEL_WORDS = new Set(["refractor","refractors","xfractor","x-fractor","fractor","prizm","prizms","mojo","wave","shimmer","foil","foilboard","holo","chrome","sapphire","superfractor","printing","plate","plates","black","gold","silver","blue","red","green","orange","purple","pink","yellow","aqua","teal","magenta","fuchsia","bronze","platinum","rainbow","atomic","lava","pattern","laser","crackle","mini","base","parallel","variation","variations","sp","ssp","auto","autograph","autographs","relic","patch","jersey","insert","inserts","checklist","1/1","numbered","border","camo","tie-dye","disco","cracked","ice","optic","velocity","hyper","speckle","sparkle","glitter","neon","negative","sepia","vintage","stock","paper","canvas","gilded","glossy","matte"]);
+const isPersonName = (v) => { const t = foldName(v).split(" ").filter(Boolean); return t.length >= 2 && t.length <= 5 && !t.some((w) => PARALLEL_WORDS.has(w)) && !/^\d/.test(t[0]); };
 
 /** name / note / printRun -- the clean-parallel-annotations rule: a parenthetical
  *  anywhere and an "Est. print run" tail are footnotes, never part of the name;
@@ -149,7 +151,7 @@ function parseHtml(html, product) {
       while ((pm = pRx.exec(cm[1]))) for (const line of pm[1].split(/<br\s*\/?>/i)) { const c = parseCardLine(line); if (c) cards.push(c); }
     }
     if (!cards.length) continue;
-    const playerNames = new Set(cards.map((c) => foldName(c.player)));
+    const playerNames = new Set(cards.map((c) => c.player).filter(isPersonName).map(foldName));
     const ladders = parseLadders(sub.body, playerNames, rejected);
     subsets.push({ title: sub.title, cards, ladders });
   }
@@ -253,7 +255,7 @@ function main() {
             const { section, finish } = sectionSplit(sv, sections);
             const sec = bySection.get(section) ?? { title: section, cards: new Map(), ladders: [{ label: "xlsx", rungs: [] }], category: categoryOf(section) };
             for (const c of cards) sec.cards.set(c.num, { num: c.num, player: c.player });
-            if (finish) { const { name, note, printRun } = clean(finish); const rejected = []; if (acceptRung(name, new Set([...sec.cards.values()].map((c) => foldName(c.player))), rejected, "xlsx")) { if (!sec.ladders[0].rungs.some((r) => r.name === name)) sec.ladders[0].rungs.push({ name, note, printRun: printRun ?? cards[0]?.printRun ?? null }); } }
+            if (finish) { const { name, note, printRun } = clean(finish); const rejected = []; if (acceptRung(name, new Set([...sec.cards.values()].map((c) => c.player).filter(isPersonName).map(foldName)), rejected, "xlsx")) { if (!sec.ladders[0].rungs.some((r) => r.name === name)) sec.ladders[0].rungs.push({ name, note, printRun: printRun ?? cards[0]?.printRun ?? null }); } }
             bySection.set(section, sec);
           }
           const subsets = [...bySection.values()].map((s) => ({ title: s.title, category: s.category, cards: [...s.cards.values()], ladders: s.ladders }));

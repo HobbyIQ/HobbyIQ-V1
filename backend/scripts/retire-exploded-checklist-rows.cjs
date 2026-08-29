@@ -54,6 +54,8 @@ const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === 
 //   have landed so the pointing sales re-resolve onto rows that exist.
 const MODE = ["misparsed", "tail", "playerrung", "source"].includes(String(process.env.MODE || "").toLowerCase()) ? String(process.env.MODE).toLowerCase() : "exploded";
 const foldName = (v) => String(v ?? "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+const PARALLEL_WORDS = new Set(["refractor","refractors","xfractor","x-fractor","fractor","prizm","prizms","mojo","wave","shimmer","foil","foilboard","holo","chrome","sapphire","superfractor","printing","plate","plates","black","gold","silver","blue","red","green","orange","purple","pink","yellow","aqua","teal","magenta","fuchsia","bronze","platinum","rainbow","atomic","lava","pattern","laser","crackle","mini","base","parallel","variation","variations","sp","ssp","auto","autograph","autographs","relic","patch","jersey","insert","inserts","checklist","1/1","numbered","border","camo","tie-dye","disco","cracked","ice","optic","velocity","hyper","speckle","sparkle","glitter","neon","negative","sepia","vintage","stock","paper","canvas","gilded","glossy","matte"]);
+const isPersonName = (v) => { const t = foldName(v).split(" ").filter(Boolean); return t.length >= 2 && t.length <= 5 && !t.some((w) => PARALLEL_WORDS.has(w)) && !/^\d/.test(t[0]); };
 const SOURCES = String(process.env.SOURCES || (MODE === "tail" ? "checklistinsider-2026-08-27,checklistcenter,bccp" : "baseballcardpedia")).split(",").map((s) => s.trim()).filter(Boolean);
 const PAR_MAX = Number(process.env.PAR_MAX || 150), NUM_MAX = Number(process.env.NUM_MAX || 2000), TAIL_MIN = Number(process.env.TAIL_MIN || 5);
 const CARD_LINE = /^\d+[a-z]?\s+[A-Za-z]/;
@@ -199,7 +201,7 @@ async function main() {
       const { resources: pars } = await retry(() => cat.items.query({ query: "SELECT DISTINCT c.parallel AS p FROM c WHERE c.sport = @sp AND c.year = @y AND c.setKey = @k AND c.source = @s AND NOT IS_DEFINED(c.gradeTier) AND IS_DEFINED(c.parallel)", parameters: params }, { maxItemCount: 5000 }).fetchAll());
       if (!pars.length) continue;
       const { resources: players } = await retry(() => cat.items.query({ query: "SELECT DISTINCT c.playerName AS n FROM c WHERE c.sport = @sp AND c.year = @y AND c.setKey = @k AND c.source = @s AND NOT IS_DEFINED(c.gradeTier) AND IS_DEFINED(c.playerName)", parameters: params }, { maxItemCount: 5000 }).fetchAll());
-      const names = new Set(players.map((r) => foldName(r.n)).filter(Boolean));
+      const names = new Set(players.map((r) => r.n).filter(isPersonName).map(foldName));
       const bad = new Set(pars.map((r) => String(r.p ?? "")).filter((par) => par && names.has(foldName(par))));
       if (!bad.size) continue;
       hitProducts++;
