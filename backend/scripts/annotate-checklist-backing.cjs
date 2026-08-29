@@ -257,7 +257,10 @@ async function main() {
             ];
             // The candidate sets, for the ruling. Never applied here.
             if (familyIn) ops.push({ op: "set", path: "/checklistFamilySetKeys", value: familyIn });
-            await retry(() => cat.item(d.id, d.id).patch(ops));
+            // CF-PATCH-BY-PARTITION (2026-08-29). 3,391 baseball rows have cardId !== id;
+            // patching with id as the key 404'd silently, they stayed unstamped, and the
+            // relaunch re-judged the same rows every 5 minutes.
+            await retry(() => cat.item(d.id, d.cardId ?? d.id).patch(ops));
             written++;
           } catch (e) {
             if (e.code === 404) return;   // moved by a concurrent pass; not a failure
