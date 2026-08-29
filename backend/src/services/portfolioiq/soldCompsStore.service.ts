@@ -1341,7 +1341,20 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
     // every incoming comp immediately "tracks to the catalog." Cached
     // in-process — the first comp for a slug this run does one Cosmos
     // read + (if missing) one upsert; subsequent comps are free.
-    if (doc.hobbyiqCardId && doc.cardYear && doc.sport) {
+    // CF-SALES-DO-NOT-MINT-CARDS (Drew, 2026-08-28: "want to make sure the
+    // card catalog is not writing from sales index"). This auto-seed is how
+    // 2.5M sales-derived catalog rows came to exist: a sale that matched
+    // nothing minted a row at its own parser slug, and that row then
+    // confirmed the sale. The checklist is the spine; a VENDOR sale that the
+    // catalog cannot place stays unplaced — catalogMatched=false, counted by
+    // catalog_resolve_not_found, re-resolved by the rematch when its
+    // checklist lands. It never becomes a card.
+    //
+    // USER sources still seed, by Drew's 2026-08-08 directive: a card the
+    // user physically owns is real coverage even before its checklist is
+    // acquired. That is the one place a sale is evidence of a card.
+    const USER_SEED_SOURCES = new Set(["ebay-user-purchase", "ebay-user-sale", "manual-user-entry", "user-verified"]);
+    if (doc.hobbyiqCardId && doc.cardYear && doc.sport && USER_SEED_SOURCES.has(String(input.source))) {
       void (async () => {
         try {
           const { ensureCatalogRow } = await import("../catalog/ensureCatalogRow.service.js");
