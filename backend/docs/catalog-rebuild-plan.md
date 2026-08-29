@@ -235,7 +235,11 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   rows; 2026 Bowman base 80,324 → 18,381; Leaf 12,866 auto rows marked. Known
   residue: the two-word section heuristic truncates insert category slugs
   ("insert:under-the", "insert:chrome-prospect") — informational, not identity.
-  Dry run #5 = 33259741463 (slots=1) → APPLY → MODE=source retire. Also seen in the same run: the bcp ladders re-ingest now
+  **Dry run #5 (33259741463): 510 products, 2,879,911 rows → 2,869,277 would
+  land, no converter refusals, one 1,395-row category (2023 Leaf Eclectic
+  [insert:leaf-metal], 154 rungs) caught by the ingest gate.** APPLY ×8
+  dispatched 15:20Z (33259974536 … 33259993471) → MODE=source retire of the old
+  `checklistcenter` / `checklistcenter-html` rows once every shard lands. Also seen in the same run: the bcp ladders re-ingest now
   skips 762,534 player-name-parallel rows (#1396 working as built).
   cached at c:/tmp/clc (ladders only, no card lists → bounded 547-page re-fetch);
   the old HTML ingester split ladders on commas (player names became rungs) and
@@ -258,7 +262,21 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   weightedMedianPrice → plainMedianPrice), so the curve entry must pin which
   fields each valueSource populates (`tests/gradeCurveEntryFieldPopulation.test.ts`);
   (5) adapter for the legacy shape; (6) retire the Cardsight seam; (7) delete
-  `gradedPriceProjection`. Next: PR 1 + PR 3 (independent).
+  `gradedPriceProjection`. **PR 1 ☑ #1419** (`fmvRung.ts`: closed FmvRungLabel
+  union, `rungLabel` written by unifiedPricing / canonicalFmv /
+  observedGradeCurve / priceFromOurPool; `PortfolioHolding.fmvRung` at every
+  fairMarketValue write site with nulls on legacy paths; the digest gate reads
+  fmvRung first — a cross-grade-fallback price no longer digests even with a
+  `unified:` basis note). **PR 3 ☑ #1418** (slugFromParsedQuery for /search and
+  /price; /price-by-id passes originalHiqSlug ?? a partition-scoped vendor-id
+  lookup). Findings from the build, each its own PR: (a) the `/price`
+  canonical-first template passes `parsed.brand` as setKey — "2017 Topps
+  Chrome" slugs to `:topps:`, a LIVE mis-identity; (b) raw holdings never take
+  the unified early exit (`computeUnifiedPrice` fills the top-level price only
+  when `opts.grade.company` is set, and portfolioStore passes `grade: null`);
+  (c) `pricingSource` has the staleness hazard fmvRung now guards against
+  (batch legacy writes never reset it). Next: PR 4 (one grade curve + the iOS
+  field-population contract).
 - ◐ D5 Phase 07 — the catalog writers. **Scoped 2026-08-29 (agent replicated the
   guard test's walk, read-only): 68 files match the guard, 5 are false positives
   (they write `sold_comps`), 2 of the 3 "canonical" passes are COMMENT matches —
@@ -278,7 +296,18 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   **PR 8 ☑ #1408**: `checklistDiff` (admin pasted-checklist add) builds through
   deriveCatalogEntry/upsertCatalogEntry with authoritativeSetKey; #1409 drops
   the three converted files from the guard's debt list. PR 1 (guard rewrite)
-  and D4 PR 1/PR 3 are building in worktrees; PR 2 (catalogRowOps) building too.
+  **PR 2 ☑ #1417**: `catalogRowOps.service.ts` — `moveCatalogRow` /
+  `retireCatalogRow` / `rebuildSearchFields` / `isGradedChildOf`; authority
+  decides collisions, vendorIds union, sales re-pointed before the delete,
+  15 tests (4 mutation-checked). **Hazard it found:** the census pattern
+  `STARTSWITH(c.id, id + ":") AND IS_DEFINED(c.gradeTier)` also matches the
+  NUMBERED sibling's graded children (`…:no-auto:num-50:psa-10` starts with
+  `…:no-auto:`) — every existing mover (including the clean-parallel-annotations
+  and rename-setkey fleets that ran today) deletes them. Recoverable: the
+  C-chain's materialize-graded-identities regenerates graded rows; PR 3 moves
+  the fleets onto isGradedChildOf. Also: src `buildSearchTokens` lacks the
+  searcher-view/ASCII-fold passes its CJS twin has (O'Neal, Agüero) — port
+  those ~25 lines.
   **PR 1 ☑ #1414**: the guard measures honestly (112 writers, 9 canonical, 41
   mutators now visible, 5 false positives gone, red-capable); it surfaced two
   more hand-rolled minters — `seedCardCatalog.ts` and
@@ -297,6 +326,35 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   PR 5 delete class (a) — HOLD `create-tiffany-cards-from-base` /
   `create-product-line-cards-from-base` (synthetic parallels; Drew ruling) and the
   two `*-product-structure` importers (D3 may consume).
+- ◐ D8 **The title outranks the vendor tag** (Drew, 2026-08-29 15:25Z, holding
+  `ca7a150b` — 2026 Bowman Chrome CPA-MG Marconi German Gold Refractor /50:
+  "Bases are tagged to this gold or the gold is tagged to bases"). Read-only
+  diagnosis: under the gold slug 38 of the 40 latest rows were CardHedge base
+  autos at $5–12 whose titles never said gold, stamped `parallel: Gold` because
+  `persistVendorSalesToPool` let `identity.parallel` (the vendor PRODUCT tag:
+  CH's variant, TCA's structured hint) overwrite the title parse, and the
+  long-form rule then folded `:gold:` into `:gold-refractor:`. The holding
+  priced off a $10 pool. **Exact pool-wide counts** (title never says the
+  stamped colour word): CH Gold 226 / Gold Refractor 7 / Blue 161 / Blue
+  Refractor 467 / Black 132 / Silver 551 / Green 105 / Purple 73 / Red 66; TCA
+  colour refractors 1–3% each (Gold Refractor 299); Cardsight 5–30%. A separate
+  **"Refractor" bucket** — CH 163,272 / TCA 37,854 / Cardsight 14,422 rows
+  stamped Refractor whose title never says it — is CH's variant against our
+  own composed "… #CPA-ZC Base" suffix and cannot be judged from the title:
+  **NEEDS DREW** (is CH's Bowman Chrome auto "Refractor" variant the base auto
+  or the /499 refractor?). Fixes: **#1420/#1421** — `parallelTheTitleAllows()`,
+  a pure tested rule at the seam: a sale's parallel is what its title says; a
+  vendor tag can neither add a finish the title lacks nor replace one it
+  names; disagreements counted (`vendorParallelOverruled`). **#1416/#1422** —
+  `repair-parallel-from-title` (colours only): dry run #1 scanned 4,842 rows,
+  would repair 3,998 (1,755 → Base, 2,243 → the finish the title names) — but
+  199 "Blue Refractor → Refractor" / 196 "Gold Refractor → Refractor" were
+  titles saying "Refractor /150" with the colour omitted: a REFINEMENT, not a
+  contradiction (moving them would mint `refractor:num-150`, a rung no
+  checklist has) — #1422 keeps those; dry run #2 → APPLY → re-price the
+  holding. Also seen under the base sibling: "Yellow 21/75" filed as base
+  (the numbered-refractor inference is a parser gap), and CH composed titles
+  "2026 2026 Bowman …" (doubled year).
 - ☐ D7 **eBay import into the portfolio** (Drew, 2026-08-29): an imported eBay
   purchase/sale matches to any existing `sold_comps` row so there are NO
   duplicates in the system; if it is not there, a new sale is created (through
