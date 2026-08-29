@@ -456,7 +456,23 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   checklist row resolves, the sale under the resolved slug keyed by the eBay
   order id; fixture test first (red on main), then fixes. The pricing call's
   sibling-×8 path is D4 PR 5/6 (retire the estimate seam under exact-pool
-  supremacy).
+  supremacy). **Delivered on branch `fix/d9-ebay-import-one-identity`
+  (unmerged; 3 commits, `tests/ebayImportOneIdentity.test.ts` red on main
+  4/5, green after, 4 mutation checks, tsc 0):** `resolveImportIdentity`
+  (ebayAutoHolding.service) is the one derivation — final fields through
+  holdingFieldNormalizer; a title with no card number asks
+  `resolveCardNumberByPlayer` (internal, unique-or-nothing); canonicalize
+  gets number + the title's parallel + printRun + player, never an empty
+  number; cardId = hobbyiqCardId = catalogVerifiedSlug from the one match
+  (≥0.9); `printRun` travels on the holding; cardTitle is rebuilt from the
+  RESOLVED identity (finish, #number, /N) and the listing title is kept on
+  `ebayListingTitle`. The sale: `purchaseSaleIdentity` (order id, SUBTOTAL
+  — $182.50, shipping stays in cost basis) is shared by import, confirm and
+  the rematch route, which had three keys and two prices; recordSoldComp
+  takes `printRun` (outranks the title regex) and supersedes the same id
+  filed under another partition (the twin). Confirm's
+  `verifiedSlugFor`: a verified number + a canonical pin → the pin is the
+  verified slug. Not touched: the pricing call (D4 PR 5/6), the matcher.
 - ◐ D8 **The title outranks the vendor tag** (Drew, 2026-08-29 15:25Z, holding
   `ca7a150b` — 2026 Bowman Chrome CPA-MG Marconi German Gold Refractor /50:
   "Bases are tagged to this gold or the gold is tagged to bases"). Read-only

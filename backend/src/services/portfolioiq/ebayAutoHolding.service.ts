@@ -149,183 +149,32 @@ export async function autoCreateHoldingForPurchase(
   const holding = buildHoldingFromParse(purchase, parsed);
   if (details) applyBrowseEnrichment(holding, details);
 
-  // CF-EBAY-MATCH-CATALOG-AT-INGEST (Drew, 2026-08-13: "I want ebay to match to
-  // the card catalog immediately... and we can approve it once ingested in the
-  // ebay tab").
+  // CF-ONE-IMPORT-ONE-IDENTITY (Drew, 2026-08-29, checklist D9: "We need to
+  // fix the whole eBay import to holdings process, because it seems broken").
   //
-  // This path built a holding from the parsed title and seeded a NEW catalog
-  // row from eBay's aspects, but never asked whether we ALREADY hold that card
-  // in the checklist. Nothing looked, so every imported holding rendered
-  // "MISSING / VALUE —" with a Fix-identity link, even for cards whose
-  // checklist row and comps we have.
+  // Drew's own import of "2026 Bowman Marconi German Chrome Auto Gold
+  // Refractor 1st #/50 Nationals" came out with THREE identities and none of
+  // them the checklist row:
   //
-  // Match against the catalog here, at ingest. The holding still lands as
-  // pending-review under EBAY_IMPORT_FORCE_REVIEW — the match is a PROPOSAL
-  // the user approves in the eBay tab, not an auto-commit. That distinction
-  // matters: title parsing is lossy, and a loose match is confidently wrong in
-  // a way the user cannot see. Probed against prod on 2026-08-13, free-text
-  // matching returned "2018 Topps Chrome Update Ohtani" as topps-HERITAGE #20
-  // and "2017 Bowman ROYF-9 Judge" as bowman #1 — right player, wrong card.
+  //   catalogMatchSlug   hiq:...:bowman-chrome::refractor:auto   (EMPTY number)
+  //   cardId             ...:cpa-mg:refractor:auto               (suggester)
+  //   hobbyiqCardId      ...:cpa-mg:gold-refractor:auto          (no /50)
   //
-  // canonicalize() is the strict matcher (exact identity → 0.98, degrading to
-  // 0.3 for speculative), so the confidence it returns is what the review UI
-  // should sort and colour by. Only a strong match pins cardId; a weak one is
-  // recorded for the reviewer without steering pricing.
-  try {
-    const { canonicalize } = await import("../catalog/catalogMatcher.service.js");
-    const h = holding as Record<string, unknown>;
-    const match = await canonicalize({
-      sport: String(h.sport ?? "baseball"),
-      year: typeof h.cardYear === "number" ? h.cardYear : null,
-      setName: String(h.setName ?? h.product ?? ""),
-      cardNumber: String(h.cardNumber ?? ""),
-      parallel: String(h.parallel ?? "") || null,
-      isAuto: Boolean(h.isAuto),
-      playerName: String(h.playerName ?? ""),
-      // CF-THE-USER-SEED-EXEMPTION-WAS-NEVER-REACHED (Drew, 2026-08-25: "when
-      // we buy from ebay and they aren't in our existing sold comps. It needs
-      // to create the sold comp. It is truly a comp DIRECTLY from ebay").
-      //
-      // This passed "ebay-title", which is a VENDOR source. Under
-      // CATALOG_MATCH_ONLY_ENABLED the matcher returns early for vendor
-      // sources with found:false, confidence:0.3 -- so a card the user
-      // physically owns could never seed a catalog row, and the whole chain
-      // downstream of it died:
-      //
-      //   no catalog row  ->  confidence 0.3 never clears the 0.9 pin bar
-      //                   ->  holding.cardId never set
-      //                   ->  "We could not identify this card"
-      //                   ->  confirmHoldingReview gates its comp emit on
-      //                       cardId, so NO COMP WAS EVER EMITTED
-      //
-      // USER_SEED_ALLOWED_SOURCES and TRUSTED_SOURCES both already name
-      // "ebay-user-purchase", the sold-comp source enum already has it, and
-      // soldCompsStore was built for precisely this. Every piece was in place
-      // and unreachable because the caller announced itself as a vendor.
-      //
-      // The user owns the physical card; that is the whole basis of the
-      // exemption. Seeds land confidence 0.6 / verificationStatus
-      // pending-review, below the 0.9 pin bar, so this creates the row without
-      // steering pricing -- then confirm re-matches as "user-verified", finds
-      // the now-existing row exactly, pins it, and the comp emits.
-      source: "ebay-user-purchase",
-    } as never);
-
-    if (match) {
-      h.catalogMatchConfidence = match.confidence;
-      h.catalogMatchedBy = match.matchedBy ?? null;
-      h.catalogMatchSlug = match.slug ?? null;
-      // Pin the identity only when the matcher is confident. Below that the
-      // slug is a suggestion for the reviewer — pinning it would send pricing
-      // to the wrong card while still showing a value, which reads as correct.
-      if (match.found && match.slug && match.confidence >= 0.9) {
-        h.cardId = match.slug;
-      }
-
-      // CF-EBAY-MISS-SEEDS-CHECKLIST (Drew, 2026-08-13: "we should get those
-      // checklists if we are missing them").
-      //
-      // A miss on a card the user demonstrably owns is the strongest possible
-      // signal that a checklist is worth building — they paid for it. Record it
-      // so the gap becomes a work order instead of a permanently unmatched
-      // holding. Deduped per release by checklistSeedQueue, so a 200-card
-      // import files one order per set, not 200.
-      //
-      // Real misses this fires on, from Drew's own portfolio: 2017 Topps Gold
-      // Label, 2020 Bowman Draft (BD152), 2022 Topps Chrome image variations.
-      if (!match.found) {
-        const { requestChecklistSeed } = await import("../catalog/checklistSeedQueue.service.js");
-        const { normalizeSetKey } = await import("./hobbyIqCardId.service.js");
-        const setNameForSeed = String(h.setName ?? h.product ?? "").trim();
-        if (setNameForSeed && typeof h.cardYear === "number") {
-          await requestChecklistSeed({
-            sport: String(h.sport ?? "baseball"),
-            year: h.cardYear,
-            setName: setNameForSeed,
-            setKey: normalizeSetKey(setNameForSeed),
-            reason: "ebay-import-unmatched",
-            missingPlayer: String(h.playerName ?? "") || undefined,
-            missingCardNumber: String(h.cardNumber ?? "") || undefined,
-          });
-        }
-      }
-    }
-  } catch (err) {
-    // Never block an import on the matcher — the holding still lands for
-    // review, exactly as before.
-    console.warn(JSON.stringify({
-      event: "ebay_import_catalog_match_failed",
-      source: "ebayAutoHolding.service",
-      error: (err as Error)?.message ?? String(err),
-    }));
-  }
-
-  // CF-A-REAL-SALE-IS-IN-THE-POOL-ONCE (Drew, 2026-08-29, checklist D7a):
-  // "these are real sales, so we need to treat them as such but ensure there
-  // aren't duplicates in the system." The eBay ids travel onto the holding
-  // (they used to live only on the purchase entry, so every later comp path
-  // fell back to a holding:: key and could never dedupe by eBay id), and the
-  // purchase is written to the pool NOW through the one writer -- keyed by
-  // the eBay order line item id (else the item id), filed under the same
-  // checklist slug the holding was just pinned to. recordSoldComp dedupes on
-  // id and on content hash and returns the row's id; the holding links to it.
-  {
-    const h = holding as Record<string, unknown>;
-    if (purchase.ebayItemId) h.ebayItemId = purchase.ebayItemId;
-    if (purchase.ebayOrderId) h.ebayOrderId = purchase.ebayOrderId;
-    const slug = typeof h.cardId === "string" && h.cardId.startsWith("hiq:") ? h.cardId : null;
-    const price = typeof h.purchasePrice === "number" ? h.purchasePrice : Number(h.purchasePrice ?? 0);
-    const soldAt = String(h.purchaseDate ?? purchase.purchaseDate ?? "");
-    if (slug && price > 0 && soldAt && String(h.playerName ?? "").trim()) {
-      try {
-        const { recordSoldComp } = await import("./soldCompsStore.service.js");
-        const res = await recordSoldComp({
-          cardId: slug,
-          playerName: String(h.playerName),
-          cardYear: typeof h.cardYear === "number" ? h.cardYear : null,
-          setName: (h.setName as string | null) ?? null,
-          parallel: (h.parallel as string | null) ?? null,
-          cardNumber: (h.cardNumber as string | null) ?? null,
-          isAuto: h.isAuto === true,
-          gradeCompany: (h.gradeCompany as string | null) ?? null,
-          gradeValue: (h.gradeValue as number | null) ?? null,
-          sport: (h.sport as string | null) ?? null,
-          price,
-          soldAt,
-          source: "ebay-user-purchase",
-          sourceExternalId: purchase.ebayOrderId ?? purchase.ebayItemId ?? null,
-          contributorUserId: ((doc as { userId?: string }).userId ?? null) as string | null,
-          title: String(purchase.notes ?? "") || null,
-          imageUrl: (h.ebayImageUrl as string | null) ?? null,
-          sellerHandle: null,
-          verifiedByUser: false,
-          confidence: Number(h.parseConfidence ?? 0.7),
-        } as never);
-        if (res?.written) {
-          h.soldCompId = res.id ?? null;
-          h.soldCompDeduped = res.deduped === true;
-          if (res.hobbyiqCardId) h.soldCompSlug = res.hobbyiqCardId;
-        }
-        console.log(JSON.stringify({
-          event: "ebay_import_sale_recorded",
-          source: "ebayAutoHolding.service",
-          holdingId: holding.id,
-          slug,
-          sourceExternalId: purchase.ebayOrderId ?? purchase.ebayItemId ?? null,
-          written: res?.written ?? false,
-          deduped: res?.deduped ?? false,
-          reason: res?.reason ?? null,
-        }));
-      } catch (err) {
-        console.warn(JSON.stringify({
-          event: "ebay_import_sale_record_failed",
-          source: "ebayAutoHolding.service",
-          holdingId: holding.id,
-          error: (err as Error)?.message ?? String(err),
-        }));
-      }
-    }
-  }
+  // and a NEW catalog row minted at the third one -- the checklist row's
+  // un-numbered twin -- with the sale filed under it. Each defect was one
+  // writer deriving identity its own way: the matcher was asked with the
+  // title's parse before any card number existed and without the print run it
+  // had parsed; hobbyiqCardId was never set here and was later re-derived by a
+  // PATCH from a holding that carried no printRun; the suggester's pick became
+  // cardId at confirm because nothing had pinned one.
+  //
+  // Now identity is derived ONCE, here, and every field that names the card
+  // is written from that one answer: cardId, hobbyiqCardId, catalogVerifiedSlug
+  // and the sale's slug. The holding carries printRun so a later re-derivation
+  // keeps the :num-N segment, and the card title is rebuilt from the RESOLVED
+  // identity so it can never drop the finish or the /N again.
+  await resolveImportIdentity(holding);
+  await recordImportSale(holding, purchase, doc);
 
   doc.holdings[holding.id] = holding;
   // Idempotent Set-union merge, symmetric with PATCH /link-holdings.
@@ -344,6 +193,276 @@ export async function autoCreateHoldingForPurchase(
   return { status: "created", holding, parsed, enriched: !!details };
 }
 
+// ─── Identity resolution ───────────────────────────────────────────────────
+
+const str = (v: unknown): string => String(v ?? "").trim();
+
+/**
+ * Derive the holding's identity ONCE from its final fields: normalize them,
+ * resolve a missing card number from the catalog, canonicalize with the
+ * title's parallel AND print run, and pin every identity field from the one
+ * answer. Never throws — a matcher failure leaves the holding for review,
+ * exactly as before.
+ */
+async function resolveImportIdentity(holding: PortfolioHolding & Record<string, unknown>): Promise<void> {
+  const h = holding as Record<string, unknown>;
+
+  // The one cleaning standard, applied to the values we are about to match
+  // and store -- not to one branch of them. "Marconi German," came out of this
+  // path with its comma because the normalizer only ever saw the parallel.
+  const { fields: clean } = normalizeHoldingFields({
+    playerName: str(h.playerName) || null,
+    cardYear: typeof h.cardYear === "number" ? h.cardYear : null,
+    setName: str(h.setName) || null,
+    parallel: str(h.parallel) || null,
+    cardNumber: str(h.cardNumber) || null,
+    isAuto: typeof h.isAuto === "boolean" ? h.isAuto : null,
+    product: str(h.product) || null,
+  });
+  if (str(clean.playerName)) h.playerName = str(clean.playerName);
+  if (str(clean.cardNumber)) h.cardNumber = str(clean.cardNumber);
+  if (str(clean.setName)) {
+    const productFollowsSet = !str(h.product) || str(h.product) === str(h.setName);
+    h.setName = str(clean.setName);
+    if (productFollowsSet) h.product = h.setName;
+  }
+  // Only ever improve the parallel; an unrecognised one stays reviewable
+  // rather than silently becoming base (same rule as the Browse path above).
+  if (str(clean.parallel)) h.parallel = str(clean.parallel);
+
+  try {
+    const { canonicalize, resolveCardNumberByPlayer } = await import("../catalog/catalogMatcher.service.js");
+    const sport = (str(h.sport) || "baseball").toLowerCase();
+    const year = typeof h.cardYear === "number" ? h.cardYear : null;
+    const setName = str(h.setName) || str(h.product);
+    const player = str(h.playerName);
+    const parallel = str(h.parallel) || null;
+    const isAuto = h.isAuto === true;
+    const printRun = typeof h.printRun === "number" && h.printRun > 0 ? h.printRun : null;
+    let cardNumber = str(h.cardNumber);
+
+    // A title that names no card number is not a dead end: the catalog knows
+    // which number this player carries in this product at this parallel, when
+    // it is exactly one. Internal lookup -- never a vendor call.
+    if (!cardNumber && year && setName && player) {
+      const resolved = await resolveCardNumberByPlayer({ year, setKey: setName, player, isAuto, parallel });
+      if (resolved.cardNumber) {
+        cardNumber = resolved.cardNumber;
+        h.cardNumber = cardNumber;
+        h.cardNumberResolvedBy = "catalog-player-lookup";
+      } else if (resolved.candidates.length > 1) {
+        h.catalogCardNumberCandidates = resolved.candidates;
+      }
+    }
+
+    // Never ask the matcher with an empty card number: the computed slug would
+    // carry a "::" segment, and the user-seed path would happily mint it.
+    if (!cardNumber || !year || !setName) {
+      h.catalogMatchConfidence = 0;
+      h.catalogMatchedBy = "not-found";
+      h.catalogMatchSlug = null;
+      h.catalogMatchSkippedReason = !cardNumber ? "no-card-number" : !year ? "no-year" : "no-set";
+      await requestSeedForMiss(h);
+      return;
+    }
+
+    const match = await canonicalize({
+      sport,
+      year,
+      setName,
+      cardNumber,
+      parallel,
+      isAuto,
+      printRun,
+      player,
+      // CF-THE-USER-SEED-EXEMPTION-WAS-NEVER-REACHED (Drew, 2026-08-25): the
+      // user owns the physical card; that is the whole basis of the seed
+      // exemption. A vendor source is turned away at the door.
+      source: "ebay-user-purchase",
+    });
+
+    h.catalogMatchConfidence = match.confidence;
+    h.catalogMatchedBy = match.matchedBy ?? null;
+    h.catalogMatchSlug = match.slug ?? null;
+    // Pin the identity only when the matcher is confident. Below that the
+    // slug is a suggestion for the reviewer -- pinning it would send pricing
+    // to the wrong card while still showing a value, which reads as correct.
+    if (match.found && match.slug && match.confidence >= 0.9) {
+      const now = new Date().toISOString();
+      h.cardId = match.slug;
+      h.hobbyiqCardId = match.slug;
+      h.catalogVerifiedSlug = match.slug;
+      h.catalogVerifiedSource = "hobbyiq-catalog";
+      h.catalogVerifiedAt = now;
+      if (match.matchedBy === "seeded") {
+        // We just created the row; the catalog cannot vouch for it yet.
+        h.catalogVerifiedReason = "seeded-from-user-purchase";
+      } else {
+        h.catalogVerified = true;
+        h.catalogVerifiedReason = "catalog-match-at-import";
+      }
+      h.identitySource = "ebay-import-catalog-match";
+    }
+    if (!match.found) await requestSeedForMiss(h);
+  } catch (err) {
+    // Never block an import on the matcher — the holding still lands for
+    // review, exactly as before.
+    console.warn(JSON.stringify({
+      event: "ebay_import_catalog_match_failed",
+      source: "ebayAutoHolding.service",
+      error: (err as Error)?.message ?? String(err),
+    }));
+  }
+
+  // The title is rebuilt from the RESOLVED identity -- after the match, so it
+  // carries the card number the catalog supplied and never drops the finish
+  // or the /N. The listing title itself is kept on ebayListingTitle.
+  const title = buildCardTitle(h);
+  if (title) h.cardTitle = title;
+}
+
+// CF-EBAY-MISS-SEEDS-CHECKLIST (Drew, 2026-08-13: "we should get those
+// checklists if we are missing them"). A miss on a card the user demonstrably
+// owns is the strongest possible signal that a checklist is worth building —
+// they paid for it. Deduped per release by checklistSeedQueue.
+async function requestSeedForMiss(h: Record<string, unknown>): Promise<void> {
+  try {
+    const setNameForSeed = str(h.setName) || str(h.product);
+    if (!setNameForSeed || typeof h.cardYear !== "number") return;
+    const { requestChecklistSeed } = await import("../catalog/checklistSeedQueue.service.js");
+    const { normalizeSetKey } = await import("./hobbyIqCardId.service.js");
+    await requestChecklistSeed({
+      sport: (str(h.sport) || "baseball").toLowerCase(),
+      year: h.cardYear,
+      setName: setNameForSeed,
+      setKey: normalizeSetKey(setNameForSeed),
+      reason: "ebay-import-unmatched",
+      missingPlayer: str(h.playerName) || undefined,
+      missingCardNumber: str(h.cardNumber) || undefined,
+    });
+  } catch { /* a seed request never blocks an import */ }
+}
+
+// ─── The sale ──────────────────────────────────────────────────────────────
+
+/** The purchase record an imported holding was created from, if the doc
+ *  still carries it. */
+export function sourcePurchaseFor(
+  doc: { purchases?: ReadonlyArray<unknown> } | null | undefined,
+  holding: { sourcePurchaseId?: unknown } | Record<string, unknown> | null | undefined,
+): PortfolioPurchaseEntry | null {
+  const id = str(holding?.sourcePurchaseId);
+  if (!id) return null;
+  const hit = (doc?.purchases ?? []).find((p) => str((p as { id?: unknown })?.id) === id);
+  return (hit as PortfolioPurchaseEntry | undefined) ?? null;
+}
+
+/**
+ * CF-ONE-TRANSACTION-ONE-ROW (D9). The pool identity of a purchase's sale,
+ * derived the same way by EVERY writer -- import, confirm, rematch. Three
+ * writers had three keys (order id / item id / holding::) and two prices, so
+ * one purchase became up to three pool rows.
+ *
+ *   key    the eBay order line item id -- one per transaction -- else the
+ *          item id, else a holding-scoped stand-in.
+ *   price  the SUBTOTAL: what the item sold for. Shipping, tax and fees are
+ *          the buyer's cost basis (the holding keeps totalCost for P&L), not
+ *          the market's price for the card. Every vendor feed in the pool
+ *          reports the item price the same way.
+ */
+export function purchaseSaleIdentity(
+  purchase: Pick<PortfolioPurchaseEntry, "ebayOrderId" | "ebayItemId" | "subtotal" | "totalCost"> | null | undefined,
+  holding: { id?: unknown; ebayOrderId?: unknown; ebayItemId?: unknown; purchasePrice?: unknown; totalCostBasis?: unknown } | Record<string, unknown>,
+): { sourceExternalId: string; price: number } {
+  const key = str(purchase?.ebayOrderId) || str(holding.ebayOrderId)
+    || str(purchase?.ebayItemId) || str(holding.ebayItemId)
+    || `holding::${str(holding.id)}`;
+  const num = (v: unknown): number => (typeof v === "number" && Number.isFinite(v) && v > 0 ? v : 0);
+  const price = num(purchase?.subtotal) || num(purchase?.totalCost)
+    || num(holding.purchasePrice) || num(holding.totalCostBasis);
+  return { sourceExternalId: key, price };
+}
+
+// CF-A-REAL-SALE-IS-IN-THE-POOL-ONCE (Drew, 2026-08-29, checklist D7a):
+// "these are real sales, so we need to treat them as such but ensure there
+// aren't duplicates in the system." The eBay ids travel onto the holding, and
+// the purchase is written to the pool NOW through the one writer, under the
+// slug the holding was just pinned to. recordSoldComp dedupes on id and on
+// content hash and returns the row's id; the holding links to it.
+async function recordImportSale(
+  holding: PortfolioHolding & Record<string, unknown>,
+  purchase: PortfolioPurchaseEntry,
+  doc: AutoHoldingDocShape,
+): Promise<void> {
+  const h = holding as Record<string, unknown>;
+  if (purchase.ebayItemId) h.ebayItemId = purchase.ebayItemId;
+  if (purchase.ebayOrderId) h.ebayOrderId = purchase.ebayOrderId;
+  const slug = typeof h.cardId === "string" && h.cardId.startsWith("hiq:") ? h.cardId : null;
+  const { sourceExternalId, price } = purchaseSaleIdentity(purchase, h);
+  const soldAt = str(h.purchaseDate) || str(purchase.purchaseDate);
+  if (!slug || price <= 0 || !soldAt || !str(h.playerName)) return;
+  try {
+    const { recordSoldComp } = await import("./soldCompsStore.service.js");
+    const res = await recordSoldComp({
+      cardId: slug,
+      playerName: str(h.playerName),
+      cardYear: typeof h.cardYear === "number" ? h.cardYear : null,
+      setName: str(h.setName) || null,
+      parallel: str(h.parallel) || null,
+      cardNumber: str(h.cardNumber) || null,
+      isAuto: h.isAuto === true,
+      printRun: typeof h.printRun === "number" && h.printRun > 0 ? h.printRun : null,
+      gradeCompany: str(h.gradeCompany) || null,
+      gradeValue: typeof h.gradeValue === "number" ? h.gradeValue : null,
+      sport: (str(h.sport) || "baseball").toLowerCase(),
+      price,
+      soldAt,
+      source: "ebay-user-purchase",
+      sourceExternalId,
+      contributorUserId: ((doc as { userId?: string }).userId ?? null) as string | null,
+      title: str(purchase.notes) || null,
+      imageUrl: str(h.ebayImageUrl) || null,
+      sellerHandle: null,
+      verifiedByUser: false,
+      confidence: Number(h.parseConfidence ?? 0.7),
+    });
+    if (res?.written) {
+      h.soldCompId = res.id ?? null;
+      h.soldCompDeduped = res.deduped === true;
+      h.soldCompSlug = res.hobbyiqCardId ?? slug;
+      if (res.hobbyiqCardId && res.hobbyiqCardId !== slug) {
+        // The pool resolves through the same matcher with the same inputs, so
+        // this cannot happen quietly: it means the two derivations diverged.
+        console.warn(JSON.stringify({
+          event: "ebay_import_sale_slug_disagrees",
+          source: "ebayAutoHolding.service",
+          holdingId: holding.id,
+          holdingSlug: slug,
+          poolSlug: res.hobbyiqCardId,
+        }));
+      }
+    }
+    console.log(JSON.stringify({
+      event: "ebay_import_sale_recorded",
+      source: "ebayAutoHolding.service",
+      holdingId: holding.id,
+      slug,
+      sourceExternalId,
+      price,
+      written: res?.written ?? false,
+      deduped: res?.deduped ?? false,
+      reason: res?.reason ?? null,
+    }));
+  } catch (err) {
+    console.warn(JSON.stringify({
+      event: "ebay_import_sale_record_failed",
+      source: "ebayAutoHolding.service",
+      holdingId: holding.id,
+      error: (err as Error)?.message ?? String(err),
+    }));
+  }
+}
+
 // ─── Holding construction ──────────────────────────────────────────────────
 
 function buildHoldingFromParse(
@@ -359,7 +478,6 @@ function buildHoldingFromParse(
   // totalCostBasis is the all-in per-unit cost for realized-P&L math.
   const perItemAllIn = purchase.totalCost;
 
-  const cardTitle = buildCardTitle(parsed);
   const gradeValue = parsed.grade ? extractGradeValue(parsed.grade) : undefined;
 
   // We build with `as any` for the ebay-auto specific fields since the
@@ -408,7 +526,14 @@ function buildHoldingFromParse(
     holding.gradingCompany = parsed.gradeCompany;   // legacy field alias
   }
   if (gradeValue !== undefined) holding.gradeValue = gradeValue;
-  if (cardTitle) holding.cardTitle = cardTitle;
+  // CF-ONE-IMPORT-ONE-IDENTITY (D9): the print run the title states travels on
+  // the holding, so every later re-derivation of its slug keeps the :num-N
+  // segment (CF-ACCEPT-CARRIES-PRINTRUN). The listing title itself is kept
+  // verbatim; cardTitle is rebuilt from the resolved identity afterwards.
+  if (typeof parsed.printRun === "number" && parsed.printRun > 0) holding.printRun = parsed.printRun;
+  if (purchase.notes) holding.ebayListingTitle = purchase.notes;
+  const provisionalTitle = buildCardTitle(holding);
+  if (provisionalTitle) holding.cardTitle = provisionalTitle;
   // CF-EBAY-AUTO-DETECTION (2026-07-12): isAuto is a declared field on
   // PortfolioHolding — populated when the parser flagged the title as
   // an autograph. Rookie signal preserved on notes (no dedicated boolean).
@@ -420,13 +545,21 @@ function buildHoldingFromParse(
   return holding;
 }
 
-function buildCardTitle(parsed: ParsedListingTitle): string | undefined {
+/**
+ * CF-ONE-IMPORT-ONE-IDENTITY (D9). The card title is a rendering of the
+ * holding's identity fields -- the finish, the card number and the print run
+ * included -- never a rebuild that drops them. "2026 Bowman Chrome Refractor
+ * Marconi German" was what this produced for a Gold Refractor /50.
+ */
+function buildCardTitle(fields: Record<string, unknown>): string | undefined {
   const parts: string[] = [];
-  if (parsed.year !== null) parts.push(String(parsed.year));
-  if (parsed.setName) parts.push(parsed.setName);
-  if (parsed.parallel) parts.push(parsed.parallel);
-  if (parsed.playerName) parts.push(parsed.playerName);
-  if (parsed.cardNumber) parts.push(`#${parsed.cardNumber}`);
+  if (typeof fields.cardYear === "number") parts.push(String(fields.cardYear));
+  if (str(fields.setName)) parts.push(str(fields.setName));
+  if (str(fields.parallel)) parts.push(str(fields.parallel));
+  if (str(fields.playerName)) parts.push(str(fields.playerName));
+  if (str(fields.cardNumber)) parts.push(`#${str(fields.cardNumber)}`);
+  if (typeof fields.printRun === "number" && fields.printRun > 0) parts.push(`/${fields.printRun}`);
+  if (fields.isAuto === true) parts.push("Auto");
   return parts.length > 0 ? parts.join(" ") : undefined;
 }
 

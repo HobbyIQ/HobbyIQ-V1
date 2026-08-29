@@ -103,7 +103,7 @@ router.post("/rematch-ebay-imports", requireSession, async (req: Request, res: R
         "../services/portfolioiq/portfolioStore.service.js"
       ).catch(() => ({ applyRematchToHolding: null, readUserDoc: null })) as {
         applyRematchToHolding: ((...args: unknown[]) => Promise<boolean>) | null;
-        readUserDoc: ((userId: string) => Promise<{ holdings: Record<string, unknown> }>) | null;
+        readUserDoc: ((userId: string) => Promise<{ holdings: Record<string, unknown>; purchases?: unknown[] }>) | null;
       };
       if (applyRematchToHolding) {
         for (const r of results) {
@@ -153,6 +153,14 @@ router.post("/rematch-ebay-imports", requireSession, async (req: Request, res: R
                     const { recordSoldComp, deleteSoldCompById } = await import(
                       "../services/portfolioiq/soldCompsStore.service.js"
                     );
+                    // CF-ONE-TRANSACTION-ONE-ROW (D9): the sale's key and price
+                    // are derived the one way every writer derives them.
+                    const { purchaseSaleIdentity, sourcePurchaseFor } = await import(
+                      "../services/portfolioiq/ebayAutoHolding.service.js"
+                    );
+                    const sourcePurchase = sourcePurchaseFor(doc, h);
+                    const { sourceExternalId, price } = purchaseSaleIdentity(sourcePurchase, h);
+                    if (!(price > 0)) return;
                     // CF-ONE-SALE-ONE-ROW (2026-08-29, D7c): the import wrote this
                     // purchase under the holding's slug at import time; if the
                     // rematch moved the holding, that row is superseded.
@@ -169,19 +177,15 @@ router.post("/rematch-ebay-imports", requireSession, async (req: Request, res: R
                       parallel: r.after.parallel ?? null,
                       cardNumber: r.after.cardNumber ?? null,
                       isAuto: h.isAuto === true,
+                      printRun: typeof h.printRun === "number" ? h.printRun : null,
                       gradeCompany: (h.gradeCompany as string | null) ?? null,
                       gradeValue: (h.gradeValue as number | null) ?? null,
-                      price: r.purchasePrice!,
+                      price,
                       soldAt,
                       source: "ebay-user-purchase",
-                      // CF-COMP-DEDUP-CANONICAL (Drew, 2026-07-18): use a
-                      // holding-scoped fallback so re-emissions from any path
-                      // (confirm/rematch/suggester/backfill) upsert to the
-                      // same doc when ebayItemId is absent. Prevents the
-                      // 3-5×-per-holding duplicates seen in Drew's pool.
-                      sourceExternalId: (h.ebayItemId as string | null) ?? `holding::${r.holdingId}`,
+                      sourceExternalId,
                       contributorUserId: userId,
-                      title: r.ebayTitle ?? null,
+                      title: String(sourcePurchase?.notes ?? "") || r.ebayTitle || null,
                       imageUrl: (h.ebayImageUrl as string | null) ?? null,
                       sellerHandle: null,
                       // NOT user-verified (Drew hasn't manually confirmed);

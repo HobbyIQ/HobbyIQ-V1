@@ -267,6 +267,11 @@ export interface RecordSoldCompInput {
   parallel?: string | null;
   cardNumber?: string | null;
   isAuto?: boolean;
+  /** CF-ONE-IMPORT-ONE-IDENTITY (D9). The print run the caller RESOLVED — a
+   *  checklist row, a pinned holding. Preferred over the title regex, so a
+   *  re-emit carrying a rebuilt title can never drop the :num-N segment and
+   *  file the sale under an un-numbered twin. */
+  printRun?: number | null;
   /** Sport tag ("baseball" / "football" / "basketball" / "hockey" /
    *  "soccer" / null). When absent, inferSportFromContext() derives from
    *  setName + title. */
@@ -680,12 +685,16 @@ export function deriveHobbyIqSlug(input: Pick<RecordSoldCompInput,
   // reach BOTH the guard and the computation — a guard that judged one
   // identity while the computation emitted another is the parity bug this
   // file was already fixed for once.
-  | "playerName">): DerivedSlug {
+  | "playerName" | "printRun">): DerivedSlug {
   const sportForSlug = input.sport ?? inferSportFromContext(input.setName, input.title, input.cardYear);
   const cardNumberFinal = (input.cardNumber && input.cardNumber.trim())
     ? input.cardNumber.trim()
     : extractCardNumberFromTitle(input.title);
-  const printRunFinal = extractPrintRunFromTitle(input.title);
+  // A print run the caller resolved outranks one sniffed from the title: the
+  // title may be a rebuilt one that no longer states it.
+  const printRunFinal = typeof input.printRun === "number" && Number.isInteger(input.printRun) && input.printRun > 0
+    ? input.printRun
+    : extractPrintRunFromTitle(input.title);
 
   // Resolve the setKey the way computeHobbyIqCardId will, THEN guard it.
   // sportForSlug is normalized first because the resolver's Pokemon branch is
@@ -1375,6 +1384,41 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
     }
   }
 
+  // CF-ONE-TRANSACTION-ONE-ROW (Drew, 2026-08-29, checklist D9). For a
+  // user-owned sale the id IS the transaction: `ebay-user-purchase::<order>`.
+  // But /cardId is the partition key, so the same id under a different slug
+  // is a DIFFERENT document to Cosmos -- the upsert below cannot see it, the
+  // contentHash probe is partition-scoped, and the cross-partition probe
+  // above keys on the slug that just changed. That is how Drew's purchase sat
+  // under the un-numbered twin while a re-file landed beside it. One
+  // transaction, one row: a copy of this id filed under another card is
+  // superseded before this write lands.
+  if (isUserScoped && input.sourceExternalId && String(input.sourceExternalId).trim()) {
+    try {
+      const { resources: sameId } = await c.items.query<{ id: string; cardId: string }>({
+        query: "SELECT c.id, c.cardId FROM c WHERE c.id = @id AND c.cardId != @cardId",
+        parameters: [
+          { name: "@id", value: doc.id },
+          { name: "@cardId", value: doc.cardId },
+        ],
+      }).fetchAll();
+      // Re-checked in code: only ever this id, only ever another partition.
+      const stale = (sameId ?? []).filter((e) => e?.id === doc.id && typeof e.cardId === "string" && e.cardId !== doc.cardId);
+      for (const e of stale) {
+        try { await c.item(e.id, e.cardId).delete(); } catch { /* best effort */ }
+      }
+      if (stale.length > 0) {
+        console.log(JSON.stringify({
+          event: "sold_comp_same_id_rehomed",
+          source: "soldCompsStore.recordSoldComp",
+          id: doc.id,
+          fromCardIds: stale.map((e) => e.cardId),
+          toCardId: doc.cardId,
+        }));
+      }
+    } catch { /* non-fatal — fall through to upsert */ }
+  }
+
   try {
     await c.items.upsert(doc as any);
     // CF-INGEST-CATALOG-AUTO-SEED (Drew, 2026-08-05). Fire-and-forget:
@@ -1407,7 +1451,9 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
             cardNumber: doc.cardNumber,
             parallel: doc.parallel,
             isAuto: doc.isAuto,
-            printRun: extractPrintRunFromTitle(input.title),
+            // The print run the slug was derived with -- never a second
+            // reading of the title that could disagree with it.
+            printRun: printRunFinal,
             playerName: doc.playerName,
           });
         } catch { /* silent — never blocks ingest */ }
