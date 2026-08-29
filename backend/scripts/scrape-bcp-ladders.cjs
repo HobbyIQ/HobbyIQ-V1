@@ -82,7 +82,10 @@ function section(html, id, level) {
 }
 
 /** "108" / "US150" / "BD-72" -> a card number; "Juan Soto" is not. */
-const CARD_NUM = /^([A-Z]{0,4}-?\d+[a-z]?)$/i;
+const CARD_NUM = /^([A-Z]{0,4}-?\d+[a-z]?|[A-Z0-9]{1,6}-[A-Z0-9]{1,6})$/i;
+/** An insert-style number carries letters: 90CB-1, UL-7, RS-12. A pure
+ *  number inside an insert section would collide with the base set. */
+const INSERT_NUM = /[A-Z]/i;
 
 /** Base-set card lines: <li>NUM NAME[, Team]</li> */
 function parseCards(body) {
@@ -145,12 +148,47 @@ function parseLadder(parallelsBody) {
   return [...rungs.values()];
 }
 
+/**
+ * CF-INSERTS-ARE-THEIR-OWN-PRODUCT (Drew, 2026-08-28: "let's go get those
+ * checklists topps chrome, topps"). Scorecard v2's remaining unconfirmed are
+ * INSERTS -- UL, RS, GC, PX, FF prefixes on 2025 Chrome -- not base cards.
+ * The base scraper stopped at the Inserts heading on purpose (Class
+ * Encounters #4 once overwrote Fleer #4). This reads the section SAFELY:
+ * only cards whose number carries letters are emitted, because a pure number
+ * inside an insert set would collide with the base set's numbering. Each
+ * insert's own ladder (its <li> rungs) expands over that insert's cards
+ * alone.
+ */
+function parseInserts(html) {
+  const body = section(html, "Inserts", 2);
+  if (!body) return [];
+  const out = [];
+  for (const m of body.matchAll(/<h3 id="([^"]+?)(?:_\d+)?">/g)) {
+    const name = detag(m[1].replace(/_/g, " "));
+    const sub = section(body, m[1], 3);
+    if (!sub) continue;
+    const cards = parseCards(sub).filter((c) => INSERT_NUM.test(c.num));
+    if (!cards.length) continue;
+    // The section slice begins with its own <h3>, which parseLadder's heading
+    // pass would read as a rung named after the insert itself. An insert is
+    // not a parallel of itself.
+    const selfSlug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+    const ladder = parseLadder(sub).filter((r) => r.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") !== selfSlug);
+    out.push({ name, cards, ladder });
+  }
+  return out;
+}
+
 async function main() {
   fs.mkdirSync(OUT_DIR, { recursive: true });
   const [y0, y1] = YEARS.split("-").map(Number);
   const work = [];
   if (TITLES) for (const t of TITLES.split(",")) work.push(t.trim());
-  else for (let y = y0; y <= (y1 || y0); y++) work.push(`${y}_Topps`, `${y}_Topps_Update`);
+  // The page families holding scorecard v2's remaining unconfirmed rows.
+  else for (let y = y0; y <= (y1 || y0); y++) work.push(
+    `${y}_Topps`, `${y}_Topps_Update`, `${y}_Topps_Chrome`, `${y}_Topps_Chrome_Update`,
+    `${y}_Bowman`, `${y}_Bowman_Chrome`, `${y}_Bowman_Draft`, `${y}_Topps_Heritage`, `${y}_Panini_Prizm`,
+  );
 
   console.log(`[bcp-ladders] ${work.length} pages  years=${YEARS}\nout: ${OUT_DIR}\n`);
   let pages = 0, staged = 0, rows = 0, noLadder = 0, noCards = 0, unreachable = 0;
@@ -178,6 +216,19 @@ async function main() {
         lines.push(["base", csvEsc(c.num), csvEsc(r.name), "false", r.printRun ?? "", csvEsc(c.player)].join(","));
       }
     }
+    const inserts = parseInserts(html);
+    let insertRows = 0;
+    for (const ins of inserts) {
+      const cat = "insert:" + ins.name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+      for (const c of ins.cards) {
+        lines.push([csvEsc(cat), csvEsc(c.num), "", "false", "", csvEsc(c.player)].join(","));
+        insertRows++;
+        for (const r of ins.ladder) {
+          lines.push([csvEsc(cat), csvEsc(c.num), csvEsc(r.name), "false", r.printRun ?? "", csvEsc(c.player)].join(","));
+          insertRows++;
+        }
+      }
+    }
     const key = `${year}-${setName.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-baseball`;
     fs.writeFileSync(path.join(OUT_DIR, `${key}.csv`), lines.join("\n") + "\n");
     fs.writeFileSync(path.join(OUT_DIR, `${key}.manifest.json`), JSON.stringify({
@@ -186,7 +237,7 @@ async function main() {
     }, null, 1));
     staged++;
     rows += lines.length - 1;
-    console.log(`  ${title}: ${cards.length} cards x ${ladder.length + 1} rungs -> ${f(lines.length - 1)} rows`);
+    console.log(`  ${title}: ${cards.length} cards x ${ladder.length + 1} rungs + ${inserts.length} inserts (${f(insertRows)} rows) -> ${f(lines.length - 1)} rows`);
   }
 
   console.log(`\npages fetched     ${pages}`);
