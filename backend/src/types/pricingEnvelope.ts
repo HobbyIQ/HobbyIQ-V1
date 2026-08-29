@@ -189,7 +189,7 @@ export interface PricingProvenance {
   vendorUpdatedAt: string | null;
   /** hobbyIqFmv path indicator — "our-pool" when priceHoldingFromOurPool
    *  rescued, "legacy-engine" when computeEstimate served. */
-  pricingSource: "our-pool" | "legacy-engine" | "unified-pricing" | null;
+  pricingSource: "our-pool" | "legacy-engine" | "unified-pricing" | "sibling-estimate" | null;
   /** Metadata about the winning our-pool call. */
   pricingSourceMeta:
     | { slug: string; method: string; compsUsed: number }

@@ -37,7 +37,7 @@
 
 import type { PortfolioHolding } from "../../types/portfolioiq.types.js";
 import { computeHobbyIqFmv, type HobbyIqFmvMethod, type HobbyIqFmvResult } from "./hobbyIqFmv.service.js";
-import type { FmvRungLabel } from "../compiq/fmvRung.js";
+import { isExactPoolRung, type FmvRungLabel } from "../compiq/fmvRung.js";
 import { deriveHoldingSlug } from "./holdingSlug.service.js";
 
 export interface OurPoolPricingResult {
@@ -171,6 +171,33 @@ export async function priceHoldingFromOurPool(
     const band = useExplicit
       ? { low: explicitLow as number, high: explicitHigh as number }
       : bandAround(result.fmv, 0.20);
+
+    // CF-EXACT-POOL-IS-OBSERVED (D4 PR 5, 2026-08-29). hobbyIqFmv's first
+    // branch is the unified engine on the exact slug (method
+    // "unified-market-value", rungLabel exact-pool-*). This function did not
+    // know that method, fell to "Unknown method — treat as estimated", and
+    // the Marconi German exact pool ($182.50, n=3) was written to
+    // estimatedValue with isEstimate true while the headline kept the
+    // sibling's $1,109 in fairMarketValue. A price whose rung read the
+    // exact (identity, grade) pool is an OBSERVATION — and one sale of the
+    // exact card is thin but genuinely that card, so it does not face
+    // MIN_COMPS_FOR_BROAD_RUNG either.
+    if (isExactPoolRung(result.rungLabel)) {
+      return {
+        fairMarketValue: result.fmv,
+        valuationStatus: "observed",
+        estimatedValue: null,
+        estimateLow: null,
+        estimateHigh: null,
+        estimateConfidence: conf,
+        estimateBasis: result.basisNote,
+        method: result.method,
+        rungLabel: result.rungLabel,
+        compsUsed,
+        slug,
+        source: "our-pool",
+      };
+    }
 
     // grade-cross-raw is a synthetic estimate. Everything else with a
     // requested grade is observation of adjacent-identity real sales.

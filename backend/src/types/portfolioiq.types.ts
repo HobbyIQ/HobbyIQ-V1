@@ -168,8 +168,12 @@ export interface PortfolioHolding {
   //                      by canonical hobbyiqCardId slug
   //   "legacy-engine"  — computeEstimate / rail / ladder (pre-Our-Pool
   //                      wiring OR Our-Pool returned no data + fell back)
+  //   "unified-pricing" — the unified engine's exact-identity pool
+  //   "sibling-estimate" — D4 PR 5: siblingCardPriceFallback (another
+  //                      card × the measured parallel premium); only ever
+  //                      written when the holding's exact pool is empty
   // Absent → legacy pre-CF holding, treat as "legacy-engine".
-  pricingSource?: "our-pool" | "legacy-engine" | "unified-pricing";
+  pricingSource?: "our-pool" | "legacy-engine" | "unified-pricing" | "sibling-estimate";
   /** Extra breadcrumbs when pricingSource === "our-pool": which ladder
    *  rung won, how many comps contributed, and the exact slug that got
    *  matched. Absent on legacy-engine rows. */
