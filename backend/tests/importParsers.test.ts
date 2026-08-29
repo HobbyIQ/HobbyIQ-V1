@@ -229,6 +229,30 @@ describe("CF-IMPORT-BE — collision detector (the #2 guard, Hartman-4× scenari
   });
 });
 
+// ─── CSV cells arrive as text (CF-IMPORT-SERIAL-IS-TEXT, D12-b) ─────────
+
+describe("CF-IMPORT-SERIAL-IS-TEXT — the CSV reader delivers text; the columns parse themselves", () => {
+  const csv = (rows: string[]) => rows.join("\n") + "\n";
+
+  it("a Serial cell '/50' or '12/50' stays text — it is a print run, not a 1950 date", () => {
+    const res = parseHoldingsFile(csv([
+      "Player,Year,Brand,Card #,Serial,Cert,Auto,Paid",
+      "Marconi German,2026,Bowman Chrome,CPA-MG,/50,12345678,TRUE,120",
+      "Marconi German,2026,Bowman Chrome,CPA-MG,12/50,,FALSE,$95.50",
+    ]), "csv");
+    expect(res.rows[0]!.cells["serialNumber"]?.value).toBe("/50");
+    expect(res.rows[1]!.cells["serialNumber"]?.value).toBe("12/50");
+    expect(res.rows[0]!.cells["certNumber"]?.value).toBe("12345678");
+    expect(res.rows[0]!.cells["cardNumber"]?.value).toBe("CPA-MG");
+    // The typed columns still parse: the reader stopped typing, the parsers did not.
+    expect(res.rows[0]!.cells["cardYear"]?.value).toBe(2026);
+    expect(res.rows[0]!.cells["isAuto"]?.value).toBe(true);
+    expect(res.rows[1]!.cells["isAuto"]?.value).toBe(false);
+    expect(res.rows[0]!.cells["purchasePrice"]?.value).toBe(120);
+    expect(res.rows[1]!.cells["purchasePrice"]?.value).toBe(95.5);
+  });
+});
+
 // ─── file parser (xlsx round-trip detection + path strictness) ──────────
 
 describe("CF-IMPORT-BE — parseHoldingsFile (path detection + parsing)", () => {
