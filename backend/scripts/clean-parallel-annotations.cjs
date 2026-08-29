@@ -1,0 +1,240 @@
+#!/usr/bin/env node
+/**
+ * clean-parallel-annotations.cjs -- the parallel NAME is the name, not the footnote.
+ *
+ * CF-CLEAN-THE-NAMES (Drew, 2026-08-29 "do it"). 402,289 checklist-source
+ * identity rows carry a page annotation glued into `parallel`:
+ *
+ *   "Refractor - Est. print run ~4,000 to 6,000"       (bccp, 3,298 rows)
+ *   "Purple (exclusive to packs sold at Meijer stores)" (290,823 rows)
+ *   "Platinum ()"                                       (24,330 rows)
+ *
+ * The rung exists on the spine under an unmatchable slug, so the sale-derived
+ * twin never folds onto it -- Ohtani's 2018 Topps Chrome Refractor is exactly
+ * this, and it is most of why only 6% of derived rows are rung-confirmed.
+ *
+ * This is NOT vocabulary invention (the rule Drew set on 08-28): nothing is
+ * added. The annotation is moved, verbatim, to `parallelNote`; a numeric print
+ * run inside it fills `printRun` when the row has none; the name is what the
+ * checklist calls the rung once the footnote is off it.
+ *
+ * What it does per row (checklist sources only, identity rows only):
+ *   1. clean(parallel) -> { name, note, printRun }
+ *   2. newSlug = the id with segment 5 (parallelSlug) rebuilt from name
+ *   3. newSlug === id  -> patch parallel/parallelNote/printRun in place   (healed)
+ *      no row at newSlug -> write the row there, re-point its sales,
+ *                           delete graded children of the old slug, delete old (moved)
+ *      checklist row at newSlug -> the spine already has it: re-point sales,
+ *                           delete graded children + old                   (folded)
+ *      derived row at newSlug -> the spine outranks it: overwrite with this
+ *                           checklist row (authority), re-point, delete old (replaced)
+ *
+ * The "other" shape -- 83,838 rows where `parallel` holds player-pair text or a
+ * page paragraph ("Eric Davis (as) Andy Nezelek", "Purple RayWave Refractor (")
+ * -- is a mis-parsed checklist, not an annotated rung. Counted, left alone,
+ * reported as its own repair list.
+ *
+ * Env: COSMOS_CONNECTION_STRING; APPLY/BACKFILL_APPLY; SLOT/SLOTS (hash of id);
+ *      SPORTS (comma list, default all); CONCURRENCY=16; RUN_MINUTES=140; LIMIT.
+ * Exit 4 when the reconciliation does not add up (see reportWrites).
+ */
+"use strict";
+const path = require("path");
+const crypto = require("crypto");
+const { CosmosClient } = require("@azure/cosmos");
+const { reportWrites } = require(path.join(__dirname, "..", "dist", "services", "ops", "writeReconciliation.js"));
+
+const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
+const SLOT = Number(process.env.SLOT ?? 0), SLOTS = Math.max(1, Number(process.env.SLOTS ?? 1));
+const SPORTS = String(process.env.SPORTS || "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+const CONCURRENCY = Math.max(1, Number(process.env.CONCURRENCY || 16));
+const RUN_MS = Number(process.env.RUN_MINUTES || 140) * 60000;
+const LIMIT = Number(process.env.LIMIT || 0);
+const STARTED = Date.now();
+const f = (n) => Number(n).toLocaleString();
+
+const CHECKLIST_SOURCE = /^(bccp|baseballcardpedia|checklist|beckett|tcgdex|cardboardchecklist)/;
+const CHECKLIST_SQL = "(c.source = 'bccp' OR STARTSWITH(c.source,'baseballcardpedia') OR STARTSWITH(c.source,'checklist') OR STARTSWITH(c.source,'beckett') OR STARTSWITH(c.source,'tcgdex') OR STARTSWITH(c.source,'cardboardchecklist'))";
+const slugify = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+const shardOf = (id) => parseInt(crypto.createHash("sha1").update(String(id)).digest("hex").slice(0, 8), 16) % SLOTS;
+
+/** The three annotation shapes. Returns null for anything else (the
+ *  mis-parsed "other" shape is not ours to rename). */
+function clean(parallel) {
+  const raw = String(parallel ?? "");
+  let name = raw, note = null, shape = null;
+  const est = name.match(/^(.*?)\s*[-–—]?\s*Est\.?\s*print run\b(.*)$/i);
+  if (est) { note = ("Est. print run" + est[2]).trim(); name = est[1]; shape = "est-print-run"; }
+  const par = name.match(/^(.*?)\s*\(([^()]*)\)\s*$/);
+  if (par) {
+    const inner = par[2].trim();
+    note = [inner, note].filter(Boolean).join("; ") || null;
+    name = par[1];
+    shape = shape ?? (inner ? "parenthetical" : "empty-paren");
+  }
+  if (!shape) return null;
+  name = name.replace(/[-–—:]\s*$/, "").trim();
+  let printRun = null;
+  if (note) {
+    const m = note.match(/(\d[\d,]{1,})\s*(?:copies|cards|made)/i) || note.match(/#?\s*\/\s*(\d[\d,]{1,})/) || note.match(/numbered to\s*(\d[\d,]{1,})/i) || note.match(/^(\d[\d,]{1,})$/);
+    if (m) printRun = Number(m[1].replace(/,/g, "")) || null;
+  }
+  return { name, note, printRun, shape };
+}
+
+const retry = async (fn, tries = 8) => {
+  let wait = 500;
+  for (let a = 0; ; a++) {
+    try { return await fn(); }
+    catch (e) {
+      const msg = String(e?.message ?? e);
+      if (!/request rate|429|ETIMEDOUT|ECONNRESET|503/i.test(msg) || a >= tries) throw e;
+      await new Promise((r) => setTimeout(r, wait)); wait = Math.min(wait * 2, 15000);
+    }
+  }
+};
+
+async function main() {
+  const conn = process.env.COSMOS_CONNECTION_STRING;
+  if (!conn) { console.error("FATAL: COSMOS_CONNECTION_STRING not set"); process.exit(1); }
+  const db = new CosmosClient({ connectionString: conn, connectionPolicy: { retryOptions: { maxRetryAttemptsOnThrottledRequests: 30, maxWaitTimeInSeconds: 120 } } }).database("hobbyiq");
+  const cat = db.container("card_catalog"), pool = db.container("sold_comps");
+
+  console.log(`slot ${SLOT}/${SLOTS}  sports=${SPORTS.join(",") || "all"}  ${APPLY ? "APPLY" : "REPORT ONLY"}  budget ${RUN_MS / 60000}m\n`);
+  const shapes = {}; const misparsedNames = new Map();
+  let scanned = 0, otherShards = 0, misparsed = 0, emptyName = 0, healed = 0, moved = 0, folded = 0, replaced = 0, salesRepointed = 0, gradedDeleted = 0, failed = 0, notReached = 0, printRunsFilled = 0;
+  let stopReason = null, token;
+  const sportSql = SPORTS.length ? ` AND c.sport IN (${SPORTS.map((_, i) => `@sp${i}`).join(",")})` : "";
+  const query = {
+    query: `SELECT * FROM c WHERE NOT IS_DEFINED(c.gradeTier) AND IS_DEFINED(c.parallel) AND (CONTAINS(c.parallel, '(') OR CONTAINS(LOWER(c.parallel), 'print run')) AND ${CHECKLIST_SQL}${sportSql}`,
+    parameters: SPORTS.map((s, i) => ({ name: `@sp${i}`, value: s })),
+  };
+
+  do {
+    const page = await retry(() => cat.items.query(query, { maxItemCount: 200, continuationToken: token }).fetchNext());
+    token = page.continuationToken;
+    const mine = page.resources.filter((d) => shardOf(d.id) === SLOT);
+    otherShards += page.resources.length - mine.length;
+
+    for (let i = 0; i < mine.length; i += CONCURRENCY) {
+      await Promise.all(mine.slice(i, i + CONCURRENCY).map(async (d) => {
+        scanned++;
+        try {
+          const c = clean(d.parallel);
+          if (!c) { misparsed++; misparsedNames.set(String(d.parallel).slice(0, 60), (misparsedNames.get(String(d.parallel).slice(0, 60)) ?? 0) + 1); return; }
+          shapes[c.shape] = (shapes[c.shape] ?? 0) + 1;
+          if (!c.name) { emptyName++; return; }
+          const parts = String(d.id).split(":");
+          if (parts.length < 7) { misparsed++; return; }
+          parts[5] = slugify(c.name);
+          const newSlug = parts.join(":");
+          const printRun = d.printRun ?? c.printRun ?? null;
+          if (printRun && !d.printRun) printRunsFilled++;
+
+          if (newSlug === d.id) {
+            // The slug never carried the footnote; only the name text did.
+            if (!APPLY) { healed++; return; }
+            const ops = [
+              { op: "set", path: "/parallel", value: c.name },
+              { op: "set", path: "/parallelSlug", value: parts[5] },
+              { op: "set", path: "/parallelNote", value: c.note },
+              { op: "set", path: "/printRun", value: printRun },
+              { op: "set", path: "/parallelCleanedAt", value: new Date().toISOString() },
+            ];
+            await retry(() => cat.item(d.id, d.cardId ?? d.id).patch(ops));
+            healed++;
+            return;
+          }
+
+          const { resource: existing } = await retry(() => cat.item(newSlug, newSlug).read()).catch(() => ({ resource: null }));
+          const outcome = !existing ? "moved" : CHECKLIST_SOURCE.test(String(existing.source)) ? "folded" : "replaced";
+          if (!APPLY) { if (outcome === "moved") moved++; else if (outcome === "folded") folded++; else replaced++; return; }
+
+          if (outcome !== "folded") {
+            const { _rid, _self, _etag, _attachments, _ts, checklistBacking, checklistBackingAt, checklistFamilySetKeys, ...rest } = d;
+            const tokens = new Set((Array.isArray(d.searchTokens) ? d.searchTokens : []).filter((t) => typeof t === "string"));
+            for (const w of String(d.parallel).toLowerCase().split(/[^a-z0-9]+/)) tokens.delete(w);
+            for (const w of c.name.toLowerCase().split(/[^a-z0-9]+/)) if (w) tokens.add(w);
+            await retry(() => cat.items.upsert({
+              ...rest, id: newSlug, cardId: newSlug, hobbyiqCardId: newSlug,
+              parallel: c.name, parallelSlug: parts[5], parallelNote: c.note, printRun,
+              searchTokens: [...tokens],
+              movedFrom: d.id, movedReason: "parallel annotation moved to parallelNote", movedAt: new Date().toISOString(),
+              ...(outcome === "replaced" ? { replacedDerivedSource: existing.source } : {}),
+            }));
+          } else if ((c.note && !existing.parallelNote) || (printRun && !existing.printRun)) {
+            const ops = [];
+            if (c.note && !existing.parallelNote) ops.push({ op: "set", path: "/parallelNote", value: c.note });
+            if (printRun && !existing.printRun) ops.push({ op: "set", path: "/printRun", value: printRun });
+            await retry(() => cat.item(newSlug, newSlug).patch(ops)).catch(() => {});
+          }
+
+          // Sales that resolved onto the annotated slug follow the card.
+          let sToken;
+          do {
+            const sp = await retry(() => pool.items.query({ query: "SELECT c.id, c.cardId FROM c WHERE c.hobbyiqCardId = @s", parameters: [{ name: "@s", value: d.id }] }, { maxItemCount: 200, continuationToken: sToken }).fetchNext());
+            sToken = sp.continuationToken;
+            for (const x of sp.resources) {
+              await retry(() => pool.item(x.id, x.cardId).patch([
+                { op: "set", path: "/hobbiqCardIdPrev", value: d.id },
+                { op: "set", path: "/hobbyiqCardId", value: newSlug },
+                { op: "set", path: "/reslugedFrom", value: d.id },
+                { op: "set", path: "/reslugedReason", value: "parallel annotation cleaned" },
+                { op: "set", path: "/reslugedAt", value: new Date().toISOString() },
+              ]));
+              salesRepointed++;
+            }
+          } while (sToken);
+
+          // Graded children are regenerable from their parent; they do not move.
+          let gToken;
+          do {
+            const gp = await retry(() => cat.items.query({ query: "SELECT c.id, c.cardId FROM c WHERE STARTSWITH(c.id, @p) AND IS_DEFINED(c.gradeTier)", parameters: [{ name: "@p", value: d.id + ":" }] }, { maxItemCount: 200, continuationToken: gToken }).fetchNext());
+            gToken = gp.continuationToken;
+            for (const g of gp.resources) {
+              await retry(() => cat.item(g.id, g.cardId ?? g.id).delete()).catch((e) => { if (e.code !== 404) throw e; });
+              gradedDeleted++;
+            }
+          } while (gToken);
+
+          await retry(() => cat.item(d.id, d.cardId ?? d.id).delete()).catch((e) => { if (e.code !== 404) throw e; });
+          if (outcome === "moved") moved++; else if (outcome === "folded") folded++; else replaced++;
+        } catch (e) {
+          failed++;
+          if (failed <= 5) console.error(`  failed ${String(d.id).slice(0, 70)}: ${String(e.message || e).slice(0, 70)}`);
+        }
+      }));
+      const processed = Math.min(i + CONCURRENCY, mine.length);
+      if (LIMIT && (healed + moved + folded + replaced) >= LIMIT) { stopReason = "limit"; notReached += mine.length - processed; break; }
+      if (Date.now() - STARTED > RUN_MS) { stopReason = "budget"; notReached += mine.length - processed; break; }
+    }
+    if (stopReason) break;
+    if (scanned && scanned % 2000 < CONCURRENCY) process.stderr.write(`\r  scanned=${f(scanned)} healed=${f(healed)} moved=${f(moved)} folded=${f(folded)} replaced=${f(replaced)} sales=${f(salesRepointed)}   `);
+  } while (token);
+  process.stderr.write("\n");
+
+  if (stopReason === "budget") console.log(`\nstopped at the ${RUN_MS / 60000}-minute budget — the relaunch continues from here`);
+  else if (stopReason === "limit") console.log(`\nstopped at LIMIT=${f(LIMIT)} — a bounded run`);
+  console.log(`\n${APPLY ? "APPLY" : "REPORT ONLY — nothing written"}`);
+  console.log(`  rows scanned (this slot)     ${f(scanned)}   (+${f(otherShards)} belonging to other slots)`);
+  console.log(`  shapes                       ${Object.entries(shapes).map(([k, v]) => `${k}=${f(v)}`).join("  ")}`);
+  console.log(`  HEALED in place              ${f(healed)}   <- slug was already clean; name text was not`);
+  console.log(`  MOVED to the clean slug      ${f(moved)}`);
+  console.log(`  FOLDED (spine had it)        ${f(folded)}`);
+  console.log(`  REPLACED a derived twin      ${f(replaced)}   <- the checklist outranks a sale-minted row`);
+  console.log(`  sales re-pointed             ${f(salesRepointed)}`);
+  console.log(`  graded children deleted      ${f(gradedDeleted)}   <- regenerable by materialize-graded-identities`);
+  console.log(`  print runs recovered         ${f(printRunsFilled)}`);
+  console.log(`  mis-parsed (left alone)      ${f(misparsed)}   <- player text / page prose in the parallel column; its own repair`);
+  console.log(`  empty after clean (left)     ${f(emptyName)}`);
+  console.log(`  failed                       ${f(failed)}`);
+  if (misparsedNames.size) {
+    console.log(`\n  mis-parsed examples (top 8):`);
+    for (const [k, n] of [...misparsedNames.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8)) console.log(`    ${String(f(n)).padStart(7)}  ${k}`);
+  }
+  if (APPLY) {
+    reportWrites({ job: "clean-parallel-annotations", intended: scanned, written: healed + moved + folded + replaced, skipped: misparsed + emptyName + notReached, failed });
+  }
+}
+
+main().catch((e) => { console.error("FATAL:", e?.stack || e?.message); process.exit(3); });
