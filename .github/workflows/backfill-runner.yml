@@ -144,6 +144,7 @@ on:
           - conform-holdings-to-catalog
           # D14 read-only probes (apply is irrelevant; they never write).
           - audit-pool-identity
+          - probe-price-routes
       apply:
         description: "Actually write (true) or dry-run only (false)"
         required: true
@@ -341,6 +342,23 @@ jobs:
           echo "::add-mask::$TOK"
           echo "ADMIN_API_TOKEN=$TOK" >> "$GITHUB_ENV"
           echo "ADMIN_API_TOKEN fetched (length: ${#TOK})"
+
+      # D14 (2026-08-29). probe-price-routes replays slugs through the live
+      # pricing routes; requireSession admits the harness token as a
+      # synthetic pro_seller user. Fetched from App Service the way
+      # AUTH_SESSION_SECRET is, scoped to this one script, never echoed.
+      - name: Fetch TIER1_HARNESS_TOKEN from HobbyIQ3 App Service
+        if: inputs.script == 'probe-price-routes'
+        shell: bash
+        run: |
+          TOK=$(az webapp config appsettings list             --name HobbyIQ3             --resource-group rg-hobbyiq-dev             --query "[?name=='TIER1_HARNESS_TOKEN'].value | [0]"             -o tsv)
+          if [ -z "$TOK" ]; then
+            echo "::error::FAILED to fetch TIER1_HARNESS_TOKEN from App Service"
+            exit 1
+          fi
+          echo "::add-mask::$TOK"
+          echo "TIER1_HARNESS_TOKEN=$TOK" >> "$GITHUB_ENV"
+          echo "TIER1_HARNESS_TOKEN fetched (length: ${#TOK})"
 
       - name: Fetch AUTH_SESSION_SECRET from HobbyIQ3 App Service
         if: inputs.script == 'reprice-user-holdings'
