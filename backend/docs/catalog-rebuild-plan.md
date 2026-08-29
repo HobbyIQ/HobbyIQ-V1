@@ -19,6 +19,9 @@ user-owned cards may seed).
   category-structure decides Base, one point-read per row (23k rows/min)
 - Pokémon identity unified (numbers unglued, setKeys onto TCG-code vocabulary;
   era names stripped too, #1355)
+- **Pokémon scorecard** (same measure as baseball): 17.8% → **36.1%** any-backing
+  after the era fix + re-annotate (55,986 derived rows: card-confirmed 20,174,
+  checklist-confirmed 47, unconfirmed 35,765 — 34,016 of them `ingest-auto-seed`)
 - Year-prefix twin setKeys unified across sports; season keys ruled
   (first year + bare key); bowman-paper folded into bowman BY RULING
 - `playerSlug` on every derived row (flagship-first backfill), and the
@@ -49,7 +52,6 @@ user-owned cards may seed).
 1. **R5 rematch** — `reslugAllSoldComps`, 8 slots, dispatched 2026-08-29
    02:31Z (only-improve; also re-resolves the 14.6k sales the retire unplaced)
 2. Baseball re-annotation v3 fleet draining → compile the final scorecard
-3. Pokémon: mapper chain (era fix) → re-annotate → pokémon scorecard
 4. → RU rollback (Drew's go given, after the rematch + emission drain):
    card_catalog 400k→~2.5k, **sold_comps 100k→8k** (raised 40k→100k TEMP
    2026-08-29 02:52Z — it was pinned at 100% with 24k 429s/5min under the
