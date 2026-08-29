@@ -152,8 +152,30 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   the eBay item id + content hash), matched to a checklist card, and the
   portfolio holding is populated with that same card. These are REAL sales and
   are treated as such — first-class comps in the pool, never a second copy.
-  Scoping now: map the existing path (ebayImportRematch routes, ebayAutoHolding,
-  the CF-IMPORT async job) against those five requirements; fix the gaps.
+  MAPPED 2026-08-29 13:45Z — what the code does today, against the five requirements:
+  - the import (`POST /api/portfolio/erp/purchases/import/ebay` → ebayBuyerHistory →
+    ebayAutoHolding) creates the HOLDING and pins the checklist slug, but **never
+    writes the sale** — the purchase enters sold_comps only if the user later
+    confirms it, or a suggester/rematch happens to fire;
+  - the eBay item id / order-line-item id are stored on the purchase entry only,
+    **never on the holding**, so 4 of 5 comp paths key the pool row by
+    `holding::<id>` — dedupe by eBay id is impossible there; the sell path passes
+    no id at all (clients never send `ebayOrderId`);
+  - the rematch route and the suggester file comps under **CardHedge vendor ids**
+    (via a CardHedge search — a vendor call in matching) while the confirm path uses
+    the `hiq:` slug: holding and sale routinely carry different identifiers;
+  - a dedupe hit returns `{written:true}` like a write and no id, so nothing links
+    the holding to its sale; the canonical-scoring gives a `holding::` key +50 so a
+    collision DELETES the row that carried the real eBay id.
+  Fix plan, in order: **D7a** the import writes the sale through recordSoldComp with
+  the real eBay ids (order line item id, item id) and the holding's checklist slug;
+  recordSoldComp returns {written, id, deduped}; the holding stamps ebayItemId /
+  ebayOrderId / soldCompId. **D7b** every user-comp path keys by the eBay id (sell
+  path falls back to the holding's id server-side); real-id rows outrank
+  `holding::` rows. **D7c** the rematch resolves through canonicalize (internal), never
+  CardHedge, and files under the slug; the suggester stops emitting comps. **D7d**
+  the writer's catalog reconcile for user sources no longer depends on
+  CATALOG_MATCH_ONLY_ENABLED.
 - ☐ D6 **Identity key ≠ family key.** `normalizeSetKey` folds distinct products into
   a family (Co-Signers → topps, UD Premier → upper-deck, 1990 Donruss →
   panini-donruss) on both sales and checklists. Decide: identity key = the
