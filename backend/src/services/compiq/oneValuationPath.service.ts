@@ -67,6 +67,12 @@ export interface ValuationGrade {
 export interface ValuationRequest {
   /** An hiq slug, or a vendor id the catalog can map to one. */
   id: string;
+  /** D17: a holding's second identity (its `cardId` — a vendor id, or a
+   *  second slug) beside the slug in `id`. The exact pool is then asked in
+   *  the persist site's order (#1462): the slug alone, its twin, then
+   *  `cardId` ∪ slug, then cardId's twin. Routes, which know only a slug,
+   *  leave it unset. */
+  cardId?: string | null;
   /** undefined / null / no company → the Raw tier. */
   grade?: ValuationGrade | null;
   /** The caller's print run, when it knows one the slug does not carry. */
@@ -99,6 +105,8 @@ export interface ValuationIdentity {
   requestedId: string;
   /** The identity the unified engine actually read (the slug or its twin). */
   pooledAs: string | null;
+  /** Which attempt of the #1462 order read it (exactPoolSupremacy's label). */
+  pooledVia: string | null;
   sport: string | null;
   year: number | null;
   setKey: string | null;
@@ -174,7 +182,7 @@ export function normalizeGrade(grade: ValuationGrade | null | undefined): Valuat
 
 function blankIdentity(requestedId: string): ValuationIdentity {
   return {
-    slug: null, requestedId, pooledAs: null,
+    slug: null, requestedId, pooledAs: null, pooledVia: null,
     sport: null, year: null, setKey: null, setName: null, cardNumber: null,
     parallel: "Base", parallelSlug: null, isAuto: false, printRun: null,
     playerName: null, imageUrl: null,
@@ -316,8 +324,13 @@ export async function valueIdentity(req: ValuationRequest): Promise<Valuation> {
   const playerName = req.playerName ?? identity.playerName ?? null;
 
   // ── 1. The exact pool, priced once ─────────────────────────────────────
+  //
+  // A holding's second identity (req.cardId) joins the attempts after the
+  // slug and its twin — the persist site's order since #1462, so a wrong
+  // cardId's comps cannot dilute the checklist identity's own pool.
+  const secondId = String(req.cardId ?? "").trim();
   const exact = await priceHoldingFromExactPool(
-    { hobbyiqCardId: slug, cardId: null, printRun: identity.printRun },
+    { hobbyiqCardId: slug, cardId: secondId && secondId !== slug ? secondId : null, printRun: identity.printRun },
     {
       grade,
       playerName,
@@ -329,7 +342,10 @@ export async function valueIdentity(req: ValuationRequest): Promise<Valuation> {
   const v = base(identity);
   const u = exact?.u ?? null;
   v.unified = u;
-  if (exact) v.identity.pooledAs = exact.attempt.cardId;
+  if (exact) {
+    v.identity.pooledAs = exact.attempt.cardId;
+    v.identity.pooledVia = exact.attempt.label;
+  }
   if (u) {
     v.gradeCurve = curveFromUnified(u, nowMs);
     v.totalSampleCount = u.totalSampleCount;

@@ -15,7 +15,7 @@
 // in-union `method` on the two wires that have one, the curve served under
 // the slug, and the same null-with-a-reason when there is nothing. Spies pin
 // that no second engine is consulted for the headline.
-import { describe, it, expect, beforeAll, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from "vitest";
 import request from "supertest";
 import fs from "node:fs";
 import path from "node:path";
@@ -74,9 +74,32 @@ vi.mock("../src/services/compiq/canonicalFmv.service.js", async (importActual) =
   const actual = await importActual<typeof import("../src/services/compiq/canonicalFmv.service.js")>();
   return { ...actual, computeCanonicalFmv: vi.fn(async (input: never) => { h.calls.canonical++; return actual.computeCanonicalFmv(input); }) };
 });
+// The CH estimate engine: counted, and answered with nothing — no route may
+// reach it (pinned at 0 on every route case), and the persist site's legacy
+// chain must find nothing in it so what it persists can only be the entry's.
 vi.mock("../src/services/compiq/compiqEstimate.service.js", async (importActual) => {
   const actual = await importActual<typeof import("../src/services/compiq/compiqEstimate.service.js")>();
-  return { ...actual, computeEstimate: vi.fn(async (...args: never[]) => { h.calls.estimate++; return (actual.computeEstimate as (...a: never[]) => unknown)(...args); }) };
+  return {
+    ...actual,
+    computeEstimate: vi.fn(async () => {
+      h.calls.estimate++;
+      return {
+        fairMarketValue: 0, confidence: { pricingConfidence: 0 }, source: "no-recent-comps",
+        compsUsed: 0, compsAvailable: 0, recentComps: [], cardIdentity: null, gradeUsed: "Raw",
+        daysSinceNewestComp: null, variantWarning: [],
+      };
+    }),
+  };
+});
+// The persist site's other estimate rungs (D4 PR 5's fixture stubs them the
+// same way): nothing measured, nothing to persist.
+vi.mock("../src/services/portfolioiq/priceFromOurPool.service.js", async (importActual) => {
+  const actual = await importActual<Record<string, unknown>>();
+  return { ...actual, priceHoldingFromOurPool: vi.fn(async () => null) };
+});
+vi.mock("../src/services/compiq/siblingCardPriceFallback.service.js", async (importActual) => {
+  const actual = await importActual<Record<string, unknown>>();
+  return { ...actual, attemptSiblingPriceFallback: vi.fn(async () => null) };
 });
 vi.mock("../src/services/compiq/observedGradeCurve.service.js", async (importActual) => {
   const actual = await importActual<typeof import("../src/services/compiq/observedGradeCurve.service.js")>();
@@ -504,5 +527,154 @@ describe("D17 — /observed-grade-curves-bulk: every slug through the entry, onc
     expect(c.fmvReason).toBe("identity-not-in-catalog");
     expect(h.calls.unified).toBe(0);
     expect(h.calls.curve).toBe(0);
+  });
+});
+
+// ─── D17: the portfolio persist site ────────────────────────────────────────
+//
+// repriceHoldingsForUser (the batch / scheduled site) and autoPriceHolding
+// (add / update / refresh — reached through POST /holdings/:id/refresh) with
+// a fixture holding against the same mocked reader: the number persisted on
+// the holding must be the number the four routes serve for its slug + grade,
+// under the same rung. The unified early-exit flag is ON here so the
+// boundary is observable: for an identity the catalog names, the entry
+// decides and the flagged legacy reads never run; for an identity it cannot
+// name, the legacy reads still price it (unchanged since #1462).
+describe("D17 — the portfolio persist site: what is written is what the routes serve", () => {
+  const USER = "test-user";
+  let store: typeof import("../src/services/portfolioiq/portfolioStore.service.js");
+  beforeAll(async () => {
+    store = await import("../src/services/portfolioiq/portfolioStore.service.js");
+    process.env.PORTFOLIO_OBSERVED_GRADE_OVERRIDE_ENABLED = "true";
+  });
+  afterAll(() => { delete process.env.PORTFOLIO_OBSERVED_GRADE_OVERRIDE_ENABLED; });
+  beforeEach(async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network disabled in tests")));
+    const doc = await store.readUserDoc(USER);
+    doc.holdings = {};
+    await store.writeUserDoc(USER, doc);
+  });
+  afterEach(() => { vi.unstubAllGlobals(); });
+
+  async function seed(fields: Record<string, unknown>): Promise<string> {
+    const id = `h-${Math.random().toString(36).slice(2, 8)}`;
+    const doc = await store.readUserDoc(USER);
+    doc.holdings[id] = {
+      id, quantity: 1, purchasePrice: 100, totalCostBasis: 100, cardStatus: "active",
+      playerName: "Test Player", cardYear: 2018, setName: "Bowman Chrome", cardNumber: "49",
+      parallel: "Gold Refractor", isAuto: false, lastUpdated: "2026-08-01T00:00:00.000Z",
+      ...fields,
+    } as never;
+    await store.writeUserDoc(USER, doc);
+    return id;
+  }
+  const stored = async (id: string): Promise<Record<string, unknown>> => (await store.readUserDoc(USER)).holdings[id] as unknown as Record<string, unknown>;
+  async function refresh(id: string): Promise<void> {
+    const r = await request(app).post(`/api/portfolio/holdings/${id}/refresh`).set(H);
+    expect(r.status).toBe(200);
+  }
+
+  it("(slug, Raw): the batch reprice AND the refresh persist the four routes' number and rung, labelled observed, with the routes' comp count", async () => {
+    const { pb } = await four(GOLD);
+    const id = await seed({ hobbyiqCardId: GOLD });
+    const res = await store.repriceHoldingsForUser(USER);
+    expect(res.updates.find((u) => u.id === id)).toMatchObject({ status: "repriced", reason: `one-valuation-path:${pb.rungLabel}` });
+    const hld = await stored(id);
+    expect(hld.fairMarketValue).toBe(pb.marketValue);
+    expect(hld.fmvRung).toBe(pb.rungLabel);
+    expect(EXACT.has(String(hld.fmvRung))).toBe(true);
+    expect(hld.isEstimate).toBe(false);
+    expect(hld.valuationStatus).toBe("observed");
+    expect(hld.pricingSource).toBe("unified-pricing");
+    expect(hld.pricingSourceMeta).toEqual({ slug: GOLD, method: pb.rungLabel, compsUsed: pb.compsUsed });
+    expect(hld.predictedPrice).toBe(pb.predictedPrice);
+    expect(hld.estimateBasis).toMatch(/^unified: Raw window=/);
+    expect(hld.estimateBasis).toContain("id=hobbyiqCardId");
+    expect(hld.lastUpdated).not.toBe("2026-08-01T00:00:00.000Z");
+    // The on-demand site, from a stale number: the same answer.
+    const doc = await store.readUserDoc(USER);
+    (doc.holdings[id] as unknown as Record<string, unknown>).fairMarketValue = 1;
+    (doc.holdings[id] as unknown as Record<string, unknown>).fmvRung = null;
+    await store.writeUserDoc(USER, doc);
+    await refresh(id);
+    const again = await stored(id);
+    expect(again.fairMarketValue).toBe(pb.marketValue);
+    expect(again.fmvRung).toBe(pb.rungLabel);
+    expect(again.pricingSourceMeta).toEqual({ slug: GOLD, method: pb.rungLabel, compsUsed: pb.compsUsed });
+    // No second engine, no legacy chain, on either site.
+    expect(h.calls.estimate).toBe(0);
+    expect(h.calls.curve).toBe(0);
+    expect(h.calls.canonical).toBe(0);
+    expect(h.calls.ladder).toEqual([]);
+  });
+
+  it("(slug, PSA 10): the graded holding persists the graded wire's number — not Raw's", async () => {
+    const raw = await four(GOLD);
+    const psa10 = await four(GOLD, { company: "PSA", value: 10 });
+    const id = await seed({ hobbyiqCardId: GOLD, gradeCompany: "PSA", gradeValue: 10 });
+    await store.repriceHoldingsForUser(USER);
+    const hld = await stored(id);
+    expect(hld.fairMarketValue).toBe(psa10.pb.marketValue);
+    expect(hld.fairMarketValue).not.toBe(raw.pb.marketValue);
+    expect(hld.fmvRung).toBe(psa10.pb.rungLabel);
+    expect(hld.pricingSourceMeta).toEqual({ slug: GOLD, method: psa10.pb.rungLabel, compsUsed: psa10.pb.compsUsed });
+  });
+
+  it("(slug, PSA 8 — no pool at the tier): the same entry's grade-curve-estimate is persisted as an ESTIMATE under its rung — never the engine's cross-grade rescale as observed", async () => {
+    const psa8 = await four(GOLD, { company: "PSA", value: 8 });
+    expect(psa8.pb.rungLabel).toBe("grade-curve-estimate");
+    const id = await seed({ hobbyiqCardId: GOLD, gradeCompany: "PSA", gradeValue: 8 });
+    const res = await store.repriceHoldingsForUser(USER);
+    expect(res.updates.find((u) => u.id === id)).toMatchObject({ status: "repriced", reason: "one-valuation-path:grade-curve-estimate" });
+    const hld = await stored(id);
+    expect(hld.fairMarketValue).toBe(psa8.pb.marketValue);
+    expect(hld.fmvRung).toBe("grade-curve-estimate");
+    expect(hld.fmvRung).not.toBe("cross-grade-fallback");
+    expect(hld.isEstimate).toBe(true);
+    expect(hld.valuationStatus).toBe("estimated");
+    expect(hld.pricingSource).toBe("unified-pricing");
+    expect(hld.pricingSourceMeta).toEqual({ slug: GOLD, method: "grade-curve-estimate", compsUsed: 0 });
+    expect(hld.estimateBasis).toMatch(/^Estimated from this card's own Raw sales/);
+    await refresh(id);
+    const again = await stored(id);
+    expect(again.fairMarketValue).toBe(psa8.pb.marketValue);
+    expect(again.fmvRung).toBe("grade-curve-estimate");
+    expect(h.calls.estimate).toBe(0);
+  });
+
+  it("no exact pool: the entry declines, the flagged legacy exact-pool reads do NOT run, the gated estimate chain finds nothing — no exact-pool rung, no unified-pricing label, skipped", async () => {
+    const e = await four(EMPTY);
+    expect(e.pb.fmvReason).toBe("no-exact-pool");
+    const id = await seed({ hobbyiqCardId: EMPTY, cardYear: 2020, setName: "Topps Chrome", cardNumber: "1", parallel: "Base" });
+    const res = await store.repriceHoldingsForUser(USER);
+    expect(res.updates.find((u) => u.id === id)?.status).toBe("skipped");
+    const hld = await stored(id);
+    expect(hld.fairMarketValue ?? null).toBeNull();
+    expect(EXACT.has(String(hld.fmvRung))).toBe(false);
+    expect(hld.pricingSource).not.toBe("unified-pricing");
+    // The legacy estimate chain ran (once), found nothing, and persisted nothing.
+    expect(h.calls.estimate).toBe(1);
+  });
+
+  it("a slug the catalog does not hold, with sales under it: the entry declines and the LEGACY exact-pool read still prices it — legacy survives only for identities the catalog cannot name", async () => {
+    h.rows.push(...Array.from({ length: 5 }, (_, i) => sale(NOT_IN_CATALOG, 20 + i, 10 + i)));
+    const id = await seed({ hobbyiqCardId: NOT_IN_CATALOG, cardYear: 2021, setName: "Bowman", cardNumber: "7", parallel: "Base" });
+    const res = await store.repriceHoldingsForUser(USER);
+    expect(res.updates.find((u) => u.id === id)).toMatchObject({ status: "repriced", reason: "unified-pricing-early-exit" });
+    const hld = await stored(id);
+    expect(EXACT.has(String(hld.fmvRung))).toBe(true);
+    expect(hld.pricingSource).toBe("unified-pricing");
+    // And the routes say null for it: the same identity rule, both sides.
+    const { pb } = await four(NOT_IN_CATALOG);
+    expect(pb.fmvReason).toBe("identity-not-in-catalog");
+  });
+
+  it("the cost-basis floor still stands: an exact-pool number under 15% of a > $50 cost basis is not written", async () => {
+    const id = await seed({ hobbyiqCardId: THIN, cardYear: 2019, setName: "Topps Stadium Club", cardNumber: "100", parallel: "Base", isAuto: true, purchasePrice: 400, totalCostBasis: 400 });
+    const res = await store.repriceHoldingsForUser(USER);
+    expect(res.updates.find((u) => u.id === id)?.status).toBe("skipped");
+    const hld = await stored(id);
+    expect(hld.fairMarketValue ?? null).toBeNull();
+    expect(EXACT.has(String(hld.fmvRung))).toBe(false);
   });
 });

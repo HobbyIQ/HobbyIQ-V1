@@ -171,4 +171,65 @@ describe("D17 pins — card-detail, card-panel, the bulk curves and the persist 
     expect(bulkBody.includes("await valueIdentity(")).toBe(true);
     for (const call of D17_ENGINE_CALLS) expect(bulkBody.includes(call), call).toBe(false);
   });
+
+  it("the persist site: autoPriceHolding, repriceHoldingsForUser and the supremacy gate ask the one entry FIRST; the legacy exact-pool reads follow, gated to identities the catalog cannot name; the tile rung and the majority resolver are gone", () => {
+    const src = stripComments(read("src/services/portfolioiq/portfolioStore.service.ts"));
+    // The grade-curve tile rung (a legacy curve build per holding) is gone,
+    // and so is the slug -> majority vendor-id resolver it used.
+    expect(src.includes("buildObservedGradeCurve(")).toBe(false);
+    expect(src.includes('NOT STARTSWITH(c.cardId, "hiq:")')).toBe(false);
+    expect(src.includes("await computeUnifiedPrice(")).toBe(false);
+
+    const between = (from: string, to: string): string => {
+      const a = src.indexOf(from);
+      expect(a, from).toBeGreaterThanOrEqual(0);
+      const b = src.indexOf(to, a + from.length);
+      expect(b, to).toBeGreaterThan(a);
+      return src.slice(a, b);
+    };
+    // autoPriceHolding: from its signature to its legacy computeEstimate call.
+    const auto = between("async function autoPriceHolding(", "const estimate = await computeEstimate(");
+    const autoEntry = auto.indexOf("valueHoldingThroughOneEntry(");
+    const autoLegacy = auto.indexOf("priceHoldingFromExactPool(");
+    expect(autoEntry).toBeGreaterThanOrEqual(0);
+    expect(autoLegacy).toBeGreaterThan(autoEntry);
+    expect(auto.slice(0, autoEntry).includes("priceHoldingFromExactPool(")).toBe(false);
+    expect(auto).toMatch(/if \(!entryDecidedExactPool && process\.env\.PORTFOLIO_OBSERVED_GRADE_OVERRIDE_ENABLED === "true" && earlyResolvedId\)/);
+    expect(src).toMatch(/if \(!entryDecidedExactPool\s*&& process\.env\.PORTFOLIO_OBSERVED_GRADE_OVERRIDE_ENABLED === "true"\s*&& resolvedIdForPricing\)/);
+    // repriceHoldingsForUser: the same shape, both flagged reads gated.
+    const reprice = between("export async function repriceHoldingsForUser(", "const estimate = await computeEstimate(");
+    const rEntry = reprice.indexOf("valueHoldingThroughOneEntry(");
+    const rLegacy = reprice.indexOf("priceHoldingFromExactPool(");
+    expect(rEntry).toBeGreaterThanOrEqual(0);
+    expect(rLegacy).toBeGreaterThan(rEntry);
+    expect(reprice).toMatch(/if \(!bEntryDecided && process\.env\.PORTFOLIO_OBSERVED_GRADE_OVERRIDE_ENABLED === "true" && bEarlyId\)/);
+    expect(src).toMatch(/if \(!bEntryDecided && process\.env\.PORTFOLIO_OBSERVED_GRADE_OVERRIDE_ENABLED === "true"\) \{/);
+    // The supremacy gate: the entry replaces a blocked estimate; the legacy
+    // re-price only when the entry could not resolve the identity.
+    const gate = between("async function gateEstimateAgainstExactPool(", "async function autoPriceHolding(");
+    const gEntry = gate.indexOf("valueHoldingThroughOneEntry(");
+    const gLegacy = gate.indexOf("priceHoldingFromExactPool(");
+    expect(gEntry).toBeGreaterThanOrEqual(0);
+    expect(gLegacy).toBeGreaterThan(gEntry);
+    expect(gate).toMatch(/const entryDecided = entry\.outcome !== "unresolved";\s*[\s\S]*?if \(!entryDecided\) \{/);
+  });
+
+  it("holdingValuation.ts is the adapter over the entry: valueIdentity only, no engine, no grader-premium table, and it never writes cross-grade-fallback", () => {
+    const src = stripComments(read("src/services/portfolioiq/holdingValuation.ts"));
+    expect(src.includes("await valueIdentity(")).toBe(true);
+    for (const call of D17_ENGINE_CALLS) expect(src.includes(call), call).toBe(false);
+    expect(src.includes("getGraderPremium(")).toBe(false);
+    expect(src.includes('"cross-grade-fallback"')).toBe(false);
+    // The estimate write is an estimate, and the observed write an exact-pool rung.
+    expect(src).toMatch(/fmvRung: "grade-curve-estimate",[\s\S]*?isEstimate: true,[\s\S]*?valuationStatus: "estimated"/);
+    expect(src).toMatch(/const observed = priced && v\.valueSource === "observed" && isExactPoolRung\(v\.rungLabel\);/);
+    // Every literal that sets fairMarketValue sets fmvRung (the rung-writers rule).
+    const literals = src.split("fairMarketValue: ").length - 1;
+    const rungs = src.split("fmvRung: ").length - 1;
+    expect(literals).toBe(2);
+    expect(rungs).toBe(2);
+    // The entry takes the holding's second identity and asks in #1462's order.
+    const entry = stripComments(read("src/services/compiq/oneValuationPath.service.ts"));
+    expect(entry).toMatch(/cardId: secondId && secondId !== slug \? secondId : null, printRun: identity\.printRun/);
+  });
 });

@@ -20,6 +20,9 @@ import { resolvePlayer } from "../mlb/playerResolver.service.js";
 import { deleteBlobByUrl } from "../photoStorage/photoStorage.service.js";
 import { resolveCardsightGradeId } from "../cardsight/cardsightGradesTaxonomy.js";
 import { fillDerivedSlugFromCatalog } from "./holdingSlug.service.js";
+// CF-ONE-VALUATION-PATH (D17, 2026-08-30): the persist site prices the exact
+// pool through the ONE valuation entry (holdingValuation → valueIdentity).
+import { valueHoldingThroughOneEntry } from "./holdingValuation.js";
 import { isPriceFromOurPoolEnabled, priceHoldingFromOurPool } from "./priceFromOurPool.service.js";
 import { composeHoldingWireShape, composePortfolioListResponse } from "./responseAssembly.js";
 // CF-INVENTORY-CATALOG-IMAGE (2026-07-05): shared resolver produces the
@@ -2865,25 +2868,60 @@ async function gateEstimateAgainstExactPool(input: {
     blockingCount: verdict.blockingCount,
     counts: verdict.counts,
   }));
+  // CF-ONE-VALUATION-PATH (D17, 2026-08-30). The exact pool through the ONE
+  // entry first: the number that replaces a blocked estimate is the number
+  // the card page serves for this holding's slug + grade. A tier with no
+  // pool of its own is the entry's empirical fill (grade-curve-estimate,
+  // persisted as an estimate) — never the engine's cross-grade rescale off
+  // getGraderPremium's tables. When the identity resolved but the entry has
+  // no exact-pool number, the legacy re-price below must not run: it could
+  // only produce the number the entry declined to. The legacy re-price
+  // serves identities the catalog cannot name, exactly as before.
+  const entry = await valueHoldingThroughOneEntry(holding, { userId: input.userId ?? null, caller: input.site, nowIso });
+  if (entry.outcome === "observed" || entry.outcome === "estimated") {
+    console.log(JSON.stringify({
+      event: "exact_pool_priced_over_estimate",
+      source: "portfolioStore.gateEstimateAgainstExactPool",
+      site: input.site,
+      userId: input.userId ?? null,
+      holdingId: holding.id,
+      fair_market_value: entry.valuation.fairMarketValue,
+      rung: entry.valuation.rungLabel,
+      samples: entry.valuation.compsUsed,
+      identityAttempt: entry.valuation.identity.pooledVia,
+      pricedId: entry.valuation.identity.pooledAs,
+      replacedEstimate: input.proposed,
+      oneValuationPath: true,
+    }));
+    return {
+      outcome: "priced-from-exact-pool",
+      holding: entry.holding,
+      blockingId: verdict.blockingId as string,
+      canonical: entry.valuation.fairMarketValue as number,
+    };
+  }
+  const entryDecided = entry.outcome !== "unresolved";
   const gCo = holding.gradeCompany ? String(holding.gradeCompany).trim() : null;
   const gValRaw = (holding as { gradeValue?: unknown }).gradeValue;
   const gVal = typeof gValRaw === "number" ? gValRaw : (gValRaw ? Number(gValRaw) : null);
   let exact: ExactPoolPrice | null = null;
-  try {
-    exact = await priceHoldingFromExactPool(holding as HoldingIdentityFields, {
-      grade: gCo ? { company: gCo, value: gVal } : null,
-      excludeContributorUserId: input.userId ?? null,
-      playerName: typeof holding.playerName === "string" ? holding.playerName : null,
-      cardYear: shimmedCardYear(holding) ?? null,
-    });
-  } catch (err) {
-    console.warn(JSON.stringify({
-      event: "exact_pool_supremacy_price_error",
-      source: "portfolioStore.gateEstimateAgainstExactPool",
-      site: input.site,
-      holdingId: holding.id,
-      error: (err as Error)?.message ?? String(err),
-    }));
+  if (!entryDecided) {
+    try {
+      exact = await priceHoldingFromExactPool(holding as HoldingIdentityFields, {
+        grade: gCo ? { company: gCo, value: gVal } : null,
+        excludeContributorUserId: input.userId ?? null,
+        playerName: typeof holding.playerName === "string" ? holding.playerName : null,
+        cardYear: shimmedCardYear(holding) ?? null,
+      });
+    } catch (err) {
+      console.warn(JSON.stringify({
+        event: "exact_pool_supremacy_price_error",
+        source: "portfolioStore.gateEstimateAgainstExactPool",
+        site: input.site,
+        holdingId: holding.id,
+        error: (err as Error)?.message ?? String(err),
+      }));
+    }
   }
   // CF-COST-BASIS-SANITY-FLOOR, as at every other unified write: a price
   // under 15% of a > $50 cost basis is a slug mismatch, not a market.
@@ -2945,125 +2983,37 @@ async function autoPriceHolding(
   source: string,
   userId?: string,
 ): Promise<PortfolioHolding> {
-  // CF-GRADE-CURVE-IS-SOURCE-OF-TRUTH (Drew, 2026-08-06). Grade curve
-  // IS the canonical market value + predicted next sale per Drew's
-  // product doctrine. Portfolio holdings must display the SAME number
-  // the card page's grade curve shows for the (slug, grade) tuple —
-  // otherwise the portfolio disagrees with the card page for the same
-  // card. FIRST rung: call buildObservedGradeCurve, find the tile
-  // matching the holding's grade, use tile.trendAdjustedValue as
-  // fairMarketValue. Falls through to legacy rungs on any miss.
-  const holdingSlug = (holding as any).hobbyiqCardId ?? holding.cardId ?? null;
-  if (typeof holdingSlug === "string" && holdingSlug.length > 0) {
-    try {
-      // Resolve hiq: slug to majority CH cardId (same pattern as the
-      // observed-grade-curve route handler).
-      let curveCardId = holdingSlug;
-      if (curveCardId.startsWith("hiq:")) {
-        try {
-          const { CosmosClient: _CC } = await import("@azure/cosmos");
-          const cn = process.env.COSMOS_CONNECTION_STRING;
-          if (cn) {
-            const sc = new _CC(cn).database(process.env.COSMOS_DATABASE ?? "hobbyiq").container("sold_comps");
-            const { resources: buckets } = await sc.items.query<{ cid: string; n: number }>({
-              query: `SELECT c.cardId as cid, COUNT(1) as n FROM c
-                      WHERE c.hobbyiqCardId = @s AND IS_DEFINED(c.cardId) AND c.cardId != null
-                        AND NOT STARTSWITH(c.cardId, "hiq:")
-                      GROUP BY c.cardId`,
-              parameters: [{ name: "@s", value: curveCardId }],
-            }).fetchAll();
-            if (buckets.length > 0) {
-              buckets.sort((a, b) => b.n - a.n);
-              curveCardId = buckets[0].cid;
-            }
-          }
-        } catch { /* keep slug */ }
-      }
-      const { buildObservedGradeCurve } = await import("../compiq/observedGradeCurve.service.js");
-      const curve = await buildObservedGradeCurve(curveCardId, {
-        playerName: (holding as any).playerName ?? null,
-        // CF-GRADE-CURVE-POOL-UNION (2026-08-22). curveCardId was just
-        // resolved from the slug to the dominant vendor cardId; hand the slug
-        // over too so the unified overlay unions both, as this service's own
-        // pricing path already does. Otherwise the curve prices this card off
-        // a strictly smaller pool than the holding does.
-        hobbyiqCardId: holdingSlug.startsWith("hiq:") ? holdingSlug : null,
-      });
-      if (curve?.entries?.length) {
-        const wantGrader = (holding as any).gradeCompany ? String((holding as any).gradeCompany).toUpperCase() : "Raw";
-        const wantVal = typeof (holding as any).gradeValue === "number" ? (holding as any).gradeValue
-          : ((holding as any).gradeValue ? Number((holding as any).gradeValue) : null);
-        const tile = curve.entries.find((e: { grader: string; grade: string }) => {
-          if (e.grader !== wantGrader) return false;
-          if (wantGrader === "Raw") return true;
-          // CF-GRADE-CURVE-TILE-LABEL (2026-08-22). `e.grade` is the LABEL and
-          // already carries the grader — "PSA 9", "BGS 9.5" — so Number(e.grade)
-          // is NaN and NaN === 9 is false. The tile was therefore never found
-          // for ANY graded holding, CF-GRADE-CURVE-IS-SOURCE-OF-TRUTH silently
-          // fell through to unified pricing, and the portfolio price could not
-          // agree with the grade curve it is supposed to be reading.
-          //
-          // Raw holdings return true above, which is why this survived: raw
-          // cards agreed and graded ones never did. Shohei Ohtani 2018 Bowman
-          // Chrome #1 PSA 9 showed $2,114.10 stored against $2,341.20 on the
-          // curve for the same card and grade.
-          //
-          // Same wrong assumption CF-GRADE-LABEL-BUGFIX (2026-08-08) fixed in
-          // the unified overlay, still live here.
-          const gradeNum = Number(String(e.grade).replace(/[^0-9.]/g, ""));
-          return Number.isFinite(gradeNum) && gradeNum === wantVal;
-        }) as { trendAdjustedValue: number | null; value: number | null; weightedMedianPrice: number | null; predictedPriceAt30d: number | null; rungLabel?: string | null } | undefined;
-        const tileFmv = tile?.trendAdjustedValue ?? tile?.value ?? tile?.weightedMedianPrice ?? null;
-        if (tileFmv !== null && tileFmv > 0) {
-          const nowIso = new Date().toISOString();
-          const gradeCurveResult: PortfolioHolding = {
-            ...holding,
-            fairMarketValue: tileFmv,
-            // CF-RUNG-LABEL (D4 PR 1): the tile names its own rung — the
-            // unified overlay's label, this curve's own exact-pool read, or
-            // "grade-curve-estimate" for a filled tier. Read, never inferred.
-            fmvRung: tile?.rungLabel ?? null,
-            predictedPrice: tile?.predictedPriceAt30d ?? tileFmv,
-            predictedPriceLow: null,
-            predictedPriceHigh: null,
-            predictedPriceMechanism: "grade-curve-tile",
-            predictedPriceUpdatedAt: nowIso,
-            estimatedValue: null,
-            estimateLow: null,
-            estimateHigh: null,
-            estimateConfidence: null,
-            estimateBasis: `Grade curve tile for ${wantGrader}${wantGrader !== "Raw" ? " " + wantVal : ""}`,
-            isEstimate: false,
-            valuationStatus: "observed",
-            pricingSource: "unified-pricing",
-            // D4 PR 5: a tile write names no comp count; clear any meta a
-            // previous pass left behind rather than let it describe this price.
-            pricingSourceMeta: undefined,
-            lastUpdated: nowIso,
-          } as PortfolioHolding;
-          evaluateHoldingAlerts(doc, previous, gradeCurveResult);
-          doc.holdings[holding.id] = gradeCurveResult;
-          console.log(JSON.stringify({
-            event: "portfolio_grade_curve_source_of_truth_applied",
-            source: "portfolioStore.autoPriceHolding",
-            holdingId: holding.id,
-            slug: holdingSlug,
-            resolvedCardId: curveCardId,
-            grader: wantGrader, gradeValue: wantVal,
-            tileFmv,
-          }));
-          return gradeCurveResult;
-        }
-      }
-    } catch (err) {
-      // Grade-curve lookup failed — fall through to legacy chain.
-      console.warn(JSON.stringify({
-        event: "portfolio_grade_curve_source_of_truth_error",
-        holdingId: holding.id,
-        message: (err as Error).message,
-      }));
+  // CF-ONE-VALUATION-PATH (D17, 2026-08-30). FIRST rung: the ONE valuation
+  // entry — the same call the card page answers from — so the number
+  // persisted here IS the number every pricing route serves for this
+  // holding's slug + grade. This replaces CF-GRADE-CURVE-IS-SOURCE-OF-TRUTH
+  // (08-06: the legacy curve build on the majority vendor cardId, read for
+  // the holding's tile) and, for every identity the catalog names, the
+  // unified early exit below: three reads of one pool through three engine
+  // calls, and the engine's cross-grade rescale (getGraderPremium's tables,
+  // rung cross-grade-fallback) persisted as "observed". The entry's fill for
+  // a tier with no pool is this identity's other tiers × the empirical
+  // ratio, persisted as an ESTIMATE under its rung name.
+  //
+  // Not env-flagged — the tile rung never was. The legacy exact-pool reads
+  // below run only when the catalog holds no identity for the holding
+  // (`unresolved`); when the identity resolved and the entry declined
+  // (`unpriced`, or the cost-basis floor), they must not run either — they
+  // could only produce the number the entry declined to. The legacy
+  // ESTIMATE chain (computeEstimate, the rail, the ladders, our-pool, the
+  // sibling) still runs for an unpriced holding, each site behind the
+  // supremacy gate.
+  const oneEntry = await valueHoldingThroughOneEntry(holding, { userId: userId ?? null, caller: "autoPriceHolding.one-entry" });
+  if (oneEntry.outcome === "observed" || oneEntry.outcome === "estimated") {
+    const nowIso = (oneEntry.holding.lastUpdated as string) ?? new Date().toISOString();
+    if (oneEntry.outcome === "observed") {
+      appendPriceHistory(doc, holding.id, { at: nowIso, value: oneEntry.valuation.fairMarketValue as number, source });
     }
+    evaluateHoldingAlerts(doc, previous, oneEntry.holding);
+    doc.holdings[holding.id] = oneEntry.holding;
+    return oneEntry.holding;
   }
+  const entryDecidedExactPool = oneEntry.outcome !== "unresolved";
 
   // CF-UNIFIED-PRICING-EARLY-EXIT (Drew, 2026-08-04). ONE function,
   // ONE number, ONE prediction. When computeUnifiedPrice has real
@@ -3075,8 +3025,9 @@ async function autoPriceHolding(
   // Legacy path below stays as the coverage-gap fallback for holdings
   // where unified has no data (thin pool, unknown cardId). Over time
   // the pool fills and this early-exit fires for more holdings.
+  // D17: only for identities the catalog cannot name (see above).
   const earlyResolvedId = holding.cardId || (holding as any).hobbyiqCardId || null;
-  if (process.env.PORTFOLIO_OBSERVED_GRADE_OVERRIDE_ENABLED === "true" && earlyResolvedId) {
+  if (!entryDecidedExactPool && process.env.PORTFOLIO_OBSERVED_GRADE_OVERRIDE_ENABLED === "true" && earlyResolvedId) {
     try {
       const gCo = (holding as any).gradeCompany
         ? String((holding as any).gradeCompany).trim()
@@ -3257,7 +3208,10 @@ async function autoPriceHolding(
   const resolvedIdForPricing = holding.cardId
     || (holding as any).hobbyiqCardId
     || null;
-  if (process.env.PORTFOLIO_OBSERVED_GRADE_OVERRIDE_ENABLED === "true"
+  // D17: only for identities the catalog cannot name — the one entry decided
+  // the exact pool for every other holding above.
+  if (!entryDecidedExactPool
+      && process.env.PORTFOLIO_OBSERVED_GRADE_OVERRIDE_ENABLED === "true"
       && resolvedIdForPricing) {
     try {
       const gradeCoRaw = (holding as any).gradeCompany;
@@ -8625,6 +8579,22 @@ export async function repriceHoldingsForUser(
       continue;
     }
     try {
+      // CF-ONE-VALUATION-PATH (D17, 2026-08-30). FIRST: the ONE valuation
+      // entry, as at autoPriceHolding — the batch and the on-demand path
+      // persist the same number the card page serves. The legacy exact-pool
+      // reads below run only when the catalog holds no identity for the
+      // holding; an unpriced resolved identity walks the gated estimate
+      // chain only.
+      const bOneEntry = await valueHoldingThroughOneEntry(holding, { userId, caller: "repriceHoldingsForUser.one-entry" });
+      if (bOneEntry.outcome === "observed" || bOneEntry.outcome === "estimated") {
+        evaluateHoldingAlerts(doc, doc.holdings[holding.id], bOneEntry.holding);
+        doc.holdings[holding.id] = bOneEntry.holding;
+        repriced += 1;
+        updates.push({ id: holding.id, status: "repriced", reason: `one-valuation-path:${bOneEntry.valuation.rungLabel}` });
+        continue;
+      }
+      const bEntryDecided = bOneEntry.outcome !== "unresolved";
+
       // CF-UNIFIED-PRICING-BATCH-EARLY-EXIT (Drew, 2026-08-04). Same
       // ONE-function, ONE-number, ONE-prediction contract as
       // autoPriceHolding. Fire unified pricing FIRST. When it has
@@ -8632,8 +8602,9 @@ export async function repriceHoldingsForUser(
       // directly + continue to next holding — bypass computeEstimate
       // + graded rail + ladder + our-pool + sibling fallback + resolver
       // fallback entirely. Cuts one CH call per holding on the hot path.
+      // D17: only for identities the catalog cannot name (see above).
       const bEarlyId = (holding as any).cardId || (holding as any).hobbyiqCardId || null;
-      if (process.env.PORTFOLIO_OBSERVED_GRADE_OVERRIDE_ENABLED === "true" && bEarlyId) {
+      if (!bEntryDecided && process.env.PORTFOLIO_OBSERVED_GRADE_OVERRIDE_ENABLED === "true" && bEarlyId) {
         try {
           const bGCo = (holding as any).gradeCompany
             ? String((holding as any).gradeCompany).trim()
@@ -8768,7 +8739,8 @@ export async function repriceHoldingsForUser(
       // When unified returns a valid trend-lifted marketValue with
       // confidence >= 0.3, write it directly and skip the rest of the
       // legacy pricing branches for this holding.
-      if (process.env.PORTFOLIO_OBSERVED_GRADE_OVERRIDE_ENABLED === "true") {
+      // D17: only for identities the catalog cannot name (see above).
+      if (!bEntryDecided && process.env.PORTFOLIO_OBSERVED_GRADE_OVERRIDE_ENABLED === "true") {
         const bResolvedId = (holding as any).cardId || (holding as any).hobbyiqCardId || null;
         if (bResolvedId) {
           try {
