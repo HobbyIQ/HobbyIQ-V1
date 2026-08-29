@@ -133,6 +133,15 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
 - ☐ D4 One valuation path — retire the Cardsight-era graded compiler onto the
   canonical engine (docs/pricing-obedience-audit.md)
 - ☐ D5 Phase 07 — 58 writers bypassing upsertCatalogEntry
+- ☐ D7 **eBay import into the portfolio** (Drew, 2026-08-29): an imported eBay
+  purchase/sale matches to any existing `sold_comps` row so there are NO
+  duplicates in the system; if it is not there, a new sale is created (through
+  the one writer, source `ebay-user-purchase` / `ebay-user-sale`, keyed by
+  the eBay item id + content hash), matched to a checklist card, and the
+  portfolio holding is populated with that same card. These are REAL sales and
+  are treated as such — first-class comps in the pool, never a second copy.
+  Scoping now: map the existing path (ebayImportRematch routes, ebayAutoHolding,
+  the CF-IMPORT async job) against those five requirements; fix the gaps.
 - ☐ D6 **Identity key ≠ family key.** `normalizeSetKey` folds distinct products into
   a family (Co-Signers → topps, UD Premier → upper-deck, 1990 Donruss →
   panini-donruss) on both sales and checklists. Decide: identity key = the
