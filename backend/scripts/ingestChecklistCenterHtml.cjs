@@ -1,4 +1,9 @@
 #!/usr/bin/env node
+// !! DO NOT RUN -- superseded 2026-08-29 by checklist D3. This ingester raw-upserts
+// !! into card_catalog with a ladder parser that turned player names into
+// !! rungs. Use scrape-checklistcenter-products.cjs + convertChecklistCenterToChecklistCsv.cjs
+// !! (the canonical CSV) through ingest-checklists-end-to-end.cjs phase "clc".
+if (process.env.I_KNOW_THIS_IS_SUPERSEDED !== "true") { console.error("This ingester is superseded (checklist D3). Refusing to run."); process.exit(2); }
 /**
  * CF-CLC-HTML-INGESTER (Drew, 2026-08-09). For older checklistcenter
  * pages (2016-2020) that don't publish an XLSX. Parses the inline
