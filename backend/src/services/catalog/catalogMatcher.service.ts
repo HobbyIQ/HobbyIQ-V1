@@ -654,6 +654,44 @@ export async function readCatalogIdentityBySlug(slug: string): Promise<{
   }
 }
 
+/**
+ * CF-A-DERIVED-SLUG-IS-ADOPTED-ONLY-FROM-THE-CATALOG (2026-08-29, checklist
+ * D12a). Does the catalog hold a row for this slug? A point read at
+ * (slug, slug) -- 1 RU, the read canonicalize's Step 1 and ensureCatalogRow
+ * already make -- then the un-numbered twin when the slug carries :num-N (a
+ * holding's title regex can add a print run the checklist row does not
+ * carry; exactPoolSupremacy treats the pair the same way).
+ *
+ * Returns the slug the catalog holds (the id itself, or its twin), or null.
+ * Fails CLOSED: null when the container is unavailable or a read throws for
+ * any reason other than 404 -- a caller adopting or pricing a slug on this
+ * answer does neither during an outage, and says so.
+ */
+export async function catalogSlugIfExists(slug: string): Promise<string | null> {
+  const id = String(slug ?? "").trim();
+  if (!id.startsWith("hiq:")) return null;
+  const container = await getContainer();
+  if (!container) return null;
+  const candidates = [id];
+  if (/:num-d+$/.test(id)) candidates.push(id.replace(/:num-d+$/, ""));
+  for (const candidate of candidates) {
+    try {
+      const { resource } = await container.item(candidate, candidate).read();
+      if (resource) return candidate;
+    } catch (err) {
+      if ((err as { code?: number })?.code === 404) continue;
+      console.warn(JSON.stringify({
+        event: "catalog_slug_exists_read_error",
+        source: "catalogMatcher.catalogSlugIfExists",
+        slug: candidate,
+        error: (err as Error)?.message ?? String(err),
+      }));
+      return null;
+    }
+  }
+  return null;
+}
+
 export async function lookupCatalogPlayerName(
   year: number | null | undefined,
   setKey: string | null | undefined,

@@ -16,9 +16,9 @@
 // that in as the portfolio pricer.
 //
 // Behavior:
-//   - Ensures holding has hobbyiqCardId (computes via deriveHoldingSlug
-//     if missing); returns null when slug can't be derived (identity
-//     insufficient) so caller falls back to legacy.
+//   - Requires holding.hobbyiqCardId to be a catalog row (D12a: never
+//     derived at price time, never priced when the catalog does not hold
+//     it); returns null otherwise so caller falls back to legacy.
 //   - Calls computeHobbyIqFmv({slug, gradeCompany, gradeValue}).
 //   - Interprets the winning rung:
 //       method === "grade-cross-raw"  → estimated (raw × multiplier)
@@ -38,7 +38,6 @@
 import type { PortfolioHolding } from "../../types/portfolioiq.types.js";
 import { computeHobbyIqFmv, type HobbyIqFmvMethod, type HobbyIqFmvResult } from "./hobbyIqFmv.service.js";
 import { isExactPoolRung, type FmvRungLabel } from "../compiq/fmvRung.js";
-import { deriveHoldingSlug } from "./holdingSlug.service.js";
 
 export interface OurPoolPricingResult {
   fairMarketValue: number | null;
@@ -138,9 +137,27 @@ export async function priceHoldingFromOurPool(
   holding: PortfolioHolding,
 ): Promise<OurPoolPricingResult | null> {
   try {
+    // CF-A-DERIVED-SLUG-IS-ADOPTED-ONLY-FROM-THE-CATALOG (D12a, 2026-08-29).
+    // This priced the holding's pinned slug -- or, with none, a slug minted
+    // from its free text at price time, never checked against the catalog.
+    // A slug the catalog does not hold names no card, so there is no pool
+    // to project from: no derivation here, and the pinned slug must be a
+    // catalog row (its un-numbered twin counts, and the catalog's form is
+    // what is priced). Fails closed on an outage -- null, never a guess.
     const explicit = typeof holding.hobbyiqCardId === "string" ? holding.hobbyiqCardId.trim() : "";
-    const slug = explicit.startsWith("hiq:") ? explicit : deriveHoldingSlug(holding);
-    if (!slug) return null;
+    if (!explicit.startsWith("hiq:")) return null;
+    const { catalogSlugIfExists } = await import("../catalog/catalogMatcher.service.js");
+    const slug = await catalogSlugIfExists(explicit);
+    if (!slug) {
+      console.warn(JSON.stringify({
+        event: "our_pool_slug_not_in_catalog",
+        source: "priceFromOurPool.priceHoldingFromOurPool",
+        holdingId: holding.id ?? null,
+        hobbyiqCardId: explicit,
+        detail: "the holding's slug is not a catalog row; no pool is priced from it",
+      }));
+      return null;
+    }
 
     const { company, value } = requestedGrade(holding);
     const result: HobbyIqFmvResult = await computeHobbyIqFmv({

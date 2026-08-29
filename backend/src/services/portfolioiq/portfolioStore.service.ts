@@ -19,7 +19,7 @@ import { buildGradeBreakdown } from "../compiq/marketRead.service.js";
 import { resolvePlayer } from "../mlb/playerResolver.service.js";
 import { deleteBlobByUrl } from "../photoStorage/photoStorage.service.js";
 import { resolveCardsightGradeId } from "../cardsight/cardsightGradesTaxonomy.js";
-import { withDerivedSlug } from "./holdingSlug.service.js";
+import { fillDerivedSlugFromCatalog } from "./holdingSlug.service.js";
 import { isPriceFromOurPoolEnabled, priceHoldingFromOurPool } from "./priceFromOurPool.service.js";
 import { composeHoldingWireShape, composePortfolioListResponse } from "./responseAssembly.js";
 // CF-INVENTORY-CATALOG-IMAGE (2026-07-05): shared resolver produces the
@@ -2544,6 +2544,47 @@ function applyCatalogMatchToHolding(
     }));
   }
   return { pinned: true };
+}
+
+// CF-A-SUPPLIED-SLUG-MUST-BE-A-CATALOG-ROW (2026-08-29, checklist D12a). A
+// caller may pin hobbyiqCardId in the body — the card page the user added
+// from, the picker, an import. updateHolding wrote it as given. A slug is an
+// identity only when the catalog holds it, so a supplied slug is accepted
+// only when catalogSlugIfExists says so (the catalog's form is written);
+// otherwise the previous value stands and the rejection is logged. Fails
+// closed on a catalog outage. Absent / cleared values are not gated: an
+// explicit clear stays a clear.
+async function gateSuppliedSlug(
+  h: PortfolioHolding,
+  ctx: { source: string; userId: string; holdingId: string; previous: string | null },
+): Promise<void> {
+  const rec = h as unknown as Record<string, unknown>;
+  const supplied = String(rec.hobbyiqCardId ?? "").trim();
+  if (!supplied || supplied === ctx.previous) return;
+  let found: string | null = null;
+  if (supplied.startsWith("hiq:")) {
+    try {
+      const { catalogSlugIfExists } = await import("../catalog/catalogMatcher.service.js");
+      found = await catalogSlugIfExists(supplied);
+    } catch {
+      found = null;
+    }
+  }
+  if (!found) {
+    console.warn(JSON.stringify({
+      event: "holding_slug_rejected_not_in_catalog",
+      source: ctx.source,
+      userId: ctx.userId,
+      holdingId: ctx.holdingId,
+      suppliedSlug: supplied,
+      keptSlug: ctx.previous,
+      detail: "a supplied hobbyiqCardId is accepted only when it names a catalog row",
+    }));
+    rec.hobbyiqCardId = ctx.previous;
+    return;
+  }
+  rec.hobbyiqCardId = found;
+  rec.hobbyiqCardIdSource = "pinned";
 }
 
 // CF-ONE-IDENTITY-IN-THE-POOL (2026-08-29, checklist D12a). A user's SALE or
@@ -5664,11 +5705,14 @@ export async function addHolding(req: Request, res: Response) {
     "portfolioStore.service.addHolding",
   );
   holding = await populateCardsightGradeId(holding);
-  // CF-PORTFOLIO-DETAIL-SLUG (Drew, 2026-07-26). Populate the canonical
-  // hobbyiqCardId at add-time so iOS's tap-into-card flow can hit
-  // /api/compiq/card-detail with holding.hobbyiqCardId directly. Null
-  // when identity is insufficient (iOS falls back to legacy tap).
-  holding = withDerivedSlug(holding);
+  // CF-A-SUPPLIED-SLUG-MUST-BE-A-CATALOG-ROW (D12a): a slug the caller pinned
+  // (the card page, the picker) is accepted only when the catalog holds it.
+  await gateSuppliedSlug(holding, {
+    source: "portfolioStore.addHolding",
+    userId: auth.userId,
+    holdingId: holding.id,
+    previous: null,
+  });
 
   // CF-CATALOG-AUTO-SEED-ON-ADD (Drew, 2026-08-04). "When they add
   // cards, they search within the catalog and then the comps fall
@@ -5680,8 +5724,8 @@ export async function addHolding(req: Request, res: Response) {
   // point at a canonical catalog row from that moment on.
   //
   // Wrapped in try/catch so a Cosmos hiccup can't block add-card.
-  // Silent-safe: on any failure the withDerivedSlug value is what
-  // sticks; user still gets their card added.
+  // Silent-safe: on any failure the holding keeps whatever was pinned;
+  // user still gets their card added.
   try {
     if (holding.playerName && holding.cardYear && holding.cardNumber) {
       const { canonicalize } = await import("../catalog/catalogMatcher.service.js");
@@ -5738,6 +5782,16 @@ export async function addHolding(req: Request, res: Response) {
       error: (err as Error)?.message ?? String(err),
     }));
   }
+  // CF-PORTFOLIO-DETAIL-SLUG (Drew, 2026-07-26). Populate the canonical
+  // hobbyiqCardId at add-time so iOS's tap-into-card flow can hit
+  // /api/compiq/card-detail with holding.hobbyiqCardId directly. Null
+  // when identity is insufficient (iOS falls back to legacy tap).
+  //
+  // CF-A-MINTED-SLUG-NEVER-REPLACES-A-PIN (D12a): this ran FIRST and
+  // overwrote whatever the caller pinned with a free-text guess. It now
+  // runs after the catalog has answered, fills only an absent slug, and
+  // only with a slug the catalog holds.
+  holding = await fillDerivedSlugFromCatalog(holding, { source: "portfolioStore.addHolding" });
 
   // CF-GRADE-COMPANY-WITHOUT-VALUE: run before the identity gate so the
   // persisted shape is already coherent.
@@ -5878,11 +5932,22 @@ export async function updateHolding(req: Request, res: Response) {
     "portfolioStore.service.updateHolding",
   );
   next = await populateCardsightGradeId(next);
-  // CF-PORTFOLIO-DETAIL-SLUG: recompute slug on every update — identity
-  // edits (fixed parallel, corrected cardNumber, added year) must
-  // propagate to hobbyiqCardId or it goes stale relative to the merged
-  // holding state.
-  next = withDerivedSlug(next);
+  // CF-A-SUPPLIED-SLUG-MUST-BE-A-CATALOG-ROW (D12a): a hobbyiqCardId in the
+  // body is accepted only when the catalog holds it; otherwise the stored
+  // one stands.
+  if ("hobbyiqCardId" in (cleanBody as Record<string, unknown>)) {
+    await gateSuppliedSlug(next, {
+      source: "portfolioStore.updateHolding",
+      userId: auth.userId,
+      holdingId: id,
+      previous: String((previous as { hobbyiqCardId?: string | null }).hobbyiqCardId ?? "").trim() || null,
+    });
+  }
+  // CF-A-MINTED-SLUG-NEVER-REPLACES-A-PIN (D12a). This used to recompute the
+  // slug from free text on EVERY update and overwrite the pinned one, before
+  // the catalog was even asked. Identity edits now propagate through the
+  // catalog resolve below; the derivation fills only an absent slug, after,
+  // and only with a slug the catalog holds.
 
   // CF-CATALOG-RESOLVE-ON-UPDATE (Drew, 2026-08-08). Same catalog-first
   // resolution addHolding does — but on EDIT. Fixes the Verlander-class
@@ -5895,8 +5960,8 @@ export async function updateHolding(req: Request, res: Response) {
   // rebinds hobbyiqCardId + cardId to the catalog's canonical slug.
   //
   // Wrapped in try/catch — a Cosmos hiccup shouldn't block edits.
-  // Silent-safe: on any failure the withDerivedSlug value is what
-  // sticks; user still gets their edit persisted.
+  // Silent-safe: on any failure the stored slug is what sticks; user
+  // still gets their edit persisted.
   try {
     if (next.playerName && next.cardYear && next.cardNumber) {
       const { canonicalize } = await import("../catalog/catalogMatcher.service.js");
@@ -5943,6 +6008,13 @@ export async function updateHolding(req: Request, res: Response) {
       error: (err as Error)?.message ?? String(err),
     }));
   }
+  // CF-PORTFOLIO-DETAIL-SLUG: fill a slug only when the merged holding still
+  // has none (legacy rows, catalog unavailable), and only with a slug the
+  // catalog holds. A pinned slug is kept even when an identity field changed
+  // and the catalog could not confidently re-place the card; that
+  // disagreement is logged by the resolve above, not silently resolved by a
+  // free-text guess.
+  next = await fillDerivedSlugFromCatalog(next, { source: "portfolioStore.updateHolding" });
 
   // CF-GRADE-COMPANY-WITHOUT-VALUE: symmetric with addHolding. An edit that
   // adds a company without a grade must not persist the shape either.
