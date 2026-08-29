@@ -307,6 +307,19 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   `canonicalFmv.buildGradeLadder` is still a SECOND curve rendered by iOS
   (GradeLadderSection); `treeGradeCurve.service.ts` now uncalled; the
   service's estimate passes and monotonic clamps still write entry fields.
+  **PR 5/6 building (worktree) against the Marconi fixture:** the $1,109.44
+  was `autoPriceHolding` falling to `attemptSiblingPriceFallback`, whose
+  CF-PARALLEL-PREMIUM-FLOOR (2026-07-06) applies a hardcoded "hobby-consensus"
+  parallel multiplier when the empirical premium is missing — 8.00× here,
+  "floor lifted from 1.00×" — keyed by a CardHedge id, persisted with
+  `isEstimate: true` while three exact gold sales existed, and labelled
+  `pricingSource: "unified-pricing"`. The build: retire the floor (a missing
+  empirical premium is honest silence, the rule mapSiblingToRepriceFmv already
+  applies to other grades); exact-pool supremacy at the persist site (an
+  estimate is never written when EITHER of the holding's identity fields, or
+  their numbered/un-numbered twin, has an exact sale); cross-setkey stays
+  inside the product family and the player and respects the print run; the
+  labels tell the truth (`sibling-estimate`, the fallback fmvRung).
 - ◐ D5 Phase 07 — the catalog writers. **Scoped 2026-08-29 (agent replicated the
   guard test's walk, read-only): 68 files match the guard, 5 are false positives
   (they write `sold_comps`), 2 of the 3 "canonical" passes are COMMENT matches —
