@@ -97,7 +97,13 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
 - ◐ B4 Re-scrape the exploded / mis-parsed bcp products through the fixed parser
   (#1368) and the explosion gate (#1373): the e2e bcp phase now takes years /
   titles / phases from the runner (#1377); dispatched 13:18Z for 2005–2015 flagship
-  + the 17 exploded non-flagship titles. Run 1 landed the 12 reachable titles
+  + the 17 exploded non-flagship titles. Run 2 (#1380) scraped 105 pages and
+  ingested 480,754 rows for 2005–2015 — but older set pages list per-player SP
+  rosters inside the Parallels section as bare list items, so 2008 Topps came back
+  with 18 player-name "rungs" × 661 rows and 2010 Update with ~150. #1392 makes a
+  player of the same product an impossible rung in the scraper, the ingest, and a
+  new retire MODE=playerrung (dry run on 4 slots, every checklist source); run 3
+  re-scrapes 2005–2015 with the guard (mode=reingest). Run 1 landed the 12 reachable titles
   (57,038 rows; A&G / Updates-and-Highlights titles 404) but NO flagship years —
   `--titles` had replaced the per-year list (#1380 fixes: titles add). Run 2
   dispatched 13:27Z for 2005–2015 flagship + A&G `%27s` title variants.
@@ -191,7 +197,11 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   the sell path falls back to the holding's ids. D7c shipped (#1390, deploy next)
   — the rematch resolves through canonicalize (no CardHedge), supersedes the old
   pool row when the slug moves, and the suggester no longer writes sales.
-  Remaining: D7b backfill of eBay ids onto existing holdings; D7d.
+  D7b + D7d shipped (#1393, deploying): backfill stamps the eBay ids onto existing
+  holdings from their purchase entry (dry run: 92 holdings, 70 stamp, 22 have no linked
+  purchase, 0 failed → APPLY running); user-owned sales reconcile against the catalog
+  regardless of CATALOG_MATCH_ONLY_ENABLED. **D7 complete pending deploy + the
+  double-import check.**
 - ☐ D6 **Identity key ≠ family key.** `normalizeSetKey` folds distinct products into
   a family (Co-Signers → topps, UD Premier → upper-deck, 1990 Donruss →
   panini-donruss) on both sales and checklists. Decide: identity key = the
