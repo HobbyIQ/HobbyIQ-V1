@@ -31,6 +31,8 @@ const { catalogAuthorityOf } = require(path.join(backend, "dist", "services", "c
 
 const USER_ID = process.env.USER_ID || "";
 const RECENT = Number(process.env.RECENT || 8);
+// The price comparison is RAW-vs-raw: graded pool rows are excluded so a PSA 10
+// pool never flags a raw holding (first run over-flagged Ohtani/Maddux this way).
 const f = (n) => Number(n).toLocaleString();
 const retry = async (fn, tries = 8) => { let wait = 500; for (let a = 0; ; a++) { try { return await fn(); } catch (e) { const msg = String(e?.message ?? e); if (!/request rate|429|ETIMEDOUT|ECONNRESET|503/i.test(msg) || a >= tries) throw e; await new Promise((r) => setTimeout(r, wait)); wait = Math.min(wait * 2, 15000); } } };
 const COLOUR_WORDS = ["gold", "blue", "green", "orange", "red", "purple", "black", "silver", "pink", "yellow", "aqua", "sapphire", "sepia", "fuchsia", "magenta", "teal", "rose", "platinum", "bronze"];
@@ -88,7 +90,7 @@ async function main() {
         else { fl.push(`UNBACKED-ROW [${catRow.source}]`); flags.unbackedRow++; }
       }
       // the pool under this slug
-      const { resources: sales } = await retry(() => pool.items.query({ query: "SELECT TOP 40 c.title, c.price, c.soldAt, c.source, c.parallel, c.printRun FROM c WHERE c.hobbyiqCardId = @s AND c.price > 0 ORDER BY c.soldAt DESC", parameters: [{ name: "@s", value: slug }] }).fetchAll());
+      const { resources: sales } = await retry(() => pool.items.query({ query: "SELECT TOP 40 c.title, c.price, c.soldAt, c.source, c.parallel, c.printRun FROM c WHERE c.hobbyiqCardId = @s AND c.price > 0 AND (NOT IS_DEFINED(c.gradeCompany) OR c.gradeCompany = null OR c.gradeCompany = '') ORDER BY c.soldAt DESC", parameters: [{ name: "@s", value: slug }] }).fetchAll());
       const contra = sales.map((r) => titleContradicts(parts.parallel, r.title)).filter(Boolean);
       if (contra.length) { fl.push(`POOL-CONTRADICTS ${contra.length}/${sales.length} (${contra[0]})`); flags.poolContradicts++; }
       const prs = new Set(sales.map((r) => r.printRun).filter((x) => typeof x === "number"));
