@@ -126,6 +126,9 @@ on:
           - retire-exploded-checklist-rows
 
           - repair-parallel-from-title
+
+
+          - fold-unnumbered-twins
           - rename-setkey
           - parse-player-from-checklist
           - identity-triangulation
