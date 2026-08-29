@@ -59,7 +59,7 @@ async function main() {
   if (!conn) { console.error("FATAL: COSMOS_CONNECTION_STRING not set"); process.exit(1); }
   const pool = new CosmosClient({ connectionString: conn, connectionPolicy: { retryOptions: { maxRetryAttemptsOnThrottledRequests: 30, maxWaitTimeInSeconds: 120 } } }).database("hobbyiq").container("sold_comps");
   console.log(`repair-parallel-from-title  ${APPLY ? "APPLY" : "REPORT ONLY"}  sources=${SOURCES.join(",")}  slot ${SLOT}/${SLOTS}  budget ${RUN_MINUTES}m`);
-  const stats = { scanned: 0, otherShard: 0, repaired: 0, toBase: 0, toOther: 0, kept: 0, failed: 0, noSlug: 0 };
+  const stats = { scanned: 0, otherShard: 0, repaired: 0, toBase: 0, toOther: 0, kept: 0, keptRefinement: 0, failed: 0, noSlug: 0 };
   const moves = new Map(); // "source|from>to" -> n
   const examples = [];
   let stopReason = null;
@@ -84,7 +84,15 @@ async function main() {
           const titleWord = fromTitle ? fromTitle.split(" ")[0].toLowerCase() : null;
           if (titleWord && !String(r.title ?? "").toLowerCase().includes(titleWord)) { stats.kept++; continue; }
           const newParallel = fromTitle ?? "Base";
-          if (newParallel.toLowerCase() === String(r.parallel ?? "").toLowerCase()) { stats.kept++; continue; }
+          const oldLower = String(r.parallel ?? "").toLowerCase(), newLower = newParallel.toLowerCase();
+          if (newLower === oldLower) { stats.kept++; continue; }
+          // CF-A-REFINEMENT-IS-NOT-A-CONTRADICTION (dry run #1: 199 "Blue
+          // Refractor" -> "Refractor", 196 "Gold Refractor" -> "Refractor"). A
+          // title that says "Refractor /150" and a vendor tag "Blue Refractor"
+          // agree -- the colour refines the family the title names; moving the
+          // row to a bare refractor:num-150 would mint a rung no checklist has.
+          // Only a title that names NO finish, or a DIFFERENT one, overrules.
+          if (fromTitle && oldLower.endsWith(" " + newLower)) { stats.keptRefinement++; continue; }
           let newSlug;
           try { newSlug = computeHobbyIqCardId({ ...comp, parallel: newParallel }); } catch { stats.failed++; continue; }
           if (!newSlug || !newSlug.startsWith("hiq:") || newSlug === slug) { stats.kept++; continue; }
@@ -112,6 +120,7 @@ async function main() {
   console.log(`  rows scanned           ${f(stats.scanned)}   (${f(stats.otherShard)} belonging to other slots)`);
   console.log(`  ${APPLY ? "REPAIRED" : "WOULD REPAIR"}           ${f(stats.repaired)}   <- to Base ${f(stats.toBase)}, to another named finish ${f(stats.toOther)}`);
   console.log(`  kept                   ${f(stats.kept)}   <- title names the same finish, or names one it does not contain`);
+  console.log(`  kept, refinement       ${f(stats.keptRefinement)}   <- the title names the family the vendor colour refines (Refractor /150 vs Blue Refractor)`);
   console.log(`  no slug                ${f(stats.noSlug)}`);
   console.log(`  failed                 ${f(stats.failed)}`);
   console.log(`  moves by source|from>to:`);
