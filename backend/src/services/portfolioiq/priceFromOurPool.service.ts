@@ -37,6 +37,7 @@
 
 import type { PortfolioHolding } from "../../types/portfolioiq.types.js";
 import { computeHobbyIqFmv, type HobbyIqFmvMethod, type HobbyIqFmvResult } from "./hobbyIqFmv.service.js";
+import type { FmvRungLabel } from "../compiq/fmvRung.js";
 import { deriveHoldingSlug } from "./holdingSlug.service.js";
 
 export interface OurPoolPricingResult {
@@ -48,6 +49,9 @@ export interface OurPoolPricingResult {
   estimateConfidence: "estimate" | "rough" | "ballpark" | "no-data" | null;
   estimateBasis: string | null;
   method: HobbyIqFmvMethod;
+  /** CF-RUNG-LABEL (D4 PR 1): the hobbyIqFmv rung in the shared
+   *  vocabulary, carried onto the holding as `fmvRung`. */
+  rungLabel: FmvRungLabel;
   compsUsed: number;
   slug: string;
   source: "our-pool";
@@ -177,6 +181,7 @@ export async function priceHoldingFromOurPool(
         estimateConfidence: conf,
         estimateBasis: result.basisNote,
         method: result.method,
+        rungLabel: result.rungLabel,
         compsUsed,
         slug,
         source: "our-pool",
@@ -207,6 +212,7 @@ export async function priceHoldingFromOurPool(
         estimateConfidence: conf,
         estimateBasis: result.basisNote,  // the rung's prose, for transparency
         method: result.method,
+        rungLabel: result.rungLabel,
         compsUsed,
         slug,
         source: "our-pool",
@@ -233,6 +239,7 @@ export async function priceHoldingFromOurPool(
         estimateConfidence: conf,
         estimateBasis: result.basisNote,
         method: result.method,
+        rungLabel: result.rungLabel,
         compsUsed,
         slug,
         source: "our-pool",
@@ -252,6 +259,7 @@ export async function priceHoldingFromOurPool(
         estimateConfidence: conf,
         estimateBasis: result.basisNote,
         method: result.method,
+        rungLabel: result.rungLabel,
         compsUsed,
         slug,
         source: "our-pool",
@@ -268,6 +276,7 @@ export async function priceHoldingFromOurPool(
       estimateConfidence: conf,
       estimateBasis: result.basisNote,
       method: result.method,
+      rungLabel: result.rungLabel,
       compsUsed,
       slug,
       source: "our-pool",

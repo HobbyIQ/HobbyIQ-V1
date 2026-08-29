@@ -20,6 +20,7 @@ import { parseHobbyIqCardId, slugify } from "./hobbyIqCardId.service.js";
 import { loadPopulationForSlug, type CardPopulationLookup } from "./cardPopulationLookup.service.js";
 import { getGraderPremium } from "../compiq/compiqEstimate.service.js";
 import { projectNextSaleFromComps } from "../compiq/nextSaleProjection.service.js";
+import { hobbyIqRungLabel, type FmvRungLabel } from "../compiq/fmvRung.js";
 import { fetchPlayerInSetMomentum, momentumMultiplierToPctPerMonth } from "../compiq/playerInSetMomentum.service.js";
 import { findNeighborComps, compositeFilterFromCardId, summarizeByDistance } from "./findNeighborComps.service.js";
 import { computeAxisAdjustment, getLatestMomentum } from "./marketMomentum.service.js";
@@ -118,6 +119,12 @@ export interface HobbyIqFmvResult {
   /** CF-HOBBYIQ-FMV-LADDER (Drew, 2026-07-23). Which rung produced the
    *  fmv. iOS can render a confidence indicator + human-readable note. */
   method: HobbyIqFmvMethod;
+  /** CF-RUNG-LABEL (D4 PR 1, 2026-08-29). `method` in the shared rung
+   *  vocabulary (fmvRung.ts): the unified engine's own label when unified
+   *  priced it; `direct-slug` becomes the exact-pool label for the
+   *  aggregation that fired; every other ladder rung is already a rung
+   *  name. priceFromOurPool carries it onto the holding as `fmvRung`. */
+  rungLabel: FmvRungLabel;
   basisNote: string;
   confidence: number;      // 0.0-1.0
   /** CF-HOBBYIQ-FMV-POPULATION (Drew, 2026-07-24). Per-grader graded
@@ -298,6 +305,7 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
     trend: { direction: "flat", slopePerMonthPct: 0, method: "none" },
     recentComps: [],
     method: "no-basis",
+    rungLabel: "no-basis",
     basisNote: "No comparable sales in the last 180 days",
     confidence: 0,
     population: null,
@@ -351,6 +359,7 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
         },
         recentComps: [],
         method: "unified-market-value" as any,
+        rungLabel: u.rungLabel,
         basisNote: `unified: window=${u.windowDays}d median=$${u.fmv?.toFixed(0) ?? "?"} marketValue=$${u.marketValue?.toFixed(0) ?? "?"} predicted=$${u.predictedPrice?.toFixed(0) ?? "?"} trend=${u.trendDirection} ${u.trendPctPerWeek?.toFixed(1) ?? "?"}%/wk conf=${u.confidence.toFixed(2)}`,
         confidence: u.confidence,
         population: null,
@@ -498,6 +507,7 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
         // Caglianone's $205.48 last sale — the very card #1178 needed a
         // cost-basis floor to rescue from the fallback that ran instead.
         method: "rare-card-anchor",
+        rungLabel: "rare-card-anchor",
         basisNote: rare.basisNote,
         confidence: rare.parentDeltaPct !== null ? 0.65 : 0.45,
         population,
@@ -1142,6 +1152,7 @@ async function buildResult(
       trend: { direction: "flat", slopePerMonthPct: 0, method: "none" },
       recentComps: [],
       method: "no-basis",
+      rungLabel: "no-basis",
       basisNote: "No comparable sales",
       confidence: 0,
       population,
@@ -1228,8 +1239,11 @@ async function buildResult(
   );
 
   let fmv: number;
+  // CF-RUNG-LABEL: remember WHICH branch produced fmv, for the rung label.
+  let aggregation: "linear-regression" | "trend-adjusted-last-sale" | "median";
   if (projection && projection.nextSaleValue > 0) {
     fmv = projection.nextSaleValue;
+    aggregation = projection.method;
   } else {
     // Shouldn't hit — the priced.length > 0 guard means projection has
     // at least 1 comp to anchor on. Belt-and-suspenders: fall back to
@@ -1243,6 +1257,7 @@ async function buildResult(
       trendSource,
     }));
     fmv = median;
+    aggregation = "median";
   }
 
   // Telemetry: when broader-identity trend kicked in on a thin rung,
@@ -1295,6 +1310,7 @@ async function buildResult(
     trend,
     recentComps,
     method,
+    rungLabel: hobbyIqRungLabel(method, aggregation),
     basisNote,
     confidence,
     population,
@@ -1870,6 +1886,7 @@ async function tryCompositePath(
       gradeQualifier: d.gradeQualifier ?? null,
     })),
     method: "composite-neighbor",
+    rungLabel: "composite-neighbor",
     basisNote: `Composite path: ${workingDocs.length} neighbors [${distanceHint}] over ${windowDays}d ${adjustmentHint}. Base projection $${baseFmv.toFixed(2)} → adjusted $${adjustedFmv.toFixed(2)}.`,
     confidence,
     population: null,

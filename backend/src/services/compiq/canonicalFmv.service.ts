@@ -60,6 +60,7 @@ import { fetchCardActiveListings } from "../ebay/ebayListingSearch.service.js";
 import { CosmosClient, type Container } from "@azure/cosmos";
 import { classifyFamily, lookupGradeRatio, lookupGradeRatioByTier, lookupValueBandMultiplier } from "./gradeCalibrationConfig.js";
 import { titleMatchesParallel } from "./titleParallelMatch.js";
+import { canonicalRungLabel, type FmvRungLabel } from "./fmvRung.js";
 
 export type CanonicalFmvMethod =
   | "direct-comp"
@@ -147,6 +148,15 @@ export interface CanonicalFmvResult {
   fmv: number | null;
   /** Which rung fired. */
   method: CanonicalFmvMethod;
+  /** CF-RUNG-LABEL (D4 PR 1, 2026-08-29). The same rung in the shared
+   *  vocabulary every engine writes (fmvRung.ts): `direct-comp` becomes
+   *  the exact-pool label for the projection branch that fired, every
+   *  other method is already a rung name. Always present on a result
+   *  returned by computeCanonicalFmv (finalize / NULL_RESULT write it;
+   *  the cache wrapper backfills entries stored before the field
+   *  existed). Optional in the type only so the rung helpers can build
+   *  their result without it. */
+  rungLabel?: FmvRungLabel;
   /** 0.0-1.0 self-reported confidence. Falls with each rung down the ladder. */
   confidence: number;
   /** Full audit trail — comps used, trend applied, multipliers, etc. */
@@ -230,6 +240,7 @@ export interface CanonicalBuyPriceResult {
 const NULL_RESULT = (reason: string): CanonicalFmvResult => ({
   fmv: null,
   method: "no-basis",
+  rungLabel: "no-basis",
   confidence: 0,
   provenance: { summary: reason, comps: [], trendPctPerMonth: null, multipliers: {} },
   computedAt: new Date().toISOString(),
@@ -352,6 +363,9 @@ export async function computeCanonicalFmv(
       skipCacheWhen: (r) => r.method === "no-basis",
     },
   );
+  // CF-RUNG-LABEL: a result cached before the label existed comes back
+  // without one; derive it from the method so the field is never absent.
+  if (!result.rungLabel) result.rungLabel = canonicalRungLabel(result.method);
   return result;
 }
 
@@ -510,6 +524,9 @@ function isSpecificRequest(input: CanonicalFmvInput): boolean {
  *  telemetry. Called at every successful-rung return point.
  */
 function finalize(result: CanonicalFmvResult, input: CanonicalFmvInput, t0: number): CanonicalFmvResult {
+  // CF-RUNG-LABEL: the one place every successful rung passes through.
+  // direct-comp names its own branch at its return; the rest map 1:1.
+  result.rungLabel = result.rungLabel ?? canonicalRungLabel(result.method);
   result.gradeLadder = buildGradeLadder(result, input);
   result.recentRange = buildRecentRange(result);
   // CF-CANONICAL-BUY-PRICE (Drew, 2026-07-22): compute the buyer-side
@@ -719,6 +736,7 @@ function logCompute(result: CanonicalFmvResult, input: CanonicalFmvInput, t0: nu
       gradeCompany: input.gradeCompany ?? null,
       gradeValue: input.gradeValue ?? null,
       method: result.method,
+      rungLabel: result.rungLabel ?? null,
       confidence: result.confidence,
       fmv: result.fmv,
       elapsedMs: Date.now() - t0,
@@ -1175,6 +1193,7 @@ async function tryDirectComp(
   return {
     fmv: projection.nextSaleValue,
     method: "direct-comp",
+    rungLabel: canonicalRungLabel("direct-comp", projection.method),
     confidence: Math.min(0.95, projection.confidence + 0.05),
     provenance: {
       summary: `${fresh.length} same-parallel user comp${fresh.length === 1 ? "" : "s"} · ${projection.method === "linear-regression" ? "regression" : "anchor"} ${actualSlopePct >= 0 ? "+" : ""}${actualSlopePct.toFixed(1)}%/mo`,

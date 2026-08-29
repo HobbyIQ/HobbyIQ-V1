@@ -1,3 +1,5 @@
+import { isExactPoolRung } from "./fmvRung.js";
+
 // CF-TRAJECTORY-12WK bounds alerts (Drew, 2026-07-28).
 //
 // Tiny in-process accumulator for projection-multiplier bound hits.
@@ -86,6 +88,10 @@ export interface CostBasisDivergenceAlert {
   fmvMethod: string | null;
   fmvBasisNote: string | null;
   fmvCompCount: number | null;
+  /** CF-RUNG-LABEL (D4 PR 1, 2026-08-29). The holding's `fmvRung` — the
+   *  rung that produced the price, written by the engine that decided
+   *  it. When present it is the ONLY thing the exact-pool gate reads. */
+  fmvRung?: string | null;
   observedAt: string;
 }
 
@@ -134,8 +140,15 @@ export function recordCostBasisDivergenceIfNoteworthy(input: Omit<CostBasisDiver
   // CF-THE-DIGEST-WAS-SILENT (2026-08-29): the unified engine's basis note
   // starts "unified: window=…"; it IS the exact-identity pool. Accept it too,
   // so the gate does not depend on a method field that a caller forgot.
-  const fromExactPool =
-    method === "unified-market-value" || basis.includes("exact-pool supremacy") || basis.startsWith("unified:");
+  // CF-RUNG-LABEL (D4 PR 1, 2026-08-29). The holding now carries the rung
+  // that priced it, written by the engine. When the label is present it
+  // decides — a labelled fallback rung is suppressed even if its basis note
+  // happens to start "unified:". The prose checks survive only for holdings
+  // priced before the label existed.
+  const rung = typeof input.fmvRung === "string" && input.fmvRung.length > 0 ? input.fmvRung : null;
+  const fromExactPool = rung !== null
+    ? isExactPoolRung(rung)
+    : (method === "unified-market-value" || basis.includes("exact-pool supremacy") || basis.startsWith("unified:"));
   if (!fromExactPool) {
     console.warn(JSON.stringify({
       event: "engine_divergence_suspect",
@@ -148,6 +161,7 @@ export function recordCostBasisDivergenceIfNoteworthy(input: Omit<CostBasisDiver
       fmv: Math.round(fmv * 100) / 100,
       gainLossPct: Math.round(gainLossPct * 1000) / 1000,
       fmvMethod: input.fmvMethod,
+      fmvRung: rung,
       fmvBasisNote: input.fmvBasisNote,
       fmvCompCount: input.fmvCompCount,
     }));
@@ -169,6 +183,7 @@ export function recordCostBasisDivergenceIfNoteworthy(input: Omit<CostBasisDiver
     fmv: Math.round(fmv * 100) / 100,
     gainLossPct: Math.round(gainLossPct * 1000) / 1000,
     fmvMethod: input.fmvMethod,
+    fmvRung: rung,
     fmvCompCount: input.fmvCompCount,
     direction: gainLossPct < 0 ? "loss" : "gain",
   }));

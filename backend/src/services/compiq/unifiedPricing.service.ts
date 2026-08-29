@@ -23,6 +23,7 @@
 import { CosmosClient, type Container } from "@azure/cosmos";
 import { dedupeSoldComps } from "../portfolioiq/dedupeSoldComps.js";
 import { projectNextSaleFromComps } from "./nextSaleProjection.service.js";
+import type { ExactPoolRungLabel } from "./fmvRung.js";
 
 const COSMOS_DATABASE = process.env.COSMOS_DATABASE ?? "hobbyiq";
 const SOLD_COMPS_CONTAINER = process.env.COSMOS_SOLD_COMPS_CONTAINER ?? "sold_comps";
@@ -113,6 +114,12 @@ export interface UnifiedGradeEntry {
   // ($2,700 recent August sales). marketValue = $2,326 × 1.12 ≈ $2,600
   // matches what a buyer will actually pay THIS WEEK.
   marketValue: number | null;
+  // CF-RUNG-LABEL (D4 PR 1, 2026-08-29). Which branch of
+  // computeTrendAndPrediction produced marketValue / predictedPrice for
+  // this tier. Every tier here is the EXACT (identity, grade) pool; the
+  // label names the aggregation. Written in exactly one place — the branch
+  // that returned the number — so no consumer has to infer it.
+  rungLabel: ExactPoolRungLabel;
 }
 
 export interface UnifiedPriceResult {
@@ -128,6 +135,14 @@ export interface UnifiedPriceResult {
   method: "weighted-median" | "no-basis";
   confidence: number;
   computedAt: string;
+  // CF-RUNG-LABEL (D4 PR 1). The rung that produced the top-level
+  // fmv / marketValue / predictedPrice: the matched tier's own label when
+  // the requested grade had a pool entry; "cross-grade-fallback" when the
+  // answer was rescaled off ANOTHER grade's pool (CF-UNIFIED-GRADE-
+  // FALLBACK-CHAIN) — real sales, wrong grade, so NOT an exact-pool rung;
+  // "no-basis" when there is no number (including a curve-only call with
+  // no grade requested).
+  rungLabel: ExactPoolRungLabel | "cross-grade-fallback" | "no-basis";
 }
 
 let _cachedContainer: Container | null = null;
@@ -355,6 +370,7 @@ export async function computeUnifiedPrice(
     method: "no-basis",
     confidence: 0,
     computedAt: new Date(nowMs).toISOString(),
+    rungLabel: "no-basis",
   };
 
   const container = await getContainer();
@@ -404,6 +420,7 @@ export async function computeUnifiedPrice(
     predictedPrice: number | null;
     trendPctPerWeek: number | null;
     trendDirection: "up" | "down" | "flat";
+    rungLabel: ExactPoolRungLabel;
   } {
     // ── CF-TREND-FROM-FIT-NOT-LAST-THREE (2026-08-22) ──────────────────
     //
@@ -444,12 +461,13 @@ export async function computeUnifiedPrice(
           predictedPrice: Math.round((at7d?.nextSaleValue ?? atNow.nextSaleValue) * 100) / 100,
           trendPctPerWeek: perWeek,
           trendDirection: Math.abs(perWeek) < 1 ? "flat" : (perWeek > 0 ? "up" : "down"),
+          rungLabel: "exact-pool-projection",
         };
       }
     }
 
     if (wMedian === null || rows.length < 4) {
-      return { marketValue: wMedian, predictedPrice: wMedian, trendPctPerWeek: null, trendDirection: "flat" };
+      return { marketValue: wMedian, predictedPrice: wMedian, trendPctPerWeek: null, trendDirection: "flat", rungLabel: "exact-pool-weighted-median" };
     }
 
     // CF-LEADING-EDGE-MV (Drew, 2026-08-08). Tier 1 of the recency
@@ -533,14 +551,15 @@ export async function computeUnifiedPrice(
           predictedPrice: Math.round(leadingEdgeMv * forwardFactor * 100) / 100,
           trendPctPerWeek: leadingEdgeTrendPct,
           trendDirection: leadingEdgeDirection,
+          rungLabel: "exact-pool-leading-edge",
         };
       }
-      return { marketValue: wMedian, predictedPrice: wMedian, trendPctPerWeek: null, trendDirection: "flat" };
+      return { marketValue: wMedian, predictedPrice: wMedian, trendPctPerWeek: null, trendDirection: "flat", rungLabel: "exact-pool-weighted-median" };
     }
     const rMed = weightedMedian(recent, nowMs);
     const pMed = weightedMedian(prior, nowMs);
     if (!rMed || !pMed || pMed <= 0) {
-      return { marketValue: wMedian, predictedPrice: wMedian, trendPctPerWeek: null, trendDirection: "flat" };
+      return { marketValue: wMedian, predictedPrice: wMedian, trendPctPerWeek: null, trendDirection: "flat", rungLabel: "exact-pool-weighted-median" };
     }
     const ratio = rMed / pMed;
     // Clamp to [0.5, 1.5] — anything more extreme is thin-pool noise.
@@ -572,6 +591,7 @@ export async function computeUnifiedPrice(
         predictedPrice: Math.round(leadingEdgeMv * forwardFactor * 100) / 100,
         trendPctPerWeek: trendPct,
         trendDirection: direction,
+        rungLabel: "exact-pool-leading-edge",
       };
     }
 
@@ -580,7 +600,7 @@ export async function computeUnifiedPrice(
     const predicted = Math.round(wMedian * Math.pow(cappedRatio, 1.5) * 100) / 100;
     const direction: "up" | "down" | "flat" =
       Math.abs(widerPctPerWeek) < 1 ? "flat" : (widerPctPerWeek > 0 ? "up" : "down");
-    return { marketValue, predictedPrice: predicted, trendPctPerWeek: widerPctPerWeek, trendDirection: direction };
+    return { marketValue, predictedPrice: predicted, trendPctPerWeek: widerPctPerWeek, trendDirection: direction, rungLabel: "exact-pool-weighted-median" };
   }
 
   const gradeCurve: UnifiedGradeEntry[] = [];
@@ -608,6 +628,7 @@ export async function computeUnifiedPrice(
       predictedPrice: trend.predictedPrice,
       trendPctPerWeek: trend.trendPctPerWeek,
       trendDirection: trend.trendDirection,
+      rungLabel: trend.rungLabel,
     });
   }
   gradeCurve.sort((a, b) => (b.sampleCount - a.sampleCount));
@@ -619,6 +640,7 @@ export async function computeUnifiedPrice(
   let trendPctPerWeek: number | null = null;
   let trendDirection: "up" | "down" | "flat" = "flat";
   let selectedConfidence = 0;
+  let rungLabel: UnifiedPriceResult["rungLabel"] = "no-basis";
   if (opts.grade?.company) {
     const target = gradeLabel(opts.grade.company, opts.grade.value);
     // CF-UNIFIED-GRADE-FALLBACK-CHAIN (Drew, 2026-08-04). When the requested
@@ -649,6 +671,9 @@ export async function computeUnifiedPrice(
       trendPctPerWeek = matched.trendPctPerWeek;
       trendDirection = matched.trendDirection;
       selectedConfidence = matched.confidence;
+      // CF-RUNG-LABEL: the tier's own rung when the requested grade matched;
+      // a fallback rung when the number is another grade's pool rescaled.
+      rungLabel = requestedButFallbackMatched ? "cross-grade-fallback" : matched.rungLabel;
 
       // CF-UNIFIED-GRADE-MULTIPLIER-TRANSLATE (Drew, 2026-08-07). When
       // the requested grade didn't match a pool entry AND we fell back
@@ -724,5 +749,6 @@ export async function computeUnifiedPrice(
     method: comps.length > 0 ? "weighted-median" : "no-basis",
     confidence: selectedConfidence || Math.min(1, comps.length / 30),
     computedAt: new Date(nowMs).toISOString(),
+    rungLabel,
   };
 }

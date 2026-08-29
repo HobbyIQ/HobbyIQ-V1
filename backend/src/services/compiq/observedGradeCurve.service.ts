@@ -25,6 +25,7 @@ import { getCardSales } from "./cardhedge.client.js";
 import { recordBoundedProjectionAlert } from "./boundedProjectionAlerts.service.js";
 import { logSubRawInversionObserved } from "./marketRead.service.js";
 import { readSoldCompsForGrade } from "./soldCompsGradeReader.js";
+import type { FmvRungLabel } from "./fmvRung.js";
 import { computeWeightedMedian, getGraderPremium } from "./compiqEstimate.service.js";
 // CF-MATCHED-COHORT-TRAJECTORY (2026-07-05): swap the noisy raw
 // sales-stats-by-player signal for the mix-bias-free matched-cohort
@@ -163,6 +164,14 @@ export interface ObservedGradeEntry {
    *  actual sales; `estimated` = projected from Raw × grade multiplier;
    *  `unavailable` = no data path yielded a number. */
   valueSource: "observed" | "estimated" | "unavailable";
+  /** CF-RUNG-LABEL (D4 PR 1, 2026-08-29). The rung that produced `value`
+   *  / `trendAdjustedValue` for this tier, in the shared vocabulary
+   *  (fmvRung.ts): the unified overlay's own label when it reached this
+   *  tier; "exact-pool-trajectory" for this service's own observed read;
+   *  "grade-curve-estimate" for an estimated tier (see `estimatedSource`
+   *  for the mechanism); null when unavailable. portfolioStore persists
+   *  the chosen tile's label as the holding's `fmvRung`. */
+  rungLabel?: FmvRungLabel | null;
   /** When valueSource === "estimated", the multiplier applied to the
    *  Raw observed median. Null when the estimate came from a reference
    *  price rather than a Raw × multiplier calculation. */
@@ -1936,6 +1945,8 @@ export async function buildObservedGradeCurve(
         (entry as { trendAdjustedValue: number | null }).trendAdjustedValue = mv;
         (entry as { weightedMedianPrice: number | null }).weightedMedianPrice = um.weightedMedian;
         (entry as { sampleCount: number }).sampleCount = um.sampleCount;
+        // CF-RUNG-LABEL: the overlay's number carries the overlay's rung.
+        entry.rungLabel = um.rungLabel;
         if (um.predictedPrice != null) {
           (entry as { predictedPriceAt30d: number | null }).predictedPriceAt30d = um.predictedPrice;
         }
@@ -2165,6 +2176,18 @@ export async function buildObservedGradeCurve(
         black.trendAdjustedValue = tenVal;
       }
     }
+  }
+
+  // CF-RUNG-LABEL (D4 PR 1). Name the rung on every tier the overlay did
+  // not already label: an observed tier is this service's own exact-pool
+  // read carried by the trajectory; an estimated tier is a fill; an
+  // unavailable tier has no rung. A consumer (portfolioStore's tile path)
+  // reads this field — it does not infer the rung from valueSource.
+  for (const e of curve.entries) {
+    if (e.rungLabel) continue;
+    e.rungLabel = e.valueSource === "observed"
+      ? "exact-pool-trajectory"
+      : e.valueSource === "estimated" ? "grade-curve-estimate" : null;
   }
 
   return curve;

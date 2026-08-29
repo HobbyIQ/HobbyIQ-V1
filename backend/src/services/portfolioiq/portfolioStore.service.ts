@@ -571,6 +571,7 @@ export function withholdPricesFromUnidentifiedHoldings(doc: UserDoc): UserDoc {
     next[id] = {
       ...holding,
       fairMarketValue: null as any,
+      fmvRung: null,
       estimatedValue: null,
       estimateLow: null,
       estimateHigh: null,
@@ -2609,13 +2610,17 @@ async function autoPriceHolding(
           // the unified overlay, still live here.
           const gradeNum = Number(String(e.grade).replace(/[^0-9.]/g, ""));
           return Number.isFinite(gradeNum) && gradeNum === wantVal;
-        }) as { trendAdjustedValue: number | null; value: number | null; weightedMedianPrice: number | null; predictedPriceAt30d: number | null } | undefined;
+        }) as { trendAdjustedValue: number | null; value: number | null; weightedMedianPrice: number | null; predictedPriceAt30d: number | null; rungLabel?: string | null } | undefined;
         const tileFmv = tile?.trendAdjustedValue ?? tile?.value ?? tile?.weightedMedianPrice ?? null;
         if (tileFmv !== null && tileFmv > 0) {
           const nowIso = new Date().toISOString();
           const gradeCurveResult: PortfolioHolding = {
             ...holding,
             fairMarketValue: tileFmv,
+            // CF-RUNG-LABEL (D4 PR 1): the tile names its own rung — the
+            // unified overlay's label, this curve's own exact-pool read, or
+            // "grade-curve-estimate" for a filled tier. Read, never inferred.
+            fmvRung: tile?.rungLabel ?? null,
             predictedPrice: tile?.predictedPriceAt30d ?? tileFmv,
             predictedPriceLow: null,
             predictedPriceHigh: null,
@@ -2734,6 +2739,7 @@ async function autoPriceHolding(
         const unified: PortfolioHolding = {
           ...holding,
           fairMarketValue: canonical,
+          fmvRung: u.rungLabel,
           predictedPrice: u.predictedPrice,
           predictedPriceLow: null,
           predictedPriceHigh: null,
@@ -2818,6 +2824,7 @@ async function autoPriceHolding(
     method: string; confidence: number;
     trendPctPerWeek: number | null; trendDirection: string;
     windowDays: number;
+    rungLabel: string;
   } | null = null;
   // CF-UNIFIED-PRICING-HIQ-FALLBACK (Drew, 2026-08-04). Also fire when
   // holding lacks a resolved cardId but HAS a canonical hobbyiqCardId
@@ -2883,6 +2890,7 @@ async function autoPriceHolding(
           trendPctPerWeek: unified.trendPctPerWeek,
           trendDirection: unified.trendDirection,
           windowDays: unified.windowDays,
+          rungLabel: unified.rungLabel,
         };
         console.log(JSON.stringify({
           event: "portfolio_unified_pricing_applied",
@@ -3151,6 +3159,7 @@ async function autoPriceHolding(
       ...identityPatch,
       ...chLastSalePatch,
       fairMarketValue: null as any,  // ladder produces estimate, not observed
+      fmvRung: null,
       estimatedValue: preEarlyLadderResult.derivedFmv,
       estimateLow: preEarlyLadderResult.anchorPrice * 0.7,
       estimateHigh: preEarlyLadderResult.anchorPrice * 1.3,
@@ -3281,9 +3290,15 @@ async function autoPriceHolding(
   // fallback) regardless of what the graded-rail decided. Bypasses
   // the graded-rail's "estimated" branch which was writing null even
   // though unified had a real observed-based number.
+  // CF-RUNG-LABEL (D4 PR 1, 2026-08-29). The rung that produced whatever
+  // `priceSurface` finally holds. Every producer of the surface below sets
+  // it — the engines that name their rung write the name, the legacy paths
+  // write null — and the final holding write persists it as `fmvRung`.
+  let priceSurfaceRung: string | null = null;
   if (unifiedResult && (unifiedResult.predictedPrice ?? unifiedResult.fmv) !== null) {
     const chosen = unifiedResult.predictedPrice ?? unifiedResult.fmv!;
     resolved.fairMarketValueOverride = chosen;
+    priceSurfaceRung = unifiedResult.rungLabel;
     (resolved as any).valuationStatus = "observed";
     (resolved as any).isEstimate = false;
     (resolved as any).estimatedValue = null;
@@ -3348,6 +3363,7 @@ async function autoPriceHolding(
       };
       // Promote to "estimated" so iOS shows the ladder-derived value
       // with low-confidence styling instead of the null FMV.
+      priceSurfaceRung = null;  // the ladder does not name its rung
       resolvedAfterLadder = {
         fairMarketValueOverride: null,
         valuationStatus: "estimated" as const,
@@ -3419,6 +3435,7 @@ async function autoPriceHolding(
           isEstimate: ourPool.valuationStatus === "estimated",
         };
         ourPoolMeta = { slug: ourPool.slug, method: ourPool.method, compsUsed: ourPool.compsUsed };
+        priceSurfaceRung = ourPool.rungLabel;
       }
     }
   }
@@ -3449,6 +3466,7 @@ async function autoPriceHolding(
         estimateBasis: `unified: window=${unifiedResult.windowDays}d median=$${unifiedResult.fmv?.toFixed(0) ?? "?"} marketValue=$${unifiedResult.marketValue?.toFixed(0) ?? "?"} predicted=$${unifiedResult.predictedPrice?.toFixed(0) ?? "?"} trend=${unifiedResult.trendDirection} ${unifiedResult.trendPctPerWeek?.toFixed(1) ?? "?"}%/wk`,
         isEstimate: false,
       };
+      priceSurfaceRung = unifiedResult.rungLabel;
     }
   }
 
@@ -3521,6 +3539,7 @@ async function autoPriceHolding(
       estimateHigh: null,
       isEstimate: false,
     };
+    priceSurfaceRung = null;
     unidentifiedPatch = {
       needsReview: true,
       reviewReason:
@@ -3637,6 +3656,9 @@ async function autoPriceHolding(
     // path actually landed on each holding after the flag flips on.
     pricingSource: ourPoolMeta ? "our-pool" : "legacy-engine",
     pricingSourceMeta: ourPoolMeta ?? undefined,
+    // CF-RUNG-LABEL (D4 PR 1): the rung behind the final price surface;
+    // null when the legacy engine, which does not name its rung, produced it.
+    fmvRung: priceSurfaceRung,
     // CF-AUTOPRICE-GRADE-LADDER-FALLBACK (2026-06-28): persist the
     // anchor snapshot so the iOS detail surface can render
     // "Last sold: PSA 9 $1325 · 236 days ago" alongside the estimated
@@ -3756,6 +3778,7 @@ async function autoPriceHolding(
         }));
       } else {
         (updated as any).fairMarketValue = fallback.fairMarketValue;
+        (updated as any).fmvRung = null;  // resolver fallback names no rung
         (updated as any).valuationStatus = "estimated";
         (updated as any).isEstimate = true;
         (updated as any).estimateBasis = fallback.estimateBasis;
@@ -3797,6 +3820,7 @@ async function autoPriceHolding(
       });
       if (hiq && hiq.fmv !== null && hiq.fmv > 0) {
         (updated as any).fairMarketValue = hiq.fmv;
+        (updated as any).fmvRung = hiq.rungLabel;
         (updated as any).predictedPrice = hiq.fmv;
         (updated as any).predictedPriceMechanism = `hobbyIqFmv:${hiq.method}`;
         (updated as any).predictedPriceUpdatedAt = new Date().toISOString();
@@ -4263,6 +4287,7 @@ export async function applyRematchToHolding(
   (h as { predictedPrice?: number | null }).predictedPrice = null;
   (h as { predictedPriceUpdatedAt?: string | null }).predictedPriceUpdatedAt = null;
   (h as { fairMarketValue?: number | null }).fairMarketValue = null;
+  (h as { fmvRung?: string | null }).fmvRung = null;
   await writeUserDoc(userId, doc);
   return true;
 }
@@ -8182,6 +8207,7 @@ export async function repriceHoldingsForUser(
             const bUpdated: PortfolioHolding = {
               ...holding,
               fairMarketValue: bCanon,
+              fmvRung: bU.rungLabel,
               predictedPrice: bU.predictedPrice,
               predictedPriceLow: null,
               predictedPriceHigh: null,
@@ -8293,6 +8319,7 @@ export async function repriceHoldingsForUser(
               doc.holdings[holding.id] = {
                 ...holding,
                 fairMarketValue: bChosen,
+                fmvRung: unified.rungLabel,
                 estimatedValue: null,
                 estimateLow: null,
                 estimateHigh: null,
@@ -8368,6 +8395,7 @@ export async function repriceHoldingsForUser(
           ...holding,
           ...repriceIdentityPatch,
           fairMarketValue: null as any,  // engine classified as estimated, not observed
+          fmvRung: null,
           estimatedValue: (estimate as any)?.estimatedValue ?? null,
           estimateLow: (estimate as any)?.estimateLow ?? null,
           estimateHigh: (estimate as any)?.estimateHigh ?? null,
@@ -8498,6 +8526,7 @@ export async function repriceHoldingsForUser(
               ...holding,
               ...repriceIdentityPatch,
               fairMarketValue: null as any,
+              fmvRung: null,
               estimatedValue: ladder.derivedFmv,
               estimateLow: ladder.anchorPrice * 0.7,
               estimateHigh: ladder.anchorPrice * 1.3,
@@ -8551,6 +8580,7 @@ export async function repriceHoldingsForUser(
               ...holding,
               ...repriceIdentityPatch,
               fairMarketValue: fallback.fairMarketValue,
+              fmvRung: null,
               estimatedValue: null,
               isEstimate: true,
               valuationStatus: "estimated",
@@ -8627,6 +8657,7 @@ export async function repriceHoldingsForUser(
                 ...holding,
                 ...repriceIdentityPatch,
                 fairMarketValue: ourPool.fairMarketValue ?? undefined,
+                fmvRung: ourPool.rungLabel,
                 estimatedValue: ourPool.estimatedValue,
                 estimateLow: ourPool.estimateLow,
                 estimateHigh: ourPool.estimateHigh,
@@ -8750,6 +8781,7 @@ export async function repriceHoldingsForUser(
                   ...holding,
                   ...repriceIdentityPatch,
                   fairMarketValue: match.price,
+                  fmvRung: null,
                   estimatedValue: null,
                   isEstimate: true,
                   valuationStatus: "estimated",
@@ -8888,6 +8920,7 @@ export async function repriceHoldingsForUser(
         ...holding,
         ...repriceIdentityPatch,
         fairMarketValue: fairValue,
+        fmvRung: null,
         predictedPrice: repricePredictedPrice,
         predictedPriceLow: repricePredictedPriceLow,
         predictedPriceHigh: repricePredictedPriceHigh,
@@ -8982,6 +9015,10 @@ export async function repriceHoldingsForUser(
             ?? (h as { pricingMeta?: { method?: string } }).pricingMeta?.method
             ?? null),
         fmvBasisNote: (h as { estimateBasis?: string | null }).estimateBasis ?? null,
+        // CF-RUNG-LABEL (D4 PR 1): the label the writer stamped beside the
+        // price. The gate reads this first; the method/basis fields above
+        // only matter for holdings priced before the label existed.
+        fmvRung: (h as { fmvRung?: string | null }).fmvRung ?? null,
         fmvCompCount: (h as { pricingSourceMeta?: { compsUsed?: number } }).pricingSourceMeta?.compsUsed
           ?? (h as { pricingMeta?: { compsUsed?: number } }).pricingMeta?.compsUsed
           ?? null,
@@ -9017,7 +9054,7 @@ export async function repriceHoldingsForUser(
           const cost = Math.round(d.costBasis);
           const fmv = Math.round(d.fmv);
           const label = d.cardTitle ?? d.playerName ?? d.slug ?? d.holdingId;
-          const method = d.fmvMethod ? ` [${d.fmvMethod}]` : "";
+          const method = d.fmvRung ? ` [${d.fmvRung}]` : d.fmvMethod ? ` [${d.fmvMethod}]` : "";
           return `  ${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%  $${cost} → $${fmv}  ${label}${method}`;
         }).join("\n");
         const divergenceOverflow = divergenceHits.length > 10 ? `\n\n... and ${divergenceHits.length - 10} more` : "";
