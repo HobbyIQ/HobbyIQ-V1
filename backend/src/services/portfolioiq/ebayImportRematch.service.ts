@@ -11,7 +11,7 @@
 // import with a stronger parser + CH's canonical catalog.
 
 import type { PortfolioHolding } from "../../types/portfolioiq.types.js";
-import { searchCards, getPriceEstimate } from "../compiq/cardhedge.client.js";
+import { parseListingTitle } from "./ebayTitleParser.service.js";
 
 export interface RematchResult {
   holdingId: string;
@@ -30,7 +30,7 @@ export interface RematchResult {
     setName: string | null;
     cardId: string | null;
     matchConfidence: number;
-    matchSource: "cardhedge-search" | "unchanged" | "no_match";
+    matchSource: "catalog" | "cardhedge-search" | "unchanged" | "no_match";
   };
   needsReview: boolean;
   reviewReason: string | null;
@@ -94,53 +94,48 @@ export async function rematchOne(
   if (!title) return emptyAfter("unchanged");
 
   try {
-    // Query CH with the raw title — CH's tokenizer handles the fuzzy
-    // matching. We add a purchase-price hint via keeping the title
-    // intact; the searchCards implementation walks CH's card-search.
-    const cards = await searchCards(title, 5);
-    if (!cards || cards.length === 0) return emptyAfter("no_match");
-
-    // Pick the highest-confidence card. searchCards returns them
-    // ordered; the top hit is the best. When multiple hits at the
-    // same score exist and one carries CPA-*/BCPA-* card_number
-    // matching a token in the ebay title (like "CPA-EHA"), prefer it.
-    // CF-EBAY-REMATCH-PRICE-VALIDATE (Drew, 2026-07-18): walk the
-    // scored candidates in order; for each, fetch CH's Raw price
-    // estimate and check whether it's in the ballpark of the user's
-    // purchase price. Reject candidates whose price differs by more
-    // than an order of magnitude (0.10× or 10×) — that's the "you
-    // paid $305 but the match's Raw price is $2" failure mode from
-    // the first dry-run. Falls back to unchanged when no candidate
-    // survives.
-    const candidates = pickRankedMatches(cards, title);
-    let top: CardMatchCandidate | null = candidates[0] ?? null;
-    if (purchasePrice && purchasePrice > 0 && candidates.length > 0) {
-      top = await firstPriceValid(candidates, purchasePrice);
-    }
-    if (!top) return emptyAfter("no_match");
-
-    // CF-EBAY-REMATCH-TITLE-GUARD (Drew, 2026-07-18): "the name says
-    // what it is." Single decision function classifies each parallel
-    // change into (accept / preserve-before) based on info-loss vs
-    // info-swap vs info-add, with title-support as the escape hatch
-    // for swaps/adds only. Losses are never authorized by title.
-    const proposedParallel = (top.variant ?? before.parallel) as string | null;
+    // CF-WE-USE-OUR-INTERNAL-PROCESSES (Drew, 2026-08-28: "I do not want it
+    // calling cardsight or cardhedge. We use our internal processes";
+    // checklist D7c). This used to search CardHedge, take its card_id as the
+    // holding's cardId, and the route then filed the comp under that vendor
+    // id -- while the confirm path filed under the hiq: slug. Same purchase,
+    // two identifiers, two partitions, no dedupe. The rematch now parses the
+    // title with our own parser and resolves through canonicalize(); the
+    // answer is the checklist slug or nothing.
+    const parsed = parseListingTitle(title);
+    const sport = String((holding as { sport?: string }).sport ?? "baseball");
+    const year = parsed.year ?? ((holding as { cardYear?: number }).cardYear ?? null);
+    const setName = parsed.setName ?? before.setName ?? null;
+    const cardNumber = parsed.cardNumber ?? before.cardNumber ?? null;
+    if (!year || !setName || !cardNumber) return emptyAfter("no_match");
+    const proposedParallel = (parsed.parallel ?? before.parallel) as string | null;
     const finalParallel = shouldSuppressParallelChange(title, before.parallel, proposedParallel)
       ? before.parallel
       : proposedParallel;
+    const { canonicalize } = await import("../catalog/catalogMatcher.service.js");
+    const match = await canonicalize({
+      sport,
+      year,
+      setName,
+      cardNumber,
+      parallel: finalParallel,
+      isAuto: parsed.isAuto === true || (holding as { isAuto?: boolean }).isAuto === true,
+      player: parsed.playerName ?? (holding as { playerName?: string }).playerName ?? null,
+      source: "ebay-user-purchase",
+    });
+    if (!match || !match.found || !match.slug || match.confidence < 0.9) return emptyAfter("no_match", match?.confidence ?? 0);
     const after = {
       parallel: finalParallel,
-      cardNumber: (top.number ?? before.cardNumber) as string | null,
-      setName: (top.set ?? before.setName) as string | null,
-      cardId: (top.card_id ?? before.cardId) as string | null,
-      matchConfidence: (top as { confidence?: number }).confidence ?? 0.8,
-      matchSource: "cardhedge-search" as const,
+      cardNumber,
+      setName,
+      cardId: match.slug,
+      matchConfidence: match.confidence,
+      matchSource: "catalog" as const,
     };
     const changed =
       after.parallel !== before.parallel
       || after.cardNumber !== before.cardNumber
       || after.cardId !== before.cardId;
-
     return {
       ...base,
       after,
@@ -219,46 +214,6 @@ export function pickRankedMatches(
 ): CardMatchCandidate[] {
   const survivors = strictSurvivors(cards, title);
   return survivors.map((s) => s.c);
-}
-
-/** Test each candidate's CH Raw price estimate against the user's
- *  purchase price. Return the first candidate whose CH Raw price is
- *  within [purchasePrice × 0.10, purchasePrice × 10] — i.e. within
- *  an order of magnitude. Wider bands might over-accept; narrower
- *  might over-reject. Order-of-magnitude is defensible against the
- *  100× swings the first dry-run produced (e.g. $305 paid vs $2 raw
- *  = 150× off).
- *
- *  Falls back to the top ranked candidate when we can't fetch any
- *  price at all (CH down, cardId unknown). Returns null when every
- *  candidate has a fetched price AND none are in range. */
-async function firstPriceValid(
-  ranked: CardMatchCandidate[],
-  purchasePrice: number,
-): Promise<CardMatchCandidate | null> {
-  if (ranked.length === 0) return null;
-  const lowFloor = purchasePrice * 0.10;
-  const highCeil = purchasePrice * 10;
-  let anyPriceFetched = false;
-
-  for (const c of ranked) {
-    if (!c.card_id) continue;
-    try {
-      // Raw is the shared grade across autos/non-autos/graded holdings.
-      // If the caller's holding is graded, the observed rail derived
-      // downstream will re-price at the right tier — Raw here is the
-      // "does the SKU value make sense at all" gate.
-      const est = await getPriceEstimate(c.card_id, "Raw");
-      const price = est?.price ?? null;
-      if (price === null || !Number.isFinite(price) || price <= 0) continue;
-      anyPriceFetched = true;
-      if (price >= lowFloor && price <= highCeil) return c;
-    } catch { /* ignore, try next candidate */ }
-  }
-  // No survivor: if we NEVER got a price back, fall back to top
-  // ranked. If we did get prices but none passed, it means every
-  // in-range option was rejected → prefer unchanged (null).
-  return anyPriceFetched ? null : ranked[0];
 }
 
 /** Shared strict-filter + score. Returns ranked survivor list.

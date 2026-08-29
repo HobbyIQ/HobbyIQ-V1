@@ -582,6 +582,17 @@ export function scoreForCanonical(row: {
   );
 }
 
+/** CF-ONE-SALE-ONE-ROW (2026-08-29, D7c). When a rematch moves a holding to a
+ *  different checklist slug, the pool row written under the old slug is
+ *  superseded: the partition key (cardId) cannot be patched, so the old row is
+ *  deleted before the sale is re-written under the new slug. Never throws. */
+export async function deleteSoldCompById(id: string, cardId: string): Promise<boolean> {
+  const c = await getContainer();
+  if (!c) return false;
+  try { await c.item(id, cardId).delete(); return true; }
+  catch (err) { if ((err as { code?: number })?.code === 404) return false; console.warn(JSON.stringify({ event: "sold_comp_supersede_delete_failed", id, cardId, error: (err as Error)?.message ?? String(err) })); return false; }
+}
+
 /** The row pickCanonical would keep: highest scoreForCanonical. */
 function bestOf<T extends { id?: string; verifiedByUser?: boolean; sourceExternalId?: string | null; parallel?: string | null; observedAt?: string }>(rows: T[]): T | undefined {
   return rows.slice().sort((a, b) => scoreForCanonical(b) - scoreForCanonical(a))[0];

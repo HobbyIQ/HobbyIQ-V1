@@ -150,9 +150,17 @@ router.post("/rematch-ebay-imports", requireSession, async (req: Request, res: R
                       ?? h.confirmedAt
                       ?? new Date().toISOString(),
                     );
-                    const { recordSoldComp } = await import(
+                    const { recordSoldComp, deleteSoldCompById } = await import(
                       "../services/portfolioiq/soldCompsStore.service.js"
                     );
+                    // CF-ONE-SALE-ONE-ROW (2026-08-29, D7c): the import wrote this
+                    // purchase under the holding's slug at import time; if the
+                    // rematch moved the holding, that row is superseded.
+                    const prevId = (h.soldCompId as string | null) ?? null;
+                    const prevSlug = (h.soldCompSlug as string | null) ?? (r.before.cardId ?? null);
+                    if (prevId && prevSlug && prevSlug !== r.after.cardId) {
+                      await deleteSoldCompById(prevId, prevSlug);
+                    }
                     await recordSoldComp({
                       cardId: r.after.cardId!,
                       playerName,
