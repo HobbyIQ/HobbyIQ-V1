@@ -133,6 +133,7 @@ on:
           - rename-setkey
           - parse-player-from-checklist
           - identity-triangulation
+          - backfill-holding-ebay-ids
           - map-derived-parallels-to-rungs
           - repair-pokemon-glued-numbers
           - map-pokemon-setkeys-to-checklist

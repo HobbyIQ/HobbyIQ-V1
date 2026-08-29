@@ -616,6 +616,12 @@ function bestOf<T extends { id?: string; verifiedByUser?: boolean; sourceExterna
  * `written: false` with a reason lets the caller keep the row retryable.
  * Additive: the 46 existing callers ignore the return and are unaffected.
  */
+/** CF-SALES-DO-NOT-MINT-CARDS (#1353) / CF-A-USER-SALE-IS-ALWAYS-RECONCILED
+ *  (D7d). The only sources that may seed a catalog row, and the sources whose
+ *  sales are reconciled against the catalog regardless of env. User-owned
+ *  cards; never a vendor feed. */
+const USER_SEED_SOURCES = new Set(["ebay-user-purchase", "ebay-user-sale", "manual-user-entry", "user-verified"]);
+
 export interface RecordSoldCompResult {
   written: boolean;
   /** CF-THE-SALE-HAS-AN-ID (2026-08-29, checklist D7a). The pool row's id
@@ -882,7 +888,13 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
   // Only fires when CATALOG_MATCH_ONLY_ENABLED=true — otherwise the pre-
   // existing behavior stays (compute slug, write directly). Tests default
   // OFF so mock containers don't need to also mock card_catalog.
-  if (process.env.CATALOG_MATCH_ONLY_ENABLED === "true" && hobbyiqCardId && input.cardYear && sportForSlug) {
+  // CF-A-USER-SALE-IS-ALWAYS-RECONCILED (2026-08-29, checklist D7d). The
+  // import resolves the holding through the catalog unconditionally; the
+  // sale it writes must be resolved the same way, or one transaction carries
+  // two identities depending on an env var with no default in the repo.
+  // Vendor feeds keep the flag; user-owned sales reconcile regardless.
+  const reconcile = process.env.CATALOG_MATCH_ONLY_ENABLED === "true" || USER_SEED_SOURCES.has(String(input.source));
+  if (reconcile && hobbyiqCardId && input.cardYear && sportForSlug) {
     try {
       const { canonicalize } = await import("../catalog/catalogMatcher.service.js");
       const userSourceMap: Record<string, "user-verified" | "ebay-user-purchase" | "ebay-user-sale" | "manual-user-entry" | "cardhedge" | "cardsight" | "tca" | "ebay-title"> = {
@@ -936,7 +948,7 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
           candidateSlug: resolved.slug,
           reason: adoption.refusedReason,
         }));
-      } else if (!resolved.found && process.env.CATALOG_MATCH_ONLY_ENABLED === "true") {
+      } else if (!resolved.found && reconcile) {
         // Vendor source + no catalog match under match-only rule = skip write.
         // User sources will have hit the seed branch and returned found:true
         // from canonicalize, so they never reach this line.
@@ -1382,7 +1394,7 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
     // USER sources still seed, by Drew's 2026-08-08 directive: a card the
     // user physically owns is real coverage even before its checklist is
     // acquired. That is the one place a sale is evidence of a card.
-    const USER_SEED_SOURCES = new Set(["ebay-user-purchase", "ebay-user-sale", "manual-user-entry", "user-verified"]);
+    // USER_SEED_SOURCES is module-level (shared with the D7d reconcile gate).
     if (doc.hobbyiqCardId && doc.cardYear && doc.sport && USER_SEED_SOURCES.has(String(input.source))) {
       void (async () => {
         try {
