@@ -69,7 +69,8 @@ const SPORTS = String(process.env.SPORTS || "").split(",").map((s) => s.trim().t
 // FORCE_AUTO_PREFIXES: prefixes that are autographs BY DEFINITION, ruled auto
 // whatever the other sources say (Drew, 2026-08-30: "CPA is what?" -> Chrome
 // Prospect Autograph; the one source saying no-auto for CPA rows is wrong).
-const FORCE_AUTO_PREFIXES = new Set(String(process.env.FORCE_AUTO_PREFIXES || "").split(",").map((x) => x.trim().toUpperCase()).filter(Boolean));
+// The runner has no dedicated input for this; its `scope` input (SCOPE env, default "refractor") doubles as the list.
+const FORCE_AUTO_PREFIXES = new Set(String(process.env.FORCE_AUTO_PREFIXES || (process.env.SCOPE && process.env.SCOPE !== "refractor" ? process.env.SCOPE : "") || "").split(",").map((x) => x.trim().toUpperCase()).filter(Boolean));
 const YEARS = String(process.env.YEARS || "").split(",").map((s) => Number(s.trim())).filter((n) => Number.isFinite(n) && n > 0);
 const f = (n) => Number(n).toLocaleString();
 const shardOf = (key) => parseInt(crypto.createHash("sha1").update(String(key)).digest("hex").slice(0, 8), 16) % SLOTS;
