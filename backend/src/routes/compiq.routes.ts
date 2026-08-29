@@ -2745,7 +2745,7 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
         parsed.confidence >= 0.5 &&
         typeof parsed.year === "number" &&
         typeof parsed.cardNumber === "string" && parsed.cardNumber.length > 0 &&
-        typeof parsed.brand === "string" && parsed.brand.length > 0
+        typeof (parsed.set ?? parsed.brand) === "string" && String(parsed.set ?? parsed.brand).length > 0
       ) {
         try {
           const { computeHobbyIqCardId } = await import("../services/portfolioiq/hobbyIqCardId.service.js");
@@ -2758,7 +2758,7 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
           const slug = computeHobbyIqCardId({
             sport: sportGuess,
             year: parsed.year,
-            setKey: parsed.brand,
+            setKey: String(parsed.set ?? parsed.brand), // CF-PRODUCT-NOT-BRAND (2026-08-29): "Topps Chrome" is not "Topps",
             cardNumber: parsed.cardNumber,
             parallel: parsed.parallel || "Base",
             isAuto: parsed.isAuto ?? false,
@@ -2770,7 +2770,7 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
             gradeCompany: null,
             gradeValue: null,
             cardYear: parsed.year,
-            product: parsed.brand,
+            product: parsed.set ?? parsed.brand,
             player: parsed.playerName ?? null,
             cardNumber: parsed.cardNumber,
             freshCompute: false,
@@ -2793,7 +2793,7 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
             // Resolved once — the lookup is cached per process, but calling it
             // twice in one object literal is just noise.
             const resolvedPlayerName = parsed.playerName
-              ?? await lookupCatalogPlayerName(parsed.year, parsed.brand, parsed.cardNumber);
+              ?? await lookupCatalogPlayerName(parsed.year, parsed.set ?? parsed.brand, parsed.cardNumber);
             console.log(JSON.stringify({
               event: "price_canonical_first_hit",
               source: "compiq.routes.price",
