@@ -34,7 +34,9 @@ function whitelisted(): string[] {
   return [...block.matchAll(/^\s+-\s+([a-z0-9][a-z0-9-]*)\s*$/gm)].map((m) => m[1]);
 }
 
-const WRITE_CALL = /items\.bulk\(|\.upsert\(|\.delete\(\)|\.replace\(/;
+// A write that goes through catalogRowOps (D5 PR 3/4) is still a write —
+// without these two the converted movers drop out of the population.
+const WRITE_CALL = /items\.bulk\(|\.upsert\(|\.delete\(\)|\.replace\(|moveCatalogRow\(|retireCatalogRow\(/;
 
 /**
  * Known-unwired write scripts, as of 2026-08-25. Every one of these can finish,
