@@ -74,9 +74,14 @@ function clean(parallel) {
   }
   if (!shape) return null;
   name = name.replace(/[-–—:]\s*$/, "").trim();
+  // A print run is taken ONLY when the whole footnote is a print-run
+  // statement. "(Base not numbered, ... serial numbered to 500 copies)"
+  // describes sub-classes, not this rung -- that 500 must not become its number.
   let printRun = null;
   if (note) {
-    const m = note.match(/(\d[\d,]{1,})\s*(?:copies|cards|made)/i) || note.match(/#?\s*\/\s*(\d[\d,]{1,})/) || note.match(/numbered to\s*(\d[\d,]{1,})/i) || note.match(/^(\d[\d,]{1,})$/);
+    const m = note.match(/^(?:#\s*)?\/?\s*(\d[\d,]{0,6})\s*(?:copies|cards|made)?\.?$/i)
+      || note.match(/^(?:serial\s+)?numbered to\s*(\d[\d,]{0,6})\.?$/i)
+      || note.match(/^(?:series\s+\w+:\s*)?(\d[\d,]{0,6})\s*copies\.?$/i);
     if (m) printRun = Number(m[1].replace(/,/g, "")) || null;
   }
   return { name, note, printRun, shape };
@@ -176,7 +181,6 @@ async function main() {
             sToken = sp.continuationToken;
             for (const x of sp.resources) {
               await retry(() => pool.item(x.id, x.cardId).patch([
-                { op: "set", path: "/hobbiqCardIdPrev", value: d.id },
                 { op: "set", path: "/hobbyiqCardId", value: newSlug },
                 { op: "set", path: "/reslugedFrom", value: d.id },
                 { op: "set", path: "/reslugedReason", value: "parallel annotation cleaned" },
