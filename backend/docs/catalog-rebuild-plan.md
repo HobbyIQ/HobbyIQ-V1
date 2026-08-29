@@ -391,6 +391,41 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   PR 5 delete class (a) — HOLD `create-tiffany-cards-from-base` /
   `create-product-line-cards-from-base` (synthetic parallels; Drew ruling) and the
   two `*-product-structure` importers (D3 may consume).
+- ◐ D10 **Look at all holdings for everyone** (Drew, 2026-08-29 17:15Z). The three
+  defects under holding `ca7a150b` are not specific to it. **#1448
+  `audit-all-holdings`** (read-only, runner-whitelisted): per holding —
+  IDENTITY (slug on a checklist row / an un-numbered twin of a numbered
+  checklist row / an unbacked row / not in the catalog), POOL (rows under the
+  slug whose titles name a different colour than the slug; print-run mix),
+  PRICE (persisted FMV > 2x off the exact recent pool; a cross-identity rung) —
+  one line per holding, then the roll-up. First run in progress; the fixes are
+  the passes already built: fold-unnumbered-twins APPLY → conform-holdings
+  APPLY → reprice-user-holdings, plus repair-parallel-from-title for pools.
+- ◐ D9 **The eBay import → holdings pipeline** (Drew, 2026-08-29 17:20Z: "we
+  need to fix the whole ebay import to holdings process, bc it seems broken").
+  The Marconi purchase IS the fixture. Real listing title (`purchase.notes`):
+  "2026 Bowman Marconi German Chrome Auto Gold Refractor 1st #/50 Nationals";
+  Browse aspects: only `{Sport: Baseball}`; the checklist row
+  `…:cpa-mg:gold-refractor:auto:num-50` existed. The import produced:
+  `cardTitle` "2026 Bowman Chrome Refractor Marconi German" (Gold and /50
+  dropped by a rebuild), `playerName` "Marconi German," (trailing comma),
+  canonicalize called with an EMPTY card number and parallel "refractor"
+  (`catalogMatchSlug: …:bowman-chrome::refractor:auto`, not-found), `cardId`
+  from the suggester's Refractor card and `hobbyiqCardId`/`catalogVerifiedSlug`
+  from a later rematch (two identities on one holding, neither the checklist
+  row), a self-seeded un-numbered catalog twin (`ebay-user-purchase`, printRun
+  null) with the sale under it. **And the $1,109.44 is explained:**
+  `estimateBasis: "sibling: 1778814561816x… × 8.00× parallel (floor lifted from
+  1.00×)"`, `isEstimate: true` — a sibling-rung estimate keyed by a CardHedge id
+  with a model multiplier, while three exact gold sales existed; `pricingSource:
+  "unified-pricing"` was a mislabel. Fix in a worktree (D9 agent): one parse
+  (the listing title; #1433 composes Gold Refractor + /50), one match (card
+  number + the title's finish + print run → the checklist row), one identity
+  (cardId = hobbyiqCardId = catalogVerifiedSlug = soldCompSlug), no seed when a
+  checklist row resolves, the sale under the resolved slug keyed by the eBay
+  order id; fixture test first (red on main), then fixes. The pricing call's
+  sibling-×8 path is D4 PR 5/6 (retire the estimate seam under exact-pool
+  supremacy).
 - ◐ D8 **The title outranks the vendor tag** (Drew, 2026-08-29 15:25Z, holding
   `ca7a150b` — 2026 Bowman Chrome CPA-MG Marconi German Gold Refractor /50:
   "Bases are tagged to this gold or the gold is tagged to bases"). Read-only
