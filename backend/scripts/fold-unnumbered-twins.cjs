@@ -45,7 +45,7 @@ const { reportWrites } = require(path.join(backend, "dist", "services", "ops", "
 const APPLY = process.env.BACKFILL_APPLY === "true" || process.env.APPLY === "true";
 const SLOT = Number(process.env.SLOT || 0), SLOTS = Number(process.env.SLOTS || 1);
 const RUN_MINUTES = Number(process.env.RUN_MINUTES || 140);
-const SPORT = String(process.env.SPORT || "").toLowerCase();
+const SPORT = String(process.env.SPORT || String(process.env.SPORTS || "").split(",")[0] || "").trim().toLowerCase(); // the runner exports SPORTS from its sports input
 const LIMIT = Number(process.env.LIMIT || 0);
 const f = (n) => Number(n).toLocaleString();
 const shardOf = (id) => parseInt(crypto.createHash("sha1").update(String(id)).digest("hex").slice(0, 8), 16) % SLOTS;
