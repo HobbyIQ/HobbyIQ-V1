@@ -144,7 +144,28 @@ async function main() {
       a.numCount = Number(cnt[0] ?? 0); numChecks++;
     }
     products = (MODE === "source" ? [...agg.values()] : [...agg.values()].filter((a) => a.pars.size > PAR_MAX || (a.numCount ?? 0) > NUM_MAX)).sort((x, y) => y.rows - x.rows);
-    if (MODE === "source" && REPLACED_BY) {
+    // REPLACED_BY=none: no replacement source -- the rows are vendor-/sale-minted
+    // (Drew, 2026-08-30: "GO" on cardsight / cardhedge / pool / sold-comps stubs /
+    // tree-builder). Only checklists mint; these have no checklist twin at their id
+    // (the ingest's tie-break already replaced the ones that did). Every holding
+    // still pointing at one is printed first -- it becomes "unresolved", honestly.
+    const NO_REPLACEMENT = REPLACED_BY.toLowerCase() === "none";
+    if (MODE === "source" && NO_REPLACEMENT) {
+      console.log(`  REPLACED_BY=none: retiring the whole source(s) ${SOURCES.join(",")} -- no coverage guard (vendor-/sale-minted rows have no replacement; only checklists mint)`);
+      try {
+        const portfolio = db.container("portfolio");
+        const { resources: docs } = await retry(() => portfolio.items.query("SELECT c.id, c.userId, c.holdings FROM c WHERE IS_DEFINED(c.holdings)").fetchAll());
+        let pointing = 0, scanned = 0; const ex = [];
+        for (const d of docs) for (const [hid, h] of Object.entries(d.holdings ?? {})) {
+          const id = String(h.hobbyiqCardId ?? h.cardId ?? ""); if (!id.startsWith("hiq:")) continue; scanned++;
+          let row = null; try { row = (await retry(() => cat.item(id, id).read())).resource ?? null; } catch (e) { if (e?.code !== 404) throw e; }
+          if (row && SOURCES.includes(String(row.source))) { pointing++; if (ex.length < 20) ex.push(`    ${h.playerName ?? "?"} #${h.cardNumber ?? "?"} -> ${id} [${row.source}] (user ${String(d.userId).slice(0, 13)})`); }
+        }
+        console.log(`  holdings pointing at a row of these sources: ${f(pointing)} of ${f(scanned)} hiq-identified holdings -- they become unresolved (the acquisition list)`);
+        for (const e of ex) console.log(e);
+      } catch (e) { console.log(`  holdings report failed: ${String(e?.message ?? e).slice(0, 120)}`); }
+    }
+    if (MODE === "source" && REPLACED_BY && !NO_REPLACEMENT) {
       const before = products.length, rowsBefore = products.reduce((n, p) => n + (p.rows || 0), 0);
       const keptProducts = [], retiring = [];
       let measured = 0;

@@ -197,23 +197,37 @@ async function main() {
         const isAuto = h.isAuto === true || cardRows.every((r) => r.isAuto === true);
         const resolved = `hiq:${sport}:${year}:${setKey}:${num.toLowerCase()}:${rung.seg}:${isAuto ? "auto" : "no-auto"}`;
         const existing = String(h.hobbyiqCardId ?? "");
+        // CF-THE-IDENTITY-IS-A-ROW: the composed slug must exist as a catalog row.
+        // When only its numbered twin exists (the un-numbered twin was folded --
+        // #1441/#1470), the numbered row IS the card; two numbered twins are a
+        // ruling, not a guess.
+        const ids = cardRows.map((r) => String(r.id));
+        let target = resolved;
+        if (!ids.includes(resolved)) {
+          const numbered = ids.filter((id) => id.startsWith(resolved + ":num-"));
+          if (numbered.length === 1) target = numbered[0];
+          else { unresolved++; if (unresolvedEx.length < 8) unresolvedEx.push(`no row at ${resolved}${numbered.length > 1 ? " (two numbered twins)" : ""}`); continue; }
+        }
+        // CF-ONLY-IMPROVE: an existing identity that is the numbered form of the
+        // resolved row is MORE specific -- keep it.
+        if (existing && existing.startsWith(target + ":num-") && ids.includes(existing)) { agreed++; if (rung.conf >= 0.95) resolvedExact++; else resolvedFuzzy++; continue; }
         if (rung.conf >= 0.95) resolvedExact++; else resolvedFuzzy++;
 
-        if (existing === resolved) { agreed++; }
-        else if (existing && productChanged(existing, resolved)) {
+        if (existing === target) { agreed++; }
+        else if (existing && productChanged(existing, target)) {
           productChangeRefused++;
-          if (refusedEx.length < 8) refusedEx.push(`${h.playerName} #${num} ${JSON.stringify(h.parallel)}: ${existing} -> ${resolved} would change the product (${setKeyOf(existing)} -> ${setKeyOf(resolved)}); refused -- a missing checklist row is an acquisition gap`);
+          if (refusedEx.length < 8) refusedEx.push(`${h.playerName} #${num} ${JSON.stringify(h.parallel)}: ${existing} -> ${target} would change the product (${setKeyOf(existing)} -> ${setKeyOf(target)}); refused -- a missing checklist row is an acquisition gap`);
           continue;
         }
         else if (existing && rung.conf < 0.95) { /* disagreement below the replace gate: report as fuzzy, no write */ }
         else {
           corrected++;
-          if (correctedEx.length < 8) correctedEx.push(`${h.playerName} #${num} ${JSON.stringify(h.parallel)}\n        ${existing || "(none)"}\n     -> ${resolved}  (conf ${rung.conf})`);
+          if (correctedEx.length < 8) correctedEx.push(`${h.playerName} #${num} ${JSON.stringify(h.parallel)}\n        ${existing || "(none)"}\n     -> ${target}  (conf ${rung.conf})`);
         }
 
         if (!APPLY) continue;
         const ops = [];
-        if ((existing !== resolved && (rung.conf >= 0.95 || !existing)) ) ops.push({ op: "set", path: `/holdings/${hid}/hobbyiqCardId`, value: resolved });
+        if ((existing !== target && (rung.conf >= 0.95 || !existing)) ) ops.push({ op: "set", path: `/holdings/${hid}/hobbyiqCardId`, value: target });
         if (h.cardsightCardId !== undefined && h.cardsightCardId !== null) { ops.push({ op: "set", path: `/holdings/${hid}/cardsightCardId`, value: null }); legacyCleared++; }
         if (ops.length) {
           ops.push({ op: "set", path: `/holdings/${hid}/identityResolvedBy`, value: "catalog-internal" });
@@ -248,7 +262,13 @@ async function main() {
   if (unresolvedEx.length) { console.log(`\n  unresolved — the acquisition/ruling list:`); for (const e of unresolvedEx) console.log(`     ${e.slice(0, 110)}`); }
 }
 
-module.exports = { resolveRung, setAgrees, identityTargets, productChanged, setKeyOf };
+/** Pure: which catalog row a composed slug resolves to among the card's rows (the un-numbered row, else its ONE numbered twin, else nothing). */
+function rowFor(resolved, ids) {
+  if (ids.includes(resolved)) return resolved;
+  const numbered = ids.filter((id) => id.startsWith(resolved + ":num-"));
+  return numbered.length === 1 ? numbered[0] : null;
+}
+module.exports = { resolveRung, setAgrees, identityTargets, productChanged, setKeyOf, rowFor };
 
 if (require.main === module) {
   main().catch((e) => { console.error("FATAL:", e?.stack || e?.message); process.exit(3); });

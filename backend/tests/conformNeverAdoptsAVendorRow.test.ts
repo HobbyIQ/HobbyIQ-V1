@@ -7,7 +7,8 @@
 import { describe, expect, it } from "vitest";
 import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
-const { identityTargets, productChanged, setKeyOf } = require("../scripts/conform-holdings-to-catalog.cjs") as {
+const { identityTargets, productChanged, setKeyOf, rowFor } = require("../scripts/conform-holdings-to-catalog.cjs") as {
+  rowFor: (resolved: string, ids: string[]) => string | null;
   identityTargets: (rows: Array<{ source?: string }>) => Array<{ source?: string }>;
   productChanged: (existing: string, resolved: string) => boolean;
   setKeyOf: (hiq: string) => string;
@@ -30,5 +31,12 @@ describe("conform-holdings-to-catalog -- a holding never adopts a vendor-minted 
     expect(productChanged("", "hiq:baseball:2020:bowman-draft:bd152:base:no-auto")).toBe(false); // no identity yet: nothing to keep
     expect(setKeyOf("hiq:baseball:2025:bowman-draft:cpa-mwi:refractor:auto:num-499")).toBe("bowman-draft");
     expect(setKeyOf("1778814561816x835862652021336800")).toBe("");
+  });
+  it("the identity is a ROW: the composed slug resolves to itself, else to its one numbered twin, else nothing", () => {
+    const base = "hiq:baseball:2025:bowman-draft:cpa-mwi:refractor:auto";
+    expect(rowFor(base, [base, base + ":num-499"])).toBe(base);
+    expect(rowFor(base, [base + ":num-499", "hiq:baseball:2025:bowman-draft:cpa-mwi:gold-refractor:auto:num-50"])).toBe(base + ":num-499");
+    expect(rowFor(base, [base + ":num-499", base + ":num-250"])).toBeNull();
+    expect(rowFor(base, ["hiq:baseball:2025:bowman-draft:cpa-mwi:gold-refractor:auto:num-50"])).toBeNull();
   });
 });
