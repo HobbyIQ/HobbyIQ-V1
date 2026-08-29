@@ -1167,7 +1167,14 @@ async function canonicalizeImpl(input: CatalogMatchInput): Promise<CatalogMatchR
   // low-confidence with verificationStatus:'pending' so the admin review
   // surface can filter + verify against product checklists.
   const isUserSource = USER_SEED_ALLOWED_SOURCES.has(input.source);
-  if (process.env.CATALOG_MATCH_ONLY_ENABLED === "true" && !isUserSource) {
+  // CF-SALES-DO-NOT-MINT-CARDS (Drew, 2026-08-28: "CH shouldn't derive rows
+  // either. we do with checklists"). This used to refuse vendor seeding only
+  // while CATALOG_MATCH_ONLY_ENABLED was "true" — an env flag, which a
+  // process can lower for one call (the one-pool emission did, and minted
+  // rows through this path in the same window). Vendor sources now never
+  // seed, regardless of environment: a checklist mints cards; a user's
+  // physical card mints a card; a CardHedge or TCA sale never does.
+  if (!isUserSource && input.source !== "checklist") {
     return {
       slug: canonicalSlug,
       found: false,
