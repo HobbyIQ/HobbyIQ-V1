@@ -180,6 +180,16 @@ on:
         required: false
         default: ""
         type: string
+      phases:
+        description: "For ingest-checklists-end-to-end: which phases to run (beckett,insider,bcp,tcgdexja). Empty = all."
+        required: false
+        default: ""
+        type: string
+      titles:
+        description: "For ingest-checklists-end-to-end (bcp phase): extra baseballcardpedia page titles, comma-separated (e.g. 2012_Topps_Allen_and_Ginter,1990_Donruss). Empty = the per-year flagship list."
+        required: false
+        default: ""
+        type: string
       years:
         description: "Optional comma-separated years to scope an attest/resolve run (e.g. 1950,1955). Empty = all years."
         required: false
@@ -482,6 +492,8 @@ jobs:
           # corroboration threshold and optional year scoping.
           MIN_SALES: ${{ inputs.min_sales }}
           YEARS: ${{ inputs.years }}
+          PHASES: ${{ inputs.phases }}
+          BCP_TITLES: ${{ inputs.titles }}
           # repair-refractor-mislabel: "refractor" (plain segment only) or
           # "all" (every slug whose parallel disagrees with its own title).
           SCOPE: ${{ inputs.scope }}
@@ -562,7 +574,7 @@ jobs:
           # forever once a slot was down to rows it cannot change.
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (phases_done=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=ingest-checklists-end-to-end -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=ingest-checklists-end-to-end -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f years="${{ inputs.years }}" -f phases="${{ inputs.phases }}" -f titles="${{ inputs.titles }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (phases_done=${N:-0}) — done, no re-dispatch."
           fi

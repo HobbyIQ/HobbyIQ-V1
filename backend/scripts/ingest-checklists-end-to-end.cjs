@@ -111,7 +111,13 @@ function run(script, args, env) {
     // The one source that carries 2016-2024 flagship parallel ladders. The
     // original bcp scraper SKIPPED parallel sections; this one reads only them.
     try {
-      run("scrape-bcp-ladders.cjs", ["--years=2016-2026", `--outDir=${bcpDir}`, "--delayMs=800"]);
+      // CF-RESCRAPE-WHAT-EXPLODED (2026-08-29, checklist B4). The runner's YEARS
+      // and BCP_TITLES inputs widen the scrape to the products the old bcp
+      // scrape exploded (2005-2015 Topps / Heritage / A&G / Gypsy Queen, Donruss,
+      // Score, Upper Deck ...). Default stays the flagship 2016-2026 window.
+      const bcpArgs = [`--years=${process.env.YEARS || "2016-2026"}`, `--outDir=${bcpDir}`, "--delayMs=800"];
+      if (process.env.BCP_TITLES) bcpArgs.push(`--titles=${process.env.BCP_TITLES}`);
+      run("scrape-bcp-ladders.cjs", bcpArgs);
       done.push("bcp-acquired");
     } catch (e) { console.error("  bcp acquire failed: " + String(e.message).slice(0, 120)); }
   }
