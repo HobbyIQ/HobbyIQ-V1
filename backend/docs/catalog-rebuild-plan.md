@@ -586,6 +586,75 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
     attempted, notify workflows assert `pushProviderConfigured` + print counts,
     cleanliness/publish workflows exit non-zero on nothing, Cardsight + verdict
     crons removed, a row-count axis on the freshness canary.
+  - **D13 — alert gates prove delivery** (built on `feat/d13`, 8 commits,
+    2026-08-29 ~21:00Z; tsc 0; every item pinned by a test AND a mutation
+    check that went red). The defect had one shape: a gate reads a field
+    nothing writes, a send result is discarded, or a job locks state as
+    "done" at zero sends — green while sending nothing. Each fix makes the
+    failure VISIBLE (non-zero exit / warn-level event / red workflow).
+    (1) *Cascade push*: `cascade-detect.yml` fetched no APNs env → null
+    provider → `pushSent:0`, exit 0 for six weeks. Now the five-variable
+    APNs block (as watchlist-digest.yml), `isPushProviderConfigured()`
+    exported from notification.service, the fan-out reports `optedInUsers`,
+    and the pure `cascadePushExitCode({newEvents, optedInUsers,
+    providerConfigured})` (in `portfolioiq/cascadeNotify.service.ts` — the
+    file lives there, not under `signals/`) is red iff events were owed to
+    opted-in users and the sender did not exist; test
+    `cascadePushExitCode.test.ts` (truth table + a null-provider sender
+    still surfaces owners); mutant: decision disabled → 2 red. (2)
+    *DailyIQ*: `markNotified(date)` ran even with no provider, so a re-run
+    skipped the day. Marks only when the provider is configured (zero
+    opted-in users still marks — a legitimate zero); otherwise warn-event
+    `dailyiq_push_provider_missing {date, optedInUsers}` and the day stays
+    unmarked; test `dailyiqMarksOnlyOnAttempt.test.ts`; mutant: always-mark
+    → 1 red. (3) *Divergence digest*: three swallows + a literal recipient
+    → `divergenceDigestSend.ts`: `sendDivergenceDigest` never throws,
+    returns `{delivered, reason, users, rows}`, emits
+    `cost_basis_digest_not_delivered {reason, users, rows}` (acs-
+    unconfigured / email-provider-failed / send-threw / email-module-
+    unavailable) or `cost_basis_digest_delivered`; recipient =
+    `OPS_ALERT_EMAIL` (trimmed) || the historical literal, never logged;
+    test `divergenceDigestSend.test.ts` incl. a structural pin that the
+    reprice site no longer calls sendEmail; mutant: result swallowed → 3
+    red. (4) *Notify workflows*: the three admin routes spread
+    `pushProviderConfigured` into `.summary`; watchlistDigestNotify /
+    gradeWorthyPushNotify results carry it and the two scripts exit 1 when
+    it is false on a scheduled run (`GITHUB_EVENT_NAME=schedule` or
+    `REQUIRE_PUSH_PROVIDER=1`; dispatch warns); grade-arbitrage / sell-side
+    / personal-prospect print `notify summary: candidates=N pushesSent=M
+    providerConfigured=…` every run and exit 1 on a scheduled non-dry-run
+    with `false` — read via jq `has()` because `//` treats false as missing;
+    an API without the field prints `unknown` and stays green; test
+    `notifyProviderGate.test.ts`; mutant: `exit 1`→`exit 0` → 1 red; the
+    block was run locally with a jq shim (schedule+false → 1; +true → 0;
+    dispatch → 0; dry-run → 0). (5) *nightly-cleanliness*: missing
+    `ADMIN_API_TOKEN` and an empty anomalies response were warn + exit 0 →
+    both exit 1; the four dispatches stay and print their backfill-runner
+    run URL; mutant: guard → exit 0 → 2 red. (6) *market-insights publish*:
+    200 with an empty snapshot was green → `publish summary: …` every run,
+    exit 1 when gainers+losers+notable == 0; mutant → 1 red. (7)
+    *Retired vendor*: `cardsight-pricing-nightly` schedule removed
+    (retired 2026-08-16; it was still writing 2–3 rows/day into sold_comps
+    — 08-24, 08-27), `verdict-flip-push-fanout` schedule removed (permanent
+    dry-run scaffold, `.cjs:68,149`), `cardsight` dropped from ingest-
+    health `KNOWN_SOURCES`; test `workflowAlertGates.test.ts` (pins 5, 6,
+    7); mutant: cron back → 1 red. (8) *Freshness canary*: `MIN_ROWS_24H`
+    per-source floor on the trailing-24h row COUNT (default off; 429
+    retry; both axes report before exit). Measured read-only 2026-08-29,
+    UTC days 08-22..08-28 — `tca-ebay` 100190 / 114513 / 108922 / 100966 /
+    9340 / 11911 / 9280 (min 9280); `cardhedge` 197620 / 36640 / 58927 /
+    96621 / 101911 / 58272 / 32422. Floor = ~25% of the minimum day →
+    `tca-ebay=2300` in the workflow; NOTE the 08-26 step-down 100k → 10k
+    is the very shape the axis exists for — an end-to-end read-only run
+    saw 441,477 `tca-ebay` rows in the trailing 24h (firehose flowing);
+    once a firehose-era week is confirmed, raise toward 25,000. Test
+    `freshnessCanaryRowFloor.test.ts`; mutant: floor never fails → 2 red.
+    **Deploy note**: `backend/src` changed (notification.service,
+    cascadeNotify, dailyiq.job, portfolioStore, divergenceDigestSend, the
+    three admin routes, two notify services, ingestHealth) → dispatch
+    "Daily 5AM ET Refresh & Deploy" after merge; until then the admin
+    routes lack `pushProviderConfigured` and the workflows print
+    `providerConfigured=unknown` (green by design).
   - *Cron + runner writers (group E):* 52 cron workflows, ~40 writers, **zero
     cron writers call reportWrites**; the reconciliation test is blind to 23
     patch-only writers, camelCase names, no-APPLY-token scripts and every

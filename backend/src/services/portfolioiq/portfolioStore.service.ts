@@ -9387,65 +9387,30 @@ export async function repriceHoldingsForUser(
 
   // CF-TRAJECTORY-12WK bounds alerts (Drew, 2026-07-28). After every
   // reprice run, drain any projection-multiplier bound hits (floor
-  // 0.20 / ceiling 3.0) and email Drew a digest so he can review
-  // whether the linear model needs a non-linear taper. Silent-no-op
-  // when no bounds hit. Silent-no-op when ACS is unconfigured (dev).
+  // 0.20 / ceiling 3.0) and the cost-basis divergences, and email the
+  // ops digest. Silent-no-op when nothing hit.
+  //
+  // D13 (2026-08-29) — alert gates prove delivery. The send used to be
+  // swallowed three times over with a hardcoded recipient; the result
+  // `{delivered:false, devLogged:true}` was never read. The digest now
+  // lives in divergenceDigestSend.ts, which never throws and ALWAYS
+  // emits cost_basis_digest_delivered / cost_basis_digest_not_delivered
+  // with a reason. The outer try still protects the reprice from a
+  // failed dynamic import — not from a silent non-delivery.
   try {
     const { drainAlerts, drainDivergenceAlerts } = await import("../compiq/boundedProjectionAlerts.service.js");
     const divergenceHits = drainDivergenceAlerts();
     const hits = drainAlerts();
     if (hits.length > 0 || divergenceHits.length > 0) {
-      const { sendEmail } = await import("../emailService.js").catch(() => ({ sendEmail: null as any }));
-      if (sendEmail) {
-        const boundsPreview = hits.slice(0, 10).map((h) => {
-          const pctRaw = Math.round((h.rawMultiplier - 1) * 1000) / 10;
-          const pctBounded = Math.round((h.bounded - 1) * 1000) / 10;
-          return `  ${h.playerName ?? "?"} — rate ${(h.rate * 100).toFixed(1)}%/wk × ${h.weeksSinceSale.toFixed(1)}wk → raw ${pctRaw >= 0 ? "+" : ""}${pctRaw}% (bounded ${pctBounded >= 0 ? "+" : ""}${pctBounded}%) [${h.direction}]`;
-        }).join("\n");
-        const boundsOverflow = hits.length > 10 ? `\n\n... and ${hits.length - 10} more` : "";
-        // Divergence section — sort by absolute % first so the biggest
-        // gaps (like the Hartman 85% loss) surface at the top.
-        const divergenceSorted = [...divergenceHits].sort((a, b) => Math.abs(b.gainLossPct) - Math.abs(a.gainLossPct));
-        const divergencePreview = divergenceSorted.slice(0, 10).map((d) => {
-          const pct = Math.round(d.gainLossPct * 1000) / 10;
-          const cost = Math.round(d.costBasis);
-          const fmv = Math.round(d.fmv);
-          const label = d.cardTitle ?? d.playerName ?? d.slug ?? d.holdingId;
-          const method = d.fmvRung ? ` [${d.fmvRung}]` : d.fmvMethod ? ` [${d.fmvMethod}]` : "";
-          return `  ${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%  $${cost} → $${fmv}  ${label}${method}`;
-        }).join("\n");
-        const divergenceOverflow = divergenceHits.length > 10 ? `\n\n... and ${divergenceHits.length - 10} more` : "";
-        const parts: string[] = [];
-        const htmlParts: string[] = [];
-        if (divergenceHits.length > 0) {
-          parts.push(
-            `${divergenceHits.length} cost-basis vs FMV divergence${divergenceHits.length === 1 ? "" : "s"} ` +
-            `(>40% AND >$500):\n${divergencePreview}${divergenceOverflow}`,
-          );
-          htmlParts.push(`<p><strong>${divergenceHits.length} cost-basis vs FMV divergence${divergenceHits.length === 1 ? "" : "s"}</strong></p><pre style="font-family:monospace;font-size:13px;background:#f6f8fa;padding:12px;border-radius:6px">${divergencePreview}${divergenceOverflow}</pre>`);
-        }
-        if (hits.length > 0) {
-          parts.push(
-            `${hits.length} projection-multiplier bound hit${hits.length === 1 ? "" : "s"}:\n${boundsPreview}${boundsOverflow}`,
-          );
-          htmlParts.push(`<p><strong>${hits.length} projection-multiplier bound hit${hits.length === 1 ? "" : "s"}</strong></p><pre style="font-family:monospace;font-size:13px;background:#f6f8fa;padding:12px;border-radius:6px">${boundsPreview}${boundsOverflow}</pre>`);
-        }
-        const subject = divergenceHits.length > 0
-          ? `[HobbyIQ] ${divergenceHits.length} pricing divergence${divergenceHits.length === 1 ? "" : "s"} + ${hits.length} bound hit${hits.length === 1 ? "" : "s"} in reprice for ${userId}`
-          : `[HobbyIQ] ${hits.length} projection-bound hit${hits.length === 1 ? "" : "s"} in reprice for ${userId}`;
-        await sendEmail({
-          to: "drew@justtheboysandcards.com",
-          subject,
-          plainText:
-            `Reprice for userId=${userId}.\n\n` +
-            parts.join("\n\n") +
-            `\n\nKQL: search for event in ("cost_basis_fmv_divergence", "bounded_projection_alert") in App Insights.`,
-          html: `<p>Reprice for <strong>${userId}</strong>.</p>${htmlParts.join("")}<p>KQL: search for <code>event in ("cost_basis_fmv_divergence", "bounded_projection_alert")</code> in App Insights.</p>`,
-        }).catch(() => { /* silent — telemetry already logged */ });
-      }
+      const { sendDivergenceDigest } = await import("./divergenceDigestSend.js");
+      await sendDivergenceDigest({ userId, hits, divergenceHits });
     }
-  } catch {
-    // Never let alerting break the reprice.
+  } catch (err) {
+    console.warn(JSON.stringify({
+      event: "cost_basis_digest_not_delivered",
+      reason: "digest-module-threw",
+      error: (err as Error)?.message ?? String(err),
+    }));
   }
 
   return {
