@@ -34,6 +34,7 @@ const { CosmosClient } = require("@azure/cosmos");
 const backend = path.resolve(__dirname, "..");
 const { parseListingTitle } = require(path.join(backend, "dist", "services", "portfolioiq", "ebayTitleParser.service.js"));
 const { computeHobbyIqCardId, parseHobbyIqCardId } = require(path.join(backend, "dist", "services", "portfolioiq", "hobbyIqCardId.service.js"));
+const { canonicalize } = require(path.join(backend, "dist", "services", "catalog", "catalogMatcher.service.js"));
 
 const APPLY = process.env.APPLY === "true" || process.env.BACKFILL_APPLY === "true"; // the runner exports BACKFILL_APPLY, not APPLY
 const SOURCES = String(process.env.SOURCES || "cardhedge,tca-ebay,cardsight").split(",").map((s) => s.trim()).filter(Boolean);
@@ -70,7 +71,7 @@ async function main() {
   if (!conn) { console.error("FATAL: COSMOS_CONNECTION_STRING not set"); process.exit(1); }
   const pool = new CosmosClient({ connectionString: conn, connectionPolicy: { retryOptions: { maxRetryAttemptsOnThrottledRequests: 30, maxWaitTimeInSeconds: 120 } } }).database("hobbyiq").container("sold_comps");
   console.log(`repair-parallel-from-title  ${APPLY ? "APPLY" : "REPORT ONLY"}  mode=${MODE}  sources=${SOURCES.join(",")}  slot ${SLOT}/${SLOTS}  budget ${RUN_MINUTES}m`);
-  const stats = { scanned: 0, otherShard: 0, repaired: 0, toBase: 0, toOther: 0, kept: 0, keptRefinement: 0, failed: 0, noSlug: 0 };
+  const stats = { scanned: 0, otherShard: 0, repaired: 0, toBase: 0, toOther: 0, kept: 0, keptRefinement: 0, failed: 0, noSlug: 0, resolvedByMatcher: 0 };
   const moves = new Map(); // "source|from>to" -> n
   const examples = [];
   let stopReason = null;
@@ -110,6 +111,17 @@ async function main() {
           if (fromTitle && newLower === "refractor" && BARE_COLOURS.has(oldLower)) { stats.keptRefinement++; continue; }
           let newSlug;
           try { newSlug = computeHobbyIqCardId({ ...comp, parallel: newParallel }); } catch { stats.failed++; continue; }
+          // CF-A-KEY-NEEDS-BOTH-HALVES (refractor dry run ×8): a title that names
+          // a bare colour ("Black /10") would otherwise mint ":black:" where the
+          // checklist spells "black-refractor". A NAMED finish is resolved through
+          // the matcher (Colour ≡ Refractor, long form, the product's own ladder);
+          // Base needs no resolving. Not found -> the computed slug, as before.
+          if (newParallel !== "Base") {
+            try {
+              const r = await retry(() => canonicalize({ sport: comp.sport, year: Number(comp.year), setName: String(comp.setKey), cardNumber: String(comp.cardNumber), parallel: newParallel, isAuto: Boolean(comp.isAuto), printRun: comp.printRun ?? null, player: null, source: "harness" }));
+              if (r && r.found && typeof r.slug === "string" && r.slug.startsWith("hiq:")) { if (r.slug !== newSlug) stats.resolvedByMatcher++; newSlug = r.slug; }
+            } catch { /* keep the computed slug */ }
+          }
           if (!newSlug || !newSlug.startsWith("hiq:") || newSlug === slug) { stats.kept++; continue; }
           const key = `${source}|${r.parallel}>${newParallel}`;
           moves.set(key, (moves.get(key) || 0) + 1);
@@ -136,6 +148,7 @@ async function main() {
   console.log(`  ${APPLY ? "REPAIRED" : "WOULD REPAIR"}           ${f(stats.repaired)}   <- to Base ${f(stats.toBase)}, to another named finish ${f(stats.toOther)}`);
   console.log(`  kept                   ${f(stats.kept)}   <- title names the same finish, or names one it does not contain`);
   console.log(`  kept, refinement       ${f(stats.keptRefinement)}   <- the title names the family the vendor colour refines (Refractor /150 vs Blue Refractor)`);
+  console.log(`  resolved by matcher    ${f(stats.resolvedByMatcher)}   <- a named finish landed on the checklist spelling, not the computed slug`);
   console.log(`  no slug                ${f(stats.noSlug)}`);
   console.log(`  failed                 ${f(stats.failed)}`);
   console.log(`  moves by source|from>to:`);
