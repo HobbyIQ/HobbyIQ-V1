@@ -527,6 +527,76 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
     sold holdings counted); the yearbook applies a clamped portfolio
     multiplier as a sold-value proxy; player-trend partitions key on the raw
     name while ids are slugged. → probes + fixes queued after D12.
+  - *Alerts, digests, pushes (group D, 20:15Z):* the **cascade push is a
+    structural no-op** — `cascade-detect.yml` never passes the APNs env, so the
+    provider is null, every push no-ops, `pushSent:0`, green nightly (iOS DOES
+    write `pushOnCascade`); the cost-basis digest's exact-pool writers on the
+    batch path sit behind `PORTFOLIO_OBSERVED_GRADE_OVERRIDE_ENABLED` (prod:
+    true — verified read-only) and its send result is discarded three times
+    over with a hardcoded recipient and no env override; DailyIQ marks the day
+    "notified" at zero sends; watchlist-digest and grade-worthy scan zero users
+    because nothing in iOS writes `pushOnWatchlistDigest`/`pushOnGradeWorthy`;
+    the four admin notify crons gate on HTTP 200 only; nightly-cleanliness is
+    structurally incapable of going red and auto-applies four unreconciled
+    writers; three Azure alerts read a retired Cardsight metric; the freshness
+    canary cannot tell the firehose from the webhook trickle (the 08-03 outage
+    shape); `cardsight-pricing-nightly` still calls the retired vendor's API on
+    a cron; verdict-flip is a permanent dry-run scaffold on a cron. → **D13**
+    (building, `feat/d13`): the APNs env for cascade, delivery-checked digest
+    with an `OPS_ALERT_EMAIL` override, DailyIQ marks only when a push was
+    attempted, notify workflows assert `pushProviderConfigured` + print counts,
+    cleanliness/publish workflows exit non-zero on nothing, Cardsight + verdict
+    crons removed, a row-count axis on the freshness canary.
+  - *Cron + runner writers (group E):* 52 cron workflows, ~40 writers, **zero
+    cron writers call reportWrites**; the reconciliation test is blind to 23
+    patch-only writers, camelCase names, no-APPLY-token scripts and every
+    service-mediated write (~30 writers it certifies without inspecting);
+    permanently dry under the runner (flag never exported):
+    `recover-chrome-collapse-damage`, `ingest-2026-bowman-auto-checklist`;
+    apply even on `apply=false`: `refresh-market-signals`,
+    `refresh-calibration-multipliers`, `reprice-user-holdings`,
+    `drain-staging-backlog`; marker printed but no relaunch step:
+    `retire-prose-parallel-rows`, `fold-unnumbered-twins`,
+    `map-yearprefixed-setkeys`, `apply-setkey-rulings`; ten relaunch steps gate
+    on progress>0 instead of the marker; `grade-explode` (nightly, mints graded
+    rows) runs against `retire-unreferenced-graded-rows`/`materialize-graded-
+    identities` in opposite directions; `bcp-sweep` + `checklist-refresh`
+    re-scrape the exploded-spine source daily with no #1373 gate;
+    `priceAlertEvaluator` prices a Cardsight UUID through `computeEstimate`.
+    → **D14** (building, `feat/d14`): reconciliation test v2 (patch writers,
+    cron population, marker ⇔ relaunch lint, declared debt that may only
+    shrink); the cron writers get reportWrites in a follow-up batch.
+  - *Web + MCP (group F):* one dead web call (`POST /api/portfolio/identify`,
+    never existed — the scan page uploads then 404s); the web renders no rung
+    or provenance (`method.ladderRung`/`provenance.pricingSource` typed, never
+    shown); BuyerIQ can display a pool median as "Market" (falls to
+    `weightedMedianPrice`); `/api/players/:name` tiers and the grade-analysis
+    ROI are backend medians shown as prices; `apps/api` is a legacy Express +
+    Prisma API (999 files, committed dist + zip) nothing deploys or imports;
+    `mcp-server` is a plain Express app on a separate App Service that nothing
+    live calls (not iOS, not web, not backend), prices from a comp MEDIAN +
+    hardcoded grade multipliers + an LLM prompt, identity a text tuple never a
+    slug, and keeps two unauthenticated backend routes alive for itself. →
+    queued: delete `apps/api`, retire the MCP routes (NEEDS DREW), render the
+    rung on web, fix the BuyerIQ fallback and the identify 404.
+  **The matrix's top-10 probes, by money-at-risk:** (1) audit-all-holdings +
+  rung/identity block → D14; (2) `probe-price-routes` (replay slugs through
+  `/price-by-id`, `/canonical-fmv`, `/hobbyiq-fmv`, grade-curve; rung ∈
+  vocabulary, setKey not a brand, cross-route disagreement) → D14; (3)
+  `probe-grade-curves` (card-panel vs canonical ladder vs card-detail per
+  tier); (4) `audit-pool-identity` → D14; (5) reconciliation v2 → D14; (6)
+  `probe-dailyiq-identity`; (7) route identity-gate lint
+  (`noFreeTextPricing.test.ts`); (8) `probe-notify-jobs` (rung of every push's
+  price); (9) alert liveness → D13; (10) smoke v2 (rung + setKey + ±30% of
+  canonical-fmv). Surface reductions first: the 9 always-empty CH/CS handlers,
+  2 unmounted stubs, `/api/ops/cardsight-probe`, `bcp-sweep`.
+  **Mover validation (report-only, 140-min budget each, 20:10Z):**
+  clean-parallel-annotations dry — 30,564 rows this slot: 758 heal / 5,979
+  move / 1,075 fold / 1,482 replace-a-derived-twin / 2,970 graded children /
+  **3,076 failed** (dry-run failures are moveCatalogRow refusals — read the
+  reasons before any APPLY); rename-setkey dry (`topps-allen-and-ginter`) —
+  12,894 rows: 11,267 move / 711 fold / 905 replace / 2,539 sales re-pointed /
+  0 failed.
 - ◐ D10 **Look at all holdings for everyone** (Drew, 2026-08-29 17:15Z). The three
   defects under holding `ca7a150b` are not specific to it. **#1448
   `audit-all-holdings`** (read-only, runner-whitelisted): per holding —
@@ -555,8 +625,10 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   for the contradicting pools → `reprice-user-holdings` MODE=all (#1451 —
   every portfolio user). **D9 (#1454) and D4 PR 5/6 (#1462) landed →
   `reprice-user-holdings` MODE=all dispatched 18:40Z (33268405103) with the
-  PR 5/6 deploy (33268395668); result and the re-audit recorded here when
-  they land.** The fold → conform passes run again once fold-unnumbered-twins'
+  PR 5/6 deploy (33268395668 — landed, health serves the PR 5/6 sha); the
+  reprice is queued behind the fleets (GitHub runs ~35 runner jobs at once and
+  the relaunch children fill the slots); result and the re-audit recorded here
+  when it runs.** The fold → conform passes run again once fold-unnumbered-twins'
   report-only run finishes (its pass 1 scans every numbered row at the RU
   floor).
 - ◐ D9 **The eBay import → holdings pipeline** (Drew, 2026-08-29 17:20Z: "we
