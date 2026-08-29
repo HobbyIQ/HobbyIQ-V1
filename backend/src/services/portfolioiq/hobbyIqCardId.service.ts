@@ -863,8 +863,22 @@ export function deriveParentSetKey(setKey: string): string | null {
  *
  * Diff logs for both attempts are reproducible with scripts/comp-quality/ +
  * a GROUP BY on sold_comps.setName; the numbers above are from 2026-08-23. */
+// CF-THE-PRODUCT-NAME-IS-NOT-THE-KEY (2026-08-29, identity triangulation
+// baseline: holding -> same card 90.5%). A holding typed as the checklist names
+// it -- "2024 Panini Prospect Edition Baseball" -- leaked the year and the
+// sport into the set key (2024-panini-prospect-edition-baseball, not found).
+// A season prefix ("2024-25 ") falls to the first-year-plus-bare-key ruling of
+// 2026-08-28; a trailing sport word names the sport field, never the product.
+const SET_KEY_YEAR_PREFIX = /^(?:19|20)\d{2}(?:-\d{2})?-/;
+const SET_KEY_SPORT_SUFFIX = /-(?:baseball|football|basketball|hockey|soccer|wrestling|mma|golf|racing)$/;
+export function stripYearAndSport(slug: string): string {
+  let out = slug.replace(SET_KEY_YEAR_PREFIX, "");
+  out = out.replace(SET_KEY_SPORT_SUFFIX, "");
+  return out || slug;
+}
+
 export function normalizeSetKey(setName: string): string {
-  const s = slugify(setName);
+  const s = stripYearAndSport(slugify(setName));
   for (const [re, canonical] of knownSetKeyPatterns()) {
     if (re.test(s)) return canonical;
   }
