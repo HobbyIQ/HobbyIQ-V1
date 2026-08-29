@@ -1026,84 +1026,14 @@ export async function generateCardIdSuggestions(
     // pool automatically — no manual review required to seed data.
     // Mirrors the emit shape from ebayReviewQueue.service.ts:267-293
     // and ebayImportRematch.routes.ts. Fire-and-forget.
-    void (async () => {
-      try {
-        const { recordSoldComp } = await import("./soldCompsStore.service.js");
-        for (const h of targets) {
-          const suggestedCardId = String((h as any).suggestedCardId ?? "").trim();
-          const tier = String((h as any).suggestionConfidenceTier ?? "").toLowerCase();
-          // Only emit for verified + high suggestions. Medium and lower
-          // are too speculative to seed the shared pool.
-          if (!suggestedCardId) continue;
-          if (tier !== "verified" && tier !== "high") continue;
-          const price = Number((h as any).purchasePrice ?? (h as any).totalCostBasis ?? 0);
-          if (!(price > 0)) continue;
-          const playerName = String((h as any).playerName ?? "").trim();
-          if (!playerName) continue;
-          const soldAt = String(
-            (h as any).purchaseDate
-            ?? (h as any).addedAt
-            ?? new Date().toISOString(),
-          );
-          const confidence = Number((h as any).suggestionConfidence ?? 0.7);
-          // CF-SUGGESTER-IDENTITY-COHERENCE (Drew, 2026-07-19). When
-          // the suggester replaces the holding's cardId, its
-          // parallel/cardNumber/setName are ALSO the new authority —
-          // the whole point of a rematch is that the holding's original
-          // fields were wrong (that's why cardId got swapped). Storing
-          // the new cardId with the old parallel/cardNumber gives a
-          // mismatched comp doc that poisons downstream FMV. Prefer
-          // suggestionCandidate.{variant,number,set,year} when present;
-          // fall back to holding fields only if the candidate is silent
-          // on that dimension.
-          const cand = ((h as any).suggestionCandidate ?? {}) as {
-            variant?: string | null;
-            number?: string | null;
-            set?: string | null;
-            year?: string | number | null;
-          };
-          const parallelToWrite = cand.variant ?? (h as any).parallel ?? null;
-          const cardNumberToWrite = cand.number ?? (h as any).cardNumber ?? null;
-          const setNameToWrite = cand.set ?? (h as any).setName ?? null;
-          const candYear = typeof cand.year === "number"
-            ? cand.year
-            : typeof cand.year === "string" && Number.isFinite(Number(cand.year))
-              ? Number(cand.year)
-              : null;
-          const cardYearToWrite = candYear ?? (h as any).cardYear ?? null;
-          try {
-            await recordSoldComp({
-              cardId: suggestedCardId,
-              playerName,
-              cardYear: cardYearToWrite,
-              setName: setNameToWrite,
-              parallel: parallelToWrite,
-              cardNumber: cardNumberToWrite,
-              isAuto: (h as any).isAuto === true,
-              gradeCompany: (h as any).gradeCompany ?? null,
-              gradeValue: (h as any).gradeValue ?? null,
-              price,
-              soldAt,
-              source: "ebay-user-purchase",
-              sourceExternalId: ((h as any).ebayItemId as string | null) ?? `holding::${(h as any).id}`,
-              contributorUserId: userId,
-              title: ((h as any).cardTitle as string | null) ?? null,
-              imageUrl: ((h as any).ebayImageUrl as string | null) ?? null,
-              sellerHandle: null,
-              // NOT user-verified — the suggester is the identity source,
-              // not the user. Confidence tier gates emission (verified +
-              // high only) so pool quality stays high.
-              verifiedByUser: false,
-              confidence,
-            });
-          } catch {
-            // per-holding failure never blocks the batch
-          }
-        }
-      } catch {
-        // swallow — comp emission is auxiliary
-      }
-    })();
+    // CF-A-SUGGESTION-IS-NOT-A-SALE (2026-08-29, checklist D7c). This used to
+    // write a pool row under the CardHedge candidate id for every verified/high
+    // suggestion -- a vendor-keyed comp for a purchase the import had already
+    // written under its checklist slug. A suggestion lands on the holding for
+    // the user to accept; the sale is written once, at import, by the one
+    // writer.
+    void targets;
+
   }
   return summary;
 }
