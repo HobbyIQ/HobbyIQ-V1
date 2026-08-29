@@ -275,7 +275,29 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   — the html-only pages that converted to 0 rows; an acquisition list for the
   CLC converter's html path). #1460: the retire's self-relaunch forwards
   `sources` + `scope` (a child without them would FATAL on #1455's guard).
-  **APPLY ×8 dispatched 18:25Z** (33268119635 … 33268143439). Also seen in the same run: the bcp ladders re-ingest now
+  **APPLY ×8 dispatched 18:25Z** (33268119635 … 33268143439) — **CANCELLED
+  20:05Z** after three shards had deleted ~30k of the 1,096,118 old-CLC rows
+  (retired=15,014 / 10,005 / 5,005; the other five were still scanning).
+  Why: Drew's picker for 2025 Bowman Draft CPA-MWI showed no Gold, and the
+  read-only look found the new spine does not carry the Bowman colour ladder
+  at all — **checklistcenter-2026-08-29 has 18.6 parallels per card for 2025
+  Bowman Draft (only refractor / red refractor / superfractor of the plain
+  ladder) and 5.4 per card for 2025 Bowman Chrome, while 2025 Topps Chrome
+  converts with the full ladder (19.3 per card)**; for CPA-MWI the new source
+  has 13 rows (Wave / Lava / Gumball / Peanuts / plates) and no Gold Refractor
+  /50, Purple /250, Blue /150, Green /99 or Orange /25 — those live only under
+  bcp today. The #1458 replaced-by guard is PRODUCT-level (the product exists
+  under the replacement source) and says nothing about per-card coverage, so
+  any source retire can delete rows the replacement never re-minted. Two
+  follow-ups: (1) **D3b** (building, `feat/d3b`): the CLC converter expands
+  section-level parallel ladders per card (Bowman pages state the ladder once
+  per section; the per-line path only emits parallels that appear as their own
+  rows), fixture-tested on CPA-MWI, then `MODE=reingest`; (2) the retire's
+  guard becomes per-(cardNumber, parallel, printRun) coverage — a product is
+  retired only when the replacement covers ≥ 95% of its old keys, and the
+  uncovered keys are listed; a read-only old-vs-new coverage measurement over
+  the 60 largest old-CLC products is running (numbers below when it lands).
+  The cancelled runs printed no budget marker, so nothing relaunched. Also seen in the same run: the bcp ladders re-ingest now
   skips 762,534 player-name-parallel rows (#1396 working as built).
   cached at c:/tmp/clc (ladders only, no card lists → bounded 547-page re-fetch);
   the old HTML ingester split ladders on commas (player names became rungs) and
@@ -590,7 +612,22 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   price); (9) alert liveness → D13; (10) smoke v2 (rung + setKey + ±30% of
   canonical-fmv). Surface reductions first: the 9 always-empty CH/CS handlers,
   2 unmounted stubs, `/api/ops/cardsight-probe`, `bcp-sweep`.
-  **Mover validation (report-only, 140-min budget each, 20:10Z):**
+  **What Drew saw on the 2025 Bowman Draft CPA-MWI picker (20:20Z):** 102
+  un-graded rows across 11 sources for one card; the picker asked for 25 →
+  Gold fell off the end (**#1466**: 100 rows, the backend's cap); `2025 2025
+  Bowman Draft Baseball` (setName carries the year — fixed in the row, and a
+  vocabulary item: setName should not carry the year at all); `Max Williams,`
+  (beckett-checklist rows keep the trailing comma — a repair for the beckett
+  converter); 21 bcp rows whose "parallel" is another card (`BDC 17 Ethan
+  Conrad`) — the exploded-spine footnote shape the name-cleaning pass targets;
+  checklistinsider rows (`Gold Border /50`, `Gold Geometric Refractor /50`)
+  with `isAuto:false` on a CPA- card — that source's auto boundary is wrong
+  (isAuto is the card-number prefix); `gold:auto:num-50` AND
+  `gold-refractor:auto:num-50` both present (the Colour ≡ Refractor fold has
+  not reached this card); the row's right-hand number is a sales MEDIAN
+  (`salesSummary.median30d`) — now labelled `med` as a picking hint; the
+  picker should carry the exact-pool FMV instead (queued).
+    **Mover validation (report-only, 140-min budget each, 20:10Z):**
   clean-parallel-annotations dry — 30,564 rows this slot: 758 heal / 5,979
   move / 1,075 fold / 1,482 replace-a-derived-twin / 2,970 graded children /
   **3,076 failed** (dry-run failures are moveCatalogRow refusals — read the
@@ -628,7 +665,19 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   PR 5/6 deploy (33268395668 — landed, health serves the PR 5/6 sha); the
   reprice is queued behind the fleets (GitHub runs ~35 runner jobs at once and
   the relaunch children fill the slots); result and the re-audit recorded here
-  when it runs.** The fold → conform passes run again once fold-unnumbered-twins'
+  when it runs.** → **ran 19:20–19:40Z (33268405103): 12 users; Drew 45
+  requested / 37 repriced / 8 skipped (confidence gate + pending-review);
+  the flagged Marconi German Gold Refractor /50 now reads **$182.50
+  observed, `exact-pool-weighted-median`, our-pool, n=3** (was $1,109.44
+  sibling × 8.00× floor). The new gate withheld five estimates because an
+  exact pool existed (`estimate_withheld_exact_pool_exists`: a 1999 Black
+  Diamond base with 8 sales under the un-numbered twin, a 2005 Bowman Chrome
+  base with 5, a 2024 Bowman Draft CPA-TG Blue /150 with 2, a 2026 Bowman
+  CPA-BG Black X-Fractor with 2 under the un-numbered twin) and one
+  unidentified holding's price was withheld at write (Marek Houston,
+  cardsight-sourced, no slug). Those twins are exactly the fold →
+  conform chain's population. Re-audit (`audit-all-holdings`) after fold +
+  conform. The fold → conform passes run again once fold-unnumbered-twins'
   report-only run finishes (its pass 1 scans every numbered row at the RU
   floor).
 - ◐ D9 **The eBay import → holdings pipeline** (Drew, 2026-08-29 17:20Z: "we
