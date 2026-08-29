@@ -129,6 +129,12 @@ const SYNONYMS: Record<string, string> = {
   "market value": "fairMarketValue",
   "fairmarketvalue": "fairMarketValue",
   "current value": "fairMarketValue",
+  // CF-IMPORT-RESOLVES-TO-CHECKLIST (D12-b, 2026-08-29): an explicit sport
+  // column names the slug namespace so the resolver need not infer it.
+  // Import-only pseudo-canonical (not an export column) — the slug carries
+  // the sport once the row resolves. Card Ladder calls it "Category".
+  "sport": "sport",
+  "category": "sport",                           // Card Ladder
   // notes
   "note": "notes",
   "comment": "notes",

@@ -1,19 +1,40 @@
 // CF-IMPORT-BE (2026-06-21) — preview + commit route integration tests.
+//
+// CF-IMPORT-RESOLVES-TO-CHECKLIST (D12-b, 2026-08-29): the fixtures carry
+// canonical `hiq:` slugs. The old ones carried vendor-style ids ("abc12345",
+// "card-import-1") that the round-trip lane persisted verbatim as identity —
+// the defect D12-b closes. A cardId cell is now an identity only when it is
+// an hiq: slug the catalog holds, so the catalog is faked here: every
+// well-formed hiq: slug exists, the matcher finds nothing from free text.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import request from "supertest";
 import * as XLSX from "xlsx";
 import app from "../src/app";
 
-// Mock the Cardsight resolver — import routes go through it for arbitrary
-// rows; we don't want live HTTP in tests.
-vi.mock("../src/services/compiq/catalogSource.js", async (importActual) => {
+const looksLikeSlug = (s: string) => s.startsWith("hiq:") && s.split(":").length >= 7;
+
+vi.mock("../src/services/portfolioiq/cardCatalog.service.js", async (importActual) => {
   const actual = await importActual() as Record<string, unknown>;
   return {
     ...actual,
-    resolveCardId: vi.fn().mockResolvedValue({ cardId: null }),
+    getCatalogEntry: vi.fn(async (slug: string) =>
+      looksLikeSlug(slug)
+        ? { id: slug, cardId: slug, hobbyiqCardId: slug, sport: "baseball", year: 2026, setKey: "bowman", cardNumber: slug.split(":")[4], parallel: "Base", isAuto: false, printRun: null, playerName: "Fixture", vendorIds: {} }
+        : null),
   };
 });
+vi.mock("../src/services/catalog/catalogMatcher.service.js", async (importActual) => {
+  const actual = await importActual() as Record<string, unknown>;
+  return {
+    ...actual,
+    canonicalize: vi.fn(async () => ({ slug: "", found: false, confidence: 0, matchedBy: "not-found" })),
+    resolveCardNumberByPlayer: vi.fn(async () => ({ cardNumber: null, candidates: [] })),
+  };
+});
+
+/** A canonical slug for a fixture card. */
+const slug = (n: string) => `hiq:baseball:2026:bowman:${n.toLowerCase()}:base:no-auto`;
 
 beforeEach(() => {
   vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network disabled in tests")));
@@ -52,8 +73,8 @@ describe("CF-IMPORT-BE — POST /api/portfolio/import/preview", () => {
     const file = makeXlsxBase64(
       ["holdingId", "cardId", "playerName", "cardYear", "product", "purchasePrice"],
       [
-        ["new-import-h1", "abc12345", "Test Player A", 2026, "Bowman", 100],
-        ["new-import-h2", "def67890", "Test Player B", 2024, "Bowman Chrome", 200],
+        ["new-import-h1", slug("rt-a"), "Test Player A", 2026, "Bowman", 100],
+        ["new-import-h2", slug("rt-b"), "Test Player B", 2024, "Bowman Chrome", 200],
       ],
     );
     const res = await request(app)
@@ -67,6 +88,26 @@ describe("CF-IMPORT-BE — POST /api/portfolio/import/preview", () => {
     expect(res.body.envelopes).toHaveLength(2);
     // No live writes occurred — the same preview can be called repeatedly
     expect(res.body.summary.bucketCounts["resolved-clean"]).toBeGreaterThan(0);
+    // The slug the catalog holds IS the identity; a round-trip needs no field resolution.
+    expect(res.body.envelopes[0].cardId).toBe(slug("rt-a"));
+    expect(res.body.envelopes[0].resolution.matchedBy).toBe("round-trip");
+  });
+
+  it("round-trip sheet with a vendor id in the cardId cell → the cell is a hint, the row is unresolved", async () => {
+    const { sessionId } = await signIn();
+    const file = makeXlsxBase64(
+      ["holdingId", "cardId", "playerName", "cardYear", "product", "purchasePrice"],
+      [["new-import-h3", "abc12345", "Test Player A", 2026, "Bowman", 100]],
+    );
+    const res = await request(app)
+      .post("/api/portfolio/import/preview")
+      .set("x-session-id", sessionId)
+      .send({ file, format: "xlsx" });
+    expect(res.status).toBe(200);
+    expect(res.body.summary.isRoundTrip).toBe(true);
+    expect(res.body.envelopes[0].bucket).toBe("unresolved");
+    expect(res.body.envelopes[0].cardId).toBeNull();
+    expect(res.body.envelopes[0].identityHint).toBe("abc12345");
   });
 
   it("arbitrary sheet → auto-map proposal + lenient parse", async () => {
@@ -96,7 +137,7 @@ describe("CF-IMPORT-BE — POST /api/portfolio/import/preview", () => {
     // assertions below read.
     const rows: unknown[][] = Array.from({ length: 30 }, (_, i) => [
       `import-bulk-${i}`,
-      `cardId-${i}`,
+      slug(`bulk-${i}`),
       `Player ${i}`,
       2026,
       "Bowman",
@@ -112,7 +153,7 @@ describe("CF-IMPORT-BE — POST /api/portfolio/import/preview", () => {
       .send({ file, format: "xlsx" });
     expect(res.status).toBe(200);
     expect(res.body.summary.capacityProjection.cap).toBeGreaterThan(0);
-    // 100 rows > 25 cap → wouldExceed true (current may be > 0 from earlier tests but never enough to flip wouldExceed false here)
+    // 30 rows > 25 cap → wouldExceed true (current may be > 0 from earlier tests but never enough to flip wouldExceed false here)
     expect(res.body.summary.capacityProjection.wouldExceed).toBe(true);
   });
 });
@@ -144,10 +185,10 @@ describe("CF-IMPORT-BE — POST /api/portfolio/import/commit", () => {
         rowNumber: 2,
         lane: "new",
         bucket: "resolved-clean",
-        cardId: "card-import-1",
+        cardId: slug("card-import-1"),
         payload: {
           id: "import-commit-h1",
-          cardId: "card-import-1",
+          cardId: slug("card-import-1"),
           playerName: "Import Test Player",
           cardYear: 2026,
           product: "Bowman",
@@ -167,6 +208,7 @@ describe("CF-IMPORT-BE — POST /api/portfolio/import/commit", () => {
     expect(res1.body.cached).toBe(false);
     expect(res1.body.totals.added).toBe(1);
     expect(res1.body.outcomes[0].holdingId).toBeDefined();
+    expect(res1.body.outcomes[0].hobbyiqCardId).toBe(slug("card-import-1"));
 
     // Second commit with same token — should return cached
     const res2 = await request(app)
@@ -177,6 +219,26 @@ describe("CF-IMPORT-BE — POST /api/portfolio/import/commit", () => {
     expect(res2.body.cached).toBe(true);
     // Cached result has the same totals
     expect(res2.body.totals.added).toBe(1);
+  });
+
+  it("refuses an envelope whose cardId is not a canonical hiq: slug (the old verbatim-adoption path)", async () => {
+    const { sessionId } = await signIn();
+    const token = `commit-test-vendor-${Date.now()}`;
+    const res = await request(app)
+      .post("/api/portfolio/import/commit")
+      .set("x-session-id", sessionId)
+      .send({
+        idempotencyToken: token,
+        envelopes: [{
+          rowNumber: 2, lane: "new", bucket: "resolved-clean", cardId: "card-import-1",
+          payload: { cardId: "card-import-1", playerName: "Vendor Id", cardYear: 2026, product: "Bowman" },
+          parseFlags: [], message: "stale client envelope",
+        }],
+      });
+    expect(res.status).toBe(200);
+    expect(res.body.totals.added).toBe(0);
+    expect(res.body.totals.failed).toBe(1);
+    expect(res.body.outcomes[0].reason).toContain("not a canonical hiq: slug");
   });
 
   it("skips unresolved envelopes by default", async () => {
@@ -208,7 +270,7 @@ describe("CF-IMPORT-BE — POST /api/portfolio/import/commit", () => {
 describe("CF-IMPORT-VOLUME §1.a — fresh collision re-check at commit", () => {
   it("re-commit with stale envelopes does NOT create dupes (the mass-dupe-on-retry scenario)", async () => {
     const { sessionId } = await signIn();
-    const sharedCardId = `card-fresh-collision-${Date.now()}`;
+    const sharedCardId = slug(`fresh-collision-${Date.now()}`);
 
     // First commit: add a holding for the card. Token A.
     const tokenA = `fresh-collision-A-${Date.now()}`;
@@ -258,7 +320,7 @@ describe("CF-IMPORT-VOLUME §1.a — fresh collision re-check at commit", () => 
 
   it("envelopes that ARRIVED with bucket 'resolved-collision' keep user's explicit action (re-check doesn't override)", async () => {
     const { sessionId } = await signIn();
-    const sharedCardId = `card-explicit-collision-${Date.now()}`;
+    const sharedCardId = slug(`explicit-collision-${Date.now()}`);
     const holdingId = `ec-holding-${Date.now()}`;
 
     // First add the row
@@ -310,12 +372,13 @@ describe("CF-IMPORT-VOLUME §1.b — Redis-backed idempotency (with in-memory fa
     // through the cache roundtrip).
     const { sessionId } = await signIn();
     const token = `redis-cache-test-${Date.now()}`;
+    const cardId = slug(`redis-test-card-${Date.now()}`);
     const envelopes = [{
       rowNumber: 2, lane: "new", bucket: "resolved-clean",
-      cardId: `redis-test-card-${Date.now()}`,
+      cardId,
       payload: {
         id: `redis-test-holding-${Date.now()}`,
-        cardId: `redis-test-card-${Date.now()}`,
+        cardId,
         playerName: "Redis Cache Test",
         cardYear: 2026,
         product: "Bowman",
@@ -351,10 +414,10 @@ describe("CF-IMPORT-VOLUME §1.c — commit-side capacity re-enforcement", () =>
       rowNumber: 2 + i,
       lane: "new" as const,
       bucket: "resolved-clean" as const,
-      cardId: `cap-test-card-${i}-${Date.now()}`,
+      cardId: slug(`cap-test-card-${i}-${Date.now()}`),
       payload: {
         id: `cap-test-holding-${i}-${Date.now()}`,
-        cardId: `cap-test-card-${i}-${Date.now()}`,
+        cardId: slug(`cap-test-card-${i}-${Date.now()}`),
         playerName: `Capacity Test ${i}`,
         cardYear: 2026,
         product: "Bowman",
@@ -380,14 +443,15 @@ describe("CF-IMPORT-VOLUME §1.c — commit-side capacity re-enforcement", () =>
     const { commitImport } = await import("../src/services/portfolioiq/import/importService.js");
     const { userId } = await signIn();
     const token = `unlimited-test-${Date.now()}`;
+    const cardId = slug(`unlim-${Date.now()}`);
     const envelopes = [{
       rowNumber: 2,
       lane: "new" as const,
       bucket: "resolved-clean" as const,
-      cardId: `unlim-${Date.now()}`,
+      cardId,
       payload: {
         id: `unlim-holding-${Date.now()}`,
-        cardId: `unlim-${Date.now()}`,
+        cardId,
         playerName: "Unlimited Test",
         cardYear: 2026,
         product: "Bowman",

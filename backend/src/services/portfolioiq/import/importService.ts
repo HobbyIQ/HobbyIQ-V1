@@ -5,6 +5,15 @@
 // existing addHolding/updateHolding paths. Idempotency token prevents
 // double-ingest on retried commits (the bulk-import scenario where a
 // double-tap could create a mass-dupe event).
+//
+// CF-IMPORT-RESOLVES-TO-CHECKLIST (D12-b, 2026-08-29). Commit writes ONE
+// identity — cardId = hobbyiqCardId = the resolved `hiq:` slug — stamped
+// with the resolution's confidence / matchedBy / print run. The slug is
+// checked again at the persist site: it must be canonical AND the catalog
+// must still hold it (a row can be retired between preview and commit). A
+// cardId that fails either check is refused. An unresolved row the user
+// insists on is written without an identity, flagged for review, with any
+// sub-threshold suggestion parked for the in-app confirm — never adopted.
 
 import {
   parseHoldingsFile,
@@ -13,10 +22,12 @@ import {
 } from "./fileParser.js";
 import {
   resolveBatch,
+  IMPORT_BUCKETS,
   type ImportRowEnvelope,
   type NormalizedHoldingPayload,
   type ImportBucket,
 } from "./resolveBatch.js";
+import { asHiqSlug, type ImportResolution } from "./importResolver.js";
 import {
   readImportJob,
   writeImportJob,
@@ -31,12 +42,10 @@ import {
   writeUserDoc,
   countHoldingsForUser,
 } from "../portfolioStore.service.js";
+import { getCatalogEntry } from "../cardCatalog.service.js";
+import { parseHobbyIqCardId } from "../hobbyIqCardId.service.js";
 import { cacheGet, cacheSet } from "../../shared/cache.service.js";
-import {
-  effectivePlanFor,
-  getCap,
-  type Plan,
-} from "../../../config/entitlements.js";
+import { getCap, type Plan } from "../../../config/entitlements.js";
 import { detectCollision } from "./collisionDetector.js";
 
 /** Minimal UserDoc shape we touch (the real type lives inside portfolioStore as an internal interface). */
@@ -93,6 +102,12 @@ function normalizeId(id: string | undefined | null): string {
   return String(id ?? "").trim().toLowerCase();
 }
 
+function emptyBucketCounts(): Record<ImportBucket, number> {
+  const out = {} as Record<ImportBucket, number>;
+  for (const b of IMPORT_BUCKETS) out[b] = 0;
+  return out;
+}
+
 export interface PreviewSummary {
   totalRows: number;
   isRoundTrip: boolean;
@@ -147,6 +162,9 @@ export interface CommitOutcome {
   outcome: "added" | "updated" | "skipped" | "failed";
   holdingId?: string;
   reason?: string;
+  /** The identity the holding was written with (NEW lane). Null when the
+   *  row was committed without one. */
+  hobbyiqCardId?: string | null;
 }
 
 export interface CommitResult {
@@ -211,13 +229,7 @@ export async function buildPreview(
   });
 
   // Bucket counts
-  const bucketCounts: Record<ImportBucket, number> = {
-    "resolved-clean": 0,
-    "resolved-collision": 0,
-    "ambiguous": 0,
-    "unresolved": 0,
-    "identity-edited": 0,
-  };
+  const bucketCounts = emptyBucketCounts();
   let defaultCommitCount = 0;
   for (const env of envelopes) {
     bucketCounts[env.bucket] = (bucketCounts[env.bucket] ?? 0) + 1;
@@ -364,13 +376,7 @@ async function runAsyncResolve(args: {
     });
 
     // Compute summary + capacity projection mirror
-    const bucketCounts: Record<string, number> = {
-      "resolved-clean": 0,
-      "resolved-collision": 0,
-      "ambiguous": 0,
-      "unresolved": 0,
-      "identity-edited": 0,
-    };
+    const bucketCounts: Record<string, number> = emptyBucketCounts();
     let defaultCommitCount = 0;
     for (const env of envelopes) {
       bucketCounts[env.bucket] = (bucketCounts[env.bucket] ?? 0) + 1;
@@ -476,7 +482,6 @@ export async function commitImport(
   }
 
   const doc = await readUserDoc(userId);
-  const liveHoldings = doc.holdings ?? {};
 
   // ─── §1.c Commit-side capacity re-enforcement ─────────────────────
   // Project the impact assuming the request's actions (or the envelope
@@ -527,16 +532,22 @@ export async function commitImport(
   let freshCollisionsBlocked = 0;
   for (const env of request.envelopes) {
     let action = actions[env.rowNumber] ?? defaultActionFor(env);
+    const adds = env.lane === "new" && (action === "commit" || action === "add-as-copy");
+    const identity: CommitIdentity = adds ? await identityForCommit(env) : { slug: null };
 
-    if (env.lane === "new" && env.cardId && (action === "commit" || action === "add-as-copy")) {
+    if (adds) {
       const freshCollision = detectCollision(
         {
-          cardId: env.cardId,
+          cardId: identity.slug,
           holdingId: env.payload.id ?? null,
           parallel: env.payload.parallel ?? null,
           gradeCompany: env.payload.gradeCompany ?? null,
           gradeValue: env.payload.gradeValue ?? null,
           serialNumber: env.payload.serialNumber ?? null,
+          playerName: env.payload.playerName ?? null,
+          cardYear: env.payload.cardYear ?? null,
+          product: env.payload.product ?? null,
+          cardNumber: env.payload.cardNumber ?? null,
         },
         doc.holdings,
       );
@@ -549,7 +560,7 @@ export async function commitImport(
       }
     }
 
-    const result = await applyAction(doc, env, action);
+    const result = await applyAction(doc, env, action, identity);
     outcomes.push(result);
   }
 
@@ -574,10 +585,6 @@ export async function commitImport(
   // dupes that earlier partial writes may have created).
   await cacheSet(cacheKey, JSON.stringify(result), IDEMPOTENCY_TTL_SECONDS);
 
-  // The liveHoldings reference is kept for diagnostics — surfaced via
-  // process logs if useful. (Intentional pin against lint dead-code rule.)
-  void liveHoldings;
-
   return result;
 }
 
@@ -594,10 +601,103 @@ function defaultActionFor(env: ImportRowEnvelope): CommitAction {
   }
 }
 
+interface CommitIdentity {
+  slug: string | null;
+  error?: string;
+}
+
+/**
+ * The identity a NEW-lane commit writes, from the envelope the client sent
+ * back. Envelopes are client-supplied and the preview may be old, so the
+ * cell is checked again at the persist site: only a canonical `hiq:` slug
+ * is an identity, and only one the catalog still holds (D10 found 15
+ * holdings on rows that no longer existed; a commit must not add a 16th).
+ * A suggestion below the bar is never adopted here — it rides on
+ * `resolution` and is parked on the holding for the in-app confirm.
+ */
+async function identityForCommit(env: ImportRowEnvelope): Promise<CommitIdentity> {
+  const raw = String(env.cardId ?? "").trim();
+  if (!raw) return { slug: null };
+  const slug = asHiqSlug(raw);
+  if (!slug) {
+    return { slug: null, error: `cardId "${raw.slice(0, 40)}" is not a canonical hiq: slug; re-run the preview` };
+  }
+  const row = await getCatalogEntry(slug);
+  if (!row) {
+    return { slug: null, error: `${slug} names no catalog row (retired since the preview?); re-run the preview` };
+  }
+  return { slug };
+}
+
+/**
+ * Stamp the one identity + its provenance onto a holding the commit writes.
+ *
+ * With a slug: cardId = hobbyiqCardId = catalogVerifiedSlug = slug, the
+ * resolution's confidence / matchedBy / print run alongside. The identity
+ * is marked verified when the row's own fields matched a checklist row
+ * exactly, or the slug came from our own export (round-trip) — the same
+ * act as add-card, where the user typed the fields. A fuzzier match that
+ * cleared the bar is pinned (as add-card pins it) but left for the
+ * Unverified badge to invite a look.
+ *
+ * Without one: no identity, no price. The holding is flagged for review
+ * with the reason on it, and a sub-threshold suggestion is parked on
+ * catalogMatchSlug — the wire's `proposedIdentity` — so the in-app confirm
+ * (accept-identity) can adopt and price it. Same path the eBay import uses.
+ */
+function stampImportIdentity(
+  holding: PortfolioHolding,
+  slug: string | null,
+  resolution: ImportResolution | null | undefined,
+): void {
+  const h = holding as PortfolioHolding & Record<string, unknown>;
+  // Import-only column; the slug carries the sport.
+  delete h.sport;
+  const now = new Date().toISOString();
+
+  if (!slug) {
+    const suggested = resolution?.found && resolution.slug ? resolution.slug : null;
+    h.cardId = null;
+    h.hobbyiqCardId = null;
+    h.catalogMatchConfidence = resolution?.confidence ?? 0;
+    h.catalogMatchedBy = resolution?.matchedBy ?? "not-found";
+    h.catalogMatchSlug = suggested;
+    if (typeof resolution?.printRun === "number" && resolution.printRun > 0) h.printRun = resolution.printRun;
+    h.needsReview = true;
+    h.reviewReason = suggested
+      ? `The catalog suggests ${suggested} at ${Math.round((resolution?.confidence ?? 0) * 100)}% — below the bar to adopt it. Confirm the identity to see a value.`
+      : "We could not identify this card, so we are not showing a value. Confirm the set, card number and parallel.";
+    return;
+  }
+
+  const matchedBy = resolution?.matchedBy ?? "round-trip";
+  h.cardId = slug;
+  h.hobbyiqCardId = slug;
+  h.catalogMatchSlug = slug;
+  h.catalogMatchConfidence = resolution?.confidence ?? 1;
+  h.catalogMatchedBy = matchedBy;
+  h.catalogVerifiedSlug = slug;
+  h.catalogVerifiedSource = "hobbyiq-catalog";
+  h.catalogVerifiedAt = now;
+  h.catalogVerified = true;
+  h.catalogVerifiedReason = "catalog-match-at-import";
+  h.identitySource = "spreadsheet-import-catalog-match";
+  const printRun = resolution?.printRun ?? parseHobbyIqCardId(slug)?.printRun ?? null;
+  if (typeof printRun === "number" && printRun > 0) h.printRun = printRun;
+  if (matchedBy === "exact" || matchedBy === "round-trip") {
+    h.identityVerified = true;
+    h.identityVerifiedAt = now;
+    h.identityVerifiedBy = { source: "spreadsheet-import", candidateId: slug, verifiedAt: now };
+  }
+  h.needsReview = false;
+  h.reviewReason = null;
+}
+
 async function applyAction(
   doc: UserDocShape,
   env: ImportRowEnvelope,
   action: CommitAction,
+  identity: CommitIdentity,
 ): Promise<CommitOutcome> {
   try {
     if (action === "skip") {
@@ -610,7 +710,10 @@ async function applyAction(
       if (!existing) {
         return { rowNumber: env.rowNumber, action, outcome: "failed", reason: "existing holding not found" };
       }
-      doc.holdings[hid] = mergePayload(existing, env.payload);
+      // Identity is not editable through this lane.
+      const { cardId: _c, hobbyiqCardId: _h, sport: _s, ...metadata } = env.payload;
+      void _c; void _h; void _s;
+      doc.holdings[hid] = mergePayload(existing, metadata);
       return { rowNumber: env.rowNumber, action, outcome: "updated", holdingId: hid };
     }
     if (action === "update-cost") {
@@ -634,12 +737,15 @@ async function applyAction(
       return { rowNumber: env.rowNumber, action, outcome: "updated", holdingId: targetHid };
     }
     // commit (NEW lane) or add-as-copy
+    if (identity.error) {
+      return { rowNumber: env.rowNumber, action, outcome: "failed", reason: identity.error };
+    }
     const newId = env.payload.id ? normalizeId(env.payload.id) : normalizeId(generateId());
     const newHolding = mergePayload({ id: newId } as PortfolioHolding, env.payload);
     newHolding.id = newId;
-    newHolding.cardId = env.cardId ?? null;
+    stampImportIdentity(newHolding, identity.slug, env.resolution);
     doc.holdings[newId] = newHolding;
-    return { rowNumber: env.rowNumber, action, outcome: "added", holdingId: newId };
+    return { rowNumber: env.rowNumber, action, outcome: "added", holdingId: newId, hobbyiqCardId: identity.slug };
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     return { rowNumber: env.rowNumber, action, outcome: "failed", reason: msg };
