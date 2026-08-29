@@ -8,7 +8,7 @@ Nothing in `backend/src` — pure scripts, no deploy, no runtime changes.
 | Phase | Script | Endpoint | Writes to | Expected runtime (full baseball) |
 |-------|--------|----------|-----------|----------------------------------|
 | A1 | `phase-a-crawl-releases.cjs` | `GET /v1/catalog/releases?segment=X` | `.state/releases-<sport>.json` | ~5s (1,992 baseball releases) |
-| A2 | `phase-a-crawl-cards.cjs` | `GET /v1/catalog/releases/{id}/cards` | `card_catalog` container | ~15-30 min (~100k baseball cards) |
+| A2 | `phase-a-crawl-cards.cjs` — **deleted 2026-08-29 (D5 PR 5)**: vendor feeds never mint catalog rows (#1362) | `GET /v1/catalog/releases/{id}/cards` | `card_catalog` container | n/a |
 | B  | `phase-b-crawl-pricing.cjs` | `POST /v1/pricing/` (batch 100) | `sold_comps` container | ~15-30 min (~1,000 batches, many upserts per batch) |
 | C  | `phase-c-crawl-population.cjs` | `GET /v1/population/release/{id}` | `card_population` container | ~5-10 min (1,992 releases) |
 | D  | `phase-d-crawl-release-calendar.cjs` | `GET /v1/release-calendar/` | `release_calendar` container | ~30s |
@@ -47,7 +47,7 @@ dominates). Every phase is resumable via `--resume`.
 ```sh
 # Catalog first (Phase A is prerequisite for B/C/E)
 node backend/scripts/cardsight-bulk/phase-a-crawl-releases.cjs
-node backend/scripts/cardsight-bulk/phase-a-crawl-cards.cjs --min-year 2020
+# phase-a-crawl-cards.cjs was deleted 2026-08-29 (D5 PR 5): vendor feeds never mint catalog rows (#1362)
 
 # Pricing (recent + graded sales for every catalog card)
 node backend/scripts/cardsight-bulk/phase-b-crawl-pricing.cjs \

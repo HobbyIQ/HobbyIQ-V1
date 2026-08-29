@@ -70,12 +70,9 @@ on:
           - backfill-catalog-driven-canonicalize
           - backfill-stage2-title-parser
           - backfill-stage3-price-sanity
-          - expand-catalog-from-sold-comps-gaps
-          - expand-catalog-full-enumeration
           # CF-CS-KILL-SWITCH (Drew, 2026-08-02). CS API calls halted.
           # Any script that hits Cardsight is removed from the whitelist
           # so no dispatch can call CS. See:
-          #   - expand-catalog-from-cardsight (catalog enum)
           #   - backfill-catalog-cs-images (image probe)
           #   - backfill-cs-card-population (pop probe)
           #   - reaudit-cardsight-unverified (reads sold_comps only, no CS API — kept)
@@ -87,7 +84,6 @@ on:
           - backfill-bowman-mega-box-reslug
           - backfill-sub-channel-vocabulary
           - auto-quarantine-contaminated-pools
-          - expand-catalog-from-tcdb
           # CS-touching scripts removed from whitelist (CF-CS-KILL-SWITCH):
           #   - backfill-catalog-cs-images
           #   - backfill-cs-card-population
@@ -106,8 +102,6 @@ on:
           - reaudit-cardsight-unverified
           - recover-chrome-collapse-damage
           - normalize-catalog-format
-          - attest-unnumbered-by-player
-          - resolve-sales-without-identity
           - retire-flattened-attestations
           - repair-refractor-mislabel
           - merge-bare-colour-parallels
@@ -171,10 +165,6 @@ on:
         description: "Total partitions. normalize splits by year; rehome splits a YEAR by setKey letter range, so SLOTS=4 with the same YEARS runs one year four ways."
         required: false
         default: "16"
-      min_sales:
-        description: "For attest-* scripts: how many independent sales must agree before a card is created. 2 is the default; 1 accepts a single sale and is much riskier."
-        required: false
-        default: "2"
       scope:
         description: "For repair-refractor-mislabel: 'refractor' (plain segment only) or 'all' (every parallel pool)."
         required: false
@@ -196,7 +186,7 @@ on:
         default: ""
         type: string
       years:
-        description: "Optional comma-separated years to scope an attest/resolve run (e.g. 1950,1955). Empty = all years."
+        description: "Optional comma-separated years to scope a run (e.g. 1950,1955). Empty = all years."
         required: false
         default: ""
       limit:
@@ -357,9 +347,9 @@ jobs:
           echo "AUTH_SESSION_SECRET fetched (length: ${#SEC})"
 
       # CF-CS-KEY-FOR-CATALOG-EXPANSION (Drew, 2026-08-01). Cardsight
-      # catalog enumeration + image backfill both need CARDSIGHT_API_KEY.
+      # image backfill + population probe need CARDSIGHT_API_KEY.
       - name: Fetch CARDSIGHT_API_KEY from HobbyIQ3 App Service
-        if: inputs.script == 'expand-catalog-from-cardsight' || inputs.script == 'backfill-catalog-cs-images' || inputs.script == 'backfill-cs-card-population'
+        if: inputs.script == 'backfill-catalog-cs-images' || inputs.script == 'backfill-cs-card-population'
         shell: bash
         run: |
           CS_KEY=$(az webapp config appsettings list \
@@ -493,9 +483,9 @@ jobs:
           # one can be re-run alone — the script skips rows already normalised.
           SLOT: ${{ inputs.slot }}
           SLOTS: ${{ inputs.slots }}
-          # attest-unnumbered-by-player / resolve-sales-without-identity:
-          # corroboration threshold and optional year scoping.
-          MIN_SALES: ${{ inputs.min_sales }}
+          # Optional year scoping (ingest-checklists-end-to-end, rehome-catalog-
+          # rows-to-own-partition, dedupe-catalog-partition-shadows, merge-bare-
+          # colour-parallels, repair-refractor-mislabel).
           YEARS: ${{ inputs.years }}
           PHASES: ${{ inputs.phases }}
           BCP_TITLES: ${{ inputs.titles }}
@@ -1067,13 +1057,12 @@ jobs:
           fi
 
       - name: Self-relaunch catalog expansion until RELAUNCH_NEEDED=false
-        # CF-CATALOG-EXPANSION-SELF-RELAUNCH (Drew, 2026-08-01). Both
-        # catalog-expansion scripts (gap-filler and full-enumeration) print
-        # RELAUNCH_NEEDED=true when there are still tuples to process. The
-        # script self-caps to ~25 min per invocation; this step re-dispatches
-        # the workflow immediately so it continues in a fresh runner. Loops
-        # until the script emits RELAUNCH_NEEDED=false.
-        if: ${{ !cancelled() && (inputs.script == 'expand-catalog-from-sold-comps-gaps' || inputs.script == 'expand-catalog-full-enumeration' || inputs.script == 'expand-catalog-from-cardsight' || inputs.script == 'backfill-catalog-cs-images' || inputs.script == 'normalize-catalog-schema' || inputs.script == 'dedupe-catalog-by-hobbyiq' || inputs.script == 'backfill-cs-card-population' || inputs.script == 'drain-staging-backlog' || inputs.script == 'rescore-anomalies' || inputs.script == 'score-all-sold-comps' || inputs.script == 'reaudit-cardsight-unverified' || inputs.script == 'backfill-searchtokens-all-sports' || inputs.script == 'fix-catalog-parallel-as-player' || inputs.script == 'auto-label-catalog-variants') && inputs.apply == true }}
+        # CF-CATALOG-EXPANSION-SELF-RELAUNCH (Drew, 2026-08-01). A script on
+        # this list prints RELAUNCH_NEEDED=true when there are still tuples to
+        # process. The script self-caps to ~25 min per invocation; this step
+        # re-dispatches the workflow immediately so it continues in a fresh
+        # runner. Loops until the script emits RELAUNCH_NEEDED=false.
+        if: ${{ !cancelled() && (inputs.script == 'backfill-catalog-cs-images' || inputs.script == 'normalize-catalog-schema' || inputs.script == 'dedupe-catalog-by-hobbyiq' || inputs.script == 'backfill-cs-card-population' || inputs.script == 'drain-staging-backlog' || inputs.script == 'rescore-anomalies' || inputs.script == 'score-all-sold-comps' || inputs.script == 'reaudit-cardsight-unverified' || inputs.script == 'backfill-searchtokens-all-sports' || inputs.script == 'fix-catalog-parallel-as-player' || inputs.script == 'auto-label-catalog-variants') && inputs.apply == true }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash

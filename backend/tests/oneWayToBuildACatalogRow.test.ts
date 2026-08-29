@@ -109,7 +109,9 @@ const MOVERS = new Set<string>();
 /**
  * Writers that hand-roll a catalog ROW (items.upsert / bulk / create on the
  * card_catalog handle) without the builder. Measured 2026-08-29: 62;
- * re-measured after D5 PR 3 moved the seven movers onto catalogRowOps: 54.
+ * re-measured after D5 PR 3 moved the seven movers onto catalogRowOps: 54;
+ * re-measured after D5 PR 5 deleted the 25 dead minters (sales never mint,
+ * #1353; vendor feeds never mint, #1362): 29.
  * Versus the 2026-08-26 list: the five sold_comps writers and the two ebay
  * services (PR 6, #1403/#1404) are gone; the two comment-match "canonical"
  * files, the capital-C `getContainer` cardsight crawler and the env-fallback
@@ -119,17 +121,11 @@ const BYPASSING = new Set([
   // A hand-rolled mover is debt here (via MOVERS) until it imports catalogRowOps.
   ...MOVERS,
   "backend/scripts/attachImagesToCatalog.cjs",
-  "backend/scripts/attest-unnumbered-by-player.cjs",
   "backend/scripts/auto-label-catalog-variants.cjs",
   "backend/scripts/backfill-canonicalize-chrome-slugs.cjs",
   "backend/scripts/backfill-catalog-cs-images.cjs",
-  "backend/scripts/backfill-catalog-from-sold-comps.cjs",
   "backend/scripts/backfill-cs-card-population.cjs",
   "backend/scripts/backfill-searchtokens-all-sports.cjs",
-  "backend/scripts/build-tree-nodes.ts",
-  "backend/scripts/bulk-build-catalog.ts",
-  "backend/scripts/cardsight-bulk/phase-a-crawl-cards.cjs",
-  "backend/scripts/catalog-sales-synth.cjs",
   "backend/scripts/cleanupNullPartitionCatalogRows.cjs",
   "backend/scripts/comp-quality/backfill-search-fields.cjs",
   "backend/scripts/comp-quality/create-product-line-cards-from-base.cjs",
@@ -137,23 +133,10 @@ const BYPASSING = new Set([
   "backend/scripts/dedupe-catalog-by-hobbyiq.cjs",
   "backend/scripts/dedupe-catalog-partition-shadows.cjs",
   "backend/scripts/dedupe-catalog-setkeys.ts",
-  "backend/scripts/expand-catalog-from-cardsight.cjs",
-  "backend/scripts/expand-catalog-from-sold-comps-gaps.cjs",
-  "backend/scripts/expand-catalog-from-tcdb.cjs",
-  "backend/scripts/expand-catalog-full-enumeration.cjs",
   "backend/scripts/explodeCatalogGrades.cjs",
-  "backend/scripts/fillCatalogFromChecklists.cjs",
   "backend/scripts/fix-catalog-parallel-as-player.cjs",
-  "backend/scripts/fixGriffeyMissingHoldings.cjs",
-  "backend/scripts/fixVladBCP150Catalog.cjs",
   "backend/scripts/import-bccp-to-catalog.ts",
   "backend/scripts/import-clc-to-catalog.ts",
-  "backend/scripts/ingestBaseballAlmanac.cjs",
-  "backend/scripts/ingestBaseballCardPedia.cjs",
-  "backend/scripts/ingestBeckettChecklist.cjs",
-  "backend/scripts/ingestBeckettChecklistDataDriven.cjs",
-  "backend/scripts/ingestChecklistCenter.cjs",
-  "backend/scripts/ingestChecklistCenterHtml.cjs",
   "backend/scripts/match-catalog-to-alt-sources.ts",
   "backend/scripts/match-catalog-to-bccp.ts",
   "backend/scripts/match-catalog-to-xlsx.ts",
@@ -162,15 +145,9 @@ const BYPASSING = new Set([
   "backend/scripts/normalize-catalog-schema.cjs",
   "backend/scripts/normalizeVendorRows.cjs",
   "backend/scripts/priorityCatalogReslug.cjs",
-  "backend/scripts/recoverCardsightStubs.cjs",
-  "backend/scripts/recoverCardsightViaTca.cjs",
   "backend/scripts/rehome-catalog-rows-to-own-partition.cjs",
   "backend/scripts/reslugCatalogFromCurrent.cjs",
-  "backend/scripts/resolve-sales-without-identity.cjs",
   "backend/scripts/resport-mistagged-pokemon.cjs",
-  "backend/scripts/seedCardCatalog.ts",
-  "backend/scripts/seedCatalogFromUnmatchedPool.cjs",
-  "backend/scripts/tcdbBatchFill.cjs",
   "backend/src/services/portfolioiq/catalogReview.service.ts",
 ]);
 
@@ -632,9 +609,10 @@ describe("one way to build a catalog row", () => {
     // Measured floor, not an aspiration: the 2026-08-29 census found 9 of 112
     // writers on the canonical path (ensureCatalogRow plus eight scripts that
     // require the builder from dist/); re-measured after D5 PR 3 put the seven
-    // movers on catalogRowOps: 17. It can only go up -- if it drops, a writer
-    // was converted back to hand-rolling or the matcher above regressed.
-    // Deleting a compliant writer (D5 PR 5 retires dead scripts) lowers it
+    // movers on catalogRowOps: 17 of 112; after D5 PR 5 deleted 25 dead
+    // hand-rolled minters (none compliant): still 17, of 87. It can only go
+    // up -- if it drops, a writer was converted back to hand-rolling or the
+    // matcher above regressed. Deleting a compliant writer lowers it
     // legitimately; re-measure and change the number in that PR.
     expect(ok).toBeGreaterThanOrEqual(17);
   });

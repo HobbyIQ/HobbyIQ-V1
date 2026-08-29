@@ -298,6 +298,8 @@ measurement problem for a coverage hole.*
 Creates catalog rows from corroborated sales (N independent sales must agree).
 Still sales→catalog, but the least bad version.
 → *Recommend: keep, tagged derived, never allowed to outvote a checklist.*
+→ *Retired 2026-08-29 (D5 PR 5): the script is deleted — sales never mint a
+catalog row (#1353). Its existing `sales-attested` rows fall under item 2.*
 
 **4. When does RU come back down?**
 `card_catalog` at 400,000 (floor ~40,000 RU/s) for the retire; peak observed
