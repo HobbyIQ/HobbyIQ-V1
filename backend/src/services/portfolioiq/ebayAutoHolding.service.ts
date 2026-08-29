@@ -332,60 +332,14 @@ export async function autoCreateHoldingForPurchase(
   const merged = new Set([...purchase.holdingIds, holding.id]);
   purchase.holdingIds = [...merged];
 
-  // CF-EBAY-BROWSE-CATALOG-SEED (Drew, 2026-08-03). When eBay Browse
-  // returned item-specifics for this purchase, upsert a catalog row
-  // with source='ebay-browse'. eBay's official aspects (Year, Set,
-  // Player, Card Number, Grade, Parallel) are high-signal because
-  // sellers explicitly tagged them at listing time. Grows the owned
-  // catalog with every user purchase we import. Deterministic id per
-  // (player, year, set, cardNumber, parallel, isAuto) tuple.
-  if (details) {
-    void (async () => {
-      try {
-        const { createHash } = await import("crypto");
-        const holdingAny = holding as Record<string, unknown>;
-        const player = String(holdingAny.playerName ?? "").trim();
-        const year = typeof holdingAny.cardYear === "number" ? holdingAny.cardYear : null;
-        const setName = String(holdingAny.setName ?? holdingAny.product ?? "").trim();
-        const cardNumber = String(holdingAny.cardNumber ?? "").trim();
-        const parallel = String(holdingAny.parallel ?? "base").toLowerCase().trim();
-        const isAuto = Boolean(holdingAny.isAuto);
-        const sport = String(holdingAny.sport ?? "").toLowerCase().trim() || "baseball";
-        if (!player || !year || !setName || !cardNumber) return;
-        const SPORT_WORDS_RX = /\s+(baseball|basketball|football|hockey|soccer|golf)(\s|$)/gi;
-        const YEAR_PREFIX_RX = /^(19|20)\d{2}(-\d{2})?\s+/;
-        const normalizeSetKeyFn = (raw: string) => {
-          let s = String(raw ?? "").toLowerCase().trim();
-          if (!s) return "";
-          s = s.replace(YEAR_PREFIX_RX, "").trim();
-          s = s.replace(SPORT_WORDS_RX, " ").trim();
-          return s.replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").replace(/-{2,}/g, "-");
-        };
-        const tupleKey = [sport, year, normalizeSetKeyFn(setName), cardNumber.toLowerCase(), parallel, isAuto ? "auto" : "no-auto", player.toLowerCase()].join("|");
-        const catId = "ebay-browse:" + createHash("sha256").update(tupleKey).digest("hex").slice(0, 20);
-        const { CosmosClient } = await import("@azure/cosmos");
-        const conn = process.env.COSMOS_CONNECTION_STRING;
-        if (!conn) return;
-        const cat = new CosmosClient(conn)
-          .database(process.env.COSMOS_DATABASE ?? "hobbyiq")
-          .container("card_catalog");
-        await cat.items.upsert({
-          id: catId,
-          player, year, number: cardNumber,
-          setKey: normalizeSetKeyFn(setName),
-          setName,
-          sport,
-          parallel,
-          parallels: parallel && parallel !== "base" ? [{ name: parallel }] : [],
-          isAuto,
-          source: "ebay-browse",
-          confidence: 0.92, // eBay official item-specifics — high signal
-          ebayItemId: (holdingAny.ebayItemId as string) ?? null,
-          seededAt: new Date().toISOString(),
-        });
-      } catch { /* soft — catalog seeding is nice-to-have */ }
-    })();
-  }
+  // CF-ONLY-CHECKLISTS-MINT (Drew, 2026-08-29; catalog rebuild D5). This used
+  // to upsert a card_catalog row at "ebay-browse:<sha256>" from eBay's
+  // item-specifics (CF-EBAY-BROWSE-CATALOG-SEED, 2026-08-03). eBay Browse is a
+  // vendor feed; vendor feeds never mint identity (#1362), and a hash id is
+  // not an hiq slug, so those rows were unreachable by every reader anyway.
+  // The purchase's SALE is written to the pool above (recordSoldComp), and a
+  // user-owned card seeds through the one canonical path in soldCompsStore
+  // (USER_SEED_SOURCES -> ensureCatalogRow -> upsertCatalogEntry).
 
   return { status: "created", holding, parsed, enriched: !!details };
 }

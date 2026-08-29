@@ -505,46 +505,12 @@ export async function confirmHoldingReview(
         (holding as any).catalogVerifiedAt = new Date().toISOString();
       } catch { /* soft: verification is nice-to-have */ }
     }
-    // CF-USER-VERIFIED-CATALOG-FLYWHEEL (Drew, 2026-08-03). Every user
-    // approval IS a first-class catalog entry — the user just told us
-    // "yes this is that card." Fire-and-forget upsert into
-    // card_catalog with source='user-verified' (highest-confidence
-    // provenance since a human confirmed it). Deterministic id keyed
-    // by the tuple so repeated confirms on the same card collapse.
-    void (async () => {
-      try {
-        const player = String((holding as any).playerName ?? "").trim();
-        const year = Number((holding as any).cardYear);
-        const setName = String((holding as any).setName ?? "").trim();
-        const cardNumber = String((holding as any).cardNumber ?? "").trim();
-        const sport = String((holding as any).sport ?? "").toLowerCase().trim();
-        const parallel = String((holding as any).parallel ?? "base").toLowerCase().trim();
-        const isAuto = Boolean((holding as any).isAuto);
-        const printRun = (holding as any).printRun ?? null;
-        if (!player || !year || !setName || !cardNumber || !sport) return;
-        const key = [sport, year, setName.toLowerCase(), cardNumber.toLowerCase(), parallel, isAuto ? "auto" : "no-auto", printRun ?? "", player.toLowerCase()].join("|");
-        const { createHash } = await import("crypto");
-        const id = "user-verified:" + createHash("sha256").update(key).digest("hex").slice(0, 20);
-        const { CosmosClient } = await import("@azure/cosmos");
-        const cs = process.env.COSMOS_CONNECTION_STRING;
-        if (!cs) return;
-        const cat = new CosmosClient(cs)
-          .database(process.env.COSMOS_DATABASE ?? "hobbyiq")
-          .container("card_catalog");
-        await cat.items.upsert({
-          id,
-          player, year, number: cardNumber, setKey: setName, setName, sport, parallel,
-          parallels: parallel && parallel !== "base" ? [{ name: parallel }] : [],
-          isAuto, printRun,
-          source: "user-verified",
-          verifiedByUserIds: [userId],
-          confidence: 0.98,   // human-in-the-loop = highest-trust catalog tier
-          verifiedAt: new Date().toISOString(),
-          holdingCardId: (holding as any).cardId ?? null,
-          tcaCatalogVerified: (holding as any).tcaCatalogVerified ?? null,
-        });
-      } catch { /* soft: catalog flywheel is nice-to-have */ }
-    })();
+    // CF-ONLY-CHECKLISTS-MINT (Drew, 2026-08-29; catalog rebuild D5). The
+    // CF-USER-VERIFIED-CATALOG-FLYWHEEL block (2026-08-03) that lived here
+    // upserted a card_catalog row at "user-verified:<sha256>" -- a second,
+    // hash-id copy of the same event the canonical seed path already handles
+    // ("user-verified" is in USER_SEED_SOURCES; soldCompsStore ->
+    // ensureCatalogRow -> upsertCatalogEntry, id === hiq slug). Removed.
   }
 
   // Log corrections if any were made. Every confirm gets a record — even
