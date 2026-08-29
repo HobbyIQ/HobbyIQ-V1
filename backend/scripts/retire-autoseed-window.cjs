@@ -28,6 +28,12 @@ const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReco
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
 const SINCE = process.env.SINCE || "2026-08-29T01:40:00Z";
 const UNTIL = process.env.UNTIL || new Date().toISOString();
+// CF-RETIRE-UNCONFIRMED (Drew, 2026-08-29 "do it"). SCOPE=unconfirmed (or the
+// runner's MODE=unconfirmed) retires every sale-minted row the annotation judged
+// unconfirmed -- no checklist card behind it, any sport, no time window. The
+// card-confirmed sale-minted rows are NOT touched: they are real cards whose
+// rung the ladders will fold; Ohtani's 2018 Topps Chrome Refractor is one.
+const SCOPE = String(process.env.SCOPE || process.env.MODE || "window").toLowerCase() === "unconfirmed" ? "unconfirmed" : "window";
 const CONCURRENCY = Math.max(1, Number(process.env.CONCURRENCY || 32));
 const LIMIT = Number(process.env.LIMIT || 0);
 const RUN_MS = Number(process.env.RUN_MINUTES || 140) * 60000;
@@ -53,14 +59,18 @@ async function main() {
     }
   };
 
-  console.log(`window ${SINCE} .. ${UNTIL}  ${APPLY ? "APPLY (deletes)" : "REPORT ONLY"}\n`);
+  console.log(SCOPE === "unconfirmed" ? `scope UNCONFIRMED sale-minted rows (any sport, any time)  ${APPLY ? "APPLY (deletes)" : "REPORT ONLY"}
+` : `window ${SINCE} .. ${UNTIL}  ${APPLY ? "APPLY (deletes)" : "REPORT ONLY"}
+`);
   let scanned = 0, retired = 0, keptHasSales = 0, failed = 0, notReached = 0;
   let stopReason = null;
   let token;
   do {
     const page = await retry(() => cat.items.query({
-      query: "SELECT c.id, c.cardId FROM c WHERE c.source = 'ingest-auto-seed' AND c.observedAt >= @since AND c.observedAt <= @until",
-      parameters: [{ name: "@since", value: SINCE }, { name: "@until", value: UNTIL }],
+      query: SCOPE === "unconfirmed"
+        ? "SELECT c.id, c.cardId FROM c WHERE c.source = 'ingest-auto-seed' AND c.checklistBacking = 'unconfirmed' AND NOT IS_DEFINED(c.gradeTier)"
+        : "SELECT c.id, c.cardId FROM c WHERE c.source = 'ingest-auto-seed' AND c.observedAt >= @since AND c.observedAt <= @until",
+      parameters: SCOPE === "unconfirmed" ? [] : [{ name: "@since", value: SINCE }, { name: "@until", value: UNTIL }],
     }, { maxItemCount: 300, continuationToken: token }).fetchNext());
     token = page.continuationToken;
     for (let i = 0; i < page.resources.length; i += CONCURRENCY) {
@@ -82,7 +92,7 @@ async function main() {
           for (const s of sales) {
             await retry(() => comps.item(s.id, s.cardId).patch([
               { op: "set", path: "/catalogMatched", value: false },
-              { op: "set", path: "/catalogUnplacedReason", value: "sale-minted row retired; awaiting checklist" },
+              { op: "set", path: "/catalogUnplacedReason", value: SCOPE === "unconfirmed" ? "sale-minted row retired (unconfirmed by any checklist); acquisition list" : "sale-minted row retired; awaiting checklist" },
             ])).catch(() => { /* a missed stamp costs nothing; the rematch re-resolves regardless */ });
           }
           await retry(() => cat.item(d.id, d.cardId ?? d.id).delete()).catch((e) => { if (e.code !== 404) throw e; });
