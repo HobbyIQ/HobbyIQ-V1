@@ -102,8 +102,12 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   rosters inside the Parallels section as bare list items, so 2008 Topps came back
   with 18 player-name "rungs" × 661 rows and 2010 Update with ~150. #1392 makes a
   player of the same product an impossible rung in the scraper, the ingest, and a
-  new retire MODE=playerrung (dry run on 4 slots, every checklist source); run 3
-  re-scrapes 2005–2015 with the guard (mode=reingest). Run 1 landed the 12 reachable titles
+  new retire MODE=playerrung; run 3 re-scrapes 2005–2015 with the guard
+  (mode=reingest). The first playerrung dry run caught its own false positives
+  (the old cross-join put rung words in the player field too, so "Refractor" read
+  as a player) — #1396 makes the oracle person names only (2–5 tokens, no parallel
+  vocabulary) in the retire, the ingest gate, the scraper and the converter; dry
+  run #2 in flight, nothing applied. Run 1 landed the 12 reachable titles
   (57,038 rows; A&G / Updates-and-Highlights titles 404) but NO flagship years —
   `--titles` had replaced the per-year list (#1380 fixes: titles add). Run 2
   dispatched 13:27Z for 2005–2015 flagship + A&G `%27s` title variants.
@@ -149,7 +153,11 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   title under a baseball Bowman slug; an Upper Deck hockey title under
   topps-pristine) — measure wrong-product matches pool-wide; only-improve cannot
   fix a wrong product. Re-run after C.
-- ☐ D3 checklistcenter → canonical CSV converter — SCOPED 13:50Z: 547 product URLs
+- ◐ D3 checklistcenter → canonical CSV converter — SHIPPED #1395 (acquire +
+  convert + e2e phase `clc` + retire MODE=source; old ingesters refuse to run;
+  smoke test 6 products / 48,437 rows / 0 refused); dry run over 2020–2026 in
+  flight → APPLY → MODE=source retire of the old `checklistcenter*` rows AFTER the
+  clean rows land. Scoped 13:50Z: 547 product URLs
   cached at c:/tmp/clc (ladders only, no card lists → bounded 547-page re-fetch);
   the old HTML ingester split ladders on commas (player names became rungs) and
   swallowed multi-ladder paragraphs; converter = scrape-checklistcenter-products +
@@ -200,8 +208,9 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   D7b + D7d shipped (#1393, deploying): backfill stamps the eBay ids onto existing
   holdings from their purchase entry (dry run: 92 holdings, 70 stamp, 22 have no linked
   purchase, 0 failed → APPLY running); user-owned sales reconcile against the catalog
-  regardless of CATALOG_MATCH_ONLY_ENABLED. **D7 complete pending deploy + the
-  double-import check.**
+  regardless of CATALOG_MATCH_ONLY_ENABLED. Backfill APPLIED: 70 holdings stamped,
+  6 docs written, 0 failed. **D7 complete in code and data** (live via the 14:07Z
+  deploy); the double-import check is the remaining acceptance test.
 - ☐ D6 **Identity key ≠ family key.** `normalizeSetKey` folds distinct products into
   a family (Co-Signers → topps, UD Premier → upper-deck, 1990 Donruss →
   panini-donruss) on both sales and checklists. Decide: identity key = the
