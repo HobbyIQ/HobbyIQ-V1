@@ -63,18 +63,25 @@ user-owned cards may seed).
 - Internal holding resolver built (no vendor calls); dry-run: 31/92 resolved,
   12 corrections
 
-## RUNNING (self-driving; each step fires on the last one's completion)
+## RUNNING (Drew's "do it", 2026-08-29 12:20Z — all four rulings taken)
 
 1. ~~R5 rematch~~ **DONE 11:52Z** — 8 slots, 15,852,221 rows scanned,
-   18,885 re-slugged (only-improve), 0 failed, 0 relaunches (every slot
-   finished inside its budget). Unplaced pool rows 17,104 → **11,598**.
-4. → RU rollback (Drew's go given, after the rematch + emission drain):
-   card_catalog 400k→~2.5k, **sold_comps 100k→8k** (raised 40k→100k TEMP
-   2026-08-29 02:52Z — it was pinned at 100% with 24k 429s/5min under the
-   rematch + emission), **title_parse_cache 2,000→400** (manual, same
-   moment). Locally `az cosmosdb sql container throughput update`; from CI
-   the data plane — the CI principal has no control plane
-5. → holdings APPLY (`conform-holdings-to-catalog`, replace gate 0.95)
+   18,885 re-slugged (only-improve), 0 failed, 0 relaunches. Unplaced pool
+   rows 17,104 → **11,598**.
+2. ~~Holdings APPLY~~ **DONE 12:24Z** — 92 holdings, 38 resolved exact (≥.95)
+   and written, 1 fuzzy left alone, 0 failed. Re-run after step 4 folds.
+3. ~~RU rollback~~ **DONE 12:28Z** for sold_comps (100k → **10k**, its floor:
+   Cosmos refuses below 10% of the highest max ever provisioned, so 8k is gone)
+   and title_parse_cache (2,000 → 400). card_catalog stays 400k until step 4
+   finishes, then 40k (its floor).
+4. **"Clean the names"** — `clean-parallel-annotations` (#1367; bcp scraper
+   + ingest note column #1368). Dry run on 4 slots in flight → APPLY → mapper
+   redo (baseball) → re-annotate → scorecard v4 → holdings APPLY again.
+   Acceptance: Ohtani `…:150:refractor:no-auto` is a checklist row,
+   checklist-confirmed, its sale-minted twin gone.
+5. **Retire unconfirmed sale-minted rows** — `retire-autoseed-window`
+   MODE=unconfirmed (#1365/#1366): dry run in flight → APPLY. Card-confirmed
+   sale-minted rows stay until step 4 folds them.
 
 ## NEXT BUILDS (in order)
 
@@ -92,29 +99,12 @@ user-owned cards may seed).
 
 ## NEEDS DREW (not code)
 
-- **RU rollback go** (the 08-29 raise was "temp"): sold_comps 100k→8k,
-  title_parse_cache 2,000→400, card_catalog 400k→40k. Rematch + emission are
-  done; nothing is running.
-- **Holdings APPLY go**: `conform-holdings-to-catalog` replace gate 0.95, no
-  vendor calls; dry-run 31/92 resolved, 12 corrections. Rewrites `portfolio`.
-- **"Clean the names" ruling — ~400k spine rows carry page annotations inside
-  the parallel name** (bccp 236,838; checklistinsider 84,232; baseballcardpedia
-  53,181; checklistcenter 27,662): "Refractor - Est. print run ~4,000 to 6,000",
-  "Purple (exclusive to packs sold at Meijer stores)", "Platinum ()", "Royal
-  Blue (Series One: 7025 copies)". The rung exists, under an unmatchable slug —
-  Ohtani's 2018 Topps Chrome Refractor is exactly this, which is why his
-  sale-minted row stayed card-confirmed. Proposal: name = text before " (" /
-  " - Est."; annotation kept verbatim in `parallelNote`; numeric print run →
-  `printRun`; scraper/converter fixes + a re-slug repair over the ~400k rows,
-  then the mapper folds the derived twins. Largest lever on rung-confirmed (6%).
-
-- **755,755 pre-existing `ingest-auto-seed` rows** (sale-minted before
-  2026-08-29 01:40Z, all sports): delete-vs-keep — NOT all junk: Ohtani's
-  Refractor identity row is one, card-confirmed. Recommendation: retire only
-  the unconfirmed ones now (110k baseball, 34k pokémon); fold the
-  card-confirmed ones onto checklist rungs via "clean the names" first. They are the self-confirming
-  class; 114k of baseball's 249k unconfirmed are these. A retire is one
-  dispatch away (`retire-autoseed-window` with an earlier SINCE) once ruled.
+- **The mis-parsed 83,838 checklist rows** whose `parallel` column holds
+  player-pair text or page prose ("Eric Davis (as) Andy Nezelek", "Topps
+  Released A Mini Sized Factory Set (each Card Measuring 2", "Purple RayWave
+  Refractor ("): a column-shift / prose-capture bug in the vintage converters
+  (bccp, checklistcenter). Their own repair — re-scrape or retire; ruling
+  needed on which.
 - Pokémon promo ambiguity: `*-black-star-promos` derived keys match several
   era promo sets (dp / hgss / xy / sm / swsh / sv) — needs the year→era rule
 - Vintage sourcing: 1990s baseball (Score/Fleer/etc.), Japanese Pokémon
