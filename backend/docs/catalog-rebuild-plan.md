@@ -702,7 +702,19 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
     literal pending-review status — judgment call flagged), fifth + sixth
     headline chains fixed, listings link their holding, the suggester emits
     hiq ids only, composer FMV-first, `querySoldComps` throws instead of
-    failing open. Deploy 33274840453 carries D13 + D3b + D12-a.
+    failing open. Deploy 33274840453 carries D13 + D3b + D12-a — **live
+    23:20Z, health serves `1714a06`.** **D12-b merged #1475 (23:15Z)**: the
+    spreadsheet import resolves through the catalog (`importResolver.ts` +
+    the shared `identityFromFields.ts` lifted out of the eBay import; a
+    round-trip `hiq:` slug is identity only if the catalog holds it; one
+    identity written and re-checked at the persist site; priced on commit
+    through the add-card path; collisions keyed by the resolved slug, a
+    title-tuple key for unresolved rows; `hobbyiqCardId` exported as the
+    round-trip anchor). Two bugs found on the way: SheetJS typed a Serial
+    cell `/50` as the Excel date serial 18264 before any parser saw it
+    (`raw: true`), and the preview cap read `req.user.tier` (never existed)
+    so every preview projected against the free cap. Deploy #2
+    33275053457 carries it (expect `162e769`).
     `feat/d12a`) + **D12-b** (**delivered on branch `feat/d12b`, unmerged — 7
     commits, tsc 0, the six import suites + the D9 eBay fixture green, a
     mutation check per commit**). The import resolves through the catalog:
