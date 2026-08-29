@@ -365,8 +365,14 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   uncovered keys are plain `base` rows and foil parallels, Donruss/Prizm
   uncovered keys are the Panini ladders (artist proof /25, carolina blue
   laser /249 …) — the html converter still misses those two page shapes →
-  **D3c** (queued behind D17 — one builder at a time). Retire dry run with
-  the floor dispatched 03:05Z (MODE=source, SOURCES old CLC, scope new CLC). Also seen in the same run: the bcp ladders re-ingest now
+  **D3c** (queued behind D17 — one builder at a time). Retire dry run with the floor dispatched 03:05Z (MODE=source, SOURCES old CLC, scope new CLC)
+  — **verdict (33279788445): retiring 57 of 408 products (133,471 of 820,174
+  rows), KEPT 351 products / 686,703 rows under the floor; every sale
+  re-pointable (sales-unplaced 0).** The APPLY ×8 dispatch was BLOCKED by the
+  auto-mode classifier (a delete fleet) — Drew runs it or allows the pattern:
+  `gh workflow run backfill-runner.yml -f script=retire-exploded-checklist-rows
+  -f apply=true -f mode=source -f sources=checklistcenter,checklistcenter-html
+  -f scope=checklistcenter-2026-08-29 -f slot=N -f slots=8`, N = 0…7. Also seen in the same run: the bcp ladders re-ingest now
   skips 762,534 player-name-parallel rows (#1396 working as built).
   **D3b (2026-08-29 ~22:00Z, `feat/d3b`): the ladder was never lost — the LABEL was.**
   The brief: CLC lacks Bowman's plain colour ladder (2025 Bowman Draft CPA-MWI: 13 rows,
@@ -1375,7 +1381,33 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   stubs 59,890, tree-builder-v1 14,473, ebay-browse 62 ≈ 950k rows** the
   doctrine says should not exist; where a checklist row shares the id the
   re-ingest's tie-break already replaced them, so these are the ones with no
-  checklist twin: an acquisition list plus garbage — NEEDS DREW (below).** Drew (22:30Z): "I see 2 max williams superfractors …
+  checklist twin: an acquisition list plus garbage — NEEDS DREW (below).**
+  **Drew's rulings (05:00Z 08-30):** (1) retire the ~950k vendor-/sale-minted
+  rows — **GO** → `retire-exploded-checklist-rows` MODE=source with
+  `REPLACED_BY=none` (#1492: no coverage guard for sources that have no
+  replacement; prints every holding still pointing at one) — dry run
+  33280778780; (2) "CPA is what?" → Chrome Prospect Autograph, an autograph
+  by definition → `FORCE_AUTO_PREFIXES` (#1492; the runner's `scope` input
+  carries it, #1493) — isAuto dry with CPA forced 33280807658; (3) the
+  one-of-one graded-children churn (~2.8M derived rows deleted and rebuilt
+  by materialize) explained — proceed after its dry run, materialize right
+  after; (4) MCP: retire as a pricing engine; a thin MCP tool over
+  `/api/compiq/price-by-id` is the only useful shape later.
+  **Conform guards (#1491, #1492):** only checklist-authority rows are
+  identity targets; a product-changing correction is REFUSED and reported
+  (dry #2: Ohtani HMT1 `topps-chrome` → `topps-chrome-update` — probably a
+  real correction, HMT-1 is the Update card — and two Bowman ↔ Bowman Chrome
+  CPA cases: rulings, not bot moves); the composed slug must exist as a row
+  (else its one numbered twin — after the folds the Max Williams holdings land
+  on `:num-499`); an existing numbered identity is never demoted (Griffey
+  `:num-3000` stays); the year-token regex typo (`/^d{4}$/`) fixed. Dry #2:
+  91 holdings, 25 agree, 7 corrections, 3 refused, 2,058 vendor rows ignored,
+  56 unresolved. Dry #3 with the row rule dispatched (33280773925).
+  **Cross-source fold dry (33274650026):** 8,798,694 numbered rows, 6,896,738
+  unique-/N base ids; in the first 102,812 candidates WOULD FOLD 2,344 (282
+  one-of-one, 2,062 cross-source; 3,590 sales re-pointed), 408 ambiguous, 395
+  same-source-lists-both, 124 refusals (setKey ≠ slug), **6,942,991 not
+  reached** — APPLY ×8 dispatched 05:18Z (33280658423 … 33280680511). Drew (22:30Z): "I see 2 max williams superfractors …
   superfractors are 1/1" — bcp's un-numbered `superfractor:auto` beside
   beckett's `:num-1`, and the same pair on Refractor /499, Black /10, Red /5,
   Red Lava, Sky Blue. **#1470:** the fold's decision is a pure tested rule
@@ -1613,7 +1645,8 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
 
 ## NEEDS DREW (not code)
 
-- **Retire the vendor-/sale-minted catalog rows (~950k):** cardsight 664,927,
+- ~~Retire the vendor-/sale-minted catalog rows (~950k)~~ **GO (05:00Z 08-30)** — dry run running; APPLY needs the classifier allowance or Drew's dispatch.
+- **Retire the vendor-/sale-minted catalog rows (~950k) — original note:** cardsight 664,927,
   cardhedge 133,911, pool 75,650, sold-comps stubs 59,890, tree-builder-v1
   14,473 un-graded rows with no checklist twin at their id. Doctrine says
   only checklists mint; holdings pinned to one of these (e.g. Witt's
@@ -1623,7 +1656,8 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   sales pointing at each retired row first; keep rows with ≥ 1 holding as an
   acquisition list). Say go / not yet.
 
-- **isAuto ruling, 2025 Bowman (basketball) CPA-:** the only other checklist
+- ~~isAuto ruling, 2025 Bowman (basketball) CPA-~~ **RULED: CPA = Chrome Prospect Autograph = auto** (05:00Z 08-30).
+- **isAuto ruling — original note:** the only other checklist
   family (bccp, 609 rows) says no-auto for a prefix the generator forces to
   `:auto`; 6,930 rows wait. The bccp rows tagged basketball on a Bowman
   product look like the exploded-spine shape — likely retire, not rule.
