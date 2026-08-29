@@ -18,7 +18,8 @@
 //   extraInCatalog: [{ cardNumber, playerName, slug }]    — catalog entries for this year+setKey that AREN'T in the pasted checklist — likely spurious / non-canonical
 
 import { CosmosClient, type Container } from "@azure/cosmos";
-import { computeHobbyIqCardId, normalizeSetKey } from "./hobbyIqCardId.service.js";
+import { normalizeSetKey } from "./hobbyIqCardId.service.js";
+import { deriveCatalogEntry, upsertCatalogEntry } from "./cardCatalog.service.js";
 
 const COSMOS_DATABASE = process.env.COSMOS_DATABASE ?? "hobbyiq";
 
@@ -191,8 +192,13 @@ const AUTO_CARD_NUMBER_PREFIX = /^(CPA|BCPA|BCDA|BDPA|BDA|BPA|BCRA|TCRA|TRA|FCA|
 export async function createCatalogEntriesFromChecklist(
   input: CreateFromChecklistInput,
 ): Promise<CreateFromChecklistResult | null> {
-  const cat = getCatalog();
-  if (!cat) return null;
+  // CF-ONE-WAY-TO-BUILD-A-CATALOG-ROW (catalog rebuild D5, PR 8, 2026-08-29).
+  // This used to raw-upsert a hand-built document: it dropped parallelSlug /
+  // playerSlug / searchTokens, skipped the authority contest, and so a later
+  // lower-ranked writer could silently clobber a real checklist row. A pasted
+  // checklist IS a checklist ("checklist-admin-add" ranks as one), so it goes
+  // through the one writer every checklist row goes through.
+  if (!getCatalog()) return null; // Cosmos configured?
 
   const setKey = normalizeSetKey(input.setName);
   const year = Math.trunc(Number(input.year));
@@ -207,45 +213,27 @@ export async function createCatalogEntriesFromChecklist(
     if (!cardNumber || !player) { result.skipped++; continue; }
 
     const isAuto = isAutoSet || AUTO_CARD_NUMBER_PREFIX.test(cardNumber);
-    let slug: string;
-    try {
-      slug = computeHobbyIqCardId({
-        sport, year, setKey, cardNumber,
-        parallel: "Base",
-        isAuto,
-        printRun: null,
-      });
-    } catch {
-      result.errored++;
-      continue;
-    }
+    const derived = deriveCatalogEntry({
+      sport, year, setKey, cardNumber,
+      parallel: "Base",
+      isAuto,
+      printRun: null,
+      playerName: player,
+      source: "checklist-admin-add",
+      // Pasted from an admin-sourced checklist -> high confidence base
+      // but stays pending until explicit verification.
+      confidence: 0.85,
+      // the admin named the product; never the vendor-text prefix repair
+      authoritativeSetKey: true,
+    });
+    if (!derived) { result.errored++; continue; }
 
-    const now = new Date().toISOString();
     try {
-      await cat.items.upsert({
-        id: slug,
-        cardId: slug,
-        hobbyiqCardId: slug,
-        sport,
-        year,
-        cardYear: year,
-        setKey,
-        setName: input.setName,
-        cardNumber,
-        parallel: "Base",
-        isAuto,
-        printRun: null,
-        playerName: player,
-        source: "checklist-admin-add",
-        // Pasted from an admin-sourced checklist → high confidence base
-        // but stays pending until explicit verification.
-        confidence: 0.85,
-        verificationStatus: "pending-review",
-        observedAt: now,
-        lastSeenAt: now,
-      });
+      const entry = { ...derived, setName: input.setName, verificationStatus: "pending-review" };
+      const written = await upsertCatalogEntry(entry);
+      if (!written) { result.errored++; continue; }
       result.written++;
-      if (result.writtenSlugs.length < 20) result.writtenSlugs.push(slug);
+      if (result.writtenSlugs.length < 20) result.writtenSlugs.push(derived.id);
     } catch {
       result.errored++;
     }
