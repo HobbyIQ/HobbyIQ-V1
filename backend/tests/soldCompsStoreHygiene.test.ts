@@ -62,6 +62,16 @@ function fakeContainer(): { container: Container; store: Map<string, any> } {
             if (contentHash !== undefined) {
               return { resources: rows.filter((d) => (d as { contentHash?: string }).contentHash === contentHash) };
             }
+            // CF-ONE-TRANSACTION-ONE-ROW (D9): recordSoldComp probes for the
+            // same id filed under another cardId partition before it writes.
+            // Same lesson as @h above -- an unknown param must not fall
+            // through to the whole store, or the probe "finds" every row and
+            // the supersede deletes them.
+            const sameId = params.get("@id");
+            if (sameId !== undefined) {
+              const notCardId = params.get("@cardId");
+              return { resources: rows.filter((d) => d.id === sameId && d.cardId !== notCardId) };
+            }
             if (cid) rows = rows.filter((d) => d.cardId === cid);
             if (from) rows = rows.filter((d) => d.soldAt >= from);
             if (to) rows = rows.filter((d) => d.soldAt <= to);
