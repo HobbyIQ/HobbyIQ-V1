@@ -173,6 +173,8 @@ async function main() {
   // never reaching the tail.
   const REINGEST = String(process.env.REINGEST || "") === "true";
   let alreadyDone = 0;
+  let cardLineParallel = 0, explodedFiles = 0;
+  const EXPLODED_PAR_MAX = Number(process.env.EXPLODED_PAR_MAX || 150), EXPLODED_NUM_MAX = Number(process.env.EXPLODED_NUM_MAX || 2000);
   if (!REINGEST) {
     const before = files.length;
     files = files.filter((n) => !fs.existsSync(path.join(DIR, n + ".ingested")));
@@ -204,7 +206,27 @@ async function main() {
       const [category, cardNumber, parallel, isAuto, printRun, player, parallelNote] = splitCsv(line);
       rows++;
       if (!cardNumber || !player) { skippedRow++; continue; }
+      // CF-A-CARD-LINE-IS-NOT-A-RUNG (2026-08-29). "100 Mike Trout" in the
+      // parallel column is a scraper joining a card line to a rung; it can
+      // never name a parallel. Skipped per row, counted, never written.
+      if (/^\d+[a-z]?\s+[A-Za-z]/.test(String(parallel || ""))) { cardLineParallel++; continue; }
       batch.push({ category, cardNumber, parallel, isAuto, printRun, player, parallelNote: parallelNote || null });
+    }
+
+    // CF-EXPLODED-FILE-GATE (2026-08-29). The spine held 140 products / 11.49M
+    // rows from a scrape that cross-joined cards with players: 99,994 card
+    // numbers for 2012 Topps, 162,763 for 2025 Topps. No real checklist has
+    // more than ~150 rungs or ~2,000 card numbers. A file over either line is
+    // refused whole -- logged, counted, no resume marker -- so the explosion
+    // can never be re-ingested.
+    {
+      const pars = new Set(batch.map((r) => String(r.parallel || "")));
+      const nums = new Set(batch.map((r) => String(r.cardNumber)));
+      if (pars.size > EXPLODED_PAR_MAX || nums.size > EXPLODED_NUM_MAX) {
+        console.log(`!! EXPLODED checklist file refused: ${name}  rows=${f(batch.length)} distinct parallels=${f(pars.size)} distinct cardNumbers=${f(nums.size)}`);
+        explodedFiles++;
+        continue;
+      }
     }
 
     for (let i = 0; i < batch.length; i += CONCURRENCY) {
@@ -305,6 +327,8 @@ async function main() {
   console.log(`  files ingested         ${f(files_ok)}${SLOTS > 1 ? `   of ${f(allFiles.length)} in the directory — SHARD ${SLOT}/${SLOTS}, NOT the whole set` : ""}`);
   console.log(`  files already done     ${f(alreadyDone)}   <- resumed past these`);
   console.log(`  files with no manifest ${f(noProduct)}   <- could not name the product`);
+  console.log(`  files REFUSED, exploded ${f(explodedFiles)}   <- >${f(EXPLODED_PAR_MAX)} rungs or >${f(EXPLODED_NUM_MAX)} card numbers; a cross-join, not a checklist`);
+  console.log(`  rows with card-line parallel ${f(cardLineParallel)}   <- "100 Mike Trout" is not a rung; skipped`);
   console.log(`  csv rows read          ${f(rows)}`);
   console.log(`  catalog rows written   ${f(written)}`);
   {
