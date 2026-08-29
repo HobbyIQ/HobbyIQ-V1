@@ -179,6 +179,22 @@ export interface PortfolioHolding {
                        // types.ts import-cycle-free
     compsUsed: number;
   };
+  // CF-RUNG-LABEL (D4 "one valuation path", PR 1 — 2026-08-29). The
+  // machine-readable name of the RUNG that produced this holding's current
+  // price surface (fairMarketValue, or estimatedValue when fairMarketValue
+  // is null). Vocabulary: FmvRungLabel in services/compiq/fmvRung.ts — a
+  // plain string here to keep types.ts import-free. Written by the writer
+  // that decided the price, at the same time as the price:
+  //   "exact-pool-*"  the exact (identity, grade) pool — unified engine,
+  //                   grade-curve tile, hobbyIqFmv direct-slug
+  //   anything else   a named fallback rung (cross-grade-fallback,
+  //                   sibling-parallel, grade-cross-raw, ...)
+  //   null / absent   the legacy engine, which does not name its rung
+  // Consumers (the divergence digest, telemetry, iOS) READ this. They
+  // never infer the rung from estimateBasis prose. Every write site that
+  // sets fairMarketValue also sets this, so a label can never outlive the
+  // price it described.
+  fmvRung?: string | null;
   // CF-NEXT-SALE-PREDICTION-LAYER (design d531939) — forward-looking
   // predicted price (FMV × TrendIQ-derived bounded factor). Mechanism
   // attribution distinguishes trendiq-projection (success path) from

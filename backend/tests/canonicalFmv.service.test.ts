@@ -28,6 +28,9 @@ describe("computeCanonicalFmv contract", () => {
   it("returns no-basis with fmv null on missing cardId", async () => {
     const result = await computeCanonicalFmv({ ...MINIMAL_INPUT, cardId: "" });
     expect(result.method).toBe("no-basis");
+    // CF-RUNG-LABEL (D4 PR 1): the response names its rung in the shared
+    // vocabulary, even when the rung is "nothing".
+    expect(result.rungLabel).toBe("no-basis");
     expect(result.fmv).toBe(null);
     expect(result.confidence).toBe(0);
     expect(result.provenance.summary).toBeTruthy();
