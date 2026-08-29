@@ -11,8 +11,9 @@ import type { PortfolioHolding } from "../../types/portfolioiq.types.js";
 import type { HoldingListingInput } from "../ebay/ebayListing.service.js";
 
 export interface ComposeListingOverrides {
-  /** User-supplied target price. Defaults to holding.predictedPrice,
-   *  then holding.fairMarketValue, then estimatedValue. */
+  /** User-supplied target price. Otherwise holding.fairMarketValue (the
+   *  headline), then holding.predictedPrice, then estimatedValue -- see
+   *  pickTargetPrice. */
   targetPrice?: number;
   /** User-editable description. Falls back to the auto-generated one. */
   description?: string;
@@ -99,13 +100,24 @@ export function composeListingInput(
   };
 }
 
-function pickTargetPrice(holding: PortfolioHolding, override?: number): number {
+/**
+ * CF-LISTING-PRICE-PRECEDENCE (D12a, 2026-08-29). The asking price. This
+ * took predictedPrice before fairMarketValue, so a card whose exact
+ * (identity, grade) pool had spoken was listed at a trend extrapolation
+ * (predictedPrice is written from several places -- a 30-day tile, a
+ * reprice, hobbyIqFmv -- and is not the headline) instead of the pool's
+ * projected next sale. fairMarketValue IS the headline: the persist sites
+ * write it from `marketValue ?? predictedPrice ?? fmv` (#1432, D12-a s.4),
+ * so it comes first here too. Order: the seller's target, then FMV, then
+ * predictedPrice, then the estimate.
+ */
+export function pickTargetPrice(holding: PortfolioHolding, override?: number): number {
   if (typeof override === "number" && override > 0) return round2(override);
-  if (typeof holding.predictedPrice === "number" && holding.predictedPrice > 0) {
-    return round2(holding.predictedPrice);
-  }
   if (typeof holding.fairMarketValue === "number" && holding.fairMarketValue > 0) {
     return round2(holding.fairMarketValue);
+  }
+  if (typeof holding.predictedPrice === "number" && holding.predictedPrice > 0) {
+    return round2(holding.predictedPrice);
   }
   if (typeof holding.estimatedValue === "number" && holding.estimatedValue > 0) {
     return round2(holding.estimatedValue);

@@ -591,8 +591,8 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
     flat wire shape carries NO rung/provenance (only the nested `pricing`
     envelope, and that drops to null unless three fields agree), while
     `quickSaleValue/premiumValue/suggestedListPrice` and the buy/hold/sell zones
-    are hardcoded multipliers (0.85 / 1.15 / 1.05 / 0.9). → **D12-a** (building,
-    `feat/d12a`) + **D12-b** (building, `feat/d12b`: the import resolves through
+    are hardcoded multipliers (0.85 / 1.15 / 1.05 / 0.9). → **D12-a** (SHIPPED on
+    `feat/d12a`, 8 commits, 2026-08-29 — paragraph below) + **D12-b** (building, `feat/d12b`: the import resolves through
     the catalog, round-trip ids must be existing hiq slugs, one identity, price
     on commit).
   - *Pricing engines (group A):* `withDerivedSlug` MINTS an hiq slug from free
@@ -605,8 +605,41 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
     hardcoded tables (PSA 8 → 1.0; static GRADER_PREMIUMS; canonicalFmv's
     gradeTierMultiplier table); the sibling fallback's ×8 / ÷8 PSA-10 constants
     and `parallelPremiumFloors` (/1 → 100×, /50 → 8× …) — PR 5/6 in flight;
-    `hobbyIqFmv` returns a method string not in its own union. → D12-a covers
-    the identity items; the multiplier tables are D4 PR 6.
+    `hobbyIqFmv` returns a method string not in its own union. → D12-a shipped
+    the identity items (below); the multiplier tables are D4 PR 6.
+  - **D12-a SHIPPED** (`feat/d12a`, 8 commits, 2026-08-29; backend/src changed —
+    dispatch "Daily 5AM ET Refresh & Deploy" after merge). §1 every user
+    sale / purchase emit (order poll, manual sell, Add Card purchase) keys its
+    sold_comps row by `poolIdentityForHolding(h)` — the pinned hiq slug or
+    nothing: no identity → withheld + `user_comp_withheld_no_identity`; the
+    vendor id rides as `vendorCardId` metadata; the purchase uses D9's
+    `purchaseSaleIdentity()` key so the import row and the Add Card row are
+    one row. §2 `withDerivedSlug` is gone: `fillDerivedSlugFromCatalog` fills
+    only an ABSENT slug and only when `catalogSlugIfExists` (point read at
+    (slug, slug), un-numbered twin aware, fails closed) holds it; the catalog
+    resolve runs BEFORE the fill on add and update; `priceFromOurPool` never
+    derives at price time and prices only a catalog-row slug (else null +
+    `our_pool_slug_not_in_catalog`). §3 one gate (0.9) pins both fields on
+    add and update; below it the match is the existing proposal
+    (`catalogMatchSlug` … → the wire's `proposedIdentity` → /accept-identity),
+    NOT `cardStatus: pending-review` (written in exactly one place); a
+    body-supplied `hobbyiqCardId` is accepted only when it names a catalog row
+    (`hobbyiqCardIdSource: "pinned"`, else `holding_slug_rejected_not_in_catalog`).
+    §4 the fifth (and a sixth) headline chain read `marketValue ??
+    predictedPrice ?? fmv`, pinned line-wise over portfolioStore (8 chains).
+    §5 `createListing` links the holding itself on every publish
+    (`result.linked`). §6 the suggester's `cardId` is hiq-only — `idKind`,
+    `candidate.vendorCardId`, `SuggestBatchSummary.vendorIdDropped`. §7 the
+    composer lists FMV before predictedPrice. §8 `querySoldComps` throws
+    `SoldCompsQueryError`; the vendor source propagates; the resolver reports
+    `sourceErrors` and does not cache a null reached through one. Each item
+    has a test that fails under the old code (`tests/d12a.*.test.ts`) and a
+    mutation check. **Left for a follow-up:** the wire shape's read-time
+    `deriveHoldingSlug` fallback (responseAssembly `composeHoldingWireShape`)
+    still mints a display slug for legacy holdings; `resolveCard` callers do
+    not yet read `sourceErrors`; a body-supplied `cardId` that is an hiq slug
+    is not catalog-gated (only `hobbyiqCardId` is); `querySoldComps`'s cardId
+    filter passes ledger entries that carry no cardId (none do).
   - *Analysis surfaces (group B):* none of the 15 analysis services touch a
     pricing engine or an hiq slug — grade-worthy, timing forecast, parallel
     ladder, missing parallels, sub-raw discovery price from `ch_daily_sales`

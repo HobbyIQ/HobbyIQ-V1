@@ -16,6 +16,20 @@ vi.mock("../src/services/portfolioiq/hobbyIqFmv.service.js", async () => {
   };
 });
 
+// D12a: the pinned slug must be a catalog row. The catalog says yes here;
+// the tests that say otherwise override per call.
+vi.mock("../src/services/catalog/catalogMatcher.service.js", async () => {
+  const actual = await vi.importActual<
+    typeof import("../src/services/catalog/catalogMatcher.service.js")
+  >("../src/services/catalog/catalogMatcher.service.js");
+  return { ...actual, catalogSlugIfExists: vi.fn(async (slug: string) => slug) };
+});
+
+async function catalogExistsMock() {
+  const mod = await import("../src/services/catalog/catalogMatcher.service.js");
+  return mod.catalogSlugIfExists as unknown as ReturnType<typeof vi.fn>;
+}
+
 async function loadModule() {
   return await import("../src/services/portfolioiq/priceFromOurPool.service.js");
 }
@@ -273,20 +287,49 @@ describe("priceHoldingFromOurPool", () => {
     expect(result).toBeNull();
   });
 
-  it("uses derived slug when holding.hobbyiqCardId is missing", async () => {
+  it("D12a: does NOT derive a slug at price time — no pinned slug, no price", async () => {
     const mock = await computeMock();
+    mock.mockClear();
     mock.mockResolvedValue(
       fmvResultShell({ method: "direct-slug", fmv: 100, compCount: 3, confidence: 0.8 }),
     );
     const h = { ...baseHolding(), hobbyiqCardId: undefined } as unknown as PortfolioHolding;
     const { priceHoldingFromOurPool } = await loadModule();
     const result = await priceHoldingFromOurPool(h);
-    // deriveHoldingSlug needs a discoverable sport — for Bowman Baseball
-    // it succeeds, so we should get a live path.
-    expect(result).not.toBeNull();
-    expect(result?.source).toBe("our-pool");
-    // The mock was called (proving we went past the null-slug bail).
-    expect(mock).toHaveBeenCalled();
+    // Mutation check: the pre-fix pricer minted a slug from the holding's
+    // text here (Bowman Baseball derives fine) and priced it.
+    expect(result).toBeNull();
+    expect(mock).not.toHaveBeenCalled();
+  });
+
+  it("D12a: a pinned slug the catalog does not hold prices nothing", async () => {
+    const exists = await catalogExistsMock();
+    exists.mockResolvedValueOnce(null);
+    const mock = await computeMock();
+    mock.mockClear();
+    mock.mockResolvedValue(
+      fmvResultShell({ method: "direct-slug", fmv: 100, compCount: 3, confidence: 0.8 }),
+    );
+    const { priceHoldingFromOurPool } = await loadModule();
+    const result = await priceHoldingFromOurPool(baseHolding());
+    expect(result).toBeNull();
+    expect(mock).not.toHaveBeenCalled();
+  });
+
+  it("D12a: when the catalog holds only the un-numbered twin, the catalog's form is what is priced", async () => {
+    const exists = await catalogExistsMock();
+    const twin = "hiq:baseball:2026:bowman:CPA-EHA:orange-shimmer-refractor:auto";
+    exists.mockResolvedValueOnce(twin);
+    const mock = await computeMock();
+    mock.mockClear();
+    mock.mockResolvedValue(
+      fmvResultShell({ method: "direct-slug", fmv: 100, compCount: 3, confidence: 0.8 }),
+    );
+    const h = { ...baseHolding(), hobbyiqCardId: twin + ":num-25" } as unknown as PortfolioHolding;
+    const { priceHoldingFromOurPool } = await loadModule();
+    const result = await priceHoldingFromOurPool(h);
+    expect(result?.slug).toBe(twin);
+    expect(mock.mock.calls[0][0]).toMatchObject({ hobbyiqCardId: twin });
   });
 });
 

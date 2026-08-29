@@ -234,6 +234,12 @@ export interface SoldCompDoc {
   // See hobbyIqCardId.service.ts for the format spec.
   hobbyiqCardId?: string | null;
 
+  // CF-ONE-IDENTITY-IN-THE-POOL (D12a, 2026-08-29). The vendor id the source
+  // holding carried (CardHedge bubble.io id, Cardsight compound id) when a
+  // USER sale is filed under its hiq: slug. Metadata for provenance and for
+  // the vendor-id -> slug bridge; it never keys a row.
+  vendorCardId?: string | null;
+
   // CF-COMPOSITE-IDENTITY (Drew, 2026-07-30). 6-axis composite parallel
   // identity per parallel-vocabulary framework. Each axis is queryable
   // independently, enabling neighbor-multiplier lookups, ladder walking
@@ -293,6 +299,9 @@ export interface RecordSoldCompInput {
    *  to sold_comps; only threaded through so the enqueue can carry
    *  the pointer. */
   url?: string | null;
+  /** CF-ONE-IDENTITY-IN-THE-POOL (D12a). The source holding's vendor cardId,
+   *  carried as metadata when a user sale is filed under its hiq: slug. */
+  vendorCardId?: string | null;
   sellerHandle?: string | null;
   verifiedByUser?: boolean;
   confidence?: number;
@@ -1044,6 +1053,7 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
     imageUrl: input.imageUrl ?? null,
     sellerHandle: input.sellerHandle ?? null,
     verifiedByUser: input.verifiedByUser ?? false,
+    vendorCardId: input.vendorCardId ?? null,
     composite: computeCompositeForRow({
       title: input.title,
       cardNumber: input.cardNumber,

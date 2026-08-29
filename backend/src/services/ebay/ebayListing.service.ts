@@ -131,6 +131,11 @@ export interface EbayListingResult {
   listingId?: string;
   listingUrl?: string;
   inventoryItemKey?: string;
+  /** CF-EVERY-PUBLISH-LINKS-THE-HOLDING (D12a). True when the holding now
+   *  carries ebayOfferId / ebayListingId; false when the listing is live on
+   *  eBay but the back-reference could not be written (no such holding, or
+   *  the write failed) — the sale poll cannot match this listing until it is. */
+  linked?: boolean;
   error?: string;
   /** When publish fails because of a missing seller policy, names which one and why. */
   missingPolicy?: { policyType: SellerPolicyType; reason: MissingSellerPolicyReason };
@@ -1011,7 +1016,44 @@ async function publishOffer(userId: string, offerId: string): Promise<string> {
 // Public surface
 // ---------------------------------------------------------------------------
 
-/** Full create-and-publish flow. */
+/** Persist the eBay back-references on the holding after a publish. Dynamic
+ *  import keeps this module free of a static portfolioStore dependency
+ *  (portfolioStore is the far larger graph). Returns whether the holding
+ *  now carries the ids; never throws. */
+async function linkPublishedListingToHolding(
+  userId: string,
+  holdingId: string,
+  offerId: string,
+  listingId: string,
+): Promise<boolean> {
+  try {
+    const { linkEbayListing } = await import("../portfolioiq/portfolioStore.service.js");
+    const linked = await linkEbayListing(userId, String(holdingId), {
+      offerId,
+      listingId,
+      publishedAt: new Date().toISOString(),
+    });
+    if (!linked) {
+      console.warn(JSON.stringify({
+        event: "ebay_publish_link_no_holding",
+        source: "ebayListing.createListing",
+        userId, holdingId, offerId, listingId,
+      }));
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error(JSON.stringify({
+      event: "ebay_publish_link_failed",
+      source: "ebayListing.createListing",
+      userId, holdingId, offerId, listingId,
+      error: (err as Error)?.message ?? String(err),
+    }));
+    return false;
+  }
+}
+
+/** Full create-and-publish flow. Links the holding to the listing on success. */
 export async function createListing(userId: string, input: HoldingListingInput): Promise<EbayListingResult> {
   try {
     // Inventory key is unique per holding; reusing across calls is safe (idempotent PUT)
@@ -1025,7 +1067,19 @@ export async function createListing(userId: string, input: HoldingListingInput):
       ? `https://www.sandbox.ebay.com/itm/${listingId}`
       : `https://www.ebay.com/itm/${listingId}`;
 
-    return { success: true, offerId, listingId, listingUrl, inventoryItemKey };
+    // CF-EVERY-PUBLISH-LINKS-THE-HOLDING (2026-08-29, checklist D12a). The
+    // back-reference (ebayOfferId / ebayListingId on the holding) is what
+    // ebayOrderPoll's findHoldingByEbayListingIdAcrossUsers matches a sold
+    // order against. It was written by ONE of the two publish routes
+    // (/api/ebay/listings/publish) and not the other
+    // (/api/portfolio/holdings/:id/ebay/listing), so a card listed through
+    // the portfolio route could sell on eBay and never be marked sold — the
+    // poll logged ebay_poll_no_matching_holding forever. The link now happens
+    // here, once, on every successful publish. A link failure never unwinds a
+    // listing that is already live; it is reported on the result.
+    const linked = await linkPublishedListingToHolding(userId, input.holdingId, offerId, listingId);
+
+    return { success: true, offerId, listingId, listingUrl, inventoryItemKey, linked };
   } catch (err) {
     if (err instanceof MissingSellerPolicyError) {
       return {

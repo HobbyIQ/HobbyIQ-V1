@@ -1,3 +1,6 @@
+// CF-A-SUGGESTION-IS-A-SLUG-OR-NOTHING (D12a, 2026-08-29): a vendor id no longer
+// reaches the wire as `cardId`. The vendor candidates this suite scores are
+// asserted through `idKind` + `candidate.vendorCardId`; `cardId` is hiq-only.
 // CF-CARDID-SUGGESTER-MULTI-VENDOR + CF-CARDID-SUGGESTER-TOP-N
 // (Drew, 2026-07-14) — pins the multi-vendor cardId suggester behavior:
 //
@@ -171,7 +174,7 @@ describe("CF-CARDID-SUGGESTER-MULTI-VENDOR — Hartman Blue Refractor scenario",
     ]);
     const r = await suggestCardIdForHolding(makeHolding({ parallel: "Green Refractor" }));
     expect(r!.candidateSource).toBe("cardhedge");
-    expect(r!.cardId).toBe("ch-cpaeha-green-refractor");
+    expect(r!.cardId).toBeUndefined(); expect(r!.idKind).toBe("vendor"); expect(r!.candidate.vendorCardId).toBe("ch-cpaeha-green-refractor");
     // Alternatives should NOT include the duplicate CS row (dedup key
     // year::number::parallel collides).
     expect(r!.alternatives ?? []).toHaveLength(0);
@@ -236,7 +239,7 @@ describe("CF-CARDID-SUGGESTER-QUERY-NORMALIZATION — opportunistic set-filter f
       parallel: "Green Refractor",
     }));
     expect(r).not.toBeNull();
-    expect(r!.cardId).toBe("ch-relaxed-hit");
+    expect(r!.cardId).toBeUndefined(); expect(r!.idKind).toBe("vendor"); expect(r!.candidate.vendorCardId).toBe("ch-relaxed-hit");
     // Called CH twice: once strict, once relaxed.
     expect(chCallCount).toBe(2);
   });
@@ -255,7 +258,7 @@ describe("CF-CARDID-SUGGESTER-QUERY-NORMALIZATION — opportunistic set-filter f
     vi.mocked(fetchCardsightUuidNativeCandidates).mockResolvedValue([]);
 
     const r = await suggestCardIdForHolding(makeHolding({ parallel: "Green Refractor" }));
-    expect(r!.cardId).toBe("ch-strict-hit");
+    expect(r!.cardId).toBeUndefined(); expect(r!.idKind).toBe("vendor"); expect(r!.candidate.vendorCardId).toBe("ch-strict-hit");
     expect(chCallCount).toBe(1);  // strict only, no retry
   });
 
@@ -319,7 +322,7 @@ describe("CF-HOLDING-FIELD-NORMALIZER — suggester runs on cleaned fields", () 
       setName: "Bowman Chrome",
     }));
     expect(r).not.toBeNull();
-    expect(r!.cardId).toBe("ch-refractor");
+    expect(r!.cardId).toBeUndefined(); expect(r!.idKind).toBe("vendor"); expect(r!.candidate.vendorCardId).toBe("ch-refractor");
     // Should score well — parallel matches after normalization
     expect(r!.confidence).toBeGreaterThanOrEqual(0.8);
   });
@@ -497,7 +500,7 @@ describe("CF-CARDID-SUGGESTER-TOP-N — alternatives surfacing", () => {
     expect(r!.alternatives).toBeDefined();
     // Cap at 2, primary excluded, in score order.
     expect(r!.alternatives!.length).toBeLessThanOrEqual(2);
-    const altIds = r!.alternatives!.map((a) => a.cardId);
+    const altIds = r!.alternatives!.map((a) => a.candidate.vendorCardId);
     expect(altIds).not.toContain("ch-primary");
     expect(altIds).not.toContain("ch-alt-3-should-be-clipped");
   });
@@ -535,10 +538,10 @@ describe("CF-CARDID-SUGGESTER-TOP-N — alternatives surfacing", () => {
       makeHolding({ parallel: "Green Refractor", cardYear: 2025 }),
     );
     expect(r!.candidateSource).toBe("cardhedge");
-    expect(r!.cardId).toBe("ch-primary");
+    expect(r!.cardId).toBeUndefined(); expect(r!.idKind).toBe("vendor"); expect(r!.candidate.vendorCardId).toBe("ch-primary");
     expect(r!.confidenceTier).not.toBe("high");
     // ch-alt-cand should be there; CS Speckle Refractor deduped OUT.
-    const altIds = (r!.alternatives ?? []).map((a) => a.cardId);
+    const altIds = (r!.alternatives ?? []).map((a) => a.candidate.vendorCardId);
     expect(altIds).toContain("ch-alt-cand");
     expect(altIds).not.toContain(
       "00000000-0000-0000-0000-000000000010::00000000-0000-0000-0000-000000000011",
@@ -567,7 +570,7 @@ describe("CF-CARDID-SUGGESTER-TOP-N — alternatives surfacing", () => {
     );
     // Even if there's room in the alternatives array, low-score junk
     // shouldn't show up.
-    const altIds = (r!.alternatives ?? []).map((a) => a.cardId);
+    const altIds = (r!.alternatives ?? []).map((a) => a.candidate.vendorCardId);
     expect(altIds).not.toContain("ch-junk");
   });
 });
