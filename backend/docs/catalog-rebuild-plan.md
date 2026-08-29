@@ -644,6 +644,21 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   not reached this card); the row's right-hand number is a sales MEDIAN
   (`salesSummary.median30d`) — now labelled `med` as a picking hint; the
   picker should carry the exact-pool FMV instead (queued).
+  **Measured 21:55Z:** trailing-comma `playerName` = beckett-checklist 9,199 +
+  catalog-explode-actuals 507 + tcdb 97 + small others; checklistinsider rows
+  with `isAuto=false` on auto-prefixed card numbers (cpa-/bdc-/pa-/ra-) =
+  **98,382 of 4,092,438** (2025 bowman basketball 13,927; 2025 bowman-draft
+  9,528; 2024 bowman-draft 5,513; 2025 topps-chrome-platinum 5,487; 2026
+  bowman-chrome 5,058); `setName` starts with the year in EVERY source
+  (12.47M bcp, 4.09M checklistinsider, 1.71M new CLC …) — a display rule, not
+  a rewrite. → **D15** (building, `feat/d15`): `repair-trailing-comma-player-
+  names` (patch + search fields) and `repair-isauto-from-cardnumber-catalog`
+  (a mover through catalogRowOps; the product's auto prefixes decided by the
+  majority of its checklist sources, never by text). The `gold:auto:num-50` /
+  `gold-refractor:auto:num-50` twin is `merge-bare-colour-parallels`'s case —
+  dry run for 2025 dispatched 20:25Z (33273454220). Also identified:
+  `baseballcardpedia-ladders-2026-08-29` (725k rows) is the e2e ingest's
+  re-scraped bcp under the #1373 gate — the sane bcp, not the exploded one.
     **Mover validation (report-only, 140-min budget each, 20:10Z):**
   clean-parallel-annotations dry — 30,564 rows this slot: 758 heal / 5,979
   move / 1,075 fold / 1,482 replace-a-derived-twin / 2,970 graded children /
