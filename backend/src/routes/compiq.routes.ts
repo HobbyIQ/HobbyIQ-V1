@@ -5439,173 +5439,44 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
       };
     }
 
-    // CF-PRICE-BY-ID-CANONICAL-FIRST (Drew, 2026-08-08, revised). Any
-    // request that arrives with an hiq: slug should try canonical-fmv
-    // FIRST. Prior behavior: convert hiq: → vendor cardId (bubble.io),
-    // then hit the CH/CS pipeline. With CH_RUNTIME_DISABLED=true, that
-    // pipeline returns "no-recent-comps" → user sees $0 despite our
-    // own pool having 700+ comps for the exact slug. Canonical-fmv
-    // reads our own sold_comps directly by hobbyiqCardId, so it always
-    // finds what we have. We keep the original hiq: slug as
-    // `originalHiqSlug` so the fallback in `if (originalHiqSlug)` below
-    // can still fire even if vendor-cardId resolution rewrote
-    // `resolvedCardId` to a bubble.io id.
+    // CF-ONE-VALUATION-PATH (D16, 2026-08-30). An hiq: slug — or a vendor id
+    // the catalog can name — is priced by the ONE valuation path
+    // (oneValuationPath.service: the unified exact-pool engine on the catalog
+    // identity, every tier at its own window, the gated ladder only when the
+    // pool is empty) and answered from it. Nothing after this block runs for
+    // a slug: the CF-PRICE-BY-ID-CANONICAL-FIRST branch that lived here ran
+    // canonical-fmv's own ladder over its own five-source pool and labelled
+    // the answer `direct-comp` (the D14 probe: 0% exact-pool rung on this
+    // wire, 44% cross-route disagreement), and when THAT found nothing the
+    // CH pipeline below priced the same slug a second way. The legacy
+    // pipeline below now serves only vendor ids the catalog cannot name.
     const originalHiqSlug: string | null = resolvedCardId.startsWith("hiq:") ? resolvedCardId : null;
-
-    // CF-PRICE-BY-ID-HIQ-SLUG (Drew, 2026-08-06). Vendor-cardId lookup
-    // preserved for callers that still route to CH (rare after canonical-
-    // first — mostly a defense-in-depth path).
-    if (resolvedCardId.startsWith("hiq:")) {
-      try {
-        const { CosmosClient: _CC } = await import("@azure/cosmos");
-        const cn = process.env.COSMOS_CONNECTION_STRING;
-        if (cn) {
-          const sc = new _CC(cn).database(process.env.COSMOS_DATABASE ?? "hobbyiq").container("sold_comps");
-          const { resources: buckets } = await sc.items.query<{ cid: string; n: number }>({
-            query: `SELECT c.cardId as cid, COUNT(1) as n
-                    FROM c WHERE c.hobbyiqCardId = @s
-                      AND IS_DEFINED(c.cardId) AND c.cardId != null
-                      AND NOT STARTSWITH(c.cardId, "hiq:")
-                    GROUP BY c.cardId`,
-            parameters: [{ name: "@s", value: resolvedCardId }],
-          }).fetchAll();
-          if (buckets.length > 0) {
-            buckets.sort((a, b) => b.n - a.n);
-            resolvedCardId = buckets[0].cid;
-          }
-        }
-      } catch { /* fall through with slug */ }
-    }
-
-    // CF-PRICE-BY-ID-CANONICAL-FALLBACK (Drew, 2026-08-08). Route to
-    // canonical-fmv whenever the ORIGINAL request arrived with an hiq:
-    // slug — regardless of whether vendor-cardId lookup rewrote
-    // resolvedCardId to a bubble.io id. Canonical-fmv is authoritative:
-    // it reads our own sold_comps by hobbyiqCardId, which is what iOS
-    // and web actually want. The CH/CS path stays as unreachable
-    // fallback for legacy Cardsight-UUID callers that skip this route
-    // entirely.
-    if (originalHiqSlug) {
-      // Inline parallel resolution — resolvedParallelName is declared later
-      // in this handler; recompute here for the canonical-fmv fallback.
-      const earlyParallelName: string =
-        typeof parallelName === "string" && parallelName.length > 0
-          ? parallelName
-          : typeof parallel === "string" && parallel.length > 0
-          ? parallel
-          : "Base";
-      try {
-        const { computeCanonicalFmv } = await import("../services/compiq/canonicalFmv.service.js");
-        const canon = await computeCanonicalFmv({
-          cardId: originalHiqSlug,
-          parallel: earlyParallelName,
-          gradeCompany: typeof gradeCompany === "string" ? gradeCompany : null,
-          gradeValue: typeof gradeValue === "number" ? gradeValue : null,
-          cardYear: null,
-          product: null,
-          player: null,
-          cardNumber: null,
-          freshCompute: false,
-        } as any);
-        if (canon && typeof (canon as any).fmv === "number" && (canon as any).fmv > 0) {
-          const fmv = (canon as any).fmv as number;
-          const compsAvailable = (canon as any).recentRange?.n ?? 0;
-          const provComps = (canon as any).provenance?.comps ?? [];
-          const summary = (canon as any).provenance?.summary ?? "";
-          // Parse "718 same-parallel user comps" for compsAvailable if larger than recentRange.
-          const summaryMatch = /(\d+)\s+same-parallel/.exec(summary);
-          const parallelCount = summaryMatch ? Number(summaryMatch[1]) : compsAvailable;
-          const method = String((canon as any).method || "canonical-fmv");
-          const buyZone: [number, number] = [Math.round(fmv * 0.85), Math.round(fmv * 0.95)];
-          const holdZone: [number, number] = [Math.round(fmv * 0.95), Math.round(fmv * 1.10)];
-          const sellZone: [number, number] = [Math.round(fmv * 1.10), Math.round(fmv * 1.25)];
-          const recentComps = provComps.slice(0, 20).map((c: any) => ({
-            price: Number(c.price ?? 0),
-            soldDate: String(c.soldAt ?? ""),
-            grader: null,
-            gradeValue: null,
-            parallel: c.parallel ?? earlyParallelName ?? null,
-            marketplace: c.source ?? undefined,
-          })).filter((r: any) => r.price > 0 && r.soldDate);
-          const lastSale = recentComps.length > 0 ? {
-            price: recentComps[0].price,
-            soldDate: recentComps[0].soldDate,
-            grader: null,
-            gradeValue: null,
-          } : null;
-          // CF-PRICE-BY-ID-CANONICAL-IDENTITY (Drew, 2026-08-09). Enrich
-          // response with real cardIdentity by looking up the catalog
-          // entry for the hiq: slug. Without this, the frontend fell
-          // back to using provenance.summary ("428 same-parallel user
-          // comps · regression +4.3%/mo") as the card title on the
-          // detail page. Card detail needs player/setName/cardNumber
-          // to render a proper title like "2018 Topps Chrome Update
-          // Shohei Ohtani #HMT1".
-          let enrichedIdentity: Record<string, unknown> = { card_id: originalHiqSlug };
-          try {
-            const { CosmosClient: _CC2 } = await import("@azure/cosmos");
-            const cn2 = process.env.COSMOS_CONNECTION_STRING;
-            if (cn2) {
-              const cat = new _CC2(cn2).database(process.env.COSMOS_DATABASE ?? "hobbyiq").container("card_catalog");
-              const { resource: doc } = await cat.item(originalHiqSlug, originalHiqSlug).read();
-              if (doc) {
-                enrichedIdentity = {
-                  card_id: originalHiqSlug,
-                  player: doc.playerName ?? null,
-                  year: typeof doc.year === "number" ? doc.year : (typeof doc.cardYear === "number" ? doc.cardYear : null),
-                  set: doc.setName ?? doc.setKey ?? null,
-                  number: doc.cardNumber ?? null,
-                  parallel: doc.parallel ?? earlyParallelName,
-                  isAuto: doc.isAuto === true,
-                  imageUrl: doc.imageUrl ?? null,
-                  sport: doc.sport ?? null,
-                };
-              }
-            }
-          } catch { /* enrichment is best-effort — fall through with minimal identity */ }
-          console.log(JSON.stringify({
-            event: "price_by_id_canonical_fmv_fallback",
-            source: "compiq.routes.price-by-id",
-            cardId: originalHiqSlug,
-            fmv, compsAvailable: parallelCount, compsUsed: compsAvailable,
-            method,
-            identityEnriched: !!enrichedIdentity.player,
-          }));
-          return res.json({
-            success: true,
-            cardsightCardId: originalHiqSlug,
-            // CF-SUMMARY-NAMESPACE (Drew, 2026-08-09). Nest provenance
-            // summary under provenance.summary so frontend can't
-            // accidentally use it as the card title. Card title should
-            // be derived from cardIdentity (player + set + year + #).
-            provenance: summary ? { summary } : undefined,
-            marketTier: { value: fmv, high: sellZone[1] },
-            buyZone, holdZone, sellZone,
-            fairMarketValueLive: fmv,
-            marketValue: fmv,
-            predictedPrice: fmv,
-            predictedPriceRange: [Math.round(fmv * 0.95), Math.round(fmv * 1.05)] as [number, number],
-            confidence: (canon as any).confidence ?? 0.85,
-            approximate: false,
-            source: method,
-            recentComps,
-            compsUsed: compsAvailable,
-            compsAvailable: parallelCount,
-            lastSale,
-            cardIdentity: enrichedIdentity,
-            cardImageUrl: enrichedIdentity.imageUrl ?? null,
-          });
-        }
-      } catch (err) {
-        console.warn(JSON.stringify({
-          event: "price_by_id_canonical_fmv_fallback_error",
+    {
+      const { valueIdentity } = await import("../services/compiq/oneValuationPath.service.js");
+      const { toPriceByIdResponse } = await import("../services/compiq/oneValuationPathAdapters.js");
+      const bodyPrintRun = Number((req.body as { printRun?: unknown } | undefined)?.printRun);
+      const v = await valueIdentity({
+        id: resolvedCardId,
+        grade: { company: typeof gradeCompany === "string" ? gradeCompany : null, value: typeof gradeValue === "number" ? gradeValue : null },
+        printRun: Number.isFinite(bodyPrintRun) && bodyPrintRun > 0 ? bodyPrintRun : null,
+      });
+      if (v.identity.slug || originalHiqSlug) {
+        console.log(JSON.stringify({
+          event: "price_by_id_one_valuation_path",
           source: "compiq.routes.price-by-id",
-          cardId: originalHiqSlug,
-          error: (err as Error)?.message ?? String(err),
+          cardId: resolvedCardId,
+          slug: v.identity.slug,
+          fmv: v.fairMarketValue,
+          rungLabel: v.rungLabel,
+          valueSource: v.valueSource,
+          reason: v.reason,
+          compsUsed: v.compsUsed,
+          windowDays: v.windowDays,
+          ms: Date.now() - handlerStart,
         }));
-        // Fall through to CH pipeline (defense-in-depth — the CH path
-        // is broken with CH_RUNTIME_DISABLED but keep the option open).
+        return res.json(toPriceByIdResponse(v));
       }
+      // A vendor id the catalog cannot name: the legacy pipeline, unchanged.
     }
 
     // CF-PARALLEL-AWARE-VALUE (2026-06-09): UUID-shape validation on
