@@ -355,7 +355,18 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   30k–104k kept-by-authority; the gate refused one cross-join insert, 2023
   Leaf Eclectic "leaf-metal" 154 parallels × 25 numbers, and one 2016 Topps
   "double-play-rip-cards" 920 parallels × 1 number). `audit-source-coverage`
-  dispatched 02:28Z (33278726520). Also seen in the same run: the bcp ladders re-ingest now
+  (33278726520, 02:50Z): **406 old-CLC products / 820,174 rows remain (the
+  fixed tie-break already relabelled ~300k of the 1.1M); 349 products are
+  BELOW the 95% floor and stay; ~57 clear it** — every Leaf product at
+  100% normalised (the old rows' glued subset prefixes), Topps Chrome 2023,
+  Chrome Sapphire, Fire, Tribute, Finest, Rip, Tier One, Diamond Icons,
+  Gilded, 206, Pro Debut, Black & White, Panini Immaculate, 2024 Select … The
+  below-floor shape is specific: Topps flagship (Series 1/2/Update 2020–2025)
+  uncovered keys are plain `base` rows and foil parallels, Donruss/Prizm
+  uncovered keys are the Panini ladders (artist proof /25, carolina blue
+  laser /249 …) — the html converter still misses those two page shapes →
+  **D3c** (queued behind D17 — one builder at a time). Retire dry run with
+  the floor dispatched 03:05Z (MODE=source, SOURCES old CLC, scope new CLC). Also seen in the same run: the bcp ladders re-ingest now
   skips 762,534 player-name-parallel rows (#1396 working as built).
   **D3b (2026-08-29 ~22:00Z, `feat/d3b`): the ladder was never lost — the LABEL was.**
   The brief: CLC lacks Bowman's plain colour ladder (2025 Bowman Draft CPA-MWI: 13 rows,
@@ -1253,8 +1264,14 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   un-numbered twins (6,915 sales re-pointed, 120 graded children), 20
   refusals where the row's `setKey` field disagrees with its own slug
   (`bowman` vs `bowman-chrome`/`bowman-paper` — conform-card-profile's
-  population). APPLY dispatched 20:22Z (33273328022); conform-holdings
-  APPLY follows it.** Drew (22:30Z): "I see 2 max williams superfractors …
+  population). APPLY dispatched 20:22Z (33273328022) — **ran to its 140-min
+  budget: 6,899,700 base ids with exactly one numbered variant after the
+  re-ingest, 330,268 candidates reached, FOLDED 4,136 (14,137 sales
+  re-pointed, 328 graded children), 11,832 checklist twins left for the
+  cross-source mode, 77 refusals (setKey ≠ slug), reconciled; it predates
+  its relaunch step, so relaunched by hand 03:05Z (33279764127) — from here
+  the marker-keyed step continues it.** conform-holdings dry run dispatched
+  with it (33279767793); APPLY → reprice-all → audit-all-holdings follow.** Drew (22:30Z): "I see 2 max williams superfractors …
   superfractors are 1/1" — bcp's un-numbered `superfractor:auto` beside
   beckett's `:num-1`, and the same pair on Refractor /499, Black /10, Red /5,
   Red Lava, Sky Blue. **#1470:** the fold's decision is a pure tested rule
