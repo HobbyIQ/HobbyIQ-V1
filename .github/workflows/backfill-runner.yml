@@ -191,6 +191,11 @@ on:
         required: false
         default: ""
         type: string
+      sources:
+        description: "Comma-separated catalog sources (SOURCES env) -- REQUIRED for retire-exploded-checklist-rows mode=source"
+        required: false
+        type: string
+        default: ""
       years:
         description: "Optional comma-separated years to scope a run (e.g. 1950,1955). Empty = all years."
         required: false
@@ -495,6 +500,7 @@ jobs:
           YEARS: ${{ inputs.years }}
           PHASES: ${{ inputs.phases }}
           BCP_TITLES: ${{ inputs.titles }}
+          SOURCES: ${{ inputs.sources }}
           # repair-refractor-mislabel: "refractor" (plain segment only) or
           # "all" (every slug whose parallel disagrees with its own title).
           SCOPE: ${{ inputs.scope }}
