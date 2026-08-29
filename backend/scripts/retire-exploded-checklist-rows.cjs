@@ -38,9 +38,16 @@ const { CosmosClient } = require("@azure/cosmos");
 const { reportWrites } = require(path.join(__dirname, "..", "dist", "services", "ops", "writeReconciliation.js"));
 
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
-const MODE = String(process.env.MODE || "").toLowerCase() === "misparsed" ? "misparsed" : "exploded";
-const SOURCES = String(process.env.SOURCES || "baseballcardpedia").split(",").map((s) => s.trim()).filter(Boolean);
-const PAR_MAX = Number(process.env.PAR_MAX || 150), NUM_MAX = Number(process.env.NUM_MAX || 2000);
+// MODE=tail: for sources whose products are only PARTLY exploded (checklistinsider:
+//   the real rungs are there on every card, plus a garbage tail -- 3,602
+//   "parallels" and 47,546 card numbers on a ~150-card 2025 Bowman basketball),
+//   retire only the rows of a flagged product whose (product, parallel) group has
+//   fewer than TAIL_MIN rows, or whose parallel is a card line. A rung exists on
+//   many cards; a footnote or a joined card line exists on one.
+const MODE = ["misparsed", "tail"].includes(String(process.env.MODE || "").toLowerCase()) ? String(process.env.MODE).toLowerCase() : "exploded";
+const SOURCES = String(process.env.SOURCES || (MODE === "tail" ? "checklistinsider-2026-08-27,checklistcenter,bccp" : "baseballcardpedia")).split(",").map((s) => s.trim()).filter(Boolean);
+const PAR_MAX = Number(process.env.PAR_MAX || 150), NUM_MAX = Number(process.env.NUM_MAX || 2000), TAIL_MIN = Number(process.env.TAIL_MIN || 5);
+const CARD_LINE = /^\d+[a-z]?\s+[A-Za-z]/;
 const SLOT = Number(process.env.SLOT ?? 0), SLOTS = Math.max(1, Number(process.env.SLOTS ?? 1));
 const CONCURRENCY = Math.max(1, Number(process.env.CONCURRENCY || 32));
 const RUN_MS = Number(process.env.RUN_MINUTES || 140) * 60000;
@@ -71,7 +78,7 @@ async function main() {
 
   // ---- the product list (exploded mode): computed, not hand-typed
   let products = [];
-  if (MODE === "exploded") {
+  if (MODE === "exploded" || MODE === "tail") {
     const srcSql = SOURCES.map((_, i) => `c.source = @src${i}`).join(" OR ");
     const { resources } = await retry(() => cat.items.query({
       query: `SELECT c.sport AS sp, c.year AS y, c.setKey AS k, c.source AS s, c.parallel AS p, c.cardNumber AS n, COUNT(1) AS rows FROM c WHERE NOT IS_DEFINED(c.gradeTier) AND (${srcSql}) GROUP BY c.sport, c.year, c.setKey, c.source, c.parallel, c.cardNumber`,
@@ -80,8 +87,9 @@ async function main() {
     const agg = new Map();
     for (const r of resources) {
       const key = `${r.sp}|${r.y}|${r.k}|${r.s}`;
-      const a = agg.get(key) ?? { sport: r.sp, year: r.y, setKey: r.k, source: r.s, rows: 0, pars: new Set(), nums: new Set() };
+      const a = agg.get(key) ?? { sport: r.sp, year: r.y, setKey: r.k, source: r.s, rows: 0, pars: new Set(), nums: new Set(), parCounts: new Map() };
       a.rows += r.rows; a.pars.add(String(r.p ?? "")); a.nums.add(String(r.n ?? "")); agg.set(key, a);
+      a.parCounts.set(String(r.p ?? ""), (a.parCounts.get(String(r.p ?? "")) ?? 0) + r.rows);
     }
     products = [...agg.values()].filter((a) => a.pars.size > PAR_MAX || a.nums.size > NUM_MAX).sort((x, y) => y.rows - x.rows);
     const total = products.reduce((s, p) => s + p.rows, 0);
@@ -91,7 +99,7 @@ async function main() {
     console.log("");
   }
 
-  let scanned = 0, otherShards = 0, retired = 0, salesUnplaced = 0, gradedDeleted = 0, failed = 0, notReached = 0;
+  let scanned = 0, otherShards = 0, retired = 0, salesUnplaced = 0, gradedDeleted = 0, failed = 0, notReached = 0, kept = 0;
   let stopReason = null;
   const reason = MODE === "exploded" ? "exploded checklist product retired; awaiting a clean checklist" : "mis-parsed checklist row retired; awaiting a clean checklist";
 
@@ -129,12 +137,12 @@ async function main() {
     }
   };
 
-  const walk = async (query) => {
+  const walk = async (query, keep = null) => {
     let token;
     do {
       const page = await retry(() => cat.items.query(query, { maxItemCount: 300, continuationToken: token }).fetchNext());
       token = page.continuationToken;
-      const mine = page.resources.filter((d) => shardOf(d.id) === SLOT);
+      const mine = page.resources.filter((d) => shardOf(d.id) === SLOT && (!keep || keep(d)));
       otherShards += page.resources.length - mine.length;
       for (let i = 0; i < mine.length; i += CONCURRENCY) {
         await Promise.all(mine.slice(i, i + CONCURRENCY).map(retireRow));
@@ -154,6 +162,21 @@ async function main() {
         parameters: [{ name: "@sp", value: p.sport }, { name: "@y", value: p.year }, { name: "@k", value: p.setKey }, { name: "@s", value: p.source }],
       });
     }
+  } else if (MODE === "tail") {
+    // Only the tail of a flagged product goes: a (product, parallel) group with
+    // fewer than TAIL_MIN rows, or a card-line parallel. The rungs that exist on
+    // every card stay -- they are the checklist.
+    for (const p of products) {
+      if (stopReason) break;
+      const tail = new Set([...p.parCounts.entries()].filter(([par, n]) => n < TAIL_MIN || CARD_LINE.test(par)).map(([par]) => par));
+      const tailRows = [...p.parCounts.entries()].filter(([par]) => tail.has(par)).reduce((s, [, n]) => s + n, 0);
+      kept += p.rows - tailRows;
+      if (!tail.size) continue;
+      await walk({
+        query: "SELECT c.id, c.cardId, c.parallel FROM c WHERE c.sport = @sp AND c.year = @y AND c.setKey = @k AND c.source = @s AND NOT IS_DEFINED(c.gradeTier)",
+        parameters: [{ name: "@sp", value: p.sport }, { name: "@y", value: p.year }, { name: "@k", value: p.setKey }, { name: "@s", value: p.source }],
+      }, (d) => tail.has(String(d.parallel ?? "")));
+    }
   } else {
     await walk({ query: `SELECT c.id, c.cardId FROM c WHERE NOT IS_DEFINED(c.gradeTier) AND IS_DEFINED(c.parallel) AND CONTAINS(c.parallel, '(') AND NOT ENDSWITH(c.parallel, ')') AND NOT CONTAINS(LOWER(c.parallel), 'print run') AND ${CHECKLIST_SQL}` });
   }
@@ -164,6 +187,7 @@ async function main() {
   console.log(`\n${APPLY ? "APPLY" : "REPORT ONLY — nothing deleted"}`);
   console.log(`  rows scanned (this slot)   ${f(scanned)}   (+${f(otherShards)} belonging to other slots)`);
   console.log(`  RETIRED                    ${f(retired)}`);
+  if (MODE === "tail") console.log(`  kept (real rungs)          ${f(kept)}   <- groups with >= ${TAIL_MIN} rows; the checklist itself`);
   console.log(`  sales stamped unplaced     ${f(salesUnplaced)}   <- the rematch owns them once a clean checklist lands`);
   console.log(`  graded children deleted    ${f(gradedDeleted)}`);
   console.log(`  failed                     ${f(failed)}`);
