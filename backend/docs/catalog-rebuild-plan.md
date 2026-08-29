@@ -350,7 +350,23 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   already holds those ids); tcgdex 1,003 / 1,003 kept; explosion gate
   refused 0 everywhere. When all eight shards land → `audit-source-coverage`
   (old checklistcenter/-html vs checklistcenter-2026-08-29, exact +
-  normalised keys) → retire only products ≥ 95%. Also seen in the same run: the bcp ladders re-ingest now
+  normalised keys) → retire only products ≥ 95%. **All eight shards landed by
+  02:15Z**, every one reconciled (CLC phase per shard 313k–416k written /
+  30k–104k kept-by-authority; the gate refused one cross-join insert, 2023
+  Leaf Eclectic "leaf-metal" 154 parallels × 25 numbers, and one 2016 Topps
+  "double-play-rip-cards" 920 parallels × 1 number). `audit-source-coverage`
+  (33278726520, 02:50Z): **406 old-CLC products / 820,174 rows remain (the
+  fixed tie-break already relabelled ~300k of the 1.1M); 349 products are
+  BELOW the 95% floor and stay; ~57 clear it** — every Leaf product at
+  100% normalised (the old rows' glued subset prefixes), Topps Chrome 2023,
+  Chrome Sapphire, Fire, Tribute, Finest, Rip, Tier One, Diamond Icons,
+  Gilded, 206, Pro Debut, Black & White, Panini Immaculate, 2024 Select … The
+  below-floor shape is specific: Topps flagship (Series 1/2/Update 2020–2025)
+  uncovered keys are plain `base` rows and foil parallels, Donruss/Prizm
+  uncovered keys are the Panini ladders (artist proof /25, carolina blue
+  laser /249 …) — the html converter still misses those two page shapes →
+  **D3c** (queued behind D17 — one builder at a time). Retire dry run with
+  the floor dispatched 03:05Z (MODE=source, SOURCES old CLC, scope new CLC). Also seen in the same run: the bcp ladders re-ingest now
   skips 762,534 player-name-parallel rows (#1396 working as built).
   **D3b (2026-08-29 ~22:00Z, `feat/d3b`): the ladder was never lost — the LABEL was.**
   The brief: CLC lacks Bowman's plain colour ladder (2025 Bowman Draft CPA-MWI: 13 rows,
@@ -1168,9 +1184,23 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   the 200-sample default; expect disagreement → ~0% on priced slugs (the
   four are one call), null ≤ the catalog-miss rate, labels 100% in
   vocabulary, `grade-curve under a vendor id` 0%.
-    **Merged #1483 (01:45Z 08-30); deploy #3 33277935264.** After it lands the
-    same-slug replay (`SLUGS_FILE=backend/docs/d16-probe-sample-slugs.txt
-    LIMIT=50`) is the after-number against 34.0%. Judgment calls to read
+    **Merged #1483 (01:45Z 08-30); deploy #3 33277935264 — live 02:20Z,
+    health `c23d976`. Same-slug replay: routes disagree by >25% on 0 of 50
+    (was 17 of 50 = 34.0%); label in vocabulary 100% / 100% / 100% / 100%
+    (price-by-id was 4%); exact-pool rung 100% on all four (price-by-id was
+    0%); FMV null 0% everywhere (was 8%); hobbyiq-fmv method outside its
+    union 0% (was 88%); grade curve under a vendor id 0% (was 86%); all four
+    routes show the identical rung distribution — leading-edge ×21,
+    weighted-median ×16, projection ×13.** The 200-sample runner probe re-run
+    (33278464941) is the official after-number: **routes disagree by >25% on
+    0 of 200 (was 86 of 200 = 43.0%)** — the scorecard's first line is closed. D17 (building,
+    `feat/d17`, the one builder running per Drew's "use what we have before
+    credits"): `/card-detail`, `/card-panel`, the bulk curves, the portfolio
+    persist site and the price-alert evaluator through the same entry.
+    Queued, not launched: D18 (cron writers reconcile; progress-gated
+    relaunches become marker-keyed), D19 (re-key the old user comps; collapse
+    the CH `ch-daily::`/`ch-comp::` dual ids), D20 (web: render the rung,
+    the BuyerIQ median fallback, the identify 404, FMV in the picker). Judgment calls to read
     (NEEDS DREW if any should go the other way): thin pools (n = 1–2) now
     price from the unified weighted-median rung on every route (the persist
     site's ≥ 1 rule) — `/hobbyiq-fmv` used to drift-adjust the last sale
@@ -1302,8 +1332,14 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   un-numbered twins (6,915 sales re-pointed, 120 graded children), 20
   refusals where the row's `setKey` field disagrees with its own slug
   (`bowman` vs `bowman-chrome`/`bowman-paper` — conform-card-profile's
-  population). APPLY dispatched 20:22Z (33273328022); conform-holdings
-  APPLY follows it.** Drew (22:30Z): "I see 2 max williams superfractors …
+  population). APPLY dispatched 20:22Z (33273328022) — **ran to its 140-min
+  budget: 6,899,700 base ids with exactly one numbered variant after the
+  re-ingest, 330,268 candidates reached, FOLDED 4,136 (14,137 sales
+  re-pointed, 328 graded children), 11,832 checklist twins left for the
+  cross-source mode, 77 refusals (setKey ≠ slug), reconciled; it predates
+  its relaunch step, so relaunched by hand 03:05Z (33279764127) — from here
+  the marker-keyed step continues it.** conform-holdings dry run dispatched
+  with it (33279767793); APPLY → reprice-all → audit-all-holdings follow.** Drew (22:30Z): "I see 2 max williams superfractors …
   superfractors are 1/1" — bcp's un-numbered `superfractor:auto` beside
   beckett's `:num-1`, and the same pair on Refractor /499, Black /10, Red /5,
   Red Lava, Sky Blue. **#1470:** the fold's decision is a pure tested rule
