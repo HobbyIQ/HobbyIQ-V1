@@ -63,6 +63,13 @@ const SOURCES = String(process.env.SOURCES || (MODE === "tail" ? "checklistinsid
 // default and reported 13,142,137 rows (1,927 products) -- a dry run, nothing
 // written, but one input away from deleting the spine. Name the sources or stop.
 if (MODE === "source" && !process.env.SOURCES) { console.error("FATAL: MODE=source retires whole sources -- set SOURCES explicitly (e.g. SOURCES=checklistcenter,checklistcenter-html)"); process.exit(1); }
+// CF-DO-NOT-RETIRE-WHAT-WAS-NOT-REPLACED (2026-08-29, source dry run #2: 428
+// products / 1,201,383 rows). The CLC re-ingest covered 510 of 547 products;
+// retiring every old row would drop checklist coverage for the rest. With
+// REPLACED_BY=<source> (the runner's SCOPE input doubles as it for MODE=source)
+// only products that exist under the replacement source are retired; the
+// others are counted and kept. Default for MODE=source: checklistcenter-2026-08-29.
+const REPLACED_BY = MODE === "source" ? String(process.env.REPLACED_BY || (process.env.SCOPE && process.env.SCOPE !== "refractor" ? process.env.SCOPE : "") || "checklistcenter-2026-08-29").trim() : "";
 const PAR_MAX = Number(process.env.PAR_MAX || 150), NUM_MAX = Number(process.env.NUM_MAX || 2000), TAIL_MIN = Number(process.env.TAIL_MIN || 5);
 const CARD_LINE = /^\d+[a-z]?\s+[A-Za-z]/;
 const SLOT = Number(process.env.SLOT ?? 0), SLOTS = Math.max(1, Number(process.env.SLOTS ?? 1));
@@ -124,6 +131,16 @@ async function main() {
       a.numCount = Number(cnt[0] ?? 0); numChecks++;
     }
     products = (MODE === "source" ? [...agg.values()] : [...agg.values()].filter((a) => a.pars.size > PAR_MAX || (a.numCount ?? 0) > NUM_MAX)).sort((x, y) => y.rows - x.rows);
+    if (MODE === "source" && REPLACED_BY) {
+      const { resources: repl } = await retry(() => cat.items.query({ query: "SELECT DISTINCT c.sport, c.year, c.setKey FROM c WHERE c.source = @r AND NOT IS_DEFINED(c.gradeTier)", parameters: [{ name: "@r", value: REPLACED_BY }] }, { maxItemCount: 10000 }).fetchAll());
+      const have = new Set(repl.map((r) => `${r.sport}|${r.year}|${r.setKey}`));
+      const before = products.length, rowsBefore = products.reduce((n, p) => n + (p.rows || 0), 0);
+      const keptProducts = products.filter((p) => !have.has(`${p.sp ?? p.sport}|${p.y ?? p.year}|${p.k ?? p.setKey}`));
+      products = products.filter((p) => have.has(`${p.sp ?? p.sport}|${p.y ?? p.year}|${p.k ?? p.setKey}`));
+      const rowsAfter = products.reduce((n, p) => n + (p.rows || 0), 0);
+      console.log(`  replaced-by ${REPLACED_BY}: ${f(have.size)} products in the replacement source; retiring ${f(products.length)} of ${f(before)} products (${f(rowsAfter)} of ${f(rowsBefore)} rows); KEPT ${f(keptProducts.length)} products / ${f(rowsBefore - rowsAfter)} rows not yet replaced`);
+      for (const p of keptProducts.slice(0, 15)) console.log(`    kept: ${p.sp ?? p.sport} ${p.y ?? p.year} ${p.k ?? p.setKey}  ${f(p.rows || 0)} rows`);
+    }
     console.log(`  (${f(agg.size)} products grouped; ${f(numChecks)} distinct-number checks)`);
     const total = products.reduce((s, p) => s + p.rows, 0);
     console.log(`\nexploded products (sources=${SOURCES.join(",")}; >${PAR_MAX} parallels or >${NUM_MAX} card numbers): ${products.length} products, ${f(total)} identity rows`);
