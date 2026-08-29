@@ -909,6 +909,27 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   **D14 — the probes (built on `feat/d14`, 2026-08-29; every one READ-ONLY,
   one scorecard block, exit 0 on a bad number, `LIMIT` env, whitelisted on the
   runner with `apply` irrelevant):**
+    **Merged #1480 (00:35Z 08-30).** The scorecard the audit asked for, first
+    numbers (2026-08-30, read-only): **routes** — the four pricing routes
+    disagree by >25% on **44.2%** of (slug, Raw) (2018 Bowman #49 Gold:
+    $11,995 / $11,995 / $3,893.55 / $88 across price-by-id, canonical-fmv,
+    hobbyiq-fmv, grade-curve); price-by-id labels `direct-comp` (not a rung)
+    and shows an exact-pool rung 0% of the time; hobbyiq-fmv `method` outside
+    its union 80%; grade-curve served under a vendor id 89%; FMV null 8 / 8.5
+    / 0 / 0.5%. **Pool** — `cardId` not hiq 79.8% (cardhedge 97%, tca-ebay
+    0%; the canonical id lives in `hobbyiqCardId`, missing 1.6%); user
+    purchases keyed `holding::` 59% / item id 40%, sales 100%
+    timestamp-keyed (D12-a's keying fixes future rows; a backfill re-keys the
+    old ones — queued); CH rows under both `ch-daily::` and `ch-comp::` for
+    49 of 100 cards. **Holdings** — fmvRung null 38%, non-exact 27%,
+    estimate shown 23%, isEstimate with an exact pool ≥3: 8 of 23 (the
+    fold → conform → reprice chain's population). **Writes** — runner
+    writers reconciling 29/75, cron writers 0/23, marker-printers relaunched
+    on the marker 11/24 — all declared debt that may only shrink. → **D16**
+    (building, `feat/d16`): one computation behind the four routes, the
+    probe as its acceptance test (target: disagreement <5%, labels 100% in
+    vocabulary, grade curve by slug). Runner baseline runs dispatched 00:38Z
+    (audit-pool-identity 33276073374; probe-price-routes 33276077524).
   - `audit-pool-identity` — sold_comps identity per source: partition key not
     an hiq: slug, `hobbyiqCardId ≠ cardId`, CardHedge rows keyed `ch-daily::`
     AND `ch-comp::` for one card (whole partitions read, (day, price) pairs
