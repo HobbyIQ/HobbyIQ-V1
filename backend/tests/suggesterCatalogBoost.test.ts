@@ -1,3 +1,6 @@
+// CF-A-SUGGESTION-IS-A-SLUG-OR-NOTHING (D12a, 2026-08-29): a vendor id no longer
+// reaches the wire as `cardId`. The vendor candidates this suite scores are
+// asserted through `idKind` + `candidate.vendorCardId`; `cardId` is hiq-only.
 // CF-CARDID-SUGGESTER-CATALOG-BOOST (Drew, 2026-07-14): pins the
 // confidence bump applied when the reference-catalog verifies a
 // candidate's SKU. Tests verify boost DELTAS (base + expected boost),
@@ -182,8 +185,8 @@ describe("CF-CARDID-SUGGESTER-CATALOG-BOOST — confidence delta per tier", () =
 
     // Force medium tier so alts emit
     const r = await suggestCardIdForHolding(makeHolding({ cardYear: 2025 }));
-    const altA = r?.alternatives?.find((a) => a.cardId === "ch-alt-a");
-    const altB = r?.alternatives?.find((a) => a.cardId === "ch-alt-b");
+    const altA = r?.alternatives?.find((a) => a.candidate.vendorCardId === "ch-alt-a");
+    const altB = r?.alternatives?.find((a) => a.candidate.vendorCardId === "ch-alt-b");
     // Both may or may not be present depending on scoring; if both are,
     // A should be boosted higher than B.
     if (altA && altB) {

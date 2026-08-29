@@ -1046,7 +1046,11 @@ router.get("/export", async (req, res, next) => {
 router.post("/import/preview", async (req, res, next) => {
   try {
     const userId = req.user!.userId;
-    const userTier = (req.user as { tier?: string } | undefined)?.tier ?? "free";
+    // CF-IMPORT-RESOLVES-TO-CHECKLIST (D12-b): the preview's capacity
+    // projection reads the same effective plan commit enforces. (The old
+    // `req.user.tier` never existed on AuthUser, so every preview projected
+    // against the free cap.)
+    const userPlan = effectivePlanFor(req.user!);
     const body = req.body as { file?: string; format?: string } | undefined;
     if (!body?.file || typeof body.file !== "string") {
       return res.status(400).json({ error: "Missing 'file' field (base64-encoded xlsx or csv body)" });
@@ -1065,7 +1069,7 @@ router.post("/import/preview", async (req, res, next) => {
       fileBuffer = Buffer.from(body.file, "base64");
     }
 
-    const result = await buildPreview(userId, fileBuffer, format, userTier);
+    const result = await buildPreview(userId, fileBuffer, format, userPlan);
     res.json({ ok: true, ...result });
   } catch (err) {
     next(err);

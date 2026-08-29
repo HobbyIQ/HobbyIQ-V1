@@ -1,15 +1,38 @@
 // CF-IMPORT-BE (2026-06-21) — per-row resolver orchestration with bounded
 // concurrency (4-way, per the step-0 rate-limit probe ceiling).
 //
-// Round-trip rows (cardId present + matches existing) skip
-// resolution entirely. Arbitrary rows go through cardsight.mapper's
-// resolveCardId (which already carries the 429/5xx exponential backoff
-// per fetchWithRetry).
+// CF-IMPORT-RESOLVES-TO-CHECKLIST (D12-b, 2026-08-29). Every NEW-lane row
+// goes through the internal catalog resolver (importResolver.ts). A
+// round-trip cell is an identity only when it is an `hiq:` slug the catalog
+// holds; anything else is a hint and the row resolves from its fields. The
+// buckets — the same five iOS keys its rendering on:
+//
+//   resolved-clean       found at >= the identity bar, no collision  → commit
+//   resolved-collision   found at >= the bar, collides               → per collision
+//   ambiguous            the catalog holds several answers            → skip
+//   unresolved           nothing AT the bar. A match BELOW it rides   → skip
+//                        along on `resolution` as a suggestion; a
+//                        committed row is added for review with the
+//                        suggestion parked, never with it as identity
+//   identity-edited      UPDATE lane, identity column changed         → skip
+//
+// Collision keys derive from the resolved slug, or the title tuple when
+// there is none — an unresolved row still collides with an identical one,
+// whether it already sits in the portfolio or earlier in the same sheet.
 
-import { resolveCardId } from "../../compiq/catalogSource.js";
-import type { CompIQQueryInput } from "../../compiq/catalogSource.js";
 import type { ParsedRow } from "./fileParser.js";
-import { detectCollision, type CollisionDetection } from "./collisionDetector.js";
+import {
+  detectCollision,
+  collisionKeyOf,
+  type CollisionDetection,
+} from "./collisionDetector.js";
+import {
+  resolveImportRow,
+  asHiqSlug,
+  type ImportResolver,
+  type ImportResolution,
+} from "./importResolver.js";
+import { identityPinMinConfidence } from "../identityFromFields.js";
 import type { PortfolioHolding } from "../../../types/portfolioiq.types.js";
 
 export type ImportLane = "update" | "new";
@@ -21,6 +44,14 @@ export type ImportBucket =
   | "unresolved"
   | "identity-edited";
 
+export const IMPORT_BUCKETS: ReadonlyArray<ImportBucket> = [
+  "resolved-clean",
+  "resolved-collision",
+  "ambiguous",
+  "unresolved",
+  "identity-edited",
+];
+
 export interface ImportRowEnvelope {
   /** 1-indexed row number from the sheet. */
   rowNumber: number;
@@ -28,8 +59,17 @@ export interface ImportRowEnvelope {
   lane: ImportLane;
   /** Resolution + collision verdict bucket. */
   bucket: ImportBucket;
-  /** Resolved cardId (from sheet anchor OR resolver call). null when unresolved. */
+  /** The identity the commit will write: a canonical `hiq:` slug, or null.
+   *  Set only when the resolution cleared the identity bar (or the row is a
+   *  round-trip slug the catalog holds). A suggestion below the bar lives in
+   *  `resolution` and is never written as identity. */
   cardId: string | null;
+  /** What the resolver said, in full — slug, confidence, matchedBy, print
+   *  run, why-not. Absent on the UPDATE lane. */
+  resolution?: ImportResolution | null;
+  /** Non-identity content of a cardId / hobbyiqCardId cell (a vendor id, a
+   *  slug the catalog does not hold). Carried for display; never persisted. */
+  identityHint?: string | null;
   /** Existing holdingId targeted by an UPDATE-lane row. */
   existingHoldingId?: string;
   /** Collision detection result when applicable. */
@@ -45,6 +85,9 @@ export interface ImportRowEnvelope {
 export interface NormalizedHoldingPayload {
   id?: string;
   cardId?: string | null;
+  hobbyiqCardId?: string | null;
+  /** Import-only: an explicit sport column. Not persisted — the slug carries it. */
+  sport?: string;
   playerName?: string;
   cardYear?: number;
   product?: string;
@@ -73,22 +116,21 @@ const RESOLVE_CONCURRENCY = 4;
 export interface ResolveBatchOptions {
   isRoundTrip: boolean;
   existingHoldings: Record<string, PortfolioHolding>;
-  /** Test hook — inject a resolver replacement (defaults to real resolveCardId). */
-  resolver?: (input: CompIQQueryInput) => Promise<{ cardId: string | null }>;
+  /** Test hook — inject a resolver replacement (defaults to resolveImportRow). */
+  resolver?: ImportResolver;
   /**
    * CF-IMPORT-ASYNC (2026-06-21): fires after each row's envelope is
    * computed (clean, collision, ambiguous, unresolved — anything). The
-   * async preview path uses this to throttle progress writes to the
-   * import-job doc. Never thrown; per-call errors are caught and logged.
+   * async preview job uses this for throttled progress writes. Errors
+   * thrown by the callback are swallowed — progress reporting must
+   * never crash the resolve loop.
    */
-  onRowComplete?: () => Promise<void>;
+  onRowComplete?: (envelope: ImportRowEnvelope) => Promise<void> | void;
 }
 
 /**
- * Resolve + dedup-classify a batch of parsed rows. Concurrency-limited
- * per the step-0 probe (sweet spot 4-way at ~2 req/s sustained).
- *
- * Returns per-row envelopes. ZERO writes — preview only.
+ * Resolve every row into an envelope. Bounded 4-way concurrency; order of
+ * the returned array matches the input rows.
  */
 export async function resolveBatch(
   rows: ReadonlyArray<ParsedRow>,
@@ -96,46 +138,61 @@ export async function resolveBatch(
 ): Promise<ImportRowEnvelope[]> {
   const resolver = opts.resolver ?? defaultResolver;
   const envelopes: ImportRowEnvelope[] = new Array(rows.length);
-
-  // Bounded-concurrency worker pool
   let next = 0;
+
   async function worker() {
     while (next < rows.length) {
       const idx = next++;
-      envelopes[idx] = await processRow(rows[idx]!, opts, resolver);
-      // CF-IMPORT-ASYNC: per-row progress hook. Errors swallowed —
-      // progress reporting must never sink the resolver.
+      const row = rows[idx]!;
+      const env = await processRow(row, opts, resolver);
+      envelopes[idx] = env;
       if (opts.onRowComplete) {
-        try { await opts.onRowComplete(); } catch (err: unknown) {
-          console.warn("[resolveBatch] onRowComplete threw:", err);
+        try {
+          await opts.onRowComplete(env);
+        } catch {
+          // Progress callbacks must never sink the resolve loop.
         }
       }
     }
   }
   await Promise.all(Array.from({ length: RESOLVE_CONCURRENCY }, () => worker()));
 
+  markIntraBatchDuplicates(envelopes);
   return envelopes;
 }
 
-async function defaultResolver(input: CompIQQueryInput): Promise<{ cardId: string | null }> {
+async function defaultResolver(input: Parameters<ImportResolver>[0]): Promise<ImportResolution> {
   try {
-    const r = await resolveCardId(input);
-    return { cardId: r.cardId };
-  } catch {
-    return { cardId: null };
+    return await resolveImportRow(input);
+  } catch (err: unknown) {
+    console.warn(JSON.stringify({
+      event: "import_resolver_error",
+      source: "resolveBatch.defaultResolver",
+      error: err instanceof Error ? err.message : String(err),
+    }));
+    return { slug: null, found: false, confidence: 0, matchedBy: "not-found", printRun: null, sport: null, reason: "not-in-catalog" };
   }
 }
 
 async function processRow(
   row: ParsedRow,
   opts: ResolveBatchOptions,
-  resolver: (input: CompIQQueryInput) => Promise<{ cardId: string | null }>,
+  resolver: ImportResolver,
 ): Promise<ImportRowEnvelope> {
   const payload = extractPayload(row);
 
   // ─── UPDATE lane: holdingId on the sheet matches an existing holding ──
   if (payload.id && opts.existingHoldings[payload.id]) {
     const existing = opts.existingHoldings[payload.id]!;
+    const existingIdentity =
+      asHiqSlug((existing as { hobbyiqCardId?: string | null }).hobbyiqCardId)
+      ?? (existing.cardId ?? null);
+    // Identity is not editable through the metadata-update lane. The cells
+    // must not reach mergePayload: a blank cardId cell would otherwise wipe
+    // the stored identity, and a filled one would overwrite it unvalidated.
+    delete payload.cardId;
+    delete payload.hobbyiqCardId;
+    delete payload.sport;
     // Check whether stored identity matches the row's identity. If the
     // user edited an identity column, flag for re-resolve rather than
     // silent metadata update.
@@ -145,7 +202,7 @@ async function processRow(
         rowNumber: row.rowNumber,
         lane: "update",
         bucket: "identity-edited",
-        cardId: existing.cardId ?? null,
+        cardId: existingIdentity,
         existingHoldingId: payload.id,
         payload,
         parseFlags: row.flags,
@@ -156,7 +213,7 @@ async function processRow(
       rowNumber: row.rowNumber,
       lane: "update",
       bucket: "resolved-clean",
-      cardId: existing.cardId ?? null,
+      cardId: existingIdentity,
       existingHoldingId: payload.id,
       payload,
       parseFlags: row.flags,
@@ -165,71 +222,172 @@ async function processRow(
   }
 
   // ─── NEW lane ───────────────────────────────────────────────────────
-  // If cardId already on the sheet (round-trip), skip resolver.
-  let resolvedCardId: string | null = payload.cardId ?? null;
+  // A round-trip cell is an identity only when it is an hiq: slug the
+  // catalog holds; the resolver checks that. Anything else is a hint.
+  const cellSlug = asHiqSlug(payload.hobbyiqCardId) ?? asHiqSlug(payload.cardId);
+  const rawCell = String(payload.hobbyiqCardId ?? payload.cardId ?? "").trim() || null;
 
-  if (!resolvedCardId) {
-    // Arbitrary path: call resolver.
-    const result = await resolver({
-      playerName: payload.playerName ?? "",
-      cardYear: payload.cardYear,
-      product: payload.product,
-      parallel: payload.parallel,
-      cardNumber: payload.cardNumber,
-      isAuto: payload.isAuto,
-    } as CompIQQueryInput);
-    resolvedCardId = result.cardId;
-  }
+  const resolution = await resolver({
+    sport: payload.sport ?? null,
+    cardYear: payload.cardYear ?? null,
+    product: payload.product ?? null,
+    cardTitle: payload.cardTitle ?? null,
+    cardNumber: payload.cardNumber ?? null,
+    parallel: payload.parallel ?? null,
+    variation: payload.variation ?? null,
+    serialNumber: payload.serialNumber ?? null,
+    isAuto: payload.isAuto ?? null,
+    playerName: payload.playerName ?? null,
+    roundTripSlug: cellSlug,
+  });
 
-  if (!resolvedCardId) {
-    return {
-      rowNumber: row.rowNumber,
-      lane: "new",
-      bucket: "unresolved",
-      cardId: null,
-      payload,
-      parseFlags: row.flags,
-      message: "Resolver could not match this row to a Cardsight catalog entry.",
-    };
-  }
+  const minConfidence = identityPinMinConfidence();
+  const identity =
+    resolution.found && resolution.confidence >= minConfidence
+      ? asHiqSlug(resolution.slug)
+      : null;
 
-  // Collision check
+  // The sheet's cell never becomes the identity by itself. What the commit
+  // writes is `cardId` on the envelope, set from the resolution.
+  payload.cardId = identity;
+  payload.hobbyiqCardId = identity;
+  delete payload.sport;
+  const identityHint = identity && rawCell === identity ? null : rawCell;
+
   const collision = detectCollision(
     {
-      cardId: resolvedCardId,
+      cardId: identity,
       holdingId: payload.id ?? null,
       parallel: payload.parallel ?? null,
       gradeCompany: payload.gradeCompany ?? null,
       gradeValue: payload.gradeValue ?? null,
       serialNumber: payload.serialNumber ?? null,
+      playerName: payload.playerName ?? null,
+      cardYear: payload.cardYear ?? null,
+      product: payload.product ?? null,
+      cardNumber: payload.cardNumber ?? null,
     },
     opts.existingHoldings,
   );
 
-  payload.cardId = resolvedCardId;
+  const base = {
+    rowNumber: row.rowNumber,
+    lane: "new" as const,
+    cardId: identity,
+    resolution,
+    identityHint,
+    payload,
+    parseFlags: row.flags,
+    ...(collision.collides ? { collision } : {}),
+  };
+  const hintNote = resolution.rejectedRoundTrip
+    ? ` The sheet's ${resolution.rejectedRoundTrip} names no catalog row and was not used as identity.`
+    : "";
+  const pct = (n: number) => `${Math.round(n * 100)}%`;
 
-  if (collision.collides) {
+  if (identity) {
+    if (collision.collides) {
+      return { ...base, bucket: "resolved-collision", message: collision.reason + hintNote };
+    }
     return {
-      rowNumber: row.rowNumber,
-      lane: "new",
-      bucket: "resolved-collision",
-      cardId: resolvedCardId,
-      collision,
-      payload,
-      parseFlags: row.flags,
-      message: collision.reason,
+      ...base,
+      bucket: "resolved-clean",
+      message: `Resolved to the HobbyIQ catalog (${resolution.matchedBy}, ${pct(resolution.confidence)}); no collision.${hintNote}`,
     };
   }
 
+  if (resolution.ambiguous?.cardNumbers?.length) {
+    return {
+      ...base,
+      bucket: "ambiguous",
+      message: `The catalog holds ${resolution.ambiguous.cardNumbers.length} card numbers for this player in this product (${resolution.ambiguous.cardNumbers.join(", ")}); add the card number.${hintNote}`,
+    };
+  }
+  if (resolution.ambiguous?.sports?.length) {
+    return {
+      ...base,
+      bucket: "ambiguous",
+      message: `This card exists in more than one sport (${resolution.ambiguous.sports.join(", ")}); add a Sport column.${hintNote}`,
+    };
+  }
+  if (resolution.found && resolution.slug) {
+    // Below the bar: a suggestion, never an identity. The row keeps the
+    // bucket iOS renders as "fix identity"; the suggestion travels on
+    // `resolution` and, if the row is committed anyway, is parked on the
+    // holding for the in-app confirm (the same pending-review path the eBay
+    // import uses).
+    return {
+      ...base,
+      bucket: "unresolved",
+      message: `Catalog suggests ${resolution.slug} (${resolution.matchedBy}, ${pct(resolution.confidence)}) — below the ${pct(minConfidence)} identity bar, so it is not adopted. If committed, the card is added for review with this suggestion attached; confirm it in the app.${hintNote}`,
+    };
+  }
   return {
-    rowNumber: row.rowNumber,
-    lane: "new",
-    bucket: "resolved-clean",
-    cardId: resolvedCardId,
-    payload,
-    parseFlags: row.flags,
-    message: "Resolved to Cardsight catalog; no collision.",
+    ...base,
+    bucket: "unresolved",
+    message: `${unresolvedReasonText(resolution)}${hintNote}`,
   };
+}
+
+function unresolvedReasonText(r: ImportResolution): string {
+  switch (r.reason) {
+    case "no-year": return "No card year on the row; cannot resolve.";
+    case "no-set": return "No product / set on the row; cannot resolve.";
+    case "no-card-number": return "No card number on the row and the catalog could not supply one from the player; cannot resolve.";
+    case "sport-unknown": return "Could not tell which sport this product is; add a Sport column.";
+    case "not-in-catalog":
+    default:
+      return r.slug
+        ? `No catalog row matches this identity (would be ${r.slug}).`
+        : "No catalog row matches this identity.";
+  }
+}
+
+/**
+ * Two identical rows in one sheet collide with each other, not just with the
+ * portfolio: the second carries a collision naming the first. A resolved row
+ * moves to resolved-collision (skip default); an unresolved row keeps its
+ * bucket (already skip default) and gains the collision.
+ */
+function markIntraBatchDuplicates(envelopes: ImportRowEnvelope[]): void {
+  const firstByKey = new Map<string, number>();
+  const ordered = [...envelopes].sort((a, b) => a.rowNumber - b.rowNumber);
+  for (const env of ordered) {
+    if (env.lane !== "new") continue;
+    const key = collisionKeyOf({
+      cardId: env.cardId,
+      holdingId: env.payload.id ?? null,
+      parallel: env.payload.parallel ?? null,
+      gradeCompany: env.payload.gradeCompany ?? null,
+      gradeValue: env.payload.gradeValue ?? null,
+      serialNumber: env.payload.serialNumber ?? null,
+      playerName: env.payload.playerName ?? null,
+      cardYear: env.payload.cardYear ?? null,
+      product: env.payload.product ?? null,
+      cardNumber: env.payload.cardNumber ?? null,
+    });
+    if (!key) continue;
+    const first = firstByKey.get(key);
+    if (first === undefined) {
+      firstByKey.set(key, env.rowNumber);
+      continue;
+    }
+    const prior = env.collision;
+    env.collision = {
+      collides: true,
+      existingHoldingIds: prior?.existingHoldingIds ?? [],
+      duplicateOfRowNumbers: [...(prior?.duplicateOfRowNumbers ?? []), first],
+      defaultAction: prior?.collides ? prior.defaultAction : "skip",
+      keyedBy: env.cardId ? "slug" : "title",
+      reason: `duplicate of row ${first} in this file${prior?.collides ? `; ${prior.reason}` : ""}`,
+    };
+    if (env.bucket === "resolved-clean") {
+      env.bucket = "resolved-collision";
+      env.message = env.collision.reason;
+    } else {
+      env.message = `${env.message} Duplicate of row ${first} in this file.`;
+    }
+  }
 }
 
 /** Lift the per-row parsed cells into a flat payload usable by addHolding. */
@@ -239,6 +397,8 @@ function extractPayload(row: ParsedRow): NormalizedHoldingPayload {
 
   out.id = get("holdingId") as string | undefined;
   out.cardId = (get("cardId") as string | undefined) ?? null;
+  out.hobbyiqCardId = (get("hobbyiqCardId") as string | undefined) ?? null;
+  out.sport = get("sport") as string | undefined;
   out.playerName = get("playerName") as string | undefined;
   out.cardYear = get("cardYear") as number | undefined;
   out.product = get("product") as string | undefined;

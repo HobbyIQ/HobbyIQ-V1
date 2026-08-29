@@ -16,11 +16,18 @@ import { readFileSync } from "node:fs";
 describe("the eBay purchase path claims a user source", () => {
   const src = readFileSync("src/services/portfolioiq/ebayAutoHolding.service.ts", "utf8");
   const matcher = readFileSync("src/services/catalog/catalogMatcher.service.ts", "utf8");
+  // CF-ONE-IDENTITY-DERIVATION (D12-b): the eBay path names its source on the
+  // call into identityFromFields, which forwards it to canonicalize
+  // unchanged. Both halves are read, so a source dropped in the middle fails.
+  const derivation = readFileSync("src/services/portfolioiq/identityFromFields.ts", "utf8");
 
   it("passes a source that is on BOTH allowlists", () => {
-    const call = src.slice(src.indexOf("const match = await canonicalize({"));
+    const call = src.slice(src.indexOf("await resolveIdentityFromFields({"));
     const source = call.match(/source:\s*"([^"]+)"/)?.[1];
     expect(source).toBe("ebay-user-purchase");
+    const forwarded = derivation.slice(derivation.indexOf("await deps.canonicalize({"));
+    expect(forwarded.indexOf("await deps.canonicalize({")).toBe(0);
+    expect(forwarded).toMatch(/source:\s*f\.source/);
 
     // The two gates it has to clear: the CATALOG_MATCH_ONLY early return, and
     // the seed itself. A source on one list but not the other still fails.
@@ -31,7 +38,7 @@ describe("the eBay purchase path claims a user source", () => {
   });
 
   it("does not pass a vendor source, which the match-only gate turns away", () => {
-    const call = src.slice(src.indexOf("const match = await canonicalize({"));
+    const call = src.slice(src.indexOf("await resolveIdentityFromFields({"));
     const source = call.match(/source:\s*"([^"]+)"/)?.[1] ?? "";
     for (const vendor of ["ebay-title", "cardhedge", "tca", "cardsight", "ebay-browse"]) {
       expect(source).not.toBe(vendor);

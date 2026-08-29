@@ -69,6 +69,19 @@ async function main() {
         holdingsScanned++;
 
         const oldSlug = h.hobbyiqCardId ?? null;
+        // CF-A-MINTED-SLUG-NEVER-REPLACES-A-PIN (D12a, 2026-08-29). The
+        // generator re-derives from free text; a slug the catalog wrote or
+        // the import/picker pinned is a stronger identity than that and is
+        // never overwritten by this pass. Only generator-derived (or
+        // pre-CF unlabelled, non-pinned) slugs are re-aligned.
+        const isPin = typeof oldSlug === "string" && oldSlug.startsWith("hiq:") && (
+          h.hobbyiqCardIdSource === "catalog"
+          || h.hobbyiqCardIdSource === "catalog-seeded"
+          || h.hobbyiqCardIdSource === "pinned"
+          || h.catalogVerifiedSlug === oldSlug
+          || h.cardId === oldSlug
+        );
+        if (isPin) { holdingsSkipped++; continue; }
         const newSlug = deriveHoldingSlug(h);
         if (!newSlug) { holdingsSkipped++; continue; }
         if (oldSlug === newSlug) { holdingsSkipped++; continue; }

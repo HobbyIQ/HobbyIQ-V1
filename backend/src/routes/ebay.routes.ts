@@ -46,7 +46,6 @@ import {
   HoldingListingInput,
 } from "../services/ebay/ebayListing.service.js";
 import {
-  linkEbayListing,
   unlinkEbayListingByOfferId,
   readUserDoc,
 } from "../services/portfolioiq/portfolioStore.service.js";
@@ -705,19 +704,9 @@ router.post("/listings/publish", async (req: Request, res: Response) => {
     res.status(502).json(result);
     return;
   }
-  // PR D.6: persist eBay listing back-references on the holding so the
-  // ITEM_SOLD webhook can map a sale notification back to this holding.
-  if (result.offerId && result.listingId) {
-    try {
-      await linkEbayListing(userId, String(input.holdingId), {
-        offerId: result.offerId,
-        listingId: result.listingId,
-        publishedAt: new Date().toISOString(),
-      });
-    } catch (err) {
-      console.error("[ebay.publish] linkEbayListing failed:", err);
-    }
-  }
+  // PR D.6 / CF-EVERY-PUBLISH-LINKS-THE-HOLDING (D12a): the eBay listing
+  // back-references are persisted on the holding by createListing itself,
+  // for every publish route — see `result.linked`.
   // CF-PUBLISH-PERSIST-EDITS (Drew, 2026-07-20). When the user's
   // Listing Review edits included a category-aspect fill-in (League,
   // Type, Country/Region of Manufacture, Year Manufactured, Season,

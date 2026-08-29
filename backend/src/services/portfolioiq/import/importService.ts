@@ -5,6 +5,18 @@
 // existing addHolding/updateHolding paths. Idempotency token prevents
 // double-ingest on retried commits (the bulk-import scenario where a
 // double-tap could create a mass-dupe event).
+//
+// CF-IMPORT-RESOLVES-TO-CHECKLIST (D12-b, 2026-08-29). Commit writes ONE
+// identity — cardId = hobbyiqCardId = the resolved `hiq:` slug — stamped
+// with the resolution's confidence / matchedBy / print run, and then prices
+// every holding it committed with an identity through the same pricing
+// path add-card uses. The slug is checked again at the persist site: it
+// must be canonical AND the catalog must still hold it (a row can be
+// retired between preview and commit). A cardId that fails either check is
+// refused. An unresolved row the user insists on is written without an
+// identity, flagged for review, with any sub-threshold suggestion parked
+// for the in-app confirm — never adopted — and, per "no identity, no
+// price", is not priced.
 
 import {
   parseHoldingsFile,
@@ -13,10 +25,12 @@ import {
 } from "./fileParser.js";
 import {
   resolveBatch,
+  IMPORT_BUCKETS,
   type ImportRowEnvelope,
   type NormalizedHoldingPayload,
   type ImportBucket,
 } from "./resolveBatch.js";
+import { asHiqSlug, type ImportResolution } from "./importResolver.js";
 import {
   readImportJob,
   writeImportJob,
@@ -30,13 +44,12 @@ import {
   readUserDoc,
   writeUserDoc,
   countHoldingsForUser,
+  repriceOneHolding,
 } from "../portfolioStore.service.js";
+import { getCatalogEntry } from "../cardCatalog.service.js";
+import { parseHobbyIqCardId } from "../hobbyIqCardId.service.js";
 import { cacheGet, cacheSet } from "../../shared/cache.service.js";
-import {
-  effectivePlanFor,
-  getCap,
-  type Plan,
-} from "../../../config/entitlements.js";
+import { getCap, type Plan } from "../../../config/entitlements.js";
 import { detectCollision } from "./collisionDetector.js";
 
 /** Minimal UserDoc shape we touch (the real type lives inside portfolioStore as an internal interface). */
@@ -68,6 +81,20 @@ const IDEMPOTENCY_TTL_SECONDS = 24 * 60 * 60; // 24h
  */
 export const SYNC_PREVIEW_ROW_THRESHOLD = 40;
 
+/**
+ * CF-IMPORT-RESOLVES-TO-CHECKLIST: commit prices what it wrote. Up to this
+ * many holdings are priced before the response returns, so a small import
+ * comes back already valued; above it the pass is detached the way the
+ * async preview is (an import-job doc the client can poll, kind "pricing").
+ *
+ * The pass runs ONE holding at a time: repriceOneHolding is a read-modify-
+ * write of the whole user doc, and two in flight would overwrite each
+ * other's price. Widening it needs autoPriceHolding exported so the pass can
+ * price the in-memory doc and write once.
+ */
+export const INLINE_PRICE_MAX = 5;
+const PRICE_CONCURRENCY = 1;
+
 function generateJobId(): string {
   // 16 hex chars; collision-resistant per-user and short enough for UI display.
   const hex = (n: number) => Math.floor(Math.random() * n).toString(16).padStart(2, "0");
@@ -75,22 +102,25 @@ function generateJobId(): string {
   return part(8);
 }
 
-// CF-IMPORT-BE inlined helpers (mirrors portfolioStore conventions —
-// not exported from there, but duplication is cheaper than refactoring
-// the store for one consumer).
-function holdingsCapFor(tier: string): number | null {
-  // Free=25, collector=250, investor+=unlimited (null).
-  // Matches src/config/entitlements.ts:81 / :90 + the comment at
-  // src/routes/portfolioiq.routes.ts:148.
-  const t = tier.toLowerCase();
-  if (t === "free") return 25;
-  if (t === "collector") return 250;
-  return null; // investor / pro / etc. — unlimited
+/** The plan's holdings cap as the preview reports it: a number, or null for
+ *  unlimited. One source of truth — config/entitlements — the same table
+ *  commit reads. (An inlined free=25 / collector=250 copy lived here, fed by a
+ *  `req.user.tier` that never existed, so every preview projected against
+ *  the free cap.) */
+function holdingsCapFor(plan: Plan): number | null {
+  const cap = getCap(plan, "holdingsCap");
+  return cap === "unlimited" ? null : cap;
 }
 
 function normalizeId(id: string | undefined | null): string {
   // CF-D1 contract: stored holding keys are lowercase.
   return String(id ?? "").trim().toLowerCase();
+}
+
+function emptyBucketCounts(): Record<ImportBucket, number> {
+  const out = {} as Record<ImportBucket, number>;
+  for (const b of IMPORT_BUCKETS) out[b] = 0;
+  return out;
 }
 
 export interface PreviewSummary {
@@ -147,6 +177,19 @@ export interface CommitOutcome {
   outcome: "added" | "updated" | "skipped" | "failed";
   holdingId?: string;
   reason?: string;
+  /** The identity the holding was written with (NEW lane). Null when the
+   *  row was committed without one. */
+  hobbyiqCardId?: string | null;
+}
+
+export interface CommitPricing {
+  /** "inline": priced before this response. "queued": detached pass, poll
+   *  `jobId` on the import-jobs endpoint. "none": nothing had an identity. */
+  mode: "inline" | "queued" | "none";
+  holdingIds: string[];
+  priced?: number;
+  failed?: number;
+  jobId?: string;
 }
 
 export interface CommitResult {
@@ -177,6 +220,17 @@ export interface CommitResult {
    * "N rows skipped because they were just added in a prior commit."
    */
   freshCollisionsBlocked?: number;
+  /** What happened to pricing for the holdings this commit added. Not part
+   *  of the idempotency-cached result — the cache is written the moment the
+   *  holdings are, before any price is. */
+  pricing?: CommitPricing;
+}
+
+/** Injection seam for tests. */
+export interface CommitDeps {
+  /** Prices one holding by id; defaults to portfolioStore.repriceOneHolding,
+   *  which runs the same autoPriceHolding add-card runs. */
+  priceHolding?: (userId: string, holdingId: string) => Promise<boolean>;
 }
 
 /**
@@ -194,13 +248,13 @@ export async function buildPreview(
   userId: string,
   fileBuffer: Buffer | string,
   format: FileFormat,
-  userTier: string,
+  userPlan: Plan,
 ): Promise<PreviewResult | PreviewKickoffResult> {
   const parsed: FileParseResult = parseHoldingsFile(fileBuffer, format);
 
   // Async fork: above threshold, return jobId + kick detached job
   if (parsed.totalRows > SYNC_PREVIEW_ROW_THRESHOLD) {
-    return await kickAsyncPreview(userId, fileBuffer, format, userTier, parsed);
+    return await kickAsyncPreview(userId, fileBuffer, format, userPlan, parsed);
   }
 
   // Sync path (unchanged): resolve inline
@@ -211,13 +265,7 @@ export async function buildPreview(
   });
 
   // Bucket counts
-  const bucketCounts: Record<ImportBucket, number> = {
-    "resolved-clean": 0,
-    "resolved-collision": 0,
-    "ambiguous": 0,
-    "unresolved": 0,
-    "identity-edited": 0,
-  };
+  const bucketCounts = emptyBucketCounts();
   let defaultCommitCount = 0;
   for (const env of envelopes) {
     bucketCounts[env.bucket] = (bucketCounts[env.bucket] ?? 0) + 1;
@@ -225,7 +273,7 @@ export async function buildPreview(
   }
 
   const currentCount = Object.keys(doc.holdings ?? {}).length;
-  const cap = holdingsCapFor(userTier);
+  const cap = holdingsCapFor(userPlan);
   const incomingDelta = defaultCommitCount;
   const projectedTotal = currentCount + incomingDelta;
   const wouldExceed = cap !== null && projectedTotal > cap;
@@ -260,7 +308,7 @@ async function kickAsyncPreview(
   userId: string,
   fileBuffer: Buffer | string,
   format: FileFormat,
-  userTier: string,
+  userPlan: Plan,
   parsed: FileParseResult,
 ): Promise<PreviewKickoffResult> {
   const jobId = generateJobId();
@@ -273,6 +321,7 @@ async function kickAsyncPreview(
     id: `import-job-${jobId}`,
     userId,
     jobId,
+    kind: "preview",
     status: "pending",
     progress: { rowsProcessed: 0, rowsTotal: parsed.totalRows, lastProgressAt: now },
     ttl: IMPORT_JOB_TTL_SECONDS,
@@ -290,7 +339,7 @@ async function kickAsyncPreview(
   const doc = await readUserDoc(userId);
   const existingHoldings = doc.holdings ?? {};
   const currentCount = Object.keys(existingHoldings).length;
-  const cap = holdingsCapFor(userTier);
+  const cap = holdingsCapFor(userPlan);
 
   // Detached: do NOT await. The HTTP response returns to the client
   // immediately after this function returns the kickoff result.
@@ -364,13 +413,7 @@ async function runAsyncResolve(args: {
     });
 
     // Compute summary + capacity projection mirror
-    const bucketCounts: Record<string, number> = {
-      "resolved-clean": 0,
-      "resolved-collision": 0,
-      "ambiguous": 0,
-      "unresolved": 0,
-      "identity-edited": 0,
-    };
+    const bucketCounts: Record<string, number> = emptyBucketCounts();
     let defaultCommitCount = 0;
     for (const env of envelopes) {
       bucketCounts[env.bucket] = (bucketCounts[env.bucket] ?? 0) + 1;
@@ -460,6 +503,7 @@ export async function commitImport(
   userId: string,
   request: CommitRequest,
   userPlan: Plan,
+  deps: CommitDeps = {},
 ): Promise<CommitResult> {
   // ─── §1.b Redis-backed idempotency: check first, before any reads ──
   const cacheKey = idempotencyKey(userId, request.idempotencyToken);
@@ -476,7 +520,6 @@ export async function commitImport(
   }
 
   const doc = await readUserDoc(userId);
-  const liveHoldings = doc.holdings ?? {};
 
   // ─── §1.c Commit-side capacity re-enforcement ─────────────────────
   // Project the impact assuming the request's actions (or the envelope
@@ -527,16 +570,22 @@ export async function commitImport(
   let freshCollisionsBlocked = 0;
   for (const env of request.envelopes) {
     let action = actions[env.rowNumber] ?? defaultActionFor(env);
+    const adds = env.lane === "new" && (action === "commit" || action === "add-as-copy");
+    const identity: CommitIdentity = adds ? await identityForCommit(env) : { slug: null };
 
-    if (env.lane === "new" && env.cardId && (action === "commit" || action === "add-as-copy")) {
+    if (adds) {
       const freshCollision = detectCollision(
         {
-          cardId: env.cardId,
+          cardId: identity.slug,
           holdingId: env.payload.id ?? null,
           parallel: env.payload.parallel ?? null,
           gradeCompany: env.payload.gradeCompany ?? null,
           gradeValue: env.payload.gradeValue ?? null,
           serialNumber: env.payload.serialNumber ?? null,
+          playerName: env.payload.playerName ?? null,
+          cardYear: env.payload.cardYear ?? null,
+          product: env.payload.product ?? null,
+          cardNumber: env.payload.cardNumber ?? null,
         },
         doc.holdings,
       );
@@ -549,7 +598,7 @@ export async function commitImport(
       }
     }
 
-    const result = await applyAction(doc, env, action);
+    const result = await applyAction(doc, env, action, identity);
     outcomes.push(result);
   }
 
@@ -574,11 +623,122 @@ export async function commitImport(
   // dupes that earlier partial writes may have created).
   await cacheSet(cacheKey, JSON.stringify(result), IDEMPOTENCY_TTL_SECONDS);
 
-  // The liveHoldings reference is kept for diagnostics — surfaced via
-  // process logs if useful. (Intentional pin against lint dead-code rule.)
-  void liveHoldings;
+  // ─── Price what was committed ─────────────────────────────────────
+  // No identity, no price: only holdings written with a slug are priced.
+  const toPrice = outcomes
+    .filter((o) => o.outcome === "added" && o.holdingId && o.hobbyiqCardId)
+    .map((o) => o.holdingId!);
+  result.pricing = await priceCommittedHoldings(userId, toPrice, deps.priceHolding ?? repriceOneHolding);
 
   return result;
+}
+
+/**
+ * Price the holdings a commit added. Inline (awaited) up to INLINE_PRICE_MAX;
+ * above that, detached with an import-job doc (kind "pricing") the client
+ * polls on the same endpoint as an async preview. Per-holding failures are
+ * logged, counted, and never thrown — the scheduled reprice is the catch-all.
+ */
+async function priceCommittedHoldings(
+  userId: string,
+  holdingIds: string[],
+  priceHolding: (userId: string, holdingId: string) => Promise<boolean>,
+): Promise<CommitPricing> {
+  if (holdingIds.length === 0) return { mode: "none", holdingIds: [] };
+
+  if (holdingIds.length <= INLINE_PRICE_MAX) {
+    const { priced, failed } = await runPricingPass(userId, holdingIds, priceHolding);
+    return { mode: "inline", holdingIds, priced, failed };
+  }
+
+  const jobId = generateJobId();
+  const now = new Date().toISOString();
+  await writeImportJob({
+    id: `import-job-${jobId}`,
+    userId,
+    jobId,
+    kind: "pricing",
+    status: "processing",
+    progress: { rowsProcessed: 0, rowsTotal: holdingIds.length, lastProgressAt: now },
+    ttl: IMPORT_JOB_TTL_SECONDS,
+    pricing: { holdingIds, priced: 0, failed: 0 },
+    createdAt: now,
+    updatedAt: now,
+  });
+
+  // Detached: do NOT await. Same substrate as the async preview — Always-On
+  // keeps the process alive; progress lands on the job doc.
+  void (async () => {
+    let lastWriteAt = Date.now();
+    let done = 0;
+    let priced = 0;
+    let failed = 0;
+    try {
+      const outcome = await runPricingPass(userId, holdingIds, priceHolding, async (ok) => {
+        done += 1;
+        if (ok) priced += 1; else failed += 1;
+        const nowMs = Date.now();
+        if (nowMs - lastWriteAt < PROGRESS_WRITE_THROTTLE_MS) return;
+        lastWriteAt = nowMs;
+        await safeWriteJob(userId, jobId, (d) => ({
+          ...d,
+          progress: { rowsProcessed: done, rowsTotal: holdingIds.length, lastProgressAt: new Date().toISOString() },
+          pricing: { holdingIds, priced, failed },
+          updatedAt: new Date().toISOString(),
+        }));
+      });
+      await safeWriteJob(userId, jobId, (d) => ({
+        ...d,
+        status: "ready",
+        progress: { rowsProcessed: holdingIds.length, rowsTotal: holdingIds.length, lastProgressAt: new Date().toISOString() },
+        pricing: { holdingIds, priced: outcome.priced, failed: outcome.failed },
+        updatedAt: new Date().toISOString(),
+      }));
+    } catch (err: unknown) {
+      await safeWriteJob(userId, jobId, (d) => ({
+        ...d,
+        status: "failed",
+        errorMessage: err instanceof Error ? err.message : String(err),
+        updatedAt: new Date().toISOString(),
+      }));
+    }
+  })();
+
+  return { mode: "queued", holdingIds, jobId };
+}
+
+async function runPricingPass(
+  userId: string,
+  holdingIds: ReadonlyArray<string>,
+  priceHolding: (userId: string, holdingId: string) => Promise<boolean>,
+  onEach?: (ok: boolean) => Promise<void>,
+): Promise<{ priced: number; failed: number }> {
+  let priced = 0;
+  let failed = 0;
+  let next = 0;
+  async function worker() {
+    while (next < holdingIds.length) {
+      const holdingId = holdingIds[next++]!;
+      let ok = false;
+      try {
+        ok = await priceHolding(userId, holdingId);
+      } catch (err: unknown) {
+        console.warn(JSON.stringify({
+          event: "import_commit_price_error",
+          source: "importService.priceCommittedHoldings",
+          userId,
+          holdingId,
+          error: err instanceof Error ? err.message : String(err),
+        }));
+      }
+      if (ok) priced += 1; else failed += 1;
+      if (onEach) {
+        try { await onEach(ok); } catch { /* progress must never sink pricing */ }
+      }
+    }
+  }
+  await Promise.all(Array.from({ length: PRICE_CONCURRENCY }, () => worker()));
+  return { priced, failed };
 }
 
 function defaultActionFor(env: ImportRowEnvelope): CommitAction {
@@ -594,10 +754,103 @@ function defaultActionFor(env: ImportRowEnvelope): CommitAction {
   }
 }
 
+interface CommitIdentity {
+  slug: string | null;
+  error?: string;
+}
+
+/**
+ * The identity a NEW-lane commit writes, from the envelope the client sent
+ * back. Envelopes are client-supplied and the preview may be old, so the
+ * cell is checked again at the persist site: only a canonical `hiq:` slug
+ * is an identity, and only one the catalog still holds (D10 found 15
+ * holdings on rows that no longer existed; a commit must not add a 16th).
+ * A suggestion below the bar is never adopted here — it rides on
+ * `resolution` and is parked on the holding for the in-app confirm.
+ */
+async function identityForCommit(env: ImportRowEnvelope): Promise<CommitIdentity> {
+  const raw = String(env.cardId ?? "").trim();
+  if (!raw) return { slug: null };
+  const slug = asHiqSlug(raw);
+  if (!slug) {
+    return { slug: null, error: `cardId "${raw.slice(0, 40)}" is not a canonical hiq: slug; re-run the preview` };
+  }
+  const row = await getCatalogEntry(slug);
+  if (!row) {
+    return { slug: null, error: `${slug} names no catalog row (retired since the preview?); re-run the preview` };
+  }
+  return { slug };
+}
+
+/**
+ * Stamp the one identity + its provenance onto a holding the commit writes.
+ *
+ * With a slug: cardId = hobbyiqCardId = catalogVerifiedSlug = slug, the
+ * resolution's confidence / matchedBy / print run alongside. The identity
+ * is marked verified when the row's own fields matched a checklist row
+ * exactly, or the slug came from our own export (round-trip) — the same
+ * act as add-card, where the user typed the fields. A fuzzier match that
+ * cleared the bar is pinned (as add-card pins it) but left for the
+ * Unverified badge to invite a look.
+ *
+ * Without one: no identity, no price. The holding is flagged for review
+ * with the reason on it, and a sub-threshold suggestion is parked on
+ * catalogMatchSlug — the wire's `proposedIdentity` — so the in-app confirm
+ * (accept-identity) can adopt and price it. Same path the eBay import uses.
+ */
+function stampImportIdentity(
+  holding: PortfolioHolding,
+  slug: string | null,
+  resolution: ImportResolution | null | undefined,
+): void {
+  const h = holding as PortfolioHolding & Record<string, unknown>;
+  // Import-only column; the slug carries the sport.
+  delete h.sport;
+  const now = new Date().toISOString();
+
+  if (!slug) {
+    const suggested = resolution?.found && resolution.slug ? resolution.slug : null;
+    h.cardId = null;
+    h.hobbyiqCardId = null;
+    h.catalogMatchConfidence = resolution?.confidence ?? 0;
+    h.catalogMatchedBy = resolution?.matchedBy ?? "not-found";
+    h.catalogMatchSlug = suggested;
+    if (typeof resolution?.printRun === "number" && resolution.printRun > 0) h.printRun = resolution.printRun;
+    h.needsReview = true;
+    h.reviewReason = suggested
+      ? `The catalog suggests ${suggested} at ${Math.round((resolution?.confidence ?? 0) * 100)}% — below the bar to adopt it. Confirm the identity to see a value.`
+      : "We could not identify this card, so we are not showing a value. Confirm the set, card number and parallel.";
+    return;
+  }
+
+  const matchedBy = resolution?.matchedBy ?? "round-trip";
+  h.cardId = slug;
+  h.hobbyiqCardId = slug;
+  h.catalogMatchSlug = slug;
+  h.catalogMatchConfidence = resolution?.confidence ?? 1;
+  h.catalogMatchedBy = matchedBy;
+  h.catalogVerifiedSlug = slug;
+  h.catalogVerifiedSource = "hobbyiq-catalog";
+  h.catalogVerifiedAt = now;
+  h.catalogVerified = true;
+  h.catalogVerifiedReason = "catalog-match-at-import";
+  h.identitySource = "spreadsheet-import-catalog-match";
+  const printRun = resolution?.printRun ?? parseHobbyIqCardId(slug)?.printRun ?? null;
+  if (typeof printRun === "number" && printRun > 0) h.printRun = printRun;
+  if (matchedBy === "exact" || matchedBy === "round-trip") {
+    h.identityVerified = true;
+    h.identityVerifiedAt = now;
+    h.identityVerifiedBy = { source: "spreadsheet-import", candidateId: slug, verifiedAt: now };
+  }
+  h.needsReview = false;
+  h.reviewReason = null;
+}
+
 async function applyAction(
   doc: UserDocShape,
   env: ImportRowEnvelope,
   action: CommitAction,
+  identity: CommitIdentity,
 ): Promise<CommitOutcome> {
   try {
     if (action === "skip") {
@@ -610,7 +863,10 @@ async function applyAction(
       if (!existing) {
         return { rowNumber: env.rowNumber, action, outcome: "failed", reason: "existing holding not found" };
       }
-      doc.holdings[hid] = mergePayload(existing, env.payload);
+      // Identity is not editable through this lane.
+      const { cardId: _c, hobbyiqCardId: _h, sport: _s, ...metadata } = env.payload;
+      void _c; void _h; void _s;
+      doc.holdings[hid] = mergePayload(existing, metadata);
       return { rowNumber: env.rowNumber, action, outcome: "updated", holdingId: hid };
     }
     if (action === "update-cost") {
@@ -634,12 +890,15 @@ async function applyAction(
       return { rowNumber: env.rowNumber, action, outcome: "updated", holdingId: targetHid };
     }
     // commit (NEW lane) or add-as-copy
+    if (identity.error) {
+      return { rowNumber: env.rowNumber, action, outcome: "failed", reason: identity.error };
+    }
     const newId = env.payload.id ? normalizeId(env.payload.id) : normalizeId(generateId());
     const newHolding = mergePayload({ id: newId } as PortfolioHolding, env.payload);
     newHolding.id = newId;
-    newHolding.cardId = env.cardId ?? null;
+    stampImportIdentity(newHolding, identity.slug, env.resolution);
     doc.holdings[newId] = newHolding;
-    return { rowNumber: env.rowNumber, action, outcome: "added", holdingId: newId };
+    return { rowNumber: env.rowNumber, action, outcome: "added", holdingId: newId, hobbyiqCardId: identity.slug };
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     return { rowNumber: env.rowNumber, action, outcome: "failed", reason: msg };

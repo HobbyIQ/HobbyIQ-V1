@@ -58,8 +58,13 @@ export const soldCompsVendorSource: VendorSource = {
         cardId: query.cardId,
         limit: 20,
       });
-    } catch {
-      return null;
+    } catch (err) {
+      // CF-QUERY-SOLD-COMPS-FAILS-CLOSED (D12a, 2026-08-29). This returned
+      // null -- "no comps" -- on ANY error, so a Cosmos blip read as an empty
+      // pool and the resolver cached that answer. A pool that could not be
+      // read is not an empty pool: propagate the typed error; the resolver
+      // records a source error and does not cache "nothing" for the card.
+      throw err;
     }
     if (!result || result.count === 0) return null;
     const { fmv, freshest } = aggregate(result.comps);

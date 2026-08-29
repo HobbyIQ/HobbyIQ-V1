@@ -40,7 +40,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const backend = path.resolve(__dirname, "..");
 const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
-const { upsertCatalogEntry } = require(path.join(backend, "dist/services/portfolioiq/cardCatalog.service.js"));
+const { upsertCatalogEntry, cleanPlayerName } = require(path.join(backend, "dist/services/portfolioiq/cardCatalog.service.js"));
 const { computeHobbyIqCardId, slugify, normalizeSetKey } = require(path.join(backend, "dist/services/portfolioiq/hobbyIqCardId.service.js"));
 const { catalogAuthorityOf } = require(path.join(backend, "dist/services/catalog/catalogAuthority.service.js"));
 const { CosmosClient } = require("@azure/cosmos");
@@ -192,6 +192,8 @@ async function main() {
   let notReached = 0;
   // Numbered rows whose parallel the source left blank. NOT base cards.
   let unnamedParallel = 0;
+  // Written, but the merge kept the row another source already held there.
+  let keptExisting = 0;
   let stopReason = null;
 
   for (const name of files) {
@@ -207,7 +209,9 @@ async function main() {
     for (let i = 1; i < lines.length; i++) {
       const line = lines[i].trim();
       if (!line) continue;
-      const [category, cardNumber, parallel, isAuto, printRun, player, parallelNote] = splitCsv(line);
+      const [category, cardNumber, parallel, isAuto, printRun, rawPlayer, parallelNote] = splitCsv(line);
+      // CF-A-NAME-DOES-NOT-END-IN-A-COMMA: Beckett's cell is "Max Williams,".
+      const player = cleanPlayerName(rawPlayer);
       rows++;
       if (!cardNumber || !player) { skippedRow++; continue; }
       // CF-A-CARD-LINE-IS-NOT-A-RUNG (2026-08-29). "100 Mike Trout" in the
@@ -293,7 +297,7 @@ async function main() {
           if (parallelBlank && numbered && categoryBlank) { unnamedParallel++; return; }
 
           const known = await lookup(slug);
-          await upsertCatalogEntry({
+          const landed = await upsertCatalogEntry({
             id: slug, cardId: slug, hobbyiqCardId: slug,
             sport: product.sport, year: product.year,
             setKey: product.setKey, setName: product.setName,
@@ -322,7 +326,18 @@ async function main() {
               ...product.setKey.split("-"),
             ].filter(Boolean))),
           }, { known });
+          // The service swallows its own upsert error and returns null: that
+          // row was NOT written, and counting it as written is how a run
+          // reconciles green having lost rows.
+          if (!landed) { failed++; return; }
           written++;
+          // CF-THE-LABEL-IS-NOT-THE-ATTESTATION (2026-08-29, D3b). When the
+          // merge keeps the existing row (another source, equal or higher
+          // authority, equal or higher confidence), the write refreshed
+          // lastSeenAt and nothing else -- the row does NOT carry this SOURCE.
+          // Counted on its own line, as a slice of written, so "rows under the
+          // new source" is never mistaken for "rows this ingest attested".
+          if (landed.source !== SOURCE) keptExisting++;
         } catch (e) {
           failed++;
           if (failed <= 5) console.error(`  failed ${String(r.cardNumber)}: ${String(e.message || e).slice(0, 70)}`);
@@ -359,6 +374,7 @@ async function main() {
   console.log(`  rows with player-name parallel ${f(playerNameParallel)}   <- a roster line, not a rung; skipped`);
   console.log(`  csv rows read          ${f(rows)}`);
   console.log(`  catalog rows written   ${f(written)}`);
+  if (APPLY) console.log(`    of which kept the existing row ${f(keptExisting)}   <- same id already held by another source at equal/higher authority and confidence; only lastSeenAt moved, the row does NOT carry source=${SOURCE}`);
   {
     // The number that decides whether another cycle is needed, stated rather
     // than left to be inferred from a wall-clock subtraction.

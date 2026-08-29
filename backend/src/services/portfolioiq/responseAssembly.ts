@@ -238,6 +238,11 @@ export interface PortfolioHoldingWire {
   // the suggestion prominently on the review sheet — Accept sends
   // { cardId: suggestedCardId } in the confirm edits body.
   suggestedCardId?: string | null;
+  /** CF-A-SUGGESTION-IS-A-SLUG-OR-NOTHING (D12a): "hiq" when suggestedCardId
+   *  is a canonical slug; "vendor" when the winning candidate carried only a
+   *  vendor id (suggestedCardId is then absent; the vendor id is context on
+   *  suggestionCandidate.vendorCardId). */
+  suggestionIdKind?: "hiq" | "vendor" | null;
   suggestionConfidence?: number | null;
   suggestionCandidate?: {
     title?: string;
@@ -670,6 +675,7 @@ export function composeHoldingWireShape(
     setName: (holding as any).setName,
     // CF-CARDID-SUGGESTER (2026-07-12)
     suggestedCardId: (holding as any).suggestedCardId,
+    suggestionIdKind: (holding as any).suggestionIdKind,
     suggestionConfidence: (holding as any).suggestionConfidence,
     suggestionCandidate: (holding as any).suggestionCandidate,
     suggestionConfidenceTier: (holding as any).suggestionConfidenceTier,

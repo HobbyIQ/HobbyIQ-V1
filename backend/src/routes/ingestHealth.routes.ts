@@ -31,7 +31,10 @@ interface HealthResponse {
   totalLast7d: number;
 }
 
-const KNOWN_SOURCES = ["cardhedge", "tca-ebay", "cardsight"];
+// D13 (2026-08-29): `cardsight` dropped — the vendor was retired from
+// matching on 2026-08-16 and its nightly cron is off; monitoring a
+// retired source can only ever report red or a stray trickle.
+const KNOWN_SOURCES = ["cardhedge", "tca-ebay"];
 const CACHE_TTL_MS = 5 * 60 * 1000;
 let cached: { at: number; payload: HealthResponse } | null = null;
 
@@ -88,7 +91,7 @@ async function collect(): Promise<HealthResponse> {
       if (ageMinutes === null || ageMinutes > 24 * 60) status = "red";
       else if (ageMinutes > 4 * 60) status = "yellow";
     } else {
-      // Cardsight: red at 24h, yellow at 4h.
+      // Default cadence for any source added later: red at 24h, yellow at 4h.
       if (ageMinutes === null || ageMinutes > 24 * 60) status = "red";
       else if (ageMinutes > 4 * 60) status = "yellow";
     }

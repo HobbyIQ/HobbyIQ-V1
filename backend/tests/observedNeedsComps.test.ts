@@ -40,6 +40,11 @@ vi.mock("../src/services/portfolioiq/hobbyIqFmv.service.js", () => ({
   computeHobbyIqFmv: (...args: unknown[]) => computeHobbyIqFmv(...args),
 }));
 
+// D12a: the pinned slug must be a catalog row; it is, here.
+vi.mock("../src/services/catalog/catalogMatcher.service.js", () => ({
+  catalogSlugIfExists: async (slug: string) => slug,
+}));
+
 const SLUG = "hiq:baseball:2024:bowman-draft:cpa-cc:blue-refractor:auto";
 
 const holding = () =>

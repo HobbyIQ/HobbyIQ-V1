@@ -314,8 +314,87 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   prefix-normalized keys; the MODE=source guard becomes per-product coverage
   ≥ 95%, kept products printed with their number). **The old-CLC retire stays
   cancelled until a re-ingest passes that gate.** The cancelled runs printed
-  no budget marker, so nothing relaunched. Also seen in the same run: the bcp ladders re-ingest now
+  no budget marker, so nothing relaunched.
+  **CORRECTION (D3b, #1472, 22:50Z): the converter never dropped the ladder.**
+  The 2025 Bowman Draft workbook lists all 26 rungs for CPA-MWI and the xlsx
+  path emits all 26. The root cause is `upsertCatalogEntry`'s tie-break in
+  `cardCatalog.service.ts`: `entry.confidence > existing.confidence` is
+  `0.95 > undefined` = false, so every old-label row at the SAME id (old
+  checklistcenter, bcp, beckett — none carry a confidence) kept its old
+  source label and the re-ingest was a no-op on it (2,090 old rows in that
+  product carry the re-ingest's `lastSeenAt`). The 13 "missing" rungs exist
+  at the same ids under other labels; the 23% key coverage above IS this
+  mislabeling. Had the retire run to completion it would have deleted the
+  re-attested rows themselves. Fix: missing confidence = 0, the incoming
+  winner keeps the replaced row's image/sale-counts/move-history, the ingest
+  prints `kept the existing row N`; converter html-path gaps fixed on the
+  side (label families reach their rungs, `SuperFractor 1/1` → /1,
+  parenthesised odds no longer shred into rungs, 14 doubled-sport URLs);
+  `audit-source-coverage.cjs` (exact + normalised keys; leaf-vivid 51% → 100%
+  normalised) and the retire's per-product ≥ 95% floor shipped. **Order:**
+  deploy (33274840453) → re-ingest `MODE=reingest PHASES=clc` (report-only
+  shard 0/8 dispatched 22:55Z, 33274846587, to read the `kept` counters)
+  → APPLY ×8 → `audit-source-coverage` → retire with the floor. **Dry shard
+  0/8 (33274846587) ran the whole CLC phase: 547 products fetched (html
+  547, xlsx 351), the html path now expands section ladders (2018 Bowman:
+  27 rungs × 706 numbers = 7,084 ladder rows; 2020 Bowman 28 × 734), shard 0
+  read 491,013 csv rows and would write 489,042, explosion gate refused 0 —
+  so the whole set is ≈3.9M rows (2.87M before the ladder fix). APPLY ×8
+  dispatched 00:05Z (relaunch children follow the marker).** Also seen in the same run: the bcp ladders re-ingest now
   skips 762,534 player-name-parallel rows (#1396 working as built).
+  **D3b (2026-08-29 ~22:00Z, `feat/d3b`): the ladder was never lost — the LABEL was.**
+  The brief: CLC lacks Bowman's plain colour ladder (2025 Bowman Draft CPA-MWI: 13 rows,
+  no Gold Refractor /50, Purple /250, Blue /150 …; 18.6 parallels/card vs bcp's 54).
+  Measured: the 2025 Bowman Draft WORKBOOK lists all 26 rungs for CPA-MWI and the xlsx
+  path emits all 26 (12,531 rows, 15.8 parallels/card over 787 cards — bcp's 54/card is
+  the exploded cross-join, "BDC 1 Eli Willit" is one of its "parallels", not a target).
+  Cosmos holds the 13 "missing" rungs under OTHER labels at the SAME id: Refractor /499,
+  Black /10, Red /5, SuperFractor under `beckett-checklist`; Blue /150 under
+  `baseballcardpedia`; Red Lava, Black X-Fractor under `checklistinsider-2026-08-27`;
+  2,090 old `checklistcenter` rows with lastSeenAt 15:31Z — touched by the re-ingest.
+  ROOT CAUSE `cardCatalog.service.ts` upsertCatalogEntry: the class tie-break
+  `entry.confidence > existing.confidence` is `0.95 > undefined` → false. Every old
+  checklistcenter / baseballcardpedia / beckett-checklist row carries NO confidence
+  field, so it won the tie and kept its label; the re-ingest's 2,869,277 "written" rows
+  were largely no-op upserts (lastSeenAt only). The key-coverage read (new source covers
+  23% of the 60 largest old products' keys; 2025 bowman-draft 0%) is this mechanism, not
+  a converter gap; the brief's 12,249 "CLC" rows were 8,591 old + 3,658 new.
+  FIX, five commits: (1) `mergeCatalogEntries` (exported, tested directly —
+  theCleanestOneWins.test.ts had pinned a COPY of the rule): missing confidence = 0, an
+  exact tie still keeps the existing row; an incoming winner now carries the replaced
+  row's image / sale counts / move history (`PRESERVED_ON_REPLACE`) and drops
+  name-derived fields (displayName, searchText, checklistBacking). (2) ingest prints
+  `of which kept the existing row N` as a slice of written (a null upsert return is
+  failed, not written). (3) converter html path — the REAL gaps, all page text: a ladder
+  label's finish family reaches its rungs ("Refractor Parallels: Gold" → Gold Refractor;
+  Prizm / Wave / Lava / RayWave / Geometric / Ice / Flash; an insert-set label like "Prime
+  Number Parallels" appends nothing); "SuperFractor 1/1" → run 1 (was "SuperFractor 1",
+  no run); ';' inside parentheses no longer splits (Topps Chrome's odds became rungs
+  "1:1 Jumbo"); the 14 doubled-sport URLs (`2020-bowman-baseball-baseball`) no longer land
+  under `bowman-baseball` / `leaf-metal-baseball`; xlsx: Select's "- Gold Prizms"
+  separator. Every product prints sections / laddersFound / ladderRows; `--report`
+  writes nothing. Fixtures are trimmed real pages + workbook rows
+  (tests/fixtures/clc, tests/clcConverterSectionLadder.test.ts: Bowman Draft, Topps
+  Chrome control, Select, Prizm). (4) `audit-source-coverage` (runner-whitelisted,
+  read-only): per old product, keys the replacement covers — exact and normalised
+  (glued subset prefix / auto / prizm(s) / (rc) stripped, colour + finish words never) —
+  uncovered keys, a TOTAL line, `min_coverage_pct` flagging. (5) retire MODE=source:
+  the REPLACED_BY presence guard → per-product coverage ≥ MIN_COVERAGE_PCT (runner input,
+  default 95) from the SAME lib (`scripts/lib/sourceCoverage.cjs`); under the floor the
+  product is KEPT and printed with its coverage. Local html-path parallels/card after:
+  2025 bowman-draft 12.6 (bare colours → long form; xlsx path unchanged at 15.8),
+  bowman-chrome 12.7, topps-chrome 17.3 (odds fragments gone), panini-prizm 17.9,
+  panini-select 13.6, 2020 bowman 10.4, 2018 bowman draft 10.0.
+  ORDER: merge → dispatch "Daily 5AM ET Refresh & Deploy" (src change) → HOLD the
+  MODE=source retire: if the 18:25Z APPLY ×8 fleet is still running it is deleting rows
+  the re-ingest re-attested — cancel by script identity, re-measure → re-ingest
+  `ingest-checklists-end-to-end` MODE=reingest PHASES=clc slots=8 on main (the merge fix
+  relabels the re-attested rows; the `kept the existing row` line should be small) →
+  `audit-source-coverage` sources=checklistcenter,checklistcenter-html
+  scope=checklistcenter-2026-08-29 → only then MODE=source retire with the floor.
+  RESIDUE: an html variation section ("Base Image Variation Set") emits a blank-parallel
+  row that shares the base card's id; Panini naming differs by path (html "Blue Prizm",
+  xlsx "Prizms Blue" / "Blue Prizms") — the normalised key absorbs it, the slug does not.
   cached at c:/tmp/clc (ladders only, no card lists → bounded 547-page re-fetch);
   the old HTML ingester split ladders on commas (player names became rungs) and
   swallowed multi-ladder paragraphs; converter = scrape-checklistcenter-products +
@@ -538,8 +617,8 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
     flat wire shape carries NO rung/provenance (only the nested `pricing`
     envelope, and that drops to null unless three fields agree), while
     `quickSaleValue/premiumValue/suggestedListPrice` and the buy/hold/sell zones
-    are hardcoded multipliers (0.85 / 1.15 / 1.05 / 0.9). → **D12-a** (building,
-    `feat/d12a`) + **D12-b** (building, `feat/d12b`: the import resolves through
+    are hardcoded multipliers (0.85 / 1.15 / 1.05 / 0.9). → **D12-a** (SHIPPED on
+    `feat/d12a`, 8 commits, 2026-08-29 — paragraph below) + **D12-b** (building, `feat/d12b`: the import resolves through
     the catalog, round-trip ids must be existing hiq slugs, one identity, price
     on commit).
   - *Pricing engines (group A):* `withDerivedSlug` MINTS an hiq slug from free
@@ -552,8 +631,41 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
     hardcoded tables (PSA 8 → 1.0; static GRADER_PREMIUMS; canonicalFmv's
     gradeTierMultiplier table); the sibling fallback's ×8 / ÷8 PSA-10 constants
     and `parallelPremiumFloors` (/1 → 100×, /50 → 8× …) — PR 5/6 in flight;
-    `hobbyIqFmv` returns a method string not in its own union. → D12-a covers
-    the identity items; the multiplier tables are D4 PR 6.
+    `hobbyIqFmv` returns a method string not in its own union. → D12-a shipped
+    the identity items (below); the multiplier tables are D4 PR 6.
+  - **D12-a SHIPPED** (`feat/d12a`, 8 commits, 2026-08-29; backend/src changed —
+    dispatch "Daily 5AM ET Refresh & Deploy" after merge). §1 every user
+    sale / purchase emit (order poll, manual sell, Add Card purchase) keys its
+    sold_comps row by `poolIdentityForHolding(h)` — the pinned hiq slug or
+    nothing: no identity → withheld + `user_comp_withheld_no_identity`; the
+    vendor id rides as `vendorCardId` metadata; the purchase uses D9's
+    `purchaseSaleIdentity()` key so the import row and the Add Card row are
+    one row. §2 `withDerivedSlug` is gone: `fillDerivedSlugFromCatalog` fills
+    only an ABSENT slug and only when `catalogSlugIfExists` (point read at
+    (slug, slug), un-numbered twin aware, fails closed) holds it; the catalog
+    resolve runs BEFORE the fill on add and update; `priceFromOurPool` never
+    derives at price time and prices only a catalog-row slug (else null +
+    `our_pool_slug_not_in_catalog`). §3 one gate (0.9) pins both fields on
+    add and update; below it the match is the existing proposal
+    (`catalogMatchSlug` … → the wire's `proposedIdentity` → /accept-identity),
+    NOT `cardStatus: pending-review` (written in exactly one place); a
+    body-supplied `hobbyiqCardId` is accepted only when it names a catalog row
+    (`hobbyiqCardIdSource: "pinned"`, else `holding_slug_rejected_not_in_catalog`).
+    §4 the fifth (and a sixth) headline chain read `marketValue ??
+    predictedPrice ?? fmv`, pinned line-wise over portfolioStore (8 chains).
+    §5 `createListing` links the holding itself on every publish
+    (`result.linked`). §6 the suggester's `cardId` is hiq-only — `idKind`,
+    `candidate.vendorCardId`, `SuggestBatchSummary.vendorIdDropped`. §7 the
+    composer lists FMV before predictedPrice. §8 `querySoldComps` throws
+    `SoldCompsQueryError`; the vendor source propagates; the resolver reports
+    `sourceErrors` and does not cache a null reached through one. Each item
+    has a test that fails under the old code (`tests/d12a.*.test.ts`) and a
+    mutation check. **Left for a follow-up:** the wire shape's read-time
+    `deriveHoldingSlug` fallback (responseAssembly `composeHoldingWireShape`)
+    still mints a display slug for legacy holdings; `resolveCard` callers do
+    not yet read `sourceErrors`; a body-supplied `cardId` that is an hiq slug
+    is not catalog-gated (only `hobbyiqCardId` is); `querySoldComps`'s cardId
+    filter passes ledger entries that carry no cardId (none do).
   - *Analysis surfaces (group B):* none of the 15 analysis services touch a
     pricing engine or an hiq slug — grade-worthy, timing forecast, parallel
     ladder, missing parallels, sub-raw discovery price from `ch_daily_sales`
@@ -585,7 +697,142 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
     with an `OPS_ALERT_EMAIL` override, DailyIQ marks only when a push was
     attempted, notify workflows assert `pushProviderConfigured` + print counts,
     cleanliness/publish workflows exit non-zero on nothing, Cardsight + verdict
-    crons removed, a row-count axis on the freshness canary.
+    crons removed, a row-count axis on the freshness canary. **Merged #1471
+    (22:45Z)**: 30 files; measured tca-ebay 9,280–114,513 rows/day (floor
+    2,300; raise toward 25,000 once a firehose-era week is confirmed — Drew);
+    the retired Cardsight was still writing 0–3 rows/day. **D12-a merged
+    #1473 (22:53Z)**: user comps pool under the hiq slug or are withheld
+    (`user_comp_withheld_no_identity`), `fillDerivedSlugFromCatalog`
+    replaces `withDerivedSlug` (fill-only, catalog-backed, fails closed), one
+    0.9 gate pins both ids on add/update (below it → proposal fields, not the
+    literal pending-review status — judgment call flagged), fifth + sixth
+    headline chains fixed, listings link their holding, the suggester emits
+    hiq ids only, composer FMV-first, `querySoldComps` throws instead of
+    failing open. Deploy 33274840453 carries D13 + D3b + D12-a — **live
+    23:20Z, health serves `1714a06`.** **D12-b merged #1475 (23:15Z)**: the
+    spreadsheet import resolves through the catalog (`importResolver.ts` +
+    the shared `identityFromFields.ts` lifted out of the eBay import; a
+    round-trip `hiq:` slug is identity only if the catalog holds it; one
+    identity written and re-checked at the persist site; priced on commit
+    through the add-card path; collisions keyed by the resolved slug, a
+    title-tuple key for unresolved rows; `hobbyiqCardId` exported as the
+    round-trip anchor). Two bugs found on the way: SheetJS typed a Serial
+    cell `/50` as the Excel date serial 18264 before any parser saw it
+    (`raw: true`), and the preview cap read `req.user.tier` (never existed)
+    so every preview projected against the free cap. Deploy #2
+    33275053457 carries it — **live 23:35Z, health serves `162e769`.**
+    `feat/d12a`) + **D12-b** (**delivered on branch `feat/d12b`, unmerged — 7
+    commits, tsc 0, the six import suites + the D9 eBay fixture green, a
+    mutation check per commit**). The import resolves through the catalog:
+    `importResolver.ts` point-reads a round-trip `hiq:` slug (an identity only
+    when the catalog holds it; a vendor id or a slug we do not hold is a HINT
+    on the envelope, `identityHint`, never persisted), otherwise resolves the
+    row's fields through holdingFieldNormalizer + the ONE derivation the eBay
+    import runs — `identityFromFields.ts`, lifted out of
+    `ebayAutoHolding.resolveImportIdentity` so both imports run one rule
+    (never an empty card number; number-by-player; the matcher asked with the
+    parallel + print run + player; the 0.9 bar) — with source `import`, which
+    never seeds. The print run is split out of the serial ("/50", "12/50") or
+    the parallel ("Gold Refractor /50"); the sport comes from a Sport /
+    Category column, the product, or a 4-sport probe (one confident answer
+    or `ambiguous`). A match BELOW the bar stays `unresolved` (no new bucket —
+    iOS keys its rendering on the five) with the suggestion on `resolution`;
+    committed anyway it is written with NO identity, `needsReview` + the
+    reason, the suggestion parked on `catalogMatchSlug` (the wire's
+    `proposedIdentity`) for accept-identity, which adopts AND prices it.
+    Commit writes ONE identity — `cardId = hobbyiqCardId =
+    catalogVerifiedSlug`, printRun, confidence / matchedBy, identityVerified
+    for exact / round-trip — after re-checking the slug at the persist site
+    (canonical AND still in the catalog: a row retired between preview and
+    commit is refused, not a 16th D10 orphan), then prices every holding it
+    added with an identity through `repriceOneHolding` → `autoPriceHolding`,
+    the add-card path with #1462's exact-pool gate inside: inline up to 5,
+    above that a `kind: "pricing"` import-job the client polls. No identity,
+    no price. The collision key is the resolved slug (+ grade / serial), and a
+    row with no slug is keyed by its title tuple — the old "no cardId → no
+    collision check possible" had let the entire unresolved population (every
+    arbitrary-sheet row, with the resolver stubbed) bypass dedup; two
+    identical rows in one file collide too. The export writes `hobbyiqCardId`
+    and the import treats it as the round-trip anchor. Two more defects found
+    on the way and fixed in their own commits: SheetJS's CSV reader turned a
+    Serial cell "/50" into 18264 (Excel's 1950-01-01) before any column
+    parser saw it (`raw: true`); the preview projected every user against
+    the free cap because it read `req.user.tier`, a field AuthUser never had
+    (it now reads effectivePlanFor + config/entitlements, the table commit
+    reads). Contract notes for iOS: envelope fields `resolution` /
+    `identityHint`, `pricing` on the commit result and `kind: "pricing"` job
+    docs are all additive; the `sport` column is import-only. Deploy: after
+    merge, dispatch "Daily 5AM ET Refresh & Deploy" (backend/src) and verify
+    the health sha.
+  - **D13 — alert gates prove delivery** (built on `feat/d13`, 8 commits,
+    2026-08-29 ~21:00Z; tsc 0; every item pinned by a test AND a mutation
+    check that went red). The defect had one shape: a gate reads a field
+    nothing writes, a send result is discarded, or a job locks state as
+    "done" at zero sends — green while sending nothing. Each fix makes the
+    failure VISIBLE (non-zero exit / warn-level event / red workflow).
+    (1) *Cascade push*: `cascade-detect.yml` fetched no APNs env → null
+    provider → `pushSent:0`, exit 0 for six weeks. Now the five-variable
+    APNs block (as watchlist-digest.yml), `isPushProviderConfigured()`
+    exported from notification.service, the fan-out reports `optedInUsers`,
+    and the pure `cascadePushExitCode({newEvents, optedInUsers,
+    providerConfigured})` (in `portfolioiq/cascadeNotify.service.ts` — the
+    file lives there, not under `signals/`) is red iff events were owed to
+    opted-in users and the sender did not exist; test
+    `cascadePushExitCode.test.ts` (truth table + a null-provider sender
+    still surfaces owners); mutant: decision disabled → 2 red. (2)
+    *DailyIQ*: `markNotified(date)` ran even with no provider, so a re-run
+    skipped the day. Marks only when the provider is configured (zero
+    opted-in users still marks — a legitimate zero); otherwise warn-event
+    `dailyiq_push_provider_missing {date, optedInUsers}` and the day stays
+    unmarked; test `dailyiqMarksOnlyOnAttempt.test.ts`; mutant: always-mark
+    → 1 red. (3) *Divergence digest*: three swallows + a literal recipient
+    → `divergenceDigestSend.ts`: `sendDivergenceDigest` never throws,
+    returns `{delivered, reason, users, rows}`, emits
+    `cost_basis_digest_not_delivered {reason, users, rows}` (acs-
+    unconfigured / email-provider-failed / send-threw / email-module-
+    unavailable) or `cost_basis_digest_delivered`; recipient =
+    `OPS_ALERT_EMAIL` (trimmed) || the historical literal, never logged;
+    test `divergenceDigestSend.test.ts` incl. a structural pin that the
+    reprice site no longer calls sendEmail; mutant: result swallowed → 3
+    red. (4) *Notify workflows*: the three admin routes spread
+    `pushProviderConfigured` into `.summary`; watchlistDigestNotify /
+    gradeWorthyPushNotify results carry it and the two scripts exit 1 when
+    it is false on a scheduled run (`GITHUB_EVENT_NAME=schedule` or
+    `REQUIRE_PUSH_PROVIDER=1`; dispatch warns); grade-arbitrage / sell-side
+    / personal-prospect print `notify summary: candidates=N pushesSent=M
+    providerConfigured=…` every run and exit 1 on a scheduled non-dry-run
+    with `false` — read via jq `has()` because `//` treats false as missing;
+    an API without the field prints `unknown` and stays green; test
+    `notifyProviderGate.test.ts`; mutant: `exit 1`→`exit 0` → 1 red; the
+    block was run locally with a jq shim (schedule+false → 1; +true → 0;
+    dispatch → 0; dry-run → 0). (5) *nightly-cleanliness*: missing
+    `ADMIN_API_TOKEN` and an empty anomalies response were warn + exit 0 →
+    both exit 1; the four dispatches stay and print their backfill-runner
+    run URL; mutant: guard → exit 0 → 2 red. (6) *market-insights publish*:
+    200 with an empty snapshot was green → `publish summary: …` every run,
+    exit 1 when gainers+losers+notable == 0; mutant → 1 red. (7)
+    *Retired vendor*: `cardsight-pricing-nightly` schedule removed
+    (retired 2026-08-16; it was still writing 2–3 rows/day into sold_comps
+    — 08-24, 08-27), `verdict-flip-push-fanout` schedule removed (permanent
+    dry-run scaffold, `.cjs:68,149`), `cardsight` dropped from ingest-
+    health `KNOWN_SOURCES`; test `workflowAlertGates.test.ts` (pins 5, 6,
+    7); mutant: cron back → 1 red. (8) *Freshness canary*: `MIN_ROWS_24H`
+    per-source floor on the trailing-24h row COUNT (default off; 429
+    retry; both axes report before exit). Measured read-only 2026-08-29,
+    UTC days 08-22..08-28 — `tca-ebay` 100190 / 114513 / 108922 / 100966 /
+    9340 / 11911 / 9280 (min 9280); `cardhedge` 197620 / 36640 / 58927 /
+    96621 / 101911 / 58272 / 32422. Floor = ~25% of the minimum day →
+    `tca-ebay=2300` in the workflow; NOTE the 08-26 step-down 100k → 10k
+    is the very shape the axis exists for — an end-to-end read-only run
+    saw 441,477 `tca-ebay` rows in the trailing 24h (firehose flowing);
+    once a firehose-era week is confirmed, raise toward 25,000. Test
+    `freshnessCanaryRowFloor.test.ts`; mutant: floor never fails → 2 red.
+    **Deploy note**: `backend/src` changed (notification.service,
+    cascadeNotify, dailyiq.job, portfolioStore, divergenceDigestSend, the
+    three admin routes, two notify services, ingestHealth) → dispatch
+    "Daily 5AM ET Refresh & Deploy" after merge; until then the admin
+    routes lack `pushProviderConfigured` and the workflows print
+    `providerConfigured=unknown` (green by design).
   - *Cron + runner writers (group E):* 52 cron workflows, ~40 writers, **zero
     cron writers call reportWrites**; the reconciliation test is blind to 23
     patch-only writers, camelCase names, no-APPLY-token scripts and every
@@ -659,13 +906,6 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   dry run for 2025 dispatched 20:25Z (33273454220). Also identified:
   `baseballcardpedia-ladders-2026-08-29` (725k rows) is the e2e ingest's
   re-scraped bcp under the #1373 gate — the sane bcp, not the exploded one.
-    **Mover validation (report-only, 140-min budget each, 20:10Z):**
-  clean-parallel-annotations dry — 30,564 rows this slot: 758 heal / 5,979
-  move / 1,075 fold / 1,482 replace-a-derived-twin / 2,970 graded children /
-  **3,076 failed** (dry-run failures are moveCatalogRow refusals — read the
-  reasons before any APPLY); rename-setkey dry (`topps-allen-and-ginter`) —
-  12,894 rows: 11,267 move / 711 fold / 905 replace / 2,539 sales re-pointed /
-  0 failed.
   **D14 — the probes (built on `feat/d14`, 2026-08-29; every one READ-ONLY,
   one scorecard block, exit 0 on a bad number, `LIMIT` env, whitelisted on the
   runner with `apply` irrelevant):**
@@ -737,6 +977,82 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
     writers, key the nine relaunch steps on the marker, give price-by-id a
     rungLabel and the three wires an identity, and find why canonical-fmv,
     hobbyiq-fmv and the curve read one exact pool to three numbers.
+    **D15 — what the CPA-MWI picker showed, as three catalogRowOps movers
+  (`feat/d15`, unmerged, 2026-08-29; tests 3 files / 7 mutation checks, tsc 0,
+  writer guard 28/91 compliant (was 24/87), reconciliation 30/56):** (1) `repair-trailing-comma-player-names` — 9,837 rows
+  end in "," (beckett-checklist 9,199 — 1,715 of the comma rows are graded
+  children; explode-actuals 507, tcdb 97, cardhedge 19, bcp 8, auto-seed 6,
+  checklistcenter 1), 2 in ";", 148 in " " (cardhedge-graded). Every sampled
+  row is "Full Name," — no "Last, First" exists — so only the trailing run of
+  [,;whitespace] is trimmed (a trailing "." is "Jr.", 656,452 rows, untouched);
+  playerSlug is recomputed with hobbyIqCardId.slugify (the checklist ingest's
+  and the matcher's slugifier — "Moisés" → moises; the builder's private
+  playerSlugify would give moiss); searchText / displayName rebuilt by
+  `rebuildSearchFields`; searchTokens UNIONED (the comma never reached a
+  token; a graded row keeps its grade tokens, the nightly fold passes
+  survive). A patch — the slug has no player segment. **Root cause closed:**
+  `cleanPlayerName` at deriveCatalogEntry and at the CSV ingest's row parse.
+  Dry run LIMIT=200: 208 candidates → WOULD REPAIR 208 (23 graded), 0 failed.
+  (2) `repair-isauto-from-cardnumber-catalog` — the 98,382 checklistinsider-
+  2026-08-27 rows with isAuto=false on an auto-prefixed number are TWO shapes:
+  41,609 CPA-/CDA- rows already sit at a `:auto` id (the generator forces nine
+  prefixes) with a stale FIELD → a heal; every BDC-/PA-/RA- row sits at
+  `:no-auto` → a move iff the product's OTHER checklist families rule the
+  prefix signed (one GROUP BY per product over every source's un-graded rows,
+  ~7k RU; each family votes by its row majority, dated scrape runs fold into
+  one family, vendor/derived never vote, the source under repair never votes;
+  no ruling → only field-vs-id heals; a ruling that contradicts the
+  generator's forced list is REFUSED and printed). Sharded by product
+  (sha1(sport|year|setKey)) so a slot computes each product's evidence once;
+  2025 bowman basketball is 2.5% of the source. Dry run LIMIT=200 (498
+  products, 4,092,310 rows in scope), first product 2025 bowman/basketball:
+  35 (product, prefix) pairs — 28 ruled, 7 no ruling, **1 REFUSED: CPA
+  ruling=no-auto by the only other family, `bccp 0/609`** (bccp rows tagged
+  basketball on a Bowman product — the exploded-spine shape; the generator
+  forces CPA → :auto, so 6,930 rows wait for a ruling, not a move); 200 heals
+  on BDA- (`…:bda-ac:…:auto` with isAuto=false — and those ids say
+  `bowman-draft` while the row's setKey field says `bowman`: conform-card-
+  profile's population; moveCatalogRow refuses a MOVE on such a row, a heal
+  it allows). (3) `conform-one-of-one-parallels` — Drew: "superfractors are
+  1/1"; glossary: every plate is 1/1. 255,229 un-graded rows whose id's
+  parallel segment matches `(^|-)superfractors?(-|$) | printing-plate |
+  (^|-)(one-of-one|1-of-1)(-|$)` sit at an id without `:num-1` (printRun null
+  246,271; /4 8,861 — checklistinsider "Printing Plates Parallel", the four
+  plates read as a run; 1368310399850795000 ×49; /200 ×39; 2021 ×5; strings),
+  and 55 `:num-1` ids carry a field ≠ 1 (healed in place). The plural is
+  admitted deliberately (`superfractors` 21,536, `superfractors-refractor`
+  8,075 — a category header glued into the name; the singular-only regex
+  would have skipped 26 distinct slugs); one-of-one / 1-of-1 are 25 real
+  rungs (class-3-red-one-of-one, od-1-of-1); prose footnote slugs are skipped
+  and counted. Dry run LIMIT=200: 208 candidates → 207 actionable — moved 155
+  / folded 37 / replaced 15 (checklistcenter outranks the explode's derived
+  num-1 twin), 1 sale re-pointed, **2,277 graded children retired (≈11 per
+  row → the full run retires ~2.8M graded rows; regenerable — dispatch
+  `materialize-graded-identities` after)**, 1 prose, 0 failed. **Dispatch
+  (runner-whitelisted; relaunch steps keyed on the budget marker):** dry
+  first with `apply=false slots=1` and read the REFUSED / failed lines; then
+  APPLY sharded — comma `slots=4` (≈10k rows, one cycle; `sources` optional);
+  isAuto `slots=8` (`sources` defaults to checklistinsider-2026-08-27;
+  `sports` / `years` scope; `VERBOSE=true` prints every pair); one-of-one
+  `slots=8` (255k moves, ~2.8M graded deletes; each move runs one sales query
+  against sold_comps at its 10k floor). Then the D10 chain: conform-holdings
+  → reprice → re-explode.
+    **Mover validation (report-only, 140-min budget each, 20:10Z):**
+  clean-parallel-annotations dry — 30,564 rows this slot: 758 heal / 5,979
+  move / 1,075 fold / 1,482 replace-a-derived-twin / 2,970 graded children /
+  **3,076 failed** (dry-run failures are moveCatalogRow refusals — read the
+  reasons before any APPLY); rename-setkey dry (`topps-allen-and-ginter`) —
+  12,894 rows: 11,267 move / 711 fold / 905 replace / 2,539 sales re-pointed /
+  0 failed.
+    **Merged #1477 (23:40Z).** Dispatched: `repair-trailing-comma-player-names`
+    APPLY (33275249458); `conform-one-of-one-parallels` full dry run
+    (33275255335 — the LIMIT=200 dry was 207/208 actionable; the full run's
+    graded-children count decides whether `materialize-graded-identities`
+    runs right after); `repair-isauto-from-cardnumber-catalog` full dry run
+    (33275261214). The agent's un-graded print-run breakdown (null 246,271;
+    /4 8,861; a 19-digit mis-parse ×49) does not show my /50 ×234, /25 ×255
+    … — those were graded rows; the un-graded population is what the mover
+    touches.
 - ◐ D10 **Look at all holdings for everyone** (Drew, 2026-08-29 17:15Z). The three
   defects under holding `ca7a150b` are not specific to it. **#1448
   `audit-all-holdings`** (read-only, runner-whitelisted): per holding —
@@ -786,7 +1102,25 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   refusals where the row's `setKey` field disagrees with its own slug
   (`bowman` vs `bowman-chrome`/`bowman-paper` — conform-card-profile's
   population). APPLY dispatched 20:22Z (33273328022); conform-holdings
-  APPLY follows it.** Web picker fix #1466 deployed (SWA run 33273147531).
+  APPLY follows it.** Drew (22:30Z): "I see 2 max williams superfractors …
+  superfractors are 1/1" — bcp's un-numbered `superfractor:auto` beside
+  beckett's `:num-1`, and the same pair on Refractor /499, Black /10, Red /5,
+  Red Lava, Sky Blue. **#1470:** the fold's decision is a pure tested rule
+  (`foldTwinRule.ts`): vendor/user twins fold as before; a SuperFractor or
+  printing plate folds into its /1 whatever its source (CF-A-SUPERFRACTOR-IS-
+  ONE-OF-ONE; mis-parsed print runs beside the /1 no longer make it
+  ambiguous); `MODE=cross-source` folds a checklist twin whose own source
+  lists no numbered variant (one source omitted the print run another lists
+  — only-improve) and leaves a source that lists both alone. Cross-source
+  dry run 33274650026. The catalog has 50,966 un-numbered SuperFractor rows
+  and 158,741 un-numbered printing plates (+7,149 at "/4") → D15's third
+  script `conform-one-of-one-parallels`. `merge-bare-colour-parallels` 2025:
+  8,877 chrome bare-colour rows, 1,861 with a long-form twin → APPLY
+  dispatched 22:52Z (33274680156) — **wrote 1,873, reconciled (intended
+  59,676 = written 1,873 + skipped 57,803)**; the 7,068 with no long-form row
+  need a rename mode (queued). `repair-trailing-comma-player-names` APPLY
+  (33275249458): **11,702 repaired, 1,804 of them graded children, 0 failed,
+  reconciled** — "Ethan Petry," is "Ethan Petry" again. Web picker fix #1466 deployed (SWA run 33273147531).
 - ◐ D9 **The eBay import → holdings pipeline** (Drew, 2026-08-29 17:20Z: "we
   need to fix the whole ebay import to holdings process, bc it seems broken").
   The Marconi purchase IS the fixture. Real listing title (`purchase.notes`):
@@ -1005,6 +1339,25 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   product, family key = a separate fallback field; then re-slug catalog + pool.
 
 ## NEEDS DREW (not code)
+
+- **isAuto ruling, 2025 Bowman (basketball) CPA-:** the only other checklist
+  family (bccp, 609 rows) says no-auto for a prefix the generator forces to
+  `:auto`; 6,930 rows wait. The bccp rows tagged basketball on a Bowman
+  product look like the exploded-spine shape — likely retire, not rule.
+- **Freshness floor:** `tca-ebay` MIN_ROWS_24H is 2,300 (25% of the worst
+  measured day, 9,280, during the 08-26 firehose-off step); today's 441,477
+  says raise toward 25,000 once a firehose-era week is confirmed.
+- **Below-gate import matches:** D12-a/b park a 0.72 match on the proposal
+  fields (`catalogMatchSlug` + `needsReview`), not the literal
+  `pending-review` status (which would push every fuzzy manual add into the
+  Verify queue). Say if you want the literal status.
+- **One-of-one conform at full scale** retires ~2.8M regenerable graded
+  children (≈11 per moved row) → `materialize-graded-identities` right after;
+  the graded-tier RU window matters (card_catalog is at 400k until the spine
+  passes finish).
+- **MCP server + `apps/api`:** nothing live calls either; the MCP prices
+  from a comp median + hardcoded grade multipliers + an LLM prompt and keeps
+  two unauthenticated backend routes alive for itself. Retire both?
 
 **Queued 2026-08-29 (newest first):**
 - **Holding headline = fit-at-now market value (#1432).** portfolioStore's

@@ -210,13 +210,47 @@ describe("CF-IMPORT-BE — collision detector (the #2 guard, Hartman-4× scenari
     expect(r.collides).toBe(false);
   });
 
-  it("no cardId on incoming row → no collision check possible", () => {
+  // CF-IMPORT-RESOLVES-TO-CHECKLIST (D12-b, 2026-08-29): a row with no id is
+  // keyed by what it SAYS it is. The old contract here ("no cardId → no
+  // collision check possible") let the entire unresolved population — which,
+  // with the resolver stubbed, was every arbitrary-sheet row — bypass dedup.
+  it("no cardId on incoming row → keyed by the title tuple, still checked", () => {
     const r = detectCollision(
-      { cardId: null, holdingId: null, parallel: "anything", gradeCompany: null, gradeValue: null, serialNumber: null },
+      { cardId: null, holdingId: null, parallel: "Blue X-Fractor /150", gradeCompany: null, gradeValue: null, serialNumber: null,
+        playerName: "Eric Hartman", cardYear: 2024, product: "Bowman Chrome", cardNumber: "CPA-EH" },
+      { "h1": { id: "h1", cardId: null, parallel: "Blue X-Fractor /150", playerName: "Eric Hartman", cardYear: 2024, product: "Bowman Chrome", cardNumber: "CPA-EH" } as unknown as import("../src/types/portfolioiq.types.js").PortfolioHolding },
+    );
+    expect(r.collides).toBe(true);
+    expect(r.keyedBy).toBe("title");
+    expect(r.existingHoldingIds).toEqual(["h1"]);
+    expect(r.reason).not.toContain("no collision check possible");
+  });
+
+  it("no cardId AND no title on incoming row → nothing to compare (the only no-check case)", () => {
+    const r = detectCollision(
+      { cardId: null, holdingId: null, parallel: null, gradeCompany: null, gradeValue: null, serialNumber: null },
       HARTMAN_HOLDINGS,
     );
     expect(r.collides).toBe(false);
-    expect(r.reason).toContain("no cardId");
+    expect(r.reason).toContain("nothing to compare");
+  });
+
+  it("a resolved row matches an existing holding on hobbyiqCardId, and on the title tuple when the ids differ", () => {
+    type H = import("../src/types/portfolioiq.types.js").PortfolioHolding;
+    const SLUG = "hiq:baseball:2024:bowman-chrome:cpa-eh:blue-refractor:auto:num-150";
+    const existing = {
+      "legacy": { id: "legacy", cardId: "befe9bcc", hobbyiqCardId: SLUG, parallel: "Blue Refractor" } as unknown as H,
+      "titled": { id: "titled", cardId: "1675907831540x1", playerName: "Eric Hartman", cardYear: 2024, product: "Bowman Chrome", cardNumber: "CPA-EH", parallel: "Blue Refractor" } as unknown as H,
+      "other": { id: "other", cardId: "1675907831540x2", playerName: "Someone Else", cardYear: 2024, product: "Bowman Chrome", cardNumber: "CPA-SE", parallel: "Blue Refractor" } as unknown as H,
+    };
+    const r = detectCollision(
+      { cardId: SLUG, holdingId: null, parallel: "Blue Refractor", gradeCompany: null, gradeValue: null, serialNumber: null,
+        playerName: "Eric Hartman", cardYear: 2024, product: "Bowman Chrome", cardNumber: "CPA-EH" },
+      existing,
+    );
+    expect(r.collides).toBe(true);
+    expect([...r.existingHoldingIds].sort()).toEqual(["legacy", "titled"]);
+    expect(r.keyedBy).toBe("slug");
   });
 
   it("different grade → not a collision", () => {
@@ -226,6 +260,30 @@ describe("CF-IMPORT-BE — collision detector (the #2 guard, Hartman-4× scenari
       HARTMAN_HOLDINGS,
     );
     expect(r.collides).toBe(false);
+  });
+});
+
+// ─── CSV cells arrive as text (CF-IMPORT-SERIAL-IS-TEXT, D12-b) ─────────
+
+describe("CF-IMPORT-SERIAL-IS-TEXT — the CSV reader delivers text; the columns parse themselves", () => {
+  const csv = (rows: string[]) => rows.join("\n") + "\n";
+
+  it("a Serial cell '/50' or '12/50' stays text — it is a print run, not a 1950 date", () => {
+    const res = parseHoldingsFile(csv([
+      "Player,Year,Brand,Card #,Serial,Cert,Auto,Paid",
+      "Marconi German,2026,Bowman Chrome,CPA-MG,/50,12345678,TRUE,120",
+      "Marconi German,2026,Bowman Chrome,CPA-MG,12/50,,FALSE,$95.50",
+    ]), "csv");
+    expect(res.rows[0]!.cells["serialNumber"]?.value).toBe("/50");
+    expect(res.rows[1]!.cells["serialNumber"]?.value).toBe("12/50");
+    expect(res.rows[0]!.cells["certNumber"]?.value).toBe("12345678");
+    expect(res.rows[0]!.cells["cardNumber"]?.value).toBe("CPA-MG");
+    // The typed columns still parse: the reader stopped typing, the parsers did not.
+    expect(res.rows[0]!.cells["cardYear"]?.value).toBe(2026);
+    expect(res.rows[0]!.cells["isAuto"]?.value).toBe(true);
+    expect(res.rows[1]!.cells["isAuto"]?.value).toBe(false);
+    expect(res.rows[0]!.cells["purchasePrice"]?.value).toBe(120);
+    expect(res.rows[1]!.cells["purchasePrice"]?.value).toBe(95.5);
   });
 });
 

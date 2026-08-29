@@ -348,6 +348,15 @@ export interface PortfolioHolding {
   // insufficient (missing year / setName / cardNumber, or sport not
   // inferrable) — iOS falls back to legacy tap behavior in that case.
   hobbyiqCardId?: string | null;
+  // CF-A-MINTED-SLUG-NEVER-REPLACES-A-PIN (D12a, 2026-08-29). HOW the slug
+  // above was chosen, written at the same time as the slug:
+  //   "catalog"        a catalog row matched at or above the pin gate
+  //   "catalog-seeded" the catalog seeded the row from this user's card
+  //   "derived"        minted from the holding's own text — the catalog had
+  //                    nothing (or could not be asked); not checklist-backed
+  //   "pinned"         the caller supplied it (card page, picker, import)
+  // Absent on holdings written before this CF.
+  hobbyiqCardIdSource?: "catalog" | "catalog-seeded" | "derived" | "pinned" | null;
 
   // CF-GRADED-RAIL-WIRE-IN (2026-06-14): graded-rail valuation fields.
   // STRUCTURALLY SEPARATE from fairMarketValue (observed-only). When the

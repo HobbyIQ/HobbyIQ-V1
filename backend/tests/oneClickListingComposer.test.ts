@@ -36,18 +36,19 @@ describe("composeListingInput — happy path", () => {
     expect(input!.parallel).toBe("Orange Shimmer Refractor");
     expect(input!.cardNumber).toBe("CPA-EHA");
     expect(input!.brand).toBe("Bowman");
-    expect(input!.listingPrice).toBe(2639);
+    // D12a: fairMarketValue (the headline) lists, not predictedPrice.
+    expect(input!.listingPrice).toBe(1990);
     expect(input!.bestOfferEnabled).toBe(true);
-    expect(input!.bestOfferMinPrice).toBeCloseTo(2639 * 0.85, 0);
+    expect(input!.bestOfferMinPrice).toBeCloseTo(1990 * 0.85, 0);
     expect(input!.quantity).toBe(1);
   });
 
-  it("prefers predictedPrice over marketValue over estimatedValue", () => {
+  it("prefers fairMarketValue over predictedPrice over estimatedValue (D12a)", () => {
     const p = composeListingInput(holding({ predictedPrice: 2500, fairMarketValue: 1000 }));
-    expect(p!.listingPrice).toBe(2500);
+    expect(p!.listingPrice).toBe(1000);
 
-    const m = composeListingInput(holding({ predictedPrice: null, fairMarketValue: 1000 }));
-    expect(m!.listingPrice).toBe(1000);
+    const m = composeListingInput(holding({ predictedPrice: 2500, fairMarketValue: null }));
+    expect(m!.listingPrice).toBe(2500);
 
     const e = composeListingInput(holding({
       predictedPrice: null, fairMarketValue: null, estimatedValue: 500,
@@ -113,7 +114,7 @@ describe("composeListingInput — overrides", () => {
 
   it("custom bestOfferAutoDeclinePct changes the min price", () => {
     const input = composeListingInput(holding(), { bestOfferAutoDeclinePct: 0.30 });
-    expect(input!.bestOfferMinPrice).toBeCloseTo(2639 * 0.70, 0);
+    expect(input!.bestOfferMinPrice).toBeCloseTo(1990 * 0.70, 0);
   });
 
   it("description override passes through", () => {
