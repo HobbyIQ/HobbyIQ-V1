@@ -7,6 +7,8 @@
 //   4. graded children retired -- and ONLY the old slug's own children
 //   5. sales re-pointed, survivor written, BEFORE the old row is deleted
 //   6. dryRun writes nothing
+//   7. a rehome (same slug, foreign partition) re-addresses the row and
+//      touches neither its sales nor its own graded ladder (D5 PR 4)
 //
 // The fakes share one operation log so the ORDER of writes is assertable, not
 // just their presence.
@@ -27,24 +29,39 @@ function notFound(): Error & { code: number } {
   return Object.assign(new Error("Entity with the specified id does not exist in the system"), { code: 404 });
 }
 
+/** Both containers partition on /cardId, so one id can exist once per
+ *  partition -- which is exactly the rehome case. A doc lives at
+ *  (id, cardId): keyed by the bare id in its own partition, `id@pk` in a
+ *  foreign one. */
+const keyOf = (id: string, pk?: string | null) => (pk === undefined || pk === null || pk === id ? id : `${id}@${pk}`);
+
 /** Just enough of @azure/cosmos Container for the two operations: point
- *  read / patch / delete by id, upsert, and the two query shapes the service
- *  issues. Anything else throws so a new query cannot pass by accident. */
+ *  read / patch / delete by (id, pk), upsert, and the two query shapes the
+ *  service issues. Anything else throws so a new query cannot pass by accident. */
 class FakeContainer {
   readonly docs = new Map<string, Doc>();
   constructor(readonly name: string, readonly log: string[], seed: Doc[] = []) {
-    for (const d of seed) this.docs.set(d.id, structuredClone(d));
+    for (const d of seed) this.docs.set(keyOf(d.id, d.cardId), structuredClone(d));
   }
-  item(id: string, _pk?: string) {
+  /** The doc at (id, pk); with no pk, the one in its own partition, else any with that id. */
+  get(id: string, pk?: string): Doc | undefined {
+    if (pk !== undefined) return this.docs.get(keyOf(id, pk));
+    return this.docs.get(id) ?? [...this.docs.values()].find((d) => d.id === id);
+  }
+  has(id: string, pk?: string): boolean {
+    return this.get(id, pk) !== undefined;
+  }
+  item(id: string, pk?: string) {
+    const k = keyOf(id, pk);
     return {
       read: async () => {
         this.log.push(`${this.name}.read ${id}`);
-        const d = this.docs.get(id);
+        const d = this.docs.get(k);
         if (!d) throw notFound();
         return { resource: structuredClone(d), statusCode: 200 };
       },
       patch: async (ops: Array<{ op: string; path: string; value: unknown }>) => {
-        const d = this.docs.get(id);
+        const d = this.docs.get(k);
         if (!d) throw notFound();
         for (const o of ops) {
           if (o.op !== "set") throw new Error(`fake: unsupported patch op ${o.op}`);
@@ -54,8 +71,8 @@ class FakeContainer {
         return { resource: structuredClone(d) };
       },
       delete: async () => {
-        if (!this.docs.has(id)) throw notFound();
-        this.docs.delete(id);
+        if (!this.docs.has(k)) throw notFound();
+        this.docs.delete(k);
         this.log.push(`${this.name}.delete ${id}`);
         return {};
       },
@@ -63,7 +80,7 @@ class FakeContainer {
   }
   readonly items = {
     upsert: async (doc: Doc) => {
-      this.docs.set(doc.id, structuredClone(doc));
+      this.docs.set(keyOf(doc.id, doc.cardId), structuredClone(doc));
       this.log.push(`${this.name}.upsert ${doc.id}`);
       return { resource: structuredClone(doc) };
     },
@@ -174,7 +191,7 @@ describe("moveCatalogRow: authority", () => {
     expect(row.confidence).toBe(0.6);
     expect(row.movedFrom).toBeUndefined();          // the incumbent is not the one that moved
     expect(w.catalog.docs.has(OLD)).toBe(false);    // the derived twin is still retired
-    expect(w.sales.docs.get("s1")!.hobbyiqCardId).toBe(NEW);  // and its sales still follow
+    expect(w.sales.get("s1")!.hobbyiqCardId).toBe(NEW);  // and its sales still follow
   });
 
   it("equal authority: more vendorIds wins, then the incumbent keeps its address", async () => {
@@ -283,21 +300,21 @@ describe("moveCatalogRow: graded children, sales, order", () => {
     for (const child of [`${OLD}:psa-10`, `${OLD}:psa-9`]) expect(at(`card_catalog.delete ${child}`)).toBeLessThan(oldDelete);
     // and what the sales now say
     for (const id of ["s1", "s2"]) {
-      const s = w.sales.docs.get(id)!;
+      const s = w.sales.get(id)!;
       expect(s.hobbyiqCardId).toBe(NEW);
       expect(s.reslugedFrom).toBe(OLD);
       expect(s.reslugedReason).toBe(REASON);
       expect(typeof s.reslugedAt).toBe("string");
       expect(s.normalizedSetKey).toBe("topps-allen-and-ginter");
     }
-    expect(w.sales.docs.get("s3")!.hobbyiqCardId).not.toBe(NEW);   // a sale at another card is untouched
+    expect(w.sales.get("s3")!.hobbyiqCardId).not.toBe(NEW);   // a sale at another card is untouched
   });
 
   it("normalizedSetKey is stamped only when asked", async () => {
     const w = world();
     await moveCatalogRow(w.cat, identityRow(), NEW, { setKey: "topps-allen-and-ginter" }, { reason: REASON, salesContainer: w.pool });
-    expect(w.sales.docs.get("s1")!.normalizedSetKey).toBe("topps-allen-ginter");
-    expect(w.sales.docs.get("s1")!.hobbyiqCardId).toBe(NEW);
+    expect(w.sales.get("s1")!.normalizedSetKey).toBe("topps-allen-ginter");
+    expect(w.sales.get("s1")!.hobbyiqCardId).toBe(NEW);
   });
 
   it("(6) dryRun writes nothing and still reports what a run would do", async () => {
@@ -308,7 +325,7 @@ describe("moveCatalogRow: graded children, sales, order", () => {
     expect(w.catalog.docs.has(OLD)).toBe(true);
     expect(w.catalog.docs.has(NEW)).toBe(false);
     expect(w.catalog.docs.has(`${OLD}:psa-10`)).toBe(true);
-    expect(w.sales.docs.get("s1")!.hobbyiqCardId).toBe(OLD);
+    expect(w.sales.get("s1")!.hobbyiqCardId).toBe(OLD);
   });
 
   it("`known` skips the incumbent read; omitting salesContainer says so", async () => {
@@ -330,6 +347,58 @@ describe("moveCatalogRow: graded children, sales, order", () => {
   });
 });
 
+describe("moveCatalogRow: a rehome (same slug, foreign partition)", () => {
+  // The 17.7M-row shape rehome-catalog-rows-to-own-partition exists for: a
+  // correct slug in `id`, a CardHedge vendor id in `cardId`, invisible to the
+  // (slug, slug) point read.
+  const VENDOR = "1775832219776x807179689237410600";
+  const foreign = (over: Doc = {}) => identityRow({ cardId: VENDOR, source: "cardhedge", vendorIds: {}, ...over });
+
+  it("(7) copies the row to (slug, slug), keeps the vendor partition key as a cross-reference, and re-derives nothing", async () => {
+    const w = world({ old: foreign() });
+    const r = await moveCatalogRow(w.cat, foreign(), OLD, {}, { reason: "re-homed", salesContainer: w.pool });
+    expect(r).toMatchObject({ action: "move", newSlug: OLD, salesRepointed: 0, gradedChildrenRetired: 0, survivor: "incoming" });
+    expect(r.decision).toBe(`rehome from partition ${VENDOR}: no row at ${OLD}; sales and graded children stay (the slug did not change)`);
+    const home = w.catalog.get(OLD, OLD)!;
+    expect(home.cardId).toBe(OLD);
+    expect(home.vendorIds).toEqual({ cardhedge: VENDOR });
+    expect(home.rehomedFrom).toBe(VENDOR);
+    expect(home.rehomedReason).toBe("re-homed");
+    expect(home.movedFrom).toBeUndefined();
+    expect(home.searchTokens).toContain("oldsetonly");     // the card did not change: nothing rebuilt
+    expect(home.checklistBacking).toBe("confirmed");       // still describes this slug
+    expect(home._etag).toBeUndefined();
+    expect(w.catalog.has(OLD, VENDOR)).toBe(false);        // the foreign copy is gone
+    // its own ladder and its sales are untouched
+    for (const child of [`${OLD}:psa-10`, `${OLD}:psa-9`]) expect(w.catalog.has(child)).toBe(true);
+    expect(w.sales.get("s1")).toEqual(sale("s1", OLD));
+    expect(w.catalog.writes()).toEqual([`card_catalog.upsert ${OLD}`, `card_catalog.delete ${OLD}`]);
+  });
+
+  it("a copy already at (slug, slug) is the half-finished move: decided by authority, vendorIds unioned, the foreign copy retired", async () => {
+    const w = world({ old: identityRow({ vendorIds: { cardhedge: "ch-9" } }), extraCatalog: [foreign({ vendorIds: { cardsight: "cs-1" } })] });
+    const r = await moveCatalogRow(w.cat, foreign({ vendorIds: { cardsight: "cs-1" } }), OLD, {}, { reason: "re-homed", salesContainer: w.pool });
+    expect(r.action).toBe("fold");
+    expect(r.decision).toMatch(/^rehome from partition \d+x\d+: authority: incumbent beckett-scraped-2026-08-19 \(rank 3\) outranks incoming cardhedge \(rank 2\)/);
+    const home = w.catalog.get(OLD, OLD)!;
+    expect(home.source).toBe("beckett-scraped-2026-08-19");
+    expect(home.vendorIds).toEqual({ cardhedge: "ch-9", cardsight: "cs-1" });   // the survivor's ch-9 wins the key clash
+    expect(w.catalog.has(OLD, VENDOR)).toBe(false);
+    expect(w.catalog.has(`${OLD}:psa-10`)).toBe(true);
+    expect(w.catalog.writes()).toEqual([`card_catalog.upsert ${OLD}`, `card_catalog.delete ${OLD}`]);
+  });
+
+  it("dryRun rehome writes nothing; a row already in its own partition is still a noop", async () => {
+    const w = world({ old: foreign() });
+    const dry = await moveCatalogRow(w.cat, foreign(), OLD, {}, { reason: "re-homed", dryRun: true });
+    expect(dry).toMatchObject({ action: "move", salesRepointed: 0, gradedChildrenRetired: 0 });
+    expect(w.catalog.writes()).toEqual([]);
+    expect(w.catalog.has(OLD, VENDOR)).toBe(true);
+    const home = await moveCatalogRow(w.cat, identityRow(), OLD, {}, { reason: "re-homed" });
+    expect(home.action).toBe("noop");
+  });
+});
+
 describe("retireCatalogRow", () => {
   it("retires the graded children, then the row; stamps nothing on the sales", async () => {
     const w = world();
@@ -340,7 +409,7 @@ describe("retireCatalogRow", () => {
     const writes = w.catalog.writes();
     expect(writes[writes.length - 1]).toBe(`card_catalog.delete ${OLD}`);
     expect(writes.some((l) => l.startsWith("sold_comps."))).toBe(false);
-    expect(w.sales.docs.get("s1")).toEqual(sale("s1", OLD));
+    expect(w.sales.get("s1")).toEqual(sale("s1", OLD));
   });
 
   it("dryRun writes nothing; an absent row is a noop", async () => {

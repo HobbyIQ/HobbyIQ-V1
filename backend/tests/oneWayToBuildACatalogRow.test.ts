@@ -101,8 +101,11 @@ const ROW_OPS_IMPORT = /(?:from\s*|require\s*\(\s*)["'][^"']*catalogRowOps\.serv
  * 2026-08-29 census found (apply-setkey-rulings, clean-parallel-annotations,
  * map-derived-parallels-to-rungs, map-pokemon-setkeys-to-checklist,
  * map-yearprefixed-setkeys, rename-setkey, repair-pokemon-glued-numbers) were
- * converted in D5 PR 3 and left. A new hand-rolled mover is listed here until
- * it goes through moveCatalogRow.
+ * converted in D5 PR 3 and left; the seven allowlisted movers (dedupe-catalog-
+ * by-hobbyiq, dedupe-catalog-partition-shadows, dedupe-catalog-setkeys,
+ * migrate-catalog-setkey, priorityCatalogReslug, rehome-catalog-rows-to-own-
+ * partition, reslugCatalogFromCurrent) in D5 PR 4. A new hand-rolled mover is
+ * listed here until it goes through moveCatalogRow.
  */
 const MOVERS = new Set<string>();
 
@@ -111,7 +114,8 @@ const MOVERS = new Set<string>();
  * card_catalog handle) without the builder. Measured 2026-08-29: 62;
  * re-measured after D5 PR 3 moved the seven movers onto catalogRowOps: 54;
  * re-measured after D5 PR 5 deleted the 25 dead minters (sales never mint,
- * #1353; vendor feeds never mint, #1362): 29.
+ * #1353; vendor feeds never mint, #1362): 29; after D5 PR 4 moved the seven
+ * allowlisted movers onto catalogRowOps: 22.
  * Versus the 2026-08-26 list: the five sold_comps writers and the two ebay
  * services (PR 6, #1403/#1404) are gone; the two comment-match "canonical"
  * files, the capital-C `getContainer` cardsight crawler and the env-fallback
@@ -130,9 +134,6 @@ const BYPASSING = new Set([
   "backend/scripts/comp-quality/backfill-search-fields.cjs",
   "backend/scripts/comp-quality/create-product-line-cards-from-base.cjs",
   "backend/scripts/comp-quality/create-tiffany-cards-from-base.cjs",
-  "backend/scripts/dedupe-catalog-by-hobbyiq.cjs",
-  "backend/scripts/dedupe-catalog-partition-shadows.cjs",
-  "backend/scripts/dedupe-catalog-setkeys.ts",
   "backend/scripts/explodeCatalogGrades.cjs",
   "backend/scripts/fix-catalog-parallel-as-player.cjs",
   "backend/scripts/import-bccp-to-catalog.ts",
@@ -140,13 +141,9 @@ const BYPASSING = new Set([
   "backend/scripts/match-catalog-to-alt-sources.ts",
   "backend/scripts/match-catalog-to-bccp.ts",
   "backend/scripts/match-catalog-to-xlsx.ts",
-  "backend/scripts/migrate-catalog-setkey.cjs",
   "backend/scripts/normalize-catalog-format.cjs",
   "backend/scripts/normalize-catalog-schema.cjs",
   "backend/scripts/normalizeVendorRows.cjs",
-  "backend/scripts/priorityCatalogReslug.cjs",
-  "backend/scripts/rehome-catalog-rows-to-own-partition.cjs",
-  "backend/scripts/reslugCatalogFromCurrent.cjs",
   "backend/scripts/resport-mistagged-pokemon.cjs",
   "backend/src/services/portfolioiq/catalogReview.service.ts",
 ]);
@@ -610,10 +607,11 @@ describe("one way to build a catalog row", () => {
     // writers on the canonical path (ensureCatalogRow plus eight scripts that
     // require the builder from dist/); re-measured after D5 PR 3 put the seven
     // movers on catalogRowOps: 17 of 112; after D5 PR 5 deleted 25 dead
-    // hand-rolled minters (none compliant): still 17, of 87. It can only go
-    // up -- if it drops, a writer was converted back to hand-rolling or the
-    // matcher above regressed. Deleting a compliant writer lowers it
+    // hand-rolled minters (none compliant): still 17, of 87; after D5 PR 4
+    // put the seven allowlisted movers on catalogRowOps: 24 of 87. It can
+    // only go up -- if it drops, a writer was converted back to hand-rolling
+    // or the matcher above regressed. Deleting a compliant writer lowers it
     // legitimately; re-measure and change the number in that PR.
-    expect(ok).toBeGreaterThanOrEqual(17);
+    expect(ok).toBeGreaterThanOrEqual(24);
   });
 });

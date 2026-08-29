@@ -283,6 +283,29 @@ function buildIncoming(
   return doc;
 }
 
+/**
+ * The row as it should exist in its OWN partition (a rehome: same slug,
+ * foreign `cardId`). Nothing about the card changes, so nothing derived is
+ * rebuilt and the slug-bound annotations stay -- they still describe this
+ * slug. The old partition key was a vendor id for 17.7M rows
+ * (CF-A-ROW-IN-THE-WRONG-PARTITION-IS-AN-INVISIBLE-ROW) and a CH lookup
+ * resolves by it, so it is kept under the row's source in vendorIds.
+ */
+function rehomeIncoming(
+  oldRow: CatalogRowDoc,
+  oldPk: string,
+  changedFields: Partial<CardCatalogEntry> & Record<string, unknown>,
+): CatalogRowDoc {
+  const doc = { ...stripSystemFields(oldRow), ...changedFields, cardId: String(oldRow.id) } as CatalogRowDoc;
+  if (!oldPk.startsWith("hiq:")) {
+    const k = String(oldRow.source ?? "vendor");
+    const vendorIds = { ...(doc.vendorIds ?? {}) };
+    if (!vendorIds[k]) vendorIds[k] = oldPk;
+    doc.vendorIds = vendorIds;
+  }
+  return doc;
+}
+
 // ── the collision ────────────────────────────────────────────────────────────
 
 function salesCounter(row: CatalogRowDoc): number {
@@ -437,6 +460,14 @@ async function retireGradedChildren(
  * them -- parallelSlug, playerSlug, year/cardYear, isAuto, brand,
  * parentSetKey, searchText, searchTokens, displayName -- is rebuilt here, so a
  * caller cannot forget one.
+ *
+ * `newSlug === oldRow.id` with a foreign `cardId` is a REHOME: the slug is
+ * right, the partition key is not (a vendor id, or a parent's slug from the
+ * exploded ladder), so the (slug, slug) point read cannot see the row. The
+ * card does not change: no sale is re-pointed (they already name this slug)
+ * and no graded child is retired (they are still this row's children). Copy
+ * to (slug, slug), decide a twin by the same authority rule, delete the
+ * foreign copy last.
  */
 export async function moveCatalogRow(
   container: Container,
@@ -451,18 +482,22 @@ export async function moveCatalogRow(
   const dryRun = opts.dryRun === true;
   const now = new Date().toISOString();
   const oldId = String(oldRow.id);
-  if (newSlug === oldId) {
+  const oldPk = String(oldRow.cardId ?? oldId);
+  const rehome = newSlug === oldId && oldPk !== oldId;
+  if (newSlug === oldId && !rehome) {
     return { action: "noop", newSlug, salesRepointed: 0, gradedChildrenRetired: 0, survivor: null, decision: "newSlug equals the row's id; nothing to move" };
   }
 
-  const incoming = buildIncoming(oldRow, newSlug, changedFields);
+  const incoming = rehome ? rehomeIncoming(oldRow, oldPk, changedFields) : buildIncoming(oldRow, newSlug, changedFields);
   const incumbent = "known" in opts ? (opts.known ?? null) : await readIncumbent(container, newSlug, retry);
 
   let action: MoveCatalogRowAction;
   let survivor: "incoming" | "incumbent";
   let decision: string;
   let doc: CatalogRowDoc;
-  const stamp = { movedFrom: oldId, movedReason: reason, movedAt: now };
+  const stamp = rehome
+    ? { rehomedFrom: oldPk, rehomedReason: reason, rehomedAt: now }
+    : { movedFrom: oldId, movedReason: reason, movedAt: now };
   if (!incumbent) {
     action = "move";
     survivor = "incoming";
@@ -498,6 +533,7 @@ export async function moveCatalogRow(
       };
     }
   }
+  if (rehome) decision = `rehome from partition ${oldPk}: ${decision}`;
 
   // 1. Copy first. The survivor exists at newSlug before any sale points there.
   if (!dryRun) {
@@ -510,9 +546,11 @@ export async function moveCatalogRow(
     }
   }
 
-  // 2. Sales follow the card.
+  // 2. Sales follow the card. On a rehome the card did not move.
   let salesRepointed = 0;
-  if (opts.salesContainer) {
+  if (rehome) {
+    decision += "; sales and graded children stay (the slug did not change)";
+  } else if (opts.salesContainer) {
     const sales = opts.salesContainer;
     const ops: PatchOperation[] = [
       { op: "set", path: "/hobbyiqCardId", value: newSlug },
@@ -537,11 +575,12 @@ export async function moveCatalogRow(
   }
 
   // 3. Graded children of the old slug. Regenerable from the survivor by
-  //    materialize-graded-identities; they do not move.
-  const gradedChildrenRetired = await retireGradedChildren(container, oldId, retry, dryRun);
+  //    materialize-graded-identities; they do not move. A rehomed row keeps
+  //    its own ladder.
+  const gradedChildrenRetired = rehome ? 0 : await retireGradedChildren(container, oldId, retry, dryRun);
 
-  // 4. The old row, last.
-  if (!dryRun) await deleteTolerant(container, oldId, String(oldRow.cardId ?? oldId), retry);
+  // 4. The old row, last -- on a rehome, the copy in the foreign partition.
+  if (!dryRun) await deleteTolerant(container, oldId, oldPk, retry);
 
   return { action, newSlug, salesRepointed, gradedChildrenRetired, survivor, decision };
 }

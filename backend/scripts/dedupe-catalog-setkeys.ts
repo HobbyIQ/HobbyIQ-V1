@@ -14,27 +14,24 @@
  *
  * For every catalog row at an OLD slug:
  *   - Compute NEW slug (same identity, canonical setKey).
- *   - Look for an existing row at NEW slug in card_catalog.
- *   - Case A — NEW exists: MERGE. Take max compCount / most-recent
- *     lastSeenAt / union of searchTokens onto NEW. Delete OLD.
- *   - Case B — NEW absent: RENAME. Rewrite doc.id + doc.cardId +
- *     doc.setKey to NEW slug, insert as NEW, delete OLD. (Cosmos can't
- *     move a partition-key value in place — the doc travels.)
+ *   - Probe for an existing row at NEW slug; the answer is handed to the
+ *     move as `known` (CF-DO-NOT-LOOK-TWICE).
+ *   - catalogRowOps.moveCatalogRow (D5 PR 4) does the move: copy to NEW
+ *     with the searchable fields rebuilt (the OLD setKey's tokens do not
+ *     travel), re-point the sold_comps rows still at OLD (normalizedSetKey
+ *     follows), retire OLD's graded children, delete OLD last. A row
+ *     already at NEW is decided by authority: folded (its vendorIds
+ *     unioned with ours) or replaced.
  *
- * sold_comps rows that were built with the old normalizer still carry
- * hobbyiqCardId pointing at the OLD slug. We do NOT change comps here
- * — a separate re-run of backfill-soldcomps-canonical.ts (which uses
- * the same fixed normalizer) will re-derive the canonical slug and
- * patch every comp. That script is idempotent and cheap.
- *
- * Idempotent — safe to re-run. Uses bulk() upsert + point deletes.
+ * Idempotent — safe to re-run.
  *
  * Usage:
  *   npx tsx backend/scripts/dedupe-catalog-setkeys.ts \
  *     [--year YYYY|--all] [--sport baseball] [--dry-run|--auto-approve]
  */
 
-import { CosmosClient, type JSONObject } from "@azure/cosmos";
+import { CosmosClient } from "@azure/cosmos";
+import { moveCatalogRow, type CatalogRowDoc } from "../src/services/catalog/catalogRowOps.service.js";
 
 interface Args { year?: number; all?: boolean; sport?: string; dryRun?: boolean; autoApprove?: boolean; }
 function parseArgs(): Args {
@@ -79,14 +76,6 @@ const OLD_TO_NEW_SETKEY: Record<string, string> = {
   // years, not by mass rename here.
 };
 
-interface CatalogRow {
-  id: string; cardId: string; year: number; sport: string; setKey: string;
-  cardNumber?: string; parallel?: string; isAuto?: boolean; printRun?: number | null;
-  observedCompCount?: number; lastSeenAt?: string; source?: string;
-  searchTokens?: string[]; setName?: string; playerName?: string; playerSlug?: string;
-  parallelSlug?: string; hobbyiqCardId?: string;
-}
-
 /** Compute the NEW slug for a row that's currently at OLD setKey. We
  *  rebuild the id string mechanically because computeHobbyIqCardId
  *  derives the same suffix regardless of setKey. Safer than importing
@@ -102,21 +91,6 @@ function rewriteSlug(oldSlug: string, oldSetKey: string, newSetKey: string): str
   return parts.join(":");
 }
 
-function mergeRow(target: CatalogRow, source: CatalogRow): CatalogRow {
-  // Prefer the higher observedCompCount and the most recent lastSeen.
-  const merged: CatalogRow = { ...target };
-  if ((source.observedCompCount ?? 0) > (target.observedCompCount ?? 0)) merged.observedCompCount = source.observedCompCount;
-  else merged.observedCompCount = (target.observedCompCount ?? 0) + (source.observedCompCount ?? 0);
-  if (source.lastSeenAt && (!target.lastSeenAt || source.lastSeenAt > target.lastSeenAt)) merged.lastSeenAt = source.lastSeenAt;
-  if (source.searchTokens || target.searchTokens) {
-    const tokens = new Set<string>([...(target.searchTokens ?? []), ...(source.searchTokens ?? [])]);
-    merged.searchTokens = [...tokens];
-  }
-  if (source.playerName && !target.playerName) merged.playerName = source.playerName;
-  if (source.playerSlug && !target.playerSlug) merged.playerSlug = source.playerSlug;
-  return merged;
-}
-
 async function main(): Promise<void> {
   const args = parseArgs();
   if (!args.year && !args.all) { console.error("Usage: dedupe-catalog-setkeys.ts (--year YYYY|--all) [--sport baseball] [--dry-run|--auto-approve]"); process.exit(2); }
@@ -124,7 +98,9 @@ async function main(): Promise<void> {
   if (!conn) { console.error("COSMOS_CONNECTION_STRING required"); process.exit(2); }
 
   const client = new CosmosClient(conn);
-  const cat = client.database(process.env.COSMOS_DATABASE ?? "hobbyiq").container("card_catalog");
+  const db = client.database(process.env.COSMOS_DATABASE ?? "hobbyiq");
+  const cat = db.container("card_catalog");
+  const pool = db.container("sold_comps");
 
   const oldSetKeys = Object.keys(OLD_TO_NEW_SETKEY);
   console.log(`\n▸ Dedupe scan across ${oldSetKeys.length} old-setKey fragmentations`);
@@ -137,11 +113,11 @@ async function main(): Promise<void> {
   const setKeyParams = oldSetKeys.map((k, i) => ({ name: `@sk${i}`, value: k }));
 
   console.log(`▸ Scanning for old-setKey rows...`);
-  const iterator = cat.items.query<CatalogRow>({
+  const iterator = cat.items.query<CatalogRowDoc>({
     query: `SELECT * FROM c WHERE c.sport = @sport${yearFilter} AND c.source = 'bulk-build-from-pool' AND c.setKey IN (${setKeyList})`,
     parameters: [{ name: "@sport", value: args.sport ?? "baseball" }, ...yearParam, ...setKeyParams],
   }, { maxItemCount: 500 });
-  const oldRows: CatalogRow[] = [];
+  const oldRows: CatalogRowDoc[] = [];
   while (iterator.hasMoreResults()) {
     const { resources } = await iterator.fetchNext();
     for (const r of resources) oldRows.push(r);
@@ -156,8 +132,8 @@ async function main(): Promise<void> {
   console.log(`▸ Breakdown by old setKey:`);
   for (const [k, v] of [...perOldSetKey.entries()].sort((a, b) => b[1] - a[1])) console.log(`   ${k.padEnd(28)} ${v}`);
 
-  // Plan actions: {mode: "merge" | "rename", oldRow, newSlug, newRowIfMerge?}
-  interface Action { mode: "merge" | "rename"; oldRow: CatalogRow; newSlug: string; newRow?: CatalogRow; }
+  // Plan actions: the old row, its new slug, and whatever the probe found there.
+  interface Action { oldRow: CatalogRowDoc; newSetKey: string; newSlug: string; known: CatalogRowDoc | null; }
   const actions: Action[] = [];
   const missCounter = { hasNew: 0, needsRename: 0, badSlug: 0 };
 
@@ -171,14 +147,15 @@ async function main(): Promise<void> {
       if (!newSetKey) { missCounter.badSlug++; return; }
       const newSlug = rewriteSlug(row.id, row.setKey, newSetKey);
       if (newSlug === row.id) { missCounter.badSlug++; return; }
+      let known: CatalogRowDoc | null = null;
       try {
-        const { resource } = await cat.item(newSlug, newSlug).read<CatalogRow>();
-        if (resource) { actions.push({ mode: "merge", oldRow: row, newSlug, newRow: resource }); missCounter.hasNew++; }
-        else { actions.push({ mode: "rename", oldRow: row, newSlug }); missCounter.needsRename++; }
+        const { resource } = await cat.item(newSlug, newSlug).read<CatalogRowDoc>();
+        known = resource ?? null;
       } catch {
-        actions.push({ mode: "rename", oldRow: row, newSlug });
-        missCounter.needsRename++;
+        known = null;
       }
+      actions.push({ oldRow: row, newSetKey, newSlug, known });
+      if (known) missCounter.hasNew++; else missCounter.needsRename++;
       probed++;
     }));
     if (probed % 500 === 0) process.stdout.write(`  probed ${probed}/${oldRows.length}\r`);
@@ -196,9 +173,8 @@ async function main(): Promise<void> {
 
   console.log(`\n▸ Applying ${actions.length} actions...`);
   const startedAt = Date.now();
-  let merged = 0, renamed = 0, deleted = 0, errors = 0;
+  let merged = 0, replaced = 0, renamed = 0, deleted = 0, salesRepointed = 0, errors = 0;
 
-  // Group deletes/upserts by partition (each id is its own partition).
   // Simple loop with modest concurrency; the volume is bounded by
   // pre-fix dupe count (~20K rows across all years).
   const CONC = 8;
@@ -206,37 +182,27 @@ async function main(): Promise<void> {
     const batch = actions.slice(i, i + CONC);
     await Promise.all(batch.map(async (act) => {
       try {
-        if (act.mode === "merge" && act.newRow) {
-          const target = mergeRow(act.newRow, act.oldRow);
-          await cat.items.upsert(target as unknown as JSONObject);
-          await cat.item(act.oldRow.id, act.oldRow.id).delete();
-          merged++;
-          deleted++;
-        } else {
-          // Rename: build new doc with rewritten setKey + id.
-          const newDoc = { ...act.oldRow, id: act.newSlug, cardId: act.newSlug, setKey: OLD_TO_NEW_SETKEY[act.oldRow.setKey] } as unknown as JSONObject;
-          // Drop Cosmos internal fields that upsert won't like.
-          delete (newDoc as { _rid?: unknown })._rid;
-          delete (newDoc as { _self?: unknown })._self;
-          delete (newDoc as { _etag?: unknown })._etag;
-          delete (newDoc as { _attachments?: unknown })._attachments;
-          delete (newDoc as { _ts?: unknown })._ts;
-          await cat.items.upsert(newDoc);
-          await cat.item(act.oldRow.id, act.oldRow.id).delete();
-          renamed++;
-          deleted++;
-        }
+        const r = await moveCatalogRow(cat, act.oldRow, act.newSlug, { setKey: act.newSetKey }, {
+          reason: `bare setKey ${act.oldRow.setKey} -> ${act.newSetKey}`,
+          repointNormalizedSetKey: true,
+          salesContainer: pool,
+          known: act.known,
+        });
+        if (r.action === "fold") merged++;
+        else if (r.action === "replace") replaced++;
+        else renamed++;
+        salesRepointed += r.salesRepointed;
+        deleted++;
       } catch (err) {
         errors++;
         if (errors < 5) console.warn(`  ! ${act.oldRow.id}: ${(err as Error).message}`);
       }
     }));
-    const rate = (merged + renamed) / Math.max(1, (Date.now() - startedAt) / 1000);
-    process.stdout.write(`  merged ${merged}, renamed ${renamed}, deleted ${deleted}, err ${errors} — ${rate.toFixed(1)}/s\r`);
+    const rate = (merged + replaced + renamed) / Math.max(1, (Date.now() - startedAt) / 1000);
+    process.stdout.write(`  merged ${merged}, replaced ${replaced}, renamed ${renamed}, deleted ${deleted}, err ${errors} — ${rate.toFixed(1)}/s\r`);
   }
 
-  console.log(`\n▸ Done in ${Math.round((Date.now() - startedAt) / 1000)}s: merged=${merged}, renamed=${renamed}, deleted=${deleted}, errors=${errors}`);
-  console.log(`\n▸ Next: re-run backfill-soldcomps-canonical.ts so sold_comps.hobbyiqCardId points at the new slugs.`);
+  console.log(`\n▸ Done in ${Math.round((Date.now() - startedAt) / 1000)}s: merged=${merged}, replaced=${replaced}, renamed=${renamed}, deleted=${deleted}, sales re-pointed=${salesRepointed}, errors=${errors}`);
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });

@@ -7,23 +7,34 @@
 //   1. Read every holding.hobbyiqCardId across every portfolio doc
 //   2. For each unique slug, check the catalog row
 //   3. If the catalog row's stored id doesn't equal what the current
-//      generator would produce for its own stored fields, move it
+//      generator would produce for its own stored fields, move it --
+//      catalogRowOps.moveCatalogRow (D5 PR 4): copy to the canonical slug
+//      with the searchable fields rebuilt, re-point the sales still at the
+//      old slug, retire its graded children, delete the old row last; a
+//      row already at the canonical slug is decided by authority.
 //   4. Also patch holdings whose slug doesn't exist in catalog but
 //      would be produced by the generator from the holding's fields
+//
+// A holding may name a graded slug (…:psa-10). Its catalog row is left
+// alone: the generator produces the PARENT's slug for it, and moving a
+// graded row there folds it onto its parent.
 //
 // Env: APPLY=true
 
 const { CosmosClient } = require("@azure/cosmos");
 const path = require("path");
 const { computeHobbyIqCardId } = require(path.resolve(__dirname, "..", "dist", "services", "portfolioiq", "hobbyIqCardId.service.js"));
+const { moveCatalogRow } = require(path.resolve(__dirname, "..", "dist", "services", "catalog", "catalogRowOps.service.js"));
 
 const APPLY = process.env.APPLY === "true";
 
 async function main() {
   const conn = process.env.COSMOS_CONNECTION_STRING;
+  if (!conn) { console.error("FATAL: COSMOS_CONNECTION_STRING not set"); process.exit(1); }
   const db = new CosmosClient(conn).database("hobbyiq");
   const portfolio = db.container("portfolio");
   const catalog = db.container("card_catalog");
+  const pool = db.container("sold_comps");
   console.log(`▸ ${APPLY ? "APPLY" : "DRY-RUN"}`);
 
   // Step 1: collect unique hobbyiqCardId slugs from all holdings
@@ -41,7 +52,7 @@ async function main() {
   console.log(`  ${slugs.size} unique slugs across ${totalHoldings} holdings from ${docs.length} portfolios`);
 
   // Step 2: for each unique slug, look up catalog row + check drift
-  let checked = 0, catalogOk = 0, catalogMiss = 0, catalogDrift = 0, moved = 0, failed = 0;
+  let checked = 0, catalogOk = 0, catalogMiss = 0, graded = 0, catalogDrift = 0, moved = 0, failed = 0;
   const missSlugs = [], driftSlugs = [];
   for (const slug of slugs) {
     checked++;
@@ -51,6 +62,7 @@ async function main() {
     }, { enableCrossPartitionQuery: true }).fetchAll();
     if (resources.length === 0) { catalogMiss++; missSlugs.push(slug); continue; }
     const doc = resources[0];
+    if (doc.gradeTier !== undefined) { graded++; continue; }
     // Recompute what the current generator would produce
     let canonicalSlug;
     try {
@@ -69,20 +81,22 @@ async function main() {
     driftSlugs.push({ from: slug, to: canonicalSlug, player: doc.playerName });
     if (!APPLY) continue;
 
-    // Move: upsert at new id + delete old (catalog partition = /cardId)
-    const oldPk = doc.cardId ?? doc.id;
-    const newDoc = { ...doc, id: canonicalSlug, cardId: canonicalSlug, hobbyiqCardId: canonicalSlug, reslugedAt: new Date().toISOString(), reslugedFrom: slug };
-    delete newDoc._rid; delete newDoc._self; delete newDoc._etag; delete newDoc._attachments; delete newDoc._ts;
+    // The slug carries the setKey the generator resolved -- a key needs both halves.
+    const setKey = canonicalSlug.split(":")[3];
     try {
-      await catalog.items.upsert(newDoc);
-      await catalog.item(doc.id, oldPk).delete().catch(() => {});
-      moved++;
+      const r = await moveCatalogRow(catalog, doc, canonicalSlug, { setKey }, {
+        reason: "holding-referenced catalog slug re-derived by the current generator",
+        repointNormalizedSetKey: setKey !== doc.setKey,
+        salesContainer: pool,
+      });
+      if (r.action !== "noop") moved++;
     } catch (err) { failed++; console.warn(`  fail ${slug}: ${err.message||err}`); }
   }
 
   console.log(`\n[done] ${checked} slugs checked`);
   console.log(`  catalog OK (canonical): ${catalogOk}`);
   console.log(`  catalog missing:        ${catalogMiss}`);
+  console.log(`  catalog graded (left):  ${graded}`);
   console.log(`  catalog drift:          ${catalogDrift}${APPLY ? ` (moved ${moved}, failed ${failed})` : ""}`);
   if (catalogMiss > 0) {
     console.log(`\nMISSING slugs (need catalog rows):`);
