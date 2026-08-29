@@ -553,8 +553,12 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   users:** fold-unnumbered-twins APPLY → conform-holdings-to-catalog APPLY
   (52 unresolved = the acquisition/ruling list) → repair-parallel-from-title
   for the contradicting pools → `reprice-user-holdings` MODE=all (#1451 —
-  every portfolio user; dispatch AFTER D9 and D4 PR 5/6 land so no floor
-  price is re-persisted) → audit again.
+  every portfolio user). **D9 (#1454) and D4 PR 5/6 (#1462) landed →
+  `reprice-user-holdings` MODE=all dispatched 18:40Z (33268405103) with the
+  PR 5/6 deploy (33268395668); result and the re-audit recorded here when
+  they land.** The fold → conform passes run again once fold-unnumbered-twins'
+  report-only run finishes (its pass 1 scans every numbered row at the RU
+  floor).
 - ◐ D9 **The eBay import → holdings pipeline** (Drew, 2026-08-29 17:20Z: "we
   need to fix the whole ebay import to holdings process, bc it seems broken").
   The Marconi purchase IS the fixture. Real listing title (`purchase.notes`):
