@@ -93,7 +93,8 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   checklistcenter) — `retire-exploded-checklist-rows` MODE=misparsed, after B1.
 - ◐ B3 Unify `topps-allen-ginter` → `topps-allen-and-ginter` (checklist-majority
   form: 656k vs 71k checklist rows) via `rename-setkey` (#1372). Dry run: 191,521
-  rows — 175,521 move, 15,958 fold, 0 failed → APPLY running on 4 slots.
+  rows — 175,521 move, 15,958 fold, 0 failed → APPLY on 4 slots: slots 0–1 done
+  (87,577 moved, 7,895 folded, 24,892 sales re-pointed, 0 failed), 2–3 running.
 - ◐ B4 Re-scrape the exploded / mis-parsed bcp products through the fixed parser
   (#1368) and the explosion gate (#1373): the e2e bcp phase now takes years /
   titles / phases from the runner (#1377); dispatched 13:18Z for 2005–2015 flagship
@@ -140,7 +141,11 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   Designation tags (RC/AS/DP…) stripped (#1389). Full run after B1.
 - ◐ D2 `identity-triangulation` (#1381) — BUILT: 200 checklist cards with sales ×
   (sale-shaped canonicalize, holding-shaped canonicalize, title search) vs the
-  checklist id. Finding (ii) fixed: #1386 (live `2c65690`). **BASELINE (before the spine passes), baseball ≥2016, 200 cards:
+  checklist id. Finding (ii) fixed: #1386 (live `2c65690`). Finding (i) fixed: #1398
+  — scoring is a pure tested function; a row is no longer rewarded for set-key
+  tokens or parallel words the query never said, and Base is preferred when the
+  query says base or names no finish (4 tests reproduce the baseline misses).
+  Harness re-run dispatches itself after the #1398 deploy. **BASELINE (before the spine passes), baseball ≥2016, 200 cards:
   sale → same card 86.0%, holding → 90.5%, search → 30.5%, ALL THREE 26.0%.**
   Findings, each its own fix: (i) SEARCH ranks a rarer parallel row above the
   base row the title names ("#217 X-Fractor" → platinum-anniversary refractor;
