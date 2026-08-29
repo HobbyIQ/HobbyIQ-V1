@@ -132,6 +132,7 @@ on:
           - retire-exploded-checklist-rows
           - rename-setkey
           - parse-player-from-checklist
+          - identity-triangulation
           - map-derived-parallels-to-rungs
           - repair-pokemon-glued-numbers
           - map-pokemon-setkeys-to-checklist
