@@ -63,6 +63,13 @@ const norm = (k) => String(k)
   .replace(/^\d{4}-pokemon-/, "")
   .replace(/^(swshp?|svp?|smp?|xyp?|bwp?|dpp?|pl|hgss|col|ex|base|neo|gym)\d*[a-z]?-/, "")
   .replace(/-japanese-/, "-").replace(/^japanese-/, "")
+  // CF-ERA-IS-NOT-THE-SET (2026-08-28, pokemon scorecard). Derived keys carry
+  // the ERA name the checklist keys encode as a code prefix:
+  //   2024-pokemon-scarlet-violet-surging-sparks  vs  sv8-surging-sparks
+  // Stripping the code (sv8-) but not the era (scarlet-violet-) left 47k rows
+  // unconfirmed with their checklist one word away. Era names are a closed
+  // list; stripped only at the START of the remaining key.
+  .replace(/^(scarlet-violet|sword-shield|sun-moon|xy|black-white|diamond-pearl|platinum|heartgold-soulsilver|hgss|call-of-legends)-/, "")
   .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 
 async function main() {
