@@ -55,6 +55,18 @@ describe("CF-DIGEST-IS-FOR-MARKET-MOVES", () => {
     expect(drainDivergenceAlerts()).toHaveLength(1);
   });
 
+  it("CF-THE-DIGEST-WAS-SILENT: the REAL holding shape — no method field, only the unified basis note — still fires", () => {
+    // pricingMeta.method had no writer anywhere in src, so every production
+    // holding arrived here with fmvMethod === null and the digest suppressed
+    // everything for a day. The unified engine's basis note IS the exact pool.
+    const fired = recordCostBasisDivergenceIfNoteworthy({
+      ...base,
+      fmvMethod: null,
+      fmvBasisNote: "unified: window=180d median=$300 marketValue=$339 predicted=$330 trend=down -2.1%/wk conf=0.71",
+    });
+    expect(fired).toBe(true);
+    expect(drainDivergenceAlerts()).toHaveLength(1);
+  });
   it("thresholds still gate first: small deltas never fire regardless of method", () => {
     const fired = recordCostBasisDivergenceIfNoteworthy({
       ...base,

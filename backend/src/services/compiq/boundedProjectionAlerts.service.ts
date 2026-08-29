@@ -131,8 +131,11 @@ export function recordCostBasisDivergenceIfNoteworthy(input: Omit<CostBasisDiver
   // user-facing digest.
   const method = String(input.fmvMethod ?? "");
   const basis = String(input.fmvBasisNote ?? "");
+  // CF-THE-DIGEST-WAS-SILENT (2026-08-29): the unified engine's basis note
+  // starts "unified: window=…"; it IS the exact-identity pool. Accept it too,
+  // so the gate does not depend on a method field that a caller forgot.
   const fromExactPool =
-    method === "unified-market-value" || basis.includes("exact-pool supremacy");
+    method === "unified-market-value" || basis.includes("exact-pool supremacy") || basis.startsWith("unified:");
   if (!fromExactPool) {
     console.warn(JSON.stringify({
       event: "engine_divergence_suspect",
