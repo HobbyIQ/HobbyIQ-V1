@@ -55,6 +55,7 @@ const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === 
 const MODE = ["misparsed", "tail", "playerrung", "source"].includes(String(process.env.MODE || "").toLowerCase()) ? String(process.env.MODE).toLowerCase() : "exploded";
 const foldName = (v) => String(v ?? "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 const PARALLEL_WORDS = new Set(["refractor","refractors","xfractor","x-fractor","fractor","prizm","prizms","mojo","wave","shimmer","foil","foilboard","holo","chrome","sapphire","superfractor","printing","plate","plates","black","gold","silver","blue","red","green","orange","purple","pink","yellow","aqua","teal","magenta","fuchsia","bronze","platinum","rainbow","atomic","lava","pattern","laser","crackle","mini","base","parallel","variation","variations","sp","ssp","auto","autograph","autographs","relic","patch","jersey","insert","inserts","checklist","1/1","numbered","border","camo","tie-dye","disco","cracked","ice","optic","velocity","hyper","speckle","sparkle","glitter","neon","negative","sepia","vintage","stock","paper","canvas","gilded","glossy","matte"]);
+const PLAYERRUNG_MIN = Number(process.env.PLAYERRUNG_MIN || 5);
 const isPersonName = (v) => { const t = foldName(v).split(" ").filter(Boolean); return t.length >= 2 && t.length <= 5 && !t.some((w) => PARALLEL_WORDS.has(w)) && !/^\d/.test(t[0]); };
 const SOURCES = String(process.env.SOURCES || (MODE === "tail" ? "checklistinsider-2026-08-27,checklistcenter,bccp" : "baseballcardpedia")).split(",").map((s) => s.trim()).filter(Boolean);
 const PAR_MAX = Number(process.env.PAR_MAX || 150), NUM_MAX = Number(process.env.NUM_MAX || 2000), TAIL_MIN = Number(process.env.TAIL_MIN || 5);
@@ -203,6 +204,12 @@ async function main() {
       const { resources: players } = await retry(() => cat.items.query({ query: "SELECT DISTINCT c.playerName AS n FROM c WHERE c.sport = @sp AND c.year = @y AND c.setKey = @k AND c.source = @s AND NOT IS_DEFINED(c.gradeTier) AND IS_DEFINED(c.playerName)", parameters: params }, { maxItemCount: 5000 }).fetchAll());
       const names = new Set(players.map((r) => r.n).filter(isPersonName).map(foldName));
       const bad = new Set(pars.map((r) => String(r.p ?? "")).filter((par) => par && names.has(foldName(par))));
+      // CF-A-ROSTER-IS-MANY-NAMES (2026-08-29, dry run #2). One or two hits
+      // are a mis-parsed ROW whose playerName is a rung ("Die Cut", "Artist's
+      // Proof", "Triple Exposure") -- retiring every card on that rung would
+      // delete the real parallel. A roster taken for a ladder puts dozens of
+      // names in the rung list (2012 Topps: 170). PLAYERRUNG_MIN hits or nothing.
+      if (bad.size && bad.size < PLAYERRUNG_MIN) { console.log(`  ${p.sp} ${p.y} ${p.k} [${p.s}]: ${bad.size} hit(s) under the floor of ${PLAYERRUNG_MIN}, kept (${[...bad].slice(0, 3).join(", ")})`); continue; }
       if (!bad.size) continue;
       hitProducts++;
       console.log(`  ${p.sp} ${p.y} ${p.k} [${p.s}]: ${bad.size} player-name parallels (e.g. ${[...bad].slice(0, 3).join(", ")})`);

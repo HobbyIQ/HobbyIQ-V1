@@ -173,7 +173,7 @@ async function main() {
   // never reaching the tail.
   const REINGEST = String(process.env.REINGEST || "") === "true";
   let alreadyDone = 0;
-  let cardLineParallel = 0, explodedFiles = 0, playerNameParallel = 0;
+  let cardLineParallel = 0, explodedFiles = 0, explodedCategories = 0, explodedRows = 0, playerNameParallel = 0;
   const foldName = (v) => String(v ?? "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
   const PARALLEL_WORDS = new Set(["refractor","refractors","xfractor","x-fractor","fractor","prizm","prizms","mojo","wave","shimmer","foil","foilboard","holo","chrome","sapphire","superfractor","printing","plate","plates","black","gold","silver","blue","red","green","orange","purple","pink","yellow","aqua","teal","magenta","fuchsia","bronze","platinum","rainbow","atomic","lava","pattern","laser","crackle","mini","base","parallel","variation","variations","sp","ssp","auto","autograph","autographs","relic","patch","jersey","insert","inserts","checklist","1/1","numbered","border","camo","tie-dye","disco","cracked","ice","optic","velocity","hyper","speckle","sparkle","glitter","neon","negative","sepia","vintage","stock","paper","canvas","gilded","glossy","matte"]);
   const isPersonName = (v) => { const t = foldName(v).split(" ").filter(Boolean); return t.length >= 2 && t.length <= 5 && !t.some((w) => PARALLEL_WORDS.has(w)) && !/^\d/.test(t[0]); };
@@ -232,18 +232,27 @@ async function main() {
 
     // CF-EXPLODED-FILE-GATE (2026-08-29). The spine held 140 products / 11.49M
     // rows from a scrape that cross-joined cards with players: 99,994 card
-    // numbers for 2012 Topps, 162,763 for 2025 Topps. No real checklist has
-    // more than ~150 rungs or ~2,000 card numbers. A file over either line is
-    // refused whole -- logged, counted, no resume marker -- so the explosion
-    // can never be re-ingested.
+    // numbers for 2012 Topps, 162,763 for 2025 Topps. No real checklist
+    // CATEGORY has more than ~150 rungs or ~2,000 card numbers.
+    // CF-RIGHT-GUARD-RIGHT-SCOPE (2026-08-29, D3 dry run): the unit is the
+    // category, not the file. A flagship's xlsx carries 20 insert sets, each
+    // with its own ladder -- 514 distinct rung names across 2025 Topps Series 1
+    // is the checklist, not a cross-join; a roster cross-join still puts 600
+    // "rungs" inside ONE category and is refused there. A category over either
+    // line is dropped -- logged, counted, no resume marker -- and the rest of
+    // the file lands.
     {
-      const pars = new Set(batch.map((r) => String(r.parallel || "")));
-      const nums = new Set(batch.map((r) => String(r.cardNumber)));
-      if (pars.size > EXPLODED_PAR_MAX || nums.size > EXPLODED_NUM_MAX) {
-        console.log(`!! EXPLODED checklist file refused: ${name}  rows=${f(batch.length)} distinct parallels=${f(pars.size)} distinct cardNumbers=${f(nums.size)}`);
-        explodedFiles++;
-        continue;
+      const byCat = new Map();
+      for (const r of batch) { const c = String(r.category || "base"); if (!byCat.has(c)) byCat.set(c, { pars: new Set(), nums: new Set(), rows: 0 }); const g = byCat.get(c); g.pars.add(String(r.parallel || "")); g.nums.add(String(r.cardNumber)); g.rows++; }
+      const refused = new Set();
+      for (const [c, g] of byCat) {
+        if (g.pars.size > EXPLODED_PAR_MAX || g.nums.size > EXPLODED_NUM_MAX) {
+          console.log(`!! EXPLODED category refused: ${name} [${c}]  rows=${f(g.rows)} distinct parallels=${f(g.pars.size)} distinct cardNumbers=${f(g.nums.size)}`);
+          refused.add(c); explodedCategories++; explodedRows += g.rows;
+        }
       }
+      if (refused.size) { const keep = batch.filter((r) => !refused.has(String(r.category || "base"))); batch.length = 0; batch.push(...keep); }
+      if (!batch.length) { explodedFiles++; continue; }
     }
 
     for (let i = 0; i < batch.length; i += CONCURRENCY) {
@@ -344,7 +353,8 @@ async function main() {
   console.log(`  files ingested         ${f(files_ok)}${SLOTS > 1 ? `   of ${f(allFiles.length)} in the directory — SHARD ${SLOT}/${SLOTS}, NOT the whole set` : ""}`);
   console.log(`  files already done     ${f(alreadyDone)}   <- resumed past these`);
   console.log(`  files with no manifest ${f(noProduct)}   <- could not name the product`);
-  console.log(`  files REFUSED, exploded ${f(explodedFiles)}   <- >${f(EXPLODED_PAR_MAX)} rungs or >${f(EXPLODED_NUM_MAX)} card numbers; a cross-join, not a checklist`);
+  console.log(`  categories REFUSED, exploded ${f(explodedCategories)} (${f(explodedRows)} rows)   <- >${f(EXPLODED_PAR_MAX)} rungs or >${f(EXPLODED_NUM_MAX)} card numbers inside ONE category; a cross-join, not a checklist`);
+  console.log(`  files with nothing left ${f(explodedFiles)}   <- every category refused`);
   console.log(`  rows with card-line parallel ${f(cardLineParallel)}   <- "100 Mike Trout" is not a rung; skipped`);
   console.log(`  rows with player-name parallel ${f(playerNameParallel)}   <- a roster line, not a rung; skipped`);
   console.log(`  csv rows read          ${f(rows)}`);
