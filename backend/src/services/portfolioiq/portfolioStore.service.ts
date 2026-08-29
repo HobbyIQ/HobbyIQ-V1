@@ -3537,8 +3537,13 @@ async function autoPriceHolding(
   // it — the engines that name their rung write the name, the legacy paths
   // write null — and the final holding write persists it as `fmvRung`.
   let priceSurfaceRung: string | null = null;
-  if (unifiedResult && (unifiedResult.predictedPrice ?? unifiedResult.fmv) !== null) {
-    const chosen = unifiedResult.predictedPrice ?? unifiedResult.fmv!;
+  // CF-ONE-HEADLINE-CHAIN (D12a, 2026-08-29). #1432 aligned the headline to
+  // `marketValue ?? predictedPrice ?? fmv` everywhere the unified result is
+  // read; this producer and the final-authority one below were the two left
+  // reading predictedPrice first, so the same holding could carry a different
+  // headline depending on which branch wrote last.
+  if (unifiedResult && (unifiedResult.marketValue ?? unifiedResult.predictedPrice ?? unifiedResult.fmv) !== null) {
+    const chosen = unifiedResult.marketValue ?? unifiedResult.predictedPrice ?? unifiedResult.fmv!;
     resolved.fairMarketValueOverride = chosen;
     priceSurfaceRung = unifiedResult.rungLabel;
     (resolved as any).valuationStatus = "observed";
@@ -3696,8 +3701,10 @@ async function autoPriceHolding(
   // the same holding). Both are valid pool queries but unified's math
   // is what portfolio + Grade Curve now share.
   let unifiedIsFinalAuthority = false;
-  if (unifiedResult && (unifiedResult.predictedPrice ?? unifiedResult.marketValue ?? unifiedResult.fmv) !== null) {
-    const finalChosen = unifiedResult.predictedPrice ?? unifiedResult.marketValue ?? unifiedResult.fmv!;
+  // CF-ONE-HEADLINE-CHAIN (D12a): marketValue ?? predictedPrice ?? fmv — the
+  // fifth and last chain, aligned with the four #1432 aligned.
+  if (unifiedResult && (unifiedResult.marketValue ?? unifiedResult.predictedPrice ?? unifiedResult.fmv) !== null) {
+    const finalChosen = unifiedResult.marketValue ?? unifiedResult.predictedPrice ?? unifiedResult.fmv!;
     // CF-EXACT-POOL-SUPREMACY (D4 PR 5): >= 1 exact sale, as at the early exit.
     if (finalChosen > 0 && unifiedResult.totalSampleCount >= 1) {
       unifiedIsFinalAuthority = true;
