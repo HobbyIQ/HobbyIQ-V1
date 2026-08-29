@@ -49,6 +49,13 @@ import { parseHoldingsFile } from "../src/services/portfolioiq/import/fileParser
 import { resolveBatch, type ImportRowEnvelope } from "../src/services/portfolioiq/import/resolveBatch.js";
 import { commitImport, readImportJobStatus, INLINE_PRICE_MAX } from "../src/services/portfolioiq/import/importService.js";
 import { detectCollision } from "../src/services/portfolioiq/import/collisionDetector.js";
+import { autoMapHeaders } from "../src/services/portfolioiq/import/headerAutoMap.js";
+import {
+  buildExportRows,
+  buildHoldingsExport,
+  exportColumnHeaders,
+} from "../src/services/portfolioiq/exportHoldings.service.js";
+import type { PortfolioHoldingWire } from "../src/services/portfolioiq/responseAssembly.js";
 import { readUserDoc } from "../src/services/portfolioiq/portfolioStore.service.js";
 import type { PortfolioHolding } from "../src/types/portfolioiq.types.js";
 
@@ -499,5 +506,47 @@ describe("(a′) commit prices what it wrote — through the add-card pricing pa
     }
     expect(job).toMatchObject({ kind: "pricing", status: "ready", pricing: { priced: n, failed: 0 } });
     expect(priceSpy).toHaveBeenCalledTimes(n);
+  });
+});
+
+// ─── (f) ─────────────────────────────────────────────────────────────────
+
+describe("(f) the export carries hobbyiqCardId and re-imports as a round-trip", () => {
+  const wire = {
+    id: "h-export-1", cardId: SLUG, hobbyiqCardId: SLUG, gradeId: null,
+    playerName: "Marconi German", cardYear: 2026, product: "Bowman Chrome", cardTitle: "",
+    cardNumber: "CPA-MG", parallel: "Gold Refractor", serialNumber: "12/50", isAuto: true,
+    quantity: 1, purchasePrice: 120,
+  } as unknown as PortfolioHoldingWire;
+
+  it("hobbyiqCardId is an identity-group export column and a round-trip anchor header", () => {
+    expect(exportColumnHeaders()).toContain("hobbyiqCardId");
+    expect(buildExportRows([wire])[0]!["hobbyiqCardId"]).toBe(SLUG);
+    expect(autoMapHeaders(["hobbyiqCardId", "playerName"]).isRoundTrip).toBe(true);
+  });
+
+  it("export → import round-trips the identity without field resolution", async () => {
+    const exported = buildHoldingsExport([wire], "csv");
+    const parsed = parseHoldingsFile(exported.buffer as string, "csv");
+    expect(parsed.isRoundTrip).toBe(true);
+    expect(parsed.rows[0]!.cells["hobbyiqCardId"]?.value).toBe(SLUG);
+
+    const [env] = await resolveBatch(parsed.rows, { isRoundTrip: true, existingHoldings: {} });
+    expect(env!.lane).toBe("new");
+    expect(env!.bucket).toBe("resolved-clean");
+    expect(env!.cardId).toBe(SLUG);
+    expect(env!.resolution?.matchedBy).toBe("round-trip");
+    expect(getEntryMock).toHaveBeenCalledWith(SLUG);
+    expect(canonicalizeMock).not.toHaveBeenCalled();
+  });
+
+  it("a legacy export with a vendor id in cardId and the slug in hobbyiqCardId: the slug wins", async () => {
+    const [env] = await envelopesFor(csv(
+      ["holdingId", "cardId", "hobbyiqCardId", "playerName", "cardYear", "product"],
+      [["", "1675907831540x1", SLUG, "Marconi German", 2026, "Bowman Chrome"]],
+    ));
+    expect(env!.bucket).toBe("resolved-clean");
+    expect(env!.cardId).toBe(SLUG);
+    expect(env!.identityHint).toBeNull();
   });
 });

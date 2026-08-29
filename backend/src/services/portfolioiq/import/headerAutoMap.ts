@@ -151,7 +151,9 @@ const SYNONYMS: Record<string, string> = {
 // CF-CARDID-RENAME (2026-06-30): accept both the new `cardid` header
 // (post-rename exports) and the legacy `cardsightcardid` (older exports
 // users may still re-import). normalize() lowercases first.
-const ROUND_TRIP_ANCHOR_HEADERS = new Set(["holdingid", "cardid", "cardsightcardid"]);
+// CF-IMPORT-RESOLVES-TO-CHECKLIST (D12-b, 2026-08-29): `hobbyiqcardid` is
+// the canonical-slug anchor the export now writes.
+const ROUND_TRIP_ANCHOR_HEADERS = new Set(["holdingid", "cardid", "cardsightcardid", "hobbyiqcardid"]);
 
 export interface AutoMapResult {
   /** True when the file looks like CF-EXPORT-BE's own output (carries holdingId or cardId). */
