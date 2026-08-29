@@ -30,6 +30,14 @@
  * canonical row BEFORE the shadow is retired. Getting that order wrong breaks
  * CH lookups silently, which is the worst possible failure to add.
  *
+ * Each shadow is catalogRowOps.moveCatalogRow's rehome (D5 PR 4): the row is
+ * copied to (id, id) -- its vendor partition key kept under its source in
+ * vendorIds, a row already there decided by authority and its vendorIds
+ * unioned -- and only then is the shadow deleted. Richest shadow first, so
+ * when no row sits at (id, id) yet the first rehome creates it and the rest
+ * fold onto it. Nothing about the card changes, so sales and graded children
+ * are untouched.
+ *
  * Every retirement prints its (id, cardId) pair, so the run log is the undo
  * record.
  *
@@ -41,6 +49,7 @@ const { CosmosClient } = require("@azure/cosmos");
 const path = require("node:path");
 const ROOT = path.resolve(__dirname, "..");
 const { reportWrites } = require(path.join(ROOT, "dist/services/ops/writeReconciliation.js"));
+const { moveCatalogRow } = require(path.join(ROOT, "dist/services/catalog/catalogRowOps.service.js"));
 
 const APPLY = String(process.env.BACKFILL_APPLY || "") === "true";
 const YEARS = String(process.env.YEARS || "2026").split(",").map(Number).filter(Boolean);
@@ -57,10 +66,10 @@ const RETIRE_NO_PK = String(process.env.RETIRE_NO_PARTITION_KEY || "") === "true
     connectionPolicy: { retryOptions: { maxRetryAttemptsOnThrottledRequests: 60, maxWaitTimeInSeconds: 300 } },
   }).database(process.env.COSMOS_DATABASE ?? "hobbyiq").container("card_catalog");
 
-  const query = async (spec, opts) => {
+  const retry = async (fn) => {
     let wait = 1000;
     for (let a = 0; ; a++) {
-      try { return await cat.items.query(spec, opts).fetchNext(); }
+      try { return await fn(); }
       catch (e) {
         if (!/request rate is too large|429/i.test(String(e?.message)) || a >= 12) throw e;
         await new Promise((r) => setTimeout(r, wait)); wait = Math.min(wait * 2, 30000);
@@ -77,12 +86,12 @@ const RETIRE_NO_PK = String(process.env.RETIRE_NO_PARTITION_KEY || "") === "true
     const groups = new Map();
     let token, scanned = 0;
     do {
-      const page = await query(
+      const page = await retry(() => cat.items.query(
         { query: "SELECT c.id, c.cardId, c.setKey, c.source, c.vendorIds, c.verificationStatus " +
                  "FROM c WHERE c.year = @y AND STARTSWITH(c.id, 'hiq:') AND CONTAINS(LOWER(c.setKey ?? ''), @k)",
           parameters: [{ name: "@y", value: year }, { name: "@k", value: SETKEY_LIKE }] },
         { maxItemCount: 1000, continuationToken: token },
-      );
+      ).fetchNext());
       token = page.continuationToken;
       for (const r of page.resources) {
         scanned++;
@@ -138,88 +147,60 @@ const RETIRE_NO_PK = String(process.env.RETIRE_NO_PARTITION_KEY || "") === "true
 
     for (const [id, rowsForId] of dupes) {
       // The rows this group will act on -- the same predicate `surplus` counted
-      // and the retire loop guards on. Named once so the three cannot diverge.
-      const toRetire = rowsForId.filter((r) => r.cardId !== id);
+      // and the loop below guards on. Named once so the two cannot diverge.
+      // Every shadow ends in exactly one of retired / skipped / failed.
+      const toRetire = rowsForId.filter((r) => r.cardId !== id)
+        .sort((a, b) => Object.keys(b.vendorIds ?? {}).length - Object.keys(a.vendorIds ?? {}).length);
       let retiredHere = 0;
-      try {
-        // The canonical row is the one already keyed by its own slug. If none
-        // exists, promote the richest shadow rather than inventing a row.
-        const canonicalStub = rowsForId.find((r) => r.cardId === id);
-        const keeper = canonicalStub ?? rowsForId.slice().sort(
-          (a, b) => Object.keys(b.vendorIds ?? {}).length - Object.keys(a.vendorIds ?? {}).length)[0];
 
-        // Read the FULL keeper doc; the projection above is not the whole row.
-        const full = (await cat.item(keeper.id, keeper.cardId).read()).resource;
-        if (!full) { skipped += toRetire.length; continue; }
-
-        // Consolidate every shadow's vendor mappings onto the keeper FIRST.
-        // A CH lookup resolves by vendor cardId; losing these is a silent break.
-        const vendorIds = { ...(full.vendorIds ?? {}) };
-        const absorbed = [];
-        for (const s of rowsForId) {
-          if (s.cardId === keeper.cardId) continue;
-          for (const [k, v] of Object.entries(s.vendorIds ?? {})) if (!vendorIds[k]) vendorIds[k] = v;
-          // The shadow's own partition key IS a vendor id when it is not a slug.
-          if (!String(s.cardId).startsWith("hiq:")) {
-            vendorIds[String(s.source ?? "vendor")] = vendorIds[String(s.source ?? "vendor")] ?? s.cardId;
-          }
-          absorbed.push(s.cardId);
-        }
-
-        const target = { ...full, id, cardId: id, vendorIds,
-          dedupedFrom: { count: absorbed.length, at: new Date().toISOString() } };
-        await cat.items.upsert(target);
-        merged++;
-
-        // Only now retire the shadows. Order matters: the mappings are already safe.
-        for (const s of rowsForId) {
-          if (s.cardId === id) continue;
-          // A row stored with no partition key cannot be addressed by
-          // (id, cardId) the way the others can. Skipping it loudly beats
-          // deleting the wrong row: it stays visible in the count instead of
-          // disappearing into a success total.
-          if (s.cardId === undefined || s.cardId === null) {
-            // CF-A-MISSING-PARTITION-KEY-IS-STILL-A-KEY (Drew, 2026-08-25).
-            // This used to skip unconditionally, on the belief that a row
-            // written with no partition key "cannot be addressed by (id,
-            // cardId) the way the others can". It can:
-            //
-            //   cat.item(id, undefined).read() -> 200, cardId=undefined
-            //   cat.item(id, id).read()        -> 200, the canonical row
-            //
-            // Two distinct, separately addressable documents. Every one of the
-            // 5,142 left in 2026 bowman is this shape, and skipping them meant
-            // the job could never make progress on them however often it ran.
-            //
-            // Opt-in, because deleting by a partition key the SDK infers rather
-            // than one we pass explicitly is a targeting risk I have verified
-            // by READ and not by delete. And verify immediately before each
-            // delete: the row must still be the keyless one, and the canonical
-            // row must already exist, or we would be deleting the last copy.
-            if (!RETIRE_NO_PK) { skipped++; continue; }
-            try {
-              const shadow = (await cat.item(s.id, undefined).read()).resource;
-              const canonical = (await cat.item(id, id).read()).resource;
-              if (!shadow || shadow.cardId !== undefined || !canonical) { skipped++; continue; }
-              await cat.item(s.id, undefined).delete();
-              retired++; retiredHere++;
-              console.log("      RETIRED (no partition key) " + s.id);
-            } catch { failed++; }
-            continue;
-          }
+      for (const s of toRetire) {
+        if (s.cardId === undefined || s.cardId === null) {
+          // CF-A-MISSING-PARTITION-KEY-IS-STILL-A-KEY (Drew, 2026-08-25).
+          // This used to skip unconditionally, on the belief that a row
+          // written with no partition key "cannot be addressed by (id,
+          // cardId) the way the others can". It can:
+          //
+          //   cat.item(id, undefined).read() -> 200, cardId=undefined
+          //   cat.item(id, id).read()        -> 200, the canonical row
+          //
+          // Two distinct, separately addressable documents. Every one of the
+          // 5,142 left in 2026 bowman is this shape, and skipping them meant
+          // the job could never make progress on them however often it ran.
+          //
+          // Opt-in, because deleting by a partition key the SDK infers rather
+          // than one we pass explicitly is a targeting risk I have verified
+          // by READ and not by delete. And verify immediately before each
+          // delete: the row must still be the keyless one, and the canonical
+          // row must already exist, or we would be deleting the last copy.
+          // This stays a hand-addressed delete: catalogRowOps addresses a row
+          // by `cardId ?? id`, which for a keyless row is the canonical one.
+          if (!RETIRE_NO_PK) { skipped++; continue; }
           try {
-            await cat.item(s.id, s.cardId).delete();
+            const shadow = (await cat.item(s.id, undefined).read()).resource;
+            const canonical = (await cat.item(id, id).read()).resource;
+            if (!shadow || shadow.cardId !== undefined || !canonical) { skipped++; continue; }
+            await cat.item(s.id, undefined).delete();
             retired++; retiredHere++;
-            console.log("      RETIRED " + s.id + "  cardId=" + s.cardId);
+            console.log("      RETIRED (no partition key) " + s.id);
           } catch { failed++; }
+          continue;
         }
-      } catch {
-        // Only the rows this group had NOT already retired are failures. The
-        // old `rowsForId.length - 1` charged the whole group every time, so a
-        // throw after a partial retire counted those rows twice -- once as
-        // retired, once as failed.
-        failed += Math.max(0, toRetire.length - retiredHere);
+        try {
+          // The projection above is not the whole row; the rehome copies the row.
+          const full = (await retry(() => cat.item(s.id, s.cardId).read()).catch((e) => {
+            if (e?.code === 404) return { resource: undefined };
+            throw e;
+          })).resource;
+          if (!full) { skipped++; continue; }
+          const r = await moveCatalogRow(cat, full, id, {}, {
+            reason: "partition shadow folded onto its own slug (CF-ONE-ROW-PER-CANONICAL-SLUG)",
+            retry,
+          });
+          retired++; retiredHere++;
+          console.log("      RETIRED " + s.id + "  cardId=" + s.cardId + "  (" + r.action + ")");
+        } catch { failed++; }
       }
+      if (retiredHere) merged++;
     }
   }
 

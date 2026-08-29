@@ -19,19 +19,34 @@
 // address. Running the dedupe job on these would report zero work forever.
 //
 // WRITE FIRST, THEN DELETE. A partition key is immutable, so this is
-// copy-and-remove. Interrupted after the copy you have a duplicate, which the
-// dedupe job already knows how to resolve. Interrupted after a delete-first you
-// have nothing. So: write the copy, READ IT BACK, and only then remove the
-// original. A copy that cannot be read back is never followed by a delete.
+// copy-and-remove, and the copy-and-remove is catalogRowOps.moveCatalogRow's
+// rehome (D5 PR 4): the row is upserted at (slug, slug) -- a write Cosmos has
+// acknowledged, or the call throws and no delete follows -- and only then is
+// the original removed from the vendor partition. Interrupted between the two
+// you have a duplicate, which the next run finishes (below). Nothing about the
+// card changes on a rehome, so its sales and its own graded ladder are left
+// exactly where they are.
 //
 // The old partition key was a vendor id and is preserved in vendorIds -- a CH
 // lookup resolves by vendor cardId and losing that is a silent break.
+//
+// CF-FINISH-THE-HALF-MOVED-ROWS (Drew, 2026-08-26). This used to skip whenever
+// a row already sat at (id,id), on the reasoning that a twin belongs to the
+// dedupe job. That reasoning strands the row forever, and the stranded
+// population GROWS every time a run is interrupted -- because "canonical
+// written, original not yet deleted" is exactly the state a cancelled run
+// leaves behind, and this job was cancelled repeatedly that night. One 2013
+// slot found 180 such rows and moved 0 of them. So a twin at (id,id) is
+// finished: the helper decides it by authority (a same-content twin folds,
+// its vendor id crossing over into vendorIds) and removes the redundant copy.
 //
 // Env:
 //   COSMOS_CONNECTION_STRING  required
 //   APPLY=true                actually write (default dry-run)
 //   YEARS=2025,2026           years to sweep (default: all)
 //   SETKEY_LIKE=bowman        substring the setKey must contain (default: any)
+//   PARENTS_ONLY=true         identity rows only; graded rows are regenerable
+//                             from their parent (the runner's parents_only)
 //   CONCURRENCY=16
 //   LIMIT=0                   stop after N re-homes (0 = no limit)
 
@@ -39,12 +54,14 @@ const path = require("node:path");
 const backend = path.resolve(__dirname, "..");
 const { CosmosClient } = require("@azure/cosmos");
 const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
+const { moveCatalogRow } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
 
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
 const CONCURRENCY = Number(process.env.CONCURRENCY || 16);
 const LIMIT = Number(process.env.LIMIT || 0);
 const YEARS = String(process.env.YEARS || "").split(",").map((y) => Number(y.trim())).filter(Boolean);
 const SETKEY_LIKE = String(process.env.SETKEY_LIKE || "").toLowerCase();
+const PARENTS_ONLY = String(process.env.PARENTS_ONLY || "") === "true";
 // Cap the SCAN itself, so a dry-run can size a slice without walking all of it.
 const SCAN_LIMIT = Number(process.env.SCAN_LIMIT || 0);
 
@@ -73,6 +90,28 @@ function slotRange(slot, slots) {
   return { lo, hi };
 }
 
+// CF-THE-REHOME-SCAN-CAN-BE-THROTTLED-TOO (Drew, 2026-08-25). The per-row
+// read/write/delete already retry through the connection policy -- a 429
+// there is counted and moved past. The SCAN did not, so a single throttled
+// page killed the whole run with FATAL and abandoned every row it had not
+// reached yet. Run 32910343326 died exactly that way mid-2021.
+//
+// normalize-catalog-format learned this same lesson hours earlier and carries
+// the same wrapper. Same claim from the server, same answer: not now, ask
+// again. The per-row moves go through it too.
+const retry = async (fn) => {
+  let wait = 1000;
+  for (let attempt = 0; ; attempt++) {
+    try { return await fn(); }
+    catch (e) {
+      const throttled = /request rate is too large|429/i.test(String(e?.message));
+      if (!throttled || attempt >= 12) throw e;
+      await new Promise((r) => setTimeout(r, wait));
+      wait = Math.min(wait * 2, 30000);
+    }
+  }
+};
+
 (async () => {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) { console.error("FATAL: COSMOS_CONNECTION_STRING not set"); process.exit(1); }
@@ -81,29 +120,7 @@ function slotRange(slot, slots) {
     connectionPolicy: { retryOptions: { maxRetryAttemptsOnThrottledRequests: 60, maxWaitTimeInSeconds: 300 } },
   }).database("hobbyiq").container("card_catalog");
 
-  // CF-THE-REHOME-SCAN-CAN-BE-THROTTLED-TOO (Drew, 2026-08-25). The per-row
-  // read/write/delete already retry through the connection policy -- a 429
-  // there is counted and moved past. The SCAN did not, so a single throttled
-  // page killed the whole run with FATAL and abandoned every row it had not
-  // reached yet. Run 32910343326 died exactly that way mid-2021.
-  //
-  // normalize-catalog-format learned this same lesson hours earlier and carries
-  // the same wrapper. Same claim from the server, same answer: not now, ask
-  // again.
-  const queryWithRetry = async (spec, opts) => {
-    let wait = 1000;
-    for (let attempt = 0; ; attempt++) {
-      try { return await cat.items.query(spec, opts).fetchNext(); }
-      catch (e) {
-        const throttled = /request rate is too large|429/i.test(String(e?.message));
-        if (!throttled || attempt >= 12) throw e;
-        await new Promise((r) => setTimeout(r, wait));
-        wait = Math.min(wait * 2, 30000);
-      }
-    }
-  };
-
-  let scanned = 0, candidates = 0, rehomed = 0, alreadyThere = 0, failed = 0, verifyFailed = 0;
+  let scanned = 0, candidates = 0, rehomed = 0, alreadyThere = 0, failed = 0;
   // CF-COUNT-WHAT-THE-LOOP-TOUCHES. `candidates` counts rows the SCAN found;
   // `attempted` counts rows the work loop actually took up. They differ the
   // moment LIMIT stops the run mid-page: the remainder of that page was seen
@@ -117,6 +134,7 @@ function slotRange(slot, slots) {
   const where = ["STARTSWITH(c.id,'hiq:')", "c.id != c.cardId", "IS_DEFINED(c.cardId)", "c.cardId != null"];
   if (YEARS.length) where.push(`c.year IN (${YEARS.join(",")})`);
   if (SETKEY_LIKE) where.push(`CONTAINS(LOWER(c.setKey ?? ''), '${SETKEY_LIKE.replace(/'/g, "")}')`);
+  if (PARENTS_ONLY) where.push("NOT IS_DEFINED(c.gradeTier)");
   const range = slotRange(SLOT, SLOTS);
   if (range) {
     where.push(`c.setKey >= '${range.lo}' AND c.setKey < '${range.hi}'`);
@@ -125,10 +143,10 @@ function slotRange(slot, slots) {
 
   let token, pages = 0;
   do {
-    const page = await queryWithRetry(
+    const page = await retry(() => cat.items.query(
       { query: `SELECT * FROM c WHERE ${where.join(" AND ")}` },
       { maxItemCount: 200, continuationToken: token },
-    );
+    ).fetchNext());
     token = page.continuationToken;
 
     const work = [];
@@ -143,63 +161,16 @@ function slotRange(slot, slots) {
       for (let i = 0; i < work.length; i += CONCURRENCY) {
         await Promise.all(work.slice(i, i + CONCURRENCY).map(async (r) => {
           attempted++;
-          const oldKey = r.cardId;
           try {
-            // Already at its own address? Then this is the duplicate case, not
-            // the singleton case -- leave it for dedupe-catalog-partition-shadows
-            // rather than deleting a row whose twin we did not inspect.
-            let existing = null;
-            try { existing = (await cat.item(r.id, r.id).read()).resource ?? null; } catch (e) { if (e.code !== 404) throw e; }
-            // CF-FINISH-THE-HALF-MOVED-ROWS (Drew, 2026-08-26). This used to
-            // skip whenever a row already sat at (id,id), on the reasoning that
-            // a twin belongs to the dedupe job. That reasoning strands the row
-            // forever, and the stranded population GROWS every time a run is
-            // interrupted -- because "canonical written, original not yet
-            // deleted" is exactly the state a cancelled run leaves behind, and
-            // this job was cancelled repeatedly tonight. One 2013 slot found
-            // 180 such rows and moved 0 of them.
-            //
-            // It is safe to finish the move. The canonical row is not a guess:
-            // we have just READ it, at the address this row is trying to reach.
-            // The copy sitting in the vendor partition is redundant, and the
-            // only thing it holds that the canonical row might not is its own
-            // partition key -- a vendor id -- so that gets carried across
-            // before the delete, same as the normal path.
-            if (existing) {
-              alreadyThere++;
-              const vids = { ...(existing.vendorIds ?? {}) };
-              if (!String(oldKey).startsWith("hiq:")) {
-                const k = String(r.source ?? "vendor");
-                if (!vids[k]) vids[k] = oldKey;
-              }
-              if (Object.keys(vids).length !== Object.keys(existing.vendorIds ?? {}).length) {
-                await cat.items.upsert({ ...existing, vendorIds: vids });
-              }
-              await cat.item(r.id, oldKey).delete();
-              rehomed++;
-              return;
-            }
-
-            // The old partition key was a vendor id. A CH lookup resolves by
-            // vendor cardId, so it has to survive the move.
-            const vendorIds = { ...(r.vendorIds ?? {}) };
-            if (!String(oldKey).startsWith("hiq:")) {
-              const k = String(r.source ?? "vendor");
-              if (!vendorIds[k]) vendorIds[k] = oldKey;
-            }
-            const moved = { ...r, cardId: r.id, vendorIds,
-              rehomedFrom: oldKey, rehomedAt: new Date().toISOString() };
-            delete moved._rid; delete moved._self; delete moved._etag; delete moved._attachments; delete moved._ts;
-
-            await cat.items.upsert(moved);
-
-            // Read it back at the NEW address before removing the old one. A
-            // copy that cannot be read is not a copy.
-            let landed = null;
-            try { landed = (await cat.item(r.id, r.id).read()).resource ?? null; } catch (e) { if (e.code !== 404) throw e; }
-            if (!landed) { verifyFailed++; return; }
-
-            await cat.item(r.id, oldKey).delete();
+            // Same slug, foreign partition: the helper's rehome. It copies to
+            // (id, id), keeps the vendor partition key in vendorIds, and deletes
+            // the original last. A row already at (id, id) is the half-moved
+            // twin, decided by authority and finished (see the header).
+            const res = await moveCatalogRow(cat, r, r.id, {}, {
+              reason: "re-homed from a foreign partition (CF-A-ROW-IN-THE-WRONG-PARTITION-IS-AN-INVISIBLE-ROW)",
+              retry,
+            });
+            if (res.action !== "move") alreadyThere++;
             rehomed++;
           } catch (e) {
             failed++;
@@ -218,12 +189,12 @@ function slotRange(slot, slots) {
   process.stderr.write("\n");
 
   const scope = (YEARS.length ? "years=" + YEARS.join(",") : "years=all") +
-                (SETKEY_LIKE ? "  setKey~" + SETKEY_LIKE : "");
+                (SETKEY_LIKE ? "  setKey~" + SETKEY_LIKE : "") +
+                (PARENTS_ONLY ? "  parents-only" : "");
   console.log(`\n${APPLY ? "APPLY" : "DRY-RUN"}  ${scope}`);
   console.log(`  rows in a foreign partition   ${candidates.toLocaleString()}`);
   console.log(`  re-homed to their own slug    ${rehomed.toLocaleString()}`);
-  console.log(`  ...of those, leftover twins    ${alreadyThere.toLocaleString()}   (canonical already present; redundant copy removed)`);
-  console.log(`  copy could not be read back   ${verifyFailed.toLocaleString()}   (NOT deleted)`);
+  console.log(`  ...of those, leftover twins    ${alreadyThere.toLocaleString()}   (canonical already present; decided by authority, redundant copy removed)`);
   console.log(`  failed                        ${failed.toLocaleString()}`);
   if (LIMIT && candidates > attempted) {
     console.log(`  not attempted                 ${(candidates - attempted).toLocaleString()}   (LIMIT reached; seen, not tried)`);
@@ -233,10 +204,8 @@ function slotRange(slot, slots) {
     for (const s of samples) console.log("     " + s);
   }
   if (APPLY) {
-    reportWrites({
-      job: "rehome-catalog-rows-to-own-partition",
-      intended: attempted, written: rehomed,
-      skipped: alreadyThere + verifyFailed, failed,
-    });
+    // `alreadyThere` is a sub-total of `rehomed`, not a sibling of it: it goes
+    // on its own line above, never into `skipped`, or the equation over-counts.
+    reportWrites({ job: "rehome-catalog-rows-to-own-partition", intended: attempted, written: rehomed, failed });
   }
 })().catch((e) => { console.error("FATAL:", e?.stack || e?.message || String(e)); process.exit(3); });
