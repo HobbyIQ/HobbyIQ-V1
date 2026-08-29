@@ -95,8 +95,6 @@ const BYPASSING = new Set([
   "backend/scripts/tca-match-enricher.cjs",
   "backend/scripts/tcdbBatchFill.cjs",
   "backend/src/services/portfolioiq/catalogReview.service.ts",
-  "backend/src/services/portfolioiq/ebayAutoHolding.service.ts",
-  "backend/src/services/portfolioiq/ebayReviewQueue.service.ts",
   "backend/src/services/portfolioiq/persistVendorSalesToPool.service.ts",]);
 
 function catalogWriters(): { rel: string; src: string }[] {
