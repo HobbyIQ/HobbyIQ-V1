@@ -351,8 +351,26 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   199 "Blue Refractor → Refractor" / 196 "Gold Refractor → Refractor" were
   titles saying "Refractor /150" with the colour omitted: a REFINEMENT, not a
   contradiction (moving them would mint `refractor:num-150`, a rung no
-  checklist has) — #1422 keeps those; dry run #2 → APPLY → re-price the
-  holding. Also seen under the base sibling: "Yellow 21/75" filed as base
+  checklist has) — #1422 keeps those (#1424 the bare-colour short form: "Blue"
+  IS "Blue Refractor"); dry run #2: 2,535 → APPLY. **The first "APPLY" wrote
+  nothing** — the runner exports BACKFILL_APPLY, not APPLY (#1427; memory
+  [[runner-exports-backfill-apply]]); APPLY #2 = 33261692593, verify by the
+  Cosmos count of `reslugedReason`, not the log. **Refractor bucket settled by
+  price** (read-only): under 2025 Bowman Chrome CPA-EP `:refractor:auto`, CH
+  rows whose title never says "refractor" sell at a $60.95 median (n=695); the
+  ones that say it, $140 (n=67); the true base pool, $47 — a silent title is
+  the base auto, the same seam as the gold. #1426 MODE=refractor; dry run ×8
+  (33261514583…33261533112) → APPLY ×8. **Parser defect found on the way:**
+  `ebayTitleParser` names ONE token from a flat list with "refractor" ahead of
+  the colours, so "Gold Refractor 1st #/50" parses as bare "Refractor" and
+  captures no print run — #1428 makes the seam adopt a vendor tag that
+  REFINES the title's finish (else a real Gold Refractor sale would have lost
+  its gold under title-wins); a composition fix for the parser itself is
+  building in a worktree. Also shipped alongside: #1425 `/price`
+  canonical-first slugs the PRODUCT (parsed.set ?? parsed.brand), not the
+  brand. **Re-pricing the holding:** the app's own `POST /holdings/:id/refresh`
+  (or the next batch reprice) — no local write path; Drew can tap refresh on
+  the card once the pool is clean. Also seen under the base sibling: "Yellow 21/75" filed as base
   (the numbered-refractor inference is a parser gap), and CH composed titles
   "2026 2026 Bowman …" (doubled year).
 - ☐ D7 **eBay import into the portfolio** (Drew, 2026-08-29): an imported eBay
