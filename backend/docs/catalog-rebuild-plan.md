@@ -63,48 +63,56 @@ user-owned cards may seed).
 - Internal holding resolver built (no vendor calls); dry-run: 31/92 resolved,
   12 corrections
 
-## RUNNING (Drew's "do it", 2026-08-29 12:20Z — all four rulings taken)
+## EXECUTION CHECKLIST (Drew, 2026-08-29 13:00Z: "make a checklist and start executing")
 
-1. ~~R5 rematch~~ **DONE 11:52Z** — 8 slots, 15,852,221 rows scanned,
-   18,885 re-slugged (only-improve), 0 failed, 0 relaunches. Unplaced pool
-   rows 17,104 → **11,598**.
-2. ~~Holdings APPLY~~ **DONE 12:24Z** — 92 holdings, 38 resolved exact (≥.95)
-   and written, 1 fuzzy left alone, 0 failed. Re-run after step 4 folds.
-3. ~~RU rollback~~ **DONE 12:28Z** for sold_comps (100k → **10k**, its floor:
-   Cosmos refuses below 10% of the highest max ever provisioned, so 8k is gone)
-   and title_parse_cache (2,000 → 400). card_catalog stays 400k until step 4
-   finishes, then 40k (its floor).
-4. **"Clean the names"** — `clean-parallel-annotations` (#1367; bcp scraper
-   + ingest note column #1368). Dry run on 4 slots in flight → APPLY → mapper
-   redo (baseball) → re-annotate → scorecard v4 → holdings APPLY again.
-   Acceptance: Ohtani `…:150:refractor:no-auto` is a checklist row,
-   checklist-confirmed, its sale-minted twin gone.
-5. **Retire unconfirmed sale-minted rows** — `retire-autoseed-window`
-   MODE=unconfirmed (#1365/#1366): dry run in flight → APPLY. Card-confirmed
-   sale-minted rows stay until step 4 folds them.
+Ordered; each item starts when the one above it lands. ☐ open · ◐ running · ☑ done.
 
-## NEXT BUILDS (in order)
+**A. In flight**
+- ◐ A1 `clean-parallel-annotations` APPLY, 4 slots (dry run: 402,289 rows — 242,194 move,
+  44,194 fold, 8,233 replace a sale-minted twin, 23,127 heal, 0 failed)
+- ◐ A2 `retire-autoseed-window` MODE=unconfirmed — dry run → APPLY (retires the
+  sale-minted rows no checklist confirms; card-confirmed ones stay)
 
-1. **One-pool emission, redo** — re-drain `comps_staging` (awaiting-catalog
-   670k, awaiting-verify 1.83M, player-precision 373k, chdaily ~284k) now that
-   an unmatched sale enters the pool flagged instead of minting a row; the
-   1.46M `needs-parse` sales go through the title parser first
-2. **checklistcenter → canonical CSV converter** — last legacy source into the
-   guarded pipe (its old ingester raw-upserts and must not be rerun)
-3. **One valuation path** — retire the Cardsight-era graded compiler onto the
-   canonical engine; route the 3 compiq route call sites through the canonical
-   resolver. Acceptance: docs/pricing-obedience-audit.md
-4. Phase 07 — 58 writers bypassing upsertCatalogEntry (the red guard test
-   `oneWayToBuildACatalogRow` names them)
+**B. Spine hygiene (before anything matches against it again)**
+- ☐ B1 Retire the EXPLODED checklist products — 2025 topps-allen-and-ginter
+  (baseballcardpedia) is 627,464 rows whose "parallel" column holds card lines
+  ("100 Mike Trout") cross-joined ×49; the spine-wide scan (>150 distinct
+  parallels per product) sizes the rest. Sales pointing at them → unplaced.
+- ☐ B2 Retire the MIS-PARSED rows (83,838; 45,292 are 1990 Donruss, ~26k Leaf via
+  checklistcenter) — the rows themselves, not their products.
+- ☐ B3 Unify `topps-allen-ginter` → `topps-allen-and-ginter` (checklist-majority
+  form: 656k vs 71k checklist rows) via `apply-setkey-rulings`.
+- ☐ B4 Re-scrape the exploded / mis-parsed bcp products through the fixed parser
+  (#1368) and ingest them clean.
+
+**C. Rebuild passes on the clean spine**
+- ☐ C1 `conform-card-profile` — displayName/searchTokens re-derived from the id for
+  every moved row
+- ☐ C2 `map-derived-parallels-to-rungs` MODE=redo — baseball, football, basketball,
+  hockey, soccer (the sports that had annotated rows), 8 slots
+- ☐ C3 **Full rematch** `reslugAllSoldComps`, 8 slots, all 16.1M (only-improve)
+- ☐ C4 Re-annotate all sports (baseball 16 slots) → **scorecard v4**; acceptance:
+  Ohtani `…:150:refractor:no-auto` is a checklist row, checklist-confirmed
+- ☐ C5 `materialize-graded-identities` — re-mint the graded children the cleaning
+  deleted
+- ☐ C6 Rung-acquisition report v2 (card-confirmed-not-rung-confirmed by product)
+- ☐ C7 Holdings APPLY again
+- ☐ C8 card_catalog RU 400k → 40k (floor)
+
+**D. Next builds**
+- ☐ D1 Rules-based `needs-parse` pre-parser: the checklist knows every player in a
+  product, so "which checklist name is in this title" is a lookup — drain the
+  1.46M parked sales without the AI parser
+- ☐ D2 Identity triangulation harness: 200 cards × (sale, holding, search) must
+  resolve to the SAME checklist-minted card — the acceptance line, as a number
+- ☐ D3 checklistcenter → canonical CSV converter (it produced 27,662 annotated and
+  ~26k mis-parsed rows; the old ingester raw-upserts and must not be rerun)
+- ☐ D4 One valuation path — retire the Cardsight-era graded compiler onto the
+  canonical engine (docs/pricing-obedience-audit.md)
+- ☐ D5 Phase 07 — 58 writers bypassing upsertCatalogEntry
 
 ## NEEDS DREW (not code)
 
-- **The mis-parsed 83,838 checklist rows** whose `parallel` column holds
-  player-pair text or page prose ("Eric Davis (as) Andy Nezelek", "Topps
-  Released A Mini Sized Factory Set (each Card Measuring 2", "Purple RayWave
-  Refractor ("): a column-shift / prose-capture bug in the vintage converters
-  (bccp, checklistcenter). Their own repair — re-scrape or retire; ruling
-  needed on which.
 - Pokémon promo ambiguity: `*-black-star-promos` derived keys match several
   era promo sets (dp / hgss / xy / sm / swsh / sv) — needs the year→era rule
 - Vintage sourcing: 1990s baseball (Score/Fleer/etc.), Japanese Pokémon
