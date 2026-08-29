@@ -121,7 +121,7 @@ async function main() {
   console.log(`slot ${SLOT}/${SLOTS}  ${mine.length} of ${plan.length} mappable keys  ${APPLY ? "APPLY" : "REPORT ONLY"}`);
   console.log(`  ambiguous ${f(ambiguous)}   no-match ${f(noMatch)} keys / ${f(noMatchRows)} rows (acquisition)\n`);
 
-  let scanned = 0, moved = 0, redundant = 0, salesRepointed = 0, failed = 0, notReached = 0, malformed = 0, drifted = 0;
+  let scanned = 0, moved = 0, folded = 0, redundant = 0, salesRepointed = 0, failed = 0, notReached = 0, malformed = 0, drifted = 0;
   let stopReason = null;
 
   for (const p of mine) {
@@ -171,7 +171,14 @@ async function main() {
                 mappedFrom: d.id, mappedReason: "pokemon setKey unified to checklist vocabulary",
                 mappedAt: new Date().toISOString(),
               }));
-            } else { redundant++; }
+            } else {
+              // CF-FOLD-IS-A-MOVE (2026-08-29). The checklist row already exists,
+              // so nothing is upserted -- but the derived row is still deleted
+              // and its sales re-pointed below. That is a move, counted once
+              // as moved; folded is a slice of it, not a sibling path. Counting
+              // it as redundant too charged one row to two axes (OVER by 2,138).
+              folded++;
+            }
 
             let sToken;
             do {
@@ -215,6 +222,7 @@ async function main() {
   console.log(`\n${APPLY ? "APPLY" : "REPORT ONLY — nothing written"}`);
   console.log(`  derived rows scanned    ${f(scanned)}`);
   console.log(`  MOVED to checklist key  ${f(moved)}`);
+  console.log(`  ...folded into existing ${f(folded)}   <- slice of MOVED`);
   console.log(`  redundant (row existed) ${f(redundant)}`);
   console.log(`  sales re-pointed        ${f(salesRepointed)}`);
   console.log(`  malformed id (left)     ${f(malformed)}`);
