@@ -45,7 +45,7 @@ import {
 } from "../services/compiq/cardhedgeLearnCorpus.service.js";
 // Static, not dynamic: this is used inside a synchronous response literal, and
 // the module is a leaf (it imports only alias tables), so there is no cycle.
-import { normalizeSetKey } from "../services/portfolioiq/hobbyIqCardId.service.js";
+import { computeHobbyIqCardId, normalizeSetKey } from "../services/portfolioiq/hobbyIqCardId.service.js";
 import { cacheWrap, cacheGet, cacheSet, cacheDel } from "../services/shared/cache.service.js";
 import { CompIQEstimateRequest } from "../types/compiq.types.js";
 // CF-MARKET-READ (2026-06-08): grounded prose summary of the comp pool
@@ -1162,6 +1162,61 @@ function requestFromParsed(parsed: ParsedCardQuery): CompIQEstimateRequest {
     gradeCompany: parsed.gradingCompany ?? undefined,
     gradeValue: parsed.grade && parsed.grade !== "raw" ? Number(parsed.grade) : undefined,
   };
+}
+
+/**
+ * CF-ROUTE-SLUGS (D4 "one valuation path", PR 3 — 2026-08-29). The canonical
+ * hiq slug for a free-text query, derived from the parsed year / product /
+ * card number / parallel / auto / print run — the same components the
+ * canonical-first block in /price already assembles. Every pricing route
+ * resolves this BEFORE pricing so that no engine downstream has to price by a
+ * vendor id or a free-text tuple when the identity is derivable.
+ *
+ * Null when the parse cannot name all three of year, product and card
+ * number: a slug with a guessed segment is a different card, and pricing the
+ * wrong card confidently is worse than not naming one. The parser does not
+ * carry a sport; free-text routes default to baseball, the deepest pool,
+ * exactly as the existing canonical-first path does.
+ *
+ * The product is `parsed.set` ("Topps Chrome"), falling back to the brand
+ * ("Topps") only when no set was recognised — Topps and Topps Chrome are
+ * different products with different card #169s.
+ *
+ * Pure: no I/O, never throws.
+ */
+function slugFromParsedQuery(parsed: ParsedCardQuery, sport = "baseball"): string | null {
+  const product = parsed.set ?? parsed.brand;
+  if (typeof parsed.year !== "number" || !parsed.cardNumber || !product) return null;
+  try {
+    return computeHobbyIqCardId({
+      sport,
+      year: parsed.year,
+      setKey: product,
+      cardNumber: parsed.cardNumber,
+      parallel: parsed.parallel || "Base",
+      isAuto: parsed.isAuto ?? false,
+      printRun: parsed.printRun ?? null,
+    });
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * CF-ROUTE-SLUGS (D4 PR 3). The canonical hiq slug for a request that
+ * arrived with a VENDOR cardId: read off the sold_comps rows that carry both
+ * ids (a partition-scoped point read — see soldCompsStore). Null when nothing
+ * maps the id; never throws, never blocks the price.
+ */
+async function slugForVendorCardId(cardId: string): Promise<string | null> {
+  try {
+    const { lookupHobbyIqCardIdForVendorCardId } = await import(
+      "../services/portfolioiq/soldCompsStore.service.js"
+    );
+    return await lookupHobbyIqCardIdForVendorCardId(cardId);
+  } catch {
+    return null;
+  }
 }
 
 const CACHE_TTL_SECONDS = 15 * 60; // 15 minutes
@@ -2296,6 +2351,10 @@ router.post("/search", requireSession, requireRateLimited("priceChecksPerDay"), 
               gradeBreakdown,
               source: "compiq.search",
               cardId: cardIdForGraded,
+              // CF-ROUTE-SLUGS (D4 PR 3): the route resolves the canonical
+              // identity before pricing; the compiler's exact-pool supremacy
+              // needs it, and so will the unified adapter that replaces it.
+              hobbyiqCardId: slugFromParsedQuery(parsed),
             });
             gradedEstimates = compiled.estimates;
           }
@@ -3504,6 +3563,8 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
               gradeBreakdown,
               source: "compiq.price",
               cardId: cardIdForGraded,
+              // CF-ROUTE-SLUGS (D4 PR 3): see /search above.
+              hobbyiqCardId: slugFromParsedQuery(parsed),
             });
             gradedEstimates = compiled.estimates;
           }
@@ -6164,6 +6225,11 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
       // matching rail next to a raw-scope comp card in one request.
       let gradedEstimates: GradedProjectionResult[] = [];
       if (pricingForMR && !pricingForMR.notFound) {
+        // CF-ROUTE-SLUGS (D4 PR 3): a request that arrived with an hiq: slug
+        // already IS the identity; a vendor id is mapped through sold_comps.
+        // Resolved inside the guard so the live path (pricing.notFound) pays
+        // nothing for it.
+        const slugForGraded: string | null = originalHiqSlug ?? await slugForVendorCardId(resolvedCardId);
         const compiled = await compileGradedEstimatesForCard({
           pricing: pricingForMR,
           estimate: est as {
@@ -6186,6 +6252,7 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
           gradeBreakdown,
           source: "compiq.price-by-id",
           cardId: resolvedCardId,
+          hobbyiqCardId: slugForGraded,
         });
         gradedEstimates = compiled.estimates;
       }
