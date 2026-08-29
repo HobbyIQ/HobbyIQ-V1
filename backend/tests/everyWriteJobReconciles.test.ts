@@ -45,17 +45,15 @@ const UNRECONCILED = new Set([
   "backfill-isauto-from-cardnumber", "ingest-product-checklist",
   "backfill-cardsight-title-identity", "backfill-canonicalize-chrome-slugs",
   "backfill-catalog-driven-canonicalize", "backfill-stage2-title-parser",
-  "backfill-stage3-price-sanity", "expand-catalog-from-sold-comps-gaps",
-  "expand-catalog-full-enumeration", "promote-sold-comps-trust-tier",
+  "backfill-stage3-price-sanity", "promote-sold-comps-trust-tier",
   "baseline-pool-snapshot", "backfill-cardsight-unverified-flag",
   "migrate-cardsight-to-staging", "backfill-grade-from-title",
   "backfill-bowman-mega-box-reslug", "backfill-sub-channel-vocabulary",
-  "auto-quarantine-contaminated-pools", "expand-catalog-from-tcdb",
+  "auto-quarantine-contaminated-pools",
   "normalize-catalog-schema", "dedupe-catalog-by-hobbyiq",
   "backfill-searchtokens-all-sports", "fix-catalog-parallel-as-player",
   "auto-label-catalog-variants", "rescore-anomalies", "score-all-sold-comps",
-  "reaudit-cardsight-unverified", "attest-unnumbered-by-player",
-  "resolve-sales-without-identity", "retire-flattened-attestations",
+  "reaudit-cardsight-unverified", "retire-flattened-attestations",
 ]);
 
 function writeScripts(): { name: string; src: string }[] {

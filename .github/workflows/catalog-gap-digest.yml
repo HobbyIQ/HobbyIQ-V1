@@ -3,7 +3,8 @@ name: Catalog Gap Digest
 # CF-CATALOG-GAP-DIGEST (Drew, 2026-08-08). Emails Drew a ranked list of
 # the top-N catalog gap buckets — sets appearing most frequently in the
 # sold_comps unmatched pool with no card_catalog coverage. Each morning's
-# report is the day's batch-fill hit-list for tcdbBatchFill.cjs.
+# report is the day's checklist-acquisition hit-list. (tcdbBatchFill.cjs,
+# its original consumer, was deleted in D5 PR 5 — vendor feeds never mint.)
 #
 # Cadence: daily 10 UTC = 6 AM EDT (mirrors waitlist digest). Skips
 # silently on empty pool.
