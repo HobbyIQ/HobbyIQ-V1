@@ -102,17 +102,14 @@ function generateJobId(): string {
   return part(8);
 }
 
-// CF-IMPORT-BE inlined helpers (mirrors portfolioStore conventions —
-// not exported from there, but duplication is cheaper than refactoring
-// the store for one consumer).
-function holdingsCapFor(tier: string): number | null {
-  // Free=25, collector=250, investor+=unlimited (null).
-  // Matches src/config/entitlements.ts:81 / :90 + the comment at
-  // src/routes/portfolioiq.routes.ts:148.
-  const t = tier.toLowerCase();
-  if (t === "free") return 25;
-  if (t === "collector") return 250;
-  return null; // investor / pro / etc. — unlimited
+/** The plan's holdings cap as the preview reports it: a number, or null for
+ *  unlimited. One source of truth — config/entitlements — the same table
+ *  commit reads. (An inlined free=25 / collector=250 copy lived here, fed by a
+ *  `req.user.tier` that never existed, so every preview projected against
+ *  the free cap.) */
+function holdingsCapFor(plan: Plan): number | null {
+  const cap = getCap(plan, "holdingsCap");
+  return cap === "unlimited" ? null : cap;
 }
 
 function normalizeId(id: string | undefined | null): string {
@@ -251,13 +248,13 @@ export async function buildPreview(
   userId: string,
   fileBuffer: Buffer | string,
   format: FileFormat,
-  userTier: string,
+  userPlan: Plan,
 ): Promise<PreviewResult | PreviewKickoffResult> {
   const parsed: FileParseResult = parseHoldingsFile(fileBuffer, format);
 
   // Async fork: above threshold, return jobId + kick detached job
   if (parsed.totalRows > SYNC_PREVIEW_ROW_THRESHOLD) {
-    return await kickAsyncPreview(userId, fileBuffer, format, userTier, parsed);
+    return await kickAsyncPreview(userId, fileBuffer, format, userPlan, parsed);
   }
 
   // Sync path (unchanged): resolve inline
@@ -276,7 +273,7 @@ export async function buildPreview(
   }
 
   const currentCount = Object.keys(doc.holdings ?? {}).length;
-  const cap = holdingsCapFor(userTier);
+  const cap = holdingsCapFor(userPlan);
   const incomingDelta = defaultCommitCount;
   const projectedTotal = currentCount + incomingDelta;
   const wouldExceed = cap !== null && projectedTotal > cap;
@@ -311,7 +308,7 @@ async function kickAsyncPreview(
   userId: string,
   fileBuffer: Buffer | string,
   format: FileFormat,
-  userTier: string,
+  userPlan: Plan,
   parsed: FileParseResult,
 ): Promise<PreviewKickoffResult> {
   const jobId = generateJobId();
@@ -342,7 +339,7 @@ async function kickAsyncPreview(
   const doc = await readUserDoc(userId);
   const existingHoldings = doc.holdings ?? {};
   const currentCount = Object.keys(existingHoldings).length;
-  const cap = holdingsCapFor(userTier);
+  const cap = holdingsCapFor(userPlan);
 
   // Detached: do NOT await. The HTTP response returns to the client
   // immediately after this function returns the kickoff result.

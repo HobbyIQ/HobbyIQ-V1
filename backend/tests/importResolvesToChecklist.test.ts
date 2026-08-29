@@ -47,7 +47,13 @@ import { buildComponents, type CatalogMatchInput } from "../src/services/catalog
 import { computeHobbyIqCardId } from "../src/services/portfolioiq/hobbyIqCardId.service.js";
 import { parseHoldingsFile } from "../src/services/portfolioiq/import/fileParser.js";
 import { resolveBatch, type ImportRowEnvelope } from "../src/services/portfolioiq/import/resolveBatch.js";
-import { commitImport, readImportJobStatus, INLINE_PRICE_MAX } from "../src/services/portfolioiq/import/importService.js";
+import {
+  buildPreview,
+  commitImport,
+  readImportJobStatus,
+  INLINE_PRICE_MAX,
+  type PreviewResult,
+} from "../src/services/portfolioiq/import/importService.js";
 import { detectCollision } from "../src/services/portfolioiq/import/collisionDetector.js";
 import { autoMapHeaders } from "../src/services/portfolioiq/import/headerAutoMap.js";
 import {
@@ -548,5 +554,20 @@ describe("(f) the export carries hobbyiqCardId and re-imports as a round-trip", 
     expect(env!.bucket).toBe("resolved-clean");
     expect(env!.cardId).toBe(SLUG);
     expect(env!.identityHint).toBeNull();
+  });
+});
+
+// ─── (g) ─────────────────────────────────────────────────────────────────
+
+describe("(g) the preview's holdings cap is config/entitlements, the same source commit reads", () => {
+  const SHEET = csv(["Player", "Year", "Brand", "Card #"], [["Marconi German", 2026, "Bowman Chrome", "CPA-MG"]]);
+
+  it("free 25 / collector 250 / investor + pro_seller unlimited", async () => {
+    const capFor = async (plan: "free" | "collector" | "investor" | "pro_seller") =>
+      ((await buildPreview(freshUser(), SHEET, "csv", plan)) as PreviewResult).summary.capacityProjection.cap;
+    expect(await capFor("free")).toBe(25);
+    expect(await capFor("collector")).toBe(250);
+    expect(await capFor("investor")).toBeNull();
+    expect(await capFor("pro_seller")).toBeNull();
   });
 });

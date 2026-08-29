@@ -129,12 +129,15 @@ describe("CF-IMPORT-BE — POST /api/portfolio/import/preview", () => {
     expect(env.payload.purchasePrice).toBe(150.5);
   });
 
-  it("capacity projection surfaces wouldExceed flag", async () => {
+  it("capacity projection reads the caller's effective plan (owner-override admin: no cap)", async () => {
     const { sessionId } = await signIn();
-    // Free tier = 25 cap. Make a sheet with 30 rows — over cap, but
-    // under the CF-IMPORT-ASYNC SYNC_PREVIEW_ROW_THRESHOLD (40) so it
-    // stays in the sync path and returns the `summary` object the
-    // assertions below read.
+    // CF-IMPORT-RESOLVES-TO-CHECKLIST (D12-b): this used to assert a 25 cap
+    // because the route read `req.user.tier` (never set) and fell back to
+    // "free" for everyone. The projection now reads effectivePlanFor; the
+    // test admin has owner-override unlimited. The per-plan numbers are
+    // pinned in importResolvesToChecklist (g). 30 rows stays under the
+    // CF-IMPORT-ASYNC SYNC_PREVIEW_ROW_THRESHOLD (40) so the sync path
+    // returns the `summary` object read below.
     const rows: unknown[][] = Array.from({ length: 30 }, (_, i) => [
       `import-bulk-${i}`,
       slug(`bulk-${i}`),
@@ -152,9 +155,9 @@ describe("CF-IMPORT-BE — POST /api/portfolio/import/preview", () => {
       .set("x-session-id", sessionId)
       .send({ file, format: "xlsx" });
     expect(res.status).toBe(200);
-    expect(res.body.summary.capacityProjection.cap).toBeGreaterThan(0);
-    // 30 rows > 25 cap → wouldExceed true (current may be > 0 from earlier tests but never enough to flip wouldExceed false here)
-    expect(res.body.summary.capacityProjection.wouldExceed).toBe(true);
+    expect(res.body.summary.capacityProjection.cap).toBeNull();
+    expect(res.body.summary.capacityProjection.incomingDeltaWithDefaults).toBe(30);
+    expect(res.body.summary.capacityProjection.wouldExceed).toBe(false);
   });
 });
 
