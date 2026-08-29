@@ -77,8 +77,12 @@ describe("recordCostBasisDivergenceIfNoteworthy", () => {
     cardTitle: "Hartman Gold Refractor Auto",
     playerName: "Eric Hartman",
     slug: "hiq:baseball:2026:bowman:cpa-eha:gold-refractor:auto",
-    fmvMethod: "grade-cross-raw",
-    fmvBasisNote: null,
+    // CF-DIGEST-IS-FOR-MARKET-MOVES (#1342): the digest admits exact-pool
+    // prices only. The recording cases below are market moves priced by the
+    // unified exact-identity engine; the fallback-rung case is asserted
+    // suppressed in divergenceDigestGate.test.ts.
+    fmvMethod: "unified-market-value",
+    fmvBasisNote: "unified: window=180d median=$300 marketValue=$339 predicted=$330 trend=down -2.1%/wk conf=0.71",
     fmvCompCount: 2,
   } as const;
 
