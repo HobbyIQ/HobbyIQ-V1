@@ -178,7 +178,9 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   went. #1410: narrowToNamedProduct is a pure exported function over
   PRODUCT_WORDS (brands + product lines only); 4 real-shape tests, mutation-
   checked (3 fail under the old vocabulary). **Re-run #3 (33259153271, 15:03Z):
-  sale 87.0%, holding 96.5%, search 47.5%, ALL THREE 43.0%** (26.0 → 37.0 → 43.0
+  sale 87.0%, holding 96.5%, search 47.5%, ALL THREE 43.0%**; **re-run #4
+  (33262940112, 17:45Z, after the D3 landing + colour repair): sale 87.0%,
+  holding 97.5%, search 49.5%, ALL THREE 45.0%** (26.0 → 37.0 → 43.0 → 45.0
   across the day). Live: `b5274b4`. Finding (iii) measured: the pool's sport
   TAG never disagrees with the slug's sport (0 of 16M across 6×6 sport pairs) —
   the tag is derived from the same place as the slug, so wrong-product sales
@@ -254,7 +256,12 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   reportWrites, so it called 2,065 / 6,434 rows "vanished" — #1430 declares
   them. The runner ids I recorded for the D3 fleet were partly fleet
   relaunch children created in the same seconds (the ledger, not the
-  dispatch list, is the record). MODE=source retire dry run = 33262435380. Also seen in the same run: the bcp ladders re-ingest now
+  dispatch list, is the record). MODE=source retire dry run = 33262435380 — **NEAR MISS:** dispatched without
+  `SOURCES` it fell to the script's `baseballcardpedia` default and reported
+  retiring 13,142,137 rows across 1,927 products (the whole undated bcp
+  source). Dry run, nothing written; #1455 makes MODE=source refuse to run
+  without explicit SOURCES and gives the runner a `sources` input; scoped
+  dry run #2 (`checklistcenter,checklistcenter-html`) = 33266850438. Also seen in the same run: the bcp ladders re-ingest now
   skips 762,534 player-name-parallel rows (#1396 working as built).
   cached at c:/tmp/clc (ladders only, no card lists → bounded 547-page re-fetch);
   the old HTML ingester split ladders on commas (player names became rungs) and
@@ -454,9 +461,21 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   number + the title's finish + print run → the checklist row), one identity
   (cardId = hobbyiqCardId = catalogVerifiedSlug = soldCompSlug), no seed when a
   checklist row resolves, the sale under the resolved slug keyed by the eBay
-  order id; fixture test first (red on main), then fixes. The pricing call's
-  sibling-×8 path is D4 PR 5/6 (retire the estimate seam under exact-pool
-  supremacy). **Delivered on branch `fix/d9-ebay-import-one-identity`
+  order id; fixture test first (red on main), then fixes. **☑ #1454 (deploy
+  33266797637):** `cardTitle` from the RESOLVED identity (keeps Gold and /50;
+  the listing title verbatim on `ebayListingTitle`); player/set/number/
+  parallel through holdingFieldNormalizer; canonicalize never called with an
+  empty number (`resolveCardNumberByPlayer`, internal catalog, unique-or-
+  nothing) and always with the title's parallel + printRun + player;
+  `cardId = hobbyiqCardId = catalogVerifiedSlug` pinned from the one match,
+  `printRun` on the holding; no catalog mint when a checklist row resolves, a
+  NUMBERED seed when none does; the sale keyed by the eBay ORDER id at
+  SUBTOTAL ($182.50 — D7a's totalCost changed; shipping/tax stay in cost
+  basis) shared by import / confirm / rematch; recordSoldComp supersedes the
+  same id under another partition; the rematch passes printRun (a /50 card
+  could only reach its row at fuzzy 0.72 before). 5-case fixture test (red on
+  main → green), 4 mutation checks, 560 tests. The pricing call's sibling-×8
+  path is D4 PR 5/6 (building). **Delivered on branch `fix/d9-ebay-import-one-identity`
   (unmerged; 3 commits, `tests/ebayImportOneIdentity.test.ts` red on main
   4/5, green after, 4 mutation checks, tsc 0):** `resolveImportIdentity`
   (ebayAutoHolding.service) is the one derivation — final fields through
@@ -506,8 +525,22 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   price** (read-only): under 2025 Bowman Chrome CPA-EP `:refractor:auto`, CH
   rows whose title never says "refractor" sell at a $60.95 median (n=695); the
   ones that say it, $140 (n=67); the true base pool, $47 — a silent title is
-  the base auto, the same seam as the gold. #1426 MODE=refractor; dry run ×8
-  (33261514583…33261533112) → APPLY ×8. **Parser defect found on the way:**
+  the base auto, the same seam as the gold. #1426 MODE=refractor. **Dry run ×8
+  (17:40Z): each shard would repair ~25k rows — ≈203k total, 94% → Base, the
+  rest to the finish the title names (Black, Mojo, Purple, Red, Blue, Yellow,
+  Aqua …); 0 refinements, 0 failed.** #1453: a NAMED finish resolves through
+  `canonicalize` before the slug is written (a bare "Black" would otherwise
+  mint `:black:` where the checklist spells `black-refractor`). **APPLY ×8
+  dispatched 18:05Z** (33266618162 … 33266636316) with the #1446 self-relaunch.
+  **Reprice run (33263161323, 64 min, Drew's user): requested 45, repriced 37,
+  skipped 8.** For the Marconi holding the engine COMPUTED the right answer —
+  `our_pool_fallback_wired_from_reprice_hit … unified-market-value, compsUsed 3,
+  fmv 182.5` — and the persisted $1,109.44 / isEstimate / floor basis SURVIVED
+  (lastUpdated never moved): the persist path refuses an exact-pool price
+  while keeping a floor estimate, and the pass pinned `cardId` (the wrong
+  identity) before `hobbyiqCardId`. Handed to the D4 PR 5/6 builder as a
+  fixture case. The same run logged `sibling_fallback_floor_only …
+  floorMultiplier 3` for Theo Gillen CPA-TG — the floor being deleted. **Parser defect found on the way:**
   `ebayTitleParser` names ONE token from a flat list with "refractor" ahead of
   the colours, so "Gold Refractor 1st #/50" parses as bare "Refractor" and
   captures no print run — #1428 makes the seam adopt a vendor tag that
