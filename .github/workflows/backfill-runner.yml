@@ -131,6 +131,7 @@ on:
           - clean-parallel-annotations
           - retire-exploded-checklist-rows
           - rename-setkey
+          - parse-player-from-checklist
           - map-derived-parallels-to-rungs
           - repair-pokemon-glued-numbers
           - map-pokemon-setkeys-to-checklist
@@ -809,6 +810,24 @@ jobs:
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=rename-setkey -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f scope="${{ inputs.scope }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (moved=${N:-0}) — done, no re-dispatch."
+          fi
+
+      - name: Self-relaunch the checklist player parse until the slot is clean
+        if: ${{ !cancelled() && inputs.script == 'parse-player-from-checklist' && inputs.apply == true }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        working-directory: backend
+        run: |
+          set +e
+          N=$(grep -aoE "PARSED from the checklist +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          echo "parsed=${N:-0}"
+          # CF-RELAUNCH-ONLY-ON-BUDGET (2026-08-29): relaunch iff the script stopped at its budget.
+          if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
+            echo "::notice::budget hit (parsed=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=parse-player-from-checklist -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}"
+          else
+            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (parsed=${N:-0}) — done, no re-dispatch."
           fi
 
       - name: Self-relaunch the parallel-annotation cleaning until the slot is clean
