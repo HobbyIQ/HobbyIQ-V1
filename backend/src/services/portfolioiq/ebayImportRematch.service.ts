@@ -120,6 +120,10 @@ export async function rematchOne(
       cardNumber,
       parallel: finalParallel,
       isAuto: parsed.isAuto === true || (holding as { isAuto?: boolean }).isAuto === true,
+      // CF-ONE-IMPORT-ONE-IDENTITY (D9): the print run is half the key. Without
+      // it a /50 card computes an un-numbered slug, reaches its checklist row
+      // only at fuzzy 0.72, and the rematch refuses at the 0.9 gate forever.
+      printRun: parsed.printRun ?? ((holding as { printRun?: number | null }).printRun ?? null),
       player: parsed.playerName ?? (holding as { playerName?: string }).playerName ?? null,
       source: "ebay-user-purchase",
     });
