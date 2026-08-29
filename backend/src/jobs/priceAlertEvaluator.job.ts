@@ -1,11 +1,30 @@
 // priceAlertEvaluator.job.ts — Scheduled scan over every active price alert.
 //
 // For each active, not-yet-triggered alert in the `compiq_alerts` Cosmos
-// container, builds a structured CompIQ estimate request from the alert's
-// card snapshot, re-prices via the CompIQ estimate service, and on
-// threshold-cross:
+// container, resolves the alert's card to a catalog identity, prices it
+// through the ONE valuation path, and on threshold-cross:
 //   - flips `triggeredAt` + `isActive=false` in Cosmos
 //   - fires an APNs push via notification.service.sendPriceAlertNotification
+//
+// CF-ONE-VALUATION-PATH (D17, 2026-08-30). The evaluator used to build a
+// free-text CompIQ estimate request from the alert's card snapshot (player,
+// year, product, variant, grade) and price THAT — a text search, not an
+// identity, so the number an alert fired on could be any card of that
+// player's the search found, and never the number the card page showed.
+// Now:
+//   1. `alert.cardId` goes through valueIdentity — an hiq: slug the catalog
+//      holds, or a vendor id (often a Cardsight UUID) that maps to one
+//      through sold_comps and the catalog (nothing minted);
+//   2. failing that, the snapshot's own fields derive a slug the way D12-a's
+//      fillDerivedSlugFromCatalog does — fill-only, catalog-backed: adopted
+//      only when the catalog holds exactly ONE of its forms (the snapshot
+//      carries no isAuto, so both the no-auto and the auto form are asked;
+//      two hits are an ambiguous identity, not a guess);
+//   3. unresolvable → the alert is SKIPPED with a counted reason and a null
+//      evaluation recorded — never priced from text.
+// The price is valueIdentity's fairMarketValue for the alert's grade: the
+// same number /price-by-id, /canonical-fmv, /hobbyiq-fmv, the curve, the
+// panel, card-detail and the portfolio serve for that slug + grade.
 //
 // Defaults:
 //   - Runs every 30 minutes (override via PRICE_ALERT_INTERVAL_MIN)
@@ -20,12 +39,14 @@ import {
   recordAlertEvaluation,
   PriceAlert,
 } from "../repositories/priceAlerts.repository.js";
-import { computeEstimate } from "../services/compiq/compiqEstimate.service.js";
-import type { CompIQEstimateRequest } from "../types/compiq.types.js";
+import { valueIdentity, type Valuation, type ValuationGrade } from "../services/compiq/oneValuationPath.service.js";
+import { catalogSlugIfExists } from "../services/catalog/catalogMatcher.service.js";
+import { computeHobbyIqCardId } from "../services/portfolioiq/hobbyIqCardId.service.js";
+import { inferSportFromContext } from "../services/portfolioiq/soldCompsStore.service.js";
 import { sendPriceAlertNotification } from "../services/notification.service.js";
 import { runSingleFlight } from "./_singleFlight.js";
 
-interface EvaluatorSummary {
+export interface EvaluatorSummary {
   startedAt: string;
   finishedAt: string;
   durationMs: number;
@@ -35,6 +56,14 @@ interface EvaluatorSummary {
   pricingErrors: number;
   pushSent: number;
   pushFailed: number;
+  /** D17: alerts whose card resolves to no catalog identity (cardId names
+   *  none; the snapshot derives none the catalog holds). Not priced. */
+  skippedNoIdentity: number;
+  /** D17: the snapshot derives a slug the catalog holds in BOTH auto forms. */
+  skippedAmbiguousIdentity: number;
+  /** D17: identity resolved, but the one valuation path has no number for
+   *  the tier (null with a reason) — no signal, not an error. */
+  unpriced: number;
 }
 
 const DEFAULT_INTERVAL_MIN = 30;
@@ -51,41 +80,87 @@ function sleep(ms: number): Promise<void> {
 
 /**
  * Parse a freeform grade string like "PSA 10" / "BGS 9.5" / "SGC 10" into
- * structured `{ gradeCompany, gradeValue }`. Returns an empty object for
- * empty, raw, or unrecognized inputs — caller treats those as ungraded.
+ * the entry's grade. Null for empty, raw, or unrecognized inputs — the Raw
+ * tier.
  */
-function parseGrade(grade: string | null | undefined): {
-  gradeCompany?: string;
-  gradeValue?: number;
-} {
-  if (!grade) return {};
+export function parseAlertGrade(grade: string | null | undefined): ValuationGrade | null {
+  if (!grade) return null;
   const trimmed = grade.trim();
-  if (!trimmed) return {};
-  if (/^raw$/i.test(trimmed)) return {};
+  if (!trimmed) return null;
+  if (/^raw$/i.test(trimmed)) return null;
   const m = trimmed.match(/^([A-Za-z]+)\s+([0-9]+(?:\.[0-9]+)?)$/);
-  if (!m) return {};
+  if (!m) return null;
   const value = Number(m[2]);
-  if (!Number.isFinite(value)) return {};
-  return { gradeCompany: m[1].toUpperCase(), gradeValue: value };
+  if (!Number.isFinite(value)) return null;
+  return { company: m[1].toUpperCase(), value };
 }
 
 /**
- * Build a structured CompIQ estimate request from the alert's stored card
- * snapshot. Returns null when the snapshot lacks the minimum signal required
- * to price (a player name) so the evaluator can skip without firing pricing.
+ * The slugs the alert's snapshot could name, derived exactly as a holding's
+ * is (deriveHoldingSlug): year + set + card number + the inferred sport, the
+ * variant (Base when blank), the print run. The snapshot has no isAuto, so
+ * both forms are returned; the caller adopts one only when the catalog holds
+ * exactly one. Pure; empty when the snapshot lacks the minimum identity.
  */
-function buildEstimateRequest(alert: PriceAlert): CompIQEstimateRequest | null {
-  const playerName = alert.playerName?.trim();
-  if (!playerName) return null;
+export function snapshotSlugCandidates(alert: Pick<PriceAlert, "cardSnapshot">): string[] {
   const snap = alert.cardSnapshot;
-  const req: CompIQEstimateRequest = { playerName };
-  if (snap?.year) req.cardYear = snap.year;
-  if (snap?.setName?.trim()) req.product = snap.setName.trim();
-  if (snap?.variant?.trim()) req.parallel = snap.variant.trim();
-  const grade = parseGrade(snap?.grade);
-  if (grade.gradeCompany) req.gradeCompany = grade.gradeCompany;
-  if (typeof grade.gradeValue === "number") req.gradeValue = grade.gradeValue;
-  return req;
+  if (!snap) return [];
+  const year = Number(snap.year);
+  const setKey = String(snap.setName ?? "").trim();
+  const cardNumber = String(snap.cardNumber ?? "").trim();
+  if (!Number.isFinite(year) || year <= 0 || !setKey || !cardNumber) return [];
+  const sport = inferSportFromContext(setKey, null, year);
+  if (!sport) return [];
+  const parallel = String(snap.variant ?? "").trim() || "Base";
+  const printRun = typeof snap.printRun === "number" && Number.isFinite(snap.printRun) && snap.printRun > 0 ? snap.printRun : null;
+  const out: string[] = [];
+  for (const isAuto of [false, true]) {
+    try {
+      const slug = computeHobbyIqCardId({ sport, year, setKey, cardNumber, parallel, isAuto, printRun });
+      if (slug && !out.includes(slug)) out.push(slug);
+    } catch { /* an unbuildable form is no candidate */ }
+  }
+  return out;
+}
+
+export type AlertIdentityResolution =
+  | { kind: "priced"; via: "cardId" | "snapshot"; valuation: Valuation }
+  | { kind: "no-identity"; candidates: string[] }
+  | { kind: "ambiguous-identity"; candidates: string[] };
+
+/**
+ * Resolve the alert's card to a catalog identity and price it through the
+ * one valuation path. `alert.cardId` first (the entry maps a vendor id to
+ * its slug; an hiq: slug must be a catalog row); then the snapshot's derived
+ * slug, when the catalog holds exactly one of its forms.
+ */
+export async function priceAlertThroughOneEntry(alert: PriceAlert): Promise<AlertIdentityResolution> {
+  const grade = parseAlertGrade(alert.cardSnapshot?.grade);
+  const printRun = alert.cardSnapshot?.printRun;
+  const req = {
+    grade,
+    printRun: typeof printRun === "number" && printRun > 0 ? printRun : null,
+    playerName: alert.playerName?.trim() || null,
+  };
+  const pinned = String(alert.cardId ?? "").trim();
+  if (pinned) {
+    const v = await valueIdentity({ id: pinned, ...req });
+    if (v.identity.slug) return { kind: "priced", via: "cardId", valuation: v };
+  }
+  const candidates = snapshotSlugCandidates(alert);
+  const held: string[] = [];
+  for (const candidate of candidates) {
+    let found: string | null = null;
+    try { found = await catalogSlugIfExists(candidate); } catch { found = null; }
+    if (found && !held.includes(found)) held.push(found);
+  }
+  if (held.length === 1) {
+    const v = await valueIdentity({ id: held[0], ...req });
+    if (v.identity.slug) return { kind: "priced", via: "snapshot", valuation: v };
+    return { kind: "no-identity", candidates };
+  }
+  if (held.length > 1) return { kind: "ambiguous-identity", candidates: held };
+  return { kind: "no-identity", candidates };
 }
 
 function thresholdCrossed(alert: PriceAlert, currentPrice: number): boolean {
@@ -113,67 +188,72 @@ function formatPushBody(alert: PriceAlert, currentPrice: number): {
  */
 export async function runPriceAlertEvaluator(): Promise<EvaluatorSummary> {
   const startedAt = new Date();
+  const zero = (): EvaluatorSummary => ({
+    startedAt: startedAt.toISOString(),
+    finishedAt: startedAt.toISOString(),
+    durationMs: 0,
+    evaluated: 0,
+    triggered: 0,
+    unchanged: 0,
+    pricingErrors: 0,
+    pushSent: 0,
+    pushFailed: 0,
+    skippedNoIdentity: 0,
+    skippedAmbiguousIdentity: 0,
+    unpriced: 0,
+  });
   if (_running) {
     console.warn("[price.alert.evaluator] already running; skipping overlap");
-    return {
-      startedAt: startedAt.toISOString(),
-      finishedAt: startedAt.toISOString(),
-      durationMs: 0,
-      evaluated: 0,
-      triggered: 0,
-      unchanged: 0,
-      pricingErrors: 0,
-      pushSent: 0,
-      pushFailed: 0,
-    };
+    return zero();
   }
   _running = true;
 
-  let evaluated = 0;
-  let triggered = 0;
-  let unchanged = 0;
-  let pricingErrors = 0;
-  let pushSent = 0;
-  let pushFailed = 0;
+  const s = zero();
 
   try {
     const alerts = await listAllActiveAlerts();
     console.log(`[price.alert.evaluator] start active=${alerts.length}`);
 
     for (const alert of alerts) {
-      evaluated += 1;
-      const req = buildEstimateRequest(alert);
-      if (!req) {
-        // Nothing to price on — skip and record null price so it surfaces.
-        await recordAlertEvaluation(alert.userId, alert.alertId, {
-          currentPrice: null,
-          triggered: false,
-        });
-        continue;
-      }
+      s.evaluated += 1;
 
       let currentPrice: number | null = null;
+      let skipped: "no-identity" | "ambiguous-identity" | null = null;
       try {
-        // CF-PREDICTION-CORPUS-CALL-CONTEXT (2026-06-01): PriceAlert
-        // schema (priceAlerts.repository.ts:25-37) has no holdingId
-        // field — only userId + cardId (where cardId is a Cardsight
-        // catalog UUID, not a portfolio reference). buildEstimateRequest
-        // above builds a free-text-style CompIQEstimateRequest from
-        // alert.cardSnapshot, not a cardId-pinned one. So:
-        // userId known, holdingId null, routedFromHolding=false per
-        // the conservative explicit-opt-in rule. If alerts ever grow
-        // a holdingId field, the routedFromHolding=true path is one
-        // edit away.
-        const result = await computeEstimate(req, {
-          source: "price-alert-evaluator",
-          userId: alert.userId,
-          holdingId: null,
-          routedFromHolding: false,
-        });
-        const fair = (result as { fairMarketValue?: unknown })?.fairMarketValue;
-        currentPrice = typeof fair === "number" && fair > 0 ? fair : null;
+        const r = await priceAlertThroughOneEntry(alert);
+        if (r.kind === "priced") {
+          const fair = r.valuation.fairMarketValue;
+          currentPrice = typeof fair === "number" && fair > 0 ? fair : null;
+          if (currentPrice === null) s.unpriced += 1;
+          console.log(JSON.stringify({
+            event: "price_alert_valued",
+            source: "price-alert-evaluator",
+            alertId: alert.alertId,
+            userId: alert.userId,
+            cardId: alert.cardId,
+            slug: r.valuation.identity.slug,
+            via: r.via,
+            tier: r.valuation.requestedTier,
+            fair_market_value: currentPrice,
+            rung: r.valuation.rungLabel,
+            reason: r.valuation.reason,
+          }));
+        } else {
+          skipped = r.kind;
+          if (r.kind === "no-identity") s.skippedNoIdentity += 1;
+          else s.skippedAmbiguousIdentity += 1;
+          console.warn(JSON.stringify({
+            event: "price_alert_skipped_no_catalog_identity",
+            source: "price-alert-evaluator",
+            alertId: alert.alertId,
+            userId: alert.userId,
+            cardId: alert.cardId,
+            reason: r.kind,
+            candidates: r.candidates,
+          }));
+        }
       } catch (err: any) {
-        pricingErrors += 1;
+        s.pricingErrors += 1;
         console.warn(
           `[price.alert.evaluator] pricing failed alert=${alert.alertId}:`,
           err?.message ?? err,
@@ -194,8 +274,13 @@ export async function runPriceAlertEvaluator(): Promise<EvaluatorSummary> {
         );
       }
 
+      if (skipped) {
+        if (PER_ALERT_DELAY_MS > 0) await sleep(PER_ALERT_DELAY_MS);
+        continue;
+      }
+
       if (crossed && currentPrice !== null) {
-        triggered += 1;
+        s.triggered += 1;
         const payload = formatPushBody(alert, currentPrice);
         try {
           const res = await sendPriceAlertNotification(alert.userId, {
@@ -204,17 +289,17 @@ export async function runPriceAlertEvaluator(): Promise<EvaluatorSummary> {
             cardId: alert.cardId,
             alertId: alert.alertId,
           });
-          pushSent += res.sent;
-          pushFailed += res.failed;
+          s.pushSent += res.sent;
+          s.pushFailed += res.failed;
         } catch (err: any) {
-          pushFailed += 1;
+          s.pushFailed += 1;
           console.error(
             `[price.alert.evaluator] push failed alert=${alert.alertId}:`,
             err?.message ?? err,
           );
         }
       } else {
-        unchanged += 1;
+        s.unchanged += 1;
       }
 
       if (PER_ALERT_DELAY_MS > 0) await sleep(PER_ALERT_DELAY_MS);
@@ -226,24 +311,16 @@ export async function runPriceAlertEvaluator(): Promise<EvaluatorSummary> {
   }
 
   const finishedAt = new Date();
-  const summary: EvaluatorSummary = {
-    startedAt: startedAt.toISOString(),
-    finishedAt: finishedAt.toISOString(),
-    durationMs: finishedAt.getTime() - startedAt.getTime(),
-    evaluated,
-    triggered,
-    unchanged,
-    pricingErrors,
-    pushSent,
-    pushFailed,
-  };
+  s.finishedAt = finishedAt.toISOString();
+  s.durationMs = finishedAt.getTime() - startedAt.getTime();
   console.log(
-    `[price.alert.evaluator] done evaluated=${evaluated} triggered=${triggered} ` +
-      `unchanged=${unchanged} pricingErrors=${pricingErrors} pushSent=${pushSent} ` +
-      `pushFailed=${pushFailed} durationMs=${summary.durationMs}`,
+    `[price.alert.evaluator] done evaluated=${s.evaluated} triggered=${s.triggered} ` +
+      `unchanged=${s.unchanged} unpriced=${s.unpriced} skippedNoIdentity=${s.skippedNoIdentity} ` +
+      `skippedAmbiguousIdentity=${s.skippedAmbiguousIdentity} pricingErrors=${s.pricingErrors} ` +
+      `pushSent=${s.pushSent} pushFailed=${s.pushFailed} durationMs=${s.durationMs}`,
   );
 
-  return summary;
+  return s;
 }
 
 export function startPriceAlertEvaluatorJob(): void {

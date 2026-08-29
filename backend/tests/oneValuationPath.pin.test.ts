@@ -111,3 +111,141 @@ describe("D16 pins — the four routes price through the one valuation path only
     expect(src).toMatch(/method: isExactPoolRung\(u\.rungLabel\) \? "direct-slug" : "grade-cross-raw"/);
   });
 });
+
+// ─── D17: every price surface through the one entry ─────────────────────────
+//
+// The surfaces D16 left on their own calls. Each pin has the same shape as
+// the D16 ones: the entry answers first, and no second engine is consulted
+// for the headline (or for a tier) on the way.
+const D17_ENGINE_CALLS = [
+  ...ENGINE_CALLS,
+  "computeGradeBreakdownSingleScan(",   // the card-detail ladder's second engine (pre-D17)
+] as const;
+
+describe("D17 pins — card-detail, card-panel, the bulk curves and the persist site price through the one valuation path only", () => {
+  it("/card-detail: cardDetail.service calls valueIdentity and no engine — the header is the adapter over the valuation, the ladder is its curve", () => {
+    const src = stripComments(read("src/services/portfolioiq/cardDetail.service.ts"));
+    expect(src.includes("valueIdentity(")).toBe(true);
+    expect(src.includes("toHobbyIqFmvResponse(")).toBe(true);
+    expect(src.includes("ladderFromValuation(v)")).toBe(true);
+    for (const call of D17_ENGINE_CALLS) expect(src.includes(call), call).toBe(false);
+    expect(src.includes("getGraderPremium(")).toBe(false);
+    // The route hands the body to the service and nothing else prices there.
+    const canon = read("src/routes/canonicalFmv.routes.ts");
+    const body = handlerBody(canon, "post", "/card-detail");
+    expect(body.includes("computeCardDetail(")).toBe(true);
+    for (const call of D17_ENGINE_CALLS) expect(body.includes(call), call).toBe(false);
+  });
+
+  it("/card-panel/:cardId: valueIdentity answers the slug branch under the slug; the legacy build and the grade-rescue overlay follow it, for vendor ids only", () => {
+    const compiq = read("src/routes/compiq.routes.ts");
+    const body = handlerBody(compiq, "get", "/card-panel/:cardId");
+    const entry = body.indexOf("valueIdentity(");
+    const legacy = body.indexOf("buildObservedGradeCurve(");
+    const rescue = body.indexOf("overlayGradeRescue(");
+    expect(entry).toBeGreaterThanOrEqual(0);
+    expect(legacy).toBeGreaterThan(entry);
+    expect(rescue).toBeGreaterThan(legacy);
+    const slugBranch = body.slice(0, legacy);
+    for (const call of D17_ENGINE_CALLS) expect(slugBranch.includes(call), `${call} before the legacy build`).toBe(false);
+    expect(slugBranch.includes("overlayGradeRescue(")).toBe(false);
+    expect(slugBranch).toMatch(/return res\.json\(body\)/);
+    // The slug -> majority vendor-id resolver is gone from this handler.
+    expect(body.includes('NOT STARTSWITH(c.cardId, "hiq:")')).toBe(false);
+  });
+
+  it("/observed-grade-curves-bulk: valueIdentitiesBulk first (BULK_CONCURRENCY), the legacy batch build after, for ids the catalog cannot name", () => {
+    const compiq = read("src/routes/compiq.routes.ts");
+    const body = handlerBody(compiq, "post", "/observed-grade-curves-bulk");
+    const entry = body.indexOf("valueIdentitiesBulk(");
+    const legacy = body.indexOf("buildObservedGradeCurvesBulk(");
+    expect(entry).toBeGreaterThanOrEqual(0);
+    expect(legacy).toBeGreaterThan(entry);
+    expect(body.slice(entry, entry + 120)).toContain("concurrency: BULK_CONCURRENCY");
+    for (const call of D17_ENGINE_CALLS) expect(body.includes(call), call).toBe(false);
+    // The bulk helper is the entry, many times — not a second engine.
+    const svc = stripComments(read("src/services/compiq/oneValuationPath.service.ts"));
+    const bulkAt = svc.indexOf("export async function valueIdentitiesBulk(");
+    expect(bulkAt).toBeGreaterThanOrEqual(0);
+    const bulkBody = svc.slice(bulkAt);
+    expect(bulkBody.includes("await valueIdentity(")).toBe(true);
+    for (const call of D17_ENGINE_CALLS) expect(bulkBody.includes(call), call).toBe(false);
+  });
+
+  it("the persist site: autoPriceHolding, repriceHoldingsForUser and the supremacy gate ask the one entry FIRST; the legacy exact-pool reads follow, gated to identities the catalog cannot name; the tile rung and the majority resolver are gone", () => {
+    const src = stripComments(read("src/services/portfolioiq/portfolioStore.service.ts"));
+    // The grade-curve tile rung (a legacy curve build per holding) is gone,
+    // and so is the slug -> majority vendor-id resolver it used.
+    expect(src.includes("buildObservedGradeCurve(")).toBe(false);
+    expect(src.includes('NOT STARTSWITH(c.cardId, "hiq:")')).toBe(false);
+    expect(src.includes("await computeUnifiedPrice(")).toBe(false);
+
+    const between = (from: string, to: string): string => {
+      const a = src.indexOf(from);
+      expect(a, from).toBeGreaterThanOrEqual(0);
+      const b = src.indexOf(to, a + from.length);
+      expect(b, to).toBeGreaterThan(a);
+      return src.slice(a, b);
+    };
+    // autoPriceHolding: from its signature to its legacy computeEstimate call.
+    const auto = between("async function autoPriceHolding(", "const estimate = await computeEstimate(");
+    const autoEntry = auto.indexOf("valueHoldingThroughOneEntry(");
+    const autoLegacy = auto.indexOf("priceHoldingFromExactPool(");
+    expect(autoEntry).toBeGreaterThanOrEqual(0);
+    expect(autoLegacy).toBeGreaterThan(autoEntry);
+    expect(auto.slice(0, autoEntry).includes("priceHoldingFromExactPool(")).toBe(false);
+    expect(auto).toMatch(/if \(!entryDecidedExactPool && process\.env\.PORTFOLIO_OBSERVED_GRADE_OVERRIDE_ENABLED === "true" && earlyResolvedId\)/);
+    expect(src).toMatch(/if \(!entryDecidedExactPool\s*&& process\.env\.PORTFOLIO_OBSERVED_GRADE_OVERRIDE_ENABLED === "true"\s*&& resolvedIdForPricing\)/);
+    // repriceHoldingsForUser: the same shape, both flagged reads gated.
+    const reprice = between("export async function repriceHoldingsForUser(", "const estimate = await computeEstimate(");
+    const rEntry = reprice.indexOf("valueHoldingThroughOneEntry(");
+    const rLegacy = reprice.indexOf("priceHoldingFromExactPool(");
+    expect(rEntry).toBeGreaterThanOrEqual(0);
+    expect(rLegacy).toBeGreaterThan(rEntry);
+    expect(reprice).toMatch(/if \(!bEntryDecided && process\.env\.PORTFOLIO_OBSERVED_GRADE_OVERRIDE_ENABLED === "true" && bEarlyId\)/);
+    expect(src).toMatch(/if \(!bEntryDecided && process\.env\.PORTFOLIO_OBSERVED_GRADE_OVERRIDE_ENABLED === "true"\) \{/);
+    // The supremacy gate: the entry replaces a blocked estimate; the legacy
+    // re-price only when the entry could not resolve the identity.
+    const gate = between("async function gateEstimateAgainstExactPool(", "async function autoPriceHolding(");
+    const gEntry = gate.indexOf("valueHoldingThroughOneEntry(");
+    const gLegacy = gate.indexOf("priceHoldingFromExactPool(");
+    expect(gEntry).toBeGreaterThanOrEqual(0);
+    expect(gLegacy).toBeGreaterThan(gEntry);
+    expect(gate).toMatch(/const entryDecided = entry\.outcome !== "unresolved";\s*[\s\S]*?if \(!entryDecided\) \{/);
+  });
+
+  it("holdingValuation.ts is the adapter over the entry: valueIdentity only, no engine, no grader-premium table, and it never writes cross-grade-fallback", () => {
+    const src = stripComments(read("src/services/portfolioiq/holdingValuation.ts"));
+    expect(src.includes("await valueIdentity(")).toBe(true);
+    for (const call of D17_ENGINE_CALLS) expect(src.includes(call), call).toBe(false);
+    expect(src.includes("getGraderPremium(")).toBe(false);
+    expect(src.includes('"cross-grade-fallback"')).toBe(false);
+    // The estimate write is an estimate, and the observed write an exact-pool rung.
+    expect(src).toMatch(/fmvRung: "grade-curve-estimate",[\s\S]*?isEstimate: true,[\s\S]*?valuationStatus: "estimated"/);
+    expect(src).toMatch(/const observed = priced && v\.valueSource === "observed" && isExactPoolRung\(v\.rungLabel\);/);
+    // Every literal that sets fairMarketValue sets fmvRung (the rung-writers rule).
+    const literals = src.split("fairMarketValue: ").length - 1;
+    const rungs = src.split("fmvRung: ").length - 1;
+    expect(literals).toBe(2);
+    expect(rungs).toBe(2);
+    // The entry takes the holding's second identity and asks in #1462's order.
+    const entry = stripComments(read("src/services/compiq/oneValuationPath.service.ts"));
+    expect(entry).toMatch(/cardId: secondId && secondId !== slug \? secondId : null, printRun: identity\.printRun/);
+  });
+
+  it("the price-alert evaluator prices the alert's CARD through valueIdentity — a catalog identity (cardId, else the snapshot's slug the catalog holds in exactly one form) — never the text engine", () => {
+    const src = stripComments(read("src/jobs/priceAlertEvaluator.job.ts"));
+    expect(src.includes("await valueIdentity(")).toBe(true);
+    for (const call of D17_ENGINE_CALLS) expect(src.includes(call), call).toBe(false);
+    expect(src.includes("compiqEstimate.service")).toBe(false);
+    expect(src.includes("CompIQEstimateRequest")).toBe(false);
+    // Fill-only, catalog-backed: the derived slug is adopted through
+    // catalogSlugIfExists, and only when exactly one form is held.
+    expect(src.includes("await catalogSlugIfExists(candidate)")).toBe(true);
+    expect(src).toMatch(/if \(held\.length === 1\) \{/);
+    expect(src).toMatch(/if \(held\.length > 1\) return \{ kind: "ambiguous-identity"/);
+    // The skip is counted, never priced.
+    expect(src).toMatch(/skippedNoIdentity/);
+    expect(src).toMatch(/skippedAmbiguousIdentity/);
+  });
+});

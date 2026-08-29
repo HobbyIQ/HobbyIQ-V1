@@ -3936,41 +3936,127 @@ router.get("/card-panel/:cardId", requireSession, requireRateLimited("priceCheck
     if (!cardId || typeof cardId !== "string" || !cardId.trim()) {
       return res.status(400).json({ success: false, error: 'Missing or invalid "cardId"' });
     }
-    let id = cardId.trim();
-    // CF-CARD-PANEL-HIQ-SLUG (Drew, 2026-08-06). Catalog-search
-    // click-throughs land here with an hiq: slug. Same resolver as
-    // /observed-grade-curve — swap to a vendor cardId that any
-    // sold_comps row is stamped with, so downstream lookups work.
-    if (id.startsWith("hiq:")) {
-      try {
-        const { CosmosClient: _CC } = await import("@azure/cosmos");
-        const cn = process.env.COSMOS_CONNECTION_STRING;
-        if (cn) {
-          const sc = new _CC(cn).database(process.env.COSMOS_DATABASE ?? "hobbyiq").container("sold_comps");
-          // CF-HIQ-RESOLVER-MAJORITY (Drew, 2026-08-06). Prior resolver
-          // picked TOP 1 by arbitrary Cosmos order — for cards with
-          // 500+ CH rows on one canonical cardId and 1-3 rows on a
-          // rogue mismatched cardId, TOP 1 could return the rogue, then
-          // the whole grade curve rendered data for a wrong CH card.
-          // (Real case on Ohtani 2018 Bowman Chrome #1 PSA 9: 547/567
-          // rows shared "1625707759165x..." but TOP 1 returned
-          // "1689201618080x..." — grade curve came back as a $150
-          // card, not the actual $2K+ Ohtani.) Now GROUP BY cardId
-          // and pick the majority.
-          const { resources: buckets } = await sc.items.query<{ cid: string; n: number }>({
-            query: `SELECT c.cardId as cid, COUNT(1) as n
-                    FROM c WHERE c.hobbyiqCardId = @s
-                      AND IS_DEFINED(c.cardId) AND c.cardId != null
-                      AND NOT STARTSWITH(c.cardId, "hiq:")
-                    GROUP BY c.cardId`,
-            parameters: [{ name: "@s", value: id }],
-          }).fetchAll();
-          if (buckets.length > 0) {
-            buckets.sort((a, b) => b.n - a.n);
-            id = buckets[0].cid;
-          }
-        }
-      } catch { /* fall through */ }
+    const id = cardId.trim();
+    // CF-ONE-VALUATION-PATH (D17, 2026-08-30). The panel for an hiq: slug —
+    // or a vendor id the catalog can name — is the one valuation path's
+    // curve: the same engine result /observed-grade-curve, /price-by-id,
+    // /canonical-fmv, /hobbyiq-fmv and /card-detail derive from, every tier
+    // at its own window, served UNDER THE SLUG with the catalog's identity.
+    // The resolver that lived here (CF-CARD-PANEL-HIQ-SLUG, 08-06) swapped
+    // the slug for the majority vendor cardId among its rows and the legacy
+    // build below then read that id through a second engine (its own read,
+    // trajectory, sibling pass, then a unified overlay) and the grade-rescue
+    // overlay wrote the tiers a third time. The legacy build now serves
+    // only vendor ids the catalog cannot name.
+    {
+      const { valueIdentity } = await import("../services/compiq/oneValuationPath.service.js");
+      const { toObservedGradeCurveResponse, wireIdentity } = await import("../services/compiq/oneValuationPathAdapters.js");
+      const v = await valueIdentity({ id, grade: null });
+      if (v.identity.slug || id.startsWith("hiq:")) {
+        const slug = v.identity.slug ?? id;
+        const curve = toObservedGradeCurveResponse(v);
+        const ident = wireIdentity(v.identity);
+        // "Similar cards" carousel — a catalog/search surface, not a price
+        // engine; it needs the identity's year, set and player.
+        const samePlayerSiblings = await (async () => {
+          try {
+            const year = typeof ident.year === "number" ? ident.year : Number.parseInt(String(ident.year ?? ""), 10);
+            const set = typeof ident.set === "string" ? ident.set : null;
+            const player = typeof ident.player === "string" ? ident.player : null;
+            if (!Number.isFinite(year) || !set || !player) return [];
+            const { getSamePlayerSiblings } = await import("../services/compiq/samePlayerSiblings.service.js");
+            return await getSamePlayerSiblings({ selfCardId: slug, year, set, playerName: player });
+          } catch { return []; }
+        })();
+        const body = {
+          success: true,
+          cardId: slug,
+          identity: v.identity.slug
+            ? {
+                cardId: slug,
+                player: ident.player ?? null,
+                set: ident.set ?? null,
+                number: ident.number ?? null,
+                variant: ident.parallel ?? null,
+                year: ident.year ?? null,
+                imageUrl: ident.imageUrl ?? null,
+                description: null,
+                // Additive (D17): the catalog identity the other wires carry.
+                slug: ident.slug,
+                setKey: ident.setKey,
+                sport: ident.sport,
+                isAuto: ident.isAuto,
+                printRun: ident.printRun,
+              }
+            : null,
+          gradeCurve: {
+            totalSampleCount: curve.totalSampleCount,
+            computedAt: curve.computedAt,
+            entries: curve.entries,
+            ratePerWeek: null,
+            signalSource: null,
+            siblingFallback: null,
+            // Additive (D17).
+            rungLabel: curve.rungLabel,
+            valueSource: curve.valueSource,
+            fmvReason: curve.fmvReason,
+          },
+          referencePrices: [],
+          samePlayerSiblings,
+          rungLabel: curve.rungLabel,
+          valueSource: curve.valueSource,
+          fmvReason: curve.fmvReason,
+        };
+        void (async () => {
+          try {
+            console.log(JSON.stringify({
+              event: "card_panel_composed",
+              source: "compiq.card-panel",
+              referenceVendor: "cardhedge",
+              cardId: slug,
+              identityResolved: v.identity.slug !== null,
+              gradeCurveSampleCount: v.totalSampleCount,
+              referenceRowCount: 0,
+              oneValuationPath: true,
+              timestamp: new Date().toISOString(),
+            }));
+            persistCardPanel({
+              source: "compiq.card-panel",
+              cardId: slug,
+              identityResolved: v.identity.slug !== null,
+              gradeCurveSampleCount: v.totalSampleCount,
+              referenceRowCount: 0,
+            });
+            persistObservedGradeCurve({
+              source: "compiq.card-panel",
+              cardId: slug,
+              totalSampleCount: v.totalSampleCount,
+              ratePerWeek: null,
+              signalSource: null,
+              grades: v.gradeCurve.map((e) => ({
+                grade: e.grade,
+                grader: e.grader,
+                sampleCount: e.sampleCount,
+                observedMedian: e.weightedMedianPrice,
+                valueSource: e.valueSource,
+                estimatedMultiplier: e.estimatedMultiplier,
+                estimatedFrom: e.estimatedFrom,
+                confidenceScore: e.confidenceScore,
+                newestSaleDate: e.newestSaleDate,
+                daysSinceNewestSale: e.daysSinceNewestSale,
+                trendAdjustedValue: e.trendAdjustedValue,
+                trendAdjustmentPct: e.trendAdjustmentPct,
+                predictedPriceAt30d: e.predictedPriceAt30d,
+                predictedPricePct: e.predictedPricePct,
+                predictedPriceRangeLow: e.predictedPriceRangeLow,
+                predictedPriceRangeHigh: e.predictedPriceRangeHigh,
+              })),
+            });
+          } catch { /* telemetry never blocks the response */ }
+        })();
+        return res.json(body);
+      }
+      // A vendor id the catalog cannot name: the legacy build, unchanged.
     }
     const { buildObservedGradeCurve } = await import(
       "../services/compiq/observedGradeCurve.service.js"
@@ -4252,21 +4338,48 @@ router.post("/observed-grade-curves-bulk", requireSession, requireEntitlement("p
       return res.status(400).json({ success: false, error: 'Every cardIds entry must be a string' });
     }
 
-    const { buildObservedGradeCurvesBulk } = await import(
+    const { buildObservedGradeCurvesBulk, BULK_CONCURRENCY } = await import(
       "../services/compiq/observedGradeCurve.service.js"
     );
+    const start = Date.now();
+    // CF-ONE-VALUATION-PATH (D17, 2026-08-30). Every id goes through the
+    // ONE entry first — deduped, BULK_CONCURRENCY at a time, one exact-pool
+    // read per identity — and an hiq: slug (or a vendor id the catalog can
+    // name) is answered with the one valuation path's curve: the same
+    // engine result /observed-grade-curve, /card-panel and the portfolio
+    // persist site derive from. The legacy batch build below serves only
+    // ids the catalog cannot name.
+    //
+    // The curve is keyed by the REQUESTED id (`cardId`), not the slug, so a
+    // caller that sent 500 ids can join the answers back — iOS keys
+    // BulkGradeCurve by cardId; the slug rides along as `identity.slug`.
+    const { valueIdentitiesBulk } = await import("../services/compiq/oneValuationPath.service.js");
+    const { toObservedGradeCurveResponse } = await import("../services/compiq/oneValuationPathAdapters.js");
+    const uniqueIds = Array.from(new Set((cardIds as string[]).map((id) => id.trim()).filter((id) => id.length > 0)));
+    const valuations = await valueIdentitiesBulk(uniqueIds, { concurrency: BULK_CONCURRENCY });
+    const curves: Array<Record<string, unknown>> = [];
+    const legacyIds: string[] = [];
+    for (const id of uniqueIds) {
+      const v = valuations.get(id);
+      if (v && (v.identity.slug || id.startsWith("hiq:"))) {
+        const { success: _success, ...curve } = toObservedGradeCurveResponse(v);
+        curves.push({ ...curve, cardId: id, slug: v.identity.slug });
+      } else {
+        legacyIds.push(id);
+      }
+    }
     // CF-EMPIRICAL-GRADE-MULTIPLIER (Drew, 2026-07-20): fetch per-card
     // meta up-front so the empirical (family, grader) multiplier
-    // resolves for each card in the batch. getCardMetaById is a hot-
-    // cache read so N metadata lookups add ~5-20ms total for 500
+    // resolves for each legacy card in the batch. getCardMetaById is a
+    // hot-cache read so N metadata lookups add ~5-20ms total for 500
     // cards. Without this, every entry logs uncovered and the pill
     // returns unavailable.
     const perCardMeta = new Map<string, { setName?: string | null; sport?: string | null; cardClass?: "auto" | "base" }>();
-    await Promise.all(cardIds.map(async (id: string) => {
+    await Promise.all(legacyIds.map(async (id: string) => {
       try {
-        const meta = await getCardMetaById(id.trim());
+        const meta = await getCardMetaById(id);
         if (meta) {
-          perCardMeta.set(id.trim(), {
+          perCardMeta.set(id, {
             setName: (meta as { set?: string | null })?.set ?? null,
             sport: (meta as { sport?: string | null })?.sport ?? null,
             cardClass: extractCardClass(meta),
@@ -4274,22 +4387,55 @@ router.post("/observed-grade-curves-bulk", requireSession, requireEntitlement("p
         }
       } catch { /* per-card meta failures are non-fatal */ }
     }));
-    const start = Date.now();
-    const map = await buildObservedGradeCurvesBulk(cardIds, perCardMeta);
+    const map = legacyIds.length > 0
+      ? await buildObservedGradeCurvesBulk(legacyIds, perCardMeta)
+      : new Map<string, import("../services/compiq/observedGradeCurve.service.js").ObservedGradeCurve>();
+    for (const curve of map.values()) curves.push(curve as unknown as Record<string, unknown>);
     const durationMs = Date.now() - start;
 
     void (async () => {
       try {
-        const totalSamples = Array.from(map.values()).reduce((sum, c) => sum + c.totalSampleCount, 0);
+        const totalSamples = curves.reduce((sum, c) => sum + Number(c.totalSampleCount ?? 0), 0);
         console.log(JSON.stringify({
           event: "observed_grade_curves_bulk_composed",
           source: "compiq.observed-grade-curves-bulk",
           requestedCount: cardIds.length,
-          uniqueCount: map.size,
+          uniqueCount: curves.length,
+          oneValuationPathCount: curves.length - map.size,
+          legacyCount: map.size,
           durationMs,
           totalSampleCount: totalSamples,
           timestamp: new Date().toISOString(),
         }));
+        // The one-path curves persist under the slug, as the single route does.
+        for (const [id, v] of valuations) {
+          if (!(v.identity.slug || id.startsWith("hiq:"))) continue;
+          persistObservedGradeCurve({
+            source: "compiq.observed-grade-curves-bulk",
+            cardId: v.identity.slug ?? id,
+            totalSampleCount: v.totalSampleCount,
+            ratePerWeek: null,
+            signalSource: null,
+            grades: v.gradeCurve.map((e) => ({
+              grade: e.grade,
+              grader: e.grader,
+              sampleCount: e.sampleCount,
+              observedMedian: e.weightedMedianPrice,
+              valueSource: e.valueSource,
+              estimatedMultiplier: e.estimatedMultiplier,
+              estimatedFrom: e.estimatedFrom,
+              confidenceScore: e.confidenceScore,
+              newestSaleDate: e.newestSaleDate,
+              daysSinceNewestSale: e.daysSinceNewestSale,
+              trendAdjustedValue: e.trendAdjustedValue,
+              trendAdjustmentPct: e.trendAdjustmentPct,
+              predictedPriceAt30d: e.predictedPriceAt30d,
+              predictedPricePct: e.predictedPricePct,
+              predictedPriceRangeLow: e.predictedPriceRangeLow,
+              predictedPriceRangeHigh: e.predictedPriceRangeHigh,
+            })),
+          });
+        }
         // CF-CARDHEDGE-LEARN-CORPUS bulk gap fix (2026-07-04): the batched
         // route was missing corpus persistence — portfolio reprice fires
         // 500 curves at once and none of them were being persisted. Every
@@ -4330,8 +4476,8 @@ router.post("/observed-grade-curves-bulk", requireSession, requireEntitlement("p
 
     res.json({
       success: true,
-      count: map.size,
-      curves: Array.from(map.values()),
+      count: curves.length,
+      curves,
     });
   } catch (err) {
     return next(err);

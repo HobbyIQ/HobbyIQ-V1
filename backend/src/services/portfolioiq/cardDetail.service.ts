@@ -9,28 +9,45 @@
 // gracefully — the composite still returns whatever succeeded, with
 // per-section error flags iOS can render as "temporarily unavailable"
 // rather than blanking the whole screen.
+//
+// CF-ONE-VALUATION-PATH (D17, 2026-08-30). The headline and the ladder are
+// ONE valuation (oneValuationPath.service.valueIdentity) — the same result
+// /hobbyiq-fmv, /price-by-id, /canonical-fmv and /observed-grade-curve
+// derive from. Before D17 this composite ran computeHobbyIqFmv for the
+// header and computeGradeBreakdownSingleScan for the ladder: two engines
+// over the same rows (the ladder at a fixed 180d window, the header at the
+// density cascade), agreeing only because CF-LADDER-PROJECTS-FROM-ANCHOR
+// handed the header's number to the ladder as an anchor. Now the `fmv`
+// block IS /hobbyiq-fmv's answer (toHobbyIqFmvResponse over the valuation)
+// and every ladder tier IS that valuation's curve entry — the requested
+// grade's tier equals the header by construction. `maxAgeDays` is no
+// longer honoured (the engine's window is the density cascade's; a
+// caller-chosen window would be a second computation).
 
-import { computeHobbyIqFmv, computeGradeBreakdownSingleScan, type HobbyIqFmvResult, type GradeBreakdownTier } from "./hobbyIqFmv.service.js";
+import type { HobbyIqFmvResult } from "./hobbyIqFmv.service.js";
 import { computeRelatedCards, type RelatedCardsResult } from "./discoverySurfaces.service.js";
 import { parseHobbyIqCardId } from "./hobbyIqCardId.service.js";
+import { valueIdentity, type Valuation } from "../compiq/oneValuationPath.service.js";
+import { toHobbyIqFmvResponse, wireIdentity } from "../compiq/oneValuationPathAdapters.js";
+import { gradeCurveEntryLabel } from "../compiq/gradeCurveEntry.js";
+import type { ObservedGradeEntry } from "../compiq/observedGradeCurve.service.js";
 
 export interface CardDetailInput {
   hobbyiqCardId: string;              // canonical slug
   gradeCompany?: string | null;
   gradeValue?: number | null;
-  maxAgeDays?: number;                // passed to computeHobbyIqFmv
-  previewLimit?: number;              // passed to computeHobbyIqFmv (recentComps)
+  /** D17: accepted for back-compat, not honoured — the one valuation path's
+   *  window is the engine's density cascade. */
+  maxAgeDays?: number;
+  previewLimit?: number;              // recentComps preview size on `fmv`
   relatedLimit?: number;              // passed to computeRelatedCards (default 8)
-  /** When true, run parallel FMV computes for a fixed grade ladder so
+  /** When true, the grade ladder is rendered from the valuation's curve so
    *  iOS can render "PSA 10 = $X, PSA 9.5 = $Y, Raw = $Z" in one call.
    *
-   *  CF-GRADE-LADDER-OPT-IN (Drew, 2026-07-25). Default flipped to
-   *  FALSE — 7 parallel computeHobbyIqFmv calls tie up the Cosmos SDK
-   *  hard (measured 15-17s cold on `hiq:baseball:2025:topps-chrome-
-   *  sapphire:300:base:no-auto`). iOS should opt in explicitly for the
-   *  full grade breakdown view; the default fast path (primary FMV +
-   *  related) returns in ~200-700ms. A proper single-scan grade
-   *  breakdown is queued as follow-up. */
+   *  CF-GRADE-LADDER-OPT-IN (Drew, 2026-07-25). Default FALSE. D17: the
+   *  ladder no longer costs a second engine call — it is the same curve the
+   *  header came from — but the opt-in is kept so the wire shape does not
+   *  grow for callers that never asked for it. */
   includeGradeLadder?: boolean;
 }
 
@@ -40,10 +57,17 @@ export interface GradeLadderTier {
   gradeCompany: string | null;
   gradeValue: number | null;
   fmv: number | null;
-  compCount: number;                  // direct comps at this grade (before fallback)
+  compCount: number;                  // sales in this tier's own pool (0 when estimated)
   trend: "up" | "down" | "flat";
-  method: string;                     // rung from HobbyIqFmvMethod
+  /** D17: the tier's rung in the closed vocabulary (fmvRung.ts) — an
+   *  exact-pool rung for an observed tier, `grade-curve-estimate` for a
+   *  tier filled from this card's other tiers × the empirical ratio.
+   *  (Pre-D17: "direct-slug" | "anchor-projected".) */
+  method: string;
   confidence: number;
+  /** Additive (D17): the same rung as `method`, and the tier's valueSource. */
+  rungLabel: string | null;
+  valueSource: "observed" | "estimated" | "unavailable";
 }
 
 export interface CardDetailIdentity {
@@ -69,23 +93,53 @@ export interface CardDetailResult {
   relatedError: string | null;
   processingMs: number;
   computedAt: string;
+  /** Additive (D17): the valuation's rung, source and reason, and the
+   *  catalog identity every other pricing wire carries. */
+  rungLabel: string;
+  valueSource: Valuation["valueSource"];
+  fmvReason: Valuation["reason"];
+  catalogIdentity: Record<string, unknown> | null;
 }
 
-// Standard grade tiers surfaced in the ladder. Kept intentionally short —
-// these are the tiers 95% of iOS users care about at glance. PSA
-// dominates market share, BGS is the second-most-tracked, Raw is the
-// no-grade baseline. If a tier has zero direct comps, computeHobbyIqFmv's
-// internal fallback ladder still returns a number — the compCount field
-// signals "how much conviction" (0 = fallback-only, positive = direct).
-const GRADE_LADDER_TIERS: Array<{ label: string; company: string | null; value: number | null }> = [
-  { label: "PSA 10",  company: "PSA", value: 10 },
-  { label: "PSA 9.5", company: "PSA", value: 9.5 },
-  { label: "PSA 9",   company: "PSA", value: 9 },
-  { label: "BGS 10",  company: "BGS", value: 10 },
-  { label: "BGS 9.5", company: "BGS", value: 9.5 },
-  { label: "SGC 10",  company: "SGC", value: 10 },
-  { label: "Raw",     company: null,  value: null },
-];
+/** The ladder's trend for a tier, from the tier's own fit (trendPctPerWeek). */
+function tierTrend(entry: ObservedGradeEntry): "up" | "down" | "flat" {
+  const pct = entry.predictedPricePct;
+  if (typeof pct !== "number" || !Number.isFinite(pct)) return "flat";
+  if (pct > 0.5) return "up";
+  if (pct < -0.5) return "down";
+  return "flat";
+}
+
+/** Every priced tier of the valuation's curve as a ladder tier, sorted by
+ *  value descending with Raw last (the order the ladder always had). */
+export function ladderFromValuation(v: Valuation): GradeLadderTier[] {
+  const tiers: GradeLadderTier[] = [];
+  for (const e of v.gradeCurve) {
+    const value = e.trendAdjustedValue ?? e.value;
+    if (typeof value !== "number" || !(value > 0)) continue;
+    const label = gradeCurveEntryLabel(e);
+    const isRaw = label === "Raw";
+    const m = String(e.grade).match(/(\d+(?:\.\d+)?)/);
+    tiers.push({
+      gradeLabel: label,
+      gradeCompany: isRaw ? null : e.grader,
+      gradeValue: isRaw ? null : (m ? Number(m[1]) : null),
+      fmv: Math.round(value * 100) / 100,
+      compCount: e.valueSource === "observed" ? e.sampleCount : 0,
+      trend: tierTrend(e),
+      method: e.rungLabel ?? (e.valueSource === "estimated" ? "grade-curve-estimate" : "no-basis"),
+      confidence: e.confidenceScore ?? 0,
+      rungLabel: e.rungLabel ?? null,
+      valueSource: e.valueSource,
+    });
+  }
+  tiers.sort((a, b) => {
+    if (a.gradeCompany === null && b.gradeCompany !== null) return 1;
+    if (b.gradeCompany === null && a.gradeCompany !== null) return -1;
+    return (b.fmv ?? 0) - (a.fmv ?? 0);
+  });
+  return tiers;
+}
 
 export async function computeCardDetail(input: CardDetailInput): Promise<CardDetailResult> {
   const t0 = Date.now();
@@ -103,111 +157,70 @@ export async function computeCardDetail(input: CardDetailInput): Promise<CardDet
     related: null, relatedError: null,
     processingMs: 0,
     computedAt: now.toISOString(),
+    rungLabel: "no-basis",
+    valueSource: "unavailable",
+    fmvReason: null,
+    catalogIdentity: null,
   };
   if (!slug || !slug.startsWith("hiq:")) {
     return { ...empty, fmvError: "invalid hobbyiqCardId (must start with 'hiq:')", processingMs: Date.now() - t0 };
   }
 
   const parsed = parseHobbyIqCardId(slug);
-  const identity: CardDetailIdentity = {
-    hobbyiqCardId: slug,
-    sport: parsed?.sport ?? null,
-    year: parsed?.year ?? null,
-    setKey: parsed?.setKey ?? null,
-    cardNumber: parsed?.cardNumber ?? null,
-    parallel: parsed?.parallel ?? null,
-    isAuto: parsed?.isAuto ?? null,
-    printRun: parsed?.printRun ?? null,
-  };
-
-  // CF-GRADE-BREAKDOWN-SINGLE-SCAN (Drew, 2026-07-26). Replaced the
-  // 7-parallel-computeHobbyIqFmv implementation (measured 15-17s cold
-  // on prod due to Cosmos SDK contention) with ONE Cosmos scan of the
-  // slug's comps, grouped by (gradeCompany, gradeValue) in-memory.
-  // O(1) Cosmos queries. Empirical-only: tiers with fewer than
-  // minTierComps direct comps are OMITTED (iOS shows "insufficient
-  // data" not a fabricated fallback multiplier).
-  //
-  // includeGradeLadder default remains false per the PR #763 opt-in
-  // hotfix; iOS asks for it explicitly on the grade-breakdown view.
   const includeGradeLadder = input.includeGradeLadder === true;
 
-  // CF-LADDER-PROJECTS-FROM-ANCHOR (2026-08-22). The header and the ladder used
-  // to be two independent computations raced in the same Promise.allSettled,
-  // and nothing made the ladder's entry for the card's own grade equal the
-  // number printed above it. On Griffin they disagreed completely: header $650
-  // from his last real sale, ladder empty.
-  //
-  // computeHobbyIqFmv is NOT memoised — only its Cosmos container is cached —
-  // so it is computed exactly ONCE here and its value feeds both the header
-  // and the ladder's anchor. Calling it twice would double the expensive path
-  // on the very route CF-GRADE-BREAKDOWN-SINGLE-SCAN exists to keep fast.
-  //
-  // relatedPromise is started BEFORE the await so it still overlaps the FMV
-  // call. Only the ladder is serialised behind it, and only when the ladder
-  // was actually asked for (opt-in; iOS grade-breakdown view).
+  // relatedPromise is started BEFORE the valuation so it overlaps it.
   const relatedPromise = computeRelatedCards(slug, input.relatedLimit ?? 8);
 
-  const fmvSettled = (await Promise.allSettled([
-    computeHobbyIqFmv({
-      hobbyiqCardId: slug,
-      gradeCompany: input.gradeCompany ?? null,
-      gradeValue: input.gradeValue ?? null,
-      maxAgeDays: input.maxAgeDays,
-      previewLimit: input.previewLimit,
+  // ONE valuation: the header, and the ladder's every tier, come from it.
+  const valuationSettled = (await Promise.allSettled([
+    valueIdentity({
+      id: slug,
+      grade: { company: input.gradeCompany ?? null, value: input.gradeValue ?? null },
     }),
   ]))[0];
-  const fmvForAnchor = fmvSettled.status === "fulfilled" ? fmvSettled.value : null;
-
-  const gradeLadderPromise: Promise<GradeLadderTier[]> = includeGradeLadder
-    ? computeGradeBreakdownSingleScan(slug, {
-        maxAgeDays: input.maxAgeDays,
-        anchorFmv: fmvForAnchor?.fmv ?? null,
-        anchorGradeCompany: input.gradeCompany ?? null,
-        anchorGradeValue: input.gradeValue ?? null,
-      })
-        .then((r): GradeLadderTier[] => r.tiers.map((t: GradeBreakdownTier) => ({
-          gradeLabel: t.gradeLabel,
-          gradeCompany: t.gradeCompany,
-          gradeValue: t.gradeValue,
-          fmv: t.fmv,
-          compCount: t.compCount,
-          trend: t.trend,
-          // CF-LADDER-PROJECTS-FROM-ANCHOR: a projected tier is NOT direct-slug
-          // and must not claim direct-slug's 0.95. The tier carries its own.
-          method: t.basis === "projected" ? "anchor-projected" : "direct-slug",
-          confidence: t.confidence,
-        })))
-    : Promise.resolve([]);
-
-  const [relatedSettled, gradeLadderSettled] = await Promise.allSettled([
-    relatedPromise,
-    gradeLadderPromise,
-  ]);
-
-  const fmv = fmvSettled.status === "fulfilled" ? fmvSettled.value : null;
-  const fmvError = fmvSettled.status === "rejected"
-    ? (fmvSettled.reason instanceof Error ? fmvSettled.reason.message : String(fmvSettled.reason))
+  const v = valuationSettled.status === "fulfilled" ? valuationSettled.value : null;
+  const fmvError = valuationSettled.status === "rejected"
+    ? (valuationSettled.reason instanceof Error ? valuationSettled.reason.message : String(valuationSettled.reason))
     : null;
+
+  const relatedSettled = (await Promise.allSettled([relatedPromise]))[0];
   const related = relatedSettled.status === "fulfilled" ? relatedSettled.value : null;
   const relatedError = relatedSettled.status === "rejected"
     ? (relatedSettled.reason instanceof Error ? relatedSettled.reason.message : String(relatedSettled.reason))
     : null;
-  const gradeLadder = includeGradeLadder && gradeLadderSettled.status === "fulfilled"
-    ? gradeLadderSettled.value
+
+  // The identity block: the catalog's identity when the entry resolved it,
+  // the slug's own segments otherwise (the pre-D17 shape, same keys).
+  const identity: CardDetailIdentity = {
+    hobbyiqCardId: v?.identity.slug ?? slug,
+    sport: v?.identity.sport ?? parsed?.sport ?? null,
+    year: v?.identity.year ?? parsed?.year ?? null,
+    setKey: v?.identity.setKey ?? parsed?.setKey ?? null,
+    cardNumber: v?.identity.cardNumber ?? parsed?.cardNumber ?? null,
+    parallel: v?.identity.parallel ?? parsed?.parallel ?? null,
+    isAuto: v?.identity.isAuto ?? parsed?.isAuto ?? null,
+    printRun: v?.identity.printRun ?? parsed?.printRun ?? null,
+  };
+
+  const fmv = v
+    ? toHobbyIqFmvResponse(v, { previewLimit: input.previewLimit })
     : null;
-  const gradeLadderError = gradeLadderSettled.status === "rejected"
-    ? (gradeLadderSettled.reason instanceof Error ? gradeLadderSettled.reason.message : String(gradeLadderSettled.reason))
-    : null;
+  const gradeLadder = includeGradeLadder && v ? ladderFromValuation(v) : null;
+  const gradeLadderError = includeGradeLadder && !v ? fmvError : null;
 
   return {
     success: true,
-    hobbyiqCardId: slug,
+    hobbyiqCardId: v?.identity.slug ?? slug,
     identity,
     fmv, fmvError,
     gradeLadder, gradeLadderError,
     related, relatedError,
     processingMs: Date.now() - t0,
-    computedAt: new Date().toISOString(),
+    computedAt: v?.computedAt ?? new Date().toISOString(),
+    rungLabel: v?.rungLabel ?? "no-basis",
+    valueSource: v?.valueSource ?? "unavailable",
+    fmvReason: v?.reason ?? null,
+    catalogIdentity: v ? wireIdentity(v.identity) : null,
   };
 }

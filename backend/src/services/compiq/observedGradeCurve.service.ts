@@ -2230,7 +2230,7 @@ export function capProjectedTiers(entries: ObservedGradeEntry[]): void {
  * Returns a Map<cardId, ObservedGradeCurve>. Callers can iterate,
  * transform, or emit a bulk API response as needed.
  */
-const BULK_CONCURRENCY = 8;
+export const BULK_CONCURRENCY = 8;
 
 /** CF-EMPIRICAL-GRADE-MULTIPLIER (Drew, 2026-07-20). Per-card meta the
  *  bulk helper can pipe to buildObservedGradeCurve so each card's

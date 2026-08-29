@@ -1216,6 +1216,74 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
     entry is the follow-up. The per-tier overlay also moves `/card-panel`
     tier numbers and the portfolio tile on the next reprice (dense tiers
     from a 180d fit to their density window).
+    **D17 — every price surface through the one entry (built on `feat/d17`,
+  2026-08-30, 6 commits, unmerged; backend/src changed — dispatch "Daily 5AM
+  ET Refresh & Deploy" after merge).** The five surfaces D16 left on their
+  own calls, each routed through `valueIdentity` so the number is one
+  computation everywhere: **(1) `/card-detail`** — the `fmv` block is
+  `toHobbyIqFmvResponse` over the valuation (byte-identical to
+  `/hobbyiq-fmv`) and every ladder tier is the valuation's curve entry;
+  computeHobbyIqFmv + computeGradeBreakdownSingleScan are gone from it.
+  **(2) `/card-panel`** — the slug branch serves the entry's curve under the
+  slug with the catalog identity block; the majority-vendor resolver, the
+  legacy build, the second overlay and the grade-rescue pass survive only
+  for vendor ids the catalog cannot name. **(3) `/observed-grade-curves-bulk`**
+  — `valueIdentitiesBulk` (the entry many times: deduped, BULK_CONCURRENCY =
+  8 workers, one exact-pool read per identity) serves every slug; curves keyed
+  by the REQUESTED id so a 500-id caller can join (iOS keys BulkGradeCurve by
+  cardId), slug additive. **(4) the portfolio persist site** —
+  `holdingValuation.ts` is the adapter over the entry (decides what a
+  valuation becomes on a holding, nothing about the price): an exact-pool
+  rung → the unified write, observed; `grade-curve-estimate` → persisted as
+  an ESTIMATE under its rung (this replaces the engine's cross-grade rescale
+  off getGraderPremium's tables being persisted as observed — the seam D16
+  flagged); cost-basis floor / unresolved / unpriced → nothing written.
+  autoPriceHolding and repriceHoldingsForUser ask it FIRST (not env-flagged,
+  as the tile rung was not), the supremacy gate before its re-price; the
+  grade-curve tile rung and its GROUP BY resolver are removed; the flagged
+  legacy exact-pool reads run only for identities the catalog cannot name,
+  and for a resolved identity the entry declined they do not run at all (they
+  could only produce the number it declined to) — the gated ESTIMATE chain
+  still does. The entry takes `cardId` so the pool is asked in #1462's order
+  (slug, twin, cardId ∪ slug) and reports `pooledVia`. **(5) the price-alert
+  evaluator** — `alert.cardId` through the entry, else the snapshot's derived
+  slug adopted only when the catalog holds exactly ONE of its auto forms
+  (fill-only, catalog-backed, as D12-a); unresolvable → counted skip with a
+  null evaluation, never priced from text; compiqEstimate no longer imported.
+  **Judgment calls (flagged):** card-detail `gradeLadder[].method` now carries
+  the rung (was `direct-slug` / `anchor-projected` — D16's move on
+  price-by-id's `source`), `maxAgeDays` accepted and not honoured; card-panel
+  `ratePerWeek` / `signalSource` / `siblingFallback` null on the one-path
+  branch; bulk corpus rows persist under the slug; the persist site stamps
+  `pricingSourceMeta.compsUsed` as the TIER's pool (the routes' number, not
+  the whole curve's) and `sourceVendor: "hobbyiq-pool"` (the gate's
+  convention since D4 PR 5); a holding whose slug has no rows but whose
+  vendor cardId has is still priced from that pool (attempt 3) while the
+  card page, which knows only the slug, says null — a data gap (rows without
+  a slug), not a rule; the advanced-alerts evaluator
+  (`advancedAlerts/ruleEvaluator.ts`) still prices from text — follow-up.
+  **Pre-existing gap seen under a mutation:** the reprice mid-path
+  (`bExact`, after computeEstimate) has no cost-basis floor — unreachable for
+  catalog-resolved identities now, still live for unresolved ones.
+  **Harness finding:** concurrent dynamic imports race vitest's async mock
+  factory (`importActual`) — engine spies undercount under concurrency; the
+  bulk contract pins the read count at the `exactPoolReader` seam (a static
+  mock) instead. **Tests:** `oneValuationPath.contract.test.ts` (+15: the same
+  fixture pool through card-detail, card-panel, the bulk route, and
+  repriceHoldingsForUser + autoPriceHolding via POST /holdings/:id/refresh
+  against the mocked reader — identical FMV + rung on Raw / PSA 10 / the PSA
+  8 fill, the shared null + reason, legacy surviving only for identities the
+  catalog cannot name, the cost-basis floor), `oneValuationPath.pin.test.ts`
+  (+6), `priceAlertEvaluator.job.test.ts` (rewritten, 7); required-green set
+  + touched persist tests 237/237; tsc 0. **Mutation checks (each reverted):**
+  card-detail header on computeHobbyIqFmv → pin 1 + contract 3 red; card-panel
+  slug branch off → contract 3 red; bulk slugs to the legacy build → contract 2
+  red; the persist site skipping the entry → contract 4 red (Raw's comp count
+  and basis, PSA 10, PSA 8 persisted as cross-grade-fallback, the floor);
+  alerts through computeEstimate → job test 1 + pin 1 red. **After-number:**
+  `audit-all-holdings` PRICE column after the next reprice — persisted
+  fairMarketValue vs `/hobbyiq-fmv` for (slug, grade) should disagree on 0
+  exact-pool-rung holdings; the D16 probe replay (`SLUGS_FILE`) unchanged.
 - ◐ D10 **Look at all holdings for everyone** (Drew, 2026-08-29 17:15Z). The three
   defects under holding `ca7a150b` are not specific to it. **#1448
   `audit-all-holdings`** (read-only, runner-whitelisted): per holding —
