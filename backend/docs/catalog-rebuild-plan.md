@@ -363,8 +363,20 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   red — `conform-holdings-to-catalog` wrote holdings without reconciling —
   #1437 wires reportWrites (#1438 fixes the require order #1437 put above the
   const it used; the smoke's FIRST line is the gate, not its exit code).
-  Next: PR 4 (8 allowlisted movers — building), PR 7 (approveVendorUnmatched —
-  NEEDS DREW), the orchestrator follow-up.
+  **PR 4 ☑ #1443**: the eight allowlisted movers on catalogRowOps (−136 net;
+  `fixVladBCP150Catalog` already deleted by PR 5); the helper gains a same-
+  slug / different-partition REHOME (18/18 tests); writer guard 24 of 87
+  compliant, hand-rolled minters 22. Flagged behaviour changes: `migrate-
+  catalog-setkey` now MOVES (collision by authority) instead of create-if-
+  absent — the 409 rule was the derived-beats-checklist defect; both reslug
+  scripts skip graded rows (their generator yields the parent slug); rehome
+  drops the read-back (the upsert ack is the verification); `dedupe-catalog-
+  setkeys` loses its searchTokens union (defect #1). #1444: the reconciliation
+  guard now counts `moveCatalogRow`/`retireCatalogRow` as writes (converted
+  movers had dropped out of its population). **D5 remaining:** PR 7
+  `approveVendorUnmatched` (NEEDS DREW); the 13 transitively-dead sweep
+  orchestrators / shell wrappers (delete after D3 harvests their product-URL
+  enumeration); keyless-partition shadows stay hand-addressed by design.
   Remaining, smallest first: PR 1 fix the guard (import-match, not text-match;
   extend WRITES to patch/replace/delete; pair TOUCHES+WRITES to one container
   var); PR 8 `checklistDiff` onto deriveCatalogEntry/upsertCatalogEntry; PR 2
