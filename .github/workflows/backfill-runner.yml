@@ -130,6 +130,8 @@ on:
           - retire-autoseed-window
           - clean-parallel-annotations
           - retire-exploded-checklist-rows
+
+          - repair-parallel-from-title
           - rename-setkey
           - parse-player-from-checklist
           - identity-triangulation
