@@ -16,6 +16,15 @@ vi.mock("../src/repositories/eraBaselines.repository.js", () => ({
   getEraBaseline: (...args: unknown[]) => getEraBaselineMock(...args),
 }));
 
+// D4 PR 5 (2026-08-29): the tier multiplier is the MEASURED parallel premium
+// (empiricalParallelPremium.ts), not a hobby-consensus floor by print run.
+// Mocked so the shape tests below do not depend on the live calibration
+// table; one test pins the refusal when nothing was measured.
+const lookupEmpiricalParallelPremiumMock = vi.fn();
+vi.mock("../src/services/compiq/empiricalParallelPremium.js", () => ({
+  lookupEmpiricalParallelPremium: (...args: unknown[]) => lookupEmpiricalParallelPremiumMock(...args),
+}));
+
 async function load() {
   return await import("../src/services/compiq/referenceCatalogBaseline");
 }
@@ -60,7 +69,30 @@ describe("computeReferenceCatalogBaseline", () => {
     // Default: Cosmos era-baselines returns null (empty container) so
     // static fallback is used unless a specific test overrides.
     getEraBaselineMock.mockResolvedValue(null);
+    lookupEmpiricalParallelPremiumMock.mockReset();
+    lookupEmpiricalParallelPremiumMock.mockReturnValue({
+      premium: 3.2, matchedSet: "Bowman Chrome", sampleSize: 40, usedProxy: false,
+    });
     delete process.env.COMPIQ_REFERENCE_CATALOG_BASELINE_ENABLED;
+  });
+
+  it("D4 PR 5: refuses when no parallel premium was measured — no floor stands in", async () => {
+    process.env.COMPIQ_REFERENCE_CATALOG_BASELINE_ENABLED = "true";
+    inferPrintRunFromReferenceCatalogMock.mockResolvedValue({
+      printRun: 150,
+      parallel: "Blue Refractor",
+      cardSet: "Chrome Prospects",
+    });
+    lookupEmpiricalParallelPremiumMock.mockReturnValue(null);
+    const { computeReferenceCatalogBaseline } = await load();
+    const r = await computeReferenceCatalogBaseline({
+      product: "Bowman Chrome",
+      year: 2020,
+      parallel: "Blue Refractor",
+      cardClass: "base",
+    });
+    expect(r).toBeNull();
+    expect(lookupEmpiricalParallelPremiumMock).toHaveBeenCalledWith(2020, "Bowman Chrome", "Blue Refractor", false);
   });
 
   it("returns null when env flag is off (default)", async () => {
@@ -110,10 +142,9 @@ describe("computeReferenceCatalogBaseline", () => {
     expect(r).not.toBeNull();
     // eraBaseline for bowman-chrome 2020 base = 12
     expect(r!.eraBaseline).toBe(12);
-    // tierMultiplier for /150 base — from parallelPremiumFloors (whatever
-    // it returns; test just locks the shape).
+    // tierMultiplier IS the measured premium (mocked 3.2 above).
     expect(r!.printRun).toBe(150);
-    expect(r!.tierMultiplier).toBeGreaterThan(0);
+    expect(r!.tierMultiplier).toBe(3.2);
     expect(r!.floor).toBe(
       Math.round(r!.eraBaseline * r!.tierMultiplier * 100) / 100,
     );

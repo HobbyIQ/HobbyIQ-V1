@@ -45,6 +45,16 @@ import {
 // ─── Cosmos DB client (lazy init) ─────────────────────────────────────────────
 import { CosmosClient, Container } from "@azure/cosmos";
 import { DefaultAzureCredential } from "@azure/identity";
+// CF-EXACT-POOL-SUPREMACY (D4 PR 5, 2026-08-29): the persist-site guard.
+import {
+  EXACT_POOL_WINDOW_DAYS,
+  isCrossIdentityRung,
+  judgeExactPoolSupremacyForHolding,
+  priceHoldingFromExactPool,
+  type ExactPoolPrice,
+  type ExactPoolSupremacyVerdict,
+  type HoldingIdentityFields,
+} from "./exactPoolSupremacy.js";
 
 let _container: Container | null = null;
 let _initPromise: Promise<Container | null> | null = null;
@@ -2536,6 +2546,213 @@ async function emitUserEbayPurchaseComp(
   }
 }
 
+// ─── CF-EXACT-POOL-SUPREMACY (D4 "one valuation path", PR 5 — 2026-08-29) ──
+//
+// A fallback rung may never outrank an exact pool that has >= 1 sale. Every
+// site in this file that persists an ESTIMATE from another identity (a
+// sibling × premium, a neighbouring parallel, a family baseline, a vendor
+// resolver, a rail, a ladder, an unnamed legacy rung) asks the gate first:
+//
+//   allowed                 no identity of this holding — hobbyiqCardId,
+//                           cardId, their numbered/un-numbered twins — has a
+//                           sale in window: the estimate may be written;
+//   priced-from-exact-pool  an identity has sales and the unified engine
+//                           priced them (hobbyiqCardId ALONE first, so a
+//                           wrong cardId cannot dilute the right pool): that
+//                           price is written, observed, with its labels;
+//   withheld                an identity has sales the engine could not price:
+//                           nothing new is written, and a stale estimate
+//                           already on the holding is cleared — an estimate
+//                           contradicted by exact sales may not stand.
+//
+// The estimate itself becomes telemetry (estimate_withheld_exact_pool_exists).
+// Holding ca7a150b is the case: three exact raw sales under hobbyiqCardId,
+// $1,109.44 sibling × 8.00× floor persisted as fairMarketValue.
+type EstimateGateOutcome =
+  | { outcome: "allowed" }
+  | { outcome: "priced-from-exact-pool"; holding: PortfolioHolding; blockingId: string; canonical: number }
+  | { outcome: "withheld"; holding: PortfolioHolding; blockingId: string; cleared: boolean };
+
+/** The unified write, in the shape the early exits use — labels included. */
+function unifiedHoldingWrite(
+  holding: PortfolioHolding,
+  exact: ExactPoolPrice,
+  nowIso: string,
+): PortfolioHolding {
+  const u = exact.u;
+  return {
+    ...holding,
+    fairMarketValue: exact.canonical,
+    fmvRung: u.rungLabel,
+    predictedPrice: u.predictedPrice,
+    predictedPriceLow: null,
+    predictedPriceHigh: null,
+    predictedPriceMechanism: "unified-trend",
+    predictedPriceUpdatedAt: nowIso,
+    movementDirection: u.trendDirection === "up" ? "up"
+      : u.trendDirection === "down" ? "down"
+      : null,
+    movementUpdatedAt: nowIso,
+    estimatedValue: null,
+    estimateLow: null,
+    estimateHigh: null,
+    estimateConfidence: null,
+    estimateBasis: `unified: window=${u.windowDays}d median=$${u.fmv?.toFixed(0) ?? "?"} marketValue=$${u.marketValue?.toFixed(0) ?? "?"} predicted=$${u.predictedPrice?.toFixed(0) ?? "?"} trend=${u.trendDirection} ${u.trendPctPerWeek?.toFixed(1) ?? "?"}%/wk conf=${u.confidence.toFixed(2)} id=${exact.attempt.label}`,
+    isEstimate: false,
+    valuationStatus: "observed",
+    pricingSource: "unified-pricing",
+    pricingSourceMeta: { slug: exact.attempt.cardId, method: u.rungLabel, compsUsed: u.totalSampleCount },
+    nearestGradedAnchor: undefined,
+    verdict: "Observed",
+    recommendation: holding.recommendation ?? "Hold",
+    lastUpdated: nowIso,
+    sourceVendor: "hobbyiq-pool" as any,
+    sourceVendorUpdatedAt: nowIso,
+  };
+}
+
+/** Nothing new is written; a stale persisted estimate is cleared. */
+function withholdEstimate(
+  holding: PortfolioHolding,
+  verdict: ExactPoolSupremacyVerdict,
+  nowIso: string,
+): { holding: PortfolioHolding; cleared: boolean } {
+  if (holding.isEstimate !== true) return { holding, cleared: false };
+  const n = verdict.blockingCount;
+  return {
+    cleared: true,
+    holding: {
+      ...holding,
+      fairMarketValue: null as any,
+      fmvRung: null,
+      estimatedValue: null,
+      estimateLow: null,
+      estimateHigh: null,
+      estimateConfidence: null,
+      estimateBasis: `estimate withheld: ${n} exact sale${n === 1 ? "" : "s"} under ${verdict.blockingId} in ${EXACT_POOL_WINDOW_DAYS}d that the engine could not price; no fallback rung may stand in for them`,
+      isEstimate: false,
+      valuationStatus: "pending",
+      pricingSource: "legacy-engine",
+      pricingSourceMeta: undefined,
+      nearestGradedAnchor: undefined,
+      verdict: "Pending",
+      lastUpdated: nowIso,
+    },
+  };
+}
+
+async function gateEstimateAgainstExactPool(input: {
+  holding: PortfolioHolding;
+  userId?: string;
+  /** The rung that produced the estimate; null for an unnamed legacy rung. */
+  rung: string | null | undefined;
+  site: string;
+  proposed: number | null;
+  basis: string | null;
+}): Promise<EstimateGateOutcome> {
+  const { holding } = input;
+  if (!isCrossIdentityRung(input.rung)) return { outcome: "allowed" };
+  let verdict: ExactPoolSupremacyVerdict;
+  try {
+    verdict = await judgeExactPoolSupremacyForHolding(holding as HoldingIdentityFields);
+  } catch (err) {
+    console.warn(JSON.stringify({
+      event: "exact_pool_supremacy_error",
+      source: "portfolioStore.gateEstimateAgainstExactPool",
+      site: input.site,
+      holdingId: holding.id,
+      error: (err as Error)?.message ?? String(err),
+    }));
+    return { outcome: "allowed" };
+  }
+  if (verdict.allowed) return { outcome: "allowed" };
+  const nowIso = new Date().toISOString();
+  console.warn(JSON.stringify({
+    event: "estimate_withheld_exact_pool_exists",
+    source: "portfolioStore.gateEstimateAgainstExactPool",
+    site: input.site,
+    userId: input.userId ?? null,
+    holdingId: holding.id,
+    rung: input.rung ?? null,
+    proposedEstimate: input.proposed,
+    proposedBasis: input.basis,
+    blockingId: verdict.blockingId,
+    blockingCount: verdict.blockingCount,
+    counts: verdict.counts,
+  }));
+  const gCo = holding.gradeCompany ? String(holding.gradeCompany).trim() : null;
+  const gValRaw = (holding as { gradeValue?: unknown }).gradeValue;
+  const gVal = typeof gValRaw === "number" ? gValRaw : (gValRaw ? Number(gValRaw) : null);
+  let exact: ExactPoolPrice | null = null;
+  try {
+    exact = await priceHoldingFromExactPool(holding as HoldingIdentityFields, {
+      grade: gCo ? { company: gCo, value: gVal } : null,
+      excludeContributorUserId: input.userId ?? null,
+      playerName: typeof holding.playerName === "string" ? holding.playerName : null,
+      cardYear: shimmedCardYear(holding) ?? null,
+    });
+  } catch (err) {
+    console.warn(JSON.stringify({
+      event: "exact_pool_supremacy_price_error",
+      source: "portfolioStore.gateEstimateAgainstExactPool",
+      site: input.site,
+      holdingId: holding.id,
+      error: (err as Error)?.message ?? String(err),
+    }));
+  }
+  // CF-COST-BASIS-SANITY-FLOOR, as at every other unified write: a price
+  // under 15% of a > $50 cost basis is a slug mismatch, not a market.
+  if (exact) {
+    const qty = Math.max(1, toNumber(holding.quantity, 1));
+    const cost = toNumber(holding.totalCostBasis, toNumber(holding.purchasePrice, 0) * qty);
+    const proposedTotal = exact.canonical * qty;
+    if (cost > 50 && proposedTotal > 0 && proposedTotal / cost < 0.15) {
+      console.warn(JSON.stringify({
+        event: "exact_pool_supremacy_rejected_cost_basis_floor",
+        source: "portfolioStore.gateEstimateAgainstExactPool",
+        site: input.site,
+        holdingId: holding.id,
+        costBasis: cost,
+        proposedTotal,
+        pricedId: exact.attempt.cardId,
+      }));
+      exact = null;
+    }
+  }
+  if (exact) {
+    console.log(JSON.stringify({
+      event: "exact_pool_priced_over_estimate",
+      source: "portfolioStore.gateEstimateAgainstExactPool",
+      site: input.site,
+      userId: input.userId ?? null,
+      holdingId: holding.id,
+      fair_market_value: exact.canonical,
+      rung: exact.u.rungLabel,
+      samples: exact.u.totalSampleCount,
+      identityAttempt: exact.attempt.label,
+      pricedId: exact.attempt.cardId,
+      replacedEstimate: input.proposed,
+    }));
+    return {
+      outcome: "priced-from-exact-pool",
+      holding: unifiedHoldingWrite(holding, exact, nowIso),
+      blockingId: verdict.blockingId as string,
+      canonical: exact.canonical,
+    };
+  }
+  const w = withholdEstimate(holding, verdict, nowIso);
+  console.warn(JSON.stringify({
+    event: "estimate_withheld_exact_pool_unpriced",
+    source: "portfolioStore.gateEstimateAgainstExactPool",
+    site: input.site,
+    holdingId: holding.id,
+    blockingId: verdict.blockingId,
+    blockingCount: verdict.blockingCount,
+    staleEstimateCleared: w.cleared,
+  }));
+  return { outcome: "withheld", holding: w.holding, blockingId: verdict.blockingId as string, cleared: w.cleared };
+}
+
 async function autoPriceHolding(
   doc: UserDoc,
   holding: PortfolioHolding,
@@ -2634,6 +2851,9 @@ async function autoPriceHolding(
             isEstimate: false,
             valuationStatus: "observed",
             pricingSource: "unified-pricing",
+            // D4 PR 5: a tile write names no comp count; clear any meta a
+            // previous pass left behind rather than let it describe this price.
+            pricingSourceMeta: undefined,
             lastUpdated: nowIso,
           } as PortfolioHolding;
           evaluateHoldingAlerts(doc, previous, gradeCurveResult);
@@ -2673,15 +2893,18 @@ async function autoPriceHolding(
   const earlyResolvedId = holding.cardId || (holding as any).hobbyiqCardId || null;
   if (process.env.PORTFOLIO_OBSERVED_GRADE_OVERRIDE_ENABLED === "true" && earlyResolvedId) {
     try {
-      const { computeUnifiedPrice } = await import("../compiq/unifiedPricing.service.js");
       const gCo = (holding as any).gradeCompany
         ? String((holding as any).gradeCompany).trim()
         : null;
       const gVal = typeof (holding as any).gradeValue === "number"
         ? (holding as any).gradeValue
         : ((holding as any).gradeValue ? Number((holding as any).gradeValue) : null);
-      const u = await computeUnifiedPrice(String(earlyResolvedId), {
-        hobbyiqCardId: (holding as any).hobbyiqCardId ?? null,
+      // CF-EXACT-POOL-FIRST-BY-CHECKLIST-ID (D4 PR 5, 2026-08-29). The
+      // checklist identity (hobbyiqCardId) ALONE first, then its twin, then
+      // the cardId union — exactPoolSupremacy.unifiedIdentityAttempts. The
+      // Marconi fixture's cardId was a different card; a union pool let its
+      // comps hide the three exact sales under hobbyiqCardId.
+      const exact = await priceHoldingFromExactPool(holding as HoldingIdentityFields, {
         grade: gCo ? { company: gCo, value: gVal } : null,
         excludeContributorUserId: userId ?? null,
         // CF-PLAYER-TREND-ADJUSTMENT: pipe playerName + cardYear so
@@ -2702,7 +2925,8 @@ async function autoPriceHolding(
       // page all show marketValue, so a holding priced here must show the
       // SAME number: marketValue first, the +7d read only when the engine
       // could not evaluate at now, the bare median last.
-      const canonical = u.marketValue ?? u.predictedPrice ?? u.fmv;
+      const u = exact?.u ?? null;
+      const canonical = u ? (u.marketValue ?? u.predictedPrice ?? u.fmv) : null;
       // CF-UNIFIED-SAMPLE-FLOOR (Drew, 2026-08-04). Use unified whenever
       // the pool has >= 1 exact-cardId sample and a positive canonical
       // number — trust the pool over sibling rescue even when old.
@@ -2720,16 +2944,18 @@ async function autoPriceHolding(
           costBasis: earlyCost,
           proposedTotal: earlyProposedTotal,
           proposedPct: Math.round((earlyProposedTotal / earlyCost) * 10000) / 100,
-          confidence: u.confidence,
-          totalSampleCount: u.totalSampleCount,
+          confidence: u?.confidence ?? null,
+          totalSampleCount: u?.totalSampleCount ?? 0,
         }));
         // Fall through to legacy path — legacy has its own guards.
-      } else if (canonical !== null && canonical > 0 && u.totalSampleCount >= 1) {
+      } else if (u !== null && canonical !== null && canonical > 0 && u.totalSampleCount >= 1) {
         const nowIso = new Date().toISOString();
         console.log(JSON.stringify({
           event: "portfolio_unified_early_exit_applied",
           source: "portfolioStore.autoPriceHolding",
           userId, holdingId: holding.id, cardId: earlyResolvedId,
+          identityAttempt: exact?.attempt.label ?? null,
+          pricedId: exact?.attempt.cardId ?? null,
           fair_market_value: canonical,
           unified_median: u.fmv,
           unified_market_value: u.marketValue,
@@ -2760,6 +2986,9 @@ async function autoPriceHolding(
           isEstimate: false,
           valuationStatus: "observed",
           pricingSource: "unified-pricing",
+          // CF-LABELS-TELL-THE-TRUTH (D4 PR 5): the meta names THIS price's
+          // rung and pool; a previous pass's "cross-setkey" cannot survive.
+          pricingSourceMeta: { slug: exact?.attempt.cardId ?? String(earlyResolvedId), method: u.rungLabel, compsUsed: u.totalSampleCount },
           lastUpdated: nowIso,
           sourceVendor: "cardhedge" as any,
           sourceVendorUpdatedAt: nowIso,
@@ -2828,6 +3057,9 @@ async function autoPriceHolding(
     trendPctPerWeek: number | null; trendDirection: string;
     windowDays: number;
     rungLabel: string;
+    totalSampleCount: number;
+    pricedId: string;
+    identityAttempt: string;
   } | null = null;
   // CF-UNIFIED-PRICING-HIQ-FALLBACK (Drew, 2026-08-04). Also fire when
   // holding lacks a resolved cardId but HAS a canonical hobbyiqCardId
@@ -2843,13 +3075,13 @@ async function autoPriceHolding(
   if (process.env.PORTFOLIO_OBSERVED_GRADE_OVERRIDE_ENABLED === "true"
       && resolvedIdForPricing) {
     try {
-      const { computeUnifiedPrice } = await import("../compiq/unifiedPricing.service.js");
       const gradeCoRaw = (holding as any).gradeCompany;
       const gradeValRaw = (holding as any).gradeValue;
       const gradeCo = gradeCoRaw ? String(gradeCoRaw).trim() : null;
       const gradeVal = typeof gradeValRaw === "number" ? gradeValRaw : (gradeValRaw ? Number(gradeValRaw) : null);
-      const unified = await computeUnifiedPrice(String(resolvedIdForPricing), {
-        hobbyiqCardId: (holding as any).hobbyiqCardId ?? null,
+      // CF-EXACT-POOL-FIRST-BY-CHECKLIST-ID (D4 PR 5): hobbyiqCardId alone
+      // first, then its twin, then the cardId union.
+      const midExact = await priceHoldingFromExactPool(holding as HoldingIdentityFields, {
         grade: gradeCo ? { company: gradeCo, value: gradeVal } : null,
         // CF-EXCLUDE-SELF-COMPS (Drew, 2026-08-04). Symmetric rule: a
         // user's OWN eBay purchase shouldn't feed their own pricing.
@@ -2884,9 +3116,14 @@ async function autoPriceHolding(
       // read at now, the number the grade-curve tile shows — then the +7d
       // read, then the bare median. When the pool is too thin for a trend
       // signal, all three are equal.
-      const chosen = unified.marketValue ?? unified.predictedPrice ?? unified.fmv;
-      if (chosen !== null && chosen > 0 && unified.confidence >= 0.3) {
+      const unified = midExact?.u ?? null;
+      const chosen = unified ? (unified.marketValue ?? unified.predictedPrice ?? unified.fmv) : null;
+      // CF-EXACT-POOL-SUPREMACY (D4 PR 5): >= 1 exact sale, as at the early exit.
+      if (unified !== null && chosen !== null && chosen > 0 && unified.totalSampleCount >= 1) {
         unifiedResult = {
+          totalSampleCount: unified.totalSampleCount,
+          pricedId: midExact?.attempt.cardId ?? String(resolvedIdForPricing),
+          identityAttempt: midExact?.attempt.label ?? "cardId",
           fmv: unified.fmv,
           marketValue: unified.marketValue,
           predictedPrice: unified.predictedPrice,
@@ -3458,9 +3695,12 @@ async function autoPriceHolding(
   // walks a different ladder and can produce a stale number ($1,925 for
   // the same holding). Both are valid pool queries but unified's math
   // is what portfolio + Grade Curve now share.
+  let unifiedIsFinalAuthority = false;
   if (unifiedResult && (unifiedResult.predictedPrice ?? unifiedResult.marketValue ?? unifiedResult.fmv) !== null) {
     const finalChosen = unifiedResult.predictedPrice ?? unifiedResult.marketValue ?? unifiedResult.fmv!;
-    if (finalChosen > 0 && unifiedResult.confidence >= 0.3) {
+    // CF-EXACT-POOL-SUPREMACY (D4 PR 5): >= 1 exact sale, as at the early exit.
+    if (finalChosen > 0 && unifiedResult.totalSampleCount >= 1) {
+      unifiedIsFinalAuthority = true;
       priceSurface = {
         fairMarketValueOverride: finalChosen,
         valuationStatus: "observed",
@@ -3597,7 +3837,7 @@ async function autoPriceHolding(
       holdingId: holding.id,
       costBasis: cohCost,
       fairMarketValue: priceSurface.fairMarketValueOverride,
-      pricingSource: ourPoolMeta ? "our-pool" : "legacy-engine",
+      pricingSource: unifiedIsFinalAuthority ? "unified-pricing" : ourPoolMeta ? "our-pool" : "legacy-engine",
       reviewReason: coherencePatch.reviewReason,
       flaggedForReview: true,
     }));
@@ -3642,6 +3882,30 @@ async function autoPriceHolding(
     return holding;
   }
 
+  // CF-EXACT-POOL-SUPREMACY (D4 PR 5, 2026-08-29). Every estimate this
+  // function can write converges here. A cross-identity estimate (a rail,
+  // a ladder, a neighbour rung, an unnamed legacy rung) may be persisted
+  // only when no identity of this holding has a sale in window; otherwise
+  // the exact pool prices it, or nothing does.
+  if (priceSurface.isEstimate) {
+    const gate = await gateEstimateAgainstExactPool({
+      holding,
+      userId,
+      rung: priceSurfaceRung,
+      site: "autoPriceHolding.priceSurface",
+      proposed: priceSurface.estimatedValue ?? priceSurface.fairMarketValueOverride ?? null,
+      basis: priceSurface.estimateBasis ?? null,
+    });
+    if (gate.outcome !== "allowed") {
+      if (gate.outcome === "priced-from-exact-pool") {
+        appendPriceHistory(doc, holding.id, { at: String(gate.holding.lastUpdated), value: gate.canonical, source });
+      }
+      evaluateHoldingAlerts(doc, previous, gate.holding);
+      doc.holdings[holding.id] = gate.holding;
+      return gate.holding;
+    }
+  }
+
   const updated: PortfolioHolding = {
     ...holding,
     ...identityPatch,
@@ -3659,8 +3923,14 @@ async function autoPriceHolding(
     valuationStatus: priceSurface.valuationStatus,
     // CF-OUR-POOL-PORTFOLIO-PRICER: telemetry so we can audit which pricing
     // path actually landed on each holding after the flag flips on.
-    pricingSource: ourPoolMeta ? "our-pool" : "legacy-engine",
-    pricingSourceMeta: ourPoolMeta ?? undefined,
+    // CF-LABELS-TELL-THE-TRUTH (D4 PR 5): when the unified engine is the
+    // final authority on the surface, say so — and name its rung and pool.
+    // Before this the surface said "legacy-engine" (or "our-pool") under a
+    // unified price, and a previous pass's meta rode along.
+    pricingSource: unifiedIsFinalAuthority ? "unified-pricing" : ourPoolMeta ? "our-pool" : "legacy-engine",
+    pricingSourceMeta: unifiedIsFinalAuthority && unifiedResult
+      ? { slug: unifiedResult.pricedId, method: unifiedResult.rungLabel, compsUsed: unifiedResult.totalSampleCount }
+      : (ourPoolMeta ?? undefined),
     // CF-RUNG-LABEL (D4 PR 1): the rung behind the final price surface;
     // null when the legacy engine, which does not name its rung, produced it.
     fmvRung: priceSurfaceRung,
@@ -8162,15 +8432,15 @@ export async function repriceHoldingsForUser(
       const bEarlyId = (holding as any).cardId || (holding as any).hobbyiqCardId || null;
       if (process.env.PORTFOLIO_OBSERVED_GRADE_OVERRIDE_ENABLED === "true" && bEarlyId) {
         try {
-          const { computeUnifiedPrice } = await import("../compiq/unifiedPricing.service.js");
           const bGCo = (holding as any).gradeCompany
             ? String((holding as any).gradeCompany).trim()
             : null;
           const bGVal = typeof (holding as any).gradeValue === "number"
             ? (holding as any).gradeValue
             : ((holding as any).gradeValue ? Number((holding as any).gradeValue) : null);
-          const bU = await computeUnifiedPrice(String(bEarlyId), {
-            hobbyiqCardId: (holding as any).hobbyiqCardId ?? null,
+          // CF-EXACT-POOL-FIRST-BY-CHECKLIST-ID (D4 PR 5): hobbyiqCardId alone
+          // first, then its twin, then the cardId union.
+          const bExactEarly = await priceHoldingFromExactPool(holding as HoldingIdentityFields, {
             grade: bGCo ? { company: bGCo, value: bGVal } : null,
             excludeContributorUserId: userId ?? null,
             playerName: (holding as any).playerName ?? null,
@@ -8178,9 +8448,10 @@ export async function repriceHoldingsForUser(
               ? (holding as any).cardYear
               : null,
           });
+          const bU = bExactEarly?.u ?? null;
           // CF-ONE-GRADE-CURVE (D4 PR 4): same precedence as autoPriceHolding
           // — marketValue (the fit at now, the tile's number) first.
-          const bCanon = bU.marketValue ?? bU.predictedPrice ?? bU.fmv;
+          const bCanon = bU ? (bU.marketValue ?? bU.predictedPrice ?? bU.fmv) : null;
           // Cost-basis floor for batch reprice early-exit — same guard
           // as autoPriceHolding to catch slug-mismatch price drops.
           const bEarlyQty = Math.max(1, toNumber(holding.quantity, 1));
@@ -8194,15 +8465,17 @@ export async function repriceHoldingsForUser(
               holdingId: holding.id,
               costBasis: bEarlyCost,
               proposedTotal: bEarlyProposedTotal,
-              confidence: bU.confidence,
+              confidence: bU?.confidence ?? null,
             }));
             // Fall through to legacy path.
-          } else if (bCanon !== null && bCanon > 0 && bU.totalSampleCount >= 1) {
+          } else if (bU !== null && bCanon !== null && bCanon > 0 && bU.totalSampleCount >= 1) {
             const bNow = new Date().toISOString();
             console.log(JSON.stringify({
               event: "batch_reprice_unified_early_exit_applied",
               source: "portfolioStore.repriceHoldingsForUser",
               userId, holdingId: holding.id, cardId: bEarlyId,
+              identityAttempt: bExactEarly?.attempt.label ?? null,
+              pricedId: bExactEarly?.attempt.cardId ?? null,
               fair_market_value: bCanon,
               unified_median: bU.fmv,
               unified_market_value: bU.marketValue,
@@ -8232,6 +8505,7 @@ export async function repriceHoldingsForUser(
               isEstimate: false,
               valuationStatus: "observed",
               pricingSource: "unified-pricing",
+              pricingSourceMeta: { slug: bExactEarly?.attempt.cardId ?? String(bEarlyId), method: bU.rungLabel, compsUsed: bU.totalSampleCount },
               lastUpdated: bNow,
               sourceVendor: "cardhedge" as any,
               sourceVendorUpdatedAt: bNow,
@@ -8295,24 +8569,31 @@ export async function repriceHoldingsForUser(
         const bResolvedId = (holding as any).cardId || (holding as any).hobbyiqCardId || null;
         if (bResolvedId) {
           try {
-            const { computeUnifiedPrice } = await import("../compiq/unifiedPricing.service.js");
             const gradeCoRaw = (holding as any).gradeCompany;
             const gradeValRaw = (holding as any).gradeValue;
             const gradeCo = gradeCoRaw ? String(gradeCoRaw).trim() : null;
             const gradeVal = typeof gradeValRaw === "number" ? gradeValRaw : (gradeValRaw ? Number(gradeValRaw) : null);
-            const unified = await computeUnifiedPrice(String(bResolvedId), {
-              hobbyiqCardId: (holding as any).hobbyiqCardId ?? null,
+            // CF-EXACT-POOL-FIRST-BY-CHECKLIST-ID (D4 PR 5): hobbyiqCardId alone
+            // first, then its twin, then the cardId union.
+            const bExact = await priceHoldingFromExactPool(holding as HoldingIdentityFields, {
               grade: gradeCo ? { company: gradeCo, value: gradeVal } : null,
               excludeContributorUserId: userId ?? null,
             });
+            const unified = bExact?.u ?? null;
             // CF-ONE-GRADE-CURVE (D4 PR 4): marketValue first, as everywhere.
-            const bChosen = unified.marketValue ?? unified.predictedPrice ?? unified.fmv;
-            if (bChosen !== null && bChosen > 0 && unified.confidence >= 0.3) {
+            const bChosen = unified ? (unified.marketValue ?? unified.predictedPrice ?? unified.fmv) : null;
+            // CF-EXACT-POOL-SUPREMACY (D4 PR 5): >= 1 exact sale prices the
+            // holding — the rule autoPriceHolding's early exit already applies
+            // (CF-UNIFIED-SAMPLE-FLOOR). This site demanded confidence >= 0.3
+            // instead, so a thin exact pool could fall through to the rescues.
+            if (unified !== null && bChosen !== null && bChosen > 0 && unified.totalSampleCount >= 1) {
               const uNow = new Date().toISOString();
               console.log(JSON.stringify({
                 event: "batch_reprice_unified_pricing_applied",
                 source: "portfolioStore.repriceHoldingsForUser",
                 userId, holdingId: holding.id, cardId: bResolvedId,
+                identityAttempt: bExact?.attempt.label ?? null,
+                pricedId: bExact?.attempt.cardId ?? null,
                 unified_median: unified.fmv,
                 unified_market_value: unified.marketValue,
                 unified_predicted: unified.predictedPrice,
@@ -8336,6 +8617,7 @@ export async function repriceHoldingsForUser(
                 isEstimate: false,
                 valuationStatus: "observed",
                 pricingSource: "unified-pricing",
+                pricingSourceMeta: { slug: bExact?.attempt.cardId ?? String(bResolvedId), method: unified.rungLabel, compsUsed: unified.totalSampleCount },
                 verdict: holding.verdict ?? "Hold",
                 recommendation: holding.recommendation ?? "Hold",
                 lastUpdated: uNow,
@@ -8372,6 +8654,25 @@ export async function repriceHoldingsForUser(
         (estimate as any)?.cardIdentity,
       );
 
+      // CF-EXACT-POOL-SUPREMACY (D4 PR 5, 2026-08-29). Every estimate site
+      // below asks the gate first. When an identity of this holding has a
+      // sale in window, the estimate is telemetry: the exact pool prices the
+      // holding (unified engine, hobbyiqCardId first) or a stale estimate is
+      // withheld — and the loop moves on.
+      const applyGate = (gate: EstimateGateOutcome, site: string): boolean => {
+        if (gate.outcome === "allowed") return false;
+        evaluateHoldingAlerts(doc, doc.holdings[holding.id], gate.holding);
+        doc.holdings[holding.id] = gate.holding;
+        if (gate.outcome === "priced-from-exact-pool") {
+          repriced += 1;
+          updates.push({ id: holding.id, status: "repriced", reason: `exact-pool-supremacy:${site} (${gate.blockingId})` });
+        } else {
+          skipped += 1;
+          updates.push({ id: holding.id, status: "skipped", reason: `estimate-withheld:${site} (${gate.blockingId}${gate.cleared ? ", stale estimate cleared" : ""})` });
+        }
+        return true;
+      };
+
       // CF-A(a) — T3 BASE-AUTO FLOOR RE-BUCKET: when the engine emits
       // valuationStatus === "estimated" (set at T3 ladder success in
       // compiqEstimate.service.ts), bypass the FMV-based confidence gate
@@ -8381,6 +8682,11 @@ export async function repriceHoldingsForUser(
       const engineT3 = (estimate as any)?.valuationStatus === "estimated"
         && (estimate as any)?.estimateBasis === "base_auto_floor";
       if (engineT3) {
+        if (applyGate(await gateEstimateAgainstExactPool({
+          holding, userId, rung: null, site: "reprice.t3-base-auto-floor",
+          proposed: toNumber((estimate as any)?.estimatedValue, 0) || null,
+          basis: "base_auto_floor",
+        }), "reprice.t3-base-auto-floor")) continue;
         const t3Now = new Date().toISOString();
         const t3PredictedPrice = typeof (estimate as any)?.predictedPrice === "number"
           && Number.isFinite((estimate as any).predictedPrice)
@@ -8469,6 +8775,10 @@ export async function repriceHoldingsForUser(
           });
         }
 
+        if (lsLadderResult && applyGate(await gateEstimateAgainstExactPool({
+          holding, userId, rung: null, site: "reprice.last-sale-ladder",
+          proposed: lsLadderResult.derivedFmv, basis: lsLadderResult.explanation,
+        }), "reprice.last-sale-ladder")) continue;
         const chLsUpdated: PortfolioHolding = {
           ...holding,
           ...repriceIdentityPatch,
@@ -8529,6 +8839,10 @@ export async function repriceHoldingsForUser(
             source: "portfolio.repriceHoldingsForUser",
           });
           if (ladder) {
+            if (applyGate(await gateEstimateAgainstExactPool({
+              holding, userId, rung: null, site: "reprice.grade-ladder",
+              proposed: ladder.derivedFmv, basis: ladder.explanation,
+            }), "reprice.grade-ladder")) continue;
             const now = new Date().toISOString();
             doc.holdings[holding.id] = {
               ...holding,
@@ -8583,6 +8897,10 @@ export async function repriceHoldingsForUser(
             cardId: (holding as any).cardId,
           });
           if (fallback) {
+            if (applyGate(await gateEstimateAgainstExactPool({
+              holding, userId, rung: null, site: "reprice.resolver-fallback",
+              proposed: fallback.fairMarketValue, basis: fallback.estimateBasis,
+            }), "reprice.resolver-fallback")) continue;
             const now = new Date().toISOString();
             const rescued: PortfolioHolding = {
               ...holding,
@@ -8661,6 +8979,15 @@ export async function repriceHoldingsForUser(
                 }));
                 // Fall through — legacy path continues.
               } else {
+              // CF-EXACT-POOL-SUPREMACY (D4 PR 5): an our-pool ESTIMATE from a
+              // cross-identity rung (cross-setkey, sibling-parallel, family-
+              // baseline, composite-neighbor …) faces the gate; an observed
+              // result, or an estimate that read this identity's own pool
+              // (rare-card-anchor, grade-cross-raw), does not.
+              if (ourPool.valuationStatus === "estimated" && applyGate(await gateEstimateAgainstExactPool({
+                holding, userId, rung: ourPool.rungLabel, site: "reprice.our-pool",
+                proposed: fmv, basis: ourPool.estimateBasis,
+              }), "reprice.our-pool")) continue;
               doc.holdings[holding.id] = {
                 ...holding,
                 ...repriceIdentityPatch,
@@ -8785,15 +9112,37 @@ export async function repriceHoldingsForUser(
               if (match) {
                 const now = new Date().toISOString();
                 const basis = siblingEstimateBasis(sibling);
+                // CF-EXACT-POOL-SUPREMACY (D4 PR 5): a sibling × premium estimate
+                // is persisted ONLY when no identity of this holding has a sale
+                // in window. The Marconi German $1,109.44 was written here past
+                // three exact sales under hobbyiqCardId.
+                if (applyGate(await gateEstimateAgainstExactPool({
+                  holding, userId, rung: "sibling-estimate", site: "reprice.sibling-estimate",
+                  proposed: match.price, basis,
+                }), "reprice.sibling-estimate")) continue;
                 doc.holdings[holding.id] = {
                   ...holding,
                   ...repriceIdentityPatch,
                   fairMarketValue: match.price,
-                  fmvRung: null,
+                  // CF-LABELS-TELL-THE-TRUTH (D4 PR 5): the rung, the source and
+                  // the meta all name the sibling estimate; nothing here can
+                  // masquerade as "unified-pricing" / "cross-setkey", and no
+                  // previous pass's labels survive the spread.
+                  fmvRung: "sibling-estimate",
                   estimatedValue: null,
+                  estimateLow: null,
+                  estimateHigh: null,
+                  estimateConfidence: "rough",
                   isEstimate: true,
                   valuationStatus: "estimated",
                   estimateBasis: basis,
+                  pricingSource: "sibling-estimate",
+                  pricingSourceMeta: {
+                    slug: String((holding as any).hobbyiqCardId ?? (holding as any).cardId ?? holding.id),
+                    method: "sibling-estimate",
+                    compsUsed: sibling.siblingCompCount,
+                  },
+                  nearestGradedAnchor: undefined,
                   verdict: "Estimated",
                   recommendation: "Hold",
                   lastUpdated: now,
@@ -8811,7 +9160,7 @@ export async function repriceHoldingsForUser(
                   chosenGrade: match.grade,
                   chosenPrice: match.price,
                   parallelPremium: sibling.parallelPremium,
-                  floorApplied: sibling.floorApplied,
+                  premiumSampleSize: sibling.premiumSampleSize,
                   siblingIsCrossClass: sibling.siblingIsCrossClass,
                 }));
                 continue;

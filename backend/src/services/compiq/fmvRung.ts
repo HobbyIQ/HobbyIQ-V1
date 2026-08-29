@@ -58,6 +58,11 @@ export type FmvRungLabel =
    *  observed anchor x empirical grade ratio (or a reference price). The
    *  entry's `estimatedSource` names the mechanism. */
   | "grade-curve-estimate"
+  /** siblingCardPriceFallback (D4 PR 5): ANOTHER card — the same player's
+   *  Base Auto / Base card — × the measured parallel premium. A model over
+   *  a different identity; persisted only when the holding's own exact
+   *  pool is empty (exactPoolSupremacy.ts). Never an exact-pool rung. */
+  | "sibling-estimate"
   | Exclude<CanonicalFmvMethod, "direct-comp">
   | Exclude<HobbyIqFmvMethod, "direct-slug">;
 

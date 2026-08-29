@@ -9,6 +9,11 @@
 // explicit about the empirical-only doctrine. So this helper returns
 // null for "other" grades, leaving the holding to fall through to the
 // existing skip persist. Honest silence over an inferred number.
+//
+// D4 PR 5 (2026-08-29): the same rule now covers the PARALLEL axis —
+// the sibling service returns null when no measured premium exists, so
+// nothing here ever sees a floor-lifted number, and the basis note names
+// the measurement (sample size, matched set) instead of a floor.
 
 import type { SiblingFallbackResult } from "../compiq/siblingCardPriceFallback.service.js";
 
@@ -53,24 +58,19 @@ export function mapSiblingToRepriceFmv(
 /**
  * Format the estimateBasis string persisted on the holding so it's
  * self-describing when a KQL query surfaces "why is this card estimated
- * from a sibling?"
+ * from a sibling?" — which sibling, which measured premium, and how many
+ * paired observations stand behind it.
  */
 export function siblingEstimateBasis(
   sibling: Pick<
     SiblingFallbackResult,
     | "siblingCardId"
-    | "siblingParallel"
     | "parallelPremium"
-    | "empiricalPremium"
-    | "floorApplied"
-    | "siblingIsCrossClass"
+    | "premiumSampleSize"
+    | "premiumMatchedSet"
+    | "premiumUsedProxy"
   >,
 ): string {
-  const parts: string[] = [`sibling: ${sibling.siblingCardId}`];
-  if (sibling.siblingIsCrossClass) parts.push("cross-class");
-  parts.push(`× ${sibling.parallelPremium.toFixed(2)}× parallel`);
-  if (sibling.floorApplied) {
-    parts.push(`(floor lifted from ${sibling.empiricalPremium.toFixed(2)}×)`);
-  }
-  return parts.join(" ");
+  const proxy = sibling.premiumUsedProxy ? " proxy" : "";
+  return `sibling: ${sibling.siblingCardId} × ${sibling.parallelPremium.toFixed(2)}× parallel (empirical n=${sibling.premiumSampleSize}, ${sibling.premiumMatchedSet}${proxy})`;
 }

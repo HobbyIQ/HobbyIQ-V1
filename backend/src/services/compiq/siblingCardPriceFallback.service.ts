@@ -9,18 +9,36 @@
  * The fallback:
  *   1. Read the target card's identity (year, set, parallel, isAuto,
  *      playerName).
- *   2. Look up the parallel-premium multiplier for that
- *      (year, set, parallel, isAuto) tuple in
- *      backend/data/parallel-premiums-latest.json.
- *   3. If not found, try same-year Bowman Chrome Prospects as a proxy
- *      (auto premiums track well across Bowman family products).
- *   4. Search CH for the same PLAYER's Base Auto (or Base card if
+ *   2. Look up the MEASURED parallel-premium multiplier for that
+ *      (year, set, parallel, isAuto) tuple (empiricalParallelPremium.ts,
+ *      backed by backend/data/parallel-premiums-latest.json; same-year
+ *      same-brand-family proxy when the exact set was never measured).
+ *   3. Search CH for the same PLAYER's Base Auto (or Base card if
  *      !isAuto) in the same set.
- *   5. Fetch the sibling's Raw + PSA 10 comps.
- *   6. Compute basePrice × parallelPremium → estimated Raw + PSA 10.
+ *   4. Fetch the sibling's Raw comps (PSA 10 as the secondary anchor).
+ *   5. Compute basePrice × parallelPremium → estimated Raw; PSA 10 from
+ *      Raw via the engine's calibrated grader premium.
  *
  * Returns null on any miss — the target card genuinely has no
  * defensible price estimate, and the pill should stay "unavailable".
+ *
+ * D4 PR 5 (2026-08-29) — the seam obeys the empirical-only doctrine
+ * (project_empirical_only_multiplier_doctrine). Three hobby-consensus
+ * multipliers used to live here and are gone:
+ *   - CF-PARALLEL-PREMIUM-FLOOR: `applyPrintRunFloor` lifted the measured
+ *     premium to a print-run tier floor (Gold /50 = 8x, Orange /25 = 15x,
+ *     ...) and, when nothing was measured at all, used the floor ALONE
+ *     ("floor-only", empiricalPremium = 1). That is the "8.00x parallel
+ *     (floor lifted from 1.00x)" behind the $1,109 Marconi German
+ *     estimate. Now: no measurement, no price.
+ *   - CF-SIBLING-BASE-CARD-FALLBACK: when the player had no Base Auto,
+ *     the Base CARD was anchored and multiplied by a flat 10x "auto-over-
+ *     base premium". Now: no Base Auto sibling, no price.
+ *   - PSA 10 = Raw x 8 (and Raw = PSA 10 / 8 when the sibling had only
+ *     slab sales). Now: getGraderPremium — the calibration ladder every
+ *     other engine path already uses.
+ * `siblingIsCrossClass` / `crossClassAutoPremium` stay on the result as
+ * permanent false / null because iOS decodes the lineage shape.
  *
  * Silent no-throw. All errors caught, returned as null. Never blocks
  * the primary response path.
@@ -29,65 +47,27 @@
  * only when ALL grade entries have valueSource === "unavailable" AND
  * the caller opted in via opts.enableSiblingFallback (routes with
  * user-facing display do; bulk reprice paths don't, to avoid CH cost
- * amplification).
+ * amplification). Also the last rung of repriceHoldingsForUser — where,
+ * since D4 PR 5, a sibling estimate is persisted ONLY when the holding's
+ * exact-identity pool is empty (exactPoolSupremacy.ts).
  */
 
-import * as fs from "node:fs";
-import * as path from "node:path";
 import {
   searchCards as chSearchCards,
   getCardSales,
   type CardHedgeCard,
 } from "./cardhedge.client.js";
-import { computeWeightedMedian } from "./compiqEstimate.service.js";
-// CF-PARALLEL-PREMIUM-FLOOR (2026-07-06, Drew): hobby-consensus minimum
-// multipliers by print-run tier. Overrides the empirical calibration
-// median when it's demonstrably too low for a rare parallel (e.g.
-// Orange /25 auto median = 4.4× but hobby-consensus is 15×).
-import { applyPrintRunFloor } from "./parallelPremiumFloors.js";
+import { computeWeightedMedian, getGraderPremium } from "./compiqEstimate.service.js";
+import {
+  lookupEmpiricalParallelPremium,
+  _resetEmpiricalParallelPremiumCacheForTesting,
+} from "./empiricalParallelPremium.js";
+import { inferPrintRun } from "./parallelPremiumFloors.js";
 
-interface EmpiricalParallelEntry {
-  year: number;
-  set: string;
-  parallel: string;
-  printRun: string;
-  isAuto?: boolean;
-  baseRelativePremium: number | null;
-  sampleSize: number;
-  provenance?: string;
-}
-
-/** Cached parallel-premiums table load. Reset via reloadTable for tests. */
-let _tableCache: EmpiricalParallelEntry[] | null | undefined = undefined;
-
-function loadTable(): EmpiricalParallelEntry[] | null {
-  if (_tableCache !== undefined) return _tableCache;
-  try {
-    const p = path.resolve(process.cwd(), "data/parallel-premiums-latest.json");
-    if (!fs.existsSync(p)) {
-      _tableCache = null;
-      return null;
-    }
-    const parsed = JSON.parse(fs.readFileSync(p, "utf-8"));
-    const entries = Array.isArray(parsed?.entries) ? parsed.entries : [];
-    _tableCache = entries as EmpiricalParallelEntry[];
-    return _tableCache;
-  } catch (err) {
-    console.warn(
-      `[siblingFallback] parallel-premiums load failed: ${(err as Error)?.message ?? err}`,
-    );
-    _tableCache = null;
-    return null;
-  }
-}
-
-/** Test hook — force a reload on the next lookup call. */
+/** Test hook — force a reload of the parallel-premiums table on the next
+ *  lookup. Kept under its historical name for the existing test files. */
 export function _resetTableCacheForTesting(): void {
-  _tableCache = undefined;
-}
-
-function normalizeToken(s: string): string {
-  return s.trim().toLowerCase().replace(/\s+/g, " ");
+  _resetEmpiricalParallelPremiumCacheForTesting();
 }
 
 /**
@@ -115,100 +95,6 @@ function extractSurname(fullName: string | null | undefined): string | null {
   return last;
 }
 
-/**
- * Find the parallel-premium entry matching (year, set, parallel, isAuto).
- * Falls through to Bowman Chrome Prospects as a same-year proxy when
- * the exact set has no entry for the auto tier (common: Bowman Draft
- * Chrome has base-card entries but not auto entries; Bowman Chrome
- * Prospects has both and auto premiums generalize well across the
- * Bowman family).
- */
-function lookupPremium(
-  year: number,
-  setName: string,
-  parallel: string,
-  isAuto: boolean,
-): { entry: EmpiricalParallelEntry; matchedSet: string } | null {
-  const table = loadTable();
-  if (!table) return null;
-
-  const setNorm = normalizeToken(setName);
-  const parallelNorm = normalizeToken(parallel);
-
-  const exact = table.find(
-    (e) =>
-      e.year === year &&
-      normalizeToken(e.set) === setNorm &&
-      normalizeToken(e.parallel) === parallelNorm &&
-      !!e.isAuto === isAuto &&
-      typeof e.baseRelativePremium === "number" &&
-      e.baseRelativePremium > 0 &&
-      e.sampleSize >= 5,
-  );
-  if (exact) return { entry: exact, matchedSet: exact.set };
-
-  // CF-SIBLING-PROXY-BRAND-FAMILY (2026-07-07, Drew): the calibration
-  // table indexes each product under whichever set name the discovery
-  // script produced from CH's search (e.g. 2025 Orange auto premiums
-  // live in set="Bowman Draft", NOT set="Bowman Chrome Prospects" — CH
-  // returned that string). The pre-fix proxy required set exactly ==
-  // "bowman chrome prospects" — silently bailed for every target whose
-  // same-year Bowman family entry happened to sit under any other set
-  // name.
-  //
-  // Concrete miss discovered via probe 2026-07-07: Willits 2025 Bowman
-  // Draft Chrome Orange Auto — reached this branch, but the 2025
-  // Orange isAuto=true entry lives under set="Bowman Draft" (n=30,
-  // premium=4.364). No match → null → fallback bailed → the very card
-  // that PR #303 (print-run floor) was supposed to price stayed
-  // "unavailable" on prod.
-  //
-  // Fix: match by BRAND FAMILY substring. Bowman/Topps/Panini variants
-  // trade close enough that any same-year same-parallel same-isAuto
-  // hit inside the target's brand family is materially better than
-  // gray-pill "unavailable". Prefer highest-sample-size entry so the
-  // richest calibration wins when multiple candidates exist.
-  const targetBrand = inferBrand(setNorm);
-  if (targetBrand) {
-    const candidates = table.filter(
-      (e) =>
-        e.year === year &&
-        normalizeToken(e.parallel) === parallelNorm &&
-        !!e.isAuto === isAuto &&
-        typeof e.baseRelativePremium === "number" &&
-        e.baseRelativePremium > 0 &&
-        e.sampleSize >= 5 &&
-        inferBrand(normalizeToken(e.set)) === targetBrand &&
-        normalizeToken(e.set) !== setNorm,  // exact already tried above
-    );
-    if (candidates.length > 0) {
-      // Prefer highest sample-size within the family
-      candidates.sort((a, b) => b.sampleSize - a.sampleSize);
-      const best = candidates[0];
-      return { entry: best, matchedSet: best.set };
-    }
-  }
-
-  return null;
-}
-
-/**
- * Infer the brand family for a set name. Returns the canonical family
- * token (bowman/topps/panini) or null when no known family matches.
- * Used by lookupPremium to constrain the proxy fallback to the target's
- * own brand family — Bowman auto premiums track well across Bowman
- * Chrome Prospects / Bowman Draft Chrome / Bowman Draft / Bowman's
- * Best, but poorly across Bowman → Panini Prizm.
- */
-function inferBrand(normalizedSet: string): string | null {
-  if (normalizedSet.includes("bowman")) return "bowman";
-  if (normalizedSet.includes("topps")) return "topps";
-  if (normalizedSet.includes("panini") || normalizedSet.includes("prizm") ||
-      normalizedSet.includes("select") || normalizedSet.includes("mosaic") ||
-      normalizedSet.includes("optic")) return "panini";
-  return null;
-}
-
 export interface SiblingFallbackInput {
   targetCardId: string;
   year: number;
@@ -229,7 +115,8 @@ export interface SiblingFallbackInput {
 export interface SiblingFallbackResult {
   /** Estimated Raw price for TODAY — sibling's trend-projected median × parallel premium. */
   estimatedRawPrice: number | null;
-  /** Estimated PSA 10 price (Raw × PSA 10 tier multiplier of 8). */
+  /** Estimated PSA 10 price — Raw × the calibrated PSA 10 grader premium
+   *  for this card class / year / set (getGraderPremium). */
   estimatedPSA10Price: number | null;
   /** Predicted Raw price at the trajectory horizon (7d) = today's
    *  estimate projected another week forward at the same rate.
@@ -245,39 +132,38 @@ export interface SiblingFallbackResult {
   siblingBaseProjectedToday: number;
   /** Weeks since the sibling's newest closed sale — used for projection. */
   siblingWeeksSinceNewestSale: number | null;
-  /** Effective multiplier applied: max(empiricalPremium, printRunFloor). */
+  /** How many sibling sales the anchor median was computed from. This is
+   *  the comp count a persisted estimate reports — the TARGET has none. */
+  siblingCompCount: number;
+  /** The multiplier applied. Since D4 PR 5 this IS the measured premium;
+   *  there is no floor to lift it. */
   parallelPremium: number;
-  /** CF-SIBLING-LINEAGE-SURFACE (2026-07-07): the empirical (median-of-
-   *  medians) premium from the calibration table BEFORE floor lift.
-   *  Same as parallelPremium when no floor applied. Enables downstream
-   *  callers + KQL to see when the hobby-consensus floor overrode the
-   *  empirical value. */
+  /** CF-SIBLING-LINEAGE-SURFACE (2026-07-07): the measured premium from
+   *  the calibration table. Always equal to parallelPremium now; kept so
+   *  KQL written against the lineage keeps working. */
   empiricalPremium: number;
-  /** True when the print-run floor lifted the empirical value. */
-  floorApplied: boolean;
-  /** Inferred print run for the target parallel (25 for Orange, 50
-   *  for Gold, etc.). Null when the parallel didn't match any known
-   *  hobby-consensus tier. */
+  /** Paired observations behind the premium. */
+  premiumSampleSize: number;
+  /** Inferred print run for the target parallel by NAME (25 for Orange,
+   *  50 for Gold, ...). Informational — a scarcity guess, not a
+   *  multiplier. Null when the name matches no known parallel. */
   inferredPrintRun: number | null;
   /** Which parallel-premium table entry we matched (helps ops debug). */
   premiumMatchedSet: string;
-  /** True when we had to fall through to Bowman Chrome Prospects. */
+  /** True when the premium came from a same-brand-family proxy set. */
   premiumUsedProxy: boolean;
-  /** CF-SIBLING-BASE-CARD-FALLBACK (2026-07-06): true when the target
-   *  is an auto but we anchored on the player's Base CARD (non-auto)
-   *  because no Base Auto SKU exists — hobby-consensus auto-over-base
-   *  premium was applied in addition to the parallel premium. */
+  /** Retired D4 PR 5 — the Base-card × 10x cross-class anchor is gone.
+   *  Permanently false; stays on the wire for iOS's lineage decoder. */
   siblingIsCrossClass: boolean;
-  /** Multiplier applied to bridge Base card → Base Auto anchor when
-   *  siblingIsCrossClass is true. Null otherwise. */
+  /** Retired D4 PR 5. Permanently null. */
   crossClassAutoPremium: number | null;
 }
 
 /**
  * Attempt to derive an estimated price for a thin-market card by
- * combining a sibling's Base Auto comps with the target's parallel
- * premium. Returns null on any miss — genuinely rare card, honest
- * silence over speculation.
+ * combining a sibling's Base Auto comps with the target's measured
+ * parallel premium. Returns null on any miss — genuinely rare card,
+ * honest silence over speculation.
  */
 export async function attemptSiblingPriceFallback(
   input: SiblingFallbackInput,
@@ -286,72 +172,30 @@ export async function attemptSiblingPriceFallback(
     return null;
   }
 
-  // Step 1 — parallel premium
-  const premiumMatch = lookupPremium(
+  // Step 1 — the MEASURED parallel premium, or nothing.
+  const premiumMatch = lookupEmpiricalParallelPremium(
     input.year,
     input.set,
     input.parallel,
     input.isAuto,
   );
-
-  // CF-PARALLEL-PREMIUM-FLOOR (2026-07-06, Drew): apply the print-run
-  // floor. For known-rare parallels (Orange /25, Red /5, etc.), the
-  // empirical median tends to under-represent hot-prospect market —
-  // the median is dragged down by cool-player sales at the same
-  // parallel. The floor represents the hobby-consensus "hot prospect"
-  // baseline. When it lifts the value, telemetry captures the flip.
-  //
-  // CF-FLOOR-ONLY-WHEN-EMPIRICAL-MISSING (2026-07-08, Drew): production
-  // KQL showed `sibling_fallback_no_premium` firing on cards like 2024
-  // Bowman Chrome Blue Refractor auto — brand-family proxy had nothing
-  // to fall back to (no 2024 Bowman-family auto Blue Refractor entries
-  // in the calibration table). Previously we bailed → user got a gray
-  // pill. But Blue Refractor IS a known /150 parallel with a defined
-  // hobby-consensus floor of 3×. Now: when empirical is missing entirely
-  // AND the parallel matches a known print-run tier, use the floor as
-  // the anchor. When both are missing, still bail.
-  let empiricalPremium: number;
-  let premiumUsedProxy: boolean;
-  let premiumMatchedSet: string;
-  let floored: ReturnType<typeof applyPrintRunFloor>;
-  if (premiumMatch) {
-    empiricalPremium = premiumMatch.entry.baseRelativePremium as number;
-    premiumUsedProxy = normalizeToken(premiumMatch.matchedSet) !== normalizeToken(input.set);
-    premiumMatchedSet = premiumMatch.matchedSet;
-    floored = applyPrintRunFloor(empiricalPremium, input.parallel);
-  } else {
-    // No empirical — try the floor only.
-    const floorOnly = applyPrintRunFloor(1, input.parallel);
-    if (floorOnly.effective === 1 || floorOnly.inferredPrintRun === null) {
-      // Parallel doesn't match any tier either — genuinely can't price.
-      console.log(JSON.stringify({
-        event: "sibling_fallback_no_premium",
-        source: "siblingCardPriceFallback",
-        year: input.year,
-        set: input.set,
-        parallel: input.parallel,
-        isAuto: input.isAuto,
-      }));
-      return null;
-    }
-    // Floor-only path: empirical stays as 1 (documented in telemetry),
-    // premium comes purely from the floor.
-    empiricalPremium = 1;
-    premiumUsedProxy = false;
-    premiumMatchedSet = `floor-only (/${floorOnly.inferredPrintRun})`;
-    floored = floorOnly;
+  if (!premiumMatch) {
     console.log(JSON.stringify({
-      event: "sibling_fallback_floor_only",
+      event: "sibling_fallback_no_premium",
       source: "siblingCardPriceFallback",
+      note: "no measured parallel premium for this (year, set, parallel, isAuto); no price",
       year: input.year,
       set: input.set,
       parallel: input.parallel,
       isAuto: input.isAuto,
-      inferredPrintRun: floorOnly.inferredPrintRun,
-      floorMultiplier: floorOnly.effective,
     }));
+    return null;
   }
-  const parallelPremium = floored.effective;
+  const parallelPremium = premiumMatch.premium;
+  const empiricalPremium = premiumMatch.premium;
+  const premiumUsedProxy = premiumMatch.usedProxy;
+  const premiumMatchedSet = premiumMatch.matchedSet;
+  const inferredPrintRun = inferPrintRun(input.parallel);
 
   // Step 2 — sibling card search. For autos, seek the same player's
   // Base Auto in the same set. For non-autos, seek the Base card.
@@ -399,7 +243,7 @@ export async function attemptSiblingPriceFallback(
   // Conrad probe today; same pattern seen with Willits/Ike Irish
   // yesterday). Filtering solely on the CH-reported `player` field will
   // silently pick THE WRONG PLAYER's card as our sibling — and then
-  // multiply THAT card's median × 15× floor as the target's price.
+  // multiply THAT card's median as the target's price.
   //
   // Guard: prefer siblings whose text fields (title / name / subset)
   // contain the target player's surname. If NONE match, fall back to
@@ -417,37 +261,10 @@ export async function attemptSiblingPriceFallback(
   );
   // Prefer candidates whose description clearly matches the player.
   const surnameMatches = candidateSiblings.filter(textContainsSurname);
-  let sibling = surnameMatches[0] ?? candidateSiblings[0];
-  // Additional signal — if we used Base Auto (or Base) as the sibling
-  // but had to promote up from the alternative anchor. Tracked for
-  // telemetry so ops can KQL how often this fires.
-  let siblingIsCrossClass = false;
-  let crossClassAutoPremium: number | null = null;
-  if (!sibling && input.isAuto) {
-    // Try Base card (non-auto). Same player, same set.
-    const baseCandidates = cards.filter((c) => {
-      const variant = (c.variant ?? "").toLowerCase();
-      const subset = (c.subset ?? "").toLowerCase();
-      return (
-        c.card_id !== input.targetCardId &&
-        (variant === "base" || variant === "") &&
-        !subset.includes("auto") &&
-        !subset.includes("signat")
-      );
-    });
-    // Same surname guard as above — prefer clearly-named candidates.
-    const baseSurnameMatches = baseCandidates.filter(textContainsSurname);
-    const baseCard = baseSurnameMatches[0] ?? baseCandidates[0];
-    if (baseCard) {
-      sibling = baseCard;
-      siblingIsCrossClass = true;
-      // Hobby-consensus auto-over-base premium for prospects. Ranges
-      // from 5× (cool player) to 50-100× (top prospect at peak hype).
-      // Middle-ground 10× as a defensible starting point; refined via
-      // corpus calibration later.
-      crossClassAutoPremium = 10;
-    }
-  }
+  const sibling = surnameMatches[0] ?? candidateSiblings[0];
+  // D4 PR 5: no same-class sibling means no anchor. The Base CARD x 10x
+  // "auto-over-base" bridge for auto targets was a hobby-consensus
+  // multiplier and is retired; honest silence instead.
   if (!sibling) {
     console.log(JSON.stringify({
       event: "sibling_fallback_no_base_found",
@@ -460,12 +277,26 @@ export async function attemptSiblingPriceFallback(
     return null;
   }
 
+  // The calibrated PSA 10 / Raw ratio for this card class — the same
+  // ladder (GRADE_CALIBRATION family x band x sport, vintage table,
+  // gem-rate) hobbyIqFmv's grade-cross-raw rung and the grade curve use.
+  const psa10Premium = (rawAnchor: number | null): number =>
+    getGraderPremium(
+      "PSA",
+      "10",
+      rawAnchor,
+      input.isAuto ? "autograph" : "base",
+      input.year,
+      input.set,
+    );
+
   // Step 3 — sibling's comps at Raw. PSA 10 as secondary. Capture
   // dates too so we can trend-project the median forward (Drew's
   // "predict accurately, median is a weighted average [snapshot]"
   // point 2026-07-06).
   let siblingBaseMedianRaw: number | null = null;
   let siblingNewestSaleDate: string | null = null;
+  let siblingCompCount = 0;
   try {
     const rawSales = await getCardSales(sibling.card_id, "Raw", 50);
     const rawSalesUsable = rawSales
@@ -477,6 +308,7 @@ export async function attemptSiblingPriceFallback(
       .filter((s) => Number.isFinite(s.price) && s.price > 0);
     if (rawSalesUsable.length > 0) {
       siblingBaseMedianRaw = computeWeightedMedian(rawSalesUsable);
+      siblingCompCount = rawSalesUsable.length;
       // Find the newest closed sale date to time the trend projection
       const dates = rawSalesUsable
         .map((s) => s.date)
@@ -484,8 +316,8 @@ export async function attemptSiblingPriceFallback(
         .sort();
       siblingNewestSaleDate = dates.length > 0 ? dates[dates.length - 1] : null;
     }
-    // If no Raw sales on the sibling either, try PSA 10 and adjust
-    // downward via the standard Raw × 8 multiplier.
+    // If no Raw sales on the sibling either, try PSA 10 and translate
+    // back to Raw through the calibrated PSA 10 premium.
     if (siblingBaseMedianRaw === null) {
       const psaSales = await getCardSales(sibling.card_id, "PSA 10", 50);
       const psaUsable = psaSales
@@ -497,8 +329,10 @@ export async function attemptSiblingPriceFallback(
         .filter((s) => Number.isFinite(s.price) && s.price > 0);
       if (psaUsable.length > 0) {
         const psaMedian = computeWeightedMedian(psaUsable);
-        if (psaMedian !== null && psaMedian > 0) {
-          siblingBaseMedianRaw = Math.round((psaMedian / 8) * 100) / 100;
+        const ratio = psa10Premium(null);
+        if (psaMedian !== null && psaMedian > 0 && Number.isFinite(ratio) && ratio > 0) {
+          siblingBaseMedianRaw = Math.round((psaMedian / ratio) * 100) / 100;
+          siblingCompCount = psaUsable.length;
           const dates = psaUsable
             .map((s) => s.date)
             .filter((d): d is string => typeof d === "string" && d.length > 0)
@@ -572,17 +406,13 @@ export async function attemptSiblingPriceFallback(
       Math.round(siblingBaseMedianRaw * marketMultiplier * 100) / 100;
   }
 
-  // When we cross-class-fell-back (Base card → Auto target), apply the
-  // auto-premium multiplier FIRST to get the projected Base Auto anchor,
-  // THEN apply the parallel premium to reach the target parallel. Both
-  // multipliers stack — 1 Base card × 10 (auto premium) × 15 (Orange /25 floor)
-  // = 150× vs a plain Base card. Represents the compounded scarcity.
-  const preParallelAnchor = siblingIsCrossClass && crossClassAutoPremium
-    ? siblingBaseProjectedToday * crossClassAutoPremium
-    : siblingBaseProjectedToday;
   const estimatedRawPrice =
-    Math.round(preParallelAnchor * parallelPremium * 100) / 100;
-  const estimatedPSA10Price = Math.round(estimatedRawPrice * 8 * 100) / 100;
+    Math.round(siblingBaseProjectedToday * parallelPremium * 100) / 100;
+  const psa10Ratio = psa10Premium(estimatedRawPrice);
+  const estimatedPSA10Price =
+    Number.isFinite(psa10Ratio) && psa10Ratio > 0
+      ? Math.round(estimatedRawPrice * psa10Ratio * 100) / 100
+      : null;
   // Predicted at 7d = today's estimate projected another week forward
   // at the same rate. Null when no rate is available.
   let estimatedRawPredicted7d: number | null = null;
@@ -605,18 +435,18 @@ export async function attemptSiblingPriceFallback(
     parallel: input.parallel,
     isAuto: input.isAuto,
     siblingCardId: sibling.card_id,
+    siblingCompCount,
     siblingBaseMedianRaw,
     siblingBaseProjectedToday,
     siblingWeeksSinceNewestSale,
     trajectoryRateWeekly: input.trajectoryRateWeekly ?? null,
     parallelPremium,
     empiricalPremium,
-    floorApplied: floored.flooredFrom !== null,
-    inferredPrintRun: floored.inferredPrintRun,
+    premiumSampleSize: premiumMatch.sampleSize,
+    inferredPrintRun,
     premiumMatchedSet,
     premiumUsedProxy,
-    siblingIsCrossClass,
-    crossClassAutoPremium,
+    psa10Ratio,
     estimatedRawPrice,
     estimatedPSA10Price,
     estimatedRawPredicted7d,
@@ -631,13 +461,14 @@ export async function attemptSiblingPriceFallback(
     siblingBaseMedianRaw,
     siblingBaseProjectedToday,
     siblingWeeksSinceNewestSale,
+    siblingCompCount,
     parallelPremium,
     empiricalPremium,
-    floorApplied: floored.flooredFrom !== null,
-    inferredPrintRun: floored.inferredPrintRun,
+    premiumSampleSize: premiumMatch.sampleSize,
+    inferredPrintRun,
     premiumMatchedSet,
     premiumUsedProxy,
-    siblingIsCrossClass,
-    crossClassAutoPremium,
+    siblingIsCrossClass: false,
+    crossClassAutoPremium: null,
   };
 }

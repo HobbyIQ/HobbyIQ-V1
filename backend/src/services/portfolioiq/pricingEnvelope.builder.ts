@@ -167,6 +167,10 @@ function buildMethod(holding: PortfolioHolding): PricingMethod {
   if (src === "legacy-engine") {
     return { kind: "legacy-engine", label: "Legacy engine", ladderRung: null, compsUsed };
   }
+  // D4 PR 5: the sibling × measured-premium estimate names itself.
+  if (src === "sibling-estimate") {
+    return { kind: "sibling", label: "Sibling card × parallel premium", ladderRung: "sibling-estimate", compsUsed };
+  }
   // No pricingSource → the holding was priced through a fallback path
   // that didn't stamp pricingSource. Best-effort classify from other
   // hints on the holding.
@@ -182,6 +186,8 @@ function buildMethod(holding: PortfolioHolding): PricingMethod {
 function mapOurPoolRungToKind(rung: string | null): PricingMethod["kind"] {
   switch (rung) {
     case "direct-slug":
+    // D4 PR 5: hobbyIqFmv's unified branch on the exact slug — the exact pool.
+    case "unified-market-value":
       return "direct-comp";
     case "cross-setkey":
     case "cross-printrun":

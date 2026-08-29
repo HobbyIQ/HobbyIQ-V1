@@ -66,7 +66,6 @@ export interface ManualIdentityResult {
     siblingWeeksSinceNewestSale: number | null;
     parallelPremium: number;
     empiricalPremium: number;
-    floorApplied: boolean;
     inferredPrintRun: number | null;
     premiumMatchedSet: string;
     premiumUsedProxy: boolean;
@@ -168,7 +167,6 @@ export async function priceByManualIdentity(
         siblingWeeksSinceNewestSale: fallback.siblingWeeksSinceNewestSale,
         parallelPremium: fallback.parallelPremium,
         empiricalPremium: fallback.empiricalPremium,
-        floorApplied: fallback.floorApplied,
         inferredPrintRun: fallback.inferredPrintRun,
         premiumMatchedSet: fallback.premiumMatchedSet,
         premiumUsedProxy: fallback.premiumUsedProxy,

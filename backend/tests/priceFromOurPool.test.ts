@@ -78,6 +78,53 @@ describe("priceHoldingFromOurPool", () => {
     expect(result).toBeNull();
   });
 
+  // CF-EXACT-POOL-IS-OBSERVED (D4 PR 5, 2026-08-29). Tonight's reprice log
+  // for the Marconi German fixture: our_pool_fallback_wired_from_reprice_hit
+  // { method: "unified-market-value", compsUsed: 3, fmv: 182.5,
+  //   valuationStatus: "estimated" }. hobbyIqFmv's unified branch priced the
+  // EXACT pool and this function, not knowing the method, filed it under
+  // "Unknown method — treat as estimated": $182.50 went to estimatedValue
+  // while the headline kept the sibling's $1,109.
+  it("MARCONI GERMAN: the unified exact-pool branch (method unified-market-value, rung exact-pool-*) is OBSERVED, even at n=3", async () => {
+    const mock = await computeMock();
+    mock.mockResolvedValue(fmvResultShell({
+      method: "unified-market-value" as any,
+      rungLabel: "exact-pool-leading-edge",
+      fmv: 182.5,
+      min: 182.5,
+      max: 180,
+      compCount: 3,
+      confidence: 0.37,
+      basisNote: "unified: window=90d median=$182 marketValue=$182 predicted=$180 trend=flat 0.0%/wk conf=0.37",
+    } as any));
+    const { priceHoldingFromOurPool } = await loadModule();
+    const result = await priceHoldingFromOurPool(baseHolding());
+
+    expect(result).not.toBeNull();
+    expect(result!.valuationStatus).toBe("observed");
+    expect(result!.fairMarketValue).toBe(182.5);
+    expect(result!.estimatedValue).toBeNull();
+    expect(result!.rungLabel).toBe("exact-pool-leading-edge");
+    expect(result!.method).toBe("unified-market-value");
+    expect(result!.compsUsed).toBe(3);
+  });
+
+  it("one sale of the exact card through the unified branch is still observed — thin, but genuinely that card", async () => {
+    const mock = await computeMock();
+    mock.mockResolvedValue(fmvResultShell({
+      method: "unified-market-value" as any,
+      rungLabel: "exact-pool-weighted-median",
+      fmv: 90,
+      compCount: 1,
+      confidence: 0.1,
+      basisNote: "unified: window=180d median=$90 marketValue=$90 predicted=$90 trend=flat 0.0%/wk conf=0.10",
+    } as any));
+    const { priceHoldingFromOurPool } = await loadModule();
+    const result = await priceHoldingFromOurPool(baseHolding());
+    expect(result!.valuationStatus).toBe("observed");
+    expect(result!.fairMarketValue).toBe(90);
+  });
+
   // CF-RARE-CARD-ANCHOR-LABEL (2026-08-22). The rare-card rung anchors on the
   // LAST ACTUAL SALE of the exact slug and projects it by the parent pool's
   // drift — the most empirical answer we hold for a card too rare to have a

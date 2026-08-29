@@ -2,6 +2,10 @@
 // mapping so a wrong-grade sibling result never lands as a real FMV on
 // the wrong tier — the empirical-only doctrine says "no defensible
 // multiplier for arbitrary grades" so we return null and skip.
+//
+// D4 PR 5 (2026-08-29): the basis note names the MEASUREMENT (premium,
+// sample size, matched set). There is no floor clause any more because
+// there is no floor.
 
 import { describe, expect, it } from "vitest";
 import {
@@ -53,43 +57,41 @@ describe("mapSiblingToRepriceFmv", () => {
   it("returns null when the applicable sibling field is zero or missing", () => {
     expect(mapSiblingToRepriceFmv({ estimatedRawPrice: 0, estimatedPSA10Price: 200 }, null, null)).toBeNull();
     expect(mapSiblingToRepriceFmv({ estimatedRawPrice: 25, estimatedPSA10Price: 0 }, "PSA", 10)).toBeNull();
+    expect(mapSiblingToRepriceFmv({ estimatedRawPrice: 25, estimatedPSA10Price: null }, "PSA", 10)).toBeNull();
   });
 });
 
 describe("siblingEstimateBasis", () => {
-  it("formats a plain sibling estimate", () => {
+  it("names the sibling, the measured premium and the measurement behind it", () => {
     const s = siblingEstimateBasis({
       siblingCardId: "ch-abc-123",
-      siblingParallel: "Base",
       parallelPremium: 5.5,
-      empiricalPremium: 5.5,
-      floorApplied: false,
-      siblingIsCrossClass: false,
+      premiumSampleSize: 30,
+      premiumMatchedSet: "Bowman Chrome",
+      premiumUsedProxy: false,
     });
-    expect(s).toBe("sibling: ch-abc-123 × 5.50× parallel");
+    expect(s).toBe("sibling: ch-abc-123 × 5.50× parallel (empirical n=30, Bowman Chrome)");
   });
 
-  it("notes when the print-run floor lifted the empirical premium", () => {
+  it("says when the premium came from a brand-family proxy set", () => {
     const s = siblingEstimateBasis({
       siblingCardId: "ch-abc-123",
-      siblingParallel: "Base",
-      parallelPremium: 15,
-      empiricalPremium: 4.4,
-      floorApplied: true,
-      siblingIsCrossClass: false,
+      parallelPremium: 4.364,
+      premiumSampleSize: 30,
+      premiumMatchedSet: "Bowman Draft",
+      premiumUsedProxy: true,
     });
-    expect(s).toContain("floor lifted from 4.40×");
+    expect(s).toBe("sibling: ch-abc-123 × 4.36× parallel (empirical n=30, Bowman Draft proxy)");
   });
 
-  it("notes when a cross-class fall (base card → auto target) was used", () => {
+  it("never mentions a floor — there is none", () => {
     const s = siblingEstimateBasis({
       siblingCardId: "ch-abc-123",
-      siblingParallel: "Base",
-      parallelPremium: 15,
-      empiricalPremium: 15,
-      floorApplied: false,
-      siblingIsCrossClass: true,
+      parallelPremium: 1.2,
+      premiumSampleSize: 7,
+      premiumMatchedSet: "Bowman Chrome",
+      premiumUsedProxy: false,
     });
-    expect(s).toContain("cross-class");
+    expect(s).not.toMatch(/floor/i);
   });
 });
