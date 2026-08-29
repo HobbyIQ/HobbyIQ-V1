@@ -35,7 +35,7 @@ const backend = path.resolve(__dirname, "..");
 const { parseListingTitle } = require(path.join(backend, "dist", "services", "portfolioiq", "ebayTitleParser.service.js"));
 const { computeHobbyIqCardId, parseHobbyIqCardId } = require(path.join(backend, "dist", "services", "portfolioiq", "hobbyIqCardId.service.js"));
 
-const APPLY = process.env.APPLY === "true";
+const APPLY = process.env.APPLY === "true" || process.env.BACKFILL_APPLY === "true"; // the runner exports BACKFILL_APPLY, not APPLY
 const SOURCES = String(process.env.SOURCES || "cardhedge,tca-ebay,cardsight").split(",").map((s) => s.trim()).filter(Boolean);
 const SLOT = Number(process.env.SLOT || 0), SLOTS = Number(process.env.SLOTS || 1);
 const RUN_MINUTES = Number(process.env.RUN_MINUTES || 140);
