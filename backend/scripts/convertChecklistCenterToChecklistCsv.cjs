@@ -194,21 +194,30 @@ function categoryOf(section) {
 
 function emit(product, subsets, rejected, srcKind) {
   const rowsOut = [];
-  const pars = new Set(), nums = new Set();
-  let baseEmitted = false;
+  let baseEmitted = false, refusedSubsets = 0;
+  // CF-RIGHT-GUARD-RIGHT-SCOPE (2026-08-29, D3 dry run). Each subset's ladder
+  // lands on that subset's own cards, so a product's distinct-rung count grows
+  // with its insert sets (2025 Topps Series 1: 514 across ~20 sets) and says
+  // nothing about a cross-join. The gate is per subset: a subset whose ladder
+  // exceeds PAR_MAX rungs or whose card list exceeds NUM_MAX numbers is what a
+  // roster-for-ladder mistake looks like, and only that subset is refused.
   for (const sub of subsets) {
     const category = sub.category ?? categoryOf(sub.title.replace(/^\d{4}\s+/, "").replace(/\s+(Set|Checklist)$/i, "").replace(/^[^-]*-\s*/, ""));
     const isAuto = /\b(auto|autograph|signature)/i.test(sub.title) ? "true" : "false";
     const rungs = sub.ladders.flatMap((l) => l.rungs);
+    const subPars = new Set(rungs.map((r) => r.name)), subNums = new Set(sub.cards.map((c) => c.num));
+    if (subPars.size > PAR_MAX || subNums.size > NUM_MAX) {
+      console.log(`!! REFUSED subset ${product.sourceSlug} [${sub.title}]: distinct rungs=${subPars.size} cardNumbers=${subNums.size} (gate ${PAR_MAX}/${NUM_MAX})`);
+      refusedSubsets++; continue;
+    }
     for (const c of sub.cards) {
-      nums.add(c.num);
       rowsOut.push([category, c.num, category === "base" ? "Base" : "", isAuto, "", c.player, ""]);
-      for (const r of rungs) { pars.add(r.name); rowsOut.push([category, c.num, r.name, isAuto, r.printRun ?? "", c.player, r.note ?? ""]); }
+      for (const r of rungs) rowsOut.push([category, c.num, r.name, isAuto, r.printRun ?? "", c.player, r.note ?? ""]);
     }
     if (category === "base") baseEmitted = true;
   }
-  if (pars.size > PAR_MAX || nums.size > NUM_MAX) {
-    console.log(`!! REFUSED ${product.sourceSlug}: distinct rungs=${pars.size} cardNumbers=${nums.size} (gate ${PAR_MAX}/${NUM_MAX})`);
+  if (!rowsOut.length) {
+    console.log(`!! REFUSED ${product.sourceSlug}: every subset over the gate (${refusedSubsets} refused)`);
     return null;
   }
   const meta = productMeta(product);
