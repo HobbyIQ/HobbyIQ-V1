@@ -6,7 +6,7 @@
 // This is the "we know EXACTLY what tier this parallel is on the
 // scarcity ladder, but nobody's sold one recently" case. The formula:
 //
-//   floor = eraBaseline(productKey, year, cardClass) × tierMultiplier(printRun)
+//   floor = eraBaseline(productKey, year, cardClass) × measured parallel premium
 //   range = floor × [0.5, 2.0]
 //
 // Confidence: 25. Below scarcity-prior-floor (40), above setdoc-
@@ -31,10 +31,7 @@
 // container is empty or unreachable, we fall through to a hand-curated
 // static table (this module's ERA_BASELINE_STATIC).
 
-import {
-  floorForPrintRunByClass,
-  floorForPrintRun,
-} from "./parallelPremiumFloors.js";
+import { lookupEmpiricalParallelPremium } from "./empiricalParallelPremium.js";
 import { inferPrintRunFromReferenceCatalog } from "./referenceCatalogLookup.js";
 // CF-NO-NULL-PRICING PR 2 (2026-07-11): Cosmos-backed era-baselines
 // as PRIMARY source. Static table below is the fallback when the
@@ -208,10 +205,18 @@ export async function computeReferenceCatalogBaseline(input: {
   if (!catalogHit || catalogHit.printRun === null) return null;
 
   const printRun = catalogHit.printRun;
-  const tierMultiplier =
-    floorForPrintRunByClass(printRun, input.cardClass) ??
-    floorForPrintRun(printRun) ??
-    1;
+  // CF-EMPIRICAL-PARALLEL-PREMIUM (D4 PR 5, 2026-08-29). The tier multiplier
+  // was a hobby-consensus floor by print run; that table is deleted. Tier 6
+  // now multiplies the era baseline by the MEASURED premium for (year,
+  // product, parallel, isAuto), and refuses when nothing was measured.
+  const empirical = lookupEmpiricalParallelPremium(
+    input.year,
+    input.product,
+    input.parallel,
+    input.cardClass === "auto",
+  );
+  if (!empirical) return null;
+  const tierMultiplier = empirical.premium;
 
   // Step 2: get the era baseline for this productKey/year/class.
   // PRIMARY: Cosmos-backed `era-baselines` container (refreshed by PR 4's

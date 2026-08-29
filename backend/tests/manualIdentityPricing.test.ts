@@ -107,16 +107,18 @@ describe("CF-MANUAL-IDENTITY-PRICING — priceByManualIdentity", () => {
     expect(result).not.toBeNull();
     expect(result!.siblingFallback).not.toBeNull();
     expect(result!.siblingFallback!.siblingCardId).toBe("conrad-base-auto");
-    // Blue Refractor /150 → 3× floor; empirical 2.5 lifts to 3
-    expect(result!.siblingFallback!.parallelPremium).toBe(3);
-    expect(result!.siblingFallback!.floorApplied).toBe(true);
+    // D4 PR 5: the measured 2.5× IS the multiplier. The /150 tier floor
+    // that used to lift it to 3× is gone.
+    expect(result!.siblingFallback!.parallelPremium).toBe(2.5);
+    expect(result!.siblingFallback!.empiricalPremium).toBe(2.5);
     expect(result!.siblingFallback!.inferredPrintRun).toBe(150);
-    // Sibling median $150 × 3× = $450
-    expect(result!.estimatedRawPrice).toBeCloseTo(450, 0);
+    expect(result!.siblingFallback).not.toHaveProperty("floorApplied");
+    // Sibling median $150 × 2.5× = $375
+    expect(result!.estimatedRawPrice).toBeCloseTo(375, 0);
     expect(result!.trajectoryRateWeekly).toBeCloseTo(0.05, 3);
     expect(result!.signalSource).toBe("matched-cohort-cached");
-    // Predicted 7d = $450 × 1.05 = $472.50
-    expect(result!.estimatedRawPredicted7d).toBeCloseTo(472.5, 1);
+    // Predicted 7d = $375 × 1.05 = $393.75
+    expect(result!.estimatedRawPredicted7d).toBeCloseTo(393.75, 1);
     expect(result!.predictedPricePct).toBeCloseTo(5, 1);
   });
 
@@ -214,7 +216,8 @@ describe("CF-MANUAL-IDENTITY-PRICING — priceByManualIdentity", () => {
     });
 
     expect(result).not.toBeNull();
-    expect(result!.estimatedRawPrice).toBeCloseTo(450, 0);
+    // $150 × the measured 2.5× (no floor lift to 3×)
+    expect(result!.estimatedRawPrice).toBeCloseTo(375, 0);
     expect(result!.trajectoryRateWeekly).toBeNull();
     expect(result!.signalSource).toBeNull();
     expect(result!.estimatedRawPredicted7d).toBeNull();

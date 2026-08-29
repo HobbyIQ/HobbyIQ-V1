@@ -323,20 +323,14 @@ export interface ObservedGradeCurve {
     siblingBaseProjectedToday: number;
     /** Weeks between the sibling's newest closed sale and today. */
     siblingWeeksSinceNewestSale: number | null;
-    /** Effective parallel-premium multiplier applied at the target's
-     *  print-run tier. This is `max(empiricalPremium, printRunFloor)`
-     *  when the parallel matches a hobby-consensus floor. */
+    /** The measured parallel-premium multiplier applied. D4 PR 5: there
+     *  is no floor any more — this IS the calibration measurement. */
     parallelPremium: number;
-    /** The empirical (median-of-medians) premium from the calibration
-     *  table BEFORE floor lift. Same as parallelPremium when no floor
-     *  applied. Useful for KQL: `parallelPremium != empiricalPremium`
-     *  = floor overrode the empirical value. */
+    /** Same as parallelPremium (kept for KQL written against the
+     *  lineage; the two can no longer differ). */
     empiricalPremium: number;
-    /** True when the print-run floor lifted the empirical value. */
-    floorApplied: boolean;
-    /** Inferred print run for the target parallel (25 for Orange, 50
-     *  for Gold, etc.). Null when the parallel doesn't match any
-     *  known hobby-consensus tier. */
+    /** Inferred print run for the target parallel by NAME (25 for
+     *  Orange, 50 for Gold, ...). A scarcity guess, not a multiplier. */
     inferredPrintRun: number | null;
     /** Set from the parallel-premiums table row that matched (may be
      *  the same-set exact hit OR the Bowman Chrome Prospects proxy). */
@@ -1820,7 +1814,6 @@ export async function buildObservedGradeCurve(
           siblingWeeksSinceNewestSale: fallback.siblingWeeksSinceNewestSale,
           parallelPremium: fallback.parallelPremium,
           empiricalPremium: fallback.empiricalPremium,
-          floorApplied: fallback.floorApplied,
           inferredPrintRun: fallback.inferredPrintRun,
           premiumMatchedSet: fallback.premiumMatchedSet,
           premiumUsedProxy: fallback.premiumUsedProxy,

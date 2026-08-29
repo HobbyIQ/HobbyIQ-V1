@@ -8811,7 +8811,7 @@ export async function repriceHoldingsForUser(
                   chosenGrade: match.grade,
                   chosenPrice: match.price,
                   parallelPremium: sibling.parallelPremium,
-                  floorApplied: sibling.floorApplied,
+                  premiumSampleSize: sibling.premiumSampleSize,
                   siblingIsCrossClass: sibling.siblingIsCrossClass,
                 }));
                 continue;

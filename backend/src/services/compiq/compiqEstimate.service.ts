@@ -131,9 +131,11 @@ import { fetchCompsByPlayer } from "./compsByPlayer.service.js";
 import { detectProductFamily } from "./productFamilyProjection.js";
 import {
   inferPrintRun,
-  floorForPrintRun,
-  floorForPrintRunByClass,
 } from "./parallelPremiumFloors.js";
+// CF-EMPIRICAL-PARALLEL-PREMIUM (D4 PR 5, 2026-08-29): the ONLY parallel
+// multiplier. The hobby-consensus floor table is gone; a projection that
+// needs a parallel multiplier reads a measurement or refuses.
+import { lookupEmpiricalParallelPremium } from "./empiricalParallelPremium.js";
 // CF-BOWMAN-PARALLELS-DATASET (2026-07-09, Drew): year-aware print-run
 // lookup against Drew's 1,849-row Bowman reference workbook. The
 // hand-coded parallelPremiumFloors rules assume single-tier values
@@ -4668,45 +4670,58 @@ export async function computeEstimate(
           .filter((c) => Number.isFinite(c.price) && c.price > 0)
           .map((c) => ({ price: c.price, soldDate: c.date }));
         const parentNextSale = projectNextSaleFromComps(parentCompsForProjection);
-        if (parentRawPrices.length > 0 && parentNextSale !== null) {
-          const parentBaseMedian = parentNextSale.nextSaleValue;
-          // When the family was detected via the parallel field ("Black
-          // Sapphire"), use effectiveParallel ("Black") for print-run
-          // inference so we get the /10 tier instead of a no-match.
-          const parallelName =
-            familyGap.effectiveParallel ??
-            (typeof queryContext.parallel === "string" ? queryContext.parallel : "");
-          // CF-BOWMAN-PARALLELS-DATASET (2026-07-09): year-aware lookup
-          // first, hand-coded rules as fallback. Bowman family only —
-          // the dataset scope is documented in bowmanParallelsDataset.ts.
-          const printRun = parallelName
-            ? await inferPrintRunYearFirst(
+        // When the family was detected via the parallel field ("Black
+        // Sapphire"), use effectiveParallel ("Black") for print-run
+        // inference so we get the /10 tier instead of a no-match.
+        const parallelName =
+          familyGap.effectiveParallel ??
+          (typeof queryContext.parallel === "string" ? queryContext.parallel : "");
+        // CF-BOWMAN-PARALLELS-DATASET (2026-07-09): year-aware lookup
+        // first, hand-coded rules as fallback. Bowman family only —
+        // the dataset scope is documented in bowmanParallelsDataset.ts.
+        const printRun = parallelName
+          ? await inferPrintRunYearFirst(
+              parallelName,
+              typeof queryContext.cardYear === "number"
+                ? queryContext.cardYear
+                : null,
+              queryContext.isAuto,
+              typeof queryContext.product === "string"
+                ? queryContext.product
+                : null,
+            )
+          : null;
+        // CF-EMPIRICAL-PARALLEL-PREMIUM (D4 PR 5, 2026-08-29). This rung
+        // used to multiply by a hobby-consensus print-run floor (CF-FAMILY-
+        // PROJECTION-CLASS-AWARE-FLOOR: /1 = 100x auto / 180x base, ...).
+        // That table is deleted. A numbered parallel needs a MEASURED
+        // premium for (year, parent product, parallel, isAuto); without one
+        // the rung refuses rather than price a 1/1 at the base price. An
+        // un-numbered parallel carries no parallel multiplier (x1), as before.
+        const empiricalParallel =
+          printRun !== null && parallelName
+            ? lookupEmpiricalParallelPremium(
+                typeof queryContext.cardYear === "number" ? queryContext.cardYear : NaN,
+                familyGap.parentProduct,
                 parallelName,
-                typeof queryContext.cardYear === "number"
-                  ? queryContext.cardYear
-                  : null,
-                queryContext.isAuto,
-                typeof queryContext.product === "string"
-                  ? queryContext.product
-                  : null,
+                queryContext.isAuto === true,
               )
             : null;
-          // CF-FAMILY-PROJECTION-CLASS-AWARE-FLOOR (2026-07-09, Drew —
-          // Owen Carey Padparadscha Sapphire): mirror the parallel-floor-
-          // projection path (#344). Sapphire is a paper product line, so
-          // non-auto queries should get the base-tier floor (1.8× the
-          // auto floor) not the auto floor. Pre-fix, Padparadscha /1
-          // Sapphire projected at $462.50 (auto floor 100×); post-fix
-          // it projects at $832.50 (base floor 180×) which is closer
-          // to hobby reality for a 1/1 non-auto Sapphire parallel.
-          const cardClass: "auto" | "base" =
-            queryContext.isAuto === true ? "auto" : "base";
-          const parallelFloor =
-            printRun !== null
-              ? floorForPrintRunByClass(printRun, cardClass) ??
-                floorForPrintRun(printRun)
-              : null;
-          const parallelMultiplier = parallelFloor ?? 1;
+        const parallelMultiplier: number | null =
+          printRun === null ? 1 : (empiricalParallel?.premium ?? null);
+        if (parallelMultiplier === null) {
+          console.log(JSON.stringify({
+            event: "product_family_projection_refused_no_empirical_parallel_premium",
+            source: "compiq.computeEstimate",
+            query: cardTitle,
+            player: queryContext.playerName,
+            parentProduct: familyGap.parentProduct,
+            parallel: parallelName || null,
+            inferredPrintRun: printRun,
+          }));
+        }
+        if (parentRawPrices.length > 0 && parentNextSale !== null && parallelMultiplier !== null) {
+          const parentBaseMedian = parentNextSale.nextSaleValue;
           const projectedFmv =
             Math.round(
               parentBaseMedian *
@@ -4845,9 +4860,33 @@ export async function computeEstimate(
             : null,
         )
       : null;
+    // CF-EMPIRICAL-PARALLEL-PREMIUM (D4 PR 5, 2026-08-29). The floor table
+    // this rung was named for is gone. Its multiplier is now the MEASURED
+    // premium for (year, product, parallel, isAuto) — or the rung refuses.
+    const empiricalParallelPremium =
+      parallelPrintRun !== null && parallelPrintRun <= 50 && parallelForFloor
+        ? lookupEmpiricalParallelPremium(
+            typeof queryContext.cardYear === "number" ? queryContext.cardYear : NaN,
+            typeof queryContext.product === "string" ? queryContext.product : "",
+            parallelForFloor,
+            queryContext.isAuto === true,
+          )
+        : null;
+    if (parallelPrintRun !== null && parallelPrintRun <= 50 && empiricalParallelPremium === null) {
+      console.log(JSON.stringify({
+        event: "parallel_projection_refused_no_empirical_parallel_premium",
+        source: "compiq.computeEstimate",
+        query: cardTitle,
+        player: queryContext.playerName ?? null,
+        product: queryContext.product ?? null,
+        parallel: parallelForFloor,
+        inferredPrintRun: parallelPrintRun,
+      }));
+    }
     if (
       parallelPrintRun !== null &&
       parallelPrintRun <= 50 && // only meaningful for RARE parallels
+      empiricalParallelPremium !== null &&
       typeof queryContext.playerName === "string" &&
       queryContext.playerName.trim().length > 0 &&
       typeof queryContext.product === "string" &&
@@ -4882,10 +4921,7 @@ export async function computeEstimate(
         if (parentRawPrices.length > 0 && parentNextSale !== null) {
           const parentBaseMedian = parentNextSale.nextSaleValue;
           const cardClass: "auto" | "base" = queryContext.isAuto === true ? "auto" : "base";
-          const parallelMultiplier =
-            floorForPrintRunByClass(parallelPrintRun, cardClass) ??
-            floorForPrintRun(parallelPrintRun) ??
-            1;
+          const parallelMultiplier = empiricalParallelPremium.premium;
           const projectedFmv =
             Math.round(parentBaseMedian * parallelMultiplier * 100) / 100;
 
@@ -4959,7 +4995,7 @@ export async function computeEstimate(
             recentComps: [],
             variantWarning: [],
             confidence: { pricingConfidence: 55 },
-            verdict: `Estimated — no direct sales on this SKU; projected from ${cardClass === "auto" ? "" : "non-auto "}base card × /${parallelPrintRun} parallel floor`,
+            verdict: `Estimated — no direct sales on this SKU; projected from ${cardClass === "auto" ? "" : "non-auto "}base card × ${parallelMultiplier.toFixed(2)}× measured /${parallelPrintRun} parallel premium`,
             gradeUsed: cardHedgeGrade,
             marketDNA: { trend: "flat", speed: "Normal" },
           } as Record<string, unknown>;
@@ -4980,10 +5016,7 @@ export async function computeEstimate(
           if (pyAnchor) {
             const cardClass: "auto" | "base" =
               queryContext.isAuto === true ? "auto" : "base";
-            const parallelMultiplier =
-              floorForPrintRunByClass(parallelPrintRun, cardClass) ??
-              floorForPrintRun(parallelPrintRun) ??
-              1;
+            const parallelMultiplier = empiricalParallelPremium.premium;
             const projectedFmv =
               Math.round(pyAnchor.median * parallelMultiplier * 100) / 100;
             console.log(
@@ -5056,7 +5089,7 @@ export async function computeEstimate(
               recentComps: [],
               variantWarning: [],
               confidence: { pricingConfidence: 40 },
-              verdict: `Structural floor — this player has no direct sales yet; anchored on ${pyAnchor.compCount} product-year comps × /${parallelPrintRun} parallel floor`,
+              verdict: `Structural floor — this player has no direct sales yet; anchored on ${pyAnchor.compCount} product-year comps × ${parallelMultiplier.toFixed(2)}× measured /${parallelPrintRun} parallel premium`,
               gradeUsed: cardHedgeGrade,
               marketDNA: { trend: "flat", speed: "Normal" },
             } as Record<string, unknown>;
@@ -6780,7 +6813,6 @@ export async function computeEstimate(
               isAuto: effectiveIsAuto,
               estimatedRawPrice: fb.estimatedRawPrice,
               parallelPremium: fb.parallelPremium,
-              floorApplied: fb.floorApplied,
               inferredPrintRun: fb.inferredPrintRun,
               siblingIsCrossClass: fb.siblingIsCrossClass,
               premiumMatchedSet: fb.premiumMatchedSet,
@@ -6808,7 +6840,7 @@ export async function computeEstimate(
     const finalEstimateBasis =
       resolvedEstimateBasis ??
       (backportedEstimateValue !== null
-        ? `Sibling anchor via ${backportedSiblingLineage?.siblingIsCrossClass ? "Base card × cross-class × " : "Base Auto × "}${backportedSiblingLineage?.parallelPremium}× ${backportedSiblingLineage?.floorApplied ? "(floor)" : "(empirical)"}`
+        ? `Sibling anchor via ${backportedSiblingLineage?.siblingIsCrossClass ? "Base card × cross-class × " : "Base Auto × "}${backportedSiblingLineage?.parallelPremium}× (empirical n=${backportedSiblingLineage?.premiumSampleSize})`
         : null);
 
     // CF-GUESTIMATE-THIN-DATA-BRANCH (Drew, 2026-07-18): the thin-data
@@ -7121,7 +7153,6 @@ export async function computeEstimate(
               backportedSiblingLineage.siblingWeeksSinceNewestSale,
             parallelPremium: backportedSiblingLineage.parallelPremium,
             empiricalPremium: backportedSiblingLineage.empiricalPremium,
-            floorApplied: backportedSiblingLineage.floorApplied,
             inferredPrintRun: backportedSiblingLineage.inferredPrintRun,
             premiumMatchedSet: backportedSiblingLineage.premiumMatchedSet,
             premiumUsedProxy: backportedSiblingLineage.premiumUsedProxy,
