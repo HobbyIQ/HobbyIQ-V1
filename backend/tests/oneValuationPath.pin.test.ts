@@ -153,4 +153,22 @@ describe("D17 pins — card-detail, card-panel, the bulk curves and the persist 
     // The slug -> majority vendor-id resolver is gone from this handler.
     expect(body.includes('NOT STARTSWITH(c.cardId, "hiq:")')).toBe(false);
   });
+
+  it("/observed-grade-curves-bulk: valueIdentitiesBulk first (BULK_CONCURRENCY), the legacy batch build after, for ids the catalog cannot name", () => {
+    const compiq = read("src/routes/compiq.routes.ts");
+    const body = handlerBody(compiq, "post", "/observed-grade-curves-bulk");
+    const entry = body.indexOf("valueIdentitiesBulk(");
+    const legacy = body.indexOf("buildObservedGradeCurvesBulk(");
+    expect(entry).toBeGreaterThanOrEqual(0);
+    expect(legacy).toBeGreaterThan(entry);
+    expect(body.slice(entry, entry + 120)).toContain("concurrency: BULK_CONCURRENCY");
+    for (const call of D17_ENGINE_CALLS) expect(body.includes(call), call).toBe(false);
+    // The bulk helper is the entry, many times — not a second engine.
+    const svc = stripComments(read("src/services/compiq/oneValuationPath.service.ts"));
+    const bulkAt = svc.indexOf("export async function valueIdentitiesBulk(");
+    expect(bulkAt).toBeGreaterThanOrEqual(0);
+    const bulkBody = svc.slice(bulkAt);
+    expect(bulkBody.includes("await valueIdentity(")).toBe(true);
+    for (const call of D17_ENGINE_CALLS) expect(bulkBody.includes(call), call).toBe(false);
+  });
 });

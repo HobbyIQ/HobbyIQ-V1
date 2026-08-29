@@ -4338,21 +4338,48 @@ router.post("/observed-grade-curves-bulk", requireSession, requireEntitlement("p
       return res.status(400).json({ success: false, error: 'Every cardIds entry must be a string' });
     }
 
-    const { buildObservedGradeCurvesBulk } = await import(
+    const { buildObservedGradeCurvesBulk, BULK_CONCURRENCY } = await import(
       "../services/compiq/observedGradeCurve.service.js"
     );
+    const start = Date.now();
+    // CF-ONE-VALUATION-PATH (D17, 2026-08-30). Every id goes through the
+    // ONE entry first — deduped, BULK_CONCURRENCY at a time, one exact-pool
+    // read per identity — and an hiq: slug (or a vendor id the catalog can
+    // name) is answered with the one valuation path's curve: the same
+    // engine result /observed-grade-curve, /card-panel and the portfolio
+    // persist site derive from. The legacy batch build below serves only
+    // ids the catalog cannot name.
+    //
+    // The curve is keyed by the REQUESTED id (`cardId`), not the slug, so a
+    // caller that sent 500 ids can join the answers back — iOS keys
+    // BulkGradeCurve by cardId; the slug rides along as `identity.slug`.
+    const { valueIdentitiesBulk } = await import("../services/compiq/oneValuationPath.service.js");
+    const { toObservedGradeCurveResponse } = await import("../services/compiq/oneValuationPathAdapters.js");
+    const uniqueIds = Array.from(new Set((cardIds as string[]).map((id) => id.trim()).filter((id) => id.length > 0)));
+    const valuations = await valueIdentitiesBulk(uniqueIds, { concurrency: BULK_CONCURRENCY });
+    const curves: Array<Record<string, unknown>> = [];
+    const legacyIds: string[] = [];
+    for (const id of uniqueIds) {
+      const v = valuations.get(id);
+      if (v && (v.identity.slug || id.startsWith("hiq:"))) {
+        const { success: _success, ...curve } = toObservedGradeCurveResponse(v);
+        curves.push({ ...curve, cardId: id, slug: v.identity.slug });
+      } else {
+        legacyIds.push(id);
+      }
+    }
     // CF-EMPIRICAL-GRADE-MULTIPLIER (Drew, 2026-07-20): fetch per-card
     // meta up-front so the empirical (family, grader) multiplier
-    // resolves for each card in the batch. getCardMetaById is a hot-
-    // cache read so N metadata lookups add ~5-20ms total for 500
+    // resolves for each legacy card in the batch. getCardMetaById is a
+    // hot-cache read so N metadata lookups add ~5-20ms total for 500
     // cards. Without this, every entry logs uncovered and the pill
     // returns unavailable.
     const perCardMeta = new Map<string, { setName?: string | null; sport?: string | null; cardClass?: "auto" | "base" }>();
-    await Promise.all(cardIds.map(async (id: string) => {
+    await Promise.all(legacyIds.map(async (id: string) => {
       try {
-        const meta = await getCardMetaById(id.trim());
+        const meta = await getCardMetaById(id);
         if (meta) {
-          perCardMeta.set(id.trim(), {
+          perCardMeta.set(id, {
             setName: (meta as { set?: string | null })?.set ?? null,
             sport: (meta as { sport?: string | null })?.sport ?? null,
             cardClass: extractCardClass(meta),
@@ -4360,22 +4387,55 @@ router.post("/observed-grade-curves-bulk", requireSession, requireEntitlement("p
         }
       } catch { /* per-card meta failures are non-fatal */ }
     }));
-    const start = Date.now();
-    const map = await buildObservedGradeCurvesBulk(cardIds, perCardMeta);
+    const map = legacyIds.length > 0
+      ? await buildObservedGradeCurvesBulk(legacyIds, perCardMeta)
+      : new Map<string, import("../services/compiq/observedGradeCurve.service.js").ObservedGradeCurve>();
+    for (const curve of map.values()) curves.push(curve as unknown as Record<string, unknown>);
     const durationMs = Date.now() - start;
 
     void (async () => {
       try {
-        const totalSamples = Array.from(map.values()).reduce((sum, c) => sum + c.totalSampleCount, 0);
+        const totalSamples = curves.reduce((sum, c) => sum + Number(c.totalSampleCount ?? 0), 0);
         console.log(JSON.stringify({
           event: "observed_grade_curves_bulk_composed",
           source: "compiq.observed-grade-curves-bulk",
           requestedCount: cardIds.length,
-          uniqueCount: map.size,
+          uniqueCount: curves.length,
+          oneValuationPathCount: curves.length - map.size,
+          legacyCount: map.size,
           durationMs,
           totalSampleCount: totalSamples,
           timestamp: new Date().toISOString(),
         }));
+        // The one-path curves persist under the slug, as the single route does.
+        for (const [id, v] of valuations) {
+          if (!(v.identity.slug || id.startsWith("hiq:"))) continue;
+          persistObservedGradeCurve({
+            source: "compiq.observed-grade-curves-bulk",
+            cardId: v.identity.slug ?? id,
+            totalSampleCount: v.totalSampleCount,
+            ratePerWeek: null,
+            signalSource: null,
+            grades: v.gradeCurve.map((e) => ({
+              grade: e.grade,
+              grader: e.grader,
+              sampleCount: e.sampleCount,
+              observedMedian: e.weightedMedianPrice,
+              valueSource: e.valueSource,
+              estimatedMultiplier: e.estimatedMultiplier,
+              estimatedFrom: e.estimatedFrom,
+              confidenceScore: e.confidenceScore,
+              newestSaleDate: e.newestSaleDate,
+              daysSinceNewestSale: e.daysSinceNewestSale,
+              trendAdjustedValue: e.trendAdjustedValue,
+              trendAdjustmentPct: e.trendAdjustmentPct,
+              predictedPriceAt30d: e.predictedPriceAt30d,
+              predictedPricePct: e.predictedPricePct,
+              predictedPriceRangeLow: e.predictedPriceRangeLow,
+              predictedPriceRangeHigh: e.predictedPriceRangeHigh,
+            })),
+          });
+        }
         // CF-CARDHEDGE-LEARN-CORPUS bulk gap fix (2026-07-04): the batched
         // route was missing corpus persistence — portfolio reprice fires
         // 500 curves at once and none of them were being persisted. Every
@@ -4416,8 +4476,8 @@ router.post("/observed-grade-curves-bulk", requireSession, requireEntitlement("p
 
     res.json({
       success: true,
-      count: map.size,
-      curves: Array.from(map.values()),
+      count: curves.length,
+      curves,
     });
   } catch (err) {
     return next(err);

@@ -457,3 +457,38 @@ function labelEstimates(entries: ObservedGradeEntry[]): void {
     if (e.valueSource === "estimated") e.rungLabel = "grade-curve-estimate";
   }
 }
+
+/**
+ * CF-ONE-VALUATION-PATH (D17, 2026-08-30). Many identities through the ONE
+ * entry: each id is valued exactly once (deduped), `concurrency` at a time,
+ * one exact-pool read per identity — the batched shape
+ * /observed-grade-curves-bulk needs. Not a second computation: every
+ * valuation is `valueIdentity`'s. An id whose valuation throws is absent
+ * from the map (logged); the caller decides what a miss becomes.
+ */
+export async function valueIdentitiesBulk(
+  ids: ReadonlyArray<string>,
+  opts: { concurrency?: number; grade?: ValuationGrade | null } = {},
+): Promise<Map<string, Valuation>> {
+  const unique = Array.from(new Set(ids.filter((id) => typeof id === "string" && id.trim().length > 0).map((id) => id.trim())));
+  const out = new Map<string, Valuation>();
+  const width = Math.max(1, Math.min(Math.trunc(opts.concurrency ?? 8), unique.length || 1));
+  let cursor = 0;
+  const worker = async (): Promise<void> => {
+    while (cursor < unique.length) {
+      const id = unique[cursor++];
+      try {
+        out.set(id, await valueIdentity({ id, grade: opts.grade ?? null }));
+      } catch (err) {
+        console.warn(JSON.stringify({
+          event: "one_valuation_path_bulk_id_failed",
+          source: "oneValuationPath.valueIdentitiesBulk",
+          id,
+          error: (err as Error)?.message ?? String(err),
+        }));
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: width }, () => worker()));
+  return out;
+}

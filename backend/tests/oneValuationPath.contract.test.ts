@@ -30,7 +30,7 @@ const h = vi.hoisted(() => ({
   rows: [] as Array<Record<string, unknown>>,
   catalog: new Map<string, Record<string, unknown>>(),
   vendorMap: new Map<string, string>(),
-  calls: { canonical: 0, estimate: 0, curve: 0, ladder: [] as Array<Record<string, unknown>>, unified: 0 },
+  calls: { canonical: 0, estimate: 0, curve: 0, ladder: [] as Array<Record<string, unknown>>, unified: 0, reads: [] as string[] },
 }));
 
 vi.mock("../src/services/authService.js", async (importActual) => {
@@ -45,6 +45,7 @@ vi.mock("../src/services/authService.js", async (importActual) => {
 });
 vi.mock("../src/services/compiq/exactPoolReader.js", () => ({
   readExactPoolRows: vi.fn(async (input: { cardId: string; hobbyiqCardId: string | null; windowDays: number; nowMs?: number }) => {
+    h.calls.reads.push(input.cardId);
     const now = input.nowMs ?? Date.now();
     const cutoff = now - input.windowDays * 86_400_000;
     return h.rows.filter((r) =>
@@ -145,7 +146,7 @@ beforeEach(() => {
     [EMPTY, identityRow({ year: 2020, setKey: "topps-chrome", setName: "2020 Topps Chrome", cardNumber: "1", parallel: "Base", printRun: null })],
   ]);
   h.vendorMap = new Map([[VENDOR, GOLD]]);
-  h.calls = { canonical: 0, estimate: 0, curve: 0, ladder: [], unified: 0 };
+  h.calls = { canonical: 0, estimate: 0, curve: 0, ladder: [], unified: 0, reads: [] };
 });
 
 const H = { "x-session-id": "test-sess" };
@@ -454,5 +455,54 @@ describe("D17 — /card-panel: the tiers are the one entry's curve, served under
     }
     expect(h.calls.curve).toBe(0);
     expect(h.calls.estimate).toBe(0);
+  });
+});
+
+describe("D17 — /observed-grade-curves-bulk: every slug through the entry, once, keyed by the requested id", () => {
+  it("the batch's curves equal the single route's, per slug; a repeated id is valued once; the empty pool carries the shared reason", async () => {
+    const gold = await four(GOLD);
+    const thin = await four(THIN);
+    const empty = await four(EMPTY);
+    // The single route's pool reads for the same four identities, measured
+    // at the engine's read seam (the one mock that cannot race an import).
+    const singleBefore = h.calls.reads.length;
+    for (const id of [GOLD, THIN, EMPTY, VENDOR]) {
+      await request(app).get(`/api/compiq/observed-grade-curve/${encodeURIComponent(id)}`).set(H);
+    }
+    const singleReads = h.calls.reads.slice(singleBefore).sort();
+    expect(singleReads).toEqual([GOLD, GOLD, THIN, EMPTY].sort());
+    const bulkBefore = h.calls.reads.length;
+    const r = await request(app).post("/api/compiq/observed-grade-curves-bulk").set(H)
+      .send({ cardIds: [GOLD, THIN, GOLD, EMPTY, VENDOR] });
+    expect(r.status).toBe(200);
+    expect(r.body.count).toBe(4);
+    const byId = new Map<string, Record<string, unknown>>((r.body.curves as Array<Record<string, unknown>>).map((c) => [String(c.cardId), c]));
+    expect([...byId.keys()].sort()).toEqual([GOLD, THIN, EMPTY, VENDOR].sort());
+    expect(byId.get(GOLD)!.entries).toEqual(gold.gc.entries);
+    expect(byId.get(THIN)!.entries).toEqual(thin.gc.entries);
+    expect(byId.get(EMPTY)!.entries).toEqual(empty.gc.entries);
+    expect(byId.get(EMPTY)!.fmvReason).toBe("no-exact-pool");
+    // A vendor id is answered under the requested id, from its catalog slug.
+    const vendor = byId.get(VENDOR)!;
+    expect(vendor.slug).toBe(GOLD);
+    expect(vendor.entries).toEqual(gold.gc.entries);
+    expect((vendor.identity as Record<string, unknown>).slug).toBe(GOLD);
+    // The batch reads exactly what the single route reads for the same four
+    // identities — one pool read per identity; GOLD sent twice is read once
+    // for itself (the vendor id is its own identity read, as on the single route).
+    expect(h.calls.reads.slice(bulkBefore).sort()).toEqual(singleReads);
+    expect(h.calls.curve).toBe(0);
+    expect(h.calls.estimate).toBe(0);
+    expect(h.calls.canonical).toBe(0);
+  });
+
+  it("a slug the catalog does not hold is null with identity-not-in-catalog — not sent to the legacy build", async () => {
+    const r = await request(app).post("/api/compiq/observed-grade-curves-bulk").set(H).send({ cardIds: [NOT_IN_CATALOG] });
+    expect(r.status).toBe(200);
+    const c = (r.body.curves as Array<Record<string, unknown>>)[0];
+    expect(c.cardId).toBe(NOT_IN_CATALOG);
+    expect(c.fmvReason).toBe("identity-not-in-catalog");
+    expect(h.calls.unified).toBe(0);
+    expect(h.calls.curve).toBe(0);
   });
 });
