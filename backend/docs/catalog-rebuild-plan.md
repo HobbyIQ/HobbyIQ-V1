@@ -95,8 +95,10 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   2011 Heritage 71 …; slot 3 alone would retire 471,494 rows) and 5 are ONE
   mis-parsed row whose playerName is a real rung ("Die Cut" ×2, "Artist's
   Proof", "Triple Exposure", 2004 Bowman Chrome ×2) — retiring those would delete
-  the real parallel. #1405: PLAYERRUNG_MIN=5 hits or the product is kept. Dry
-  run #3 (slot 3/4) = 33258362517 → APPLY ×4.
+  the real parallel. #1405: PLAYERRUNG_MIN=5 hits or the product is kept. **Dry run #3 (33258362517):
+  17 products flagged, all roster explosions; the 5 singletons kept under the
+  floor; slot 3 alone 471,018 rows.** APPLY ×4 dispatched 15:16Z (33259764716
+  33259767774 33259771243 33259775326).
 - ☐ B2 Retire the MIS-PARSED rows (83,838; 45,292 are 1990 Donruss, ~26k Leaf via
   checklistcenter) — `retire-exploded-checklist-rows` MODE=misparsed, after B1.
 - ◐ B3 Unify `topps-allen-ginter` → `topps-allen-and-ginter` (checklist-majority
@@ -167,7 +169,13 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   a set text containing the SPORT and the Beckett row (setName "Bowman Draft")
   went. #1410: narrowToNamedProduct is a pure exported function over
   PRODUCT_WORDS (brands + product lines only); 4 real-shape tests, mutation-
-  checked (3 fail under the old vocabulary). Re-run #3 = 33259153271.
+  checked (3 fail under the old vocabulary). **Re-run #3 (33259153271, 15:03Z):
+  sale 87.0%, holding 96.5%, search 47.5%, ALL THREE 43.0%** (26.0 → 37.0 → 43.0
+  across the day). Live: `b5274b4`. Finding (iii) measured: the pool's sport
+  TAG never disagrees with the slug's sport (0 of 16M across 6×6 sport pairs) —
+  the tag is derived from the same place as the slug, so wrong-product sales
+  can only be found from the TITLE ("Score 🏈", "Upper Deck ... Rookies Jersey",
+  "UEFA"); a title-based measurement is queued for after the fleets drain.
   Remaining shapes in the 63 misses: (iv) sale/holding both land on
   `bowman-chrome:bcp-125` [not-found] for a `bowman:bcp-125` checklist card —
   the family ladder (bowman-chrome → bowman) is not walked on a miss (D6);
@@ -209,8 +217,25 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   removed the report-only sets the return line read; `node --check` is syntax,
   not a smoke test) — #1411, smoke-run locally on 3 products (19,371 rows;
   the html-only 2018 Donruss Optic page converted to 0 rows — look at html
-  card-list parsing after the xlsx-backed products land). Dry run #4 =
-  33259229904 (slots=1) → APPLY → MODE=source retire. Also seen in the same run: the bcp ladders re-ingest now
+  card-list parsing after the xlsx-backed products land). **Dry run #4
+  (33259229904): 510 products converted (311 xlsx / 199 html), 4,255,085 rows,
+  7 subsets refused — among them the BASE subsets of 2025 Topps Series 1 (359
+  "rungs" on a 350-card set), Series 2 (280) and 2026 Bowman (171).** Pulled
+  the three locally: the converter was building the cross-join ITSELF — every
+  xlsx line is already one (card, finish) pair, and the converter pooled a
+  section's finishes into one ladder and multiplied it onto every card of the
+  section ("Team Card Holo Foil" on Trout #1; base #1 got "Chrome Prospects
+  Gold Refractor", BCP-1 got "Gold Pattern Refractor"). 2023 Leaf Metal's 200
+  base "rungs", by contrast, are 200 REAL Leaf parallels — a count gate cannot
+  judge a manufacturer-published xlsx. #1413: the xlsx path emits one row per
+  line (nothing multiplied, no count gate), strips the per-card type qualifier
+  ("Future Stars", "Chrome Prospects", "Paper Prospects") when most of the
+  card's finishes extend it, and reads auto from the finish ("Auto Silver
+  Prismatic" → Silver Prismatic, isAuto). Local: Series 1 base 126,000 → 22,235
+  rows; 2026 Bowman base 80,324 → 18,381; Leaf 12,866 auto rows marked. Known
+  residue: the two-word section heuristic truncates insert category slugs
+  ("insert:under-the", "insert:chrome-prospect") — informational, not identity.
+  Dry run #5 = 33259741463 (slots=1) → APPLY → MODE=source retire. Also seen in the same run: the bcp ladders re-ingest now
   skips 762,534 player-name-parallel rows (#1396 working as built).
   cached at c:/tmp/clc (ladders only, no card lists → bounded 547-page re-fetch);
   the old HTML ingester split ladders on commas (player names became rungs) and
@@ -253,7 +278,11 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   **PR 8 ☑ #1408**: `checklistDiff` (admin pasted-checklist add) builds through
   deriveCatalogEntry/upsertCatalogEntry with authoritativeSetKey; #1409 drops
   the three converted files from the guard's debt list. PR 1 (guard rewrite)
-  and D4 PR 1/PR 3 are building in worktrees.
+  and D4 PR 1/PR 3 are building in worktrees; PR 2 (catalogRowOps) building too.
+  **PR 1 ☑ #1414**: the guard measures honestly (112 writers, 9 canonical, 41
+  mutators now visible, 5 false positives gone, red-capable); it surfaced two
+  more hand-rolled minters — `seedCardCatalog.ts` and
+  `cardsight-bulk/phase-a-crawl-cards.cjs` — both for PR 5 (delete).
   Remaining, smallest first: PR 1 fix the guard (import-match, not text-match;
   extend WRITES to patch/replace/delete; pair TOUCHES+WRITES to one container
   var); PR 8 `checklistDiff` onto deriveCatalogEntry/upsertCatalogEntry; PR 2
