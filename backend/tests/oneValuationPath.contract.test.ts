@@ -306,3 +306,97 @@ describe("D16 — one fixture pool, four handlers, one number", () => {
     expect(est.rungLabel).toBe(psa10.rungLabel);
   });
 });
+
+// ─── D17: every price surface through the one entry ─────────────────────────
+//
+// D16 left /card-detail, /card-panel, /observed-grade-curves-bulk and the
+// portfolio persist site on their own calls (same window policy, separate
+// computation). The same fixture pool goes through each of them here and
+// must come back as the SAME number and the SAME rung the four routes
+// serve — and the same null + reason when there is nothing.
+
+async function detail(id: string, g: { company: string; value: number } | null = null, extra: Record<string, unknown> = {}) {
+  const r = await request(app).post("/api/compiq/card-detail").set(H).send({
+    hobbyiqCardId: id, ...grade(g), includeGradeLadder: true, ...extra,
+  });
+  expect(r.status).toBe(200);
+  const label = g ? `${g.company.toUpperCase()} ${g.value}` : "Raw";
+  const tier = (r.body.gradeLadder as Array<Record<string, unknown>> | null)?.find((t) => t.gradeLabel === label) ?? null;
+  return { body: r.body, tier };
+}
+
+describe("D17 — /card-detail: the header is /hobbyiq-fmv's number, the ladder is the curve", () => {
+  it("(slug, Raw): fmv.fmv, fmv.rungLabel and the Raw ladder tier equal the four routes; identity on the wire", async () => {
+    const { pb, hf, gc } = await four(GOLD);
+    const { body, tier } = await detail(GOLD);
+    expect(body.fmv.fmv).toBe(pb.marketValue);
+    expect(body.fmv.fmv).toBe(hf.fmv);
+    expect(body.fmv.rungLabel).toBe(hf.rungLabel);
+    expect(body.fmv.method).toBe("direct-slug");
+    expect(body.rungLabel).toBe(pb.rungLabel);
+    expect(body.valueSource).toBe("observed");
+    expect(body.fmvReason).toBeNull();
+    expect(tier?.fmv).toBe(pb.marketValue);
+    expect(tier?.rungLabel).toBe(pb.rungLabel);
+    expect(tier?.method).toBe(pb.rungLabel);
+    expect(tier?.compCount).toBe(10);
+    expect(body.fmv.compCount).toBe(10);
+    // Every ladder tier is a curve entry: same value, same rung, per grade.
+    const entries = gc.entries as Array<Record<string, unknown>>;
+    for (const t of body.gradeLadder as Array<Record<string, unknown>>) {
+      const e = entries.find((x) => (t.gradeLabel === "Raw" ? x.grader === "Raw" : x.grade === t.gradeLabel))!;
+      expect(t.fmv, String(t.gradeLabel)).toBe(e.trendAdjustedValue ?? e.value);
+      expect(t.rungLabel, String(t.gradeLabel)).toBe(e.rungLabel);
+      expect(VOCAB.has(String(t.method)), String(t.method)).toBe(true);
+    }
+    expect(body.catalogIdentity.slug).toBe(GOLD);
+    expect(body.identity.setKey).toBe("bowman-chrome");
+    expect(body.identity.printRun).toBe(50);
+    expect(h.calls.canonical).toBe(0);
+    expect(h.calls.estimate).toBe(0);
+    expect(h.calls.curve).toBe(0);
+    expect(h.calls.ladder).toEqual([]);
+  });
+
+  it("(slug, PSA 10) and (slug, PSA 8): the graded header equals the graded wire — exact pool, then the empirical fill", async () => {
+    const psa10 = await four(GOLD, { company: "PSA", value: 10 });
+    const d10 = await detail(GOLD, { company: "PSA", value: 10 });
+    expect(d10.body.fmv.fmv).toBe(psa10.pb.marketValue);
+    expect(d10.body.fmv.rungLabel).toBe(psa10.pb.rungLabel);
+    expect(d10.tier?.fmv).toBe(psa10.pb.marketValue);
+    const psa8 = await four(GOLD, { company: "PSA", value: 8 });
+    const d8 = await detail(GOLD, { company: "PSA", value: 8 });
+    expect(d8.body.fmv.fmv).toBe(psa8.pb.marketValue);
+    expect(d8.body.rungLabel).toBe("grade-curve-estimate");
+    expect(d8.body.fmv.rungLabel).toBe("grade-curve-estimate");
+    expect(d8.body.valueSource).toBe("estimated");
+    expect(d8.tier?.fmv).toBe(psa8.pb.marketValue);
+    expect(d8.tier?.valueSource).toBe("estimated");
+    expect(d8.tier?.compCount).toBe(0);
+    expect(h.calls.ladder).toEqual([]);
+  });
+
+  it("no exact pool: fmv null, no-basis, the same reason as the four routes; the ladder stays empty (no second engine fills it)", async () => {
+    const e = await four(EMPTY);
+    const { body } = await detail(EMPTY);
+    expect(body.fmv.fmv).toBeNull();
+    expect(body.fmv.method).toBe("no-basis");
+    expect(body.rungLabel).toBe("no-basis");
+    expect(body.fmvReason).toBe(e.pb.fmvReason);
+    expect(body.fmvReason).toBe("no-exact-pool");
+    expect(body.gradeLadder).toEqual([]);
+    expect(body.fmvError).toBeNull();
+    expect(h.calls.canonical).toBe(0);
+    expect(h.calls.estimate).toBe(0);
+    expect(h.calls.curve).toBe(0);
+  });
+
+  it("a slug the catalog does not hold: identity-not-in-catalog, nothing priced, no engine asked", async () => {
+    const { body } = await detail(NOT_IN_CATALOG);
+    expect(body.fmv.fmv).toBeNull();
+    expect(body.fmvReason).toBe("identity-not-in-catalog");
+    expect(body.catalogIdentity.slug).toBeNull();
+    expect(h.calls.unified).toBe(0);
+    expect(h.calls.ladder).toEqual([]);
+  });
+});

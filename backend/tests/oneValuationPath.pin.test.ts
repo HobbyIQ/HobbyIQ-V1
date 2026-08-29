@@ -111,3 +111,29 @@ describe("D16 pins — the four routes price through the one valuation path only
     expect(src).toMatch(/method: isExactPoolRung\(u\.rungLabel\) \? "direct-slug" : "grade-cross-raw"/);
   });
 });
+
+// ─── D17: every price surface through the one entry ─────────────────────────
+//
+// The surfaces D16 left on their own calls. Each pin has the same shape as
+// the D16 ones: the entry answers first, and no second engine is consulted
+// for the headline (or for a tier) on the way.
+const D17_ENGINE_CALLS = [
+  ...ENGINE_CALLS,
+  "computeGradeBreakdownSingleScan(",   // the card-detail ladder's second engine (pre-D17)
+] as const;
+
+describe("D17 pins — card-detail, card-panel, the bulk curves and the persist site price through the one valuation path only", () => {
+  it("/card-detail: cardDetail.service calls valueIdentity and no engine — the header is the adapter over the valuation, the ladder is its curve", () => {
+    const src = stripComments(read("src/services/portfolioiq/cardDetail.service.ts"));
+    expect(src.includes("valueIdentity(")).toBe(true);
+    expect(src.includes("toHobbyIqFmvResponse(")).toBe(true);
+    expect(src.includes("ladderFromValuation(v)")).toBe(true);
+    for (const call of D17_ENGINE_CALLS) expect(src.includes(call), call).toBe(false);
+    expect(src.includes("getGraderPremium(")).toBe(false);
+    // The route hands the body to the service and nothing else prices there.
+    const canon = read("src/routes/canonicalFmv.routes.ts");
+    const body = handlerBody(canon, "post", "/card-detail");
+    expect(body.includes("computeCardDetail(")).toBe(true);
+    for (const call of D17_ENGINE_CALLS) expect(body.includes(call), call).toBe(false);
+  });
+});

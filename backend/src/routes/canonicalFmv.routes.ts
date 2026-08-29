@@ -316,16 +316,21 @@ router.get("/autocomplete-player", requireSession, async (req: Request, res: Res
 });
 
 // CF-CARD-DETAIL-COMPOSITE (Drew, 2026-07-25). Single-call card-detail
-// render for iOS. Wraps computeHobbyIqFmv + computeRelatedCards in one
+// render for iOS. Wraps the valuation + computeRelatedCards in one
 // parallel-fetched envelope so tap-into-card renders instantly instead
 // of chaining 2+ round-trips.
+//
+// CF-ONE-VALUATION-PATH (D17, 2026-08-30). The `fmv` block and the grade
+// ladder are the ONE valuation path's answer (cardDetail.service →
+// valueIdentity): the same number /hobbyiq-fmv serves for the slug + grade,
+// the ladder's every tier the same curve entry /observed-grade-curve serves.
 //
 // POST /api/compiq/card-detail
 // Body: {
 //   hobbyiqCardId: string,        // required — canonical slug
 //   gradeCompany?: string | null,
 //   gradeValue?: number | null,
-//   maxAgeDays?: number,          // freshness cutoff for FMV pool
+//   maxAgeDays?: number,          // accepted, not honoured since D17 (the engine's window)
 //   previewLimit?: number,        // recentComps preview size
 //   relatedLimit?: number,        // # of related cards per bucket
 // }
