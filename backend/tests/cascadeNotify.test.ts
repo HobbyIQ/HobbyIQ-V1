@@ -261,6 +261,6 @@ describe("sendCascadeAlertsForNewEvents — payload shape", () => {
     const result = await sendCascadeAlertsForNewEvents([]);
     expect(listUsersOwningPlayerWithCascadeOptInMock).not.toHaveBeenCalled();
     expect(sendCascadeAlertNotificationMock).not.toHaveBeenCalled();
-    expect(result).toEqual({ sent: 0, failed: 0 });
+    expect(result).toEqual({ sent: 0, failed: 0, optedInUsers: 0 });
   });
 });

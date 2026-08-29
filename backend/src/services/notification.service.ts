@@ -55,6 +55,17 @@ function getProvider(): apn.Provider | null {
   }
 }
 
+/**
+ * D13 (2026-08-29) — alert gates prove delivery. Every push path above
+ * no-ops silently when the APNs provider is missing; nightly jobs then
+ * report `pushSent: 0` and exit green. Callers ask this before trusting
+ * a zero. Same memoized init as a send, so the answer is the one a send
+ * would get — not a bare env check that could disagree with it.
+ */
+export function isPushProviderConfigured(): boolean {
+  return getProvider() !== null;
+}
+
 interface SendResult {
   sent: number;
   failed: number;
