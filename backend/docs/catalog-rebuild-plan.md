@@ -70,6 +70,14 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
 **A. In flight**
 - ◐ A1 `clean-parallel-annotations` APPLY, 4 slots (dry run: 402,289 rows — 242,194 move,
   44,194 fold, 8,233 replace a sale-minted twin, 23,127 heal, 0 failed)
+- ℹ Fleet conclusions read "failure" on budget-stopped runs: the scripts exit 4
+  at the budget marker and the "Run backfill" step goes red, but every
+  self-relaunch step ran (checked per family: unconfirmed s1, exploded s1,
+  clean s0, ginter s3 → relaunch step success). Ledger of every completed run
+  since 12:40Z lives in the session scratch; A1 (clean) slot 2 finished in one
+  window, slots 0/1/3 relaunched; A2 all 8 relaunched; B1 exploded all 8
+  relaunched; B3 ginter slots 0–2 done, slot 3 relaunched; tail ×4 done
+  (34,566 rows); B4 #3 wrote 6,065 rows.
 - ◐ A2 `retire-autoseed-window` MODE=unconfirmed — dry run: **383,803** rows, 238,640
   with pointing sales, 0 failed → APPLY running on 8 slots (#1371 gave it shards +
   a budget-gated relaunch)
@@ -238,8 +246,15 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   **Dry run #5 (33259741463): 510 products, 2,879,911 rows → 2,869,277 would
   land, no converter refusals, one 1,395-row category (2023 Leaf Eclectic
   [insert:leaf-metal], 154 rungs) caught by the ingest gate.** APPLY ×8
-  dispatched 15:20Z (33259974536 … 33259993471) → MODE=source retire of the old
-  `checklistcenter` / `checklistcenter-html` rows once every shard lands. Also seen in the same run: the bcp ladders re-ingest now
+  dispatched 15:20Z. **LANDED 16:05Z: 2,869,277 rows under
+  `checklistcenter-2026-08-29`, exactly the dry run's number** (shards 0–7:
+  351,828 / 405,031 / 334,792 / 353,739 / 351,022 / 359,362 / 309,888 /
+  403,615). Shards 3 and 4 exited non-zero AFTER writing: gate-dropped rows
+  (card-line, player-name, exploded category) were not declared to
+  reportWrites, so it called 2,065 / 6,434 rows "vanished" — #1430 declares
+  them. The runner ids I recorded for the D3 fleet were partly fleet
+  relaunch children created in the same seconds (the ledger, not the
+  dispatch list, is the record). MODE=source retire dry run = 33262435380. Also seen in the same run: the bcp ladders re-ingest now
   skips 762,534 player-name-parallel rows (#1396 working as built).
   cached at c:/tmp/clc (ladders only, no card lists → bounded 547-page re-fetch);
   the old HTML ingester split ladders on commas (player names became rungs) and
@@ -275,8 +290,23 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   the unified early exit (`computeUnifiedPrice` fills the top-level price only
   when `opts.grade.company` is set, and portfolioStore passes `grade: null`);
   (c) `pricingSource` has the staleness hazard fmvRung now guards against
-  (batch legacy writes never reset it). Next: PR 4 (one grade curve + the iOS
-  field-population contract).
+  (batch legacy writes never reset it). **PR 4 ☑ #1432 — ONE grade curve:**
+  `gradeCurveEntry.ts` is the adapter + contract (trendAdjustedValue =
+  marketValue, never null on a unified tier; `value` carries the same
+  projection so a median can no longer hide in iOS's fallback slot; medians
+  diagnostic; predictedPricePct null on the weighted-median rung); CF-RAW-IS-A-
+  TIER — `grade: null` now prices the Raw tier (raw holdings NEVER took the
+  unified path before); the tree enricher (the last writer on
+  /observed-grade-curve) is deleted and unified-only tiers (PSA 1–7, CSG/HGA)
+  appended; the four portfolioStore headline chains now read `marketValue ??
+  predictedPrice ?? fmv` — the tile / card-page number — instead of the +7d
+  read. **Visible:** holdings' headline FMV moves from the +7d prediction to
+  the fit-at-now market value; the iOS LAST SALE cell reads `entry.value`
+  first and will show the market value until iOS decodes `newestSalePrice`
+  (already on the wire). 860/860 tests, 3 mutation checks. Left for PR 5/6:
+  `canonicalFmv.buildGradeLadder` is still a SECOND curve rendered by iOS
+  (GradeLadderSection); `treeGradeCurve.service.ts` now uncalled; the
+  service's estimate passes and monotonic clamps still write entry fields.
 - ◐ D5 Phase 07 — the catalog writers. **Scoped 2026-08-29 (agent replicated the
   guard test's walk, read-only): 68 files match the guard, 5 are false positives
   (they write `sold_comps`), 2 of the 3 "canonical" passes are COMMENT matches —
@@ -312,6 +342,17 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   mutators now visible, 5 false positives gone, red-capable); it surfaced two
   more hand-rolled minters — `seedCardCatalog.ts` and
   `cardsight-bulk/phase-a-crawl-cards.cjs` — both for PR 5 (delete).
+  **PR 3 ☑ #1431**: the seven movers go through `moveCatalogRow` (−326/+176;
+  MOVERS self-emptied in the guard; map-derived's double-counted reconciliation
+  fixed; a setKey field/id-segment disagreement now fails loudly; provenance
+  unified to movedFrom/movedReason/movedAt). The running clean-parallel-
+  annotations / rename-setkey relaunch children pick this code up at their
+  next relaunch (`--ref main`), so REPORT-ONLY validation runs were
+  dispatched first: clean slot 0/4 = 33262432618, rename slot 3/4 =
+  33262433937. Next: PR 7 (approveVendorUnmatched — NEEDS DREW), PR 4
+  (8 allowlisted movers), PR 5 (delete class (a): workflows reference
+  catalog-sales-synth.yml, tcdbBatchFill in catalog-gap-digest.yml, and 6
+  backfill-runner whitelist entries — remove those with the files).
   Remaining, smallest first: PR 1 fix the guard (import-match, not text-match;
   extend WRITES to patch/replace/delete; pair TOUCHES+WRITES to one container
   var); PR 8 `checklistDiff` onto deriveCatalogEntry/upsertCatalogEntry; PR 2
@@ -365,8 +406,15 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   the colours, so "Gold Refractor 1st #/50" parses as bare "Refractor" and
   captures no print run — #1428 makes the seam adopt a vendor tag that
   REFINES the title's finish (else a real Gold Refractor sale would have lost
-  its gold under title-wins); a composition fix for the parser itself is
-  building in a worktree. Also shipped alongside: #1425 `/price`
+  its gold under title-wins); **#1433 fixes the parser itself** — a typed
+  finish vocabulary, modifiers kept in the title's order ("Reptilian Green
+  Refractor"), Sapphire only with a colour, Printing Plate colour-last,
+  team/product colour words blanked ("Blue Jays", "Topps Chrome Black"),
+  `printRun` captured (#/50, 14/50, numbered to 50, 1/1; grade fractions
+  protected; seasons rejected). Finding: the ingest seam parses with
+  `parseListingIdentity` (a separate 1,735-line parser that already
+  composes), so the seam's refinement rule (#1428) is defence; the consumers
+  of #1433 are the repair script, ebayImportRematch and ebayAutoHolding. Also shipped alongside: #1425 `/price`
   canonical-first slugs the PRODUCT (parsed.set ?? parsed.brand), not the
   brand. **Re-pricing the holding:** the app's own `POST /holdings/:id/refresh`
   (or the next batch reprice) — no local write path; Drew can tap refresh on
