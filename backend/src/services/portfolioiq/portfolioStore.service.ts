@@ -2483,14 +2483,76 @@ async function applyGradeLadderFallback(opts: {
   }
 }
 
+// CF-ONE-IDENTITY-IN-THE-POOL (2026-08-29, checklist D12a). A user's SALE or
+// PURCHASE is a sold_comps row, and sold_comps is partitioned on cardId.
+// Every user-sale writer in this file read `holding.cardId` — which on a
+// vendor-sourced holding is a CardHedge bubble.io id or a Cardsight compound
+// id — so a real sale by a real user, confidence 1.0, verifiedByUser, landed
+// in a VENDOR's partition. The only thing that could reach the canonical pool
+// was the hobbyiqCardId the store re-derived from the holding's free text,
+// which may or may not agree with the identity the holding had already been
+// pinned to. Nothing read `holding.hobbyiqCardId`.
+//
+// ONE resolution, used by every user-sale emit (purchase, manual sell, eBay
+// order poll): the hiq: slug the holding is pinned to — hobbyiqCardId, else
+// cardId when it is itself a slug — or nothing. A holding with no hiq
+// identity does not emit; the skip is logged as user_comp_withheld_no_identity.
+// The vendor id travels as `vendorCardId` metadata and never keys a row. No
+// catalog call here: recordSoldComp reconciles the slug against the catalog
+// and refuses (D7d, catalog-unmatched) what the catalog cannot place.
+export interface HoldingPoolIdentity {
+  /** The hiq: slug the row is keyed by, or null when the holding has none. */
+  cardId: string | null;
+  /** The same slug — the canonical key the row carries. */
+  hobbyiqCardId: string | null;
+  /** The holding's resolved print run, so a re-emit cannot drop :num-N (D9). */
+  printRun: number | null;
+  /** The holding's vendor cardId, when it has one. Metadata only. */
+  vendorCardId: string | null;
+  via: "hobbyiqCardId" | "cardId" | "none";
+}
+
+function isHiqSlug(v: unknown): v is string {
+  return typeof v === "string" && v.trim().startsWith("hiq:") && v.trim().length > 4;
+}
+
+export function poolIdentityForHolding(holding: PortfolioHolding): HoldingPoolIdentity {
+  const h = holding as PortfolioHolding & { printRun?: unknown };
+  const pinned = String(h.hobbyiqCardId ?? "").trim();
+  const cardId = String(h.cardId ?? "").trim();
+  const vendorCardId = cardId && !isHiqSlug(cardId) ? cardId : null;
+  const printRun = typeof h.printRun === "number" && Number.isInteger(h.printRun) && h.printRun > 0 ? h.printRun : null;
+  if (isHiqSlug(pinned)) return { cardId: pinned, hobbyiqCardId: pinned, printRun, vendorCardId, via: "hobbyiqCardId" };
+  if (isHiqSlug(cardId)) return { cardId, hobbyiqCardId: cardId, printRun, vendorCardId: null, via: "cardId" };
+  return { cardId: null, hobbyiqCardId: null, printRun, vendorCardId, via: "none" };
+}
+
+function logUserCompWithheldNoIdentity(
+  source: string,
+  userId: string,
+  holding: PortfolioHolding,
+  identity: HoldingPoolIdentity,
+): void {
+  console.warn(JSON.stringify({
+    event: "user_comp_withheld_no_identity",
+    source,
+    userId,
+    holdingId: holding.id,
+    vendorCardId: identity.vendorCardId,
+    detail: "no hiq: slug on the holding; a user sale or purchase is never pooled under a vendor id",
+  }));
+}
+
 // CF-USER-EBAY-PURCHASE-AUTO-COMP (Drew, 2026-08-08). Fires from
 // addHolding + updateHolding when a user tells us they bought a card
-// on eBay. Writes one sold_comps row per holding (dedup key
-// `holding::<id>`), matching the pattern ebayImportRematch uses so
-// re-emissions from either path converge on the same doc.
+// on eBay. Writes one sold_comps row per holding, keyed the way the eBay
+// import keys its purchase row (D9 purchaseSaleIdentity: the order id, then
+// the item id, then `holding::<id>`) so re-emissions from either path
+// converge on the same doc.
 async function emitUserEbayPurchaseComp(
   holding: PortfolioHolding,
   userId: string,
+  doc?: { purchases?: ReadonlyArray<unknown> } | null,
 ): Promise<void> {
   const src = String((holding as { purchaseSource?: string }).purchaseSource ?? "").trim();
   if (!src || !/^ebay/i.test(src)) return;
@@ -2498,28 +2560,44 @@ async function emitUserEbayPurchaseComp(
   if (!Number.isFinite(price) || price <= 0) return;
   const purchaseDate = String((holding as { purchaseDate?: string }).purchaseDate ?? "").trim();
   if (!purchaseDate) return;
-  const cardId = String((holding as { cardId?: string }).cardId ?? "").trim();
   const playerName = String((holding as { playerName?: string }).playerName ?? "").trim();
-  if (!cardId || !playerName) return;
+  if (!playerName) return;
+  // CF-ONE-IDENTITY-IN-THE-POOL (D12a): the pinned slug, never the vendor id.
+  const identity = poolIdentityForHolding(holding);
+  if (!identity.cardId) {
+    logUserCompWithheldNoIdentity("portfolioStore.emitUserEbayPurchaseComp", userId, holding, identity);
+    return;
+  }
+  const cardId = identity.cardId;
   const soldAt = purchaseDate.includes("T") ? purchaseDate : `${purchaseDate}T00:00:00Z`;
   try {
     const { recordSoldComp } = await import("./soldCompsStore.service.js");
+    // D9's key, so the import's row and this one are ONE row: the purchase
+    // record's eBay order id, else the ids the holding carries, else
+    // `holding::<id>`. Same-id rows supersede in the store.
+    const { purchaseSaleIdentity, sourcePurchaseFor } = await import("./ebayAutoHolding.service.js");
+    const { sourceExternalId } = purchaseSaleIdentity(
+      sourcePurchaseFor(doc ?? null, holding as unknown as Record<string, unknown>),
+      holding as unknown as Record<string, unknown>,
+    );
+    const sport = (holding as { sport?: unknown }).sport;
     await recordSoldComp({
       cardId,
+      vendorCardId: identity.vendorCardId,
       playerName,
       cardYear: ((holding as { cardYear?: number }).cardYear ?? null) as number | null,
       setName: ((holding as { setName?: string }).setName ?? null) as string | null,
       parallel: ((holding as { parallel?: string }).parallel ?? null) as string | null,
       cardNumber: ((holding as { cardNumber?: string }).cardNumber ?? null) as string | null,
       isAuto: (holding as { isAuto?: boolean }).isAuto === true,
+      printRun: identity.printRun,
+      sport: typeof sport === "string" && sport ? sport.toLowerCase() : null,
       gradeCompany: ((holding as { gradeCompany?: string }).gradeCompany ?? null) as string | null,
       gradeValue: ((holding as { gradeValue?: number }).gradeValue ?? null) as number | null,
       price,
       soldAt,
       source: "ebay-user-purchase",
-      // Dedup key across re-emissions: `holding::<id>` matches the fallback
-      // used by ebayImportRematch when no ebayItemId is available.
-      sourceExternalId: (holding as { ebayItemId?: string }).ebayItemId ?? `holding::${holding.id}`,
+      sourceExternalId,
       contributorUserId: userId,
       title: ((holding as { cardTitle?: string }).cardTitle ?? null) as string | null,
       imageUrl: ((holding as { photos?: string[] }).photos?.[0] ?? null) as string | null,
@@ -2535,6 +2613,9 @@ async function emitUserEbayPurchaseComp(
       userId,
       holdingId: holding.id,
       cardId,
+      identityVia: identity.via,
+      vendorCardId: identity.vendorCardId,
+      sourceExternalId,
       price,
       grade: (holding as { gradeCompany?: string }).gradeCompany
         ? `${(holding as { gradeCompany?: string }).gradeCompany} ${(holding as { gradeValue?: number }).gradeValue ?? ""}`.trim()
@@ -5673,7 +5754,7 @@ export async function addHolding(req: Request, res: Response) {
   // Gate: purchaseSource must start with "ebay" (case-insensitive) AND
   // purchasePrice > 0 AND purchaseDate present. Silent-safe: any Cosmos
   // failure leaves the holding intact.
-  await emitUserEbayPurchaseComp(doc.holdings[holding.id], auth.userId).catch((err) => {
+  await emitUserEbayPurchaseComp(doc.holdings[holding.id], auth.userId, doc).catch((err) => {
     console.warn(JSON.stringify({
       event: "user_ebay_purchase_comp_error",
       source: "portfolioStore.addHolding",
@@ -5928,7 +6009,7 @@ export async function updateHolding(req: Request, res: Response) {
   // user may add / correct purchase details after the initial add. Dedup
   // key `holding::<id>` means re-emissions upsert the same doc — no dup
   // comps from repeated edits.
-  await emitUserEbayPurchaseComp(doc.holdings[id], auth.userId).catch((err) => {
+  await emitUserEbayPurchaseComp(doc.holdings[id], auth.userId, doc).catch((err) => {
     console.warn(JSON.stringify({
       event: "user_ebay_purchase_comp_error",
       source: "portfolioStore.updateHolding",
@@ -7233,19 +7314,26 @@ export async function sellHolding(req: Request, res: Response) {
   // sold_comps pool captures REAL sale prices from real users. Same
   // fire-and-forget pattern as confirm-hook — never blocks the sale
   // response, never fails the sale on comp write.
-  const soldCardId = String((holding as any).cardId ?? "").trim();
-  if (soldCardId && holding.playerName) {
+  // CF-ONE-IDENTITY-IN-THE-POOL (D12a): the pinned slug, never the vendor id.
+  const sellIdentity = poolIdentityForHolding(holding);
+  if (!sellIdentity.cardId && holding.playerName) {
+    logUserCompWithheldNoIdentity("portfolioStore.sellHolding", auth.userId, holding, sellIdentity);
+  }
+  if (sellIdentity.cardId && holding.playerName) {
+    const soldCardId = sellIdentity.cardId;
     void (async () => {
       try {
         const { recordSoldComp } = await import("./soldCompsStore.service.js");
         await recordSoldComp({
           cardId: soldCardId,
+          vendorCardId: sellIdentity.vendorCardId,
           playerName: String(holding.playerName ?? ""),
           cardYear: holding.cardYear ?? null,
           setName: holding.setName ?? null,
           parallel: holding.parallel ?? null,
           cardNumber: holding.cardNumber ?? null,
           isAuto: holding.isAuto === true,
+          printRun: sellIdentity.printRun,
           // CF-USER-COMPS-GRADE-EMIT (Drew, 2026-07-18): include grade
           // fields so downstream readers (canonical FMV rung 1's
           // per-grade pool filter) match this row correctly against a
@@ -7598,19 +7686,27 @@ export async function markHoldingSoldFromEbay(
   // Previously only the manual /sell path emitted; this closes the
   // flywheel gap. Idempotent via {source}::{sourceExternalId} — replay
   // safe if the webhook fires twice.
-  const ebaySoldCardId = String((holding as { cardId?: string }).cardId ?? "").trim();
-  if (ebaySoldCardId && holding.playerName) {
+  // CF-ONE-IDENTITY-IN-THE-POOL (D12a): the pinned slug, never the vendor id.
+  // The sale is still marked sold either way; only the pool write is withheld.
+  const poolIdentity = poolIdentityForHolding(holding);
+  if (!poolIdentity.cardId && holding.playerName) {
+    logUserCompWithheldNoIdentity("portfolioStore.markHoldingSoldFromEbay", userId, holding, poolIdentity);
+  }
+  if (poolIdentity.cardId && holding.playerName) {
+    const ebaySoldCardId = poolIdentity.cardId;
     void (async () => {
       try {
         const { recordSoldComp } = await import("./soldCompsStore.service.js");
         await recordSoldComp({
           cardId: ebaySoldCardId,
+          vendorCardId: poolIdentity.vendorCardId,
           playerName: String(holding.playerName ?? ""),
           cardYear: holding.cardYear ?? null,
           setName: holding.setName ?? null,
           parallel: holding.parallel ?? null,
           cardNumber: holding.cardNumber ?? null,
           isAuto: holding.isAuto === true,
+          printRun: poolIdentity.printRun,
           gradeCompany: (holding as { gradeCompany?: string | null }).gradeCompany ?? null,
           gradeValue: (holding as { gradeValue?: number | null }).gradeValue ?? null,
           price: unitSalePrice,
