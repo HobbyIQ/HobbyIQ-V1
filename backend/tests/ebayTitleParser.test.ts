@@ -156,9 +156,17 @@ describe("parseListingTitle — edge cases", () => {
   });
 
   it("named parallel captured (Padparadscha, Refractor, X-Fractor, Wave)", () => {
-    for (const parallel of ["Padparadscha", "Refractor", "Xfractor", "Wave"]) {
-      const p = parseListingTitle(`2025 Bowman Chrome Sapphire ${parallel} Owen Carey`);
-      expect(p.parallel).toMatch(new RegExp(parallel, "i"));
+    // CF-THE-TITLE-COMPOSES-ITS-FINISH (2026-08-29): the parallel is now in
+    // the pool's spelling, so a title's "Xfractor" is reported as "X-Fractor".
+    // The pin used to echo the title's own spelling back.
+    for (const [titled, spelled] of [
+      ["Padparadscha", "Padparadscha"],
+      ["Refractor", "Refractor"],
+      ["Xfractor", "X-Fractor"],
+      ["Wave", "Wave"],
+    ]) {
+      const p = parseListingTitle(`2025 Bowman Chrome Sapphire ${titled} Owen Carey`);
+      expect(p.parallel).toMatch(new RegExp(spelled, "i"));
     }
   });
 
