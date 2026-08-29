@@ -33,7 +33,10 @@ const UNTIL = process.env.UNTIL || new Date().toISOString();
 // unconfirmed -- no checklist card behind it, any sport, no time window. The
 // card-confirmed sale-minted rows are NOT touched: they are real cards whose
 // rung the ladders will fold; Ohtani's 2018 Topps Chrome Refractor is one.
-const SCOPE = String(process.env.SCOPE || process.env.MODE || "window").toLowerCase() === "unconfirmed" ? "unconfirmed" : "window";
+// The runner exports SCOPE=refractor by default (repair-refractor-mislabel's
+// input), so MODE must outrank SCOPE here or the unconfirmed pass silently
+// runs the window pass (dry run 33252844937 did exactly that).
+const SCOPE = [String(process.env.MODE || ""), String(process.env.SCOPE || "")].map((v) => v.toLowerCase()).includes("unconfirmed") ? "unconfirmed" : "window";
 const CONCURRENCY = Math.max(1, Number(process.env.CONCURRENCY || 32));
 const LIMIT = Number(process.env.LIMIT || 0);
 const RUN_MS = Number(process.env.RUN_MINUTES || 140) * 60000;
