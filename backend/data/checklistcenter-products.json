@@ -1,0 +1,4930 @@
+{
+ "generatedAt": "2026-08-29T14:10:04.105Z",
+ "source": "c:/tmp/clc cache (scrape-clc-checklist.mjs), ladders only — no card lists",
+ "count": 547,
+ "products": [
+  {
+   "url": "https://www.checklistcenter.com/2018-bowman-baseball-card-checklist/",
+   "sourceSlug": "2018-bowman-baseball-card-checklist",
+   "productName": "2018 Bowman",
+   "year": 2018,
+   "sport": "baseball",
+   "subsets": 20,
+   "parallels": 27
+  },
+  {
+   "url": "https://www.checklistcenter.com/2018-bowman-draft-baseball-card-checklist/",
+   "sourceSlug": "2018-bowman-draft-baseball-card-checklist",
+   "productName": "2018 Bowman Draft",
+   "year": 2018,
+   "sport": "baseball",
+   "subsets": 18,
+   "parallels": 9
+  },
+  {
+   "url": "https://www.checklistcenter.com/2018-donruss-optic-baseball-card-checklist/",
+   "sourceSlug": "2018-donruss-optic-baseball-card-checklist",
+   "productName": "2018 Donruss Optic",
+   "year": 2018,
+   "sport": "baseball",
+   "subsets": 19,
+   "parallels": 138
+  },
+  {
+   "url": "https://www.checklistcenter.com/2018-leaf-valiant-baseball-baseball-card-checklist/",
+   "sourceSlug": "2018-leaf-valiant-baseball-baseball-card-checklist",
+   "productName": "2018 Leaf Valiant Baseball",
+   "year": 2018,
+   "sport": "baseball",
+   "subsets": 5,
+   "parallels": 21
+  },
+  {
+   "url": "https://www.checklistcenter.com/2018-topps-archives-baseball-card-checklist/",
+   "sourceSlug": "2018-topps-archives-baseball-card-checklist",
+   "productName": "2018 Topps Archives",
+   "year": 2018,
+   "sport": "baseball",
+   "subsets": 15,
+   "parallels": 25
+  },
+  {
+   "url": "https://www.checklistcenter.com/2019-bowmans-best-baseball-card-checklist/",
+   "sourceSlug": "2019-bowmans-best-baseball-card-checklist",
+   "productName": "2019 Bowman's Best",
+   "year": 2019,
+   "sport": "baseball",
+   "subsets": 12,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2019-donruss-baseball-card-checklist/",
+   "sourceSlug": "2019-donruss-baseball-card-checklist",
+   "productName": "2019 Donruss",
+   "year": 2019,
+   "sport": "baseball",
+   "subsets": 28,
+   "parallels": 126
+  },
+  {
+   "url": "https://www.checklistcenter.com/2019-leaf-flash-baseball-card-checklist/",
+   "sourceSlug": "2019-leaf-flash-baseball-card-checklist",
+   "productName": "2019 Leaf Flash",
+   "year": 2019,
+   "sport": "baseball",
+   "subsets": 8,
+   "parallels": 51
+  },
+  {
+   "url": "https://www.checklistcenter.com/2019-leaf-metal-draft-baseball-baseball-card-checklist/",
+   "sourceSlug": "2019-leaf-metal-draft-baseball-baseball-card-checklist",
+   "productName": "2019 Leaf Metal Draft Baseball",
+   "year": 2019,
+   "sport": "baseball",
+   "subsets": 8,
+   "parallels": 152
+  },
+  {
+   "url": "https://www.checklistcenter.com/2019-leaf-metal-perfect-game-all-american-classic-baseball-card-checklist/",
+   "sourceSlug": "2019-leaf-metal-perfect-game-all-american-classic-baseball-card-checklist",
+   "productName": "2019 Leaf Metal Perfect Game All-American Classic",
+   "year": 2019,
+   "sport": "baseball",
+   "subsets": 7,
+   "parallels": 43
+  },
+  {
+   "url": "https://www.checklistcenter.com/2019-leaf-trinity-baseball-baseball-card-checklist/",
+   "sourceSlug": "2019-leaf-trinity-baseball-baseball-card-checklist",
+   "productName": "2019 Leaf Trinity Baseball",
+   "year": 2019,
+   "sport": "baseball",
+   "subsets": 4,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2019-leaf-ultimate-draft-baseball-card-checklist/",
+   "sourceSlug": "2019-leaf-ultimate-draft-baseball-card-checklist",
+   "productName": "2019 Leaf Ultimate Draft",
+   "year": 2019,
+   "sport": "baseball",
+   "subsets": 7,
+   "parallels": 37
+  },
+  {
+   "url": "https://www.checklistcenter.com/2019-leaf-valiant-baseball-baseball-card-checklist/",
+   "sourceSlug": "2019-leaf-valiant-baseball-baseball-card-checklist",
+   "productName": "2019 Leaf Valiant Baseball",
+   "year": 2019,
+   "sport": "baseball",
+   "subsets": 7,
+   "parallels": 50
+  },
+  {
+   "url": "https://www.checklistcenter.com/2019-topps-dynasty-baseball-card-checklist/",
+   "sourceSlug": "2019-topps-dynasty-baseball-card-checklist",
+   "productName": "2019 Topps Dynasty",
+   "year": 2019,
+   "sport": "baseball",
+   "subsets": 11,
+   "parallels": 10
+  },
+  {
+   "url": "https://www.checklistcenter.com/2019-topps-finest-baseball-card-checklist/",
+   "sourceSlug": "2019-topps-finest-baseball-card-checklist",
+   "productName": "2019 Topps Finest",
+   "year": 2019,
+   "sport": "baseball",
+   "subsets": 13,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2019-topps-stadium-club-baseball-card-checklist/",
+   "sourceSlug": "2019-topps-stadium-club-baseball-card-checklist",
+   "productName": "2019 Topps Stadium Club",
+   "year": 2019,
+   "sport": "baseball",
+   "subsets": 17,
+   "parallels": 44
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-bowman-baseball-baseball-card-checklist/",
+   "sourceSlug": "2020-bowman-baseball-baseball-card-checklist",
+   "productName": "2020 Bowman Baseball",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 20,
+   "parallels": 29
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-bowman-chrome-baseball-card-checklist/",
+   "sourceSlug": "2020-bowman-chrome-baseball-card-checklist",
+   "productName": "2020 Bowman Chrome",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 21,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-bowman-draft-baseball-card-checklist/",
+   "sourceSlug": "2020-bowman-draft-baseball-card-checklist",
+   "productName": "2020 Bowman Draft",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 18,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-bowman-heritage-baseball-card-checklist/",
+   "sourceSlug": "2020-bowman-heritage-baseball-card-checklist",
+   "productName": "2020 Bowman Heritage",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 7,
+   "parallels": 4
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-bowman-platinum-baseball-card-checklist/",
+   "sourceSlug": "2020-bowman-platinum-baseball-card-checklist",
+   "productName": "2020 Bowman Platinum",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 13,
+   "parallels": 39
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-bowman-sapphire-edition-baseball-card-checklist/",
+   "sourceSlug": "2020-bowman-sapphire-edition-baseball-card-checklist",
+   "productName": "2020 Bowman Sapphire Edition",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 3,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-bowman-sterling-baseball-card-checklist/",
+   "sourceSlug": "2020-bowman-sterling-baseball-card-checklist",
+   "productName": "2020 Bowman Sterling",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 9,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-bowmans-best-baseball-card-checklist/",
+   "sourceSlug": "2020-bowmans-best-baseball-card-checklist",
+   "productName": "2020 Bowman's Best",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 13,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-donruss-baseball-card-checklist/",
+   "sourceSlug": "2020-donruss-baseball-card-checklist",
+   "productName": "2020 Donruss Baseball",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 24,
+   "parallels": 135
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-donruss-optic-baseball-card-checklist/",
+   "sourceSlug": "2020-donruss-optic-baseball-card-checklist",
+   "productName": "2020 Donruss Optic",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 18,
+   "parallels": 115
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-leaf-draft-baseball-card-checklist/",
+   "sourceSlug": "2020-leaf-draft-baseball-card-checklist",
+   "productName": "2020 Leaf Draft Baseball",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 4,
+   "parallels": 3
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-leaf-flash-baseball-card-checklist/",
+   "sourceSlug": "2020-leaf-flash-baseball-card-checklist",
+   "productName": "2020 Leaf Flash",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 8,
+   "parallels": 49
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-leaf-hall-of-fame-baseball-cut-signatures-baseball-card-checklist/",
+   "sourceSlug": "2020-leaf-hall-of-fame-baseball-cut-signatures-baseball-card-checklist",
+   "productName": "2020 Leaf Hall of Fame Baseball Cut Signatures",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 2,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-leaf-lumber-kings-baseball-card-checklist/",
+   "sourceSlug": "2020-leaf-lumber-kings-baseball-card-checklist",
+   "productName": "2020 Leaf Lumber Kings",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 17,
+   "parallels": 66
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-leaf-metal-draft-baseball-card-checklist/",
+   "sourceSlug": "2020-leaf-metal-draft-baseball-card-checklist",
+   "productName": "2020 Leaf Metal Draft",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 10,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-leaf-metal-perfect-game-all-american-baseball-card-checklist/",
+   "sourceSlug": "2020-leaf-metal-perfect-game-all-american-baseball-card-checklist",
+   "productName": "2020 Leaf Metal Perfect Game All-American",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 4,
+   "parallels": 43
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-leaf-perfect-game-national-showcase-baseball-card-checklist/",
+   "sourceSlug": "2020-leaf-perfect-game-national-showcase-baseball-card-checklist",
+   "productName": "2020 Leaf Perfect Game National Showcase",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 5,
+   "parallels": 24
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-leaf-pete-rose-charlie-hustle-edition-baseball-card-checklist/",
+   "sourceSlug": "2020-leaf-pete-rose-charlie-hustle-edition-baseball-card-checklist",
+   "productName": "2020 Leaf Pete Rose Charlie Hustle Edition",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 2,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-leaf-trinity-baseball-baseball-card-checklist/",
+   "sourceSlug": "2020-leaf-trinity-baseball-baseball-card-checklist",
+   "productName": "2020 Leaf Trinity Baseball",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 7,
+   "parallels": 6
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-leaf-valiant-baseball-card-checklist/",
+   "sourceSlug": "2020-leaf-valiant-baseball-card-checklist",
+   "productName": "2020 Leaf Valiant Baseball",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 8,
+   "parallels": 55
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-onyx-nimbus-baseball-card-checklist/",
+   "sourceSlug": "2020-onyx-nimbus-baseball-card-checklist",
+   "productName": "2020 Onyx Nimbus",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 3,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-onyx-vintage-baseball-card-checklist/",
+   "sourceSlug": "2020-onyx-vintage-baseball-card-checklist",
+   "productName": "2020 Onyx Vintage",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 6,
+   "parallels": 7
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-onyx-vintage-extended-baseball-card-checklist/",
+   "sourceSlug": "2020-onyx-vintage-extended-baseball-card-checklist",
+   "productName": "2020 Onyx Vintage Extended",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 2,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-panini-absolute-baseball-card-checklist/",
+   "sourceSlug": "2020-panini-absolute-baseball-card-checklist",
+   "productName": "2020 Panini Absolute",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 33,
+   "parallels": 67
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-panini-chronicles-baseball-baseball-card-checklist/",
+   "sourceSlug": "2020-panini-chronicles-baseball-baseball-card-checklist",
+   "productName": "2020 Panini Chronicles Baseball",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 46,
+   "parallels": 196
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-panini-contenders-baseball-card-checklist/",
+   "sourceSlug": "2020-panini-contenders-baseball-card-checklist",
+   "productName": "2020 Panini Contenders",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 29,
+   "parallels": 34
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-panini-diamond-kings-baseball-card-checklist/",
+   "sourceSlug": "2020-panini-diamond-kings-baseball-card-checklist",
+   "productName": "2020 Panini Diamond Kings",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 31,
+   "parallels": 47
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-panini-elite-extra-edition-baseball-card-checklist/",
+   "sourceSlug": "2020-panini-elite-extra-edition-baseball-card-checklist",
+   "productName": "2020 Panini Elite Extra Edition",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 33,
+   "parallels": 96
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-panini-flawless-baseball-baseball-card-checklist/",
+   "sourceSlug": "2020-panini-flawless-baseball-baseball-card-checklist",
+   "productName": "2020 Panini Flawless Baseball",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 41,
+   "parallels": 130
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-panini-immaculate-baseball-baseball-card-checklist/",
+   "sourceSlug": "2020-panini-immaculate-baseball-baseball-card-checklist",
+   "productName": "2020 Panini Immaculate Baseball",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 37,
+   "parallels": 148
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-panini-national-treasures-baseball-card-checklist/",
+   "sourceSlug": "2020-panini-national-treasures-baseball-card-checklist",
+   "productName": "2020 Panini National Treasures",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 64,
+   "parallels": 182
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-panini-prizm-baseball-card-checklist/",
+   "sourceSlug": "2020-panini-prizm-baseball-card-checklist",
+   "productName": "2020 Panini Prizm",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 22,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-panini-prizm-draft-picks-baseball-card-checklist/",
+   "sourceSlug": "2020-panini-prizm-draft-picks-baseball-card-checklist",
+   "productName": "2020 Panini Prizm Draft Picks",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 17,
+   "parallels": 3
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-panini-select-baseball-card-checklist/",
+   "sourceSlug": "2020-panini-select-baseball-card-checklist",
+   "productName": "2020 Panini Select",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 23,
+   "parallels": 121
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-panini-stars-stripes-usa-baseball-card-checklist/",
+   "sourceSlug": "2020-panini-stars-stripes-usa-baseball-card-checklist",
+   "productName": "2020 Panini Stars & Stripes USA",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 21,
+   "parallels": 60
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-topps-allen-ginter-baseball-card-checklist/",
+   "sourceSlug": "2020-topps-allen-ginter-baseball-card-checklist",
+   "productName": "2020 Topps Allen & Ginter",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 45,
+   "parallels": 26
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-topps-allen-ginter-chrome-baseball-card-checklist/",
+   "sourceSlug": "2020-topps-allen-ginter-chrome-baseball-card-checklist",
+   "productName": "2020 Topps Allen & Ginter Chrome",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 6,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-topps-allen-ginter-x-baseball-card-checklist/",
+   "sourceSlug": "2020-topps-allen-ginter-x-baseball-card-checklist",
+   "productName": "2020 Topps Allen & Ginter X",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 5,
+   "parallels": 4
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-topps-archives-baseball-card-checklist/",
+   "sourceSlug": "2020-topps-archives-baseball-card-checklist",
+   "productName": "2020 Topps Archives",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 21,
+   "parallels": 34
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-topps-archives-signature-series-active-baseball-card-checklist/",
+   "sourceSlug": "2020-topps-archives-signature-series-active-baseball-card-checklist",
+   "productName": "2020 Topps Archives Signature Series",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 2,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-topps-archives-snapshots-baseball-card-checklist/",
+   "sourceSlug": "2020-topps-archives-snapshots-baseball-card-checklist",
+   "productName": "2020 Topps Archives Snapshots",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 5,
+   "parallels": 16
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-topps-baseballs-finest-flashbacks-baseball-card-checklist/",
+   "sourceSlug": "2020-topps-baseballs-finest-flashbacks-baseball-card-checklist",
+   "productName": "2020 Topps Baseball's Finest Flashbacks",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 6,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-topps-big-league-baseball-card-checklist/",
+   "sourceSlug": "2020-topps-big-league-baseball-card-checklist",
+   "productName": "2020 Topps Big League",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 14,
+   "parallels": 10
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-topps-chrome-baseball-card-checklist/",
+   "sourceSlug": "2020-topps-chrome-baseball-card-checklist",
+   "productName": "2020 Topps Chrome",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 19,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-topps-chrome-ben-baller-baseball-card-checklist/",
+   "sourceSlug": "2020-topps-chrome-ben-baller-baseball-card-checklist",
+   "productName": "2020 Topps Chrome Ben Baller",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 5,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-topps-chrome-black-baseball-card-checklist/",
+   "sourceSlug": "2020-topps-chrome-black-baseball-card-checklist",
+   "productName": "2020 Topps Chrome Black",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 4,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-topps-chrome-sapphire-baseball-card-checklist/",
+   "sourceSlug": "2020-topps-chrome-sapphire-baseball-card-checklist",
+   "productName": "2020 Topps Chrome Sapphire",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 3,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-topps-chrome-update-baseball-card-checklist/",
+   "sourceSlug": "2020-topps-chrome-update-baseball-card-checklist",
+   "productName": "2020 Topps Chrome Update",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 8,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-topps-clearly-authentic-baseball-card-checklist/",
+   "sourceSlug": "2020-topps-clearly-authentic-baseball-card-checklist",
+   "productName": "2020 Topps Clearly Authentic",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 6,
+   "parallels": 26
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-topps-definitive-collection-baseball-card-checklist/",
+   "sourceSlug": "2020-topps-definitive-collection-baseball-card-checklist",
+   "productName": "2020 Topps Definitive Collection",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 19,
+   "parallels": 39
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-topps-diamond-icons-baseball-card-checklist/",
+   "sourceSlug": "2020-topps-diamond-icons-baseball-card-checklist",
+   "productName": "2020 Topps Diamond Icons",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 20,
+   "parallels": 33
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-topps-dynasty-baseball-card-checklist/",
+   "sourceSlug": "2020-topps-dynasty-baseball-card-checklist",
+   "productName": "2020 Topps Dynasty",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 12,
+   "parallels": 12
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-topps-finest-baseball-card-checklist/",
+   "sourceSlug": "2020-topps-finest-baseball-card-checklist",
+   "productName": "2020 Topps Finest",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 13,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-topps-fire-baseball-card-checklist/",
+   "sourceSlug": "2020-topps-fire-baseball-card-checklist",
+   "productName": "2020 Topps Fire",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 11,
+   "parallels": 31
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-topps-five-star-baseball-card-checklist/",
+   "sourceSlug": "2020-topps-five-star-baseball-card-checklist",
+   "productName": "2020 Topps Five Star",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 12,
+   "parallels": 29
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-topps-gallery-baseball-card-checklist/",
+   "sourceSlug": "2020-topps-gallery-baseball-card-checklist",
+   "productName": "2020 Topps Gallery",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 15,
+   "parallels": 27
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-topps-gold-label-baseball-card-checklist/",
+   "sourceSlug": "2020-topps-gold-label-baseball-card-checklist",
+   "productName": "2020 Topps Gold Label",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 9,
+   "parallels": 24
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-topps-gypsy-queen-baseball-card-checklist/",
+   "sourceSlug": "2020-topps-gypsy-queen-baseball-card-checklist",
+   "productName": "2020 Topps Gypsy Queen",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 20,
+   "parallels": 45
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-topps-heritage-baseball-card-checklist/",
+   "sourceSlug": "2020-topps-heritage-baseball-card-checklist",
+   "productName": "2020 Topps Heritage",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 33,
+   "parallels": 12
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-topps-heritage-high-number-baseball-card-checklist/",
+   "sourceSlug": "2020-topps-heritage-high-number-baseball-card-checklist",
+   "productName": "2020 Topps Heritage High Number",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 33,
+   "parallels": 11
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-topps-heritage-minor-league-baseball-card-checklist/",
+   "sourceSlug": "2020-topps-heritage-minor-league-baseball-card-checklist",
+   "productName": "2020 Topps Heritage Minor League",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 18,
+   "parallels": 7
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-topps-holiday-mega-box-baseball-card-checklist/",
+   "sourceSlug": "2020-topps-holiday-mega-box-baseball-card-checklist",
+   "productName": "2020 Topps Holiday Mega Box",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 10,
+   "parallels": 14
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-topps-inception-baseball-card-checklist/",
+   "sourceSlug": "2020-topps-inception-baseball-card-checklist",
+   "productName": "2020 Topps Inception",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 15,
+   "parallels": 29
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-topps-luminaries-baseball-card-checklist/",
+   "sourceSlug": "2020-topps-luminaries-baseball-card-checklist",
+   "productName": "2020 Topps Luminaries",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 28,
+   "parallels": 22
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-topps-museum-collection-baseball-card-checklist/",
+   "sourceSlug": "2020-topps-museum-collection-baseball-card-checklist",
+   "productName": "2020 Topps Museum Collection",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 25,
+   "parallels": 32
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-topps-national-baseball-card-day-baseball-card-checklist/",
+   "sourceSlug": "2020-topps-national-baseball-card-day-baseball-card-checklist",
+   "productName": "2020 Topps National Baseball Card Day",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 4,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-topps-opening-day-baseball-card-checklist/",
+   "sourceSlug": "2020-topps-opening-day-baseball-card-checklist",
+   "productName": "2020 Topps Opening Day",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 25,
+   "parallels": 3
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-topps-pro-debut-baseball-card-checklist/",
+   "sourceSlug": "2020-topps-pro-debut-baseball-card-checklist",
+   "productName": "2020 Topps Pro Debut",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 18,
+   "parallels": 33
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-topps-rip-baseball-card-checklist/",
+   "sourceSlug": "2020-topps-rip-baseball-card-checklist",
+   "productName": "2020 Topps Rip",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 5,
+   "parallels": 8
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-topps-series-1-baseball-card-checklist/",
+   "sourceSlug": "2020-topps-series-1-baseball-card-checklist",
+   "productName": "2020 Topps Series 1",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 45,
+   "parallels": 88
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-topps-series-2-baseball-card-checklist/",
+   "sourceSlug": "2020-topps-series-2-baseball-card-checklist",
+   "productName": "2020 Topps Series 2",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 40,
+   "parallels": 76
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-topps-silver-packs-series-2-baseball-card-checklist/",
+   "sourceSlug": "2020-topps-silver-packs-series-2-baseball-card-checklist",
+   "productName": "2020 Topps Silver Packs Series 2",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 5,
+   "parallels": 13
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-topps-stadium-club-baseball-card-checklist/",
+   "sourceSlug": "2020-topps-stadium-club-baseball-card-checklist",
+   "productName": "2020 Topps Stadium Club",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 18,
+   "parallels": 49
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-topps-stadium-club-chrome-baseball-card-checklist/",
+   "sourceSlug": "2020-topps-stadium-club-chrome-baseball-card-checklist",
+   "productName": "2020 Topps Stadium Club Chrome",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 9,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-topps-sterling-baseball-card-checklist/",
+   "sourceSlug": "2020-topps-sterling-baseball-card-checklist",
+   "productName": "2020 Topps Sterling",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 14,
+   "parallels": 15
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-topps-tier-one-baseball-card-checklist/",
+   "sourceSlug": "2020-topps-tier-one-baseball-card-checklist",
+   "productName": "2020 Topps Tier One",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 27,
+   "parallels": 24
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-topps-transcendent-collection-baseball-baseball-card-checklist/",
+   "sourceSlug": "2020-topps-transcendent-collection-baseball-baseball-card-checklist",
+   "productName": "2020 Topps Transcendent Collection Baseball",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 13,
+   "parallels": 8
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-topps-transcendent-collection-hall-of-fame-baseball-card-checklist/",
+   "sourceSlug": "2020-topps-transcendent-collection-hall-of-fame-baseball-card-checklist",
+   "productName": "2020 Topps Transcendent Collection Hall of Fame",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 11,
+   "parallels": 6
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-topps-tribute-baseball-card-checklist/",
+   "sourceSlug": "2020-topps-tribute-baseball-card-checklist",
+   "productName": "2020 Topps Tribute",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 18,
+   "parallels": 53
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-topps-triple-threads-baseball-card-checklist/",
+   "sourceSlug": "2020-topps-triple-threads-baseball-card-checklist",
+   "productName": "2020 Topps Triple Threads",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 35,
+   "parallels": 82
+  },
+  {
+   "url": "https://www.checklistcenter.com/2020-topps-update-series-baseball-card-checklist/",
+   "sourceSlug": "2020-topps-update-series-baseball-card-checklist",
+   "productName": "2020 Topps Update Series",
+   "year": 2020,
+   "sport": "baseball",
+   "subsets": 36,
+   "parallels": 86
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-bowman-1st-edition-baseball-card-checklist/",
+   "sourceSlug": "2021-bowman-1st-edition-baseball-card-checklist",
+   "productName": "2021 Bowman 1st Edition",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 4,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-bowman-baseball-card-checklist/",
+   "sourceSlug": "2021-bowman-baseball-card-checklist",
+   "productName": "2021 Bowman",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 21,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-bowman-chrome-baseball-card-checklist/",
+   "sourceSlug": "2021-bowman-chrome-baseball-card-checklist",
+   "productName": "2021 Bowman Chrome",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 20,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-bowman-chrome-mega-box-baseball-card-checklist/",
+   "sourceSlug": "2021-bowman-chrome-mega-box-baseball-card-checklist",
+   "productName": "2021 Bowman Chrome Mega Box",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 8,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-bowman-chrome-sapphire-edition-baseball-card-checklist/",
+   "sourceSlug": "2021-bowman-chrome-sapphire-edition-baseball-card-checklist",
+   "productName": "2021 Bowman Chrome Sapphire Edition",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 4,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-bowman-chrome-x-baseball-card-checklist/",
+   "sourceSlug": "2021-bowman-chrome-x-baseball-card-checklist",
+   "productName": "2021 Bowman Chrome X",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 4,
+   "parallels": 4
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-bowman-draft-1st-edition-baseball-card-checklist/",
+   "sourceSlug": "2021-bowman-draft-1st-edition-baseball-card-checklist",
+   "productName": "2021 Bowman Draft 1st Edition",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 3,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-bowman-draft-baseball-card-checklist/",
+   "sourceSlug": "2021-bowman-draft-baseball-card-checklist",
+   "productName": "2021 Bowman Draft",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 15,
+   "parallels": 10
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-bowman-draft-sapphire-baseball-card-checklist/",
+   "sourceSlug": "2021-bowman-draft-sapphire-baseball-card-checklist",
+   "productName": "2021 Bowman Draft Sapphire",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 2,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-bowman-heritage-baseball-card-checklist/",
+   "sourceSlug": "2021-bowman-heritage-baseball-card-checklist",
+   "productName": "2021 Bowman Heritage",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 6,
+   "parallels": 11
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-bowman-inception-baseball-card-checklist/",
+   "sourceSlug": "2021-bowman-inception-baseball-card-checklist",
+   "productName": "2021 Bowman Inception",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 6,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-bowman-mega-box-chrome-baseball-card-checklist/",
+   "sourceSlug": "2021-bowman-mega-box-chrome-baseball-card-checklist",
+   "productName": "2021 Bowman Mega Box Chrome",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 8,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-bowman-platinum-baseball-card-checklist/",
+   "sourceSlug": "2021-bowman-platinum-baseball-card-checklist",
+   "productName": "2021 Bowman Platinum",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 21,
+   "parallels": 59
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-bowman-sapphire-edition-baseball-card-checklist/",
+   "sourceSlug": "2021-bowman-sapphire-edition-baseball-card-checklist",
+   "productName": "2021 Bowman Sapphire Edition",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 3,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-bowman-sterling-baseball-card-checklist/",
+   "sourceSlug": "2021-bowman-sterling-baseball-card-checklist",
+   "productName": "2021 Bowman Sterling",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 10,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-bowman-transcendent-collection-baseball-card-checklist/",
+   "sourceSlug": "2021-bowman-transcendent-collection-baseball-card-checklist",
+   "productName": "2021 Bowman Transcendent Collection",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 11,
+   "parallels": 10
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-bowmans-best-baseball-card-checklist/",
+   "sourceSlug": "2021-bowmans-best-baseball-card-checklist",
+   "productName": "2021 Bowman's Best",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 12,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-donruss-baseball-card-checklist/",
+   "sourceSlug": "2021-donruss-baseball-card-checklist",
+   "productName": "2021 Donruss Baseball",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 23,
+   "parallels": 135
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-donruss-optic-baseball-card-checklist/",
+   "sourceSlug": "2021-donruss-optic-baseball-card-checklist",
+   "productName": "2021 Donruss Optic",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 18,
+   "parallels": 170
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-leaf-draft-baseball-blaster-baseball-card-checklist/",
+   "sourceSlug": "2021-leaf-draft-baseball-blaster-baseball-card-checklist",
+   "productName": "2021 Leaf Draft Baseball Blaster",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 3,
+   "parallels": 2
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-leaf-flash-baseball-card-checklist/",
+   "sourceSlug": "2021-leaf-flash-baseball-card-checklist",
+   "productName": "2021 Leaf Flash Baseball",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 9,
+   "parallels": 68
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-leaf-lumber-baseball-card-checklist/",
+   "sourceSlug": "2021-leaf-lumber-baseball-card-checklist",
+   "productName": "2021 Leaf Lumber",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 27,
+   "parallels": 178
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-leaf-metal-draft-baseball-card-checklist/",
+   "sourceSlug": "2021-leaf-metal-draft-baseball-card-checklist",
+   "productName": "2021 Leaf Metal Draft",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 9,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-leaf-metal-perfect-game-all-american-classic-baseball-card-checklist/",
+   "sourceSlug": "2021-leaf-metal-perfect-game-all-american-classic-baseball-card-checklist",
+   "productName": "2021 Leaf Metal Perfect Game All-American Classic",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 6,
+   "parallels": 41
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-leaf-perfect-game-national-showcase-baseball-card-checklist/",
+   "sourceSlug": "2021-leaf-perfect-game-national-showcase-baseball-card-checklist",
+   "productName": "2021 Leaf Perfect Game National Showcase",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 5,
+   "parallels": 43
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-leaf-trinity-baseball-card-checklist/",
+   "sourceSlug": "2021-leaf-trinity-baseball-card-checklist",
+   "productName": "2021 Leaf Trinity Baseball",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 4,
+   "parallels": 21
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-leaf-valiant-baseball-baseball-card-checklist/",
+   "sourceSlug": "2021-leaf-valiant-baseball-baseball-card-checklist",
+   "productName": "2021 Leaf Valiant Baseball",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 5,
+   "parallels": 32
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-onyx-premium-baseball-card-checklist/",
+   "sourceSlug": "2021-onyx-premium-baseball-card-checklist",
+   "productName": "2021 Onyx Premium",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 2,
+   "parallels": 5
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-onyx-vintage-baseball-card-checklist/",
+   "sourceSlug": "2021-onyx-vintage-baseball-card-checklist",
+   "productName": "2021 Onyx Vintage Baseball",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 3,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-onyx-vintage-extended-baseball-card-checklist/",
+   "sourceSlug": "2021-onyx-vintage-extended-baseball-card-checklist",
+   "productName": "2021 Onyx Vintage Extended",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 3,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-panini-absolute-baseball-card-checklist/",
+   "sourceSlug": "2021-panini-absolute-baseball-card-checklist",
+   "productName": "2021 Panini Absolute",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 33,
+   "parallels": 158
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-panini-chronicles-baseball-card-checklist/",
+   "sourceSlug": "2021-panini-chronicles-baseball-card-checklist",
+   "productName": "2021 Panini Chronicles",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 51,
+   "parallels": 235
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-panini-contenders-baseball-card-checklist/",
+   "sourceSlug": "2021-panini-contenders-baseball-card-checklist",
+   "productName": "2021 Panini Contenders",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 31,
+   "parallels": 34
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-panini-diamond-kings-baseball-card-checklist/",
+   "sourceSlug": "2021-panini-diamond-kings-baseball-card-checklist",
+   "productName": "2021 Panini Diamond Kings",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 27,
+   "parallels": 67
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-panini-elite-extra-edition-baseball-card-checklist/",
+   "sourceSlug": "2021-panini-elite-extra-edition-baseball-card-checklist",
+   "productName": "2021 Panini Elite Extra Edition",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 19,
+   "parallels": 103
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-panini-flawless-baseball-card-checklist/",
+   "sourceSlug": "2021-panini-flawless-baseball-card-checklist",
+   "productName": "2021 Panini Flawless",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 48,
+   "parallels": 145
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-panini-immaculate-collection-baseball-card-checklist/",
+   "sourceSlug": "2021-panini-immaculate-collection-baseball-card-checklist",
+   "productName": "2021 Panini Immaculate Collection",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 41,
+   "parallels": 168
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-panini-mosaic-baseball-card-checklist/",
+   "sourceSlug": "2021-panini-mosaic-baseball-card-checklist",
+   "productName": "2021 Panini Mosaic",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 29,
+   "parallels": 6
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-panini-national-treasures-baseball-card-checklist/",
+   "sourceSlug": "2021-panini-national-treasures-baseball-card-checklist",
+   "productName": "2021 Panini National Treasures",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 70,
+   "parallels": 169
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-panini-prizm-baseball-card-checklist/",
+   "sourceSlug": "2021-panini-prizm-baseball-card-checklist",
+   "productName": "2021 Panini Prizm",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 21,
+   "parallels": 28
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-panini-prizm-draft-picks-baseball-card-checklist/",
+   "sourceSlug": "2021-panini-prizm-draft-picks-baseball-card-checklist",
+   "productName": "2021 Panini Prizm Draft Picks",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 20,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-panini-select-baseball-card-checklist/",
+   "sourceSlug": "2021-panini-select-baseball-card-checklist",
+   "productName": "2021 Panini Select",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 28,
+   "parallels": 167
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-panini-spectra-baseball-card-checklist/",
+   "sourceSlug": "2021-panini-spectra-baseball-card-checklist",
+   "productName": "2021 Panini Spectra",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 32,
+   "parallels": 216
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-panini-stars-stripes-usa-baseball-box-set-baseball-card-checklist/",
+   "sourceSlug": "2021-panini-stars-stripes-usa-baseball-box-set-baseball-card-checklist",
+   "productName": "2021 Panini Stars & Stripes USA Baseball Box Set",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 3,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-panini-stars-stripes-usa-baseball-card-checklist/",
+   "sourceSlug": "2021-panini-stars-stripes-usa-baseball-card-checklist",
+   "productName": "2021 Panini Stars & Stripes USA",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 25,
+   "parallels": 44
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-pro-set-baseball-blaster-baseball-card-checklist/",
+   "sourceSlug": "2021-pro-set-baseball-blaster-baseball-card-checklist",
+   "productName": "2021 Pro Set Baseball Blaster",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 3,
+   "parallels": 4
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-pro-set-metal-baseball-baseball-card-checklist/",
+   "sourceSlug": "2021-pro-set-metal-baseball-baseball-card-checklist",
+   "productName": "2021 Pro Set Metal Baseball",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 4,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-topps-all-star-rookie-cup-baseball-card-checklist/",
+   "sourceSlug": "2021-topps-all-star-rookie-cup-baseball-card-checklist",
+   "productName": "2021 Topps All-Star Rookie Cup",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 9,
+   "parallels": 41
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-topps-allen-ginter-baseball-card-checklist/",
+   "sourceSlug": "2021-topps-allen-ginter-baseball-card-checklist",
+   "productName": "2021 Topps Allen & Ginter",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 44,
+   "parallels": 25
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-topps-allen-ginter-chrome-baseball-card-checklist/",
+   "sourceSlug": "2021-topps-allen-ginter-chrome-baseball-card-checklist",
+   "productName": "2021 Topps Allen & Ginter Chrome",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 7,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-topps-allen-ginter-x-baseball-card-checklist/",
+   "sourceSlug": "2021-topps-allen-ginter-x-baseball-card-checklist",
+   "productName": "2021 Topps Allen & Ginter X",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 6,
+   "parallels": 4
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-topps-archives-baseball-card-checklist/",
+   "sourceSlug": "2021-topps-archives-baseball-card-checklist",
+   "productName": "2021 Topps Archives Baseball",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 19,
+   "parallels": 23
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-topps-archives-signature-series-retired-player-edition-baseball-card-checklist/",
+   "sourceSlug": "2021-topps-archives-signature-series-retired-player-edition-baseball-card-checklist",
+   "productName": "2021 Topps Archives Signature Series Retired Player Edition",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 2,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-topps-archives-snapshots-baseball-card-checklist/",
+   "sourceSlug": "2021-topps-archives-snapshots-baseball-card-checklist",
+   "productName": "2021 Topps Archives Snapshots",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 5,
+   "parallels": 19
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-topps-baseball-complete-factory-set-baseball-card-checklist/",
+   "sourceSlug": "2021-topps-baseball-complete-factory-set-baseball-card-checklist",
+   "productName": "2021 Topps Baseball Complete Factory Set",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 3,
+   "parallels": 2
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-topps-baseball-japan-edition-baseball-card-checklist/",
+   "sourceSlug": "2021-topps-baseball-japan-edition-baseball-card-checklist",
+   "productName": "2021 Topps Baseball Japan Edition",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 7,
+   "parallels": 14
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-topps-baseball-uk-edition-baseball-card-checklist/",
+   "sourceSlug": "2021-topps-baseball-uk-edition-baseball-card-checklist",
+   "productName": "2021 Topps Baseball UK Edition",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 5,
+   "parallels": 15
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-topps-big-league-baseball-card-checklist/",
+   "sourceSlug": "2021-topps-big-league-baseball-card-checklist",
+   "productName": "2021 Topps Big League",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 18,
+   "parallels": 16
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-topps-brooklyn-collection-baseball-card-checklist/",
+   "sourceSlug": "2021-topps-brooklyn-collection-baseball-card-checklist",
+   "productName": "2021 Topps Brooklyn Collection",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 3,
+   "parallels": 15
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-topps-chrome-baseball-card-checklist/",
+   "sourceSlug": "2021-topps-chrome-baseball-card-checklist",
+   "productName": "2021 Topps Chrome",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 16,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-topps-chrome-ben-baller-baseball-card-checklist/",
+   "sourceSlug": "2021-topps-chrome-ben-baller-baseball-card-checklist",
+   "productName": "2021 Topps Chrome Ben Baller",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 6,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-topps-chrome-black-baseball-card-checklist/",
+   "sourceSlug": "2021-topps-chrome-black-baseball-card-checklist",
+   "productName": "2021 Topps Chrome Black",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 4,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-topps-chrome-platinum-anniversary-baseball-card-checklist/",
+   "sourceSlug": "2021-topps-chrome-platinum-anniversary-baseball-card-checklist",
+   "productName": "2021 Topps Chrome Platinum Anniversary",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 4,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-topps-chrome-sapphire-edition-baseball-card-checklist/",
+   "sourceSlug": "2021-topps-chrome-sapphire-edition-baseball-card-checklist",
+   "productName": "2021 Topps Chrome Sapphire Edition",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 3,
+   "parallels": 10
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-topps-chrome-update-baseball-card-checklist/",
+   "sourceSlug": "2021-topps-chrome-update-baseball-card-checklist",
+   "productName": "2021 Topps Chrome Update",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 10,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-topps-chrome-update-sapphire-baseball-card-checklist/",
+   "sourceSlug": "2021-topps-chrome-update-sapphire-baseball-card-checklist",
+   "productName": "2021 Topps Chrome Update Sapphire",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 3,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-topps-clearly-authentic-baseball-card-checklist/",
+   "sourceSlug": "2021-topps-clearly-authentic-baseball-card-checklist",
+   "productName": "2021 Topps Clearly Authentic",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 6,
+   "parallels": 22
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-topps-definitive-collection-baseball-card-checklist/",
+   "sourceSlug": "2021-topps-definitive-collection-baseball-card-checklist",
+   "productName": "2021 Topps Definitive Collection",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 21,
+   "parallels": 44
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-topps-diamond-icons-baseball-card-checklist/",
+   "sourceSlug": "2021-topps-diamond-icons-baseball-card-checklist",
+   "productName": "2021 Topps Diamond Icons",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 22,
+   "parallels": 35
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-topps-dynasty-baseball-card-checklist/",
+   "sourceSlug": "2021-topps-dynasty-baseball-card-checklist",
+   "productName": "2021 Topps Dynasty",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 12,
+   "parallels": 11
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-topps-finest-baseball-card-checklist/",
+   "sourceSlug": "2021-topps-finest-baseball-card-checklist",
+   "productName": "2021 Topps Finest",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 13,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-topps-finest-flashbacks-baseball-card-checklist/",
+   "sourceSlug": "2021-topps-finest-flashbacks-baseball-card-checklist",
+   "productName": "2021 Topps Finest Flashbacks",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 6,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-topps-fire-baseball-card-checklist/",
+   "sourceSlug": "2021-topps-fire-baseball-card-checklist",
+   "productName": "2021 Topps Fire",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 11,
+   "parallels": 24
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-topps-five-star-baseball-card-checklist/",
+   "sourceSlug": "2021-topps-five-star-baseball-card-checklist",
+   "productName": "2021 Topps Five Star",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 14,
+   "parallels": 29
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-topps-gallery-baseball-card-checklist/",
+   "sourceSlug": "2021-topps-gallery-baseball-card-checklist",
+   "productName": "2021 Topps Gallery",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 15,
+   "parallels": 43
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-topps-gypsy-queen-baseball-card-checklist/",
+   "sourceSlug": "2021-topps-gypsy-queen-baseball-card-checklist",
+   "productName": "2021 Topps Gypsy Queen",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 18,
+   "parallels": 34
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-topps-heritage-baseball-card-checklist/",
+   "sourceSlug": "2021-topps-heritage-baseball-card-checklist",
+   "productName": "2021 Topps Heritage",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 31,
+   "parallels": 12
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-topps-heritage-high-number-baseball-card-checklist/",
+   "sourceSlug": "2021-topps-heritage-high-number-baseball-card-checklist",
+   "productName": "2021 Topps Heritage High Number",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 27,
+   "parallels": 10
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-topps-heritage-minor-leagues-baseball-card-checklist/",
+   "sourceSlug": "2021-topps-heritage-minor-leagues-baseball-card-checklist",
+   "productName": "2021 Topps Heritage Minor Leagues",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 13,
+   "parallels": 2
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-topps-holiday-mega-box-baseball-card-checklist/",
+   "sourceSlug": "2021-topps-holiday-mega-box-baseball-card-checklist",
+   "productName": "2021 Topps Holiday Mega Box",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 12,
+   "parallels": 2
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-topps-inception-baseball-card-checklist/",
+   "sourceSlug": "2021-topps-inception-baseball-card-checklist",
+   "productName": "2021 Topps Inception",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 16,
+   "parallels": 31
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-topps-luminaries-baseball-card-checklist/",
+   "sourceSlug": "2021-topps-luminaries-baseball-card-checklist",
+   "productName": "2021 Topps Luminaries",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 30,
+   "parallels": 30
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-topps-mickey-mantle-collection-baseball-card-checklist/",
+   "sourceSlug": "2021-topps-mickey-mantle-collection-baseball-card-checklist",
+   "productName": "2021 Topps Mickey Mantle Collection",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 5,
+   "parallels": 11
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-topps-museum-collection-baseball-card-checklist/",
+   "sourceSlug": "2021-topps-museum-collection-baseball-card-checklist",
+   "productName": "2021 Topps Museum Collection",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 25,
+   "parallels": 34
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-topps-national-baseball-card-day-baseball-card-checklist/",
+   "sourceSlug": "2021-topps-national-baseball-card-day-baseball-card-checklist",
+   "productName": "2021 Topps National Baseball Card Day",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 3,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-topps-npb-baseball-card-checklist/",
+   "sourceSlug": "2021-topps-npb-baseball-card-checklist",
+   "productName": "2021 Topps NPB",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 4,
+   "parallels": 15
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-topps-nscc-bowman-national-convention-baseball-card-checklist/",
+   "sourceSlug": "2021-topps-nscc-bowman-national-convention-baseball-card-checklist",
+   "productName": "2021 Topps NSCC Bowman National Convention",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 3,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-topps-opening-day-baseball-card-checklist/",
+   "sourceSlug": "2021-topps-opening-day-baseball-card-checklist",
+   "productName": "2021 Topps Opening Day",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 22,
+   "parallels": 2
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-topps-pro-debut-baseball-card-checklist/",
+   "sourceSlug": "2021-topps-pro-debut-baseball-card-checklist",
+   "productName": "2021 Topps Pro Debut",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 13,
+   "parallels": 29
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-topps-rip-baseball-card-checklist/",
+   "sourceSlug": "2021-topps-rip-baseball-card-checklist",
+   "productName": "2021 Topps Rip",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 5,
+   "parallels": 8
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-topps-series-1-baseball-card-checklist/",
+   "sourceSlug": "2021-topps-series-1-baseball-card-checklist",
+   "productName": "2021 Topps Series 1",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 44,
+   "parallels": 84
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-topps-series-2-baseball-card-checklist/",
+   "sourceSlug": "2021-topps-series-2-baseball-card-checklist",
+   "productName": "2021 Topps Series 2",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 40,
+   "parallels": 97
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-topps-spotlight-70-andy-friedman-baseball-card-checklist/",
+   "sourceSlug": "2021-topps-spotlight-70-andy-friedman-baseball-card-checklist",
+   "productName": "2021 Topps Spotlight 70 Andy Friedman",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 5,
+   "parallels": 5
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-topps-stadium-club-baseball-card-checklist/",
+   "sourceSlug": "2021-topps-stadium-club-baseball-card-checklist",
+   "productName": "2021 Topps Stadium Club",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 19,
+   "parallels": 55
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-topps-stadium-club-chrome-baseball-card-checklist/",
+   "sourceSlug": "2021-topps-stadium-club-chrome-baseball-card-checklist",
+   "productName": "2021 Topps Stadium Club Chrome",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 10,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-topps-sterling-baseball-card-checklist/",
+   "sourceSlug": "2021-topps-sterling-baseball-card-checklist",
+   "productName": "2021 Topps Sterling",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 15,
+   "parallels": 18
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-topps-tier-one-baseball-card-checklist/",
+   "sourceSlug": "2021-topps-tier-one-baseball-card-checklist",
+   "productName": "2021 Topps Tier One",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 26,
+   "parallels": 25
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-topps-transcendent-collection-baseball-card-checklist/",
+   "sourceSlug": "2021-topps-transcendent-collection-baseball-card-checklist",
+   "productName": "2021 Topps Transcendent Collection",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 15,
+   "parallels": 7
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-topps-transcendent-hall-of-fame-baseball-card-checklist/",
+   "sourceSlug": "2021-topps-transcendent-hall-of-fame-baseball-card-checklist",
+   "productName": "2021 Topps Transcendent Hall of Fame",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 11,
+   "parallels": 9
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-topps-tribute-baseball-card-checklist/",
+   "sourceSlug": "2021-topps-tribute-baseball-card-checklist",
+   "productName": "2021 Topps Tribute",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 19,
+   "parallels": 54
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-topps-triple-threads-baseball-card-checklist/",
+   "sourceSlug": "2021-topps-triple-threads-baseball-card-checklist",
+   "productName": "2021 Topps Triple Threads",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 34,
+   "parallels": 83
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-topps-update-series-baseball-card-checklist/",
+   "sourceSlug": "2021-topps-update-series-baseball-card-checklist",
+   "productName": "2021 Topps Update Series",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 35,
+   "parallels": 68
+  },
+  {
+   "url": "https://www.checklistcenter.com/2021-topps-x-derek-jeter-baseball-card-checklist/",
+   "sourceSlug": "2021-topps-x-derek-jeter-baseball-card-checklist",
+   "productName": "2021 Topps X Derek Jeter",
+   "year": 2021,
+   "sport": "baseball",
+   "subsets": 3,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-bowman-1st-edition-baseball-card-checklist/",
+   "sourceSlug": "2022-bowman-1st-edition-baseball-card-checklist",
+   "productName": "2022 Bowman 1st Edition",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 4,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-bowman-baseball-card-checklist/",
+   "sourceSlug": "2022-bowman-baseball-card-checklist",
+   "productName": "2022 Bowman Baseball",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 23,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-bowman-chrome-baseball-card-checklist/",
+   "sourceSlug": "2022-bowman-chrome-baseball-card-checklist",
+   "productName": "2022 Bowman Chrome",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 23,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-bowman-chrome-mega-box-baseball-card-checklist/",
+   "sourceSlug": "2022-bowman-chrome-mega-box-baseball-card-checklist",
+   "productName": "2022 Bowman Chrome Mega Box",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 8,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-bowman-chrome-sapphire-edition-baseball-card-checklist/",
+   "sourceSlug": "2022-bowman-chrome-sapphire-edition-baseball-card-checklist",
+   "productName": "2022 Bowman Chrome Sapphire Edition",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 3,
+   "parallels": 6
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-bowman-chrome-x-baseball-card-checklist/",
+   "sourceSlug": "2022-bowman-chrome-x-baseball-card-checklist",
+   "productName": "2022 Bowman Chrome X",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 5,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-bowman-draft-1st-edition-baseball-card-checklist/",
+   "sourceSlug": "2022-bowman-draft-1st-edition-baseball-card-checklist",
+   "productName": "2022 Bowman Draft 1st Edition",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 3,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-bowman-draft-baseball-card-checklist/",
+   "sourceSlug": "2022-bowman-draft-baseball-card-checklist",
+   "productName": "2022 Bowman Draft",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 18,
+   "parallels": 10
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-bowman-draft-sapphire-edition-baseball-card-checklist/",
+   "sourceSlug": "2022-bowman-draft-sapphire-edition-baseball-card-checklist",
+   "productName": "2022 Bowman Draft Sapphire Edition",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 2,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-bowman-heritage-baseball-card-checklist/",
+   "sourceSlug": "2022-bowman-heritage-baseball-card-checklist",
+   "productName": "2022 Bowman Heritage",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 7,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-bowman-inception-baseball-card-checklist/",
+   "sourceSlug": "2022-bowman-inception-baseball-card-checklist",
+   "productName": "2022 Bowman Inception",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 7,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-bowman-mega-box-chrome-baseball-card-checklist/",
+   "sourceSlug": "2022-bowman-mega-box-chrome-baseball-card-checklist",
+   "productName": "2022 Bowman Mega Box Chrome",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 8,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-bowman-npb-baseball-card-checklist/",
+   "sourceSlug": "2022-bowman-npb-baseball-card-checklist",
+   "productName": "2022 Bowman NPB",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 6,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-bowman-platinum-baseball-card-checklist/",
+   "sourceSlug": "2022-bowman-platinum-baseball-card-checklist",
+   "productName": "2022 Bowman Platinum",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 21,
+   "parallels": 59
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-bowman-sapphire-edition-baseball-card-checklist/",
+   "sourceSlug": "2022-bowman-sapphire-edition-baseball-card-checklist",
+   "productName": "2022 Bowman Sapphire Edition",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 3,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-bowman-sterling-baseball-card-checklist/",
+   "sourceSlug": "2022-bowman-sterling-baseball-card-checklist",
+   "productName": "2022 Bowman Sterling",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 9,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-bowman-transcendent-collection-baseball-card-checklist/",
+   "sourceSlug": "2022-bowman-transcendent-collection-baseball-card-checklist",
+   "productName": "2022 Bowman Transcendent Collection",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 12,
+   "parallels": 10
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-bowmans-best-baseball-card-checklist/",
+   "sourceSlug": "2022-bowmans-best-baseball-card-checklist",
+   "productName": "2022 Bowman's Best",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 15,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-donruss-baseball-card-checklist/",
+   "sourceSlug": "2022-donruss-baseball-card-checklist",
+   "productName": "2022 Donruss",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 24,
+   "parallels": 148
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-donruss-optic-baseball-card-checklist/",
+   "sourceSlug": "2022-donruss-optic-baseball-card-checklist",
+   "productName": "2022 Donruss Optic",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 18,
+   "parallels": 166
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-leaf-lumber-baseball-card-checklist/",
+   "sourceSlug": "2022-leaf-lumber-baseball-card-checklist",
+   "productName": "2022 Leaf Lumber",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 33,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-leaf-metal-baseball-card-checklist/",
+   "sourceSlug": "2022-leaf-metal-baseball-card-checklist",
+   "productName": "2022 Leaf Metal Baseball",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 12,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-leaf-metal-perfect-game-all-american-classic-baseball-card-checklist/",
+   "sourceSlug": "2022-leaf-metal-perfect-game-all-american-classic-baseball-card-checklist",
+   "productName": "2022 Leaf Metal Perfect Game All-American Classic",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 6,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-leaf-trinity-baseball-card-checklist/",
+   "sourceSlug": "2022-leaf-trinity-baseball-card-checklist",
+   "productName": "2022 Leaf Trinity Baseball",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 10,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-leaf-vivid-baseball-card-checklist/",
+   "sourceSlug": "2022-leaf-vivid-baseball-card-checklist",
+   "productName": "2022 Leaf Vivid Baseball",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 9,
+   "parallels": 36
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-onyx-vintage-baseball-card-checklist/",
+   "sourceSlug": "2022-onyx-vintage-baseball-card-checklist",
+   "productName": "2022 Onyx Vintage",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 2,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-onyx-vintage-extended-baseball-card-checklist/",
+   "sourceSlug": "2022-onyx-vintage-extended-baseball-card-checklist",
+   "productName": "2022 Onyx Vintage Extended",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 3,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-panini-absolute-baseball-card-checklist/",
+   "sourceSlug": "2022-panini-absolute-baseball-card-checklist",
+   "productName": "2022 Panini Absolute",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 34,
+   "parallels": 135
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-panini-capstone-baseball-card-checklist/",
+   "sourceSlug": "2022-panini-capstone-baseball-card-checklist",
+   "productName": "2022 Panini Capstone",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 24,
+   "parallels": 29
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-panini-chronicles-baseball-card-checklist/",
+   "sourceSlug": "2022-panini-chronicles-baseball-card-checklist",
+   "productName": "2022 Panini Chronicles",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 60,
+   "parallels": 312
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-panini-diamond-kings-baseball-card-checklist/",
+   "sourceSlug": "2022-panini-diamond-kings-baseball-card-checklist",
+   "productName": "2022 Panini Diamond Kings",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 27,
+   "parallels": 94
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-panini-elite-extra-edition-baseball-card-checklist/",
+   "sourceSlug": "2022-panini-elite-extra-edition-baseball-card-checklist",
+   "productName": "2022 Panini Elite Extra Edition",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 22,
+   "parallels": 112
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-panini-flawless-baseball-card-checklist/",
+   "sourceSlug": "2022-panini-flawless-baseball-card-checklist",
+   "productName": "2022 Panini Flawless",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 40,
+   "parallels": 151
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-panini-immaculate-collection-baseball-card-checklist/",
+   "sourceSlug": "2022-panini-immaculate-collection-baseball-card-checklist",
+   "productName": "2022 Panini Immaculate Collection",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 58,
+   "parallels": 160
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-panini-national-treasures-mlb-baseball-card-checklist/",
+   "sourceSlug": "2022-panini-national-treasures-mlb-baseball-card-checklist",
+   "productName": "2022 Panini National Treasures MLB",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 65,
+   "parallels": 193
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-panini-prizm-baseball-card-checklist/",
+   "sourceSlug": "2022-panini-prizm-baseball-card-checklist",
+   "productName": "2022 Panini Prizm",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 20,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-panini-prizm-draft-picks-baseball-card-checklist/",
+   "sourceSlug": "2022-panini-prizm-draft-picks-baseball-card-checklist",
+   "productName": "2022 Panini Prizm Draft Picks",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 17,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-panini-select-baseball-card-checklist/",
+   "sourceSlug": "2022-panini-select-baseball-card-checklist",
+   "productName": "2022 Panini Select",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 26,
+   "parallels": 111
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-panini-three-and-two-debut-edition-baseball-card-checklist/",
+   "sourceSlug": "2022-panini-three-and-two-debut-edition-baseball-card-checklist",
+   "productName": "2022 Panini Three and Two Debut Edition",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 70,
+   "parallels": 132
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-allen-ginter-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-allen-ginter-baseball-card-checklist",
+   "productName": "2022 Topps Allen & Ginter",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 46,
+   "parallels": 12
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-allen-ginter-chrome-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-allen-ginter-chrome-baseball-card-checklist",
+   "productName": "2022 Topps Allen & Ginter Chrome",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 8,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-allen-ginter-x-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-allen-ginter-x-baseball-card-checklist",
+   "productName": "2022 Topps Allen & Ginter X",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 7,
+   "parallels": 4
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-archives-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-archives-baseball-card-checklist",
+   "productName": "2022 Topps Archives",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 27,
+   "parallels": 50
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-archives-signature-series-active-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-archives-signature-series-active-baseball-card-checklist",
+   "productName": "2022 Topps Archives Signature Series Active Player Edition",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 2,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-archives-snapshots-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-archives-snapshots-baseball-card-checklist",
+   "productName": "2022 Topps Archives Snapshots",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 5,
+   "parallels": 19
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-baseball-japan-edition-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-baseball-japan-edition-baseball-card-checklist",
+   "productName": "2022 Topps Baseball Japan Edition",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 7,
+   "parallels": 15
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-baseball-uk-edition-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-baseball-uk-edition-baseball-card-checklist",
+   "productName": "2022 Topps Baseball UK Edition",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 6,
+   "parallels": 20
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-black-white-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-black-white-baseball-card-checklist",
+   "productName": "2022 Topps Black & White",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 6,
+   "parallels": 7
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-brooklyn-collection-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-brooklyn-collection-baseball-card-checklist",
+   "productName": "2022 Topps Brooklyn Collection",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 3,
+   "parallels": 16
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-chrome-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-chrome-baseball-card-checklist",
+   "productName": "2022 Topps Chrome",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 19,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-chrome-ben-baller-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-chrome-ben-baller-baseball-card-checklist",
+   "productName": "2022 Topps Chrome Ben Baller",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 7,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-chrome-black-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-chrome-black-baseball-card-checklist",
+   "productName": "2022 Topps Chrome Black",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 5,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-chrome-logofractor-edition-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-chrome-logofractor-edition-baseball-card-checklist",
+   "productName": "2022 Topps Chrome Logofractor Edition",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 8,
+   "parallels": 24
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-chrome-npb-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-chrome-npb-baseball-card-checklist",
+   "productName": "2022 Topps Chrome NPB",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 6,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-chrome-platinum-anniversary-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-chrome-platinum-anniversary-baseball-card-checklist",
+   "productName": "2022 Topps Chrome Platinum Anniversary",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 5,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-chrome-sapphire-edition-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-chrome-sapphire-edition-baseball-card-checklist",
+   "productName": "2022 Topps Chrome Sapphire Edition",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 2,
+   "parallels": 6
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-chrome-sonic-lite-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-chrome-sonic-lite-baseball-card-checklist",
+   "productName": "2022 Topps Chrome Sonic Lite",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 8,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-chrome-update-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-chrome-update-baseball-card-checklist",
+   "productName": "2022 Topps Chrome Update",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 9,
+   "parallels": 23
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-chrome-update-sapphire-edition-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-chrome-update-sapphire-edition-baseball-card-checklist",
+   "productName": "2022 Topps Chrome Update Sapphire Edition",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 3,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-clearly-authentic-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-clearly-authentic-baseball-card-checklist",
+   "productName": "2022 Topps Clearly Authentic",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 6,
+   "parallels": 26
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-cosmic-chrome-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-cosmic-chrome-baseball-card-checklist",
+   "productName": "2022 Topps Cosmic Chrome",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 10,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-definitive-collection-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-definitive-collection-baseball-card-checklist",
+   "productName": "2022 Topps Definitive Collection",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 21,
+   "parallels": 45
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-diamond-icons-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-diamond-icons-baseball-card-checklist",
+   "productName": "2022 Topps Diamond Icons",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 23,
+   "parallels": 38
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-dynamic-duals-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-dynamic-duals-baseball-card-checklist",
+   "productName": "2022 Topps Dynamic Duals",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 6,
+   "parallels": 14
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-dynasty-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-dynasty-baseball-card-checklist",
+   "productName": "2022 Topps Dynasty",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 15,
+   "parallels": 9
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-finest-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-finest-baseball-card-checklist",
+   "productName": "2022 Topps Finest",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 13,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-finest-flashbacks-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-finest-flashbacks-baseball-card-checklist",
+   "productName": "2022 Topps Finest Flashbacks",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 8,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-fire-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-fire-baseball-card-checklist",
+   "productName": "2022 Topps Fire",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 11,
+   "parallels": 25
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-five-star-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-five-star-baseball-card-checklist",
+   "productName": "2022 Topps Five Star",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 16,
+   "parallels": 35
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-gallery-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-gallery-baseball-card-checklist",
+   "productName": "2022 Topps Gallery",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 15,
+   "parallels": 45
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-gilded-collection-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-gilded-collection-baseball-card-checklist",
+   "productName": "2022 Topps Gilded Collection",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 8,
+   "parallels": 15
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-gold-label-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-gold-label-baseball-card-checklist",
+   "productName": "2022 Topps Gold Label",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 11,
+   "parallels": 27
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-gypsy-queen-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-gypsy-queen-baseball-card-checklist",
+   "productName": "2022 Topps Gypsy Queen",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 17,
+   "parallels": 34
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-heritage-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-heritage-baseball-card-checklist",
+   "productName": "2022 Topps Heritage",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 28,
+   "parallels": 15
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-heritage-high-number-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-heritage-high-number-baseball-card-checklist",
+   "productName": "2022 Topps Heritage High Number",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 32,
+   "parallels": 10
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-heritage-minor-league-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-heritage-minor-league-baseball-card-checklist",
+   "productName": "2022 Topps Heritage Minor League",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 14,
+   "parallels": 2
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-holiday-mega-box-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-holiday-mega-box-baseball-card-checklist",
+   "productName": "2022 Topps Holiday Mega Box",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 11,
+   "parallels": 19
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-inception-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-inception-baseball-card-checklist",
+   "productName": "2022 Topps Inception",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 17,
+   "parallels": 33
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-luminaries-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-luminaries-baseball-card-checklist",
+   "productName": "2022 Topps Luminaries",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 31,
+   "parallels": 34
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-mini-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-mini-baseball-card-checklist",
+   "productName": "2022 Topps Mini",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 6,
+   "parallels": 8
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-mlb-3d-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-mlb-3d-baseball-card-checklist",
+   "productName": "2022 Topps MLB 3D",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 0,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-mlb-rookie-of-the-year-75th-anniversary-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-mlb-rookie-of-the-year-75th-anniversary-baseball-card-checklist",
+   "productName": "2022 Topps MLB Rookie of the Year 75th Anniversary",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 4,
+   "parallels": 6
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-museum-collection-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-museum-collection-baseball-card-checklist",
+   "productName": "2022 Topps Museum Collection",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 29,
+   "parallels": 41
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-opening-day-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-opening-day-baseball-card-checklist",
+   "productName": "2022 Topps Opening Day",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 24,
+   "parallels": 3
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-pristine-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-pristine-baseball-card-checklist",
+   "productName": "2022 Topps Pristine",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 11,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-pro-debut-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-pro-debut-baseball-card-checklist",
+   "productName": "2022 Topps Pro Debut",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 14,
+   "parallels": 32
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-rip-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-rip-baseball-card-checklist",
+   "productName": "2022 Topps Rip",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 6,
+   "parallels": 24
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-series-1-1st-edition-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-series-1-1st-edition-baseball-card-checklist",
+   "productName": "2022 Topps Series 1 1st Edition",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 3,
+   "parallels": 22
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-series-1-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-series-1-baseball-card-checklist",
+   "productName": "2022 Topps Series 1",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 44,
+   "parallels": 97
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-series-2-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-series-2-baseball-card-checklist",
+   "productName": "2022 Topps Series 2",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 40,
+   "parallels": 104
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-spotlight-70-ii-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-spotlight-70-ii-baseball-card-checklist",
+   "productName": "2022 Topps Spotlight 70 II",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 7,
+   "parallels": 4
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-stadium-club-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-stadium-club-baseball-card-checklist",
+   "productName": "2022 Topps Stadium Club",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 24,
+   "parallels": 55
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-stadium-club-chrome-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-stadium-club-chrome-baseball-card-checklist",
+   "productName": "2022 Topps Stadium Club Chrome",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 11,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-sterling-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-sterling-baseball-card-checklist",
+   "productName": "2022 Topps Sterling",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 16,
+   "parallels": 18
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-tier-one-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-tier-one-baseball-card-checklist",
+   "productName": "2022 Topps Tier One",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 30,
+   "parallels": 28
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-transcendent-collection-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-transcendent-collection-baseball-card-checklist",
+   "productName": "2022 Topps Transcendent Collection",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 17,
+   "parallels": 8
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-tribute-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-tribute-baseball-card-checklist",
+   "productName": "2022 Topps Tribute",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 22,
+   "parallels": 52
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-triple-threads-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-triple-threads-baseball-card-checklist",
+   "productName": "2022 Topps Triple Threads",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 38,
+   "parallels": 91
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-update-series-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-update-series-baseball-card-checklist",
+   "productName": "2022 Topps Update Series",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 39,
+   "parallels": 92
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-x-aaron-judge-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-x-aaron-judge-baseball-card-checklist",
+   "productName": "2022 Topps X Aaron Judge",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 4,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-x-bobby-witt-jr-crown-collection-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-x-bobby-witt-jr-crown-collection-baseball-card-checklist",
+   "productName": "2022 Topps X Bobby Witt Jr. Crown Collection",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 6,
+   "parallels": 9
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-x-juan-soto-curated-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-x-juan-soto-curated-baseball-card-checklist",
+   "productName": "2022 Topps X Juan Soto Curated",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 4,
+   "parallels": 6
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-x-mlb-players-exclusive-promo-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-x-mlb-players-exclusive-promo-baseball-card-checklist",
+   "productName": "2022 Topps X MLB Players Exclusive Promo",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 1,
+   "parallels": 5
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-x-naturel-1952-topps-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-x-naturel-1952-topps-baseball-card-checklist",
+   "productName": "2022 Topps X Naturel 1952 Topps",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 5,
+   "parallels": 1
+  },
+  {
+   "url": "https://www.checklistcenter.com/2022-topps-x-wander-franco-baseball-card-checklist/",
+   "sourceSlug": "2022-topps-x-wander-franco-baseball-card-checklist",
+   "productName": "2022 Topps X Wander Franco",
+   "year": 2022,
+   "sport": "baseball",
+   "subsets": 5,
+   "parallels": 7
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-bowman-1st-edition-baseball-card-checklist/",
+   "sourceSlug": "2023-bowman-1st-edition-baseball-card-checklist",
+   "productName": "2023 Bowman 1st Edition",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 3,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-bowman-baseball-card-checklist/",
+   "sourceSlug": "2023-bowman-baseball-card-checklist",
+   "productName": "2023 Bowman Baseball",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 21,
+   "parallels": 34
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-bowman-chrome-baseball-card-checklist/",
+   "sourceSlug": "2023-bowman-chrome-baseball-card-checklist",
+   "productName": "2023 Bowman Chrome",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 31,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-bowman-chrome-sapphire-edition-baseball-card-checklist/",
+   "sourceSlug": "2023-bowman-chrome-sapphire-edition-baseball-card-checklist",
+   "productName": "2023 Bowman Chrome Sapphire Edition",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 5,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-bowman-draft-baseball-card-checklist/",
+   "sourceSlug": "2023-bowman-draft-baseball-card-checklist",
+   "productName": "2023 Bowman Draft",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 27,
+   "parallels": 18
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-bowman-draft-sapphire-baseball-card-checklist/",
+   "sourceSlug": "2023-bowman-draft-sapphire-baseball-card-checklist",
+   "productName": "2023 Bowman Draft Sapphire",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 5,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-bowman-mega-box-baseball-card-checklist/",
+   "sourceSlug": "2023-bowman-mega-box-baseball-card-checklist",
+   "productName": "2023 Bowman Mega Box",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 8,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-bowman-platinum-baseball-card-checklist/",
+   "sourceSlug": "2023-bowman-platinum-baseball-card-checklist",
+   "productName": "2023 Bowman Platinum",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 20,
+   "parallels": 65
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-bowman-sapphire-edition-baseball-card-checklist/",
+   "sourceSlug": "2023-bowman-sapphire-edition-baseball-card-checklist",
+   "productName": "2023 Bowman Sapphire Edition",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 2,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-bowman-sterling-baseball-card-checklist/",
+   "sourceSlug": "2023-bowman-sterling-baseball-card-checklist",
+   "productName": "2023 Bowman Sterling",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 9,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-bowmans-best-baseball-card-checklist/",
+   "sourceSlug": "2023-bowmans-best-baseball-card-checklist",
+   "productName": "2023 Bowman's Best",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 17,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-donruss-baseball-card-checklist/",
+   "sourceSlug": "2023-donruss-baseball-card-checklist",
+   "productName": "2023 Donruss Baseball",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 29,
+   "parallels": 169
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-leaf-a-bronx-legacy-baseball-card-checklist/",
+   "sourceSlug": "2023-leaf-a-bronx-legacy-baseball-card-checklist",
+   "productName": "2023 Leaf A Bronx Legacy",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 18,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-leaf-eclectic-baseball-card-checklist/",
+   "sourceSlug": "2023-leaf-eclectic-baseball-card-checklist",
+   "productName": "2023 Leaf Eclectic Baseball",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 40,
+   "parallels": 6
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-leaf-exotic-baseball-card-checklist/",
+   "sourceSlug": "2023-leaf-exotic-baseball-card-checklist",
+   "productName": "2023 Leaf Exotic Baseball",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 4,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-leaf-metal-baseball-card-checklist/",
+   "sourceSlug": "2023-leaf-metal-baseball-card-checklist",
+   "productName": "2023 Leaf Metal Baseball",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 18,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-leaf-perfect-game-all-american-classic-baseball-card-checklist/",
+   "sourceSlug": "2023-leaf-perfect-game-all-american-classic-baseball-card-checklist",
+   "productName": "2023 Leaf Perfect Game All-American Classic",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 9,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-leaf-perfect-game-bonus-box-baseball-card-checklist/",
+   "sourceSlug": "2023-leaf-perfect-game-bonus-box-baseball-card-checklist",
+   "productName": "2023 Leaf Perfect Game Bonus Box",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 21,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-leaf-perfect-game-national-showcase-baseball-card-checklist/",
+   "sourceSlug": "2023-leaf-perfect-game-national-showcase-baseball-card-checklist",
+   "productName": "2023 Leaf Perfect Game National Showcase",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 12,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-leaf-signature-series-baseball-card-checklist/",
+   "sourceSlug": "2023-leaf-signature-series-baseball-card-checklist",
+   "productName": "2023 Leaf Signature Series",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 3,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-leaf-trinity-baseball-card-checklist/",
+   "sourceSlug": "2023-leaf-trinity-baseball-card-checklist",
+   "productName": "2023 Leaf Trinity",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 24,
+   "parallels": 4
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-leaf-trinity-mega-box-baseball-card-checklist/",
+   "sourceSlug": "2023-leaf-trinity-mega-box-baseball-card-checklist",
+   "productName": "2023 Leaf Trinity Mega Box",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 5,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-leaf-vivid-baseball-card-checklist/",
+   "sourceSlug": "2023-leaf-vivid-baseball-card-checklist",
+   "productName": "2023 Leaf Vivid",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 13,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-onyx-premium-baseball-card-checklist/",
+   "sourceSlug": "2023-onyx-premium-baseball-card-checklist",
+   "productName": "2023 Onyx Premium",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 2,
+   "parallels": 4
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-onyx-vintage-baseball-card-checklist/",
+   "sourceSlug": "2023-onyx-vintage-baseball-card-checklist",
+   "productName": "2023 Onyx Vintage",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 3,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-onyx-vintage-extended-baseball-card-checklist/",
+   "sourceSlug": "2023-onyx-vintage-extended-baseball-card-checklist",
+   "productName": "2023 Onyx Vintage Extended",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 3,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-panini-chronicles-baseball-card-checklist/",
+   "sourceSlug": "2023-panini-chronicles-baseball-card-checklist",
+   "productName": "2023 Panini Chronicles",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 52,
+   "parallels": 242
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-panini-elite-extra-edition-baseball-card-checklist/",
+   "sourceSlug": "2023-panini-elite-extra-edition-baseball-card-checklist",
+   "productName": "2023 Panini Elite Extra Edition",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 19,
+   "parallels": 83
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-panini-flawless-baseball-card-checklist/",
+   "sourceSlug": "2023-panini-flawless-baseball-card-checklist",
+   "productName": "2023 Panini Flawless Baseball",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 50,
+   "parallels": 165
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-panini-immaculate-collection-baseball-card-checklist/",
+   "sourceSlug": "2023-panini-immaculate-collection-baseball-card-checklist",
+   "productName": "2023 Panini Immaculate Collection",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 53,
+   "parallels": 135
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-panini-national-treasures-baseball-card-checklist/",
+   "sourceSlug": "2023-panini-national-treasures-baseball-card-checklist",
+   "productName": "2023 Panini National Treasures",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 78,
+   "parallels": 178
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-panini-prizm-baseball-card-checklist/",
+   "sourceSlug": "2023-panini-prizm-baseball-card-checklist",
+   "productName": "2023 Panini Prizm",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 28,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-panini-select-baseball-card-checklist/",
+   "sourceSlug": "2023-panini-select-baseball-card-checklist",
+   "productName": "2023 Panini Select Baseball",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 24,
+   "parallels": 59
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-panini-stars-stripes-usa-baseball-card-checklist/",
+   "sourceSlug": "2023-panini-stars-stripes-usa-baseball-card-checklist",
+   "productName": "2023 Panini Stars & Stripes USA",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 41,
+   "parallels": 159
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-panini-three-and-two-baseball-card-checklist/",
+   "sourceSlug": "2023-panini-three-and-two-baseball-card-checklist",
+   "productName": "2023 Panini Three and Two",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 70,
+   "parallels": 139
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-topps-206-high-series-baseball-card-checklist/",
+   "sourceSlug": "2023-topps-206-high-series-baseball-card-checklist",
+   "productName": "2023 Topps 206 High Series",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 5,
+   "parallels": 11
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-topps-206-low-series-baseball-card-checklist/",
+   "sourceSlug": "2023-topps-206-low-series-baseball-card-checklist",
+   "productName": "2023 Topps 206 Low Series",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 5,
+   "parallels": 11
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-topps-allen-ginter-baseball-card-checklist/",
+   "sourceSlug": "2023-topps-allen-ginter-baseball-card-checklist",
+   "productName": "2023 Topps Allen & Ginter",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 46,
+   "parallels": 29
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-topps-allen-ginter-x-baseball-card-checklist/",
+   "sourceSlug": "2023-topps-allen-ginter-x-baseball-card-checklist",
+   "productName": "2023 Topps Allen & Ginter X",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 7,
+   "parallels": 8
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-topps-archives-baseball-card-checklist/",
+   "sourceSlug": "2023-topps-archives-baseball-card-checklist",
+   "productName": "2023 Topps Archives",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 26,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-topps-archives-signature-series-retired-player-edition-baseball-card-checklist/",
+   "sourceSlug": "2023-topps-archives-signature-series-retired-player-edition-baseball-card-checklist",
+   "productName": "2023 Topps Archives Signature Series Retired Player Edition",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 3,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-topps-baseball-japan-edition-baseball-card-checklist/",
+   "sourceSlug": "2023-topps-baseball-japan-edition-baseball-card-checklist",
+   "productName": "2023 Topps Baseball Japan Edition",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 12,
+   "parallels": 18
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-topps-big-league-baseball-card-checklist/",
+   "sourceSlug": "2023-topps-big-league-baseball-card-checklist",
+   "productName": "2023 Topps Big League",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 19,
+   "parallels": 4
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-topps-black-white-baseball-card-checklist/",
+   "sourceSlug": "2023-topps-black-white-baseball-card-checklist",
+   "productName": "2023 Topps Black & White",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 8,
+   "parallels": 18
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-topps-brooklyn-collection-baseball-card-checklist/",
+   "sourceSlug": "2023-topps-brooklyn-collection-baseball-card-checklist",
+   "productName": "2023 Topps Brooklyn Collection",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 3,
+   "parallels": 17
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-topps-chrome-baseball-card-checklist/",
+   "sourceSlug": "2023-topps-chrome-baseball-card-checklist",
+   "productName": "2023 Topps Chrome",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 26,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-topps-chrome-black-baseball-card-checklist/",
+   "sourceSlug": "2023-topps-chrome-black-baseball-card-checklist",
+   "productName": "2023 Topps Chrome Black",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 6,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-topps-chrome-lids-baseball-card-checklist/",
+   "sourceSlug": "2023-topps-chrome-lids-baseball-card-checklist",
+   "productName": "2023 Topps Chrome Lids",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 3,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-topps-chrome-logofractor-edition-baseball-card-checklist/",
+   "sourceSlug": "2023-topps-chrome-logofractor-edition-baseball-card-checklist",
+   "productName": "2023 Topps Chrome LogoFractor Edition",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 7,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-topps-chrome-platinum-anniversary-baseball-card-checklist/",
+   "sourceSlug": "2023-topps-chrome-platinum-anniversary-baseball-card-checklist",
+   "productName": "2023 Topps Chrome Platinum Anniversary",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 6,
+   "parallels": 1
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-topps-chrome-update-sapphire-edition-baseball-card-checklist/",
+   "sourceSlug": "2023-topps-chrome-update-sapphire-edition-baseball-card-checklist",
+   "productName": "2023 Topps Chrome Update Sapphire Edition",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 5,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-topps-chrome-update-series-baseball-card-checklist/",
+   "sourceSlug": "2023-topps-chrome-update-series-baseball-card-checklist",
+   "productName": "2023 Topps Chrome Update Series",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 24,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-topps-cosmic-chrome-baseball-card-checklist/",
+   "sourceSlug": "2023-topps-cosmic-chrome-baseball-card-checklist",
+   "productName": "2023 Topps Cosmic Chrome",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 13,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-topps-definitive-collection-baseball-card-checklist/",
+   "sourceSlug": "2023-topps-definitive-collection-baseball-card-checklist",
+   "productName": "2023 Topps Definitive Collection",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 29,
+   "parallels": 57
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-topps-diamond-icons-baseball-card-checklist/",
+   "sourceSlug": "2023-topps-diamond-icons-baseball-card-checklist",
+   "productName": "2023 Topps Diamond Icons",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 23,
+   "parallels": 28
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-topps-dynamic-duals-baseball-card-checklist/",
+   "sourceSlug": "2023-topps-dynamic-duals-baseball-card-checklist",
+   "productName": "2023 Topps Dynamic Duals",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 7,
+   "parallels": 19
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-topps-dynasty-baseball-card-checklist/",
+   "sourceSlug": "2023-topps-dynasty-baseball-card-checklist",
+   "productName": "2023 Topps Dynasty",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 15,
+   "parallels": 6
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-topps-finest-baseball-card-checklist/",
+   "sourceSlug": "2023-topps-finest-baseball-card-checklist",
+   "productName": "2023 Topps Finest",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 15,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-topps-finest-flashbacks-baseball-card-checklist/",
+   "sourceSlug": "2023-topps-finest-flashbacks-baseball-card-checklist",
+   "productName": "2023 Topps Finest Flashbacks",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 12,
+   "parallels": 5
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-topps-five-star-baseball-card-checklist/",
+   "sourceSlug": "2023-topps-five-star-baseball-card-checklist",
+   "productName": "2023 Topps Five Star",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 17,
+   "parallels": 38
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-topps-gilded-collection-baseball-card-checklist/",
+   "sourceSlug": "2023-topps-gilded-collection-baseball-card-checklist",
+   "productName": "2023 Topps Gilded Collection",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 8,
+   "parallels": 21
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-topps-heritage-baseball-card-checklist/",
+   "sourceSlug": "2023-topps-heritage-baseball-card-checklist",
+   "productName": "2023 Topps Heritage",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 32,
+   "parallels": 14
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-topps-heritage-high-number-baseball-card-checklist/",
+   "sourceSlug": "2023-topps-heritage-high-number-baseball-card-checklist",
+   "productName": "2023 Topps Heritage High Number",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 31,
+   "parallels": 9
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-topps-holiday-baseball-card-checklist/",
+   "sourceSlug": "2023-topps-holiday-baseball-card-checklist",
+   "productName": "2023 Topps Holiday",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 12,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-topps-inception-baseball-card-checklist/",
+   "sourceSlug": "2023-topps-inception-baseball-card-checklist",
+   "productName": "2023 Topps Inception",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 20,
+   "parallels": 41
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-topps-luminaries-baseball-card-checklist/",
+   "sourceSlug": "2023-topps-luminaries-baseball-card-checklist",
+   "productName": "2023 Topps Luminaries",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 32,
+   "parallels": 36
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-topps-museum-collection-baseball-card-checklist/",
+   "sourceSlug": "2023-topps-museum-collection-baseball-card-checklist",
+   "productName": "2023 Topps Museum Collection",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 29,
+   "parallels": 58
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-topps-npb-nippon-professional-baseball-card-checklist/",
+   "sourceSlug": "2023-topps-npb-nippon-professional-baseball-card-checklist",
+   "productName": "2023 Topps NPB Nippon Professional Baseball",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 6,
+   "parallels": 20
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-topps-pristine-baseball-card-checklist/",
+   "sourceSlug": "2023-topps-pristine-baseball-card-checklist",
+   "productName": "2023 Topps Pristine",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 16,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-topps-pro-debut-baseball-card-checklist/",
+   "sourceSlug": "2023-topps-pro-debut-baseball-card-checklist",
+   "productName": "2023 Topps Pro Debut",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 16,
+   "parallels": 2
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-topps-rip-baseball-card-checklist/",
+   "sourceSlug": "2023-topps-rip-baseball-card-checklist",
+   "productName": "2023 Topps Rip",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 6,
+   "parallels": 18
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-topps-series-1-baseball-1st-edition-baseball-card-checklist/",
+   "sourceSlug": "2023-topps-series-1-baseball-1st-edition-baseball-card-checklist",
+   "productName": "2023 Topps Series 1 Baseball 1st Edition",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 3,
+   "parallels": 3
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-topps-series-1-baseball-card-checklist/",
+   "sourceSlug": "2023-topps-series-1-baseball-card-checklist",
+   "productName": "2023 Topps Series 1",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 42,
+   "parallels": 94
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-topps-series-2-baseball-card-checklist/",
+   "sourceSlug": "2023-topps-series-2-baseball-card-checklist",
+   "productName": "2023 Topps Series 2",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 42,
+   "parallels": 97
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-topps-stadium-club-baseball-card-checklist/",
+   "sourceSlug": "2023-topps-stadium-club-baseball-card-checklist",
+   "productName": "2023 Topps Stadium Club",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 26,
+   "parallels": 51
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-topps-sterling-baseball-card-checklist/",
+   "sourceSlug": "2023-topps-sterling-baseball-card-checklist",
+   "productName": "2023 Topps Sterling",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 16,
+   "parallels": 21
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-topps-tier-one-baseball-card-checklist/",
+   "sourceSlug": "2023-topps-tier-one-baseball-card-checklist",
+   "productName": "2023 Topps Tier One",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 33,
+   "parallels": 33
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-topps-transcendent-baseball-card-checklist/",
+   "sourceSlug": "2023-topps-transcendent-baseball-card-checklist",
+   "productName": "2023 Topps Transcendent",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 21,
+   "parallels": 20
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-topps-tribute-baseball-card-checklist/",
+   "sourceSlug": "2023-topps-tribute-baseball-card-checklist",
+   "productName": "2023 Topps Tribute",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 20,
+   "parallels": 62
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-topps-update-series-baseball-card-checklist/",
+   "sourceSlug": "2023-topps-update-series-baseball-card-checklist",
+   "productName": "2023 Topps Update Series",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 45,
+   "parallels": 103
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-topps-world-baseball-classic-baseball-card-checklist/",
+   "sourceSlug": "2023-topps-world-baseball-classic-baseball-card-checklist",
+   "productName": "2023 Topps World Baseball Classic",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 13,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-topps-world-baseball-classic-global-stars-baseball-card-checklist/",
+   "sourceSlug": "2023-topps-world-baseball-classic-global-stars-baseball-card-checklist",
+   "productName": "2023 Topps World Baseball Classic Global Stars",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 4,
+   "parallels": 19
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-topps-x-bob-ross-the-joy-of-baseball-card-checklist/",
+   "sourceSlug": "2023-topps-x-bob-ross-the-joy-of-baseball-card-checklist",
+   "productName": "2023 Topps X Bob Ross The Joy of Baseball",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 9,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-topps-x-j-rod-the-show-out-collection-baseball-card-checklist/",
+   "sourceSlug": "2023-topps-x-j-rod-the-show-out-collection-baseball-card-checklist",
+   "productName": "2023 Topps X J-Rod The Show Out Collection",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 11,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-topps-x-mlb-players-clubhouse-exclusive-baseball-card-checklist/",
+   "sourceSlug": "2023-topps-x-mlb-players-clubhouse-exclusive-baseball-card-checklist",
+   "productName": "2023 Topps X MLB Players Clubhouse Exclusive",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 2,
+   "parallels": 5
+  },
+  {
+   "url": "https://www.checklistcenter.com/2023-topps-xpectations-baseball-card-checklist/",
+   "sourceSlug": "2023-topps-xpectations-baseball-card-checklist",
+   "productName": "2023 Topps Xpectations",
+   "year": 2023,
+   "sport": "baseball",
+   "subsets": 4,
+   "parallels": 1
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-bowman-baseball-card-checklist/",
+   "sourceSlug": "2024-bowman-baseball-card-checklist",
+   "productName": "2024 Bowman Baseball",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 28,
+   "parallels": 41
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-bowman-chrome-baseball-card-checklist/",
+   "sourceSlug": "2024-bowman-chrome-baseball-card-checklist",
+   "productName": "2024 Bowman Chrome",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 30,
+   "parallels": 7
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-bowman-chrome-mega-box-baseball-card-checklist/",
+   "sourceSlug": "2024-bowman-chrome-mega-box-baseball-card-checklist",
+   "productName": "2024 Bowman Chrome Mega Box",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 10,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-bowman-chrome-sapphire-baseball-card-checklist/",
+   "sourceSlug": "2024-bowman-chrome-sapphire-baseball-card-checklist",
+   "productName": "2024 Bowman Chrome Sapphire",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 7,
+   "parallels": 10
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-bowman-draft-baseball-card-checklist/",
+   "sourceSlug": "2024-bowman-draft-baseball-card-checklist",
+   "productName": "2024 Bowman Draft",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 22,
+   "parallels": 19
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-bowman-draft-sapphire-baseball-card-checklist/",
+   "sourceSlug": "2024-bowman-draft-sapphire-baseball-card-checklist",
+   "productName": "2024 Bowman Draft Sapphire",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 5,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-bowman-mega-box-baseball-card-checklist/",
+   "sourceSlug": "2024-bowman-mega-box-baseball-card-checklist",
+   "productName": "2024 Bowman Mega Box",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 8,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-bowman-sapphire-baseball-card-checklist/",
+   "sourceSlug": "2024-bowman-sapphire-baseball-card-checklist",
+   "productName": "2024 Bowman Sapphire",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 5,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-bowman-sterling-baseball-card-checklist/",
+   "sourceSlug": "2024-bowman-sterling-baseball-card-checklist",
+   "productName": "2024 Bowman Sterling",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 11,
+   "parallels": 53
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-bowmans-best-baseball-card-checklist/",
+   "sourceSlug": "2024-bowmans-best-baseball-card-checklist",
+   "productName": "2024 Bowman's Best Baseball",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 21,
+   "parallels": 2
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-donruss-baseball-card-checklist/",
+   "sourceSlug": "2024-donruss-baseball-card-checklist",
+   "productName": "2024 Donruss Baseball",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 21,
+   "parallels": 113
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-leaf-a-bronx-legacy-series-2-baseball-card-checklist/",
+   "sourceSlug": "2024-leaf-a-bronx-legacy-series-2-baseball-card-checklist",
+   "productName": "2024 Leaf A Bronx Legacy Series 2",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 29,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-leaf-electrum-baseball-card-checklist/",
+   "sourceSlug": "2024-leaf-electrum-baseball-card-checklist",
+   "productName": "2024 Leaf Electrum Baseball",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 18,
+   "parallels": 37
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-leaf-lumber-baseball-card-checklist/",
+   "sourceSlug": "2024-leaf-lumber-baseball-card-checklist",
+   "productName": "2024 Leaf Lumber",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 31,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-leaf-metal-baseball-baseball-card-checklist/",
+   "sourceSlug": "2024-leaf-metal-baseball-baseball-card-checklist",
+   "productName": "2024 Leaf Metal Baseball",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 18,
+   "parallels": 6
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-leaf-trinity-baseball-card-checklist/",
+   "sourceSlug": "2024-leaf-trinity-baseball-card-checklist",
+   "productName": "2024 Leaf Trinity Baseball",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 22,
+   "parallels": 48
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-leaf-trinity-mega-box-baseball-card-checklist/",
+   "sourceSlug": "2024-leaf-trinity-mega-box-baseball-card-checklist",
+   "productName": "2024 Leaf Trinity Mega Box",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 4,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-leaf-vivid-baseball-card-checklist/",
+   "sourceSlug": "2024-leaf-vivid-baseball-card-checklist",
+   "productName": "2024 Leaf Vivid Baseball",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 21,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-panini-boys-of-summer-baseball-card-checklist/",
+   "sourceSlug": "2024-panini-boys-of-summer-baseball-card-checklist",
+   "productName": "2024 Panini Boys of Summer",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 22,
+   "parallels": 74
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-panini-crusade-baseball-card-checklist/",
+   "sourceSlug": "2024-panini-crusade-baseball-card-checklist",
+   "productName": "2024 Panini Crusade",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 9,
+   "parallels": 29
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-panini-flawless-baseball-card-checklist/",
+   "sourceSlug": "2024-panini-flawless-baseball-card-checklist",
+   "productName": "2024 Panini Flawless",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 53,
+   "parallels": 98
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-panini-impeccable-baseball-card-checklist/",
+   "sourceSlug": "2024-panini-impeccable-baseball-card-checklist",
+   "productName": "2024 Panini Impeccable",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 21,
+   "parallels": 42
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-panini-national-treasures-baseball-card-checklist/",
+   "sourceSlug": "2024-panini-national-treasures-baseball-card-checklist",
+   "productName": "2024 Panini National Treasures",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 41,
+   "parallels": 103
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-panini-prizm-baseball-card-checklist/",
+   "sourceSlug": "2024-panini-prizm-baseball-card-checklist",
+   "productName": "2024 Panini Prizm",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 17,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-panini-prospect-edition-baseball-card-checklist/",
+   "sourceSlug": "2024-panini-prospect-edition-baseball-card-checklist",
+   "productName": "2024 Panini Prospect Edition",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 25,
+   "parallels": 93
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-panini-select-baseball-card-checklist/",
+   "sourceSlug": "2024-panini-select-baseball-card-checklist",
+   "productName": "2024 Panini Select",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 30,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-panini-stars-stripes-usa-baseball-card-checklist/",
+   "sourceSlug": "2024-panini-stars-stripes-usa-baseball-card-checklist",
+   "productName": "2024 Panini Stars & Stripes USA",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 45,
+   "parallels": 116
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-panini-three-and-two-baseball-card-checklist/",
+   "sourceSlug": "2024-panini-three-and-two-baseball-card-checklist",
+   "productName": "2024 Panini Three and Two",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 30,
+   "parallels": 86
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-press-pass-premium-baseball-card-checklist/",
+   "sourceSlug": "2024-press-pass-premium-baseball-card-checklist",
+   "productName": "2024 Press Pass Premium",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 19,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-topps-206-baseball-card-checklist/",
+   "sourceSlug": "2024-topps-206-baseball-card-checklist",
+   "productName": "2024 Topps 206",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 10,
+   "parallels": 13
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-topps-50-50-shohei-ohtani-baseball-card-checklist/",
+   "sourceSlug": "2024-topps-50-50-shohei-ohtani-baseball-card-checklist",
+   "productName": "2024 Topps 50/50: Shohei Ohtani",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 9,
+   "parallels": 3
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-topps-allen-ginter-baseball-card-checklist/",
+   "sourceSlug": "2024-topps-allen-ginter-baseball-card-checklist",
+   "productName": "2024 Topps Allen & Ginter",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 49,
+   "parallels": 52
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-topps-allen-ginter-x-baseball-card-checklist/",
+   "sourceSlug": "2024-topps-allen-ginter-x-baseball-card-checklist",
+   "productName": "2024 Topps Allen & Ginter X",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 5,
+   "parallels": 8
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-topps-archives-baseball-card-checklist/",
+   "sourceSlug": "2024-topps-archives-baseball-card-checklist",
+   "productName": "2024 Topps Archives",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 27,
+   "parallels": 30
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-topps-big-league-baseball-card-checklist/",
+   "sourceSlug": "2024-topps-big-league-baseball-card-checklist",
+   "productName": "2024 Topps Big League",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 23,
+   "parallels": 32
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-topps-black-and-white-baseball-card-checklist/",
+   "sourceSlug": "2024-topps-black-and-white-baseball-card-checklist",
+   "productName": "2024 Topps Black and White",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 10,
+   "parallels": 23
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-topps-brooklyn-collection-baseball-card-checklist/",
+   "sourceSlug": "2024-topps-brooklyn-collection-baseball-card-checklist",
+   "productName": "2024 Topps Brooklyn Collection",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 5,
+   "parallels": 17
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-topps-chrome-baseball-card-checklist/",
+   "sourceSlug": "2024-topps-chrome-baseball-card-checklist",
+   "productName": "2024 Topps Chrome",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 33,
+   "parallels": 52
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-topps-chrome-black-baseball-card-checklist/",
+   "sourceSlug": "2024-topps-chrome-black-baseball-card-checklist",
+   "productName": "2024 Topps Chrome Black",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 8,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-topps-chrome-logofractor-edition-baseball-card-checklist/",
+   "sourceSlug": "2024-topps-chrome-logofractor-edition-baseball-card-checklist",
+   "productName": "2024 Topps Chrome LogoFractor Edition",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 9,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-topps-chrome-sapphire-baseball-card-checklist/",
+   "sourceSlug": "2024-topps-chrome-sapphire-baseball-card-checklist",
+   "productName": "2024 Topps Chrome Sapphire",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 6,
+   "parallels": 20
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-topps-cosmic-chrome-baseball-card-checklist/",
+   "sourceSlug": "2024-topps-cosmic-chrome-baseball-card-checklist",
+   "productName": "2024 Topps Cosmic Chrome",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 18,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-topps-definitive-baseball-card-checklist/",
+   "sourceSlug": "2024-topps-definitive-baseball-card-checklist",
+   "productName": "2024 Topps Definitive",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 29,
+   "parallels": 53
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-topps-diamond-icons-baseball-card-checklist/",
+   "sourceSlug": "2024-topps-diamond-icons-baseball-card-checklist",
+   "productName": "2024 Topps Diamond Icons",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 31,
+   "parallels": 41
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-topps-dynamic-duals-baseball-card-checklist/",
+   "sourceSlug": "2024-topps-dynamic-duals-baseball-card-checklist",
+   "productName": "2024 Topps Dynamic Duals",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 7,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-topps-dynasty-baseball-card-checklist/",
+   "sourceSlug": "2024-topps-dynasty-baseball-card-checklist",
+   "productName": "2024 Topps Dynasty",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 19,
+   "parallels": 13
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-topps-finest-baseball-card-checklist/",
+   "sourceSlug": "2024-topps-finest-baseball-card-checklist",
+   "productName": "2024 Topps Finest",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 19,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-topps-five-star-baseball-card-checklist/",
+   "sourceSlug": "2024-topps-five-star-baseball-card-checklist",
+   "productName": "2024 Topps Five Star",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 23,
+   "parallels": 57
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-topps-gilded-collection-baseball-card-checklist/",
+   "sourceSlug": "2024-topps-gilded-collection-baseball-card-checklist",
+   "productName": "2024 Topps Gilded Collection",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 10,
+   "parallels": 21
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-topps-heritage-baseball-card-checklist/",
+   "sourceSlug": "2024-topps-heritage-baseball-card-checklist",
+   "productName": "2024 Topps Heritage",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 34,
+   "parallels": 23
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-topps-heritage-high-number-baseball-card-checklist/",
+   "sourceSlug": "2024-topps-heritage-high-number-baseball-card-checklist",
+   "productName": "2024 Topps Heritage High Number",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 30,
+   "parallels": 19
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-topps-heritage-mini-baseball-card-checklist/",
+   "sourceSlug": "2024-topps-heritage-mini-baseball-card-checklist",
+   "productName": "2024 Topps Heritage Mini",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 10,
+   "parallels": 7
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-topps-holiday-baseball-card-checklist/",
+   "sourceSlug": "2024-topps-holiday-baseball-card-checklist",
+   "productName": "2024 Topps Holiday",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 18,
+   "parallels": 13
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-topps-inception-mlb-baseball-card-checklist/",
+   "sourceSlug": "2024-topps-inception-mlb-baseball-card-checklist",
+   "productName": "2024 Topps Inception MLB",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 23,
+   "parallels": 95
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-topps-luminaries-baseball-card-checklist/",
+   "sourceSlug": "2024-topps-luminaries-baseball-card-checklist",
+   "productName": "2024 Topps Luminaries",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 39,
+   "parallels": 49
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-topps-museum-collection-baseball-card-checklist/",
+   "sourceSlug": "2024-topps-museum-collection-baseball-card-checklist",
+   "productName": "2024 Topps Museum Collection",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 36,
+   "parallels": 95
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-topps-pristine-baseball-card-checklist/",
+   "sourceSlug": "2024-topps-pristine-baseball-card-checklist",
+   "productName": "2024 Topps Pristine",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 19,
+   "parallels": 14
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-topps-pro-debut-baseball-card-checklist/",
+   "sourceSlug": "2024-topps-pro-debut-baseball-card-checklist",
+   "productName": "2024 Topps Pro Debut",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 17,
+   "parallels": 48
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-topps-series-1-baseball-card-checklist/",
+   "sourceSlug": "2024-topps-series-1-baseball-card-checklist",
+   "productName": "2024 Topps Series 1",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 45,
+   "parallels": 115
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-topps-series-2-baseball-card-checklist/",
+   "sourceSlug": "2024-topps-series-2-baseball-card-checklist",
+   "productName": "2024 Topps Series 2",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 52,
+   "parallels": 149
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-topps-stadium-club-baseball-card-checklist/",
+   "sourceSlug": "2024-topps-stadium-club-baseball-card-checklist",
+   "productName": "2024 Topps Stadium Club",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 23,
+   "parallels": 111
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-topps-sterling-baseball-card-checklist/",
+   "sourceSlug": "2024-topps-sterling-baseball-card-checklist",
+   "productName": "2024 Topps Sterling",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 19,
+   "parallels": 23
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-topps-tier-one-baseball-card-checklist/",
+   "sourceSlug": "2024-topps-tier-one-baseball-card-checklist",
+   "productName": "2024 Topps Tier One",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 42,
+   "parallels": 35
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-topps-transcendent-baseball-card-checklist/",
+   "sourceSlug": "2024-topps-transcendent-baseball-card-checklist",
+   "productName": "2024 Topps Transcendent",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 33,
+   "parallels": 14
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-topps-tribute-baseball-card-checklist/",
+   "sourceSlug": "2024-topps-tribute-baseball-card-checklist",
+   "productName": "2024 Topps Tribute",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 23,
+   "parallels": 100
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-topps-triple-threads-baseball-card-checklist/",
+   "sourceSlug": "2024-topps-triple-threads-baseball-card-checklist",
+   "productName": "2024 Topps Triple Threads",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 45,
+   "parallels": 79
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-topps-update-series-baseball-card-checklist/",
+   "sourceSlug": "2024-topps-update-series-baseball-card-checklist",
+   "productName": "2024 Topps Update Series",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 44,
+   "parallels": 182
+  },
+  {
+   "url": "https://www.checklistcenter.com/2024-topps-x-chris-berman-boomers-baseball-card-checklist/",
+   "sourceSlug": "2024-topps-x-chris-berman-boomers-baseball-card-checklist",
+   "productName": "2024 Topps X Chris Berman: Boomers Baseball",
+   "year": 2024,
+   "sport": "baseball",
+   "subsets": 9,
+   "parallels": 17
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-bowman-baseball-card-checklist/",
+   "sourceSlug": "2025-bowman-baseball-card-checklist",
+   "productName": "2025 Bowman",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 29,
+   "parallels": 51
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-bowman-chrome-baseball-card-checklist/",
+   "sourceSlug": "2025-bowman-chrome-baseball-card-checklist",
+   "productName": "2025 Bowman Chrome",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 30,
+   "parallels": 1
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-bowman-chrome-mega-box-baseball-card-checklist/",
+   "sourceSlug": "2025-bowman-chrome-mega-box-baseball-card-checklist",
+   "productName": "2025 Bowman Chrome Mega Box",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 13,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-bowman-chrome-sapphire-baseball-card-checklist/",
+   "sourceSlug": "2025-bowman-chrome-sapphire-baseball-card-checklist",
+   "productName": "2025 Bowman Chrome Sapphire",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 7,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-bowman-draft-baseball-card-checklist/",
+   "sourceSlug": "2025-bowman-draft-baseball-card-checklist",
+   "productName": "2025 Bowman Draft",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 25,
+   "parallels": 7
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-bowman-draft-sapphire-baseball-card-checklist/",
+   "sourceSlug": "2025-bowman-draft-sapphire-baseball-card-checklist",
+   "productName": "2025 Bowman Draft Sapphire",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 5,
+   "parallels": 6
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-bowman-mega-box-baseball-card-checklist/",
+   "sourceSlug": "2025-bowman-mega-box-baseball-card-checklist",
+   "productName": "2025 Bowman Mega Box",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 12,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-bowmans-best-baseball-card-checklist/",
+   "sourceSlug": "2025-bowmans-best-baseball-card-checklist",
+   "productName": "2025 Bowman's Best",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 22,
+   "parallels": 19
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-donruss-baseball-card-checklist/",
+   "sourceSlug": "2025-donruss-baseball-card-checklist",
+   "productName": "2025 Donruss Baseball",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 32,
+   "parallels": 228
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-leaf-a-bronx-legacy-baseball-card-checklist/",
+   "sourceSlug": "2025-leaf-a-bronx-legacy-baseball-card-checklist",
+   "productName": "2025 Leaf A Bronx Legacy",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 25,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-leaf-baseball-nation-baseball-card-checklist/",
+   "sourceSlug": "2025-leaf-baseball-nation-baseball-card-checklist",
+   "productName": "2025 Leaf Baseball Nation",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 20,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-leaf-lumber-baseball-card-checklist/",
+   "sourceSlug": "2025-leaf-lumber-baseball-card-checklist",
+   "productName": "2025 Leaf Lumber",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 32,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-leaf-metal-baseball-card-checklist/",
+   "sourceSlug": "2025-leaf-metal-baseball-card-checklist",
+   "productName": "2025 Leaf Metal",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 21,
+   "parallels": 7
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-leaf-optichrome-baseball-card-checklist/",
+   "sourceSlug": "2025-leaf-optichrome-baseball-card-checklist",
+   "productName": "2025 Leaf Optichrome Baseball",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 24,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-leaf-seasons-in-the-sun-baseball-card-checklist/",
+   "sourceSlug": "2025-leaf-seasons-in-the-sun-baseball-card-checklist",
+   "productName": "2025 Leaf Seasons in the Sun",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 25,
+   "parallels": 12
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-leaf-spectacular-baseball-card-checklist/",
+   "sourceSlug": "2025-leaf-spectacular-baseball-card-checklist",
+   "productName": "2025 Leaf Spectacular",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 26,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-leaf-vivid-baseball-card-checklist/",
+   "sourceSlug": "2025-leaf-vivid-baseball-card-checklist",
+   "productName": "2025 Leaf Vivid Baseball",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 21,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-panini-boys-of-summer-baseball-card-checklist/",
+   "sourceSlug": "2025-panini-boys-of-summer-baseball-card-checklist",
+   "productName": "2025 Panini Boys of Summer",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 38,
+   "parallels": 96
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-panini-crusade-baseball-card-checklist/",
+   "sourceSlug": "2025-panini-crusade-baseball-card-checklist",
+   "productName": "2025 Panini Crusade",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 15,
+   "parallels": 53
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-panini-flawless-baseball-card-checklist/",
+   "sourceSlug": "2025-panini-flawless-baseball-card-checklist",
+   "productName": "2025 Panini Flawless",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 65,
+   "parallels": 90
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-panini-impeccable-baseball-card-checklist/",
+   "sourceSlug": "2025-panini-impeccable-baseball-card-checklist",
+   "productName": "2025 Panini Impeccable",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 21,
+   "parallels": 41
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-panini-national-treasures-baseball-card-checklist/",
+   "sourceSlug": "2025-panini-national-treasures-baseball-card-checklist",
+   "productName": "2025 Panini National Treasures",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 43,
+   "parallels": 84
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-panini-prizm-baseball-card-checklist/",
+   "sourceSlug": "2025-panini-prizm-baseball-card-checklist",
+   "productName": "2025 Panini Prizm",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 19,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-panini-prospect-edition-baseball-card-checklist/",
+   "sourceSlug": "2025-panini-prospect-edition-baseball-card-checklist",
+   "productName": "2025 Panini Prospect Edition",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 18,
+   "parallels": 97
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-panini-select-baseball-card-checklist/",
+   "sourceSlug": "2025-panini-select-baseball-card-checklist",
+   "productName": "2025 Panini Select",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 30,
+   "parallels": 1
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-panini-stars-and-stripes-baseball-card-checklist/",
+   "sourceSlug": "2025-panini-stars-and-stripes-baseball-card-checklist",
+   "productName": "2025 Panini Stars and Stripes",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 45,
+   "parallels": 114
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-panini-three-and-two-baseball-card-checklist/",
+   "sourceSlug": "2025-panini-three-and-two-baseball-card-checklist",
+   "productName": "2025 Panini Three and Two",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 27,
+   "parallels": 109
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-topps-all-star-game-mega-box-baseball-card-checklist/",
+   "sourceSlug": "2025-topps-all-star-game-mega-box-baseball-card-checklist",
+   "productName": "2025 Topps All-Star Game Mega Box",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 10,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-topps-allen-ginter-baseball-card-checklist/",
+   "sourceSlug": "2025-topps-allen-ginter-baseball-card-checklist",
+   "productName": "2025 Topps Allen & Ginter",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 40,
+   "parallels": 51
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-topps-archives-baseball-card-checklist/",
+   "sourceSlug": "2025-topps-archives-baseball-card-checklist",
+   "productName": "2025 Topps Archives",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 16,
+   "parallels": 62
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-topps-black-white-baseball-card-checklist/",
+   "sourceSlug": "2025-topps-black-white-baseball-card-checklist",
+   "productName": "2025 Topps Black & White",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 13,
+   "parallels": 29
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-topps-chrome-baseball-card-checklist/",
+   "sourceSlug": "2025-topps-chrome-baseball-card-checklist",
+   "productName": "2025 Topps Chrome",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 44,
+   "parallels": 33
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-topps-chrome-black-baseball-card-checklist/",
+   "sourceSlug": "2025-topps-chrome-black-baseball-card-checklist",
+   "productName": "2025 Topps Chrome Black",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 10,
+   "parallels": 2
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-topps-chrome-logofractor-baseball-card-checklist/",
+   "sourceSlug": "2025-topps-chrome-logofractor-baseball-card-checklist",
+   "productName": "2025 Topps Chrome LogoFractor",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 9,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-topps-chrome-platinum-baseball-card-checklist/",
+   "sourceSlug": "2025-topps-chrome-platinum-baseball-card-checklist",
+   "productName": "2025 Topps Chrome Platinum",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 11,
+   "parallels": 4
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-topps-chrome-sapphire-baseball-card-checklist/",
+   "sourceSlug": "2025-topps-chrome-sapphire-baseball-card-checklist",
+   "productName": "2025 Topps Chrome Sapphire",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 6,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-topps-chrome-sapphire-update-series-baseball-card-checklist/",
+   "sourceSlug": "2025-topps-chrome-sapphire-update-series-baseball-card-checklist",
+   "productName": "2025 Topps Chrome Sapphire Update Series",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 6,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-topps-chrome-update-series-baseball-card-checklist/",
+   "sourceSlug": "2025-topps-chrome-update-series-baseball-card-checklist",
+   "productName": "2025 Topps Chrome Update Series",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 35,
+   "parallels": 4
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-topps-cosmic-chrome-baseball-card-checklist/",
+   "sourceSlug": "2025-topps-cosmic-chrome-baseball-card-checklist",
+   "productName": "2025 Topps Cosmic Chrome",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 20,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-topps-definitive-collection-baseball-card-checklist/",
+   "sourceSlug": "2025-topps-definitive-collection-baseball-card-checklist",
+   "productName": "2025 Topps Definitive Collection",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 33,
+   "parallels": 63
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-topps-diamond-icons-baseball-card-checklist/",
+   "sourceSlug": "2025-topps-diamond-icons-baseball-card-checklist",
+   "productName": "2025 Topps Diamond Icons",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 36,
+   "parallels": 60
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-topps-dynasty-baseball-card-checklist/",
+   "sourceSlug": "2025-topps-dynasty-baseball-card-checklist",
+   "productName": "2025 Topps Dynasty",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 19,
+   "parallels": 14
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-topps-finest-baseball-card-checklist/",
+   "sourceSlug": "2025-topps-finest-baseball-card-checklist",
+   "productName": "2025 Topps Finest",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 23,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-topps-five-star-baseball-card-checklist/",
+   "sourceSlug": "2025-topps-five-star-baseball-card-checklist",
+   "productName": "2025 Topps Five Star",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 26,
+   "parallels": 68
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-topps-gilded-collection-baseball-card-checklist/",
+   "sourceSlug": "2025-topps-gilded-collection-baseball-card-checklist",
+   "productName": "2025 Topps Gilded Collection",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 12,
+   "parallels": 32
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-topps-heritage-baseball-card-checklist/",
+   "sourceSlug": "2025-topps-heritage-baseball-card-checklist",
+   "productName": "2025 Topps Heritage",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 33,
+   "parallels": 71
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-topps-heritage-high-number-baseball-card-checklist/",
+   "sourceSlug": "2025-topps-heritage-high-number-baseball-card-checklist",
+   "productName": "2025 Topps Heritage High Number",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 30,
+   "parallels": 42
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-topps-holiday-baseball-card-checklist/",
+   "sourceSlug": "2025-topps-holiday-baseball-card-checklist",
+   "productName": "2025 Topps Holiday",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 22,
+   "parallels": 21
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-topps-inception-baseball-card-checklist/",
+   "sourceSlug": "2025-topps-inception-baseball-card-checklist",
+   "productName": "2025 Topps Inception",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 21,
+   "parallels": 72
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-topps-museum-collection-baseball-card-checklist/",
+   "sourceSlug": "2025-topps-museum-collection-baseball-card-checklist",
+   "productName": "2025 Topps Museum Collection",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 31,
+   "parallels": 107
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-topps-pristine-baseball-card-checklist/",
+   "sourceSlug": "2025-topps-pristine-baseball-card-checklist",
+   "productName": "2025 Topps Pristine",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 19,
+   "parallels": 4
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-topps-pro-debut-baseball-card-checklist/",
+   "sourceSlug": "2025-topps-pro-debut-baseball-card-checklist",
+   "productName": "2025 Topps Pro Debut",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 18,
+   "parallels": 10
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-topps-series-1-baseball-card-checklist/",
+   "sourceSlug": "2025-topps-series-1-baseball-card-checklist",
+   "productName": "2025 Topps Series 1",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 49,
+   "parallels": 189
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-topps-series-1-celebration-mega-box-baseball-card-checklist/",
+   "sourceSlug": "2025-topps-series-1-celebration-mega-box-baseball-card-checklist",
+   "productName": "2025 Topps Series 1 Celebration Mega Box",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 10,
+   "parallels": 41
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-topps-series-1-tokyo-series-mega-box-baseball-card-checklist/",
+   "sourceSlug": "2025-topps-series-1-tokyo-series-mega-box-baseball-card-checklist",
+   "productName": "2025 Topps Series 1 Tokyo Series Mega Box",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 9,
+   "parallels": 21
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-topps-series-2-baseball-card-checklist/",
+   "sourceSlug": "2025-topps-series-2-baseball-card-checklist",
+   "productName": "2025 Topps Series 2",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 58,
+   "parallels": 200
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-topps-shoebox-treasures-baseball-card-checklist/",
+   "sourceSlug": "2025-topps-shoebox-treasures-baseball-card-checklist",
+   "productName": "2025 Topps Shoebox Treasures",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 11,
+   "parallels": 43
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-topps-stadium-club-baseball-card-checklist/",
+   "sourceSlug": "2025-topps-stadium-club-baseball-card-checklist",
+   "productName": "2025 Topps Stadium Club",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 15,
+   "parallels": 70
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-topps-sterling-baseball-card-checklist/",
+   "sourceSlug": "2025-topps-sterling-baseball-card-checklist",
+   "productName": "2025 Topps Sterling",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 27,
+   "parallels": 30
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-topps-takashi-murakami-mlb-world-tour-tokyo-series-baseball-card-checklist/",
+   "sourceSlug": "2025-topps-takashi-murakami-mlb-world-tour-tokyo-series-baseball-card-checklist",
+   "productName": "2025 Topps Takashi Murakami + MLB World Tour Tokyo Series",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 4,
+   "parallels": 9
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-topps-tier-one-baseball-card-checklist/",
+   "sourceSlug": "2025-topps-tier-one-baseball-card-checklist",
+   "productName": "2025 Topps Tier One",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 43,
+   "parallels": 65
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-topps-transcendent-baseball-card-checklist/",
+   "sourceSlug": "2025-topps-transcendent-baseball-card-checklist",
+   "productName": "2025 Topps Transcendent",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 34,
+   "parallels": 27
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-topps-tribute-baseball-card-checklist/",
+   "sourceSlug": "2025-topps-tribute-baseball-card-checklist",
+   "productName": "2025 Topps Tribute",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 20,
+   "parallels": 82
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-topps-update-series-baseball-card-checklist/",
+   "sourceSlug": "2025-topps-update-series-baseball-card-checklist",
+   "productName": "2025 Topps Update Series",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 51,
+   "parallels": 138
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-topps-welcome-to-the-club-3x-mvp-baseball-card-checklist/",
+   "sourceSlug": "2025-topps-welcome-to-the-club-3x-mvp-baseball-card-checklist",
+   "productName": "2025 Topps Welcome to the Club: 3X MVP",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 9,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2025-topps-x-bob-ross-the-joy-of-baseball-baseball-card-checklist/",
+   "sourceSlug": "2025-topps-x-bob-ross-the-joy-of-baseball-baseball-card-checklist",
+   "productName": "2025 Topps x Bob Ross: The Joy of Baseball",
+   "year": 2025,
+   "sport": "baseball",
+   "subsets": 10,
+   "parallels": 41
+  },
+  {
+   "url": "https://www.checklistcenter.com/2026-bowman-baseball-card-checklist/",
+   "sourceSlug": "2026-bowman-baseball-card-checklist",
+   "productName": "2026 Bowman Baseball",
+   "year": 2026,
+   "sport": "baseball",
+   "subsets": 41,
+   "parallels": 55
+  },
+  {
+   "url": "https://www.checklistcenter.com/2026-bowman-sapphire-baseball-card-checklist/",
+   "sourceSlug": "2026-bowman-sapphire-baseball-card-checklist",
+   "productName": "2026 Bowman Sapphire",
+   "year": 2026,
+   "sport": "baseball",
+   "subsets": 5,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2026-donruss-baseball-card-checklist/",
+   "sourceSlug": "2026-donruss-baseball-card-checklist",
+   "productName": "2026 Donruss Baseball",
+   "year": 2026,
+   "sport": "baseball",
+   "subsets": 37,
+   "parallels": 233
+  },
+  {
+   "url": "https://www.checklistcenter.com/2026-donruss-elite-baseball-card-checklist/",
+   "sourceSlug": "2026-donruss-elite-baseball-card-checklist",
+   "productName": "2026 Donruss Elite",
+   "year": 2026,
+   "sport": "baseball",
+   "subsets": 27,
+   "parallels": 129
+  },
+  {
+   "url": "https://www.checklistcenter.com/2026-leaf-baseball-nation-baseball-card-checklist/",
+   "sourceSlug": "2026-leaf-baseball-nation-baseball-card-checklist",
+   "productName": "2026 Leaf Baseball Nation",
+   "year": 2026,
+   "sport": "baseball",
+   "subsets": 23,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2026-leaf-electrum-baseball-card-checklist/",
+   "sourceSlug": "2026-leaf-electrum-baseball-card-checklist",
+   "productName": "2026 Leaf Electrum",
+   "year": 2026,
+   "sport": "baseball",
+   "subsets": 13,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2026-leaf-metal-baseball-card-checklist/",
+   "sourceSlug": "2026-leaf-metal-baseball-card-checklist",
+   "productName": "2026 Leaf Metal Baseball",
+   "year": 2026,
+   "sport": "baseball",
+   "subsets": 33,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2026-leaf-metal-draft-baseball-card-checklist/",
+   "sourceSlug": "2026-leaf-metal-draft-baseball-card-checklist",
+   "productName": "2026 Leaf Metal Draft",
+   "year": 2026,
+   "sport": "baseball",
+   "subsets": 15,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2026-leaf-vivid-baseball-card-checklist/",
+   "sourceSlug": "2026-leaf-vivid-baseball-card-checklist",
+   "productName": "2026 Leaf Vivid",
+   "year": 2026,
+   "sport": "baseball",
+   "subsets": 20,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2026-panini-immaculate-collection-baseball-card-checklist/",
+   "sourceSlug": "2026-panini-immaculate-collection-baseball-card-checklist",
+   "productName": "2026 Panini Immaculate Collection",
+   "year": 2026,
+   "sport": "baseball",
+   "subsets": 46,
+   "parallels": 118
+  },
+  {
+   "url": "https://www.checklistcenter.com/2026-panini-stars-stripes-prizm-usa-baseball-card-checklist/",
+   "sourceSlug": "2026-panini-stars-stripes-prizm-usa-baseball-card-checklist",
+   "productName": "2026 Panini Stars & Stripes Prizm USA",
+   "year": 2026,
+   "sport": "baseball",
+   "subsets": 31,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2026-pro-set-metal-baseball-card-checklist/",
+   "sourceSlug": "2026-pro-set-metal-baseball-card-checklist",
+   "productName": "2026 Pro Set Metal",
+   "year": 2026,
+   "sport": "baseball",
+   "subsets": 22,
+   "parallels": 0
+  },
+  {
+   "url": "https://www.checklistcenter.com/2026-topps-chrome-baseball-card-checklist/",
+   "sourceSlug": "2026-topps-chrome-baseball-card-checklist",
+   "productName": "2026 Topps Chrome",
+   "year": 2026,
+   "sport": "baseball",
+   "subsets": 54,
+   "parallels": 6
+  },
+  {
+   "url": "https://www.checklistcenter.com/2026-topps-chrome-black-baseball-card-checklist/",
+   "sourceSlug": "2026-topps-chrome-black-baseball-card-checklist",
+   "productName": "2026 Topps Chrome Black",
+   "year": 2026,
+   "sport": "baseball",
+   "subsets": 12,
+   "parallels": 3
+  },
+  {
+   "url": "https://www.checklistcenter.com/2026-topps-dynamic-duals-baseball-card-checklist/",
+   "sourceSlug": "2026-topps-dynamic-duals-baseball-card-checklist",
+   "productName": "2026 Topps Dynamic Duals",
+   "year": 2026,
+   "sport": "baseball",
+   "subsets": 9,
+   "parallels": 30
+  },
+  {
+   "url": "https://www.checklistcenter.com/2026-topps-finest-baseball-card-checklist/",
+   "sourceSlug": "2026-topps-finest-baseball-card-checklist",
+   "productName": "2026 Topps Finest",
+   "year": 2026,
+   "sport": "baseball",
+   "subsets": 27,
+   "parallels": 23
+  },
+  {
+   "url": "https://www.checklistcenter.com/2026-topps-heritage-baseball-card-checklist/",
+   "sourceSlug": "2026-topps-heritage-baseball-card-checklist",
+   "productName": "2026 Topps Heritage",
+   "year": 2026,
+   "sport": "baseball",
+   "subsets": 26,
+   "parallels": 51
+  },
+  {
+   "url": "https://www.checklistcenter.com/2026-topps-series-1-baseball-card-checklist/",
+   "sourceSlug": "2026-topps-series-1-baseball-card-checklist",
+   "productName": "2026 Topps Series 1",
+   "year": 2026,
+   "sport": "baseball",
+   "subsets": 51,
+   "parallels": 187
+  },
+  {
+   "url": "https://www.checklistcenter.com/2026-topps-series-1-celebration-mega-box-baseball-card-checklist/",
+   "sourceSlug": "2026-topps-series-1-celebration-mega-box-baseball-card-checklist",
+   "productName": "2026 Topps Series 1 Celebration Mega Box",
+   "year": 2026,
+   "sport": "baseball",
+   "subsets": 14,
+   "parallels": 52
+  },
+  {
+   "url": "https://www.checklistcenter.com/2026-topps-series-2-baseball-card-checklist/",
+   "sourceSlug": "2026-topps-series-2-baseball-card-checklist",
+   "productName": "2026 Topps Series 2",
+   "year": 2026,
+   "sport": "baseball",
+   "subsets": 67,
+   "parallels": 287
+  },
+  {
+   "url": "https://www.checklistcenter.com/2026-topps-tier-one-baseball-card-checklist/",
+   "sourceSlug": "2026-topps-tier-one-baseball-card-checklist",
+   "productName": "2026 Topps Tier One",
+   "year": 2026,
+   "sport": "baseball",
+   "subsets": 48,
+   "parallels": 155
+  },
+  {
+   "url": "https://www.checklistcenter.com/2026-topps-tribute-baseball-card-checklist/",
+   "sourceSlug": "2026-topps-tribute-baseball-card-checklist",
+   "productName": "2026 Topps Tribute",
+   "year": 2026,
+   "sport": "baseball",
+   "subsets": 23,
+   "parallels": 125
+  }
+ ]
+}

@@ -48,7 +48,11 @@ const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === 
 //   equals a player name of the same product -- a roster line the scraper took
 //   for a rung ("Jimmy Rollins" x 661 on 2008 Topps; "Adam Jones" on the old
 //   2012 Topps scrape). The product's own player list is the oracle.
-const MODE = ["misparsed", "tail", "playerrung"].includes(String(process.env.MODE || "").toLowerCase()) ? String(process.env.MODE).toLowerCase() : "exploded";
+// MODE=source: retire EVERY identity row of the given SOURCES -- a source that
+//   has been superseded by a clean re-ingest (checklist D3: the old
+//   checklistcenter ingesters), not an exploded one. Run AFTER the clean rows
+//   have landed so the pointing sales re-resolve onto rows that exist.
+const MODE = ["misparsed", "tail", "playerrung", "source"].includes(String(process.env.MODE || "").toLowerCase()) ? String(process.env.MODE).toLowerCase() : "exploded";
 const foldName = (v) => String(v ?? "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 const SOURCES = String(process.env.SOURCES || (MODE === "tail" ? "checklistinsider-2026-08-27,checklistcenter,bccp" : "baseballcardpedia")).split(",").map((s) => s.trim()).filter(Boolean);
 const PAR_MAX = Number(process.env.PAR_MAX || 150), NUM_MAX = Number(process.env.NUM_MAX || 2000), TAIL_MIN = Number(process.env.TAIL_MIN || 5);
@@ -83,7 +87,7 @@ async function main() {
 
   // ---- the product list (exploded mode): computed, not hand-typed
   let products = [];
-  if (MODE === "exploded" || MODE === "tail") {
+  if (MODE === "exploded" || MODE === "tail" || MODE === "source") {
     // Grouping by parallel AND cardNumber returned millions of combos on the
     // exploded source and aborted. Group by parallel only (bounded: products x
     // rungs), then count distinct card numbers per product with a subquery --
@@ -111,7 +115,7 @@ async function main() {
       }).fetchAll());
       a.numCount = Number(cnt[0] ?? 0); numChecks++;
     }
-    products = [...agg.values()].filter((a) => a.pars.size > PAR_MAX || (a.numCount ?? 0) > NUM_MAX).sort((x, y) => y.rows - x.rows);
+    products = (MODE === "source" ? [...agg.values()] : [...agg.values()].filter((a) => a.pars.size > PAR_MAX || (a.numCount ?? 0) > NUM_MAX)).sort((x, y) => y.rows - x.rows);
     console.log(`  (${f(agg.size)} products grouped; ${f(numChecks)} distinct-number checks)`);
     const total = products.reduce((s, p) => s + p.rows, 0);
     console.log(`\nexploded products (sources=${SOURCES.join(",")}; >${PAR_MAX} parallels or >${NUM_MAX} card numbers): ${products.length} products, ${f(total)} identity rows`);
@@ -122,7 +126,7 @@ async function main() {
 
   let scanned = 0, otherShards = 0, retired = 0, salesUnplaced = 0, gradedDeleted = 0, failed = 0, notReached = 0, kept = 0;
   let stopReason = null;
-  const reason = MODE === "exploded" ? "exploded checklist product retired; awaiting a clean checklist" : MODE === "playerrung" ? "player-name parallel retired (a roster line, not a rung)" : "mis-parsed checklist row retired; awaiting a clean checklist";
+  const reason = MODE === "exploded" ? "exploded checklist product retired; awaiting a clean checklist" : MODE === "source" ? "superseded by the clean checklistcenter re-ingest" : MODE === "playerrung" ? "player-name parallel retired (a roster line, not a rung)" : "mis-parsed checklist row retired; awaiting a clean checklist";
 
   const retireRow = async (d) => {
     scanned++;
@@ -175,7 +179,7 @@ async function main() {
     } while (token);
   };
 
-  if (MODE === "exploded") {
+  if (MODE === "exploded" || MODE === "source") {
     for (const p of products) {
       if (stopReason) break;
       await walk({

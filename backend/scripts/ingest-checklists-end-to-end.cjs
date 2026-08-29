@@ -43,7 +43,7 @@ const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === 
 // bcp included in the DEFAULT, in the code, not the comment: an earlier patch
 // edited the Env doc line and left this default untouched, and phase 3 sat
 // configured-off through every relaunch while the log said nothing.
-const PHASES = String(process.env.PHASES || "beckett,insider,bcp,tcgdexja").split(",").map((s) => s.trim()).filter(Boolean);
+const PHASES = String(process.env.PHASES || "beckett,insider,bcp,tcgdexja,clc").split(",").map((s) => s.trim()).filter(Boolean);
 const SPORT = process.env.SPORT || "baseball";
 const PAGES = process.env.PAGES || "29";
 const SLOT = Number(process.env.SLOT ?? 0);
@@ -76,6 +76,7 @@ function run(script, args, env) {
   const insiderDir = path.join(WORKDIR, "insider-csv");
   const insiderJsonl = path.join(WORKDIR, "insider.jsonl");
   const bcpDir = path.join(WORKDIR, "bcp-ladders");
+  const clcPagesDir = path.join(WORKDIR, "clc-pages"), clcDir = path.join(WORKDIR, "clc-csv");
   const tcgdexJaDir = path.join(WORKDIR, "tcgdex-ja");
   console.log(`workdir ${WORKDIR}   budget ${RUN_MS / 60000}m   ${APPLY ? "APPLY" : "REPORT ONLY"}\n`);
 
@@ -122,6 +123,23 @@ function run(script, args, env) {
     } catch (e) { console.error("  bcp acquire failed: " + String(e.message).slice(0, 120)); }
   }
 
+  if (PHASES.includes("clc") && left() > 5 * 60000) {
+    console.log("\n── phase 5: checklistcenter (D3) ──");
+    // CF-CHECKLISTCENTER-INTO-THE-GUARDED-PIPE. The old checklistcenter
+    // ingesters raw-upserted ~1.2M rows with comma-split ladders (player
+    // names became rungs) and must not be rerun. Pages are acquired into the
+    // cached WORKDIR once, converted to the canonical CSV with the rung guards,
+    // and land through the same guarded ingest as every other source.
+    try {
+      const hasCsv = fs.existsSync(clcDir) && fs.readdirSync(clcDir).some((n) => n.endsWith(".csv"));
+      if (!hasCsv || process.env.FORCE_ACQUIRE === "true") {
+        run("scrape-checklistcenter-products.cjs", [`--outDir=${clcPagesDir}`, "--delayMs=800", ...(process.env.YEARS ? [`--years=${process.env.YEARS}`] : [])]);
+        run("convertChecklistCenterToChecklistCsv.cjs", [`--pagesDir=${clcPagesDir}`, `--outDir=${clcDir}`, ...(process.env.YEARS ? [`--years=${process.env.YEARS}`] : [])]);
+      } else console.log("  clc-csv cached; skipping acquisition (FORCE_ACQUIRE=true to refresh)");
+      done.push("clc-acquired");
+    } catch (e) { console.error("  clc acquire failed: " + String(e.message).slice(0, 120)); }
+  }
+
   if (PHASES.includes("tcgdexja") && left() > 5 * 60000) {
     console.log("\n── phase 4: tcgdex Japanese sets ──");
     // Japanese-exclusive sets bridged to English species names via dexId.
@@ -148,6 +166,7 @@ function run(script, args, env) {
   // The tiny source must never be starved by the big ones.
   for (const [dir, source] of [
     [bcpDir, `baseballcardpedia-ladders-${stamp}`],
+[clcDir, `checklistcenter-${stamp}`],
     [beckettDir, `beckett-checklist-${stamp}`],
     [insiderDir, `checklistinsider-${stamp}`],
     [tcgdexJaDir, `tcgdex-ja-${stamp}`],
