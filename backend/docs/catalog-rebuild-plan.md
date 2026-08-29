@@ -666,6 +666,77 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   reasons before any APPLY); rename-setkey dry (`topps-allen-and-ginter`) —
   12,894 rows: 11,267 move / 711 fold / 905 replace / 2,539 sales re-pointed /
   0 failed.
+  **D14 — the probes (built on `feat/d14`, 2026-08-29; every one READ-ONLY,
+  one scorecard block, exit 0 on a bad number, `LIMIT` env, whitelisted on the
+  runner with `apply` irrelevant):**
+  - `audit-pool-identity` — sold_comps identity per source: partition key not
+    an hiq: slug, `hobbyiqCardId ≠ cardId`, CardHedge rows keyed `ch-daily::`
+    AND `ch-comp::` for one card (whole partitions read, (day, price) pairs
+    matched across shapes), what keys a user purchase/sale, verified rows
+    whose parallel's first word is absent from the title (Cosmos-side NOT
+    CONTAINS, Base excluded). First run (16,135,582 rows, 6 sources,
+    2,000/source sampled, 351s): cardId not hiq: **79.8%** (cardhedge 97.0% —
+    the vendor id is the partition key; tca-ebay 0.0%, cardsight 0.7%);
+    hobbyiqCardId missing 1.6% (253,307); cardId ≠ hobbyiqCardId 73.7% of the
+    sample (4,504 / 6,113) — tca-ebay **45.9%** and cardsight 75.1% with the
+    cardId already an hiq: slug, i.e. the sale is filed under one card and
+    matched to another; ebay-user-purchase 75.2%, ebay-user-sale 77.8%. User
+    keys: purchases `holding::` 59.4% / item id 39.6%, sales are
+    **100% timestamp-keyed** (null sourceExternalId), manual `admin-manual::`.
+    CardHedge: 49 of 100 cards carry both key shapes and 693 (3.1%) (day,
+    price) pairs exist under both — the same sale in the pool twice.
+    Verified parallel-word-absent 18 (4.7%), ebay-user-purchase 26.8%,
+    "Refractor" the top offender.
+  - `probe-price-routes` — replays checklist-confirmed slugs with ≥ 3 raw
+    sales / 180d through `/price-by-id`, `/canonical-fmv`, `/hobbyiq-fmv` and
+    `/observed-grade-curve` (Raw) under the harness session at ≤ 4 rps, the
+    rung vocabulary read from the TS unions at run time. First run (45 slugs:
+    1 in 7 candidates had a pool, the pull is now 15× LIMIT): label in
+    vocabulary price-by-id **6.7%** — it emits the canonical METHOD
+    (`direct-comp` ×36, `no-recent-comps` ×4, `projected` ×2), no rungLabel
+    on that wire; canonical-fmv / hobbyiq-fmv / grade-curve 100%. Exact-pool
+    rung 0% / 80% / 100% / 100%. `cardIdentity.setKey` = slug 100% on
+    price-by-id; **no identity on the other three wires**. FMV null 8.9% /
+    13.3% / 0% / 0%. **Routes disagree by > 25% on 55.6%** (25 / 45 — 2021
+    Bowman Chrome CPA-EHA Refractor Auto: $13.09 / $13.09 / $125.00 /
+    $243.75 off a pool of 14; three routes label the same exact pool
+    `exact-pool-projection` and read it to different numbers). hobbyiq-fmv
+    `method` outside its own union 91.1% (`unified-market-value`);
+    grade-curve answered under a vendor id 82.2%; median rung with ≥ 8
+    sales 0 / 20. The LIMIT=200 run (1,535 candidates probed, 800 requests,
+    ~35 min at the RU floor): price-by-id label in vocabulary 2.5%
+    (`direct-comp` ×177, `no-recent-comps` ×17), exact-pool rung 0% / 89.0%
+    / 99.0% / 99.5%, FMV null 8.0% / 8.5% / 0% / 0.5% — canonical-fmv answers
+    `no-basis` on 17 slugs whose exact pool hobbyiq-fmv priced; **routes
+    disagree by > 25% on 44.2%** (88 / 199; worst, 2018 Bowman #49 Gold:
+    $11,995 / $11,995 / $3,893.55 / $88.00 off a pool of 3); hobbyiq-fmv
+    median rung with ≥ 8 sales 5 / 48 (10.4%), `method` outside its union
+    80.0%; grade-curve under a vendor id 89.0%.
+  - `audit-all-holdings` RUNGS block — appended, existing output untouched:
+    judged from the persisted fields, never from estimateBasis prose. First
+    run (all users, 92 holdings, 10 clean): fmvRung null **38.0%** (35), not
+    an exact-pool rung 27.2% (25: rare-card-anchor ×11, cross-grade-fallback
+    ×10, sibling-parallel ×3, same-printrun-cross-parallel ×1), cardId ≠
+    hobbyiqCardId 28.3% (26), cardId not hiq: 10.9% (10), estimatedValue
+    shown because fairMarketValue is null 22.8% (21), isEstimate while the
+    exact pool has ≥ 3 raw sales in 180d **8 of 23** (34.8%).
+  - `everyWriteJobReconciles` v2 — `.patch(` and `.create(` are writes,
+    `.replace(` only in its Cosmos shape (the v1 pattern called eight
+    HTML-escaping digests writers), camelCase names, the cron population
+    (every `scripts/*.cjs` a workflow invokes, no APPLY needed — a cron is
+    always live), and the marker ⇔ relaunch contract judged with comments
+    stripped. Measured: runner writers 29 / 75 reconcile (debt 46, was 26
+    declared — `reslugAllSoldComps` and 21 patch-only writers were invisible;
+    `ingest-product-checklist` leaves the list because its writes are
+    service-mediated and the net cannot see them); cron writers **0 / 23**
+    (`cosmos-throughput` excluded by name — it replaces an OFFER, not rows);
+    marker-printers relaunched on the marker 11 / 24 (debt 13: four with no
+    relaunch step, nine gating on progress > 0). Every debt list is sorted,
+    may only shrink, and a wired or vanished entry fails the test.
+    Mutation-checked four ways. → next, by doctrine: wire the 23 cron
+    writers, key the nine relaunch steps on the marker, give price-by-id a
+    rungLabel and the three wires an identity, and find why canonical-fmv,
+    hobbyiq-fmv and the curve read one exact pool to three numbers.
 - ◐ D10 **Look at all holdings for everyone** (Drew, 2026-08-29 17:15Z). The three
   defects under holding `ca7a150b` are not specific to it. **#1448
   `audit-all-holdings`** (read-only, runner-whitelisted): per holding —
