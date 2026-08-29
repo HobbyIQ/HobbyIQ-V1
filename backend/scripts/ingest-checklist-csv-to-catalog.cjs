@@ -175,6 +175,8 @@ async function main() {
   let alreadyDone = 0;
   let cardLineParallel = 0, explodedFiles = 0, playerNameParallel = 0;
   const foldName = (v) => String(v ?? "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  const PARALLEL_WORDS = new Set(["refractor","refractors","xfractor","x-fractor","fractor","prizm","prizms","mojo","wave","shimmer","foil","foilboard","holo","chrome","sapphire","superfractor","printing","plate","plates","black","gold","silver","blue","red","green","orange","purple","pink","yellow","aqua","teal","magenta","fuchsia","bronze","platinum","rainbow","atomic","lava","pattern","laser","crackle","mini","base","parallel","variation","variations","sp","ssp","auto","autograph","autographs","relic","patch","jersey","insert","inserts","checklist","1/1","numbered","border","camo","tie-dye","disco","cracked","ice","optic","velocity","hyper","speckle","sparkle","glitter","neon","negative","sepia","vintage","stock","paper","canvas","gilded","glossy","matte"]);
+  const isPersonName = (v) => { const t = foldName(v).split(" ").filter(Boolean); return t.length >= 2 && t.length <= 5 && !t.some((w) => PARALLEL_WORDS.has(w)) && !/^\d/.test(t[0]); };
   const EXPLODED_PAR_MAX = Number(process.env.EXPLODED_PAR_MAX || 150), EXPLODED_NUM_MAX = Number(process.env.EXPLODED_NUM_MAX || 2000);
   if (!REINGEST) {
     const before = files.length;
@@ -221,7 +223,7 @@ async function main() {
     // of the same file is a roster line the scraper took for a rung ("Jimmy
     // Rollins" x 661 rows on 2008 Topps). The file knows its own players.
     {
-      const players = new Set(rawRows.map((r) => foldName(r.player)).filter(Boolean));
+      const players = new Set(rawRows.map((r) => r.player).filter(isPersonName).map(foldName));
       for (const r of rawRows) {
         if (r.parallel && players.has(foldName(r.parallel))) { playerNameParallel++; continue; }
         batch.push({ category: r.category, cardNumber: r.cardNumber, parallel: r.parallel, isAuto: r.isAuto, printRun: r.printRun, player: r.player, parallelNote: r.parallelNote || null });

@@ -114,6 +114,8 @@ const UMBRELLA = /(parallels|factory set|retail|club set|variations?|short print
 // each). The base list is on the same page: any rung candidate that equals a
 // player name of this product is a roster line, not a rung.
 const foldName = (s) => String(s ?? "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+const PARALLEL_WORDS = new Set(["refractor","refractors","xfractor","x-fractor","fractor","prizm","prizms","mojo","wave","shimmer","foil","foilboard","holo","chrome","sapphire","superfractor","printing","plate","plates","black","gold","silver","blue","red","green","orange","purple","pink","yellow","aqua","teal","magenta","fuchsia","bronze","platinum","rainbow","atomic","lava","pattern","laser","crackle","mini","base","parallel","variation","variations","sp","ssp","auto","autograph","autographs","relic","patch","jersey","insert","inserts","checklist","1/1","numbered","border","camo","tie-dye","disco","cracked","ice","optic","velocity","hyper","speckle","sparkle","glitter","neon","negative","sepia","vintage","stock","paper","canvas","gilded","glossy","matte"]);
+const isPersonName = (v) => { const t = foldName(v).split(" ").filter(Boolean); return t.length >= 2 && t.length <= 5 && !t.some((w) => PARALLEL_WORDS.has(w)) && !/^\d/.test(t[0]); };
 
 /** Everything the Parallels section names, deduped by slug, run kept when found. */
 // CF-THE-NAME-IS-NOT-THE-FOOTNOTE (Drew, 2026-08-29 "clean the names"). A
@@ -212,7 +214,7 @@ function parseInserts(html) {
     // pass would read as a rung named after the insert itself. An insert is
     // not a parallel of itself.
     const selfSlug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
-    const ladder = parseLadder(sub, new Set(cards.map((c) => foldName(c.player)))).filter((r) => r.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") !== selfSlug);
+    const ladder = parseLadder(sub, new Set(cards.map((c) => c.player).filter(isPersonName).map(foldName))).filter((r) => r.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") !== selfSlug);
     out.push({ name, cards, ladder });
   }
   return out;
@@ -247,7 +249,7 @@ async function main() {
     const base = section(html, "Base_Set", 2);
     const par = section(html, "Parallels", 2);
     const cards = parseCards(base);
-    const ladder = parseLadder(par, new Set(cards.map((c) => foldName(c.player))));
+    const ladder = parseLadder(par, new Set(cards.map((c) => c.player).filter(isPersonName).map(foldName)));
     if (ladder.rosterLines) console.log(`   ${ladder.rosterLines} roster line(s) in the Parallels section refused as rungs (player names of this set)`);
     if (!cards.length) { noCards++; console.log(`  ${title}: 0 base cards — layout not understood, SKIPPED (not emitted)`); continue; }
     if (!ladder.length) { noLadder++; console.log(`  ${title}: base ok (${cards.length}) but 0 rungs — nothing new to add`); continue; }
