@@ -179,10 +179,19 @@ describe("CF-ROUTE-SLUGS: /price-by-id resolves the identity before pricing", ()
     expect(input?.hobbyiqCardId).toBeNull();
   });
 
-  it("a request that arrived with an hiq: slug passes that slug through, with no lookup", async () => {
+  // CF-ONE-VALUATION-PATH (D16, 2026-08-30). An hiq: slug is priced by the
+  // one valuation path and answered from it — it never reaches the legacy
+  // pipeline, so the graded-estimates compiler (a second engine) is not
+  // called for it at all; its graded tiers come from the same result. The
+  // wire still says which rung answered, and here — no catalog under test —
+  // why there is no number.
+  it("a request that arrived with an hiq: slug is answered by the one valuation path — no lookup, no legacy compile", async () => {
     const res = await post("/api/compiq/price-by-id", { cardId: HIQ_REQUEST });
     expect(res.status).toBe(200);
-    expect(lastCompileInput()?.hobbyiqCardId).toBe(HIQ_REQUEST);
+    expect(lastCompileInput()).toBeUndefined();
     expect(h.lookup).not.toHaveBeenCalled();
+    expect(res.body.rungLabel).toBe("no-basis");
+    expect(res.body.fmvReason).toBe("identity-not-in-catalog");
+    expect(res.body.cardIdentity?.card_id).toBe(HIQ_REQUEST);
   });
 });

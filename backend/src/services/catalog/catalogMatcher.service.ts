@@ -620,6 +620,9 @@ export async function readCatalogIdentityBySlug(slug: string): Promise<{
    *  is re-canonicalized by the next PATCH from a holding that has no printRun,
    *  the slug loses its :num-N segment, and the acceptance is silently undone. */
   printRun: number | null;
+  /** CF-ONE-VALUATION-PATH (D16): the row's image, so a pricing route's
+   *  identity block needs no second catalog read. */
+  imageUrl: string | null;
 } | null> {
   const id = String(slug ?? "").trim();
   if (!id.startsWith("hiq:")) return null;
@@ -628,7 +631,7 @@ export async function readCatalogIdentityBySlug(slug: string): Promise<{
     if (!container) return null;
     const { resources } = await container.items.query<Record<string, unknown>>({
       query: `SELECT c.playerName, c.cardYear, c.year, c.setKey, c.setName, c.cardNumber,
-                     c.parallel, c.isAuto, c.sport, c.printRun
+                     c.parallel, c.isAuto, c.sport, c.printRun, c.imageUrl
               FROM c WHERE c.id = @id`,
       parameters: [{ name: "@id", value: id }],
     }).fetchAll();
@@ -649,6 +652,7 @@ export async function readCatalogIdentityBySlug(slug: string): Promise<{
       isAuto: typeof r.isAuto === "boolean" ? r.isAuto : null,
       sport: str(r.sport),
       printRun: num(r.printRun),
+      imageUrl: str(r.imageUrl),
     };
   } catch {
     return null;

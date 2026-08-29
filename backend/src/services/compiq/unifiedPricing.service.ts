@@ -23,6 +23,7 @@
 import { CosmosClient, type Container } from "@azure/cosmos";
 import { dedupeSoldComps } from "../portfolioiq/dedupeSoldComps.js";
 import { projectNextSaleFromComps } from "./nextSaleProjection.service.js";
+import { readExactPoolRows, type ExactPoolRow } from "./exactPoolReader.js";
 import type { ExactPoolRungLabel } from "./fmvRung.js";
 
 const COSMOS_DATABASE = process.env.COSMOS_DATABASE ?? "hobbyiq";
@@ -76,6 +77,9 @@ const WINDOWS = [
   { days: 180, minDirect: 3 },
 ];
 
+// D16: how many of a tier's sales ride on the result for the wire's comp list.
+const TIER_SALES_ON_WIRE = 50;
+
 // Recency decay: sale weight = exp(-days_since_sale / HALF_LIFE_DAYS).
 // 14d half-life means a 48h-old sale is ~5× weight of a 30d-old sale.
 const HALF_LIFE_DAYS = 14;
@@ -120,6 +124,10 @@ export interface UnifiedGradeEntry {
   // label names the aggregation. Written in exactly one place — the branch
   // that returned the number — so no consumer has to infer it.
   rungLabel: ExactPoolRungLabel;
+  // CF-ONE-VALUATION-PATH (D16, 2026-08-30). The sales this tier was priced
+  // from, newest first (capped), so a wire's comp list / sales history is
+  // the SAME rows that produced the number — not a second read.
+  sales?: Array<{ price: number; soldAt: string; source: string | null }>;
 }
 
 export interface UnifiedPriceResult {
@@ -156,14 +164,7 @@ async function getContainer(): Promise<Container | null> {
   } catch { return null; }
 }
 
-interface RawCompRow {
-  price: number;
-  soldAt: string;
-  gradeCompany: string | null;
-  gradeValue: number | null;
-  priceAnomaly?: boolean;
-  contributorUserId?: string | null;
-}
+type RawCompRow = ExactPoolRow;
 
 // CF-SELF-COMP-THIN-POOL (Drew, 2026-08-04). When the surviving pool
 // after excluding the user's own contributions has fewer than this many
@@ -173,59 +174,63 @@ interface RawCompRow {
 // and legacy engine's fuzzy fallback produces $1.89.
 const SELF_COMP_MIN_OTHER_SAMPLES = 3;
 
-async function queryComps(
-  cont: Container,
+/** The identity's deduped pool in the window. `null` when Cosmos is not
+ *  configured. CF-ONE-VALUATION-PATH (D16): the query lives in
+ *  exactPoolReader so a test can feed one fixture pool below the engine. */
+async function fetchPoolRows(
   cardId: string,
   hobbyiqCardId: string | null,
   windowDays: number,
-  excludeContributorUserId?: string | null,
-): Promise<RawCompRow[]> {
-  const cutoff = new Date(Date.now() - windowDays * 86400_000).toISOString();
-  const parts: string[] = ["c.soldAt >= @cutoff", "c.price > 0", "(NOT IS_DEFINED(c.priceAnomaly) OR c.priceAnomaly != true)"];
-  const params: Array<{ name: string; value: string | number | boolean | null }> = [
-    { name: "@cutoff", value: cutoff },
-  ];
-  // Union: match by cardId OR hobbyiqCardId (covers cross-vendor storage).
-  parts.push("(c.cardId = @cid" + (hobbyiqCardId ? " OR c.hobbyiqCardId = @hiq" : "") + ")");
-  params.push({ name: "@cid", value: cardId });
-  if (hobbyiqCardId) params.push({ name: "@hiq", value: hobbyiqCardId });
+  nowMs: number,
+): Promise<RawCompRow[] | null> {
+  const resources = await readExactPoolRows({ cardId, hobbyiqCardId, windowDays, nowMs });
+  if (resources === null) return null;
+  const raw = resources.filter((r) => Number.isFinite(r.price) && r.price > 0 && !!r.soldAt);
+  // CF-DEDUPE-SOLD-COMPS (2026-08-22). One sale arrives up to three times —
+  // cardsight, cardhedge and tca-ebay all ingest the same eBay transaction,
+  // and cardhedge writes it twice at different timestamp precision. On
+  // Ohtani 2018 BC #1 that is 340 of 1,238 rows.
+  //
+  // It matters here more than anywhere else: the leading edge below is the
+  // MEDIAN OF THE LAST 3 SALES, so two copies of one sale outvote every
+  // other recent sale and become the market value. That is how this card
+  // reported "-9.7%, falling" while its own PSA 9 sales rose +16%/month.
+  const clean = dedupeSoldComps(raw);
+  if (clean.length !== raw.length) {
+    console.log(JSON.stringify({
+      event: "sold_comps_deduped",
+      source: "unifiedPricing.queryComps",
+      cardId,
+      hobbyiqCardId,
+      before: raw.length,
+      after: clean.length,
+      removed: raw.length - clean.length,
+    }));
+  }
+  return clean;
+}
 
-  try {
-    const { resources } = await cont.items.query<RawCompRow>({
-      query: `SELECT c.price, c.soldAt, c.gradeCompany, c.gradeValue, c.priceAnomaly, c.contributorUserId FROM c WHERE ${parts.join(" AND ")}`,
-      parameters: params,
-    }, { maxItemCount: 500 }).fetchAll();
-    const raw = (resources || []).filter((r) => Number.isFinite(r.price) && r.price > 0 && !!r.soldAt);
-    // CF-DEDUPE-SOLD-COMPS (2026-08-22). One sale arrives up to three times —
-    // cardsight, cardhedge and tca-ebay all ingest the same eBay transaction,
-    // and cardhedge writes it twice at different timestamp precision. On
-    // Ohtani 2018 BC #1 that is 340 of 1,238 rows.
-    //
-    // It matters here more than anywhere else: the leading edge below is the
-    // MEDIAN OF THE LAST 3 SALES, so two copies of one sale outvote every
-    // other recent sale and become the market value. That is how this card
-    // reported "-9.7%, falling" while its own PSA 9 sales rose +16%/month.
-    const clean = dedupeSoldComps(raw);
-    if (clean.length !== raw.length) {
-      console.log(JSON.stringify({
-        event: "sold_comps_deduped",
-        source: "unifiedPricing.queryComps",
-        cardId,
-        hobbyiqCardId,
-        before: raw.length,
-        after: clean.length,
-        removed: raw.length - clean.length,
-      }));
-    }
-    // Post-filter: exclude self-comps ONLY when the surviving other-pool
-    // is large enough to price on its own. See SELF_COMP_MIN_OTHER_SAMPLES.
-    if (excludeContributorUserId) {
-      const others = clean.filter((r) => r.contributorUserId !== excludeContributorUserId);
-      if (others.length >= SELF_COMP_MIN_OTHER_SAMPLES) return others;
-      // else: keep self-comps in — they carry the only market signal we have
-    }
-    return clean;
-  } catch { return []; }
+/** Post-filter: exclude self-comps ONLY when the surviving other-pool is
+ *  large enough to price on its own. See SELF_COMP_MIN_OTHER_SAMPLES. Pure,
+ *  so the per-tier window mode can apply it to each window exactly as the
+ *  cascade applied it to each query. */
+function applySelfCompRule(rows: RawCompRow[], excludeContributorUserId?: string | null): RawCompRow[] {
+  if (!excludeContributorUserId) return rows;
+  const others = rows.filter((r) => r.contributorUserId !== excludeContributorUserId);
+  if (others.length >= SELF_COMP_MIN_OTHER_SAMPLES) return others;
+  // else: keep self-comps in — they carry the only market signal we have
+  return rows;
+}
+
+async function queryComps(
+  cardId: string,
+  hobbyiqCardId: string | null,
+  windowDays: number,
+  nowMs: number,
+  excludeContributorUserId?: string | null,
+): Promise<RawCompRow[] | null> {
+  const rows = await fetchPoolRows(cardId, hobbyiqCardId, windowDays, nowMs);
+  return rows === null ? null : applySelfCompRule(rows, excludeContributorUserId);
 }
 
 function gradeLabel(company: string | null, value: number | null): string {
@@ -354,6 +359,15 @@ export async function computeUnifiedPrice(
     // at all → no leading-edge trend. Fixed 180 window catches every
     // tier with sales in the last 6 months.
     fixedWindowDays?: number;
+    // CF-ONE-VALUATION-PATH (D16, 2026-08-30). Every tier chooses its OWN
+    // window by its own density — the same 60 → 90 → 180 cascade the
+    // requested tier has always had, applied to each tier of the curve
+    // from one 180d read. So a tier's curve entry IS the number that tier
+    // would get as a headline: the four pricing routes and the grade curve
+    // derive from one result, and a dense PSA 10 next to a sparse Raw no
+    // longer reads the Raw pool at 180d while the headline read it at 60d.
+    // When set, fixedWindowDays is ignored (the read is always 180d).
+    perTierWindows?: boolean;
   } = {},
 ): Promise<UnifiedPriceResult> {
   const nowMs = Date.now();
@@ -374,7 +388,6 @@ export async function computeUnifiedPrice(
   };
 
   const container = await getContainer();
-  if (!container) return empty;
 
   // CF-RAW-IS-A-TIER (D4 "one valuation path", PR 4 — 2026-08-29). Which
   // tier the caller asked for:
@@ -395,35 +408,81 @@ export async function computeUnifiedPrice(
   // Adaptive window — start tight, widen until direct-grade density
   // supports the requested read. When opts.fixedWindowDays is passed
   // (grade-curve panel), skip the cascade and use exactly that window.
+  // When opts.perTierWindows is passed, read 180d once and let every tier
+  // run the cascade on its own rows (D16).
+  const maxWindow = WINDOWS[WINDOWS.length - 1].days;
   let selectedWindow = 180;
   let comps: RawCompRow[] = [];
-  if (opts.fixedWindowDays && opts.fixedWindowDays > 0) {
+  // Per-tier mode: the rows each tier is priced from, by tier label.
+  const tierRows = new Map<string, { rows: RawCompRow[]; windowDays: number }>();
+  if (opts.perTierWindows) {
+    const all = await fetchPoolRows(cardId, opts.hobbyiqCardId ?? null, maxWindow, nowMs);
+    if (all === null || all.length === 0) return empty;
+    const withinWindow = new Map<number, RawCompRow[]>();
+    const rowsWithin = (days: number): RawCompRow[] => {
+      let cached = withinWindow.get(days);
+      if (!cached) {
+        const cutoffMs = nowMs - days * 86400_000;
+        cached = applySelfCompRule(
+          all.filter((r) => { const t = Date.parse(r.soldAt); return Number.isFinite(t) && t >= cutoffMs; }),
+          opts.excludeContributorUserId ?? null,
+        );
+        withinWindow.set(days, cached);
+      }
+      return cached;
+    };
+    const labels = new Set(rowsWithin(maxWindow).map((r) => gradeLabel(r.gradeCompany, r.gradeValue)));
+    for (const label of labels) {
+      let chosen: { rows: RawCompRow[]; windowDays: number } | null = null;
+      for (const w of WINDOWS) {
+        const rows = rowsWithin(w.days).filter((r) => gradeLabel(r.gradeCompany, r.gradeValue) === label);
+        if (rows.length >= w.minDirect) { chosen = { rows, windowDays: w.days }; break; }
+      }
+      if (!chosen) {
+        chosen = { rows: rowsWithin(maxWindow).filter((r) => gradeLabel(r.gradeCompany, r.gradeValue) === label), windowDays: maxWindow };
+      }
+      if (chosen.rows.length > 0) tierRows.set(label, chosen);
+    }
+    // The result's window and pool size describe the requested tier's read
+    // — the same numbers the cascade reported for it.
+    selectedWindow = (requestedTier && tierRows.get(requestedTier)?.windowDays) || maxWindow;
+    comps = rowsWithin(selectedWindow);
+  } else if (opts.fixedWindowDays && opts.fixedWindowDays > 0) {
     selectedWindow = opts.fixedWindowDays;
-    comps = await queryComps(container, cardId, opts.hobbyiqCardId ?? null, selectedWindow, opts.excludeContributorUserId ?? null);
+    const rows = await queryComps(cardId, opts.hobbyiqCardId ?? null, selectedWindow, nowMs, opts.excludeContributorUserId ?? null);
+    if (rows === null) return empty;
+    comps = rows;
   } else {
-  for (const w of WINDOWS) {
-    comps = await queryComps(container, cardId, opts.hobbyiqCardId ?? null, w.days, opts.excludeContributorUserId ?? null);
-    // If a specific tier was requested, measure density on THAT tier
-    // for cascade decision. Else use overall pool density.
-    let densityCount = comps.length;
-    if (requestedTier) {
-      densityCount = comps.filter((r) => gradeLabel(r.gradeCompany, r.gradeValue) === requestedTier).length;
-    }
-    if (densityCount >= w.minDirect) {
-      selectedWindow = w.days;
-      break;
+    for (const w of WINDOWS) {
+      const rows = await queryComps(cardId, opts.hobbyiqCardId ?? null, w.days, nowMs, opts.excludeContributorUserId ?? null);
+      if (rows === null) return empty;
+      comps = rows;
+      // If a specific tier was requested, measure density on THAT tier
+      // for cascade decision. Else use overall pool density.
+      let densityCount = comps.length;
+      if (requestedTier) {
+        densityCount = comps.filter((r) => gradeLabel(r.gradeCompany, r.gradeValue) === requestedTier).length;
+      }
+      if (densityCount >= w.minDirect) {
+        selectedWindow = w.days;
+        break;
+      }
     }
   }
-  }
-  if (comps.length === 0) return empty;
+  if (comps.length === 0 && tierRows.size === 0) return empty;
 
-  // Group by grade
+  // Group by grade — in per-tier mode each tier already holds its own
+  // window's rows; otherwise every tier shares the selected window.
   const groups = new Map<string, RawCompRow[]>();
-  for (const r of comps) {
-    const key = gradeLabel(r.gradeCompany, r.gradeValue);
-    let arr = groups.get(key);
-    if (!arr) { arr = []; groups.set(key, arr); }
-    arr.push(r);
+  if (opts.perTierWindows) {
+    for (const [label, t] of tierRows) groups.set(label, t.rows);
+  } else {
+    for (const r of comps) {
+      const key = gradeLabel(r.gradeCompany, r.gradeValue);
+      let arr = groups.get(key);
+      if (!arr) { arr = []; groups.set(key, arr); }
+      arr.push(r);
+    }
   }
 
   // Trend + projected next sale per grade. Split rows into recent 14d
@@ -644,6 +703,11 @@ export async function computeUnifiedPrice(
       trendPctPerWeek: trend.trendPctPerWeek,
       trendDirection: trend.trendDirection,
       rungLabel: trend.rungLabel,
+      sales: rows
+        .map((r) => ({ price: Number(r.price), soldAt: String(r.soldAt), source: r.source ?? null, t: Date.parse(r.soldAt) }))
+        .sort((a, b) => (Number.isFinite(b.t) ? b.t : 0) - (Number.isFinite(a.t) ? a.t : 0))
+        .slice(0, TIER_SALES_ON_WIRE)
+        .map(({ price, soldAt, source }) => ({ price, soldAt, source })),
     });
   }
   gradeCurve.sort((a, b) => (b.sampleCount - a.sampleCount));
@@ -732,7 +796,7 @@ export async function computeUnifiedPrice(
       // if the wider Cam Caminiti 2024 pool is trending up 20%.
       const newestMs = matched.newestSaleDate ? Date.parse(matched.newestSaleDate) : 0;
       const daysSinceNewest = newestMs > 0 ? (nowMs - newestMs) / 86400_000 : 0;
-      if (daysSinceNewest > 60 && opts.playerName && opts.cardYear && marketValue !== null) {
+      if (daysSinceNewest > 60 && opts.playerName && opts.cardYear && marketValue !== null && container) {
         try {
           const playerRatio = await computePlayerPoolTrendRatio(
             container,

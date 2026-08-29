@@ -1089,6 +1089,85 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
     /4 8,861; a 19-digit mis-parse ×49) does not show my /50 ×234, /25 ×255
     … — those were graded rows; the un-graded population is what the mover
     touches.
+    **D16 — one valuation path behind the four routes (built on `feat/d16`,
+  2026-08-30, 7 commits, unmerged; backend/src changed — dispatch "Daily 5AM ET
+  Refresh & Deploy" after merge).** The D14 probe's finding was one shape four
+  times: `/price-by-id` ran canonical-fmv's ladder over a cardId-keyed
+  five-source pool and stamped `source: "direct-comp"` (a METHOD, 0% exact-pool
+  rung on that wire), then the CH pipeline priced the same slug a second way
+  when that found nothing; `/hobbyiq-fmv` ran the unified engine at the
+  density window and labelled it `unified-market-value` (outside its own
+  union); `/observed-grade-curve` swapped the slug for the majority vendor id,
+  ran the legacy build's own read + trajectory + sibling pass, then a unified
+  overlay at a FIXED 180d window; `/canonical-fmv` answered no-basis on slugs
+  the others priced. Same rows, four engines, four windows. **Built:**
+  `oneValuationPath.service.valueIdentity({ id, grade?, printRun? })` — the
+  ENTRY, not a fifth engine: identity resolved once (catalog slug; a vendor id
+  maps through sold_comps and the catalog must hold it; nothing minted; a slug
+  the catalog does not hold is refused as priceFromOurPool refuses it), the
+  exact pool priced once by the unified engine through
+  `priceHoldingFromExactPool` (hobbyiqCardId alone first, its twin second,
+  ≥ 1 sale — #1462's rule), the grade curve = that same result over the
+  canonical tiers through gradeCurveEntry's one writer; **headline(T) ==
+  curve[T] by construction** because the engine gained `perTierWindows`
+  (one 180d read, every tier runs the 60/90/180 cascade on its own rows —
+  pinned identical to the cascade's answer for the requested tier; the
+  self-comp rule per window). No pool at the tier → this identity's other
+  tiers × the empirical ratio (`grade-curve-estimate`; the engine's
+  getGraderPremium cross-grade rescale is NOT used for a headline — D4 PR 6's
+  tables) → with no sale at any grade the GATED ladder (computeHobbyIqFmv,
+  `skipExactPool`) under its own rung name → null with `fmvReason` on every
+  route. `oneValuationPathAdapters` shapes the four wires from one Valuation
+  (pure, pinned engine-free); every surface carries `rungLabel` (closed
+  vocabulary), `valueSource`, `identity`, `fmvReason`; price-by-id's `source`
+  is the rung (a null keeps `no-recent-comps` + `marketTier: null` — iOS's
+  no-data check); hobbyiq-fmv's `method` is `direct-slug` for the exact pool
+  (computeHobbyIqFmv itself fixed — the string is gone from src); canonical's
+  `method` is `direct-comp` for the exact pool and the ladder's own names
+  otherwise (union widened); the curve is served UNDER THE SLUG with
+  `rungLabel` on every priced tier; the legacy curve overlay (card-panel,
+  bulk, the portfolio tile) moved to per-tier windows too. Legacy pipelines
+  survive only for vendor ids the catalog cannot name. **Judgment calls
+  (flagged):** (1) thin pools n = 1–2 are priced by the unified engine's
+  weighted-median rung on every route (hobbyiq-fmv used rare-card-anchor /
+  the drift-adjusted last sale below conf 0.3) — the persist site's rule
+  since #1462; the engine does not implement `exact-pool-last-sale`, a
+  follow-up if the thin-pool aggregation should drift-adjust; (2) the
+  observed-tier floor pass (CF-GRADE-CURVE-MONOTONIC) is not applied on the
+  one path's curve — it rewrites an observed number; the projected-tier cap
+  is; (3) `/hobbyiq-fmv maxAgeDays` no longer honoured (a caller window = a
+  second computation); (4) the catalog check fails CLOSED — a catalog outage
+  nulls the four routes (was: hobbyiq-fmv priced without a catalog read);
+  (5) `/card-detail`, `/card-panel`, `/observed-grade-curves-bulk` and the
+  portfolio persist site still call their engines directly (their windows
+  now match; routing them through the entry is the follow-up). **Before
+  (this branch's 50-slug read-only sample, 2026-08-30, slugs in
+  `backend/docs/d16-probe-sample-slugs.txt` — replay with `SLUGS_FILE`):
+  routes disagree > 25% on 17/50 = 34.0%** (runner 200-sample baseline
+  43.0%); label in vocabulary price-by-id 4.0% (`direct-comp` ×44,
+  `no-recent-comps` ×4) / 100 / 100 / 100; exact-pool rung 0% / 88% / 100% /
+  100%; FMV null 8% / 8% / 0% / 0%; hobbyiq-fmv `method` outside its union
+  88%; grade-curve under a vendor id 86%; worst: 2021 Bowman Chrome CPA-EHA
+  Refractor Auto $13.09 / $13.09 / $125.00 / $243.75 off a pool of 14.
+  **Tests:** `oneValuationPath.contract.test.ts` (8 — ONE fixture pool at the
+  engine's read seam `exactPoolReader` through all four handlers: identical
+  FMV + rung on Raw / PSA 10 / thin tiers / the empirical fill, labels from
+  the TS unions, method in-union, curve under the slug, the same null +
+  reason, no second engine via spies), `oneValuationPath.pin.test.ts` (8
+  source pins), `oneValuationPath.test.ts` (12), `unifiedPerTierWindows.test.ts`
+  (5); required-green set + touched tests 260/260; tsc 0. **Mutation checks
+  (each reverted):** a second computeHobbyIqFmv on /hobbyiq-fmv → pin 1 +
+  contract 5 red; the curve route back on buildObservedGradeCurve → contract
+  4 red; `source: "direct-comp"` → contract 1 red; the entry on the cascade
+  instead of per-tier → pin 1 red; per-tier mode collapsed to one window →
+  engine test 4 red. Full suite 593/598 files — the 4 reds reproduce on
+  `origin/main` (explodeCatalogGrades.cjs load ×2, allCanonicalVerticals,
+  slugGuardResolverParity); signalFetchObservability is a load flake (green
+  alone). **After-number:** re-run `probe-price-routes` on the runner after
+  the deploy with `SLUGS_FILE` pointing at the committed list (LIMIT=50) and
+  the 200-sample default; expect disagreement → ~0% on priced slugs (the
+  four are one call), null ≤ the catalog-miss rate, labels 100% in
+  vocabulary, `grade-curve under a vendor id` 0%.
 - ◐ D10 **Look at all holdings for everyone** (Drew, 2026-08-29 17:15Z). The three
   defects under holding `ca7a150b` are not specific to it. **#1448
   `audit-all-holdings`** (read-only, runner-whitelisted): per holding —

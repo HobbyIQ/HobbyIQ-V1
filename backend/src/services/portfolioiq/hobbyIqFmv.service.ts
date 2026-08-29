@@ -26,7 +26,7 @@ import {
 import { loadPopulationForSlug, type CardPopulationLookup } from "./cardPopulationLookup.service.js";
 import { getGraderPremium } from "../compiq/compiqEstimate.service.js";
 import { projectNextSaleFromComps } from "../compiq/nextSaleProjection.service.js";
-import { hobbyIqRungLabel, type FmvRungLabel } from "../compiq/fmvRung.js";
+import { hobbyIqRungLabel, isExactPoolRung, type FmvRungLabel } from "../compiq/fmvRung.js";
 import { fetchPlayerInSetMomentum, momentumMultiplierToPctPerMonth } from "../compiq/playerInSetMomentum.service.js";
 import { findNeighborComps, compositeFilterFromCardId, summarizeByDistance } from "./findNeighborComps.service.js";
 import { computeAxisAdjustment, getLatestMomentum } from "./marketMomentum.service.js";
@@ -77,6 +77,11 @@ export interface HobbyIqFmvInput {
    *  rung learns the player from the exact slug's own pool, and when that
    *  is empty too it refuses to cross. */
   playerName?: string | null;
+  /** CF-ONE-VALUATION-PATH (D16, 2026-08-30). The one valuation path has
+   *  already asked the unified engine for the exact pool (and found it
+   *  empty); it calls here for the GATED fallback ladder only. Skips the
+   *  unified branch so the same engine is not asked twice. */
+  skipExactPool?: boolean;
 }
 
 export interface HobbyIqFmvComp {
@@ -337,7 +342,7 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
   // fmv = unified.marketValue (trend-lifted current — the ONE number)
   // basisNote carries the math trace. Ladder + composite + rare-card
   // paths below only fire when unified has no data (thin pool).
-  try {
+  if (input.skipExactPool !== true) try {
     const { computeUnifiedPrice } = await import("../compiq/unifiedPricing.service.js");
     const gradeCo = typeof input.gradeCompany === "string" && input.gradeCompany.trim().length > 0
       ? input.gradeCompany.trim()
@@ -370,7 +375,13 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
           method: "regression",
         },
         recentComps: [],
-        method: "unified-market-value" as any,
+        // CF-ONE-VALUATION-PATH (D16, 2026-08-30). This said
+        // "unified-market-value" — a string outside HobbyIqFmvMethod, on 80%
+        // of /hobbyiq-fmv answers (D14 probe). In this ladder's vocabulary
+        // the exact pool IS direct-slug; a cross-grade rescale of it is
+        // grade-cross-raw (this card's other grade × multiplier). The
+        // precise aggregation rides on rungLabel, as it always has.
+        method: isExactPoolRung(u.rungLabel) ? "direct-slug" : "grade-cross-raw",
         rungLabel: u.rungLabel,
         basisNote: `unified: window=${u.windowDays}d median=$${u.fmv?.toFixed(0) ?? "?"} marketValue=$${u.marketValue?.toFixed(0) ?? "?"} predicted=$${u.predictedPrice?.toFixed(0) ?? "?"} trend=${u.trendDirection} ${u.trendPctPerWeek?.toFixed(1) ?? "?"}%/wk conf=${u.confidence.toFixed(2)}`,
         confidence: u.confidence,

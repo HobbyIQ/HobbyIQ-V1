@@ -72,7 +72,20 @@ export type CanonicalFmvMethod =
   | "product-tier"
   | "tiered-momentum-card"
   | "tiered-momentum-player"
-  | "no-basis";
+  | "no-basis"
+  // CF-ONE-VALUATION-PATH (D16, 2026-08-30). /canonical-fmv answers from the
+  // one valuation path: the exact pool is direct-comp; when the exact pool
+  // is empty the GATED fallback ladder may answer, and its rungs keep their
+  // own names here rather than being folded into a canonical name that
+  // means something else (labels tell the truth).
+  | "grade-curve-estimate"
+  | "cross-setkey"
+  | "cross-printrun"
+  | "same-printrun-cross-parallel"
+  | "printrun-discovery"
+  | "grade-cross-raw"
+  | "composite-neighbor"
+  | "rare-card-anchor";
 
 export interface CanonicalFmvInput {
   /** Canonical CH cardId (or Cardsight UUID). Required for pool lookups. */
