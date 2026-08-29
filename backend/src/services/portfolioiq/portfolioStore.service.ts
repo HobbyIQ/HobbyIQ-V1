@@ -2483,6 +2483,69 @@ async function applyGradeLadderFallback(opts: {
   }
 }
 
+// CF-ONE-PIN-GATE-FOR-BOTH-FIELDS (2026-08-29, checklist D12a). addHolding
+// adopted a catalog match as BOTH hobbyiqCardId and cardId at ANY confidence
+// when nothing was pinned — fuzzy-parallel 0.72, family-fallback 0.55 — and
+// updateHolding gated cardId at 0.9 but wrote hobbyiqCardId UNGATED, on the
+// theory that "nothing prices off it alone". priceFromOurPool prices off it
+// alone. One gate (ADD_SLUG_OVERRIDE_MIN_CONFIDENCE), both fields, both
+// paths. Below the gate the match is recorded on the holding as a PROPOSAL —
+// catalogMatchSlug / catalogMatchConfidence / catalogMatchedBy, the fields
+// the eBay import writes and composeHoldingWireShape's proposedIdentity
+// already surfaces for the user to accept — never as identity.
+type CatalogMatchLike = { slug: string; found: boolean; confidence: number; matchedBy: string };
+
+function applyCatalogMatchToHolding(
+  h: PortfolioHolding,
+  match: CatalogMatchLike,
+  ctx: { source: string; userId: string; holdingId: string; cardIdRule: "fill" | "rebind" },
+): { pinned: boolean } {
+  const rec = h as unknown as Record<string, unknown>;
+  const previousSlug = String(rec.hobbyiqCardId ?? "").trim() || null;
+  const hasMatch = match.found && typeof match.slug === "string" && match.slug.length > 0;
+  const confident = hasMatch && (match.confidence ?? 0) >= ADD_SLUG_OVERRIDE_MIN_CONFIDENCE;
+  rec.catalogMatchSlug = hasMatch ? match.slug : null;
+  rec.catalogMatchConfidence = typeof match.confidence === "number" ? match.confidence : null;
+  rec.catalogMatchedBy = match.matchedBy ?? null;
+  if (!confident) {
+    if (hasMatch && match.slug !== previousSlug) {
+      console.log(JSON.stringify({
+        event: "catalog_match_parked_as_suggestion",
+        source: ctx.source,
+        userId: ctx.userId,
+        holdingId: ctx.holdingId,
+        previousSlug,
+        suggestedSlug: match.slug,
+        matchedBy: match.matchedBy,
+        confidence: match.confidence,
+        gate: ADD_SLUG_OVERRIDE_MIN_CONFIDENCE,
+        detail: previousSlug
+          ? "re-derivation disagreed with the pinned slug below the gate; keeping the pin"
+          : "match below the pin gate; recorded as a proposal, not as identity",
+      }));
+    }
+    return { pinned: false };
+  }
+  rec.hobbyiqCardId = match.slug;
+  rec.hobbyiqCardIdSource = match.matchedBy === "seeded" ? "catalog-seeded" : "catalog";
+  const currentCardId = String(rec.cardId ?? "").trim();
+  if (ctx.cardIdRule === "rebind" || !currentCardId) rec.cardId = match.slug;
+  if (match.slug !== previousSlug) {
+    console.log(JSON.stringify({
+      event: ctx.cardIdRule === "fill" ? "catalog_auto_seed_on_add" : "catalog_resolve_on_update_rebind",
+      source: ctx.source,
+      userId: ctx.userId,
+      holdingId: ctx.holdingId,
+      previousSlug,
+      resolvedSlug: match.slug,
+      matchedBy: match.matchedBy,
+      confidence: match.confidence,
+      pinned: true,
+    }));
+  }
+  return { pinned: true };
+}
+
 // CF-ONE-IDENTITY-IN-THE-POOL (2026-08-29, checklist D12a). A user's SALE or
 // PURCHASE is a sold_comps row, and sold_comps is partitioned on cardId.
 // Every user-sale writer in this file read `holding.cardId` — which on a
@@ -5656,36 +5719,16 @@ export async function addHolding(req: Request, res: Response) {
       //
       // Still adopted when the incoming id is NOT already canonical, which is
       // the case this block was written for.
-      const pinnedSlug = String((holding as { hobbyiqCardId?: string }).hobbyiqCardId ?? "").trim();
-      const hasPinnedSlug = pinnedSlug.startsWith("hiq:");
-      const matchOverridesPin =
-        hasPinnedSlug
-        && matchResult.slug !== pinnedSlug
-        && (matchResult.confidence ?? 0) < ADD_SLUG_OVERRIDE_MIN_CONFIDENCE;
-      if (matchOverridesPin) {
-        console.warn(JSON.stringify({
-          event: "catalog_auto_seed_kept_pinned_slug",
-          source: "portfolioStore.addHolding",
-          userId: auth.userId,
-          pinnedSlug,
-          rejectedSlug: matchResult.slug,
-          matchedBy: matchResult.matchedBy,
-          confidence: matchResult.confidence,
-          detail: "re-derivation disagreed with the slug the user added from; keeping theirs",
-        }));
-      }
-      if (matchResult.found && matchResult.slug && !matchOverridesPin) {
-        (holding as { hobbyiqCardId?: string }).hobbyiqCardId = matchResult.slug;
-        if (!holding.cardId) (holding as { cardId?: string }).cardId = matchResult.slug;
-        console.log(JSON.stringify({
-          event: "catalog_auto_seed_on_add",
-          source: "portfolioStore.addHolding",
-          userId: auth.userId,
-          holdingId: holding.id,
-          slug: matchResult.slug,
-          matchedBy: matchResult.matchedBy,
-        }));
-      }
+      //
+      // CF-ONE-PIN-GATE-FOR-BOTH-FIELDS (D12a): the same gate applies when
+      // NOTHING is pinned. A 0.72 is a proposal, not the card. See
+      // applyCatalogMatchToHolding.
+      applyCatalogMatchToHolding(holding, matchResult, {
+        source: "portfolioStore.addHolding",
+        userId: auth.userId,
+        holdingId: holding.id,
+        cardIdRule: "fill",
+      });
     }
   } catch (err) {
     console.warn(JSON.stringify({
@@ -5869,42 +5912,27 @@ export async function updateHolding(req: Request, res: Response) {
         player: next.playerName,
         source: "user-verified",
       });
-      if (matchResult.found && matchResult.slug) {
-        const currentSlug = (next as { hobbyiqCardId?: string }).hobbyiqCardId;
-        // CF-ONE-PIN-GATE-EVERYWHERE (Drew, 2026-08-23). cardId was pinned on
-        // `found` alone, with no confidence test — while BOTH deliberate pin
-        // sites require >= 0.9 (ebayAutoHolding.service.ts:195,
-        // ebayReviewQueue.service.ts:389). canonicalize returns found:true at
-        // confidence 0.72 for matchedBy "fuzzy-parallel", so ANY patch of a
-        // holding — changing only its notes — silently pinned a 0.72 match.
-        //
-        // Measured on holding aff3236a (2025 Bowman Draft Gold #CPA-MWI,
-        // $301.43): its parked match is exactly that shape. The machine has
-        // been accepting on the user's behalf, invisibly, at a confidence the
-        // rest of the system considers too weak to trust.
-        //
-        // hobbyiqCardId stays UNGATED on purpose. It is a derived slug, not a
-        // pin — CF-PORTFOLIO-DETAIL-SLUG needs it present so iOS tap-into-card
-        // resolves — and nothing prices off it alone. cardId is the pin, and
-        // the pin is what must agree across all three sites.
-        const confident = (matchResult.confidence ?? 0) >= 0.9;
-        if (matchResult.slug !== currentSlug) {
-          (next as { hobbyiqCardId?: string }).hobbyiqCardId = matchResult.slug;
-          if (confident) (next as { cardId?: string }).cardId = matchResult.slug;
-          console.log(JSON.stringify({
-            event: "catalog_resolve_on_update_rebind",
-            source: "portfolioStore.updateHolding",
-            userId: auth.userId,
-            holdingId: id,
-            previousSlug: currentSlug,
-            resolvedSlug: matchResult.slug,
-            matchedBy: matchResult.matchedBy,
-            confidence: matchResult.confidence,
-            // So a skipped pin is visible rather than looking like a no-op.
-            pinned: confident,
-          }));
-        }
-      }
+      // CF-ONE-PIN-GATE-EVERYWHERE (Drew, 2026-08-23). cardId was pinned on
+      // `found` alone, with no confidence test — while BOTH deliberate pin
+      // sites require >= 0.9 (ebayAutoHolding.service.ts:195,
+      // ebayReviewQueue.service.ts:389). canonicalize returns found:true at
+      // confidence 0.72 for matchedBy "fuzzy-parallel", so ANY patch of a
+      // holding — changing only its notes — silently pinned a 0.72 match.
+      //
+      // Measured on holding aff3236a (2025 Bowman Draft Gold #CPA-MWI,
+      // $301.43): its parked match is exactly that shape. The machine has
+      // been accepting on the user's behalf, invisibly, at a confidence the
+      // rest of the system considers too weak to trust.
+      //
+      // CF-ONE-PIN-GATE-FOR-BOTH-FIELDS (D12a): hobbyiqCardId was left
+      // UNGATED here on the theory that nothing prices off it alone.
+      // priceFromOurPool does. Same gate, both fields.
+      applyCatalogMatchToHolding(next, matchResult, {
+        source: "portfolioStore.updateHolding",
+        userId: auth.userId,
+        holdingId: id,
+        cardIdRule: "rebind",
+      });
     }
   } catch (err) {
     console.warn(JSON.stringify({
