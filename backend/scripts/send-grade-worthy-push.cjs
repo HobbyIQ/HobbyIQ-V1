@@ -12,8 +12,11 @@
  *   node backend/scripts/send-grade-worthy-push.cjs
  *
  * Exit codes:
- *   0 completed (regardless of sent count)
+ *   0 completed (a zero send count with a CONFIGURED provider is fine)
  *   1 Cosmos connection or dist build missing
+ *   1 push provider NOT configured on a scheduled run (D13, 2026-08-29:
+ *     GITHUB_EVENT_NAME=schedule, or REQUIRE_PUSH_PROVIDER=1) — every send
+ *     no-ops without APNS_*, and a green zero was hiding that.
  */
 
 const path = require("path");
@@ -42,6 +45,7 @@ async function main() {
     holdingsFired: 0,
     sent: 0,
     failed: 0,
+    pushProviderConfigured: false,
   };
   try {
     result = await sendGradeWorthyPushesForOptedInUsers();
@@ -60,9 +64,23 @@ async function main() {
     holdingsFired: result.holdingsFired,
     pushSent: result.sent,
     pushFailed: result.failed,
+    pushProviderConfigured: result.pushProviderConfigured === true,
     elapsedMs: Date.now() - t0,
   }));
-  process.exit(0);
+  process.exit(pushProviderExitCode(result.pushProviderConfigured === true, process.env));
+}
+
+/**
+ * D13 (2026-08-29) — alert gates prove delivery. A scheduled run whose
+ * sender does not exist is red; a manual dispatch only warns.
+ */
+function pushProviderExitCode(configured, env) {
+  if (configured) return 0;
+  const scheduled = env.GITHUB_EVENT_NAME === "schedule" || env.REQUIRE_PUSH_PROVIDER === "1";
+  const line = "push provider NOT configured — every send no-op'd (need APNS_KEY_ID/APNS_TEAM_ID/APNS_BUNDLE_ID/APNS_KEY_P8 in the env)";
+  if (scheduled) { console.error(`::error::${line}`); return 1; }
+  console.warn(`::warning::${line}`);
+  return 0;
 }
 
 async function pathExists(p) {

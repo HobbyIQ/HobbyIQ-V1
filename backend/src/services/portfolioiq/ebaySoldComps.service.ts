@@ -82,6 +82,33 @@ export interface SoldCompsResult {
   };
 }
 
+/**
+ * CF-QUERY-SOLD-COMPS-FAILS-CLOSED (2026-08-29, checklist D12a). A pool that
+ * could not be read is not an empty pool. querySoldComps used to swallow a
+ * failed user-doc read (`catch { continue }`), so a Cosmos error came back
+ * as fewer -- or zero -- comps and the caller priced from nothing as if the
+ * pool were empty; the vendor source then returned null and the resolver
+ * cached "nothing" for the card. Now the query throws this typed error and
+ * callers withhold rather than estimate.
+ */
+export class SoldCompsQueryError extends Error {
+  readonly code = "SOLD_COMPS_QUERY_FAILED" as const;
+  constructor(
+    readonly stage: "list-users" | "read-user-doc",
+    readonly userId: string | null,
+    cause: unknown,
+  ) {
+    super(`sold-comps query failed at ${stage}${userId ? ` (user ${userId})` : ""}: ${(cause as Error)?.message ?? String(cause)}`);
+    this.name = "SoldCompsQueryError";
+    (this as { cause?: unknown }).cause = cause;
+  }
+}
+
+export function isSoldCompsQueryError(err: unknown): err is SoldCompsQueryError {
+  return err instanceof SoldCompsQueryError
+    || (typeof err === "object" && err !== null && (err as { code?: unknown }).code === "SOLD_COMPS_QUERY_FAILED");
+}
+
 const MAX_LIMIT = 200;
 const DEFAULT_LIMIT = 50;
 
@@ -90,7 +117,12 @@ const DEFAULT_LIMIT = 50;
 export async function querySoldComps(query: SoldCompsQuery): Promise<SoldCompsResult> {
   const limit = Math.min(MAX_LIMIT, Math.max(1, query.limit ?? DEFAULT_LIMIT));
 
-  const userIds = await listAllPortfolioUserIds();
+  let userIds: string[];
+  try {
+    userIds = await listAllPortfolioUserIds();
+  } catch (err) {
+    throw new SoldCompsQueryError("list-users", null, err);
+  }
   const raw: SoldComp[] = [];
 
   const nowMs = Date.now();
@@ -98,8 +130,10 @@ export async function querySoldComps(query: SoldCompsQuery): Promise<SoldCompsRe
     let doc;
     try {
       doc = await readUserDoc(userId);
-    } catch {
-      continue;
+    } catch (err) {
+      // CF-QUERY-SOLD-COMPS-FAILS-CLOSED (D12a): a partial pool is the
+      // fail-open. Throw, do not skip.
+      throw new SoldCompsQueryError("read-user-doc", userId, err);
     }
     const ledger = Array.isArray(doc.ledger) ? doc.ledger : [];
     for (const entry of ledger) {

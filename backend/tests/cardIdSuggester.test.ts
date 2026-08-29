@@ -1,3 +1,6 @@
+// CF-A-SUGGESTION-IS-A-SLUG-OR-NOTHING (D12a, 2026-08-29): a vendor id no longer
+// reaches the wire as `cardId`. The vendor candidates this suite scores are
+// asserted through `idKind` + `candidate.vendorCardId`; `cardId` is hiq-only.
 // CF-CARDID-SUGGESTER (2026-07-12) — unit tests for the suggester.
 
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
@@ -86,7 +89,7 @@ describe("suggestCardIdForHolding", () => {
     ]);
     const r = await suggestCardIdForHolding(makeHolding());
     expect(r).not.toBeNull();
-    expect(r!.cardId).toBe("ch-abc-123");
+    expect(r!.cardId).toBeUndefined(); expect(r!.idKind).toBe("vendor"); expect(r!.candidate.vendorCardId).toBe("ch-abc-123");
     expect(r!.confidence).toBeGreaterThanOrEqual(0.9);
     expect(r!.candidate.image).toBe("https://cdn/x.jpg");
   });
@@ -113,7 +116,7 @@ describe("suggestCardIdForHolding", () => {
       },
     ]);
     const r = await suggestCardIdForHolding(makeHolding());
-    expect(r!.cardId).toBe("ch-perfect");
+    expect(r!.cardId).toBeUndefined(); expect(r!.idKind).toBe("vendor"); expect(r!.candidate.vendorCardId).toBe("ch-perfect");
   });
 
   it("passes structured filters to CH search", async () => {
@@ -182,7 +185,7 @@ describe("suggestCardIdForHolding — normalized confidence + tiers", () => {
       },
     ]);
     const r = await suggestCardIdForHolding(makeHolding());
-    expect(r!.cardId).toBe("ch-perfect");
+    expect(r!.cardId).toBeUndefined(); expect(r!.idKind).toBe("vendor"); expect(r!.candidate.vendorCardId).toBe("ch-perfect");
     expect(r!.confidence).toBe(1);
     expect(r!.confidenceTier).toBe("high");
   });

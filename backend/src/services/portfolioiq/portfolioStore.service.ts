@@ -19,7 +19,7 @@ import { buildGradeBreakdown } from "../compiq/marketRead.service.js";
 import { resolvePlayer } from "../mlb/playerResolver.service.js";
 import { deleteBlobByUrl } from "../photoStorage/photoStorage.service.js";
 import { resolveCardsightGradeId } from "../cardsight/cardsightGradesTaxonomy.js";
-import { withDerivedSlug } from "./holdingSlug.service.js";
+import { fillDerivedSlugFromCatalog } from "./holdingSlug.service.js";
 import { isPriceFromOurPoolEnabled, priceHoldingFromOurPool } from "./priceFromOurPool.service.js";
 import { composeHoldingWireShape, composePortfolioListResponse } from "./responseAssembly.js";
 // CF-INVENTORY-CATALOG-IMAGE (2026-07-05): shared resolver produces the
@@ -2483,14 +2483,180 @@ async function applyGradeLadderFallback(opts: {
   }
 }
 
+// CF-ONE-PIN-GATE-FOR-BOTH-FIELDS (2026-08-29, checklist D12a). addHolding
+// adopted a catalog match as BOTH hobbyiqCardId and cardId at ANY confidence
+// when nothing was pinned — fuzzy-parallel 0.72, family-fallback 0.55 — and
+// updateHolding gated cardId at 0.9 but wrote hobbyiqCardId UNGATED, on the
+// theory that "nothing prices off it alone". priceFromOurPool prices off it
+// alone. One gate (ADD_SLUG_OVERRIDE_MIN_CONFIDENCE), both fields, both
+// paths. Below the gate the match is recorded on the holding as a PROPOSAL —
+// catalogMatchSlug / catalogMatchConfidence / catalogMatchedBy, the fields
+// the eBay import writes and composeHoldingWireShape's proposedIdentity
+// already surfaces for the user to accept — never as identity.
+type CatalogMatchLike = { slug: string; found: boolean; confidence: number; matchedBy: string };
+
+function applyCatalogMatchToHolding(
+  h: PortfolioHolding,
+  match: CatalogMatchLike,
+  ctx: { source: string; userId: string; holdingId: string; cardIdRule: "fill" | "rebind" },
+): { pinned: boolean } {
+  const rec = h as unknown as Record<string, unknown>;
+  const previousSlug = String(rec.hobbyiqCardId ?? "").trim() || null;
+  const hasMatch = match.found && typeof match.slug === "string" && match.slug.length > 0;
+  const confident = hasMatch && (match.confidence ?? 0) >= ADD_SLUG_OVERRIDE_MIN_CONFIDENCE;
+  rec.catalogMatchSlug = hasMatch ? match.slug : null;
+  rec.catalogMatchConfidence = typeof match.confidence === "number" ? match.confidence : null;
+  rec.catalogMatchedBy = match.matchedBy ?? null;
+  if (!confident) {
+    if (hasMatch && match.slug !== previousSlug) {
+      console.log(JSON.stringify({
+        event: "catalog_match_parked_as_suggestion",
+        source: ctx.source,
+        userId: ctx.userId,
+        holdingId: ctx.holdingId,
+        previousSlug,
+        suggestedSlug: match.slug,
+        matchedBy: match.matchedBy,
+        confidence: match.confidence,
+        gate: ADD_SLUG_OVERRIDE_MIN_CONFIDENCE,
+        detail: previousSlug
+          ? "re-derivation disagreed with the pinned slug below the gate; keeping the pin"
+          : "match below the pin gate; recorded as a proposal, not as identity",
+      }));
+    }
+    return { pinned: false };
+  }
+  rec.hobbyiqCardId = match.slug;
+  rec.hobbyiqCardIdSource = match.matchedBy === "seeded" ? "catalog-seeded" : "catalog";
+  const currentCardId = String(rec.cardId ?? "").trim();
+  if (ctx.cardIdRule === "rebind" || !currentCardId) rec.cardId = match.slug;
+  if (match.slug !== previousSlug) {
+    console.log(JSON.stringify({
+      event: ctx.cardIdRule === "fill" ? "catalog_auto_seed_on_add" : "catalog_resolve_on_update_rebind",
+      source: ctx.source,
+      userId: ctx.userId,
+      holdingId: ctx.holdingId,
+      previousSlug,
+      resolvedSlug: match.slug,
+      matchedBy: match.matchedBy,
+      confidence: match.confidence,
+      pinned: true,
+    }));
+  }
+  return { pinned: true };
+}
+
+// CF-A-SUPPLIED-SLUG-MUST-BE-A-CATALOG-ROW (2026-08-29, checklist D12a). A
+// caller may pin hobbyiqCardId in the body — the card page the user added
+// from, the picker, an import. updateHolding wrote it as given. A slug is an
+// identity only when the catalog holds it, so a supplied slug is accepted
+// only when catalogSlugIfExists says so (the catalog's form is written);
+// otherwise the previous value stands and the rejection is logged. Fails
+// closed on a catalog outage. Absent / cleared values are not gated: an
+// explicit clear stays a clear.
+async function gateSuppliedSlug(
+  h: PortfolioHolding,
+  ctx: { source: string; userId: string; holdingId: string; previous: string | null },
+): Promise<void> {
+  const rec = h as unknown as Record<string, unknown>;
+  const supplied = String(rec.hobbyiqCardId ?? "").trim();
+  if (!supplied || supplied === ctx.previous) return;
+  let found: string | null = null;
+  if (supplied.startsWith("hiq:")) {
+    try {
+      const { catalogSlugIfExists } = await import("../catalog/catalogMatcher.service.js");
+      found = await catalogSlugIfExists(supplied);
+    } catch {
+      found = null;
+    }
+  }
+  if (!found) {
+    console.warn(JSON.stringify({
+      event: "holding_slug_rejected_not_in_catalog",
+      source: ctx.source,
+      userId: ctx.userId,
+      holdingId: ctx.holdingId,
+      suppliedSlug: supplied,
+      keptSlug: ctx.previous,
+      detail: "a supplied hobbyiqCardId is accepted only when it names a catalog row",
+    }));
+    rec.hobbyiqCardId = ctx.previous;
+    return;
+  }
+  rec.hobbyiqCardId = found;
+  rec.hobbyiqCardIdSource = "pinned";
+}
+
+// CF-ONE-IDENTITY-IN-THE-POOL (2026-08-29, checklist D12a). A user's SALE or
+// PURCHASE is a sold_comps row, and sold_comps is partitioned on cardId.
+// Every user-sale writer in this file read `holding.cardId` — which on a
+// vendor-sourced holding is a CardHedge bubble.io id or a Cardsight compound
+// id — so a real sale by a real user, confidence 1.0, verifiedByUser, landed
+// in a VENDOR's partition. The only thing that could reach the canonical pool
+// was the hobbyiqCardId the store re-derived from the holding's free text,
+// which may or may not agree with the identity the holding had already been
+// pinned to. Nothing read `holding.hobbyiqCardId`.
+//
+// ONE resolution, used by every user-sale emit (purchase, manual sell, eBay
+// order poll): the hiq: slug the holding is pinned to — hobbyiqCardId, else
+// cardId when it is itself a slug — or nothing. A holding with no hiq
+// identity does not emit; the skip is logged as user_comp_withheld_no_identity.
+// The vendor id travels as `vendorCardId` metadata and never keys a row. No
+// catalog call here: recordSoldComp reconciles the slug against the catalog
+// and refuses (D7d, catalog-unmatched) what the catalog cannot place.
+export interface HoldingPoolIdentity {
+  /** The hiq: slug the row is keyed by, or null when the holding has none. */
+  cardId: string | null;
+  /** The same slug — the canonical key the row carries. */
+  hobbyiqCardId: string | null;
+  /** The holding's resolved print run, so a re-emit cannot drop :num-N (D9). */
+  printRun: number | null;
+  /** The holding's vendor cardId, when it has one. Metadata only. */
+  vendorCardId: string | null;
+  via: "hobbyiqCardId" | "cardId" | "none";
+}
+
+function isHiqSlug(v: unknown): v is string {
+  return typeof v === "string" && v.trim().startsWith("hiq:") && v.trim().length > 4;
+}
+
+export function poolIdentityForHolding(holding: PortfolioHolding): HoldingPoolIdentity {
+  const h = holding as PortfolioHolding & { printRun?: unknown };
+  const pinned = String(h.hobbyiqCardId ?? "").trim();
+  const cardId = String(h.cardId ?? "").trim();
+  const vendorCardId = cardId && !isHiqSlug(cardId) ? cardId : null;
+  const printRun = typeof h.printRun === "number" && Number.isInteger(h.printRun) && h.printRun > 0 ? h.printRun : null;
+  if (isHiqSlug(pinned)) return { cardId: pinned, hobbyiqCardId: pinned, printRun, vendorCardId, via: "hobbyiqCardId" };
+  if (isHiqSlug(cardId)) return { cardId, hobbyiqCardId: cardId, printRun, vendorCardId: null, via: "cardId" };
+  return { cardId: null, hobbyiqCardId: null, printRun, vendorCardId, via: "none" };
+}
+
+function logUserCompWithheldNoIdentity(
+  source: string,
+  userId: string,
+  holding: PortfolioHolding,
+  identity: HoldingPoolIdentity,
+): void {
+  console.warn(JSON.stringify({
+    event: "user_comp_withheld_no_identity",
+    source,
+    userId,
+    holdingId: holding.id,
+    vendorCardId: identity.vendorCardId,
+    detail: "no hiq: slug on the holding; a user sale or purchase is never pooled under a vendor id",
+  }));
+}
+
 // CF-USER-EBAY-PURCHASE-AUTO-COMP (Drew, 2026-08-08). Fires from
 // addHolding + updateHolding when a user tells us they bought a card
-// on eBay. Writes one sold_comps row per holding (dedup key
-// `holding::<id>`), matching the pattern ebayImportRematch uses so
-// re-emissions from either path converge on the same doc.
+// on eBay. Writes one sold_comps row per holding, keyed the way the eBay
+// import keys its purchase row (D9 purchaseSaleIdentity: the order id, then
+// the item id, then `holding::<id>`) so re-emissions from either path
+// converge on the same doc.
 async function emitUserEbayPurchaseComp(
   holding: PortfolioHolding,
   userId: string,
+  doc?: { purchases?: ReadonlyArray<unknown> } | null,
 ): Promise<void> {
   const src = String((holding as { purchaseSource?: string }).purchaseSource ?? "").trim();
   if (!src || !/^ebay/i.test(src)) return;
@@ -2498,28 +2664,44 @@ async function emitUserEbayPurchaseComp(
   if (!Number.isFinite(price) || price <= 0) return;
   const purchaseDate = String((holding as { purchaseDate?: string }).purchaseDate ?? "").trim();
   if (!purchaseDate) return;
-  const cardId = String((holding as { cardId?: string }).cardId ?? "").trim();
   const playerName = String((holding as { playerName?: string }).playerName ?? "").trim();
-  if (!cardId || !playerName) return;
+  if (!playerName) return;
+  // CF-ONE-IDENTITY-IN-THE-POOL (D12a): the pinned slug, never the vendor id.
+  const identity = poolIdentityForHolding(holding);
+  if (!identity.cardId) {
+    logUserCompWithheldNoIdentity("portfolioStore.emitUserEbayPurchaseComp", userId, holding, identity);
+    return;
+  }
+  const cardId = identity.cardId;
   const soldAt = purchaseDate.includes("T") ? purchaseDate : `${purchaseDate}T00:00:00Z`;
   try {
     const { recordSoldComp } = await import("./soldCompsStore.service.js");
+    // D9's key, so the import's row and this one are ONE row: the purchase
+    // record's eBay order id, else the ids the holding carries, else
+    // `holding::<id>`. Same-id rows supersede in the store.
+    const { purchaseSaleIdentity, sourcePurchaseFor } = await import("./ebayAutoHolding.service.js");
+    const { sourceExternalId } = purchaseSaleIdentity(
+      sourcePurchaseFor(doc ?? null, holding as unknown as Record<string, unknown>),
+      holding as unknown as Record<string, unknown>,
+    );
+    const sport = (holding as { sport?: unknown }).sport;
     await recordSoldComp({
       cardId,
+      vendorCardId: identity.vendorCardId,
       playerName,
       cardYear: ((holding as { cardYear?: number }).cardYear ?? null) as number | null,
       setName: ((holding as { setName?: string }).setName ?? null) as string | null,
       parallel: ((holding as { parallel?: string }).parallel ?? null) as string | null,
       cardNumber: ((holding as { cardNumber?: string }).cardNumber ?? null) as string | null,
       isAuto: (holding as { isAuto?: boolean }).isAuto === true,
+      printRun: identity.printRun,
+      sport: typeof sport === "string" && sport ? sport.toLowerCase() : null,
       gradeCompany: ((holding as { gradeCompany?: string }).gradeCompany ?? null) as string | null,
       gradeValue: ((holding as { gradeValue?: number }).gradeValue ?? null) as number | null,
       price,
       soldAt,
       source: "ebay-user-purchase",
-      // Dedup key across re-emissions: `holding::<id>` matches the fallback
-      // used by ebayImportRematch when no ebayItemId is available.
-      sourceExternalId: (holding as { ebayItemId?: string }).ebayItemId ?? `holding::${holding.id}`,
+      sourceExternalId,
       contributorUserId: userId,
       title: ((holding as { cardTitle?: string }).cardTitle ?? null) as string | null,
       imageUrl: ((holding as { photos?: string[] }).photos?.[0] ?? null) as string | null,
@@ -2535,6 +2717,9 @@ async function emitUserEbayPurchaseComp(
       userId,
       holdingId: holding.id,
       cardId,
+      identityVia: identity.via,
+      vendorCardId: identity.vendorCardId,
+      sourceExternalId,
       price,
       grade: (holding as { gradeCompany?: string }).gradeCompany
         ? `${(holding as { gradeCompany?: string }).gradeCompany} ${(holding as { gradeValue?: number }).gradeValue ?? ""}`.trim()
@@ -3537,8 +3722,13 @@ async function autoPriceHolding(
   // it — the engines that name their rung write the name, the legacy paths
   // write null — and the final holding write persists it as `fmvRung`.
   let priceSurfaceRung: string | null = null;
-  if (unifiedResult && (unifiedResult.predictedPrice ?? unifiedResult.fmv) !== null) {
-    const chosen = unifiedResult.predictedPrice ?? unifiedResult.fmv!;
+  // CF-ONE-HEADLINE-CHAIN (D12a, 2026-08-29). #1432 aligned the headline to
+  // `marketValue ?? predictedPrice ?? fmv` everywhere the unified result is
+  // read; this producer and the final-authority one below were the two left
+  // reading predictedPrice first, so the same holding could carry a different
+  // headline depending on which branch wrote last.
+  if (unifiedResult && (unifiedResult.marketValue ?? unifiedResult.predictedPrice ?? unifiedResult.fmv) !== null) {
+    const chosen = unifiedResult.marketValue ?? unifiedResult.predictedPrice ?? unifiedResult.fmv!;
     resolved.fairMarketValueOverride = chosen;
     priceSurfaceRung = unifiedResult.rungLabel;
     (resolved as any).valuationStatus = "observed";
@@ -3696,8 +3886,10 @@ async function autoPriceHolding(
   // the same holding). Both are valid pool queries but unified's math
   // is what portfolio + Grade Curve now share.
   let unifiedIsFinalAuthority = false;
-  if (unifiedResult && (unifiedResult.predictedPrice ?? unifiedResult.marketValue ?? unifiedResult.fmv) !== null) {
-    const finalChosen = unifiedResult.predictedPrice ?? unifiedResult.marketValue ?? unifiedResult.fmv!;
+  // CF-ONE-HEADLINE-CHAIN (D12a): marketValue ?? predictedPrice ?? fmv — the
+  // fifth and last chain, aligned with the four #1432 aligned.
+  if (unifiedResult && (unifiedResult.marketValue ?? unifiedResult.predictedPrice ?? unifiedResult.fmv) !== null) {
+    const finalChosen = unifiedResult.marketValue ?? unifiedResult.predictedPrice ?? unifiedResult.fmv!;
     // CF-EXACT-POOL-SUPREMACY (D4 PR 5): >= 1 exact sale, as at the early exit.
     if (finalChosen > 0 && unifiedResult.totalSampleCount >= 1) {
       unifiedIsFinalAuthority = true;
@@ -5513,11 +5705,14 @@ export async function addHolding(req: Request, res: Response) {
     "portfolioStore.service.addHolding",
   );
   holding = await populateCardsightGradeId(holding);
-  // CF-PORTFOLIO-DETAIL-SLUG (Drew, 2026-07-26). Populate the canonical
-  // hobbyiqCardId at add-time so iOS's tap-into-card flow can hit
-  // /api/compiq/card-detail with holding.hobbyiqCardId directly. Null
-  // when identity is insufficient (iOS falls back to legacy tap).
-  holding = withDerivedSlug(holding);
+  // CF-A-SUPPLIED-SLUG-MUST-BE-A-CATALOG-ROW (D12a): a slug the caller pinned
+  // (the card page, the picker) is accepted only when the catalog holds it.
+  await gateSuppliedSlug(holding, {
+    source: "portfolioStore.addHolding",
+    userId: auth.userId,
+    holdingId: holding.id,
+    previous: null,
+  });
 
   // CF-CATALOG-AUTO-SEED-ON-ADD (Drew, 2026-08-04). "When they add
   // cards, they search within the catalog and then the comps fall
@@ -5529,8 +5724,8 @@ export async function addHolding(req: Request, res: Response) {
   // point at a canonical catalog row from that moment on.
   //
   // Wrapped in try/catch so a Cosmos hiccup can't block add-card.
-  // Silent-safe: on any failure the withDerivedSlug value is what
-  // sticks; user still gets their card added.
+  // Silent-safe: on any failure the holding keeps whatever was pinned;
+  // user still gets their card added.
   try {
     if (holding.playerName && holding.cardYear && holding.cardNumber) {
       const { canonicalize } = await import("../catalog/catalogMatcher.service.js");
@@ -5568,36 +5763,16 @@ export async function addHolding(req: Request, res: Response) {
       //
       // Still adopted when the incoming id is NOT already canonical, which is
       // the case this block was written for.
-      const pinnedSlug = String((holding as { hobbyiqCardId?: string }).hobbyiqCardId ?? "").trim();
-      const hasPinnedSlug = pinnedSlug.startsWith("hiq:");
-      const matchOverridesPin =
-        hasPinnedSlug
-        && matchResult.slug !== pinnedSlug
-        && (matchResult.confidence ?? 0) < ADD_SLUG_OVERRIDE_MIN_CONFIDENCE;
-      if (matchOverridesPin) {
-        console.warn(JSON.stringify({
-          event: "catalog_auto_seed_kept_pinned_slug",
-          source: "portfolioStore.addHolding",
-          userId: auth.userId,
-          pinnedSlug,
-          rejectedSlug: matchResult.slug,
-          matchedBy: matchResult.matchedBy,
-          confidence: matchResult.confidence,
-          detail: "re-derivation disagreed with the slug the user added from; keeping theirs",
-        }));
-      }
-      if (matchResult.found && matchResult.slug && !matchOverridesPin) {
-        (holding as { hobbyiqCardId?: string }).hobbyiqCardId = matchResult.slug;
-        if (!holding.cardId) (holding as { cardId?: string }).cardId = matchResult.slug;
-        console.log(JSON.stringify({
-          event: "catalog_auto_seed_on_add",
-          source: "portfolioStore.addHolding",
-          userId: auth.userId,
-          holdingId: holding.id,
-          slug: matchResult.slug,
-          matchedBy: matchResult.matchedBy,
-        }));
-      }
+      //
+      // CF-ONE-PIN-GATE-FOR-BOTH-FIELDS (D12a): the same gate applies when
+      // NOTHING is pinned. A 0.72 is a proposal, not the card. See
+      // applyCatalogMatchToHolding.
+      applyCatalogMatchToHolding(holding, matchResult, {
+        source: "portfolioStore.addHolding",
+        userId: auth.userId,
+        holdingId: holding.id,
+        cardIdRule: "fill",
+      });
     }
   } catch (err) {
     console.warn(JSON.stringify({
@@ -5607,6 +5782,16 @@ export async function addHolding(req: Request, res: Response) {
       error: (err as Error)?.message ?? String(err),
     }));
   }
+  // CF-PORTFOLIO-DETAIL-SLUG (Drew, 2026-07-26). Populate the canonical
+  // hobbyiqCardId at add-time so iOS's tap-into-card flow can hit
+  // /api/compiq/card-detail with holding.hobbyiqCardId directly. Null
+  // when identity is insufficient (iOS falls back to legacy tap).
+  //
+  // CF-A-MINTED-SLUG-NEVER-REPLACES-A-PIN (D12a): this ran FIRST and
+  // overwrote whatever the caller pinned with a free-text guess. It now
+  // runs after the catalog has answered, fills only an absent slug, and
+  // only with a slug the catalog holds.
+  holding = await fillDerivedSlugFromCatalog(holding, { source: "portfolioStore.addHolding" });
 
   // CF-GRADE-COMPANY-WITHOUT-VALUE: run before the identity gate so the
   // persisted shape is already coherent.
@@ -5666,7 +5851,7 @@ export async function addHolding(req: Request, res: Response) {
   // Gate: purchaseSource must start with "ebay" (case-insensitive) AND
   // purchasePrice > 0 AND purchaseDate present. Silent-safe: any Cosmos
   // failure leaves the holding intact.
-  await emitUserEbayPurchaseComp(doc.holdings[holding.id], auth.userId).catch((err) => {
+  await emitUserEbayPurchaseComp(doc.holdings[holding.id], auth.userId, doc).catch((err) => {
     console.warn(JSON.stringify({
       event: "user_ebay_purchase_comp_error",
       source: "portfolioStore.addHolding",
@@ -5747,11 +5932,22 @@ export async function updateHolding(req: Request, res: Response) {
     "portfolioStore.service.updateHolding",
   );
   next = await populateCardsightGradeId(next);
-  // CF-PORTFOLIO-DETAIL-SLUG: recompute slug on every update — identity
-  // edits (fixed parallel, corrected cardNumber, added year) must
-  // propagate to hobbyiqCardId or it goes stale relative to the merged
-  // holding state.
-  next = withDerivedSlug(next);
+  // CF-A-SUPPLIED-SLUG-MUST-BE-A-CATALOG-ROW (D12a): a hobbyiqCardId in the
+  // body is accepted only when the catalog holds it; otherwise the stored
+  // one stands.
+  if ("hobbyiqCardId" in (cleanBody as Record<string, unknown>)) {
+    await gateSuppliedSlug(next, {
+      source: "portfolioStore.updateHolding",
+      userId: auth.userId,
+      holdingId: id,
+      previous: String((previous as { hobbyiqCardId?: string | null }).hobbyiqCardId ?? "").trim() || null,
+    });
+  }
+  // CF-A-MINTED-SLUG-NEVER-REPLACES-A-PIN (D12a). This used to recompute the
+  // slug from free text on EVERY update and overwrite the pinned one, before
+  // the catalog was even asked. Identity edits now propagate through the
+  // catalog resolve below; the derivation fills only an absent slug, after,
+  // and only with a slug the catalog holds.
 
   // CF-CATALOG-RESOLVE-ON-UPDATE (Drew, 2026-08-08). Same catalog-first
   // resolution addHolding does — but on EDIT. Fixes the Verlander-class
@@ -5764,8 +5960,8 @@ export async function updateHolding(req: Request, res: Response) {
   // rebinds hobbyiqCardId + cardId to the catalog's canonical slug.
   //
   // Wrapped in try/catch — a Cosmos hiccup shouldn't block edits.
-  // Silent-safe: on any failure the withDerivedSlug value is what
-  // sticks; user still gets their edit persisted.
+  // Silent-safe: on any failure the stored slug is what sticks; user
+  // still gets their edit persisted.
   try {
     if (next.playerName && next.cardYear && next.cardNumber) {
       const { canonicalize } = await import("../catalog/catalogMatcher.service.js");
@@ -5781,42 +5977,27 @@ export async function updateHolding(req: Request, res: Response) {
         player: next.playerName,
         source: "user-verified",
       });
-      if (matchResult.found && matchResult.slug) {
-        const currentSlug = (next as { hobbyiqCardId?: string }).hobbyiqCardId;
-        // CF-ONE-PIN-GATE-EVERYWHERE (Drew, 2026-08-23). cardId was pinned on
-        // `found` alone, with no confidence test — while BOTH deliberate pin
-        // sites require >= 0.9 (ebayAutoHolding.service.ts:195,
-        // ebayReviewQueue.service.ts:389). canonicalize returns found:true at
-        // confidence 0.72 for matchedBy "fuzzy-parallel", so ANY patch of a
-        // holding — changing only its notes — silently pinned a 0.72 match.
-        //
-        // Measured on holding aff3236a (2025 Bowman Draft Gold #CPA-MWI,
-        // $301.43): its parked match is exactly that shape. The machine has
-        // been accepting on the user's behalf, invisibly, at a confidence the
-        // rest of the system considers too weak to trust.
-        //
-        // hobbyiqCardId stays UNGATED on purpose. It is a derived slug, not a
-        // pin — CF-PORTFOLIO-DETAIL-SLUG needs it present so iOS tap-into-card
-        // resolves — and nothing prices off it alone. cardId is the pin, and
-        // the pin is what must agree across all three sites.
-        const confident = (matchResult.confidence ?? 0) >= 0.9;
-        if (matchResult.slug !== currentSlug) {
-          (next as { hobbyiqCardId?: string }).hobbyiqCardId = matchResult.slug;
-          if (confident) (next as { cardId?: string }).cardId = matchResult.slug;
-          console.log(JSON.stringify({
-            event: "catalog_resolve_on_update_rebind",
-            source: "portfolioStore.updateHolding",
-            userId: auth.userId,
-            holdingId: id,
-            previousSlug: currentSlug,
-            resolvedSlug: matchResult.slug,
-            matchedBy: matchResult.matchedBy,
-            confidence: matchResult.confidence,
-            // So a skipped pin is visible rather than looking like a no-op.
-            pinned: confident,
-          }));
-        }
-      }
+      // CF-ONE-PIN-GATE-EVERYWHERE (Drew, 2026-08-23). cardId was pinned on
+      // `found` alone, with no confidence test — while BOTH deliberate pin
+      // sites require >= 0.9 (ebayAutoHolding.service.ts:195,
+      // ebayReviewQueue.service.ts:389). canonicalize returns found:true at
+      // confidence 0.72 for matchedBy "fuzzy-parallel", so ANY patch of a
+      // holding — changing only its notes — silently pinned a 0.72 match.
+      //
+      // Measured on holding aff3236a (2025 Bowman Draft Gold #CPA-MWI,
+      // $301.43): its parked match is exactly that shape. The machine has
+      // been accepting on the user's behalf, invisibly, at a confidence the
+      // rest of the system considers too weak to trust.
+      //
+      // CF-ONE-PIN-GATE-FOR-BOTH-FIELDS (D12a): hobbyiqCardId was left
+      // UNGATED here on the theory that nothing prices off it alone.
+      // priceFromOurPool does. Same gate, both fields.
+      applyCatalogMatchToHolding(next, matchResult, {
+        source: "portfolioStore.updateHolding",
+        userId: auth.userId,
+        holdingId: id,
+        cardIdRule: "rebind",
+      });
     }
   } catch (err) {
     console.warn(JSON.stringify({
@@ -5827,6 +6008,13 @@ export async function updateHolding(req: Request, res: Response) {
       error: (err as Error)?.message ?? String(err),
     }));
   }
+  // CF-PORTFOLIO-DETAIL-SLUG: fill a slug only when the merged holding still
+  // has none (legacy rows, catalog unavailable), and only with a slug the
+  // catalog holds. A pinned slug is kept even when an identity field changed
+  // and the catalog could not confidently re-place the card; that
+  // disagreement is logged by the resolve above, not silently resolved by a
+  // free-text guess.
+  next = await fillDerivedSlugFromCatalog(next, { source: "portfolioStore.updateHolding" });
 
   // CF-GRADE-COMPANY-WITHOUT-VALUE: symmetric with addHolding. An edit that
   // adds a company without a grade must not persist the shape either.
@@ -5921,7 +6109,7 @@ export async function updateHolding(req: Request, res: Response) {
   // user may add / correct purchase details after the initial add. Dedup
   // key `holding::<id>` means re-emissions upsert the same doc — no dup
   // comps from repeated edits.
-  await emitUserEbayPurchaseComp(doc.holdings[id], auth.userId).catch((err) => {
+  await emitUserEbayPurchaseComp(doc.holdings[id], auth.userId, doc).catch((err) => {
     console.warn(JSON.stringify({
       event: "user_ebay_purchase_comp_error",
       source: "portfolioStore.updateHolding",
@@ -7226,19 +7414,26 @@ export async function sellHolding(req: Request, res: Response) {
   // sold_comps pool captures REAL sale prices from real users. Same
   // fire-and-forget pattern as confirm-hook — never blocks the sale
   // response, never fails the sale on comp write.
-  const soldCardId = String((holding as any).cardId ?? "").trim();
-  if (soldCardId && holding.playerName) {
+  // CF-ONE-IDENTITY-IN-THE-POOL (D12a): the pinned slug, never the vendor id.
+  const sellIdentity = poolIdentityForHolding(holding);
+  if (!sellIdentity.cardId && holding.playerName) {
+    logUserCompWithheldNoIdentity("portfolioStore.sellHolding", auth.userId, holding, sellIdentity);
+  }
+  if (sellIdentity.cardId && holding.playerName) {
+    const soldCardId = sellIdentity.cardId;
     void (async () => {
       try {
         const { recordSoldComp } = await import("./soldCompsStore.service.js");
         await recordSoldComp({
           cardId: soldCardId,
+          vendorCardId: sellIdentity.vendorCardId,
           playerName: String(holding.playerName ?? ""),
           cardYear: holding.cardYear ?? null,
           setName: holding.setName ?? null,
           parallel: holding.parallel ?? null,
           cardNumber: holding.cardNumber ?? null,
           isAuto: holding.isAuto === true,
+          printRun: sellIdentity.printRun,
           // CF-USER-COMPS-GRADE-EMIT (Drew, 2026-07-18): include grade
           // fields so downstream readers (canonical FMV rung 1's
           // per-grade pool filter) match this row correctly against a
@@ -7591,19 +7786,27 @@ export async function markHoldingSoldFromEbay(
   // Previously only the manual /sell path emitted; this closes the
   // flywheel gap. Idempotent via {source}::{sourceExternalId} — replay
   // safe if the webhook fires twice.
-  const ebaySoldCardId = String((holding as { cardId?: string }).cardId ?? "").trim();
-  if (ebaySoldCardId && holding.playerName) {
+  // CF-ONE-IDENTITY-IN-THE-POOL (D12a): the pinned slug, never the vendor id.
+  // The sale is still marked sold either way; only the pool write is withheld.
+  const poolIdentity = poolIdentityForHolding(holding);
+  if (!poolIdentity.cardId && holding.playerName) {
+    logUserCompWithheldNoIdentity("portfolioStore.markHoldingSoldFromEbay", userId, holding, poolIdentity);
+  }
+  if (poolIdentity.cardId && holding.playerName) {
+    const ebaySoldCardId = poolIdentity.cardId;
     void (async () => {
       try {
         const { recordSoldComp } = await import("./soldCompsStore.service.js");
         await recordSoldComp({
           cardId: ebaySoldCardId,
+          vendorCardId: poolIdentity.vendorCardId,
           playerName: String(holding.playerName ?? ""),
           cardYear: holding.cardYear ?? null,
           setName: holding.setName ?? null,
           parallel: holding.parallel ?? null,
           cardNumber: holding.cardNumber ?? null,
           isAuto: holding.isAuto === true,
+          printRun: poolIdentity.printRun,
           gradeCompany: (holding as { gradeCompany?: string | null }).gradeCompany ?? null,
           gradeValue: (holding as { gradeValue?: number | null }).gradeValue ?? null,
           price: unitSalePrice,
@@ -9387,65 +9590,30 @@ export async function repriceHoldingsForUser(
 
   // CF-TRAJECTORY-12WK bounds alerts (Drew, 2026-07-28). After every
   // reprice run, drain any projection-multiplier bound hits (floor
-  // 0.20 / ceiling 3.0) and email Drew a digest so he can review
-  // whether the linear model needs a non-linear taper. Silent-no-op
-  // when no bounds hit. Silent-no-op when ACS is unconfigured (dev).
+  // 0.20 / ceiling 3.0) and the cost-basis divergences, and email the
+  // ops digest. Silent-no-op when nothing hit.
+  //
+  // D13 (2026-08-29) — alert gates prove delivery. The send used to be
+  // swallowed three times over with a hardcoded recipient; the result
+  // `{delivered:false, devLogged:true}` was never read. The digest now
+  // lives in divergenceDigestSend.ts, which never throws and ALWAYS
+  // emits cost_basis_digest_delivered / cost_basis_digest_not_delivered
+  // with a reason. The outer try still protects the reprice from a
+  // failed dynamic import — not from a silent non-delivery.
   try {
     const { drainAlerts, drainDivergenceAlerts } = await import("../compiq/boundedProjectionAlerts.service.js");
     const divergenceHits = drainDivergenceAlerts();
     const hits = drainAlerts();
     if (hits.length > 0 || divergenceHits.length > 0) {
-      const { sendEmail } = await import("../emailService.js").catch(() => ({ sendEmail: null as any }));
-      if (sendEmail) {
-        const boundsPreview = hits.slice(0, 10).map((h) => {
-          const pctRaw = Math.round((h.rawMultiplier - 1) * 1000) / 10;
-          const pctBounded = Math.round((h.bounded - 1) * 1000) / 10;
-          return `  ${h.playerName ?? "?"} — rate ${(h.rate * 100).toFixed(1)}%/wk × ${h.weeksSinceSale.toFixed(1)}wk → raw ${pctRaw >= 0 ? "+" : ""}${pctRaw}% (bounded ${pctBounded >= 0 ? "+" : ""}${pctBounded}%) [${h.direction}]`;
-        }).join("\n");
-        const boundsOverflow = hits.length > 10 ? `\n\n... and ${hits.length - 10} more` : "";
-        // Divergence section — sort by absolute % first so the biggest
-        // gaps (like the Hartman 85% loss) surface at the top.
-        const divergenceSorted = [...divergenceHits].sort((a, b) => Math.abs(b.gainLossPct) - Math.abs(a.gainLossPct));
-        const divergencePreview = divergenceSorted.slice(0, 10).map((d) => {
-          const pct = Math.round(d.gainLossPct * 1000) / 10;
-          const cost = Math.round(d.costBasis);
-          const fmv = Math.round(d.fmv);
-          const label = d.cardTitle ?? d.playerName ?? d.slug ?? d.holdingId;
-          const method = d.fmvRung ? ` [${d.fmvRung}]` : d.fmvMethod ? ` [${d.fmvMethod}]` : "";
-          return `  ${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%  $${cost} → $${fmv}  ${label}${method}`;
-        }).join("\n");
-        const divergenceOverflow = divergenceHits.length > 10 ? `\n\n... and ${divergenceHits.length - 10} more` : "";
-        const parts: string[] = [];
-        const htmlParts: string[] = [];
-        if (divergenceHits.length > 0) {
-          parts.push(
-            `${divergenceHits.length} cost-basis vs FMV divergence${divergenceHits.length === 1 ? "" : "s"} ` +
-            `(>40% AND >$500):\n${divergencePreview}${divergenceOverflow}`,
-          );
-          htmlParts.push(`<p><strong>${divergenceHits.length} cost-basis vs FMV divergence${divergenceHits.length === 1 ? "" : "s"}</strong></p><pre style="font-family:monospace;font-size:13px;background:#f6f8fa;padding:12px;border-radius:6px">${divergencePreview}${divergenceOverflow}</pre>`);
-        }
-        if (hits.length > 0) {
-          parts.push(
-            `${hits.length} projection-multiplier bound hit${hits.length === 1 ? "" : "s"}:\n${boundsPreview}${boundsOverflow}`,
-          );
-          htmlParts.push(`<p><strong>${hits.length} projection-multiplier bound hit${hits.length === 1 ? "" : "s"}</strong></p><pre style="font-family:monospace;font-size:13px;background:#f6f8fa;padding:12px;border-radius:6px">${boundsPreview}${boundsOverflow}</pre>`);
-        }
-        const subject = divergenceHits.length > 0
-          ? `[HobbyIQ] ${divergenceHits.length} pricing divergence${divergenceHits.length === 1 ? "" : "s"} + ${hits.length} bound hit${hits.length === 1 ? "" : "s"} in reprice for ${userId}`
-          : `[HobbyIQ] ${hits.length} projection-bound hit${hits.length === 1 ? "" : "s"} in reprice for ${userId}`;
-        await sendEmail({
-          to: "drew@justtheboysandcards.com",
-          subject,
-          plainText:
-            `Reprice for userId=${userId}.\n\n` +
-            parts.join("\n\n") +
-            `\n\nKQL: search for event in ("cost_basis_fmv_divergence", "bounded_projection_alert") in App Insights.`,
-          html: `<p>Reprice for <strong>${userId}</strong>.</p>${htmlParts.join("")}<p>KQL: search for <code>event in ("cost_basis_fmv_divergence", "bounded_projection_alert")</code> in App Insights.</p>`,
-        }).catch(() => { /* silent — telemetry already logged */ });
-      }
+      const { sendDivergenceDigest } = await import("./divergenceDigestSend.js");
+      await sendDivergenceDigest({ userId, hits, divergenceHits });
     }
-  } catch {
-    // Never let alerting break the reprice.
+  } catch (err) {
+    console.warn(JSON.stringify({
+      event: "cost_basis_digest_not_delivered",
+      reason: "digest-module-threw",
+      error: (err as Error)?.message ?? String(err),
+    }));
   }
 
   return {

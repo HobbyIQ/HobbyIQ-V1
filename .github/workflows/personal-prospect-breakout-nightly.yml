@@ -60,6 +60,7 @@ jobs:
           ADMIN_API_TOKEN: ${{ secrets.ADMIN_API_TOKEN }}
           SPORT: ${{ matrix.sport }}
           DRY_RUN: ${{ inputs.dry_run || 'false' }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
           set -euo pipefail
           BODY=$(jq -nc \
@@ -83,6 +84,20 @@ jobs:
           fi
           echo "Summary:"
           jq '.summary' response.json
+          # D13 (2026-08-29) — alert gates prove delivery. HTTP 200 with
+          # pushesSent:0 was green even when the API had no APNs provider
+          # and every push no-op'd. One summary line always; red on a
+          # scheduled non-dry-run when the provider is missing. A zero
+          # with a configured provider stays green. (jq's // treats false
+          # as missing, so the boolean is read with has().)
+          CANDIDATES=$(jq -r '.summary.matches // 0' response.json)
+          PUSHES=$(jq -r '.summary.pushesSent // 0' response.json)
+          CONFIGURED=$(jq -r 'if (.summary | has("pushProviderConfigured")) then (.summary.pushProviderConfigured | tostring) else "unknown" end' response.json)
+          echo "notify summary: candidates=$CANDIDATES pushesSent=$PUSHES providerConfigured=$CONFIGURED"
+          if [ "$EVENT_NAME" = "schedule" ] && [ "$DRY_RUN" != "true" ] && [ "$CONFIGURED" = "false" ]; then
+            echo "::error::personal-prospect-breakout: push provider NOT configured on the API — candidates=$CANDIDATES were owed a push and every send no-op'd"
+            exit 1
+          fi
 
       - name: Upload response
         uses: actions/upload-artifact@v4

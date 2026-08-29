@@ -1,3 +1,6 @@
+// CF-A-SUGGESTION-IS-A-SLUG-OR-NOTHING (D12a, 2026-08-29): a vendor id no longer
+// reaches the wire as `cardId`. The vendor candidates this suite scores are
+// asserted through `idKind` + `candidate.vendorCardId`; `cardId` is hiq-only.
 // CF-CARDID-SUGGESTER-CATALOG-VERIFY (Drew, 2026-07-14): pins the
 // reference-catalog hookup on cardIdSuggester. Every suggestion (and
 // alternative) resolves its (year, product, parallel) against the
@@ -122,7 +125,7 @@ describe("CF-CARDID-SUGGESTER-CATALOG-VERIFY", () => {
 
     const r = await suggestCardIdForHolding(makeHolding());
     expect(r).not.toBeNull();
-    expect(r?.cardId).toBe("ch-x");
+    expect(r?.cardId).toBeUndefined(); expect(r?.idKind).toBe("vendor"); expect(r?.candidate.vendorCardId).toBe("ch-x");
     expect(r?.catalogVerified).toBeNull();
   });
 
@@ -156,7 +159,7 @@ describe("CF-CARDID-SUGGESTER-CATALOG-VERIFY", () => {
     expect(r?.confidenceTier).not.toBe("high");
     expect(r?.catalogVerified?.canonicalParallel).toBe("Green Refractor");
     expect(r?.alternatives).toBeDefined();
-    const alt = r?.alternatives?.find((a) => a.cardId === "ch-alt");
+    const alt = r?.alternatives?.find((a) => a.candidate.vendorCardId === "ch-alt");
     expect(alt).toBeDefined();
     expect(alt?.catalogVerified).toBeNull();
   });

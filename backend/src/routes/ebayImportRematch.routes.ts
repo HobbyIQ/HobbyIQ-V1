@@ -787,7 +787,10 @@ router.post("/admin/sell-side-notify/run", requireAdmin, async (req: Request, re
       perHoldingCooldownHours: typeof req.body?.perHoldingCooldownHours === "number" ? req.body.perHoldingCooldownHours : undefined,
       dismissCooldownDays: typeof req.body?.dismissCooldownDays === "number" ? req.body.dismissCooldownDays : undefined,
     });
-    res.json({ computedAt: new Date().toISOString(), summary });
+    // D13 (2026-08-29): the workflow asserts this — pushesSent:0 with no
+    // provider is the defect, not a quiet night.
+    const { isPushProviderConfigured } = await import("../services/notification.service.js");
+    res.json({ computedAt: new Date().toISOString(), summary: { ...summary, pushProviderConfigured: isPushProviderConfigured() } });
   } catch (err) { next(err); }
 });
 
@@ -827,7 +830,9 @@ router.post("/admin/personal-prospect-breakout/run", requireAdmin, async (req: R
       perHoldingCooldownDays: typeof req.body?.perHoldingCooldownDays === "number" ? req.body.perHoldingCooldownDays : undefined,
       dryRun: req.body?.dryRun === true,
     });
-    res.json({ computedAt: new Date().toISOString(), summary });
+    // D13 (2026-08-29): see sell-side-notify above.
+    const { isPushProviderConfigured } = await import("../services/notification.service.js");
+    res.json({ computedAt: new Date().toISOString(), summary: { ...summary, pushProviderConfigured: isPushProviderConfigured() } });
   } catch (err) { next(err); }
 });
 
@@ -847,7 +852,9 @@ router.post("/admin/grade-arbitrage-notify/run", requireAdmin, async (req: Reque
       dismissCooldownDays: typeof req.body?.dismissCooldownDays === "number" ? req.body.dismissCooldownDays : undefined,
       sport: typeof req.body?.sport === "string" ? req.body.sport : undefined,
     });
-    res.json({ computedAt: new Date().toISOString(), summary });
+    // D13 (2026-08-29): see sell-side-notify above.
+    const { isPushProviderConfigured } = await import("../services/notification.service.js");
+    res.json({ computedAt: new Date().toISOString(), summary: { ...summary, pushProviderConfigured: isPushProviderConfigured() } });
   } catch (err) { next(err); }
 });
 

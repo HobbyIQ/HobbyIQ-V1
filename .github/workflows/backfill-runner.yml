@@ -58,6 +58,7 @@ on:
           - backfill-composite-fields
           - backfill-composite-v3
           - audit-ladder-violations
+          - audit-source-coverage
           - prototype-neighbor-lookup
           - market-analysis-composite
           - refresh-market-signals
@@ -192,10 +193,15 @@ on:
         default: ""
         type: string
       sources:
-        description: "Comma-separated catalog sources (SOURCES env) -- REQUIRED for retire-exploded-checklist-rows mode=source"
+        description: "Comma-separated catalog sources (SOURCES env) -- REQUIRED for retire-exploded-checklist-rows mode=source and for audit-source-coverage (the OLD sources; `scope` is the replacement source)"
         required: false
         type: string
         default: ""
+      min_coverage_pct:
+        description: "For retire-exploded-checklist-rows mode=source and audit-source-coverage: a product is retired only when the replacement source covers at least this % of its (cardNumber, parallel, printRun) keys; below it the product is KEPT."
+        required: false
+        type: string
+        default: "95"
       years:
         description: "Optional comma-separated years to scope a run (e.g. 1950,1955). Empty = all years."
         required: false
@@ -501,6 +507,9 @@ jobs:
           PHASES: ${{ inputs.phases }}
           BCP_TITLES: ${{ inputs.titles }}
           SOURCES: ${{ inputs.sources }}
+          # retire mode=source / audit-source-coverage: the per-product key
+          # coverage floor under which an old product is kept, not retired.
+          MIN_COVERAGE_PCT: ${{ inputs.min_coverage_pct }}
           # repair-refractor-mislabel: "refractor" (plain segment only) or
           # "all" (every slug whose parallel disagrees with its own title).
           SCOPE: ${{ inputs.scope }}
@@ -795,7 +804,7 @@ jobs:
           # CF-RELAUNCH-ONLY-ON-BUDGET (2026-08-29): relaunch iff the script stopped at its budget.
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (retired=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=retire-exploded-checklist-rows -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sources="${{ inputs.sources }}" -f scope="${{ inputs.scope }}"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=retire-exploded-checklist-rows -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sources="${{ inputs.sources }}" -f scope="${{ inputs.scope }}" -f min_coverage_pct="${{ inputs.min_coverage_pct }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (retired=${N:-0}) — done, no re-dispatch."
           fi
@@ -816,6 +825,26 @@ jobs:
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (repaired=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} mode=${{ inputs.mode }} to continue"
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-parallel-from-title -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}"
+          else
+            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (repaired=${N:-0}) — done, no re-dispatch."
+          fi
+
+      - name: Self-relaunch the parallel-from-title repair until the slot is clean
+        if: ${{ !cancelled() && inputs.script == 'fold-unnumbered-twins' && inputs.apply == true }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        working-directory: backend
+        run: |
+          set +e
+          N=$(grep -aoE "^  REPAIRED +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          echo "repaired=${N:-0}"
+          # CF-RELAUNCH-ONLY-ON-BUDGET (2026-08-29): relaunch iff the script stopped at its budget.
+          # The repair re-queries "parallel stamped, title silent" each run, so a relaunch
+          # resumes exactly where the rows still disagree -- nothing is re-patched.
+          if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
+            echo "::notice::budget hit (repaired=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} mode=${{ inputs.mode }} to continue"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=fold-unnumbered-twins -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (repaired=${N:-0}) — done, no re-dispatch."
           fi

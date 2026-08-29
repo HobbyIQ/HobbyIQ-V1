@@ -260,6 +260,11 @@ export interface ResolveCardResult {
   winner: CardResolution | null;
   responses: Array<CardResolution | null>;
   fromCache: boolean;
+  /** CF-QUERY-SOLD-COMPS-FAILS-CLOSED (D12a): how many sources THREW (as
+   *  opposed to answering null). A null winner with sourceErrors > 0 is
+   *  "could not be read", not "nothing found" -- callers withhold, and the
+   *  resolver does not cache it. */
+  sourceErrors: number;
 }
 
 /**
@@ -281,7 +286,7 @@ export async function resolveCard(query: CardQuery): Promise<ResolveCardResult> 
   // Layer 1: in-memory LRU (5ms hit path).
   const cached = cacheGet(key, now);
   if (cached) {
-    return { winner: cached, responses: [cached], fromCache: true };
+    return { winner: cached, responses: [cached], fromCache: true, sourceErrors: 0 };
   }
 
   // Layer 2 (CF-VENDOR-PRICING-CACHE, Drew 2026-07-13): Cosmos persistent
@@ -295,7 +300,7 @@ export async function resolveCard(query: CardQuery): Promise<ResolveCardResult> 
     const persisted = await getCachedResolution(key, query.cardId ?? null);
     if (persisted) {
       cacheSet(key, persisted, now);
-      return { winner: persisted, responses: [persisted], fromCache: true };
+      return { winner: persisted, responses: [persisted], fromCache: true, sourceErrors: 0 };
     }
   } catch (err) {
     console.warn(JSON.stringify({
@@ -306,13 +311,15 @@ export async function resolveCard(query: CardQuery): Promise<ResolveCardResult> 
   }
 
   if (registeredSources.length === 0) {
-    return { winner: null, responses: [], fromCache: false };
+    return { winner: null, responses: [], fromCache: false, sourceErrors: 0 };
   }
 
+  let sourceErrors = 0;
   const promises = registeredSources.map((source) =>
     Promise.resolve()
       .then(() => source.resolveCard(query))
       .catch((err) => {
+        sourceErrors += 1;
         console.warn(JSON.stringify({
           event: "catalog_resolver_source_error",
           source: "catalogResolver.service",
@@ -368,7 +375,7 @@ export async function resolveCard(query: CardQuery): Promise<ResolveCardResult> 
     });
     cacheSet(key, earlyWinner, now);
     writeThrough(earlyWinner);
-    return { winner: earlyWinner, responses: [earlyWinner], fromCache: false };
+    return { winner: earlyWinner, responses: [earlyWinner], fromCache: false, sourceErrors };
   }
 
   // No confident hit within early-return window — wait for all up to
@@ -382,6 +389,10 @@ export async function resolveCard(query: CardQuery): Promise<ResolveCardResult> 
   if (best) cacheSet(key, best, now);
   // Cache the result — including null — to prevent hammering vendors on
   // repeated queries for genuinely-missing cards.
-  writeThrough(best);
-  return { winner: best, responses, fromCache: false };
+  // CF-QUERY-SOLD-COMPS-FAILS-CLOSED (D12a, 2026-08-29): a null reached while
+  // a source THREW is not a genuinely-missing card; caching it would pin the
+  // outage on this card for the cache TTL. Cache a null only when every
+  // source answered.
+  if (best || sourceErrors === 0) writeThrough(best);
+  return { winner: best, responses, fromCache: false, sourceErrors };
 }

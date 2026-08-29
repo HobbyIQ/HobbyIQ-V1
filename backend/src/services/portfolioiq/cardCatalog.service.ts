@@ -215,6 +215,78 @@ export async function getCatalogEntry(slug: string): Promise<CardCatalogEntry | 
 }
 
 /**
+ * Fields an incoming winner carries over from the row it replaces. They are
+ * enrichment written by OTHER jobs about the same card -- an image the 32M
+ * backfill found, the sale counts, the re-home / move history -- and none of
+ * them is a claim about the card's identity, which is exactly what the winner
+ * is replacing. Everything derived from the row's own name (displayName,
+ * searchText, profileVersion, checklistBacking ...) is NOT carried: it
+ * described the old row, and the normalisers recompute it for the new one.
+ */
+const PRESERVED_ON_REPLACE = [
+  "imageUrl", "imageSource", "imageBackfilledAt",
+  "recentSaleCount", "observedCompCount", "firstSeenAt", "team",
+  "rehomedFrom", "rehomedAt", "movedFrom", "movedReason", "movedAt",
+  "setKeyBefore", "canonicalizedFrom", "unfoldedFrom",
+] as const;
+
+/** A confidence the row never declared is no confidence, not a high one. */
+const confidenceOf = (v: unknown): number => (typeof v === "number" && Number.isFinite(v) ? v : 0);
+
+/**
+ * The merge rule behind upsertCatalogEntry, on its own so it can be tested
+ * without a container -- the test that pinned "the cleanest one wins" carried
+ * a COPY of the rule, and the copy could not fail when the rule did.
+ *
+ * CF-NO-CONFIDENCE-IS-NOT-HIGH-CONFIDENCE (2026-08-29, D3b). Rank by authority
+ * first, and within a class by confidence. The class tie-break compared
+ * `entry.confidence > existing.confidence`, and the 1.2M old checklistcenter
+ * rows, the 13M baseballcardpedia rows and the beckett-checklist rows carry NO
+ * confidence field at all -- so `0.95 > undefined` was false and the row with
+ * no confidence beat the 0.95 checklist row every time. The D3 re-ingest
+ * "wrote" 2,869,277 rows and left most of them under the OLD label: 2025
+ * Bowman Draft CPA-MWI's Refractor /499, Purple Refractor /250, Gold Refractor
+ * /50 ... all upserted as no-ops onto beckett / bcp / old-checklistcenter rows
+ * with the same id, and the new source showed only the 13 rungs nobody else
+ * had. A source retire keyed on that label would have deleted the ladder the
+ * re-ingest had just re-attested. Missing confidence is 0; an exact tie still
+ * keeps the existing row (idempotent re-runs stay no-ops).
+ */
+export function mergeCatalogEntries(
+  entry: Omit<CardCatalogEntry, "observedAt" | "lastSeenAt">,
+  existing: CardCatalogEntry | null,
+  now: string,
+): { merged: CardCatalogEntry; winnerIsIncoming: boolean } {
+  const incomingRank = authorityRank(entry.source);
+  const existingRank = existing ? authorityRank(existing.source) : -1;
+  const winnerIsIncoming = !existing
+    || incomingRank > existingRank
+    || (incomingRank === existingRank && confidenceOf(entry.confidence) > confidenceOf(existing.confidence));
+  if (!winnerIsIncoming) {
+    return {
+      winnerIsIncoming,
+      merged: {
+        ...existing!,
+        vendorIds: { ...existing!.vendorIds, ...entry.vendorIds },
+        lastSeenAt: now,
+      },
+    };
+  }
+  const merged: CardCatalogEntry = {
+    ...entry,
+    vendorIds: { ...(existing?.vendorIds ?? {}), ...entry.vendorIds },
+    observedAt: existing?.observedAt ?? now,
+    lastSeenAt: now,
+  };
+  if (existing) {
+    const from = existing as unknown as Record<string, unknown>;
+    const onto = merged as unknown as Record<string, unknown>;
+    for (const k of PRESERVED_ON_REPLACE) if (from[k] !== undefined && onto[k] === undefined) onto[k] = from[k];
+  }
+  return { winnerIsIncoming, merged };
+}
+
+/**
  * Upsert a catalog entry. Idempotent: same slug → same doc id, so
  * repeated calls with identical facts are no-ops. When the incoming
  * entry has higher confidence than the existing, the higher wins.
@@ -257,23 +329,7 @@ export async function upsertCatalogEntry(
   // This is the whole point of ingesting checklists: a checklist is the only
   // artifact that can CONTRADICT a sale. If it cannot win, ingesting it just
   // adds rows that agree with whatever was already there.
-  const incomingRank = authorityRank(entry.source);
-  const existingRank = existing ? authorityRank(existing.source) : -1;
-  const winnerIsIncoming = !existing
-    || incomingRank > existingRank
-    || (incomingRank === existingRank && entry.confidence > existing.confidence);
-  const merged: CardCatalogEntry = winnerIsIncoming
-    ? {
-        ...entry,
-        vendorIds: { ...(existing?.vendorIds ?? {}), ...entry.vendorIds },
-        observedAt: existing?.observedAt ?? now,
-        lastSeenAt: now,
-      }
-    : {
-        ...existing!,
-        vendorIds: { ...existing!.vendorIds, ...entry.vendorIds },
-        lastSeenAt: now,
-      };
+  const { merged } = mergeCatalogEntries(entry, existing, now);
   try {
     await c.items.upsert(merged as unknown as Record<string, unknown>);
     return merged;

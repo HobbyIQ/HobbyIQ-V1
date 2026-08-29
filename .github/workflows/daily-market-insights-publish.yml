@@ -108,3 +108,16 @@ jobs:
           if [ "$HTTP_STATUS" != "200" ]; then
             exit 1
           fi
+
+          # D13 (2026-08-29) — alert gates prove delivery. HTTP 200 with an
+          # empty snapshot was green. One summary line always; red when
+          # nothing was published.
+          GAINERS=$(jq -r '.topGainersCount // 0' response.json)
+          LOSERS=$(jq -r '.topLosersCount // 0' response.json)
+          NOTABLE=$(jq -r '.notableSalesCount // 0' response.json)
+          POOL=$(jq -r '.poolSize // 0' response.json)
+          echo "publish summary: slot=$SLOT gainers=$GAINERS losers=$LOSERS notable=$NOTABLE pool=$POOL"
+          if [ "$((GAINERS + LOSERS + NOTABLE))" -eq 0 ]; then
+            echo "::error::publish-market returned 200 with no content (gainers=0 losers=0 notable=0) — nothing was published"
+            exit 1
+          fi

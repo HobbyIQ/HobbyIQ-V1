@@ -86,12 +86,61 @@ function upgradeBareColorFromTitle(parallel: string, title: string | null): stri
   return parallel;
 }
 
-/** Mutation-free: return a copy of the holding with hobbyiqCardId
- *  populated if computable. When holding already carries a slug, we
- *  RECOMPUTE and overwrite — cheap, and lets identity edits (fixed
- *  parallel, corrected cardNumber) propagate to the slug automatically. */
-export function withDerivedSlug<T extends PortfolioHolding>(holding: T): T {
-  const slug = deriveHoldingSlug(holding);
-  if (slug === null && !holding.hobbyiqCardId) return holding;
-  return { ...holding, hobbyiqCardId: slug };
+/** True when the holding carries a canonical `hiq:` slug -- a PIN, whatever
+ *  wrote it (the card page the user added from, a catalog match, the import). */
+export function hasPinnedSlug(holding: { hobbyiqCardId?: string | null }): boolean {
+  return String(holding.hobbyiqCardId ?? "").trim().startsWith("hiq:");
+}
+
+/**
+ * Fill an ABSENT hobbyiqCardId from the holding's own text -- but only with a
+ * slug the catalog holds. Mutation-free: a copy when it fills, the same
+ * object when it does not.
+ *
+ * CF-A-MINTED-SLUG-NEVER-REPLACES-A-PIN (2026-08-29, checklist D12a). This
+ * replaces withDerivedSlug, which RECOMPUTED on every write and overwrote
+ * whatever was there. What it recomputed from is free text: the sport is
+ * inferred from the title, the print run is regex'd out of the title, a bare
+ * colour becomes a Refractor on a heuristic, and computeHobbyIqCardId never
+ * reads the catalog. So a holding whose identity had been resolved against a
+ * checklist row -- added from its own card page, pinned by the import at
+ * >= 0.9, picked in the review sheet -- had that identity replaced by a
+ * guess every time the user touched a note, and priceFromOurPool priced the
+ * guess. A guess the catalog does not hold is not an identity at all.
+ *
+ * Two rules:
+ *   1. a slug the holding already carries is kept (fill-only);
+ *   2. a derived slug is adopted only when catalogSlugIfExists says the
+ *      catalog holds it -- the id itself or its un-numbered twin, and the
+ *      catalog's form is what is written; otherwise the holding stays
+ *      without a slug and the miss is logged. Fails closed on an outage.
+ * A filled slug says how it was chosen: hobbyiqCardIdSource "derived".
+ * Identity edits propagate through the catalog resolve on update, never
+ * through a recompute here.
+ */
+export async function fillDerivedSlugFromCatalog<T extends PortfolioHolding>(
+  holding: T,
+  ctx: { source: string } = { source: "holdingSlug.fillDerivedSlugFromCatalog" },
+): Promise<T> {
+  if (hasPinnedSlug(holding)) return holding;
+  const derived = deriveHoldingSlug(holding);
+  if (derived === null) return holding;
+  let found: string | null = null;
+  try {
+    const { catalogSlugIfExists } = await import("../catalog/catalogMatcher.service.js");
+    found = await catalogSlugIfExists(derived);
+  } catch {
+    found = null;
+  }
+  if (!found) {
+    console.log(JSON.stringify({
+      event: "derived_slug_not_in_catalog",
+      source: ctx.source,
+      holdingId: holding.id ?? null,
+      derivedSlug: derived,
+      detail: "a slug minted from the holding's text is not an identity until the catalog holds it; left unset",
+    }));
+    return holding;
+  }
+  return { ...holding, hobbyiqCardId: found, hobbyiqCardIdSource: "derived" };
 }

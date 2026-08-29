@@ -94,8 +94,20 @@ async function catalogVerifyCandidate(
  */
 export type SuggestionConfidenceTier = "high" | "medium" | "low";
 
+/** CF-A-SUGGESTION-IS-A-SLUG-OR-NOTHING (D12a, 2026-08-29). What kind of id
+ *  the winning candidate carried. "hiq" — our canonical slug, and `cardId`
+ *  is set. "vendor" — a CardHedge / Cardsight id; `cardId` is ABSENT and the
+ *  vendor id is context on `candidate.vendorCardId` only. */
+export type SuggestionIdKind = "hiq" | "vendor";
+
 export interface CardIdSuggestion {
-  cardId: string;
+  /** The canonical hiq: slug to suggest. ABSENT when the winning candidate
+   *  carried a vendor id — a suggestion that is not our identity is not a
+   *  suggestion the holding may adopt (see idKind). Every consumer that
+   *  writes suggestedCardId / cardId from this field is therefore
+   *  hiq-only by construction. */
+  cardId?: string;
+  idKind: SuggestionIdKind;
   confidence: number;   // 0.0 - 1.0
   confidenceTier: SuggestionConfidenceTier;
   /** CF-CARDID-SUGGESTER-MULTI-VENDOR (Drew, 2026-07-14): which catalog
@@ -124,6 +136,10 @@ export interface CardIdSuggestion {
     number?: string;
     variant?: string;
     image?: string;
+    /** CF-A-SUGGESTION-IS-A-SLUG-OR-NOTHING (D12a): the vendor's own id for
+     *  this candidate when idKind is "vendor". Context for the review sheet
+     *  (link out, badge); never an identity the holding adopts. */
+    vendorCardId?: string;
   };
   /** CF-CARDID-SUGGESTER-TOP-N (Drew, 2026-07-14): when the primary
    *  suggestion isn't in the "high" tier, up to 2 alternative candidates
@@ -229,9 +245,12 @@ interface FieldMatchResult {
  * source flag propagates to the caller for wire attribution.
  */
 interface CommonCandidate {
-  /** Wire cardId — CH's bubble.io id, CS's compound "{parent}::{parallel}",
-   *  or (catalog-first) our canonical hiq: slug. */
+  /** The candidate's id — CH's bubble.io id, CS's compound
+   *  "{parent}::{parallel}", or (catalog-first) our canonical hiq: slug.
+   *  Only an hiq: id reaches the wire as `cardId`; see idKind. */
   cardId: string;
+  /** CF-A-SUGGESTION-IS-A-SLUG-OR-NOTHING (D12a). */
+  idKind: SuggestionIdKind;
   source: "cardhedge" | "cardsight-uuid" | "hobbyiq-catalog";
   title: string | null;
   name: string | null;
@@ -250,6 +269,7 @@ function chToCommon(c: CardHedgeCard): CommonCandidate | null {
   if (!c.card_id) return null;
   return {
     cardId: c.card_id,
+    idKind: "vendor",
     source: "cardhedge",
     title: c.title ?? null,
     name: c.name ?? null,
@@ -311,14 +331,19 @@ function catalogHitToCommon(h: CanonicalSearchHit): CommonCandidate | null {
   // (CF-SEARCH-CHECKLIST-IS-THE-INDEX) and from the matcher's fuzzy-parallel
   // step today.
   //
-  // A vendor id is still better than nothing when it is all we have, so it
-  // remains the fallback — but a canonical slug always wins when present, and
-  // the flag lets a caller see which it got.
+  // CF-A-SUGGESTION-IS-A-SLUG-OR-NOTHING (D12a, 2026-08-29). "A vendor id is
+  // still better than nothing" was the fallback here, and it was persisted as
+  // suggestedCardId and auto-applied as cardId at >= 0.55 by the confirm and
+  // rescue passes. A vendor id on a vendor-sourced catalog row is still a
+  // vendor's copy of the card. The row stays a candidate — its fields still
+  // score, still verify, still show in the sheet — but only an hiq: slug is
+  // ever offered as the id to adopt.
   const wireCardId = h.hobbyiqCardId ?? h.cardId;
   if (!wireCardId) return null;
   const isCanonical = typeof wireCardId === "string" && wireCardId.startsWith("hiq:");
   return {
     cardId: wireCardId,
+    idKind: isCanonical ? "hiq" : "vendor",
     canonical: isCanonical,
     source: "hobbyiq-catalog",
     title: null,
@@ -341,6 +366,7 @@ function csIdentityToCommon(c: CardIdentity): CommonCandidate | null {
     : c.candidateId;
   return {
     cardId: wireCardId,
+    idKind: "vendor",
     source: "cardsight-uuid",
     title: c.title ?? null,
     name: c.player ?? null,
@@ -829,7 +855,7 @@ export async function suggestCardIdForHolding(
       seenAltKeys.add(key);
       const altConfidence = Math.round(s.match.score * 100) / 100;
       alternatives.push({
-        cardId: s.candidate.cardId,
+        ...wireIdOf(s.candidate),
         confidence: altConfidence,
         confidenceTier: tierForConfidence(altConfidence),
         candidateSource: s.candidate.source,
@@ -838,14 +864,7 @@ export async function suggestCardIdForHolding(
           fieldsMatched: s.match.fieldsMatched,
           mismatchedFields: s.match.mismatched,
         },
-        candidate: {
-          title: s.candidate.title ?? s.candidate.name ?? undefined,
-          set: s.candidate.set ?? undefined,
-          year: s.candidate.year ?? undefined,
-          number: s.candidate.number ?? undefined,
-          variant: s.candidate.variant ?? undefined,
-          image: s.candidate.image ?? undefined,
-        },
+        candidate: candidateContextOf(s.candidate),
       });
     }
   }
@@ -908,7 +927,7 @@ export async function suggestCardIdForHolding(
     : rawTier;
 
   return {
-    cardId: top.candidate.cardId,
+    ...wireIdOf(top.candidate),
     confidence: boostedConfidence,
     confidenceTier: boostedTier,
     candidateSource: top.candidate.source,
@@ -917,16 +936,29 @@ export async function suggestCardIdForHolding(
       fieldsMatched: top.match.fieldsMatched,
       mismatchedFields: top.match.mismatched,
     },
-    candidate: {
-      title: top.candidate.title ?? top.candidate.name ?? undefined,
-      set: top.candidate.set ?? undefined,
-      year: top.candidate.year ?? undefined,
-      number: top.candidate.number ?? undefined,
-      variant: top.candidate.variant ?? undefined,
-      image: top.candidate.image ?? undefined,
-    },
+    candidate: candidateContextOf(top.candidate),
     catalogVerified: primaryCatalog ?? null,
     ...(alternatives.length > 0 ? { alternatives } : {}),
+  };
+}
+
+/** CF-A-SUGGESTION-IS-A-SLUG-OR-NOTHING (D12a): the id half of the wire.
+ *  `cardId` is present only for an hiq: slug; a vendor id is left off. */
+function wireIdOf(c: CommonCandidate): { cardId?: string; idKind: SuggestionIdKind } {
+  return c.idKind === "hiq" ? { cardId: c.cardId, idKind: "hiq" } : { idKind: "vendor" };
+}
+
+/** The candidate's descriptive context for the review sheet. A vendor id
+ *  rides here as `vendorCardId` — context, never an identity. */
+function candidateContextOf(c: CommonCandidate): CardIdSuggestion["candidate"] {
+  return {
+    title: c.title ?? c.name ?? undefined,
+    set: c.set ?? undefined,
+    year: c.year ?? undefined,
+    number: c.number ?? undefined,
+    variant: c.variant ?? undefined,
+    image: c.image ?? undefined,
+    ...(c.idKind === "vendor" ? { vendorCardId: c.cardId } : {}),
   };
 }
 
@@ -940,6 +972,10 @@ export interface SuggestBatchSummary {
   noCandidates: number;
   skipped: number;
   errors: number;
+  /** CF-A-SUGGESTION-IS-A-SLUG-OR-NOTHING (D12a): winners that carried only
+   *  a vendor id. Counted in `suggested` (their context landed on the
+   *  holding) but NO suggestedCardId was written for them. */
+  vendorIdDropped: number;
 }
 
 /**
@@ -961,6 +997,7 @@ export async function generateCardIdSuggestions(
     noCandidates: 0,
     skipped: 0,
     errors: 0,
+    vendorIdDropped: 0,
   };
   const holdings = Object.values(doc.holdings ?? {});
   const targets = holdings.filter(
@@ -983,7 +1020,16 @@ export async function generateCardIdSuggestions(
           summary.noCandidates += 1;
           continue;
         }
-        (h as any).suggestedCardId = suggestion.cardId;
+        // CF-A-SUGGESTION-IS-A-SLUG-OR-NOTHING (D12a): suggestedCardId is an
+        // hiq: slug or absent. A vendor-id winner still lands its context
+        // (suggestionCandidate.vendorCardId, candidateSource) for the sheet.
+        if (suggestion.cardId) {
+          (h as any).suggestedCardId = suggestion.cardId;
+        } else {
+          delete (h as any).suggestedCardId;
+          summary.vendorIdDropped += 1;
+        }
+        (h as any).suggestionIdKind = suggestion.idKind;
         (h as any).suggestionConfidence = suggestion.confidence;
         (h as any).suggestionCandidate = suggestion.candidate;
         (h as any).suggestionConfidenceTier = suggestion.confidenceTier;

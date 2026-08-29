@@ -32,8 +32,13 @@ async function main() {
   );
   // CF-CASCADE-APNS-PUSH (Drew, 2026-07-17). Fan-out to APNs for the
   // subset of newly-detected events that aren't already stored.
-  const { sendCascadeAlertsForNewEvents } = require(
+  const { sendCascadeAlertsForNewEvents, cascadePushExitCode } = require(
     path.join(distRoot, "services", "portfolioiq", "cascadeNotify.service.js"),
+  );
+  // D13 (2026-08-29): the sender no-ops without APNS_*; ask before
+  // trusting a zero. The workflow must pass the five APNs vars.
+  const { isPushProviderConfigured } = require(
+    path.join(distRoot, "services", "notification.service.js"),
   );
 
   const client = new CosmosClient(process.env.COSMOS_CONNECTION_STRING);
@@ -102,7 +107,8 @@ async function main() {
 
   const upserted = await upsertCascadeEvents(result.events);
 
-  let notify = { sent: 0, failed: 0 };
+  const pushProviderConfigured = isPushProviderConfigured();
+  let notify = { sent: 0, failed: 0, optedInUsers: 0 };
   if (newEvents.length > 0) {
     try {
       notify = await sendCascadeAlertsForNewEvents(newEvents);
@@ -120,8 +126,10 @@ async function main() {
     detected: result.detected,
     upserted,
     newEvents: newEvents.length,
+    optedInUsers: notify.optedInUsers ?? 0,
     pushSent: notify.sent,
     pushFailed: notify.failed,
+    pushProviderConfigured,
     elapsedMs: Date.now() - t0,
     topEvents: result.events.slice(0, 10).map((e) => ({
       player: e.player,
@@ -132,7 +140,22 @@ async function main() {
     })),
   }));
 
-  process.exit(0);
+  // D13 (2026-08-29): a zero because nobody was owed a push is fine; a
+  // zero because the sender does not exist is the defect this script
+  // hid for six weeks. Red, with the reason on one line.
+  const exitCode = cascadePushExitCode({
+    newEvents: newEvents.length,
+    optedInUsers: notify.optedInUsers ?? 0,
+    providerConfigured: pushProviderConfigured,
+  });
+  if (exitCode !== 0) {
+    console.error(
+      `::error::cascade push provider NOT configured — ${newEvents.length} new event(s) owed to ` +
+      `${notify.optedInUsers} opted-in user(s) and every send no-op'd (need APNS_KEY_ID/APNS_TEAM_ID/` +
+      `APNS_BUNDLE_ID/APNS_KEY_P8 in the workflow env)`,
+    );
+  }
+  process.exit(exitCode);
 }
 
 async function pathExists(p) {
