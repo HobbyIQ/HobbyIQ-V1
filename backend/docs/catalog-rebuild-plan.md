@@ -314,7 +314,27 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   prefix-normalized keys; the MODE=source guard becomes per-product coverage
   ≥ 95%, kept products printed with their number). **The old-CLC retire stays
   cancelled until a re-ingest passes that gate.** The cancelled runs printed
-  no budget marker, so nothing relaunched. Also seen in the same run: the bcp ladders re-ingest now
+  no budget marker, so nothing relaunched.
+  **CORRECTION (D3b, #1472, 22:50Z): the converter never dropped the ladder.**
+  The 2025 Bowman Draft workbook lists all 26 rungs for CPA-MWI and the xlsx
+  path emits all 26. The root cause is `upsertCatalogEntry`'s tie-break in
+  `cardCatalog.service.ts`: `entry.confidence > existing.confidence` is
+  `0.95 > undefined` = false, so every old-label row at the SAME id (old
+  checklistcenter, bcp, beckett — none carry a confidence) kept its old
+  source label and the re-ingest was a no-op on it (2,090 old rows in that
+  product carry the re-ingest's `lastSeenAt`). The 13 "missing" rungs exist
+  at the same ids under other labels; the 23% key coverage above IS this
+  mislabeling. Had the retire run to completion it would have deleted the
+  re-attested rows themselves. Fix: missing confidence = 0, the incoming
+  winner keeps the replaced row's image/sale-counts/move-history, the ingest
+  prints `kept the existing row N`; converter html-path gaps fixed on the
+  side (label families reach their rungs, `SuperFractor 1/1` → /1,
+  parenthesised odds no longer shred into rungs, 14 doubled-sport URLs);
+  `audit-source-coverage.cjs` (exact + normalised keys; leaf-vivid 51% → 100%
+  normalised) and the retire's per-product ≥ 95% floor shipped. **Order:**
+  deploy (33274840453) → re-ingest `MODE=reingest PHASES=clc` (report-only
+  shard 0/8 dispatched 22:55Z, 33274846587, to read the `kept` counters)
+  → APPLY ×8 → `audit-source-coverage` → retire with the floor. Also seen in the same run: the bcp ladders re-ingest now
   skips 762,534 player-name-parallel rows (#1396 working as built).
   **D3b (2026-08-29 ~22:00Z, `feat/d3b`): the ladder was never lost — the LABEL was.**
   The brief: CLC lacks Bowman's plain colour ladder (2025 Bowman Draft CPA-MWI: 13 rows,
@@ -671,7 +691,18 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
     with an `OPS_ALERT_EMAIL` override, DailyIQ marks only when a push was
     attempted, notify workflows assert `pushProviderConfigured` + print counts,
     cleanliness/publish workflows exit non-zero on nothing, Cardsight + verdict
-    crons removed, a row-count axis on the freshness canary.
+    crons removed, a row-count axis on the freshness canary. **Merged #1471
+    (22:45Z)**: 30 files; measured tca-ebay 9,280–114,513 rows/day (floor
+    2,300; raise toward 25,000 once a firehose-era week is confirmed — Drew);
+    the retired Cardsight was still writing 0–3 rows/day. **D12-a merged
+    #1473 (22:53Z)**: user comps pool under the hiq slug or are withheld
+    (`user_comp_withheld_no_identity`), `fillDerivedSlugFromCatalog`
+    replaces `withDerivedSlug` (fill-only, catalog-backed, fails closed), one
+    0.9 gate pins both ids on add/update (below it → proposal fields, not the
+    literal pending-review status — judgment call flagged), fifth + sixth
+    headline chains fixed, listings link their holding, the suggester emits
+    hiq ids only, composer FMV-first, `querySoldComps` throws instead of
+    failing open. Deploy 33274840453 carries D13 + D3b + D12-a.
   - **D13 — alert gates prove delivery** (built on `feat/d13`, 8 commits,
     2026-08-29 ~21:00Z; tsc 0; every item pinned by a test AND a mutation
     check that went red). The defect had one shape: a gate reads a field
@@ -870,7 +901,22 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   refusals where the row's `setKey` field disagrees with its own slug
   (`bowman` vs `bowman-chrome`/`bowman-paper` — conform-card-profile's
   population). APPLY dispatched 20:22Z (33273328022); conform-holdings
-  APPLY follows it.** Web picker fix #1466 deployed (SWA run 33273147531).
+  APPLY follows it.** Drew (22:30Z): "I see 2 max williams superfractors …
+  superfractors are 1/1" — bcp's un-numbered `superfractor:auto` beside
+  beckett's `:num-1`, and the same pair on Refractor /499, Black /10, Red /5,
+  Red Lava, Sky Blue. **#1470:** the fold's decision is a pure tested rule
+  (`foldTwinRule.ts`): vendor/user twins fold as before; a SuperFractor or
+  printing plate folds into its /1 whatever its source (CF-A-SUPERFRACTOR-IS-
+  ONE-OF-ONE; mis-parsed print runs beside the /1 no longer make it
+  ambiguous); `MODE=cross-source` folds a checklist twin whose own source
+  lists no numbered variant (one source omitted the print run another lists
+  — only-improve) and leaves a source that lists both alone. Cross-source
+  dry run 33274650026. The catalog has 50,966 un-numbered SuperFractor rows
+  and 158,741 un-numbered printing plates (+7,149 at "/4") → D15's third
+  script `conform-one-of-one-parallels`. `merge-bare-colour-parallels` 2025:
+  8,877 chrome bare-colour rows, 1,861 with a long-form twin → APPLY
+  dispatched 22:52Z (33274680156); the 7,016 with no long-form row need a
+  rename mode (queued). Web picker fix #1466 deployed (SWA run 33273147531).
 - ◐ D9 **The eBay import → holdings pipeline** (Drew, 2026-08-29 17:20Z: "we
   need to fix the whole ebay import to holdings process, bc it seems broken").
   The Marconi purchase IS the fixture. Real listing title (`purchase.notes`):
