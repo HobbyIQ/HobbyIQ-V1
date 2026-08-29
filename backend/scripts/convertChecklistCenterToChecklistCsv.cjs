@@ -195,6 +195,7 @@ function categoryOf(section) {
 function emit(product, subsets, rejected, srcKind) {
   const rowsOut = [];
   let baseEmitted = false, refusedSubsets = 0;
+  const pars = new Set(), nums = new Set(); // product-wide, for the report only -- the gate is per subset
   // CF-RIGHT-GUARD-RIGHT-SCOPE (2026-08-29, D3 dry run). Each subset's ladder
   // lands on that subset's own cards, so a product's distinct-rung count grows
   // with its insert sets (2025 Topps Series 1: 514 across ~20 sets) and says
@@ -210,7 +211,9 @@ function emit(product, subsets, rejected, srcKind) {
       console.log(`!! REFUSED subset ${product.sourceSlug} [${sub.title}]: distinct rungs=${subPars.size} cardNumbers=${subNums.size} (gate ${PAR_MAX}/${NUM_MAX})`);
       refusedSubsets++; continue;
     }
+    for (const r of rungs) pars.add(r.name);
     for (const c of sub.cards) {
+      nums.add(c.num);
       rowsOut.push([category, c.num, category === "base" ? "Base" : "", isAuto, "", c.player, ""]);
       for (const r of rungs) rowsOut.push([category, c.num, r.name, isAuto, r.printRun ?? "", c.player, r.note ?? ""]);
     }
