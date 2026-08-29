@@ -340,7 +340,17 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   27 rungs × 706 numbers = 7,084 ladder rows; 2020 Bowman 28 × 734), shard 0
   read 491,013 csv rows and would write 489,042, explosion gate refused 0 —
   so the whole set is ≈3.9M rows (2.87M before the ladder fix). APPLY ×8
-  dispatched 00:05Z (relaunch children follow the marker).** Also seen in the same run: the bcp ladders re-ingest now
+  dispatched 00:05Z (relaunch children follow the marker).** **Shard 5
+  finished first (01:05Z, within budget, reconciled):** the runner's cached
+  workdir holds every staged source, so `MODE=reingest` re-upserts all five
+  — that is the fix reaching them all: checklistcenter-2026-08-29 313,906
+  written / 48,401 kept-by-higher-authority (before #1472 every one of
+  these would have been "kept"); bcp-ladders 151,262 / 36,238 kept; beckett
+  65,309 / 54,969 kept; checklistinsider 559,400 / 529,490 kept (the spine
+  already holds those ids); tcgdex 1,003 / 1,003 kept; explosion gate
+  refused 0 everywhere. When all eight shards land → `audit-source-coverage`
+  (old checklistcenter/-html vs checklistcenter-2026-08-29, exact +
+  normalised keys) → retire only products ≥ 95%. Also seen in the same run: the bcp ladders re-ingest now
   skips 762,534 player-name-parallel rows (#1396 working as built).
   **D3b (2026-08-29 ~22:00Z, `feat/d3b`): the ladder was never lost — the LABEL was.**
   The brief: CLC lacks Bowman's plain colour ladder (2025 Bowman Draft CPA-MWI: 13 rows,
@@ -929,7 +939,12 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
     (building, `feat/d16`): one computation behind the four routes, the
     probe as its acceptance test (target: disagreement <5%, labels 100% in
     vocabulary, grade curve by slug). Runner baseline runs dispatched 00:38Z
-    (audit-pool-identity 33276073374; probe-price-routes 33276077524).
+    (audit-pool-identity 33276073374; probe-price-routes 33276077524) —
+    **the runner reproduces the baseline: routes disagree >25% on 86/200 =
+    43.0%** (worst: null no-recent-comps / null no-basis / $0.88
+    exact-pool-last-sale / $0.15 exact-pool-weighted-median on a pool of 3);
+    pool probe: hobbyiqCardId missing 253,307 of 16.1M (1.6%). These are the
+    numbers D16 must move.
   - `audit-pool-identity` — sold_comps identity per source: partition key not
     an hiq: slug, `hobbyiqCardId ≠ cardId`, CardHedge rows keyed `ch-daily::`
     AND `ch-comp::` for one card (whole partitions read, (day, price) pairs
