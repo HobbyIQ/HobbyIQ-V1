@@ -411,9 +411,27 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   checklist row / an unbacked row / not in the catalog), POOL (rows under the
   slug whose titles name a different colour than the slug; print-run mix),
   PRICE (persisted FMV > 2x off the exact recent pool; a cross-identity rung) —
-  one line per holding, then the roll-up. First run in progress; the fixes are
-  the passes already built: fold-unnumbered-twins APPLY → conform-holdings
-  APPLY → reprice-user-holdings, plus repair-parallel-from-title for pools.
+  one line per holding, then the roll-up. **First run (17:40Z): 92 holdings /
+  12 users — 14 clean.** Identity: 22 with NO hiq slug (legacy CardHedge-id
+  holdings, e.g. `1675907831540x…`), 15 on a catalog row that no longer exists
+  (retired today or never minted: `2025:bowman-chrome:cpa-ws:blue-refractor`,
+  `1992:undefined:232`, `1987:1987-bellingham-baseball:15`), 7 un-numbered
+  TWINS of numbered checklist rows (Marconi /50, Caminiti /150, Antunez /499,
+  Arias /250, Sirota /499, SPX Radiance /1000 …), 19 on unbacked rows
+  (`user-verified`, `ingest-auto-seed`, `holding-seeded`). Pool: 6 contradict
+  their slug (Griffey '97 Finest #238 "Base" holding bronze sales; a Black &
+  White Red Ink row flagged by the colour heuristic — noise). Price: 27 persisted
+  FMVs > 2x off their own exact pool and 11 priced by a cross-identity rung —
+  the same Leo De Vries CPA-LD Blue holding priced $428 against an $869 pool
+  for FOUR holdings across THREE users; Trout US175 $955 vs $405; Griffey '91
+  Score #396 $281 vs $2.75; Ohtani '18 Bowman Chrome #1 $2,106 vs $8,195 (the
+  first run compared against pools that included graded rows — #1451 makes it
+  raw-vs-raw; re-run after the fixes). 6 have no price. **Fix chain, all
+  users:** fold-unnumbered-twins APPLY → conform-holdings-to-catalog APPLY
+  (52 unresolved = the acquisition/ruling list) → repair-parallel-from-title
+  for the contradicting pools → `reprice-user-holdings` MODE=all (#1451 —
+  every portfolio user; dispatch AFTER D9 and D4 PR 5/6 land so no floor
+  price is re-persisted) → audit again.
 - ◐ D9 **The eBay import → holdings pipeline** (Drew, 2026-08-29 17:20Z: "we
   need to fix the whole ebay import to holdings process, bc it seems broken").
   The Marconi purchase IS the fixture. Real listing title (`purchase.notes`):
