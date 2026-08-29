@@ -135,17 +135,26 @@ async function main() {
     const rows = await q(cat, `SELECT TOP ${perBucket} c.id, c.sport, c.setKey FROM c WHERE c.sport = @sp AND c.year = @y AND c.checklistBacking = 'checklist-confirmed' AND NOT IS_DEFINED(c.gradeTier)`, [{ name: "@sp", value: sp }, { name: "@y", value: y }]);
     for (const r of rows) if (typeof r.id === "string" && r.id.startsWith("hiq:")) candidates.push(r);
   }
-  const shuffled = candidates.map((r) => [rnd(), r]).sort((a, b) => a[0] - b[0]).map(([, r]) => r);
+  // D16 (2026-08-30): a before/after pair must replay the SAME slugs, and the
+  // catalog moves under the sampler between runs. SLUGS_FILE replays a fixed
+  // list (one slug per line; the pool count is still measured so `[pool n]`
+  // is current); SAMPLE_FILE writes the slugs this run priced, for the next.
+  const shuffled = process.env.SLUGS_FILE
+    ? fs.readFileSync(process.env.SLUGS_FILE, "utf8").split(/\r?\n/).map((s) => s.trim()).filter((s) => s.startsWith("hiq:")).map((id) => ({ id, sport: id.split(":")[1] ?? null, setKey: id.split(":")[3] ?? "" }))
+    : candidates.map((r) => [rnd(), r]).sort((a, b) => a[0] - b[0]).map(([, r]) => r);
   const since = new Date(Date.now() - DAYS * 864e5).toISOString();
   const sample = []; let tried = 0;
   for (const r of shuffled) {
     if (sample.length >= LIMIT || tried >= LIMIT * 20) break;
     tried++;
     const n = Number((await q(pool, "SELECT VALUE COUNT(1) FROM c WHERE c.hobbyiqCardId = @s AND c.price > 0 AND c.soldAt >= @d AND (NOT IS_DEFINED(c.gradeCompany) OR c.gradeCompany = null OR c.gradeCompany = '')", [{ name: "@s", value: r.id }, { name: "@d", value: since }]))[0] ?? 0);
-    if (n >= MIN_POOL) sample.push({ slug: r.id, sport: r.sport, setKey: String(r.id.split(":")[3] ?? ""), poolN: n });
+    // A replayed slug is kept whatever its pool says today — the point of the
+    // replay is the same rows, and a slug whose pool drained is a finding.
+    if (n >= MIN_POOL || process.env.SLUGS_FILE) sample.push({ slug: r.id, sport: r.sport, setKey: String(r.id.split(":")[3] ?? ""), poolN: n });
   }
-  console.log(`probe-price-routes  READ-ONLY  ${BASE}\n  sample ${f(sample.length)} checklist-backed slugs (tried ${f(tried)} of ${f(candidates.length)} candidates) sports=${SPORTS.join(",")} years=${Y0}-${Y1}  pool >= ${MIN_POOL} raw sales / ${DAYS}d  rps=${RPS}\n  rung vocabulary: ${vocab.labels.size} labels from ${vocab.from}\n`);
+  console.log(`probe-price-routes  READ-ONLY  ${BASE}\n  sample ${f(sample.length)} checklist-backed slugs (${process.env.SLUGS_FILE ? `replayed from ${process.env.SLUGS_FILE}` : `tried ${f(tried)} of ${f(candidates.length)} candidates`}) sports=${SPORTS.join(",")} years=${Y0}-${Y1}  pool >= ${MIN_POOL} raw sales / ${DAYS}d  rps=${RPS}\n  rung vocabulary: ${vocab.labels.size} labels from ${vocab.from}\n`);
   if (!sample.length) { console.error("FATAL: empty sample — no checklist-backed slug met the pool threshold"); process.exit(2); }
+  if (process.env.SAMPLE_FILE) { fs.writeFileSync(process.env.SAMPLE_FILE, sample.map((s) => s.slug).join("\n") + "\n"); console.log(`  sample written to ${process.env.SAMPLE_FILE}\n`); }
 
   // ── replay ──────────────────────────────────────────────────────────
   const ROUTES = ["price-by-id", "canonical-fmv", "hobbyiq-fmv", "grade-curve"];

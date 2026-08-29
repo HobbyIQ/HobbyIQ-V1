@@ -1,0 +1,113 @@
+// CF-ONE-VALUATION-PATH (D16, 2026-08-30) — source pins: no route consults a
+// second engine for the headline.
+//
+// The contract test proves the four handlers agree on a fixture; this file
+// makes the SHAPE that guarantees it fail loudly if it is undone — a route
+// that calls canonical-fmv, the CH estimate, hobbyIqFmv or the legacy curve
+// build BEFORE (or instead of) the one valuation path, an adapter that grows
+// an engine call, or the entry growing a second engine of its own. Every
+// defect D14 measured had that shape; a grep is the cheapest guard for it.
+import { describe, it, expect } from "vitest";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const here = path.dirname(fileURLToPath(import.meta.url));
+const read = (rel: string) => fs.readFileSync(path.join(here, "..", rel), "utf8");
+const stripComments = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
+
+const ENGINE_CALLS = [
+  "computeCanonicalFmv(",
+  "computeEstimate(",
+  "computeHobbyIqFmv(",
+  "buildObservedGradeCurve(",
+  "computeUnifiedPrice(",
+  "priceHoldingFromOurPool(",
+  "compileGradedEstimatesForCard(",
+] as const;
+
+/** The body of one Express handler: from its `router.<verb>("<path>"` to the
+ *  next `router.` at column 0. */
+function handlerBody(src: string, verb: string, routePath: string): string {
+  const start = src.indexOf(`router.${verb}("${routePath}"`);
+  expect(start, `handler ${verb} ${routePath} not found`).toBeGreaterThanOrEqual(0);
+  const next = src.indexOf("\nrouter.", start + 1);
+  return stripComments(src.slice(start, next > 0 ? next : undefined));
+}
+
+describe("D16 pins — the four routes price through the one valuation path only", () => {
+  const compiq = read("src/routes/compiq.routes.ts");
+  const canon = read("src/routes/canonicalFmv.routes.ts");
+
+  it("/price-by-id: the slug branch calls valueIdentity and returns before the legacy pipeline; the CH/canonical calls exist only after the legacy cache key", () => {
+    const body = handlerBody(compiq, "post", "/price-by-id");
+    const entry = body.indexOf("valueIdentity(");
+    expect(entry).toBeGreaterThanOrEqual(0);
+    const legacyStart = body.indexOf("const cacheKey = normalizeCacheKey(");
+    expect(legacyStart).toBeGreaterThan(entry);
+    const slugBranch = body.slice(0, legacyStart);
+    for (const call of ENGINE_CALLS) expect(slugBranch.includes(call), `${call} before the legacy pipeline`).toBe(false);
+    expect(slugBranch).toMatch(/return res\.json\(toPriceByIdResponse\(v\)\)/);
+    // The slug -> vendor-id GROUP BY resolver is gone from this handler.
+    expect(body.includes('NOT STARTSWITH(c.cardId, "hiq:")')).toBe(false);
+  });
+
+  it("/observed-grade-curve/:cardId: valueIdentity answers the slug branch under the slug; the legacy build follows it, for vendor ids only", () => {
+    const body = handlerBody(compiq, "get", "/observed-grade-curve/:cardId");
+    const entry = body.indexOf("valueIdentity(");
+    const legacy = body.indexOf("buildObservedGradeCurve(");
+    expect(entry).toBeGreaterThanOrEqual(0);
+    expect(legacy).toBeGreaterThan(entry);
+    const slugBranch = body.slice(0, legacy);
+    for (const call of ENGINE_CALLS) expect(slugBranch.includes(call), `${call} before the legacy build`).toBe(false);
+    expect(slugBranch).toMatch(/return res\.json\(body\)/);
+    expect(body.includes('NOT STARTSWITH(c.cardId, "hiq:")')).toBe(false);
+  });
+
+  it("/hobbyiq-fmv: valueIdentity only — no direct computeHobbyIqFmv", () => {
+    const body = handlerBody(canon, "post", "/hobbyiq-fmv");
+    expect(body.includes("valueIdentity(")).toBe(true);
+    for (const call of ENGINE_CALLS) expect(body.includes(call), call).toBe(false);
+  });
+
+  it("/canonical-fmv: valueIdentity decides first; computeCanonicalFmv only after, for vendor ids the catalog cannot name", () => {
+    const body = handlerBody(canon, "post", "/canonical-fmv");
+    const entry = body.indexOf("valueIdentity(");
+    const legacy = body.indexOf("computeCanonicalFmv(");
+    expect(entry).toBeGreaterThanOrEqual(0);
+    expect(legacy).toBeGreaterThan(entry);
+    for (const call of ENGINE_CALLS.filter((c) => c !== "computeCanonicalFmv(")) expect(body.includes(call), call).toBe(false);
+  });
+
+  it("the adapters are pure shapers: no engine is called in oneValuationPathAdapters.ts", () => {
+    const src = stripComments(read("src/services/compiq/oneValuationPathAdapters.ts"));
+    for (const call of ENGINE_CALLS) expect(src.includes(call), call).toBe(false);
+    expect(src.includes("await ")).toBe(false);
+  });
+
+  it("the entry runs ONE engine (the exact pool through exactPoolSupremacy) and the gated ladder with the exact pool skipped — nothing else", () => {
+    const src = stripComments(read("src/services/compiq/oneValuationPath.service.ts"));
+    expect(src.includes("priceHoldingFromExactPool(")).toBe(true);
+    expect(src.includes("perTierWindows: true")).toBe(true);
+    const ladderAt = src.indexOf("computeHobbyIqFmv(");
+    expect(ladderAt).toBeGreaterThanOrEqual(0);
+    expect(src.slice(ladderAt, ladderAt + 400)).toContain("skipExactPool: true");
+    for (const call of ["computeCanonicalFmv(", "computeEstimate(", "computeUnifiedPrice(", "buildObservedGradeCurve(", "priceHoldingFromOurPool(", "compileGradedEstimatesForCard("]) {
+      expect(src.includes(call), call).toBe(false);
+    }
+  });
+
+  it("the legacy curve's unified overlay prices every tier at its own window — the same policy as the headline", () => {
+    const src = stripComments(read("src/services/compiq/observedGradeCurve.service.ts"));
+    const overlay = src.indexOf("const hiqOpt: Parameters<typeof computeUnifiedPrice>[1] = {");
+    expect(overlay).toBeGreaterThanOrEqual(0);
+    expect(src.slice(overlay, overlay + 200)).toContain("perTierWindows: true");
+    expect(src.slice(overlay, overlay + 200)).not.toContain("fixedWindowDays");
+  });
+
+  it("hobbyIqFmv's exact-pool branch names a method inside its own union", () => {
+    const src = stripComments(read("src/services/portfolioiq/hobbyIqFmv.service.ts"));
+    expect(src.includes('"unified-market-value" as any')).toBe(false);
+    expect(src).toMatch(/method: isExactPoolRung\(u\.rungLabel\) \? "direct-slug" : "grade-cross-raw"/);
+  });
+});
