@@ -35,11 +35,22 @@ const backend = path.resolve(__dirname, "..");
 const { parseListingTitle } = require(path.join(backend, "dist", "services", "portfolioiq", "ebayTitleParser.service.js"));
 const { computeHobbyIqCardId, parseHobbyIqCardId } = require(path.join(backend, "dist", "services", "portfolioiq", "hobbyIqCardId.service.js"));
 
-const APPLY = process.env.APPLY === "true";
+const APPLY = process.env.APPLY === "true" || process.env.BACKFILL_APPLY === "true"; // the runner exports BACKFILL_APPLY, not APPLY
 const SOURCES = String(process.env.SOURCES || "cardhedge,tca-ebay,cardsight").split(",").map((s) => s.trim()).filter(Boolean);
 const SLOT = Number(process.env.SLOT || 0), SLOTS = Number(process.env.SLOTS || 1);
 const RUN_MINUTES = Number(process.env.RUN_MINUTES || 140);
+// MODE=refractor: the bucket the colour pass left alone. Settled by price
+// (2026-08-29, read-only): under 2025 Bowman Chrome CPA-EP :refractor:auto,
+// CardHedge rows whose title never says "refractor" sell at a $60.95 median
+// (n=695) while the ones that do say it sell at $140 (n=67); the true base
+// pool sits at $47. A silent title is the base auto -- the vendor "Refractor"
+// variant was stamped on base sales. CH 163,272 / TCA 37,854 / Cardsight
+// 14,422 rows. MODE is the runner input; the runner ALSO exports
+// SCOPE=refractor by default for other scripts, so SCOPE is not the switch.
+const MODE = String(process.env.MODE || "colours").toLowerCase();
+const REFRACTOR_ONLY = ["Refractor"];
 const COLOURS = ["Gold", "Gold Refractor", "Blue", "Blue Refractor", "Green", "Green Refractor", "Orange", "Orange Refractor", "Red", "Red Refractor", "Purple", "Purple Refractor", "Black", "Black Refractor", "Sapphire", "Silver", "Pink", "Pink Refractor", "Yellow", "Yellow Refractor", "Aqua", "Aqua Refractor"];
+const BARE_COLOURS = new Set(["gold", "blue", "green", "orange", "red", "purple", "black", "silver", "pink", "yellow", "aqua", "sapphire"]);
 const f = (n) => Number(n).toLocaleString();
 const shardOf = (id) => parseInt(crypto.createHash("sha1").update(String(id)).digest("hex").slice(0, 8), 16) % SLOTS;
 const started = Date.now();
@@ -58,14 +69,14 @@ async function main() {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) { console.error("FATAL: COSMOS_CONNECTION_STRING not set"); process.exit(1); }
   const pool = new CosmosClient({ connectionString: conn, connectionPolicy: { retryOptions: { maxRetryAttemptsOnThrottledRequests: 30, maxWaitTimeInSeconds: 120 } } }).database("hobbyiq").container("sold_comps");
-  console.log(`repair-parallel-from-title  ${APPLY ? "APPLY" : "REPORT ONLY"}  sources=${SOURCES.join(",")}  slot ${SLOT}/${SLOTS}  budget ${RUN_MINUTES}m`);
+  console.log(`repair-parallel-from-title  ${APPLY ? "APPLY" : "REPORT ONLY"}  mode=${MODE}  sources=${SOURCES.join(",")}  slot ${SLOT}/${SLOTS}  budget ${RUN_MINUTES}m`);
   const stats = { scanned: 0, otherShard: 0, repaired: 0, toBase: 0, toOther: 0, kept: 0, keptRefinement: 0, failed: 0, noSlug: 0 };
   const moves = new Map(); // "source|from>to" -> n
   const examples = [];
   let stopReason = null;
   outer:
   for (const source of SOURCES) {
-    for (const par of COLOURS) {
+    for (const par of (MODE === "refractor" ? REFRACTOR_ONLY : COLOURS)) {
       const word = par.split(" ")[0].toLowerCase();
       const q = { query: "SELECT c.id, c.cardId, c.title, c.parallel, c.hobbyiqCardId, c.price FROM c WHERE c.source = @s AND c.parallel = @p AND NOT CONTAINS(LOWER(c.title), @w)", parameters: [{ name: "@s", value: source }, { name: "@p", value: par }, { name: "@w", value: word }] };
       const it = pool.items.query(q, { maxItemCount: 500 });
@@ -93,6 +104,10 @@ async function main() {
           // row to a bare refractor:num-150 would mint a rung no checklist has.
           // Only a title that names NO finish, or a DIFFERENT one, overrules.
           if (fromTitle && oldLower.endsWith(" " + newLower)) { stats.keptRefinement++; continue; }
+          // the short form of the same refinement: a bare colour IS "<Colour>
+          // Refractor" (project_colour_equals_refractor_ruling), so "Blue" vs a
+          // title saying "Refractor" agrees too (dry run #2: 92 rows)
+          if (fromTitle && newLower === "refractor" && BARE_COLOURS.has(oldLower)) { stats.keptRefinement++; continue; }
           let newSlug;
           try { newSlug = computeHobbyIqCardId({ ...comp, parallel: newParallel }); } catch { stats.failed++; continue; }
           if (!newSlug || !newSlug.startsWith("hiq:") || newSlug === slug) { stats.kept++; continue; }

@@ -19,6 +19,14 @@ describe("the title outranks the vendor tag", () => {
     expect(parallelTheTitleAllows(null, null)).toEqual({ parallel: null, vendorTagOverruled: null });
     expect(parallelTheTitleAllows(null, "Base")).toEqual({ parallel: null, vendorTagOverruled: null });
   });
+  it("a vendor tag that REFINES the title's finish is adopted (the parser drops the colour from 'Gold Refractor')", () => {
+    expect(parallelTheTitleAllows("Refractor", "Gold Refractor")).toEqual({ parallel: "Gold Refractor", vendorTagOverruled: null });
+    expect(parallelTheTitleAllows("Refractor", "Blue")).toEqual({ parallel: "Blue", vendorTagOverruled: null });
+    expect(parallelTheTitleAllows("Refractor", "Gold")).toEqual({ parallel: "Gold", vendorTagOverruled: null });
+  });
+  it("a refinement needs a finish to refine: a silent title is still Base", () => {
+    expect(parallelTheTitleAllows(null, "Gold Refractor")).toEqual({ parallel: null, vendorTagOverruled: "Gold Refractor" });
+  });
   it("the vendor can never add a finish the title lacks", () => {
     expect(parallelTheTitleAllows(null, "Refractor").parallel).toBeNull();
   });

@@ -376,7 +376,12 @@ async function main() {
   console.log(`  rows not reached       ${f(notReached)}   <- the budget stopped before these`);
   console.log(`  failed                 ${f(failed)}`);
   if (APPLY) {
-    reportWrites({ job: "ingest-checklist-csv-to-catalog", intended: rows, written, skipped: skippedRow + notReached + unnamedParallel, failed });
+    // CF-A-SLICE-IS-NOT-A-SIBLING-COUNTER: every row the gates dropped before
+    // the batch (card-line parallels, player-name parallels, exploded
+    // categories) is DECLARED, or the reconciliation calls the run vanished --
+    // D3 APPLY shards 3/4 wrote 353,739 + 351,022 rows and exited non-zero
+    // over 2,065 + 6,434 undeclared gate drops.
+    reportWrites({ job: "ingest-checklist-csv-to-catalog", intended: rows, written, skipped: skippedRow + notReached + unnamedParallel + cardLineParallel + playerNameParallel + explodedRows, failed });
   }
 }
 

@@ -21,13 +21,15 @@
  * What it does per row (checklist sources only, identity rows only):
  *   1. clean(parallel) -> { name, note, printRun }
  *   2. newSlug = the id with segment 5 (parallelSlug) rebuilt from name
- *   3. newSlug === id  -> patch parallel/parallelNote/printRun in place   (healed)
- *      no row at newSlug -> write the row there, re-point its sales,
- *                           delete graded children of the old slug, delete old (moved)
- *      checklist row at newSlug -> the spine already has it: re-point sales,
- *                           delete graded children + old                   (folded)
- *      derived row at newSlug -> the spine outranks it: overwrite with this
- *                           checklist row (authority), re-point, delete old (replaced)
+ *   3. newSlug === id  -> patch parallel/parallelNote/printRun in place, the
+ *                         searchable fields rebuilt (rebuildSearchFields)   (healed)
+ *      otherwise       -> catalogRowOps.moveCatalogRow (D5 PR 2): copy to the
+ *                         clean slug, re-point sales, retire graded children
+ *                         of the old slug, delete old. A row already at the
+ *                         clean slug is decided by authority: the spine keeps
+ *                         its address and the footnote / print run it lacks
+ *                         are grafted on (folded); a derived twin is
+ *                         overwritten, its vendorIds kept (replaced).
  *
  * The "other" shape -- 83,838 rows where `parallel` holds player-pair text or a
  * page paragraph ("Eric Davis (as) Andy Nezelek", "Purple RayWave Refractor (")
@@ -43,6 +45,7 @@ const path = require("path");
 const crypto = require("crypto");
 const { CosmosClient } = require("@azure/cosmos");
 const { reportWrites } = require(path.join(__dirname, "..", "dist", "services", "ops", "writeReconciliation.js"));
+const { moveCatalogRow, rebuildSearchFields } = require(path.join(__dirname, "..", "dist", "services", "catalog", "catalogRowOps.service.js"));
 
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
 const SLOT = Number(process.env.SLOT ?? 0), SLOTS = Math.max(1, Number(process.env.SLOTS ?? 1));
@@ -53,7 +56,6 @@ const LIMIT = Number(process.env.LIMIT || 0);
 const STARTED = Date.now();
 const f = (n) => Number(n).toLocaleString();
 
-const CHECKLIST_SOURCE = /^(bccp|baseballcardpedia|checklist|beckett|tcgdex|cardboardchecklist)/;
 const CHECKLIST_SQL = "(c.source = 'bccp' OR STARTSWITH(c.source,'baseballcardpedia') OR STARTSWITH(c.source,'checklist') OR STARTSWITH(c.source,'beckett') OR STARTSWITH(c.source,'tcgdex') OR STARTSWITH(c.source,'cardboardchecklist'))";
 const slugify = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 const shardOf = (id) => parseInt(crypto.createHash("sha1").update(String(id)).digest("hex").slice(0, 8), 16) % SLOTS;
@@ -140,70 +142,29 @@ async function main() {
           if (newSlug === d.id) {
             // The slug never carried the footnote; only the name text did.
             if (!APPLY) { healed++; return; }
-            const ops = [
-              { op: "set", path: "/parallel", value: c.name },
-              { op: "set", path: "/parallelSlug", value: parts[5] },
-              { op: "set", path: "/parallelNote", value: c.note },
-              { op: "set", path: "/printRun", value: printRun },
-              { op: "set", path: "/parallelCleanedAt", value: new Date().toISOString() },
-            ];
-            await retry(() => cat.item(d.id, d.cardId ?? d.id).patch(ops));
+            const fields = { parallel: c.name, parallelSlug: parts[5], parallelNote: c.note, printRun, parallelCleanedAt: new Date().toISOString() };
+            Object.assign(fields, rebuildSearchFields({ ...d, ...fields }));
+            await retry(() => cat.item(d.id, d.cardId ?? d.id).patch(Object.entries(fields).map(([k, v]) => ({ op: "set", path: `/${k}`, value: v }))));
             healed++;
             return;
           }
 
-          const { resource: existing } = await retry(() => cat.item(newSlug, newSlug).read()).catch(() => ({ resource: null }));
-          const outcome = !existing ? "moved" : CHECKLIST_SOURCE.test(String(existing.source)) ? "folded" : "replaced";
-          if (!APPLY) { if (outcome === "moved") moved++; else if (outcome === "folded") folded++; else replaced++; return; }
-
-          if (outcome !== "folded") {
-            const { _rid, _self, _etag, _attachments, _ts, checklistBacking, checklistBackingAt, checklistFamilySetKeys, ...rest } = d;
-            const tokens = new Set((Array.isArray(d.searchTokens) ? d.searchTokens : []).filter((t) => typeof t === "string"));
-            for (const w of String(d.parallel).toLowerCase().split(/[^a-z0-9]+/)) tokens.delete(w);
-            for (const w of c.name.toLowerCase().split(/[^a-z0-9]+/)) if (w) tokens.add(w);
-            await retry(() => cat.items.upsert({
-              ...rest, id: newSlug, cardId: newSlug, hobbyiqCardId: newSlug,
-              parallel: c.name, parallelSlug: parts[5], parallelNote: c.note, printRun,
-              searchTokens: [...tokens],
-              movedFrom: d.id, movedReason: "parallel annotation moved to parallelNote", movedAt: new Date().toISOString(),
-              ...(outcome === "replaced" ? { replacedDerivedSource: existing.source } : {}),
-            }));
-          } else if ((c.note && !existing.parallelNote) || (printRun && !existing.printRun)) {
+          // One point read serves both the move's collision decision (`known`)
+          // and the fold-time graft below -- CF-DO-NOT-LOOK-TWICE.
+          const existing = await retry(() => cat.item(newSlug, newSlug).read())
+            .then((x) => x.resource ?? null, (e) => { if (e?.code === 404) return null; throw e; });
+          const r = await moveCatalogRow(cat, d, newSlug, { parallel: c.name, parallelNote: c.note, printRun }, {
+            reason: "parallel annotation moved to parallelNote", dryRun: !APPLY, salesContainer: pool, known: existing, retry,
+          });
+          salesRepointed += r.salesRepointed; gradedDeleted += r.gradedChildrenRetired;
+          if (r.action === "fold") {
+            // The spine's row kept its address; the footnote and print run it lacks come along.
             const ops = [];
             if (c.note && !existing.parallelNote) ops.push({ op: "set", path: "/parallelNote", value: c.note });
             if (printRun && !existing.printRun) ops.push({ op: "set", path: "/printRun", value: printRun });
-            await retry(() => cat.item(newSlug, newSlug).patch(ops)).catch(() => {});
+            if (ops.length && APPLY) await retry(() => cat.item(newSlug, newSlug).patch(ops)).catch(() => {});
           }
-
-          // Sales that resolved onto the annotated slug follow the card.
-          let sToken;
-          do {
-            const sp = await retry(() => pool.items.query({ query: "SELECT c.id, c.cardId FROM c WHERE c.hobbyiqCardId = @s", parameters: [{ name: "@s", value: d.id }] }, { maxItemCount: 200, continuationToken: sToken }).fetchNext());
-            sToken = sp.continuationToken;
-            for (const x of sp.resources) {
-              await retry(() => pool.item(x.id, x.cardId).patch([
-                { op: "set", path: "/hobbyiqCardId", value: newSlug },
-                { op: "set", path: "/reslugedFrom", value: d.id },
-                { op: "set", path: "/reslugedReason", value: "parallel annotation cleaned" },
-                { op: "set", path: "/reslugedAt", value: new Date().toISOString() },
-              ]));
-              salesRepointed++;
-            }
-          } while (sToken);
-
-          // Graded children are regenerable from their parent; they do not move.
-          let gToken;
-          do {
-            const gp = await retry(() => cat.items.query({ query: "SELECT c.id, c.cardId FROM c WHERE STARTSWITH(c.id, @p) AND IS_DEFINED(c.gradeTier)", parameters: [{ name: "@p", value: d.id + ":" }] }, { maxItemCount: 200, continuationToken: gToken }).fetchNext());
-            gToken = gp.continuationToken;
-            for (const g of gp.resources) {
-              await retry(() => cat.item(g.id, g.cardId ?? g.id).delete()).catch((e) => { if (e.code !== 404) throw e; });
-              gradedDeleted++;
-            }
-          } while (gToken);
-
-          await retry(() => cat.item(d.id, d.cardId ?? d.id).delete()).catch((e) => { if (e.code !== 404) throw e; });
-          if (outcome === "moved") moved++; else if (outcome === "folded") folded++; else replaced++;
+          if (r.action === "move") moved++; else if (r.action === "fold") folded++; else if (r.action === "replace") replaced++;
         } catch (e) {
           failed++;
           if (failed <= 5) console.error(`  failed ${String(d.id).slice(0, 70)}: ${String(e.message || e).slice(0, 70)}`);

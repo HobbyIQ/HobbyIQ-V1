@@ -94,33 +94,29 @@ const ROW_OPS_CALL = /\b(?:moveCatalogRow|retireCatalogRow)\s*\(/;
 const ROW_OPS_IMPORT = /(?:from\s*|require\s*\(\s*)["'][^"']*catalogRowOps\.service(?:\.js)?["']/;
 
 /**
- * The seven setKey movers: one shape copied seven times (upsert the row at
- * its new slug, re-point sales, delete the old row). D5 PR 3 converts these
- * onto catalogRowOps. Keyed to "imports catalogRowOps": the moment one does,
- * the stale check below makes it leave BYPASSING and this list -- it
- * self-empties. Until catalogRowOps.service.ts lands nothing can import it,
- * so the list simply waits.
+ * Movers: scripts that MOVE a card_catalog row (upsert at the new slug,
+ * re-point sales, delete the old row) by hand. Keyed to "imports
+ * catalogRowOps": the moment one does, the stale check below makes it leave
+ * BYPASSING and this list -- it self-empties. The seven setKey movers the
+ * 2026-08-29 census found (apply-setkey-rulings, clean-parallel-annotations,
+ * map-derived-parallels-to-rungs, map-pokemon-setkeys-to-checklist,
+ * map-yearprefixed-setkeys, rename-setkey, repair-pokemon-glued-numbers) were
+ * converted in D5 PR 3 and left. A new hand-rolled mover is listed here until
+ * it goes through moveCatalogRow.
  */
-const MOVERS = new Set([
-  "backend/scripts/apply-setkey-rulings.cjs",
-  "backend/scripts/clean-parallel-annotations.cjs",
-  "backend/scripts/map-derived-parallels-to-rungs.cjs",
-  "backend/scripts/map-pokemon-setkeys-to-checklist.cjs",
-  "backend/scripts/map-yearprefixed-setkeys.cjs",
-  "backend/scripts/rename-setkey.cjs",
-  "backend/scripts/repair-pokemon-glued-numbers.cjs",
-]);
+const MOVERS = new Set<string>();
 
 /**
  * Writers that hand-roll a catalog ROW (items.upsert / bulk / create on the
- * card_catalog handle) without the builder. Measured 2026-08-29: 62.
+ * card_catalog handle) without the builder. Measured 2026-08-29: 62;
+ * re-measured after D5 PR 3 moved the seven movers onto catalogRowOps: 54.
  * Versus the 2026-08-26 list: the five sold_comps writers and the two ebay
- * services (PR 6, #1403/#1404) are gone; the seven movers, the two comment-
- * match "canonical" files, the capital-C `getContainer` cardsight crawler and
- * the env-fallback seedCardCatalog are newly visible.
+ * services (PR 6, #1403/#1404) are gone; the two comment-match "canonical"
+ * files, the capital-C `getContainer` cardsight crawler and the env-fallback
+ * seedCardCatalog are newly visible.
  */
 const BYPASSING = new Set([
-  // D5 PR 3 converts these onto catalogRowOps.
+  // A hand-rolled mover is debt here (via MOVERS) until it imports catalogRowOps.
   ...MOVERS,
   "backend/scripts/attachImagesToCatalog.cjs",
   "backend/scripts/attest-unnumbered-by-player.cjs",
@@ -635,10 +631,11 @@ describe("one way to build a catalog row", () => {
     console.log(`catalog writers on the builder or catalogRowOps: ${ok}/${all.length}  (hand-rolled minters ${minters}, hand-rolled mutators ${mutators})`);
     // Measured floor, not an aspiration: the 2026-08-29 census found 9 of 112
     // writers on the canonical path (ensureCatalogRow plus eight scripts that
-    // require the builder from dist/). It can only go up -- if it drops, a
-    // writer was converted back to hand-rolling or the matcher above regressed.
-    // Deleting a canonical writer (D5 PR 5 retires dead scripts) lowers it
+    // require the builder from dist/); re-measured after D5 PR 3 put the seven
+    // movers on catalogRowOps: 17. It can only go up -- if it drops, a writer
+    // was converted back to hand-rolling or the matcher above regressed.
+    // Deleting a compliant writer (D5 PR 5 retires dead scripts) lowers it
     // legitimately; re-measure and change the number in that PR.
-    expect(ok).toBeGreaterThanOrEqual(9);
+    expect(ok).toBeGreaterThanOrEqual(17);
   });
 });

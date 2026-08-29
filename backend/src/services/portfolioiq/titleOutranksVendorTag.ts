@@ -22,15 +22,33 @@ const norm = (v: string | null | undefined): string | null => {
   return s && !/^base$/i.test(s) ? s : null;
 };
 
+/** Bare colours the pool spells as "<Colour> Refractor" (the Colour ≡
+ *  Refractor ruling): a vendor tag "Blue" against a title saying "Refractor"
+ *  is a refinement, not a disagreement. */
+const BARE_COLOURS = new Set(["gold", "blue", "green", "orange", "red", "purple", "black", "silver", "pink", "yellow", "aqua", "sapphire"]);
+
+/** CF-A-REFINEMENT-IS-NOT-A-CONTRADICTION (2026-08-29, repair dry run #1).
+ *  The eBay title parser names ONE token and lists "refractor" before the
+ *  colours, so "Gold Refractor 1st #/50" parses as bare "Refractor". A vendor
+ *  tag "Gold Refractor" against that title REFINES what the title says --
+ *  adopting it is right; a title that names no finish at all, or a different
+ *  one, still overrules the tag. */
+function refines(vendor: string, title: string): boolean {
+  const v = vendor.toLowerCase(), t = title.toLowerCase();
+  if (v.endsWith(" " + t)) return true;               // "gold refractor" refines "refractor"
+  if (t === "refractor" && BARE_COLOURS.has(v)) return true; // "blue" IS "blue refractor"
+  return false;
+}
+
 export function parallelTheTitleAllows(
   titleParallel: string | null | undefined,
   vendorParallel: string | null | undefined,
 ): ParallelDecision {
   const fromTitle = norm(titleParallel);
   const fromVendor = norm(vendorParallel);
-  const agrees = (fromTitle ?? "").toLowerCase() === (fromVendor ?? "").toLowerCase();
-  return {
-    parallel: fromTitle,
-    vendorTagOverruled: fromVendor !== null && !agrees ? fromVendor : null,
-  };
+  if (fromVendor === null) return { parallel: fromTitle, vendorTagOverruled: null };
+  if (fromTitle === null) return { parallel: null, vendorTagOverruled: fromVendor };
+  if (fromTitle.toLowerCase() === fromVendor.toLowerCase()) return { parallel: fromTitle, vendorTagOverruled: null };
+  if (refines(fromVendor, fromTitle)) return { parallel: fromVendor, vendorTagOverruled: null };
+  return { parallel: fromTitle, vendorTagOverruled: fromVendor };
 }

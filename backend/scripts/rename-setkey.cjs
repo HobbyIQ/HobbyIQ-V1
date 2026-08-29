@@ -14,12 +14,13 @@
  * (bowman-chrome != bowman stays inviolate).
  *
  * Per identity row with setKey=FROM (and sport=SPORT): newSlug = the id with
- * segment 3 rewritten; then, exactly as clean-parallel-annotations does:
- *   no row at newSlug            -> move (copy, re-point sales, delete old)
- *   checklist row at newSlug     -> fold (re-point sales, delete old)
- *   derived row at newSlug       -> if THIS row is checklist-sourced, replace it
- *                                   (the spine outranks derived); else fold
- * Graded children of the old slug are deleted (regenerable).
+ * segment 3 rewritten, then catalogRowOps.moveCatalogRow (D5 PR 2) does the
+ * move -- copy, re-point sales, retire graded children of the old slug, delete
+ * old -- and decides a collision at newSlug by authority (checklist > vendor >
+ * derived; then vendorIds, sales, confidence):
+ *   no row at newSlug            -> moved
+ *   the incumbent keeps the slug -> folded (its vendorIds unioned with ours)
+ *   this row outranks it         -> replaced
  *
  * Env: COSMOS_CONNECTION_STRING; APPLY/BACKFILL_APPLY; FROM; TO; SPORT;
  *      SLOT/SLOTS (hash of id); CONCURRENCY=16; RUN_MINUTES=140; LIMIT.
@@ -29,6 +30,7 @@ const path = require("path");
 const crypto = require("crypto");
 const { CosmosClient } = require("@azure/cosmos");
 const { reportWrites } = require(path.join(__dirname, "..", "dist", "services", "ops", "writeReconciliation.js"));
+const { moveCatalogRow } = require(path.join(__dirname, "..", "dist", "services", "catalog", "catalogRowOps.service.js"));
 
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
 // The runner carries the ruling in `scope` as "sport:from>to", e.g.
@@ -44,7 +46,6 @@ const RUN_MS = Number(process.env.RUN_MINUTES || 140) * 60000;
 const LIMIT = Number(process.env.LIMIT || 0);
 const STARTED = Date.now();
 const f = (n) => Number(n).toLocaleString();
-const CHECKLIST_SOURCE = /^(bccp|baseballcardpedia|checklist|beckett|tcgdex|cardboardchecklist)/;
 const shardOf = (id) => parseInt(crypto.createHash("sha1").update(String(id)).digest("hex").slice(0, 8), 16) % SLOTS;
 
 const retry = async (fn, tries = 8) => {
@@ -83,43 +84,11 @@ async function main() {
           const parts = String(d.id).split(":");
           if (parts.length < 7 || parts[3] !== FROM) { malformed++; return; }
           parts[3] = TO;
-          const newSlug = parts.join(":");
-          const { resource: existing } = await retry(() => cat.item(newSlug, newSlug).read()).catch(() => ({ resource: null }));
-          const thisIsChecklist = CHECKLIST_SOURCE.test(String(d.source));
-          const outcome = !existing ? "moved" : (CHECKLIST_SOURCE.test(String(existing.source)) || !thisIsChecklist) ? "folded" : "replaced";
-          if (!APPLY) { if (outcome === "moved") moved++; else if (outcome === "folded") folded++; else replaced++; return; }
-
-          if (outcome !== "folded") {
-            const { _rid, _self, _etag, _attachments, _ts, checklistBacking, checklistBackingAt, checklistFamilySetKeys, ...rest } = d;
-            await retry(() => cat.items.upsert({
-              ...rest, id: newSlug, cardId: newSlug, hobbyiqCardId: newSlug, setKey: TO,
-              renamedFrom: d.id, renamedReason: `ruled: ${FROM} -> ${TO}`, renamedAt: new Date().toISOString(),
-              ...(outcome === "replaced" ? { replacedDerivedSource: existing.source } : {}),
-            }));
-          }
-          let sToken;
-          do {
-            const sp = await retry(() => pool.items.query({ query: "SELECT c.id, c.cardId FROM c WHERE c.hobbyiqCardId = @s", parameters: [{ name: "@s", value: d.id }] }, { maxItemCount: 200, continuationToken: sToken }).fetchNext());
-            sToken = sp.continuationToken;
-            for (const x of sp.resources) {
-              await retry(() => pool.item(x.id, x.cardId).patch([
-                { op: "set", path: "/hobbyiqCardId", value: newSlug },
-                { op: "set", path: "/normalizedSetKey", value: TO },
-                { op: "set", path: "/reslugedFrom", value: d.id },
-                { op: "set", path: "/reslugedReason", value: `ruled setKey rename ${FROM} -> ${TO}` },
-                { op: "set", path: "/reslugedAt", value: new Date().toISOString() },
-              ]));
-              salesRepointed++;
-            }
-          } while (sToken);
-          let gToken;
-          do {
-            const gp = await retry(() => cat.items.query({ query: "SELECT c.id, c.cardId FROM c WHERE STARTSWITH(c.id, @p) AND IS_DEFINED(c.gradeTier)", parameters: [{ name: "@p", value: d.id + ":" }] }, { maxItemCount: 200, continuationToken: gToken }).fetchNext());
-            gToken = gp.continuationToken;
-            for (const g of gp.resources) { await retry(() => cat.item(g.id, g.cardId ?? g.id).delete()).catch((e) => { if (e.code !== 404) throw e; }); gradedDeleted++; }
-          } while (gToken);
-          await retry(() => cat.item(d.id, d.cardId ?? d.id).delete()).catch((e) => { if (e.code !== 404) throw e; });
-          if (outcome === "moved") moved++; else if (outcome === "folded") folded++; else replaced++;
+          const r = await moveCatalogRow(cat, d, parts.join(":"), { setKey: TO }, {
+            reason: `ruled setKey rename ${FROM} -> ${TO}`, repointNormalizedSetKey: true, dryRun: !APPLY, salesContainer: pool, retry,
+          });
+          salesRepointed += r.salesRepointed; gradedDeleted += r.gradedChildrenRetired;
+          if (r.action === "move") moved++; else if (r.action === "fold") folded++; else if (r.action === "replace") replaced++;
         } catch (e) {
           failed++;
           if (failed <= 5) console.error(`  failed ${String(d.id).slice(0, 70)}: ${String(e.message || e).slice(0, 70)}`);
@@ -138,7 +107,7 @@ async function main() {
   console.log(`  rows scanned (this slot)   ${f(scanned)}   (+${f(otherShards)} belonging to other slots)`);
   console.log(`  MOVED to ${TO.padEnd(24)} ${f(moved)}`);
   console.log(`  FOLDED (target had it)     ${f(folded)}`);
-  console.log(`  REPLACED a derived twin    ${f(replaced)}`);
+  console.log(`  REPLACED a lower twin      ${f(replaced)}`);
   console.log(`  sales re-pointed           ${f(salesRepointed)}`);
   console.log(`  graded children deleted    ${f(gradedDeleted)}`);
   console.log(`  malformed id (left)        ${f(malformed)}`);
