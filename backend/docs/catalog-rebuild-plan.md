@@ -967,6 +967,15 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   reasons before any APPLY); rename-setkey dry (`topps-allen-and-ginter`) —
   12,894 rows: 11,267 move / 711 fold / 905 replace / 2,539 sales re-pointed /
   0 failed.
+    **Merged #1477 (23:40Z).** Dispatched: `repair-trailing-comma-player-names`
+    APPLY (33275249458); `conform-one-of-one-parallels` full dry run
+    (33275255335 — the LIMIT=200 dry was 207/208 actionable; the full run's
+    graded-children count decides whether `materialize-graded-identities`
+    runs right after); `repair-isauto-from-cardnumber-catalog` full dry run
+    (33275261214). The agent's un-graded print-run breakdown (null 246,271;
+    /4 8,861; a 19-digit mis-parse ×49) does not show my /50 ×234, /25 ×255
+    … — those were graded rows; the un-graded population is what the mover
+    touches.
 - ◐ D10 **Look at all holdings for everyone** (Drew, 2026-08-29 17:15Z). The three
   defects under holding `ca7a150b` are not specific to it. **#1448
   `audit-all-holdings`** (read-only, runner-whitelisted): per holding —
@@ -1250,6 +1259,25 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   product, family key = a separate fallback field; then re-slug catalog + pool.
 
 ## NEEDS DREW (not code)
+
+- **isAuto ruling, 2025 Bowman (basketball) CPA-:** the only other checklist
+  family (bccp, 609 rows) says no-auto for a prefix the generator forces to
+  `:auto`; 6,930 rows wait. The bccp rows tagged basketball on a Bowman
+  product look like the exploded-spine shape — likely retire, not rule.
+- **Freshness floor:** `tca-ebay` MIN_ROWS_24H is 2,300 (25% of the worst
+  measured day, 9,280, during the 08-26 firehose-off step); today's 441,477
+  says raise toward 25,000 once a firehose-era week is confirmed.
+- **Below-gate import matches:** D12-a/b park a 0.72 match on the proposal
+  fields (`catalogMatchSlug` + `needsReview`), not the literal
+  `pending-review` status (which would push every fuzzy manual add into the
+  Verify queue). Say if you want the literal status.
+- **One-of-one conform at full scale** retires ~2.8M regenerable graded
+  children (≈11 per moved row) → `materialize-graded-identities` right after;
+  the graded-tier RU window matters (card_catalog is at 400k until the spine
+  passes finish).
+- **MCP server + `apps/api`:** nothing live calls either; the MCP prices
+  from a comp median + hardcoded grade multipliers + an LLM prompt and keeps
+  two unauthenticated backend routes alive for itself. Retire both?
 
 **Queued 2026-08-29 (newest first):**
 - **Holding headline = fit-at-now market value (#1432).** portfolioStore's
