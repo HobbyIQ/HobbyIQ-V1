@@ -411,6 +411,30 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   PR 5 delete class (a) — HOLD `create-tiffany-cards-from-base` /
   `create-product-line-cards-from-base` (synthetic parallels; Drew ruling) and the
   two `*-product-structure` importers (D3 may consume).
+- ◐ D11 **Audit the whole app** (Drew, 2026-08-29 18:15Z: "maybe we should audit
+  the whole app too?"). Yes — every defect today had one shape: a rule right in
+  one place and absent in the next, or one number from two computations,
+  invisible until a MEASUREMENT compared a surface's output to a ground truth
+  (the checklist row, the listing title, the exact-identity pool). The audit is
+  the same three questions asked of every surface, each answered by a
+  read-only probe that prints a number: **IDENTITY** (does the surface resolve
+  the hiq slug on a checklist row before it works?), **POOL** (does it price or
+  list from the exact pool — title-, grade-, print-run-consistent?), **PRICE**
+  (one computation, a truthful rung label, no floors or model multipliers,
+  gates that admit exact pools and refuse fallbacks) — plus **WRITES** (only
+  checklists mint; every write job reconciles; every fleet carries the budget
+  marker + relaunch; whole-scope writes name their scope) and **CONTRACTS**
+  (iOS ↔ API field population — `resolvedMarketValue` was a hidden consumer;
+  the digest was silent because its gate read a field nothing wrote). Probes
+  that exist: identity-triangulation (26 → 45% today), audit-all-holdings
+  (14/92 clean), the writer + reconciliation guards (24/87, 25/50), the
+  deploy's pricing smoke test. Gaps: the routes, the jobs, the iOS contracts.
+  **Step 1 (in flight, read-only): the inventory** — every route, cron/runner
+  writer, iOS consumer, ingest path and alert gate mapped to the questions and
+  to the probe that would measure it, ranked by money-at-risk (`/price`,
+  canonical-fmv, portfolio, DailyIQ, market movers, card-panel first). Step 2:
+  build the top probes as one read-only `audit-app` family on the runner and
+  keep their numbers here as the scorecard. Step 3: fix by doctrine, re-measure.
 - ◐ D10 **Look at all holdings for everyone** (Drew, 2026-08-29 17:15Z). The three
   defects under holding `ca7a150b` are not specific to it. **#1448
   `audit-all-holdings`** (read-only, runner-whitelisted): per holding —
