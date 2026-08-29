@@ -123,11 +123,14 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
 **D. Next builds**
 - ◐ D1 `parse-player-from-checklist` (#1378) — BUILT. The 1,459,254 player-less
   sales all carry a slug; (sport, year, setKey, cardNumber) → the checklist's
-  player(s) → the ONE in the title; exploded addresses skipped. 1/64 sample dry run
-  running for precision; full run after B1 retires the explosion.
+  player(s) → the ONE in the title; exploded addresses skipped. 1/64 samples:
+  ~23k rows → ~4,700 parsed (20%), every printed parse correct; misses are honest
+  (10k addresses with no checklist yet — the exploded spine and wrong-vocabulary
+  keys; 4.6k whose ingest slug is the wrong sport/product; 2.8k `unknown` set).
+  Designation tags (RC/AS/DP…) stripped (#1389). Full run after B1.
 - ◐ D2 `identity-triangulation` (#1381) — BUILT: 200 checklist cards with sales ×
   (sale-shaped canonicalize, holding-shaped canonicalize, title search) vs the
-  checklist id. **BASELINE (before the spine passes), baseball ≥2016, 200 cards:
+  checklist id. Finding (ii) fixed: #1386 (live `2c65690`). **BASELINE (before the spine passes), baseball ≥2016, 200 cards:
   sale → same card 86.0%, holding → 90.5%, search → 30.5%, ALL THREE 26.0%.**
   Findings, each its own fix: (i) SEARCH ranks a rarer parallel row above the
   base row the title names ("#217 X-Fractor" → platinum-anniversary refractor;
@@ -140,8 +143,13 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   title under a baseball Bowman slug; an Upper Deck hockey title under
   topps-pristine) — measure wrong-product matches pool-wide; only-improve cannot
   fix a wrong product. Re-run after C.
-- ☐ D3 checklistcenter → canonical CSV converter (it produced 27,662 annotated and
-  ~26k mis-parsed rows; the old ingester raw-upserts and must not be rerun)
+- ☐ D3 checklistcenter → canonical CSV converter — SCOPED 13:50Z: 547 product URLs
+  cached at c:/tmp/clc (ladders only, no card lists → bounded 547-page re-fetch);
+  the old HTML ingester split ladders on commas (player names became rungs) and
+  swallowed multi-ladder paragraphs; converter = scrape-checklistcenter-products +
+  convertChecklistCenterToChecklistCsv (bcp rung guards, `;`-only split, setKey from
+  the URL slug, never normalizeSetKey) + e2e phase `clc` + MODE=source retire of the
+  old rows AFTER the clean re-ingest. ~590 lines, 5 files.
 - ☐ D4 One valuation path — retire the Cardsight-era graded compiler onto the
   canonical engine (docs/pricing-obedience-audit.md)
 - ☐ D5 Phase 07 — 58 writers bypassing upsertCatalogEntry
@@ -176,6 +184,14 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   CardHedge, and files under the slug; the suggester stops emitting comps. **D7d**
   the writer's catalog reconcile for user sources no longer depends on
   CATALOG_MATCH_ONLY_ENABLED.
+  **Status 14:00Z:** D7a shipped (#1388, live `3c15787`) — the writer returns
+  {id, deduped, hobbyiqCardId}; real eBay ids outrank `holding::` keys; the
+  import stamps ebayItemId/ebayOrderId on the holding and writes the purchase to
+  the pool at import, keyed by the order line item id, under the holding's slug;
+  the sell path falls back to the holding's ids. D7c shipped (#1390, deploy next)
+  — the rematch resolves through canonicalize (no CardHedge), supersedes the old
+  pool row when the slug moves, and the suggester no longer writes sales.
+  Remaining: D7b backfill of eBay ids onto existing holdings; D7d.
 - ☐ D6 **Identity key ≠ family key.** `normalizeSetKey` folds distinct products into
   a family (Co-Signers → topps, UD Premier → upper-deck, 1990 Donruss →
   panini-donruss) on both sales and checklists. Decide: identity key = the
