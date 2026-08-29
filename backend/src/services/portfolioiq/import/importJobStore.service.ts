@@ -39,6 +39,10 @@ export interface ImportJobDoc {
   userId: string;
   /** The job id callers poll on. */
   jobId: string;
+  /** CF-IMPORT-RESOLVES-TO-CHECKLIST (D12-b): "preview" resolves rows;
+   *  "pricing" prices the holdings a large commit added. Absent on docs
+   *  written before the field existed — read as "preview". */
+  kind?: "preview" | "pricing";
   status: ImportJobStatus;
   progress: ImportJobProgress;
   /**
@@ -77,6 +81,8 @@ export interface ImportJobDoc {
     bucketCounts: Record<string, number>;
     defaultCommitCount: number;
   };
+  /** kind "pricing": which holdings the pass covers and how it went. */
+  pricing?: { holdingIds: string[]; priced: number; failed: number };
   /** Failure reason when status === "failed". */
   errorMessage?: string;
   createdAt: string;

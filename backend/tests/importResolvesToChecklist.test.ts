@@ -21,10 +21,11 @@
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { canonicalizeMock, cardNumberMock, getEntryMock } = vi.hoisted(() => ({
+const { canonicalizeMock, cardNumberMock, getEntryMock, repriceMock } = vi.hoisted(() => ({
   canonicalizeMock: vi.fn(),
   cardNumberMock: vi.fn(),
   getEntryMock: vi.fn(),
+  repriceMock: vi.fn(),
 }));
 
 vi.mock("../src/services/catalog/catalogMatcher.service.js", async (orig) => {
@@ -35,12 +36,18 @@ vi.mock("../src/services/portfolioiq/cardCatalog.service.js", async (orig) => {
   const actual = await (orig() as Promise<Record<string, unknown>>);
   return { ...actual, getCatalogEntry: getEntryMock };
 });
+// The pricing path is the store's own (repriceOneHolding → autoPriceHolding);
+// only the call is observed here — what it computes is #1462's business.
+vi.mock("../src/services/portfolioiq/portfolioStore.service.js", async (orig) => {
+  const actual = await (orig() as Promise<Record<string, unknown>>);
+  return { ...actual, repriceOneHolding: repriceMock };
+});
 
 import { buildComponents, type CatalogMatchInput } from "../src/services/catalog/catalogMatcher.service.js";
 import { computeHobbyIqCardId } from "../src/services/portfolioiq/hobbyIqCardId.service.js";
 import { parseHoldingsFile } from "../src/services/portfolioiq/import/fileParser.js";
 import { resolveBatch, type ImportRowEnvelope } from "../src/services/portfolioiq/import/resolveBatch.js";
-import { commitImport } from "../src/services/portfolioiq/import/importService.js";
+import { commitImport, readImportJobStatus, INLINE_PRICE_MAX } from "../src/services/portfolioiq/import/importService.js";
 import { detectCollision } from "../src/services/portfolioiq/import/collisionDetector.js";
 import { readUserDoc } from "../src/services/portfolioiq/portfolioStore.service.js";
 import type { PortfolioHolding } from "../src/types/portfolioiq.types.js";
@@ -83,6 +90,7 @@ beforeEach(() => {
   CATALOG.set(SLUG, catalogRow(SLUG));
   getEntryMock.mockImplementation(async (slug: string) => CATALOG.get(slug) ?? null);
   cardNumberMock.mockResolvedValue({ cardNumber: null, candidates: [] });
+  repriceMock.mockResolvedValue(true);
   // The real matcher's exact rung, over the in-memory catalog.
   canonicalizeMock.mockImplementation(async (input: CatalogMatchInput) => {
     const slug = computeHobbyIqCardId(buildComponents(input));
@@ -405,5 +413,91 @@ describe("(e) two rows of the same card collide, resolved or not", () => {
     ), existing);
     expect(env!.bucket).toBe("resolved-collision");
     expect(env!.collision).toMatchObject({ existingHoldingIds: ["legacy"], keyedBy: "slug", defaultAction: "skip" });
+  });
+});
+
+// ─── (a′) price on commit ────────────────────────────────────────────────
+
+describe("(a′) commit prices what it wrote — through the add-card pricing path, never without an identity", () => {
+  const SHEET = csv(
+    ["Player", "Year", "Brand", "Card #", "Variant", "Serial", "Auto", "Paid"],
+    [["Marconi German", 2026, "Bowman Chrome", "CPA-MG", "Gold Refractor", "/50", "TRUE", 120]],
+  );
+
+  it("prices each added holding once, inline for a small import", async () => {
+    const userId = freshUser();
+    const envelopes = await envelopesFor(SHEET);
+    const priceSpy = vi.fn().mockResolvedValue(true);
+    const result = await commitImport(userId, { idempotencyToken: `p1-${userId}`, envelopes }, "investor", { priceHolding: priceSpy });
+    const hid = result.outcomes[0]!.holdingId!;
+    expect(priceSpy).toHaveBeenCalledTimes(1);
+    expect(priceSpy).toHaveBeenCalledWith(userId, hid);
+    expect(result.pricing).toEqual({ mode: "inline", holdingIds: [hid], priced: 1, failed: 0 });
+  });
+
+  it("the default price call is portfolioStore.repriceOneHolding — the add-card pricing path", async () => {
+    const userId = freshUser();
+    const envelopes = await envelopesFor(SHEET);
+    const result = await commitImport(userId, { idempotencyToken: `p2-${userId}`, envelopes }, "investor");
+    expect(result.totals.added).toBe(1);
+    expect(repriceMock).toHaveBeenCalledWith(userId, result.outcomes[0]!.holdingId);
+  });
+
+  it("a pricing failure is counted and never fails the commit", async () => {
+    const userId = freshUser();
+    const envelopes = await envelopesFor(SHEET);
+    const result = await commitImport(
+      userId,
+      { idempotencyToken: `p3-${userId}`, envelopes },
+      "investor",
+      { priceHolding: vi.fn().mockRejectedValue(new Error("pricing down")) },
+    );
+    expect(result.totals.added).toBe(1);
+    expect(result.pricing).toMatchObject({ mode: "inline", priced: 0, failed: 1 });
+  });
+
+  it("no identity, no price: a row committed for review is not priced", async () => {
+    const userId = freshUser();
+    const [env] = await envelopesFor(csv(["Player", "Year", "Brand", "Card #"], [["Nobody Special", 2026, "Bowman Chrome", "CPA-NS"]]));
+    expect(env!.bucket).toBe("unresolved");
+    const priceSpy = vi.fn().mockResolvedValue(true);
+    const result = await commitImport(
+      userId,
+      { idempotencyToken: `p4-${userId}`, envelopes: [env!], actions: { [env!.rowNumber]: "commit" } },
+      "investor",
+      { priceHolding: priceSpy },
+    );
+    expect(result.totals.added).toBe(1);
+    expect(priceSpy).not.toHaveBeenCalled();
+    expect(result.pricing).toEqual({ mode: "none", holdingIds: [] });
+  });
+
+  it("above INLINE_PRICE_MAX the pass is queued on a pricing job the client polls to ready", async () => {
+    const userId = freshUser();
+    const n = INLINE_PRICE_MAX + 1;
+    const rows: unknown[][] = [];
+    for (let i = 1; i <= n; i += 1) {
+      const slug = `hiq:baseball:2026:bowman-chrome:cpa-m${i}:gold-refractor:auto:num-50`;
+      CATALOG.set(slug, catalogRow(slug, { cardNumber: `CPA-M${i}` }));
+      rows.push(["Marconi German", 2026, "Bowman Chrome", `CPA-M${i}`, "Gold Refractor", "/50", "TRUE"]);
+    }
+    const envelopes = await envelopesFor(csv(["Player", "Year", "Brand", "Card #", "Variant", "Serial", "Auto"], rows));
+    expect(envelopes.every((e) => e.bucket === "resolved-clean")).toBe(true);
+
+    const priceSpy = vi.fn().mockResolvedValue(true);
+    const result = await commitImport(userId, { idempotencyToken: `p5-${userId}`, envelopes }, "investor", { priceHolding: priceSpy });
+    expect(result.totals.added).toBe(n);
+    expect(result.pricing).toMatchObject({ mode: "queued", holdingIds: expect.any(Array) });
+    expect(result.pricing!.holdingIds).toHaveLength(n);
+    const jobId = result.pricing!.jobId!;
+    expect(jobId).toBeTruthy();
+
+    let job = await readImportJobStatus(userId, jobId);
+    for (let tries = 0; tries < 100 && job?.status !== "ready"; tries += 1) {
+      await new Promise((r) => setTimeout(r, 20));
+      job = await readImportJobStatus(userId, jobId);
+    }
+    expect(job).toMatchObject({ kind: "pricing", status: "ready", pricing: { priced: n, failed: 0 } });
+    expect(priceSpy).toHaveBeenCalledTimes(n);
   });
 });

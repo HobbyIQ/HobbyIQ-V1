@@ -8,12 +8,15 @@
 //
 // CF-IMPORT-RESOLVES-TO-CHECKLIST (D12-b, 2026-08-29). Commit writes ONE
 // identity — cardId = hobbyiqCardId = the resolved `hiq:` slug — stamped
-// with the resolution's confidence / matchedBy / print run. The slug is
-// checked again at the persist site: it must be canonical AND the catalog
-// must still hold it (a row can be retired between preview and commit). A
-// cardId that fails either check is refused. An unresolved row the user
-// insists on is written without an identity, flagged for review, with any
-// sub-threshold suggestion parked for the in-app confirm — never adopted.
+// with the resolution's confidence / matchedBy / print run, and then prices
+// every holding it committed with an identity through the same pricing
+// path add-card uses. The slug is checked again at the persist site: it
+// must be canonical AND the catalog must still hold it (a row can be
+// retired between preview and commit). A cardId that fails either check is
+// refused. An unresolved row the user insists on is written without an
+// identity, flagged for review, with any sub-threshold suggestion parked
+// for the in-app confirm — never adopted — and, per "no identity, no
+// price", is not priced.
 
 import {
   parseHoldingsFile,
@@ -41,6 +44,7 @@ import {
   readUserDoc,
   writeUserDoc,
   countHoldingsForUser,
+  repriceOneHolding,
 } from "../portfolioStore.service.js";
 import { getCatalogEntry } from "../cardCatalog.service.js";
 import { parseHobbyIqCardId } from "../hobbyIqCardId.service.js";
@@ -76,6 +80,20 @@ const IDEMPOTENCY_TTL_SECONDS = 24 * 60 * 60; // 24h
  * path.
  */
 export const SYNC_PREVIEW_ROW_THRESHOLD = 40;
+
+/**
+ * CF-IMPORT-RESOLVES-TO-CHECKLIST: commit prices what it wrote. Up to this
+ * many holdings are priced before the response returns, so a small import
+ * comes back already valued; above it the pass is detached the way the
+ * async preview is (an import-job doc the client can poll, kind "pricing").
+ *
+ * The pass runs ONE holding at a time: repriceOneHolding is a read-modify-
+ * write of the whole user doc, and two in flight would overwrite each
+ * other's price. Widening it needs autoPriceHolding exported so the pass can
+ * price the in-memory doc and write once.
+ */
+export const INLINE_PRICE_MAX = 5;
+const PRICE_CONCURRENCY = 1;
 
 function generateJobId(): string {
   // 16 hex chars; collision-resistant per-user and short enough for UI display.
@@ -167,6 +185,16 @@ export interface CommitOutcome {
   hobbyiqCardId?: string | null;
 }
 
+export interface CommitPricing {
+  /** "inline": priced before this response. "queued": detached pass, poll
+   *  `jobId` on the import-jobs endpoint. "none": nothing had an identity. */
+  mode: "inline" | "queued" | "none";
+  holdingIds: string[];
+  priced?: number;
+  failed?: number;
+  jobId?: string;
+}
+
 export interface CommitResult {
   idempotencyToken: string;
   cached: boolean;
@@ -195,6 +223,17 @@ export interface CommitResult {
    * "N rows skipped because they were just added in a prior commit."
    */
   freshCollisionsBlocked?: number;
+  /** What happened to pricing for the holdings this commit added. Not part
+   *  of the idempotency-cached result — the cache is written the moment the
+   *  holdings are, before any price is. */
+  pricing?: CommitPricing;
+}
+
+/** Injection seam for tests. */
+export interface CommitDeps {
+  /** Prices one holding by id; defaults to portfolioStore.repriceOneHolding,
+   *  which runs the same autoPriceHolding add-card runs. */
+  priceHolding?: (userId: string, holdingId: string) => Promise<boolean>;
 }
 
 /**
@@ -285,6 +324,7 @@ async function kickAsyncPreview(
     id: `import-job-${jobId}`,
     userId,
     jobId,
+    kind: "preview",
     status: "pending",
     progress: { rowsProcessed: 0, rowsTotal: parsed.totalRows, lastProgressAt: now },
     ttl: IMPORT_JOB_TTL_SECONDS,
@@ -466,6 +506,7 @@ export async function commitImport(
   userId: string,
   request: CommitRequest,
   userPlan: Plan,
+  deps: CommitDeps = {},
 ): Promise<CommitResult> {
   // ─── §1.b Redis-backed idempotency: check first, before any reads ──
   const cacheKey = idempotencyKey(userId, request.idempotencyToken);
@@ -585,7 +626,122 @@ export async function commitImport(
   // dupes that earlier partial writes may have created).
   await cacheSet(cacheKey, JSON.stringify(result), IDEMPOTENCY_TTL_SECONDS);
 
+  // ─── Price what was committed ─────────────────────────────────────
+  // No identity, no price: only holdings written with a slug are priced.
+  const toPrice = outcomes
+    .filter((o) => o.outcome === "added" && o.holdingId && o.hobbyiqCardId)
+    .map((o) => o.holdingId!);
+  result.pricing = await priceCommittedHoldings(userId, toPrice, deps.priceHolding ?? repriceOneHolding);
+
   return result;
+}
+
+/**
+ * Price the holdings a commit added. Inline (awaited) up to INLINE_PRICE_MAX;
+ * above that, detached with an import-job doc (kind "pricing") the client
+ * polls on the same endpoint as an async preview. Per-holding failures are
+ * logged, counted, and never thrown — the scheduled reprice is the catch-all.
+ */
+async function priceCommittedHoldings(
+  userId: string,
+  holdingIds: string[],
+  priceHolding: (userId: string, holdingId: string) => Promise<boolean>,
+): Promise<CommitPricing> {
+  if (holdingIds.length === 0) return { mode: "none", holdingIds: [] };
+
+  if (holdingIds.length <= INLINE_PRICE_MAX) {
+    const { priced, failed } = await runPricingPass(userId, holdingIds, priceHolding);
+    return { mode: "inline", holdingIds, priced, failed };
+  }
+
+  const jobId = generateJobId();
+  const now = new Date().toISOString();
+  await writeImportJob({
+    id: `import-job-${jobId}`,
+    userId,
+    jobId,
+    kind: "pricing",
+    status: "processing",
+    progress: { rowsProcessed: 0, rowsTotal: holdingIds.length, lastProgressAt: now },
+    ttl: IMPORT_JOB_TTL_SECONDS,
+    pricing: { holdingIds, priced: 0, failed: 0 },
+    createdAt: now,
+    updatedAt: now,
+  });
+
+  // Detached: do NOT await. Same substrate as the async preview — Always-On
+  // keeps the process alive; progress lands on the job doc.
+  void (async () => {
+    let lastWriteAt = Date.now();
+    let done = 0;
+    let priced = 0;
+    let failed = 0;
+    try {
+      const outcome = await runPricingPass(userId, holdingIds, priceHolding, async (ok) => {
+        done += 1;
+        if (ok) priced += 1; else failed += 1;
+        const nowMs = Date.now();
+        if (nowMs - lastWriteAt < PROGRESS_WRITE_THROTTLE_MS) return;
+        lastWriteAt = nowMs;
+        await safeWriteJob(userId, jobId, (d) => ({
+          ...d,
+          progress: { rowsProcessed: done, rowsTotal: holdingIds.length, lastProgressAt: new Date().toISOString() },
+          pricing: { holdingIds, priced, failed },
+          updatedAt: new Date().toISOString(),
+        }));
+      });
+      await safeWriteJob(userId, jobId, (d) => ({
+        ...d,
+        status: "ready",
+        progress: { rowsProcessed: holdingIds.length, rowsTotal: holdingIds.length, lastProgressAt: new Date().toISOString() },
+        pricing: { holdingIds, priced: outcome.priced, failed: outcome.failed },
+        updatedAt: new Date().toISOString(),
+      }));
+    } catch (err: unknown) {
+      await safeWriteJob(userId, jobId, (d) => ({
+        ...d,
+        status: "failed",
+        errorMessage: err instanceof Error ? err.message : String(err),
+        updatedAt: new Date().toISOString(),
+      }));
+    }
+  })();
+
+  return { mode: "queued", holdingIds, jobId };
+}
+
+async function runPricingPass(
+  userId: string,
+  holdingIds: ReadonlyArray<string>,
+  priceHolding: (userId: string, holdingId: string) => Promise<boolean>,
+  onEach?: (ok: boolean) => Promise<void>,
+): Promise<{ priced: number; failed: number }> {
+  let priced = 0;
+  let failed = 0;
+  let next = 0;
+  async function worker() {
+    while (next < holdingIds.length) {
+      const holdingId = holdingIds[next++]!;
+      let ok = false;
+      try {
+        ok = await priceHolding(userId, holdingId);
+      } catch (err: unknown) {
+        console.warn(JSON.stringify({
+          event: "import_commit_price_error",
+          source: "importService.priceCommittedHoldings",
+          userId,
+          holdingId,
+          error: err instanceof Error ? err.message : String(err),
+        }));
+      }
+      if (ok) priced += 1; else failed += 1;
+      if (onEach) {
+        try { await onEach(ok); } catch { /* progress must never sink pricing */ }
+      }
+    }
+  }
+  await Promise.all(Array.from({ length: PRICE_CONCURRENCY }, () => worker()));
+  return { priced, failed };
 }
 
 function defaultActionFor(env: ImportRowEnvelope): CommitAction {
