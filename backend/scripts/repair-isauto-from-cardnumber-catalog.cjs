@@ -66,6 +66,11 @@ const LIMIT = Number(process.env.LIMIT || 0);
 const VERBOSE = process.env.VERBOSE === "true";
 const SOURCES = String(process.env.SOURCES || "checklistinsider-2026-08-27").split(",").map((s) => s.trim()).filter(Boolean);
 const SPORTS = String(process.env.SPORTS || "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+// FORCE_AUTO_PREFIXES: prefixes that are autographs BY DEFINITION, ruled auto
+// whatever the other sources say (Drew, 2026-08-30: "CPA is what?" -> Chrome
+// Prospect Autograph; the one source saying no-auto for CPA rows is wrong).
+// The runner has no dedicated input for this; its `scope` input (SCOPE env, default "refractor") doubles as the list.
+const FORCE_AUTO_PREFIXES = new Set(String(process.env.FORCE_AUTO_PREFIXES || (process.env.SCOPE && process.env.SCOPE !== "refractor" ? process.env.SCOPE : "") || "").split(",").map((x) => x.trim().toUpperCase()).filter(Boolean));
 const YEARS = String(process.env.YEARS || "").split(",").map((s) => Number(s.trim())).filter((n) => Number.isFinite(n) && n > 0);
 const f = (n) => Number(n).toLocaleString();
 const shardOf = (key) => parseInt(crypto.createHash("sha1").update(String(key)).digest("hex").slice(0, 8), 16) % SLOTS;
@@ -120,6 +125,10 @@ function rulePrefixes(groups, opts) {
   }
   const out = new Map();
   for (const [prefix, e] of byPrefix) {
+    if ((opts.forceAuto ?? FORCE_AUTO_PREFIXES).has(prefix)) {
+      out.set(prefix, { prefix, ruling: true, reason: "auto by definition (FORCE_AUTO_PREFIXES)", voters: [], target: e.target });
+      continue;
+    }
     const voters = [...e.families.values()]
       .map((v) => ({ ...v, verdict: v.auto > v.noAuto ? true : v.noAuto > v.auto ? false : null }))
       .sort((a, b) => (b.auto + b.noAuto) - (a.auto + a.noAuto));
