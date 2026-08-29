@@ -417,8 +417,22 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   of #1433 are the repair script, ebayImportRematch and ebayAutoHolding. Also shipped alongside: #1425 `/price`
   canonical-first slugs the PRODUCT (parsed.set ?? parsed.brand), not the
   brand. **Re-pricing the holding:** the app's own `POST /holdings/:id/refresh`
-  (or the next batch reprice) — no local write path; Drew can tap refresh on
-  the card once the pool is clean. Also seen under the base sibling: "Yellow 21/75" filed as base
+  (or the next batch reprice) — no local write path. **Colour APPLY #2 landed:
+  2,427 rows repaired, 2,427 verified carrying the stamp in Cosmos** (Silver
+  504, Blue Refractor 273, Gold 169 → Base …). The holding's PERSISTED value
+  was wrong the other way too: `fairMarketValue: 1,109.44`, method
+  `cross-setkey`, 3 comps — against a purchase of $187.49 and a clean gold
+  pool of $182.50 / $187.49 / $102.50 (no CPA-MG row anywhere prices above
+  $187 except the 1/1 Superfractor at $2,500 and a Gold Ink /15 at $725; the
+  cross-setkey rung crosses ANY setKey on year+number+parallel, and CPA-MG is
+  a different player in 2025 — Beckett initials collide). Repriced through
+  the sanctioned path `reprice-user-holdings` (runner; REPRICE_USER_ID is
+  Drew's) after the #1432/#1433 deploy (`9f14942`) — result recorded below
+  when it lands. Residual to measure later: a CH "Gold Shimmer /50" row still
+  sits under gold-refractor — the title names a MORE specific finish than the
+  stamp (the colour pass only looks at titles that lack the colour word); a
+  "title is more specific than the stamp" pass with the #1433 parser is the
+  next measurable repair. Also seen under the base sibling: "Yellow 21/75" filed as base
   (the numbered-refractor inference is a parser gap), and CH composed titles
   "2026 2026 Bowman …" (doubled year).
 - ☐ D7 **eBay import into the portfolio** (Drew, 2026-08-29): an imported eBay
@@ -471,6 +485,32 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   product, family key = a separate fallback field; then re-slug catalog + pool.
 
 ## NEEDS DREW (not code)
+
+**Queued 2026-08-29 (newest first):**
+- **Holding headline = fit-at-now market value (#1432).** portfolioStore's
+  four chains used to read the +7d prediction first; the tile, hobbyIqFmv and
+  the card page read `marketValue`. They now agree on marketValue. If you
+  want the +7d read as the holding headline instead, say so — it is a
+  one-line revert in portfolioStore, but then the tile and the card page must
+  change too (one number, one computation).
+- **Cross-setkey rung ("same year+number+parallel, ANY setKey").** It
+  rescued fragmented ingest but it can cross to a different product's card
+  with the same number in the same year. Ruling: keep it only within a
+  product FAMILY (bowman ↔ bowman-chrome per the ladder) and require the
+  playerName to match?
+- **approveVendorUnmatched** (D5 PR 7): a vendor sale that failed to match
+  becomes an identity row on one admin click, stamped `admin-approved`
+  (authority 0). Refuse like #1362, or route through the merge so a
+  checklist row always beats it?
+- **Synthetic-parallel creators** `create-tiffany-cards-from-base` /
+  `create-product-line-cards-from-base`: delete (no synthetic parallels —
+  actuals only) or keep with a source stamp?
+- **bcp-125 pairing:** sale and holding both say "2026 Bowman Chrome Prospects
+  BCP-125" and land on `bowman-chrome:bcp-125` (not found); the checklist
+  files BCP-125 under `bowman`. The family ladder is deliberately refused
+  for bowman ↔ bowman-chrome. Is a BCP-prefixed number in the flagship year
+  always the Bowman product?
+- Pokémon promo-era rule; vintage sourcing (unchanged).
 
 - Pokémon promo ambiguity: `*-black-star-promos` derived keys match several
   era promo sets (dp / hgss / xy / sm / swsh / sv) — needs the year→era rule
