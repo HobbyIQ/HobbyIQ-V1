@@ -333,6 +333,42 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   their numbered/un-numbered twin, has an exact sale); cross-setkey stays
   inside the product family and the player and respects the print run; the
   labels tell the truth (`sibling-estimate`, the fallback fmvRung).
+  **PR 5 (branch `fix/d4-pr5-sibling-estimate-obeys-doctrine`, 3 commits)
+  — the sibling estimate seam obeys the doctrine.** Fixture: holding
+  `ca7a150b`, three exact raw sales under `hobbyiqCardId`, `cardId` a
+  different card, $1,109.44 = sibling × 8.00× FLOOR persisted as FMV;
+  the same run's log computed the exact pool (our-pool, `unified-market-
+  value`, n=3, $182.50) and filed it "estimated" because priceFromOurPool
+  did not know the method. (1/3) The parallel-premium floor is gone:
+  `PRINT_RUN_TO_FLOOR` (1/1 100× … /500 1.5×, ×1.8 non-auto),
+  `applyPrintRunFloor`, `floorForPrintRun[ByClass]` deleted; the ONE
+  multiplier source is `empiricalParallelPremium.ts` (the calibration
+  table's measurement, n ≥ 5); the sibling seam returns null without a
+  measurement, drops the Base-card × 10× cross-class bridge, and derives
+  PSA 10 via getGraderPremium instead of × 8; compiqEstimate's three floor
+  projections and Tier 6 refuse a numbered parallel with no measurement.
+  (2/3) `cross-setkey` stays inside the product family
+  (`productFamilyKey`: first two segments; bowman ↔ bowman-chrome and
+  sapphire refused) and the PLAYER (folded), print run never
+  contradicting; no known player → the rung is refused (`crossSetKeyRule.
+  ts`). (3/3) `exactPoolSupremacy.ts`: every estimate write in
+  portfolioStore (six reprice sites + autoPriceHolding's surface) asks
+  the gate — an identity of the holding (hobbyiqCardId FIRST, cardId,
+  their numbered/un-numbered twins) with ≥ 1 sale in 180d blocks the
+  estimate; the exact pool prices it (unified engine, hobbyiqCardId ALONE
+  before any cardId union, ≥ 1 sample) or a stale estimate is withheld
+  and cleared; the estimate is telemetry. priceFromOurPool classifies an
+  exact-pool rung as observed. Labels: `sibling-estimate` (fmvRung,
+  pricingSource, meta.method), every unified write stamps
+  `pricingSourceMeta { method: rungLabel }`, the final surface says
+  `unified-pricing` when unified was the authority. Tests:
+  `siblingEstimateNeverOutranksExactPool.test.ts` (39; the fixture end to
+  end through /reprice/batch), 6 mutation checks. **Left for PR 6:** the
+  `finalChosen` chain in autoPriceHolding's final-authority block still
+  reads `predictedPrice ?? marketValue ?? fmv` (the +7d read first —
+  CF-ONE-GRADE-CURVE reversed that everywhere else); the sibling site
+  still writes its estimate INTO `fairMarketValue` (the rail's firewall
+  keeps estimates in `estimatedValue`) — both pre-existing, left as-is.
 - ◐ D5 Phase 07 — the catalog writers. **Scoped 2026-08-29 (agent replicated the
   guard test's walk, read-only): 68 files match the guard, 5 are false positives
   (they write `sold_comps`), 2 of the 3 "canonical" passes are COMMENT matches —
