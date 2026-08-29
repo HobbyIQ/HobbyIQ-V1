@@ -334,6 +334,48 @@ function tokenize(input: string): string[] {
 
 /** Direct catalog search. Returns hits sorted by token-overlap score
  *  descending, then by sales volume as tiebreaker. */
+/** Brand and product-line words. A query token in this set names the
+ *  PRODUCT being searched for; the hit's set text must account for every one
+ *  of them. Deliberately NOT the anchor stopword list: that list also carries
+ *  sport words ("baseball") and finish words ("base", "refractor", "auto"),
+ *  which name no product and must never narrow one. */
+export const PRODUCT_WORDS = new Set([
+  "bowman", "topps", "panini", "leaf", "upper", "deck", "fleer", "donruss", "score",
+  "chrome", "prizm", "select", "optic", "mosaic", "heritage", "sapphire", "finest",
+  "sterling", "inception", "platinum", "stadium", "club", "gallery", "archives",
+  "allen", "ginter", "gypsy", "queen", "immaculate", "obsidian", "contenders",
+  "prospect", "prospects", "update", "series", "draft", "mega", "jumbo",
+]);
+
+/** CF-SEARCH-PRODUCT-NARROWS (Drew, 2026-08-16: "any 2018 bowman chrome
+ *  ohtani, NOT other years"). With the year pinned in SQL, the PRODUCT still
+ *  has to narrow, or "2018 bowman chrome ohtani" fills the page with topps,
+ *  bowmans-best and donruss-optic. Require the row's set text to account for
+ *  ALL the product words the query said ("bowman chrome" keeps bowman-chrome
+ *  and bowman-chrome-sapphire, drops bare bowman and topps-chrome); fall back
+ *  to ANY, then to no narrowing, so an unindexed product never empties the
+ *  page (the rule narrowToRequestedVariants follows).
+ *
+ *  CF-A-SPORT-IS-NOT-A-PRODUCT (2026-08-29, identity triangulation re-run:
+ *  search -> same card 42.0%). The product words used to be the anchor
+ *  stopwords, which include "baseball" and "base". "2025 Bowman Draft Baseball
+ *  #BD-143 Base" then demanded a set text containing "baseball": the Beckett
+ *  Base row (setName "Bowman Draft", the top score) was dropped and a
+ *  "Base Cards" row whose setName says "...Baseball" survived. Same shape for
+ *  "#TCA-ARU Base" -> topps-chrome-black. Product words are PRODUCT_WORDS. */
+export function narrowToNamedProduct<H extends { setKey?: string | null; setName?: string | null }>(
+  tokens: string[],
+  hits: H[],
+): H[] {
+  const productTokens = tokens.filter((t) => /^[a-z]+$/.test(t) && PRODUCT_WORDS.has(t));
+  if (productTokens.length === 0) return hits;
+  const setTextOf = (h: H) => `${h.setKey ?? ""} ${h.setName ?? ""}`.toLowerCase();
+  const all = hits.filter((h) => productTokens.every((t) => setTextOf(h).includes(t)));
+  if (all.length > 0) return all;
+  const any = hits.filter((h) => productTokens.some((t) => setTextOf(h).includes(t)));
+  return any.length > 0 ? any : hits;
+}
+
 /** The row's scoring, as a pure function so the identity triangulation
  *  harness and its tests can hold it to account.
  *
@@ -1031,18 +1073,7 @@ export async function searchCatalog(
   // narrowToRequestedVariants follows. A product we have not indexed under
   // that name must not empty the page; it falls back to matching ANY product
   // word, then to no narrowing at all.
-  const productTokens = tokens.filter((t) => /^[a-z]+$/.test(t) && ANCHOR_STOPWORDS.has(t));
-  if (productTokens.length > 0) {
-    const setTextOf = (h: CatalogSearchHit) =>
-      `${h.setKey ?? ""} ${h.setName ?? ""}`.toLowerCase();
-    const all = collapsed.filter((h) => productTokens.every((t) => setTextOf(h).includes(t)));
-    if (all.length > 0) collapsed = all;
-    else {
-      const any = collapsed.filter((h) => productTokens.some((t) => setTextOf(h).includes(t)));
-      if (any.length > 0) collapsed = any;
-    }
-  }
-
+  collapsed = narrowToNamedProduct(tokens, collapsed);
   const deduped = collapsed.slice(0, limit);
 
   // CF-SEARCH-ATTACH-COMPS (Drew, 2026-08-13: "we want to search for the
