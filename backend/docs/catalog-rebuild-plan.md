@@ -1407,7 +1407,26 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   unique-/N base ids; in the first 102,812 candidates WOULD FOLD 2,344 (282
   one-of-one, 2,062 cross-source; 3,590 sales re-pointed), 408 ambiguous, 395
   same-source-lists-both, 124 refusals (setKey ≠ slug), **6,942,991 not
-  reached** — APPLY ×8 dispatched 05:18Z (33280658423 … 33280680511). Drew (22:30Z): "I see 2 max williams superfractors …
+  reached** — APPLY ×8 dispatched 05:18Z (33280658423 … 33280680511).
+  **Dry-run verdicts (05:45Z):** conform dry #3 with the row rule — 91
+  holdings, 28 exact, 15 agree, 10 corrections, 3 refused (the Ohtani /
+  Antunez / Arias rulings), 63 unresolved (the acquisition list; grows as
+  composed slugs with no row stop being "resolved"). `conform-one-of-one-
+  parallels` full dry (slot 0/1): 72,628 candidates reached before the
+  budget, 71,107 actionable, WOULD REPAIR 64,580 (moved 57,715, folded 5,089,
+  replaced 1,762, healed 14), graded children 61,789 — the ~2.8M estimate
+  was wrong by an order of magnitude; 6,527 refusals are rows whose setKey
+  FIELD disagrees with their own slug (`bowman` vs `bowmans-best`) → APPLY
+  ×8 dispatched 05:50Z (Drew's OK; the marker-keyed relaunch continues each
+  shard; materialize-graded-identities after). `repair-isauto` dry (before
+  the CPA ruling): 56 of 498 products reached, REPAIRED 72,213 (healed 27,218
+  field→id, moved 37,310, folded 2,994, replaced 4,691) but **122,791
+  refusals — the same setKey-field-vs-slug drift** (`topps` vs
+  `topps-series-1`), so `conform-card-profile` runs FIRST (dry dispatched
+  05:50Z); the 2026 Topps Series 1 prefixes (BSA, 91A, MLMA, HLAR, 75YA …)
+  and 2025 Chrome Update (CRDA, AC, RA, 90CUA) are ruled auto 2-0 / 1-0 by
+  the checklists; BDA on 2025 bowman/basketball has no other family (630
+  rows). isAuto dry with CPA forced (33280807658) still running. Drew (22:30Z): "I see 2 max williams superfractors …
   superfractors are 1/1" — bcp's un-numbered `superfractor:auto` beside
   beckett's `:num-1`, and the same pair on Refractor /499, Black /10, Red /5,
   Red Lava, Sky Blue. **#1470:** the fold's decision is a pure tested rule
