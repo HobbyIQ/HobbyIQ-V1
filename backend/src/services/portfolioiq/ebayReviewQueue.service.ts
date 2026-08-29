@@ -217,6 +217,28 @@ export async function applyCatalogIdentityToHolding(
   }
 }
 
+/**
+ * CF-ONE-IMPORT-ONE-IDENTITY (Drew, 2026-08-29, checklist D9). The slug the
+ * catalog verification stamps on a holding.
+ *
+ * verifyCardIdentity answers "is this card NUMBER on this player's rows for
+ * this set" and returns the id of whichever row matched -- ANY parallel of
+ * that number. So a holding pinned at import to the Gold Refractor /50 was
+ * stamped catalogVerifiedSlug ...:gold-refractor:auto (or any sibling), a
+ * second identity beside its cardId. When the verification confirms the
+ * number and the holding already carries a canonical pin, the pin IS the
+ * verified slug: it names the same card, with the parallel and print run the
+ * number-only lookup cannot see.
+ */
+export function verifiedSlugFor(
+  pinnedCardId: string | null | undefined,
+  v: { verified: boolean | null; matchedSlug?: string | null },
+): string | null {
+  const pinned = String(pinnedCardId ?? "").trim();
+  if (v.verified === true && pinned.startsWith("hiq:")) return pinned;
+  return v.matchedSlug ?? null;
+}
+
 export async function confirmHoldingReview(
   userId: string,
   holdingId: string,
@@ -499,7 +521,8 @@ export async function confirmHoldingReview(
         (holding as any).catalogVerified = v.verified;
         (holding as any).catalogVerifiedReason = v.reason;
         (holding as any).catalogVerifiedSource = v.source;
-        if (v.matchedSlug) (holding as any).catalogVerifiedSlug = v.matchedSlug;
+        const verifiedSlug = verifiedSlugFor(String((holding as any).cardId ?? ""), v);
+        if (verifiedSlug) (holding as any).catalogVerifiedSlug = verifiedSlug;
         if (v.candidateNumbers?.length) (holding as any).catalogCandidateNumbers = v.candidateNumbers;
         if (v.seedRequested) (holding as any).catalogSeedRequested = true;
         (holding as any).catalogVerifiedAt = new Date().toISOString();
@@ -540,7 +563,15 @@ export async function confirmHoldingReview(
   // pool value).
   const confirmedCardId = String((holding as any).cardId ?? "").trim();
   if (confirmedCardId && typeof holding.playerName === "string" && holding.playerName.trim()) {
-    const price = Number((holding as any).purchasePrice ?? (holding as any).totalCostBasis ?? 0);
+    // CF-ONE-TRANSACTION-ONE-ROW (D9). This re-emit used to key the sale by
+    // the eBay ITEM id at the all-in cost, while the import had keyed the same
+    // purchase by the ORDER id at the subtotal -- two rows for one sale. The
+    // one derivation (purchaseSaleIdentity) is shared with the import and the
+    // rematch, so this lands on the row the import wrote and upgrades it to
+    // user-verified.
+    const { purchaseSaleIdentity, sourcePurchaseFor } = await import("./ebayAutoHolding.service.js");
+    const sourcePurchase = sourcePurchaseFor(doc, holding);
+    const { sourceExternalId, price } = purchaseSaleIdentity(sourcePurchase, holding as Record<string, unknown>);
     const soldAt = String(
       (holding as any).purchaseDate
       ?? (holding as any).addedAt
@@ -559,17 +590,17 @@ export async function confirmHoldingReview(
             parallel: holding.parallel ?? null,
             cardNumber: holding.cardNumber ?? null,
             isAuto: holding.isAuto === true,
+            printRun: typeof (holding as any).printRun === "number" ? (holding as any).printRun : null,
             gradeCompany: (holding as { gradeCompany?: string | null }).gradeCompany ?? null,
             gradeValue: (holding as { gradeValue?: number | null }).gradeValue ?? null,
             price,
             soldAt,
             source: "ebay-user-purchase",
-            // CF-COMP-DEDUP-CANONICAL (Drew, 2026-07-18): fall back to
-            // holding-scoped id so rematch/suggester/backfill re-emissions
-            // upsert this same doc instead of creating duplicates.
-            sourceExternalId: extractEbayItemIdFromHolding(doc, holdingId) ?? `holding::${holdingId}`,
+            sourceExternalId,
             contributorUserId: userId,
-            title: (holding as any).cardTitle ?? extractEbayTitleFromHolding(doc, holdingId) ?? null,
+            // The listing title, not the rebuilt card title: the pool's title
+            // is provenance, and the rebuilt one once dropped the /50.
+            title: extractEbayTitleFromHolding(doc, holdingId) ?? (holding as any).cardTitle ?? null,
             imageUrl: (holding as any).ebayImageUrl ?? null,
             sellerHandle: null,
             verifiedByUser: true,
