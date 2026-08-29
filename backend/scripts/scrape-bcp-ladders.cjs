@@ -211,9 +211,12 @@ async function main() {
   fs.mkdirSync(OUT_DIR, { recursive: true });
   const [y0, y1] = YEARS.split("-").map(Number);
   const work = [];
-  if (TITLES) for (const t of TITLES.split(",")) work.push(t.trim());
+  // --titles ADDS pages to the per-year flagship list; it used to replace it,
+  // so the 2005-2015 re-scrape (checklist B4) fetched 17 named pages and none
+  // of the flagship years it was dispatched for.
+  if (TITLES) for (const t of TITLES.split(",")) if (t.trim()) work.push(t.trim());
   // The page families holding scorecard v2's remaining unconfirmed rows.
-  else for (let y = y0; y <= (y1 || y0); y++) work.push(
+  if (!String(arg("titlesOnly", "")).length) for (let y = y0; y <= (y1 || y0); y++) work.push(
     `${y}_Topps`, `${y}_Topps_Update`, `${y}_Topps_Chrome`, `${y}_Topps_Chrome_Update`,
     `${y}_Bowman`, `${y}_Bowman_Chrome`, `${y}_Bowman_Draft`, `${y}_Topps_Heritage`, `${y}_Panini_Prizm`,
   );
