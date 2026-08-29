@@ -231,7 +231,12 @@ async function resolveImportIdentity(holding: PortfolioHolding & Record<string, 
   if (str(clean.parallel)) h.parallel = str(clean.parallel);
 
   try {
-    const { canonicalize, resolveCardNumberByPlayer } = await import("../catalog/catalogMatcher.service.js");
+    // CF-ONE-IDENTITY-DERIVATION (D12-b, 2026-08-29): the derivation itself
+    // -- number-by-player, never an empty number, the matcher asked with the
+    // parallel + print run + player, the >= 0.9 bar -- lives in
+    // identityFromFields, shared with the spreadsheet import so both run ONE
+    // rule. What this function still owns is what to write back.
+    const { resolveIdentityFromFields, clearsIdentityBar } = await import("./identityFromFields.js");
     const sport = (str(h.sport) || "baseball").toLowerCase();
     const year = typeof h.cardYear === "number" ? h.cardYear : null;
     const setName = str(h.setName) || str(h.product);
@@ -239,55 +244,47 @@ async function resolveImportIdentity(holding: PortfolioHolding & Record<string, 
     const parallel = str(h.parallel) || null;
     const isAuto = h.isAuto === true;
     const printRun = typeof h.printRun === "number" && h.printRun > 0 ? h.printRun : null;
-    let cardNumber = str(h.cardNumber);
 
-    // A title that names no card number is not a dead end: the catalog knows
-    // which number this player carries in this product at this parallel, when
-    // it is exactly one. Internal lookup -- never a vendor call.
-    if (!cardNumber && year && setName && player) {
-      const resolved = await resolveCardNumberByPlayer({ year, setKey: setName, player, isAuto, parallel });
-      if (resolved.cardNumber) {
-        cardNumber = resolved.cardNumber;
-        h.cardNumber = cardNumber;
-        h.cardNumberResolvedBy = "catalog-player-lookup";
-      } else if (resolved.candidates.length > 1) {
-        h.catalogCardNumberCandidates = resolved.candidates;
-      }
-    }
-
-    // Never ask the matcher with an empty card number: the computed slug would
-    // carry a "::" segment, and the user-seed path would happily mint it.
-    if (!cardNumber || !year || !setName) {
-      h.catalogMatchConfidence = 0;
-      h.catalogMatchedBy = "not-found";
-      h.catalogMatchSlug = null;
-      h.catalogMatchSkippedReason = !cardNumber ? "no-card-number" : !year ? "no-year" : "no-set";
-      await requestSeedForMiss(h);
-      return;
-    }
-
-    const match = await canonicalize({
+    const derived = await resolveIdentityFromFields({
       sport,
       year,
-      setName,
-      cardNumber,
+      setName: setName || null,
+      player: player || null,
+      cardNumber: str(h.cardNumber) || null,
       parallel,
       isAuto,
       printRun,
-      player,
       // CF-THE-USER-SEED-EXEMPTION-WAS-NEVER-REACHED (Drew, 2026-08-25): the
       // user owns the physical card; that is the whole basis of the seed
       // exemption. A vendor source is turned away at the door.
       source: "ebay-user-purchase",
     });
+    if (derived.cardNumberResolvedBy === "catalog-player-lookup" && derived.cardNumber) {
+      h.cardNumber = derived.cardNumber;
+      h.cardNumberResolvedBy = "catalog-player-lookup";
+    } else if (derived.cardNumberCandidates.length > 1) {
+      h.catalogCardNumberCandidates = derived.cardNumberCandidates;
+    }
 
+    // The matcher was never asked (empty number / year / set): the holding
+    // stays for review and the checklist is requested.
+    if (!derived.match) {
+      h.catalogMatchConfidence = 0;
+      h.catalogMatchedBy = "not-found";
+      h.catalogMatchSlug = null;
+      h.catalogMatchSkippedReason = derived.skippedReason;
+      await requestSeedForMiss(h);
+      return;
+    }
+
+    const match = derived.match;
     h.catalogMatchConfidence = match.confidence;
     h.catalogMatchedBy = match.matchedBy ?? null;
     h.catalogMatchSlug = match.slug ?? null;
     // Pin the identity only when the matcher is confident. Below that the
     // slug is a suggestion for the reviewer -- pinning it would send pricing
     // to the wrong card while still showing a value, which reads as correct.
-    if (match.found && match.slug && match.confidence >= 0.9) {
+    if (clearsIdentityBar(match)) {
       const now = new Date().toISOString();
       h.cardId = match.slug;
       h.hobbyiqCardId = match.slug;
