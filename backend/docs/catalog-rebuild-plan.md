@@ -1284,6 +1284,19 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   `audit-all-holdings` PRICE column after the next reprice — persisted
   fairMarketValue vs `/hobbyiq-fmv` for (slug, grade) should disagree on 0
   exact-pool-rung holdings; the D16 probe replay (`SLUGS_FILE`) unchanged.
+    **Merged #1488 (03:30Z 08-30); deploy #4 33279979918 (expect `a1cf6bc`).**
+    Persist stamps changed with it: `pricingSourceMeta.compsUsed` is the
+    tier's pool (the routes' number), `sourceVendor: "hobbyiq-pool"`,
+    `grade-curve-estimate` persisted as an estimate (`isEstimate: true`).
+    Flagged for later: `advancedAlerts/ruleEvaluator.ts` still prices from
+    text; a holding whose slug has no rows but whose vendor id has is still
+    priced (attempt 3) while the slug-only card page says null — a data gap
+    the pool re-key (D19) closes. After-number: `audit-all-holdings`'s PRICE
+    column after the next reprice-all should show no exact-pool-rung
+    disagreement between a persisted FMV and `/hobbyiq-fmv`. **D3c**
+    (building, `feat/d3c`, the single builder): the converter's two
+    below-floor page shapes — Topps flagship base rows + foil parallels,
+    Panini ladders — with the coverage measurement as the acceptance number.
 - ◐ D10 **Look at all holdings for everyone** (Drew, 2026-08-29 17:15Z). The three
   defects under holding `ca7a150b` are not specific to it. **#1448
   `audit-all-holdings`** (read-only, runner-whitelisted): per holding —
