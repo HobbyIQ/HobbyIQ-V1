@@ -1168,9 +1168,22 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   the 200-sample default; expect disagreement → ~0% on priced slugs (the
   four are one call), null ≤ the catalog-miss rate, labels 100% in
   vocabulary, `grade-curve under a vendor id` 0%.
-    **Merged #1483 (01:45Z 08-30); deploy #3 33277935264.** After it lands the
-    same-slug replay (`SLUGS_FILE=backend/docs/d16-probe-sample-slugs.txt
-    LIMIT=50`) is the after-number against 34.0%. Judgment calls to read
+    **Merged #1483 (01:45Z 08-30); deploy #3 33277935264 — live 02:20Z,
+    health `c23d976`. Same-slug replay: routes disagree by >25% on 0 of 50
+    (was 17 of 50 = 34.0%); label in vocabulary 100% / 100% / 100% / 100%
+    (price-by-id was 4%); exact-pool rung 100% on all four (price-by-id was
+    0%); FMV null 0% everywhere (was 8%); hobbyiq-fmv method outside its
+    union 0% (was 88%); grade curve under a vendor id 0% (was 86%); all four
+    routes show the identical rung distribution — leading-edge ×21,
+    weighted-median ×16, projection ×13.** The 200-sample runner probe re-run
+    (33278464941) is the official after-number against 43.0%. D17 (building,
+    `feat/d17`, the one builder running per Drew's "use what we have before
+    credits"): `/card-detail`, `/card-panel`, the bulk curves, the portfolio
+    persist site and the price-alert evaluator through the same entry.
+    Queued, not launched: D18 (cron writers reconcile; progress-gated
+    relaunches become marker-keyed), D19 (re-key the old user comps; collapse
+    the CH `ch-daily::`/`ch-comp::` dual ids), D20 (web: render the rung,
+    the BuyerIQ median fallback, the identify 404, FMV in the picker). Judgment calls to read
     (NEEDS DREW if any should go the other way): thin pools (n = 1–2) now
     price from the unified weighted-median rung on every route (the persist
     site's ≥ 1 rule) — `/hobbyiq-fmv` used to drift-adjust the last sale
