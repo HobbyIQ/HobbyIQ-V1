@@ -14,6 +14,12 @@ name: Nightly Cleanliness Maintenance
 #      adjusts scorer weights based on human decisions).
 #
 # Manual trigger via workflow_dispatch also supported for one-off runs.
+#
+# D13 (2026-08-29) — alert gates prove delivery. This workflow was
+# structurally incapable of going red: a missing ADMIN_API_TOKEN and an
+# empty anomalies response both warned and exited 0. Both are exit 1
+# now. The four dispatches stay; each prints the backfill-runner run URL
+# it produced so a green here can be traced to the run that did the work.
 
 on:
   schedule:
@@ -38,6 +44,11 @@ jobs:
             --ref main \
             -f script=backfill-catalog-driven-canonicalize \
             -f apply=true
+          # D13: print the run this dispatch produced (newest backfill-runner run).
+          sleep 20
+          gh run list --repo "$GITHUB_REPOSITORY" --workflow=backfill-runner.yml --limit 1 \
+            --json url,displayTitle,status --jq '"dispatched backfill-catalog-driven-canonicalize → " + .[0].url + " (" + .[0].status + ")"' \
+            || echo "::warning::could not list the backfill-runner run for backfill-catalog-driven-canonicalize"
 
   trust-tier-promotion:
     runs-on: ubuntu-latest
@@ -52,6 +63,11 @@ jobs:
             --ref main \
             -f script=promote-sold-comps-trust-tier \
             -f apply=true
+          # D13: print the run this dispatch produced (newest backfill-runner run).
+          sleep 20
+          gh run list --repo "$GITHUB_REPOSITORY" --workflow=backfill-runner.yml --limit 1 \
+            --json url,displayTitle,status --jq '"dispatched promote-sold-comps-trust-tier → " + .[0].url + " (" + .[0].status + ")"' \
+            || echo "::warning::could not list the backfill-runner run for promote-sold-comps-trust-tier"
 
   baseline-snapshot:
     runs-on: ubuntu-latest
@@ -66,6 +82,11 @@ jobs:
             --ref main \
             -f script=baseline-pool-snapshot \
             -f apply=true
+          # D13: print the run this dispatch produced (newest backfill-runner run).
+          sleep 20
+          gh run list --repo "$GITHUB_REPOSITORY" --workflow=backfill-runner.yml --limit 1 \
+            --json url,displayTitle,status --jq '"dispatched baseline-pool-snapshot → " + .[0].url + " (" + .[0].status + ")"' \
+            || echo "::warning::could not list the backfill-runner run for baseline-pool-snapshot"
 
   auto-quarantine-pools:
     runs-on: ubuntu-latest
@@ -80,6 +101,11 @@ jobs:
             --ref main \
             -f script=auto-quarantine-contaminated-pools \
             -f apply=true
+          # D13: print the run this dispatch produced (newest backfill-runner run).
+          sleep 20
+          gh run list --repo "$GITHUB_REPOSITORY" --workflow=backfill-runner.yml --limit 1 \
+            --json url,displayTitle,status --jq '"dispatched auto-quarantine-contaminated-pools → " + .[0].url + " (" + .[0].status + ")"' \
+            || echo "::warning::could not list the backfill-runner run for auto-quarantine-contaminated-pools"
 
   train-confidence-weights:
     runs-on: ubuntu-latest
@@ -101,8 +127,9 @@ jobs:
             --query "[?name=='ADMIN_API_TOKEN'].value | [0]" \
             -o tsv)
           if [ -z "$TOK" ]; then
-            echo "::warning::ADMIN_API_TOKEN not found — skipping train-weights step"
-            exit 0
+            # D13: a missing token used to warn and exit 0 — green with nothing trained.
+            echo "::error::ADMIN_API_TOKEN not found in HobbyIQ3 App Service settings — train-weights and anomaly detection cannot run"
+            exit 1
           fi
           echo "::add-mask::$TOK"
           echo "ADMIN_API_TOKEN=$TOK" >> "$GITHUB_ENV"
@@ -125,8 +152,9 @@ jobs:
           RESULT=$(curl -sf --max-time 90 -H "Authorization: Bearer $ADMIN_API_TOKEN" \
             "https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net/api/cleanliness/anomalies?force=true")
           if [ -z "$RESULT" ]; then
-            echo "::warning::anomaly detection returned empty (may still be initializing)"
-            exit 0
+            # D13: an empty response used to warn and exit 0 — green with no detection.
+            echo "::error::anomaly detection returned empty (curl -f failed or the API returned nothing) — no drift comparison ran"
+            exit 1
           fi
           HIGH_COUNT=$(echo "$RESULT" | node -e "let d=''; process.stdin.on('data',c=>d+=c); process.stdin.on('end',()=>{ try { const r=JSON.parse(d); const highs=(r.report?.anomalies||[]).filter(a=>a.suspiciousness==='high'); console.log(highs.length); } catch { console.log('0'); } })")
           TOTAL=$(echo "$RESULT" | node -e "let d=''; process.stdin.on('data',c=>d+=c); process.stdin.on('end',()=>{ try { const r=JSON.parse(d); console.log((r.report?.anomalies||[]).length); } catch { console.log('0'); } })")
