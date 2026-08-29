@@ -8971,9 +8971,20 @@ export async function repriceHoldingsForUser(
         slug: (h as { hobbyiqCardId?: string | null }).hobbyiqCardId ?? null,
         costBasis: cost,
         fmv: fmvCandidate,
-        fmvMethod: (h as { pricingMeta?: { method?: string } }).pricingMeta?.method ?? null,
+        // CF-THE-DIGEST-WAS-SILENT (2026-08-29, D4 scoping). `pricingMeta` has no
+        // writer anywhere in src, so the #1342 gate saw method=null on every
+        // holding and suppressed the whole digest. The unified engine prices from
+        // the exact-identity per-grade pool and stamps pricingSource; that is
+        // the exact-pool signal the gate was written for.
+        fmvMethod: (h as { pricingSource?: string }).pricingSource === "unified-pricing"
+          ? "unified-market-value"
+          : ((h as { pricingSourceMeta?: { method?: string } }).pricingSourceMeta?.method
+            ?? (h as { pricingMeta?: { method?: string } }).pricingMeta?.method
+            ?? null),
         fmvBasisNote: (h as { estimateBasis?: string | null }).estimateBasis ?? null,
-        fmvCompCount: (h as { pricingMeta?: { compsUsed?: number } }).pricingMeta?.compsUsed ?? null,
+        fmvCompCount: (h as { pricingSourceMeta?: { compsUsed?: number } }).pricingSourceMeta?.compsUsed
+          ?? (h as { pricingMeta?: { compsUsed?: number } }).pricingMeta?.compsUsed
+          ?? null,
       });
     }
   } catch {
