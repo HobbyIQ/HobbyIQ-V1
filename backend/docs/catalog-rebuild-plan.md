@@ -1352,7 +1352,30 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   cross-source mode, 77 refusals (setKey ≠ slug), reconciled; it predates
   its relaunch step, so relaunched by hand 03:05Z (33279764127) — from here
   the marker-keyed step continues it.** conform-holdings dry run dispatched
-  with it (33279767793); APPLY → reprice-all → audit-all-holdings follow.** Drew (22:30Z): "I see 2 max williams superfractors …
+  with it (33279767793) — **92 holdings: 40 resolve exact, 1 fuzzy, 35 already
+  agree, 6 corrections, 51 unresolved (no catalog match ≥ 0.8), 0 failed.
+  Two of the corrections say the APPLY must wait:** (1) the three Max Williams
+  CPA-MWI "Refractor" holdings would land on the UN-numbered
+  `refractor:auto` (checklistinsider, 13 sales) while the checklist's
+  `:num-499` (22 sales) is the card — the cross-source fold must run first;
+  (2) Bobby Witt Jr. BD152 would move from `2020:bowman-draft` to
+  `bowman-draft-1st-edition` at 0.95 — because the real base row
+  `2020:bowman-draft:bd152:base:no-auto` is MISSING (its ten bccp parallels
+  exist; the base row is the Topps-flagship "base rows" shape D3c is fixing)
+  and the only base row left is a **CardHedge-minted** 1st Edition twin.
+  **Drew (04:35Z): "bobby witt came out of bowman draft … first edition is
+  another bowman set" — the correction is wrong on its face: Bowman Draft
+  and Bowman Draft 1st Edition are different products; conform gets a guard
+  (never adopt a vendor-minted row; a product-changing correction needs a
+  checklist-authority target).** So:
+  cross-source fold APPLY → D3c re-ingest → conform APPLY → reprice-all →
+  audit-all-holdings. Measured while looking (04:20Z): **vendor- and
+  sale-minted un-graded catalog rows still present — cardsight 664,927,
+  cardhedge 133,911 (104,081 carrying vendorIds), pool 75,650, sold-comps
+  stubs 59,890, tree-builder-v1 14,473, ebay-browse 62 ≈ 950k rows** the
+  doctrine says should not exist; where a checklist row shares the id the
+  re-ingest's tie-break already replaced them, so these are the ones with no
+  checklist twin: an acquisition list plus garbage — NEEDS DREW (below).** Drew (22:30Z): "I see 2 max williams superfractors …
   superfractors are 1/1" — bcp's un-numbered `superfractor:auto` beside
   beckett's `:num-1`, and the same pair on Refractor /499, Black /10, Red /5,
   Red Lava, Sky Blue. **#1470:** the fold's decision is a pure tested rule
@@ -1589,6 +1612,16 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   product, family key = a separate fallback field; then re-slug catalog + pool.
 
 ## NEEDS DREW (not code)
+
+- **Retire the vendor-/sale-minted catalog rows (~950k):** cardsight 664,927,
+  cardhedge 133,911, pool 75,650, sold-comps stubs 59,890, tree-builder-v1
+  14,473 un-graded rows with no checklist twin at their id. Doctrine says
+  only checklists mint; holdings pinned to one of these (e.g. Witt's
+  CardHedge-minted 1st Edition twin) become "unresolved" — honest, and the
+  conform pass reports them. Proposed: `retire-autoseed-window` /
+  MODE=unconfirmed with the same coverage-style guard (print the holdings and
+  sales pointing at each retired row first; keep rows with ≥ 1 holding as an
+  acquisition list). Say go / not yet.
 
 - **isAuto ruling, 2025 Bowman (basketball) CPA-:** the only other checklist
   family (bccp, 609 rows) says no-auto for a prefix the generator forces to
