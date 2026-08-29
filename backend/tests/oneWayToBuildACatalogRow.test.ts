@@ -611,7 +611,9 @@ describe("one way to build a catalog row", () => {
     // put the seven allowlisted movers on catalogRowOps: 24 of 87. It can
     // only go up -- if it drops, a writer was converted back to hand-rolling
     // or the matcher above regressed. Deleting a compliant writer lowers it
-    // legitimately; re-measure and change the number in that PR.
-    expect(ok).toBeGreaterThanOrEqual(24);
+    // legitimately; re-measure and change the number in that PR. D15 added
+    // three row-ops scripts (repair-trailing-comma-player-names, repair-isauto-
+    // from-cardnumber-catalog, conform-one-of-one-parallels): 28 of 91.
+    expect(ok).toBeGreaterThanOrEqual(28);
   });
 });
