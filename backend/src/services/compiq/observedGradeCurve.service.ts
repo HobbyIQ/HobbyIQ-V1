@@ -26,6 +26,16 @@ import { recordBoundedProjectionAlert } from "./boundedProjectionAlerts.service.
 import { logSubRawInversionObserved } from "./marketRead.service.js";
 import { readSoldCompsForGrade } from "./soldCompsGradeReader.js";
 import type { FmvRungLabel } from "./fmvRung.js";
+// CF-ONE-GRADE-CURVE (D4 PR 4, 2026-08-29). The ONE writer of a tier's
+// numbers from the unified engine, and the field-population contract iOS
+// resolves its headline through. This service decides which entry a unified
+// tier maps to; gradeCurveEntry decides which fields carry the number.
+import {
+  applyUnifiedTierToEntry,
+  blankGradeCurveEntry,
+  gradeCurveEntryLabel,
+  unifiedTierHasPool,
+} from "./gradeCurveEntry.js";
 import { computeWeightedMedian, getGraderPremium } from "./compiqEstimate.service.js";
 // CF-MATCHED-COHORT-TRAJECTORY (2026-07-05): swap the noisy raw
 // sales-stats-by-player signal for the mix-bias-free matched-cohort
@@ -1923,37 +1933,49 @@ export async function buildObservedGradeCurve(
     const u = await computeUnifiedPrice(cardId, hiqOpt);
     unifiedAnchor = u.marketValue ?? u.fmv ?? null;
     const byLabel = new Map(u.gradeCurve.map((e) => [e.grade, e]));
+    // CF-GRADE-LABEL-BUGFIX (Drew, 2026-08-08). entry.grade already carries
+    // the grader ("PSA 10"), and unified labels its tiers the same way, so
+    // the two match directly; `${grader} ${grade}` produced "PSA PSA 10",
+    // matched nothing, and left every graded tier at the family's top-tier
+    // anchor ("PSA 8 = PSA 9 = PSA 10" on the Grade Curve UI).
+    //
+    // CF-ONE-GRADE-CURVE (D4 PR 4, 2026-08-29). The overlay used to write
+    // its own choice of fields here — `value` got the weighted MEDIAN and
+    // `trendAdjustedValue` the market value — and the /card-panel route
+    // then wrote a second, differently-windowed overlay over it, and the
+    // tree enricher a third. Every number on a unified tier now goes through
+    // applyUnifiedTierToEntry, the one place that decides which field
+    // carries what, so iOS's `trendAdjustedValue ?? value ?? median…`
+    // chain resolves to the projection on every surface.
+    const seen = new Set<string>();
     for (const entry of curve.entries) {
-      // CF-GRADE-LABEL-BUGFIX (Drew, 2026-08-08). Prior form
-      // "`${entry.grader} ${entry.grade}`.trim()" produced double-
-      // prefixed labels like "PSA PSA 10" because entry.grade already
-      // contains the grader ("PSA 10"/"BGS 9.5" etc. from CANONICAL_GRADES.label).
-      // The overlay lookup failed for every graded entry — silently —
-      // and each entry kept whatever the CH-based initial pass set,
-      // which was the top-tier value for the whole family. That's the
-      // "PSA 8 = PSA 9 = PSA 10" anchor collapse on the Grade Curve UI.
-      // Ohtani 2018 BC RC PSA 9 showed $7,200 (PSA 10's value) instead
-      // of the ~$2,300 weighted median of its own 85 sold_comps rows.
-      const gradeStr = String(entry.grade).trim();
-      const label = entry.grader === "Raw" || gradeStr.toLowerCase() === "raw"
-        ? "Raw"
-        : gradeStr;
+      const label = gradeCurveEntryLabel(entry);
+      seen.add(label);
       const um = byLabel.get(label);
-      if (um && um.weightedMedian != null && um.sampleCount > 0) {
-        const mv = um.marketValue ?? um.weightedMedian;
-        (entry as { value: number | null }).value = um.weightedMedian;
-        (entry as { trendAdjustedValue: number | null }).trendAdjustedValue = mv;
-        (entry as { weightedMedianPrice: number | null }).weightedMedianPrice = um.weightedMedian;
-        (entry as { sampleCount: number }).sampleCount = um.sampleCount;
-        // CF-RUNG-LABEL: the overlay's number carries the overlay's rung.
-        entry.rungLabel = um.rungLabel;
-        if (um.predictedPrice != null) {
-          (entry as { predictedPriceAt30d: number | null }).predictedPriceAt30d = um.predictedPrice;
-        }
-        if (um.trendPctPerWeek != null) {
-          (entry as { predictedPricePct: number | null }).predictedPricePct = um.trendPctPerWeek;
-        }
+      if (um && unifiedTierHasPool(um)) {
+        applyUnifiedTierToEntry(entry, um, {
+          confidenceScore: computeConfidence(um.sampleCount, um.newestSaleDate),
+        });
       }
+    }
+    // Tiers the pool has sales for that CANONICAL_GRADES does not list —
+    // PSA 7 and below on vintage, CSG / HGA slabs. The tree enricher used
+    // to append these from its own 7d-first cascade (a second engine); they
+    // now come from the same pool through the same writer. Each is placed
+    // after the last tier of its grader so pill order stays grouped.
+    for (const um of u.gradeCurve) {
+      if (seen.has(um.grade) || !unifiedTierHasPool(um)) continue;
+      if (/\?/.test(um.grade)) continue;   // a grader with no numeric grade is not a tier
+      const grader = um.gradeCompany ? String(um.gradeCompany).toUpperCase() : "Raw";
+      const extra = applyUnifiedTierToEntry(blankGradeCurveEntry(um.grade, grader), um, {
+        confidenceScore: computeConfidence(um.sampleCount, um.newestSaleDate),
+      });
+      let insertAt = curve.entries.length;
+      for (let i = curve.entries.length - 1; i >= 0; i--) {
+        if (curve.entries[i].grader === grader) { insertAt = i + 1; break; }
+      }
+      curve.entries.splice(insertAt, 0, extra);
+      seen.add(um.grade);
     }
     (curve as { totalSampleCount: number }).totalSampleCount = Math.max(
       curve.totalSampleCount,
@@ -2256,36 +2278,7 @@ export async function buildObservedGradeCurvesBulk(
         );
         results.set(id, {
           cardId: id,
-          entries: CANONICAL_GRADES.map((cfg) => ({
-            grade: cfg.label,
-            grader: cfg.grader,
-            sampleCount: 0,
-            weightedMedianPrice: null,
-            plainMedianPrice: null,
-            priceRangeLow: null,
-            priceRangeHigh: null,
-            newestSaleDate: null,
-            oldestSaleDate: null,
-            confidenceScore: 0,
-            value: null,
-            valueSource: "unavailable",
-            estimatedMultiplier: null,
-            estimatedFrom: null,
-            daysSinceNewestSale: null,
-            newestSalePrice: null,
-            trendAdjustedValue: null,
-            trendAdjustmentPct: null,
-            predictedPriceAt30d: null,
-            predictedPricePct: null,
-            predictedPriceRangeLow: null,
-            predictedPriceRangeHigh: null,
-            predictedHorizonDays: PREDICTED_HORIZON_DAYS,
-            recommendation: null,
-            salesHistory: [],
-            referencePrice: null,
-            referenceDivergencePct: null,
-            referenceAnomaly: false,
-          })),
+          entries: CANONICAL_GRADES.map((cfg) => blankGradeCurveEntry(cfg.label, cfg.grader)),
           totalSampleCount: 0,
           computedAt: new Date().toISOString(),
           ratePerWeek: null,

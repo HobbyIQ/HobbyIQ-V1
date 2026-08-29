@@ -4021,10 +4021,20 @@ router.get("/card-panel/:cardId", requireSession, requireRateLimited("priceCheck
     // "similar cards" surface. Runs concurrently with grade curve —
     // adds one CH call (~200ms warm-cache); the samePlayerSiblings
     // service has its own 12h cache so repeat card-panel hits are free.
+    // CF-ONE-GRADE-CURVE (D4 PR 4, 2026-08-29). The slug the request carried
+    // (or the identity's) goes INTO the curve build, so its unified overlay
+    // unions (vendor id OR slug) — the same pool the portfolio prices from.
+    // This route used to run a second unified overlay of its own afterwards,
+    // with that slug but a different window, and a tree enrichment on top;
+    // three writers of one entry. The service's overlay is now the only one.
+    const requestSlug = cardId.trim().startsWith("hiq:") ? cardId.trim() : null;
+    const hiqSlug: string | null =
+      (identity as { hobbyiqCardId?: string | null } | null)?.hobbyiqCardId ?? requestSlug;
     const [gradeCurve, samePlayerSiblings] = await Promise.all([
       buildObservedGradeCurve(id, {
         playerName: identityPlayer,
         parallelTierKey,
+        hobbyiqCardId: hiqSlug,
         // CF-SIBLING-CARD-FALLBACK (2026-07-06): user-facing route → opt
         // in so thin-market cards get an estimate rather than a gray pill.
         enableSiblingFallback: true,
@@ -4060,91 +4070,13 @@ router.get("/card-panel/:cardId", requireSession, requireRateLimited("priceCheck
       })(),
     ]);
 
-    // CF-CARD-PANEL-UNIFIED-CONVERGE (Drew, 2026-08-04). Portfolio and
-    // Grade Curve were showing different numbers for the same card
-    // (Ohtani PSA 9: portfolio $2,482 vs Grade Curve MARKET VALUE $2,610).
-    // observedGradeCurve computes "past anchor × trend-forward" while
-    // computeUnifiedPrice uses recency-weighted median (14d half-life).
-    // Both intend to answer "what's this card worth today" — they diverge
-    // because the math is different. Post-process each observed entry
-    // with unified pricing so both surfaces read from the same rows +
-    // the same math. Estimated entries (no observed sales for that tier)
-    // keep their observedGradeCurve values — unified would return null
-    // for those tiers and we'd lose the estimate.
-    try {
-      const { computeUnifiedPrice } = await import(
-        "../services/compiq/unifiedPricing.service.js"
-      );
-      // Resolve hiqSlug from identity (unified pricing needs it to
-      // union sales across vendor cardIds). enrichEntriesWithTree
-      // does its own slug resolution downstream when needed.
-      const hiqSlug: string | null =
-        (identity as { hobbyiqCardId?: string | null })?.hobbyiqCardId ?? null;
-      const unified = await computeUnifiedPrice(id, { hobbyiqCardId: hiqSlug });
-
-      // Tree-scoped per-tier pricing wins over the CH-based curve when
-      // the tree has data for this card. Shared helper in
-      // treeGradeCurve.service.ts — used by both /card-panel and
-      // /observed-grade-curve endpoints so field mapping stays in sync.
-      try {
-        const { enrichEntriesWithTree } = await import(
-          "../services/compiq/treeGradeCurve.service.js"
-        );
-        const enriched = await enrichEntriesWithTree(
-          gradeCurve.entries as never,
-          { cardIdOrSlug: id, hobbyiqCardId: hiqSlug },
-        );
-        if (enriched) (gradeCurve as { totalSampleCount: number }).totalSampleCount = enriched.totalSampleCount;
-      } catch (err) {
-        console.warn(JSON.stringify({
-          event: "tree_grade_curve_failed",
-          source: "compiq.card-panel",
-          cardId: id,
-          error: (err as Error)?.message ?? String(err),
-        }));
-      }
-      const byLabel = new Map(unified.gradeCurve.map((e) => [e.grade, e]));
-      for (const entry of gradeCurve.entries) {
-        // CF-GRADE-LABEL-BUGFIX (Drew, 2026-08-08). Same fix as
-        // observedGradeCurve.service.ts:1871 — entry.grade already
-        // contains the grader prefix ("PSA 10"), so
-        // `${entry.grader} ${entry.grade}` produced "PSA PSA 10" and
-        // never matched unified's "PSA 10". Overlay failed silently
-        // for every graded entry, causing anchor collapse on the
-        // Grade Curve UI (PSA 8/9/10 all showed PSA 10's value).
-        const gradeStr = String(entry.grade).trim();
-        const label =
-          entry.grader === "Raw" || gradeStr.toLowerCase() === "raw"
-            ? "Raw"
-            : gradeStr;
-        const u = byLabel.get(label);
-        if (u && u.weightedMedian != null && u.sampleCount > 0) {
-          // trendAdjustedValue = the trend-lifted market value (matches
-          // Grade Curve's MARKET VALUE label semantics)
-          // value = the raw weighted median (past clearing price)
-          // Both used to fall back to trendAdjustedValue in UI reads;
-          // supplying both keeps consumers that read either one aligned.
-          const mv = u.marketValue ?? u.weightedMedian;
-          (entry as { value: number | null }).value = u.weightedMedian;
-          (entry as { trendAdjustedValue: number | null }).trendAdjustedValue = mv;
-          (entry as { weightedMedianPrice: number | null }).weightedMedianPrice = u.weightedMedian;
-          (entry as { sampleCount: number }).sampleCount = u.sampleCount;
-          if (u.predictedPrice != null) {
-            (entry as { predictedPriceAt30d: number | null }).predictedPriceAt30d = u.predictedPrice;
-          }
-          if (u.trendPctPerWeek != null) {
-            (entry as { predictedPricePct: number | null }).predictedPricePct = u.trendPctPerWeek;
-          }
-        }
-      }
-    } catch (err) {
-      console.warn(JSON.stringify({
-        event: "card_panel_unified_converge_error",
-        source: "compiq.card-panel",
-        cardId: id,
-        error: (err as Error)?.message ?? String(err),
-      }));
-    }
+    // CF-CARD-PANEL-UNIFIED-CONVERGE (Drew, 2026-08-04) lived here: a second
+    // unified overlay over the curve's own, plus the tree enrichment. Both
+    // wrote the same entry fields from a different window / engine, and the
+    // last writer won — which is how Portfolio and Grade Curve disagreed for
+    // the same card. CF-ONE-GRADE-CURVE (D4 PR 4, 2026-08-29): the curve's
+    // unified overlay (slug union, fixed 180d, gradeCurveEntry contract) is
+    // the only writer of a tier's numbers. Routes never touch entry fields.
 
     void (async () => {
       try {
@@ -4498,6 +4430,12 @@ router.get("/observed-grade-curve/:cardId", requireSession, requireRateLimited("
       playerName,
       referencePriceByGrade,
       parallelTierKey,
+      // CF-ONE-GRADE-CURVE (D4 PR 4, 2026-08-29). The slug was resolved to a
+      // vendor id above and then dropped, so the curve's unified overlay
+      // unioned the vendor id against nothing — a narrower pool than the
+      // portfolio prices the same card from (CF-GRADE-CURVE-POOL-UNION fixed
+      // portfolioStore; this route had the same gap).
+      hobbyiqCardId: rawCardId.trim().startsWith("hiq:") ? rawCardId.trim() : null,
       // CF-SIBLING-CARD-FALLBACK (2026-07-06): user-facing route.
       enableSiblingFallback: true,
       // CF-CLASS-AWARE-GRADE-MULTIPLIERS (2026-07-06)
@@ -4560,26 +4498,11 @@ router.get("/observed-grade-curve/:cardId", requireSession, requireRateLimited("
       }
     })();
 
-    // Tree-scoped per-tier pricing wins over the CH-based curve when
-    // the tree has data for this card. Shared enrichment helper — see
-    // treeGradeCurve.service.ts enrichEntriesWithTree for the mapping.
-    try {
-      const { enrichEntriesWithTree } = await import(
-        "../services/compiq/treeGradeCurve.service.js"
-      );
-      const enriched = await enrichEntriesWithTree(
-        curve.entries as never,
-        { cardIdOrSlug: cardId.trim() },
-      );
-      if (enriched) (curve as { totalSampleCount: number }).totalSampleCount = enriched.totalSampleCount;
-    } catch (err) {
-      console.warn(JSON.stringify({
-        event: "tree_grade_curve_enrichment_failed",
-        source: "compiq.observed-grade-curve",
-        cardId: cardId.trim(),
-        error: (err as Error)?.message ?? String(err),
-      }));
-    }
+    // CF-ONE-GRADE-CURVE (D4 PR 4, 2026-08-29). The tree enrichment that ran
+    // here re-priced every tier from its own 7d-first cascade AFTER the
+    // curve's unified overlay — the last writer, and a second engine. Tiers
+    // outside CANONICAL_GRADES now come from the unified pool inside the
+    // curve build, through the same writer as every other tier.
 
     res.json({
       success: true,

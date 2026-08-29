@@ -2692,14 +2692,17 @@ async function autoPriceHolding(
           ? (holding as any).cardYear
           : null,
       });
-      // CF-FMV-IS-PROJECTED-NEXT-SALE (Drew, 2026-08-05). Grade-curve
-      // prediction wins over marketValue/fmv (both derived from
-      // medians). Per the golden rule: "FMV is the projected next sale
-      // from a comp pool's trend — NEVER a median or mean." The
-      // predictedPrice field is what the app should show as the
-      // headline market value on every holding. marketValue + fmv are
-      // fallbacks for when the pipeline can't produce a prediction.
-      const canonical = u.predictedPrice ?? u.marketValue ?? u.fmv;
+      // CF-FMV-IS-PROJECTED-NEXT-SALE (Drew, 2026-08-05). Per the golden
+      // rule: "FMV is the projected next sale from a comp pool's trend —
+      // NEVER a median or mean."
+      // CF-ONE-GRADE-CURVE (D4 PR 4, 2026-08-29). Since CF-TREND-FROM-FIT-
+      // NOT-LAST-THREE (08-22) marketValue IS that projection — the fit read
+      // at now; predictedPrice is the same fit read at +7d. The grade-curve
+      // tile above, hobbyIqFmv (CF-NEVER-A-BARE-MEDIAN, 08-28) and the card
+      // page all show marketValue, so a holding priced here must show the
+      // SAME number: marketValue first, the +7d read only when the engine
+      // could not evaluate at now, the bare median last.
+      const canonical = u.marketValue ?? u.predictedPrice ?? u.fmv;
       // CF-UNIFIED-SAMPLE-FLOOR (Drew, 2026-08-04). Use unified whenever
       // the pool has >= 1 exact-cardId sample and a positive canonical
       // number — trust the pool over sibling rescue even when old.
@@ -2877,9 +2880,11 @@ async function autoPriceHolding(
       // this week — matches Drew's memory rule "FMV = projected next sale
       // from pool trend; never a median".
       //
-      // Fall-throughs: marketValue -> fmv -> predictedPrice. When the
-      // pool is too thin for a trend signal, marketValue equals fmv.
-      const chosen = unified.predictedPrice ?? unified.marketValue ?? unified.fmv;
+      // Fall-throughs (CF-ONE-GRADE-CURVE, D4 PR 4): marketValue — the fit
+      // read at now, the number the grade-curve tile shows — then the +7d
+      // read, then the bare median. When the pool is too thin for a trend
+      // signal, all three are equal.
+      const chosen = unified.marketValue ?? unified.predictedPrice ?? unified.fmv;
       if (chosen !== null && chosen > 0 && unified.confidence >= 0.3) {
         unifiedResult = {
           fmv: unified.fmv,
@@ -8173,7 +8178,9 @@ export async function repriceHoldingsForUser(
               ? (holding as any).cardYear
               : null,
           });
-          const bCanon = bU.predictedPrice ?? bU.marketValue ?? bU.fmv;
+          // CF-ONE-GRADE-CURVE (D4 PR 4): same precedence as autoPriceHolding
+          // — marketValue (the fit at now, the tile's number) first.
+          const bCanon = bU.marketValue ?? bU.predictedPrice ?? bU.fmv;
           // Cost-basis floor for batch reprice early-exit — same guard
           // as autoPriceHolding to catch slug-mismatch price drops.
           const bEarlyQty = Math.max(1, toNumber(holding.quantity, 1));
@@ -8298,7 +8305,8 @@ export async function repriceHoldingsForUser(
               grade: gradeCo ? { company: gradeCo, value: gradeVal } : null,
               excludeContributorUserId: userId ?? null,
             });
-            const bChosen = unified.predictedPrice ?? unified.marketValue ?? unified.fmv;
+            // CF-ONE-GRADE-CURVE (D4 PR 4): marketValue first, as everywhere.
+            const bChosen = unified.marketValue ?? unified.predictedPrice ?? unified.fmv;
             if (bChosen !== null && bChosen > 0 && unified.confidence >= 0.3) {
               const uNow = new Date().toISOString();
               console.log(JSON.stringify({

@@ -17,8 +17,11 @@
  * spelling of a real product, and inventing the bare form is vocabulary
  * injection.
  *
- * Copy-before-delete; sales re-pointed before the old row goes; the id is the
- * truth (rows resolve from their own id segment, drifted fields healed).
+ * The move is catalogRowOps.moveCatalogRow (D5 PR 2): copy before delete,
+ * sales re-pointed before the old row goes, graded children of the old slug
+ * retired, the searchable fields rebuilt, and a row already at the bare slug
+ * decided by authority (fold or replace). The id is the truth (rows resolve
+ * from their own id segment, drifted fields healed).
  *
  * Env: COSMOS_CONNECTION_STRING; APPLY/BACKFILL_APPLY (default report only);
  *      SLOT/SLOTS  CONCURRENCY=48  RUN_MINUTES=140  LIMIT=0
@@ -27,6 +30,7 @@ const path = require("node:path");
 const backend = path.resolve(__dirname, "..");
 const { CosmosClient } = require("@azure/cosmos");
 const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
+const { moveCatalogRow, rebuildSearchFields } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
 
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
 const CONCURRENCY = Math.max(1, Number(process.env.CONCURRENCY || 48));
@@ -68,7 +72,7 @@ async function main() {
   const mine = SLOTS > 1 ? plan.filter((_, i) => i % SLOTS === SLOT) : plan;
   console.log(`slot ${SLOT}/${SLOTS}  ${mine.length} of ${plan.length} twin keys  (${f(noTwin.length)} prefixed keys WITHOUT a twin — reported, untouched)  ${APPLY ? "APPLY" : "REPORT ONLY"}\n`);
 
-  let scanned = 0, moved = 0, redundant = 0, salesRepointed = 0, malformed = 0, failed = 0, notReached = 0;
+  let scanned = 0, moved = 0, folded = 0, replaced = 0, redundant = 0, salesRepointed = 0, gradedRetired = 0, malformed = 0, failed = 0, notReached = 0;
   let stopReason = null;
 
   for (const p of mine) {
@@ -92,45 +96,26 @@ async function main() {
             const from = parts[3];
             const to = /^(19|20)\d{2}-/.test(from) ? bareOf(from) : null;
             if (!to || !existing.has(`${p.sport}|${to}`)) {
-              // id already bare, or its own twin absent: heal the FIELD only
+              // id already bare, or its own twin absent: heal the FIELD only,
+              // and the searchable fields built from it
               if (d.setKey !== from && APPLY) {
-                await retry(() => cat.item(d.id, d.cardId ?? d.id).patch([{ op: "set", path: "/setKey", value: from }])).catch(() => {});
+                const s = rebuildSearchFields({ ...d, setKey: from });
+                await retry(() => cat.item(d.id, d.cardId ?? d.id).patch([
+                  { op: "set", path: "/setKey", value: from },
+                  ...Object.entries(s).map(([k, v]) => ({ op: "set", path: `/${k}`, value: v })),
+                ])).catch(() => {});
               }
               redundant++;
               return;
             }
             parts[3] = to;
-            const newSlug = parts.join(":");
-            if (!APPLY) { moved++; return; }
-
-            const { resource: exists } = await retry(() => cat.item(newSlug, newSlug).read()).catch(() => ({ resource: null }));
-            if (!exists) {
-              const { _rid, _self, _etag, _attachments, _ts, ...rest } = d;
-              await retry(() => cat.items.upsert({
-                ...rest, id: newSlug, cardId: newSlug, hobbyiqCardId: newSlug, setKey: to,
-                mappedFrom: d.id, mappedReason: "year prefix stripped; bare twin existed",
-                mappedAt: new Date().toISOString(),
-              }));
-            }
-            let sToken;
-            do {
-              const sp = await retry(() => comps.items.query({
-                query: "SELECT c.id, c.cardId FROM c WHERE c.hobbyiqCardId = @s",
-                parameters: [{ name: "@s", value: d.id }],
-              }, { maxItemCount: 200, continuationToken: sToken }).fetchNext());
-              sToken = sp.continuationToken;
-              for (const x of sp.resources) {
-                await retry(() => comps.item(x.id, x.cardId).patch([
-                  { op: "set", path: "/hobbyiqCardId", value: newSlug },
-                  { op: "set", path: "/normalizedSetKey", value: to },
-                  { op: "set", path: "/reslugedFrom", value: d.id },
-                  { op: "set", path: "/reslugedReason", value: "year-prefixed setKey unified onto bare twin" },
-                  { op: "set", path: "/reslugedAt", value: new Date().toISOString() },
-                ]));
-                salesRepointed++;
-              }
-            } while (sToken);
-            await retry(() => cat.item(d.id, d.cardId ?? d.id).delete()).catch((e) => { if (e.code !== 404) throw e; });
+            const r = await moveCatalogRow(cat, d, parts.join(":"), { setKey: to }, {
+              reason: "year-prefixed setKey unified onto bare twin", repointNormalizedSetKey: true, dryRun: !APPLY, salesContainer: comps, retry,
+            });
+            salesRepointed += r.salesRepointed; gradedRetired += r.gradedChildrenRetired;
+            // fold and replace are slices of MOVED: the old row is gone either way
+            if (r.action === "fold") folded++;
+            else if (r.action === "replace") { replaced++; if (replaced <= 3) console.log(`  replaced at ${r.newSlug.slice(0, 58)}: ${r.decision}`); }
             moved++;
           } catch (e) {
             failed++;
@@ -153,8 +138,11 @@ async function main() {
   console.log(`\n${APPLY ? "APPLY" : "REPORT ONLY — nothing written"}`);
   console.log(`  rows scanned            ${f(scanned)}`);
   console.log(`  MOVED to the bare twin  ${f(moved)}`);
+  console.log(`  ...folded onto the twin ${f(folded)}   <- slice of MOVED; the twin kept its address`);
+  console.log(`  ...replaced the twin    ${f(replaced)}   <- slice of MOVED; this row outranked it`);
   console.log(`  redundant / field-heal  ${f(redundant)}`);
   console.log(`  sales re-pointed        ${f(salesRepointed)}`);
+  console.log(`  graded children retired ${f(gradedRetired)}   <- regenerable by materialize-graded-identities`);
   console.log(`  malformed id            ${f(malformed)}`);
   console.log(`  failed                  ${f(failed)}`);
   if (noTwin.length) {
