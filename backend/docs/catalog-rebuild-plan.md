@@ -127,7 +127,19 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   running for precision; full run after B1 retires the explosion.
 - ◐ D2 `identity-triangulation` (#1381) — BUILT: 200 checklist cards with sales ×
   (sale-shaped canonicalize, holding-shaped canonicalize, title search) vs the
-  checklist id; baseline run in flight (before the spine passes), re-run after C.
+  checklist id. **BASELINE (before the spine passes), baseball ≥2016, 200 cards:
+  sale → same card 86.0%, holding → 90.5%, search → 30.5%, ALL THREE 26.0%.**
+  Findings, each its own fix: (i) SEARCH ranks a rarer parallel row above the
+  base row the title names ("#217 X-Fractor" → platinum-anniversary refractor;
+  "#BD-143 Base" → base-cards) and bleeds across products ("#TCA-ARU" → chrome-black
+  cba-mr) — search scoring must weight exact number + set and honour "Base";
+  (ii) HOLDING path leaks the product name's year/sport into the set key
+  ("2024 Panini Prospect Edition Baseball" → `2024-panini-prospect-edition-baseball`,
+  not found) — strip leading year/season and trailing sport before normalizeSetKey;
+  (iii) some POOL sales sit under the wrong product entirely (a 2025 Score football
+  title under a baseball Bowman slug; an Upper Deck hockey title under
+  topps-pristine) — measure wrong-product matches pool-wide; only-improve cannot
+  fix a wrong product. Re-run after C.
 - ☐ D3 checklistcenter → canonical CSV converter (it produced 27,662 annotated and
   ~26k mis-parsed rows; the old ingester raw-upserts and must not be rerun)
 - ☐ D4 One valuation path — retire the Cardsight-era graded compiler onto the
