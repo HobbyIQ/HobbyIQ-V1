@@ -416,7 +416,9 @@ export interface VendorPersistResult {
   inserted: number;
   deduped: number;
   skipped: number;                          // rows that couldn't be parsed to identity
-  catalogUnmatched: number;                 // rows whose computed slug has no matching card_catalog entry — held for admin review
+  catalogUnmatched: number;
+  /** vendor product tags that disagreed with the title and were not adopted (CF-THE-TITLE-OUTRANKS-THE-VENDOR-TAG) */
+  vendorParallelOverruled?: number;                 // rows whose computed slug has no matching card_catalog entry — held for admin review
   /**
    * CF-PROMOTER-VERIFY-LOOP (Drew, 2026-08-15). Rows diverted to
    * verify_queue rather than written to the pool. These are a SUBSET of
@@ -770,7 +772,7 @@ export async function persistVendorSalesToPool(
     // titleOutranksVendorTag.ts for the rule and the numbers.
     {
       const decision = parallelTheTitleAllows(parsed.parallel, identity.parallel);
-      parsed.parallel = decision.parallel;
+      parsed.parallel = decision.parallel ?? "Base";
       if (decision.vendorTagOverruled) result.vendorParallelOverruled = (result.vendorParallelOverruled ?? 0) + 1;
     }
     if (identity.isAuto !== undefined && identity.isAuto !== null) parsed.isAuto = identity.isAuto;
