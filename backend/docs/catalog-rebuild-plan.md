@@ -261,7 +261,13 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   retiring 13,142,137 rows across 1,927 products (the whole undated bcp
   source). Dry run, nothing written; #1455 makes MODE=source refuse to run
   without explicit SOURCES and gives the runner a `sources` input; scoped
-  dry run #2 (`checklistcenter,checklistcenter-html`) = 33266850438. Also seen in the same run: the bcp ladders re-ingest now
+  dry run #2 (`checklistcenter,checklistcenter-html`) = 33266850438: **428 products /
+  1,201,383 rows** — the expected size. One more guard before the APPLY: the CLC
+  re-ingest covered 510 of 547 products (21 converted empty, 16 no page), so
+  retiring every old row would drop checklist coverage for the rest — #1458
+  `REPLACED_BY` (default `checklistcenter-2026-08-29`; the runner's scope
+  input doubles as it) retires only products present under the replacement
+  source and lists the kept ones. Dry run #3 = 33267576465 → APPLY. Also seen in the same run: the bcp ladders re-ingest now
   skips 762,534 player-name-parallel rows (#1396 working as built).
   cached at c:/tmp/clc (ladders only, no card lists → bounded 547-page re-fetch);
   the old HTML ingester split ladders on commas (player names became rungs) and
