@@ -201,10 +201,10 @@ async function main() {
     for (let i = 1; i < lines.length; i++) {
       const line = lines[i].trim();
       if (!line) continue;
-      const [category, cardNumber, parallel, isAuto, printRun, player] = splitCsv(line);
+      const [category, cardNumber, parallel, isAuto, printRun, player, parallelNote] = splitCsv(line);
       rows++;
       if (!cardNumber || !player) { skippedRow++; continue; }
-      batch.push({ category, cardNumber, parallel, isAuto, printRun, player });
+      batch.push({ category, cardNumber, parallel, isAuto, printRun, player, parallelNote: parallelNote || null });
     }
 
     for (let i = 0; i < batch.length; i += CONCURRENCY) {
@@ -256,6 +256,8 @@ async function main() {
             // words like that and it messes up the checklists" -- Drew,
             // 2026-08-28). Blank stays blank.
             parallel: r.parallel || null,
+            // optional 7th column: the checklist's footnote, verbatim, never in the name
+            ...(r.parallelNote ? { parallelNote: r.parallelNote } : {}),
             parallelSlug: slugify(r.parallel || "Base"),
             isAuto: r.isAuto === "true",
             printRun: r.printRun ? Number(r.printRun) : null,
