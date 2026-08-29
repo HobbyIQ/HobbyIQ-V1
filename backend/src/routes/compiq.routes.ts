@@ -4344,38 +4344,53 @@ router.get("/observed-grade-curve/:cardId", requireSession, requireRateLimited("
     if (!rawCardId || typeof rawCardId !== "string" || !rawCardId.trim()) {
       return res.status(400).json({ success: false, error: 'Missing or invalid "cardId"' });
     }
-    // CF-OBSERVED-GRADE-CURVE-HIQ-SLUG (Drew, 2026-08-06). Catalog-search
-    // click-throughs land here with an hiq:...:no-auto slug in :cardId.
-    // Resolve to a vendor cardId by pulling any sold_comps row with
-    // that hobbyiqCardId (cross-partition, cheap TOP 1). Falls through
-    // to the vendor path unchanged for vendor-shaped IDs.
-    let cardId = rawCardId.trim();
-    if (cardId.startsWith("hiq:")) {
-      try {
-        const { CosmosClient: _CC } = await import("@azure/cosmos");
-        const cn = process.env.COSMOS_CONNECTION_STRING;
-        if (cn) {
-          const sc = new _CC(cn).database(process.env.COSMOS_DATABASE ?? "hobbyiq").container("sold_comps");
-          // CF-HIQ-RESOLVER-MAJORITY (Drew, 2026-08-06). Same fix as
-          // card-panel/:cardId — TOP 1 picked an arbitrary row's cardId
-          // and hit a rogue CH cardId for 3 of 567 Ohtani rows, so the
-          // grade curve came back for a completely different CH card.
-          // GROUP BY + pick the majority so 547/567 wins over the
-          // rogue 1.
-          const { resources: buckets } = await sc.items.query<{ cid: string; n: number }>({
-            query: `SELECT c.cardId as cid, COUNT(1) as n
-                    FROM c WHERE c.hobbyiqCardId = @s
-                      AND IS_DEFINED(c.cardId) AND c.cardId != null
-                      AND NOT STARTSWITH(c.cardId, "hiq:")
-                    GROUP BY c.cardId`,
-            parameters: [{ name: "@s", value: cardId }],
-          }).fetchAll();
-          if (buckets.length > 0) {
-            buckets.sort((a, b) => b.n - a.n);
-            cardId = buckets[0].cid;
-          }
-        }
-      } catch { /* fall through with slug */ }
+    // CF-ONE-VALUATION-PATH (D16, 2026-08-30). The curve for an hiq: slug —
+    // or a vendor id the catalog can name — is the one valuation path's
+    // curve: the same engine result the other three routes price from,
+    // every tier at its own window, served UNDER THE SLUG. The resolver that
+    // lived here swapped the slug for the majority vendor cardId among its
+    // rows (the D14 probe: 89% of curves answered under a vendor id) and the
+    // legacy build below then read that id through a second engine. The
+    // legacy build now serves only vendor ids the catalog cannot name.
+    const cardId = rawCardId.trim();
+    {
+      const { valueIdentity } = await import("../services/compiq/oneValuationPath.service.js");
+      const { toObservedGradeCurveResponse } = await import("../services/compiq/oneValuationPathAdapters.js");
+      const v = await valueIdentity({ id: cardId, grade: null });
+      if (v.identity.slug || cardId.startsWith("hiq:")) {
+        const body = toObservedGradeCurveResponse(v);
+        void (async () => {
+          try {
+            persistObservedGradeCurve({
+              source: "compiq.observed-grade-curve",
+              cardId: String(body.cardId),
+              totalSampleCount: v.totalSampleCount,
+              ratePerWeek: null,
+              signalSource: null,
+              grades: v.gradeCurve.map((e) => ({
+                grade: e.grade,
+                grader: e.grader,
+                sampleCount: e.sampleCount,
+                observedMedian: e.weightedMedianPrice,
+                valueSource: e.valueSource,
+                estimatedMultiplier: e.estimatedMultiplier,
+                estimatedFrom: e.estimatedFrom,
+                confidenceScore: e.confidenceScore,
+                newestSaleDate: e.newestSaleDate,
+                daysSinceNewestSale: e.daysSinceNewestSale,
+                trendAdjustedValue: e.trendAdjustedValue,
+                trendAdjustmentPct: e.trendAdjustmentPct,
+                predictedPriceAt30d: e.predictedPriceAt30d,
+                predictedPricePct: e.predictedPricePct,
+                predictedPriceRangeLow: e.predictedPriceRangeLow,
+                predictedPriceRangeHigh: e.predictedPriceRangeHigh,
+              })),
+            });
+          } catch { /* telemetry never blocks the response */ }
+        })();
+        return res.json(body);
+      }
+      // A vendor id the catalog cannot name: the legacy build, unchanged.
     }
     const { buildObservedGradeCurve } = await import("../services/compiq/observedGradeCurve.service.js");
     // Meta-cache lookup for player name so the trajectory pass fires.
