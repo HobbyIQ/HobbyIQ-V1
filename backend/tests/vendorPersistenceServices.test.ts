@@ -32,10 +32,15 @@ beforeEach(() => {
 });
 
 describe("persistVendorCatalog — flag gate + empty input", () => {
-  it("flag OFF → returns zero counts, no throw", async () => {
-    expect(isPersistVendorCatalogEnabled()).toBe(false);
+  it("flag OFF → refuses: every entry skipped, nothing written", async () => {
+    delete process.env.PERSIST_VENDOR_CATALOG_ENABLED;
     const r = await persistVendorCatalog("cardhedge", [{ cardId: "abc", player: "Test" }]);
-    expect(r).toEqual({ inserted: 0, deduped: 0, skipped: 0 });
+    expect(r).toEqual({ inserted: 0, deduped: 0, skipped: 1 });
+  });
+  it("flag ON → STILL refuses (CF-VENDOR-NEVER-MINTS-A-CARD): the catalog is minted by checklists only", async () => {
+    process.env.PERSIST_VENDOR_CATALOG_ENABLED = "true";
+    const r = await persistVendorCatalog("cardhedge", [{ cardId: "a" }, { cardId: "b" }, { cardId: "c" }]);
+    expect(r).toEqual({ inserted: 0, deduped: 0, skipped: 3 });
   });
   it("flag ON + empty array → zeros", async () => {
     process.env.PERSIST_VENDOR_CATALOG_ENABLED = "true";

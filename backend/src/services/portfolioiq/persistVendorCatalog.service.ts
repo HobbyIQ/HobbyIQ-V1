@@ -69,76 +69,23 @@ export async function persistVendorCatalog(
   entries: VendorCatalogEntry[],
 ): Promise<VendorCatalogPersistResult> {
   const result: VendorCatalogPersistResult = { inserted: 0, deduped: 0, skipped: 0 };
-  if (!isPersistVendorCatalogEnabled()) return result;
   if (!Array.isArray(entries) || entries.length === 0) return result;
-  const container = await getContainer("card_catalog");
-  if (!container) return result;
-
-  for (const e of entries) {
-    const cardId = String(e.cardId ?? "").trim();
-    if (!cardId) { result.skipped++; continue; }
-    // CF-PARALLEL-AS-PLAYER-BLOCK — coerce parallel-word player field to
-    // null so downstream code doesn't treat it as identity.
-    if (isParallelWord(e.player)) {
-      e.player = null;
-    }
-    const contentHash = contentHashOf(
-      source, cardId, e.title, e.player, e.set, e.year, e.number, e.variant,
-    );
-    try {
-      // CF-DEDUP-CHECK-CANONICAL (Drew, 2026-08-01). After the
-      // dedupe-catalog-by-hobbyiq merge, vendor rows are collapsed to
-      // one canonical row per physical card, and the vendor cardId
-      // lives in canonical.vendorMappings. If we only check the old
-      // shape (c.cardId = @c AND c.contentHash = @h), every future CS/CH
-      // search would miss the canonical row and re-insert a duplicate.
-      // Second query covers the canonical shape by vendorMappings.
-      const { resources: byLegacyKey } = await container.items.query({
-        query: "SELECT c.id FROM c WHERE c.cardId = @c AND c.contentHash = @h",
-        parameters: [{ name: "@c", value: cardId }, { name: "@h", value: contentHash }],
-      }).fetchAll();
-      if (byLegacyKey.length > 0) { result.deduped++; continue; }
-      const { resources: byCanonicalMapping } = await container.items.query({
-        query: "SELECT c.id FROM c WHERE c.source = 'canonical' AND EXISTS(SELECT VALUE 1 FROM m IN c.vendorMappings WHERE m.source = @s AND m.vendorCardId = @c)",
-        parameters: [{ name: "@s", value: source }, { name: "@c", value: cardId }],
-      }).fetchAll();
-      if (byCanonicalMapping.length > 0) { result.deduped++; continue; }
-      // CF-SEARCH-INDEX-AT-INSERT (Drew, 2026-07-25). Compute searchText
-      // + searchTokens at insert time so newly-persisted vendor rows are
-      // immediately searchable via /card-search — no dependency on the
-      // nightly backfill catching up. recentSaleCount stays nightly (it
-      // needs a sold_comps lookup that would double insert cost).
-      const { searchText, searchTokens } = buildSearchIndex({
-        title: e.title ?? null,
-        player: e.player ?? null,
-        set: e.set ?? null,
-        year: e.year ?? null,
-        number: e.number ?? null,
-        variant: e.variant ?? null,
-      });
-      const doc = {
-        id: `${source}::${cardId}::${contentHash.slice(0, 8)}`,
-        cardId,
-        source,
-        contentHash,
-        title: e.title ?? null,
-        player: e.player ?? null,
-        set: e.set ?? null,
-        year: e.year ?? null,
-        number: e.number ?? null,
-        variant: e.variant ?? null,
-        imageUrl: e.imageUrl ?? null,
-        searchText,
-        searchTokens,
-        observedAt: new Date().toISOString(),
-      };
-      await container.items.upsert(doc);
-      result.inserted++;
-    } catch {
-      result.skipped++;
-    }
-  }
-  logPersistEvent("catalog", source, result);
+  // CF-VENDOR-NEVER-MINTS-A-CARD (Drew, 2026-08-28: "CH shouldn't derive rows
+  // either. we do with checklists"). The catalog is minted by checklists; a
+  // vendor search response is not an identity source. This path wrote 117
+  // cardhedge:: rows on 2026-08-29 09:53Z from the post-deploy cache warm,
+  // untouched by the sales gate (#1353). It now refuses regardless of the
+  // PERSIST_VENDOR_CATALOG_ENABLED flag -- an env var is not a doctrine.
+  // Every other vendor-persistence domain (sold comps, price series,
+  // listings, query signals) is unaffected.
+  result.skipped = entries.length;
+  console.log(JSON.stringify({
+    event: "vendor_catalog_persist_refused",
+    source: "persistVendorCatalog",
+    vendorSource: source,
+    entries: entries.length,
+    reason: "catalog rows are minted by checklists only",
+  }));
   return result;
 }
 
