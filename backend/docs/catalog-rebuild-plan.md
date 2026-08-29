@@ -900,6 +900,66 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   dry run for 2025 dispatched 20:25Z (33273454220). Also identified:
   `baseballcardpedia-ladders-2026-08-29` (725k rows) is the e2e ingest's
   re-scraped bcp under the #1373 gate — the sane bcp, not the exploded one.
+    **D15 — what the CPA-MWI picker showed, as three catalogRowOps movers
+  (`feat/d15`, unmerged, 2026-08-29; tests 3 files / 7 mutation checks, tsc 0,
+  writer guard 28/91 compliant (was 24/87), reconciliation 30/56):** (1) `repair-trailing-comma-player-names` — 9,837 rows
+  end in "," (beckett-checklist 9,199 — 1,715 of the comma rows are graded
+  children; explode-actuals 507, tcdb 97, cardhedge 19, bcp 8, auto-seed 6,
+  checklistcenter 1), 2 in ";", 148 in " " (cardhedge-graded). Every sampled
+  row is "Full Name," — no "Last, First" exists — so only the trailing run of
+  [,;whitespace] is trimmed (a trailing "." is "Jr.", 656,452 rows, untouched);
+  playerSlug is recomputed with hobbyIqCardId.slugify (the checklist ingest's
+  and the matcher's slugifier — "Moisés" → moises; the builder's private
+  playerSlugify would give moiss); searchText / displayName rebuilt by
+  `rebuildSearchFields`; searchTokens UNIONED (the comma never reached a
+  token; a graded row keeps its grade tokens, the nightly fold passes
+  survive). A patch — the slug has no player segment. **Root cause closed:**
+  `cleanPlayerName` at deriveCatalogEntry and at the CSV ingest's row parse.
+  Dry run LIMIT=200: 208 candidates → WOULD REPAIR 208 (23 graded), 0 failed.
+  (2) `repair-isauto-from-cardnumber-catalog` — the 98,382 checklistinsider-
+  2026-08-27 rows with isAuto=false on an auto-prefixed number are TWO shapes:
+  41,609 CPA-/CDA- rows already sit at a `:auto` id (the generator forces nine
+  prefixes) with a stale FIELD → a heal; every BDC-/PA-/RA- row sits at
+  `:no-auto` → a move iff the product's OTHER checklist families rule the
+  prefix signed (one GROUP BY per product over every source's un-graded rows,
+  ~7k RU; each family votes by its row majority, dated scrape runs fold into
+  one family, vendor/derived never vote, the source under repair never votes;
+  no ruling → only field-vs-id heals; a ruling that contradicts the
+  generator's forced list is REFUSED and printed). Sharded by product
+  (sha1(sport|year|setKey)) so a slot computes each product's evidence once;
+  2025 bowman basketball is 2.5% of the source. Dry run LIMIT=200 (498
+  products, 4,092,310 rows in scope), first product 2025 bowman/basketball:
+  35 (product, prefix) pairs — 28 ruled, 7 no ruling, **1 REFUSED: CPA
+  ruling=no-auto by the only other family, `bccp 0/609`** (bccp rows tagged
+  basketball on a Bowman product — the exploded-spine shape; the generator
+  forces CPA → :auto, so 6,930 rows wait for a ruling, not a move); 200 heals
+  on BDA- (`…:bda-ac:…:auto` with isAuto=false — and those ids say
+  `bowman-draft` while the row's setKey field says `bowman`: conform-card-
+  profile's population; moveCatalogRow refuses a MOVE on such a row, a heal
+  it allows). (3) `conform-one-of-one-parallels` — Drew: "superfractors are
+  1/1"; glossary: every plate is 1/1. 255,229 un-graded rows whose id's
+  parallel segment matches `(^|-)superfractors?(-|$) | printing-plate |
+  (^|-)(one-of-one|1-of-1)(-|$)` sit at an id without `:num-1` (printRun null
+  246,271; /4 8,861 — checklistinsider "Printing Plates Parallel", the four
+  plates read as a run; 1368310399850795000 ×49; /200 ×39; 2021 ×5; strings),
+  and 55 `:num-1` ids carry a field ≠ 1 (healed in place). The plural is
+  admitted deliberately (`superfractors` 21,536, `superfractors-refractor`
+  8,075 — a category header glued into the name; the singular-only regex
+  would have skipped 26 distinct slugs); one-of-one / 1-of-1 are 25 real
+  rungs (class-3-red-one-of-one, od-1-of-1); prose footnote slugs are skipped
+  and counted. Dry run LIMIT=200: 208 candidates → 207 actionable — moved 155
+  / folded 37 / replaced 15 (checklistcenter outranks the explode's derived
+  num-1 twin), 1 sale re-pointed, **2,277 graded children retired (≈11 per
+  row → the full run retires ~2.8M graded rows; regenerable — dispatch
+  `materialize-graded-identities` after)**, 1 prose, 0 failed. **Dispatch
+  (runner-whitelisted; relaunch steps keyed on the budget marker):** dry
+  first with `apply=false slots=1` and read the REFUSED / failed lines; then
+  APPLY sharded — comma `slots=4` (≈10k rows, one cycle; `sources` optional);
+  isAuto `slots=8` (`sources` defaults to checklistinsider-2026-08-27;
+  `sports` / `years` scope; `VERBOSE=true` prints every pair); one-of-one
+  `slots=8` (255k moves, ~2.8M graded deletes; each move runs one sales query
+  against sold_comps at its 10k floor). Then the D10 chain: conform-holdings
+  → reprice → re-explode.
     **Mover validation (report-only, 140-min budget each, 20:10Z):**
   clean-parallel-annotations dry — 30,564 rows this slot: 758 heal / 5,979
   move / 1,075 fold / 1,482 replace-a-derived-twin / 2,970 graded children /
