@@ -39,8 +39,8 @@
  *      USER (scope to one userId); LIMIT=0
  */
 const path = require("node:path");
-const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
 const backend = path.resolve(__dirname, "..");
+const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
 const { CosmosClient } = require("@azure/cosmos");
 const { catalogAuthorityOf } = require(path.join(backend, "dist/services/catalog/catalogAuthority.service.js"));
 
