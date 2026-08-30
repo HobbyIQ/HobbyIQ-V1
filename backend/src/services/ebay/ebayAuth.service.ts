@@ -25,7 +25,6 @@ import {
   writeTokenRecord,
   deleteTokenRecord,
   markReconnectRequired,
-
   connectionStatusOf,
 } from "./ebayTokenStore.service.js";
 
