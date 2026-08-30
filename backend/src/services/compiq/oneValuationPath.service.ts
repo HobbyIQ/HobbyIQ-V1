@@ -375,7 +375,11 @@ export async function valueIdentity(req: ValuationRequest): Promise<Valuation> {
     v.predictedPrice = tier.predictedPriceAt30d;
     v.weightedMedian = tier.weightedMedianPrice;
     v.sales = (um?.sales ?? []).slice();
-    v.basis = `unified: ${requestedTier} window=${u.windowDays}d n=${tier.sampleCount} median=$${tier.weightedMedianPrice?.toFixed(0) ?? "?"} marketValue=$${v.fairMarketValue.toFixed(0)} predicted=$${v.predictedPrice?.toFixed(0) ?? "?"} trend=${v.trend.direction} ${v.trend.pctPerWeek?.toFixed(1) ?? "?"}%/wk rung=${v.rungLabel}`;
+    // D22: the basis states the window choice (the cascade's path), the
+    // anchor the projection started from, and what the rung did — the
+    // projectionNote — beside the numbers. Still prefixed `unified:` (the
+    // digest gate's secondary read).
+    v.basis = `unified: ${requestedTier} window=${u.windowDays}d${um?.windowNote ? ` [${um.windowNote}]` : ""} n=${tier.sampleCount} anchor=$${tier.weightedMedianPrice?.toFixed(0) ?? "?"} marketValue=$${v.fairMarketValue.toFixed(0)} predicted=$${v.predictedPrice?.toFixed(0) ?? "?"} trend=${v.trend.direction} ${v.trend.pctPerWeek?.toFixed(1) ?? "?"}%/wk rung=${v.rungLabel}${um?.projectionNote ? ` — ${um.projectionNote}` : ""}`;
     // Tiers with no pool of their own are filled from this identity's
     // observed tiers × the empirical ratio (estimated, labelled), never
     // touching an observed tier.

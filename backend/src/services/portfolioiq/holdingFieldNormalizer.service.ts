@@ -39,6 +39,8 @@
 // call on already-clean data (idempotent). If a rule can't confidently
 // clean a value, leave it unchanged rather than guess.
 
+import { canonicalVariationName } from "../catalog/variationVocabulary.js";
+
 export interface NormalizableHoldingFields {
   playerName?: string | null;
   cardYear?: number | null;
@@ -253,6 +255,9 @@ const RULES: Rule[] = [
     apply(fields, changes) {
       const p = fields.parallel;
       if (!p) return fields;
+      // D22: "Chrome Variation" (Heritage) names its KIND with the word the
+      // rule would strip; a variation keeps every word it has.
+      if (/\b(?:variations?|var)\b/i.test(p)) return fields;
       // Split into tokens (whitespace + hyphen boundary), lowercase for
       // comparison against SUBSET_WORDS but keep original casing for the
       // rebuild.
@@ -472,6 +477,27 @@ const RULES: Rule[] = [
       if (expanded !== p) {
         changes.push({ rule: "parallel_expand_ref_suffix", field: "parallel", before: p, after: expanded });
         return { ...fields, parallel: expanded };
+      }
+      return fields;
+    },
+  },
+
+  // ── R9 parallel: the variation vocabulary (D22) ─────────────────────
+  // CF-A-VARIATION-IS-A-CARD. A holding's parallel field says "Photo
+  // Variations", "Image Var", "SSP", "SP Variation", "Golden Mirror Image
+  // Variation" — six spellings of two cards. One vocabulary
+  // (variationVocabulary.ts) so the holding CAN be the variation, through the
+  // field it already has. A bare "SP" is left alone: in Heritage it is the
+  // short-printed base card, and only the catalog match can say.
+  {
+    name: "parallel_variation_vocabulary",
+    apply(fields, changes) {
+      const p = fields.parallel;
+      if (!p) return fields;
+      const canon = canonicalVariationName(p);
+      if (canon && canon !== p) {
+        changes.push({ rule: "parallel_variation_vocabulary", field: "parallel", before: p, after: canon });
+        return { ...fields, parallel: canon };
       }
       return fields;
     },

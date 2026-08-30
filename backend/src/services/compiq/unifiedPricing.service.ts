@@ -22,7 +22,7 @@
 
 import { CosmosClient, type Container } from "@azure/cosmos";
 import { dedupeSoldComps } from "../portfolioiq/dedupeSoldComps.js";
-import { projectNextSaleFromComps } from "./nextSaleProjection.service.js";
+import { projectFromLeadingEdge } from "./nextSaleProjection.service.js";
 import { readExactPoolRows, type ExactPoolRow } from "./exactPoolReader.js";
 import type { ExactPoolRungLabel } from "./fmvRung.js";
 
@@ -84,6 +84,47 @@ const TIER_SALES_ON_WIRE = 50;
 // 14d half-life means a 48h-old sale is ~5× weight of a 30d-old sale.
 const HALF_LIFE_DAYS = 14;
 
+// ── CF-ONE-SALE-WINDOW-POLICY (D22, Drew 2026-08-30) ─────────────────────
+//
+// Holding afd40fed — Theo Gillen 2024 Bowman Draft CPA-TG Blue Refractor
+// /150, raw. Five sales: $125, $161.50, $192.51, $250 (2025) and $729 on
+// 2026-08-20. The 60d and 90d windows hold that one sale; the 180d window
+// holds two, and with a 14-day half-life the $729 sale carries 99.99% of the
+// window's recency weight — so the weighted median IS the one sale, and the
+// card read $729 ("projected next sale" at n = 1, the NEEDS DREW item).
+//
+// The rule, as a named policy Drew can flip. Drew ruled 2026-08-30 19:50Z:
+// "Keep — the latest sale is the market."
+//
+//   "last-sale"  (DEFAULT, Drew's ruling) the latest sale IS the market. When
+//                a thin window's newest sale carries >= ONE_SALE_WEIGHT_SHARE
+//                of the recency weight and DISAGREES (beyond
+//                ONE_SALE_AGREEMENT_PCT) with the leading edge of the widest
+//                window — the plain median of its newest <= 3 sales — the
+//                newest sale stands under exact-pool-last-sale, and the basis
+//                prints what widen would have said. Gillen: $729
+//                (widen would say $489.50).
+//   "widen"      the named alternative, off: a one-sale window does not win
+//                on its own — the widest window's leading edge stands under
+//                exact-pool-leading-edge, the basis printing $729 beside it.
+//
+// When the carrying sale AGREES with the leading edge there is nothing to
+// decide and the weighted median stands under its own label. A window with
+// exactly ONE sale stands under exact-pool-last-sale in either policy. The
+// env var is the flip; the constant is the default.
+export type OneSaleWindowPolicy = "widen" | "last-sale";
+export const ONE_SALE_WINDOW_POLICY_DEFAULT: OneSaleWindowPolicy = "last-sale";
+export function oneSaleWindowPolicy(): OneSaleWindowPolicy {
+  const v = String(process.env.ONE_SALE_WINDOW_POLICY ?? "").trim().toLowerCase();
+  return v === "last-sale" || v === "widen" ? v : ONE_SALE_WINDOW_POLICY_DEFAULT;
+}
+/** The newest sale "carries the window" when it holds this share of the
+ *  pool's recency weight. Gillen 99.99%; the D16 thin fixture ($50 at 3d,
+ *  $60 at 30d) 87%. */
+export const ONE_SALE_WEIGHT_SHARE = 0.75;
+/** The newest sale agrees with the leading edge when within this fraction. */
+export const ONE_SALE_AGREEMENT_PCT = 0.25;
+
 export interface UnifiedGradeEntry {
   grade: string;                 // e.g. "PSA 9", "BGS 10", "Raw"
   gradeCompany: string | null;   // e.g. "PSA"; null for raw
@@ -128,6 +169,14 @@ export interface UnifiedGradeEntry {
   // from, newest first (capped), so a wire's comp list / sales history is
   // the SAME rows that produced the number — not a second read.
   sales?: Array<{ price: number; soldAt: string; source: string | null }>;
+  // CF-THE-PROJECTION-IS-THE-LEADING-EDGE (D22). What the rung did, in
+  // prose for the basis: the anchor and how far back it sits, the trend
+  // applied from there, the newest-sale band, or the one-sale policy's
+  // verdict with the OTHER policy's number beside it. Never the label.
+  projectionNote: string | null;
+  // D22: why this window — the cascade's path for this tier ("60d n=15" or
+  // "60d n=1, 90d n=1, 180d n=2"), stated so the basis can say it.
+  windowNote: string | null;
 }
 
 export interface UnifiedPriceResult {
@@ -415,6 +464,8 @@ export async function computeUnifiedPrice(
   let comps: RawCompRow[] = [];
   // Per-tier mode: the rows each tier is priced from, by tier label.
   const tierRows = new Map<string, { rows: RawCompRow[]; windowDays: number }>();
+  // D22: the cascade's path per tier, for the basis ("60d n=1, 90d n=1, 180d n=2").
+  const tierWindowNotes = new Map<string, string>();
   if (opts.perTierWindows) {
     const all = await fetchPoolRows(cardId, opts.hobbyiqCardId ?? null, maxWindow, nowMs);
     if (all === null || all.length === 0) return empty;
@@ -434,14 +485,17 @@ export async function computeUnifiedPrice(
     const labels = new Set(rowsWithin(maxWindow).map((r) => gradeLabel(r.gradeCompany, r.gradeValue)));
     for (const label of labels) {
       let chosen: { rows: RawCompRow[]; windowDays: number } | null = null;
+      const path: string[] = [];
       for (const w of WINDOWS) {
         const rows = rowsWithin(w.days).filter((r) => gradeLabel(r.gradeCompany, r.gradeValue) === label);
+        path.push(`${w.days}d n=${rows.length}`);
         if (rows.length >= w.minDirect) { chosen = { rows, windowDays: w.days }; break; }
       }
       if (!chosen) {
         chosen = { rows: rowsWithin(maxWindow).filter((r) => gradeLabel(r.gradeCompany, r.gradeValue) === label), windowDays: maxWindow };
+        path.push(`${maxWindow}d with all ${chosen.rows.length}`);
       }
-      if (chosen.rows.length > 0) tierRows.set(label, chosen);
+      if (chosen.rows.length > 0) { tierRows.set(label, chosen); tierWindowNotes.set(label, path.join(", ")); }
     }
     // The result's window and pool size describe the requested tier's read
     // — the same numbers the cascade reported for it.
@@ -453,6 +507,7 @@ export async function computeUnifiedPrice(
     if (rows === null) return empty;
     comps = rows;
   } else {
+    const path: string[] = [];
     for (const w of WINDOWS) {
       const rows = await queryComps(cardId, opts.hobbyiqCardId ?? null, w.days, nowMs, opts.excludeContributorUserId ?? null);
       if (rows === null) return empty;
@@ -463,11 +518,13 @@ export async function computeUnifiedPrice(
       if (requestedTier) {
         densityCount = comps.filter((r) => gradeLabel(r.gradeCompany, r.gradeValue) === requestedTier).length;
       }
+      path.push(`${w.days}d n=${densityCount}`);
       if (densityCount >= w.minDirect) {
         selectedWindow = w.days;
         break;
       }
     }
+    if (requestedTier) tierWindowNotes.set(requestedTier, path.join(", "));
   }
   if (comps.length === 0 && tierRows.size === 0) return empty;
 
@@ -495,6 +552,7 @@ export async function computeUnifiedPrice(
     trendPctPerWeek: number | null;
     trendDirection: "up" | "down" | "flat";
     rungLabel: ExactPoolRungLabel;
+    projectionNote: string | null;
   } {
     // ── CF-TREND-FROM-FIT-NOT-LAST-THREE (2026-08-22) ──────────────────
     //
@@ -521,27 +579,42 @@ export async function computeUnifiedPrice(
     //
     // The leading-edge path below is KEPT as the fallback for pools too thin
     // to fit, which is what it was always good at.
+    //
+    // ── CF-THE-PROJECTION-IS-THE-LEADING-EDGE (D22, Drew 2026-08-30) ──────
+    //
+    // The OLS fit's level was the WINDOW's centroid — the mean price at the
+    // mean date — so on Max Williams CPA-MWI (60d, ten sales at $25–38 in
+    // the newest week, $12–21 before) the line carried a $14-era level
+    // forward and read $18.74, below every one of the last ten sales. The
+    // projection is now anchored on the leading edge: the recency-weighted
+    // median at its own (recency-weighted) time, and the window's trend
+    // moves it forward from THERE to now. See projectFromLeadingEdge.
     const datedForFit = rows
       .map((r) => ({ price: Number(r.price), soldDate: String(r.soldAt ?? "") }))
       .filter((c) => Number.isFinite(c.price) && c.price > 0 && Number.isFinite(Date.parse(c.soldDate)));
     if (datedForFit.length >= 8) {
-      const atNow = projectNextSaleFromComps(datedForFit, { forwardDays: 0, minNForRegression: 3, nowMs });
-      const at7d = projectNextSaleFromComps(datedForFit, { forwardDays: 7, minNForRegression: 3, nowMs });
+      const atNow = projectFromLeadingEdge(datedForFit, { forwardDays: 0, nowMs, halfLifeDays: HALF_LIFE_DAYS });
+      const at7d = projectFromLeadingEdge(datedForFit, { forwardDays: 7, nowMs, halfLifeDays: HALF_LIFE_DAYS });
       if (atNow && atNow.nextSaleValue > 0) {
         // slopePerMonthPct -> per week, the unit this function reports in.
         const perWeek = Math.round((atNow.slopePerMonthPct / (30 / 7)) * 10) / 10;
+        const trendWord = atNow.slopeNote === "fit"
+          ? `trend ${perWeek >= 0 ? "+" : ""}${perWeek}%/wk of the anchor, applied forward ${atNow.anchorAgeDays}d to now`
+          : atNow.slopeNote === "insane-fit" ? "the window's fit is noise (>300%/month) — no trend applied" : "no trend fit — the anchor stands";
+        const capWord = atNow.cap === "newest-band" ? `; held inside ±25% of the newest sale ($${atNow.newestPrice}, ${atNow.newestAgeDays}d ago)` : "";
         return {
           marketValue: Math.round(atNow.nextSaleValue * 100) / 100,
           predictedPrice: Math.round((at7d?.nextSaleValue ?? atNow.nextSaleValue) * 100) / 100,
           trendPctPerWeek: perWeek,
           trendDirection: Math.abs(perWeek) < 1 ? "flat" : (perWeek > 0 ? "up" : "down"),
           rungLabel: "exact-pool-projection",
+          projectionNote: `anchored on the leading edge: recency-weighted level $${atNow.anchorPrice} sitting ${atNow.anchorAgeDays}d back (n=${atNow.n}); ${trendWord}${capWord}`,
         };
       }
     }
 
     if (wMedian === null || rows.length < 4) {
-      return { marketValue: wMedian, predictedPrice: wMedian, trendPctPerWeek: null, trendDirection: "flat", rungLabel: "exact-pool-weighted-median" };
+      return thinPoolReading(rows, wMedian);
     }
 
     // CF-LEADING-EDGE-MV (Drew, 2026-08-08). Tier 1 of the recency
@@ -626,14 +699,15 @@ export async function computeUnifiedPrice(
           trendPctPerWeek: leadingEdgeTrendPct,
           trendDirection: leadingEdgeDirection,
           rungLabel: "exact-pool-leading-edge",
+          projectionNote: `median of the newest ${leadingCount} sales ($${leadingSales.join(", $")}); too few for a wider trend`,
         };
       }
-      return { marketValue: wMedian, predictedPrice: wMedian, trendPctPerWeek: null, trendDirection: "flat", rungLabel: "exact-pool-weighted-median" };
+      return { marketValue: wMedian, predictedPrice: wMedian, trendPctPerWeek: null, trendDirection: "flat", rungLabel: "exact-pool-weighted-median", projectionNote: "recency-weighted median; no leading edge or trend could be read" };
     }
     const rMed = weightedMedian(recent, nowMs);
     const pMed = weightedMedian(prior, nowMs);
     if (!rMed || !pMed || pMed <= 0) {
-      return { marketValue: wMedian, predictedPrice: wMedian, trendPctPerWeek: null, trendDirection: "flat", rungLabel: "exact-pool-weighted-median" };
+      return { marketValue: wMedian, predictedPrice: wMedian, trendPctPerWeek: null, trendDirection: "flat", rungLabel: "exact-pool-weighted-median", projectionNote: "recency-weighted median; the 14d-vs-prior trend could not be read" };
     }
     const ratio = rMed / pMed;
     // Clamp to [0.5, 1.5] — anything more extreme is thin-pool noise.
@@ -666,6 +740,7 @@ export async function computeUnifiedPrice(
         trendPctPerWeek: trendPct,
         trendDirection: direction,
         rungLabel: "exact-pool-leading-edge",
+        projectionNote: `median of the newest ${leadingCount} sales ($${leadingSales.join(", $")}) against the ${leadingPriorSales.length} before them`,
       };
     }
 
@@ -674,7 +749,64 @@ export async function computeUnifiedPrice(
     const predicted = Math.round(wMedian * Math.pow(cappedRatio, 1.5) * 100) / 100;
     const direction: "up" | "down" | "flat" =
       Math.abs(widerPctPerWeek) < 1 ? "flat" : (widerPctPerWeek > 0 ? "up" : "down");
-    return { marketValue, predictedPrice: predicted, trendPctPerWeek: widerPctPerWeek, trendDirection: direction, rungLabel: "exact-pool-weighted-median" };
+    return { marketValue, predictedPrice: predicted, trendPctPerWeek: widerPctPerWeek, trendDirection: direction, rungLabel: "exact-pool-weighted-median", projectionNote: "recency-weighted median × the 14d-vs-prior ratio (no leading edge could be read)" };
+  }
+
+  /**
+   * CF-ONE-SALE-WINDOW-POLICY (D22). The thin rung (n < 4): the
+   * recency-weighted median, UNLESS one sale carries the window — then the
+   * policy above decides between that sale and the widest window's leading
+   * edge, and the note prints the number the other policy would have given.
+   */
+  function thinPoolReading(rows: RawCompRow[], wMedian: number | null): ReturnType<typeof computeTrendAndPrediction> {
+    const timed = rows
+      .map((r) => ({ price: Number(r.price), t: Date.parse(r.soldAt) }))
+      .filter((x) => Number.isFinite(x.t) && Number.isFinite(x.price) && x.price > 0)
+      .sort((a, b) => b.t - a.t);
+    const plain = { marketValue: wMedian, predictedPrice: wMedian, trendPctPerWeek: null as number | null, trendDirection: "flat" as const, rungLabel: "exact-pool-weighted-median" as const };
+    if (wMedian === null || timed.length === 0) return { ...plain, projectionNote: "recency-weighted median of an undated thin pool" };
+    const r2 = (n: number) => Math.round(n * 100) / 100;
+    const weights = timed.map((x) => Math.exp(-Math.max(0, (nowMs - x.t) / 86400_000) / HALF_LIFE_DAYS));
+    const totalW = weights.reduce((s, w) => s + w, 0);
+    const share = totalW > 0 ? weights[0] / totalW : 1;
+    const newest = timed[0];
+    const newestAge = Math.round((nowMs - newest.t) / 86400_000);
+    if (timed.length === 1) {
+      return {
+        marketValue: r2(newest.price), predictedPrice: r2(newest.price), trendPctPerWeek: null, trendDirection: "flat",
+        rungLabel: "exact-pool-last-sale",
+        projectionNote: `one sale in the widest window ($${r2(newest.price)}, ${newestAge}d ago) and nothing wider to widen to — the sale stands`,
+      };
+    }
+    if (share < ONE_SALE_WEIGHT_SHARE) {
+      return { ...plain, projectionNote: `recency-weighted median of ${timed.length} sales; the newest carries ${Math.round(share * 100)}% of the weight (< ${Math.round(ONE_SALE_WEIGHT_SHARE * 100)}%)` };
+    }
+    // One sale carries the window.
+    const edgeSales = timed.slice(0, 3).map((x) => x.price);
+    const sorted = edgeSales.slice().sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    const edge = sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+    const disagreePct = edge > 0 ? Math.abs(newest.price - edge) / edge : 0;
+    const policy = oneSaleWindowPolicy();
+    const sharePct = share >= 0.9995 ? ">99.9" : String(Math.round(share * 1000) / 10);
+    if (disagreePct <= ONE_SALE_AGREEMENT_PCT) {
+      return {
+        ...plain,
+        projectionNote: `the newest sale ($${r2(newest.price)}, ${newestAge}d ago) carries ${sharePct}% of the window's recency weight and agrees with the leading edge of the newest ${edgeSales.length} ($${r2(edge)}) within ${Math.round(disagreePct * 100)}% — the weighted median stands`,
+      };
+    }
+    if (policy === "last-sale") {
+      return {
+        marketValue: r2(newest.price), predictedPrice: r2(newest.price), trendPctPerWeek: null, trendDirection: "flat",
+        rungLabel: "exact-pool-last-sale",
+        projectionNote: `the newest sale ($${r2(newest.price)}, ${newestAge}d ago) carries ${sharePct}% of the window's recency weight and disagrees with the leading edge of the newest ${edgeSales.length} ($${r2(edge)}) by ${Math.round(disagreePct * 100)}%; ONE_SALE_WINDOW_POLICY=last-sale (Drew: the latest sale is the market) — the sale stands (widen would say $${r2(edge)})`,
+      };
+    }
+    return {
+      marketValue: r2(edge), predictedPrice: r2(edge), trendPctPerWeek: null, trendDirection: "flat",
+      rungLabel: "exact-pool-leading-edge",
+      projectionNote: `the newest sale ($${r2(newest.price)}, ${newestAge}d ago) carries ${sharePct}% of the window's recency weight and disagrees with the leading edge of the newest ${edgeSales.length} ($${r2(edge)}) by ${Math.round(disagreePct * 100)}%; ONE_SALE_WINDOW_POLICY=widen — the leading edge stands (last-sale would say $${r2(newest.price)})`,
+    };
   }
 
   const gradeCurve: UnifiedGradeEntry[] = [];
@@ -703,6 +835,8 @@ export async function computeUnifiedPrice(
       trendPctPerWeek: trend.trendPctPerWeek,
       trendDirection: trend.trendDirection,
       rungLabel: trend.rungLabel,
+      projectionNote: trend.projectionNote,
+      windowNote: tierWindowNotes.get(label) ?? null,
       sales: rows
         .map((r) => ({ price: Number(r.price), soldAt: String(r.soldAt), source: r.source ?? null, t: Date.parse(r.soldAt) }))
         .sort((a, b) => (Number.isFinite(b.t) ? b.t : 0) - (Number.isFinite(a.t) ? a.t : 0))

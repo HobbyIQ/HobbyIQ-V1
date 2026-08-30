@@ -24,7 +24,9 @@ import {
 } from "./parseTitleIdentity.service.js";
 import { resolveVertical } from "./resolveVertical.service.js";
 import { computeHobbyIqCardId, slugify, normalizeSetKey as canonicalNormalizeSetKey } from "./hobbyIqCardId.service.js";
-import { canonicalizeParallelName } from "../catalog/catalogMatcher.service.js";
+import { canonicalizeParallelName, variationParallelsForCard } from "../catalog/catalogMatcher.service.js";
+import { canonicalVariationName, pickVariationForMarker, reduceVariationStockToCatalog, variationNameFromSlug } from "../catalog/variationVocabulary.js";
+import { qualifiedSetKeyFromTitle } from "../catalog/productQualifiers.js";
 import { parseGradeLabel } from "./gradeParser.js";
 
 // CF-CHECKLIST-NARROWER (Drew, 2026-08-02). When parseListingIdentity
@@ -419,6 +421,12 @@ export interface VendorPersistResult {
   catalogUnmatched: number;
   /** vendor product tags that disagreed with the title and were not adopted (CF-THE-TITLE-OUTRANKS-THE-VENDOR-TAG) */
   vendorParallelOverruled?: number;                 // rows whose computed slug has no matching card_catalog entry — held for admin review
+  /** D22: a weak title marker (SP / SSP / IV / Short Print) corroborated a variation. */
+  variationFromMarker?: number;
+  /** D22: the title named a product qualifier (1st Edition / Sapphire / Chrome / Update) the vendor's product tag lacked. */
+  productQualifierApplied?: number;
+  /** D22: a qualifier whose move is a ruling (bowman ↔ bowman-chrome, Topps Chrome Update) — counted, not made. */
+  productQualifierRefused?: number;
   /**
    * CF-PROMOTER-VERIFY-LOOP (Drew, 2026-08-15). Rows diverted to
    * verify_queue rather than written to the pool. These are a SUBSET of
@@ -572,6 +580,9 @@ export async function persistVendorSalesToPool(
   // either duplicate a sale or silently drop one. It stays a live read.
   const rollingPricesBySlug = new Map<string, number[]>();
   const anomalyCohortByKey = new Map<string, number[]>();
+  // D22: the catalog's variation rows per (sport, year, setKey, cardNumber),
+  // asked only when a title carries a weak variation marker.
+  const variationRowsByCard = new Map<string, string[]>();
 
   for (const row of rows) {
     const title = String(row.title ?? "").trim();
@@ -591,6 +602,16 @@ export async function persistVendorSalesToPool(
     let cardYear = identity.cardYear ?? guessCardYearFromTitle(title);
     let playerName = identity.playerName ?? guessPlayerFromTitle(title);
     let setKey = identity.setName ?? inferSetKeyFromTitle(title);
+    // CF-A-PRODUCT-QUALIFIER-IS-IDENTITY (D22). "1st Edition", "Sapphire",
+    // "Chrome" (paper vs chrome), "Update" in the TITLE name a different
+    // product than the plain one; the title outranks the vendor's product
+    // tag here as it does for the parallel. Refused moves (bowman ↔ bowman-
+    // chrome, Topps Chrome Update) are counted, never made.
+    if (setKey) {
+      const q = qualifiedSetKeyFromTitle(setKey, title);
+      if (q.applied.length) { setKey = q.setKey; result.productQualifierApplied = (result.productQualifierApplied ?? 0) + 1; }
+      if (q.refused.length) result.productQualifierRefused = (result.productQualifierRefused ?? 0) + 1;
+    }
     // CF-VERTICAL-NOT-SPORT wired in (Drew, 2026-08-14: "if tcg is done then
     // those pending should flow quickly in backfill"). They will not, unless
     // the vertical is resolved here — inferSportFromTitle defaults to
@@ -771,9 +792,37 @@ export async function persistVendorSalesToPool(
     // product tag used to overwrite the title parse here; it may not. See
     // titleOutranksVendorTag.ts for the rule and the numbers.
     {
-      const decision = parallelTheTitleAllows(parsed.parallel, identity.parallel);
+      const decision = parallelTheTitleAllows(parsed.parallel, identity.parallel, { variationMarker: parsed.variationMarker ?? null });
       parsed.parallel = decision.parallel ?? "Base";
       if (decision.vendorTagOverruled) result.vendorParallelOverruled = (result.vendorParallelOverruled ?? 0) + 1;
+      if (decision.variationCorroboratedByMarker) result.variationFromMarker = (result.variationFromMarker ?? 0) + 1;
+    }
+    // CF-A-VARIATION-IS-A-CARD (D22). A weak marker alone ("SP", "SSP", "IV",
+    // "Short Print") names a variation only when the product's checklist
+    // holds one for THIS card — the plain image variation, never a named
+    // kind (Heritage's bare "SP" is the short-printed base card). One
+    // catalog read per (product, card) per batch.
+    const titleVariation = canonicalVariationName(parsed.parallel);
+    if ((parsed.variationMarker && !titleVariation) || (titleVariation && /\b(?:chrome|paper)\b/i.test(titleVariation))) {
+      if (cardYear && setKey && sport && parsed.cardNumber) {
+        const canonKey = canonicalNormalizeSetKey(setKey);
+        const key = `${sport}|${cardYear}|${canonKey}|${String(parsed.cardNumber).toUpperCase()}`;
+        let slugs = variationRowsByCard.get(key);
+        if (!slugs) {
+          try { slugs = await variationParallelsForCard({ sport, year: cardYear, setKey: canonKey, cardNumber: parsed.cardNumber }); } catch { slugs = []; }
+          variationRowsByCard.set(key, slugs);
+        }
+        if (titleVariation) {
+          // A grader-label stock word ("SP-CHROME") is the card's only where
+          // the checklist distinguishes chrome from paper.
+          const reduced = reduceVariationStockToCatalog(titleVariation, slugs);
+          if (reduced && reduced !== parsed.parallel) parsed.parallel = reduced;
+        } else {
+          const pick = pickVariationForMarker(parsed.variationMarker, slugs);
+          const name = pick ? variationNameFromSlug(pick) : null;
+          if (name) { parsed.parallel = name; result.variationFromMarker = (result.variationFromMarker ?? 0) + 1; }
+        }
+      }
     }
     if (identity.isAuto !== undefined && identity.isAuto !== null) parsed.isAuto = identity.isAuto;
     if (identity.printRun !== undefined && identity.printRun !== null) parsed.printRun = identity.printRun;

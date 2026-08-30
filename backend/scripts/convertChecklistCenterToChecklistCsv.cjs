@@ -122,6 +122,8 @@ function clean(raw) {
   return { name, note, printRun };
 }
 
+const { variationFinishOfSection, isVariationSection } = require("./lib/variationSections.cjs");
+
 const UMBRELLA = /(parallels?|factory set|retail|club set|variations?|short prints?|\bsps?\b|photo variations?|checklist)$/i;
 const CARD_LINE = /^\d+[a-z]?\s+[A-Za-z]/;
 const EXCLUSION = /^\(?\*?\s*no\b/i;
@@ -319,9 +321,48 @@ function sectionsOf(setValues, numbersOf = () => []) {
   const extensionsOf = (v) => values.filter((o) => o !== v && o.startsWith(v + " ")).length;
   const isHead = (v) => !endsInRung(v) || extensionsOf(v) >= 2;
   const split = (sv, section) => ({ section, finish: sv === section ? "" : sv.startsWith(section + " ") ? sv.slice(section.length + 1).trim() : sv });
+  // CF-A-VARIATION-IS-A-CARD (D22, Drew 2026-08-30: "image variations are
+  // typical in card sets, so we need to fix that"). A Set value that names a
+  // variation ("Image Variations", "Image Variations SuperFractor", "Base
+  // Golden Mirror Variations", "Etched in Glass Variations") is a VARIATION OF
+  // the section whose numbers hold all of its numbers — the plain card it
+  // varies — and its finish is the vocabulary's spelling, never blank and
+  // never "Base". Measured on 29 real pages: 101 variation (section|finish)
+  // keys, 30 of them emitted blank under an "insert:image-variations"
+  // category — the same id as the plain card, the collision the D3c residue
+  // named. The anchor is the value's own prefix section when it has one
+  // ("Etched in Glass" for "Etched in Glass Variations"), else Base, else the
+  // smallest containing section; with no containing section the value keeps
+  // the readings below (its own section, as before).
+  // The anchor is decided PER NUMBER: 2024 Bowman Chrome's "Image Variations"
+  // list rookies (Base, 1–100) and prospects (Chrome Prospects, BCP-) in one
+  // section, so each card folds onto the section that holds ITS number. A
+  // number no section holds keeps the value's own section, as before.
+  const numsCache = new Map();
+  const numsOf = (v) => { let n = numsCache.get(v); if (!n) { n = new Set(numbersOf(v).map(String)); numsCache.set(v, n); } return n; };
+  const plainValues = values.filter((v) => !isVariationSection(v));
+  const anchorForNumber = (sv, num) => {
+    const holds = (v) => v !== sv && numsOf(v).has(num);
+    const prefix = plainValues.filter((v) => holds(v) && sv.toLowerCase().startsWith(v.toLowerCase() + " ")).sort((a, b) => b.length - a.length)[0];
+    if (prefix) return prefix;
+    const base = plainValues.find((v) => /^base$/i.test(v) && holds(v));
+    if (base) return base;
+    return plainValues.filter(holds).sort((a, b) => numsOf(a).size - numsOf(b).size)[0] ?? null;
+  };
   for (const sv of values) {
     const w = wordsOf(sv);
     let section = null;
+    if (isVariationSection(sv)) {
+      const anchorByNum = new Map();
+      for (const num of numsOf(sv)) { const a = anchorForNumber(sv, num); if (a) anchorByNum.set(num, { section: a, finish: variationFinishOfSection(sv, a) ?? sv }); }
+      if (anchorByNum.size) {
+        const counts = new Map();
+        for (const { section: a } of anchorByNum.values()) counts.set(a, (counts.get(a) || 0) + 1);
+        const common = [...counts.entries()].sort((p, q) => q[1] - p[1])[0][0];
+        out.set(sv, { section: common, finish: variationFinishOfSection(sv, common) ?? sv, anchorByNum, own: anchorByNum.size < numsOf(sv).size ? { section: sv, finish: "" } : null });
+        continue;
+      }
+    }
     if (/^base(\s|$)/i.test(sv)) section = "Base";
     // a head ending in a rung word needs a ladder under it: "Black Gold" heads
     // Pink Foil / Blue Foil / Green Foil ..., while "Autographs Prizms Gold"
@@ -361,16 +402,28 @@ function sectionsOf(setValues, numbersOf = () => []) {
   return out;
 }
 
-function sectionSplit(setValue, sections) {
-  // sections: Set value -> { section, finish } (sectionsOf)
+function sectionSplit(setValue, sections, num = null) {
+  // sections: Set value -> { section, finish } (sectionsOf); a variation value
+  // carries `anchorByNum` (D22) — the section that holds THIS number — and
+  // `own` for numbers no plain section holds.
   const hit = sections instanceof Map ? sections.get(setValue) : null;
-  if (hit) return hit;
+  if (hit) {
+    if (num !== null && hit.anchorByNum) return hit.anchorByNum.get(String(num)) ?? hit.own ?? { section: hit.section, finish: hit.finish };
+    return { section: hit.section, finish: hit.finish };
+  }
   return { section: setValue, finish: "" };
 }
 
 function categoryOf(section) {
   const s = slugify(section);
   if (!s || /^(base|base-set|base-cards)$/.test(s)) return "base";
+  // CF-A-VARIATION-IS-A-CARD (D22). Bowman Draft's html pages name the base
+  // sets by stock — "Base Paper Set" (BD-) and "Base Chrome Set" (BDC-) —
+  // and both are the base set; the stock lives in the number prefix. Filed
+  // as inserts they minted no plain base row at all (2020 #BD-152 had ten
+  // bccp parallels and no base card), and a "Base Image Variation" could
+  // not anchor onto them.
+  if (/^base-(paper|chrome)$/.test(s)) return "base";
   return "insert:" + s;
 }
 
@@ -388,8 +441,20 @@ function convertHtml(html, product) {
   // nothing about a cross-join. The gate is per subset: a subset whose ladder
   // exceeds PAR_MAX rungs or whose card list exceeds NUM_MAX numbers is what a
   // roster-for-ladder mistake looks like, and only that subset is refused.
+  const plainTitle = (s) => s.title.replace(/^\d{4}\s+/, "").replace(/\s+(Set|Checklist)$/i, "").replace(/^[^-]*-\s*/, "");
+  const numsOf = (s) => new Set(s.cards.map((c) => c.num));
   for (const sub of subsets) {
-    const category = sub.category ?? categoryOf(sub.title.replace(/^\d{4}\s+/, "").replace(/\s+(Set|Checklist)$/i, "").replace(/^[^-]*-\s*/, ""));
+    let category = sub.category ?? categoryOf(plainTitle(sub));
+    // CF-A-VARIATION-IS-A-CARD (D22). A subset titled "Base Image Variation
+    // Set" / "Base Golden Mirror Image Variation" / "Image Variations" is the
+    // VARIATION of the subset whose numbers hold all of its numbers (Base
+    // first), and every one of its rows carries that finish — 2020 Bowman
+    // Draft emitted these as `insert:base-image-variation` with a blank
+    // parallel, the plain card's own id. "… Auto" on the title is the flag.
+    const variationFinish = (variationFinishOfSection(plainTitle(sub)) ?? "").replace(/\s+(auto|autos|autograph|autographs)$/i, "").trim() || null;
+    const plainSubsets = subsets.filter((o) => o !== sub && !isVariationSection(plainTitle(o)));
+    const anchorFor = (num) => plainSubsets.find((o) => /^base(\s|$)/i.test(plainTitle(o)) && numsOf(o).has(num))
+      ?? plainSubsets.filter((o) => numsOf(o).has(num)).sort((a, b) => numsOf(a).size - numsOf(b).size)[0] ?? null;
     const isAuto = /\b(auto|autograph|signature)/i.test(sub.title) ? "true" : "false";
     const rungs = sub.ladders.flatMap((l) => l.rungs);
     const subPars = new Set(rungs.map((r) => r.name)), subNums = new Set(sub.cards.map((c) => c.num));
@@ -401,8 +466,12 @@ function convertHtml(html, product) {
     for (const r of rungs) pars.add(r.name);
     for (const c of sub.cards) {
       nums.add(c.num);
-      rowsOut.push([category, c.num, category === "base" ? "Base" : "", isAuto, "", c.player, ""]);
-      for (const r of rungs) { rowsOut.push([category, c.num, r.name, isAuto, r.printRun ?? "", c.player, r.note ?? ""]); ladderRows++; }
+      // a variation subset's card sits on the subset that holds ITS number
+      const anchor = variationFinish ? anchorFor(c.num) : null;
+      const cat = anchor ? (anchor.category ?? categoryOf(plainTitle(anchor))) : category;
+      const finish = anchor ? variationFinish : null;
+      rowsOut.push([cat, c.num, finish ?? (cat === "base" ? "Base" : ""), isAuto, "", c.player, ""]);
+      for (const r of rungs) { rowsOut.push([cat, c.num, finish ? `${finish} ${r.name}` : r.name, isAuto, r.printRun ?? "", c.player, r.note ?? ""]); ladderRows++; }
     }
     if (category === "base") baseEmitted = true;
   }
@@ -469,10 +538,10 @@ function convertXlsx(rows2d, product) {
   // (section, num) -> { player, category, finishes: [{ name, note, printRun }] }
   const byCard = new Map();
   for (const [sv, cards] of x.bySet) {
-    const { section, finish } = sectionSplit(sv, sections);
-    const category = categoryOf(section);
-    const sectionAuto = /\b(auto|autograph|signature)/i.test(section);
     for (const c of cards) {
+      const { section, finish } = sectionSplit(sv, sections, c.num);
+      const category = categoryOf(section);
+      const sectionAuto = /\b(auto|autograph|signature)/i.test(section);
       const key = section + "\u0000" + c.num;
       const card = byCard.get(key) ?? { section, category, sectionAuto, num: c.num, player: c.player, finishes: [] };
       if (finish) { const { name, note, printRun } = clean(finish); card.finishes.push({ name, note, printRun: printRun ?? c.printRun ?? null }); }
@@ -510,7 +579,7 @@ function convertXlsx(rows2d, product) {
       let name = r.name;
       // "Set - Concourse - Gold Prizms" minus its qualifier "Set - Concourse" is
       // "Gold Prizms", not "- Gold Prizms": the separator goes with it.
-      if (qualifier) name = name === qualifier ? "" : name.startsWith(qualifier + " ") ? name.slice(qualifier.length + 1).replace(/^[-\u2013\u2014:]\s*/, "") : name;
+      if (qualifier && !isVariationSection(name)) name = name === qualifier ? "" : name.startsWith(qualifier + " ") ? name.slice(qualifier.length + 1).replace(/^[-\u2013\u2014:]\s*/, "") : name;
       let isAuto = card.sectionAuto || (qualifier ? /\b(auto|autograph|signature)/i.test(qualifier) : false);
       if (AUTO_RX.test(name)) { isAuto = true; name = name.replace(AUTO_RX, "").trim(); }
       // a finish that is only the auto word ("2023 Greatest Hits Autographs"

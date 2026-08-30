@@ -29,7 +29,7 @@
 // and the 2026-07-15 audit that catalogued the 9 median-as-FMV sites this
 // helper replaces.
 
-import { computeSlopeValuation } from "./slopeValuation.js";
+import { computeSlopeValuation, fitLinearRegression } from "./slopeValuation.js";
 
 export interface DatedComp {
   /** Realized sale price. Non-positive / non-finite values are dropped. */
@@ -350,4 +350,130 @@ function round2(v: number): number {
 
 function round1(v: number): number {
   return Math.round(v * 10) / 10;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CF-THE-PROJECTION-IS-THE-LEADING-EDGE (D22, Drew 2026-08-30).
+//
+// Holding deced7d3 — 2025 Bowman Draft Max Williams CPA-MWI Refractor auto,
+// raw. Sales by week: May $11–25, June $10.51, July $12–15, Aug-w1 $30, Aug-w2
+// $19.50–21, Aug-w3 TEN sales at $25–38 (median $30, last $38). The persisted
+// value was $18.74 `exact-pool-projection`, basis "window=60d n=29 median=$14
+// trend=up 12.1%/wk": branch 1 above fits an ordinary least-squares line over
+// the whole window, and an OLS line passes through the WINDOW's centroid — the
+// mean price at the mean date, five weeks back on this card — so the slope had
+// to carry a $14-era level forward and never reached the market that had just
+// paid $25–38 ten times. A "projected next sale" below every one of the last
+// ten sales is the median wearing a trend's name.
+//
+// This projection is anchored on the leading edge instead:
+//
+//   anchor  the pool's recency-weighted median (HALF_LIFE-day decay, the same
+//           weights the engine already uses) — the newest sales carry it;
+//   from    the anchor's own time: the recency-weighted mean age of the pool
+//           (on Max Williams ~13 days back, not ~35);
+//   slope   the window's OLS trend in $/day (the signal branch 1 reported all
+//           along), applied ONLY forward from there to now (+ forwardDays).
+//
+// So the level is where the market is trading now and the trend moves it
+// forward from there — never from a stale median. The guards branch 1 earned
+// stay: the newest-sale ±25% band (CF-CAP-ANCHOR-IS-THE-LAST-SALE) and the
+// slope sanity cap (CF-SLOPE-SANITY-CAP — an insane fit is no trend, the
+// anchor stands). Nothing here is a median AS the value: the anchor is the
+// level the projection starts from, exactly as the OLS centroid was.
+//
+// Branch 1 (`projectNextSaleFromComps`) is left as it was for the gated
+// fallback ladder's own rungs; the unified engine — the one valuation path —
+// uses this.
+
+const LEADING_EDGE_HALF_LIFE_DAYS = 14;
+const LEADING_EDGE_NEWEST_BAND_PCT = 0.25;
+const LEADING_EDGE_SLOPE_SANITY_PCT_PER_MONTH = 300;
+
+export interface LeadingEdgeProjection {
+  /** The projected sale at now + forwardDays. Positive, finite. */
+  nextSaleValue: number;
+  /** The recency-weighted median the projection is anchored on. */
+  anchorPrice: number;
+  /** How far back the anchor sits: the recency-weighted mean age, in days. */
+  anchorAgeDays: number;
+  /** The window's OLS trend, $/day (0 when no fit or an insane one). */
+  slopePerDay: number;
+  /** The same trend as % of the anchor per month. */
+  slopePerMonthPct: number;
+  /** Priced, dated sales the projection read. */
+  n: number;
+  /** The newest sale's price (the band's anchor). */
+  newestPrice: number;
+  /** Days since the newest sale. */
+  newestAgeDays: number;
+  /** Whether the newest-sale band clipped the value. */
+  cap: "none" | "newest-band";
+  /** Why there is no trend when slopePerDay is 0. */
+  slopeNote: "fit" | "no-fit" | "insane-fit";
+}
+
+export function projectFromLeadingEdge(
+  comps: ReadonlyArray<DatedComp>,
+  opts: { nowMs?: number; forwardDays?: number; halfLifeDays?: number } = {},
+): LeadingEdgeProjection | null {
+  const nowMs = opts.nowMs ?? Date.now();
+  const forwardDays = opts.forwardDays ?? 0;
+  const halfLife = opts.halfLifeDays ?? LEADING_EDGE_HALF_LIFE_DAYS;
+  const dated = (comps ?? [])
+    .filter((c) => Number.isFinite(c.price) && c.price > 0 && typeof c.soldDate === "string" && c.soldDate.length > 0)
+    .map((c) => ({ price: c.price, tMs: Date.parse(c.soldDate as string) }))
+    .filter((p) => Number.isFinite(p.tMs))
+    .sort((a, b) => a.tMs - b.tMs);
+  if (dated.length === 0) return null;
+
+  // The anchor: recency-weighted median, and its own time.
+  const weighted = dated.map((p) => {
+    const ageDays = Math.max(0, (nowMs - p.tMs) / MS_PER_DAY);
+    return { price: p.price, ageDays, w: Math.exp(-ageDays / halfLife) };
+  });
+  const totalW = weighted.reduce((s, r) => s + r.w, 0);
+  if (!(totalW > 0)) return null;
+  const byPrice = [...weighted].sort((a, b) => a.price - b.price);
+  let cum = 0;
+  let anchorPrice = byPrice[byPrice.length - 1].price;
+  for (const r of byPrice) { cum += r.w; if (cum >= totalW / 2) { anchorPrice = r.price; break; } }
+  const anchorAgeDays = weighted.reduce((s, r) => s + r.w * r.ageDays, 0) / totalW;
+
+  // The trend: the window's OLS slope, $/day, sanity-capped.
+  const reg = fitLinearRegression(dated);
+  let slopePerDay = reg ? reg.slope * MS_PER_DAY : 0;
+  let slopeNote: LeadingEdgeProjection["slopeNote"] = reg ? "fit" : "no-fit";
+  let slopePerMonthPct = anchorPrice > 0 ? (slopePerDay * 30 / anchorPrice) * 100 : 0;
+  if (Math.abs(slopePerMonthPct) > LEADING_EDGE_SLOPE_SANITY_PCT_PER_MONTH) {
+    slopePerDay = 0; slopePerMonthPct = 0; slopeNote = "insane-fit";
+  }
+
+  // Forward from the anchor's time to now (+ forwardDays).
+  let value = anchorPrice + slopePerDay * (anchorAgeDays + forwardDays);
+
+  // The band: never more than 25% from the newest sale, and never on the
+  // wrong side of it (CF-CAP-ANCHOR-IS-THE-LAST-SALE).
+  const newest = dated[dated.length - 1];
+  const newestPrice = newest.price;
+  const newestAgeDays = Math.max(0, (nowMs - newest.tMs) / MS_PER_DAY);
+  const high = Math.max(newestPrice * (1 + LEADING_EDGE_NEWEST_BAND_PCT), newestPrice);
+  const low = Math.min(newestPrice * (1 - LEADING_EDGE_NEWEST_BAND_PCT), newestPrice);
+  let cap: LeadingEdgeProjection["cap"] = "none";
+  if (value > high) { value = high; cap = "newest-band"; }
+  if (value < low) { value = low; cap = "newest-band"; }
+  if (!(value > 0)) value = Math.max(0.01, anchorPrice);
+
+  return {
+    nextSaleValue: round2(value),
+    anchorPrice: round2(anchorPrice),
+    anchorAgeDays: Math.round(anchorAgeDays * 10) / 10,
+    slopePerDay: Math.round(slopePerDay * 10000) / 10000,
+    slopePerMonthPct: round1(slopePerMonthPct),
+    n: dated.length,
+    newestPrice: round2(newestPrice),
+    newestAgeDays: Math.round(newestAgeDays * 10) / 10,
+    cap,
+    slopeNote,
+  };
 }

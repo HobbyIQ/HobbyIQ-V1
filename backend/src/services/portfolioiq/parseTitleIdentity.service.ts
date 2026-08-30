@@ -41,6 +41,7 @@
 // classifyTcg — the same pure classifier the ingest path already uses, so the
 // two cannot disagree.
 import { classifyTcg } from "./tcgVertical.service.js";
+import { canonicalVariationName, readVariationFromTitle, type VariationMarker } from "../catalog/variationVocabulary.js";
 
 /** TCG `POS/TOTAL` card number, e.g. "008/132". Position CAN exceed the total
  *  (secret/hyper rares are numbered above set size), so only the <=400 bound
@@ -74,6 +75,11 @@ export interface ParsedListingIdentity {
    *  "PSA 10 GEM MINT" etc. — extracted from title. Null when raw. */
   gradeCompany: "PSA" | "BGS" | "SGC" | "CGC" | "HGA" | null;
   gradeValue: number | null;
+  /** CF-A-VARIATION-IS-A-CARD (D22). A weak variation marker the title
+   *  carries WITHOUT naming a variation — bare "SP", "SSP", "Short Print",
+   *  or a standalone "IV" out of context. The seam corroborates it against
+   *  the product's checklist; this parser never guesses. */
+  variationMarker: VariationMarker | null;
 }
 
 // CF-GRADE-FROM-TITLE (Drew, 2026-08-01). Matches:
@@ -292,9 +298,24 @@ export function parseListingIdentity(
   // sellers use CH's slab-derived title).
   const isAuto = extractIsAuto(t) || isCardNumberAutoSubset(cardNumber);
   const grade = extractGradeFromTitle(t);
+  // CF-A-VARIATION-IS-A-CARD (D22). The variation family is read by the one
+  // vocabulary; a named variation is the finish ("Image Variation", "Golden
+  // Mirror Variation", the label form "Image Variation Chrome"), composed
+  // ahead of any colour / refractor the title also names ("Image Variation
+  // Gold Speckle Refractor"); a weak marker rides along for the seam.
+  const variation = readVariationFromTitle(t.toLowerCase());
+  const finish = extractParallel(t);
+  // The whitelist below already names some variations verbatim ("Chrome-Image
+  // Variation"); that spelling is more specific than the family read and is
+  // kept — the slug layer speaks the vocabulary either way.
+  const parallel = variation.finish
+    ? (canonicalVariationName(finish) ? finish
+      : finish && !/^base$/i.test(finish) && !/^refractor$/i.test(finish) ? `${variation.finish} ${finish}` : variation.finish)
+    : finish;
   return {
     cardNumber,
-    parallel: extractParallel(t),
+    parallel,
+    variationMarker: variation.finish ? null : variation.marker,
     isAuto,
     printRun: extractPrintRun(t, isTcg),
     autoStyle: isAuto ? extractAutoStyle(t) : null,

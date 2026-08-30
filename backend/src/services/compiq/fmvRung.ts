@@ -28,16 +28,27 @@ import type { HobbyIqFmvMethod } from "../portfolioiq/hobbyIqFmv.service.js";
 
 /** Rungs that read the exact (identity, grade) pool, by aggregation. */
 export type ExactPoolRungLabel =
-  /** Regression fit over the exact pool, evaluated at now (n >= 8 in
-   *  unified, n >= 3 in canonical / hobbyIqFmv). The doctrine rung. */
+  /** The trend projection over the exact pool, evaluated at now (n >= 8 in
+   *  unified, n >= 3 in canonical / hobbyIqFmv). The doctrine rung. D22
+   *  (CF-THE-PROJECTION-IS-THE-LEADING-EDGE): in unified the level is the
+   *  recency-weighted leading edge at its own time and the window's trend
+   *  moves it forward from there — never from the window's median. */
   | "exact-pool-projection"
-  /** Newest exact sale, drift-adjusted by the broader trend since it sold
-   *  (canonical / hobbyIqFmv when n < 3 — too thin to fit). */
+  /** Newest exact sale: canonical / hobbyIqFmv when n < 3 (drift-adjusted
+   *  by the broader trend since it sold); unified when the widest window
+   *  holds exactly ONE sale, or when one sale carries a thin window and
+   *  disagrees with its leading edge under ONE_SALE_WINDOW_POLICY=last-sale
+   *  — the default, Drew's ruling: the latest sale is the market (D22). */
   | "exact-pool-last-sale"
-  /** Median of the newest three exact sales (unified, 4 <= n < 8). */
+  /** Median of the newest three exact sales (unified, 4 <= n < 8) — and,
+   *  since D22, the widest window's leading edge (newest <= 3) when a thin
+   *  window's one carrying sale disagrees with it under the named
+   *  alternative ONE_SALE_WINDOW_POLICY=widen (off). */
   | "exact-pool-leading-edge"
   /** Recency-weighted median of the exact pool (unified, n < 4 — the last
-   *  resort; the basis note already exposes it). */
+   *  resort; the basis note already exposes it). Since D22 it stands only
+   *  when no single sale carries the window, or the carrying sale agrees
+   *  with the leading edge. */
   | "exact-pool-weighted-median"
   /** Plain median of the exact pool (hobbyIqFmv's belt-and-braces branch
    *  when the projection returns nothing — logged when it fires). */

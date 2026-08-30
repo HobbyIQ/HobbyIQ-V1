@@ -23,6 +23,7 @@ const fs = require("fs");
 const path = require("path");
 const cheerio = require("cheerio");
 
+const { variationFinishOfSection } = require("./lib/variationSections.cjs");
 const BCP_URL = process.env.BCP_URL;
 if (!BCP_URL) { console.error("BCP_URL required"); process.exit(2); }
 
@@ -220,7 +221,13 @@ async function main() {
     // Skip parallels-only sections entirely (they're metadata, not new
     // card entries; the same cardNumbers appear in the Base Set section)
     if (/\bparallels?\b/.test(joined)) continue;
-    if (/\bbase\s*set\b/.test(joined)) category = "base";
+    // CF-A-VARIATION-IS-A-CARD (D22). A "Variations" / "Image Variations" /
+    // "SP Variations" heading lists the base set's variations: the same
+    // numbers, a different card. It is a base-category section whose rows
+    // carry the variation finish — never "Base", never skipped.
+    const variationFinish = variationFinishOfSection(leaf);
+    if (variationFinish) category = "base";
+    else if (/\bbase\s*set\b/.test(joined)) category = "base";
     else if (/\bpromotional?\b|\bpromo\b/.test(joined)) category = `insert-promo`;
     else if (/\binserts?\b/.test(joined)) category = `insert-${slugify(leaf)}`;
     else if (/\bautographs?\b|\bauto\b/.test(joined)) category = `auto-${slugify(leaf)}`;
@@ -235,7 +242,7 @@ async function main() {
       rows.push({
         category,
         cardNumber: n,
-        parallel: "Base",
+        parallel: variationFinish ?? "Base",
         isAuto: category.startsWith("auto-") ? "true" : "false",
         printRun: printRun ?? "",
         player: p.replace(/,/g, ""),

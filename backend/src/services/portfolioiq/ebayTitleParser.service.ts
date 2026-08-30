@@ -113,6 +113,8 @@ const INSERT_TOKENS: readonly string[] = [
 // exceptions are market shorthand, not inference: "True Blue" IS "Blue
 // Refractor" (card-lingo-glossary §1), and "Ref" IS "Refractor".
 
+import { readVariationFromTitle, type VariationMarker } from "../catalog/variationVocabulary.js";
+
 type FinishKind = "colour" | "pattern" | "sapphire" | "family";
 
 interface FinishToken {
@@ -368,6 +370,12 @@ export interface ParsedListingTitle {
    *  Null when the title states none. Optional so existing callers that
    *  build this shape by hand keep compiling. */
   printRun?: number | null;
+  /** CF-A-VARIATION-IS-A-CARD (D22). A weak variation marker the title
+   *  carries WITHOUT naming a variation — bare "SP", "SSP", "Short Print",
+   *  or a standalone "IV" out of context. The seam corroborates it against
+   *  the product's checklist (pickVariationForMarker); the parser never
+   *  guesses. Null when the title names the finish outright or has none. */
+  variationMarker?: VariationMarker | null;
   /** [0.0, 1.0]. See scoreParse() for weights. */
   parseConfidence: number;
 }
@@ -465,6 +473,7 @@ export function parseListingTitle(input: string | null | undefined): ParsedListi
     isRookie,
     isAuto,
     printRun,
+    variationMarker: finish.variationMarker,
     parseConfidence,
   };
 }
@@ -533,8 +542,19 @@ function spellFractor(text: string): string {
  * ONE family word. Also returns the title words consumed, so the player-name
  * extractor never reads "Gold" or "Wave" as a name.
  */
-function composeParallel(normalized: string): { parallel: string | null; words: string[] } {
-  const hits = scanFinishTokens(normalized);
+function composeParallel(normalized: string): { parallel: string | null; words: string[]; variationMarker: VariationMarker | null } {
+  // CF-A-VARIATION-IS-A-CARD (D22). The variation family is read first and
+  // its span blanked before the finish scan, so "Black & White Variation" is
+  // the named kind and never also the colours Black and White. A finish the
+  // title names beside it ("Image Variation Gold Speckle Refractor") is
+  // composed after the variation name.
+  const variation = readVariationFromTitle(normalized);
+  let scanText = normalized;
+  for (const c of variation.consumed) {
+    const idx = scanText.indexOf(c);
+    if (idx >= 0) scanText = scanText.slice(0, idx) + " ".repeat(c.length) + scanText.slice(idx + c.length);
+  }
+  const hits = scanFinishTokens(scanText);
   const modifiers: string[] = [];
   const families: string[] = [];
   let hasColour = false;
@@ -566,7 +586,10 @@ function composeParallel(normalized: string): { parallel: string | null; words: 
   const parts = family === "Printing Plate"
     ? ["Printing Plate", ...modifiers]              // "Printing Plate Black"
     : [...modifiers, ...sapphire, ...(family ? [family] : [])];
-  return { parallel: parts.length > 0 ? parts.join(" ") : null, words };
+  if (variation.finish) {
+    return { parallel: [variation.finish, ...parts].join(" "), words: [...words, ...variation.words], variationMarker: null };
+  }
+  return { parallel: parts.length > 0 ? parts.join(" ") : null, words, variationMarker: variation.marker };
 }
 
 function extractPrintRun(raw: string): number | null {

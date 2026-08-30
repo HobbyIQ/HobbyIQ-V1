@@ -889,7 +889,8 @@ jobs:
           # resumes exactly where the rows still disagree -- nothing is re-patched.
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (repaired=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} mode=${{ inputs.mode }} to continue"
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-parallel-from-title -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}"
+            # D22: the mode (colours / refractor / variation / product), the sources and the scope travel with the slot.
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-parallel-from-title -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sources="${{ inputs.sources }}" -f scope="${{ inputs.scope }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (repaired=${N:-0}) — done, no re-dispatch."
           fi

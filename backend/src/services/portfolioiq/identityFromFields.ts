@@ -17,10 +17,13 @@
 import {
   canonicalize as canonicalizeReal,
   resolveCardNumberByPlayer as resolveCardNumberByPlayerReal,
+  variationParallelsForCard as variationParallelsForCardReal,
   type CatalogMatchInput,
   type CatalogMatchResult,
   type CatalogMatchSource,
 } from "../catalog/catalogMatcher.service.js";
+import { canonicalVariationName, reduceVariationStockToCatalog } from "../catalog/variationVocabulary.js";
+import { normalizeSetKey } from "./hobbyIqCardId.service.js";
 
 export interface IdentityFields {
   /** Slug namespace. The caller decides (sheet column, product inference, a default). */
@@ -50,6 +53,12 @@ export interface IdentityFromFields {
   skippedReason: IdentitySkippedReason | null;
   /** The matcher's answer. Null when skipped. */
   match: CatalogMatchResult | null;
+  /** CF-A-VARIATION-IS-A-CARD (D22). The parallel the matcher was asked with
+   *  when the row's own said a variation another way ("SP-CHROME" from a
+   *  grader label, "Photo Variations", "SSP") — the vocabulary's spelling,
+   *  with a label's stock word kept only where the product's checklist
+   *  distinguishes chrome from paper. Null when the parallel stood as given. */
+  parallelResolvedAs: string | null;
 }
 
 /** Injection seam for tests -- the two catalog reads this derivation performs. */
@@ -62,11 +71,15 @@ export interface IdentityFromFieldsDeps {
     isAuto: boolean;
     parallel?: string | null;
   }) => Promise<{ cardNumber: string | null; candidates: string[] }>;
+  /** D22: the catalog's variation rows for a card (parallel slugs), asked
+   *  only when the row's parallel names a variation with a stock word. */
+  variationParallelsForCard?: (input: { sport: string; year: number; setKey: string; cardNumber: string }) => Promise<string[]>;
 }
 
 const DEFAULT_DEPS: IdentityFromFieldsDeps = {
   canonicalize: canonicalizeReal,
   resolveCardNumberByPlayer: resolveCardNumberByPlayerReal,
+  variationParallelsForCard: variationParallelsForCardReal,
 };
 
 const str = (v: unknown): string => String(v ?? "").trim();
@@ -101,7 +114,14 @@ export async function resolveIdentityFromFields(
   const year = typeof f.year === "number" && Number.isFinite(f.year) && f.year > 0 ? f.year : null;
   const setName = str(f.setName);
   const player = str(f.player);
-  const parallel = str(f.parallel) || null;
+  // CF-A-VARIATION-IS-A-CARD (D22). A holding's parallel that names a
+  // variation any way sellers and grader labels do — "Photo Variations",
+  // "SSP", "SP-CHROME" — is asked of the catalog in the vocabulary's one
+  // spelling, so the holding CAN be the variation through the field it has.
+  const given = str(f.parallel) || null;
+  const variation = canonicalVariationName(given);
+  let parallel = variation ?? given;
+  let parallelResolvedAs: string | null = variation && variation !== given ? variation : null;
   let cardNumber = str(f.cardNumber);
   let cardNumberResolvedBy: IdentityFromFields["cardNumberResolvedBy"] = null;
   let cardNumberCandidates: string[] = [];
@@ -128,7 +148,18 @@ export async function resolveIdentityFromFields(
       cardNumberCandidates,
       skippedReason: !cardNumber ? "no-card-number" : !year ? "no-year" : "no-set",
       match: null,
+      parallelResolvedAs,
     };
+  }
+
+  // A grader label's stock word ("SP-CHROME") is the card's only where the
+  // product's checklist distinguishes chrome from paper; otherwise the
+  // plain variation is the card, and the label's word would only miss it.
+  if (variation && /\b(?:chrome|paper)\b/i.test(variation) && deps.variationParallelsForCard) {
+    let slugs: string[] = [];
+    try { slugs = await deps.variationParallelsForCard({ sport: f.sport, year, setKey: normalizeSetKey(setName), cardNumber }); } catch { slugs = []; }
+    const reduced = reduceVariationStockToCatalog(variation, slugs);
+    if (reduced && reduced !== parallel) { parallel = reduced; parallelResolvedAs = reduced; }
   }
 
   const match = await deps.canonicalize({
@@ -142,5 +173,5 @@ export async function resolveIdentityFromFields(
     player: player || null,
     source: f.source,
   });
-  return { cardNumber, cardNumberResolvedBy, cardNumberCandidates, skippedReason: null, match };
+  return { cardNumber, cardNumberResolvedBy, cardNumberCandidates, skippedReason: null, match, parallelResolvedAs };
 }

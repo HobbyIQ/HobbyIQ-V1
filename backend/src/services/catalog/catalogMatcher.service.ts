@@ -697,6 +697,31 @@ export async function catalogSlugIfExists(slug: string): Promise<string | null> 
   return null;
 }
 
+/**
+ * CF-A-VARIATION-IS-A-CARD (D22). The catalog's variation rows for one card
+ * — the parallel slugs only — so a seam can corroborate a weak title marker
+ * ("SP", "SSP", "IV", "Short Print") against the product's own checklist.
+ * Empty when the container is unavailable or the read throws.
+ */
+export async function variationParallelsForCard(input: { sport: string; year: number; setKey: string; cardNumber: string }): Promise<string[]> {
+  const container = await getContainer();
+  if (!container) return [];
+  try {
+    const { resources } = await container.items.query<{ id: string; parallelSlug?: string }>({
+      query: "SELECT c.id, c.parallelSlug FROM c WHERE c.sport = @s AND c.year = @y AND c.setKey = @k AND c.cardNumber = @n AND CONTAINS(c.parallelSlug, 'variation') OFFSET 0 LIMIT 50",
+      parameters: [
+        { name: "@s", value: String(input.sport).toLowerCase() },
+        { name: "@y", value: input.year },
+        { name: "@k", value: input.setKey },
+        { name: "@n", value: String(input.cardNumber).toUpperCase() },
+      ],
+    }).fetchAll();
+    return (resources ?? []).map((r) => String(r.parallelSlug ?? parallelSegmentOf(r.id) ?? "")).filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
 export async function lookupCatalogPlayerName(
   year: number | null | undefined,
   setKey: string | null | undefined,
