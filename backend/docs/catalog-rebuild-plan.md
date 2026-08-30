@@ -2416,11 +2416,92 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
     through catalogRowOps over the ≈1.2M disagreeing rows with sales and
     holdings re-pointed; then `audit-source-coverage` → the old-CLC
     duplicate retire (Drew's go) → D21 → D24 → D25.
+    **Order after D23 (Drew, 05:05Z 08-30): D28 → D26 → D21 → D24 → D25.**
+    **D28 — the card number is never a grade, a print run, a year, an
+    ordinal, or a lot (RULED: right after D23).** Harrison's Ohtani
+    (`user-67878bb5` / `2925db74`, "2018 Topps Chrome Refractor PSA 10",
+    pitching = the standard #150 Refractor) sat on
+    `hiq:baseball:2018:topps-chrome:9:refractor:no-auto` — a nameless bccp
+    row at **#9** — and priced from a Paul DeJong 1983 35th Anniversary
+    Refractor #83T-22 and an Ohtani 1983 Topps Refractor #83T-6, both keyed
+    to "#9" because the number was lifted from **"PSA 9"** when the parser
+    could not read `83T-22`/`83T-6`. Measured in sold_comps (16.14M rows)
+    04:40Z: grade digit as the number (cardNumber ∈ {8,9,10} with a
+    "<PSA|BGS|SGC|CGC> n" token and no "#n") **43,224** (upper bound — a
+    real #9 graded PSA 9 also matches; cardhedge 28,706 / tca-ebay 14,463;
+    **24,383 written in the last 24h — the defect is live**); print run as
+    the number (cardNumber contains "/") **25,093** (tca-ebay 18,679 /
+    cardhedge 6,411; 18,026 in the last 7d) plus ≈1,950 where the bare
+    print-run value became the number; "1st" → #1 **1,334**; LOT → #2
+    **79**; a "#" in the title the parser never read **754**; catalog rows
+    whose cardNumber equals the year **1,319** (e.g.
+    `topps-chrome:2018:gold-refractor`); 9,047 checklist rows with
+    **"Base Cards" glued into the parallel name** (cardboardchecklist 8,858 /
+    beckett 189) — why 2018 Topps Chrome #150 has
+    `150:base-cards-refractor:no-auto` and no `150:refractor:no-auto`.
+    Code: `parseTitleIdentity.service.ts` already guards graders
+    (CF-A-GRADE-IS-NOT-A-CARD-NUMBER, 08-24) so the live writers are
+    elsewhere — `chRowToSoldComp.ts` takes `row.number` from CardHedge
+    verbatim, and the tca-ebay path has its own derivation; the strict
+    measure (title states a different explicit "#X") timed out at 10 min
+    and is the builder's first number. Spec:
+    `docs/d28-card-number-integrity-spec.md`. Deliverables: guards on
+    every emitter (a number is never a grader digit, a "/N", a year, "1st",
+    or a lot count; an explicit "#X" always wins), a re-key pass for the
+    mis-keyed sales through `relocate-sold-comp`, the base-cards clean
+    (`base-cards-<x>` → `<x>`) through catalogRowOps, the year-as-number
+    catalog rows retired, then Harrison's holding ruled to
+    `hiq:baseball:2018:topps-chrome:150:refractor:no-auto`.
+    **D26 — eBay account sync resolves every sale to a card (RULED 04:05Z;
+    after D28).** Measured: the hourly in-process poll
+    (`jobs/ebayOrderPoll.job.ts`) runs — its last cycle read `users=8
+    orders=29 matched=0 noMatch=29 fetchFail=2 cursorsAdvanced=0`; 5,821
+    `ebay_poll_no_matching_holding` events in 3 days across 4 users
+    because a sold line item matches ONLY a holding carrying our listing id
+    (`findHoldingByEbayListingIdAcrossUsers`), and with nothing matched the
+    cursor never advances — the same 29 orders are re-fetched every hour.
+    Ruling: each sold line resolves to a catalog card from its eBay title +
+    item specifics through the matcher the import uses (≥ 0.9 auto-links;
+    below parks for the user's confirm); the sale is written to the pool
+    under that identity (source `ebay-account`); when the seller holds
+    that card the holding is marked sold; the cursor advances on every
+    processed order; expired tokens surface a "reconnect eBay" state. Spec:
+    `docs/d26-ebay-account-sync-spec.md`.
+    **D27 — VERIFIED means a checklist-backed card (merged #1537, deploy #10
+    `6561893`).** Drew's screenshot (03:50Z): the PSA 9 Gillen sat on the
+    same checklist row as the raw one and read UNVERIFIED — the chip was the
+    manual Confirm-gate flag alone. Ruling: VERIFIED whenever the identity
+    resolves to a checklist-backed catalog row, by Confirm, import, the
+    conform sweep, or a ruling; UNVERIFIED only when fuzzy/parked; Confirm
+    stays as the override. `stampChecklistBackedIdentity` (tested) after a
+    confident pin in add/update; the conform sweep stamps holdings on
+    checklist rows (APPLY 33290995633 succeeded after the merge); the
+    rulings path stamps; reconciliation = holdings patched. Also merged
+    tonight: **#1536** the Gain-$ / cost / return sorts order by the number
+    the row shows (`holdingCost`/`holdingGain`); **#1534** the rulings path
+    (fs/retry) — rulings APPLY 33290006435 wrote 3 = 3 (Ohtani → Topps
+    Chrome Update; Antunez, Arias → Bowman); **#1535 + #1538**
+    `purge-unaddressable-catalog-rows` — 81,714 card_catalog rows whose id
+    carries '/' (old `card::`/`variant::` ids with a print run parsed as
+    the card number; bccp 69,341 · tree-builder-v1 8,294 · pool 4,079; 0
+    holdings point at them; the SDK cannot address them) are deleted by
+    `_self` through a stored procedure, sharded by partition key,
+    `PURGE_SOURCES` allowlist, a holdings guard that WALKS the holdings map
+    (`JOIN h IN c.holdings` iterates nothing on a map — #1538), budget
+    marker, reconciled. Dry 33290356725 (slot 0/8): 10,467 rows in 1,070
+    partitions, 0 refused. **Drew: GO (05:05Z) — his dispatch.**
 - ~~A single fresh sale carrying the number~~ **RULED KEEP (19:50Z 08-30): "Keep — the latest sale is the market."** D22's `ONE_SALE_WINDOW_POLICY` default is `last-sale` (Gillen $729 under `exact-pool-last-sale`); `widen` (n ≥ 2 before the window wins; $489.50) is the named alternative, off.
 - **A single fresh sale carrying the number — original note:** Gillen Blue Refractor /150 —
   project); or cap a one-sale window's move against the prior window.
 
 ## NEEDS DREW (not code)
+
+- **Purge the 81,714 unaddressable catalog rows — RULED GO 05:05Z, Drew's
+  hand (classifier):**
+  `gh workflow run backfill-runner.yml -f script=purge-unaddressable-catalog-rows -f apply=true -f slot=N -f slots=8`
+  for N = 0…7. Each slot relaunches itself on the budget marker; the
+  summary prints PURGED / refused (source) / refused (held) / failed / not
+  reached and reconciles.
 
 - **Process (Drew, 21:40Z): decisions are sent as answerable question widgets
   (options + recommendation, ≤ 4 per round), never as a prose list; this
