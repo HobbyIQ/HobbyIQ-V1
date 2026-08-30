@@ -13,6 +13,9 @@
  *   MODE=months  the whole pool, one `_ts` month per query, oldest to newest.
  *                MONTHS=6 walks the last six; MONTHS=0 walks every month back
  *                to SINCE (default 2018-01).
+ *   MODE=catalog-year  card_catalog rows whose cardNumber IS the set year --
+ *                by SOURCE and by AUTHORITY, because a checklist-backed one is
+ *                a converter bug to fix and a vendor one is a retire.
  *   MODE=shapes  re-runs the spec's shape table (grade digit / slash / bare
  *                print run / 1st / LOT / hash-with-no-number) so before and
  *                after are the same measurement.
@@ -31,6 +34,7 @@
 const path = require("path");
 const crypto = require("crypto");
 const { CosmosClient } = require("@azure/cosmos");
+const { catalogAuthorityOf } = require(path.join(__dirname, "..", "dist", "services", "catalog", "catalogAuthority.service.js"));
 const { judgeCardNumber, explicitTitleCardNumber, isTcgVertical } =
   require(path.join(__dirname, "..", "dist", "services", "portfolioiq", "cardNumberIntegrity.js"));
 
@@ -173,7 +177,7 @@ async function main() {
       ["grade digit", `${SELECT} WHERE c.cardNumber IN ('8','9','10') AND IS_DEFINED(c.title)`],
       ["slash in cardNumber", `${SELECT} WHERE CONTAINS(c.cardNumber, '/') AND IS_DEFINED(c.title)`],
       ["cardNumber 1 or 2 (ordinal / lot)", `${SELECT} WHERE c.cardNumber IN ('1','2') AND IS_DEFINED(c.title)`],
-      ["no cardNumber, '#' in title", `${SELECT} WHERE NOT IS_DEFINED(c.cardNumber) AND CONTAINS(c.title, '#')`],
+      ["no cardNumber, '#' in title", `${SELECT} WHERE (NOT IS_DEFINED(c.cardNumber) OR IS_NULL(c.cardNumber) OR c.cardNumber = '') AND CONTAINS(c.title, '#')`],
       ["4-digit cardNumber", `${SELECT} WHERE LENGTH(c.cardNumber) = 4 AND IS_DEFINED(c.title)`],
     ];
     for (const [label, q] of slices) {
@@ -181,8 +185,49 @@ async function main() {
       const n = await walk(pool, q, [], label, out);
       console.log(`  ${label.padEnd(38)} scanned ${f(n)}`);
     }
+  } else if (MODE === "catalog-year") {
+    // card_catalog, not the pool: rows whose cardNumber IS the set's year
+    // (`hiq:baseball:2018:topps-chrome:2018:gold-refractor:no-auto`). The
+    // question is not how many there are, it is WHOSE they are -- a
+    // checklist-backed one would be a converter bug to fix, and a vendor or
+    // sale-minted one is a retire.
+    const cat = db.container("card_catalog");
+    const bySource = new Map(), byAuthority = new Map(), samples = [];
+    let scanned = 0, hits = 0, token;
+    console.log(`\nslice: card_catalog rows with a 4-character cardNumber, kept when it equals the row's year`);
+    do {
+      if (Date.now() - STARTED > RUN_MS) { out.stopped = "budget"; break; }
+      const page = await retry(() => cat.items
+        .query("SELECT c.id, c.source, c.cardNumber, c.year, c.gradeTier, c.checklistBacking FROM c WHERE LENGTH(c.cardNumber) = 4", { maxItemCount: 1000, continuationToken: token, maxDegreeOfParallelism: 8 })
+        .fetchNext());
+      token = page.continuationToken;
+      for (const r of page.resources ?? []) {
+        scanned++;
+        if (String(r.cardNumber) !== String(r.year)) continue;
+        hits++;
+        const src = String(r.source ?? "(none)");
+        bySource.set(src, (bySource.get(src) ?? 0) + 1);
+        const auth = catalogAuthorityOf(src);
+        byAuthority.set(auth, (byAuthority.get(auth) ?? 0) + 1);
+        if (samples.length < 8) samples.push(`${r.id}   source=${src}  authority=${auth}${r.gradeTier ? `  gradeTier=${r.gradeTier}` : ""}${r.checklistBacking ? `  checklistBacking=${r.checklistBacking}` : ""}`);
+      }
+      if (scanned && scanned % 50000 < 1000) process.stderr.write(`\r  catalog-year: scanned ${f(scanned)}  hits ${f(hits)}   `);
+    } while (token);
+    process.stderr.write("\n");
+    console.log(`\n${"=".repeat(72)}`);
+    console.log(`4-character cardNumber rows scanned  ${f(scanned)}`);
+    console.log(`cardNumber EQUALS the year           ${f(hits)}`);
+    console.log(`\n  by authority (checklist here would be a CONVERTER BUG, not a retire):`);
+    for (const [k, n] of [...byAuthority.entries()].sort((a, b) => b[1] - a[1])) console.log(`    ${String(k).padEnd(30)} ${f(n).padStart(10)}`);
+    console.log(`\n  by source:`);
+    for (const [k, n] of [...bySource.entries()].sort((a, b) => b[1] - a[1])) console.log(`    ${String(k).padEnd(44)} ${f(n).padStart(10)}`);
+    console.log(`\n  samples:`);
+    for (const x of samples) console.log(`    ${x}`);
+    if (out.stopped === "budget") console.log(`\nstopped at the ${RUN_MS / 60000}-minute budget — the relaunch continues from here`);
+    console.log(`\nREAD ONLY — nothing written.`);
+    return;
   } else {
-    console.error(`FATAL: MODE must be one of grade | months | shapes (got "${MODE}")`);
+    console.error(`FATAL: MODE must be one of grade | months | shapes | catalog-year (got "${MODE}")`);
     process.exit(1);
   }
 

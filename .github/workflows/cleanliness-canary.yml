@@ -10,6 +10,9 @@ name: Sold Comps Cleanliness Canary
 #   - garbage-prefix playerName rate > 1% in last 12h
 #   - fragmented-slug rate > 2%
 #   - missing hobbyiqCardId rate > 5%
+#   - card_number_integrity rate > 0.5%  (D28, CF-A-CARD-NUMBER-IS-NOT-A-GRADE:
+#     a title that states a different "#X", or a cardNumber the title shows to
+#     be a grade / print run / year / ordinal / lot count)
 #
 # Alert channel: GitHub Actions workflow failure → notification email.
 
@@ -27,7 +30,7 @@ on:
 jobs:
   cleanliness:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 15
     permissions:
       id-token: write
       contents: read
@@ -40,7 +43,15 @@ jobs:
           cache-dependency-path: backend/package-lock.json
       - name: Install deps
         working-directory: backend
-        run: npm ci --prefer-offline --no-audit --no-fund --omit=dev
+        # NOT --omit=dev any more: the D28 card_number_integrity check requires
+        # the COMPILED guard (dist/services/portfolioiq/cardNumberIntegrity.js)
+        # rather than a second copy of its rules, and the build needs
+        # typescript. A canary that re-implements the invariant stops measuring
+        # it the first time the invariant moves.
+        run: npm ci --prefer-offline --no-audit --no-fund
+      - name: Build backend dist
+        working-directory: backend
+        run: npm run build
       - uses: azure/login@v3
         with:
           client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}

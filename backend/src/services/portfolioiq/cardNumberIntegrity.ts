@@ -118,10 +118,14 @@ export function titleStatesHash(title: string | null | undefined, num: string): 
 //
 // Three alternatives, longest first (JS alternation is ordered):
 //   1. a hyphenated SKU, either half alphanumeric -- BCP-16, 83T-22, 90CB-7
-//   2. a glued alpha SKU                          -- US175, SMLB10, USC35
-//   3. a bare number with an optional letter      -- 150, 9, 22A
+//   2. a SLASHED SKU whose halves are not both numbers -- AAC/BG, N/A. Fleer
+//      Avant's dual-player inserts are numbered exactly this way, and 12,099
+//      pool rows carry one; a rule that called every slash a print run would
+//      have thrown those away (measured 2026-08-30).
+//   3. a glued alpha SKU                          -- US175, SMLB10, USC35
+//   4. a bare number with an optional letter      -- 150, 9, 22A
 const EXPLICIT_HASH_RE =
-  /#\s*([A-Z0-9]{1,6}-[A-Z0-9]{1,8}|[A-Z]{2,6}\d{1,4}[A-Z]?|\d{1,4}[A-Z]?)\b/gi;
+  /#\s*([A-Z0-9]{1,6}-[A-Z0-9]{1,8}|[A-Z]{1,5}\/[A-Z0-9]{1,6}|[A-Z]{2,6}\d{1,4}[A-Z]?|\d{1,4}[A-Z]?)\b/gi;
 // "#PSA10" / "#BGS 9" is a grade with a hash in front of it, not a SKU.
 const HASHED_GRADER_RE = /^(PSA|BGS|SGC|CGC|BVG|HGA|GEM|MINT|GRADE|GRADED)[-\s]*\d/i;
 // "Serial #", "numbered #", "#'d" introduce a PRINT RUN, not a card number.
@@ -175,9 +179,18 @@ export function isGraderDigit(title: string | null | undefined, num: string): bo
   return false;
 }
 
-/** The candidate IS a print run: "108/165" outside a TCG vertical. */
+/**
+ * The candidate IS a print run: "108/165" outside a TCG vertical.
+ *
+ * A slash is NOT enough. Measured 2026-08-30: of 25,093 pool rows whose
+ * cardNumber contains "/", a large share are real SKUs -- "2003 Fleer Avant
+ * #AAC/BG" (a dual-player insert numbered by both players' initials) and the
+ * "N/A" the slug builder already reads as unnumbered. Only a NUMBER over a
+ * NUMBER is a serial, and only outside a TCG vertical
+ * (CF-SERIAL-IS-NOT-A-CARDNUMBER).
+ */
 export function isPrintRunSlash(num: string, opts: CardNumberOptions = {}): boolean {
-  if (!num.includes("/")) return false;
+  if (!/^\s*\d{1,4}\s*\/\s*\d{1,5}\s*$/.test(num)) return false;
   if (!opts.isTcg) return true;
   // Even in TCG only POS/TOTAL with both bounded is a card number; "1/1" and
   // "22/30" reaching a TCG row are still serials, but the vertical is the

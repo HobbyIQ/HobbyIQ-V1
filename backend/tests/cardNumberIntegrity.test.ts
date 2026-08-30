@@ -61,6 +61,23 @@ describe("a card number is never a print run", () => {
     expect(v.rejected).toBe("print-run-slash");
   });
 
+  // Measured 2026-08-30: 12,099 of the pool rows a "any slash is a print run"
+  // rule would have thrown away are real SKUs. Fleer Avant numbers its
+  // dual-player inserts by both players' initials, and "N/A" is the slug
+  // builder's own word for unnumbered.
+  it("keeps a slashed SKU whose halves are not both numbers", () => {
+    expect(isPrintRunSlash("AAC/BG")).toBe(false);
+    expect(isPrintRunSlash("N/A")).toBe(false);
+    expect(judgeCardNumber("AAC/BG", "2003 Fleer Avant Baseball #AAC/BG Blue").cardNumber).toBe("AAC/BG");
+    expect(explicitTitleCardNumber("2003 Fleer Avant Baseball #AAC/BR Blue")).toBe("AAC/BR");
+    expect(explicitTitleCardNumber("1951 Topps Major League All-Stars Baseball #n/a Base")).toBe("N/A");
+  });
+
+  it("still refuses a number over a number", () => {
+    expect(isPrintRunSlash("22/30")).toBe(true);
+    expect(isPrintRunSlash("108/165")).toBe(true);
+  });
+
   it("keeps POS/TOTAL in a TCG vertical", () => {
     expect(isPrintRunSlash("044/193", { isTcg: true })).toBe(false);
     const v = judgeCardNumber("044/193", "Charizard VMAX Darkness Ablaze 044/193 PSA 10", { isTcg: true });
