@@ -1701,7 +1701,15 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   Runner landings by 13:00Z: one-of-one 7/8 (≈28k repairs each, ~2.9k
   setKey-drift refusals per shard for the second pass), re-ingest #2 6/8
   (each shard now "kept the existing row" for ~95% — the identity is held
-  at the canonical id, as D3c said). Drew (22:30Z): "I see 2 max williams superfractors …
+  at the canonical id, as D3c said).
+  **reprice-all #2 (33285350714, 13:25Z, after the conform pass): 12 users,
+  91 requested / 49 repriced / 42 skipped (pending-review + the confidence
+  gate); the write-time firewall fired on a `same-printrun-cross-parallel`
+  rung persisted as observed (`estimate_relabelled_at_write`), and the
+  unidentified Marek Houston holding stayed withheld. `audit-all-holdings`
+  MODE=all dispatched right after (33285582918) — its RUNGS block is the D10
+  after-number against 14/92 clean, fmvRung null 38%, estimate shown 23%,
+  isEstimate with an exact pool ≥ 3: 8 of 23.** Drew (22:30Z): "I see 2 max williams superfractors …
   superfractors are 1/1" — bcp's un-numbered `superfractor:auto` beside
   beckett's `:num-1`, and the same pair on Refractor /499, Black /10, Red /5,
   Red Lava, Sky Blue. **#1470:** the fold's decision is a pure tested rule
