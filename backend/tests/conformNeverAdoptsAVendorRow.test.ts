@@ -7,7 +7,8 @@
 import { describe, expect, it } from "vitest";
 import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
-const { identityTargets, productChanged, setKeyOf, rowFor } = require("../scripts/conform-holdings-to-catalog.cjs") as {
+const { identityTargets, productChanged, setKeyOf, rowFor, numberedTwinsOf } = require("../scripts/conform-holdings-to-catalog.cjs") as {
+  numberedTwinsOf: (resolved: string, ids: string[]) => string[];
   rowFor: (resolved: string, ids: string[]) => string | null;
   identityTargets: (rows: Array<{ source?: string }>) => Array<{ source?: string }>;
   productChanged: (existing: string, resolved: string) => boolean;
@@ -38,5 +39,11 @@ describe("conform-holdings-to-catalog -- a holding never adopts a vendor-minted 
     expect(rowFor(base, [base + ":num-499", "hiq:baseball:2025:bowman-draft:cpa-mwi:gold-refractor:auto:num-50"])).toBe(base + ":num-499");
     expect(rowFor(base, [base + ":num-499", base + ":num-250"])).toBeNull();
     expect(rowFor(base, ["hiq:baseball:2025:bowman-draft:cpa-mwi:gold-refractor:auto:num-50"])).toBeNull();
+  });
+  it("a graded child is not a numbered twin (Gillen: two children made the card 'ambiguous')", () => {
+    const base = "hiq:baseball:2024:bowman-draft:cpa-tg:blue-refractor:auto";
+    const ids = [base + ":num-150", base + ":num-150:psa-9", base + ":num-150:psa-10", "hiq:baseball:2024:bowman-draft:cpa-tg:blue-wave-refractor:auto:num-150"];
+    expect(numberedTwinsOf(base, ids)).toEqual([base + ":num-150"]);
+    expect(rowFor(base, ids)).toBe(base + ":num-150");
   });
 });

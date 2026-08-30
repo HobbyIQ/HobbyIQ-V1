@@ -141,7 +141,7 @@ async function main() {
         const params = variants.map((v, i) => ({ name: `@n${i}`, value: v }));
         const { resources: rows } = await retry(() => cat.items.query({
           query: `SELECT c.id, c.sport, c.setKey, c.setName, c.parallel, c.parallelSlug, c.playerSlug, c.isAuto, c.source
-                  FROM c WHERE c.year = @y AND c.cardNumber IN (${params.map((p) => p.name).join(",")})`,
+                  FROM c WHERE c.year = @y AND c.cardNumber IN (${params.map((p) => p.name).join(",")}) AND NOT IS_DEFINED(c.gradeTier)`,
           parameters: [{ name: "@y", value: year }, ...params],
         }).fetchAll());
 
@@ -204,13 +204,13 @@ async function main() {
         const ids = cardRows.map((r) => String(r.id));
         let target = resolved;
         if (!ids.includes(resolved)) {
-          const numbered = ids.filter((id) => id.startsWith(resolved + ":num-"));
+          const numbered = numberedTwinsOf(resolved, ids);
           if (numbered.length === 1) target = numbered[0];
           else { unresolved++; if (unresolvedEx.length < 8) unresolvedEx.push(`no row at ${resolved}${numbered.length > 1 ? " (two numbered twins)" : ""}`); continue; }
         }
         // CF-ONLY-IMPROVE: an existing identity that is the numbered form of the
         // resolved row is MORE specific -- keep it.
-        if (existing && existing.startsWith(target + ":num-") && ids.includes(existing)) { agreed++; if (rung.conf >= 0.95) resolvedExact++; else resolvedFuzzy++; continue; }
+        if (existing && numberedTwinsOf(target, [existing]).length === 1 && ids.includes(existing)) { agreed++; if (rung.conf >= 0.95) resolvedExact++; else resolvedFuzzy++; continue; }
         if (rung.conf >= 0.95) resolvedExact++; else resolvedFuzzy++;
 
         if (existing === target) { agreed++; }
@@ -263,12 +263,17 @@ async function main() {
 }
 
 /** Pure: which catalog row a composed slug resolves to among the card's rows (the un-numbered row, else its ONE numbered twin, else nothing). */
+/** The numbered twins of an un-numbered id: exactly `<id>:num-N` — a graded child (`<id>:num-N:psa-9`) is derived, never a twin (Gillen, 2026-08-30: two graded children made the card "ambiguous"). */
+function numberedTwinsOf(resolved, ids) {
+  const prefix = resolved + ":num-";
+  return ids.filter((id) => id.startsWith(prefix) && /^\d+$/.test(id.slice(prefix.length)));
+}
 function rowFor(resolved, ids) {
   if (ids.includes(resolved)) return resolved;
-  const numbered = ids.filter((id) => id.startsWith(resolved + ":num-"));
+  const numbered = numberedTwinsOf(resolved, ids);
   return numbered.length === 1 ? numbered[0] : null;
 }
-module.exports = { resolveRung, setAgrees, identityTargets, productChanged, setKeyOf, rowFor };
+module.exports = { resolveRung, setAgrees, identityTargets, productChanged, setKeyOf, rowFor, numberedTwinsOf };
 
 if (require.main === module) {
   main().catch((e) => { console.error("FATAL:", e?.stack || e?.message); process.exit(3); });
