@@ -2392,6 +2392,30 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   insert → the Witt page red; the per-number anchor off → the 2024 Topps
   Chrome page red; the repair script back in the reconciliation debt list →
   the guard red.
+    **Merged #1531 (21:05Z 08-30); deploy #9 33289559745.** Verified in the
+    canonical checkout (tsc 0; vitest 0 over 12 files). Drew on the Witt
+    holding (20:50Z): "this is bowman draft, BD clearly states it for 2020
+    Bowman Draft … and is an image variation or SP" — identity = 2020
+    bowman-draft BD-152 image variation (SP), chrome; the slab's "SP-CHROME"
+    now reads as Image Variation, the row appears when the 2020 page
+    re-ingests through the new converter (dispatched 21:20Z, YEARS=2020),
+    then the conform pass resolves the holding. The BD-152 / BD152 spelling
+    is D23's hyphen rule. **Per-holding identity rulings (#1530):**
+    `backend/data/holding-identity-rulings.json` + `conform-holdings
+    SCOPE=rulings` — Drew ruled Ohtani HMT1 → `topps-chrome-update`,
+    Antunez CPA-BA and Arias CPA-FA → `bowman` (dry run then APPLY
+    dispatched). `clean-parallel-annotations` APPLY ×8 dispatched 20:57Z
+    (Drew: run it now; the 81,714 slash-id rows wait for a purge script).
+    **Round-3 rulings (21:15Z):** BDA- on 2025 Bowman basketball — the
+    builder reads the page and rules from its text; vintage — acquire TCDB
+    next (→ D25, after D24); Pokémon — reopen after D23 and the retires.
+    **D23 (building, `feat/d23`, the single builder):** the slug generator
+    stops collapsing (a product table with the panini- rule), card numbers
+    keep the checklist's hyphen with hyphen-insensitive matching, the family
+    table feeds only pricing fallbacks and search, and a rename fleet
+    through catalogRowOps over the ≈1.2M disagreeing rows with sales and
+    holdings re-pointed; then `audit-source-coverage` → the old-CLC
+    duplicate retire (Drew's go) → D21 → D24 → D25.
 - ~~A single fresh sale carrying the number~~ **RULED KEEP (19:50Z 08-30): "Keep — the latest sale is the market."** D22's `ONE_SALE_WINDOW_POLICY` default is `last-sale` (Gillen $729 under `exact-pool-last-sale`); `widen` (n ≥ 2 before the window wins; $489.50) is the named alternative, off.
 - **A single fresh sale carrying the number — original note:** Gillen Blue Refractor /150 —
   project); or cap a one-sale window's move against the prior window.
