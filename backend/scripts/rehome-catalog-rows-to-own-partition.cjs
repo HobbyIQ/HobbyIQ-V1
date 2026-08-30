@@ -49,6 +49,15 @@
 //                             from their parent (the runner's parents_only)
 //   CONCURRENCY=16
 //   LIMIT=0                   stop after N re-homes (0 = no limit)
+//   RUN_MINUTES=140           stop at this budget and PRINT the marker the
+//                             runner's relaunch step greps (D18, 2026-08-29)
+//
+// CF-A-KILLED-JOB-CANNOT-REPORT-PROGRESS (D18). This used to run until the
+// runner's 150-minute step ceiling SIGKILLed it. A killed process prints no
+// summary, so the relaunch step — which read "re-homed N" from the log — saw
+// nothing and stopped the fleet, green. The job now owns a clock under the
+// ceiling: it stops at RUN_MINUTES, prints its summary, reconciles, and prints
+// "stopped at the … budget" so the marker-keyed relaunch continues the slot.
 
 const path = require("node:path");
 const backend = path.resolve(__dirname, "..");
@@ -74,6 +83,8 @@ const SCAN_LIMIT = Number(process.env.SCAN_LIMIT || 0);
 // coordination. SLOTS=1 (the default) is the old single-pass behaviour exactly.
 const SLOT = Number(process.env.SLOT ?? 0);
 const SLOTS = Number(process.env.SLOTS ?? 1);
+const RUN_MS = Number(process.env.RUN_MINUTES || 140) * 60000;
+const STARTED = Date.now();
 
 /**
  * Split the setKey space into SLOTS contiguous ranges that tile it with no gap
@@ -130,6 +141,8 @@ const retry = async (fn) => {
   // the scan rather than from the loop -- so it gets the same fix.
   let attempted = 0;
   const samples = [];
+  // "limit" or "budget": why the run stopped before the scan drained.
+  let stopReason = null;
 
   const where = ["STARTSWITH(c.id,'hiq:')", "c.id != c.cardId", "IS_DEFINED(c.cardId)", "c.cardId != null"];
   if (YEARS.length) where.push(`c.year IN (${YEARS.join(",")})`);
@@ -177,7 +190,8 @@ const retry = async (fn) => {
             if (failed <= 5) console.error("  rehome failed " + String(r.id).slice(0, 60) + ": " + String(e.message || e).slice(0, 80));
           }
         }));
-        if (LIMIT && rehomed >= LIMIT) { token = undefined; break; }
+        if (LIMIT && rehomed >= LIMIT) { stopReason = "limit"; token = undefined; break; }
+        if (Date.now() - STARTED > RUN_MS) { stopReason = "budget"; token = undefined; break; }
       }
     }
     pages++;
@@ -185,8 +199,13 @@ const retry = async (fn) => {
       process.stderr.write(`\r  scanned ${scanned}  rehomed ${rehomed}  already ${alreadyThere}  failed ${failed}   `);
     }
     if (SCAN_LIMIT && scanned >= SCAN_LIMIT) break;
+    // The dry-run scan can outlive the ceiling too; the clock applies to both.
+    if (!stopReason && Date.now() - STARTED > RUN_MS) { stopReason = "budget"; break; }
   } while (token);
   process.stderr.write("\n");
+
+  if (stopReason === "budget") console.log(`\nstopped at the ${RUN_MS / 60000}-minute budget with work left — the relaunch continues from here`);
+  else if (stopReason === "limit") console.log(`\nstopped at LIMIT=${LIMIT.toLocaleString()} — a bounded run`);
 
   const scope = (YEARS.length ? "years=" + YEARS.join(",") : "years=all") +
                 (SETKEY_LIKE ? "  setKey~" + SETKEY_LIKE : "") +
@@ -196,8 +215,8 @@ const retry = async (fn) => {
   console.log(`  re-homed to their own slug    ${rehomed.toLocaleString()}`);
   console.log(`  ...of those, leftover twins    ${alreadyThere.toLocaleString()}   (canonical already present; decided by authority, redundant copy removed)`);
   console.log(`  failed                        ${failed.toLocaleString()}`);
-  if (LIMIT && candidates > attempted) {
-    console.log(`  not attempted                 ${(candidates - attempted).toLocaleString()}   (LIMIT reached; seen, not tried)`);
+  if (APPLY && candidates > attempted) {
+    console.log(`  not attempted                 ${(candidates - attempted).toLocaleString()}   (${stopReason === "budget" ? "budget" : "LIMIT"} reached; seen, not tried)`);
   }
   if (samples.length) {
     console.log(`\n  sample:`);

@@ -169,27 +169,19 @@ const UNRECONCILED_CRON = new Set([
 const BUDGET_MARKER = /stopped at the .*budget/;
 
 /**
- * Whitelisted marker-printers whose relaunch step is missing or gates on
- * progress > 0 instead of the marker, as of 2026-08-29. Four have no relaunch
- * step at all (apply-setkey-rulings, fold-unnumbered-twins,
- * map-yearprefixed-setkeys, retire-prose-parallel-rows); the rest relaunch
- * on a count, which loops forever on a slot that is down to rows it cannot
- * change and stops early on a budget stop that changed nothing.
+ * Whitelisted marker-printers with NO relaunch step at all, as of D18
+ * (2026-08-29). The nine that relaunched on a count — which loops forever on
+ * a slot down to rows it cannot change and stops early on a budget stop that
+ * changed nothing — are marker-keyed since D18, and rehome (which printed no
+ * marker and was SIGKILLed at the step ceiling) now owns a clock under it.
+ * These three run one cycle and stop, green, with work left; giving them a
+ * relaunch step is an ops decision (a fleet that keeps going), not a lint fix.
  * Sorted. May only shrink.
  */
 const RELAUNCH_NOT_KEYED_ON_MARKER = new Set([
   "apply-setkey-rulings",
-  "backfill-playerslug",
-  "canonicalize-vendor-shaped-rows",
-  "conform-card-profile",
-  "map-pokemon-setkeys-to-checklist",
   "map-yearprefixed-setkeys",
-  "materialize-graded-identities",
-  "repair-parallel-subset-fold",
-  "repair-pokemon-glued-numbers",
-  "retire-numbered-base-rows",
   "retire-prose-parallel-rows",
-  "retire-unreferenced-graded-rows",
 ]);
 
 type Script = { name: string; src: string };
@@ -348,6 +340,7 @@ describe("every fleet script that stops at its budget is relaunched on the marke
     const ok = printers.filter((n) => keyed.has(n)).length;
     // eslint-disable-next-line no-console
     console.log(`marker-printers relaunched on the marker: ${ok}/${printers.length}  (debt ${printers.length - ok})`);
-    expect(ok).toBeGreaterThanOrEqual(11);
+    // D18 floor: 15 before, 25 after (nine count-gated steps + rehome).
+    expect(ok).toBeGreaterThanOrEqual(25);
   });
 });
