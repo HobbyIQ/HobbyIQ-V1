@@ -1922,6 +1922,86 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   panini-donruss) on both sales and checklists. Decide: identity key = the
   product, family key = a separate fallback field; then re-slug catalog + pool.
 
+    **D19 — the pool keeps every sale once (built on `feat/d19`, 2026-08-30, 4
+  commits, unmerged; backend/src unchanged — no deploy).** D9 / D12-a fixed
+  every FUTURE user emit; the D14 probe measured what the OLD rows still
+  carry, and D19 is the backfill: two report-only, sharded, marker-relaunched
+  runner scripts over one helper. **The helper**
+  (`scripts/lib/relocate-sold-comp.cjs`): /cardId is the partition key, so a
+  re-key is a new document plus a delete — the helper writes the kept row,
+  reads it back (id, cardId and a stamp field must match), and only then
+  deletes the old rows one by one; an upsert or read-back failure deletes
+  nothing, a failed delete is a DUPLICATE reported on its own line and never
+  retried into a missing row (tca-match-enricher's delete-then-create is the
+  opposite order). **`rekey-user-comps`** (ebay-user-purchase +
+  ebay-user-sale, 110 rows): LINK the row to its holding (the `holding::`
+  key, the eBay order / item id it carries, or — sales — the ledger entry
+  with the same soldAt instant and price); IDENTITY by D12-a
+  (holding.hobbyiqCardId → holding.cardId-if-slug → the row's own
+  hobbyiqCardId, each only when the catalog holds it, else UNRESOLVED with a
+  reason); KEY by D9 (`purchaseSaleIdentity`: order id → item id →
+  holding::, price = SUBTOTAL; a sale: ledger.ebayOrderId → the holding's
+  ids → the D7b timestamp key); rows deriving one (id, cardId) are one
+  transaction — what varied is printed before the word duplicate, two grades
+  or two parallels REFUSE. Dry run (read-only, 2026-08-30): 2 already
+  canonical, **58 would re-key** (33 onto the order id, 34 keep their key and
+  change partition only), **4 would collapse** (7 documents → 4: the import's
+  `holding::` row beside the poll's row, or one `holding::` id under two
+  partitions), 0 refused, **42 unresolved** — 34 `slug-not-in-catalog` (the
+  row's only slug is a retired or never-minted row:
+  `2026:bowman:cpa-oc:refractor:auto`, `1997:topps-finest:238:base`,
+  `2024:bowman-chrome:cpa-id:refractor:auto` … — D10's acquisition list, not
+  a re-key), 7 `holding-two-identities`, 1 no identity; 54 of the 110 rows
+  name holdings that no longer exist and re-home on their own slug with the
+  key kept. Two rulings to read (NEEDS DREW if either should go the other
+  way): (1) a re-keyed purchase takes D9's SUBTOTAL from its purchase record —
+  **30 rows move from totalCost to subtotal** (74.86 → 64, 1,260 → 1,250 …),
+  the price the live import has written since #1454; (2) a holding whose
+  cardId and hobbyiqCardId are BOTH hiq slugs and disagree (the D9
+  two-identities finding: `…cpa-ce:red-refractor:auto:num-5` vs
+  `…cpa-ce:chrome-refractor:auto`) may not move a sale off a catalog-held
+  slug on a coin toss — 7 rows wait for conform-holdings.
+  CF-A-SALE-IS-NEVER-LOST prints the count per source and per contributor
+  before and after: 110 → 106 expected (= 110 − 65 deleted + 61 created; the
+  4 collapses are the only net change), a mismatch is exit 4.
+  **`collapse-ch-dual-ids`**: 1,842 `ch-comp::` rows (a shape nothing writes
+  today) name 105 CH cards; every partition read whole (11,296 rows) and
+  grouped by (day, price cents): **979 pairs** (one row of each shape), 73
+  ambiguous groups, 784 comp rows the daily path never saw. The variance
+  histogram, before any rule: soldAt 100% (the two paths report different
+  times of the same day), imageUrl 99.9%, parallelSlug 88.5%, parallel
+  78.4%, hobbyiqCardId 72.9%, setName 71.8%, title 70.2% (the comp path kept
+  the real listing title; the daily path composed `YEAR SET #NUM VARIANT`),
+  cardNumber 30.8%, isAuto 12.8%, printRun 9.5%, grade 7.9%. **Refused 660
+  of 979**: parallel-differs 517 (`Base → Mojo Refractor` 80, `Base → Chrome
+  Refractor` 72, `Reptilian Refractor → Blue Refractor` 35, `Refractor →
+  Base` 32 …), grade-differs 77 (RAW → PSA 10 ×43, RAW → PSA 9 ×33),
+  auto-differs 49, cardnumber-differs 17 — two rows that disagree on the
+  grade or the parallel are two sales by the rule, and the parallel table is
+  a finding in its own right: for ONE CH card id the comp path stamped a
+  parallel the daily path's title never said (the retired warm-pool shape) —
+  a question for the writers, not a licence to guess here. **Would collapse
+  319** (kept ch-daily 164 / ch-comp 155 — a catalog-held slug outranks a
+  title, then the real title outranks the composed one; imageUrl folded 155,
+  composite 74, parallelSlug 60; the dropped row's title / slug / parallel
+  ride on `collapsedFrom`). Tests (`d19.poolKeepsEverySaleOnce`, 31 cases):
+  the link, the derivation through the real `purchaseSaleIdentity`, the group
+  plan and its refusals, the pairing, the CH decision, the helper against a
+  fake container (create fails → nothing deleted; read-back differs → nothing
+  deleted; delete fails → duplicate reported, tried once; 404 → not ours),
+  and the fleet discipline (report-only default, BACKFILL_APPLY, the marker,
+  reportWrites, whitelist + marker-keyed relaunch); seven mutation checks
+  red. The reconciliation guard's write net learns `relocateSoldComp(`, so a
+  script that writes only through the helper is a writer to it (runner
+  writers reconciling 33/79 → 35/81; marker-printers relaunched on the marker
+  25/28 → 27/30; the debt lists unchanged). Dispatch
+  after merge: `rekey-user-comps` apply (one slot, 110 rows), then
+  `collapse-ch-dual-ids` apply (105 cards), then re-run `audit-pool-identity`
+  — the after-numbers are user purchases keyed by the order id with cardId
+  hiq for every linked row, and (day, price) pairs under two shapes = the
+  refused 660 only. Not touched: `manual-user-entry` (`admin-manual::` keys,
+  3 rows) and the 360,872 CardHedge rows keyed by a bare bubble id.
+
 ## NEEDS DREW (not code)
 
 - **A single fresh sale carrying the number:** Gillen Blue Refractor /150 —
