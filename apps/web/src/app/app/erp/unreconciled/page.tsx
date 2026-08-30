@@ -171,12 +171,15 @@ function UnreconciledRow({ e, onSaved }: { e: UnreconciledEntry; onSaved: (next:
       const res = await saveUnreconciledCosts(e.id, body);
       if (!res.success) {
         setError("Save failed.");
-        setSaving(false);
         return;
       }
       onSaved(res.entry);
     } catch (err) {
       setError((err as { message?: string }).message ?? "Save failed.");
+    } finally {
+      // Drew, 2026-08-30 ("wont reconcile"): the success path never cleared
+      // `saving`, so a card whose fees were still pending stayed on "Saving…"
+      // after a 200. The costs were saved; the button just never said so.
       setSaving(false);
     }
   }
