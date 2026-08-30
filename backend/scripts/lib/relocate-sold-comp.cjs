@@ -39,9 +39,20 @@ function stripSystem(doc) {
 const isMissing = (v) => v === null || v === undefined || v === "";
 const cents = (p) => Math.round(Number(p ?? 0) * 100);
 const day = (iso) => String(iso ?? "").slice(0, 10);
-/** Mirror of soldCompsStore's normalizeParallel (contentHash): Colour ≡ Colour
- *  Refractor is one card, so the trailing word is not a difference. */
-const normParallel = (s) => String(s ?? "").trim().toLowerCase().replace(/\s+/g, " ").replace(/ refractors?$/, "").replace(/^\[base\]$/, "base") || "base";
+/** Mirror of soldCompsStore's normalizeParallel (contentHash).
+ *
+ *  D31: the trailing " Refractor" is NO LONGER stripped. The retracted rule
+ *  said a colour and its colour-refractor sibling were one card; D31 says the
+ *  checklist decides per card, and Topps Finest #197 lists `Uncommon` AND
+ *  `Uncommon Refractor` as two of them. Stripping the word made the two hash
+ *  identically inside one cardId partition, and the store's pre-write dedup
+ *  reads "same contentHash in this partition" as "the same sale" -- so a
+ *  genuine sale of one card was swallowed at ingest by the other's row. */
+const normParallel = (s) => String(s ?? "").trim().toLowerCase().replace(/\s+/g, " ").replace(/^\[base\]$/, "base") || "base";
+
+/** The pre-D31 normalization, kept ONLY so a stored row's legacy hash can be
+ *  recognised during the transition. Never used to WRITE a hash. */
+const legacyNormParallel = (s) => String(s ?? "").trim().toLowerCase().replace(/\s+/g, " ").replace(/ refractors?$/, "").replace(/^\[base\]$/, "base") || "base";
 /** Raw is a grade too: null company + null value is "RAW|0", which is what the
  *  store hashes. Two rows whose gradeKey differs are two sales. */
 const gradeKey = (r) => `${String(r?.gradeCompany ?? "raw").toUpperCase()}|${r?.gradeValue ?? 0}`;
@@ -49,10 +60,10 @@ const gradeKey = (r) => `${String(r?.gradeCompany ?? "raw").toUpperCase()}|${r?.
 /** Mirror of soldCompsStore.computeContentHash -- the partition-scoped dedup
  *  key. A row that moves partition must carry the hash of its NEW cardId or
  *  the store's pre-write dedup can never see it. */
-function contentHashOf(row) {
+function hashWith(row, parallel) {
   const parts = [
     String(row.cardId ?? "").trim(),
-    String(row.parallel ?? "").trim().toLowerCase().replace(/\s+/g, " ").replace(/ refractors?$/, ""),
+    parallel,
     row.isAuto === true ? "1" : "0",
     String(row.gradeCompany ?? "raw").toUpperCase(),
     String(row.gradeValue ?? 0),
@@ -60,6 +71,23 @@ function contentHashOf(row) {
     day(row.soldAt),
   ];
   return crypto.createHash("sha1").update(parts.join("|")).digest("hex");
+}
+
+/** D31: the parallel is hashed WHOLE -- see `normParallel`. */
+function contentHashOf(row) {
+  return hashWith(row, String(row.parallel ?? "").trim().toLowerCase().replace(/\s+/g, " "));
+}
+
+/** The hash the SAME sale carries if it was stored before the D31 fix. */
+function legacyContentHashOf(row) {
+  return hashWith(row, String(row.parallel ?? "").trim().toLowerCase().replace(/\s+/g, " ").replace(/ refractors?$/, ""));
+}
+
+/** Every hash a stored row for this sale could carry: the new form, plus the
+ *  legacy form when it differs. Mirrors soldCompsStore.contentHashesForLookup. */
+function contentHashesForLookup(row) {
+  const fresh = contentHashOf(row), legacy = legacyContentHashOf(row);
+  return legacy === fresh ? [fresh] : [fresh, legacy];
 }
 
 /** Which of `fields` differ between the documents. Missing (null / undefined /
@@ -146,4 +174,4 @@ async function relocateSoldComp(pool, { keep, drop, retry = (fn) => fn(), verify
   return { ok: duplicatesLeft.length === 0, stage: "done", existedBefore, deleted, alreadyGone, duplicatesLeft };
 }
 
-module.exports = { relocateSoldComp, stripSystem, isMissing, cents, day, normParallel, gradeKey, contentHashOf, varianceOf, foldMissing, sameRef };
+module.exports = { relocateSoldComp, stripSystem, isMissing, cents, day, normParallel, legacyNormParallel, gradeKey, contentHashOf, legacyContentHashOf, contentHashesForLookup, varianceOf, foldMissing, sameRef };

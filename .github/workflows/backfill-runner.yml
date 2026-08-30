@@ -134,6 +134,7 @@ on:
           - fold-checklist-numbered-twins
           - apply-cpa-product-rule
           - consolidate-catalog-duplicates
+          - revert-d30-base-onto-one-of-one
 
           - rekey-user-comps
           - collapse-ch-dual-ids

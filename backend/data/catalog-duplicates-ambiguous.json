@@ -1,15 +1,1722 @@
 {
-  "_doc": "D30 groups the consolidation fleet REFUSED to decide -- written by scripts/consolidate-catalog-duplicates.cjs. Reasons are DISJOINT: the first match names the group, and the counts sum to the ambiguous total. Print-run conflicts and player-differs are NOT here -- they are not duplicates at all, and the fleet never folds them. This file is a PLACEHOLDER committed with the fleet; a scoped run overwrites it (and a sharded fleet writes catalog-duplicates-ambiguous.slot-N.json per slot).",
+  "_doc": "D30 groups the consolidation fleet REFUSED to decide -- written by scripts/consolidate-catalog-duplicates.cjs. Reasons are DISJOINT: the first match names the group, and the counts sum to the ambiguous total. Print-run conflicts and player-differs are NOT here -- they are not duplicates at all, and the fleet never folds them. THIS IS A REAL SAMPLE, not a placeholder: a READ-ONLY football-2024 LIMIT=400 slice run on the branch that fixed the grouping key, the spelling majority, the pre-flight hash guard and the D31 hash strip. A scoped run overwrites it; a sharded fleet writes catalog-duplicates-ambiguous.slot-N.json per slot.",
   "_reasons": {
-    "no-checklist-row": "All rows are derived/vendor. Spec rule 1: the row with the most sales survives (winnerBy 'sales') and the card joins the acquisition list. Refined first by the printRun FIELD -- a row carrying printRun=50 beside a ':num-50' twin is the same rung written two ways, which is r2, not ambiguity.",
-    "two-checklist-print-runs-one-product": "Two checklist rows of one product at different print runs. Split into near-miss (<=10% apart -- likely ONE source's transcription error, e.g. /149 vs /150 across 2024 bowman-chrome-mega-box, rulable once per (product, parallel)) and distinct-rungs (two real rungs).",
-    "d31-one-source-names-both-colour-forms": "ONE scrape run lists both the bare colour and '<colour>-refractor' for this card. D31: that is the site saying TWO CARDS (Topps Finest #197 uncommon / uncommon-refractor -- Drew named 600 of them).",
-    "two-dedicated-cpa-products": "Two dedicated non-bcp checklist products both list the CPA number for the same player. D29/R2: both stay; sales split by the title's product words.",
-    "contradicts-holding-ruling": "The fold would RETIRE an id that data/holding-identity-rulings.json names as an identity. Reported, never silently resolved."
+    "no-checklist-row": "All rows are derived/vendor. Spec rule 1: the row with the most sales would survive, flagged winnerBy \"sales\", and the card joins the acquisition list. The fleet refuses rather than guessing which derived spelling is the card.",
+    "two-checklist-print-runs-one-product:distinct-rungs": "Two checklist sources number one parallel differently and the runs are more than 10% apart -- most likely two real rungs (/55 and /75), so folding either way would merge two cards. Includes the BASE-card-is-not-a-1/1 shape: a base row transcribed /1 beside an un-numbered base row.",
+    "two-checklist-print-runs-one-product:near-miss": "Two checklist print runs within 10% of each other (/149 vs /150) -- almost always ONE source transcribing wrong, and rulable once per (product, parallel) rather than per card.",
+    "d31-one-source-names-both-colour-forms": "ONE scrape run lists both a bare colour and its <colour>-refractor for this card, which is the site saying TWO CARDS (D31). Topps Finest #197 uncommon / uncommon-refractor is the named example.",
+    "two-dedicated-cpa-products": "Two dedicated checklists both name this CPA number and the titles do not say which product the sale was. D29 R2 keeps both rows.",
+    "contradicts-holding-ruling": "The fold would retire an id that one of Drew's holding-identity rulings names as an identity."
   },
-  "generatedAt": null,
-  "scope": null,
-  "counts": {},
-  "total": 0,
-  "groups": []
+  "generatedAt": "2026-08-30T20:59:05.678Z",
+  "scope": {
+    "sports": [
+      "football"
+    ],
+    "years": [
+      2024
+    ],
+    "scopeAll": false,
+    "mode": "all",
+    "slot": 0,
+    "slots": 1
+  },
+  "counts": {
+    "two-checklist-print-runs-one-product:distinct-rungs": 43,
+    "no-checklist-row": 14,
+    "two-checklist-print-runs-one-product:near-miss": 1
+  },
+  "total": 58,
+  "truncatedTo": null,
+  "groups": [
+    {
+      "identityKey": "football|2024|panini-prizm|347|base|no-auto",
+      "kind": "numbered-vs-unnumbered",
+      "reason": "two-checklist-print-runs-one-product:distinct-rungs",
+      "detail": "a BASE row is numbered /1 beside an un-numbered base row -- a base card is not a 1/1, so the /1 is a mis-transcription; folding either way risks a real card's pool (found live on 2024 panini-prizm #347, 190 sales)",
+      "rows": [
+        {
+          "id": "hiq:football:2024:panini-prizm:347:base:no-auto",
+          "source": "beckett-scraped-2026-08-26",
+          "parallelSlug": "base",
+          "printRun": null,
+          "playerName": "Jayden Daniels"
+        },
+        {
+          "id": "hiq:football:2024:panini-prizm:347:base:no-auto:num-1",
+          "source": "checklistinsider-2026-08-28",
+          "parallelSlug": "base",
+          "printRun": 1,
+          "playerName": "Jayden Daniels"
+        }
+      ]
+    },
+    {
+      "identityKey": "football|2024|topps-chrome|134|purple-speckle-refractor|no-auto",
+      "kind": "numbered-vs-unnumbered",
+      "reason": "two-checklist-print-runs-one-product:near-miss",
+      "detail": "2 checklist print runs (/275, /299) -- NEAR MISS (<=10% apart): likely one source's transcription error, rulable once per (product, parallel)",
+      "rows": [
+        {
+          "id": "hiq:football:2024:topps-chrome:134:purple-speckle-refractor:no-auto:num-275",
+          "source": "checklistinsider-2026-08-27",
+          "parallelSlug": "purple-speckle-refractor",
+          "printRun": 275,
+          "playerName": "Julian Edelman"
+        },
+        {
+          "id": "hiq:football:2024:topps-chrome:134:purple-speckle-refractor:no-auto",
+          "source": "sold-comps-stub-2026-08-12",
+          "parallelSlug": "purple-speckle-refractor",
+          "printRun": null,
+          "playerName": "Julian Edelman"
+        },
+        {
+          "id": "hiq:football:2024:topps-chrome:134:purple-speckle-refractor:no-auto:num-299",
+          "source": "bccp",
+          "parallelSlug": "purple-speckle-refractor",
+          "printRun": 299,
+          "playerName": null
+        }
+      ]
+    },
+    {
+      "identityKey": "football|2024|panini-origins|49|base|no-auto",
+      "kind": "numbered-vs-unnumbered",
+      "reason": "two-checklist-print-runs-one-product:distinct-rungs",
+      "detail": "a BASE row is numbered /1 beside an un-numbered base row -- a base card is not a 1/1, so the /1 is a mis-transcription; folding either way risks a real card's pool (found live on 2024 panini-prizm #347, 190 sales)",
+      "rows": [
+        {
+          "id": "hiq:football:2024:panini-origins:49:base:no-auto",
+          "source": "checklistinsider-2026-08-27",
+          "parallelSlug": "base",
+          "printRun": null,
+          "playerName": "Wes Welker"
+        },
+        {
+          "id": "hiq:football:2024:panini-origins:49:base:no-auto:num-1",
+          "source": "checklistinsider-2026-08-28",
+          "parallelSlug": "base",
+          "printRun": 1,
+          "playerName": "Wes Welker"
+        },
+        {
+          "id": "hiq:football:2024:panini-origins:49:base:no-auto:num-25",
+          "source": "checklistinsider-2026-08-28",
+          "parallelSlug": "base",
+          "printRun": 25,
+          "playerName": "Wes Welker"
+        }
+      ]
+    },
+    {
+      "identityKey": "football|2024|topps-chrome|ra-cwi|aqua-refractor|auto",
+      "kind": "numbered-vs-unnumbered",
+      "reason": "no-checklist-row",
+      "detail": "all 2 rows are derived/vendor (ingest-auto-seed) -- most-sales would survive; the card joins the acquisition list",
+      "rows": [
+        {
+          "id": "hiq:football:2024:topps-chrome:ra-cwi:aqua-refractor:auto:num-199",
+          "source": "ingest-auto-seed",
+          "parallelSlug": "aqua-refractor",
+          "printRun": 199,
+          "playerName": "Caleb Williams"
+        },
+        {
+          "id": "hiq:football:2024:topps-chrome:ra-cwi:aqua-refractor:auto",
+          "source": "ingest-auto-seed",
+          "parallelSlug": "aqua-refractor",
+          "printRun": null,
+          "playerName": "Caleb Williams"
+        }
+      ]
+    },
+    {
+      "identityKey": "football|2024|panini-prizm|52|purple-ice|no-auto",
+      "kind": "numbered-vs-unnumbered",
+      "reason": "no-checklist-row",
+      "detail": "all 2 rows are derived/vendor (ingest-auto-seed) -- most-sales would survive; the card joins the acquisition list",
+      "rows": [
+        {
+          "id": "hiq:football:2024:panini-prizm:52:purple-ice:no-auto",
+          "source": "ingest-auto-seed",
+          "parallelSlug": "purple-ice",
+          "printRun": null,
+          "playerName": "Brian Urlacher"
+        },
+        {
+          "id": "hiq:football:2024:panini-prizm:52:purple-ice:no-auto:num-225",
+          "source": "ingest-auto-seed",
+          "parallelSlug": "purple-ice",
+          "printRun": 225,
+          "playerName": "Brian Urlacher"
+        }
+      ]
+    },
+    {
+      "identityKey": "football|2024|panini-illusions|7|cubic-trophy-collection|no-auto",
+      "kind": "numbered-vs-unnumbered",
+      "reason": "no-checklist-row",
+      "detail": "all 2 rows are derived/vendor (ingest-auto-seed) -- most-sales would survive; the card joins the acquisition list",
+      "rows": [
+        {
+          "id": "hiq:football:2024:panini-illusions:7:cubic-trophy-collection:no-auto:num-399",
+          "source": "ingest-auto-seed",
+          "parallelSlug": "cubic-trophy-collection",
+          "printRun": 399,
+          "playerName": "Lamar Jackson"
+        },
+        {
+          "id": "hiq:football:2024:panini-illusions:7:cubic-trophy-collection:no-auto",
+          "source": "ingest-auto-seed",
+          "parallelSlug": "cubic-trophy-collection",
+          "printRun": null,
+          "playerName": "Lamar Jackson"
+        }
+      ]
+    },
+    {
+      "identityKey": "football|2024|panini-phoenix|247|base|no-auto",
+      "kind": "numbered-vs-unnumbered",
+      "reason": "two-checklist-print-runs-one-product:distinct-rungs",
+      "detail": "a BASE row is numbered /1 beside an un-numbered base row -- a base card is not a 1/1, so the /1 is a mis-transcription; folding either way risks a real card's pool (found live on 2024 panini-prizm #347, 190 sales)",
+      "rows": [
+        {
+          "id": "hiq:football:2024:panini-phoenix:247:base:no-auto",
+          "source": "checklistinsider-2026-08-27",
+          "parallelSlug": "base",
+          "printRun": null,
+          "playerName": "Will Reichard"
+        },
+        {
+          "id": "hiq:football:2024:panini-phoenix:247:base:no-auto:num-1",
+          "source": "checklistinsider-2026-08-28",
+          "parallelSlug": "base",
+          "printRun": 1,
+          "playerName": "Will Reichard"
+        },
+        {
+          "id": "hiq:football:2024:panini-phoenix:247:base:no-auto:num-25",
+          "source": "checklistinsider-2026-08-28",
+          "parallelSlug": "base",
+          "printRun": 25,
+          "playerName": "Will Reichard"
+        },
+        {
+          "id": "hiq:football:2024:panini-phoenix:247:base:no-auto:num-49",
+          "source": "checklistinsider-2026-08-28",
+          "parallelSlug": "base",
+          "printRun": 49,
+          "playerName": "Will Reichard"
+        },
+        {
+          "id": "hiq:football:2024:panini-phoenix:247:base:no-auto:num-33",
+          "source": "checklistinsider-2026-08-28",
+          "parallelSlug": "base",
+          "printRun": 33,
+          "playerName": "Will Reichard"
+        },
+        {
+          "id": "hiq:football:2024:panini-phoenix:247:base:no-auto:num-199",
+          "source": "checklistinsider-2026-08-28",
+          "parallelSlug": "base",
+          "printRun": 199,
+          "playerName": "Will Reichard"
+        },
+        {
+          "id": "hiq:football:2024:panini-phoenix:247:base:no-auto:num-99",
+          "source": "checklistinsider-2026-08-28",
+          "parallelSlug": "base",
+          "printRun": 99,
+          "playerName": "Will Reichard"
+        },
+        {
+          "id": "hiq:football:2024:panini-phoenix:247:base:no-auto:num-10",
+          "source": "checklistinsider-2026-08-28",
+          "parallelSlug": "base",
+          "printRun": 10,
+          "playerName": "Will Reichard"
+        }
+      ]
+    },
+    {
+      "identityKey": "football|2024|panini-prizm|19|purple-ice|no-auto",
+      "kind": "numbered-vs-unnumbered",
+      "reason": "no-checklist-row",
+      "detail": "all 2 rows are derived/vendor (ingest-auto-seed) -- most-sales would survive; the card joins the acquisition list",
+      "rows": [
+        {
+          "id": "hiq:football:2024:panini-prizm:19:purple-ice:no-auto:num-225",
+          "source": "ingest-auto-seed",
+          "parallelSlug": "purple-ice",
+          "printRun": 225,
+          "playerName": "Lamar Jackson"
+        },
+        {
+          "id": "hiq:football:2024:panini-prizm:19:purple-ice:no-auto",
+          "source": "ingest-auto-seed",
+          "parallelSlug": "purple-ice",
+          "printRun": null,
+          "playerName": "Lamar Jackson"
+        }
+      ]
+    },
+    {
+      "identityKey": "football|2024|panini-mosaic|273|choice-fusion-red-and-yellow|no-auto",
+      "kind": "numbered-vs-unnumbered",
+      "reason": "no-checklist-row",
+      "detail": "all 2 rows are derived/vendor (ingest-auto-seed) -- most-sales would survive; the card joins the acquisition list",
+      "rows": [
+        {
+          "id": "hiq:football:2024:panini-mosaic:273:choice-fusion-red-and-yellow:no-auto:num-80",
+          "source": "ingest-auto-seed",
+          "parallelSlug": "choice-fusion-red-and-yellow",
+          "printRun": 80,
+          "playerName": "Drake Maye"
+        },
+        {
+          "id": "hiq:football:2024:panini-mosaic:273:choice-fusion-red-and-yellow:no-auto",
+          "source": "ingest-auto-seed",
+          "parallelSlug": "choice-fusion-red-and-yellow",
+          "printRun": null,
+          "playerName": "Drake Maye"
+        }
+      ]
+    },
+    {
+      "identityKey": "football|2024|panini-mosaic|201|choice-fusion-red-and-yellow|no-auto",
+      "kind": "numbered-vs-unnumbered",
+      "reason": "no-checklist-row",
+      "detail": "all 2 rows are derived/vendor (ingest-auto-seed) -- most-sales would survive; the card joins the acquisition list",
+      "rows": [
+        {
+          "id": "hiq:football:2024:panini-mosaic:201:choice-fusion-red-and-yellow:no-auto:num-80",
+          "source": "ingest-auto-seed",
+          "parallelSlug": "choice-fusion-red-and-yellow",
+          "printRun": 80,
+          "playerName": "Noah Fant"
+        },
+        {
+          "id": "hiq:football:2024:panini-mosaic:201:choice-fusion-red-and-yellow:no-auto",
+          "source": "ingest-auto-seed",
+          "parallelSlug": "choice-fusion-red-and-yellow",
+          "printRun": null,
+          "playerName": "Noah Fant"
+        }
+      ]
+    },
+    {
+      "identityKey": "football|2024|panini-prizm|143|purple-power|no-auto",
+      "kind": "numbered-vs-unnumbered",
+      "reason": "no-checklist-row",
+      "detail": "all 2 rows are derived/vendor (ingest-auto-seed) -- most-sales would survive; the card joins the acquisition list",
+      "rows": [
+        {
+          "id": "hiq:football:2024:panini-prizm:143:purple-power:no-auto:num-49",
+          "source": "ingest-auto-seed",
+          "parallelSlug": "purple-power",
+          "printRun": 49,
+          "playerName": "Chris Jones"
+        },
+        {
+          "id": "hiq:football:2024:panini-prizm:143:purple-power:no-auto",
+          "source": "ingest-auto-seed",
+          "parallelSlug": "purple-power",
+          "printRun": null,
+          "playerName": "Chris Jones"
+        }
+      ]
+    },
+    {
+      "identityKey": "football|2024|panini-mosaic|319|base|no-auto",
+      "kind": "numbered-vs-unnumbered",
+      "reason": "two-checklist-print-runs-one-product:distinct-rungs",
+      "detail": "a BASE row is numbered /1 beside an un-numbered base row -- a base card is not a 1/1, so the /1 is a mis-transcription; folding either way risks a real card's pool (found live on 2024 panini-prizm #347, 190 sales)",
+      "rows": [
+        {
+          "id": "hiq:football:2024:panini-mosaic:319:base:no-auto",
+          "source": "beckett-scraped-2026-08-25",
+          "parallelSlug": "base",
+          "printRun": null,
+          "playerName": "Jared Verse"
+        },
+        {
+          "id": "hiq:football:2024:panini-mosaic:319:base:no-auto:num-10",
+          "source": "checklistinsider-2026-08-28",
+          "parallelSlug": "base",
+          "printRun": 10,
+          "playerName": "Jared Verse"
+        },
+        {
+          "id": "hiq:football:2024:panini-mosaic:319:base:no-auto:num-15",
+          "source": "checklistinsider-2026-08-28",
+          "parallelSlug": "base",
+          "printRun": 15,
+          "playerName": "Jared Verse"
+        },
+        {
+          "id": "hiq:football:2024:panini-mosaic:319:base:no-auto:num-25",
+          "source": "checklistinsider-2026-08-28",
+          "parallelSlug": "base",
+          "printRun": 25,
+          "playerName": "Jared Verse"
+        },
+        {
+          "id": "hiq:football:2024:panini-mosaic:319:base:no-auto:num-99",
+          "source": "checklistinsider-2026-08-28",
+          "parallelSlug": "base",
+          "printRun": 99,
+          "playerName": "Jared Verse"
+        },
+        {
+          "id": "hiq:football:2024:panini-mosaic:319:base:no-auto:num-1",
+          "source": "checklistinsider-2026-08-28",
+          "parallelSlug": "base",
+          "printRun": 1,
+          "playerName": "Jared Verse"
+        },
+        {
+          "id": "hiq:football:2024:panini-mosaic:319:base:no-auto:num-199",
+          "source": "checklistinsider-2026-08-28",
+          "parallelSlug": "base",
+          "printRun": 199,
+          "playerName": "Jared Verse"
+        },
+        {
+          "id": "hiq:football:2024:panini-mosaic:319:base:no-auto:num-49",
+          "source": "checklistinsider-2026-08-28",
+          "parallelSlug": "base",
+          "printRun": 49,
+          "playerName": "Jared Verse"
+        }
+      ]
+    },
+    {
+      "identityKey": "football|2024|panini-mosaic|393|no-huddle-blue|no-auto",
+      "kind": "numbered-vs-unnumbered",
+      "reason": "no-checklist-row",
+      "detail": "all 2 rows are derived/vendor (ingest-auto-seed) -- most-sales would survive; the card joins the acquisition list",
+      "rows": [
+        {
+          "id": "hiq:football:2024:panini-mosaic:393:no-huddle-blue:no-auto",
+          "source": "ingest-auto-seed",
+          "parallelSlug": "no-huddle-blue",
+          "printRun": null,
+          "playerName": "Spencer Rattler"
+        },
+        {
+          "id": "hiq:football:2024:panini-mosaic:393:no-huddle-blue:no-auto:num-75",
+          "source": "ingest-auto-seed",
+          "parallelSlug": "no-huddle-blue",
+          "printRun": 75,
+          "playerName": "Spencer Rattler"
+        }
+      ]
+    },
+    {
+      "identityKey": "football|2024|panini-prizm|46|blue-wave|no-auto",
+      "kind": "numbered-vs-unnumbered",
+      "reason": "no-checklist-row",
+      "detail": "all 2 rows are derived/vendor (ingest-auto-seed) -- most-sales would survive; the card joins the acquisition list",
+      "rows": [
+        {
+          "id": "hiq:football:2024:panini-prizm:46:blue-wave:no-auto:num-230",
+          "source": "ingest-auto-seed",
+          "parallelSlug": "blue-wave",
+          "printRun": 230,
+          "playerName": "Tyson Bagent"
+        },
+        {
+          "id": "hiq:football:2024:panini-prizm:46:blue-wave:no-auto",
+          "source": "ingest-auto-seed",
+          "parallelSlug": "blue-wave",
+          "printRun": null,
+          "playerName": "Tyson Bagent"
+        }
+      ]
+    },
+    {
+      "identityKey": "football|2024|panini-prizm|347|red-shimmer|no-auto",
+      "kind": "numbered-vs-unnumbered",
+      "reason": "no-checklist-row",
+      "detail": "all 2 rows are derived/vendor (ingest-auto-seed) -- most-sales would survive; the card joins the acquisition list",
+      "rows": [
+        {
+          "id": "hiq:football:2024:panini-prizm:347:red-shimmer:no-auto:num-35",
+          "source": "ingest-auto-seed",
+          "parallelSlug": "red-shimmer",
+          "printRun": 35,
+          "playerName": "Jayden Daniels"
+        },
+        {
+          "id": "hiq:football:2024:panini-prizm:347:red-shimmer:no-auto",
+          "source": "ingest-auto-seed",
+          "parallelSlug": "red-shimmer",
+          "printRun": null,
+          "playerName": "Jayden Daniels"
+        }
+      ]
+    },
+    {
+      "identityKey": "football|2024|panini-prizm|192|purple-ice|no-auto",
+      "kind": "numbered-vs-unnumbered",
+      "reason": "no-checklist-row",
+      "detail": "all 2 rows are derived/vendor (ingest-auto-seed) -- most-sales would survive; the card joins the acquisition list",
+      "rows": [
+        {
+          "id": "hiq:football:2024:panini-prizm:192:purple-ice:no-auto:num-225",
+          "source": "ingest-auto-seed",
+          "parallelSlug": "purple-ice",
+          "printRun": 225,
+          "playerName": "Randy Moss"
+        },
+        {
+          "id": "hiq:football:2024:panini-prizm:192:purple-ice:no-auto",
+          "source": "ingest-auto-seed",
+          "parallelSlug": "purple-ice",
+          "printRun": null,
+          "playerName": "Randy Moss"
+        }
+      ]
+    },
+    {
+      "identityKey": "football|2024|panini-prizm|111|purple-ice|no-auto",
+      "kind": "numbered-vs-unnumbered",
+      "reason": "no-checklist-row",
+      "detail": "all 2 rows are derived/vendor (ingest-auto-seed) -- most-sales would survive; the card joins the acquisition list",
+      "rows": [
+        {
+          "id": "hiq:football:2024:panini-prizm:111:purple-ice:no-auto",
+          "source": "ingest-auto-seed",
+          "parallelSlug": "purple-ice",
+          "printRun": null,
+          "playerName": "C.J. Stroud"
+        },
+        {
+          "id": "hiq:football:2024:panini-prizm:111:purple-ice:no-auto:num-225",
+          "source": "ingest-auto-seed",
+          "parallelSlug": "purple-ice",
+          "printRun": 225,
+          "playerName": "C.J. Stroud"
+        }
+      ]
+    },
+    {
+      "identityKey": "football|2024|panini-prizm|301|blue-sparkle|no-auto",
+      "kind": "numbered-vs-unnumbered",
+      "reason": "no-checklist-row",
+      "detail": "all 2 rows are derived/vendor (ingest-auto-seed) -- most-sales would survive; the card joins the acquisition list",
+      "rows": [
+        {
+          "id": "hiq:football:2024:panini-prizm:301:blue-sparkle:no-auto",
+          "source": "ingest-auto-seed",
+          "parallelSlug": "blue-sparkle",
+          "printRun": null,
+          "playerName": "Caleb Williams"
+        },
+        {
+          "id": "hiq:football:2024:panini-prizm:301:blue-sparkle:no-auto:num-96",
+          "source": "ingest-auto-seed",
+          "parallelSlug": "blue-sparkle",
+          "printRun": 96,
+          "playerName": "Caleb Williams"
+        }
+      ]
+    },
+    {
+      "identityKey": "football|2024|panini-mosaic|310|purple|no-auto",
+      "kind": "numbered-vs-unnumbered",
+      "reason": "no-checklist-row",
+      "detail": "all 2 rows are derived/vendor (ingest-auto-seed) -- most-sales would survive; the card joins the acquisition list",
+      "rows": [
+        {
+          "id": "hiq:football:2024:panini-mosaic:310:purple:no-auto:num-49",
+          "source": "ingest-auto-seed",
+          "parallelSlug": "purple",
+          "printRun": 49,
+          "playerName": "J.J. McCarthy"
+        },
+        {
+          "id": "hiq:football:2024:panini-mosaic:310:purple:no-auto",
+          "source": "ingest-auto-seed",
+          "parallelSlug": "purple",
+          "printRun": null,
+          "playerName": "J.J. McCarthy"
+        }
+      ]
+    },
+    {
+      "identityKey": "football|2024|panini-donruss|6|press-proof-gold|no-auto",
+      "kind": "other",
+      "reason": "two-checklist-print-runs-one-product:distinct-rungs",
+      "detail": "2 checklist print runs (/25, /50) -- distinct rungs",
+      "rows": [
+        {
+          "id": "hiq:football:2024:panini-donruss:6:press-proof-gold:no-auto:num-25",
+          "source": "checklistinsider-2026-08-11",
+          "parallelSlug": "press-proof-gold",
+          "printRun": 25,
+          "playerName": "Christian Kirk"
+        },
+        {
+          "id": "hiq:football:2024:panini-donruss:6:press-proof-gold:no-auto:num-50",
+          "source": "checklistinsider-2026-08-11",
+          "parallelSlug": "press-proof-gold",
+          "printRun": 50,
+          "playerName": "Christian Kirk"
+        }
+      ]
+    },
+    {
+      "identityKey": "football|2024|panini-donruss|17|season-stat-line|no-auto",
+      "kind": "numbered-vs-unnumbered",
+      "reason": "two-checklist-print-runs-one-product:distinct-rungs",
+      "detail": "2 checklist print runs (/30, /500) -- distinct rungs",
+      "rows": [
+        {
+          "id": "hiq:football:2024:panini-donruss:17:season-stat-line:no-auto",
+          "source": "checklistinsider-2026-08-11",
+          "parallelSlug": "season-stat-line",
+          "printRun": null,
+          "playerName": "Vince Ferragamo"
+        },
+        {
+          "id": "hiq:football:2024:panini-donruss:17:season-stat-line:no-auto:num-30",
+          "source": "checklistinsider-2026-08-27",
+          "parallelSlug": "season-stat-line",
+          "printRun": 30,
+          "playerName": "Vince Ferragamo"
+        },
+        {
+          "id": "hiq:football:2024:panini-donruss:17:season-stat-line:no-auto:num-500",
+          "source": "checklistinsider-2026-08-11",
+          "parallelSlug": "season-stat-line",
+          "printRun": 500,
+          "playerName": "Vince Ferragamo"
+        }
+      ]
+    },
+    {
+      "identityKey": "football|2024|panini-donruss|39|press-proof-gold|no-auto",
+      "kind": "other",
+      "reason": "two-checklist-print-runs-one-product:distinct-rungs",
+      "detail": "2 checklist print runs (/25, /50) -- distinct rungs",
+      "rows": [
+        {
+          "id": "hiq:football:2024:panini-donruss:39:press-proof-gold:no-auto:num-25",
+          "source": "checklistinsider-2026-08-11",
+          "parallelSlug": "press-proof-gold",
+          "printRun": 25,
+          "playerName": "Brian Robinson Jr."
+        },
+        {
+          "id": "hiq:football:2024:panini-donruss:39:press-proof-gold:no-auto:num-50",
+          "source": "checklistinsider-2026-08-11",
+          "parallelSlug": "press-proof-gold",
+          "printRun": 50,
+          "playerName": "Brian Robinson Jr."
+        }
+      ]
+    },
+    {
+      "identityKey": "football|2024|panini-donruss|52|press-proof-gold|no-auto",
+      "kind": "other",
+      "reason": "two-checklist-print-runs-one-product:distinct-rungs",
+      "detail": "2 checklist print runs (/25, /50) -- distinct rungs",
+      "rows": [
+        {
+          "id": "hiq:football:2024:panini-donruss:52:press-proof-gold:no-auto:num-25",
+          "source": "checklistinsider-2026-08-11",
+          "parallelSlug": "press-proof-gold",
+          "printRun": 25,
+          "playerName": "Zack Martin"
+        },
+        {
+          "id": "hiq:football:2024:panini-donruss:52:press-proof-gold:no-auto:num-50",
+          "source": "checklistinsider-2026-08-27",
+          "parallelSlug": "press-proof-gold",
+          "printRun": 50,
+          "playerName": "Zack Martin"
+        }
+      ]
+    },
+    {
+      "identityKey": "football|2024|panini-donruss|56|season-stat-line|no-auto",
+      "kind": "numbered-vs-unnumbered",
+      "reason": "two-checklist-print-runs-one-product:distinct-rungs",
+      "detail": "2 checklist print runs (/59, /500) -- distinct rungs",
+      "rows": [
+        {
+          "id": "hiq:football:2024:panini-donruss:56:season-stat-line:no-auto",
+          "source": "checklistinsider-2026-08-11",
+          "parallelSlug": "season-stat-line",
+          "printRun": null,
+          "playerName": "Elijah Moore"
+        },
+        {
+          "id": "hiq:football:2024:panini-donruss:56:season-stat-line:no-auto:num-59",
+          "source": "checklistinsider-2026-08-27",
+          "parallelSlug": "season-stat-line",
+          "printRun": 59,
+          "playerName": "Elijah Moore"
+        },
+        {
+          "id": "hiq:football:2024:panini-donruss:56:season-stat-line:no-auto:num-500",
+          "source": "checklistinsider-2026-08-27",
+          "parallelSlug": "season-stat-line",
+          "printRun": 500,
+          "playerName": "Elijah Moore"
+        }
+      ]
+    },
+    {
+      "identityKey": "football|2024|panini-donruss|66|press-proof-gold|no-auto",
+      "kind": "other",
+      "reason": "two-checklist-print-runs-one-product:distinct-rungs",
+      "detail": "2 checklist print runs (/25, /50) -- distinct rungs",
+      "rows": [
+        {
+          "id": "hiq:football:2024:panini-donruss:66:press-proof-gold:no-auto:num-25",
+          "source": "checklistinsider-2026-08-11",
+          "parallelSlug": "press-proof-gold",
+          "printRun": 25,
+          "playerName": "DeMarcus Lawrence"
+        },
+        {
+          "id": "hiq:football:2024:panini-donruss:66:press-proof-gold:no-auto:num-50",
+          "source": "checklistinsider-2026-08-11",
+          "parallelSlug": "press-proof-gold",
+          "printRun": 50,
+          "playerName": "DeMarcus Lawrence"
+        }
+      ]
+    },
+    {
+      "identityKey": "football|2024|panini-donruss|81|season-stat-line|no-auto",
+      "kind": "numbered-vs-unnumbered",
+      "reason": "two-checklist-print-runs-one-product:distinct-rungs",
+      "detail": "2 checklist print runs (/115, /500) -- distinct rungs",
+      "rows": [
+        {
+          "id": "hiq:football:2024:panini-donruss:81:season-stat-line:no-auto",
+          "source": "checklistinsider-2026-08-11",
+          "parallelSlug": "season-stat-line",
+          "printRun": null,
+          "playerName": "Alex Anzalone"
+        },
+        {
+          "id": "hiq:football:2024:panini-donruss:81:season-stat-line:no-auto:num-500",
+          "source": "checklistinsider-2026-08-11",
+          "parallelSlug": "season-stat-line",
+          "printRun": 500,
+          "playerName": "Alex Anzalone"
+        },
+        {
+          "id": "hiq:football:2024:panini-donruss:81:season-stat-line:no-auto:num-115",
+          "source": "checklistinsider-2026-08-27",
+          "parallelSlug": "season-stat-line",
+          "printRun": 115,
+          "playerName": "Alex Anzalone"
+        }
+      ]
+    },
+    {
+      "identityKey": "football|2024|panini-donruss|92|season-stat-line|no-auto",
+      "kind": "numbered-vs-unnumbered",
+      "reason": "two-checklist-print-runs-one-product:distinct-rungs",
+      "detail": "2 checklist print runs (/8, /500) -- distinct rungs",
+      "rows": [
+        {
+          "id": "hiq:football:2024:panini-donruss:92:season-stat-line:no-auto",
+          "source": "checklistinsider-2026-08-11",
+          "parallelSlug": "season-stat-line",
+          "printRun": null,
+          "playerName": "Romeo Doubs"
+        },
+        {
+          "id": "hiq:football:2024:panini-donruss:92:season-stat-line:no-auto:num-8",
+          "source": "checklistinsider-2026-08-27",
+          "parallelSlug": "season-stat-line",
+          "printRun": 8,
+          "playerName": "Romeo Doubs"
+        },
+        {
+          "id": "hiq:football:2024:panini-donruss:92:season-stat-line:no-auto:num-500",
+          "source": "checklistinsider-2026-08-11",
+          "parallelSlug": "season-stat-line",
+          "printRun": 500,
+          "playerName": "Romeo Doubs"
+        }
+      ]
+    },
+    {
+      "identityKey": "football|2024|panini-donruss|113|press-proof-gold|no-auto",
+      "kind": "other",
+      "reason": "two-checklist-print-runs-one-product:distinct-rungs",
+      "detail": "2 checklist print runs (/25, /50) -- distinct rungs",
+      "rows": [
+        {
+          "id": "hiq:football:2024:panini-donruss:113:press-proof-gold:no-auto:num-25",
+          "source": "checklistinsider-2026-08-11",
+          "parallelSlug": "press-proof-gold",
+          "printRun": 25,
+          "playerName": "Ka'imi Fairbairn"
+        },
+        {
+          "id": "hiq:football:2024:panini-donruss:113:press-proof-gold:no-auto:num-50",
+          "source": "checklistinsider-2026-08-11",
+          "parallelSlug": "press-proof-gold",
+          "printRun": 50,
+          "playerName": "Ka'imi Fairbairn"
+        }
+      ]
+    },
+    {
+      "identityKey": "football|2024|panini-donruss|179|season-stat-line|no-auto",
+      "kind": "numbered-vs-unnumbered",
+      "reason": "two-checklist-print-runs-one-product:distinct-rungs",
+      "detail": "2 checklist print runs (/5, /500) -- distinct rungs",
+      "rows": [
+        {
+          "id": "hiq:football:2024:panini-donruss:179:season-stat-line:no-auto",
+          "source": "checklistinsider-2026-08-11",
+          "parallelSlug": "season-stat-line",
+          "printRun": null,
+          "playerName": "Jeffery Simmons"
+        },
+        {
+          "id": "hiq:football:2024:panini-donruss:179:season-stat-line:no-auto:num-500",
+          "source": "checklistinsider-2026-08-11",
+          "parallelSlug": "season-stat-line",
+          "printRun": 500,
+          "playerName": "Jeffery Simmons"
+        },
+        {
+          "id": "hiq:football:2024:panini-donruss:179:season-stat-line:no-auto:num-5",
+          "source": "checklistinsider-2026-08-27",
+          "parallelSlug": "season-stat-line",
+          "printRun": 5,
+          "playerName": "Jeffery Simmons"
+        }
+      ]
+    },
+    {
+      "identityKey": "football|2024|panini-donruss|193|season-stat-line|no-auto",
+      "kind": "numbered-vs-unnumbered",
+      "reason": "two-checklist-print-runs-one-product:distinct-rungs",
+      "detail": "2 checklist print runs (/10, /500) -- distinct rungs",
+      "rows": [
+        {
+          "id": "hiq:football:2024:panini-donruss:193:season-stat-line:no-auto",
+          "source": "checklistinsider-2026-08-11",
+          "parallelSlug": "season-stat-line",
+          "printRun": null,
+          "playerName": "Nick Bosa"
+        },
+        {
+          "id": "hiq:football:2024:panini-donruss:193:season-stat-line:no-auto:num-10",
+          "source": "checklistinsider-2026-08-27",
+          "parallelSlug": "season-stat-line",
+          "printRun": 10,
+          "playerName": "Nick Bosa"
+        },
+        {
+          "id": "hiq:football:2024:panini-donruss:193:season-stat-line:no-auto:num-500",
+          "source": "checklistinsider-2026-08-11",
+          "parallelSlug": "season-stat-line",
+          "printRun": 500,
+          "playerName": "Nick Bosa"
+        }
+      ]
+    },
+    {
+      "identityKey": "football|2024|panini-donruss|240|press-proof-gold|no-auto",
+      "kind": "other",
+      "reason": "two-checklist-print-runs-one-product:distinct-rungs",
+      "detail": "2 checklist print runs (/25, /50) -- distinct rungs",
+      "rows": [
+        {
+          "id": "hiq:football:2024:panini-donruss:240:press-proof-gold:no-auto:num-25",
+          "source": "checklistinsider-2026-08-11",
+          "parallelSlug": "press-proof-gold",
+          "printRun": 25,
+          "playerName": "Matthew Stafford"
+        },
+        {
+          "id": "hiq:football:2024:panini-donruss:240:press-proof-gold:no-auto:num-50",
+          "source": "checklistinsider-2026-08-11",
+          "parallelSlug": "press-proof-gold",
+          "printRun": 50,
+          "playerName": "Matthew Stafford"
+        }
+      ]
+    },
+    {
+      "identityKey": "football|2024|panini-donruss|252|season-stat-line|no-auto",
+      "kind": "numbered-vs-unnumbered",
+      "reason": "two-checklist-print-runs-one-product:distinct-rungs",
+      "detail": "2 checklist print runs (/14, /500) -- distinct rungs",
+      "rows": [
+        {
+          "id": "hiq:football:2024:panini-donruss:252:season-stat-line:no-auto",
+          "source": "checklistinsider-2026-08-11",
+          "parallelSlug": "season-stat-line",
+          "printRun": null,
+          "playerName": "Julius Peppers"
+        },
+        {
+          "id": "hiq:football:2024:panini-donruss:252:season-stat-line:no-auto:num-500",
+          "source": "checklistinsider-2026-08-11",
+          "parallelSlug": "season-stat-line",
+          "printRun": 500,
+          "playerName": "Julius Peppers"
+        },
+        {
+          "id": "hiq:football:2024:panini-donruss:252:season-stat-line:no-auto:num-14",
+          "source": "checklistinsider-2026-08-27",
+          "parallelSlug": "season-stat-line",
+          "printRun": 14,
+          "playerName": "Julius Peppers"
+        }
+      ]
+    },
+    {
+      "identityKey": "football|2024|panini-donruss|257|press-proof-gold|no-auto",
+      "kind": "other",
+      "reason": "two-checklist-print-runs-one-product:distinct-rungs",
+      "detail": "2 checklist print runs (/25, /50) -- distinct rungs",
+      "rows": [
+        {
+          "id": "hiq:football:2024:panini-donruss:257:press-proof-gold:no-auto:num-25",
+          "source": "checklistinsider-2026-08-11",
+          "parallelSlug": "press-proof-gold",
+          "printRun": 25,
+          "playerName": "Zaire Franklin"
+        },
+        {
+          "id": "hiq:football:2024:panini-donruss:257:press-proof-gold:no-auto:num-50",
+          "source": "checklistinsider-2026-08-11",
+          "parallelSlug": "press-proof-gold",
+          "printRun": 50,
+          "playerName": "Zaire Franklin"
+        }
+      ]
+    },
+    {
+      "identityKey": "football|2024|panini-donruss|271|season-stat-line|no-auto",
+      "kind": "numbered-vs-unnumbered",
+      "reason": "two-checklist-print-runs-one-product:distinct-rungs",
+      "detail": "2 checklist print runs (/65, /500) -- distinct rungs",
+      "rows": [
+        {
+          "id": "hiq:football:2024:panini-donruss:271:season-stat-line:no-auto",
+          "source": "checklistinsider-2026-08-11",
+          "parallelSlug": "season-stat-line",
+          "printRun": null,
+          "playerName": "Trevor Lawrence"
+        },
+        {
+          "id": "hiq:football:2024:panini-donruss:271:season-stat-line:no-auto:num-500",
+          "source": "checklistinsider-2026-08-11",
+          "parallelSlug": "season-stat-line",
+          "printRun": 500,
+          "playerName": "Trevor Lawrence"
+        },
+        {
+          "id": "hiq:football:2024:panini-donruss:271:season-stat-line:no-auto:num-65",
+          "source": "checklistinsider-2026-08-27",
+          "parallelSlug": "season-stat-line",
+          "printRun": 65,
+          "playerName": "Trevor Lawrence"
+        }
+      ]
+    },
+    {
+      "identityKey": "football|2024|panini-donruss|277|press-proof-gold|no-auto",
+      "kind": "other",
+      "reason": "two-checklist-print-runs-one-product:distinct-rungs",
+      "detail": "2 checklist print runs (/25, /50) -- distinct rungs",
+      "rows": [
+        {
+          "id": "hiq:football:2024:panini-donruss:277:press-proof-gold:no-auto:num-25",
+          "source": "checklistinsider-2026-08-11",
+          "parallelSlug": "press-proof-gold",
+          "printRun": 25,
+          "playerName": "Trent Williams"
+        },
+        {
+          "id": "hiq:football:2024:panini-donruss:277:press-proof-gold:no-auto:num-50",
+          "source": "checklistinsider-2026-08-11",
+          "parallelSlug": "press-proof-gold",
+          "printRun": 50,
+          "playerName": "Trent Williams"
+        }
+      ]
+    },
+    {
+      "identityKey": "football|2024|panini-donruss|9|press-proof-gold|no-auto",
+      "kind": "other",
+      "reason": "two-checklist-print-runs-one-product:distinct-rungs",
+      "detail": "2 checklist print runs (/25, /50) -- distinct rungs",
+      "rows": [
+        {
+          "id": "hiq:football:2024:panini-donruss:9:press-proof-gold:no-auto:num-50",
+          "source": "checklistinsider-2026-08-27",
+          "parallelSlug": "press-proof-gold",
+          "printRun": 50,
+          "playerName": "Khalil Mack"
+        },
+        {
+          "id": "hiq:football:2024:panini-donruss:9:press-proof-gold:no-auto:num-25",
+          "source": "checklistinsider-2026-08-11",
+          "parallelSlug": "press-proof-gold",
+          "printRun": 25,
+          "playerName": "Khalil Mack"
+        }
+      ]
+    },
+    {
+      "identityKey": "football|2024|panini-donruss|13|jersey-number|no-auto",
+      "kind": "other",
+      "reason": "two-checklist-print-runs-one-product:distinct-rungs",
+      "detail": "2 checklist print runs (/11, /99) -- distinct rungs",
+      "rows": [
+        {
+          "id": "hiq:football:2024:panini-donruss:13:jersey-number:no-auto:num-99",
+          "source": "checklistinsider-2026-08-27",
+          "parallelSlug": "jersey-number",
+          "printRun": 99,
+          "playerName": "Brandon Aiyuk"
+        },
+        {
+          "id": "hiq:football:2024:panini-donruss:13:jersey-number:no-auto:num-11",
+          "source": "checklistinsider-2026-08-27",
+          "parallelSlug": "jersey-number",
+          "printRun": 11,
+          "playerName": "Brandon Aiyuk"
+        }
+      ]
+    },
+    {
+      "identityKey": "football|2024|panini-donruss|21|press-proof-gold|no-auto",
+      "kind": "other",
+      "reason": "two-checklist-print-runs-one-product:distinct-rungs",
+      "detail": "2 checklist print runs (/25, /50) -- distinct rungs",
+      "rows": [
+        {
+          "id": "hiq:football:2024:panini-donruss:21:press-proof-gold:no-auto:num-50",
+          "source": "checklistinsider-2026-08-11",
+          "parallelSlug": "press-proof-gold",
+          "printRun": 50,
+          "playerName": "Aaron Jones"
+        },
+        {
+          "id": "hiq:football:2024:panini-donruss:21:press-proof-gold:no-auto:num-25",
+          "source": "checklistinsider-2026-08-11",
+          "parallelSlug": "press-proof-gold",
+          "printRun": 25,
+          "playerName": "Aaron Jones"
+        }
+      ]
+    },
+    {
+      "identityKey": "football|2024|panini-donruss|56|press-proof-gold|no-auto",
+      "kind": "other",
+      "reason": "two-checklist-print-runs-one-product:distinct-rungs",
+      "detail": "2 checklist print runs (/25, /50) -- distinct rungs",
+      "rows": [
+        {
+          "id": "hiq:football:2024:panini-donruss:56:press-proof-gold:no-auto:num-50",
+          "source": "checklistinsider-2026-08-27",
+          "parallelSlug": "press-proof-gold",
+          "printRun": 50,
+          "playerName": "Elijah Moore"
+        },
+        {
+          "id": "hiq:football:2024:panini-donruss:56:press-proof-gold:no-auto:num-25",
+          "source": "checklistinsider-2026-08-11",
+          "parallelSlug": "press-proof-gold",
+          "printRun": 25,
+          "playerName": "Elijah Moore"
+        }
+      ]
+    },
+    {
+      "identityKey": "football|2024|panini-donruss|81|jersey-number|no-auto",
+      "kind": "other",
+      "reason": "two-checklist-print-runs-one-product:distinct-rungs",
+      "detail": "2 checklist print runs (/34, /99) -- distinct rungs",
+      "rows": [
+        {
+          "id": "hiq:football:2024:panini-donruss:81:jersey-number:no-auto:num-99",
+          "source": "checklistinsider-2026-08-11",
+          "parallelSlug": "jersey-number",
+          "printRun": 99,
+          "playerName": "Alex Anzalone"
+        },
+        {
+          "id": "hiq:football:2024:panini-donruss:81:jersey-number:no-auto:num-34",
+          "source": "checklistinsider-2026-08-27",
+          "parallelSlug": "jersey-number",
+          "printRun": 34,
+          "playerName": "Alex Anzalone"
+        }
+      ]
+    },
+    {
+      "identityKey": "football|2024|panini-donruss|143|season-stat-line|no-auto",
+      "kind": "numbered-vs-unnumbered",
+      "reason": "two-checklist-print-runs-one-product:distinct-rungs",
+      "detail": "2 checklist print runs (/5, /500) -- distinct rungs",
+      "rows": [
+        {
+          "id": "hiq:football:2024:panini-donruss:143:season-stat-line:no-auto:num-500",
+          "source": "checklistinsider-2026-08-11",
+          "parallelSlug": "season-stat-line",
+          "printRun": 500,
+          "playerName": "Jahmyr Gibbs"
+        },
+        {
+          "id": "hiq:football:2024:panini-donruss:143:season-stat-line:no-auto:num-5",
+          "source": "checklistinsider-2026-08-27",
+          "parallelSlug": "season-stat-line",
+          "printRun": 5,
+          "playerName": "Jahmyr Gibbs"
+        },
+        {
+          "id": "hiq:football:2024:panini-donruss:143:season-stat-line:no-auto",
+          "source": "checklistinsider-2026-08-11",
+          "parallelSlug": "season-stat-line",
+          "printRun": null,
+          "playerName": "Jahmyr Gibbs"
+        }
+      ]
+    },
+    {
+      "identityKey": "football|2024|panini-donruss|149|season-stat-line|no-auto",
+      "kind": "numbered-vs-unnumbered",
+      "reason": "two-checklist-print-runs-one-product:distinct-rungs",
+      "detail": "2 checklist print runs (/8, /500) -- distinct rungs",
+      "rows": [
+        {
+          "id": "hiq:football:2024:panini-donruss:149:season-stat-line:no-auto:num-500",
+          "source": "checklistinsider-2026-08-11",
+          "parallelSlug": "season-stat-line",
+          "printRun": 500,
+          "playerName": "Richard Sherman"
+        },
+        {
+          "id": "hiq:football:2024:panini-donruss:149:season-stat-line:no-auto:num-8",
+          "source": "checklistinsider-2026-08-27",
+          "parallelSlug": "season-stat-line",
+          "printRun": 8,
+          "playerName": "Richard Sherman"
+        },
+        {
+          "id": "hiq:football:2024:panini-donruss:149:season-stat-line:no-auto",
+          "source": "checklistinsider-2026-08-11",
+          "parallelSlug": "season-stat-line",
+          "printRun": null,
+          "playerName": "Richard Sherman"
+        }
+      ]
+    },
+    {
+      "identityKey": "football|2024|panini-donruss|153|season-stat-line|no-auto",
+      "kind": "numbered-vs-unnumbered",
+      "reason": "two-checklist-print-runs-one-product:distinct-rungs",
+      "detail": "2 checklist print runs (/10, /500) -- distinct rungs",
+      "rows": [
+        {
+          "id": "hiq:football:2024:panini-donruss:153:season-stat-line:no-auto:num-500",
+          "source": "checklistinsider-2026-08-11",
+          "parallelSlug": "season-stat-line",
+          "printRun": 500,
+          "playerName": "Jordan Addison"
+        },
+        {
+          "id": "hiq:football:2024:panini-donruss:153:season-stat-line:no-auto",
+          "source": "checklistinsider-2026-08-11",
+          "parallelSlug": "season-stat-line",
+          "printRun": null,
+          "playerName": "Jordan Addison"
+        },
+        {
+          "id": "hiq:football:2024:panini-donruss:153:season-stat-line:no-auto:num-10",
+          "source": "checklistinsider-2026-08-27",
+          "parallelSlug": "season-stat-line",
+          "printRun": 10,
+          "playerName": "Jordan Addison"
+        }
+      ]
+    },
+    {
+      "identityKey": "football|2024|panini-donruss|155|press-proof-gold|no-auto",
+      "kind": "other",
+      "reason": "two-checklist-print-runs-one-product:distinct-rungs",
+      "detail": "2 checklist print runs (/25, /50) -- distinct rungs",
+      "rows": [
+        {
+          "id": "hiq:football:2024:panini-donruss:155:press-proof-gold:no-auto:num-50",
+          "source": "checklistinsider-2026-08-11",
+          "parallelSlug": "press-proof-gold",
+          "printRun": 50,
+          "playerName": "Joe Mixon"
+        },
+        {
+          "id": "hiq:football:2024:panini-donruss:155:press-proof-gold:no-auto:num-25",
+          "source": "checklistinsider-2026-08-11",
+          "parallelSlug": "press-proof-gold",
+          "printRun": 25,
+          "playerName": "Joe Mixon"
+        }
+      ]
+    },
+    {
+      "identityKey": "football|2024|panini-donruss|160|season-stat-line|no-auto",
+      "kind": "numbered-vs-unnumbered",
+      "reason": "two-checklist-print-runs-one-product:distinct-rungs",
+      "detail": "2 checklist print runs (/66, /500) -- distinct rungs",
+      "rows": [
+        {
+          "id": "hiq:football:2024:panini-donruss:160:season-stat-line:no-auto:num-500",
+          "source": "checklistinsider-2026-08-11",
+          "parallelSlug": "season-stat-line",
+          "printRun": 500,
+          "playerName": "Russell Wilson"
+        },
+        {
+          "id": "hiq:football:2024:panini-donruss:160:season-stat-line:no-auto:num-66",
+          "source": "checklistinsider-2026-08-27",
+          "parallelSlug": "season-stat-line",
+          "printRun": 66,
+          "playerName": "Russell Wilson"
+        },
+        {
+          "id": "hiq:football:2024:panini-donruss:160:season-stat-line:no-auto",
+          "source": "checklistinsider-2026-08-11",
+          "parallelSlug": "season-stat-line",
+          "printRun": null,
+          "playerName": "Russell Wilson"
+        }
+      ]
+    },
+    {
+      "identityKey": "football|2024|panini-donruss|219|jersey-number|no-auto",
+      "kind": "other",
+      "reason": "two-checklist-print-runs-one-product:distinct-rungs",
+      "detail": "2 checklist print runs (/84, /99) -- distinct rungs",
+      "rows": [
+        {
+          "id": "hiq:football:2024:panini-donruss:219:jersey-number:no-auto:num-99",
+          "source": "checklistinsider-2026-08-11",
+          "parallelSlug": "jersey-number",
+          "printRun": 99,
+          "playerName": "Kendrick Bourne"
+        },
+        {
+          "id": "hiq:football:2024:panini-donruss:219:jersey-number:no-auto:num-84",
+          "source": "checklistinsider-2026-08-27",
+          "parallelSlug": "jersey-number",
+          "printRun": 84,
+          "playerName": "Kendrick Bourne"
+        }
+      ]
+    },
+    {
+      "identityKey": "football|2024|panini-donruss|247|press-proof-gold|no-auto",
+      "kind": "other",
+      "reason": "two-checklist-print-runs-one-product:distinct-rungs",
+      "detail": "2 checklist print runs (/25, /50) -- distinct rungs",
+      "rows": [
+        {
+          "id": "hiq:football:2024:panini-donruss:247:press-proof-gold:no-auto:num-50",
+          "source": "checklistinsider-2026-08-11",
+          "parallelSlug": "press-proof-gold",
+          "printRun": 50,
+          "playerName": "Chris Godwin"
+        },
+        {
+          "id": "hiq:football:2024:panini-donruss:247:press-proof-gold:no-auto:num-25",
+          "source": "checklistinsider-2026-08-11",
+          "parallelSlug": "press-proof-gold",
+          "printRun": 25,
+          "playerName": "Chris Godwin"
+        }
+      ]
+    },
+    {
+      "identityKey": "football|2024|panini-donruss|273|press-proof-gold|no-auto",
+      "kind": "other",
+      "reason": "two-checklist-print-runs-one-product:distinct-rungs",
+      "detail": "2 checklist print runs (/25, /50) -- distinct rungs",
+      "rows": [
+        {
+          "id": "hiq:football:2024:panini-donruss:273:press-proof-gold:no-auto:num-50",
+          "source": "checklistinsider-2026-08-11",
+          "parallelSlug": "press-proof-gold",
+          "printRun": 50,
+          "playerName": "Kellen Winslow"
+        },
+        {
+          "id": "hiq:football:2024:panini-donruss:273:press-proof-gold:no-auto:num-25",
+          "source": "checklistinsider-2026-08-11",
+          "parallelSlug": "press-proof-gold",
+          "printRun": 25,
+          "playerName": "Kellen Winslow"
+        }
+      ]
+    },
+    {
+      "identityKey": "football|2024|panini-donruss|290|press-proof-gold|no-auto",
+      "kind": "other",
+      "reason": "two-checklist-print-runs-one-product:distinct-rungs",
+      "detail": "2 checklist print runs (/25, /50) -- distinct rungs",
+      "rows": [
+        {
+          "id": "hiq:football:2024:panini-donruss:290:press-proof-gold:no-auto:num-50",
+          "source": "checklistinsider-2026-08-11",
+          "parallelSlug": "press-proof-gold",
+          "printRun": 50,
+          "playerName": "Bryce Young"
+        },
+        {
+          "id": "hiq:football:2024:panini-donruss:290:press-proof-gold:no-auto:num-25",
+          "source": "checklistinsider-2026-08-11",
+          "parallelSlug": "press-proof-gold",
+          "printRun": 25,
+          "playerName": "Bryce Young"
+        }
+      ]
+    },
+    {
+      "identityKey": "football|2024|panini-donruss|300|press-proof-gold|no-auto",
+      "kind": "other",
+      "reason": "two-checklist-print-runs-one-product:distinct-rungs",
+      "detail": "2 checklist print runs (/25, /50) -- distinct rungs",
+      "rows": [
+        {
+          "id": "hiq:football:2024:panini-donruss:300:press-proof-gold:no-auto:num-50",
+          "source": "checklistinsider-2026-08-11",
+          "parallelSlug": "press-proof-gold",
+          "printRun": 50,
+          "playerName": "Josh Allen"
+        },
+        {
+          "id": "hiq:football:2024:panini-donruss:300:press-proof-gold:no-auto:num-25",
+          "source": "checklistinsider-2026-08-11",
+          "parallelSlug": "press-proof-gold",
+          "printRun": 25,
+          "playerName": "Josh Allen"
+        }
+      ]
+    },
+    {
+      "identityKey": "football|2024|panini-mosaic|311|base|no-auto",
+      "kind": "numbered-vs-unnumbered",
+      "reason": "two-checklist-print-runs-one-product:distinct-rungs",
+      "detail": "a BASE row is numbered /1 beside an un-numbered base row -- a base card is not a 1/1, so the /1 is a mis-transcription; folding either way risks a real card's pool (found live on 2024 panini-prizm #347, 190 sales)",
+      "rows": [
+        {
+          "id": "hiq:football:2024:panini-mosaic:311:base:no-auto",
+          "source": "beckett-scraped-2026-08-25",
+          "parallelSlug": "base",
+          "printRun": null,
+          "playerName": "Olumuyiwa Fashanu"
+        },
+        {
+          "id": "hiq:football:2024:panini-mosaic:311:base:no-auto:num-199",
+          "source": "checklistinsider-2026-08-28",
+          "parallelSlug": "base",
+          "printRun": 199,
+          "playerName": "Olumuyiwa Fashanu"
+        },
+        {
+          "id": "hiq:football:2024:panini-mosaic:311:base:no-auto:num-99",
+          "source": "checklistinsider-2026-08-28",
+          "parallelSlug": "base",
+          "printRun": 99,
+          "playerName": "Olumuyiwa Fashanu"
+        },
+        {
+          "id": "hiq:football:2024:panini-mosaic:311:base:no-auto:num-10",
+          "source": "checklistinsider-2026-08-28",
+          "parallelSlug": "base",
+          "printRun": 10,
+          "playerName": "Olumuyiwa Fashanu"
+        },
+        {
+          "id": "hiq:football:2024:panini-mosaic:311:base:no-auto:num-25",
+          "source": "checklistinsider-2026-08-28",
+          "parallelSlug": "base",
+          "printRun": 25,
+          "playerName": "Olumuyiwa Fashanu"
+        },
+        {
+          "id": "hiq:football:2024:panini-mosaic:311:base:no-auto:num-1",
+          "source": "checklistinsider-2026-08-28",
+          "parallelSlug": "base",
+          "printRun": 1,
+          "playerName": "Olumuyiwa Fashanu"
+        },
+        {
+          "id": "hiq:football:2024:panini-mosaic:311:base:no-auto:num-15",
+          "source": "checklistinsider-2026-08-28",
+          "parallelSlug": "base",
+          "printRun": 15,
+          "playerName": "Olumuyiwa Fashanu"
+        },
+        {
+          "id": "hiq:football:2024:panini-mosaic:311:base:no-auto:num-49",
+          "source": "checklistinsider-2026-08-28",
+          "parallelSlug": "base",
+          "printRun": 49,
+          "playerName": "Olumuyiwa Fashanu"
+        }
+      ]
+    },
+    {
+      "identityKey": "football|2024|panini-mosaic|348|base|no-auto",
+      "kind": "numbered-vs-unnumbered",
+      "reason": "two-checklist-print-runs-one-product:distinct-rungs",
+      "detail": "a BASE row is numbered /1 beside an un-numbered base row -- a base card is not a 1/1, so the /1 is a mis-transcription; folding either way risks a real card's pool (found live on 2024 panini-prizm #347, 190 sales)",
+      "rows": [
+        {
+          "id": "hiq:football:2024:panini-mosaic:348:base:no-auto",
+          "source": "beckett-scraped-2026-08-25",
+          "parallelSlug": "base",
+          "printRun": null,
+          "playerName": "Kris Jenkins"
+        },
+        {
+          "id": "hiq:football:2024:panini-mosaic:348:base:no-auto:num-15",
+          "source": "checklistinsider-2026-08-28",
+          "parallelSlug": "base",
+          "printRun": 15,
+          "playerName": "Kris Jenkins"
+        },
+        {
+          "id": "hiq:football:2024:panini-mosaic:348:base:no-auto:num-1",
+          "source": "checklistinsider-2026-08-28",
+          "parallelSlug": "base",
+          "printRun": 1,
+          "playerName": "Kris Jenkins"
+        }
+      ]
+    },
+    {
+      "identityKey": "football|2024|panini-prizm|85|base|no-auto",
+      "kind": "numbered-vs-unnumbered",
+      "reason": "two-checklist-print-runs-one-product:distinct-rungs",
+      "detail": "a BASE row is numbered /1 beside an un-numbered base row -- a base card is not a 1/1, so the /1 is a mis-transcription; folding either way risks a real card's pool (found live on 2024 panini-prizm #347, 190 sales)",
+      "rows": [
+        {
+          "id": "hiq:football:2024:panini-prizm:85:base:no-auto",
+          "source": "beckett-scraped-2026-08-26",
+          "parallelSlug": "base",
+          "printRun": null,
+          "playerName": "Greg Dulcich"
+        },
+        {
+          "id": "hiq:football:2024:panini-prizm:85:base:no-auto:num-5",
+          "source": "checklistinsider-2026-08-28",
+          "parallelSlug": "base",
+          "printRun": 5,
+          "playerName": "Greg Dulcich"
+        },
+        {
+          "id": "hiq:football:2024:panini-prizm:85:base:no-auto:num-35",
+          "source": "checklistinsider-2026-08-28",
+          "parallelSlug": "base",
+          "printRun": 35,
+          "playerName": "Greg Dulcich"
+        },
+        {
+          "id": "hiq:football:2024:panini-prizm:85:base:no-auto:num-1",
+          "source": "checklistinsider-2026-08-28",
+          "parallelSlug": "base",
+          "printRun": 1,
+          "playerName": "Greg Dulcich"
+        },
+        {
+          "id": "hiq:football:2024:panini-prizm:85:base:no-auto:num-25",
+          "source": "checklistinsider-2026-08-28",
+          "parallelSlug": "base",
+          "printRun": 25,
+          "playerName": "Greg Dulcich"
+        }
+      ]
+    },
+    {
+      "identityKey": "football|2024|panini-prizm|88|base|no-auto",
+      "kind": "numbered-vs-unnumbered",
+      "reason": "two-checklist-print-runs-one-product:distinct-rungs",
+      "detail": "a BASE row is numbered /1 beside an un-numbered base row -- a base card is not a 1/1, so the /1 is a mis-transcription; folding either way risks a real card's pool (found live on 2024 panini-prizm #347, 190 sales)",
+      "rows": [
+        {
+          "id": "hiq:football:2024:panini-prizm:88:base:no-auto",
+          "source": "beckett-scraped-2026-08-26",
+          "parallelSlug": "base",
+          "printRun": null,
+          "playerName": "Marvin Mims"
+        },
+        {
+          "id": "hiq:football:2024:panini-prizm:88:base:no-auto:num-25",
+          "source": "checklistinsider-2026-08-28",
+          "parallelSlug": "base",
+          "printRun": 25,
+          "playerName": "Marvin Mims"
+        },
+        {
+          "id": "hiq:football:2024:panini-prizm:88:base:no-auto:num-35",
+          "source": "checklistinsider-2026-08-28",
+          "parallelSlug": "base",
+          "printRun": 35,
+          "playerName": "Marvin Mims"
+        },
+        {
+          "id": "hiq:football:2024:panini-prizm:88:base:no-auto:num-1",
+          "source": "checklistinsider-2026-08-28",
+          "parallelSlug": "base",
+          "printRun": 1,
+          "playerName": "Marvin Mims"
+        },
+        {
+          "id": "hiq:football:2024:panini-prizm:88:base:no-auto:num-5",
+          "source": "checklistinsider-2026-08-28",
+          "parallelSlug": "base",
+          "printRun": 5,
+          "playerName": "Marvin Mims"
+        }
+      ]
+    },
+    {
+      "identityKey": "football|2024|panini-prizm|177|base|no-auto",
+      "kind": "numbered-vs-unnumbered",
+      "reason": "two-checklist-print-runs-one-product:distinct-rungs",
+      "detail": "a BASE row is numbered /1 beside an un-numbered base row -- a base card is not a 1/1, so the /1 is a mis-transcription; folding either way risks a real card's pool (found live on 2024 panini-prizm #347, 190 sales)",
+      "rows": [
+        {
+          "id": "hiq:football:2024:panini-prizm:177:base:no-auto",
+          "source": "beckett-scraped-2026-08-26",
+          "parallelSlug": "base",
+          "printRun": null,
+          "playerName": "Tyreek Hill"
+        },
+        {
+          "id": "hiq:football:2024:panini-prizm:177:base:no-auto:num-5",
+          "source": "checklistinsider-2026-08-28",
+          "parallelSlug": "base",
+          "printRun": 5,
+          "playerName": "Tyreek Hill"
+        },
+        {
+          "id": "hiq:football:2024:panini-prizm:177:base:no-auto:num-1",
+          "source": "checklistinsider-2026-08-28",
+          "parallelSlug": "base",
+          "printRun": 1,
+          "playerName": "Tyreek Hill"
+        },
+        {
+          "id": "hiq:football:2024:panini-prizm:177:base:no-auto:num-35",
+          "source": "checklistinsider-2026-08-28",
+          "parallelSlug": "base",
+          "printRun": 35,
+          "playerName": "Tyreek Hill"
+        },
+        {
+          "id": "hiq:football:2024:panini-prizm:177:base:no-auto:num-25",
+          "source": "checklistinsider-2026-08-28",
+          "parallelSlug": "base",
+          "printRun": 25,
+          "playerName": "Tyreek Hill"
+        }
+      ]
+    },
+    {
+      "identityKey": "football|2024|panini-prizm|200|base|no-auto",
+      "kind": "numbered-vs-unnumbered",
+      "reason": "two-checklist-print-runs-one-product:distinct-rungs",
+      "detail": "a BASE row is numbered /1 beside an un-numbered base row -- a base card is not a 1/1, so the /1 is a mis-transcription; folding either way risks a real card's pool (found live on 2024 panini-prizm #347, 190 sales)",
+      "rows": [
+        {
+          "id": "hiq:football:2024:panini-prizm:200:base:no-auto",
+          "source": "beckett-scraped-2026-08-26",
+          "parallelSlug": "base",
+          "printRun": null,
+          "playerName": "Drew Bledsoe"
+        },
+        {
+          "id": "hiq:football:2024:panini-prizm:200:base:no-auto:num-1",
+          "source": "checklistinsider-2026-08-28",
+          "parallelSlug": "base",
+          "printRun": 1,
+          "playerName": "Drew Bledsoe"
+        },
+        {
+          "id": "hiq:football:2024:panini-prizm:200:base:no-auto:num-5",
+          "source": "checklistinsider-2026-08-28",
+          "parallelSlug": "base",
+          "printRun": 5,
+          "playerName": "Drew Bledsoe"
+        },
+        {
+          "id": "hiq:football:2024:panini-prizm:200:base:no-auto:num-35",
+          "source": "checklistinsider-2026-08-27",
+          "parallelSlug": "base",
+          "printRun": 35,
+          "playerName": "Drew Bledsoe"
+        },
+        {
+          "id": "hiq:football:2024:panini-prizm:200:base:no-auto:num-25",
+          "source": "checklistinsider-2026-08-28",
+          "parallelSlug": "base",
+          "printRun": 25,
+          "playerName": "Drew Bledsoe"
+        }
+      ]
+    },
+    {
+      "identityKey": "football|2024|panini-prizm|306|base|no-auto",
+      "kind": "numbered-vs-unnumbered",
+      "reason": "two-checklist-print-runs-one-product:distinct-rungs",
+      "detail": "a BASE row is numbered /1 beside an un-numbered base row -- a base card is not a 1/1, so the /1 is a mis-transcription; folding either way risks a real card's pool (found live on 2024 panini-prizm #347, 190 sales)",
+      "rows": [
+        {
+          "id": "hiq:football:2024:panini-prizm:306:base:no-auto",
+          "source": "beckett-scraped-2026-08-26",
+          "parallelSlug": "base",
+          "printRun": null,
+          "playerName": "Audric Estime"
+        },
+        {
+          "id": "hiq:football:2024:panini-prizm:306:base:no-auto:num-25",
+          "source": "checklistinsider-2026-08-28",
+          "parallelSlug": "base",
+          "printRun": 25,
+          "playerName": "Audric Estime"
+        },
+        {
+          "id": "hiq:football:2024:panini-prizm:306:base:no-auto:num-35",
+          "source": "checklistinsider-2026-08-28",
+          "parallelSlug": "base",
+          "printRun": 35,
+          "playerName": "Audric Estime"
+        },
+        {
+          "id": "hiq:football:2024:panini-prizm:306:base:no-auto:num-75",
+          "source": "checklistinsider-2026-08-28",
+          "parallelSlug": "base",
+          "printRun": 75,
+          "playerName": "Audric Estime"
+        },
+        {
+          "id": "hiq:football:2024:panini-prizm:306:base:no-auto:num-10",
+          "source": "checklistinsider-2026-08-28",
+          "parallelSlug": "base",
+          "printRun": 10,
+          "playerName": "Audric Estime"
+        },
+        {
+          "id": "hiq:football:2024:panini-prizm:306:base:no-auto:num-1",
+          "source": "checklistinsider-2026-08-28",
+          "parallelSlug": "base",
+          "printRun": 1,
+          "playerName": "Audric Estime"
+        },
+        {
+          "id": "hiq:football:2024:panini-prizm:306:base:no-auto:num-5",
+          "source": "checklistinsider-2026-08-28",
+          "parallelSlug": "base",
+          "printRun": 5,
+          "playerName": "Audric Estime"
+        },
+        {
+          "id": "hiq:football:2024:panini-prizm:306:base:no-auto:num-49",
+          "source": "checklistinsider-2026-08-28",
+          "parallelSlug": "base",
+          "printRun": 49,
+          "playerName": "Audric Estime"
+        },
+        {
+          "id": "hiq:football:2024:panini-prizm:306:base:no-auto:num-149",
+          "source": "checklistinsider-2026-08-28",
+          "parallelSlug": "base",
+          "printRun": 149,
+          "playerName": "Audric Estime"
+        }
+      ]
+    },
+    {
+      "identityKey": "football|2024|panini-prizm|392|base|no-auto",
+      "kind": "numbered-vs-unnumbered",
+      "reason": "two-checklist-print-runs-one-product:distinct-rungs",
+      "detail": "a BASE row is numbered /1 beside an un-numbered base row -- a base card is not a 1/1, so the /1 is a mis-transcription; folding either way risks a real card's pool (found live on 2024 panini-prizm #347, 190 sales)",
+      "rows": [
+        {
+          "id": "hiq:football:2024:panini-prizm:392:base:no-auto",
+          "source": "beckett-scraped-2026-08-26",
+          "parallelSlug": "base",
+          "printRun": null,
+          "playerName": "Trey Benson"
+        },
+        {
+          "id": "hiq:football:2024:panini-prizm:392:base:no-auto:num-49",
+          "source": "checklistinsider-2026-08-28",
+          "parallelSlug": "base",
+          "printRun": 49,
+          "playerName": "Trey Benson"
+        },
+        {
+          "id": "hiq:football:2024:panini-prizm:392:base:no-auto:num-10",
+          "source": "checklistinsider-2026-08-28",
+          "parallelSlug": "base",
+          "printRun": 10,
+          "playerName": "Trey Benson"
+        },
+        {
+          "id": "hiq:football:2024:panini-prizm:392:base:no-auto:num-1",
+          "source": "checklistinsider-2026-08-28",
+          "parallelSlug": "base",
+          "printRun": 1,
+          "playerName": "Trey Benson"
+        },
+        {
+          "id": "hiq:football:2024:panini-prizm:392:base:no-auto:num-5",
+          "source": "checklistinsider-2026-08-28",
+          "parallelSlug": "base",
+          "printRun": 5,
+          "playerName": "Trey Benson"
+        },
+        {
+          "id": "hiq:football:2024:panini-prizm:392:base:no-auto:num-35",
+          "source": "checklistinsider-2026-08-28",
+          "parallelSlug": "base",
+          "printRun": 35,
+          "playerName": "Trey Benson"
+        },
+        {
+          "id": "hiq:football:2024:panini-prizm:392:base:no-auto:num-25",
+          "source": "checklistinsider-2026-08-28",
+          "parallelSlug": "base",
+          "printRun": 25,
+          "playerName": "Trey Benson"
+        },
+        {
+          "id": "hiq:football:2024:panini-prizm:392:base:no-auto:num-75",
+          "source": "checklistinsider-2026-08-28",
+          "parallelSlug": "base",
+          "printRun": 75,
+          "playerName": "Trey Benson"
+        },
+        {
+          "id": "hiq:football:2024:panini-prizm:392:base:no-auto:num-149",
+          "source": "checklistinsider-2026-08-28",
+          "parallelSlug": "base",
+          "printRun": 149,
+          "playerName": "Trey Benson"
+        }
+      ]
+    }
+  ]
 }

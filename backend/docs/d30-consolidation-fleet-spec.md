@@ -115,6 +115,64 @@ checklist row; two checklist rows of one product with different print runs;
 two dedicated products both listing a CPA number where the titles do not say
 which; contradictions with the rulings file.
 
+## D30-R2 repair (2026-08-30) — what the first build got wrong
+
+The first build (`feat/d30-fleet-1946`) was refuted on two counts and carried
+two more defects found in review. All four are fixed on `feat/d30-fleet-r2-0830`:
+
+1. **THE GROUPING KEY (blocker).** The fleet grouped with D29's `identityKeyOf`,
+   whose key embeds the RAW `setKey` field, so two SPELLINGS of one product
+   never met: `MODE=setkey` was a no-op and `cross-product-cpa` was never
+   emitted. D30 now has its own `groupKeyOf` (duplicateWinnerRule.ts) that
+   normalizes the PRODUCT and only the product — a known alias to its one
+   spelling, Drew's Donruss era ruling, and the bowman/bowman-chrome collapse
+   for auto-prefixed CPA numbers ONLY. `identityKeyOf` is unchanged: it is
+   D29's contract and its own tests pin the field-not-segment reading.
+
+   **A measurement correction the refutation did not have.** The drift is in the
+   ID SEGMENT, not the field. Measured live on prod 2026-08-30, baseball
+   2024-26: of 62,650 drift-pair observations, **ZERO** have differing setKey
+   FIELDS — every one is the D23 rename having renamed the field while the id
+   still reads the old spelling (`topps-206: topps~topps-206`). So `kindOf`
+   compares the id segment too, exactly as the measurement does
+   (`measure-d31.cjs:443`). A fix that only widened the field would have left
+   the population still reporting empty.
+
+   The family ladder is deliberately NOT used: `productFamilyOf` maps
+   `bowman-paper` onto `bowman`, which is the merge Drew called catastrophic.
+   The dead `productFamilyOf` import in the first build was the WRONG function,
+   not the missing one.
+
+2. **RULE 3 WAS DEAD CODE (major).** `canonicalSpellingOf` implemented Drew's
+   majority correctly and was never called; the winner came from `rankRows`,
+   whose last tie-break is id LENGTH — Drew's tie-break promoted to the whole
+   rule. Four publishers spelling `refractor` folded onto beckett's lone
+   `refractors-refractor`. `pickSpellingWinner` now selects the row carrying the
+   canonical spelling, and stands down where r1/r2/r6 decide on stronger facts.
+
+3. **THE contentHash GUARD WAS POST-HOC (major).** The probe ran inside
+   `moveSalesAndRow` and the refusal after the loop, so under APPLY every
+   colliding sale was written before `exit(2)` could fire. It is now a
+   read-only PRE-FLIGHT over the whole plan: APPLY refuses with ZERO writes.
+   The seen-set is seeded with the WINNER's own sales (the per-loser scoping
+   made the reported 530 a floor, not a count).
+
+4. **THE ' Refractor' STRIP (blocker before APPLY).** D31 retracted
+   colour=refractor, so the strip conflated a colour with its colour-refractor
+   sibling in the partition-scoped pre-write dedup — a genuine sale swallowed at
+   ingest. Removed from both `computeContentHash` and
+   `relocate-sold-comp.cjs`. **Transition safety:** stored rows carry the legacy
+   hash, so the dedup LOOKUP asks for both forms (`contentHashesForLookup`,
+   `ARRAY_CONTAINS`) while the pool is mixed; the WRITE stores only the new
+   form. Without that, the fix would have resurrected the duplicates it exists
+   to prevent. `needsDeploy: true` — this touches `backend/src`.
+
+Also: the ambiguous artifact is a REAL football-2024 sample (58 groups) rather
+than an empty stub; the salesWidth test imports the real `ownsPoolKey` instead
+of re-implementing it; and the un-run prod revert is now a whitelisted runner
+script — see the plan doc for why the prior builder's version would have
+half-reverted the rows.
+
 ## Guardrails
 
 Never run the write path locally; the runner only; REPORT ONLY first; gate on

@@ -17,27 +17,34 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { ownsPoolKey } from "../src/services/catalog/duplicateWinnerRule.js";
 
 const backend = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const source = fs.readFileSync(path.join(backend, "scripts", "consolidate-catalog-duplicates.cjs"), "utf8");
 
 /**
- * The ownership rule, extracted exactly as the script applies it: a key belongs
- * to the loser unless a LONGER rival id in the same group also prefixes it.
+ * THE REAL FUNCTION, not a copy of it. This test used to re-implement the
+ * ownership rule locally, so it vouched for its own copy and could drift from
+ * the script silently. `ownsPoolKey` now lives in duplicateWinnerRule and the
+ * script calls it, so what is asserted here is what runs -- and the regex
+ * below pins that the script still delegates rather than re-inlining it.
  */
-function ownsKey(key: string, loserId: string, rivals: string[]): boolean {
-  if (key === loserId) return true;
-  if (!key.startsWith(`${loserId}:`)) return false;
-  for (const rid of rivals) {
-    if ((key === rid || key.startsWith(`${rid}:`)) && rid.length > loserId.length) return false;
-  }
-  return true;
-}
+const ownsKey = (key: string, loserId: string, rivals: string[]): boolean =>
+  ownsPoolKey(key, loserId, rivals);
 
 describe("the sales query covers the FULL width, not just the exact id", () => {
   it("queries `id` OR keys extending it with ':'", () => {
     expect(source).toMatch(/c\.hobbyiqCardId = @s OR STARTSWITH\(c\.hobbyiqCardId, @p\)/);
     expect(source).toMatch(/value: `\$\{loserId\}:`/);
+  });
+
+  it("the script DELEGATES to ownsPoolKey rather than re-inlining the rule", () => {
+    // If someone re-inlines the loop, this fails and the test above stops
+    // vouching for the script -- which is exactly the drift being prevented.
+    expect(source).toMatch(/ownsPoolKey\(key, loserId, rivals\)/);
+    expect(source).toMatch(/ownsPoolKey/);
+    // and the rule is NOT duplicated inside the script any more
+    expect(source).not.toMatch(/if \(key === loserId\) return true;/);
   });
 
   it("does NOT hand salesContainer to moveCatalogRow (which would re-scan the narrow subset)", () => {

@@ -3322,8 +3322,34 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
     47 base cards in ONE sport-year that would have had their pools folded onto a
     mis-transcribed /1.**
 
-    **NEEDS DREW: the 190 rows are still on the /1 row.** A scoped, verified
-    revert is written and NOT run — `C:/tmp/d30out/REVERT-190-rows.cjs`, dry-run
-    by default. It re-points only rows whose `reslugedFrom` is that exact loser
-    AND whose `reslugedReason` contains "D30 r2", so it cannot touch anything
-    another job moved. Run it from `backend/` after Drew's go.
+    **NEEDS DREW: the 190 rows are still on the /1 row.** The revert is now a
+    runner script — `backend/scripts/revert-d30-base-onto-one-of-one.cjs`,
+    whitelisted in backfill-runner.yml, REPORT ONLY unless `BACKFILL_APPLY=true`,
+    and refusing to run without `SCOPE=d30-base-one-of-one-incident` (the
+    refusal sits above the `dist` require and fires with `dist` absent, #1565).
+    It selects only rows on the /1 slug stamped `reslugedFrom` = that exact
+    loser whose `reslugedReason` contains "D30 r2", so it cannot reach a row any
+    other job moved.
+
+    **THE PRIOR REVERT SCRIPT WAS WRONG, and reading prod is what showed it**
+    (verified read-only 2026-08-30, D30-R2). Its row SELECTION was exactly
+    right — its predicate matches 190 of 190, and the looser predicates match
+    190 too, so it neither over- nor under-reaches. Its WRITE was wrong twice:
+
+      1. It PATCHED, but the rows changed partition. All 190 carry
+         `cardId = …:num-1` (measured: cardId==WRONG 190, cardId==LOSER 0), so
+         the fold RELOCATED them cross-partition. `cardId` is the partition key
+         and cannot be patched; a patch setting only `hobbyiqCardId` would
+         leave each sale reading as the base card by one field and as the 1/1
+         by the other — worse than the state it is fixing.
+      2. It left `contentHash` STALE. The hash includes `cardId`, and a sample
+         row's stored hash recomputes exactly from `cardId=…:num-1`. Left
+         behind, the store's pre-write dedup could never match a re-emit of
+         that sale and the row would duplicate on the next ingest.
+
+    The runner script goes through `relocateSoldComp` (upsert → verify → delete,
+    the same path the fold used) and recomputes the hash for the destination
+    partition — the exact inverse of what was done. REPORT ONLY, run
+    2026-08-30: `matched 190 → re-keyed (relocate) 190, slug patched 0,
+    failed 0, RECONCILES 190 vs 190 OK`. **NOT RUN with APPLY — Drew's
+    dispatch.**

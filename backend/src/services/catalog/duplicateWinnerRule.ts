@@ -54,7 +54,7 @@
  */
 import { catalogAuthorityOf } from "./catalogAuthority.service";
 import { foldSpelling, chooseSpelling } from "./parallelSpellingFold";
-import { isProductSetKey, productEntry } from "./productSetKeys";
+import { isProductSetKey, productEntry, productSetKeyForName, spellForEra } from "./productSetKeys";
 import {
   printRunOf,
   cleanParallelSlug,
@@ -104,6 +104,141 @@ export type DupDecision =
   | { kind: "consolidate"; winner: DupRow; losers: DupRow[]; winnerBy: WinnerBy; reason: string }
   | { kind: "ambiguous"; why: AmbiguousReason; detail: string; rows: DupRow[]; nearMiss?: boolean }
   | { kind: "not-a-group"; why: NotAGroupReason; detail: string };
+
+// -- the pool width ----------------------------------------------------------
+
+/**
+ * DOES THIS POOL KEY BELONG TO THIS LOSER?
+ *
+ * `moveCatalogRow` re-points sales with `WHERE c.hobbyiqCardId = @s` -- an
+ * EXACT match. Pool keys routinely EXTEND a row id with `:num-N` or a grade
+ * segment, so a fold that only moved exact matches would strand them on a
+ * deleted row.
+ *
+ * Widening to `STARTSWITH(id + ":")` creates the opposite hazard: within one
+ * group a NUMBERED TWIN's id is itself an extension of the un-numbered loser's
+ * id, so `<loser>:num-50` would be claimed by the loser and a real /50 card's
+ * sales would move onto the un-numbered winner. LONGEST MATCH decides: a key
+ * belongs to the most specific row in the group that prefixes it.
+ *
+ * This lives in the tested module rather than inside the script so the test
+ * pins the CODE THAT RUNS. A test that re-implements the rule locally vouches
+ * only for its own copy, and drifts silently from the script it names.
+ */
+export function ownsPoolKey(key: string, loserId: string, rivals: readonly string[]): boolean {
+  if (key === loserId) return true;
+  if (!key.startsWith(`${loserId}:`)) return false;
+  for (const rid of rivals) {
+    if ((key === rid || key.startsWith(`${rid}:`)) && rid.length > loserId.length) return false;
+  }
+  return true;
+}
+
+// -- the D30 grouping key ----------------------------------------------------
+
+/**
+ * THE PRODUCT HALF OF THE D30 GROUPING KEY, and why D29's `identityKeyOf`
+ * cannot be it.
+ *
+ * `identityKeyOf` puts the RAW `setKey` FIELD in the key. That is exactly
+ * right for D29 (R1 compares a target and a twin that already sit in one
+ * product) and it is pinned by
+ * `foldTwinRuleChecklistNumbered.test.ts:330` -- "identityKeyOf reads the
+ * setKey FIELD, not the id segment" -- so it must not change. But it makes
+ * TWO of D30's six modes unreachable, because D30's job is precisely the
+ * groups whose rows disagree about the product's SPELLING:
+ *
+ *   - MODE=setkey (`id-setkey-drift`) needs the two spellings of ONE product
+ *     to meet. Measured live 2026-08-30: `finest` [baseballcardpedia] vs
+ *     `topps-finest` [checklistinsider] on 2024 #93-19 Andrew McCutchen --
+ *     one card, two rows, two spellings, and the raw-field key never
+ *     compares them.
+ *   - MODE=cpa (`cross-product-cpa`) needs `bowman` and `bowman-chrome` to
+ *     meet for an auto-prefixed CPA number, which is the whole population
+ *     D29 R2 exists to decide.
+ *
+ * SO THE KEY NORMALIZES THE PRODUCT, AND ONLY THE PRODUCT'S SPELLING:
+ *
+ *   1. `productSetKeyForName` maps a KNOWN ALIAS of a product to that
+ *      product's one spelling (`finest` -> `topps-finest`, `topps-update` ->
+ *      `topps-update-series`). A setKey the table does not spell passes
+ *      through UNCHANGED -- an unknown product is its own product, never
+ *      guessed into a neighbour.
+ *   2. `spellForEra` applies Drew's Donruss ruling (b): from 2009 the product
+ *      is `panini-donruss`, before it `donruss`. So `donruss` and
+ *      `panini-donruss` group together WITHIN one year and never across the
+ *      1990/2024 boundary.
+ *   3. The CPA exception, and nothing wider: `bowman` and `bowman-chrome`
+ *      collapse to one product ONLY for an auto-prefixed CPA-style card
+ *      number, exactly as the measurement did
+ *      (`measure-baseball-2024-2026.cjs:256`).
+ *
+ * WHAT IT DELIBERATELY DOES NOT DO -- the catastrophic direction. Over-
+ * grouping here MERGES DIFFERENT REAL CARDS, so every one of these stays a
+ * separate group and is pinned by a test:
+ *
+ *   - `bowman` vs `bowman-chrome` for a NON-CPA number (#220): paper and
+ *     chrome are different cards (memory: bowman-vs-chrome merging "would be
+ *     catastrophic").
+ *   - `bowman-chrome` vs `bowman-chrome-sapphire`: sapphire is another set,
+ *     CPA number or not -- the CPA collapse names two products explicitly and
+ *     sapphire is not one of them.
+ *   - `bowman-draft` vs `bowman-chrome`, `bowman` vs `bowman-paper`: the
+ *     family ladder relates them for PRICING, and `productFamilyOf` would
+ *     collapse all four to `bowman`. Identity is not the family, so the
+ *     family ladder is NOT used here.
+ *
+ * That last point is why `productFamilyOf` -- imported and never called by
+ * the first build of the fleet -- is the WRONG function for this key: it maps
+ * `bowman-chrome`, `bowman-paper`, `bowman-draft` and `bowman` all to
+ * `bowman`, which is the merge Drew called catastrophic.
+ */
+const CPA_COLLAPSE_NUMBER = /^(?:cpa|bcpa)-/i;
+
+/** The two products the CPA rule -- and only the CPA rule -- collapses. */
+export const CPA_COLLAPSE_PRODUCTS = ["bowman", "bowman-chrome"] as const;
+
+/** The one spelling of a row's product: a known alias resolved, the Donruss
+ *  era applied, anything else left exactly as it was written. */
+export function productKeyOf(row: Pick<DupRow, "setKey" | "year">): string {
+  const raw = String(row.setKey ?? "").trim().toLowerCase();
+  if (!raw) return "";
+  const spelled = productSetKeyForName(raw) ?? raw;
+  const year = Number(row.year);
+  return spellForEra(spelled, Number.isFinite(year) && year > 0 ? year : null);
+}
+
+/** True iff this row is a `bowman`/`bowman-chrome` row at an auto-prefixed
+ *  CPA-style number -- the ONE place two products share an identity. */
+export function isCpaCollapseRow(row: Pick<DupRow, "setKey" | "year" | "cardNumber">): boolean {
+  const p = productKeyOf(row);
+  if (p !== "bowman" && p !== "bowman-chrome") return false;
+  return CPA_COLLAPSE_NUMBER.test(String(row.cardNumber ?? "").trim());
+}
+
+/** The product half of the grouping key: the product's one spelling, or the
+ *  collapsed `bowman|bowman-chrome` for a CPA number. */
+export function groupProductKeyOf(row: Pick<DupRow, "setKey" | "year" | "cardNumber">): string {
+  return isCpaCollapseRow(row) ? CPA_COLLAPSE_PRODUCTS.join("|") : productKeyOf(row);
+}
+
+/**
+ * THE D30 GROUPING KEY: `sport | year | product | number | parallel | auto`.
+ *
+ * Every half except the product is D29's, byte for byte -- `cleanParallelSlug`
+ * for the parallel and the same auto-by-card-number gate -- so a group the
+ * two keys agree on is the same group, and R1 can still be called on its rows.
+ * The product half is the one thing D30 widens, and only as far as one
+ * product's own spellings.
+ */
+export function groupKeyOf(row: DupRow, forceAutoPrefixes: readonly string[] = DEFAULT_FORCE_AUTO_PREFIXES): string {
+  const sport = String(row.sport ?? "").trim().toLowerCase();
+  const year = String(row.year ?? "").trim();
+  const cardNumber = String(row.cardNumber ?? "").trim().toLowerCase();
+  const parallel = cleanParallelSlug(row.parallelSlug);
+  const auto = row.isAuto === true || isAutoByCardNumber(row.cardNumber, forceAutoPrefixes) ? "auto" : "no-auto";
+  return `${sport}|${year}|${groupProductKeyOf(row)}|${cardNumber}|${parallel}|${auto}`;
+}
 
 // -- source identity ---------------------------------------------------------
 
@@ -351,6 +486,63 @@ export function rankRows(rows: DupRow[]): DupRow[] {
 }
 
 /**
+ * RULE 3's SURVIVOR: the row carrying the canonical spelling.
+ *
+ * Returns null when the group is not a spelling group at all (every row
+ * already spells the parallel the same way), or when no row actually carries
+ * the canonical spelling -- in both cases `rankRows` decides as before, so
+ * this narrows to exactly the rows rule 3 is about.
+ *
+ * The candidate set is restricted to rows that fold to ONE rung
+ * (`foldSpelling`), which is what makes this a re-SPELLING rather than a
+ * different parallel; the D31 colour gate and the print-run gate have already
+ * refused above, so anything reaching here is one card.
+ *
+ * Among the rows carrying the canonical spelling, `rankRows` still orders --
+ * a checklist row outranks a derived row spelling it the same way, so rule 1
+ * is not lost to rule 3.
+ */
+export function pickSpellingWinner(rows: DupRow[]): DupRow | null {
+  const spellings = new Set(rows.map((r) => cleanParallelSlug(r.parallelSlug)));
+  if (spellings.size < 2) return null;
+
+  // RULE 3 IS THE LAST WORD ON SPELLING, NOT THE FIRST WORD ON EVERYTHING.
+  // The rules above it in the spec decide on facts stronger than a spelling
+  // vote, so where either applies the majority does not get to overrule it:
+  //
+  //   r1 -- a checklist row beats a derived row. If some rows are checklist
+  //         and some are not, only the checklist rows may survive, and the
+  //         vote is taken among them (which is also `chooseSpelling`'s own
+  //         voter rule, so this only stops a derived row winning on a tie).
+  //   r2 -- numbered beats un-numbered. A print run is a fact off the
+  //         checklist; a spelling is a transcription. If the rows disagree
+  //         about the print run, r2 decides and rule 3 stands down.
+  //   r6 -- the no-auto ghost folds onto the auto row, by card number.
+  //
+  // Narrowing here rather than in the caller keeps every rule's scope visible
+  // in one place -- the "right guard, wrong scope" shape (#1177-#1180) is what
+  // happens when a rule's reach is wider than the fact it is built on.
+  const runs = new Set(rows.map((r) => runOf(r)));
+  if (runs.size > 1) return null;
+  const autos = new Set(rows.map((r) => r.isAuto === true));
+  if (autos.size > 1) return null;
+
+  const checklist = rows.filter(isChecklistRow);
+  const eligible = checklist.length > 0 ? checklist : rows;
+  if (new Set(eligible.map((r) => cleanParallelSlug(r.parallelSlug))).size < 2) return null;
+
+  const canonical = canonicalSpellingOf(rows);
+  if (!canonical) return null;
+
+  const canonicalClean = cleanParallelSlug(canonical);
+  const matches = eligible.filter(
+    (r) => cleanParallelSlug(r.parallelSlug) === canonicalClean || String(r.parallelSlug ?? "").toLowerCase().trim() === canonical,
+  );
+  if (matches.length === 0) return null;
+  return rankRows(matches)[0];
+}
+
+/**
  * THE D30 DECISION for one identity group.
  *
  * The ORDER of the gates IS the rule, and every gate that REFUSES sits above
@@ -492,7 +684,16 @@ export function decideDuplicateGroup(input: {
 
   // GATE 5/6: the winner, ranked deterministically; winnerBy names the rule
   // that actually decided, which is what the dry run reports per kind.
-  const winner = rankRows(rows)[0];
+  //
+  // RULE 3 IS APPLIED HERE, NOT DESCRIBED HERE. Drew, 12:50Z: "the majority
+  // spelling among the checklist sources for that product wins, tie -> the
+  // longer form." `rankRows` alone cannot express that: its last tie-break is
+  // `String(b.id).length - String(a.id).length`, which is Drew's TIE-BREAK
+  // promoted to the whole rule. Measured live: four publishers spelling
+  // `refractor` against beckett's lone `refractors-refractor` folded onto
+  // beckett, because that id is longer. So when the group is a SPELLING group
+  // the majority picks the survivor and `rankRows` only orders the rest.
+  const winner = pickSpellingWinner(rows) ?? rankRows(rows)[0];
   const losers = rows.filter((r) => r.id !== winner.id);
   if (losers.length === 0) return { kind: "not-a-group", why: "single-row", detail: "one distinct row id" };
 

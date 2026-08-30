@@ -103,14 +103,15 @@ const backend = path.resolve(__dirname, "..");
 const D = (...p) => require(path.join(backend, "dist", ...p));
 const { moveCatalogRow, retireCatalogRow, isGradedChildOf } = D("services", "catalog", "catalogRowOps.service.js");
 const { catalogAuthorityOf } = D("services", "catalog", "catalogAuthority.service.js");
-const { productFamilyOf } = D("services", "catalog", "productSetKeys.js");
+
 const {
-  identityKeyOf, printRunOf, shardOfIdentity, decideChecklistNumberedFold,
+  printRunOf, shardOfIdentity, decideChecklistNumberedFold,
   pickChecklistNumberedTarget, cleanParallelSlug, DEFAULT_FORCE_AUTO_PREFIXES,
 } = D("services", "catalog", "foldTwinRuleChecklistNumbered.js");
 const {
   decideDuplicateGroup, isRenameOwnedProduct, colourFormOf, canonicalSpellingOf,
   oneSourceNamesBothColourForms, sourceKeyOf,
+  groupKeyOf, groupProductKeyOf, isCpaCollapseRow, ownsPoolKey,
 } = D("services", "catalog", "duplicateWinnerRule.js");
 const { decideCpaProduct } = D("services", "catalog", "cpaProductRule.js");
 const { reportWrites } = D("services", "ops", "writeReconciliation.js");
@@ -151,9 +152,22 @@ function loadRulings() {
  */
 function kindOf(rows) {
   const clean = [...new Set(rows.map((r) => cleanParallelSlug(r.parallelSlug)))];
+  // THE DRIFT IS IN THE ID AS OFTEN AS IN THE FIELD, and the measurement counts
+  // both: `setKeysRaw.size > 1 || idSetKeys.size > 1` (measure-d31.cjs:443).
+  // Measured live 2026-08-30, baseball 2024-26: of 62,650 drift observations
+  // ZERO have differing setKey FIELDS -- every one is the D23 rename having
+  // renamed the field while the id still reads the old spelling
+  // (`topps-206: topps~topps-206`). A kind that looked only at the field would
+  // still report this population as empty.
   const setKeys = [...new Set(rows.map((r) => String(r.setKey ?? "").toLowerCase()))];
+  const idSetKeys = [...new Set(rows.map((r) => String(r.id ?? "").split(":")[3] ?? ""))];
   const runs = [...new Set(rows.map((r) => printRunOf(r)))];
-  if (setKeys.length > 1) return "id-setkey-drift";
+  if (setKeys.length > 1 || idSetKeys.length > 1) {
+    // The bowman/bowman-chrome CPA collapse is its OWN kind: it is the only
+    // place two DIFFERENT products share one identity, and D29 R2 decides it.
+    if (rows.some((r) => isCpaCollapseRow(r))) return "cross-product-cpa";
+    return "id-setkey-drift";
+  }
   if (rows.some((r) => r.isAuto !== true) && rows.some((r) => r.isAuto === true)) return "no-auto-ghost";
   if (runs.includes(null) && runs.some((n) => n !== null)) return "numbered-vs-unnumbered";
   if (clean.length > 1) {
@@ -214,7 +228,12 @@ async function main() {
       const { resources } = await retry(() => it.fetchNext());
       for (const r of resources ?? []) {
         rowsRead++;
-        const key = identityKeyOf(r, FORCE_AUTO_PREFIXES);
+        // THE D30 GROUPING KEY, not D29's identityKeyOf. identityKeyOf puts the
+        // RAW setKey field in the key -- correct for R1, and pinned by its own
+        // tests -- but it means two SPELLINGS of one product never meet, which
+        // makes MODE=setkey and the cross-product half of MODE=cpa unreachable.
+        // groupKeyOf normalizes the PRODUCT's spelling and nothing else.
+        const key = groupKeyOf(r, FORCE_AUTO_PREFIXES);
         if (SLOTS > 1 && shardOfIdentity(key, SLOTS, sha1) !== SLOT) { rowsOtherShard++; continue; }
         const list = groups.get(key) ?? [];
         list.push(r);
@@ -253,6 +272,8 @@ async function main() {
   const byNotAGroup = new Map();
   const ambiguousOut = [];
   const samples = [];
+  /** Groups DECIDED as consolidate, held until the pre-flight has passed. */
+  const plan = [];
   let stopReason = null;
 
   const bumpMap = (m, k) => m.set(k, (m.get(k) ?? 0) + 1);
@@ -263,6 +284,54 @@ async function main() {
   };
 
   const holdingsIndex = await buildHoldingsIndex(portfolio, stats);
+
+  // -- PRE-FLIGHT: the contentHash collision guard, BEFORE any write ---------
+  //
+  // WHY THIS IS A PASS AND NOT A COUNTER. The first build probed the hash
+  // inside moveSalesAndRow, incremented a counter, and refused AFTER the group
+  // loop finished. Under APPLY that refusal is theatre: every colliding sale
+  // is already upserted or patched onto the winner's partition by the time
+  // exit(2) fires, and exit(2) only spares the groups the loop had not reached
+  // yet. Since contentHash is the store's partition-scoped PRE-WRITE dedup
+  // key, each collision landed means a future genuine sale is silently
+  // swallowed at ingest -- the exact outcome the guard exists to prevent.
+  //
+  // So the probe runs FIRST, over the same groups the loop will process, with
+  // zero writes; APPLY refuses UP FRONT and nothing has moved. REPORT ONLY
+  // still counts and prints, which is how the number reaches Drew.
+  //
+  // THE SEEN-SET IS SEEDED WITH THE WINNER'S OWN SALES. The first build scoped
+  // it per LOSER, so a loser colliding with the WINNER's existing sales, or
+  // with a different loser's, was never counted -- its 530 was a floor. The
+  // set here is per WINNER PARTITION, which is the scope the dedup actually
+  // uses.
+  async function preflightHashCollisions(plan) {
+    let collisions = 0, groupsWithCollisions = 0, salesProbed = 0;
+    const examples = [];
+    for (const { key, winner, losers } of plan) {
+      const winnerId = String(winner.id);
+      const seen = new Set();
+      // SEED: the sales already sitting on the winner. A loser's sale that
+      // hashes to one of these collides the moment it lands.
+      for (const row of await salesUnder(pool, winnerId)) {
+        salesProbed++;
+        seen.add(contentHashOf({ ...row, cardId: winnerId }));
+      }
+      let hit = 0;
+      for (const loser of losers) {
+        for (const row of await salesUnder(pool, String(loser.id))) {
+          salesProbed++;
+          const h = contentHashOf({ ...row, cardId: winnerId });
+          if (seen.has(h)) { hit++; collisions++; } else seen.add(h);
+        }
+      }
+      if (hit > 0) {
+        groupsWithCollisions++;
+        if (examples.length < 10) examples.push(`    ${key}  ->  ${winnerId}  (${hit} colliding sale(s))`);
+      }
+    }
+    return { collisions, groupsWithCollisions, salesProbed, examples };
+  }
 
   let gi = 0;
   for (const [key, rows] of groups) {
@@ -340,12 +409,40 @@ async function main() {
       samples.push(`  [${kind}/${winnerBy}] ${losers.map((l) => l.id).join(", ")}  ->  ${winner.id}  [${winner.source}]`);
     }
 
+    // DECIDED, NOT WRITTEN. The plan is built in full so the contentHash
+    // pre-flight can see every group this run would touch BEFORE any write.
+    plan.push({ key, kind, rows, winner, losers, reason: decision.reason });
+  }
+
+  // -- the pre-flight refusal, BEFORE the write phase -----------------------
+  const preflight = await preflightHashCollisions(plan);
+  stats.hashCollisionRisk = preflight.collisions;
+  console.log(`
+  contentHash PRE-FLIGHT (read-only, before any write):`);
+  console.log(`    groups planned             ${f(plan.length)}`);
+  console.log(`    sales probed               ${f(preflight.salesProbed)}   <- the WINNER's own sales seed the set, then every loser's`);
+  console.log(`    COLLISIONS                 ${f(preflight.collisions)} in ${f(preflight.groupsWithCollisions)} group(s)`);
+  if (preflight.examples.length) { console.log(`    colliding groups:`); for (const ex of preflight.examples) console.log(ex); }
+
+  if (APPLY && preflight.collisions > 0) {
+    console.error(`
+FATAL: ${f(preflight.collisions)} contentHash collisions across ${f(preflight.groupsWithCollisions)} group(s).`);
+    console.error(`       These folds would put two sales that hash IDENTICALLY into one cardId partition, and`);
+    console.error(`       the store's pre-write dedup reads that as "the same sale" -- a genuine future sale`);
+    console.error(`       would be swallowed at ingest.`);
+    console.error(`       NOTHING HAS BEEN WRITTEN. The refusal is PRE-FLIGHT by design: the first build probed`);
+    console.error(`       inside the write loop and refused after it, so it wrote the collisions it then refused over.`);
+    process.exit(2);
+  }
+
+  // -- the write phase ------------------------------------------------------
+  for (const { key, kind, rows, winner, losers, reason } of plan) {
     try {
       let movedSales = 0;
       for (const loser of losers) {
         // (2)+(3): the FULL sales width under this loser, each key attributed to
         // the LONGEST matching row so a numbered twin keeps its own sales.
-        const res = await moveSalesAndRow(cat, pool, { winner, loser, rows, reason: decision.reason, stats });
+        const res = await moveSalesAndRow(cat, pool, { winner, loser, rows, reason, stats });
         movedSales += res.moved;
         await repointHoldings(portfolio, holdingsIndex, loser.id, winner.id, stats);
         stats.rowsFolded++;
@@ -382,7 +479,7 @@ async function main() {
   console.log(`    sales relocate failed      ${f(stats.salesRelocateFailed)}`);
   console.log(`    holdings re-pointed        ${f(stats.holdingsRepointed)}   (walked ${f(stats.holdingsWalked)} holdings / ${f(stats.holdingDocsWalked)} docs)`);
   console.log(`    graded children retired    ${f(stats.gradedRetired)}`);
-  console.log(`    contentHash COLLISION RISK ${f(stats.hashCollisionRisk)}   <- the retracted ' Refractor' strip still lives in computeContentHash`);
+  console.log(`    contentHash COLLISIONS     ${f(stats.hashCollisionRisk)}   <- measured PRE-FLIGHT; APPLY refuses up front while any are outstanding`);
 
   if (stats.r1Reached + stats.r1Skipped > 0) {
     const tot = stats.r1Reached + stats.r1Skipped;
@@ -424,14 +521,6 @@ async function main() {
     console.log(`\n  ambiguous list written: ${dest}  (${f(ambiguousOut.length)} of ${f(stats.ambiguous)} groups)`);
   }
 
-  // (3b) APPLY REFUSES while a contentHash collision is outstanding.
-  if (APPLY && stats.hashCollisionRisk > 0) {
-    console.error(`\nFATAL: ${f(stats.hashCollisionRisk)} would-be contentHash collisions. computeContentHash still strips a`);
-    console.error(`       trailing " Refractor" (D31 retracted that rule), so this fold could let the pool dedup`);
-    console.error(`       eat a real sale. Fix the hash, or run the affected groups after it is fixed.`);
-    process.exit(2);
-  }
-
   if (APPLY) {
     // DISJOINT counters. Sub-totals of `written` go on their OWN line and are
     // never folded into `skipped` -- a slice is not a sibling counter.
@@ -461,21 +550,38 @@ async function main() {
  * partitions and goes through relocateSoldComp; everything else is patched in
  * place by the move. The two are counted separately and never summed.
  */
+/**
+ * Every pool row under a slug -- the exact-match key AND the keys that extend
+ * it (`:num-N`, a grade segment). READ ONLY: this is the pre-flight probe's
+ * reader and never writes. Attribution to the longest matching row is the
+ * CALLER's job (see `ownsKey`); here the full width is what the collision
+ * probe needs to see.
+ */
+async function salesUnder(pool, slug) {
+  const out = [];
+  const it = pool.items.query(
+    {
+      query: "SELECT c.id, c.cardId, c.hobbyiqCardId, c.parallel, c.price, c.soldAt, c.gradeCompany, c.gradeValue, c.isAuto FROM c WHERE c.hobbyiqCardId = @s OR STARTSWITH(c.hobbyiqCardId, @p)",
+      parameters: [{ name: "@s", value: slug }, { name: "@p", value: `${slug}:` }],
+    },
+    { maxItemCount: 200 },
+  );
+  while (it.hasMoreResults()) {
+    const { resources } = await retry(() => it.fetchNext());
+    for (const row of resources ?? []) out.push(row);
+  }
+  return out;
+}
+
 async function moveSalesAndRow(cat, pool, { winner, loser, rows, reason, stats }) {
   const loserId = String(loser.id);
   const winnerId = String(winner.id);
   // Every OTHER row's id in the group: a pool key extending one of these is not
   // this loser's to move.
   const rivals = rows.map((r) => String(r.id)).filter((id) => id !== loserId);
-  const ownsKey = (key) => {
-    if (key === loserId) return true;
-    if (!key.startsWith(`${loserId}:`)) return false;
-    // LONGEST match wins: if any rival id is a longer prefix of this key, it is theirs.
-    for (const rid of rivals) {
-      if ((key === rid || key.startsWith(`${rid}:`)) && rid.length > loserId.length) return false;
-    }
-    return true;
-  };
+  // LONGEST match wins. The rule lives in duplicateWinnerRule so the test can
+  // pin the code that runs rather than a local copy of it.
+  const ownsKey = (key) => ownsPoolKey(key, loserId, rivals);
 
   let moved = 0;
   const it = pool.items.query(
@@ -485,7 +591,6 @@ async function moveSalesAndRow(cat, pool, { winner, loser, rows, reason, stats }
     },
     { maxItemCount: 200 },
   );
-  const seenHash = new Set();
   while (it.hasMoreResults()) {
     const { resources } = await retry(() => it.fetchNext());
     for (const row of resources ?? []) {
@@ -498,12 +603,10 @@ async function moveSalesAndRow(cat, pool, { winner, loser, rows, reason, stats }
       const suffix = key.length > loserId.length ? key.slice(loserId.length) : "";
       const newHiq = `${winnerId}${suffix}`;
 
-      // (3b) contentHash collision watch. The hash strips a trailing
-      // " Refractor" and is scoped to cardId, so two sales that differ ONLY by
-      // that word collide once they share a partition -- exactly what a colour
-      // fold creates. Counted here; APPLY refuses while any are outstanding.
-      const probe = contentHashOf({ ...row, cardId: winnerId });
-      if (seenHash.has(probe)) stats.hashCollisionRisk++; else seenHash.add(probe);
+      // The contentHash collision probe does NOT live here. It ran as a
+      // read-only PRE-FLIGHT over the whole plan before this phase started, so a
+      // colliding run refuses with zero writes rather than counting damage it
+      // has already done. See `preflightHashCollisions`.
 
       if (String(row.cardId ?? "") === loserId) {
         // The partition key IS the loser slug: a cross-partition re-key.

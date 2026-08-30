@@ -57,10 +57,18 @@ function fakeContainer(): { container: Container; store: Map<string, any> } {
             // duplicate and silently skipping it. That is why three tests here
             // saw an empty store or one row short; the store was correct and
             // the fake was lying. Filter on it like Cosmos would.
+            // D31 TRANSITION: `@h` is now an ARRAY of the hash forms a stored
+            // row could carry (the new whole-parallel hash, plus the legacy
+            // form that stripped a trailing " Refractor"), matched with
+            // ARRAY_CONTAINS. A fake that still compared it as a scalar would
+            // match nothing and make every second write look like a NEW sale
+            // -- the same "the fake was lying" trap as the note above, in the
+            // opposite direction. Accept both shapes.
             const contentHash = params.get("@h");
             let rows = Array.from(store.values()) as SoldCompDoc[];
             if (contentHash !== undefined) {
-              return { resources: rows.filter((d) => (d as { contentHash?: string }).contentHash === contentHash) };
+              const wanted = Array.isArray(contentHash) ? contentHash : [contentHash];
+              return { resources: rows.filter((d) => wanted.includes((d as { contentHash?: string }).contentHash as string)) };
             }
             // CF-ONE-TRANSACTION-ONE-ROW (D9): recordSoldComp probes for the
             // same id filed under another cardId partition before it writes.
