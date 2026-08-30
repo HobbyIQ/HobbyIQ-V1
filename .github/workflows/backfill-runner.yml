@@ -131,6 +131,7 @@ on:
 
 
           - fold-unnumbered-twins
+          - fold-checklist-numbered-twins
 
           - rekey-user-comps
           - collapse-ch-dual-ids
@@ -1011,7 +1012,7 @@ jobs:
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (repaired=${N:-0}) — done, no re-dispatch."
           fi
 
-      - name: Self-relaunch the parallel-from-title repair until the slot is clean
+      - name: Self-relaunch the un-numbered twin fold until the slot is clean
         if: ${{ !cancelled() && inputs.script == 'fold-unnumbered-twins' && inputs.apply == true }}
         env:
           GH_TOKEN: ${{ github.token }}
@@ -1019,16 +1020,39 @@ jobs:
         working-directory: backend
         run: |
           set +e
-          N=$(grep -aoE "^  REPAIRED +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
-          echo "repaired=${N:-0}"
+          # The fold prints FOLDED (apply) / WOULD FOLD (report), never REPAIRED --
+          # the old grep was copy-paste from the repair step and always reported 0.
+          N=$(grep -aoE "^  (FOLDED|WOULD FOLD) +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          echo "folded=${N:-0}"
           # CF-RELAUNCH-ONLY-ON-BUDGET (2026-08-29): relaunch iff the script stopped at its budget.
-          # The repair re-queries "parallel stamped, title silent" each run, so a relaunch
-          # resumes exactly where the rows still disagree -- nothing is re-patched.
+          # The fold re-queries the twins each run, so a relaunch resumes exactly
+          # where rows are still split -- nothing is double-folded.
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
-            echo "::notice::budget hit (repaired=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} mode=${{ inputs.mode }} to continue"
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=fold-unnumbered-twins -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}"
+            echo "::notice::budget hit (folded=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} mode=${{ inputs.mode }} to continue"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=fold-unnumbered-twins -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f sources="${{ inputs.sources }}"
           else
-            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (repaired=${N:-0}) — done, no re-dispatch."
+            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (folded=${N:-0}) — done, no re-dispatch."
+          fi
+
+      - name: Self-relaunch the checklist-numbered twin fold until the slot is clean
+        if: ${{ !cancelled() && inputs.script == 'fold-checklist-numbered-twins' && inputs.apply == true }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        working-directory: backend
+        run: |
+          set +e
+          N=$(grep -aoE "^  (FOLDED|WOULD FOLD) +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          echo "folded=${N:-0}"
+          # CF-RELAUNCH-ONLY-ON-BUDGET: relaunch iff the script printed its budget line.
+          # R1 re-derives its identity groups every run (the catalog is moving under
+          # the D23/D28 fleets), so a relaunch resumes correctly and a twin that has
+          # already folded no longer exists to be found again.
+          if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
+            echo "::notice::budget hit (folded=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=fold-checklist-numbered-twins -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f sources="${{ inputs.sources }}"
+          else
+            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (folded=${N:-0}) — done, no re-dispatch."
           fi
 
       - name: Self-relaunch the user-comp re-key until the slot is clean

@@ -53,7 +53,11 @@ const { reportWrites } = require(path.join(backend, "dist", "services", "ops", "
 const APPLY = process.env.BACKFILL_APPLY === "true" || process.env.APPLY === "true";
 const SLOT = Number(process.env.SLOT || 0), SLOTS = Number(process.env.SLOTS || 1);
 const RUN_MINUTES = Number(process.env.RUN_MINUTES || 140);
-const SPORT = String(process.env.SPORT || String(process.env.SPORTS || "").split(",")[0] || "").trim().toLowerCase(); // the runner exports SPORTS from its sports input
+// The runner exports SPORTS as a COMMA LIST; taking only the first element
+// silently scoped a multi-sport dispatch to one sport.
+const SPORT_LIST = String(process.env.SPORT || process.env.SPORTS || "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+const SPORT = SPORT_LIST[0] || ""; // kept for the banner
+
 const MODE = String(process.env.MODE || "vendor").trim().toLowerCase() === "cross-source" ? "cross-source" : "vendor";
 const LIMIT = Number(process.env.LIMIT || 0);
 const f = (n) => Number(n).toLocaleString();
@@ -69,13 +73,13 @@ async function main() {
   if (!conn) { console.error("FATAL: COSMOS_CONNECTION_STRING not set"); process.exit(1); }
   const db = new CosmosClient({ connectionString: conn, connectionPolicy: { retryOptions: { maxRetryAttemptsOnThrottledRequests: 30, maxWaitTimeInSeconds: 120 } } }).database("hobbyiq");
   const cat = db.container("card_catalog"), pool = db.container("sold_comps");
-  console.log(`fold-unnumbered-twins  ${APPLY ? "APPLY" : "REPORT ONLY"}  mode=${MODE}  slot ${SLOT}/${SLOTS}  budget ${RUN_MINUTES}m${SPORT ? `  sport=${SPORT}` : ""}`);
+  console.log(`fold-unnumbered-twins  ${APPLY ? "APPLY" : "REPORT ONLY"}  mode=${MODE}  slot ${SLOT}/${SLOTS}  budget ${RUN_MINUTES}m${SPORT_LIST.length ? `  sports=${SPORT_LIST.join(",")}` : ""}`);
 
   // Pass 1: every NUMBERED checklist identity row, grouped by its un-numbered
   // base id. Only groups with exactly one /N are candidates.
   const numberedByBase = new Map(); // baseId -> [{ id, printRun, source }]
   {
-    const q = { query: `SELECT c.id, c.printRun, c.source FROM c WHERE STARTSWITH(c.id, "hiq:") AND NOT IS_DEFINED(c.gradeTier) AND IS_DEFINED(c.printRun) AND c.printRun != null${SPORT ? " AND c.sport = @sp" : ""}`, parameters: SPORT ? [{ name: "@sp", value: SPORT }] : [] };
+    const q = { query: `SELECT c.id, c.printRun, c.source FROM c WHERE STARTSWITH(c.id, "hiq:") AND NOT IS_DEFINED(c.gradeTier) AND IS_DEFINED(c.printRun) AND c.printRun != null${SPORT_LIST.length ? " AND ARRAY_CONTAINS(@sports, c.sport)" : ""}`, parameters: SPORT_LIST.length ? [{ name: "@sports", value: SPORT_LIST }] : [] };
     const it = cat.items.query(q, { maxItemCount: 1000 });
     let n = 0;
     while (it.hasMoreResults()) {
@@ -105,7 +109,7 @@ async function main() {
   let i = 0;
   for (const [base, numberedList] of unique) {
     if (LIMIT && i >= LIMIT) { stats.notReached += unique.size - i; break; }
-    if (budgetLeft() < 90000) { stopReason = `stopped at the ${RUN_MINUTES}-minute budget`; stats.notReached += unique.size - i; break; }
+    if (budgetLeft() < 90000) { stopReason = `stopped at the ${RUN_MINUTES}-minute budget — the relaunch continues from here`; stats.notReached += unique.size - i; break; }
     i++;
     if (SLOTS > 1 && shardOf(base) !== SLOT) { stats.otherShard++; continue; }
     stats.candidates++;
