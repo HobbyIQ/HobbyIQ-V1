@@ -2168,6 +2168,33 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   lists "Card scan / auto-identify". Turbopack refuses a junctioned
   `node_modules` ("points out of the filesystem root"), so the worktree
   was built from its own `npm ci`.
+    **Merged #1519 (16:20Z 08-30); SWA deploy 33286215812.** Verified in the
+    canonical checkout after `npm install` (the branch adds vitest) and a
+    cleared stale `.next`: web tsc 0, 27/27 tests exit 0. Flagged backend
+    gap: `pricingEnvelope.builder.buildMethod` does not know
+    `unified-pricing` (`method.kind: unknown`); the web reads
+    `pricingSourceMeta.method` meanwhile — queued (small).
+  **Drew (16:00Z): holding deced7d3 — "trending up and no $18 purchases
+  recently."** Max Williams CPA-MWI Refractor, raw: sales by week May-w2
+  $16.99 ×2, May-w3 $10.94–$25 ×4, Jun/Jul $10.51–$15, Aug-w1 $30, Aug-w2
+  $19.50–$21, **Aug-w3 ×10 $25–$38 (median $30, last $38)**; persisted
+  **$18.74 `exact-pool-projection`** — anchored on the 60-day window's
+  median ($14) plus the slope (12%/wk), so it sits below every one of the
+  last ten sales. The mirror of Gillen's one-sale $729: the projection must
+  be anchored on the LEADING EDGE. **Drew (16:10Z): holding 3fe98abe — "this
+  is an image variation, is that accounted for?"** No: 2020 Bowman Draft
+  Witt #BD152 (PSA) has no variation field, the catalog has no
+  image-variation row for it, D3c's `sectionsOf` folds a lone "Variation"
+  section into Base (wrong: an SP image variation is its own card), and its
+  only pool row is a **2020 Bowman Draft 1st Edition** sale ($4) under the
+  plain Draft id — a product qualifier the title says and the slug lacks.
+  → **D22** (building, `feat/d22`, the single builder): the projection
+  anchored on the leading edge with the n = 1 policy as a named default
+  (Drew can flip), image/photo variations as their own identity
+  (vocabulary → glossary, converter, title parser + seam, holding
+  derivation), and `repair-parallel-from-title MODE=product` (a title's
+  "1st Edition" / "Sapphire" / "Chrome" / "Update" never pools under the
+  plain product; unmatched → acquisition list). D21 follows D22.
 
 ## NEEDS DREW (not code)
 
