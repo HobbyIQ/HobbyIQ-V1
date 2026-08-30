@@ -40,6 +40,15 @@
 // numbers that provably came from somewhere else, and it is not in the
 // business of guessing that a number is wrong.
 
+// D23 already settled that a card-number comparison is hyphen- and
+// case-insensitive (CF-THE-ID-CARRIES-THE-PRODUCT, ruling d: bd152 = BD-152).
+// This module re-exports that one rather than declaring a second: the canary
+// found "BCP-10" stored against a title printing "#BCP10" on 1.13% of the last
+// six hours of live rows, and a SECOND spelling rule would have been a second
+// place for that answer to drift.
+export { sameCardNumber } from "./hobbyIqCardId.service.js";
+import { sameCardNumber } from "./hobbyIqCardId.service.js";
+
 /** Why a candidate card number was refused. */
 export type CardNumberRejection =
   | "grader-digit"
@@ -99,27 +108,6 @@ const trim = (v: unknown): string => String(v ?? "").trim();
 const asBareNumber = (v: string): string | null => (/^\d{1,4}(?:\.\d)?$/.test(v) ? v : null);
 /** Regex-safe copy of a token. */
 const esc = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
-/**
- * Are these two strings the SAME card number, spelled differently?
- *
- * Measured 2026-08-30 on live ingest: CardHedge stores "BCP-10" while the
- * listing title it came from prints "#BCP10". They are one card. Comparing the
- * raw strings called that a mis-key on 1.13% of the last six hours of rows,
- * and -- worse -- would have let the title's spelling WIN and written the
- * hyphen-free form, which is the population D23's MODE=hyphen exists to fold
- * back (checklistcenter is unanimously hyphenated; the wiki-style sources
- * disagree with themselves 12-18% of the time, per catalogAuthority's
- * isTranscriptionGrade).
- *
- * So: hyphens, spaces and punctuation are SPELLING, not identity. Where the
- * two agree on the letters and digits, the stored spelling stands.
- */
-export function sameCardNumber(a: string | null | undefined, b: string | null | undefined): boolean {
-  const norm = (v: unknown) => String(v ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "");
-  const x = norm(a);
-  return x !== "" && x === norm(b);
-}
 
 /** Does the title state this exact number with a `#` in front of it? That is
  *  the seller saying "this is the card number", and it settles every rule. */

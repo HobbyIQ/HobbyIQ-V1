@@ -2558,7 +2558,16 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
     itself), and a slash is a print run only NUMBER-over-NUMBER, because
     12,099 of the slash rows are real SKUs ("2003 Fleer Avant **#AAC/BG**"
     numbers a dual-player insert by both players' initials; "N/A" is the
-    slug builder's own word for unnumbered). 67 pins across
+    slug builder's own word for unnumbered). A THIRD correction came from the
+    canary, on live ingest, before any of it shipped: CardHedge stores
+    "BCP-10" and the listing it came from prints "#BCP10". Comparing raw
+    strings called that a mis-key on 1.13% of the last six hours of rows —
+    and let the TITLE'S spelling win, which would have written the
+    hyphen-free form, the exact population D23's MODE=hyphen exists to fold
+    back. `sameCardNumber` makes hyphens and punctuation SPELLING, not
+    identity: where the two agree on letters and digits the STORED spelling
+    stands and nothing is counted. The canary reads 0.00% after. 73 pins
+    across
     `cardNumberIntegrity.test.ts` (a KEEP case beside every refusal) and
     `cardNumberIntegrityParity.test.ts` (the verbatim 08-24 corpus through
     BOTH rules, so the two cannot drift); every rule mutation-checked.
