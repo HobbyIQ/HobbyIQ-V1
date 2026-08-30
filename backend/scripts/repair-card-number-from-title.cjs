@@ -343,9 +343,15 @@ async function main() {
   for (const [k, n] of [...sourceHist.entries()].sort((a, b) => b[1] - a[1])) console.log(`    ${String(k).padEnd(26)} ${f(n).padStart(10)}`);
 
   if (APPLY) {
+    // CF-A-SLICE-IS-NOT-A-SIBLING-COUNTER. `notReached` rows were never
+    // scanned -- the budget stopped the loop before their batch ran -- so they
+    // are NOT in `scanned`. Folding them into `skipped` while intending only
+    // `scanned` claims more than was intended and trips the over-accounting
+    // alarm on every budget stop. The rows this run took responsibility for
+    // are the ones it scanned PLUS the ones it was holding and did not reach.
     reportWrites({
       job: "repair-card-number-from-title",
-      intended: s.scanned,
+      intended: s.scanned + s.notReached,
       written: written(),
       skipped: s.unchanged + s.noSlug + s.noPlayer + s.notReached,
       failed: s.failed,

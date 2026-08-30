@@ -2496,40 +2496,135 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
     them pricing within the family meanwhile.
     **Order after D23 (Drew, 05:05Z 08-30): D28 → D26 → D21 → D24 → D25.**
     **D28 — the card number is never a grade, a print run, a year, an
-    ordinal, or a lot (RULED: right after D23).** Harrison's Ohtani
-    (`user-67878bb5` / `2925db74`, "2018 Topps Chrome Refractor PSA 10",
-    pitching = the standard #150 Refractor) sat on
-    `hiq:baseball:2018:topps-chrome:9:refractor:no-auto` — a nameless bccp
-    row at **#9** — and priced from a Paul DeJong 1983 35th Anniversary
-    Refractor #83T-22 and an Ohtani 1983 Topps Refractor #83T-6, both keyed
-    to "#9" because the number was lifted from **"PSA 9"** when the parser
-    could not read `83T-22`/`83T-6`. Measured in sold_comps (16.14M rows)
-    04:40Z: grade digit as the number (cardNumber ∈ {8,9,10} with a
-    "<PSA|BGS|SGC|CGC> n" token and no "#n") **43,224** (upper bound — a
-    real #9 graded PSA 9 also matches; cardhedge 28,706 / tca-ebay 14,463;
-    **24,383 written in the last 24h — the defect is live**); print run as
-    the number (cardNumber contains "/") **25,093** (tca-ebay 18,679 /
-    cardhedge 6,411; 18,026 in the last 7d) plus ≈1,950 where the bare
-    print-run value became the number; "1st" → #1 **1,334**; LOT → #2
-    **79**; a "#" in the title the parser never read **754**; catalog rows
-    whose cardNumber equals the year **1,319** (e.g.
-    `topps-chrome:2018:gold-refractor`); 9,047 checklist rows with
-    **"Base Cards" glued into the parallel name** (cardboardchecklist 8,858 /
-    beckett 189) — why 2018 Topps Chrome #150 has
-    `150:base-cards-refractor:no-auto` and no `150:refractor:no-auto`.
-    Code: `parseTitleIdentity.service.ts` already guards graders
-    (CF-A-GRADE-IS-NOT-A-CARD-NUMBER, 08-24) so the live writers are
-    elsewhere — `chRowToSoldComp.ts` takes `row.number` from CardHedge
-    verbatim, and the tca-ebay path has its own derivation; the strict
-    measure (title states a different explicit "#X") timed out at 10 min
-    and is the builder's first number. Spec:
-    `docs/d28-card-number-integrity-spec.md`. Deliverables: guards on
-    every emitter (a number is never a grader digit, a "/N", a year, "1st",
-    or a lot count; an explicit "#X" always wins), a re-key pass for the
-    mis-keyed sales through `relocate-sold-comp`, the base-cards clean
-    (`base-cards-<x>` → `<x>`) through catalogRowOps, the year-as-number
-    catalog rows retired, then Harrison's holding ruled to
-    `hiq:baseball:2018:topps-chrome:150:refractor:no-auto`.
+    ordinal, or a lot (BUILT on `feat/d28`; APPLY is Drew's dispatch).**
+    Harrison's Ohtani (`user-67878bb5` / holding
+    `2925db74-649e-487a-bc40-a0d6bba67b34`, "2018 Topps Chrome Refractor
+    PSA 10", pitching = the standard #150 Refractor) sat on
+    `hiq:baseball:2018:topps-chrome:9:refractor:no-auto` and priced from a
+    Paul DeJong 1983 35th Anniversary Refractor #83T-22 and an Ohtani 1983
+    Topps Refractor #83T-6, all three keyed to "9" lifted from **"PSA 9"**.
+    **THE STRICT MEASURE** (the title states an explicit `#X` that is NOT
+    the stored `cardNumber`), run sharded because the full-pool query timed
+    out at 10 min — `scripts/measure-card-number-integrity.cjs`, READ ONLY,
+    with no write path in it at all: over the grade slice (`cardNumber IN
+    ('8','9','10')`, **362,477 rows**) **15,261** — cardhedge 13,442 /
+    tca-ebay 1,814 / cardsight 5; over all five measured shapes
+    (**1,356,106 rows**) **64,957** — cardhedge 49,054 / tca-ebay 14,710 /
+    cardsight 1,193. Re-measured through the one guard, the shapes are:
+    grader-digit **38,723** (ch 24,243 / tca 14,436), print-run-slash
+    **12,099** (tca 9,511 / ch 2,585), year-as-number **8,361** (tca 5,654 /
+    ch 2,707), ordinal **1,243**, print-run-bare **536**, lot-count **8**;
+    the "`#` in the title, no cardNumber" bucket measures **0** because
+    those rows carry `cardNumber: null` rather than an absent field (the
+    spec's 754 used `NOT IS_DEFINED`, which none of them are — the repair's
+    `nonumber` mode tests all three spellings).
+    **The writers, traced.** `parseTitleIdentity.extractCardNumber` already
+    refused grader digits (08-24) — and it was one of FIVE derivations:
+    (1) `chRowToSoldComp.ts` copied `cardNumber: row.number` verbatim, and
+    CardHedge's `description` IS the source listing's title line, so its
+    28,706 grade-digit rows are CH assigning the sale to the wrong product
+    and us trusting it; (2) the tca-ebay path (`tca-firehose-ingest.cjs` →
+    `persistVendorSalesToPool`) takes `identity.cardNumber ??
+    parseListingIdentity(title)` and then lets the LLM / vision enricher
+    fill a null one — three chances to write a grade, and the 08-24 guard
+    covered only the middle one; (3) `ebayTitleParser.parseListingTitle` has
+    its own two regexes (`#N` with no lookbehind, and any 2-5 letters glued
+    to digits) and is what gave Harrison's holding "#9"; (4)
+    `cardOcr.parseCardNumber` reads `#([A-Z0-9-]{1,12})` off a slab whose
+    label prints the grade; (5) `identityFromFields` takes the field as
+    given from a spreadsheet cell or a holding. Grepping the MAPPING rather
+    than the module found **three more**, and two of them could never have
+    been fixed by a guard alone: `bulk-import-ch-daily-to-sold-comps.cjs`
+    keeps its OWN copy of the CH mapping — the copy that wrote ~4.2M of the
+    current pool rows — so fixing chRowToSoldComp alone would have left the
+    single biggest writer of the defect untouched; and
+    `emit-staging-to-pool.cjs` (MODE=chdaily) plus canonicalFmv's CH ingest
+    both SYNTHESISED the title out of the very field in question
+    (`${year} ${set} #${number} ${variant}`), so the title agreed with the
+    number BY CONSTRUCTION and no guard could ever have caught anything
+    through it. Both now select CH's own `c.description` — the source
+    listing's title line, confirmed present on `ch_daily_sales` — judge the
+    number against that, and carry the real title to the pool.
+    **The fix: `src/services/portfolioiq/cardNumberIntegrity.ts` — one
+    pure, tested ruling applied at all eight.** An explicit `#X` in the title
+    WINS over any vendor field (logged `card_number_vendor_disagrees`,
+    counted on `VendorPersistResult`); a number the title shows to be a
+    grader's digit, a `/N` print run or the bare N of one, a 1900-2035 year,
+    an ordinal or a lot count is REFUSED. Every refusal requires the title
+    to actually say the thing: a bare "9" whose title never mentions a grade
+    is left alone. Two corrections the measurement forced: the explicit-`#X`
+    reader had to widen (`#SMLB10`, `#90CB-7`, `#83T-6` are a `#` it could
+    not parse, and every miss falls through to the vendor's digit — the bug
+    itself), and a slash is a print run only NUMBER-over-NUMBER, because
+    12,099 of the slash rows are real SKUs ("2003 Fleer Avant **#AAC/BG**"
+    numbers a dual-player insert by both players' initials; "N/A" is the
+    slug builder's own word for unnumbered). 67 pins across
+    `cardNumberIntegrity.test.ts` (a KEEP case beside every refusal) and
+    `cardNumberIntegrityParity.test.ts` (the verbatim 08-24 corpus through
+    BOTH rules, so the two cannot drift); every rule mutation-checked.
+    **The repairs.** `repair-card-number-from-title.cjs` re-derives with the
+    guard and gives each row one outcome: MOVED through
+    `lib/relocate-sold-comp.cjs` when the derived identity exists in
+    card_catalog (checklist authority preferred, else the numbered twin
+    `foldTwinRule` allows); PARKED — the number segment cleared to the
+    player-precision address, `cardNumberUnreadable: true` — when it does
+    not; or left alone when the guard agrees. A number that WAS read but has
+    no catalog row parks carrying `cardNumberFromTitle`: that is an
+    acquisition list, not a parse failure. The new slug is surgery on
+    segment 4, never a full recompute, so a setKey the resolver spells
+    differently today cannot ride along on a card-number repair.
+    `clean-base-cards-parallel-slug.cjs` takes the checklist's section
+    heading off the rung name: `base-cards-<x>` → `<x>` (MODE=cards,
+    unambiguous — no product calls a rung "Base Cards Refractor"), and
+    `base-<x>` → `<x>` only where the row's own subsetName / setName says
+    "Base" (MODE=subset); without that evidence the row is LEFT, because
+    "Base Variation Refractor" and "Base Pitching Refractor" are real rung
+    names and stripping them would be the 3.1x bloat mistake in reverse.
+    **Report-only counters (2026-08-30, run locally — a dry run touches
+    nothing; the runner dispatch is Drew's).** repair MODE=grade slot 0/8:
+    __REPAIR_COUNTERS__ base-cards clean MODE=cards slot 0/8 (LIMIT=250):
+    264 scanned, **264 cleaned** = 133 moved / 111 folded / 20 replaced (12
+    of them onto a numbered twin), 0 sales re-pointed, 0 failed;
+    cardboardchecklist 256 / beckett 8; rung names recovered: Refractor 152,
+    Autograph Variation 13, Chrome Variation 9, Short Prints 7, ….
+    **The year-as-number catalog rows are NOT a retire.** Measured over the
+    1,666,260 rows with a four-character `cardNumber`: **2,074** have
+    `cardNumber === year`, and **1,438 of them are checklist-authority**
+    (bccp 1,057 + bccp-graded 292, plus checklistcenter / cardboardchecklist
+    / cardboardconnection / baseball-almanac / checklist-batch-fill),
+    against 370 derived, 232 unknown and 34 vendor. By the spec's own rule
+    that makes it a CONVERTER bug rather than a delete — the checklist
+    ingest is putting the product's year in the card-number column — so no
+    retire is dispatched and the converter is the next fix. (The spec's
+    1,319 counted a narrower slice; the 2,074 here includes graded children,
+    which are regenerable and follow their parents.)
+    **Harrison's ruling** is in `data/holding-identity-rulings.json`:
+    `2925db74-649e-487a-bc40-a0d6bba67b34` (`user-67878bb5`) from
+    `hiq:baseball:2018:topps-chrome:9:refractor:no-auto` to
+    `hiq:baseball:2018:topps-chrome:150:refractor:no-auto`. That target
+    **already exists** (source `bccp`, checklist authority, verified by
+    point read), so the ruling does NOT wait on the base-cards clean. The
+    two mis-keyed sales' correct targets, both confirmed present: DeJong →
+    `hiq:baseball:2018:topps-chrome:83t-22:1983-topps-baseball-refractor:no-auto`
+    (cardboardchecklist — there is no `83t-22:refractor` row at all), Ohtani
+    → `hiq:baseball:2018:topps-chrome:83t-6:1983-topps-baseball-refractor:no-auto`
+    (cardboardchecklist), exactly the slug the spec predicted.
+    **The canary.** `checkSoldCompsCleanliness.cjs` grows a
+    `card_number_integrity` axis — counts by shape AND by source, alert
+    above 0.5% (measured 0.03% over the last 6h of live ingest; the defect
+    at its peak wrote 24,383 rows in 24h, which is percent-scale, not
+    basis-point scale). It requires the COMPILED guard rather than a second
+    copy of its rules, so `cleanliness-canary.yml` now installs dev deps and
+    builds.
+    **APPLY, in order (Drew's dispatch — merge and deploy first, then):**
+    (1) `gh workflow run backfill-runner.yml -f script=clean-base-cards-parallel-slug -f apply=true -f mode=cards -f slot=N -f slots=8 -f concurrency=16` (N = 0…7);
+    (2) `gh workflow run backfill-runner.yml -f script=repair-card-number-from-title -f apply=true -f mode=grade -f slot=N -f slots=8 -f concurrency=12` (N = 0…7), then the same fleet with `-f mode=slash`, `-f mode=ordinal`, `-f mode=year`, `-f mode=nonumber`;
+    (3) `gh workflow run backfill-runner.yml -f script=conform-holdings-to-catalog -f apply=true -f scope=rulings -f slot=0 -f slots=1`;
+    (4) `gh workflow run backfill-runner.yml -f script=reprice-user-holdings -f apply=true`;
+    (5) `gh workflow run backfill-runner.yml -f script=materialize-graded-identities -f apply=true` (the graded children retired by the moves regenerate under the new ids);
+    (6) the after number: `-f script=measure-card-number-integrity -f apply=false -f mode=shapes`, compared against the 64,957 above.
+    Both write scripts relaunch on their own budget marker with every input
+    forwarded, and both exit 1 on a MODE they were not given.
     **D26 — eBay account sync resolves every sale to a card (RULED 04:05Z;
     after D28).** Measured: the hourly in-process poll
     (`jobs/ebayOrderPoll.job.ts`) runs — its last cycle read `users=8

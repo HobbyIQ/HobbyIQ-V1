@@ -249,9 +249,12 @@ async function main() {
   for (const [k, n] of [...byNewName.entries()].sort((a, b) => b[1] - a[1]).slice(0, 15)) console.log(`    ${String(k).padEnd(48)} ${f(n).padStart(8)}`);
 
   if (APPLY) {
+    // CF-A-SLICE-IS-NOT-A-SIBLING-COUNTER: `notReached` rows were never
+    // scanned, so intending only `scanned` while skipping them over-accounts
+    // on every budget stop. Intend what this run took on: scanned + held.
     reportWrites({
       job: "clean-base-cards-parallel-slug",
-      intended: s.scanned,
+      intended: s.scanned + s.notReached,
       written,
       skipped: s.notChecklist + s.noEvidence + s.nothingToStrip + s.noSlug + s.noop + s.notReached,
       failed: s.failed,
