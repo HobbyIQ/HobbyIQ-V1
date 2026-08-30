@@ -2582,7 +2582,18 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
     names and stripping them would be the 3.1x bloat mistake in reverse.
     **Report-only counters (2026-08-30, run locally — a dry run touches
     nothing; the runner dispatch is Drew's).** repair MODE=grade slot 0/8:
-    __REPAIR_COUNTERS__ base-cards clean MODE=cards slot 0/8 (LIMIT=250):
+    **44,402 rows scanned** (the other 318,075 belong to slots 1-7), **6,528 repaired**
+    = 306 moved onto a checklist row / 18 onto a numbered twin (foldTwinRule) /
+    144 onto a vendor-or-derived row / 4,843 PARKED with no readable number /
+    1,217 PARKED carrying a number the catalog has no row for; **37,784 left
+    alone because the guard agreed** (85% — the blast radius is bounded and
+    measured, not asserted); 89 unparsable slugs, 1 with no player to park
+    under, **0 failed, 0 not reached**, and the reconciliation closes exactly
+    (44,402 = 6,528 + 37,874). Why the number changed: grader-digit 4,823,
+    the title's #X overruling the vendor 1,744, bare print run 49, lot count 2
+    — cardhedge 4,420 / tca-ebay 2,188 / cardsight 10. Extrapolated across
+    8 slots the grade slice alone is ~52k repairs.
+    base-cards clean MODE=cards slot 0/8 (LIMIT=250):
     264 scanned, **264 cleaned** = 133 moved / 111 folded / 20 replaced (12
     of them onto a numbered twin), 0 sales re-pointed, 0 failed;
     cardboardchecklist 256 / beckett 8; rung names recovered: Refractor 152,
