@@ -39,6 +39,7 @@
  *      USER (scope to one userId); LIMIT=0
  */
 const path = require("node:path");
+const fs = require("node:fs");
 const backend = path.resolve(__dirname, "..");
 const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
 const { CosmosClient } = require("@azure/cosmos");
@@ -46,6 +47,16 @@ const { catalogAuthorityOf } = require(path.join(backend, "dist/services/catalog
 
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
 const USER = process.env.USER_ID || "";
+
+// Three attempts with backoff for transient socket/timeout errors; the SDK
+// already retries throttles (connectionPolicy). A 404 is an answer, not a fault.
+async function retry(fn, attempts = 3) {
+  let last;
+  for (let i = 0; i < attempts; i++) {
+    try { return await fn(); } catch (e) { last = e; if (e?.code === 404) throw e; await new Promise((r) => setTimeout(r, 500 * (i + 1))); }
+  }
+  throw last;
+}
 const LIMIT = Number(process.env.LIMIT || 0);
 const f = (n) => Number(n).toLocaleString();
 
