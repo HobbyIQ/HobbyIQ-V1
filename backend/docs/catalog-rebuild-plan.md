@@ -427,6 +427,96 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   RESIDUE: an html variation section ("Base Image Variation Set") emits a blank-parallel
   row that shares the base card's id; Panini naming differs by path (html "Blue Prizm",
   xlsx "Prizms Blue" / "Blue Prizms") — the normalised key absorbs it, the slug does not.
+  **D3c — the two page shapes (2026-08-30, `feat/d3c`): the converter never dropped
+  them; the LABEL was never going to carry them.** The brief read the audit's uncovered
+  keys (2024 Topps Series 1 `33|base|`, `33|rainbow foil|`; 2025 Donruss `53|artist proof
+  /25`, `carolina blue laser /249`) as rows the converter drops. Measured on the real
+  pages: both products convert on the xlsx path and the runner's own log (33274846587)
+  emits 2024 Topps Series 1 = 20,043 rows (Base + all 37 foil/holiday finishes on 370
+  cards) and 2025 Donruss = 17,722 (Base 1–100 + Rated Prospects 101–200 × 68 finishes);
+  shards 2–7 each print `rows not reached 0` for the CLC phase. The rows are in Cosmos —
+  at their CANONICAL ids, under someone else's label. Two mechanisms: (1) the ingest
+  mints ids through `computeHobbyIqCardId`, which collapses the setKey (`topps-series-1`
+  → `topps`, `donruss` → `panini-donruss`, `leaf-vivid` → `leaf`, `BCP-` → `bowman-
+  chrome`), so the old raw-upserted row `hiq:baseball:2024:topps-series-1:33:base:no-auto`
+  and the re-ingested `hiq:baseball:2024:topps:33:base:no-auto` are two documents and the
+  new write never replaces the old; (2) at the canonical id an EARLIER checklist source
+  already sits at equal authority and confidence — bcp ladders are ingested before CLC in
+  the same job, insider/beckett landed 08-27 — and `mergeCatalogEntries` keeps the
+  existing row on an exact tie (`cardCatalog.service.ts:255`, "kept the existing row"
+  30k–104k per shard). Point reads: `…:2024:topps:33:base:no-auto` = baseballcardpedia-
+  ladders-2026-08-29; `…:33:rainbow-foil` / `gold:num-2024` / `vintage-stock:num-99` /
+  `royal-blue` = bcp-ladders-2026-08-28; `…:2025:panini-donruss:53:artist-proof:no-auto:
+  num-25`, `101:base`, `101:artist-proof-black:num-1` = checklistinsider-2026-08-27;
+  `…:2025:leaf:1:base:no-auto` = beckett-checklist-2026-08-27 under setKey
+  leaf-spectacular (the Leaf id collapse conflates products — the vocabulary decision,
+  not fixed here). The audit's held set was `c.source = @new` only
+  (`lib/sourceCoverage.cjs:66`, D3b) — every kept key counted as uncovered, hence 349/406.
+  FIX 1, `scripts/lib/sourceCoverage.cjs` (audit + retire share it): coverage is measured
+  on IDENTITY — the old row's canonical id (isAuto either way) held by any
+  checklist-authority source that is not being retired (`COVER_BY=replacement` restores
+  the label-only reading); the held rows come from one `STARTSWITH(c.id, 'hiq:sport:year:
+  canonKey:')` query per canonical prefix (cached, 6 deep). The text normalisation gained
+  what the old rows actually look like: blank ≡ Base; a card-TYPE label the old ingester
+  glued onto a numbered range ("Rated Prospects …", "Rookie and Veteran Retail Autographs
+  …" — bare, unnumbered, no finish word, the card has no plain row, ≥3 extensions) is
+  strippable, shortest strip first ("rated prospects optic gold" meets "optic gold" before
+  "gold"; "Optic" on card 53 is NOT a type because 53 has a plain row, so Optic Gold /10
+  never reads as Gold /10); a bare colour meets its long form (`TRC-1|green|10` = Green
+  Refractor /10, the colour = refractor ruling); a null run meets the checklist's numbered
+  plain card (`HSHA-BW|base|` = Base /25); a parallel filed in subsetName with "Base" as
+  the parallel is that parallel ("Bowman Sterling Aqua Refractor" / Base /125 — misfiled,
+  not fabricated); "Subset Key: FS=Future Stars" legend rows (1,050 on 2020 Series 1) leave
+  the denominator and are counted. Every line prints who holds the keys.
+  FIX 2, the converter, on real gaps the diagnosis found on the way (all page text):
+  html `clean()` read "Red #/25 or Less" as "Red #/25" with NO run — the "or less" strip
+  ran after the run parse (2020 S1 auto sets ×26; 2021/2022 Donruss "Career Stat Line
+  #/500 or less" ×262 each, "Gold #/25 or less", "Pink Fireworks #/199"; 2021 Prizm "Blue
+  #/149" ×100); xlsx `sectionSplit` took the first TWO words as the section, so a
+  three-word section with no parallels became a parallel of its own first two words
+  ("Challenge Code" ×30, "Topps Baseball" ×25 on 2024 S1; "Recollection Collection" ×23 —
+  in Cosmos today; "Image Variation" ×335 on 2025 Update — Golden Mirror Image Variation
+  collapsed onto the base card's id), a lone "Autographs" stayed as a parallel (×78/×36),
+  "Autographs Prizms Gold" listed without its plain row became a type and Gold Vinyl lost
+  its Gold ("Vinyl" ×190 on 2022 Prizm DP), Leaf's Base/Auto marker stayed in the finish
+  ("Talent Base Crystal Black", "Base Laser Black" — 15,576 Leaf Vivid identities; Leaf
+  Metal "Tritanium Prismatic White" → "White", 15,348), Bowman mega autos read "Mega
+  Autographs Chrome Gold Mojo Refractor" (1,248). Now: a "Base …" value belongs to Base;
+  the shortest plain Set value that word-prefixes a value heads it; a value others extend
+  heads its own section (a head ending in a colour needs ≥2 under it: "Black Gold"
+  yes, "Autographs Prizms Gold" no); siblings under the same two words share their
+  common words less trailing finish words ("Tritanium", "1991 Gold Leaf Prospects" keeps
+  its Gold; Relic/Relics twins split); a lone "… Variation(s)" whose numbers are base
+  numbers is a Base finish; a lone value with a finish tail keeps it ("Mega Futures" +
+  "Chrome Mojo"). Row counts per product are UNCHANGED (18 cached products: 308,531 rows
+  before and after; 2025 Leaf Vivid 40,552 → 40,552, 100% coverage before and after);
+  only names moved. Tests: `tests/clcConverterPageShapes.test.ts` (trimmed real
+  workbooks/page: 2024 Topps Series 1, 2025 Donruss, 2025 Update, Leaf Vivid control, Leaf
+  Metal, 2026 Bowman, 2022 Prizm DP, 2020 Series 1 html) + `tests/sourceCoverageIdentity.
+  test.ts` (stub slug + fake container: kept-under-another-label, blank ≡ Base, type
+  label, the Optic guard, colour ≡ refractor, legend, COVER_BY both ways).
+  NUMBERS (local, old Cosmos keys vs the converted CSV, identity-based): 2024
+  topps-series-1 **100%** (exact 99.6; was 52%), 2025 topps-update-series **99.1** (21),
+  2022 update 100 (37), 2020 series-1 100 (45), 2023 chrome-platinum-anniversary 100 (12),
+  2025 donruss **100** (2), 2024 donruss 100 (4), 2026 donruss 100 (8), 2025 panini-prizm
+  100 (6), 2022 prizm-draft-picks 100 (6), 2026 bowman 100 (84), 2026 leaf-metal 100 (94),
+  2025 leaf-vivid 100 (100, the control) — 131,789 keys, 99.9% (the residue is 108
+  2025-Update plain insert rows whose card number the workbook lists under a different
+  prefix). The 2025 Prizm residue of 391 old rows is 87 "Base /N" artifacts covered via
+  their subsetName. Donruss inserts numbered 1..N without a prefix (Bomb Squad #1, Diamond
+  Kings #1, Coming Attractions #1) collapse onto one id per number+parallel — pre-existing,
+  the id carries no subset; noted, not fixed.
+  ORDER: merge (scripts + tests only; no `backend/src`, no deploy) → re-ingest
+  `ingest-checklists-end-to-end` `MODE=reingest PHASES=clc` slots=8 on main (renamed
+  identities mint their ids; the misnamed rows the D3 re-ingest wrote under
+  checklistcenter-2026-08-29 — "Talent Base Crystal Black", "Recollection Collection",
+  "Challenge Code" … — are NOT touched by it and need a staleness retire of that label:
+  follow-up) → `audit-source-coverage` `OLD_SOURCES=checklistcenter,checklistcenter-html`
+  (default `COVER_BY=any-checklist`; read the "covered keys held by" line — the retire
+  deletes old rows whose identity bcp / insider / beckett hold at the canonical id, i.e.
+  duplicates at non-canonical ids; Drew decides whether that is the reading he wants
+  before APPLY) → `retire-exploded-checklist-rows MODE=source SOURCES=checklistcenter,
+  checklistcenter-html MIN_COVERAGE_PCT=95` dry run → APPLY.
   cached at c:/tmp/clc (ladders only, no card lists → bounded 547-page re-fetch);
   the old HTML ingester split ladders on commas (player names became rungs) and
   swallowed multi-ladder paragraphs; converter = scrape-checklistcenter-products +
