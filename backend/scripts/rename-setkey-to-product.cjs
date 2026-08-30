@@ -39,9 +39,11 @@
  * MODE=hyphen. SOURCES is REQUIRED (a whole-scope write names its scope): for
  * every un-graded row of those sources whose cardNumber is letters-then-digits
  * with no hyphen (bccp "BD152"), the checklist's spelling (BD-152) is probed
- * by point read; when that row exists this one is folded onto it through
- * moveCatalogRow; when it does not, the row is refused and counted -- the
- * checklist's spelling is unknown and this script never invents one.
+ * by point read; when that row exists AND is checklist-authority
+ * (canAdjudicate) this one is folded onto it through moveCatalogRow; when
+ * it does not exist, or is a derived / vendor row, the row is refused and
+ * counted -- the checklist's spelling is unknown and this script never
+ * invents one.
  *
  * MODE=holdings. Slot 0 only. Every portfolio holding whose hobbyiqCardId /
  * cardId is an hiq slug that no longer names a catalog row is re-pointed: the
@@ -265,6 +267,7 @@ async function main() {
   const gen = require(path.join(backend, "dist/services/portfolioiq/hobbyIqCardId.service.js"));
   const { moveCatalogRow, rebuildSearchFields } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
   const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
+  const { canAdjudicate } = require(path.join(backend, "dist/services/catalog/catalogAuthority.service.js"));
   const db = new CosmosClient({ connectionString: conn, connectionPolicy: { retryOptions: { maxRetryAttemptsOnThrottledRequests: 30, maxWaitTimeInSeconds: 120 } } }).database("hobbyiq");
   const cat = db.container("card_catalog"), pool = db.container("sold_comps"), portfolio = db.container("portfolio");
 
@@ -289,7 +292,7 @@ async function main() {
 
   if (MODE === "estimate") return estimate(cat, products, table, filters);
   if (MODE === "product") return renameProducts(cat, pool, products, table, deps, filters, { moveCatalogRow, rebuildSearchFields, reportWrites, deriveParentSetKey: gen.deriveParentSetKey, deriveBrand: gen.deriveBrand });
-  if (MODE === "hyphen") return foldHyphens(cat, pool, deps, filters, { moveCatalogRow, reportWrites });
+  if (MODE === "hyphen") return foldHyphens(cat, pool, deps, filters, { moveCatalogRow, reportWrites, canAdjudicate });
   if (MODE === "holdings") return repointHoldings(cat, portfolio, deps, { reportWrites });
   console.error(`FATAL: unknown MODE=${MODE} (product | hyphen | holdings | estimate)`);
   process.exit(1);
@@ -407,7 +410,7 @@ async function renameProducts(cat, pool, products, table, deps, filters, lib) {
 
 async function foldHyphens(cat, pool, deps, filters, lib) {
   if (!SOURCES.length) { console.error("FATAL: MODE=hyphen needs SOURCES (comma list) -- a whole-scope write names its scope"); process.exit(1); }
-  const stats = { scanned: 0, otherShard: 0, actionable: 0, folded: 0, replaced: 0, moved: 0, canonical: 0, noTwin: 0, refused: 0, gone: 0, salesRepointed: 0, gradedRetired: 0, failed: 0, notReached: 0 };
+  const stats = { scanned: 0, otherShard: 0, actionable: 0, folded: 0, replaced: 0, moved: 0, canonical: 0, noTwin: 0, twinNotChecklist: 0, refused: 0, gone: 0, salesRepointed: 0, gradedRetired: 0, failed: 0, notReached: 0 };
   const examples = [];
   let stopReason = null;
   const spec = {
@@ -428,6 +431,11 @@ async function foldHyphens(cat, pool, deps, filters, lib) {
         try {
           const twin = await pointRead(cat, d.twinId, d.twinId);
           if (!twin) { stats.noTwin++; return; }
+          // Ruling (d) says the CHECKLIST's hyphen. A twin that is itself a
+          // derived or vendor row (a stub, an exploded ladder) proves nothing
+          // about the spelling; the first dry run showed a bccp row REPLACING
+          // such a twin by authority. Only a checklist-authority twin decides.
+          if (!lib.canAdjudicate(twin.source)) { stats.twinNotChecklist++; return; }
           stats.actionable++;
           const full = await pointRead(cat, row.id, row.cardId ?? row.id);
           if (!full) { stats.gone++; return; }
@@ -454,6 +462,7 @@ async function foldHyphens(cat, pool, deps, filters, lib) {
   console.log(`  sales re-pointed         ${f(stats.salesRepointed)}`);
   console.log(`  graded children retired  ${f(stats.gradedRetired)}`);
   console.log(`  no hyphenated twin       ${f(stats.noTwin)}   <- the checklist's spelling is unknown; refused, never invented`);
+  console.log(`  twin is not a checklist  ${f(stats.twinNotChecklist)}   <- a derived / vendor row at the hyphenated id proves nothing about the spelling; refused`);
   console.log(`  already hyphenated       ${f(stats.canonical)}`);
   console.log(`  refused                  ${f(stats.refused)}   <- not an identity row / not letters-then-digits`);
   console.log(`  gone before the move     ${f(stats.gone)}`);
