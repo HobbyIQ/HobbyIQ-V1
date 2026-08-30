@@ -249,11 +249,12 @@ describe("D16 — one fixture pool, four handlers, one number", () => {
     expect(new Set([thin.pb.marketValue, thin.cf.fmv, thin.hf.fmv, thin.tile?.trendAdjustedValue]).size).toBe(1);
     // D22 (CF-ONE-SALE-WINDOW-POLICY): this fixture — $0.88 at 12d, $0.15 at
     // 60d — is the one-sale shape: the newest sale carries ~97% of the window's
-    // recency weight and disagrees with the 180d leading edge ($0.515) by 71%,
-    // so under the default policy (widen) the leading edge stands under its own
-    // label. Still an exact-pool thin rung, still one number on every route.
-    expect(thin.pb.rungLabel).toBe("exact-pool-leading-edge");
-    expect(thin.pb.marketValue).toBe(0.52);
+    // recency weight and disagrees with the 180d leading edge ($0.515) by 71%.
+    // Drew's ruling (the default): the latest sale is the market — the same
+    // $0.88 as before, under the label that says one sale carried it. Still
+    // an exact-pool thin rung, still one number on every route.
+    expect(thin.pb.rungLabel).toBe("exact-pool-last-sale");
+    expect(thin.pb.marketValue).toBe(0.88);
     expect(thin.hf.compCount).toBe(2);
     expect(h.calls.ladder).toEqual([]);
   });

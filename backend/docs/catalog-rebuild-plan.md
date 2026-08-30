@@ -1491,6 +1491,148 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
     identity (a sale is never lost: create-verify-delete), collapse the
     CardHedge `ch-daily::` / `ch-comp::` dual ids (refusing any pair whose
     grade or parallel differs), variance printed before "duplicate".
+    **D22 — the projection is the leading edge; a variation is a card (built
+  on `feat/d22`, 2026-08-30, 5 commits, unmerged; backend/src changed —
+  dispatch "Daily 5AM ET Refresh & Deploy" after merge).** Two measured
+  defects (Drew, 08-30). **A. The projection lagged the leading edge.** Max
+  Williams CPA-MWI Refractor raw (holding deced7d3): ten sales at $25–38 in
+  the newest week, $12–21 before; persisted **$18.74** `exact-pool-projection`
+  ("window=60d n=29 median=$14 trend=up 12.1%/wk"). The OLS fit's level was
+  the WINDOW's centroid — the mean price at the mean date, five weeks back —
+  so the slope carried a $14-era level forward and never reached the market
+  that had just paid $25–38 ten times. `projectFromLeadingEdge`
+  (nextSaleProjection): the level is the pool's recency-weighted median at
+  its own recency-weighted time, and the window's OLS trend moves it forward
+  from THERE to now; the newest-sale ±25% band and the slope-sanity cap stay.
+  Fixture (Drew's weeks, through `valueIdentity` on the mocked reader):
+  **$35.15** — anchor $30 sitting 13.2d back, +9.1%/wk applied 13.2d,
+  predicted +7d $37.88 — inside the last ten sales' range, was $18.74. **The
+  n = 1 policy** (Gillen CPA-TG Blue /150, afd40fed: 180d window n=2, the
+  $729 sale carries >99.9% of the recency weight, so the weighted median WAS
+  the one sale): `ONE_SALE_WINDOW_POLICY` in unifiedPricing — **default
+  `last-sale`, Drew's ruling 19:50Z: "Keep — the latest sale is the market"**
+  → **$729** under `exact-pool-last-sale` (the label now says one sale carried
+  it; was `exact-pool-weighted-median`), the basis printing what the named
+  alternative would say; **`widen`** (off; `ONE_SALE_WINDOW_POLICY=widen`): a
+  one-sale window does not win on its own — the widest window's leading edge
+  (median of the newest ≤ 3) stands under `exact-pool-leading-edge`, **$489.50**
+  for Gillen. A carrying sale that AGREES with the leading edge (within 25%)
+  leaves the weighted median standing; exactly one sale in 180d stands under
+  last-sale in either policy. Every tier carries `projectionNote` (what the
+  rung did) and `windowNote` (the cascade's path); the basis states the window
+  choice ("window=180d [60d n=1, 90d n=1, 180d n=2, 180d with all 2]"), the
+  anchor and the note. Persist stamps untouched; the D16 contract's THIN
+  fixture ($0.88 at 12d, $0.15 at 60d — the same shape) pins
+  `exact-pool-last-sale` $0.88 (same number, honest label). Not changed: the
+  gated ladder's own rungs (`projectNextSaleFromComps` branch 1) still anchor
+  on the window centroid — follow-up. **B. Image variations are not a card
+  yet** — "image variations are typical in card sets, so we need to fix that";
+  "it will have the same card number but be called IV, Image Variation or
+  other uses in sold comp data"; the PSA label on holding 3fe98abe reads
+  "2020 BOWMAN DRAFT #BD152 BOBBY WITT JR. SP-CHROME MINT 9". **Inventory
+  (read-only, 08-30):** the catalog holds **1,066 distinct parallel spellings**
+  with a variation word — Clear Variation 4,888 vs Clear Variations 700; Ssp
+  2,792 vs SSP 2,587; Image Variations 1,886 vs Image Variation 1,460 vs IMAGE
+  VARIATION 350; Golden Mirror under five spellings (1,034 / 760 / 1,129 / 391
+  / 350); Lightboard Logo under two (1,744 / 1,724) — by source
+  checklistcenter 22,883 + 21,264, cardboardchecklist 15,624, checklistinsider
+  14,502, bcp ~13k, beckett ~6k, ingest-auto-seed 6,252; by product
+  topps-chrome 18,688, topps-heritage 9,767, allen-and-ginter 8,661,
+  topps-series-1 7,116, topps 6,385, topps-update-series 5,502, bowman 3,646,
+  bowman-chrome 3,519, stadium-club 2,816, bowman-draft 1,046; 65 html-path
+  `subsetName`s carrying "variation" (Donruss / Optic / Stadium Club "Base
+  Variations Set" — the blank-parallel residue D3c named). On 29 real CLC
+  pages the converter emitted **101 variation (section|finish) keys, 30 of
+  them BLANK under an `insert:image-variations`-style category — the plain
+  card's own id**; the rest plural ("Clear Variations"), "Variations"-only
+  under an insert's name, or "Super Short Prints". Pool: **443,988 rows under
+  BASE slugs of 15 products with variation sections; 8,937 (2.0%) titles carry
+  a variation token** — bare SP 5,194 (much of it "SP Authentic" and
+  short-printed INSERTS), SSP 1,780, Variation 1,011, Short Print 775,
+  Image/Photo Var 75, IV 77 (74 of them "Iván"), Var 25. **Vocabulary**
+  (`variationVocabulary.ts`, glossary §3): `image-variation` (SP is the
+  default tier, not spelled; `-sp` is an accepted alias and folds),
+  `image-variation-ssp`, `<kind>-variation` for a named kind (golden-mirror,
+  true-photo, clear, team-color, lightboard-logo, murakami, frozenfractor,
+  action, throwback-uniform, nickname, color-swap, chrome — Heritage only —,
+  black-&-white, rookie-design, wbc-flag, retrofractor …; image/photo come off
+  only when what remains is a KNOWN kind, so "True Photo" keeps its photo and
+  an unknown "Rookie Image Variation" keeps every word), a finish after the
+  word keeps its place (`image-variation-gold-speckle-refractor`), the
+  grader-label forms SP-CHROME / SSP-CHROME / SP-PAPER carry a stock word kept
+  only where the checklist distinguishes chrome from paper, and a bare "SP" /
+  "Short Print" is NOT a variation (Heritage's short print is the base card).
+  **Identity = the base card's number + the finish**: never a twin (twins
+  differ only by `:num-N` — the fold's own regex, pinned) and never folded.
+  **Wired:** the slug layer (`normalizeParallel`; on chrome stock a bare
+  variation is not a refractor); both title parsers (a strong form names the
+  finish; weak markers SP / SSP / IV / Short Print ride to the seam — "IV"
+  with Unicode boundaries, `#SSP-RC` card numbers excluded);
+  `parallelTheTitleAllows` (a marker corroborates a vendor's variation tag,
+  never a colour tag); `persistVendorSalesToPool` (a marker becomes a
+  variation only when the product's checklist holds the plain image variation
+  for that card — `variationParallelsForCard`, memoised per batch; a label's
+  stock word is reduced to what the checklist holds); the holding normalizer
+  (R9 `parallel_variation_vocabulary`) and `identityFromFields` (the holding
+  CAN be the variation through the `parallel` it has); the PSA grader
+  ("SP-CHROME" → "Image Variation Chrome"; was the parallel text "Sp Chrome").
+  **Converters:** CLC xlsx `sectionsOf` anchors a variation Set value PER
+  NUMBER onto the plain section holding that number (its prefix section, else
+  Base, else the smallest) with the vocabulary's finish — 2024 Bowman Chrome's
+  "Image Variations" mix rookies and BCP- prospects; CLC html files a "Base
+  Image Variation Set" subset the same way, and "Base Paper Set" / "Base
+  Chrome Set" are now the base set (2020 Bowman Draft minted no plain BD-152
+  base row before); bcp's scrape reads a Variations heading as a base-category
+  section with the finish; Beckett / checklistinsider already fold via
+  `classifySections` (rung "Image Variation" / "SP Variation" / "SSP
+  Variation" — the slug layer speaks). **After:** on the same 29 pages 160 of
+  178 keys named; the 18 blank are own-numbered sections (WBC-1…, BCP-251+,
+  CRAV-, "2023 AFL MVP SP") — correctly not variations of a base number.
+  Fixtures, all real pages: 2024 Topps Chrome / 2023 Series 1 / 2024 Heritage
+  (xlsx), 2020 Bowman Draft (the Witt page) / 2023 Stadium Club (html), plus a
+  drift guard pinning the converters' CJS mirror to the TS vocabulary.
+  **Product qualifiers** (`productQualifiers.ts`): "1st Edition" / "Sapphire"
+  / "Chrome" / "Update" in a title move the plain setKey — the grammar now
+  keeps `bowman-draft-1st-edition` / `bowman-1st-edition` (it collapsed them
+  to bowman-draft; the Witt $4 sale's road) — while bowman → bowman-chrome and
+  Topps Chrome Update are REFUSED and counted (the family ruling; the D6
+  vocabulary collision: the grammar collapses "Topps Chrome Update" into
+  topps-chrome while the checklist holds `topps-chrome-update-series`).
+  `repair-parallel-from-title` gains **MODE=variation** and **MODE=product**
+  (+ LIMIT, `reportWrites`, the relaunch step forwards mode / sources / scope /
+  slots; out of the reconciliation debt list). **Dry runs (LIMIT=200,
+  read-only, cardhedge + tca-ebay): product — 6 would re-key (2022 Bowman
+  Draft → `bowman-draft-1st-edition` rows that exist), 194 UNMATCHED (no
+  catalog row at the qualified key — the acquisition list; 2020 BD-152 1st
+  Edition Blue Foil among them; D23's setKey rename supersedes these targets —
+  counted, never minted), 0 refused in the sample; variation — 1 would re-key
+  (2025 Topps Chrome #246 → `lightboard-logo-variation`), 193 markers left
+  (2003 Flair `#SSP-RC` card numbers, the "SP Authentic" brand — the
+  corroboration rule held).** **The Witt holding (3fe98abe):** before, the
+  cert path minted the parallel text "Sp Chrome" and the holding sat on
+  `bowman:bd152:base` / `bowman-draft:bd152:base`; after, the descriptor
+  reads "Image Variation Chrome", the title "…#BD152 SP-Chrome…" parses the
+  same, and the derivation asks the catalog for the variation — **NOT FOUND
+  today**: the catalog holds no variation row for 2020 BD152 until the 2020
+  page is re-ingested with this converter (then the label's "Chrome" reduces
+  to the page's plain `image-variation`, which has no chrome/paper split).
+  **Flagged:** the html path slugs the number `bd-152` (slugify keeps the
+  hyphen) while the bccp rows and the holding say `bd152` — a card-number
+  normalisation ruling (BD-152 ≡ BD152) is needed before that identity
+  resolves; "Logofractor Edition" and "Complete Set" are product qualifiers
+  the table does not carry yet; the CLC html path's `insert:` category prefix
+  vs the ingester's `insert-` check is a D3c question this build did not
+  open. **Gates:** tsc 0; vitest 0 over the required set + `projectionIsThe-
+  LeadingEdge`, `variationIsACard`, `variationSectionsOnRealPages`; **mutation checks
+  (each reverted, each red):** the anchor without recency weighting (half-life
+  → 100,000d: the old window centroid) → Max Williams red; the policy default
+  flipped to `widen` → the Gillen default red; the parser ignoring the
+  variation read → the abbreviation fixtures red; the seam's marker
+  corroboration off → the vendor-tag test red; the slug layer without the
+  vocabulary → the slug table red; the converter filing "Base Paper" as an
+  insert → the Witt page red; the per-number anchor off → the 2024 Topps
+  Chrome page red; the repair script back in the reconciliation debt list →
+  the guard red.
 - ◐ D10 **Look at all holdings for everyone** (Drew, 2026-08-29 17:15Z). The three
   defects under holding `ca7a150b` are not specific to it. **#1448
   `audit-all-holdings`** (read-only, runner-whitelisted): per holding —
@@ -2171,12 +2313,13 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
 
 ## NEEDS DREW (not code)
 
-- **A single fresh sale carrying the number:** Gillen Blue Refractor /150 —
+- ~~A single fresh sale carrying the number~~ **RULED KEEP (19:50Z 08-30): "Keep — the latest sale is the market."** D22's `ONE_SALE_WINDOW_POLICY` default is `last-sale` (Gillen $729 under `exact-pool-last-sale`); `widen` (n ≥ 2 before the window wins; $489.50) is the named alternative, off.
+- **A single fresh sale carrying the number — original note:** Gillen Blue Refractor /150 —
   four 2025 sales $125–$250, one $729 twelve days ago; the 60-day window has
   one sale, so the card reads $729. That is "projected next sale" at n = 1
   (D16). Options: keep (the latest sale IS the market); require n ≥ 2 in the
   window before the window wins (else widen to 90/180 and let the trend
-  project); or cap a one-sale window's move against the prior window. Rule?
+  project); or cap a one-sale window's move against the prior window.
 
 - **Retire old-CLC duplicates at non-canonical ids (D3c):** identity-based
   coverage says the old `checklistcenter`/`checklistcenter-html` rows are

@@ -36,13 +36,14 @@ export type ExactPoolRungLabel =
   | "exact-pool-projection"
   /** Newest exact sale: canonical / hobbyIqFmv when n < 3 (drift-adjusted
    *  by the broader trend since it sold); unified when the widest window
-   *  holds exactly ONE sale, or under ONE_SALE_WINDOW_POLICY=last-sale when
-   *  one sale carries a thin window (D22). */
+   *  holds exactly ONE sale, or when one sale carries a thin window and
+   *  disagrees with its leading edge under ONE_SALE_WINDOW_POLICY=last-sale
+   *  — the default, Drew's ruling: the latest sale is the market (D22). */
   | "exact-pool-last-sale"
   /** Median of the newest three exact sales (unified, 4 <= n < 8) — and,
    *  since D22, the widest window's leading edge (newest <= 3) when a thin
-   *  window's one carrying sale disagrees with it under
-   *  ONE_SALE_WINDOW_POLICY=widen. */
+   *  window's one carrying sale disagrees with it under the named
+   *  alternative ONE_SALE_WINDOW_POLICY=widen (off). */
   | "exact-pool-leading-edge"
   /** Recency-weighted median of the exact pool (unified, n < 4 — the last
    *  resort; the basis note already exposes it). Since D22 it stands only

@@ -15,10 +15,12 @@
 // B. Holding afd40fed — Theo Gillen 2024 Bowman Draft CPA-TG Blue Refractor
 //    /150, raw. Five sales: $125, $161.50, $192.51, $250 (2025) and $729 on
 //    2026-08-20. The 60d/90d windows hold one sale; the 180d window two, and
-//    the $729 carries >99.9% of its recency weight → the card read $729. Under
-//    the default policy (widen) a one-sale window does not win on its own:
-//    the 180d leading edge ($489.50) stands, and the basis prints what the
-//    other policy would say. Under last-sale, $729 under its own label.
+//    the $729 carries >99.9% of its recency weight → the card read $729 under
+//    a weighted-median label. Drew ruled (2026-08-30 19:50Z): "Keep — the
+//    latest sale is the market." So the DEFAULT policy is last-sale: $729
+//    stands, under a label that says one sale carried it, and the basis
+//    prints what the named alternative (widen: the 180d leading edge,
+//    $489.50) would have said. widen is the constant Drew can flip on.
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 
 const h = vi.hoisted(() => ({
@@ -181,41 +183,41 @@ describe("A. the projection is anchored on the leading edge (Max Williams CPA-MW
 });
 
 describe("B. a one-sale window does not win on its own (Gillen CPA-TG Blue /150)", () => {
-  it("the default policy is `widen`, and the constants are named", () => {
-    expect(ONE_SALE_WINDOW_POLICY_DEFAULT).toBe("widen");
-    expect(oneSaleWindowPolicy()).toBe("widen");
+  it("the default policy is `last-sale` (Drew's ruling), and the constants are named", () => {
+    expect(ONE_SALE_WINDOW_POLICY_DEFAULT).toBe("last-sale");
+    expect(oneSaleWindowPolicy()).toBe("last-sale");
     expect(ONE_SALE_WEIGHT_SHARE).toBe(0.75);
     expect(ONE_SALE_AGREEMENT_PCT).toBe(0.25);
   });
 
-  it("widen (default): not $729 from one sale — the 180d leading edge stands, under its own label, and the basis prints the other policy's number", async () => {
+  it("last-sale (default, Drew's ruling): the latest sale IS the market — $729 under exact-pool-last-sale, with widen's number printed beside it", async () => {
     h.catalog.set(TG, catalogRow({ year: 2024, setName: "2024 Bowman Draft", cardNumber: "CPA-TG", parallel: "Blue Refractor", printRun: 150 }));
     h.rows = gillen();
     const v = await valueIdentity({ id: TG });
     // eslint-disable-next-line no-console
-    console.log(`Gillen (widen): FMV $${v.fairMarketValue} rung ${v.rungLabel}\n  basis: ${v.basis}`);
+    console.log(`Gillen (last-sale, default): FMV $${v.fairMarketValue} rung ${v.rungLabel}\n  basis: ${v.basis}`);
     expect(v.windowDays).toBe(180);
     expect(v.compsUsed).toBe(2);
-    expect(v.fairMarketValue).toBe(489.5);
-    expect(v.rungLabel).toBe("exact-pool-leading-edge");
+    expect(v.fairMarketValue).toBe(729);
+    expect(v.rungLabel).toBe("exact-pool-last-sale");
     expect(v.valueSource).toBe("observed");
     expect(v.basis).toMatch(/window=180d \[60d n=1, 90d n=1, 180d n=2, 180d with all 2\]/);
     expect(v.basis).toMatch(/carries >99\.9% of the window's recency weight/);
-    expect(v.basis).toMatch(/ONE_SALE_WINDOW_POLICY=widen/);
-    expect(v.basis).toMatch(/last-sale would say \$729/);
+    expect(v.basis).toMatch(/ONE_SALE_WINDOW_POLICY=last-sale/);
+    expect(v.basis).toMatch(/widen would say \$489\.5/);
   });
 
-  it("last-sale (the flip): the latest sale IS the market — $729 under exact-pool-last-sale, with widen's number beside it", async () => {
-    process.env.ONE_SALE_WINDOW_POLICY = "last-sale";
+  it("widen (the named alternative, off): a one-sale window does not win on its own — the 180d leading edge $489.50 under its own label, with $729 printed beside it", async () => {
+    process.env.ONE_SALE_WINDOW_POLICY = "widen";
     h.catalog.set(TG, catalogRow({ year: 2024, setName: "2024 Bowman Draft", cardNumber: "CPA-TG", parallel: "Blue Refractor", printRun: 150 }));
     h.rows = gillen();
     const v = await valueIdentity({ id: TG });
     // eslint-disable-next-line no-console
-    console.log(`Gillen (last-sale): FMV $${v.fairMarketValue} rung ${v.rungLabel}`);
-    expect(v.fairMarketValue).toBe(729);
-    expect(v.rungLabel).toBe("exact-pool-last-sale");
-    expect(v.basis).toMatch(/ONE_SALE_WINDOW_POLICY=last-sale/);
-    expect(v.basis).toMatch(/widen would say \$489\.5/);
+    console.log(`Gillen (widen, alternative): FMV $${v.fairMarketValue} rung ${v.rungLabel}`);
+    expect(v.fairMarketValue).toBe(489.5);
+    expect(v.rungLabel).toBe("exact-pool-leading-edge");
+    expect(v.basis).toMatch(/ONE_SALE_WINDOW_POLICY=widen/);
+    expect(v.basis).toMatch(/last-sale would say \$729/);
   });
 
   it("a carrying sale that AGREES with the leading edge leaves the weighted median standing (the D16 thin fixture)", async () => {

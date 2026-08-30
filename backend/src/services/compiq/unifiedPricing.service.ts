@@ -93,23 +93,27 @@ const HALF_LIFE_DAYS = 14;
 // window's recency weight — so the weighted median IS the one sale, and the
 // card read $729 ("projected next sale" at n = 1, the NEEDS DREW item).
 //
-// The rule, as a named policy Drew can flip:
+// The rule, as a named policy Drew can flip. Drew ruled 2026-08-30 19:50Z:
+// "Keep — the latest sale is the market."
 //
-//   "widen"      (default) a one-sale window does not win on its own. When a
-//                thin window's newest sale carries >= ONE_SALE_WEIGHT_SHARE
-//                of the recency weight, it must AGREE (within
+//   "last-sale"  (DEFAULT, Drew's ruling) the latest sale IS the market. When
+//                a thin window's newest sale carries >= ONE_SALE_WEIGHT_SHARE
+//                of the recency weight and DISAGREES (beyond
 //                ONE_SALE_AGREEMENT_PCT) with the leading edge of the widest
-//                window — the plain median of its newest <= 3 sales — or the
-//                projection falls back to that leading edge. Gillen: 180d
-//                leading edge $489.50, the $729 disagrees by 49% → $489.50
-//                (exact-pool-leading-edge; the basis prints both numbers).
-//   "last-sale"  the latest sale IS the market: $729 (exact-pool-last-sale).
+//                window — the plain median of its newest <= 3 sales — the
+//                newest sale stands under exact-pool-last-sale, and the basis
+//                prints what widen would have said. Gillen: $729
+//                (widen would say $489.50).
+//   "widen"      the named alternative, off: a one-sale window does not win
+//                on its own — the widest window's leading edge stands under
+//                exact-pool-leading-edge, the basis printing $729 beside it.
 //
-// A window with exactly ONE sale has nothing wider to widen to (the cascade
-// already reached 180d): the sale stands under exact-pool-last-sale, which
-// says so. The env var is the flip; the constant is the default.
+// When the carrying sale AGREES with the leading edge there is nothing to
+// decide and the weighted median stands under its own label. A window with
+// exactly ONE sale stands under exact-pool-last-sale in either policy. The
+// env var is the flip; the constant is the default.
 export type OneSaleWindowPolicy = "widen" | "last-sale";
-export const ONE_SALE_WINDOW_POLICY_DEFAULT: OneSaleWindowPolicy = "widen";
+export const ONE_SALE_WINDOW_POLICY_DEFAULT: OneSaleWindowPolicy = "last-sale";
 export function oneSaleWindowPolicy(): OneSaleWindowPolicy {
   const v = String(process.env.ONE_SALE_WINDOW_POLICY ?? "").trim().toLowerCase();
   return v === "last-sale" || v === "widen" ? v : ONE_SALE_WINDOW_POLICY_DEFAULT;
@@ -785,17 +789,17 @@ export async function computeUnifiedPrice(
     const disagreePct = edge > 0 ? Math.abs(newest.price - edge) / edge : 0;
     const policy = oneSaleWindowPolicy();
     const sharePct = share >= 0.9995 ? ">99.9" : String(Math.round(share * 1000) / 10);
+    if (disagreePct <= ONE_SALE_AGREEMENT_PCT) {
+      return {
+        ...plain,
+        projectionNote: `the newest sale ($${r2(newest.price)}, ${newestAge}d ago) carries ${sharePct}% of the window's recency weight and agrees with the leading edge of the newest ${edgeSales.length} ($${r2(edge)}) within ${Math.round(disagreePct * 100)}% — the weighted median stands`,
+      };
+    }
     if (policy === "last-sale") {
       return {
         marketValue: r2(newest.price), predictedPrice: r2(newest.price), trendPctPerWeek: null, trendDirection: "flat",
         rungLabel: "exact-pool-last-sale",
-        projectionNote: `the newest sale ($${r2(newest.price)}, ${newestAge}d ago) carries ${sharePct}% of the window's recency weight; ONE_SALE_WINDOW_POLICY=last-sale — the latest sale is the market (widen would say $${r2(edge)}, the leading edge of the newest ${edgeSales.length})`,
-      };
-    }
-    if (disagreePct <= ONE_SALE_AGREEMENT_PCT) {
-      return {
-        ...plain,
-        projectionNote: `the newest sale ($${r2(newest.price)}, ${newestAge}d ago) carries ${sharePct}% of the window's recency weight and agrees with the leading edge of the newest ${edgeSales.length} ($${r2(edge)}) within ${Math.round(disagreePct * 100)}% — the weighted median stands (ONE_SALE_WINDOW_POLICY=widen)`,
+        projectionNote: `the newest sale ($${r2(newest.price)}, ${newestAge}d ago) carries ${sharePct}% of the window's recency weight and disagrees with the leading edge of the newest ${edgeSales.length} ($${r2(edge)}) by ${Math.round(disagreePct * 100)}%; ONE_SALE_WINDOW_POLICY=last-sale (Drew: the latest sale is the market) — the sale stands (widen would say $${r2(edge)})`,
       };
     }
     return {

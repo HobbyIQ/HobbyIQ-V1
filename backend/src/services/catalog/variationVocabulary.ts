@@ -165,8 +165,11 @@ const KNOWN_KIND_SLUGS = new Set(KINDS.filter((k) => !k.requires).map((k) => k.k
 
 const VARIATION_WORD = /\b(?:variations?|var)\b/;
 const IMAGE_VARIATION = /\b(?:image|photo|picture|pic)\s*(?:variations?|var)\b/;
-const SSP = /\bssp\b|\bsuper\s+short\s+prints?\b/;
-const SP_TIER = /\bsp\b/;
+// A tier word that is part of a CARD NUMBER ("#SSP-RC", 2003 Flair; "#SP-12")
+// is not a marker: not preceded by "#", not followed by "-" + a code — the
+// label form "SP-CHROME" / "SSP-PAPER" is read by LABEL_FORM first.
+const SSP = /(?<!#\s*)\bssp\b(?!-[a-z0-9])|\bsuper\s+short\s+prints?\b/;
+const SP_TIER = /(?<!#\s*)\bsp\b(?!-[a-z0-9])/;
 const SHORT_PRINT = /\bshort\s+prints?\b/;
 /** The grader-label form: "SP-CHROME", "SSP-CHROME", "SP Chrome", "SP-PAPER". */
 const LABEL_FORM = /\b(ssp|sp)[\s-]+(chrome|paper)\b/;
