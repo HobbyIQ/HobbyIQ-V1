@@ -1744,7 +1744,11 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   (product, prefix) pairs — 975 ruled, 0 refused; 136,110 rows to repair
   (healed 47,940, moved 69,781, folded 5,572, replaced 12,817); the 147,745
   "failures" were the setKey-field drift, since healed by card-profile →
-  APPLY ×8 dispatched 18:05Z (scope=CPA).**
+  APPLY ×8 dispatched 18:05Z (scope=CPA; 33286986728 … 33287013122).**
+  **Re-ingest #2 complete (8/8, 18:20Z), every shard reconciled** — the
+  converter's page-shape fixes and the tie-break are on every staged source;
+  `audit-source-coverage` #2 (identity-based, old CLC vs new) dispatched
+  18:25Z — its number decides the floor-gated retire Drew dispatches.
   **Runner landings by 15:30Z:** `conform-one-of-one-parallels` 8/8 shards —
   ≈224k rows repaired (moved ≈200k, folded ≈18k, replaced ≈6k), ≈82k
   regenerable graded children retired, ≈23k refusals (the setKey-field
