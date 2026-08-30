@@ -1724,7 +1724,17 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   vs a $2 raw median; the Tiffany Maddux $1,757 vs $55; the Judge; the
   Aaron). **#1515:** the flag compares to the holding's own tier; audit #2
   33285811376. What remains real in that list is the n = 1 window (Gillen
-  raw $729 vs a 5-sale median of $192.51) — Drew's rule.
+  raw $729 vs a 5-sale median of $192.51) — Drew's rule. **Audit #2
+  (tier-aware, 16:45Z): clean 30 of 91 (was 14/92 at the start of D10),
+  priceOffPool 10 (was 23), isEstimate while an exact pool ≥ 3 exists: 0 of
+  17 (was 9), fmvRung null 27 / non-exact 15 unchanged — the identity
+  backlog.** **Cross-source fold, generation 1 (eight shards, each at its
+  140-min budget, 17:00Z): FOLDED 63,204 (vendor/user twins ≈ 20k, 1/1 by
+  definition ≈ 2.5k, cross-source ≈ 40k), sales re-pointed 123,771, graded
+  children retired 14,253, 6,592 refusals (the setKey-field drift, now
+  healed by card-profile), 2,221 same-source-lists-both left alone; each
+  shard scanned ≈ 4.7M of the 7.0M base ids — the marker-keyed relaunch
+  children (generation 2, 33286102649 … 33286125906) finish the rest.**
   **Runner landings by 15:30Z:** `conform-one-of-one-parallels` 8/8 shards —
   ≈224k rows repaired (moved ≈200k, folded ≈18k, replaced ≈6k), ≈82k
   regenerable graded children retired, ≈23k refusals (the setKey-field
