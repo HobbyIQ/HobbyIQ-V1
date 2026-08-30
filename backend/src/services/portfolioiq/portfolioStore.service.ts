@@ -158,6 +158,15 @@ interface UserDoc {
   // holdingIds[] back-reference. Optional so existing user docs load
   // without migration.
   purchases?: PortfolioPurchaseEntry[];
+  // D26 (CF-THE-ACCOUNT-SYNC-RESOLVES-EVERY-SALE, Drew 2026-08-30). Sold order
+  // lines the hourly eBay ACCOUNT sync saw -- including the ones the user never
+  // listed through HobbyIQ, which is the whole point. The buy-side counterpart
+  // is `purchases`, and this deliberately mirrors it: an array on the user doc,
+  // idempotent on the source's own id, no new container. A line whose identity
+  // did not clear the 0.9 bar sits here PARKED with its best candidate, which
+  // is the D12-a parked-match shape on a sale rather than on a holding.
+  // Optional so every existing user doc loads without migration.
+  ebayAccountSales?: EbayAccountSaleEntry[];
   // CF-VERDICT-FLIP-PUSH-PREFS (Drew, 2026-07-16, PR #499 follow-up):
   // per-user notification opt-ins. Absent → all defaults (all off).
   // Push worker (backend/scripts/verdict-flip-push-fanout.cjs) only
@@ -8105,6 +8114,261 @@ export interface RecordPurchaseInput {
 export interface RecordPurchaseResult {
   entry: PortfolioPurchaseEntry;
   replay: boolean;
+}
+
+// ─── D26: the eBay account sync's sold lines ───────────────────────────────
+
+/** How the sale's identity was settled. */
+export type EbayAccountSaleStatus =
+  /** The matcher cleared the >= 0.9 bar. `cardId` is the identity. */
+  | "resolved"
+  /** The matcher answered below the bar. `proposedIdentity` is the candidate
+   *  the user confirms or rejects; `cardId` is null. */
+  | "parked"
+  /** No answer at all — not a card, or the matcher was never asked. */
+  | "unresolved";
+
+/**
+ * One sold order line from the connected eBay account.
+ *
+ * Keyed by (ebayOrderId, lineItemId): that pair is eBay's own identifier for a
+ * sold line and it is what makes a replay a no-op, which the poll depends on
+ * because its query window deliberately back-walks an hour on every cycle.
+ */
+export interface EbayAccountSaleEntry {
+  /** `${ebayOrderId}::${lineItemId}` — the idempotency key, and the id. */
+  id: string;
+  ebayOrderId: string;
+  lineItemId: string;
+  ebayListingId: string | null;
+  /** ISO — when eBay says the order was created. */
+  soldAt: string;
+  /** ISO — when this row was first written. */
+  observedAt: string;
+  title: string | null;
+  quantity: number;
+  /** Gross unit sale price. Fees belong on the holding's P&L, not here. */
+  unitSalePrice: number;
+  currency: string | null;
+  buyerUsername: string | null;
+
+  status: EbayAccountSaleStatus;
+  /** The resolved catalog slug. Null unless `status === "resolved"`. */
+  cardId: string | null;
+  /** The parked candidate — same shape as `proposedIdentity` on the holding
+   *  wire (CF-SURFACE-THE-PARKED-MATCH), so a client that already renders one
+   *  renders the other. Null when there is nothing to propose. */
+  proposedIdentity: { slug: string; confidence: number | null; matchedBy: string | null } | null;
+  /** Why nothing resolved. Null when it did. */
+  unresolvedReason: string | null;
+
+  /** What the matcher was asked with — the user's confirm screen shows this. */
+  fields: {
+    sport: string | null;
+    year: number | null;
+    setName: string | null;
+    player: string | null;
+    cardNumber: string | null;
+    parallel: string | null;
+    isAuto: boolean;
+    printRun: number | null;
+    gradeCompany: string | null;
+    gradeValue: number | null;
+  };
+  imageUrl: string | null;
+
+  /** The holding this sale was matched to and marked sold, when there was one. */
+  holdingId: string | null;
+  /** How the holding was found — provenance for the three-step ladder. */
+  holdingMatchedBy: "listing-id" | "identity-and-grade" | "identity-ungraded" | null;
+  /** The pool row this sale is in, and which path put it there. */
+  poolRowId: string | null;
+  poolWrittenBy: "holding-ledger" | "ebay-account" | null;
+}
+
+export interface UpsertEbayAccountSaleResult {
+  entry: EbayAccountSaleEntry;
+  /** True when an entry for this (orderId, lineItemId) already existed. */
+  replay: boolean;
+  /** True when the doc was actually written. A replay whose fields are
+   *  unchanged writes nothing — the poll re-reads the same 29 orders every
+   *  hour and must not rewrite eight docs an hour for no reason. */
+  written: boolean;
+}
+
+/** The idempotency key. Exported so the backfill and the tests build it the
+ *  same way rather than each spelling the separator their own way. */
+export function ebayAccountSaleId(ebayOrderId: string, lineItemId: string): string {
+  return `${String(ebayOrderId ?? "").trim()}::${String(lineItemId ?? "").trim()}`;
+}
+
+/** Fields the poll may refresh on a replay. Everything else is first-write. */
+type EbayAccountSaleUpdate = Omit<EbayAccountSaleEntry, "id" | "observedAt">;
+
+/**
+ * The ceiling on how many account sales ride on one user doc.
+ *
+ * A Cosmos document is capped at 2 MB and this array lives on the SAME doc as
+ * the user's holdings, ledger, purchases and price history. A Pro Seller doing
+ * 500 sales a month would add ~1,500 entries over the backfill's 90-day window
+ * at roughly 450 bytes each -- about 0.7 MB of a budget that is already spoken
+ * for. So the array is bounded: the newest EBAY_ACCOUNT_SALES_MAX by sale date
+ * are kept and older ones are dropped.
+ *
+ * Nothing is lost that matters. The SALE itself lives in `sold_comps` and in
+ * the ledger; this array is the sync's working record -- what we saw, how we
+ * resolved it, and what is still waiting on the user's confirm. If this ever
+ * needs to be unbounded it wants its own container, not a bigger user doc.
+ */
+export const EBAY_ACCOUNT_SALES_MAX = Math.max(
+  100,
+  Number(process.env.EBAY_ACCOUNT_SALES_MAX ?? 1000) || 1000,
+);
+
+/** Newest-first by sale date, capped. Returns the array to store. */
+function capAccountSales(sales: EbayAccountSaleEntry[]): EbayAccountSaleEntry[] {
+  if (sales.length <= EBAY_ACCOUNT_SALES_MAX) return sales;
+  const sorted = [...sales].sort((a, b) => String(b.soldAt ?? "").localeCompare(String(a.soldAt ?? "")));
+  const kept = sorted.slice(0, EBAY_ACCOUNT_SALES_MAX);
+  console.warn(JSON.stringify({
+    event: "ebay_account_sales_pruned",
+    source: "portfolioStore.upsertEbayAccountSale",
+    kept: kept.length,
+    dropped: sales.length - kept.length,
+    detail: "oldest account-sale records dropped to keep the user doc under the Cosmos 2MB ceiling; the sales themselves are in sold_comps and the ledger",
+  }));
+  return kept;
+}
+
+/**
+ * Write (or refresh) one account sale on the user's doc. Idempotent on
+ * (ebayOrderId, lineItemId).
+ *
+ * A replay refreshes the resolution — the catalog gains checklists, so a line
+ * that parked last week can resolve this week and must be allowed to — but it
+ * NEVER rewrites `observedAt`, and it writes nothing at all when the outcome
+ * is identical to what is stored.
+ */
+export async function upsertEbayAccountSale(
+  userId: string,
+  update: EbayAccountSaleUpdate,
+): Promise<UpsertEbayAccountSaleResult> {
+  const id = ebayAccountSaleId(update.ebayOrderId, update.lineItemId);
+  const doc = await readUserDoc(userId);
+  const sales = doc.ebayAccountSales ?? [];
+  const idx = sales.findIndex((e) => e?.id === id);
+  const now = new Date().toISOString();
+
+  if (idx >= 0) {
+    const prev = sales[idx];
+    const next: EbayAccountSaleEntry = { ...update, id, observedAt: prev.observedAt ?? now };
+    if (JSON.stringify(prev) === JSON.stringify(next)) {
+      return { entry: prev, replay: true, written: false };
+    }
+    sales[idx] = next;
+    doc.ebayAccountSales = capAccountSales(sales);
+    await writeUserDoc(userId, doc);
+    return { entry: next, replay: true, written: true };
+  }
+
+  const entry: EbayAccountSaleEntry = { ...update, id, observedAt: now };
+  sales.push(entry);
+  doc.ebayAccountSales = capAccountSales(sales);
+  await writeUserDoc(userId, doc);
+  return { entry, replay: false, written: true };
+}
+
+/** Read a user's account sales — newest first. The account page's
+ *  "eBay sales we saw" list, and the confirm queue for the parked ones. */
+export async function listEbayAccountSales(
+  userId: string,
+  opts: { status?: EbayAccountSaleStatus; limit?: number } = {},
+): Promise<EbayAccountSaleEntry[]> {
+  const doc = await readUserDoc(userId);
+  const all = (doc.ebayAccountSales ?? []).filter((e) => !!e);
+  const filtered = opts.status ? all.filter((e) => e.status === opts.status) : all;
+  filtered.sort((a, b) => String(b.soldAt ?? "").localeCompare(String(a.soldAt ?? "")));
+  const limit = Math.max(1, Math.min(500, opts.limit ?? 200));
+  return filtered.slice(0, limit);
+}
+
+/** Where the seller's holding for a sale was found. */
+export interface SellerHoldingMatch {
+  holdingId: string;
+  holding: PortfolioHolding;
+  matchedBy: "identity-and-grade" | "identity-ungraded";
+  /** How many holdings the walk actually examined. A guard that cannot say
+   *  what it looked at is not a guard (`JOIN h IN c.holdings` iterates
+   *  nothing — this walks `Object.values`). */
+  holdingsWalked: number;
+}
+
+const gradeNumOf = (v: unknown): number | null =>
+  typeof v === "number" && Number.isFinite(v) ? v : null;
+const gradeCoOf = (v: unknown): string | null => {
+  const g = String(v ?? "").trim().toUpperCase();
+  return g ? g : null;
+};
+
+/**
+ * D26 deliverable 3. Find the SELLER's own active holding for a resolved
+ * identity, when the listing id did not already name one.
+ *
+ * The ladder, most specific first:
+ *   1. exact identity + the same grade (a PSA 10 sells the PSA 10)
+ *   2. the same identity, un-graded (a raw copy)
+ *
+ * Step 0 — the holding carrying the listing id — is the CALLER's, because that
+ * lookup is cross-user (`findHoldingByEbayListingIdAcrossUsers`) and this one
+ * deliberately is not: another user's card is not this seller's inventory.
+ *
+ * Returns null when the user holds no such card, which is not a failure: the
+ * sale still records to the pool and still shows in their sales history.
+ */
+export async function findSellerHoldingForIdentity(
+  userId: string,
+  slug: string,
+  grade: { gradeCompany?: string | null; gradeValue?: number | null } = {},
+): Promise<SellerHoldingMatch | null> {
+  const wanted = String(slug ?? "").trim();
+  if (!userId || !wanted) return null;
+
+  const doc = await readUserDoc(userId);
+  // `doc.holdings` is a MAP keyed by holding id. Walk its values.
+  const entries = Object.entries(doc.holdings ?? {});
+  const holdingsWalked = entries.length;
+  if (holdingsWalked === 0) {
+    console.log(JSON.stringify({
+      event: "ebay_account_seller_holding_walk",
+      source: "portfolioStore.findSellerHoldingForIdentity",
+      userId,
+      slug: wanted,
+      holdingsWalked: 0,
+      detail: "user holds nothing; no holding can match",
+    }));
+    return null;
+  }
+
+  const wantCo = gradeCoOf(grade.gradeCompany);
+  const wantVal = gradeNumOf(grade.gradeValue);
+
+  let ungraded: SellerHoldingMatch | null = null;
+  for (const [holdingId, holding] of entries) {
+    if (!holding) continue;
+    if (poolIdentityForHolding(holding).cardId !== wanted) continue;
+    const hCo = gradeCoOf((holding as { gradeCompany?: unknown }).gradeCompany);
+    const hVal = gradeNumOf((holding as { gradeValue?: unknown }).gradeValue);
+    if (wantCo && hCo === wantCo && hVal === wantVal) {
+      return { holdingId, holding, matchedBy: "identity-and-grade", holdingsWalked };
+    }
+    if (!wantCo && !hCo) {
+      return { holdingId, holding, matchedBy: "identity-and-grade", holdingsWalked };
+    }
+    if (!hCo && !ungraded) {
+      ungraded = { holdingId, holding, matchedBy: "identity-ungraded", holdingsWalked };
+    }
+  }
+  return ungraded;
 }
 
 export async function recordPurchase(

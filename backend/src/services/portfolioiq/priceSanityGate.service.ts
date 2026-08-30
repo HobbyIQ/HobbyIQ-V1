@@ -21,7 +21,7 @@ const MIN_POOL_SIZE = 5;
 const MIN_MEDIAN = 20;
 const FLOOR_MULT = 0.2;
 const CEILING_MULT = 5.0;
-const CONFIRMED_SOURCES = ["cardhedge", "ebay-user-purchase", "manual-user-entry", "ebay-user-sale", "ebay-browse-ended"];
+const CONFIRMED_SOURCES = ["cardhedge", "ebay-user-purchase", "manual-user-entry", "ebay-user-sale", "ebay-account", "ebay-browse-ended"];
 
 interface SanityResult {
   isOutlier: boolean;

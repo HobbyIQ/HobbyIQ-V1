@@ -185,6 +185,9 @@ export function preIngestClean(input: RecordSoldCompInput): PreIngestResult {
 
     case "ebay-user-purchase":
     case "ebay-user-sale":
+    // D26: the eBay account sync. Its title is a real listing title, so the
+    // same title-parse refinement applies.
+    case "ebay-account":
     case "ebay-browse-ended": {
       // High trust — title-parse refines if fields aren't already set
       if (parsedFromTitle) {

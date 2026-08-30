@@ -78,7 +78,7 @@ router.post("/user/flag-comp", async (req: Request, res: Response, next: NextFun
             gradeValue: (row as { gradeValue?: number | null }).gradeValue ?? null,
             price: Number((row as { price?: number }).price ?? 0),
             soldAt: String((row as { soldAt?: string }).soldAt ?? ""),
-            source: (String((row as { source?: string }).source ?? "manual-user-entry") as "cardhedge" | "ebay-user-purchase" | "ebay-user-sale" | "manual-user-entry" | "ebay-browse-ended" | "cardsight"),
+            source: (String((row as { source?: string }).source ?? "manual-user-entry") as "cardhedge" | "ebay-user-purchase" | "ebay-user-sale" | "ebay-account" | "manual-user-entry" | "ebay-browse-ended" | "cardsight"),
             title: (row as { title?: string | null }).title ?? null,
             imageUrl: (row as { imageUrl?: string | null }).imageUrl ?? null,
             url: null,

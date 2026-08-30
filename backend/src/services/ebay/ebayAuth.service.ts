@@ -24,6 +24,8 @@ import {
   readTokenRecord,
   writeTokenRecord,
   deleteTokenRecord,
+  markReconnectRequired,
+  connectionStatusOf,
 } from "./ebayTokenStore.service.js";
 
 // ---------------------------------------------------------------------------
@@ -208,13 +210,39 @@ export async function handleCallback(
   return { ...record, platform };
 }
 
+/**
+ * D26 (Drew 2026-08-30). An eBay token failure that no retry can fix.
+ *
+ * eBay answers a dead / revoked refresh grant with `invalid_grant`, and the
+ * OAuth token endpoint returns 400 or 401 for a credential problem. A 5xx, a
+ * 429 or a socket error is the OTHER kind: transient, and marking a user
+ * reconnect-required for one of those would log them out of their own sync
+ * over a blip. Only the terminal shapes count.
+ */
+export function isTerminalTokenError(message: string): boolean {
+  const m = String(message ?? "").toLowerCase();
+  if (m.includes("refresh token expired")) return true;
+  if (m.includes("not connected")) return false;
+  if (m.includes("invalid_grant") || m.includes("invalid_client")) return true;
+  if (m.includes("invalid_scope") || m.includes("unauthorized_client")) return true;
+  // `fetchEbayToken` puts the HTTP status in the message ("eBay token
+  // exchange failed: 400 ...").
+  return /(400|401|403)/.test(m);
+}
+
 /** Returns a valid access token for the user, refreshing if needed. Throws if not connected. */
 export async function getAccessToken(userId: string): Promise<string> {
   const record = await readTokenRecord(userId);
   if (!record) throw new Error("eBay account not connected for this user");
 
   if (Date.now() > record.refreshTokenExpiresAt) {
-    await deleteTokenRecord(userId);
+    // D26: this used to `deleteTokenRecord`. Deleting the record is why
+    // `refreshExpired` read 0 on every cycle while two users failed forever —
+    // the first expiry erased the evidence AND removed the user from
+    // `listConnectedUserIds`, so nothing could ever show them a "Reconnect
+    // eBay" button. An expired refresh token is inert; the record is the only
+    // thing that can explain the state, so it stays and is MARKED.
+    await markReconnectRequired(userId, "refresh token expired");
     throw new Error("eBay refresh token expired. Please reconnect your eBay account.");
   }
 
@@ -229,7 +257,17 @@ export async function getAccessToken(userId: string): Promise<string> {
     scope:         REQUIRED_SCOPES,
   });
 
-  const tokenRes = await fetchEbayToken(body);
+  let tokenRes;
+  try {
+    tokenRes = await fetchEbayToken(body);
+  } catch (err) {
+    const msg = (err as Error)?.message ?? String(err);
+    if (isTerminalTokenError(msg)) {
+      // The reason is eBay's own error code, never the token or the body.
+      await markReconnectRequired(userId, `refresh rejected by eBay: ${msg.slice(0, 200)}`);
+    }
+    throw err;
+  }
 
   record.accessToken          = tokenRes.access_token;
   record.accessTokenExpiresAt = Date.now() + (tokenRes.expires_in - 60) * 1000;
@@ -237,6 +275,9 @@ export async function getAccessToken(userId: string): Promise<string> {
     record.refreshToken            = tokenRes.refresh_token;
     record.refreshTokenExpiresAt   = Date.now() + (tokenRes.refresh_token_expires_in - 60) * 1000;
   }
+  // A refresh that worked proves the connection is healthy again.
+  record.connectionStatus        = "ok";
+  record.connectionStatusReason  = null;
   await writeTokenRecord(record);
 
   return record.accessToken;
@@ -250,9 +291,18 @@ export async function getConnectionStatus(userId: string): Promise<{
   connectedAt?: string;
   accessTokenExpiresAt?: number;
   refreshTokenExpiresAt?: number;
+  /** D26. "ok" or "reconnect-required". A record exists either way, so
+   *  `connected` alone cannot tell a working connection from a dead one —
+   *  which is what the account page needs to know. Additive: a client that
+   *  reads only `connected` behaves exactly as before. */
+  status?: "ok" | "reconnect-required";
+  /** Why re-authorisation is needed. Null when the connection is healthy. */
+  reconnectReason?: string | null;
+  reconnectRequiredAt?: string | null;
 }> {
   const r = await readTokenRecord(userId);
   if (!r) return { connected: false };
+  const status = connectionStatusOf(r);
   return {
     connected: true,
     ebayUserId: r.ebayUserId,
@@ -260,6 +310,9 @@ export async function getConnectionStatus(userId: string): Promise<{
     connectedAt: r.connectedAt,
     accessTokenExpiresAt: r.accessTokenExpiresAt,
     refreshTokenExpiresAt: r.refreshTokenExpiresAt,
+    status,
+    reconnectReason: status === "reconnect-required" ? (r.connectionStatusReason ?? null) : null,
+    reconnectRequiredAt: status === "reconnect-required" ? (r.connectionStatusAt ?? null) : null,
   };
 }
 

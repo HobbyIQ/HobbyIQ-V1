@@ -20,6 +20,38 @@ export interface EbayTokenRecord {
    * the implicit starting point when this field is null/absent.
    */
   lastPolledAt?: string | null;
+  /**
+   * D26 (CF-THE-ACCOUNT-SYNC-RESOLVES-EVERY-SALE, Drew 2026-08-30). The
+   * connection's health as the POLL sees it, so an unusable connection is a
+   * state the user can act on rather than a counter nobody reads.
+   *
+   * Measured 2026-08-30: `fetchFail=2` every cycle for weeks. Both users
+   * (`admin-testing-hobbyiq`, `user-8aa46493`) had a live refresh token by
+   * date and an expired access token, so `getAccessToken` took the refresh
+   * branch and eBay rejected the grant — and NOTHING logged it, because
+   * `pollEbayOrdersForUser` returns "fetch-failed" from the token step before
+   * it reaches `ebay_poll_fetch_failed`. Zero occurrences of that event in
+   * three days of traces while the counter read 2 every hour.
+   *
+   * "reconnect-required" means: no automated retry will fix this, the user
+   * must re-authorise. The poll SKIPS such a user instead of burning a failed
+   * eBay call on them every hour, and /api/ebay/status surfaces it so the
+   * account page can say "Reconnect eBay". Absent means healthy — the OAuth
+   * callback writes a fresh record, so a reconnect clears it by construction.
+   */
+  connectionStatus?: "ok" | "reconnect-required";
+  /** Why. Short, human-readable, never a token or a secret. */
+  connectionStatusReason?: string | null;
+  /** When the status was last set. */
+  connectionStatusAt?: string | null;
+}
+
+/** The connection health a caller may act on. Absent status reads "ok" so
+ *  every record written before D26 is healthy until the poll says otherwise. */
+export function connectionStatusOf(
+  record: Pick<EbayTokenRecord, "connectionStatus"> | null | undefined,
+): "ok" | "reconnect-required" {
+  return record?.connectionStatus === "reconnect-required" ? "reconnect-required" : "ok";
 }
 
 interface EbayTokenDoc {
@@ -135,6 +167,61 @@ export async function writeTokenRecord(record: EbayTokenRecord): Promise<void> {
     updatedAt: new Date().toISOString(),
   };
   await container.items.upsert(doc);
+}
+
+/**
+ * D26. Mark a connection unusable until the user re-authorises, WITHOUT
+ * deleting it.
+ *
+ * `getAccessToken` used to `deleteTokenRecord` on a dead refresh token. That
+ * is why `refreshExpired=0` on every cycle while two users failed forever: the
+ * first expiry removed the evidence, and a user who has silently vanished from
+ * `listConnectedUserIds` cannot be shown a "Reconnect eBay" button. An expired
+ * refresh token is inert — keeping the record costs nothing and is the only
+ * way the account page can explain itself.
+ *
+ * Idempotent: re-marking an already-marked connection with the same reason
+ * does not write, so an hourly poll cannot rewrite eight docs an hour.
+ */
+export async function markReconnectRequired(userId: string, reason: string): Promise<boolean> {
+  const record = await readTokenRecord(userId);
+  if (!record) return false;
+  const trimmed = String(reason ?? "").slice(0, 300);
+  if (record.connectionStatus === "reconnect-required" && record.connectionStatusReason === trimmed) {
+    return false;
+  }
+  await writeTokenRecord({
+    ...record,
+    connectionStatus: "reconnect-required",
+    connectionStatusReason: trimmed,
+    connectionStatusAt: new Date().toISOString(),
+  });
+  console.warn(JSON.stringify({
+    event: "ebay_connection_reconnect_required",
+    source: "ebayTokenStore.service",
+    userId,
+    reason: trimmed,
+  }));
+  return true;
+}
+
+/** Clear the flag — a successful token acquisition proves the connection
+ *  works again. Writes only when there is something to clear. */
+export async function clearReconnectRequired(userId: string): Promise<boolean> {
+  const record = await readTokenRecord(userId);
+  if (!record || connectionStatusOf(record) === "ok") return false;
+  await writeTokenRecord({
+    ...record,
+    connectionStatus: "ok",
+    connectionStatusReason: null,
+    connectionStatusAt: new Date().toISOString(),
+  });
+  console.log(JSON.stringify({
+    event: "ebay_connection_recovered",
+    source: "ebayTokenStore.service",
+    userId,
+  }));
+  return true;
 }
 
 /**

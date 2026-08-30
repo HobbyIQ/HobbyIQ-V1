@@ -3201,7 +3201,7 @@ export async function augmentCompsWithUserPool(
   try {
     userComps = await readCompsByCardId({
       cardId: resolvedCardId,
-      sources: ["ebay-user-purchase", "ebay-user-sale", "manual-user-entry"],
+      sources: ["ebay-user-purchase", "ebay-user-sale", "ebay-account", "manual-user-entry"],
       parallel: parallel ?? undefined,
       gradeCompany: gradeCompany ?? undefined,
       gradeValue: gradeValue ?? undefined,
@@ -3358,7 +3358,7 @@ export async function augmentCompsWithUserPool(
         // trade at wildly different prices even after parallel multiplier.
         const allParallelComps = await readCompsByCardId({
           cardId: resolvedCardId,
-          sources: ["ebay-user-purchase", "ebay-user-sale", "manual-user-entry"],
+          sources: ["ebay-user-purchase", "ebay-user-sale", "ebay-account", "manual-user-entry"],
           gradeCompany: gradeCompany ?? undefined,
           gradeValue: gradeValue ?? undefined,
           isAuto,

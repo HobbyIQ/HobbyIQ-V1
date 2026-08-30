@@ -108,7 +108,7 @@ export async function computeCleanlinessReport(force = false): Promise<Cleanline
   // Score: rewards clean canonicalization + confirmed sources, penalizes flags + missing fields
   const denom = totalRows || 1;
   const cleanCanonicalized = catalogFlag + stage2Flag;
-  const confirmedSources = (bySource["cardhedge"] || 0) + (bySource["ebay-user-purchase"] || 0) + (bySource["manual-user-entry"] || 0) + (bySource["ebay-user-sale"] || 0);
+  const confirmedSources = (bySource["cardhedge"] || 0) + (bySource["ebay-user-purchase"] || 0) + (bySource["manual-user-entry"] || 0) + (bySource["ebay-user-sale"] || 0) + (bySource["ebay-account"] || 0);
   const flagged = priceOutliers + csUnverified;
   const rawScore = ((cleanCanonicalized + confirmedSources) - (flagged + missingAny)) / denom;
   const score = Math.max(0, Math.min(100, Math.round(rawScore * 100)));
