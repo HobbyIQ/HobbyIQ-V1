@@ -100,6 +100,27 @@ const asBareNumber = (v: string): string | null => (/^\d{1,4}(?:\.\d)?$/.test(v)
 /** Regex-safe copy of a token. */
 const esc = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
+/**
+ * Are these two strings the SAME card number, spelled differently?
+ *
+ * Measured 2026-08-30 on live ingest: CardHedge stores "BCP-10" while the
+ * listing title it came from prints "#BCP10". They are one card. Comparing the
+ * raw strings called that a mis-key on 1.13% of the last six hours of rows,
+ * and -- worse -- would have let the title's spelling WIN and written the
+ * hyphen-free form, which is the population D23's MODE=hyphen exists to fold
+ * back (checklistcenter is unanimously hyphenated; the wiki-style sources
+ * disagree with themselves 12-18% of the time, per catalogAuthority's
+ * isTranscriptionGrade).
+ *
+ * So: hyphens, spaces and punctuation are SPELLING, not identity. Where the
+ * two agree on the letters and digits, the stored spelling stands.
+ */
+export function sameCardNumber(a: string | null | undefined, b: string | null | undefined): boolean {
+  const norm = (v: unknown) => String(v ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  const x = norm(a);
+  return x !== "" && x === norm(b);
+}
+
 /** Does the title state this exact number with a `#` in front of it? That is
  *  the seller saying "this is the card number", and it settles every rule. */
 export function titleStatesHash(title: string | null | undefined, num: string): boolean {
@@ -283,7 +304,13 @@ export function judgeCardNumber(
   const titleNumber = explicitTitleCardNumber(title, opts);
 
   if (titleNumber) {
-    const disagrees = cand !== "" && cand !== titleNumber;
+    // The same number spelled two ways is not a disagreement, and the STORED
+    // spelling wins there -- see sameCardNumber. Only a genuinely different
+    // number is the title overruling the vendor.
+    if (cand !== "" && sameCardNumber(cand, titleNumber)) {
+      return { cardNumber: cand, rejected: null, titleNumber, vendorDisagrees: false, source: "candidate" };
+    }
+    const disagrees = cand !== "";
     return { cardNumber: titleNumber, rejected: null, titleNumber, vendorDisagrees: disagrees, source: "title" };
   }
   if (!cand) return { cardNumber: null, rejected: null, titleNumber: null, vendorDisagrees: false, source: "none" };

@@ -39,7 +39,7 @@ const path = require("path");
 const crypto = require("crypto");
 const { CosmosClient } = require("@azure/cosmos");
 const { catalogAuthorityOf } = require(path.join(__dirname, "..", "dist", "services", "catalog", "catalogAuthority.service.js"));
-const { judgeCardNumber, explicitTitleCardNumber, isTcgVertical } =
+const { judgeCardNumber, explicitTitleCardNumber, isTcgVertical, sameCardNumber } =
   require(path.join(__dirname, "..", "dist", "services", "portfolioiq", "cardNumberIntegrity.js"));
 
 const MODE = String(process.env.MODE || "grade").trim().toLowerCase();
@@ -89,8 +89,10 @@ function classify(r) {
   const shapes = [];
   const stated = explicitTitleCardNumber(title, { isTcg: tcg });
   // THE STRICT MEASURE: the title states an explicit #X and it is not what
-  // the row is keyed to.
-  if (stated && num && stated.toUpperCase() !== num.toUpperCase()) shapes.push("strict-disagreement");
+  // the row is keyed to. "BCP-10" and "#BCP10" are ONE card number spelled two
+  // ways -- 1.13% of the last six hours of live rows -- so the comparison is
+  // on identity, not on punctuation (sameCardNumber).
+  if (stated && num && !sameCardNumber(stated, num)) shapes.push("strict-disagreement");
   if (stated && !num) shapes.push("hash-in-title-no-number");
   if (num) {
     const v = judgeCardNumber(num, title, { isTcg: tcg });

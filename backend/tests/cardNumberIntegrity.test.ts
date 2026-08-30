@@ -17,6 +17,7 @@ import {
   isOrdinal,
   isLotCount,
   isTcgVertical,
+  sameCardNumber,
 } from "../src/services/portfolioiq/cardNumberIntegrity.js";
 
 describe("a card number is never a grader's digit", () => {
@@ -39,7 +40,10 @@ describe("a card number is never a grader's digit", () => {
     expect(isGraderDigit(t, "9")).toBe(false);
     const v = judgeCardNumber("9", t);
     expect(v.cardNumber).toBe("9");
-    expect(v.source).toBe("title");
+    expect(v.titleNumber).toBe("9");
+    // The title and the vendor agree, so the stored spelling stands and
+    // nothing is overruled — `source` is "candidate", not "title".
+    expect(v.vendorDisagrees).toBe(false);
   });
 
   it("leaves a bare number alone when the title never mentions a grade", () => {
@@ -197,6 +201,35 @@ describe("an explicit #X in the title wins over the vendor field", () => {
     const v = judgeCardNumber("150", "2018 Topps Chrome #150 Shohei Ohtani Refractor");
     expect(v.vendorDisagrees).toBe(false);
     expect(v.cardNumber).toBe("150");
+  });
+
+  // Measured on live ingest 2026-08-30: CardHedge stores "BCP-10" and the
+  // listing it came from prints "#BCP10". One card, two spellings. Calling it
+  // a disagreement read 1.13% of six hours of rows as defects, and letting the
+  // title win would have written the hyphen-free form — the population D23's
+  // MODE=hyphen exists to fold back.
+  it("the same number spelled two ways keeps the STORED spelling", () => {
+    expect(sameCardNumber("BCP-10", "BCP10")).toBe(true);
+    const v = judgeCardNumber("BCP-10", "2012 Bowman Baseball #BCP10 Base");
+    expect(v.cardNumber).toBe("BCP-10");
+    expect(v.vendorDisagrees).toBe(false);
+    expect(v.titleNumber).toBe("BCP10");
+    expect(v.source).toBe("candidate");
+  });
+
+  it("sameCardNumber is identity, not punctuation", () => {
+    expect(sameCardNumber("83T-22", "83t22")).toBe(true);
+    expect(sameCardNumber("US 175", "US175")).toBe(true);
+    expect(sameCardNumber("BCP-10", "BCP-11")).toBe(false);
+    expect(sameCardNumber("9", "150")).toBe(false);
+    expect(sameCardNumber("", "")).toBe(false);
+    expect(sameCardNumber(null, null)).toBe(false);
+  });
+
+  it("a genuinely different number is still the title overruling the vendor", () => {
+    const v = judgeCardNumber("9", "2018 Topps Chrome #150 Shohei Ohtani Refractor PSA 10");
+    expect(v.cardNumber).toBe("150");
+    expect(v.vendorDisagrees).toBe(true);
   });
 
   it("reads prefixed SKUs", () => {

@@ -46,7 +46,7 @@ const { CosmosClient } = require("@azure/cosmos");
 // D28. The SAME guard the emitters run, not a second copy of its rules — a
 // canary that re-implements the invariant stops measuring it the first time
 // the invariant moves. Requires backend/dist (the workflow builds it).
-const { judgeCardNumber, explicitTitleCardNumber, isTcgVertical } =
+const { judgeCardNumber, explicitTitleCardNumber, isTcgVertical, sameCardNumber } =
   require(path.join(__dirname, "..", "dist", "services", "portfolioiq", "cardNumberIntegrity.js"));
 
 const WINDOW_HOURS = Number(process.env.WINDOW_HOURS || 12);
@@ -138,7 +138,10 @@ async function main() {
       let shape = null;
       if (title) {
         const stated = explicitTitleCardNumber(title, { isTcg: tcg });
-        if (stated && num && stated.toUpperCase() !== num.toUpperCase()) shape = "title-states-a-different-number";
+        // sameCardNumber, not a string compare: "BCP-10" and "#BCP10" are one
+        // card number spelled two ways, and counting that as a defect made this
+        // axis read 1.13% on rows that were fine.
+        if (stated && num && !sameCardNumber(stated, num)) shape = "title-states-a-different-number";
         else if (num) shape = judgeCardNumber(num, title, { isTcg: tcg }).rejected;
       }
       if (shape) {
