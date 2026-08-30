@@ -168,6 +168,33 @@ function soldCompsContainer(): Container | null {
  * identity and is logged — the guard fails OPEN to the pre-existing
  * behaviour rather than withholding every price during an outage.
  */
+/**
+ * The count query for one candidate. CF-A-TWIN-WITHOUT-A-PRINT-RUN (Drew,
+ * 2026-08-30, holding 7a90172d — Theo Gillen 2024 Bowman Draft CPA-TG Blue
+ * Refractor /150, PSA 9): the holding carried no printRun field, so the
+ * candidate list never formed `…:num-150`, the gate saw 0 sales under the
+ * un-numbered id, and a sibling-parallel $3.26 was persisted while the numbered
+ * checklist row had 5 sales. An UN-numbered hiq id therefore counts its
+ * numbered twins as well (`STARTSWITH(id + ":num-")`) — the same card, print
+ * run omitted by the seller or the holding.
+ */
+export function exactSalesCountQuery(id: string, cutoff: string): { query: string; parameters: Array<{ name: string; value: string }> } {
+  const column = isHiqSlug(id) ? "c.hobbyiqCardId" : "c.cardId";
+  const unnumberedHiq = isHiqSlug(id) && !NUM_SUFFIX.test(id);
+  const idClause = unnumberedHiq
+    ? `(${column} = @id OR STARTSWITH(${column}, @idNum))`
+    : `${column} = @id`;
+  const parameters = [{ name: "@id", value: id }, { name: "@cutoff", value: cutoff }];
+  if (unnumberedHiq) parameters.push({ name: "@idNum", value: `${id}:num-` });
+  return {
+    query: `SELECT VALUE COUNT(1) FROM c
+                WHERE ${idClause} AND c.soldAt >= @cutoff AND c.price > 0
+                  AND (NOT IS_DEFINED(c.priceAnomaly) OR c.priceAnomaly != true)
+                  AND (NOT IS_DEFINED(c.flaggedWrong) OR c.flaggedWrong = false)`,
+    parameters,
+  };
+}
+
 export async function countExactSalesInWindow(
   candidates: ReadonlyArray<string>,
   opts: { windowDays?: number; container?: Container | null } = {},
@@ -182,18 +209,8 @@ export async function countExactSalesInWindow(
   const windowDays = opts.windowDays ?? EXACT_POOL_WINDOW_DAYS;
   const cutoff = new Date(Date.now() - windowDays * 86_400_000).toISOString();
   for (const id of candidates) {
-    const column = isHiqSlug(id) ? "c.hobbyiqCardId" : "c.cardId";
     try {
-      const { resources } = await container.items.query<number>({
-        query: `SELECT VALUE COUNT(1) FROM c
-                WHERE ${column} = @id AND c.soldAt >= @cutoff AND c.price > 0
-                  AND (NOT IS_DEFINED(c.priceAnomaly) OR c.priceAnomaly != true)
-                  AND (NOT IS_DEFINED(c.flaggedWrong) OR c.flaggedWrong = false)`,
-        parameters: [
-          { name: "@id", value: id },
-          { name: "@cutoff", value: cutoff },
-        ],
-      }).fetchAll();
+      const { resources } = await container.items.query<number>(exactSalesCountQuery(id, cutoff)).fetchAll();
       const n = Number(resources?.[0] ?? 0);
       counts[id] = Number.isFinite(n) ? n : 0;
     } catch (err) {
