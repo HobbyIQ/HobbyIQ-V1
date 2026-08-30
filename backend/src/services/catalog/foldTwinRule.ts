@@ -20,6 +20,18 @@
  * specific (only-improve) and the twin folds. A source that itself lists both
  * an un-numbered X and an X /N is describing two cards (numbered Base is
  * checklist-defined) -- left alone.
+ *
+ * CF-THE-CHECKLIST-THAT-NAMES-THE-PRODUCT-WINS (Drew, 2026-08-30, D29/R2):
+ * the "same source lists both" veto asks whether ONE source is describing two
+ * cards, and only a DEDICATED per-release transcription can be trusted to have
+ * meant that. The wiki-family sources (baseballcardpedia, bccp) list an insert
+ * on a product page and disagree with THEMSELVES 12-18% of the time on
+ * punctuation alone (catalogAuthority's measured table) -- a bcp row carrying
+ * both an un-numbered and a numbered spelling is far likelier to be one card
+ * typed twice than a deliberate pair. So the veto now consults
+ * `isDedicatedChecklist`, not the flattened checklist class: a bcp twin folds
+ * onto the dedicated checklist's numbered row instead of silently blocking it,
+ * and a genuine dedicated-vs-dedicated pair still skips exactly as before.
  */
 export type NumberedTwin = { id: string; printRun: number; source: string };
 export type FoldMode = "vendor" | "cross-source";
@@ -41,10 +53,15 @@ export function decideTwinFold(input: {
   baseId: string;
   twinSource: string;
   twinIsChecklist: boolean;
+  /** D29/R2: is the twin a DEDICATED per-release transcription? Only such a
+   *  source is trusted to have deliberately listed both an un-numbered X and an
+   *  X /N. Omitted -> falls back to `twinIsChecklist`, the pre-D29 behaviour. */
+  twinIsDedicated?: boolean;
   numbered: NumberedTwin[];
   mode: FoldMode;
 }): FoldDecision {
   const { baseId, twinSource, twinIsChecklist, numbered, mode } = input;
+  const twinIsDedicated = input.twinIsDedicated ?? twinIsChecklist;
   const oneOfOne = ALWAYS_ONE_OF_ONE.test(parallelSlugOf(baseId));
   const runs = new Set(numbered.map((n) => n.printRun));
   let target: NumberedTwin | undefined;
@@ -59,7 +76,9 @@ export function decideTwinFold(input: {
     return { fold: true, target, kind: "one-of-one", reason: "a SuperFractor / printing plate is 1/1 by definition; the un-numbered row omitted it (CF-A-SUPERFRACTOR-IS-ONE-OF-ONE)" };
   }
   if (mode === "cross-source") {
-    if (numbered.some((n) => n.source === twinSource)) return { fold: false, skip: "same-source-lists-both" };
+    // The veto belongs to a dedicated checklist only (D29/R2). A bcp-family
+    // twin that also lists a /N is one card typed two ways, not two cards.
+    if (twinIsDedicated && numbered.some((n) => n.source === twinSource)) return { fold: false, skip: "same-source-lists-both" };
     return { fold: true, target, kind: "cross-source", reason: `one checklist source (${twinSource}) omitted the print run another (${target.source}) lists -- the numbered row is strictly more specific (CF-ONE-SOURCE-OMITTED-THE-PRINT-RUN)` };
   }
   return { fold: false, skip: "twin-is-checklist" };

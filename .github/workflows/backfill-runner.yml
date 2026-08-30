@@ -132,6 +132,7 @@ on:
 
           - fold-unnumbered-twins
           - fold-checklist-numbered-twins
+          - apply-cpa-product-rule
 
           - rekey-user-comps
           - collapse-ch-dual-ids
@@ -1053,6 +1054,29 @@ jobs:
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=fold-checklist-numbered-twins -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f sources="${{ inputs.sources }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (folded=${N:-0}) — done, no re-dispatch."
+          fi
+
+      - name: Self-relaunch the CPA product rule until the slot is decided
+        if: ${{ !cancelled() && inputs.script == 'apply-cpa-product-rule' && inputs.apply == true }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        working-directory: backend
+        run: |
+          set +e
+          N=$(grep -aoE "^  ROWS MOVED +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          echo "rowsMoved=${N:-0}"
+          # CF-RELAUNCH-ONLY-ON-BUDGET (2026-08-29): relaunch iff the script printed its
+          # budget marker. Never on a count -- a slot whose every identity abstains moves
+          # zero rows and is FINISHED -- and never on a cancel.
+          # D29/R2: the rule re-derives the identity groups each run, and a folded row no
+          # longer sits at the losing setKey, so a relaunch resumes on what is still split.
+          if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
+            echo "::notice::budget hit (rowsMoved=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} mode=${{ inputs.mode }} to continue"
+            # The scope travels with the slot: mode, sports and scope verbatim.
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=apply-cpa-product-rule -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f scope="${{ inputs.scope }}"
+          else
+            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (rowsMoved=${N:-0}) — done, no re-dispatch."
           fi
 
       - name: Self-relaunch the user-comp re-key until the slot is clean

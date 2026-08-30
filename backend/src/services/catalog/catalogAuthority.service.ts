@@ -165,3 +165,60 @@ export function authorityRank(source: string | null | undefined): number {
     default: return 0;
   }
 }
+
+// ── R2: WHICH PRODUCT DOES A CARD BELONG TO? ────────────────────────────────
+//
+// CF-THE-CHECKLIST-THAT-NAMES-THE-PRODUCT-WINS (Drew, 2026-08-30, D29/R2):
+// "the checklist that names the product wins; bcp's Bowman page is not that."
+//
+// A CPA auto filed under BOTH `bowman` and `bowman-chrome` is not two cards.
+// One of those two rows is a dedicated checklist transcription of a specific
+// release; the other is a wiki page that lists the insert under whichever
+// product its editor filed it beside. Measured over the bowman CPA scope
+// (2020-2026, 117,529 identities): 2,385 identities have exactly ONE
+// dedicated key and at least one bcp-family key at another product.
+//
+// `catalogAuthorityOf` CANNOT draw this line, and deliberately so. Its
+// CHECKLIST class exists to answer "is this row evidence at all", and for that
+// question baseballcardpedia's 918,828 rows are emphatically yes -- narrowing
+// it discarded them once already (see the header). So this is an ADDED
+// predicate, not a widened one: `canAdjudicate`, `isReKeyable` and
+// `authorityRank` keep the answers they have, and the new question gets its
+// own name. (CF-THE-RECURRING-BUG-SHAPE: right guard, wrong scope -- editing
+// the existing regex would have moved three other consumers with it.)
+//
+// The split is the same one `isTranscriptionGrade` already measured for
+// punctuation, and for the same reason: the dedicated transcriptions are
+// unanimous, the wiki sources disagree with THEMSELVES 12-18% of the time. A
+// source that cannot agree with itself about a hyphen is not the source that
+// decides which product a card shipped in.
+//
+// `checklistcenter-html` is excluded exactly as it is for formatting: same
+// site, different extraction, the dirtiest source measured.
+
+/** Dedicated per-release checklist transcriptions -- the only sources that may
+ *  name WHICH PRODUCT a card belongs to (D29/R2). */
+const DEDICATED_CHECKLIST = /^(checklistcenter|checklistinsider|beckett|cardboardchecklist)/;
+
+/** The wiki-style sources. Real evidence that a card EXISTS; never evidence of
+ *  which product it shipped in -- their product pages aggregate inserts. */
+const BCP_FAMILY = /^(baseballcardpedia|bccp)/;
+
+/**
+ * May this source name which PRODUCT a card belongs to?
+ *
+ * Strictly narrower than `canAdjudicate`: every dedicated checklist can
+ * adjudicate, but not every adjudicating source names the product.
+ */
+export function isDedicatedChecklist(source: string | null | undefined): boolean {
+  const s = String(source ?? "").toLowerCase().trim().replace(/-graded$/, "");
+  if (s === "checklistcenter-html") return false;
+  if (DERIVED.test(s)) return false;
+  return DEDICATED_CHECKLIST.test(s);
+}
+
+/** A wiki-family source (baseballcardpedia, bccp). Its product filing folds. */
+export function isBcpFamily(source: string | null | undefined): boolean {
+  const s = String(source ?? "").toLowerCase().trim().replace(/-graded$/, "");
+  return BCP_FAMILY.test(s);
+}
