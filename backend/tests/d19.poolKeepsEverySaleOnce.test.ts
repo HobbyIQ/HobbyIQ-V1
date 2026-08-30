@@ -190,8 +190,19 @@ describe("D19 rekey: one target, its rows, and what varied", () => {
     expect(rekey.planGroup({ target, members: graded, existing: null })).toMatchObject({ kind: "refused", reason: "grade-differs" });
     const par = [{ row: { ...R_HOLDING, parallel: "Gold" }, identity: members[0].identity }, { row: { ...R_ITEM, parallel: "Blue Refractor" }, identity: members[1].identity }];
     expect(rekey.planGroup({ target, members: par, existing: null })).toMatchObject({ kind: "refused", reason: "parallel-differs" });
-    // Colour ≡ Colour Refractor is one card; a missing grade folds, it does not differ
-    const same = [{ row: { ...R_HOLDING, parallel: "Blue" }, identity: members[0].identity }, { row: { ...R_ITEM, parallel: "Blue Refractor", gradeCompany: "BGS", gradeValue: 9 }, identity: members[1].identity }];
+    // D31 (2026-08-30) RETRACTED "Colour ≡ Colour Refractor". There is no
+    // colour/finish vocabulary rule; the catalog resolver decides per card, and
+    // Topps Finest #197 lists `Uncommon` AND `Uncommon Refractor` as two of
+    // ~600 real pairs Drew named. So `Blue` and `Blue Refractor` are now two
+    // parallels and this collapse is REFUSED -- the safe direction: refusing
+    // leaves two rows a later pass can still merge, while collapsing destroys
+    // one card's pool irreversibly.
+    const colourPair = [{ row: { ...R_HOLDING, parallel: "Blue" }, identity: members[0].identity }, { row: { ...R_ITEM, parallel: "Blue Refractor", gradeCompany: "BGS", gradeValue: 9 }, identity: members[1].identity }];
+    expect(rekey.planGroup({ target, members: colourPair, existing: null })).toMatchObject({ kind: "refused", reason: "parallel-differs" });
+
+    // ...and what this test was really pinning still holds: on ONE parallel, a
+    // missing grade FOLDS rather than differing.
+    const same = [{ row: { ...R_HOLDING, parallel: "Blue" }, identity: members[0].identity }, { row: { ...R_ITEM, parallel: "Blue", gradeCompany: "BGS", gradeValue: 9 }, identity: members[1].identity }];
     const plan = rekey.planGroup({ target, members: same, existing: null });
     expect(plan.kind).toBe("collapse");
     expect(plan.keep.gradeCompany).toBe("BGS");
@@ -229,9 +240,16 @@ describe("D19 collapse: the same CardHedge sale under two ids", () => {
     expect(ch.decideChCollapse({ ...DAILY, printRun: 50 }, { ...COMP, printRun: 150 })).toMatchObject({ collapse: false, reason: "printrun-differs" });
     expect(ch.decideChCollapse(DAILY, { ...COMP, cardNumber: "39" })).toMatchObject({ collapse: false, reason: "cardnumber-differs" });
   });
-  it("Blue and Blue Refractor are one card; #CPA-EHA and cpa-eha are one number", () => {
-    const d = ch.decideChCollapse({ ...DAILY, parallel: "Blue" }, { ...COMP, parallel: "Blue Refractor", cardNumber: "#CPA-EHA" });
-    expect(d.collapse).toBe(true);
+  it("D31: Blue and Blue Refractor are TWO cards -- but #CPA-EHA and cpa-eha are still one number", () => {
+    // The card-number half of this rule is unchanged: the `#` and the case are
+    // formatting. The colour half was RETRACTED by D31 -- a bare colour and its
+    // `<colour> Refractor` sibling are separate cards unless the checklist says
+    // otherwise, so collapsing them across ids would merge two pools.
+    expect(ch.decideChCollapse({ ...DAILY, parallel: "Blue" }, { ...COMP, parallel: "Blue Refractor", cardNumber: "#CPA-EHA" }))
+      .toMatchObject({ collapse: false, reason: "parallel-differs" });
+
+    // the number rule on its own, with the parallels agreeing
+    expect(ch.decideChCollapse({ ...DAILY, parallel: "Blue" }, { ...COMP, parallel: "Blue", cardNumber: "#CPA-EHA" }).collapse).toBe(true);
   });
   it("keeps the richer identity and folds what it lacks; the other's title and slug ride along", () => {
     // equal on the catalog: the comp row's real listing title outranks the composed one
