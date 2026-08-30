@@ -419,7 +419,9 @@ export function narrowToNamedProduct<H extends { setKey?: string | null; setName
  *      parallel in the query, so a bare "refractor" rewards no colour; the
  *      finish suffix itself is never required, so a bare "gold" still names
  *      Gold Refractor (Colour == Colour Refractor; the catalog keeps the
- *      long form) and the colour row outranks Base as it always did
+ *      long form). Once the colour IS named the suffix is not an unnamed
+ *      word either, so it costs nothing -- otherwise the colour row cleared
+ *      Base only by 0.5/n - 0.05, which vanishes at ten query tokens
  *    - "auto" in the query (or isAuto on the request): auto row +0.15, any
  *      other row -0.3; a query silent on auto changes nothing
  *    - the query's year token is never an exact card number ("#2025")
@@ -499,7 +501,23 @@ export function scoreCatalogRow(
       score -= steps > 0 ? Math.min(0.5, 0.1 * steps) : Math.min(0.5, 0.25 * unnamedSet);
     }
   }
-  const unnamedParallel = parallelWords.filter((w) => !queryWords.has(w) && !FINISH_STOP.has(w)).length;
+  // The finish SUFFIX is excluded from the unnamed set by the SAME rule that
+  // excludes it from namedParallelWords -- once the query has named the
+  // colour or pattern, "refractor" is not a word the user had to say. Without
+  // this the colour row paid -0.2 for a suffix it was never charged for
+  // naming, and outranked Base only by the raw parallel-field token, worth
+  // 1.5/(3n): margin 0.5/n - 0.05, which is ZERO at ten query tokens and
+  // negative beyond. Measured: "2024 bowman chrome leo de vries blue bcp-179
+  // padres rc" (10 tokens) tied Blue Refractor with Base at 1.9833, and a
+  // 13-token variant put Base ahead. The suffix is forgiven only when some
+  // OTHER word of the parallel is named, so a bare "refractor" still pays for
+  // the colour in "Pearl Refractor", and a query naming no finish at all
+  // leaves Base its +0.3 and the win.
+  const queryNamesAParallelWord = namedParallelWords.some((w) => queryWords.has(w));
+  const unnamedParallel = parallelWords.filter((w) =>
+    !queryWords.has(w)
+    && !FINISH_STOP.has(w)
+    && !(queryNamesAParallelWord && PARALLEL_FINISH_SUFFIX.has(w))).length;
   if (!isBaseRow) score -= Math.min(0.4, 0.2 * unnamedParallel);
   const queryNamesAFinish = tokens.some((t) => !FINISH_STOP.has(t) && CATALOG_FINISH_WORDS.has(t));
   if (isBaseRow && (queryTokens.has("base") || !queryNamesAFinish)) score += 0.3;
@@ -525,10 +543,11 @@ const FINISH_STOP = new Set(["base", "card", "cards", "rc", "rookie", "auto", "a
  *  pattern that the checklist writes and the hobby drops. A bare colour in a
  *  query names its Refractor/Prizm (Colour == Colour Refractor, per card, the
  *  catalog keeping the long form), so the suffix is never a word the query
- *  had to say for the named-parallel bonus. It still counts as unnamed for
- *  the parallel penalty, exactly as before, so the plain "Refractor" row
- *  outranks "Gold Refractor" under a bare "refractor" -- and a bare
- *  "refractor" names no colour: "Pearl Refractor" needs "pearl". Patterns
+ *  had to say -- neither for the named-parallel bonus nor for the unnamed
+ *  penalty, ONCE some other word of the parallel is named. Under a bare
+ *  "refractor" no other word is named, so "Gold Refractor" still pays for
+ *  "gold" and the plain "Refractor" row outranks it; "Pearl Refractor" still
+ *  needs "pearl". Patterns
  *  ("wave", "x-fractor", "mojo") are NOT suffixes -- "gold" does not name
  *  Gold Wave Refractor. */
 const PARALLEL_FINISH_SUFFIX = new Set(["refractor", "refractors", "prizm", "prizms"]);

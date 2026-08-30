@@ -163,3 +163,72 @@ describe("the full-name bonus does not reach a different surname", () => {
     expect(score(misspelt, maxWilliams) - score(wrongMan, maxWilliams)).toBeGreaterThan(0.5);
   });
 });
+
+// CF-SEARCH-FULL-NAME-DOMINATES second refutation (2026-08-30). The suffix
+// was excluded from the named-parallel BONUS but still charged -0.2 as an
+// "unnamed" parallel word, so a colour row cleared Base only by the raw
+// parallel-field token, 1.5/(3n), against +0.15 - 0.2: a margin of
+// 0.5/n - 0.05 that is ZERO at ten query tokens and negative beyond. Measured
+// on 526097cd: "2024 bowman chrome leo de vries blue bcp-179 padres rc" (10
+// tokens) tied Blue Refractor with Base at 1.9833, and the tie broke on comps
+// count, which favours Base. One rule now governs both halves: once the query
+// names a colour or pattern word of the parallel, the finish suffix is not a
+// word the query had to say -- no bonus requirement, no penalty. The margin
+// is a flat +0.2 at every query length.
+describe("the finish suffix is not an unnamed word once the colour is named", () => {
+  const row = (parallel: string, playerName = "Leo De Vries", cardNumber = "BCP-179", setKey = "bowman-chrome", year = 2024) =>
+    ({ setKey, cardNumber, year, parallel, playerName, isAuto: false });
+
+  it("10 tokens: 'blue' still names Blue Refractor over Base (the measured tie)", () => {
+    const q = "2024 bowman chrome leo de vries blue bcp-179 padres rc";
+    expect(tok(q)).toHaveLength(10);
+    expect(score(q, row("Blue Refractor")) - score(q, row("Base"))).toBeGreaterThan(0.1);
+  });
+
+  it("12+ tokens: the margin does not decay with query length", () => {
+    const short = "2024 bowman chrome blue leo de vries";
+    const long = "2024 bowman chrome leo de vries blue bcp-179 san diego padres rc prospect";
+    expect(tok(long).length).toBeGreaterThanOrEqual(12);
+    const marginLong = score(long, row("Blue Refractor")) - score(long, row("Base"));
+    const marginShort = score(short, row("Blue Refractor")) - score(short, row("Base"));
+    // Under the old rule the margin was 0.5/n - 0.05 and CROSSED ZERO at ten
+    // tokens. Forgiving the suffix adds a flat +0.2 to the colour row, so the
+    // 0.5/n term still decays but the sum no longer approaches zero: the
+    // long-query margin stays a large fraction of the short-query one instead
+    // of going negative.
+    expect(marginLong).toBeGreaterThan(0.1);
+    expect(marginLong).toBeGreaterThan(marginShort * 0.6);
+  });
+
+  it("the four bare-colour queries still put the colour first", () => {
+    const cases: Array<[string, ReturnType<typeof row>, ReturnType<typeof row>]> = [
+      ["2023 topps chrome gold ohtani", row("Gold Refractor", "Shohei Ohtani", "17", "topps-chrome", 2023), row("Base", "Shohei Ohtani", "17", "topps-chrome", 2023)],
+      ["2024 bowman chrome blue leo de vries", row("Blue Refractor"), row("Base")],
+      ["2022 bowman chrome green george kirby 34", row("Green Refractor", "George Kirby", "34", "bowman-chrome", 2022), row("Base", "George Kirby", "34", "bowman-chrome", 2022)],
+      ["2024 topps chrome pink ohtani", row("Pink Refractor", "Shohei Ohtani", "1", "topps-chrome", 2024), row("Base", "Shohei Ohtani", "1", "topps-chrome", 2024)],
+    ];
+    for (const [q, colour, base] of cases) expect(score(q, colour)).toBeGreaterThan(score(q, base));
+  });
+
+  it("a bare 'refractor' still earns Pearl Refractor nothing: no colour is named, so 'pearl' is still unnamed", () => {
+    // Max Williams' defect. The suffix is forgiven only once some OTHER word
+    // of the parallel is named; under a bare "refractor" none is.
+    const q = "2025 bowman refractor williams";
+    const plain = row("Refractor", "Carson Williams", "BWC-14", "bowman", 2025);
+    const pearl = row("Pearl Refractor", "Carson Williams", "BWC-14", "bowman", 2025);
+    const base = row("Base", "Carson Williams", "BWC-14", "bowman", 2025);
+    expect(score(q, plain)).toBeGreaterThan(score(q, base));
+    expect(score(q, base)).toBeGreaterThan(score(q, pearl));
+  });
+
+  it("a pattern is still not a suffix: 'blue' does not name Blue Wave Refractor", () => {
+    const q = "2024 bowman chrome leo de vries blue bcp-179 padres rc";
+    expect(score(q, row("Blue Refractor"))).toBeGreaterThan(score(q, row("Blue Wave Refractor")));
+  });
+
+  it("Base still wins when the query names no finish at all", () => {
+    const q = "2024 bowman chrome leo de vries bcp-179 padres rc";
+    expect(score(q, row("Base"))).toBeGreaterThan(score(q, row("Refractor")));
+    expect(score(q, row("Base"))).toBeGreaterThan(score(q, row("Blue Refractor")));
+  });
+});
