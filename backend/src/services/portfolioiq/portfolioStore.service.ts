@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { randomUUID } from "crypto";
+import { isExactPoolRung } from "../compiq/fmvRung.js";
 import { getUserBySession } from "../authService.js";
 import { PortfolioHolding, type HoldingHeldExpense, type HeldExpenseKind } from "../../types/portfolioiq.types.js";
 import type { CompIQEstimateRequest } from "../../types/compiq.types.js";
@@ -536,6 +537,41 @@ export async function readUserDoc(userId: string): Promise<UserDoc> {
  * word on the row is most of why the number read as authoritative on the card
  * page while the badge said UNVERIFIED.
  */
+/**
+ * CF-AN-ESTIMATE-IS-NEVER-OBSERVED (Drew, 2026-08-30, holding 7a90172d): a
+ * sibling-parallel $3.26 sat on a PSA 9 Blue Refractor /150 with
+ * `valuationStatus: "observed"` and `isEstimate: false`. Only an exact-pool
+ * rung (the card's own sales at that tier) is observed; every other rung is
+ * an estimate and says so — at the write, so no rung writer can forget.
+ */
+export function estimatesAreNeverObserved(doc: UserDoc): UserDoc {
+  const holdings = doc?.holdings;
+  if (!holdings || typeof holdings !== "object") return doc;
+  let relabelled = 0;
+  const next: Record<string, PortfolioHolding> = {};
+  for (const [id, holding] of Object.entries(holdings as Record<string, PortfolioHolding>)) {
+    if (!holding || typeof holding !== "object") { next[id] = holding; continue; }
+    const h = holding as PortfolioHolding & { fmvRung?: string | null; isEstimate?: boolean; valuationStatus?: string | null };
+    const rung = typeof h.fmvRung === "string" ? h.fmvRung : null;
+    if (!rung || isExactPoolRung(rung)) { next[id] = holding; continue; }
+    if (h.isEstimate === true && h.valuationStatus === "estimated") { next[id] = holding; continue; }
+    relabelled += 1;
+    if (relabelled <= 5) {
+      console.warn(JSON.stringify({
+        event: "estimate_relabelled_at_write",
+        source: "portfolioStore.writeUserDoc",
+        holdingId: id,
+        fmvRung: rung,
+        wasValuationStatus: h.valuationStatus ?? null,
+        wasIsEstimate: h.isEstimate ?? null,
+      }));
+    }
+    next[id] = { ...(holding as PortfolioHolding), isEstimate: true, valuationStatus: "estimated" } as PortfolioHolding;
+  }
+  if (relabelled === 0) return doc;
+  return { ...doc, holdings: next };
+}
+
 export function withholdPricesFromUnidentifiedHoldings(doc: UserDoc): UserDoc {
   const holdings = doc?.holdings;
   if (!holdings || typeof holdings !== "object") return doc;
@@ -607,7 +643,7 @@ export async function writeUserDoc(userId: string, doc: UserDoc): Promise<void> 
   // Every write to a portfolio doc passes through here. See
   // CF-NO-IDENTITY-NO-PRICE-AT-THE-DOOR above for why the check lives at the
   // door rather than at each of the 22 places that set a price.
-  doc = withholdPricesFromUnidentifiedHoldings(doc);
+  doc = estimatesAreNeverObserved(withholdPricesFromUnidentifiedHoldings(doc));
 
   // Test mode: use in-memory store
   if (!container && isTestMode) {
