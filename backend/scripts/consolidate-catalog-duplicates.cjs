@@ -47,15 +47,28 @@
  *     and are counted on their OWN line: `salesRelocated` is different work from
  *     `salesRepointed` and the two are NEVER summed.
  *
- * (3b) THE contentHash HAZARD, reported before any APPLY. `computeContentHash`
- *     (portfolioiq/soldCompsStore.service.ts:566) and its mirror in
- *     relocate-sold-comp.cjs:44 still strip a trailing " Refractor" -- the
- *     comment says "Colour = Colour Refractor is one card". D31 RETRACTED that.
- *     contentHash is scoped to cardId, so the collision only bites when a fold
- *     lands a `Gold` sale and a `Gold Refractor` sale in the SAME partition at
- *     the same price/date/grade -- which is exactly what MODE=colour creates.
- *     The dry run COUNTS would-be collisions and APPLY REFUSES while any are
- *     outstanding, so the dedup cannot eat a real sale.
+ * (3b) THE contentHash HAZARD, refused BEFORE any write (D30-R2). The strip of
+ *     a trailing " Refractor" is GONE from computeContentHash and from
+ *     relocate-sold-comp -- D31 retracted the rule that made it safe, and with
+ *     it in place a `Gold` sale and a `Gold Refractor` sale hashed identically
+ *     inside one partition, where the store's pre-write dedup reads that as the
+ *     same sale and swallows a real one at ingest.
+ *
+ *     Collisions can still exist between sales a fold brings together, so they
+ *     are counted by a read-only PRE-FLIGHT over the whole plan and APPLY
+ *     refuses UP FRONT with zero writes. The first build probed inside the write
+ *     loop and refused after it, which wrote the collisions it then refused
+ *     over. The seen-set is seeded with the WINNER's own sales; scoping it per
+ *     loser made the first build's 530 a floor rather than a count.
+ *
+ * (4) THE GROUPING KEY IS D30's OWN (D30-R2). D29's `identityKeyOf` embeds the
+ *     RAW setKey field -- right for R1, and pinned by its own tests -- but it
+ *     means two SPELLINGS of one product never meet, so MODE=setkey was a no-op
+ *     and `cross-product-cpa` was never emitted. `groupKeyOf` normalizes the
+ *     PRODUCT and only the product. Measured live: of 62,650 baseball drift
+ *     observations ZERO differ in the setKey FIELD -- every one is the D23
+ *     rename having renamed the field while the id still reads the old spelling
+ *     -- so `kindOf` compares the id segment too, as the measurement does.
  *
  * -- WHAT THIS SCRIPT DOES NOT DO -------------------------------------------
  *
@@ -407,6 +420,33 @@ async function main() {
 
     if (samples.length < 25) {
       samples.push(`  [${kind}/${winnerBy}] ${losers.map((l) => l.id).join(", ")}  ->  ${winner.id}  [${winner.source}]`);
+    }
+
+    // THE WINNER MUST BE A ROW moveCatalogRow CAN WRITE TO.
+    //
+    // `buildIncoming` THROWS when a slug's setKey segment disagrees with the
+    // row's own setKey FIELD -- "a key needs both halves" (#1348), and that
+    // guard is right: a row whose id says one product while its field says
+    // another is exactly the fragmentation it exists to end.
+    //
+    // The D30 grouping key now reaches those rows on purpose. Measured live on
+    // the baseball slice: `hiq:...:bowman-chrome:bcp-52:base:no-auto`
+    // [checklistinsider] and `hiq:...:bowman:bcp-52:base:no-auto` [beckett]
+    // are one Ethan Dorchies card and BOTH carry setKey `bowman` -- the D23
+    // rename renamed the fields and has not yet re-keyed the ids. They are a
+    // real duplicate, but the winner's ADDRESS is mid-flight, and folding onto
+    // an address that is about to change is the hazard the rename-owned skip
+    // already exists for.
+    //
+    // So this is a SKIP on the rename's counter, not a failure: the rename
+    // finishes, the id catches up with the field, and the next pass folds it.
+    // Left as a throw it showed up as `failed 20` -- an error counter carrying
+    // a decision, which hides a real refusal behind what reads as a bug.
+    const wSeg = String(winner.id ?? "").split(":")[3] ?? "";
+    const wField = String(winner.setKey ?? "").trim().toLowerCase();
+    if (wField && wSeg && wSeg !== wField) {
+      stats.skippedRenameOwned++;
+      continue;
     }
 
     // DECIDED, NOT WRITTEN. The plan is built in full so the contentHash

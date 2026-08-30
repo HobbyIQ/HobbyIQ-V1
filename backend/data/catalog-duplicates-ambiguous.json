@@ -1,14 +1,6 @@
 {
-  "_doc": "D30 groups the consolidation fleet REFUSED to decide -- written by scripts/consolidate-catalog-duplicates.cjs. Reasons are DISJOINT: the first match names the group, and the counts sum to the ambiguous total. Print-run conflicts and player-differs are NOT here -- they are not duplicates at all, and the fleet never folds them. THIS IS A REAL SAMPLE, not a placeholder: a READ-ONLY football-2024 LIMIT=400 slice run on the branch that fixed the grouping key, the spelling majority, the pre-flight hash guard and the D31 hash strip. A scoped run overwrites it; a sharded fleet writes catalog-duplicates-ambiguous.slot-N.json per slot.",
-  "_reasons": {
-    "no-checklist-row": "All rows are derived/vendor. Spec rule 1: the row with the most sales would survive, flagged winnerBy \"sales\", and the card joins the acquisition list. The fleet refuses rather than guessing which derived spelling is the card.",
-    "two-checklist-print-runs-one-product:distinct-rungs": "Two checklist sources number one parallel differently and the runs are more than 10% apart -- most likely two real rungs (/55 and /75), so folding either way would merge two cards. Includes the BASE-card-is-not-a-1/1 shape: a base row transcribed /1 beside an un-numbered base row.",
-    "two-checklist-print-runs-one-product:near-miss": "Two checklist print runs within 10% of each other (/149 vs /150) -- almost always ONE source transcribing wrong, and rulable once per (product, parallel) rather than per card.",
-    "d31-one-source-names-both-colour-forms": "ONE scrape run lists both a bare colour and its <colour>-refractor for this card, which is the site saying TWO CARDS (D31). Topps Finest #197 uncommon / uncommon-refractor is the named example.",
-    "two-dedicated-cpa-products": "Two dedicated checklists both name this CPA number and the titles do not say which product the sale was. D29 R2 keeps both rows.",
-    "contradicts-holding-ruling": "The fold would retire an id that one of Drew's holding-identity rulings names as an identity."
-  },
-  "generatedAt": "2026-08-30T20:59:05.678Z",
+  "_doc": "D30 groups the fleet REFUSED to decide. Reasons are disjoint; the first match names the group. Print-run conflicts and player-differs are NOT here -- they are not duplicates at all.",
+  "generatedAt": "2026-08-30T21:30:26.431Z",
   "scope": {
     "sports": [
       "football"
