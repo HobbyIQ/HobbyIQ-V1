@@ -125,6 +125,7 @@ on:
           - retire-autoseed-window
           - clean-parallel-annotations
           - retire-exploded-checklist-rows
+          - purge-unaddressable-catalog-rows
 
           - repair-parallel-from-title
 
@@ -872,6 +873,24 @@ jobs:
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=retire-exploded-checklist-rows -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sources="${{ inputs.sources }}" -f scope="${{ inputs.scope }}" -f min_coverage_pct="${{ inputs.min_coverage_pct }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (retired=${N:-0}) — done, no re-dispatch."
+          fi
+
+      - name: Self-relaunch the unaddressable-row purge until the slot is clean
+        if: ${{ !cancelled() && inputs.script == 'purge-unaddressable-catalog-rows' && inputs.apply == true }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        working-directory: backend
+        run: |
+          set +e
+          N=$(grep -aoE "^  PURGED +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          echo "purged=${N:-0}"
+          # CF-RELAUNCH-ONLY-ON-BUDGET: relaunch iff the script stopped at its budget.
+          if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
+            echo "::notice::budget hit (purged=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=purge-unaddressable-catalog-rows -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}"
+          else
+            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (purged=${N:-0}) — done, no re-dispatch."
           fi
 
       - name: Self-relaunch the parallel-from-title repair until the slot is clean
