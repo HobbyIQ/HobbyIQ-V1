@@ -156,6 +156,12 @@ on:
           # D23 (2026-08-30): the id carries the product -- the rename fleet
           # (MODE=product | hyphen | holdings | estimate; SCOPE, SOURCES).
           - rename-setkey-to-product
+          # D28 (2026-08-30): a card number is never a grade, a print run, a
+          # year, an ordinal or a lot. The measure is READ ONLY and has no
+          # write path at all -- `apply` is irrelevant to it.
+          - measure-card-number-integrity
+          - repair-card-number-from-title
+          - clean-base-cards-parallel-slug
       apply:
         description: "Actually write (true) or dry-run only (false)"
         required: true
@@ -240,7 +246,7 @@ on:
         default: false
         type: boolean
       mode:
-        description: "For canonicalize-vendor-shaped-rows: 'vendor' (id is not a hiq slug) or 'nopk' (cardId missing entirely). For repair-parallel-subset-fold: 'prefix' or 'glue'. For rename-setkey-to-product: 'product' (the catalog rename, sharded), 'hyphen' (needs sources), 'holdings' (slot 0), 'estimate' (read-only counts). Empty = the script's default."
+        description: "For canonicalize-vendor-shaped-rows: 'vendor' (id is not a hiq slug) or 'nopk' (cardId missing entirely). For repair-parallel-subset-fold: 'prefix' or 'glue'. For rename-setkey-to-product: 'product' (the catalog rename, sharded), 'hyphen' (needs sources), 'holdings' (slot 0), 'estimate' (read-only counts). For repair-card-number-from-title (D28): 'grade' | 'slash' | 'ordinal' | 'year' | 'nonumber' | 'all' (needs scope=all) -- REQUIRED, no default. For clean-base-cards-parallel-slug: 'cards' | 'subset' | 'both' (needs scope=all) -- REQUIRED. For measure-card-number-integrity: 'grade' | 'shapes' | 'months' | 'catalog-year'. Empty = the script's default."
         required: false
         default: ""
       shard_hex:
@@ -1111,6 +1117,48 @@ jobs:
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=rename-setkey-to-product -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f sources="${{ inputs.sources }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (renamed=${N:-0}) — done, no re-dispatch."
+          fi
+
+      - name: Self-relaunch the card-number repair until the slot is clean
+        # D28 (CF-A-CARD-NUMBER-IS-NOT-A-GRADE). Stops at its own 140-minute
+        # budget and PRINTS its summary; a run killed by the 150-minute step
+        # ceiling prints nothing. CF-RELAUNCH-ONLY-ON-BUDGET (#1361): relaunch
+        # iff the marker printed, never on a count; every input forwarded
+        # verbatim (mode / scope / sources / slot / slots), so the relaunch is
+        # the same dispatch.
+        if: ${{ !cancelled() && inputs.script == 'repair-card-number-from-title' && inputs.apply == true }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        working-directory: backend
+        run: |
+          set +e
+          N=$(grep -aoE "^  REPAIRED +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          echo "repaired=${N:-0}"
+          if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
+            echo "::notice::budget hit (repaired=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-card-number-from-title -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f scope="${{ inputs.scope }}" -f sources="${{ inputs.sources }}"
+          else
+            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (repaired=${N:-0}) — done, no re-dispatch."
+          fi
+
+      - name: Self-relaunch the base-cards clean until the slot is clean
+        # D28. Same contract as above: the marker is the predicate, and mode /
+        # scope / sources / sports travel with the relaunch.
+        if: ${{ !cancelled() && inputs.script == 'clean-base-cards-parallel-slug' && inputs.apply == true }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        working-directory: backend
+        run: |
+          set +e
+          N=$(grep -aoE "^  CLEANED +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          echo "cleaned=${N:-0}"
+          if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
+            echo "::notice::budget hit (cleaned=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=clean-base-cards-parallel-slug -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f scope="${{ inputs.scope }}" -f sources="${{ inputs.sources }}" -f sports="${{ inputs.sports }}"
+          else
+            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (cleaned=${N:-0}) — done, no re-dispatch."
           fi
 
       - name: Self-relaunch the checklist-backing annotation until the slot is clean

@@ -1,3 +1,5 @@
+import { judgeCardNumber, logCardNumberVerdict } from "../portfolioiq/cardNumberIntegrity.js";
+
 export interface OcrExtractInput {
   frontText?: string;
   backText?: string;
@@ -109,7 +111,16 @@ export function extractCardCandidate(input: OcrExtractInput): OcrCardCandidate {
   const product = pickFirstMatch(lower, PRODUCT_HINTS);
   const parallel = pickFirstMatch(lower, PARALLEL_HINTS);
   const year = parseYear(lower);
-  const cardNumber = parseCardNumber(normalized);
+  // D28 (CF-A-CARD-NUMBER-IS-NOT-A-GRADE). A slab's OCR text is the one place
+  // the grader's digit is guaranteed to be present -- "PSA 9" is printed on
+  // the label this text came from -- and `#\s*([A-Z0-9-]{1,12})` reads it
+  // happily. Same ruling as every other emitter: the explicit `#X` wins, and a
+  // number the text shows to be a grade / print run / year / ordinal / lot is
+  // refused rather than becoming the card.
+  const ocrCardNumberCandidate = parseCardNumber(normalized);
+  const cardNumberVerdict = judgeCardNumber(ocrCardNumberCandidate ?? null, normalized);
+  logCardNumberVerdict("slab-ocr", cardNumberVerdict, { candidate: ocrCardNumberCandidate ?? null, title: normalized });
+  const cardNumber = cardNumberVerdict.cardNumber ?? undefined;
   const grade = parseGrade(normalized);
   const playerName = parsePlayerName(normalized);
   const isAuto = /\b(auto|autograph)\b/i.test(normalized);

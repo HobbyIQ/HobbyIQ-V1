@@ -27,6 +27,15 @@
       "rulingBy": "Drew",
       "date": "2026-08-30",
       "note": "CPA-FA ships in the Bowman release"
+    },
+    {
+      "holdingId": "2925db74-649e-487a-bc40-a0d6bba67b34",
+      "userId": "user-67878bb5-496d-4bf5-87e4-e8869609d19f",
+      "from": "hiq:baseball:2018:topps-chrome:9:refractor:no-auto",
+      "to": "hiq:baseball:2018:topps-chrome:150:refractor:no-auto",
+      "rulingBy": "Drew",
+      "date": "2026-08-30",
+      "note": "2018 Topps Chrome #150 Refractor, pitching (the standard Refractor); the #9 came from PSA 9"
     }
   ]
 }
