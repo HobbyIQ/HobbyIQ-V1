@@ -173,8 +173,33 @@ export function isGraderDigit(title: string | null | undefined, num: string): bo
   if (!t || !n) return false;
   if (Number(n) > 10) return false;                 // grades run 1..10
   if (titleStatesHash(t, n)) return false;          // the seller said it is the card number
+  let graderAdjacent = false;
   for (const g of GRADER_TOKENS) {
-    if (new RegExp(`\\b${esc(g)}\\b[\\s.:-]*${esc(n)}(?!\\d)(?!\\s*\\/)`, "i").test(t)) return true;
+    if (new RegExp(`\\b${esc(g)}\\b[\\s.:-]*${esc(n)}(?!\\d)(?!\\s*\\/)`, "i").test(t)) { graderAdjacent = true; break; }
+  }
+  if (!graderAdjacent) return false;
+  // The upper bound the spec named: "a real #9 graded PSA 9 also matches". The
+  // discriminator is whether the title says the number TWICE. In
+  //   "2023 Topps Chrome Elly De La Cruz 10 PSA 10"
+  // the first "10" follows a player name, not a grader — the seller stated the
+  // card number and the grade, and only one of them is the grade. One
+  // occurrence away from every grader token is enough to keep it.
+  return !statedAwayFromAGrader(t, n);
+}
+
+/** Does this bare number appear at least once NOT preceded by a grader or a
+ *  condition word? Written as a token walk, like parseTitleIdentity's
+ *  standaloneCardNumber — a preceding-token set membership has no escape bugs
+ *  and no lookbehind. */
+function statedAwayFromAGrader(title: string, n: string): boolean {
+  const toks = title.split(/\s+/).filter(Boolean);
+  const graders = new Set(GRADER_TOKENS.map((g) => g.replace(/[^A-Za-z]/g, "").toUpperCase()));
+  for (let i = 0; i < toks.length; i++) {
+    // Strip surrounding punctuation, but a token that is not JUST this number
+    // (2010, 9.5, 10/82) is a different thing that happens to contain it.
+    if (toks[i].replace(/^[^0-9]+|[^0-9]+$/g, "") !== n) continue;
+    const prev = i > 0 ? toks[i - 1].toUpperCase().replace(/[^A-Z]/g, "") : "";
+    if (!prev || !graders.has(prev)) return true;
   }
   return false;
 }

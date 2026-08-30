@@ -51,6 +51,25 @@ describe("a card number is never a grader's digit", () => {
   it("does not read a grade above 10 as one", () => {
     expect(isGraderDigit("Lot PSA 25 cards", "25")).toBe(false);
   });
+
+  // The upper bound the spec named -- "a real #9 graded PSA 9 also matches".
+  // The discriminator is whether the title states the number TWICE.
+  it("keeps a bare card number the title also states away from the grader", () => {
+    const t = "2023 Topps Chrome Elly De La Cruz 10 PSA 10";
+    expect(isGraderDigit(t, "10")).toBe(false);
+    expect(judgeCardNumber("10", t).cardNumber).toBe("10");
+  });
+
+  it("still refuses when every occurrence follows a grader", () => {
+    expect(isGraderDigit("2023 Topps Chrome Elly De La Cruz PSA 10 GEM MT 10", "10")).toBe(true);
+  });
+
+  it("a longer number that merely contains the digits is not an occurrence", () => {
+    // "2010" contains "10"; it is not a second statement of card #10.
+    expect(isGraderDigit("2010 Topps Chrome Buster Posey PSA 10", "10")).toBe(true);
+    // Neither is the "10" inside a TCG POS/TOTAL.
+    expect(isGraderDigit("Pokemon Base Set Charizard 10/82 CGC 10 hmm", "10")).toBe(true);
+  });
 });
 
 describe("a card number is never a print run", () => {
