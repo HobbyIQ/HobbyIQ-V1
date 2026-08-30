@@ -75,6 +75,19 @@ function resolveRung(parallelText, rungSegs) {
   const candidates = [];
   for (const k of rungSegs) for (const fam of FAMILIES) if (k === `${s0}-${fam}`) { candidates.push(k); break; }
   if (candidates.length === 1) return { seg: candidates[0], conf: 0.8 };
+  // CF-BASE-REFRACTOR-IS-THE-PLAIN-REFRACTOR (2026-08-30, D35). The long-form
+  // probe above only ever APPENDS a family ("<text>-<fam>"), so a holding
+  // parallel of "Refractor" looks for "refractor-refractor". The
+  // checklistcenter-2026-08-29 vocabulary spells the plain auto parallel
+  // "base-refractor" -- a long form in the PREFIX direction -- so holding
+  // af962529 (Michael Harris II, 2020 Bowman Chrome CPA-MH Refractor)
+  // reported: rung "Refractor" not on bowman-chrome #CPA-MH, while sitting
+  // pinned to a derived row. "base-<family>" IS the plain <family>.
+  //
+  // This is a BASE/PLAIN equivalence, not a colour rule: D31 says no colour
+  // vocabulary and none is added -- "Blue" against {blue, blue-refractor}
+  // still takes the exact "blue" above and never reaches here.
+  if (FAMILIES.includes(s0) && rungSegs.has("base-" + s0)) return { seg: "base-" + s0, conf: 0.8 };
   return null;
 }
 
@@ -99,13 +112,136 @@ function productChanged(existing, resolved) {
   return Boolean(a) && Boolean(b) && a !== b;
 }
 
-/** Token overlap between the holding's set text and a candidate setKey/setName. */
-function setAgrees(holdingSetText, setKey, setName) {
-  const h = new Set(slug(holdingSetText).split("-").filter((w) => w && !/^\d{4}$/.test(w) && w !== "baseball"));
+/**
+ * CF-A-NUMBER-IS-THE-SAME-NUMBER-SPACED-OR-NOT (2026-08-30, D35). The
+ * candidate query is cardNumber IN (...), and the three variants were
+ * as-is / upper / lower -- all of which preserve whitespace. Holding b2ea5dac
+ * stores "BBP 14"; the checklist row (baseballcardpedia, playerSlug
+ * greg-maddux) stores "BBP14". The row EXISTS and was never fetched, so the
+ * holding reported "only vendor-minted rows" against its own self-seed.
+ * Whitespace is typography, not identity, so the space-stripped and
+ * space-hyphenated forms join the IN list.
+ *
+ * DELIBERATELY NOT WIDENED: hyphens are NOT stripped and nothing fuzzy is
+ * added. Beckett initials already collide (CPA-AN is both Angel Nunez and
+ * Alejandro Nunez) -- the NUMBER test is the one guard that must stay narrow.
+ * This only adds spellings of the SAME number.
+ */
+function cardNumberVariants(num) {
+  const raw = String(num ?? "").trim();
+  if (!raw) return [];
+  const forms = [raw, raw.replace(/\s+/g, ""), raw.replace(/\s+/g, "-")];
+  const out = [];
+  for (const f of forms) for (const v of [f, f.toUpperCase(), f.toLowerCase()]) if (v && !out.includes(v)) out.push(v);
+  return out;
+}
+
+/**
+ * CF-THE-SET-FIELD-CARRIES-THE-PARALLEL (2026-08-30, D35). setAgrees demands
+ * that EVERY holding set-text token appear in the candidate's setKey+setName.
+ * Holding 437f010d (Derek Jeter 1997 Bowman's Best Preview) has setName AND
+ * product both reading "Bowmans Best Preview Atomic Refractor" -- the eBay
+ * parse glued the SUBSET word and the PARALLEL NAME into the set field, the
+ * known footnote/parallel-in-setName pollution reaching the holding side. Its
+ * candidate row is checklist-backed (baseballcardpedia, playerSlug
+ * derek-jeter) with the rung matching exactly, and it still reported "set
+ * no-match" because preview/atomic/refractor cannot appear in setKey
+ * "bowmans-best" + setName "1997 Bowmans Best Baseball".
+ *
+ * A token is dropped ONLY when the holding itself accounts for it elsewhere:
+ * it appears in the holding's own parallel field (the rung gate in step 4
+ * still has to match that against the card's real rungs), or it is a
+ * checklist SECTION word rather than a product word. Everything else must
+ * still appear. A genuine product disagreement -- "Sapphire", "Draft",
+ * "Chrome" -- is not on the stoplist and still returns false, which is the
+ * guard-scope line: this relaxes WHICH WORDS COUNT AS SET TEXT, never
+ * whether the set must agree.
+ */
+const SUBSET_WORDS = new Set(["preview", "previews", "masters", "autographs", "autograph", "auto", "insert", "inserts"]);
+
+/**
+ * THE WORDS THAT NAME A PRODUCT, read from the productSetKeys table rather
+ * than written out here, so this cannot drift from D23's vocabulary. A token
+ * in this set is NEVER excused: "sapphire", "chrome", "draft", "update",
+ * "prospects", "series" and "edition" all name products, and a plain Bowman
+ * Draft must not match a Bowman Draft Sapphire just because the holding's
+ * parallel field happens to say "Sapphire". Fails OPEN to an empty set only
+ * if the table cannot be loaded, which is the pre-existing strict behaviour.
+ */
+const PRODUCT_WORDS = (() => {
+  try {
+    const { productSetKeys } = require(path.join(backend, "dist/services/catalog/productSetKeys.js"));
+    const w = new Set();
+    for (const k of productSetKeys()) for (const part of String(k).split("-")) if (part) w.add(part);
+    return w;
+  } catch { return new Set(); }
+})();
+
+/**
+ * CF-A-POSSESSIVE-IS-NOT-A-TOKEN (2026-08-30, D35). slug() turns every
+ * non-alphanumeric run into a separator, so "1996 Bowman's Best" tokenises to
+ * {1996, bowman, s, best} -- and the stray "s" appears in no setKey or
+ * setName, so EVERY candidate failed. Holding b2ea5dac's checklist row
+ * (hiq:baseball:1996:bowmans-best:bbp14:atomic-refractor:no-auto,
+ * baseballcardpedia, playerSlug greg-maddux) was fetched, player-agreed and
+ * rung-exact, and still reported "set no-match" on an apostrophe.
+ *
+ * The apostrophe is folded away BEFORE tokenising, so "Bowman's" and
+ * "Bowmans" are one word, which is what the catalog's own setKey already
+ * spells. Scoped to set-text comparison only: the global slug() that COMPOSES
+ * ids is untouched, so no identity changes spelling because of this.
+ */
+const setSlug = (s) => slug(String(s ?? "").replace(/['\u2019]/g, ""));
+
+function setAgrees(holdingSetText, setKey, setName, holding) {
+  const h = new Set(setSlug(holdingSetText).split("-").filter((w) => w && !/^\d{4}$/.test(w) && w !== "baseball"));
   if (!h.size) return false;
-  const c = new Set([...slug(setKey).split("-"), ...slug(setName ?? "").split("-")].filter(Boolean));
-  for (const w of h) if (!c.has(w)) return false;   // every holding word must appear
+  const c = new Set([...setSlug(setKey).split("-"), ...setSlug(setName ?? "").split("-")].filter(Boolean));
+  const parallelWords = new Set(slug(holding && holding.parallel).split("-").filter(Boolean));
+  for (const w of h) {
+    if (c.has(w)) continue;
+    // A word that NAMES A PRODUCT is never excused, however it reached the
+    // holding's set text. This is the guard-scope line: the relaxation below
+    // decides which words count as set text, never whether the set agrees.
+    if (PRODUCT_WORDS.has(w)) return false;
+    if (parallelWords.has(w)) continue;   // the holding's own parallel field says this word
+    if (SUBSET_WORDS.has(w)) continue;    // a checklist section, not a product
+    return false;                          // every other holding word must appear
+  }
   return true;
+}
+
+/**
+ * CF-A-CHECKLIST-ROW-WITHOUT-A-PLAYERSLUG-IS-STILL-THAT-PLAYER (2026-08-30,
+ * D35). Step 2 filtered on r.playerSlug alone. Only 254 of 605 1997
+ * setKey="finest" checklist rows carry one -- the rest carry playerName
+ * ("Ken Griffey, Jr.") -- so the authoritative rows were dropped before
+ * authority was even considered, leaving the vendor self-seed and the report
+ * "only vendor-minted rows". Fall back to slugifying playerName.
+ *
+ * The second rule is the narrow one. Catalog "justin-gonzales" vs holding
+ * "justin-gonzalez" differ in the FINAL LETTER, so neither contains the other
+ * and containment fails. A single trailing-character difference is accepted,
+ * but ONLY as a last resort: the near-miss set is returned separately and is
+ * used only when NO row agrees exactly. Beckett initials collide, so this
+ * widens the NAME test and never the NUMBER test -- two different players at
+ * one cardNumber still split rather than pin.
+ */
+function playerAgreement(rows, player) {
+  const nameOf = (r) => String(r.playerSlug ?? "") || slug(r.playerName ?? "");
+  const agrees = (ps) => Boolean(ps) && (ps === player || ps.includes(player) || player.includes(ps));
+  const exact = (rows ?? []).filter((r) => agrees(nameOf(r)));
+  if (exact.length) return { rows: exact, nearMiss: false };
+  const near = (rows ?? []).filter((r) => {
+    const ps = nameOf(r);
+    if (!ps || !player) return false;
+    if (Math.abs(ps.length - player.length) > 1) return false;
+    const a = ps.length >= player.length ? ps : player;
+    const b = ps.length >= player.length ? player : ps;
+    if (a.length === b.length) return a.slice(0, -1) === b.slice(0, -1) && a !== b;
+    return a.slice(0, -1) === b;
+  });
+  return near.length ? { rows: near, nearMiss: true } : { rows: [], nearMiss: false };
 }
 
 /**
@@ -218,19 +354,18 @@ async function main() {
         if (!year || !num || !player) { unresolved++; if (unresolvedEx.length < 8) unresolvedEx.push(`missing fields: ${h.playerName} ${year} #${num}`); continue; }
 
         // 1. candidates by year + number variants (index-usable IN)
-        const variants = [...new Set([num, num.toUpperCase(), num.toLowerCase()])];
+        const variants = cardNumberVariants(num);
         const params = variants.map((v, i) => ({ name: `@n${i}`, value: v }));
         const { resources: rows } = await retry(() => cat.items.query({
-          query: `SELECT c.id, c.sport, c.setKey, c.setName, c.parallel, c.parallelSlug, c.playerSlug, c.isAuto, c.source
+          query: `SELECT c.id, c.sport, c.setKey, c.setName, c.cardNumber, c.parallel, c.parallelSlug, c.playerSlug, c.playerName, c.isAuto, c.source
                   FROM c WHERE c.year = @y AND c.cardNumber IN (${params.map((p) => p.name).join(",")}) AND NOT IS_DEFINED(c.gradeTier)`,
           parameters: [{ name: "@y", value: year }, ...params],
         }).fetchAll());
 
-        // 2. player agreement
-        const mine = rows.filter((r) => {
-          const ps = String(r.playerSlug ?? "");
-          return ps && (ps === player || ps.includes(player) || player.includes(ps));
-        });
+        // 2. player agreement (playerSlug, else playerName; a single trailing
+        //    character only as a last resort -- see playerAgreement)
+        const agreement = playerAgreement(rows, player);
+        const mine = agreement.rows;
         if (!mine.length) { unresolved++; if (unresolvedEx.length < 8) unresolvedEx.push(`no catalog card: ${h.playerName} ${year} #${num}`); continue; }
         const vendorOnly = mine.length - identityTargets(mine).length;
         const targets = identityTargets(mine);
@@ -244,7 +379,7 @@ async function main() {
         // alone matched nothing and stranded 76 of 92 holdings.
         const setTexts = [h.setName, h.product].map((x) => String(x ?? "").trim()).filter(Boolean);
         const bySet = new Map();
-        for (const r of targets) if (setTexts.some((st) => setAgrees(st, r.setKey, r.setName))) {
+        for (const r of targets) if (setTexts.some((st) => setAgrees(st, r.setKey, r.setName, { parallel: h.parallel }))) {
           if (!bySet.has(r.setKey)) bySet.set(r.setKey, []);
           bySet.get(r.setKey).push(r);
         }
@@ -276,7 +411,18 @@ async function main() {
 
         const sport = cardRows[0].sport;
         const isAuto = h.isAuto === true || cardRows.every((r) => r.isAuto === true);
-        const resolved = `hiq:${sport}:${year}:${setKey}:${num.toLowerCase()}:${rung.seg}:${isAuto ? "auto" : "no-auto"}`;
+        // CF-THE-NUMBER-SEGMENT-IS-THE-CATALOG-S (2026-08-30, D35). The
+        // segment was composed from the HOLDING's raw cardNumber, so holding
+        // b2ea5dac ("BBP 14") composed ...:bbp 14:... -- a slug with a space
+        // in it, which matches no row and is not a legal id -- while the row
+        // it had just fetched and player-agreed spells the number "BBP14".
+        // Fixing the candidate query alone was not enough: the composed
+        // identity has to be spelled the way the CATALOG spells it. Taken
+        // from the matched rows (they all share one cardNumber by
+        // construction: it is the IN list that selected them), falling back
+        // to the holding's own spelling when the field is absent.
+        const catalogNum = String(cardRows.find((r) => r.cardNumber)?.cardNumber ?? num);
+        const resolved = `hiq:${sport}:${year}:${setKey}:${catalogNum.toLowerCase()}:${rung.seg}:${isAuto ? "auto" : "no-auto"}`;
         const existing = String(h.hobbyiqCardId ?? "");
         // CF-THE-IDENTITY-IS-A-ROW: the composed slug must exist as a catalog row.
         // When only its numbered twin exists (the un-numbered twin was folded --
@@ -393,7 +539,7 @@ function rowFor(resolved, ids) {
   const numbered = numberedTwinsOf(resolved, ids);
   return numbered.length === 1 ? numbered[0] : null;
 }
-module.exports = { resolveRung, setAgrees, identityTargets, productChanged, setKeyOf, rowFor, numberedTwinsOf };
+module.exports = { resolveRung, setAgrees, identityTargets, productChanged, setKeyOf, rowFor, numberedTwinsOf, cardNumberVariants, playerAgreement };
 
 if (require.main === module) {
   main().catch((e) => { console.error("FATAL:", e?.stack || e?.message); process.exit(3); });

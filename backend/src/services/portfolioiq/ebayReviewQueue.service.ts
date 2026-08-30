@@ -475,14 +475,36 @@ export async function confirmHoldingReview(
         playerName: String(h.playerName ?? ""),
         source: "user-verified",
       } as never);
+      // CF-CONFIRM-USES-THE-ONE-PIN-GATE (2026-08-30, D35). This block used
+      // to reimplement the >= 0.9 gate inline and write ONLY h.cardId — the
+      // identifier `hobbyiqCardId` did not appear anywhere in this file. So
+      // seven of Drew's holdings sat at 0.95-0.98, comfortably above the
+      // gate, with NO hobbyiqCardId: no guard refused them, a second code
+      // path simply never wrote the field, and every reader that keys on
+      // hobbyiqCardId (conform, priceFromOurPool) found nothing. That is the
+      // two-rival-gates shape, third copy. There is now ONE gate:
+      // applyCatalogMatchToHolding writes both fields, applies
+      // ADD_SLUG_OVERRIDE_MIN_CONFIDENCE and the checklist-authority rule,
+      // and parks below either as catalogMatchSlug — the same proposal
+      // fields this block already wrote.
       if (match) {
-        h.catalogMatchConfidence = match.confidence;
-        h.catalogMatchedBy = match.matchedBy ?? null;
-        h.catalogMatchSlug = match.slug ?? null;
-        if (match.found && match.slug && match.confidence >= 0.9) {
-          h.cardId = match.slug;
-          h.cardIdSetOnConfirm = true;
-        }
+        const { applyCatalogMatchToHolding } = await import("./portfolioStore.service.js");
+        const pin = await applyCatalogMatchToHolding(
+          holding as never,
+          {
+            slug: String(match.slug ?? ""),
+            found: Boolean(match.found),
+            confidence: Number(match.confidence ?? 0),
+            matchedBy: String(match.matchedBy ?? ""),
+          },
+          {
+            source: "ebayReviewQueue.confirmHolding",
+            userId,
+            holdingId,
+            cardIdRule: "fill",
+          },
+        );
+        if (pin.pinned) h.cardIdSetOnConfirm = true;
       }
     } catch {
       // Never fail an approval because the matcher was unavailable — the
@@ -491,8 +513,36 @@ export async function confirmHoldingReview(
   }
 
   if ((holding as any).cardId) {
-    (holding as any).identityVerified = true;
-    (holding as any).identityVerifiedAt = new Date().toISOString();
+    // CF-VERIFIED-IS-CHECKLIST-BACKED at Confirm (2026-08-30, D35). This used
+    // to read `identityVerified = true` on nothing more than cardId being
+    // truthy — any string at all. Holding 277b05a3 (Cal Ripken) has no
+    // setName, no cardNumber and no parallel, a raw CardHedge id in cardId,
+    // and reads VERIFIED; so does every holding pinned to a self-seeded
+    // vendor row. The flag was therefore useless as a signal of which
+    // holdings still need work. VERIFIED now means the same thing here that
+    // it means to conform-holdings-to-catalog and to the add/update paths:
+    // the identity names a checklist-backed catalog row. A holding that is
+    // merely confirmed still activates and still keeps its cardId — it just
+    // is not claimed to be verified.
+    {
+      const { stampChecklistBackedIdentity, readCatalogRowSource } = await import("./checklistBackedIdentity.js");
+      const outcome = await stampChecklistBackedIdentity(
+        holding as unknown as Record<string, unknown>,
+        readCatalogRowSource,
+        { via: "ebayReviewQueue.confirmHolding" },
+      );
+      if (outcome !== "stamped" && outcome !== "already-verified") {
+        console.log(JSON.stringify({
+          event: "confirm_identity_not_verified",
+          source: "ebayReviewQueue.confirmHolding",
+          userId, holdingId,
+          cardId: String((holding as any).cardId ?? "").slice(0, 80),
+          hobbyiqCardId: String((holding as any).hobbyiqCardId ?? "") || null,
+          outcome,
+          detail: "confirmed and active, but the identity is not a checklist-backed catalog row",
+        }));
+      }
+    }
     // CF-CATALOG-VERIFY-OWN-POOL (Drew, 2026-08-12). Cross-reference
     // against OUR card_catalog to tag whether the parsed identity exists
     // in a real published set. Never blocks the confirm.
