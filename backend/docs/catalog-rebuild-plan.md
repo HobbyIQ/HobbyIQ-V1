@@ -2422,6 +2422,12 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
 
 ## NEEDS DREW (not code)
 
+- **Process (Drew, 21:40Z): decisions are sent as answerable question widgets
+  (options + recommendation, ≤ 4 per round), never as a prose list; this
+  section is the record, not the request.** Vendor-source retire: **Drew runs
+  the eight dispatch commands himself** (21:45Z); a watch reports each run's
+  banner and reconciliation as it lands.
+
 - **RULED 2026-08-30 19:50Z (Drew, in detail):**
   1. **One-sale window: KEEP — "the latest sale is the market."** A window
      with a single sale wins on its own (Gillen stays $729). D22 keeps
