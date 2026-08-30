@@ -2510,7 +2510,11 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
     ('8','9','10')`, **362,477 rows**) **15,261** — cardhedge 13,442 /
     tca-ebay 1,814 / cardsight 5; over all five measured shapes
     (**1,356,106 rows**) **64,957** — cardhedge 49,054 / tca-ebay 14,710 /
-    cardsight 1,193. Re-measured through the one guard, the shapes are:
+    cardsight 1,193. Both of those were taken BEFORE the spelling fix below,
+    so both are an UPPER BOUND: they count "BCP-10" against a title printing
+    "#BCP10" as a disagreement, and the canary put that class at 1.13% of
+    live rows. The re-measurement under the corrected guard is the number to
+    quote once it lands; it can only come down. Re-measured through the one guard, the shapes are:
     grader-digit **38,723** (ch 24,243 / tca 14,436), print-run-slash
     **12,099** (tca 9,511 / ch 2,585), year-as-number **8,361** (tca 5,654 /
     ch 2,707), ordinal **1,243**, print-run-bare **536**, lot-count **8**;
