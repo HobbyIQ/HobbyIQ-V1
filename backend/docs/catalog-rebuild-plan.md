@@ -523,6 +523,27 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   convertChecklistCenterToChecklistCsv (bcp rung guards, `;`-only split, setKey from
   the URL slug, never normalizeSetKey) + e2e phase `clc` + MODE=source retire of the
   old rows AFTER the clean re-ingest. ~590 lines, 5 files.
+  **Merged #1497 (07:00Z 08-30).** The third time tonight the converter was
+  not the gap: `computeHobbyIqCardId` collapses the setKey (`topps-series-1`
+  → `topps`, `donruss` → `panini-donruss`, `leaf-vivid` → `leaf`), the
+  rows exist at those canonical ids under bcp-ladders / checklistinsider
+  labels, and the OLD CLC rows sit at non-canonical ids; the audit counted
+  `c.source = @new` only. Identity-based coverage (any non-retired checklist
+  source holding the canonical id) puts the 18 worst products at 99.9%.
+  Re-ingest #2 ×8 with the fixed converter dispatched 07:00Z (33282281037 …
+  33282311099). **NEEDS DREW (below): with identity-based coverage the
+  MODE=source retire deletes old-CLC rows at NON-canonical ids whose identity
+  another checklist source holds at the canonical id — duplicates by
+  doctrine (one identity per card), sales re-pointed; say go.** Follow-up: the
+  misnamed rows the first re-ingest wrote under `checklistcenter-2026-08-29`
+  ("Talent Base Crystal Black", "Recollection Collection" …) need a staleness
+  retire of that label (rows not touched by re-ingest #2).
+  **One-of-one APPLY, first shards (07:05Z):** slot 0 repaired 28,277 (moved
+  25,325, folded 2,200, replaced 746; graded children 9,899), slot 6 repaired
+  27,874; ~2,900 refusals per shard are the setKey-field drift
+  (`bowman`/`bowmans-best`, `upper-deck`/`upper-deck-series-1`,
+  `topps-heritage`/`-high-number`) — the card-profile APPLY running now
+  fixes the field, a second one-of-one pass picks them up; reconciled.
 - ◐ D4 One valuation path — retire the Cardsight-era graded compiler onto the
   canonical engine (docs/pricing-obedience-audit.md). **Scoped 2026-08-29 (agent
   read of every consumer):** the graded compiler is inert in prod (its flag is
@@ -1764,6 +1785,13 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   product, family key = a separate fallback field; then re-slug catalog + pool.
 
 ## NEEDS DREW (not code)
+
+- **Retire old-CLC duplicates at non-canonical ids (D3c):** identity-based
+  coverage says the old `checklistcenter`/`checklistcenter-html` rows are
+  duplicates of rows another checklist source holds at the canonical id
+  (`topps-series-1:33` vs `topps:33`); the floor-gated MODE=source retire
+  would delete them with sales re-pointed. One identity per card says yes;
+  it is a semantic change to the guard, so: go?
 
 - ~~Retire the vendor-/sale-minted catalog rows (~950k)~~ **GO (05:00Z 08-30)** — dry run running; APPLY needs the classifier allowance or Drew's dispatch.
 - **Retire the vendor-/sale-minted catalog rows (~950k) — original note:** cardsight 664,927,
