@@ -678,7 +678,7 @@ export async function catalogSlugIfExists(slug: string): Promise<string | null> 
   const container = await getContainer();
   if (!container) return null;
   const candidates = [id];
-  if (/:num-d+$/.test(id)) candidates.push(id.replace(/:num-d+$/, ""));
+  if (/:num-\d+$/.test(id)) candidates.push(id.replace(/:num-\d+$/, ""));
   for (const candidate of candidates) {
     try {
       const { resource } = await container.item(candidate, candidate).read();
