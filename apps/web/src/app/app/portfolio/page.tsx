@@ -629,10 +629,10 @@ function HoldingRow({ h }: { h: PortfolioHolding }) {
   const value = holdingDisplayValue(h);
   // CF-COST-FALLBACK (Drew, 2026-08-03). Fall back to purchasePrice ×
   // quantity when totalCostBasis is null so rows without fees still
-  // show the paid amount + honest P&L.
-  const cost =
-    h.totalCostBasis
-    ?? (h.purchasePrice != null ? h.purchasePrice * h.quantity : null);
+  // show the paid amount + honest P&L. The sort uses the same helper —
+  // the order and the numbers on screen are one computation (Drew,
+  // 2026-08-30: "when I sort on Gain $ it isn't in order").
+  const cost = holdingCost(h);
   // CF-PRICING-ENVELOPE (2026-07-31). Derive valuation status via envelope-
   // first helper. Used by the badge conditionals below so this row picks
   // up envelope-computed status transitions the moment the wire ships them.
@@ -865,6 +865,18 @@ function filterHoldings(items: PortfolioHolding[], query: string): PortfolioHold
   });
 }
 
+/** The cost a row shows: totalCostBasis, else purchasePrice × quantity (CF-COST-FALLBACK). */
+function holdingCost(h: PortfolioHolding): number | null {
+  return h.totalCostBasis ?? (h.purchasePrice != null ? h.purchasePrice * h.quantity : null);
+}
+
+/** The gain a row shows: display value − the cost the row shows; null when either is unknown. */
+function holdingGain(h: PortfolioHolding): number | null {
+  const value = holdingDisplayValue(h);
+  const cost = holdingCost(h);
+  return value != null && cost != null ? value - cost : null;
+}
+
 function sortHoldings(items: PortfolioHolding[], key: SortKey, dir: SortDir): PortfolioHolding[] {
   const mult = dir === "asc" ? 1 : -1;
   const sorted = [...items];
@@ -877,23 +889,21 @@ function sortHoldings(items: PortfolioHolding[], key: SortKey, dir: SortDir): Po
         bv = holdingDisplayValue(b) ?? -Infinity;
         break;
       case "cost":
-        av = a.totalCostBasis ?? -Infinity;
-        bv = b.totalCostBasis ?? -Infinity;
+        av = holdingCost(a) ?? -Infinity;
+        bv = holdingCost(b) ?? -Infinity;
         break;
       case "gainPct": {
-        const av0 = holdingDisplayValue(a);
-        const bv0 = holdingDisplayValue(b);
-        const acost = a.totalCostBasis ?? 0;
-        const bcost = b.totalCostBasis ?? 0;
-        av = av0 != null && acost > 0 ? ((av0 - acost) / acost) * 100 : -Infinity;
-        bv = bv0 != null && bcost > 0 ? ((bv0 - bcost) / bcost) * 100 : -Infinity;
+        const ag = holdingGain(a);
+        const bg = holdingGain(b);
+        const acost = holdingCost(a) ?? 0;
+        const bcost = holdingCost(b) ?? 0;
+        av = ag != null && acost > 0 ? (ag / acost) * 100 : -Infinity;
+        bv = bg != null && bcost > 0 ? (bg / bcost) * 100 : -Infinity;
         break;
       }
       case "gain": {
-        const av0 = holdingDisplayValue(a);
-        const bv0 = holdingDisplayValue(b);
-        av = av0 != null && a.totalCostBasis != null ? av0 - a.totalCostBasis : -Infinity;
-        bv = bv0 != null && b.totalCostBasis != null ? bv0 - b.totalCostBasis : -Infinity;
+        av = holdingGain(a) ?? -Infinity;
+        bv = holdingGain(b) ?? -Infinity;
         break;
       }
       case "title":
