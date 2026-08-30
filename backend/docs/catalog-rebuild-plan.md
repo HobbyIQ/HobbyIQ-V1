@@ -2596,17 +2596,21 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
     names and stripping them would be the 3.1x bloat mistake in reverse.
     **Report-only counters (2026-08-30, run locally — a dry run touches
     nothing; the runner dispatch is Drew's).** repair MODE=grade slot 0/8:
-    **44,402 rows scanned** (the other 318,075 belong to slots 1-7), **6,528 repaired**
-    = 306 moved onto a checklist row / 18 onto a numbered twin (foldTwinRule) /
-    144 onto a vendor-or-derived row / 4,843 PARKED with no readable number /
-    1,217 PARKED carrying a number the catalog has no row for; **37,784 left
-    alone because the guard agreed** (85% — the blast radius is bounded and
-    measured, not asserted); 89 unparsable slugs, 1 with no player to park
-    under, **0 failed, 0 not reached**, and the reconciliation closes exactly
-    (44,402 = 6,528 + 37,874). Why the number changed: grader-digit 4,823,
-    the title's #X overruling the vendor 1,744, bare print run 49, lot count 2
-    — cardhedge 4,420 / tca-ebay 2,188 / cardsight 10. Extrapolated across
-    8 slots the grade slice alone is ~52k repairs.
+    **44,402 rows scanned** (the other 318,075 belong to slots 1-7 —
+    12.25% against an even eighth's 12.5%, so the hash-of-partition-key axis
+    is measured, not assumed), **6,278 repaired** = 306 moved onto a checklist
+    row / 18 onto a numbered twin (foldTwinRule) / 144 onto a vendor-or-derived
+    row / 4,593 PARKED with no readable number / 1,217 PARKED carrying a number
+    the catalog has no row for; **38,037 left alone because the guard agreed**
+    (86% — the blast radius is bounded and measured, not asserted); 86
+    unparsable slugs, 1 with no player to park under, **0 failed, 0 not
+    reached**, and the reconciliation closes exactly (44,402 = 6,278 + 38,037 +
+    86 + 1). Why the number changed: grader-digit 4,555, the title's #X
+    overruling the vendor 1,744, bare print run 64, lot count 2 — cardhedge
+    4,182 / tca-ebay 2,173 / cardsight 10. Extrapolated across 8 slots the
+    grade slice alone is ~50k repairs. (The same run under the pre-spelling-fix
+    guard reported 6,528; the 250-row difference is the "BCP-10" vs "#BCP10"
+    class it was wrongly parking.)
     base-cards clean MODE=cards slot 0/8, the whole slot: **1,139 scanned**
     (+7,908 in slots 1-7 — 9,047 total, the spec's number exactly),
     **1,137 cleaned** = 586 moved / 481 folded onto a row already there / 70
