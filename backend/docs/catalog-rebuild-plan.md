@@ -2001,6 +2001,23 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   hiq for every linked row, and (day, price) pairs under two shapes = the
   refused 660 only. Not touched: `manual-user-entry` (`admin-manual::` keys,
   3 rows) and the 360,872 CardHedge rows keyed by a bare bubble id.
+    **Merged #1508 (12:05Z 08-30)**, exit-code gate (tsc 0, vitest 0 over 69).
+    Dry runs (prod, LIMIT=200): re-key 110 user rows → 58 re-keyed (33 onto
+    the D9 order id), 4 collapsed, 42 unresolved (34 slug-not-in-catalog =
+    the acquisition list, 7 two-minded holdings held for conform, 1 no
+    identity), 30 prices move to D9's subtotal; CH dual ids 979 pairs → 319
+    collapse, **660 refused** (parallel differs 517 — Base→Mojo Refractor 80,
+    Base→Chrome Refractor 72 …; grade differs 77; auto 49; number 17): the
+    comp path stamped parallels the daily path's titles never said — a writer
+    finding, not a merge. **APPLYs dispatched 12:08Z** (rekey 33285006502;
+    collapse 33285011415). Incidental: `catalogSlugIfExists` tested
+    `/:num-d+$/` — a literal d — so the un-numbered-twin fallback behind
+    #1473's fill-only adoption and the gate's twin lookup never fired;
+    **#1509** fixes it (deploy #7 33285176280). **D20** (building, `feat/d20`,
+    the single builder): the web renders the rung/provenance chip, the
+    BuyerIQ median fallback goes, the recent-comps median stops posing as a
+    stat, the dead identify call becomes an honest page, the picker shows the
+    last sale + count, the 17 pre-existing web tsc errors go.
 
 ## NEEDS DREW (not code)
 
