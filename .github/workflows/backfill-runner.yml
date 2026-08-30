@@ -168,6 +168,7 @@ on:
           # each user's token to call getOrders. REPORT ONLY unless apply=true;
           # shards by connected user; leaves lastPolledAt to the hourly poll.
           - backfill-ebay-account-sales
+          - run-ebay-order-poll
       apply:
         description: "Actually write (true) or dry-run only (false)"
         required: true
@@ -412,7 +413,7 @@ jobs:
       # defaults to "sandbox" in code, and a sandbox run would fetch zero
       # orders and report a perfectly green nothing.
       - name: Fetch eBay app credentials from HobbyIQ3 App Service
-        if: inputs.script == 'backfill-ebay-account-sales'
+        if: inputs.script == 'backfill-ebay-account-sales' || inputs.script == 'run-ebay-order-poll'
         shell: bash
         run: |
           # AUTH_SESSION_SECRET is in this list because ebayAuth.service THROWS
