@@ -55,9 +55,13 @@ vi.mock("../src/services/compiq/exactPoolReader.js", () => ({
 }));
 vi.mock("../src/services/catalog/catalogMatcher.service.js", async (importActual) => {
   const actual = await importActual<Record<string, unknown>>();
+  // CF-AN-IDENTITY-RESOLVES-TO-ITS-ROW (2026-08-30): the catalog answer is the
+  // REAL resolver rule over the fixture catalog's ids — the row itself, else
+  // its one numbered twin, else nothing — not a bare `has`.
+  const { pickCatalogRow } = await import("../src/services/catalog/catalogIdentityResolver.js");
   return {
     ...actual,
-    catalogSlugIfExists: vi.fn(async (slug: string) => (h.catalog.has(slug) ? slug : null)),
+    catalogSlugIfExists: vi.fn(async (slug: string) => pickCatalogRow(slug, [...h.catalog.keys()]).id),
     readCatalogIdentityBySlug: vi.fn(async (slug: string) => h.catalog.get(slug) ?? null),
     lookupCatalogPlayerName: vi.fn(async () => "Test Player"),
   };
@@ -301,6 +305,31 @@ describe("D16 — one fixture pool, four handlers, one number", () => {
     expect(h.calls.unified).toBe(0);
     expect(h.calls.ladder).toEqual([]);
     expect(h.calls.canonical).toBe(0);
+    expect(h.calls.estimate).toBe(0);
+    expect(h.calls.curve).toBe(0);
+  });
+
+  it("an un-numbered id whose ONLY catalog row is its numbered twin (Max Williams CPA-MWI): every route prices the twin's pool under the twin's slug", async () => {
+    const UN = "hiq:baseball:2025:bowman-draft:cpa-mwi:refractor:auto";
+    const TWIN = `${UN}:num-499`;
+    h.catalog.set(TWIN, identityRow({ year: 2025, setKey: "bowman-draft", setName: "2025 Bowman Draft", cardNumber: "CPA-MWI", parallel: "Refractor", isAuto: true, printRun: 499 }));
+    h.rows.push(...Array.from({ length: 10 }, (_, i) => sale(TWIN, 200 + i * 4, 45 - i * 5)));
+    const direct = await four(TWIN);
+    const via = await four(UN);
+    // Mutation check: before, the un-numbered id was identity-not-in-catalog on every route.
+    expect(typeof via.pb.marketValue === "number" && via.pb.marketValue > 0).toBe(true);
+    expect(via.pb.marketValue).toBe(direct.pb.marketValue);
+    expect(new Set([via.pb.marketValue, via.cf.fmv, via.hf.fmv, via.tile?.trendAdjustedValue]).size).toBe(1);
+    expect(new Set([via.pb.rungLabel, via.cf.rungLabel, via.hf.rungLabel, via.tile?.rungLabel]).size).toBe(1);
+    expect(EXACT.has(via.pb.rungLabel)).toBe(true);
+    expect(via.pb.compsUsed).toBe(10);
+    for (const r of [via.pb.fmvReason, via.cf.fmvReason, via.hf.fmvReason, via.gc.fmvReason]) expect(r ?? null).toBeNull();
+    // Served under the twin — the row the identity IS.
+    expect(via.gc.cardId).toBe(TWIN);
+    for (const b of [via.pb.cardIdentity, via.cf.identity, via.hf.identity, via.gc.identity]) {
+      expect(b.slug).toBe(TWIN);
+      expect(b.setKey).toBe("bowman-draft");
+    }
     expect(h.calls.estimate).toBe(0);
     expect(h.calls.curve).toBe(0);
   });

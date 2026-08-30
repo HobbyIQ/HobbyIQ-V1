@@ -47,6 +47,7 @@ import { guardSlugInputs, normalizeSportStrict, type SlugGuardResult } from "./s
 import { canonicalizeParallel } from "./parallelCanonicalizer.service.js";
 import { parseParallelComposite } from "./parseParallelComposite.service.js";
 import { enrichCompositeV3 } from "./enrichCompositeV3.service.js";
+import { resolveIdentityToCatalogRow, type CatalogRowResolution } from "../catalog/catalogIdentityResolver.js";
 import { createHash } from "crypto";
 
 // CF-COMPOSITE-EMIT (Drew, 2026-07-30). Compute the 6-axis composite
@@ -1820,6 +1821,10 @@ export async function readCompsByCardId(input: {
   // Symmetric rule: user-contributed data doesn't feed the contributor's
   // OWN pricing but remains market signal for everyone else.
   excludeContributorUserId?: string | null;
+  /** CF-AN-IDENTITY-RESOLVES-TO-ITS-ROW (2026-08-30): a caller that already
+   *  resolved an hiq slug to its catalog row (recent-sales, to report
+   *  resolvedCardId) passes it here so the read does not resolve twice. */
+  resolvedIdentity?: CatalogRowResolution | null;
 }): Promise<SoldCompDoc[]> {
   const c = await getContainer();
   if (!c) return [];
@@ -1880,11 +1885,26 @@ export async function readCompsByCardId(input: {
   const looksLikeHiqSlug = typeof input.cardId === "string" && input.cardId.startsWith("hiq:");
   const matchField = looksLikeHiqSlug ? "c.hobbyiqCardId" : "c.cardId";
   const orderClause = looksLikeHiqSlug ? "" : " ORDER BY c.soldAt DESC";
+  // CF-AN-IDENTITY-RESOLVES-TO-ITS-ROW (2026-08-30): an hiq slug is read
+  // under the catalog row that IS its identity — see poolReadIdFor. Still ONE
+  // equality, still one query.
+  const resolvedIdentity = looksLikeHiqSlug
+    ? (input.resolvedIdentity ?? await resolveIdentityToCatalogRow(input.cardId))
+    : null;
+  const readId = poolReadIdFor(input.cardId, resolvedIdentity);
+  if (readId !== input.cardId) {
+    console.log(JSON.stringify({
+      event: "sold_comps_read_resolved_to_numbered_twin",
+      source: "soldCompsStore.readCompsByCardId",
+      requestedCardId: input.cardId,
+      readCardId: readId,
+    }));
+  }
   const q = {
     query:
       `SELECT * FROM c WHERE ${matchField} = @cid AND c.soldAt >= @from AND c.soldAt <= @to${orderClause}`,
     parameters: [
-      { name: "@cid", value: input.cardId },
+      { name: "@cid", value: readId },
       { name: "@from", value: from },
       { name: "@to", value: to },
     ],
@@ -2184,6 +2204,8 @@ export async function readCompsByHobbyIqCardId(input: {
   // semantics as readCompsByCardId.
   isAuto?: boolean;
   printRun?: number | null;
+  /** CF-AN-IDENTITY-RESOLVES-TO-ITS-ROW: see readCompsByCardId. */
+  resolvedIdentity?: CatalogRowResolution | null;
 }): Promise<SoldCompDoc[]> {
   const c = await getContainer();
   if (!c) return [];
@@ -2193,9 +2215,20 @@ export async function readCompsByHobbyIqCardId(input: {
   const from = input.fromDate ?? new Date(now.getTime() - 180 * 86_400_000).toISOString();
   const limit = Math.min(500, Math.max(1, input.limit ?? 100));
 
+  // CF-AN-IDENTITY-RESOLVES-TO-ITS-ROW (2026-08-30): read under the catalog
+  // row that IS the identity — see poolReadIdFor.
+  const readId = poolReadIdFor(hiqId, input.resolvedIdentity ?? await resolveIdentityToCatalogRow(hiqId));
+  if (readId !== hiqId) {
+    console.log(JSON.stringify({
+      event: "sold_comps_read_resolved_to_numbered_twin",
+      source: "soldCompsStore.readCompsByHobbyIqCardId",
+      requestedCardId: hiqId,
+      readCardId: readId,
+    }));
+  }
   const params: Array<{ name: string; value: string | number }> = [
     { name: "@lim", value: limit },
-    { name: "@hiq", value: hiqId },
+    { name: "@hiq", value: readId },
     { name: "@from", value: from },
   ];
   const query = `SELECT TOP @lim * FROM c
@@ -2400,4 +2433,23 @@ export async function readCompsByIdentity(input: {
 export function _setContainerForTests(container: Container | null): void {
   _container = container;
   _initPromise = null;
+}
+
+/**
+ * CF-AN-IDENTITY-RESOLVES-TO-ITS-ROW (2026-08-30, holding deced7d3). The pool
+ * id a read for an hiq slug is keyed on: the catalog's single numbered twin
+ * when the slug has no row of its own (…:cpa-mwi:refractor:auto → …:num-499,
+ * where the 35 sales were), else the slug as given. Pure.
+ *
+ * Exactly ONE id, never a STARTSWITH union: a union would silently merge two
+ * numbered twins the doctrine says are two cards. On "ambiguous" the read
+ * stays on the id as given and the resolver has logged the ruling it needs
+ * (catalog_identity_ambiguous_twins). "unnumbered-twin" also stays as given:
+ * a numbered slug's pool rows carry the number the seller wrote, and the
+ * valuation path reaches the un-numbered row's pool through
+ * exactPoolSupremacy's twin attempt — today's behaviour, unchanged.
+ */
+export function poolReadIdFor(cardId: string, resolution: CatalogRowResolution | null | undefined): string {
+  if (resolution && resolution.kind === "numbered-twin" && resolution.id) return resolution.id;
+  return cardId;
 }

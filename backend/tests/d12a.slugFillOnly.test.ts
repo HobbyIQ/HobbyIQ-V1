@@ -29,6 +29,7 @@ vi.mock("../src/services/portfolioiq/soldCompsStore.service.js", async (orig) =>
 import app from "../src/app";
 import { readUserDoc } from "../src/services/portfolioiq/portfolioStore.service.js";
 import { fillDerivedSlugFromCatalog, deriveHoldingSlug, hasPinnedSlug } from "../src/services/portfolioiq/holdingSlug.service.js";
+import { pickCatalogRow } from "../src/services/catalog/catalogIdentityResolver.js";
 import type { PortfolioHolding } from "../src/types/portfolioiq.types.js";
 
 const VENDOR_ID = "1606922959335x293409091214639100";
@@ -50,14 +51,11 @@ const identity = {
 
 const fuzzy = { slug: FUZZY, found: true, confidence: 0.72, matchedBy: "fuzzy-parallel" };
 
-/** The catalog holds exactly `known`; asked about a numbered slug whose
- *  un-numbered twin is in `known`, it answers with the twin. */
+/** The catalog holds exactly `known`; the answer is the REAL resolver rule over
+ *  it (catalogIdentityResolver.pickCatalogRow): the id itself, else its twin in
+ *  either direction, else null — CF-AN-IDENTITY-RESOLVES-TO-ITS-ROW (2026-08-30). */
 function catalogHolds(...known: string[]): void {
-  matcher.catalogSlugIfExists.mockImplementation(async (slug: string) => {
-    if (known.includes(slug)) return slug;
-    const twin = slug.replace(/:num-\d+$/, "");
-    return twin !== slug && known.includes(twin) ? twin : null;
-  });
+  matcher.catalogSlugIfExists.mockImplementation(async (slug: string) => pickCatalogRow(slug, known).id);
 }
 
 let warnSpy: ReturnType<typeof vi.spyOn>;
@@ -254,5 +252,87 @@ describe("updateHolding — a pin is kept; a supplied slug must be a catalog row
     const h = await stored(userId, "d12a-fill-upd-vendor");
     expect(h.hobbyiqCardId).toBe(PIN);
     expect(matcher.catalogSlugIfExists).not.toHaveBeenCalledWith(VENDOR_ID);
+  });
+});
+
+// CF-AN-IDENTITY-RESOLVES-TO-ITS-ROW (2026-08-30, holding deced7d3 — Max Williams
+// 2025 Bowman Draft CPA-MWI Refractor auto). The card page's URL id was the
+// UN-numbered slug; the catalog's only row is …:num-499. A supplied un-numbered
+// slug was REJECTED as "not in catalog" and the same slug was written as cardId
+// with no gate at all — a holding pinned to an id with zero pool rows. Now both
+// fields resolve to the one row; two numbered twins resolve to nothing.
+const MWI = "hiq:baseball:2025:bowman-draft:cpa-mwi:refractor:auto";
+const MWI_499 = `${MWI}:num-499`;
+const MWI_250 = `${MWI}:num-250`;
+const williams = {
+  playerName: "Max Williams",
+  cardYear: 2025,
+  product: "Bowman Draft",
+  cardTitle: "2025 Bowman Draft Max Williams Refractor Auto",   // no "/499" in the title
+  cardNumber: "CPA-MWI",
+  parallel: "Refractor",
+  isAuto: true,
+};
+
+describe("an un-numbered slug whose only catalog row is its numbered twin", () => {
+  it("addHolding writes …:num-499 as hobbyiqCardId (pinned) and normalizes an hiq cardId to the same row", async () => {
+    const { sessionId, userId } = await signIn();
+    catalogHolds(MWI_499);
+    await add(sessionId, "twin-add", { ...williams, hobbyiqCardId: MWI, cardId: MWI });
+    const h = await stored(userId, "twin-add");
+    // Mutation check: before, the supplied slug was rejected (null) and cardId written as given.
+    expect(h.hobbyiqCardId).toBe(MWI_499);
+    expect(h.hobbyiqCardIdSource).toBe("pinned");
+    expect(h.cardId).toBe(MWI_499);
+    expect(events(logSpy, "holding_slug_resolved_to_catalog_row")).toMatchObject([{ suppliedSlug: MWI, writtenSlug: MWI_499 }]);
+    expect(events(logSpy, "holding_cardid_resolved_to_catalog_row")).toMatchObject([{ previousCardId: MWI, cardId: MWI_499 }]);
+    expect(events(warnSpy, "holding_slug_rejected_not_in_catalog")).toEqual([]);
+  });
+
+  it("two numbered twins: the supplied slug is refused (no guess); the hiq cardId is kept as given and logged", async () => {
+    const { sessionId, userId } = await signIn();
+    catalogHolds(MWI_499, MWI_250);
+    await add(sessionId, "twin-add-ambiguous", { ...williams, hobbyiqCardId: MWI, cardId: MWI });
+    const h = await stored(userId, "twin-add-ambiguous");
+    expect(h.hobbyiqCardId ?? null).toBeNull();
+    expect(h.cardId).toBe(MWI);
+    expect(events(warnSpy, "holding_slug_rejected_not_in_catalog")).toMatchObject([{ suppliedSlug: MWI, keptSlug: null }]);
+    expect(events(warnSpy, "holding_cardid_not_a_catalog_row")).toMatchObject([{ cardId: MWI }]);
+  });
+
+  it("a vendor cardId is not an hiq slug and is untouched", async () => {
+    const { sessionId, userId } = await signIn();
+    catalogHolds(MWI_499);
+    await add(sessionId, "twin-add-vendor", { ...williams, hobbyiqCardId: MWI, cardId: VENDOR_ID });
+    const h = await stored(userId, "twin-add-vendor");
+    expect(h.hobbyiqCardId).toBe(MWI_499);
+    expect(h.cardId).toBe(VENDOR_ID);
+    expect(events(logSpy, "holding_cardid_resolved_to_catalog_row")).toEqual([]);
+    expect(events(warnSpy, "holding_cardid_not_a_catalog_row")).toEqual([]);
+  });
+
+  it("fillDerivedSlugFromCatalog adopts the twin (source derived) when the title omits /499", async () => {
+    const h = { id: "h", ...williams } as unknown as PortfolioHolding;
+    const derived = deriveHoldingSlug(h) as string;
+    expect(derived).toBeTruthy();
+    expect(derived).not.toMatch(/:num-/);
+    catalogHolds(`${derived}:num-499`);
+    const out = await fillDerivedSlugFromCatalog(h);
+    // Mutation check: before, derived_slug_not_in_catalog and no slug.
+    expect(out.hobbyiqCardId).toBe(`${derived}:num-499`);
+    expect(out.hobbyiqCardIdSource).toBe("derived");
+  });
+
+  it("updateHolding: a cardId in the body is normalized to the row; a body without one leaves cardId alone", async () => {
+    const { sessionId, userId } = await signIn();
+    catalogHolds(PIN, MWI_499);
+    await add(sessionId, "twin-upd", { hobbyiqCardId: PIN, cardId: PIN });
+    await patch(sessionId, "twin-upd", { cardId: MWI });
+    expect((await stored(userId, "twin-upd")).cardId).toBe(MWI_499);
+    await patch(sessionId, "twin-upd", { notes: "no identity in this body" });
+    const h = await stored(userId, "twin-upd");
+    expect(h.cardId).toBe(MWI_499);
+    expect(h.hobbyiqCardId).toBe(PIN);
+    expect(h.notes).toBe("no identity in this body");
   });
 });

@@ -28,6 +28,7 @@ import {
   type HobbyIqCardIdComponents,
 } from "../portfolioiq/hobbyIqCardId.service.js";
 import { productFamilyOf, productRefinementsOf } from "./productSetKeys.js";
+import { resolveIdentityToCatalogRow } from "./catalogIdentityResolver.js";
 
 const COSMOS_DATABASE = process.env.COSMOS_DATABASE ?? "hobbyiq";
 const CATALOG_CONTAINER = process.env.COSMOS_CARD_CATALOG_CONTAINER ?? "card_catalog";
@@ -671,13 +672,26 @@ export async function readCatalogIdentityBySlug(slug: string): Promise<{
 
 /**
  * CF-A-DERIVED-SLUG-IS-ADOPTED-ONLY-FROM-THE-CATALOG (2026-08-29, checklist
- * D12a). Does the catalog hold a row for this slug? A point read at
- * (slug, slug) -- 1 RU, the read canonicalize's Step 1 and ensureCatalogRow
- * already make -- then the un-numbered twin when the slug carries :num-N (a
- * holding's title regex can add a print run the checklist row does not
- * carry; exactPoolSupremacy treats the pair the same way).
+ * D12a). Does the catalog hold a row for this slug? Returns the slug the
+ * catalog holds -- the id itself, or its twin -- or null.
  *
- * Returns the slug the catalog holds (the id itself, or its twin), or null.
+ * CF-AN-IDENTITY-RESOLVES-TO-ITS-ROW (2026-08-30, holding deced7d3). The twin
+ * now resolves in BOTH directions, through the one resolver
+ * (catalogIdentityResolver.resolveIdentityToCatalogRow):
+ *   - a NUMBERED id with no row whose un-numbered form is a row -> that row
+ *     (a holding's title regex can add a print run the checklist does not
+ *     carry; the #1509 direction, unchanged);
+ *   - an UN-NUMBERED id with no row and exactly ONE `<id>:num-N` row -> that
+ *     row (the un-numbered row was folded into it and the holding was not:
+ *     Max Williams 2025 Bowman Draft CPA-MWI Refractor, 35 sales under
+ *     :num-499 and a card page with no comps).
+ * Two numbered twins resolve to NOTHING (null): two cards, a ruling.
+ *
+ * Every writer that gates a slug (gateSuppliedSlug, fillDerivedSlugFromCatalog,
+ * resolveHiqCardIdToCatalogRow) and every reader that prices one
+ * (resolveValuationIdentity, priceFromOurPool, the alert evaluator) goes
+ * through here, so all of them write and price the catalog's form.
+ *
  * Fails CLOSED: null when the container is unavailable or a read throws for
  * any reason other than 404 -- a caller adopting or pricing a slug on this
  * answer does neither during an outage, and says so.
@@ -685,26 +699,7 @@ export async function readCatalogIdentityBySlug(slug: string): Promise<{
 export async function catalogSlugIfExists(slug: string): Promise<string | null> {
   const id = String(slug ?? "").trim();
   if (!id.startsWith("hiq:")) return null;
-  const container = await getContainer();
-  if (!container) return null;
-  const candidates = [id];
-  if (/:num-\d+$/.test(id)) candidates.push(id.replace(/:num-\d+$/, ""));
-  for (const candidate of candidates) {
-    try {
-      const { resource } = await container.item(candidate, candidate).read();
-      if (resource) return candidate;
-    } catch (err) {
-      if ((err as { code?: number })?.code === 404) continue;
-      console.warn(JSON.stringify({
-        event: "catalog_slug_exists_read_error",
-        source: "catalogMatcher.catalogSlugIfExists",
-        slug: candidate,
-        error: (err as Error)?.message ?? String(err),
-      }));
-      return null;
-    }
-  }
-  return null;
+  return (await resolveIdentityToCatalogRow(id)).id;
 }
 
 /**

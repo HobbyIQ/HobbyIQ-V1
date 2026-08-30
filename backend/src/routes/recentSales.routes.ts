@@ -21,7 +21,15 @@
 //       { source, price, soldAt, title, parallel, gradeCompany, gradeValue,
 //         cardYear, cardNumber, contributorUserId (only for own comps),
 //         imageUrl, sellerHandle }
-//     ]
+//     ],
+//     byGrade: [...],
+//     // CF-AN-IDENTITY-RESOLVES-TO-ITS-ROW (2026-08-30), additive:
+//     requestedCardId: string, // the :cardId as sent
+//     resolvedCardId: string,  // the pool id the sales were read under — the
+//                              // catalog's single numbered twin when the slug
+//                              // has no row of its own, else requestedCardId
+//     identityKind: "exact" | "numbered-twin" | "unnumbered-twin" | "ambiguous"
+//                 | "none" | null   // null for a vendor id (not resolved)
 //   }
 //
 // Privacy: contributorUserId is redacted unless the row's contributor
@@ -33,7 +41,8 @@ import { Router, type Request, type Response } from "express";
 import { getUserBySession } from "../services/authService.js";
 import { requireSession } from "../middleware/requireSession.js";
 import { requireRateLimited } from "../middleware/requireRateLimited.js";
-import { readCompsByCardId } from "../services/portfolioiq/soldCompsStore.service.js";
+import { poolReadIdFor, readCompsByCardId } from "../services/portfolioiq/soldCompsStore.service.js";
+import { resolveIdentityToCatalogRow } from "../services/catalog/catalogIdentityResolver.js";
 
 const router = Router();
 
@@ -100,8 +109,19 @@ router.get("/cards/:cardId/recent-sales", requireSession, requireRateLimited("pr
 
     const fromDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 
+    // CF-AN-IDENTITY-RESOLVES-TO-ITS-ROW (2026-08-30, holding deced7d3 — Max
+    // Williams CPA-MWI Refractor: 35 sales under …:num-499, a card page opened
+    // at the un-numbered id, no comps). An hiq slug is read under the catalog
+    // row that IS its identity — its single numbered twin when the slug has
+    // no row of its own. Resolved ONCE here (handed to the read) so the
+    // response can say which id the comps are keyed under. A vendor id is not
+    // resolved.
+    const resolvedIdentity = cardId.startsWith("hiq:") ? await resolveIdentityToCatalogRow(cardId) : null;
+    const resolvedCardId = poolReadIdFor(cardId, resolvedIdentity);
+
     const rawComps = await readCompsByCardId({
       cardId,
+      resolvedIdentity,
       fromDate,
       // sources: undefined → all sources (user + CH + CS + browse-ended)
       parallel: parallel !== undefined ? parallel : undefined,
@@ -265,6 +285,11 @@ router.get("/cards/:cardId/recent-sales", requireSession, requireRateLimited("pr
       windowDays: days,
       sales,           // backwards-compat: flat list preserved
       byGrade,         // new: grouped by grade tier for the Comp Sheet UI
+      // CF-AN-IDENTITY-RESOLVES-TO-ITS-ROW (additive): which id the comps are
+      // keyed under, so a client can say "comps for the /499 checklist card".
+      requestedCardId: cardId,
+      resolvedCardId,
+      identityKind: resolvedIdentity?.kind ?? null,
     });
   } catch (err) { next(err); }
 });

@@ -2638,6 +2638,67 @@ async function gateSuppliedSlug(
   }
   rec.hobbyiqCardId = found;
   rec.hobbyiqCardIdSource = "pinned";
+  if (found !== supplied) {
+    console.log(JSON.stringify({
+      event: "holding_slug_resolved_to_catalog_row",
+      source: ctx.source,
+      userId: ctx.userId,
+      holdingId: ctx.holdingId,
+      suppliedSlug: supplied,
+      writtenSlug: found,
+      detail: "the catalog's form of the supplied slug is written (its twin)",
+    }));
+  }
+}
+
+// CF-AN-IDENTITY-RESOLVES-TO-ITS-ROW (2026-08-30, holding deced7d3 — Max
+// Williams 2025 Bowman Draft CPA-MWI Refractor auto). The holding's SECOND
+// identity, cardId, was written ungated: the web sends the card page's URL id
+// as cardsightCardId -> cardId, so an un-numbered hiq slug whose only catalog
+// row is …:num-499 stayed pinned as cardId even after hobbyiqCardId had been
+// corrected — two identities on one holding, and every reader keyed on cardId
+// found nothing. An hiq cardId now goes through the SAME resolver as
+// hobbyiqCardId (catalogSlugIfExists -> catalogIdentityResolver): the
+// catalog's row is written — the id itself, or its one twin. A slug the
+// catalog cannot place (no row, or two numbered twins) is KEPT and logged,
+// never nulled: the identity gate still needs a cardId, and
+// exactPoolSupremacy's STARTSWITH count still fails safe on it. A vendor
+// cardId is not an hiq slug and is untouched.
+async function resolveHiqCardIdToCatalogRow(
+  h: PortfolioHolding,
+  ctx: { source: string; userId: string; holdingId: string },
+): Promise<void> {
+  const rec = h as unknown as Record<string, unknown>;
+  const cid = String(rec.cardId ?? "").trim();
+  if (!cid.startsWith("hiq:")) return;
+  let found: string | null = null;
+  try {
+    const { catalogSlugIfExists } = await import("../catalog/catalogMatcher.service.js");
+    found = await catalogSlugIfExists(cid);
+  } catch {
+    found = null;
+  }
+  if (!found) {
+    console.warn(JSON.stringify({
+      event: "holding_cardid_not_a_catalog_row",
+      source: ctx.source,
+      userId: ctx.userId,
+      holdingId: ctx.holdingId,
+      cardId: cid,
+      detail: "an hiq cardId names no catalog row (none, or two numbered twins); kept as given",
+    }));
+    return;
+  }
+  if (found === cid) return;
+  rec.cardId = found;
+  console.log(JSON.stringify({
+    event: "holding_cardid_resolved_to_catalog_row",
+    source: ctx.source,
+    userId: ctx.userId,
+    holdingId: ctx.holdingId,
+    previousCardId: cid,
+    cardId: found,
+  }));
 }
 
 // CF-ONE-IDENTITY-IN-THE-POOL (2026-08-29, checklist D12a). A user's SALE or
@@ -5717,6 +5778,16 @@ export async function addHolding(req: Request, res: Response) {
     holdingId: holding.id,
     previous: null,
   });
+  // CF-AN-IDENTITY-RESOLVES-TO-ITS-ROW: the second identity (an hiq cardId —
+  // the card page's URL id, which the web sends under the legacy name
+  // cardsightCardId; hoisted here by the same data-boundary rule the read
+  // path applies, so the resolver sees it) goes through the same resolver.
+  normalizeHoldingCatalogId(holding as unknown as Record<string, unknown>);
+  await resolveHiqCardIdToCatalogRow(holding, {
+    source: "portfolioStore.addHolding",
+    userId: auth.userId,
+    holdingId: holding.id,
+  });
 
   // CF-CATALOG-AUTO-SEED-ON-ADD (Drew, 2026-08-04). "When they add
   // cards, they search within the catalog and then the comps fall
@@ -5951,6 +6022,17 @@ export async function updateHolding(req: Request, res: Response) {
       userId: auth.userId,
       holdingId: id,
       previous: String((previous as { hobbyiqCardId?: string | null }).hobbyiqCardId ?? "").trim() || null,
+    });
+  }
+  // CF-AN-IDENTITY-RESOLVES-TO-ITS-ROW: a cardId the body supplies (under
+  // either name) is written as the catalog's row, the same way addHolding
+  // writes it. A body that does not touch it does not touch it.
+  if ("cardId" in (cleanBody as Record<string, unknown>) || "cardsightCardId" in (cleanBody as Record<string, unknown>)) {
+    normalizeHoldingCatalogId(next as unknown as Record<string, unknown>);
+    await resolveHiqCardIdToCatalogRow(next, {
+      source: "portfolioStore.updateHolding",
+      userId: auth.userId,
+      holdingId: id,
     });
   }
   // CF-A-MINTED-SLUG-NEVER-REPLACES-A-PIN (D12a). This used to recompute the

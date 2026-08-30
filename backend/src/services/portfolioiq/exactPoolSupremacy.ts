@@ -177,6 +177,16 @@ function soldCompsContainer(): Container | null {
  * checklist row had 5 sales. An UN-numbered hiq id therefore counts its
  * numbered twins as well (`STARTSWITH(id + ":num-")`) — the same card, print
  * run omitted by the seller or the holding.
+ *
+ * CF-AN-IDENTITY-RESOLVES-TO-ITS-ROW (2026-08-30). This STARTSWITH is the
+ * gate's FAIL-SAFE and stays. On an un-numbered id with TWO numbered twins it
+ * counts both — deliberately: the resolver (catalogIdentityResolver) refuses
+ * to name that card, and a card it cannot name must not be priced from a
+ * sibling either; blocking the estimate is the safe side. The readers that
+ * LIST or PRICE sales never union twins — they read the one row the resolver
+ * names (soldCompsStore.poolReadIdFor). A holding whose cardId /
+ * hobbyiqCardId the resolver normalized to …:num-N forms its attempts from
+ * that id directly: unifiedIdentityAttempts needs no printRun for it.
  */
 export function exactSalesCountQuery(id: string, cutoff: string): { query: string; parameters: Array<{ name: string; value: string }> } {
   const column = isHiqSlug(id) ? "c.hobbyiqCardId" : "c.cardId";
