@@ -57,12 +57,6 @@
 "use strict";
 const path = require("path");
 const crypto = require("crypto");
-const { CosmosClient } = require("@azure/cosmos");
-const backend = path.resolve(__dirname, "..");
-const { moveCatalogRow } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
-const { decideCpaProduct, groupKey } = require(path.join(backend, "dist/services/catalog/cpaProductRule.js"));
-const { catalogAuthorityOf } = require(path.join(backend, "dist/services/catalog/catalogAuthority.service.js"));
-const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
 
 /**
  * An env var that is SET BUT EMPTY is a deliberate widening, not an absence.
@@ -87,6 +81,46 @@ const RUN_MS = Number(process.env.RUN_MINUTES || 140) * 60000;
 const LIMIT = Number(process.env.LIMIT || 0);
 const STARTED = Date.now();
 
+/**
+ * Pure: needs no compiled code, so it can run above the requires.
+ * "2020-2026" or a comma list; a reversed range names no year.
+ */
+function parseYears(spec) {
+  const m = /^(\d{4})-(\d{4})$/.exec(spec);
+  if (m) {
+    const lo = Number(m[1]), hi = Number(m[2]);
+    if (hi < lo) return [];
+    return Array.from({ length: hi - lo + 1 }, (_, i) => lo + i);
+  }
+  return spec.split(",").map((s) => Number(s.trim())).filter((n) => Number.isFinite(n) && n > 1900);
+}
+const YEAR_LIST = parseYears(YEARS);
+
+// ── THE SCOPE REFUSALS RUN FIRST, BEFORE ANY require() THAT CAN THROW ────────
+// CF-A-WHOLE-SOURCE-RETIRE-NEEDS-ITS-NAME: a whole-scope write is asked for by
+// name (MODE=source with no SOURCES defaulted to baseballcardpedia and reported
+// 13.14M rows). These gates sit ABOVE the @azure/cosmos and dist/ requires on
+// purpose, the defect #1565 fixed for fold-checklist-numbered-twins: with a
+// stale or absent `dist` the process died on MODULE_NOT_FOUND, which also exits
+// 1, so a refusal that NEVER RAN looked exactly like a refusal that did. The
+// exit code alone could not tell them apart and the message was never printed.
+// None of these checks needs compiled code, so nothing about the build state
+// can decide whether they fire.
+if (!MODE) { console.error("FATAL: MODE is required and has no default. One of: fold | report"); process.exit(1); }
+if (!["fold", "report"].includes(MODE)) { console.error(`FATAL: unknown MODE "${MODE}". One of: fold | report`); process.exit(1); }
+if (!YEAR_LIST.length) { console.error(`FATAL: YEARS="${YEARS}" names no year. Use 2020-2026 or a comma list.`); process.exit(1); }
+if (!SPORTS.length) { console.error("FATAL: SPORTS is empty; this rule was measured on baseball only."); process.exit(1); }
+if (!PREFIXES.length) { console.error("FATAL: PREFIXES is empty; R2 was ruled on CPA/BCPA auto numbers."); process.exit(1); }
+if (!FAMILY && SCOPE !== "all") { console.error("FATAL: FAMILY is empty -- that is every product in the catalog. Confirm it with SCOPE=all."); process.exit(1); }
+if (!process.env.COSMOS_CONNECTION_STRING) { console.error("FATAL: COSMOS_CONNECTION_STRING not set"); process.exit(1); }
+
+const { CosmosClient } = require("@azure/cosmos");
+const backend = path.resolve(__dirname, "..");
+const { moveCatalogRow } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
+const { decideCpaProduct, groupKey } = require(path.join(backend, "dist/services/catalog/cpaProductRule.js"));
+const { catalogAuthorityOf } = require(path.join(backend, "dist/services/catalog/catalogAuthority.service.js"));
+const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
+
 const f = (n) => Number(n ?? 0).toLocaleString("en-US");
 const str = (v) => String(v ?? "").trim();
 const shardOf = (k) => parseInt(crypto.createHash("sha1").update(String(k)).digest("hex").slice(0, 8), 16) % SLOTS;
@@ -107,15 +141,6 @@ const retry = async (fn, tries = 8) => {
   }
 };
 
-function parseYears(spec) {
-  const m = /^(\d{4})-(\d{4})$/.exec(spec);
-  if (m) {
-    const lo = Number(m[1]), hi = Number(m[2]);
-    if (hi < lo) return [];
-    return Array.from({ length: hi - lo + 1 }, (_, i) => lo + i);
-  }
-  return spec.split(",").map((s) => Number(s.trim())).filter((n) => Number.isFinite(n) && n > 1900);
-}
 
 /**
  * The identity key is `groupKey` in cpaProductRule -- (year, folded number,
@@ -151,18 +176,12 @@ async function rowAt(cat, id) {
 
 async function main() {
   const conn = process.env.COSMOS_CONNECTION_STRING;
-  if (!conn) { console.error("FATAL: COSMOS_CONNECTION_STRING not set"); process.exit(1); }
 
-  // CF-A-WHOLE-SOURCE-RETIRE-NEEDS-ITS-NAME: a whole-scope write is asked for
-  // by name. MODE has no default, and widening past the measured R2 population
-  // demands SCOPE=all -- an unscoped run reported 13.14M rows once already.
-  if (!MODE) { console.error("FATAL: MODE is required and has no default. One of: fold | report"); process.exit(1); }
-  if (!["fold", "report"].includes(MODE)) { console.error(`FATAL: unknown MODE "${MODE}". One of: fold | report`); process.exit(1); }
-  const years = parseYears(YEARS);
-  if (!years.length) { console.error(`FATAL: YEARS="${YEARS}" names no year. Use 2020-2026 or a comma list.`); process.exit(1); }
-  if (!SPORTS.length) { console.error("FATAL: SPORTS is empty; this rule was measured on baseball only."); process.exit(1); }
-  if (!PREFIXES.length) { console.error("FATAL: PREFIXES is empty; R2 was ruled on CPA/BCPA auto numbers."); process.exit(1); }
-  if (!FAMILY && SCOPE !== "all") { console.error("FATAL: FAMILY is empty -- that is every product in the catalog. Confirm it with SCOPE=all."); process.exit(1); }
+  // MODE / YEARS / SPORTS / PREFIXES / FAMILY were parsed and ENFORCED at the
+  // top of this file, above the requires. Do not move those gates back down
+  // here: a stale dist would make them unreachable and the MODULE_NOT_FOUND
+  // would masquerade as the refusal (#1565).
+  const years = YEAR_LIST;
 
   const db = new CosmosClient({ connectionString: conn, connectionPolicy: { retryOptions: { maxRetryAttemptsOnThrottledRequests: 30, maxWaitTimeInSeconds: 120 } } }).database("hobbyiq");
   const cat = db.container("card_catalog"), pool = db.container("sold_comps");

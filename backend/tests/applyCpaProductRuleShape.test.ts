@@ -27,7 +27,8 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
-const SCRIPT = path.resolve(__dirname, "../scripts/apply-cpa-product-rule.cjs");
+const BACKEND = path.resolve(__dirname, "..");
+const SCRIPT = path.join(BACKEND, "scripts", "apply-cpa-product-rule.cjs");
 const SRC = readFileSync(SCRIPT, "utf8");
 
 /**
@@ -40,11 +41,21 @@ const SRC = readFileSync(SCRIPT, "utf8");
  * this helper has to clear.
  */
 function run(env: Record<string, string>): { code: number; out: string } {
-  const clean = { ...process.env, COSMOS_CONNECTION_STRING: "", BACKFILL_APPLY: "", APPLY: "" };
-  for (const k of ["MODE", "SCOPE", "SPORTS", "YEARS", "PREFIXES", "FAMILY", "SLOT", "SLOTS", "LIMIT"]) delete clean[k];
+  // The env is REPLACED, not spread over process.env: inheriting an ambient
+  // SPORTS/YEARS/FAMILY would hand the script the very scope these tests assert
+  // it does not have, and vitest itself puts MODE=test in the environment --
+  // exactly the ambient-value trap. Only the vars node needs to start are kept.
+  const base: Record<string, string> = {
+    PATH: process.env.PATH ?? "",
+    SystemRoot: process.env.SystemRoot ?? "",
+    COMSPEC: process.env.COMSPEC ?? "",
+  };
   try {
     const out = execFileSync(process.execPath, [SCRIPT], {
-      env: { ...clean, ...env },
+      // cwd is pinned to backend/ so the run does not depend on where vitest
+      // was invoked from.
+      cwd: BACKEND,
+      env: { ...base, ...env },
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"],
       timeout: 30000,
@@ -85,6 +96,37 @@ describe("apply-cpa-product-rule refuses an unscoped write", () => {
     const r = run({ COSMOS_CONNECTION_STRING: "x", MODE: "report", PREFIXES: "" });
     expect(r.code).toBe(1);
     expect(r.out).toMatch(/PREFIXES is empty/);
+  });
+
+  it("puts every refusal AHEAD of every require that can throw, so a stale dist cannot fake it", () => {
+    // The defect #1565 fixed for fold-checklist-numbered-twins, and the one
+    // this branch shipped: the refusals sat inside main(), BELOW top-level
+    // requires of @azure/cosmos and four dist/ modules. With a stale or absent
+    // dist the process died on MODULE_NOT_FOUND -- which also exits 1 -- so the
+    // `code` assertions above passed for the wrong reason and only the message
+    // assertions caught it. Assert the ORDER in the source, not just the
+    // observed exit code, because an exit code cannot tell the two apart.
+    const refusals = [
+      "MODE is required and has no default",
+      "unknown MODE",
+      "names no year",
+      "SPORTS is empty",
+      "PREFIXES is empty",
+      "FAMILY is empty",
+    ].map((msg) => {
+      const at = SRC.indexOf(msg);
+      expect(at, `refusal not found in source: ${msg}`).toBeGreaterThan(-1);
+      return at;
+    });
+    const last = Math.max(...refusals);
+
+    // Every top-level require EXCEPT the node builtins `path` and `crypto`,
+    // which cannot fail to resolve, must come after the LAST refusal.
+    const risky = [...SRC.matchAll(/^[ \t]*(?:const|let|var)\b[^\n]*\brequire\([^\n]*$/gm)]
+      .filter((m) => !/require\((["'])(?:node:)?(?:path|crypto)\1\)/.test(m[0]));
+
+    expect(risky.length).toBeGreaterThan(0);
+    for (const m of risky) expect(m.index ?? 0).toBeGreaterThan(last);
   });
 
   it("exits 1 with no connection string, before touching the network", () => {
