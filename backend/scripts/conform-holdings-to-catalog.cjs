@@ -129,7 +129,15 @@ async function applyRulings(portfolio, cat) {
       const doc = docs[0]; const h = doc?.h;
       if (!h) { skipped++; console.log(`  skip ${r.holdingId.slice(0, 8)}: holding not found for user`); continue; }
       const current = String(h.hobbyiqCardId ?? "");
-      if (current === r.to && String(h.cardId ?? "") === r.to) { skipped++; console.log(`  skip ${r.holdingId.slice(0, 8)}: already ${r.to}`); continue; }
+      if (current === r.to && String(h.cardId ?? "") === r.to) {
+        // Already ruled — but the displayed card number may still be the old one.
+        if (row.cardNumber && String(h.cardNumber ?? "") !== String(row.cardNumber)) {
+          console.log(`  ${APPLY ? "FIXED NUMBER" : "WOULD FIX NUMBER"} ${r.holdingId.slice(0, 8)}: cardNumber ${JSON.stringify(h.cardNumber)} -> ${JSON.stringify(row.cardNumber)} (already ${r.to})`);
+          if (APPLY) await retry(() => portfolio.item(doc.id, doc.userId).patch([{ op: "set", path: `/holdings/${r.holdingId}/cardNumber`, value: String(row.cardNumber) }]));
+          applied++; continue;
+        }
+        skipped++; console.log(`  skip ${r.holdingId.slice(0, 8)}: already ${r.to}`); continue;
+      }
       if (current !== r.from) { skipped++; console.log(`  skip ${r.holdingId.slice(0, 8)}: current hobbyiqCardId ${current || "(none)"} != ruling.from ${r.from}`); continue; }
       console.log(`  ${APPLY ? "RULED" : "WOULD RULE"} ${r.holdingId.slice(0, 8)} ${h.playerName ?? ""} #${h.cardNumber ?? ""}: ${r.from} -> ${r.to}  (${r.rulingBy} ${r.date}: ${r.note})`);
       if (!APPLY) { applied++; continue; }
@@ -139,6 +147,11 @@ async function applyRulings(portfolio, cat) {
         { op: "set", path: `/holdings/${r.holdingId}/identityResolvedBy`, value: `ruling:${r.rulingBy}:${r.date}` },
         { op: "set", path: `/holdings/${r.holdingId}/identityResolvedAt`, value: new Date().toISOString() },
       ];
+      // A ruling that changes the card number corrects the holding's displayed
+      // number too (Harrison's Ohtani read "#9" after moving to #150).
+      if (row.cardNumber && String(h.cardNumber ?? "") !== String(row.cardNumber)) {
+        ops.push({ op: "set", path: `/holdings/${r.holdingId}/cardNumber`, value: String(row.cardNumber) });
+      }
       // CF-VERIFIED-IS-CHECKLIST-BACKED: a ruling onto a checklist-backed row is VERIFIED.
       if (catalogAuthorityOf(String(row.source ?? "")) === "checklist") {
         const at = new Date().toISOString();
@@ -297,7 +310,15 @@ async function main() {
 
         if (!APPLY) continue;
         const ops = [];
-        if ((existing !== target && (rung.conf >= 0.95 || !existing)) ) ops.push({ op: "set", path: `/holdings/${hid}/hobbyiqCardId`, value: target });
+        if ((existing !== target && (rung.conf >= 0.95 || !existing)) ) {
+          ops.push({ op: "set", path: `/holdings/${hid}/hobbyiqCardId`, value: target });
+          // CF-ONE-IDENTITY-BOTH-FIELDS (2026-08-30): legacy readers key on cardId; a
+          // corrected hobbyiqCardId with a stale hiq: cardId is two identities on one
+          // holding (Max Williams: hobbyiqCardId …:num-499, cardId the folded-away
+          // un-numbered slug → no comps). A vendor cardId (non-hiq) is left alone.
+          const cid = String(h.cardId ?? "").trim();
+          if (!cid || cid.startsWith("hiq:")) ops.push({ op: "set", path: `/holdings/${hid}/cardId`, value: target });
+        }
         if (h.cardsightCardId !== undefined && h.cardsightCardId !== null) { ops.push({ op: "set", path: `/holdings/${hid}/cardsightCardId`, value: null }); legacyCleared++; }
         if (ops.length) {
           ops.push({ op: "set", path: `/holdings/${hid}/identityResolvedBy`, value: "catalog-internal" });
