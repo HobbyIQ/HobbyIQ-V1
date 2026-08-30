@@ -1476,6 +1476,21 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   nightlies' logs must each show a `reconciled:` line (a green run without
   one is the old failure shape), and grade-explode should complete for the
   first time since gradeLadder was wired.
+    **Merged #1503 (09:35Z 08-30); deploy #6 33283656704.** Verified with the
+    exit-code gate (tsc 0, vitest 0). Found on the way: `grade-explode` and
+    `sold-comps-ch-backfill` had been crashing at `require()` — their
+    workflows never built `dist/`; eleven workflows gain `npx tsc` and a guard
+    makes it structural; the v2 guard's `wired` predicate was satisfied by an
+    import line alone (now demands a call). Left declared: the 46 runner
+    writers, three marker-printers with no relaunch step (`apply-setkey-
+    rulings`, `map-yearprefixed-setkeys`, `retire-prose-parallel-rows` — an
+    ops decision), `reprice-user-holdings` / `drain-staging-backlog` (no
+    honest `intended` on the caller side). Named, not fixed:
+    `tca-match-enricher`'s delete-then-create re-key. **D19** (building,
+    `feat/d19`, the single builder): re-key the old user comps to the D9/D12-a
+    identity (a sale is never lost: create-verify-delete), collapse the
+    CardHedge `ch-daily::` / `ch-comp::` dual ids (refusing any pair whose
+    grade or parallel differs), variance printed before "duplicate".
 - ◐ D10 **Look at all holdings for everyone** (Drew, 2026-08-29 17:15Z). The three
   defects under holding `ca7a150b` are not specific to it. **#1448
   `audit-all-holdings`** (read-only, runner-whitelisted): per holding —
