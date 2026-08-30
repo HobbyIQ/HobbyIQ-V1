@@ -2603,7 +2603,15 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
     `hiq:baseball:2018:topps-chrome:9:refractor:no-auto` to
     `hiq:baseball:2018:topps-chrome:150:refractor:no-auto`. That target
     **already exists** (source `bccp`, checklist authority, verified by
-    point read), so the ruling does NOT wait on the base-cards clean. The
+    point read), so the ruling does NOT wait on the base-cards clean. Worth
+    knowing before the APPLY: the holding's `hobbyiqCardId` is the `from`
+    the ruling matches on, but its `cardId` had drifted to a DIFFERENT
+    PRODUCT — `variant::hiq:baseball:2018:bowman-chrome:9:refractor:no-auto:num-499`
+    — and the rulings path sets both fields to `to`, which is what makes
+    this one ruling enough. Verified report-only: `SCOPE=rulings` reads
+    `rulings 4  would apply 1  skipped 3  failed 0` —
+    `WOULD RULE 2925db74 Shohei Ohtani #9: …:9:refractor:no-auto ->
+    …:150:refractor:no-auto`. The
     two mis-keyed sales' correct targets, both confirmed present: DeJong →
     `hiq:baseball:2018:topps-chrome:83t-22:1983-topps-baseball-refractor:no-auto`
     (cardboardchecklist — there is no `83t-22:refractor` row at all), Ohtani

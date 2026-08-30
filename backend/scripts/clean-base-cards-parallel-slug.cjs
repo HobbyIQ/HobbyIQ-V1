@@ -131,7 +131,7 @@ async function main() {
   const s = {
     scanned: 0, otherSlot: 0, notChecklist: 0, noEvidence: 0, nothingToStrip: 0, noSlug: 0,
     moved: 0, folded: 0, replaced: 0, noop: 0, salesRepointed: 0, gradedRetired: 0, twinFolds: 0,
-    failed: 0, notReached: 0,
+    failed: 0, notReached: 0, refusedSetKeySplit: 0,
   };
   const bySource = new Map(), byNewName = new Map(), examples = [];
   const bump = (m, k) => m.set(k, (m.get(k) ?? 0) + 1);
@@ -212,7 +212,21 @@ async function main() {
         await Promise.all(batch.map(async (d) => {
           s.scanned++; seen++;
           try { await handle(d, mode); }
-          catch (e) { s.failed++; if (s.failed <= 8) console.error(`  failed ${String(d.id).slice(0, 80)}: ${String(e?.message ?? e).slice(0, 100)}`); }
+          catch (e) {
+            // CF-A-KEY-NEEDS-BOTH-HALVES. moveCatalogRow refuses a row whose id
+            // and whose `setKey` FIELD disagree -- D23's rename is mid-flight
+            // and some rows carry the old spelling in one half. That is a
+            // REFUSAL of a different repair's population, not a failure of
+            // this one: counted on its own line, declared as skipped, and left
+            // for the rename fleet to finish.
+            const msg = String(e?.message ?? e);
+            if (/newSlug says setKey/.test(msg)) {
+              s.refusedSetKeySplit++;
+              if (s.refusedSetKeySplit <= 3) console.log(`  refused (setKey id/field split, D23's population) ${String(d.id).slice(0, 80)}`);
+              return;
+            }
+            s.failed++; if (s.failed <= 8) console.error(`  failed ${String(d.id).slice(0, 80)}: ${msg.slice(0, 100)}`);
+          }
         }));
         const done = s.moved + s.folded + s.replaced;
         if (LIMIT && done >= LIMIT) { stopReason = "limit"; s.notReached += mine.length - Math.min(i + CONCURRENCY, mine.length); break; }
@@ -241,6 +255,7 @@ async function main() {
   console.log(`  not a checklist row           ${f(s.notChecklist)}   <- left alone; a derived parallel is not a transcription`);
   console.log(`  no subset evidence            ${f(s.noEvidence)}   <- "Base Variation Refractor" is a rung name; not stripped`);
   console.log(`  nothing to strip / no-op      ${f(s.nothingToStrip + s.noSlug + s.noop)}`);
+  console.log(`  refused (setKey id/field split) ${f(s.refusedSetKeySplit)}   <- D23's rename population; a key needs both halves`);
   console.log(`  failed                        ${f(s.failed)}`);
   console.log(`  not reached                   ${f(s.notReached)}`);
   console.log(`\n  by source:`);
@@ -256,7 +271,7 @@ async function main() {
       job: "clean-base-cards-parallel-slug",
       intended: s.scanned + s.notReached,
       written,
-      skipped: s.notChecklist + s.noEvidence + s.nothingToStrip + s.noSlug + s.noop + s.notReached,
+      skipped: s.notChecklist + s.noEvidence + s.nothingToStrip + s.noSlug + s.noop + s.notReached + s.refusedSetKeySplit,
       failed: s.failed,
     });
   }
