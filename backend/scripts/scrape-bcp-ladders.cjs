@@ -165,6 +165,35 @@ const UMBRELLA = /(parallels|factory set|retail|club set|variations?|short print
 // each). The base list is on the same page: any rung candidate that equals a
 // player name of this product is a roster line, not a rung.
 const foldName = (s) => String(s ?? "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+// CF-A-CARD-NUMBER-IS-NOT-A-RUNG (D33, Drew 2026-08-30: "still a mess" on
+// 2020 Bowman Draft BD-152). Both defences above are NUMBER-PREFIX-BLIND, and
+// baseballcardpedia writes its card numbers SPACE-separated:
+//
+//   <li>BD 121 Spencer Torkelson</li>     <- a card line
+//
+// CARD_NUM tested only the first space-delimited token, which here is the bare
+// alpha prefix "BD" -- not a card number, so the line was accepted as a RUNG
+// and every card on the page became a "parallel" of every other card. The
+// roster set missed it too: that set is built from parseCards' `player` field,
+// the name AFTER the number, so it holds "spencer torkelson" while the
+// candidate folds to "bd 121 spencer torkelson" and the two never compare
+// equal. 47,267 catalog rows were minted this way (baseballcardpedia 28,776 +
+// baseballcardpedia-graded 18,491) across 2,234 distinct cards.
+//
+// The fix closes both halves. `leadingCardNumber` recognises a card number in
+// EITHER spelling -- the hyphen form "BD-121" that CARD_NUM already caught and
+// the space form "BD 121" it could not -- and `foldRoster` strips one before
+// folding, so a roster line is refused by name even when it arrives numbered.
+//
+// The alpha prefix is REQUIRED to be followed by digits, so a real rung whose
+// first word happens to be short ("Sky Blue", "Gold Wave") is never mistaken
+// for a number: "Sky" is not followed by a digit.
+const LEADING_CARD_NUM = /^([A-Z]{1,5}[-\s]?\d+[a-z]?|\d+[a-z]?)\s+(?=\S)/i;
+/** The card-number prefix of a line, or "" when the line does not start with one. */
+const leadingCardNumber = (text) => (String(text ?? "").match(LEADING_CARD_NUM) || [""])[0].trim();
+/** foldName with any leading card number removed -- so "BD 121 Spencer
+ *  Torkelson" folds to the same key the base list's "Spencer Torkelson" does. */
+const foldRoster = (s) => foldName(String(s ?? "").replace(LEADING_CARD_NUM, ""));
 const PARALLEL_WORDS = new Set(["refractor","refractors","xfractor","x-fractor","fractor","prizm","prizms","mojo","wave","shimmer","foil","foilboard","holo","chrome","sapphire","superfractor","printing","plate","plates","black","gold","silver","blue","red","green","orange","purple","pink","yellow","aqua","teal","magenta","fuchsia","bronze","platinum","rainbow","atomic","lava","pattern","laser","crackle","mini","base","parallel","variation","variations","sp","ssp","auto","autograph","autographs","relic","patch","jersey","insert","inserts","checklist","1/1","numbered","border","camo","tie-dye","disco","cracked","ice","optic","velocity","hyper","speckle","sparkle","glitter","neon","negative","sepia","vintage","stock","paper","canvas","gilded","glossy","matte"]);
 const isPersonName = (v) => { const t = foldName(v).split(" ").filter(Boolean); return t.length >= 2 && t.length <= 5 && !t.some((w) => PARALLEL_WORDS.has(w)) && !/^\d/.test(t[0]); };
 
@@ -352,7 +381,7 @@ function parseLadder(parallelsBody, playerNames = new Set()) {
     run = run ?? split.run ?? null;
     const k = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
     if (!k) return;
-    if (playerNames.has(foldName(name))) { rosterLines++; return; }
+    if (playerNames.has(foldName(name)) || playerNames.has(foldRoster(name))) { rosterLines++; return; }
     if (!rungs.has(k)) rungs.set(k, { name, printRun: run ?? null, note });
     else { const r = rungs.get(k); if (run && !r.printRun) r.printRun = run; if (note && !r.note) r.note = note; }
   };
@@ -375,7 +404,10 @@ function parseLadder(parallelsBody, playerNames = new Set()) {
     const paren = text.indexOf("(");
     const name = (paren > 0 ? text.slice(0, paren) : text).trim().replace(/[-–—:]$/, "").trim();
     if (!name || name.length > 45 || !/[A-Za-z]{2}/.test(name)) continue;
-    if (CARD_NUM.test(name.split(" ")[0])) continue;          // a card line
+    // A card line, in either of the page's two spellings: "BD-121 Spencer
+    // Torkelson" (caught by the first token) and "BD 121 Spencer Torkelson"
+    // (whose first token is only the alpha prefix). CF-A-CARD-NUMBER-IS-NOT-A-RUNG.
+    if (CARD_NUM.test(name.split(" ")[0]) || leadingCardNumber(name)) continue;
     const note = paren > 0 ? text.slice(paren) : "";
     const run = note.match(RUN_NOTE);
     const n = run ? Number((run[1] || run[2] || "").replace(/,/g, "")) : null;
@@ -645,12 +677,15 @@ async function main() {
 // The parsing surface is exported so the pins can run it over saved
 // fixtures; `main` is exported so a run can be driven over those fixtures
 // with fetch stubbed, i.e. the COMMITTED emission path is what gets checked,
-// not a reimplementation of it.
+// not a reimplementation of it. D33 adds the card-line guard's own helpers
+// (leadingCardNumber / foldRoster / foldName): the number-prefix defences the
+// scrapeBcpLaddersCardLineGuard pins drive directly.
 module.exports = {
   main,
   parseCards, parseLadder, parseScopedLadders, section,
   splitScopes, derivePrefix, prefixesFromImages, prefixFromProse,
   isCardListScope, isCardLine, rungNameInScope, cleanScrapedPlayer,
+  leadingCardNumber, foldRoster, foldName,
 };
 
 if (require.main === module) {

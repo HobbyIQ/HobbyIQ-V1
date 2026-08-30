@@ -445,23 +445,47 @@ export function deriveCatalogEntry(input: {
  * writes the player cell as "Max Williams," and the one checklist CSV carried
  * it through to 9,199 catalog rows -- Drew saw it in the 2025 Bowman Draft
  * CPA-MWI picker. A trailing run of commas / semicolons / whitespace is not
- * part of any name. A trailing "." IS ("Jr." -- 656,452 rows) and an embedded
- * comma is not this defect (no "Last, First" row was found), so neither is
- * touched. Applied here by deriveCatalogEntry and by the CSV ingest's row
- * parse; scripts/repair-trailing-comma-player-names.cjs heals the rows that
- * were already written.
+ * part of any name. A trailing "." IS ("Jr." -- 656,452 rows). Applied here by
+ * deriveCatalogEntry and by the CSV ingest's row parse;
+ * scripts/repair-trailing-comma-player-names.cjs heals the rows that were
+ * already written.
+ *
+ * CF-ONE-PLAYER-IS-NOT-TWO-PLAYERS (D33, Drew 2026-08-30, "still a mess" on
+ * 2020 Bowman Draft BD-152). D15 scoped EMBEDDED commas out because no
+ * "Last, First" row was found -- true, and this is not that shape. baseball-
+ * cardpedia writes the GENERATIONAL SUFFIX with a comma before it ("Bobby
+ * Witt, Jr."), which the end-anchored trim cannot see: the trailing character
+ * is the ".". So both spellings persist and the picker renders one player as
+ * two -- measured 2026-08-30, 158,567 catalog rows, and the clean spelling
+ * already coexists for every one of the top names (Bobby Witt Jr. 33,367;
+ * Ken Griffey Jr. 24,441). The comma before Jr./Sr./II/III/IV/V is
+ * punctuation, not a name boundary, so it is dropped and the suffix kept.
+ *
+ * WHAT THIS STILL REFUSES TO DO. Only a comma followed by a known
+ * generational suffix is touched. A "Last, First" row -- if one ever appears
+ * -- is left exactly as it is, because reordering a name invents an identity;
+ * and a multi-player name keeps every player ("Eddie Murray / Cal Ripken,
+ * Jr." -> "Eddie Murray / Cal Ripken Jr.", never split on the comma). The
+ * D15 pin "O'Neil, Tyler" stays untouched for the same reason.
  */
+const GENERATIONAL_SUFFIX_COMMA = /,\s*(Jr|Sr|III|IV|II|V)\.?(?![A-Za-z])/gi;
+
 export function cleanPlayerName(raw: string | null | undefined): string {
-  return String(raw ?? "").trim()
-    .replace(/[\s,;]+$/, "")
-    // CF-A-COMMA-BEFORE-JR-IS-NOT-A-TEAM (D33, Drew 2026-08-30). The picker
-    // listed "Bobby Witt, Jr." and "Bobby Witt Jr." as two different players
-    // for one card: baseballcardpedia writes the comma, every other source
-    // does not. A comma before an honorific SUFFIX is punctuation inside one
-    // name, so it is removed and the suffix kept. This is the one embedded
-    // comma the docblock above excludes, and only that one: "Smith, John" is
-    // Last-First, a different defect, and is deliberately left alone.
-    .replace(/,\s+(Jr\.?|Sr\.?|I{2,3}|IV)$/i, " $1");
+  // CF-A-COMMA-BEFORE-JR-IS-NOT-A-TEAM (D33, Drew 2026-08-30). The picker
+  // listed "Bobby Witt, Jr." and "Bobby Witt Jr." as two different players for
+  // one card: baseballcardpedia writes the comma, every other source does not.
+  // A comma before an honorific SUFFIX is punctuation inside one name, so it
+  // is removed and the suffix kept. The match is GLOBAL, not end-anchored, so
+  // the suffix is also healed mid-string -- "Ronald Acuna, Jr., Braves" and
+  // "Eddie Murray / Cal Ripken, Jr." both carry it away from the end -- and
+  // the (?![A-Za-z]) lookahead is what keeps "Smith, Ivan" / "Brown, Sroka"
+  // (a real name that merely STARTS like a suffix) untouched.
+  return String(raw ?? "")
+    .trim()
+    .replace(GENERATIONAL_SUFFIX_COMMA, (_m, suffix: string) => ` ${suffix}${_m.trimEnd().endsWith(".") ? "." : ""}`)
+    .replace(/\s{2,}/g, " ")
+    .trim()
+    .replace(/[\s,;]+$/, "");
 }
 
 function playerSlugify(name: string): string {
