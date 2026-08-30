@@ -201,7 +201,8 @@ describe("priceAlertEvaluator — the alert's card through the one valuation pat
     expect(snapshotSlugCandidates({ cardSnapshot: null })).toEqual([]);
     const both = snapshotSlugCandidates({ cardSnapshot: { playerName: "x", year: 2011, setName: "Topps Update", cardNumber: "US175", variant: "Gold", printRun: 2011 } });
     expect(both).toHaveLength(2);
-    expect(both.every((s) => s.startsWith("hiq:baseball:2011:topps-update:"))).toBe(true);
+    // D23 (CF-THE-ID-CARRIES-THE-PRODUCT): "Topps Update" is the Update Series product, one spelling.
+    expect(both.every((s) => s.startsWith("hiq:baseball:2011:topps-update-series:"))).toBe(true);
     expect(parseAlertGrade("PSA 10")).toEqual({ company: "PSA", value: 10 });
     expect(parseAlertGrade("bgs 9.5")).toEqual({ company: "BGS", value: 9.5 });
     expect(parseAlertGrade("Raw")).toBeNull();

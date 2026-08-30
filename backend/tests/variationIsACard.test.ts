@@ -257,13 +257,15 @@ describe("product qualifiers in titles are identity", () => {
   });
   it("Sapphire, Update and Chrome move the plain product; iterated", () => {
     expect(qualifiedSetKeyFromTitle("Bowman Draft", "2024 Bowman Draft Sapphire Konnor Griffin #BDC-1").setKey).toBe("bowman-draft-sapphire");
-    expect(qualifiedSetKeyFromTitle("Topps", "2024 Topps Update Series #US1 Paul Skenes RC").setKey).toBe("topps-update");
+    // D23: the id carries the product as the checklist names it — topps-update-series.
+    expect(qualifiedSetKeyFromTitle("Topps", "2024 Topps Update Series #US1 Paul Skenes RC").setKey).toBe("topps-update-series");
     expect(qualifiedSetKeyFromTitle("Topps", "2020 Topps Chrome Bobby Witt Jr #100 RC").setKey).toBe("topps-chrome");
     expect(qualifiedSetKeyFromTitle("Topps", "2024 Topps Chrome Sapphire Edition #1 Ohtani")).toMatchObject({ setKey: "topps-chrome-sapphire", applied: ["Chrome", "Sapphire"] });
   });
   it("refusals are rulings, not bot moves; an already-qualified key and a Draft chrome card are not moves", () => {
     expect(qualifiedSetKeyFromTitle("Bowman", "2025 Bowman Chrome Prospects BCP-125 Owen Carey")).toMatchObject({ setKey: "bowman", applied: [], refused: [{ qualifier: "Chrome" }] });
-    expect(qualifiedSetKeyFromTitle("Topps Chrome", "2024 Topps Chrome Update Series #USC88 Paul Skenes")).toMatchObject({ setKey: "topps-chrome", refused: [{ qualifier: "Update" }] });
+    // D23 made the vocabulary ruling this refusal waited for: Chrome Update is topps-chrome-update-series.
+    expect(qualifiedSetKeyFromTitle("Topps Chrome", "2024 Topps Chrome Update Series #USC88 Paul Skenes")).toMatchObject({ setKey: "topps-chrome-update-series", refused: [] });
     expect(qualifiedSetKeyFromTitle("Bowman Draft 1st Edition", "2020 Bowman Draft 1st Edition Bobby Witt Jr")).toMatchObject({ setKey: "bowman-draft-1st-edition", applied: [] });
     expect(qualifiedSetKeyFromTitle("Bowman Draft", "2025 Bowman Draft Chrome Max Williams CPA-MWI Refractor Auto /499")).toMatchObject({ setKey: "bowman-draft", applied: [], refused: [] });
     expect(qualifiedSetKeyFromTitle("Topps Heritage", "2024 Topps Heritage Chrome #100").setKey).toBe("topps-heritage");

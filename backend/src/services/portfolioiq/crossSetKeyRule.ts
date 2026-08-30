@@ -30,7 +30,7 @@
  */
 
 import { normalizePlayerName } from "../compiq/parallelTokenizer.js";
-import { parseHobbyIqCardId } from "./hobbyIqCardId.service.js";
+import { parseHobbyIqCardId, sameCardNumber } from "./hobbyIqCardId.service.js";
 import { productFamilyKey, sameProductFamily } from "./productFamily.service.js";
 
 const GENERATIONAL_SUFFIXES = new Set(["jr", "sr", "ii", "iii", "iv", "v"]);
@@ -127,14 +127,15 @@ export function filterCrossSetKeyComps<R extends CrossSetKeyRow>(
     return { kept: [], refused: "no-player", excluded };
   }
   const kept: R[] = [];
-  const targetNumber = String(target.cardNumber ?? "").toUpperCase();
   for (const r of rows) {
     const comp = typeof r.hobbyiqCardId === "string" ? parseHobbyIqCardId(r.hobbyiqCardId) : null;
     if (!comp) { excluded.noSlug++; continue; }
+    // Card numbers compare hyphen- and case-insensitively (D23, ruling d):
+    // a bccp bd152 comp is the checklist's BD-152 card.
     if (
       comp.sport !== target.sport
       || comp.year !== target.year
-      || String(comp.cardNumber ?? "").toUpperCase() !== targetNumber
+      || !sameCardNumber(comp.cardNumber, target.cardNumber)
       || comp.isAuto !== target.isAuto
     ) { excluded.otherIdentity++; continue; }
     if (!sameProductFamily(target.setKey, comp.setKey)) { excluded.otherFamily++; continue; }

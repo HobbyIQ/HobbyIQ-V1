@@ -18,6 +18,7 @@
 // calls elsewhere in the codebase are legacy and being migrated.
 
 import { CosmosClient, type Container } from "@azure/cosmos";
+import { sameCardNumber } from "./hobbyIqCardId.service.js";
 
 export interface HoldingMatcher {
   holdingId?: string;
@@ -113,7 +114,7 @@ export async function safeWriteHolding(opts: {
   // Find matching holdings — must satisfy ALL provided matcher fields
   const matching = Object.entries(doc.holdings || {}).filter(([k, h]: [string, any]) => {
     if (matcher.holdingId && (h.id ?? k) !== matcher.holdingId) return false;
-    if (matcher.cardNumber && String(h.cardNumber || "").toUpperCase() !== matcher.cardNumber.toUpperCase()) return false;
+    if (matcher.cardNumber && !sameCardNumber(h.cardNumber, matcher.cardNumber)) return false;
     if (matcher.parallel && String(h.parallel || "") !== matcher.parallel) return false;
     if (matcher.hobbyiqCardId && h.hobbyiqCardId !== matcher.hobbyiqCardId) return false;
     return true;

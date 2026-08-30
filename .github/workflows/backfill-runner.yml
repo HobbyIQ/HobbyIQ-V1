@@ -153,6 +153,9 @@ on:
           - repair-trailing-comma-player-names
           - repair-isauto-from-cardnumber-catalog
           - conform-one-of-one-parallels
+          # D23 (2026-08-30): the id carries the product -- the rename fleet
+          # (MODE=product | hyphen | holdings | estimate; SCOPE, SOURCES).
+          - rename-setkey-to-product
       apply:
         description: "Actually write (true) or dry-run only (false)"
         required: true
@@ -183,7 +186,7 @@ on:
         required: false
         default: "16"
       scope:
-        description: "For repair-refractor-mislabel: 'refractor' (plain segment only) or 'all' (every parallel pool)."
+        description: "For repair-refractor-mislabel: 'refractor' (plain segment only) or 'all' (every parallel pool). For rename-setkey-to-product MODE=product: comma-separated ruled product keys (e.g. topps-series-1,leaf-metal); the default here or 'all' = every ruled product."
         required: false
         default: "refractor"
         type: string
@@ -203,7 +206,7 @@ on:
         default: ""
         type: string
       sources:
-        description: "Comma-separated catalog sources (SOURCES env) -- REQUIRED for retire-exploded-checklist-rows mode=source and for audit-source-coverage (the OLD sources; `scope` is the replacement source)"
+        description: "Comma-separated catalog sources (SOURCES env) -- REQUIRED for retire-exploded-checklist-rows mode=source, for audit-source-coverage (the OLD sources; `scope` is the replacement source), and for rename-setkey-to-product mode=hyphen (the sources whose hyphen-free card numbers fold onto the checklist's spelling, e.g. bccp)"
         required: false
         type: string
         default: ""
@@ -237,7 +240,7 @@ on:
         default: false
         type: boolean
       mode:
-        description: "For canonicalize-vendor-shaped-rows: 'vendor' (id is not a hiq slug) or 'nopk' (cardId missing entirely). For repair-parallel-subset-fold: 'prefix' or 'glue'. Empty = the script's default."
+        description: "For canonicalize-vendor-shaped-rows: 'vendor' (id is not a hiq slug) or 'nopk' (cardId missing entirely). For repair-parallel-subset-fold: 'prefix' or 'glue'. For rename-setkey-to-product: 'product' (the catalog rename, sharded), 'hyphen' (needs sources), 'holdings' (slot 0), 'estimate' (read-only counts). Empty = the script's default."
         required: false
         default: ""
       shard_hex:
@@ -1085,6 +1088,29 @@ jobs:
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=conform-one-of-one-parallels -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sports="${{ inputs.sports }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (repaired=${N:-0}) — done, no re-dispatch."
+          fi
+
+      - name: Self-relaunch the setKey rename until the slot is clean
+        # D23 (CF-THE-ID-CARRIES-THE-PRODUCT). Stops at its own 140-minute
+        # budget and PRINTS its summary; a run killed by the 150-minute step
+        # ceiling prints nothing. CF-RELAUNCH-ONLY-ON-BUDGET (#1361): relaunch
+        # iff the marker printed, never on a count; every input forwarded
+        # verbatim (mode / sports / years / scope / sources), so the relaunch
+        # is the same dispatch.
+        if: ${{ !cancelled() && inputs.script == 'rename-setkey-to-product' && inputs.apply == true }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        working-directory: backend
+        run: |
+          set +e
+          N=$(grep -aoE "^  RENAMED +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          echo "renamed=${N:-0}"
+          if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
+            echo "::notice::budget hit (renamed=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=rename-setkey-to-product -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f sources="${{ inputs.sources }}"
+          else
+            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (renamed=${N:-0}) — done, no re-dispatch."
           fi
 
       - name: Self-relaunch the checklist-backing annotation until the slot is clean

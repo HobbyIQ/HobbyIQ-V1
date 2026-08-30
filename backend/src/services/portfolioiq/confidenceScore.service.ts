@@ -18,6 +18,7 @@
 
 import type { RecordSoldCompInput } from "./soldCompsStore.service.js";
 import { parseListingIdentity } from "./parseTitleIdentity.service.js";
+import { sameCardNumber } from "./hobbyIqCardId.service.js";
 
 export interface ConfidenceInput {
   row: RecordSoldCompInput;
@@ -122,7 +123,7 @@ export async function scoreRow(input: ConfidenceInput): Promise<ConfidenceOutput
     let checks = 0;
     if (row.cardNumber && parsed.cardNumber) {
       checks++;
-      if (row.cardNumber.toUpperCase() === parsed.cardNumber.toUpperCase()) agree++;
+      if (sameCardNumber(row.cardNumber, parsed.cardNumber)) agree++;
     }
     if (row.parallel && parsed.parallel) {
       checks++;

@@ -231,14 +231,16 @@ describe("computeHobbyIqCardId — set key controlled vocabulary", () => {
     expect(slug).toContain(":bowman-chrome:");
   });
 
-  it("Topps Chrome Update → topps-chrome (subset collapses per CF-CHROME-SUBSET-COLLAPSE)", () => {
+  it("Topps Chrome Update → topps-chrome-update-series (D23 supersedes CF-CHROME-SUBSET-COLLAPSE)", () => {
     const slug = computeHobbyIqCardId({
       sport: "baseball", year: 2024, setKey: "2024 Topps Chrome Update Series",
       cardNumber: "US1", parallel: "Base", isAuto: false,
     });
-    // Update subset collapses to parent topps-chrome (buyers don't
-    // distinguish subset; only Sapphire/Platinum/Black stay separate).
-    expect(slug).toContain(":topps-chrome:");
+    // CF-THE-ID-CARRIES-THE-PRODUCT (Drew, 2026-08-30): the id carries the
+    // product as the checklist names it. Update Series is its own key; the
+    // topps-chrome FAMILY (productSetKeys) is what pricing may cross into.
+    expect(slug).toContain(":topps-chrome-update-series:");
+    expect(slug).not.toContain(":topps-chrome:");
   });
 
   it("Panini Prizm collapses to panini-prizm", () => {

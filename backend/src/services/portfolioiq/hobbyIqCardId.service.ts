@@ -42,6 +42,7 @@ import { chromeRefractorSuffixForVariation, normalizeVariationSlug } from "../ca
 import { POKEMON_SET_ALIASES } from "../catalog/pokemonSetAliases.js";
 import { YUGIOH_SET_ALIASES, MTG_SET_ALIASES } from "../catalog/tcgSetAliases.js";
 import { JAPANESE_POKEMON_SET_ALIASES } from "../catalog/japanesePokemonAliases.js";
+import { productParentOf, productSetKeyForName, spellForEra } from "../catalog/productSetKeys.js";
 export interface HobbyIqCardIdComponents {
   sport: string;              // e.g. "baseball"
   year: number;               // e.g. 2026
@@ -772,59 +773,16 @@ export function deriveBrand(setKey: string): string {
  *  parent setKey — the base product this one is a variant or subset of.
  *  Top-level products (topps, bowman) return null.
  *
- *  Chains (each row: setKey → parent):
- *    topps-traded-tiffany → topps-traded
- *    topps-traded         → topps
- *    topps-tiffany        → topps
- *    topps-update-sapphire → topps-update
- *    topps-update         → topps
- *    topps-chrome-sapphire → topps-chrome
- *    topps-chrome-platinum → topps-chrome
- *    topps-chrome-black    → topps-chrome
- *    topps-chrome         → topps
- *    bowman-chrome-sapphire → bowman-chrome
- *    bowman-chrome        → bowman
- *    bowman-draft-paper   → bowman-draft
- *    bowman-draft         → bowman
- *    every other topps-*  → topps
- *    every other bowman-* → bowman
- *    every panini-*       → panini
- *
- *  Callers use this for FMV fallback: if a Traded Tiffany card has thin
- *  comps, walk up the chain to Traded, then to flagship Topps for a
- *  wider comparison pool. Also useful for aggregation queries. */
+ *  CF-THE-ID-CARRIES-THE-PRODUCT (D23). The chain is READ FROM THE TABLE
+ *  (productSetKeys.ts), never derived from a prefix of the key: the old
+ *  fallback `startsWith("topps-") → "topps"` was the family as a string
+ *  accident, and a product the table does not name has no parent rather
+ *  than a guessed one. A legacy spelling (`topps-update`) answers with its
+ *  product's parent. Callers use this for FMV fallback and for
+ *  catalogVerify's family step: a Traded Tiffany card with thin comps walks
+ *  to Traded, then to flagship Topps. */
 export function deriveParentSetKey(setKey: string): string | null {
-  if (!setKey) return null;
-  // Traded/Tiffany chain (Traded Tiffany is a variant of Traded).
-  if (setKey === "topps-traded-tiffany") return "topps-traded";
-  if (setKey === "topps-traded") return "topps";
-  if (setKey === "topps-tiffany") return "topps";
-  // Update chain.
-  if (setKey === "topps-update-sapphire") return "topps-update";
-  if (setKey === "topps-update") return "topps";
-  // Chrome variants under Topps Chrome.
-  if (setKey === "topps-chrome-sapphire") return "topps-chrome";
-  if (setKey === "topps-chrome-platinum") return "topps-chrome";
-  if (setKey === "topps-chrome-black") return "topps-chrome";
-  // Bowman Chrome variants.
-  if (setKey === "bowman-chrome-sapphire") return "bowman-chrome";
-  // Bowman Draft variants.
-  if (setKey === "bowman-draft-paper") return "bowman-draft";
-  if (setKey === "bowman-draft") return "bowman";
-  // Bowman paper.
-  if (setKey === "bowman-paper") return "bowman";
-  // Roots.
-  if (setKey === "topps" || setKey === "bowman" || setKey === "panini") return null;
-  if (setKey === "o-pee-chee") return null;
-  if (setKey === "upper-deck" || setKey === "fleer" || setKey === "pinnacle" || setKey === "goudey") return null;
-  // Fallback: strip last-segment for hyphenated topps-*/bowman-* → parent brand.
-  if (setKey.startsWith("topps-")) return "topps";
-  if (setKey.startsWith("bowman-")) return "bowman";
-  if (setKey.startsWith("panini-") || setKey === "national-treasures") return "panini";
-  if (setKey.startsWith("upper-deck-") || setKey === "sp-authentic" || setKey === "sp-prospects") return "upper-deck";
-  if (setKey.startsWith("fleer-") || setKey === "flair") return "fleer";
-  if (setKey.startsWith("pinnacle-")) return "pinnacle";
-  return null;
+  return productParentOf(setKey);
 }
 
 /** Normalize setKey — accepts either an already-normalized short form
@@ -887,6 +845,15 @@ export function stripYearAndSport(slug: string): string {
 
 export function normalizeSetKey(setName: string): string {
   const s = stripYearAndSport(slugify(setName));
+  // CF-THE-ID-CARRIES-THE-PRODUCT (D23, Drew 2026-08-30). The product table
+  // answers FIRST: "Topps Series 1" is topps-series-1, "Topps Update" and
+  // "Topps Update Series" are one product (topps-update-series), "Bowman
+  // Draft 1st Edition" is another set, "Leaf Metal" is leaf-metal. Every
+  // one of these used to fall to a family rule below (`/topps/`, `/leaf/`)
+  // and mint the family as the identity. The regex vocabulary keeps
+  // everything the table does not name, its catch-alls included.
+  const named = productSetKeyForName(s);
+  if (named) return named;
   for (const [re, canonical] of knownSetKeyPatterns()) {
     if (re.test(s)) return canonical;
   }
@@ -894,6 +861,15 @@ export function normalizeSetKey(setName: string): string {
     if (re.test(s)) return canonical;
   }
   return s;
+}
+
+/** Every key the regex vocabulary can emit — for the guard that checks the
+ *  product table knows the family of each of them. */
+export function vocabularyDestinations(): string[] {
+  const out = new Set<string>();
+  for (const [, k] of knownSetKeyPatterns()) out.add(k);
+  for (const [, k] of bareAliasPatterns()) out.add(k);
+  return [...out].sort();
 }
 
 
@@ -922,9 +898,57 @@ export function matchKnownProductLine(text: string): string | null {
 }
 
 /** Normalize cardNumber: lowercase, kept literal. Preserves letters,
- *  digits, and internal hyphens (CPA-EHA → cpa-eha, BCP-102 → bcp-102). */
+ *  digits, and internal hyphens (CPA-EHA → cpa-eha, BCP-102 → bcp-102).
+ *  CF-THE-ID-CARRIES-THE-PRODUCT (D23, ruling d): the checklist's hyphen IS
+ *  the canonical spelling of the segment (bd-152, cpa-tg); a source that
+ *  drops it (bccp "BD152", a PSA label) is matched hyphen-insensitively by
+ *  sameCardNumber / cardNumberVariants below, and folded onto the
+ *  checklist's spelling by the rename fleet when the twin exists. */
 function normalizeCardNumber(cardNumber: string): string {
   return slugify(cardNumber);
+}
+
+/** A card number with everything but its letters and digits removed,
+ *  upper-cased: BD-152, bd152 and "BD 152" fold to BD152. Empty for an
+ *  empty input. */
+export function foldCardNumber(raw: string | null | undefined): string {
+  return String(raw ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
+/** CF-THE-ID-CARRIES-THE-PRODUCT (D23, ruling d): every card-number
+ *  comparison is hyphen- and case-insensitive. bd152 ≡ BD-152 ≡ bd-152.
+ *  Two empty numbers are NOT the same card. */
+export function sameCardNumber(a: string | null | undefined, b: string | null | undefined): boolean {
+  const fa = foldCardNumber(a);
+  return fa !== "" && fa === foldCardNumber(b);
+}
+
+/**
+ * The spellings a stored card number may have for an index-friendly
+ * `c.cardNumber IN (...)`: the raw text, upper, lower, the hyphen-free
+ * fold, and — when the raw carries no hyphen and is letters-then-digits —
+ * the checklist's hyphenated form (BD152 → BD-152). Equality against
+ * literals uses the index; UPPER()/REPLACE() on the column would not
+ * (CF-RESOLVER-INDEX-FRIENDLY). Deduped; never empty for a non-empty input.
+ */
+export function cardNumberVariants(raw: string | null | undefined): string[] {
+  const s = String(raw ?? "").trim();
+  if (!s) return [];
+  const upper = s.toUpperCase();
+  const folded = foldCardNumber(s);
+  const out = new Set<string>([s, upper, s.toLowerCase()]);
+  if (folded) { out.add(folded); out.add(folded.toLowerCase()); }
+  const m = /^([A-Z]+)(\d+)$/.exec(folded);
+  if (m && !upper.includes("-")) { out.add(`${m[1]}-${m[2]}`); out.add(`${m[1]}-${m[2]}`.toLowerCase()); }
+  return [...out].filter(Boolean);
+}
+
+/** `c.cardNumber IN (@n0, @n1, …)` and its parameters, for the variants
+ *  above. Splice `sql` into ONE template literal so catalogQuerySchema's
+ *  guard still sees the query. */
+export function cardNumberInClause(raw: string | null | undefined, prefix = "@n"): { sql: string; params: Array<{ name: string; value: string }> } {
+  const params = cardNumberVariants(raw).map((v, i) => ({ name: `${prefix}${i}`, value: v }));
+  return { sql: params.map((p) => p.name).join(", "), params };
 }
 
 /** Normalize parallel to a canonical slug. Caller MUST pass the
@@ -1333,11 +1357,12 @@ export function resolveSetKeyForSlug(sport: string, setName: string, year: numbe
     : normalizeSetKey(setName);
   // CF-PANINI-IS-ANACHRONISTIC-BEFORE-2009: Panini did not acquire Donruss
   // until 2009, so a 1987 "Donruss" card must not be stamped panini-donruss.
-  // Applied after normalization so it corrects the canonical key rather than
-  // racing the vocabulary that produces it.
-  return (rawSetKey === "panini-donruss" && year > 0 && year < 2009)
-    ? "donruss"
-    : rawSetKey;
+  // CF-THE-ID-CARRIES-THE-PRODUCT (D23, ruling b): the maker prefix is kept
+  // on Panini-era products and the era decides the spelling — the rule and
+  // its switch live in productSetKeys (DONRUSS_SPELLING_POLICY). Applied
+  // after normalization so it corrects the canonical key rather than racing
+  // the vocabulary that produces it.
+  return spellForEra(rawSetKey, year);
 }
 
 /** Compute the canonical hobbyiqCardId slug for a card. Same inputs

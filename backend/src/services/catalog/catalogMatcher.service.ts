@@ -21,11 +21,13 @@
 
 import { CosmosClient, type Container } from "@azure/cosmos";
 import {
+  cardNumberInClause,
   computeHobbyIqCardId,
   normalizeSetKey,
   slugify,
   type HobbyIqCardIdComponents,
 } from "../portfolioiq/hobbyIqCardId.service.js";
+import { productFamilyOf, productRefinementsOf } from "./productSetKeys.js";
 
 const COSMOS_DATABASE = process.env.COSMOS_DATABASE ?? "hobbyiq";
 const CATALOG_CONTAINER = process.env.COSMOS_CARD_CATALOG_CONTAINER ?? "card_catalog";
@@ -170,18 +172,21 @@ export const PARALLEL_FAMILY_WORDS = [
 ] as const;
 
 /**
- * CF-VERIFIED-REFINEMENTS-ONLY (Drew rulings, 2026-08-28). The set-family
- * prefixes a bare key may widen into: the SERIES split (one continuous
- * numbering, measured — 2024 Topps S1 1,724 numbers, S2 443, ZERO overlap)
- * and the UPDATE series. A bare `STARTSWITH(setKey + "-")` would pull
- * topps-chrome into topps and let a chrome ladder answer flagship comps —
- * the bowman-chrome ≠ bowman merge in mirror image, refused here the same
- * way the batch mappers refuse it.
+ * CF-VERIFIED-REFINEMENTS-ONLY (Drew rulings, 2026-08-28). The set keys a
+ * plain product may widen into: the SERIES split (one continuous numbering,
+ * measured — 2024 Topps S1 1,724 numbers, S2 443, ZERO overlap) and the
+ * UPDATE series. A bare `STARTSWITH(setKey + "-")` would pull topps-chrome
+ * into topps and let a chrome ladder answer flagship comps — the
+ * bowman-chrome ≠ bowman merge in mirror image, refused here the same way
+ * the batch mappers refuse it.
+ *
+ * CF-THE-ID-CARRIES-THE-PRODUCT (D23). The refinements are READ FROM THE
+ * TABLE (productSetKeys `refines`), every spelling of them, as exact keys
+ * for an `IN (...)` — not prefixes: `topps-series` as a prefix would have
+ * admitted topps-series-1-1st-edition, which is another set.
  */
-export function widenedSetKeyPrefixes(setKey: string): string[] {
-  const k = String(setKey ?? "").trim();
-  if (!k) return [];
-  return [`${k}-series`, `${k}-update`];
+export function widenedSetKeys(setKey: string): string[] {
+  return productRefinementsOf(setKey);
 }
 
 /**
@@ -712,13 +717,16 @@ export async function variationParallelsForCard(input: { sport: string; year: nu
   const container = await getContainer();
   if (!container) return [];
   try {
+    // CF-THE-ID-CARRIES-THE-PRODUCT (D23, ruling d): hyphen-insensitive,
+    // as an index-friendly IN over the spellings.
+    const num = cardNumberInClause(input.cardNumber);
     const { resources } = await container.items.query<{ id: string; parallelSlug?: string }>({
-      query: "SELECT c.id, c.parallelSlug FROM c WHERE c.sport = @s AND c.year = @y AND c.setKey = @k AND c.cardNumber = @n AND CONTAINS(c.parallelSlug, 'variation') OFFSET 0 LIMIT 50",
+      query: `SELECT c.id, c.parallelSlug FROM c WHERE c.sport = @s AND c.year = @y AND c.setKey = @k AND c.cardNumber IN (${num.sql}) AND CONTAINS(c.parallelSlug, 'variation') OFFSET 0 LIMIT 50`,
       parameters: [
         { name: "@s", value: String(input.sport).toLowerCase() },
         { name: "@y", value: input.year },
         { name: "@k", value: input.setKey },
-        { name: "@n", value: String(input.cardNumber).toUpperCase() },
+        ...num.params,
       ],
     }).fetchAll();
     return (resources ?? []).map((r) => String(r.parallelSlug ?? parallelSegmentOf(r.id) ?? "")).filter(Boolean);
@@ -1023,17 +1031,18 @@ async function canonicalizeImpl(input: CatalogMatchInput): Promise<CatalogMatchR
       // fields actually read, drop the ORDER BY, and sort in memory — a card
       // has far fewer than 300 parallels, so we still receive the complete
       // candidate set and the in-memory sort is exactly as deterministic.
+      // CF-MATCHER-QUERY-COST: the spellings are literals HERE, not a function
+      // in SQL. UPPER() on the column defeats the index — measured 532.9 RU vs
+      // 82.3 RU for an identical 49-row result set. CF-THE-ID-CARRIES-THE-
+      // PRODUCT (D23, ruling d): the IN carries the hyphen-free and the
+      // hyphenated spellings too, so BD152 finds the checklist's BD-152.
+      const num = cardNumberInClause(components.cardNumber);
       const { resources } = await container.items.query({
-        query: "SELECT c.id, c.parallelSlug, c.parallel, c.printRun FROM c WHERE c.sport = @s AND c.year = @y AND c.cardNumber = @n AND c.isAuto = @a AND c.setKey = @sk OFFSET 0 LIMIT 300",
+        query: `SELECT c.id, c.parallelSlug, c.parallel, c.printRun FROM c WHERE c.sport = @s AND c.year = @y AND c.cardNumber IN (${num.sql}) AND c.isAuto = @a AND c.setKey = @sk OFFSET 0 LIMIT 300`,
         parameters: [
           { name: "@s", value: components.sport },
           { name: "@y", value: components.year },
-          // CF-MATCHER-QUERY-COST: uppercased HERE, not in SQL. UPPER() on the
-          // column defeats the index — measured 532.9 RU vs 82.3 RU for an
-          // identical 49-row result set. card_catalog stores cardNumber
-          // already-uppercase (3,361 of 4,000 sampled upper, 0 lower), so
-          // this is the same comparison at 6.5x lower cost.
-          { name: "@n", value: components.cardNumber.toUpperCase() },
+          ...num.params,
           { name: "@a", value: components.isAuto },
           { name: "@sk", value: components.setKey },
         ],
@@ -1136,17 +1145,19 @@ async function canonicalizeImpl(input: CatalogMatchInput): Promise<CatalogMatchR
       // parallel inference at once is two guesses stacked. Same print-run
       // rejection and ungraded preference as the exact pool.
       if (pool.length === 0) {
-        const prefixes = widenedSetKeyPrefixes(components.setKey);
-        if (prefixes.length === 2) {
+        const refinements = widenedSetKeys(components.setKey);
+        if (refinements.length > 0) {
+          const num = cardNumberInClause(components.cardNumber);
+          const refParams = refinements.map((k, i) => ({ name: `@r${i}`, value: k }));
+          const refIn = refParams.map((p) => p.name).join(", ");
           const { resources: widened } = await container.items.query({
-            query: "SELECT c.id, c.parallelSlug, c.parallel, c.printRun FROM c WHERE c.sport = @s AND c.year = @y AND c.cardNumber = @n AND c.isAuto = @a AND (STARTSWITH(c.setKey, @p0) OR STARTSWITH(c.setKey, @p1)) OFFSET 0 LIMIT 300",
+            query: `SELECT c.id, c.parallelSlug, c.parallel, c.printRun FROM c WHERE c.sport = @s AND c.year = @y AND c.cardNumber IN (${num.sql}) AND c.isAuto = @a AND c.setKey IN (${refIn}) OFFSET 0 LIMIT 300`,
             parameters: [
               { name: "@s", value: components.sport },
               { name: "@y", value: components.year },
-              { name: "@n", value: components.cardNumber.toUpperCase() },
+              ...num.params,
               { name: "@a", value: components.isAuto },
-              { name: "@p0", value: prefixes[0]! },
-              { name: "@p1", value: prefixes[1]! },
+              ...refParams,
             ],
           }).fetchAll();
           const widenedBest = (widened as Array<{ id: string; parallelSlug?: string; parallel?: string; printRun?: number | null }>)
@@ -1180,10 +1191,11 @@ async function canonicalizeImpl(input: CatalogMatchInput): Promise<CatalogMatchR
 
   // Step 3: family fallback — same year/cardNumber/isAuto but a
   // related setKey (bowman-chrome-updates → bowman-chrome). Only fires
-  // when the incoming set has a `-` hierarchy.
-  const familyKey = components.setKey.includes("-")
-    ? components.setKey.split("-").slice(0, 2).join("-")
-    : components.setKey;
+  // when the table puts the incoming set inside a wider family
+  // (CF-THE-ID-CARRIES-THE-PRODUCT: read from productSetKeys, never from
+  // the first two segments — topps-series-1 → topps is a family, and
+  // bowman-draft-1st-edition → nothing, because 1st Edition is another set).
+  const familyKey = productFamilyOf(components.setKey);
   if (familyKey && familyKey !== components.setKey) {
     try {
       // CF-PARALLEL-IS-IDENTITY (Drew, 2026-08-13). This step legitimately
@@ -1199,17 +1211,15 @@ async function canonicalizeImpl(input: CatalogMatchInput): Promise<CatalogMatchR
       // 0.98 exact match. Crossing the family ladder is defensible; silently
       // changing which card it is, is not.
       // Same projection + no cross-partition sort as Step 2 (CF-MATCHER-QUERY-COST).
+      // CF-MATCHER-QUERY-COST: spellings as literals, never UPPER() on the
+      // column (see Step 2); hyphen-insensitive per D23 ruling d.
+      const num = cardNumberInClause(components.cardNumber);
       const { resources } = await container.items.query({
-        query: "SELECT c.id, c.parallelSlug, c.parallel FROM c WHERE c.sport = @s AND c.year = @y AND c.cardNumber = @n AND c.isAuto = @a AND c.setKey = @fk OFFSET 0 LIMIT 300",
+        query: `SELECT c.id, c.parallelSlug, c.parallel FROM c WHERE c.sport = @s AND c.year = @y AND c.cardNumber IN (${num.sql}) AND c.isAuto = @a AND c.setKey = @fk OFFSET 0 LIMIT 300`,
         parameters: [
           { name: "@s", value: components.sport },
           { name: "@y", value: components.year },
-          // CF-MATCHER-QUERY-COST: uppercased HERE, not in SQL. UPPER() on the
-          // column defeats the index — measured 532.9 RU vs 82.3 RU for an
-          // identical 49-row result set. card_catalog stores cardNumber
-          // already-uppercase (3,361 of 4,000 sampled upper, 0 lower), so
-          // this is the same comparison at 6.5x lower cost.
-          { name: "@n", value: components.cardNumber.toUpperCase() },
+          ...num.params,
           { name: "@a", value: components.isAuto },
           { name: "@fk", value: familyKey },
         ],

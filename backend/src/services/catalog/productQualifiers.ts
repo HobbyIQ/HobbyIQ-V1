@@ -13,16 +13,15 @@
  * Bowman), "Update" — is identity, not noise: a sale whose title says one of
  * them must not be pooled under the plain product's slug.
  *
- * The table is small and explicit. Two moves are REFUSED on purpose and
+ * The table is small and explicit. One move is REFUSED on purpose and
  * reported, never made by a bot:
  *   bowman → bowman-chrome     Bowman's own Chrome Prospects (BCP-, CPA-)
  *                              say "Chrome" in every title; the family
  *                              ladder refuses bowman ↔ bowman-chrome (the
  *                              bcp-125 NEEDS DREW ruling).
- *   topps-chrome → (Update)    the grammar collapses Topps Chrome Update into
- *                              topps-chrome (CF-CHROME-SUBSET-COLLAPSE) while
- *                              the checklist holds topps-chrome-update-series
- *                              — a vocabulary ruling.
+ * topps-chrome → (Update) was refused too, waiting on a vocabulary ruling;
+ * D23 (CF-THE-ID-CARRIES-THE-PRODUCT, Drew 2026-08-30) made it: the id
+ * carries topps-chrome-update-series, and the move is made.
  * Used by the ingest seam (persistVendorSalesToPool) and by
  * repair-parallel-from-title MODE=product (through dist).
  */
@@ -52,13 +51,19 @@ export const PRODUCT_QUALIFIERS: ReadonlyArray<QualifierRule> = [
       "bowman-draft": "bowman-draft-sapphire",
       "topps-chrome": "topps-chrome-sapphire",
       "topps-update": "topps-update-sapphire",
+      "topps-update-series": "topps-update-sapphire",
+      "topps-chrome-update-series": "topps-chrome-update-sapphire",
     },
   },
   {
     qualifier: "Update",
     re: /\bupdate\b/i,
-    moves: { "topps": "topps-update" },
-    refuse: { "topps-chrome": "vocabulary: the slug grammar collapses Topps Chrome Update into topps-chrome (CF-CHROME-SUBSET-COLLAPSE) while the checklist holds topps-chrome-update-series — a ruling, not a bot move" },
+    // CF-THE-ID-CARRIES-THE-PRODUCT (D23, Drew 2026-08-30): the vocabulary
+    // ruling this rule used to wait for. The id carries the product as the
+    // checklist names it — topps-update-series, topps-chrome-update-series —
+    // so "Update" in a title moves the plain product to the Update series,
+    // Chrome included.
+    moves: { "topps": "topps-update-series", "topps-chrome": "topps-chrome-update-series" },
   },
   {
     qualifier: "Chrome",
