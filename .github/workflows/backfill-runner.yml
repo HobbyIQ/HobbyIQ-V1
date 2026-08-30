@@ -173,6 +173,13 @@ on:
           - run-ebay-order-poll
           - run-ebay-finances-enrichment
           - run-ebay-purchase-sync
+          # D37 (2026-08-30): the BUY side into the pool. Replays every
+          # eBay-origin holding that carries a pinned hiq slug through
+          # recordSoldComp under the D9 purchase key, for the rows created
+          # before the emit existed or pinned after it ran. Cosmos only -- it
+          # calls no eBay API, so it needs none of the app credentials above.
+          # REPORT ONLY unless apply=true; shards by portfolio user.
+          - backfill-ebay-purchase-comps
           # D33 (2026-08-30): the five stored-row repairs behind Drew's "still
           # a mess" on 2020 Bowman Draft BD-152. MODE is REQUIRED and has no
           # default -- card-as-parallel | chrome-ladder | first-edition |
@@ -773,6 +780,30 @@ jobs:
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=backfill-ebay-account-sales -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f limit="${{ inputs.limit }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (recorded=$N) -- done, no re-dispatch."
+          fi
+
+      - name: Self-relaunch the eBay purchase-comp backfill until every user is replayed
+        # D37. Same contract as D26 above: the script stops at its OWN
+        # 140-minute budget and prints the marker, so this step relaunches on
+        # the MARKER and never on a count. A count gate would loop forever on a
+        # slot whose holdings are all already in the pool -- every replay of a
+        # present row is counted as alreadyPresent, not written, so "written=0"
+        # is the healthy steady state here, not a reason to stop or to go again.
+        if: ${{ !cancelled() && inputs.script == 'backfill-ebay-purchase-comps' && inputs.apply == true }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        working-directory: backend
+        run: |
+          set +e
+          N=$(grep -aoE "^  rows written +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          N=${N:-0}
+          echo "ebay_purchase_comps_written=$N"
+          if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
+            echo "::notice::budget hit (written=$N) -- re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=backfill-ebay-purchase-comps -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f limit="${{ inputs.limit }}"
+          else
+            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (written=$N) -- done, no re-dispatch."
           fi
 
       - name: Self-relaunch the numbered-Base retirement until nothing retires
