@@ -6,7 +6,7 @@
  * …:num-499 (checklistcenter, /499) — and 35 sales the card page could not see.
  */
 import { describe, expect, it } from "vitest";
-import { numberedTwinsOf, pickCatalogRow } from "../src/services/catalog/catalogIdentityResolver.js";
+import { numberedTwinsOf, pickCatalogRow, poolReadIdsFor } from "../src/services/catalog/catalogIdentityResolver.js";
 
 const MWI = "hiq:baseball:2025:bowman-draft:cpa-mwi:refractor:auto";
 const MWI_499 = `${MWI}:num-499`;
@@ -53,6 +53,39 @@ describe("pickCatalogRow -- a numbered id (the #1509 direction, preserved)", () 
   it("with neither is nothing; another print run is not its twin", () => {
     expect(pickCatalogRow(MWI_499, []).kind).toBe("none");
     expect(pickCatalogRow(MWI_499, [MWI_250]).kind).toBe("none");
+  });
+});
+
+describe("pickCatalogRow -- several twins: the checklist authority names the card (the secondary refutation)", () => {
+  const CHECKLIST = { id: MWI_499, source: "checklistcenter-2026-08-29" };
+  const VENDOR_500 = { id: `${MWI}:num-500`, source: "cardhedge" };
+  const DERIVED_250 = { id: MWI_250, source: "sold-comps-stub" };
+  it("one checklist twin beside a vendor twin: the checklist row, chosenBy authority, both twins listed", () => {
+    expect(pickCatalogRow(MWI, [CHECKLIST, VENDOR_500])).toEqual({
+      requested: MWI, id: MWI_499, kind: "numbered-twin", twins: [MWI_499, `${MWI}:num-500`], chosenBy: "authority",
+    });
+    expect(pickCatalogRow(MWI, [VENDOR_500, DERIVED_250, CHECKLIST]).id).toBe(MWI_499);
+  });
+  it("two checklist authorities that disagree on the print run: ambiguous (a ruling, not a guess)", () => {
+    expect(pickCatalogRow(MWI, [CHECKLIST, { id: MWI_250, source: "beckett-checklist" }])).toMatchObject({ id: null, kind: "ambiguous", twins: [MWI_250, MWI_499] });
+  });
+  it("no authority among several twins: ambiguous", () => {
+    expect(pickCatalogRow(MWI, [VENDOR_500, DERIVED_250])).toMatchObject({ id: null, kind: "ambiguous" });
+  });
+  it("a single twin is the card whatever its source (unchanged); bare ids are read as source-less", () => {
+    expect(pickCatalogRow(MWI, [VENDOR_500])).toEqual({ requested: MWI, id: `${MWI}:num-500`, kind: "numbered-twin", twins: [`${MWI}:num-500`] });
+    expect(pickCatalogRow(MWI, [MWI_499, MWI_250])).toMatchObject({ kind: "ambiguous" });
+  });
+});
+
+describe("poolReadIdsFor -- which pool keys a reader unions", () => {
+  it("numbered-twin: the id and its ONE twin; every other kind the id alone", () => {
+    expect(poolReadIdsFor(MWI, pickCatalogRow(MWI, [MWI_499, GOLD_50]))).toEqual([MWI, MWI_499]);
+    expect(poolReadIdsFor(MWI, pickCatalogRow(MWI, [MWI, MWI_499]))).toEqual([MWI]);
+    expect(poolReadIdsFor(MWI, pickCatalogRow(MWI, [MWI_499, MWI_250]))).toEqual([MWI]);
+    expect(poolReadIdsFor(MWI, pickCatalogRow(MWI, []))).toEqual([MWI]);
+    expect(poolReadIdsFor(MWI_499, pickCatalogRow(MWI_499, [MWI]))).toEqual([MWI_499]);
+    expect(poolReadIdsFor(VENDOR, null)).toEqual([VENDOR]);
   });
 });
 

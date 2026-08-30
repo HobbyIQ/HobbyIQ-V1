@@ -25,7 +25,7 @@ describe("catalogSlugIfExists -- the numbered-twin regex matches digits", () => 
   });
   it("catalogSlugIfExists defers to the one resolver — no second copy of the twin rule in the matcher", () => {
     const matcher = read("../src/services/catalog/catalogMatcher.service.ts");
-    expect(matcher).toMatch(/resolveIdentityToCatalogRow\(id\)/);
+    expect(matcher).toMatch(/resolveIdentityToCatalogRow\(id, \{ printRun/);
     expect(matcher).not.toMatch(/candidates\.push\(id\.replace/);
   });
 });

@@ -46,6 +46,7 @@
 import { CosmosClient, type Container } from "@azure/cosmos";
 import { isExactPoolRung } from "../compiq/fmvRung.js";
 import type { UnifiedPriceResult } from "../compiq/unifiedPricing.service.js";
+import { resolveIdentityToCatalogRow, type CatalogRowResolution } from "../catalog/catalogIdentityResolver.js";
 
 export const EXACT_POOL_WINDOW_DAYS = 180;
 
@@ -183,10 +184,12 @@ function soldCompsContainer(): Container | null {
  * counts both — deliberately: the resolver (catalogIdentityResolver) refuses
  * to name that card, and a card it cannot name must not be priced from a
  * sibling either; blocking the estimate is the safe side. The readers that
- * LIST or PRICE sales never union twins — they read the one row the resolver
- * names (soldCompsStore.poolReadIdFor). A holding whose cardId /
- * hobbyiqCardId the resolver normalized to …:num-N forms its attempts from
- * that id directly: unifiedIdentityAttempts needs no printRun for it.
+ * LIST or PRICE sales union exactly the id and the ONE twin the resolver
+ * names (catalogIdentityResolver.poolReadIdsFor — the pool is not re-keyed
+ * until the D29 fleet runs), never a STARTSWITH over every twin. A holding
+ * whose cardId / hobbyiqCardId the resolver normalized to …:num-N forms its
+ * attempts from that id directly: unifiedIdentityAttempts needs no printRun
+ * for it.
  */
 export function exactSalesCountQuery(id: string, cutoff: string): { query: string; parameters: Array<{ name: string; value: string }> } {
   const column = isHiqSlug(id) ? "c.hobbyiqCardId" : "c.cardId";
@@ -251,20 +254,30 @@ export interface ExactPoolAttempt {
   cardId: string;
   /** The slug handed as the union partner, when any. */
   hobbyiqCardId: string | null;
-  label: "hobbyiqCardId" | "hobbyiqCardId-twin" | "cardId+hobbyiqCardId" | "cardId" | "cardId-twin";
+  /** CF-AN-IDENTITY-RESOLVES-TO-ITS-ROW: the slug keys the pool is read
+   *  under in ONE query — the catalog's numbered row and the un-numbered id
+   *  it resolves from (one card, two keys until D29 re-keys the pool).
+   *  Absent = hobbyiqCardId alone. */
+  hobbyiqCardIds?: string[];
+  label: "hobbyiqCardId" | "hobbyiqCardId+numbered-twin" | "hobbyiqCardId-twin" | "cardId+hobbyiqCardId" | "cardId" | "cardId-twin";
 }
 
 /**
  * The order the unified engine is asked, per identity:
  *   1. hobbyiqCardId alone — the checklist identity's own pool, with no
  *      union that could let a wrong cardId's comps dilute it;
+ *      CF-AN-IDENTITY-RESOLVES-TO-ITS-ROW: when the resolver says the
+ *      slug is an un-numbered id whose ONE catalog row is its numbered twin
+ *      (kind "numbered-twin"), the first attempt reads BOTH keys in one
+ *      query — the same union recent-sales lists — and the two halves are
+ *      never re-tried alone (each is a subset of the union);
  *   2. its numbered / un-numbered twin alone;
  *   3. cardId ∪ hobbyiqCardId — today's shape, for holdings whose cardId
  *      is a vendor id whose rows never got a slug;
  *   4. cardId's twin, when cardId is itself a slug.
  * Pure.
  */
-export function unifiedIdentityAttempts(h: HoldingIdentityFields): ExactPoolAttempt[] {
+export function unifiedIdentityAttempts(h: HoldingIdentityFields, resolution?: CatalogRowResolution | null): ExactPoolAttempt[] {
   const attempts: ExactPoolAttempt[] = [];
   const seen = new Set<string>();
   const add = (a: ExactPoolAttempt) => {
@@ -281,7 +294,23 @@ export function unifiedIdentityAttempts(h: HoldingIdentityFields): ExactPoolAtte
     if (printRun !== null) return `${slug}:num-${printRun}`;
     return null;
   };
-  if (hiq) {
+  // The resolver's numbered-twin answer for THIS slug, whichever half the
+  // caller handed us (the valuation entry passes the catalog row; a holding
+  // passes the un-numbered id it still carries).
+  const twinUnion = hiq && resolution && resolution.kind === "numbered-twin" && resolution.id
+    && (resolution.requested === hiq || resolution.id === hiq)
+    ? { row: resolution.id, unnumbered: resolution.requested }
+    : null;
+  if (hiq && twinUnion) {
+    add({
+      cardId: twinUnion.row,
+      hobbyiqCardId: twinUnion.row,
+      hobbyiqCardIds: [twinUnion.row, twinUnion.unnumbered],
+      label: "hobbyiqCardId+numbered-twin",
+    });
+    seen.add(`${twinUnion.row}|${twinUnion.row}`);
+    seen.add(`${twinUnion.unnumbered}|${twinUnion.unnumbered}`);
+  } else if (hiq) {
     add({ cardId: hiq, hobbyiqCardId: hiq, label: "hobbyiqCardId" });
     const twin = twinOf(hiq);
     if (twin) add({ cardId: twin, hobbyiqCardId: twin, label: "hobbyiqCardId-twin" });
@@ -320,14 +349,33 @@ export async function priceHoldingFromExactPool(
     /** CF-ONE-VALUATION-PATH (D16): every tier of the returned curve at its
      *  own density-chosen window, so the curve IS the headline per tier. */
     perTierWindows?: boolean;
+    /** CF-AN-IDENTITY-RESOLVES-TO-ITS-ROW: the resolver's answer for the
+     *  holding's slug, when the caller already has it (the valuation entry
+     *  resolves once). Omitted (undefined) = resolve here, memoized, so the
+     *  portfolio callers (autoPriceHolding, the reprice job) read the same
+     *  union the routes read. `null` = resolved to nothing, do not resolve. */
+    resolution?: CatalogRowResolution | null;
   },
 ): Promise<ExactPoolPrice | null> {
-  const attempts = unifiedIdentityAttempts(h);
+  let resolution = opts.resolution;
+  if (resolution === undefined) {
+    resolution = null;
+    const hiq = isHiqSlug(h.hobbyiqCardId) ? h.hobbyiqCardId.trim() : null;
+    if (hiq && !NUM_SUFFIX.test(hiq)) {
+      try {
+        resolution = await resolveIdentityToCatalogRow(hiq, { printRun: positiveInt(h.printRun) });
+      } catch {
+        resolution = null;
+      }
+    }
+  }
+  const attempts = unifiedIdentityAttempts(h, resolution);
   if (attempts.length === 0) return null;
   const { computeUnifiedPrice } = await import("../compiq/unifiedPricing.service.js");
   for (const attempt of attempts) {
     const u = await computeUnifiedPrice(attempt.cardId, {
       hobbyiqCardId: attempt.hobbyiqCardId,
+      hobbyiqCardIds: attempt.hobbyiqCardIds ?? null,
       grade: opts.grade,
       excludeContributorUserId: opts.excludeContributorUserId ?? null,
       playerName: opts.playerName ?? null,

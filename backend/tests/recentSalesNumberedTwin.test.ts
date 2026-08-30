@@ -3,7 +3,9 @@
  * asks GET /api/compiq/cards/:cardId/recent-sales with the holding's id. For
  * hiq:baseball:2025:bowman-draft:cpa-mwi:refractor:auto that answered count 0 while
  * …:num-499 — the only catalog row — had 35 sales. The route now resolves the id once,
- * reads under the row the identity IS, and says so (additive fields; `sales` and
+ * reads under the id AND its one twin (the pool is keyed both ways until the D29
+ * fleet re-keys it — …:cpa-sha:green:auto has 14 sales under the un-numbered key and
+ * 0 under the twin; a swap read 0), and says so (additive fields; `sales` and
  * `byGrade` unchanged).
  */
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
@@ -61,8 +63,8 @@ beforeAll(() => {
     items: {
       query(spec: { query: string; parameters: Array<{ name: string; value: unknown }> }) {
         h.queries.push(spec);
-        const key = spec.parameters.find((p) => p.name === "@cid")?.value;
-        return { async fetchAll() { return { resources: h.rows.filter((r) => r.hobbyiqCardId === key || r.cardId === key) }; } };
+        const keys = spec.parameters.filter((p) => p.name === "@cid" || p.name === "@cid1").map((p) => p.value);
+        return { async fetchAll() { return { resources: h.rows.filter((r) => keys.includes(r.hobbyiqCardId) || keys.includes(r.cardId)) }; } };
       },
     },
   } as unknown as Container);
@@ -81,19 +83,32 @@ beforeEach(() => {
 const H = { "x-session-id": "test-sess" };
 const get = (id: string) => request(app).get(`/api/compiq/cards/${encodeURIComponent(id)}/recent-sales?tier=all&days=365&limit=50`).set(H);
 
-describe("GET /cards/:cardId/recent-sales -- an un-numbered id reads its numbered twin", () => {
-  it("count 35, requestedCardId = the un-numbered id, resolvedCardId = …:num-499, identityKind numbered-twin", async () => {
+describe("GET /cards/:cardId/recent-sales -- an un-numbered id reads itself AND its numbered twin", () => {
+  it("count 35, requestedCardId = the un-numbered id, resolvedCardId = …:num-499, poolCardIds = both, identityKind numbered-twin", async () => {
     const res = await get(MWI);
     expect(res.status).toBe(200);
     // Mutation check: before, the read matched the id as given -> count 0.
     expect(res.body.count).toBe(35);
     expect(res.body.requestedCardId).toBe(MWI);
     expect(res.body.resolvedCardId).toBe(MWI_499);
+    expect(res.body.poolCardIds).toEqual([MWI, MWI_499]);
     expect(res.body.identityKind).toBe("numbered-twin");
-    // One read, keyed on the twin; the resolver was consulted by the route and handed down, not run twice.
+    // One read, keyed on both; the resolver was consulted by the route and handed down, not run twice.
     expect(h.queries).toHaveLength(1);
-    expect(h.queries[0].parameters.find((p) => p.name === "@cid")?.value).toBe(MWI_499);
+    expect(h.queries[0].parameters.find((p) => p.name === "@cid")?.value).toBe(MWI);
+    expect(h.queries[0].parameters.find((p) => p.name === "@cid1")?.value).toBe(MWI_499);
     expect(h.queries[0].query).not.toMatch(/STARTSWITH/);
+  });
+  it("the un-numbered key's own sales are listed too: 14 under the id and 0 under the twin -> 14; both -> 49", async () => {
+    const own = Array.from({ length: 14 }, (_, i) => ({ ...sale(MWI, i + 100), printRun: null }));
+    h.rows = own;
+    // Mutation check: the swap (read the twin only) answered count 0 here.
+    expect((await get(MWI)).body.count).toBe(14);
+    h.rows = [...own, ...Array.from({ length: 35 }, (_, i) => sale(MWI_499, i))];
+    const res = await get(MWI);
+    expect(res.body.count).toBe(49);
+    expect(res.body.sales).toHaveLength(49);
+    expect(res.body.poolCardIds).toEqual([MWI, MWI_499]);
   });
   it("the existing shapes are unchanged: a flat `sales` list and `byGrade` tiers", async () => {
     const res = await get(MWI);
@@ -107,10 +122,11 @@ describe("GET /cards/:cardId/recent-sales -- an un-numbered id reads its numbere
     expect(res.body.byGrade).toMatchObject([{ grader: "Raw", count: 35 }]);
     expect(res.body.byGrade[0].sales).toHaveLength(35);
   });
-  it("the numbered id itself still answers the same 35 (identityKind exact)", async () => {
+  it("the numbered id itself still answers the same 35 (identityKind exact, read alone)", async () => {
     const res = await get(MWI_499);
     expect(res.body.count).toBe(35);
     expect(res.body.resolvedCardId).toBe(MWI_499);
+    expect(res.body.poolCardIds).toEqual([MWI_499]);
     expect(res.body.identityKind).toBe("exact");
   });
 });
@@ -122,7 +138,19 @@ describe("GET /cards/:cardId/recent-sales -- no guess on two twins, no resolve f
     expect(res.body.count).toBe(0);
     expect(res.body.identityKind).toBe("ambiguous");
     expect(res.body.resolvedCardId).toBe(AMBIG);
+    expect(res.body.poolCardIds).toEqual([AMBIG]);
     expect(h.queries[0].parameters.find((p) => p.name === "@cid")?.value).toBe(AMBIG);
+    expect(h.queries[0].parameters.find((p) => p.name === "@cid1")).toBeUndefined();
+  });
+  it("an unresolved id (the catalog could not be asked) reads as given: identityKind unresolved, count from its own key", async () => {
+    h.rows = Array.from({ length: 3 }, (_, i) => ({ ...sale(MWI, i), printRun: null }));
+    h.catalog.set(MWI, { requested: MWI, id: null, kind: "unresolved", twins: [], error: "429" });
+    const res = await get(MWI);
+    expect(res.status).toBe(200);
+    expect(res.body.count).toBe(3);
+    expect(res.body.identityKind).toBe("unresolved");
+    expect(res.body.resolvedCardId).toBe(MWI);
+    expect(res.body.poolCardIds).toEqual([MWI]);
   });
   it("a vendor id: identityKind null, resolvedCardId = the id, partition-scoped read as before", async () => {
     h.rows = [{ ...sale(MWI_499, 0), cardId: VENDOR, hobbyiqCardId: null }];
@@ -132,6 +160,7 @@ describe("GET /cards/:cardId/recent-sales -- no guess on two twins, no resolve f
     expect(res.body.identityKind).toBeNull();
     expect(res.body.requestedCardId).toBe(VENDOR);
     expect(res.body.resolvedCardId).toBe(VENDOR);
+    expect(res.body.poolCardIds).toEqual([VENDOR]);
     expect(h.queries[0].query).toMatch(/c\.cardId = @cid/);
   });
 });

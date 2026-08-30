@@ -19,14 +19,21 @@ const h = vi.hoisted(() => ({
 }));
 
 vi.mock("../src/services/compiq/exactPoolReader.js", () => ({
-  readExactPoolRows: vi.fn(async (input: { cardId: string; hobbyiqCardId: string | null; windowDays: number; nowMs?: number }) => {
+  readExactPoolRows: vi.fn(async (input: { cardId: string; hobbyiqCardId: string | null; hobbyiqCardIds?: readonly string[] | null; windowDays: number; nowMs?: number }) => {
     const now = input.nowMs ?? Date.now();
     const cutoff = now - input.windowDays * 86_400_000;
+    const keys = new Set([input.hobbyiqCardId, ...(input.hobbyiqCardIds ?? [])].filter(Boolean));
     return h.rows.filter((r) =>
-      (r.cardId === input.cardId || (input.hobbyiqCardId && r.hobbyiqCardId === input.hobbyiqCardId))
+      (r.cardId === input.cardId || keys.has(r.hobbyiqCardId as string))
       && Date.parse(String(r.soldAt)) >= cutoff);
   }),
 }));
+// CF-AN-IDENTITY-RESOLVES-TO-ITS-ROW (2026-08-30): the entry asks the resolver
+// directly; the fixture catalog answers through the real pure rule.
+vi.mock("../src/services/catalog/catalogIdentityResolver.js", async (importActual) => {
+  const actual = await importActual<typeof import("../src/services/catalog/catalogIdentityResolver.js")>();
+  return { ...actual, resolveIdentityToCatalogRow: vi.fn(async (slug: string) => actual.pickCatalogRow(slug, [...h.catalog.keys()])) };
+});
 vi.mock("../src/services/catalog/catalogMatcher.service.js", async (importActual) => {
   const actual = await importActual<Record<string, unknown>>();
   return {

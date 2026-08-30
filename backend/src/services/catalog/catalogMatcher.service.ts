@@ -693,13 +693,21 @@ export async function readCatalogIdentityBySlug(slug: string): Promise<{
  * through here, so all of them write and price the catalog's form.
  *
  * Fails CLOSED: null when the container is unavailable or a read throws for
- * any reason other than 404 -- a caller adopting or pricing a slug on this
- * answer does neither during an outage, and says so.
+ * any reason other than 404 (the resolver's kind "unresolved") -- a WRITER
+ * adopting a slug on this answer does not, during an outage, and says so.
+ * The READERS (the valuation entry, soldCompsStore) call the resolver
+ * directly and fail OPEN on "unresolved" -- they read the id as given.
+ *
+ * Cost: the resolver memoizes the twin lookup per stem (10 min, bounded) and
+ * takes an optional print run that settles the twin with one point read, so
+ * the callers here (gateSuppliedSlug, fillDerivedSlugFromCatalog,
+ * priceFromOurPool, the alert evaluator, the rematch loops) pay the
+ * cross-partition query once per stem per TTL, not per call.
  */
-export async function catalogSlugIfExists(slug: string): Promise<string | null> {
+export async function catalogSlugIfExists(slug: string, opts: { printRun?: number | string | null } = {}): Promise<string | null> {
   const id = String(slug ?? "").trim();
   if (!id.startsWith("hiq:")) return null;
-  return (await resolveIdentityToCatalogRow(id)).id;
+  return (await resolveIdentityToCatalogRow(id, { printRun: opts.printRun ?? null })).id;
 }
 
 /**

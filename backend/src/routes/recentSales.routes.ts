@@ -25,11 +25,17 @@
 //     byGrade: [...],
 //     // CF-AN-IDENTITY-RESOLVES-TO-ITS-ROW (2026-08-30), additive:
 //     requestedCardId: string, // the :cardId as sent
-//     resolvedCardId: string,  // the pool id the sales were read under — the
-//                              // catalog's single numbered twin when the slug
-//                              // has no row of its own, else requestedCardId
+//     resolvedCardId: string,  // the catalog row the identity IS — the slug's
+//                              // single numbered twin when it has no row of
+//                              // its own (or its un-numbered row, #1509),
+//                              // else requestedCardId
+//     poolCardIds: string[],   // the pool keys the sales were read under: the
+//                              // id AND its one twin on "numbered-twin" (the
+//                              // pool is keyed both ways until the D29 fleet
+//                              // re-keys it), else [requestedCardId]
 //     identityKind: "exact" | "numbered-twin" | "unnumbered-twin" | "ambiguous"
-//                 | "none" | null   // null for a vendor id (not resolved)
+//                 | "none" | "unresolved" | null   // null for a vendor id
+//                                                  // (not resolved)
 //   }
 //
 // Privacy: contributorUserId is redacted unless the row's contributor
@@ -41,8 +47,8 @@ import { Router, type Request, type Response } from "express";
 import { getUserBySession } from "../services/authService.js";
 import { requireSession } from "../middleware/requireSession.js";
 import { requireRateLimited } from "../middleware/requireRateLimited.js";
-import { poolReadIdFor, readCompsByCardId } from "../services/portfolioiq/soldCompsStore.service.js";
-import { resolveIdentityToCatalogRow } from "../services/catalog/catalogIdentityResolver.js";
+import { readCompsByCardId } from "../services/portfolioiq/soldCompsStore.service.js";
+import { poolReadIdsFor, resolveIdentityToCatalogRow } from "../services/catalog/catalogIdentityResolver.js";
 
 const router = Router();
 
@@ -111,13 +117,16 @@ router.get("/cards/:cardId/recent-sales", requireSession, requireRateLimited("pr
 
     // CF-AN-IDENTITY-RESOLVES-TO-ITS-ROW (2026-08-30, holding deced7d3 — Max
     // Williams CPA-MWI Refractor: 35 sales under …:num-499, a card page opened
-    // at the un-numbered id, no comps). An hiq slug is read under the catalog
-    // row that IS its identity — its single numbered twin when the slug has
-    // no row of its own. Resolved ONCE here (handed to the read) so the
-    // response can say which id the comps are keyed under. A vendor id is not
-    // resolved.
+    // at the un-numbered id, no comps). An hiq slug is read under the id AND
+    // the one numbered twin the resolver names: the fold re-keyed catalog
+    // rows, not the pool, so …:cpa-sha:green:auto still has its 14 sales
+    // under the un-numbered key (a swap read 0). Resolved ONCE here (handed
+    // to the read, memoized in the resolver) so the response can say which
+    // row the identity is and which keys the comps came from. A vendor id is
+    // not resolved. The permanent fix is the D29 fleet re-keying the pool.
     const resolvedIdentity = cardId.startsWith("hiq:") ? await resolveIdentityToCatalogRow(cardId) : null;
-    const resolvedCardId = poolReadIdFor(cardId, resolvedIdentity);
+    const poolCardIds = cardId.startsWith("hiq:") ? poolReadIdsFor(cardId, resolvedIdentity) : [cardId];
+    const resolvedCardId = resolvedIdentity?.id ?? cardId;
 
     const rawComps = await readCompsByCardId({
       cardId,
@@ -285,10 +294,12 @@ router.get("/cards/:cardId/recent-sales", requireSession, requireRateLimited("pr
       windowDays: days,
       sales,           // backwards-compat: flat list preserved
       byGrade,         // new: grouped by grade tier for the Comp Sheet UI
-      // CF-AN-IDENTITY-RESOLVES-TO-ITS-ROW (additive): which id the comps are
-      // keyed under, so a client can say "comps for the /499 checklist card".
+      // CF-AN-IDENTITY-RESOLVES-TO-ITS-ROW (additive): which row the identity
+      // is and which pool keys the comps came from, so a client can say
+      // "comps for the /499 checklist card".
       requestedCardId: cardId,
       resolvedCardId,
+      poolCardIds,
       identityKind: resolvedIdentity?.kind ?? null,
     });
   } catch (err) { next(err); }
