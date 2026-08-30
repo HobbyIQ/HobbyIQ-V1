@@ -127,7 +127,9 @@ describe("2025 Topps Update, xlsx: a variation set listed without 'Base', a dual
   it("Golden Mirror Image Variation is a Base finish of US193, not a blank row colliding with the base card", () => {
     const us = byCard(out.rows, "US193");
     expect(us.filter((r) => r.parallel === "Base")).toHaveLength(1);
-    expect(us.find((r) => r.parallel === "Golden Mirror Image Variation")?.category).toBe("base");
+    // D22: the vocabulary's spelling — "Golden Mirror Variation" (image comes
+    // off a KNOWN kind; plural to singular) — still a Base finish of US193.
+    expect(us.find((r) => r.parallel === "Golden Mirror Variation")?.category).toBe("base");
     expect(names(us)).not.toContain("Image Variation");
     expect(runOf(us, "Diamante Foil")).toBeNull();
     expect(runOf(us, "Black Diamante Foil")).toBe(10);
@@ -285,7 +287,10 @@ describe("the small rules behind the shapes", () => {
   it("sectionsOf: a lone '... Variation(s)' whose numbers are base numbers is a Base finish", () => {
     const nums = (sv: string) => (sv === "Base" ? ["1", "2", "3"] : sv === "Image Variations" ? ["2", "3"] : ["CA-1"]);
     const s: Map<string, { section: string; finish: string }> = conv.sectionsOf(["Base", "Base Refractor", "Image Variations", "Coming Attractions"], nums);
-    expect(s.get("Image Variations")).toEqual({ section: "Base", finish: "Image Variations" });
+    // D22: the finish is the vocabulary's singular; the entry also carries the
+    // per-number anchor map (every number here is a base number).
+    expect(s.get("Image Variations")).toMatchObject({ section: "Base", finish: "Image Variation" });
+    expect(s.get("Image Variations")!.anchorByNum.get("2")).toEqual({ section: "Base", finish: "Image Variation" });
     expect(s.get("Coming Attractions")).toEqual({ section: "Coming Attractions", finish: "" });
   });
 });
