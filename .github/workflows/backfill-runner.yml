@@ -169,6 +169,7 @@ on:
           # shards by connected user; leaves lastPolledAt to the hourly poll.
           - backfill-ebay-account-sales
           - run-ebay-order-poll
+          - run-ebay-finances-enrichment
       apply:
         description: "Actually write (true) or dry-run only (false)"
         required: true
@@ -413,7 +414,7 @@ jobs:
       # defaults to "sandbox" in code, and a sandbox run would fetch zero
       # orders and report a perfectly green nothing.
       - name: Fetch eBay app credentials from HobbyIQ3 App Service
-        if: inputs.script == 'backfill-ebay-account-sales' || inputs.script == 'run-ebay-order-poll'
+        if: inputs.script == 'backfill-ebay-account-sales' || inputs.script == 'run-ebay-order-poll' || inputs.script == 'run-ebay-finances-enrichment'
         shell: bash
         run: |
           # AUTH_SESSION_SECRET is in this list because ebayAuth.service THROWS
