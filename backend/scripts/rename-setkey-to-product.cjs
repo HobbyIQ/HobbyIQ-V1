@@ -219,16 +219,21 @@ function scopeFilters() {
 function productPopulation(p, table) {
   const params = [];
   const ors = [];
+  // The id's OWN text decides whether its segment is the canonical key --
+  // never CONCAT over the row's sport / year fields, which goes undefined for
+  // a row missing either and silently drops it from the population (8
+  // leaf-limited rows, measured 2026-08-30). ":key:" cannot match another
+  // segment: a card number or a parallel is never spelled like a product key.
   if (p.era) {
-    ors.push(`(c.setKey = "donruss" AND (c.year >= ${table.PANINI_DONRUSS_FROM_YEAR} OR NOT STARTSWITH(c.id, CONCAT("hiq:", c.sport, ":", ToString(c.year), ":donruss:"))))`);
-    ors.push(`(c.setKey = "panini-donruss" AND (c.year < ${table.PANINI_DONRUSS_FROM_YEAR} OR NOT STARTSWITH(c.id, CONCAT("hiq:", c.sport, ":", ToString(c.year), ":panini-donruss:"))))`);
+    ors.push(`(c.setKey = "donruss" AND (c.year >= ${table.PANINI_DONRUSS_FROM_YEAR} OR NOT CONTAINS(c.id, ":donruss:")))`);
+    ors.push(`(c.setKey = "panini-donruss" AND (c.year < ${table.PANINI_DONRUSS_FROM_YEAR} OR NOT CONTAINS(c.id, ":panini-donruss:")))`);
   } else {
     const aliases = p.spellings.filter((s) => s !== p.setKey);
     if (aliases.length) {
       ors.push(`c.setKey IN (${aliases.map((_, i) => `@al${i}`).join(",")})`);
       aliases.forEach((a, i) => params.push({ name: `@al${i}`, value: a }));
     }
-    ors.push(`(c.setKey = @canon AND NOT STARTSWITH(c.id, CONCAT("hiq:", c.sport, ":", ToString(c.year), ":", @canon, ":")))`);
+    ors.push(`(c.setKey = @canon AND NOT CONTAINS(c.id, CONCAT(":", @canon, ":")))`);
     params.push({ name: "@canon", value: p.setKey });
     if (p.setKey === "topps-chrome-update-series") ors.push(`(c.setKey = "topps-chrome" AND (CONTAINS(c.setName, "Update") OR CONTAINS(c.setName, "update")))`);
   }
@@ -322,9 +327,14 @@ async function renameProducts(cat, pool, products, table, deps, filters, lib) {
       query: `SELECT c.id, c.cardId, c.sport, c.year, c.setKey, c.setName, c.cardNumber, c.source FROM c WHERE STARTSWITH(c.id, "hiq:") AND NOT IS_DEFINED(c.gradeTier) AND ${pop.sql}${filters.sql}`,
       parameters: [...pop.params, ...filters.params],
     };
+    let pages = 0;
     await forEachPage(cat, spec, async (rows) => {
       const mine = SLOTS > 1 ? rows.filter((r) => shardOf(r.id) === SLOT) : rows;
       stats.otherShard += rows.length - mine.length;
+      pages++;
+      // A fleet script says where it is: one line per page, so a slow page
+      // or a slow row is visible in the runner log while it happens.
+      process.stderr.write(`  ${label.slice(0, 32).padEnd(32)} page ${pages} rows=${rows.length} mine=${mine.length} scanned=${f(stats.scanned)} actionable=${f(stats.actionable)} renamed=${f(stats.moved + stats.folded + stats.replaced + stats.healed)} t=${Math.round((Date.now() - started) / 1000)}s\n`);
       for (let i = 0; i < mine.length; i += CONCURRENCY) {
         if (LIMIT && stats.actionable >= LIMIT) { stopReason = "limit"; stats.notReached += mine.length - i; return false; }
         if (budgetLeft() < 90000) { stopReason = "budget"; stats.notReached += mine.length - i; return false; }

@@ -28,10 +28,12 @@ describe("Chrome subset collapse (Drew's rule: buyers don't distinguish subset)"
     expect(normalizeSetKey("2025 Bowman Draft Chrome Baseball")).toBe("bowman-draft");
     expect(normalizeSetKey("2025 Bowman Chrome Draft Baseball")).toBe("bowman-draft");
   });
-  it("Topps Chrome Update collapses to topps-chrome", () => {
-    expect(normalizeSetKey("2020 Topps Chrome Update Baseball")).toBe("topps-chrome");
-    // Bare "Chrome Update" without Topps prefix — no match (safer than mis-classify)
-    expect(normalizeSetKey("2018 Topps Chrome Update")).toBe("topps-chrome");
+  it("Topps Chrome Update is its own product — D23 supersedes the 2026-08-01 collapse", () => {
+    // CF-THE-ID-CARRIES-THE-PRODUCT (Drew, 2026-08-30): the id carries the
+    // product as the checklist names it; topps-chrome is the FAMILY pricing
+    // may cross into (productSetKeys), not the identity.
+    expect(normalizeSetKey("2020 Topps Chrome Update Baseball")).toBe("topps-chrome-update-series");
+    expect(normalizeSetKey("2018 Topps Chrome Update")).toBe("topps-chrome-update-series");
   });
   it("Sapphire is a distinct product — NOT collapsed", () => {
     expect(normalizeSetKey("2023 Bowman Chrome Sapphire Baseball")).toBe("bowman-chrome-sapphire");

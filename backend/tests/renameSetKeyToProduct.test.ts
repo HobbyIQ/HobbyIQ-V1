@@ -150,7 +150,11 @@ describe("the population is per product and self-shrinking", () => {
   it("names the aliases and the canonical key, and the era clauses for Donruss", () => {
     const upd = script.productPopulation(ruled.find((p) => p.setKey === "topps-update-series"), table);
     expect(upd.sql).toContain("c.setKey IN (@al0");
-    expect(upd.sql).toContain("NOT STARTSWITH(c.id, CONCAT(\"hiq:\", c.sport, \":\", ToString(c.year), \":\", @canon, \":\"))");
+    // The id's own text decides, never CONCAT over the row's sport / year
+    // fields: a row missing either would silently drop out of the population
+    // (8 leaf-limited rows did, measured 2026-08-30).
+    expect(upd.sql).toContain("NOT CONTAINS(c.id, CONCAT(\":\", @canon, \":\"))");
+    expect(upd.sql).not.toContain("ToString(c.year)");
     expect(upd.params.find((p: { name: string }) => p.name === "@canon")?.value).toBe("topps-update-series");
     expect(upd.params.some((p: { value: string }) => p.value === "topps-update")).toBe(true);
     const chrome = script.productPopulation(ruled.find((p) => p.setKey === "topps-chrome-update-series"), table);
