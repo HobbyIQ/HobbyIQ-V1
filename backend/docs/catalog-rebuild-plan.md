@@ -2514,10 +2514,11 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
     grader-digit **38,723** (ch 24,243 / tca 14,436), print-run-slash
     **12,099** (tca 9,511 / ch 2,585), year-as-number **8,361** (tca 5,654 /
     ch 2,707), ordinal **1,243**, print-run-bare **536**, lot-count **8**;
-    the "`#` in the title, no cardNumber" bucket measures **0** because
-    those rows carry `cardNumber: null` rather than an absent field (the
-    spec's 754 used `NOT IS_DEFINED`, which none of them are — the repair's
-    `nonumber` mode tests all three spellings).
+    the "`#` in the title, no cardNumber" bucket needs all three spellings of
+    "missing" — `NOT IS_DEFINED` alone returns **0**, because those rows carry
+    `cardNumber: null` rather than an absent field. With `IS_NULL` and `= ''`
+    added it measures **754**, the spec's number exactly; the repair's
+    `nonumber` mode uses the same three-way test.
     **The writers, traced.** `parseTitleIdentity.extractCardNumber` already
     refused grader digits (08-24) — and it was one of FIVE derivations:
     (1) `chRowToSoldComp.ts` copied `cardNumber: row.number` verbatim, and
