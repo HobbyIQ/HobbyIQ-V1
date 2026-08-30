@@ -3196,3 +3196,28 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
     `backend/node_modules/.bin` twice (`npx vitest` then fails with no test
     output and rc 1); gates now invoke `node node_modules/vitest/vitest.mjs`
     and every builder prompt forbids touching the canonical tree.
+    **Landed 18:40–19:00Z:** **#1564** D33 rows + picker (`repair-bcp-
+    misfiled-parallels` MODE=names/card-as-parallel/number-glued/first-
+    edition/chrome-ladder; the picker says the year once and shows print
+    run · ✓ checklist · N sales); **#1565** D29 twins (`fold-checklist-
+    numbered-twins`; the scope refusal runs before the requires so a stale
+    dist cannot fake it); **#1566** D36 rulings (from:null + a fields block;
+    Gonzalez → 2026 Bowman CPA-JG /499, Caglianone → 2026 Topps Chrome
+    RA-JC /499 with year/set corrected, Jeter → bowmans-best BBP4, Griffey →
+    black-diamond D24 base, Griffey → donruss-studio #232; Finest →
+    `topps-finest` in the product table). Deploy #18. **Purge done:** 8/8
+    slots, 81,749 rows, every slot reconciled exactly, 0 refused. **Vendor
+    retire ×8** running (first 140-minute generation). **D29 CPA (round 2,
+    landing):** correct and safe; refuted only on REACH — the measured
+    ceiling on the declared scope is 1,896 two-product groups of 90,584
+    (648 fold ≈ 677 rows; 562 no dedicated row; 339 target not a product;
+    196 keep-both; 123 print-run disagreement); the 1,075-card figure from
+    the D30 measure and the 6,106-row projection both came from a
+    parallel-agnostic key that D31 forbids, and 2021 CPA-AM is an initials
+    collision (Mojica vs Martin) the player gate rightly refuses. Merged as
+    measured once its landing agent resolves the conflicts with #1564–#1566.
+    **D30 fleet builder launched 19:00Z** (Opus; re-measures two slices with
+    the D31 key first). The post-deploy chain runs itself: rulings APPLY →
+    twins + repair-bcp REPORT-ONLY → APPLY each when clean → conform →
+    reprice; then the CPA fleet, then D30's, then the coverage audit → the
+    exploded/old-CLC retire; Drew is notified at completion.
