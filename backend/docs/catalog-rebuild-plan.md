@@ -1673,7 +1673,20 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   (33284407911)** — the after-number is this holding's FMV from its 5 sales.
   Runner landings by 10:30Z: card-profile 8/8 (writes good, exits red on
   the pre-#1499 accounting), one-of-one shards 0/2/3/4/6 (≈28k repairs
-  each), re-ingest #2 shards 3/5. Drew (22:30Z): "I see 2 max williams superfractors …
+  each), re-ingest #2 shards 3/5.
+  **The conform APPLY (33284403692) corrected 10 but SKIPPED Gillen:** the
+  new row rule counted `…:num-150:psa-9` / `:psa-10` — graded children —
+  as numbered twins and called the card ambiguous (Caminiti, with no
+  children yet, went through and now prices $205.40 from its own pool).
+  **#1506:** `numberedTwinsOf()` matches `<id>:num-N` exactly and the
+  candidate query excludes graded rows; **APPLY #2 (33284681106) moved both
+  Gillen Blue Refractor holdings to `…:num-150`** (8 corrections, reconciled);
+  reprice #3 dispatched (33284849571). The pool behind that card: five raw
+  sales — $125, $161.50, $192.51, $250 (2025) and **$729 on 2026-08-20** —
+  and the projection's 60-day window holds only the last, so the raw
+  holding reads $729 (`exact-pool-weighted-median`): the projected-next-sale
+  doctrine at n = 1, D16's flagged judgment call — **NEEDS DREW (below)**.
+  Deploys #5/#6 live (`ca2c467`). Drew (22:30Z): "I see 2 max williams superfractors …
   superfractors are 1/1" — bcp's un-numbered `superfractor:auto` beside
   beckett's `:num-1`, and the same pair on Refractor /499, Black /10, Red /5,
   Red Lava, Sky Blue. **#1470:** the fold's decision is a pure tested rule
@@ -1910,6 +1923,13 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   product, family key = a separate fallback field; then re-slug catalog + pool.
 
 ## NEEDS DREW (not code)
+
+- **A single fresh sale carrying the number:** Gillen Blue Refractor /150 —
+  four 2025 sales $125–$250, one $729 twelve days ago; the 60-day window has
+  one sale, so the card reads $729. That is "projected next sale" at n = 1
+  (D16). Options: keep (the latest sale IS the market); require n ≥ 2 in the
+  window before the window wins (else widen to 90/180 and let the trend
+  project); or cap a one-sale window's move against the prior window. Rule?
 
 - **Retire old-CLC duplicates at non-canonical ids (D3c):** identity-based
   coverage says the old `checklistcenter`/`checklistcenter-html` rows are
