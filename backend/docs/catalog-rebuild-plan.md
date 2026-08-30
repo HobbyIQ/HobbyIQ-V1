@@ -2205,6 +2205,15 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   derivation), and `repair-parallel-from-title MODE=product` (a title's
   "1st Edition" / "Sapphire" / "Chrome" / "Update" never pools under the
   plain product; unmatched → acquisition list). D21 follows D22.
+  **Drew (17:35Z): "image variations are typical in card sets, so we need to
+  fix that"** → D22's variation work is a CLASS across products (Topps SP /
+  SSP photo variations every year, Bowman and Bowman Draft image variations,
+  Heritage action / throwback, Chrome / Prizm, Stadium Club): inventory
+  first (variation sections per source and product family from the cached
+  pages; catalog rows already carrying variation words vs sections the
+  converter folded into Base), a vocabulary for the family, every converter
+  path, the title parser + seam, the pool repair, and holdings carrying the
+  variation in `parallel`. Memory: image-variations-are-their-own-card.
 
 ## NEEDS DREW (not code)
 
