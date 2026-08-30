@@ -2252,6 +2252,35 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
 
 ## NEEDS DREW (not code)
 
+- **RULED 2026-08-30 19:50Z (Drew, in detail):**
+  1. **One-sale window: KEEP — "the latest sale is the market."** A window
+     with a single sale wins on its own (Gillen stays $729). D22 keeps
+     "needs n ≥ 2" as a named, OFF alternative; the leading-edge anchoring
+     (Max Williams from its last ten sales) is unchanged.
+  2. **setKey identity: the product as the checklist names it** —
+     `topps-series-1`, `topps-series-2`, `topps-update-series`,
+     `topps-chrome-update-series`, `bowman-draft-1st-edition`,
+     `upper-deck-series-1`, `topps-heritage-high-number`, `leaf-vivid`,
+     `leaf-metal`; the family (`topps` ⊃ `topps-series-1`) only for
+     pricing fallbacks and search. **Maker prefix: KEEP `panini-` on
+     Panini-era products** (the checklist says "Panini Donruss" → `panini-donruss`;
+     pre-Panini Donruss stays `donruss`) — i.e. literally as the checklist
+     names it. → **D23** (after D22): the slug generator stops collapsing;
+     a rename fleet through catalogRowOps over the ≈1.2M+ disagreeing rows,
+     sales and holdings re-pointed; the pool's `hobbyiqCardId` follows;
+     the search family ladder and `crossSetKeyRule`'s `productFamilyKey`
+     read the family from a table, not from the id.
+  3. **Retire the old-CLC duplicates at non-canonical ids: GO — after D23**
+     (the canonical id changes; coverage is re-measured then).
+  4. **Retire the MCP server as a pricing engine + delete `apps/api`: GO**
+     → D24 (repo removal by a builder; the `compiq-mcp` App Service and
+     the two unauthenticated backend routes it kept alive; the Azure resource
+     deletion is a live mutation — the exact `az` command will be listed
+     for Drew's hand, as with the retire dispatches).
+  Order from here: D22 → D23 → D21 (tier ids depend on the vocabulary) →
+  D24. The vendor-source retire (REPLACED_BY=none) does not depend on D23
+  and can be dispatched now (classifier — Drew's hand).
+
 - **The setKey vocabulary (D23):** the id collapses the product (`topps-series-1`
   → `topps`, `topps-chrome-update-series` → `topps-chrome`,
   `bowman-draft-1st-edition` → `bowman-draft`, `upper-deck-series-1` →
