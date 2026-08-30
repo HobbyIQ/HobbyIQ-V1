@@ -1,5 +1,5 @@
 {
-  "_doc": "Per-holding identity rulings by Drew. conform-holdings-to-catalog SCOPE=rulings applies ONLY these: the holding's current hobbyiqCardId must equal `from`, the `to` row must exist in card_catalog, and both cardId and hobbyiqCardId are set to `to` (one identity). A product-changing move is what the bot refuses (CF-A-HOLDING-NEVER-ADOPTS-A-VENDOR-ROW); a ruling is the human saying so.",
+  "_doc": "Per-holding identity rulings by Drew. conform-holdings-to-catalog SCOPE=rulings applies ONLY these: the holding's current hobbyiqCardId must equal `from` (use `from: null` for a holding that has NO hobbyiqCardId yet), the `to` row must exist in card_catalog, and both cardId and hobbyiqCardId are set to `to` (one identity). An optional `fields` object corrects the holding's OWN text (year, setName, ...) in the same ruling, for a holding whose stored product is simply wrong. A product-changing move is what the bot refuses (CF-A-HOLDING-NEVER-ADOPTS-A-VENDOR-ROW); a ruling is the human saying so.",
   "rulings": [
     {
       "holdingId": "82c36e0d-be4d-4d32-9a5f-b2407cc39a1e",
@@ -36,6 +36,55 @@
       "rulingBy": "Drew",
       "date": "2026-08-30",
       "note": "2018 Topps Chrome #150 Refractor, pitching (the standard Refractor); the #9 came from PSA 9"
+    },
+    {
+      "holdingId": "ca820b08-b1a0-465d-8d9b-2511cd552109",
+      "userId": "user-199fcbc9-58ba-4643-a0c9-f75bcbc90bd4",
+      "from": null,
+      "to": "hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499",
+      "rulingBy": "Drew",
+      "date": "2026-08-30",
+      "note": "Justin Gonzalez CPA-JG Refractor auto: CPA ships in the Bowman release. The catalog spells the player 'Justin Gonzales' (beckett-checklist) -- Drew: same player. The holding had no hobbyiqCardId; its cardId pointed at the bowman-chrome twin. Already pinned by the conform pass on 2026-08-30, so the ruling reports `already` and skips -- kept as the written record of the decision."
+    },
+    {
+      "holdingId": "9b971b03-ff54-45fb-9ecb-a7536c174143",
+      "userId": "user-199fcbc9-58ba-4643-a0c9-f75bcbc90bd4",
+      "from": null,
+      "to": "hiq:baseball:2026:topps-chrome:ra-jc:refractor:auto:num-499",
+      "rulingBy": "Drew",
+      "date": "2026-08-30",
+      "note": "Jac Caglianone RA-JC Refractor auto: the holding said 2024 Bowman Draft but its eBay title says 2026 Topps Chrome. The 2026 Topps Chrome RA-JC Refractor auto is /499 (checklistcenter-2026-08-29); the holding's own year/setName are corrected with it.",
+      "fields": {
+        "year": 2026,
+        "setName": "2026 Topps Chrome"
+      }
+    },
+    {
+      "holdingId": "5979f485-8298-489e-80c8-7be94b45c4af",
+      "userId": "user-199fcbc9-58ba-4643-a0c9-f75bcbc90bd4",
+      "from": "hiq:baseball:1997:bowman:bbp4:atomic-refractor:no-auto",
+      "to": "hiq:baseball:1997:bowmans-best:bbp4:atomic-refractor:no-auto",
+      "rulingBy": "Drew",
+      "date": "2026-08-30",
+      "note": "Derek Jeter 1997 BBP4 Atomic Refractor: the stored id said `bowman`; the card is Bowman's Best (baseballcardpedia). The holding's cardId already pointed at the right row."
+    },
+    {
+      "holdingId": "6f4f079b-0d76-4ae8-88e0-ca27b4c0e6c1",
+      "userId": "user-199fcbc9-58ba-4643-a0c9-f75bcbc90bd4",
+      "from": "hiq:baseball:1999:upper-deck-black-diamond:d24:base:no-auto:num-1500",
+      "to": "hiq:baseball:1999:black-diamond:d24:base:no-auto",
+      "rulingBy": "Drew",
+      "date": "2026-08-30",
+      "note": "Ken Griffey Jr 1999 D24: the only checklist-authority row is baseballcardpedia's `black-diamond` base row -- both `upper-deck-black-diamond` rows are sold-comps-stub (derived) and the checklist does NOT number the base card (the /1500 is the Triple's short-set print run, D24 Triple). No :num-1500 row exists."
+    },
+    {
+      "holdingId": "86cb8844-6fb3-44e4-b82c-0bbc4730d47a",
+      "userId": "user-199fcbc9-58ba-4643-a0c9-f75bcbc90bd4",
+      "from": "hiq:baseball:1992:undefined:232:base:no-auto",
+      "to": "hiq:baseball:1992:donruss-studio:232:base:no-auto",
+      "rulingBy": "Drew",
+      "date": "2026-08-30",
+      "note": "Ken Griffey Jr 1992 Studio #232 base. The stored id carried a literal 'undefined' setKey segment. `donruss-studio` is the spelling the slug generator mints (studio -> donruss-studio) and the D23 product table names; 327 tcdb-scrape checklist rows back it against 279 baseballcardpedia rows under bare `studio`."
     }
   ]
 }
