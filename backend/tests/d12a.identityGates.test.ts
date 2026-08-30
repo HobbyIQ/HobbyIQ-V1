@@ -12,10 +12,28 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import request from "supertest";
 
-const matcher = vi.hoisted(() => ({ canonicalize: vi.fn(), catalogSlugIfExists: vi.fn() }));
+// D35 (CF-PIN-ONLY-A-CHECKLIST-ROW): confidence is no longer the only pin
+// gate — the row a match names must also be checklist-backed, because
+// canonicalize seeds `user-verified` rows and then matches its own seed above
+// the confidence gate. These fixtures are the CHECKLIST case, so the row
+// reader answers `baseballcardpedia` and the gate that this file pins (the
+// CONFIDENCE gate) is the one under test. The authority gate has its own
+// fixtures in tests/pinRefusesNonChecklistRow.test.ts.
+const matcher = vi.hoisted(() => ({
+  canonicalize: vi.fn(),
+  catalogSlugIfExists: vi.fn(),
+  getCatalogContainerForRead: vi.fn(async () => ({
+    item: (id: string) => ({ read: async () => ({ resource: { id, source: "baseballcardpedia" } }) }),
+  })),
+}));
 vi.mock("../src/services/catalog/catalogMatcher.service.js", async (orig) => {
   const actual = await (orig() as Promise<Record<string, unknown>>);
-  return { ...actual, canonicalize: matcher.canonicalize, catalogSlugIfExists: matcher.catalogSlugIfExists };
+  return {
+    ...actual,
+    canonicalize: matcher.canonicalize,
+    catalogSlugIfExists: matcher.catalogSlugIfExists,
+    getCatalogContainerForRead: matcher.getCatalogContainerForRead,
+  };
 });
 vi.mock("../src/services/portfolioiq/soldCompsStore.service.js", async (orig) => {
   const actual = await (orig() as Promise<Record<string, unknown>>);

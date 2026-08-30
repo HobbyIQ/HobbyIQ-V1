@@ -2548,11 +2548,25 @@ async function applyGradeLadderFallback(opts: {
 // already surfaces for the user to accept — never as identity.
 type CatalogMatchLike = { slug: string; found: boolean; confidence: number; matchedBy: string };
 
-function applyCatalogMatchToHolding(
+// CF-PIN-ONLY-A-CHECKLIST-ROW (2026-08-30, D35). Confidence was the only pin
+// gate, and confidence is self-confirming: canonicalize SEEDS a
+// `user-verified` row for an unmatched identity and then matches its own seed
+// at 0.95-0.98 (matchedBy "seeded"), because catalogMatcher hands
+// `user-verified` a 0.9 floor by construction. Four of Drew's holdings carry
+// exactly that shape — a vendor row minted by the request that then "found"
+// it. A match proves nothing unless the row is checklist-backed, so authority
+// is now a second, independent gate: above the confidence gate but on a
+// vendor / derived / unknown row, the match parks as a proposal exactly as a
+// sub-gate match does. Fails CLOSED only on authority, never on a read
+// outage — an unreadable row parks rather than pinning blind.
+export async function applyCatalogMatchToHolding(
   h: PortfolioHolding,
   match: CatalogMatchLike,
-  ctx: { source: string; userId: string; holdingId: string; cardIdRule: "fill" | "rebind" },
-): { pinned: boolean } {
+  ctx: {
+    source: string; userId: string; holdingId: string; cardIdRule: "fill" | "rebind";
+    readRow?: (slug: string) => Promise<{ source?: string | null } | null>;
+  },
+): Promise<{ pinned: boolean }> {
   const rec = h as unknown as Record<string, unknown>;
   const previousSlug = String(rec.hobbyiqCardId ?? "").trim() || null;
   const hasMatch = match.found && typeof match.slug === "string" && match.slug.length > 0;
@@ -2577,6 +2591,37 @@ function applyCatalogMatchToHolding(
           : "match below the pin gate; recorded as a proposal, not as identity",
       }));
     }
+    return { pinned: false };
+  }
+  // AUTHORITY GATE. Read the row the match names and refuse anything a
+  // checklist did not vouch for.
+  const readRow = ctx.readRow ?? (async (slug: string) => {
+    const { readCatalogRowSource } = await import("./checklistBackedIdentity.js");
+    return readCatalogRowSource(slug);
+  });
+  let rowSource: string | null | undefined;
+  let rowRead = false;
+  try {
+    const row = await readRow(match.slug);
+    rowRead = Boolean(row);
+    rowSource = row?.source ?? null;
+  } catch { rowRead = false; }
+  const { catalogAuthorityOf } = await import("../catalog/catalogAuthority.service.js");
+  const authority = rowRead ? catalogAuthorityOf(rowSource) : "unreadable";
+  if (authority !== "checklist") {
+    console.log(JSON.stringify({
+      event: "catalog_match_parked_not_checklist_backed",
+      source: ctx.source,
+      userId: ctx.userId,
+      holdingId: ctx.holdingId,
+      previousSlug,
+      suggestedSlug: match.slug,
+      matchedBy: match.matchedBy,
+      confidence: match.confidence,
+      rowSource: rowRead ? rowSource : null,
+      authority,
+      detail: "confident, but the row is not checklist-backed; recorded as a proposal, not as identity",
+    }));
     return { pinned: false };
   }
   rec.hobbyiqCardId = match.slug;
@@ -5842,7 +5887,7 @@ export async function addHolding(req: Request, res: Response) {
       // CF-ONE-PIN-GATE-FOR-BOTH-FIELDS (D12a): the same gate applies when
       // NOTHING is pinned. A 0.72 is a proposal, not the card. See
       // applyCatalogMatchToHolding.
-      const pin = applyCatalogMatchToHolding(holding, matchResult, {
+      const pin = await applyCatalogMatchToHolding(holding, matchResult, {
         source: "portfolioStore.addHolding",
         userId: auth.userId,
         holdingId: holding.id,
@@ -6084,7 +6129,7 @@ export async function updateHolding(req: Request, res: Response) {
       // CF-ONE-PIN-GATE-FOR-BOTH-FIELDS (D12a): hobbyiqCardId was left
       // UNGATED here on the theory that nothing prices off it alone.
       // priceFromOurPool does. Same gate, both fields.
-      const pin = applyCatalogMatchToHolding(next, matchResult, {
+      const pin = await applyCatalogMatchToHolding(next, matchResult, {
         source: "portfolioStore.updateHolding",
         userId: auth.userId,
         holdingId: id,
