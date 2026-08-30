@@ -452,7 +452,16 @@ export function deriveCatalogEntry(input: {
  * were already written.
  */
 export function cleanPlayerName(raw: string | null | undefined): string {
-  return String(raw ?? "").trim().replace(/[\s,;]+$/, "");
+  return String(raw ?? "").trim()
+    .replace(/[\s,;]+$/, "")
+    // CF-A-COMMA-BEFORE-JR-IS-NOT-A-TEAM (D33, Drew 2026-08-30). The picker
+    // listed "Bobby Witt, Jr." and "Bobby Witt Jr." as two different players
+    // for one card: baseballcardpedia writes the comma, every other source
+    // does not. A comma before an honorific SUFFIX is punctuation inside one
+    // name, so it is removed and the suffix kept. This is the one embedded
+    // comma the docblock above excludes, and only that one: "Smith, John" is
+    // Last-First, a different defect, and is deliberately left alone.
+    .replace(/,\s+(Jr\.?|Sr\.?|I{2,3}|IV)$/i, " $1");
 }
 
 function playerSlugify(name: string): string {

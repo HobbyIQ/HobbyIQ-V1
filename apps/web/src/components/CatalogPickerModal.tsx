@@ -180,11 +180,17 @@ export function CatalogPickerModal({
           )}
           <div className="space-y-1.5">
             {(hits ?? []).map((h) => {
-              // The checklist sources write the year into setName ("2025 Bowman Draft
-              // Baseball") and some write the player with a trailing comma; the row
-              // must not read "2025 2025 Bowman Draft" or "Max Williams,".
-              const setLabel = String(h.setName || h.setKey || "").replace(h.year ? new RegExp("^" + String(h.year) + "\s+") : /^$/, "").trim();
-              const playerLabel = String(h.playerName || "").replace(/[s,;]+$/, "").trim();
+              // The checklist sources write the year into setName ("2025 Bowman
+              // Draft Baseball"), so the row must not read "2025 2025 Bowman
+              // Draft". D33 (2026-08-30): both scrubs here were broken by a
+              // lost backslash. `"\s+"` in a JS string is "s+", so the year
+              // regex compiled to /^2025s+/ and never matched -- Drew saw the
+              // doubled year. And /[s,;]+$/ is a character class of the
+              // LITERAL letter s, so it truncated real surnames: "Chris
+              // Sales" rendered as "Chris Sale". The player name is cleaned
+              // at ingest (cleanPlayerName), so display only trims.
+              const setLabel = String(h.setName || h.setKey || "").replace(h.year ? new RegExp("^" + String(h.year) + "\\s+") : /^$/, "").trim();
+              const playerLabel = String(h.playerName || "").trim();
               const bits = [
                 h.year ? String(h.year) : null,
                 setLabel || null,

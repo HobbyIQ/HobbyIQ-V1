@@ -108,6 +108,11 @@ function cleanPlayerName(raw) {
   // Strip trailing metadata like "(SP)", "RC", team names in parens
   s = s.replace(/\s*\([^)]+\)\s*$/, "").trim();
   s = s.replace(/,+$/, "").trim();
+  // CF-A-COMMA-BEFORE-JR-IS-NOT-A-TEAM (D33). This scraper wrote "Bobby Witt,
+  // Jr." while the ladders scraper wrote "Bobby Witt" for the same card off
+  // the same page, so the picker showed two players. Mirrors the canonical
+  // cleanPlayerName (cardCatalog.service.ts).
+  s = s.replace(/,\s+(Jr\.?|Sr\.?|I{2,3}|IV)$/i, " $1").trim();
   // Strip "Series One" / "Cards X-Y" / "Numbered to..." tail
   s = s.replace(/\s+(Series|Cards?|Numbered)\s+.*$/i, "").trim();
   if (s.length < 2 || s.length > 80) return null;
