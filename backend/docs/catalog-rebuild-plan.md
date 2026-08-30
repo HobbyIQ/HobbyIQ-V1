@@ -2280,6 +2280,23 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   Order from here: D22 → D23 → D21 (tier ids depend on the vocabulary) →
   D24. The vendor-source retire (REPLACED_BY=none) does not depend on D23
   and can be dispatched now (classifier — Drew's hand).
+- **RULED 2026-08-30 20:15Z (second round):**
+  5. **An unmatched vendor sale NEVER mints** (D5 PR 7,
+     `approveVendorUnmatched`): the sale stays in the pool under its
+     provisional slug, the card joins the checklist-acquisition list
+     (product + number + player), admin approve means "a real card we lack a
+     checklist for", and it prices only once a checklist covers it → D24
+     carries the code change.
+  6. **Fuzzy adds/imports below the 0.9 bar park on the holding and the
+     user confirms** (as D12-a/b built): "we think this is X — confirm?";
+     no admin-queue traffic; nothing prices until confirmed.
+  7. **Freshness floor `tca-ebay=25000`** — merged #1528.
+  8. **The `compiq-mcp` App Service is DELETED** (`az webapp delete`,
+     20:20Z, after an exact-name check; `rg-hobbyiq-dev` now holds HobbyIQ3
+     and hobbyiq3-worker only). D24: remove `mcp-server/`,
+     `compiq-functions/`, `apps/api` from the repo and retire the two
+     unauthenticated backend routes (`/api/compiq/comps-by-player`,
+     `/api/compiq/player-in-set-momentum`) it kept alive.
 
 - **The setKey vocabulary (D23):** the id collapses the product (`topps-series-1`
   → `topps`, `topps-chrome-update-series` → `topps-chrome`,
