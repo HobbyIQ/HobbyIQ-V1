@@ -2083,6 +2083,31 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
     with NO rung as an estimate (`no_rung_relabelled_at_write`) — the Max
     Williams Gold /50 $32.46 "observed" shape.
 
+- ○ D21 **The grade curve is the graded card, and the page says how sure it
+  is** (Drew, 2026-08-30 15:50Z: "add to our list on the grade curve to be
+  directly linked to the graded card ID? Something to show accuracy of the
+  entire card page"). Queued behind D20 (one builder at a time).
+  (a) **Every grade-curve tier row is keyed to its own graded identity** —
+  the materialized graded row (`…:num-150:psa-10`) is the tier: the one
+  entry (`valueIdentity`) returns each tier with its graded id, that tier
+  reads the exact pool under that id (grade-consistent rows), and the card
+  page / card-panel / grade-curve responses carry `tierCardId` so a tier is
+  a card the user can open (recent sales, holdings, listings) — not a
+  derived number. Where no graded row exists yet, the tier says so
+  (`materialize-graded-identities` mints it; never mint from the page).
+  (b) **A card-page accuracy panel built from facts, not a score:**
+  identity — checklist-backed (which source, when last seen) or provisional;
+  pool — per tier: n in the window used (60/90/180), last sale date, the
+  rung label (observed vs estimate) and the comps behind it; provenance —
+  what priced each tier and why (`fmvReason` when null); and "what would
+  make this better" (a checklist to acquire, a tier with no sales, a twin
+  to fold). One shape on the wire for iOS and web; the web renders it via
+  D20's provenance chip work. Acceptance: `probe-price-routes` gains a
+  per-tier identity check (every tier id exists as a catalog row and its
+  pool rows carry that id), and the card page for the Gillen Blue /150
+  shows PSA 9 as `…:num-150:psa-9` with its own (empty, today) pool and the
+  raw-derived estimate labelled as such.
+
 ## NEEDS DREW (not code)
 
 - **A single fresh sale carrying the number:** Gillen Blue Refractor /150 —
