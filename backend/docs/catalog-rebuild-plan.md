@@ -3221,3 +3221,130 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
     twins + repair-bcp REPORT-ONLY → APPLY each when clean → conform →
     reprice; then the CPA fleet, then D30's, then the coverage audit → the
     exploded/old-CLC retire; Drew is notified at completion.
+
+## Evening chain, 2026-08-30 (19:00–20:05Z)
+
+- **#1568 D29 R2 merged** — apply-cpa-product-rule + cpaProductRule.ts; a CPA row
+  lives under the product whose dedicated checklist names it; measured ceiling
+  1,896 two-product groups (~677 rows); slot 0/8 report 76 groups / 86 rows.
+  Deploy #19 verified (shaShort 36821bc). CPA report (slot 0/8) + fold ×8
+  dispatched 19:36Z — watcher collects reconciliations.
+- **#1569 D37 merged** (f38c971b, no deploy — scripts/tests/workflows only) —
+  backfill-ebay-purchase-comps: an imported eBay purchase is an observed sale.
+  The live emit already existed (emitUserEbayPurchaseComp via addHolding/
+  updateHolding + recordImportSale — the "zero references" measure was true
+  only of ebayBuyerHistory.service.ts); this is the REPLAY for holdings that
+  predate it. Dry runs: Drew 89→37 (Gold Max Williams $295.95 acceptance line
+  verbatim; prod pool has 0 rows on all three D9 keys), all users 143→49,
+  catalog-unmatched 0, failures 0. REPORT dispatched 19:57Z; watcher
+  banner-checks then APPLYs.
+- **NEEDS DREW (ratify, next widget round):** D37 uses source
+  `ebay-user-purchase`, which sits in USER_SEED_SOURCES and so CAN mint a
+  catalog row (zero would mint in this run — catalog-unmatched 0). That is
+  pre-existing main behavior under the 2026-08-08 user-seed exemption (a card
+  the user physically owns is real coverage before its checklist lands); the
+  branch pins it in a test and pins `ebay-account` OUT. Ratify or reverse.
+- **D38 queued (small builder):** purchaseSaleIdentity falls back to
+  holding.purchasePrice (all-in, incl. shipping) when sourcePurchaseFor
+  returns null; the doc id is price-independent, so a later live edit can
+  silently flip a comp from subtotal to all-in basis. Guard the upsert (or
+  the fallback) so subtotal never regresses to all-in.
+- **D29 CPA FOLD DONE (20:10Z, 8/8 green):** 567 fold groups authorised, 1,229
+  sales re-pointed, 256 graded children retired (regenerable by
+  materialize-graded-identities), every slot reconciled exact
+  (e.g. intended 10,764 = written 65 + skipped 10,699). All multi-print-run
+  groups abstained per D31 (different print runs are different cards). The
+  first dispatch generation FATAL'd on YEARS="" — the runner passes an empty
+  years input over the script default; years=2020-2026 explicit on re-dispatch
+  (the whole-scope-refusal gate worked).
+- **D37 APPLIED (20:08Z, run 33332706501):** reconciled intended 49 = written 44
+  + skipped 5; 23 new pool rows + 21 already present (the live emit had them);
+  failures 0. **The Gold Max Williams comp is IN THE POOL, verified by read:**
+  `ebay-user-purchase::377291610293-10088272676307` on
+  `…cpa-mwi:gold-refractor:auto:num-50`, both id fields, $295.95. The card
+  prices from it at the chain-end reprice. **5-row retryable tail** (re-run the
+  backfill after conform/rename/D30): cpa-tsy 2024, b25-km 2025 (await
+  checklists), bp-18 logo-variation (the bowman-paper spelling), and — seam to
+  investigate — cpa-jg + a cpa-jwh where recordSoldComp's WRITE-TIME slug
+  recompute said `bowman-chrome` while the ruled/pinned holding id says
+  `bowman`: the emit carried the pinned id, the store recomputed and refused.
+  One identity, one derivation — the store should trust the pinned id it was
+  handed (CF-USE-NORMALIZED-FOR-LOOKUPS class). Queued with D38.
+- **Report chain:** rulings APPLY landed (9 ruled / 3 applied); order-poll
+  cron reconciled 4=1+3; repair-bcp reports names / number-glued /
+  first-edition clean; twins-2020 + card-as-parallel + chrome-ladder reports
+  still running — a watcher dispatches twins APPLY ×8 (years 2020–2026) and
+  repair-bcp APPLY 5 modes × 4 slots on success, then conform → reprice.
+
+
+## APPLY fleet night, 2026-08-30 (21:29–22:00Z)
+
+- **Reports, final tallies before APPLY:** twins-2020 (33330101019) clean —
+  RIVAL /N 3,515 reported-not-folded, survivor WARNs are the expected
+  no-auto-ghost folds; names / number-glued / first-edition clean (earlier);
+  card-as-parallel (33330107098) WOULD CHANGE 20,385; chrome-ladder
+  (33330120651) hit the 140-min budget with a sane partial: WOULD CHANGE
+  24,604 = fold 15,349 + move 9,087 + replace 168, REFUSED player-mismatch 12,
+  never-mint 2,563, FATAL 0.
+- **RUNNER DEFECT (fix queued): the REPORT path never relaunches.** 33330120651
+  printed the budget marker and its relaunch step produced no output — the
+  per-script relaunch steps evidently cover only APPLY dispatches, so any
+  report longer than one budget can never finish. Decision taken: gate
+  chrome-ladder APPLY on the sane 140-minute partial + D33's adversarial
+  verification rather than burn multi-hour report generations; the APPLY's own
+  reconciliation is the authoritative count.
+- **Ops episode, recorded honestly:** the gate watcher treated 651's
+  budget-stop completion as report-done and fired all 28 APPLYs; the four
+  chrome-ladder APPLYs were env-confirmed and cancelled inside their checkout
+  phase (no writes; cancel never relaunches). Slot census over the window
+  verified all 28 dispatches present — no missing shard. Chrome-ladder APPLY
+  ×4 re-dispatched at ~21:58Z after the partial-report gate above. Lesson
+  folded into the watchers: completion + marker-absence is the report-done
+  signal, never completion alone.
+- **In flight:** twins ×8 (years 2020-2026) + repair-bcp names/card-as-parallel/
+  number-glued/first-edition/chrome-ladder ×4 — watcher collects
+  reconciliations at zero-open, then conform APPLY → reprice → the D37
+  5-row tail re-run.
+
+
+## Checklist-gap rulings (Drew, 2026-08-30 ~22:50Z)
+
+Source map merged as #1571 (backend/docs/checklist-gap-source-map.md); the
+scraper-bug fix round is running. Drew ruled on the map's four questions:
+
+1. **Bellingham #15 — mint now.** Griffey is #15 (Beckett/CardLadder/PSA
+   agreement suffices; no primary-scan step). Mint via a hand-authored entry in
+   the ONE canonical checklist CSV format, source `drew-ruling-2026-08-30`,
+   then conform re-points his holding. No parallels exist for the product.
+2. **CPA-TSY — ALREADY DONE.** Read-back 23:00Z: Drew's Sykora holding
+   9df155b7 sits on `hiq:baseball:2024:bowman:cpa-tsy:refractor:auto:num-499`,
+   identityVerified — the 20:10Z CPA fold fleet moved it exactly as Drew just
+   ruled. No ruling entry needed; the D37 tail re-run emits its purchase comp
+   (the 20:08Z skip recomputed bowman-chrome from the pre-fold state). The
+   read also showed live id-setkey drift in the cpa-tsy family (rows with
+   setKey bowman under …:bowman-chrome:… ids) — D30's population, on plan.
+3. **Set-level production figures — blank printRun + a rarity field.**
+   printRun stays serial-only truth; a separate set-level production/rarity
+   field carries Tiffany's ~30,000 sets and pre-serial pack-odds tiers
+   (1997/1999 Finest, 1996 Metal Universe). Small schema addition, queued into
+   the post-map builder round.
+4. **Bowman channel axis — distinct parallel names, no new axis.** Hobby
+   "Green /99" vs HTA "Green Atomic /99" stay channel-qualified VERBATIM in
+   the parallel name/slug; the scraper never normalizes them together. No
+   schema change. Unblocks the 2020/2024 Bowman ingests.
+5. checklistcentral.cards paid bundle — recommended NO, Drew did not object;
+   not scheduled.
+
+**Red Ink ruling (Drew, 2026-08-30 ~23:20Z):** in Bowman autos, "Red Ink" is
+the SSP variant of the Black & White Shimmer auto parallel — a DISTINCT card
+that needs its own catalog row so "Red Ink" sale titles match. Wire into the
+2026 Bowman ingest: if the source lists it, ingest as named; if not, mint
+drew-ruled rows (source drew-ruling-2026-08-30) under the CPA auto checklist,
+and make the matcher resolve "red ink" title text to that row (never to the
+plain Black & White Shimmer, never to base). Collector taxonomy is
+authoritative; ratio similarity between the two is NOT identity.
+
+**Post-map builder round (queued, after the scraper fix judges):** rarity
+field (#3), Bellingham hand-ruled entry + ingest (#1), CPA-TSY ruling entry
+(#2, gated on its row), D38 subtotal guard, the write-time recompute seam
+(cpa-jg), and the runner report-relaunch defect.
