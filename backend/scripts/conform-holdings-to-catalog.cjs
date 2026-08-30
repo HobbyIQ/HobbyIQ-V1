@@ -139,6 +139,13 @@ async function applyRulings(portfolio, cat) {
         { op: "set", path: `/holdings/${r.holdingId}/identityResolvedBy`, value: `ruling:${r.rulingBy}:${r.date}` },
         { op: "set", path: `/holdings/${r.holdingId}/identityResolvedAt`, value: new Date().toISOString() },
       ];
+      // CF-VERIFIED-IS-CHECKLIST-BACKED: a ruling onto a checklist-backed row is VERIFIED.
+      if (catalogAuthorityOf(String(row.source ?? "")) === "checklist") {
+        const at = new Date().toISOString();
+        ops.push({ op: "set", path: `/holdings/${r.holdingId}/identityVerified`, value: true });
+        ops.push({ op: "set", path: `/holdings/${r.holdingId}/identityVerifiedAt`, value: at });
+        ops.push({ op: "set", path: `/holdings/${r.holdingId}/identityVerifiedBy`, value: { source: "checklist-backed-identity", candidateId: r.to, via: `ruling:${r.rulingBy}:${r.date}`, verifiedAt: at } });
+      }
       await retry(() => portfolio.item(doc.id, doc.userId).patch(ops));
       applied++;
     } catch (e) { failed++; console.log(`  failed ${r.holdingId.slice(0, 8)}: ${String(e?.message ?? e).slice(0, 120)}`); }
@@ -178,6 +185,11 @@ async function main() {
   console.log(`${docs.length} portfolio docs  ${APPLY ? "APPLY" : "REPORT ONLY"}\n`);
 
   let holdings = 0, resolvedExact = 0, resolvedFuzzy = 0, corrected = 0, agreed = 0, unresolved = 0, legacyCleared = 0, failed = 0;
+  // CF-VERIFIED-IS-CHECKLIST-BACKED (Drew, 2026-08-30): a holding whose identity
+  // is a checklist-backed catalog row is VERIFIED -- by Confirm, import, this
+  // sweep, or a ruling. `patched` counts holdings written (a holding may be
+  // corrected AND stamped; it is one write).
+  let verifiedStamped = 0, patched = 0;
   let vendorRowsIgnored = 0, vendorRowsRefused = 0, productChangeRefused = 0;
   const refusedEx = [];
   const unresolvedEx = [], correctedEx = [];
@@ -266,7 +278,9 @@ async function main() {
         }
         // CF-ONLY-IMPROVE: an existing identity that is the numbered form of the
         // resolved row is MORE specific -- keep it.
-        if (existing && numberedTwinsOf(target, [existing]).length === 1 && ids.includes(existing)) { agreed++; if (rung.conf >= 0.95) resolvedExact++; else resolvedFuzzy++; continue; }
+        // The kept identity is then the target: the agreed branch below counts it
+        // and the APPLY block can still stamp it VERIFIED.
+        if (existing && numberedTwinsOf(target, [existing]).length === 1 && ids.includes(existing)) target = existing;
         if (rung.conf >= 0.95) resolvedExact++; else resolvedFuzzy++;
 
         if (existing === target) { agreed++; }
@@ -288,7 +302,20 @@ async function main() {
         if (ops.length) {
           ops.push({ op: "set", path: `/holdings/${hid}/identityResolvedBy`, value: "catalog-internal" });
           ops.push({ op: "set", path: `/holdings/${hid}/identityResolvedAt`, value: new Date().toISOString() });
+        }
+        // CF-VERIFIED-IS-CHECKLIST-BACKED: the identity this holding ends up on is
+        // one of the checklist-authority rows (`ids`) -> VERIFIED, unless already.
+        const finalId = ops.some((o) => o.path.endsWith("/hobbyiqCardId")) ? target : existing;
+        if (finalId && ids.includes(finalId) && h.identityVerified !== true) {
+          const at = new Date().toISOString();
+          ops.push({ op: "set", path: `/holdings/${hid}/identityVerified`, value: true });
+          ops.push({ op: "set", path: `/holdings/${hid}/identityVerifiedAt`, value: at });
+          ops.push({ op: "set", path: `/holdings/${hid}/identityVerifiedBy`, value: { source: "checklist-backed-identity", candidateId: finalId, via: "conform-holdings-to-catalog", verifiedAt: at } });
+          verifiedStamped++;
+        }
+        if (ops.length) {
           await retry(() => portfolio.item(doc.id, doc.userId).patch(ops.slice(0, 10)));
+          patched++;
         }
       } catch (e) {
         failed++;
@@ -312,7 +339,9 @@ async function main() {
   // CF-EVERY-WRITE-JOB-RECONCILES: intended = every holding scanned; written =
   // identities corrected (+ legacy fields cleared); skipped = agreed +
   // unresolved + resolved-but-unchanged; failed declared. Disjoint by design.
-  if (APPLY) reportWrites({ job: "conform-holdings-to-catalog", intended: holdings, written: corrected + legacyCleared, skipped: holdings - corrected - legacyCleared - failed, failed });
+  console.log(`  verified stamped        ${f(verifiedStamped)}   <- identity is a checklist-backed row (Drew, 2026-08-30)`);
+  console.log(`  holdings patched        ${f(patched)}`);
+  if (APPLY) reportWrites({ job: "conform-holdings-to-catalog", intended: holdings, written: patched, skipped: holdings - patched - failed, failed });
   if (refusedEx.length) { console.log(`\n  refused:`); for (const e of refusedEx) console.log(`     ${e}`); }
   if (correctedEx.length) { console.log(`\n  corrections:`); for (const e of correctedEx) console.log(`     ${e}`); }
   if (unresolvedEx.length) { console.log(`\n  unresolved — the acquisition/ruling list:`); for (const e of unresolvedEx) console.log(`     ${e.slice(0, 110)}`); }

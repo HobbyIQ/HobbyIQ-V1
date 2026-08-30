@@ -703,10 +703,11 @@ function HoldingRow({ h }: { h: PortfolioHolding }) {
             </span>
           )}
           {value != null && <ProvenanceChip rung={provenance} source={provenance.source} />}
-          {/* CF-IDENTITY-VERIFIED (Drew, 2026-07-27): tiny chip that says
-              whether this holding's identity has been explicitly confirmed
-              via the Confirm gate in Edit. Follow-up PR can gate storefront
-              publication on this — for now it's a surfacing signal only. */}
+          {/* CF-IDENTITY-VERIFIED (Drew, 2026-07-27) + CF-VERIFIED-IS-CHECKLIST-
+              BACKED (Drew, 2026-08-30): VERIFIED means this holding's identity
+              is a checklist-backed catalog card — confirmed by you in Edit, by
+              an import, by the catalog sweep, or by a ruling. UNVERIFIED means
+              the identity is fuzzy or parked: open Edit and pick the card. */}
           {h.identityVerified ? (
             <span
               className="px-1.5 py-0.5 rounded text-[10px] font-medium"
@@ -714,7 +715,7 @@ function HoldingRow({ h }: { h: PortfolioHolding }) {
                 background: "color-mix(in oklab, var(--hiq-hobby-green) 15%, transparent)",
                 color: "var(--hiq-hobby-green)",
               }}
-              title="Identity confirmed via the Confirm gate — FMV pipeline trusts this ID."
+              title="Identity is a checklist-backed catalog card — pricing reads that card's exact pool."
             >
               ✓ VERIFIED
             </span>
@@ -722,7 +723,7 @@ function HoldingRow({ h }: { h: PortfolioHolding }) {
             <span
               className="px-1.5 py-0.5 rounded text-[10px] font-medium text-[color:var(--color-muted)]"
               style={{ background: "var(--color-bg)" }}
-              title="Identity not yet confirmed via the Confirm gate — open Edit and pick a catalog match."
+              title="Identity is fuzzy or parked — open Edit and pick the catalog card."
             >
               UNVERIFIED
             </span>

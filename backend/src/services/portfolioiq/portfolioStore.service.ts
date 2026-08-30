@@ -5762,12 +5762,18 @@ export async function addHolding(req: Request, res: Response) {
       // CF-ONE-PIN-GATE-FOR-BOTH-FIELDS (D12a): the same gate applies when
       // NOTHING is pinned. A 0.72 is a proposal, not the card. See
       // applyCatalogMatchToHolding.
-      applyCatalogMatchToHolding(holding, matchResult, {
+      const pin = applyCatalogMatchToHolding(holding, matchResult, {
         source: "portfolioStore.addHolding",
         userId: auth.userId,
         holdingId: holding.id,
         cardIdRule: "fill",
       });
+      // CF-VERIFIED-IS-CHECKLIST-BACKED (Drew, 2026-08-30): a pin onto a
+      // checklist-backed row is VERIFIED without a trip through Edit.
+      if (pin.pinned) {
+        const { stampChecklistBackedIdentity, readCatalogRowSource } = await import("./checklistBackedIdentity.js");
+        await stampChecklistBackedIdentity(holding as unknown as Record<string, unknown>, readCatalogRowSource, { via: "portfolioStore.addHolding" });
+      }
     }
   } catch (err) {
     console.warn(JSON.stringify({
@@ -5987,12 +5993,17 @@ export async function updateHolding(req: Request, res: Response) {
       // CF-ONE-PIN-GATE-FOR-BOTH-FIELDS (D12a): hobbyiqCardId was left
       // UNGATED here on the theory that nothing prices off it alone.
       // priceFromOurPool does. Same gate, both fields.
-      applyCatalogMatchToHolding(next, matchResult, {
+      const pin = applyCatalogMatchToHolding(next, matchResult, {
         source: "portfolioStore.updateHolding",
         userId: auth.userId,
         holdingId: id,
         cardIdRule: "rebind",
       });
+      // CF-VERIFIED-IS-CHECKLIST-BACKED (Drew, 2026-08-30).
+      if (pin.pinned) {
+        const { stampChecklistBackedIdentity, readCatalogRowSource } = await import("./checklistBackedIdentity.js");
+        await stampChecklistBackedIdentity(next as unknown as Record<string, unknown>, readCatalogRowSource, { via: "portfolioStore.updateHolding" });
+      }
     }
   } catch (err) {
     console.warn(JSON.stringify({

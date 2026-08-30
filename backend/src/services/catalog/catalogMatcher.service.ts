@@ -32,6 +32,11 @@ const CATALOG_CONTAINER = process.env.COSMOS_CARD_CATALOG_CONTAINER ?? "card_cat
 
 let _container: Container | null = null;
 
+/** The card_catalog container for point reads by other services (null when no connection string). */
+export async function getCatalogContainerForRead(): Promise<Container | null> {
+  return getContainer();
+}
+
 async function getContainer(): Promise<Container | null> {
   if (_container) return _container;
   const conn = process.env.COSMOS_CONNECTION_STRING;
