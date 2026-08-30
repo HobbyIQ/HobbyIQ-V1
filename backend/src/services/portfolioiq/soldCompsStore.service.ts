@@ -42,7 +42,7 @@
 
 import { Container, CosmosClient } from "@azure/cosmos";
 import { DefaultAzureCredential } from "@azure/identity";
-import { computeHobbyIqCardId, resolveSetKeyForSlug } from "./hobbyIqCardId.service.js";
+import { computeHobbyIqCardId, resolveSetKeyForSlug, sameCardNumber } from "./hobbyIqCardId.service.js";
 import { guardSlugInputs, normalizeSportStrict, type SlugGuardResult } from "./slugGuard.service.js";
 import { canonicalizeParallel } from "./parallelCanonicalizer.service.js";
 import { parseParallelComposite } from "./parseParallelComposite.service.js";
@@ -2324,7 +2324,8 @@ export async function readCompsByIdentity(input: {
   if (wantedCn !== null) {
     rows = rows.filter((d) => {
       const docCn = typeof d.cardNumber === "string" ? d.cardNumber.trim().toLowerCase() : null;
-      return docCn === null || docCn === wantedCn;
+      // D23 ruling d: hyphen-insensitive (bd152 ≡ bd-152).
+      return docCn === null || sameCardNumber(docCn, wantedCn);
     });
   }
 

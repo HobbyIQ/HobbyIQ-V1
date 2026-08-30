@@ -12,6 +12,7 @@
 
 import type { PortfolioHolding } from "../../types/portfolioiq.types.js";
 import { parseListingTitle } from "./ebayTitleParser.service.js";
+import { sameCardNumber } from "./hobbyIqCardId.service.js";
 
 export interface RematchResult {
   holdingId: string;
@@ -136,9 +137,13 @@ export async function rematchOne(
       matchConfidence: match.confidence,
       matchSource: "catalog" as const,
     };
+    // A hyphen-only respelling of the number is not a change (D23, ruling d).
+    const numberChanged = (after.cardNumber || before.cardNumber)
+      ? !sameCardNumber(after.cardNumber, before.cardNumber)
+      : false;
     const changed =
       after.parallel !== before.parallel
-      || after.cardNumber !== before.cardNumber
+      || numberChanged
       || after.cardId !== before.cardId;
     return {
       ...base,

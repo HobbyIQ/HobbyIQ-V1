@@ -147,7 +147,9 @@ describe("verifyCardIdentity", () => {
       expect.objectContaining({
         sport: "baseball",
         year: 2011,
-        setKey: "topps-update",
+        // D23 (CF-THE-ID-CARRIES-THE-PRODUCT): "2011 Topps Update" is the
+        // Update Series product, one spelling.
+        setKey: "topps-update-series",
         reason: "player-not-in-set",
         missingPlayer: "Mike Trout",
         missingCardNumber: "US175",

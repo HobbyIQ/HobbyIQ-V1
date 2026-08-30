@@ -23,7 +23,7 @@ import {
   inferSportFromTitle,
 } from "./parseTitleIdentity.service.js";
 import { resolveVertical } from "./resolveVertical.service.js";
-import { computeHobbyIqCardId, slugify, normalizeSetKey as canonicalNormalizeSetKey } from "./hobbyIqCardId.service.js";
+import { cardNumberInClause, computeHobbyIqCardId, slugify, normalizeSetKey as canonicalNormalizeSetKey } from "./hobbyIqCardId.service.js";
 import { canonicalizeParallelName, variationParallelsForCard } from "../catalog/catalogMatcher.service.js";
 import { canonicalVariationName, pickVariationForMarker, reduceVariationStockToCatalog, variationNameFromSlug } from "../catalog/variationVocabulary.js";
 import { qualifiedSetKeyFromTitle } from "../catalog/productQualifiers.js";
@@ -283,14 +283,16 @@ async function scoreCandidatesByPrice(
     let bands = PRICE_BAND_CACHE.get(key);
     if (!bands) {
       try {
+        // D23 ruling d: the number matches every spelling (bd152 ≡ BD-152).
+        const num = cardNumberInClause(c.cardNumber);
         const q = c.parallel
           ? {
-              query: "SELECT c.price FROM c WHERE c.playerName = @p AND c.cardYear = @y AND c.cardNumber = @n AND c.parallel = @par AND c.price > 0",
-              parameters: [{ name: "@p", value: ctx.playerName }, { name: "@y", value: ctx.cardYear }, { name: "@n", value: c.cardNumber }, { name: "@par", value: c.parallel }],
+              query: `SELECT c.price FROM c WHERE c.playerName = @p AND c.cardYear = @y AND c.cardNumber IN (${num.sql}) AND c.parallel = @par AND c.price > 0`,
+              parameters: [{ name: "@p", value: ctx.playerName }, { name: "@y", value: ctx.cardYear }, ...num.params, { name: "@par", value: c.parallel }],
             }
           : {
-              query: "SELECT c.price FROM c WHERE c.playerName = @p AND c.cardYear = @y AND c.cardNumber = @n AND c.price > 0",
-              parameters: [{ name: "@p", value: ctx.playerName }, { name: "@y", value: ctx.cardYear }, { name: "@n", value: c.cardNumber }],
+              query: `SELECT c.price FROM c WHERE c.playerName = @p AND c.cardYear = @y AND c.cardNumber IN (${num.sql}) AND c.price > 0`,
+              parameters: [{ name: "@p", value: ctx.playerName }, { name: "@y", value: ctx.cardYear }, ...num.params],
             };
         const { resources } = await sold.items.query(q).fetchAll();
         const prices = (resources as Array<{ price: number }>).map((r) => Number(r.price)).filter((n) => Number.isFinite(n) && n > 0).sort((a, b) => a - b);
@@ -335,14 +337,16 @@ async function resolveGradeTierByPrice(
   const sold = await getSoldForScoring();
   if (!sold) return null;
   try {
+    // D23 ruling d: the number matches every spelling (bd152 ≡ BD-152).
+    const num = cardNumberInClause(ctx.cardNumber);
     const q = ctx.parallel
       ? {
-          query: "SELECT c.gradeCompany, c.gradeValue, c.price FROM c WHERE c.playerName = @p AND c.cardYear = @y AND c.cardNumber = @n AND c.parallel = @par AND c.price > 0",
-          parameters: [{ name: "@p", value: ctx.playerName }, { name: "@y", value: ctx.cardYear }, { name: "@n", value: ctx.cardNumber }, { name: "@par", value: ctx.parallel }],
+          query: `SELECT c.gradeCompany, c.gradeValue, c.price FROM c WHERE c.playerName = @p AND c.cardYear = @y AND c.cardNumber IN (${num.sql}) AND c.parallel = @par AND c.price > 0`,
+          parameters: [{ name: "@p", value: ctx.playerName }, { name: "@y", value: ctx.cardYear }, ...num.params, { name: "@par", value: ctx.parallel }],
         }
       : {
-          query: "SELECT c.gradeCompany, c.gradeValue, c.price FROM c WHERE c.playerName = @p AND c.cardYear = @y AND c.cardNumber = @n AND c.price > 0",
-          parameters: [{ name: "@p", value: ctx.playerName }, { name: "@y", value: ctx.cardYear }, { name: "@n", value: ctx.cardNumber }],
+          query: `SELECT c.gradeCompany, c.gradeValue, c.price FROM c WHERE c.playerName = @p AND c.cardYear = @y AND c.cardNumber IN (${num.sql}) AND c.price > 0`,
+          parameters: [{ name: "@p", value: ctx.playerName }, { name: "@y", value: ctx.cardYear }, ...num.params],
         };
     const { resources } = await sold.items.query(q).fetchAll();
     const rows = resources as Array<{ gradeCompany: string | null; gradeValue: number | null; price: number }>;

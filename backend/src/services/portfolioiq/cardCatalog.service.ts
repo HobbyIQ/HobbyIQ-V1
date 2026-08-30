@@ -420,7 +420,13 @@ export function deriveCatalogEntry(input: {
     sport: input.sport,
     year,
     cardYear: year,
-    setKey,
+    // CF-THE-ID-CARRIES-THE-PRODUCT (D23). A key needs both halves AT MINT:
+    // the field is the id's own setKey segment, never the caller's spelling
+    // of it. "leaf-metal-baseball" (a filename), "Topps Update" (one
+    // source's name) and "bowman" + BCP- (the vendor repair) all used to
+    // leave a field that disagreed with the id, and every mover then refused
+    // the row. setName keeps the source's own words.
+    setKey: parsedSlug[3] ?? setKey,
     cardNumber: cardNumber.toUpperCase(),
     parallel: String(input.parallel ?? "Base"),
     parallelSlug,

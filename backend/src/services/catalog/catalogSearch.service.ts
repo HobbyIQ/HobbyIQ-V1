@@ -27,7 +27,7 @@ import {
 } from "./catalogVisibility.js";
 // Same normaliser the slug generator uses, so "Bowman Draft" here and
 // "bowman-draft" in a slug are compared as the one thing they are.
-import { normalizeSetKey } from "../portfolioiq/hobbyIqCardId.service.js";
+import { cardNumberInClause, normalizeSetKey, sameCardNumber } from "../portfolioiq/hobbyIqCardId.service.js";
 
 const COSMOS_DATABASE = process.env.COSMOS_DATABASE ?? "hobbyiq";
 const CATALOG_CONTAINER = process.env.COSMOS_CARD_CATALOG_CONTAINER ?? "card_catalog";
@@ -345,6 +345,9 @@ export const PRODUCT_WORDS = new Set([
   "sterling", "inception", "platinum", "stadium", "club", "gallery", "archives",
   "allen", "ginter", "gypsy", "queen", "immaculate", "obsidian", "contenders",
   "prospect", "prospects", "update", "series", "draft", "mega", "jumbo",
+  // CF-THE-ID-CARRIES-THE-PRODUCT (D23): the Leaf lines the id now carries
+  // ("leaf metal" must not fill the page with Leaf Vivid).
+  "vivid", "metal",
 ]);
 
 /** CF-SEARCH-PRODUCT-NARROWS (Drew, 2026-08-16: "any 2018 bowman chrome
@@ -809,12 +812,12 @@ export async function searchCatalog(
   // stores card numbers uppercase ("BCP-69", "HMT1", "CPA-EHA"), so comparing
   // against both the uppercased token and the raw one keeps it an indexable
   // equality while still matching either casing.
-  const armNumber = cardNumberToken
-    ? buildArm(`(c.cardNumber = @cardNumUpper OR c.cardNumber = @cardNum)`,
-      [
-        { name: "@cardNumUpper", value: cardNumberToken.toUpperCase() },
-        { name: "@cardNum", value: cardNumberToken },
-      ])
+  // CF-THE-ID-CARRIES-THE-PRODUCT (D23, ruling d): the same indexable
+  // equality over every spelling — case, hyphen-free, hyphenated — so a
+  // query typed "bd152" finds the checklist's BD-152.
+  const numberIn = cardNumberToken ? cardNumberInClause(cardNumberToken, "@cardNum") : null;
+  const armNumber = numberIn
+    ? buildArm(`(c.cardNumber IN (${numberIn.sql}))`, numberIn.params)
     : null;
 
   let rows: Row[] = [];
@@ -994,7 +997,7 @@ export async function searchCatalog(
     const wantSetKey = ctx.setName ? normalizeSetKey(String(ctx.setName)) : "";
     const wantPlayer = fold(String(ctx.playerName ?? ""));
     for (const h of scored) {
-      if (wantNumber && String(h.cardNumber ?? "").trim().toUpperCase() === wantNumber) h.score += 1.2;
+      if (wantNumber && sameCardNumber(h.cardNumber, wantNumber)) h.score += 1.2;
       if (wantYear !== null && h.year === wantYear) h.score += 0.6;
       if (wantSetKey && String(h.setKey ?? "") === wantSetKey) h.score += 0.4;
       if (wantPlayer && fold(String(h.playerName ?? "")) === wantPlayer) h.score += 0.3;

@@ -16,7 +16,7 @@
 //   - Trend: OLS regression when n≥3; anchor slope when n=2; flat below.
 
 import { CosmosClient, type Container } from "@azure/cosmos";
-import { parseHobbyIqCardId, slugify } from "./hobbyIqCardId.service.js";
+import { cardNumberInClause, parseHobbyIqCardId, slugify } from "./hobbyIqCardId.service.js";
 import {
   filterCrossSetKeyComps,
   foldPlayerName,
@@ -449,16 +449,18 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
         // (each player's card number is globally distinct in a given set —
         // CPA-EHA = Eric Hartman across every year/set). Don't need
         // playerName which isn't on parsed anyway.
+        // D23 ruling d: the number matches every spelling (bd152 ≡ BD-152).
+        const num = cardNumberInClause(String(parsed.cardNumber ?? ""), "@num");
         const siblingParams: Array<{ name: string; value: string | number | boolean }> = [
           { name: "@year", value: parsed.year ?? 0 },
-          { name: "@num", value: String(parsed.cardNumber ?? "") },
+          ...num.params,
           { name: "@auto", value: parsed.isAuto === true },
           { name: "@slug", value: slug },
           { name: "@cut", value: cutoff },
         ];
         const { resources: sibs } = await container.items.query<number>({
           query: `SELECT VALUE COUNT(1) FROM c
-                  WHERE c.cardYear = @year AND c.cardNumber = @num AND c.isAuto = @auto
+                  WHERE c.cardYear = @year AND c.cardNumber IN (${num.sql}) AND c.isAuto = @auto
                     AND c.hobbyiqCardId != @slug
                     AND c.soldAt >= @cut AND c.price > 0
                     AND (NOT IS_DEFINED(c.flaggedWrong) OR c.flaggedWrong = false)`,

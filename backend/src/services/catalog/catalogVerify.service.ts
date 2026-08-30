@@ -37,6 +37,7 @@ import { CosmosClient, type Container } from "@azure/cosmos";
 import {
   normalizeSetKey,
   deriveParentSetKey,
+  sameCardNumber,
   slugify,
 } from "../portfolioiq/hobbyIqCardId.service.js";
 import { requestChecklistSeed } from "./checklistSeedQueue.service.js";
@@ -157,8 +158,9 @@ function findNumberMatch(
   rows: CatalogNumberRow[],
   cardNumber: string,
 ): CatalogNumberRow | undefined {
-  const target = String(cardNumber).trim().toUpperCase();
-  return rows.find((r) => String(r.cardNumber ?? "").trim().toUpperCase() === target);
+  // Hyphen- and case-insensitive (D23, ruling d): BD152 verifies against
+  // the checklist's BD-152.
+  return rows.find((r) => sameCardNumber(r.cardNumber, cardNumber));
 }
 
 function numbersOf(rows: CatalogNumberRow[]): string[] {

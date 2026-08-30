@@ -39,7 +39,7 @@
 
 import { CosmosClient, type Container } from "@azure/cosmos";
 import { requestChecklistSeed } from "./checklistSeedQueue.service.js";
-import { slugify } from "../portfolioiq/hobbyIqCardId.service.js";
+import { cardNumberVariants, slugify } from "../portfolioiq/hobbyIqCardId.service.js";
 import { canAdjudicate } from "./catalogAuthority.service.js";
 
 const COSMOS_DATABASE = process.env.COSMOS_DATABASE ?? "hobbyiq";
@@ -170,7 +170,10 @@ export async function resolveSetKeyFromCatalog(
     // case-insensitive match is expressed as equality against the variants
     // instead. An IN over literals is index-usable; UPPER() over a column is
     // not. Deduped because "CPA-MWI" yields one variant, not three.
-    const variants = [...new Set([cardNumber, cardNumber.toUpperCase(), cardNumber.toLowerCase()])];
+    // CF-THE-ID-CARRIES-THE-PRODUCT (D23, ruling d): the hyphen-free and the
+    // hyphenated spellings too, so BD152 resolves through the checklist's
+    // BD-152 row.
+    const variants = cardNumberVariants(cardNumber);
     const numParams = variants.map((v, i) => ({ name: `@n${i}`, value: v }));
     // ONE template literal, not a concatenation. catalogQuerySchema.test.ts
     // reads the SQL back out of this file to check every c.<field> against the

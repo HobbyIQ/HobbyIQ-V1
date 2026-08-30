@@ -1,66 +1,60 @@
-// CF-PRODUCT-FAMILY (Drew, 2026-08-01). Every set slug expresses a
-// parent-then-subproduct hierarchy in its dash-joined name:
-//   bowman-chrome           → parent=bowman, subproduct=chrome
-//   bowman-chrome-sapphire  → parent=bowman, subproduct=chrome-sapphire
-//   bowman-mega-box         → parent=bowman, subproduct=mega-box
-//   topps-chrome-platinum   → parent=topps,  subproduct=chrome-platinum
-//   panini-donruss-optic    → parent=panini, subproduct=donruss-optic
+// CF-PRODUCT-FAMILY (Drew, 2026-08-01) — the relationship between a product
+// and the family a pricing rung may cross into, and the brand it rolls up to.
 //
-// This helper exposes the relationship so pool queries can:
-//   - Query a specific sub-product (bowman-mega-box)
-//   - Fall back to sibling sub-products of same parent when pool is thin
-//   - Roll up to parent brand for market-level analytics
+// CF-THE-ID-CARRIES-THE-PRODUCT (D23, Drew 2026-08-30, ruling c). The family
+// used to be the first two segments of the key — `split("-").slice(0, 2)` —
+// which was right for bowman-chrome-prospects (bowman-chrome) and wrong for
+// everything the ruling names: it made `topps-series-1` and `topps-sapphire`
+// one family, could not say that `bowman-draft-1st-edition` is another set,
+// and read `leaf-metal-draft` as a refinement of a `leaf-metal` it did not
+// know. The family is READ FROM THE TABLE now (catalog/productSetKeys.ts):
+//   topps-series-1 / topps-update-series      -> topps          (one family)
+//   bowman-chrome-prospects / -updates / -mega-box -> bowman-chrome
+//   topps-chrome-update-series               -> topps-chrome
+//   bowman-draft-chrome                       -> bowman-draft
+//   bowman                                    -> bowman   (NOT bowman-chrome:
+//                                                 paper and Chrome are different
+//                                                 cards — Drew, 2026-08-22)
+//   topps                                     -> topps    (NOT topps-chrome)
+//   *sapphire*, *1st-edition*                 -> itself   (own checklist; never
+//                                                 crosses — Drew, 2026-08-22 / 30)
+//   donruss / panini-donruss                  -> donruss  (one line, two owners)
+//   a key the table does not know             -> itself   (an unknown product
+//                                                 crosses nothing)
+// A legacy spelling (`topps-update`) answers with its product's family, so
+// pool rows keyed under an old spelling still price within the family while
+// the rename fleet runs.
 
-const KNOWN_PARENTS = new Set([
-  "bowman",
-  "topps",
-  "panini",
-  "upper-deck",
-  "fleer",
-  "donruss",
-  "leaf",
-]);
+import { productAncestry, productEntry, productFamilyOf } from "../catalog/productSetKeys.js";
 
 export interface ProductFamily {
-  parent: string;               // "bowman", "topps", "panini", etc.
-  subproduct: string;           // "chrome", "mega-box", "chrome-platinum", etc. Empty for parent-only.
+  parent: string;               // the brand root: "bowman", "topps", "panini", ...
+  subproduct: string;           // what follows the root on the ancestry walk; empty for a root
   slug: string;                 // original set slug
-  hierarchy: string[];          // [parent, ...subproduct-segments]
+  hierarchy: string[];          // root → ... → the product itself
 }
 
+/** The product's place under its brand, from the table's parent chain
+ *  (display and roll-up only — never identity, never the pricing family).
+ *  A key the table does not know is its own root. */
 export function parseProductFamily(setSlug: string): ProductFamily {
   const s = String(setSlug || "").trim().toLowerCase();
   if (!s) return { parent: "", subproduct: "", slug: s, hierarchy: [] };
-  const segments = s.split("-");
-  const parent = KNOWN_PARENTS.has(segments[0]) ? segments[0] : segments[0];
-  const subproduct = segments.slice(1).join("-");
+  const chain = productAncestry(s).reverse();     // root first
+  const parent = chain[0] ?? s;
+  const rest = chain.slice(1);
   return {
     parent,
-    subproduct,
+    subproduct: rest.join(" > "),
     slug: s,
-    hierarchy: subproduct ? [parent, ...subproduct.split("-")] : [parent],
+    hierarchy: chain,
   };
 }
 
 // CF-CROSS-SETKEY-STAYS-HOME (D4 PR 5, 2026-08-29). The product FAMILY a
-// pricing rung may cross setKeys within — the ladder the catalog matcher
-// already honours (project_product_family_ladder): the first two segments.
-//   bowman-chrome-prospects / bowman-chrome-updates / bowman-chrome-mega-box
-//     -> bowman-chrome           (one family)
-//   topps-chrome-update          -> topps-chrome
-//   bowman-draft-chrome          -> bowman-draft (a second spelling of it)
-//   bowman                       -> bowman        (NOT bowman-chrome: paper
-//                                   and Chrome are different cards at
-//                                   different prices — Drew, 2026-08-22)
-//   topps                        -> topps         (NOT topps-chrome)
-//   *sapphire*                   -> itself        (its own checklist; never
-//                                   crosses — Drew, 2026-08-22)
+// pricing rung may cross setKeys within — the table's `family` column.
 export function productFamilyKey(setKey: string): string {
-  const s = String(setKey || "").trim().toLowerCase();
-  if (!s) return "";
-  const segments = s.split("-").filter(Boolean);
-  if (segments.includes("sapphire")) return s;
-  return segments.slice(0, 2).join("-");
+  return productFamilyOf(setKey);
 }
 
 /** True iff two setKeys sit in the same product family (see
@@ -72,16 +66,23 @@ export function sameProductFamily(a: string, b: string): boolean {
   return ka !== "" && ka === kb;
 }
 
-/** Given a set slug, return all sibling sub-products under the same
- *  parent brand. Useful for "widen the pool" queries. */
+/** Given a family (or brand) key, the slugs among `allSlugs` that belong to
+ *  it — by the table, not by prefix. Useful for "widen the pool" queries. */
 export function siblingsOfParent(parent: string, allSlugs: string[]): string[] {
-  return allSlugs.filter((s) => s.startsWith(`${parent}-`) || s === parent);
+  const p = String(parent || "").trim().toLowerCase();
+  if (!p) return [];
+  return allSlugs.filter((s) => s === p || productFamilyOf(s) === p || productAncestry(s).includes(p));
 }
 
-/** Human-friendly display name. `bowman-mega-box` → "Bowman > Mega Box". */
+/** Human-friendly display name. `bowman-chrome-mega-box` → "Bowman > Bowman Chrome > Bowman Chrome Mega Box". */
 export function displayHierarchy(setSlug: string): string {
   const fam = parseProductFamily(setSlug);
   const titleCase = (s: string) => s.split("-").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
-  if (!fam.subproduct) return titleCase(fam.parent);
-  return `${titleCase(fam.parent)} > ${titleCase(fam.subproduct)}`;
+  if (fam.hierarchy.length <= 1) return titleCase(fam.parent);
+  return fam.hierarchy.map(titleCase).join(" > ");
+}
+
+/** Whether the table names this key (or one of its spellings) at all. */
+export function isKnownProduct(setKey: string): boolean {
+  return productEntry(setKey) !== null;
 }

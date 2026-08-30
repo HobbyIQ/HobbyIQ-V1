@@ -3,7 +3,7 @@
 // spellings before the rule was written; the unique-match guard is the Prizm
 // safety and these tests are its contract.
 import { describe, it, expect } from "vitest";
-import { resolveLongFormRung, parallelTokenSet, widenedSetKeyPrefixes } from "../src/services/catalog/catalogMatcher.service.js";
+import { resolveLongFormRung, parallelTokenSet, widenedSetKeys } from "../src/services/catalog/catalogMatcher.service.js";
 
 const cand = (seg: string) => ({ id: `hiq:baseball:2023:topps-chrome:150:${seg}:no-auto`, seg });
 
@@ -59,23 +59,26 @@ describe("resolveLongFormRung", () => {
   });
 });
 
-describe("widenedSetKeyPrefixes — CF-VERIFIED-REFINEMENTS-ONLY", () => {
-  it("widens only into -series and -update, never the bare hyphen", () => {
-    expect(widenedSetKeyPrefixes("topps")).toEqual(["topps-series", "topps-update"]);
+describe("widenedSetKeys — CF-VERIFIED-REFINEMENTS-ONLY", () => {
+  // D23 (CF-THE-ID-CARRIES-THE-PRODUCT): the refinements are the table's
+  // exact keys — the series split and the update series, every spelling of
+  // them — never a `-series` / `-update` PREFIX, which would have admitted
+  // topps-series-1-1st-edition (another set).
+  it("widens only into the series split and the update series", () => {
+    const w = widenedSetKeys("topps");
+    expect(w).toEqual(expect.arrayContaining(["topps-series-1", "topps-series-2", "topps-update-series", "topps-update"]));
+    expect(w).not.toContain("topps-series-1-1st-edition");
   });
   it("topps-chrome can never be reached from topps", () => {
-    for (const p of widenedSetKeyPrefixes("topps")) {
-      expect("topps-chrome".startsWith(p)).toBe(false);
-      expect("topps-chrome-sapphire".startsWith(p)).toBe(false);
-    }
+    const w = widenedSetKeys("topps");
+    expect(w).not.toContain("topps-chrome");
+    expect(w).not.toContain("topps-chrome-sapphire");
+    expect(w).not.toContain("topps-chrome-update-series");
   });
-  it("bowman widens to prefixes that match nothing real — harmless by construction", () => {
-    for (const p of widenedSetKeyPrefixes("bowman")) {
-      expect("bowman-chrome".startsWith(p)).toBe(false);
-      expect("bowman-sapphire".startsWith(p)).toBe(false);
-    }
+  it("bowman widens into nothing — harmless by construction", () => {
+    expect(widenedSetKeys("bowman")).toEqual([]);
   });
   it("empty input widens to nothing", () => {
-    expect(widenedSetKeyPrefixes("")).toEqual([]);
+    expect(widenedSetKeys("")).toEqual([]);
   });
 });

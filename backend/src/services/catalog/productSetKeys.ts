@@ -1,0 +1,386 @@
+/**
+ * CF-THE-ID-CARRIES-THE-PRODUCT (D23; Drew, 2026-08-30 19:50Z, ruled in
+ * detail): "the id's setKey is the product as the checklist names it."
+ *
+ * THE DEFECT THIS ENDS. computeHobbyIqCardId collapsed the product into its
+ * family: "2024 Topps Series 1" minted `topps`, "Topps Update Series" minted
+ * `topps-update`, "Topps Chrome Update Series" minted `topps-chrome`,
+ * "Bowman Draft 1st Edition" minted `bowman-draft`, "Upper Deck Series 1"
+ * minted `upper-deck`, "Topps Heritage High Number" minted `topps-heritage`,
+ * every Leaf product minted `leaf` -- while the row's own setKey FIELD kept
+ * the real product. Measured 2026-08-30, read-only, un-graded rows whose id
+ * disagrees with their own setKey field: 1,231,457 across the ruled keys
+ * (topps-series-2 216,000 / topps-series-1 213,796 / topps-chrome-update-
+ * series 152,996 / topps-update-series 142,993 / leaf-metal 109,618 /
+ * leaf-vivid 109,224 / topps-heritage-high-number 39,820 / upper-deck-
+ * series-2 17,162 / upper-deck-series-1 11,558 / bowman-draft-1st-edition
+ * 3,427; Donruss 208,036 -- see the era rule below). The movers (isAuto,
+ * one-of-one, the cross-source fold) refused about half their rows on it,
+ * because a key needs both halves and these rows had two.
+ *
+ * THE RULINGS, as data:
+ *   (a) the id carries the full product exactly as the checklist names it,
+ *       ONE spelling per product -- this table is where the spellings live;
+ *       `names` are the other spellings the checklists and the sellers use,
+ *       written as slugify emits them (year and sport stripped), because a
+ *       rule written against a product's NAME rather than against what
+ *       slugify actually produces for it never fires
+ *       (CF-PANINI-PRODUCTS-MISSING-FROM-VOCAB);
+ *   (b) the maker prefix is KEPT on Panini-era products ("2025 Panini
+ *       Donruss" -> panini-donruss; a 1990 Donruss checklist says Donruss ->
+ *       donruss). Measured 2026-08-30: every baseball checklist source names
+ *       the modern product "Donruss" (519,422 rows; checklistcenter,
+ *       checklistinsider, baseballcardpedia, beckett all), "Panini Donruss"
+ *       appears only in football (cardboardconnection, hobbymonitor) and in
+ *       derived rows -- so the NAME cannot carry the ruling by itself and
+ *       the ERA does: DONRUSS_SPELLING_POLICY below, a named policy Drew can
+ *       flip, default `panini-era` (the acquisition year decides, exactly
+ *       the 2009 boundary CF-PANINI-IS-ANACHRONISTIC-BEFORE-2009 pinned),
+ *       alternative `as-named` (the name decides, year-independent);
+ *   (c) the product FAMILY (`topps` contains `topps-series-1`; `bowman-chrome`
+ *       contains its prospects/updates/mega-box spellings; `bowman-draft` is
+ *       NOT `bowman-draft-1st-edition`; sapphire never crosses) exists ONLY
+ *       for pricing fallbacks (crossSetKeyRule via productFamilyKey) and for
+ *       narrowing (the matcher's family step, the reference ladder), never
+ *       for identity -- and it is read from THIS table, never derived from a
+ *       string prefix of the key (`split("-").slice(0, 2)` was the family;
+ *       it made `topps-series-1` and `topps-sapphire` siblings and could not
+ *       say that 1st Edition is another set);
+ *   (d) card-number spelling keeps the checklist's hyphen; every match is
+ *       hyphen-insensitive (sameCardNumber / cardNumberVariants in
+ *       hobbyIqCardId.service).
+ *
+ * WHAT IS NOT HERE. The regex vocabulary in hobbyIqCardId.service still
+ * handles every product this table does not name, catch-alls included, so a
+ * product the table does not know is still collapsed to its brand by the
+ * `/topps/`, `/bowman/`, `/leaf/` rules. Naming a product is one row here;
+ * the Leaf rows below were taken from the measured field spellings of
+ * 2026-08-30 for exactly that reason. This module imports nothing from the
+ * slug generator, so it can be read by everything that does.
+ */
+
+export type DonrussSpellingPolicy = "panini-era" | "as-named";
+
+/** Drew's ruling (b), as a switch: `panini-era` -- Donruss from 2009 on is
+ *  `panini-donruss` and before it `donruss`, whatever the text said;
+ *  `as-named` -- "Panini Donruss" is `panini-donruss` and "Donruss" is
+ *  `donruss` in every year. Compile-time on purpose: an identity policy read
+ *  from the environment would mint different ids on different machines. */
+export const DONRUSS_SPELLING_POLICY: DonrussSpellingPolicy = "panini-era";
+/** Panini acquired Donruss in 2009 (CF-PANINI-IS-ANACHRONISTIC-BEFORE-2009). */
+export const PANINI_DONRUSS_FROM_YEAR = 2009;
+
+export interface ProductSetKey {
+  /** The one spelling. */
+  readonly setKey: string;
+  /** True when THIS TABLE decides the product's spelling (the D23 products):
+   *  the key and its `names` take part in productSetKeyForName, ahead of the
+   *  regex vocabulary. Every other entry carries family / parent data only
+   *  and leaves its spelling to the vocabulary's own ordering — "Bowman
+   *  Chrome Prospects" must still fold to bowman-chrome, "Donruss Optic" to
+   *  panini-optic, "Upper Deck SPx Finite" to spx-finite, and a
+   *  `bowman-chrome` name matched as a segment run would pre-empt all three. */
+  readonly spelled?: boolean;
+  /** Other spellings of the same product, as slugify emits them with the
+   *  year and the sport already stripped. A single-segment name matches a
+   *  product text only exactly; a multi-segment name also matches as a
+   *  contiguous run of segments inside a longer text ("topps-update-series-
+   *  hobby-box"), longest name first. Only consulted when `spelled`. */
+  readonly names?: readonly string[];
+  /** The pricing family. Defaults to the key itself: a product is its own
+   *  family unless the table says otherwise. */
+  readonly family?: string;
+  /** The immediate parent for the reference / verify walk (the flagship this
+   *  is a release of). Defaults to none. */
+  readonly parent?: string | null;
+  /** The plain product this one is a VERIFIED refinement of, for the
+   *  matcher's widening (CF-VERIFIED-REFINEMENTS-ONLY): the series split and
+   *  the update series of a flagship. 1st Edition is another set, not a
+   *  refinement. */
+  readonly refines?: string;
+}
+
+type Opts = { spelled?: boolean; names?: readonly string[]; family?: string; parent?: string | null; refines?: string };
+const P = (setKey: string, o: Opts = {}): ProductSetKey => ({ setKey, ...o });
+/** A product whose spelling THIS table decides (see `spelled`). */
+const S = (setKey: string, o: Opts = {}): ProductSetKey => ({ setKey, spelled: true, ...o });
+
+/** The table. Order is irrelevant; lookups are by name and by key. */
+export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
+  // -- Topps flagship and its verified refinements ---------------------------
+  P("topps"),
+  S("topps-series-1", { names: ["topps-series-one", "topps-s1"], family: "topps", parent: "topps", refines: "topps" }),
+  S("topps-series-2", { names: ["topps-series-two", "topps-s2"], family: "topps", parent: "topps", refines: "topps" }),
+  // "2024 Topps Series 1 1st Edition" is another set (as 1st Edition always
+  // is); the sport word leaked into one measured spelling.
+  S("topps-series-1-1st-edition", { names: ["topps-series-1-baseball-1st-edition", "topps-series-1-first-edition", "topps-1st-edition"], parent: "topps-series-1" }),
+  S("topps-series-1-celebration-mega-box", { family: "topps-series-1", parent: "topps-series-1" }),
+  S("topps-series-1-tokyo-series-mega-box", { family: "topps-series-1", parent: "topps-series-1" }),
+  // Topps Update: baseballcardpedia names it "Topps Update" (630k rows),
+  // checklistcenter / checklistinsider / beckett "Topps Update Series"; Drew
+  // ruled the full name. 2006-2009 it was "Topps Updates & Highlights", a
+  // different name for a different release, kept as the checklist names it.
+  S("topps-update-series", { names: ["topps-update", "topps-update-chrome"], family: "topps", parent: "topps", refines: "topps" }),
+  S("topps-updates-and-highlights", { names: ["topps-updates-highlights", "topps-update-and-highlights", "topps-update-highlights"], family: "topps", parent: "topps", refines: "topps" }),
+  // A vendor spelling with its own regex rule; spelled here so the longer
+  // name wins over the `topps-update` alias above.
+  S("topps-update-sapphire", { parent: "topps-update-series" }),
+  P("topps-chrome", { parent: "topps" }),
+  S("topps-chrome-update-series", { names: ["topps-chrome-update"], family: "topps-chrome", parent: "topps-chrome", refines: "topps-chrome" }),
+  S("topps-chrome-updates-and-highlights", { names: ["topps-chrome-updates-highlights"], family: "topps-chrome", parent: "topps-chrome", refines: "topps-chrome" }),
+  S("topps-chrome-update-sapphire", {
+    names: ["topps-chrome-update-sapphire-edition", "topps-chrome-update-series-sapphire", "topps-chrome-update-series-sapphire-edition", "topps-update-sapphire-chrome", "topps-sapphire-chrome-update"],
+    parent: "topps-chrome-update-series",
+  }),
+  P("topps-chrome-sapphire", { parent: "topps-chrome" }),
+  P("topps-chrome-platinum", { parent: "topps-chrome" }),
+  P("topps-chrome-black", { parent: "topps-chrome" }),
+  P("topps-heritage", { parent: "topps" }),
+  S("topps-heritage-high-number", { names: ["topps-heritage-high-numbers", "heritage-high-number", "heritage-high-numbers"], family: "topps-heritage", parent: "topps-heritage", refines: "topps-heritage" }),
+  P("topps-traded", { parent: "topps" }),
+  P("topps-traded-tiffany", { parent: "topps-traded" }),
+  P("topps-tiffany", { parent: "topps" }),
+  P("topps-finest", { parent: "topps" }),
+  P("topps-finest-flashbacks", { parent: "topps-finest" }),
+  ...["topps-gold-label", "topps-pristine", "topps-total", "topps-pro-debut", "topps-transcendent", "topps-dynasty", "topps-tribute",
+    "topps-inception", "topps-definitive", "topps-five-star", "topps-museum-collection", "topps-gypsy-queen", "topps-archives",
+    "topps-big-league", "topps-bunt", "topps-allen-ginter", "topps-stadium-club", "topps-cosmic-chrome", "topps-now",
+    "topps-signature-class", "topps-resurgence", "topps-composite", "topps-cracker-jack"].map((k) => P(k, { parent: "topps" })),
+  P("o-pee-chee"),
+
+  // -- Bowman -----------------------------------------------------------------
+  P("bowman"),
+  P("bowman-paper", { family: "bowman", parent: "bowman" }),
+  P("bowman-chrome", { parent: "bowman" }),
+  // Vendor spellings of Bowman Chrome subsets (the pool carries them):
+  // one family, per the ladder the matcher honours.
+  P("bowman-chrome-prospects", { family: "bowman-chrome", parent: "bowman-chrome" }),
+  P("bowman-chrome-updates", { family: "bowman-chrome", parent: "bowman-chrome" }),
+  P("bowman-chrome-mega-box", { family: "bowman-chrome", parent: "bowman-chrome" }),
+  P("bowman-chrome-draft", { family: "bowman-chrome", parent: "bowman-chrome" }),
+  P("bowman-chrome-sapphire", { parent: "bowman-chrome" }),
+  P("bowman-chrome-draft-picks-and-prospects", { family: "bowman-chrome", parent: "bowman-draft-picks-and-prospects" }),
+  P("bowman-draft", { parent: "bowman" }),
+  P("bowman-draft-chrome", { family: "bowman-draft", parent: "bowman-draft" }),
+  P("bowman-draft-paper", { family: "bowman-draft", parent: "bowman-draft" }),
+  P("bowman-draft-picks-and-prospects", { family: "bowman-draft", parent: "bowman" }),
+  P("bowman-draft-sapphire", { parent: "bowman-draft" }),
+  // 1st Edition is another set (D22; Drew: "first edition is another bowman
+  // set"): its own family, so the cross-setkey rung never reaches Draft.
+  S("bowman-draft-1st-edition", { names: ["bowman-draft-first-edition"], parent: "bowman-draft" }),
+  S("bowman-1st-edition", { names: ["bowman-first-edition"], parent: "bowman" }),
+  P("bowman-sterling", { parent: "bowman" }),
+  P("bowman-heritage", { parent: "bowman" }),
+  P("bowman-platinum", { parent: "bowman" }),
+  P("bowmans-best", { parent: "bowman" }),
+  P("bowman-best-university", { parent: "bowmans-best" }),
+
+  // -- Upper Deck -------------------------------------------------------------
+  P("upper-deck"),
+  S("upper-deck-series-1", { names: ["upper-deck-series-one"], family: "upper-deck", parent: "upper-deck", refines: "upper-deck" }),
+  S("upper-deck-series-2", { names: ["upper-deck-series-two"], family: "upper-deck", parent: "upper-deck", refines: "upper-deck" }),
+  ...["upper-deck-black-diamond", "upper-deck-retro", "upper-deck-choice", "upper-deck-mvp"].map((k) => P(k, { family: "upper-deck", parent: "upper-deck" })),
+  P("sp-authentic", { parent: "upper-deck" }),
+  P("sp-prospects", { parent: "upper-deck" }),
+  P("spx"),
+  P("spx-finite", { parent: "spx" }),
+  P("collectors-choice"),
+
+  // -- Leaf: every product the catalog's own field spellings name (measured
+  //    2026-08-30; the bare `leaf` rule collapsed all of them). Own family
+  //    each -- Leaf products do not share a numbering -- under the Leaf root.
+  P("leaf"),
+  S("leaf-vivid", { names: ["leaf-vivid-baseball"], parent: "leaf" }),
+  S("leaf-metal", { names: ["leaf-metal-baseball"], parent: "leaf" }),
+  S("leaf-metal-draft", { names: ["leaf-metal-draft-baseball"], family: "leaf-metal", parent: "leaf-metal" }),
+  S("leaf-metal-perfect-game-all-american-classic", { names: ["leaf-metal-perfect-game-all-american"], family: "leaf-metal", parent: "leaf-metal" }),
+  S("leaf-trinity", { names: ["leaf-trinity-baseball"], parent: "leaf" }),
+  S("leaf-trinity-mega-box", { family: "leaf-trinity", parent: "leaf-trinity" }),
+  S("leaf-valiant", { names: ["leaf-valiant-baseball"], parent: "leaf" }),
+  S("leaf-draft", { names: ["leaf-draft-baseball-blaster", "leaf-draft-baseball"], parent: "leaf" }),
+  S("leaf-rookies-and-stars", { names: ["leaf-rookies-stars"], parent: "leaf" }),
+  S("leaf-limited", { parent: "leaf" }),
+  S("leaf-limited-rookies", { family: "leaf-limited", parent: "leaf-limited" }),
+  S("leaf-certified-materials", { parent: "leaf" }),
+  S("leaf-certified-materials-samples", { family: "leaf-certified-materials", parent: "leaf-certified-materials" }),
+  S("leaf-a-bronx-legacy", { parent: "leaf" }),
+  S("leaf-a-bronx-legacy-series-2", { family: "leaf-a-bronx-legacy", parent: "leaf-a-bronx-legacy" }),
+  ...["leaf-optichrome", "leaf-perfect-game-national-showcase", "leaf-baseball-nation", "leaf-perfect-game-bonus-box",
+    "leaf-perfect-game-all-american-classic", "leaf-lumber", "leaf-lumber-kings", "leaf-electrum", "leaf-exotic",
+    "leaf-exotic-multi-sport", "leaf-signature-series", "leaf-signature-series-nscc-multisport", "leaf-eclectic",
+    "leaf-seasons-in-the-sun", "leaf-flash", "leaf-spectacular", "leaf-century", "leaf-ultimate-draft",
+    "leaf-decadence-multi-sport", "leaf-pete-rose-legacy", "leaf-fractal-materials", "leaf-collections",
+    "leaf-certified", "leaf-preferred"].map((k) => S(k, { parent: "leaf" })),
+
+  // -- Donruss: one product line across two owners; the era decides the
+  //    spelling (DONRUSS_SPELLING_POLICY, applied by spellForEra once the
+  //    year is known). Not `spelled` here: the vocabulary's own ordering
+  //    keeps "Donruss Optic" / "Donruss Elite" / "Studio" apart from the
+  //    flagship, and its bare alias gives the modern spelling to a text with
+  //    no year. One pricing family, so a sale keyed under the other era's
+  //    spelling still prices the card.
+  P("donruss", { family: "donruss" }),
+  P("panini-donruss", { family: "donruss" }),
+  P("donruss-elite"),
+  P("donruss-studio"),
+
+  // -- Panini (the maker is the parent; every product its own family) --------
+  P("panini"),
+  P("panini-prizm", { parent: "panini" }),
+  P("panini-prizm-draft-picks", { family: "panini-prizm", parent: "panini-prizm" }),
+  P("panini-prizm-wnba", { family: "panini-prizm", parent: "panini-prizm" }),
+  P("panini-prizm-monopoly-wnba", { family: "panini-prizm", parent: "panini-prizm" }),
+  ...["panini-select", "panini-mosaic", "panini-optic", "panini-contenders", "panini-immaculate", "panini-flawless",
+    "panini-national-treasures", "panini-absolute", "panini-chronicles", "panini-phoenix", "panini-illusions",
+    "panini-obsidian", "panini-spectra", "panini-revolution", "panini-crown-royale", "panini-one-one", "panini-playoff",
+    "panini-score", "panini-classics", "panini-legacy", "panini-threads", "panini-rookies-and-stars", "panini-zenith",
+    "panini-court-kings", "panini-origins", "panini-encased", "panini-eminence", "panini-totally-certified",
+    "panini-certified", "panini-crusade", "panini-hoops", "panini-prestige", "panini-elite-extra-edition",
+    "panini-diamond-kings"].map((k) => P(k, { parent: "panini" })),
+
+  // -- Fleer / Skybox / Pinnacle / Score / vintage ----------------------------
+  P("fleer"),
+  ...["fleer-stickers", "fleer-tradition", "fleer-update", "fleer-metal-universe"].map((k) => P(k, { parent: "fleer" })),
+  P("fleer-tradition-update", { family: "fleer-tradition", parent: "fleer-tradition" }),
+  P("fleer-tradition-glossy", { family: "fleer-tradition", parent: "fleer-tradition" }),
+  P("flair", { parent: "fleer" }),
+  P("ultra"),
+  P("skybox"),
+  ...["skybox-metal-universe", "skybox-thunder", "skybox-premium", "skybox-molten-metal"].map((k) => P(k, { parent: "skybox" })),
+  P("metal-universe"),
+  P("pinnacle"),
+  P("pinnacle-aficionado", { parent: "pinnacle" }),
+  P("score"),
+  P("score-select", { parent: "score" }),
+  ...["goudey", "circa-thunder", "cracker-jack", "all-time-diamond-kings", "diamond-kings", "t206", "play-ball", "kelloggs",
+    "post-cereal", "golden-press"].map((k) => P(k)),
+];
+
+// -- lookups -----------------------------------------------------------------
+
+const BY_KEY = new Map<string, ProductSetKey>();
+const BY_NAME = new Map<string, ProductSetKey>();
+for (const p of PRODUCT_SET_KEYS) {
+  if (BY_KEY.has(p.setKey)) throw new Error(`productSetKeys: duplicate setKey ${p.setKey}`);
+  BY_KEY.set(p.setKey, p);
+}
+for (const p of PRODUCT_SET_KEYS) {
+  for (const n of [p.setKey, ...(p.names ?? [])]) {
+    const prior = BY_NAME.get(n);
+    if (prior && prior !== p) throw new Error(`productSetKeys: "${n}" names both ${prior.setKey} and ${p.setKey}`);
+    BY_NAME.set(n, p);
+  }
+}
+/** The spelled products' names — the only ones productSetKeyForName reads. */
+const SPELLED_NAMES = new Map<string, ProductSetKey>([...BY_NAME.entries()].filter(([, p]) => p.spelled === true));
+/** Multi-segment spelled names, longest first, so "topps-update-series" is
+ *  tried before "topps-update" and "leaf-metal-draft" before "leaf-metal". */
+const RUN_NAMES: ReadonlyArray<{ segs: string[]; product: ProductSetKey }> = [...SPELLED_NAMES.entries()]
+  .filter(([n]) => n.includes("-"))
+  .map(([n, product]) => ({ segs: n.split("-"), product }))
+  .sort((a, b) => b.segs.length - a.segs.length || b.segs.join("-").length - a.segs.join("-").length);
+
+function containsRun(hay: string[], needle: string[]): boolean {
+  if (needle.length === 0 || needle.length > hay.length) return false;
+  outer: for (let i = 0; i + needle.length <= hay.length; i++) {
+    for (let j = 0; j < needle.length; j++) if (hay[i + j] !== needle[j]) continue outer;
+    return true;
+  }
+  return false;
+}
+
+/** The table entry for a key or for any of its spellings, or null. */
+export function productEntry(setKeyOrName: string | null | undefined): ProductSetKey | null {
+  const s = String(setKeyOrName ?? "").trim().toLowerCase();
+  return s ? BY_NAME.get(s) ?? null : null;
+}
+
+/** True iff the key is the one spelling of a product in the table. */
+export function isProductSetKey(setKey: string | null | undefined): boolean {
+  return BY_KEY.has(String(setKey ?? "").trim().toLowerCase());
+}
+
+/**
+ * The one spelling for a product text (slugified, year and sport stripped),
+ * or null when the table does not spell it. Only `spelled` products answer.
+ * Exact first; then the longest multi-segment name that appears as a
+ * contiguous run of segments -- a single-segment name never matches inside a
+ * longer text. Under the `as-named` Donruss policy the bare texts "donruss"
+ * and "panini-donruss" answer as themselves; under `panini-era` they are
+ * left to the vocabulary (the modern spelling) and spellForEra corrects
+ * the year.
+ */
+export function productSetKeyForName(slug: string | null | undefined): string | null {
+  const s = String(slug ?? "").trim().toLowerCase();
+  if (!s) return null;
+  if (DONRUSS_SPELLING_POLICY === "as-named" && (s === "donruss" || s === "panini-donruss")) return s;
+  const exact = SPELLED_NAMES.get(s);
+  if (exact) return exact.setKey;
+  const segs = s.split("-");
+  for (const { segs: needle, product } of RUN_NAMES) {
+    if (containsRun(segs, needle)) return product.setKey;
+  }
+  return null;
+}
+
+/** Ruling (b) as code: which spelling Donruss takes in `year` under the
+ *  policy. Every other key passes through untouched. */
+export function spellForEra(setKey: string, year: number | null | undefined, policy: DonrussSpellingPolicy = DONRUSS_SPELLING_POLICY): string {
+  if (setKey !== "donruss" && setKey !== "panini-donruss") return setKey;
+  if (policy === "as-named") return setKey;
+  if (typeof year !== "number" || !Number.isFinite(year) || year <= 0) return setKey;
+  return year >= PANINI_DONRUSS_FROM_YEAR ? "panini-donruss" : "donruss";
+}
+
+/** The pricing family of a key -- from the table; a key the table does not
+ *  know is its own family. A legacy spelling ("topps-update") answers with
+ *  its product's family, so pool rows keyed under an old spelling still
+ *  price within the family while the rename fleet runs. */
+export function productFamilyOf(setKey: string | null | undefined): string {
+  const s = String(setKey ?? "").trim().toLowerCase();
+  if (!s) return "";
+  const p = BY_NAME.get(s);
+  return p ? (p.family ?? p.setKey) : s;
+}
+
+/** The immediate parent (the flagship this is a release of), or null. */
+export function productParentOf(setKey: string | null | undefined): string | null {
+  const p = productEntry(setKey);
+  return p ? (p.parent ?? null) : null;
+}
+
+/** The key, then its parents up to the root -- for a lookup that may fall
+ *  back to the flagship (the reference ladder, catalogVerify's family step).
+ *  A legacy spelling walks as its product. */
+export function productAncestry(setKey: string | null | undefined): string[] {
+  const s = String(setKey ?? "").trim().toLowerCase();
+  if (!s) return [];
+  const out: string[] = [s];
+  let cur = productEntry(s);
+  if (cur && cur.setKey !== s) out.push(cur.setKey);
+  const seen = new Set(out);
+  while (cur && cur.parent && !seen.has(cur.parent)) {
+    out.push(cur.parent);
+    seen.add(cur.parent);
+    cur = BY_KEY.get(cur.parent) ?? null;
+  }
+  return out;
+}
+
+/** The verified refinements of a plain product -- every spelling of them,
+ *  so rows not yet renamed are still found -- for the matcher's widening. */
+export function productRefinementsOf(setKey: string | null | undefined): string[] {
+  const s = String(setKey ?? "").trim().toLowerCase();
+  if (!s) return [];
+  const out: string[] = [];
+  for (const p of PRODUCT_SET_KEYS) {
+    if (p.refines === s) out.push(p.setKey, ...(p.names ?? []));
+  }
+  return out;
+}
+
+/** Every key the table spells -- for the guard that checks the vocabulary's
+ *  destinations all have a family entry. */
+export function productSetKeys(): string[] {
+  return [...BY_KEY.keys()];
+}
