@@ -28,6 +28,9 @@ import {
 // Same normaliser the slug generator uses, so "Bowman Draft" here and
 // "bowman-draft" in a slug are compared as the one thing they are.
 import { cardNumberInClause, normalizeSetKey, sameCardNumber } from "../portfolioiq/hobbyIqCardId.service.js";
+// CF-SEARCH-FULL-NAME-DOMINATES: the product PARENT walk (D23 table), so a
+// "bowman" query can recognise bowman-draft as one family step away.
+import { productAncestry, productEntry } from "./productSetKeys.js";
 
 const COSMOS_DATABASE = process.env.COSMOS_DATABASE ?? "hobbyiq";
 const CATALOG_CONTAINER = process.env.COSMOS_CARD_CATALOG_CONTAINER ?? "card_catalog";
@@ -396,10 +399,38 @@ export function narrowToNamedProduct<H extends { setKey?: string | null; setName
  *  So: a set-key token the query does not name costs -0.25 each (cap -0.5); a
  *  parallel word the query does not name costs -0.2 each (cap -0.4); a query
  *  that says "base" or names no finish prefers the Base row (+0.3); and a
- *  one-character token matches only by equality, never by substring. */
+ *  one-character token matches only by equality, never by substring.
+ *  CF-SEARCH-FULL-NAME-DOMINATES (2026-08-30, Drew's edit-card search for
+ *  "2025 bowman refractor auto max williams" returned Carson Williams Pearl
+ *  Refractor and no Max Williams at all). Even with the right row in the
+ *  candidate set the scorer ranked it second: the per-token player match paid
+ *  +0.167 for "max", while the flat set penalty charged -0.25 for the family
+ *  refinement "draft" under a "bowman" query -- so an exact-product row
+ *  WITHOUT the player beat the family row WITH the full name. "auto" was a
+ *  stop word worth nothing, so the auto twin tied its no-auto twin; and a
+ *  bare "refractor" earned "Pearl Refractor" the named-parallel bonus. So:
+ *    - every word of the row's player name in the query (particles and
+ *      suffixes aside)                                            +0.5
+ *    - an unnamed set word whose product ANCESTRY the query names in full
+ *      ("bowman" for bowman-draft, "topps chrome" for topps-chrome-update-
+ *      series) costs -0.1 per family rung instead of -0.25 per word; a
+ *      product with no named ancestor keeps the full penalty
+ *    - the named-parallel bonus needs EVERY colour/pattern word of the
+ *      parallel in the query, so a bare "refractor" rewards no colour; the
+ *      finish suffix itself is never required, so a bare "gold" still names
+ *      Gold Refractor (Colour == Colour Refractor; the catalog keeps the
+ *      long form). Once the colour IS named the suffix is not an unnamed
+ *      word either, so it costs nothing -- otherwise the colour row cleared
+ *      Base only by 0.5/n - 0.05, which vanishes at ten query tokens
+ *    - "auto" in the query (or isAuto on the request): auto row +0.15, any
+ *      other row -0.3; a query silent on auto changes nothing
+ *    - the query's year token is never an exact card number ("#2025")
+ *  Net order: exact product with the player > family product with the player
+ *  > exact product without the player. */
 export function scoreCatalogRow(
   tokens: string[],
-  r: { playerName?: string | null; setKey?: string | null; setName?: string | null; setNameFromSet?: string | null; cardNumber?: string | null; year?: number | null; parallel?: string | null; parallelSlug?: string | null; searchTokens?: string[] | null },
+  r: { playerName?: string | null; setKey?: string | null; setName?: string | null; setNameFromSet?: string | null; cardNumber?: string | null; year?: number | null; parallel?: string | null; parallelSlug?: string | null; searchTokens?: string[] | null; isAuto?: boolean | null },
+  opts: { isAuto?: boolean | null; year?: number | null } = {},
 ): { score: number; hitFields: number } | null {
   const rowTokens = new Set((r.searchTokens ?? []).map((t) => String(t).toLowerCase()));
   const rowPlayer = String(r.playerName ?? "").toLowerCase();
@@ -426,26 +457,140 @@ export function scoreCatalogRow(
   }
   const maxPossible = tokens.length * 3.0;
   let score = maxPossible > 0 ? raw / maxPossible : 0;
-  const numberIsExact = rowNumber.length > 0 && tokens.some((t) => t === rowNumber);
-  if (numberIsExact) score += 1.0;
   const queryTokens = new Set(tokens);
+  // Hyphen-split, so "x-fractor" names both "x" and "fractor" and a typed
+  // "bowman-draft" names both set words.
+  const queryWords = new Set(tokens.flatMap((t) => t.split("-")).filter(Boolean));
+  // The year the query is scoped to. A cardNumber that happens to equal it
+  // ("Savion Williams Freshman #2025") is not the card the user numbered.
+  const yearToken = opts.year != null
+    ? String(opts.year)
+    : (tokens.find((t) => /^(?:19|20)\d{2}$/.test(t) && Number(t) <= 2035) ?? null);
+  const numberIsExact = rowNumber.length > 0 && tokens.some((t) => t === rowNumber && t !== yearToken);
+  if (numberIsExact) score += 1.0;
   const parallelWords = rowParallel ? rowParallel.split(/[\s-]+/).filter(Boolean) : [];
   const isBaseRow = !rowParallel || rowParallel === "base";
-  if (parallelWords.length && tokens.some((t) => parallelWords.includes(t))) score += 0.15;
+  // The named-parallel bonus needs every non-finish word of the parallel in
+  // the query: "Refractor" under "refractor" earns it, "Pearl Refractor" does
+  // not -- the query never said pearl. The finish SUFFIX is not such a word:
+  // a bare colour names its Refractor (Colour == Colour Refractor, the
+  // catalog keeps the long form), so "Gold Refractor" under "gold" earns it
+  // too. Only the colour or pattern has to be said.
+  const namedParallelWords = parallelWords.filter((w) => !FINISH_STOP.has(w) && !PARALLEL_FINISH_SUFFIX.has(w));
+  if (parallelWords.length
+      && parallelWords.some((w) => queryWords.has(w))
+      && namedParallelWords.every((w) => queryWords.has(w))) score += 0.15;
   // words the query never said
   const setWords = rowSet.split(/[\s-]+/).filter((w) => w && !/^\d{4}$/.test(w));
-  const querySaysSet = setWords.some((w) => queryTokens.has(w));
-  if (querySaysSet) {
-    const unnamedSet = setWords.filter((w) => !queryTokens.has(w)).length;
-    score -= Math.min(0.5, 0.25 * unnamedSet);
+  const setNamedByWord = setWords.some((w) => queryWords.has(w));
+  // A set the query reached only by SUBSTRING -- "bowman" inside "bowmans-
+  // best" -- is a set the query never named: the per-token loop paid it the
+  // set weight as if it were the product asked for, and no word penalty ever
+  // fired. Every word of such a set is unnamed; the family step below still
+  // applies when the table says it is a refinement of the product named.
+  const setMatchedBySubstring = !setNamedByWord
+    && tokens.some((t) => PRODUCT_WORDS.has(t) && rowSet.includes(t));
+  if (setNamedByWord || setMatchedBySubstring) {
+    const unnamedSet = setWords.filter((w) => !queryWords.has(w)).length;
+    if (unnamedSet > 0) {
+      // A refinement of a product the query DID name is a family step, not a
+      // word the query never said: "bowman" reaches bowman-draft one rung
+      // down. A product whose ancestry the query never names (topps-chrome-
+      // platinum-anniversary under "topps chrome") keeps the full penalty.
+      const steps = familyStepsToNamedAncestor(r.setKey || rowSet, queryWords);
+      score -= steps > 0 ? Math.min(0.5, 0.1 * steps) : Math.min(0.5, 0.25 * unnamedSet);
+    }
   }
-  const FINISH_STOP = new Set(["base", "card", "cards", "rc", "rookie", "auto", "psa", "bgs", "sgc", "gem", "mint", "nm"]);
-  const unnamedParallel = parallelWords.filter((w) => !queryTokens.has(w) && !FINISH_STOP.has(w)).length;
+  // The finish SUFFIX is excluded from the unnamed set by the SAME rule that
+  // excludes it from namedParallelWords -- once the query has named the
+  // colour or pattern, "refractor" is not a word the user had to say. Without
+  // this the colour row paid -0.2 for a suffix it was never charged for
+  // naming, and outranked Base only by the raw parallel-field token, worth
+  // 1.5/(3n): margin 0.5/n - 0.05, which is ZERO at ten query tokens and
+  // negative beyond. Measured: "2024 bowman chrome leo de vries blue bcp-179
+  // padres rc" (10 tokens) tied Blue Refractor with Base at 1.9833, and a
+  // 13-token variant put Base ahead. The suffix is forgiven only when some
+  // OTHER word of the parallel is named, so a bare "refractor" still pays for
+  // the colour in "Pearl Refractor", and a query naming no finish at all
+  // leaves Base its +0.3 and the win.
+  const queryNamesAParallelWord = namedParallelWords.some((w) => queryWords.has(w));
+  const unnamedParallel = parallelWords.filter((w) =>
+    !queryWords.has(w)
+    && !FINISH_STOP.has(w)
+    && !(queryNamesAParallelWord && PARALLEL_FINISH_SUFFIX.has(w))).length;
   if (!isBaseRow) score -= Math.min(0.4, 0.2 * unnamedParallel);
   const queryNamesAFinish = tokens.some((t) => !FINISH_STOP.has(t) && CATALOG_FINISH_WORDS.has(t));
   if (isBaseRow && (queryTokens.has("base") || !queryNamesAFinish)) score += 0.3;
+  // The FULL player name. Per-token matching already pays 3.0 a token, but
+  // normalised by the query length that is +0.167 for "max" -- less than one
+  // family step used to cost. When the query names every word of the row's
+  // player, that is the person being asked for, and it dominates.
+  const nameWords = fold(rowPlayer).split(/[\s-]+/).filter((w) => w.length >= 2 && !NAME_PARTICLES.has(w));
+  if (nameWords.length >= 2 && nameWords.every((w) => nameWordNamed(w, queryWords))) score += 0.5;
+  // Auto is honoured when the query says it; a query silent on auto must not
+  // push the autos down the page (CF-SEARCH-CHECKLIST-OPTIONS).
+  const querySaysAuto = opts.isAuto === true || tokens.some((t) => AUTO_WORDS.has(t));
+  if (querySaysAuto) score += r.isAuto === true ? 0.15 : -0.3;
   if (hitFields < Math.max(1, Math.ceil(tokens.length / 2))) return null;
   return { score, hitFields };
+}
+
+/** Parallel words that name a finish rather than a colour or pattern; they
+ *  are never "unnamed" and never earn the named-parallel bonus on their own. */
+const FINISH_STOP = new Set(["base", "card", "cards", "rc", "rookie", "auto", "autos", "autograph", "autographs", "psa", "bgs", "sgc", "gem", "mint", "nm"]);
+
+/** The finish SUFFIX of a parallel name -- the word after the colour or
+ *  pattern that the checklist writes and the hobby drops. A bare colour in a
+ *  query names its Refractor/Prizm (Colour == Colour Refractor, per card, the
+ *  catalog keeping the long form), so the suffix is never a word the query
+ *  had to say -- neither for the named-parallel bonus nor for the unnamed
+ *  penalty, ONCE some other word of the parallel is named. Under a bare
+ *  "refractor" no other word is named, so "Gold Refractor" still pays for
+ *  "gold" and the plain "Refractor" row outranks it; "Pearl Refractor" still
+ *  needs "pearl". Patterns
+ *  ("wave", "x-fractor", "mojo") are NOT suffixes -- "gold" does not name
+ *  Gold Wave Refractor. */
+const PARALLEL_FINISH_SUFFIX = new Set(["refractor", "refractors", "prizm", "prizms"]);
+
+/** How a query says "auto". */
+const AUTO_WORDS = new Set(["auto", "autos", "autograph", "autographs", "autographed"]);
+
+/** Particles and suffixes inside a player name that a query need not repeat
+ *  for the full-name bonus: "Leo De Vries" is named by "leo vries". */
+const NAME_PARTICLES = new Set(["jr", "sr", "ii", "iii", "iv", "de", "da", "di", "del", "der", "du", "la", "le", "van", "von", "dos", "das", "st"]);
+
+/** Is this word of the row's player name in the query -- exactly, or within
+ *  the same bounded edit distance fuzzyIncludes allows (5+ letters only)?
+ *  The budget is keyed on the SHORTER of the two words, as fuzzyIncludes
+ *  keys it on the query token: keyed on the row word, "williams" (8, budget
+ *  2) accepted "willis" and Max Williams took the full-name bonus for a
+ *  query that asked for Max Willis. */
+function nameWordNamed(word: string, queryWords: Set<string>): boolean {
+  if (queryWords.has(word)) return true;
+  if (word.length < 5) return false;
+  for (const q of queryWords) {
+    const shorter = Math.min(q.length, word.length);
+    if (shorter < 5) continue;
+    const budget = shorter >= 8 ? 2 : 1;
+    if (Math.abs(q.length - word.length) > budget) continue;
+    if (editDistance(word, q, budget) <= budget) return true;
+  }
+  return false;
+}
+
+/** How many rungs of the product ancestry (productSetKeys' PARENT walk -- not
+ *  productFamilyOf, whose pricing family for bowman-draft is bowman-draft
+ *  itself) separate this row's product from one the query names in full.
+ *  0 when no ancestor is named. */
+function familyStepsToNamedAncestor(setKeyOrName: string, queryWords: Set<string>): number {
+  const raw = String(setKeyOrName ?? "").trim().toLowerCase().replace(/\s+/g, "-");
+  if (!raw) return 0;
+  const chain = productAncestry(productEntry(raw)?.setKey ?? raw);
+  for (let i = 1; i < chain.length; i++) {
+    const words = chain[i].split("-").filter((w) => w && !/^\d{4}$/.test(w));
+    if (words.length > 0 && words.every((w) => queryWords.has(w))) return i;
+  }
+  return 0;
 }
 
 /** Finish vocabulary a query uses to name a parallel; when none is present the
@@ -542,6 +687,9 @@ export async function searchCatalog(
     "prospect", "prospects", "paper", "update", "series", "draft", "mega", "jumbo",
     "base", "insert", "parallel", "variation", "numbered", "card", "cards",
     "baseball", "basketball", "football", "hockey", "soccer", "wrestling",
+    // CF-SEARCH-FULL-NAME-DOMINATES (2026-08-30): grade words, so "psa 10"
+    // cannot become a name token now that three-letter tokens qualify.
+    "psa", "bgs", "sgc", "cgc", "hga", "csg", "tag", "gem", "mint", "raw", "rc", "graded", "slab",
   ]);
   // A MISSPELLED product word is still a product word. "2026 bowmen owen carey"
   // put "bowmen" (6) ahead of "carey" (5) on length, anchored the whole search
@@ -552,8 +700,13 @@ export async function searchCatalog(
     ANCHOR_STOPWORDS.has(t)
     || (t.length >= 5 && [...ANCHOR_STOPWORDS].some((w) =>
       Math.abs(w.length - t.length) <= 1 && editDistance(w, t, 1) <= 1));
+  // CF-SEARCH-FULL-NAME-DOMINATES (2026-08-30): three letters qualify. "max"
+  // was under the old four-letter floor, so "2025 bowman refractor auto max
+  // williams" reached Cosmos as "williams" alone -- 37,614 verified rows for
+  // 2025, sampled at TOP 2000 with no ORDER BY, and the card was not in the
+  // sample. Every one of the 597 Max Williams rows carries "max".
   const alphaTokens = tokens.filter(
-    (t) => /^[a-z]+$/.test(t) && t.length >= 4 && !isStopword(t),
+    (t) => /^[a-z]+$/.test(t) && t.length >= 3 && !isStopword(t),
   );
   // CF-SEARCH-ANCHOR-FROM-PARSER (2026-08-21). "Longest non-stopword token"
   // is a PROXY for the surname, and it loses whenever a colour or finish word
@@ -589,13 +742,26 @@ export async function searchCatalog(
     const pn = String(input.playerName ?? "").toLowerCase();
     if (!pn) return null;
     const parts = pn.split(/[^a-z]+/).filter((t) => t.length >= 3);
-    return parts.length > 0 ? parts : null;
+    // A parsed "name" made only of product, finish or grade words is not a
+    // name; fall back to the token proxy rather than AND a brand into SQL.
+    const named = parts.filter((t) => !isStopword(t));
+    return named.length > 0 ? named : null;
   })();
   const parsedPlayerAnchor = playerNameTokens
     ? (playerNameTokens.slice().sort((a, b) => b.length - a.length)[0] ?? null)
     : null;
   const anchor = parsedPlayerAnchor
     ?? (alphaTokens.sort((a, b) => b.length - a.length)[0] ?? null);
+  // CF-SEARCH-FULL-NAME-DOMINATES (2026-08-30). EVERY name token reaches
+  // Cosmos, not just the longest. The anchor arm used to key on one token, so
+  // a common surname produced an arbitrary 2000-row sample and the second
+  // name token was never applied in SQL at all -- "Max Williams" fetched the
+  // same Williams sample as "Williams" and the card was not in it. Each
+  // ARRAY_CONTAINS is an index point-lookup; their intersection is small
+  // (597 rows for Max Williams 2025, all under the cap). Longest first, so
+  // @name0 is the anchor.
+  const nameTokens: string[] = [...new Set(playerNameTokens ?? alphaTokens)]
+    .sort((a, b) => b.length - a.length);
 
   // A token that looks like a CARD NUMBER: alphanumeric with a digit, and not a
   // bare year. "hmt1", "bcp-69", "cpa-eha", "us285". Used to guarantee the
@@ -803,8 +969,25 @@ export async function searchCatalog(
   // emptiness — it has to be triggered by QUALITY. A correctly spelled name
   // scores high on the exact arm; a misspelling scores poorly because the rows
   // it found belong to someone else. Below the floor, pay for the fuzzy arm.
-  const armExact = anchor ? buildArm(`ARRAY_CONTAINS(c.searchTokens, @anchorExact)`) : null;
-  const armFuzzy = anchor ? buildArm(`EXISTS(SELECT VALUE t FROM t IN c.searchTokens WHERE STARTSWITH(t, @anchor))`) : null;
+  //
+  // CF-SEARCH-FULL-NAME-DOMINATES (2026-08-30). Both arms AND a predicate per
+  // NAME TOKEN ("max" AND "williams"), so the candidate set is the person
+  // asked for rather than a sample of a surname. The single-anchor arms below
+  // survive only as the FALLBACK rung, for when the ANDed arms find nothing:
+  // a misspelled first name, or a non-name token that slipped into the list.
+  // With one name token the ANDed arm IS the single-anchor arm, so the
+  // fallback is built only when there is more than one.
+  const prefixOf = (t: string) => t.slice(0, Math.max(4, t.length - 2));
+  const nameParams = nameTokens.map((t, i) => ({ name: `@name${i}`, value: t }));
+  const namePrefixParams = nameTokens.map((t, i) => ({ name: `@namePrefix${i}`, value: prefixOf(t) }));
+  const armExactAll = nameTokens.length > 0
+    ? buildArm(nameTokens.map((_, i) => `ARRAY_CONTAINS(c.searchTokens, @name${i})`).join(" AND "), nameParams)
+    : null;
+  const armFuzzyAll = nameTokens.length > 0
+    ? buildArm(nameTokens.map((_, i) => `EXISTS(SELECT VALUE t FROM t IN c.searchTokens WHERE STARTSWITH(t, @namePrefix${i}))`).join(" AND "), namePrefixParams)
+    : null;
+  const armExact = anchor && nameTokens.length > 1 ? buildArm(`ARRAY_CONTAINS(c.searchTokens, @anchorExact)`) : null;
+  const armFuzzy = anchor && nameTokens.length > 1 ? buildArm(`EXISTS(SELECT VALUE t FROM t IN c.searchTokens WHERE STARTSWITH(t, @anchor))`) : null;
   // Card numbers are compared WITHOUT wrapping the column in LOWER(). A
   // function on the indexed column defeats the index, and this one cost 15.7s
   // on "…blue refractor bcp-69" and 18.3s on "…ohtani hmt1" — the arm meant to
@@ -847,8 +1030,13 @@ export async function searchCatalog(
     const fastById = new Map<string, Row>();
     const absorb = (rows: Row[]) => { for (const r of rows) if (r?.id) fastById.set(r.id, r); };
 
-    // The exact arm and the card-number arm are both cheap point lookups.
-    absorb((await Promise.all([runArm(armExact), runArm(armNumber)])).flat());
+    // The ANDed exact arm and the card-number arm are both cheap point lookups.
+    const [exactRows, numberRows] = await Promise.all([runArm(armExactAll), runArm(armNumber)]);
+    absorb(exactRows);
+    absorb(numberRows);
+    // Rows the NAME arms produced. The card-number arm does not count: the
+    // fallback below exists for a name that reached nothing.
+    let nameArmFound = exactRows.length;
     // Escalate to the fuzzy prefix scan only when the cheap arms did not
     // produce a confident answer for this query.
     //
@@ -880,9 +1068,19 @@ export async function searchCatalog(
     // back to alphaTokens when it found no player — there, the old proxy is
     // still the best signal available, and escalating is the safe direction.
     const nameTokensForGate = playerNameTokens ?? alphaTokens;
-    if (armFuzzy && withinBudget()
-        && !nameTokensCovered([...fastById.values()], nameTokensForGate)) {
-      absorb(await runArm(armFuzzy));
+    const covered = () => nameTokensCovered([...fastById.values()], nameTokensForGate);
+    if (armFuzzyAll && withinBudget() && !covered()) {
+      const fuzzyRows = await runArm(armFuzzyAll);
+      absorb(fuzzyRows);
+      nameArmFound += fuzzyRows.length;
+    }
+    // CF-SEARCH-FULL-NAME-DOMINATES: the single-anchor rung, only when the
+    // ANDed arms reached nothing at all. When they found rows, every one of
+    // those rows carries every name token typed; a single-anchor sample could
+    // only add rows that MISS one, so it is not worth its 2000-row cost.
+    if (nameArmFound === 0 && armExact && withinBudget()) {
+      absorb(await runArm(armExact));
+      if (armFuzzy && withinBudget() && !covered()) absorb(await runArm(armFuzzy));
     }
     // CF-CATALOG-SEARCH-TIME-BUDGET: each rung below is an unindexed CONTAINS
     // scan and they run in SEQUENCE, so without a check between them one slow
@@ -928,7 +1126,10 @@ export async function searchCatalog(
   // Score = sum(weighted matches) / max possible (tokens × 3.0).
   const scored: CatalogSearchHit[] = [];
   for (const r of rows) {
-    const verdict = scoreCatalogRow(tokens, r);
+    // CF-SEARCH-FULL-NAME-DOMINATES: the request's isAuto is a scoring signal
+    // here (the SQL filter above fires only on an explicit boolean), and the
+    // scoped year is what keeps "#2025" from posing as a card number.
+    const verdict = scoreCatalogRow(tokens, r, { isAuto: input.isAuto ?? null, year: effectiveYear });
     if (!verdict) continue;
     const score = verdict.score;
     scored.push({

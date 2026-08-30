@@ -12,6 +12,7 @@
 import { Request, Response, Router } from "express";
 import { requireSession } from "../middleware/requireSession.js";
 import { searchCatalog } from "../services/catalog/catalogSearch.service.js";
+import { parseCardQuery } from "../services/compiq/cardQueryParser.js";
 
 const router = Router();
 router.use(requireSession);
@@ -51,7 +52,13 @@ router.post("/search", async (req: Request, res: Response) => {
     : null;
 
   try {
-    const result = await searchCatalog({ query, limit, sport, year, isAuto, context });
+    // CF-SEARCH-ANCHOR-FROM-PARSER, the way /api/compiq/search already does
+    // it: hand the search the player the parser resolved, so the anchor and
+    // the escalation gate are decided by the name, not by the longest token.
+    const result = await searchCatalog({
+      query, limit, sport, year, isAuto, context,
+      playerName: parseCardQuery(query).playerName ?? null,
+    });
     res.json({ success: true, ...result });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Catalog search failed";
