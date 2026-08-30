@@ -74,6 +74,23 @@
 "use strict";
 const path = require("path");
 const crypto = require("crypto");
+
+// ── THE SCOPE REFUSAL RUNS FIRST, BEFORE ANY require() THAT CAN THROW ────────
+// A whole-scope write must be asked for by name (the MODE=source lesson: it
+// defaulted to baseballcardpedia and reported 13.14M rows). This gate sits
+// ABOVE the @azure/cosmos and dist/ requires on purpose: a stale or absent
+// `dist` made the refusal unreachable, and the job exited on a MODULE_NOT_FOUND
+// that merely LOOKED like a refusal. The scope check needs no compiled code,
+// so nothing about the build can decide whether it fires.
+const SPORTS = String(process.env.SPORTS || process.env.SPORT || "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+const YEARS = String(process.env.YEARS || "").split(",").map((s) => Number(s.trim())).filter((n) => Number.isFinite(n) && n > 0);
+const SCOPE = String(process.env.SCOPE || "").trim().toLowerCase();
+if (!SPORTS.length && !YEARS.length && SCOPE !== "all") {
+  console.error("FATAL: no SPORTS and no YEARS. This would fold the ENTIRE catalog.");
+  console.error("       Pass SPORTS=baseball and/or YEARS=2020,2021,... , or SCOPE=all to mean it.");
+  process.exit(1);
+}
+
 const { CosmosClient } = require("@azure/cosmos");
 const backend = path.resolve(__dirname, "..");
 const { moveCatalogRow } = require(path.join(backend, "dist", "services", "catalog", "catalogRowOps.service.js"));
@@ -95,12 +112,10 @@ const APPLY = process.env.BACKFILL_APPLY === "true" || process.env.APPLY === "tr
 const SLOT = Number(process.env.SLOT || 0), SLOTS = Number(process.env.SLOTS || 1);
 const RUN_MINUTES = Number(process.env.RUN_MINUTES || 140);
 const RUN_MS = RUN_MINUTES * 60000;
-// The runner exports SPORTS from its `sports` input as a COMMA LIST. Taking
-// only the first element (as fold-unnumbered-twins does) silently scopes a
-// multi-sport dispatch to one sport.
-const SPORTS = String(process.env.SPORTS || process.env.SPORT || "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
-const YEARS = String(process.env.YEARS || "").split(",").map((s) => Number(s.trim())).filter((n) => Number.isFinite(n) && n > 0);
-const SCOPE = String(process.env.SCOPE || "").trim().toLowerCase();
+// SPORTS / YEARS / SCOPE are parsed and enforced at the top of this file, above
+// the requires. The runner exports SPORTS from its `sports` input as a COMMA
+// LIST; taking only the first element (as fold-unnumbered-twins does) silently
+// scopes a multi-sport dispatch to one sport.
 const LIMIT = Number(process.env.LIMIT || 0);
 const PROBE_SHARDS = process.env.PROBE_SHARDS === "true";
 const FORCE_AUTO_PREFIXES = String(process.env.FORCE_AUTO_PREFIXES || DEFAULT_FORCE_AUTO_PREFIXES.join(","))
@@ -123,15 +138,6 @@ const R2_RULINGS = [
 async function main() {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) { console.error("FATAL: COSMOS_CONNECTION_STRING not set"); process.exit(1); }
-
-  // A WHOLE-SCOPE WRITE MUST BE ASKED FOR BY NAME. The lesson from MODE=source
-  // defaulting to baseballcardpedia and reporting 13.14M rows: a job that can
-  // touch everything refuses unless someone said so out loud.
-  if (!SPORTS.length && !YEARS.length && SCOPE !== "all") {
-    console.error("FATAL: no SPORTS and no YEARS. This would fold the ENTIRE catalog.");
-    console.error("       Pass SPORTS=baseball and/or YEARS=2020,2021,... , or SCOPE=all to mean it.");
-    process.exit(1);
-  }
 
   const db = new CosmosClient({ connectionString: conn, connectionPolicy: { retryOptions: { maxRetryAttemptsOnThrottledRequests: 30, maxWaitTimeInSeconds: 120 } } }).database("hobbyiq");
   const cat = db.container("card_catalog"), pool = db.container("sold_comps"), portfolio = db.container("portfolio");
@@ -212,8 +218,17 @@ async function main() {
   // Walk the holdings map ONCE, before any fold.
   const holdingsIndex = await buildHoldingsIndex(portfolio, stats);
 
+  // PINNED GROUPS GO FIRST. The pinned case is the one a human reads the report
+  // to check, so it must not be a hostage to where the budget happens to stop:
+  // with 700k+ groups on a slot, an insertion-ordered walk left cpa-mh in
+  // `notReached` and printed "hashes to another slot" -- which was not true at
+  // SLOTS=1 and told the reader the opposite of what had happened. Ordering is
+  // all this changes; every group is still examined exactly once.
+  const isPinnedGroup = (rows) => rows.some((r) => SAMPLE_PINS.some((pin) => String(r.id).toLowerCase().includes(pin)));
+  const ordered = [...groups].sort((a, b) => Number(isPinnedGroup(b[1])) - Number(isPinnedGroup(a[1])));
+
   let gi = 0;
-  for (const [key, rows] of groups) {
+  for (const [key, rows] of ordered) {
     if (LIMIT && gi >= LIMIT) { stats.notReached += groups.size - gi; break; }
     if (budgetLeft() < 90000) { stopReason = `stopped at the ${RUN_MS / 60000}-minute budget — the relaunch continues from here`; stats.notReached += groups.size - gi; break; }
     gi++;
@@ -328,7 +343,7 @@ async function main() {
     console.log(`\n  PINNED SAMPLE (${SAMPLE_PINS.join(",")}) -- the case Drew named:`);
     for (const s of pinnedSamples) console.log(s);
   } else {
-    console.log(`\n  PINNED SAMPLE (${SAMPLE_PINS.join(",")}): no fold on this slot (the group hashes to another slot, or is already folded)`);
+    console.log(`\n  PINNED SAMPLE (${SAMPLE_PINS.join(",")}): no fold${SLOTS > 1 ? " on this slot (the group may hash to another slot)" : ""} -- the group is already folded, or holds no foldable twin.`);
   }
   if (samples.length) { console.log(`\n  other samples:`); for (const s of samples) console.log(s); }
 

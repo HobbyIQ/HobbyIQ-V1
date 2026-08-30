@@ -10,14 +10,24 @@ const script = path.join(backend, "scripts", "fold-checklist-numbered-twins.cjs"
 const source = fs.readFileSync(script, "utf8");
 
 describe("fold-checklist-numbered-twins -- the scope refusal", () => {
+  // The lesson from MODE=source defaulting to baseballcardpedia and reporting
+  // 13.14M rows: a whole-scope write must be asked for by name.
+
   it("REFUSES with exit 1 when dispatched with no SPORTS and no YEARS", () => {
-    // The lesson from MODE=source defaulting to baseballcardpedia and reporting
-    // 13.14M rows: a whole-scope write must be asked for by name.
     let code: number | null = null;
     let out = "";
     try {
       execFileSync(process.execPath, [script], {
-        env: { ...process.env, COSMOS_CONNECTION_STRING: "dummy", SPORTS: "", SPORT: "", YEARS: "", SCOPE: "", BACKFILL_APPLY: "" },
+        // cwd is pinned to the backend dir so the run does not depend on where
+        // vitest was invoked from, and the env is REPLACED rather than spread:
+        // inheriting an ambient SPORTS/YEARS from the shell would hand the
+        // script the very scope this test is asserting it does not have.
+        cwd: backend,
+        env: {
+          PATH: process.env.PATH ?? "",
+          SystemRoot: process.env.SystemRoot ?? "",
+          COSMOS_CONNECTION_STRING: "dummy",
+        },
         encoding: "utf8",
         stdio: ["ignore", "pipe", "pipe"],
       });
@@ -30,6 +40,24 @@ describe("fold-checklist-numbered-twins -- the scope refusal", () => {
     expect(code).toBe(1);
     expect(out).toMatch(/would fold the ENTIRE catalog/i);
     expect(out).toMatch(/SCOPE=all/);
+  });
+
+  it("puts the refusal AHEAD of every require that can throw, so a stale dist cannot fake it", () => {
+    // This is the defect that made the run above pass for the wrong reason in a
+    // checkout with a stale `dist`: the refusal sat inside main(), below
+    // top-level requires of dist/ and @azure/cosmos, so the process exited on a
+    // MODULE_NOT_FOUND that merely LOOKED like a refusal (exit 1, no message).
+    // Assert the ORDER in the source, not just the observed exit code.
+    const refusal = source.indexOf("would fold the ENTIRE catalog");
+    expect(refusal).toBeGreaterThan(-1);
+
+    // Every top-level require EXCEPT the node builtins `path` and `crypto`,
+    // which cannot fail to resolve, must come after the refusal.
+    const risky = [...source.matchAll(/^[ \t]*(?:const|let|var)\b[^\n]*\brequire\([^\n]*$/gm)]
+      .filter((m) => !/require\((["'])(?:node:)?(?:path|crypto)\1\)/.test(m[0]));
+
+    expect(risky.length).toBeGreaterThan(0);
+    for (const m of risky) expect(m.index ?? 0).toBeGreaterThan(refusal);
   });
 });
 
