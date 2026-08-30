@@ -3116,3 +3116,24 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
     /1500). 7 sit on non-checklist rows (user-verified / ingest-auto-seed /
     ebay-user-purchase) for products without a checklist. Ripken (277b05a3)
     is a bare CH-id holding with no fields at all.
+    **Process (Drew, 14:00Z): "all work pushed to opus to execute … You are an
+    orchestrator agent."** Every subagent runs `model: 'opus', effort: 'high'`;
+    this session writes specs and workflow scripts, dispatches, reads
+    results, and brings decisions as question widgets. Applied to the live
+    runs (stopped, edited, resumed from cache).
+    **Search + comps fixed — merged #1557 and #1558, deploy #15.** Three
+    adversarial rounds (two refuted, the third clean, all proofs read-only on
+    prod): (a) the Edit-card search — a bare colour names the card's colour
+    parallel in whichever form the catalog holds it, the finish suffix is
+    never a word the query had to say and is no longer charged as unnamed
+    ("2025 bowman refractor auto max williams" → the Bowman Draft CPA-MWI
+    Refractor first; 10- and 13-token queries proven); (b) identity readers
+    — `resolveIdentityToCatalogRow` (exact | numbered-twin | none; two twins
+    refuse), every reader and the valuation entry read [id, twin] in BOTH
+    directions from one function (the catalog fold moved rows, not sales —
+    8 of 200 stems carried rows under the un-numbered form), memoised, a
+    print-run probe instead of the 112-RU cross-partition scan, fail-open on
+    non-404; a bridge until the D30 fleet re-keys the pool. After deploy: a
+    conform APPLY + reprice pins the 8 parked holdings and the Gonzalez
+    purchase. A builder's junction cleanup had emptied the canonical
+    `backend/node_modules/.bin`; restored with `npm install --prefer-offline`.
