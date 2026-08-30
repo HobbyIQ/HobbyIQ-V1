@@ -17,6 +17,14 @@
 //   MAX_MINUTES=45            wall-clock cap
 
 const { CosmosClient } = require("@azure/cosmos");
+const path = require("path");
+// CF-A-GREEN-RUN-IS-NOT-A-DATA-FLOW (D18, 2026-08-29). Counters, disjoint:
+//   intended = rows scanned under APPLY (every scanned row is patched)
+//   written  = patches acknowledged (tagged)
+//   failed   = patches that threw
+// The wall-clock cap stops the SCAN, so an unreached row is never scanned and
+// never intended. Requires dist/.
+const { reportWrites } = require(path.join(__dirname, "..", "dist/services/ops/writeReconciliation.js"));
 
 const APPLY = process.env.APPLY === "true";
 const VENDOR = process.env.VENDOR || "tca-ebay";
@@ -78,6 +86,7 @@ async function main() {
 
   console.log(`\n[identity-backfill] done — scanned=${scanned} tagged=${tagged} precise=${precise} fallback=${fallback} failed=${failed} elapsed=${((Date.now()-startMs)/1000).toFixed(0)}s`);
   if (!APPLY) console.log(`(dry-run — no writes)`);
+  if (APPLY) reportWrites({ job: "backfill-identity-method", intended: scanned, written: tagged, failed });
 }
 
 main().catch(err => { console.error(err); process.exit(1); });

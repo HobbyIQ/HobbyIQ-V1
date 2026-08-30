@@ -26,6 +26,18 @@
 //   FRESH=true node backend/scripts/backfillMarketplaceListings.cjs
 
 const { CosmosClient } = require("@azure/cosmos");
+const path = require("path");
+// CF-A-GREEN-RUN-IS-NOT-A-DATA-FLOW (D18, 2026-08-29). Two write sets, each
+// reconciled on its own line:
+//   rebuild:      intended = upserts planned + stale deletions planned
+//                 written  = upserts acknowledged + rows now absent (a 404 on a
+//                            stale delete counts as absent — the end state the
+//                            job wanted)
+//                 failed   = upserts / deletes that threw
+//   fresh-delete: (FRESH=true only) intended = every listing in the container,
+//                 written = deleted, failed = threw
+// Requires dist/ — the workflow builds before running this.
+const { reportWrites } = require(path.join(__dirname, "..", "dist/services/ops/writeReconciliation.js"));
 
 const CONN = process.env.COSMOS_CONNECTION_STRING;
 const DRY_RUN = String(process.env.DRY_RUN ?? "").toLowerCase() === "true";
@@ -173,9 +185,11 @@ async function main() {
       query: "SELECT c.id, c.sellerId FROM c",
     }).fetchAll();
     console.log(`[FRESH] deleting ${all.length} listings`);
+    let freshDeleted = 0, freshFailed = 0;
     for (const r of all) {
-      try { await listingsC.item(r.id, r.sellerId).delete(); } catch { /* skip */ }
+      try { await listingsC.item(r.id, r.sellerId).delete(); freshDeleted++; } catch { freshFailed++; }
     }
+    reportWrites({ job: "backfillMarketplaceListings:fresh-delete", intended: all.length, written: freshDeleted, failed: freshFailed });
   }
 
   const sellers = await fetchEligibleSellers(usersC);
@@ -274,6 +288,12 @@ async function main() {
   console.log(`  deleted (stale) : ${deleted}`);
   console.log(`  delete-failed   : ${deleteFailed}`);
   console.log(`  elapsed         : ${elapsed}s`);
+  reportWrites({
+    job: "backfillMarketplaceListings",
+    intended: plannedUpserts.length + toDelete.length,
+    written: upserted + deleted,
+    failed: upsertFailed + deleteFailed,
+  });
 }
 
 main().catch((e) => {

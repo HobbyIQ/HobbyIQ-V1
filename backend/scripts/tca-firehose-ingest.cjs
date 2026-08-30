@@ -37,6 +37,16 @@ const { CosmosClient } = require("@azure/cosmos");
 const https = require("https");
 const path = require("path");
 const fs = require("fs");
+// CF-A-GREEN-RUN-IS-NOT-A-DATA-FLOW (D18, 2026-08-29). Counters, disjoint:
+//   intended = TCA rows fetched under APPLY (each is pre-checked or persisted)
+//   written  = inserted by persistVendorSalesToPool
+//   skipped  = unusable before persist + deduped + skipped + catalogUnmatched
+//              (the service lands every row in exactly one of its four counts;
+//              catalogUnmatched was not being tallied at all until D18)
+//   failed   = persist calls that rejected (row-level)
+// A TCA FETCH that fails is fetchErrors — no rows, so nothing intended. The
+// crawl_state upsert is one doc; if it throws the run exits 1, not green.
+const { reportWrites } = require(path.join(__dirname, "..", "dist/services/ops/writeReconciliation.js"));
 
 // CF-TCA-USE-CLEAN-PIPELINE (Drew, 2026-08-02). Route through
 // persistVendorSalesToPool so TCA rows get the SAME treatment as CH
@@ -312,7 +322,9 @@ async function main() {
   let totalFetched = 0;
   let totalWritten = 0;
   let totalDedupSkipped = 0;
+  let totalCatalogUnmatched = 0;
   let totalErrors = 0;
+  let fetchErrors = 0;
   let lastCursor = cursor;
 
   // CF-TCA-PIPELINED-FETCH (Drew, 2026-08-02). Overlaps fetch of page
@@ -338,7 +350,7 @@ async function main() {
     try { resp = await nextFetch; }
     catch (err) {
       console.error(`[tca-firehose] fatal fetch error:`, err);
-      totalErrors++;
+      fetchErrors++;
       break;
     }
     const rows = (resp && resp.data) || [];
@@ -378,6 +390,7 @@ async function main() {
           .then((res) => {
             totalWritten += res.inserted;
             totalDedupSkipped += res.deduped + res.skipped;
+            totalCatalogUnmatched += res.catalogUnmatched ?? 0;
           })
           .catch((err) => {
             totalErrors++;
@@ -411,14 +424,15 @@ async function main() {
       lastRunAt: new Date().toISOString(),
       totalRowsWritten: (existing?.totalRowsWritten || 0) + totalWritten,
       lastPagesFetched: page,
-      lastError: totalErrors > 0 ? `${totalErrors} row-level errors` : null,
+      lastError: (totalErrors + fetchErrors) > 0 ? `${totalErrors} row-level errors, ${fetchErrors} fetch errors` : null,
     };
     await putState(state, newState);
     console.log(`[tca-firehose] state persisted — cursor advanced, cumulativeTotal=${newState.totalRowsWritten}`);
   }
 
   const elapsedS = ((Date.now() - startMs) / 1000).toFixed(0);
-  console.log(`\n[tca-firehose] done — pages=${page} fetched=${totalFetched} written=${totalWritten} skipped=${totalDedupSkipped} errors=${totalErrors} elapsed=${elapsedS}s`);
+  console.log(`\n[tca-firehose] done — pages=${page} fetched=${totalFetched} written=${totalWritten} skipped=${totalDedupSkipped} catalogUnmatched=${totalCatalogUnmatched} errors=${totalErrors} fetchErrors=${fetchErrors} elapsed=${elapsedS}s`);
+  if (APPLY) reportWrites({ job: "tca-firehose-ingest", intended: totalFetched, written: totalWritten, skipped: totalDedupSkipped + totalCatalogUnmatched, failed: totalErrors });
 
   // A daily-feed run that started with NO stored cursor asked the unlimited
   // window for a whole day of sales. Zero rows back is an anomaly — a real day

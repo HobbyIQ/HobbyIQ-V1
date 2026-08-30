@@ -23,6 +23,11 @@ const path = require("path");
 const backend = path.resolve(__dirname, "..", "..");
 const { CosmosClient } = require(path.join(backend, "node_modules/@azure/cosmos"));
 const { parseHobbyIqCardId, computeHobbyIqCardId } = require(path.join(backend, "dist/services/portfolioiq/hobbyIqCardId.service.js"));
+// CF-A-GREEN-RUN-IS-NOT-A-DATA-FLOW (D18, 2026-08-29). This re-slugs rows on
+// a nightly cron. Counters, disjoint: intended = patches in this run's chunk
+// (toApply); written = patches that resolved; failed = patches that threw.
+// The BACKLOG line is the remainder deferred to the next run, never intended.
+const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
 
 const APPLY = process.env.RESLUG_APPLY === "true";
 const CONCURRENCY = Number(process.env.RESLUG_CONCURRENCY || "12");
@@ -202,6 +207,7 @@ async function main() {
     if (done % 500 === 0) process.stdout.write(`\r  patched ${done}/${toApply.length}`);
   });
   console.log(`\n  patched ${result.ok} / errors ${result.err} in ${((Date.now()-t0)/1000).toFixed(1)}s`);
+  reportWrites({ job: "phash-verify-and-reslug", intended: toApply.length, written: result.ok, failed: result.err });
   const remaining = patches.length - toApply.length;
   if (remaining > 0) {
     console.log(`  BACKLOG: ${remaining} patches remaining — next run picks up`);

@@ -23,6 +23,19 @@
 const { CosmosClient } = require("@azure/cosmos");
 const path = require("path");
 const fs = require("fs");
+// CF-A-GREEN-RUN-IS-NOT-A-DATA-FLOW (D18, 2026-08-29). Two write sets, each
+// reconciled on its own line:
+//   pool:        intended = rows handed to persistVendorSalesToPool (tried).
+//                The service lands each row in EXACTLY one of inserted /
+//                deduped / skipped / catalogUnmatched (divertedToVerify is a
+//                sub-count of skipped), or rejects (errored). written =
+//                inserted; skipped = the other three; failed = errored.
+//   status-flip: intended = flips attempted, written = flipped, failed =
+//                patchFailed — the patch that stops a promoted row being
+//                re-scanned forever (CF-STAGING-FLIP-PARTITION-KEY).
+// Rows unusable before persist (no soldAt / price) are `unusable`, printed on
+// their own, never intended. Requires dist/ (the workflow builds).
+const { reportWrites } = require(path.join(__dirname, "..", "dist/services/ops/writeReconciliation.js"));
 
 function loadPersistHelper() {
   const distRoot = path.resolve(__dirname, "..", "dist");
@@ -178,6 +191,7 @@ async function main() {
 
   let playerFromCatalog = 0;
   let scanned = 0, tried = 0, inserted = 0, deduped = 0, skipped = 0, catalogUnmatched = 0, errored = 0, statusFlipped = 0, patchFailed = 0, divertedToVerify = 0;
+  let unusable = 0, flipAttempted = 0;
   const inflight = new Set();
 
   while (iter.hasMoreResults()) {
@@ -201,7 +215,7 @@ async function main() {
         externalId: vp.externalId || vp.id || raw.vendorRawId || null,
         imageUrl: vp.imageUrl || null,
       };
-      if (!vsRow.soldAt || !(vsRow.price > 0)) { skipped++; continue; }
+      if (!vsRow.soldAt || !(vsRow.price > 0)) { unusable++; continue; }
 
       // Preserve identity hints TCA sent us in the original payload
       const hint = {};
@@ -318,6 +332,7 @@ async function main() {
             // rows from the top — which is what the 48.6% dedupe rate in
             // that run actually was. The backlog could never fall, and
             // nothing alarmed because the job exits 0 either way.
+            flipAttempted++;
             try {
               await stg.item(row.id, row.hobbyiqCardId).patch([
                 { op: "replace", path: "/status", value: newStatus },
@@ -350,8 +365,12 @@ async function main() {
   }
   await Promise.all([...inflight]);
 
-  console.log(`\n[promoter] done — scanned=${scanned} tried=${tried} inserted=${inserted} deduped=${deduped} skipped=${skipped} diverted=${divertedToVerify} catalogUnmatched=${catalogUnmatched} playerFromCatalog=${playerFromCatalog} flipped=${statusFlipped} patchFailed=${patchFailed} errored=${errored} elapsed=${((Date.now()-startMs)/1000).toFixed(0)}s`);
+  console.log(`\n[promoter] done — scanned=${scanned} unusable=${unusable} tried=${tried} inserted=${inserted} deduped=${deduped} skipped=${skipped} diverted=${divertedToVerify} catalogUnmatched=${catalogUnmatched} playerFromCatalog=${playerFromCatalog} flipped=${statusFlipped} patchFailed=${patchFailed} errored=${errored} elapsed=${((Date.now()-startMs)/1000).toFixed(0)}s`);
   if (!APPLY) console.log(`(dry-run — no writes)`);
+  if (APPLY) {
+    reportWrites({ job: "promote-staging-pending:pool", intended: tried, written: inserted, skipped: deduped + skipped + catalogUnmatched, failed: errored });
+    reportWrites({ job: "promote-staging-pending:status-flip", intended: flipAttempted, written: statusFlipped, failed: patchFailed });
+  }
 }
 
 main().catch(err => { console.error(err); process.exit(1); });

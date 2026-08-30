@@ -19,6 +19,14 @@
 //   Optional: SOURCE_FILTER=baseballcardpedia (default = all rows w/o cardYear)
 
 const { CosmosClient } = require("@azure/cosmos");
+const path = require("path");
+// CF-A-GREEN-RUN-IS-NOT-A-DATA-FLOW (D18, 2026-08-29). Counters, disjoint:
+//   intended = rows scanned
+//   written  = patches acknowledged
+//   skipped  = rows whose slug yields no year (left alone)
+//   failed   = patches rejected
+// Requires dist/ — the workflow builds before running this.
+const { reportWrites } = require(path.join(__dirname, "..", "dist/services/ops/writeReconciliation.js"));
 
 const CONN = process.env.COSMOS_CONNECTION_STRING;
 const DRY_RUN = String(process.env.DRY_RUN ?? "true").toLowerCase() !== "false";
@@ -120,6 +128,7 @@ async function main() {
   console.log(`  patched        : ${patched.toLocaleString()}`);
   console.log(`  patch-failed   : ${patchFailed.toLocaleString()}`);
   console.log(`  elapsed        : ${elapsed}s`);
+  reportWrites({ job: "backfillCatalogCardYearFromSlug", intended: scanned, written: patched, skipped: skippedBadSlug, failed: patchFailed });
 }
 
 main().catch((e) => { console.error("[FATAL]", (e && e.stack) || e); process.exit(1); });

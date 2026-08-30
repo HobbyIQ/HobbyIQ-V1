@@ -129,35 +129,25 @@ const UNRECONCILED = new Set([
 ]);
 
 /**
- * Cron-invoked write scripts still unwired, as of 2026-08-29. These run on a
- * schedule with no dry-run and nobody watching the log, so a throttling
- * collapse here is a green run every night. Sorted. May only shrink.
+ * Cron-invoked write scripts still unwired. These run on a schedule with no
+ * dry-run and nobody watching the log, so a throttling collapse here is a
+ * green run every night. 23 on 2026-08-29 (v2); D18 wired all 23 the same
+ * day. Sorted. May only shrink — and it is empty, so any name here is a
+ * regression.
  */
-const UNRECONCILED_CRON = new Set([
-  "apply-sold-comps-dedup",
-  "backfill-identity-method",
-  "backfill-null-slugs",
-  "backfill-sold-comps-content-hash",
-  "backfill-sold-comps-from-ch",
-  "backfillCatalogCardYearFromSlug",
-  "backfillMarketplaceListings",
-  "cardsight-bulk/phase-b-crawl-pricing",
-  "comp-quality/backfill-search-fields",
-  "comp-quality/compute-slug-phash-centroids",
-  "comp-quality/phash-verify-and-reslug",
-  "drainCatalogSeedQueue",
-  "explodeCatalogGrades",
-  "merge-unambiguous-printrun",
-  "promote-staging-pending",
-  "purge-old-sales-derived",
-  "requeueMatchableAwaitingCatalog",
-  "reslug-setkey-from-setname",
-  "rollup-sold-comps-daily",
-  "sold-comps-cleaner",
-  "sold-comps-cross-source-dedup",
-  "tca-firehose-ingest",
-  "tca-match-enricher",
-]);
+const UNRECONCILED_CRON = new Set<string>([]);
+
+/**
+ * A script that requires compiled code (`dist/`) must be run by a workflow
+ * that compiles it — dist/ is gitignored, so nothing else puts it there.
+ * grade-explode (nightly) and sold-comps-ch-backfill required dist/ and
+ * crashed at require() until D18 added the build step; wiring reportWrites
+ * (compiled TS) into every cron writer makes this the rule, not the case.
+ * Workflows still invoking a dist-requiring script without a build step.
+ * Sorted. May only shrink — empty since D18.
+ */
+const UNBUILT_WORKFLOWS = new Set<string>([]);
+const BUILD_STEP = /npm run build|npx tsc\b|\btsc\b/;
 
 // ── the budget marker ⇔ relaunch contract ───────────────────────────────
 //
@@ -200,7 +190,12 @@ function runnerWriters(): Script[] {
 function cronWriters(): Script[] {
   return load(cronInvoked()).filter((s) => WRITE_CALL.test(s.src) && !NOT_ROW_WRITERS.has(s.name));
 }
-const wired = (s: Script) => s.src.includes("reportWrites");
+// A CALL, outside comments. `const { reportWrites } = require(...)` is an
+// import, and an import nobody calls is the "helper nobody calls" this file
+// exists to catch — D18's mutation check found the old `includes` passed it.
+const stripComments = (src: string) => src.replace(/^\s*\/\/.*$/gm, "").replace(/\/\*[\s\S]*?\*\//g, "");
+const wired = (s: Script) => /\breportWrites\(/.test(stripComments(s.src));
+const wiredFile = (f: string) => fs.existsSync(f) && /\breportWrites\(/.test(stripComments(fs.readFileSync(f, "utf8")));
 
 type RelaunchStep = { name: string; scripts: string[]; keyedOnMarker: boolean };
 /** Every runner step that re-dispatches the workflow, which scripts it fires
@@ -258,10 +253,7 @@ describe("every backfill that writes must reconcile", () => {
   it("the debt lists only name scripts that are genuinely still unwired", () => {
     // Once a script is wired, its name has to come OUT of the list, or the list
     // stops meaning anything and quietly re-permits the next regression.
-    const stale = [...UNRECONCILED, ...UNRECONCILED_CRON].filter((name) => {
-      const f = path.join(SCRIPTS, `${name}.cjs`);
-      return fs.existsSync(f) && fs.readFileSync(f, "utf8").includes("reportWrites");
-    });
+    const stale = [...UNRECONCILED, ...UNRECONCILED_CRON].filter((name) => wiredFile(path.join(SCRIPTS, `${name}.cjs`)));
     expect(stale, `wired but still listed as debt — remove from the debt list:\n  ${stale.join("\n  ")}`)
       .toEqual([]);
   });
@@ -285,8 +277,7 @@ describe("every backfill that writes must reconcile", () => {
       "merge-bare-colour-parallels", "dedupe-catalog-partition-shadows",
       "annotate-checklist-backing", "emit-staging-to-pool",
     ]) {
-      const src = fs.readFileSync(path.join(SCRIPTS, `${name}.cjs`), "utf8");
-      expect(src, `${name} lost its reconciliation`).toContain("reportWrites");
+      expect(wiredFile(path.join(SCRIPTS, `${name}.cjs`)), `${name} lost its reconciliation`).toBe(true);
     }
   });
 
@@ -296,6 +287,32 @@ describe("every backfill that writes must reconcile", () => {
     // eslint-disable-next-line no-console
     console.log(`runner write-scripts reconciling: ${rw}/${runner.length}  (debt ${runner.length - rw})\ncron write-scripts reconciling:   ${cw}/${cron.length}  (debt ${cron.length - cw})`);
     expect(rw).toBeGreaterThanOrEqual(4);
+    // D18: every cron writer reconciles. 0/23 before; the population may grow,
+    // the wired fraction may not fall.
+    expect(cron.length).toBeGreaterThanOrEqual(23);
+    expect(cw).toBe(cron.length);
+  });
+
+  it("every cron workflow that runs a dist-requiring script builds dist first", () => {
+    const requiresDist = new Map<string, boolean>();
+    const needsBuild = (name: string) => {
+      if (!requiresDist.has(name)) {
+        const f = path.join(SCRIPTS, `${name}.cjs`);
+        requiresDist.set(name, fs.existsSync(f) && /dist\//.test(fs.readFileSync(f, "utf8").replace(/^\s*\/\/.*$/gm, "")));
+      }
+      return requiresDist.get(name)!;
+    };
+    const unbuilt: string[] = [];
+    for (const f of fs.readdirSync(WORKFLOWS)) {
+      if (!/\.ya?ml$/.test(f) || f === "backfill-runner.yml") continue;
+      const yml = fs.readFileSync(path.join(WORKFLOWS, f), "utf8");
+      const dist = [...new Set([...yml.matchAll(/scripts\/([A-Za-z0-9_./-]*?)\.cjs/g)].map((m) => m[1]))].filter(needsBuild);
+      if (dist.length && !BUILD_STEP.test(yml) && !UNBUILT_WORKFLOWS.has(f)) unbuilt.push(`${f} -> ${dist.join(", ")}`);
+    }
+    expect(unbuilt, `these run a script that requires dist/ and never build it — the script crashes at require():\n  ${unbuilt.join("\n  ")}`)
+      .toEqual([]);
+    const stale = [...UNBUILT_WORKFLOWS].filter((f) => !fs.existsSync(path.join(WORKFLOWS, f)) || BUILD_STEP.test(fs.readFileSync(path.join(WORKFLOWS, f), "utf8")));
+    expect(stale, `now builds (or gone) — remove from UNBUILT_WORKFLOWS:\n  ${stale.join("\n  ")}`).toEqual([]);
   });
 });
 

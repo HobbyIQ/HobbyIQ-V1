@@ -22,6 +22,13 @@
  * day) on average). Should complete in ~30-45min.
  */
 const { CosmosClient } = require("@azure/cosmos");
+const path = require("path");
+// CF-A-GREEN-RUN-IS-NOT-A-DATA-FLOW (D18, 2026-08-29). Counters, disjoint:
+//   intended = rollup docs built for the days that were queried
+//   written  = upserts acknowledged; failed = upserts that threw (until D18
+//              an upsert error was only logged, and the DONE line could not
+//              tell a day that wrote nothing from a day with no comps)
+const { reportWrites } = require(path.join(__dirname, "..", "dist/services/ops/writeReconciliation.js"));
 
 function parseArgs(argv) {
   const args = { apply: false, sport: null, concurrency: 6 };
@@ -70,7 +77,7 @@ async function main() {
   console.log(`Rollup window: ${args.from} → ${args.to}  apply=${args.apply}  sport=${args.sport ?? "(all)"}  concurrency=${args.concurrency}`);
 
   const t0 = Date.now();
-  let totalRollupsWritten = 0;
+  let totalRollupsWritten = 0, totalRollupsIntended = 0, totalErrors = 0;
 
   // Walk day-by-day. Each day's rows across ALL cardIds → one query
   // (partition-scoped read is via /cardId, but our aggregation is
@@ -166,28 +173,31 @@ async function main() {
       void key;
     }
 
-    let dayWritten = 0;
+    let dayWritten = 0, dayErrors = 0;
     if (args.apply) {
+      totalRollupsIntended += rollupDocs.length;
       const chunks = [];
       for (let i = 0; i < rollupDocs.length; i += args.concurrency) chunks.push(rollupDocs.slice(i, i + args.concurrency));
       for (const chunk of chunks) {
         await Promise.all(chunk.map(async (doc) => {
           try { await scDaily.items.upsert(doc); dayWritten++; }
-          catch (err) { console.error(`  ${dayISO}: upsert error ${err.message}`); }
+          catch (err) { dayErrors++; if (dayErrors <= 3) console.error(`  ${dayISO}: upsert error ${err.message}`); }
         }));
       }
     } else {
       dayWritten = rollupDocs.length;
     }
     totalRollupsWritten += dayWritten;
+    totalErrors += dayErrors;
 
     const elapsed = (Date.now() - t0) / 1000;
     const rate = totalRollupsWritten / elapsed;
-    console.log(`  ${dayISO}: comps=${rows.length}  rollups=${dayWritten}  (running total ${totalRollupsWritten.toLocaleString()} @ ${rate.toFixed(0)}/s)`);
+    console.log(`  ${dayISO}: comps=${rows.length}  rollups=${dayWritten}${dayErrors ? `  errors=${dayErrors}` : ""}  (running total ${totalRollupsWritten.toLocaleString()} @ ${rate.toFixed(0)}/s)`);
   }
 
   const elapsedMin = (Date.now() - t0) / 60_000;
-  console.log(`\nDONE. rollups_written=${totalRollupsWritten.toLocaleString()}  time=${elapsedMin.toFixed(1)}min  apply=${args.apply}`);
+  console.log(`\nDONE. rollups_written=${totalRollupsWritten.toLocaleString()}  errors=${totalErrors}  time=${elapsedMin.toFixed(1)}min  apply=${args.apply}`);
+  if (args.apply) reportWrites({ job: "rollup-sold-comps-daily", intended: totalRollupsIntended, written: totalRollupsWritten, failed: totalErrors });
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });

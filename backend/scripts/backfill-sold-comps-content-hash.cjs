@@ -23,6 +23,14 @@
  */
 const { CosmosClient } = require("@azure/cosmos");
 const { createHash } = require("crypto");
+const path = require("path");
+// CF-A-GREEN-RUN-IS-NOT-A-DATA-FLOW (D18, 2026-08-29). Counters, disjoint:
+//   intended = rows scanned (the query already excludes stamped rows)
+//   written  = patches fulfilled (stamped)
+//   skipped  = rows that arrived already carrying a hash (alreadyOk)
+//   failed   = patches rejected (errors)
+// Every batch is flushed, the remainder included, so scanned = the sum.
+const { reportWrites } = require(path.join(__dirname, "..", "dist/services/ops/writeReconciliation.js"));
 
 const RATE_MS = Number(process.env.BACKFILL_RATE_MS ?? "30");
 const CONCURRENCY = Number(process.env.BACKFILL_CONCURRENCY ?? "1");
@@ -139,6 +147,7 @@ async function main() {
 
   const elapsed = (Date.now() - t0) / 1000;
   console.error(`\nDONE. scanned=${scanned.toLocaleString()}  ${args.apply ? "stamped" : "would-stamp"}=${stamped.toLocaleString()}  alreadyOk=${alreadyOk.toLocaleString()}  errors=${errors}  time=${elapsed.toFixed(0)}s`);
+  if (args.apply) reportWrites({ job: "backfill-sold-comps-content-hash", intended: scanned, written: stamped, skipped: alreadyOk, failed: errors });
 }
 
 main().catch(e => { console.error(e); process.exit(1); });

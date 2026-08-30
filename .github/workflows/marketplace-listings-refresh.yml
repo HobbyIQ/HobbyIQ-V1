@@ -42,8 +42,13 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Install @azure/cosmos
-        run: npm install @azure/cosmos --no-save
+      - name: Install backend deps
+        working-directory: backend
+        run: npm ci --omit=optional --no-audit --no-fund
+
+      - name: Build TS (reportWrites lives in dist/ — D18)
+        working-directory: backend
+        run: npx tsc
 
       - name: Login to Azure
         uses: azure/login@v3

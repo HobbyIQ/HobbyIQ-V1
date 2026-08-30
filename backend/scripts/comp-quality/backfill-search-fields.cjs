@@ -28,6 +28,15 @@
 const path = require("path");
 const backend = path.resolve(__dirname, "..", "..");
 const { CosmosClient } = require(path.join(backend, "node_modules/@azure/cosmos"));
+// CF-A-GREEN-RUN-IS-NOT-A-DATA-FLOW (D18, 2026-08-29). Counters, disjoint:
+//   intended = patch rows handed to flush() (streamed during the scan)
+//   written  = bulk operations that came back 2xx
+//   failed   = operations that came back non-retryable, or were still
+//              throttled when the retries ran out, or whose bulk CALL threw
+// A throttled operation is retried, and counted only when it settles.
+// unchanged / refused / deferred rows are never flushed, so never intended —
+// they are printed on their own lines. Requires dist/.
+const { reportWrites, bulkOutcome } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
 
 // CF-ARG-BOTH-FORMS (2026-08-21). This accepted only `--name value`. A
 // `--minYear=2026` silently fell through to the fallback, so the scan ran
@@ -210,7 +219,7 @@ async function main() {
   const patches = [];
   let scanned = 0, unchanged = 0, refused = 0, deferred = 0;
   // Writer, callable mid-scan. Totals accumulate across flushes.
-  let wroteOk = 0, wroteErr = 0, throttled = 0, flushes = 0;
+  let wroteOk = 0, wroteErr = 0, throttled = 0, flushes = 0, flushed = 0, bulkThrows = 0;
   const opsFor = (pp) => ({
     operationType: "Patch",
     id: pp.id,
@@ -229,26 +238,34 @@ async function main() {
   async function flush(batchRows) {
     if (!APPLY || batchRows.length === 0) return;
     flushes++;
+    flushed += batchRows.length;
     const batches = [];
     for (let i = 0; i < batchRows.length; i += BULK_BATCH) batches.push(batchRows.slice(i, i + BULK_BATCH));
-    const r = await runInParallel(batches, async (batch) => {
+    await runInParallel(batches, async (batch) => {
       let pending = batch;
-      for (let attempt = 0; attempt < 6 && pending.length > 0; attempt++) {
-        if (attempt > 0) await new Promise((r2) => setTimeout(r2, Math.min(8000, 250 * 2 ** attempt)));
-        const res = await cc.items.bulk(pending.map(opsFor));
-        const retry = [];
-        for (let k = 0; k < res.length; k++) {
-          const code = res[k]?.statusCode ?? 0;
-          if (code >= 200 && code < 300) wroteOk++;
-          else if (code === 429 || code === 449 || code === 503) { throttled++; retry.push(pending[k]); }
-          else wroteErr++;
+      try {
+        for (let attempt = 0; attempt < 6 && pending.length > 0; attempt++) {
+          if (attempt > 0) await new Promise((r2) => setTimeout(r2, Math.min(8000, 250 * 2 ** attempt)));
+          const res = await cc.items.bulk(pending.map(opsFor));
+          const retry = [];
+          for (let k = 0; k < res.length; k++) {
+            const outcome = bulkOutcome(res[k]?.statusCode);
+            if (outcome === "written") wroteOk++;
+            else if (outcome === "retry") { throttled++; retry.push(pending[k]); }
+            else wroteErr++;
+          }
+          pending = retry;
         }
-        pending = retry;
+      } catch (e) {
+        // The CALL threw (network, SDK): nothing in `pending` was classified,
+        // so every one of those rows is a failed row — counted exactly below.
+        // Before D18 a thrown batch was charged a flat BULK_BATCH, which
+        // over-counted every short last batch and broke the equation.
+        bulkThrows++;
+        if (bulkThrows <= 3) console.warn(`  bulk call threw (${pending.length} rows): ${e && e.message}`);
       }
       wroteErr += pending.length;
     });
-    // r.err counts BATCHES that threw outright; convert to rows.
-    wroteErr += r.err * BULK_BATCH;
   }
 
   while (ccIt.hasMoreResults()) {
@@ -358,7 +375,9 @@ async function main() {
   console.log(`  throttled:    ${throttled}   (retried, not lost)`);
   console.log(`  flushes:      ${flushes}   (streamed during the scan, memory stayed flat)`);
   if (wroteErr > 0) console.log(`  ${wroteErr} rows FAILED — re-run to pick them up.`);
+  if (bulkThrows > 0) console.log(`  bulk calls that threw: ${bulkThrows}   (their rows are in the failed count)`);
   void t0;
+  reportWrites({ job: "backfill-search-fields", intended: flushed, written: wroteOk, failed: wroteErr });
 
   // CF-SEARCH-ENRICH-COVERAGE-ASSERT: never let the run's own counters be
   // the last word. Re-query the data and print what is actually left.

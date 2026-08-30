@@ -28,6 +28,17 @@ const {
 
 const backend = path.resolve(__dirname, "..", "..");
 const { computeHobbyIqCardId } = require(path.join(backend, "dist/services/portfolioiq/hobbyIqCardId.service.js"));
+// CF-A-GREEN-RUN-IS-NOT-A-DATA-FLOW (D18, 2026-08-29). The printed totals
+// carry over across --resume runs from the progress file, so they cannot be
+// this run's equation. Per-RUN counters, sales-level, disjoint:
+//   intended = sale records the write loop took up this run
+//   written  = upserts acknowledged (inserted)
+//   skipped  = deduped (already in the pool) + unusable (no price / date /
+//              slug / cardYear / cardNumber)
+//   failed   = upserts that threw — until D18 these were counted as "skipped"
+// A CS batch whose FETCH fails is counted in the card-level `failed` total,
+// which is a different unit; those sales never became work units.
+const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
 
 function arg(name, fallback) {
   const i = process.argv.indexOf(`--${name}`);
@@ -171,7 +182,7 @@ async function upsertSale(soldCompsContainer, source, catalogRow, saleRecord, gr
   };
   if (dryRun) return "inserted";
   try { await soldCompsContainer.items.upsert(doc); return "inserted"; }
-  catch (err) { console.warn(`  upsert fail (${slug}): ${err.message}`); return "skipped"; }
+  catch (err) { console.warn(`  upsert fail (${slug}): ${err.message}`); return "failed"; }
 }
 
 async function main() {
@@ -208,6 +219,8 @@ async function main() {
 
   const t0 = Date.now();
   let inserted = progress.totals.inserted, deduped = progress.totals.deduped, skipped = progress.totals.skipped, failed = progress.totals.failed;
+  let upsertFailed = 0;
+  const run = { intended: 0, inserted: 0, deduped: 0, skipped: 0, failed: 0 };
 
   for (let bi = 0; bi < batches.length; bi++) {
     const batch = batches[bi];
@@ -251,10 +264,12 @@ async function main() {
 
     const perCardStats = new Map();
     await runInParallel(workUnits, async (u) => {
+      run.intended++;
       const status = await upsertSale(soldCompsContainer, SOURCE, u.catalogRow, u.rec, u.gradedContext, dryRun);
-      const s = perCardStats.get(u.cardId) || { inserted: 0, deduped: 0, skipped: 0 };
+      const s = perCardStats.get(u.cardId) || { inserted: 0, deduped: 0, skipped: 0, failed: 0 };
       if (status === "inserted") s.inserted++;
       else if (status === "deduped") s.deduped++;
+      else if (status === "failed") s.failed++;
       else s.skipped++;
       perCardStats.set(u.cardId, s);
     });
@@ -263,6 +278,8 @@ async function main() {
       inserted += s.inserted;
       deduped += s.deduped;
       skipped += s.skipped;
+      upsertFailed += s.failed;
+      run.inserted += s.inserted; run.deduped += s.deduped; run.skipped += s.skipped; run.failed += s.failed;
       progress.doneCardIds[cardId] = s;
     }
     progress.totals = { batches: bi + 1, inserted, deduped, skipped, failed };
@@ -273,8 +290,9 @@ async function main() {
   }
 
   const total = ((Date.now() - t0) / 1000).toFixed(1);
-  console.log(`\n[phase-b-pricing] complete: inserted=${inserted} deduped=${deduped} skipped=${skipped} failed=${failed} in ${total}s`);
+  console.log(`\n[phase-b-pricing] complete: inserted=${inserted} deduped=${deduped} skipped=${skipped} upsertFailed=${upsertFailed} failed(cards, fetch)=${failed} in ${total}s`);
   console.log(`  progress state: .state/${progressFile}`);
+  if (!dryRun) reportWrites({ job: "phase-b-crawl-pricing", intended: run.intended, written: run.inserted, skipped: run.deduped + run.skipped, failed: run.failed });
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });

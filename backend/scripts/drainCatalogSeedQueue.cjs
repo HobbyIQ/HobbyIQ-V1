@@ -36,6 +36,14 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const https = require("node:https");
+// CF-A-GREEN-RUN-IS-NOT-A-DATA-FLOW (D18, 2026-08-29). This job's OWN rows are
+// the seed-status upserts (done / unavailable). markSeed swallowed a failed
+// upsert as "non-fatal", so a seed could be served and re-drained forever
+// with every run green. Counted now: intended = markSeed calls under --apply,
+// written = upserts acknowledged, failed = upserts that threw. The checklist
+// rows themselves are written by the ingest CHILD process, whose exit code
+// is checked per checklist; the promotion batch is a child too.
+const { reportWrites } = require(path.join(__dirname, "..", "dist/services/ops/writeReconciliation.js"));
 
 const args = process.argv.slice(2);
 const APPLY = args.includes("--apply");
@@ -165,10 +173,17 @@ function run(cmd, argv, env) {
   return { code: r.status, out: `${r.stdout || ""}${r.stderr || ""}` };
 }
 
+const seedWrites = { intended: 0, written: 0, failed: 0 };
 async function markSeed(seed, status, extra) {
   if (!APPLY) return;
   const next = { ...seed, status, drainedAt: new Date().toISOString(), ...(extra || {}) };
-  try { await queue.items.upsert(next); } catch { /* non-fatal */ }
+  seedWrites.intended++;
+  try { await queue.items.upsert(next); seedWrites.written++; }
+  catch (e) {
+    // Non-fatal for the drain (the next seed still runs); reconciled at the end.
+    seedWrites.failed++;
+    if (seedWrites.failed <= 3) console.log(`   seed status write failed ${seed.id}: ${String(e && e.message).slice(0, 100)}`);
+  }
 }
 
 (async () => {
@@ -376,4 +391,5 @@ async function markSeed(seed, status, extra) {
   }
 
   if (!APPLY) console.log("\nDRY RUN — nothing written. Re-run with --apply.");
+  if (APPLY) reportWrites({ job: "drainCatalogSeedQueue:seed-status", ...seedWrites });
 })().catch((e) => { console.error("FATAL", e.message); process.exit(1); });

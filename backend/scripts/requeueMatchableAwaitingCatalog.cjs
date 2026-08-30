@@ -26,6 +26,12 @@
 //   node scripts/requeueMatchableAwaitingCatalog.cjs --max 50000   (sample+size)
 
 const { CosmosClient } = require("@azure/cosmos");
+const path = require("node:path");
+// CF-A-GREEN-RUN-IS-NOT-A-DATA-FLOW (D18, 2026-08-29). Counters, disjoint:
+//   intended = rows the requeue loop took up (re-fetched per slug — not the
+//              scan-time estimate, which can drift while a drain is running)
+//   written  = patches acknowledged (requeued); failed = patches that threw
+const { reportWrites } = require(path.join(__dirname, "..", "dist/services/ops/writeReconciliation.js"));
 
 const args = process.argv.slice(2);
 const APPLY = args.includes("--apply");
@@ -141,7 +147,7 @@ async function mapLimit(items, limit, fn) {
   if (!resolvable.length) { console.log("\nnothing resolvable to requeue."); return; }
 
   console.log(`\nrequeueing ${rowsReady.toLocaleString()} rows across ${resolvable.length.toLocaleString()} slugs...`);
-  let requeued = 0, errors = 0;
+  let requeued = 0, errors = 0, attempted = 0;
   await mapLimit(resolvable, CONCURRENCY, async (slug) => {
     // Single-partition query: these rows all share hobbyiqCardId = slug.
     const { resources } = await staging.items.query({
@@ -149,6 +155,7 @@ async function mapLimit(items, limit, fn) {
       parameters: [],
     }, { partitionKey: slug }).fetchAll();
     for (const r of resources) {
+      attempted++;
       try {
         // Patch, not replace — two fields instead of the whole document.
         await staging.item(r.id, slug).patch([
@@ -165,4 +172,5 @@ async function mapLimit(items, limit, fn) {
 
   console.log(`\nREQUEUED : ${requeued.toLocaleString()}`);
   console.log(`errors   : ${errors}`);
+  reportWrites({ job: "requeueMatchableAwaitingCatalog", intended: attempted, written: requeued, failed: errors });
 })().catch((e) => { console.error("FATAL", e.message); process.exit(1); });

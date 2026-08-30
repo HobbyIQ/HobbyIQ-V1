@@ -1,5 +1,5 @@
 import { describe, expect, it, afterEach } from "vitest";
-import { reconcileWrites } from "../src/services/ops/writeReconciliation";
+import { bulkOutcome, reconcileWrites } from "../src/services/ops/writeReconciliation";
 
 afterEach(() => { process.exitCode = 0; });
 
@@ -93,5 +93,41 @@ describe("counters that do not add up", () => {
     expect(r.ok).toBe(true);
     expect(r.overAccounted).toBe(0);
     expect(process.exitCode).toBe(0);
+  });
+});
+
+describe("one bulk operation, one outcome (D18)", () => {
+  it("2xx is written", () => {
+    expect(bulkOutcome(200)).toBe("written");
+    expect(bulkOutcome(201)).toBe("written");
+    expect(bulkOutcome(204)).toBe("written");
+  });
+
+  it("the server's 'not now' codes are retry, not failure and not success", () => {
+    expect(bulkOutcome(429)).toBe("retry");
+    expect(bulkOutcome(449)).toBe("retry");
+    expect(bulkOutcome(503)).toBe("retry");
+  });
+
+  it("everything else is failed, including a missing code", () => {
+    for (const code of [400, 404, 412, 424, 500]) expect(bulkOutcome(code)).toBe("failed");
+    expect(bulkOutcome(undefined)).toBe("failed");
+    expect(bulkOutcome(null)).toBe("failed");
+    expect(bulkOutcome(0)).toBe("failed");
+  });
+
+  it("classifying a whole bulk response reconciles exactly, short last batch included", () => {
+    // The backfill-search-fields shape: a batch of 37 where two are throttled
+    // and one is a hard 400. Before D18 a batch that THREW was charged as a
+    // flat 100 failed rows, so the equation over-accounted by 63 here.
+    const res = Array.from({ length: 37 }, (_, i) => ({ statusCode: i === 3 ? 429 : i === 9 ? 449 : i === 20 ? 400 : 200 }));
+    const tally = { written: 0, retry: 0, failed: 0 };
+    for (const op of res) tally[bulkOutcome(op.statusCode)]++;
+    expect(tally).toEqual({ written: 34, retry: 2, failed: 1 });
+    // A caller that gives up on the retries counts them as failed:
+    const r = reconcileWrites({ job: "x", intended: 37, written: tally.written, failed: tally.failed + tally.retry });
+    expect(r.ok).toBe(true);
+    expect(r.overAccounted).toBe(0);
+    expect(r.unaccounted).toBe(0);
   });
 });

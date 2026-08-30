@@ -48,6 +48,11 @@ const {
   resolveSetKeyForSlug,
   deriveParentSetKey,
 } = require(path.join(backend, "dist/services/portfolioiq/hobbyIqCardId.service.js"));
+// CF-A-GREEN-RUN-IS-NOT-A-DATA-FLOW (D18, 2026-08-29). Counters, disjoint:
+//   intended = rows the write loop took up (the ones that re-derived to a
+//              genuinely better key); written = patches acknowledged (moved);
+//   failed = patches that threw. Rows left alone are printed on their own.
+const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
 
 function arg(name, dflt) {
   const hit = process.argv.find((a) => a.startsWith(`--${name}=`));
@@ -132,7 +137,7 @@ async function main() {
     { maxItemCount: 1000 },
   );
 
-  let scanned = 0, moved = 0, noSetName = 0, notBetter = 0, demoted = 0, failed = 0;
+  let scanned = 0, moved = 0, noSetName = 0, notBetter = 0, demoted = 0, failed = 0, attempted = 0;
   const destinations = new Map();
 
   while (iter.hasMoreResults() && scanned < LIMIT) {
@@ -166,6 +171,7 @@ async function main() {
         const { r, next, key } = work[cursor++];
         destinations.set(key, (destinations.get(key) || 0) + 1);
         if (!APPLY) { moved++; continue; }
+        attempted++;
         try {
           await sold.item(r.id, r.cardId).patch([
             { op: "add", path: "/hobbyiqCardIdBefore", value: r.hobbyiqCardId },
@@ -187,6 +193,7 @@ async function main() {
     .forEach(([k, v]) => console.log(`   ${String(v).padStart(7)}  ${k}`));
   console.log(`\nscanned=${scanned} moved=${moved} noSetName=${noSetName} leftAlone=${notBetter} demotionsBlocked=${demoted} failed=${failed}`);
   if (!APPLY) console.log("DRY-RUN — re-run with --apply to write");
+  if (APPLY) reportWrites({ job: "reslug-setkey-from-setname", intended: attempted, written: moved, failed });
   return 0;
 }
 main().then((c) => process.exit(c)).catch((e) => { console.error(e); process.exit(1); });
