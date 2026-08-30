@@ -28,8 +28,21 @@ const path = require("path");
 const backend = __dirname + "/..";
 const { CosmosClient } = require(path.join(backend, "node_modules/@azure/cosmos"));
 const { upsertMomentumSignal } = require(path.join(backend, "dist/services/portfolioiq/marketMomentum.service.js"));
+const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
 
-const APPLY = process.env.MARKET_SIGNALS_APPLY !== "false";
+// CF-RUNNER-FLAG-HYGIENE (D18, 2026-08-29). Default-on meant `apply=false`
+// under the runner still wrote — the runner exports BACKFILL_APPLY, not
+// MARKET_SIGNALS_APPLY. Precedence: an explicit MARKET_SIGNALS_APPLY (the cron
+// workflows set "true"); else the runner's BACKFILL_APPLY when it is present;
+// else the old default, on.
+const APPLY = process.env.MARKET_SIGNALS_APPLY !== undefined
+  ? process.env.MARKET_SIGNALS_APPLY !== "false"
+  : process.env.BACKFILL_APPLY !== undefined
+    ? process.env.BACKFILL_APPLY === "true"
+    : true;
+// Reconciled (D18): intended = signals handed to upsertMomentumSignal, written =
+// calls that resolved. A call that throws aborts the run (exit 1), not green.
+const writes = { intended: 0, written: 0 };
 const WINDOW_DAYS = Number(process.env.MARKET_SIGNALS_WINDOW_DAYS || "30");
 const MIN_VOLUME = Number(process.env.MARKET_SIGNALS_MIN_VOLUME || "20");
 
@@ -96,6 +109,7 @@ async function emitDimension(name, currGroups, priorGroups, computedAt) {
       sampleSize: combined,
     };
     if (APPLY) {
+      writes.intended++;
       await upsertMomentumSignal({
         dimension: name,
         key: String(key),
@@ -103,6 +117,7 @@ async function emitDimension(name, currGroups, priorGroups, computedAt) {
         computedAt,
         metrics,
       });
+      writes.written++;
     }
     emitted++;
   }
@@ -177,6 +192,7 @@ async function main() {
   console.log(`  Signals emitted: ${total}`);
   console.log(`  computedAt:      ${computedAt}`);
   if (!APPLY) console.log(`\n*** DRY-RUN. Set MARKET_SIGNALS_APPLY=true to write. ***`);
+  if (APPLY) reportWrites({ job: "refresh-market-signals", ...writes });
 }
 
 main().catch(e => { console.error(e); process.exit(1); });

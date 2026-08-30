@@ -181,10 +181,41 @@ function load(names: string[]): Script[] {
     .filter((s) => fs.existsSync(s.file))
     .map((s) => ({ name: s.name, src: fs.readFileSync(s.file, "utf8") }));
 }
-/** Runner writers: whitelisted, writes, and has an APPLY switch to be on. */
+/** Runner writers: whitelisted and writes. (v2 also required an APPLY token
+ *  somewhere in the source; D18 dropped that — a writer with NO switch is
+ *  always-live under the runner and was invisible to this net, which is how
+ *  recover-chrome-collapse-damage sat outside every list.) */
 function runnerWriters(): Script[] {
-  return load(whitelisted()).filter((s) => WRITE_CALL.test(s.src) && /APPLY/.test(s.src) && !NOT_ROW_WRITERS.has(s.name));
+  return load(whitelisted()).filter((s) => WRITE_CALL.test(s.src) && !NOT_ROW_WRITERS.has(s.name));
 }
+
+// ── the runner's switches ───────────────────────────────────────────────
+//
+// The runner exports exactly the *_APPLY switches below, derived from
+// `inputs.apply`. A whitelisted writer that reads some other name
+// (RECOVER_MODE, INGEST_APPLY) is permanently dry under it — an "APPLY"
+// dispatch prints plausible counters and writes nothing — and one that reads
+// no switch at all writes on `apply=false`. Both were live in D11's audit.
+const RUNNER_FLAGS = /\b(BACKFILL_APPLY|RESLUG_APPLY|APPROVE_APPLY)\b/;
+/** The *_APPLY names the runner actually exports, read from the yml so the
+ *  regex above cannot drift from it. */
+function runnerExportedFlags(): string[] {
+  const yml = fs.readFileSync(RUNNER, "utf8");
+  const start = yml.indexOf("- name: Run backfill (");
+  const block = yml.slice(start, yml.indexOf("\n        run:", start));
+  return [...block.matchAll(/^\s+([A-Z_]*APPLY[A-Z_]*):\s*\$\{\{ inputs\.apply/gm)].map((m) => m[1]).sort();
+}
+/** Whitelisted scripts that write through a service the WRITE_CALL net cannot
+ *  see — repriceHoldingsForUser, the staging endpoints, upsertMomentumSignal /
+ *  upsertCalibration, upsertCatalogEntry. Named here so the switch guard
+ *  covers them; every one wrote on `apply=false` or never at all before D18. */
+const SERVICE_WRITERS = [
+  "drain-staging-backlog",
+  "ingest-2026-bowman-auto-checklist",
+  "refresh-calibration-multipliers",
+  "refresh-market-signals",
+  "reprice-user-holdings",
+];
 /** Cron writers: invoked by a workflow and writes. No APPLY needed — a cron
  *  is always live. */
 function cronWriters(): Script[] {
@@ -291,6 +322,20 @@ describe("every backfill that writes must reconcile", () => {
     // the wired fraction may not fall.
     expect(cron.length).toBeGreaterThanOrEqual(23);
     expect(cw).toBe(cron.length);
+  });
+
+  it("every whitelisted writer reads a switch the runner exports", () => {
+    expect(runnerExportedFlags(), "the runner's exported switches moved — update RUNNER_FLAGS").toEqual(["APPROVE_APPLY", "BACKFILL_APPLY", "RESLUG_APPLY"]);
+    const writers = [...runnerWriters(), ...load(SERVICE_WRITERS)];
+    const deaf = writers.filter((s) => !RUNNER_FLAGS.test(stripComments(s.src))).map((s) => s.name);
+    expect(deaf, `whitelisted, writes, and reads none of ${runnerExportedFlags().join("/")} — permanently dry, or live on apply=false, under the runner:\n  ${deaf.join("\n  ")}`)
+      .toEqual([]);
+  });
+
+  it("the service writers the switch guard names are still whitelisted", () => {
+    const wl = new Set(whitelisted());
+    const gone = SERVICE_WRITERS.filter((n) => !wl.has(n) || !fs.existsSync(path.join(SCRIPTS, `${n}.cjs`)));
+    expect(gone, `not whitelisted (or deleted) — remove from SERVICE_WRITERS:\n  ${gone.join("\n  ")}`).toEqual([]);
   });
 
   it("every cron workflow that runs a dist-requiring script builds dist first", () => {

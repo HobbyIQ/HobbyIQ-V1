@@ -8,10 +8,27 @@
 //   AUTH_SESSION_SECRET        required (transitive imports)
 //   REPRICE_USER_ID            required (which user's holdings to reprice)
 //   REPRICE_MAX_HOLDINGS       optional (default 200)
+//   BACKFILL_APPLY=true        the runner's switch; anything else is a dry run
+//
+// CF-RUNNER-FLAG-HYGIENE (D18, 2026-08-29). This read no flag at all, so an
+// `apply=false` dispatch repriced (and persisted) the portfolio anyway. It
+// honours the runner's BACKFILL_APPLY now: a dry dispatch says which users and
+// how many holdings it would reprice, and exits. The sanctioned dispatch —
+// `-f script=reprice-user-holdings -f apply=true` — is unchanged.
+//
+// NOT reconciled, on purpose (D18). repriceHoldingsForUser returns
+// `requested` = ALL holdings, while repriced + skipped cover only the
+// CANDIDATES it kept after the min-age filter and the maxHoldings slice — so
+// no honest `intended` exists on this side of the call, and a wrong intended
+// is worse than none (it fires WORK VANISHED on every portfolio over 200). The
+// service would have to return the candidate count; until then the JSON it
+// prints is the record. A call that throws aborts the run (exit 1), not green.
 
 const path = require("path");
 const backend = __dirname + "/..";
 const { repriceHoldingsForUser } = require(path.join(backend, "dist/services/portfolioiq/portfolioStore.service.js"));
+
+const APPLY = process.env.BACKFILL_APPLY === "true";
 
 const USER_ID = process.env.REPRICE_USER_ID || process.env.DREW_USER_ID;
 // CF-LOOK-AT-EVERY-HOLDING (Drew, 2026-08-29): MODE=all reprices every user
@@ -29,8 +46,12 @@ async function main() {
     if (!process.env.COSMOS_CONNECTION_STRING) { console.error("FATAL: COSMOS_CONNECTION_STRING not set"); process.exit(1); }
     const portfolio = new CosmosClient(process.env.COSMOS_CONNECTION_STRING).database(process.env.COSMOS_DATABASE || "hobbyiq").container("portfolio");
     const { resources } = await portfolio.items.query("SELECT DISTINCT VALUE c.userId FROM c WHERE IS_DEFINED(c.holdings)").fetchAll();
-    console.log(`[reprice-user-holdings] MODE=all -> ${resources.length} users
+    console.log(`[reprice-user-holdings] MODE=all -> ${resources.length} users  ${APPLY ? "APPLY" : "DRY-RUN"}
 `);
+    if (!APPLY) {
+      console.log(`DRY-RUN — ${resources.length} users would be repriced (up to ${MAX_HOLDINGS} holdings each). Dispatch with apply=true to write.`);
+      return;
+    }
     const totals = {};
     for (const uid of resources) {
       const t0 = Date.now();
@@ -45,7 +66,12 @@ ALL USERS DONE  ${JSON.stringify(totals)}`);
   console.log(`[reprice-user-holdings]`);
   console.log(`  userId:      ${USER_ID}`);
   console.log(`  maxHoldings: ${MAX_HOLDINGS}`);
-  console.log(`  composite:   ${process.env.HOBBYIQFMV_COMPOSITE_ENABLED === "true" ? "ENABLED" : "DISABLED"}\n`);
+  console.log(`  composite:   ${process.env.HOBBYIQFMV_COMPOSITE_ENABLED === "true" ? "ENABLED" : "DISABLED"}`);
+  console.log(`  mode:        ${APPLY ? "APPLY" : "DRY-RUN"}\n`);
+  if (!APPLY) {
+    console.log(`DRY-RUN — would reprice up to ${MAX_HOLDINGS} holdings for ${USER_ID}. Dispatch with apply=true to write.`);
+    return;
+  }
 
   const t0 = Date.now();
   const result = await repriceHoldingsForUser(USER_ID, "batch-reprice", {
