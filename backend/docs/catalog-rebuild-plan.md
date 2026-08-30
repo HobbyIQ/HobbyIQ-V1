@@ -2033,6 +2033,21 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
     BuyerIQ median fallback goes, the recent-comps median stops posing as a
     stat, the dead identify call becomes an honest page, the picker shows the
     last sale + count, the 17 pre-existing web tsc errors go.
+    **D19 APPLYs landed (13:20Z):** rekey — 110 user rows → **59 re-keyed**
+    (34 onto the D9 order id), 4 transactions collapsed (7 docs → 4), 41
+    unresolved (33 slug-not-in-catalog, 7 two-minded holdings, 1 no
+    identity), 0 failed, 0 duplicates left; pool before 110 → after 106 =
+    110 − 66 deleted + 62 created — CF-A-SALE-IS-NEVER-LOST holds,
+    reconciled. Collapse — 319 CH pairs collapsed (kept ch-daily 164 /
+    ch-comp 155; folded imageUrl 155, composite 74, parallelSlug 60), **660
+    refused** as two sales (grade 77, parallel 517, auto 49, number 17 —
+    e.g. CH card 1746983719903x669… daily=RAW Refractor CPA-TW vs comp=PSA 9
+    on the same day and price: the comp path's grade/parallel stamps
+    disagree with the daily path's titles — the writer finding stands).
+    Deploy #7 live (`6d0faa9`, the twin regex). **#1512 (deploy #8
+    33285570523):** the write-time firewall also relabels a priced holding
+    with NO rung as an estimate (`no_rung_relabelled_at_write`) — the Max
+    Williams Gold /50 $32.46 "observed" shape.
 
 ## NEEDS DREW (not code)
 
