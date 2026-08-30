@@ -134,6 +134,44 @@ function productOf(csvPath) {
   };
 }
 
+/**
+ * CF-A-CARD-IS-NOT-A-PARALLEL, the ingest side (D33, Drew 2026-08-30).
+ *
+ * The old gate was /^\d+[a-z]?\s+[A-Za-z]/ -- BARE numbers only. It blocked
+ * "100 Mike Trout" and admitted every prefixed form, which is exactly the
+ * shape sitting in prod: "BD 154 Adley Rutschman", "BD-121 Spencer
+ * Torkelson", 29,189 rows of another card's number+name in the parallel
+ * column. The scraper that minted them is deleted, but nothing stopped a
+ * future one from re-admitting the shape, so the gate is widened here too:
+ * defence in depth, at the last step before a row is written.
+ *
+ * BLAST RADIUS. Real parallel/insert names that START WITH DIGITS must
+ * survive -- "20 in '20" (a 2020 Bowman Draft insert) and "1990 Bowman" (a
+ * 2020 Bowman retro insert) are both on the pages this ingest reads. A
+ * 4-digit year lead is therefore never a card line, and "20 in '20" is
+ * followed by "in", which no card line is: a card line's number is followed
+ * by a NAME, so a stop-word after the number rules it out.
+ */
+const CARD_LINE_PARALLEL = /^[A-Za-z]{0,5}[-\s]?\d{1,4}[a-z]?\s+\p{L}/u;
+const NOT_A_NAME_AFTER_NUMBER = /^(?:in|of|to|and|the|for|per|on|at|by)\b/i;
+/** Finish vocabulary that legitimately follows a bare number in a parallel. */
+const FINISH_AFTER_NUMBER = /^(?:colou?r|tone|tool|of|piece|pc|patch|star|swatch|box|case|player|team|logo|letter|strand)\b/i;
+function isCardLineParallel(parallel) {
+  const v = String(parallel || "").trim();
+  if (!CARD_LINE_PARALLEL.test(v)) return false;
+  if (/^(?:19|20)\d{2}\s/.test(v)) return false;              // "1990 Bowman"
+  const after = v.replace(/^[A-Za-z]{0,5}[-\s]?\d{1,4}[a-z]?\s+/u, "");
+  if (NOT_A_NAME_AFTER_NUMBER.test(after)) return false;      // "20 in '20"
+  // A BARE number (no letter prefix) can still name a PARALLEL when what
+  // follows is finish vocabulary rather than a person: "3 Color Patch",
+  // "5 Tool", "1 of 1". Capitalisation cannot separate those from "100 Mike
+  // Trout" (both are two capitalised words), so the finish words decide. A
+  // PREFIXED line ("BD 154 ...") is a card line regardless: no parallel
+  // carries a set prefix.
+  if (!/^[A-Za-z]{1,5}[-\s]/.test(v) && FINISH_AFTER_NUMBER.test(after)) return false;
+  return true;
+}
+
 async function main() {
   if (!process.env.COSMOS_CONNECTION_STRING) { console.error("FATAL: COSMOS_CONNECTION_STRING not set"); process.exit(1); }
   if (!DIR || !fs.existsSync(DIR)) { console.error(`FATAL: DIR not found: ${DIR}`); process.exit(1); }
@@ -214,10 +252,10 @@ async function main() {
       const player = cleanPlayerName(rawPlayer);
       rows++;
       if (!cardNumber || !player) { skippedRow++; continue; }
-      // CF-A-CARD-LINE-IS-NOT-A-RUNG (2026-08-29). "100 Mike Trout" in the
+      // CF-A-CARD-LINE-IS-NOT-A-RUNG (2026-08-29; widened D33 2026-08-30).
       // parallel column is a scraper joining a card line to a rung; it can
       // never name a parallel. Skipped per row, counted, never written.
-      if (/^\d+[a-z]?\s+[A-Za-z]/.test(String(parallel || ""))) { cardLineParallel++; continue; }
+      if (isCardLineParallel(parallel)) { cardLineParallel++; continue; }
       rawRows.push({ category, cardNumber, parallel, isAuto, printRun, player, parallelNote });
       continue;
       batch.push({ category, cardNumber, parallel, isAuto, printRun, player, parallelNote: parallelNote || null });
