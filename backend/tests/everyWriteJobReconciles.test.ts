@@ -65,10 +65,12 @@ function cronInvoked(): string[] {
 }
 
 // A write that goes through catalogRowOps (D5 PR 3/4) is still a write —
-// without those two the converted movers drop out of the population. A
+// without those two the converted movers drop out of the population. So is
+// one through scripts/lib/relocate-sold-comp.cjs (D19): a re-key of a
+// sold_comps row is an upsert and deletes the script itself never spells. A
 // `.patch(` is a write. A `.replace(` is a write only in its Cosmos shape:
 // `.replace(doc)`, never `.replace(/&/g, "&amp;")`.
-const WRITE_CALL = /items\.bulk\(|\.upsert\(|\.create\(|\.delete\(\)|\.replace\((?![/"'`])|\.patch\(|moveCatalogRow\(|retireCatalogRow\(/;
+const WRITE_CALL = /items\.bulk\(|\.upsert\(|\.create\(|\.delete\(\)|\.replace\((?![/"'`])|\.patch\(|moveCatalogRow\(|retireCatalogRow\(|relocateSoldComp\(/;
 
 /** Writes to Cosmos that are not rows. `cosmos-throughput` replaces an
  *  OFFER (RU scaling); there is nothing to reconcile against. */
