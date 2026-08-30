@@ -171,6 +171,11 @@ on:
           - run-ebay-order-poll
           - run-ebay-finances-enrichment
           - run-ebay-purchase-sync
+          # D33 (2026-08-30): the five stored-row repairs behind Drew's "still
+          # a mess" on 2020 Bowman Draft BD-152. MODE is REQUIRED and has no
+          # default -- card-as-parallel | chrome-ladder | first-edition |
+          # names | number-glued. Sharded by sha1(id); SCOPE narrows to setKeys.
+          - repair-bcp-misfiled-parallels
       apply:
         description: "Actually write (true) or dry-run only (false)"
         required: true
@@ -255,7 +260,7 @@ on:
         default: false
         type: boolean
       mode:
-        description: "For canonicalize-vendor-shaped-rows: 'vendor' (id is not a hiq slug) or 'nopk' (cardId missing entirely). For repair-parallel-subset-fold: 'prefix' or 'glue'. For rename-setkey-to-product: 'product' (the catalog rename, sharded), 'hyphen' (needs sources), 'holdings' (slot 0), 'estimate' (read-only counts). For repair-card-number-from-title (D28): 'grade' | 'slash' | 'ordinal' | 'year' | 'nonumber' | 'all' (needs scope=all) -- REQUIRED, no default. For clean-base-cards-parallel-slug: 'cards' | 'subset' | 'both' (needs scope=all) -- REQUIRED. For measure-card-number-integrity: 'grade' | 'shapes' | 'months' | 'catalog-year'. Empty = the script's default."
+        description: "For canonicalize-vendor-shaped-rows: 'vendor' (id is not a hiq slug) or 'nopk' (cardId missing entirely). For repair-parallel-subset-fold: 'prefix' or 'glue'. For rename-setkey-to-product: 'product' (the catalog rename, sharded), 'hyphen' (needs sources), 'holdings' (slot 0), 'estimate' (read-only counts). For repair-card-number-from-title (D28): 'grade' | 'slash' | 'ordinal' | 'year' | 'nonumber' | 'all' (needs scope=all) -- REQUIRED, no default. For clean-base-cards-parallel-slug: 'cards' | 'subset' | 'both' (needs scope=all) -- REQUIRED. For measure-card-number-integrity: 'grade' | 'shapes' | 'months' | 'catalog-year'. For repair-bcp-misfiled-parallels (D33): 'card-as-parallel' (retire the rows whose parallel is another card) | 'chrome-ladder' (move the refractor ladder from the paper number to the chrome one) | 'first-edition' (move 1st Edition rows to their own product) | 'names' (the comma before Jr./Sr./II) | 'number-glued' (black-1 -> black:num-1) -- REQUIRED, no default. Empty = the script's default."
         required: false
         default: ""
       shard_hex:
@@ -1200,6 +1205,31 @@ jobs:
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=rename-setkey-to-product -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f sources="${{ inputs.sources }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (renamed=${N:-0}) — done, no re-dispatch."
+          fi
+
+      - name: Self-relaunch the misfiled-parallel repair until the slot is clean
+        # D33. The five repairs behind Drew's "still a mess" on 2020 Bowman
+        # Draft BD-152. Stops at its own 140-minute budget and PRINTS its
+        # summary; a run killed by the 150-minute step ceiling prints nothing.
+        # CF-RELAUNCH-ONLY-ON-BUDGET (#1361): relaunch iff the marker printed,
+        # never on a count and never on a cancel; every input forwarded
+        # verbatim (mode / scope / sources / sports / years / slot / slots), so
+        # the relaunch is the same dispatch -- and MODE especially, because the
+        # script exits 1 without it rather than picking a population itself.
+        if: ${{ !cancelled() && inputs.script == 'repair-bcp-misfiled-parallels' && inputs.apply == true }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        working-directory: backend
+        run: |
+          set +e
+          N=$(grep -aoE "^  CHANGED +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          echo "changed=${N:-0}"
+          if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
+            echo "::notice::budget hit (changed=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-bcp-misfiled-parallels -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f sources="${{ inputs.sources }}"
+          else
+            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (changed=${N:-0}) — done, no re-dispatch."
           fi
 
       - name: Self-relaunch the card-number repair until the slot is clean

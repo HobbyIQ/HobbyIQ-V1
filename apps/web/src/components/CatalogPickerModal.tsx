@@ -33,6 +33,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { searchCatalog, type CatalogSearchHit } from "@/lib/api";
+import { playerLabelOf, setLabelOf } from "@/lib/catalogHitLabel";
 
 // Same input styling the edit modal uses — one look, not a second one invented
 // here. `hiq-input` does not exist; assuming it did would have shipped an
@@ -183,14 +184,18 @@ export function CatalogPickerModal({
               // The checklist sources write the year into setName ("2025 Bowman
               // Draft Baseball"), so the row must not read "2025 2025 Bowman
               // Draft". D33 (2026-08-30): both scrubs here were broken by a
-              // lost backslash. `"\s+"` in a JS string is "s+", so the year
-              // regex compiled to /^2025s+/ and never matched -- Drew saw the
-              // doubled year. And /[s,;]+$/ is a character class of the
-              // LITERAL letter s, so it truncated real surnames: "Chris
-              // Sales" rendered as "Chris Sale". The player name is cleaned
-              // at ingest (cleanPlayerName), so display only trims.
-              const setLabel = String(h.setName || h.setKey || "").replace(h.year ? new RegExp("^" + String(h.year) + "\\s+") : /^$/, "").trim();
-              const playerLabel = String(h.playerName || "").trim();
+              // lost backslash (#1466). `"\s+"` in a JS string is "s+", so the
+              // year regex compiled to /^2025s+/ and never matched -- Drew saw
+              // the doubled year. And /[s,;]+$/ is a character class of the
+              // LITERAL letter s, so it truncated real surnames: "Chris Sales"
+              // rendered as "Chris Sale", 2.45M rows / 12.4% of the catalog,
+              // display only. Both now live as pure helpers in
+              // src/lib/catalogHitLabel.ts, where a regex LITERAL cannot be
+              // silently de-escaped by its quotes and both rules are pinned by
+              // tests. The player name is cleaned at ingest (cleanPlayerName),
+              // so display only trims.
+              const setLabel = setLabelOf(h);
+              const playerLabel = playerLabelOf(h);
               const bits = [
                 h.year ? String(h.year) : null,
                 setLabel || null,
