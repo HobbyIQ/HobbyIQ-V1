@@ -1724,7 +1724,18 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   vs a $2 raw median; the Tiffany Maddux $1,757 vs $55; the Judge; the
   Aaron). **#1515:** the flag compares to the holding's own tier; audit #2
   33285811376. What remains real in that list is the n = 1 window (Gillen
-  raw $729 vs a 5-sale median of $192.51) — Drew's rule. Drew (22:30Z): "I see 2 max williams superfractors …
+  raw $729 vs a 5-sale median of $192.51) — Drew's rule.
+  **Runner landings by 15:30Z:** `conform-one-of-one-parallels` 8/8 shards —
+  ≈224k rows repaired (moved ≈200k, folded ≈18k, replaced ≈6k), ≈82k
+  regenerable graded children retired, ≈23k refusals (the setKey-field
+  drift the card-profile pass has since healed) for a second pass;
+  re-ingest #2 7/8 (each shard ≈95% "kept the existing row" — the identity
+  is held at the canonical id); the vendor-mode fold relaunch (single slot)
+  folded 236 one-of-one twins and stopped at its budget — its marker-keyed
+  relaunch continues it, though the cross-source ×8 fleet covers the same
+  base ids. `materialize-graded-identities` ×8 dispatched 15:32Z
+  (33285887598 … 33285911031) to rebuild the graded children behind the
+  moves; the second one-of-one pass follows it. Drew (22:30Z): "I see 2 max williams superfractors …
   superfractors are 1/1" — bcp's un-numbered `superfractor:auto` beside
   beckett's `:num-1`, and the same pair on Refractor /499, Black /10, Red /5,
   Red Lava, Sky Blue. **#1470:** the fold's decision is a pure tested rule
