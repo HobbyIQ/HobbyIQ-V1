@@ -79,7 +79,8 @@ describe("legitimate matches still resolve", () => {
   it("keeps market-language aliases matching after canonicalization", () => {
     // "True Blue" = "Blue Refractor" per the market-language rule. The alias is
     // applied before slugging, so the token sets agree.
-    expect(same(canonicalizeParallelName("True Blue"), "blue-refractor")).toBe(true);
+    // CF-COLOUR-FOLLOWS-THE-CHECKLIST (Drew, 2026-08-30): True Blue is Blue as written.
+    expect(same(canonicalizeParallelName("True Blue"), "blue")).toBe(true);
     expect(same(canonicalizeParallelName("[Base]"), "base")).toBe(true);
     expect(same(canonicalizeParallelName("Base Refractor"), "refractor")).toBe(true);
   });
