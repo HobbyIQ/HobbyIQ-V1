@@ -61,13 +61,16 @@ describe("Base and Refractor are different cards", () => {
 });
 
 describe("the neighbouring parallel rules still work", () => {
-  it("still unifies a colour with its refractor — that merge is correct", () => {
-    // CF-CHROME-COLOR-IMPLIES-REFRACTOR acts on NON-base parallels only, so
-    // removing the base rule must leave it intact.
-    expect(parallelOf(card({ parallel: "Blue" })))
-      .toBe(parallelOf(card({ parallel: "Blue Refractor" })));
-    expect(parallelOf(card({ parallel: "Gold" })))
-      .toBe(parallelOf(card({ parallel: "Gold Refractor" })));
+  it("no longer unifies a colour with its refractor at the generator — the catalog decides per card (CF-COLOUR-FOLLOWS-THE-CHECKLIST, Drew 2026-08-30)", () => {
+    // CF-CHROME-COLOR-IMPLIES-REFRACTOR was removed: Topps Tribute's checklists
+    // name 19,099 bare-colour parallels with no refractor form, and Finest
+    // lists "Uncommon" and "Uncommon Refractor" as two cards. "Blue" is blue;
+    // the catalog resolver maps it onto "Blue Refractor" only when that is the
+    // one blue row the card has.
+    expect(parallelOf(card({ parallel: "Blue" }))).toBe("blue");
+    expect(parallelOf(card({ parallel: "Blue Refractor" }))).toBe("blue-refractor");
+    expect(parallelOf(card({ parallel: "Gold" }))).toBe("gold");
+    expect(parallelOf(card({ parallel: "Gold Refractor" }))).toBe("gold-refractor");
   });
 
   it("does not let the colour rule reach Base", () => {

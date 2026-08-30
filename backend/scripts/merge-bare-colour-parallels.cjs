@@ -30,6 +30,16 @@
  *   YEARS           comma list, or empty for every year present
  *   SLOT / SLOTS    partition the year list across parallel dispatches
  */
+// RETIRED (Drew, 2026-08-30: "color does not always mean refractor … remove
+// rules, and follow it to the checklist or catalog"). This mover's premise —
+// the bare colour and the long form are one card, the long form wins — is a
+// vocabulary rule the catalog contradicts (Topps Tribute names 19,099
+// bare-colour parallels with no refractor form; Finest lists "Uncommon" and
+// "Uncommon Refractor" as two cards). Consolidation now follows the checklist
+// row per card (the D30 fleet). The script refuses to run.
+console.error("RETIRED 2026-08-30: merge-bare-colour-parallels moved sales on a vocabulary rule (colour = refractor). Colour follows the checklist per card now — use the D30 consolidation fleet.");
+process.exit(2);
+// eslint-disable-next-line no-unreachable
 const { CosmosClient } = require("@azure/cosmos");
 const { reportWrites } = require(require("node:path").resolve(__dirname, "..", "dist/services/ops/writeReconciliation.js"));
 

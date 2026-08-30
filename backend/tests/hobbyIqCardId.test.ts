@@ -656,6 +656,8 @@ describe("computeHobbyIqCardId — market vocabulary aliases", () => {
       cardNumber: "CPA-EHA", parallel: "Green Refractor",
       isAuto: true, printRun: 99,
     });
+    // "True Green Refractor" says Refractor itself; stripping "True" is a
+    // spelling fix, not a vocabulary rule — still the same slug.
     expect(trueGreen).toBe(green);
     // CF-CHROME-PREFIX-OVERRIDE-NARROW (2026-08-10). CPA- with
     // setKey="Bowman" upgrades to bowman-chrome.
@@ -676,12 +678,15 @@ describe("computeHobbyIqCardId — market vocabulary aliases", () => {
     expect(trueBlue).toBe(blue);
   });
 
-  it("True Blue (no explicit Refractor) === Blue Refractor (CF-TRUE-COLOR-IMPLIES-REFRACTOR)", () => {
-    // Hartshorn 2026-07-28 root cause: parallel="True Blue" stripped
-    // "True", produced :blue: slug — fragmented the pool from
-    // :blue-refractor: where every CH/CS ingest of the same physical
-    // card lands. Now: True<Color> without "Refractor" also emits
-    // -refractor suffix.
+  it("True Blue (no explicit Refractor) is Blue — the catalog decides the refractor, not the generator (CF-COLOUR-FOLLOWS-THE-CHECKLIST)", () => {
+    // 2026-07-28 (CF-TRUE-COLOR-IMPLIES-REFRACTOR) forced "-refractor" after a
+    // stripped "True". Drew, 2026-08-30: "color does not always mean
+    // refractor … remove rules, and follow it to the checklist or catalog".
+    // Measured that night: Topps Tribute's checklists name 19,099 bare-colour
+    // parallels with no refractor form; Finest lists "Uncommon" AND "Uncommon
+    // Refractor" as two cards. The generator writes what was said; the
+    // catalog resolver (unique long-form candidate) maps "Blue" onto "Blue
+    // Refractor" only when that is the one blue row the card has.
     const trueBlue = computeHobbyIqCardId({
       sport: "baseball", year: 2025, setKey: "Bowman Draft",
       cardNumber: "CPA-JHA", parallel: "True Blue",
@@ -692,8 +697,19 @@ describe("computeHobbyIqCardId — market vocabulary aliases", () => {
       cardNumber: "CPA-JHA", parallel: "Blue Refractor",
       isAuto: true, printRun: null,
     });
-    expect(trueBlue).toBe(blueRefractor);
-    expect(trueBlue).toBe("hiq:baseball:2025:bowman-draft:cpa-jha:blue-refractor:auto");
+    expect(trueBlue).not.toBe(blueRefractor);
+    expect(trueBlue).toBe("hiq:baseball:2025:bowman-draft:cpa-jha:blue:auto");
+  });
+
+  it("a bare colour on Topps Tribute stays the colour the checklist names (CF-COLOUR-FOLLOWS-THE-CHECKLIST)", () => {
+    // 2025 Topps Tribute #56 is stored as :blue: from the checklist ("Blue");
+    // the removed product-level rule slugged every sale titled "Blue" as
+    // :blue-refractor:, a twin the checklist never had.
+    const s = computeHobbyIqCardId({
+      sport: "baseball", year: 2025, setKey: "Topps Tribute",
+      cardNumber: "56", parallel: "Blue", isAuto: false, printRun: null,
+    });
+    expect(s).toBe("hiq:baseball:2025:topps-tribute:56:blue:no-auto");
   });
 
   it("does NOT collapse Green Shimmer / Green Lava into base green", () => {
@@ -1137,12 +1153,15 @@ describe("computeHobbyIqCardId — no double -fractor on chrome stock", () => {
     });
     expect(s).toContain(":blue-refractor:");
   });
-  it("bare 'Blue' still gets -refractor appended (existing rule preserved)", () => {
+  it("bare 'Blue' stays :blue: — the product-level append is gone (CF-COLOUR-FOLLOWS-THE-CHECKLIST, Drew 2026-08-30)", () => {
+    // The catalog resolver maps it onto :blue-refractor: only when that is the
+    // one blue row the card has; the generator no longer assumes it.
     const s = computeHobbyIqCardId({
       sport: "baseball", year: 2025, setKey: "Bowman Chrome",
       cardNumber: "BDC-1", parallel: "Blue", isAuto: false,
     });
-    expect(s).toContain(":blue-refractor:");
+    expect(s).toContain(":blue:");
+    expect(s).not.toContain(":blue-refractor:");
   });
 });
 
