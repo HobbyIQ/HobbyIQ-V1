@@ -11,8 +11,12 @@
 // (CF-A-GRADE-IS-NOT-A-CARD-NUMBER, 2026-08-24). It is not the only path. The
 // CH converter copies `row.number` verbatim, the eBay title parser has its own
 // regexes, the OCR extractor has a third, the import takes the user's field,
-// and the LLM enricher answers with whatever it read. Five derivations, one
-// invariant, and nowhere it was stated once.
+// and the LLM enricher answers with whatever it read. Grepping the MAPPING
+// rather than the module found three more: bulk-import-ch-daily-to-sold-comps
+// keeps its OWN copy (the one that wrote ~4.2M rows), and emit-staging-to-pool
+// plus canonicalFmv's CH ingest SYNTHESISED their title out of the very field
+// in question, so no guard could ever have caught anything through them.
+// Eight derivations, one invariant, and nowhere it was stated once.
 //
 // This module is that statement. It is pure: no Cosmos, no network, no clock.
 // It answers one question -- given a candidate card number and the title the
