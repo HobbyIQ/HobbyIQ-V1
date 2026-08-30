@@ -46,6 +46,7 @@ const backend = path.resolve(__dirname, "..");
 const { CosmosClient } = require("@azure/cosmos");
 const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
 const { recordSoldComp } = require(path.join(backend, "dist/services/portfolioiq/soldCompsStore.service.js"));
+const { judgeCardNumber, logCardNumberVerdict } = require(path.join(backend, "dist/services/portfolioiq/cardNumberIntegrity.js"));
 
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
 const MODE = String(process.env.MODE || "").toLowerCase();
@@ -103,7 +104,7 @@ async function main() {
   let token;
 
   const query = MODE === "chdaily"
-    ? { query: "SELECT c.id, c.card_id, c.player, c.year, c.card_set, c.number, c.variant, c.price, c.sale_date, c.image_url, c[\"group\"] AS grp FROM c" }
+    ? { query: "SELECT c.id, c.card_id, c.player, c.year, c.card_set, c.number, c.variant, c.price, c.sale_date, c.image_url, c.description, c.card_description, c[\"group\"] AS grp FROM c" }
     : { query: `SELECT c.id, c.hobbyiqCardId, c.status, c.clean, c.raw FROM c WHERE c.status IN (${STATUSES.map((_, i) => `@s${i}`).join(",")})`,
         parameters: STATUSES.map((s, i) => ({ name: `@s${i}`, value: s })) };
 
@@ -123,12 +124,22 @@ async function main() {
             const { resources: have } = await retry(() => pool.items.query({ query: "SELECT VALUE COUNT(1) FROM c WHERE c.sourceExternalId = @e", parameters: [{ name: "@e", value: ext }] }).fetchAll());
             if (have[0] > 0) { deduped++; return; }
             if (!(Number(row.price) > 0) || !row.sale_date) { invalid++; return; }
+            // D28 (CF-A-CARD-NUMBER-IS-NOT-A-GRADE). The title used to be
+            // SYNTHESISED from row.number -- "#9" built out of the very field
+            // in question -- so no guard could ever have caught a grade here:
+            // the title agreed with the number by construction. CH's own
+            // `description` IS the source listing's title line, so it is what
+            // the number is now judged against, and it travels to the pool.
+            const chTitle = row.description || row.card_description
+              || `${row.year ?? ""} ${row.card_set ?? ""} #${row.number ?? ""} ${row.variant ?? ""}`.trim();
+            const numberVerdict = judgeCardNumber(row.number ?? null, row.description || row.card_description || null);
+            logCardNumberVerdict("ch-daily-staging", numberVerdict, { candidate: row.number ?? null, title: chTitle, cardId: String(row.card_id) });
             input = {
               cardId: String(row.card_id), playerName: String(row.player ?? ""), cardYear: row.year ?? null,
-              setName: row.card_set ?? null, parallel: row.variant ?? null, cardNumber: row.number ?? null,
+              setName: row.card_set ?? null, parallel: row.variant ?? null, cardNumber: numberVerdict.cardNumber,
               sport: row.grp ? String(row.grp).toLowerCase() : null, price: Number(row.price), soldAt: String(row.sale_date),
               source: "cardhedge", sourceExternalId: ext, contributorUserId: null,
-              title: `${row.year ?? ""} ${row.card_set ?? ""} #${row.number ?? ""} ${row.variant ?? ""}`.trim(),
+              title: chTitle,
               imageUrl: row.image_url ?? null, sellerHandle: null, verifiedByUser: false, confidence: 0.8,
             };
           } else {

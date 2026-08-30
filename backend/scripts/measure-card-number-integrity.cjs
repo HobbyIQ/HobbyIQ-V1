@@ -24,7 +24,11 @@
  * that is 90% cardhedge is a converter bug and a shape that is 90% tca-ebay is
  * an ingest bug, and the aggregate hides which.
  *
- * This script NEVER writes. There is no APPLY path in it at all.
+ * This script NEVER writes. There is no APPLY path in it at all, and it does
+ * NOT print the runner's budget marker: nothing relaunches a read-only walk,
+ * so claiming the relaunch contract would be a lie the invariant test
+ * (everyWriteJobReconciles) rightly catches. It says the clock ran out and
+ * that its numbers are partial instead.
  *
  * Env: COSMOS_CONNECTION_STRING; MODE; MONTHS; SINCE=YYYY-MM; SLOT/SLOTS
  *      (hash of cardId, for running the month walk in parallel); LIMIT;
@@ -223,7 +227,7 @@ async function main() {
     for (const [k, n] of [...bySource.entries()].sort((a, b) => b[1] - a[1])) console.log(`    ${String(k).padEnd(44)} ${f(n).padStart(10)}`);
     console.log(`\n  samples:`);
     for (const x of samples) console.log(`    ${x}`);
-    if (out.stopped === "budget") console.log(`\nstopped at the ${RUN_MS / 60000}-minute budget — the relaunch continues from here`);
+    if (out.stopped === "budget") console.log(`\nthe ${RUN_MS / 60000}-minute clock ran out before the walk finished. This script is READ ONLY and NOTHING relaunches it — re-run with a larger RUN_MINUTES, or split it across SLOTS. The numbers above are a PARTIAL count.`);
     console.log(`\nREAD ONLY — nothing written.`);
     return;
   } else {
@@ -241,7 +245,7 @@ async function main() {
     if (name === "strict-disagreement") continue;
     printTally(name, t);
   }
-  if (out.stopped === "budget") console.log(`\nstopped at the ${RUN_MS / 60000}-minute budget — the relaunch continues from here`);
+  if (out.stopped === "budget") console.log(`\nthe ${RUN_MS / 60000}-minute clock ran out before the walk finished. This script is READ ONLY and NOTHING relaunches it — re-run with a larger RUN_MINUTES, or split it across SLOTS. The numbers above are a PARTIAL count.`);
   else if (out.stopped === "limit") console.log(`\nstopped at LIMIT=${f(LIMIT)} — a bounded run`);
   console.log(`\nREAD ONLY — nothing written.`);
 }

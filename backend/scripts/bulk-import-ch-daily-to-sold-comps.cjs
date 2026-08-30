@@ -31,6 +31,11 @@ const path = require("path");
 const backend = __dirname + "/..";
 const { CosmosClient } = require(path.join(backend, "node_modules/@azure/cosmos"));
 const { recordSoldComp } = require(path.join(backend, "dist/services/portfolioiq/soldCompsStore.service.js"));
+// D28 (CF-A-CARD-NUMBER-IS-NOT-A-GRADE). This script keeps its OWN copy of the
+// CH mapping -- the copy that wrote ~4.2M of the current sold_comps rows -- so
+// the guard has to be applied here too. Applying it only in
+// chRowToSoldComp.ts would leave the biggest writer of the defect untouched.
+const { judgeCardNumber, logCardNumberVerdict } = require(path.join(backend, "dist/services/portfolioiq/cardNumberIntegrity.js"));
 
 const APPLY = process.env.BACKFILL_APPLY === "true";
 const CONCURRENCY = Number(process.env.BACKFILL_CONCURRENCY || "8");
@@ -134,6 +139,10 @@ async function main() {
   let skippedNoPrice = 0;
   let skippedNoPlayer = 0;
   let skippedSport = 0;
+  // D28: the title overrode CardHedge's number, and the number CH gave that
+  // the title showed to be a grade / print run / year / ordinal / lot.
+  let cardNumberVendorDisagreed = 0;
+  let cardNumberRefused = 0;
   const graderDist = {};
   const yearDist = {};
 
@@ -213,13 +222,23 @@ async function main() {
       }
       if (row.year) yearDist[row.year] = (yearDist[row.year] ?? 0) + 1;
 
+      // D28: CardHedge's `number` is their PRODUCT's number and their
+      // `description` is the source listing's title line. When the title
+      // states an explicit "#X" it wins; when it shows the number to be a
+      // grade / print run / year / ordinal / lot, the number is refused.
+      const chTitle = row.description || row.card_description || null;
+      const numberVerdict = judgeCardNumber(row.number ?? null, chTitle);
+      if (numberVerdict.vendorDisagrees) cardNumberVendorDisagreed++;
+      if (numberVerdict.rejected) cardNumberRefused++;
+      logCardNumberVerdict("ch-daily-bulk", numberVerdict, { candidate: row.number ?? null, title: chTitle, cardId: String(row.card_id).trim() });
+
       writes.push({
         cardId: String(row.card_id).trim(),
         playerName: player,
         cardYear: Number.isFinite(Number(row.year)) ? Number(row.year) : null,
         setName: row.card_set || row.card_set_type || null,
         parallel: row.variant || "Base",
-        cardNumber: row.number || null,
+        cardNumber: numberVerdict.cardNumber,
         isAuto: inferIsAutoFromCH(row),
         sport,
         gradeCompany,
@@ -229,7 +248,7 @@ async function main() {
         source: "cardhedge",
         sourceExternalId: `ch-daily::${row.price_history_id}`,
         contributorUserId: null,
-        title: row.description || row.card_description || null,
+        title: chTitle,
         imageUrl: row.image_url || null,
         sellerHandle: null,
         verifiedByUser: false,
@@ -271,6 +290,8 @@ async function main() {
   console.log(`  emitted to sold_comps:   ${emitted.toLocaleString()} ${APPLY ? "" : "(dry-run count)"}`);
   console.log(`  skipped (raw grade):     ${skippedRaw.toLocaleString()} (still emitted with null grade)`);
   console.log(`  skipped (no player):     ${skippedNoPlayer.toLocaleString()}`);
+  console.log(`  card number: title overrode CH  ${cardNumberVendorDisagreed.toLocaleString()}   <- D28, card_number_vendor_disagrees`);
+  console.log(`  card number: refused (grade / print run / year / ordinal / lot)  ${cardNumberRefused.toLocaleString()}`);
   console.log(`  skipped (no price):      ${skippedNoPrice.toLocaleString()}`);
   console.log(`  skipped (sport filter):  ${skippedSport.toLocaleString()}`);
   console.log(`  next start date:         ${currentEnd}`);

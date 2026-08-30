@@ -61,6 +61,7 @@ import { CosmosClient, type Container } from "@azure/cosmos";
 import { classifyFamily, lookupGradeRatio, lookupGradeRatioByTier, lookupValueBandMultiplier } from "./gradeCalibrationConfig.js";
 import { titleMatchesParallel } from "./titleParallelMatch.js";
 import { canonicalRungLabel, type FmvRungLabel } from "./fmvRung.js";
+import { judgeCardNumber, logCardNumberVerdict } from "../portfolioiq/cardNumberIntegrity.js";
 
 export type CanonicalFmvMethod =
   | "direct-comp"
@@ -948,9 +949,16 @@ async function warmPoolFromChDailySales(
       grader: string;
       sale_date: string;
       image_url: string | null;
+      description?: string | null;
+      card_description?: string | null;
     }>({
+      // D28: `c.description` is the source listing's title line. Without it the
+      // title below is SYNTHESISED from c.number -- "#9" built from the very
+      // field in question -- and no card-number guard can catch anything,
+      // because the title agrees with the number by construction.
       query: `SELECT TOP 50 c.card_id, c.player, c.year, c.card_set, c.variant,
-                            c.number, c.price, c.grader, c.sale_date, c.image_url
+                            c.number, c.price, c.grader, c.sale_date, c.image_url,
+                            c.description, c.card_description
               FROM c
               WHERE c.card_id = @cardId
                 AND c.grade = @grader
@@ -975,6 +983,12 @@ async function warmPoolFromChDailySales(
     for (const row of resources) {
       if (!Number.isFinite(row.price) || row.price <= 0) continue;
       if (wantParallel && stripRefr(row.variant ?? "") !== wantParallel) continue;
+      // D28 (CF-A-CARD-NUMBER-IS-NOT-A-GRADE): CardHedge's number is a
+      // candidate; its description is the title that decides.
+      const chTitle = row.description || row.card_description
+        || `${row.year} ${row.card_set} #${row.number} ${row.variant}`.trim();
+      const numberVerdict = judgeCardNumber(row.number ?? null, row.description || row.card_description || null);
+      logCardNumberVerdict("canonical-fmv-ch", numberVerdict, { candidate: row.number ?? null, title: chTitle, cardId: row.card_id });
       try {
         await recordSoldComp({
           cardId: row.card_id,
@@ -982,7 +996,7 @@ async function warmPoolFromChDailySales(
           cardYear: row.year ?? null,
           setName: row.card_set ?? null,
           parallel: row.variant ?? null,
-          cardNumber: row.number ?? null,
+          cardNumber: numberVerdict.cardNumber,
           isAuto: detectIsAuto(input),
           gradeCompany: input.gradeCompany ?? null,
           gradeValue: input.gradeValue ?? null,
@@ -991,7 +1005,7 @@ async function warmPoolFromChDailySales(
           source: "cardhedge",
           sourceExternalId: `ch-daily::${row.card_id}::${row.sale_date}::${Math.round(row.price * 100)}`,
           contributorUserId: null,
-          title: `${row.year} ${row.card_set} #${row.number} ${row.variant}`.trim(),
+          title: chTitle,
           imageUrl: row.image_url ?? null,
           sellerHandle: null,
           verifiedByUser: false,
