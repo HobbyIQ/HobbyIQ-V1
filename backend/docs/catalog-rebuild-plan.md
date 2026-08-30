@@ -3137,3 +3137,31 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
     conform APPLY + reprice pins the 8 parked holdings and the Gonzalez
     purchase. A builder's junction cleanup had emptied the canonical
     `backend/node_modules/.bin`; restored with `npm install --prefer-offline`.
+    **D35 — the eBay confirm path had no pin gate (merged #1560, deploy #16).**
+    Why 8 of Drew's holdings had no identity with parked candidates at
+    0.95–0.98: `ebayReviewQueue.confirmHolding` reimplemented the ≥0.9 gate
+    inline and wrote ONLY `cardId` — `hobbyiqCardId` appeared nowhere in the
+    file — so no guard refused them; a second code path never wrote the
+    field (and stamped identityVerified on any truthy cardId, even a raw
+    CardHedge id). Confirm now runs `applyCatalogMatchToHolding` (one gate,
+    both fields, checklist-only); four conform lookups widened where D23
+    allows (cardNumberVariants, set/player agreement). Measured on Drew's
+    whole portfolio REPORT ONLY: corrected 0 → 3 (Jeter BBP4 PSA 7, the 1996
+    Bowman's Best BBP-14 group card, Harris CPA-MH X-Fractor), unresolved
+    28 → 18, product-change refusals 0 → 4. Three Opus refuters clean; 92
+    new tests. **Drew's rulings 16:05Z (D36, building):** Gonzalez ca820b08
+    → `hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499` (CPA ships in
+    the Bowman release; "Gonzales" in the catalog is the same player);
+    Caglianone 9b971b03 → the 2026 Topps Chrome RA-JC Refractor auto (the
+    listing's own title; RA-JC is not a 2024 Bowman Draft number); Finest is
+    **topps-finest** (product-table entry; the "finest" checklist rows
+    rename); Jeter 5979f485 → bowmans-best BBP4 Atomic Refractor; Griffey
+    6f4f079b → black-diamond D24 /1500; Griffey 86cb8844 → studio #232 (the
+    literal "undefined" setKey in its stored id is a separate bug to find).
+    Judge 2017 Topps Gold Label = acquisition (the product has ZERO
+    checklist rows); Ripken 277b05a3 = field recovery (no set/number on the
+    holding). **Holdings re-point (MODE=holdings, 12:59Z):** Ohtani HMT1 →
+    `topps-chrome-update-series`, Trout US175 ×3 → `topps-update-series`
+    (the rename had moved their rows after the first pass). **Drew's vendor
+    retire is running:** one slot's first generation retired 75,016 rows in
+    its 140-minute budget and relaunched on the marker (run 33313043109).
