@@ -125,7 +125,9 @@ describe("the slug layer: the variation is its own card, with the base card's nu
     expect(normalizeParallel("Photo Variation")).toBe("image-variation");
     expect(normalizeParallel("SSP")).toBe("image-variation-ssp");
     expect(normalizeParallel("True Photo Variations")).toBe("true-photo-variation");
-    expect(normalizeParallel("True Blue")).toBe("blue-refractor");
+    // CF-COLOUR-FOLLOWS-THE-CHECKLIST (Drew, 2026-08-30): "True Blue" is Blue as
+    // written; whether it is a Refractor is the catalog's per-card answer.
+    expect(normalizeParallel("True Blue")).toBe("blue");
     expect(normalizeParallel("Golden Mirror Image Variation SP")).toBe("golden-mirror-variation");
   });
 
@@ -137,8 +139,12 @@ describe("the slug layer: the variation is its own card, with the base card's nu
     expect(chromeRefractorSuffixForVariation("image-variation-chrome")).toBe("image-variation-chrome");
     expect(chromeRefractorSuffixForVariation("gold")).toBeNull();
     expect(parallelOf(slug("Topps Chrome", "Image Variations"))).toBe("image-variation");
-    expect(parallelOf(slug("Topps Chrome", "Image Variation Gold Speckle"))).toBe("image-variation-gold-speckle-refractor");
-    expect(parallelOf(slug("Topps Chrome", "Gold"))).toBe("gold-refractor");
+    // CF-COLOUR-FOLLOWS-THE-CHECKLIST (Drew, 2026-08-30): the generator no
+    // longer appends -refractor on chrome stock; chromeRefractorSuffixForVariation
+    // stays available to the catalog resolver, which applies it only when the
+    // card's checklist names the refractor form.
+    expect(parallelOf(slug("Topps Chrome", "Image Variation Gold Speckle"))).toBe("image-variation-gold-speckle");
+    expect(parallelOf(slug("Topps Chrome", "Gold"))).toBe("gold");
     expect(parallelOf(slug("Topps", "SSP"))).toBe("image-variation-ssp");
     expect(parallelOf(slug("Topps Update", "Golden Mirror Image Variations"))).toBe("golden-mirror-variation");
     expect(parallelOf(slug("Topps Heritage", "Chrome Variation"))).toBe("chrome-variation");

@@ -121,18 +121,23 @@ export interface CatalogMatchResult {
  *  labels that trade under multiple names in the wild. Applied BEFORE
  *  the slug is computed so all downstream paths agree on one form. */
 const PARALLEL_ALIAS_MAP: Record<string, string> = {
-  // "True {Color}" → "{Color} Refractor" per Drew's memory
-  "true blue": "Blue Refractor",
-  "true green": "Green Refractor",
-  "true red": "Red Refractor",
-  "true orange": "Orange Refractor",
-  "true gold": "Gold Refractor",
-  "true purple": "Purple Refractor",
-  "true black": "Black Refractor",
-  "true yellow": "Yellow Refractor",
-  "true pink": "Pink Refractor",
-  // "Mega" → "Mojo" in some Panini contexts (project_market_language_normalization)
-  "mega mojo": "Mojo Refractor",
+  // CF-COLOUR-FOLLOWS-THE-CHECKLIST (Drew, 2026-08-30): "True {Color}" is the
+  // market's word for {Color}; whether that colour is a Refractor on this card
+  // is the checklist's to say — the resolver below picks the unique long-form
+  // candidate when the card has only "{Color} Refractor", and leaves "{Color}"
+  // when the checklist lists it (or both). The old "→ {Color} Refractor"
+  // rewrite is gone.
+  "true blue": "Blue",
+  "true green": "Green",
+  "true red": "Red",
+  "true orange": "Orange",
+  "true gold": "Gold",
+  "true purple": "Purple",
+  "true black": "Black",
+  "true yellow": "Yellow",
+  "true pink": "Pink",
+  // "Mega" → "Mojo" (the refractor-ness is the catalog's)
+  "mega mojo": "Mojo",
   // Bracketed base variants
   "[base]": "Base",
   "base refractor": "Refractor",

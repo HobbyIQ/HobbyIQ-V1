@@ -267,7 +267,9 @@ describe("Mojo parallels — colors preserved, Refractor implied", () => {
   // Green Mojo /99, Red Mojo /25 are common Mega Box parallels.
   // Slug must preserve the color AND treat Mojo as implying Refractor.
   it("Bare 'Mojo' → mojo-refractor", () => {
-    expect(parallelOf("Mojo")).toBe("mojo-refractor");
+    // CF-COLOUR-FOLLOWS-THE-CHECKLIST (Drew, 2026-08-30): written as said;
+    // the catalog resolver decides whether this card's Mojo is a Refractor.
+    expect(parallelOf("Mojo")).toBe("mojo");
   });
   it("'Mojo Refractor' → mojo-refractor (unchanged)", () => {
     expect(parallelOf("Mojo Refractor")).toBe("mojo-refractor");
@@ -276,25 +278,25 @@ describe("Mojo parallels — colors preserved, Refractor implied", () => {
     expect(parallelOf("Mega Refractor")).toBe("mojo-refractor");
   });
   it("'Blue Mojo' → blue-mojo-refractor", () => {
-    expect(parallelOf("Blue Mojo")).toBe("blue-mojo-refractor");
+    expect(parallelOf("Blue Mojo")).toBe("blue-mojo");
   });
   it("'Blue Mojo Refractor' → blue-mojo-refractor", () => {
     expect(parallelOf("Blue Mojo Refractor")).toBe("blue-mojo-refractor");
   });
   it("'Green Mojo' → green-mojo-refractor", () => {
-    expect(parallelOf("Green Mojo")).toBe("green-mojo-refractor");
+    expect(parallelOf("Green Mojo")).toBe("green-mojo");
   });
   it("'Red Mega Refractor' → red-mojo-refractor (color + mega/mojo alias)", () => {
     expect(parallelOf("Red Mega Refractor")).toBe("red-mojo-refractor");
   });
   it("Bare 'Mega' → mojo-refractor (mega + mojo are same card language)", () => {
-    expect(parallelOf("Mega")).toBe("mojo-refractor");
+    expect(parallelOf("Mega")).toBe("mojo");
   });
   it("'Blue Mega' → blue-mojo-refractor", () => {
-    expect(parallelOf("Blue Mega")).toBe("blue-mojo-refractor");
+    expect(parallelOf("Blue Mega")).toBe("blue-mojo");
   });
   it("'Gold Mega' → gold-mojo-refractor", () => {
-    expect(parallelOf("Gold Mega")).toBe("gold-mojo-refractor");
+    expect(parallelOf("Gold Mega")).toBe("gold-mojo");
   });
 });
 

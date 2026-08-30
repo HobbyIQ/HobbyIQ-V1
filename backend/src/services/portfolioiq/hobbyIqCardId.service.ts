@@ -1011,16 +1011,20 @@ export function normalizeParallel(parallel: string | null | undefined): string {
   // (Blue Mojo /50, Green Mojo /99, Red Mojo /25). Ensure any slug
   // ending in "-mojo" (or bare "mojo") gets the "-refractor" suffix
   // so it pools with "Mojo Refractor" and "Mega Refractor" variants.
-  if (/(^|-)mojo$/.test(s)) {
-    s = `${s}-refractor`;
-  }
+  // CF-COLOUR-FOLLOWS-THE-CHECKLIST (Drew, 2026-08-30): the "-mojo" →
+  // "-mojo-refractor" append (CF-MOJO-IMPLIES-REFRACTOR) is REMOVED with the
+  // other vocabulary rules; "Mojo" is written as said and the catalog resolver
+  // maps it onto "Mojo Refractor" only when that is the one mojo row the card has.
   // CF-MEGA-IS-MOJO (Drew, 2026-08-01). Now that sub-channel captures
   // the Mega Box product context separately, bare "Mega" (or
   // "Blue Mega", "Red Mega" etc.) in the parallel field is safely
   // treated as an alias for Mojo — same physical parallel, different
   // card-language. Collapses to <color>-mojo-refractor.
+  // CF-COLOUR-FOLLOWS-THE-CHECKLIST (Drew, 2026-08-30): "Mega" is the market's
+  // word for Mojo; whether the card's Mojo is a "Mojo Refractor" is the
+  // catalog's to say, not the vocabulary's.
   if (/(^|-)mega$/.test(s)) {
-    s = s.replace(/mega$/, "mojo-refractor");
+    s = s.replace(/mega$/, "mojo");
   }
   // CF-TRUE-COLOR-IMPLIES-REFRACTOR (Drew, 2026-07-28). "True Blue"
   // (with no explicit "Refractor" suffix) is a market synonym for
@@ -1032,9 +1036,11 @@ export function normalizeParallel(parallel: string | null | undefined): string {
   // already a refractor-tagged variant (so "True Blue Refractor" and
   // "True Blue Shimmer Refractor" pass through unchanged after their
   // own strip).
-  if (hadTruePrefix && !/(^|-)refractor(-|$)/.test(s)) {
-    s = `${s}-refractor`;
-  }
+  // CF-COLOUR-FOLLOWS-THE-CHECKLIST (Drew, 2026-08-30): the forced
+  // "-refractor" after a stripped "True" is REMOVED. "True Blue" is "Blue" as
+  // the seller wrote it; the catalog resolver maps it onto "Blue Refractor"
+  // only when that is the one blue row the card has.
+  void hadTruePrefix;
   return s;
 }
 
@@ -1475,19 +1481,19 @@ export function computeHobbyIqCardId(components: HobbyIqCardIdComponents): strin
   // ARE the refractor stock and appending `-refractor` produced e.g.
   // `x-fractor-refractor` which then fragmented against bare `x-fractor`
   // (n=581, cleanliness canary 2026-08-11).
-  if (
-    parallelSlug !== "base" &&
-    !/(^|-)refractor(-|$)/.test(parallelSlug) &&
-    !/fractor$/.test(parallelSlug) &&
-    isChromeStockSetKey(setKey)
-  ) {
-    // CF-A-VARIATION-IS-NOT-A-REFRACTOR (D22). An image variation is the
-    // base-finish card with a different photo; only a finish named AFTER the
-    // variation word ("Image Variation Gold Speckle") is chrome's colour
-    // shorthand for a refractor. chromeRefractorSuffixForVariation is null
-    // for every non-variation slug, so nothing else changes here.
-    parallelSlug = chromeRefractorSuffixForVariation(parallelSlug) ?? `${parallelSlug}-refractor`;
-  }
+  // CF-COLOUR-FOLLOWS-THE-CHECKLIST (Drew, 2026-08-30: "color does not always
+  // mean refractor … remove rules, and follow it to the checklist or catalog").
+  // The product-level append above this line ("on chrome stock, any non-base
+  // parallel without -refractor gets it") is REMOVED. It minted twins the
+  // checklist never had — 2025 Topps Tribute #56 "Blue" is stored as :blue:
+  // from the checklist while every sale titled "Blue" was slugged
+  // :blue-refractor:. The generator now writes the parallel as named; the
+  // catalog resolver (catalogMatcher: the unique long-form candidate,
+  // catalogSlugIfExists) maps "Gold" onto "Gold Refractor" only when that is
+  // the one gold row the card has, and leaves it when the checklist lists
+  // "Gold" — or both. chromeRefractorSuffixForVariation stays exported for the
+  // resolver; it is no longer applied here.
+  void chromeRefractorSuffixForVariation;
 
   // NOTE (Drew, 2026-08-11): resist the temptation to add a
   // Panini-analog "Silver → Silver Prizm" collapse. Even though the
