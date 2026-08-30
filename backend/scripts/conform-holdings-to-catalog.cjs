@@ -202,7 +202,7 @@ async function main() {
   // is a checklist-backed catalog row is VERIFIED -- by Confirm, import, this
   // sweep, or a ruling. `patched` counts holdings written (a holding may be
   // corrected AND stamped; it is one write).
-  let verifiedStamped = 0, patched = 0;
+  let verifiedStamped = 0, patched = 0, cardIdAligned = 0;
   let vendorRowsIgnored = 0, vendorRowsRefused = 0, productChangeRefused = 0;
   const refusedEx = [];
   const unresolvedEx = [], correctedEx = [];
@@ -308,8 +308,16 @@ async function main() {
           if (correctedEx.length < 8) correctedEx.push(`${h.playerName} #${num} ${JSON.stringify(h.parallel)}\n        ${existing || "(none)"}\n     -> ${target}  (conf ${rung.conf})`);
         }
 
+        // CF-ONE-IDENTITY-BOTH-FIELDS, the already-agreed case: hobbyiqCardId is right
+        // but cardId still carries an older hiq: slug (Max Williams after the earlier
+        // pass) — align it; a vendor cardId is left alone. Counted before the APPLY
+        // gate so REPORT ONLY states it.
+        const cidNow = String(h.cardId ?? "").trim();
+        const alignCardId = existing === target && cidNow !== target && (!cidNow || cidNow.startsWith("hiq:"));
+        if (alignCardId) cardIdAligned++;
         if (!APPLY) continue;
         const ops = [];
+        if (alignCardId) ops.push({ op: "set", path: `/holdings/${hid}/cardId`, value: target });
         if ((existing !== target && (rung.conf >= 0.95 || !existing)) ) {
           ops.push({ op: "set", path: `/holdings/${hid}/hobbyiqCardId`, value: target });
           // CF-ONE-IDENTITY-BOTH-FIELDS (2026-08-30): legacy readers key on cardId; a
@@ -361,6 +369,7 @@ async function main() {
   // identities corrected (+ legacy fields cleared); skipped = agreed +
   // unresolved + resolved-but-unchanged; failed declared. Disjoint by design.
   console.log(`  verified stamped        ${f(verifiedStamped)}   <- identity is a checklist-backed row (Drew, 2026-08-30)`);
+  console.log(`  cardId aligned          ${f(cardIdAligned)}   <- an older hiq: cardId brought to the agreed hobbyiqCardId`);
   console.log(`  holdings patched        ${f(patched)}`);
   if (APPLY) reportWrites({ job: "conform-holdings-to-catalog", intended: holdings, written: patched, skipped: holdings - patched - failed, failed });
   if (refusedEx.length) { console.log(`\n  refused:`); for (const e of refusedEx) console.log(`     ${e}`); }
