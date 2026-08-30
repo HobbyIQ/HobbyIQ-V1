@@ -2495,6 +2495,60 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
     `topps-update:…`) are the rematch's population; the family table keeps
     them pricing within the family meanwhile.
     **Order after D23 (Drew, 05:05Z 08-30): D28 → D26 → D21 → D24 → D25.**
+    **Landed 08-30 06:50–09:10Z:** D23 merged **#1540**, deploy #11 `456c814`;
+    the rename fleet dispatched **16 slots × concurrency 24** (Drew's call;
+    2,532,021 rows; Donruss stays `panini-era`, 2009 boundary — Drew ruled);
+    MODE=holdings re-pointed 1 (Witt bd152 → bd-152), 12 unresolved = products
+    absent from the catalog (acquisition list). D28 merged **#1541**, deploy
+    #12 `2cfca64`; the base-cards clean ×8 and the grade repair ×8 dispatched
+    09:05Z (the classifier let those through); the remaining repair modes
+    (slash / ordinal / year / nonumber), the after-measure (compare against
+    45,718) and Harrison's ruling APPLY follow. D26 merged **#1543**, deploy
+    #13 — the backfill runs REPORT ONLY first, then APPLY (single slot; the
+    measured shard axis is 8/6-2/3-1-3-1). #1542: conform writes both id
+    fields (Max Williams' cardId had kept the folded-away un-numbered slug →
+    no comps) and a ruling corrects the displayed card number (Harrison read
+    "#9" after moving to #150). Harrison's Ohtani: ruled onto
+    `hiq:baseball:2018:topps-chrome:150:refractor:no-auto` 08:35Z; Antunez
+    and Arias holdings were SOLD by Harrison 03:31Z (POST …/sell) — not lost.
+    **"Fix this quickly" (Drew, 08:30Z): Max Williams Refractor** — the
+    identity sat on the un-numbered `…:cpa-mwi:refractor:auto` (0 pool
+    rows) while the checklist's `…:num-499` held 35 sales; conform APPLY
+    33302312918 corrected 12 identities; reprice followed. The two code
+    defects (the Edit-card search ranking Carson/Jett Williams 2025 Bowman
+    colour refractors above Max Williams' Bowman Draft CPA-MWI Refractor
+    auto; readers not falling through to an un-numbered identity's single
+    numbered twin) are a two-builder workflow with three refuters each.
+    **D29 — one row per card (Drew's rulings 09:40Z, building):** (1) when
+    the checklist numbers a parallel, every sale-minted twin (un-numbered or
+    differently numbered) folds onto the checklist's numbered row and its
+    sales re-point there (322 CPA plain-Refractor autos 2020–2026 are split
+    this way; Harris #CPA-MH: `…:refractor:auto` 57 sales +
+    `…:refractor:auto:num-499` 1 sale + the checklist's
+    `…:base-refractor:auto:num-499`); (2) a CPA row lives under the product
+    whose DEDICATED checklist names it — bcp's Bowman page is not that
+    (1,075 cards filed under both bowman and bowman-chrome); where two real
+    products list the number both rows stay and sales split by the title's
+    product words; contradictions with the Antunez/Arias rulings are
+    reported, not silently resolved; (3) the Edit-card picker shows print
+    run · product · ✓ checklist · N sales, sale-minted rows rank below
+    checklist rows (after the search workflow lands).
+    **D30 — no duplicate card, ever (Drew, 09:50Z: "find any duplicate
+    cards in the card catalog and consolidate all sales onto it. This will
+    be a big big big issue for us if sales are split across different cards
+    in the card catalog of the same card").** A read-only measurement
+    workflow (8 slices by sport × year band; one equivalence key built from
+    the rulings: product as named, hyphen-insensitive number, cleaned
+    parallel — base-glue, colour ≡ colour-refractor per card, True-colour,
+    superfractor spellings — auto by prefix; graded children excluded)
+    produces `catalog-duplicates-measure.md`: multi-row groups, rows,
+    groups whose SALES are split, sales involved, holdings on a non-winner
+    row, by kind × sport, the winner rule per kind, and the AMBIGUOUS
+    groups (Drew's rulings). The consolidation fleet generalises D29's
+    machinery (catalogRowOps fold + relocate-sold-comp + holdings map walk
+    + graded children; sharded; reconciled) over that worklist, then a
+    nightly `catalog_duplicates` canary axis so a split pool can never
+    return silently.
     **D28 — the card number is never a grade, a print run, a year, an
     ordinal, or a lot (BUILT on `feat/d28`; APPLY is Drew's dispatch).**
     Harrison's Ohtani (`user-67878bb5` / holding
