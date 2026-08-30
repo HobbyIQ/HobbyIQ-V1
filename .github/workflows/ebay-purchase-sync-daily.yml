@@ -1,0 +1,43 @@
+# Drew, 2026-08-30 12:58Z ("we have A LIVE ebay purchase from import why is that
+# not included there?"): the in-process weekly purchase sync sat behind the
+# restart-surviving single-flight lock and missed its weekly window. It now runs
+# on the backfill runner every day (7-day window; the import is idempotent on
+# the eBay order, so overlap costs nothing). The in-process scheduler stays
+# armed until WEEKLY_EBAY_PURCHASE_SYNC_ENABLED=false is set on HobbyIQ3 (a
+# live App Service change — Drew's confirm).
+name: eBay purchase sync (daily)
+
+on:
+  schedule:
+    - cron: "11 7 * * *"   # 07:11 UTC daily — after the 5AM ET deploy warm-up
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: "true to import purchases; false = REPORT ONLY (lists users, calls nothing). Window: 7 days (the script's DAYS default; the runner has no days input)."
+        required: false
+        default: "true"
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+  actions: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch run-ebay-purchase-sync on the backfill runner
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          APPLY="${{ inputs.apply || 'true' }}"
+          gh workflow run backfill-runner.yml \
+            --repo "$GITHUB_REPOSITORY" \
+            --ref main \
+            -f script=run-ebay-purchase-sync \
+            -f apply="$APPLY"
+          sleep 20
+          gh run list --repo "$GITHUB_REPOSITORY" --workflow=backfill-runner.yml --limit 1 \
+            --json url,displayTitle,status --jq '"dispatched run-ebay-purchase-sync (apply=" + "'"$APPLY"'" + ") → " + .[0].url + " (" + .[0].status + ")"' \
+            || echo "::warning::could not list the backfill-runner run for run-ebay-purchase-sync"
