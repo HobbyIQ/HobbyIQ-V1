@@ -74,3 +74,92 @@ describe("search says what it means — a bare finish, auto, and the year", () =
     expect(score(q, numberedByYear)).toBeCloseTo(score(q, numberedNormally), 9);
   });
 });
+
+// CF-SEARCH-FULL-NAME-DOMINATES refutation (2026-08-30). The first cut of
+// the every-word rule made "refractor" a word the query had to say, so a
+// bare colour no longer named its Refractor: "2023 topps chrome gold ohtani"
+// went from Gold Refractor 0.550 > Base 0.500 to Base 0.500 > Gold Refractor
+// 0.400 (measured), and three more bare-colour queries flipped the same way.
+// Colour == Colour Refractor per card, the catalog keeping the long form, so
+// the colour word names the parallel; only the finish SUFFIX is free. Both
+// shapes pinned with the verbatim queries.
+describe("search says what it means — a bare colour names its Refractor; a bare Refractor names no colour", () => {
+  const row = (setKey: string, cardNumber: string, year: number, parallel: string, playerName: string) =>
+    ({ setKey, cardNumber, year, parallel, playerName, isAuto: false });
+
+  it("2023 topps chrome gold ohtani: Gold Refractor > Base > Refractor > Gold Wave Refractor", () => {
+    const q = "2023 topps chrome gold ohtani";
+    const gold = row("topps-chrome", "17", 2023, "Gold Refractor", "Shohei Ohtani");
+    const base = row("topps-chrome", "17", 2023, "Base", "Shohei Ohtani");
+    const plain = row("topps-chrome", "17", 2023, "Refractor", "Shohei Ohtani");
+    const goldWave = row("topps-chrome", "17", 2023, "Gold Wave Refractor", "Shohei Ohtani");
+    expect(score(q, gold)).toBeGreaterThan(score(q, base));
+    expect(score(q, base)).toBeGreaterThan(score(q, plain));
+    // A pattern is not a suffix: "gold" does not name Gold Wave.
+    expect(score(q, gold)).toBeGreaterThan(score(q, goldWave));
+    expect(score(q, base)).toBeGreaterThan(score(q, goldWave));
+  });
+
+  it("2024 bowman chrome blue leo de vries: Blue Refractor > Base", () => {
+    const q = "2024 bowman chrome blue leo de vries";
+    expect(score(q, row("bowman-chrome", "BCP-179", 2024, "Blue Refractor", "Leo De Vries")))
+      .toBeGreaterThan(score(q, row("bowman-chrome", "BCP-179", 2024, "Base", "Leo De Vries")));
+  });
+
+  it("2022 bowman chrome green george kirby 34: Green Refractor > Base", () => {
+    const q = "2022 bowman chrome green george kirby 34";
+    expect(score(q, row("bowman-chrome", "34", 2022, "Green Refractor", "George Kirby")))
+      .toBeGreaterThan(score(q, row("bowman-chrome", "34", 2022, "Base", "George Kirby")));
+  });
+
+  it("2024 topps chrome pink ohtani: Pink Refractor > Base", () => {
+    const q = "2024 topps chrome pink ohtani";
+    expect(score(q, row("topps-chrome", "1", 2024, "Pink Refractor", "Shohei Ohtani")))
+      .toBeGreaterThan(score(q, row("topps-chrome", "1", 2024, "Base", "Shohei Ohtani")));
+  });
+
+  it("a bare colour names its Prizm the same way: 2024 select silver wembanyama", () => {
+    const q = "2024 select silver wembanyama";
+    expect(score(q, row("panini-select", "1", 2024, "Silver Prizm", "Victor Wembanyama")))
+      .toBeGreaterThan(score(q, row("panini-select", "1", 2024, "Base", "Victor Wembanyama")));
+  });
+
+  it("2025 bowman refractor auto max williams: the Bowman Draft CPA-MWI Refractor auto is first, and Pearl Refractor earns nothing for a colour the query never said", () => {
+    const q = "2025 bowman refractor auto max williams";
+    const target = { setKey: "bowman-draft", setName: "Bowman Draft", cardNumber: "CPA-MWI", year: 2025, parallel: "Refractor", playerName: "Max Williams", isAuto: true, printRun: 499 };
+    const carsonPearl = { setKey: "bowman", setName: "Bowman", cardNumber: "BTP-3", year: 2025, parallel: "Pearl Refractor", playerName: "Carson Williams", isAuto: false };
+    const carsonRed = { setKey: "bowman", setName: "Bowman", cardNumber: "BTP-3", year: 2025, parallel: "Red Refractor", playerName: "Carson Williams", isAuto: false };
+    const carsonOrange = { setKey: "bowman", setName: "Bowman", cardNumber: "BTP-3", year: 2025, parallel: "Orange Refractor", playerName: "Carson Williams", isAuto: false };
+    const carsonPlain = { setKey: "bowman", setName: "Bowman", cardNumber: "BWC-14", year: 2025, parallel: "Refractor", playerName: "Carson Williams", isAuto: false };
+    const carsonBase = { setKey: "bowman", setName: "Bowman", cardNumber: "BWC-14", year: 2025, parallel: "Base", playerName: "Carson Williams", isAuto: false };
+    const jettGreen = { setKey: "bowman", setName: "Bowman", cardNumber: "BTP-58", year: 2025, parallel: "Green Refractor", playerName: "Jett Williams", isAuto: false };
+    const t = score(q, target);
+    for (const other of [carsonPearl, carsonRed, carsonOrange, carsonPlain, carsonBase, jettGreen]) {
+      expect(t).toBeGreaterThan(score(q, other));
+    }
+    // The plain Refractor is what "refractor" names; the colours are not.
+    expect(score(q, carsonPlain)).toBeGreaterThan(score(q, carsonPearl));
+    expect(score(q, carsonBase)).toBeGreaterThanOrEqual(score(q, carsonPearl));
+    expect(score(q, carsonBase)).toBeGreaterThanOrEqual(score(q, jettGreen));
+  });
+});
+
+// The full-name bonus is fuzzy on 5+ letter words, keyed on the SHORTER word
+// as fuzzyIncludes keys on the query token. Keyed on the row word, "williams"
+// (8 letters, budget 2) accepted "willis", and a query for Max Willis paid
+// Max Williams the +0.5 that decides the page.
+describe("the full-name bonus does not reach a different surname", () => {
+  const maxWilliams = { setKey: "bowman-draft", cardNumber: "BD-68", year: 2025, parallel: "Refractor", playerName: "Max Williams", isAuto: false };
+  const maxWillis = { setKey: "bowman-draft", cardNumber: "BD-99", year: 2025, parallel: "Refractor", playerName: "Max Willis", isAuto: false };
+
+  it("'max willis' does not earn Max Williams the full-name bonus; Max Willis outranks him by the bonus", () => {
+    const q = "2025 bowman refractor max willis";
+    expect(score(q, maxWillis) - score(q, maxWilliams)).toBeGreaterThan(0.5);
+  });
+
+  it("a real misspelling of the same length still earns it: 'max willaims'", () => {
+    const misspelt = "2025 bowman refractor max willaims";
+    const wrongMan = "2025 bowman refractor max willis";
+    expect(score(misspelt, maxWilliams) - score(wrongMan, maxWilliams)).toBeGreaterThan(0.5);
+  });
+});

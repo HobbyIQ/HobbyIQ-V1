@@ -415,8 +415,11 @@ export function narrowToNamedProduct<H extends { setKey?: string | null; setName
  *      ("bowman" for bowman-draft, "topps chrome" for topps-chrome-update-
  *      series) costs -0.1 per family rung instead of -0.25 per word; a
  *      product with no named ancestor keeps the full penalty
- *    - the named-parallel bonus needs EVERY non-finish word of the parallel
- *      in the query, so a bare "refractor" rewards no colour
+ *    - the named-parallel bonus needs EVERY colour/pattern word of the
+ *      parallel in the query, so a bare "refractor" rewards no colour; the
+ *      finish suffix itself is never required, so a bare "gold" still names
+ *      Gold Refractor (Colour == Colour Refractor; the catalog keeps the
+ *      long form) and the colour row outranks Base as it always did
  *    - "auto" in the query (or isAuto on the request): auto row +0.15, any
  *      other row -0.3; a query silent on auto changes nothing
  *    - the query's year token is never an exact card number ("#2025")
@@ -467,8 +470,11 @@ export function scoreCatalogRow(
   const isBaseRow = !rowParallel || rowParallel === "base";
   // The named-parallel bonus needs every non-finish word of the parallel in
   // the query: "Refractor" under "refractor" earns it, "Pearl Refractor" does
-  // not -- the query never said pearl.
-  const namedParallelWords = parallelWords.filter((w) => !FINISH_STOP.has(w));
+  // not -- the query never said pearl. The finish SUFFIX is not such a word:
+  // a bare colour names its Refractor (Colour == Colour Refractor, the
+  // catalog keeps the long form), so "Gold Refractor" under "gold" earns it
+  // too. Only the colour or pattern has to be said.
+  const namedParallelWords = parallelWords.filter((w) => !FINISH_STOP.has(w) && !PARALLEL_FINISH_SUFFIX.has(w));
   if (parallelWords.length
       && parallelWords.some((w) => queryWords.has(w))
       && namedParallelWords.every((w) => queryWords.has(w))) score += 0.15;
@@ -515,6 +521,18 @@ export function scoreCatalogRow(
  *  are never "unnamed" and never earn the named-parallel bonus on their own. */
 const FINISH_STOP = new Set(["base", "card", "cards", "rc", "rookie", "auto", "autos", "autograph", "autographs", "psa", "bgs", "sgc", "gem", "mint", "nm"]);
 
+/** The finish SUFFIX of a parallel name -- the word after the colour or
+ *  pattern that the checklist writes and the hobby drops. A bare colour in a
+ *  query names its Refractor/Prizm (Colour == Colour Refractor, per card, the
+ *  catalog keeping the long form), so the suffix is never a word the query
+ *  had to say for the named-parallel bonus. It still counts as unnamed for
+ *  the parallel penalty, exactly as before, so the plain "Refractor" row
+ *  outranks "Gold Refractor" under a bare "refractor" -- and a bare
+ *  "refractor" names no colour: "Pearl Refractor" needs "pearl". Patterns
+ *  ("wave", "x-fractor", "mojo") are NOT suffixes -- "gold" does not name
+ *  Gold Wave Refractor. */
+const PARALLEL_FINISH_SUFFIX = new Set(["refractor", "refractors", "prizm", "prizms"]);
+
 /** How a query says "auto". */
 const AUTO_WORDS = new Set(["auto", "autos", "autograph", "autographs", "autographed"]);
 
@@ -523,13 +541,19 @@ const AUTO_WORDS = new Set(["auto", "autos", "autograph", "autographs", "autogra
 const NAME_PARTICLES = new Set(["jr", "sr", "ii", "iii", "iv", "de", "da", "di", "del", "der", "du", "la", "le", "van", "von", "dos", "das", "st"]);
 
 /** Is this word of the row's player name in the query -- exactly, or within
- *  the same bounded edit distance fuzzyIncludes allows (5+ letters only)? */
+ *  the same bounded edit distance fuzzyIncludes allows (5+ letters only)?
+ *  The budget is keyed on the SHORTER of the two words, as fuzzyIncludes
+ *  keys it on the query token: keyed on the row word, "williams" (8, budget
+ *  2) accepted "willis" and Max Williams took the full-name bonus for a
+ *  query that asked for Max Willis. */
 function nameWordNamed(word: string, queryWords: Set<string>): boolean {
   if (queryWords.has(word)) return true;
   if (word.length < 5) return false;
-  const budget = word.length >= 8 ? 2 : 1;
   for (const q of queryWords) {
-    if (q.length < 5 || Math.abs(q.length - word.length) > budget) continue;
+    const shorter = Math.min(q.length, word.length);
+    if (shorter < 5) continue;
+    const budget = shorter >= 8 ? 2 : 1;
+    if (Math.abs(q.length - word.length) > budget) continue;
     if (editDistance(word, q, budget) <= budget) return true;
   }
   return false;
