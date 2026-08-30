@@ -1686,7 +1686,22 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   and the projection's 60-day window holds only the last, so the raw
   holding reads $729 (`exact-pool-weighted-median`): the projected-next-sale
   doctrine at n = 1, D16's flagged judgment call — **NEEDS DREW (below)**.
-  Deploys #5/#6 live (`ca2c467`). Drew (22:30Z): "I see 2 max williams superfractors …
+  Deploys #5/#6 live (`ca2c467`). **Reprice #3 (33284849571, 12:40Z): 44
+  requested / 32 repriced. Gillen raw holding $729 `exact-pool-weighted-
+  median` (observed, window 180d, n = 2); Gillen PSA 9 holding $885.37
+  `grade-curve-estimate` (estimated: this card's own raw sales × the
+  empirical PSA 9 ratio) — was $3.26 sibling-parallel "observed"; Caminiti
+  $205.40 from its own pool; the three Max Williams Refractors $18.74
+  `exact-pool-projection` (n = 29 in 60 days) on the un-numbered row until
+  the cross-source folds land.** Gap seen on the way: Max Williams Gold
+  Refractor /50 carries $32.46 with NO rung and `valuationStatus: observed`
+  — a pre-rung legacy price the write-time firewall (#1501) cannot see; the
+  next reprice-all re-stamps every holding, and the firewall should also
+  treat "priced with no rung" as not-observed (queued, small).
+  Runner landings by 13:00Z: one-of-one 7/8 (≈28k repairs each, ~2.9k
+  setKey-drift refusals per shard for the second pass), re-ingest #2 6/8
+  (each shard now "kept the existing row" for ~95% — the identity is held
+  at the canonical id, as D3c said). Drew (22:30Z): "I see 2 max williams superfractors …
   superfractors are 1/1" — bcp's un-numbered `superfractor:auto` beside
   beckett's `:num-1`, and the same pair on Refractor /499, Black /10, Red /5,
   Red Lava, Sky Blue. **#1470:** the fold's decision is a pure tested rule
