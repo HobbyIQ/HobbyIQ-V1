@@ -110,7 +110,14 @@ async function main() {
         else { fl.push(`UNBACKED-ROW [${catRow.source}]`); flags.unbackedRow++; }
       }
       // the pool under this slug
-      const { resources: sales } = await retry(() => pool.items.query({ query: "SELECT TOP 40 c.title, c.price, c.soldAt, c.source, c.parallel, c.printRun FROM c WHERE c.hobbyiqCardId = @s AND c.price > 0 AND (NOT IS_DEFINED(c.gradeCompany) OR c.gradeCompany = null OR c.gradeCompany = '') ORDER BY c.soldAt DESC", parameters: [{ name: "@s", value: slug }] }).fetchAll());
+      // The PRICE compare is per TIER: a graded holding's FMV is compared to the same
+      // grade's pool, never to the raw pool (2026-08-30: a PSA 10 1991 Score Griffey at
+      // $229 flagged "off pool" against a $2 raw median). Ungraded -> raw rows.
+      const gCo = String(h.gradeCompany ?? "").trim(), gVal = h.gradeValue == null || h.gradeValue === "" ? null : Number(h.gradeValue);
+      const graded = Boolean(gCo) && gVal != null && Number.isFinite(gVal);
+      const tierClause = graded ? "c.gradeCompany = @gc AND c.gradeValue = @gv" : "(NOT IS_DEFINED(c.gradeCompany) OR c.gradeCompany = null OR c.gradeCompany = '')";
+      const tierParams = graded ? [{ name: "@gc", value: gCo }, { name: "@gv", value: gVal }] : [];
+      const { resources: sales } = await retry(() => pool.items.query({ query: "SELECT TOP 40 c.title, c.price, c.soldAt, c.source, c.parallel, c.printRun FROM c WHERE c.hobbyiqCardId = @s AND c.price > 0 AND " + tierClause + " ORDER BY c.soldAt DESC", parameters: [{ name: "@s", value: slug }, ...tierParams] }).fetchAll());
       const contra = sales.map((r) => titleContradicts(parts.parallel, r.title)).filter(Boolean);
       if (contra.length) { fl.push(`POOL-CONTRADICTS ${contra.length}/${sales.length} (${contra[0]})`); flags.poolContradicts++; }
       const prs = new Set(sales.map((r) => r.printRun).filter((x) => typeof x === "number"));
@@ -121,7 +128,7 @@ async function main() {
       const exact = sales.filter((r) => !titleContradicts(parts.parallel, r.title)).map((r) => r.price);
       const med = median(exact.slice(0, RECENT));
       if (fmv == null) { fl.push("NO-PRICE"); flags.noPrice++; }
-      else if (med != null && (fmv > 2 * med || fmv < med / 2)) { fl.push(`PRICE-OFF-POOL fmv=$${fmv} vs recent-median=$${med} (n=${exact.length})`); flags.priceOffPool++; }
+      else if (med != null && (fmv > 2 * med || fmv < med / 2)) { fl.push(`PRICE-OFF-POOL fmv=$${fmv} vs recent-median=$${med} (n=${exact.length}, tier ${graded ? gCo + " " + gVal : "raw"})`); flags.priceOffPool++; }
       if (/cross-setkey|sibling|neighbor|model|grade-cross|composite/i.test(String(method))) { fl.push(`CROSS-RUNG ${method}`); flags.crossIdentityRung++; }
       lines.push({ userId, hid, title, slug, fmv, cost, method, n: sales.length, fl });
     } else lines.push({ userId, hid, title, slug, fmv, cost, method, n: 0, fl });
