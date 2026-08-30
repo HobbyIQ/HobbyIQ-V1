@@ -1310,65 +1310,11 @@ export async function uploadHoldingPhoto(file: File): Promise<string> {
   return sas.blobUrl;
 }
 
-// CF-CARD-IDENTIFY web parity (Drew, 2026-08-05). Mirrors iOS
-// CardIdentifyView flow: upload image → get blob URL → POST it to
-// /api/portfolio/identify → render detections. Keep field names 1:1
-// with HobbyIQ/PortfolioAdvancedModels.swift.
-export interface CardIdentifyParallel {
-  id?: string | null;
-  name?: string | null;
-  numberedTo?: number | null;
-}
-export interface CardIdentifyCard {
-  id: string;
-  segmentId?: string | null;
-  releaseId?: string | null;
-  setId?: string | null;
-  year?: string | null;
-  manufacturer?: string | null;
-  releaseName?: string | null;
-  setName?: string | null;
-  name?: string | null;
-  number?: string | null;
-  parallel?: CardIdentifyParallel | null;
-}
-export interface CardIdentifyGrading {
-  confidence?: string | null;
-  company?: { id?: string | null; name?: string | null } | null;
-  grade?: { id?: string | null; value?: string | null; condition?: string | null } | null;
-  qualifier?: { id?: string | null; name?: string | null } | null;
-  autoGrade?: { id?: string | null; value?: string | null; condition?: string | null } | null;
-}
-export interface CardIdentifyDetection {
-  confidence?: string | null;
-  card?: CardIdentifyCard | null;
-  grading?: CardIdentifyGrading | null;
-}
-export interface CardIdentifyMessage {
-  severity?: "info" | "warning" | "error" | string;
-  code?: string;
-  message?: string;
-}
-export interface CardIdentifyResponse {
-  success?: boolean;
-  requestId?: string;
-  processingTime?: number;
-  detections?: CardIdentifyDetection[];
-  messages?: CardIdentifyMessage[];
-  error?: string;
-}
-export async function identifyCardFromBlob(
-  blobUrl: string,
-  opts: { extractCert?: boolean } = {},
-): Promise<CardIdentifyResponse> {
-  return await request<CardIdentifyResponse>("/api/portfolio/identify", {
-    method: "POST",
-    body: JSON.stringify({
-      blobUrl,
-      extractCert: opts.extractCert ?? true,
-    }),
-  });
-}
+// D20 (2026-08-30): `identifyCardFromBlob()` and the CardIdentify* types
+// (CF-CARD-IDENTIFY web parity, 2026-08-05) are gone. They posted to
+// /api/portfolio/identify, a route the backend has never had — the scan
+// page uploaded, then 404'd. /app/identify now says photo identification
+// is not available; the call comes back with a real handler, not before.
 
 // POST /holdings/:id/regrade — atomic grade conversion. Rolls
 // `gradingCost` into totalCostBasis, sets grade + optional cert#, and
