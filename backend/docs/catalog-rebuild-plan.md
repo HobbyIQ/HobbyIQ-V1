@@ -1686,7 +1686,56 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   and the projection's 60-day window holds only the last, so the raw
   holding reads $729 (`exact-pool-weighted-median`): the projected-next-sale
   doctrine at n = 1, D16's flagged judgment call — **NEEDS DREW (below)**.
-  Deploys #5/#6 live (`ca2c467`). Drew (22:30Z): "I see 2 max williams superfractors …
+  Deploys #5/#6 live (`ca2c467`). **Reprice #3 (33284849571, 12:40Z): 44
+  requested / 32 repriced. Gillen raw holding $729 `exact-pool-weighted-
+  median` (observed, window 180d, n = 2); Gillen PSA 9 holding $885.37
+  `grade-curve-estimate` (estimated: this card's own raw sales × the
+  empirical PSA 9 ratio) — was $3.26 sibling-parallel "observed"; Caminiti
+  $205.40 from its own pool; the three Max Williams Refractors $18.74
+  `exact-pool-projection` (n = 29 in 60 days) on the un-numbered row until
+  the cross-source folds land.** Gap seen on the way: Max Williams Gold
+  Refractor /50 carries $32.46 with NO rung and `valuationStatus: observed`
+  — a pre-rung legacy price the write-time firewall (#1501) cannot see; the
+  next reprice-all re-stamps every holding, and the firewall should also
+  treat "priced with no rung" as not-observed (queued, small).
+  Runner landings by 13:00Z: one-of-one 7/8 (≈28k repairs each, ~2.9k
+  setKey-drift refusals per shard for the second pass), re-ingest #2 6/8
+  (each shard now "kept the existing row" for ~95% — the identity is held
+  at the canonical id, as D3c said).
+  **reprice-all #2 (33285350714, 13:25Z, after the conform pass): 12 users,
+  91 requested / 49 repriced / 42 skipped (pending-review + the confidence
+  gate); the write-time firewall fired on a `same-printrun-cross-parallel`
+  rung persisted as observed (`estimate_relabelled_at_write`), and the
+  unidentified Marek Houston holding stayed withheld. `audit-all-holdings`
+  MODE=all dispatched right after (33285582918) — its RUNGS block is the D10
+  after-number against 14/92 clean, fmvRung null 38%, estimate shown 23%,
+  isEstimate with an exact pool ≥ 3: 8 of 23.** **Result (33285582918,
+  14:25Z): 91 holdings — clean 21 (was 14), fmvRung null 27 = 29.7% (was
+  38%), non-exact rung 15 = 16.5% (was 27.2%), cardId ≠ hobbyiqCardId 25 =
+  27.5%, cardId not hiq 10 = 11%, estimatedValue shown 0 (was 22.8%),
+  isEstimate with an exact pool ≥ 3: 9 of 17. Rung labels now on the wire:
+  exact-pool-weighted-median ×25, exact-pool-projection ×17,
+  grade-curve-estimate ×13, exact-pool-leading-edge ×6, last-sale ×1.** The
+  identity backlog is the acquisition list: noSlug 22, notInCatalog 14,
+  unbacked 16 (vendor-minted rows Drew said GO on), twinOfNumbered 2 — the
+  vendor retire + D3c re-ingest + a second conform pass close most of it.
+  The 23 PRICE-OFF-POOL flags were mostly an audit artifact: a graded
+  holding compared to the RAW pool median (PSA 10 1991 Score Griffey $229
+  vs a $2 raw median; the Tiffany Maddux $1,757 vs $55; the Judge; the
+  Aaron). **#1515:** the flag compares to the holding's own tier; audit #2
+  33285811376. What remains real in that list is the n = 1 window (Gillen
+  raw $729 vs a 5-sale median of $192.51) — Drew's rule.
+  **Runner landings by 15:30Z:** `conform-one-of-one-parallels` 8/8 shards —
+  ≈224k rows repaired (moved ≈200k, folded ≈18k, replaced ≈6k), ≈82k
+  regenerable graded children retired, ≈23k refusals (the setKey-field
+  drift the card-profile pass has since healed) for a second pass;
+  re-ingest #2 7/8 (each shard ≈95% "kept the existing row" — the identity
+  is held at the canonical id); the vendor-mode fold relaunch (single slot)
+  folded 236 one-of-one twins and stopped at its budget — its marker-keyed
+  relaunch continues it, though the cross-source ×8 fleet covers the same
+  base ids. `materialize-graded-identities` ×8 dispatched 15:32Z
+  (33285887598 … 33285911031) to rebuild the graded children behind the
+  moves; the second one-of-one pass follows it. Drew (22:30Z): "I see 2 max williams superfractors …
   superfractors are 1/1" — bcp's un-numbered `superfractor:auto` beside
   beckett's `:num-1`, and the same pair on Refractor /499, Black /10, Red /5,
   Red Lava, Sky Blue. **#1470:** the fold's decision is a pure tested rule
@@ -2001,6 +2050,64 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   hiq for every linked row, and (day, price) pairs under two shapes = the
   refused 660 only. Not touched: `manual-user-entry` (`admin-manual::` keys,
   3 rows) and the 360,872 CardHedge rows keyed by a bare bubble id.
+    **Merged #1508 (12:05Z 08-30)**, exit-code gate (tsc 0, vitest 0 over 69).
+    Dry runs (prod, LIMIT=200): re-key 110 user rows → 58 re-keyed (33 onto
+    the D9 order id), 4 collapsed, 42 unresolved (34 slug-not-in-catalog =
+    the acquisition list, 7 two-minded holdings held for conform, 1 no
+    identity), 30 prices move to D9's subtotal; CH dual ids 979 pairs → 319
+    collapse, **660 refused** (parallel differs 517 — Base→Mojo Refractor 80,
+    Base→Chrome Refractor 72 …; grade differs 77; auto 49; number 17): the
+    comp path stamped parallels the daily path's titles never said — a writer
+    finding, not a merge. **APPLYs dispatched 12:08Z** (rekey 33285006502;
+    collapse 33285011415). Incidental: `catalogSlugIfExists` tested
+    `/:num-d+$/` — a literal d — so the un-numbered-twin fallback behind
+    #1473's fill-only adoption and the gate's twin lookup never fired;
+    **#1509** fixes it (deploy #7 33285176280). **D20** (building, `feat/d20`,
+    the single builder): the web renders the rung/provenance chip, the
+    BuyerIQ median fallback goes, the recent-comps median stops posing as a
+    stat, the dead identify call becomes an honest page, the picker shows the
+    last sale + count, the 17 pre-existing web tsc errors go.
+    **D19 APPLYs landed (13:20Z):** rekey — 110 user rows → **59 re-keyed**
+    (34 onto the D9 order id), 4 transactions collapsed (7 docs → 4), 41
+    unresolved (33 slug-not-in-catalog, 7 two-minded holdings, 1 no
+    identity), 0 failed, 0 duplicates left; pool before 110 → after 106 =
+    110 − 66 deleted + 62 created — CF-A-SALE-IS-NEVER-LOST holds,
+    reconciled. Collapse — 319 CH pairs collapsed (kept ch-daily 164 /
+    ch-comp 155; folded imageUrl 155, composite 74, parallelSlug 60), **660
+    refused** as two sales (grade 77, parallel 517, auto 49, number 17 —
+    e.g. CH card 1746983719903x669… daily=RAW Refractor CPA-TW vs comp=PSA 9
+    on the same day and price: the comp path's grade/parallel stamps
+    disagree with the daily path's titles — the writer finding stands).
+    Deploy #7 live (`6d0faa9`, the twin regex). **#1512 (deploy #8
+    33285570523):** the write-time firewall also relabels a priced holding
+    with NO rung as an estimate (`no_rung_relabelled_at_write`) — the Max
+    Williams Gold /50 $32.46 "observed" shape.
+
+- ○ D21 **The grade curve is the graded card, and the page says how sure it
+  is** (Drew, 2026-08-30 15:50Z: "add to our list on the grade curve to be
+  directly linked to the graded card ID? Something to show accuracy of the
+  entire card page"). Queued behind D20 (one builder at a time).
+  (a) **Every grade-curve tier row is keyed to its own graded identity** —
+  the materialized graded row (`…:num-150:psa-10`) is the tier: the one
+  entry (`valueIdentity`) returns each tier with its graded id, that tier
+  reads the exact pool under that id (grade-consistent rows), and the card
+  page / card-panel / grade-curve responses carry `tierCardId` so a tier is
+  a card the user can open (recent sales, holdings, listings) — not a
+  derived number. Where no graded row exists yet, the tier says so
+  (`materialize-graded-identities` mints it; never mint from the page).
+  (b) **A card-page accuracy panel built from facts, not a score:**
+  identity — checklist-backed (which source, when last seen) or provisional;
+  pool — per tier: n in the window used (60/90/180), last sale date, the
+  rung label (observed vs estimate) and the comps behind it; provenance —
+  what priced each tier and why (`fmvReason` when null); and "what would
+  make this better" (a checklist to acquire, a tier with no sales, a twin
+  to fold). One shape on the wire for iOS and web; the web renders it via
+  D20's provenance chip work. Acceptance: `probe-price-routes` gains a
+  per-tier identity check (every tier id exists as a catalog row and its
+  pool rows carry that id), and the card page for the Gillen Blue /150
+  shows PSA 9 as `…:num-150:psa-9` with its own (empty, today) pool and the
+  raw-derived estimate labelled as such.
+
     **D20 — the web says what the engine says (built on `feat/d20`,
   2026-08-30, 8 commits, unmerged; `apps/web` only — deploys on merge via
   `deploy-web.yml`, no backend dispatch).** Group F's web findings, each
