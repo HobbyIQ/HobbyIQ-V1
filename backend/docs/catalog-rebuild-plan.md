@@ -2549,6 +2549,57 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
     + graded children; sharded; reconciled) over that worklist, then a
     nightly `catalog_duplicates` canary axis so a split pool can never
     return silently.
+    **D30 measured (8 slices, 2026-08-30 09:05–10:30Z, snapshot under
+    three running fleets):** 20,518,726 un-graded rows; **1,102,131
+    multi-row groups** (2,485,267 rows in them); **17,762 groups whose SALES
+    are split across rows, 684,571 sales in them**; 11 holdings on a
+    non-winner row. By kind: id-setkey-drift 300,221 (the D23 rename mid-
+    flight — old and new spellings both present; includes a `bowman-paper`
+    spelling the fleet emits that is not in the product table), numbered-
+    vs-un-numbered 290,400, colour-vs-colour-refractor 201,034 (measured
+    under the rule Drew retracted the same morning — see D31), print-run
+    conflict 81,987 (not duplicates), setKey spelling 31,161, superfractor
+    spelling 26,854, hyphen 26,736, base-glue 23,006, refractor spelling
+    21,279, cross-product CPA 13,869, no-auto ghost 13,816, player-differs
+    12,490 (the CPA-AG case — NOT duplicates), printing-plate spelling
+    10,596. Slice JSONs under the session scratchpad `d30/`; the synthesis
+    and critique agents died on subagent credits — the table above is the
+    main session's sum. **The builders (D29 twins/CPA, the search + comps
+    repair round) also died on subagent credits with their diagnoses
+    complete; they resume when credits are bought.**
+    **D31 — colour follows the checklist (Drew, 12:05Z: "color does not
+    always mean refractor. remove rules, and follow it to the checklist or
+    catalog"; merged #1546, deploy #14).** Measured against the checklist
+    rows of the 13 chrome-stock products: Topps Tribute names **19,099**
+    bare-colour parallels (Red 3,025 · Green 2,868 · Purple 2,584 · Gold
+    2,369 …) with no refractor form; Topps Chrome names **57,818** (Gold
+    Wave, RayWave, Aqua Lava …); where ONE checklist lists both forms they
+    are two cards — 2000 Bowman Chrome Retro/Future vs Retro/Future
+    Refractor (494), Finest Uncommon vs Uncommon Refractor (600), Sterling
+    Rookies vs Rookies Refractor (200), Platinum Autographs vs Autographs
+    Refractor /199 (35); and the rule rewrote the checklist's own rows at
+    mint — 45,706 Topps Chrome, 18,034 Tribute, 17,944 Bowman Chrome, 9,563
+    Chrome Sapphire rows whose slug says -refractor while their checklist
+    text does not. Removed: CF-CHROME-COLOR-IMPLIES-REFRACTOR (product-level
+    append on 14 setKeys), CF-TRUE-COLOR-IMPLIES-REFRACTOR, CF-MOJO-IMPLIES-
+    REFRACTOR, the True-{Colour} → {Colour} Refractor and Mega Mojo → Mojo
+    Refractor aliases; `merge-bare-colour-parallels.cjs` retired. The
+    generator writes the parallel as named; the catalog resolver (unique
+    long-form candidate, catalogSlugIfExists) maps "Gold" onto "Gold
+    Refractor" only when that is the one gold row the card has. **Follow-ups
+    (D30's fleet):** re-key the pool rows the rule minted (sales under
+    `<colour>-refractor` whose card's checklist names `<colour>`) and the
+    checklist rows it rewrote at mint (slug → the checklist text's form);
+    where two checklist SOURCES spell one card both ways (Topps Chrome
+    15,819; Sapphire 8,132; Tribute 5,345 …) the surviving spelling is
+    Drew's call (NEEDS DREW).
+    **Also landed 08-30 11:30–12:40Z:** D28 grade repair 8/8 (≈50k sales
+    re-keyed), slash 8/8 (≈12k), ordinal/year/nonumber ×8 dispatched 12:35Z;
+    D26 backfill REPORT ONLY 33303042961 (8 users, 55 orders, 19 auto-
+    resolved / 17 parked / 19 unresolvable, 0 holdings marked sold) → APPLY
+    33309736501 (55 = 18 written + 37 skipped); conform #1545 aligned 15
+    stale cardIds; Max Williams and Harrison both on one identity, both
+    fields, exact-pool projection.
     **D28 — the card number is never a grade, a print run, a year, an
     ordinal, or a lot (BUILT on `feat/d28`; APPLY is Drew's dispatch).**
     Harrison's Ohtani (`user-67878bb5` / holding
