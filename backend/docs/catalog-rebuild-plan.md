@@ -2509,15 +2509,17 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
     with no write path in it at all: over the grade slice (`cardNumber IN
     ('8','9','10')`, **362,477 rows**) **15,261** — cardhedge 13,442 /
     tca-ebay 1,814 / cardsight 5; over all five measured shapes
-    (**1,356,106 rows**) **64,957** — cardhedge 49,054 / tca-ebay 14,710 /
-    cardsight 1,193. Both of those were taken BEFORE the spelling fix below,
-    so both are an UPPER BOUND: they count "BCP-10" against a title printing
-    "#BCP10" as a disagreement, and the canary put that class at 1.13% of
-    live rows. The re-measurement under the corrected guard is the number to
-    quote once it lands; it can only come down. Re-measured through the one guard, the shapes are:
-    grader-digit **38,723** (ch 24,243 / tca 14,436), print-run-slash
-    **12,099** (tca 9,511 / ch 2,585), year-as-number **8,361** (tca 5,654 /
-    ch 2,707), ordinal **1,243**, print-run-bare **536**, lot-count **8**;
+    (**1,356,860 rows**) **45,718** — cardhedge 31,385 / tca-ebay 13,505 /
+    cardsight 828. (The first pass of that second slice read 64,957. It was
+    taken before the spelling fix below and counted "BCP-10" against a title
+    printing "#BCP10" as a disagreement: **19,239 of the 64,957 — 30% of the
+    apparent defect — were punctuation, not a mis-key.** That is why the
+    measure ran before the numbers were written down.) Re-measured through the
+    corrected guard, the shapes are: grader-digit **36,448** (ch 22,214 / tca
+    14,190), print-run-slash **9,217** (tca 9,210 — almost entirely one
+    source), year-as-number **8,361** (tca 5,654 / ch 2,707), ordinal **1,255**
+    (ch 929 / tca 326), print-run-bare **675**, an unread `#` with no
+    cardNumber **77**, lot-count **9**;
     the "`#` in the title, no cardNumber" bucket needs all three spellings of
     "missing" — `NOT IS_DEFINED` alone returns **0**, because those rows carry
     `cardNumber: null` rather than an absent field. With `IS_NULL` and `= ''`
@@ -2561,7 +2563,7 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
     reader had to widen (`#SMLB10`, `#90CB-7`, `#83T-6` are a `#` it could
     not parse, and every miss falls through to the vendor's digit — the bug
     itself), and a slash is a print run only NUMBER-over-NUMBER, because
-    12,099 of the slash rows are real SKUs ("2003 Fleer Avant **#AAC/BG**"
+    the slash rows are real SKUs ("2003 Fleer Avant **#AAC/BG**"
     numbers a dual-player insert by both players' initials; "N/A" is the
     slug builder's own word for unnumbered). A THIRD correction came from the
     canary, on live ingest, before any of it shipped: CardHedge stores
@@ -2668,7 +2670,7 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
     (3) `gh workflow run backfill-runner.yml -f script=conform-holdings-to-catalog -f apply=true -f scope=rulings -f slot=0 -f slots=1`;
     (4) `gh workflow run backfill-runner.yml -f script=reprice-user-holdings -f apply=true`;
     (5) `gh workflow run backfill-runner.yml -f script=materialize-graded-identities -f apply=true` (the graded children retired by the moves regenerate under the new ids);
-    (6) the after number: `-f script=measure-card-number-integrity -f apply=false -f mode=shapes`, compared against the 64,957 above.
+    (6) the after number: `-f script=measure-card-number-integrity -f apply=false -f mode=shapes`, compared against the **45,718** above.
     Both write scripts relaunch on their own budget marker with every input
     forwarded, and both exit 1 on a MODE they were not given.
     **D26 — eBay account sync resolves every sale to a card (RULED 04:05Z;
