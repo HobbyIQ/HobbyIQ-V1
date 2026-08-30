@@ -2593,11 +2593,20 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
     the title's #X overruling the vendor 1,744, bare print run 49, lot count 2
     — cardhedge 4,420 / tca-ebay 2,188 / cardsight 10. Extrapolated across
     8 slots the grade slice alone is ~52k repairs.
-    base-cards clean MODE=cards slot 0/8 (LIMIT=250):
-    264 scanned, **264 cleaned** = 133 moved / 111 folded / 20 replaced (12
-    of them onto a numbered twin), 0 sales re-pointed, 0 failed;
-    cardboardchecklist 256 / beckett 8; rung names recovered: Refractor 152,
-    Autograph Variation 13, Chrome Variation 9, Short Prints 7, ….
+    base-cards clean MODE=cards slot 0/8, the whole slot: **1,139 scanned**
+    (+7,908 in slots 1-7 — 9,047 total, the spec's number exactly),
+    **1,137 cleaned** = 586 moved / 481 folded onto a row already there / 70
+    replacing a lower-authority twin, 60 of them landing on a `:num-N`
+    address through foldTwinRule; 0 sales re-pointed (no sale ever computed a
+    "Base Cards" parallel from a title, so none pointed at these slugs), 0
+    graded children retired, 2 refused. cardboardchecklist 1,120 / beckett 19.
+    The rung names recovered: **Refractor 631**, Autograph Variation 56,
+    Chrome Variation 55, Lightboard Logo Variation Refractor 33, Short Prints
+    29, Image Variations Refractor 26, …. The 2 refusals are rows whose id
+    says `topps` while their `setKey` FIELD says `topps-series-2` —
+    moveCatalogRow's CF-A-KEY-NEEDS-BOTH-HALVES guard, D23's rename
+    population, not this repair's; they are now counted on their own line
+    rather than charged to `failed`.
     **The year-as-number catalog rows are NOT a retire.** Measured over the
     1,666,260 rows with a four-character `cardNumber`: **2,074** have
     `cardNumber === year`, and **1,438 of them are checklist-authority**
