@@ -1314,9 +1314,8 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
     `feat/d17`, the one builder running per Drew's "use what we have before
     credits"): `/card-detail`, `/card-panel`, the bulk curves, the portfolio
     persist site and the price-alert evaluator through the same entry.
-    Queued, not launched: D18 (cron writers reconcile; progress-gated
-    relaunches become marker-keyed), D19 (re-key the old user comps; collapse
-    the CH `ch-daily::`/`ch-comp::` dual ids), D20 (web: render the rung,
+    D18 built (`feat/d18`, below). Queued, not launched: D19 (re-key the old
+    user comps; collapse the CH `ch-daily::`/`ch-comp::` dual ids), D20 (web: render the rung,
     the BuyerIQ median fallback, the identify 404, FMV in the picker). Judgment calls to read
     (NEEDS DREW if any should go the other way): thin pools (n = 1–2) now
     price from the unified weighted-median rung on every route (the persist
@@ -1414,6 +1413,69 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
     (building, `feat/d3c`, the single builder): the converter's two
     below-floor page shapes — Topps flagship base rows + foil parallels,
     Panini ladders — with the coverage measurement as the acceptance number.
+    **D18 — every write job reconciles (built on `feat/d18`, 2026-08-30, 4
+  commits, unmerged; backend/src changed — `bulkOutcome` in
+  writeReconciliation — dispatch "Daily 5AM ET Refresh & Deploy" after
+  merge).** The debt the v2 guard measured, shrunk mechanically and pinned.
+  **(1) Relaunch** — the nine count-gated steps (repair-parallel-subset-fold,
+  canonicalize-vendor-shaped-rows, retire-numbered-base-rows,
+  repair-pokemon-glued-numbers, map-pokemon-setkeys-to-checklist,
+  backfill-playerslug, conform-card-profile, materialize-graded-identities,
+  retire-unreferenced-graded-rows) grep the budget marker and forward
+  slot/slots/mode/sports/years/scope/sources verbatim, as the fold step does;
+  rehome-catalog-rows-to-own-partition, which printed no marker and was
+  SIGKILLed at the step ceiling (a killed job cannot report progress), owns
+  RUN_MINUTES=140 and prints it, and its relaunch forwards
+  years/setkey_like/parents_only/limit/scan_limit. Marker-printers relaunched
+  on the marker **15/27 → 25/28 (debt 12 → 3)**; the three left
+  (apply-setkey-rulings, map-yearprefixed-setkeys, retire-prose-parallel-rows)
+  have no relaunch step at all — giving them one is an ops decision (a fleet
+  that keeps going), not a lint fix. **(2) Cron writers** — all 23 call
+  reportWrites around their real write loop with disjoint counters and a
+  header saying what each means; nothing they write changed, only what they
+  measure. Measurement defects found on the way: backfill-search-fields
+  charged a bulk batch that THREW a flat 100 failed rows (over-accounted every
+  short last batch; now exact through `bulkOutcome` — 2xx written / 429·449·503
+  retry / else failed, unit-tested); purge-old-sales-derived and
+  sold-comps-cross-source-dedup dropped 404s from every count;
+  rollup-sold-comps-daily only logged an upsert error; phase-b-crawl-pricing
+  counted a thrown upsert as "skipped"; tca-firehose-ingest never tallied
+  catalogUnmatched and let a FETCH error pose as a row error;
+  drainCatalogSeedQueue swallowed a failed seed-status upsert as "non-fatal";
+  tca-match-enricher's delete-then-create re-key can lose a row (named in its
+  header, not fixed). Cron writers reconciling **0/23 → 23/23 (debt 0, floor
+  pinned)**. reportWrites is compiled TS and dist/ is gitignored, so the
+  eleven cron workflows that never built it gain `npx tsc` after install —
+  two of them (grade-explode, nightly; sold-comps-ch-backfill) already
+  required dist/ and have been crashing at require(); a new guard makes the
+  build step the rule (a workflow that runs a dist-requiring script must
+  build). **(3) Runner switches** — the six group-E scripts read what the
+  runner exports: recover-chrome-collapse-damage (RECOVER_MODE, permanently
+  dry) and ingest-2026-bowman-auto-checklist (INGEST_APPLY) fall back to
+  BACKFILL_APPLY, both reconciled; refresh-market-signals /
+  refresh-calibration-multipliers (default-on, wrote on apply=false) honour
+  BACKFILL_APPLY under the runner while the cron workflows' explicit
+  `*_APPLY: "true"` still wins; reprice-user-holdings and drain-staging-backlog
+  (no flag, wrote on every dispatch) honour BACKFILL_APPLY — `-f apply=true`
+  in the runbooks is unchanged. A new guard case reads the runner's exported
+  switches from the yml and requires every whitelisted writer (the net plus
+  five named service writers) to read one; runnerWriters() no longer needs an
+  APPLY token to see a writer, so recover-chrome-collapse-damage joined the
+  population (runner writers reconciling 32/78 → 33/79; the 46 declared are
+  unchanged — each needs its own counters understood before it is wired).
+  **(4) The guard itself** — `wired` was `includes("reportWrites")`, which the
+  import line alone satisfied; it now demands a call outside comments (the
+  mutation check found it). Stays on the list, with reasons: the 46 runner
+  writers; reprice-user-holdings is NOT reconciled because the service's
+  `requested` is ALL holdings while repriced+skipped cover only the candidates
+  after the min-age filter and the maxHoldings slice — a wrong intended fires
+  WORK VANISHED on every portfolio over 200; the service would have to return
+  the candidate count. Mutation-checked four ways (count-gate a relaunch,
+  un-wire a cron writer, drop a build step, point a writer at an unexported
+  switch — each red); tsc --noEmit 0. Verify the write after merge: the next
+  nightlies' logs must each show a `reconciled:` line (a green run without
+  one is the old failure shape), and grade-explode should complete for the
+  first time since gradeLadder was wired.
 - ◐ D10 **Look at all holdings for everyone** (Drew, 2026-08-29 17:15Z). The three
   defects under holding `ca7a150b` are not specific to it. **#1448
   `audit-all-holdings`** (read-only, runner-whitelisted): per holding —
