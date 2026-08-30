@@ -9,6 +9,13 @@
  * The query is the one unifiedPricing always ran: the exact identity —
  * `cardId` OR `hobbyiqCardId` — within the window, priced, not anomalous.
  * Dedupe, the self-comp rule, grouping and every number stay in the engine.
+ *
+ * CF-AN-IDENTITY-RESOLVES-TO-ITS-ROW (2026-08-30): an un-numbered id and its
+ * ONE numbered twin are one card whose pool is split across two keys until
+ * the D29 fleet re-keys sold_comps (the fold re-keyed catalog rows only).
+ * `hobbyiqCardIds` carries the twin so the union is read in the SAME query
+ * the readers use (soldCompsStore reads the same two keys) — one more
+ * equality on the indexed field, +1–3 RU measured, never a STARTSWITH.
  */
 import { CosmosClient, type Container } from "@azure/cosmos";
 
@@ -45,6 +52,10 @@ function getContainer(): Container | null {
 export async function readExactPoolRows(input: {
   cardId: string;
   hobbyiqCardId: string | null;
+  /** The identity's other slug key(s), matched on hobbyiqCardId in the same
+   *  query: the un-numbered id beside its numbered twin (see the header).
+   *  Duplicates of `hobbyiqCardId` are ignored. */
+  hobbyiqCardIds?: readonly string[] | null;
   windowDays: number;
   nowMs?: number;
 }): Promise<ExactPoolRow[] | null> {
@@ -56,10 +67,17 @@ export async function readExactPoolRows(input: {
   const params: Array<{ name: string; value: string | number | boolean | null }> = [
     { name: "@cutoff", value: cutoff },
   ];
-  // Union: match by cardId OR hobbyiqCardId (covers cross-vendor storage).
-  parts.push("(c.cardId = @cid" + (input.hobbyiqCardId ? " OR c.hobbyiqCardId = @hiq" : "") + ")");
+  // Union: match by cardId OR hobbyiqCardId (covers cross-vendor storage),
+  // and by the identity's twin key when the caller names one.
+  const hiqIds: string[] = [];
+  for (const v of [input.hobbyiqCardId, ...(input.hobbyiqCardIds ?? [])]) {
+    const s = typeof v === "string" ? v.trim() : "";
+    if (s && !hiqIds.includes(s)) hiqIds.push(s);
+  }
+  const hiqClauses = hiqIds.map((_, i) => ` OR c.hobbyiqCardId = @hiq${i === 0 ? "" : i}`).join("");
+  parts.push(`(c.cardId = @cid${hiqClauses})`);
   params.push({ name: "@cid", value: input.cardId });
-  if (input.hobbyiqCardId) params.push({ name: "@hiq", value: input.hobbyiqCardId });
+  hiqIds.forEach((v, i) => params.push({ name: `@hiq${i === 0 ? "" : i}`, value: v }));
   try {
     const { resources } = await cont.items.query<ExactPoolRow>({
       query: `SELECT c.price, c.soldAt, c.gradeCompany, c.gradeValue, c.priceAnomaly, c.contributorUserId, c.source FROM c WHERE ${parts.join(" AND ")}`,

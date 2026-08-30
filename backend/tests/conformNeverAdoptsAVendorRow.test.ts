@@ -6,6 +6,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { createRequire } from "node:module";
+import { numberedTwinsOf as resolverNumberedTwinsOf, pickCatalogRow } from "../src/services/catalog/catalogIdentityResolver.js";
 const require = createRequire(import.meta.url);
 const { identityTargets, productChanged, setKeyOf, rowFor, numberedTwinsOf } = require("../scripts/conform-holdings-to-catalog.cjs") as {
   numberedTwinsOf: (resolved: string, ids: string[]) => string[];
@@ -45,5 +46,40 @@ describe("conform-holdings-to-catalog -- a holding never adopts a vendor-minted 
     const ids = [base + ":num-150", base + ":num-150:psa-9", base + ":num-150:psa-10", "hiq:baseball:2024:bowman-draft:cpa-tg:blue-wave-refractor:auto:num-150"];
     expect(numberedTwinsOf(base, ids)).toEqual([base + ":num-150"]);
     expect(rowFor(base, ids)).toBe(base + ":num-150");
+  });
+});
+
+// CF-AN-IDENTITY-RESOLVES-TO-ITS-ROW (2026-08-30). The rule's home is the TS
+// resolver (catalogIdentityResolver.pickCatalogRow); the .cjs keeps a copy it
+// cannot import. ONE fixture table, asserted against BOTH, so they cannot drift.
+// The script only ever asks about the un-numbered slug it composed, so the table
+// is un-numbered inputs; the numbered direction (#1509) is the resolver's alone.
+describe("conform's rowFor and the resolver's pickCatalogRow are the same rule", () => {
+  const MWI = "hiq:baseball:2025:bowman-draft:cpa-mwi:refractor:auto";
+  const TG = "hiq:baseball:2024:bowman-draft:cpa-tg:blue-refractor:auto";
+  const WJ = "hiq:baseball:2024:bowman-chrome:cpa-wj:refractor:auto";
+  // [slug, ids the card holds, expected row]
+  const TABLE: Array<[string, string[], string | null]> = [
+    [MWI, [MWI, `${MWI}:num-499`], MWI],                                                       // own row wins
+    [MWI, [`${MWI}:num-499`, "hiq:baseball:2025:bowman-draft:cpa-mwi:gold-refractor:auto:num-50"], `${MWI}:num-499`], // the one twin (prod, 2026-08-30)
+    [MWI, [`${MWI}:num-499`, `${MWI}:num-250`], null],                                       // two twins: a ruling
+    [MWI, ["hiq:baseball:2025:bowman-draft:cpa-mwi:gold-refractor:auto:num-50"], null],        // another parallel is not a twin
+    [MWI, [], null],
+    [TG, [`${TG}:num-150`, `${TG}:num-150:psa-9`, `${TG}:num-150:psa-10`], `${TG}:num-150`],   // graded children are not twins
+    [TG, [`${TG}:num-150:psa-9`], null],
+    // the prod cpa-wj shape (read-only, 2026-08-30): two twins under graded children -> nothing
+    [WJ, [`${WJ}:num-499`, `${WJ}:num-150:psa-10`, `${WJ}:num-10:sgc-10`, `${WJ}:num-499:psa-9`, `${WJ}:num-10:bgs-9-5`, `${WJ}:num-10`], null],
+  ];
+  it("agree on every row of the table", () => {
+    for (const [slug, ids, expected] of TABLE) {
+      expect(rowFor(slug, ids), `cjs rowFor ${slug} over ${ids.length} ids`).toBe(expected);
+      expect(pickCatalogRow(slug, ids).id, `resolver pickCatalogRow ${slug} over ${ids.length} ids`).toBe(expected);
+      expect(numberedTwinsOf(slug, ids), `numberedTwinsOf ${slug}`).toEqual(resolverNumberedTwinsOf(slug, ids));
+    }
+  });
+  it("names the kinds the script reports as prose", () => {
+    expect(pickCatalogRow(MWI, [`${MWI}:num-499`]).kind).toBe("numbered-twin");
+    expect(pickCatalogRow(MWI, [`${MWI}:num-499`, `${MWI}:num-250`]).kind).toBe("ambiguous");
+    expect(pickCatalogRow(MWI, []).kind).toBe("none");
   });
 });

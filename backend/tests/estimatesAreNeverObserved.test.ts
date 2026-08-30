@@ -6,7 +6,8 @@
  */
 import { describe, expect, it } from "vitest";
 import { estimatesAreNeverObserved } from "../src/services/portfolioiq/portfolioStore.service.js";
-import { exactSalesCountQuery } from "../src/services/portfolioiq/exactPoolSupremacy.js";
+import { exactIdentityCandidates, exactSalesCountQuery, unifiedIdentityAttempts } from "../src/services/portfolioiq/exactPoolSupremacy.js";
+import { poolReadIdsFor } from "../src/services/catalog/catalogIdentityResolver.js";
 
 describe("CF-AN-ESTIMATE-IS-NEVER-OBSERVED -- the write-time firewall", () => {
   it("relabels a sibling-parallel rung persisted as observed", () => {
@@ -35,5 +36,75 @@ describe("CF-A-TWIN-WITHOUT-A-PRINT-RUN -- the gate counts a base id's numbered 
     const v = exactSalesCountQuery("1778814561816x835862652021336800", "x");
     expect(v.query).toMatch(/c\.cardId = @id/);
     expect(v.query).not.toMatch(/STARTSWITH/);
+  });
+});
+
+// CF-AN-IDENTITY-RESOLVES-TO-ITS-ROW (2026-08-30, holding deced7d3 -- Max Williams
+// CPA-MWI). Once the resolver has normalized a holding's cardId / hobbyiqCardId to
+// the catalog's numbered row, the exact-pool attempts form from that id directly --
+// no printRun field needed. The gate's STARTSWITH stays as the fail-safe (it counts
+// BOTH twins on an ambiguous id, by design); the readers union exactly the id and
+// the ONE twin the resolver names (the pool is keyed both ways until D29 re-keys
+// it), never every twin.
+describe("CF-AN-IDENTITY-RESOLVES-TO-ITS-ROW -- a normalized holding needs no printRun", () => {
+  const MWI = "hiq:baseball:2025:bowman-draft:cpa-mwi:refractor:auto";
+  const MWI_499 = `${MWI}:num-499`;
+  const TWIN = { requested: MWI, id: MWI_499, kind: "numbered-twin" as const, twins: [MWI_499], poolTwin: MWI_499 };
+  // The SYMMETRIC half (round-2 refutation): the holding carries the NUMBERED
+  // form (the branch's own writers put it there) and the stem holds the sales.
+  const REVERSE = { requested: MWI_499, id: MWI_499, kind: "exact" as const, twins: [], poolTwin: MWI };
+  it("cardId/hobbyiqCardId …:num-499 with no printRun: the numbered identity first, its un-numbered twin second", () => {
+    const h = { hobbyiqCardId: MWI_499, cardId: MWI_499 };
+    expect(exactIdentityCandidates(h)).toEqual([MWI_499, MWI]);
+    expect(unifiedIdentityAttempts(h).map((a) => [a.cardId, a.label])).toEqual([
+      [MWI_499, "hobbyiqCardId"],
+      [MWI, "hobbyiqCardId-twin"],
+    ]);
+  });
+  it("with the resolver's numbered-twin answer, the FIRST attempt reads both keys in one query and neither half is re-tried alone", () => {
+    // The holding still carries the un-numbered id (the common state)...
+    const viaHolding = unifiedIdentityAttempts({ hobbyiqCardId: MWI }, TWIN);
+    // Reported as the catalog row, and READ as the whole union in a canonical
+    // order — so the two halves of one card give the IDENTICAL attempt.
+    expect(viaHolding[0]).toEqual({ cardId: MWI_499, hobbyiqCardId: MWI_499, hobbyiqCardIds: [MWI_499, MWI], label: "hobbyiqCardId+pool-twin" });
+    expect(viaHolding.map((a) => a.cardId)).toEqual([MWI_499]);
+    // ...and the valuation entry hands the catalog row: the same union.
+    const viaEntry = unifiedIdentityAttempts({ hobbyiqCardId: MWI_499, printRun: 499 }, TWIN);
+    expect(viaEntry).toEqual(viaHolding);
+    // A second identity (cardId) still follows, as before.
+    const withCardId = unifiedIdentityAttempts({ hobbyiqCardId: MWI, cardId: "vendor-1" }, TWIN);
+    expect(withCardId.map((a) => a.label)).toEqual(["hobbyiqCardId+pool-twin", "cardId+hobbyiqCardId"]);
+    // A resolution for a DIFFERENT slug, or a refusal, changes nothing.
+    expect(unifiedIdentityAttempts({ hobbyiqCardId: MWI }, { ...TWIN, requested: "hiq:other", id: "hiq:other:num-5", poolTwin: "hiq:other:num-5" }).map((a) => a.label)).toEqual(["hobbyiqCardId"]);
+    expect(unifiedIdentityAttempts({ hobbyiqCardId: MWI }, { requested: MWI, id: null, kind: "ambiguous", twins: [], poolTwin: null }).map((a) => a.label)).toEqual(["hobbyiqCardId"]);
+    expect(unifiedIdentityAttempts({ hobbyiqCardId: MWI }, null)).toEqual(unifiedIdentityAttempts({ hobbyiqCardId: MWI }));
+  });
+  it("the gate counts both twins on an un-numbered id (fail-safe); the read unions the id with its ONE twin, never more", () => {
+    expect(exactSalesCountQuery(MWI, "x").query).toMatch(/STARTSWITH\(c\.hobbyiqCardId, @idNum\)/);
+    expect(poolReadIdsFor(MWI, { requested: MWI, id: null, kind: "ambiguous", twins: [`${MWI}:num-250`, MWI_499], poolTwin: null })).toEqual([MWI]);
+    expect(poolReadIdsFor(MWI, TWIN)).toEqual([MWI, MWI_499]);
+  });
+
+  // CF-AN-IDENTITY-RESOLVES-TO-ITS-ROW, SYMMETRIC (round-2 refutation). The
+  // valuation attempt for a NUMBERED holding must union the stem too, or
+  // priceHoldingFromExactPool cites comps recent-sales does not list.
+  it("REVERSE: a numbered holding whose stem holds the sales unions both keys, and it is poolReadIdsFor's own list", () => {
+    const a = unifiedIdentityAttempts({ hobbyiqCardId: MWI_499 }, REVERSE);
+    expect(a[0]).toEqual({ cardId: MWI_499, hobbyiqCardId: MWI_499, hobbyiqCardIds: [MWI_499, MWI], label: "hobbyiqCardId+pool-twin" });
+    expect([...(a[0].hobbyiqCardIds ?? [])].sort()).toEqual([...poolReadIdsFor(MWI_499, REVERSE)].sort());
+    // Mutation check: round 2 skipped the resolve for a numbered slug and
+    // produced ["hobbyiqCardId", "hobbyiqCardId-twin"] — two reads, the
+    // second of which the exact-pool gate could reject on its own count.
+    expect(a.map((x) => x.label)).toEqual(["hobbyiqCardId+pool-twin"]);
+    // A stem that IS a row of its own is a different identity: no union — the
+    // pre-existing #1509 twin attempt reaches it separately, as it always did.
+    expect(unifiedIdentityAttempts({ hobbyiqCardId: MWI_499 }, { ...REVERSE, poolTwin: null }).map((x) => x.label))
+      .toEqual(["hobbyiqCardId", "hobbyiqCardId-twin"]);
+  });
+
+  it("REVERSE and forward produce the SAME union — one card, one pool, either way in", () => {
+    // Identical, not merely equivalent: same attempt, same reported identity.
+    expect(unifiedIdentityAttempts({ hobbyiqCardId: MWI }, TWIN)[0])
+      .toEqual(unifiedIdentityAttempts({ hobbyiqCardId: MWI_499 }, REVERSE)[0]);
   });
 });

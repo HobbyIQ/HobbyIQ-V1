@@ -47,6 +47,7 @@ import { guardSlugInputs, normalizeSportStrict, type SlugGuardResult } from "./s
 import { canonicalizeParallel } from "./parallelCanonicalizer.service.js";
 import { parseParallelComposite } from "./parseParallelComposite.service.js";
 import { enrichCompositeV3 } from "./enrichCompositeV3.service.js";
+import { poolReadIdsFor, resolveIdentityToCatalogRow, type CatalogRowResolution } from "../catalog/catalogIdentityResolver.js";
 import { createHash } from "crypto";
 
 // CF-COMPOSITE-EMIT (Drew, 2026-07-30). Compute the 6-axis composite
@@ -1820,6 +1821,10 @@ export async function readCompsByCardId(input: {
   // Symmetric rule: user-contributed data doesn't feed the contributor's
   // OWN pricing but remains market signal for everyone else.
   excludeContributorUserId?: string | null;
+  /** CF-AN-IDENTITY-RESOLVES-TO-ITS-ROW (2026-08-30): a caller that already
+   *  resolved an hiq slug to its catalog row (recent-sales, to report
+   *  resolvedCardId) passes it here so the read does not resolve twice. */
+  resolvedIdentity?: CatalogRowResolution | null;
 }): Promise<SoldCompDoc[]> {
   const c = await getContainer();
   if (!c) return [];
@@ -1880,11 +1885,35 @@ export async function readCompsByCardId(input: {
   const looksLikeHiqSlug = typeof input.cardId === "string" && input.cardId.startsWith("hiq:");
   const matchField = looksLikeHiqSlug ? "c.hobbyiqCardId" : "c.cardId";
   const orderClause = looksLikeHiqSlug ? "" : " ORDER BY c.soldAt DESC";
+  // CF-AN-IDENTITY-RESOLVES-TO-ITS-ROW (2026-08-30): an hiq slug is read
+  // under the id AND the one numbered twin the resolver names — see
+  // catalogIdentityResolver.poolReadIdsFor (the pool is keyed both ways until
+  // the D29 fleet re-keys it). Two equalities on the indexed field in one
+  // query, never a STARTSWITH. A caller's printRun lets the resolver settle
+  // the twin with a 1-RU point read instead of the stem query.
+  const resolvedIdentity = looksLikeHiqSlug
+    ? (input.resolvedIdentity ?? await resolveIdentityToCatalogRow(input.cardId, {
+      printRun: typeof input.printRun === "number" ? input.printRun : null,
+    }))
+    : null;
+  const readIds = looksLikeHiqSlug ? poolReadIdsFor(input.cardId, resolvedIdentity) : [input.cardId];
+  if (readIds.length > 1) {
+    console.log(JSON.stringify({
+      event: "sold_comps_read_unions_numbered_twin",
+      source: "soldCompsStore.readCompsByCardId",
+      requestedCardId: input.cardId,
+      readCardIds: readIds,
+    }));
+  }
+  const idClause = readIds.length > 1
+    ? `(${matchField} = @cid OR ${matchField} = @cid1)`
+    : `${matchField} = @cid`;
   const q = {
     query:
-      `SELECT * FROM c WHERE ${matchField} = @cid AND c.soldAt >= @from AND c.soldAt <= @to${orderClause}`,
+      `SELECT * FROM c WHERE ${idClause} AND c.soldAt >= @from AND c.soldAt <= @to${orderClause}`,
     parameters: [
-      { name: "@cid", value: input.cardId },
+      { name: "@cid", value: readIds[0] },
+      ...(readIds.length > 1 ? [{ name: "@cid1", value: readIds[1] }] : []),
       { name: "@from", value: from },
       { name: "@to", value: to },
     ],
@@ -2184,6 +2213,8 @@ export async function readCompsByHobbyIqCardId(input: {
   // semantics as readCompsByCardId.
   isAuto?: boolean;
   printRun?: number | null;
+  /** CF-AN-IDENTITY-RESOLVES-TO-ITS-ROW: see readCompsByCardId. */
+  resolvedIdentity?: CatalogRowResolution | null;
 }): Promise<SoldCompDoc[]> {
   const c = await getContainer();
   if (!c) return [];
@@ -2193,13 +2224,31 @@ export async function readCompsByHobbyIqCardId(input: {
   const from = input.fromDate ?? new Date(now.getTime() - 180 * 86_400_000).toISOString();
   const limit = Math.min(500, Math.max(1, input.limit ?? 100));
 
+  // CF-AN-IDENTITY-RESOLVES-TO-ITS-ROW (2026-08-30): read under the id AND
+  // the one numbered twin the resolver names — see readCompsByCardId and
+  // catalogIdentityResolver.poolReadIdsFor.
+  const readIds = poolReadIdsFor(hiqId, input.resolvedIdentity ?? await resolveIdentityToCatalogRow(hiqId, {
+    printRun: typeof input.printRun === "number" ? input.printRun : null,
+  }));
+  if (readIds.length > 1) {
+    console.log(JSON.stringify({
+      event: "sold_comps_read_unions_numbered_twin",
+      source: "soldCompsStore.readCompsByHobbyIqCardId",
+      requestedCardId: hiqId,
+      readCardIds: readIds,
+    }));
+  }
   const params: Array<{ name: string; value: string | number }> = [
     { name: "@lim", value: limit },
-    { name: "@hiq", value: hiqId },
+    { name: "@hiq", value: readIds[0] },
+    ...(readIds.length > 1 ? [{ name: "@hiq1", value: readIds[1] }] : []),
     { name: "@from", value: from },
   ];
+  const idClause = readIds.length > 1
+    ? "(c.hobbyiqCardId = @hiq OR c.hobbyiqCardId = @hiq1)"
+    : "c.hobbyiqCardId = @hiq";
   const query = `SELECT TOP @lim * FROM c
-                 WHERE c.hobbyiqCardId = @hiq
+                 WHERE ${idClause}
                    AND c.soldAt >= @from
                  ORDER BY c.soldAt DESC`;
 

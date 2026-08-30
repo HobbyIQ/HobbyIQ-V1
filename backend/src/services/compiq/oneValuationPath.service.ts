@@ -55,7 +55,8 @@ import {
 } from "./observedGradeCurve.service.js";
 import { priceHoldingFromExactPool } from "../portfolioiq/exactPoolSupremacy.js";
 import { computeHobbyIqFmv, type HobbyIqFmvResult } from "../portfolioiq/hobbyIqFmv.service.js";
-import { catalogSlugIfExists, readCatalogIdentityBySlug } from "../catalog/catalogMatcher.service.js";
+import { readCatalogIdentityBySlug } from "../catalog/catalogMatcher.service.js";
+import { resolveIdentityToCatalogRow, type CatalogRowResolution } from "../catalog/catalogIdentityResolver.js";
 import { lookupHobbyIqCardIdForVendorCardId } from "../portfolioiq/soldCompsStore.service.js";
 import { parseHobbyIqCardId } from "../portfolioiq/hobbyIqCardId.service.js";
 
@@ -191,14 +192,23 @@ function blankIdentity(requestedId: string): ValuationIdentity {
 
 /** Resolve the caller's id to the catalog's slug and the identity block.
  *  A vendor id maps through sold_comps (the rows carry both ids) and then
- *  the catalog must hold the slug — nothing is minted here. */
+ *  the catalog must hold the slug — nothing is minted here.
+ *
+ *  CF-AN-IDENTITY-RESOLVES-TO-ITS-ROW (2026-08-30): the catalog is asked
+ *  through the one resolver (catalogIdentityResolver), whose answer is
+ *  returned beside the identity so the exact-pool read unions the id with
+ *  its one numbered twin (the pool is keyed both ways until D29). It fails
+ *  OPEN: when the catalog could not be asked (a throttle, a non-404 read
+ *  error — kind "unresolved"), the id is priced AS GIVEN and logged, never
+ *  refused as identity-not-in-catalog; a genuine miss (kind "none" /
+ *  "ambiguous") is still the refusal it always was. */
 export async function resolveValuationIdentity(
   requestedId: string,
   printRunHint: number | null,
-): Promise<{ identity: ValuationIdentity; reason: ValuationReason }> {
+): Promise<{ identity: ValuationIdentity; reason: ValuationReason; resolution: CatalogRowResolution | null }> {
   const id = String(requestedId ?? "").trim();
   const identity = blankIdentity(id);
-  if (!id) return { identity, reason: "no-catalog-identity" };
+  if (!id) return { identity, reason: "no-catalog-identity", resolution: null };
 
   let candidate: string | null = null;
   let missReason: ValuationReason = "no-catalog-identity";
@@ -208,8 +218,27 @@ export async function resolveValuationIdentity(
   } else {
     try { candidate = await lookupHobbyIqCardIdForVendorCardId(id); } catch { candidate = null; }
   }
-  const slug = candidate ? await catalogSlugIfExists(candidate) : null;
-  if (!slug) return { identity, reason: missReason };
+  let resolution: CatalogRowResolution | null = null;
+  if (candidate) {
+    try {
+      resolution = await resolveIdentityToCatalogRow(candidate, { printRun: printRunHint });
+    } catch (err) {
+      resolution = { requested: candidate, id: null, kind: "unresolved", twins: [], error: (err as Error)?.message ?? String(err) };
+    }
+  }
+  let slug: string | null = resolution?.id ?? null;
+  if (!slug && resolution && resolution.kind === "unresolved") {
+    slug = resolution.requested;
+    console.warn(JSON.stringify({
+      event: "valuation_identity_unresolved_read_as_given",
+      source: "oneValuationPath.resolveValuationIdentity",
+      requestedId: id,
+      slug,
+      error: resolution.error ?? null,
+      detail: "the catalog could not be asked (not a 404); the id is priced as given, not refused as identity-not-in-catalog",
+    }));
+  }
+  if (!slug) return { identity, reason: missReason, resolution };
 
   const parsed = parseHobbyIqCardId(slug);
   const seg = slug.split(":");
@@ -228,7 +257,7 @@ export async function resolveValuationIdentity(
   identity.printRun = printRunHint ?? parsed?.printRun ?? row?.printRun ?? null;
   identity.playerName = row?.playerName ?? null;
   identity.imageUrl = row?.imageUrl ?? null;
-  return { identity, reason: null };
+  return { identity, reason: null, resolution };
 }
 
 /** Every canonical tier as a blank entry, in canonical order. */
@@ -311,7 +340,7 @@ export async function valueIdentity(req: ValuationRequest): Promise<Valuation> {
     computedAt: new Date(nowMs).toISOString(),
   });
 
-  const { identity, reason: idReason } = await resolveValuationIdentity(req.id, printRunHint);
+  const { identity, reason: idReason, resolution } = await resolveValuationIdentity(req.id, printRunHint);
   if (!identity.slug || idReason) {
     const v = base(identity);
     v.reason = idReason ?? "no-catalog-identity";
@@ -328,6 +357,9 @@ export async function valueIdentity(req: ValuationRequest): Promise<Valuation> {
   // A holding's second identity (req.cardId) joins the attempts after the
   // slug and its twin — the persist site's order since #1462, so a wrong
   // cardId's comps cannot dilute the checklist identity's own pool.
+  // CF-AN-IDENTITY-RESOLVES-TO-ITS-ROW: the resolver's answer rides along
+  // (resolved ONCE above), so a numbered-twin identity's first attempt reads
+  // the id and its twin in one query — the union recent-sales lists.
   const secondId = String(req.cardId ?? "").trim();
   const exact = await priceHoldingFromExactPool(
     { hobbyiqCardId: slug, cardId: secondId && secondId !== slug ? secondId : null, printRun: identity.printRun },
@@ -337,6 +369,7 @@ export async function valueIdentity(req: ValuationRequest): Promise<Valuation> {
       cardYear: identity.year,
       excludeContributorUserId: req.excludeContributorUserId ?? null,
       perTierWindows: true,
+      resolution,
     },
   );
   const v = base(identity);

@@ -231,8 +231,9 @@ async function fetchPoolRows(
   hobbyiqCardId: string | null,
   windowDays: number,
   nowMs: number,
+  hobbyiqCardIds: readonly string[] | null = null,
 ): Promise<RawCompRow[] | null> {
-  const resources = await readExactPoolRows({ cardId, hobbyiqCardId, windowDays, nowMs });
+  const resources = await readExactPoolRows({ cardId, hobbyiqCardId, hobbyiqCardIds, windowDays, nowMs });
   if (resources === null) return null;
   const raw = resources.filter((r) => Number.isFinite(r.price) && r.price > 0 && !!r.soldAt);
   // CF-DEDUPE-SOLD-COMPS (2026-08-22). One sale arrives up to three times —
@@ -277,8 +278,9 @@ async function queryComps(
   windowDays: number,
   nowMs: number,
   excludeContributorUserId?: string | null,
+  hobbyiqCardIds: readonly string[] | null = null,
 ): Promise<RawCompRow[] | null> {
-  const rows = await fetchPoolRows(cardId, hobbyiqCardId, windowDays, nowMs);
+  const rows = await fetchPoolRows(cardId, hobbyiqCardId, windowDays, nowMs, hobbyiqCardIds);
   return rows === null ? null : applySelfCompRule(rows, excludeContributorUserId);
 }
 
@@ -386,6 +388,12 @@ export async function computeUnifiedPrice(
   cardId: string,
   opts: {
     hobbyiqCardId?: string | null;
+    // CF-AN-IDENTITY-RESOLVES-TO-ITS-ROW (2026-08-30). The identity's other
+    // slug key(s), read in the SAME pool query: an un-numbered id and its one
+    // numbered twin are one card whose rows sit under two keys until the D29
+    // fleet re-keys sold_comps. exactPoolSupremacy forms this from the
+    // resolver's answer; nothing here unions on its own.
+    hobbyiqCardIds?: readonly string[] | null;
     grade?: { company: string | null; value: number | null } | null;
     // CF-PLAYER-TREND-ADJUSTMENT (Drew, 2026-08-04). When passed with
     // cardYear, unified pricing applies a wider-player-pool trend
@@ -467,7 +475,7 @@ export async function computeUnifiedPrice(
   // D22: the cascade's path per tier, for the basis ("60d n=1, 90d n=1, 180d n=2").
   const tierWindowNotes = new Map<string, string>();
   if (opts.perTierWindows) {
-    const all = await fetchPoolRows(cardId, opts.hobbyiqCardId ?? null, maxWindow, nowMs);
+    const all = await fetchPoolRows(cardId, opts.hobbyiqCardId ?? null, maxWindow, nowMs, opts.hobbyiqCardIds ?? null);
     if (all === null || all.length === 0) return empty;
     const withinWindow = new Map<number, RawCompRow[]>();
     const rowsWithin = (days: number): RawCompRow[] => {
@@ -503,13 +511,13 @@ export async function computeUnifiedPrice(
     comps = rowsWithin(selectedWindow);
   } else if (opts.fixedWindowDays && opts.fixedWindowDays > 0) {
     selectedWindow = opts.fixedWindowDays;
-    const rows = await queryComps(cardId, opts.hobbyiqCardId ?? null, selectedWindow, nowMs, opts.excludeContributorUserId ?? null);
+    const rows = await queryComps(cardId, opts.hobbyiqCardId ?? null, selectedWindow, nowMs, opts.excludeContributorUserId ?? null, opts.hobbyiqCardIds ?? null);
     if (rows === null) return empty;
     comps = rows;
   } else {
     const path: string[] = [];
     for (const w of WINDOWS) {
-      const rows = await queryComps(cardId, opts.hobbyiqCardId ?? null, w.days, nowMs, opts.excludeContributorUserId ?? null);
+      const rows = await queryComps(cardId, opts.hobbyiqCardId ?? null, w.days, nowMs, opts.excludeContributorUserId ?? null, opts.hobbyiqCardIds ?? null);
       if (rows === null) return empty;
       comps = rows;
       // If a specific tier was requested, measure density on THAT tier

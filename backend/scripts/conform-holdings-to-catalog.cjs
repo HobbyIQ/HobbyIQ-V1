@@ -377,7 +377,12 @@ async function main() {
   if (unresolvedEx.length) { console.log(`\n  unresolved — the acquisition/ruling list:`); for (const e of unresolvedEx) console.log(`     ${e.slice(0, 110)}`); }
 }
 
-/** Pure: which catalog row a composed slug resolves to among the card's rows (the un-numbered row, else its ONE numbered twin, else nothing). */
+/** Pure: which catalog row a composed slug resolves to among the card's rows (the un-numbered row, else its ONE numbered twin, else nothing).
+ *  CF-AN-IDENTITY-RESOLVES-TO-ITS-ROW (2026-08-30): the rule's HOME is
+ *  backend/src/services/catalog/catalogIdentityResolver.ts (pickCatalogRow) —
+ *  the readers and the holding writers use it. This is its CJS copy (a .cjs
+ *  cannot import the TS module); tests/conformNeverAdoptsAVendorRow.test.ts
+ *  pins both against ONE fixture table so they cannot drift. */
 /** The numbered twins of an un-numbered id: exactly `<id>:num-N` — a graded child (`<id>:num-N:psa-9`) is derived, never a twin (Gillen, 2026-08-30: two graded children made the card "ambiguous"). */
 function numberedTwinsOf(resolved, ids) {
   const prefix = resolved + ":num-";
