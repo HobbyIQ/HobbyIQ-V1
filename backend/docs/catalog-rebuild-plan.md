@@ -1476,85 +1476,21 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   nightlies' logs must each show a `reconciled:` line (a green run without
   one is the old failure shape), and grade-explode should complete for the
   first time since gradeLadder was wired.
-    **D19 — the pool keeps every sale once (built on `feat/d19`, 2026-08-30, 4
-  commits, unmerged; backend/src unchanged — no deploy).** D9 / D12-a fixed
-  every FUTURE user emit; the D14 probe measured what the OLD rows still
-  carry, and D19 is the backfill: two report-only, sharded, marker-relaunched
-  runner scripts over one helper. **The helper**
-  (`scripts/lib/relocate-sold-comp.cjs`): /cardId is the partition key, so a
-  re-key is a new document plus a delete — the helper writes the kept row,
-  reads it back (id, cardId and a stamp field must match), and only then
-  deletes the old rows one by one; an upsert or read-back failure deletes
-  nothing, a failed delete is a DUPLICATE reported on its own line and never
-  retried into a missing row (tca-match-enricher's delete-then-create is the
-  opposite order). **`rekey-user-comps`** (ebay-user-purchase +
-  ebay-user-sale, 110 rows): LINK the row to its holding (the `holding::`
-  key, the eBay order / item id it carries, or — sales — the ledger entry
-  with the same soldAt instant and price); IDENTITY by D12-a
-  (holding.hobbyiqCardId → holding.cardId-if-slug → the row's own
-  hobbyiqCardId, each only when the catalog holds it, else UNRESOLVED with a
-  reason); KEY by D9 (`purchaseSaleIdentity`: order id → item id →
-  holding::, price = SUBTOTAL; a sale: ledger.ebayOrderId → the holding's
-  ids → the D7b timestamp key); rows deriving one (id, cardId) are one
-  transaction — what varied is printed before the word duplicate, two grades
-  or two parallels REFUSE. Dry run (read-only, 2026-08-30): 2 already
-  canonical, **58 would re-key** (33 onto the order id, 34 keep their key and
-  change partition only), **4 would collapse** (7 documents → 4: the import's
-  `holding::` row beside the poll's row, or one `holding::` id under two
-  partitions), 0 refused, **42 unresolved** — 34 `slug-not-in-catalog` (the
-  row's only slug is a retired or never-minted row:
-  `2026:bowman:cpa-oc:refractor:auto`, `1997:topps-finest:238:base`,
-  `2024:bowman-chrome:cpa-id:refractor:auto` … — D10's acquisition list, not
-  a re-key), 7 `holding-two-identities`, 1 no identity; 54 of the 110 rows
-  name holdings that no longer exist and re-home on their own slug with the
-  key kept. Two rulings to read (NEEDS DREW if either should go the other
-  way): (1) a re-keyed purchase takes D9's SUBTOTAL from its purchase record —
-  **30 rows move from totalCost to subtotal** (74.86 → 64, 1,260 → 1,250 …),
-  the price the live import has written since #1454; (2) a holding whose
-  cardId and hobbyiqCardId are BOTH hiq slugs and disagree (the D9
-  two-identities finding: `…cpa-ce:red-refractor:auto:num-5` vs
-  `…cpa-ce:chrome-refractor:auto`) may not move a sale off a catalog-held
-  slug on a coin toss — 7 rows wait for conform-holdings.
-  CF-A-SALE-IS-NEVER-LOST prints the count per source and per contributor
-  before and after: 110 → 106 expected (= 110 − 65 deleted + 61 created; the
-  4 collapses are the only net change), a mismatch is exit 4.
-  **`collapse-ch-dual-ids`**: 1,842 `ch-comp::` rows (a shape nothing writes
-  today) name 105 CH cards; every partition read whole (11,296 rows) and
-  grouped by (day, price cents): **979 pairs** (one row of each shape), 73
-  ambiguous groups, 784 comp rows the daily path never saw. The variance
-  histogram, before any rule: soldAt 100% (the two paths report different
-  times of the same day), imageUrl 99.9%, parallelSlug 88.5%, parallel
-  78.4%, hobbyiqCardId 72.9%, setName 71.8%, title 70.2% (the comp path kept
-  the real listing title; the daily path composed `YEAR SET #NUM VARIANT`),
-  cardNumber 30.8%, isAuto 12.8%, printRun 9.5%, grade 7.9%. **Refused 660
-  of 979**: parallel-differs 517 (`Base → Mojo Refractor` 80, `Base → Chrome
-  Refractor` 72, `Reptilian Refractor → Blue Refractor` 35, `Refractor →
-  Base` 32 …), grade-differs 77 (RAW → PSA 10 ×43, RAW → PSA 9 ×33),
-  auto-differs 49, cardnumber-differs 17 — two rows that disagree on the
-  grade or the parallel are two sales by the rule, and the parallel table is
-  a finding in its own right: for ONE CH card id the comp path stamped a
-  parallel the daily path's title never said (the retired warm-pool shape) —
-  a question for the writers, not a licence to guess here. **Would collapse
-  319** (kept ch-daily 164 / ch-comp 155 — a catalog-held slug outranks a
-  title, then the real title outranks the composed one; imageUrl folded 155,
-  composite 74, parallelSlug 60; the dropped row's title / slug / parallel
-  ride on `collapsedFrom`). Tests (`d19.poolKeepsEverySaleOnce`, 31 cases):
-  the link, the derivation through the real `purchaseSaleIdentity`, the group
-  plan and its refusals, the pairing, the CH decision, the helper against a
-  fake container (create fails → nothing deleted; read-back differs → nothing
-  deleted; delete fails → duplicate reported, tried once; 404 → not ours),
-  and the fleet discipline (report-only default, BACKFILL_APPLY, the marker,
-  reportWrites, whitelist + marker-keyed relaunch); seven mutation checks
-  red. The reconciliation guard's write net learns `relocateSoldComp(`, so a
-  script that writes only through the helper is a writer to it (runner
-  writers reconciling 33/79 → 35/81; marker-printers relaunched on the marker
-  25/28 → 27/30; the debt lists unchanged). Dispatch
-  after merge: `rekey-user-comps` apply (one slot, 110 rows), then
-  `collapse-ch-dual-ids` apply (105 cards), then re-run `audit-pool-identity`
-  — the after-numbers are user purchases keyed by the order id with cardId
-  hiq for every linked row, and (day, price) pairs under two shapes = the
-  refused 660 only. Not touched: `manual-user-entry` (`admin-manual::` keys,
-  3 rows) and the 360,872 CardHedge rows keyed by a bare bubble id.
+    **Merged #1503 (09:35Z 08-30); deploy #6 33283656704.** Verified with the
+    exit-code gate (tsc 0, vitest 0). Found on the way: `grade-explode` and
+    `sold-comps-ch-backfill` had been crashing at `require()` — their
+    workflows never built `dist/`; eleven workflows gain `npx tsc` and a guard
+    makes it structural; the v2 guard's `wired` predicate was satisfied by an
+    import line alone (now demands a call). Left declared: the 46 runner
+    writers, three marker-printers with no relaunch step (`apply-setkey-
+    rulings`, `map-yearprefixed-setkeys`, `retire-prose-parallel-rows` — an
+    ops decision), `reprice-user-holdings` / `drain-staging-backlog` (no
+    honest `intended` on the caller side). Named, not fixed:
+    `tca-match-enricher`'s delete-then-create re-key. **D19** (building,
+    `feat/d19`, the single builder): re-key the old user comps to the D9/D12-a
+    identity (a sale is never lost: create-verify-delete), collapse the
+    CardHedge `ch-daily::` / `ch-comp::` dual ids (refusing any pair whose
+    grade or parallel differs), variance printed before "duplicate".
 - ◐ D10 **Look at all holdings for everyone** (Drew, 2026-08-29 17:15Z). The three
   defects under holding `ca7a150b` are not specific to it. **#1448
   `audit-all-holdings`** (read-only, runner-whitelisted): per holding —
@@ -1716,7 +1652,41 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   contract test red in the run — a failed FILE (its `beforeAll` hook timed
   out at 30 s under load) with zero failed TESTS, and my gate counted tests;
   it passes alone on main (23/23). The gate reads vitest's exit code from
-  here on. Drew (22:30Z): "I see 2 max williams superfractors …
+  here on.
+  **Drew (10:20Z): "search select to inventory … isn't selecting the right
+  card … it is the blue refractor, but priced super low and has no comps
+  when I know there are comps."** Replayed the web's `/api/search/cards`
+  dispatcher read-only: the full query ranks the checklist card #1; the
+  short ones are honest ambiguity (`theo gillen blue refractor` ties five
+  real Gillen Blue Refractors at 0.9 — 2025 Bowman #BTP-76, 2024 Draft
+  #BD-73, Bowman's Best, Bowman Chrome #BMA-TG, the CPA-TG auto; `2024
+  bowman draft theo gillen blue` ranks the base card's Blue /150 first
+  because the query never said refractor or auto) and the rows show year /
+  set / #number / Auto, so the pick is the user's. The price and "no comps"
+  are the identity forms: `hobbyiqCardId` on the folded-away un-numbered
+  twin, `cardId` on a sale-minted `bowman-chrome` row, while the checklist
+  row `…:num-150` holds 5 raw sales → **conform-holdings APPLY dispatched
+  10:30Z (33284403692; dry #3's corrections are exactly the numbered-twin
+  moves: Gillen, Caminiti, Griffey Radiance /1000, Sykora, Max Williams Gold
+  /50 — the Max Williams Refractors still land on the un-numbered row until
+  the cross-source folds finish, then a second pass) + Drew's reprice
+  (33284407911)** — the after-number is this holding's FMV from its 5 sales.
+  Runner landings by 10:30Z: card-profile 8/8 (writes good, exits red on
+  the pre-#1499 accounting), one-of-one shards 0/2/3/4/6 (≈28k repairs
+  each), re-ingest #2 shards 3/5.
+  **The conform APPLY (33284403692) corrected 10 but SKIPPED Gillen:** the
+  new row rule counted `…:num-150:psa-9` / `:psa-10` — graded children —
+  as numbered twins and called the card ambiguous (Caminiti, with no
+  children yet, went through and now prices $205.40 from its own pool).
+  **#1506:** `numberedTwinsOf()` matches `<id>:num-N` exactly and the
+  candidate query excludes graded rows; **APPLY #2 (33284681106) moved both
+  Gillen Blue Refractor holdings to `…:num-150`** (8 corrections, reconciled);
+  reprice #3 dispatched (33284849571). The pool behind that card: five raw
+  sales — $125, $161.50, $192.51, $250 (2025) and **$729 on 2026-08-20** —
+  and the projection's 60-day window holds only the last, so the raw
+  holding reads $729 (`exact-pool-weighted-median`): the projected-next-sale
+  doctrine at n = 1, D16's flagged judgment call — **NEEDS DREW (below)**.
+  Deploys #5/#6 live (`ca2c467`). Drew (22:30Z): "I see 2 max williams superfractors …
   superfractors are 1/1" — bcp's un-numbered `superfractor:auto` beside
   beckett's `:num-1`, and the same pair on Refractor /499, Black /10, Red /5,
   Red Lava, Sky Blue. **#1470:** the fold's decision is a pure tested rule
@@ -1952,7 +1922,94 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   panini-donruss) on both sales and checklists. Decide: identity key = the
   product, family key = a separate fallback field; then re-slug catalog + pool.
 
+    **D19 — the pool keeps every sale once (built on `feat/d19`, 2026-08-30, 4
+  commits, unmerged; backend/src unchanged — no deploy).** D9 / D12-a fixed
+  every FUTURE user emit; the D14 probe measured what the OLD rows still
+  carry, and D19 is the backfill: two report-only, sharded, marker-relaunched
+  runner scripts over one helper. **The helper**
+  (`scripts/lib/relocate-sold-comp.cjs`): /cardId is the partition key, so a
+  re-key is a new document plus a delete — the helper writes the kept row,
+  reads it back (id, cardId and a stamp field must match), and only then
+  deletes the old rows one by one; an upsert or read-back failure deletes
+  nothing, a failed delete is a DUPLICATE reported on its own line and never
+  retried into a missing row (tca-match-enricher's delete-then-create is the
+  opposite order). **`rekey-user-comps`** (ebay-user-purchase +
+  ebay-user-sale, 110 rows): LINK the row to its holding (the `holding::`
+  key, the eBay order / item id it carries, or — sales — the ledger entry
+  with the same soldAt instant and price); IDENTITY by D12-a
+  (holding.hobbyiqCardId → holding.cardId-if-slug → the row's own
+  hobbyiqCardId, each only when the catalog holds it, else UNRESOLVED with a
+  reason); KEY by D9 (`purchaseSaleIdentity`: order id → item id →
+  holding::, price = SUBTOTAL; a sale: ledger.ebayOrderId → the holding's
+  ids → the D7b timestamp key); rows deriving one (id, cardId) are one
+  transaction — what varied is printed before the word duplicate, two grades
+  or two parallels REFUSE. Dry run (read-only, 2026-08-30): 2 already
+  canonical, **58 would re-key** (33 onto the order id, 34 keep their key and
+  change partition only), **4 would collapse** (7 documents → 4: the import's
+  `holding::` row beside the poll's row, or one `holding::` id under two
+  partitions), 0 refused, **42 unresolved** — 34 `slug-not-in-catalog` (the
+  row's only slug is a retired or never-minted row:
+  `2026:bowman:cpa-oc:refractor:auto`, `1997:topps-finest:238:base`,
+  `2024:bowman-chrome:cpa-id:refractor:auto` … — D10's acquisition list, not
+  a re-key), 7 `holding-two-identities`, 1 no identity; 54 of the 110 rows
+  name holdings that no longer exist and re-home on their own slug with the
+  key kept. Two rulings to read (NEEDS DREW if either should go the other
+  way): (1) a re-keyed purchase takes D9's SUBTOTAL from its purchase record —
+  **30 rows move from totalCost to subtotal** (74.86 → 64, 1,260 → 1,250 …),
+  the price the live import has written since #1454; (2) a holding whose
+  cardId and hobbyiqCardId are BOTH hiq slugs and disagree (the D9
+  two-identities finding: `…cpa-ce:red-refractor:auto:num-5` vs
+  `…cpa-ce:chrome-refractor:auto`) may not move a sale off a catalog-held
+  slug on a coin toss — 7 rows wait for conform-holdings.
+  CF-A-SALE-IS-NEVER-LOST prints the count per source and per contributor
+  before and after: 110 → 106 expected (= 110 − 65 deleted + 61 created; the
+  4 collapses are the only net change), a mismatch is exit 4.
+  **`collapse-ch-dual-ids`**: 1,842 `ch-comp::` rows (a shape nothing writes
+  today) name 105 CH cards; every partition read whole (11,296 rows) and
+  grouped by (day, price cents): **979 pairs** (one row of each shape), 73
+  ambiguous groups, 784 comp rows the daily path never saw. The variance
+  histogram, before any rule: soldAt 100% (the two paths report different
+  times of the same day), imageUrl 99.9%, parallelSlug 88.5%, parallel
+  78.4%, hobbyiqCardId 72.9%, setName 71.8%, title 70.2% (the comp path kept
+  the real listing title; the daily path composed `YEAR SET #NUM VARIANT`),
+  cardNumber 30.8%, isAuto 12.8%, printRun 9.5%, grade 7.9%. **Refused 660
+  of 979**: parallel-differs 517 (`Base → Mojo Refractor` 80, `Base → Chrome
+  Refractor` 72, `Reptilian Refractor → Blue Refractor` 35, `Refractor →
+  Base` 32 …), grade-differs 77 (RAW → PSA 10 ×43, RAW → PSA 9 ×33),
+  auto-differs 49, cardnumber-differs 17 — two rows that disagree on the
+  grade or the parallel are two sales by the rule, and the parallel table is
+  a finding in its own right: for ONE CH card id the comp path stamped a
+  parallel the daily path's title never said (the retired warm-pool shape) —
+  a question for the writers, not a licence to guess here. **Would collapse
+  319** (kept ch-daily 164 / ch-comp 155 — a catalog-held slug outranks a
+  title, then the real title outranks the composed one; imageUrl folded 155,
+  composite 74, parallelSlug 60; the dropped row's title / slug / parallel
+  ride on `collapsedFrom`). Tests (`d19.poolKeepsEverySaleOnce`, 31 cases):
+  the link, the derivation through the real `purchaseSaleIdentity`, the group
+  plan and its refusals, the pairing, the CH decision, the helper against a
+  fake container (create fails → nothing deleted; read-back differs → nothing
+  deleted; delete fails → duplicate reported, tried once; 404 → not ours),
+  and the fleet discipline (report-only default, BACKFILL_APPLY, the marker,
+  reportWrites, whitelist + marker-keyed relaunch); seven mutation checks
+  red. The reconciliation guard's write net learns `relocateSoldComp(`, so a
+  script that writes only through the helper is a writer to it (runner
+  writers reconciling 33/79 → 35/81; marker-printers relaunched on the marker
+  25/28 → 27/30; the debt lists unchanged). Dispatch
+  after merge: `rekey-user-comps` apply (one slot, 110 rows), then
+  `collapse-ch-dual-ids` apply (105 cards), then re-run `audit-pool-identity`
+  — the after-numbers are user purchases keyed by the order id with cardId
+  hiq for every linked row, and (day, price) pairs under two shapes = the
+  refused 660 only. Not touched: `manual-user-entry` (`admin-manual::` keys,
+  3 rows) and the 360,872 CardHedge rows keyed by a bare bubble id.
+
 ## NEEDS DREW (not code)
+
+- **A single fresh sale carrying the number:** Gillen Blue Refractor /150 —
+  four 2025 sales $125–$250, one $729 twelve days ago; the 60-day window has
+  one sale, so the card reads $729. That is "projected next sale" at n = 1
+  (D16). Options: keep (the latest sale IS the market); require n ≥ 2 in the
+  window before the window wins (else widen to 90/180 and let the trend
+  project); or cap a one-sale window's move against the prior window. Rule?
 
 - **Retire old-CLC duplicates at non-canonical ids (D3c):** identity-based
   coverage says the old `checklistcenter`/`checklistcenter-html` rows are
