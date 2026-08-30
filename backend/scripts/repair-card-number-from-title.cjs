@@ -291,8 +291,13 @@ async function main() {
   for (const m of modes) {
     if (stopReason) break;
     const srcSql = SOURCES.length ? ` AND c.source IN (${SOURCES.map((_, i) => `@s${i}`).join(",")})` : "";
+    // SELECT * and not a projection. The row read here becomes the document
+    // UPSERT-ed at the new address, so any field the projection left out would
+    // be silently dropped from the sale -- url, sellerHandle, verifiedByUser,
+    // normalizedSetKey, every earlier repair's stamp. A re-key must carry the
+    // whole row or it is a partial rewrite wearing a move's clothes.
     const query = {
-      query: `SELECT c.id, c.cardId, c.hobbyiqCardId, c.cardNumber, c.title, c.source, c.sport, c.playerName, c.parallel, c.isAuto, c.gradeCompany, c.gradeValue, c.price, c.soldAt, c.printRun, c.cardYear, c.setName, c.sourceExternalId, c.contentHash, c.imageUrl, c.contributorUserId, c.vendorCardId, c.confidence, c.cardNumberUnreadable FROM c WHERE ${MODE_SQL[m]} AND IS_DEFINED(c.title)${srcSql}`,
+      query: `SELECT * FROM c WHERE ${MODE_SQL[m]} AND IS_DEFINED(c.title)${srcSql}`,
       parameters: SOURCES.map((v, i) => ({ name: `@s${i}`, value: v })),
     };
     console.log(`\n-- MODE=${m}: ${MODE_SQL[m]}`);
