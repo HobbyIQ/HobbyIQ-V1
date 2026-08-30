@@ -2409,13 +2409,91 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
     **Round-3 rulings (21:15Z):** BDA- on 2025 Bowman basketball — the
     builder reads the page and rules from its text; vintage — acquire TCDB
     next (→ D25, after D24); Pokémon — reopen after D23 and the retires.
-    **D23 (building, `feat/d23`, the single builder):** the slug generator
-    stops collapsing (a product table with the panini- rule), card numbers
-    keep the checklist's hyphen with hyphen-insensitive matching, the family
-    table feeds only pricing fallbacks and search, and a rename fleet
-    through catalogRowOps over the ≈1.2M disagreeing rows with sales and
-    holdings re-pointed; then `audit-source-coverage` → the old-CLC
-    duplicate retire (Drew's go) → D21 → D24 → D25.
+    **D23 — the id carries the product (built on `feat/d23`, 2026-08-30, 5
+    commits, unmerged; backend/src changed — dispatch "Daily 5AM ET Refresh &
+    Deploy" after merge).** Drew's ruling, as code: (a) `productSetKeys.ts` is
+    the one spelling per product, consulted by `normalizeSetKey` ahead of the
+    regex vocabulary — `topps-series-1/2`, `topps-series-1-1st-edition`,
+    `topps-update-series` (baseballcardpedia's "Topps Update" — 630k rows — is
+    a spelling of it), `topps-updates-and-highlights` (2006–09, as named),
+    `topps-chrome-update-series`, `topps-heritage-high-number`,
+    `bowman-draft-1st-edition`, `upper-deck-series-1/2`, and every Leaf product
+    the catalog's own field spellings name (the bare `/leaf/` rule collapsed
+    all 400k of them). Only `spelled` entries take part in naming; the rest
+    carry family data and leave their spelling to the vocabulary's ordering
+    ("Bowman Chrome Prospects" still folds to bowman-chrome, "Donruss Optic"
+    stays panini-optic). (b) **Donruss — judgment call.** Every baseball
+    checklist source names the modern product "Donruss" (519,422 rows;
+    "Panini Donruss" only in football, hobbymonitor and derived rows), so the
+    name cannot carry the ruling; `DONRUSS_SPELLING_POLICY` (compile-time)
+    does: default `panini-era` (2009+ → panini-donruss, before → donruss —
+    Drew's "Panini-era products keep the prefix", and the ids already say so),
+    alternative `as-named`. (c) The family is READ FROM THE TABLE, never a
+    prefix of the key — `productFamilyKey`, the matcher's family step and its
+    widening (exact keys in an IN, never `-series` prefixes), `deriveParentSetKey`
+    and the reference ladder; an unknown key is its own family; a legacy
+    spelling (`topps-update`) sits in its product's family so pool rows keep
+    pricing while the fleet runs; `productFamilyIsATable.test.ts` scans the
+    family modules for the prefix idioms. (d) The card-number segment keeps
+    the checklist's hyphen (bd-152; US135 has none); every compare is
+    `sameCardNumber`, every lookup `cardNumberVariants` (an indexable IN over
+    the case / hyphen-free / hyphenated spellings): matcher, resolver, search,
+    verify, the cross-setkey rung, the sibling count, the vendor-sale bands,
+    the holding matcher, the rematch. `deriveCatalogEntry` writes the id's
+    setKey segment into the field (both halves at mint); `productQualifiers`
+    lifts the Chrome Update refusal. **Full-population estimate (read-only,
+    `MODE=estimate`): 2,532,021 rows** — topps-update-series 775,578, Donruss
+    (era) 378,495, topps-series-2 216,681, topps-series-1 213,779,
+    topps-chrome-update-series 199,073 (incl. 27k `topps-chrome` rows whose
+    setName says Update), leaf-metal 131,740, leaf-vivid 109,224, the other
+    Leaf lines ≈460k, topps-heritage-high-number 39,820, upper-deck-series-1/2
+    11,558 / 17,162, topps-chrome-update-sapphire 8,111 (the `-edition` field
+    spelling), bowman-1st-edition 7,610, topps-series-1-1st-edition 4,396,
+    bowman-draft-1st-edition 3,427; `topps-updates-and-highlights` 0 (its
+    181,417 rows were slugified straight to the product and are canonical).
+    **Dry runs (LIMIT=200, report-only, `rename-setkey-to-product.cjs`
+    MODE=product per family):** topps-series-1 208 → moved 162 / replaced 46
+    (sales 3,310, graded children 1,084); topps-series-2 208 → 116 / 92
+    (1,934; 1,405); topps-series-1-1st-edition 205 → 205 moved;
+    topps-update-series 208 → moved 134 / folded 3 / replaced 71 (1,204;
+    1,936); topps-chrome-update-series 208 → 166 / 27 / 15 (2,775; 1,217);
+    topps-chrome-update-sapphire 214 → 42 / 12 / 2 + **158 field heals**;
+    topps-heritage-high-number 208 → 158 / 50; bowman-draft-1st-edition 213 →
+    213 moved; upper-deck-series-1/2 208 → 208 each; leaf-vivid 208 → 155 / 53;
+    leaf-metal, leaf-optichrome 208 → 208; leaf-metal-draft 207 / 1;
+    leaf-trinity 204 / 4; Donruss (era) 224 → moved 64 / folded 148 / refused
+    12 (`not-an-identity-row`: graded ids without a gradeTier). Zero failed,
+    zero gone, zero name-over-field. The folded / replaced twins are the
+    **old-CLC rows** (`checklistcenter` / `-html` minted product-spelled ids
+    directly: 41,201 topps-update-series, 35,591 topps-series-2, 25,939
+    topps-series-1, +22k html), so the fleet lands the new checklist row on top
+    of the old-CLC duplicate wherever both exist and the retire finishes the
+    rest. **MODE=hyphen** (SOURCES=bccp, LIMIT=200): 2,881 candidates → 201
+    actionable (folded 179 / replaced 22 onto a checklist-authority twin),
+    2,671 refused for no twin, 9 refused because the twin was a derived row.
+    **MODE=holdings:** 12 users / 88 holdings — 54 canonical, 20 no id, 1
+    vendor id, **1 re-point: Witt 3fe98abe `bd152` → `bd-152`** (derived,
+    confirmed by point read — D22's flag), 12 unresolved (products absent
+    from the catalog: 1992 Studio with an `undefined` setKey, 1987 Bellingham,
+    UD Black Diamond D24 /1500, Traded Tiffany 70T, Finest ×3, Bowman's Best
+    BBP4 under `bowman`, four Bowman / Bowman Chrome CPA parallels — the
+    acquisition list, not D23's). Refusals: MODE=hyphen without SOURCES and
+    SCOPE naming no ruled product both exit 1. **Pace:** each dry-run row is
+    four round trips at ~2.5 s under today's fleet contention (24 rows in
+    37 s at concurrency 8), so 2.5M rows at 8 slots × 16 is a multi-day fleet;
+    dispatch at 16 slots × concurrency 24 once the current fleets finish, and
+    expect ~10–15 sale patches per Topps-flagship row. **Dispatch order:**
+    merge → deploy (`/api/health` sha) → `gh workflow run backfill-runner.yml
+    -f script=rename-setkey-to-product -f apply=true -f mode=product -f slot=N
+    -f slots=8 -f concurrency=16` (N = 0…7; relaunches on the budget marker,
+    every input forwarded) → `-f mode=holdings -f apply=true -f slot=0 -f
+    slots=1` → (optional) `-f mode=hyphen -f sources=bccp -f apply=true -f
+    slot=N -f slots=8` → `materialize-graded-identities` (the retired children
+    regenerate under the new ids) → re-run `audit-source-coverage` → the
+    old-CLC duplicate retire (Drew's GO after D23) → then Drew's order below.
+    Unmatched pool rows still keyed under an old spelling (no catalog row at
+    `topps-update:…`) are the rematch's population; the family table keeps
+    them pricing within the family meanwhile.
     **Order after D23 (Drew, 05:05Z 08-30): D28 → D26 → D21 → D24 → D25.**
     **D28 — the card number is never a grade, a print run, a year, an
     ordinal, or a lot (RULED: right after D23).** Harrison's Ohtani
