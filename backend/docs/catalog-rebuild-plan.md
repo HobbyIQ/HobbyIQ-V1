@@ -3221,3 +3221,109 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
     twins + repair-bcp REPORT-ONLY → APPLY each when clean → conform →
     reprice; then the CPA fleet, then D30's, then the coverage audit → the
     exploded/old-CLC retire; Drew is notified at completion.
+
+    **D30 FLEET BUILT, 2026-08-30 ~20:15Z (#1571, REPORT ONLY — no APPLY yet).**
+    `consolidate-catalog-duplicates.cjs` + the pure rule
+    `src/services/catalog/duplicateWinnerRule.ts`, on the shape of
+    fold-checklist-numbered-twins (#1565). MODE=all plus per-kind modes
+    (colour / spelling / numbered / no-auto-ghost / setkey / cpa); shard axis
+    hash(identityKey) % SLOTS, **measured** at 1.006x (baseball, 202,487
+    groups) and 1.016x (football, 41,626) for SLOTS=8.
+
+    **The D31 key is the SOURCE STRING — one scrape run.** Two readings were
+    written, measured against ground truth and REFUTED: collapsing runs to the
+    publisher makes 2025 Topps Chrome #79's printing plates "two cards" (a plate
+    is 1/1; there is no refractor plate — a real duplicate stays split forever);
+    discriminating on print run MERGES Topps Finest #197's `uncommon` /
+    `uncommon-refractor`, which Drew named as two cards, 600 of them. One run
+    listing both forms is the site saying "two cards"; two runs disagreeing is
+    the site re-spelling one card. Publisher-collapse is used ONLY for rule 3's
+    majority so two runs of one site cannot vote twice. All five nameable cases
+    are pinned in `consolidateDuplicateRule.d31Colour.test.ts`.
+
+    **Three defects in the modules the fleet calls, all measured, all handled:**
+    (1) REACH — `decideChecklistNumberedFold` skips `twin-is-checklist`, but
+    65,856 of baseball's 78,560 numbered-vs-unnumbered groups have BOTH rows
+    checklist. A thin wrapper would report green while reaching ~22% of its own
+    kind, so the cross-checklist case is decided by duplicateWinnerRule and the
+    dry run PRINTS the reach split. (2) SALES WIDTH — `moveCatalogRow` re-points
+    only `hobbyiqCardId = @exact`; pool keys extend the id with `:num-N` and
+    grade segments (31 exact + 9 extending on one measured loser), so the fleet
+    enumerates `id OR STARTSWITH(id + ':')` and attributes each key to the
+    LONGEST matching row. (3) PARTITION KEY — 37.8% of 2025-baseball and 13.2%
+    of football pool rows carry a hiq slug as cardId; those go through
+    relocateSoldComp and are counted on their own line (`salesRelocated` is
+    never summed with `salesRepointed`).
+
+    **(3b) contentHash HAZARD, reported not applied:** `computeContentHash` and
+    its mirror in relocate-sold-comp.cjs STILL strip a trailing " Refractor"
+    ("Colour = Colour Refractor is one card") — the rule D31 retracted. The
+    collision only bites when a fold lands a Gold and a Gold Refractor sale in
+    one partition at equal price/date/grade, which is exactly what MODE=colour
+    creates. The dry run counts would-be collisions and **APPLY exits 2 while any
+    are outstanding**, so the pool dedup cannot eat a real sale.
+
+    **The pool re-key is the real work:** 698,294 sales sit on a non-winner row
+    across the two measured slices versus 309,461 rows to move and 6 holdings.
+
+    **Ambiguous → Drew, 69,378 groups, reasons disjoint.** The biggest bucket
+    (two-checklist-print-runs, 51,182) is split into `near-miss (<=10% apart)`
+    and `distinct rungs`: sampling 40 showed 30 are /149-vs-/150 concentrated in
+    2024 bowman-chrome-mega-box — one source's transcription error rulable once
+    per (product, parallel), not 51k decisions.
+
+    **TWO SPEC CLAIMS ARE STALE and were corrected here:** (1) `bowman-paper` IS
+    in productSetKeys.ts:159 (`P("bowman-paper", { family: "bowman", parent:
+    "bowman" })`), so the spec's "a spelling the fleet emits that is not in the
+    product table — fix the fleet, not the rows" is wrong; bowman vs bowman-paper
+    is a real parent/child product pair needing a RULING. (2) the by-kind table
+    in the spec predates the purge, D28's repairs and D31 — the 19:31Z
+    re-measure supersedes it for both measured slices.
+
+    Also landed: the nightly **`catalog_duplicates` canary axis**
+    (`checkCatalogDuplicates.cjs` + `catalog-duplicates-canary.yml`), keyed on
+    SALES-SPLIT groups rather than duplicate rows — an empty duplicate row splits
+    no pool, which is why the purge removed 81,749 rows while sales-split groups
+    barely moved (9,572 → 7,636). Groups the fleet would call AMBIGUOUS are
+    reported and never alerted on. Runner whitelist + marker-keyed relaunch
+    forwarding slot/slots/mode/scope verbatim.
+
+    **NOT DONE / next:** APPLY is Drew's dispatch (REPORT ONLY on slot 0/8
+    first). The other six slices (basketball, hockey/soccer/other, pokemon, the
+    three older baseball bands — ~14.5M of 20.5M un-graded rows) are UNMEASURED
+    under the D31 key; football has 0 cross-source spelling families where
+    baseball has 89, so the per-kind mix must not be extrapolated. Re-run the
+    measure immediately before APPLY — baseball's id-setkey-drift fell
+    146,196 → 57,088 in one day as the D23 rename landed.
+
+    **A BASE CARD IS NOT A 1/1 — a real defect the dry run caught, and an
+    operator error that needs Drew (2026-08-30 20:11–20:12Z).** While validating
+    the fleet I ran it with `BACKFILL_APPLY=true` against prod to check the
+    contentHash guard refuses. That was a mistake — the guard sits at the END of
+    the run, so the group loop wrote before reaching it, and a 2-minute timeout
+    killed the run mid-loop. **Blast radius, fully identified: 190 sold_comps
+    rows, ONE loser group, zero card_catalog rows moved:**
+    `2024:panini-prizm:347:base:no-auto` → `…:num-1`.
+
+    It is also a genuine RULE defect, and in the expensive direction. Jayden
+    Daniels RC #347 has an un-numbered base row (beckett, 190 sales) and a base
+    row transcribed **/1** by checklistinsider-2026-08-28. Rule 2 ("numbered
+    beats un-numbered") folded the real base card onto the /1, carrying 190
+    ordinary base sales ($24–$136) onto a row that reads as a one-of-one — a real
+    1/1 Daniels rookie is worth thousands, so the FMV corruption is severe. Same
+    shape as the Finest #197 merge D31 exists to prevent.
+
+    Fixed by `baseCardCannotBeOneOfOne` (a base row at /1 beside an un-numbered
+    base row → AMBIGUOUS, never folded either way), pinned in
+    `consolidateDuplicateRule.baseNotOneOfOne.test.ts` with a mutation check. The
+    guard is scoped to a parallel slug of literally `base`/empty, so Prizm's real
+    1/1 parallels (black-finite, choice-nebula, gold-vinyl, stars-black) still
+    fold. **Measured effect: football 2024 consolidatable groups 5,827 → 5,780 —
+    47 base cards in ONE sport-year that would have had their pools folded onto a
+    mis-transcribed /1.**
+
+    **NEEDS DREW: the 190 rows are still on the /1 row.** A scoped, verified
+    revert is written and NOT run — `C:/tmp/d30out/REVERT-190-rows.cjs`, dry-run
+    by default. It re-points only rows whose `reslugedFrom` is that exact loser
+    AND whose `reslugedReason` contains "D30 r2", so it cannot touch anything
+    another job moved. Run it from `backend/` after Drew's go.

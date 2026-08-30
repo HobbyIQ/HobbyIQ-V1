@@ -1,0 +1,15 @@
+{
+  "_doc": "D30 groups the consolidation fleet REFUSED to decide -- written by scripts/consolidate-catalog-duplicates.cjs. Reasons are DISJOINT: the first match names the group, and the counts sum to the ambiguous total. Print-run conflicts and player-differs are NOT here -- they are not duplicates at all, and the fleet never folds them. This file is a PLACEHOLDER committed with the fleet; a scoped run overwrites it (and a sharded fleet writes catalog-duplicates-ambiguous.slot-N.json per slot).",
+  "_reasons": {
+    "no-checklist-row": "All rows are derived/vendor. Spec rule 1: the row with the most sales survives (winnerBy 'sales') and the card joins the acquisition list. Refined first by the printRun FIELD -- a row carrying printRun=50 beside a ':num-50' twin is the same rung written two ways, which is r2, not ambiguity.",
+    "two-checklist-print-runs-one-product": "Two checklist rows of one product at different print runs. Split into near-miss (<=10% apart -- likely ONE source's transcription error, e.g. /149 vs /150 across 2024 bowman-chrome-mega-box, rulable once per (product, parallel)) and distinct-rungs (two real rungs).",
+    "d31-one-source-names-both-colour-forms": "ONE scrape run lists both the bare colour and '<colour>-refractor' for this card. D31: that is the site saying TWO CARDS (Topps Finest #197 uncommon / uncommon-refractor -- Drew named 600 of them).",
+    "two-dedicated-cpa-products": "Two dedicated non-bcp checklist products both list the CPA number for the same player. D29/R2: both stay; sales split by the title's product words.",
+    "contradicts-holding-ruling": "The fold would RETIRE an id that data/holding-identity-rulings.json names as an identity. Reported, never silently resolved."
+  },
+  "generatedAt": null,
+  "scope": null,
+  "counts": {},
+  "total": 0,
+  "groups": []
+}

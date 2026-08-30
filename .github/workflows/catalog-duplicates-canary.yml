@@ -1,0 +1,85 @@
+name: Catalog Duplicates Canary
+
+# CF-D30-ONE-CARD-ONE-ROW-ONE-POOL (Drew, 2026-08-30): "This will be a big big
+# big issue for us if sales are split across different cards in the card catalog
+# of the same card." The D30 fleet consolidates the backlog; this canary watches
+# so a split pool cannot come BACK silently afterwards.
+#
+# The alert is keyed on SALES-SPLIT groups, not on duplicate rows. An empty
+# duplicate row splits no pool -- the purge removed 81,749 rows while sales-split
+# groups barely moved (9,572 -> 7,636). One card with two POOLS is the defect,
+# because FMV is then computed from half the card's own comps.
+#
+# Groups the fleet would call AMBIGUOUS are reported but never alerted on: they
+# are Drew's to rule, and alerting on them would train the canary to be ignored.
+#
+# Cadence: daily. Alert channel: workflow failure -> notification email.
+
+on:
+  schedule:
+    - cron: "43 11 * * *"   # daily at 11:43 UTC (offset from the other canaries)
+  workflow_dispatch:
+    inputs:
+      sports:
+        description: 'Comma list of sports to scan (default: the sampled slice)'
+        required: false
+        type: string
+        default: 'baseball'
+      years:
+        description: 'Comma list of years (default 2025,2026)'
+        required: false
+        type: string
+        default: '2025,2026'
+      max_sales_split_groups:
+        description: 'Alert above this many consolidatable sales-split groups'
+        required: false
+        type: string
+        default: '250'
+
+jobs:
+  catalog-duplicates:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+      - name: Install deps
+        working-directory: backend
+        # NOT --omit=dev: the canary requires the COMPILED decision
+        # (dist/services/catalog/duplicateWinnerRule.js) rather than a second
+        # copy of its rules. A canary that re-implements the invariant stops
+        # measuring it the first time the invariant moves.
+        run: npm ci --prefer-offline --no-audit --no-fund
+      - name: Build backend dist
+        working-directory: backend
+        run: npm run build
+      - uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+      - name: Fetch Cosmos connection string
+        id: env
+        run: |
+          COSMOS_CS=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='COSMOS_CONNECTION_STRING'].value" -o tsv | tr -d '\r\n')
+          if [ -z "$COSMOS_CS" ]; then echo "::error::COSMOS_CONNECTION_STRING empty"; exit 1; fi
+          echo "::add-mask::$COSMOS_CS"
+          echo "cs=$COSMOS_CS" >> "$GITHUB_OUTPUT"
+      - name: Run catalog duplicates canary
+        working-directory: backend
+        env:
+          COSMOS_CONNECTION_STRING: ${{ steps.env.outputs.cs }}
+          SPORTS: ${{ inputs.sports || 'baseball' }}
+          YEARS: ${{ inputs.years || '2025,2026' }}
+          MAX_SALES_SPLIT_GROUPS: ${{ inputs.max_sales_split_groups || '250' }}
+        run: |
+          node scripts/checkCatalogDuplicates.cjs

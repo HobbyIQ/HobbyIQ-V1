@@ -18,9 +18,13 @@ subagent credits are bought.
 | sales in those groups | **684,571** |
 | holdings on a non-winner row | 11 |
 
-By kind (groups): id-setkey-drift 300,221 (the D23 rename mid-flight; includes a
-`bowman-paper` spelling the fleet emits that is not in `productSetKeys.ts` — fix
-the fleet, not the rows) · numbered-vs-unnumbered 290,400 · colour-vs-colour-
+By kind (groups): id-setkey-drift 300,221 (the D23 rename mid-flight. NOTE,
+CORRECTED 2026-08-30 20:00Z: this originally said `bowman-paper` is "a spelling
+the fleet emits that is not in `productSetKeys.ts` — fix the fleet, not the
+rows". That is WRONG. `bowman-paper` IS in the table at productSetKeys.ts:159,
+`P("bowman-paper", { family: "bowman", parent: "bowman" })`. bowman vs
+bowman-paper are two legitimate products, so those groups need a product
+RULING, not a rename) · numbered-vs-unnumbered 290,400 · colour-vs-colour-
 refractor 201,034 (measured under the rule retracted in D31 — re-measure with the
 D31 key) · printrun-conflict 81,987 (NOT duplicates unless one source is wrong) ·
 setkey-spelling 31,161 · superfractor-spelling 26,854 · hyphen-spelling 26,736 ·
@@ -32,6 +36,14 @@ Slice JSONs (with top examples and per-group rows/sales/holdings) sit under the
 session scratchpad `d30/`; the measure scripts beside them are read-only and
 re-runnable — **re-run them before dispatch** (three fleets have moved the
 catalog since).
+
+> **STALE NUMBERS.** The by-kind table above predates the purge (81,749 rows),
+> D28's repairs and D31. Both measured slices were re-measured under the D31 key
+> on 2026-08-30 19:31Z and those numbers supersede these — see the D30 paragraphs
+> in `catalog-rebuild-plan.md`. Baseball's colour-vs-colour-refractor fell
+> 49,460 → 36,320 under the D31 key (the retracted rule was over-merging) and
+> id-setkey-drift 146,196 → 57,088 as the D23 rename lands. The other six slices
+> are still UNMEASURED under the D31 key; do not extrapolate the per-kind mix.
 
 ## The equivalence key (what "the same card" means) — after D31
 
