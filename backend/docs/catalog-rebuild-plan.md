@@ -1749,6 +1749,27 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   converter's page-shape fixes and the tie-break are on every staged source;
   `audit-source-coverage` #2 (identity-based, old CLC vs new) dispatched
   18:25Z — its number decides the floor-gated retire Drew dispatches.
+  **isAuto APPLY, first shards (19:20Z):** shard 1 repaired 28,222 / refused
+  25,575; shard 6 repaired 2,817 / refused 22,912 — the refusals are NOT the
+  drift card-profile healed: `moveCatalogRow: newSlug says setKey
+  "topps-chrome" but the row says "topps-chrome-update-series"` — **the id's
+  setKey segment is the collapsed parent product (`computeHobbyIqCardId`)
+  while the row's `setKey` field carries the real product.** Measured
+  read-only (sample 4,000 per family): topps-series-1 → `topps` 75%
+  (250k rows), topps-series-2 → `topps` 78% (261k), topps-update-series →
+  `topps-update` 63% (187k), topps-chrome-update-series → `topps-chrome`
+  76% (169k), **bowman-draft-1st-edition → `bowman-draft` 94%** (3.7k —
+  Drew's ruling says different products), upper-deck-series-1 →
+  `upper-deck` 100% (12k), topps-heritage-high-number → `topps-heritage`
+  78% (51k), leaf-vivid / leaf-metal → `leaf` 56% (300k), and Donruss both
+  ways (panini-donruss → `donruss` 63%; donruss → `panini-donruss` 36%) —
+  **≈1.19M rows in these families alone.** The movers refuse rather than
+  guess (right). This is the setKey vocabulary decision the memory flagged
+  ("normalizeSetKey collapses products — consistent but wrong identity; a
+  vocabulary decision, not an ingest patch") — **NEEDS DREW (below) → D23.**
+  Also seen: parallel slugs with the odds glued in
+  (`negative-refractor-181-hobby-138-jumbo-…-mojo-refractor`) from an older
+  ingest — the name-cleaning pass's population.
   **Runner landings by 15:30Z:** `conform-one-of-one-parallels` 8/8 shards —
   ≈224k rows repaired (moved ≈200k, folded ≈18k, replaced ≈6k), ≈82k
   regenerable graded children retired, ≈23k refusals (the setKey-field
@@ -2230,6 +2251,26 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   variation in `parallel`. Memory: image-variations-are-their-own-card.
 
 ## NEEDS DREW (not code)
+
+- **The setKey vocabulary (D23):** the id collapses the product (`topps-series-1`
+  → `topps`, `topps-chrome-update-series` → `topps-chrome`,
+  `bowman-draft-1st-edition` → `bowman-draft`, `upper-deck-series-1` →
+  `upper-deck`, `topps-heritage-high-number` → `topps-heritage`,
+  `leaf-vivid`/`leaf-metal` → `leaf`) while the field keeps it — ≈1.19M rows
+  disagree with their own id. Your rulings (Draft ≠ 1st Edition; Update is
+  the Update card) say the FIELD is the identity. **Recommendation:** the id
+  setKey = the product as the checklist names it, one spelling per product
+  (`topps-series-1`, `topps-series-2`, `topps-update-series`,
+  `topps-chrome-update-series`, `bowman-draft-1st-edition`,
+  `upper-deck-series-1`, `topps-heritage-high-number`, `leaf-vivid`,
+  `leaf-metal`), Donruss as `donruss` for every year (the hobby says "2025
+  Donruss"; Panini is the maker, not the product — same logic would make
+  `prizm`, `select`, `optic`: say if you want the maker prefix kept), with the
+  product-family ladder (`topps-series-1` ⊂ `topps`, `bowman-chrome` ⊂
+  `bowman`) kept ONLY for pricing fallbacks (the cross-setkey rule) and
+  search, never for identity. Cost: a rename fleet through catalogRowOps
+  (sales and holdings re-pointed) over ≈1.2M+ rows and the slug generator
+  changed first. Say go on the vocabulary and I'll build D23.
 
 - **Two retire dispatches the auto-mode classifier blocks for me (run as-is,
   N = 0…7):**
