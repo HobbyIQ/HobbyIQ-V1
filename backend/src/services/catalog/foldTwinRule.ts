@@ -64,3 +64,8 @@ export function decideTwinFold(input: {
   }
   return { fold: false, skip: "twin-is-checklist" };
 }
+
+// R1 (CF-A-CHECKLIST-NUMBERED-ROW-IS-THE-IDENTITY) lives in its own module so
+// the cross-source fleet mid-flight against decideTwinFold sees no change to
+// this file's contract. Re-exported so callers have one import surface.
+export * from "./foldTwinRuleChecklistNumbered.js";
