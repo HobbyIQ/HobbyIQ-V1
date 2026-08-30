@@ -15,8 +15,8 @@ describe("CF-AN-ESTIMATE-IS-NEVER-OBSERVED -- the write-time firewall", () => {
     expect(out.holdings.a.isEstimate).toBe(true);
     expect(out.holdings.a.valuationStatus).toBe("estimated");
   });
-  it("leaves an exact-pool rung observed, and a holding with no rung alone", () => {
-    const doc = { id: "u", userId: "u", holdings: { a: { fmvRung: "exact-pool-weighted-median", isEstimate: false, valuationStatus: "observed" }, b: { fairMarketValue: 10 } } } as never;
+  it("leaves an exact-pool rung observed, and an unpriced holding with no rung alone", () => {
+    const doc = { id: "u", userId: "u", holdings: { a: { fmvRung: "exact-pool-weighted-median", isEstimate: false, valuationStatus: "observed" }, b: { valuationStatus: "pending" } } } as never;
     const out = estimatesAreNeverObserved(doc) as { holdings: Record<string, { isEstimate?: boolean; valuationStatus?: string }> };
     expect(out.holdings.a.valuationStatus).toBe("observed");
     expect(out.holdings.b.isEstimate).toBeUndefined();

@@ -553,12 +553,17 @@ export function estimatesAreNeverObserved(doc: UserDoc): UserDoc {
     if (!holding || typeof holding !== "object") { next[id] = holding; continue; }
     const h = holding as PortfolioHolding & { fmvRung?: string | null; isEstimate?: boolean; valuationStatus?: string | null };
     const rung = typeof h.fmvRung === "string" ? h.fmvRung : null;
-    if (!rung || isExactPoolRung(rung)) { next[id] = holding; continue; }
+    // A priced holding with NO rung is a pre-rung legacy price: it cannot claim
+    // "observed" either (Max Williams Gold /50, $32.46, 2026-08-30). Unpriced
+    // holdings are left alone.
+    const priced = toNumber((h as { fairMarketValue?: unknown }).fairMarketValue, 0) > 0;
+    if (!rung && !priced) { next[id] = holding; continue; }
+    if (rung && isExactPoolRung(rung)) { next[id] = holding; continue; }
     if (h.isEstimate === true && h.valuationStatus === "estimated") { next[id] = holding; continue; }
     relabelled += 1;
     if (relabelled <= 5) {
       console.warn(JSON.stringify({
-        event: "estimate_relabelled_at_write",
+        event: rung ? "estimate_relabelled_at_write" : "no_rung_relabelled_at_write",
         source: "portfolioStore.writeUserDoc",
         holdingId: id,
         fmvRung: rung,
