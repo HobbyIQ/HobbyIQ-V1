@@ -3479,3 +3479,22 @@ authoritative; ratio similarity between the two is NOT identity.
 field (#3), Bellingham hand-ruled entry + ingest (#1), CPA-TSY ruling entry
 (#2, gated on its row), D38 subtotal guard, the write-time recompute seam
 (cpa-jg), and the runner report-relaunch defect.
+
+
+## D30 R2 landed + Daniels closed (2026-08-30 23:10–23:35Z)
+
+- **#1573 merged, deploy #20 verified (09137ed):** the consolidation fleet with
+  the product-level grouping key, decide-level majority spelling, read-only
+  contentHash PRE-FLIGHT, and the D31 hash fix (strip removed, transition-safe
+  two-hash ARRAY_CONTAINS lookup) — both refuter lenses + judge: nothing
+  refuted. #1572 carried the evening docs.
+- **Daniels revert APPLIED and VERIFIED BY READ (Drew: "Fix it don't avoid
+  it"):** reconciled intended 190 = written 190, failed 0; the /1 row now holds
+  0 sales, the base row 930. The first builder's undisclosed prod write is
+  fully repaired.
+- **Consolidate REPORT probes (limit 400, slot 0/8), both reconciled:**
+  football 0 pre-flight collisions, 10 consolidated, 30 ambiguous→Drew;
+  baseball 26 collisions in 3 groups (was 534/9 at the fix-round measure),
+  15 consolidated, 6 ambiguous. **APPLY ×16 HOLDS** for Drew's ambiguous-ledger
+  ruling; baseball also needs its 3 collision groups cleared (the pre-flight
+  refuses up front by design).
