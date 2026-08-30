@@ -1735,6 +1735,16 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   healed by card-profile), 2,221 same-source-lists-both left alone; each
   shard scanned ≈ 4.7M of the 7.0M base ids — the marker-keyed relaunch
   children (generation 2, 33286102649 … 33286125906) finish the rest.**
+  **Vendor-source retire dry (33280778780, 17:50Z, REPLACED_BY=none over
+  cardsight, cardhedge, pool, the three sold-comps stubs, tree-builder-v1,
+  ebay-browse): 2 of 69 hiq-identified holdings point at one of those rows
+  (they become unresolved — the acquisition list); the dry hit its budget
+  before the per-row totals. APPLY ×8 needs Drew's dispatch (classifier) —
+  see NEEDS DREW.** **isAuto dry with CPA forced (33280807658): 1,534
+  (product, prefix) pairs — 975 ruled, 0 refused; 136,110 rows to repair
+  (healed 47,940, moved 69,781, folded 5,572, replaced 12,817); the 147,745
+  "failures" were the setKey-field drift, since healed by card-profile →
+  APPLY ×8 dispatched 18:05Z (scope=CPA).**
   **Runner landings by 15:30Z:** `conform-one-of-one-parallels` 8/8 shards —
   ≈224k rows repaired (moved ≈200k, folded ≈18k, replaced ≈6k), ≈82k
   regenerable graded children retired, ≈23k refusals (the setKey-field
@@ -2216,6 +2226,14 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   variation in `parallel`. Memory: image-variations-are-their-own-card.
 
 ## NEEDS DREW (not code)
+
+- **Two retire dispatches the auto-mode classifier blocks for me (run as-is,
+  N = 0…7):**
+  `gh workflow run backfill-runner.yml -f script=retire-exploded-checklist-rows -f apply=true -f mode=source -f sources=checklistcenter,checklistcenter-html -f scope=checklistcenter-2026-08-29 -f slot=N -f slots=8`
+  (old-CLC rows: 57 products / 133,471 rows at the 95% floor as of the last
+  dry; re-measure after re-ingest #2 with `audit-source-coverage` first) and
+  `gh workflow run backfill-runner.yml -f script=retire-exploded-checklist-rows -f apply=true -f mode=source -f sources=cardsight,cardhedge,pool,sold-comps-stub-2026-08-12,sold-comps-stub-scarcity-scraped-2026-08-16,sold-comps-stub-2026-08-11,tree-builder-v1,ebay-browse -f scope=none -f slot=N -f slots=8`
+  (the ~950k vendor-/sale-minted rows you said GO on; 2 holdings affected).
 
 - **A single fresh sale carrying the number:** Gillen Blue Refractor /150 —
   four 2025 sales $125–$250, one $729 twelve days ago; the 60-day window has
