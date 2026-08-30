@@ -69,6 +69,10 @@ describe("a card number is never a grader's digit", () => {
     expect(isGraderDigit("2010 Topps Chrome Buster Posey PSA 10", "10")).toBe(true);
     // Neither is the "10" inside a TCG POS/TOTAL.
     expect(isGraderDigit("Pokemon Base Set Charizard 10/82 CGC 10 hmm", "10")).toBe(true);
+    // Nor the one glued to a SKU prefix -- "#SMLB10" says SMLB10, never 10.
+    expect(isGraderDigit("2025 TOPPS STARS OF MLB SMLB10 SHOHEI OHTANI PSA 10", "10")).toBe(true);
+    // Punctuation around the number is not part of it, though.
+    expect(isGraderDigit("2023 Topps Chrome Elly De La Cruz (10) PSA 10", "10")).toBe(false);
   });
 });
 

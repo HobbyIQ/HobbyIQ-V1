@@ -195,9 +195,11 @@ function statedAwayFromAGrader(title: string, n: string): boolean {
   const toks = title.split(/\s+/).filter(Boolean);
   const graders = new Set(GRADER_TOKENS.map((g) => g.replace(/[^A-Za-z]/g, "").toUpperCase()));
   for (let i = 0; i < toks.length; i++) {
-    // Strip surrounding punctuation, but a token that is not JUST this number
-    // (2010, 9.5, 10/82) is a different thing that happens to contain it.
-    if (toks[i].replace(/^[^0-9]+|[^0-9]+$/g, "") !== n) continue;
+    // Strip surrounding PUNCTUATION only. A token that is not JUST this number
+    // -- 2010, 9.5, 10/82, and above all "#SMLB10" -- is a different thing
+    // that happens to contain the digits, and counting it would keep the very
+    // grade this rule exists to refuse.
+    if (toks[i].replace(/^[^A-Za-z0-9]+|[^A-Za-z0-9]+$/g, "") !== n) continue;
     const prev = i > 0 ? toks[i - 1].toUpperCase().replace(/[^A-Z]/g, "") : "";
     if (!prev || !graders.has(prev)) return true;
   }
