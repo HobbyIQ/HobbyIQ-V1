@@ -113,3 +113,26 @@ describe("REPORT ONLY still reports the number", () => {
     expect(print).not.toMatch(/if \(APPLY\)/);
   });
 });
+
+describe("a mid-rename row is a SKIP, not a failure", () => {
+  it("every row in the fold is checked, not just the winner", () => {
+    // moveCatalogRow's buildIncoming THROWS when a slug's setKey segment
+    // disagrees with the row's own setKey FIELD ("a key needs both halves",
+    // #1348) -- and it builds the incoming row from the LOSER's fields at the
+    // WINNER's slug, so a mid-rename LOSER throws just the same. Checking only
+    // the winner left 2 failures in the measured baseball slice, both CPA
+    // groups where the mid-rename row was a loser.
+    const block = source.slice(at("const midRename ="), at("// DECIDED, NOT WRITTEN"));
+    expect(block).toMatch(/\[winner, \.\.\.losers\]\.some/);
+    expect(block).toMatch(/stats\.skippedRenameOwned\+\+/);
+  });
+
+  it("the skip happens BEFORE the group joins the plan, so it never reaches a write", () => {
+    expect(at("const midRename =")).toBeLessThan(at("plan.push({ key, kind, rows, winner, losers"));
+  });
+
+  it("it lands on the rename counter, never on `failed`", () => {
+    const block = source.slice(at("const midRename ="), at("// DECIDED, NOT WRITTEN"));
+    expect(block).not.toMatch(/stats\.failed/);
+  });
+});

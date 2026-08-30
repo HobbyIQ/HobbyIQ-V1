@@ -442,9 +442,17 @@ async function main() {
     // finishes, the id catches up with the field, and the next pass folds it.
     // Left as a throw it showed up as `failed 20` -- an error counter carrying
     // a decision, which hides a real refusal behind what reads as a bug.
-    const wSeg = String(winner.id ?? "").split(":")[3] ?? "";
-    const wField = String(winner.setKey ?? "").trim().toLowerCase();
-    if (wField && wSeg && wSeg !== wField) {
+    // The check covers EVERY row in the fold, not just the winner: moveCatalogRow
+    // builds the incoming row from the LOSER's fields at the WINNER's slug, so a
+    // loser whose own id and field disagree throws just the same. Measured: the
+    // winner-only form left 2 failures in the baseball slice, both CPA groups
+    // where the mid-rename row was a loser.
+    const midRename = [winner, ...losers].some((r) => {
+      const seg = String(r.id ?? "").split(":")[3] ?? "";
+      const field = String(r.setKey ?? "").trim().toLowerCase();
+      return field !== "" && seg !== "" && seg !== field;
+    });
+    if (midRename) {
       stats.skippedRenameOwned++;
       continue;
     }
