@@ -551,7 +551,7 @@ function makeId(source: SoldCompSource, externalId: string | null, cardId: strin
 /** CF-CONTENT-HASH (Drew, 2026-07-20). Canonical hash of the SALE
  *  content — cross-source dedup key. Same underlying sale from any
  *  source (eBay user + CH + eBay browse) produces the same hash. */
-function computeContentHash(input: {
+export type ContentHashInput = {
   cardId: string;
   parallel?: string | null;
   isAuto?: boolean;
@@ -561,15 +561,37 @@ function computeContentHash(input: {
   isAuthentic?: boolean | null;
   price: number;
   soldAt: string;
-}): string {
-  const normalizeParallel = (s: string | null | undefined): string => {
-    return (s ?? "").trim().toLowerCase()
-      .replace(/\s+/g, " ")
-      .replace(/ refractors?$/, "");    // match stripRefr in canonicalFmv
-  };
+};
+
+/** The parallel as the hash reads it. Whitespace and case are noise; the
+ *  WORDS are not. */
+function normalizeParallelForHash(s: string | null | undefined): string {
+  return (s ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+/**
+ * THE LEGACY normalization: it stripped a trailing " Refractor".
+ *
+ * D31 RETRACTED the rule that made that safe. There is no colour-equals-
+ * refractor vocabulary rule any more -- the catalog resolver decides per card,
+ * and Topps Finest #197 lists `Uncommon` AND `Uncommon Refractor` as two real
+ * cards. So the strip makes a $40 `Blue` sale and a $900 `Blue Refractor` sale
+ * hash IDENTICALLY inside one cardId partition, and the pre-write dedup below
+ * treats "same contentHash in this partition" as "the same sale". The loser of
+ * that comparison is not written -- a genuine future sale swallowed at ingest,
+ * and the FMV of both cards wrong.
+ *
+ * Kept ONLY to recognise rows already stored under it. Never used for a new
+ * hash. See `contentHashesForLookup`.
+ */
+function legacyNormalizeParallelForHash(s: string | null | undefined): string {
+  return normalizeParallelForHash(s).replace(/ refractors?$/, "");
+}
+
+function hashParts(input: ContentHashInput, parallel: string): string {
   const parts = [
     input.cardId.trim(),
-    normalizeParallel(input.parallel),
+    parallel,
     input.isAuto === true ? "1" : "0",
     (input.gradeCompany ?? "raw").toUpperCase(),
     String(input.gradeValue ?? 0),
@@ -577,6 +599,45 @@ function computeContentHash(input: {
     (input.soldAt ?? "").slice(0, 10),             // soldDay only — ignore hour/minute noise
   ];
   return createHash("sha1").update(parts.join("|")).digest("hex");
+}
+
+/** CF-CONTENT-HASH (Drew, 2026-07-20). Canonical hash of the SALE
+ *  content — cross-source dedup key. Same underlying sale from any
+ *  source (eBay user + CH + eBay browse) produces the same hash.
+ *
+ *  D31: the parallel is hashed WHOLE. A colour and its colour-refractor
+ *  sibling are two cards unless the checklist says otherwise, and the hash is
+ *  not the place that decides. */
+export function computeContentHash(input: ContentHashInput): string {
+  return hashParts(input, normalizeParallelForHash(input.parallel));
+}
+
+/** The legacy hash for the SAME sale, as rows written before the D31 fix
+ *  carry it. Identical to the new hash whenever the parallel does not end in
+ *  "refractor"/"refractors", which is the overwhelming majority of the pool. */
+export function legacyContentHash(input: ContentHashInput): string {
+  return hashParts(input, legacyNormalizeParallelForHash(input.parallel));
+}
+
+/**
+ * EVERY hash a stored row for this sale could be carrying — the new form
+ * first, then the legacy form when it differs.
+ *
+ * TRANSITION SAFETY. Stored rows carry hashes computed WITH the strip. If the
+ * pre-write dedup looked up only the new hash, then on the day this ships
+ * every re-emit of an already-stored `Blue Refractor` sale would miss its own
+ * stored row and be written again — the fix would RESURRECT the duplicates it
+ * exists to prevent. So the lookup asks for both forms while the pool is
+ * mixed; the WRITE only ever stores the new one, so the legacy form drains as
+ * rows are rewritten and this can be dropped once the pool is re-hashed.
+ *
+ * The two forms differ ONLY for a parallel ending in "refractor"/"refractors",
+ * so for almost every sale this is the same single-hash lookup it was before.
+ */
+export function contentHashesForLookup(input: ContentHashInput): string[] {
+  const fresh = computeContentHash(input);
+  const legacy = legacyContentHash(input);
+  return legacy === fresh ? [fresh] : [fresh, legacy];
 }
 
 /** Score a doc for pickCanonical — higher = keep. Mirror the scoring
@@ -863,7 +924,7 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
   const c = shouldRouteToStaging ? await getCardsightStagingContainer() : await getContainer();
   if (!c) return { written: false, reason: "error" };
 
-  const contentHash = computeContentHash({
+  const contentHashInput = {
     cardId: input.cardId,
     parallel: input.parallel,
     isAuto: input.isAuto,
@@ -872,7 +933,12 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
     isAuthentic: input.isAuthentic ?? null,
     price: input.price,
     soldAt: input.soldAt,
-  });
+  };
+  const contentHash = computeContentHash(contentHashInput);
+  // D31 transition: a row stored before the " Refractor" strip was removed
+  // carries the legacy hash, so the dedup LOOKUP asks for both forms. The
+  // WRITE stores only `contentHash` (the new form).
+  const contentHashLookup = contentHashesForLookup(contentHashInput);
 
   // CF-HOBBYIQ-CARDID (Drew, 2026-07-23, issue #706 Phase 1b). Compute
   // the canonical hobbyiqCardId from the input attributes. Populated on
@@ -1269,8 +1335,8 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
   // is the eBay item id directly (already dedup-safe on id).
   try {
     const { resources: existing } = await c.items.query<SoldCompDoc>({
-      query: "SELECT * FROM c WHERE c.contentHash = @h",
-      parameters: [{ name: "@h", value: contentHash }],
+      query: "SELECT * FROM c WHERE ARRAY_CONTAINS(@h, c.contentHash)",
+      parameters: [{ name: "@h", value: contentHashLookup }],
     }, { partitionKey: doc.cardId }).fetchAll();
 
     if (existing.length > 0) {

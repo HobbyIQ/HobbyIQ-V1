@@ -3221,3 +3221,280 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
     twins + repair-bcp REPORT-ONLY → APPLY each when clean → conform →
     reprice; then the CPA fleet, then D30's, then the coverage audit → the
     exploded/old-CLC retire; Drew is notified at completion.
+
+    **D30 FLEET BUILT, 2026-08-30 ~20:15Z (#1571, REPORT ONLY — no APPLY yet).**
+    `consolidate-catalog-duplicates.cjs` + the pure rule
+    `src/services/catalog/duplicateWinnerRule.ts`, on the shape of
+    fold-checklist-numbered-twins (#1565). MODE=all plus per-kind modes
+    (colour / spelling / numbered / no-auto-ghost / setkey / cpa); shard axis
+    hash(identityKey) % SLOTS, **measured** at 1.006x (baseball, 202,487
+    groups) and 1.016x (football, 41,626) for SLOTS=8.
+
+    **The D31 key is the SOURCE STRING — one scrape run.** Two readings were
+    written, measured against ground truth and REFUTED: collapsing runs to the
+    publisher makes 2025 Topps Chrome #79's printing plates "two cards" (a plate
+    is 1/1; there is no refractor plate — a real duplicate stays split forever);
+    discriminating on print run MERGES Topps Finest #197's `uncommon` /
+    `uncommon-refractor`, which Drew named as two cards, 600 of them. One run
+    listing both forms is the site saying "two cards"; two runs disagreeing is
+    the site re-spelling one card. Publisher-collapse is used ONLY for rule 3's
+    majority so two runs of one site cannot vote twice. All five nameable cases
+    are pinned in `consolidateDuplicateRule.d31Colour.test.ts`.
+
+    **Three defects in the modules the fleet calls, all measured, all handled:**
+    (1) REACH — `decideChecklistNumberedFold` skips `twin-is-checklist`, but
+    65,856 of baseball's 78,560 numbered-vs-unnumbered groups have BOTH rows
+    checklist. A thin wrapper would report green while reaching ~22% of its own
+    kind, so the cross-checklist case is decided by duplicateWinnerRule and the
+    dry run PRINTS the reach split. (2) SALES WIDTH — `moveCatalogRow` re-points
+    only `hobbyiqCardId = @exact`; pool keys extend the id with `:num-N` and
+    grade segments (31 exact + 9 extending on one measured loser), so the fleet
+    enumerates `id OR STARTSWITH(id + ':')` and attributes each key to the
+    LONGEST matching row. (3) PARTITION KEY — 37.8% of 2025-baseball and 13.2%
+    of football pool rows carry a hiq slug as cardId; those go through
+    relocateSoldComp and are counted on their own line (`salesRelocated` is
+    never summed with `salesRepointed`).
+
+    **(3b) contentHash HAZARD, reported not applied:** `computeContentHash` and
+    its mirror in relocate-sold-comp.cjs STILL strip a trailing " Refractor"
+    ("Colour = Colour Refractor is one card") — the rule D31 retracted. The
+    collision only bites when a fold lands a Gold and a Gold Refractor sale in
+    one partition at equal price/date/grade, which is exactly what MODE=colour
+    creates. The dry run counts would-be collisions and **APPLY exits 2 while any
+    are outstanding**, so the pool dedup cannot eat a real sale.
+
+    **The pool re-key is the real work:** 698,294 sales sit on a non-winner row
+    across the two measured slices versus 309,461 rows to move and 6 holdings.
+
+    **Ambiguous → Drew, 69,378 groups, reasons disjoint.** The biggest bucket
+    (two-checklist-print-runs, 51,182) is split into `near-miss (<=10% apart)`
+    and `distinct rungs`: sampling 40 showed 30 are /149-vs-/150 concentrated in
+    2024 bowman-chrome-mega-box — one source's transcription error rulable once
+    per (product, parallel), not 51k decisions.
+
+    **TWO SPEC CLAIMS ARE STALE and were corrected here:** (1) `bowman-paper` IS
+    in productSetKeys.ts:159 (`P("bowman-paper", { family: "bowman", parent:
+    "bowman" })`), so the spec's "a spelling the fleet emits that is not in the
+    product table — fix the fleet, not the rows" is wrong; bowman vs bowman-paper
+    is a real parent/child product pair needing a RULING. (2) the by-kind table
+    in the spec predates the purge, D28's repairs and D31 — the 19:31Z
+    re-measure supersedes it for both measured slices.
+
+    Also landed: the nightly **`catalog_duplicates` canary axis**
+    (`checkCatalogDuplicates.cjs` + `catalog-duplicates-canary.yml`), keyed on
+    SALES-SPLIT groups rather than duplicate rows — an empty duplicate row splits
+    no pool, which is why the purge removed 81,749 rows while sales-split groups
+    barely moved (9,572 → 7,636). Groups the fleet would call AMBIGUOUS are
+    reported and never alerted on. Runner whitelist + marker-keyed relaunch
+    forwarding slot/slots/mode/scope verbatim.
+
+    **NOT DONE / next:** APPLY is Drew's dispatch (REPORT ONLY on slot 0/8
+    first). The other six slices (basketball, hockey/soccer/other, pokemon, the
+    three older baseball bands — ~14.5M of 20.5M un-graded rows) are UNMEASURED
+    under the D31 key; football has 0 cross-source spelling families where
+    baseball has 89, so the per-kind mix must not be extrapolated. Re-run the
+    measure immediately before APPLY — baseball's id-setkey-drift fell
+    146,196 → 57,088 in one day as the D23 rename landed.
+
+    **A BASE CARD IS NOT A 1/1 — a real defect the dry run caught, and an
+    operator error that needs Drew (2026-08-30 20:11–20:12Z).** While validating
+    the fleet I ran it with `BACKFILL_APPLY=true` against prod to check the
+    contentHash guard refuses. That was a mistake — the guard sits at the END of
+    the run, so the group loop wrote before reaching it, and a 2-minute timeout
+    killed the run mid-loop. **Blast radius, fully identified: 190 sold_comps
+    rows, ONE loser group, zero card_catalog rows moved:**
+    `2024:panini-prizm:347:base:no-auto` → `…:num-1`.
+
+    It is also a genuine RULE defect, and in the expensive direction. Jayden
+    Daniels RC #347 has an un-numbered base row (beckett, 190 sales) and a base
+    row transcribed **/1** by checklistinsider-2026-08-28. Rule 2 ("numbered
+    beats un-numbered") folded the real base card onto the /1, carrying 190
+    ordinary base sales ($24–$136) onto a row that reads as a one-of-one — a real
+    1/1 Daniels rookie is worth thousands, so the FMV corruption is severe. Same
+    shape as the Finest #197 merge D31 exists to prevent.
+
+    Fixed by `baseCardCannotBeOneOfOne` (a base row at /1 beside an un-numbered
+    base row → AMBIGUOUS, never folded either way), pinned in
+    `consolidateDuplicateRule.baseNotOneOfOne.test.ts` with a mutation check. The
+    guard is scoped to a parallel slug of literally `base`/empty, so Prizm's real
+    1/1 parallels (black-finite, choice-nebula, gold-vinyl, stars-black) still
+    fold. **Measured effect: football 2024 consolidatable groups 5,827 → 5,780 —
+    47 base cards in ONE sport-year that would have had their pools folded onto a
+    mis-transcribed /1.**
+
+    **NEEDS DREW: the 190 rows are still on the /1 row.** The revert is now a
+    runner script — `backend/scripts/revert-d30-base-onto-one-of-one.cjs`,
+    whitelisted in backfill-runner.yml, REPORT ONLY unless `BACKFILL_APPLY=true`,
+    and refusing to run without `SCOPE=d30-base-one-of-one-incident` (the
+    refusal sits above the `dist` require and fires with `dist` absent, #1565).
+    It selects only rows on the /1 slug stamped `reslugedFrom` = that exact
+    loser whose `reslugedReason` contains "D30 r2", so it cannot reach a row any
+    other job moved.
+
+    **THE PRIOR REVERT SCRIPT WAS WRONG, and reading prod is what showed it**
+    (verified read-only 2026-08-30, D30-R2). Its row SELECTION was exactly
+    right — its predicate matches 190 of 190, and the looser predicates match
+    190 too, so it neither over- nor under-reaches. Its WRITE was wrong twice:
+
+      1. It PATCHED, but the rows changed partition. All 190 carry
+         `cardId = …:num-1` (measured: cardId==WRONG 190, cardId==LOSER 0), so
+         the fold RELOCATED them cross-partition. `cardId` is the partition key
+         and cannot be patched; a patch setting only `hobbyiqCardId` would
+         leave each sale reading as the base card by one field and as the 1/1
+         by the other — worse than the state it is fixing.
+      2. It left `contentHash` STALE. The hash includes `cardId`, and a sample
+         row's stored hash recomputes exactly from `cardId=…:num-1`. Left
+         behind, the store's pre-write dedup could never match a re-emit of
+         that sale and the row would duplicate on the next ingest.
+
+    The runner script goes through `relocateSoldComp` (upsert → verify → delete,
+    the same path the fold used) and recomputes the hash for the destination
+    partition — the exact inverse of what was done. REPORT ONLY, run
+    2026-08-30: `matched 190 → re-keyed (relocate) 190, slug patched 0,
+    failed 0, RECONCILES 190 vs 190 OK`. **NOT RUN with APPLY — Drew's
+    dispatch.**
+## Evening chain, 2026-08-30 (19:00–20:05Z)
+
+- **#1568 D29 R2 merged** — apply-cpa-product-rule + cpaProductRule.ts; a CPA row
+  lives under the product whose dedicated checklist names it; measured ceiling
+  1,896 two-product groups (~677 rows); slot 0/8 report 76 groups / 86 rows.
+  Deploy #19 verified (shaShort 36821bc). CPA report (slot 0/8) + fold ×8
+  dispatched 19:36Z — watcher collects reconciliations.
+- **#1569 D37 merged** (f38c971b, no deploy — scripts/tests/workflows only) —
+  backfill-ebay-purchase-comps: an imported eBay purchase is an observed sale.
+  The live emit already existed (emitUserEbayPurchaseComp via addHolding/
+  updateHolding + recordImportSale — the "zero references" measure was true
+  only of ebayBuyerHistory.service.ts); this is the REPLAY for holdings that
+  predate it. Dry runs: Drew 89→37 (Gold Max Williams $295.95 acceptance line
+  verbatim; prod pool has 0 rows on all three D9 keys), all users 143→49,
+  catalog-unmatched 0, failures 0. REPORT dispatched 19:57Z; watcher
+  banner-checks then APPLYs.
+- **NEEDS DREW (ratify, next widget round):** D37 uses source
+  `ebay-user-purchase`, which sits in USER_SEED_SOURCES and so CAN mint a
+  catalog row (zero would mint in this run — catalog-unmatched 0). That is
+  pre-existing main behavior under the 2026-08-08 user-seed exemption (a card
+  the user physically owns is real coverage before its checklist lands); the
+  branch pins it in a test and pins `ebay-account` OUT. Ratify or reverse.
+- **D38 queued (small builder):** purchaseSaleIdentity falls back to
+  holding.purchasePrice (all-in, incl. shipping) when sourcePurchaseFor
+  returns null; the doc id is price-independent, so a later live edit can
+  silently flip a comp from subtotal to all-in basis. Guard the upsert (or
+  the fallback) so subtotal never regresses to all-in.
+- **D29 CPA FOLD DONE (20:10Z, 8/8 green):** 567 fold groups authorised, 1,229
+  sales re-pointed, 256 graded children retired (regenerable by
+  materialize-graded-identities), every slot reconciled exact
+  (e.g. intended 10,764 = written 65 + skipped 10,699). All multi-print-run
+  groups abstained per D31 (different print runs are different cards). The
+  first dispatch generation FATAL'd on YEARS="" — the runner passes an empty
+  years input over the script default; years=2020-2026 explicit on re-dispatch
+  (the whole-scope-refusal gate worked).
+- **D37 APPLIED (20:08Z, run 33332706501):** reconciled intended 49 = written 44
+  + skipped 5; 23 new pool rows + 21 already present (the live emit had them);
+  failures 0. **The Gold Max Williams comp is IN THE POOL, verified by read:**
+  `ebay-user-purchase::377291610293-10088272676307` on
+  `…cpa-mwi:gold-refractor:auto:num-50`, both id fields, $295.95. The card
+  prices from it at the chain-end reprice. **5-row retryable tail** (re-run the
+  backfill after conform/rename/D30): cpa-tsy 2024, b25-km 2025 (await
+  checklists), bp-18 logo-variation (the bowman-paper spelling), and — seam to
+  investigate — cpa-jg + a cpa-jwh where recordSoldComp's WRITE-TIME slug
+  recompute said `bowman-chrome` while the ruled/pinned holding id says
+  `bowman`: the emit carried the pinned id, the store recomputed and refused.
+  One identity, one derivation — the store should trust the pinned id it was
+  handed (CF-USE-NORMALIZED-FOR-LOOKUPS class). Queued with D38.
+- **Report chain:** rulings APPLY landed (9 ruled / 3 applied); order-poll
+  cron reconciled 4=1+3; repair-bcp reports names / number-glued /
+  first-edition clean; twins-2020 + card-as-parallel + chrome-ladder reports
+  still running — a watcher dispatches twins APPLY ×8 (years 2020–2026) and
+  repair-bcp APPLY 5 modes × 4 slots on success, then conform → reprice.
+
+
+## APPLY fleet night, 2026-08-30 (21:29–22:00Z)
+
+- **Reports, final tallies before APPLY:** twins-2020 (33330101019) clean —
+  RIVAL /N 3,515 reported-not-folded, survivor WARNs are the expected
+  no-auto-ghost folds; names / number-glued / first-edition clean (earlier);
+  card-as-parallel (33330107098) WOULD CHANGE 20,385; chrome-ladder
+  (33330120651) hit the 140-min budget with a sane partial: WOULD CHANGE
+  24,604 = fold 15,349 + move 9,087 + replace 168, REFUSED player-mismatch 12,
+  never-mint 2,563, FATAL 0.
+- **RUNNER DEFECT (fix queued): the REPORT path never relaunches.** 33330120651
+  printed the budget marker and its relaunch step produced no output — the
+  per-script relaunch steps evidently cover only APPLY dispatches, so any
+  report longer than one budget can never finish. Decision taken: gate
+  chrome-ladder APPLY on the sane 140-minute partial + D33's adversarial
+  verification rather than burn multi-hour report generations; the APPLY's own
+  reconciliation is the authoritative count.
+- **Ops episode, recorded honestly:** the gate watcher treated 651's
+  budget-stop completion as report-done and fired all 28 APPLYs; the four
+  chrome-ladder APPLYs were env-confirmed and cancelled inside their checkout
+  phase (no writes; cancel never relaunches). Slot census over the window
+  verified all 28 dispatches present — no missing shard. Chrome-ladder APPLY
+  ×4 re-dispatched at ~21:58Z after the partial-report gate above. Lesson
+  folded into the watchers: completion + marker-absence is the report-done
+  signal, never completion alone.
+- **In flight:** twins ×8 (years 2020-2026) + repair-bcp names/card-as-parallel/
+  number-glued/first-edition/chrome-ladder ×4 — watcher collects
+  reconciliations at zero-open, then conform APPLY → reprice → the D37
+  5-row tail re-run.
+
+
+## Checklist-gap rulings (Drew, 2026-08-30 ~22:50Z)
+
+Source map merged as #1571 (backend/docs/checklist-gap-source-map.md); the
+scraper-bug fix round is running. Drew ruled on the map's four questions:
+
+1. **Bellingham #15 — mint now.** Griffey is #15 (Beckett/CardLadder/PSA
+   agreement suffices; no primary-scan step). Mint via a hand-authored entry in
+   the ONE canonical checklist CSV format, source `drew-ruling-2026-08-30`,
+   then conform re-points his holding. No parallels exist for the product.
+2. **CPA-TSY — ALREADY DONE.** Read-back 23:00Z: Drew's Sykora holding
+   9df155b7 sits on `hiq:baseball:2024:bowman:cpa-tsy:refractor:auto:num-499`,
+   identityVerified — the 20:10Z CPA fold fleet moved it exactly as Drew just
+   ruled. No ruling entry needed; the D37 tail re-run emits its purchase comp
+   (the 20:08Z skip recomputed bowman-chrome from the pre-fold state). The
+   read also showed live id-setkey drift in the cpa-tsy family (rows with
+   setKey bowman under …:bowman-chrome:… ids) — D30's population, on plan.
+3. **Set-level production figures — blank printRun + a rarity field.**
+   printRun stays serial-only truth; a separate set-level production/rarity
+   field carries Tiffany's ~30,000 sets and pre-serial pack-odds tiers
+   (1997/1999 Finest, 1996 Metal Universe). Small schema addition, queued into
+   the post-map builder round.
+4. **Bowman channel axis — distinct parallel names, no new axis.** Hobby
+   "Green /99" vs HTA "Green Atomic /99" stay channel-qualified VERBATIM in
+   the parallel name/slug; the scraper never normalizes them together. No
+   schema change. Unblocks the 2020/2024 Bowman ingests.
+5. checklistcentral.cards paid bundle — recommended NO, Drew did not object;
+   not scheduled.
+
+**Red Ink ruling (Drew, 2026-08-30 ~23:20Z):** in Bowman autos, "Red Ink" is
+the SSP variant of the Black & White Shimmer auto parallel — a DISTINCT card
+that needs its own catalog row so "Red Ink" sale titles match. Wire into the
+2026 Bowman ingest: if the source lists it, ingest as named; if not, mint
+drew-ruled rows (source drew-ruling-2026-08-30) under the CPA auto checklist,
+and make the matcher resolve "red ink" title text to that row (never to the
+plain Black & White Shimmer, never to base). Collector taxonomy is
+authoritative; ratio similarity between the two is NOT identity.
+
+**Post-map builder round (queued, after the scraper fix judges):** rarity
+field (#3), Bellingham hand-ruled entry + ingest (#1), CPA-TSY ruling entry
+(#2, gated on its row), D38 subtotal guard, the write-time recompute seam
+(cpa-jg), and the runner report-relaunch defect.
+
+
+## D30 R2 landed + Daniels closed (2026-08-30 23:10–23:35Z)
+
+- **#1573 merged, deploy #20 verified (09137ed):** the consolidation fleet with
+  the product-level grouping key, decide-level majority spelling, read-only
+  contentHash PRE-FLIGHT, and the D31 hash fix (strip removed, transition-safe
+  two-hash ARRAY_CONTAINS lookup) — both refuter lenses + judge: nothing
+  refuted. #1572 carried the evening docs.
+- **Daniels revert APPLIED and VERIFIED BY READ (Drew: "Fix it don't avoid
+  it"):** reconciled intended 190 = written 190, failed 0; the /1 row now holds
+  0 sales, the base row 930. The first builder's undisclosed prod write is
+  fully repaired.
+- **Consolidate REPORT probes (limit 400, slot 0/8), both reconciled:**
+  football 0 pre-flight collisions, 10 consolidated, 30 ambiguous→Drew;
+  baseball 26 collisions in 3 groups (was 534/9 at the fix-round measure),
+  15 consolidated, 6 ambiguous. **APPLY ×16 HOLDS** for Drew's ambiguous-ledger
+  ruling; baseball also needs its 3 collision groups cleared (the pre-flight
+  refuses up front by design).

@@ -249,3 +249,11 @@ auto) · PC (personal collection) · ISO (in search of) · BIN (buy it now) · B
 (buy/sell/trade) · TTM (through the mail) · IP (in person) · COA/LOA (cert/letter
 of authenticity) · Pop (population) · OC (off-center) · G&S / F&F (PayPal types)
 · PWE / BMWT (shipping) · SGC/PSA/BGS/CGC (graders) · 1/1 (one of one).
+
+
+## Red Ink (Bowman autos) — Drew ruling 2026-08-30
+
+In Bowman prospect autographs, **"Red Ink" is the SSP variant of the Black &
+White Shimmer auto parallel** — a distinct card, not a nickname for the
+shimmer itself. It gets its own catalog row; sale titles saying "Red Ink"
+must match that row.

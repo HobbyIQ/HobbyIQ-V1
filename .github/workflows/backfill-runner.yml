@@ -133,6 +133,8 @@ on:
           - fold-unnumbered-twins
           - fold-checklist-numbered-twins
           - apply-cpa-product-rule
+          - consolidate-catalog-duplicates
+          - revert-d30-base-onto-one-of-one
 
           - rekey-user-comps
           - collapse-ch-dual-ids
@@ -1108,6 +1110,30 @@ jobs:
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=apply-cpa-product-rule -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f scope="${{ inputs.scope }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (rowsMoved=${N:-0}) — done, no re-dispatch."
+          fi
+
+      - name: Self-relaunch the duplicate consolidation until the slot is clean
+        if: ${{ !cancelled() && inputs.script == 'consolidate-catalog-duplicates' && inputs.apply == true }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        working-directory: backend
+        run: |
+          set +e
+          N=$(grep -aoE "^  CONSOLIDATED \(groups\) +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+" | tail -1 | tr -d ,)
+          echo "consolidated=${N:-0}"
+          # CF-RELAUNCH-ONLY-ON-BUDGET: relaunch iff the script printed its budget marker.
+          # Never on a count -- a slot whose every group is ambiguous consolidates zero and
+          # is FINISHED -- and never on a cancel (a killed job cannot report progress).
+          # D30 re-derives its identity groups every run (the catalog is moving under the
+          # D23 rename x16), so a relaunch resumes on what is still split and a group that
+          # has already folded no longer presents two rows to find.
+          if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
+            echo "::notice::budget hit (consolidated=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} mode=${{ inputs.mode }} to continue"
+            # The scope travels with the slot: mode, sports, years and scope verbatim.
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=consolidate-catalog-duplicates -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}"
+          else
+            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (consolidated=${N:-0}) — done, no re-dispatch."
           fi
 
       - name: Self-relaunch the user-comp re-key until the slot is clean
