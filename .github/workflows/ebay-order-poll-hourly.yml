@@ -1,0 +1,46 @@
+# D26 follow-up (Drew, 2026-08-30 13:10Z: "cut over to the GH cron; flip the
+# flag"). The eBay order poll used to run on a setInterval inside the API
+# process — it doubled across workers (64 cycles/24h) and its reconciliation
+# exit code meant nothing there. This cron dispatches the backfill runner,
+# which holds the credential steps and goes red on a shortfall.
+#
+# The in-process scheduler stays armed until EBAY_ORDER_POLL_DISABLE_SCHEDULER=
+# true is set on HobbyIQ3 (a live App Service change — Drew's confirm). Until
+# then both run; every write is idempotent on (orderId, lineItemId), so the
+# overlap costs nothing but a duplicate log line.
+name: eBay order poll (hourly)
+
+on:
+  schedule:
+    - cron: "23 * * * *"   # hourly at :23 UTC — off the hour, clear of the 5AM deploy and the nightly fleets
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: "true to record sales / mark holdings / advance cursors; false = REPORT ONLY"
+        required: false
+        default: "true"
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+  actions: write
+
+jobs:
+  poll:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch run-ebay-order-poll on the backfill runner
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          APPLY="${{ inputs.apply || 'true' }}"
+          gh workflow run backfill-runner.yml \
+            --repo "$GITHUB_REPOSITORY" \
+            --ref main \
+            -f script=run-ebay-order-poll \
+            -f apply="$APPLY"
+          sleep 20
+          gh run list --repo "$GITHUB_REPOSITORY" --workflow=backfill-runner.yml --limit 1 \
+            --json url,displayTitle,status --jq '"dispatched run-ebay-order-poll (apply=" + "'"$APPLY"'" + ") → " + .[0].url + " (" + .[0].status + ")"' \
+            || echo "::warning::could not list the backfill-runner run for run-ebay-order-poll"
