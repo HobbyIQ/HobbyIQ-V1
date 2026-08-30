@@ -245,12 +245,47 @@ function playerAgreement(rows, player) {
 }
 
 /**
+ * The subset of a ruling's `fields` that actually DIFFER on the holding, as
+ * patch ops (D36, Drew 2026-08-30). A ruling names the holding's own text it
+ * corrects (year, setName, ...); only keys whose value really changes are
+ * written, so a re-run of an applied ruling is a no-op rather than a churn of
+ * identical writes. Values are written as given -- the ruling is the human's
+ * spelling. A key that is not a plain identifier is ignored outright: a patch
+ * path is never built out of arbitrary text.
+ */
+function fieldOps(holdingId, h, fields) {
+  const out = [];
+  for (const [k, v] of Object.entries(fields ?? {})) {
+    if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(k)) continue;   // never build a path from arbitrary text
+    const cur = h?.[k];
+    const same = cur === v || (cur != null && v != null && String(cur) === String(v));
+    if (same) continue;
+    out.push({ op: "set", path: `/holdings/${holdingId}/${k}`, value: v, _k: k, _from: cur });
+  }
+  return out;
+}
+
+/**
  * SCOPE=rulings (Drew, 2026-08-30): apply the per-holding identity rulings in
  * backend/data/holding-identity-rulings.json and nothing else. The bot refuses a
  * product-changing correction; a ruling is the human saying so. Guards: the
  * holding's current hobbyiqCardId must equal `from` (else skipped, reported),
  * the `to` row must exist in card_catalog (point read), and both cardId and
  * hobbyiqCardId are set to `to` -- one identity.
+ *
+ * `from: null` -- A HOLDING WITH NO IDENTITY YET (D36, Drew 2026-08-30). Two of
+ * the rulings are holdings that carry a `cardId` but no `hobbyiqCardId` at all
+ * (the Gonzalez CPA-JG and the Caglianone RA-JC). `from` must still be
+ * declared, so the ruling states what it expects to find: null (or "") means
+ * "this holding has no hobbyiqCardId", and the guard holds exactly as strictly
+ * -- a holding that has since acquired one is skipped, not overwritten.
+ *
+ * `fields` -- A RULING MAY ALSO CORRECT THE HOLDING'S OWN TEXT. The Caglianone
+ * holding says "2024 Bowman Draft" while its eBay title says 2026 Topps Chrome;
+ * moving the identity without the text leaves the card displaying the wrong
+ * product forever. Only the keys named in `fields` are written, and only when
+ * they actually differ. The cardNumber alignment below is unchanged and still
+ * takes the catalog row's spelling.
  */
 async function applyRulings(portfolio, cat) {
   const file = path.join(backend, "data", "holding-identity-rulings.json");
@@ -274,10 +309,19 @@ async function applyRulings(portfolio, cat) {
         }
         skipped++; console.log(`  skip ${r.holdingId.slice(0, 8)}: already ${r.to}`); continue;
       }
-      if (current !== r.from) { skipped++; console.log(`  skip ${r.holdingId.slice(0, 8)}: current hobbyiqCardId ${current || "(none)"} != ruling.from ${r.from}`); continue; }
-      console.log(`  ${APPLY ? "RULED" : "WOULD RULE"} ${r.holdingId.slice(0, 8)} ${h.playerName ?? ""} #${h.cardNumber ?? ""}: ${r.from} -> ${r.to}  (${r.rulingBy} ${r.date}: ${r.note})`);
+      // `from: null` (or "") is the ruling saying "expect NO identity yet".
+      const expectsNone = r.from === null || r.from === undefined || r.from === "";
+      if (expectsNone ? current !== "" : current !== r.from) {
+        skipped++;
+        console.log(`  skip ${r.holdingId.slice(0, 8)}: current hobbyiqCardId ${current || "(none)"} != ruling.from ${expectsNone ? "(none)" : r.from}`);
+        continue;
+      }
+      console.log(`  ${APPLY ? "RULED" : "WOULD RULE"} ${r.holdingId.slice(0, 8)} ${h.playerName ?? ""} #${h.cardNumber ?? ""}: ${expectsNone ? "(no identity)" : r.from} -> ${r.to}  (${r.rulingBy} ${r.date}: ${r.note})`);
+      const fops = fieldOps(r.holdingId, h, r.fields);
+      for (const o of fops) console.log(`      ${APPLY ? "field" : "would set"} ${o._k}: ${JSON.stringify(o._from)} -> ${JSON.stringify(o.value)}`);
       if (!APPLY) { applied++; continue; }
       const ops = [
+        ...fops.map(({ op, path: pth, value }) => ({ op, path: pth, value })),
         { op: "set", path: `/holdings/${r.holdingId}/hobbyiqCardId`, value: r.to },
         { op: "set", path: `/holdings/${r.holdingId}/cardId`, value: r.to },
         { op: "set", path: `/holdings/${r.holdingId}/identityResolvedBy`, value: `ruling:${r.rulingBy}:${r.date}` },
@@ -539,7 +583,7 @@ function rowFor(resolved, ids) {
   const numbered = numberedTwinsOf(resolved, ids);
   return numbered.length === 1 ? numbered[0] : null;
 }
-module.exports = { resolveRung, setAgrees, identityTargets, productChanged, setKeyOf, rowFor, numberedTwinsOf, cardNumberVariants, playerAgreement };
+module.exports = { resolveRung, setAgrees, identityTargets, productChanged, setKeyOf, rowFor, numberedTwinsOf, cardNumberVariants, playerAgreement, fieldOps };
 
 if (require.main === module) {
   main().catch((e) => { console.error("FATAL:", e?.stack || e?.message); process.exit(3); });

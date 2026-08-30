@@ -140,8 +140,14 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
   P("topps-traded", { parent: "topps" }),
   P("topps-traded-tiffany", { parent: "topps-traded" }),
   P("topps-tiffany", { parent: "topps" }),
-  P("topps-finest", { parent: "topps" }),
-  P("topps-finest-flashbacks", { parent: "topps-finest" }),
+  // D36, Drew 2026-08-30: "the product is topps-finest -- the product as Topps
+  // names it, not `finest`". Spelled here so the rename fleet moves the
+  // baseballcardpedia rows still keyed `finest` (58,442 measured 2026-08-30,
+  // against 221,498 already `topps-finest`) and so Drew's Finest holdings
+  // resolve. The bare-alias rule in hobbyIqCardId already minted topps-finest
+  // for NEW ids; this table is what the fleet and the family walk read.
+  S("topps-finest", { names: ["finest"], parent: "topps" }),
+  S("topps-finest-flashbacks", { names: ["finest-flashbacks"], family: "topps-finest", parent: "topps-finest" }),
   ...["topps-gold-label", "topps-pristine", "topps-total", "topps-pro-debut", "topps-transcendent", "topps-dynasty", "topps-tribute",
     "topps-inception", "topps-definitive", "topps-five-star", "topps-museum-collection", "topps-gypsy-queen", "topps-archives",
     "topps-big-league", "topps-bunt", "topps-allen-ginter", "topps-stadium-club", "topps-cosmic-chrome", "topps-now",

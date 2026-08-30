@@ -35,6 +35,8 @@ import { qualifiedSetKeyFromTitle } from "../src/services/catalog/productQualifi
 import {
   DONRUSS_SPELLING_POLICY,
   PANINI_DONRUSS_FROM_YEAR,
+  productAncestry,
+  productFamilyOf,
   productSetKeyForName,
   spellForEra,
 } from "../src/services/catalog/productSetKeys.js";
@@ -120,6 +122,29 @@ describe("the id carries the product as the checklist names it (ruling a)", () =
     expect(productSetKeyForName("donruss")).toBeNull();
     expect(productSetKeyForName("leaf")).toBeNull();
     expect(productSetKeyForName("leaf-something-new")).toBeNull();
+  });
+
+  // D36, Drew 2026-08-30: "the product is topps-finest (the product as Topps
+  // names it), not finest". The bare-alias rule already minted topps-finest
+  // for NEW ids; the TABLE is what the rename fleet reads, and until it
+  // spelled the product the 58,442 baseballcardpedia rows still keyed
+  // `finest` (against 221,498 already topps-finest, measured 2026-08-30) had
+  // nothing to move them -- and Drew's Finest holdings could not reach the
+  // checklist row hiq:baseball:1997:finest:238:base:no-auto.
+  it("Finest is spelled topps-finest, and Flashbacks is its own product", () => {
+    expect(productSetKeyForName("finest")).toBe("topps-finest");
+    expect(productSetKeyForName("topps-finest")).toBe("topps-finest");
+    // the longer name wins over the bare `finest` alias
+    expect(productSetKeyForName("finest-flashbacks")).toBe("topps-finest-flashbacks");
+    expect(productSetKeyForName("topps-finest-flashbacks")).toBe("topps-finest-flashbacks");
+    // a single-segment name matches only exactly -- stripping the year is the
+    // caller's job, not a substring match here
+    expect(productSetKeyForName("1997-finest")).toBeNull();
+    // the legacy spelling still prices within the product, and the walk reaches Topps
+    expect(productFamilyOf("finest")).toBe("topps-finest");
+    expect(productFamilyOf("topps-finest-flashbacks")).toBe("topps-finest");
+    expect(productAncestry("finest")).toContain("topps-finest");
+    expect(productAncestry("topps-finest")).toContain("topps");
   });
 });
 
