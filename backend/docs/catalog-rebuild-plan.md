@@ -2610,7 +2610,7 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
     HobbyIQ3 — **a live App Service change, HALT for Drew's confirm** after
     the runner poll's REPORT-ONLY validation run is green; the two
     reconnect-required connections (admin-testing, user-8aa46493) stay so
-    until those users reconnect; (3) **D32 — "Sales to confirm"**: a screen
+    until those users reconnect — **DONE 12:28Z: runner poll validated REPORT ONLY (8 users, 29 orders, 10 resolved / 11 parked / 8 unresolvable, 2 reconnect-required), Drew's go, `EBAY_ORDER_POLL_DISABLE_SCHEDULER=true` set on HobbyIQ3, health `3fe0878` back at 12:29:31Z, both workers logged "scheduler disabled" on boot; the cron owns the poll from 12:23Z's successor at :23 hourly**; (3) **D32 — "Sales to confirm"**: a screen
     for the parked (17) and unresolvable (19) eBay sales — confirm links the
     sale to a checklist row, reject parks it on the acquisition list; spec
     `docs/d32-sales-to-confirm-spec.md`, the next builder after credits;
