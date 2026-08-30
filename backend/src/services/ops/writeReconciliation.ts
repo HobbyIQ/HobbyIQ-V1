@@ -147,3 +147,27 @@ export function reportWrites(input: WriteReconciliation): ReconciliationResult {
   else console.error(r.message);
   return r;
 }
+
+/**
+ * What one operation inside a Cosmos `items.bulk` / `items.batch` response
+ * means for the reconciliation. A bulk call does not throw per row: it
+ * returns a status code per operation, and a job that counts those wrong
+ * cannot reconcile. Three outcomes, disjoint:
+ *
+ *   written — 2xx, the row is on the server
+ *   retry   — 429 / 449 / 503, the server said "not now"; the row is neither
+ *             written nor failed until the caller stops retrying it
+ *   failed  — anything else (400, 404, 412, 424 …), and a missing code
+ *
+ * A row the caller gives up retrying is `failed`. (D18, 2026-08-29 — this
+ * used to be inlined in backfill-search-fields, where a batch that THREW was
+ * charged as a flat 100 failed rows regardless of its size, and the equation
+ * over-accounted on every short last batch.)
+ */
+export type BulkOutcome = "written" | "retry" | "failed";
+export function bulkOutcome(statusCode: number | null | undefined): BulkOutcome {
+  const code = typeof statusCode === "number" ? statusCode : 0;
+  if (code >= 200 && code < 300) return "written";
+  if (code === 429 || code === 449 || code === 503) return "retry";
+  return "failed";
+}

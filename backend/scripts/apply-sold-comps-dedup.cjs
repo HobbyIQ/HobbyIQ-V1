@@ -32,6 +32,15 @@
  */
 const { CosmosClient } = require("@azure/cosmos");
 const readline = require("readline");
+const path = require("path");
+// CF-A-GREEN-RUN-IS-NOT-A-DATA-FLOW (D18, 2026-08-29). This deletes on a
+// nightly cron with nobody reading the log. Counters, disjoint:
+//   intended = doomed rows the loop took up under --apply
+//   written  = deletes Cosmos acknowledged
+//   failed   = deletes that threw (a 404 lands here too: the row was not where
+//              the detector said it was, which is worth a red run)
+// reportWrites sets exitCode 4 when they do not add up. Requires dist/.
+const { reportWrites } = require(path.join(__dirname, "..", "dist/services/ops/writeReconciliation.js"));
 
 const APPLY = process.argv.includes("--apply");
 const RATE_MS = Number(process.env.DEDUP_RATE_MS ?? "50");
@@ -74,6 +83,7 @@ async function main() {
   let deleted = 0;
   let kept = 0;
   let errors = 0;
+  let attempted = 0;
 
   for await (const line of rl) {
     const trimmed = line.trim();
@@ -88,6 +98,7 @@ async function main() {
 
     for (const d of doomed) {
       if (!APPLY) { deleted++; continue; }
+      attempted++;
       try {
         await sc.item(d.id, cluster.cardId).delete();
         deleted++;
@@ -100,6 +111,7 @@ async function main() {
   }
 
   console.error(`\nDONE. clusters=${clusters}  kept=${kept}  ${APPLY ? "deleted" : "would-delete"}=${deleted}  errors=${errors}`);
+  if (APPLY) reportWrites({ job: "apply-sold-comps-dedup", intended: attempted, written: deleted, failed: errors });
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });

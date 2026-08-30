@@ -51,6 +51,10 @@ jobs:
         working-directory: backend
         run: npm ci --omit=optional --no-audit --no-fund
 
+      - name: Build TS (reportWrites lives in dist/ — D18)
+        working-directory: backend
+        run: npx tsc
+
       - name: Login to Azure
         uses: azure/login@v3
         with:

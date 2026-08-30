@@ -18,6 +18,13 @@
 
 const ADMIN = process.env.ADMIN_API_TOKEN;
 if (!ADMIN) { console.error("ADMIN_API_TOKEN required"); process.exit(1); }
+// CF-RUNNER-FLAG-HYGIENE (D18, 2026-08-29). This read no flag at all, so an
+// `apply=false` dispatch drained staging through the live endpoints anyway.
+// It honours the runner's BACKFILL_APPLY now: a dry dispatch reports the
+// pending count and exits. The endpoints own the write counts (cleaned /
+// autoFixed / promoted are what THEY return); this script has no "intended"
+// of its own to reconcile against, so it stays outside the reconciliation net.
+const APPLY = process.env.BACKFILL_APPLY === "true";
 const BASE = process.env.API_BASE || "https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net";
 const MAX_MINUTES = Math.max(1, Number(process.env.BACKFILL_MAX_MINUTES || 25));
 const DRAIN_FLOOR = Math.max(0, Number(process.env.DRAIN_FLOOR || 100));
@@ -54,6 +61,11 @@ async function main() {
   const startPending = await currentPending();
   console.log(`  Starting pending count: ${startPending}`);
   if (startPending <= DRAIN_FLOOR) { console.log("  Below floor — nothing to do."); return; }
+  if (!APPLY) {
+    console.log("  DRY-RUN — BACKFILL_APPLY is not \"true\"; no endpoint called. Dispatch with apply=true to drain.");
+    console.log("RELAUNCH_NEEDED=false");
+    return;
+  }
 
   let cycles = 0;
   let cleanedTotal = 0, autoFixedTotal = 0, promotedTotal = 0;

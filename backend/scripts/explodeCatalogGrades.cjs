@@ -26,6 +26,12 @@
 const { CosmosClient } = require("@azure/cosmos");
 const { isIssuedGrade, canonicalGradeCompany } =
   require(require("node:path").resolve(__dirname, "..", "dist/services/catalog/gradeLadder.service.js"));
+// CF-A-GREEN-RUN-IS-NOT-A-DATA-FLOW (D18, 2026-08-29). This mints graded rows
+// nightly. Counters, disjoint: intended = graded rows built (generated);
+// written = per-operation 2xx from the batch, or a per-item fallback upsert
+// that resolved; failed = the rest. Every built row is attempted under
+// --apply, so generated = upserted + errors.
+const { reportWrites } = require(require("node:path").resolve(__dirname, "..", "dist/services/ops/writeReconciliation.js"));
 
 const argOf = (name, def) => {
   const a = process.argv.find((x) => x.startsWith(`--${name}=`));
@@ -253,6 +259,7 @@ async function main() {
   console.log(`Graded rows built:   ${generated.toLocaleString()}`);
   console.log(`${APPLY ? "Upserted" : "Would-upsert"}: ${(APPLY ? upserted : generated).toLocaleString()}`);
   console.log(`Errors:              ${errors.toLocaleString()}`);
+  if (APPLY) reportWrites({ job: "explodeCatalogGrades", intended: generated, written: upserted, failed: errors });
 }
 
 // Only a direct run does the work; the builder is also imported by tests.

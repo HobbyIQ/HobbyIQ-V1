@@ -27,6 +27,20 @@
 //   CONCURRENCY                  parallel workers (default 6)
 
 const { CosmosClient } = require("@azure/cosmos");
+const path = require("path");
+// CF-A-GREEN-RUN-IS-NOT-A-DATA-FLOW (D18, 2026-08-29). Counters, disjoint:
+//   intended = rows that reached the write (a confident match under APPLY)
+//   written  = rows re-keyed or upserted (matched)
+//   failed   = the read found nothing, or the delete / create / upsert threw
+// Rows that never matched are stillPending, printed on their own. The
+// summary's `failed` also counts rows that failed BEFORE the write (a catalog
+// query that threw); writeFailed is the write-side sub-count the equation uses.
+//
+// KNOWN HAZARD, measured not fixed here: the re-key is delete-then-create. A
+// delete that succeeds followed by a create that fails LOSES the row; it shows
+// here as a failed write. The safe order is write-then-delete (catalogRowOps
+// does that for card_catalog); the pool has no such helper yet.
+const { reportWrites } = require(path.join(__dirname, "..", "dist/services/ops/writeReconciliation.js"));
 
 const APPLY = process.env.APPLY === "true";
 const MAX_MINUTES = Math.max(1, Number(process.env.MAX_MINUTES || 12));
@@ -100,7 +114,7 @@ async function main() {
 
   console.log(`[tca-match-enricher] fetched ${pendingRows.length} pending rows`);
 
-  let matched = 0, stillPending = 0, failed = 0;
+  let matched = 0, stillPending = 0, failed = 0, writeAttempted = 0, writeFailed = 0;
   const inflight = new Set();
 
   async function processRow(row) {
@@ -179,15 +193,28 @@ async function main() {
 
       // Cosmos doesn't allow partition-key change on update. Read the doc,
       // merge patch, upsert (may need to delete-and-recreate if cardId changed).
-      const { resource: existing } = await sold.item(row.id, row.cardId).read();
-      if (!existing) { failed++; return; }
+      writeAttempted++;
+      let existing;
+      try {
+        ({ resource: existing } = await sold.item(row.id, row.cardId).read());
+      } catch (readErr) {
+        // A read that throws is a row we meant to write and could not.
+        writeFailed++;
+        throw readErr;
+      }
+      if (!existing) { failed++; writeFailed++; return; }
       const merged = { ...existing, ...patch };
-      if (existing.cardId !== patch.cardId) {
-        // Partition key changing — must delete + recreate.
-        await sold.item(row.id, existing.cardId).delete();
-        await sold.items.create(merged);
-      } else {
-        await sold.items.upsert(merged);
+      try {
+        if (existing.cardId !== patch.cardId) {
+          // Partition key changing — must delete + recreate.
+          await sold.item(row.id, existing.cardId).delete();
+          await sold.items.create(merged);
+        } else {
+          await sold.items.upsert(merged);
+        }
+      } catch (writeErr) {
+        writeFailed++;
+        throw writeErr;
       }
       matched++;
     } catch (err) {
@@ -209,8 +236,9 @@ async function main() {
   await Promise.all([...inflight]);
 
   const elapsedS = ((Date.now() - startMs) / 1000).toFixed(0);
-  console.log(`\n[tca-match-enricher] done — matched=${matched} stillPending=${stillPending} failed=${failed} elapsed=${elapsedS}s`);
+  console.log(`\n[tca-match-enricher] done — matched=${matched} stillPending=${stillPending} failed=${failed} (writeFailed=${writeFailed}) elapsed=${elapsedS}s`);
   if (!APPLY) console.log(`(dry-run — no sold_comps writes)`);
+  if (APPLY) reportWrites({ job: "tca-match-enricher", intended: writeAttempted, written: matched, failed: writeFailed });
 }
 
 main().catch(err => { console.error(err); process.exit(1); });

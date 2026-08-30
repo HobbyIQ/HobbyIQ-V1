@@ -17,6 +17,10 @@
 const path = require("path");
 const backend = path.resolve(__dirname, "..", "..");
 const { CosmosClient } = require(path.join(backend, "node_modules/@azure/cosmos"));
+// CF-A-GREEN-RUN-IS-NOT-A-DATA-FLOW (D18, 2026-08-29). Counters, disjoint:
+//   intended = centroid docs computed; written = upserts that resolved;
+//   failed = upserts that threw (runInParallel's err). Requires dist/.
+const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
 
 const APPLY = process.env.CENTROID_APPLY === "true";
 const MIN_COMPS = Number(process.env.CENTROID_MIN_COMPS || "5");
@@ -156,5 +160,6 @@ async function main() {
     if (done % 500 === 0) process.stdout.write(`\r  written ${done}/${docs.length}`);
   });
   console.log(`\n  written ${result.ok} / errors ${result.err} in ${((Date.now()-t0)/1000).toFixed(1)}s`);
+  reportWrites({ job: "compute-slug-phash-centroids", intended: docs.length, written: result.ok, failed: result.err });
 }
 main().catch(e => { console.error(e); process.exit(1); });

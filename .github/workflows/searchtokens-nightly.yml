@@ -60,6 +60,11 @@ jobs:
         working-directory: backend
         run: npm ci
 
+      - name: Build TS (reportWrites lives in dist/ — D18)
+        if: steps.et-gate.outputs.should_run == 'true'
+        working-directory: backend
+        run: npx tsc
+
       - name: Login to Azure
         if: steps.et-gate.outputs.should_run == 'true'
         uses: azure/login@v3

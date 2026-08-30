@@ -21,6 +21,11 @@
 
 const { CosmosClient } = require("@azure/cosmos");
 const crypto = require("crypto");
+const path = require("path");
+// CF-A-GREEN-RUN-IS-NOT-A-DATA-FLOW (D18, 2026-08-29). This deletes. Counters,
+// disjoint: intended = non-survivor rows the loop took up; written = deletes
+// acknowledged; skipped = already gone (404); failed = deletes that threw.
+const { reportWrites } = require(path.join(__dirname, "..", "dist/services/ops/writeReconciliation.js"));
 
 const APPLY = process.env.APPLY === "true";
 const MAX_MINUTES = Math.max(1, Number(process.env.MAX_MINUTES || 50));
@@ -73,7 +78,7 @@ async function main() {
   }
 
   // Phase 2: find duplicate groups (size > 1), delete all except earliest observedAt
-  let dupeGroups = 0, dupeRows = 0, deleted = 0, errors = 0;
+  let dupeGroups = 0, dupeRows = 0, deleted = 0, gone = 0, errors = 0, attempted = 0;
   const sourcesCrossed = new Map(); // count how many cross-source combos
   const inflight = new Set();
 
@@ -93,10 +98,11 @@ async function main() {
     if (!APPLY) continue;
     for (const row of toDelete) {
       while (inflight.size >= CONCURRENCY) await Promise.race([...inflight]);
+      attempted++;
       const p = sold.item(row.id, row.cardId).delete()
         .then(() => { deleted++; })
         .catch((err) => {
-          if (err?.code === 404) return;
+          if (err?.code === 404) { gone++; return; }
           errors++;
           if (errors < 10) console.warn(`  delete err id=${row.id}: ${err?.code ?? err?.message}`);
         })
@@ -111,12 +117,13 @@ async function main() {
   }
   await Promise.all([...inflight]);
 
-  console.log(`\n[xsrc-dedup] DONE — scanned=${scanned.toLocaleString()} groups=${groups.size.toLocaleString()} dupeGroups=${dupeGroups.toLocaleString()} dupeRows=${dupeRows.toLocaleString()} deleted=${deleted.toLocaleString()} errors=${errors} el=${((Date.now()-startMs)/1000).toFixed(0)}s`);
+  console.log(`\n[xsrc-dedup] DONE — scanned=${scanned.toLocaleString()} groups=${groups.size.toLocaleString()} dupeGroups=${dupeGroups.toLocaleString()} dupeRows=${dupeRows.toLocaleString()} deleted=${deleted.toLocaleString()} gone=${gone.toLocaleString()} errors=${errors} el=${((Date.now()-startMs)/1000).toFixed(0)}s`);
   console.log("Cross-source combos:");
   for (const [combo, n] of [...sourcesCrossed.entries()].sort((a, b) => b[1] - a[1])) {
     console.log(`  ${combo.padEnd(35)} ${n.toLocaleString()}`);
   }
   if (!APPLY) console.log("(dry-run — no deletes)");
+  if (APPLY) reportWrites({ job: "sold-comps-cross-source-dedup", intended: attempted, written: deleted, skipped: gone, failed: errors });
 }
 
 main().catch((err) => { console.error(err); process.exit(1); });

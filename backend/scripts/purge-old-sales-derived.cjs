@@ -16,6 +16,12 @@
 //   CONCURRENCY=32             parallel deletes
 
 const { CosmosClient } = require("@azure/cosmos");
+const path = require("path");
+// CF-A-GREEN-RUN-IS-NOT-A-DATA-FLOW (D18, 2026-08-29). Counters, disjoint:
+//   intended = rows scanned under APPLY (every scanned row gets a delete)
+//   written  = deletes acknowledged; skipped = already gone (404, idempotent)
+//   failed   = deletes that threw otherwise
+const { reportWrites } = require(path.join(__dirname, "..", "dist/services/ops/writeReconciliation.js"));
 
 const APPLY = process.env.APPLY === "true";
 const CUTOFF_ISO = process.env.CUTOFF_ISO;
@@ -37,7 +43,7 @@ async function main() {
   };
   const iter = cat.items.query(q, { maxItemCount: 500 });
 
-  let scanned = 0, deleted = 0, errors = 0;
+  let scanned = 0, deleted = 0, gone = 0, errors = 0;
   const inflight = new Set();
 
   while (iter.hasMoreResults()) {
@@ -50,7 +56,7 @@ async function main() {
       const p = cat.item(row.id, row.id).delete()
         .then(() => { deleted++; })
         .catch((err) => {
-          if (err?.code === 404) return;   // already gone — idempotent
+          if (err?.code === 404) { gone++; return; }   // already gone — idempotent
           errors++;
           if (errors < 10) console.warn(`  delete err id=${row.id}: ${err?.code ?? err?.message}`);
         })
@@ -65,8 +71,9 @@ async function main() {
   }
   await Promise.all([...inflight]);
 
-  console.log(`\n[purge] DONE — scanned=${scanned.toLocaleString()} deleted=${deleted.toLocaleString()} errors=${errors} elapsed=${((Date.now()-startMs)/1000).toFixed(0)}s`);
+  console.log(`\n[purge] DONE — scanned=${scanned.toLocaleString()} deleted=${deleted.toLocaleString()} gone=${gone.toLocaleString()} errors=${errors} elapsed=${((Date.now()-startMs)/1000).toFixed(0)}s`);
   if (!APPLY) console.log("(dry-run — no deletes)");
+  if (APPLY) reportWrites({ job: "purge-old-sales-derived", intended: scanned, written: deleted, skipped: gone, failed: errors });
 }
 
 main().catch((err) => { console.error(err); process.exit(1); });

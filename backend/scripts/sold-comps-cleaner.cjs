@@ -33,6 +33,10 @@
 const { CosmosClient } = require("@azure/cosmos");
 const path = require("path");
 const fs = require("fs");
+// CF-A-GREEN-RUN-IS-NOT-A-DATA-FLOW (D18, 2026-08-29). Counters, disjoint:
+//   intended = rows where a field changed (every one is patched under APPLY)
+//   written  = patches acknowledged; failed = patches that threw
+const { reportWrites } = require(path.join(__dirname, "..", "dist/services/ops/writeReconciliation.js"));
 
 const APPLY = process.env.APPLY === "true";
 const MAX_MINUTES = Math.max(1, Number(process.env.MAX_MINUTES || 50));
@@ -187,6 +191,7 @@ async function main() {
   console.log(`\n[cleaner] DONE — scanned=${scanned.toLocaleString()} changed=${changed.toLocaleString()} patched=${patched.toLocaleString()} errors=${errors} elapsed=${((Date.now()-startMs)/1000).toFixed(0)}s`);
   console.log(`Field changes: ${JSON.stringify(changedFields)}`);
   if (!APPLY) console.log("(dry-run — no writes)");
+  if (APPLY) reportWrites({ job: "sold-comps-cleaner", intended: changed, written: patched, failed: errors });
   // Referenced but unused to avoid unused-import lint if we later remove parsers
   void helpers;
 }

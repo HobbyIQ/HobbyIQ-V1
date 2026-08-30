@@ -68,9 +68,15 @@ jobs:
           cache: npm
           cache-dependency-path: backend/package-lock.json
 
-      - name: Install backend deps (only @azure/cosmos needed)
+      - name: Install backend deps
         working-directory: backend
         run: npm ci --omit=optional --no-audit --no-fund
+
+      # The script requires dist/ (hobbyIqCardId.service, writeReconciliation);
+      # dist/ is gitignored, and until D18 nothing here built it.
+      - name: Build TS (the script requires dist/ — D18)
+        working-directory: backend
+        run: npx tsc
 
       - name: Login to Azure
         uses: azure/login@v3

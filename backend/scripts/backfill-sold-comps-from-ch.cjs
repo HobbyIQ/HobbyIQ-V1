@@ -37,6 +37,13 @@ const { CosmosClient } = require("@azure/cosmos");
 // so rows written from CH land with the canonical slug on first insert
 // (instead of relying on the nightly cleanup pass to backfill).
 const { computeHobbyIqCardId } = require(path.join(__dirname, "..", "dist/services/portfolioiq/hobbyIqCardId.service.js"));
+// CF-A-GREEN-RUN-IS-NOT-A-DATA-FLOW (D18, 2026-08-29). Counters, disjoint:
+//   intended = CH rows fetched and handed to the day loop (processed)
+//   written  = upserts acknowledged
+//   skipped  = rows without a card_id / price / sale_date
+//   failed   = upserts that threw
+// A day whose QUERY fails is logged and never counted as processed.
+const { reportWrites } = require(path.join(__dirname, "..", "dist/services/ops/writeReconciliation.js"));
 
 // Prospect autograph cardNumber prefixes — per Drew's memory
 // `isauto-boundary-is-cardnumber-not-text`, the cardNumber prefix IS
@@ -282,6 +289,7 @@ async function main() {
   const elapsedMin = (Date.now() - t0) / 60_000;
   console.log(`\nDONE. processed=${totalProcessed.toLocaleString()}  wrote=${totalWritten.toLocaleString()}  skipped=${totalSkipped.toLocaleString()}  errors=${totalErrors.toLocaleString()}  time=${elapsedMin.toFixed(1)}min`);
   console.log(`apply=${args.apply}${args.apply ? "" : " (dry-run — no writes)"}`);
+  if (args.apply) reportWrites({ job: "backfill-sold-comps-from-ch", intended: totalProcessed, written: totalWritten, skipped: totalSkipped, failed: totalErrors });
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });

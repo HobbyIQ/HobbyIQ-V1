@@ -23,7 +23,8 @@
 // Env:
 //   COSMOS_CONNECTION_STRING     — required
 //   AUTH_SESSION_SECRET          — required (transitive imports)
-//   INGEST_APPLY=false           — default dry-run; set true to write
+//   INGEST_APPLY=false           — default dry-run; set true to write (the
+//                                  runner's BACKFILL_APPLY is honoured too)
 
 const path = require("path");
 const fs = require("fs");
@@ -32,8 +33,16 @@ const {
   deriveCatalogEntry,
   upsertCatalogEntry,
 } = require(path.join(backend, "dist/services/portfolioiq/cardCatalog.service.js"));
+const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
 
-const APPLY = process.env.INGEST_APPLY === "true";
+// CF-RUNNER-FLAG-HYGIENE (D18, 2026-08-29). The runner exports BACKFILL_APPLY
+// and never INGEST_APPLY, so under the runner this was PERMANENTLY DRY: an
+// "APPLY" dispatch printed the plan and wrote nothing. An explicit INGEST_APPLY
+// still wins; otherwise the runner's flag; with neither, dry.
+const APPLY = (process.env.INGEST_APPLY ?? process.env.BACKFILL_APPLY) === "true";
+// Reconciled (D18): intended = entries handed to upsertCatalogEntry, written =
+// upserts that returned a row, failed = upserts that returned nothing or
+// threw. A row that fails to DERIVE never reaches the write (failed_derive).
 
 const SETKEY_MAP = {
   chrome_prospect_autographs: { setKey: "bowman", parallel: "Base", printRun: null, tag: "hobby" },
@@ -100,6 +109,8 @@ async function main() {
     dual_expansions: 0,
     wrote: 0,
     failed: 0,
+    upsert_attempted: 0,
+    upsert_failed: 0,
   };
   const preview = [];
 
@@ -144,12 +155,13 @@ async function main() {
       if (preview.length < 15) preview.push({ id: entry.id, player, note: row.note });
 
       if (APPLY) {
+        stats.upsert_attempted++;
         try {
           const w = await upsertCatalogEntry(entry);
           if (w) stats.wrote++;
-          else stats.failed++;
+          else stats.upsert_failed++;
         } catch (e) {
-          stats.failed++;
+          stats.upsert_failed++;
           console.warn(`  upsert failed: ${entry.id} — ${(e?.message ?? e).slice(0, 80)}`);
         }
       }
@@ -163,8 +175,9 @@ async function main() {
   console.log(`  skipped (name-only set): ${stats.skipped_set}`);
   console.log(`  skipped (no player): ${stats.skipped_no_player}`);
   console.log(`  failed derive:       ${stats.failed}`);
-  if (APPLY) console.log(`  wrote to catalog:    ${stats.wrote}`);
-  else console.log(`\n*** DRY-RUN. Set INGEST_APPLY=true to write. ***`);
+  if (APPLY) console.log(`  wrote to catalog:    ${stats.wrote}   (upsert failed: ${stats.upsert_failed})`);
+  else console.log(`\n*** DRY-RUN. Set INGEST_APPLY=true (or dispatch with apply=true) to write. ***`);
+  if (APPLY) reportWrites({ job: "ingest-2026-bowman-auto-checklist", intended: stats.upsert_attempted, written: stats.wrote, failed: stats.upsert_failed });
 
   console.log(`\n══ Sample entries (first 15) ══`);
   preview.forEach(p => console.log(`  ${p.id.padEnd(60)} ${p.player}${p.note ? `  [${p.note}]` : ""}`));

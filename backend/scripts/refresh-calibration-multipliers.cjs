@@ -32,8 +32,21 @@ const path = require("path");
 const backend = __dirname + "/..";
 const { CosmosClient } = require(path.join(backend, "node_modules/@azure/cosmos"));
 const { upsertCalibration } = require(path.join(backend, "dist/services/portfolioiq/marketMomentum.service.js"));
+const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
 
-const APPLY = process.env.CALIBRATION_APPLY !== "false";
+// CF-RUNNER-FLAG-HYGIENE (D18, 2026-08-29). Default-on meant `apply=false`
+// under the runner still wrote — the runner exports BACKFILL_APPLY, not
+// CALIBRATION_APPLY. Precedence: an explicit CALIBRATION_APPLY (the cron
+// workflows set "true"); else the runner's BACKFILL_APPLY when it is present;
+// else the old default, on.
+const APPLY = process.env.CALIBRATION_APPLY !== undefined
+  ? process.env.CALIBRATION_APPLY !== "false"
+  : process.env.BACKFILL_APPLY !== undefined
+    ? process.env.BACKFILL_APPLY === "true"
+    : true;
+// Reconciled (D18): intended = calibration docs handed to upsertCalibration,
+// written = calls that resolved. A call that throws aborts the run (exit 1).
+const writes = { intended: 0, written: 0 };
 const WINDOW_DAYS = Number(process.env.CALIBRATION_WINDOW_DAYS || "90");
 
 async function fetchSample(sc, sinceIso) {
@@ -139,6 +152,7 @@ async function computePerIdentityMultiplier({
   if (Object.keys(multipliers).length <= 1) return 0;
 
   if (APPLY) {
+    writes.intended++;
     await upsertCalibration({
       dimension,
       scope,
@@ -148,6 +162,7 @@ async function computePerIdentityMultiplier({
       sampleSize: maxIdentityN,
       confidence: confidence(maxIdentityN),
     });
+    writes.written++;
   }
   return 1;
 }
@@ -275,6 +290,7 @@ async function main() {
   console.log(`\n════════════════ SUMMARY ════════════════`);
   console.log(`  computedAt: ${computedAt}`);
   if (!APPLY) console.log(`\n*** DRY-RUN. Set CALIBRATION_APPLY=true to write. ***`);
+  if (APPLY) reportWrites({ job: "refresh-calibration-multipliers", ...writes });
 }
 
 main().catch(e => { console.error(e); process.exit(1); });

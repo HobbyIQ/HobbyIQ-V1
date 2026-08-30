@@ -13,12 +13,23 @@
 //
 // Env:
 //   COSMOS_CONNECTION_STRING   required
-//   RECOVER_MODE               dry | apply (default dry)
+//   RECOVER_MODE               dry | apply (default: the runner's BACKFILL_APPLY,
+//                              else dry)
 //   RECOVER_CONCURRENCY        default 8
 
 const { CosmosClient } = require("@azure/cosmos");
+const path = require("path");
+// CF-A-GREEN-RUN-IS-NOT-A-DATA-FLOW (D18, 2026-08-29). Counters, disjoint:
+//   intended = rows the apply branch handed to an upsert
+//   written  = upserts acknowledged (rewritten); failed = upserts that threw
+const { reportWrites } = require(path.join(__dirname, "..", "dist/services/ops/writeReconciliation.js"));
 
-const MODE = (process.env.RECOVER_MODE || "dry").toLowerCase();
+// CF-RUNNER-FLAG-HYGIENE (D18, 2026-08-29). The runner exports BACKFILL_APPLY
+// and never RECOVER_MODE, so under the runner this was PERMANENTLY DRY: an
+// "APPLY" dispatch printed plausible would-change counters and wrote nothing.
+// An explicit RECOVER_MODE still wins (the manual runbook); otherwise the
+// runner's flag decides; with neither, dry.
+const MODE = (process.env.RECOVER_MODE || (process.env.BACKFILL_APPLY === "true" ? "apply" : "dry")).toLowerCase();
 const CONCURRENCY = Math.max(1, Number(process.env.RECOVER_CONCURRENCY || 8));
 
 // Set-string canonicalization ONLY (safe rules — no cardNumber prefix override).
@@ -162,7 +173,7 @@ async function main() {
   const transitions = {};
   const skipped = {};
   const inFlight = [];
-  let rewritten = 0, unchanged = 0, errored = 0, keptAsIs = 0;
+  let rewritten = 0, unchanged = 0, errored = 0, keptAsIs = 0, attempted = 0;
   for (const r of rows) {
     const oldSlug = r.hobbyiqCardId;
     if (typeof oldSlug !== "string" || !oldSlug.startsWith("hiq:")) { unchanged++; continue; }
@@ -186,6 +197,7 @@ async function main() {
     if (MODE === "apply") {
       r.hobbyiqCardId = newSlug;
       r.__recoveredChromeAt = new Date().toISOString();
+      attempted++;
       inFlight.push(
         withRetry(() => sc.items.upsert(r))
           .then(() => { rewritten++; })
@@ -213,6 +225,7 @@ async function main() {
   Object.entries(skipped).sort((a,b) => b[1] - a[1]).slice(0, 15).forEach(([k, n]) => {
     console.log(`  ${String(n).padStart(5)}  ${k}`);
   });
+  if (MODE === "apply") reportWrites({ job: "recover-chrome-collapse-damage", intended: attempted, written: rewritten, failed: errored });
 }
 
 main().catch(e => { console.error(e); process.exit(1); });

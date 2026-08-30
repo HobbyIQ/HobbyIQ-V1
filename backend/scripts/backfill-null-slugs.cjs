@@ -35,6 +35,12 @@ const path = require("path");
 const backend = path.join(__dirname, "..");
 const { CosmosClient } = require(path.join(backend, "node_modules/@azure/cosmos"));
 const { deriveHobbyIqSlug } = require(path.join(backend, "dist/services/portfolioiq/soldCompsStore.service.js"));
+// CF-A-GREEN-RUN-IS-NOT-A-DATA-FLOW (D18, 2026-08-29). Counters, disjoint:
+//   intended = rows scanned
+//   written  = slugs stamped (keyed)
+//   skipped  = refused by the guard + already keyed (LEFT ALONE, by design)
+//   failed   = patches that threw
+const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
 
 function arg(name, dflt) {
   const hit = process.argv.find((a) => a.startsWith(`--${name}=`));
@@ -136,6 +142,7 @@ async function main() {
     `alreadyKeyed=${skippedHasSlug} failed=${failed}`);
   console.log(`distinct destination setKeys: ${destinations.size}`);
   if (!APPLY) console.log("\nDRY-RUN — re-run with --apply to write");
+  if (APPLY) reportWrites({ job: "backfill-null-slugs", intended: scanned, written: keyed, skipped: refused + skippedHasSlug, failed });
   return 0;
 }
 main().then((c) => process.exit(c)).catch((e) => { console.error(e); process.exit(1); });

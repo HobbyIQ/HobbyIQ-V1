@@ -46,6 +46,13 @@
 const path = require("path");
 const backend = path.join(__dirname, "..");
 const { CosmosClient } = require(path.join(backend, "node_modules/@azure/cosmos"));
+// CF-A-GREEN-RUN-IS-NOT-A-DATA-FLOW (D18, 2026-08-29). Counters, disjoint:
+//   intended = rows the pass-2 loop took up for a patch
+//   written  = patches acknowledged (rowsMoved)
+//   failed   = patches that threw (patchFailed)
+// A merge whose row QUERY failed is queryFailed — its rows were never seen,
+// so never intended; it is printed on its own. Requires dist/.
+const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
 
 const arg = (n, d) => {
   const hit = process.argv.find((a) => a.startsWith(`--${n}=`));
@@ -157,7 +164,7 @@ async function main() {
   if (merges.length > TOP) console.log(`   ... and ${merges.length - TOP} more`);
 
   // ---- PASS 2: move the unnumbered rows ----------------------------------
-  let moved = 0, failed = 0;
+  let moved = 0, rowsAttempted = 0, patchFailed = 0, queryFailed = 0;
   let cursor = 0;
   await Promise.all(Array.from({ length: POOL }, async () => {
     while (cursor < merges.length) {
@@ -169,6 +176,7 @@ async function main() {
         }).fetchAll();
         for (const row of resources) {
           if (!APPLY) { moved++; continue; }
+          rowsAttempted++;
           try {
             await sold.item(row.id, row.cardId).patch([
               { op: "add", path: "/hobbyiqCardIdBefore", value: m.from },
@@ -176,19 +184,20 @@ async function main() {
             ]);
             moved++;
           } catch (e) {
-            failed++;
-            if (failed <= 5) console.log(`   patch failed ${row.id}: ${String(e.message).slice(0, 80)}`);
+            patchFailed++;
+            if (patchFailed <= 5) console.log(`   patch failed ${row.id}: ${String(e.message).slice(0, 80)}`);
           }
         }
       } catch (e) {
-        failed++;
-        if (failed <= 5) console.log(`   query failed ${m.from}: ${String(e.message).slice(0, 80)}`);
+        queryFailed++;
+        if (queryFailed <= 5) console.log(`   query failed ${m.from}: ${String(e.message).slice(0, 80)}`);
       }
     }
   }));
 
-  console.log(`\npass1Scanned=${scanned} merges=${merges.length} rowsMoved=${moved} ambiguousLeftAlone=${ambiguous} failed=${failed}`);
+  console.log(`\npass1Scanned=${scanned} merges=${merges.length} rowsMoved=${moved} ambiguousLeftAlone=${ambiguous} patchFailed=${patchFailed} queryFailed=${queryFailed}`);
   if (!APPLY) console.log("DRY-RUN — re-run with --apply to write");
+  if (APPLY) reportWrites({ job: "merge-unambiguous-printrun", intended: rowsAttempted, written: moved, failed: patchFailed });
   return 0;
 }
 main().then((c) => process.exit(c)).catch((e) => { console.error(e); process.exit(1); });
