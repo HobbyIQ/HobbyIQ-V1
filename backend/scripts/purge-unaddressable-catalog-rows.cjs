@@ -95,11 +95,24 @@ async function main() {
   console.log(`purge-unaddressable-catalog-rows  slot ${SLOT}/${SLOTS}  ${APPLY ? "APPLY (deletes)" : "REPORT ONLY"}  budget ${RUN_MS / 60000}m  PURGE_SOURCES=${[...PURGE_SOURCES].join(",")}${LIMIT ? `  LIMIT=${f(LIMIT)}` : ""}`);
 
   // Holdings that point at an unaddressable id — a refusal list, expected empty.
+  // `holdings` is a MAP keyed by holding id (not an array): `JOIN h IN c.holdings`
+  // iterates nothing, so the docs are read and walked here.
   const held = new Set();
-  const heldQ = "SELECT VALUE h.hobbyiqCardId FROM c JOIN h IN c.holdings WHERE CONTAINS(h.hobbyiqCardId, '/') OR CONTAINS(h.hobbyiqCardId, '#') OR CONTAINS(h.hobbyiqCardId, '?') OR CONTAINS(h.hobbyiqCardId, '\\\\')";
-  const heldQ2 = "SELECT VALUE h.cardId FROM c JOIN h IN c.holdings WHERE CONTAINS(h.cardId, '/') OR CONTAINS(h.cardId, '#') OR CONTAINS(h.cardId, '?') OR CONTAINS(h.cardId, '\\\\')";
-  for (const q of [heldQ, heldQ2]) for (const id of (await retry(() => port.items.query(q).fetchAll())).resources) if (id) held.add(String(id));
-  console.log(`holdings pointing at unaddressable ids: ${f(held.size)}${held.size ? "  <- those rows are REFUSED" : ""}`);
+  let docsSeen = 0, holdingsSeen = 0;
+  const docIter = port.items.query("SELECT c.id, c.userId, c.holdings FROM c WHERE IS_DEFINED(c.holdings)", { maxItemCount: 50 });
+  while (docIter.hasMoreResults()) {
+    const page = await retry(() => docIter.fetchNext());
+    for (const d of page.resources ?? []) {
+      docsSeen++;
+      const list = Array.isArray(d.holdings) ? d.holdings : Object.values(d.holdings ?? {});
+      for (const h of list) {
+        holdingsSeen++;
+        for (const k of ["hobbyiqCardId", "cardId"]) { const v = String(h?.[k] ?? ""); if (v && hasIllegal(v)) held.add(v); }
+      }
+    }
+  }
+  console.log(`holdings pointing at unaddressable ids: ${f(held.size)} (walked ${f(holdingsSeen)} holdings in ${f(docsSeen)} docs)${held.size ? "  <- those rows are REFUSED" : ""}`);
+  if (!holdingsSeen) { console.error("FATAL: walked 0 holdings — the guard cannot vouch for anything; refusing to run"); process.exit(2); }
 
   // The rows: grouped by partition key, sharded by that key so a partition's rows purge together.
   const query = "SELECT c.id, c.cardId, c.source, c._self FROM c WHERE CONTAINS(c.id, '/') OR CONTAINS(c.id, '#') OR CONTAINS(c.id, '?') OR CONTAINS(c.id, '\\\\')";
