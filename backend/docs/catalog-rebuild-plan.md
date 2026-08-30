@@ -1548,7 +1548,15 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   isAuto APPLY (CPA forced) → materialize-graded-identities (after one-of-one)
   → D3c re-ingest → conform-holdings APPLY → reprice-all → audit-all-holdings;
   the two retires (old-CLC floor-gated; vendor-minted) wait on Drew's
-  dispatch (classifier) and the vendor dry run's banner. Drew (22:30Z): "I see 2 max williams superfractors …
+  dispatch (classifier) and the vendor dry run's banner.
+  **Card-profile shards 0/1 (08:05Z): wrote 471,799 / 528,460 rows, 0
+  failed — and exited RED: intended counted every row seen (3.77M, kept for
+  shard stability) while skipped declared neither the other slots' 7/8 nor
+  the already-clean rows → UNACCOUNTED 87.5% (the sibling-counter shape).
+  #1499 declares both; shards 2–7 run the old accounting (writes fine, exit
+  red for the same reason). D18 (building, `feat/d18`, the single builder):
+  cron writers reconcile, the nine progress-gated relaunch steps become
+  marker-keyed, runner flag hygiene.** Drew (22:30Z): "I see 2 max williams superfractors …
   superfractors are 1/1" — bcp's un-numbered `superfractor:auto` beside
   beckett's `:num-1`, and the same pair on Refractor /499, Black /10, Red /5,
   Red Lava, Sky Blue. **#1470:** the fold's decision is a pure tested rule
