@@ -21,7 +21,7 @@ name: Sold Comps Freshness Canary
 # days 08-22..08-28):
 #   tca-ebay   100190 / 114513 / 108922 / 100966 /  9340 / 11911 /  9280   min  9280
 #   cardhedge  197620 /  36640 /  58927 /  96621 / 101911 / 58272 / 32422   min 32422
-# Floor = ~25% of the observed minimum day → tca-ebay=2300. The 08-26
+# Floor = ~25% of the observed minimum day → tca-ebay=25000. The 08-26
 # step-down from ~100k/day to ~10k/day is itself the shape this axis
 # exists for: if the firehose is confirmed back, raise the floor toward
 # 25000 (25% of the firehose-era minimum). cardhedge stays off (runtime,
@@ -38,10 +38,10 @@ on:
         type: string
         default: '25'
       min_rows_24h:
-        description: 'Per-source 24h row floors, e.g. tca-ebay=2300,cardhedge=0 (0 = off). Default tca-ebay=2300.'
+        description: 'Per-source 24h row floors, e.g. tca-ebay=25000,cardhedge=0 (0 = off). Default tca-ebay=25000.'
         required: false
         type: string
-        default: 'tca-ebay=2300'
+        default: 'tca-ebay=25000'
 
 jobs:
   check-freshness:
@@ -85,5 +85,5 @@ jobs:
           COSMOS_CONNECTION_STRING="$COSMOS_CONNECTION_STRING" \
           COSMOS_DATABASE=hobbyiq \
           MAX_STALENESS_HOURS="${{ inputs.max_staleness_hours || '25' }}" \
-          MIN_ROWS_24H="${{ inputs.min_rows_24h || 'tca-ebay=2300' }}" \
+          MIN_ROWS_24H="${{ inputs.min_rows_24h || 'tca-ebay=25000' }}" \
           node scripts/checkSoldCompsFreshness.cjs

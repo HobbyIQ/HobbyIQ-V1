@@ -97,7 +97,52 @@ function setAgrees(holdingSetText, setKey, setName) {
   return true;
 }
 
+/**
+ * SCOPE=rulings (Drew, 2026-08-30): apply the per-holding identity rulings in
+ * backend/data/holding-identity-rulings.json and nothing else. The bot refuses a
+ * product-changing correction; a ruling is the human saying so. Guards: the
+ * holding's current hobbyiqCardId must equal `from` (else skipped, reported),
+ * the `to` row must exist in card_catalog (point read), and both cardId and
+ * hobbyiqCardId are set to `to` -- one identity.
+ */
+async function applyRulings(portfolio, cat) {
+  const file = path.join(backend, "data", "holding-identity-rulings.json");
+  const rulings = JSON.parse(fs.readFileSync(file, "utf8")).rulings ?? [];
+  console.log(`conform-holdings-to-catalog  SCOPE=rulings  ${APPLY ? "APPLY" : "REPORT ONLY"}  ${rulings.length} ruling(s) from ${path.relative(backend, file)}`);
+  let applied = 0, skipped = 0, failed = 0;
+  for (const r of rulings) {
+    try {
+      let row = null; try { row = (await retry(() => cat.item(r.to, r.to).read())).resource ?? null; } catch (e) { if (e?.code !== 404) throw e; }
+      if (!row) { skipped++; console.log(`  skip ${r.holdingId.slice(0, 8)} ${r.note}: target row MISSING ${r.to}`); continue; }
+      const { resources: docs } = await retry(() => portfolio.items.query({ query: "SELECT c.id, c.userId, c.holdings[@h] AS h FROM c WHERE c.userId = @u AND IS_DEFINED(c.holdings[@h])", parameters: [{ name: "@h", value: r.holdingId }, { name: "@u", value: r.userId }] }).fetchAll());
+      const doc = docs[0]; const h = doc?.h;
+      if (!h) { skipped++; console.log(`  skip ${r.holdingId.slice(0, 8)}: holding not found for user`); continue; }
+      const current = String(h.hobbyiqCardId ?? "");
+      if (current === r.to && String(h.cardId ?? "") === r.to) { skipped++; console.log(`  skip ${r.holdingId.slice(0, 8)}: already ${r.to}`); continue; }
+      if (current !== r.from) { skipped++; console.log(`  skip ${r.holdingId.slice(0, 8)}: current hobbyiqCardId ${current || "(none)"} != ruling.from ${r.from}`); continue; }
+      console.log(`  ${APPLY ? "RULED" : "WOULD RULE"} ${r.holdingId.slice(0, 8)} ${h.playerName ?? ""} #${h.cardNumber ?? ""}: ${r.from} -> ${r.to}  (${r.rulingBy} ${r.date}: ${r.note})`);
+      if (!APPLY) { applied++; continue; }
+      const ops = [
+        { op: "set", path: `/holdings/${r.holdingId}/hobbyiqCardId`, value: r.to },
+        { op: "set", path: `/holdings/${r.holdingId}/cardId`, value: r.to },
+        { op: "set", path: `/holdings/${r.holdingId}/identityResolvedBy`, value: `ruling:${r.rulingBy}:${r.date}` },
+        { op: "set", path: `/holdings/${r.holdingId}/identityResolvedAt`, value: new Date().toISOString() },
+      ];
+      await retry(() => portfolio.item(doc.id, doc.userId).patch(ops));
+      applied++;
+    } catch (e) { failed++; console.log(`  failed ${r.holdingId.slice(0, 8)}: ${String(e?.message ?? e).slice(0, 120)}`); }
+  }
+  console.log(`\n${APPLY ? "APPLIED" : "REPORT ONLY -- nothing written"}\n  rulings ${rulings.length}  ${APPLY ? "applied" : "would apply"} ${applied}  skipped ${skipped}  failed ${failed}`);
+  if (APPLY) reportWrites({ job: "conform-holdings-to-catalog", intended: rulings.length, written: applied, skipped, failed });
+}
+
 async function main() {
+  if (String(process.env.SCOPE || "").trim().toLowerCase() === "rulings") {
+    const conn = process.env.COSMOS_CONNECTION_STRING;
+    if (!conn) { console.error("FATAL: COSMOS_CONNECTION_STRING not set"); process.exit(1); }
+    const db = new CosmosClient({ connectionString: conn, connectionPolicy: { retryOptions: { maxRetryAttemptsOnThrottledRequests: 30, maxWaitTimeInSeconds: 120 } } }).database("hobbyiq");
+    return applyRulings(db.container("portfolio"), db.container("card_catalog"));
+  }
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) { console.error("FATAL: COSMOS_CONNECTION_STRING not set"); process.exit(1); }
   const db = new CosmosClient({
