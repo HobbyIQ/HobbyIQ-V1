@@ -1,0 +1,32 @@
+{
+  "_doc": "Per-holding identity rulings by Drew. conform-holdings-to-catalog SCOPE=rulings applies ONLY these: the holding's current hobbyiqCardId must equal `from`, the `to` row must exist in card_catalog, and both cardId and hobbyiqCardId are set to `to` (one identity). A product-changing move is what the bot refuses (CF-A-HOLDING-NEVER-ADOPTS-A-VENDOR-ROW); a ruling is the human saying so.",
+  "rulings": [
+    {
+      "holdingId": "82c36e0d-be4d-4d32-9a5f-b2407cc39a1e",
+      "userId": "user-199fcbc9-58ba-4643-a0c9-f75bcbc90bd4",
+      "from": "hiq:baseball:2018:topps-chrome:hmt1:base:no-auto",
+      "to": "hiq:baseball:2018:topps-chrome-update:hmt1:base:no-auto",
+      "rulingBy": "Drew",
+      "date": "2026-08-30",
+      "note": "Ohtani HMT-1 is the Topps Chrome Update card"
+    },
+    {
+      "holdingId": "465490d3-6125-4ada-9667-675d83c0debe",
+      "userId": "user-67878bb5-496d-4bf5-87e4-e8869609d19f",
+      "from": "hiq:baseball:2026:bowman-chrome:cpa-ba:refractor:auto",
+      "to": "hiq:baseball:2026:bowman:cpa-ba:refractor:auto:num-499",
+      "rulingBy": "Drew",
+      "date": "2026-08-30",
+      "note": "CPA-BA ships in the Bowman release; Bowman Chrome is the later product"
+    },
+    {
+      "holdingId": "60900941-28a5-411d-9dc4-1133b3d41c4d",
+      "userId": "user-67878bb5-496d-4bf5-87e4-e8869609d19f",
+      "from": "hiq:baseball:2025:bowman-chrome:cpa-fa:purple-refractor:auto",
+      "to": "hiq:baseball:2025:bowman:cpa-fa:purple-refractor:auto:num-250",
+      "rulingBy": "Drew",
+      "date": "2026-08-30",
+      "note": "CPA-FA ships in the Bowman release"
+    }
+  ]
+}
