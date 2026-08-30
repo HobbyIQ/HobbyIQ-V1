@@ -18,6 +18,7 @@ import {
   PsaApiError,
 } from "../psa/psaCert.service.js";
 import { tokenizeParallel } from "../compiq/parallelTokenizer.js";
+import { canonicalVariationName } from "../catalog/variationVocabulary.js";
 import { parseGradeLabel } from "../portfolioiq/gradeParser.js";
 import {
   CertGraderError,
@@ -83,6 +84,19 @@ export function canonicalParallelFromVariety(
   variety: string | null | undefined,
 ): string | null {
   if (!variety || typeof variety !== "string") return null;
+  // CF-A-VARIATION-IS-A-CARD (D22, Drew 2026-08-30). The PSA label on holding
+  // 3fe98abe reads "SP-CHROME": the throwing-pose image variation of the
+  // Chrome card, same number as the base. tokenizeParallel turned that into
+  // the parallel text "Sp Chrome" — a slug no checklist holds — so the
+  // holding sat on the base card twice. The descriptor is read by the one
+  // vocabulary first: "SP-CHROME" → "Image Variation Chrome", "SSP" →
+  // "Image Variation SSP", "Photo Variation" → "Image Variation". A bare
+  // "SP" is not a variation (Heritage's short print) and falls through.
+  const variation = canonicalVariationName(variety);
+  if (variation) {
+    const auto = detectAutoFromVariety(variety);
+    return auto ? variation : variation;
+  }
   const tokens = tokenizeParallel(variety);
   if (tokens.length === 0) return null;
   const parallelTokens = tokens.filter((t) => !AUTO_TOKENS.has(t));

@@ -11,10 +11,15 @@
 // finish the title does not name, and never replace one it does. The tag is
 // returned as telemetry so the caller can count the disagreements.
 
+import { canonicalVariationName, type VariationMarker } from "../catalog/variationVocabulary.js";
+
 export interface ParallelDecision {
   parallel: string | null;
   /** The vendor tag that was NOT adopted, when it disagreed with the title. */
   vendorTagOverruled: string | null;
+  /** D22: the vendor's variation tag was adopted because the title carried
+   *  a weak marker ("SP", "SSP", "IV", "Short Print") that corroborates it. */
+  variationCorroboratedByMarker?: boolean;
 }
 
 const norm = (v: string | null | undefined): string | null => {
@@ -43,12 +48,25 @@ function refines(vendor: string, title: string): boolean {
 export function parallelTheTitleAllows(
   titleParallel: string | null | undefined,
   vendorParallel: string | null | undefined,
+  opts: { variationMarker?: VariationMarker | null } = {},
 ): ParallelDecision {
   const fromTitle = norm(titleParallel);
   const fromVendor = norm(vendorParallel);
   if (fromVendor === null) return { parallel: fromTitle, vendorTagOverruled: null };
-  if (fromTitle === null) return { parallel: null, vendorTagOverruled: fromVendor };
+  // CF-A-VARIATION-IS-A-CARD (D22). A vendor tag that names a variation
+  // ("Image Variation", "SSP") is adopted when the title, though it never
+  // spelled the variation, carries a weak marker for one: "SP", "SSP", "IV",
+  // "Short Print". The marker corroborates the tag; a colour tag it cannot.
+  const vendorVariation = canonicalVariationName(fromVendor);
+  if (fromTitle === null) {
+    if (opts.variationMarker && vendorVariation) return { parallel: vendorVariation, vendorTagOverruled: null, variationCorroboratedByMarker: true };
+    return { parallel: null, vendorTagOverruled: fromVendor };
+  }
   if (fromTitle.toLowerCase() === fromVendor.toLowerCase()) return { parallel: fromTitle, vendorTagOverruled: null };
+  // Two spellings of one variation ("Image Variations" / "Image Variation")
+  // agree; the canonical spelling is adopted.
+  const titleVariation = canonicalVariationName(fromTitle);
+  if (titleVariation && vendorVariation && titleVariation === vendorVariation) return { parallel: titleVariation, vendorTagOverruled: null };
   if (refines(fromVendor, fromTitle)) return { parallel: fromVendor, vendorTagOverruled: null };
   return { parallel: fromTitle, vendorTagOverruled: fromVendor };
 }

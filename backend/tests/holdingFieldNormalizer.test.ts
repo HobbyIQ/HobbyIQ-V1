@@ -426,8 +426,11 @@ describe("R7 parallel_strip_garbled_subset_prefix — legacy 'Chr Prospect Auto-
     // "Image Variation". Real observed variant (Kade Anderson 2025
     // Bowman Draft). {1,} requires ≥2 tokens.
     const r = normalizeHoldingFields({ parallel: "Chrome-Image Variation" });
-    expect(r.fields.parallel).toBe("Chrome-Image Variation");
+    // R7 leaves it whole; R9 (D22, parallel_variation_vocabulary) then spells
+    // it the vocabulary's way — every word kept, singular, no hyphen.
+    expect(r.fields.parallel).toBe("Chrome Image Variation");
     expect(r.changes.filter((c) => c.rule === "parallel_strip_garbled_subset_prefix")).toHaveLength(0);
+    expect(r.changes.map((c) => c.rule)).toEqual(["parallel_variation_vocabulary"]);
   });
 });
 

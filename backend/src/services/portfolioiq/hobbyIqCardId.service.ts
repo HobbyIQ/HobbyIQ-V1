@@ -38,6 +38,7 @@
 //
 // This module has ZERO side effects. Import + call is safe anywhere.
 
+import { chromeRefractorSuffixForVariation, normalizeVariationSlug } from "../catalog/variationVocabulary.js";
 import { POKEMON_SET_ALIASES } from "../catalog/pokemonSetAliases.js";
 import { YUGIOH_SET_ALIASES, MTG_SET_ALIASES } from "../catalog/tcgSetAliases.js";
 import { JAPANESE_POKEMON_SET_ALIASES } from "../catalog/japanesePokemonAliases.js";
@@ -305,6 +306,12 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     // base or chrome variants. "Bowman Draft Paper" MUST match before
     // "Bowman Draft" to preserve stock specificity.
     [/bowman-draft-paper/, "bowman-draft-paper"],
+    // CF-1ST-EDITION-IS-ANOTHER-SET (D22, Drew 2026-08-30: "bobby witt came
+    // out of bowman draft … first edition is another bowman set"). Before
+    // this line "2020 Bowman Draft 1st Edition" fell through to the plain
+    // bowman-draft rule and every 1st Edition sale pooled under the plain
+    // Draft card (holding 3fe98abe's only pool row). Must precede it.
+    [/bowman-draft-(?:1st|first)-edition/, "bowman-draft-1st-edition"],
     [/bowman-draft/, "bowman-draft"],
     [/bowman-paper/, "bowman-paper"],
     [/bowman-sterling/, "bowman-sterling"],
@@ -357,6 +364,7 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     [/bowman-platinum/, "bowman-platinum"],
     [/bowmans?-best-university/, "bowman-best-university"],
     [/bowmans?-best/, "bowmans-best"],
+    [/bowman-(?:1st|first)-edition/, "bowman-1st-edition"],
     [/^bowman/, "bowman"],
     [/bowman/, "bowman"],
     // CF-TOPPS-CHROME-PLATINUM-DISTINCT (Drew, 2026-08-01). Topps Chrome
@@ -939,11 +947,17 @@ function normalizeCardNumber(cardNumber: string): string {
  *  minimal-risk. */
 export function normalizeParallel(parallel: string | null | undefined): string {
   const raw = String(parallel ?? "").trim();
+  // CF-A-VARIATION-IS-A-CARD (D22). A variation name has its own vocabulary
+  // (variationVocabulary.ts): "Image Variations" / "Photo Variation" / "SP
+  // Variation" / "SSP" / "IV" are one card — image-variation(-ssp) — and a
+  // named kind keeps its words singular. "True Photo Variation" is a named
+  // kind, not the market's "True Blue"; the True-prefix rule does not apply.
+  const isVariationText = /\b(?:variations?|var)\b/i.test(raw) || /^(?:ssp|iv|super\s+short\s+prints?)$/i.test(raw);
   // Strip leading "True " (case-insensitive, whitespace-boundary).
   // Only matches when "true" is a standalone leading word, so parallels
   // like "TrueSonic" (hypothetical brand) aren't accidentally altered.
-  const hadTruePrefix = /^true\s+/i.test(raw);
-  const stripped = raw.replace(/^true\s+/i, "");
+  const hadTruePrefix = !isVariationText && /^true\s+/i.test(raw);
+  const stripped = hadTruePrefix ? raw.replace(/^true\s+/i, "") : raw;
   let s = slugify(stripped);
   // Compound-variant unification: same market variant, different spelling
   // in the wild. Both forms must slug to the same canonical form or we
@@ -963,6 +977,7 @@ export function normalizeParallel(parallel: string | null | undefined): string {
   // color distinction. Bare "Mega" alone is NOT collapsed here —
   // too ambiguous (could be Bowman Mega Box product context).
   s = s.replace(/(^|-)mega-refractor($|-)/g, "$1mojo-refractor$2");
+  if (isVariationText) return normalizeVariationSlug(s);
   if (s === "" || s === "base" || s === "none" || s === "no-parallel") {
     return "base";
   }
@@ -1441,7 +1456,12 @@ export function computeHobbyIqCardId(components: HobbyIqCardIdComponents): strin
     !/fractor$/.test(parallelSlug) &&
     isChromeStockSetKey(setKey)
   ) {
-    parallelSlug = `${parallelSlug}-refractor`;
+    // CF-A-VARIATION-IS-NOT-A-REFRACTOR (D22). An image variation is the
+    // base-finish card with a different photo; only a finish named AFTER the
+    // variation word ("Image Variation Gold Speckle") is chrome's colour
+    // shorthand for a refractor. chromeRefractorSuffixForVariation is null
+    // for every non-variation slug, so nothing else changes here.
+    parallelSlug = chromeRefractorSuffixForVariation(parallelSlug) ?? `${parallelSlug}-refractor`;
   }
 
   // NOTE (Drew, 2026-08-11): resist the temptation to add a

@@ -117,8 +117,41 @@ chrome finish (its own product line). A **Superfractor** is the gold-swirl 1/1.
   non-unique card "1/1."
 - **Printing Plate** — the physical CMYK plate used to print a card; each is a 1/1.
 - **Superfractor** — the 1/1 gold-swirl refractor.
-- **Variation / SP Variation / Photo Variation** — a card with a different
-  photo/design than base, usually short-printed.
+- **Variation / SP Variation / Photo Variation / Image Variation (IV)** — a
+  distinct card that shares the base card's NUMBER but carries a different
+  photo (or a stamped, foiled, colour-swapped or otherwise altered image),
+  short-printed. Topps flagship tiers them **SP** and **SSP** (super short
+  print); Topps Chrome calls them "Image Variation"; Bowman / Bowman Draft
+  "Image Variations"; Heritage names each kind ("Action Variation", "Throwback
+  Uniform Variation", "Nickname Variation", "Color Swap Variation", "Chrome
+  Variation"); 2024–25 Topps names kinds ("Golden Mirror", "True Photo",
+  "Clear", "Team Color", "Lightboard Logo", "Murakami", "FrozenFractor").
+  Sellers write "IV", "Image Var", "Photo Var", "Var", "Variation", "SP
+  Variation", "SSP", "SP". A variation is its own card in the catalog, beside
+  the base row under the same number — never a parallel of it and never
+  pooled with it.
+
+  **HobbyIQ vocabulary (D22, 2026-08-30 — `variationVocabulary.ts`):**
+  - `image-variation` — the plain photo/image variation ("Image Variation",
+    "Photo Variation", bare "Variation", "Var", "IV", "SP Variation"; SP is the
+    default tier and is not spelled; `image-variation-sp` is an accepted alias).
+  - `image-variation-ssp` — the super-short-print tier ("SSP Variation",
+    "Super Short Print", bare "SSP").
+  - `<kind>-variation` — a named kind keeps the page's words, singular, minus
+    image/photo/base: `golden-mirror-variation`, `true-photo-variation`,
+    `clear-variation`, `team-color-variation`, `lightboard-logo-variation`,
+    `murakami-variation`, `frozenfractor-variation`, `action-variation`,
+    `throwback-uniform-variation`, `nickname-variation`, `color-swap-variation`,
+    `chrome-variation`, `black-&-white-variation`, `rookie-design-variation`,
+    `wbc-flag-variation`, `retrofractor-variation`. A finish after the word
+    keeps its place: `image-variation-gold-speckle-refractor`.
+  - `short-print` — a bare "SP" / "Short Print" that names no variation. In
+    Heritage and Allen & Ginter a short print is the scarce BASE card (the
+    high numbers), not a photo variation; only the product's checklist can
+    say which, so a bare "SP"/"SSP"/"IV" in a listing title becomes a
+    variation only when the checklist holds an image variation for that card.
+  - On chrome stock a bare variation is NOT a refractor (the `-refractor`
+    shorthand applies only to a colour named after the variation word).
 - **Die-cut** — cut into a non-rectangular shape. **Acetate** — clear plastic
   stock instead of cardboard. **Booklet** — oversized hinged card.
 - **Chase card** — the most-wanted card in a product. **Hit** — any valuable
