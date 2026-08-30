@@ -2444,9 +2444,15 @@ export interface BatchRepriceResult {
 }
 
 export async function refreshAllHoldings(): Promise<BatchRepriceResult> {
+  // The server reprices up to PORTFOLIO_REPRICE_HTTP_MAX_HOLDINGS (50)
+  // holdings synchronously before responding — ~40s for a full batch, so
+  // the 30s request() default aborts mid-run while the server finishes
+  // into a dead socket. 180s covers the batch with headroom; the hard
+  // ceiling is the Azure front-end's ~230s response cut-off.
   return await request<BatchRepriceResult>("/api/portfolio/reprice/batch", {
     method: "POST",
     body: JSON.stringify({}),
+    timeoutMs: 180_000,
   });
 }
 
