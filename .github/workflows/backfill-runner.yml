@@ -162,6 +162,12 @@ on:
           - measure-card-number-integrity
           - repair-card-number-from-title
           - clean-base-cards-parallel-slug
+          # D26 (2026-08-30): replay the connected eBay accounts' last 90 days
+          # through the resolve/record/mark path. Needs the eBay app
+          # credentials (fetched below) as well as Cosmos, because it refreshes
+          # each user's token to call getOrders. REPORT ONLY unless apply=true;
+          # shards by connected user; leaves lastPolledAt to the hourly poll.
+          - backfill-ebay-account-sales
       apply:
         description: "Actually write (true) or dry-run only (false)"
         required: true
@@ -399,6 +405,45 @@ jobs:
           echo "AUTH_SESSION_SECRET=$SEC" >> "$GITHUB_ENV"
           echo "AUTH_SESSION_SECRET fetched (length: ${#SEC})"
 
+      # D26 (2026-08-30). backfill-ebay-account-sales refreshes each connected
+      # user's OAuth token to call /sell/fulfillment/v1/order, so it needs the
+      # eBay APP credentials -- the same ones HobbyIQ3 runs with. Fetched from
+      # App Service, masked, never echoed. EBAY_ENV must come across too: it
+      # defaults to "sandbox" in code, and a sandbox run would fetch zero
+      # orders and report a perfectly green nothing.
+      - name: Fetch eBay app credentials from HobbyIQ3 App Service
+        if: inputs.script == 'backfill-ebay-account-sales'
+        shell: bash
+        run: |
+          # AUTH_SESSION_SECRET is in this list because ebayAuth.service THROWS
+          # AT MODULE LOAD without it ("cannot sign OAuth state"). The backfill
+          # never signs an OAuth state -- it only refreshes tokens -- but the
+          # import kills the process before it can say so. Found by running the
+          # script's harness locally against a user that does not exist.
+          for NAME in EBAY_CLIENT_ID EBAY_CLIENT_SECRET EBAY_ENV EBAY_REDIRECT_URI AUTH_SESSION_SECRET; do
+            V=$(az webapp config appsettings list \
+              --name HobbyIQ3 \
+              --resource-group rg-hobbyiq-dev \
+              --query "[?name=='$NAME'].value | [0]" \
+              -o tsv)
+            if [ -z "$V" ] || [ "$V" = "None" ]; then
+              if [ "$NAME" = "EBAY_REDIRECT_URI" ]; then
+                echo "::warning::$NAME absent; the backfill never runs the OAuth redirect so this is fine"
+                continue
+              fi
+              echo "::error::FAILED to fetch $NAME from App Service"
+              exit 1
+            fi
+            echo "::add-mask::$V"
+            echo "$NAME=$V" >> "$GITHUB_ENV"
+            echo "$NAME fetched (length: ${#V})"
+          done
+          # A production run must say so out loud: EBAY_ENV defaults to sandbox
+          # in code, and sandbox returns no real orders.
+          if [ "${EBAY_ENV:-}" != "production" ]; then
+            echo "::notice::EBAY_ENV is not 'production' in this shell; the value written to GITHUB_ENV is what the script reads."
+          fi
+
       # CF-CS-KEY-FOR-CATALOG-EXPANSION (Drew, 2026-08-01). Cardsight
       # image backfill + population probe need CARDSIGHT_API_KEY.
       - name: Fetch CARDSIGHT_API_KEY from HobbyIQ3 App Service
@@ -576,6 +621,14 @@ jobs:
           # (exit 134). It builds an in-memory Map of every vendor row for
           # slug grouping. 8GB heap easily fits 2.4M rows and gives
           # headroom for future catalog growth.
+          # D26 backfill-ebay-account-sales. DAYS and USER_IDS are script-level
+          # knobs whose defaults ARE the ruling (90 days, every connected
+          # user), so they get no dispatch input -- this workflow already
+          # carries 23 and a knob nobody sets is a knob that drifts. `limit`
+          # bounds USERS for this script, and `slot`/`slots` shard by userId.
+          # RUN_MINUTES stays at the script's own 140 so the budget marker
+          # lands inside the 150-minute step ceiling.
+          DAYS: "90"
           NODE_OPTIONS: "--max-old-space-size=8192"
         run: node "backend/scripts/${{ inputs.script }}.cjs" | tee /tmp/backfill.log
         shell: bash
@@ -683,6 +736,33 @@ jobs:
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=canonicalize-vendor-shaped-rows -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f sources="${{ inputs.sources }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (canonicalized=$MOVED) — done, no re-dispatch."
+          fi
+
+      - name: Self-relaunch the eBay account-sales backfill until every user is replayed
+        # D26. The script stops at its OWN 140-minute budget and PRINTS its
+        # summary, so "SALES IN THE POOL n" exists for this step to read. A run
+        # killed by the 150-minute step ceiling prints nothing, the relaunch
+        # reads 0, and the fleet stops silently with every run green.
+        if: ${{ !cancelled() && inputs.script == 'backfill-ebay-account-sales' && inputs.apply == true }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        working-directory: backend
+        run: |
+          set +e
+          N=$(grep -aoE "^  SALES IN THE POOL +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          N=${N:-0}
+          echo "ebay_account_sales_recorded=$N"
+          # CF-RELAUNCH-ONLY-ON-BUDGET (#1361, D18 2026-08-29). Relaunch iff the
+          # script printed its budget marker -- never on a count. A count gate
+          # loops forever on a slot whose users have no sales left, and stops
+          # early on a budget stop that happened to record nothing. The inputs
+          # are forwarded verbatim so the relaunch is the same dispatch.
+          if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
+            echo "::notice::budget hit (recorded=$N) -- re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=backfill-ebay-account-sales -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f limit="${{ inputs.limit }}"
+          else
+            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (recorded=$N) -- done, no re-dispatch."
           fi
 
       - name: Self-relaunch the numbered-Base retirement until nothing retires

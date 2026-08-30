@@ -23,6 +23,7 @@ import {
   upsertEbayAccountSale,
   listEbayAccountSales,
   ebayAccountSaleId,
+  EBAY_ACCOUNT_SALES_MAX,
   type EbayAccountSaleEntry,
 } from "../src/services/portfolioiq/portfolioStore.service.js";
 
@@ -205,5 +206,39 @@ describe("D26 — upsertEbayAccountSale: idempotent on (orderId, lineItemId)", (
     const parked = await listEbayAccountSales(USER, { status: "parked" });
     expect(parked).toHaveLength(1);
     expect(parked[0].proposedIdentity?.slug).toBe(SLUG);
+  });
+});
+
+describe("D26 — the sale array is bounded: a user doc has a 2MB ceiling", () => {
+  it("keeps the newest EBAY_ACCOUNT_SALES_MAX by sale date and drops the oldest", async () => {
+    // The array shares one Cosmos doc with holdings, ledger, purchases and
+    // price history. A Pro Seller replaying 90 days would otherwise push it
+    // through the document limit and every write on the doc would start
+    // failing — including the holdings ones.
+    const over = EBAY_ACCOUNT_SALES_MAX + 5;
+    const doc = await readUserDoc(USER);
+    doc.ebayAccountSales = Array.from({ length: over }, (_, i) => ({
+      ...sale({ lineItemId: `LI-${i}` }),
+      id: ebayAccountSaleId("ORD-1", `LI-${i}`),
+      observedAt: "2026-08-01T00:00:00.000Z",
+      // i=0 is the OLDEST.
+      soldAt: new Date(Date.UTC(2026, 0, 1) + i * 3600_000).toISOString(),
+    })) as never;
+    await writeUserDoc(USER, doc);
+
+    await upsertEbayAccountSale(USER, sale({ lineItemId: "brand-new", soldAt: "2026-08-29T00:00:00.000Z" }));
+
+    const after = await readUserDoc(USER);
+    expect(after.ebayAccountSales).toHaveLength(EBAY_ACCOUNT_SALES_MAX);
+    const ids = new Set(after.ebayAccountSales!.map((e) => e.lineItemId));
+    expect(ids.has("brand-new")).toBe(true);   // the newest survives
+    expect(ids.has("LI-0")).toBe(false);       // the oldest is dropped
+  });
+
+  it("does not prune when the array is under the ceiling", async () => {
+    await upsertEbayAccountSale(USER, sale({ lineItemId: "a" }));
+    await upsertEbayAccountSale(USER, sale({ lineItemId: "b" }));
+    const doc = await readUserDoc(USER);
+    expect(doc.ebayAccountSales).toHaveLength(2);
   });
 });

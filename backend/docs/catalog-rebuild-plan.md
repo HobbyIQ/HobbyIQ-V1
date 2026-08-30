@@ -2688,6 +2688,41 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
     that card the holding is marked sold; the cursor advances on every
     processed order; expired tokens surface a "reconnect eBay" state. Spec:
     `docs/d26-ebay-account-sync-spec.md`.
+    **BUILT on `feat/d26`; APPLY is Drew's dispatch.** Re-measured 07:46Z,
+    five cycles after the spec's reading and byte-identical to it. Two things
+    the re-measure added. **The cursor has never advanced for anyone, ever** —
+    `lastPolledAt` is NULL on all 8 `ebay_connections` docs and
+    `cursorAdvanced: true` has 0 occurrences in three days, so this is not
+    "stalled recently", it is "never once since 2026-06-01". And **`fetchFail=2`
+    had no explaining log line at all**: `ebay_poll_fetch_failed` has 0
+    occurrences, because the failure returns from the TOKEN step above the only
+    line that logs — the two users (`admin-testing-hobbyiq`, `user-8aa46493`)
+    have a refresh token live by DATE and an expired access token, so eBay is
+    rejecting the refresh grant and nothing said so. Shipped: the resolve /
+    record / mark ladder in `ebayAccountSaleIdentity.service` +
+    `ebayOrderPoll.service`; the `ebay-account` pool source wired through all
+    11 consumer allowlists; exactly one pool row per sale (the holding's ledger
+    emit when the holding carries a pinned slug, `ebay-account` otherwise —
+    disjoint, counted separately); `findSellerHoldingForIdentity` walking the
+    holdings MAP with a grade rung; the cursor inversion (the old test is
+    inverted IN PLACE with the measurement on it, not deleted);
+    `connectionStatus: "reconnect-required"` on the connection doc with
+    `GET /api/ebay/status` + `GET /api/ebay/account-sales` surfacing it, and
+    `getAccessToken` no longer DELETING the record on expiry (deleting it is
+    why the state was invisible); `reportWrites` on the cycle; and
+    `scripts/backfill-ebay-account-sales.cjs` (whitelisted, sharded by user —
+    measured 8/0 at SLOTS=1, 6/2 at 2, 3/1/3/1 at 4 — budget marker, relaunch
+    step, REPORT ONLY by default). A sale still never mints a card: the matcher
+    is asked as `ebay-title` and `ebay-account` is kept out of
+    `USER_SEED_SOURCES`, both asserted structurally. Two follow-ups NOT in the
+    PR and stated in the spec: the freshness canary's `ebay-account` floor waits
+    until APPLY lands rows (a floor over zero rows is a canary nobody believes),
+    and the hourly scheduler SHOULD move from in-process to a GH Actions cron —
+    it duplicates today (64 completed cycles in 24h across 2 workers where the
+    interval says 24) and `reportWrites`' exit code is meaningless inside the
+    API process — but that cutover needs the
+    `EBAY_ORDER_POLL_DISABLE_SCHEDULER=true` App Service flip, which HALTs for
+    Drew, so it is its own change.
     **D27 — VERIFIED means a checklist-backed card (merged #1537, deploy #10
     `6561893`).** Drew's screenshot (03:50Z): the PSA 9 Gillen sat on the
     same checklist row as the raw one and read UNVERIFIED — the chip was the

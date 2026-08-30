@@ -8206,6 +8206,41 @@ export function ebayAccountSaleId(ebayOrderId: string, lineItemId: string): stri
 type EbayAccountSaleUpdate = Omit<EbayAccountSaleEntry, "id" | "observedAt">;
 
 /**
+ * The ceiling on how many account sales ride on one user doc.
+ *
+ * A Cosmos document is capped at 2 MB and this array lives on the SAME doc as
+ * the user's holdings, ledger, purchases and price history. A Pro Seller doing
+ * 500 sales a month would add ~1,500 entries over the backfill's 90-day window
+ * at roughly 450 bytes each -- about 0.7 MB of a budget that is already spoken
+ * for. So the array is bounded: the newest EBAY_ACCOUNT_SALES_MAX by sale date
+ * are kept and older ones are dropped.
+ *
+ * Nothing is lost that matters. The SALE itself lives in `sold_comps` and in
+ * the ledger; this array is the sync's working record -- what we saw, how we
+ * resolved it, and what is still waiting on the user's confirm. If this ever
+ * needs to be unbounded it wants its own container, not a bigger user doc.
+ */
+export const EBAY_ACCOUNT_SALES_MAX = Math.max(
+  100,
+  Number(process.env.EBAY_ACCOUNT_SALES_MAX ?? 1000) || 1000,
+);
+
+/** Newest-first by sale date, capped. Returns the array to store. */
+function capAccountSales(sales: EbayAccountSaleEntry[]): EbayAccountSaleEntry[] {
+  if (sales.length <= EBAY_ACCOUNT_SALES_MAX) return sales;
+  const sorted = [...sales].sort((a, b) => String(b.soldAt ?? "").localeCompare(String(a.soldAt ?? "")));
+  const kept = sorted.slice(0, EBAY_ACCOUNT_SALES_MAX);
+  console.warn(JSON.stringify({
+    event: "ebay_account_sales_pruned",
+    source: "portfolioStore.upsertEbayAccountSale",
+    kept: kept.length,
+    dropped: sales.length - kept.length,
+    detail: "oldest account-sale records dropped to keep the user doc under the Cosmos 2MB ceiling; the sales themselves are in sold_comps and the ledger",
+  }));
+  return kept;
+}
+
+/**
  * Write (or refresh) one account sale on the user's doc. Idempotent on
  * (ebayOrderId, lineItemId).
  *
@@ -8231,14 +8266,14 @@ export async function upsertEbayAccountSale(
       return { entry: prev, replay: true, written: false };
     }
     sales[idx] = next;
-    doc.ebayAccountSales = sales;
+    doc.ebayAccountSales = capAccountSales(sales);
     await writeUserDoc(userId, doc);
     return { entry: next, replay: true, written: true };
   }
 
   const entry: EbayAccountSaleEntry = { ...update, id, observedAt: now };
   sales.push(entry);
-  doc.ebayAccountSales = sales;
+  doc.ebayAccountSales = capAccountSales(sales);
   await writeUserDoc(userId, doc);
   return { entry, replay: false, written: true };
 }
