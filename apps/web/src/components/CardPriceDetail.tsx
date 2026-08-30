@@ -16,6 +16,8 @@ import {
 import { EditHoldingModal } from "@/components/EditHoldingModal";
 import type { PortfolioHolding } from "@/lib/api";
 import { formatUSD, formatPct } from "@/lib/format";
+import { ProvenanceChip } from "@/components/ProvenanceChip";
+import { describeRung, type RungDescription } from "@/lib/rung";
 
 interface Grade { company: string; value: number }
 
@@ -155,7 +157,21 @@ export function CardPriceDetail({
   const usingTile = tileFmv != null;
   const shownComps = usingTile ? (tile?.sampleCount ?? null) : (detail?.compsUsed ?? null);
   const shownConfidence = usingTile ? (tile?.confidenceScore ?? null) : (detail?.confidence ?? null);
-  const shownSource = usingTile ? (tile?.valueSource ?? null) : (detail?.source ?? null);
+  // (shownSource — the tile's valueSource or price-by-id's `source` string —
+  // used to print here as "source: observed"; D20 replaced it with the rung.)
+  // D20 — the web says what the engine says. The rung beside the number,
+  // from the same path that supplied the number: the tile's per-tier
+  // `rungLabel` (and the tier's pool size) when the tile priced it,
+  // price-by-id's `rungLabel` otherwise (`source` has carried the same
+  // name since D16; a legacy value there renders as an unknown rung, never
+  // as an observed one). No number → the engine's reason.
+  const detailRungLabel = detail?.rungLabel ?? detail?.source ?? null;
+  const shownRung: RungDescription = fmv == null
+    ? { kind: "unpriced", text: detail?.fmvReason ?? "no price yet", label: usingTile ? (tile?.rungLabel ?? null) : detailRungLabel }
+    : usingTile
+      ? describeRung(tile?.rungLabel, { compsUsed: tile?.sampleCount })
+      : describeRung(detailRungLabel, { compsUsed: detail?.compsUsed });
+  const shownRungSource = usingTile ? "observed-grade-curve" : "price-by-id";
   const parallels = candidate?.parallels ?? [];
   // CF-TITLE-CARD-IDENTITY (Drew, 2026-08-11). Backend enriches the
   // response with cardIdentity (player, year, set, number) precisely
@@ -288,6 +304,7 @@ export function CardPriceDetail({
               <Stat
                 label={grade ? `${grade.company} ${grade.value} FMV` : "Raw FMV"}
                 value={formatUSD(fmv, { hideCents: fmv != null && fmv >= 100 })}
+                sub={<ProvenanceChip rung={shownRung} source={shownRungSource} />}
               />
               <Stat
                 label="Predicted sale"
@@ -393,7 +410,8 @@ export function CardPriceDetail({
             {shownComps != null && <span>{shownComps} comps used</span>}
             {!usingTile && detail.compsAvailable != null && <span> · {detail.compsAvailable} available</span>}
             {detail.daysSinceNewestComp != null && <span> · newest {detail.daysSinceNewestComp}d ago</span>}
-            {shownSource && <span> · source: {shownSource}</span>}
+            {/* D20: the rung is the chip under the FMV above; the raw label
+                rides in its tooltip, so no second "source:" string here. */}
           </div>
         </>
       )}
@@ -871,11 +889,13 @@ function PillButton({ active, onClick, children }: {
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function Stat({ label, value, sub }: { label: string; value: string; sub?: React.ReactNode }) {
   return (
     <div>
       <div className="text-xs uppercase tracking-wide text-[color:var(--color-muted)] mb-1">{label}</div>
       <div className="text-2xl font-bold tabular-nums">{value}</div>
+      {/* D20: the provenance chip sits under the number it describes. */}
+      {sub && <div className="mt-1.5">{sub}</div>}
     </div>
   );
 }
@@ -911,27 +931,39 @@ function GradeLadder({
     value: number | null;
     count?: number;
     conf?: string | null;
+    /** D20: the tier's rung in words + its raw label (tooltip). */
+    rung: RungDescription;
   };
   const rows: Row[] = [];
+  // Legacy `gradeBreakdown` (vendor ids the catalog cannot name): its
+  // `medianPrice` is a MEDIAN and must not sit in a ladder as if it were a
+  // price. The tier shows its last sale — an observed number — with the
+  // count; the breakdown names no rung, and the row says so.
   for (const o of observed) {
     if (o.gradeCompany && o.gradeValue != null) {
       rows.push({
         gradeCompany: o.gradeCompany,
         gradeValue: o.gradeValue,
         kind: "observed",
-        value: o.medianPrice ?? null,
+        value: o.lastSalePrice ?? null,
         count: o.count,
+        rung: { kind: "unknown", text: "last sale (legacy breakdown, rung not reported)", label: null },
       });
     }
   }
+  // D16 `gradedEstimates`: every tier of the one-path curve, each with its
+  // own rung and whether it was observed or estimated.
   for (const e of estimated) {
     if (rows.some((r) => r.gradeCompany === e.gradeCompany && r.gradeValue === e.gradeValue)) continue;
+    const rung = describeRung(e.rungLabel, { compsUsed: e.sampleCount });
     rows.push({
       gradeCompany: e.gradeCompany,
       gradeValue: e.gradeValue,
-      kind: "estimated",
+      kind: e.valueSource === "observed" ? "observed" : "estimated",
       value: e.estimatedValue ?? null,
+      count: e.sampleCount ?? undefined,
       conf: e.estimateConfidence,
+      rung,
     });
   }
   rows.sort((a, b) => {
@@ -972,6 +1004,14 @@ function GradeLadder({
                 }}
               >
                 {r.kind === "observed" ? `${r.count ?? 0} sold` : (r.conf ?? "est")}
+              </div>
+              {/* D20: the tier's rung in words; the raw label in the tooltip. */}
+              <div
+                className="text-[10px] mt-1 leading-tight"
+                style={{ color: r.rung.kind === "observed" ? "var(--hiq-hobby-green)" : r.rung.kind === "estimate" ? "var(--hiq-electric-blue)" : "var(--hiq-warning)" }}
+                title={`rung: ${r.rung.label ?? "(none)"}`}
+              >
+                {r.rung.text}
               </div>
             </button>
           );

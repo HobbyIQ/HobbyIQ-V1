@@ -27,6 +27,8 @@ import { RecentCompsList } from "@/components/RecentCompsList";
 import { IdentityBanner } from "@/components/IdentityBanner";
 import { GradeCurveView } from "@/components/GradeCurveView";
 import { fetchObservedGradeCurve, type ObservedGradeEntry } from "@/lib/api";
+import { ProvenanceChip } from "@/components/ProvenanceChip";
+import { describeRung, holdingProvenance, type RungDescription } from "@/lib/rung";
 
 export default function HoldingDetailPage() {
   const params = useParams<{ id: string }>();
@@ -196,6 +198,18 @@ export default function HoldingDetailPage() {
   // The estimate DETAILS block follows the same rule: it appears only when the
   // estimate is doing the work.
   const showEstimateDetails = !valueFromCurve && showEstimateBadge;
+  // D20 — the web says what the engine says. The rung beside the number:
+  // when the curve priced this grade, the tile's own rung and the size of
+  // the pool it read; otherwise the persisted holding's (envelope
+  // `method.ladderRung` / `pricingSourceMeta.method`). A number with no
+  // rung says so — it is never dressed as an observed one.
+  const storedProvenance = holdingProvenance(h);
+  const headlineRung: RungDescription = valueFromCurve
+    ? describeRung(curveTile?.rungLabel, { compsUsed: curveTile?.sampleCount })
+    : value != null
+      ? storedProvenance
+      : { kind: "unpriced", text: "no price yet", label: storedProvenance.label };
+  const headlineRungSource = valueFromCurve ? "observed-grade-curve" : storedProvenance.source;
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-8">
@@ -257,7 +271,12 @@ export default function HoldingDetailPage() {
 
         {/* Value / cost / P&L — centered symmetric 4-col KPI row */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8 pt-6 border-t border-[color:var(--color-border)]">
-          <Stat label="Market value" value={formatUSD(value, { hideCents: true })} badge={showEstimateBadge ? "EST" : undefined} />
+          <Stat
+            label="Market value"
+            value={formatUSD(value, { hideCents: true })}
+            badge={showEstimateBadge ? "EST" : undefined}
+            sub={<ProvenanceChip rung={headlineRung} source={headlineRungSource} />}
+          />
           <Stat label="Total paid" value={formatUSD(cost, { hideCents: true })} />
           <Stat label="Gain/loss" value={formatUSDCompact(gain)} color={gainColor} />
           <Stat label="Return" value={formatPct(gainPct)} color={gainColor} />
@@ -511,7 +530,7 @@ export default function HoldingDetailPage() {
   );
 }
 
-function Stat({ label, value, color, badge }: { label: string; value: string; color?: string; badge?: string }) {
+function Stat({ label, value, color, badge, sub }: { label: string; value: string; color?: string; badge?: string; sub?: React.ReactNode }) {
   // CF-STAT-CENTERED (Drew, 2026-08-11). Center-aligned so the 4-col
   // stat row on the holding-detail page reads as a symmetric row of
   // KPIs instead of left-justified table cells.
@@ -534,6 +553,8 @@ function Stat({ label, value, color, badge }: { label: string; value: string; co
       <div className="text-2xl font-bold tabular-nums tracking-tight" style={color ? { color } : undefined}>
         {value}
       </div>
+      {/* D20: the provenance chip sits under the number it describes. */}
+      {sub && <div className="mt-1.5 flex justify-center">{sub}</div>}
     </div>
   );
 }

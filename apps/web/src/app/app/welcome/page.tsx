@@ -79,7 +79,7 @@ function ProgressRing({ pct }: { pct: number }) {
 function WelcomeBody() {
   const router = useRouter();
   const params = useSearchParams();
-  const justVerified = params.get("verified") === "1";
+  const justVerified = params?.get("verified") === "1";
 
   const [user, setUser] = useState<AuthUser | null>(null);
   const [data, setData] = useState<OnboardingResponse | null>(null);

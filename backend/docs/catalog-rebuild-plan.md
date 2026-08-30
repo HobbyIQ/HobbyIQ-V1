@@ -2108,6 +2108,67 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   shows PSA 9 as `…:num-150:psa-9` with its own (empty, today) pool and the
   raw-derived estimate labelled as such.
 
+    **D20 — the web says what the engine says (built on `feat/d20`,
+  2026-08-30, 8 commits, unmerged; `apps/web` only — deploys on merge via
+  `deploy-web.yml`, no backend dispatch).** Group F's web findings, each
+  its own commit. **(1) The rung is rendered.** `lib/rung.ts` mirrors the
+  CLOSED vocabulary in `fmvRung.ts` (6 exact-pool + 19 fallback + no-basis)
+  and turns a label into words — "projected from 5 sales of this card",
+  "estimate from sibling parallels", "estimate from the grade curve" — with
+  observed / estimate / unpriced / unknown; a label the web does not know
+  renders as `unknown rung "<label>"`, a missing one as "rung not
+  reported", never hidden and never assumed observed. `holdingProvenance()`
+  reads the envelope's `method.ladderRung`, then
+  `pricingSourceMeta.method` (holdingValuation's stamp — the envelope
+  builder's `buildMethod` does not know `unified-pricing` and reports
+  `kind: "unknown", ladderRung: null` for every one-path holding; a
+  backend follow-up), then the flat `fmvRung`. `ProvenanceChip` renders
+  it under the number on the holding detail (the curve tile's rung when
+  the curve priced the grade, the persisted holding's otherwise), the
+  portfolio row, the card page hero (tile `rungLabel` / price-by-id
+  `rungLabel`, `source` as the legacy carrier; the footer's "source:"
+  string is gone), each grade-ladder tier, and every grade-curve tier.
+  The legacy `gradeBreakdown` ladder tier (vendor ids the catalog cannot
+  name) showed `medianPrice` as its number — it now shows the tier's
+  LAST SALE, labelled "legacy breakdown, rung not reported". **(2)
+  BuyerIQ** fell through `trendAdjustedValue → weightedMedianPrice →
+  value` and printed a pool median as "Market $X"; `lib/gradeCurveValue.
+  pickGradeCurveTierValue()` is `trendAdjustedValue ?? value` (positive
+  only), the medians never read, "No price yet" + the engine's reason
+  (`fmvReason`) otherwise, the rung chip beside the number. **(3)
+  RecentCompsList** computed a client-side median and rendered "Median
+  (n)" in the stat row directly under the FMV; the row is now "Sales
+  shown — facts about the list below, not the value above": count, low,
+  high, newest. **(4) The identify page** posted the uploaded blob to
+  `POST /api/portfolio/identify`, which has never had a handler (upload,
+  then 404); `identifyCardFromBlob()` and its types are deleted, the page
+  says photo identification is not available on the web yet and links
+  Search / Add-a-card, no route invented. **(5) The catalog picker's**
+  number was `salesSummary.median30d` labelled `med` (#1466); the search
+  hit carries no last-sale PRICE (`salesSummary` = count, medians,
+  `lastSaleAt`, trend), so the row shows "N sales · last YYYY-MM-DD" and
+  no dollar figure. **(6) tsc:** the 16 pre-existing `TS18047` errors
+  (`params`/`searchParams` possibly null, nine pages) reproduce only when
+  `next-env.d.ts` carries `next/navigation-types/compat/navigation` —
+  the OneDrive checkout's generated file does, a fresh `next build`'s
+  does not (which is why the deploy was green); every read is now
+  `params?.get(...) ?? default`, 0 errors under both. **(7) Tests:**
+  `apps/web` gains vitest (node env, pure helpers only, 27 cases): the
+  rung words and the legacy-engine wording, a contract pin that reads
+  `fmvRung.ts` + `CanonicalFmvMethod` + `HobbyIqFmvMethod` from backend
+  source and requires the web's list to equal them, `holdingDisplayValue`
+  / `fmvPerUnitOf` (observed before estimate, cost-proxy never a value, a
+  declined envelope never falls through), and the tier pick (never a
+  median). **Gates:** `tsc --noEmit -p apps/web` 0 (fresh next-env and
+  with the compat reference), `next build` 0, `npm test` 27/27 exit 0.
+  **Not done / flagged:** no screenshots (no session, no prod calls); the
+  envelope builder's `unified-pricing` gap above; `/api/players/:name`
+  tiers and the grade-analysis ROI are still backend medians shown as
+  prices (group F, not in D20's list); the marketing pricing page still
+  lists "Card scan / auto-identify". Turbopack refuses a junctioned
+  `node_modules` ("points out of the filesystem root"), so the worktree
+  was built from its own `npm ci`.
+
 ## NEEDS DREW (not code)
 
 - **A single fresh sale carrying the number:** Gillen Blue Refractor /150 —

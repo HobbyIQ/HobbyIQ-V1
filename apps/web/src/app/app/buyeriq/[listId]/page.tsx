@@ -20,13 +20,16 @@ import {
   type BuyerIqStatus,
   type SearchCandidate,
 } from "@/lib/api";
+import { pickGradeCurveTierValue } from "@/lib/gradeCurveValue";
+import type { RungDescription } from "@/lib/rung";
+import { ProvenanceChip } from "@/components/ProvenanceChip";
 
 const STATUS_TABS: BuyerIqStatus[] = ["wanted", "acquired", "passed"];
 
 export default function BuyerIqListDetailPage() {
   const params = useParams<{ listId: string }>();
   const router = useRouter();
-  const listId = params.listId;
+  const listId = String(params?.listId ?? "");
 
   const [list, setList] = useState<BuyerIqList | null>(null);
   const [targets, setTargets] = useState<BuyerIqTarget[]>([]);
@@ -227,6 +230,8 @@ function TargetRow({
   // when the target has a hobbyiqCardId (catalog-verified). Silent
   // no-op for legacy free-text targets.
   const [fmv, setFmv] = useState<number | null>(null);
+  // D20: the rung behind the Market number (or the reason there is none).
+  const [fmvRung, setFmvRung] = useState<RungDescription | null>(null);
   const [fmvLoaded, setFmvLoaded] = useState(false);
   useEffect(() => {
     if (!target.hobbyiqCardId) return;
@@ -245,9 +250,14 @@ function TargetRow({
         // reads (fetchObservedGradeCurve), then pick the entry that
         // matches the target's grade. That guarantees the Market
         // Value chip here equals the tile on the card panel — no
-        // divergence between surfaces. Fallback ladder within the
-        // entry: trendAdjustedValue (post-unified-overlay) →
-        // weightedMedianPrice (raw pool median) → value (estimate).
+        // divergence between surfaces.
+        //
+        // D20 — the web says what the engine says. The number is
+        // `trendAdjustedValue ?? value` (pickGradeCurveTierValue — the
+        // tile's own expression). The old ladder fell through to
+        // `weightedMedianPrice` — a pool MEDIAN printed as "Market $X" —
+        // between the two; that fallback is gone. No engine number → "No
+        // price yet" with the engine's reason, never a median.
         const curve = await fetchObservedGradeCurve(cardId);
         // Build the tier label the entries use: "Raw" or e.g. "PSA 10".
         // Matches CANONICAL_GRADES label shape in observedGradeCurve
@@ -260,19 +270,19 @@ function TargetRow({
           if (wantsRaw) return e.grader === "Raw" || String(e.grade).toLowerCase() === "raw";
           return String(e.grade).trim() === targetLabel;
         });
-        const val = entry
-          ? (typeof entry.trendAdjustedValue === "number" && entry.trendAdjustedValue > 0 ? entry.trendAdjustedValue : null) ??
-            (typeof entry.weightedMedianPrice === "number" && entry.weightedMedianPrice > 0 ? entry.weightedMedianPrice : null) ??
-            (typeof entry.value === "number" && entry.value > 0 ? entry.value : null)
-          : null;
+        const picked = pickGradeCurveTierValue(entry ?? null, { curveReason: curve.fmvReason ?? null });
         if (!cancelled) {
-          setFmv(val);
+          setFmv(picked.value);
+          setFmvRung(picked.rung);
           setFmvLoaded(true);
         }
       } catch (err) {
         // eslint-disable-next-line no-console
         console.warn("[BuyerIQ FMV] fetch failed for", target.id, err);
-        if (!cancelled) setFmvLoaded(true);
+        if (!cancelled) {
+          setFmvRung({ kind: "unpriced", text: "price lookup failed", label: null });
+          setFmvLoaded(true);
+        }
       }
     })();
     return () => { cancelled = true; };
@@ -323,13 +333,21 @@ function TargetRow({
                 Amber = cap ABOVE market (overpaying).
                 Neutral = even / no comparison possible. */}
             {fmv != null ? (
-              <Chip
-                label={`Market $${fmv < 100 ? fmv.toFixed(2) : Math.round(fmv)}`}
-                bg="rgba(61,169,255,0.18)"
-                fg="var(--color-accent)"
-              />
+              <>
+                <Chip
+                  label={`Market $${fmv < 100 ? fmv.toFixed(2) : Math.round(fmv)}`}
+                  bg="rgba(61,169,255,0.18)"
+                  fg="var(--color-accent)"
+                />
+                {/* D20: the rung beside the number. */}
+                {fmvRung && <ProvenanceChip rung={fmvRung} source="observed-grade-curve" />}
+              </>
             ) : fmvLoaded && target.hobbyiqCardId ? (
-              <Chip label="Market —" bg="var(--color-bg-card-hover)" fg="var(--color-muted)" />
+              <>
+                <Chip label="No price yet" bg="var(--color-bg-card-hover)" fg="var(--color-muted)" />
+                {/* D20: the reason, from the engine — never a median in its place. */}
+                {fmvRung && <ProvenanceChip rung={fmvRung} source="observed-grade-curve" />}
+              </>
             ) : target.hobbyiqCardId ? (
               <Chip label="Market …" bg="var(--color-bg-card-hover)" fg="var(--color-muted)" />
             ) : null}

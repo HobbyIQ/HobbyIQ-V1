@@ -40,7 +40,7 @@ function Loading() {
 function SearchPageInner() {
   const router = useRouter();
   const params = useSearchParams();
-  const initialQ = params.get("q") ?? "";
+  const initialQ = params?.get("q") ?? "";
 
   const [query, setQuery] = useState(initialQ);
   const [phase, setPhase] = useState<Phase>(initialQ ? "searching" : "idle");
@@ -147,9 +147,9 @@ function SearchPageInner() {
             href="/app/identify"
             className="text-sm font-medium px-3 py-2 rounded-lg hover:bg-white/[0.04]"
             style={{ background: "color-mix(in oklab, var(--color-accent) 12%, transparent)", color: "var(--color-accent)", border: "1px solid color-mix(in oklab, var(--color-accent) 35%, transparent)" }}
-            title="Upload a photo of a card to identify it"
+            title="Photo identification is not available on the web yet"
           >
-            Identify from photo →
+            Identify from photo (not yet available)
           </Link>
           <Link
             href="/app/products?year=2025"

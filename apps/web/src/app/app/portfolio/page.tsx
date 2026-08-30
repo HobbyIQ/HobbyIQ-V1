@@ -10,6 +10,8 @@ import { PortfolioValueChart } from "@/components/PortfolioValueChart";
 import { BulkEbayListModal } from "@/components/BulkEbayListModal";
 import { BulkCostBasisModal } from "@/components/BulkCostBasisModal";
 import { AddCardModal } from "@/components/AddCardModal";
+import { ProvenanceChip } from "@/components/ProvenanceChip";
+import { holdingProvenance } from "@/lib/rung";
 
 type SortKey = "value" | "cost" | "gainPct" | "gain" | "title";
 type SortDir = "asc" | "desc";
@@ -69,7 +71,7 @@ function matchesHealthFilter(h: PortfolioHolding, filter: HealthFilter): boolean
 function PortfolioPageBody() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const rawFilter = searchParams.get("filter");
+  const rawFilter = searchParams?.get("filter") ?? null;
   const activeFilter: HealthFilter | null = isHealthFilter(rawFilter) ? rawFilter : null;
 
   const [data, setData] = useState<PortfolioResponse | null>(null);
@@ -89,23 +91,23 @@ function PortfolioPageBody() {
   // CF-UX-CLEANUP #4: AddCardModal state. Also auto-opens when
   // ?add=1 is present (that's how the old /app/portfolio/add route
   // redirect lands the user + how iOS deep links can reach the flow).
-  const [addOpen, setAddOpen] = useState(searchParams.get("add") === "1");
+  const [addOpen, setAddOpen] = useState(searchParams?.get("add") === "1");
   // CF-EBAY-SOLD-SYNC-ON-DEMAND (2026-08-17): on-demand pull of eBay sales.
   const [ebaySyncing, setEbaySyncing] = useState(false);
   const [ebaySyncMsg, setEbaySyncMsg] = useState<string | null>(null);
   useEffect(() => {
     // Sync when the URL param changes (browser back / forward or
     // client-side push into ?add=1 from elsewhere).
-    if (searchParams.get("add") === "1") setAddOpen(true);
+    if (searchParams?.get("add") === "1") setAddOpen(true);
   }, [searchParams]);
   function closeAdd() {
     setAddOpen(false);
     // Strip the query param so refreshing doesn't reopen the modal.
-    if (searchParams.get("add")) router.replace("/app/portfolio");
+    if (searchParams?.get("add")) router.replace("/app/portfolio");
   }
   async function onAdded() {
     setAddOpen(false);
-    if (searchParams.get("add")) router.replace("/app/portfolio");
+    if (searchParams?.get("add")) router.replace("/app/portfolio");
     // Reload the portfolio so the new card appears immediately.
     try {
       const next = await fetchPortfolio();
@@ -647,6 +649,11 @@ function HoldingRow({ h }: { h: PortfolioHolding }) {
   }
   const gainColor =
     (gain ?? 0) > 0 ? "var(--color-success)" : (gain ?? 0) < 0 ? "var(--color-danger)" : undefined;
+  // D20 — the web says what the engine says. The rung that produced the
+  // value in this row, in words, so a legacy-engine or sibling number is
+  // visibly not an observed one. Rendered only beside a number; a row with
+  // no value already carries the MISSING pill.
+  const provenance = holdingProvenance(h);
 
   return (
     <div className="hiq-card p-4 md:p-5 flex items-center gap-4">
@@ -695,6 +702,7 @@ function HoldingRow({ h }: { h: PortfolioHolding }) {
               PENDING
             </span>
           )}
+          {value != null && <ProvenanceChip rung={provenance} source={provenance.source} />}
           {/* CF-IDENTITY-VERIFIED (Drew, 2026-07-27): tiny chip that says
               whether this holding's identity has been explicitly confirmed
               via the Confirm gate in Edit. Follow-up PR can gate storefront

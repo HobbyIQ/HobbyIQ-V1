@@ -20,13 +20,19 @@
  * parallel can never disagree with its slug.
  *
  * The picker shows what actually distinguishes near-identical rows: parallel,
- * print run, and the recent median. On a page of five Max Williams autos the
- * price is often the fastest way to recognise which one you own.
+ * print run, and how many sales we hold for the row (with the last-sale
+ * date). On a page of five Max Williams autos the sales count is often the
+ * fastest way to recognise which one you own.
+ *
+ * D20 — the web says what the engine says: the row's number used to be
+ * `salesSummary.median30d` labelled `med` (#1466). The search hit carries
+ * no last-sale PRICE (only `count` and `lastSaleAt`), so the row shows
+ * those two facts and no dollar figure. A median is never shown as the
+ * number; the exact-pool FMV belongs to the card page once the pick lands.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { searchCatalog, type CatalogSearchHit } from "@/lib/api";
-import { formatUSD } from "@/lib/format";
 
 // Same input styling the edit modal uses — one look, not a second one invented
 // here. `hiq-input` does not exist; assuming it did would have shipped an
@@ -189,7 +195,8 @@ export function CatalogPickerModal({
                 h.isAuto ? "Auto" : null,
                 h.printRun ? `/${h.printRun}` : null,
               ].filter(Boolean).join(" · ");
-              const med = h.salesSummary?.median30d ?? h.salesSummary?.median90d ?? h.salesSummary?.medianAll;
+              const saleCount = h.salesSummary?.count ?? 0;
+              const lastSaleDay = h.salesSummary?.lastSaleAt ? String(h.salesSummary.lastSaleAt).slice(0, 10) : null;
               return (
                 <button
                   key={h.slug}
@@ -208,16 +215,21 @@ export function CatalogPickerModal({
                       )}
                     </div>
                     <div className="text-right shrink-0">
-                      {med != null ? (
-                        <div className="text-sm font-medium tabular-nums" title="Median of recent sales — a picking hint, not the FMV">{formatUSD(med, { hideCents: med >= 100 })}<span className="text-[10px] text-[color:var(--color-muted)] ml-1">med</span></div>
+                      {saleCount > 0 ? (
+                        <>
+                          <div
+                            className="text-sm font-medium tabular-nums"
+                            title="Sales we hold for this exact card — a picking hint, not a price"
+                          >
+                            {saleCount} sale{saleCount === 1 ? "" : "s"}
+                          </div>
+                          {lastSaleDay && (
+                            <div className="text-xs text-[color:var(--color-muted)]">last {lastSaleDay}</div>
+                          )}
+                        </>
                       ) : (
-                        <div className="text-xs text-[color:var(--color-muted)]">no comps</div>
+                        <div className="text-xs text-[color:var(--color-muted)]">no sales yet</div>
                       )}
-                      {h.salesSummary?.count ? (
-                        <div className="text-xs text-[color:var(--color-muted)]">
-                          {h.salesSummary.count} sale{h.salesSummary.count === 1 ? "" : "s"}
-                        </div>
-                      ) : null}
                     </div>
                   </div>
                 </button>

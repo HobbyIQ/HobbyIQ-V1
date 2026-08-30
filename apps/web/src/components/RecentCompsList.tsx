@@ -85,14 +85,19 @@ export function RecentCompsList({
     });
   }, [sales, sourceFilter, gradeFilter]);
 
+  // D20 — the web says what the engine says. These are facts about the
+  // LIST below (how many, lowest, highest, newest) under the filters the
+  // user picked. The client-side median that used to sit here, labelled
+  // "Median (n)" beside the FMV, is gone: FMV is the engine's projected next
+  // sale under a named rung, never a median, and a median in a stat tile
+  // next to it read as one.
   const stats = useMemo(() => {
     if (filtered.length === 0) return null;
     const prices = filtered.map((s) => s.price).filter((p) => Number.isFinite(p) && p > 0).sort((a, b) => a - b);
-    const median = prices[Math.floor(prices.length / 2)] ?? 0;
     const min = prices[0] ?? 0;
     const max = prices[prices.length - 1] ?? 0;
     const newest = filtered.reduce((acc, s) => (s.soldAt > acc ? s.soldAt : acc), "");
-    return { median, min, max, newest, n: prices.length };
+    return { min, max, newest, n: prices.length };
   }, [filtered]);
 
   return (
@@ -150,11 +155,16 @@ export function RecentCompsList({
       )}
 
       {!loading && !error && stats && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-          <MiniStat label={`Median (${stats.n})`} value={formatUSD(stats.median, { hideCents: stats.median >= 100 })} />
-          <MiniStat label="Low" value={formatUSD(stats.min, { hideCents: stats.min >= 100 })} />
-          <MiniStat label="High" value={formatUSD(stats.max, { hideCents: stats.max >= 100 })} />
-          <MiniStat label="Newest sale" value={stats.newest.slice(0, 10)} />
+        <div className="mb-4">
+          <div className="text-[10px] uppercase tracking-wide text-[color:var(--color-muted)] mb-2">
+            Sales shown — facts about the list below, not the value above
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <MiniStat label="Sales shown" value={String(stats.n)} />
+            <MiniStat label="Low" value={formatUSD(stats.min, { hideCents: stats.min >= 100 })} />
+            <MiniStat label="High" value={formatUSD(stats.max, { hideCents: stats.max >= 100 })} />
+            <MiniStat label="Newest sale" value={stats.newest.slice(0, 10)} />
+          </div>
         </div>
       )}
 

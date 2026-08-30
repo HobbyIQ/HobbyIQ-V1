@@ -52,8 +52,8 @@ function Loading() {
 function ProductsInner() {
   const router = useRouter();
   const params = useSearchParams();
-  const initialYear = Number(params.get("year")) || 2025;
-  const initialBrand = params.get("brand") ?? "";
+  const initialYear = Number(params?.get("year")) || 2025;
+  const initialBrand = params?.get("brand") ?? "";
 
   const [year, setYear] = useState<number>(initialYear);
   const [brand, setBrand] = useState<string>(initialBrand);

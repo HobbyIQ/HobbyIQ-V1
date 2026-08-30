@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { fetchObservedGradeCurve, type ObservedGradeEntry } from "@/lib/api";
 import { formatUSD, formatUSDCompact, formatPct } from "@/lib/format";
+import { ProvenanceChip } from "@/components/ProvenanceChip";
+import { describeRung, type RungDescription } from "@/lib/rung";
 
 interface Props {
   cardId: string;
@@ -128,6 +130,12 @@ export function GradeCurveView({ cardId, entries: entriesProp, loading: loadingP
 
 function GradeRow({ e }: { e: ObservedGradeEntry }) {
   const value = e.trendAdjustedValue ?? e.value;
+  // D20 — the web says what the engine says. Each tier carries the rung
+  // that produced its value (D16 `rungLabel`); a tier with no number says
+  // why, and a legacy curve that named no rung says that too.
+  const rung: RungDescription = value == null
+    ? { kind: "unpriced", text: e.sampleCount > 0 ? "no price at this grade" : "no sales at this grade", label: e.rungLabel ?? null }
+    : describeRung(e.rungLabel, { compsUsed: e.sampleCount });
   const predicted = e.predictedPriceAt30d;
   const trendPct = e.trendAdjustmentPct;
   const trendColor =
@@ -173,6 +181,10 @@ function GradeRow({ e }: { e: ObservedGradeEntry }) {
             </div>
             <div className="text-lg font-bold tabular-nums mt-0.5">
               {value != null ? formatUSD(value, { hideCents: value >= 100 }) : "—"}
+            </div>
+            {/* D20: the tier's rung in words, under the number it produced. */}
+            <div className="mt-1">
+              <ProvenanceChip rung={rung} source="observed-grade-curve" />
             </div>
             {trendPct != null && Math.abs(trendPct) > 0.5 && (
               <div className="text-[10px] tabular-nums mt-0.5" style={{ color: trendColor }}>
