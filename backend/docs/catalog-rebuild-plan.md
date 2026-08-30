@@ -3164,4 +3164,35 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
     `topps-chrome-update-series`, Trout US175 ×3 → `topps-update-series`
     (the rename had moved their rows after the first pass). **Drew's vendor
     retire is running:** one slot's first generation retired 75,016 rows in
-    its 140-minute budget and relaunched on the marker (run 33313043109).
+    its 140-minute budget and relaunched on the marker (run 33313043109) —
+    correction: that run was `mode=exploded slot 7/8` (the old-bcp-spine
+    retire the plan sequences after the rename + coverage audit), not the
+    vendor-source retire; its other seven slots wait for the audit.
+    **Auto-dispatch (Drew, 16:40Z: "auto dispatch and notify me on
+    completion"; permission rule `Bash(gh workflow run backfill-runner.yml*)`
+    added 16:50Z):** the purge ×8 and the vendor-source retire ×8
+    (`mode=source`, `scope=none`, eight sources) dispatched 16:55Z; every
+    later fleet (twins fold, D33 repair modes, D30 consolidation, the
+    exploded/old-CLC retire after the coverage audit) dispatches itself as
+    its prerequisite lands; a push notification at completion.
+    **D33 converter merged #1562** (the h3 is a product boundary; a card is
+    not a parallel; ", Jr." → "Jr."; fixtures from the real 2020/2025 pages).
+    The rows track (`repair-bcp-misfiled-parallels`: names 139,572 · card-as-
+    parallel 784 → retire (≈×12 with graded children) · number-glued 440 ·
+    first-edition 510 · chrome-ladder 560, all dry, 0 failed) and the picker
+    track (live proof on Drew's Witt query: doubled-year labels 0, ✓
+    checklist on 25 rows, print run + "N sales · last date") conflict with
+    #1562 in three files → the landing round rebases them. **D29 twins**
+    READY from its refuters but one test fails in the canonical checkout
+    (the scope refusal does not exit 1 there) → landing round. **D29 CPA**
+    refuted MAJOR for reach (an exact-parallelSlug key reaches ~26% of the
+    population: 2021 cpa-am's three spellings never meet) → round 2 on a
+    normalised key (D28's cleaning + same-print-run spelling rule; two print
+    runs never merge). **D36** BLOCKED: its branch silently reverted #1560 —
+    rebuilt on current main in the landing round (targets corrected by its
+    own dry run: Griffey D24 → `black-diamond:d24:base:no-auto` — the
+    checklist does not number the base; Griffey 232 → `donruss-studio`).
+    **Process:** a builder's junction cleanup emptied the canonical
+    `backend/node_modules/.bin` twice (`npx vitest` then fails with no test
+    output and rc 1); gates now invoke `node node_modules/vitest/vitest.mjs`
+    and every builder prompt forbids touching the canonical tree.
