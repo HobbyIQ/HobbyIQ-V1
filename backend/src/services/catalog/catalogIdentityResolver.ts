@@ -22,8 +22,11 @@
  * This module is the ONE home of the rule, for readers and writers alike:
  *
  *   pickCatalogRow(slug, rowsUnderStem)     pure — which row an id resolves to
+ *                                            AND which key holds its other
+ *                                            half of the pool (poolTwin)
  *   poolReadIdsFor(id, resolution)          pure — which pool ids a READER
- *                                            unions (the id and its one twin)
+ *                                            unions (the id and its one twin,
+ *                                            in EITHER direction)
  *   resolveIdentityToCatalogRow(slug)       the Cosmos wrapper — point read
  *                                            first (1 RU, the hit path), the
  *                                            twin lookups only on the miss
@@ -50,7 +53,7 @@
  * never a twin (Gillen, 2026-08-30: two graded children made a card look
  * ambiguous). A different parallel under the same card never matches the stem.
  *
- * ── THE POOL IS NOT RE-KEYED YET: readers union the id AND its twin ─────────
+ * ── THE POOL IS NOT RE-KEYED YET: readers union BOTH keys, SYMMETRICALLY ────
  *
  * The fold re-keyed CATALOG rows, not sold_comps. Measured read-only on
  * 2026-08-30: 16/400, 47/200 and 49/200 numbered-twin stems in three product
@@ -58,14 +61,30 @@
  * the twin (…:cpa-sha:green:auto 14 vs 0, …:bdc-145:chrome-black-refractor
  * 4 vs 0, …:cpa-bm:red-refractor:auto 8 vs 0, …:56:wave-refractor 7 vs 1).
  * A reader that SWAPS the id for its twin reads 0 on every one of those.
- * So on "numbered-twin" — ONE card, exactly one twin by this module's own
- * definition — every reader reads the id AND its twin (poolReadIdsFor):
+ *
+ * And the REVERSE is just as real (the round-2 refutation, 2026-08-30). This
+ * module's own writers — gateSuppliedSlug, resolveHiqCardIdToCatalogRow,
+ * fillDerivedSlugFromCatalog → catalogSlugIfExists — rewrite holdings to the
+ * NUMBERED form, so the numbered form is what most readers arrive with, and
+ * for it the pool rows may still sit under the stem. Measured on the same
+ * day, 2025 bowman-draft: 8 of 200 numbered ids whose stem has no catalog row
+ * carry pool rows under the stem, THREE of them with zero under the numbered
+ * id (…:bd-20:green-refractor:no-auto twin=0 stem=2, …:bd-54:gold-refractor
+ * twin=0 stem=1, …:bd-35:gold-refractor twin=0 stem=1). A reader keyed on the
+ * numbered form alone lists no comps for a card that has sales — the same bug
+ * the un-numbered direction had, mirrored.
+ *
+ * So the union is SYMMETRIC, and it is ONE list from ONE function
+ * (poolReadIdsFor over resolution.poolTwin), used by every reader:
  * recent-sales / price-history / listing-range (soldCompsStore), the
- * valuation entry and priceHoldingFromExactPool (exactPoolReader) all read
- * the same union, so an FMV never cites compsUsed N with 0 comps listed. Two
- * numbered twins stay a refusal. The PERMANENT fix is the D29 fleet
- * re-keying the pool's un-numbered rows to their twin; once it has run the
- * union degenerates to the twin alone and nothing here needs to change.
+ * valuation entry (resolveValuationIdentity) and priceHoldingFromExactPool
+ * (exactPoolReader). An FMV can therefore never cite compsUsed N with fewer
+ * comps listed beside it, in either direction. Two numbered twins of one stem
+ * stay a refusal — two cards are never merged.
+ *
+ * The PERMANENT fix is the D29/D30 fleet re-keying sold_comps to the
+ * catalog's row; once it has run every union degenerates to a single id and
+ * nothing here needs to change. THIS IS THE BRIDGE.
  *
  * ── COST (measured read-only against prod, 2026-08-30) ──────────────────────
  *
@@ -124,6 +143,22 @@ export interface CatalogRowResolution {
    *  "numbered-twin" (all of them, sorted, when authority chose among
    *  several), all of them (sorted) on "ambiguous", empty otherwise. */
   twins: string[];
+  /** CF-AN-IDENTITY-RESOLVES-TO-ITS-ROW, the SYMMETRIC half (2026-08-30).
+   *  The identity's OTHER pool key — the one slug that is the same card and
+   *  whose pool rows the fold left behind — or null when there is none. It is
+   *  set in BOTH directions and is the only thing poolReadIdsFor consumes:
+   *
+   *    un-numbered id, one numbered row  (kind "numbered-twin")
+   *        → poolTwin = that row: rows still sit under the un-numbered id;
+   *    numbered id `<stem>:num-N` whose stem has NO row of its own
+   *        (kind "exact" — the row IS `<stem>:num-N` — or "none")
+   *        → poolTwin = `<stem>`: rows still sit under the stem.
+   *
+   *  Null when the stem is a catalog row in its own right (a DIFFERENT card:
+   *  kind "unnumbered-twin", and "exact" for a numbered id whose stem also
+   *  has a row), on "ambiguous" (two numbered twins are two cards — a
+   *  refusal, never a union) and on "unresolved" / a non-hiq id. */
+  poolTwin?: string | null;
   /** "numbered-twin" only, and only when the twin was not simply the one row
    *  under the stem: "authority" — the stem held several and exactly one is
    *  checklist-authority; "print-run" — the caller's print run named it. */
@@ -154,11 +189,11 @@ export function numberedTwinsOf(id: string, ids: readonly string[]): string[] {
 }
 
 function none(requested: string): CatalogRowResolution {
-  return { requested, id: null, kind: "none", twins: [] };
+  return { requested, id: null, kind: "none", twins: [], poolTwin: null };
 }
 
 function unresolved(requested: string, error: string): CatalogRowResolution {
-  return { requested, id: null, kind: "unresolved", twins: [], error };
+  return { requested, id: null, kind: "unresolved", twins: [], error, poolTwin: null };
 }
 
 function toRow(x: string | CatalogStemRow): CatalogStemRow {
@@ -183,39 +218,74 @@ export function pickCatalogRow(slug: string, rowsUnderStem: readonly (string | C
   if (!isHiqSlug(id)) return none(id);
   const rows = rowsUnderStem.map(toRow).filter((r) => r.id);
   const ids = rows.map((r) => r.id);
-  if (ids.includes(id)) return { requested: id, id, kind: "exact", twins: [] };
   if (isNumberedSlug(id)) {
+    // A NUMBERED id. Its stem is the same card whenever the stem is NOT a
+    // catalog row of its own — that is exactly when the fold moved this
+    // card's row here and left its pool rows behind under the stem. When the
+    // stem IS a row, it is a different card (or the #1509 direction) and the
+    // two are never unioned.
     const unnumbered = id.replace(NUMBERED_SUFFIX, "");
-    return ids.includes(unnumbered)
-      ? { requested: id, id: unnumbered, kind: "unnumbered-twin", twins: [] }
-      : none(id);
+    const stemIsRow = ids.includes(unnumbered);
+    const poolTwin = stemIsRow ? null : unnumbered;
+    if (ids.includes(id)) return { requested: id, id, kind: "exact", twins: [], poolTwin };
+    return stemIsRow
+      ? { requested: id, id: unnumbered, kind: "unnumbered-twin", twins: [], poolTwin: null }
+      : { ...none(id), poolTwin };
   }
+  if (ids.includes(id)) return { requested: id, id, kind: "exact", twins: [], poolTwin: null };
   const twins = numberedTwinsOf(id, ids);
-  if (twins.length === 1) return { requested: id, id: twins[0], kind: "numbered-twin", twins };
+  if (twins.length === 1) return { requested: id, id: twins[0], kind: "numbered-twin", twins, poolTwin: twins[0] };
   if (twins.length > 1) {
     const sorted = [...twins].sort();
     const sourceOf = (t: string) => rows.find((r) => r.id === t)?.source ?? null;
     const authority = sorted.filter((t) => canAdjudicate(sourceOf(t)));
-    if (authority.length === 1) return { requested: id, id: authority[0], kind: "numbered-twin", twins: sorted, chosenBy: "authority" };
-    return { requested: id, id: null, kind: "ambiguous", twins: sorted };
+    if (authority.length === 1) return { requested: id, id: authority[0], kind: "numbered-twin", twins: sorted, chosenBy: "authority", poolTwin: authority[0] };
+    return { requested: id, id: null, kind: "ambiguous", twins: sorted, poolTwin: null };
   }
-  return none(id);
+  return { ...none(id), poolTwin: null };
 }
 
 /**
  * Pure: the pool ids a READER queries for `cardId`, given its resolution.
- * On "numbered-twin" the id AND its one twin — the same card, its pool split
- * across two keys until the D29 fleet re-keys it (see the header). Every
- * other kind reads the id as given: "exact" is its own row; "unnumbered-twin"
- * keeps the number the seller wrote and the valuation path reaches the
- * un-numbered row's pool through exactPoolSupremacy's twin attempt;
- * "ambiguous" is a refusal (two cards are never merged); "none" and
- * "unresolved" have nothing to add. Never a STARTSWITH union.
+ * THE one list, for every reader — recent-sales / price-history /
+ * listing-range (soldCompsStore), the valuation entry and
+ * priceHoldingFromExactPool (exactPoolReader) — so an FMV can never cite
+ * compsUsed N with fewer comps listed beside it.
+ *
+ * It reads `resolution.poolTwin` and nothing else, which makes it SYMMETRIC
+ * (the round-2 refutation, 2026-08-30). The pool is keyed BOTH ways because
+ * the fold moved catalog rows, not sales, and this branch's own writers
+ * (gateSuppliedSlug, resolveHiqCardIdToCatalogRow, catalogSlugIfExists)
+ * rewrite holdings to the NUMBERED form — so the numbered form is the one
+ * most readers will arrive with:
+ *
+ *   `<stem>` whose one catalog row is `<stem>:num-N`  → [<stem>, <stem>:num-N]
+ *   `<stem>:num-N` whose stem has NO catalog row      → [<stem>:num-N, <stem>]
+ *
+ * Measured read-only on 2026-08-30, 2025 bowman-draft: 8 of 200 numbered ids
+ * whose stem has no catalog row still carry pool rows under the stem, and
+ * three of those hold ZERO under the numbered id itself
+ * (…:bd-20:green-refractor:no-auto twin=0 stem=2, …:bd-54:gold-refractor
+ * twin=0 stem=1, …:bd-35:gold-refractor twin=0 stem=1) — a reader keyed on
+ * the numbered form alone lists no comps for a card that has sales.
+ *
+ * Every other case reads the id as given: "unnumbered-twin" is the #1509
+ * direction (the stem is a row of its OWN — a different identity, reached
+ * through exactPoolSupremacy's twin attempt, never unioned); "ambiguous" is
+ * a refusal (two numbered twins are two cards); "exact" for an un-numbered
+ * id is its own row; "unresolved" has nothing to add and fails open. Never a
+ * STARTSWITH union. The PERMANENT fix is the D29/D30 fleet re-keying
+ * sold_comps; once it has run every union degenerates to one id and nothing
+ * here needs to change — this is the bridge.
  */
 export function poolReadIdsFor(cardId: string, resolution: CatalogRowResolution | null | undefined): string[] {
   const id = String(cardId ?? "").trim();
-  if (resolution && resolution.kind === "numbered-twin" && resolution.id && resolution.id !== id) return [id, resolution.id];
-  return [id];
+  const twin = typeof resolution?.poolTwin === "string" ? resolution.poolTwin.trim() : "";
+  if (!twin || twin === id) return [id];
+  // Only ever the two halves of ONE stem, in the caller's-id-first order.
+  const stem = isNumberedSlug(id) ? id.replace(NUMBERED_SUFFIX, "") : id;
+  const twinStem = isNumberedSlug(twin) ? twin.replace(NUMBERED_SUFFIX, "") : twin;
+  return stem === twinStem ? [id, twin] : [id];
 }
 
 let _container: Container | null = null;
@@ -370,14 +440,28 @@ export async function resolveIdentityToCatalogRow(
 
   const own = await rowExists(container, id);
   if (typeof own === "object") return unresolved(id, own.error);
-  if (own) return pickCatalogRow(id, [id]);
 
+  // A NUMBERED id needs BOTH point reads, whether or not its own row exists:
+  // its own read settles the kind, the stem's read settles poolTwin (the
+  // round-2 refutation — the numbered form is what the writers leave on a
+  // holding, and its pool rows may still sit under the stem). Two point
+  // reads, 2 RU, no query. Symmetric with the un-numbered direction.
   if (isNumberedSlug(id)) {
     const unnumbered = id.replace(NUMBERED_SUFFIX, "");
-    const twin = await rowExists(container, unnumbered);
-    if (typeof twin === "object") return unresolved(id, twin.error);
-    return pickCatalogRow(id, twin ? [unnumbered] : []);
+    const stem = await rowExists(container, unnumbered);
+    if (typeof stem === "object") return unresolved(id, stem.error);
+    const out = pickCatalogRow(id, [...(own ? [id] : []), ...(stem ? [unnumbered] : [])]);
+    if (out.poolTwin) {
+      info("catalog_identity_pool_twin_is_the_stem", {
+        slug: id,
+        poolTwin: out.poolTwin,
+        kind: out.kind,
+        detail: "a numbered id whose stem has no catalog row: readers union both keys until the D29/D30 fleet re-keys the pool",
+      });
+    }
+    return out;
   }
+  if (own) return pickCatalogRow(id, [id]);
 
   const now = Date.now();
   const printRun = positiveInt(opts.printRun);
@@ -391,7 +475,7 @@ export async function resolveIdentityToCatalogRow(
     if (typeof hit === "object") return unresolved(id, hit.error);
     if (hit) {
       info("catalog_identity_resolved_to_twin", { slug: id, resolvedTo: candidate, chosenBy: "print-run" });
-      return { requested: id, id: candidate, kind: "numbered-twin", twins: [candidate], chosenBy: "print-run" };
+      return { requested: id, id: candidate, kind: "numbered-twin", twins: [candidate], chosenBy: "print-run", poolTwin: candidate };
     }
   }
   if (memoized) return memoized;

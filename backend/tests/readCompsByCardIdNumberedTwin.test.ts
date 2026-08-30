@@ -59,8 +59,11 @@ function stubContainer(): Container {
     },
   } as unknown as Container;
 }
-const resolution = (requested: string, kind: CatalogRowResolution["kind"], id: string | null, twins: string[] = []): CatalogRowResolution =>
-  ({ requested, id, kind, twins });
+// CF-AN-IDENTITY-RESOLVES-TO-ITS-ROW: poolTwin is what poolReadIdsFor reads,
+// and it is SYMMETRIC (round-2 refutation) — an un-numbered id's one numbered
+// row, or a numbered id's stem when the stem has no row of its own.
+const resolution = (requested: string, kind: CatalogRowResolution["kind"], id: string | null, twins: string[] = [], poolTwin: string | null = kind === "numbered-twin" ? id : null): CatalogRowResolution =>
+  ({ requested, id, kind, twins, poolTwin });
 const param = (i: number, name: string) => calls[i].spec.parameters.find((p) => p.name === name)?.value;
 
 beforeEach(() => {
@@ -184,8 +187,38 @@ describe("readCompsByHobbyIqCardId -- the same rule", () => {
   });
 });
 
+// CF-AN-IDENTITY-RESOLVES-TO-ITS-ROW, SYMMETRIC (round-2 refutation): the
+// same union from the numbered side. Measured read-only 2026-08-30, 2025
+// bowman-draft: 8 of 200 numbered ids whose stem has no catalog row carry
+// pool rows under the stem, three with ZERO under the numbered id.
+describe("readCompsByCardId -- REVERSE: a numbered id whose sales sit under its stem", () => {
+  it("reads the id AND the stem in one query: the stem's rows are not dropped", async () => {
+    pool = UN_ROWS;
+    resolver.resolveIdentityToCatalogRow.mockResolvedValue(resolution(MWI_499, "exact", MWI_499, [], MWI));
+    const rows = await readCompsByCardId({ cardId: MWI_499, fromDate: daysAgo(365) });
+    // Mutation check: round 2 read …:num-499 alone here and returned 0 — the
+    // …:bd-20:green-refractor:no-auto shape (twin=0, stem=2).
+    expect(rows).toHaveLength(14);
+    expect(calls).toHaveLength(1);
+    expect([param(0, "@cid"), param(0, "@cid1")]).toEqual([MWI_499, MWI]);
+  });
+  it("both halves in one query, exactly two equalities, never a third id", async () => {
+    pool = [...TWIN_ROWS, ...UN_ROWS];
+    resolver.resolveIdentityToCatalogRow.mockResolvedValue(resolution(MWI_499, "exact", MWI_499, [], MWI));
+    expect(await readCompsByCardId({ cardId: MWI_499, fromDate: daysAgo(365) })).toHaveLength(49);
+    expect(calls[0].spec.query).not.toMatch(/STARTSWITH/);
+    expect(calls[0].spec.parameters.filter((p) => p.name.startsWith("@cid"))).toHaveLength(2);
+  });
+  it("a stem that IS a catalog row of its own is never unioned in (#1509 stays)", async () => {
+    pool = [...TWIN_ROWS, ...UN_ROWS];
+    resolver.resolveIdentityToCatalogRow.mockResolvedValue(resolution(MWI_499, "exact", MWI_499, [], null));
+    expect(await readCompsByCardId({ cardId: MWI_499, fromDate: daysAgo(365) })).toHaveLength(35);
+    expect(param(0, "@cid1")).toBeUndefined();
+  });
+});
+
 describe("poolReadIdsFor -- pure", () => {
-  it("only numbered-twin unions, and only with the ONE twin; every other kind reads the id as given", () => {
+  it("unions the id with its ONE pool twin; every other kind reads the id as given", () => {
     expect(poolReadIdsFor(MWI, resolution(MWI, "numbered-twin", MWI_499, [MWI_499]))).toEqual([MWI, MWI_499]);
     expect(poolReadIdsFor(MWI, resolution(MWI, "exact", MWI))).toEqual([MWI]);
     expect(poolReadIdsFor(MWI, resolution(MWI, "ambiguous", null, [MWI_250, MWI_499]))).toEqual([MWI]);
@@ -194,5 +227,11 @@ describe("poolReadIdsFor -- pure", () => {
     expect(poolReadIdsFor(MWI_250, resolution(MWI_250, "unnumbered-twin", MWI))).toEqual([MWI_250]);
     expect(poolReadIdsFor(VENDOR, null)).toEqual([VENDOR]);
     expect(poolReadIdsFor(`  ${MWI} `, undefined)).toEqual([MWI]);
+  });
+  // The round-2 refutation, at the reader: the writers leave the NUMBERED
+  // form on a holding while the sales stay under the stem.
+  it("REVERSE: a numbered id whose stem has no catalog row reads [id, stem]", () => {
+    expect(poolReadIdsFor(MWI_499, resolution(MWI_499, "exact", MWI_499, [], MWI))).toEqual([MWI_499, MWI]);
+    expect(poolReadIdsFor(MWI_499, resolution(MWI_499, "none", null, [], MWI))).toEqual([MWI_499, MWI]);
   });
 });

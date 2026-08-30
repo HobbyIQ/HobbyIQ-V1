@@ -148,14 +148,35 @@ describe("valueIdentity — the exact pool prices the requested tier", () => {
     expect(h.ladderCalls).toEqual([]);
   });
 
-  it("a numbered slug whose sales sit under its un-numbered twin is priced through the twin attempt", async () => {
+  // CF-AN-IDENTITY-RESOLVES-TO-ITS-ROW, SYMMETRIC (round-2 refutation). This
+  // used to reach the un-numbered pool through the SECOND attempt and report
+  // pooledAs = the un-numbered id. It is now the FIRST attempt, reading both
+  // keys in one query and reporting the catalog row — the same union
+  // recent-sales lists, so the FMV's compsUsed and the listed sales agree.
+  it("a numbered slug whose sales sit under its un-numbered twin is priced from the union, reported as the catalog row", async () => {
     h.catalog.set(GOLD, identityRow());
     h.rows = [...RAW_10(GOLD_UNNUMBERED)];
     const v = await valueIdentity({ id: GOLD });
     expect(v.identity.slug).toBe(GOLD);
-    expect(v.identity.pooledAs).toBe(GOLD_UNNUMBERED);
+    expect(v.identity.pooledAs).toBe(GOLD);
+    expect(v.identity.pooledVia).toBe("hobbyiqCardId+pool-twin");
     expect(v.fairMarketValue).toBeGreaterThan(0);
     expect(isExactPoolRung(v.rungLabel)).toBe(true);
+    // Mutation check: round 2 skipped the resolve for a numbered slug, so the
+    // first attempt read GOLD alone (0 rows) and only the fallback twin
+    // attempt found these — a second query, and a pooledAs the card page
+    // could not reproduce.
+    expect(v.compsUsed).toBe(RAW_10(GOLD_UNNUMBERED).length);
+  });
+
+  it("...and the same card entered from its un-numbered half prices identically", async () => {
+    h.catalog.set(GOLD, identityRow());
+    h.rows = [...RAW_10(GOLD_UNNUMBERED)];
+    const fromNumbered = await valueIdentity({ id: GOLD });
+    const fromStem = await valueIdentity({ id: GOLD_UNNUMBERED });
+    expect(fromStem.identity.slug).toBe(GOLD);
+    expect(fromStem.fairMarketValue).toBe(fromNumbered.fairMarketValue);
+    expect(fromStem.compsUsed).toBe(fromNumbered.compsUsed);
   });
 
   it("a vendor id resolves to its catalog slug first and is priced as that slug", async () => {

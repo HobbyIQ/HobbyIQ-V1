@@ -19,10 +19,10 @@ describe("pickCatalogRow -- an un-numbered id", () => {
   it("resolves to its ONE numbered twin when it has no row of its own (the Max Williams case)", () => {
     const r = pickCatalogRow(MWI, [MWI_499, GOLD_50]);
     // Mutation check: the pre-fix catalogSlugIfExists answered null here.
-    expect(r).toEqual({ requested: MWI, id: MWI_499, kind: "numbered-twin", twins: [MWI_499] });
+    expect(r).toEqual({ requested: MWI, id: MWI_499, kind: "numbered-twin", twins: [MWI_499], poolTwin: MWI_499 });
   });
   it("keeps its OWN row when it has one, even when a numbered twin also exists (conform's rowFor agrees)", () => {
-    expect(pickCatalogRow(MWI, [MWI, MWI_499])).toEqual({ requested: MWI, id: MWI, kind: "exact", twins: [] });
+    expect(pickCatalogRow(MWI, [MWI, MWI_499])).toEqual({ requested: MWI, id: MWI, kind: "exact", twins: [], poolTwin: null });
   });
   it("two numbered twins are two cards: ambiguous, id null, both listed — a ruling, never a guess", () => {
     const r = pickCatalogRow(MWI, [MWI_499, MWI_250, GOLD_50]);
@@ -48,7 +48,7 @@ describe("pickCatalogRow -- a numbered id (the #1509 direction, preserved)", () 
     expect(pickCatalogRow(MWI_499, [MWI_499, MWI])).toMatchObject({ id: MWI_499, kind: "exact" });
   });
   it("with no row but an un-numbered row resolves to the un-numbered twin", () => {
-    expect(pickCatalogRow(MWI_499, [MWI])).toEqual({ requested: MWI_499, id: MWI, kind: "unnumbered-twin", twins: [] });
+    expect(pickCatalogRow(MWI_499, [MWI])).toEqual({ requested: MWI_499, id: MWI, kind: "unnumbered-twin", twins: [], poolTwin: null });
   });
   it("with neither is nothing; another print run is not its twin", () => {
     expect(pickCatalogRow(MWI_499, []).kind).toBe("none");
@@ -62,7 +62,7 @@ describe("pickCatalogRow -- several twins: the checklist authority names the car
   const DERIVED_250 = { id: MWI_250, source: "sold-comps-stub" };
   it("one checklist twin beside a vendor twin: the checklist row, chosenBy authority, both twins listed", () => {
     expect(pickCatalogRow(MWI, [CHECKLIST, VENDOR_500])).toEqual({
-      requested: MWI, id: MWI_499, kind: "numbered-twin", twins: [MWI_499, `${MWI}:num-500`], chosenBy: "authority",
+      requested: MWI, id: MWI_499, kind: "numbered-twin", twins: [MWI_499, `${MWI}:num-500`], chosenBy: "authority", poolTwin: MWI_499,
     });
     expect(pickCatalogRow(MWI, [VENDOR_500, DERIVED_250, CHECKLIST]).id).toBe(MWI_499);
   });
@@ -73,7 +73,7 @@ describe("pickCatalogRow -- several twins: the checklist authority names the car
     expect(pickCatalogRow(MWI, [VENDOR_500, DERIVED_250])).toMatchObject({ id: null, kind: "ambiguous" });
   });
   it("a single twin is the card whatever its source (unchanged); bare ids are read as source-less", () => {
-    expect(pickCatalogRow(MWI, [VENDOR_500])).toEqual({ requested: MWI, id: `${MWI}:num-500`, kind: "numbered-twin", twins: [`${MWI}:num-500`] });
+    expect(pickCatalogRow(MWI, [VENDOR_500])).toEqual({ requested: MWI, id: `${MWI}:num-500`, kind: "numbered-twin", twins: [`${MWI}:num-500`], poolTwin: `${MWI}:num-500` });
     expect(pickCatalogRow(MWI, [MWI_499, MWI_250])).toMatchObject({ kind: "ambiguous" });
   });
 });
@@ -87,11 +87,64 @@ describe("poolReadIdsFor -- which pool keys a reader unions", () => {
     expect(poolReadIdsFor(MWI_499, pickCatalogRow(MWI_499, [MWI]))).toEqual([MWI_499]);
     expect(poolReadIdsFor(VENDOR, null)).toEqual([VENDOR]);
   });
+
+  // CF-AN-IDENTITY-RESOLVES-TO-ITS-ROW, the SYMMETRIC half (round-2
+  // refutation, 2026-08-30). The branch's own writers rewrite holdings to the
+  // NUMBERED form, and for THAT form the pool rows may still sit under the
+  // stem — measured read-only, 2025 bowman-draft: 8 of 200 numbered ids whose
+  // stem has no catalog row carry rows under the stem, three of them with
+  // ZERO under the numbered id (…:bd-20:green-refractor:no-auto twin=0
+  // stem=2). Reading the numbered id alone lists no comps for a card that has
+  // sales — the mirror of the bug this branch fixes.
+  it("REVERSE: a numbered id whose stem has NO catalog row reads [id, stem]", () => {
+    // The catalog holds the numbered row only (the fold moved it here).
+    expect(poolReadIdsFor(MWI_499, pickCatalogRow(MWI_499, [MWI_499]))).toEqual([MWI_499, MWI]);
+    // …and when the catalog holds neither: still the same card's two keys.
+    expect(poolReadIdsFor(MWI_499, pickCatalogRow(MWI_499, []))).toEqual([MWI_499, MWI]);
+    // A sibling parallel under the same card changes nothing.
+    expect(poolReadIdsFor(MWI_499, pickCatalogRow(MWI_499, [MWI_499, GOLD_50]))).toEqual([MWI_499, MWI]);
+  });
+
+  it("REVERSE stops where the stem is a row of its OWN — a different identity, never unioned", () => {
+    // #1509: the stem IS a catalog row, so the numbered id is the seller's
+    // spelling of a DIFFERENT row; exactPoolSupremacy reaches it as a twin
+    // attempt, the reader never merges the two pools.
+    expect(pickCatalogRow(MWI_499, [MWI])).toMatchObject({ kind: "unnumbered-twin", poolTwin: null });
+    expect(poolReadIdsFor(MWI_499, pickCatalogRow(MWI_499, [MWI]))).toEqual([MWI_499]);
+    // Both rows exist: the numbered id is its own row and the stem is another.
+    expect(pickCatalogRow(MWI_499, [MWI_499, MWI])).toMatchObject({ kind: "exact", poolTwin: null });
+    expect(poolReadIdsFor(MWI_499, pickCatalogRow(MWI_499, [MWI_499, MWI]))).toEqual([MWI_499]);
+  });
+
+  it("the union is SYMMETRIC: the same two keys whichever form the reader arrives with", () => {
+    // The stem has no row; the numbered row is the card. One list, two ways in.
+    const fromStem = poolReadIdsFor(MWI, pickCatalogRow(MWI, [MWI_499]));
+    const fromNumbered = poolReadIdsFor(MWI_499, pickCatalogRow(MWI_499, [MWI_499]));
+    expect(fromStem).toEqual([MWI, MWI_499]);
+    expect(fromNumbered).toEqual([MWI_499, MWI]);
+    expect([...fromStem].sort()).toEqual([...fromNumbered].sort());
+  });
+
+  it("two numbered twins of one stem stay a refusal in BOTH directions", () => {
+    expect(poolReadIdsFor(MWI, pickCatalogRow(MWI, [MWI_499, MWI_250]))).toEqual([MWI]);
+    // From the numbered side the sibling twin is simply not this card's key:
+    // the stem is the only other key, and it is unioned only because it has
+    // no row of its own. :num-250's pool is never pulled into :num-499's.
+    expect(poolReadIdsFor(MWI_499, pickCatalogRow(MWI_499, [MWI_499, MWI_250]))).toEqual([MWI_499, MWI]);
+    expect(poolReadIdsFor(MWI_499, pickCatalogRow(MWI_499, [MWI_499, MWI_250]))).not.toContain(MWI_250);
+  });
+
+  it("never unions two ids that are not the two halves of ONE stem", () => {
+    const OTHER = "hiq:baseball:2025:bowman-draft:cpa-xyz:refractor:auto";
+    // A hand-made resolution naming an unrelated slug is refused by the guard.
+    expect(poolReadIdsFor(MWI, { requested: MWI, id: OTHER, kind: "numbered-twin", twins: [OTHER], poolTwin: OTHER })).toEqual([MWI]);
+    expect(poolReadIdsFor(MWI, { requested: MWI, id: GOLD_50, kind: "numbered-twin", twins: [GOLD_50], poolTwin: GOLD_50 })).toEqual([MWI]);
+  });
 });
 
 describe("pickCatalogRow -- not an hiq id", () => {
   it("a vendor id, blank, or garbage is none", () => {
-    expect(pickCatalogRow(VENDOR, [VENDOR])).toEqual({ requested: VENDOR, id: null, kind: "none", twins: [] });
+    expect(pickCatalogRow(VENDOR, [VENDOR])).toEqual({ requested: VENDOR, id: null, kind: "none", twins: [], poolTwin: null });
     expect(pickCatalogRow("", []).kind).toBe("none");
     expect(pickCatalogRow("hiq:", []).kind).toBe("none");
   });

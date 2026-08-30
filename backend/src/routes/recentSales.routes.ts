@@ -31,7 +31,7 @@
 //                              // else requestedCardId
 //     poolCardIds: string[],   // the pool keys the sales were read under: the
 //                              // id AND its one twin on "numbered-twin" (the
-//                              // pool is keyed both ways until the D29 fleet
+//                              // pool is keyed both ways until the D29/D30 fleet
 //                              // re-keys it), else [requestedCardId]
 //     identityKind: "exact" | "numbered-twin" | "unnumbered-twin" | "ambiguous"
 //                 | "none" | "unresolved" | null   // null for a vendor id
@@ -118,12 +118,16 @@ router.get("/cards/:cardId/recent-sales", requireSession, requireRateLimited("pr
     // CF-AN-IDENTITY-RESOLVES-TO-ITS-ROW (2026-08-30, holding deced7d3 — Max
     // Williams CPA-MWI Refractor: 35 sales under …:num-499, a card page opened
     // at the un-numbered id, no comps). An hiq slug is read under the id AND
-    // the one numbered twin the resolver names: the fold re-keyed catalog
-    // rows, not the pool, so …:cpa-sha:green:auto still has its 14 sales
-    // under the un-numbered key (a swap read 0). Resolved ONCE here (handed
-    // to the read, memoized in the resolver) so the response can say which
-    // row the identity is and which keys the comps came from. A vendor id is
-    // not resolved. The permanent fix is the D29 fleet re-keying the pool.
+    // the one pool twin the resolver names, in EITHER direction: the fold
+    // re-keyed catalog rows, not the pool, so …:cpa-sha:green:auto still has
+    // its 14 sales under the un-numbered key (a swap read 0) — and, the
+    // mirror case, …:bd-20:green-refractor:no-auto:num-99 has its 2 sales
+    // under the STEM while the writers put the numbered form on the holding.
+    // poolReadIdsFor is the one list; the exact-pool read (priceHoldingFrom-
+    // ExactPool) unions the same keys, so an FMV can never cite compsUsed N
+    // with fewer comps listed here. Resolved ONCE (handed to the read,
+    // memoized in the resolver). A vendor id is not resolved. The permanent
+    // fix is the D29/D30 fleet re-keying the pool; this is the bridge.
     const resolvedIdentity = cardId.startsWith("hiq:") ? await resolveIdentityToCatalogRow(cardId) : null;
     const poolCardIds = cardId.startsWith("hiq:") ? poolReadIdsFor(cardId, resolvedIdentity) : [cardId];
     const resolvedCardId = resolvedIdentity?.id ?? cardId;

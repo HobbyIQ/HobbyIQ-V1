@@ -106,7 +106,7 @@ describe("valueIdentity -- an un-numbered id whose only catalog row is its numbe
     expect(v.identity.requestedId).toBe(MWI);
     expect(v.identity.slug).toBe(MWI_499);
     expect(v.identity.pooledAs).toBe(MWI_499);
-    expect(v.identity.pooledVia).toBe("hobbyiqCardId+numbered-twin");
+    expect(v.identity.pooledVia).toBe("hobbyiqCardId+pool-twin");
     expect(v.identity.printRun).toBe(499);
     expect(v.identity.playerName).toBe("Max Williams");
     expect(v.fairMarketValue).toBeGreaterThan(0);

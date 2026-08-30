@@ -42,7 +42,7 @@ vi.mock("../src/services/catalog/catalogIdentityResolver.js", async (importActua
   return {
     ...actual,
     resolveIdentityToCatalogRow: vi.fn(async (slug: string) =>
-      h.catalog.get(slug) ?? { requested: slug, id: null, kind: "none", twins: [] }),
+      h.catalog.get(slug) ?? { requested: slug, id: null, kind: "none", twins: [], poolTwin: null }),
   };
 });
 
@@ -73,9 +73,12 @@ beforeEach(() => {
   h.queries.length = 0;
   h.rows = Array.from({ length: 35 }, (_, i) => sale(MWI_499, i));
   h.catalog = new Map<string, CatalogRowResolution>([
-    [MWI, { requested: MWI, id: MWI_499, kind: "numbered-twin", twins: [MWI_499] }],
-    [MWI_499, { requested: MWI_499, id: MWI_499, kind: "exact", twins: [] }],
-    [AMBIG, { requested: AMBIG, id: null, kind: "ambiguous", twins: [`${AMBIG}:num-10`, `${AMBIG}:num-499`] }],
+    // The prod shape (read-only, 2026-08-30): the catalog holds …:num-499 and
+    // NOT its stem, so poolTwin points the other way for each — the union is
+    // the same two keys whichever form the card page is opened at.
+    [MWI, { requested: MWI, id: MWI_499, kind: "numbered-twin", twins: [MWI_499], poolTwin: MWI_499 }],
+    [MWI_499, { requested: MWI_499, id: MWI_499, kind: "exact", twins: [], poolTwin: MWI }],
+    [AMBIG, { requested: AMBIG, id: null, kind: "ambiguous", twins: [`${AMBIG}:num-10`, `${AMBIG}:num-499`], poolTwin: null }],
   ]);
   vi.spyOn(console, "log").mockImplementation(() => {});
 });
@@ -122,11 +125,15 @@ describe("GET /cards/:cardId/recent-sales -- an un-numbered id reads itself AND 
     expect(res.body.byGrade).toMatchObject([{ grader: "Raw", count: 35 }]);
     expect(res.body.byGrade[0].sales).toHaveLength(35);
   });
-  it("the numbered id itself still answers the same 35 (identityKind exact, read alone)", async () => {
+  // REFUTED IN ROUND 2 and rewritten: this asserted the numbered id was read
+  // ALONE (poolCardIds [MWI_499]). That is precisely the reverse-case drop —
+  // the stem's sales went unlisted, and priceHoldingFromExactPool, which
+  // unions both keys, then disagreed with this route. It reads BOTH.
+  it("the numbered id itself answers the same 35 — identityKind exact, and the stem is unioned in", async () => {
     const res = await get(MWI_499);
     expect(res.body.count).toBe(35);
     expect(res.body.resolvedCardId).toBe(MWI_499);
-    expect(res.body.poolCardIds).toEqual([MWI_499]);
+    expect(res.body.poolCardIds).toEqual([MWI_499, MWI]);
     expect(res.body.identityKind).toBe("exact");
   });
 });
@@ -144,13 +151,38 @@ describe("GET /cards/:cardId/recent-sales -- no guess on two twins, no resolve f
   });
   it("an unresolved id (the catalog could not be asked) reads as given: identityKind unresolved, count from its own key", async () => {
     h.rows = Array.from({ length: 3 }, (_, i) => ({ ...sale(MWI, i), printRun: null }));
-    h.catalog.set(MWI, { requested: MWI, id: null, kind: "unresolved", twins: [], error: "429" });
+    h.catalog.set(MWI, { requested: MWI, id: null, kind: "unresolved", twins: [], error: "429", poolTwin: null });
     const res = await get(MWI);
     expect(res.status).toBe(200);
     expect(res.body.count).toBe(3);
     expect(res.body.identityKind).toBe("unresolved");
     expect(res.body.resolvedCardId).toBe(MWI);
     expect(res.body.poolCardIds).toEqual([MWI]);
+  });
+  // CF-AN-IDENTITY-RESOLVES-TO-ITS-ROW, SYMMETRIC (round-2 refutation): the
+  // card page opened at the NUMBERED form — what this branch's own writers
+  // leave on a holding — lists the stem's sales too. Measured read-only,
+  // 2025 bowman-draft: 8 of 200 numbered ids whose stem has no catalog row
+  // carry rows under the stem, three of them with ZERO under the numbered id.
+  it("REVERSE: the numbered form lists the stem's sales — same union, same count, both keys reported", async () => {
+    h.rows = Array.from({ length: 14 }, (_, i) => sale(MWI, i));
+    const res = await get(MWI_499);
+    expect(res.status).toBe(200);
+    // Mutation check: round 2 read …:num-499 alone here and answered count 0.
+    expect(res.body.count).toBe(14);
+    expect(res.body.requestedCardId).toBe(MWI_499);
+    expect(res.body.resolvedCardId).toBe(MWI_499);
+    expect(res.body.poolCardIds).toEqual([MWI_499, MWI]);
+    expect(h.queries[0].parameters.find((p) => p.name === "@cid1")?.value).toBe(MWI);
+    expect(h.queries[0].query).not.toMatch(/STARTSWITH/);
+  });
+  it("REVERSE: the two forms of one card list the SAME sales — an FMV can never cite more comps than are listed", async () => {
+    h.rows = [...Array.from({ length: 14 }, (_, i) => sale(MWI, i)), ...Array.from({ length: 35 }, (_, i) => sale(MWI_499, i + 100))];
+    const fromStem = await get(MWI);
+    const fromNumbered = await get(MWI_499);
+    expect(fromStem.body.count).toBe(49);
+    expect(fromNumbered.body.count).toBe(49);
+    expect([...fromStem.body.poolCardIds].sort()).toEqual([...fromNumbered.body.poolCardIds].sort());
   });
   it("a vendor id: identityKind null, resolvedCardId = the id, partition-scoped read as before", async () => {
     h.rows = [{ ...sale(MWI_499, 0), cardId: VENDOR, hobbyiqCardId: null }];

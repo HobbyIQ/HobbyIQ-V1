@@ -46,7 +46,7 @@
 import { CosmosClient, type Container } from "@azure/cosmos";
 import { isExactPoolRung } from "../compiq/fmvRung.js";
 import type { UnifiedPriceResult } from "../compiq/unifiedPricing.service.js";
-import { resolveIdentityToCatalogRow, type CatalogRowResolution } from "../catalog/catalogIdentityResolver.js";
+import { poolReadIdsFor, resolveIdentityToCatalogRow, type CatalogRowResolution } from "../catalog/catalogIdentityResolver.js";
 
 export const EXACT_POOL_WINDOW_DAYS = 180;
 
@@ -186,7 +186,7 @@ function soldCompsContainer(): Container | null {
  * sibling either; blocking the estimate is the safe side. The readers that
  * LIST or PRICE sales union exactly the id and the ONE twin the resolver
  * names (catalogIdentityResolver.poolReadIdsFor — the pool is not re-keyed
- * until the D29 fleet runs), never a STARTSWITH over every twin. A holding
+ * until the D29/D30 fleet runs), never a STARTSWITH over every twin. A holding
  * whose cardId / hobbyiqCardId the resolver normalized to …:num-N forms its
  * attempts from that id directly: unifiedIdentityAttempts needs no printRun
  * for it.
@@ -255,22 +255,26 @@ export interface ExactPoolAttempt {
   /** The slug handed as the union partner, when any. */
   hobbyiqCardId: string | null;
   /** CF-AN-IDENTITY-RESOLVES-TO-ITS-ROW: the slug keys the pool is read
-   *  under in ONE query — the catalog's numbered row and the un-numbered id
-   *  it resolves from (one card, two keys until D29 re-keys the pool).
-   *  Absent = hobbyiqCardId alone. */
+   *  under in ONE query — EXACTLY catalogIdentityResolver.poolReadIdsFor, the
+   *  same list recent-sales lists, in whichever direction the identity splits
+   *  (one card, two keys until D29 re-keys the pool). Absent = hobbyiqCardId
+   *  alone. */
   hobbyiqCardIds?: string[];
-  label: "hobbyiqCardId" | "hobbyiqCardId+numbered-twin" | "hobbyiqCardId-twin" | "cardId+hobbyiqCardId" | "cardId" | "cardId-twin";
+  label: "hobbyiqCardId" | "hobbyiqCardId+pool-twin" | "hobbyiqCardId-twin" | "cardId+hobbyiqCardId" | "cardId" | "cardId-twin";
 }
 
 /**
  * The order the unified engine is asked, per identity:
  *   1. hobbyiqCardId alone — the checklist identity's own pool, with no
  *      union that could let a wrong cardId's comps dilute it;
- *      CF-AN-IDENTITY-RESOLVES-TO-ITS-ROW: when the resolver says the
- *      slug is an un-numbered id whose ONE catalog row is its numbered twin
- *      (kind "numbered-twin"), the first attempt reads BOTH keys in one
- *      query — the same union recent-sales lists — and the two halves are
- *      never re-tried alone (each is a subset of the union);
+ *      CF-AN-IDENTITY-RESOLVES-TO-ITS-ROW: when the resolver names a pool
+ *      twin for the slug — an un-numbered id whose one catalog row is
+ *      `<id>:num-N`, OR a numbered id whose stem has no row of its own (the
+ *      round-2 refutation: the writers leave the NUMBERED form on holdings
+ *      while the sales stay under the stem) — the first attempt reads BOTH
+ *      keys in one query, and it is literally poolReadIdsFor's list, the
+ *      same union recent-sales lists. The two halves are never re-tried
+ *      alone (each is a subset of the union);
  *   2. its numbered / un-numbered twin alone;
  *   3. cardId ∪ hobbyiqCardId — today's shape, for holdings whose cardId
  *      is a vendor id whose rows never got a slug;
@@ -294,22 +298,37 @@ export function unifiedIdentityAttempts(h: HoldingIdentityFields, resolution?: C
     if (printRun !== null) return `${slug}:num-${printRun}`;
     return null;
   };
-  // The resolver's numbered-twin answer for THIS slug, whichever half the
-  // caller handed us (the valuation entry passes the catalog row; a holding
-  // passes the un-numbered id it still carries).
-  const twinUnion = hiq && resolution && resolution.kind === "numbered-twin" && resolution.id
-    && (resolution.requested === hiq || resolution.id === hiq)
-    ? { row: resolution.id, unnumbered: resolution.requested }
-    : null;
-  if (hiq && twinUnion) {
+  // The pool keys for THIS slug, from the ONE function every reader uses.
+  // The resolution may have been taken on either half (the valuation entry
+  // resolves the catalog row; a holding still carrying the un-numbered id
+  // resolves that), so it is accepted when it is about either half of this
+  // slug's stem; poolReadIdsFor itself refuses anything that is not.
+  const poolIds = hiq && resolution && (resolution.requested === hiq || resolution.id === hiq || resolution.poolTwin === hiq)
+    ? poolReadIdsFor(hiq, resolution.requested === hiq
+      ? resolution
+      // The resolution was taken on the OTHER half: this slug's twin is the
+      // half the resolution names that is not this slug.
+      : { ...resolution, requested: hiq, poolTwin: resolution.requested })
+    : [hiq ?? ""];
+  if (hiq && poolIds.length > 1) {
+    // The attempt is REPORTED as the catalog row (pooledAs / the identity the
+    // valuation names), while it READS poolReadIdsFor's whole union. When the
+    // catalog names no row — a numbered id whose stem is not a row either
+    // (kind "none") — the id as given stands.
+    const named = resolution && resolution.id && poolIds.includes(resolution.id) ? resolution.id : poolIds[0];
+    // The union is ORDER-CANONICAL — the named row first — so the two halves
+    // of one card produce the IDENTICAL attempt whichever half the caller
+    // held. The query ORs the keys, so order never changed the rows; making
+    // it canonical is what makes "same card, same pool" checkable.
+    const union = [named, ...poolIds.filter((k) => k !== named)];
     add({
-      cardId: twinUnion.row,
-      hobbyiqCardId: twinUnion.row,
-      hobbyiqCardIds: [twinUnion.row, twinUnion.unnumbered],
-      label: "hobbyiqCardId+numbered-twin",
+      cardId: named,
+      hobbyiqCardId: named,
+      hobbyiqCardIds: union,
+      label: "hobbyiqCardId+pool-twin",
     });
-    seen.add(`${twinUnion.row}|${twinUnion.row}`);
-    seen.add(`${twinUnion.unnumbered}|${twinUnion.unnumbered}`);
+    // Each half alone is a subset of the union — never re-tried.
+    for (const k of poolIds) seen.add(`${k}|${k}`);
   } else if (hiq) {
     add({ cardId: hiq, hobbyiqCardId: hiq, label: "hobbyiqCardId" });
     const twin = twinOf(hiq);
@@ -360,8 +379,13 @@ export async function priceHoldingFromExactPool(
   let resolution = opts.resolution;
   if (resolution === undefined) {
     resolution = null;
+    // CF-AN-IDENTITY-RESOLVES-TO-ITS-ROW, SYMMETRIC (round-2 refutation):
+    // resolve for a NUMBERED slug too. Round 2 skipped it, so a holding the
+    // branch's own writers had rewritten to `<stem>:num-N` read that key
+    // alone while its sales still sat under `<stem>` — the mirror of the bug
+    // this whole change fixes. Two point reads (2 RU) settle it.
     const hiq = isHiqSlug(h.hobbyiqCardId) ? h.hobbyiqCardId.trim() : null;
-    if (hiq && !NUM_SUFFIX.test(hiq)) {
+    if (hiq) {
       try {
         resolution = await resolveIdentityToCatalogRow(hiq, { printRun: positiveInt(h.printRun) });
       } catch {

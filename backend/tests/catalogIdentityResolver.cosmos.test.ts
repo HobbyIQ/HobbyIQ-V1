@@ -16,6 +16,7 @@ import {
   _setContainerForTests,
   IDENTITY_MEMO_MAX_ENTRIES,
   IDENTITY_MEMO_TTL_MS,
+  poolReadIdsFor,
   resolveIdentityToCatalogRow,
   STEM_QUERY,
 } from "../src/services/catalog/catalogIdentityResolver.js";
@@ -91,7 +92,7 @@ describe("resolveIdentityToCatalogRow -- an un-numbered id", () => {
   it("point-reads the id, then runs ONE DISTINCT twins-only stem query and resolves to the single twin", async () => {
     const { container, calls } = stub([MWI_499, `${MWI_499}:psa-9`, "hiq:baseball:2025:bowman-draft:cpa-mwi:gold-refractor:auto:num-50"]);
     const r = await resolveIdentityToCatalogRow(MWI, { container });
-    expect(r).toEqual({ requested: MWI, id: MWI_499, kind: "numbered-twin", twins: [MWI_499] });
+    expect(r).toEqual({ requested: MWI, id: MWI_499, kind: "numbered-twin", twins: [MWI_499], poolTwin: MWI_499 });
     expect(calls.reads).toEqual([`${MWI}|${MWI}`]);
     expect(calls.queries).toHaveLength(1);
     expect(calls.queries[0].query).toBe(STEM_QUERY);
@@ -114,14 +115,14 @@ describe("resolveIdentityToCatalogRow -- an un-numbered id", () => {
   it("two checklist twins is ambiguous — the authorities disagree — logged with the twin list", async () => {
     const { container } = stub([MWI_499, MWI_250, `${MWI_499}:psa-9`]);
     const r = await resolveIdentityToCatalogRow(MWI, { container });
-    expect(r).toEqual({ requested: MWI, id: null, kind: "ambiguous", twins: [MWI_250, MWI_499] });
+    expect(r).toEqual({ requested: MWI, id: null, kind: "ambiguous", twins: [MWI_250, MWI_499], poolTwin: null });
     expect(events(warnSpy, "catalog_identity_ambiguous_twins")).toMatchObject([{ slug: MWI, twins: [MWI_250, MWI_499] }]);
   });
   it("prefers the checklist-authority twin when a vendor row spells another print run", async () => {
     const { container } = stub([{ id: MWI_499, source: "checklistcenter-2026-08-29" }, { id: `${MWI}:num-500`, source: "cardhedge" }]);
     const r = await resolveIdentityToCatalogRow(MWI, { container });
     // Mutation check: without the authority rule this is "ambiguous", id null.
-    expect(r).toEqual({ requested: MWI, id: MWI_499, kind: "numbered-twin", twins: [MWI_499, `${MWI}:num-500`], chosenBy: "authority" });
+    expect(r).toEqual({ requested: MWI, id: MWI_499, kind: "numbered-twin", twins: [MWI_499, `${MWI}:num-500`], chosenBy: "authority", poolTwin: MWI_499 });
     expect(events(logSpy, "catalog_identity_resolved_to_twin")).toMatchObject([{ slug: MWI, resolvedTo: MWI_499, chosenBy: "authority" }]);
   });
   it("two vendor twins and no authority is still a refusal", async () => {
@@ -140,7 +141,7 @@ describe("resolveIdentityToCatalogRow -- the caller's print run settles the twin
   it("printRun 499: reads the id (404) then …:num-499 (hit) — no stem query at all", async () => {
     const { container, calls } = stub([MWI_499]);
     const r = await resolveIdentityToCatalogRow(MWI, { container, printRun: 499 });
-    expect(r).toEqual({ requested: MWI, id: MWI_499, kind: "numbered-twin", twins: [MWI_499], chosenBy: "print-run" });
+    expect(r).toEqual({ requested: MWI, id: MWI_499, kind: "numbered-twin", twins: [MWI_499], chosenBy: "print-run", poolTwin: MWI_499 });
     expect(calls.reads).toEqual([`${MWI}|${MWI}`, `${MWI_499}|${MWI_499}`]);
     expect(calls.queries).toHaveLength(0);
     expect(events(logSpy, "catalog_identity_resolved_to_twin")).toMatchObject([{ slug: MWI, resolvedTo: MWI_499, chosenBy: "print-run" }]);
@@ -196,7 +197,7 @@ describe("resolveIdentityToCatalogRow -- the memo: one stem query per stem per T
     const first = await resolveIdentityToCatalogRow(MWI, { container });
     first.twins.push("junk");
     (first as { id: string | null }).id = null;
-    expect(await resolveIdentityToCatalogRow(MWI, { container })).toEqual({ requested: MWI, id: MWI_499, kind: "numbered-twin", twins: [MWI_499] });
+    expect(await resolveIdentityToCatalogRow(MWI, { container })).toEqual({ requested: MWI, id: MWI_499, kind: "numbered-twin", twins: [MWI_499], poolTwin: MWI_499 });
   });
   it("expires after the TTL (~10 min) and is bounded", async () => {
     vi.useFakeTimers();
@@ -227,14 +228,68 @@ describe("resolveIdentityToCatalogRow -- the memo: one stem query per stem per T
 describe("resolveIdentityToCatalogRow -- a numbered id", () => {
   it("does not run the stem query: it point-reads itself, then its un-numbered form", async () => {
     const { container, calls } = stub([MWI]);
-    expect(await resolveIdentityToCatalogRow(MWI_499, { container })).toMatchObject({ id: MWI, kind: "unnumbered-twin" });
+    expect(await resolveIdentityToCatalogRow(MWI_499, { container })).toMatchObject({ id: MWI, kind: "unnumbered-twin", poolTwin: null });
     expect(calls.reads).toEqual([`${MWI_499}|${MWI_499}`, `${MWI}|${MWI}`]);
     expect(calls.queries).toHaveLength(0);
   });
-  it("with its own row: one read, exact", async () => {
+
+  // CF-AN-IDENTITY-RESOLVES-TO-ITS-ROW, the SYMMETRIC half (round-2
+  // refutation, 2026-08-30). The branch's own writers leave the NUMBERED form
+  // on a holding, and the fold moved the catalog row without moving the sales
+  // — so the numbered id's other pool key is its stem. Measured read-only,
+  // 2025 bowman-draft: 8 of 200 such ids carry rows under the stem, three
+  // with ZERO under the numbered id.
+  it("REVERSE: its own row and NO row for its stem — kind exact, poolTwin the stem, TWO reads", async () => {
     const { container, calls } = stub([MWI_499]);
-    expect(await resolveIdentityToCatalogRow(MWI_499, { container })).toMatchObject({ id: MWI_499, kind: "exact" });
-    expect(calls.reads).toHaveLength(1);
+    const r = await resolveIdentityToCatalogRow(MWI_499, { container });
+    // Mutation check: round 2 returned after the first read and never set
+    // poolTwin, so the reader read …:num-499 alone while the sales sat under
+    // the stem — the mirror of the bug this branch fixes.
+    expect(r).toEqual({ requested: MWI_499, id: MWI_499, kind: "exact", twins: [], poolTwin: MWI });
+    expect(poolReadIdsFor(MWI_499, r)).toEqual([MWI_499, MWI]);
+    // The stem read is what settles poolTwin: two point reads (2 RU), no query.
+    expect(calls.reads).toEqual([`${MWI_499}|${MWI_499}`, `${MWI}|${MWI}`]);
+    expect(calls.queries).toHaveLength(0);
+    expect(events(logSpy, "catalog_identity_pool_twin_is_the_stem")).toMatchObject([{ slug: MWI_499, poolTwin: MWI }]);
+  });
+
+  it("REVERSE: BOTH rows exist — the stem is its own identity, poolTwin null, no union", async () => {
+    const { container } = stub([MWI_499, MWI]);
+    const r = await resolveIdentityToCatalogRow(MWI_499, { container });
+    expect(r).toMatchObject({ id: MWI_499, kind: "exact", poolTwin: null });
+    expect(poolReadIdsFor(MWI_499, r)).toEqual([MWI_499]);
+  });
+
+  it("REVERSE: neither row exists — kind none, but the stem is still the other pool key", async () => {
+    const { container } = stub([]);
+    const r = await resolveIdentityToCatalogRow(MWI_499, { container });
+    expect(r).toMatchObject({ id: null, kind: "none", poolTwin: MWI });
+    expect(poolReadIdsFor(MWI_499, r)).toEqual([MWI_499, MWI]);
+  });
+
+  it("REVERSE: a sibling print run is never pulled in", async () => {
+    const { container } = stub([MWI_499, MWI_250]);
+    expect(poolReadIdsFor(MWI_499, await resolveIdentityToCatalogRow(MWI_499, { container }))).toEqual([MWI_499, MWI]);
+  });
+
+  it("REVERSE: a stem read that is not a 404 fails OPEN — unresolved, the id read as given", async () => {
+    let n = 0;
+    const container = {
+      item(id: string, pk: string) {
+        return {
+          async read() {
+            n++;
+            if (id === MWI_499) return { resource: { id } };
+            throw Object.assign(new Error("429 throttled"), { code: 429 });
+          },
+        };
+      },
+      items: { query() { throw new Error("no query expected"); } },
+    } as unknown as Container;
+    const r = await resolveIdentityToCatalogRow(MWI_499, { container });
+    expect(r).toMatchObject({ id: null, kind: "unresolved", error: "429 throttled", poolTwin: null });
+    expect(poolReadIdsFor(MWI_499, r)).toEqual([MWI_499]);
+    expect(n).toBe(2);
   });
 });
 
@@ -243,7 +298,7 @@ describe("resolveIdentityToCatalogRow -- fails OPEN on anything that is not a 40
     const { container, calls } = stub([MWI_499], { readError: Object.assign(new Error("429 throttled"), { code: 429 }) });
     const r = await resolveIdentityToCatalogRow(MWI, { container });
     // Mutation check: the fail-closed resolver answered kind "none" here — identity-not-in-catalog for a card with a row.
-    expect(r).toEqual({ requested: MWI, id: null, kind: "unresolved", twins: [], error: "429 throttled" });
+    expect(r).toEqual({ requested: MWI, id: null, kind: "unresolved", twins: [], error: "429 throttled", poolTwin: null });
     expect(calls.queries).toHaveLength(0);
     expect(events(warnSpy, "catalog_identity_resolve_error")).toMatchObject([{ step: "point-read", slug: MWI, failOpen: true }]);
     expect(_identityMemoSizeForTests()).toBe(0);
@@ -269,7 +324,7 @@ describe("resolveIdentityToCatalogRow -- fails OPEN on anything that is not a 40
     expect(await resolveIdentityToCatalogRow(MWI_499, { container })).toMatchObject({ kind: "unresolved", error: "503" });
   });
   it("no container (no connection string) is none, without throwing — nothing was asked", async () => {
-    expect(await resolveIdentityToCatalogRow(MWI)).toEqual({ requested: MWI, id: null, kind: "none", twins: [] });
+    expect(await resolveIdentityToCatalogRow(MWI)).toEqual({ requested: MWI, id: null, kind: "none", twins: [], poolTwin: null });
   });
   it("a vendor id is none with ZERO reads", async () => {
     const { container, calls } = stub([VENDOR]);
