@@ -406,7 +406,7 @@ jobs:
           echo "TIER1_HARNESS_TOKEN fetched (length: ${#TOK})"
 
       - name: Fetch AUTH_SESSION_SECRET from HobbyIQ3 App Service
-        if: inputs.script == 'reprice-user-holdings'
+        if: inputs.script == 'reprice-user-holdings' || inputs.script == 'backfill-ebay-purchase-comps'
         shell: bash
         run: |
           SEC=$(az webapp config appsettings list \
