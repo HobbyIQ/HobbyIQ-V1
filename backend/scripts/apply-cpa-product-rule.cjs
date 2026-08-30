@@ -60,7 +60,7 @@ const crypto = require("crypto");
 const { CosmosClient } = require("@azure/cosmos");
 const backend = path.resolve(__dirname, "..");
 const { moveCatalogRow } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
-const { decideCpaProduct } = require(path.join(backend, "dist/services/catalog/cpaProductRule.js"));
+const { decideCpaProduct, groupKey } = require(path.join(backend, "dist/services/catalog/cpaProductRule.js"));
 const { catalogAuthorityOf } = require(path.join(backend, "dist/services/catalog/catalogAuthority.service.js"));
 const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
 
@@ -90,7 +90,6 @@ const STARTED = Date.now();
 const f = (n) => Number(n ?? 0).toLocaleString("en-US");
 const str = (v) => String(v ?? "").trim();
 const shardOf = (k) => parseInt(crypto.createHash("sha1").update(String(k)).digest("hex").slice(0, 8), 16) % SLOTS;
-const foldNum = (v) => String(v ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "");
 const REASON = `the checklist that names the product wins; bcp's Bowman page is not that (D29/R2, Drew 2026-08-30)`;
 
 /** Serial fan-out. card_catalog is at 100 RU/s; the default parallelism hangs. */
@@ -118,16 +117,30 @@ function parseYears(spec) {
   return spec.split(",").map((s) => Number(s.trim())).filter((n) => Number.isFinite(n) && n > 1900);
 }
 
-/** The identity a card number + parallel + auto names, hyphen-insensitively (D23). */
-function identityKey(row) {
-  return [row.year ?? row.cardYear ?? "", foldNum(row.cardNumber), str(row.parallelSlug).toLowerCase(), row.isAuto === true ? "auto" : "no-auto"].join("|");
-}
+/**
+ * The identity key is `groupKey` in cpaProductRule -- (year, folded number,
+ * auto, player, FOLDED parallel spelling). It is imported, never re-derived
+ * here: R1 shipped a local copy that keyed on the EXACT parallelSlug string,
+ * and the two products spell the same rung differently, so the one card
+ * arrived as three groups that each abstained "single-setkey".
+ */
 
-/** The row's id with its setKey segment rewritten to the product that won. */
-function withSetKey(id, setKey) {
+/**
+ * The row's id with its setKey segment rewritten to the product that won and
+ * its parallel segment rewritten to the spelling that survived.
+ *
+ * hiq:<sport>:<year>:<setKey>:<cardNumber>:<parallelSlug>:<auto>[:num-N]
+ *                    seg[3]                 seg[5]
+ *
+ * Both segments move together: the whole point of R2 is that the product and
+ * the spelling are two halves of one address, and rewriting only seg[3] leaves
+ * the row beside its twin under the losing spelling.
+ */
+function withSetKeyAndParallel(id, setKey, parallelSlug) {
   const seg = String(id).split(":");
   if (seg.length < 7 || seg[0] !== "hiq") return null;
   seg[3] = setKey;
+  if (parallelSlug) seg[5] = parallelSlug;
   return seg.join(":");
 }
 
@@ -162,12 +175,13 @@ async function main() {
   const s = {
     rowsRead: 0, identities: 0, otherSlot: 0,
     singleSetKey: 0, noDedicated: 0, playerDisagreement: 0, nothingToFold: 0,
+    printRunDisagree: 0, targetNotAProduct: 0, spellingChanged: 0,
     keptBoth: 0, foldGroups: 0,
     moved: 0, folded: 0, replaced: 0, noop: 0,
     salesRepointed: 0, gradedRetired: 0,
     refusedSetKeySplit: 0, failed: 0, notReached: 0,
   };
-  const keepBothPairs = new Map(), foldPairs = new Map(), examples = [], keepBothExamples = [], collisionExamples = [];
+  const keepBothPairs = new Map(), foldPairs = new Map(), examples = [], keepBothExamples = [], collisionExamples = [], printRunExamples = [], spellingExamples = [];
   const bump = (m, k) => m.set(k, (m.get(k) ?? 0) + 1);
   let stopReason = null;
 
@@ -193,7 +207,7 @@ async function main() {
       token = page.continuationToken;
       for (const r of page.resources ?? []) {
         s.rowsRead++;
-        const k = identityKey(r);
+        const k = groupKey(r);
         const list = groups.get(k) ?? [];
         list.push(r);
         groups.set(k, list);
@@ -207,7 +221,7 @@ async function main() {
 
   // ── PASS 2: decide, and perform what the rule authorises ──────────────────
   async function handle(key, rows) {
-    const d = decideCpaProduct(rows.map((r) => ({ id: str(r.id), setKey: str(r.setKey), source: str(r.source), playerName: r.playerName ?? null, printRun: r.printRun ?? null })));
+    const d = decideCpaProduct(rows.map((r) => ({ id: str(r.id), setKey: str(r.setKey), source: str(r.source), playerName: r.playerName ?? null, printRun: r.printRun ?? null, parallelSlug: str(r.parallelSlug) })));
 
     if (d.kind === "abstain") {
       if (d.why === "single-setkey") s.singleSetKey++;
@@ -215,7 +229,11 @@ async function main() {
       else if (d.why === "player-disagreement") {
         s.playerDisagreement++;
         if (collisionExamples.length < 10) collisionExamples.push(`  ${key}   ${d.detail}`);
-      } else s.nothingToFold++;
+      } else if (d.why === "print-run-disagree") {
+        s.printRunDisagree++;
+        if (printRunExamples.length < 10) printRunExamples.push(`  ${key}   ${d.detail}`);
+      } else if (d.why === "target-not-a-product") s.targetNotAProduct++;
+      else s.nothingToFold++;
       return;
     }
 
@@ -237,14 +255,24 @@ async function main() {
     for (const r of d.rows) {
       const src = rows.find((x) => str(x.id) === r.id);
       if (!src) continue;
-      const newSlug = withSetKey(src.id, d.target);
+      // The destination carries BOTH halves of the ruling: the product the
+      // dedicated checklist named, and the spelling the majority of checklist
+      // sources at that product used (D31, tie -> the longer form). A fold that
+      // moved only the setKey would land the row beside its twin under the
+      // losing spelling and leave the pair split exactly as R1 found them.
+      const spell = d.spelling && str(d.spelling) ? str(d.spelling) : str(src.parallelSlug);
+      const newSlug = withSetKeyAndParallel(src.id, d.target, spell);
       if (!newSlug || newSlug === src.id) { s.noop++; continue; }
+      if (spell && str(src.parallelSlug) && spell !== str(src.parallelSlug)) {
+        s.spellingChanged++;
+        if (spellingExamples.length < 10) spellingExamples.push(`  ${str(src.parallelSlug)} -> ${spell}   (${src.source} -> ${d.target})`);
+      }
       // One read at the destination, reused as moveCatalogRow's `known`
       // (CF-DO-NOT-LOOK-TWICE). Authority decides the survivor there: a
       // dedicated checklist row already at the address KEEPS it and the
       // incoming derived row folds under it.
       const incumbent = await rowAt(cat, newSlug);
-      const res = await moveCatalogRow(cat, src, newSlug, { setKey: d.target }, {
+      const res = await moveCatalogRow(cat, src, newSlug, { setKey: d.target, parallelSlug: spell }, {
         reason: `${REASON}: ${r.source} filed this under ${r.setKey}`,
         dryRun: !APPLY || MODE !== "fold",
         salesContainer: pool,
@@ -298,12 +326,15 @@ async function main() {
   console.log(`    folded (a row was already there) ${f(s.folded)}`);
   console.log(`    replaced a lower-authority twin  ${f(s.replaced)}`);
   console.log(`  fold groups authorised          ${f(s.foldGroups)}   <- identities the rule decided; the rows above are their members`);
+  console.log(`  rows whose SPELLING also moved  ${f(s.spellingChanged)}   <- the majority spelling among the checklist sources won (D31); a subset of ROWS MOVED, not an addition`);
   console.log(`  sales re-pointed                ${f(s.salesRepointed)}`);
   console.log(`  graded children retired         ${f(s.gradedRetired)}   <- regenerable by materialize-graded-identities`);
   console.log(`\n  ABSTAINED (left exactly as they are):`);
   console.log(`    single setKey                    ${f(s.singleSetKey)}   <- nothing to decide`);
   console.log(`    no dedicated checklist           ${f(s.noDedicated)}   <- bcp/derived only; R2 names no winner`);
   console.log(`    player disagreement              ${f(s.playerDisagreement)}   <- an initials collision, NOT a product conflict`);
+  console.log(`    print-run disagreement           ${f(s.printRunDisagree)}   <- two different /N in one group; different print runs are different cards (D31)`);
+  console.log(`    target not a product spelling    ${f(s.targetNotAProduct)}   <- D23's rename population, not a product ruling`);
   console.log(`    nothing foldable                 ${f(s.nothingToFold)}   <- one dedicated product, but no row both agrees on the player and is foldable`);
   console.log(`  KEPT BOTH                       ${f(s.keptBoth)}   <- two dedicated products, same player; sales split by title words is a SEPARATE pass`);
   console.log(`  refused (setKey id/field split)  ${f(s.refusedSetKeySplit)}   <- D23's rename population`);
@@ -321,6 +352,8 @@ async function main() {
   if (examples.length) { console.log(`\n  fold examples:`); for (const e of examples) console.log(e); }
   if (keepBothExamples.length) { console.log(`\n  keep-both examples:`); for (const e of keepBothExamples) console.log(e); }
   if (collisionExamples.length) { console.log(`\n  initials-collision examples (abstained):`); for (const e of collisionExamples) console.log(e); }
+  if (printRunExamples.length) { console.log(`\n  print-run-disagreement examples (abstained):`); for (const e of printRunExamples) console.log(e); }
+  if (spellingExamples.length) { console.log(`\n  surviving-spelling examples:`); for (const e of spellingExamples) console.log(e); }
 
   if (stopReason === "budget") console.log(`\nstopped at the ${RUN_MS / 60000}-minute budget — the relaunch continues from here`);
   else if (stopReason === "limit") console.log(`\nstopped at LIMIT=${f(LIMIT)} — a bounded run`);
@@ -335,7 +368,7 @@ async function main() {
       job: "apply-cpa-product-rule",
       intended: s.identities + s.notReached,
       written: s.foldGroups,
-      skipped: s.singleSetKey + s.noDedicated + s.playerDisagreement + s.nothingToFold + s.keptBoth + s.refusedSetKeySplit + s.notReached,
+      skipped: s.singleSetKey + s.noDedicated + s.playerDisagreement + s.printRunDisagree + s.targetNotAProduct + s.nothingToFold + s.keptBoth + s.refusedSetKeySplit + s.notReached,
       failed: s.failed,
     });
   }
