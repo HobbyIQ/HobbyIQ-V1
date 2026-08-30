@@ -1652,7 +1652,28 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   contract test red in the run — a failed FILE (its `beforeAll` hook timed
   out at 30 s under load) with zero failed TESTS, and my gate counted tests;
   it passes alone on main (23/23). The gate reads vitest's exit code from
-  here on. Drew (22:30Z): "I see 2 max williams superfractors …
+  here on.
+  **Drew (10:20Z): "search select to inventory … isn't selecting the right
+  card … it is the blue refractor, but priced super low and has no comps
+  when I know there are comps."** Replayed the web's `/api/search/cards`
+  dispatcher read-only: the full query ranks the checklist card #1; the
+  short ones are honest ambiguity (`theo gillen blue refractor` ties five
+  real Gillen Blue Refractors at 0.9 — 2025 Bowman #BTP-76, 2024 Draft
+  #BD-73, Bowman's Best, Bowman Chrome #BMA-TG, the CPA-TG auto; `2024
+  bowman draft theo gillen blue` ranks the base card's Blue /150 first
+  because the query never said refractor or auto) and the rows show year /
+  set / #number / Auto, so the pick is the user's. The price and "no comps"
+  are the identity forms: `hobbyiqCardId` on the folded-away un-numbered
+  twin, `cardId` on a sale-minted `bowman-chrome` row, while the checklist
+  row `…:num-150` holds 5 raw sales → **conform-holdings APPLY dispatched
+  10:30Z (33284403692; dry #3's corrections are exactly the numbered-twin
+  moves: Gillen, Caminiti, Griffey Radiance /1000, Sykora, Max Williams Gold
+  /50 — the Max Williams Refractors still land on the un-numbered row until
+  the cross-source folds finish, then a second pass) + Drew's reprice
+  (33284407911)** — the after-number is this holding's FMV from its 5 sales.
+  Runner landings by 10:30Z: card-profile 8/8 (writes good, exits red on
+  the pre-#1499 accounting), one-of-one shards 0/2/3/4/6 (≈28k repairs
+  each), re-ingest #2 shards 3/5. Drew (22:30Z): "I see 2 max williams superfractors …
   superfractors are 1/1" — bcp's un-numbered `superfractor:auto` beside
   beckett's `:num-1`, and the same pair on Refractor /499, Black /10, Red /5,
   Red Lava, Sky Blue. **#1470:** the fold's decision is a pure tested rule
