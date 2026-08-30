@@ -2263,6 +2263,10 @@ export async function confirmPendingReviewHolding(
 // selected and edits the card to the catalog match").
 export interface CatalogSearchHit {
   slug: string;
+  /** The server's one display format for the card. Computed per request from
+   *  the row's fields, never stored — so it cannot go stale when a name, a
+   *  parallel or a set is corrected. */
+  displayName?: string | null;
   cardNumber: string | null;
   playerName: string | null;
   sport: string | null;
@@ -2273,6 +2277,13 @@ export interface CatalogSearchHit {
   isAuto: boolean;
   printRun: number | null;
   imageUrl: string | null;
+  /** The row's own catalog `source` string ("beckett-checklist-2026-08-01",
+   *  "sold-comps-stub-2026-08-12", "cardhedge", …). */
+  source?: string | null;
+  /** D33: what this row is allowed to decide, classified server-side from
+   *  `source` so web and iOS cannot drift on the answer. "checklist" earns the
+   *  ✓ badge — it is the same predicate that stamps a holding VERIFIED. */
+  authority?: "checklist" | "vendor" | "derived" | "unknown" | null;
   score: number;
   salesSummary: {
     count: number;

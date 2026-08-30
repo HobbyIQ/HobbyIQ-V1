@@ -31,6 +31,7 @@ import { cardNumberInClause, normalizeSetKey, sameCardNumber } from "../portfoli
 // CF-SEARCH-FULL-NAME-DOMINATES: the product PARENT walk (D23 table), so a
 // "bowman" query can recognise bowman-draft as one family step away.
 import { productAncestry, productEntry } from "./productSetKeys.js";
+import { authorityRank, catalogAuthorityOf, type CatalogAuthority } from "./catalogAuthority.service.js";
 
 const COSMOS_DATABASE = process.env.COSMOS_DATABASE ?? "hobbyiq";
 const CATALOG_CONTAINER = process.env.COSMOS_CARD_CATALOG_CONTAINER ?? "card_catalog";
@@ -124,6 +125,19 @@ export interface CatalogSearchHit {
   printRun: number | null;
   imageUrl: string | null;    // CF-CATALOG-PHOTOS: attached from sold_comps
   kind: string | null;        // "card" | "variant" | "grade" | "canonical"
+  /** "psa-10", "csg-10", … — non-empty on a graded twin. Carried so the
+   *  ungraded-wins collapse tests a FIELD instead of enumerating grader names
+   *  in a slug regex, which is how csg-10 leaked through as a pickable card. */
+  gradeTier: string | null;
+  /** The row's own `source` string, passed through verbatim. */
+  source: string | null;
+  /** D33: what this row is ALLOWED to decide, derived from `source` by the one
+   *  classifier (catalogAuthorityOf). The picker draws its checklist badge from
+   *  this and both clients rank on it, so "is this a real checklist card or a
+   *  row we minted off a sale?" has ONE answer computed in ONE place. The web
+   *  previously had no way to ask: `source` was SELECTed and then dropped here,
+   *  so a `sold-comps-stub` row and a Beckett row rendered identically. */
+  authority: CatalogAuthority;
   score: number;              // 0-1 token overlap
   salesSummary: {
     count: number;
@@ -230,12 +244,38 @@ function dedupeKey(h: CatalogSearchHit): string {
 
 /** True when `a` should represent the card instead of `b`. Ungraded first
  *  (comps hang off the ungraded slug), then canonical over vendor-keyed, then
- *  score. */
+ *  checklist authority, then score. */
 function preferHit(a: CatalogSearchHit, b: CatalogSearchHit): boolean {
-  const graded = (x: CatalogSearchHit) => (/:(raw|psa|bgs|sgc|cgc)(-|$)/.test(x.slug) ? 1 : 0);
+  // D33: GRADED IS EITHER SIGNAL, BECAUSE NEITHER ONE IS COMPLETE.
+  //
+  // The old test was a slug regex enumerating raw|psa|bgs|sgc|cgc — an
+  // allowlist of grader names, the same decaying-allowlist trap that
+  // catalogAuthority.service.ts documents for source strings. CSG, HGA and TAG
+  // were absent, so those rows read as UNGRADED, tied with their ungraded twin
+  // on identical identity fields, and won the tie by arrival order. Live: the
+  // "Find this card" page for 2020 Bowman Draft BD-152 offered
+  // `…:bd-152:refractor:no-auto:csg-10` as pick #6 — a graded slug presented as
+  // the card, which is exactly what the comment below says must not happen
+  // (comps hang off the UNGRADED slug, so picking it pins the holding to a row
+  // with an empty market panel).
+  //
+  // The obvious fix — read the `gradeTier` FIELD instead, now that it is
+  // SELECTed — trades one leak for another. Measured read-only 2026-08-30:
+  // 583 rows with a `:psa-` slug and 784 in total carry NO gradeTier at all, so
+  // a field-only test would have made those pickable. The field catches the
+  // graders the regex forgot; the slug catches the rows the field forgot.
+  // Either signal means graded, and a false positive here is cheap — it only
+  // decides which of two rows for ONE identity represents it.
+  const GRADED_SLUG = /:(raw|psa|bgs|sgc|cgc|csg|hga|tag|isa|ace|gma|pgs)(-|$)/;
+  const graded = (x: CatalogSearchHit) => (x.gradeTier || GRADED_SLUG.test(x.slug) ? 1 : 0);
   const vendor = (x: CatalogSearchHit) => (x.slug.startsWith("hiq:") ? 0 : 1);
   if (graded(a) !== graded(b)) return graded(a) < graded(b);
   if (vendor(a) !== vendor(b)) return vendor(a) < vendor(b);
+  // A checklist row represents the card over a derived twin carrying the same
+  // identity fields — a row we minted from a sale never speaks for a card when
+  // a transcribed checklist row is standing right next to it.
+  const ra = authorityRank(a.source), rb = authorityRank(b.source);
+  if (ra !== rb) return ra > rb;
   return a.score > b.score;
 }
 
@@ -846,7 +886,7 @@ export async function searchCatalog(
   // below, which the caller runs only when the verified tier came back
   // empty, so a card we hold sales for is never simply "not found".
   const qspec = {
-    query: `SELECT TOP 500 c.id, c.cardNumber, c.playerName, c.sport, c.year, c.setKey, c.setName, c["set"] AS setNameFromSet, c.parallel, c.parallelSlug, c.isAuto, c.printRun, c.searchTokens, c.salesSummary, c.kind, c.imageUrl, c.source, c.verificationStatus FROM c WHERE (${searchOr})${anchorAnd}${scopeAnd} AND ${verifiedCatalogSqlClause("c")}`,
+    query: `SELECT TOP 500 c.id, c.cardNumber, c.playerName, c.sport, c.year, c.setKey, c.setName, c["set"] AS setNameFromSet, c.parallel, c.parallelSlug, c.isAuto, c.printRun, c.searchTokens, c.salesSummary, c.kind, c.imageUrl, c.source, c.verificationStatus, c.gradeTier FROM c WHERE (${searchOr})${anchorAnd}${scopeAnd} AND ${verifiedCatalogSqlClause("c")}`,
     parameters: params,
   };
 
@@ -854,7 +894,7 @@ export async function searchCatalog(
    *  verified tier is empty — these are the "we have sales but no checklist
    *  yet" cards, and the caller flags them so they never render as equals. */
   const provisionalQspec = {
-    query: `SELECT TOP 100 c.id, c.cardNumber, c.playerName, c.sport, c.year, c.setKey, c.setName, c["set"] AS setNameFromSet, c.parallel, c.parallelSlug, c.isAuto, c.printRun, c.searchTokens, c.salesSummary, c.kind, c.imageUrl, c.source, c.verificationStatus FROM c WHERE (${searchOr})${anchorAnd}${scopeAnd} AND ${provisionalCatalogSqlClause("c")}`,
+    query: `SELECT TOP 100 c.id, c.cardNumber, c.playerName, c.sport, c.year, c.setKey, c.setName, c["set"] AS setNameFromSet, c.parallel, c.parallelSlug, c.isAuto, c.printRun, c.searchTokens, c.salesSummary, c.kind, c.imageUrl, c.source, c.verificationStatus, c.gradeTier FROM c WHERE (${searchOr})${anchorAnd}${scopeAnd} AND ${provisionalCatalogSqlClause("c")}`,
     parameters: params,
   };
 
@@ -875,6 +915,9 @@ export async function searchCatalog(
     salesSummary?: CatalogSearchHit["salesSummary"];
     kind?: string;
     imageUrl?: string | null;
+    source?: string | null;
+    verificationStatus?: string | null;
+    gradeTier?: string | null;
   }
 
   // CF-SEARCH-CHECKLIST-FIRST-QUERY (Drew, 2026-08-13). The candidate query is
@@ -935,7 +978,14 @@ export async function searchCatalog(
   // This is the minimum CatalogSearchHit needs; imageUrl is gone because search
   // no longer renders a thumbnail, and source/verificationStatus are used in
   // the WHERE clause but never read back.
-  const anchorSelectFields = `c.id, c.cardNumber, c.playerName, c.sport, c.year, c.setKey, c.setName, c.parallel, c.isAuto, c.printRun, c.salesSummary`;
+  // D33: `c.source` and `c.gradeTier` are here because THIS is the arm that
+  // actually serves a real query. The wider SELECT above carries them, but the
+  // anchor arms are what "2020 BOWMAN Bobby Witt Jr. Royals #BD152 sp" runs,
+  // and their narrower field list is why every hit on that page came back
+  // authority "unknown" with no checklist badge on any row — the classifier had
+  // nothing to classify. Both are short scalars ("baseballcardpedia", "psa-10"),
+  // so they do not reopen the wide-document cost this list exists to bound.
+  const anchorSelectFields = `c.id, c.cardNumber, c.playerName, c.sport, c.year, c.setKey, c.setName, c.parallel, c.isAuto, c.printRun, c.salesSummary, c.source, c.gradeTier`;
   //
   // The two arms run as SEPARATE queries, not as one OR. An OR that mixes an
   // EXISTS subquery with a scalar equality makes Cosmos fall back to a scan and
@@ -1162,6 +1212,9 @@ export async function searchCatalog(
       printRun: typeof r.printRun === "number" ? r.printRun : null,
       imageUrl: r.imageUrl ?? null,
       kind: r.kind ?? null,
+      gradeTier: r.gradeTier ?? null,
+      source: r.source ?? null,
+      authority: catalogAuthorityOf(r.source),
       score,
       salesSummary: r.salesSummary ?? null,
     });
@@ -1278,6 +1331,43 @@ export async function searchCatalog(
   // that name must not empty the page; it falls back to matching ANY product
   // word, then to no narrowing at all.
   collapsed = narrowToNamedProduct(tokens, collapsed);
+
+  // D33 — A SALE-MINTED ROW IS NEVER A BETTER ANSWER THAN A CHECKLIST ROW.
+  //
+  // Ordering above is score, then sales count. Neither knows what a row IS, so
+  // an `ingest-auto-seed` or `sold-comps-stub` row sits level with a Beckett
+  // one and can outrank it outright: derived rows are minted FROM sales, so
+  // they carry the sales count that breaks the tie, and a row whose parallel we
+  // inferred off a listing title beat the transcribed checklist card. On 2020
+  // Bowman Draft alone that is 173 ingest-auto-seed + 9 sold-comps-stub + 1,041
+  // catalog-explode rows competing with the checklist for the top of the page.
+  //
+  // Partition into authority tiers and concatenate, keeping the existing score
+  // order strictly inside each tier — a stable partition, not a re-sort, so
+  // every ranking rule above (the holding context boost, the product narrowing)
+  // still decides which checklist row is FIRST.
+  //
+  // COVERAGE IS NEVER FILTERED. This reorders; it does not drop. When no
+  // checklist row matched at all, the derived rows are still returned, still in
+  // their own order — a card we only know through a sale stays findable, and
+  // the `provisional` flag continues to say so. That is the same rule the
+  // vendor-row narrowing above follows, and the reason both are re-orderings
+  // rather than filters: the parse that got the user here was already unreliable.
+  //
+  // Ranking lives server-side so web and iOS cannot drift on what "best" means.
+  const tierOf = (h: CatalogSearchHit): number => {
+    switch (h.authority) {
+      case "checklist": return 0;
+      case "vendor": return 1;
+      case "unknown": return 1;   // unclassified sources rank WITH vendor, not below
+      default: return 2;          // derived
+    }
+  };
+  collapsed = collapsed
+    .map((h, i) => ({ h, i }))
+    .sort((a, b) => (tierOf(a.h) - tierOf(b.h)) || (a.i - b.i))
+    .map((x) => x.h);
+
   const deduped = collapsed.slice(0, limit);
 
   // CF-SEARCH-ATTACH-COMPS (Drew, 2026-08-13: "we want to search for the

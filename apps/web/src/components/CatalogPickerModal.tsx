@@ -33,7 +33,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { searchCatalog, type CatalogSearchHit } from "@/lib/api";
-import { playerLabelOf, setLabelOf } from "@/lib/catalogHitLabel";
+import { catalogHitLabel } from "@/lib/catalogHitLabel";
 
 // Same input styling the edit modal uses — one look, not a second one invented
 // here. `hiq-input` does not exist; assuming it did would have shipped an
@@ -181,33 +181,23 @@ export function CatalogPickerModal({
           )}
           <div className="space-y-1.5">
             {(hits ?? []).map((h) => {
-              // The checklist sources write the year into setName ("2025 Bowman
-              // Draft Baseball"), so the row must not read "2025 2025 Bowman
-              // Draft". D33 (2026-08-30): both scrubs here were broken by a
-              // lost backslash (#1466). `"\s+"` in a JS string is "s+", so the
-              // year regex compiled to /^2025s+/ and never matched -- Drew saw
-              // the doubled year. And /[s,;]+$/ is a character class of the
-              // LITERAL letter s, so it truncated real surnames: "Chris Sales"
-              // rendered as "Chris Sale", 2.45M rows / 12.4% of the catalog,
-              // display only. Both now live as pure helpers in
-              // src/lib/catalogHitLabel.ts, where a regex LITERAL cannot be
-              // silently de-escaped by its quotes and both rules are pinned by
-              // tests. The player name is cleaned at ingest (cleanPlayerName),
-              // so display only trims.
-              const setLabel = setLabelOf(h);
-              const playerLabel = playerLabelOf(h);
-              const bits = [
-                h.year ? String(h.year) : null,
-                setLabel || null,
-                h.cardNumber ? `#${h.cardNumber}` : null,
-              ].filter(Boolean).join(" ");
-              const variant = [
-                h.parallel && h.parallel.toLowerCase() !== "base" ? h.parallel : null,
-                h.isAuto ? "Auto" : null,
-                h.printRun ? `/${h.printRun}` : null,
-              ].filter(Boolean).join(" · ");
-              const saleCount = h.salesSummary?.count ?? 0;
-              const lastSaleDay = h.salesSummary?.lastSaleAt ? String(h.salesSummary.lastSaleAt).slice(0, 10) : null;
+              // D33: the label is a PURE HELPER with a test behind it. It used
+              // to be built inline here, and it carried two string-escape bugs
+              // that no type-check could see (#1466):
+              // `new RegExp("^" + year + "\s+")` compiles to `^2020s+` -- a
+              // "\s" inside double quotes is the letter s -- so the year strip
+              // never fired for ANY shape and nearly every row read
+              // "2020 2020 Bowman Draft", which is what Drew saw. And
+              // `/[s,;]+$/` is a character class of the LITERAL letter s, so it
+              // ate the last letter of every name ending in one: "Wade Boggs"
+              // rendered "Wade Bogg" across 2.45M rows, 12.4% of the catalog.
+              // Both were display-only -- the stored names were always right.
+              // The helper uses regex LITERALS, which cannot be silently
+              // de-escaped by their quotes, and it builds the set line, the
+              // variant, the sales text and the checklist badge from one place,
+              // so there is one formatter with one test behind it. The player
+              // name is cleaned at ingest (cleanPlayerName); display only trims.
+              const label = catalogHitLabel(h);
               return (
                 <button
                   key={h.slug}
@@ -217,29 +207,47 @@ export function CatalogPickerModal({
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="text-sm font-medium truncate">
-                        {playerLabel || "(unnamed)"}
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="text-sm font-medium truncate">{label.player}</span>
+                        {/* D33: the ✓ says this row transcribes a printed
+                            checklist — the same predicate that stamps a holding
+                            VERIFIED. Rows we minted from a sale carry no badge
+                            and already rank below; the badge is what makes the
+                            difference visible on a page of near-identical rows. */}
+                        {label.checklist && (
+                          <span
+                            className="text-[10px] leading-none shrink-0 px-1 py-0.5 rounded border border-[color:var(--color-border)] text-[color:var(--color-muted)]"
+                            title="Checklist-backed — this row transcribes a printed checklist"
+                          >
+                            ✓ checklist
+                          </span>
+                        )}
                       </div>
-                      <div className="text-xs text-[color:var(--color-muted)] truncate">{bits}</div>
-                      {variant && (
-                        <div className="text-xs mt-0.5 truncate">{variant}</div>
+                      <div className="text-xs text-[color:var(--color-muted)] truncate">{label.line}</div>
+                      {label.variant && (
+                        <div className="text-xs mt-0.5 font-medium truncate">{label.variant}</div>
                       )}
                     </div>
+                    {/* D33: the count and the date come from the SAME helper
+                        that builds the label, so there is one formatter with one
+                        test behind it — the inline copy that used to live here
+                        was the shape the two escape bugs hid in. Rendered as two
+                        lines, which is how the column has always read. */}
                     <div className="text-right shrink-0">
-                      {saleCount > 0 ? (
+                      {label.saleCount > 0 ? (
                         <>
                           <div
                             className="text-sm font-medium tabular-nums"
                             title="Sales we hold for this exact card — a picking hint, not a price"
                           >
-                            {saleCount} sale{saleCount === 1 ? "" : "s"}
+                            {label.saleCountText}
                           </div>
-                          {lastSaleDay && (
-                            <div className="text-xs text-[color:var(--color-muted)]">last {lastSaleDay}</div>
+                          {label.lastSaleDay && (
+                            <div className="text-xs text-[color:var(--color-muted)]">last {label.lastSaleDay}</div>
                           )}
                         </>
                       ) : (
-                        <div className="text-xs text-[color:var(--color-muted)]">no sales yet</div>
+                        <div className="text-xs text-[color:var(--color-muted)]">{label.sales}</div>
                       )}
                     </div>
                   </div>
