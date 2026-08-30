@@ -48,6 +48,7 @@ import {
 import {
   unlinkEbayListingByOfferId,
   readUserDoc,
+  listEbayAccountSales,
 } from "../services/portfolioiq/portfolioStore.service.js";
 import { requireSession } from "../middleware/requireSession.js";
 import { requireEntitlement } from "../middleware/requireEntitlement.js";
@@ -172,8 +173,51 @@ router.use(requireEntitlement("ebayIntegration"));
 
 router.get("/status", async (req: Request, res: Response) => {
   const userId = req.user!.userId;
+  // D26: `status` is "ok" or "reconnect-required", with `reconnectReason`.
+  // A record exists in both cases, so `connected` alone cannot tell a working
+  // connection from one eBay has already refused -- which is exactly what the
+  // account page has to say out loud ("Reconnect eBay"). Additive: a client
+  // reading only `connected` is unaffected.
   const status = await getConnectionStatus(userId);
   res.json({ success: true, ...status });
+});
+
+/**
+ * D26. The sold order lines the account sync saw, newest first.
+ *
+ * `?status=parked` is the confirm queue: sales whose card the matcher found
+ * below the 0.9 bar, each carrying `proposedIdentity` -- the same shape the
+ * holding wire uses for a parked match, so a client that renders one renders
+ * the other. Everything else is the user's eBay sales history as WE resolved
+ * it, including the sales they never listed through the app.
+ */
+router.get("/account-sales", async (req: Request, res: Response) => {
+  const userId = req.user!.userId;
+  const raw = String(req.query.status ?? "").trim();
+  const status =
+    raw === "resolved" || raw === "parked" || raw === "unresolved" ? raw : undefined;
+  const limit = Number(req.query.limit ?? 200);
+  try {
+    const sales = await listEbayAccountSales(userId, {
+      status,
+      limit: Number.isFinite(limit) ? limit : 200,
+    });
+    res.json({
+      success: true,
+      count: sales.length,
+      counts: {
+        resolved: sales.filter((x) => x.status === "resolved").length,
+        parked: sales.filter((x) => x.status === "parked").length,
+        unresolved: sales.filter((x) => x.status === "unresolved").length,
+      },
+      sales,
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      error: err instanceof Error ? err.message : "Unknown error",
+    });
+  }
 });
 
 // ---------------------------------------------------------------------------

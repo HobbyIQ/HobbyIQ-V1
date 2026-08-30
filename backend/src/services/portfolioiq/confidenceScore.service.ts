@@ -86,6 +86,10 @@ const SOURCE_TRUST: Record<string, number> = {
   "ebay-user-purchase": 1.0,
   "manual-user-entry": 0.9,
   "ebay-user-sale": 0.9,
+  // D26: the account sync's sold line. The user's own realized sale, so the
+  // same trust as the in-app sell flow; the identity behind it went through
+  // the >= 0.9 matcher bar before the row was ever written.
+  "ebay-account": 0.9,
   "cardhedge": 0.85,
   "ebay-browse-ended": 0.7,
   "cardsight": 0.5,

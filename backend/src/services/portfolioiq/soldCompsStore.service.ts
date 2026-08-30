@@ -116,6 +116,15 @@ const TTL_SEC = computeTtlSec();
 export type SoldCompSource =
   | "ebay-user-purchase"    // user bought this card on eBay (verified via confirm)
   | "ebay-user-sale"        // user sold this card on eBay (recorded via sale flow)
+  // D26 (CF-THE-ACCOUNT-SYNC-RESOLVES-EVERY-SALE, Drew 2026-08-30). The hourly
+  // eBay ACCOUNT sync: a sold order line on the user's connected eBay account
+  // that was never listed through HobbyIQ, resolved to a card from its listing
+  // title. Same standing as `ebay-user-sale` -- it is the user's own realized
+  // sale -- but a distinct provenance, because nothing in the app created the
+  // listing. It NEVER seeds a catalog row (the matcher is asked as
+  // `ebay-title`, which is in neither TRUSTED_SOURCES nor
+  // USER_SEED_ALLOWED_SOURCES): a sale does not mint a card.
+  | "ebay-account"
   | "manual-user-entry"     // user added holding manually with purchase price
   | "cardhedge"             // pulled from CH sold-comps API (aggregated vendor data)
   | "cardsight"             // pulled from CS pricing API
@@ -633,7 +642,15 @@ function bestOf<T extends { id?: string; verifiedByUser?: boolean; sourceExterna
 /** CF-SALES-DO-NOT-MINT-CARDS (#1353) / CF-A-USER-SALE-IS-ALWAYS-RECONCILED
  *  (D7d). The only sources that may seed a catalog row, and the sources whose
  *  sales are reconciled against the catalog regardless of env. User-owned
- *  cards; never a vendor feed. */
+ *  cards; never a vendor feed.
+ *
+ *  D26 deliberately leaves `ebay-account` OUT. The eBay account sync reaches
+ *  this function with an identity the matcher already resolved at >= 0.9, and
+ *  membership here would hand it `ensureCatalogRow` (line ~1461) -- which is
+ *  exactly "a sale mints a card", the one thing Drew ruled out for this flow.
+ *  An account sale that resolves to no catalog row PARKS for the user's
+ *  confirm; it never creates the card it could not find. Asserted in
+ *  ebayAccountSaleIdentity.test.ts. */
 const USER_SEED_SOURCES = new Set(["ebay-user-purchase", "ebay-user-sale", "manual-user-entry", "user-verified"]);
 
 export interface RecordSoldCompResult {
@@ -1475,7 +1492,7 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
     // BEFORE this write landed. The delta is the trust-in-cleanliness
     // metric. Skips if pool too thin (no reliable prediction to
     // compare against).
-    if (["ebay-user-purchase", "ebay-user-sale", "manual-user-entry"].includes(input.source)
+    if (["ebay-user-purchase", "ebay-user-sale", "ebay-account", "manual-user-entry"].includes(input.source)
         && input.contributorUserId && doc.hobbyiqCardId) {
       void (async () => {
         try {

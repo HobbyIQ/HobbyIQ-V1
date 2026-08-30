@@ -504,7 +504,7 @@ router.post("/admin/list-user-comps", requireAdmin, async (req: Request, res: Re
     }
     const sources = Array.isArray(req.body?.sources)
       ? req.body.sources.filter((s: unknown): s is string => typeof s === "string")
-      : ["ebay-user-purchase", "ebay-user-sale", "manual-user-entry"];
+      : ["ebay-user-purchase", "ebay-user-sale", "ebay-account", "manual-user-entry"];
 
     const { readUserDoc } = await import("../services/portfolioiq/portfolioStore.service.js");
     const { readCompsByCardId } = await import("../services/portfolioiq/soldCompsStore.service.js");

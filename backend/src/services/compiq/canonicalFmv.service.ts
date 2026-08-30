@@ -1035,6 +1035,7 @@ async function tryDirectComp(
   const sources = [
     "ebay-user-purchase",
     "ebay-user-sale",
+    "ebay-account",          // D26 — the eBay account sync's resolved sale
     "manual-user-entry",
     "cardhedge",             // CF-CH-POOL-WARM
     "ebay-browse-ended",     // CF-EBAY-BROWSE-ENDED-WARM (Option C)
@@ -1252,7 +1253,7 @@ async function tryCrossParallel(
   // Pull ALL parallels for this cardId (no parallel filter).
   const allComps = await readCompsByCardId({
     cardId,
-    sources: ["ebay-user-purchase", "ebay-user-sale", "manual-user-entry"],
+    sources: ["ebay-user-purchase", "ebay-user-sale", "ebay-account", "manual-user-entry"],
     // CF-GRADE-NULL-PRESERVE (Drew, 2026-08-09). See tryDirectComp
     // for the full rationale — Raw is `null`, not-specified is
     // `undefined`, and collapsing them mixes tiers.

@@ -35,7 +35,7 @@ const DRIFT_THRESHOLD = 0.30;
 const MIN_BASELINE_SAMPLES = 5;
 const HIGH_SUSPICIOUS_THRESHOLD = 0.50;   // >=50% median move + <20% sample growth = high
 const CONFIRMED_SOURCES = new Set([
-  "cardhedge", "ebay-user-purchase", "manual-user-entry", "ebay-user-sale", "ebay-browse-ended",
+  "cardhedge", "ebay-user-purchase", "manual-user-entry", "ebay-user-sale", "ebay-account", "ebay-browse-ended",
 ]);
 
 let cachedSc: Container | null = null;
