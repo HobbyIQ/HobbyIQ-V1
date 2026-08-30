@@ -10,6 +10,8 @@ import { PortfolioValueChart } from "@/components/PortfolioValueChart";
 import { BulkEbayListModal } from "@/components/BulkEbayListModal";
 import { BulkCostBasisModal } from "@/components/BulkCostBasisModal";
 import { AddCardModal } from "@/components/AddCardModal";
+import { ProvenanceChip } from "@/components/ProvenanceChip";
+import { holdingProvenance } from "@/lib/rung";
 
 type SortKey = "value" | "cost" | "gainPct" | "gain" | "title";
 type SortDir = "asc" | "desc";
@@ -647,6 +649,11 @@ function HoldingRow({ h }: { h: PortfolioHolding }) {
   }
   const gainColor =
     (gain ?? 0) > 0 ? "var(--color-success)" : (gain ?? 0) < 0 ? "var(--color-danger)" : undefined;
+  // D20 — the web says what the engine says. The rung that produced the
+  // value in this row, in words, so a legacy-engine or sibling number is
+  // visibly not an observed one. Rendered only beside a number; a row with
+  // no value already carries the MISSING pill.
+  const provenance = holdingProvenance(h);
 
   return (
     <div className="hiq-card p-4 md:p-5 flex items-center gap-4">
@@ -695,6 +702,7 @@ function HoldingRow({ h }: { h: PortfolioHolding }) {
               PENDING
             </span>
           )}
+          {value != null && <ProvenanceChip rung={provenance} source={provenance.source} />}
           {/* CF-IDENTITY-VERIFIED (Drew, 2026-07-27): tiny chip that says
               whether this holding's identity has been explicitly confirmed
               via the Confirm gate in Edit. Follow-up PR can gate storefront

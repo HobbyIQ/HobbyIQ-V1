@@ -321,7 +321,10 @@ export interface PricingEnvelope {
       | "manual"
       | null;
     vendorUpdatedAt: string | null;
-    pricingSource: "our-pool" | "legacy-engine" | null;
+    /** Which pipeline wrote the number. "unified-pricing" is the one
+     *  valuation path's persist site (D17 holdingValuation.ts); its rung
+     *  rides in `pricingSourceMeta.method`. */
+    pricingSource: "our-pool" | "legacy-engine" | "unified-pricing" | "sibling-estimate" | null;
     pricingSourceMeta:
       | { slug: string; method: string; compsUsed: number }
       | null;
@@ -397,6 +400,13 @@ export interface PortfolioHolding {
   totalProfitLoss?: number | null;
   totalProfitLossPct?: number | null;
   valuationStatus?: "observed" | "estimated" | "pending" | null;
+  isEstimate?: boolean | null;
+  /** D20. The rung that produced the holding's price surface, in the
+   *  closed vocabulary (lib/rung.ts mirrors fmvRung.ts). Optional: the
+   *  flat wire does not carry it today; read through `holdingProvenance()`
+   *  which prefers the envelope's `method.ladderRung` /
+   *  `provenance.pricingSourceMeta.method`. */
+  fmvRung?: string | null;
   // Per-unit estimate when no observed FMV exists.
   estimatedValue?: number | null;
   estimateLow?: number | null;
@@ -951,6 +961,11 @@ export interface PriceGradedEstimate {
   fairMarketValue: null;  // always null per contract — display-only, not train
   estimateConfidence?: "estimate" | "rough" | "ballpark" | "no-data" | "insufficient" | null;
   estimateBasis?: string | null;
+  /** D16 (toPriceByIdResponse): every tier of the one-path curve rides
+   *  here with its rung and whether it was observed or estimated. */
+  rungLabel?: string | null;
+  valueSource?: "observed" | "estimated" | "unavailable" | null;
+  sampleCount?: number | null;
 }
 
 export interface PriceByIdResponse {
@@ -968,7 +983,14 @@ export interface PriceByIdResponse {
   confidence?: number;
   approximate?: boolean;
   outOfScopeReason?: string | null;
+  /** D16: the rung (was canonical-fmv's METHOD). `no-recent-comps` when
+   *  the engine declined — iOS's no-data check. */
   source?: string;
+  /** D16/D17 (additive): the rung in the closed vocabulary, whether the
+   *  headline is observed or estimated, and why there is none. */
+  rungLabel?: string | null;
+  valueSource?: "observed" | "estimated" | "unavailable" | null;
+  fmvReason?: string | null;
   recentComps?: Array<{
     price: number;
     soldDate: string;
@@ -1705,6 +1727,10 @@ export interface ObservedGradeEntry {
   confidenceScore: number;
   value: number | null;
   valueSource: "observed" | "estimated" | "unavailable";
+  /** CF-RUNG-LABEL / D16: the rung that produced `value` for this tier
+   *  (closed vocabulary, lib/rung.ts). null when unavailable; absent on
+   *  legacy curves for vendor ids the catalog cannot name. */
+  rungLabel?: string | null;
   estimatedMultiplier: number | null;
   estimatedFrom: "reference-price" | "raw-multiplier" | "sibling-card" | "empirical-ratio" | "empirical-ratio-tier" | null;
   trendAdjustedValue: number | null;
@@ -1730,6 +1756,13 @@ export interface ObservedGradeCurveResponse {
   computedAt: string;
   ratePerWeek?: number | null;
   signalSource?: string | null;
+  /** D16 (toObservedGradeCurveResponse, additive): the headline rung for
+   *  the requested identity, its source, why it is null when it is, and
+   *  the catalog identity the curve was served under. */
+  rungLabel?: string | null;
+  valueSource?: "observed" | "estimated" | "unavailable" | null;
+  fmvReason?: string | null;
+  identity?: Record<string, unknown> | null;
 }
 
 export async function fetchObservedGradeCurve(cardId: string): Promise<ObservedGradeCurveResponse> {
