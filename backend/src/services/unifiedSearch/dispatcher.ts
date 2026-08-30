@@ -643,6 +643,9 @@ async function tryCatalogFirst(
     const result = await withTimeout(searchCatalog({
       query: trimmed,
       limit: CATALOG_FIRST_MAX_HITS,
+      // CF-SEARCH-ANCHOR-FROM-PARSER, as /api/compiq/search does: the parsed
+      // player decides the anchor and the escalation gate.
+      playerName: parseCardQuery(trimmed).playerName ?? null,
     }));
     const hits = result?.hits ?? [];
     if (hits.length < CATALOG_FIRST_STRONG_THRESHOLD) return null;

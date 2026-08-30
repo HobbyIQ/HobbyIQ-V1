@@ -33,3 +33,44 @@ describe("search says what it means", () => {
     expect(score(q, green)).toBeGreaterThan(score(q, base));
   });
 });
+
+// CF-SEARCH-FULL-NAME-DOMINATES (2026-08-30). The edit-card search for "2025
+// bowman refractor auto max williams" ranked Carson Williams Pearl Refractor
+// above the Max Williams Refractor auto. Three scorer rules pinned here; the
+// ranking itself is pinned in searchFullNameDominates.test.ts.
+describe("search says what it means — a bare finish, auto, and the year", () => {
+  it("a bare 'refractor' does not reward Pearl Refractor: Base >= Pearl, and the plain Refractor beats both", () => {
+    const q = "2025 bowman refractor williams";
+    const plain = { setKey: "bowman", cardNumber: "BWC-14", year: 2025, parallel: "Refractor", playerName: "Carson Williams", isAuto: false };
+    const pearl = { setKey: "bowman", cardNumber: "BWC-14", year: 2025, parallel: "Pearl Refractor", playerName: "Carson Williams", isAuto: false };
+    const base = { setKey: "bowman", cardNumber: "BWC-14", year: 2025, parallel: "Base", playerName: "Carson Williams", isAuto: false };
+    expect(score(q, base)).toBeGreaterThanOrEqual(score(q, pearl));
+    expect(score(q, plain)).toBeGreaterThan(score(q, pearl));
+    expect(score(q, plain)).toBeGreaterThan(score(q, base));
+  });
+
+  it("'auto' in the query ranks the auto twin above the no-auto twin", () => {
+    const q = "2025 bowman draft refractor auto max williams";
+    const auto = { setKey: "bowman-draft", cardNumber: "CPA-MWI", year: 2025, parallel: "Refractor", playerName: "Max Williams", isAuto: true, printRun: 499 };
+    const noAuto = { setKey: "bowman-draft", cardNumber: "BD-68", year: 2025, parallel: "Refractor", playerName: "Max Williams", isAuto: false };
+    expect(score(q, auto)).toBeGreaterThan(score(q, noAuto));
+  });
+
+  it("with no 'auto' in the query, an auto row is not penalised", () => {
+    // CF-SEARCH-CHECKLIST-OPTIONS: "show every auto option" — a query that is
+    // silent on auto must not push the autos down the page.
+    const q = "2025 bowman draft refractor max williams";
+    const auto = { setKey: "bowman-draft", cardNumber: "CPA-MWI", year: 2025, parallel: "Refractor", playerName: "Max Williams", isAuto: true };
+    const noAuto = { setKey: "bowman-draft", cardNumber: "CPA-MWI", year: 2025, parallel: "Refractor", playerName: "Max Williams", isAuto: false };
+    expect(score(q, auto)).toBeCloseTo(score(q, noAuto), 9);
+  });
+
+  it("the query year is not a card number: #2025 earns no identifier bonus under a 2025 query", () => {
+    // Live artefact: hockey "Savion Williams Freshman #2025" took the +1.0
+    // exact-number bonus from the YEAR token and topped the page.
+    const q = "2025 bowman refractor auto williams";
+    const numberedByYear = { setKey: "bowman", cardNumber: "2025", year: 2025, parallel: "Base", playerName: "Savion Williams", isAuto: true };
+    const numberedNormally = { setKey: "bowman", cardNumber: "SW-1", year: 2025, parallel: "Base", playerName: "Savion Williams", isAuto: true };
+    expect(score(q, numberedByYear)).toBeCloseTo(score(q, numberedNormally), 9);
+  });
+});
