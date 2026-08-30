@@ -56,7 +56,7 @@ describe("canonicalizeParallelName — slug-form display values", () => {
       ["gold", "gold"],            // single lowercase word is not slug form
       ["Gold Border", "Gold"],      // existing alias still wins
       ["Prizms Glitter", "Glitter Prizm"],
-      ["True Blue", "Blue Refractor"],
+      ["True Blue", "Blue"], // CF-COLOUR-FOLLOWS-THE-CHECKLIST (Drew, 2026-08-30)
     ])("%s -> %s", (input, want) => {
       expect(canonicalizeParallelName(input)).toBe(want);
     });

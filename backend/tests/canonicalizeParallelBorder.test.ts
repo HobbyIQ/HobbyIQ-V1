@@ -59,7 +59,8 @@ describe("canonicalizeParallelName — {Colour} Border is the same card", () => 
   });
 
   it("existing aliases and Base handling are unchanged", () => {
-    expect(canonicalizeParallelName("True Blue")).toBe("Blue Refractor");
+    // CF-COLOUR-FOLLOWS-THE-CHECKLIST (Drew, 2026-08-30): True Blue is Blue as written.
+    expect(canonicalizeParallelName("True Blue")).toBe("Blue");
     expect(canonicalizeParallelName("[base]")).toBe("Base");
     expect(canonicalizeParallelName(null)).toBe("Base");
     expect(canonicalizeParallelName("Gold")).toBe("Gold");
