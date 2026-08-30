@@ -2599,6 +2599,31 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
     `docs/d30-consolidation-fleet-spec.md` (winner rules per kind, the key
     after D31, the fleet shape, the ambiguous list). #1548 flipped the four
     alias pins; the full suite on main is back to the three baseline reds.
+    **Rulings 13:10Z (Drew, "ask me questions if needed"):** (1) the vendor-
+    source retire ×8 and the purge ×8 — **run both now, Drew's dispatch**
+    (a watch reports each run's banner and reconciliation); (2) the eBay poll
+    **cuts over to a GitHub cron** — merged **#1550**: `run-ebay-order-poll`
+    on the runner (every connected user through `pollEbayOrdersForUser`,
+    dryRun unless BACKFILL_APPLY, reconciled, red on per-user errors) +
+    `ebay-order-poll-hourly.yml` at :23 UTC; the in-process scheduler
+    stays armed until `EBAY_ORDER_POLL_DISABLE_SCHEDULER=true` is set on
+    HobbyIQ3 — **a live App Service change, HALT for Drew's confirm** after
+    the runner poll's REPORT-ONLY validation run is green; the two
+    reconnect-required connections (admin-testing, user-8aa46493) stay so
+    until those users reconnect; (3) **D32 — "Sales to confirm"**: a screen
+    for the parked (17) and unresolvable (19) eBay sales — confirm links the
+    sale to a checklist row, reject parks it on the acquisition list; spec
+    `docs/d32-sales-to-confirm-spec.md`, the next builder after credits;
+    (4) **builder order once credits are on: search+comps repair → D29
+    twins/CPA → D30 fleet → D21 → D24 → D25** (D32 slots after the D30 fleet
+    unless Drew moves it).
+    **D28 fleets 11:45–12:40Z:** slash 8/8 (12,345 sales re-keyed, 3 failed),
+    ordinal 7/8 done (≈6.3k re-keyed of ≈353k scanned — the guard agreed on
+    98%), year ×8 and nonumber ×8 running; the after-measure
+    (`measure-card-number-integrity` MODE=shapes, compare against 45,718)
+    follows the last slot. The D23 rename ×16: every first-generation run
+    finished and relaunched on the budget marker; generation counts are in
+    the runner.
     **Also landed 08-30 11:30–12:40Z:** D28 grade repair 8/8 (≈50k sales
     re-keyed), slash 8/8 (≈12k), ordinal/year/nonumber ×8 dispatched 12:35Z;
     D26 backfill REPORT ONLY 33303042961 (8 users, 55 orders, 19 auto-
