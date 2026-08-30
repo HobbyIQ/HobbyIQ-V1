@@ -44,7 +44,7 @@ function ThreadBody() {
   // the seller sees which card the buyer is asking about, then clear
   // it so subsequent messages in the same thread stay bare.
   const aboutRef: HoldingRef | null = useMemo(() => {
-    const raw = search.get("about");
+    const raw = search?.get("about");
     if (!raw) return null;
     try {
       const parsed = JSON.parse(raw) as Partial<HoldingRef>;

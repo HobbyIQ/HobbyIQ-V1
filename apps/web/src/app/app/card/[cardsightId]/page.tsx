@@ -42,8 +42,8 @@ function CardDetailInner() {
   const cardsightCardId = (() => {
     try { return decodeURIComponent(rawCardsightId); } catch { return rawCardsightId; }
   })();
-  const initialParallel = searchParams.get("parallel");
-  const initialGradeRaw = searchParams.get("grade");
+  const initialParallel = searchParams?.get("parallel") ?? null;
+  const initialGradeRaw = searchParams?.get("grade") ?? null;
   const initialGrade: Grade | null = (() => {
     if (!initialGradeRaw) return null;
     const [company, valueStr] = initialGradeRaw.split(":");

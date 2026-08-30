@@ -8,11 +8,11 @@ import { signIn, signUp } from "@/lib/api";
 function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
-  const isSignup = params.get("signup") === "true";
+  const isSignup = params?.get("signup") === "true";
   // CF-INVITE-ONLY-SIGNUP (Drew, 2026-08-10). Prefill invite from URL
   // (?invite=CODE) so shared "join HobbyIQ" links land the code in the
   // form automatically. User can still edit if wrong / paste-corrupted.
-  const inviteFromUrl = params.get("invite") ?? "";
+  const inviteFromUrl = params?.get("invite") ?? "";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

@@ -40,7 +40,7 @@ function Loading() {
 function SearchPageInner() {
   const router = useRouter();
   const params = useSearchParams();
-  const initialQ = params.get("q") ?? "";
+  const initialQ = params?.get("q") ?? "";
 
   const [query, setQuery] = useState(initialQ);
   const [phase, setPhase] = useState<Phase>(initialQ ? "searching" : "idle");

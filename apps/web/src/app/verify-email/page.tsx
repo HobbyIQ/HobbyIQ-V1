@@ -22,7 +22,7 @@ function VerifyEmailBody() {
   const [status, setStatus] = useState<Status>({ kind: "verifying" });
 
   useEffect(() => {
-    const token = params.get("token")?.trim() ?? "";
+    const token = params?.get("token")?.trim() ?? "";
     if (!token) {
       setStatus({ kind: "missing" });
       return;

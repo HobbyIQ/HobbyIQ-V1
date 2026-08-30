@@ -29,7 +29,7 @@ const STATUS_TABS: BuyerIqStatus[] = ["wanted", "acquired", "passed"];
 export default function BuyerIqListDetailPage() {
   const params = useParams<{ listId: string }>();
   const router = useRouter();
-  const listId = params.listId;
+  const listId = String(params?.listId ?? "");
 
   const [list, setList] = useState<BuyerIqList | null>(null);
   const [targets, setTargets] = useState<BuyerIqTarget[]>([]);

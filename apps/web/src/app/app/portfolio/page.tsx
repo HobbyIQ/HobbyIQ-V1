@@ -71,7 +71,7 @@ function matchesHealthFilter(h: PortfolioHolding, filter: HealthFilter): boolean
 function PortfolioPageBody() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const rawFilter = searchParams.get("filter");
+  const rawFilter = searchParams?.get("filter") ?? null;
   const activeFilter: HealthFilter | null = isHealthFilter(rawFilter) ? rawFilter : null;
 
   const [data, setData] = useState<PortfolioResponse | null>(null);
@@ -91,23 +91,23 @@ function PortfolioPageBody() {
   // CF-UX-CLEANUP #4: AddCardModal state. Also auto-opens when
   // ?add=1 is present (that's how the old /app/portfolio/add route
   // redirect lands the user + how iOS deep links can reach the flow).
-  const [addOpen, setAddOpen] = useState(searchParams.get("add") === "1");
+  const [addOpen, setAddOpen] = useState(searchParams?.get("add") === "1");
   // CF-EBAY-SOLD-SYNC-ON-DEMAND (2026-08-17): on-demand pull of eBay sales.
   const [ebaySyncing, setEbaySyncing] = useState(false);
   const [ebaySyncMsg, setEbaySyncMsg] = useState<string | null>(null);
   useEffect(() => {
     // Sync when the URL param changes (browser back / forward or
     // client-side push into ?add=1 from elsewhere).
-    if (searchParams.get("add") === "1") setAddOpen(true);
+    if (searchParams?.get("add") === "1") setAddOpen(true);
   }, [searchParams]);
   function closeAdd() {
     setAddOpen(false);
     // Strip the query param so refreshing doesn't reopen the modal.
-    if (searchParams.get("add")) router.replace("/app/portfolio");
+    if (searchParams?.get("add")) router.replace("/app/portfolio");
   }
   async function onAdded() {
     setAddOpen(false);
-    if (searchParams.get("add")) router.replace("/app/portfolio");
+    if (searchParams?.get("add")) router.replace("/app/portfolio");
     // Reload the portfolio so the new card appears immediately.
     try {
       const next = await fetchPortfolio();
