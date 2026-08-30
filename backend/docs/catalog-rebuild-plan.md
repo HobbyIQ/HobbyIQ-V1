@@ -2591,8 +2591,14 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
     `<colour>-refractor` whose card's checklist names `<colour>`) and the
     checklist rows it rewrote at mint (slug → the checklist text's form);
     where two checklist SOURCES spell one card both ways (Topps Chrome
-    15,819; Sapphire 8,132; Tribute 5,345 …) the surviving spelling is
-    Drew's call (NEEDS DREW).
+    15,819; Sapphire 8,132; Tribute 5,345 …) — **RULED 12:50Z: the majority
+    spelling among the checklist sources for that product wins; tie → the
+    longer form.** Also ruled: **D30 runs as ONE fleet, all kinds in
+    parallel**; Drew buys subagent credits and the builders resume (D29 twins
+    + CPA, the search + comps repair round, then the D30 fleet). Spec:
+    `docs/d30-consolidation-fleet-spec.md` (winner rules per kind, the key
+    after D31, the fleet shape, the ambiguous list). #1548 flipped the four
+    alias pins; the full suite on main is back to the three baseline reds.
     **Also landed 08-30 11:30–12:40Z:** D28 grade repair 8/8 (≈50k sales
     re-keyed), slash 8/8 (≈12k), ordinal/year/nonumber ×8 dispatched 12:35Z;
     D26 backfill REPORT ONLY 33303042961 (8 users, 55 orders, 19 auto-
