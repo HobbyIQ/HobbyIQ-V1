@@ -2610,7 +2610,7 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
     HobbyIQ3 — **a live App Service change, HALT for Drew's confirm** after
     the runner poll's REPORT-ONLY validation run is green; the two
     reconnect-required connections (admin-testing, user-8aa46493) stay so
-    until those users reconnect — **DONE 12:28Z: runner poll validated REPORT ONLY (8 users, 29 orders, 10 resolved / 11 parked / 8 unresolvable, 2 reconnect-required), Drew's go, `EBAY_ORDER_POLL_DISABLE_SCHEDULER=true` set on HobbyIQ3, health `3fe0878` back at 12:29:31Z, both workers logged "scheduler disabled" on boot; the cron owns the poll from 12:23Z's successor at :23 hourly**; (3) **D32 — "Sales to confirm"**: a screen
+    until those users reconnect — **DONE 12:28Z: runner poll validated REPORT ONLY (8 users, 29 orders, 10 resolved / 11 parked / 8 unresolvable, 2 reconnect-required), Drew's go, `EBAY_ORDER_POLL_DISABLE_SCHEDULER=true` set on HobbyIQ3, health `3fe0878` back at 12:29:31Z, both workers logged "scheduler disabled" on boot; the cron owns the poll from 12:23Z's successor at :23 hourly; its first APPLY hour recorded 10 of 29 line items**; (3) **D32 — "Sales to confirm"**: a screen
     for the parked (17) and unresolvable (19) eBay sales — confirm links the
     sale to a checklist row, reject parks it on the acquisition list; spec
     `docs/d32-sales-to-confirm-spec.md`, the next builder after credits;
@@ -3065,3 +3065,54 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   89.1%); every `unconfirmed` row carries a named acquisition reason
 - A sale, a holding, and a search all resolve to the SAME checklist-minted card
 - `ingest-auto-seed` never grows again (count it; #1353 is the guard)
+
+    **"wont reconcile" (Drew, 12:40Z) — fees never arrived.** Root cause, two
+    layers in the in-process finances enrichment job: SHADOW mode by default
+    (only the exact string "false" writes; HobbyIQ3 never set it) and every
+    cycle lock-skipped on both workers after each restart (the single-flight
+    lock survives restarts and is never released — a hazard for every
+    in-process job whose interval is long; note for D26's scheduler
+    follow-up). **#1553**: `run-ebay-finances-enrichment` on the runner
+    (shadow unless BACKFILL_APPLY; reconciled) + a 6-hourly cron; REPORT
+    ONLY then APPLY 33312256301 = 1 written: Drew's 2018 Bowman Chrome Ohtani
+    #1 sale (08-17) reconciled at $2,396.85 net payout, realized P&L $46.85;
+    the Griffey sale (08-30) waits its 2-day fee window. **Flags flipped on
+    Drew's go:** `EBAY_ORDER_POLL_DISABLE_SCHEDULER=true` 12:28Z and
+    `EBAY_FINANCES_ENRICHMENT_DISABLE_SCHEDULER=true` 12:54Z — both workers
+    logged "scheduler disabled" on boot, health `3fe0878`. **#1554**: the
+    reconciliation card's "Saving…" never cleared on success (a 200 in
+    0.6 s) — fixed. **D34 (Drew, 12:56Z: yes, small builder after the
+    current round):** the fee BREAKDOWN (final value fee, payment processing,
+    promoted listing, ad fee, other fees, actual shipping) came back null
+    though the net payout mapped from the two Finances transactions — map
+    eBay's per-fee transaction lines into the seven fields with fixtures from
+    real orders and re-run enrichment for already-reconciled sales so the
+    tax export is complete; spec `docs/d34-fee-lines-spec.md`.
+    **"why is my live eBay purchase not included" (Drew, 12:58Z) — corrected
+    picture:** the weekly purchase sync DID fire at 06:46Z today and imported
+    it (Justin Gonzalez 2026 Bowman #CPA-JG, $255.49, source ebay-auto); its
+    identity parked at 0.98 against `…cpa-jg:refractor:auto`, an un-numbered
+    row the catalog no longer has (the checklist row is `:num-499`), so it is
+    withheld from value — the numbered-twin resolver (repair round) + a
+    conform pass pins it. The "cycle skipped" lines were the losing worker.
+    **#1555**: the purchase sync also runs on the runner daily (07:11 UTC),
+    restart-proof; the in-process weekly stays armed (idempotent).
+    **Drew's inventory audit (13:00Z, 43 active holdings, read-only):**
+    Max Williams Gold `aff3236a` sits on the right checklist row
+    (`…cpa-mwi:gold-refractor:auto:num-50`) whose pool is 0 — the ONLY Gold
+    /50 sale we hold (PSA 9, $142.50, 08-06) is keyed to
+    `bowman-chrome:cpa-mwi:gold-refractor:auto` (title "Bowman Draft
+    Chrome", un-numbered) → D33's re-key; then it prices from that one sale.
+    8 holdings have NO identity with parked candidates at 0.95–0.98 (Judge
+    2017 Gold Label, Caglianone RA-JC, Jeter BBP4 ×2, the 1996 Bowman's Best
+    BBP-14 group card, Griffey Finest Bronze, Gonzalez CPA-JG, Harris CPA-MH
+    X-Fractor) — all un-numbered candidate ids the catalog no longer holds →
+    the resolver + conform. 10 point at rows that no longer exist: Ohtani HMT1
+    (`topps-chrome-update` → `-series` by the D23 rename AFTER the holdings
+    re-point ran; re-dispatched MODE=holdings 13:02Z) and Trout US175
+    (`topps-update` → `-series`, same), the rest acquisition-list products
+    (1997 Finest #238 with 380 sales, 1999 Finest HA8, 1987 Bellingham, 1987
+    Topps Traded Tiffany 70T with 307 sales, 1992 Studio, 1999 Black Diamond
+    /1500). 7 sit on non-checklist rows (user-verified / ingest-auto-seed /
+    ebay-user-purchase) for products without a checklist. Ripken (277b05a3)
+    is a bare CH-id holding with no fields at all.
