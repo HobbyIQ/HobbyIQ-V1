@@ -258,6 +258,9 @@ async function resolveImportIdentity(holding: PortfolioHolding & Record<string, 
       // user owns the physical card; that is the whole basis of the seed
       // exemption. A vendor source is turned away at the door.
       source: "ebay-user-purchase",
+      // D28: the listing title the number was parsed OUT of. Without it the
+      // guard cannot tell a card #9 from the "PSA 9" that produced Harrison's.
+      title: str(h.ebayListingTitle) || null,
     });
     if (derived.cardNumberResolvedBy === "catalog-player-lookup" && derived.cardNumber) {
       h.cardNumber = derived.cardNumber;

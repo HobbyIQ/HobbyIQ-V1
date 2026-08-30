@@ -114,6 +114,7 @@ const INSERT_TOKENS: readonly string[] = [
 // Refractor" (card-lingo-glossary §1), and "Ref" IS "Refractor".
 
 import { readVariationFromTitle, type VariationMarker } from "../catalog/variationVocabulary.js";
+import { judgeCardNumber, logCardNumberVerdict } from "./cardNumberIntegrity.js";
 
 type FinishKind = "colour" | "pattern" | "sapphire" | "family";
 
@@ -404,13 +405,23 @@ export function parseListingTitle(input: string | null | undefined): ParsedListi
   }
 
   // ─── Card number ─────────────────────────────────────────────────────
+  //
+  // D28 (CF-A-CARD-NUMBER-IS-NOT-A-GRADE). CARD_NUMBER_PREFIXED_RE reads
+  // `#N` with no lookbehind and CARD_NUMBER_CODED_RE reads any 2-5 letters
+  // glued to digits, so "PSA 10" and "/25" both got through here -- this is
+  // the parser that gave Harrison's holding "#9". The regexes still propose;
+  // the shared guard disposes, with the title's explicit `#X` outranking
+  // whichever regex fired.
   const prefixedMatch = raw.match(CARD_NUMBER_PREFIXED_RE);
   const codedMatch = raw.match(CARD_NUMBER_CODED_RE);
-  const cardNumber = prefixedMatch
+  const cardNumberCandidate = prefixedMatch
     ? prefixedMatch[1].toUpperCase()
     : codedMatch
     ? codedMatch[1].toUpperCase()
     : null;
+  const cardNumberVerdict = judgeCardNumber(cardNumberCandidate, raw);
+  logCardNumberVerdict("ebay-title", cardNumberVerdict, { candidate: cardNumberCandidate, title: raw });
+  const cardNumber = cardNumberVerdict.cardNumber;
 
   // ─── Set (brand + insert) ────────────────────────────────────────────
   const normalized = raw.toLowerCase();

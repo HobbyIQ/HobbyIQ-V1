@@ -23,6 +23,7 @@
 
 import type { CHDailySaleRow } from "../../types/chDailySales.types.js";
 import type { RecordSoldCompInput } from "./soldCompsStore.service.js";
+import { judgeCardNumber, logCardNumberVerdict, type CardNumberVerdict } from "./cardNumberIntegrity.js";
 
 /** CH `group` → our canonical sport tag. Returns null for groups we
  *  don't carry (the caller decides whether that's a skip or an accept).
@@ -98,8 +99,27 @@ export type MapSkipReason =
   | "no-sale-date";
 
 export type MapResult =
-  | { ok: true; input: RecordSoldCompInput }
+  | { ok: true; input: RecordSoldCompInput; cardNumberVerdict: CardNumberVerdict }
   | { ok: false; skip: MapSkipReason };
+
+/**
+ * The card number for a CH row (D28, CF-A-CARD-NUMBER-IS-NOT-A-GRADE).
+ *
+ * CardHedge's `number` is their PRODUCT's card number, and this converter
+ * copied it verbatim -- so when CH assigned the sale to the wrong product, we
+ * inherited the wrong card. 28,706 pool rows sat at cardNumber 8/9/10 with a
+ * "<grader> n" token in the description and no "#n" anywhere; the description
+ * IS the source listing's title line, so it says what the card is.
+ *
+ * The ruling: the title's explicit `#X` wins over `row.number`, and a
+ * `row.number` the title shows to be a grade, a print run, a year, an ordinal
+ * or a lot count is refused outright rather than keyed. Exported so the
+ * repair pass re-derives exactly what the live path would now write.
+ */
+export function cardNumberForChRow(row: Pick<CHDailySaleRow, "number" | "description" | "card_description">): CardNumberVerdict {
+  const title = row.description || row.card_description || null;
+  return judgeCardNumber(row.number ?? null, title);
+}
 
 /**
  * Map one CH daily-export row to a recordSoldComp input.
@@ -129,15 +149,20 @@ export function mapChRowToSoldComp(row: CHDailySaleRow, opts: MapOptions = {}): 
 
   const year = Number(row.year);
 
+  // D28. `row.number` is a candidate, not the answer -- the title decides.
+  const verdict = cardNumberForChRow(row);
+  logCardNumberVerdict("ch-daily", verdict, { candidate: row.number ?? null, title: row.description || row.card_description || null, cardId });
+
   return {
     ok: true,
+    cardNumberVerdict: verdict,
     input: {
       cardId,
       playerName,
       cardYear: Number.isFinite(year) && year > 0 ? year : null,
       setName: row.card_set || row.card_set_type || null,
       parallel: row.variant || "Base",
-      cardNumber: row.number || null,
+      cardNumber: verdict.cardNumber,
       isAuto: inferIsAutoFromCH(row),
       sport,
       gradeCompany: normGrader(row.grader),

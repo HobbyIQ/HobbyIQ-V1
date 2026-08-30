@@ -28,6 +28,7 @@ import { canonicalizeParallelName, variationParallelsForCard } from "../catalog/
 import { canonicalVariationName, pickVariationForMarker, reduceVariationStockToCatalog, variationNameFromSlug } from "../catalog/variationVocabulary.js";
 import { qualifiedSetKeyFromTitle } from "../catalog/productQualifiers.js";
 import { parseGradeLabel } from "./gradeParser.js";
+import { judgeCardNumber, logCardNumberVerdict, isTcgVertical } from "./cardNumberIntegrity.js";
 
 // CF-CHECKLIST-NARROWER (Drew, 2026-08-02). When parseListingIdentity
 // can't extract a cardNumber but we have (player, year, set) triple,
@@ -431,6 +432,12 @@ export interface VendorPersistResult {
   productQualifierApplied?: number;
   /** D22: a qualifier whose move is a ruling (bowman ↔ bowman-chrome, Topps Chrome Update) — counted, not made. */
   productQualifierRefused?: number;
+  /** D28: the title stated an explicit `#X` and the vendor field / LLM said
+   *  something else. The title won; this is how often it mattered. */
+  cardNumberVendorDisagreed?: number;
+  /** D28: a candidate card number the title showed to be a grade, a print run,
+   *  a year, an ordinal or a lot count. Refused, not written. */
+  cardNumberRefused?: number;
   /**
    * CF-PROMOTER-VERIFY-LOOP (Drew, 2026-08-15). Rows diverted to
    * verify_queue rather than written to the pool. These are a SUBSET of
@@ -715,6 +722,27 @@ export async function persistVendorSalesToPool(
         if (!parsed.isAuto && llmParsed.isAuto) parsed.isAuto = true;
         if (parsed.printRun === null && llmParsed.printRun) parsed.printRun = llmParsed.printRun;
       }
+    }
+
+    // D28 (CF-A-CARD-NUMBER-IS-NOT-A-GRADE). Four derivations have now had a
+    // say -- the vendor's structured hint, parseListingIdentity, the LLM, and
+    // vision -- and any of them can hand back a grade, a print run, a year, an
+    // ordinal or a lot count. 14,463 tca-ebay rows sat at cardNumber 8/9/10
+    // with a "<grader> n" token and no "#n"; 18,679 more carried a "/" .
+    //
+    // One ruling, applied to whatever won: an explicit `#X` in the title beats
+    // every field, and a candidate the title shows to be something else is
+    // refused. A refusal leaves cardNumber null on purpose -- checklistNarrow
+    // below then gets its chance, and failing that the row lands as
+    // player-fallback or is skipped. Never keyed to a card it is not.
+    {
+      const verdict = judgeCardNumber(cardNumber, title, { isTcg: isTcgVertical(sport) });
+      if (verdict.vendorDisagrees) result.cardNumberVendorDisagreed = (result.cardNumberVendorDisagreed ?? 0) + 1;
+      if (verdict.rejected) result.cardNumberRefused = (result.cardNumberRefused ?? 0) + 1;
+      if (verdict.vendorDisagrees || verdict.rejected) {
+        logCardNumberVerdict("vendor-pool", verdict, { candidate: cardNumber, title });
+      }
+      cardNumber = verdict.cardNumber;
     }
 
     if (!cardYear) { result.skipped++; continue; }

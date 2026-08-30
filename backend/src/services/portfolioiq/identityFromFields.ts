@@ -24,6 +24,7 @@ import {
 } from "../catalog/catalogMatcher.service.js";
 import { canonicalVariationName, reduceVariationStockToCatalog } from "../catalog/variationVocabulary.js";
 import { normalizeSetKey } from "./hobbyIqCardId.service.js";
+import { judgeCardNumber, logCardNumberVerdict, isTcgVertical } from "./cardNumberIntegrity.js";
 
 export interface IdentityFields {
   /** Slug namespace. The caller decides (sheet column, product inference, a default). */
@@ -37,6 +38,12 @@ export interface IdentityFields {
   printRun: number | null;
   /** Who is asking. Decides whether a miss may seed a catalog row (an import may not). */
   source: CatalogMatchSource;
+  /** D28: the listing / label text the fields were read from, when the caller
+   *  has it. The card-number guard needs it to tell "#9" from "PSA 9", and an
+   *  explicit `#X` in it outranks the row's own number. A spreadsheet import
+   *  has no title; the shape rules that need no text (a `/N` print run) still
+   *  apply without one. */
+  title?: string | null;
 }
 
 export type IdentitySkippedReason = "no-card-number" | "no-year" | "no-set";
@@ -122,7 +129,21 @@ export async function resolveIdentityFromFields(
   const variation = canonicalVariationName(given);
   let parallel = variation ?? given;
   let parallelResolvedAs: string | null = variation && variation !== given ? variation : null;
-  let cardNumber = str(f.cardNumber);
+  // D28 (CF-A-CARD-NUMBER-IS-NOT-A-GRADE). The number arrives here from the
+  // eBay title parser, from a spreadsheet cell, or from slab OCR, and each of
+  // those has handed over a grade at least once -- Harrison's holding reached
+  // `topps-chrome:9` through exactly this field. Judge it before it becomes an
+  // identity: an explicit `#X` in the title outranks it, and a number the text
+  // shows to be a grade / print run / year / ordinal / lot is refused. A
+  // refusal is not a dead end: the by-player lookup below is what a row with
+  // no number gets, which is the right answer for a row whose number was
+  // never a number.
+  const givenNumber = str(f.cardNumber);
+  const numberVerdict = judgeCardNumber(givenNumber, f.title ?? null, { isTcg: isTcgVertical(f.sport) });
+  if (givenNumber && (numberVerdict.vendorDisagrees || numberVerdict.rejected)) {
+    logCardNumberVerdict("identity-from-fields", numberVerdict, { candidate: givenNumber, title: f.title ?? null });
+  }
+  let cardNumber = numberVerdict.cardNumber ?? "";
   let cardNumberResolvedBy: IdentityFromFields["cardNumberResolvedBy"] = null;
   let cardNumberCandidates: string[] = [];
 
