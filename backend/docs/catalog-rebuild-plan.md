@@ -1709,7 +1709,22 @@ Ordered; each item starts when the one above it lands. ☐ open · ◐ running �
   unidentified Marek Houston holding stayed withheld. `audit-all-holdings`
   MODE=all dispatched right after (33285582918) — its RUNGS block is the D10
   after-number against 14/92 clean, fmvRung null 38%, estimate shown 23%,
-  isEstimate with an exact pool ≥ 3: 8 of 23.** Drew (22:30Z): "I see 2 max williams superfractors …
+  isEstimate with an exact pool ≥ 3: 8 of 23.** **Result (33285582918,
+  14:25Z): 91 holdings — clean 21 (was 14), fmvRung null 27 = 29.7% (was
+  38%), non-exact rung 15 = 16.5% (was 27.2%), cardId ≠ hobbyiqCardId 25 =
+  27.5%, cardId not hiq 10 = 11%, estimatedValue shown 0 (was 22.8%),
+  isEstimate with an exact pool ≥ 3: 9 of 17. Rung labels now on the wire:
+  exact-pool-weighted-median ×25, exact-pool-projection ×17,
+  grade-curve-estimate ×13, exact-pool-leading-edge ×6, last-sale ×1.** The
+  identity backlog is the acquisition list: noSlug 22, notInCatalog 14,
+  unbacked 16 (vendor-minted rows Drew said GO on), twinOfNumbered 2 — the
+  vendor retire + D3c re-ingest + a second conform pass close most of it.
+  The 23 PRICE-OFF-POOL flags were mostly an audit artifact: a graded
+  holding compared to the RAW pool median (PSA 10 1991 Score Griffey $229
+  vs a $2 raw median; the Tiffany Maddux $1,757 vs $55; the Judge; the
+  Aaron). **#1515:** the flag compares to the holding's own tier; audit #2
+  33285811376. What remains real in that list is the n = 1 window (Gillen
+  raw $729 vs a 5-sale median of $192.51) — Drew's rule. Drew (22:30Z): "I see 2 max williams superfractors …
   superfractors are 1/1" — bcp's un-numbered `superfractor:auto` beside
   beckett's `:num-1`, and the same pair on Refractor /499, Black /10, Red /5,
   Red Lava, Sky Blue. **#1470:** the fold's decision is a pure tested rule
