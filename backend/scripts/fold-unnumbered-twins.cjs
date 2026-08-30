@@ -46,7 +46,7 @@ const crypto = require("crypto");
 const { CosmosClient } = require("@azure/cosmos");
 const backend = path.resolve(__dirname, "..");
 const { moveCatalogRow } = require(path.join(backend, "dist", "services", "catalog", "catalogRowOps.service.js"));
-const { catalogAuthorityOf } = require(path.join(backend, "dist", "services", "catalog", "catalogAuthority.service.js"));
+const { catalogAuthorityOf, isDedicatedChecklist } = require(path.join(backend, "dist", "services", "catalog", "catalogAuthority.service.js"));
 const { decideTwinFold } = require(path.join(backend, "dist", "services", "catalog", "foldTwinRule.js"));
 const { reportWrites } = require(path.join(backend, "dist", "services", "ops", "writeReconciliation.js"));
 
@@ -116,7 +116,7 @@ async function main() {
     let twin = null;
     try { twin = (await retry(() => cat.item(base, base).read())).resource ?? null; } catch (e) { if (e?.code !== 404) { stats.failed++; continue; } }
     if (!twin) { stats.noTwin++; continue; }
-    const decision = decideTwinFold({ baseId: base, twinSource: String(twin.source ?? ""), twinIsChecklist: isChecklist(twin.source), numbered: numberedList, mode: MODE });
+    const decision = decideTwinFold({ baseId: base, twinSource: String(twin.source ?? ""), twinIsChecklist: isChecklist(twin.source), twinIsDedicated: isDedicatedChecklist(twin.source), numbered: numberedList, mode: MODE });
     if (!decision.fold) {
       if (decision.skip === "ambiguous") stats.ambiguous++;
       else if (decision.skip === "same-source-lists-both") stats.sameSourceListsBoth++;

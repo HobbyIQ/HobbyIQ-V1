@@ -51,3 +51,48 @@ describe("foldTwinRule -- CF-ONE-SOURCE-OMITTED-THE-PRINT-RUN (mode cross-source
     expect(d).toEqual({ fold: false, skip: "same-source-lists-both" });
   });
 });
+
+/**
+ * D29/R2 -- the "same source lists both" veto belongs to a DEDICATED
+ * per-release checklist, not to every source that classifies as "checklist".
+ */
+describe("D29/R2: a bcp twin no longer vetoes a dedicated checklist's fold", () => {
+  const numbered = [{ id: "hiq:baseball:2021:bowman-chrome:cpa-mp:refractor:auto:num-499", printRun: 499, source: "checklistcenter-2026-08-29" }];
+
+  it("a baseballcardpedia twin that also lists a /N still folds", () => {
+    const d = decideTwinFold({
+      baseId: "hiq:baseball:2021:bowman-chrome:cpa-mp:refractor:auto",
+      twinSource: "baseballcardpedia",
+      twinIsChecklist: true,
+      twinIsDedicated: false,
+      numbered: [...numbered, { id: "x:num-499", printRun: 499, source: "baseballcardpedia" }],
+      mode: "cross-source",
+    });
+    expect(d.fold).toBe(true);
+  });
+
+  it("a genuine dedicated-vs-dedicated pair STILL skips (CF-ONE-SOURCE-OMITTED-THE-PRINT-RUN is not regressed)", () => {
+    const d = decideTwinFold({
+      baseId: "hiq:baseball:2021:bowman-chrome:cpa-mp:refractor:auto",
+      twinSource: "checklistcenter-2026-08-29",
+      twinIsChecklist: true,
+      twinIsDedicated: true,
+      numbered,
+      mode: "cross-source",
+    });
+    expect(d.fold).toBe(false);
+    if (d.fold) throw new Error("unreachable");
+    expect(d.skip).toBe("same-source-lists-both");
+  });
+
+  it("omitting twinIsDedicated keeps the pre-D29 behaviour exactly", () => {
+    const d = decideTwinFold({
+      baseId: "hiq:baseball:2021:bowman-chrome:cpa-mp:refractor:auto",
+      twinSource: "checklistcenter-2026-08-29",
+      twinIsChecklist: true,
+      numbered,
+      mode: "cross-source",
+    });
+    expect(d.fold).toBe(false);
+  });
+});
