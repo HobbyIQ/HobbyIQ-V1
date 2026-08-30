@@ -111,7 +111,6 @@ const UNRECONCILED = new Set([
   "normalize-catalog-schema",
   "promote-sold-comps-trust-tier",
   "reaudit-cardsight-unverified",
-  "repair-parallel-from-title",
   "rescore-anomalies",
   "reslug-bowman-paper-vs-bowman",
   "reslug-brand-root-refinement",
