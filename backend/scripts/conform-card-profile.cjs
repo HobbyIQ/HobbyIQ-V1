@@ -115,6 +115,7 @@ async function main() {
   console.log(`slot ${SLOT}/${SLOTS}  profileVersion=${PROFILE_VERSION}${REDO ? " REDO" : ""}  ${APPLY ? "APPLY" : "REPORT ONLY"}\n`);
 
   let scanned = 0, written = 0, unparsable = 0, alreadyClean = 0, failed = 0, notReached = 0;
+  let otherSlot = 0; // siblings' rows: seen for shard stability, never this slot's work (CF-A-SLICE-IS-NOT-A-SIBLING-COUNTER)
   let fixedSlug = 0, fixedDisplay = 0, fixedTokens = 0, fixedName = 0;
   let stopReason = null;
   let token;
@@ -128,6 +129,7 @@ async function main() {
     token = page.continuationToken;
 
     const mine = SLOTS > 1 ? page.resources.filter((_, i) => (i + scanned) % SLOTS === SLOT) : page.resources;
+    otherSlot += page.resources.length - mine.length;
     scanned += page.resources.length - mine.length; // siblings' rows, counted as seen so sharding stays stable
 
     for (let i = 0; i < mine.length; i += CONCURRENCY) {
@@ -211,12 +213,14 @@ async function main() {
   console.log(`    tokens completed       ${f(fixedTokens)}   <- cardNumber searchable at last`);
   console.log(`    displayName derived    ${f(fixedName)}`);
   console.log(`  already clean            ${f(alreadyClean)}`);
+  console.log(`  other slots' rows        ${f(otherSlot)}   <- seen for shard stability, not this slot's work`);
   console.log(`  id not hiq grammar       ${f(unparsable)}   <- the canonicalize fleet owns these`);
   console.log(`  failed                   ${f(failed)}`);
   if (APPLY) {
     reportWrites({
       job: "conform-card-profile", intended: scanned, written,
-      skipped: unparsable + notReached, failed,
+      // disjoint: this slot's conformed rows + rows it deliberately left (clean, unparsable, not reached) + siblings' rows it only looked at
+      skipped: alreadyClean + unparsable + notReached + otherSlot, failed,
     });
   }
 }
