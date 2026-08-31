@@ -103,7 +103,9 @@ describe("the id carries the product as the checklist names it (ruling a)", () =
     expect(normalizeSetKey("2024 Topps Chrome Sapphire Edition")).toBe("topps-chrome-sapphire");
     expect(normalizeSetKey("2024 Topps Chrome Update Sapphire Edition")).toBe("topps-chrome-update-sapphire");
     expect(normalizeSetKey("2024 Topps Update Sapphire")).toBe("topps-update-sapphire");
-    expect(normalizeSetKey("2024 Donruss Optic")).toBe("panini-optic");
+    // D31 (Drew 2026-08-31): the table DOES spell Optic now -- one product,
+    // donruss-optic. See opticIsOneProduct.test.ts for the full pin.
+    expect(normalizeSetKey("2024 Donruss Optic")).toBe("donruss-optic");
     expect(normalizeSetKey("2024 Panini Prizm")).toBe("panini-prizm");
     expect(normalizeSetKey("Fleer Metal Universe")).toBe("fleer-metal-universe");
     expect(normalizeSetKey("2024 Topps Series 1 Celebration Mega Box")).toBe("topps-series-1-celebration-mega-box");
@@ -115,10 +117,12 @@ describe("the id carries the product as the checklist names it (ruling a)", () =
     expect(productSetKeyForName("topps-update-series-hobby-box")).toBe("topps-update-series");  // a segment run
     expect(productSetKeyForName("leaf-metal-draft")).toBe("leaf-metal-draft");                 // not leaf-metal
     // Family-only entries never pre-empt the vocabulary: the regex ordering
-    // still folds "Bowman Chrome Prospects" and keeps "Donruss Optic" apart.
+    // still folds "Bowman Chrome Prospects" and "Upper Deck SPx Finite".
     expect(productSetKeyForName("bowman-chrome-prospects")).toBeNull();
     expect(productSetKeyForName("upper-deck-spx-finite")).toBeNull();
-    expect(productSetKeyForName("panini-donruss-optic")).toBeNull();
+    // D31: panini-donruss-optic is now a NAME of the spelled donruss-optic
+    // product, so it answers -- it is no longer left to the vocabulary.
+    expect(productSetKeyForName("panini-donruss-optic")).toBe("donruss-optic");
     expect(productSetKeyForName("donruss")).toBeNull();
     expect(productSetKeyForName("leaf")).toBeNull();
     expect(productSetKeyForName("leaf-something-new")).toBeNull();
@@ -178,7 +182,9 @@ describe("the maker prefix is kept on Panini-era Donruss (ruling b)", () => {
   });
 
   it("Donruss Optic / Elite / Studio are their own products, untouched by the era rule", () => {
-    expect(resolveSetKeyForSlug("baseball", "2024 Donruss Optic", 2024)).toBe("panini-optic");
+    // D31: Optic is spelled donruss-optic and, launching in 2016, is
+    // Panini-era-only -- it needs no era boundary of its own.
+    expect(resolveSetKeyForSlug("baseball", "2024 Donruss Optic", 2024)).toBe("donruss-optic");
     expect(resolveSetKeyForSlug("baseball", "2024 Donruss Elite", 2024)).toBe("donruss-elite");
     expect(resolveSetKeyForSlug("baseball", "1995 Studio", 1995)).toBe("donruss-studio");
   });
