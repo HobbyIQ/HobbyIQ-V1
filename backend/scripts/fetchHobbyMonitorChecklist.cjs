@@ -19,18 +19,43 @@
 //   cardParallels[]  one entry per SUBSET, listing that subset's parallels
 //       {cardSet, cardType, parallels:[{name, printRun, isOneOfOne, odds}]}
 //
-// ONE ROW PER CARD — NO CROSS PRODUCT. 2026 Donruss carries 1,210 cards and
-// 248 parallel entries. Multiplying them would mint ~300,000 rows asserting
-// that every card exists in every parallel, which the source never says:
-// it states a subset's parallel LIST, not that card #44 exists in Yellow
-// Flood. Short prints and case hits make that inference wrong in detail, and
-// it is exactly the templating rejected on 2026-08-11 (memory: "No synthetic
-// parallels — actuals only"). So the cards are emitted, and the parallel
-// list is written beside them as set-level metadata for a later decision.
+// THE LADDER LANDS ON ITS OWN SUBSET'S CARDS (CF-HM-LADDER-INTO-ROWS,
+// 2026-08-30). This used to emit one row per card and park the ladder in a
+// sidecar, so every print run in the release was lost: hobbymonitor puts
+// numberDenominator on ZERO card objects and states the run once per subset,
+// on the ladder. 2026 Bowman ingested that way gives 1,165 rows with an empty
+// printRun column — CPA-JG's Refractor is /499 on the page and null in the
+// catalog.
 //
-// Emits the same CSV contract ingest-scraped-checklist already consumes, so
-// nothing downstream changes:
-//     category,cardNumber,parallel,isAuto,printRun,player
+// This is NOT the cross-product rejected on 2026-08-11. A subset's ladder is
+// applied to THAT SUBSET'S OWN CARDS ONLY — the same shape
+// convertChecklistCenterToChecklistCsv already uses (its convertHtml emits a
+// base row per card, then one row per rung of that card's own subset). The
+// rejected shape multiplied one product-wide parallel list across every card
+// in the release; this joins on (cardSet, cardType), which is how the source
+// itself scopes a ladder.
+//
+// TWO GUARDS, because a ladder is only as good as what is in it:
+//   * REAL RUNGS ONLY. 53 of 2026 Bowman's 218 "parallels" are PLAYER NAMES
+//     misfiled into the parallels[] of five hit subsets ({name:"Ethan
+//     Holliday", printRun:null, odds:null}). A rung is real only when the
+//     source gives it a printRun, isOneOfOne or odds; anything else that also
+//     matches this product's own roster is dropped as a misfiled name. That is
+//     the exploded-spine shape (11.49M cards x players rows) caught early.
+//   * PER-SUBSET CEILINGS. Same gate as the CLC converter: a subset whose
+//     ladder exceeds PAR_MAX rungs, or whose card list exceeds NUM_MAX
+//     numbers, is what a roster-read-as-a-ladder looks like — refuse that
+//     subset, keep the rest, and say so.
+//
+// Emits the canonical CSV contract, with the 7th column the CLC converter
+// added for a rung's odds/footnote:
+//     category,cardNumber,parallel,isAuto,printRun,player,parallelNote
+//
+// The manifest sets parallelColumnAuthoritative:true, so ingest-scraped-
+// checklist reads the rung out of the parallel column instead of re-deriving
+// a label from the category slug. Without that flag the legacy branch turns
+// "insert-base-cards" into the parallel "Base Cards" — the anchor's own name
+// baked into the rung, on the 100 BASE cards of the set.
 //
 //   node scripts/fetchHobbyMonitorChecklist.cjs \
 //     --url https://www.hobbymonitor.com/release/2026-donruss-baseball-checklist \
@@ -117,7 +142,45 @@ const isAutoOf = (c) =>
   /autograph/i.test(String(c.cardType ?? "")) ||
   /\b(auto|autograph|signature)/i.test(String(c.cardSet ?? ""));
 
-(async () => {
+// Same ceilings as convertChecklistCenterToChecklistCsv: past these a "ladder"
+// is a roster and the subset is refused rather than multiplied.
+const PAR_MAX = 150, NUM_MAX = 2000;
+
+/** Fold a name for roster comparison: "Julio Rodriguez - Seattle Mariners"
+ *  and "Julio Rodriguez" are the same person. The team suffix comes off. */
+const foldName = (s) => String(s ?? "").split(" - ")[0]
+  .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+  .toLowerCase().replace(/[^a-z]/g, "");
+
+/**
+ * A parallel entry is a real RUNG only when the source priced its scarcity:
+ * a printRun, a 1/1 flag, or pack odds. Everything else is a misfiled player
+ * name -- 53 of 218 on 2026 Bowman -- and minting those would put "Ethan
+ * Holliday" in the parallel column of a catalog row.
+ *
+ * `roster` is every player name in THIS product, so a refusal can name which
+ * of the two reasons it fired on; an entry with no scarcity that is also a
+ * known player of the set is unambiguous.
+ */
+function classifyRung(p, roster) {
+  const name = String(p && p.name != null ? p.name : "").trim();
+  if (!name) return { ok: false, why: "empty" };
+  const hasScarcity = p.printRun != null || p.isOneOfOne === true ||
+    (p.odds != null && String(p.odds).trim() !== "");
+  if (hasScarcity) return { ok: true, why: null };
+  if (roster.has(foldName(name))) return { ok: false, why: "player-name" };
+  if (name.length > 60) return { ok: false, why: "over-60-chars" };
+  return { ok: false, why: "no-scarcity" };
+}
+
+/** The print run a rung states. isOneOfOne is the source's way of writing /1. */
+const runOf = (p) => (p.isOneOfOne === true ? 1 : (p.printRun != null ? p.printRun : ""));
+
+/** A rung's footnote -- the pack odds, kept in the 7th column like the CLC
+ *  converter's parallelNote. Never part of the parallel name. */
+const noteOf = (p) => String(p.odds == null ? "" : p.odds).replace(/\s+/g, " ").trim();
+
+async function main() {
   if (has("--list")) {
     const html = await get("https://www.hobbymonitor.com/releases");
     const rel = extractObjects(html, '"manufacturer"').filter((o) => o.slug);
@@ -142,7 +205,35 @@ const isAutoOf = (c) =>
     process.exit(1);
   }
 
-  const rows = [];
+  // The product's own roster, for the misfiled-name guard.
+  const roster = new Set();
+  for (const c of cards) {
+    for (const pl of (Array.isArray(c.players) ? c.players : [c.players])) {
+      const f = foldName(pl); if (f) roster.add(f);
+    }
+  }
+
+  // Index the ladders by the pair the source itself scopes them with. A group
+  // is {cardSet, cardType, parallels[]} and the cards carry the same two
+  // fields, so the join is exact -- no name-similarity guessing.
+  const ladderByKey = new Map();
+  const rungStats = { entries: 0, real: 0, playerName: 0, noScarcity: 0, other: 0 };
+  const droppedNames = [];
+  for (const g of parallelGroups) {
+    const kept = [];
+    for (const p of (g.parallels || [])) {
+      rungStats.entries++;
+      const v = classifyRung(p, roster);
+      if (v.ok) { rungStats.real++; kept.push(p); continue; }
+      if (v.why === "player-name") { rungStats.playerName++; droppedNames.push(`${g.cardSet} :: ${p.name}`); }
+      else if (v.why === "no-scarcity") rungStats.noScarcity++;
+      else rungStats.other++;
+    }
+    ladderByKey.set(`${g.cardSet}||${g.cardType}`, kept);
+  }
+
+  // Cards, deduped -- the same card is listed once per team.
+  const cardRows = [];
   const seen = new Set();
   for (const c of cards) {
     const num = String(c.cardNumber ?? "").trim();
@@ -150,36 +241,79 @@ const isAutoOf = (c) =>
     const set = String(c.cardSet ?? c.cardType ?? "Base").trim() || "Base";
     const player = Array.isArray(c.players) ? c.players.join(" / ") : String(c.players ?? "");
     const key = `${set}|${num}|${player}`;
-    if (seen.has(key)) continue;          // same card listed under several teams
+    if (seen.has(key)) continue;
     seen.add(key);
-    // ingest-scraped-checklist accepts only "base", "insert-*" and "auto-*",
-    // and it derives the PARALLEL from the category slug (it ignores the
-    // parallel column). So the subset name has to ride in the category, or
-    // the row is skipped and its identity is lost — a first pass emitted
-    // "base-optic"/"bomb-squad" and lost 1,110 of 1,210 rows that way.
-    const auto = isAutoOf(c);
-    let category;
-    if (auto) category = `auto-${slug(set)}`;
-    else if (slug(set) === "base") category = "base";
-    else category = `insert-${slug(set)}`;
-    rows.push({
-      category,
-      cardNumber: num,
-      parallel: set,
-      isAuto: auto,
-      printRun: c.numberDenominator ?? "",
-      player,
-    });
+    cardRows.push({ num, set, type: String(c.cardType ?? "").trim(), player, auto: isAutoOf(c) });
   }
 
-  const header = "category,cardNumber,parallel,isAuto,printRun,player";
-  const body = rows.map((r) => [r.category, r.cardNumber, r.parallel, r.isAuto, r.printRun, r.player]
+  // ingest-scraped-checklist accepts only "base", "insert-*" and "auto-*", so
+  // the subset name has to ride in the category or the row is skipped and its
+  // identity is lost.
+  const categoryOf = (set, auto) =>
+    auto ? `auto-${slug(set)}` : (slug(set) === "base" ? "base" : `insert-${slug(set)}`);
+
+  // Emit: the base row for every card, then that card's own subset ladder.
+  // The BASE row's parallel is blank -- "blank means unknown, never Base" --
+  // except in the `base` category, whose card IS the base card. ingest reads
+  // "" as the base tier through normalizeParallel.
+  const rows = [];
+  const bySubset = new Map();
+  let ladderRows = 0, refusedSubsets = 0;
+  const refusedNote = [];
+  for (const c of cardRows) {
+    const cat = categoryOf(c.set, c.auto);
+    const rungs = ladderByKey.get(`${c.set}||${c.type}`) || [];
+    const st = bySubset.get(c.set) || { cards: 0, rungs: rungs.length, rows: 0, refused: false };
+    st.cards++;
+    bySubset.set(c.set, st);
+    rows.push({ category: cat, cardNumber: c.num, parallel: cat === "base" ? "Base" : "",
+      isAuto: c.auto, printRun: "", player: c.player, parallelNote: "" });
+    st.rows++;
+  }
+  // Per-subset ceilings, decided on the subset as a whole before any rung row
+  // is emitted for it.
+  const numsBySubset = new Map();
+  for (const c of cardRows) {
+    if (!numsBySubset.has(c.set)) numsBySubset.set(c.set, new Set());
+    numsBySubset.get(c.set).add(c.num);
+  }
+  for (const c of cardRows) {
+    const rungs = ladderByKey.get(`${c.set}||${c.type}`) || [];
+    if (!rungs.length) continue;
+    const nRungs = new Set(rungs.map((r) => r.name)).size;
+    const nNums = (numsBySubset.get(c.set) || new Set()).size;
+    if (nRungs > PAR_MAX || nNums > NUM_MAX) {
+      const st = bySubset.get(c.set);
+      if (st && !st.refused) {
+        st.refused = true; refusedSubsets++;
+        refusedNote.push(`${c.set}: rungs=${nRungs} numbers=${nNums} (gate ${PAR_MAX}/${NUM_MAX})`);
+      }
+      continue;
+    }
+    const cat = categoryOf(c.set, c.auto);
+    for (const r of rungs) {
+      rows.push({ category: cat, cardNumber: c.num, parallel: String(r.name).trim(),
+        isAuto: c.auto, printRun: runOf(r), player: c.player, parallelNote: noteOf(r) });
+      ladderRows++;
+      const st = bySubset.get(c.set); if (st) st.rows++;
+    }
+  }
+
+  const header = "category,cardNumber,parallel,isAuto,printRun,player,parallelNote";
+  const body = rows.map((r) => [r.category, r.cardNumber, r.parallel, r.isAuto, r.printRun, r.player, r.parallelNote]
     .map(csvCell).join(",")).join("\n");
 
-  const parallelCount = parallelGroups.reduce((a, g) => a + (g.parallels?.length ?? 0), 0);
+  const withRun = rows.filter((r) => String(r.printRun) !== "").length;
   console.log(`${url}`);
-  console.log(`  cards=${cards.length} rows=${rows.length} (deduped ${cards.length - rows.length}) subsets=${new Set(rows.map((r) => r.category)).size}`);
-  console.log(`  parallel groups=${parallelGroups.length} parallel entries=${parallelCount} (NOT expanded — see header)`);
+  console.log(`  cards=${cards.length} cardRows=${cardRows.length} (deduped ${cards.length - cardRows.length}) subsets=${bySubset.size}`);
+  console.log(`  ladder groups=${parallelGroups.length} entries=${rungStats.entries} -> real rungs=${rungStats.real}` +
+    `  DROPPED player-names=${rungStats.playerName} no-scarcity=${rungStats.noScarcity} other=${rungStats.other}`);
+  console.log(`  rows=${rows.length} (base ${cardRows.length} + ladder ${ladderRows})  with printRun=${withRun}`);
+  if (refusedSubsets) for (const n of refusedNote) console.log(`  !! REFUSED subset ${n}`);
+  if (droppedNames.length) {
+    console.log(`  dropped names (first 5 of ${droppedNames.length}):`);
+    for (const n of droppedNames.slice(0, 5)) console.log(`     ${n}`);
+  }
 
   if (out) {
     fs.mkdirSync(path.dirname(out), { recursive: true });
@@ -205,11 +339,25 @@ const isAutoOf = (c) =>
         productKey: yr + "-" + setKey,
         setKey: setKey,
         rowCount: rows.length,
-        sectionsReport: [...new Set(rows.map(function (r) { return r.parallel; }))].map(function (sub) {
+        // ingest-scraped-checklist re-derives the parallel from the category
+        // slug UNLESS this says otherwise -- which would file the 100 base
+        // cards under a parallel named "Base Cards". The rung is already in
+        // the parallel column, put there by the subset's own ladder.
+        parallelColumnAuthoritative: true,
+        cardRows: cardRows.length,
+        ladderRows: ladderRows,
+        rungsReal: rungStats.real,
+        rungsDroppedPlayerName: rungStats.playerName,
+        rungsDroppedNoScarcity: rungStats.noScarcity,
+        refusedSubsets: refusedSubsets,
+        sectionsReport: [...bySubset.entries()].map(function (e) {
           return {
-            breadcrumb: "Checklist > " + sub,
-            category: slug(sub),
-            playerCount: rows.filter(function (r) { return r.parallel === sub; }).length,
+            breadcrumb: "Checklist > " + e[0],
+            category: slug(e[0]),
+            playerCount: e[1].cards,
+            rungs: e[1].rungs,
+            rowCount: e[1].rows,
+            refused: e[1].refused,
             printRun: null,
           };
         }),
@@ -221,9 +369,17 @@ const isAutoOf = (c) =>
     if (parallelGroups.length) {
       const side = out.replace(/\.csv$/, "") + ".parallels.json";
       fs.writeFileSync(side, JSON.stringify({ sourceUrl: url, groups: parallelGroups }, null, 1));
-      console.log(`  wrote ${side}  (${parallelCount} parallels, set-level metadata)`);
+      console.log(`  wrote ${side}  (${rungStats.entries} published entries, ${rungStats.real} real rungs)`);
     }
   } else {
     console.log(`${header}\n${body}`);
   }
-})().catch((e) => { console.error("FATAL", e.message); process.exit(1); });
+}
+
+// Only run when invoked directly, so the pure helpers above can be unit
+// tested (the ladder filter is the guard against minting players as rungs).
+if (require.main === module) {
+  main().catch((e) => { console.error("FATAL", e.message); process.exit(1); });
+}
+
+module.exports = { classifyRung, foldName, runOf, noteOf, extractObjects, extractArray, PAR_MAX, NUM_MAX };
