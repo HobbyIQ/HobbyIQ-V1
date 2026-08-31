@@ -1,0 +1,13 @@
+{
+  "source": "drew-ruling-2026-08-30",
+  "sourceUrl": "hand-authored: Drew ruling 2026-08-30",
+  "year": 1987,
+  "setKey": "bellingham-mariners",
+  "setName": "1987 Bellingham Mariners",
+  "sport": "baseball",
+  "rows": 1,
+  "parallelColumnAuthoritative": true,
+  "handAuthored": true,
+  "note": "Ken Griffey Jr. pre-rookie, card #15. Minor-league team set; NO parallels exist for this product, so the ladder is deliberately empty and the parallel column is blank (unknown/plain), never the string \"Base\". printRun is blank: the set was not serial-numbered. The team-checklist card #33 is NOT emitted -- deriveCatalogEntry requires a playerName and the repo has no convention for player-less checklist rows in any staged CSV.",
+  "authoredAt": "2026-08-30"
+}

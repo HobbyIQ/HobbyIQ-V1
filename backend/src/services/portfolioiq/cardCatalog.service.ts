@@ -46,7 +46,27 @@ export interface CardCatalogEntry {
   parallel: string;                  // canonical human form ("Blue Refractor")
   parallelSlug: string;              // slug form ("blue-refractor")
   isAuto: boolean;
+  // SERIAL-ONLY TRUTH: a number stamped on the card. Null whenever the source
+  // did not state one for THIS card. Never filled from a set-production figure
+  // -- see `rarity`. CF-A-PRINT-RUN-IS-A-FUNCTION-OF-(RANGE, PARALLEL).
   printRun: number | null;
+  /**
+   * CF-RARITY-IS-NOT-A-PRINT-RUN (Drew ruling, 2026-08-30).
+   *
+   * A set-level production or scarcity statement in the SOURCE'S OWN WORDS --
+   * "approximately 30,000 sets produced" (1987 Topps Tiffany), "1:12/packs"
+   * (1997 Finest), "inserted 1:24 packs" (1996 Metal Universe). #1571 §5 ruled
+   * these must map to a rarity field and never be coerced into printRun; until
+   * this field existed they were dropped on the floor.
+   *
+   * DESCRIPTIVE ONLY. No valuation path reads it. It is not a multiplier, not a
+   * synthetic print run, and not a scarcity score -- a production figure counts
+   * factory sets while a serial counts copies of one card, and conflating them
+   * writes a confidently-wrong row that no later sweep can see.
+   *
+   * Absent when the source stated nothing. Blank is unknown.
+   */
+  rarity?: string | null;
   // 2,645,310 rows (8.4%) carry no player: unnamed checklist slots, team and
   // logo cards, and parallel rows seeded before a name was known. The type
   // said `string` and the data disagreed, which is a second reason writers
@@ -228,6 +248,10 @@ const PRESERVED_ON_REPLACE = [
   "recentSaleCount", "observedCompCount", "firstSeenAt", "team",
   "rehomedFrom", "rehomedAt", "movedFrom", "movedReason", "movedAt",
   "setKeyBefore", "canonicalizedFrom", "unfoldedFrom",
+  // A set-level production/odds statement is a fact about the PRODUCT, not a
+  // claim about this row's identity, so a higher-authority source that simply
+  // does not publish one must not erase it. CF-RARITY-IS-NOT-A-PRINT-RUN.
+  "rarity",
 ] as const;
 
 /** A confidence the row never declared is no confidence, not a high one. */
@@ -357,6 +381,9 @@ export function deriveCatalogEntry(input: {
   parallel: string | null | undefined;
   isAuto: boolean;
   printRun: number | null | undefined;
+  /** Set-level production / odds statement, verbatim. Descriptive only;
+   *  never a substitute for printRun. CF-RARITY-IS-NOT-A-PRINT-RUN. */
+  rarity?: string | null | undefined;
   playerName: string;
   source: CardCatalogEntry["source"];
   confidence: number;
@@ -432,6 +459,11 @@ export function deriveCatalogEntry(input: {
     parallelSlug,
     isAuto: input.isAuto,
     printRun: input.printRun ?? null,
+    // Omitted entirely when unknown, so an existing row's rarity is not
+    // overwritten with null by a source that simply does not publish one.
+    ...(typeof input.rarity === "string" && input.rarity.trim()
+      ? { rarity: input.rarity.trim() }
+      : {}),
     playerName,
     playerSlug: playerSlugify(playerName),
     vendorIds: input.vendorIds ?? {},
