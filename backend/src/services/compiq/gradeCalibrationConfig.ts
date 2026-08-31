@@ -344,8 +344,24 @@ export function classifyFamily(setName: string | null | undefined): string {
   if (s.includes("prizm")) return "panini-prizm";
   if (s.includes("select")) return "panini-select";
   if (s.includes("mosaic")) return "panini-mosaic";
-  if (s.includes("donruss")) return "panini-donruss";
+  // CF-OPTIC-BEFORE-DONRUSS (Drew, 2026-08-31). Optic MUST be tested before
+  // Donruss. Every Optic set name contains the word "donruss" -- the product
+  // is literally "Donruss Optic", and D31 (#1596) made "donruss-optic" the
+  // canonical setKey, so the slug form now carries the shadowing token too.
+  // With "donruss" first, classifyFamily("donruss-optic") returned
+  // "panini-donruss" and every Optic card silently drew paper-Donruss grade
+  // multipliers (PSA 3.25 / BGS 1.58 vs Optic's own PSA 2.82 / BGS absent).
+  // These are genuinely different cells, not a rounding difference: the
+  // calibration script queries each family with an independent
+  // CONTAINS(card_set, token), so panini-donruss (PSA n=1426) is a SUPERSET
+  // that swallows panini-optic (PSA n=813) plus ~600 paper-Donruss rows.
+  // Chrome-front Optic and paper Donruss are different cards with different
+  // grade curves, so the superset cell is the wrong one for an Optic card.
+  // Ordering is the whole fix -- the returned family key stays "panini-optic"
+  // because that is how GRADE_CALIBRATION is keyed; only the INPUT spelling
+  // changed in #1596, not the calibration cell name.
   if (s.includes("optic")) return "panini-optic";
+  if (s.includes("donruss")) return "panini-donruss";
   // CF-FB-BB-BRANDS (Drew, 2026-07-20). Extended for FB/BB-specific
   // product lines uncovered by baseball-only classifier.
   if (s.includes("hoops")) return "panini-hoops";

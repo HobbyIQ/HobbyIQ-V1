@@ -39,6 +39,23 @@
  *   --outDir=/tmp/bcp-ladders
  *   --delayMs=800             deliberately unhurried; this is a fan-run wiki
  *   --titles=A,B              explicit page titles instead of the template set
+ *   --sport=baseball          the sport every emitted row carries
+ *
+ * CF-THE-SPORT-IS-AN-INPUT-NOT-A-CONSTANT (2026-08-31). The site is
+ * baseballcardpedia, so `sport` was written as the literal "baseball" in the
+ * two places it is emitted -- the product key that names each staged file
+ * (`${year}-${setKey}-baseball`) and the manifest's own `sport` field. That
+ * held only as long as every page fetched was a baseball page, and --titles
+ * takes ARBITRARY page titles: the wiki carries football and basketball sets
+ * too, and a run dispatched with BCP_TITLES pointing at one minted its rows
+ * as baseball, into a baseball product key, with a manifest that said so.
+ * Nothing downstream could tell the difference -- the sport was not wrong in a
+ * field the ingest checks, it was wrong in the IDENTITY.
+ *
+ * So sport is a parameter, threaded from the acquisition inputs and stated
+ * explicitly at both emission sites. The default stays baseball, because that
+ * is what the source is; what changes is that a non-baseball scrape can now
+ * SAY so, and the value it says is the one that reaches disk.
  */
 const fs = require("node:fs");
 const path = require("node:path");
@@ -51,6 +68,11 @@ const YEARS = String(arg("years", "2016-2026"));
 const OUT_DIR = arg("outDir", "C:/tmp/bcp-ladders");
 const DELAY_MS = Number(arg("delayMs", "800"));
 const TITLES = arg("titles", "");
+// The sport every emitted row carries. A parameter, not a constant: see
+// CF-THE-SPORT-IS-AN-INPUT-NOT-A-CONSTANT above. Normalized here so the value
+// that reaches the product key and the manifest is the same one.
+const normalizeSport = (s) => String(s ?? "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+const SPORT = normalizeSport(arg("sport", "baseball")) || "baseball";
 
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36";
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -74,9 +96,21 @@ async function get(url, attempt = 0) {
   }
 }
 
-/** Slice the body between a heading id and the next heading of the same-or-higher level. */
+/**
+ * Slice the body between a heading id and the next heading of the same-or-higher level.
+ *
+ * CF-THE-FOOTER-IS-NOT-THE-LAST-SECTION (2026-08-31). The LAST section of a
+ * page has no following heading, so `$` ran the slice to end-of-document and
+ * swallowed the MediaWiki chrome -- including the category footer, which is a
+ * <ul> of <li> links. On 1993_Finest that put `<li>Topps</li>` and
+ * `<li>1993</li>` inside the "Refractors" scope; "1993" was refused for its
+ * leading digit but "Topps" read as a RUNG, and a rung expands over every base
+ * card, so the page would have staged 199 phantom "Topps" parallel rows.
+ * End the slice at the page chrome as well as at the next heading.
+ */
+const PAGE_CHROME = `<div id="catlinks|<div class="printfooter|<div id="mw-navigation|<footer`;
 function section(html, id, level) {
-  const re = new RegExp(`<h${level} id="${id}"[\\s\\S]*?(?=<h[2-${level}] id=|$)`);
+  const re = new RegExp(`<h${level} id="${id}"[\\s\\S]*?(?=<h[2-${level}] id=|${PAGE_CHROME}|$)`);
   const m = html.match(re);
   return m ? m[0] : "";
 }
@@ -402,6 +436,26 @@ function isCardListScope(scopeBody) {
  *  cards 1-30 AND 181-210). */
 function parseCardRange(text) {
   const t = String(text ?? "");
+  // CF-A-SUBSET-PARENTHETICAL-IS-A-RANGE (2026-08-31). 1993 Finest states the
+  // Jumbos' scope without ever writing the word "cards":
+  //
+  //   "feature reproductions of 33 players from that set's All-Star subset (84-116)"
+  //
+  // The clause below required "card(s)", found nothing, and returned null --
+  // which cardInRange reads as "the whole set", so a 33-card box-topper set
+  // expanded over all 199 base cards. That is the exploded-spine signature
+  // this very file was written to stop, arriving through a phrasing it did
+  // not know. A bare "(lo-hi)" following a subset/set noun IS the range, and
+  // the count stated alongside it ("33 players") must agree with the span's
+  // width or we do not trust the read.
+  const sub = t.match(/\b(?:subset|set|series|checklist)\b[^.()]{0,40}\(\s*(\d+)\s*[-–—]\s*(\d+)\s*\)/i);
+  if (sub) {
+    const lo = Number(sub[1]), hi = Number(sub[2]);
+    const stated = t.match(/\b(\d{1,4})\s+(?:players?|cards?|subjects?)\b/i);
+    const width = hi - lo + 1;
+    if (Number.isFinite(lo) && Number.isFinite(hi) && hi >= lo
+        && (!stated || Number(stated[1]) === width)) return [[lo, hi]];
+  }
   const m = t.match(/\bcards?\s+((?:#?\s*\d+(?:\s*[-–—]\s*\d+)?)(?:\s*,?\s*(?:and\s+)?#?\s*\d+(?:\s*[-–—]\s*\d+)?)*)/i);
   if (!m) return null;
   const spans = [];
@@ -723,7 +777,16 @@ function parseLadder(parallelsBody, playerNames = new Set(), opts = {}) {
     const ok = n && n >= 1 && n <= 100000 && !hasOdds(text);
     // The heading's own text may state pack odds or a set-production figure.
     // Those are refused as a print run and RECORDED as rarity.
-    put(name, ok ? n : null, null, null, extractRarity(text));
+    //
+    // CF-A-HEADING-RUNG-IS-SCOPED-TOO (2026-08-31). This pass passed
+    // cardRange=null unconditionally, so a rung that comes from a HEADING was
+    // always set-wide even when the heading's own body stated its span. On
+    // 1993 Finest the Jumbos are "33 players from that set's All-Star subset
+    // (84-116)" -- 33 oversized box-toppers -- and the null expanded them over
+    // all 199 base cards. The <li> rungs above already scope themselves; a
+    // heading rung must too, or the ladder cross-joins exactly where #1571
+    // says it must not.
+    put(name, ok ? n : null, null, parseCardRange(text), extractRarity(text));
   }
 
   // list rungs: <li>Name (note)</li>, rejecting card lines and prose
@@ -953,22 +1016,30 @@ function normalizeSetKeyLocal(setName) {
     .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 }
 
-async function main() {
-  fs.mkdirSync(OUT_DIR, { recursive: true });
+async function main(opts = {}) {
+  // The CLI values are the DEFAULTS, not the only source: a caller (the pins,
+  // above all) drives the committed emission path directly rather than
+  // reimplementing it. `sport` travels with outDir and years because it is
+  // the same kind of thing -- a run input that decides what lands on disk.
+  const outDir = opts.outDir ?? OUT_DIR;
+  const years = String(opts.years ?? YEARS);
+  const titles = opts.titles ?? TITLES;
+  const sport = normalizeSport(opts.sport ?? SPORT) || "baseball";
+  fs.mkdirSync(outDir, { recursive: true });
   const qualify = loadQualifier();
-  const [y0, y1] = YEARS.split("-").map(Number);
+  const [y0, y1] = years.split("-").map(Number);
   const work = [];
   // --titles ADDS pages to the per-year flagship list; it used to replace it,
   // so the 2005-2015 re-scrape (checklist B4) fetched 17 named pages and none
   // of the flagship years it was dispatched for.
-  if (TITLES) for (const t of TITLES.split(",")) if (t.trim()) work.push(t.trim());
+  if (titles) for (const t of String(titles).split(",")) if (t.trim()) work.push(t.trim());
   // The page families holding scorecard v2's remaining unconfirmed rows.
-  if (!String(arg("titlesOnly", "")).length) for (let y = y0; y <= (y1 || y0); y++) work.push(
+  if (!String(opts.titlesOnly ?? arg("titlesOnly", "")).length) for (let y = y0; y <= (y1 || y0); y++) work.push(
     `${y}_Topps`, `${y}_Topps_Update`, `${y}_Topps_Chrome`, `${y}_Topps_Chrome_Update`,
     `${y}_Bowman`, `${y}_Bowman_Chrome`, `${y}_Bowman_Draft`, `${y}_Topps_Heritage`, `${y}_Panini_Prizm`,
   );
 
-  console.log(`[bcp-ladders] ${work.length} pages  years=${YEARS}\nout: ${OUT_DIR}\n`);
+  console.log(`[bcp-ladders] ${work.length} pages  years=${years}  sport=${sport}\nout: ${outDir}\n`);
   let pages = 0, staged = 0, rows = 0, noLadder = 0, noCards = 0, unreachable = 0;
 
   for (const title of work) {
@@ -996,7 +1067,9 @@ async function main() {
     const ladderScopes = scopes.filter((s) => s.rungs.length);
     if (!ladderScopes.length) { noLadder++; console.log(`  ${title}: base ok (${cards.length}) but 0 rungs — nothing new to add`); continue; }
 
-    const productKey = (sk) => `${year}-${sk}-baseball`;
+    // The sport is part of the product key, so it is part of the IDENTITY of
+    // every file staged here -- not decoration. It comes from the run input.
+    const productKey = (sk) => `${year}-${sk}-${sport}`;
     let pageRows = 0;
     const perProduct = [];
     for (const sc of scopes) {
@@ -1079,9 +1152,9 @@ async function main() {
         ? "--" + sc.title.toLowerCase().replace(/[^a-z0-9]+/g, "-") : "");
       if (sc.refused) for (const r of sc.refused) console.log(`   scope "${sc.title}": product move REFUSED by the vocabulary (${r.qualifier}) — ${r.reason}
      rows stay under ${sc.setKey} with prefix ${sc.prefix ?? "(paper)"}; this is a ruling for Drew, not a scraper decision`);
-      fs.writeFileSync(path.join(OUT_DIR, `${key}.csv`), lines.join("\n") + "\n");
-      fs.writeFileSync(path.join(OUT_DIR, `${key}.manifest.json`), JSON.stringify({
-        year, sport: "baseball", setKey: sc.setKey,
+      fs.writeFileSync(path.join(outDir, `${key}.csv`), lines.join("\n") + "\n");
+      fs.writeFileSync(path.join(outDir, `${key}.manifest.json`), JSON.stringify({
+        year, sport, setKey: sc.setKey,
         setName: `${year} ${setName}${sc.isOwnProduct ? " " + sc.title : ""}`,
         sourceUrl: url, scope: sc.title, scopeOfPage: setName,
         cardNumberPrefix: sc.prefix, prefixDerivedFrom: sc.prefixVia,
@@ -1112,7 +1185,7 @@ async function main() {
 // (leadingCardNumber / foldRoster / foldName): the number-prefix defences the
 // scrapeBcpLaddersCardLineGuard pins drive directly.
 module.exports = {
-  main,
+  main, normalizeSport,
   parseCards, parseLadder, parseScopedLadders, section,
   splitScopes, derivePrefix, prefixesFromImages, prefixFromProse,
   isCardListScope, isCardLine, rungNameInScope, cleanScrapedPlayer,

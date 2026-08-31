@@ -28,6 +28,7 @@
  *   RUN_MINUTES=140
  *   PHASES=beckett,insider,bcp    which sources to acquire (default both)
  *   SPORT=baseball            scope the Beckett archive
+ *   BCP_SPORT=baseball        the sport bcp pages are scraped AS (default SPORT)
  *   PAGES=29                  Beckett archive depth
  *   WORKDIR                   where to stage (default: OS temp)
  */
@@ -45,6 +46,11 @@ const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === 
 // configured-off through every relaunch while the log said nothing.
 const PHASES = String(process.env.PHASES || "beckett,insider,bcp,tcgdexja,clc").split(",").map((s) => s.trim()).filter(Boolean);
 const SPORT = process.env.SPORT || "baseball";
+// The sport the bcp pages are scraped AS. Defaults to the run's SPORT so a
+// single-sport dispatch stays coherent end to end, and is separately
+// overridable because BCP_TITLES can point at pages from a different sport
+// than the Beckett archive this run is walking.
+const BCP_SPORT = process.env.BCP_SPORT || SPORT;
 const PAGES = process.env.PAGES || "29";
 const SLOT = Number(process.env.SLOT ?? 0);
 const SLOTS = Number(process.env.SLOTS ?? 1);
@@ -116,7 +122,14 @@ function run(script, args, env) {
       // and BCP_TITLES inputs widen the scrape to the products the old bcp
       // scrape exploded (2005-2015 Topps / Heritage / A&G / Gypsy Queen, Donruss,
       // Score, Upper Deck ...). Default stays the flagship 2016-2026 window.
-      const bcpArgs = [`--years=${process.env.YEARS || "2016-2026"}`, `--outDir=${bcpDir}`, "--delayMs=800"];
+      // CF-THE-SPORT-IS-AN-INPUT-NOT-A-CONSTANT (2026-08-31). The scraper used
+      // to write "baseball" into the product key and the manifest as a
+      // literal. BCP_TITLES takes arbitrary wiki page titles, so a football
+      // page dispatched through here minted football cards into a baseball
+      // identity. SPORT is the acquisition input this job already carries for
+      // Beckett; the bcp phase now states it too, explicitly, rather than
+      // letting a default downstream decide.
+      const bcpArgs = [`--years=${process.env.YEARS || "2016-2026"}`, `--outDir=${bcpDir}`, "--delayMs=800", `--sport=${BCP_SPORT}`];
       if (process.env.BCP_TITLES) bcpArgs.push(`--titles=${process.env.BCP_TITLES}`);
       run("scrape-bcp-ladders.cjs", bcpArgs);
       done.push("bcp-acquired");

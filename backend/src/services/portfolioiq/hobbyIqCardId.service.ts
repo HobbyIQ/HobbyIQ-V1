@@ -488,9 +488,17 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     // Donruss Optic sat on panini-donruss. Optic is chrome stock with its own
     // checklist and its own prices; pooling it with paper Donruss moves both.
     // Largest single collapse in the CF-COLLAPSED-SETKEY-AUDIT worklist.
-    [/(?:panini-)?donruss-optic/, "panini-optic"],
+    // D31, Drew 2026-08-31: the product is donruss-optic -- ONE product, the
+    // key the checklists name. panini-optic was the minted spelling and the
+    // checklists never used it: 142,352 un-graded catalog rows and 344,978
+    // pool rows carry a :panini-optic: id stem against ZERO pool rows on
+    // :donruss-optic:, while the checklist rows all sit on donruss-optic
+    // (FB2023 16,055 / FB2024 15,988 / FB2025 19,466 / BB2024 30,998).
+    // Both spellings mint the one key from here; rename-setkey-to-product
+    // moves the stored rows to it.
+    [/(?:panini-)?donruss-optic/, "donruss-optic"],
     [/panini-donruss/, "panini-donruss"],
-    [/panini-optic/, "panini-optic"],
+    [/panini-optic/, "donruss-optic"],
     [/panini-contenders/, "panini-contenders"],
     [/panini-immaculate/, "panini-immaculate"],
     [/panini-flawless/, "panini-flawless"],
@@ -703,7 +711,7 @@ function bareAliasPatterns(): Array<[RegExp, string]> {
     [/(^|-)prizm(-|$)/, "panini-prizm"],
     [/(^|-)mosaic(-|$)/, "panini-mosaic"],
     [/(^|-)donruss(-|$)/, "panini-donruss"],
-    [/(^|-)optic(-|$)/, "panini-optic"],
+    [/(^|-)optic(-|$)/, "donruss-optic"],
     [/(^|-)contenders(-|$)/, "panini-contenders"],
     [/(^|-)immaculate(-|$)/, "panini-immaculate"],
     [/(^|-)flawless(-|$)/, "panini-flawless"],
@@ -951,6 +959,21 @@ export function cardNumberInClause(raw: string | null | undefined, prefix = "@n"
   return { sql: params.map((p) => p.name).join(", "), params };
 }
 
+/**
+ * The head-nouns a checklist pluralizes when it uses a parallel as a SECTION
+ * HEADING ("Refractors", "Gold Refractors", "Printing Plates"). Matched only
+ * as the FINAL word of a slug, so a colour/finish prefix is preserved
+ * ("gold-refractors" → "gold-refractors" minus the s → "gold-refractor") and
+ * a name that merely contains one is untouched.
+ *
+ * Closed on purpose. Every entry is a finish/format word that names HOW a card
+ * is printed; none is a standalone parallel name whose singular is a different
+ * card. Adding a word here merges two pools, so it is a vocabulary decision:
+ * check data/checklist-parallel-names.json for a singular twin first.
+ */
+const PLURAL_PARALLEL_HEAD =
+  /(^|-)(refractor|x-fractor|xfractor|fractor|superfractor|prizm|plate|printing-plate|parallel|mini|jumbo|wave|shimmer|holo|foil|sparkle|pulsar|mojo|insert|autograph|relic|patch|die-cut|short-print|printing-plate)s$/;
+
 /** Normalize parallel to a canonical slug. Caller MUST pass the
  *  specific variant (not lossy vendor labels like "Refractor" for a
  *  Gold Refractor). Base/Base Refractor/no-parallel all normalize to
@@ -1001,6 +1024,24 @@ export function normalizeParallel(parallel: string | null | undefined): string {
   // color distinction. Bare "Mega" alone is NOT collapsed here —
   // too ambiguous (could be Bowman Mega Box product context).
   s = s.replace(/(^|-)mega-refractor($|-)/g, "$1mojo-refractor$2");
+  // CF-A-LADDER-HEADING-IS-PLURAL (2026-08-31). A checklist SECTION heading is
+  // written plural because it heads a list of cards -- "Refractors", "Gold
+  // Refractors", "Printing Plates" -- while the parallel ONE card carries is
+  // singular. Both spellings name the same physical parallel, so they must
+  // reach one slug or the pool splits: 1993 Finest's "Refractors" heading
+  // slugged `refractors` and would have stranded its cards beside the existing
+  // 705-row `refractor` pool.
+  //
+  // Measured over data/checklist-parallel-names.json (36,699 checklist-sourced
+  // names, 20,309 distinct): 584 end in a bare -s. Only the ones whose LAST
+  // word is a parallel head-noun are safe to fold, so this is a CLOSED
+  // vocabulary, not a trailing-s strip. The corpus says why a general rule
+  // would be wrong -- "Canvas" is not a plural of "Canva" (both spellings are
+  // in there, 6,957 vs 1,000), and "Stars" (1,944), "Rockets" (1,900),
+  // "Crystals", "Wedges", "Spokes", "Fireworks", "Stars & Stripes" and
+  // "Hieroglyphs" are all parallel NAMES whose singular is a different card.
+  // Those keep their s. Only the head-noun list below folds.
+  s = s.replace(PLURAL_PARALLEL_HEAD, (_m, lead: string, head: string) => lead + head);
   if (isVariationText) return normalizeVariationSlug(s);
   if (s === "" || s === "base" || s === "none" || s === "no-parallel") {
     return "base";

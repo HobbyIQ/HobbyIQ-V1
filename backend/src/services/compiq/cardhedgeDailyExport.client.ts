@@ -223,10 +223,53 @@ export function coerceRow(record: Record<string, string>): CHDailySaleRow {
     card_set: String(record.card_set ?? "").trim(),
     card_set_type: String(record.card_set_type ?? "").trim(),
     variant: String(record.variant ?? "").trim(),
-    year: toInt(record.year),
+    year: reconcileYear(toInt(record.year), String(record.card_set ?? "")),
     created_at: String(record.created_at ?? "").trim(),
     updated_at: String(record.updated_at ?? "").trim(),
   };
+}
+
+/**
+ * CF-A-THREE-DIGIT-YEAR-IS-A-TRUNCATED-ONE (2026-08-31).
+ *
+ * 2,980 sold_comps rows (and the 1,040 ch_daily_sales rows behind them) carry
+ * a THREE-DIGIT cardYear: 201, 197, 198, 202, 199, 200. Every one is the real
+ * year with its last digit gone -- "2016 Panini Donruss Football" filed under
+ * year 201, "1978 Kellogg's 3-D Super Stars Baseball" under 197.
+ *
+ * WHERE IT COMES FROM, and where it does not. The obvious suspect was this
+ * file: a shifted CSV column, or toInt eating a digit. It is neither. toInt is
+ * faithful (parseInt("2016") is 2016), and on every affected row EVERY OTHER
+ * FIELD is intact -- player, number, card_set, grade, grader, group, the
+ * timestamps -- which is not what a column shift looks like. The truncated
+ * value arrives that way from the vendor, consistently per card_id: measured
+ * 2026-08-31, 146 distinct card_ids, and not one of them has both a truncated
+ * and a full-year row. So this is an upstream defect we cannot fix at source
+ * and must not silently import.
+ *
+ * WHY card_set IS THE AUTHORITY. The set name is a STRING the vendor does not
+ * mangle, and it names the year: on all 1,040 affected rows the stored year is
+ * exactly a prefix of the year card_set states, with zero disagreements. That
+ * makes the repair a reconciliation against evidence rather than a guess.
+ *
+ * WHAT IT REFUSES TO DO. It corrects ONLY the exact signature of this defect:
+ * a 3-digit year that is a strict prefix of a 4-digit year the set name
+ * states. A 4-digit year is returned untouched even when card_set disagrees --
+ * that is a DIFFERENT question (which of two sources is right) and answering
+ * it here would let a set-name typo overwrite good data. A year with no
+ * recoverable evidence stays as it is and is visible to the audit rather than
+ * being defaulted to something plausible.
+ */
+export function reconcileYear(year: number, cardSet: string): number {
+  // Only the truncation signature. Anything else is left exactly as found.
+  if (!Number.isFinite(year) || year < 100 || year > 999) return year;
+  const stated = cardSet.match(/\b(1[89]\d{2}|20\d{2})\b/);
+  if (!stated) return year;
+  const trueYear = Number(stated[1]);
+  // The stored value must be the STATED year with its last digit dropped.
+  // Without this the guard would rewrite any 3-digit year to whatever the set
+  // name happened to mention.
+  return String(trueYear).startsWith(String(year)) ? trueYear : year;
 }
 
 function toNumber(v: unknown): number {
