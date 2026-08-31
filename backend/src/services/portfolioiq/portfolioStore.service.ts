@@ -21,6 +21,15 @@ import { resolvePlayer } from "../mlb/playerResolver.service.js";
 import { deleteBlobByUrl } from "../photoStorage/photoStorage.service.js";
 import { resolveCardsightGradeId } from "../cardsight/cardsightGradesTaxonomy.js";
 import { fillDerivedSlugFromCatalog } from "./holdingSlug.service.js";
+import {
+  type DeferredOp,
+  deferredOpsFor,
+  markPending,
+  readPending,
+  clearOps,
+  bumpAttempts,
+  MAX_ATTEMPTS,
+} from "./holdingSaveDeferredWork.js";
 // CF-ONE-VALUATION-PATH (D17, 2026-08-30): the persist site prices the exact
 // pool through the ONE valuation entry (holdingValuation → valueIdentity).
 import { valueHoldingThroughOneEntry } from "./holdingValuation.js";
@@ -6234,32 +6243,29 @@ export async function updateHolding(req: Request, res: Response) {
   // Gate on the engine input, not on a "was it a photo?" test: any patch that
   // leaves every computeEstimate input identical is equally safe to skip, and
   // identity / grade edits still reprice exactly as before.
-  if (estimateInputChanged(previous, next)) {
-    try {
-      await autoPriceHolding(doc, doc.holdings[id], previous, "update", auth.userId);
-    } catch {
-      evaluateHoldingAlerts(doc, previous, next);
-    }
-  } else {
-    // autoPriceHolding calls evaluateHoldingAlerts on its way out, so the skip
-    // path must call it directly — otherwise skipping the reprice would
-    // silently skip alert evaluation too.
-    evaluateHoldingAlerts(doc, previous, doc.holdings[id]!);
-  }
+  // CF-CARD-SAVE-FAST (Drew, 2026-08-31: "saving edits on a card is SLOW").
+  //
+  // The reprice and the comp emit used to run HERE, before writeUserDoc and
+  // before the response. Both are real work that must still happen, and
+  // neither can change what the user just typed — so they move after the
+  // response instead of being dropped. See holdingSaveDeferredWork.ts for the
+  // durability argument; the short version is that the marker is persisted by
+  // the SAME write that persists the edit, so a crash leaves a replayable debt
+  // rather than silently losing the work.
+  //
+  // The gate itself is unchanged: estimateInputChanged still decides whether a
+  // reprice is owed at all (CF-PHOTO-PATCH-LATENCY). This only changes WHEN an
+  // owed reprice runs, never whether one is owed.
+  const repriceNeeded = estimateInputChanged(previous, next);
+  const deferred = deferredOpsFor(doc.holdings[id]!, repriceNeeded);
+  markPending(doc.holdings[id]!, deferred);
 
-  // CF-USER-EBAY-PURCHASE-AUTO-COMP (Drew, 2026-08-08). Fire on update too:
-  // user may add / correct purchase details after the initial add. Dedup
-  // key `holding::<id>` means re-emissions upsert the same doc — no dup
-  // comps from repeated edits.
-  await emitUserEbayPurchaseComp(doc.holdings[id], auth.userId, doc).catch((err) => {
-    console.warn(JSON.stringify({
-      event: "user_ebay_purchase_comp_error",
-      source: "portfolioStore.updateHolding",
-      userId: auth.userId,
-      holdingId: id,
-      error: (err as Error)?.message ?? String(err),
-    }));
-  });
+  // Alerts stay synchronous. They are pure in-memory comparison of previous vs
+  // next — no Cosmos — and they belong to the doc this write persists.
+  // autoPriceHolding used to call this on its way out; now that the reprice is
+  // deferred, the request path must call it directly for BOTH branches, or
+  // deferring the reprice would silently defer alert evaluation with it.
+  evaluateHoldingAlerts(doc, previous, doc.holdings[id]!);
 
   await writeUserDoc(auth.userId, doc);
 
@@ -6283,6 +6289,124 @@ export async function updateHolding(req: Request, res: Response) {
   // never fired. Legacy {message, id} still present for existing consumers.
   const holdingWire = composeHoldingWireShape(doc.holdings[id]);
   res.json({ message: "Holding updated", id, holding: holdingWire, entry: { holding: holdingWire } });
+
+  // CF-CARD-SAVE-FAST: the user's Save has returned. Everything below is the
+  // deferred lane — it re-reads the doc, so it never writes through the stale
+  // copy this request held, and it clears the marker only on success.
+  if (deferred.length > 0) {
+    void runDeferredSaveWork(auth.userId, id, deferred, "update");
+  }
+}
+
+/**
+ * CF-CARD-SAVE-FAST. Run the work a save deferred, after the response.
+ *
+ * Re-reads the user doc rather than closing over the request's copy: between
+ * the response and this running, another write may have landed, and repricing
+ * into a stale doc would resurrect the overwritten fields. Re-reading makes
+ * this a read-modify-write on current state, which is also what makes replay
+ * from the sweep safe.
+ *
+ * Never throws — it runs unawaited, so an escaping rejection would be an
+ * unhandled rejection. Failure leaves the marker in place for the sweep.
+ */
+export async function runDeferredSaveWork(
+  userId: string,
+  holdingId: string,
+  ops: DeferredOp[],
+  source: string,
+): Promise<void> {
+  const started = Date.now();
+  const done: DeferredOp[] = [];
+  try {
+    const doc = await readUserDoc(userId);
+    const key = findHoldingKey(doc, holdingId);
+    if (!key) return;
+    const holding = doc.holdings[key];
+    if (!holding) return;
+
+    if (ops.includes("reprice")) {
+      // previous === undefined: this is a recompute of current state, not a
+      // transition, and alerts were already evaluated in the request path.
+      await autoPriceHolding(doc, doc.holdings[key]!, undefined, source, userId);
+      done.push("reprice");
+    }
+    if (ops.includes("comp-emit")) {
+      await emitUserEbayPurchaseComp(doc.holdings[key]!, userId, doc);
+      done.push("comp-emit");
+    }
+
+    clearOps(doc.holdings[key]!, done);
+    await writeUserDoc(userId, doc);
+    console.log(JSON.stringify({
+      event: "deferred_save_work_complete",
+      source: `portfolioStore.${source}`,
+      userId,
+      holdingId: key,
+      ops,
+      done,
+      ms: Date.now() - started,
+    }));
+  } catch (err) {
+    // The marker stays set — reconcileDeferredSaveWork will pick it up.
+    console.warn(JSON.stringify({
+      event: "deferred_save_work_error",
+      source: `portfolioStore.${source}`,
+      userId,
+      holdingId,
+      ops,
+      done,
+      ms: Date.now() - started,
+      error: (err as Error)?.message ?? String(err),
+    }));
+  }
+}
+
+/**
+ * CF-CARD-SAVE-FAST. The reconcile half of the at-least-once contract.
+ *
+ * Walks one user's holdings for markers left behind by a save whose deferred
+ * lane never finished — a crashed process, a Cosmos blip, an App Service
+ * recycle between the response and the work. Every deferred op is idempotent,
+ * so re-running one that partially succeeded converges rather than duplicating:
+ * the comp upserts on the fixed `holding::<id>` key and the reprice recomputes
+ * from current state.
+ *
+ * Returns what it did so a caller (script or scheduled job) can report it.
+ */
+export async function reconcileDeferredSaveWork(
+  userId: string,
+): Promise<{ scanned: number; replayed: number; exhausted: string[] }> {
+  const doc = await readUserDoc(userId);
+  // CF-HOLDINGS-IS-A-MAP: walk the map's values, never a JOIN over an object.
+  const entries = Object.entries(doc.holdings ?? {});
+  let replayed = 0;
+  const exhausted: string[] = [];
+
+  for (const [key, holding] of entries) {
+    const pending = readPending(holding as PortfolioHolding);
+    if (!pending) continue;
+    if (pending.attempts >= MAX_ATTEMPTS) {
+      exhausted.push(key);
+      continue;
+    }
+    // Count the attempt BEFORE running it, and persist that count, so a run
+    // that dies mid-work still burns an attempt and cannot spin forever.
+    bumpAttempts(holding as PortfolioHolding);
+    await writeUserDoc(userId, doc);
+    await runDeferredSaveWork(userId, key, pending.ops, "reconcile");
+    replayed += 1;
+  }
+
+  console.log(JSON.stringify({
+    event: "deferred_save_work_reconciled",
+    source: "portfolioStore.reconcileDeferredSaveWork",
+    userId,
+    scanned: entries.length,
+    replayed,
+    exhausted,
+  }));
+  return { scanned: entries.length, replayed, exhausted };
 }
 
 /**
