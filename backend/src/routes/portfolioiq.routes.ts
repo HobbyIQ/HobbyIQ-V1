@@ -1349,7 +1349,12 @@ router.post(
 );
 
 // CF-PAYMENTS-A: batch reprice is a prediction-class operation (collector+).
+// CF-PORTFOLIO-REFRESH-ASYNC (2026-08-31): this now DISPATCHES and returns
+// 202 immediately (it used to block ~68s on the full valuation chain — see
+// runBatchReprice). Clients poll /reprice/status and re-read GET /portfolio/.
 router.post("/reprice/batch", requireEntitlement("predictions"), portfolio.runBatchReprice);
+// Progress of the dispatched run. Same entitlement as the dispatch itself.
+router.get("/reprice/status", requireEntitlement("predictions"), portfolio.getBatchRepriceStatus);
 
 // CF-SOCIAL-SURFACES (Drew, 2026-07-17): "I Called It" auto-flex.
 // Returns detected flex-worthy moments — purchase_appreciated (bought

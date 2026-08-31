@@ -108,6 +108,30 @@ struct BatchRepriceResponse: Codable {
     let throttled: Bool?
     let freshSkipped: Int?
     let examined: Int?
+    // CF-PORTFOLIO-REFRESH-ASYNC (2026-08-31): POST /reprice/batch now
+    // answers 202 the moment the run is dispatched instead of pricing every
+    // holding first (one measured request cost 5,657 Cosmos calls / 68.3s and
+    // the client aborted before it finished). On that response the count
+    // fields above are absent and these describe the dispatch instead; poll
+    // GET /api/portfolio/reprice/status for the finished counts.
+    let accepted: Bool?
+    let status: String?
+    let alreadyRunning: Bool?
+    let startedAt: String?
+    /// True on dispatch: on-screen values are the last persisted ones until
+    /// the background run lands. Surface this rather than implying "now".
+    let stale: Bool?
+}
+
+/// CF-PORTFOLIO-REFRESH-ASYNC (2026-08-31): GET /api/portfolio/reprice/status
+struct RepriceStatusResponse: Codable {
+    /// "idle" | "running" | "done" | "error"
+    let status: String?
+    let running: Bool?
+    let startedAt: String?
+    let finishedAt: String?
+    let result: BatchRepriceResponse?
+    let error: String?
 }
 
 struct BatchRepriceGates: Codable {

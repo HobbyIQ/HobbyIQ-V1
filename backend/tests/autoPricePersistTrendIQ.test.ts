@@ -6,6 +6,7 @@
 
 import { describe, it, expect, beforeEach, beforeAll, afterEach, vi } from "vitest";
 import request from "supertest";
+import * as repriceJobs from "../src/services/portfolioiq/repriceJobTracker.js";
 import { readUserDoc } from "../src/services/portfolioiq/portfolioStore.service.js";
 
 process.env.COMPIQ_CORPUS_DISABLED = "1";
@@ -295,14 +296,20 @@ describe("CF-AUTOPRICE-PERSIST-TRENDIQ — repriceHoldingsForUser (site 2, via /
       .post("/api/portfolio/reprice/batch")
       .set("x-session-id", sessionId)
       .send({});
-    expect(repriceRes.status).toBe(200);
+    // CF-PORTFOLIO-REFRESH-ASYNC (2026-08-31): dispatch answers 202; the
+    // per-holding updates land on the job record once the run settles.
+    expect(repriceRes.status).toBe(202);
+    await repriceJobs.__awaitSettledForTests(userId, 20_000);
+    const repriceJob = repriceJobs.getJob(userId);
+    expect(repriceJob?.status, `reprice run errored: ${repriceJob?.error}`).toBe("done");
+    const repriceResult = repriceJob!.result!;
     // Sanity: the reprice must have actually examined+repriced our holding.
     // If it skipped (throttle, fresh, confidence-gate), the test below would
     // fail with movementDirection=null because the second mock was unused.
-    const targetUpdate = (repriceRes.body.updates ?? []).find(
+    const targetUpdate = (repriceResult.updates ?? []).find(
       (u: any) => u.id === holdingId,
     );
-    expect(targetUpdate, `reprice did not touch holding ${holdingId}; full body: ${JSON.stringify(repriceRes.body)}`).toBeDefined();
+    expect(targetUpdate, `reprice did not touch holding ${holdingId}; full result: ${JSON.stringify(repriceResult)}`).toBeDefined();
     expect(targetUpdate.status, `reprice status for ${holdingId}: ${JSON.stringify(targetUpdate)}`).toBe("repriced");
 
     const stored = await getHoldingFromStore(userId, holdingId);

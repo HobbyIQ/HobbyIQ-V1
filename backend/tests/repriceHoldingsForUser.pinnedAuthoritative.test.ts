@@ -20,6 +20,32 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from "vitest";
 import request from "supertest";
 import { readUserDoc, writeUserDoc } from "../src/services/portfolioiq/portfolioStore.service.js";
+import * as repriceJobs from "../src/services/portfolioiq/repriceJobTracker.js";
+
+// CF-PORTFOLIO-REFRESH-ASYNC (2026-08-31): POST /reprice/batch now DISPATCHES
+// the run and answers 202 immediately, instead of pricing every holding before
+// replying (one measured request cost 5,657 Cosmos calls / 68.3s and the client
+// aborted before it finished). What this file asserts is unchanged — that the
+// reprice site hands cardId + pinnedAuthoritative to computeEstimate — but the
+// work now lands AFTER the response, so dispatch and then wait for the tracked
+// run to settle before inspecting the captured calls.
+// Returns the settled run's BatchRepriceResult — the per-holding `updates`
+// that used to come back in the POST body now live on the job record.
+async function repriceAndSettle(sessionId: string, userId: string) {
+  const res = await request(app)
+    .post("/api/portfolio/reprice/batch")
+    .set("x-session-id", sessionId)
+    .send({});
+  expect(res.status).toBe(202);
+  expect(res.body.accepted).toBe(true);
+  // On dispatch the caller is explicitly told the on-screen values are the
+  // last persisted ones, not fresh output.
+  expect(res.body.stale).toBe(true);
+  await repriceJobs.__awaitSettledForTests(userId, 20_000);
+  const job = repriceJobs.getJob(userId);
+  expect(job?.status, `reprice run errored: ${job?.error}`).toBe("done");
+  return job!.result!;
+}
 
 process.env.COMPIQ_CORPUS_DISABLED = "1";
 // Same freshness-gate / throttle override as autoPricePersistTrendIQ — the
@@ -137,11 +163,7 @@ describe("repriceHoldingsForUser — pinned-authoritative wiring (CF-REPRICE-PIN
     const mockFn = compiqEstimateService.computeEstimate as unknown as ReturnType<typeof vi.fn>;
     mockFn.mockClear();
 
-    const r = await request(app)
-      .post("/api/portfolio/reprice/batch")
-      .set("x-session-id", sessionId)
-      .send({});
-    expect(r.status).toBe(200);
+    await repriceAndSettle(sessionId, userId);
 
     // Sanity: the reprice loop actually called computeEstimate for our holding.
     expect(mockFn).toHaveBeenCalled();
@@ -185,11 +207,7 @@ describe("repriceHoldingsForUser — pinned-authoritative wiring (CF-REPRICE-PIN
     const mockFn = compiqEstimateService.computeEstimate as unknown as ReturnType<typeof vi.fn>;
     mockFn.mockClear();
 
-    const r = await request(app)
-      .post("/api/portfolio/reprice/batch")
-      .set("x-session-id", sessionId)
-      .send({});
-    expect(r.status).toBe(200);
+    await repriceAndSettle(sessionId, userId);
 
     const calls = mockFn.mock.calls.filter(
       (call: any[]) => call[1]?.holdingId === holdingId,
@@ -268,14 +286,10 @@ describe("repriceHoldingsForUser — pinned-authoritative wiring (CF-REPRICE-PIN
       signalsLastUpdated: null,
     }));
 
-    const r = await request(app)
-      .post("/api/portfolio/reprice/batch")
-      .set("x-session-id", sessionId)
-      .send({});
-    expect(r.status).toBe(200);
+    const r = await repriceAndSettle(sessionId, userId);
 
     // Sanity: the holding was actually walked AND took the skip branch.
-    const targetUpdate = (r.body.updates ?? []).find(
+    const targetUpdate = (r.updates ?? []).find(
       (u: any) => u.id === holdingId,
     );
     expect(targetUpdate, `reprice did not touch ${holdingId}`).toBeDefined();

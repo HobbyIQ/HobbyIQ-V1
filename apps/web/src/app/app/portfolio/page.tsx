@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
-import { fetchPortfolio, holdingDisplayValue, refreshAllHoldings, exportPortfolio, valuationStatusOf, fmvPerUnitOf, syncEbaySold, type PortfolioResponse, type PortfolioHolding } from "@/lib/api";
+import { fetchPortfolio, holdingDisplayValue, refreshAllHoldings, getRepriceStatus, exportPortfolio, valuationStatusOf, fmvPerUnitOf, syncEbaySold, type PortfolioResponse, type PortfolioHolding } from "@/lib/api";
 import { PortfolioDashboard } from "@/components/PortfolioDashboard";
 import { formatUSD, formatUSDCompact, formatPct, formatCardTitle, formatGrade } from "@/lib/format";
 import { PortfolioValueChart } from "@/components/PortfolioValueChart";
@@ -220,15 +220,47 @@ function PortfolioPageBody() {
               setRefreshing(true);
               setRefreshBanner(null);
               try {
+                // CF-PORTFOLIO-REFRESH-ASYNC (2026-08-31): the server now
+                // acknowledges the dispatch immediately instead of pricing
+                // every holding before replying. Poll the run's status, then
+                // re-read the portfolio once it lands. Values stay on screen
+                // and readable the whole time — they are simply the last
+                // persisted ones, which the banner says out loud.
                 const res = await refreshAllHoldings();
                 if (res.throttled) {
                   setRefreshBanner("Refresh cooldown active — try again in a minute.");
-                } else if (res.reason && res.repriced === 0) {
-                  setRefreshBanner(res.reason);
                 } else {
                   setRefreshBanner(
-                    `Refreshed ${res.repriced} of ${res.requested} · ${res.freshSkipped ?? 0} already fresh`,
+                    res.alreadyRunning
+                      ? "Refresh already running — showing last saved prices until it lands."
+                      : "Refreshing in the background — showing last saved prices until it lands.",
                   );
+                  // Poll until the run settles, then pull the fresh values
+                  // from the (fast) portfolio read.
+                  const deadline = Date.now() + 5 * 60_000;
+                  for (;;) {
+                    await new Promise((r) => setTimeout(r, 3_000));
+                    if (Date.now() > deadline) {
+                      setRefreshBanner(
+                        "Refresh is taking longer than expected — prices will update on their own.",
+                      );
+                      break;
+                    }
+                    const st = await getRepriceStatus().catch(() => null);
+                    if (!st) continue;
+                    if (st.running || st.status === "running") continue;
+                    if (st.status === "error") {
+                      setRefreshBanner(st.error ?? "Refresh failed.");
+                      break;
+                    }
+                    const r = st.result;
+                    setRefreshBanner(
+                      r
+                        ? `Refreshed ${r.repriced} of ${r.requested} · ${r.freshSkipped ?? 0} already fresh`
+                        : "Refresh complete.",
+                    );
+                    break;
+                  }
                   const next = await fetchPortfolio().catch(() => null);
                   if (next) setData(next);
                 }

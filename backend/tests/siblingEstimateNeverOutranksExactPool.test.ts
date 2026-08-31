@@ -18,6 +18,7 @@
 // and the player, and labels tell the truth.
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from "vitest";
 import request from "supertest";
+import * as repriceJobs from "../src/services/portfolioiq/repriceJobTracker.js";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -464,10 +465,15 @@ describe("repriceHoldingsForUser — the fixture, end to end", () => {
     return holding.id;
   }
 
+  // CF-PORTFOLIO-REFRESH-ASYNC (2026-08-31): /reprice/batch dispatches and
+  // answers 202; the run's result lands on the job record afterwards.
   async function reprice(): Promise<any> {
     const r = await request(app).post("/api/portfolio/reprice/batch").set("x-session-id", session.sessionId).send({});
-    expect(r.status).toBe(200);
-    return r.body;
+    expect(r.status).toBe(202);
+    await repriceJobs.__awaitSettledForTests(session.userId, 20_000);
+    const job = repriceJobs.getJob(session.userId);
+    expect(job?.status, `reprice run errored: ${job?.error}`).toBe("done");
+    return job!.result!;
   }
 
   async function stored(id: string): Promise<any> {

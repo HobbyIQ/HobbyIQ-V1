@@ -559,6 +559,17 @@ export interface PortfolioResponse {
   userId: string;
   items: PortfolioHolding[];
   summary: PortfolioSummary;
+  // CF-PORTFOLIO-REFRESH-ASYNC (2026-08-31): these values are always the last
+  // persisted ones — this endpoint has never computed a price. Now that a
+  // reprice can be running while this is served, the payload says so rather
+  // than letting the UI present possibly-superseded numbers as current.
+  valuation?: {
+    /** A background reprice is working on this user's holdings right now. */
+    repricing: boolean;
+    /** lastUpdated of the stalest holding, ISO-8601; null if none recorded. */
+    oldestValuationAt: string | null;
+    oldestValuationAgeMs: number | null;
+  };
 }
 
 export async function fetchPortfolio(): Promise<PortfolioResponse> {
@@ -2443,17 +2454,51 @@ export interface BatchRepriceResult {
   }>;
 }
 
-export async function refreshAllHoldings(): Promise<BatchRepriceResult> {
-  // The server reprices up to PORTFOLIO_REPRICE_HTTP_MAX_HOLDINGS (50)
-  // holdings synchronously before responding — ~40s for a full batch, so
-  // the 30s request() default aborts mid-run while the server finishes
-  // into a dead socket. 180s covers the batch with headroom; the hard
-  // ceiling is the Azure front-end's ~230s response cut-off.
-  return await request<BatchRepriceResult>("/api/portfolio/reprice/batch", {
+// CF-PORTFOLIO-REFRESH-ASYNC (2026-08-31): the dispatch acknowledgement.
+// The server no longer computes before answering, so there is no result
+// summary to return here — only the fact that a run started.
+export interface RepriceDispatch {
+  accepted: boolean;
+  status: "running" | "throttled";
+  alreadyRunning?: boolean;
+  throttled?: boolean;
+  retryAfterMs?: number;
+  startedAt?: string | null;
+  /** Always true on dispatch: on-screen values are the last persisted ones. */
+  stale?: boolean;
+}
+
+export async function refreshAllHoldings(): Promise<RepriceDispatch> {
+  // The server used to reprice up to PORTFOLIO_REPRICE_HTTP_MAX_HOLDINGS (50)
+  // holdings synchronously before responding — one measured request issued
+  // 5,657 Cosmos calls / 68.3s of dependency time and never produced a
+  // completed request row, because this client aborted first. That is why
+  // this call had been widened to a 180s timeout.
+  //
+  // It now returns 202 as soon as the run is dispatched, so the default
+  // request() timeout is correct again. Read the new values back through
+  // fetchPortfolio() — that endpoint serves stored values in ~77ms — and
+  // use getRepriceStatus() to know when the run has landed.
+  return await request<RepriceDispatch>("/api/portfolio/reprice/batch", {
     method: "POST",
     body: JSON.stringify({}),
-    timeoutMs: 180_000,
   });
+}
+
+// GET /portfolio/reprice/status — progress of the dispatched run. Returns
+// the run's state, never a price; refreshed values come from the portfolio
+// read. Poll this while `running` is true, then re-fetch the portfolio.
+export interface RepriceStatus {
+  status: "idle" | "running" | "done" | "error";
+  running: boolean;
+  startedAt?: string;
+  finishedAt?: string | null;
+  result?: BatchRepriceResult | null;
+  error?: string | null;
+}
+
+export async function getRepriceStatus(): Promise<RepriceStatus> {
+  return await request<RepriceStatus>("/api/portfolio/reprice/status");
 }
 
 // GET /portfolio/export?format=csv|xlsx — server returns the file as an

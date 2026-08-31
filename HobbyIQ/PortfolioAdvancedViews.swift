@@ -784,8 +784,35 @@ struct BatchRepriceView: View {
         defer { isLoading = false }
 
         do {
-            let response = try await APIService.shared.runBatchReprice()
-            result = response
+            // CF-PORTFOLIO-REFRESH-ASYNC (Drew, 2026-08-31). The dispatch
+            // returns as soon as the run starts — it no longer carries the
+            // counts, because it no longer waits for the pricing work (one
+            // measured request cost 5,657 Cosmos calls / 68.3s and the client
+            // gave up first). Poll for the settled run, then use its result.
+            let dispatch = try await APIService.shared.runBatchReprice()
+            result = dispatch
+            if dispatch.throttled == true {
+                return
+            }
+
+            // Poll until the run settles. Values already on screen stay
+            // readable throughout — they are the last persisted ones.
+            let deadline = Date().addingTimeInterval(300)
+            var settled: BatchRepriceResponse? = nil
+            while Date() < deadline {
+                try? await Task.sleep(nanoseconds: 3_000_000_000)
+                if Task.isCancelled { return }
+                guard let status = try? await APIService.shared.batchRepriceStatus() else { continue }
+                if status.running == true || status.status == "running" { continue }
+                if status.status == "error" {
+                    self.error = status.error ?? "Refresh failed."
+                    return
+                }
+                settled = status.result
+                break
+            }
+            if let settled { result = settled }
+
             // CF-BATCH-REPRICE-VIEW-SYNC (Drew, 2026-07-30). The reprice
             // endpoint persists new FMVs on the backend but portfolio
             // views elsewhere in the app hold their own cached inventory
@@ -795,9 +822,7 @@ struct BatchRepriceView: View {
             // notification so MainAppView triggers portfolioVM.refresh(),
             // which re-fetches holdings and propagates fresh values to
             // Inventory, PortfolioIQ, and Dashboard tabs.
-            let throttled = response.throttled ?? false
-            let repriced = response.repriced ?? 0
-            if !throttled && repriced > 0 {
+            if (settled?.repriced ?? 0) > 0 {
                 NotificationCenter.default.post(name: .portfolioBatchRepriced, object: nil)
             }
         } catch {

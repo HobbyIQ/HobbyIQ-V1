@@ -1044,8 +1044,19 @@ struct APIService {
         try await post(path: "/api/portfolio/holdings/\(holdingId)/refresh", body: EmptyBody(), responseType: RefreshHoldingResponse.self)
     }
 
+    /// CF-PORTFOLIO-REFRESH-ASYNC (2026-08-31): returns as soon as the run is
+    /// dispatched (HTTP 202) — it no longer blocks on pricing every holding.
+    /// The response carries `accepted`/`status`/`stale`, not the final counts;
+    /// poll `batchRepriceStatus()` for those and re-read the portfolio (which
+    /// serves stored values fast) to show the new numbers.
     func runBatchReprice() async throws -> BatchRepriceResponse {
         try await post(path: "/api/portfolio/reprice/batch", body: EmptyBody(), responseType: BatchRepriceResponse.self)
+    }
+
+    /// Progress of the dispatched reprice. Returns the run's state, never a
+    /// price — refreshed values come from the portfolio read.
+    func batchRepriceStatus() async throws -> RepriceStatusResponse {
+        try await get(path: "/api/portfolio/reprice/status", responseType: RepriceStatusResponse.self)
     }
 
     func requestCardPhotoSAS(fileExtension: String = "jpg") async throws -> SASUploadResponse {
