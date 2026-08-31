@@ -178,6 +178,33 @@ describe("round-2 parser regressions", () => {
       }
     });
 
+    // ── ROUND 3 ──────────────────────────────────────────────────────────
+    //
+    // The "N more <card noun>" idiom bound the PRINT RUN's digits. \b matches
+    // between "/" and "499", so "…#12 Judge /499 MORE ROOKIES AVAILABLE" —
+    // cross-sell boilerplate on ONE numbered card — matched "499 MORE ROOKIES"
+    // and was filed as a lot, which the bare-refractor guard then wrote to
+    // Base. Round 2 pinned the un-numbered spelling of this exact boilerplate
+    // ("MORE ROOKIES AVAILABLE", no count in front); the numbered one was the
+    // shape no fixture covered, which is the same lesson this file opens with.
+    //
+    // The sibling rule never had the defect: "and|+|plus" anchors the count to
+    // a conjunction, and a print run is not preceded by one.
+    it("a PRINT RUN is not the count in 'N more cards'", () => {
+      const t = "2024 Topps Chrome Refractor #12 Judge /499 MORE ROOKIES AVAILABLE";
+      expect(isMultiCardLot(t), t).toBe(false);
+      expect(par(t)).toBe("Refractor");
+    });
+
+    it("...and the genuine closing idiom is still a lot", () => {
+      // The other direction of the same narrowing: no slash, so nothing about
+      // this changes. A guard narrowed until its own population escapes is
+      // not a fix.
+      const t = "2024 Bowman Chrome Refractor Elly De La Cruz and 5 more cards";
+      expect(isMultiCardLot(t), t).toBe(true);
+      expect(par(t)).toBe("Base");
+    });
+
     it("a BARE-refractor lot yields no finish", () => {
       // The guard sits on the bare fallback, so these reach it and are refused.
       for (const t of [

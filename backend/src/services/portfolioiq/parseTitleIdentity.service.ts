@@ -371,7 +371,15 @@ const LOT_RE = new RegExp(
     // "and 5 more", "+ 3 more cards" — the closing lot idiom, never a bare
     // "more" (which is "MORE ROOKIES AVAILABLE" cross-sell boilerplate).
     String.raw`\b(?:and|\+|plus)\s*\d+\s+more\b`,
-    String.raw`\b\d+\s+more\s+${LOT_CARD_NOUN}\b`,
+    // "3 more cards" standing alone, with the same disqualifier the sibling
+    // above gets for free from its and/+/plus anchor: the count must not be a
+    // PRINT RUN. \b sits happily between "/" and "499", so "…#12 Judge /499
+    // MORE ROOKIES AVAILABLE" matched "499 MORE ROOKIES" and filed a numbered
+    // single as a lot -> Base. That title is cross-sell boilerplate attached to
+    // one /499 card, and it is the exact shape the lexicon was narrowed to
+    // stop. A slash before the digits means the number counts COPIES OF THIS
+    // CARD, never cards in the listing.
+    String.raw`(?<![/\d])\b\d+\s+more\s+${LOT_CARD_NOUN}\b`,
     // "complete set" — but a "set break single" is exactly one card.
     String.raw`\bcomplete\s+set\b(?!\s*break\b)`,
   ].join("|"),
