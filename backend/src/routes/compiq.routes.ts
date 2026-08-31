@@ -271,6 +271,34 @@ function autoProjectExtractYearFromSet(setStr: unknown): number | null {
  * (well-known market convention; no sweep data). LogoFractor 8× (single Hartman
  * observation p50=7 in the sweep, held at 8 pending more samples).
  */
+/** The tier `autoProjectVariantTier` returns when it could not read the
+ *  parallel at all. Safe as a numerator, never safe as a denominator —
+ *  see CF-UNKNOWN-TIER-IS-NOT-A-DENOMINATOR at the Layer 4 call site. */
+export const UNKNOWN_VARIANT_TIER = 1;
+
+/**
+ * CF-UNKNOWN-TIER-IS-NOT-A-DENOMINATOR (2026-08-31). True when
+ * `autoProjectVariantTier` actually CLASSIFIED this variant, false when its
+ * "unmatched → 1×" fallback fired (empty / absent / unrecognised parallel).
+ *
+ * The tier function collapses two very different facts onto the number 1:
+ * "this is a base card" and "we could not read this parallel". As a
+ * multiplier that conflation is harmless; as a divisor it silently turns a
+ * premium sibling's real sale into a junk-band price. Callers that build a
+ * RATIO must ask this first.
+ *
+ * A variant is classified when it is a non-empty string that either matches
+ * one of the tier rules (tier !== 1) or explicitly names the base card.
+ */
+export function isClassifiedVariantTier(variantStr: unknown): boolean {
+  if (typeof variantStr !== "string") return false;
+  const v = variantStr.trim().toLowerCase();
+  if (v.length === 0) return false;
+  if (autoProjectVariantTier(v) !== UNKNOWN_VARIANT_TIER) return true;
+  // Tier 1 is only a real reading when the variant SAYS base.
+  return /^(base|base set|no parallel|none)$/.test(v);
+}
+
 export function autoProjectVariantTier(variantStr: unknown): number {
   if (typeof variantStr !== "string" || variantStr.trim().length === 0) return 1;
   const v = variantStr.toLowerCase();
@@ -547,10 +575,51 @@ async function applyAutoProjectionFallbacks(
         // reasonably when the target is a color parallel (Blue Refractor,
         // Gold, Superfractor, etc.). When either variant is Base/unknown
         // the ratio collapses to 1× (safe fallback — same behavior as v1).
+        //
+        // CF-UNKNOWN-TIER-IS-NOT-A-DENOMINATOR (2026-08-31). "Unmatched → 1×"
+        // is a safe NUMERATOR and a catastrophic DENOMINATOR. Devin Taylor
+        // CPA-DT Black auto (holding 60a7cfcc): no catalog row exists for the
+        // black auto under either spelling, so cardIdentity.variant arrives
+        // empty, autoProjectVariantTier("") returns its unmatched 1, and a
+        // legitimate high-tier sibling anchor is DIVIDED by its own tier —
+        // $37-$96 sibling sales × (1/21) = $1.76-$2.86. That is the ~$3 the
+        // user saw on a card whose own ladder trades $15-$135.
+        //
+        // The ratio is only meaningful when BOTH sides were actually
+        // classified. An unmatched tier means "we could not read this
+        // parallel", not "this parallel is a base card", so the ladder
+        // distance is unknown and the rung must not price from it. The
+        // target is a premium parallel with an EMPTY exact pool; blank beats
+        // a fabricated number.
         const anchorTier = autoProjectVariantTier(winner.card.variant);
         const targetTier = autoProjectVariantTier(ciVariant);
+        const anchorClassified = isClassifiedVariantTier(winner.card.variant);
+        const targetClassified = isClassifiedVariantTier(ciVariant);
+        // A premium anchor scaled DOWN to an unread target is the inversion.
+        // Refuse it rather than publish the collapse.
+        if (!targetClassified && anchorTier > UNKNOWN_VARIANT_TIER) {
+          console.log(
+            JSON.stringify({
+              event: "price_sibling_auto_anchor_refused_unreadable_target_tier",
+              source: "compiq.routes",
+              originalQuery: query,
+              targetCardId: ciCardId,
+              targetNumber: ciNumber,
+              targetVariant: ciVariant,
+              anchorCardId: winner.card.card_id,
+              anchorVariant: winner.card.variant,
+              anchorTier,
+              anchorLatestSale: latestSale,
+              wouldHaveProjected:
+                Math.round(latestSale * trendFactor * (targetTier / anchorTier) * 100) / 100,
+              note:
+                "target parallel could not be classified, so the tier ratio would divide a premium anchor by its own tier — refusing to price; needs identity",
+            }),
+          );
+          return;
+        }
         const parallelMultiplier =
-          anchorTier > 0 ? targetTier / anchorTier : 1.0;
+          anchorTier > 0 && anchorClassified ? targetTier / anchorTier : 1.0;
         const projected = latestSale * trendFactor * parallelMultiplier;
         const low = projected * 0.6;
         const high = projected * 1.6;
@@ -631,6 +700,30 @@ async function applyAutoProjectionFallbacks(
         .filter((p) => Number.isFinite(p) && p > 0)
         .sort((a, b) => a - b);
       if (sorted.length >= 3) {
+        // CF-UNKNOWN-TIER-IS-NOT-A-DENOMINATOR (2026-08-31), Layer 2 half.
+        // This rung crosses BOTH boundaries at once: the anchor is a
+        // different cardNumber AND a non-auto base card, bridged by a flat
+        // hobby-consensus 40×/50× that carries no parallel term whatsoever.
+        // For a target whose parallel we could not even read, that product
+        // is not an estimate of anything — the CPA-DT Black auto would be
+        // priced identically to every other unread CPA-DT parallel. When
+        // the target names a parallel we cannot classify, refuse.
+        if (ciVariant !== null && !isClassifiedVariantTier(ciVariant)) {
+          console.log(
+            JSON.stringify({
+              event: "price_base_x_auto_projection_refused_unreadable_target_tier",
+              source: "compiq.routes",
+              originalQuery: query,
+              targetCardId: ciCardId,
+              targetNumber: ciNumber,
+              targetVariant: ciVariant,
+              anchorCardId: sameYearBase.card_id,
+              note:
+                "target names a parallel the tier map cannot classify; a flat auto premium off a non-auto base card carries no parallel term — refusing to price; needs identity",
+            }),
+          );
+          return;
+        }
         const median = sorted[Math.floor(sorted.length / 2)];
         const autoPremium = autoProjectMultiplierFor(ciNumber as string);
         const projected = median * autoPremium;
