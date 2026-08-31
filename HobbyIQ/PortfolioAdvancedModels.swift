@@ -108,6 +108,44 @@ struct BatchRepriceResponse: Codable {
     let throttled: Bool?
     let freshSkipped: Int?
     let examined: Int?
+    // CF-PORTFOLIO-REFRESH-ASYNC (2026-08-31): POST /reprice/batch now
+    // answers 202 the moment the run is dispatched instead of pricing every
+    // holding first (one measured request cost 5,657 Cosmos calls / 68.3s and
+    // the client aborted before it finished). On that response the count
+    // fields above are absent and these describe the dispatch instead; poll
+    // GET /api/portfolio/reprice/status for the finished counts.
+    let accepted: Bool?
+    let status: String?
+    let alreadyRunning: Bool?
+    /// Handle for the dispatched run. Pass it to `batchRepriceStatus(jobId:)`
+    /// so a poll that lands on the other serving instance can be answered
+    /// "unknown-here" instead of the ambiguous "idle".
+    let jobId: String?
+    let startedAt: String?
+    /// True on dispatch: on-screen values are the last persisted ones until
+    /// the background run lands. Surface this rather than implying "now".
+    let stale: Bool?
+}
+
+/// CF-PORTFOLIO-REFRESH-ASYNC (2026-08-31): GET /api/portfolio/reprice/status
+///
+/// Judged blocker, same date: the backend serves from 2 instances and the job
+/// map is per-process, so a poll can land on the worker that did NOT dispatch.
+/// That worker answers `unknown-here` — it has no view of the run, which is
+/// NOT the same as the run being finished. Branch on `settled`; never treat
+/// "status is not running" as completion.
+struct RepriceStatusResponse: Codable {
+    /// "idle" | "unknown-here" | "running" | "done" | "error"
+    let status: String?
+    let running: Bool?
+    /// True only when a worker actually observed the run reach done/error.
+    /// `idle` and `unknown-here` are explicitly not settled — keep polling.
+    let settled: Bool?
+    let jobId: String?
+    let startedAt: String?
+    let finishedAt: String?
+    let result: BatchRepriceResponse?
+    let error: String?
 }
 
 struct BatchRepriceGates: Codable {

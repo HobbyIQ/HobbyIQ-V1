@@ -1044,8 +1044,26 @@ struct APIService {
         try await post(path: "/api/portfolio/holdings/\(holdingId)/refresh", body: EmptyBody(), responseType: RefreshHoldingResponse.self)
     }
 
+    /// CF-PORTFOLIO-REFRESH-ASYNC (2026-08-31): returns as soon as the run is
+    /// dispatched (HTTP 202) — it no longer blocks on pricing every holding.
+    /// The response carries `accepted`/`status`/`stale`, not the final counts;
+    /// poll `batchRepriceStatus()` for those and re-read the portfolio (which
+    /// serves stored values fast) to show the new numbers.
     func runBatchReprice() async throws -> BatchRepriceResponse {
         try await post(path: "/api/portfolio/reprice/batch", body: EmptyBody(), responseType: BatchRepriceResponse.self)
+    }
+
+    /// Progress of the dispatched reprice. Returns the run's state, never a
+    /// price — refreshed values come from the portfolio read.
+    ///
+    /// Pass the `jobId` the dispatch returned. The backend serves from 2
+    /// instances and the job map is per-process, so this poll can land on the
+    /// worker that did not dispatch; naming the run lets that worker answer
+    /// `unknown-here` rather than the ambiguous `idle`. Treat only
+    /// `settled == true` as the end of the run.
+    func batchRepriceStatus(jobId: String? = nil) async throws -> RepriceStatusResponse {
+        let items = jobId.map { [URLQueryItem(name: "jobId", value: $0)] } ?? []
+        return try await get(path: "/api/portfolio/reprice/status", queryItems: items, responseType: RepriceStatusResponse.self)
     }
 
     func requestCardPhotoSAS(fileExtension: String = "jpg") async throws -> SASUploadResponse {

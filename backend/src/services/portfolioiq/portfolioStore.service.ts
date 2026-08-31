@@ -35,6 +35,9 @@ import {
 import { valueHoldingThroughOneEntry } from "./holdingValuation.js";
 import { isPriceFromOurPoolEnabled, priceHoldingFromOurPool } from "./priceFromOurPool.service.js";
 import { composeHoldingWireShape, composePortfolioListResponse } from "./responseAssembly.js";
+// CF-PORTFOLIO-REFRESH-ASYNC (2026-08-31): background-run tracker for the
+// dispatched batch reprice. Progress state only — never a price.
+import * as repriceJobs from "./repriceJobTracker.js";
 // CF-INVENTORY-CATALOG-IMAGE (2026-07-05): shared resolver produces the
 // SAME cropped URL /api/compiq/price-by-id emits on cardImageUrl. iOS
 // falls back to this behind the user's own uploaded photo.
@@ -5196,7 +5199,48 @@ export async function getPortfolioWithSummary(req: Request, res: Response) {
   // layer; explicit wire-shape per contract_freeze_v1 §1.3. summary still
   // reads off raw holdings (uses Phase A compute-on-read helpers).
   const items = composePortfolioListResponse(rawItems, catalogImageByCardId);
-  res.json({ success: true, userId: auth.userId, items, summary });
+  // CF-PORTFOLIO-REFRESH-ASYNC (2026-08-31): the refresh is now asynchronous,
+  // so this payload can legitimately be answered while a reprice is still in
+  // flight. Values here are ALWAYS the last persisted ones — this endpoint
+  // has never computed a price and still doesn't. Say so explicitly rather
+  // than let the client present possibly-superseded numbers as fresh:
+  // `valuation.repricing` is true while a run is working on this user's
+  // holdings, and `oldestValuationAt` is the age of the stalest row so the UI
+  // can show "as of …" instead of implying now.
+  const valuation = buildValuationFreshness(auth.userId, rawItems);
+  res.json({ success: true, userId: auth.userId, items, summary, valuation });
+}
+
+/**
+ * CF-PORTFOLIO-REFRESH-ASYNC (2026-08-31): freshness envelope for the
+ * portfolio read.
+ *
+ * Serving stored values fast is only safe if the client can tell the user
+ * what they're looking at. This reports (a) whether a reprice is running
+ * right now, and (b) how old the stalest holding's valuation is. It reads
+ * `lastUpdated`, the same field the reprice ordering uses.
+ */
+export function buildValuationFreshness(
+  userId: string,
+  holdings: PortfolioHolding[],
+  now = Date.now(),
+): {
+  repricing: boolean;
+  oldestValuationAt: string | null;
+  oldestValuationAgeMs: number | null;
+} {
+  let oldestMs: number | null = null;
+  for (const h of holdings) {
+    const lu = (h as any).lastUpdated;
+    const t = typeof lu === "string" ? Date.parse(lu) : typeof lu === "number" ? lu : NaN;
+    if (!Number.isFinite(t) || t <= 0) continue;
+    if (oldestMs === null || t < oldestMs) oldestMs = t;
+  }
+  return {
+    repricing: repriceJobs.isRunning(userId, now),
+    oldestValuationAt: oldestMs === null ? null : new Date(oldestMs).toISOString(),
+    oldestValuationAgeMs: oldestMs === null ? null : Math.max(0, now - oldestMs),
+  };
 }
 
 /**
@@ -9007,6 +9051,15 @@ export interface RepriceOptions {
 const _lastRepriceAt = new Map<string, number>();
 
 /**
+ * CF-PORTFOLIO-REFRESH-ASYNC (2026-08-31): read accessor so the HTTP handler
+ * can apply the same per-user throttle synchronously — answering a spamming
+ * client without spawning a background run that would only short-circuit.
+ */
+export function getLastRepriceAt(userId: string): number | undefined {
+  return _lastRepriceAt.get(userId);
+}
+
+/**
  * CF-REVIEW-QUEUE-CLEAN-DATA (2026-07-12): reprice ONE holding immediately.
  * Called fire-and-forget after a review-queue confirm with a picked cardId
  * so the user sees the clean data reflected in inventory pricing without
@@ -10285,12 +10338,170 @@ export async function runBatchReprice(req: Request, res: Response) {
     1,
     Math.floor(Number(process.env.PORTFOLIO_REPRICE_HTTP_MAX_HOLDINGS ?? 50)) || 50,
   );
-  const result = await repriceHoldingsForUser(auth.userId, "batch-reprice", {
-    userThrottleMs: throttleMs,
-    minHoldingAgeMs: minAgeMs,
-    maxHoldings,
+  // CF-PORTFOLIO-REFRESH-ASYNC (Drew, 2026-08-31): DISPATCH, don't compute.
+  //
+  // This handler used to `await repriceHoldingsForUser(...)` and return the
+  // finished result. Measured cost of exactly one such request (App Insights,
+  // app-id 468bd437-…): 5,657 Cosmos dependency calls, 68.3s of summed
+  // dependency time — 2,992 sold_comps + 1,895 card_catalog + 280
+  // daily_price_series, i.e. the whole valuation chain once per holding,
+  // serially, for up to 50 holdings. No `requests` row was ever recorded for
+  // it, only the OPTIONS preflight: the client gave up and the server
+  // finished into a dead socket. The web client had been widened to a 180s
+  // timeout to survive it.
+  //
+  // A refresh must never block on pricing. The read path is already fast
+  // (GET /api/portfolio/ measures 77ms / ~10 deps, because it serves stored
+  // values off one user doc), so the contract is now: start the work, return
+  // a handle, let the client re-read the cheap GET to see values land.
+  //
+  // ONE VALUATION PATH is untouched — this changes *when* the caller is
+  // answered, not *how* anything is priced. repriceHoldingsForUser is still
+  // the single entry, still writes the same numbers.
+  if (repriceJobs.isRunning(auth.userId)) {
+    const running = repriceJobs.getJob(auth.userId);
+    return res.status(202).json({
+      accepted: true,
+      status: "running" as const,
+      alreadyRunning: true,
+      // Echoed so the client's polls can name this run; a worker that does
+      // not hold this id answers `unknown-here` rather than `idle`.
+      jobId: running?.jobId ?? null,
+      startedAt: running ? new Date(running.startedAt).toISOString() : null,
+      // Values on screen are the last persisted ones until this run lands.
+      // The UI must say so — see `stale` in the GET summary.
+      stale: true,
+    });
+  }
+
+  // Apply the user throttle HERE, synchronously, so a spamming client is
+  // still cheap to answer and we don't spawn a run just to have it
+  // short-circuit. repriceHoldingsForUser re-checks it anyway.
+  const lastAt = getLastRepriceAt(auth.userId);
+  if (throttleMs > 0 && lastAt && Date.now() - lastAt < throttleMs) {
+    return res.status(202).json({
+      accepted: false,
+      status: "throttled" as const,
+      throttled: true,
+      retryAfterMs: Math.max(0, throttleMs - (Date.now() - lastAt)),
+      stale: true,
+    });
+  }
+
+  const job = repriceJobs.markStarted(auth.userId);
+  // Fire-and-forget. Errors are captured onto the job entry and structured-
+  // logged; they must never reject into an unhandled rejection, and there is
+  // no response left to fail — the client already has its 202.
+  void (async () => {
+    try {
+      const result = await repriceHoldingsForUser(auth.userId, "batch-reprice", {
+        userThrottleMs: throttleMs,
+        minHoldingAgeMs: minAgeMs,
+        maxHoldings,
+      });
+      repriceJobs.markDone(auth.userId, result);
+    } catch (err) {
+      const message = (err as Error)?.message ?? String(err);
+      repriceJobs.markError(auth.userId, message);
+      console.warn(
+        JSON.stringify({
+          event: "batch_reprice_async_error",
+          source: "portfolioStore.service",
+          userId: auth.userId,
+          error: message,
+        }),
+      );
+    }
+  })();
+
+  return res.status(202).json({
+    accepted: true,
+    status: "running" as const,
+    alreadyRunning: false,
+    // The handle the client polls with. See buildRepriceStatusPayload for
+    // why a poll that lands on the other instance must be able to name it.
+    jobId: job.jobId,
+    startedAt: new Date(job.startedAt).toISOString(),
+    stale: true,
   });
-  return res.json(result);
+}
+
+/**
+ * CF-PORTFOLIO-REFRESH-ASYNC (2026-08-31): GET /api/portfolio/reprice/status
+ *
+ * Progress surface for the dispatched run. Returns the *run's* state only —
+ * never a price. The refreshed values are read back through
+ * GET /api/portfolio/, which is the one place holdings are served from.
+ */
+export async function getBatchRepriceStatus(req: Request, res: Response) {
+  const auth = await requireUser(req, res);
+  if (!auth) return;
+  const jobId = typeof req.query?.jobId === "string" ? req.query.jobId : null;
+  return res.json(buildRepriceStatusPayload(auth.userId, jobId));
+}
+
+/**
+ * CF-PORTFOLIO-REFRESH-ASYNC (Drew, 2026-08-31, judged blocker): the status
+ * answer, as a pure function so the multi-instance behaviour is pinned by
+ * tests without standing up two Node processes.
+ *
+ * The bug this shape exists to prevent: with 2 serving instances, a poll
+ * routed to the worker that did NOT dispatch found nothing in its map and
+ * answered `{status:"idle", running:false}`. Clients read any non-running
+ * status as settled and announced "Refresh complete." over a run that was
+ * still pricing on the other instance — roughly half of all polls.
+ *
+ * So a worker that cannot account for the named jobId answers
+ * **`unknown-here`**, which is neither "running" nor "settled": it says
+ * only that THIS worker has no view of that run. `settled` is the field
+ * clients branch on, and it is true only for a run this worker actually
+ * watched reach done/error. Everything else means keep asking.
+ */
+export type RepriceStatusPayload = {
+  status: "idle" | "unknown-here" | "running" | "done" | "error";
+  running: boolean;
+  /**
+   * True ONLY when this worker observed the run settle. `idle` and
+   * `unknown-here` are explicitly NOT settled — a client that dispatched
+   * must keep polling until it sees this true or its deadline fires.
+   */
+  settled: boolean;
+  jobId?: string | null;
+  startedAt?: string | null;
+  finishedAt?: string | null;
+  result?: BatchRepriceResult | null;
+  error?: string | null;
+};
+
+export function buildRepriceStatusPayload(
+  userId: string,
+  jobId?: string | null,
+  now = Date.now(),
+): RepriceStatusPayload {
+  const lookup = repriceJobs.lookupJob(userId, jobId);
+  if (lookup.kind === "idle") {
+    // Nobody dispatched, as far as this worker knows. Not settled: a client
+    // that DID dispatch is looking at the other instance's blind spot.
+    return { status: "idle", running: false, settled: false, jobId: jobId ?? null };
+  }
+  if (lookup.kind === "unknown-here") {
+    // The run was minted elsewhere (or already swept here). Say so plainly.
+    return { status: "unknown-here", running: false, settled: false, jobId: jobId ?? null };
+  }
+  const job = lookup.job;
+  const running = job.status === "running" && repriceJobs.isRunning(userId, now);
+  return {
+    status: job.status,
+    running,
+    // A "running" entry that has aged past ASSUME_DEAD_MS is not settled
+    // either — we stopped believing it, we never saw it finish.
+    settled: job.status === "done" || job.status === "error",
+    jobId: job.jobId,
+    startedAt: new Date(job.startedAt).toISOString(),
+    finishedAt: job.finishedAt != null ? new Date(job.finishedAt).toISOString() : null,
+    result: job.result ?? null,
+    error: job.error ?? null,
+  };
 }
 
 /**
