@@ -1339,30 +1339,44 @@ export async function persistVendorSalesToPool(
       // parseGradeLabel returns null on unparseable titles, which we
       // treat as "raw / grade unknown" — the sold_comps schema tolerates
       // null gradeCompany.
-      let gradeParsed = parseGradeLabel(title);
-      // CF-GRADE-TIER-RESOLVER (Drew, 2026-08-02). If the title didn't
-      // carry a grade, ask the price-band resolver to pick the most
-      // likely tier from historical sales of the same card. Stage 3.6b
-      // of the Bayesian identity decoder. Only fires when
-      // parseGradeLabel returned nothing — never overrides an explicit
-      // title-parsed grade. When resolver returns raw (company=null),
-      // gradeParsed stays null (raw is represented as gradeCompany:
-      // null in sold_comps writes below).
-      if (!gradeParsed) {
-        const resolved = await resolveGradeTierByPrice({
-          playerName,
-          cardYear,
-          cardNumber: parsed.cardNumber,
-          parallel: parsed.parallel,
-          price,
-        });
-        if (resolved && resolved.confidence >= 0.7 && resolved.gradeCompany && resolved.gradeValue !== null) {
-          gradeParsed = {
-            gradeCompany: resolved.gradeCompany,
-            gradeValue: resolved.gradeValue,
-          };
-        }
-      }
+      const gradeParsed = parseGradeLabel(title);
+      // CF-GRADE-IS-STATED-NEVER-INFERRED (Drew, 2026-08-31: "there is an
+      // issue TCA-ebay. I am seeing no grades and listed as raw when they
+      // are graded").
+      //
+      // REMOVED: CF-GRADE-TIER-RESOLVER (2026-08-02), which — when the title
+      // stated no grade — asked resolveGradeTierByPrice to pick the tier whose
+      // median sat closest to this sale's price, and stamped it on the row.
+      //
+      // A GRADE IS A FACT ABOUT THE SLAB, NOT AN INFERENCE FROM THE PRICE.
+      // The resolver reasoned backwards: it read the number FMV is supposed to
+      // predict and used it to assign the identity that determines which pool
+      // predicts it. A raw card that happened to sell high was stamped with a
+      // graded tier and moved into that tier's pool, where it then dragged the
+      // graded FMV down and left the raw pool short a real sale — both pools
+      // wrong from one write, and self-reinforcing, since the next sale's
+      // inference reads the medians this one corrupted.
+      //
+      // MEASURED over 119,475 graded tca-ebay rows (2026-08-20..08-31):
+      //   118,769 (99.41%)  title states the grade — parseGradeLabel agrees
+      //       706 (0.59%)   title states NO grade — price-inferred only
+      //         0 (0.00%)   title and stored grade disagree
+      //
+      // The 706 are the damage, and their titles show it plainly: "1950
+      // Bowman - Bob Feller #6" stored SGC 3; "1996-97 Topps Kobe Bryant
+      // Rookie RC #138 Lakers" stored BGS 8.5; "2021 Topps Chrome - Shohei
+      // Ohtani #159 Refractor" stored PSA 9. Not one names a grader.
+      //
+      // The 99.41% is the point: the shared title parser already recovers
+      // essentially every real grade, so the resolver was never load-bearing
+      // for coverage — it only ever added rows the title could not support.
+      // A title with no stated grade is a RAW sale, which is a real answer,
+      // not a missing one. Under-calling a grade costs one row in the raw
+      // pool; over-calling it corrupts two pools at once.
+      //
+      // resolveGradeTierByPrice is left in the file, unreferenced by this
+      // path, only so the accompanying rationale survives with it; no caller
+      // may reintroduce a price→grade inference without a Drew ruling.
       // CF-PARALLEL-PRICE-ANOMALY (Drew, 2026-08-04). Sellers routinely
       // mis-label parallels (e.g., "Yellow Refractor" when the card is
       // actually a Yellow X-Fractor, which sells for ~half the price).
