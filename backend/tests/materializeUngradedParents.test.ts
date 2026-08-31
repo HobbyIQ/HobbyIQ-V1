@@ -112,7 +112,10 @@ const child = (over: Record<string, unknown> = {}) => ({
   sport: "basketball",
   year: 1993,
   setKey: "topps-finest",
-  setName: "Topps Finest",
+  // The shape prod actually carries: setName ALREADY embeds the year and the
+  // sport. A clean "Topps Finest" here is what let the first version of this
+  // suite pass while the dry run minted "1993 1993 Topps Finest Basketball ...".
+  setName: "1993 Topps Finest Basketball",
   cardNumber: "110",
   parallel: "Base",
   isAuto: false,
@@ -204,6 +207,28 @@ describe("a parent must not be displayed as a graded card", () => {
     expect(row.displayName).toBe("1993 Topps Finest Michael Jordan #110");
     // and specifically NOT the child's malformed inherited string
     expect(row.displayName).not.toBe(child().displayName);
+  });
+
+  it("does not restate the year or the sport that setName already carries", () => {
+    // Caught by the first prod dry run, not by this suite: setName is
+    // "1993 Topps Finest Basketball", so composing year + setName produced
+    // "1993 1993 Topps Finest Basketball ...". The set half comes from the
+    // canonical setKey instead.
+    const row = buildParentRow(child(), PARENT);
+    expect(row.displayName).not.toMatch(/1993\s+1993/);
+    expect(row.displayName).not.toMatch(/Basketball/);
+  });
+
+  it("mints ONE spelling of the set no matter how setName was spelled", () => {
+    // This one scope holds six setName spellings, down to a bare "Finest".
+    // setKey is canonical, so every parent in a product gets the same name.
+    const spellings = [
+      "1993 Topps Finest Baseball", "1993 topps-finest Baseball",
+      "1993 Topps Finest", "1993 finest Baseball", "Finest", undefined,
+    ];
+    const names = spellings.map((setName) => parentDisplayName(child({ setName })));
+    expect(new Set(names).size, "one product must yield one set name").toBe(1);
+    expect(names[0]).toBe("1993 Topps Finest Michael Jordan #110");
   });
 
   it("does not reproduce the doubled year the inherited names carry", () => {

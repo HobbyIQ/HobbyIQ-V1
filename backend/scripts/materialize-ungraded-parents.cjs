@@ -170,19 +170,42 @@ function chooseTemplate(current, candidate) {
  *
  * Stripping the trailing grade token off the inherited string was the obvious
  * repair and it is the wrong one: these inherited names are independently
- * malformed. Real rows in this very set carry a doubled year ("1993 1993"), a
- * setKey spelled three different ways across sibling rows ("Topps Finest" /
- * "finest" / "topps-finest"), and one where a team leaked into playerName. A
- * regex would faithfully preserve all of that and merely drop " PSA 7".
+ * malformed. Real rows in this very set carry a doubled year ("1993 1993"), and
+ * one where a team leaked into playerName. A regex would faithfully preserve
+ * all of that and merely drop " PSA 7".
  *
  * So compose from the fields, which are the same fields the slug is built from.
  * A missing piece is simply omitted -- blank means unknown, never a guess
  * (CF-EVERY-INGEST-USES-THE-ONE-CHECKLIST-FORMAT). Parallel is included only
  * when it is a real parallel: "Base" is the absence of one, not a name.
+ *
+ * THE SET NAME COMES FROM setKey, NOT setName. The first dry run of this
+ * function produced "1993 1993 Topps Finest Basketball ..." because prod
+ * setName ALREADY embeds the year and the sport, so prefixing our own year
+ * duplicated it. Worse, setName is not one value: this single scope holds six
+ * spellings -- "1993 Topps Finest Baseball" (555), "1993 Topps Finest
+ * Basketball" (501), "1993 topps-finest Baseball" (52), "1993 Topps Finest"
+ * (2), "1993 finest Baseball" (2) and a bare "Finest" (1). Composing from a
+ * field with six spellings would mint six spellings.
+ *
+ * setKey is the canonical half of the identity -- it is the segment the slug
+ * itself is keyed on (CF-THE-ID-CARRIES-THE-PRODUCT), so it is exactly one
+ * value per product. Title-case it and prefix the year once. The sport is not
+ * in the name at all: it is already a column, and a name is not the place to
+ * restate the partition.
  */
-function parentDisplayName(child, setName) {
+function titleCaseSetKey(setKey) {
+  return String(setKey ?? "")
+    .trim()
+    .split("-")
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
+function parentDisplayName(child) {
   const year = child.year ?? child.cardYear ?? null;
-  const set = String(setName ?? child.setName ?? child.setKey ?? "").trim();
+  const set = titleCaseSetKey(child.setKey);
   const player = String(child.playerName ?? "").trim();
   const num = String(child.cardNumber ?? "").trim();
   const par = String(child.parallel ?? "").trim();
@@ -236,7 +259,7 @@ function buildParentRow(child, parentSlug) {
     ...rest
   } = child;
 
-  const displayName = parentDisplayName(child, rest.setName);
+  const displayName = parentDisplayName(child);
 
   return {
     ...rest,
