@@ -2269,6 +2269,36 @@ export async function confirmPendingReviewHolding(
   );
 }
 
+// CF-APPROVE-MULTIPLES (Drew, 2026-08-31). Approve many pending-review
+// holdings in one request. The response is always per-item: a row someone
+// already approved in another tab comes back "not-pending", which is a fact
+// about that row rather than a failure of the batch.
+export interface BatchConfirmItemResult {
+  holdingId: string;
+  status: "confirmed" | "not-found" | "not-pending" | "error";
+  correctionCount?: number;
+  reason?: string;
+}
+
+/** Server-side cap per batch (BATCH_CONFIRM_MAX). The UI chunks to match. */
+export const BATCH_CONFIRM_MAX = 50;
+
+export async function confirmPendingReviewHoldingsBatch(
+  holdingIds: string[],
+  edits: Record<string, Record<string, unknown>> = {},
+): Promise<{
+  success: boolean;
+  requested: number;
+  confirmed: number;
+  failed: number;
+  results: BatchConfirmItemResult[];
+}> {
+  return await request(
+    "/api/portfolio/erp/holdings/confirm-batch",
+    { method: "POST", body: JSON.stringify({ holdingIds, edits }) },
+  );
+}
+
 // CF-SEARCH-AND-PICK (Drew, 2026-08-23: "if it is not verified — i want the
 // SEARCH function to find the card to match it... that search then gets
 // selected and edits the card to the catalog match").

@@ -229,7 +229,15 @@ const stripComments = (src: string) => src.replace(/^\s*\/\/.*$/gm, "").replace(
 const wired = (s: Script) => /\breportWrites\(/.test(stripComments(s.src));
 const wiredFile = (f: string) => fs.existsSync(f) && /\breportWrites\(/.test(stripComments(fs.readFileSync(f, "utf8")));
 
-type RelaunchStep = { name: string; scripts: string[]; keyedOnMarker: boolean };
+type RelaunchStep = {
+  name: string;
+  scripts: string[];
+  keyedOnMarker: boolean;
+  /** The raw `if:` expression, so the apply gate can be read off it. */
+  gate: string;
+  /** Every `-f apply=<value>` this step re-dispatches with. */
+  applyForwards: string[];
+};
 /** Every runner step that re-dispatches the workflow, which scripts it fires
  *  for, and whether it fires on the budget marker (comments stripped, so a
  *  comment quoting the marker does not count as a gate). */
@@ -242,6 +250,8 @@ function relaunchSteps(): RelaunchStep[] {
       name: /- name:\s*(.*)/.exec(step)?.[1]?.trim() ?? "?",
       scripts: [...step.matchAll(/inputs\.script == '([^']+)'/g)].map((m) => m[1]),
       keyedOnMarker: BUDGET_MARKER.test(step.replace(/^\s*#.*$/gm, "")),
+      gate: /^\s*if:\s*(.*)$/m.exec(step)?.[1]?.trim() ?? "",
+      applyForwards: [...step.matchAll(/-f apply=("[^"]*"|\S+)/g)].map((m) => m[1]),
     }));
 }
 function markerPrinters(): string[] {
@@ -405,5 +415,73 @@ describe("every fleet script that stops at its budget is relaunched on the marke
     console.log(`marker-printers relaunched on the marker: ${ok}/${printers.length}  (debt ${printers.length - ok})`);
     // D18 floor: 15 before, 25 after (nine count-gated steps + rehome).
     expect(ok).toBeGreaterThanOrEqual(25);
+  });
+});
+
+// ── a report relaunches as a report ─────────────────────────────────────
+//
+// CF-REPORT-RELAUNCHES-AS-A-REPORT (D34, 2026-08-30). Observed on run
+// 33330120651: a REPORT-ONLY repair-bcp-misfiled-parallels printed
+// "stopped at the 140-minute budget — the relaunch continues from here"
+// and its relaunch step produced no output. Every marker-gated step carried
+// `&& inputs.apply == true` and re-dispatched `-f apply=true`, so a report
+// longer than one budget could never finish and an accidental relaunch of
+// one would have come back as a WRITE.
+//
+// The marker is mode-blind: the scripts print it from the same line in both
+// modes, and the runner's single `run:` step tees the same /tmp/backfill.log
+// in both modes. So the gate must be mode-blind too, and `apply` must be
+// forwarded verbatim like every other input.
+describe("a marker-gated relaunch fires in report mode, and as a report", () => {
+  const markerGated = () => relaunchSteps().filter((r) => r.keyedOnMarker);
+
+  it("finds the marker-gated steps", () => {
+    expect(markerGated().length).toBeGreaterThanOrEqual(37);
+  });
+
+  it("the one run step tees the log the relaunch greps, in both modes", () => {
+    const yml = fs.readFileSync(RUNNER, "utf8");
+    const start = yml.indexOf("- name: Run backfill (");
+    const step = yml.slice(start, yml.indexOf("\n      - name:", start + 10));
+    // A single unconditional tee — not an `if: apply` branch, and not a
+    // second log file a report would write instead.
+    expect(step).toContain("| tee /tmp/backfill.log");
+    expect(step).not.toMatch(/^\s*if:/m);
+    const logs = new Set([...yml.matchAll(/\/tmp\/[a-z._-]+\.log/g)].map((m) => m[0]));
+    expect([...logs], "the relaunch greps exactly the file the run step writes").toEqual(["/tmp/backfill.log"]);
+  });
+
+  it("no marker-gated step gates itself on apply — the marker is the gate", () => {
+    const applyGated = markerGated().filter((r) => /inputs\.apply\s*==\s*true/.test(r.gate));
+    expect(applyGated.map((r) => r.name),
+      `a report that stops at its budget can never finish — these relaunch only for APPLY:\n  ${applyGated.map((r) => r.name).join("\n  ")}`)
+      .toEqual([]);
+  });
+
+  it("every marker-gated step still refuses to relaunch a cancel", () => {
+    // #1361: relaunch iff the budget marker, never on cancel/failure.
+    const unguarded = markerGated().filter((r) => !r.gate.includes("!cancelled()"));
+    expect(unguarded.map((r) => r.name)).toEqual([]);
+  });
+
+  it("every marker-gated step forwards apply verbatim, never hardcoded", () => {
+    const hardcoded = markerGated().filter((r) => r.applyForwards.some((v) => !/inputs\.apply/.test(v)));
+    expect(hardcoded.map((r) => `${r.name}: ${r.applyForwards.join(" ")}`),
+      "a report relaunch would come back as a WRITE:")
+      .toEqual([]);
+  });
+
+  it("every marker-gated step re-dispatches apply exactly once", () => {
+    const wrong = markerGated().filter((r) => r.applyForwards.length !== 1);
+    expect(wrong.map((r) => `${r.name}: ${r.applyForwards.length}`)).toEqual([]);
+  });
+
+  it("the defect run's own script relaunches in report mode", () => {
+    // The observed failure, pinned by name.
+    const step = relaunchSteps().find((r) => r.scripts.includes("repair-bcp-misfiled-parallels"));
+    expect(step, "no relaunch step for the script that exposed this").toBeDefined();
+    expect(step!.keyedOnMarker).toBe(true);
+    expect(step!.gate).not.toMatch(/inputs\.apply/);
+    expect(step!.applyForwards).toEqual(['"${{ inputs.apply }}"']);
   });
 });
