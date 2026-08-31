@@ -16,7 +16,7 @@ describe("CF-NO-CROSS-VERTICAL-FALLBACK — the sports vocabulary has no jurisdi
   // 59,748 Pokemon rows carried a sports/Panini setKey.
   const PANINI_KEYS = [
     "panini-obsidian", "panini-zenith", "panini-origins", "panini-prizm",
-    "panini-select", "panini-donruss", "panini-optic", "leaf", "ultra",
+    "panini-select", "panini-donruss", "panini-optic", "donruss-optic", "leaf", "ultra",
   ];
 
   it("never returns a Panini/sports key for a Pokemon set name", () => {
@@ -60,11 +60,16 @@ describe("CF-OPTIC-WITHOUT-PANINI — Optic is its own product however it is wri
   // The rule required the `panini-` prefix, so bare "Donruss Optic" — how the
   // product is almost always written — fell to the generic donruss rule.
   // Measured 2026-08-17: 196,345 sold_comps rows affected.
-  it("routes every spelling of Optic to panini-optic", () => {
-    expect(normalizeSetKey("Donruss Optic")).toBe("panini-optic");
-    expect(normalizeSetKey("Panini Donruss Optic")).toBe("panini-optic");
-    expect(normalizeSetKey("2024 Donruss Optic Basketball")).toBe("panini-optic");
-    expect(normalizeSetKey("Optic")).toBe("panini-optic");
+  // D31 (Drew, 2026-08-31) renamed the destination: Optic is ONE product
+  // and the checklists all spell it donruss-optic. The 2026-08-17 finding
+  // this test pins -- that EVERY spelling reaches the one key -- is
+  // unchanged; only the key it reaches is. See opticIsOneProduct.test.ts.
+  it("routes every spelling of Optic to donruss-optic", () => {
+    expect(normalizeSetKey("Donruss Optic")).toBe("donruss-optic");
+    expect(normalizeSetKey("Panini Donruss Optic")).toBe("donruss-optic");
+    expect(normalizeSetKey("2024 Donruss Optic Basketball")).toBe("donruss-optic");
+    expect(normalizeSetKey("Panini Optic")).toBe("donruss-optic");
+    expect(normalizeSetKey("Optic")).toBe("donruss-optic");
   });
 
   it("leaves paper Donruss on its own key", () => {

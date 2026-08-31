@@ -67,6 +67,10 @@ const has = (n) => process.argv.includes(`--${n}`);
  * trying to be a second product vocabulary.
  */
 const URL_BRAND = {
+  // D31 (Drew, 2026-08-31) made donruss-optic the canonical key, so the
+  // publishers name it exactly as we do and it needs no entry. The legacy
+  // spelling stays mapped: a row minted before the fold still carries it, and
+  // an unmapped panini-optic would build a URL no publisher serves.
   "panini-optic": "donruss-optic",
   "panini-donruss": "donruss",
   "panini-prizm": "prizm",
