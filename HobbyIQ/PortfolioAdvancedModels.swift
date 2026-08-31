@@ -117,6 +117,10 @@ struct BatchRepriceResponse: Codable {
     let accepted: Bool?
     let status: String?
     let alreadyRunning: Bool?
+    /// Handle for the dispatched run. Pass it to `batchRepriceStatus(jobId:)`
+    /// so a poll that lands on the other serving instance can be answered
+    /// "unknown-here" instead of the ambiguous "idle".
+    let jobId: String?
     let startedAt: String?
     /// True on dispatch: on-screen values are the last persisted ones until
     /// the background run lands. Surface this rather than implying "now".
@@ -124,10 +128,20 @@ struct BatchRepriceResponse: Codable {
 }
 
 /// CF-PORTFOLIO-REFRESH-ASYNC (2026-08-31): GET /api/portfolio/reprice/status
+///
+/// Judged blocker, same date: the backend serves from 2 instances and the job
+/// map is per-process, so a poll can land on the worker that did NOT dispatch.
+/// That worker answers `unknown-here` — it has no view of the run, which is
+/// NOT the same as the run being finished. Branch on `settled`; never treat
+/// "status is not running" as completion.
 struct RepriceStatusResponse: Codable {
-    /// "idle" | "running" | "done" | "error"
+    /// "idle" | "unknown-here" | "running" | "done" | "error"
     let status: String?
     let running: Bool?
+    /// True only when a worker actually observed the run reach done/error.
+    /// `idle` and `unknown-here` are explicitly not settled — keep polling.
+    let settled: Bool?
+    let jobId: String?
     let startedAt: String?
     let finishedAt: String?
     let result: BatchRepriceResponse?

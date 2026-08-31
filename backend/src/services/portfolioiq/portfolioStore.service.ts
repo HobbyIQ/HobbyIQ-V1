@@ -10364,6 +10364,9 @@ export async function runBatchReprice(req: Request, res: Response) {
       accepted: true,
       status: "running" as const,
       alreadyRunning: true,
+      // Echoed so the client's polls can name this run; a worker that does
+      // not hold this id answers `unknown-here` rather than `idle`.
+      jobId: running?.jobId ?? null,
       startedAt: running ? new Date(running.startedAt).toISOString() : null,
       // Values on screen are the last persisted ones until this run lands.
       // The UI must say so — see `stale` in the GET summary.
@@ -10415,6 +10418,9 @@ export async function runBatchReprice(req: Request, res: Response) {
     accepted: true,
     status: "running" as const,
     alreadyRunning: false,
+    // The handle the client polls with. See buildRepriceStatusPayload for
+    // why a poll that lands on the other instance must be able to name it.
+    jobId: job.jobId,
     startedAt: new Date(job.startedAt).toISOString(),
     stale: true,
   });
@@ -10430,18 +10436,72 @@ export async function runBatchReprice(req: Request, res: Response) {
 export async function getBatchRepriceStatus(req: Request, res: Response) {
   const auth = await requireUser(req, res);
   if (!auth) return;
-  const job = repriceJobs.getJob(auth.userId);
-  if (!job) {
-    return res.json({ status: "idle" as const, running: false });
+  const jobId = typeof req.query?.jobId === "string" ? req.query.jobId : null;
+  return res.json(buildRepriceStatusPayload(auth.userId, jobId));
+}
+
+/**
+ * CF-PORTFOLIO-REFRESH-ASYNC (Drew, 2026-08-31, judged blocker): the status
+ * answer, as a pure function so the multi-instance behaviour is pinned by
+ * tests without standing up two Node processes.
+ *
+ * The bug this shape exists to prevent: with 2 serving instances, a poll
+ * routed to the worker that did NOT dispatch found nothing in its map and
+ * answered `{status:"idle", running:false}`. Clients read any non-running
+ * status as settled and announced "Refresh complete." over a run that was
+ * still pricing on the other instance — roughly half of all polls.
+ *
+ * So a worker that cannot account for the named jobId answers
+ * **`unknown-here`**, which is neither "running" nor "settled": it says
+ * only that THIS worker has no view of that run. `settled` is the field
+ * clients branch on, and it is true only for a run this worker actually
+ * watched reach done/error. Everything else means keep asking.
+ */
+export type RepriceStatusPayload = {
+  status: "idle" | "unknown-here" | "running" | "done" | "error";
+  running: boolean;
+  /**
+   * True ONLY when this worker observed the run settle. `idle` and
+   * `unknown-here` are explicitly NOT settled — a client that dispatched
+   * must keep polling until it sees this true or its deadline fires.
+   */
+  settled: boolean;
+  jobId?: string | null;
+  startedAt?: string | null;
+  finishedAt?: string | null;
+  result?: BatchRepriceResult | null;
+  error?: string | null;
+};
+
+export function buildRepriceStatusPayload(
+  userId: string,
+  jobId?: string | null,
+  now = Date.now(),
+): RepriceStatusPayload {
+  const lookup = repriceJobs.lookupJob(userId, jobId);
+  if (lookup.kind === "idle") {
+    // Nobody dispatched, as far as this worker knows. Not settled: a client
+    // that DID dispatch is looking at the other instance's blind spot.
+    return { status: "idle", running: false, settled: false, jobId: jobId ?? null };
   }
-  return res.json({
+  if (lookup.kind === "unknown-here") {
+    // The run was minted elsewhere (or already swept here). Say so plainly.
+    return { status: "unknown-here", running: false, settled: false, jobId: jobId ?? null };
+  }
+  const job = lookup.job;
+  const running = job.status === "running" && repriceJobs.isRunning(userId, now);
+  return {
     status: job.status,
-    running: job.status === "running" && repriceJobs.isRunning(auth.userId),
+    running,
+    // A "running" entry that has aged past ASSUME_DEAD_MS is not settled
+    // either — we stopped believing it, we never saw it finish.
+    settled: job.status === "done" || job.status === "error",
+    jobId: job.jobId,
     startedAt: new Date(job.startedAt).toISOString(),
     finishedAt: job.finishedAt != null ? new Date(job.finishedAt).toISOString() : null,
     result: job.result ?? null,
     error: job.error ?? null,
-  });
+  };
 }
 
 /**

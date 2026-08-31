@@ -235,24 +235,48 @@ function PortfolioPageBody() {
                       ? "Refresh already running — showing last saved prices until it lands."
                       : "Refreshing in the background — showing last saved prices until it lands.",
                   );
-                  // Poll until the run settles, then pull the fresh values
+                  // Poll until the run SETTLES, then pull the fresh values
                   // from the (fast) portfolio read.
+                  //
+                  // CF-PORTFOLIO-REFRESH-ASYNC (2026-08-31, judged blocker):
+                  // the backend serves from 2 instances and the job map is
+                  // per-process, so a poll load-balances onto the worker that
+                  // did not dispatch about half the time. That worker answers
+                  // `unknown-here` (or `idle`, if we could not name the run) —
+                  // neither of which is a completion. The earlier loop broke
+                  // out on "not running" and printed "Refresh complete." over
+                  // a run that was still pricing elsewhere.
+                  //
+                  // The rule now: only a status this client can see SETTLE
+                  // ends the poll. Ignorance is a reason to ask again.
+                  const jobId = res.jobId ?? null;
                   const deadline = Date.now() + 5 * 60_000;
                   for (;;) {
                     await new Promise((r) => setTimeout(r, 3_000));
                     if (Date.now() > deadline) {
+                      // We never saw it land. Say exactly that — the run and
+                      // the 6h scheduled job both still write to Cosmos, so
+                      // the prices really will appear; claiming "complete"
+                      // here would be a guess we have no basis for.
                       setRefreshBanner(
-                        "Refresh is taking longer than expected — prices will update on their own.",
+                        "Still refreshing — prices will land on their own; reopen this page in a minute.",
                       );
                       break;
                     }
-                    const st = await getRepriceStatus().catch(() => null);
+                    const st = await getRepriceStatus(jobId).catch(() => null);
                     if (!st) continue;
+                    // Not-settled statuses, every one of them a keep-polling:
+                    //   running       — this worker is doing the work
+                    //   unknown-here  — the run is on the other instance
+                    //   idle          — this worker has no entry; we DID
+                    //                   dispatch, so this cannot mean "no run"
                     if (st.running || st.status === "running") continue;
+                    if (st.status === "unknown-here" || st.status === "idle") continue;
                     if (st.status === "error") {
                       setRefreshBanner(st.error ?? "Refresh failed.");
                       break;
                     }
+                    // Reached only for an observed done/error.
                     const r = st.result;
                     setRefreshBanner(
                       r

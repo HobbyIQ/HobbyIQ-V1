@@ -631,6 +631,9 @@ struct BatchRepriceView: View {
     @State private var result: BatchRepriceResponse?
     @State private var isLoading = false
     @State private var error: String?
+    /// CF-PORTFOLIO-REFRESH-ASYNC (2026-08-31): non-failure status, e.g. a
+    /// refresh we dispatched but never saw settle from this instance.
+    @State private var notice: String?
     @State private var showUpgradePaywall = false
     @Environment(\.dismiss) private var dismiss
 
@@ -661,6 +664,10 @@ struct BatchRepriceView: View {
 
                 if let error {
                     portfolioErrorBanner(error)
+                }
+
+                if let notice {
+                    portfolioNoticeBanner(notice)
                 }
 
                 if let r = result {
@@ -781,6 +788,7 @@ struct BatchRepriceView: View {
     private func runReprice() async {
         isLoading = true
         error = nil
+        notice = nil
         defer { isLoading = false }
 
         do {
@@ -795,23 +803,44 @@ struct BatchRepriceView: View {
                 return
             }
 
-            // Poll until the run settles. Values already on screen stay
+            // Poll until the run SETTLES. Values already on screen stay
             // readable throughout — they are the last persisted ones.
+            //
+            // Judged blocker (2026-08-31): the backend serves from 2
+            // instances and the job map is per-process, so this poll lands on
+            // the worker that did NOT dispatch about half the time. That
+            // worker answers `unknown-here` (or `idle`, if we could not name
+            // the run) — ignorance, not completion. The earlier loop broke out
+            // on any non-running status and presented an empty result as a
+            // finished refresh. Only an observed done/error ends the poll.
+            let jobId = dispatch.jobId
             let deadline = Date().addingTimeInterval(300)
             var settled: BatchRepriceResponse? = nil
+            var didSettle = false
             while Date() < deadline {
                 try? await Task.sleep(nanoseconds: 3_000_000_000)
                 if Task.isCancelled { return }
-                guard let status = try? await APIService.shared.batchRepriceStatus() else { continue }
+                guard let status = try? await APIService.shared.batchRepriceStatus(jobId: jobId) else { continue }
                 if status.running == true || status.status == "running" { continue }
+                // This worker has no view of the run — keep asking.
+                if status.status == "unknown-here" || status.status == "idle" { continue }
                 if status.status == "error" {
                     self.error = status.error ?? "Refresh failed."
                     return
                 }
                 settled = status.result
+                didSettle = true
                 break
             }
             if let settled { result = settled }
+            if !didSettle {
+                // Never saw it land. Say so rather than implying it finished:
+                // the background run and the 6h scheduled job both still write
+                // to Cosmos, so the prices do arrive on their own. This is a
+                // notice, not an error — nothing has gone wrong.
+                self.notice = "Still refreshing — prices will land on their own; check back in a minute."
+                return
+            }
 
             // CF-BATCH-REPRICE-VIEW-SYNC (Drew, 2026-07-30). The reprice
             // endpoint persists new FMVs on the backend but portfolio
@@ -843,6 +872,30 @@ fileprivate func portfolioDataRow(label: String, value: String) -> some View {
             .font(.subheadline.weight(.bold).monospacedDigit())
             .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
     }
+}
+
+/// CF-PORTFOLIO-REFRESH-ASYNC (2026-08-31): informational sibling of
+/// `portfolioErrorBanner`. A refresh whose completion we never observed is not
+/// a failure — the background run and the 6h scheduled job both still write
+/// the prices — so it must not wear the danger styling.
+fileprivate func portfolioNoticeBanner(_ message: String) -> some View {
+    HStack(alignment: .top, spacing: 10) {
+        Image(systemName: "clock.arrow.circlepath")
+            .foregroundStyle(HobbyIQTheme.Colors.warning)
+        Text(message)
+            .font(.footnote)
+            .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+            .fixedSize(horizontal: false, vertical: true)
+        Spacer(minLength: 0)
+    }
+    .padding(12)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .background(HobbyIQTheme.Colors.warning.opacity(0.20))
+    .overlay(
+        RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+            .stroke(HobbyIQTheme.Colors.warning.opacity(0.3), lineWidth: 2.0)
+    )
+    .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
 }
 
 fileprivate func portfolioErrorBanner(_ message: String) -> some View {

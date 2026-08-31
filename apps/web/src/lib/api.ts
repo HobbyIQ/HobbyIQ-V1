@@ -2493,6 +2493,12 @@ export interface RepriceDispatch {
   alreadyRunning?: boolean;
   throttled?: boolean;
   retryAfterMs?: number;
+  /**
+   * Handle for the dispatched run. Pass it to getRepriceStatus() so a poll
+   * that load-balances onto the other serving instance can be told
+   * "unknown-here" instead of the ambiguous "idle".
+   */
+  jobId?: string | null;
   startedAt?: string | null;
   /** Always true on dispatch: on-screen values are the last persisted ones. */
   stale?: boolean;
@@ -2517,18 +2523,28 @@ export async function refreshAllHoldings(): Promise<RepriceDispatch> {
 
 // GET /portfolio/reprice/status — progress of the dispatched run. Returns
 // the run's state, never a price; refreshed values come from the portfolio
-// read. Poll this while `running` is true, then re-fetch the portfolio.
+// read.
+//
+// CF-PORTFOLIO-REFRESH-ASYNC (2026-08-31, judged blocker): the backend runs
+// on 2 instances and the job map is per-process, so a poll can land on the
+// worker that did NOT dispatch. Branch on `settled` — NOT on "status is not
+// running". `idle` and `unknown-here` both mean "this worker can't see your
+// run", which is a reason to keep polling, never a completion.
 export interface RepriceStatus {
-  status: "idle" | "running" | "done" | "error";
+  status: "idle" | "unknown-here" | "running" | "done" | "error";
   running: boolean;
+  /** True only when a worker actually observed the run reach done/error. */
+  settled?: boolean;
+  jobId?: string | null;
   startedAt?: string;
   finishedAt?: string | null;
   result?: BatchRepriceResult | null;
   error?: string | null;
 }
 
-export async function getRepriceStatus(): Promise<RepriceStatus> {
-  return await request<RepriceStatus>("/api/portfolio/reprice/status");
+export async function getRepriceStatus(jobId?: string | null): Promise<RepriceStatus> {
+  const qs = jobId ? `?jobId=${encodeURIComponent(jobId)}` : "";
+  return await request<RepriceStatus>(`/api/portfolio/reprice/status${qs}`);
 }
 
 // GET /portfolio/export?format=csv|xlsx — server returns the file as an

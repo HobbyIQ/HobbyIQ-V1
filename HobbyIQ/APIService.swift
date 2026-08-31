@@ -1055,8 +1055,15 @@ struct APIService {
 
     /// Progress of the dispatched reprice. Returns the run's state, never a
     /// price — refreshed values come from the portfolio read.
-    func batchRepriceStatus() async throws -> RepriceStatusResponse {
-        try await get(path: "/api/portfolio/reprice/status", responseType: RepriceStatusResponse.self)
+    ///
+    /// Pass the `jobId` the dispatch returned. The backend serves from 2
+    /// instances and the job map is per-process, so this poll can land on the
+    /// worker that did not dispatch; naming the run lets that worker answer
+    /// `unknown-here` rather than the ambiguous `idle`. Treat only
+    /// `settled == true` as the end of the run.
+    func batchRepriceStatus(jobId: String? = nil) async throws -> RepriceStatusResponse {
+        let items = jobId.map { [URLQueryItem(name: "jobId", value: $0)] } ?? []
+        return try await get(path: "/api/portfolio/reprice/status", queryItems: items, responseType: RepriceStatusResponse.self)
     }
 
     func requestCardPhotoSAS(fileExtension: String = "jpg") async throws -> SASUploadResponse {

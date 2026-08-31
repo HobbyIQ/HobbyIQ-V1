@@ -31,7 +31,35 @@
  * doc in Cosmos, and the 6h scheduled job (portfolioReprice.job.ts) is the
  * guaranteed catch-all if an instance recycles mid-run. Nothing here is a
  * cache of a *price* — no FMV is ever read from or served out of this map.
+ *
+ * MULTI-INSTANCE: "I don't know" IS AN ANSWER
+ * -------------------------------------------
+ * (Drew, 2026-08-31, judged blocker.) App Insights shows **2 serving
+ * instances** per role. A client's dispatch lands on one worker; its next
+ * status poll load-balances and lands, roughly half the time, on the OTHER
+ * worker — which holds no entry for that user in ITS map. The first cut of
+ * getBatchRepriceStatus answered that with `{status:"idle", running:false}`,
+ * and both clients read a non-running status as settled: the web page said
+ * "Refresh complete." while the run was still pricing on the other instance.
+ *
+ * The map stays in-process — that part of the design is right, and no
+ * durable state is being added this round. What was wrong is that the
+ * *answer* conflated two different facts:
+ *
+ *   "no job exists for this user"  (genuinely idle — nobody dispatched)
+ *   "no job exists ON THIS WORKER" (a job may well be running elsewhere)
+ *
+ * So the dispatch now mints a `jobId` and returns it, status polls carry it,
+ * and a worker asked about an id it has never seen says `unknown-here`
+ * instead of `idle`. A progress surface may say "I don't know"; what it may
+ * never do is say "done" about a run it cannot see. The client treats
+ * `unknown-here` — and `idle` after its own dispatch — as keep-polling, and
+ * on deadline tells the truth: the prices will land on their own (the
+ * background run and the 6h job both still write to Cosmos regardless of
+ * which worker answered a poll).
  */
+
+import { randomUUID } from "node:crypto";
 
 import type { BatchRepriceResult } from "./portfolioStore.service.js";
 
@@ -39,6 +67,12 @@ export type RepriceJobStatus = "running" | "done" | "error";
 
 export interface RepriceJobState {
   userId: string;
+  /**
+   * Opaque id minted at dispatch and echoed to the client, so a status poll
+   * can name the run it is asking about. A worker that has never seen the id
+   * answers `unknown-here` rather than pretending the run does not exist.
+   */
+  jobId: string;
   status: RepriceJobStatus;
   /** ms epoch when the run was dispatched. */
   startedAt: number;
@@ -81,9 +115,46 @@ export function getJob(userId: string): RepriceJobState | null {
 }
 
 export function markStarted(userId: string, now = Date.now()): RepriceJobState {
-  const job: RepriceJobState = { userId, status: "running", startedAt: now };
+  const job: RepriceJobState = { userId, jobId: randomUUID(), status: "running", startedAt: now };
   _jobs.set(userId, job);
   return job;
+}
+
+/**
+ * What THIS worker can say about the run the client is asking about.
+ *
+ * The distinction that matters (2 serving instances — see the header):
+ *
+ *   - `job`           → this worker owns the run; report its real state.
+ *   - `unknown-here`  → the client named a jobId this worker has never
+ *                       issued or has already swept. The run may be alive
+ *                       and pricing on the other instance; this worker
+ *                       cannot see it and must not answer for it.
+ *   - `idle`          → no jobId was named and this worker holds nothing for
+ *                       the user. Only meaningful to a client that has NOT
+ *                       dispatched; a client that has must keep polling,
+ *                       because a bare read carries no way to tell this
+ *                       apart from "your run is on the other worker".
+ *
+ * The asymmetry is deliberate: `unknown-here` is honest ignorance, and a
+ * caller can distinguish it from a settled run. Never collapse it to `idle`.
+ */
+export type JobLookup =
+  | { kind: "job"; job: RepriceJobState }
+  | { kind: "unknown-here" }
+  | { kind: "idle" };
+
+export function lookupJob(userId: string, jobId?: string | null): JobLookup {
+  const job = _jobs.get(userId);
+  if (!jobId) {
+    // No id to match on. Report what we hold, or plain idle.
+    return job ? { kind: "job", job } : { kind: "idle" };
+  }
+  if (job && job.jobId === jobId) return { kind: "job", job };
+  // An id was named and this worker cannot account for it — either it was
+  // minted on the other instance, or it settled here long enough ago to be
+  // swept. Both are "ask again", never "finished".
+  return { kind: "unknown-here" };
 }
 
 export function markDone(userId: string, result: BatchRepriceResult, now = Date.now()): void {
