@@ -372,19 +372,280 @@ function isCardListScope(scopeBody) {
   return cardish / lis.length >= 0.8;
 }
 
-function parseLadder(parallelsBody, playerNames = new Set()) {
+/**
+ * ============================================================================
+ * CF-A-PRINT-RUN-IS-A-FUNCTION-OF-(RANGE, PARALLEL) — #1571 §3.1, Drew
+ * 2026-08-30 ("the exploded-spine signature").
+ *
+ * BCP states vintage print runs PER CARD-NUMBER RANGE, because the subsets
+ * ARE the ranges:
+ *
+ *   Radiance Youth Movement   (cards 1-30 and 181-210; serial-numbered to 2500)
+ *   Radiance Heroes of the Game (cards 171-180;        serial-numbered to 100)
+ *
+ * The emitter cross-joined every rung over every base card, so card #1 was
+ * written as "Radiance Heroes of the Game /100" when Heroes is cards 171-180
+ * ONLY. 360 cards x 4 rungs = 1,440 rows is the same cross-join signature as
+ * the retired exploded spine (#1371), and a well-formed wrong printRun is
+ * invisible to every later sweep -- it silently splits or merges a comp pool.
+ *
+ * A rung therefore carries the CARD NUMBERS it applies to. `cardRange` is
+ * null when the page names no range, which means "the whole set" ONLY when
+ * the page says so in words ("Each base card is available in..."); otherwise
+ * the rung is emitted with a BLANK printRun rather than a set-wide guess.
+ * Blank is unknown; a guessed default is a lie that outlives the sweep.
+ */
+/** "cards 1-30 and 181-210" / "cards 171-180" / "card 45" -> [[1,30],[181,210]].
+ *  The clause runs from the word "card(s)" to the end of that clause (";" or
+ *  ")" or a verb) and may hold SEVERAL spans joined by "and"/","; capturing
+ *  only the first silently halved every split subset (Youth Movement is
+ *  cards 1-30 AND 181-210). */
+function parseCardRange(text) {
+  const t = String(text ?? "");
+  const m = t.match(/\bcards?\s+((?:#?\s*\d+(?:\s*[-–—]\s*\d+)?)(?:\s*,?\s*(?:and\s+)?#?\s*\d+(?:\s*[-–—]\s*\d+)?)*)/i);
+  if (!m) return null;
+  const spans = [];
+  for (const s of m[1].matchAll(/#?\s*(\d+)\s*(?:[-–—]\s*(\d+))?/g)) {
+    const lo = Number(s[1]), hi = s[2] === undefined ? Number(s[1]) : Number(s[2]);
+    if (!Number.isFinite(lo) || !Number.isFinite(hi) || hi < lo) continue;
+    spans.push([lo, hi]);
+  }
+  return spans.length ? spans : null;
+}
+
+/** Does a card number fall inside any span? Bare-numeric numbers only; a
+ *  lettered insert number ("UL-7") is never range-scoped. */
+function cardInRange(num, spans) {
+  if (!spans) return true;                       // unscoped rung = all cards
+  const n = Number(String(num ?? "").replace(/^[A-Za-z]{0,5}[-\s]?/, ""));
+  if (!Number.isFinite(n)) return false;
+  return spans.some(([lo, hi]) => n >= lo && n <= hi);
+}
+
+/**
+ * CF-THE-EXCEPT-BLOCK-IS-NOT-THE-RULE — #1571 §3.2.
+ *
+ * 1999 Black Diamond states the ladder, then states an EXCEPTION for three
+ * players, and the exception's <li> lines come SECOND:
+ *
+ *   Each is serial-numbered to the following production figures EXCEPT the
+ *   cards of Sammy Sosa, Ken Griffey, Jr., and Mark McGwire.
+ *     Double (Red foil): short set, 3000; Debuts, 2500     <- the RULE
+ *   For Sosa, Griffey, and McGwire their ... parallels are as follows.
+ *     Double (serial-numbered to 1998)                     <- the EXCEPTION
+ *     Triple (Sosa: 273 copies, Griffey: 350, McGwire: 457)
+ *
+ * The rule lines' "short set, 3000; Debuts, 2500" did not match RUN_NOTE, so
+ * they set printRun=null -- and then `put`'s "fill an empty run" merge let the
+ * EXCEPTION line overwrite it. Result: Double /1998, Triple /273, Quadruple
+ * /66 stamped on all 120 cards. /273 is Sammy Sosa's career home-run total
+ * written onto every player in the set, and it read as printRunFilled=360.
+ *
+ * The parser stops at this boundary the same way it already stops at
+ * id="Inserts": everything after it is a DIFFERENT scope whose figures belong
+ * to the named players' rows alone.
+ */
+/**
+ * The EXCEPT sentence and the exception BLOCK are two different things.
+ *
+ *   "Each is serial-numbered to the following figures EXCEPT the cards of
+ *    Sosa, Griffey, and McGwire."      <- NAMES the players; the rule follows
+ *     Double (Red foil): short set, 3000 ...          <- still the RULE
+ *   "For Sosa, Griffey, and McGwire their ... are as follows."  <- THE CUT
+ *     Double (serial-numbered to 1998) ...            <- the EXCEPTION
+ *
+ * Cutting at the word EXCEPT put the rule lines on the exception side and
+ * lost the real ladder. The cut is the "For X, Y and Z ... their" sentence;
+ * EXCEPT only supplies the player names (and may appear before either).
+ */
+const EXCEPT_NAMES = /\bEXCEPT\b|\bwith the exception of\b/i;
+const EXCEPT_BOUNDARY = /\bFor\s+[A-Z][\w.'-]+(?:\s*,\s*(?:and\s+)?[A-Z][\w.'-]+)*(?:\s+and\s+[A-Z][\w.'-]+)?[^.]{0,80}\btheir\b/;
+
+/** Split a Parallels body at the exception boundary: { rule, exception }. */
+function splitAtException(body) {
+  // Work on the tag stream but locate the boundary in TEXT, then map back by
+  // walking <li>/<p> blocks -- an offset in detagged text has no HTML index.
+  const blocks = [...String(body).matchAll(/<(li|p)\b[\s\S]*?<\/\1>/g)];
+  let cut = -1, names = "";
+  for (const b of blocks) {
+    const t = detag(b[0]);
+    if (EXCEPT_NAMES.test(t) && !names) names = t;
+    if (EXCEPT_BOUNDARY.test(t)) {
+      // The boundary sentence INTRODUCES the exception; the exception rungs
+      // are the blocks after it.
+      cut = b.index + b[0].length;
+      if (!names) names = t;
+      break;
+    }
+  }
+  if (cut < 0) return { rule: body, exception: "", players: [] };
+  return { rule: String(body).slice(0, cut), exception: String(body).slice(cut), players: exceptionPlayers(names) };
+}
+
+/** The players an EXCEPT clause names, e.g. "Sammy Sosa, Ken Griffey, Jr.,
+ *  and Mark McGwire" -> ["Sammy Sosa","Ken Griffey Jr.","Mark McGwire"].
+ *  The sentence ends at a period NOT preceded by an honorific, so "Jr." does
+ *  not truncate the list and silently drop Mark McGwire. */
+function exceptionPlayers(text) {
+  const t = String(text ?? "");
+  const m = t.match(/(?:EXCEPT|exception of)\s+(?:the\s+cards\s+of\s+)?([\s\S]+?)(?<!\b(?:Jr|Sr|Dr|St))\.(?:\s|$)/i)
+    || t.match(/\bFor\s+([\s\S]{0,120}?)\s+their\b/i);
+  if (!m) return [];
+  const out = [];
+  for (const raw of m[1].split(/,|\s+and\s+/)) {
+    const name = raw.trim().replace(/^the cards of\s+/i, "").trim();
+    if (!name) continue;
+    // ", Jr." arrives as its own comma-split fragment; glue it back on.
+    if (/^(Jr|Sr|I{2,3}|IV)\.?$/i.test(name)) { if (out.length) out[out.length - 1] += " " + name; continue; }
+    if (/[A-Za-z]{2}/.test(name) && name.split(/\s+/).length <= 4) out.push(name);
+  }
+  return out;
+}
+
+/**
+ * Does a base-card player match one of the exception names?
+ *
+ * The page names the same three men two ways -- "Sammy Sosa, Ken Griffey,
+ * Jr., and Mark McGwire" in the EXCEPT sentence and bare "Sosa", "Griffey",
+ * "McGwire" in the per-player figures -- while the checklist writes "Ken
+ * Griffey Jr.". A prefix test matches the first pair and MISSES the surname
+ * form, which silently dropped every per-player rung. Compare on SURNAME:
+ * the last non-honorific token of each side.
+ */
+function matchesExceptionPlayer(player, names) {
+  const surname = (v) => {
+    const t = foldName(v).split(" ").filter(Boolean).filter((w) => !/^(jr|sr|ii|iii|iv)$/.test(w));
+    return t.length ? t[t.length - 1] : "";
+  };
+  const p = foldName(player), ps = surname(player);
+  if (!ps) return false;
+  return names.some((n) => { const f = foldName(n); return p === f || ps === surname(n); });
+}
+
+/**
+ * CF-PACK-ODDS-ARE-NOT-A-PRINT-RUN (#1571 §5: "Odds must map to a rarity
+ * field and must never be coerced into printRun").
+ *
+ * 1997 Finest predates serial numbering and publishes ODDS -- "the Bronze
+ * Refractors are the easiest to pull (1:12/packs)". RUN_NOTE's ":\s*(\d+)"
+ * arm read that as a print run and stamped /12 on all 350 Refractor rows.
+ * A pre-serial product must emit BLANK, which is what "unknown" means.
+ */
+const ODDS = /\b1\s*:\s*\d/;
+const hasOdds = (s) => ODDS.test(String(s ?? ""));
+
+/**
+ * CF-A-NAMED-SUBSET-IS-A-RANGE (#1571 §3.2, the other half).
+ *
+ * Black Diamond states its rule runs by SUBSET NAME, not by card range:
+ *
+ *   Double (Red foil): short set, 3000; Debuts, 2500
+ *
+ * Two figures on one line. RUN_NOTE could read only one number, so the rung
+ * got null and the EXCEPT block then filled it. Splitting the clause gives
+ * two range-scoped rungs -- but only if the subset NAMES resolve to card
+ * numbers, and those come from the page, never from a convention:
+ *
+ *   "The last 30 cards in the base set make up a Diamond Debuts subset"
+ *   Insertion Ratios: short set 90 | Diamond Debut 30
+ *
+ * So short set = 1-90 and Debuts = 91-120 for a 120-card base. When the page
+ * does NOT state the split, the subset does not resolve and the rung is
+ * emitted BLANK rather than guessed -- unknown, not invented.
+ */
+const SUBSET_CLAUSE = /(short set|debuts?|diamond debuts?)\s*,\s*(\d[\d,]*)/gi;
+
+/** Parse "short set, 3000; Debuts, 2500" -> [{subset,run}]; [] when absent. */
+function parseSubsetRuns(note) {
+  const out = [];
+  for (const m of String(note ?? "").matchAll(SUBSET_CLAUSE)) {
+    const run = Number(m[2].replace(/,/g, ""));
+    if (!Number.isFinite(run) || run < 1 || run > 100000) continue;
+    out.push({ subset: /short/i.test(m[1]) ? "short set" : "debuts", run });
+  }
+  return out;
+}
+
+/**
+ * The card-number span of each named subset, DERIVED from the page:
+ * the base-card count plus a "last N cards ... subset" statement.
+ * Returns {} when the page does not say -- the caller then emits blank.
+ */
+function subsetRanges(html, cardCount) {
+  const t = detag(html);
+  const m = t.match(/\blast\s+(\d{1,3})\s+cards?\b[^.]{0,80}?\bmake up\b[^.]{0,60}?\bsubset\b/i);
+  if (!m || !cardCount) return {};
+  const tail = Number(m[1]);
+  if (!Number.isFinite(tail) || tail <= 0 || tail >= cardCount) return {};
+  return { "short set": [[1, cardCount - tail]], debuts: [[cardCount - tail + 1, cardCount]] };
+}
+
+/**
+ * "Sosa: 273 copies, Griffey: 350, McGwire: 457" -- one figure PER PLAYER on
+ * one line. Taking the first (273, Sosa's career HR total) and applying it to
+ * all three was the original defect one level down: Griffey's Triple is /350,
+ * not /273. Returns [{player, run}]; [] when the line is not per-player.
+ */
+const PER_PLAYER = /([A-Z][\w.'-]+(?:\s+[A-Z][\w.'-]+)?)\s*:\s*(\d[\d,]*)\s*(?:cop(?:y|ies))?/g;
+
+function parsePerPlayerRuns(note) {
+  const out = [];
+  for (const m of String(note ?? "").matchAll(PER_PLAYER)) {
+    const run = Number(m[2].replace(/,/g, ""));
+    if (!Number.isFinite(run) || run < 1 || run > 100000) continue;
+    out.push({ player: m[1].trim(), run });
+  }
+  // One "Name: number" pair is a label, not a roster ("short set: 3000").
+  return out.length >= 2 ? out : [];
+}
+
+/** Does this body state its print runs PER CARD RANGE? True when any list
+ *  item names a card range alongside a run. When true, a rung of that body
+ *  whose own range did not parse must NOT inherit a set-wide run. */
+function hasRangeClause(body) {
+  for (const m of String(body).matchAll(/<li>([\s\S]*?)<\/li>/g)) {
+    const t = detag(m[1]);
+    if (t.length <= 120 && parseCardRange(t)) return true;
+  }
+  return false;
+}
+
+/** "one-of-one" / "1/1" is a print run of 1 stated in words. */
+const ONE_OF_ONE = /\bone[-\s]of[-\s]one\b|\b1\s*\/\s*1\b/i;
+
+/**
+ * One ladder. Rungs carry the CARD NUMBERS they apply to (`cardRange`, null =
+ * whole set) and, for an EXCEPT block, the PLAYERS they apply to (`players`).
+ * Both are read off the page; neither is ever assumed.
+ */
+function parseLadder(parallelsBody, playerNames = new Set(), opts = {}) {
+  const { players: scopePlayers = null, requireRange = false, subsetRuns = null } = opts;
   const rungs = new Map();
   let rosterLines = 0;
-  const put = (rawName, run, rawNote) => {
+  const putFor = (rawName, run, rawNote, cardRange, players) => {
     const split = splitAnnotation(rawName);
     const name = split.name, note = rawNote ?? split.note ?? null;
     run = run ?? split.run ?? null;
+    // Pack odds ("1:12/packs") are a rarity statement, not a print run.
+    if (run != null && hasOdds(note)) run = null;
     const k = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
     if (!k) return;
     if (playerNames.has(foldName(name)) || playerNames.has(foldRoster(name))) { rosterLines++; return; }
-    if (!rungs.has(k)) rungs.set(k, { name, printRun: run ?? null, note });
-    else { const r = rungs.get(k); if (run && !r.printRun) r.printRun = run; if (note && !r.note) r.note = note; }
+    // A rung whose print run is stated per-range but whose range did not
+    // parse gets a BLANK run rather than the set-wide value. #1571 §3.1.
+    if (requireRange && !cardRange) run = null;
+    // Range-scoped and player-scoped rungs of the SAME name are distinct rows
+    // (Radiance /2500 on 1-30 is not Radiance /100 on 171-180; Griffey's
+    // Triple /350 is not Sosa's /273), so the key carries both scopes.
+    // Without this the Map would keep only the first.
+    const rk = k
+      + (cardRange ? "@" + cardRange.map((s) => s.join("-")).join(",") : "")
+      + (players && players.length ? "#" + players.map(foldName).join("+") : "");
+    const rec = { name, printRun: run ?? null, note, cardRange: cardRange ?? null, players: players ?? null };
+    if (!rungs.has(rk)) rungs.set(rk, rec);
+    else { const r = rungs.get(rk); if (run && !r.printRun) r.printRun = run; if (note && !r.note) r.note = note; }
   };
+  const put = (rawName, run, rawNote, cardRange) => putFor(rawName, run, rawNote, cardRange, scopePlayers);
 
   // named-rung subsections; umbrella headings organize, they do not name a card
   for (const m of parallelsBody.matchAll(/<h[34] id="([^"]+?)(?:_\d+)?">/g)) {
@@ -392,15 +653,46 @@ function parseLadder(parallelsBody, playerNames = new Set()) {
     if (/^series (one|two)/i.test(name) || UMBRELLA.test(name)) continue;
     if (name.length > 60) continue;
     const body = section(parallelsBody, m[1], m[0].includes("<h3") ? 3 : 4).slice(0, 2500);
-    const run = detag(body).match(RUN_NOTE);
+    const text = detag(body);
+    // CF-A-FAMILY-HEADING-IS-NOT-ITS-FIRST-RUNG. "Radiance" is an h3 whose
+    // body is a LIST of range-scoped children ("Radiance Youth Movement
+    // (cards 1-30 and 181-210; ... to 2500)", "Radiance Heroes of the Game
+    // (cards 171-180; ... to 100)"). Reading RUN_NOTE over the whole body
+    // handed the heading its first child's run -- Radiance /2500 on all 360
+    // cards -- and emitting the heading at all re-created the 360-wide rung
+    // the range scoping exists to remove: the children already tile the set,
+    // so a bare "Radiance" row is a duplicate of whichever child owns that
+    // card. A heading whose body states per-range runs NAMES A FAMILY; its
+    // rungs are its children.
+    if (hasRangeClause(body)) continue;
+    const run = text.match(RUN_NOTE);
     const n = run ? Number((run[1] || run[2] || "").replace(/,/g, "")) : null;
-    put(name, n && n >= 1 && n <= 100000 ? n : null);
+    const ok = n && n >= 1 && n <= 100000 && !hasOdds(text);
+    put(name, ok ? n : null, null, null);
   }
 
   // list rungs: <li>Name (note)</li>, rejecting card lines and prose
   for (const m of parallelsBody.matchAll(/<li>([\s\S]*?)<\/li>/g)) {
     const text = detag(m[1]);
-    if (!text || text.length > 60) continue;
+    // The 60-char prose guard predates range clauses. A line that NAMES A
+    // CARD RANGE is structured data, not prose -- "Radiance Cornerstones of
+    // the Game (cards 351-360; serial-numbered to 100)" is 73 chars and is
+    // the most precise rung on the page. Silently dropping it left SPx Finite
+    // with 3 of its 8 Radiance rungs. Prose still has no range clause, so the
+    // guard keeps its job; the allowance is capped so a paragraph that merely
+    // mentions a card number cannot slip through.
+    if (!text) continue;
+    // The 60-char guard rejects prose. A line carrying a SCOPED RUN CLAUSE is
+    // not prose: "Blue (Class 1, serial-numbered to 150; Class 2, ... 99;
+    // Class 3, ... 50)" is 78 chars and is a real rung whose print run varies
+    // by a scope this emitter cannot yet express in card numbers. Dropping it
+    // lost the rung entirely; keeping it with a BLANK run records the rung and
+    // says the number is unknown, which is the honest state. Its note keeps
+    // the page's own wording so the figures are recoverable later.
+    const ranged = text.length <= 160 && parseCardRange(text) != null;
+    const scopedRun = text.length <= 200 && /serial-numbered to|numbered to|\bcopies\b/i.test(text)
+      && /\b(class|series|tier|level)\s*\d|;/i.test(text);
+    if (text.length > 60 && !ranged && !scopedRun) continue;
     const paren = text.indexOf("(");
     const name = (paren > 0 ? text.slice(0, paren) : text).trim().replace(/[-–—:]$/, "").trim();
     if (!name || name.length > 45 || !/[A-Za-z]{2}/.test(name)) continue;
@@ -409,14 +701,51 @@ function parseLadder(parallelsBody, playerNames = new Set()) {
     // (whose first token is only the alpha prefix). CF-A-CARD-NUMBER-IS-NOT-A-RUNG.
     if (CARD_NUM.test(name.split(" ")[0]) || leadingCardNumber(name)) continue;
     const note = paren > 0 ? text.slice(paren) : "";
+    // The range clause lives in the SAME parenthetical as the run:
+    // "(cards 171-180; serial-numbered to 100)".
+    const cardRange = parseCardRange(note) || parseCardRange(text);
     const run = note.match(RUN_NOTE);
-    const n = run ? Number((run[1] || run[2] || "").replace(/,/g, "")) : null;
+    let n = run ? Number((run[1] || run[2] || "").replace(/,/g, "")) : null;
+    if (n == null && ONE_OF_ONE.test(note)) n = 1;      // "one-of-one" is /1
+    if (hasOdds(note)) n = null;                        // 1:12 is odds, not a run
+    // CF-A-MULTI-FIGURE-CLAUSE-HAS-NO-SINGLE-RUN. "Blue (Class 1,
+    // serial-numbered to 150; Class 2, ... 99; Class 3, ... 50)" states THREE
+    // runs for three classes. RUN_NOTE returns the first (150), which would
+    // stamp Class 1's number on all 100 cards -- the §3.1 cross-join in a
+    // different costume. When a clause holds more than one figure and the
+    // scope is not resolvable to card numbers, the run is UNKNOWN: blank.
+    const figures = (note.match(/(?:numbered to|copies|:)\s*\d[\d,]*/gi) || []).length;
+    if (figures > 1 && !cardRange) n = null;
     // an un-noted bare <li> in this section is usually prose fragment; require
     // either a note or a short multi-wordless name that reads like a rung
     if (!note && name.split(" ").length > 4) continue;
-    put(name, n && n >= 1 && n <= 100000 ? n : null, note ? note.replace(/^\(|\)$/g, "").trim() || null : null);
+    const cleanNote = note ? note.replace(/^\(|\)$/g, "").trim() || null : null;
+    // "short set, 3000; Debuts, 2500" is TWO range-scoped rungs, not one.
+    // Emitted only when the page states where the subsets split; otherwise
+    // the rung stays blank rather than taking one of the two numbers.
+    // A per-player exception line is one rung PER PLAYER: Griffey's Triple
+    // is /350, not Sosa's /273.
+    const perPlayer = scopePlayers && scopePlayers.length ? parsePerPlayerRuns(note) : [];
+    if (perPlayer.length) {
+      for (const x of perPlayer) {
+        const full = scopePlayers.find((n) => matchesExceptionPlayer(n, [x.player])) || x.player;
+        putFor(name, x.run, cleanNote, null, [full]);
+      }
+      continue;
+    }
+    const subs = subsetRuns ? parseSubsetRuns(note) : [];
+    if (subs.length && subs.some((x) => subsetRuns[x.subset])) {
+      for (const x of subs) {
+        const rng = subsetRuns[x.subset];
+        if (!rng) continue;
+        put(name, x.run, cleanNote, rng);
+      }
+      continue;
+    }
+    put(name, n && n >= 1 && n <= 100000 ? n : null, cleanNote, cardRange);
   }
   const out = [...rungs.values()];
+
   out.rosterLines = rosterLines;
   return out;
 }
@@ -436,7 +765,7 @@ function parseLadder(parallelsBody, playerNames = new Set()) {
  * stay parallels of the paper card.
  */
 function parseScopedLadders(parallelsBody, opts = {}) {
-  const { html = parallelsBody, setName = "", setKey = "", playerNames = new Set(), qualify = null } = opts;
+  const { html = parallelsBody, setName = "", setKey = "", playerNames = new Set(), qualify = null, subsetRuns = null } = opts;
   const imgPrefixes = prefixesFromImages(html);
   const out = [];
   for (const scope of splitScopes(parallelsBody)) {
@@ -449,7 +778,17 @@ function parseScopedLadders(parallelsBody, opts = {}) {
     const ownBody = sliceBeforeSubsections(scope.body);
     // A card list inside Parallels is a roster, never a ladder.
     const cardList = !isPaper && isCardListScope(ownBody);
-    const rungs = cardList ? [] : parseLadder(ownBody, playerNames);
+    // CF-THE-EXCEPT-BLOCK-IS-NOT-THE-RULE (#1571 §3.2). The rule ladder and
+    // the EXCEPT ladder are parsed SEPARATELY and never merged: the exception
+    // rungs carry the players they belong to, so they reach only those rows.
+    // Parsing them as one Map is what let Triple /273 (Sosa's career HR total)
+    // fill the rule line's empty printRun and stamp itself on all 120 cards.
+    const parts = cardList ? null : splitAtException(ownBody);
+    const ruleRungs = cardList ? [] : parseLadder(parts.rule, playerNames, { requireRange: hasRangeClause(parts.rule), subsetRuns });
+    const exRungs = cardList || !parts.exception ? []
+      : parseLadder(parts.exception, playerNames, { players: parts.players });
+    const rungs = [...ruleRungs, ...exRungs];
+    rungs.rosterLines = (ruleRungs.rosterLines || 0) + (exRungs.rosterLines || 0);
     // Route the scope title through the product vocabulary. No qualifier
     // match (or no injected resolver) means it is a finish, not a product.
     const decision = !isPaper && qualify ? qualify(setKey, scope.title) : null;
@@ -590,7 +929,11 @@ async function main() {
     const players = new Set(cards.map((c) => c.player).filter(isPersonName).map(foldName));
     // CF-THE-H3-IS-A-PRODUCT-BOUNDARY: one ladder PER PRODUCT, not one flat
     // ladder cross-joined over the paper cards.
-    const scopes = parseScopedLadders(par, { html, setName, setKey: paperSetKey, playerNames: players, qualify });
+    // Where the page names its subsets by name rather than by card range
+    // ("short set, 3000; Debuts, 2500"), resolve those names to card numbers
+    // from the page's own statement of the split. {} when it does not say.
+    const subsetRuns = subsetRanges(html, cards.length);
+    const scopes = parseScopedLadders(par, { html, setName, setKey: paperSetKey, playerNames: players, qualify, subsetRuns });
     if (!cards.length) { noCards++; console.log(`  ${title}: 0 base cards — layout not understood, SKIPPED (not emitted)`); continue; }
     const ladderScopes = scopes.filter((s) => s.rungs.length);
     if (!ladderScopes.length) { noLadder++; console.log(`  ${title}: base ok (${cards.length}) but 0 rungs — nothing new to add`); continue; }
@@ -622,6 +965,13 @@ async function main() {
       for (const c of scopeCards) {
         lines.push(["base", csvEsc(c.num), "Base", "false", "", csvEsc(c.player)].join(","));
         for (const r of sc.rungs) {
+          // A rung reaches a card only where the PAGE says it does: its card
+          // range (#1571 §3.1) and, for an EXCEPT block, its players (§3.2).
+          // Emitting outside either is the cross-join that manufactured
+          // "Radiance Heroes of the Game /100" on card #1 and Sosa's career
+          // home-run total on all 120 Black Diamond cards.
+          if (!cardInRange(c.num, r.cardRange)) continue;
+          if (r.players && r.players.length && !matchesExceptionPlayer(c.player, r.players)) continue;
           const nm = sc.isOwnProduct ? rungNameInScope(r.name, sc.title) : r.name;
           lines.push(["base", csvEsc(c.num), csvEsc(nm), "false", r.printRun ?? "", csvEsc(c.player), csvEsc(r.note ?? "")].join(","));
         }
@@ -686,6 +1036,10 @@ module.exports = {
   splitScopes, derivePrefix, prefixesFromImages, prefixFromProse,
   isCardListScope, isCardLine, rungNameInScope, cleanScrapedPlayer,
   leadingCardNumber, foldRoster, foldName,
+  // #1571: the print-run scoping surface — range clauses, the EXCEPT
+  // boundary, and the odds guard, each pinned directly by its own test.
+  parseCardRange, cardInRange, splitAtException, exceptionPlayers, parseSubsetRuns, subsetRanges,
+  matchesExceptionPlayer, hasRangeClause, hasOdds, splitAnnotation, detag,
 };
 
 if (require.main === module) {
