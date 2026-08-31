@@ -51,6 +51,7 @@ import {
 import { buildSearchText, buildSearchTokens } from "../portfolioiq/searchIndexing.service.js";
 import { authorityRank } from "./catalogAuthority.service.js";
 import { canonicalCardName } from "./canonicalCardName.js";
+import { productAncestry } from "./productSetKeys.js";
 
 /** A catalog row as it comes back from Cosmos: the typed fields plus whatever
  *  else the writer stamped on it. Extra fields travel with the row. */
@@ -202,12 +203,105 @@ export function rebuildSearchFields(row: {
 // ── the incoming row ─────────────────────────────────────────────────────────
 
 /**
+ * The setKey segment of an hiq id -- `split(":")[3]`, the same rule
+ * consolidate-catalog-duplicates' `kindOf` uses to measure id/field drift.
+ * CF-THE-ID-CARRIES-THE-PRODUCT: the id is what names the product.
+ */
+function idSetKeySegment(id: unknown): string {
+  return String(id ?? "").split(":")[3] ?? "";
+}
+
+/**
+ * Is the row's setKey FIELD strictly more specific than the id STEM -- i.e. is
+ * the field a named release *of* the stem's product?
+ *
+ * Two arms, because the catalog's products outrun the table:
+ *
+ *   the LADDER -- `productAncestry(field)` contains the stem, the repo's own
+ *   notion of "extends" (`topps-finest-flashbacks` -> topps-finest -> topps);
+ *
+ *   the LEXICAL extension -- `field.startsWith(stem + "-")`, which is what
+ *   catches the products PRODUCT_SET_KEYS does not spell yet and which are the
+ *   bulk of the live drift: `topps-baseball-japan-edition` over stem `topps`
+ *   (164 of 913 sampled), `topps-flagship` (99), `topps-chrome-logofractor-
+ *   edition` over `topps-chrome` (73), `topps-transcendent-collection` (59),
+ *   `topps-stadium-club-chrome` (50). The table answers `ancestry = [itself]`
+ *   for every one of them.
+ *
+ * Deliberately NOT more specific, and each one measured live:
+ *   field `bowman` over stem `bowman-chrome` -- the field is the GENERIC one,
+ *     the drift this module set out to correct (138 sampled);
+ *   field `donruss-optic` over stem `panini-optic` (73) -- a rival SPELLING,
+ *     not a release of it; neither arm fires and the stem wins, which is what
+ *     the era spelling policy wants;
+ *   field `bowman-sapphire` over stem `bowman-chrome-sapphire` (26) -- a
+ *     sibling, unrelated on both arms.
+ */
+function fieldExtendsStem(field: string, stem: string): boolean {
+  if (!field || !stem || field === stem) return false;
+  if (productAncestry(field).includes(stem)) return true;
+  return field.startsWith(`${stem}-`);
+}
+
+/**
  * The old row as it should exist at newSlug: id fields from the slug, the
  * derived fields re-derived, the searchable fields rebuilt, the slug-bound
- * annotations dropped. Pure -- no I/O -- and it THROWS when the slug and the
- * fields disagree about the setKey, because a key needs both halves and a
- * row whose id says one product while its setKey says another is the
- * fragmentation this module exists to end.
+ * annotations dropped. Pure -- no I/O -- and it THROWS when the two SLUGS
+ * disagree about the product, because a cross-product move is not a move:
+ * bowman-chrome and bowman-chrome-sapphire are different cards and must never
+ * be merged onto one address.
+ *
+ * CF-CANDIDATE-ID-IS-WHAT-WE-ADOPT (D30 R2, 2026-08-31). The guard used to
+ * compare newSlug's setKey against the row's setKey FIELD, and that field is
+ * NOT reliably the product.
+ *
+ * WHERE THE DRIFT COMES FROM -- measured, not assumed. It is NOT minted:
+ * deriveCatalogEntry sets `setKey: parsedSlug[3]` from the slug it has just
+ * computed, so field == stem ALWAYS at mint, for every combination of
+ * `authoritativeSetKey` (which keeps the caller's spelling in the SLUG, and so
+ * in the field with it -- it does not split the two). The drift is written
+ * LATER: field-only updates and older minters that predate the
+ * one-constructor rule, and it runs in BOTH directions. A read-only probe of
+ * card_catalog (60,000 of 15,997,198 hiq rows, 2026-08-31) found 913 drifted,
+ * 1.52%, ~243k extrapolated:
+ *
+ *   field MORE specific than the stem   568   topps-baseball-japan-edition
+ *                                             over stem topps (164),
+ *                                             topps-flagship (99),
+ *                                             topps-chrome-logofractor-edition
+ *                                             over topps-chrome (73)
+ *   stem MORE specific than the field   167   field bowman over stem
+ *                                             bowman-chrome / bowman-paper
+ *   unrelated                           178   donruss-optic vs panini-optic
+ *
+ * and the sources are the highest-authority rows we have (checklistcenter 467,
+ * checklistinsider 357, beckett-checklist 41). So the FIRST group is the
+ * majority, and it is exactly the group a "field follows the stem" rewrite
+ * would destroy.
+ *
+ * THE GUARD asks "did the caller ASK to change the product?", because that is
+ * what separates the two populations the field comparison confused:
+ *
+ *   a FOLD / renumber / parallel fix passes no setKey (`{ printRun: 499 }`,
+ *   `{ cardNumber }`): the product must NOT change, so newSlug's stem must
+ *   equal the OLD ID's stem -- whatever the drifted field says;
+ *
+ *   a RENAME passes the product it is moving to (`{ setKey: TO }` --
+ *   rename-setkey, apply-setkey-rulings, apply-cpa-product-rule,
+ *   rename-setkey-to-product all do): the stem is allowed to change, and
+ *   newSlug's stem must equal the setKey the caller ASKED for, so a slug that
+ *   lands on some third product is still refused.
+ *
+ * Either way a cross-product move stays impossible: nothing can silently carry
+ * a row from bowman-chrome to bowman-chrome-sapphire, and sapphire never
+ * merges. Only the field mismatch stops blocking.
+ *
+ * THE FIELD WRITE ONLY IMPROVES (feedback_slug_recompute_only_improve: rewrite
+ * only when strictly MORE specific). On a fold, a field that EXTENDS the stem
+ * is the better identity and is kept VERBATIM -- brand and parentSetKey with
+ * it, and searchText is never rebuilt off an identity we just demoted. Only a
+ * field that is stale-generic, equal, or unrelated to the stem is replaced by
+ * the stem. A rename is a ruling and always lands on what it asked for.
  */
 function buildIncoming(
   oldRow: CatalogRowDoc,
@@ -217,12 +311,34 @@ function buildIncoming(
   const merged = { ...stripSlugBoundFields(oldRow), ...changedFields } as CatalogRowDoc;
   const parsed = parseHobbyIqCardId(newSlug);
   if (!parsed) throw new Error(`moveCatalogRow: newSlug is not a hiq slug: ${newSlug}`);
-  const setKey = String(merged.setKey ?? "").trim();
-  if (parsed.setKey !== setKey) {
+  const oldIdSetKey = idSetKeySegment(oldRow.id);
+  // Did the caller ASK for a product change? Only an explicit `setKey` in
+  // changedFields does that; a fold passes printRun / cardNumber and means
+  // "same product, new address".
+  const askedSetKey = Object.prototype.hasOwnProperty.call(changedFields, "setKey")
+    ? String(changedFields.setKey ?? "").trim()
+    : null;
+  const expected = askedSetKey === null ? oldIdSetKey : askedSetKey;
+  if (parsed.setKey !== expected) {
     throw new Error(
-      `moveCatalogRow: newSlug says setKey "${parsed.setKey}" but the row says "${setKey}" (${newSlug}) -- a key needs both halves`,
+      askedSetKey === null
+        ? `moveCatalogRow: newSlug says setKey "${parsed.setKey}" but the row's id says "${oldIdSetKey}" (${String(oldRow.id)} -> ${newSlug}) and no setKey change was asked for -- a cross-product move is not a move`
+        : `moveCatalogRow: newSlug says setKey "${parsed.setKey}" but the caller asked for "${askedSetKey}" (${String(oldRow.id)} -> ${newSlug}) -- a cross-product move is not a move`,
     );
   }
+  // ONLY-IMPROVE. On a FOLD the caller named no product, so the row's own
+  // field gets to keep the argument: when it EXTENDS the new stem
+  // (topps-baseball-japan-edition over topps) it is the more specific
+  // identity and survives verbatim. Otherwise -- stale-generic (field
+  // "bowman", stem "bowman-chrome"), equal, or unrelated -- the stem is the
+  // better answer and the field is corrected to it. A RENAME asked for a
+  // product by name, and a ruling always lands where it was aimed.
+  // Read the ROW's own field, not `merged.setKey` -- on a rename the merge has
+  // already overwritten it with the asked-for key, so `merged` cannot tell the
+  // two lanes apart.
+  const rowSetKey = String(oldRow.setKey ?? "").trim();
+  const keepField = askedSetKey === null && fieldExtendsStem(rowSetKey, parsed.setKey);
+  const setKey = keepField ? rowSetKey : parsed.setKey;
 
   const playerName = merged.playerName ? String(merged.playerName).trim() || null : null;
   const cardNumber = String(merged.cardNumber ?? "").trim().toUpperCase();
@@ -237,11 +353,15 @@ function buildIncoming(
   // so it can disagree with a caller-supplied ruling -- and the caller
   // carries the ruling. When it disagrees, or the row has no player (8.4% of
   // the catalog), the slug's own segments are the derivation.
+  // ...and it is derived off the STEM, which is what newSlug is actually
+  // spelled with -- never off a kept extending field, which would mint a
+  // different id, fail `agrees`, and throw the derivation away for exactly the
+  // rows we are protecting.
   const derived = playerName
     ? deriveCatalogEntry({
         sport: String(merged.sport ?? ""),
         year: parsed.year,
-        setKey,
+        setKey: parsed.setKey,
         cardNumber,
         parallel,
         isAuto: parsed.isAuto,
@@ -257,7 +377,23 @@ function buildIncoming(
   const playerSlug = agrees
     ? derived.playerSlug
     : playerName ? slugify(playerName) : (typeof merged.playerSlug === "string" ? merged.playerSlug : null);
-  const setKeyChanged = setKey !== String(oldRow.setKey ?? "").trim();
+  // brand / parentSetKey are functions of the setKey we are about to WRITE.
+  // Re-derive when that differs from the stem the row came from, OR when the
+  // field is being corrected off a drifted one (field "bowman", stem
+  // "bowman-chrome": brand/parentSetKey were computed from the old field).
+  // Both clauses are load-bearing and neither implies the other:
+  //   stem-only  -- a rename whose asked-for product differs from the old stem
+  //                 but happens to equal the old FIELD (field "bowman-chrome",
+  //                 stem "bowman", renamed to "bowman-chrome"): the field
+  //                 clause is false, the product still moved;
+  //   field-only -- a fold that corrects a stale-generic field, where the stem
+  //                 never moved at all.
+  // When we KEEP an extending field the identity did not change at all, so
+  // brand / parentSetKey are left exactly as the checklist left them --
+  // deriveBrand would flatten `topps-baseball-japan-edition` to `topps` and
+  // throw away the very specificity this branch exists to protect.
+  const setKeyChanged = !keepField
+    && (setKey !== oldIdSetKey || setKey !== String(oldRow.setKey ?? "").trim());
 
   const doc: CatalogRowDoc = {
     ...merged,
