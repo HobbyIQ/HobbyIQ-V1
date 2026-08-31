@@ -358,6 +358,17 @@ export function sourcePurchaseFor(
 }
 
 /**
+ * How the price on a purchase-derived sale was arrived at (D38).
+ *
+ *   subtotal  the item price the seller charged -- what the market paid for
+ *             the card. The only basis a comp pool wants.
+ *   all-in    purchase.totalCost / holding.purchasePrice: item + shipping +
+ *             tax, with no way left to separate them. The buyer's cost basis.
+ *   none      no positive price was available at all.
+ */
+export type SalePriceBasis = "subtotal" | "all-in" | "none";
+
+/**
  * CF-ONE-TRANSACTION-ONE-ROW (D9). The pool identity of a purchase's sale,
  * derived the same way by EVERY writer -- import, confirm, rematch. Three
  * writers had three keys (order id / item id / holding::) and two prices, so
@@ -373,14 +384,30 @@ export function sourcePurchaseFor(
 export function purchaseSaleIdentity(
   purchase: Pick<PortfolioPurchaseEntry, "ebayOrderId" | "ebayItemId" | "subtotal" | "totalCost"> | null | undefined,
   holding: { id?: unknown; ebayOrderId?: unknown; ebayItemId?: unknown; purchasePrice?: unknown; totalCostBasis?: unknown } | Record<string, unknown>,
-): { sourceExternalId: string; price: number } {
+): { sourceExternalId: string; price: number; priceBasis: SalePriceBasis } {
   const key = str(purchase?.ebayOrderId) || str(holding.ebayOrderId)
     || str(purchase?.ebayItemId) || str(holding.ebayItemId)
     || `holding::${str(holding.id)}`;
   const num = (v: unknown): number => (typeof v === "number" && Number.isFinite(v) && v > 0 ? v : 0);
-  const price = num(purchase?.subtotal) || num(purchase?.totalCost)
+
+  // CF-A-SUBTOTAL-NEVER-REGRESSES-TO-ALL-IN (D38, 2026-08-30). The price and
+  // the DERIVATION of the price are returned together, because the pool row's
+  // id does not depend on the price and the store's upsert is price-blind.
+  // Any later writer that reaches this function without the purchase record
+  // -- a confirm whose sourcePurchaseFor() finds nothing, a rematch on a doc
+  // whose purchases array was trimmed -- lands on the SAME doc id and would
+  // otherwise silently overwrite 295.95 (the market's price) with 301.43 (the
+  // buyer's all-in basis). The basis travels with the price so the store can
+  // refuse that specific regression; see keepsExistingPrice() there.
+  const subtotal = num(purchase?.subtotal);
+  if (subtotal) return { sourceExternalId: key, price: subtotal, priceBasis: "subtotal" };
+
+  const totalCost = num(purchase?.totalCost)
     || num(holding.purchasePrice) || num(holding.totalCostBasis);
-  return { sourceExternalId: key, price };
+  // ALL-IN: shipping and tax are inside this number and cannot be removed --
+  // the components are unknowable from here. It is a usable price when it is
+  // the only one there is, and it is never an upgrade over a subtotal.
+  return { sourceExternalId: key, price: totalCost, priceBasis: totalCost ? "all-in" : "none" };
 }
 
 // CF-A-REAL-SALE-IS-IN-THE-POOL-ONCE (Drew, 2026-08-29, checklist D7a):
@@ -398,13 +425,16 @@ async function recordImportSale(
   if (purchase.ebayItemId) h.ebayItemId = purchase.ebayItemId;
   if (purchase.ebayOrderId) h.ebayOrderId = purchase.ebayOrderId;
   const slug = typeof h.cardId === "string" && h.cardId.startsWith("hiq:") ? h.cardId : null;
-  const { sourceExternalId, price } = purchaseSaleIdentity(purchase, h);
+  const { sourceExternalId, price, priceBasis } = purchaseSaleIdentity(purchase, h);
   const soldAt = str(h.purchaseDate) || str(purchase.purchaseDate);
   if (!slug || price <= 0 || !soldAt || !str(h.playerName)) return;
   try {
     const { recordSoldComp } = await import("./soldCompsStore.service.js");
     const res = await recordSoldComp({
       cardId: slug,
+      // D38: the holding was just pinned to this slug; hand it over as the
+      // ruled identity so the store verifies it rather than recomputing one.
+      pinnedHobbyIqCardId: slug,
       playerName: str(h.playerName),
       cardYear: typeof h.cardYear === "number" ? h.cardYear : null,
       setName: str(h.setName) || null,
@@ -416,6 +446,7 @@ async function recordImportSale(
       gradeValue: typeof h.gradeValue === "number" ? h.gradeValue : null,
       sport: (str(h.sport) || "baseball").toLowerCase(),
       price,
+      priceBasis,
       soldAt,
       source: "ebay-user-purchase",
       sourceExternalId,

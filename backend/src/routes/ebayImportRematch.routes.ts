@@ -159,7 +159,7 @@ router.post("/rematch-ebay-imports", requireSession, async (req: Request, res: R
                       "../services/portfolioiq/ebayAutoHolding.service.js"
                     );
                     const sourcePurchase = sourcePurchaseFor(doc, h);
-                    const { sourceExternalId, price } = purchaseSaleIdentity(sourcePurchase, h);
+                    const { sourceExternalId, price, priceBasis } = purchaseSaleIdentity(sourcePurchase, h);
                     if (!(price > 0)) return;
                     // CF-ONE-SALE-ONE-ROW (2026-08-29, D7c): the import wrote this
                     // purchase under the holding's slug at import time; if the
@@ -181,6 +181,7 @@ router.post("/rematch-ebay-imports", requireSession, async (req: Request, res: R
                       gradeCompany: (h.gradeCompany as string | null) ?? null,
                       gradeValue: (h.gradeValue as number | null) ?? null,
                       price,
+                      priceBasis,
                       soldAt,
                       source: "ebay-user-purchase",
                       sourceExternalId,

@@ -621,7 +621,7 @@ export async function confirmHoldingReview(
     // user-verified.
     const { purchaseSaleIdentity, sourcePurchaseFor } = await import("./ebayAutoHolding.service.js");
     const sourcePurchase = sourcePurchaseFor(doc, holding);
-    const { sourceExternalId, price } = purchaseSaleIdentity(sourcePurchase, holding as Record<string, unknown>);
+    const { sourceExternalId, price, priceBasis } = purchaseSaleIdentity(sourcePurchase, holding as Record<string, unknown>);
     const soldAt = String(
       (holding as any).purchaseDate
       ?? (holding as any).addedAt
@@ -644,6 +644,7 @@ export async function confirmHoldingReview(
             gradeCompany: (holding as { gradeCompany?: string | null }).gradeCompany ?? null,
             gradeValue: (holding as { gradeValue?: number | null }).gradeValue ?? null,
             price,
+            priceBasis,
             soldAt,
             source: "ebay-user-purchase",
             sourceExternalId,

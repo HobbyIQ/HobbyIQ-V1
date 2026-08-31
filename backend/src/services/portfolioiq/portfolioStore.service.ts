@@ -2846,6 +2846,8 @@ async function emitUserEbayPurchaseComp(
     const sport = (holding as { sport?: unknown }).sport;
     await recordSoldComp({
       cardId,
+      // D38: the ruled identity, verified by the store against the catalog.
+      pinnedHobbyIqCardId: identity.hobbyiqCardId,
       vendorCardId: identity.vendorCardId,
       playerName,
       cardYear: ((holding as { cardYear?: number }).cardYear ?? null) as number | null,

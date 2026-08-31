@@ -487,3 +487,52 @@ export async function resolveIdentityToCatalogRow(
   }
   return cloneResolution(await p);
 }
+
+/**
+ * CF-ONE-IDENTITY-ONE-DERIVATION (D38, Drew 2026-08-30). Does this hiq id
+ * resolve to a CHECKLIST-BACKED catalog row?
+ *
+ * The predicate a WRITER needs before it will trust an identity handed to it
+ * instead of deriving its own. `resolveIdentityToCatalogRow` answers "which
+ * row is this identity", and `canAdjudicate` answers "may that row decide a
+ * fact"; a pinned id is only authoritative when BOTH say yes. A derived row
+ * (`sold-comps-stub`, `ingest-auto-seed`) must not qualify — that is the
+ * catalog judging itself, which is precisely the loop catalogAuthority exists
+ * to break.
+ *
+ * Resolves through the twin rule first, so a holding pinned to `<stem>` whose
+ * checklist row is `<stem>:num-499` verifies against the row that actually
+ * exists (the cpa-jg shape).
+ *
+ * FAILS CLOSED. Null container, an unresolved read, an ambiguous twin, a
+ * non-checklist source: all return null, and the caller falls back to
+ * deriving the slug itself — today's behaviour. Trusting a pin requires a
+ * positive confirmation, never the absence of a refusal.
+ */
+export async function checklistBackedCatalogRow(
+  slug: string,
+  opts: { container?: Container | null; printRun?: number | string | null } = {},
+): Promise<{ id: string; source: string } | null> {
+  const resolution = await resolveIdentityToCatalogRow(slug, opts);
+  const id = resolution.id;
+  if (!id) return null;
+  const container = opts.container ?? getContainer();
+  if (!container) return null;
+  try {
+    const { resource } = await container.item(id, id).read<{ source?: unknown }>();
+    if (!resource) return null;
+    const source = String((resource as { source?: unknown }).source ?? "").trim();
+    if (!canAdjudicate(source)) {
+      info("catalog_identity_pin_not_checklist_backed", { slug, resolvedTo: id, source: source || null });
+      return null;
+    }
+    return { id, source };
+  } catch (err) {
+    if ((err as { code?: number })?.code !== 404) {
+      warn("catalog_identity_pin_read_error", {
+        slug, resolvedTo: id, error: (err as Error)?.message ?? String(err), failClosed: true,
+      });
+    }
+    return null;
+  }
+}
