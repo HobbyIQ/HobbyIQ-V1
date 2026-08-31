@@ -488,9 +488,17 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     // Donruss Optic sat on panini-donruss. Optic is chrome stock with its own
     // checklist and its own prices; pooling it with paper Donruss moves both.
     // Largest single collapse in the CF-COLLAPSED-SETKEY-AUDIT worklist.
-    [/(?:panini-)?donruss-optic/, "panini-optic"],
+    // D31, Drew 2026-08-31: the product is donruss-optic -- ONE product, the
+    // key the checklists name. panini-optic was the minted spelling and the
+    // checklists never used it: 142,352 un-graded catalog rows and 344,978
+    // pool rows carry a :panini-optic: id stem against ZERO pool rows on
+    // :donruss-optic:, while the checklist rows all sit on donruss-optic
+    // (FB2023 16,055 / FB2024 15,988 / FB2025 19,466 / BB2024 30,998).
+    // Both spellings mint the one key from here; rename-setkey-to-product
+    // moves the stored rows to it.
+    [/(?:panini-)?donruss-optic/, "donruss-optic"],
     [/panini-donruss/, "panini-donruss"],
-    [/panini-optic/, "panini-optic"],
+    [/panini-optic/, "donruss-optic"],
     [/panini-contenders/, "panini-contenders"],
     [/panini-immaculate/, "panini-immaculate"],
     [/panini-flawless/, "panini-flawless"],
@@ -703,7 +711,7 @@ function bareAliasPatterns(): Array<[RegExp, string]> {
     [/(^|-)prizm(-|$)/, "panini-prizm"],
     [/(^|-)mosaic(-|$)/, "panini-mosaic"],
     [/(^|-)donruss(-|$)/, "panini-donruss"],
-    [/(^|-)optic(-|$)/, "panini-optic"],
+    [/(^|-)optic(-|$)/, "donruss-optic"],
     [/(^|-)contenders(-|$)/, "panini-contenders"],
     [/(^|-)immaculate(-|$)/, "panini-immaculate"],
     [/(^|-)flawless(-|$)/, "panini-flawless"],

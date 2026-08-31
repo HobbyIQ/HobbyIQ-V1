@@ -39,6 +39,23 @@
  *   --outDir=/tmp/bcp-ladders
  *   --delayMs=800             deliberately unhurried; this is a fan-run wiki
  *   --titles=A,B              explicit page titles instead of the template set
+ *   --sport=baseball          the sport every emitted row carries
+ *
+ * CF-THE-SPORT-IS-AN-INPUT-NOT-A-CONSTANT (2026-08-31). The site is
+ * baseballcardpedia, so `sport` was written as the literal "baseball" in the
+ * two places it is emitted -- the product key that names each staged file
+ * (`${year}-${setKey}-baseball`) and the manifest's own `sport` field. That
+ * held only as long as every page fetched was a baseball page, and --titles
+ * takes ARBITRARY page titles: the wiki carries football and basketball sets
+ * too, and a run dispatched with BCP_TITLES pointing at one minted its rows
+ * as baseball, into a baseball product key, with a manifest that said so.
+ * Nothing downstream could tell the difference -- the sport was not wrong in a
+ * field the ingest checks, it was wrong in the IDENTITY.
+ *
+ * So sport is a parameter, threaded from the acquisition inputs and stated
+ * explicitly at both emission sites. The default stays baseball, because that
+ * is what the source is; what changes is that a non-baseball scrape can now
+ * SAY so, and the value it says is the one that reaches disk.
  */
 const fs = require("node:fs");
 const path = require("node:path");
@@ -51,6 +68,11 @@ const YEARS = String(arg("years", "2016-2026"));
 const OUT_DIR = arg("outDir", "C:/tmp/bcp-ladders");
 const DELAY_MS = Number(arg("delayMs", "800"));
 const TITLES = arg("titles", "");
+// The sport every emitted row carries. A parameter, not a constant: see
+// CF-THE-SPORT-IS-AN-INPUT-NOT-A-CONSTANT above. Normalized here so the value
+// that reaches the product key and the manifest is the same one.
+const normalizeSport = (s) => String(s ?? "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+const SPORT = normalizeSport(arg("sport", "baseball")) || "baseball";
 
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36";
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -994,22 +1016,30 @@ function normalizeSetKeyLocal(setName) {
     .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 }
 
-async function main() {
-  fs.mkdirSync(OUT_DIR, { recursive: true });
+async function main(opts = {}) {
+  // The CLI values are the DEFAULTS, not the only source: a caller (the pins,
+  // above all) drives the committed emission path directly rather than
+  // reimplementing it. `sport` travels with outDir and years because it is
+  // the same kind of thing -- a run input that decides what lands on disk.
+  const outDir = opts.outDir ?? OUT_DIR;
+  const years = String(opts.years ?? YEARS);
+  const titles = opts.titles ?? TITLES;
+  const sport = normalizeSport(opts.sport ?? SPORT) || "baseball";
+  fs.mkdirSync(outDir, { recursive: true });
   const qualify = loadQualifier();
-  const [y0, y1] = YEARS.split("-").map(Number);
+  const [y0, y1] = years.split("-").map(Number);
   const work = [];
   // --titles ADDS pages to the per-year flagship list; it used to replace it,
   // so the 2005-2015 re-scrape (checklist B4) fetched 17 named pages and none
   // of the flagship years it was dispatched for.
-  if (TITLES) for (const t of TITLES.split(",")) if (t.trim()) work.push(t.trim());
+  if (titles) for (const t of String(titles).split(",")) if (t.trim()) work.push(t.trim());
   // The page families holding scorecard v2's remaining unconfirmed rows.
-  if (!String(arg("titlesOnly", "")).length) for (let y = y0; y <= (y1 || y0); y++) work.push(
+  if (!String(opts.titlesOnly ?? arg("titlesOnly", "")).length) for (let y = y0; y <= (y1 || y0); y++) work.push(
     `${y}_Topps`, `${y}_Topps_Update`, `${y}_Topps_Chrome`, `${y}_Topps_Chrome_Update`,
     `${y}_Bowman`, `${y}_Bowman_Chrome`, `${y}_Bowman_Draft`, `${y}_Topps_Heritage`, `${y}_Panini_Prizm`,
   );
 
-  console.log(`[bcp-ladders] ${work.length} pages  years=${YEARS}\nout: ${OUT_DIR}\n`);
+  console.log(`[bcp-ladders] ${work.length} pages  years=${years}  sport=${sport}\nout: ${outDir}\n`);
   let pages = 0, staged = 0, rows = 0, noLadder = 0, noCards = 0, unreachable = 0;
 
   for (const title of work) {
@@ -1037,7 +1067,9 @@ async function main() {
     const ladderScopes = scopes.filter((s) => s.rungs.length);
     if (!ladderScopes.length) { noLadder++; console.log(`  ${title}: base ok (${cards.length}) but 0 rungs — nothing new to add`); continue; }
 
-    const productKey = (sk) => `${year}-${sk}-baseball`;
+    // The sport is part of the product key, so it is part of the IDENTITY of
+    // every file staged here -- not decoration. It comes from the run input.
+    const productKey = (sk) => `${year}-${sk}-${sport}`;
     let pageRows = 0;
     const perProduct = [];
     for (const sc of scopes) {
@@ -1120,9 +1152,9 @@ async function main() {
         ? "--" + sc.title.toLowerCase().replace(/[^a-z0-9]+/g, "-") : "");
       if (sc.refused) for (const r of sc.refused) console.log(`   scope "${sc.title}": product move REFUSED by the vocabulary (${r.qualifier}) — ${r.reason}
      rows stay under ${sc.setKey} with prefix ${sc.prefix ?? "(paper)"}; this is a ruling for Drew, not a scraper decision`);
-      fs.writeFileSync(path.join(OUT_DIR, `${key}.csv`), lines.join("\n") + "\n");
-      fs.writeFileSync(path.join(OUT_DIR, `${key}.manifest.json`), JSON.stringify({
-        year, sport: "baseball", setKey: sc.setKey,
+      fs.writeFileSync(path.join(outDir, `${key}.csv`), lines.join("\n") + "\n");
+      fs.writeFileSync(path.join(outDir, `${key}.manifest.json`), JSON.stringify({
+        year, sport, setKey: sc.setKey,
         setName: `${year} ${setName}${sc.isOwnProduct ? " " + sc.title : ""}`,
         sourceUrl: url, scope: sc.title, scopeOfPage: setName,
         cardNumberPrefix: sc.prefix, prefixDerivedFrom: sc.prefixVia,
@@ -1153,7 +1185,7 @@ async function main() {
 // (leadingCardNumber / foldRoster / foldName): the number-prefix defences the
 // scrapeBcpLaddersCardLineGuard pins drive directly.
 module.exports = {
-  main,
+  main, normalizeSport,
   parseCards, parseLadder, parseScopedLadders, section,
   splitScopes, derivePrefix, prefixesFromImages, prefixFromProse,
   isCardListScope, isCardLine, rungNameInScope, cleanScrapedPlayer,
