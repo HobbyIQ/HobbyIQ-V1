@@ -197,6 +197,117 @@ describe("runHistoricalBackfill — dual-vendor accumulation", () => {
   });
 });
 
+// CF-THE-TITLE-OUTRANKS-THE-VENDOR-TAG reaches historicalBackfill (Drew,
+// 2026-08-31). The CPA-VF case, exactly: a Red Ink SSP holding resolved to
+// CardHedge's ONLY CPA-VF product — a BASE auto whose 315 rows all carry
+// variant "Base" — and 50 of that base product's ~$11 sales were stamped with
+// the HOLDING's parallel and written onto the SSP slug. FMV fell to $9.38.
+describe("the title outranks the holding's parallel (CPA-VF regression)", () => {
+  const redInkIdentity = {
+    playerName: "Vaughn Fisher",
+    cardYear: 2026,
+    setName: "Bowman Chrome",
+    parallel: "Black & White Red Ink",
+    cardNumber: "CPA-VF",
+    isAuto: true,
+  };
+  // Real shape of the intruders: base-auto titles, none naming red ink.
+  const baseTitles = [
+    "2026 Bowman Chrome Vaughn Fisher 1st Bowman Auto #CPA-VF - Raw",
+    "Vaughn Fisher 2026 Bowman Chrome Prospect Autograph CPA-VF",
+    "2026 Bowman Chrome Vaughn Fisher Rookie Auto #CPA-VF",
+  ];
+
+  it("50 base-titled sales onto an SSP target write ZERO rows on the SSP slug", async () => {
+    mockedCH.mockResolvedValue(
+      Array.from({ length: 50 }, (_, i) =>
+        chSale({
+          price: 11 + (i % 9),
+          date: `2026-0${(i % 8) + 1}-15T00:00:00Z`,
+          title: baseTitles[i % baseTitles.length],
+        }),
+      ),
+    );
+    mockedCS.mockResolvedValue(csPricing());
+    await runHistoricalBackfill([
+      { chCardId: "1778540428361x447194681698603460", csCardId: null, identity: redInkIdentity },
+    ]);
+    const written = Array.from(store.values());
+    // Not one row may carry the holding's SSP parallel.
+    expect(written.filter((d) => /red ink/i.test(String(d.parallel ?? "")))).toHaveLength(0);
+    expect(written.filter((d) => /red-ink/i.test(String(d.hobbyiqCardId ?? "")))).toHaveLength(0);
+  });
+
+  it("the whole target is refused when the vendor product is Base and the holding is an SSP", async () => {
+    mockedCH.mockResolvedValue(
+      Array.from({ length: 50 }, () => chSale({ price: 11, title: baseTitles[0] })),
+    );
+    mockedCS.mockResolvedValue(csPricing());
+    const result = await runHistoricalBackfill([
+      { chCardId: "ch-cpa-vf", csCardId: null, identity: redInkIdentity },
+    ]);
+    expect(result.totalCHSalesWritten).toBe(0);
+    expect(store.size).toBe(0);
+  });
+
+  it("the Cardsight path refuses the same way", async () => {
+    mockedCH.mockResolvedValue([]);
+    mockedCS.mockResolvedValue(csPricing({
+      raw: { count: 2, records: [
+        { price: 11, date: "2026-05-01T00:00:00Z", title: baseTitles[0] },
+        { price: 12, date: "2026-06-01T00:00:00Z", title: baseTitles[1] },
+      ] as any },
+    }));
+    const result = await runHistoricalBackfill([
+      { chCardId: null, csCardId: "cs-cpa-vf", identity: redInkIdentity },
+    ]);
+    expect(result.totalCSSalesWritten).toBe(0);
+    expect(store.size).toBe(0);
+  });
+
+  // The healthy direction: the gate must not become a blanket refusal.
+  it("a title that DOES name the finish still lands on the SSP identity", async () => {
+    mockedCH.mockResolvedValue([
+      chSale({ price: 270, date: "2026-08-01T00:00:00Z", title: "2026 Bowman Chrome Vaughn Fisher 1st Auto Black & White Red Ink #CPA-VF" }),
+      chSale({ price: 250, date: "2026-07-01T00:00:00Z", title: "Vaughn Fisher 2026 Bowman Chrome Black and White Red Ink Auto CPA-VF" }),
+    ]);
+    mockedCS.mockResolvedValue(csPricing());
+    const result = await runHistoricalBackfill([
+      { chCardId: "ch-cpa-vf-ssp", csCardId: null, identity: redInkIdentity },
+    ]);
+    expect(result.totalCHSalesWritten).toBe(2);
+    const written = Array.from(store.values());
+    expect(written).toHaveLength(2);
+    // The parser reads these as "Black White Red" (it drops "&" and "Ink");
+    // the vendor tag is the same finish spelled in full, so it is adopted —
+    // one card, one row, one pool.
+    expect(written.every((d) => /red ink/i.test(String(d.parallel ?? "")))).toBe(true);
+  });
+
+  it("a non-SSP holding still gets its base sales — the gate is scoped to rarity", async () => {
+    mockedCH.mockResolvedValue([chSale({ price: 12, title: baseTitles[0] })]);
+    mockedCS.mockResolvedValue(csPricing());
+    const result = await runHistoricalBackfill([
+      { chCardId: "ch-base", csCardId: null, identity: { ...redInkIdentity, parallel: null } },
+    ]);
+    expect(result.totalCHSalesWritten).toBe(1);
+  });
+
+  it("a title naming a DIFFERENT finish is written as that finish, never the holding's", async () => {
+    mockedCH.mockResolvedValue([
+      chSale({ price: 60, title: "2026 Bowman Chrome Vaughn Fisher 1st Auto Blue Refractor /150 #CPA-VF" }),
+    ]);
+    mockedCS.mockResolvedValue(csPricing());
+    await runHistoricalBackfill([
+      { chCardId: "ch-blue", csCardId: null, identity: redInkIdentity },
+    ]);
+    const written = Array.from(store.values());
+    expect(written).toHaveLength(1);
+    expect(String(written[0].parallel ?? "")).toMatch(/blue/i);
+    expect(String(written[0].parallel ?? "")).not.toMatch(/red ink/i);
+  });
+});
+
 describe("buildTargetsFromHoldings — holding → target mapping", () => {
   it("routes CH bubble.io format (Nx...) cardId to chCardId (CF-BACKFILL-CARDID-FORMAT)", () => {
     // Live evidence 2026-07-15: 16 of Drew's 17 non-empty cardIds are
