@@ -2095,14 +2095,110 @@ export function isBlackLabelTier(e: { grade: string | number }): boolean {
 }
 
 /**
+ * CF-GRADED-POOL-INVERSE (Drew, 2026-08-31). Which observed graded tier of
+ * THIS identity anchors a raw price, and by what multiplier — the inverse of
+ * the raw→graded direction, on the SAME GRADE_CALIBRATION tables.
+ *
+ * Drew's ruling: "we should be able to price from graded cards to raw if it
+ * is unavailable with empirical data." The Figueroa Red Ink SSP is the case —
+ * a card whose raw pool is empty while its own PSA 10 children hold sales.
+ *
+ * The tier is picked by EVIDENCE, never by averaging tiers: no median or mean
+ * across tiers, and no "highest tier wins". The rule mirrors the ordering the
+ * curve already trusts elsewhere (`MONOTONIC_TRUST_MIN`, and the cascade's
+ * own preference for the denser window): a tier's evidence is its pool size
+ * first, its recency second. A PSA 10 pool at n=3 beats a PSA 9 at n=1; a
+ * PSA 9 at n=3 beats a PSA 10 at n=1, because three sales are three sales
+ * whichever tier they sit in — the multiplier is what translates the tier,
+ * and it is empirical in both directions.
+ *
+ * A tier with no empirical multiplier for this (family, sport, grade) cannot
+ * anchor anything: `empiricalGradeMultiplier` returns null and the tier is
+ * skipped, so the walk falls to the next-best-evidenced tier and, if none
+ * has a multiplier, returns null. Blank beats invented.
+ */
+export interface GradedPoolInverseAnchor {
+  /** The raw value the graded tier implies: its projection ÷ the multiplier. */
+  rawValue: number;
+  /** The tier that anchored it ("PSA 10"). */
+  fromGrade: string;
+  fromGrader: string;
+  /** That tier's pool size — the evidence that won it the anchor role. */
+  fromSampleCount: number;
+  /** The tier's own projected next sale (never a median across tiers). */
+  fromValue: number;
+  /** The empirical multiplier divided out, from GRADE_CALIBRATION. */
+  multiplier: number;
+}
+
+/** Rank observed graded tiers by evidence: pool size first, recency second. */
+function rankGradedTiersByEvidence(entries: ObservedGradeEntry[]): ObservedGradeEntry[] {
+  return entries
+    .filter((e) => e.grade !== "Raw" && e.valueSource === "observed"
+      && typeof (e.trendAdjustedValue ?? e.value) === "number"
+      && ((e.trendAdjustedValue ?? e.value) as number) > 0)
+    .sort((a, b) => {
+      const n = (b.sampleCount ?? 0) - (a.sampleCount ?? 0);
+      if (n !== 0) return n;
+      const at = a.newestSaleDate ? Date.parse(a.newestSaleDate) : 0;
+      const bt = b.newestSaleDate ? Date.parse(b.newestSaleDate) : 0;
+      return (Number.isFinite(bt) ? bt : 0) - (Number.isFinite(at) ? at : 0);
+    });
+}
+
+/**
+ * CF-GRADED-POOL-INVERSE. The raw price this identity's OWN graded children
+ * imply, or null when no graded tier has both sales and an empirical
+ * multiplier. Same identity only — the caller passes one card's curve, so a
+ * different card number or a different auto can never reach this.
+ *
+ * The numerator is the tier's PROJECTION (`trendAdjustedValue`, the rung's
+ * number — FMV is the projected next sale), not its weighted median.
+ */
+export function gradedPoolInverseAnchor(
+  entries: ObservedGradeEntry[],
+  ratioFor: (grader: string, value: number | null) => number | null,
+): GradedPoolInverseAnchor | null {
+  for (const e of rankGradedTiersByEvidence(entries)) {
+    const gradeNum = Number(String(e.grade).replace(/[^0-9.]/g, "")) || null;
+    const r = ratioFor(e.grader, gradeNum);
+    if (r === null || !Number.isFinite(r) || r <= 0) continue;   // no empirical multiplier → this tier cannot anchor
+    const fromValue = (e.trendAdjustedValue ?? e.value) as number;
+    const rawValue = fromValue / r;
+    if (!Number.isFinite(rawValue) || rawValue <= 0) continue;
+    return {
+      rawValue,
+      fromGrade: String(e.grade),
+      fromGrader: String(e.grader ?? ""),
+      fromSampleCount: e.sampleCount ?? 0,
+      fromValue,
+      multiplier: r,
+    };
+  }
+  return null;
+}
+
+/** The (family, sport) pair a slug's calibration lookups use. */
+export function calibrationScopeFor(
+  opts: { setName?: string | null; sport?: string | null; slug?: string | null },
+): { family: string; sport: string | null } {
+  const seg = String(opts.slug ?? "").split(":");
+  return {
+    sport: opts.sport ?? (seg[0] === "hiq" ? seg[1] ?? null : null),
+    family: classifyFamily(opts.setName ?? (seg[0] === "hiq" ? seg[3] ?? null : null)),
+  };
+}
+
+/**
  * CF-SITE-CURVE-NO-BLANK-TIERS (2026-08-22). Fill every tier still
  * "unavailable" from the best anchor the curve already holds, × the EMPIRICAL
  * grade ratio (GRADE_CALIBRATION via empiricalGradeMultiplier) — a grade with
  * no calibration stays unavailable rather than being projected off a
- * hardcoded matrix. Anchor precedence: observed Raw; then the best-sampled
- * observed graded tier divided back by its own ratio; then `anchorFallback`
- * (the unified market value the caller captured). Marks filled tiers
- * "estimated" / estimatedFrom "anchor-projection". Returns the anchor used.
+ * hardcoded matrix. Anchor precedence: observed Raw; then the best-EVIDENCED
+ * observed graded tier divided back by its own ratio (CF-GRADED-POOL-INVERSE,
+ * Drew 2026-08-31 — the graded→raw rung); then `anchorFallback` (the unified
+ * market value the caller captured). Marks filled tiers "estimated" /
+ * estimatedFrom "anchor-projection". Returns the anchor used.
  */
 export async function fillUnavailableTiersFromAnchor(
   entries: ObservedGradeEntry[],
@@ -2110,11 +2206,7 @@ export async function fillUnavailableTiersFromAnchor(
 ): Promise<number | null> {
   try {
     const { empiricalGradeMultiplier } = await import("./canonicalFmv.service.js");
-    const seg = String(opts.slug ?? "").split(":");
-    const sportForRatio = opts.sport ?? (seg[0] === "hiq" ? seg[1] ?? null : null);
-    const familyForRatio = classifyFamily(
-      opts.setName ?? (seg[0] === "hiq" ? seg[3] ?? null : null),
-    );
+    const { family: familyForRatio, sport: sportForRatio } = calibrationScopeFor(opts);
 
     const ratioFor = (grader: string, value: number | null): number | null =>
       empiricalGradeMultiplier(grader, value, familyForRatio, sportForRatio);
@@ -2125,13 +2217,9 @@ export async function fillUnavailableTiersFromAnchor(
       anchor = rawEntry.value;
     }
     if (anchor === null) {
-      const observedGraded = entries
-        .filter((e) => e.grade !== "Raw" && e.valueSource === "observed" && typeof e.value === "number" && e.value > 0)
-        .sort((a, b) => (b.sampleCount ?? 0) - (a.sampleCount ?? 0));
-      for (const e of observedGraded) {
-        const r = ratioFor(e.grader, Number(String(e.grade).replace(/[^0-9.]/g, "")) || null);
-        if (r !== null && r > 0) { anchor = (e.value as number) / r; break; }
-      }
+      // CF-GRADED-POOL-INVERSE: this identity's own graded children price the
+      // raw, best-evidenced tier first, on the same empirical tables.
+      anchor = gradedPoolInverseAnchor(entries, ratioFor)?.rawValue ?? null;
     }
     if (anchor === null && opts.anchorFallback !== null && opts.anchorFallback > 0) {
       anchor = opts.anchorFallback;

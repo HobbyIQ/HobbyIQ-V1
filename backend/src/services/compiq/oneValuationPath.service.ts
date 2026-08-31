@@ -48,11 +48,15 @@ import {
 } from "./gradeCurveEntry.js";
 import {
   CANONICAL_GRADES,
+  calibrationScopeFor,
   capProjectedTiers,
   computeConfidence,
   fillUnavailableTiersFromAnchor,
+  gradedPoolInverseAnchor,
+  type GradedPoolInverseAnchor,
   type ObservedGradeEntry,
 } from "./observedGradeCurve.service.js";
+import { logSubRawInversionObserved } from "./marketRead.service.js";
 import { priceHoldingFromExactPool } from "../portfolioiq/exactPoolSupremacy.js";
 import { computeHobbyIqFmv, type HobbyIqFmvResult } from "../portfolioiq/hobbyIqFmv.service.js";
 import { readCatalogIdentityBySlug } from "../catalog/catalogMatcher.service.js";
@@ -426,6 +430,20 @@ export async function valueIdentity(req: ValuationRequest): Promise<Valuation> {
 
   // ── 2. No pool at this tier, but this identity has sales at others ──────
   if (u) {
+    // CF-GRADED-POOL-INVERSE (Drew, 2026-08-31). Measured BEFORE the fill,
+    // while the curve still shows which tiers are genuinely observed: when
+    // the RAW/parent tier is the one with no pool, this identity's own graded
+    // children price it — the best-evidenced graded tier's projection ÷ that
+    // tier's empirical multiplier. The fill below performs the same division
+    // to seed its anchor; this read only recovers the provenance so the rung
+    // can be named and shown. Same identity, same tables, one computation.
+    const inverse = requestedIsRawTier(requestedTier)
+      ? gradedPoolInverseAnchor(
+          v.gradeCurve,
+          await empiricalRatioFor({ setName: identity.setName, sport: identity.sport, slug }),
+        )
+      : null;
+
     await fillUnavailableTiersFromAnchor(v.gradeCurve, {
       anchorFallback: null, setName: identity.setName, sport: identity.sport, slug,
     });
@@ -435,13 +453,25 @@ export async function valueIdentity(req: ValuationRequest): Promise<Valuation> {
     if (tier.valueSource === "estimated" && tier.value != null && tier.value > 0) {
       const anchor = v.gradeCurve.find((e) => e.valueSource === "observed" && (e.value ?? 0) > 0);
       v.fairMarketValue = tier.value;
-      v.rungLabel = "grade-curve-estimate";
       v.valueSource = "estimated";
       v.compsUsed = 0;
       v.confidence = tier.confidenceScore;
       v.windowDays = u.windowDays;
       v.predictedPrice = tier.predictedPriceAt30d ?? null;
-      v.basis = `Estimated from this card's own ${anchor ? gradeCurveEntryLabel(anchor) : "observed"} sales × the empirical ${requestedTier} ratio${tier.estimatedMultiplier != null ? ` (${tier.estimatedMultiplier.toFixed(2)}×)` : ""}; no ${requestedTier} sale of this card in ${u.windowDays}d`;
+      if (inverse) {
+        // The graded→raw rung: name it distinctly so the UI and telemetry can
+        // show where the number came from, and state the tier that anchored
+        // it (with its pool size — the evidence that won it the role).
+        v.rungLabel = "graded-pool-inverse";
+        tier.rungLabel = "graded-pool-inverse";
+        (tier as { estimatedFrom: string | null }).estimatedFrom = "graded-pool-inverse";
+        (tier as { estimatedMultiplier: number | null }).estimatedMultiplier = inverse.multiplier;
+        v.basis = `Priced from this card's own ${inverse.fromGrade} sales (n=${inverse.fromSampleCount}, projected $${inverse.fromValue.toFixed(2)}) ÷ the empirical ${inverse.fromGrade} multiplier (${inverse.multiplier.toFixed(2)}×); no ${requestedTier} sale of this card in ${u.windowDays}d`;
+        logGradedPoolInverse(slug, requestedTier, playerName, inverse, v.fairMarketValue, u.windowDays);
+      } else {
+        v.rungLabel = "grade-curve-estimate";
+        v.basis = `Estimated from this card's own ${anchor ? gradeCurveEntryLabel(anchor) : "observed"} sales × the empirical ${requestedTier} ratio${tier.estimatedMultiplier != null ? ` (${tier.estimatedMultiplier.toFixed(2)}×)` : ""}; no ${requestedTier} sale of this card in ${u.windowDays}d`;
+      }
       return v;
     }
   }
@@ -509,6 +539,71 @@ function labelEstimates(entries: ObservedGradeEntry[]): void {
     if (e.rungLabel) continue;
     if (e.valueSource === "estimated") e.rungLabel = "grade-curve-estimate";
   }
+}
+
+/** CF-GRADED-POOL-INVERSE: the rung fires only for the RAW/parent tier —
+ *  a graded tier with no pool is filled the other way (raw × ratio). */
+function requestedIsRawTier(requestedTier: string): boolean {
+  return requestedTier === "Raw";
+}
+
+/** The empirical (family, sport)-scoped multiplier lookup for one identity —
+ *  the SAME GRADE_CALIBRATION function the raw→graded fill uses, so the two
+ *  directions can never drift onto different tables. */
+async function empiricalRatioFor(
+  opts: { setName?: string | null; sport?: string | null; slug?: string | null },
+): Promise<(grader: string, value: number | null) => number | null> {
+  const { empiricalGradeMultiplier } = await import("./canonicalFmv.service.js");
+  const { family, sport } = calibrationScopeFor(opts);
+  return (grader: string, value: number | null) => empiricalGradeMultiplier(grader, value, family, sport);
+}
+
+/** CF-GRADED-POOL-INVERSE telemetry: the rung's provenance on the wire, so a
+ *  reader can see which tier priced a raw card and by what multiplier.
+ *
+ *  A sub-raw inversion — the graded tier that anchored the price trading
+ *  BELOW the raw it implies, which the data can genuinely say — is OBSERVED
+ *  through the canonical logger and never clamped (grade monotonicity is not
+ *  an invariant; the sub-raw telemetry IS the DailyIQ pipe). */
+function logGradedPoolInverse(
+  slug: string,
+  requestedTier: string,
+  playerName: string | null,
+  inverse: GradedPoolInverseAnchor,
+  rawValue: number,
+  windowDays: number,
+): void {
+  try {
+    console.log(JSON.stringify({
+      event: "graded_pool_inverse_priced",
+      source: "oneValuationPath.valueIdentity",
+      slug,
+      requestedTier,
+      fromGrade: inverse.fromGrade,
+      fromSampleCount: inverse.fromSampleCount,
+      fromValue: Math.round(inverse.fromValue * 100) / 100,
+      multiplier: inverse.multiplier,
+      rawValue,
+      windowDays,
+    }));
+    // The graded anchor sits below the raw it implies: observe, never clamp.
+    if (inverse.fromValue < rawValue) {
+      logSubRawInversionObserved({
+        source: "oneValuationPath.gradedPoolInverse",
+        player: playerName,
+        cardId: slug,
+        event: {
+          grader: inverse.fromGrader,
+          grade: inverse.fromGrade,
+          gradeMedian: Math.round(inverse.fromValue * 100) / 100,
+          gradeCount: inverse.fromSampleCount,
+          rawMedian: rawValue,
+          marginPct: rawValue > 0 ? Math.round(((rawValue - inverse.fromValue) / rawValue) * 1000) / 10 : 0,
+          marginUSD: Math.round((rawValue - inverse.fromValue) * 100) / 100,
+        },
+      });
+    }
+  } catch { /* telemetry must never break a price */ }
 }
 
 /**
