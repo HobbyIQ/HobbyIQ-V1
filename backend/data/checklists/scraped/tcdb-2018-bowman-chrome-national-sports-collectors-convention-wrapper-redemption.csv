@@ -1,0 +1,51 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,BNR-AA,Base,false,,Aaron Altherr
+base,BNR-AB,Base,false,,Andrew Benintendi
+base,BNR-AD,Base,false,,Adam Duvall
+base,BNR-AJ,Base,false,,Aaron Judge
+base,BNR-AR,Base,false,,Amed Rosario
+base,BNR-AV,Base,false,,Alex Verdugo
+base,BNR-BF,Base,false,,Bob Feller
+base,BNR-BH,Base,false,,Bryce Harper
+base,BNR-CB,Base,false,,Cody Bellinger
+base,BNR-CC,Base,false,,Carlos Correa
+base,BNR-CK,Base,false,,Corey Kluber
+base,BNR-DJ,Base,false,,Derek Jeter
+base,BNR-DS,Base,false,,Dominic Smith
+base,BNR-EJ,Base,false,,Eloy Jimenez
+base,BNR-FL,Base,false,,Francisco Lindor
+base,BNR-FM,Base,false,,Francisco Mejia
+base,BNR-GA,Base,false,,Greg Allen
+base,BNR-GS,Base,false,,Gary Sanchez
+base,BNR-GT,Base,false,,Gleyber Torres
+base,BNR-HA,Base,false,,Hank Aaron
+base,BNR-HM,Base,false,,Hideki Matsui
+base,BNR-JC,Base,false,,Jose Canseco
+base,BNR-JR,Base,false,,Jose Ramirez
+base,BNR-JT,Base,false,,Jim Thome
+base,BNR-JV,Base,false,,Joey Votto
+base,BNR-KB,Base,false,,Kris Bryant
+base,BNR-KGJ,Base,false,,Ken Griffey Jr.
+base,BNR-LS,Base,false,,Luis Severino
+base,BNR-MK,Base,false,,Mitch Keller
+base,BNR-MKO,Base,false,,Michael Kopech
+base,BNR-MM,Base,false,,Manny Machado
+base,BNR-MO,Base,false,,Matt Olson
+base,BNR-MT,Base,false,,Mike Trout
+base,BNR-NS,Base,false,,Noah Syndergaard
+base,BNR-NSE,Base,false,,Nick Senzel
+base,BNR-OV,Base,false,,Omar Vizquel
+base,BNR-QH,Base,false,,Quentin Holmes
+base,BNR-RA,Base,false,,Roberto Alomar
+base,BNR-RAC,Base,false,,Ronald Acuña Jr.
+base,BNR-RD,Base,false,,Rafael Devers
+base,BNR-RH,Base,false,,Rickey Henderson
+base,BNR-RHO,Base,false,,Rhys Hoskins
+base,BNR-RM,Base,false,,Ryan McMahon
+base,BNR-SK,Base,false,,Sandy Koufax
+base,BNR-SO,Base,false,,Shohei Ohtani
+base,BNR-TM,Base,false,,Trey Mancini
+base,BNR-VG,Base,false,,Vladimir Guerrero
+base,BNR-VGJ,Base,false,,Vladimir Guerrero Jr.
+base,BNR-VR,Base,false,,Victor Robles
+base,BNR-WB,Base,false,,Walker Buehler
