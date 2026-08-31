@@ -40,110 +40,312 @@
 // and the Layer 2 base × flat-auto-premium rung beneath it (which crosses
 // the auto AND cardNumber boundaries with no parallel term at all).
 //
-// Pinned here: the collapse cannot happen, the healthy direction still
-// prices and is still labelled, and the arithmetic itself is nailed down.
-import { describe, it, expect } from "vitest";
-import {
-  autoProjectVariantTier,
-  isClassifiedVariantTier,
-  UNKNOWN_VARIANT_TIER,
-} from "../src/routes/compiq.routes.js";
+// HOW THIS SUITE PINS IT (rewritten 2026-08-31 after the verifier proved the
+// first version did not). The guard is NOT in autoProjectVariantTier or
+// isClassifiedVariantTier — those helpers are honest on their own and were
+// honest BEFORE the fix. The guard is three branches inside
+// applyAutoProjectionFallbacks. A suite that only calls the helpers and
+// re-derives `!classified(target) && tier(anchor) > 1` inline is testing its
+// own arithmetic: disable all three shipped branches and it stays green.
+//
+// So every assertion below DRIVES THE REAL applyAutoProjectionFallbacks with
+// the cardhedge client mocked, and asserts on the mutation it makes to `est`:
+// predictedPrice null (and source still "no-recent-comps") in the collapse
+// cases, non-null (and source "projected") in the healthy shapes. Mutation-
+// checked: with the three guard branches disabled, the collapse cases go RED.
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
-describe("autoProjectVariantTier: unmatched 1x is not a reading", () => {
-  it("classifies the real premium parallels the CPA-DT ladder contains", () => {
-    expect(autoProjectVariantTier("Black Refractor")).toBe(21);
-    expect(autoProjectVariantTier("Black")).toBe(19);
-    expect(autoProjectVariantTier("Superfractor")).toBe(35);
-    expect(autoProjectVariantTier("Refractor")).toBeGreaterThan(0);
-    for (const v of ["Black Refractor", "Black", "Superfractor", "Gold Refractor"]) {
-      expect(isClassifiedVariantTier(v), v).toBe(true);
-    }
-  });
+// ── The cardhedge client is the only I/O applyAutoProjectionFallbacks does.
+// Layer 4 calls searchCards (sibling autos) + getPricesByCard (their series);
+// Layer 2 calls searchCards (same-year base) + getPricesByCard. The 365d
+// phantom/direct-anchor probe at the top also calls getPricesByCard.
+const searchCards = vi.fn();
+const getPricesByCard = vi.fn();
 
-  it("an EMPTY / absent / unreadable variant is NOT classified", () => {
-    // This is the CPA-DT black auto's state: no catalog row, so no variant.
-    for (const v of ["", "   ", null, undefined, 42, {}]) {
-      expect(isClassifiedVariantTier(v as unknown), String(v)).toBe(false);
-    }
-    // ...even though the tier function hands back a usable-looking 1.
-    expect(autoProjectVariantTier("")).toBe(UNKNOWN_VARIANT_TIER);
-    expect(autoProjectVariantTier(null)).toBe(UNKNOWN_VARIANT_TIER);
-  });
-
-  it("an explicit Base IS classified — tier 1 is a real reading there", () => {
-    for (const v of ["Base", "base", "  Base  ", "Base Set", "none"]) {
-      expect(isClassifiedVariantTier(v), v).toBe(true);
-    }
-    expect(autoProjectVariantTier("Base")).toBe(UNKNOWN_VARIANT_TIER);
-  });
-
-  it("a parallel the map has never seen is NOT classified", () => {
-    // Unknown colour words must fail closed, not masquerade as Base.
-    expect(isClassifiedVariantTier("Vaporfractor Ultra")).toBe(false);
-  });
+vi.mock("../src/services/compiq/cardhedge.client.js", async () => {
+  const actual = await vi.importActual<Record<string, unknown>>(
+    "../src/services/compiq/cardhedge.client.js",
+  );
+  return {
+    ...actual,
+    searchCards: (...args: unknown[]) => searchCards(...args),
+    getPricesByCard: (...args: unknown[]) => getPricesByCard(...args),
+  };
 });
 
-describe("the CPA-DT collapse: the arithmetic that produced ~$3", () => {
-  // The ratio Layer 4 would compute, reproduced exactly.
-  const ratio = (anchor: string, target: string): number =>
-    autoProjectVariantTier(target) / autoProjectVariantTier(anchor);
+type Card = {
+  card_id: string;
+  player?: string;
+  set?: string;
+  number?: string;
+  variant?: string;
+  year?: number | string;
+};
+type DailyPrice = { closing_date: string; price: number };
 
-  it("dividing a premium anchor by its own tier lands in the junk band", () => {
-    // Black Refractor anchor (21), target unreadable (1).
-    for (const [sale, expected] of [[37, 1.76], [45, 2.14], [60, 2.86]] as const) {
-      const projected = sale * 1.0 * ratio("Black Refractor", "");
-      expect(Math.round(projected * 100) / 100).toBeCloseTo(expected, 2);
-      // Every one of these is BELOW the cheapest real CPA-DT sale ($15).
-      expect(projected).toBeLessThan(15);
-    }
-    // Superfractor anchor (35) — the ~$3 exactly.
-    expect(96 * ratio("Superfractor", "")).toBeCloseTo(2.74, 2);
-  });
+// ── The CPA-DT fixture. Devin Taylor, 2025 Bowman Draft Chrome, prospect
+// autos. The target is the Black auto whose identity never resolved, so its
+// `variant` arrives empty from the catalog miss.
+const YEAR = 2025;
+const SET = "2025 Bowman Draft Chrome Baseball";
+const PLAYER = "Devin Taylor";
+const TARGET_CARD_ID = "ch-cpa-dt-black";
 
-  it("the guard predicate refuses precisely these pairings", () => {
-    const refuses = (anchor: string, target: string): boolean =>
-      !isClassifiedVariantTier(target)
-      && autoProjectVariantTier(anchor) > UNKNOWN_VARIANT_TIER;
+/** A daily Raw series with a flat trend (trendFactor pins to 1.0), ending on
+ *  `latest`. 30 points so both the 14d recent and 14d prior slices are full
+ *  and equal — the projection is then exactly latest × 1.0 × tierRatio. */
+function flatSeries(latest: number, n = 30): DailyPrice[] {
+  return Array.from({ length: n }, (_, i) => ({
+    closing_date: `2026-07-${String((i % 28) + 1).padStart(2, "0")}`,
+    price: latest,
+  }));
+}
 
-    // The failure: premium anchor, unreadable target → refuse.
-    expect(refuses("Black Refractor", "")).toBe(true);
-    expect(refuses("Superfractor", "")).toBe(true);
-    expect(refuses("Gold Refractor", "   ")).toBe(true);
+/** The est object /price-by-id and /search hand the decorator: an auto card
+ *  with an empty pool. `variant` is what the catalog resolved (empty string
+ *  for the CPA-DT black auto — no row exists). */
+function estFor(variant: string | null, number = "CPA-DT"): Record<string, unknown> {
+  return {
+    source: "no-recent-comps",
+    compsAvailable: 0,
+    cardIdentity: {
+      card_id: TARGET_CARD_ID,
+      player: PLAYER,
+      year: YEAR,
+      number,
+      variant,
+    },
+  };
+}
 
-    // The healthy directions stay open.
-    expect(refuses("Base", "")).toBe(false);              // no premium to collapse
-    expect(refuses("Base", "Black Refractor")).toBe(false); // scaling UP is fine
-    expect(refuses("Refractor", "Black")).toBe(false);      // both classified
-    expect(refuses("Black Refractor", "Superfractor")).toBe(false);
-  });
+/** Wire the mocks for a Layer 4 run: one sibling auto at `anchorVariant`
+ *  whose flat series ends at `anchorLatestSale`. The target itself has zero
+ *  365d history (the phantom note path), so the run falls to Layer 4. */
+function wireSiblingAnchor(anchorVariant: string, anchorLatestSale: number): void {
+  const sibling: Card = {
+    card_id: "ch-cpa-sibling",
+    player: PLAYER,
+    set: SET,
+    number: "CPA-XX",
+    variant: anchorVariant,
+  };
+  searchCards.mockResolvedValue([sibling]);
+  getPricesByCard.mockImplementation(async (cardId: string) =>
+    cardId === sibling.card_id ? flatSeries(anchorLatestSale) : [],
+  );
+}
 
-  it("scaling UP from a base anchor to a premium target is untouched", () => {
-    // The rung's original purpose — a Base-auto anchor projecting a rarer
-    // parallel — must keep working, and must move the price UP not down.
-    const projected = 20 * ratio("Base", "Black Refractor");
-    expect(projected).toBe(20 * 21);
-    expect(projected).toBeGreaterThan(20);
-  });
+/** Wire the mocks for a Layer 2 run: NO auto sibling exists, only a same-year
+ *  non-auto Base card with ≥3 Raw prices. Layer 4 finds nothing and falls
+ *  through to base × flat-auto-premium. */
+function wireBaseAnchorOnly(basePrices: number[]): void {
+  const base: Card = {
+    card_id: "ch-bdc-135-base",
+    player: PLAYER,
+    set: SET,
+    number: "BDC-135",
+    variant: "Base",
+    year: YEAR,
+  };
+  searchCards.mockResolvedValue([base]);
+  getPricesByCard.mockImplementation(async (cardId: string) =>
+    cardId === base.card_id
+      ? basePrices.map((price, i) => ({
+          closing_date: `2026-07-${String(i + 1).padStart(2, "0")}`,
+          price,
+        }))
+      : [],
+  );
+}
+
+let applyAutoProjectionFallbacks: (
+  est: Record<string, unknown>,
+  query: string,
+) => Promise<void>;
+
+beforeEach(async () => {
+  searchCards.mockReset();
+  getPricesByCard.mockReset();
+  ({ applyAutoProjectionFallbacks } = await import("../src/routes/compiq.routes.js"));
 });
 
-describe("guard behaviour table", () => {
-  const cases: Array<{
-    name: string; anchor: string; target: string; refuse: boolean;
-  }> = [
-    { name: "premium anchor → unreadable target (the CPA-DT bug)", anchor: "Black Refractor", target: "", refuse: true },
-    { name: "superfractor anchor → unreadable target", anchor: "Superfractor", target: "", refuse: true },
-    { name: "base anchor → unreadable target", anchor: "Base", target: "", refuse: false },
-    { name: "base anchor → premium target (scale up)", anchor: "Base", target: "Black Refractor", refuse: false },
-    { name: "premium anchor → premium target", anchor: "Gold Refractor", target: "Black Refractor", refuse: false },
-    { name: "premium anchor → explicit base target", anchor: "Black Refractor", target: "Base", refuse: false },
+describe("Layer 4 sibling anchor: a premium anchor is never divided by its own tier", () => {
+  // These are the exact numbers the user saw. Each one is a real sibling sale
+  // scaled by (unreadable target tier 1 / premium anchor tier) — the collapse.
+  const collapses: Array<{ anchor: string; sale: number; wouldHaveBeen: number }> = [
+    { anchor: "Black Refractor", sale: 37, wouldHaveBeen: 1.76 },
+    { anchor: "Black Refractor", sale: 45, wouldHaveBeen: 2.14 },
+    { anchor: "Black Refractor", sale: 60, wouldHaveBeen: 2.86 },
+    { anchor: "Superfractor", sale: 96, wouldHaveBeen: 2.74 },
   ];
 
-  for (const c of cases) {
-    it(`${c.name} → ${c.refuse ? "REFUSE" : "price"}`, () => {
-      const refused =
-        !isClassifiedVariantTier(c.target)
-        && autoProjectVariantTier(c.anchor) > UNKNOWN_VARIANT_TIER;
-      expect(refused).toBe(c.refuse);
+  for (const c of collapses) {
+    it(`refuses ${c.anchor} $${c.sale} → unreadable target (would have published ~$${c.wouldHaveBeen})`, async () => {
+      wireSiblingAnchor(c.anchor, c.sale);
+      const est = estFor(""); // the CPA-DT black auto: catalog miss, no variant
+
+      await applyAutoProjectionFallbacks(est, "devin taylor 2025 bowman cpa-dt black");
+
+      // The whole point: blank beats a fabricated number.
+      expect(est.predictedPrice ?? null).toBeNull();
+      expect(est.predictedPriceRange ?? null).toBeNull();
+      expect(est.predictedPriceAttribution ?? null).toBeNull();
+      // And the response stays honestly labelled, not upgraded to "projected".
+      expect(est.source).toBe("no-recent-comps");
     });
   }
+
+  it("refuses a whitespace-only variant the same way as an absent one", async () => {
+    wireSiblingAnchor("Gold Refractor", 50);
+    const est = estFor("   ");
+    await applyAutoProjectionFallbacks(est, "cpa-dt blank variant");
+    expect(est.predictedPrice ?? null).toBeNull();
+    expect(est.source).toBe("no-recent-comps");
+  });
+
+  it("refuses a parallel word the tier map has never seen — fails closed, not as Base", async () => {
+    wireSiblingAnchor("Black Refractor", 40);
+    const est = estFor("Vaporfractor Ultra");
+    await applyAutoProjectionFallbacks(est, "cpa-dt vaporfractor");
+    expect(est.predictedPrice ?? null).toBeNull();
+    expect(est.source).toBe("no-recent-comps");
+  });
+});
+
+describe("Layer 4 sibling anchor: the healthy shapes still price, and still scale", () => {
+  it("HEALTHY 1 — base anchor → premium target scales UP and is labelled", async () => {
+    // The rung's original purpose. Base anchor tier 1, Black Refractor 21.
+    wireSiblingAnchor("Base", 20);
+    const est = estFor("Black Refractor");
+
+    await applyAutoProjectionFallbacks(est, "cpa-dt black refractor");
+
+    expect(est.predictedPrice).not.toBeNull();
+    expect(est.predictedPrice).toBeCloseTo(20 * 21, 6);
+    expect(est.predictedPrice as number).toBeGreaterThan(20);
+    expect(est.source).toBe("projected");
+    const attr = est.predictedPriceAttribution as Record<string, unknown>;
+    expect(attr.mechanism).toBe("sibling_auto_latest_x_trend");
+    expect(attr.parallelMultiplier).toBeCloseTo(21, 6);
+  });
+
+  it("HEALTHY 2 — both sides classified: premium anchor → premium target prices the real ladder distance", async () => {
+    // Black Refractor 21 → Superfractor 35. Scaling between two readings is
+    // exactly what the rung is for; the guard must not touch it.
+    wireSiblingAnchor("Black Refractor", 96);
+    const est = estFor("Superfractor");
+
+    await applyAutoProjectionFallbacks(est, "cpa-dt superfractor");
+
+    expect(est.predictedPrice).toBeCloseTo(96 * (35 / 21), 6);
+    expect(est.source).toBe("projected");
+  });
+
+  it("HEALTHY 3 — premium anchor → EXPLICIT Base target still prices (a Base reading is a reading)", async () => {
+    // "Base" is classified even though its tier is also 1. The guard keys on
+    // classification, not on the number — this is the distinction the whole
+    // fix rests on, and it must stay priceable.
+    wireSiblingAnchor("Black Refractor", 42);
+    const est = estFor("Base");
+
+    await applyAutoProjectionFallbacks(est, "cpa-dt base auto");
+
+    expect(est.predictedPrice).toBeCloseTo(42 * (1 / 21), 6);
+    expect(est.source).toBe("projected");
+  });
+
+  it("HEALTHY 4 — base anchor → unreadable target: no premium exists to collapse, so it prices at 1×", async () => {
+    // Anchor tier 1 means there is no premium being divided away. The guard's
+    // condition includes `anchorTier > UNKNOWN_VARIANT_TIER` precisely so this
+    // case survives — refusing it would strip coverage for no safety gain.
+    wireSiblingAnchor("Base", 30);
+    const est = estFor("");
+
+    await applyAutoProjectionFallbacks(est, "cpa-dt unknown off base anchor");
+
+    expect(est.predictedPrice).toBeCloseTo(30, 6);
+    expect(est.source).toBe("projected");
+  });
+});
+
+describe("Layer 2 base × flat auto premium: no parallel term at all, so an unread parallel refuses", () => {
+  it("refuses the CPA-DT black auto rather than pricing it like every other unread CPA-DT parallel", async () => {
+    wireBaseAnchorOnly([0.79, 1.5, 2.0]); // the junk bdc-135 non-auto neighbours
+    const est = estFor("");
+
+    await applyAutoProjectionFallbacks(est, "devin taylor cpa-dt black");
+
+    expect(est.predictedPrice ?? null).toBeNull();
+    expect(est.predictedPriceAttribution ?? null).toBeNull();
+    expect(est.source).toBe("no-recent-comps");
+  });
+
+  it("refuses an unknown parallel word on the Layer 2 rung too", async () => {
+    wireBaseAnchorOnly([10, 12, 14]);
+    const est = estFor("Vaporfractor Ultra");
+    await applyAutoProjectionFallbacks(est, "cpa-dt vaporfractor base rung");
+    expect(est.predictedPrice ?? null).toBeNull();
+    expect(est.source).toBe("no-recent-comps");
+  });
+
+  it("HEALTHY — a null variant (nothing claimed at all) still gets the flat auto premium", async () => {
+    // The Layer 2 branch guards on `ciVariant !== null && !classified`. A card
+    // that names no parallel is not a card naming an unreadable one; the flat
+    // 40×/50× rung is the long-standing behaviour for it and must survive.
+    wireBaseAnchorOnly([10, 12, 14]);
+    const est = estFor(null);
+
+    await applyAutoProjectionFallbacks(est, "cpa-dt no variant claimed");
+
+    expect(est.predictedPrice).toBeCloseTo(12 * 40, 6); // median 12 × CPA-class 40×
+    expect(est.source).toBe("projected");
+    const attr = est.predictedPriceAttribution as Record<string, unknown>;
+    expect(attr.mechanism).toBe("base_x_auto_premium");
+  });
+
+  it("HEALTHY — an explicit Base target still gets the flat auto premium", async () => {
+    wireBaseAnchorOnly([10, 12, 14]);
+    const est = estFor("Base");
+    await applyAutoProjectionFallbacks(est, "cpa-dt explicit base");
+    expect(est.predictedPrice).toBeCloseTo(12 * 40, 6);
+    expect(est.source).toBe("projected");
+  });
+});
+
+describe("the guard is scoped to the projection stack, not to pricing at large", () => {
+  it("a target with real 365d history of its own prices from that history, unreadable parallel or not", async () => {
+    // The extended-window direct anchor runs BEFORE the tier rungs and uses
+    // the target's OWN sales — no anchor, no ratio, nothing to collapse. An
+    // unread parallel must not suppress it.
+    searchCards.mockResolvedValue([]);
+    getPricesByCard.mockImplementation(async (cardId: string, _g: string, days: number) =>
+      cardId === TARGET_CARD_ID && days === 365
+        ? [
+            { closing_date: "2026-05-01", price: 77 },
+            { closing_date: "2026-07-01", price: 125 },
+          ]
+        : [],
+    );
+    const est = estFor("");
+
+    await applyAutoProjectionFallbacks(est, "cpa-dt with own thin history");
+
+    expect(est.predictedPrice).not.toBeNull();
+    expect(est.source).toBe("projected");
+    const attr = est.predictedPriceAttribution as Record<string, unknown>;
+    expect(attr.mechanism).toBe("target_extended_window_direct");
+  });
+
+  it("a non-auto card is not in the stack's scope at all — untouched, whatever its variant", async () => {
+    wireSiblingAnchor("Black Refractor", 96);
+    const est = estFor("", "BDC-135"); // not an auto prefix
+
+    await applyAutoProjectionFallbacks(est, "bdc-135 non auto");
+
+    expect(est.predictedPrice ?? null).toBeNull();
+    expect(est.source).toBe("no-recent-comps");
+    // Not merely refused — never entered. No I/O was done.
+    expect(searchCards).not.toHaveBeenCalled();
+    expect(getPricesByCard).not.toHaveBeenCalled();
+  });
 });

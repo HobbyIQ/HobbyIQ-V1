@@ -42,7 +42,30 @@ function refines(vendor: string, title: string): boolean {
   const v = vendor.toLowerCase(), t = title.toLowerCase();
   if (v.endsWith(" " + t)) return true;               // "gold refractor" refines "refractor"
   if (t === "refractor" && BARE_COLOURS.has(v)) return true; // "blue" IS "blue refractor"
+  if (vendorSpellsTheSameFinish(v, t)) return true;
   return false;
+}
+
+/** CF-THE-FULLER-SPELLING-IS-THE-SAME-FINISH (Drew, 2026-08-31). The title
+ *  parser drops "&" and trailing nouns, so the real Red Ink title "…Black &
+ *  White Red Ink #CPA-VF" parses as "Black White Red" -- every word of which
+ *  the vendor tag "Black & White Red Ink" already contains. That is one finish
+ *  spelled two ways, not two finishes, and treating it as a disagreement would
+ *  file genuine Red Ink sales under a "Black White Red" row of their own --
+ *  a split pool, the very thing the title rule exists to prevent.
+ *
+ *  So: when the title's words are a SUBSET of the vendor tag's words, the tag
+ *  is adopted as the canonical spelling. This can only ever ADD words the
+ *  title already agreed with; a title naming a word the tag lacks ("Blue"
+ *  against "Black & White Red Ink") is still a real disagreement and still
+ *  overrules. The title must name at least one finish word -- a silent title
+ *  has an empty word set and must never subset its way into a finish. */
+function vendorSpellsTheSameFinish(vendor: string, title: string): boolean {
+  const words = (s: string): string[] => s.split(/[^a-z0-9]+/).filter(Boolean);
+  const titleWords = words(title);
+  if (titleWords.length === 0) return false;
+  const vendorWords = new Set(words(vendor));
+  return titleWords.every((w) => vendorWords.has(w));
 }
 
 export function parallelTheTitleAllows(

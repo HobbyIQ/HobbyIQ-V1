@@ -294,6 +294,10 @@ on:
         description: "For canonicalize-vendor-shaped-rows: 'vendor' (id is not a hiq slug) or 'nopk' (cardId missing entirely). For repair-parallel-subset-fold: 'prefix' or 'glue'. For rename-setkey-to-product: 'product' (the catalog rename, sharded), 'hyphen' (needs sources), 'holdings' (slot 0), 'estimate' (read-only counts). For repair-card-number-from-title (D28): 'grade' | 'slash' | 'ordinal' | 'year' | 'nonumber' | 'all' (needs scope=all) -- REQUIRED, no default. For clean-base-cards-parallel-slug: 'cards' | 'subset' | 'both' (needs scope=all) -- REQUIRED. For measure-card-number-integrity: 'grade' | 'shapes' | 'months' | 'catalog-year'. For repair-bcp-misfiled-parallels (D33): 'card-as-parallel' (retire the rows whose parallel is another card) | 'chrome-ladder' (move the refractor ladder from the paper number to the chrome one) | 'first-edition' (move 1st Edition rows to their own product) | 'names' (the comma before Jr./Sr./II) | 'number-glued' (black-1 -> black:num-1) -- REQUIRED, no default. Empty = the script's default."
         required: false
         default: ""
+      slug_prefix:
+        description: "For repair-parallel-from-title mode=backfill-stamp: bound the sweep to one slug or slug prefix (e.g. hiq:baseball:2026:bowman-chrome:cpa-vf:). Empty = the whole pool."
+        required: false
+        default: ""
       shard_hex:
         description: "For reslugAllSoldComps: contentHash first-char shards, e.g. 0,1,2,3. 16 shards total; run disjoint sets in parallel. Empty = all."
         required: false
@@ -657,6 +661,10 @@ jobs:
           SPORTS: ${{ inputs.sports }}
           # reslugAllSoldComps: contentHash first-char shard, 16 total.
           SHARD_HEX: ${{ inputs.shard_hex }}
+          # repair-parallel-from-title mode=backfill-stamp: bound the sweep to
+          # one slug or slug prefix so the blast radius is measured in slices
+          # before any pool-wide run. Empty = the whole pool.
+          SLUG_PREFIX: ${{ inputs.slug_prefix }}
           # Without this the script silently runs its DEFAULT mode and reports
           # success having touched none of the population you dispatched it for.
           MODE: ${{ inputs.mode }}
@@ -1102,7 +1110,7 @@ jobs:
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (repaired=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} mode=${{ inputs.mode }} to continue"
             # D22: the mode (colours / refractor / variation / product), the sources and the scope travel with the slot.
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-parallel-from-title -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sources="${{ inputs.sources }}" -f scope="${{ inputs.scope }}"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-parallel-from-title -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sources="${{ inputs.sources }}" -f scope="${{ inputs.scope }}" -f slug_prefix="${{ inputs.slug_prefix }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (repaired=${N:-0}) — done, no re-dispatch."
           fi
@@ -1438,6 +1446,99 @@ jobs:
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=clean-base-cards-parallel-slug -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f scope="${{ inputs.scope }}" -f sources="${{ inputs.sources }}" -f sports="${{ inputs.sports }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (cleaned=${N:-0}) — done, no re-dispatch."
+          fi
+
+      - name: Self-relaunch the CSV checklist ingest until every file is done
+        # D41 (2026-08-31). ingest-checklist-csv-to-catalog printed the budget
+        # marker with nothing re-dispatching on it, so a directory bigger than
+        # one 140-minute budget stopped after a single cycle — green, with the
+        # tail of the file list never ingested.
+        #
+        # It resumes for real: a file that finished completely leaves a
+        # `<csv>.ingested` marker beside it and the next run filters those out,
+        # so the relaunch starts at the first unfinished file rather than
+        # re-doing the head of the list forever. A file the budget cut in half
+        # is deliberately NOT marked, so it is re-done whole.
+        #
+        # #1598 remaps: this script's DIR rides `inputs.scope` and its SOURCE
+        # rides `inputs.sources`, so those are the input names forwarded here —
+        # forwarding `dir`/`source_label` would forward nothing, and without
+        # SOURCE the script cannot decide authority.
+        #
+        # CF-RELAUNCH-ONLY-ON-BUDGET (#1361): the marker is the gate, never the
+        # count — `written` legitimately reaches 0 on a cycle whose files were
+        # all already ingested. CF-REPORT-RELAUNCHES-AS-A-REPORT (#1578): the
+        # gate is mode-blind and `apply` is forwarded verbatim, so a report
+        # longer than one budget finishes as a report.
+        if: ${{ !cancelled() && inputs.script == 'ingest-checklist-csv-to-catalog' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        working-directory: backend
+        run: |
+          set +e
+          N=$(grep -aoE "^  catalog rows written +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          echo "written=${N:-0}"
+          if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
+            echo "::notice::budget hit (written=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=ingest-checklist-csv-to-catalog -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f scope="${{ inputs.scope }}" -f sources="${{ inputs.sources }}" -f limit="${{ inputs.limit }}"
+          else
+            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (written=${N:-0}) — done, no re-dispatch."
+          fi
+
+      - name: Self-relaunch the truncated-year repair until the slot is clean
+        # D41 (2026-08-31). Convergent, so the relaunch is the same dispatch:
+        # the query selects `cardYear >= 100 AND cardYear <= 999 AND source =
+        # @src`, and a repaired row's cardYear becomes a real four-digit year,
+        # so it leaves the population. A relaunch that finds nothing left reads
+        # no marker and stops.
+        #
+        # SOURCE is REQUIRED (CF-A-WHOLE-SOURCE-RETIRE-NEEDS-ITS-NAME — the
+        # script exits 1 without it rather than deriving its own scope) and per
+        # #1598 it rides `inputs.sources`, so that input travels with the
+        # relaunch or every continuation would refuse to start.
+        if: ${{ !cancelled() && inputs.script == 'repair-truncated-card-year' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        working-directory: backend
+        run: |
+          set +e
+          N=$(grep -aoE "^  (REPAIRED|WOULD REPAIR) +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          echo "repaired=${N:-0}"
+          if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
+            echo "::notice::budget hit (repaired=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-truncated-card-year -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sources="${{ inputs.sources }}" -f limit="${{ inputs.limit }}"
+          else
+            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (repaired=${N:-0}) — done, no re-dispatch."
+          fi
+
+      - name: Self-relaunch the sub-brand mis-slug repair until the slot is clean
+        # D41 (2026-08-31). Convergent: the query selects `setKey = @sk AND
+        # sport = @sp AND cardYear = @y`, and a moved row is re-keyed OUT of
+        # @sk onto its own sub-brand, so it leaves the population. The marker
+        # is the gate — `MOVED` reaches 0 on a slot whose remaining rows name
+        # no whitelisted sub-brand, and a count gate would loop on those
+        # forever.
+        #
+        # The whole scope is required (SPORT + YEAR + SETKEY; the script exits
+        # 1 if any is empty), so every scope input travels verbatim: SPORT
+        # rides `inputs.sports` and SETKEY rides `inputs.setkey_like` per the
+        # #1598 remap, and `years` carries the year scope.
+        if: ${{ !cancelled() && inputs.script == 'repair-select-subbrand-misslug' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        working-directory: backend
+        run: |
+          set +e
+          N=$(grep -aoE "^  (MOVED|WOULD MOVE) +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          echo "moved=${N:-0}"
+          if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
+            echo "::notice::budget hit (moved=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-select-subbrand-misslug -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f setkey_like="${{ inputs.setkey_like }}" -f limit="${{ inputs.limit }}"
+          else
+            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (moved=${N:-0}) — done, no re-dispatch."
           fi
 
       - name: Self-relaunch the checklist-backing annotation until the slot is clean
