@@ -428,6 +428,18 @@ router.post("/admin/rematch-ebay-imports/batch-backfill", requireAdmin, async (r
         const { recordSoldComp } = await import(
           "../services/portfolioiq/soldCompsStore.service.js"
         );
+        // CF-ONE-TRANSACTION-ONE-ROW (D9) + D38 layer 1. This sweep used to
+        // build its own identity inline: the eBay ITEM id as the key and
+        // r.purchasePrice (the ALL-IN cost) as the price, with no basis on the
+        // row. That is the third key and the second price D9 exists to
+        // collapse, and an unmarked all-in price is exactly what the store's
+        // keepsExistingPrice() cannot refuse -- a sweep over a holding whose
+        // import had already written the subtotal would overwrite the market's
+        // price with the buyer's cost. It now derives through the one shared
+        // derivation, like its :162 sibling in the apply path.
+        const { purchaseSaleIdentity, sourcePurchaseFor } = await import(
+          "../services/portfolioiq/ebayAutoHolding.service.js"
+        );
         for (const r of results) {
           if (!r) continue;
           if (!r.after?.cardId || !r.purchasePrice || r.purchasePrice <= 0) continue;
@@ -444,6 +456,9 @@ router.post("/admin/rematch-ebay-imports/batch-backfill", requireAdmin, async (r
             ?? h.confirmedAt
             ?? new Date().toISOString(),
           );
+          const sourcePurchase = sourcePurchaseFor(doc, h);
+          const { sourceExternalId, price, priceBasis } = purchaseSaleIdentity(sourcePurchase, h);
+          if (!(price > 0)) continue;
           void (async () => {
             try {
               await recordSoldComp({
@@ -461,10 +476,11 @@ router.post("/admin/rematch-ebay-imports/batch-backfill", requireAdmin, async (r
                 // sale as raw.
                 gradeCompany: (h.gradeCompany as string | null) ?? null,
                 gradeValue: (h.gradeValue as number | null) ?? null,
-                price: r.purchasePrice!,
+                price,
+                priceBasis,
                 soldAt,
                 source: "ebay-user-purchase",
-                sourceExternalId: (h.ebayItemId as string | null) ?? `holding::${r.holdingId}`,
+                sourceExternalId,
                 contributorUserId: userId,
                 title: r.ebayTitle ?? null,
                 imageUrl: (h.ebayImageUrl as string | null) ?? null,

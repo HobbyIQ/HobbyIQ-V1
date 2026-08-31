@@ -446,4 +446,139 @@ describe("D38 — the emit paths hand the store their ruled identity", () => {
       expect(src).toContain("priceBasis,");
     }
   });
+
+  it("the admin batch-backfill sweep derives its identity too — no third key, no unmarked price", () => {
+    // This sweep used to build the row inline: `sourceExternalId:
+    // h.ebayItemId` (the third key D9 collapsed) at `price: r.purchasePrice`
+    // (the ALL-IN), with no basis. Source-pinned because the route needs an
+    // admin request and a multi-user portfolio sweep to reach behaviourally.
+    const src = fs.readFileSync(path.resolve(HERE, "../src/routes/ebayImportRematch.routes.ts"), "utf8");
+    expect(src).not.toMatch(/sourceExternalId: \(h\.ebayItemId as string \| null\)/);
+    expect(src).not.toContain("price: r.purchasePrice!,");
+    // Both call sites — the apply path and the sweep — go through the one
+    // derivation, so the file holds two of them.
+    const derivations = src.match(/purchaseSaleIdentity\(sourcePurchase, h\)/g) ?? [];
+    expect(derivations).toHaveLength(2);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// The deferred-confirm seam (#1579 × D38)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * #1579 moved confirm's comp emit into an `afterWrite()` thunk so the batch
+ * fires N emits once, after its single doc write. The identity is now derived
+ * on the awaited path and CLOSED OVER by that thunk, which is a new way for
+ * the basis to go missing: the derivation can still read `priceBasis` and the
+ * emit can still name it, while the value never crosses the closure boundary.
+ *
+ * The source-text guard above cannot see that — it matches the destructure and
+ * the shorthand independently, and both survive the drop. So this suite runs
+ * the real confirm and reads what `recordSoldComp` was actually handed.
+ *
+ * The assertion is `subtotal` rather than "some basis", and that is the whole
+ * point: the store INFERS `all-in` for any unmarked ebay-user-purchase row
+ * (soldCompsStore ~:1287, layer 2). A dropped basis therefore does not look
+ * absent downstream — it looks like all-in, which is precisely the flip. Only
+ * a purchase whose true basis is `subtotal` can tell the two apart.
+ */
+describe("D38 × #1579 — the basis survives the deferred confirm emit", () => {
+  const USER = "d38-deferred-confirm";
+  const HOLDING_ID = "aff3236a";
+  const PURCHASE_ID = "purchase-gold-mwi";
+
+  /** Captures every recordSoldComp INPUT — not the stored row, which layer-2
+   *  inference would make indistinguishable. */
+  async function seedAndConfirm(batchMode: boolean): Promise<RecordSoldCompInput[]> {
+    const storeMod = await import("../src/services/portfolioiq/soldCompsStore.service.js");
+    const seen: RecordSoldCompInput[] = [];
+    const spy = vi.spyOn(storeMod, "recordSoldComp").mockImplementation(async (input) => {
+      seen.push(input);
+      return { written: true, id: "x", deduped: false, hobbyiqCardId: GOLD_SLUG };
+    });
+
+    const portfolio = await import("../src/services/portfolioiq/portfolioStore.service.js");
+    const doc = await portfolio.readUserDoc(USER);
+    (doc as { holdings: Record<string, unknown> }).holdings = {
+      [HOLDING_ID]: {
+        id: HOLDING_ID,
+        cardStatus: "pending-review",
+        source: "ebay-auto",
+        sourcePurchaseId: PURCHASE_ID,
+        playerName: "Max Williams",
+        cardYear: 2025,
+        sport: "baseball",
+        setName: "Bowman Draft",
+        parallel: "Gold Refractor",
+        cardNumber: "CPA-MWI",
+        isAuto: true,
+        printRun: 50,
+        quantity: 1,
+        cardId: GOLD_SLUG,
+        purchaseDate: "2026-08-16T21:45:42.035Z",
+        // The all-in fields the fallback would reach for if the purchase
+        // record were lost. Present precisely so the wrong answer is available.
+        purchasePrice: 301.43,
+        totalCostBasis: 301.43,
+        ebayOrderId: ORDER_ID,
+        ebayItemId: "377291610293",
+      },
+    };
+    // The purchase record carries the SUBTOTAL — the only value that can
+    // distinguish a threaded basis from a dropped one.
+    (doc as { purchases: unknown[] }).purchases = [{
+      id: PURCHASE_ID,
+      ebayOrderId: ORDER_ID,
+      ebayItemId: "377291610293",
+      subtotal: 295.95,
+      totalCost: 301.43,
+      purchaseDate: "2026-08-16T21:45:42.035Z",
+    }];
+    (doc as { ebayCorrections?: unknown[] }).ebayCorrections = [];
+    await portfolio.writeUserDoc(USER, doc);
+
+    const q = await import("../src/services/portfolioiq/ebayReviewQueue.service.js");
+    if (batchMode) await q.confirmHoldingsBatch(USER, [HOLDING_ID], {} as never);
+    else await q.confirmHoldingReview(USER, HOLDING_ID, {});
+
+    // The emit is fire-and-forget inside the thunk; let its microtasks drain.
+    await new Promise((r) => setTimeout(r, 50));
+    spy.mockRestore();
+    return seen;
+  }
+
+  it("SINGLE confirm: the deferred emit carries priceBasis `subtotal`, not the inferred all-in", async () => {
+    const seen = await seedAndConfirm(false);
+    expect(seen).toHaveLength(1);
+    const emit = seen[0];
+    expect(emit.source).toBe("ebay-user-purchase");
+    // The load-bearing three, all of which must cross the closure boundary.
+    expect(emit.price).toBe(295.95);
+    expect(emit.priceBasis).toBe("subtotal");
+    expect(emit.sourceExternalId).toBe(ORDER_ID);
+    // Not the all-in that sits one field away on the holding.
+    expect(emit.price).not.toBe(301.43);
+  });
+
+  it("BATCH confirm: the same, through the afterWrites loop that fires after the single write", async () => {
+    const seen = await seedAndConfirm(true);
+    expect(seen).toHaveLength(1);
+    expect(seen[0].price).toBe(295.95);
+    expect(seen[0].priceBasis).toBe("subtotal");
+  });
+
+  it("the basis is part of compIdentity, so it cannot be derived and then dropped at the closure", () => {
+    // #1579's compIdentity is the closure's ONLY channel for the sale's
+    // identity. A `priceBasis` read on the awaited path but absent from that
+    // object is the TS18004 this merge produced; a shape that carries it is
+    // the fix. Pinned by source because the type is erased at runtime.
+    const src = fs.readFileSync(
+      path.resolve(HERE, "../src/services/portfolioiq/ebayReviewQueue.service.ts"),
+      "utf8",
+    );
+    expect(src).toMatch(/compIdentity:\s*\|?\s*\{[^}]*priceBasis: SalePriceBasis[^}]*\}/);
+    expect(src).toContain("compIdentity = { sourceExternalId, price, priceBasis, soldAt }");
+    expect(src).toContain("const { sourceExternalId, price, priceBasis, soldAt } = compIdentity;");
+  });
 });
