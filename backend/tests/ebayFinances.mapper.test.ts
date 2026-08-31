@@ -145,8 +145,12 @@ describe("mapFinancesToFees — bucketing rules", () => {
     expect(r.otherFees).toBeNull();
     // SALE present, so netPayout IS known:
     expect(r.netPayout).toBe(100);
-    // No SHIPPING_LABEL, so actualShippingCost is null:
-    expect(r.actualShippingCost).toBeNull();
+    // D34 (2026-08-31): changed from null to 0. Once the SALE has posted,
+    // eBay has reported everything it charged; no SHIPPING_LABEL means the
+    // seller bought no label through eBay — a known cost of 0. Keeping it
+    // null stranded such orders permanently, because both branches of
+    // feesAxisSatisfied require actualShippingCost != null.
+    expect(r.actualShippingCost).toBe(0);
   });
 
   it("empty input → all-null map", () => {

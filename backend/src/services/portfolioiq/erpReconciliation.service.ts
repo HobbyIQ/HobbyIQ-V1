@@ -222,6 +222,20 @@ export function missingFeeFields(entry: LedgerEntryForErp): string[] {
   if (isReconciled(entry)) return [];
   if (entry.source !== "ebay") return [];
   if (feesAxisSatisfied(entry)) return [];
+  // D34 (2026-08-31): "waiting on" must mean eBay genuinely has not sent
+  // the number. Once the payout has posted, the breakdown lines are
+  // settled facts — a sale with no promotion truly has no promoted-listing
+  // fee, and listing it as "waiting" asks the user to wait for something
+  // that will never arrive. Before the payout posts we can't tell absent
+  // from zero, so the full list is still the honest answer.
+  //
+  // netPayout is the discriminator because it is the field eBay posts
+  // first and the one feesAxisSatisfied keys on.
+  if (entry.netPayout != null) {
+    const missing: string[] = [];
+    if (entry.actualShippingCost == null) missing.push("actualShippingCost");
+    return missing;
+  }
   const missing: string[] = [];
   if (entry.finalValueFee == null) missing.push("finalValueFee");
   if (entry.paymentProcessingFee == null) missing.push("paymentProcessingFee");

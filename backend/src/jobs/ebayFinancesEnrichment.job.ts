@@ -36,7 +36,7 @@ import {
 import { listConnectedUserIds } from "../services/ebay/ebayTokenStore.service.js";
 import {
   getTransactionsForOrder,
-  mapFinancesToFees,
+  mapFinancesToFeesWithDiagnostics,
 } from "../services/ebay/ebayFinances.service.js";
 import { applyFeeEnrichment } from "../services/portfolioiq/erpAgingOverride.service.js";
 import type { LedgerEntryForErp } from "../services/portfolioiq/erpReconciliation.service.js";
@@ -45,7 +45,28 @@ import { runSingleFlight } from "./_singleFlight.js";
 const DEFAULT_INTERVAL_HOURS = 6;
 const DEFAULT_FIRST_DELAY_MS = 120_000;
 const DEFAULT_PER_RUN_CAP = 100;
-const MIN_AGE_MS = 2 * 24 * 60 * 60 * 1000;
+
+// D34 (2026-08-31). The 2-day floor is why Drew's 1991 Score Griffey #396
+// (order 11-15096-50302, sold 2026-08-30) sat in the queue saying "waiting
+// on 7 fee fields": at every sweep it was ~1 day old, so it was counted
+// skippedFresh and NO eBay call was ever made for it. The 21:53Z REPORT
+// ONLY run and the 18:46Z APPLY run both logged
+// `skippedFresh=1 candidates=0` — the floor, not shadow mode and not the
+// worker lock (#1553 fixed those), is what held this order.
+//
+// The floor's premise is real: fees post 1–3 days after the sale, and
+// asking too early returns a FUNDS_PROCESSING transaction with no fee
+// lines. But "too early" is eBay's answer to give, not ours to assume. A
+// fresh order is now FETCHED; if the fees aren't posted yet the payload
+// says so and it lands in noFinancesData, to be retried next sweep. That
+// turns a silent 2-day blackout into at worst one wasted call per sweep.
+//
+// MIN_AGE_MS stays as the *reporting* boundary (skippedFreshFetched) so
+// the counter still shows how many candidates were young, and stays
+// overridable for a deliberate quiet period.
+const MIN_AGE_MS = Number(
+  process.env.EBAY_FINANCES_ENRICHMENT_MIN_AGE_MS ?? 2 * 24 * 60 * 60 * 1000,
+);
 const MAX_AGE_MS = 90 * 24 * 60 * 60 * 1000;
 
 let _firstRunTimer: NodeJS.Timeout | null = null;
@@ -56,6 +77,13 @@ export interface FinancesEnrichmentRunSummary {
   candidatesEvaluated: number;
   enriched: number;
   shadow: boolean;
+  mode: EnrichmentMode;
+  /** Candidates younger than MIN_AGE_MS that were fetched anyway (D34). */
+  freshFetched: number;
+  /** D34: refill mode — rows whose recomputed netPayout disagreed with stored. */
+  payoutDisagreements: number;
+  /** D34: distinct eBay fee types that fell through to otherFees. */
+  unknownFeeTypes: string[];
   skippedFresh: number;
   skippedOverWindow: number;
   noFinancesData: number;
@@ -74,32 +102,83 @@ function perRunCap(): number {
   return Number.isFinite(v) && v > 0 ? Math.floor(v) : DEFAULT_PER_RUN_CAP;
 }
 
-function isCandidate(e: any, nowMs: number): "candidate" | "skip-fresh" | "skip-over" | "skip-other" {
+/**
+ * D34: the modes the sweep runs in.
+ *   "enrich"           — the 6-hourly default: unreconciled eBay entries.
+ *   "refill-fee-lines" — entries that already have netPayout but are
+ *                        missing one or more of the five fee fields, i.e.
+ *                        the rows the pre-D34 mapper closed without a
+ *                        breakdown (Ohtani). Re-fetches and fills them.
+ */
+export type EnrichmentMode = "enrich" | "refill-fee-lines";
+
+export function resolveMode(raw: string | undefined): EnrichmentMode {
+  return String(raw ?? "").trim().toLowerCase() === "refill-fee-lines"
+    ? "refill-fee-lines"
+    : "enrich";
+}
+
+/** The five granular fee fields — netPayout/shipping are tracked apart. */
+const GRANULAR_FEE_FIELDS = [
+  "finalValueFee",
+  "paymentProcessingFee",
+  "promotedListingFee",
+  "adFee",
+  "otherFees",
+] as const;
+
+function missingAnyFeeLine(e: any): boolean {
+  return GRANULAR_FEE_FIELDS.some((f) => e?.[f] == null);
+}
+
+type Verdict = "candidate" | "candidate-fresh" | "skip-over" | "skip-other";
+
+function isCandidate(e: any, nowMs: number, mode: EnrichmentMode): Verdict {
   if (e?.source !== "ebay") return "skip-other";
-  if (e?.needsReconciliation !== true) return "skip-other";
   if (!e?.ebayOrderId) return "skip-other";
   const soldMs = Date.parse(e.soldAt ?? "");
   if (!Number.isFinite(soldMs)) return "skip-other";
   const age = nowMs - soldMs;
-  if (age < MIN_AGE_MS) return "skip-fresh";
+  // The 90-day Finances retention window is a hard boundary in both
+  // modes: past it eBay has nothing left to return.
   if (age > MAX_AGE_MS) return "skip-over";
-  return "candidate";
+
+  if (mode === "refill-fee-lines") {
+    // Target the already-reconciled rows the old mapper left hollow:
+    // payout known, breakdown absent. Deliberately NOT gated on
+    // needsReconciliation — these rows are closed, and that is the point.
+    if (e.netPayout == null) return "skip-other";
+    if (!missingAnyFeeLine(e)) return "skip-other";
+    return age < MIN_AGE_MS ? "candidate-fresh" : "candidate";
+  }
+
+  if (e?.needsReconciliation !== true) return "skip-other";
+  // D34: a fresh order is still a candidate — see MIN_AGE_MS above. It is
+  // counted separately so "how many did we ask about early" stays visible.
+  return age < MIN_AGE_MS ? "candidate-fresh" : "candidate";
 }
 
 export async function runFinancesEnrichmentSweep(opts: {
   now?: Date;
+  mode?: EnrichmentMode;
 } = {}): Promise<FinancesEnrichmentRunSummary> {
   const start = Date.now();
   const now = opts.now ?? new Date();
   const nowMs = now.getTime();
   const cap = perRunCap();
   const shadow = isShadowMode();
+  const mode = opts.mode ?? resolveMode(process.env.MODE);
+  const unknownFeeTypes = new Set<string>();
 
   const summary: FinancesEnrichmentRunSummary = {
     users: 0,
     candidatesEvaluated: 0,
     enriched: 0,
     shadow,
+    mode,
+    freshFetched: 0,
+    payoutDisagreements: 0,
+    unknownFeeTypes: [],
     skippedFresh: 0,
     skippedOverWindow: 0,
     noFinancesData: 0,
@@ -145,10 +224,15 @@ export async function runFinancesEnrichmentSweep(opts: {
     for (let i = 0; i < ledger.length; i++) {
       if (processedAcrossUsers >= cap) break;
       const entry = ledger[i];
-      const verdict = isCandidate(entry, nowMs);
-      if (verdict === "skip-fresh") { summary.skippedFresh += 1; continue; }
+      const verdict = isCandidate(entry, nowMs, mode);
       if (verdict === "skip-over")  { summary.skippedOverWindow += 1; continue; }
-      if (verdict !== "candidate")  { continue; }
+      if (verdict === "skip-other") { continue; }
+      if (verdict === "candidate-fresh") {
+        // D34: still fetched. Counted in BOTH skippedFresh (so the
+        // historical counter keeps its meaning) and freshFetched.
+        summary.skippedFresh += 1;
+        summary.freshFetched += 1;
+      }
 
       summary.candidatesEvaluated += 1;
       processedAcrossUsers += 1;
@@ -172,22 +256,61 @@ export async function runFinancesEnrichmentSweep(opts: {
         continue;
       }
 
-      const feeMap = mapFinancesToFees(txns);
+      const { feeMap, diagnostics } = mapFinancesToFeesWithDiagnostics(txns);
+      for (const t of diagnostics.unknownFeeTypes) unknownFeeTypes.add(t);
+      if (diagnostics.unknownFeeTypes.length > 0) {
+        // Never dropped, never silent: an unrecognized fee still sums into
+        // otherFees, and its name is logged so the taxonomy grows on
+        // purpose instead of by a P&L discrepancy months later.
+        console.warn(
+          "[ebay][ebay.finances.enrichment.job] unknown_fee_types " +
+          JSON.stringify({
+            orderId: entry.ebayOrderId,
+            unknownFeeTypes: diagnostics.unknownFeeTypes,
+          }),
+        );
+      }
+
+      // D34 refill: the breakdown is what's being added; the payout is
+      // already trusted and drives realized P&L. If the re-fetch disagrees,
+      // report it and KEEP the stored payout — a silent restatement of a
+      // closed row's P&L is exactly what this mode must not do.
+      let payoutDisagreed = false;
+      if (mode === "refill-fee-lines" && entry.netPayout != null && feeMap.netPayout != null) {
+        if (Math.abs(Number(entry.netPayout) - feeMap.netPayout) > 0.01) {
+          payoutDisagreed = true;
+          summary.payoutDisagreements += 1;
+          console.warn(
+            "[ebay][ebay.finances.enrichment.job] payout_disagreement " +
+            JSON.stringify({
+              orderId: entry.ebayOrderId,
+              storedNetPayout: entry.netPayout,
+              recomputedNetPayout: feeMap.netPayout,
+              netPayoutBasis: diagnostics.netPayoutBasis,
+            }),
+          );
+        }
+      }
+
+      const effectiveFeeMap = payoutDisagreed
+        ? { ...feeMap, netPayout: Number(entry.netPayout) }
+        : feeMap;
+
       const { entry: enriched, adjustment } = applyFeeEnrichment(
         entry as LedgerEntryForErp,
-        feeMap,
+        effectiveFeeMap,
         now.toISOString(),
       );
 
       // Recompute derived financials. netPayout-authoritative branch
-      // fires when feeMap.netPayout != null.
+      // fires when netPayout != null.
       const granularSum =
-        (feeMap.finalValueFee ?? 0)
-        + (feeMap.paymentProcessingFee ?? 0)
-        + (feeMap.promotedListingFee ?? 0)
-        + (feeMap.adFee ?? 0)
-        + (feeMap.otherFees ?? 0)
-        + (feeMap.actualShippingCost ?? 0);
+        (effectiveFeeMap.finalValueFee ?? 0)
+        + (effectiveFeeMap.paymentProcessingFee ?? 0)
+        + (effectiveFeeMap.promotedListingFee ?? 0)
+        + (effectiveFeeMap.adFee ?? 0)
+        + (effectiveFeeMap.otherFees ?? 0)
+        + (effectiveFeeMap.actualShippingCost ?? 0);
       const financials = computeLedgerFinancials({
         grossProceeds: (entry as any).grossProceeds,
         feesTotal: granularSum,
@@ -196,7 +319,7 @@ export async function runFinancesEnrichmentSweep(opts: {
         gradingCost: (entry as any).gradingCost ?? null,
         suppliesCost: (entry as any).suppliesCost ?? null,
         costBasisSold: (entry as any).costBasisSold,
-        netPayoutOverride: feeMap.netPayout ?? null,
+        netPayoutOverride: effectiveFeeMap.netPayout ?? null,
       });
       const finalEntry = {
         ...enriched,
@@ -216,12 +339,28 @@ export async function runFinancesEnrichmentSweep(opts: {
             orderId: entry.ebayOrderId,
             financesTransactionCount: txns.length,
             feeMap,
+            diagnostics,
             priorNetProceeds: (entry as any).netProceeds,
             wouldBeNetProceeds: financials.netProceeds,
             wouldBeRealizedPL: financials.realizedProfitLoss,
             adjustmentReason: adjustment.reason,
           }),
         );
+        // D34: the fixture tap. The five fee fields came back null on
+        // every real order because the mapper read a top-level fees[]
+        // that eBay does not send — and nothing ever printed the actual
+        // response, so the shape was never checked against reality. With
+        // EBAY_FINANCES_DUMP_TRANSACTIONS=true a REPORT ONLY run prints
+        // the raw transactions, which is what backend/tests/fixtures/
+        // ebay-finances/ is built from. Opt-in: the payload carries order
+        // and line-item ids. It carries no token — tokens live only in
+        // the Authorization header, which is never part of a response.
+        if (process.env.EBAY_FINANCES_DUMP_TRANSACTIONS === "true") {
+          console.log(
+            "[ebay][ebay.finances.enrichment.job] raw_transactions " +
+            JSON.stringify({ orderId: entry.ebayOrderId, transactions: txns }),
+          );
+        }
         summary.enriched += 1; // counted as "would-have-enriched"
         continue;
       }
@@ -247,15 +386,20 @@ export async function runFinancesEnrichmentSweep(opts: {
   }
 
   summary.durationMs = Date.now() - start;
+  summary.unknownFeeTypes = [...unknownFeeTypes].sort();
 
   console.log(
     `[ebay.finances.enrichment.job] done ` +
       `users=${summary.users} ` +
+      `mode=${summary.mode} ` +
       `enriched=${summary.enriched} ` +
       `shadow=${summary.shadow} ` +
       `skippedFresh=${summary.skippedFresh} ` +
+      `freshFetched=${summary.freshFetched} ` +
       `skippedOverWindow=${summary.skippedOverWindow} ` +
       `noFinancesData=${summary.noFinancesData} ` +
+      `payoutDisagreements=${summary.payoutDisagreements} ` +
+      `unknownFeeTypes=${summary.unknownFeeTypes.join("|") || "(none)"} ` +
       `errors=${summary.errors} ` +
       `durationMs=${summary.durationMs}`,
   );

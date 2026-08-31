@@ -1,0 +1,34 @@
+{
+  "_provenance": "eBay FeeTypeEnum (Sell Finances API) mapped to the seven HobbyIQ fee fields. The mapping is the ruling; the enum is eBay's.",
+  "_rule": "An eBay fee type that matches no bucket lands in otherFees AND has its name reported (unknownFeeTypes). Nothing is ever dropped, and nothing is ever invented.",
+  "buckets": {
+    "finalValueFee": {
+      "feeTypes": ["FINAL_VALUE_FEE", "FINAL_VALUE_FEE_FIXED_PER_ORDER"],
+      "note": "The fixed per-order component IS part of the final value fee. Before D34 it fell to otherFees, splitting one real-world fee across two columns."
+    },
+    "paymentProcessingFee": {
+      "feeTypes": ["PAYMENT_PROCESSING_FEE", "PAYMENT_PROCESSING_FEE_INTERNATIONAL"],
+      "note": "Under managed payments eBay generally folds processing into the final value fee and sends no separate line. Absent line => the field stays null (unknown), never a fabricated 0."
+    },
+    "promotedListingFee": {
+      "feeTypes": ["FINAL_VALUE_FEE_AD_FEE", "AD_FEE", "PROMOTED_LISTING_FEE"],
+      "note": "Promoted Listings Standard. Can also arrive as a NON_SALE_CHARGE transaction with top-level fees[] when billed off-payout, which is why top-level fees[] is still read."
+    },
+    "adFee": {
+      "feeTypes": ["AD_FEE_ADV*", "PROMOTED_DISPLAY*"],
+      "note": "Advanced / display advertising, distinct from Promoted Standard."
+    },
+    "otherFees": {
+      "feeTypes": ["INTERNATIONAL_FEE", "REGULATORY_OPERATING_FEE", "DISPUTE_FEE", "INSERTION_FEE", "*any unrecognized*"],
+      "note": "The honest catch-all. Reported by name so the taxonomy grows deliberately."
+    },
+    "netPayout": {
+      "source": "SALE transaction: amount - totalFeeAmount when totalFeeAmount is present, else amount",
+      "note": "eBay's amount on a SALE is GROSS. Treating it as net understates fees by the whole fee total."
+    },
+    "actualShipping": {
+      "source": "SHIPPING_LABEL transaction amount (negative; absolute value taken)",
+      "ledgerField": "actualShippingCost"
+    }
+  }
+}

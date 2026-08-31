@@ -11,10 +11,39 @@
  * "cycle skipped — another worker holds the lock", so not even the shadow
  * pass ran. Same lock defect the order poll had; same cure: the runner.
  *
- * Same code as the job: runFinancesEnrichmentSweep (candidates = ebay ledger
- * entries with needsReconciliation, 2–90 days old, per-run cap). Writes only
- * with BACKFILL_APPLY=true — otherwise SHADOW stays on and every candidate is
- * logged as would-have-enriched, nothing written.
+ * D34 (2026-08-31) — the two defects that survived that fix:
+ *
+ *   1. THE AGE FLOOR. Candidates had to be 2–90 days old. Drew's 1991 Score
+ *      Griffey #396 (order 11-15096-50302, sold 2026-08-30) was ~1 day old at
+ *      every sweep, so it was counted skippedFresh and NO eBay call was ever
+ *      made for it. Both the 18:46Z APPLY run and the 21:53Z REPORT ONLY run
+ *      logged `skippedFresh=1 candidates=0`. Fresh orders are now fetched;
+ *      eBay says whether the fees have posted.
+ *
+ *   2. THE WRONG FEE PATH. mapFinancesToFees read a top-level `fees[]`.
+ *      eBay puts the breakdown on `orderLineItems[].marketplaceFees[]`.
+ *      Every unit test built fixtures the wrong way, so the suite was green
+ *      while all five fee fields came back null on real orders — Ohtani
+ *      (17-15031-43259) reconciled at netPayout $2,396.85 on $2,999.99 gross
+ *      with $603.14 of fees itemized nowhere.
+ *
+ * MODE:
+ *   (default) "enrich"  — unreconciled eBay ledger entries inside the window.
+ *   "refill-fee-lines"  — rows that already have netPayout but are missing a
+ *                         fee line: the ones closed before the mapper was
+ *                         fixed. Re-fetches and fills the breakdown only;
+ *                         netProceeds / realizedProfitLoss are left alone
+ *                         when the recomputed payout agrees, and a
+ *                         disagreement is REPORTED with the stored payout
+ *                         kept, never silently restated. Idempotent: a row
+ *                         with every fee line present is no longer a
+ *                         candidate, so a second run does nothing.
+ *
+ * EBAY_FINANCES_DUMP_TRANSACTIONS=true (REPORT ONLY only) prints the raw
+ * Finances transactions — how the committed fixtures were captured.
+ *
+ * Writes only with BACKFILL_APPLY=true — otherwise SHADOW stays on and every
+ * candidate is logged as would-have-enriched, nothing written.
  *
  * Reconciliation: intended = candidates evaluated; written = enriched;
  * skipped = no finances data yet (eBay has not posted the fees); failed =
@@ -22,33 +51,56 @@
  *
  * Env: COSMOS_CONNECTION_STRING; EBAY_CLIENT_ID/SECRET/ENV/REDIRECT_URI;
  *      AUTH_SESSION_SECRET; BACKFILL_APPLY; EBAY_FINANCES_ENRICHMENT_PER_RUN
- *      (default 100 — raise for a backlog).
+ *      (default 100 — raise for a backlog); MODE.
  */
 const path = require("node:path");
 const backend = path.resolve(__dirname, "..");
 const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
 
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
+const RAW_MODE = String(process.env.MODE || "").trim().toLowerCase();
+const MODE = RAW_MODE === "refill-fee-lines" ? "refill-fee-lines" : "enrich";
 const f = (n) => Number(n ?? 0).toLocaleString("en-US");
 
 async function main() {
   for (const k of ["COSMOS_CONNECTION_STRING", "EBAY_CLIENT_ID", "EBAY_CLIENT_SECRET", "AUTH_SESSION_SECRET"]) {
     if (!process.env[k]) { console.error(`FATAL: ${k} not set`); process.exit(1); }
   }
+  if (RAW_MODE && RAW_MODE !== "enrich" && RAW_MODE !== "refill-fee-lines") {
+    // A typo'd MODE silently running the DEFAULT population is how a
+    // dispatch reports a perfectly green nothing. Refuse instead.
+    console.error(`FATAL: MODE="${RAW_MODE}" is not a mode (enrich | refill-fee-lines)`);
+    process.exit(1);
+  }
   // The job reads SHADOW from the env at call time: only the exact string
   // "false" writes. REPORT ONLY keeps shadow on.
   process.env.EBAY_FINANCES_ENRICHMENT_SHADOW = APPLY ? "false" : "true";
+  if (APPLY && process.env.EBAY_FINANCES_DUMP_TRANSACTIONS === "true") {
+    // The dump exists to build fixtures from a REPORT ONLY run. Letting it
+    // ride along with a write run just puts order ids in a log for no
+    // reason, so it is refused rather than quietly ignored.
+    console.error("FATAL: EBAY_FINANCES_DUMP_TRANSACTIONS is REPORT ONLY (apply=false)");
+    process.exit(1);
+  }
   const { runFinancesEnrichmentSweep } = require(path.join(backend, "dist/jobs/ebayFinancesEnrichment.job.js"));
-  console.log(`run-ebay-finances-enrichment  ${APPLY ? "APPLY (writes fees, net proceeds, realized P&L)" : "REPORT ONLY -- shadow, nothing written"}  env=${process.env.EBAY_ENV || "(default)"}  perRun=${process.env.EBAY_FINANCES_ENRICHMENT_PER_RUN || "100"}`);
-  const s = await runFinancesEnrichmentSweep();
+  console.log(`run-ebay-finances-enrichment  ${APPLY ? "APPLY (writes fees, net proceeds, realized P&L)" : "REPORT ONLY -- shadow, nothing written"}  mode=${MODE}  env=${process.env.EBAY_ENV || "(default)"}  perRun=${process.env.EBAY_FINANCES_ENRICHMENT_PER_RUN || "100"}`);
+  if (MODE === "refill-fee-lines") {
+    console.log(`  refill-fee-lines: rows WITH netPayout and any missing fee line; fills the breakdown, keeps the stored payout`);
+  }
+  const s = await runFinancesEnrichmentSweep({ mode: MODE });
   console.log(`\n${APPLY ? "APPLIED" : "REPORT ONLY -- nothing written"}`);
   console.log(`  users                 ${f(s.users)}`);
-  console.log(`  candidates            ${f(s.candidatesEvaluated)}   <- ebay, needsReconciliation, 2–90 days old`);
+  console.log(`  candidates            ${f(s.candidatesEvaluated)}   <- ${MODE === "refill-fee-lines" ? "ebay, netPayout set, a fee line missing, <=90 days old" : "ebay, needsReconciliation, <=90 days old"}`);
   console.log(`  ENRICHED              ${f(s.enriched)}${APPLY ? "" : "   <- would-have-enriched (shadow)"}`);
   console.log(`  no finances data yet  ${f(s.noFinancesData)}   <- eBay has not posted the fees`);
-  console.log(`  skipped fresh (<2d)   ${f(s.skippedFresh)}   skipped over window (>90d) ${f(s.skippedOverWindow)}`);
+  console.log(`  fresh (<2d) fetched   ${f(s.freshFetched)}   <- D34: fetched anyway, eBay decides`);
+  console.log(`  skipped over window   ${f(s.skippedOverWindow)}   (>90d, outside Finances retention)`);
+  if (MODE === "refill-fee-lines") {
+    console.log(`  payout disagreements  ${f(s.payoutDisagreements)}   <- stored payout KEPT; see payout_disagreement lines`);
+  }
+  console.log(`  unknown fee types     ${(s.unknownFeeTypes ?? []).join(", ") || "(none)"}   <- landed in otherFees, never dropped`);
   console.log(`  errors                ${f(s.errors)}   (${f(s.durationMs)} ms)`);
-  if (APPLY) reportWrites({ job: "run-ebay-finances-enrichment", intended: Number(s.candidatesEvaluated ?? 0), written: Number(s.enriched ?? 0), skipped: Number(s.noFinancesData ?? 0), failed: Number(s.errors ?? 0) });
+  if (APPLY) reportWrites({ job: `run-ebay-finances-enrichment[${MODE}]`, intended: Number(s.candidatesEvaluated ?? 0), written: Number(s.enriched ?? 0), skipped: Number(s.noFinancesData ?? 0), failed: Number(s.errors ?? 0) });
   if (Number(s.errors ?? 0) > 0) { console.error(`FATAL: ${s.errors} error(s)`); process.exit(1); }
 }
 
