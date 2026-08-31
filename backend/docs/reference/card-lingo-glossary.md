@@ -257,3 +257,22 @@ In Bowman prospect autographs, **"Red Ink" is the SSP variant of the Black &
 White Shimmer auto parallel** — a distinct card, not a nickname for the
 shimmer itself. It gets its own catalog row; sale titles saying "Red Ink"
 must match that row.
+
+## Bowman Logo Pattern vs Logo Variation — 2026-08-30
+
+Two different things that a title parse has fused before:
+
+**Bowman Logo Pattern** is a real parallel RUNG of 2026 Bowman's Base Cards
+and Paper Prospects ladders. It carries no print run — it is priced by pack
+odds (1:699 Hobby on Paper Prospects) — and it applies to that subset's own
+cards, prefixed numbers included. `BP-18 Blaine Bullard Bowman Logo Pattern`
+is a real card.
+
+**A Logo Variation** is a variation SUBSET: `Base Rookie Red RC Logo
+Variation`, 40 cards, every one of them a BARE NUMERIC base-set number
+(#18 is Roman Anthony). Prefixed runs never appear in it.
+
+So `bp-18:logo-variation` is malformed on both halves — the wrong parallel
+name AND a base-set subset on a Paper-Prospects number. A variation is a
+second printing of a base card and shares that card's number; the guard is
+in identityFromFields (CF-A-VARIATION-NEEDS-A-BARE-NUMBER).
