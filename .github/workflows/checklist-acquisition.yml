@@ -51,6 +51,36 @@ on:
         description: 'Write to the catalog (false = report only)'
         required: false
         default: 'true'
+      # DIRECT-URL LANE (CF-HM-DIRECT-URL, 2026-08-30). The ranked lane finds a
+      # release by asking hmSlugFor to match a gap onto the --list index, and
+      # that index does not hold every page: 2026-bowman-baseball-checklist is
+      # absent from it, and 'bowman'+2026+baseball matches two OTHER slugs, so
+      # the ambiguity refusal fires before the missing slug is even noticed. A
+      # release we can name by URL should not be unreachable because an index
+      # is thin. Given release_url, this lane fetches that exact page and
+      # ingests it, bypassing hmSlugFor entirely.
+      #
+      # The cron lanes never set these, so they are untouched.
+      release_url:
+        description: 'DIRECT LANE: hobbymonitor release URL (skips the gap ranking entirely)'
+        required: false
+        default: ''
+      set_key:
+        description: 'DIRECT LANE: catalog setKey, e.g. bowman (must be the key the catalog ALREADY uses)'
+        required: false
+        default: ''
+      set_name:
+        description: 'DIRECT LANE: display name, e.g. "2026 Bowman"'
+        required: false
+        default: ''
+      year:
+        description: 'DIRECT LANE: product year, e.g. 2026'
+        required: false
+        default: ''
+      sport:
+        description: 'DIRECT LANE: sport, e.g. baseball'
+        required: false
+        default: 'baseball'
 
 concurrency:
   group: checklist-acquisition
@@ -94,6 +124,7 @@ jobs:
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
 
       - name: Rank what is missing
+        if: ${{ !inputs.release_url }}
         working-directory: backend
         env:
           NODE_OPTIONS: '--max-old-space-size=4096'
@@ -110,6 +141,7 @@ jobs:
             --json=/tmp/gaps.json
 
       - name: Fetch and ingest
+        if: ${{ !inputs.release_url }}
         working-directory: backend
         env:
           NODE_OPTIONS: '--max-old-space-size=4096'
@@ -123,6 +155,76 @@ jobs:
           COSMOS_DATABASE=hobbyiq \
           node scripts/acquire-missing-checklists.cjs $APPLY_FLAG \
             --max="${{ inputs.max_products || '12' }}" --gaps=/tmp/gaps.json
+
+      # ── DIRECT-URL LANE ────────────────────────────────────────────────
+      # Runs ONLY when release_url is given, and then it is the whole job: the
+      # ranked steps above are skipped. Refusal gates come before any fetch
+      # (#1565) — an ingest under the wrong setKey mints a second, parallel
+      # product beside the real one, which is worse than the gap it closes.
+      - name: Acquire one release by URL
+        if: ${{ inputs.release_url }}
+        working-directory: backend
+        env:
+          NODE_OPTIONS: '--max-old-space-size=4096'
+          RELEASE_URL: ${{ inputs.release_url }}
+          SET_KEY: ${{ inputs.set_key }}
+          SET_NAME: ${{ inputs.set_name }}
+          YEAR: ${{ inputs.year }}
+          SPORT: ${{ inputs.sport }}
+          APPLY_INPUT: ${{ inputs.apply }}
+        run: |
+          set -euo pipefail
+
+          # ---- refusal gates, before any network call or require ----
+          case "$RELEASE_URL" in
+            https://www.hobbymonitor.com/release/*) ;;
+            *) echo "REFUSE: release_url must be a https://www.hobbymonitor.com/release/... URL (got: $RELEASE_URL)"; exit 1 ;;
+          esac
+          if [ -z "${SET_KEY:-}" ]; then echo "REFUSE: set_key is required — without it the manifest cannot name the product"; exit 1; fi
+          if [ -z "${YEAR:-}" ]; then echo "REFUSE: year is required"; exit 1; fi
+          case "$YEAR" in ''|*[!0-9]*) echo "REFUSE: year must be numeric (got: $YEAR)"; exit 1 ;; esac
+          if [ -z "${SPORT:-}" ]; then echo "REFUSE: sport is required"; exit 1; fi
+          # A prettified setKey mints a parallel product. Refuse anything that
+          # is not already a lowercase slug.
+          case "$SET_KEY" in
+            *[!a-z0-9-]*) echo "REFUSE: set_key must be a lowercase slug like 'bowman' (got: $SET_KEY)"; exit 1 ;;
+          esac
+          SET_NAME_EFF="${SET_NAME:-$YEAR $SET_KEY}"
+
+          echo "== DIRECT LANE =="
+          echo "  url=$RELEASE_URL"
+          echo "  year=$YEAR setKey=$SET_KEY setName=$SET_NAME_EFF sport=$SPORT"
+          echo "  apply=${APPLY_INPUT:-true}"
+
+          OUT="data/checklists/scraped/acquired/${YEAR}-${SET_KEY}-${SPORT}.csv"
+
+          node scripts/fetchHobbyMonitorChecklist.cjs \
+            --url "$RELEASE_URL" \
+            --out "$OUT" \
+            --year "$YEAR" \
+            --set-key "$SET_KEY" \
+            --set-name "$SET_NAME_EFF" \
+            --sport "$SPORT"
+
+          # The fetcher exits 0 on a page whose shape changed but still parsed
+          # thin. A checklist worth ingesting has rows; refuse before writing.
+          ROWS=$(($(wc -l < "$OUT") - 1))
+          echo "  csv rows=$ROWS"
+          if [ "$ROWS" -lt 5 ]; then echo "REFUSE: only $ROWS rows parsed — not ingesting"; exit 1; fi
+
+          COSMOS_CONNECTION_STRING=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='COSMOS_CONNECTION_STRING'].value" -o tsv | tr -d '\r\n')
+          if [ -z "$COSMOS_CONNECTION_STRING" ]; then echo "COSMOS_CONNECTION_STRING empty"; exit 1; fi
+
+          APPLY_ENV=""
+          if [ "${APPLY_INPUT:-true}" = "true" ]; then APPLY_ENV="true"; fi
+          COSMOS_CONNECTION_STRING="$COSMOS_CONNECTION_STRING" \
+          COSMOS_DATABASE=hobbyiq \
+          CSV_PATH="$OUT" \
+          SOURCE_LABEL=hobbymonitor \
+          APPLY="$APPLY_ENV" \
+          node scripts/ingest-scraped-checklist.cjs
 
       - name: Report what is still stranded
         if: always()
