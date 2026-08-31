@@ -121,6 +121,7 @@ on:
           - normalize-catalog-format
           - retire-flattened-attestations
           - repair-refractor-mislabel
+          - repair-base-to-title-finish
           - merge-bare-colour-parallels
           - dedupe-catalog-partition-shadows
           - rehome-catalog-rows-to-own-partition
@@ -642,6 +643,12 @@ jobs:
           SCOPE: ${{ inputs.scope }}
           # dedupe-catalog-partition-shadows: which products to sweep.
           SETKEY_LIKE: ${{ inputs.setkey_like }}
+          # repair-base-to-title-finish: the setKey axis of its scope. The
+          # parser defects it repairs are year- and sport-agnostic, so all
+          # three axes (SPORTS/YEARS/SETKEYS) are inputs and the script
+          # REFUSES an apply with all three empty -- a whole-pool mutation
+          # has to say its own name.
+          SETKEYS: ${{ inputs.setkey_like }}
           # ingest-checklist-csv-to-catalog: a committed CSV dir (e.g. the
           # drew-ruled Bellingham entry) ingested through the ONE generic
           # ingester; SOURCE decides authority and the script refuses non-
@@ -887,6 +894,31 @@ jobs:
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-pokemon-glued-numbers -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f sources="${{ inputs.sources }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (unglued=$N) — done, no re-dispatch."
+          fi
+
+      - name: Self-relaunch the base-pool repair until the shard is clean
+        if: ${{ !cancelled() && inputs.script == 'repair-base-to-title-finish' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        working-directory: backend
+        run: |
+          set +e
+          N=$(grep -aoE "MOVES base -> finish[^0-9]+[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          N=${N:-0}
+          echo "moves=$N"
+          # CF-RELAUNCH-ONLY-ON-BUDGET (#1361, D18 2026-08-29). Relaunch iff the
+          # script printed its budget marker — never on a count. A count gate
+          # looped forever on a slot down to rows it cannot change, and stopped
+          # early on a budget stop that happened to change nothing. A LIMIT stop
+          # is a dry-run bound and deliberately prints no marker.
+          # setkey_like is forwarded because it carries this script's SETKEYS
+          # axis; without it a relaunch would widen its own scope mid-fleet.
+          if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
+            echo "::notice::budget hit (moves=$N) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-base-to-title-finish -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f sources="${{ inputs.sources }}" -f setkey_like="${{ inputs.setkey_like }}"
+          else
+            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (moves=$N) — done, no re-dispatch."
           fi
 
       - name: Self-relaunch the pokemon setKey mapping until nothing moves
