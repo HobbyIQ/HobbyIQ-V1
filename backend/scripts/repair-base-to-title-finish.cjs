@@ -165,7 +165,7 @@ function retarget(slug, parallelSlug, printRun) {
   if (SETKEYS.length) { where.push(`(${SETKEYS.map((_, i) => `CONTAINS(c.hobbyiqCardId, @sk${i})`).join(" OR ")})`); SETKEYS.forEach((k, i) => params.push({ name: `@sk${i}`, value: `:${k}:` })); }
 
   const stats = {
-    seen: 0, mine: 0, correct: 0, lot: 0, wrongProduct: 0, held: 0,
+    seen: 0, mine: 0, correct: 0, lot: 0, wrongProduct: 0, held: 0, vanished: 0,
     noDest: 0, moves: 0, wrote: 0, failed: 0,
   };
   const byFinish = new Map(), heldWhy = new Map(), missing = new Map();
@@ -259,7 +259,12 @@ function retarget(slug, parallelSlug, printRun) {
       if (!APPLY) continue;
       try {
         const d = (await sold.item(r.id, r.cardId ?? r.id).read()).resource;
-        if (!d) continue;
+        // A row that vanished between the query and the re-read is neither a
+        // write nor a failure, and counting it as neither breaks the identity
+        // this job's banner claims: stats.moves has ALREADY fired, so the row
+        // would sit in `intended` with nothing on the other side. Counted
+        // explicitly so every move still reconciles.
+        if (!d) { stats.vanished++; continue; }
         d.hobbyiqCardId = dest;
         d.parallel = parsed.parallel;
         d.parallelRepairedBy = {
@@ -284,6 +289,9 @@ function retarget(slug, parallelSlug, printRun) {
               stats.wrote++;
               continue;
             }
+            // Vanished on the retry read too — same accounting as above.
+            stats.vanished++;
+            continue;
           } catch { /* falls through to failed */ }
         }
         stats.failed++;
@@ -301,6 +309,7 @@ function retarget(slug, parallelSlug, printRun) {
   console.log(`  noDest (catalog gap)   ${f(stats.noDest)}   <- destination slug absent from card_catalog; an acquisition list, not a move`);
   console.log(`  MOVES base -> finish   ${f(stats.moves)}`);
   console.log(`  wrote                  ${f(stats.wrote)}`);
+  console.log(`  vanished before write  ${f(stats.vanished)}   <- row gone between query and re-read; declared, not a silent shortfall`);
   console.log(`  failed                 ${f(stats.failed)}`);
   if (byFinish.size) {
     console.log(`  moves by finish:`);
@@ -317,8 +326,13 @@ function retarget(slug, parallelSlug, printRun) {
   // wrote. The refusals are DECLARED as skipped — they are accounted for, not
   // vanished — so they stay out of the shortfall while a committed move that
   // never reached the database still fails the run.
+  // A row that vanished between the query and the re-read is DECLARED too. It
+  // is not a write and not a failure, but stats.moves already counted it into
+  // `intended`, so leaving it out of `skipped` would open a silent shortfall in
+  // exactly the identity this block exists to check.
   const intended = stats.moves + stats.held + stats.noDest + stats.lot + stats.wrongProduct;
-  const skipped = stats.held + stats.noDest + stats.lot + stats.wrongProduct + (APPLY ? 0 : stats.moves);
+  const skipped = stats.held + stats.noDest + stats.lot + stats.wrongProduct
+    + (APPLY ? stats.vanished : stats.moves);
   reportWrites({
     job: "repair-base-to-title-finish",
     intended,

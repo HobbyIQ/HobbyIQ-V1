@@ -139,13 +139,30 @@ describe("plural Refractors and bare X-Fractor", () => {
         "2024 Topps Chrome Refractor Lot",
         "2024 Bowman Chrome Refractors Bundle",
         "2024 Topps Chrome Refractors and 5 more",
-        "2024 Bowman Chrome Refractors ++",
-        "2024 Topps Chrome Refractors You Pick",
-        "2024 Topps Chrome Refractors - Pick Your Card",
         "2024 Topps Chrome Refractors Complete Set",
         "2024 Bowman Chrome 25 x Refractors",
       ]) {
         expect(par(t), t).toBe("Base");
+      }
+    });
+
+    // ROUND 2 NARROWED THESE OUT, deliberately. Each was in the list above and
+    // each is ordinary single-card text, not a lot:
+    //
+    //   "++"          a grading condition ("NM+++"), measured as a false
+    //                 positive on a real 2023 pull
+    //   "You Pick" /  store boilerplate on a listing that still ships ONE card
+    //   "Pick Your Card"
+    //
+    // A guard that writes Base over a stated finish is wrong in the other
+    // direction, so these must now READ.
+    it("does not refuse condition and store boilerplate", () => {
+      for (const t of [
+        "2024 Bowman Chrome Refractors ++",
+        "2024 Topps Chrome Refractors You Pick",
+        "2024 Topps Chrome Refractors - Pick Your Card",
+      ]) {
+        expect(par(t), t).toBe("Refractor");
       }
     });
 
@@ -174,11 +191,18 @@ describe("plural Refractors and bare X-Fractor", () => {
         "Refractor Lot",
         "Refractors Bundle",
         "Refractors and 5 more",
-        "Refractors ++",
-        "You Pick Refractors",
         "Complete Set Refractors",
       ]) {
         expect(isMultiCardLot(t), t).toBe(true);
+      }
+    });
+
+    // Round 2: these left the lexicon. "++" is a grading condition and "You
+    // Pick" is store boilerplate on a single-card listing — see the round-2
+    // regression suite for the measured false positives.
+    it("does not fire on condition or store boilerplate", () => {
+      for (const t of ["Refractors ++", "You Pick Refractors"]) {
+        expect(isMultiCardLot(t), t).toBe(false);
       }
     });
 
