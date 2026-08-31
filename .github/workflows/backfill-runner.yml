@@ -642,6 +642,7 @@ jobs:
           # input above.
           SPORT: ${{ inputs.sports }}
           SETKEY: ${{ inputs.setkey_like }}
+          YEAR: ${{ inputs.years }}
           # ingest-checklist-csv-to-catalog: a committed CSV dir (e.g. the
           # drew-ruled Bellingham entry) ingested through the ONE generic
           # ingester; SOURCE decides authority and the script refuses non-
