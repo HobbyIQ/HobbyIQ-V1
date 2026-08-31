@@ -52,6 +52,7 @@ async function main() {
   let base = 0, insertBase = 0, autoBase = 0, wrote = 0, failed = 0, skipped = 0;
   const preview = [];
   const byParallel = new Map();
+  const rarityCounts = new Map();
 
   for (const row of rows) {
     // CF-CHECKLIST-VARIATION-IS-A-PARALLEL (Drew, 2026-08-25). The converter
@@ -129,6 +130,14 @@ async function main() {
     }
 
     const printRun = row.printRun && row.printRun.trim() ? Number(row.printRun) : null;
+    // CF-RARITY-IS-NOT-A-PRINT-RUN (Drew ruling, 2026-08-30). `rarity` is an
+    // OPTIONAL trailing column carrying a set-level production or odds
+    // statement in the source's own words ("approximately 30,000 sets
+    // produced", "1:12/packs"). It NEVER backfills printRun: a production
+    // figure counts factory sets, a serial counts copies of one card. A file
+    // written before the column existed simply has none, and blank stays
+    // unknown. See backend/docs/reference/checklist-csv-contract.md.
+    const rarity = row.rarity && row.rarity.trim() ? row.rarity.trim() : null;
     // Canonicalize setKey from manifest (setName is display-only; passing
     // it as setKey stores an un-normalized value that breaks setKey
     // filters even though the slug computation strips the year).
@@ -140,6 +149,7 @@ async function main() {
       parallel,
       isAuto: isAutoRow,
       printRun: Number.isFinite(printRun) && printRun > 0 ? printRun : null,
+      rarity,
       playerName: row.player,
       // Provenance must name the real source. catalogVisibility tiers search
       // results by `source`, and stamping a Beckett checklist as
@@ -157,6 +167,7 @@ async function main() {
     });
     if (!entry) { skipped++; continue; }
 
+    if (rarity) rarityCounts.set(rarity, (rarityCounts.get(rarity) ?? 0) + 1);
     if (preview.length < 8) preview.push(`${entry.id}  ${row.player}`);
     // A dry-run is only useful if it shows the rows it wants to create. Group
     // by the parallel actually derived so the ladder is readable at a glance,
@@ -184,6 +195,18 @@ async function main() {
   console.log(`\nproposed rows by parallel (${byParallel.size} distinct):`);
   for (const [k, v] of [...byParallel.entries()].sort((a, b) => b[1].n - a[1].n)) {
     console.log(`  ${String(v.n).padStart(5)}  ${k.padEnd(30)} e.g. ${v.eg}`);
+  }
+  // A dry-run must show what the optional rarity column would persist, or the
+  // field is invisible until it is already in Cosmos.
+  if (rarityCounts.size) {
+    console.log(`
+rarity statements (${rarityCounts.size} distinct) — DESCRIPTIVE, never printRun:`);
+    for (const [k, n] of [...rarityCounts.entries()].sort((x, y) => y[1] - x[1]).slice(0, 10)) {
+      console.log(`  ${String(n).padStart(5)}  ${k}`);
+    }
+  } else {
+    console.log(`
+rarity statements: none in this file`);
   }
   console.log(`\n[done] base=${base} insert=${insertBase} auto=${autoBase} skipped=${skipped}`);
   if (APPLY) console.log(`  wrote=${wrote} failed=${failed}`);
