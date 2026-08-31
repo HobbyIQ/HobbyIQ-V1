@@ -11,6 +11,7 @@ import {
   type SearchCandidate,
 } from "@/lib/api";
 import { formatUSD } from "@/lib/format";
+import { mergeOptimistic } from "@/lib/optimisticHolding";
 import { CalendarInput } from "@/components/CalendarInput";
 
 interface Props {
@@ -256,14 +257,38 @@ export function EditHoldingModal({ holding, onCancel, onSaved }: Props) {
           : {}),
       };
 
+      // CF-CARD-SAVE-FAST (Drew, 2026-08-31: "saving edits on a card is SLOW").
+      //
+      // The backend no longer makes the user wait on the reprice and the comp
+      // emit, but the PATCH still does real work the user has no reason to
+      // watch: the catalog resolve, the identity gate, and the Cosmos write.
+      //
+      // Every field this form edits is a field the user just typed, so the
+      // post-save view is already known here — the server's copy differs only
+      // in fields this form does not own (the FMV the deferred reprice will
+      // refresh, identity the catalog may rebind). Close on the local merge,
+      // then hand up the server's authoritative copy when it lands.
+      //
+      // The optimistic close is a VIEW decision only. Nothing is treated as
+      // saved that was not sent, and a failure below reopens with the error —
+      // it does not silently keep a merge the server rejected.
+      const optimistic = mergeOptimistic(holding, patch);
+      onSaved(optimistic);
+
       const res = await updateHolding(holding.id, patch);
       if (!res.success || !res.holding) {
+        // The save did NOT land. Put the user back in front of their edit
+        // rather than leaving the optimistic row standing as if it had.
+        onSaved(holding);
         setError(res.message ?? "Update failed.");
         setSubmitting(false);
         return;
       }
+      // Reconcile: the server's copy carries what this form cannot compute —
+      // a rebound identity, and the FMV once the deferred reprice writes it.
       onSaved(res.holding);
     } catch (err) {
+      onSaved(holding);
       const e = err as { message?: string };
       setError(e.message ?? "Update failed.");
       setSubmitting(false);
