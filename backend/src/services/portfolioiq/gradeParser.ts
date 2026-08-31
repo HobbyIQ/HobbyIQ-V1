@@ -172,6 +172,35 @@ function detectedCompanyOf(text: string): string | null {
   return null;
 }
 
+/**
+ * The grade value anchored to ONE grading company in `text`, or null.
+ *
+ * Matches "PSA 10", "PSA10", "PSA-10", "PSA10.0" — the company token followed
+ * by optional whitespace/hyphen and the grade number.
+ *
+ * CF-GRADE-MODIFIER-BETWEEN (Drew, 2026-07-29). Vendor titles often interpose
+ * a grade-modifier word between the company token and the digit: "PSA MINT 9",
+ * "PSA GEM MT 10", "BGS PRISTINE 10". An optional whitelisted modifier is
+ * allowed so the anchored path catches these. OBSERVED: "MICHAEL JORDAN 1986
+ * FLEER STICKER #8 ROOKIE PSA MINT 9" — anchored match failed, and the
+ * any-number fallback picked "8" out of "#8" as the grade instead of PSA 9.
+ *
+ * Shared by company selection and value extraction so both ask the same
+ * question of the same text: "does this grader carry a real grade here?"
+ */
+function anchoredGradeValue(text: string, company: string): number | null {
+  const companyRe = new RegExp(
+    `\\b${company}\\b[\\s-]*` +
+    `(?:(?:GEM[\\s-]+)?(?:MT|MINT|PRISTINE|NM(?:-MT)?|EX(?:-MT)?)[\\s-]+)?` +
+    `([0-9]+(?:\\.[0-9]+)?)`,
+    "i",
+  );
+  const m = text.match(companyRe);
+  if (!m) return null;
+  const parsed = Number(m[1]);
+  return Number.isFinite(parsed) && parsed > 0 && parsed <= 10 ? parsed : null;
+}
+
 export function parseGradeLabel(label: string | null | undefined): ParsedGrade | null {
   if (!label) return null;
   const trimmed = String(label).trim();
@@ -208,13 +237,30 @@ export function parseGradeLabel(label: string | null | undefined): ParsedGrade |
   }
 
   // ── Detect company token ─────────────────────────────────────────────
-  let detectedCompany: string | null = null;
-  for (const { token, canonical } of COMPANY_TOKENS) {
-    if (token.test(trimmed)) {
-      detectedCompany = canonical;
-      break;
-    }
-  }
+  //
+  // CF-THE-GRADER-WITH-THE-NUMBER-WINS (Drew, 2026-08-31). A title may name
+  // more than one grader, and only one of them is the slab this card is in:
+  //
+  //     "1968 TOPPS #230 PETE ROSE SGC 6 Bright and Sharp! Reds Not PSA or BVG"
+  //     "Kylian Mbappe 2020-21 Topps Now C.L #041 SGC 10 not PSA"
+  //     "Shohei Ohtani 2018 Topps #700 Rookie BGS 9.5 w/2x10 subs PSA Regrade?"
+  //
+  // The second grader is a comparison, a cross-over pitch or a regrade
+  // question — never the holder. Picking by COMPANY_TOKENS order (PSA first,
+  // always) attributed all three to PSA, and since PSA has no number beside it
+  // the anchored match then failed and the whole parse returned null. Measured
+  // over 1,048 tca-ebay demotion candidates: 69 (6.58%) are exactly this shape,
+  // each one a correctly-stored grade the parser could not see.
+  //
+  // So candidates are ranked by EVIDENCE, not by list position: a grader with a
+  // valid grade value anchored to it beats one without. Ties fall back to
+  // COMPANY_TOKENS order, which preserves the previous behaviour whenever the
+  // evidence does not distinguish them.
+  const presentCompanies = COMPANY_TOKENS.filter(({ token }) => token.test(trimmed));
+  const detectedCompany: string | null = presentCompanies.length
+    ? (presentCompanies.find(({ canonical }) => anchoredGradeValue(trimmed, canonical) !== null)
+        ?? presentCompanies[0]).canonical
+    : null;
 
   // ── Detect numeric value ─────────────────────────────────────────────
   // Look for a decimal number (e.g. 9.5) or integer (10, 9, 8) that
@@ -227,33 +273,9 @@ export function parseGradeLabel(label: string | null | undefined): ParsedGrade |
   // first stripped number which was 2025 → skipped → null. Now we
   // look for the digit anchored to the company token first, and only
   // fall back to any-number scan if that misses.
-  let detectedValue: number | null = null;
-  if (detectedCompany) {
-    // Match "PSA 10", "PSA10", "PSA-10", "PSA10.0", etc. with the
-    // company keyword immediately followed by a whitespace/hyphen and
-    // the grade number. Case-insensitive.
-    //
-    // CF-GRADE-MODIFIER-BETWEEN (Drew, 2026-07-29). Vendor titles often
-    // interpose a grade-modifier word between the company token and the
-    // digit: "PSA MINT 9", "PSA GEM MT 10", "BGS PRISTINE 10". Allow an
-    // optional whitelisted modifier so the anchored path catches these.
-    // OBSERVED: "MICHAEL JORDAN 1986 FLEER STICKER #8 ROOKIE PSA MINT 9"
-    // — anchored match failed, fallback picked "8" from "#8" as the
-    // grade (wrong) instead of PSA 9.
-    const companyRe = new RegExp(
-      `\\b${detectedCompany}\\b[\\s-]*` +
-      `(?:(?:GEM[\\s-]+)?(?:MT|MINT|PRISTINE|NM(?:-MT)?|EX(?:-MT)?)[\\s-]+)?` +
-      `([0-9]+(?:\\.[0-9]+)?)`,
-      "i"
-    );
-    const m = trimmed.match(companyRe);
-    if (m) {
-      const parsed = Number(m[1]);
-      if (Number.isFinite(parsed) && parsed > 0 && parsed <= 10) {
-        detectedValue = parsed;
-      }
-    }
-  }
+  let detectedValue: number | null = detectedCompany
+    ? anchoredGradeValue(trimmed, detectedCompany)
+    : null;
 
   // Fallback: any-number scan (used for descriptor-only labels where
   // there's no company token, or when the anchored match failed).
