@@ -198,6 +198,7 @@ on:
           # calls no eBay API, so it needs none of the app credentials above.
           # REPORT ONLY unless apply=true; shards by portfolio user.
           - backfill-ebay-purchase-comps
+          - ingest-checklist-csv-to-catalog
           # D33 (2026-08-30): the five stored-row repairs behind Drew's "still
           # a mess" on 2020 Bowman Draft BD-152. MODE is REQUIRED and has no
           # default -- card-as-parallel | chrome-ladder | first-edition |
