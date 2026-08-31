@@ -17,6 +17,22 @@ name: Backfill Runner (sold_comps re-slug / verify_queue batch)
 #
 # Always run the dry-run first; review the distribution + samples in
 # the workflow log; then re-dispatch with apply=true if it looks right.
+#
+# CF-REPORT-RELAUNCHES-AS-A-REPORT (D34, 2026-08-30). Every marker-gated
+# self-relaunch step below used to carry `&& inputs.apply == true` and
+# re-dispatch with a hardcoded `-f apply=true`. So a REPORT-ONLY run that
+# stopped at its 140-minute budget — printing "stopped at the 140-minute
+# budget — the relaunch continues from here", exactly as an apply does —
+# re-dispatched nothing, and no report longer than one budget could ever
+# finish (observed on run 33330120651, repair-bcp-misfiled-parallels).
+#
+# The gate is the MARKER, never the mode (CF-RELAUNCH-ONLY-ON-BUDGET,
+# #1361): the script itself is the only thing that knows work is left, and
+# it says so identically in both modes. `run:` below pipes through
+# `tee /tmp/backfill.log` unconditionally, so a report writes the same log
+# the relaunch greps. `apply` is now forwarded verbatim with every other
+# input — a report relaunches as a report, an apply as an apply — and
+# `!cancelled()` still keeps a cancel or a crash from re-dispatching.
 
 on:
   workflow_dispatch:
@@ -661,7 +677,7 @@ jobs:
         # Convergent, so re-running is safe: a row whose slug already matches
         # what the generator produces is counted as skipped, not rewritten, so
         # a relaunch that finds nothing left to change stops the loop.
-        if: ${{ !cancelled() && inputs.script == 'reslugAllSoldComps' && inputs.apply == true }}
+        if: ${{ !cancelled() && inputs.script == 'reslugAllSoldComps' }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -675,7 +691,7 @@ jobs:
           # forever once a slot was down to rows it cannot change.
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (touched=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=reslugAllSoldComps -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f shard_hex="${{ inputs.shard_hex }}"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=reslugAllSoldComps -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f shard_hex="${{ inputs.shard_hex }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (touched=${N:-0}) — done, no re-dispatch."
           fi
@@ -684,7 +700,7 @@ jobs:
         # the script slices RUN_MINUTES across phases and prints what it
         # reached. --skipExisting means a relaunch resumes rather than
         # re-scraping what is already on the runner disk.
-        if: ${{ !cancelled() && inputs.script == 'ingest-checklists-end-to-end' && inputs.apply == true }}
+        if: ${{ !cancelled() && inputs.script == 'ingest-checklists-end-to-end' }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -698,7 +714,7 @@ jobs:
           # forever once a slot was down to rows it cannot change.
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (phases_done=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=ingest-checklists-end-to-end -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f years="${{ inputs.years }}" -f phases="${{ inputs.phases }}" -f titles="${{ inputs.titles }}"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=ingest-checklists-end-to-end -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f years="${{ inputs.years }}" -f phases="${{ inputs.phases }}" -f titles="${{ inputs.titles }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (phases_done=${N:-0}) — done, no re-dispatch."
           fi
@@ -707,7 +723,7 @@ jobs:
         # "moved to the unfolded slug N" exists for this step to read. A run
         # killed by the 150-minute step ceiling prints nothing, the relaunch
         # reads 0, and the fleet stops silently with every run green.
-        if: ${{ !cancelled() && inputs.script == 'repair-parallel-subset-fold' && inputs.apply == true }}
+        if: ${{ !cancelled() && inputs.script == 'repair-parallel-subset-fold' }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -725,7 +741,7 @@ jobs:
           # are forwarded verbatim so the relaunch is the same dispatch.
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (repaired=$MOVED) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-parallel-subset-fold -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f sources="${{ inputs.sources }}"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-parallel-subset-fold -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f sources="${{ inputs.sources }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (repaired=$MOVED) — done, no re-dispatch."
           fi
@@ -734,7 +750,7 @@ jobs:
         # "re-homed N" exists for this step to read. A run killed by the step
         # ceiling prints nothing and the relaunch reads 0 -- which is how a
         # fleet stops silently with every run green.
-        if: ${{ !cancelled() && inputs.script == 'canonicalize-vendor-shaped-rows' && inputs.apply == true }}
+        if: ${{ !cancelled() && inputs.script == 'canonicalize-vendor-shaped-rows' }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -752,7 +768,7 @@ jobs:
           # are forwarded verbatim so the relaunch is the same dispatch.
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (canonicalized=$MOVED) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=canonicalize-vendor-shaped-rows -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f sources="${{ inputs.sources }}"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=canonicalize-vendor-shaped-rows -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f sources="${{ inputs.sources }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (canonicalized=$MOVED) — done, no re-dispatch."
           fi
@@ -762,7 +778,7 @@ jobs:
         # summary, so "SALES IN THE POOL n" exists for this step to read. A run
         # killed by the 150-minute step ceiling prints nothing, the relaunch
         # reads 0, and the fleet stops silently with every run green.
-        if: ${{ !cancelled() && inputs.script == 'backfill-ebay-account-sales' && inputs.apply == true }}
+        if: ${{ !cancelled() && inputs.script == 'backfill-ebay-account-sales' }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -779,7 +795,7 @@ jobs:
           # are forwarded verbatim so the relaunch is the same dispatch.
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (recorded=$N) -- re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=backfill-ebay-account-sales -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f limit="${{ inputs.limit }}"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=backfill-ebay-account-sales -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f limit="${{ inputs.limit }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (recorded=$N) -- done, no re-dispatch."
           fi
@@ -791,7 +807,7 @@ jobs:
         # slot whose holdings are all already in the pool -- every replay of a
         # present row is counted as alreadyPresent, not written, so "written=0"
         # is the healthy steady state here, not a reason to stop or to go again.
-        if: ${{ !cancelled() && inputs.script == 'backfill-ebay-purchase-comps' && inputs.apply == true }}
+        if: ${{ !cancelled() && inputs.script == 'backfill-ebay-purchase-comps' }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -803,7 +819,7 @@ jobs:
           echo "ebay_purchase_comps_written=$N"
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (written=$N) -- re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=backfill-ebay-purchase-comps -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f limit="${{ inputs.limit }}"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=backfill-ebay-purchase-comps -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f limit="${{ inputs.limit }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (written=$N) -- done, no re-dispatch."
           fi
@@ -811,7 +827,7 @@ jobs:
       - name: Self-relaunch the numbered-Base retirement until nothing retires
         # Whitelisted without a relaunch step, so six shards ran one cycle and
         # stopped at 290k remaining while every run stayed green.
-        if: ${{ !cancelled() && inputs.script == 'retire-numbered-base-rows' && inputs.apply == true }}
+        if: ${{ !cancelled() && inputs.script == 'retire-numbered-base-rows' }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -828,13 +844,13 @@ jobs:
           # are forwarded verbatim so the relaunch is the same dispatch.
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (retired=$N) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=retire-numbered-base-rows -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f sources="${{ inputs.sources }}"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=retire-numbered-base-rows -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f sources="${{ inputs.sources }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (retired=$N) — done, no re-dispatch."
           fi
 
       - name: Self-relaunch the pokemon number repair until nothing unglues
-        if: ${{ !cancelled() && inputs.script == 'repair-pokemon-glued-numbers' && inputs.apply == true }}
+        if: ${{ !cancelled() && inputs.script == 'repair-pokemon-glued-numbers' }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -851,13 +867,13 @@ jobs:
           # are forwarded verbatim so the relaunch is the same dispatch.
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (unglued=$N) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-pokemon-glued-numbers -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f sources="${{ inputs.sources }}"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-pokemon-glued-numbers -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f sources="${{ inputs.sources }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (unglued=$N) — done, no re-dispatch."
           fi
 
       - name: Self-relaunch the pokemon setKey mapping until nothing moves
-        if: ${{ !cancelled() && inputs.script == 'map-pokemon-setkeys-to-checklist' && inputs.apply == true }}
+        if: ${{ !cancelled() && inputs.script == 'map-pokemon-setkeys-to-checklist' }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -874,7 +890,7 @@ jobs:
           # are forwarded verbatim so the relaunch is the same dispatch.
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (moved=$N) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=map-pokemon-setkeys-to-checklist -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f sources="${{ inputs.sources }}"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=map-pokemon-setkeys-to-checklist -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f sources="${{ inputs.sources }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (moved=$N) — done, no re-dispatch."
           fi
@@ -882,7 +898,7 @@ jobs:
       - name: Self-relaunch the parallel mapping until the slot is clean
         # Unresolved rows are stamped, so the pending query drains to zero and
         # a run that scans nothing IS a finished slot.
-        if: ${{ !cancelled() && inputs.script == 'map-derived-parallels-to-rungs' && inputs.apply == true }}
+        if: ${{ !cancelled() && inputs.script == 'map-derived-parallels-to-rungs' }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -896,7 +912,7 @@ jobs:
           # forever once a slot was down to rows it cannot change.
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (moved=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=map-derived-parallels-to-rungs -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sports="${{ inputs.sports }}" -f mode="${{ inputs.mode }}"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=map-derived-parallels-to-rungs -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sports="${{ inputs.sports }}" -f mode="${{ inputs.mode }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (moved=${N:-0}) — done, no re-dispatch."
           fi
@@ -904,7 +920,7 @@ jobs:
       - name: Self-relaunch the one-pool emission until staging drains
         # Staging rows flip to in-pool as they are written, so the query drains
         # to zero and a run that writes nothing IS a finished pass.
-        if: ${{ !cancelled() && inputs.script == 'emit-staging-to-pool' && inputs.apply == true }}
+        if: ${{ !cancelled() && inputs.script == 'emit-staging-to-pool' }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -918,13 +934,13 @@ jobs:
           # forever once a slot was down to rows it cannot change.
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (emitted=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=emit-staging-to-pool -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=emit-staging-to-pool -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (emitted=${N:-0}) — done, no re-dispatch."
           fi
 
       - name: Self-relaunch the playerSlug backfill until the field exists everywhere
-        if: ${{ !cancelled() && inputs.script == 'backfill-playerslug' && inputs.apply == true }}
+        if: ${{ !cancelled() && inputs.script == 'backfill-playerslug' }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -941,7 +957,7 @@ jobs:
           # are forwarded verbatim so the relaunch is the same dispatch.
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (derived=$N) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=backfill-playerslug -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f sources="${{ inputs.sources }}"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=backfill-playerslug -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f sources="${{ inputs.sources }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (derived=$N) — done, no re-dispatch."
           fi
@@ -949,7 +965,7 @@ jobs:
       - name: Self-relaunch the profile conformance until the slot is clean
         # The resume predicate only takes unstamped rows, so a slot that drains
         # finishes within budget and prints no marker -- the loop stops there.
-        if: ${{ !cancelled() && inputs.script == 'conform-card-profile' && inputs.apply == true }}
+        if: ${{ !cancelled() && inputs.script == 'conform-card-profile' }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -966,13 +982,13 @@ jobs:
           # are forwarded verbatim so the relaunch is the same dispatch.
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (scanned=$SEEN) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=conform-card-profile -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f sources="${{ inputs.sources }}"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=conform-card-profile -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f sources="${{ inputs.sources }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (scanned=$SEEN) — done, no re-dispatch."
           fi
 
       - name: Self-relaunch the sale-minted retire until the slot is clean
-        if: ${{ !cancelled() && inputs.script == 'retire-autoseed-window' && inputs.apply == true }}
+        if: ${{ !cancelled() && inputs.script == 'retire-autoseed-window' }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -984,13 +1000,13 @@ jobs:
           # CF-RELAUNCH-ONLY-ON-BUDGET (2026-08-29): relaunch iff the script stopped at its budget.
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (retired=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=retire-autoseed-window -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=retire-autoseed-window -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (retired=${N:-0}) — done, no re-dispatch."
           fi
 
       - name: Self-relaunch the exploded-checklist retire until the slot is clean
-        if: ${{ !cancelled() && inputs.script == 'retire-exploded-checklist-rows' && inputs.apply == true }}
+        if: ${{ !cancelled() && inputs.script == 'retire-exploded-checklist-rows' }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -1002,13 +1018,13 @@ jobs:
           # CF-RELAUNCH-ONLY-ON-BUDGET (2026-08-29): relaunch iff the script stopped at its budget.
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (retired=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=retire-exploded-checklist-rows -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sources="${{ inputs.sources }}" -f scope="${{ inputs.scope }}" -f min_coverage_pct="${{ inputs.min_coverage_pct }}"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=retire-exploded-checklist-rows -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sources="${{ inputs.sources }}" -f scope="${{ inputs.scope }}" -f min_coverage_pct="${{ inputs.min_coverage_pct }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (retired=${N:-0}) — done, no re-dispatch."
           fi
 
       - name: Self-relaunch the unaddressable-row purge until the slot is clean
-        if: ${{ !cancelled() && inputs.script == 'purge-unaddressable-catalog-rows' && inputs.apply == true }}
+        if: ${{ !cancelled() && inputs.script == 'purge-unaddressable-catalog-rows' }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -1020,13 +1036,13 @@ jobs:
           # CF-RELAUNCH-ONLY-ON-BUDGET: relaunch iff the script stopped at its budget.
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (purged=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=purge-unaddressable-catalog-rows -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=purge-unaddressable-catalog-rows -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (purged=${N:-0}) — done, no re-dispatch."
           fi
 
       - name: Self-relaunch the parallel-from-title repair until the slot is clean
-        if: ${{ !cancelled() && inputs.script == 'repair-parallel-from-title' && inputs.apply == true }}
+        if: ${{ !cancelled() && inputs.script == 'repair-parallel-from-title' }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -1041,13 +1057,13 @@ jobs:
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (repaired=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} mode=${{ inputs.mode }} to continue"
             # D22: the mode (colours / refractor / variation / product), the sources and the scope travel with the slot.
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-parallel-from-title -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sources="${{ inputs.sources }}" -f scope="${{ inputs.scope }}"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-parallel-from-title -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sources="${{ inputs.sources }}" -f scope="${{ inputs.scope }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (repaired=${N:-0}) — done, no re-dispatch."
           fi
 
       - name: Self-relaunch the un-numbered twin fold until the slot is clean
-        if: ${{ !cancelled() && inputs.script == 'fold-unnumbered-twins' && inputs.apply == true }}
+        if: ${{ !cancelled() && inputs.script == 'fold-unnumbered-twins' }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -1063,13 +1079,13 @@ jobs:
           # where rows are still split -- nothing is double-folded.
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (folded=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} mode=${{ inputs.mode }} to continue"
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=fold-unnumbered-twins -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f sources="${{ inputs.sources }}"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=fold-unnumbered-twins -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f sources="${{ inputs.sources }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (folded=${N:-0}) — done, no re-dispatch."
           fi
 
       - name: Self-relaunch the checklist-numbered twin fold until the slot is clean
-        if: ${{ !cancelled() && inputs.script == 'fold-checklist-numbered-twins' && inputs.apply == true }}
+        if: ${{ !cancelled() && inputs.script == 'fold-checklist-numbered-twins' }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -1084,13 +1100,13 @@ jobs:
           # already folded no longer exists to be found again.
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (folded=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=fold-checklist-numbered-twins -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f sources="${{ inputs.sources }}"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=fold-checklist-numbered-twins -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f sources="${{ inputs.sources }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (folded=${N:-0}) — done, no re-dispatch."
           fi
 
       - name: Self-relaunch the CPA product rule until the slot is decided
-        if: ${{ !cancelled() && inputs.script == 'apply-cpa-product-rule' && inputs.apply == true }}
+        if: ${{ !cancelled() && inputs.script == 'apply-cpa-product-rule' }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -1107,13 +1123,13 @@ jobs:
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (rowsMoved=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} mode=${{ inputs.mode }} to continue"
             # The scope travels with the slot: mode, sports and scope verbatim.
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=apply-cpa-product-rule -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f scope="${{ inputs.scope }}"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=apply-cpa-product-rule -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f scope="${{ inputs.scope }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (rowsMoved=${N:-0}) — done, no re-dispatch."
           fi
 
       - name: Self-relaunch the duplicate consolidation until the slot is clean
-        if: ${{ !cancelled() && inputs.script == 'consolidate-catalog-duplicates' && inputs.apply == true }}
+        if: ${{ !cancelled() && inputs.script == 'consolidate-catalog-duplicates' }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -1131,13 +1147,13 @@ jobs:
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (consolidated=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} mode=${{ inputs.mode }} to continue"
             # The scope travels with the slot: mode, sports, years and scope verbatim.
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=consolidate-catalog-duplicates -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=consolidate-catalog-duplicates -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (consolidated=${N:-0}) — done, no re-dispatch."
           fi
 
       - name: Self-relaunch the user-comp re-key until the slot is clean
-        if: ${{ !cancelled() && inputs.script == 'rekey-user-comps' && inputs.apply == true }}
+        if: ${{ !cancelled() && inputs.script == 'rekey-user-comps' }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -1151,13 +1167,13 @@ jobs:
           # so a relaunch resumes on what is still mis-keyed and re-writes nothing.
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (rekeyed=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=rekey-user-comps -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sources="${{ inputs.sources }}" -f limit="${{ inputs.limit }}"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=rekey-user-comps -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sources="${{ inputs.sources }}" -f limit="${{ inputs.limit }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (rekeyed=${N:-0}) — done, no re-dispatch."
           fi
 
       - name: Self-relaunch the CardHedge dual-id collapse until the slot is clean
-        if: ${{ !cancelled() && inputs.script == 'collapse-ch-dual-ids' && inputs.apply == true }}
+        if: ${{ !cancelled() && inputs.script == 'collapse-ch-dual-ids' }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -1170,13 +1186,13 @@ jobs:
           # A collapsed pair no longer has a ch-comp:: twin, so a relaunch re-reads only what is left.
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (collapsed=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=collapse-ch-dual-ids -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f limit="${{ inputs.limit }}"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=collapse-ch-dual-ids -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f limit="${{ inputs.limit }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (collapsed=${N:-0}) — done, no re-dispatch."
           fi
 
       - name: Self-relaunch the ruled setKey rename until the slot is clean
-        if: ${{ !cancelled() && inputs.script == 'rename-setkey' && inputs.apply == true }}
+        if: ${{ !cancelled() && inputs.script == 'rename-setkey' }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -1188,13 +1204,13 @@ jobs:
           # CF-RELAUNCH-ONLY-ON-BUDGET (2026-08-29): relaunch iff the script stopped at its budget.
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (moved=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=rename-setkey -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f scope="${{ inputs.scope }}"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=rename-setkey -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f scope="${{ inputs.scope }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (moved=${N:-0}) — done, no re-dispatch."
           fi
 
       - name: Self-relaunch the checklist player parse until the slot is clean
-        if: ${{ !cancelled() && inputs.script == 'parse-player-from-checklist' && inputs.apply == true }}
+        if: ${{ !cancelled() && inputs.script == 'parse-player-from-checklist' }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -1206,13 +1222,13 @@ jobs:
           # CF-RELAUNCH-ONLY-ON-BUDGET (2026-08-29): relaunch iff the script stopped at its budget.
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (parsed=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=parse-player-from-checklist -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=parse-player-from-checklist -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (parsed=${N:-0}) — done, no re-dispatch."
           fi
 
       - name: Self-relaunch the parallel-annotation cleaning until the slot is clean
-        if: ${{ !cancelled() && inputs.script == 'clean-parallel-annotations' && inputs.apply == true }}
+        if: ${{ !cancelled() && inputs.script == 'clean-parallel-annotations' }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -1224,7 +1240,7 @@ jobs:
           # CF-RELAUNCH-ONLY-ON-BUDGET (2026-08-29): relaunch iff the script stopped at its budget.
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (moved=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=clean-parallel-annotations -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sports="${{ inputs.sports }}"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=clean-parallel-annotations -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sports="${{ inputs.sports }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (moved=${N:-0}) — done, no re-dispatch."
           fi
@@ -1233,7 +1249,7 @@ jobs:
         # Stops at its own 140-minute budget and PRINTS its summary; a run killed
         # by the 150-minute step ceiling prints nothing. CF-RELAUNCH-ONLY-ON-
         # BUDGET (#1361): relaunch iff the marker printed, never on a count.
-        if: ${{ !cancelled() && inputs.script == 'repair-trailing-comma-player-names' && inputs.apply == true }}
+        if: ${{ !cancelled() && inputs.script == 'repair-trailing-comma-player-names' }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -1244,7 +1260,7 @@ jobs:
           echo "repaired=${N:-0}"
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (repaired=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-trailing-comma-player-names -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sources="${{ inputs.sources }}"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-trailing-comma-player-names -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sources="${{ inputs.sources }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (repaired=${N:-0}) — done, no re-dispatch."
           fi
@@ -1253,7 +1269,7 @@ jobs:
         # Stops at its own 140-minute budget and PRINTS its summary; a run killed
         # by the 150-minute step ceiling prints nothing. CF-RELAUNCH-ONLY-ON-
         # BUDGET (#1361): relaunch iff the marker printed, never on a count.
-        if: ${{ !cancelled() && inputs.script == 'repair-isauto-from-cardnumber-catalog' && inputs.apply == true }}
+        if: ${{ !cancelled() && inputs.script == 'repair-isauto-from-cardnumber-catalog' }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -1264,7 +1280,7 @@ jobs:
           echo "repaired=${N:-0}"
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (repaired=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-isauto-from-cardnumber-catalog -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sources="${{ inputs.sources }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-isauto-from-cardnumber-catalog -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sources="${{ inputs.sources }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (repaired=${N:-0}) — done, no re-dispatch."
           fi
@@ -1273,7 +1289,7 @@ jobs:
         # Stops at its own 140-minute budget and PRINTS its summary; a run killed
         # by the 150-minute step ceiling prints nothing. CF-RELAUNCH-ONLY-ON-
         # BUDGET (#1361): relaunch iff the marker printed, never on a count.
-        if: ${{ !cancelled() && inputs.script == 'conform-one-of-one-parallels' && inputs.apply == true }}
+        if: ${{ !cancelled() && inputs.script == 'conform-one-of-one-parallels' }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -1284,7 +1300,7 @@ jobs:
           echo "repaired=${N:-0}"
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (repaired=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=conform-one-of-one-parallels -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sports="${{ inputs.sports }}"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=conform-one-of-one-parallels -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sports="${{ inputs.sports }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (repaired=${N:-0}) — done, no re-dispatch."
           fi
@@ -1296,7 +1312,7 @@ jobs:
         # iff the marker printed, never on a count; every input forwarded
         # verbatim (mode / sports / years / scope / sources), so the relaunch
         # is the same dispatch.
-        if: ${{ !cancelled() && inputs.script == 'rename-setkey-to-product' && inputs.apply == true }}
+        if: ${{ !cancelled() && inputs.script == 'rename-setkey-to-product' }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -1307,7 +1323,7 @@ jobs:
           echo "renamed=${N:-0}"
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (renamed=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=rename-setkey-to-product -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f sources="${{ inputs.sources }}"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=rename-setkey-to-product -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f sources="${{ inputs.sources }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (renamed=${N:-0}) — done, no re-dispatch."
           fi
@@ -1321,7 +1337,7 @@ jobs:
         # verbatim (mode / scope / sources / sports / years / slot / slots), so
         # the relaunch is the same dispatch -- and MODE especially, because the
         # script exits 1 without it rather than picking a population itself.
-        if: ${{ !cancelled() && inputs.script == 'repair-bcp-misfiled-parallels' && inputs.apply == true }}
+        if: ${{ !cancelled() && inputs.script == 'repair-bcp-misfiled-parallels' }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -1332,7 +1348,7 @@ jobs:
           echo "changed=${N:-0}"
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (changed=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-bcp-misfiled-parallels -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f sources="${{ inputs.sources }}"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-bcp-misfiled-parallels -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f sources="${{ inputs.sources }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (changed=${N:-0}) — done, no re-dispatch."
           fi
@@ -1344,7 +1360,7 @@ jobs:
         # iff the marker printed, never on a count; every input forwarded
         # verbatim (mode / scope / sources / slot / slots), so the relaunch is
         # the same dispatch.
-        if: ${{ !cancelled() && inputs.script == 'repair-card-number-from-title' && inputs.apply == true }}
+        if: ${{ !cancelled() && inputs.script == 'repair-card-number-from-title' }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -1355,7 +1371,7 @@ jobs:
           echo "repaired=${N:-0}"
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (repaired=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-card-number-from-title -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f scope="${{ inputs.scope }}" -f sources="${{ inputs.sources }}"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-card-number-from-title -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f scope="${{ inputs.scope }}" -f sources="${{ inputs.sources }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (repaired=${N:-0}) — done, no re-dispatch."
           fi
@@ -1363,7 +1379,7 @@ jobs:
       - name: Self-relaunch the base-cards clean until the slot is clean
         # D28. Same contract as above: the marker is the predicate, and mode /
         # scope / sources / sports travel with the relaunch.
-        if: ${{ !cancelled() && inputs.script == 'clean-base-cards-parallel-slug' && inputs.apply == true }}
+        if: ${{ !cancelled() && inputs.script == 'clean-base-cards-parallel-slug' }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -1374,7 +1390,7 @@ jobs:
           echo "cleaned=${N:-0}"
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (cleaned=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=clean-base-cards-parallel-slug -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f scope="${{ inputs.scope }}" -f sources="${{ inputs.sources }}" -f sports="${{ inputs.sports }}"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=clean-base-cards-parallel-slug -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f scope="${{ inputs.scope }}" -f sources="${{ inputs.sources }}" -f sports="${{ inputs.sports }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (cleaned=${N:-0}) — done, no re-dispatch."
           fi
@@ -1385,7 +1401,7 @@ jobs:
         # checklistBacking yet, so "scanned 0" means the slot is finished --
         # whereas relaunching on "annotated > 0" would loop forever once the
         # budget stop sent the next run back to the first product.
-        if: ${{ !cancelled() && inputs.script == 'annotate-checklist-backing' && inputs.apply == true }}
+        if: ${{ !cancelled() && inputs.script == 'annotate-checklist-backing' }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -1399,7 +1415,7 @@ jobs:
           # forever once a slot was down to rows it cannot change.
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (annotated=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=annotate-checklist-backing -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sports="${{ inputs.sports }}" -f mode="${{ inputs.mode }}"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=annotate-checklist-backing -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sports="${{ inputs.sports }}" -f mode="${{ inputs.mode }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (annotated=${N:-0}) — done, no re-dispatch."
           fi
@@ -1409,7 +1425,7 @@ jobs:
         # budget and PRINTS its summary, so "written N" exists to be read. A
         # process killed by the step ceiling never prints one, which is how a
         # fleet stops silently while every run stays green.
-        if: ${{ !cancelled() && inputs.script == 'materialize-graded-identities' && inputs.apply == true }}
+        if: ${{ !cancelled() && inputs.script == 'materialize-graded-identities' }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -1426,7 +1442,7 @@ jobs:
           # are forwarded verbatim so the relaunch is the same dispatch.
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (minted=$MADE) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=materialize-graded-identities -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f sources="${{ inputs.sources }}"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=materialize-graded-identities -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f sources="${{ inputs.sources }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (minted=$MADE) — done, no re-dispatch."
           fi
@@ -1436,7 +1452,7 @@ jobs:
         # outlive the 150-minute ceiling several times over. Since D18 the gate
         # is the budget marker, not "deleted > 0": a drained slice finishes
         # within budget, prints no marker, and stops.
-        if: ${{ !cancelled() && inputs.script == 'retire-unreferenced-graded-rows' && inputs.apply == true }}
+        if: ${{ !cancelled() && inputs.script == 'retire-unreferenced-graded-rows' }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -1453,7 +1469,7 @@ jobs:
           # are forwarded verbatim so the relaunch is the same dispatch.
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (deleted=$MOVED) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=retire-unreferenced-graded-rows -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f sources="${{ inputs.sources }}"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=retire-unreferenced-graded-rows -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f sources="${{ inputs.sources }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (deleted=$MOVED) — done, no re-dispatch."
           fi
@@ -1469,7 +1485,7 @@ jobs:
         # Since D18 (2026-08-29) the script stops at its OWN RUN_MINUTES budget
         # and prints the marker; a run that drains its slice within budget
         # prints no marker and the loop stops.
-        if: ${{ !cancelled() && inputs.script == 'rehome-catalog-rows-to-own-partition' && inputs.apply == true }}
+        if: ${{ !cancelled() && inputs.script == 'rehome-catalog-rows-to-own-partition' }}
         env:
           GH_TOKEN: ${{ github.token }}
           REHOME_YEARS: ${{ inputs.years }}
@@ -1498,7 +1514,7 @@ jobs:
           # are forwarded verbatim so the relaunch is the same dispatch.
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (moved=$MOVED) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=rehome-catalog-rows-to-own-partition -f apply=true -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f sources="${{ inputs.sources }}" -f setkey_like="${{ inputs.setkey_like }}" -f parents_only="${{ inputs.parents_only }}" -f limit="${{ inputs.limit }}" -f scan_limit="${{ inputs.scan_limit }}"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=rehome-catalog-rows-to-own-partition -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f sources="${{ inputs.sources }}" -f setkey_like="${{ inputs.setkey_like }}" -f parents_only="${{ inputs.parents_only }}" -f limit="${{ inputs.limit }}" -f scan_limit="${{ inputs.scan_limit }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (moved=$MOVED) — done, no re-dispatch."
           fi

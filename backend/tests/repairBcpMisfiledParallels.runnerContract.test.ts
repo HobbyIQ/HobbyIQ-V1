@@ -36,8 +36,25 @@ describe("the runner can dispatch this script", () => {
     for (const m of MODES) expect(modeInput).toContain(`'${m}'`);
   });
 
-  it("has a relaunch step keyed to this script and gated on apply", () => {
-    expect(runner).toContain("inputs.script == 'repair-bcp-misfiled-parallels' && inputs.apply == true");
+  it("has a relaunch step keyed to this script, in either mode", () => {
+    // D34 (2026-08-30): this used to require `&& inputs.apply == true` on the
+    // gate. That WAS the defect — run 33330120651 was a REPORT that stopped at
+    // its budget, printed the marker, and re-dispatched nothing, so no report
+    // longer than one budget could ever finish. The marker is the gate now
+    // (CF-REPORT-RELAUNCHES-AS-A-REPORT); apply is forwarded, not required.
+    expect(runner).toContain("inputs.script == 'repair-bcp-misfiled-parallels'");
+    const step = runner.slice(runner.indexOf("Self-relaunch the misfiled-parallel repair"));
+    const gate = /^\s*if:\s*(.*)$/m.exec(step.slice(0, 2500))?.[1] ?? "";
+    expect(gate).not.toMatch(/inputs\.apply/);
+  });
+
+  it("relaunches a report as a report, an apply as an apply", () => {
+    const step = runner.slice(runner.indexOf("Self-relaunch the misfiled-parallel repair"));
+    const dispatch = step.slice(0, 2500);
+    // Verbatim forward — never `-f apply=true`, which would turn a report
+    // continuation into a live write against 21M rows.
+    expect(dispatch).toContain('-f apply="${{ inputs.apply }}"');
+    expect(dispatch).not.toContain("-f apply=true");
   });
 
   it("the relaunch never fires on a cancel", () => {
