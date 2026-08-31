@@ -76,9 +76,10 @@ const backend = path.join(__dirname, "..");
 
 function arg(name, dflt) {
   const hit = process.argv.find((a) => a.startsWith(`--${name}=`));
+  if (!hit && process.env[name.toUpperCase().replace(/-/g, "_")]) return String(process.env[name.toUpperCase().replace(/-/g, "_")]);
   return hit ? hit.slice(name.length + 3) : dflt;
 }
-const has = (n) => process.argv.includes(`--${n}`);
+const has = (n) => process.argv.includes(`--${n}`) || (n === "apply" && process.env.BACKFILL_APPLY === "true");
 
 const APPLY = has("apply");
 const CONCURRENCY = Math.max(1, Number(arg("concurrency", "16")));
