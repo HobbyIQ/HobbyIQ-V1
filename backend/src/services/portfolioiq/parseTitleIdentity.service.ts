@@ -266,6 +266,50 @@ const TEAM_COLOUR_NOISE_RE =
 const AUTO_NEGATIVE_RE =
   /auto\s+relic|auto\s+patch|\bnon[-\s]?auto|\bno\s+auto|\bnot\s+auto|\bunsigned\b|\bwithout\s+auto/i;
 
+/** CF-A-LOT-IS-NOT-A-CARD (Drew, 2026-08-31).
+ *
+ *  A title that sells SEVERAL cards does not state one card's finish, and a
+ *  parallel read off it files a multi-card price into a single card's pool.
+ *  These are the shapes the 2024 mix measurement triaged out — 211 rows it
+ *  refused to repair rather than move to a still-wrong pool:
+ *
+ *    "2024 Bowman Chrome Lot Of 6 Refractors"
+ *    "40x 2024 Topps Chrome Refractors"
+ *    "(12 Cards) 2024 Bowman Chrome Refractors"
+ *
+ *  Exported so the repair pass excludes by the SAME rule the parser refuses
+ *  by. Two copies of this list would drift, and the drift would show up as a
+ *  repair moving rows the live parser would never have written.
+ *
+ *  Note "\bmore\b" — it catches "and 5 more", the eBay lot idiom. It also
+ *  catches a title that merely says "more", which costs a bare-refractor
+ *  reading on a handful of single cards. That trade is deliberate: an unread
+ *  finish leaves the row where it is, while a lot read as a refractor moves a
+ *  multi-card price into a real card's pool. Blank means unknown.
+ *
+ *  THE MULTIPLIER NEEDS THE LOOKAHEAD, and the fixtures found out why. The
+ *  measurement's triage regex used a bare \b\d+\s*x\b, which matches the "1 X"
+ *  inside
+ *
+ *    "Shohei Ohtani #1 X-Fractor LA Dodgers | 2024 Topps Chrome"
+ *
+ *  — a $107.50 SINGLE card, and one of the measurement's own headline examples
+ *  of the bug. A quantity "x" is followed by a count of cards, never by the
+ *  word fractor, so the lookahead separates "40x Refractors" and "25 x
+ *  Refractors" (real lots) from a card number that happens to precede an
+ *  X-Fractor. Without it this detector would refuse the exact population it
+ *  exists to protect — the guard would eat the repair.
+ *
+ *  This means the measurement's 211/1,508 lot split is slightly off in the
+ *  conservative direction: some X-Fractor singles were counted as lots and
+ *  excluded. The repair re-derives the split with THIS detector rather than
+ *  inheriting that number, so the counters it prints are the ones to trust. */
+export function isMultiCardLot(title: string | null | undefined): boolean {
+  const t = String(title ?? "");
+  if (!t) return false;
+  return /\blots?\b|\(\s*\d+\s*cards?\s*\)|\b\d+\s*x\b(?!\s*[-\s]?fractor)(?!\w)|\bbundle\b|\bmore\b|\+\+|\bpick\b|\byou\s+pick\b|\bcomplete\s+set\b/i.test(t);
+}
+
 /** Extract identity from a marketplace title.
  *
  *  When cardNumberRe is provided, only that pattern is tried (useful
@@ -843,8 +887,33 @@ function extractParallel(title: string): string {
   if (m) return capFirst(m[1]) + " Speckle Refractor";
   if (/speckle\s+refractor/i.test(T)) return "Speckle Refractor";
   if (/\bspeckle\b/i.test(T)) return "Speckle Refractor";
-  m = T.match(/(orange|red|green|gold|blue|purple|yellow|aqua|black|silver)\s+x-?fractor/i);
+  // The colour rule accepts the same three spellings the bare rule below does.
+  // It used to accept only "X-Fractor"/"Xfractor", so "Orange X Fractor /25"
+  // dropped its colour — invisible until the bare rule below existed to catch
+  // the remainder, at which point the colour loss became a wrong ANSWER rather
+  // than a fall-through to Base. Fixed here so the colour ladder stays intact
+  // across every spelling.
+  m = T.match(/(orange|red|green|gold|blue|purple|yellow|aqua|black|silver)\s+x[\s-]?fractor\b/i);
   if (m) return capFirst(m[1]) + " X-Fractor";
+  // CF-BARE-X-FRACTOR (Drew, 2026-08-31). X-Fractor was matched ONLY with a
+  // colour in front of it. There was no bare rule, so plain "X-Fractor" fell
+  // past every rule below and landed on "Base" — in all three spellings
+  // sellers use. Line 739 above notes "X-Fractor is hyphenated so the
+  // letter-run cannot reach it", which is true of the fractor-family rule;
+  // what it missed is that nothing else caught it either.
+  //
+  //   "Shohei Ohtani #1 X-Fractor LA Dodgers | 2024 Topps Chrome"  -> Base
+  //   "Topps 2024 Chrome Update Paul Skenes Rookie X fractor #USC88" -> Base
+  //
+  // The second is a $40 sale sitting in a $7.49 base pool. Measured over 2024
+  // chrome-family sold_comps: 867 rows, the single largest cause of refractors
+  // leaking into base pools.
+  //
+  // Placed AFTER the colour rule deliberately, so "Gold X-Fractor" still
+  // returns "Gold X-Fractor" and only a genuinely bare one reaches here.
+  // "Superfractor" already returned at the top of this function and cannot be
+  // reached; the \b before x keeps this off the tail of another word.
+  if (/\bx[\s-]?fractor\b/i.test(T)) return "X-Fractor";
   // Sapphire product context + standalone color → "Color Sapphire".
   // Real observed: "2026 Bowman Chrome Sapphire Owen Carey Green /99"
   // means Green Sapphire /99 (not Green Refractor /99).
@@ -1030,7 +1099,39 @@ function extractParallel(title: string): string {
   // AUTO gate — all specific color/pattern refractor rules run BEFORE
   // this line, so "Blue Refractor" / "Gold Refractor" / "Mojo Refractor"
   // still return their specific values first. This is the fallback.
-  if (/\brefractor\b/i.test(T) && !AUTO_NEGATIVE_RE.test(T)) return "Refractor";
+  //
+  // CF-REFRACTORS-IS-HOW-TOPPS-PRINTS-IT (Drew, 2026-08-31). The trailing \b
+  // made this fallback fail on the PLURAL, which is how Topps names the
+  // parallel on its own checklist ("Refractors – /499") and how sellers title
+  // it. The singular parsed; the plural fell to Base:
+  //
+  //   "2024 Bowman Chrome Refractors #80 Aaron Judge 167/499 YANKEES" -> Base
+  //
+  // 235 such rows in 2024 chrome-family alone. The plural is the SAME parallel
+  // as the singular, so it returns the same canonical "Refractor" — one card,
+  // one row, one pool.
+  //
+  // Every colour and pattern rule above already matches its own plural (none
+  // of them carries a trailing \b), so "Orange Refractors" still returns
+  // "Orange Refractor" and never reaches this line. That ordering is what
+  // keeps a widened bare rule from flattening the colour ladder, and it is
+  // pinned by fixture.
+  //
+  // The one direction widening is genuinely dangerous is a LOT. "Lot Of 6
+  // Refractors" and "40x Refractors" are not a refractor sale — they are
+  // several cards sold together, and reading a parallel off them files a
+  // multi-card price into a single card's pool. The measurement triaged 211
+  // such rows out of the 2024 population rather than repair them, and the
+  // parser must not create more: a quantity marker means this title does not
+  // name ONE card's finish, so the finish is unknown, and blank means unknown.
+  //
+  // The guard is deliberately on the bare fallback only. A lot title that
+  // names a COLOUR ("Lot of 6 Orange Refractors") still returns a parallel
+  // from the rules above — that is pre-existing behaviour, out of scope here,
+  // and the repair excludes lots by the same detector regardless.
+  if (/\brefractors?\b/i.test(T) && !AUTO_NEGATIVE_RE.test(T) && !isMultiCardLot(T)) {
+    return "Refractor";
+  }
 
   // ─── Basketball parallels (Prizm, Optic, Select, Contenders, Hoops) ───
   // CF-BASKETBALL-PARALLELS (Drew, 2026-07-28). Basketball card
