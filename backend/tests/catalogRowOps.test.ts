@@ -337,13 +337,165 @@ describe("moveCatalogRow: graded children, sales, order", () => {
     expect(r.decision).toMatch(/sales not re-pointed \(no salesContainer\)/);
   });
 
-  it("noop when newSlug is the row's own id; throws when the slug and the setKey disagree", async () => {
+  it("noop when newSlug is the row's own id; throws when the slug changes product and nobody asked", async () => {
     const w = world();
     const r = await moveCatalogRow(w.cat, identityRow(), OLD, {}, { reason: REASON, salesContainer: w.pool });
     expect(r.action).toBe("noop");
-    await expect(moveCatalogRow(w.cat, identityRow(), NEW, {}, { reason: REASON, salesContainer: w.pool })).rejects.toThrow(/a key needs both halves/);
+    // NEW's stem is a different product from OLD's, and changedFields carries
+    // no setKey: nobody asked for a rename, so it refuses.
+    await expect(moveCatalogRow(w.cat, identityRow(), NEW, {}, { reason: REASON, salesContainer: w.pool })).rejects.toThrow(/no setKey change was asked for/);
+    // and a rename whose slug lands on a THIRD product is refused too
+    await expect(
+      moveCatalogRow(w.cat, identityRow(), NEW, { setKey: "topps-chrome" }, { reason: REASON, salesContainer: w.pool }),
+    ).rejects.toThrow(/the caller asked for "topps-chrome"/);
     await expect(moveCatalogRow(w.cat, identityRow(), NEW, { setKey: "topps-allen-and-ginter" }, { reason: "  ", salesContainer: w.pool })).rejects.toThrow(/reason is required/);
     expect(w.catalog.writes()).toEqual([]);
+  });
+});
+
+// CF-CANDIDATE-ID-IS-WHAT-WE-ADOPT (D30 R2, 2026-08-31). The guard compares
+// the SETKEY SEGMENT of the two ids -- split(":")[3], the rule kindOf uses --
+// never the setKey FIELD. Checklist-backed rows carry the field "bowman" while
+// their id stem says bowman-chrome / bowman-paper BY DESIGN, and the field
+// comparison failed thousands of legitimate same-product folds: one
+// fold-unnumbered-twins slice looped at folded=0 / failed=184 every 140-minute
+// generation because ONLY these remained.
+describe("moveCatalogRow: the product is the id stem, not the setKey field", () => {
+  /** The live shape: field "bowman", id stem something else. */
+  function driftedRow(id: string, over: Doc = {}): Doc {
+    const parts = id.split(":");
+    return {
+      id, cardId: id, hobbyiqCardId: id,
+      sport: parts[1], year: Number(parts[2]), cardYear: Number(parts[2]),
+      // The FIELD the checklist ingest left: "bowman", never the id's stem.
+      setKey: "bowman", setName: "Bowman",
+      cardNumber: parts[4].toUpperCase(), parallel: "Base", parallelSlug: parts[5],
+      isAuto: parts[6] === "auto", printRun: null,
+      playerName: "Konnor Griffin", playerSlug: "konnor-griffin",
+      vendorIds: {}, source: "checklistcenter", confidence: 0.95,
+      observedAt: "2026-08-01T00:00:00.000Z", lastSeenAt: "2026-08-20T00:00:00.000Z",
+      searchTokens: ["oldsetonly"], searchText: "stale", displayName: "stale",
+      ...over,
+    };
+  }
+
+  function driftWorld(oldId: string, opts: { incumbent?: Doc } = {}) {
+    const log: string[] = [];
+    const catalog = new FakeContainer("card_catalog", log, [
+      driftedRow(oldId),
+      ...(opts.incumbent ? [opts.incumbent] : []),
+    ]);
+    const sales = new FakeContainer("sold_comps", log, [{ id: "d1", cardId: "pool-d1", hobbyiqCardId: oldId, price: 10 }]);
+    return { log, catalog, sales, cat: catalog as unknown as Container, pool: sales as unknown as Container };
+  }
+
+  // (a) Tonight's four live failures. Each is an un-numbered -> numbered fold
+  // inside ONE product: the id stems match, only the field says "bowman".
+  const LIVE: Array<[string, string]> = [
+    ["hiq:baseball:2026:bowman-chrome:bcp-50:yellow-refractor:no-auto", "bowman-chrome"],
+    ["hiq:baseball:2026:bowman-chrome:cpa-gl:speckle-refractor:auto", "bowman-chrome"],
+    ["hiq:baseball:2026:bowman-paper:bp-149:blue-pattern:no-auto", "bowman-paper"],
+    ["hiq:baseball:2024:bowman-paper:bp-67:blue:no-auto", "bowman-paper"],
+  ];
+
+  for (const [oldId, product] of LIVE) {
+    it(`moves ${oldId} onto its numbered twin (field "bowman", id stem "${product}")`, async () => {
+      const newSlug = `${oldId}:num-499`;
+      const w = driftWorld(oldId);
+      const r = await moveCatalogRow(w.cat, driftedRow(oldId), newSlug, { printRun: 499 }, {
+        reason: "D30 R2: fold the un-numbered id onto its one checklist numbered twin",
+        salesContainer: w.pool,
+      });
+      expect(r.action).toBe("move");
+      expect(r.survivor).toBe("incoming");
+      expect(r.salesRepointed).toBe(1);
+      const row = w.catalog.docs.get(newSlug)!;
+      // (c) the moved row's field ends CONSISTENT with its new id stem --
+      // the convention deriveCatalogEntry uses at mint (setKey: parsedSlug[3]).
+      expect(row.setKey).toBe(product);
+      expect(String(row.id).split(":")[3]).toBe(product);
+      expect(row.printRun).toBe(499);
+      expect(w.catalog.docs.has(oldId)).toBe(false);
+      // and the search fields were rebuilt off the corrected product
+      expect(row.searchTokens).not.toContain("oldsetonly");
+      expect(row.searchTokens).toContain(product.split("-")[0]);
+    });
+  }
+
+  it("a drifted field does not stop a same-product FOLD onto an incumbent either", async () => {
+    const oldId = "hiq:baseball:2026:bowman-chrome:bcp-50:yellow-refractor:no-auto";
+    const newSlug = `${oldId}:num-499`;
+    const incumbent = driftedRow(newSlug, { source: "checklistcenter", vendorIds: { cardhedge: "ch-9" }, compCount: 40 });
+    const w = driftWorld(oldId, { incumbent });
+    const r = await moveCatalogRow(w.cat, driftedRow(oldId), newSlug, { printRun: 499 }, {
+      reason: "D30 R2: fold the un-numbered id onto its one checklist numbered twin",
+      salesContainer: w.pool,
+    });
+    expect(r.action).toBe("fold");
+    expect(r.survivor).toBe("incumbent");
+    expect(r.salesRepointed).toBe(1);
+    expect(w.catalog.docs.has(oldId)).toBe(false);
+  });
+
+  // (b) The protective intent, kept whole: a fold can never wander across
+  // products, and the drifted field is never what lets it. THE SAPPHIRE CASE:
+  // the row's field says "bowman", so a field comparison would have compared
+  // "bowman-chrome-sapphire" against "bowman" and refused for the wrong
+  // reason -- and a field-equality rule that had been "fixed" by trusting the
+  // field would have ALLOWED it. The id stem is what refuses.
+  it("refuses a bowman-chrome row folded onto a bowman-chrome-sapphire slug", async () => {
+    const oldId = "hiq:baseball:2026:bowman-chrome:bcp-50:yellow-refractor:no-auto";
+    const sapphire = "hiq:baseball:2026:bowman-chrome-sapphire:bcp-50:yellow-refractor:no-auto:num-499";
+    const w = driftWorld(oldId);
+    // the exact shape the fold fleet uses: printRun only, no setKey
+    await expect(
+      moveCatalogRow(w.cat, driftedRow(oldId), sapphire, { printRun: 499 }, { reason: "should refuse", salesContainer: w.pool }),
+    ).rejects.toThrow(/no setKey change was asked for/);
+    expect(w.catalog.writes()).toEqual([]);
+  });
+
+  it("refuses a bowman row folded onto a topps-chrome slug", async () => {
+    const oldId = "hiq:baseball:2026:bowman:bp-149:blue:no-auto";
+    const toppsChrome = "hiq:baseball:2026:topps-chrome:bp-149:blue:no-auto:num-25";
+    const w = driftWorld(oldId);
+    await expect(
+      moveCatalogRow(w.cat, driftedRow(oldId), toppsChrome, { printRun: 25 }, { reason: "should refuse", salesContainer: w.pool }),
+    ).rejects.toThrow(/no setKey change was asked for/);
+    expect(w.catalog.writes()).toEqual([]);
+  });
+
+  it("even an explicit rename cannot land on a product it did not ask for", async () => {
+    const oldId = "hiq:baseball:2026:bowman-chrome:bcp-50:yellow-refractor:no-auto";
+    const sapphire = "hiq:baseball:2026:bowman-chrome-sapphire:bcp-50:yellow-refractor:no-auto";
+    const w = driftWorld(oldId);
+    await expect(
+      moveCatalogRow(w.cat, driftedRow(oldId), sapphire, { setKey: "bowman-chrome" }, { reason: "should refuse", salesContainer: w.pool }),
+    ).rejects.toThrow(/the caller asked for "bowman-chrome"/);
+    expect(w.catalog.writes()).toEqual([]);
+  });
+
+  it("the refusal names both ids, so an operator can see which pair was rejected", async () => {
+    const oldId = "hiq:baseball:2026:bowman-chrome:bcp-50:yellow-refractor:no-auto";
+    const sapphire = "hiq:baseball:2026:bowman-chrome-sapphire:bcp-50:yellow-refractor:no-auto:num-499";
+    const w = driftWorld(oldId);
+    await expect(
+      moveCatalogRow(w.cat, driftedRow(oldId), sapphire, { printRun: 499 }, { reason: "should refuse" }),
+    ).rejects.toThrow(/bowman-chrome-sapphire.*bowman-chrome.*bcp-50/s);
+  });
+
+  it("an explicit rename off a DRIFTED field still works: the field never decides", async () => {
+    // field "bowman", id stem "bowman-paper", ruled onto bowman-chrome. The
+    // old field matches neither side; only the asked-for setKey matters.
+    const oldId = "hiq:baseball:2026:bowman-paper:bp-149:blue-pattern:no-auto";
+    const renamed = "hiq:baseball:2026:bowman-chrome:bp-149:blue-pattern:no-auto";
+    const w = driftWorld(oldId);
+    const r = await moveCatalogRow(w.cat, driftedRow(oldId), renamed, { setKey: "bowman-chrome" }, {
+      reason: "setKey ruling applied", repointNormalizedSetKey: true, salesContainer: w.pool,
+    });
+    expect(r.action).toBe("move");
+    const row = w.catalog.docs.get(renamed)!;
+    expect(row.setKey).toBe("bowman-chrome");
+    expect(w.sales.get("d1")!.normalizedSetKey).toBe("bowman-chrome");
   });
 });
 

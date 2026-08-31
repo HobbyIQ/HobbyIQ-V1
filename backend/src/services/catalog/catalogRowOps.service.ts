@@ -202,12 +202,55 @@ export function rebuildSearchFields(row: {
 // ── the incoming row ─────────────────────────────────────────────────────────
 
 /**
+ * The setKey segment of an hiq id -- `split(":")[3]`, the same rule
+ * consolidate-catalog-duplicates' `kindOf` uses to measure id/field drift.
+ * CF-THE-ID-CARRIES-THE-PRODUCT: the id is what names the product.
+ */
+function idSetKeySegment(id: unknown): string {
+  return String(id ?? "").split(":")[3] ?? "";
+}
+
+/**
  * The old row as it should exist at newSlug: id fields from the slug, the
  * derived fields re-derived, the searchable fields rebuilt, the slug-bound
- * annotations dropped. Pure -- no I/O -- and it THROWS when the slug and the
- * fields disagree about the setKey, because a key needs both halves and a
- * row whose id says one product while its setKey says another is the
- * fragmentation this module exists to end.
+ * annotations dropped. Pure -- no I/O -- and it THROWS when the two SLUGS
+ * disagree about the product, because a cross-product move is not a move:
+ * bowman-chrome and bowman-chrome-sapphire are different cards and must never
+ * be merged onto one address.
+ *
+ * CF-CANDIDATE-ID-IS-WHAT-WE-ADOPT (D30 R2, 2026-08-31). The guard used to
+ * compare newSlug's setKey against the row's setKey FIELD, and that field is
+ * NOT the product: checklist-backed rows carry the field "bowman" while their
+ * ID STEM says bowman-chrome / bowman-paper -- by design, because
+ * deriveCatalogEntry mints the field from the id's own segment while the
+ * checklist ingest passes authoritativeSetKey and keeps its own spelling
+ * ("bowman -- it came out of a Bowman pack"). Identity resolves by ID STEM,
+ * never by field equality; catalogIdentityResolver says so in as many words,
+ * and consolidate-catalog-duplicates' `kindOf` measures drift the same way.
+ * Comparing the FIELD failed thousands of legitimate same-product folds
+ * (`hiq:baseball:2026:bowman-chrome:bcp-50:yellow-refractor:no-auto` and
+ * friends), to the point where one fleet slice looped at folded=0/failed=184
+ * because ONLY these remained.
+ *
+ * So the comparison is SEGMENT against SEGMENT -- and the question it asks is
+ * "did the caller ASK to change the product?", because that is what separates
+ * the two populations the field comparison confused:
+ *
+ *   a FOLD / renumber / parallel fix passes no setKey (`{ printRun: 499 }`,
+ *   `{ cardNumber }`): the product must NOT change, so newSlug's stem must
+ *   equal the OLD ID's stem -- whatever the drifted field says;
+ *
+ *   a RENAME passes the product it is moving to (`{ setKey: TO }` --
+ *   rename-setkey, apply-setkey-rulings, apply-cpa-product-rule,
+ *   rename-setkey-to-product all do): the stem is allowed to change, and
+ *   newSlug's stem must equal the setKey the caller ASKED for, so a slug that
+ *   lands on some third product is still refused.
+ *
+ * Either way a cross-product move stays impossible: nothing can silently
+ * carry a row from bowman-chrome to bowman-chrome-sapphire, and sapphire never
+ * merges. Only the field mismatch stops blocking. The written row's field is
+ * then made consistent with its new id stem, which is exactly what
+ * deriveCatalogEntry does at mint (`setKey: parsedSlug[3]`).
  */
 function buildIncoming(
   oldRow: CatalogRowDoc,
@@ -217,12 +260,25 @@ function buildIncoming(
   const merged = { ...stripSlugBoundFields(oldRow), ...changedFields } as CatalogRowDoc;
   const parsed = parseHobbyIqCardId(newSlug);
   if (!parsed) throw new Error(`moveCatalogRow: newSlug is not a hiq slug: ${newSlug}`);
-  const setKey = String(merged.setKey ?? "").trim();
-  if (parsed.setKey !== setKey) {
+  const oldIdSetKey = idSetKeySegment(oldRow.id);
+  // Did the caller ASK for a product change? Only an explicit `setKey` in
+  // changedFields does that; a fold passes printRun / cardNumber and means
+  // "same product, new address".
+  const askedSetKey = Object.prototype.hasOwnProperty.call(changedFields, "setKey")
+    ? String(changedFields.setKey ?? "").trim()
+    : null;
+  const expected = askedSetKey === null ? oldIdSetKey : askedSetKey;
+  if (parsed.setKey !== expected) {
     throw new Error(
-      `moveCatalogRow: newSlug says setKey "${parsed.setKey}" but the row says "${setKey}" (${newSlug}) -- a key needs both halves`,
+      askedSetKey === null
+        ? `moveCatalogRow: newSlug says setKey "${parsed.setKey}" but the row's id says "${oldIdSetKey}" (${String(oldRow.id)} -> ${newSlug}) and no setKey change was asked for -- a cross-product move is not a move`
+        : `moveCatalogRow: newSlug says setKey "${parsed.setKey}" but the caller asked for "${askedSetKey}" (${String(oldRow.id)} -> ${newSlug}) -- a cross-product move is not a move`,
     );
   }
+  // The field follows the id stem, never the caller's spelling of it -- the
+  // one convention deriveCatalogEntry uses at mint. A row that arrives with a
+  // drifted field leaves with a consistent one.
+  const setKey = parsed.setKey;
 
   const playerName = merged.playerName ? String(merged.playerName).trim() || null : null;
   const cardNumber = String(merged.cardNumber ?? "").trim().toUpperCase();
@@ -257,7 +313,11 @@ function buildIncoming(
   const playerSlug = agrees
     ? derived.playerSlug
     : playerName ? slugify(playerName) : (typeof merged.playerSlug === "string" ? merged.playerSlug : null);
-  const setKeyChanged = setKey !== String(oldRow.setKey ?? "").trim();
+  // brand / parentSetKey are functions of the PRODUCT, and the product is the
+  // id stem. Re-derive when the stem moved, or when the incoming field is
+  // about to be corrected off a drifted one (field "bowman", stem
+  // "bowman-chrome": brand/parentSetKey were computed from the old field).
+  const setKeyChanged = setKey !== oldIdSetKey || setKey !== String(oldRow.setKey ?? "").trim();
 
   const doc: CatalogRowDoc = {
     ...merged,
