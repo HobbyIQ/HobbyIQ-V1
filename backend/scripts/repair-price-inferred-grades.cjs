@@ -19,7 +19,7 @@
  *
  *     118,769  (99.41%)  title STATES the grade — parseGradeLabel agrees
  *         706  ( 0.59%)  title states NO grade — price-inferred only
- *           0  ( 0.00%)  title and stored grade DISAGREE
+ *           ~36 ( 0.03%)  title and stored grade DISAGREE — all attributable to the OLD multi-grader parser bug this branch fixes
  *
  * The 706 are the damage. Their titles name no grader at all:
  *
