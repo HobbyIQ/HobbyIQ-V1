@@ -8,6 +8,14 @@ name: Catalog Gap Digest
 #
 # Cadence: daily 10 UTC = 6 AM EDT (mirrors waitlist digest). Skips
 # silently on empty pool.
+#
+# CF-GAP-DIGEST-TRIAGE (Drew, 2026-08-31, approved the nightly measure +
+# classify). The job now runs checklist-gap-report.cjs --persist first, which
+# writes a dated artifact under backend/data/gap-reports/ and diffs against
+# the prior night; the digest then CLASSIFIES every gap (VOCAB-TWIN /
+# UNRELEASED / IMPOSSIBLE-COMPS / UNREACHABLE / DISPATCHABLE) before the mail
+# renders, and the artifact is committed so tomorrow has something to diff
+# against. ZERO catalog writes — the only write is the artifact file.
 
 on:
   schedule:
@@ -24,14 +32,24 @@ on:
         required: false
         type: string
         default: '15000'
+      min_comps:
+        description: 'Gap report min-comps floor (default 500)'
+        required: false
+        type: string
+        default: '500'
+      dry_run:
+        description: 'Set to 1 to render + log the digest and send NOTHING (also skips the artifact commit)'
+        required: false
+        type: string
+        default: ''
 
 jobs:
   digest:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 20
     permissions:
       id-token: write
-      contents: read
+      contents: write   # commits the night's gap-report artifact
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -77,6 +95,19 @@ jobs:
           echo "from_addr=$FROM_ADDR" >> "$GITHUB_OUTPUT"
           echo "from_name=$FROM_NAME" >> "$GITHUB_OUTPUT"
           echo "digest_to=$DIGEST_TO" >> "$GITHUB_OUTPUT"
+      # CF-GAP-DIGEST-TRIAGE. Measure + persist tonight's checklist gap report
+      # BEFORE the digest renders, so the mail has something to triage and
+      # diff. Writes only under backend/data/gap-reports/.
+      - name: Measure + persist checklist gap report
+        working-directory: backend
+        env:
+          COSMOS_CONNECTION_STRING: ${{ steps.env.outputs.cs }}
+        run: |
+          node scripts/checklist-gap-report.cjs \
+            --min-comps="${{ inputs.min_comps || '500' }}" \
+            --top=60 \
+            --persist
+
       - name: Run gap digest
         working-directory: backend
         env:
@@ -87,5 +118,21 @@ jobs:
           GAP_DIGEST_TO: ${{ steps.env.outputs.digest_to }}
           GAP_DIGEST_TOP_N: ${{ inputs.top_n || '20' }}
           GAP_DIGEST_SAMPLE_LIMIT: ${{ inputs.sample_limit || '15000' }}
+          GAP_DIGEST_DRY_RUN: ${{ inputs.dry_run || '' }}
         run: |
           node scripts/emailCatalogGapDigest.cjs
+
+      # The dated artifact is the diff's memory: without a commit, every night
+      # is a baseline and nothing can ever read as CLOSED.
+      - name: Commit the night's gap-report artifact
+        if: ${{ inputs.dry_run != '1' }}
+        run: |
+          git config user.name "HobbyIQ"
+          git config user.email "noreply@hobby-iq.com"
+          git add backend/data/gap-reports/
+          if git diff --cached --quiet; then
+            echo "no gap-report change to commit"
+          else
+            git commit -m "chore(gap-digest): gap report $(date -u +%Y-%m-%d)"
+            git push origin HEAD:main
+          fi
