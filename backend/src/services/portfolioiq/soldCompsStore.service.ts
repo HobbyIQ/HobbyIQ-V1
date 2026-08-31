@@ -1276,7 +1276,15 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
     gradeCompany: input.gradeCompany ?? null,
     gradeValue: input.gradeValue ?? null,
     price: input.price,
-    priceBasis: input.priceBasis ?? null,
+    // CF-A-SUBTOTAL-NEVER-REGRESSES-TO-ALL-IN (D38), defense in depth. Both
+    // guard layers gate on the INCOMING basis, so a purchase-derived writer
+    // that forgets to pass one slips an all-in price past them and overwrites a
+    // stored subtotal. A user's eBay PURCHASE never has a better basis than
+    // all-in unless a caller says "subtotal" -- the purchase record is the only
+    // thing that knows, and a caller holding one passes it. Absent that, assume
+    // the buyer's basis: worst case the row is marked all-in over another
+    // all-in, which upserts exactly as before.
+    priceBasis: input.priceBasis ?? (input.source === "ebay-user-purchase" ? "all-in" : null),
     soldAt: input.soldAt,
     observedAt: new Date().toISOString(),
     source: input.source,

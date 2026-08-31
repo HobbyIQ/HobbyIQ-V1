@@ -2839,10 +2839,20 @@ async function emitUserEbayPurchaseComp(
     // record's eBay order id, else the ids the holding carries, else
     // `holding::<id>`. Same-id rows supersede in the store.
     const { purchaseSaleIdentity, sourcePurchaseFor } = await import("./ebayAutoHolding.service.js");
-    const { sourceExternalId } = purchaseSaleIdentity(
+    // CF-A-SUBTOTAL-NEVER-REGRESSES-TO-ALL-IN (D38). This call already derives
+    // the price AND its derivation; take both. The line above reads
+    // holding.purchasePrice, which is the buyer's ALL-IN basis (item + shipping
+    // + tax) whenever the purchase record carries a subtotal -- and handing it
+    // to the store with no basis defeats BOTH D38 guard layers, because each
+    // gates on the INCOMING basis being "all-in". An unmarked all-in write then
+    // overwrites 295.95 (the market's price) with 301.43 (what the buyer paid).
+    // Prefer the purchase record's subtotal; fall back to the holding price the
+    // same way, but say so.
+    const { sourceExternalId, price: identityPrice, priceBasis } = purchaseSaleIdentity(
       sourcePurchaseFor(doc ?? null, holding as unknown as Record<string, unknown>),
       holding as unknown as Record<string, unknown>,
     );
+    const priceForPool = identityPrice > 0 ? identityPrice : price;
     const sport = (holding as { sport?: unknown }).sport;
     await recordSoldComp({
       cardId,
@@ -2859,7 +2869,10 @@ async function emitUserEbayPurchaseComp(
       sport: typeof sport === "string" && sport ? sport.toLowerCase() : null,
       gradeCompany: ((holding as { gradeCompany?: string }).gradeCompany ?? null) as string | null,
       gradeValue: ((holding as { gradeValue?: number }).gradeValue ?? null) as number | null,
-      price,
+      price: priceForPool,
+      // D38: the derivation travels with the price, so the store can refuse an
+      // all-in price over a stored subtotal.
+      priceBasis: identityPrice > 0 ? priceBasis : "all-in",
       soldAt,
       source: "ebay-user-purchase",
       sourceExternalId,
@@ -2881,7 +2894,8 @@ async function emitUserEbayPurchaseComp(
       identityVia: identity.via,
       vendorCardId: identity.vendorCardId,
       sourceExternalId,
-      price,
+      price: priceForPool,
+      priceBasis: identityPrice > 0 ? priceBasis : "all-in",
       grade: (holding as { gradeCompany?: string }).gradeCompany
         ? `${(holding as { gradeCompany?: string }).gradeCompany} ${(holding as { gradeValue?: number }).gradeValue ?? ""}`.trim()
         : "Raw",
