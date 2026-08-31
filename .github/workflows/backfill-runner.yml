@@ -128,6 +128,7 @@ on:
           - retire-unreferenced-graded-rows
           - retire-impossible-grade-rows
           - materialize-graded-identities
+          - materialize-ungraded-parents
           - canonicalize-vendor-shaped-rows
           - repair-parallel-subset-fold
           - ingest-checklists-end-to-end
@@ -576,7 +577,8 @@ jobs:
           if [ "${{ inputs.script }}" = "ingest-checklists-end-to-end" ]; then
             for CHILD in scrape-beckett-checklists scrape-checklistinsider \
                          convertChecklistInsiderToChecklistCsv \
-                         ingest-checklist-csv-to-catalog; do
+                         ingest-checklist-csv-to-catalog \
+                         materialize-ungraded-parents; do
               if [ ! -f "backend/scripts/$CHILD.cjs" ]; then
                 echo "::error::$CHILD.cjs is missing — the wrapper would acquire and then have nowhere to land the rows"
                 exit 1
@@ -646,6 +648,7 @@ jobs:
           # input above.
           SPORT: ${{ inputs.sports }}
           SETKEY: ${{ inputs.setkey_like }}
+          SET_KEY: ${{ inputs.setkey_like }}
           YEAR: ${{ inputs.years }}
           # ingest-checklist-csv-to-catalog: a committed CSV dir (e.g. the
           # drew-ruled Bellingham entry) ingested through the ONE generic
@@ -693,6 +696,24 @@ jobs:
           NODE_OPTIONS: "--max-old-space-size=8192"
         run: node "backend/scripts/${{ inputs.script }}.cjs" | tee /tmp/backfill.log
         shell: bash
+
+      # materialize-ungraded-parents: scope SPORT+YEAR+SET_KEY; the mint
+      # re-queries missing parents each run, so a relaunch resumes exactly.
+      # Relaunch iff the budget marker printed (#1361); a report relaunches
+      # as a report (#1578); never on cancel.
+      - name: Self-relaunch materialize-ungraded-parents until every parent exists
+        if: ${{ !cancelled() && inputs.script == 'materialize-ungraded-parents' }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
+            N=$(grep -aoE "parents minted +[0-9,]+" /tmp/backfill.log | grep -oE "[0-9,]+" | tail -1)
+            echo "::notice::budget hit (minted=${N:-0}) — re-dispatching to continue"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=materialize-ungraded-parents -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f setkey_like="${{ inputs.setkey_like }}" -f limit="${{ inputs.limit }}"
+          else
+            echo "::notice::finished within budget — done, no re-dispatch."
+          fi
 
       - name: Self-relaunch the re-slug until nothing changes
         # touched=N is the line this greps, and the script only prints it on a
