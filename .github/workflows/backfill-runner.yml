@@ -148,6 +148,8 @@ on:
 
           - fold-unnumbered-twins
           - fold-umbrella-to-series
+          - repair-truncated-card-year
+          - repair-select-subbrand-misslug
           - fold-checklist-numbered-twins
           - apply-cpa-product-rule
           - consolidate-catalog-duplicates
