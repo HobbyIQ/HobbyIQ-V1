@@ -16,6 +16,7 @@
  */
 import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from "vitest";
 import request from "supertest";
+import * as repriceJobs from "../src/services/portfolioiq/repriceJobTracker.js";
 import {
   readUserDoc,
   writeUserDoc,
@@ -130,7 +131,10 @@ describe("repriceHoldingsForUser — parallelId threaded into computeEstimate (C
       .post("/api/portfolio/reprice/batch")
       .set("x-session-id", sessionId)
       .send({});
-    expect(r.status).toBe(200);
+    // CF-PORTFOLIO-REFRESH-ASYNC (2026-08-31): dispatch answers 202; wait for
+    // the background run before inspecting what the engine was handed.
+    expect(r.status).toBe(202);
+    await repriceJobs.__awaitSettledForTests(userId, 20_000);
 
     const calls = mockFn.mock.calls.filter(
       (call: any[]) => call[1]?.holdingId === holdingId,
@@ -169,7 +173,10 @@ describe("repriceHoldingsForUser — parallelId threaded into computeEstimate (C
       .post("/api/portfolio/reprice/batch")
       .set("x-session-id", sessionId)
       .send({});
-    expect(r.status).toBe(200);
+    // CF-PORTFOLIO-REFRESH-ASYNC (2026-08-31): dispatch answers 202; wait for
+    // the background run before inspecting what the engine was handed.
+    expect(r.status).toBe(202);
+    await repriceJobs.__awaitSettledForTests(userId, 20_000);
 
     const calls = mockFn.mock.calls.filter(
       (call: any[]) => call[1]?.holdingId === holdingId,

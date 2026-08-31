@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
-import { fetchPortfolio, holdingDisplayValue, refreshAllHoldings, exportPortfolio, valuationStatusOf, fmvPerUnitOf, syncEbaySold, type PortfolioResponse, type PortfolioHolding } from "@/lib/api";
+import { fetchPortfolio, holdingDisplayValue, refreshAllHoldings, getRepriceStatus, exportPortfolio, valuationStatusOf, fmvPerUnitOf, syncEbaySold, type PortfolioResponse, type PortfolioHolding } from "@/lib/api";
 import { PortfolioDashboard } from "@/components/PortfolioDashboard";
 import { formatUSD, formatUSDCompact, formatPct, formatCardTitle, formatGrade } from "@/lib/format";
 import { PortfolioValueChart } from "@/components/PortfolioValueChart";
@@ -220,15 +220,71 @@ function PortfolioPageBody() {
               setRefreshing(true);
               setRefreshBanner(null);
               try {
+                // CF-PORTFOLIO-REFRESH-ASYNC (2026-08-31): the server now
+                // acknowledges the dispatch immediately instead of pricing
+                // every holding before replying. Poll the run's status, then
+                // re-read the portfolio once it lands. Values stay on screen
+                // and readable the whole time — they are simply the last
+                // persisted ones, which the banner says out loud.
                 const res = await refreshAllHoldings();
                 if (res.throttled) {
                   setRefreshBanner("Refresh cooldown active — try again in a minute.");
-                } else if (res.reason && res.repriced === 0) {
-                  setRefreshBanner(res.reason);
                 } else {
                   setRefreshBanner(
-                    `Refreshed ${res.repriced} of ${res.requested} · ${res.freshSkipped ?? 0} already fresh`,
+                    res.alreadyRunning
+                      ? "Refresh already running — showing last saved prices until it lands."
+                      : "Refreshing in the background — showing last saved prices until it lands.",
                   );
+                  // Poll until the run SETTLES, then pull the fresh values
+                  // from the (fast) portfolio read.
+                  //
+                  // CF-PORTFOLIO-REFRESH-ASYNC (2026-08-31, judged blocker):
+                  // the backend serves from 2 instances and the job map is
+                  // per-process, so a poll load-balances onto the worker that
+                  // did not dispatch about half the time. That worker answers
+                  // `unknown-here` (or `idle`, if we could not name the run) —
+                  // neither of which is a completion. The earlier loop broke
+                  // out on "not running" and printed "Refresh complete." over
+                  // a run that was still pricing elsewhere.
+                  //
+                  // The rule now: only a status this client can see SETTLE
+                  // ends the poll. Ignorance is a reason to ask again.
+                  const jobId = res.jobId ?? null;
+                  const deadline = Date.now() + 5 * 60_000;
+                  for (;;) {
+                    await new Promise((r) => setTimeout(r, 3_000));
+                    if (Date.now() > deadline) {
+                      // We never saw it land. Say exactly that — the run and
+                      // the 6h scheduled job both still write to Cosmos, so
+                      // the prices really will appear; claiming "complete"
+                      // here would be a guess we have no basis for.
+                      setRefreshBanner(
+                        "Still refreshing — prices will land on their own; reopen this page in a minute.",
+                      );
+                      break;
+                    }
+                    const st = await getRepriceStatus(jobId).catch(() => null);
+                    if (!st) continue;
+                    // Not-settled statuses, every one of them a keep-polling:
+                    //   running       — this worker is doing the work
+                    //   unknown-here  — the run is on the other instance
+                    //   idle          — this worker has no entry; we DID
+                    //                   dispatch, so this cannot mean "no run"
+                    if (st.running || st.status === "running") continue;
+                    if (st.status === "unknown-here" || st.status === "idle") continue;
+                    if (st.status === "error") {
+                      setRefreshBanner(st.error ?? "Refresh failed.");
+                      break;
+                    }
+                    // Reached only for an observed done/error.
+                    const r = st.result;
+                    setRefreshBanner(
+                      r
+                        ? `Refreshed ${r.repriced} of ${r.requested} · ${r.freshSkipped ?? 0} already fresh`
+                        : "Refresh complete.",
+                    );
+                    break;
+                  }
                   const next = await fetchPortfolio().catch(() => null);
                   if (next) setData(next);
                 }
