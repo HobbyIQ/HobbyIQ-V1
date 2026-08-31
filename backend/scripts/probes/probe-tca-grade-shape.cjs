@@ -8,9 +8,9 @@
 const { CosmosClient } = require("@azure/cosmos");
 const path = require("path");
 const { parseGradeLabel } = require(path.join(
-  __dirname, "..", "dist/services/portfolioiq/gradeParser.js"));
+  __dirname, "..", "..", "dist/services/portfolioiq/gradeParser.js"));
 const { GRADE_TIER_RE } = require(path.join(
-  __dirname, "..", "dist/services/portfolioiq/cardIdentityKey.service.js"));
+  __dirname, "..", "..", "dist/services/portfolioiq/cardIdentityKey.service.js"));
 
 const SOURCE = process.env.SOURCE || "tca-ebay";
 const LO = process.env.LO; // ISO

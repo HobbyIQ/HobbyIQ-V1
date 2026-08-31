@@ -381,6 +381,36 @@ async function resolveGradeTierByPrice(
   } catch { return null; }
 }
 
+/**
+ * CF-GRADE-IS-STATED-NEVER-INFERRED (Drew, 2026-08-31). THE ingest grade
+ * decision, and the only one persistVendorSalesToPool is permitted to make.
+ *
+ * Exported so the rule is testable as the shipped code rather than as a
+ * restatement of it. The signature is the guard: this function receives the
+ * TITLE and nothing else. It cannot see the sale price, the card's identity,
+ * or its pool, so a price→grade inference cannot be reintroduced *through*
+ * it — only by bypassing it at the call site, which
+ * tcaGradeIsStatedNeverInferred.test.ts detects by asserting that the write
+ * path's grade fields are exactly this function's output for the title.
+ *
+ * A title that states a grade yields that grade. A title that states none
+ * yields raw — a real answer, not a missing one.
+ */
+export function ingestGradeFromTitle(title: string): {
+  gradeCompany: string | null;
+  gradeValue: number | null;
+  gradeQualifier: string | null;
+  isAuthentic: true | null;
+} {
+  const g = parseGradeLabel(title);
+  return {
+    gradeCompany: g?.gradeCompany ?? null,
+    gradeValue: g?.gradeValue ?? null,
+    gradeQualifier: g?.qualifier ?? null,
+    isAuthentic: g?.isAuthentic === true ? true : null,
+  };
+}
+
 export interface VendorSaleRow {
   title: string | null;
   price: number | null | undefined;
@@ -1339,7 +1369,7 @@ export async function persistVendorSalesToPool(
       // parseGradeLabel returns null on unparseable titles, which we
       // treat as "raw / grade unknown" — the sold_comps schema tolerates
       // null gradeCompany.
-      const gradeParsed = parseGradeLabel(title);
+      const gradeParsed = ingestGradeFromTitle(title);
       // CF-GRADE-IS-STATED-NEVER-INFERRED (Drew, 2026-08-31: "there is an
       // issue TCA-ebay. I am seeing no grades and listed as raw when they
       // are graded").
@@ -1360,7 +1390,29 @@ export async function persistVendorSalesToPool(
       // MEASURED over 119,475 graded tca-ebay rows (2026-08-20..08-31):
       //   118,769 (99.41%)  title states the grade — parseGradeLabel agrees
       //       706 (0.59%)   title states NO grade — price-inferred only
-      //         0 (0.00%)   title and stored grade disagree
+      //        ~36 (0.03%)  title and stored grade DISAGREE
+      //
+      // CORRECTION (2026-08-31, adversarial review). An earlier revision of
+      // this comment claimed the disagreement rate was 0 (0.00%). That was
+      // wrong, and it is corrected here before it becomes cited doctrine. Two
+      // independent samples found it: 6 disagreements in 20,000 rows (0.03%)
+      // and 18 in a 60,000-row sweep (0.03%).
+      //
+      // The CAUSE is not surviving price-inference — it is the OLD
+      // multi-grader parser bug that THIS SAME COMMIT fixes in gradeParser.ts.
+      // Rebuilding origin/main's parser and re-running it on the disagreeing
+      // titles reproduces the stored value EXACTLY ("CGC 8 2000 Pokemon
+      // Japanese Houndoom" -> PSA 8; "BGS PRISTINE 10 ..." -> PSA 10).
+      // Attribution is total: disagreements 18, explained by the old parser
+      // 18, UNEXPLAINED 0; cross-grader cohort 96, explained 96, UNEXPLAINED
+      // 0. So the number SUPPORTS this change rather than undermining it —
+      // the disagreements are precisely the rows the parser fix stops
+      // creating, and the ~979 the companion repair demotes.
+      //
+      // Rows already stored under the old parser's cross-grader confusion
+      // (stored PSA, title says CGC/BGS/SGC) are NOT retroactively cleaned by
+      // this fix; repair-price-inferred-grades.cjs deliberately declines to
+      // adjudicate them, and they remain a known follow-up.
       //
       // The 706 are the damage, and their titles show it plainly: "1950
       // Bowman - Bob Feller #6" stored SGC 3; "1996-97 Topps Kobe Bryant
@@ -1482,15 +1534,15 @@ export async function persistVendorSalesToPool(
         isAuto: parsed.isAuto,
         printRun: parsed.printRun,
         autoStyle: parsed.autoStyle,
-        gradeCompany: gradeParsed?.gradeCompany ?? null,
-        gradeValue: gradeParsed?.gradeValue ?? null,
-        gradeQualifier: gradeParsed?.qualifier ?? null,
+        gradeCompany: gradeParsed.gradeCompany,
+        gradeValue: gradeParsed.gradeValue,
+        gradeQualifier: gradeParsed.gradeQualifier,
         // CF-AUTHENTIC-BUCKET (Drew, 2026-08-15). Persisted so downstream can
         // separate an authenticated-but-ungraded slab from both raw and from
         // a numeric tier. gradeValue is 0 for these, which keeps them out of
         // the raw bucket (`gradeValue !== null`) without colliding with a
         // real grade (0.5-10).
-        isAuthentic: gradeParsed?.isAuthentic === true ? true : null,
+        isAuthentic: gradeParsed.isAuthentic,
         price,
         soldAt: new Date(soldAt).toISOString(),
         source,

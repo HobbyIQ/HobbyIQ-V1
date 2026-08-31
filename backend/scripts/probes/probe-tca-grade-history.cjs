@@ -7,7 +7,7 @@
 const { CosmosClient } = require("@azure/cosmos");
 const path = require("path");
 const { parseGradeLabel } = require(path.join(
-  __dirname, "..", "dist/services/portfolioiq/gradeParser.js"));
+  __dirname, "..", "..", "dist/services/portfolioiq/gradeParser.js"));
 
 const SOURCE = process.env.SOURCE || "tca-ebay";
 const MONTHS = Math.max(1, Number(process.env.MONTHS || 8));

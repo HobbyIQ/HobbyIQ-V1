@@ -8,7 +8,7 @@
 const { CosmosClient } = require("@azure/cosmos");
 const path = require("path");
 const { parseGradeLabel } = require(path.join(
-  __dirname, "..", "dist/services/portfolioiq/gradeParser.js"));
+  __dirname, "..", "..", "dist/services/portfolioiq/gradeParser.js"));
 
 const SOURCES = String(process.env.SOURCES || "tca-ebay").split(",").map(s => s.trim()).filter(Boolean);
 const SINCE = process.env.SINCE || "2026-05-01";

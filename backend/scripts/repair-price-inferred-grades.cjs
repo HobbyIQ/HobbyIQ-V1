@@ -67,8 +67,12 @@
 
 const path = require("path");
 const backend = path.join(__dirname, "..");
-const { CosmosClient } = require(path.join(backend, "node_modules/@azure/cosmos"));
-const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
+// REFUSALS BEFORE REQUIRES. @azure/cosmos, writeReconciliation and
+// gradeParser are all loaded inside main() AFTER the scope refusal, so an
+// invocation that names no scope refuses with rc=2 — the honest answer —
+// rather than dying rc=1 on "Cannot find module" when node_modules or dist
+// happen to be absent. A missing build must never look like a refusal, and a
+// refusal must never be masked by a missing build.
 
 function arg(name, dflt) {
   const hit = process.argv.find((a) => a.startsWith(`--${name}=`));
@@ -101,6 +105,9 @@ async function main() {
     return 2;
   }
 
+  // Every dependency loads here — past both refusals, never before them.
+  const { CosmosClient } = require(path.join(backend, "node_modules/@azure/cosmos"));
+  const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
   const { parseGradeLabel } = require(path.join(backend, "dist/services/portfolioiq/gradeParser.js"));
   const sold = new CosmosClient(process.env.COSMOS_CONNECTION_STRING)
     .database(process.env.COSMOS_DATABASE || "hobbyiq").container("sold_comps");
@@ -116,6 +123,24 @@ async function main() {
   let where = `c.source IN (${SOURCES.map((_, i) => `@s${i}`).join(",")})`
     + ` AND IS_DEFINED(c.gradeCompany) AND c.gradeCompany != null AND c.gradeCompany != ''`;
   if (SINCE) { where += ` AND c.soldAt >= @since`; params.push({ name: "@since", value: SINCE }); }
+
+  // THE DENOMINATOR, measured before the walk. A run that stops on its budget
+  // or its --limit must be able to say how many candidates it never looked at;
+  // without this count "reconciled" would be a claim about the rows it reached
+  // and silence about the rest — a false all-clear on exactly the resumable
+  // path the relaunch ladder depends on.
+  let candidateTotal = null;
+  try {
+    const { resources: cnt } = await sold.items.query({
+      query: `SELECT VALUE COUNT(1) FROM c WHERE ${where}`,
+      parameters: params,
+    }).fetchAll();
+    candidateTotal = Number(cnt[0] ?? 0);
+    console.log(`  candidates in scope               ${candidateTotal}`);
+  } catch (e) {
+    // Never block the repair on the count; notReached simply reports unknown.
+    console.warn(`  (candidate COUNT unavailable: ${e.code ?? e.message})`);
+  }
 
   const iter = sold.items.query({
     query: `SELECT c.id, c.cardId, c.title, c.gradeCompany, c.gradeValue,
@@ -140,13 +165,21 @@ async function main() {
   const inflight = new Set();
   let stopReason = "end-of-feed";
 
+  // Every early exit records what it did NOT scan. candidateTotal is the
+  // in-scope population; tot.scanned is what the walk actually read.
+  const markNotReached = () => {
+    tot.notReached = candidateTotal === null
+      ? 0                                            // unknown; reported as such below
+      : Math.max(0, candidateTotal - tot.scanned);
+  };
+
   outer:
   while (iter.hasMoreResults()) {
-    if (budgetLeft() < 120_000) { stopReason = "budget"; break; }
+    if (budgetLeft() < 120_000) { stopReason = "budget"; markNotReached(); break; }
     const { resources } = await iter.fetchNext();
     for (const row of resources || []) {
-      if (budgetLeft() < 120_000) { stopReason = "budget"; break outer; }
-      if (LIMIT && tot.demotable >= LIMIT) { stopReason = "limit"; break outer; }
+      if (budgetLeft() < 120_000) { stopReason = "budget"; markNotReached(); break outer; }
+      if (LIMIT && tot.demotable >= LIMIT) { stopReason = "limit"; markNotReached(); break outer; }
       tot.scanned++;
 
       const title = String(row.title ?? "").trim();
@@ -203,7 +236,9 @@ async function main() {
   console.log(`  unusable title                    ${tot.noTitle}`);
   console.log(`  parser threw                      ${tot.parserThrew}`);
   console.log(`  written                           ${APPLY ? `${tot.written} (failed ${tot.failed})` : "(dry-run)"}`);
-  if (tot.notReached) console.log(`  not reached                       ${tot.notReached}`);
+  if (stopReason !== "end-of-feed") {
+    console.log(`  not reached                       ${candidateTotal === null ? "UNKNOWN (count query failed)" : tot.notReached}`);
+  }
 
   console.log(`\n  demotions by stored tier:`);
   for (const [k, v] of Object.entries(byTier).sort((a, b) => b[1] - a[1]).slice(0, 15)) {
@@ -218,13 +253,28 @@ async function main() {
     console.log(`\nstopped at --limit=${LIMIT}`);
   }
 
-  // Reconcile: intended partitions into written + skipped + failed.
+  // Reconcile: intended partitions EXACTLY into written + skipped + failed.
+  //
+  // Units matter here. tot.demotable counts rows the walk actually decided to
+  // demote. tot.notReached counts in-scope CANDIDATES the walk never read —
+  // an unknown fraction of which would have been demotable. Both belong in
+  // "intended" (the job's true obligation is the whole scoped population's
+  // worth of decisions), and the unreached remainder is reported as skipped,
+  // which is what it is: work this run declined to do and the relaunch owes.
+  //
+  // A budget-stopped run therefore reconciles as
+  //   intended = decided + undecided,  written + skipped + failed = intended
+  // instead of claiming a clean sweep over rows it never opened.
   if (APPLY) {
+    if (stopReason !== "end-of-feed") {
+      console.log(`  RELAUNCH OWED: stopped on ${stopReason}; `
+        + `${candidateTotal === null ? "UNKNOWN" : tot.notReached} in-scope candidates never read.`);
+    }
     reportWrites({
       job: "repair-price-inferred-grades",
       intended: tot.demotable + tot.notReached,
       written: tot.written,
-      skipped: tot.notReached,
+      skipped: (tot.demotable - tot.written - tot.failed) + tot.notReached,
       failed: tot.failed,
     });
   }

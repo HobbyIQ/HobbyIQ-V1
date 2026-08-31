@@ -12,7 +12,7 @@ const path = require("path");
 
 // THE SAME parser the healthy paths use — not a reimplementation.
 const { parseGradeLabel } = require(path.join(
-  __dirname, "..", "dist/services/portfolioiq/gradeParser.js"));
+  __dirname, "..", "..", "dist/services/portfolioiq/gradeParser.js"));
 
 const DAYS = Math.max(1, Number(process.env.DAYS || 14));
 const SAMPLE = Math.max(1, Number(process.env.SAMPLE || 5));
