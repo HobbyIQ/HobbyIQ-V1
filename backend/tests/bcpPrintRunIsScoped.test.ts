@@ -79,14 +79,37 @@ function readCsv(file: string): Row[] {
   return rows;
 }
 
+/**
+ * NEVER hardcode the emitted filename. The stem is `${year}-${setKey}-baseball`
+ * and the setKey comes from the product VOCABULARY, so a ruling that renames a
+ * product renames these files — and so does whether `dist/` is built, since an
+ * unbuilt dist disables product routing altogether. The manifest names its own
+ * scope; ask it. Pass null for the page's own (paper) scope.
+ */
+function csvForScope(year: number, scope: string | null): string {
+  const manifests = fs.readdirSync(OUT).filter((f) => f.endsWith(".manifest.json"));
+  const hit = manifests.find((m) => {
+    const j = JSON.parse(fs.readFileSync(path.join(OUT, m), "utf8")) as { scope?: string | null; year?: number };
+    if (Number(j.year) !== year) return false;
+    const s = j.scope ?? null;
+    return scope === null ? s === null : String(s ?? "").toLowerCase() === scope.toLowerCase();
+  });
+  if (!hit) {
+    throw new Error(
+      `no manifest for ${year} scope ${JSON.stringify(scope)} — emitted: ${manifests.join(", ") || "(nothing)"}`,
+    );
+  }
+  return hit.replace(/\.manifest\.json$/, ".csv");
+}
+
 /** The base cards of a fixture, for set-size assertions. */
 const cardsOf = (name: string) => L.parseCards(L.section(fixture(name), "Base_Set", 2));
 
 describe("§3.1 — a range-scoped print run reaches only its own cards", () => {
   const cards = cardsOf("1998-spx-finite");
   const rows = [
-    ...readCsv("1998-spx-finite-baseball--radiance.csv"),
-    ...readCsv("1998-spx-finite-baseball--spectrum.csv"),
+    ...readCsv(csvForScope(1998, "Radiance")),
+    ...readCsv(csvForScope(1998, "SPectrum")),
   ];
 
   it("reads all 360 base cards", () => {
@@ -162,7 +185,7 @@ describe("§3.1 — a range-scoped print run reaches only its own cards", () => 
 
 describe("§3.2 — the EXCEPT block is the exception, not the rule", () => {
   const cards = cardsOf("1999-black-diamond");
-  const rows = readCsv("1999-black-diamond-baseball.csv");
+  const rows = readCsv(csvForScope(1999, null));
   const runsFor = (parallel: string, run: number) =>
     rows.filter((r) => r.parallel === parallel && r.run === run);
 

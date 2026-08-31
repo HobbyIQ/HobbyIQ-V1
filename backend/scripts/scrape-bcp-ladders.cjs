@@ -1059,7 +1059,24 @@ async function main() {
       // paper setKey, so the scope name disambiguates the FILE -- without it
       // the Chrome CSV would silently overwrite the paper one and the paper
       // ladder would vanish.
-      const key = productKey(sc.setKey) + (!sc.isPaper && !sc.isOwnProduct ? "--" + sc.title.toLowerCase().replace(/[^a-z0-9]+/g, "-") : "");
+      //
+      // CF-ONE-FILE-PER-SCOPE (2026-08-31). `isOwnProduct` was the wrong test
+      // for "the setKey already disambiguates". SEVERAL scopes of one page can
+      // route to the SAME product: 1997_Finest sends Refractors, Embossed and
+      // Embossed Refractors all to `topps-finest`, so all three were
+      // isOwnProduct, all three dropped the suffix, and all three wrote the
+      // same path -- the run reported "3,500 rows across 3 product(s)" while
+      // 1,400 reached disk and the first two scopes vanished, manifest and all.
+      // That is the very failure the paragraph above describes, arriving
+      // through the other door.
+      //
+      // The suffix is about FILENAME COLLISION, so decide it that way: a scope
+      // may go bare only if no other scope of this page shares its stem.
+      const stemOf = (s) => productKey(s.setKey);
+      const stem = stemOf(sc);
+      const sharesStem = scopes.filter((o) => stemOf(o) === stem).length > 1;
+      const key = stem + (!sc.isPaper && (!sc.isOwnProduct || sharesStem)
+        ? "--" + sc.title.toLowerCase().replace(/[^a-z0-9]+/g, "-") : "");
       if (sc.refused) for (const r of sc.refused) console.log(`   scope "${sc.title}": product move REFUSED by the vocabulary (${r.qualifier}) — ${r.reason}
      rows stay under ${sc.setKey} with prefix ${sc.prefix ?? "(paper)"}; this is a ruling for Drew, not a scraper decision`);
       fs.writeFileSync(path.join(OUT_DIR, `${key}.csv`), lines.join("\n") + "\n");

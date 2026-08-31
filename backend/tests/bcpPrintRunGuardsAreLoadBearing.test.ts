@@ -77,7 +77,31 @@ function readCsv(file: string): Row[] {
   return rows;
 }
 
-const refractors = () => readCsv("1997-finest-baseball--refractors.csv");
+/**
+ * NEVER hardcode the emitted filename. The stem is `${year}-${setKey}-baseball`
+ * and the setKey comes from the product VOCABULARY (productQualifiers routes
+ * 1997 Finest's scopes to `topps-finest`), so the name legitimately changes
+ * with a vocabulary ruling — and it changes with whether `dist/` is built at
+ * all, since an unbuilt dist disables product routing entirely. A hardcoded
+ * name turns either into an ENOENT that reads like a scraper regression.
+ *
+ * The manifest is the index: each one names its own scope, so ask it.
+ */
+function csvForScope(scope: string): string {
+  const manifests = fs.readdirSync(OUT).filter((f) => f.endsWith(".manifest.json"));
+  const hit = manifests.find((m) => {
+    const j = JSON.parse(fs.readFileSync(path.join(OUT, m), "utf8")) as { scope?: string };
+    return String(j.scope ?? "").toLowerCase() === scope.toLowerCase();
+  });
+  if (!hit) {
+    throw new Error(
+      `no manifest for scope "${scope}" — emitted: ${manifests.join(", ") || "(nothing)"}`,
+    );
+  }
+  return hit.replace(/\.manifest\.json$/, ".csv");
+}
+
+const refractors = () => readCsv(csvForScope("Refractors"));
 
 describe("mutant 1 — the odds guards, together, on the <li> path", () => {
   /**
