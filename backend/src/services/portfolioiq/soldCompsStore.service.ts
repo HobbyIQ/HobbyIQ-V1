@@ -49,6 +49,9 @@ import { parseParallelComposite } from "./parseParallelComposite.service.js";
 import { enrichCompositeV3 } from "./enrichCompositeV3.service.js";
 import { poolReadIdsFor, resolveIdentityToCatalogRow, type CatalogRowResolution } from "../catalog/catalogIdentityResolver.js";
 import { createHash } from "crypto";
+// Type-only: erased at compile time, so this adds no runtime edge back to
+// ebayAutoHolding (which imports THIS module dynamically).
+import type { SalePriceBasis } from "./ebayAutoHolding.service.js";
 
 // CF-COMPOSITE-EMIT (Drew, 2026-07-30). Compute the 6-axis composite
 // from the incoming attributes. Silent-safe — returns null on any
@@ -195,6 +198,14 @@ export interface SoldCompDoc {
 
   // The sale itself
   price: number;
+  /** CF-A-SUBTOTAL-NEVER-REGRESSES-TO-ALL-IN (D38, 2026-08-30). How `price`
+   *  was derived on a purchase-sourced row: "subtotal" (the item price -- what
+   *  the market paid) or "all-in" (item + shipping + tax, the buyer's basis,
+   *  used only when the components are unknowable). Persisted so a LATER
+   *  upsert on the same doc id can tell an upgrade from a regression; the doc
+   *  id is price-independent, so without this the store cannot. Absent on
+   *  vendor rows and on rows written before D38. */
+  priceBasis?: SalePriceBasis | null;
   soldAt: string;              // ISO — when the sale occurred (per source)
   observedAt: string;          // ISO — when WE wrote the record
 
@@ -297,6 +308,25 @@ export interface RecordSoldCompInput {
   /** CF-AUTHENTIC-BUCKET: authenticated slab, no numeric grade. */
   isAuthentic?: boolean | null;
   price: number;
+  /** D38: the derivation of `price`. Emit paths that key a purchase through
+   *  purchaseSaleIdentity pass its `priceBasis` straight through. Omitted by
+   *  every vendor caller, which changes nothing for them. */
+  priceBasis?: SalePriceBasis | null;
+  /**
+   * CF-ONE-IDENTITY-ONE-DERIVATION (D38, Drew 2026-08-30). The identity the
+   * CALLER already resolved -- a holding's pinned `hobbyiqCardId`, ruled onto
+   * a checklist row by the matcher or by Drew's own confirm.
+   *
+   * When present AND the id resolves to a checklist-backed catalog row, it is
+   * the identity: the store does not re-derive one from setName/cardNumber/
+   * parallel and does not refuse the sale for failing to match its own
+   * recomputation. Anything else -- absent, unverifiable, a derived-source row,
+   * a read failure -- falls through to exactly today's behaviour.
+   *
+   * Set ONLY by callers that hold a ruled identity. A vendor feed's cardId is
+   * not one, which is why this is a separate field and not `input.cardId`.
+   */
+  pinnedHobbyIqCardId?: string | null;
   soldAt: string;
   source: SoldCompSource;
   sourceExternalId?: string | null;
@@ -667,6 +697,52 @@ export function scoreForCanonical(row: {
   );
 }
 
+/**
+ * CF-A-SUBTOTAL-NEVER-REGRESSES-TO-ALL-IN (D38, Drew 2026-08-30).
+ *
+ * THE FLIP. A purchase's pool row is keyed by `makeId(source, externalId, ...)`
+ * -- the eBay order line item id. Nothing in that id depends on the price, so
+ * every re-emit of the same transaction upserts the SAME document, and
+ * `items.upsert` takes whatever price the latest writer computed. Three
+ * writers reach it (import, ReviewQueue confirm, rematch), and two of them
+ * call `sourcePurchaseFor(doc, holding)` first. When that returns null -- the
+ * holding lost its `sourcePurchaseId`, or the doc's `purchases` array was
+ * trimmed -- `purchaseSaleIdentity` falls back to `holding.purchasePrice`,
+ * which is ALL-IN. Drew's Gold Max Williams: 295.95 (the market's price for
+ * the card) silently becomes 301.43 (his shipping and tax), on a row that
+ * still looks perfectly well-formed.
+ *
+ * The content-hash dedup does not catch it: price is INSIDE the hash, so a
+ * flipped price is a different hash, matches no existing row, and goes
+ * straight to the price-blind upsert. `scoreForCanonical` does not catch it
+ * either -- it never reads price.
+ *
+ * So the store refuses this one direction. An incoming all-in price does not
+ * overwrite a stored subtotal price; everything else upserts as before:
+ *
+ *   - subtotal over all-in         UPGRADE, take it (the fix landing later)
+ *   - subtotal over subtotal       a real correction, take it
+ *   - all-in over all-in           no better answer exists, take it
+ *   - anything over an unknown     pre-D38 rows carry no basis, take it
+ *   - all-in over subtotal         REGRESSION, keep what is stored
+ *
+ * Deliberately NOT solved by removing the fallback: an all-in price is the
+ * only price a manually-added holding ever has, and dropping it would withhold
+ * real sales from the pool. The basis is recorded instead, so the price is
+ * usable AND cannot masquerade as a better one.
+ */
+export function keepsExistingPrice(
+  existing: { price?: unknown; priceBasis?: unknown } | null | undefined,
+  incoming: { price?: unknown; priceBasis?: unknown },
+): boolean {
+  if (!existing) return false;
+  if (String(incoming.priceBasis ?? "") !== "all-in") return false;
+  if (String(existing.priceBasis ?? "") !== "subtotal") return false;
+  const stored = Number(existing.price);
+  if (!Number.isFinite(stored) || stored <= 0) return false;
+  return Number(incoming.price) !== stored;
+}
+
 /** CF-ONE-SALE-ONE-ROW (2026-08-29, D7c). When a rematch moves a holding to a
  *  different checklist slug, the pool row written under the old slug is
  *  superseded: the partition key (cardId) cannot be patched, so the old row is
@@ -977,6 +1053,72 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
   }
   let hobbyiqCardId = derived.slug;
 
+  // ── CF-ONE-IDENTITY-ONE-DERIVATION (D38, Drew 2026-08-30) ─────────────────
+  //
+  // THE cpa-jg SKIP. During the D37 backfill APPLY, an emit carrying the
+  // holding's PINNED identity was REFUSED by this function -- because this
+  // function threw that identity away and recomputed one from the holding's
+  // fields, then rejected the sale for not matching what it had just computed:
+  //
+  //     ruled holding    hiq:baseball:2026:bowman:cpa-jg:...:num-499
+  //     computedSlug     hiq:baseball:2026:bowman-chrome:cpa-jg:...
+  //     outcome          recordcomp_catalog_unmatched_skip -- the sale dropped
+  //
+  // The recomputation is not wrong in general; it is the ONLY derivation a
+  // vendor row has. But when the caller already holds an identity that a
+  // CHECKLIST ruled on, re-deriving from free text ("Bowman Chrome" in a
+  // setName) and then refusing the sale on the disagreement is the store
+  // overruling the checklist with a string parse. One identity, one
+  // derivation: the ruled one wins (CF-USE-NORMALIZED-FOR-LOOKUPS class).
+  //
+  // The trust is NOT taken on the caller's word. The pin must resolve, by
+  // READ, to a checklist-backed catalog row -- through the twin rule, so a pin
+  // on `<stem>` verifies against its `<stem>:num-499` row. A derived-source
+  // row (`sold-comps-stub`, `ingest-auto-seed`) does not qualify: that would
+  // be the catalog confirming a sale that seeded it. Anything short of a
+  // positive confirmation falls through to the recompute + reconcile below,
+  // unchanged.
+  let pinnedIsAuthoritative = false;
+  const pinnedCandidate = String(input.pinnedHobbyIqCardId ?? "").trim();
+  if (pinnedCandidate.startsWith("hiq:")) {
+    try {
+      const { checklistBackedCatalogRow } = await import("../catalog/catalogIdentityResolver.js");
+      const backed = await checklistBackedCatalogRow(pinnedCandidate, { printRun: printRunFinal });
+      if (backed) {
+        pinnedIsAuthoritative = true;
+        if (backed.id !== hobbyiqCardId) {
+          console.log(JSON.stringify({
+            event: "recordcomp_pinned_identity_honored",
+            source: "soldCompsStore.recordSoldComp",
+            vendorSource: input.source,
+            pinnedSlug: pinnedCandidate,
+            catalogRow: backed.id,
+            catalogSource: backed.source,
+            computedSlug: hobbyiqCardId,
+            detail: "the caller's checklist-ruled identity supersedes the recomputed slug",
+          }));
+        }
+        hobbyiqCardId = backed.id;
+      } else {
+        console.log(JSON.stringify({
+          event: "recordcomp_pinned_identity_unverified",
+          source: "soldCompsStore.recordSoldComp",
+          vendorSource: input.source,
+          pinnedSlug: pinnedCandidate,
+          detail: "pin did not resolve to a checklist-backed catalog row; deriving as usual",
+        }));
+      }
+    } catch (err) {
+      // Fail closed onto today's behaviour, never onto a trusted pin.
+      console.warn(JSON.stringify({
+        event: "recordcomp_pinned_identity_check_failed",
+        source: "soldCompsStore.recordSoldComp",
+        pinnedSlug: pinnedCandidate,
+        error: (err as Error)?.message ?? String(err),
+      }));
+    }
+  }
+
   // CF-CATALOG-RESOLVE-IN-RECORDCOMP (Drew, 2026-08-08). Route through the
   // catalog matcher so the sale lands under the CATALOG's canonical slug —
   // not a computed slug that may drift from user-typed setName. For user-
@@ -995,8 +1137,14 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
   // sale it writes must be resolved the same way, or one transaction carries
   // two identities depending on an env var with no default in the repo.
   // Vendor feeds keep the flag; user-owned sales reconcile regardless.
+  //
+  // D38: an authoritative pin has ALREADY been reconciled -- against the
+  // catalog, by read, to a checklist-backed row. Re-running the matcher over
+  // the free-text fields here could only rebind it onto something the
+  // checklist did not rule, or refuse it as unmatched; both are the cpa-jg
+  // bug. The pin is the reconciliation, so this whole block is skipped.
   const reconcile = process.env.CATALOG_MATCH_ONLY_ENABLED === "true" || USER_SEED_SOURCES.has(String(input.source));
-  if (reconcile && hobbyiqCardId && input.cardYear && sportForSlug) {
+  if (!pinnedIsAuthoritative && reconcile && hobbyiqCardId && input.cardYear && sportForSlug) {
     try {
       const { canonicalize } = await import("../catalog/catalogMatcher.service.js");
       const userSourceMap: Record<string, "user-verified" | "ebay-user-purchase" | "ebay-user-sale" | "manual-user-entry" | "cardhedge" | "cardsight" | "tca" | "ebay-title"> = {
@@ -1128,6 +1276,15 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
     gradeCompany: input.gradeCompany ?? null,
     gradeValue: input.gradeValue ?? null,
     price: input.price,
+    // CF-A-SUBTOTAL-NEVER-REGRESSES-TO-ALL-IN (D38), defense in depth. Both
+    // guard layers gate on the INCOMING basis, so a purchase-derived writer
+    // that forgets to pass one slips an all-in price past them and overwrites a
+    // stored subtotal. A user's eBay PURCHASE never has a better basis than
+    // all-in unless a caller says "subtotal" -- the purchase record is the only
+    // thing that knows, and a caller holding one passes it. Absent that, assume
+    // the buyer's basis: worst case the row is marked all-in over another
+    // all-in, which upserts exactly as before.
+    priceBasis: input.priceBasis ?? (input.source === "ebay-user-purchase" ? "all-in" : null),
     soldAt: input.soldAt,
     observedAt: new Date().toISOString(),
     source: input.source,
@@ -1511,6 +1668,34 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
         }));
       }
     } catch { /* non-fatal — fall through to upsert */ }
+  }
+
+  // CF-A-SUBTOTAL-NEVER-REGRESSES-TO-ALL-IN (D38). The doc id is
+  // price-independent, so this upsert is the moment a later writer without the
+  // purchase record would overwrite the market's price with the buyer's basis.
+  // Point-read the row this write is about to replace and refuse that ONE
+  // direction. Best-effort: a failed read falls through and upserts, which is
+  // exactly today's behaviour.
+  if (doc.priceBasis === "all-in") {
+    try {
+      const { resource: prior } = await c.item(doc.id, doc.cardId).read<SoldCompDoc>();
+      if (keepsExistingPrice(prior, doc)) {
+        console.log(JSON.stringify({
+          event: "sold_comp_price_regression_refused",
+          source: "soldCompsStore.recordSoldComp",
+          id: doc.id,
+          cardId: doc.cardId,
+          keptPrice: prior?.price,
+          keptBasis: prior?.priceBasis,
+          incomingPrice: doc.price,
+          incomingBasis: doc.priceBasis,
+          detail: "an all-in price (item + shipping + tax) does not overwrite a stored subtotal",
+        }));
+        // The sale IS in the pool, at the better price. Report it the way the
+        // content-hash dedup reports the same outcome.
+        return { written: true, deduped: true, id: prior?.id ?? doc.id, hobbyiqCardId: prior?.hobbyiqCardId ?? doc.hobbyiqCardId ?? null };
+      }
+    } catch { /* 404 or read failure — nothing stored to protect */ }
   }
 
   try {

@@ -3498,3 +3498,25 @@ field (#3), Bellingham hand-ruled entry + ingest (#1), CPA-TSY ruling entry
   15 consolidated, 6 ambiguous. **APPLY ×16 HOLDS** for Drew's ambiguous-ledger
   ruling; baseball also needs its 3 collision groups cleared (the pre-flight
   refuses up front by design).
+
+## D38 close-out: the last unmarked ebay-user-purchase writer (2026-08-31)
+
+- **`backend/scripts/backfillUserEbayPurchaseComps.cjs` RETIRED (deleted), not
+  fixed.** It was the last pool writer emitting `source: "ebay-user-purchase"`
+  without a `priceBasis`, writing `h.purchasePrice` (all-in) and minting its own
+  `h.ebayItemId ?? holding::<id>` key — the third-key shape the rest of D38
+  eliminated. It is superseded in full by `backfill-ebay-purchase-comps.cjs`
+  (D37, #1569), which derives price, basis and key from the one shared
+  `sourcePurchaseFor` → `purchaseSaleIdentity` derivation, writes the pinned
+  slug, shards by user, and reconciles. The retired script was referenced
+  nowhere live: absent from the backfill-runner whitelist (`backfill-ebay-purchase-comps`
+  is the whitelisted name), absent from every workflow and cron, and its only
+  commit is the bulk `a6c2ec4e` that created it. A dead unmarked writer is worse
+  than none — an APPLY run of it would have split the pool onto a stale key at
+  an all-in price.
+- **Class sweep re-run over `backend/src` + `backend/scripts`:** every remaining
+  site that writes `source: "ebay-user-purchase"` carries `priceBasis` and
+  derives via `purchaseSaleIdentity` — ebayImportRematch.routes.ts (both emits),
+  ebayAutoHolding.service.ts, ebayReviewQueue.service.ts,
+  portfolioStore.service.ts, and backfill-ebay-purchase-comps.cjs. The class is
+  closed at zero unmarked writers.

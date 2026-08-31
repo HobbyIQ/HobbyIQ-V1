@@ -21,6 +21,7 @@
 
 import { randomUUID } from "crypto";
 import type { PortfolioHolding } from "../../types/portfolioiq.types.js";
+import type { SalePriceBasis } from "./ebayAutoHolding.service.js";
 import {
   readUserDoc,
   writeUserDoc,
@@ -676,18 +677,27 @@ export async function confirmHoldingInDoc(
   const wantsComp = Boolean(
     confirmedCardId && typeof holding.playerName === "string" && holding.playerName.trim(),
   );
-  let compIdentity: { sourceExternalId: string; price: number; soldAt: string } | null = null;
+  // CF-A-SUBTOTAL-NEVER-REGRESSES-TO-ALL-IN (D38, layer 1). priceBasis is part
+  // of the identity, not a detail of the emit: it is derived HERE with the
+  // price it describes, from the same purchase record, and travels with it
+  // into the deferred emit. Deriving the price on the awaited path and the
+  // basis later would be the exact split D38 exists to prevent -- the store's
+  // keepsExistingPrice() can only refuse a subtotal→all-in regression if the
+  // row it is handed says which one this price is.
+  let compIdentity:
+    | { sourceExternalId: string; price: number; priceBasis: SalePriceBasis; soldAt: string }
+    | null = null;
   if (wantsComp) {
     const { purchaseSaleIdentity, sourcePurchaseFor } = await import("./ebayAutoHolding.service.js");
     const sourcePurchase = sourcePurchaseFor(doc, holding);
-    const { sourceExternalId, price } = purchaseSaleIdentity(sourcePurchase, holding as Record<string, unknown>);
+    const { sourceExternalId, price, priceBasis } = purchaseSaleIdentity(sourcePurchase, holding as Record<string, unknown>);
     const soldAt = String(
       (holding as any).purchaseDate
       ?? (holding as any).addedAt
       ?? (holding as any).confirmedAt
       ?? new Date().toISOString(),
     );
-    if (price > 0 && soldAt) compIdentity = { sourceExternalId, price, soldAt };
+    if (price > 0 && soldAt) compIdentity = { sourceExternalId, price, priceBasis, soldAt };
   }
   // The comp title is read off `doc` for the same reason — before the batch
   // loop moves on to the next holding.
@@ -698,7 +708,7 @@ export async function confirmHoldingInDoc(
   // batch it must not start once per holding before the single write lands.
   const afterWrite = () => {
     if (compIdentity) {
-      const { sourceExternalId, price, soldAt } = compIdentity;
+      const { sourceExternalId, price, priceBasis, soldAt } = compIdentity;
       void (async () => {
         try {
           const { recordSoldComp } = await import("./soldCompsStore.service.js");
@@ -714,6 +724,7 @@ export async function confirmHoldingInDoc(
             gradeCompany: (holding as { gradeCompany?: string | null }).gradeCompany ?? null,
             gradeValue: (holding as { gradeValue?: number | null }).gradeValue ?? null,
             price,
+            priceBasis,
             soldAt,
             source: "ebay-user-purchase",
             sourceExternalId,

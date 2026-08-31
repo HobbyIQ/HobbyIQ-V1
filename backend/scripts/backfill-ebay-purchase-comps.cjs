@@ -187,7 +187,7 @@ async function main() {
       if (!identity.cardId) { s.noIdentity++; continue; }
 
       const purchase = sourcePurchaseFor(doc, h);
-      const { sourceExternalId, price } = purchaseSaleIdentity(purchase, h);
+      const { sourceExternalId, price, priceBasis } = purchaseSaleIdentity(purchase, h);
       if (!(price > 0)) { s.noPrice++; continue; }
 
       const purchaseDate = str(h.purchaseDate) || str(purchase?.purchaseDate);
@@ -202,6 +202,12 @@ async function main() {
 
       const row = {
         cardId: identity.cardId,
+        // D38: the identity the holding was RULED onto. The store verifies it
+        // against a checklist-backed catalog row and, on confirmation, uses it
+        // instead of recomputing a slug from these free-text fields -- the
+        // cpa-jg skip, where a recomputed "bowman-chrome" refused a sale whose
+        // holding sat on a checklist "bowman" row.
+        pinnedHobbyIqCardId: identity.hobbyiqCardId,
         vendorCardId: identity.vendorCardId,
         playerName,
         cardYear: typeof h.cardYear === "number" ? h.cardYear : null,
@@ -214,6 +220,7 @@ async function main() {
         gradeCompany: str(h.gradeCompany) || null,
         gradeValue: typeof h.gradeValue === "number" ? h.gradeValue : null,
         price,
+        priceBasis,
         soldAt,
         source: "ebay-user-purchase",
         sourceExternalId,
