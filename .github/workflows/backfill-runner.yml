@@ -154,6 +154,7 @@ on:
 
           - rekey-user-comps
           - collapse-ch-dual-ids
+          - repair-finest-sport-conflation
 
           - audit-all-holdings
           - rename-setkey
@@ -1120,6 +1121,27 @@ jobs:
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=fold-checklist-numbered-twins -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f sources="${{ inputs.sources }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (folded=${N:-0}) — done, no re-dispatch."
+          fi
+
+      - name: Self-relaunch the 1993 Finest sport-conflation repair until the scope is clean
+        if: ${{ !cancelled() && inputs.script == 'repair-finest-sport-conflation' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        working-directory: backend
+        run: |
+          set +e
+          N=$(grep -aoE "^    (RE-KEYED|WOULD RE-KEY) +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          echo "rekeyed=${N:-0}"
+          # CF-RELAUNCH-ONLY-ON-BUDGET: relaunch iff the script printed its budget line.
+          # The repair re-derives its title evidence every run, and a row already
+          # moved to the correct sport no longer reads as wrong — so a relaunch
+          # resumes from where the budget stopped and never re-moves a row.
+          if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
+            echo "::notice::budget hit (rekeyed=${N:-0}) — re-dispatching to continue"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-finest-sport-conflation -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f sources="${{ inputs.sources }}"
+          else
+            echo "::notice::finished within budget (rekeyed=${N:-0}) — done, no re-dispatch."
           fi
 
       - name: Self-relaunch the CPA product rule until the slot is decided
