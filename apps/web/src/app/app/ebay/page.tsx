@@ -17,6 +17,8 @@ import {
   fetchPendingReviewHoldings,
   generatePendingReviewSuggestions,
   confirmPendingReviewHolding,
+  confirmPendingReviewHoldingsBatch,
+  BATCH_CONFIRM_MAX,
   backfillPurchaseHoldings,
   type EbayStatus,
   type EbayPoliciesResponse,
@@ -24,6 +26,7 @@ import {
   type PortfolioHolding,
   type EbayImportSummary,
   type PendingReviewHolding,
+  type BatchConfirmItemResult,
 } from "@/lib/api";
 import { formatUSD, formatCardTitle } from "@/lib/format";
 import { EbayListModal } from "@/components/EbayListModal";
@@ -590,12 +593,27 @@ function ReviewQueueSection() {
   const [backfilling, setBackfilling] = useState(false);
   const [backfillMsg, setBackfillMsg] = useState<string | null>(null);
 
+  // CF-APPROVE-MULTIPLES (Drew, 2026-08-31). Which rows are ticked, and the
+  // per-row outcome of the last batch. rowStatus is keyed by holding id and
+  // survives the row leaving the list only for rows that FAILED — a confirmed
+  // row is removed outright, which is the optimistic part.
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [batchBusy, setBatchBusy] = useState(false);
+  const [rowStatus, setRowStatus] = useState<
+    Record<string, { status: BatchConfirmItemResult["status"]; reason?: string }>
+  >({});
+  const [batchMsg, setBatchMsg] = useState<string | null>(null);
+
   async function load() {
     setLoading(true);
     setError(null);
     try {
       const res = await fetchPendingReviewHoldings();
       setHoldings(res.holdings ?? []);
+      // A reload is a fresh queue: stale ticks would silently re-approve rows
+      // the user never looked at.
+      setSelected(new Set());
+      setRowStatus({});
     } catch (err) {
       const e = err as { message?: string };
       setError(e.message ?? "Failed to load review queue");
@@ -681,6 +699,80 @@ function ReviewQueueSection() {
     }
   }
 
+  const visibleIds = (holdings ?? []).map((h) => h.id);
+  const selectedVisible = visibleIds.filter((id) => selected.has(id));
+  const allVisibleSelected = visibleIds.length > 0 && selectedVisible.length === visibleIds.length;
+
+  function toggleRow(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAllVisible() {
+    setSelected(allVisibleSelected ? new Set() : new Set(visibleIds));
+  }
+
+  // CF-APPROVE-MULTIPLES (Drew, 2026-08-31). One request per chunk of
+  // BATCH_CONFIRM_MAX; the server caps the batch because each holding still
+  // costs its own catalog work even though the 1.7 MB portfolio doc read/write
+  // is amortized across the whole batch.
+  async function onApproveSelected() {
+    const ids = selectedVisible;
+    if (ids.length === 0) return;
+    setBatchBusy(true);
+    setError(null);
+    setBatchMsg(null);
+    setRowStatus({});
+
+    const chunks: string[][] = [];
+    for (let i = 0; i < ids.length; i += BATCH_CONFIRM_MAX) {
+      chunks.push(ids.slice(i, i + BATCH_CONFIRM_MAX));
+    }
+
+    try {
+      const all: BatchConfirmItemResult[] = [];
+      for (const chunk of chunks) {
+        const res = await confirmPendingReviewHoldingsBatch(chunk);
+        all.push(...(res.results ?? []));
+      }
+
+      const confirmedIds = new Set(
+        all.filter((r) => r.status === "confirmed").map((r) => r.holdingId),
+      );
+      const failures = all.filter((r) => r.status !== "confirmed");
+
+      // Optimistic: confirmed rows leave the queue immediately. Failures stay
+      // put, carrying the reason they did not land, so nothing disappears
+      // silently.
+      setHoldings((prev) => (prev ?? []).filter((h) => !confirmedIds.has(h.id)));
+      setSelected(new Set(failures.map((r) => r.holdingId)));
+      setRowStatus(
+        Object.fromEntries(failures.map((r) => [r.holdingId, { status: r.status, reason: r.reason }])),
+      );
+
+      setBatchMsg(
+        failures.length === 0
+          ? `Approved ${confirmedIds.size} card${confirmedIds.size === 1 ? "" : "s"}.`
+          : `Approved ${confirmedIds.size} of ${all.length}. ${failures.length} still need attention.`,
+      );
+    } catch (err) {
+      const e = err as { message?: string };
+      setError(e.message ?? "Batch approve failed");
+    } finally {
+      setBatchBusy(false);
+    }
+  }
+
+  function labelForRowStatus(s: BatchConfirmItemResult["status"], reason?: string): string {
+    if (s === "not-pending") return "Already approved elsewhere — refresh";
+    if (s === "not-found") return "No longer in your queue — refresh";
+    return reason ? `Failed: ${reason}` : "Failed";
+  }
+
   return (
     <div className="hiq-card p-6 mb-6">
       <div className="flex items-baseline justify-between mb-4">
@@ -721,6 +813,37 @@ function ReviewQueueSection() {
           {backfillMsg}
         </div>
       )}
+      {/* CF-APPROVE-MULTIPLES (Drew, 2026-08-31). Bulk bar — only meaningful
+          when there is more than one row to act on. */}
+      {holdings && holdings.length > 0 && (
+        <div className="flex items-center gap-3 mb-3 flex-wrap">
+          <label className="flex items-center gap-2 text-xs cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={allVisibleSelected}
+              ref={(el) => {
+                if (el) el.indeterminate = selectedVisible.length > 0 && !allVisibleSelected;
+              }}
+              onChange={toggleSelectAllVisible}
+              disabled={batchBusy}
+              aria-label="Select all visible"
+            />
+            Select all ({visibleIds.length})
+          </label>
+          <button
+            onClick={() => void onApproveSelected()}
+            disabled={batchBusy || selectedVisible.length === 0}
+            className="hiq-btn-primary text-xs disabled:opacity-60"
+          >
+            {batchBusy
+              ? `Approving ${selectedVisible.length}…`
+              : `Approve selected${selectedVisible.length > 0 ? ` (${selectedVisible.length})` : ""}`}
+          </button>
+          {batchMsg && (
+            <span className="text-xs text-[color:var(--color-muted)]">{batchMsg}</span>
+          )}
+        </div>
+      )}
       {error && (
         <div className="text-sm mb-3" style={{ color: "var(--color-danger)" }}>
           {error}
@@ -758,10 +881,26 @@ function ReviewQueueSection() {
                 className="border border-[color:var(--color-border)] rounded p-3"
               >
                 <div className="flex items-start justify-between gap-3">
+                  <input
+                    type="checkbox"
+                    className="mt-1"
+                    checked={selected.has(h.id)}
+                    onChange={() => toggleRow(h.id)}
+                    disabled={batchBusy || !!approving[h.id]}
+                    aria-label={`Select ${suggested}`}
+                  />
                   <div className="min-w-0 flex-1">
                     <div className="text-sm font-medium truncate">
                       {suggested}
                     </div>
+                    {rowStatus[h.id] && (
+                      <div
+                        className="text-xs mt-1"
+                        style={{ color: "var(--color-danger)" }}
+                      >
+                        {labelForRowStatus(rowStatus[h.id].status, rowStatus[h.id].reason)}
+                      </div>
+                    )}
                     <div className="text-xs text-[color:var(--color-muted)] mt-1">
                       {detail}
                     </div>
