@@ -147,6 +147,7 @@ on:
 
 
           - fold-unnumbered-twins
+          - fold-umbrella-to-series
           - fold-checklist-numbered-twins
           - apply-cpa-product-rule
           - consolidate-catalog-duplicates
@@ -250,6 +251,16 @@ on:
         type: string
       setkey_like:
         description: "Substring the setKey must contain (e.g. bowman). EMPTY = every setKey. Read by dedupe-catalog-partition-shadows and rehome-catalog-rows-to-own-partition."
+        required: false
+        default: ""
+        type: string
+      sport:
+        description: "fold-umbrella-to-series (D39): the ONE sport to scope the fold to (e.g. hockey). REQUIRED by that script -- it refuses an empty scope."
+        required: false
+        default: ""
+        type: string
+      setkey:
+        description: "fold-umbrella-to-series (D39): the umbrella setKey being folded onto its series products (e.g. upper-deck). REQUIRED by that script -- it refuses an empty scope, and refuses an umbrella it has no ruling for."
         required: false
         default: ""
         type: string
@@ -642,6 +653,13 @@ jobs:
           SCOPE: ${{ inputs.scope }}
           # dedupe-catalog-partition-shadows: which products to sweep.
           SETKEY_LIKE: ${{ inputs.setkey_like }}
+          # fold-umbrella-to-series (D39, CF-THE-UMBRELLA-FOLDS-ONTO-ITS-SERIES).
+          # The scope is SPORT + YEARS + SETKEY and the script refuses when any
+          # of the three is empty -- a whole-scope write must be asked for by
+          # name (CF-A-WHOLE-SOURCE-RETIRE-NEEDS-ITS-NAME). YEARS is the shared
+          # input above.
+          SPORT: ${{ inputs.sport }}
+          SETKEY: ${{ inputs.setkey }}
           # ingest-checklist-csv-to-catalog: a committed CSV dir (e.g. the
           # drew-ruled Bellingham entry) ingested through the ONE generic
           # ingester; SOURCE decides authority and the script refuses non-
@@ -734,6 +752,33 @@ jobs:
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=ingest-checklists-end-to-end -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f years="${{ inputs.years }}" -f phases="${{ inputs.phases }}" -f titles="${{ inputs.titles }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (phases_done=${N:-0}) — done, no re-dispatch."
+          fi
+      - name: Self-relaunch the umbrella fold until nothing is left to fold
+        # D39. Same contract as every fleet script here: fold-umbrella-to-series
+        # stops at its OWN 140-minute budget and PRINTS its summary, so the
+        # "FOLDED N" line exists for this step to read. A run killed by the
+        # 150-minute step ceiling prints nothing, the relaunch reads 0, and the
+        # fleet stops silently with every run green.
+        if: ${{ !cancelled() && inputs.script == 'fold-umbrella-to-series' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        working-directory: backend
+        run: |
+          set +e
+          N=$(grep -aoE "^  (FOLDED|WOULD FOLD) +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          echo "folded=${N:-0}"
+          # CF-RELAUNCH-ONLY-ON-BUDGET (#1361, D18 2026-08-29). Relaunch iff the
+          # script printed its budget marker — never on a count. A count gate
+          # loops forever on a slot down to rows it cannot change, and stops
+          # early on a budget stop that happened to change nothing. The inputs
+          # are forwarded verbatim so the relaunch is the same dispatch — the
+          # scope (sport/years/setkey) included, or the relaunch would refuse.
+          if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
+            echo "::notice::budget hit (folded=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=fold-umbrella-to-series -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sport="${{ inputs.sport }}" -f years="${{ inputs.years }}" -f setkey="${{ inputs.setkey }}" -f limit="${{ inputs.limit }}"
+          else
+            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (folded=${N:-0}) — done, no re-dispatch."
           fi
       - name: Self-relaunch the parallel repair until nothing is folded
         # Stops at its own 140-minute budget and PRINTS its summary, so
