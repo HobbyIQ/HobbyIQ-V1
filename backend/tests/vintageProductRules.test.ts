@@ -60,7 +60,8 @@ describe("CF-VINTAGE-PRODUCT-RULES", () => {
       ["Bowman", "bowman"],
       ["Bowman's Best", "bowmans-best"],
       ["Donruss", "panini-donruss"],
-      ["Donruss Optic", "panini-optic"],
+      // D31 (Drew 2026-08-31): Optic is ONE product, spelled donruss-optic.
+      ["Donruss Optic", "donruss-optic"],
       ["Donruss Elite", "donruss-elite"],
       ["Donruss Studio", "donruss-studio"],
       ["Fleer", "fleer"],

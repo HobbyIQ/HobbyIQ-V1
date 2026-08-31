@@ -23,15 +23,44 @@
  *
  * Output is the work list, ordered by how many sales are stranded.
  *
+ * CF-GAP-DIGEST-TRIAGE (Drew, 2026-08-31). The report now PERSISTS each
+ * night's result as a dated artifact under backend/data/gap-reports/ and
+ * diffs against the prior night, so the morning mail can say what CLOSED
+ * rather than re-listing standing gaps. Same convention as the multiplier
+ * artifacts: a dated file plus a `-latest.json` pointer.
+ *
  * Usage:
  *   COSMOS_CONNECTION_STRING="..." \
  *   node backend/scripts/checklist-gap-report.cjs [--min-comps=500] [--top=60] [--json=path]
+ *                                                 [--persist] [--history-dir=path] [--date=YYYY-MM-DD]
+ *
+ * --persist writes the dated artifact + latest pointer and prints the
+ * night-over-night diff. It writes ONLY to the history directory; it never
+ * touches the catalog.
  */
 
 const path = require("path");
+const fs = require("node:fs");
 const backend = path.join(__dirname, "..");
 const { CosmosClient } = require(path.join(backend, "node_modules/@azure/cosmos"));
 const { canAdjudicate } = require(path.join(backend, "dist/services/catalog/catalogAuthority.service.js"));
+const { diffGapReports, diffHeadline } = require(path.join(backend, "dist/services/catalog/gapHistory.service.js"));
+
+function has(name) { return process.argv.includes(`--${name}`); }
+
+/** The prior night's artifact: the newest dated file that is not today's. */
+function loadPrior(dir, todayFile) {
+  if (!fs.existsSync(dir)) return { gaps: null, date: null };
+  const files = fs.readdirSync(dir)
+    .filter((f) => /^gap-report-\d{4}-\d{2}-\d{2}\.json$/.test(f) && f !== todayFile)
+    .sort();
+  const last = files[files.length - 1];
+  if (!last) return { gaps: null, date: null };
+  try {
+    const doc = JSON.parse(fs.readFileSync(path.join(dir, last), "utf8"));
+    return { gaps: doc.gaps ?? doc, date: doc.date ?? last.slice(11, 21) };
+  } catch { return { gaps: null, date: null }; }
+}
 
 function arg(name, dflt) {
   const hit = process.argv.find((a) => a.startsWith(`--${name}=`));
@@ -178,8 +207,38 @@ async function main() {
 ${needed.length} products · ${cards.toLocaleString()} cards uncovered · ${stranded.toLocaleString()} sales behind them`);
 
   if (JSON_OUT) {
-    require("node:fs").writeFileSync(JSON_OUT, JSON.stringify(needed, null, 1));
+    fs.writeFileSync(JSON_OUT, JSON.stringify(needed, null, 1));
     console.log(`wrote ${JSON_OUT}`);
+  }
+
+  // CF-GAP-DIGEST-TRIAGE. Persist tonight's list and diff against the prior
+  // night. Writes land ONLY under the history directory.
+  if (has("persist")) {
+    const dir = arg("history-dir", path.join(backend, "data/gap-reports"));
+    const date = arg("date", new Date().toISOString().slice(0, 10));
+    const todayFile = `gap-report-${date}.json`;
+    const { gaps: prior, date: priorDate } = loadPrior(dir, todayFile);
+
+    fs.mkdirSync(dir, { recursive: true });
+    const doc = { date, minComps: MIN, generatedAt: new Date().toISOString(), gaps: needed };
+    fs.writeFileSync(path.join(dir, todayFile), JSON.stringify(doc, null, 1));
+    fs.writeFileSync(path.join(dir, "gap-report-latest.json"), JSON.stringify(doc, null, 1));
+    console.log(`\npersisted ${path.join(dir, todayFile)} (+ gap-report-latest.json)`);
+
+    const d = diffGapReports(needed, prior, priorDate);
+    console.log(`\nNIGHT-OVER-NIGHT: ${diffHeadline(d)}`);
+    console.log(`  closed=${d.closed.length}  new=${d.added.length}  moved=${d.changed.length}  unchanged=${d.unchanged.length}`);
+    console.log(`  uncoveredClosed=${d.uncoveredClosed}  checklistRowsGained=${d.checklistRowsGained}`);
+    for (const g of d.closed.slice(0, 10)) {
+      console.log(`  CLOSED  ${g.sport} ${g.year} ${g.setKey} (was ${g.uncovered} uncovered)`);
+    }
+    for (const g of d.added.slice(0, 10)) {
+      console.log(`  NEW     ${g.sport} ${g.year} ${g.setKey} (${g.uncovered} uncovered)`);
+    }
+    for (const c of d.changed.slice(0, 10)) {
+      const s = c.uncoveredDelta <= 0 ? "" : "+";
+      console.log(`  MOVED   ${c.sport} ${c.year} ${c.setKey}  uncovered ${c.uncoveredBefore}->${c.uncoveredAfter} (${s}${c.uncoveredDelta})  checklist +${c.checklistRowsDelta}`);
+    }
   }
   return 0;
 }

@@ -70,7 +70,8 @@ describe("CF-COLLAPSED-SETKEY-AUDIT batch 2", () => {
       ["Fleer Stickers", "fleer-stickers"],
       ["Flair Showcase", "flair"],
       ["Donruss Elite", "donruss-elite"],
-      ["Donruss Optic", "panini-optic"],
+      // D31 (Drew 2026-08-31): Optic is ONE product, spelled donruss-optic.
+      ["Donruss Optic", "donruss-optic"],
       ["Bowman Platinum", "bowman-platinum"],
       ["Bowman's Best", "bowmans-best"],
     ];

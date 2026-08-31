@@ -77,9 +77,9 @@ export interface ProductSetKey {
    *  the key and its `names` take part in productSetKeyForName, ahead of the
    *  regex vocabulary. Every other entry carries family / parent data only
    *  and leaves its spelling to the vocabulary's own ordering — "Bowman
-   *  Chrome Prospects" must still fold to bowman-chrome, "Donruss Optic" to
-   *  panini-optic, "Upper Deck SPx Finite" to spx-finite, and a
-   *  `bowman-chrome` name matched as a segment run would pre-empt all three. */
+   *  Chrome Prospects" must still fold to bowman-chrome and "Upper Deck SPx
+   *  Finite" to spx-finite, and a `bowman-chrome` name matched as a segment
+   *  run would pre-empt both. */
   readonly spelled?: boolean;
   /** Other spellings of the same product, as slugify emits them with the
    *  year and the sport already stripped. A single-segment name matches a
@@ -185,6 +185,15 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
   P("upper-deck"),
   S("upper-deck-series-1", { names: ["upper-deck-series-one"], family: "upper-deck", parent: "upper-deck", refines: "upper-deck" }),
   S("upper-deck-series-2", { names: ["upper-deck-series-two"], family: "upper-deck", parent: "upper-deck", refines: "upper-deck" }),
+  // D39 (Drew, 2026-08-31): the hockey umbrella folds onto its SERIES products,
+  // and Extended Series is one of them. It was the only named destination the
+  // table did not spell, so "2024-25 Upper Deck Extended Series" resolved to
+  // the bare `upper-deck` umbrella -- measured 2026-08-31: 4,642 hockey 2024
+  // catalog rows carry `upper-deck-extended-series` in their setKey FIELD while
+  // every one of their ids says `upper-deck` (the D23 defect, on a product the
+  // table had no row for). Without this entry the fold has nowhere to send the
+  // 146 Extended Series sales it can name.
+  S("upper-deck-extended-series", { names: ["upper-deck-extended"], family: "upper-deck", parent: "upper-deck", refines: "upper-deck" }),
   ...["upper-deck-black-diamond", "upper-deck-retro", "upper-deck-choice", "upper-deck-mvp"].map((k) => P(k, { family: "upper-deck", parent: "upper-deck" })),
   P("sp-authentic", { parent: "upper-deck" }),
   P("sp-prospects", { parent: "upper-deck" }),
@@ -229,6 +238,32 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
   P("panini-donruss", { family: "donruss" }),
   P("donruss-elite"),
   P("donruss-studio"),
+  // D31, Drew 2026-08-31: "panini-optic and donruss-optic are ONE product,
+  // canonical key donruss-optic" -- the product as every checklist names it.
+  // Measured read-only 2026-08-31: donruss-optic holds the checklist rows
+  // (FB2023 16,055 un-graded, FB2024 15,988, FB2025 19,466, BB2024 30,998;
+  // checklistcenter 28,939 + 2,155, checklistinsider 2,054 + 420,
+  // beckett-checklist 206) while the panini-optic FIELD holds 5,718 un-graded
+  // rows and ONE checklist-backed FB2023 row -- yet 142,352 un-graded catalog
+  // rows and 344,978 pool rows still carry a :panini-optic: id STEM (54,873
+  // of them FB2023), against zero pool rows on :donruss-optic:. Same split
+  // pool, opposite direction from Finest: there the id was already right and
+  // the field lagged; here the FIELD is right and the ID lags.
+  //
+  // NO ERA RULE. Donruss needs spellForEra because the line spans two owners
+  // (1981 Donruss, 2009+ Panini Donruss). Optic does not: it launched in 2016,
+  // wholly inside the Panini era. Measured 2026-08-31 -- donruss-optic spans
+  // 2016-2025 with ZERO rows before 2016, and the only two pre-2016
+  // panini-optic rows are a sales-attested mis-parse ("2003 Panini Optic
+  // Basketball", a product that never existed). One spelling in every year, so
+  // the Donruss policy precedent applies by NOT applying: an era switch here
+  // would have no boundary to sit on.
+  //
+  // The neighbours that must NOT collapse into it (measured the same day):
+  // panini-contenders-optic 12,133, leaf-optichrome 81,298,
+  // panini-chronicles-optic, and the contenders-optic-* insert keys. "Optic"
+  // names a stock those products borrow; it is not this product.
+  S("donruss-optic", { names: ["panini-optic", "panini-donruss-optic"], parent: "panini" }),
 
   // -- Panini (the maker is the parent; every product its own family) --------
   P("panini"),
@@ -236,7 +271,7 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
   P("panini-prizm-draft-picks", { family: "panini-prizm", parent: "panini-prizm" }),
   P("panini-prizm-wnba", { family: "panini-prizm", parent: "panini-prizm" }),
   P("panini-prizm-monopoly-wnba", { family: "panini-prizm", parent: "panini-prizm" }),
-  ...["panini-select", "panini-mosaic", "panini-optic", "panini-contenders", "panini-immaculate", "panini-flawless",
+  ...["panini-select", "panini-mosaic", "panini-contenders", "panini-immaculate", "panini-flawless",
     "panini-national-treasures", "panini-absolute", "panini-chronicles", "panini-phoenix", "panini-illusions",
     "panini-obsidian", "panini-spectra", "panini-revolution", "panini-crown-royale", "panini-one-one", "panini-playoff",
     "panini-score", "panini-classics", "panini-legacy", "panini-threads", "panini-rookies-and-stars", "panini-zenith",
