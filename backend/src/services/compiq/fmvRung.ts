@@ -69,6 +69,21 @@ export type FmvRungLabel =
    *  observed anchor x empirical grade ratio (or a reference price). The
    *  entry's `estimatedSource` names the mechanism. */
   | "grade-curve-estimate"
+  /** CF-GRADED-POOL-INVERSE (Drew, 2026-08-31): "we should be able to price
+   *  from graded cards to raw if it is unavailable with empirical data."
+   *  The RAW/parent tier had no pool, so this identity's OWN graded children
+   *  priced it — the best-evidenced graded tier's projection DIVIDED by that
+   *  tier's empirical GRADE_CALIBRATION multiplier. The exact inverse of the
+   *  raw→graded fill, on the same byTier / per-sport tables.
+   *
+   *  It is its own label rather than `grade-curve-estimate` because its
+   *  provenance is different in the way that matters to a reader: the number
+   *  came from real sales OF THIS CARD (at another grade), not from a
+   *  neighbouring identity or a family baseline. Same identity only — never a
+   *  different card number, never cross-auto. Still a fallback rung: real
+   *  sales, wrong grade, so `isExactPoolRung` is false and the divergence
+   *  digest does not notify on it. */
+  | "graded-pool-inverse"
   /** siblingCardPriceFallback (D4 PR 5): ANOTHER card — the same player's
    *  Base Auto / Base card — × the measured parallel premium. A model over
    *  a different identity; persisted only when the holding's own exact
