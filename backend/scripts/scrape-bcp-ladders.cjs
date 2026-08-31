@@ -535,6 +535,56 @@ const ODDS = /\b1\s*:\s*\d/;
 const hasOdds = (s) => ODDS.test(String(s ?? ""));
 
 /**
+ * CF-RARITY-IS-NOT-A-PRINT-RUN (Drew ruling, 2026-08-30). #1571 §5 said odds
+ * "must map to a rarity field"; until now there was no such field, so every
+ * figure the guards refuse was simply DROPPED.
+ *
+ * printRun stays SERIAL-ONLY TRUTH: a number stamped on the card itself. It is
+ * blank whenever the page did not state one, and this field never fills it in.
+ *
+ * `rarity` is the descriptive companion -- a set-level production or scarcity
+ * statement the page publishes that is NOT a per-card serial:
+ *
+ *   1987 Topps Tiffany   "approximately 30,000 sets produced"  -> set production
+ *   1997 Finest          "the easiest to pull (1:12/packs)"    -> pack odds
+ *   1996 Metal Universe  "inserted 1:24 packs"                 -> pack odds
+ *
+ * Descriptive ONLY. Nothing in valuation reads it: a rarity string must never
+ * become a multiplier or a synthetic print run, because a set-production figure
+ * ("30,000 sets") and a serial ("/30000") are different claims about different
+ * objects, and conflating them is exactly the well-formed-wrong-row failure the
+ * range scoping exists to prevent.
+ */
+/** A pack-odds statement, verbatim: "1:12/packs", "inserted 1:24 packs". */
+const ODDS_PHRASE = /\b(?:inserted\s+)?1\s*:\s*\d[\d,]*(?:\s*(?:\/|\s)\s*(?:hobby |retail )?(?:packs?|boxes?|cases?))?/i;
+/** A set-production statement: "approximately 30,000 sets produced". */
+const SET_PRODUCTION = /(?:produced|made|printed|issued)\s+(?:approximately|approx\.?|about|~|an estimated|estimated)?\s*(\d[\d,]{2,})\s*(?:factory\s+)?sets?/i;
+/** The reverse wording: "production run of 30,000 sets". */
+const SET_PRODUCTION_ALT = /(?:approximately|approx\.?|est\.?|estimated|about|~)?\s*(\d[\d,]{2,})\s*(?:factory\s+)?sets?(?:\s+[^\d.]{0,40})?\s*(?:were|was)?\s*(?:produced|made|printed|issued)|(?:production|print)\s+(?:run|figure)\s+of\s*(?:approximately|approx\.?|about|~)?\s*(\d[\d,]{2,})\s*(?:sets?)?/i;
+
+/**
+ * The rarity statement a text carries, or null.
+ *
+ * Returns the page's OWN WORDS (trimmed), never a number we invented, so the
+ * figure stays auditable back to the source sentence.
+ */
+function extractRarity(text) {
+  const t = String(text ?? "").replace(/\s+/g, " ").trim();
+  if (!t) return null;
+  const odds = t.match(ODDS_PHRASE);
+  if (odds) return odds[0].trim();
+  const prod = t.match(SET_PRODUCTION) || t.match(SET_PRODUCTION_ALT);
+  if (prod) {
+    const n = Number(String(prod[1] ?? prod[2]).replace(/,/g, ""));
+    // A "set production" figure below a plausible factory-set run is far more
+    // likely a serial statement caught by the wrong regex; refuse rather than
+    // mislabel. Blank is unknown.
+    if (Number.isFinite(n) && n >= 1000) return prod[0].trim();
+  }
+  return null;
+}
+
+/**
  * CF-A-NAMED-SUBSET-IS-A-RANGE (#1571 §3.2, the other half).
  *
  * Black Diamond states its rule runs by SUBSET NAME, not by card range:
@@ -622,12 +672,15 @@ function parseLadder(parallelsBody, playerNames = new Set(), opts = {}) {
   const { players: scopePlayers = null, requireRange = false, subsetRuns = null } = opts;
   const rungs = new Map();
   let rosterLines = 0;
-  const putFor = (rawName, run, rawNote, cardRange, players) => {
+  const putFor = (rawName, run, rawNote, cardRange, players, rarity) => {
     const split = splitAnnotation(rawName);
     const name = split.name, note = rawNote ?? split.note ?? null;
     run = run ?? split.run ?? null;
     // Pack odds ("1:12/packs") are a rarity statement, not a print run.
+    // The figure is no longer DROPPED: it moves to `rarity`, which is
+    // descriptive and never feeds printRun. CF-RARITY-IS-NOT-A-PRINT-RUN.
     if (run != null && hasOdds(note)) run = null;
+    rarity = rarity ?? extractRarity(note) ?? null;
     const k = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
     if (!k) return;
     if (playerNames.has(foldName(name)) || playerNames.has(foldRoster(name))) { rosterLines++; return; }
@@ -641,11 +694,11 @@ function parseLadder(parallelsBody, playerNames = new Set(), opts = {}) {
     const rk = k
       + (cardRange ? "@" + cardRange.map((s) => s.join("-")).join(",") : "")
       + (players && players.length ? "#" + players.map(foldName).join("+") : "");
-    const rec = { name, printRun: run ?? null, note, cardRange: cardRange ?? null, players: players ?? null };
+    const rec = { name, printRun: run ?? null, note, cardRange: cardRange ?? null, players: players ?? null, rarity: rarity ?? null };
     if (!rungs.has(rk)) rungs.set(rk, rec);
-    else { const r = rungs.get(rk); if (run && !r.printRun) r.printRun = run; if (note && !r.note) r.note = note; }
+    else { const r = rungs.get(rk); if (run && !r.printRun) r.printRun = run; if (note && !r.note) r.note = note; if (rarity && !r.rarity) r.rarity = rarity; }
   };
-  const put = (rawName, run, rawNote, cardRange) => putFor(rawName, run, rawNote, cardRange, scopePlayers);
+  const put = (rawName, run, rawNote, cardRange, rarity) => putFor(rawName, run, rawNote, cardRange, scopePlayers, rarity);
 
   // named-rung subsections; umbrella headings organize, they do not name a card
   for (const m of parallelsBody.matchAll(/<h[34] id="([^"]+?)(?:_\d+)?">/g)) {
@@ -668,7 +721,9 @@ function parseLadder(parallelsBody, playerNames = new Set(), opts = {}) {
     const run = text.match(RUN_NOTE);
     const n = run ? Number((run[1] || run[2] || "").replace(/,/g, "")) : null;
     const ok = n && n >= 1 && n <= 100000 && !hasOdds(text);
-    put(name, ok ? n : null, null, null);
+    // The heading's own text may state pack odds or a set-production figure.
+    // Those are refused as a print run and RECORDED as rarity.
+    put(name, ok ? n : null, null, null, extractRarity(text));
   }
 
   // list rungs: <li>Name (note)</li>, rejecting card lines and prose
@@ -708,6 +763,9 @@ function parseLadder(parallelsBody, playerNames = new Set(), opts = {}) {
     let n = run ? Number((run[1] || run[2] || "").replace(/,/g, "")) : null;
     if (n == null && ONE_OF_ONE.test(note)) n = 1;      // "one-of-one" is /1
     if (hasOdds(note)) n = null;                        // 1:12 is odds, not a run
+    // Whatever the guards refuse is still a fact the page stated. Keep it in
+    // the descriptive field rather than dropping it. CF-RARITY-IS-NOT-A-PRINT-RUN.
+    const rungRarity = extractRarity(note) || extractRarity(text);
     // CF-A-MULTI-FIGURE-CLAUSE-HAS-NO-SINGLE-RUN. "Blue (Class 1,
     // serial-numbered to 150; Class 2, ... 99; Class 3, ... 50)" states THREE
     // runs for three classes. RUN_NOTE returns the first (150), which would
@@ -742,7 +800,7 @@ function parseLadder(parallelsBody, playerNames = new Set(), opts = {}) {
       }
       continue;
     }
-    put(name, n && n >= 1 && n <= 100000 ? n : null, cleanNote, cardRange);
+    put(name, n && n >= 1 && n <= 100000 ? n : null, cleanNote, cardRange, rungRarity);
   }
   const out = [...rungs.values()];
 
@@ -961,7 +1019,12 @@ async function main() {
           if (sc.prefix !== from) scopeCards = cards.map((c) => ({ ...c, num: sc.prefix + c.num.replace(/^[A-Z]{1,6}-/i, "") }));
         }
       }
-      const lines = ["category,cardNumber,parallel,isAuto,printRun,player,parallelNote"];
+      // CF-RARITY-IS-NOT-A-PRINT-RUN: `rarity` is a new OPTIONAL trailing
+      // column. printRun stays serial-only; a page figure that is production
+      // or odds lands here instead of being dropped. See
+      // backend/docs/reference/checklist-csv-contract.md.
+      const lines = ["category,cardNumber,parallel,isAuto,printRun,player,parallelNote,rarity"];
+      const setRarity = extractRarity(detag(section(html, "Parallels", 2))) || null;
       for (const c of scopeCards) {
         lines.push(["base", csvEsc(c.num), "Base", "false", "", csvEsc(c.player)].join(","));
         for (const r of sc.rungs) {
@@ -973,7 +1036,7 @@ async function main() {
           if (!cardInRange(c.num, r.cardRange)) continue;
           if (r.players && r.players.length && !matchesExceptionPlayer(c.player, r.players)) continue;
           const nm = sc.isOwnProduct ? rungNameInScope(r.name, sc.title) : r.name;
-          lines.push(["base", csvEsc(c.num), csvEsc(nm), "false", r.printRun ?? "", csvEsc(c.player), csvEsc(r.note ?? "")].join(","));
+          lines.push(["base", csvEsc(c.num), csvEsc(nm), "false", r.printRun ?? "", csvEsc(c.player), csvEsc(r.note ?? ""), csvEsc(r.rarity ?? setRarity ?? "")].join(","));
         }
       }
       // Inserts belong to the page's own product, never to a qualified scope.
@@ -986,7 +1049,7 @@ async function main() {
             lines.push([csvEsc(cat), csvEsc(c.num), "", "false", "", csvEsc(c.player)].join(","));
             insertRows++;
             for (const r of ins.ladder) {
-              lines.push([csvEsc(cat), csvEsc(c.num), csvEsc(r.name), "false", r.printRun ?? "", csvEsc(c.player), csvEsc(r.note ?? "")].join(","));
+              lines.push([csvEsc(cat), csvEsc(c.num), csvEsc(r.name), "false", r.printRun ?? "", csvEsc(c.player), csvEsc(r.note ?? ""), csvEsc(r.rarity ?? "")].join(","));
               insertRows++;
             }
           }
@@ -1006,7 +1069,8 @@ async function main() {
         sourceUrl: url, scope: sc.title, scopeOfPage: setName,
         cardNumberPrefix: sc.prefix, prefixDerivedFrom: sc.prefixVia,
         prefixUnresolved: (sc.isOwnProduct || sc.prefix != null) && sc.prefix == null,
-        ladder: sc.rungs.map((r) => ({ name: sc.isOwnProduct ? rungNameInScope(r.name, sc.title) : r.name, printRun: r.printRun })),
+        ladder: sc.rungs.map((r) => ({ name: sc.isOwnProduct ? rungNameInScope(r.name, sc.title) : r.name, printRun: r.printRun, rarity: r.rarity ?? null })),
+        setRarity,
       }, null, 1));
       pageRows += lines.length - 1;
       perProduct.push(`${sc.setKey}${sc.prefix ? " " + sc.prefix : ""} ${scopeCards.length}x${sc.rungs.length + 1}=${f(lines.length - 1)}${insertRows ? " +" + f(insertRows) + " insert" : ""}`);
@@ -1040,6 +1104,8 @@ module.exports = {
   // boundary, and the odds guard, each pinned directly by its own test.
   parseCardRange, cardInRange, splitAtException, exceptionPlayers, parseSubsetRuns, subsetRanges,
   matchesExceptionPlayer, hasRangeClause, hasOdds, splitAnnotation, detag,
+  // CF-RARITY-IS-NOT-A-PRINT-RUN: the descriptive companion to printRun.
+  extractRarity,
 };
 
 if (require.main === module) {
