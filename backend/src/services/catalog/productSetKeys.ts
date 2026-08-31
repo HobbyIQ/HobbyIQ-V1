@@ -185,6 +185,15 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
   P("upper-deck"),
   S("upper-deck-series-1", { names: ["upper-deck-series-one"], family: "upper-deck", parent: "upper-deck", refines: "upper-deck" }),
   S("upper-deck-series-2", { names: ["upper-deck-series-two"], family: "upper-deck", parent: "upper-deck", refines: "upper-deck" }),
+  // D39 (Drew, 2026-08-31): the hockey umbrella folds onto its SERIES products,
+  // and Extended Series is one of them. It was the only named destination the
+  // table did not spell, so "2024-25 Upper Deck Extended Series" resolved to
+  // the bare `upper-deck` umbrella -- measured 2026-08-31: 4,642 hockey 2024
+  // catalog rows carry `upper-deck-extended-series` in their setKey FIELD while
+  // every one of their ids says `upper-deck` (the D23 defect, on a product the
+  // table had no row for). Without this entry the fold has nowhere to send the
+  // 146 Extended Series sales it can name.
+  S("upper-deck-extended-series", { names: ["upper-deck-extended"], family: "upper-deck", parent: "upper-deck", refines: "upper-deck" }),
   ...["upper-deck-black-diamond", "upper-deck-retro", "upper-deck-choice", "upper-deck-mvp"].map((k) => P(k, { family: "upper-deck", parent: "upper-deck" })),
   P("sp-authentic", { parent: "upper-deck" }),
   P("sp-prospects", { parent: "upper-deck" }),
