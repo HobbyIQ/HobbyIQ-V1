@@ -85,6 +85,19 @@
       "rulingBy": "Drew",
       "date": "2026-08-30",
       "note": "Ken Griffey Jr 1992 Studio #232 base. The stored id carried a literal 'undefined' setKey segment. `donruss-studio` is the spelling the slug generator mints (studio -> donruss-studio) and the D23 product table names; 327 tcdb-scrape checklist rows back it against 279 baseballcardpedia rows under bare `studio`."
+    },
+    {
+      "holdingId": "3fe98abe-469e-497c-92ea-80b112fc4f78",
+      "userId": "user-199fcbc9-58ba-4643-a0c9-f75bcbc90bd4",
+      "from": "hiq:baseball:2020:bowman-draft:bd-152:base:no-auto",
+      "to": "hiq:baseball:2020:bowman-draft:bd-152:image-variation:no-auto",
+      "rulingBy": "Drew",
+      "date": "2026-08-31",
+      "note": "Bobby Witt Jr. BD-152 is the SP — the image variation short print, not the base card (Drew, 2026-08-31: \"This is the SP, it is still not fixed\"). The catalog row exists (cardboardchecklist). His $130 purchase comp re-points via the D37 tail re-run after the move.",
+      "fields": {
+        "parallel": "Image Variation",
+        "setName": "2020 Bowman Draft"
+      }
     }
   ]
 }
