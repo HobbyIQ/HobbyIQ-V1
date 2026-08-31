@@ -301,6 +301,10 @@ on:
         description: "For canonicalize-vendor-shaped-rows: 'vendor' (id is not a hiq slug) or 'nopk' (cardId missing entirely). For repair-parallel-subset-fold: 'prefix' or 'glue'. For rename-setkey-to-product: 'product' (the catalog rename, sharded), 'hyphen' (needs sources), 'holdings' (slot 0), 'estimate' (read-only counts). For repair-card-number-from-title (D28): 'grade' | 'slash' | 'ordinal' | 'year' | 'nonumber' | 'all' (needs scope=all) -- REQUIRED, no default. For clean-base-cards-parallel-slug: 'cards' | 'subset' | 'both' (needs scope=all) -- REQUIRED. For measure-card-number-integrity: 'grade' | 'shapes' | 'months' | 'catalog-year'. For repair-bcp-misfiled-parallels (D33): 'card-as-parallel' (retire the rows whose parallel is another card) | 'chrome-ladder' (move the refractor ladder from the paper number to the chrome one) | 'first-edition' (move 1st Edition rows to their own product) | 'names' (the comma before Jr./Sr./II) | 'number-glued' (black-1 -> black:num-1) -- REQUIRED, no default. Empty = the script's default."
         required: false
         default: ""
+      slug_prefix:
+        description: "For repair-parallel-from-title mode=backfill-stamp: bound the sweep to one slug or slug prefix (e.g. hiq:baseball:2026:bowman-chrome:cpa-vf:). Empty = the whole pool."
+        required: false
+        default: ""
       shard_hex:
         description: "For reslugAllSoldComps: contentHash first-char shards, e.g. 0,1,2,3. 16 shards total; run disjoint sets in parallel. Empty = all."
         required: false
@@ -656,6 +660,10 @@ jobs:
           SPORTS: ${{ inputs.sports }}
           # reslugAllSoldComps: contentHash first-char shard, 16 total.
           SHARD_HEX: ${{ inputs.shard_hex }}
+          # repair-parallel-from-title mode=backfill-stamp: bound the sweep to
+          # one slug or slug prefix so the blast radius is measured in slices
+          # before any pool-wide run. Empty = the whole pool.
+          SLUG_PREFIX: ${{ inputs.slug_prefix }}
           # Without this the script silently runs its DEFAULT mode and reports
           # success having touched none of the population you dispatched it for.
           MODE: ${{ inputs.mode }}
@@ -1074,7 +1082,7 @@ jobs:
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (repaired=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} mode=${{ inputs.mode }} to continue"
             # D22: the mode (colours / refractor / variation / product), the sources and the scope travel with the slot.
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-parallel-from-title -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sources="${{ inputs.sources }}" -f scope="${{ inputs.scope }}"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-parallel-from-title -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sources="${{ inputs.sources }}" -f scope="${{ inputs.scope }}" -f slug_prefix="${{ inputs.slug_prefix }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (repaired=${N:-0}) — done, no re-dispatch."
           fi

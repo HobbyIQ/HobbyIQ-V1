@@ -38,6 +38,35 @@
  *             image variation for that card; otherwise it is counted
  *             `variationUnmatched` and left. Measured 2026-08-30: 8,937 of
  *             443,988 base-slug rows across 15 products carry a token (2.0%).
+ *   backfill-stamp
+ *             CF-THE-TITLE-OUTRANKS-THE-VENDOR-TAG reaches historicalBackfill
+ *             (Drew, 2026-08-31). historicalBackfill.service fetched every sale
+ *             of ONE vendor product and stamped the HOLDING's parallel onto all
+ *             of them (backfillOneCH:122, backfillOneCS:191). Live damage: 50
+ *             CardHedge BASE auto sales (~$11) were relabelled "Black & White
+ *             Red Ink" onto hiq:baseball:2026:bowman-chrome:cpa-vf:black-white-
+ *             red-ink-refractor:auto at 2026-08-31T14:16:48Z; the holding's FMV
+ *             fell to $9.38 while its owner's real $270 self-comp was
+ *             suppressed by SELF_COMP_MIN_OTHER_SAMPLES.
+ *
+ *             FINGERPRINT (both must hold, per the diagnosis journal):
+ *               (a) sourceExternalId does NOT start with "ch-daily::" -- the
+ *                   fanout's shape. historicalBackfill writes the composite
+ *                   "<vendorCardId>::<date>::<cents>::<grade>" (line ~115), so
+ *                   the absence of that prefix is this writer's signature.
+ *               (b) the stored parallel is NOT allowed by the title under
+ *                   parallelTheTitleAllows -- the same rule the fixed service
+ *                   now applies at write time.
+ *
+ *             A poisoned row moves to the identity its title supports (Base,
+ *             usually). If the SAME vendor sale is already in the pool under a
+ *             "ch-daily::" row at the target identity, the poisoned row is a
+ *             fanout duplicate and is DELETED instead of moved -- matched on
+ *             the store's own contentHash (cardId + parallel + isAuto + grade +
+ *             priceCents + soldDay), so "duplicate" is measured, never assumed.
+ *             Re-key and delete both go through lib/relocate-sold-comp.cjs
+ *             (CF-A-SALE-IS-NEVER-LOST: upsert, verify, then delete).
+ *
  *   product   D22. Rows whose title names a PRODUCT QUALIFIER the slug's setKey
  *             lacks -- "1st Edition", "Sapphire", "Chrome" (paper vs chrome
  *             Bowman), "Update" -- are re-keyed to the qualified setKey's slug
@@ -67,6 +96,8 @@ const { canonicalize, catalogSlugIfExists, variationParallelsForCard } = require
 const { canonicalVariationName, pickVariationForMarker, readVariationFromTitle, reduceVariationStockToCatalog, variationNameFromSlug } = require(path.join(backend, "dist", "services", "catalog", "variationVocabulary.js"));
 const { PRODUCT_QUALIFIERS, qualifiedSetKeyFromTitle, setKeyOfSlug, withSetKey } = require(path.join(backend, "dist", "services", "catalog", "productQualifiers.js"));
 const { reportWrites } = require(path.join(backend, "dist", "services", "ops", "writeReconciliation.js"));
+const { parallelTheTitleAllows } = require(path.join(backend, "dist", "services", "portfolioiq", "titleOutranksVendorTag.js"));
+const { relocateSoldComp, stripSystem, contentHashesForLookup } = require(path.join(__dirname, "lib", "relocate-sold-comp.cjs"));
 
 const APPLY = process.env.APPLY === "true" || process.env.BACKFILL_APPLY === "true"; // the runner exports BACKFILL_APPLY, not APPLY
 const SOURCES = String(process.env.SOURCES || "cardhedge,tca-ebay,cardsight").split(",").map((s) => s.trim()).filter(Boolean);
@@ -74,7 +105,29 @@ const SLOT = Number(process.env.SLOT || 0), SLOTS = Number(process.env.SLOTS || 
 const RUN_MINUTES = Number(process.env.RUN_MINUTES || 140);
 const LIMIT = Number(process.env.LIMIT || 0);
 const MODE = String(process.env.MODE || "colours").toLowerCase();
-if (!["colours", "colors", "refractor", "variation", "product"].includes(MODE)) { console.error(`FATAL: MODE=${MODE} is not colours|refractor|variation|product`); process.exit(2); }
+if (!["colours", "colors", "refractor", "variation", "product", "backfill-stamp"].includes(MODE)) { console.error(`FATAL: MODE=${MODE} is not colours|refractor|variation|product|backfill-stamp`); process.exit(2); }
+/** backfill-stamp only: restrict to one slug (the CPA-VF fixture) or one slug
+ *  prefix, so the blast radius can be measured in bounded slices before any
+ *  pool-wide run. Empty = the whole pool. */
+const SLUG_PREFIX = String(process.env.SLUG_PREFIX || "").trim();
+
+/** backfill-stamp: historicalBackfill's externalId is the 4-part composite
+ *  "<vendorCardId>::<ISO date>::<priceCents>::<grade>" (service lines ~115 and
+ *  ~184). MEASURED 2026-08-31 against prod: of the 30,431 non-Base rows that
+ *  lack the fanout's "ch-daily::" prefix and whose title refuses the stored
+ *  parallel, only 130 carry THIS shape. The other 30,301 are other writers --
+ *  29,181 one-part cardsight ids and 659 "ch-comp::" three-part CardHedge ids
+ *  -- whose title/tag disagreements are a separate question with separate
+ *  causes. Repairing on the prefix alone would move ~30k rows this defect never
+ *  wrote. The shape test is therefore part of the fingerprint, not a nicety. */
+const BF_GRADE_RE = /^(raw|[A-Z]+ [0-9.]+)$/i;
+function isHistoricalBackfillShape(ext) {
+  const parts = String(ext ?? "").split("::");
+  return parts.length === 4
+    && /\d{4}-\d{2}-\d{2}/.test(parts[1])
+    && /^\d+$/.test(parts[2])
+    && BF_GRADE_RE.test(parts[3]);
+}
 const REFRACTOR_ONLY = ["Refractor"];
 const COLOURS = ["Gold", "Gold Refractor", "Blue", "Blue Refractor", "Green", "Green Refractor", "Orange", "Orange Refractor", "Red", "Red Refractor", "Purple", "Purple Refractor", "Black", "Black Refractor", "Sapphire", "Silver", "Pink", "Pink Refractor", "Yellow", "Yellow Refractor", "Aqua", "Aqua Refractor"];
 const BARE_COLOURS = new Set(["gold", "blue", "green", "orange", "red", "purple", "black", "silver", "pink", "yellow", "aqua", "sapphire"]);
@@ -110,6 +163,8 @@ async function main() {
     variationFromTitle: 0, variationFromMarker: 0, variationUnmatched: 0, variationStockReduced: 0,
     // product
     productQualifierMatched: 0, productQualifierUnmatched: 0, productQualifierRefused: 0, marked: 0,
+    // backfill-stamp
+    stamped: 0, duplicateOfFanout: 0, deleted: 0, duplicatesLeft: 0, dedupQueryFailed: 0, otherWriterShape: 0,
   };
   const moves = new Map(); // "source|from>to" -> n
   const examples = [];
@@ -216,6 +271,91 @@ async function main() {
       if (stopReason) break outer;
       continue;
     }
+    if (MODE === "backfill-stamp") {
+      // The fingerprint's cheap half runs in Cosmos: this writer's rows carry a
+      // sourceExternalId that does NOT begin "ch-daily::". The expensive half
+      // (the title rule) runs here, per row.
+      const q = {
+        query: `SELECT c.id, c.cardId, c.title, c.parallel, c.hobbyiqCardId, c.price, c.soldAt, c.isAuto, c.gradeCompany, c.gradeValue, c.sourceExternalId, c.source
+                FROM c
+                WHERE c.source = @s
+                  AND IS_DEFINED(c.parallel) AND c.parallel != '' AND c.parallel != 'Base'
+                  AND IS_DEFINED(c.sourceExternalId) AND NOT STARTSWITH(c.sourceExternalId, 'ch-daily::')
+                  ${SLUG_PREFIX ? "AND STARTSWITH(c.hobbyiqCardId, @pfx)" : ""}`,
+        parameters: [{ name: "@s", value: source }, ...(SLUG_PREFIX ? [{ name: "@pfx", value: SLUG_PREFIX }] : [])],
+      };
+      for await (const r of scan(q)) {
+        const slug = String(r.hobbyiqCardId ?? "");
+        const comp = slug.startsWith("hiq:") ? parseHobbyIqCardId(slug) : null;
+        if (!comp) { stats.noSlug++; continue; }
+        // Fingerprint half (a): only THIS writer's externalId shape. Measured
+        // 2026-08-31: 130 of 30,431 prefix-matching rows. The rest belong to
+        // other writers and are NOT this defect.
+        if (!isHistoricalBackfillShape(r.sourceExternalId)) { stats.otherWriterShape++; continue; }
+        // The rule, exactly as the fixed service now applies it at write time.
+        const parsed = parseListingTitle(r.title);
+        const decision = parallelTheTitleAllows(parsed && parsed.parallel, r.parallel, { variationMarker: (parsed && parsed.variationMarker) || null });
+        // Not overruled -> the title allows what is stored. Untouched.
+        if (!decision.vendorTagOverruled) { stats.kept++; continue; }
+        const newParallel = decision.parallel ?? "Base";
+        if (newParallel.toLowerCase() === String(r.parallel ?? "").toLowerCase()) { stats.kept++; continue; }
+        stats.stamped++;
+        const newSlug = await resolveSlug(comp, newParallel);
+        if (!newSlug || !newSlug.startsWith("hiq:") || newSlug === slug) { stats.kept++; continue; }
+        const byTarget = `${source}|${r.parallel ?? "(none)"}>${newParallel}`;
+        // Is this same vendor sale ALREADY in the pool at the target identity,
+        // written by the ch-daily fanout? Match on the store's own content hash
+        // in the TARGET partition -- measured, not assumed.
+        const moved = { ...r, cardId: newSlug, parallel: newParallel };
+        let twin = null;
+        try {
+          const hashes = contentHashesForLookup(moved);
+          const { resources } = await retry(() => pool.items.query({
+            query: `SELECT c.id, c.cardId, c.sourceExternalId FROM c WHERE c.cardId = @cid AND ARRAY_CONTAINS(@h, c.contentHash) AND c.id != @self`,
+            parameters: [{ name: "@cid", value: newSlug }, { name: "@h", value: hashes }, { name: "@self", value: r.id }],
+          }, { maxItemCount: 10 }).fetchAll());
+          twin = (resources ?? []).find((x) => String(x.sourceExternalId ?? "").startsWith("ch-daily::")) ?? (resources ?? [])[0] ?? null;
+        } catch (e) { stats.dedupQueryFailed++; }
+
+        if (twin) {
+          // The fanout already holds this sale at the right identity: the
+          // poisoned row is a duplicate, so it is deleted, not moved.
+          stats.duplicateOfFanout++;
+          moves.set(`${byTarget} [DELETE dup]`, (moves.get(`${byTarget} [DELETE dup]`) || 0) + 1);
+          if (examples.length < 25) examples.push(`  ${source}  DELETE dup  ${r.parallel} -> (already at ${newParallel})  ${slug}  $${r.price}  "${String(r.title ?? "").slice(0, 70)}"`);
+          if (!APPLY) { stats.repaired++; continue; }
+          try {
+            await retry(() => pool.item(r.id, r.cardId).delete());
+            stats.deleted++; stats.repaired++;
+          } catch (e) { stats.failed++; if (stats.failed <= 3) console.log("  delete failed " + r.id + ": " + String(e.message).slice(0, 80)); }
+          continue;
+        }
+
+        // No twin: the sale moves to the identity its title supports. A
+        // cross-partition re-key is upsert -> verify -> delete.
+        moves.set(byTarget, (moves.get(byTarget) || 0) + 1);
+        if (examples.length < 25) examples.push(`  ${source}  ${r.parallel} -> ${newParallel}  ${slug} -> ${newSlug}  $${r.price}  "${String(r.title ?? "").slice(0, 70)}"`);
+        if (newParallel === "Base") stats.toBase++; else stats.toOther++;
+        const keep = {
+          ...stripSystem(r),
+          cardId: newSlug,
+          hobbyiqCardId: newSlug,
+          parallel: newParallel,
+          reslugedFrom: slug,
+          reslugedAt: new Date().toISOString(),
+          reslugedReason: "the holding's parallel was stamped onto a vendor product's sales; the title outranks it (CF-THE-TITLE-OUTRANKS-THE-VENDOR-TAG, historicalBackfill)",
+        };
+        keep.contentHash = contentHashesForLookup(keep)[0];
+        const res = await relocateSoldComp(pool, {
+          keep, drop: [{ id: r.id, cardId: r.cardId }], retry, verifyFields: ["parallel", "hobbyiqCardId"], dryRun: !APPLY,
+        });
+        if (res.ok) stats.repaired++; else { stats.failed++; if (stats.failed <= 3) console.log(`  relocate failed ${r.id} at ${res.stage}: ${String(res.error ?? "").slice(0, 80)}`); }
+        if (res.duplicatesLeft && res.duplicatesLeft.length) stats.duplicatesLeft += res.duplicatesLeft.length;
+        if (stopReason) break outer;
+      }
+      if (stopReason) break outer;
+      continue;
+    }
     if (MODE === "product") {
       for (const rule of PRODUCT_QUALIFIERS) {
         const words = rule.qualifier === "1st Edition" ? ["1st edition", "first edition"] : [rule.qualifier.toLowerCase()];
@@ -305,6 +445,14 @@ async function main() {
     console.log(`  product: re-keyed      ${f(stats.productQualifierMatched)}   <- the qualified setKey's catalog row exists`);
     console.log(`  product: UNMATCHED     ${f(stats.productQualifierUnmatched)}   <- no catalog row at the qualified setKey — ${APPLY ? "marked productQualifierUnmatched" : "would be marked"}, left (an acquisition list)`);
     console.log(`  product: REFUSED       ${f(stats.productQualifierRefused)}   <- bowman ↔ bowman-chrome / Topps Chrome Update — rulings, not bot moves`);
+  }
+  if (MODE === "backfill-stamp") {
+    console.log(`  other writer's shape   ${f(stats.otherWriterShape)}   <- no 'ch-daily::' prefix but NOT historicalBackfill's 4-part composite — left alone`);
+    console.log(`  stamp fingerprint hit  ${f(stats.stamped)}   <- historicalBackfill's shape AND the title refuses the stored parallel`);
+    console.log(`  re-keyed to the title  ${f(stats.toBase + stats.toOther)}   <- to Base ${f(stats.toBase)}, to another named finish ${f(stats.toOther)}`);
+    console.log(`  ${APPLY ? "DELETED, fanout dup   " : "would DELETE, fanout dup"} ${f(stats.duplicateOfFanout)}   <- the same vendor sale already at the target identity under a 'ch-daily::' row`);
+    console.log(`  duplicates LEFT        ${f(stats.duplicatesLeft)}   <- a delete that failed after the new row verified — the sale is in the pool twice`);
+    console.log(`  dedup query failed     ${f(stats.dedupQueryFailed)}   <- treated as "no twin" (re-key, never delete)`);
   }
   console.log(`  no slug                ${f(stats.noSlug)}`);
   console.log(`  failed                 ${f(stats.failed)}`);

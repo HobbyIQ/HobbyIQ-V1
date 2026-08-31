@@ -25,6 +25,8 @@ import {
   type CardsightPricingResponse,
 } from "../compiq/cardsightSlim.client.js";
 import { recordSoldComp } from "./soldCompsStore.service.js";
+import { parseListingTitle } from "./ebayTitleParser.service.js";
+import { parallelTheTitleAllows } from "./titleOutranksVendorTag.js";
 
 const log = (event: string, fields: Record<string, unknown> = {}): void => {
   console.log(JSON.stringify({ event, source: "historicalBackfill.service", ...fields }));
@@ -91,6 +93,58 @@ function parseGraderString(grader: string | null | undefined): { gradeCompany: s
   return { gradeCompany: m[1].toUpperCase(), gradeValue: Number.isFinite(value) ? value : null };
 }
 
+// CF-THE-TITLE-OUTRANKS-THE-VENDOR-TAG reaches this writer too (Drew,
+// 2026-08-31). This service fetched every sale of ONE vendor product and
+// stamped `target.identity.parallel` -- the HOLDING's parallel -- onto all of
+// them. Live damage: 50 CardHedge BASE auto sales (~$11 each, CH's own variant
+// field said "Base" for all 315 rows of that product) were relabelled "Black &
+// White Red Ink" and written onto
+// hiq:baseball:2026:bowman-chrome:cpa-vf:black-white-red-ink-refractor:auto at
+// 2026-08-31T14:16:48Z. The holding's FMV fell to $9.38 -- the projection of
+// the 50 intruders alone -- while its owner's real $270 self-comp was
+// suppressed by SELF_COMP_MIN_OTHER_SAMPLES, because 50 "other" samples now
+// existed. The rule in titleOutranksVendorTag.ts would have refused every one
+// of those rows; it was simply never wired in here.
+//
+// The identity's parallel is a vendor TAG, exactly like CardHedge's variant or
+// TCA's structured hint. It is now a candidate the title can overrule, and a
+// sale whose title names no finish is written as Base -- under the base slug --
+// never inherited onto the holding's SSP identity.
+
+/** The parallel one vendor sale may carry: its TITLE decides, the holding's
+ *  parallel is only a tag. Mirrors persistVendorSalesToPool.service.ts:827. */
+function parallelForVendorSale(
+  title: string | null | undefined,
+  targetParallel: string | null | undefined,
+): { parallel: string | null; overruled: boolean } {
+  const parsed = parseListingTitle(title ?? "");
+  const decision = parallelTheTitleAllows(parsed.parallel, targetParallel, {
+    variationMarker: parsed.variationMarker ?? null,
+  });
+  return { parallel: decision.parallel, overruled: decision.vendorTagOverruled !== null };
+}
+
+/** CF-ONE-PRODUCT-IS-NOT-BOTH (belt-and-braces, Drew 2026-08-31). A holding
+ *  whose parallel is an SSP / unnumbered rarity cannot be backfilled from a
+ *  vendor product whose OWN variant is Base -- one product is not both the
+ *  base card and its short print. When every title in the fetched batch is
+ *  silent about any finish, the product is a base product and the whole target
+ *  is refused rather than written a row at a time. Without this, a title that
+ *  happened to name some unrelated finish could still drag rows across. */
+const SSP_RARITY = /\b(ssp|super\s+short\s+prints?|red\s+ink|shimmer|superfractor|1\/1|one\s+of\s+one)\b/i;
+
+export function targetIsSspButProductIsBase(
+  targetParallel: string | null | undefined,
+  titles: Array<string | null | undefined>,
+): boolean {
+  const tp = String(targetParallel ?? "").trim();
+  if (!tp || /^base$/i.test(tp)) return false;
+  if (!SSP_RARITY.test(tp)) return false;
+  if (titles.length === 0) return false;
+  // Base product <=> not one title in the batch names ANY finish.
+  return titles.every((t) => parseListingTitle(t ?? "").parallel === null);
+}
+
 async function backfillOneCH(target: BackfillTarget): Promise<{ written: number; error?: string }> {
   const chCardId = target.chCardId?.trim();
   if (!chCardId) return { written: 0 };
@@ -104,11 +158,25 @@ async function backfillOneCH(target: BackfillTarget): Promise<{ written: number;
   }
   if (sales.length === 0) return { written: 0 };
 
+  // Belt-and-braces: an SSP/rarity holding against a base vendor product.
+  if (targetIsSspButProductIsBase(target.identity.parallel, sales.map((s) => s.title))) {
+    log("historical_backfill.target_refused", {
+      vendor: "cardhedge",
+      chCardId,
+      targetParallel: target.identity.parallel,
+      salesFetched: sales.length,
+      reason: "ssp-target-base-product",
+    });
+    return { written: 0 };
+  }
+
   let written = 0;
   const cardYear = target.identity.cardYear ?? null;
   for (const s of sales) {
     if (!Number.isFinite(s.price) || s.price <= 0) continue;
     if (!s.date) continue;
+    // The title decides this sale's parallel; the holding's is only a tag.
+    const { parallel } = parallelForVendorSale(s.title, target.identity.parallel);
     // Composite external id from (chCardId, date, price-cents, grade).
     // Grade included so a Raw pass and a PSA 10 pass for the same date/
     // price don't collide on the same doc id.
@@ -119,7 +187,7 @@ async function backfillOneCH(target: BackfillTarget): Promise<{ written: number;
         playerName: target.identity.playerName,
         cardYear,
         setName: target.identity.setName ?? null,
-        parallel: target.identity.parallel ?? null,
+        parallel,
         cardNumber: target.identity.cardNumber ?? null,
         isAuto: target.identity.isAuto ?? false,
         gradeCompany,
@@ -167,11 +235,25 @@ async function backfillOneCS(target: BackfillTarget): Promise<{ written: number;
   }
   if (allRecords.length === 0) return { written: 0 };
 
+  // Belt-and-braces: an SSP/rarity holding against a base vendor product.
+  if (targetIsSspButProductIsBase(target.identity.parallel, allRecords.map((r) => r.title))) {
+    log("historical_backfill.target_refused", {
+      vendor: "cardsight",
+      csCardId,
+      targetParallel: target.identity.parallel,
+      salesFetched: allRecords.length,
+      reason: "ssp-target-base-product",
+    });
+    return { written: 0 };
+  }
+
   let written = 0;
   const cardYear = target.identity.cardYear ?? null;
   for (const r of allRecords) {
     if (!Number.isFinite(r.price) || r.price <= 0) continue;
     if (!r.date) continue;
+    // The title decides this sale's parallel; the holding's is only a tag.
+    const { parallel } = parallelForVendorSale(r.title, target.identity.parallel);
     // CF-BACKFILL-GRADE-DROP-FIX (Drew, 2026-07-19). Each allRecords
     // entry carries its own tier tag (r.grade) — "Raw" for the raw
     // records array, "PSA 10" / "BGS 9.5" / etc. for graded companies.
@@ -188,7 +270,7 @@ async function backfillOneCS(target: BackfillTarget): Promise<{ written: number;
         playerName: target.identity.playerName,
         cardYear,
         setName: target.identity.setName ?? null,
-        parallel: target.identity.parallel ?? null,
+        parallel,
         cardNumber: target.identity.cardNumber ?? null,
         isAuto: target.identity.isAuto ?? false,
         gradeCompany,
