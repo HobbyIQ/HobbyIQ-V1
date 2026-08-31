@@ -129,6 +129,7 @@ on:
           - retire-impossible-grade-rows
           - materialize-graded-identities
           - materialize-ungraded-parents
+          - repair-price-inferred-grades
           - canonicalize-vendor-shaped-rows
           - repair-parallel-subset-fold
           - ingest-checklists-end-to-end
@@ -578,7 +579,8 @@ jobs:
             for CHILD in scrape-beckett-checklists scrape-checklistinsider \
                          convertChecklistInsiderToChecklistCsv \
                          ingest-checklist-csv-to-catalog \
-                         materialize-ungraded-parents; do
+                         materialize-ungraded-parents \
+                         repair-price-inferred-grades; do
               if [ ! -f "backend/scripts/$CHILD.cjs" ]; then
                 echo "::error::$CHILD.cjs is missing — the wrapper would acquire and then have nowhere to land the rows"
                 exit 1
@@ -701,6 +703,23 @@ jobs:
       # re-queries missing parents each run, so a relaunch resumes exactly.
       # Relaunch iff the budget marker printed (#1361); a report relaunches
       # as a report (#1578); never on cancel.
+      # repair-price-inferred-grades: SOURCES scope required (never 'all');
+      # the sweep re-queries what is left, so a relaunch resumes exactly.
+      # Relaunch iff the budget marker printed; report relaunches as report.
+      - name: Self-relaunch repair-price-inferred-grades until the sweep completes
+        if: ${{ !cancelled() && inputs.script == 'repair-price-inferred-grades' }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
+            N=$(grep -aoE "demoted +[0-9,]+" /tmp/backfill.log | grep -oE "[0-9,]+" | tail -1)
+            echo "::notice::budget hit (demoted=${N:-0}) — re-dispatching to continue"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-price-inferred-grades -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sources="${{ inputs.sources }}" -f limit="${{ inputs.limit }}"
+          else
+            echo "::notice::finished within budget — done, no re-dispatch."
+          fi
+
       - name: Self-relaunch materialize-ungraded-parents until every parent exists
         if: ${{ !cancelled() && inputs.script == 'materialize-ungraded-parents' }}
         shell: bash
