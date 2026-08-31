@@ -1312,6 +1312,89 @@ router.post("/holdings/:id/confirm", async (req: Request, res: Response) => {
   }
 });
 
+// CF-APPROVE-MULTIPLES (Drew, 2026-08-31: approve "is SLOW and cannot approve
+// MULTIPLES"). Batch sibling of /holdings/:id/confirm.
+//
+// Body: { holdingIds: string[], edits?: { [holdingId]: ConfirmHoldingEdits } }
+//
+// Always 200 with per-item results when the request itself is well-formed:
+// partial failure is the normal case (a row someone already approved in another
+// tab is "not-pending", not a request error), and collapsing that to a single
+// status code would hide which rows landed. 400 is reserved for a malformed
+// request — no holdingIds, or more than the cap.
+router.post("/holdings/confirm-batch", async (req: Request, res: Response) => {
+  try {
+    const userId = userIdFrom(req);
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const rawIds = Array.isArray(body.holdingIds) ? body.holdingIds : null;
+    if (!rawIds || rawIds.length === 0) {
+      return res.status(400).json({ success: false, error: "holdingIds must be a non-empty array" });
+    }
+
+    const { confirmHoldingsBatch, BATCH_CONFIRM_MAX } = await import(
+      "../services/portfolioiq/ebayReviewQueue.service.js"
+    );
+    if (rawIds.length > BATCH_CONFIRM_MAX) {
+      return res.status(400).json({
+        success: false,
+        error: `too many holdings in one batch (max ${BATCH_CONFIRM_MAX})`,
+        max: BATCH_CONFIRM_MAX,
+      });
+    }
+
+    // Same field allow-list as the single route, applied per holding, with the
+    // same `in` check so an explicit null still reads as "clear this field".
+    const rawEdits = (body.edits ?? {}) as Record<string, unknown>;
+    const editsByHoldingId: Record<string, Record<string, unknown>> = {};
+    for (const [holdingId, value] of Object.entries(rawEdits)) {
+      if (!value || typeof value !== "object") continue;
+      const src = value as Record<string, unknown>;
+      const edits: Record<string, unknown> = {};
+      for (const field of [
+        "playerName", "cardYear", "setName", "parallel", "cardNumber",
+        "gradeCompany", "gradeValue", "isAuto", "team", "sport", "cardId",
+      ]) {
+        if (field in src) edits[field] = src[field];
+      }
+      editsByHoldingId[holdingId] = edits;
+    }
+
+    const result = await confirmHoldingsBatch(
+      userId,
+      rawIds.map((h) => String(h ?? "")),
+      editsByHoldingId as never,
+    );
+
+    // Fire-and-forget reprice per confirmed holding, same policy as the single
+    // route: the user should see real pricing without waiting for the next
+    // scheduled pass. Kept OUT of the response path so the batch returns as
+    // soon as the doc is durable.
+    const confirmedIds = result.results
+      .filter((r) => r.status === "confirmed")
+      .map((r) => r.holdingId);
+    if (confirmedIds.length > 0) {
+      void (async () => {
+        try {
+          const { repriceOneHolding } = await import(
+            "../services/portfolioiq/portfolioStore.service.js"
+          );
+          // Serial: each repriceOneHolding does its own read/write of the same
+          // portfolio doc, so running them concurrently would have them
+          // overwrite one another's results.
+          for (const id of confirmedIds) {
+            await repriceOneHolding(userId, id).catch(() => {});
+          }
+        } catch { /* auxiliary */ }
+      })();
+    }
+
+    res.status(200).json({ success: true, ...result });
+  } catch (err: any) {
+    console.error("[portfolio.erp] /holdings/confirm-batch failed:", err?.message ?? err);
+    res.status(500).json({ success: false, error: err?.message ?? "Batch confirm failed" });
+  }
+});
+
 // CF-ACCEPT-IDENTITY-WHATEVER-THE-STATE (Drew, 2026-08-23).
 //
 // THE DOOR THAT WAS LOCKED. /confirm above is the accept action, and it is

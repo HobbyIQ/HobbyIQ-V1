@@ -219,7 +219,11 @@ describe("D37 — the job is safe to dispatch", () => {
     );
     // Whitelisted, and carrying a relaunch step gated on the MARKER not a count.
     expect(wf).toContain("- backfill-ebay-purchase-comps");
-    expect(wf).toMatch(/inputs\.script == 'backfill-ebay-purchase-comps' && inputs\.apply == true/);
+    // D34 (2026-08-30): the gate no longer carries `&& inputs.apply == true`.
+    // Requiring it was the defect — a REPORT that stopped at its budget printed
+    // the marker and re-dispatched nothing, so no report longer than one budget
+    // could finish (CF-REPORT-RELAUNCHES-AS-A-REPORT).
+    expect(wf).toMatch(/inputs\.script == 'backfill-ebay-purchase-comps' \}\}/);
     expect(wf).toContain('grep -aqE "stopped at the .*budget" /tmp/backfill.log');
   });
 
