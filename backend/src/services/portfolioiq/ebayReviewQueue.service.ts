@@ -246,6 +246,56 @@ export async function confirmHoldingReview(
 ): Promise<ConfirmHoldingResult> {
   if (!userId || !holdingId) return { status: "error", reason: "missing userId or holdingId" };
   const doc = await readUserDoc(userId);
+  const outcome = await confirmHoldingInDoc(userId, doc, holdingId, edits);
+  if (outcome.status !== "confirmed") return outcome;
+  await writeUserDoc(userId, doc);
+  outcome.afterWrite();
+  return { status: "confirmed", holding: outcome.holding, correctionCount: outcome.correctionCount };
+}
+
+/**
+ * CF-APPROVE-BATCH-ONE-READ-ONE-WRITE (Drew, 2026-08-31: approve "is SLOW and
+ * cannot approve MULTIPLES").
+ *
+ * The per-holding half of confirm, operating on an ALREADY-LOADED doc and
+ * deliberately NOT writing it. Extracted so batch approve costs one portfolio
+ * read + one portfolio write for N holdings instead of N of each.
+ *
+ * MEASURED, on prod (read-only, 2026-08-31): the portfolio is one Cosmos doc
+ * per user (id === userId, holdings is a map). Drew's doc is 1,698,221 bytes —
+ * 1.7 MB — across 41 holdings, 109 ebayCorrections and 273 priceHistory keys.
+ * The old confirmHoldingReview read that whole doc and upserted the whole doc
+ * once per holding, so approving 11 pending rows moved ~37 MB of JSON through
+ * Cosmos serially. That, not per-call Cosmos latency (portfolio point reads
+ * measure p50 2ms / p95 7ms), is what "slow" is.
+ *
+ * The identity gate is UNCHANGED and is not reimplemented here: this function
+ * IS the original body, moved. applyCatalogMatchToHolding stays the single pin
+ * gate (D35) and stampChecklistBackedIdentity stays the single VERIFIED rule.
+ * Reimplementing either per-call site is the exact defect D35 fixed.
+ *
+ * Returns an `afterWrite` thunk holding the fire-and-forget side effects (comp
+ * emission, suggester feedback, reputation). Those must not run until the doc
+ * is durable, and the batch caller fires them once after its single write.
+ */
+type ConfirmInDocOutcome =
+  | {
+      status: "confirmed";
+      holding: PortfolioHolding;
+      correctionCount: number;
+      afterWrite: () => void;
+    }
+  | { status: "not-found" }
+  | { status: "not-pending" }
+  | { status: "error"; reason: string };
+
+export async function confirmHoldingInDoc(
+  userId: string,
+  doc: Awaited<ReturnType<typeof readUserDoc>>,
+  holdingId: string,
+  edits: ConfirmHoldingEdits = {},
+): Promise<ConfirmInDocOutcome> {
+  if (!userId || !holdingId) return { status: "error", reason: "missing userId or holdingId" };
   const holding = doc.holdings?.[holdingId] as (PortfolioHolding & Record<string, unknown>) | undefined;
   if (!holding) return { status: "not-found" };
   if ((holding as any).cardStatus !== "pending-review") {
@@ -603,22 +653,31 @@ export async function confirmHoldingReview(
   });
   (doc as any).ebayCorrections = correctionsList;
 
-  await writeUserDoc(userId, doc);
-
   // CF-SOLD-COMPS-FOUNDATION (Drew, 2026-07-14): user just attested to
   // this cardId — emit a comp record to the shared sold_comps pool.
   // Fire-and-forget: never block confirm on the comp write, and never
   // fail confirm if the write throws. Gated on having a real cardId
   // (else it's a manual entry without SKU verification — no cross-user
   // pool value).
+  //
+  // CF-ONE-TRANSACTION-ONE-ROW (D9). This re-emit used to key the sale by the
+  // eBay ITEM id at the all-in cost, while the import had keyed the same
+  // purchase by the ORDER id at the subtotal -- two rows for one sale. The one
+  // derivation (purchaseSaleIdentity) is shared with the import and the
+  // rematch, so this lands on the row the import wrote and upgrades it to
+  // user-verified.
+  //
+  // The identity is derived HERE, on the awaited path, for two reasons: the
+  // dynamic import must not still be resolving after the caller has finished
+  // (it raced test-environment teardown when it sat in the detached emit), and
+  // it reads `doc`, which the batch caller keeps mutating for the rest of its
+  // loop — deriving it later would key the comp off a doc that has moved on.
   const confirmedCardId = String((holding as any).cardId ?? "").trim();
-  if (confirmedCardId && typeof holding.playerName === "string" && holding.playerName.trim()) {
-    // CF-ONE-TRANSACTION-ONE-ROW (D9). This re-emit used to key the sale by
-    // the eBay ITEM id at the all-in cost, while the import had keyed the same
-    // purchase by the ORDER id at the subtotal -- two rows for one sale. The
-    // one derivation (purchaseSaleIdentity) is shared with the import and the
-    // rematch, so this lands on the row the import wrote and upgrades it to
-    // user-verified.
+  const wantsComp = Boolean(
+    confirmedCardId && typeof holding.playerName === "string" && holding.playerName.trim(),
+  );
+  let compIdentity: { sourceExternalId: string; price: number; soldAt: string } | null = null;
+  if (wantsComp) {
     const { purchaseSaleIdentity, sourcePurchaseFor } = await import("./ebayAutoHolding.service.js");
     const sourcePurchase = sourcePurchaseFor(doc, holding);
     const { sourceExternalId, price, priceBasis } = purchaseSaleIdentity(sourcePurchase, holding as Record<string, unknown>);
@@ -628,7 +687,18 @@ export async function confirmHoldingReview(
       ?? (holding as any).confirmedAt
       ?? new Date().toISOString(),
     );
-    if (price > 0 && soldAt) {
+    if (price > 0 && soldAt) compIdentity = { sourceExternalId, price, soldAt };
+  }
+  // The comp title is read off `doc` for the same reason — before the batch
+  // loop moves on to the next holding.
+  const compTitle = extractEbayTitleFromHolding(doc, holdingId) ?? (holding as any).cardTitle ?? null;
+
+  // Everything below is deferred to afterWrite(): it is auxiliary
+  // fire-and-forget work that must not start until the doc is durable, and in
+  // batch it must not start once per holding before the single write lands.
+  const afterWrite = () => {
+    if (compIdentity) {
+      const { sourceExternalId, price, soldAt } = compIdentity;
       void (async () => {
         try {
           const { recordSoldComp } = await import("./soldCompsStore.service.js");
@@ -651,7 +721,7 @@ export async function confirmHoldingReview(
             contributorUserId: userId,
             // The listing title, not the rebuilt card title: the pool's title
             // is provenance, and the rebuilt one once dropped the /50.
-            title: extractEbayTitleFromHolding(doc, holdingId) ?? (holding as any).cardTitle ?? null,
+            title: compTitle,
             imageUrl: (holding as any).ebayImageUrl ?? null,
             sellerHandle: null,
             verifiedByUser: true,
@@ -662,7 +732,6 @@ export async function confirmHoldingReview(
         }
       })();
     }
-  }
 
   // CF-SUGGESTER-FEEDBACK (Drew, 2026-07-15): capture user's confirm as
   // training signal for the suggester. Fire-and-forget — never blocks
@@ -710,8 +779,133 @@ export async function confirmHoldingReview(
       // swallow — reputation update is auxiliary
     }
   })();
+  };
 
-  return { status: "confirmed", holding, correctionCount: corrections.length };
+  return { status: "confirmed", holding, correctionCount: corrections.length, afterWrite };
+}
+
+// ─── Batch confirm ─────────────────────────────────────────────────────────
+
+/** Per-item outcome. `status` mirrors the single-confirm vocabulary exactly so
+ *  a client can render one row's result the same way whichever route produced
+ *  it. */
+export interface BatchConfirmItemResult {
+  holdingId: string;
+  status: "confirmed" | "not-found" | "not-pending" | "error";
+  correctionCount?: number;
+  reason?: string;
+}
+
+export interface BatchConfirmResult {
+  requested: number;
+  confirmed: number;
+  failed: number;
+  results: BatchConfirmItemResult[];
+}
+
+/** Cap per request. Each holding still costs its own catalog work (canonicalize
+ *  + the checklist-backed read + catalogVerify), which is the part that cannot
+ *  be amortized, so an unbounded batch would just move the timeout. */
+export const BATCH_CONFIRM_MAX = 50;
+
+/**
+ * CF-APPROVE-MULTIPLES (Drew, 2026-08-31).
+ *
+ * Approve N pending-review holdings in ONE request: one portfolio read, N
+ * per-holding confirms against the in-memory doc, one portfolio write.
+ *
+ * It loops confirmHoldingInDoc — the SAME function the single route calls, and
+ * therefore the same one identity gate (applyCatalogMatchToHolding) and the
+ * same one VERIFIED rule (stampChecklistBackedIdentity). Nothing about
+ * identity is reimplemented here; a second copy of a confidence gate is the
+ * D35 defect and this endpoint must not become its fourth instance.
+ *
+ * PARTIAL FAILURE IS NORMAL AND IS REPORTED PER ITEM. One holding that is
+ * already active (not-pending), missing (not-found), or that throws must not
+ * discard the approvals that succeeded alongside it — so a per-item throw is
+ * caught, recorded, and the loop continues. The single write then persists
+ * exactly the holdings that did confirm.
+ *
+ * The per-holding work stays SERIAL on purpose. The holdings share one `doc`
+ * object and each confirm mutates it (holding fields plus a push onto
+ * doc.ebayCorrections); running them concurrently would interleave those
+ * mutations. The win here is amortizing the 1.7 MB doc read/write, not
+ * parallelism inside it.
+ */
+export async function confirmHoldingsBatch(
+  userId: string,
+  holdingIds: string[],
+  editsByHoldingId: Record<string, ConfirmHoldingEdits> = {},
+): Promise<BatchConfirmResult> {
+  const requestedIds = Array.from(
+    new Set((holdingIds ?? []).map((h) => String(h ?? "").trim()).filter(Boolean)),
+  );
+  const results: BatchConfirmItemResult[] = [];
+  if (!userId) {
+    return {
+      requested: requestedIds.length,
+      confirmed: 0,
+      failed: requestedIds.length,
+      results: requestedIds.map((holdingId) => ({
+        holdingId, status: "error" as const, reason: "missing userId",
+      })),
+    };
+  }
+  if (requestedIds.length === 0) {
+    return { requested: 0, confirmed: 0, failed: 0, results: [] };
+  }
+
+  const doc = await readUserDoc(userId);
+  const afterWrites: Array<() => void> = [];
+  let confirmed = 0;
+
+  for (const holdingId of requestedIds) {
+    try {
+      const outcome = await confirmHoldingInDoc(userId, doc, holdingId, editsByHoldingId[holdingId] ?? {});
+      if (outcome.status === "confirmed") {
+        confirmed += 1;
+        afterWrites.push(outcome.afterWrite);
+        results.push({ holdingId, status: "confirmed", correctionCount: outcome.correctionCount });
+      } else if (outcome.status === "error") {
+        results.push({ holdingId, status: "error", reason: outcome.reason });
+      } else {
+        results.push({ holdingId, status: outcome.status });
+      }
+    } catch (err) {
+      // One bad holding must never cost the user the others in the batch.
+      results.push({
+        holdingId,
+        status: "error",
+        reason: (err as Error)?.message ?? String(err),
+      });
+    }
+  }
+
+  // Only write when something actually changed — an all-failed batch must not
+  // rewrite a 1.7 MB doc for nothing.
+  if (confirmed > 0) {
+    await writeUserDoc(userId, doc);
+    // Auxiliary effects start only now that the doc is durable.
+    for (const fire of afterWrites) {
+      try { fire(); } catch { /* swallow — auxiliary */ }
+    }
+  }
+
+  console.log(JSON.stringify({
+    event: "confirm_holdings_batch",
+    source: "ebayReviewQueue.confirmHoldingsBatch",
+    userId,
+    requested: requestedIds.length,
+    confirmed,
+    failed: requestedIds.length - confirmed,
+  }));
+
+  return {
+    requested: requestedIds.length,
+    confirmed,
+    failed: requestedIds.length - confirmed,
+    results,
+  };
 }
 
 // ─── Reject ────────────────────────────────────────────────────────────────
