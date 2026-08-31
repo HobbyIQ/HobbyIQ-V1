@@ -152,3 +152,68 @@ describe("1993 Finest stages as the checklist reads", () => {
     for (const s of scopes) for (const r of s.rungs) expect(r.printRun ?? "").toBe("");
   });
 });
+
+/**
+ * CF-A-HEADING-RUNG-IS-SCOPED-TOO (2026-08-31) — the third defect's guard,
+ * which nothing else pinned.
+ *
+ * Mutation-tested during adversarial review: reverting the fix (passing
+ * cardRange=null for a heading rung, as the code did before) left EVERY
+ * existing suite green while the Jumbos scope silently went back to spanning
+ * all 199 base cards instead of its stated 33. That is the exploded-spine
+ * signature #1571 exists to stop, so it gets its own pin.
+ *
+ * The page states the scope without ever writing the word "cards":
+ *   "reproductions of 33 players from that set's All-Star subset (84-116)"
+ * and 116-84+1 == 33, so the stated count corroborates the span.
+ */
+describe("a heading rung carries its own card range", () => {
+  const html = fs.readFileSync(
+    path.join(__dirname, "fixtures", "bcp", "1993-finest.trimmed.html"),
+    "utf8",
+  );
+  const cards = parseCards(section(html, "Base_Set", 2));
+  const scopes = parseScopedLadders(section(html, "Parallels", 2), {
+    html,
+    setName: "Finest",
+    setKey: "finest",
+    playerNames: new Set(cards.map((c: { player: string }) => c.player)),
+    qualify: null,
+  });
+
+  it("Jumbos are scoped to the All-Star subset 84-116, not the whole set", () => {
+    const jumbos = scopes.find((s: { title: string | null }) => s.title === "Jumbos");
+    expect(jumbos.rungs[0].cardRange).toEqual([[84, 116]]);
+    // 33 cards wide -- the count the page states alongside the span.
+    const [[lo, hi]] = jumbos.rungs[0].cardRange;
+    expect(hi - lo + 1).toBe(33);
+  });
+
+  it("Refractors stay set-wide -- a null range is still the correct read there", () => {
+    const refr = scopes.find((s: { title: string | null }) => s.title === "Refractors");
+    expect(refr.rungs[0].cardRange).toBeNull();
+  });
+});
+
+/**
+ * The subset-parenthetical read must REFUSE when the stated count disagrees
+ * with the span's width -- otherwise a mis-stated page silently narrows or
+ * widens a parallel. Pinned through the committed parser, not a copy.
+ */
+describe("parseCardRange refuses a subset span the stated count contradicts", () => {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { parseCardRange } = require("../scripts/scrape-bcp-ladders.cjs");
+  const real = "feature reproductions of 33 players from that set's All-Star subset (84-116).";
+
+  it("reads the real page's span", () => {
+    expect(parseCardRange(real)).toEqual([[84, 116]]);
+  });
+
+  it.each([
+    ["count disagrees with width", real.replace("33 players", "12 players")],
+    ["span narrower than the count", real.replace("(84-116)", "(84-115)")],
+    ["span reversed", real.replace("(84-116)", "(116-84)")],
+  ])("refuses when %s", (_label, text) => {
+    expect(parseCardRange(text)).toBeNull();
+  });
+});
