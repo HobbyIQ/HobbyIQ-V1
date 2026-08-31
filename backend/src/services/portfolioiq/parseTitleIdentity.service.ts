@@ -266,6 +266,135 @@ const TEAM_COLOUR_NOISE_RE =
 const AUTO_NEGATIVE_RE =
   /auto\s+relic|auto\s+patch|\bnon[-\s]?auto|\bno\s+auto|\bnot\s+auto|\bunsigned\b|\bwithout\s+auto/i;
 
+/** CF-A-LOT-IS-NOT-A-CARD (Drew, 2026-08-31).
+ *
+ *  A title that sells SEVERAL cards does not state one card's finish, and a
+ *  parallel read off it files a multi-card price into a single card's pool.
+ *  These are the shapes the 2024 mix measurement triaged out — 211 rows it
+ *  refused to repair rather than move to a still-wrong pool:
+ *
+ *    "2024 Bowman Chrome Lot Of 6 Refractors"
+ *    "40x 2024 Topps Chrome Refractors"
+ *    "(12 Cards) 2024 Bowman Chrome Refractors"
+ *
+ *  Exported so the repair pass excludes by the SAME rule the parser refuses
+ *  by. Two copies of this list would drift, and the drift would show up as a
+ *  repair moving rows the live parser would never have written.
+ *
+ *  EVERY IDIOM HERE MUST SIT NEXT TO A COUNT OF CARDS. The first round's
+ *  lexicon was bare words — \blots?\b, \bmore\b, \bpick\b, \bcomplete\s+set\b,
+ *  \b\d+\s*x\b — and each of them fires on ordinary single-card seller
+ *  boilerplate, turning a correctly-parsed Refractor into Base:
+ *
+ *    "2024 Bowman Chrome Refractor Dylan Lot RC"          <- a SURNAME
+ *    "... Elly De La Cruz MORE ROOKIES AVAILABLE"          <- cross-sell
+ *    "2024 Bowman Chrome Refractor #12 Pick Your Card"     <- store boilerplate
+ *    "2024 Bowman Chrome Refractor 10x Card Saver"         <- SHIPPING SUPPLIES
+ *    "... Refractor Complete Set Break Single"             <- literally "Single"
+ *
+ *  A guard that eats singles is not conservative, it is wrong in the other
+ *  direction: it writes Base over a finish the title plainly states. So each
+ *  idiom now carries its own count evidence.
+ *
+ *    lot        — "Lot of 6", "6 Card Lot", "Lot (12)"; never a bare "Lot",
+ *                 which is a surname often enough to matter.
+ *    (N cards)  — unchanged; the parenthesised count is already unambiguous.
+ *    N x        — must be followed by a CARD noun, not by a supply noun.
+ *                 "10x Card Saver" and "10x Toploader" are the packaging the
+ *                 single ships in. The old (?!\s*[-\s]?fractor) lookahead is
+ *                 kept on top of that so "#1 X-Fractor" still reads as a card
+ *                 number, and a bare "40x Refractors" still reads as a lot.
+ *    bundle     — must name cards ("card bundle", "bundle of 5").
+ *    more       — only the closing lot idiom "and N more", never a bare "more".
+ *    pick       — only "you pick" / "pick your card" style multi-listings...
+ *                 EXCEPT those are single-card sales from a multi-card listing,
+ *                 so they are dropped entirely; the title still names ONE
+ *                 card's finish.
+ *    complete set — must not be a "set break SINGLE", which is one card.
+ *
+ *  THE MULTIPLIER NEEDS THE LOOKAHEAD, and the fixtures found out why. The
+ *  measurement's triage regex used a bare \b\d+\s*x\b, which matches the "1 X"
+ *  inside
+ *
+ *    "Shohei Ohtani #1 X-Fractor LA Dodgers | 2024 Topps Chrome"
+ *
+ *  — a $107.50 SINGLE card, and one of the measurement's own headline examples
+ *  of the bug. A quantity "x" is followed by a count of cards, never by the
+ *  word fractor, so the lookahead separates "40x Refractors" and "25 x
+ *  Refractors" (real lots) from a card number that happens to precede an
+ *  X-Fractor. Without it this detector would refuse the exact population it
+ *  exists to protect — the guard would eat the repair.
+ *
+ *  This means the measurement's 211/1,508 lot split is off in the conservative
+ *  direction on two counts — the X-Fractor lookahead and now the narrowing —
+ *  so the repair re-derives the split with THIS detector rather than
+ *  inheriting that number, and the counters it prints are the ones to trust. */
+
+/** Nouns that mean "a card", for the count-adjacency tests below. */
+const LOT_CARD_NOUN = String.raw`(?:cards?|commons?|rookies|rc'?s|singles?|slabs?|autos?|refractors?|parallels?|inserts?|prospects?)`;
+/** Nouns that mean "packaging", which a count in front of does NOT make a lot. */
+const LOT_SUPPLY_NOUN = String.raw`(?:card\s*saver|top\s*loader|toploader|penny\s*sleeve|sleeves?|magnetic|one\s*touch|onetouch|holder|screwdown|box(?:es)?|bcw)`;
+
+const LOT_RE = new RegExp(
+  [
+    // "Lot of 6", "Lot (12)", "Lot: 6" — the count follows the word.
+    String.raw`\blots?\b[\s:]*(?:of\s+)?\(?\s*\d+`,
+    // "(4x LOT)", "4x Lot" — a multiplier immediately in front of the word.
+    String.raw`\b\d+\s*x\s*\)?\s*lots?\b`,
+    // "(20) … Lot" — a leading parenthesised bare count anywhere in a title
+    // that also says Lot. Measured on a 2024 pull: "(20) 2024 Bowman AI Chrome
+    // Refractor Insert George Lombard Jr. #19 Rookie RC Lot" is twenty cards.
+    // The count must be parenthesised and standalone, so a print run (/50) and
+    // a card number (#19) cannot reach this.
+    String.raw`\(\s*\d+\s*\)(?=.*\blots?\b)`,
+    // "6 Card Lot", "12-card lot" — the count and noun precede it.
+    String.raw`\b\d+\s*[-\s]?${LOT_CARD_NOUN}\s+lots?\b`,
+    // "Lot of Refractors" / "Card Lot" — a card noun on either side.
+    String.raw`\blots?\s+of\s+${LOT_CARD_NOUN}\b`,
+    String.raw`\b${LOT_CARD_NOUN}\s+lots?\b`,
+    // "(12 Cards)" — the parenthesised count is unambiguous on its own.
+    String.raw`\(\s*\d+\s*cards?\s*\)`,
+    // "40x Refractors", "25 x 2024 Topps Chrome Refractors" — a quantity
+    // multiplier whose title goes on to name cards. The card noun is NOT
+    // adjacent in practice: the year and product sit between them ("40x 2024
+    // Topps Chrome Refractors"), so requiring adjacency here would let every
+    // real lot through. What must be adjacent is the DISQUALIFIER — packaging.
+    // "10x Card Saver" and "10x Toploader" are the supplies the single ships
+    // in, and the supply noun always follows the count directly.
+    //
+    // The (?!\s*[-\s]?fractors?) lookahead is kept on top of that so the "#1 X"
+    // of "Shohei Ohtani #1 X-Fractor" still reads as a card number.
+    String.raw`\b\d+\s*x\b(?!\s*[-\s]?fractors?)(?!\w)(?!\s*${LOT_SUPPLY_NOUN})(?=.*\b${LOT_CARD_NOUN}\b)`,
+    // "card bundle", "bundle of 5"
+    String.raw`\b${LOT_CARD_NOUN}\s+bundle\b`,
+    String.raw`\bbundle\s+of\s+\d+`,
+    // "and 5 more", "+ 3 more cards" — the closing lot idiom, never a bare
+    // "more" (which is "MORE ROOKIES AVAILABLE" cross-sell boilerplate).
+    String.raw`\b(?:and|\+|plus)\s*\d+\s+more\b`,
+    // "3 more cards" standing alone, with the same disqualifier the sibling
+    // above gets for free from its and/+/plus anchor: the count must not be a
+    // PRINT RUN. \b sits happily between "/" and "499", so "…#12 Judge /499
+    // MORE ROOKIES AVAILABLE" matched "499 MORE ROOKIES" and filed a numbered
+    // single as a lot -> Base. That title is cross-sell boilerplate attached to
+    // one /499 card, and it is the exact shape the lexicon was narrowed to
+    // stop. A slash before the digits means the number counts COPIES OF THIS
+    // CARD, never cards in the listing.
+    String.raw`(?<![/\d])\b\d+\s+more\s+${LOT_CARD_NOUN}\b`,
+    // "complete set" — but a "set break single" is exactly one card.
+    String.raw`\bcomplete\s+set\b(?!\s*break\b)`,
+  ].join("|"),
+  "i",
+);
+
+export function isMultiCardLot(title: string | null | undefined): boolean {
+  const t = String(title ?? "");
+  if (!t) return false;
+  // "Set Break Single" / "Break Single" names ONE card no matter what else the
+  // title says, so it settles the question before the lexicon runs.
+  if (/\bbreak\s+single\b|\bsingle\s+card\b/i.test(t)) return false;
+  return LOT_RE.test(t);
+}
+
 /** Extract identity from a marketplace title.
  *
  *  When cardNumberRe is provided, only that pattern is tried (useful
@@ -843,8 +972,46 @@ function extractParallel(title: string): string {
   if (m) return capFirst(m[1]) + " Speckle Refractor";
   if (/speckle\s+refractor/i.test(T)) return "Speckle Refractor";
   if (/\bspeckle\b/i.test(T)) return "Speckle Refractor";
-  m = T.match(/(orange|red|green|gold|blue|purple|yellow|aqua|black|silver)\s+x-?fractor/i);
+  // The colour rule accepts the same three spellings the bare rule below does,
+  // singular AND plural. It used to accept only "X-Fractor"/"Xfractor", so
+  // "Orange X Fractor /25" dropped its colour — invisible until the bare rule
+  // below existed to catch the remainder, at which point the colour loss became
+  // a wrong ANSWER rather than a fall-through to Base.
+  //
+  // The first round's widening added a trailing \b and so broke the PLURAL it
+  // never tested: "Orange X-Fractors /25" failed this rule, fell past the bare
+  // rule (also singular-only) and landed on the widened /\brefractors?\b/
+  // fallback as a plain "Orange Refractor" — a /25 Orange filed into the Orange
+  // Refractor pool. Strictly worse than the behaviour it replaced. The `s?`
+  // before the \b is what makes the plural reach its own rule, and the \b is
+  // kept so this stays off the tail of another word.
+  m = T.match(/(orange|red|green|gold|blue|purple|yellow|aqua|black|silver)\s+x[\s-]?fractors?\b/i);
   if (m) return capFirst(m[1]) + " X-Fractor";
+  // CF-BARE-X-FRACTOR (Drew, 2026-08-31). X-Fractor was matched ONLY with a
+  // colour in front of it. There was no bare rule, so plain "X-Fractor" fell
+  // past every rule below and landed on "Base" — in all three spellings
+  // sellers use. Line 739 above notes "X-Fractor is hyphenated so the
+  // letter-run cannot reach it", which is true of the fractor-family rule;
+  // what it missed is that nothing else caught it either.
+  //
+  //   "Shohei Ohtani #1 X-Fractor LA Dodgers | 2024 Topps Chrome"  -> Base
+  //   "Topps 2024 Chrome Update Paul Skenes Rookie X fractor #USC88" -> Base
+  //
+  // The second is a $40 sale sitting in a $7.49 base pool. Measured over 2024
+  // chrome-family sold_comps: 867 rows, the single largest cause of refractors
+  // leaking into base pools.
+  //
+  // Placed AFTER the colour rule deliberately, so "Gold X-Fractor" still
+  // returns "Gold X-Fractor" and only a genuinely bare one reaches here.
+  // "Superfractor" already returned at the top of this function and cannot be
+  // reached; the \b before x keeps this off the tail of another word.
+  //
+  // The plural gets the same treatment the Refractor fallback got, and for the
+  // same reason: "X-Fractors" / "X Fractors" / "Xfractors" is how Topps prints
+  // it on the checklist and how sellers title it. The first round applied that
+  // reasoning to Refractor and not to the X-Fractor rule it wrote in the same
+  // commit, so all three plural spellings still returned Base.
+  if (/\bx[\s-]?fractors?\b/i.test(T)) return "X-Fractor";
   // Sapphire product context + standalone color → "Color Sapphire".
   // Real observed: "2026 Bowman Chrome Sapphire Owen Carey Green /99"
   // means Green Sapphire /99 (not Green Refractor /99).
@@ -1022,15 +1189,10 @@ function extractParallel(title: string): string {
   // parallel="Base" because no rule caught "Pink Refractor".
   if (/pink\s+refractor/i.test(T)) return "Pink Refractor";
 
-  // CF-BARE-REFRACTOR (Drew, 2026-07-29). Bare "Refractor" (no color
-  // modifier) is the base-silver refractor parallel of the base card —
-  // real and priced distinct from Base. Prior rule required AUTO_RE to
-  // be true, so non-auto refractors like "2017 Topps Chrome Aaron Judge
-  // #169 Refractor RC PSA 10" collapsed to Base. Fixed by removing the
-  // AUTO gate — all specific color/pattern refractor rules run BEFORE
-  // this line, so "Blue Refractor" / "Gold Refractor" / "Mojo Refractor"
-  // still return their specific values first. This is the fallback.
-  if (/\brefractor\b/i.test(T) && !AUTO_NEGATIVE_RE.test(T)) return "Refractor";
+  // CF-BARE-REFRACTOR (Drew, 2026-07-29). The bare "Refractor" fallback used
+  // to sit HERE, immediately after the baseball rules. It now lives below the
+  // basketball block — see CF-REFRACTOR-FALLBACK-IS-LAST for the measurement
+  // that moved it, and for the lot and sapphire guards it carries.
 
   // ─── Basketball parallels (Prizm, Optic, Select, Contenders, Hoops) ───
   // CF-BASKETBALL-PARALLELS (Drew, 2026-07-28). Basketball card
@@ -1083,6 +1245,61 @@ function extractParallel(title: string): string {
 
   // Contenders — Cracked Ice is the iconic parallel
   if (/cracked\s+ice/i.test(T)) return "Cracked Ice";
+
+  // CF-REFRACTOR-FALLBACK-IS-LAST (Drew, 2026-08-31).
+  //
+  // The bare "Refractor(s)" fallback. Every named colour and pattern rule has
+  // already run and returned, so "Blue Refractor" / "Mojo Refractor" / "Silver
+  // Prizm" / "Holo Optic" reach their own rules first. This line reads the
+  // word alone.
+  //
+  // CF-REFRACTORS-IS-HOW-TOPPS-PRINTS-IT (Drew, 2026-08-31). The trailing \b
+  // made this fallback fail on the PLURAL, which is how Topps names the
+  // parallel on its own checklist ("Refractors – /499") and how sellers title
+  // it. The singular parsed; the plural fell to Base:
+  //
+  //   "2024 Bowman Chrome Refractors #80 Aaron Judge 167/499 YANKEES" -> Base
+  //
+  // 235 such rows in 2024 chrome-family alone. The plural is the SAME parallel
+  // as the singular, so it returns the same canonical "Refractor" — one card,
+  // one row, one pool.
+  //
+  // WHY IT SITS HERE AND NOT ABOVE THE BASKETBALL BLOCK. It used to sit right
+  // after the baseball rules, which was survivable only while it was singular:
+  // basketball titles say "Refractors" often enough that widening it to the
+  // plural up there INTERCEPTED a whole sport before its own vocabulary was
+  // reached. Measured, main vs branch:
+  //
+  //   "2024 Panini Prizm Silver Refractors #12 Wembanyama"  Silver Prizm -> Refractor
+  //   "2023 Panini Donruss Optic Holo Refractors #10"       Holo Optic   -> Refractor
+  //
+  // The block's own comment ("These rules run AFTER the baseball checks
+  // above") described an ordering that the widening quietly broke. A fallback
+  // is only a fallback if every specific rule has had its turn, so it moved
+  // below all of them. Nothing above it changed meaning: the singular already
+  // lost to every rule it now still loses to.
+  //
+  // THE SAPPHIRE GATE. Bowman Chrome Sapphire is a DIFFERENT PRODUCT from
+  // Bowman Chrome (the setKey taxonomy is explicit: bowman, bowman-chrome and
+  // sapphire are different cards). The sapphire block above returns a "<Colour>
+  // Sapphire" only when the title also names a colour; a sapphire title whose
+  // only finish word is "Refractors" used to fall through to Base, and the
+  // widened fallback turned that into a confident plain "Refractor" — a
+  // sapphire sale leaking into the Bowman Chrome refractor pool at the LIVE
+  // INGEST path.
+  //
+  // The repair script guards this with namesAnotherProduct(); the parser is
+  // what every future ingest runs, so it needs the same refusal. Blank means
+  // unknown, and unknown leaves the row where it is — which is the recoverable
+  // direction.
+  if (
+    /\brefractors?\b/i.test(T) &&
+    !AUTO_NEGATIVE_RE.test(T) &&
+    !isMultiCardLot(T) &&
+    !/\bsapphire\b/i.test(T)
+  ) {
+    return "Refractor";
+  }
 
   // The chrome-auto Refractor default that used to sit here is GONE
   // (Drew, 2026-08-25: "no refractor is a base. Refractor is a parallel or a
