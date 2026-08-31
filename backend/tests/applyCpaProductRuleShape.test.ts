@@ -208,7 +208,12 @@ describe("the runner is wired for this script", () => {
     // never on cancel.
     expect(step).toMatch(/stopped at the \.\*budget/);
     expect(step).toMatch(/!cancelled\(\)/);
-    expect(step).toMatch(/inputs\.apply == true/);
+    // CF-REPORT-RELAUNCHES-AS-A-REPORT (D34, 2026-08-30). This used to require
+    // `inputs.apply == true` on the gate, which is what stranded every report
+    // that outlived one budget (run 33330120651). The marker is the gate; apply
+    // is forwarded verbatim so a report continues as a report.
+    expect(step).not.toMatch(/inputs\.apply == true/);
+    expect(step).toContain('-f apply="${{ inputs.apply }}"');
     for (const input of ["slot", "slots", "mode", "concurrency", "sports", "scope"]) {
       expect(step, `relaunch must forward ${input}`).toContain(`inputs.${input}`);
     }
