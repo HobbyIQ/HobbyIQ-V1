@@ -148,6 +148,8 @@ on:
 
           - fold-unnumbered-twins
           - fold-umbrella-to-series
+          - repair-truncated-card-year
+          - repair-select-subbrand-misslug
           - fold-checklist-numbered-twins
           - apply-cpa-product-rule
           - consolidate-catalog-duplicates
@@ -239,28 +241,8 @@ on:
         required: false
         default: "refractor"
         type: string
-      dir:
-        description: "ingest-checklist-csv-to-catalog: directory of canonical CSVs to ingest (repo-relative). EMPTY = the script refuses."
-        required: false
-        default: ""
-        type: string
-      source_label:
-        description: "ingest-checklist-csv-to-catalog: the source stamped on minted rows; must classify as checklist authority or the script refuses."
-        required: false
-        default: ""
-        type: string
       setkey_like:
         description: "Substring the setKey must contain (e.g. bowman). EMPTY = every setKey. Read by dedupe-catalog-partition-shadows and rehome-catalog-rows-to-own-partition."
-        required: false
-        default: ""
-        type: string
-      sport:
-        description: "fold-umbrella-to-series (D39): the ONE sport to scope the fold to (e.g. hockey). REQUIRED by that script -- it refuses an empty scope."
-        required: false
-        default: ""
-        type: string
-      setkey:
-        description: "fold-umbrella-to-series (D39): the umbrella setKey being folded onto its series products (e.g. upper-deck). REQUIRED by that script -- it refuses an empty scope, and refuses an umbrella it has no ruling for."
         required: false
         default: ""
         type: string
@@ -658,14 +640,15 @@ jobs:
           # of the three is empty -- a whole-scope write must be asked for by
           # name (CF-A-WHOLE-SOURCE-RETIRE-NEEDS-ITS-NAME). YEARS is the shared
           # input above.
-          SPORT: ${{ inputs.sport }}
-          SETKEY: ${{ inputs.setkey }}
+          SPORT: ${{ inputs.sports }}
+          SETKEY: ${{ inputs.setkey_like }}
+          YEAR: ${{ inputs.years }}
           # ingest-checklist-csv-to-catalog: a committed CSV dir (e.g. the
           # drew-ruled Bellingham entry) ingested through the ONE generic
           # ingester; SOURCE decides authority and the script refuses non-
           # checklist labels.
-          DIR: ${{ inputs.dir }}
-          SOURCE: ${{ inputs.source_label }}
+          DIR: ${{ inputs.scope }}
+          SOURCE: ${{ inputs.sources }}
           # CF-A-ROW-IN-THE-WRONG-PARTITION-IS-AN-INVISIBLE-ROW: bound the
           # re-home so a slice can be proven before it runs across 17.7M rows.
           LIMIT: ${{ inputs.limit }}
@@ -776,7 +759,7 @@ jobs:
           # scope (sport/years/setkey) included, or the relaunch would refuse.
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (folded=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=fold-umbrella-to-series -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sport="${{ inputs.sport }}" -f years="${{ inputs.years }}" -f setkey="${{ inputs.setkey }}" -f limit="${{ inputs.limit }}"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=fold-umbrella-to-series -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f setkey_like="${{ inputs.setkey_like }}" -f limit="${{ inputs.limit }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (folded=${N:-0}) — done, no re-dispatch."
           fi
