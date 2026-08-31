@@ -3520,3 +3520,41 @@ field (#3), Bellingham hand-ruled entry + ingest (#1), CPA-TSY ruling entry
   ebayAutoHolding.service.ts, ebayReviewQueue.service.ts,
   portfolioStore.service.ts, and backfill-ebay-purchase-comps.cjs. The class is
   closed at zero unmarked writers.
+
+
+## Overnight 08-31 (02:00–05:45Z)
+
+- **Drew's three slow things, deployed:** #1579 approve = one doc write + true
+  batch (D35 gate untouched; measured root cause: his 1.88MB user doc, only
+  ever growing); #1580 card save returns on persist (deferred work reconciled
+  via runner-only catch-up); #1583 refresh dispatches 202 + polls settle
+  honestly across 2 instances (jobId echo; unknown-here keeps polling).
+  Deploys #22–#24 verified. FOLLOW-UPS QUEUED: reprice needs a holdingIds
+  subset option; the ever-growing doc wants ebayCorrections/priceHistory split
+  out (architecture, Drew round).
+- **#1584 D38 closed at zero unmarked writers** after four rounds: basis from
+  the purchaseSaleIdentity call the emit already made; store infers all-in for
+  unmarked ebay-user-purchase; basis threads #1579's afterWrite closure; the
+  rematch sweep derives identity (third-key mint gone); never-wired
+  backfillUserEbayPurchaseComps.cjs retired. Live proof: cpa-jg subtotal
+  249.99 vs all-in 255.49.
+- **Runner fixes:** #1578 a report relaunches as a report (37 steps); #1582
+  DIR/SOURCE inputs; #1585 the choice-options gap (dispatches 422'd while the
+  shell whitelist said yes); #1586 drew-ruled CSVs in their own dir (a DIR
+  sweep stamps ONE source).
+- **Bellingham APPLIED and verified by read:**
+  hiq:baseball:1987:bellingham-mariners:15:base:no-auto — Ken Griffey Jr.,
+  source drew-ruling-checklist-2026-08-30. The 1987-bellingham-baseball
+  seed-spelling rows are now D30 fold candidates; conform re-points the
+  holding.
+- **2026 Bowman acquisition retried to zero failures** (wrote 16,885/0;
+  bp-21 red /5 verified by read). Lane B one-file-per-scope fix caught REAL
+  scraper data loss (1,400 of 3,500 rows on disk).
+- **OPEN SEAM (queued): moveCatalogRow refuses id-stem-vs-setKey-field drift**
+  — fold-unnumbered-twins APPLY logs show failures like "newSlug says
+  bowman-chrome but the row says bowman"; the probe documented the drift as
+  by-design (resolve by ID STEM). moveCatalogRow needs the same rule.
+- **Ops honesty:** one fleet APPLY slice (fold-unnumbered-twins vendor 0/1)
+  was cancelled by a mis-captured run id and re-dispatched verbatim; watchers
+  now capture ids by before/after set difference. The fleet is in its third
+  140-min generation; conform → reprice → D37 tail remain staged behind it.
