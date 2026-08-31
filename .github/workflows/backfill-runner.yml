@@ -237,6 +237,16 @@ on:
         required: false
         default: "refractor"
         type: string
+      dir:
+        description: "ingest-checklist-csv-to-catalog: directory of canonical CSVs to ingest (repo-relative). EMPTY = the script refuses."
+        required: false
+        default: ""
+        type: string
+      source_label:
+        description: "ingest-checklist-csv-to-catalog: the source stamped on minted rows; must classify as checklist authority or the script refuses."
+        required: false
+        default: ""
+        type: string
       setkey_like:
         description: "Substring the setKey must contain (e.g. bowman). EMPTY = every setKey. Read by dedupe-catalog-partition-shadows and rehome-catalog-rows-to-own-partition."
         required: false
@@ -631,6 +641,12 @@ jobs:
           SCOPE: ${{ inputs.scope }}
           # dedupe-catalog-partition-shadows: which products to sweep.
           SETKEY_LIKE: ${{ inputs.setkey_like }}
+          # ingest-checklist-csv-to-catalog: a committed CSV dir (e.g. the
+          # drew-ruled Bellingham entry) ingested through the ONE generic
+          # ingester; SOURCE decides authority and the script refuses non-
+          # checklist labels.
+          DIR: ${{ inputs.dir }}
+          SOURCE: ${{ inputs.source_label }}
           # CF-A-ROW-IN-THE-WRONG-PARTITION-IS-AN-INVISIBLE-ROW: bound the
           # re-home so a slice can be proven before it runs across 17.7M rows.
           LIMIT: ${{ inputs.limit }}
