@@ -35,7 +35,17 @@ export default defineConfig({
     // module-graph transform whose cost grew past 10s after compiq surface
     // additions (cache hardening + ebay poll + corpus + resolver work).
     // Module evaluation itself is fast; the cost is one-time SWC transform.
-    hookTimeout: 30000,
+    //
+    // CF-HOOK-TIMEOUT-ONEDRIVE (2026-08-31): bumped 30s → 120s. Same cause,
+    // larger constant. On the OneDrive-backed checkout the cold transform of
+    // the compiq module graph does not finish inside 30s, so three route
+    // suites — compiqRoutePredictionShape, compiqRouteContractCleanup,
+    // compiqRouteGradedEstimatesSurface — fail their beforeAll and SKIP every
+    // assertion (a skipped suite is a silent gap, not a red test). Verified:
+    // all three fail in isolation at 30s and pass at a raised timeout with no
+    // other change. This is I/O latency on the module load, not a hang — the
+    // ceiling only has to clear the one-time cost.
+    hookTimeout: 120000,
     // CF-TEST-TIMEOUT-BUMP (Drew, 2026-07-21). Bumped from 5s default
     // to 30s. Full-suite runs put heavy fork/import pressure on nodes
     // that hit dynamic import chains (async import("../src/...") in

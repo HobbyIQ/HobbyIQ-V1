@@ -391,8 +391,16 @@ export function autoProjectVariantTier(variantStr: unknown): number {
  * predictedPriceAttribution + upgrades `est.source` to "projected". Silently
  * no-ops when the trigger conditions aren't met OR when neither anchor path
  * finds ≥3 valid Raw prices.
+ *
+ * Exported for test only (CF-UNKNOWN-TIER-IS-NOT-A-DENOMINATOR, 2026-08-31):
+ * the CPA-DT collapse guard lives in the branches BELOW, not in the tier
+ * helpers above, so a suite that only calls autoProjectVariantTier /
+ * isClassifiedVariantTier re-implements the predicate instead of pinning it.
+ * emptyPoolPremiumParallelGuard.test.ts drives THIS function with the
+ * cardhedge client mocked. Not part of the route surface — no caller outside
+ * this module and its tests.
  */
-async function applyAutoProjectionFallbacks(
+export async function applyAutoProjectionFallbacks(
   est: Record<string, unknown>,
   query: string,
 ): Promise<void> {
