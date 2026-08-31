@@ -922,7 +922,21 @@ function extractParallel(title: string): string {
   m = T.match(/(rose\s+gold)\s+(refractor|x-?fractor|mini)/i);
   if (m) return "Rose Gold " + capFirst(m[2].replace(/-/, "-"));
   if (/black\s+shimmer\s+refractor/i.test(T)) return "Black Shimmer Refractor";
-  if (/black.{0,3}white\s+shimmer/i.test(T)) return "Black & White Shimmer Refractor";
+  // CF-RED-INK-IS-ITS-OWN-CARD (Drew ruling 2026-08-30, card-lingo-glossary).
+  // In Bowman prospect autographs "Red Ink" is the SSP variant OF the Black &
+  // White Shimmer auto — a DISTINCT card, not a nickname for the shimmer. Both
+  // must survive as themselves:
+  //   * "Red Ink" must never collapse into the shimmer, and
+  //   * neither may fall through to the bare-colour scan below, which read
+  //     "Black & White Red Ink" as "Black Refractor" and a plain "Red Ink" as
+  //     "Red Refractor" — pricing an SSP against an ordinary /5 Red rung.
+  // Red Ink is tested FIRST: a title carries both phrases ("Black & White Red
+  // Ink"), and the more specific card wins. The B&W prefix is optional because
+  // sellers drop it ("Bowman Chrome Red Ink Auto"), and " and " is spelled out
+  // as often as "&" — the old {0,3} window fit " & " but not " and ".
+  if (/\bred\s+ink\b/i.test(T)) return "Black & White Red Ink";
+  if (/\bblack\s*(?:&|and)?\s*(?:\/)?\s*white\s+shimmer/i.test(T)) return "Black & White Shimmer Refractor";
+  if (/\bb\s*&\s*w\s+shimmer\b/i.test(T)) return "Black & White Shimmer Refractor";
   m = T.match(/(blue|red|green|orange|purple|gold|yellow|aqua)\s+prism/i);
   if (m) return capFirst(m[1]) + " Prism Refractor";
   if (/gold\s+ink/i.test(T)) return "Gold Ink";

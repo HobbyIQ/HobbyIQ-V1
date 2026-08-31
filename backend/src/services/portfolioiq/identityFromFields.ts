@@ -66,6 +66,11 @@ export interface IdentityFromFields {
    *  with a label's stock word kept only where the product's checklist
    *  distinguishes chrome from paper. Null when the parallel stood as given. */
   parallelResolvedAs: string | null;
+  /** CF-A-VARIATION-NEEDS-A-BARE-NUMBER (D37). True when the row named a
+   *  variation on a PREFIXED card number (BP-/BCP-/CPA-…) that the product's
+   *  checklist does not hold one for, so the variation was dropped rather
+   *  than fused onto a number that never had it. */
+  variationRefusedForPrefixedNumber?: boolean;
 }
 
 /** Injection seam for tests -- the two catalog reads this derivation performs. */
@@ -126,8 +131,9 @@ export async function resolveIdentityFromFields(
   // "SSP", "SP-CHROME" — is asked of the catalog in the vocabulary's one
   // spelling, so the holding CAN be the variation through the field it has.
   const given = str(f.parallel) || null;
-  const variation = canonicalVariationName(given);
+  let variation = canonicalVariationName(given);
   let parallel = variation ?? given;
+  let variationRefusedForPrefixedNumber = false;
   let parallelResolvedAs: string | null = variation && variation !== given ? variation : null;
   // D28 (CF-A-CARD-NUMBER-IS-NOT-A-GRADE). The number arrives here from the
   // eBay title parser, from a spreadsheet cell, or from slab OCR, and each of
@@ -170,7 +176,49 @@ export async function resolveIdentityFromFields(
       skippedReason: !cardNumber ? "no-card-number" : !year ? "no-year" : "no-set",
       match: null,
       parallelResolvedAs,
+      variationRefusedForPrefixedNumber,
     };
+  }
+
+  // CF-A-VARIATION-NEEDS-A-BARE-NUMBER (D37, 2026-08-30). A photo/image
+  // variation is a SECOND PRINTING OF A BASE CARD and shares that card's
+  // number, so it lives where the base set's numbering lives: a bare numeric.
+  // Prefixed runs (BP-, BCP-, CPA-, BTP-, ...) are separate subsets that carry
+  // their own variation sections when they have any, under their own prefix.
+  //
+  // 2026 Bowman is the worked example. Its four variation subsets are
+  //   Base Rookie Red RC Logo Variation   40 cards, ALL bare numeric
+  //   Base Etched in Glass Variation      12 cards, ALL bare numeric
+  //   Chrome Prospects Etched in Glass    11 cards, ALL BCP-
+  //   Anime Kanji Variation                7 cards, ALL BA-
+  // #18 is Roman Anthony (Base) and HAS a Logo Variation; BP-18 is Blaine
+  // Bullard (Paper Prospects) and does not. The D37 tail row
+  //   hiq:baseball:2026:bowman-paper:bp-18:logo-variation
+  // fused the two: a Paper-Prospects number wearing a base-set subset. It came
+  // from a stored parallel of "Logo Variation" on a holding whose eBay title
+  // actually reads "Logo Pattern" — the Bowman Logo Pattern rung, a real
+  // parallel of BP-18 in this release's Paper Prospects ladder.
+  //
+  // The guard is structural, not a name list: a BASE-anchored variation (the
+  // plain image variation, or a kind with no prefix of its own) never attaches
+  // to a prefixed number. The catalog still decides WHICH variation a card
+  // has; this only refuses the fusion that no checklist can back. A prefixed
+  // number keeps a variation the catalog actually holds for it, which is how
+  // BCP-139's Etched in Glass survives.
+  if (variation && /^[A-Za-z]+-/.test(String(cardNumber).trim()) && deps.variationParallelsForCard) {
+    let held: string[] = [];
+    try { held = await deps.variationParallelsForCard({ sport: f.sport, year, setKey: normalizeSetKey(setName), cardNumber }); } catch { held = []; }
+    const slugOfName = (t: string): string => t.toLowerCase().replace(/[^a-z0-9&]+/g, "-").replace(/^-+|-+$/g, "");
+    const want = slugOfName(variation);
+    const backed = held.some((h) => slugOfName(String(h ?? "")) === want);
+    if (!backed) {
+      // The checklist does not put this variation on this prefixed number.
+      // Fall back to the card itself rather than minting the fusion.
+      variationRefusedForPrefixedNumber = true;
+      parallel = "Base";
+      parallelResolvedAs = "Base";
+      variation = null;
+    }
   }
 
   // A grader label's stock word ("SP-CHROME") is the card's only where the
@@ -194,5 +242,5 @@ export async function resolveIdentityFromFields(
     player: player || null,
     source: f.source,
   });
-  return { cardNumber, cardNumberResolvedBy, cardNumberCandidates, skippedReason: null, match, parallelResolvedAs };
+  return { cardNumber, cardNumberResolvedBy, cardNumberCandidates, skippedReason: null, match, parallelResolvedAs, variationRefusedForPrefixedNumber };
 }
