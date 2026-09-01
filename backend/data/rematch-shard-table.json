@@ -1,0 +1,1639 @@
+{
+ "_doc": "CF-THE-SHARD-AXIS-IS-MEASURED-FIRST (GREAT REMATCH, Drew 2026-09-01). Built by GROUP BY over the live sold_comps container, not assumed. Year alone is NOT an axis: 2024=2,711,283 / 2025=2,629,991 / 2023=1,457,497 / 2026=1,268,434 against an even 32-slot share of 510,509 -- a 6.6x spread that would leave one runner working 6x as long as another. The axis is composite in three levels, each used only when the level above is still over a share: (1) cardYear, every year that fits rides whole; (2) + sport class (baseball / football / basketball / pokemon / other) on the four heavy years, since 2025 baseball alone is 1,262,342; (3) + sha1(id) % parts on a unit still over a share, which is uniform by construction. 158 units packed longest-first into 32 slots. rematch-sold-comps.cjs reads this file and its banner echoes this slot's units and their measured rows. `rows` is the count AT CAPTURE and is an expectation for the banner, never a gate -- ingest legitimately adds rows between the measurement and a run.",
+ "measuredAt": "2026-09-01",
+ "container": "sold_comps",
+ "totalRows": 16336296,
+ "yearBuckets": 136,
+ "nullYearPopulations": {
+  "absent": 49,
+  "explicitNull": 4017,
+  "_doc": "Two DISTINCT populations measured 2026-09-01: 49 rows carry no cardYear field, 4,017 carry it as an explicit null. They need two different predicates (NOT IS_DEFINED vs IS_NULL); a unit's `yearKind` says which, and collapsing them made two slots claim the same rows."
+ },
+ "units": 158,
+ "sportClasses": [
+  "baseball",
+  "football",
+  "basketball",
+  "pokemon"
+ ],
+ "evenShare": 510509,
+ "minSlotRows": 497602,
+ "maxSlotRows": 532572,
+ "spread": "1.07x",
+ "slots": [
+  {
+   "slot": 0,
+   "rows": 523940,
+   "units": [
+    {
+     "key": "y=2025/s=pokemon",
+     "year": 2025,
+     "yearKind": "value",
+     "sportClass": "pokemon",
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 484940
+    },
+    {
+     "key": "y=1953",
+     "year": 1953,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 39000
+    }
+   ]
+  },
+  {
+   "slot": 1,
+   "rows": 526729,
+   "units": [
+    {
+     "key": "y=2025/s=football",
+     "year": 2025,
+     "yearKind": "value",
+     "sportClass": "football",
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 476653
+    },
+    {
+     "key": "y=1956",
+     "year": 1956,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 50076
+    }
+   ]
+  },
+  {
+   "slot": 2,
+   "rows": 525258,
+   "units": [
+    {
+     "key": "y=2023/s=baseball",
+     "year": 2023,
+     "yearKind": "value",
+     "sportClass": "baseball",
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 472733
+    },
+    {
+     "key": "y=2008",
+     "year": 2008,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 52525
+    }
+   ]
+  },
+  {
+   "slot": 3,
+   "rows": 509724,
+   "units": [
+    {
+     "key": "y=2024/s=football/h=0of2",
+     "year": 2024,
+     "yearKind": "value",
+     "sportClass": "football",
+     "hashPart": 0,
+     "hashParts": 2,
+     "rows": 451892
+    },
+    {
+     "key": "y=2025/s=other",
+     "year": 2025,
+     "yearKind": "value",
+     "sportClass": "other",
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 57832
+    }
+   ]
+  },
+  {
+   "slot": 4,
+   "rows": 507991,
+   "units": [
+    {
+     "key": "y=2024/s=football/h=1of2",
+     "year": 2024,
+     "yearKind": "value",
+     "sportClass": "football",
+     "hashPart": 1,
+     "hashParts": 2,
+     "rows": 451892
+    },
+    {
+     "key": "y=1979",
+     "year": 1979,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 56099
+    }
+   ]
+  },
+  {
+   "slot": 5,
+   "rows": 506536,
+   "units": [
+    {
+     "key": "y=2026/s=baseball/h=0of2",
+     "year": 2026,
+     "yearKind": "value",
+     "sportClass": "baseball",
+     "hashPart": 0,
+     "hashParts": 2,
+     "rows": 444634
+    },
+    {
+     "key": "y=2004",
+     "year": 2004,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 61902
+    }
+   ]
+  },
+  {
+   "slot": 6,
+   "rows": 505960,
+   "units": [
+    {
+     "key": "y=2026/s=baseball/h=1of2",
+     "year": 2026,
+     "yearKind": "value",
+     "sportClass": "baseball",
+     "hashPart": 1,
+     "hashParts": 2,
+     "rows": 444634
+    },
+    {
+     "key": "y=1958",
+     "year": 1958,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 61326
+    }
+   ]
+  },
+  {
+   "slot": 7,
+   "rows": 506634,
+   "units": [
+    {
+     "key": "y=2024/s=pokemon",
+     "year": 2024,
+     "yearKind": "value",
+     "sportClass": "pokemon",
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 444613
+    },
+    {
+     "key": "y=2007",
+     "year": 2007,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 62021
+    }
+   ]
+  },
+  {
+   "slot": 8,
+   "rows": 498558,
+   "units": [
+    {
+     "key": "y=2023/s=pokemon",
+     "year": 2023,
+     "yearKind": "value",
+     "sportClass": "pokemon",
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 433357
+    },
+    {
+     "key": "y=1963",
+     "year": 1963,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 65201
+    }
+   ]
+  },
+  {
+   "slot": 9,
+   "rows": 497603,
+   "units": [
+    {
+     "key": "y=2024/s=baseball/h=0of2",
+     "year": 2024,
+     "yearKind": "value",
+     "sportClass": "baseball",
+     "hashPart": 0,
+     "hashParts": 2,
+     "rows": 423909
+    },
+    {
+     "key": "y=1966",
+     "year": 1966,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 66091
+    },
+    {
+     "key": "y=2026/s=basketball",
+     "year": 2026,
+     "yearKind": "value",
+     "sportClass": "basketball",
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 5118
+    },
+    {
+     "key": "y=1936",
+     "year": 1936,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 881
+    },
+    {
+     "key": "y=1938",
+     "year": 1938,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 515
+    },
+    {
+     "key": "y=1927",
+     "year": 1927,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 324
+    },
+    {
+     "key": "y=1947",
+     "year": 1947,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 269
+    },
+    {
+     "key": "y=1937",
+     "year": 1937,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 161
+    },
+    {
+     "key": "y=1924",
+     "year": 1924,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 123
+    },
+    {
+     "key": "y=1919",
+     "year": 1919,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 96
+    },
+    {
+     "key": "y=1917",
+     "year": 1917,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 59
+    },
+    {
+     "key": "y=absent",
+     "year": null,
+     "yearKind": "absent",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 49
+    },
+    {
+     "key": "y=2027",
+     "year": 2027,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 4
+    },
+    {
+     "key": "y=2028",
+     "year": 2028,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 3
+    },
+    {
+     "key": "y=1860",
+     "year": 1860,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 1
+    }
+   ]
+  },
+  {
+   "slot": 10,
+   "rows": 498176,
+   "units": [
+    {
+     "key": "y=2024/s=baseball/h=1of2",
+     "year": 2024,
+     "yearKind": "value",
+     "sportClass": "baseball",
+     "hashPart": 1,
+     "hashParts": 2,
+     "rows": 423909
+    },
+    {
+     "key": "y=2014",
+     "year": 2014,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 65786
+    },
+    {
+     "key": "y=1949",
+     "year": 1949,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 8481
+    }
+   ]
+  },
+  {
+   "slot": 11,
+   "rows": 500403,
+   "units": [
+    {
+     "key": "y=2024/s=basketball",
+     "year": 2024,
+     "yearKind": "value",
+     "sportClass": "basketball",
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 421656
+    },
+    {
+     "key": "y=2006",
+     "year": 2006,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 66300
+    },
+    {
+     "key": "y=1948",
+     "year": 1948,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 12447
+    }
+   ]
+  },
+  {
+   "slot": 12,
+   "rows": 497603,
+   "units": [
+    {
+     "key": "y=2025/s=baseball/h=0of3",
+     "year": 2025,
+     "yearKind": "value",
+     "sportClass": "baseball",
+     "hashPart": 0,
+     "hashParts": 3,
+     "rows": 420781
+    },
+    {
+     "key": "y=1981",
+     "year": 1981,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 69908
+    },
+    {
+     "key": "y=1940",
+     "year": 1940,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 2727
+    },
+    {
+     "key": "y=1941",
+     "year": 1941,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 1855
+    },
+    {
+     "key": "y=1929",
+     "year": 1929,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 703
+    },
+    {
+     "key": "y=1915",
+     "year": 1915,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 531
+    },
+    {
+     "key": "y=1939",
+     "year": 1939,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 338
+    },
+    {
+     "key": "y=1887",
+     "year": 1887,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 237
+    },
+    {
+     "key": "y=1914",
+     "year": 1914,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 190
+    },
+    {
+     "key": "y=1922",
+     "year": 1922,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 116
+    },
+    {
+     "key": "y=1916",
+     "year": 1916,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 97
+    },
+    {
+     "key": "y=1930",
+     "year": 1930,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 66
+    },
+    {
+     "key": "y=201",
+     "year": 201,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 27
+    },
+    {
+     "key": "y=1944",
+     "year": 1944,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 15
+    },
+    {
+     "key": "y=1913",
+     "year": 1913,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 6
+    },
+    {
+     "key": "y=1899",
+     "year": 1899,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 3
+    },
+    {
+     "key": "y=1886",
+     "year": 1886,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 2
+    },
+    {
+     "key": "y=1880",
+     "year": 1880,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 1
+    }
+   ]
+  },
+  {
+   "slot": 13,
+   "rows": 497603,
+   "units": [
+    {
+     "key": "y=2025/s=baseball/h=1of3",
+     "year": 2025,
+     "yearKind": "value",
+     "sportClass": "baseball",
+     "hashPart": 1,
+     "hashParts": 3,
+     "rows": 420781
+    },
+    {
+     "key": "y=1967",
+     "year": 1967,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 69844
+    },
+    {
+     "key": "y=null",
+     "year": null,
+     "yearKind": "null",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 4017
+    },
+    {
+     "key": "y=1935",
+     "year": 1935,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 1606
+    },
+    {
+     "key": "y=1923",
+     "year": 1923,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 442
+    },
+    {
+     "key": "y=1912",
+     "year": 1912,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 316
+    },
+    {
+     "key": "y=1932",
+     "year": 1932,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 224
+    },
+    {
+     "key": "y=1910",
+     "year": 1910,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 133
+    },
+    {
+     "key": "y=1926",
+     "year": 1926,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 101
+    },
+    {
+     "key": "y=1920",
+     "year": 1920,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 66
+    },
+    {
+     "key": "y=1888",
+     "year": 1888,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 52
+    },
+    {
+     "key": "y=198",
+     "year": 198,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 13
+    },
+    {
+     "key": "y=197",
+     "year": 197,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 4
+    },
+    {
+     "key": "y=1901",
+     "year": 1901,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 2
+    },
+    {
+     "key": "y=200",
+     "year": 200,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 2
+    }
+   ]
+  },
+  {
+   "slot": 14,
+   "rows": 498189,
+   "units": [
+    {
+     "key": "y=2025/s=baseball/h=2of3",
+     "year": 2025,
+     "yearKind": "value",
+     "sportClass": "baseball",
+     "hashPart": 2,
+     "hashParts": 3,
+     "rows": 420781
+    },
+    {
+     "key": "y=1988",
+     "year": 1988,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 67457
+    },
+    {
+     "key": "y=1934",
+     "year": 1934,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 9951
+    }
+   ]
+  },
+  {
+   "slot": 15,
+   "rows": 508645,
+   "units": [
+    {
+     "key": "y=2021",
+     "year": 2021,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 372599
+    },
+    {
+     "key": "y=1964",
+     "year": 1964,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 81433
+    },
+    {
+     "key": "y=1952",
+     "year": 1952,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 54613
+    }
+   ]
+  },
+  {
+   "slot": 16,
+   "rows": 509575,
+   "units": [
+    {
+     "key": "y=2020",
+     "year": 2020,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 368193
+    },
+    {
+     "key": "y=1960",
+     "year": 1960,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 83143
+    },
+    {
+     "key": "y=2012",
+     "year": 2012,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 58239
+    }
+   ]
+  },
+  {
+   "slot": 17,
+   "rows": 499807,
+   "units": [
+    {
+     "key": "y=2025/s=basketball",
+     "year": 2025,
+     "yearKind": "value",
+     "sportClass": "basketball",
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 348224
+    },
+    {
+     "key": "y=1959",
+     "year": 1959,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 89015
+    },
+    {
+     "key": "y=1954",
+     "year": 1954,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 62568
+    }
+   ]
+  },
+  {
+   "slot": 18,
+   "rows": 500603,
+   "units": [
+    {
+     "key": "y=2019",
+     "year": 2019,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 319626
+    },
+    {
+     "key": "y=2024/s=other",
+     "year": 2024,
+     "yearKind": "value",
+     "sportClass": "other",
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 93413
+    },
+    {
+     "key": "y=1984",
+     "year": 1984,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 74651
+    },
+    {
+     "key": "y=1933",
+     "year": 1933,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 12913
+    }
+   ]
+  },
+  {
+   "slot": 19,
+   "rows": 526560,
+   "units": [
+    {
+     "key": "y=2022/h=0of2",
+     "year": 2022,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": 0,
+     "hashParts": 2,
+     "rows": 305066
+    },
+    {
+     "key": "y=1987",
+     "year": 1987,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 103226
+    },
+    {
+     "key": "y=1977",
+     "year": 1977,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 75856
+    },
+    {
+     "key": "y=1980",
+     "year": 1980,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 42412
+    }
+   ]
+  },
+  {
+   "slot": 20,
+   "rows": 532572,
+   "units": [
+    {
+     "key": "y=2022/h=1of2",
+     "year": 2022,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": 1,
+     "hashParts": 2,
+     "rows": 305066
+    },
+    {
+     "key": "y=1994",
+     "year": 1994,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 101552
+    },
+    {
+     "key": "y=1983",
+     "year": 1983,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 76848
+    },
+    {
+     "key": "y=2009",
+     "year": 2009,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 49106
+    }
+   ]
+  },
+  {
+   "slot": 21,
+   "rows": 515862,
+   "units": [
+    {
+     "key": "y=2018",
+     "year": 2018,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 299882
+    },
+    {
+     "key": "y=1971",
+     "year": 1971,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 115663
+    },
+    {
+     "key": "y=1962",
+     "year": 1962,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 71261
+    },
+    {
+     "key": "y=1951",
+     "year": 1951,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 29056
+    }
+   ]
+  },
+  {
+   "slot": 22,
+   "rows": 519400,
+   "units": [
+    {
+     "key": "y=2026/s=pokemon",
+     "year": 2026,
+     "yearKind": "value",
+     "sportClass": "pokemon",
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 294274
+    },
+    {
+     "key": "y=2001",
+     "year": 2001,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 119639
+    },
+    {
+     "key": "y=1965",
+     "year": 1965,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 72822
+    },
+    {
+     "key": "y=2026/s=football",
+     "year": 2026,
+     "yearKind": "value",
+     "sportClass": "football",
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 32665
+    }
+   ]
+  },
+  {
+   "slot": 23,
+   "rows": 524808,
+   "units": [
+    {
+     "key": "y=2023/s=football",
+     "year": 2023,
+     "yearKind": "value",
+     "sportClass": "football",
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 266699
+    },
+    {
+     "key": "y=1998",
+     "year": 1998,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 127721
+    },
+    {
+     "key": "y=1976",
+     "year": 1976,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 78810
+    },
+    {
+     "key": "y=2023/s=other",
+     "year": 2023,
+     "yearKind": "value",
+     "sportClass": "other",
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 51578
+    }
+   ]
+  },
+  {
+   "slot": 24,
+   "rows": 505955,
+   "units": [
+    {
+     "key": "y=2023/s=basketball",
+     "year": 2023,
+     "yearKind": "value",
+     "sportClass": "basketball",
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 233130
+    },
+    {
+     "key": "y=1992",
+     "year": 1992,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 129063
+    },
+    {
+     "key": "y=1968",
+     "year": 1968,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 85038
+    },
+    {
+     "key": "y=1982",
+     "year": 1982,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 58724
+    }
+   ]
+  },
+  {
+   "slot": 25,
+   "rows": 501820,
+   "units": [
+    {
+     "key": "y=1999",
+     "year": 1999,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 224082
+    },
+    {
+     "key": "y=1993",
+     "year": 1993,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 129321
+    },
+    {
+     "key": "y=1973",
+     "year": 1973,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 86081
+    },
+    {
+     "key": "y=1957",
+     "year": 1957,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 62336
+    }
+   ]
+  },
+  {
+   "slot": 26,
+   "rows": 497602,
+   "units": [
+    {
+     "key": "y=1997",
+     "year": 1997,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 205831
+    },
+    {
+     "key": "y=1986",
+     "year": 1986,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 132668
+    },
+    {
+     "key": "y=2015",
+     "year": 2015,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 92019
+    },
+    {
+     "key": "y=2013",
+     "year": 2013,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 65260
+    },
+    {
+     "key": "y=1931",
+     "year": 1931,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 627
+    },
+    {
+     "key": "y=1911",
+     "year": 1911,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 397
+    },
+    {
+     "key": "y=1928",
+     "year": 1928,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 272
+    },
+    {
+     "key": "y=1921",
+     "year": 1921,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 222
+    },
+    {
+     "key": "y=1945",
+     "year": 1945,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 108
+    },
+    {
+     "key": "y=1925",
+     "year": 1925,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 91
+    },
+    {
+     "key": "y=1908",
+     "year": 1908,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 55
+    },
+    {
+     "key": "y=2029",
+     "year": 2029,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 18
+    },
+    {
+     "key": "y=199",
+     "year": 199,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 16
+    },
+    {
+     "key": "y=1894",
+     "year": 1894,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 7
+    },
+    {
+     "key": "y=1946",
+     "year": 1946,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 6
+    },
+    {
+     "key": "y=1943",
+     "year": 1943,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 3
+    },
+    {
+     "key": "y=0",
+     "year": 0,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 2
+    }
+   ]
+  },
+  {
+   "slot": 27,
+   "rows": 531725,
+   "units": [
+    {
+     "key": "y=1996",
+     "year": 1996,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 172998
+    },
+    {
+     "key": "y=2003",
+     "year": 2003,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 135968
+    },
+    {
+     "key": "y=1961",
+     "year": 1961,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 97023
+    },
+    {
+     "key": "y=1985",
+     "year": 1985,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 77564
+    },
+    {
+     "key": "y=2011",
+     "year": 2011,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 48172
+    }
+   ]
+  },
+  {
+   "slot": 28,
+   "rows": 526853,
+   "units": [
+    {
+     "key": "y=2000",
+     "year": 2000,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 166710
+    },
+    {
+     "key": "y=1991",
+     "year": 1991,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 141729
+    },
+    {
+     "key": "y=1969",
+     "year": 1969,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 99457
+    },
+    {
+     "key": "y=1974",
+     "year": 1974,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 76553
+    },
+    {
+     "key": "y=2010",
+     "year": 2010,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 42404
+    }
+   ]
+  },
+  {
+   "slot": 29,
+   "rows": 531140,
+   "units": [
+    {
+     "key": "y=2002",
+     "year": 2002,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 160275
+    },
+    {
+     "key": "y=1990",
+     "year": 1990,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 143119
+    },
+    {
+     "key": "y=1970",
+     "year": 1970,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 105310
+    },
+    {
+     "key": "y=1955",
+     "year": 1955,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 75326
+    },
+    {
+     "key": "y=2026/s=other",
+     "year": 2026,
+     "yearKind": "value",
+     "sportClass": "other",
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 47110
+    }
+   ]
+  },
+  {
+   "slot": 30,
+   "rows": 504154,
+   "units": [
+    {
+     "key": "y=2016",
+     "year": 2016,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 157944
+    },
+    {
+     "key": "y=2017",
+     "year": 2017,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 143235
+    },
+    {
+     "key": "y=1972",
+     "year": 1972,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 113702
+    },
+    {
+     "key": "y=2005",
+     "year": 2005,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 72699
+    },
+    {
+     "key": "y=1950",
+     "year": 1950,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 16574
+    }
+   ]
+  },
+  {
+   "slot": 31,
+   "rows": 498308,
+   "units": [
+    {
+     "key": "y=1989",
+     "year": 1989,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 151558
+    },
+    {
+     "key": "y=1995",
+     "year": 1995,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 146994
+    },
+    {
+     "key": "y=1975",
+     "year": 1975,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 119624
+    },
+    {
+     "key": "y=1978",
+     "year": 1978,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 70047
+    },
+    {
+     "key": "y=1909",
+     "year": 1909,
+     "yearKind": "value",
+     "sportClass": null,
+     "hashPart": null,
+     "hashParts": null,
+     "rows": 10085
+    }
+   ]
+  }
+ ]
+}
