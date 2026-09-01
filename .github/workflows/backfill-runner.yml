@@ -122,6 +122,7 @@ on:
           - retire-flattened-attestations
           - repair-refractor-mislabel
           - repair-base-to-title-finish
+          - repair-setkey-from-title-parallel
           - merge-bare-colour-parallels
           - dedupe-catalog-partition-shadows
           - rehome-catalog-rows-to-own-partition
@@ -662,6 +663,12 @@ jobs:
           # REFUSES an apply with all three empty -- a whole-pool mutation
           # has to say its own name (CF-A-WHOLE-SOURCE-RETIRE-NEEDS-ITS-NAME,
           # the same doctrine fold-umbrella-to-series applies just below).
+          # repair-setkey-from-title-parallel shares this same SETKEYS axis,
+          # where it names the WRONG setKey being swept (e.g. `topps` for the
+          # flagship rows whose titles say Topps Chrome). Its scope is
+          # SPORTS + YEARS + SETKEYS, all three the shared inputs above, and it
+          # REFUSES an apply with all three empty -- a cross-product mutation
+          # has to say its own name (CF-A-WHOLE-SOURCE-RETIRE-NEEDS-ITS-NAME).
           SETKEYS: ${{ inputs.setkey_like }}
           # fold-umbrella-to-series (D39, CF-THE-UMBRELLA-FOLDS-ONTO-ITS-SERIES).
           # The scope is SPORT + YEARS + SETKEY and the script refuses when any
@@ -1025,6 +1032,32 @@ jobs:
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (moves=$N) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-base-to-title-finish -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f sources="${{ inputs.sources }}" -f setkey_like="${{ inputs.setkey_like }}"
+          else
+            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (moves=$N) — done, no re-dispatch."
+          fi
+
+      - name: Self-relaunch the setKey-from-title repair until the shard is clean
+        if: ${{ !cancelled() && inputs.script == 'repair-setkey-from-title-parallel' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        working-directory: backend
+        run: |
+          set +e
+          N=$(grep -aoE "MOVES setKey \+ finish[^0-9]+[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          N=${N:-0}
+          echo "moves=$N"
+          # CF-RELAUNCH-ONLY-ON-BUDGET (#1361, D18 2026-08-29). Relaunch iff the
+          # script printed its budget marker — never on a count. A count gate
+          # looped forever on a slot down to rows it cannot change, and stopped
+          # early on a budget stop that happened to change nothing. A LIMIT stop
+          # is a dry-run bound and deliberately prints no marker.
+          # setkey_like is forwarded because it carries this script's SETKEYS
+          # axis — the WRONG setKey being swept; without it a relaunch would
+          # widen its own scope mid-fleet.
+          if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
+            echo "::notice::budget hit (moves=$N) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-setkey-from-title-parallel -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f sources="${{ inputs.sources }}" -f setkey_like="${{ inputs.setkey_like }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (moves=$N) — done, no re-dispatch."
           fi
