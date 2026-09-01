@@ -36,8 +36,41 @@
  *                         when the recomputed payout agrees, and a
  *                         disagreement is REPORTED with the stored payout
  *                         kept, never silently restated. Idempotent: a row
- *                         with every fee line present is no longer a
+ *                         whose breakdown has been FETCHED is no longer a
  *                         candidate, so a second run does nothing.
+ *
+ * D34 R2 (2026-09-01) — four corrections to the above, all of which wrote or
+ * hid wrong money:
+ *
+ *   BLANK vs ZERO. Fee sighting is now PER BUCKET. A bucket no eBay line
+ *   touched stays NULL; a bucket eBay valued at "0.00" is recorded as 0.
+ *   R1 had a single global flag and got both directions wrong — one fee
+ *   line fabricated zeros into all five buckets, and an explicit 0.00 was
+ *   discarded as if unknown. So a row that never had a payment-processing
+ *   line still keeps a NULL there after a successful fetch. That is the
+ *   correct record, and it is why refill candidacy keys on the FETCH
+ *   (feeFetchedAt), not on counting nulls.
+ *
+ *   THE PAYOUT. Attribution is per SALE transaction — each one's own
+ *   totalFeeAmount off its own amount — and REFUND amounts are netted out.
+ *   R1 subtracted one global fee sum from one global gross, which on a
+ *   mixed-basis multi-SALE order took one line item's fees off two line
+ *   items' gross. Watch netPayoutBasis: "mixed_per_line_item" means the
+ *   derivation was compound, and it now says so instead of reporting a
+ *   clean basis.
+ *
+ *   SHIPPING. Never fabricated. A payload with no SHIPPING_LABEL leaves
+ *   actualShippingCost NULL and records shippingAbsentFromEbay; that fact,
+ *   not an invented 0, is what lets the row close. A label eBay posts after
+ *   the sale is still picked up, because such a row stays a candidate.
+ *
+ *   THE QUEUE. "Waiting on" is keyed on whether the fee fetch ANSWERED, not
+ *   on whether netPayout is set. R1 keyed it on netPayout and thereby
+ *   reported that nothing was outstanding on the Ohtani row — the one with
+ *   $603.14 itemized nowhere, whose payout had posted through the very
+ *   mapper that never read the breakdown.
+ *
+ * A refill ADDS; it never blanks a value the row already knows.
  *
  * EBAY_FINANCES_DUMP_TRANSACTIONS=true (REPORT ONLY only) prints the raw
  * Finances transactions — how the committed fixtures were captured.
@@ -85,12 +118,12 @@ async function main() {
   const { runFinancesEnrichmentSweep } = require(path.join(backend, "dist/jobs/ebayFinancesEnrichment.job.js"));
   console.log(`run-ebay-finances-enrichment  ${APPLY ? "APPLY (writes fees, net proceeds, realized P&L)" : "REPORT ONLY -- shadow, nothing written"}  mode=${MODE}  env=${process.env.EBAY_ENV || "(default)"}  perRun=${process.env.EBAY_FINANCES_ENRICHMENT_PER_RUN || "100"}`);
   if (MODE === "refill-fee-lines") {
-    console.log(`  refill-fee-lines: rows WITH netPayout and any missing fee line; fills the breakdown, keeps the stored payout`);
+    console.log(`  refill-fee-lines: rows WITH netPayout whose breakdown was never FETCHED (feeFetchedAt unset), or whose shipping is still open; fills the breakdown, keeps the stored payout, never blanks a known value`);
   }
   const s = await runFinancesEnrichmentSweep({ mode: MODE });
   console.log(`\n${APPLY ? "APPLIED" : "REPORT ONLY -- nothing written"}`);
   console.log(`  users                 ${f(s.users)}`);
-  console.log(`  candidates            ${f(s.candidatesEvaluated)}   <- ${MODE === "refill-fee-lines" ? "ebay, netPayout set, a fee line missing, <=90 days old" : "ebay, needsReconciliation, <=90 days old"}`);
+  console.log(`  candidates            ${f(s.candidatesEvaluated)}   <- ${MODE === "refill-fee-lines" ? "ebay, netPayout set, breakdown never fetched (or shipping still open), <=90 days old" : "ebay, needsReconciliation, <=90 days old"}`);
   console.log(`  ENRICHED              ${f(s.enriched)}${APPLY ? "" : "   <- would-have-enriched (shadow)"}`);
   console.log(`  no finances data yet  ${f(s.noFinancesData)}   <- eBay has not posted the fees`);
   console.log(`  fresh (<2d) fetched   ${f(s.freshFetched)}   <- D34: fetched anyway, eBay decides`);

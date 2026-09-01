@@ -43,6 +43,7 @@ vi.mock("../src/services/portfolioiq/portfolioStore.service.js", async (importAc
 });
 
 import { runFinancesEnrichmentSweep, resolveMode } from "../src/jobs/ebayFinancesEnrichment.job";
+import { missingFeeFields } from "../src/services/portfolioiq/erpReconciliation.service";
 
 const NOW = new Date("2026-08-31T22:00:00.000Z");
 
@@ -280,5 +281,269 @@ describe("D34 — mode resolution", () => {
 
     const s = await runFinancesEnrichmentSweep({ now: NOW });
     expect(s.unknownFeeTypes).toEqual(["SOME_NEW_EBAY_FEE_2027"]);
+  });
+});
+
+// ─── D34 R2 job-level adversarials ────────────────────────────────────────
+
+describe("D34 R2 — no fabricated shipping ever reaches the ledger", () => {
+  const openRow = (over: Record<string, unknown> = {}) => ({
+    id: "x",
+    source: "ebay",
+    ebayOrderId: "O",
+    soldAt: "2026-08-20T00:00:00.000Z",
+    needsReconciliation: true,
+    userCostsProvidedAt: "2026-08-21T00:00:00.000Z",
+    grossProceeds: 100,
+    costBasisSold: 50,
+    finalValueFee: null, paymentProcessingFee: null, promotedListingFee: null,
+    adFee: null, otherFees: null, netPayout: null, actualShippingCost: null,
+    ...over,
+  });
+
+  it("a SALE with no label yet leaves actualShippingCost NULL", async () => {
+    // ADV-E1. R1 wrote 0 here — an invented measurement, on an order where
+    // eBay simply had not posted the label yet.
+    userDocs.set("u-1", { ledger: [openRow()] });
+    getTransactionsForOrderMock.mockResolvedValue(
+      saleTxns("100.00", "13.25", [["FINAL_VALUE_FEE", "13.25"]]),
+    );
+
+    await runFinancesEnrichmentSweep({ now: NOW });
+
+    const e = userDocs.get("u-1").ledger[0];
+    expect(e.actualShippingCost).toBeNull();
+    expect(e.finalValueFee).toBe(13.25);
+    // Absent lines stay absent — no zeros invented alongside.
+    expect(e.paymentProcessingFee).toBeNull();
+    expect(e.adFee).toBeNull();
+  });
+
+  it("...and the row STILL closes, on the fact rather than on a fabricated 0", async () => {
+    // ADV-F1's honest counterpart: R1 needed the invented 0 to close this
+    // row. It closes on shippingAbsentFromEbay instead, and the ledger
+    // carries no number eBay never sent.
+    userDocs.set("u-1", { ledger: [openRow()] });
+    getTransactionsForOrderMock.mockResolvedValue(
+      saleTxns("100.00", "13.25", [["FINAL_VALUE_FEE", "13.25"]]),
+    );
+
+    await runFinancesEnrichmentSweep({ now: NOW });
+
+    const e = userDocs.get("u-1").ledger[0];
+    expect(e.needsReconciliation).toBe(false);
+    expect(e.reconciledVia).toBe("ebay_finances");
+    expect(e.shippingAbsentFromEbay).toBe(true);
+    expect(e.feeFetchedAt).toBe(NOW.toISOString());
+    expect(e.actualShippingCost).toBeNull();
+  });
+
+  it("a refill NEVER writes 0 over a null shipping", async () => {
+    // ADV-I1, verbatim: stored shipping null, SALE-only payload in.
+    userDocs.set("u-1", {
+      ledger: [openRow({
+        needsReconciliation: false,
+        netPayout: 86.75,
+        actualShippingCost: null,
+        feeFetchedAt: null,
+      })],
+    });
+    getTransactionsForOrderMock.mockResolvedValue(
+      saleTxns("100.00", "13.25", [["FINAL_VALUE_FEE", "13.25"]]),
+    );
+
+    await runFinancesEnrichmentSweep({ now: NOW, mode: "refill-fee-lines" });
+
+    expect(userDocs.get("u-1").ledger[0].actualShippingCost).toBeNull();
+  });
+
+  it("a refill never BLANKS a shipping value the row already knows", async () => {
+    // The mirror hazard the honest-null contract creates: the mapper
+    // truthfully returns null for a payload with no SHIPPING_LABEL, and
+    // writing that over a stored 5.97 would destroy a real measurement.
+    userDocs.set("u-1", {
+      ledger: [openRow({
+        needsReconciliation: false,
+        netPayout: 86.75,
+        actualShippingCost: 5.97,
+        feeFetchedAt: null,
+      })],
+    });
+    getTransactionsForOrderMock.mockResolvedValue(
+      saleTxns("100.00", "13.25", [["FINAL_VALUE_FEE", "13.25"]]),
+    );
+
+    await runFinancesEnrichmentSweep({ now: NOW, mode: "refill-fee-lines" });
+
+    const e = userDocs.get("u-1").ledger[0];
+    expect(e.actualShippingCost).toBe(5.97);
+    // ...and it does not then claim eBay has no label for this order.
+    expect(e.shippingAbsentFromEbay).toBe(false);
+  });
+
+  it("a label posted LATER is still picked up by a refill", async () => {
+    // The row closed with shipping unknown and no absent-fact established;
+    // it therefore remains a candidate and the late label lands.
+    userDocs.set("u-1", {
+      ledger: [openRow({
+        needsReconciliation: false,
+        netPayout: 86.75,
+        finalValueFee: 13.25,
+        actualShippingCost: null,
+        feeFetchedAt: "2026-08-21T00:00:00.000Z",
+        shippingAbsentFromEbay: false,
+      })],
+    });
+    getTransactionsForOrderMock.mockResolvedValue([
+      ...saleTxns("100.00", "13.25", [["FINAL_VALUE_FEE", "13.25"]]),
+      {
+        transactionId: "SL1",
+        orderId: "O",
+        transactionType: "SHIPPING_LABEL",
+        transactionStatus: "FUNDS_AVAILABLE_FOR_PAYOUT",
+        transactionDate: "2026-08-22T00:00:00.000Z",
+        amount: { value: "-4.50", currency: "USD" },
+      },
+    ]);
+
+    const s = await runFinancesEnrichmentSweep({ now: NOW, mode: "refill-fee-lines" });
+
+    expect(s.candidatesEvaluated).toBe(1);
+    expect(userDocs.get("u-1").ledger[0].actualShippingCost).toBe(4.5);
+  });
+
+  it("a row whose fetch settled shipping-absent is NOT re-fetched forever", async () => {
+    userDocs.set("u-1", {
+      ledger: [openRow({
+        needsReconciliation: false,
+        netPayout: 86.75,
+        finalValueFee: 13.25,
+        actualShippingCost: null,
+        feeFetchedAt: "2026-08-21T00:00:00.000Z",
+        shippingAbsentFromEbay: true,
+      })],
+    });
+
+    const s = await runFinancesEnrichmentSweep({ now: NOW, mode: "refill-fee-lines" });
+
+    expect(s.candidatesEvaluated).toBe(0);
+    expect(getTransactionsForOrderMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("D34 R2 — the job writes the per-line-item payout, not the global one", () => {
+  it("a mixed-basis multi-SALE order lands 173.50 in the ledger", async () => {
+    userDocs.set("u-1", {
+      ledger: [{
+        id: "multi", source: "ebay", ebayOrderId: "O-MULTI",
+        soldAt: "2026-08-20T00:00:00.000Z",
+        needsReconciliation: true,
+        userCostsProvidedAt: "2026-08-21T00:00:00.000Z",
+        grossProceeds: 200, costBasisSold: 100,
+        finalValueFee: null, paymentProcessingFee: null, promotedListingFee: null,
+        adFee: null, otherFees: null, netPayout: null, actualShippingCost: null,
+      }],
+    });
+    getTransactionsForOrderMock.mockResolvedValue([
+      {
+        transactionId: "S1", orderId: "O-MULTI", transactionType: "SALE",
+        transactionStatus: "FUNDS_AVAILABLE_FOR_PAYOUT",
+        transactionDate: "2026-08-20T00:00:00.000Z",
+        amount: { value: "100.00", currency: "USD" },
+        totalFeeAmount: { value: "13.25", currency: "USD" },
+        orderLineItems: [{ marketplaceFees: [{ feeType: "FINAL_VALUE_FEE", amount: { value: "13.25", currency: "USD" } }] }],
+      },
+      {
+        transactionId: "S2", orderId: "O-MULTI", transactionType: "SALE",
+        transactionStatus: "FUNDS_AVAILABLE_FOR_PAYOUT",
+        transactionDate: "2026-08-20T00:00:00.000Z",
+        amount: { value: "86.75", currency: "USD" },
+        orderLineItems: [{ marketplaceFees: [{ feeType: "FINAL_VALUE_FEE", amount: { value: "13.25", currency: "USD" } }] }],
+      },
+    ]);
+
+    await runFinancesEnrichmentSweep({ now: NOW });
+
+    const e = userDocs.get("u-1").ledger[0];
+    // NOT 186.75 — that was one line item's fees taken off two line items'
+    // gross, reported under a clean-sounding basis.
+    expect(e.netPayout).toBe(173.5);
+    expect(e.finalValueFee).toBe(26.5);
+  });
+
+  it("a REFUND lands as a reduced payout, not a full one", async () => {
+    userDocs.set("u-1", {
+      ledger: [{
+        id: "refunded", source: "ebay", ebayOrderId: "O-REF",
+        soldAt: "2026-08-20T00:00:00.000Z",
+        needsReconciliation: true,
+        userCostsProvidedAt: "2026-08-21T00:00:00.000Z",
+        grossProceeds: 100, costBasisSold: 50,
+        finalValueFee: null, paymentProcessingFee: null, promotedListingFee: null,
+        adFee: null, otherFees: null, netPayout: null, actualShippingCost: null,
+      }],
+    });
+    getTransactionsForOrderMock.mockResolvedValue([
+      ...saleTxns("100.00", "13.25", [["FINAL_VALUE_FEE", "13.25"]]),
+      {
+        transactionId: "R1", orderId: "O-REF", transactionType: "REFUND",
+        transactionStatus: "COMPLETED",
+        transactionDate: "2026-08-23T00:00:00.000Z",
+        amount: { value: "-100.00", currency: "USD" },
+        fees: [{ feeType: "FINAL_VALUE_FEE", amount: { value: "-13.25", currency: "USD" } }],
+      },
+    ]);
+
+    await runFinancesEnrichmentSweep({ now: NOW });
+
+    const e = userDocs.get("u-1").ledger[0];
+    // R1 reported the seller was paid 86.75 on a fully refunded order.
+    expect(e.netPayout).toBe(-13.25);
+    expect(e.finalValueFee).toBe(0);
+  });
+});
+
+describe("D34 R2 — the Ohtani row gains its five lines and stops reporting them", () => {
+  it("refill fills the breakdown, sets the fetch marker, and keeps the P&L", async () => {
+    userDocs.set("u-1", {
+      ledger: [{
+        id: "ohtani", source: "ebay", ebayOrderId: "17-15031-43259",
+        soldAt: "2026-08-17T15:50:42.000Z",
+        needsReconciliation: false,
+        reconciledVia: "ebay_finances", feeSource: "ebay_finances",
+        userCostsProvidedAt: "2026-08-30T12:37:07.637Z",
+        grossProceeds: 2999.99, costBasisSold: 2350,
+        netProceeds: 2396.85, realizedProfitLoss: 46.85,
+        finalValueFee: null, paymentProcessingFee: null, promotedListingFee: null,
+        adFee: null, otherFees: null,
+        netPayout: 2396.85, actualShippingCost: 5.97,
+        feeFetchedAt: null,
+      }],
+    });
+    getTransactionsForOrderMock.mockResolvedValue(
+      saleTxns("2999.99", "603.14", [
+        ["FINAL_VALUE_FEE", "397.50"],
+        ["FINAL_VALUE_FEE_FIXED_PER_ORDER", "0.30"],
+        ["FINAL_VALUE_FEE_AD_FEE", "205.34"],
+      ]),
+    );
+
+    const s = await runFinancesEnrichmentSweep({ now: NOW, mode: "refill-fee-lines" });
+    expect(s.candidatesEvaluated).toBe(1);
+
+    const e = userDocs.get("u-1").ledger[0];
+    expect(e.finalValueFee).toBe(397.8);
+    expect(e.promotedListingFee).toBe(205.34);
+    // The measured $603.14 is now itemized. Nulls contribute nothing —
+    // they are absent lines, not zero-dollar ones.
+    const sum = (e.finalValueFee ?? 0) + (e.paymentProcessingFee ?? 0)
+      + (e.promotedListingFee ?? 0) + (e.adFee ?? 0) + (e.otherFees ?? 0);
+    expect(Number(sum.toFixed(2))).toBe(603.14);
+    // The closed row's P&L is not restated, and its shipping is preserved.
+    expect(e.netPayout).toBe(2396.85);
+    expect(e.actualShippingCost).toBe(5.97);
+    expect(e.feeFetchedAt).toBe(NOW.toISOString());
+    // ...and it no longer reports the five lines as outstanding.
+    expect(missingFeeFields({ ...e, needsReconciliation: true })).toEqual([]);
   });
 });

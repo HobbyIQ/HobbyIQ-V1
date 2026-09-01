@@ -1,6 +1,9 @@
 {
   "_provenance": "eBay FeeTypeEnum (Sell Finances API) mapped to the seven HobbyIQ fee fields. The mapping is the ruling; the enum is eBay's.",
-  "_rule": "An eBay fee type that matches no bucket lands in otherFees AND has its name reported (unknownFeeTypes). Nothing is ever dropped, and nothing is ever invented.",
+  "_rule": "An eBay fee type that matches no bucket lands in otherFees AND has its name reported (unknownFeeTypes) — on SIGHTING, so a 0.00 or non-numeric amount is still named. Nothing is ever dropped, and nothing is ever invented.",
+  "_nullVsZero": "D34 R2 (2026-09-01). Sighting is PER BUCKET, not global. A bucket no line touched stays NULL (unknown). A bucket touched by a line is a NUMBER — including a line eBay valued at 0.00, because a stated zero is a fact. R1 carried one global sawAnyFee flag and had this exactly backwards in both directions: one fee line fabricated zeros into all five buckets, while an explicit 0.00 line was discarded by a `v === 0` early-out and came back null. It reported zero when it did not know, and unknown when it had been told zero.",
+  "_shipping": "D34 R2. actualShippingCost is NEVER fabricated. No SHIPPING_LABEL means the field stays NULL and the diagnostic shippingAbsentFromEbay carries the fact that the fetch completed without one. R1 wrote a 0 there so the row could pass feesAxisSatisfied; feesAxisSatisfied now reads the fact instead, so the row closes without an invented measurement and a label eBay posts later can still land.",
+  "_netPayout": "D34 R2. Attribution is PER SALE TRANSACTION: each SALE's own totalFeeAmount is subtracted from its own amount, and REFUND amounts are netted out. R1 subtracted one global fee sum from one global gross, which on a mixed-basis multi-SALE order took one line item's fees off two line items' gross (186.75 instead of 173.50) while reporting the basis 'amount_minus_total_fees'. A compound derivation now reports 'mixed_per_line_item'.",
   "buckets": {
     "finalValueFee": {
       "feeTypes": ["FINAL_VALUE_FEE", "FINAL_VALUE_FEE_FIXED_PER_ORDER"],

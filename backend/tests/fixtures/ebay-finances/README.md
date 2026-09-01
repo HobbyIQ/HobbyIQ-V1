@@ -54,3 +54,30 @@ otherFees           null  }
 `2999.99 - 2396.85 = 603.14` — 20.1% of gross — withheld by eBay and
 itemized in no field. That $603.14 is the number the seven fields have to
 account for, and the invariant the tests pin.
+
+## R2 (2026-09-01): what a null in `expectedFeeMap` means
+
+`paymentProcessingFee`, `adFee` and `otherFees` are **null** in
+`ohtani-...reconstructed.json`. In R1 they were `0`, and that was the
+fixture pinning a fabrication: this payload carries no line of those
+types, so those numbers are *unknown*. Under managed payments eBay
+generally folds processing into the final value fee and sends no separate
+line — "no line" is not "zero dollars", and the difference matters in a
+tax export.
+
+Three rules the fixtures now encode, and the tests enforce:
+
+- **Absent line → null.** Sighting is per bucket. One fee line does not
+  populate the other four.
+- **Stated `0.00` → 0.** eBay saying zero is a fact, and a fact is never
+  dropped. If the captured payload turns out to carry explicit `0.00`
+  lines for these types, those become `0` here — legitimately.
+- **No fabricated shipping.** A payload with no `SHIPPING_LABEL` leaves
+  `actualShippingCost` null; the *fact* that the fetch completed without
+  one is carried separately (`shippingAbsentFromEbay`), and that is what
+  lets the row close.
+
+When you replace this file with the real capture, read the split
+assertion's failure rather than re-greening it — and check whether the
+three nulls are genuinely absent lines or explicit zeros. Either answer is
+fine; guessing is not.

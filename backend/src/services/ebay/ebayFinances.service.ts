@@ -96,6 +96,26 @@ export interface FinancesFeeMap {
 }
 
 /**
+ * D34 R2: how netPayout was arrived at.
+ *   "none"                    — no SALE transaction; netPayout is null.
+ *   "amount_minus_total_fees" — EVERY SALE carried totalFeeAmount; each one's
+ *                               fees were subtracted from its own gross.
+ *   "amount_as_net"           — NO SALE carried totalFeeAmount; each amount was
+ *                               taken as already-net (the pre-D34 assumption).
+ *   "mixed_per_line_item"     — some SALEs carried totalFeeAmount and some did
+ *                               not. The sum is still correct (attribution is
+ *                               per transaction), but the basis is compound and
+ *                               says so rather than reporting a clean one.
+ *   "sale_minus_refunds"      — as above, with REFUND transactions netted in.
+ *                               Suffix, not a replacement: see netPayoutBasis.
+ */
+export type NetPayoutBasis =
+  | "none"
+  | "amount_minus_total_fees"
+  | "amount_as_net"
+  | "mixed_per_line_item";
+
+/**
  * D34: the fee-type strings that landed in `otherFees` because no bucket
  * claimed them. Surfaced (not persisted) so an unrecognized eBay fee type
  * shows up in the enrichment log as a named string instead of silently
@@ -111,8 +131,28 @@ export interface FinancesFeeMapDiagnostics {
   saleAmountTotal: number | null;
   /** `totalFeeAmount` summed across SALE transactions, when eBay sent it. */
   totalFeeAmountTotal: number | null;
-  /** How netPayout was arrived at — see mapFinancesToFees. */
-  netPayoutBasis: "amount_minus_total_fees" | "amount_as_net" | "none";
+  /** How netPayout was arrived at — see NetPayoutBasis. */
+  netPayoutBasis: NetPayoutBasis;
+  /** D34 R2: SALE transactions seen. */
+  saleTransactionCount: number;
+  /** D34 R2: how many of those carried a totalFeeAmount. */
+  saleTransactionsWithTotalFee: number;
+  /** D34 R2: REFUND amounts netted out of the payout (positive = refunded). */
+  refundTotal: number | null;
+  /**
+   * D34 R2: TRUE when this payload is a complete fee fetch — eBay answered
+   * with at least one SALE transaction, so what it did NOT send is a real
+   * absence rather than a question never asked. The reconciliation surface
+   * keys "is this row still waiting on eBay" on this, NOT on netPayout.
+   */
+  feeFetchComplete: boolean;
+  /**
+   * D34 R2: TRUE when the fetch was complete AND eBay sent no SHIPPING_LABEL.
+   * That is a fact about eBay ("no label was bought through us"), not a
+   * measurement of what the seller paid — so actualShippingCost stays NULL
+   * and this flag is what lets the row close. Never write a 0 here.
+   */
+  shippingAbsentFromEbay: boolean;
 }
 
 // ─── Auth + fetch primitive (mirrors ebayOrderPoll.service.ts:120-134) ────
@@ -304,55 +344,117 @@ export function mapFinancesToFees(
 export function mapFinancesToFeesWithDiagnostics(
   txns: ReadonlyArray<FinancesTransaction>,
 ): { feeMap: FinancesFeeMap; diagnostics: FinancesFeeMapDiagnostics } {
-  let finalValueFee = 0;
-  let paymentProcessingFee = 0;
-  let promotedListingFee = 0;
-  let adFee = 0;
-  let otherFees = 0;
-  let saleAmount = 0;
-  let totalFeeAmount = 0;
-  let actualShippingCost = 0;
+  // D34 R2 — PER-BUCKET SIGHTING.
+  //
+  // The R1 mapper carried ONE global `sawAnyFee`: if any fee line existed,
+  // all five fields were written as numbers. An order with only a
+  // FINAL_VALUE_FEE therefore reported paymentProcessingFee=0 — a number
+  // eBay never sent, headed for a tax export. And the inverse held too:
+  // an explicit "0.00" line was thrown away by a `v === 0` early-out, so a
+  // stated zero came back as null. The mapper reported zero when it did
+  // not know, and unknown when it had been told zero.
+  //
+  // Now each bucket carries its own sighting. A bucket that no line touched
+  // stays NULL (unknown). A bucket touched by a line — including a line
+  // whose value is 0.00 — is a number, because eBay saying "0.00" is a
+  // fact. Blank means unknown; a stated zero is never dropped.
+  const totals = {
+    finalValueFee: 0,
+    paymentProcessingFee: 0,
+    promotedListingFee: 0,
+    adFee: 0,
+    otherFees: 0,
+  };
+  const seen = {
+    finalValueFee: false,
+    paymentProcessingFee: false,
+    promotedListingFee: false,
+    adFee: false,
+    otherFees: false,
+  };
+  type Bucket = keyof typeof totals;
 
-  let sawSale = false;
+  let actualShippingCost = 0;
+  let saleAmountTotal = 0;
+  let totalFeeAmountTotal = 0;
+  let netPayoutAccum = 0;
+  let refundTotal = 0;
+
+  let saleTransactionCount = 0;
+  let saleTransactionsWithTotalFee = 0;
   let sawShipping = false;
-  let sawAnyFee = false;
-  let sawTotalFeeAmount = false;
+  let sawRefund = false;
   let sawLineItemFees = false;
   let sawTopLevelFees = false;
   const unknownFeeTypes = new Set<string>();
 
-  const bucket = (f: FinancesFee): void => {
-    const v = toNum(f.amount);
-    if (v === 0) return;
-    sawAnyFee = true;
-    const type = String(f.feeType ?? "").trim();
-    if (matchesAny(type, FEE_PATTERNS.finalValueFee)) finalValueFee += v;
-    else if (matchesAny(type, FEE_PATTERNS.paymentProcessing)) paymentProcessingFee += v;
-    else if (matchesAny(type, FEE_PATTERNS.promotedListing)) promotedListingFee += v;
-    else if (matchesAny(type, FEE_PATTERNS.adFee)) adFee += v;
-    else {
-      // Nothing is dropped: an eBay fee type we don't recognize still
-      // lands in otherFees, and its name is reported so the taxonomy can
-      // be extended deliberately rather than discovered from a P&L gap.
-      otherFees += v;
-      if (type) unknownFeeTypes.add(type);
-    }
+  const bucketFor = (type: string): Bucket => {
+    if (matchesAny(type, FEE_PATTERNS.finalValueFee)) return "finalValueFee";
+    if (matchesAny(type, FEE_PATTERNS.paymentProcessing)) return "paymentProcessingFee";
+    if (matchesAny(type, FEE_PATTERNS.promotedListing)) return "promotedListingFee";
+    if (matchesAny(type, FEE_PATTERNS.adFee)) return "adFee";
+    return "otherFees";
   };
 
+  const bucket = (f: FinancesFee): void => {
+    const type = String(f.feeType ?? "").trim();
+    const target = bucketFor(type);
+    // D34 R2 SECONDARY: name the unknown type on SIGHTING, not on a
+    // non-zero parse. A type we don't recognize is MOST likely malformed
+    // exactly when its amount is 0.00 or unparseable — dropping the name
+    // there defeats the whole "nothing is dropped, everything is named"
+    // guarantee at the moment it matters most.
+    if (target === "otherFees" && type) unknownFeeTypes.add(type);
+    // The line exists, so the bucket is now KNOWN even if the amount is
+    // zero or unparseable. toNum() yields 0 for a non-numeric amount; the
+    // sighting is what turns null into a number, not the value.
+    seen[target] = true;
+    totals[target] += toNum(f.amount);
+  };
+
+  // D34 R2 — PER-LINE-ITEM PAYOUT ATTRIBUTION.
+  //
+  // R1 kept one global sawTotalFeeAmount and subtracted the summed
+  // totalFeeAmount from the summed gross. On a multi-SALE order where only
+  // one transaction carried totalFeeAmount, that subtracted ONE line's fees
+  // from BOTH lines' gross: two $100 SALEs, fees 13.25 each but sent on
+  // only one, yielded 186.75 instead of 173.50 — and reported the
+  // reassuring basis "amount_minus_total_fees" while doing it.
+  //
+  // Attribution is now per SALE transaction: each one's own totalFeeAmount
+  // is subtracted from its own amount, and a transaction that omits it
+  // contributes its amount as already-net. The basis reports "mixed_per_
+  // line_item" when the two branches were both used, so a compound
+  // derivation can never present itself as a clean one.
   for (const t of txns) {
     const type = t.transactionType?.toUpperCase();
     if (type === "SALE") {
-      sawSale = true;
-      saleAmount += toNum(t.amount);
+      saleTransactionCount += 1;
+      const gross = toNum(t.amount);
+      saleAmountTotal += gross;
       if (t.totalFeeAmount) {
-        sawTotalFeeAmount = true;
-        totalFeeAmount += toNum(t.totalFeeAmount);
+        saleTransactionsWithTotalFee += 1;
+        const fee = toNum(t.totalFeeAmount);
+        totalFeeAmountTotal += fee;
+        netPayoutAccum += gross - fee;
+      } else {
+        netPayoutAccum += gross;
       }
     } else if (type === "SHIPPING_LABEL") {
       sawShipping = true;
       // SHIPPING_LABEL amounts are negative (debit from seller). Take
       // absolute value so actualShippingCost is a positive cost.
       actualShippingCost += Math.abs(toNum(t.amount));
+    } else if (type === "REFUND") {
+      // D34 R2 SECONDARY: money returned to the buyer is money the seller
+      // was NOT paid. Before this, a fully refunded $100 order still
+      // reported the seller was paid 86.75. eBay sends REFUND amounts as
+      // negatives; take the magnitude and subtract, so the sign convention
+      // in the payload cannot flip the direction of the correction.
+      sawRefund = true;
+      const refunded = Math.abs(toNum(t.amount));
+      refundTotal += refunded;
+      netPayoutAccum -= refunded;
     }
 
     // The real breakdown: orderLineItems[].marketplaceFees[].
@@ -362,54 +464,59 @@ export function mapFinancesToFeesWithDiagnostics(
       for (const f of mf) bucket(f);
     }
     // Top-level fees[]: REFUND / NON_SALE_CHARGE (promoted-listing fees
-    // billed off-payout arrive this way).
+    // billed off-payout arrive this way). A REFUND's fee CREDITS arrive
+    // here as negatives and correctly net down the bucket they belong to.
     const top = Array.isArray(t.fees) ? t.fees : [];
     if (top.length > 0) sawTopLevelFees = true;
     for (const f of top) bucket(f);
   }
 
-  const netPayout = !sawSale
-    ? null
-    : sawTotalFeeAmount
-      ? round2(saleAmount - totalFeeAmount)
-      : round2(saleAmount);
+  const sawSale = saleTransactionCount > 0;
+  const netPayout = sawSale ? round2(netPayoutAccum) : null;
 
-  // Null-vs-0: if no SALE transaction was found, we don't know netPayout —
-  // leave it null so the enrichment helper falls back to derivation
-  // instead of writing a misleading 0. Same for the others. Blank means
-  // unknown; it never means "zero".
+  const netPayoutBasis: NetPayoutBasis = !sawSale
+    ? "none"
+    : saleTransactionsWithTotalFee === 0
+      ? "amount_as_net"
+      : saleTransactionsWithTotalFee === saleTransactionCount
+        ? "amount_minus_total_fees"
+        : "mixed_per_line_item";
+
+  // D34 R2 — NO FABRICATED SHIPPING ZERO.
+  //
+  // R1 wrote actualShippingCost = 0 whenever a SALE posted with no
+  // SHIPPING_LABEL. eBay commonly posts the label AFTER the sale, so an
+  // order fetched inside that window got a written 0 — a measurement we
+  // invented — and feesAxisSatisfied then closed the row permanently on it.
+  //
+  // The row-closing problem was real; the fix belongs in feesAxisSatisfied,
+  // not here. A blank stays blank; `shippingAbsentFromEbay` carries the
+  // FACT (the fetch was complete and eBay sent no label) that lets the row
+  // close honestly, and leaves the field revisitable by refill.
+  const feeFetchComplete = sawSale;
   return {
     feeMap: {
-      finalValueFee: sawAnyFee ? round2(finalValueFee) : null,
-      paymentProcessingFee: sawAnyFee ? round2(paymentProcessingFee) : null,
-      promotedListingFee: sawAnyFee ? round2(promotedListingFee) : null,
-      adFee: sawAnyFee ? round2(adFee) : null,
-      otherFees: sawAnyFee ? round2(otherFees) : null,
+      finalValueFee: seen.finalValueFee ? round2(totals.finalValueFee) : null,
+      paymentProcessingFee: seen.paymentProcessingFee ? round2(totals.paymentProcessingFee) : null,
+      promotedListingFee: seen.promotedListingFee ? round2(totals.promotedListingFee) : null,
+      adFee: seen.adFee ? round2(totals.adFee) : null,
+      otherFees: seen.otherFees ? round2(totals.otherFees) : null,
       netPayout,
-      // D34: absent SHIPPING_LABEL is not the same as unknown shipping.
-      // Once eBay has posted the SALE, it has told us everything it
-      // charged for this order; no label line means the seller did not buy
-      // a label through eBay, which is a shipping cost of 0, not a mystery.
-      // Leaving it null stranded such orders forever, because BOTH branches
-      // of feesAxisSatisfied require actualShippingCost != null. Before the
-      // SALE posts we genuinely don't know, so it stays null there.
-      actualShippingCost: sawShipping
-        ? round2(actualShippingCost)
-        : sawSale
-          ? 0
-          : null,
+      actualShippingCost: sawShipping ? round2(actualShippingCost) : null,
     },
     diagnostics: {
       unknownFeeTypes: [...unknownFeeTypes].sort(),
       sawLineItemFees,
       sawTopLevelFees,
-      saleAmountTotal: sawSale ? round2(saleAmount) : null,
-      totalFeeAmountTotal: sawTotalFeeAmount ? round2(totalFeeAmount) : null,
-      netPayoutBasis: !sawSale
-        ? "none"
-        : sawTotalFeeAmount
-          ? "amount_minus_total_fees"
-          : "amount_as_net",
+      saleAmountTotal: sawSale ? round2(saleAmountTotal) : null,
+      totalFeeAmountTotal:
+        saleTransactionsWithTotalFee > 0 ? round2(totalFeeAmountTotal) : null,
+      netPayoutBasis,
+      saleTransactionCount,
+      saleTransactionsWithTotalFee,
+      refundTotal: sawRefund ? round2(refundTotal) : null,
+      feeFetchComplete,
+      shippingAbsentFromEbay: feeFetchComplete && !sawShipping,
     },
   };
 }

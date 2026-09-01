@@ -118,17 +118,28 @@ export function resolveMode(raw: string | undefined): EnrichmentMode {
     : "enrich";
 }
 
-/** The five granular fee fields — netPayout/shipping are tracked apart. */
-const GRANULAR_FEE_FIELDS = [
-  "finalValueFee",
-  "paymentProcessingFee",
-  "promotedListingFee",
-  "adFee",
-  "otherFees",
-] as const;
-
-function missingAnyFeeLine(e: any): boolean {
-  return GRANULAR_FEE_FIELDS.some((f) => e?.[f] == null);
+/**
+ * D34 R2: does this row still need its breakdown fetched?
+ *
+ * R1 asked "is any of the five fee fields null?" That worked only because
+ * the R1 mapper fabricated a zero into every bucket, so a fetched row came
+ * back with no nulls left. Under the honest contract a fetched row KEEPS
+ * nulls — eBay sends no PAYMENT_PROCESSING_FEE line under managed payments,
+ * and null is the truthful record of that — so a null-counting test would
+ * make every such row a candidate on every sweep, forever.
+ *
+ * The question is therefore about the FETCH, not the fields: has a fee
+ * fetch answered for this row? feeFetchedAt is that marker, and it is the
+ * same one missingFeeFields keys on. A row that has never been fetched is
+ * a candidate; a fetched row is done, except that a shipping value eBay had
+ * not yet posted at fetch time is still worth revisiting.
+ */
+function needsFeeBreakdownFetch(e: any): boolean {
+  if (e?.feeFetchedAt == null) return true;
+  // Fetched. The one thing still legitimately outstanding is a
+  // SHIPPING_LABEL eBay posts AFTER the sale: shipping unknown, and the
+  // fetch did NOT establish that no label exists.
+  return e?.actualShippingCost == null && e?.shippingAbsentFromEbay !== true;
 }
 
 type Verdict = "candidate" | "candidate-fresh" | "skip-over" | "skip-other";
@@ -148,7 +159,7 @@ function isCandidate(e: any, nowMs: number, mode: EnrichmentMode): Verdict {
     // payout known, breakdown absent. Deliberately NOT gated on
     // needsReconciliation — these rows are closed, and that is the point.
     if (e.netPayout == null) return "skip-other";
-    if (!missingAnyFeeLine(e)) return "skip-other";
+    if (!needsFeeBreakdownFetch(e)) return "skip-other";
     return age < MIN_AGE_MS ? "candidate-fresh" : "candidate";
   }
 
@@ -292,14 +303,54 @@ export async function runFinancesEnrichmentSweep(opts: {
         }
       }
 
-      const effectiveFeeMap = payoutDisagreed
-        ? { ...feeMap, netPayout: Number(entry.netPayout) }
-        : feeMap;
+      // D34 R2: a refill ADDS what is missing; it never blanks what is
+      // already known. The mapper honestly returns null for a field this
+      // payload does not carry — but on a refill the stored row may hold a
+      // real value from an earlier fetch (Ohtani's shipping 5.97 comes from
+      // a SHIPPING_LABEL that this order's fee re-fetch need not repeat).
+      // Writing the mapper's null over it would DESTROY a measurement in
+      // the name of not fabricating one. Keep the stored value; only a
+      // non-null from the mapper may overwrite.
+      const keepKnown = <T,>(fresh: T | null, stored: unknown): T | null =>
+        fresh != null ? fresh : (stored as T | null) ?? null;
+      const merged =
+        mode === "refill-fee-lines"
+          ? {
+              finalValueFee: keepKnown(feeMap.finalValueFee, (entry as any).finalValueFee),
+              paymentProcessingFee: keepKnown(feeMap.paymentProcessingFee, (entry as any).paymentProcessingFee),
+              promotedListingFee: keepKnown(feeMap.promotedListingFee, (entry as any).promotedListingFee),
+              adFee: keepKnown(feeMap.adFee, (entry as any).adFee),
+              otherFees: keepKnown(feeMap.otherFees, (entry as any).otherFees),
+              netPayout: keepKnown(feeMap.netPayout, (entry as any).netPayout),
+              actualShippingCost: keepKnown(feeMap.actualShippingCost, (entry as any).actualShippingCost),
+            }
+          : feeMap;
 
+      const effectiveFeeMap = payoutDisagreed
+        ? { ...merged, netPayout: Number(entry.netPayout) }
+        : merged;
+
+      // D34 R2: carry the fetch provenance onto the row. feeFetchedAt is set
+      // ONLY when eBay actually answered with a complete fetch — that is the
+      // marker missingFeeFields keys on to tell absent-because-zero from
+      // absent-because-never-fetched. shippingAbsentFromEbay records the FACT
+      // that the answer contained no SHIPPING_LABEL, which is what lets the
+      // row close without a fabricated shipping zero being written.
       const { entry: enriched, adjustment } = applyFeeEnrichment(
         entry as LedgerEntryForErp,
         effectiveFeeMap,
         now.toISOString(),
+        diagnostics.feeFetchComplete
+          ? {
+              feeFetchedAt: now.toISOString(),
+              // Only a row that ends up with NO shipping value carries the
+              // absent-from-eBay fact. If the merge kept a stored 5.97, the
+              // shipping is known and the flag would be a lie.
+              shippingAbsentFromEbay:
+                effectiveFeeMap.actualShippingCost == null
+                && diagnostics.shippingAbsentFromEbay,
+            }
+          : {},
       );
 
       // Recompute derived financials. netPayout-authoritative branch

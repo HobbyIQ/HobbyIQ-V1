@@ -78,6 +78,30 @@ export interface LedgerEntryForErp {
   userCostsProvidedBy?: string | null;
   feeSource?: ReconciledVia;
 
+  // D34 R2 (2026-09-01): FETCH PROVENANCE. The question "is this row still
+  // waiting on eBay?" is a question about whether we ASKED, not about which
+  // fields happen to be null.
+  //
+  // R1 keyed it on netPayout: if the payout had posted, only shipping could
+  // be reported missing. That silenced the exact row D34 exists to fix —
+  // the real Ohtani order (netPayout 2396.85, all five fee lines null,
+  // $603.14 itemized nowhere) reported that NOTHING was outstanding,
+  // because its payout had posted through the pre-D34 mapper that never
+  // read the breakdown at all.
+  //
+  // feeFetchedAt is set ONLY by a fee fetch that eBay actually answered.
+  // Set => an absent line is a real absence (no promotion means no promoted
+  // -listing fee to wait for). Unset => the lines are genuinely unknown and
+  // MUST be reported, whatever netPayout says.
+  feeFetchedAt?: string | null;
+  /**
+   * D34 R2: the fetch completed and eBay sent no SHIPPING_LABEL for this
+   * order — the seller bought no label through eBay. A FACT about eBay's
+   * answer, not a measurement of what shipping cost, so actualShippingCost
+   * stays NULL. This is what lets such a row close without a fabricated 0.
+   */
+  shippingAbsentFromEbay?: boolean;
+
   // CF-ERP-EXPANSION-#1 sales-tracking
   salesChannel?: SalesChannel;
   channelNote?: string;
@@ -169,7 +193,25 @@ export function allGranularFeesKnown(e: LedgerEntryForErp): boolean {
  */
 export function feesAxisSatisfied(e: LedgerEntryForErp): boolean {
   if (allGranularFeesKnown(e)) return true;
-  return e.netPayout != null && e.actualShippingCost != null;
+  if (e.netPayout != null && e.actualShippingCost != null) return true;
+  // D34 R2 (2026-09-01): the row-closing fix that replaces the mapper's
+  // fabricated shipping zero.
+  //
+  // R1 made the mapper write actualShippingCost = 0 whenever a SALE posted
+  // with no SHIPPING_LABEL, purely so the row could pass this predicate.
+  // eBay commonly posts the label AFTER the sale, so an order fetched in
+  // that window got an INVENTED measurement written to the ledger and the
+  // row closed permanently on it (refill only targets granular fee lines,
+  // not shipping, so it could never be revisited).
+  //
+  // A row may close when the fetch was COMPLETE and shipping is genuinely
+  // absent from eBay's answer. That is expressed honestly here — the fact
+  // lives in shippingAbsentFromEbay, the measurement stays NULL, and a
+  // later refill that finds a SHIPPING_LABEL can still fill it in.
+  return e.netPayout != null
+    && e.actualShippingCost == null
+    && e.shippingAbsentFromEbay === true
+    && e.feeFetchedAt != null;
 }
 
 /**
@@ -217,23 +259,52 @@ export function tryFinalizeReconciliation(
  * feesAxisSatisfied succeeds via the netPayout+shipping shortcut — those
  * entries are ready to close (waiting only on axis 2), so iOS should render
  * a "ready to save" affordance instead of a "waiting on fees" list.
+ *
+ * D34 R2 (2026-09-01): that shortcut may CLOSE a row, but it must never
+ * SILENCE one. The real Ohtani row satisfies it (netPayout 2396.85 +
+ * shipping 5.97) while all five fee lines are null and $603.14 is itemized
+ * nowhere — because its payout posted through the pre-D34 mapper that never
+ * read the breakdown. Returning [] there told the operator nothing was
+ * outstanding on the exact row this work exists to fix. The shortcut now
+ * only silences the list when a fee FETCH actually answered.
  */
 export function missingFeeFields(entry: LedgerEntryForErp): string[] {
   if (isReconciled(entry)) return [];
   if (entry.source !== "ebay") return [];
-  if (feesAxisSatisfied(entry)) return [];
-  // D34 (2026-08-31): "waiting on" must mean eBay genuinely has not sent
-  // the number. Once the payout has posted, the breakdown lines are
-  // settled facts — a sale with no promotion truly has no promoted-listing
-  // fee, and listing it as "waiting" asks the user to wait for something
-  // that will never arrive. Before the payout posts we can't tell absent
-  // from zero, so the full list is still the honest answer.
+  // A complete granular breakdown is self-evidently nothing-outstanding,
+  // whatever the provenance.
+  if (allGranularFeesKnown(entry)) return [];
+  // The netPayout+shipping shortcut counts as "nothing outstanding" ONLY
+  // when the breakdown was fetched. Without a fetch, the absent lines are
+  // unknown and belong on the list.
+  if (feesAxisSatisfied(entry) && entry.feeFetchedAt != null) return [];
+  // D34 R2 (2026-09-01): "waiting on" must mean eBay genuinely has not sent
+  // the number — and the only thing that can tell absent-because-zero from
+  // absent-because-never-fetched is whether the fee FETCH populated the
+  // breakdown. That is feeFetchedAt, not netPayout.
   //
-  // netPayout is the discriminator because it is the field eBay posts
-  // first and the one feesAxisSatisfied keys on.
-  if (entry.netPayout != null) {
+  // R1 keyed this on netPayout and got it backwards on the row that
+  // motivated the whole PR. The real Ohtani order carries netPayout
+  // 2396.85 with all five fee lines null — its payout posted through the
+  // pre-D34 mapper, which never read orderLineItems[].marketplaceFees[] at
+  // all. Keyed on netPayout, that row reported NOTHING outstanding while
+  // $603.14 sat itemized in no field. A payout can post without the
+  // breakdown ever having been fetched; the fetch marker cannot.
+  //
+  // Fetch DONE  => an absent line is a real absence. A sale with no
+  //                promotion has no promoted-listing fee to wait for, and
+  //                the card stops asking for one.
+  // Fetch UNDONE => every null line is genuinely unknown and is reported,
+  //                whatever netPayout happens to say.
+  if (entry.feeFetchedAt != null) {
     const missing: string[] = [];
-    if (entry.actualShippingCost == null) missing.push("actualShippingCost");
+    // Shipping is the one field a completed fetch can still legitimately
+    // be waiting on: eBay often posts SHIPPING_LABEL after the SALE. It is
+    // outstanding unless eBay's answer said no label exists.
+    if (entry.actualShippingCost == null && entry.shippingAbsentFromEbay !== true) {
+      missing.push("actualShippingCost");
+    }
+    if (entry.netPayout == null) missing.push("netPayout");
     return missing;
   }
   const missing: string[] = [];
