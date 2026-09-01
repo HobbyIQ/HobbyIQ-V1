@@ -1,0 +1,16 @@
+# Line endings are not part of any contract.
+#
+# This repo is a CRLF checkout (core.autocrlf=true) with no .gitattributes, so
+# what a test read from disk depended on the machine it ran on. A grep-style
+# assertion that sliced on an LF-only literal (`"} else {\n        stats..."`)
+# silently matched -1 here and sliced to EOF, swallowing the very call it
+# asserted was absent -- a net-new test that was green for its author and red on
+# a clean clone.
+#
+# Normalize in the repository, and check out platform-native.
+* text=auto
+
+# Anything executed as a POSIX script must keep LF even on Windows.
+*.sh text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf

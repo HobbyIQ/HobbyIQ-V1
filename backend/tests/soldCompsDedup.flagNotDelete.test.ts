@@ -22,7 +22,11 @@ import { describe, expect, it } from "vitest";
 
 const backend = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const require_ = createRequire(import.meta.url);
-const read = (p: string) => fs.readFileSync(path.join(backend, "scripts", p), "utf8");
+// CRLF checkout, no .gitattributes: the `indexOf("\n}")` slices below match
+// only incidentally (CRLF is `\r\n`, so `\n}` survives -- but `"{\n  x"` would
+// not). Normalize at read time so the assertions do not depend on which side of
+// the newline a stray `\r` happens to fall.
+const read = (p: string) => fs.readFileSync(path.join(backend, "scripts", p), "utf8").replace(/\r\n/g, "\n");
 
 const crossSource = read("crossSourceDedupSoldComps.cjs");
 const soldCompsClean = read("sold-comps-cross-source-dedup.cjs");
