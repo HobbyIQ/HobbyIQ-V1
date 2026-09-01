@@ -40,23 +40,42 @@
 const path = require("node:path");
 const fs = require("node:fs");
 const backend = path.resolve(__dirname, "..");
-const { CosmosClient } = require("@azure/cosmos");
-const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
-const {
-  relocateSoldComp, stripSystem, contentHashOf,
-} = require(path.join(__dirname, "lib/relocate-sold-comp.cjs"));
+// The dist/ and Cosmos requires live inside main(), as the D33 lane does it:
+// loading this module must not need a built tree, so the runner contract test
+// can require it and drive the scope refusal without a compile step.
 
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
 const DEFAULT_LIST = "data/pool-relocations/2026-09-01-four-values.json";
-// `scope` is shared with other lanes and carries THEIR vocabulary by default
-// ("refractor", "all", a product key). Only a value that names a list file is
-// a scope for THIS lane; anything else falls back to the committed default
-// rather than being read as a path that does not exist.
+// CF-A-WHOLE-SCOPE-WRITE-REFUSES-WITHOUT-ITS-SCOPE (D-06, R3).
+//
+// `scope` is shared with every other lane on this runner and carries THEIR
+// vocabulary ("refractor", "all", a product key). This lane used to treat any
+// such value as "no list given" and silently substitute the committed default
+// — so a dispatcher who typed `scope=all` meaning "everything", or who left a
+// previous lane's `scope=refractor` in the box, got a live APPLY against a
+// list they never named and whose banner they never read. The list IS the
+// scope here; a scope that does not name a list is a REFUSAL, not a default.
+//
+// An ABSENT scope still means the committed default: that is this lane's one
+// documented population, it is reviewed in the diff, and its banner names it.
 const RAW_SCOPE = String(process.env.SCOPE || "").trim();
-const SCOPE = RAW_SCOPE.endsWith(".json") ? RAW_SCOPE : DEFAULT_LIST;
+if (RAW_SCOPE && !RAW_SCOPE.endsWith(".json")) {
+  console.error(`FATAL: SCOPE="${RAW_SCOPE}" does not name a list file.`);
+  console.error("This lane's scope is a committed .json list of row ids — never a");
+  console.error("predicate, a product key, or another lane's vocabulary. Pass a path");
+  console.error(`ending in .json, or leave SCOPE empty for the default (${DEFAULT_LIST}).`);
+  process.exit(1);
+}
+const SCOPE = RAW_SCOPE || DEFAULT_LIST;
 const f = (n) => Number(n).toLocaleString();
 
 async function main() {
+  const { CosmosClient } = require("@azure/cosmos");
+  const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
+  const {
+    relocateSoldComp, stripSystem, contentHashOf,
+  } = require(path.join(__dirname, "lib/relocate-sold-comp.cjs"));
+
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) { console.error("FATAL: COSMOS_CONNECTION_STRING not set"); process.exit(1); }
 
@@ -188,3 +207,5 @@ async function main() {
 if (require.main === module) {
   main().catch((e) => { console.error("FATAL:", e?.stack || e?.message); process.exit(3); });
 }
+
+module.exports = { DEFAULT_LIST, SCOPE, APPLY };

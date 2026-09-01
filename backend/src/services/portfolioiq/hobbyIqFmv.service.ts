@@ -1468,11 +1468,6 @@ export async function computeGradeBreakdownSingleScan(
      *  a raw anchor. */
     anchorGradeCompany?: string | null;
     anchorGradeValue?: number | null;
-    /** CF-FAMILY-FROM-THE-MOST-SPECIFIC-NAME (2026-09-01). The product's
-     *  display name ("2005 Bowman Chrome Draft Picks & Prospects"). Optional,
-     *  and only ever used to pick a MORE specific calibration family than the
-     *  slug's setKey can express — see the family resolution below. */
-    setName?: string | null;
   } = {},
 ): Promise<GradeBreakdownResult> {
   const t0 = Date.now();
@@ -1611,37 +1606,10 @@ export async function computeGradeBreakdownSingleScan(
     // segment 3 the setKey. classifyFamily is hyphen-tolerant by design.
     const seg = slug.split(":");
     const sport = seg[1] ?? null;
+    const family = classifyFamily(seg[3] ?? null);
 
-    // ── CF-FAMILY-FROM-THE-MOST-SPECIFIC-NAME (2026-09-01) ────────────────
-    //
-    // The setKey is the LEAST specific of the answers available here, and it
-    // was the only one being asked. A slug's setKey is a normalized bucket:
-    // 2005 Bowman Chrome Draft Picks & Prospects normalizes to the setKey
-    // `bowman-chrome`, so classifyFamily(setKey) returned "bowman-chrome"
-    // while the product's own name resolves to "bowman-chrome-draft" — a
-    // family that EXISTS in the calibration table with its own PSA 10 tier.
-    //
-    // Verlander BDP129 PSA 10 had three answers available and took the worst:
-    //     bowman-chrome-draft  byTier PSA 10 = 5.23   (from the setName)
-    //     bowman-chrome        byTier PSA 10 = 4.43   (from the setKey)
-    //     company-level                       3.14   (the fallthrough it used)
-    //
-    // So: try the setName's family first, fall back to the setKey's. A family
-    // only wins if it actually HAS a cell for the tier being asked — an
-    // uncalibrated specific family must not shadow a calibrated general one,
-    // which would trade a right-but-coarse number for no number at all.
-    const familyFromName = opts.setName ? classifyFamily(opts.setName) : null;
-    const familyFromKey = classifyFamily(seg[3] ?? null);
-
-    const ratioFor = (company: string | null, value: number | null): number | null => {
-      // Most specific first. Each candidate is asked for THIS tier; the first
-      // that answers wins, so specificity never costs coverage.
-      if (familyFromName && familyFromName !== familyFromKey) {
-        const specific = empiricalGradeMultiplier(company, value, familyFromName, sport);
-        if (specific !== null && specific > 0) return specific;
-      }
-      return empiricalGradeMultiplier(company, value, familyFromKey, sport);
-    };
+    const ratioFor = (company: string | null, value: number | null): number | null =>
+      empiricalGradeMultiplier(company, value, family, sport);
 
     let rawAnchor: number | null = null;
     let anchorNote = "";

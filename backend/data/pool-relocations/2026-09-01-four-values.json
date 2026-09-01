@@ -6,7 +6,8 @@
     "CPA-JG belongs to bowman, not bowman-chrome: all 117 2026 CPA-JG catalog rows carry setKey=bowman across every checklist source; zero carry bowman-chrome.",
     "A row whose title names a different parallel is not a base auto and is excluded, not moved.",
     "D3 Judge rows are genuinely mis-pooled but have no catalog target; excluded pending a product decision.",
-    "Judge's 2017 Gold Label rows are in the right partition; only hobbyiqCardId is wrong. That is a repoint in place, not a relocate — and it is what makes the real $300 PSA 9 sale visible to the engine."
+    "Judge's 2017 Gold Label rows are in the right partition; only hobbyiqCardId is wrong. That is a repoint in place, not a relocate — and it is what makes the real $300 PSA 9 sale visible to the engine.",
+    "The X-Fractor /250 row (tca-ebay::227476163462) is a duplicate pair across two partitions, not a misfiled row; a relocate lane that moves one row per id is the wrong tool, and its true X-Fractor address has no catalog row to land on. Excluded with a reason rather than moved — silence was the R2 defect, and a wrong move would be worse than none."
   ],
   "entries": [
     {
@@ -741,6 +742,12 @@
       "section": "D3",
       "reason": "true product (Throwback Thursday / Topps Fire / Series One) has no card-level catalog row to land on — only a product-structure: stub. No target, no move.",
       "title": "Topps 2017 1967 Fence Busters Aaron Judge #86 /2245 BGS 9"
+    },
+    {
+      "id": "tca-ebay::227476163462",
+      "section": "D-03",
+      "reason": "NOT a misfile — a DUPLICATE PAIR. Two documents share this id in two partitions (base:no-auto and base:no-auto:num-250) with cardId/hobbyiqCardId mirror-swapped, so the same $199.99 sale is counted on both addresses. Relocating either one would collapse onto its twin, and this lane keeps one row per id — it has no collapse semantics. The title also names X-Fractor, a first-class parallel in our vocabulary, so the correct address carries an x-fractor segment; no such catalog row exists for BDP129 and CF-NO-SYNTHETIC-PARALLELS forbids minting one here. Excluded pending a dedup pass that picks the survivor, plus an X-Fractor catalog row from a checklist source.",
+      "title": "2005 Bowman Chrome Justin Verlander Rookie X-Fractor #BDP129 196/250"
     }
   ]
 }
