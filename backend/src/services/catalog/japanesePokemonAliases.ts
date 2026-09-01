@@ -12,9 +12,10 @@
 // "Pokemon", "Japanese" or the series prefix — the resolver strips those before
 // lookup, so one entry covers every vendor spelling.
 //
-// Two entries are RULED overrides, not scraped (see `RULED` in the generator):
-// "rocket-gang" -> japanese-rocket-gang and "vstar-universe" -> s12a. The
-// source page pointed both Japanese sets at an English product's code.
+// Three entries are RULED overrides, not scraped (see `RULED` in the
+// generator): "rocket-gang" -> japanese-rocket-gang, "vstar-universe" -> s12a
+// and "paradigm-trigger" -> s12. The source page pointed all three Japanese
+// sets at an English product's code.
 
 export const JAPANESE_POKEMON_SET_ALIASES: Readonly<Record<string, string>> = Object.freeze({
   "25th-anniversary-collection": "swsh8a",
@@ -150,7 +151,24 @@ export const JAPANESE_POKEMON_SET_ALIASES: Readonly<Record<string, string>> = Ob
   "ninja-spinner": "m4",
   "offense-and-defense-of-the-furthest-ends": "pcg9",
   "p-promos": "miscpp",
-  "paradigm-trigger": "swsh12",
+  // CF-THE-JAPANESE-CODE-IS-THE-KEY (Drew, 2026-09-01, R3). Was "swsh12" — the
+  // code for the ENGLISH Silver Tempest. The Japanese Paradigm Trigger set is a
+  // different product, and its official code is the bare `s12`; same doctrine
+  // as R2's sv2a/sv8a/s12a.
+  //
+  // This one differs from R1/R2 in the shape of the damage, and the difference
+  // decides the fix. `base4` and `swsh12a` were keys nothing else legitimately
+  // owned, so they could be REWRITTEN. `swsh12` IS Silver Tempest's real key
+  // and must keep answering for it — so the repair belongs HERE, at the mint,
+  // and there is deliberately NO entry in RULED_SET_KEY_REWRITES: a rewrite of
+  // swsh12 would drag the English product onto the Japanese one, the exact
+  // failure those negative pins exist to catch.
+  //
+  // Measured on main before the fix, both titles landed on one key:
+  //   "2022 Pokemon Japanese Sword & Shield Paradigm Trigger" -> swsh12
+  //   "2022 Pokemon Sword & Shield Silver Tempest"            -> swsh12
+  // 22,585 live rows were pooled across the two products.
+  "paradigm-trigger": "s12",
   "paradise-dragona": "sv7a",
   "pcg-promos": "pcgp",
   "peerless-fighters": "swsh5a",

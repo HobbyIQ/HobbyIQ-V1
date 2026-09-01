@@ -68,25 +68,36 @@ const MANUAL = {
   "neo-gold-silver-new-world": "neo1",
 };
 
-/** CF-THE-JAPANESE-CODE-IS-THE-KEY (Drew, 2026-09-01, R1 + R2). Applied AFTER
- *  MANUAL and after the scrape, so a re-run cannot restore the wrong code.
+/** CF-THE-JAPANESE-CODE-IS-THE-KEY (Drew, 2026-09-01, R1 + R2 + R3). Applied
+ *  AFTER MANUAL and after the scrape, so a re-run cannot restore the wrong
+ *  code.
  *
- *  Both entries were scraped wrong and both pointed a JAPANESE set at an
- *  ENGLISH product's key, which is the one mistake that silently merges two
+ *  All three entries were scraped wrong and all three pointed a JAPANESE set at
+ *  an ENGLISH product's key, which is the one mistake that silently merges two
  *  pools:
  *
- *    rocket-gang     the source lists the 1997 JA Rocket Gang set against
- *                    `base4`, which is EN Base Set 2 (2000). 43,724 JA sales
- *                    were minted onto the EN key before this was caught.
- *    vstar-universe  `swsh12a` is not a real code; the JA code is `s12a`. The
- *                    swsh-prefix also invites collision with the EN Sword &
- *                    Shield codes (swsh12 IS Silver Tempest).
+ *    rocket-gang      the source lists the 1997 JA Rocket Gang set against
+ *                     `base4`, which is EN Base Set 2 (2000). 43,724 JA sales
+ *                     were minted onto the EN key before this was caught.
+ *    vstar-universe   `swsh12a` is not a real code; the JA code is `s12a`. The
+ *                     swsh-prefix also invites collision with the EN Sword &
+ *                     Shield codes (swsh12 IS Silver Tempest).
+ *    paradigm-trigger the source lists the JA Paradigm Trigger set against
+ *                     `swsh12`, which IS EN Silver Tempest — so the JA set and
+ *                     the EN set answered with one key and shared one pool
+ *                     (22,585 live rows). The JA code is the bare `s12`.
+ *
+ *  Note the source's systematic failure mode, visible in the neighbours: it
+ *  hands a Japanese set its contemporaneous ENGLISH counterpart's code
+ *  (lost-abyss -> swsh11, dark-phantasma -> swsh10a). These three are the ones
+ *  Drew has ruled on; others stay as scraped until ruled.
  *
  *  Keep these until the upstream page is corrected; a scrape that already
  *  agrees leaves them as no-ops. */
 const RULED = {
   "rocket-gang": "japanese-rocket-gang",
   "vstar-universe": "s12a",
+  "paradigm-trigger": "s12",
 };
 
 (async () => {
@@ -124,9 +135,10 @@ const RULED = {
 // "Pokemon", "Japanese" or the series prefix — the resolver strips those before
 // lookup, so one entry covers every vendor spelling.
 //
-// Two entries are RULED overrides, not scraped (see \`RULED\` in the generator):
-// "rocket-gang" -> japanese-rocket-gang and "vstar-universe" -> s12a. The
-// source page pointed both Japanese sets at an English product's code.
+// Three entries are RULED overrides, not scraped (see \`RULED\` in the
+// generator): "rocket-gang" -> japanese-rocket-gang, "vstar-universe" -> s12a
+// and "paradigm-trigger" -> s12. The source page pointed all three Japanese
+// sets at an English product's code.
 
 export const JAPANESE_POKEMON_SET_ALIASES: Readonly<Record<string, string>> = Object.freeze({
 ${entries.map(([k, v]) => `  ${JSON.stringify(k)}: ${JSON.stringify(v)},`).join("\n")}

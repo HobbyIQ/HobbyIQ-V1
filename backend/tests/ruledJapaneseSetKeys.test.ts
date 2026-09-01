@@ -69,7 +69,14 @@ describe("ruled Japanese Pokemon setKeys (R2): the bare code is the key", () => 
 
 // The alias table is what MINTS a key at ingest, so the rulings have to hold
 // there too — otherwise the re-key is undone by the next Japanese sale.
-describe("the alias table mints the ruled keys (R1 + R2)", () => {
+describe("the alias table mints the ruled keys (R1 + R2 + R3)", () => {
+  it("Paradigm Trigger mints the bare JA code s12, never the EN Silver Tempest key", () => {
+    // R3. This one line pooled 22,585 rows of two different products: the JA
+    // Paradigm Trigger set and the EN Silver Tempest set both answered swsh12.
+    expect(JAPANESE_POKEMON_SET_ALIASES["paradigm-trigger"]).toBe("s12");
+    expect(JAPANESE_POKEMON_SET_ALIASES["paradigm-trigger"]).not.toBe("swsh12");
+  });
+
   it("VSTAR Universe mints s12a, never the invented swsh12a", () => {
     expect(JAPANESE_POKEMON_SET_ALIASES["vstar-universe"]).toBe("s12a");
   });
@@ -111,5 +118,70 @@ describe("resolveSetKeyForSlug lands Japanese sales on the ruled keys", () => {
 
   it("the ENGLISH Base Set 2 still resolves to base4", () => {
     expect(resolveSetKeyForSlug("pokemon", "2000 Pokemon Base Set 2", 2000)).toBe("base4");
+  });
+});
+
+// CF-THE-JAPANESE-CODE-IS-THE-KEY (Drew, 2026-09-01, ruling R3): the JA
+// Paradigm Trigger set keys to the bare official code `s12`.
+//
+// R3 is the same doctrine as R2 but NOT the same repair, and the tests below
+// are what hold the difference in place. R1/R2 rewrote keys nothing else
+// owned (base4 was wrong for a JA set, swsh12a was never real). R3's wrong
+// answer was `swsh12`, which is a LIVE, CORRECT key — it is EN Silver
+// Tempest. So the fix moves the alias at the mint and adds NOTHING to
+// RULED_SET_KEY_REWRITES; a rewrite of swsh12 would drag the English product
+// onto the Japanese one. The negatives here are the proof of that restraint.
+describe("ruled JA Paradigm Trigger (R3): the bare code s12 is the key", () => {
+  it("a JA Paradigm Trigger title resolves to s12, not the EN Silver Tempest key", () => {
+    const got = resolveSetKeyForSlug("pokemon", "2022 Pokemon Japanese Sword & Shield Paradigm Trigger", 2022);
+    expect(got).toBe("s12");
+    expect(got).not.toBe("swsh12");
+  });
+
+  it("covers the vendor spellings too — one alias entry, every variant", () => {
+    for (const title of [
+      "Pokemon Japanese Paradigm Trigger",
+      "2022 Pokemon Japanese Paradigm Trigger",
+      "2022 Pokemon Japanese Sword & Shield Paradigm Trigger",
+    ]) {
+      expect(resolveSetKeyForSlug("pokemon", title, 2022)).toBe("s12");
+    }
+  });
+
+  // THE THREE NEGATIVE PINS Drew called out. R3 must be invisible to all of
+  // them: swsh12 and swsh12tg are the ENGLISH Silver Tempest product and its
+  // Trainer Gallery, and s12a is R2's Japanese VSTAR Universe — a different
+  // set from s12 despite the one-character difference.
+  it("leaves EN Silver Tempest (swsh12) alone — a DIFFERENT product", () => {
+    expect(normalizeSetKey("swsh12")).toBe("swsh12");
+    expect(canonicalRuledSetKey("swsh12")).toBe("swsh12");
+    // and the English title itself must still mint it
+    expect(resolveSetKeyForSlug("pokemon", "2022 Pokemon Sword & Shield Silver Tempest", 2022))
+      .toBe("swsh12");
+  });
+
+  it("leaves the EN Silver Tempest Trainer Gallery (swsh12tg) alone", () => {
+    expect(normalizeSetKey("swsh12tg")).toBe("swsh12tg");
+    expect(canonicalRuledSetKey("swsh12tg")).toBe("swsh12tg");
+  });
+
+  it("leaves R2's s12a (JA VSTAR Universe) alone — s12 and s12a are two sets", () => {
+    expect(normalizeSetKey("s12a")).toBe("s12a");
+    expect(canonicalRuledSetKey("s12a")).toBe("s12a");
+    expect(resolveSetKeyForSlug("pokemon", "2022 Pokemon Japanese Sword & Shield VSTAR Universe", 2022))
+      .toBe("s12a");
+  });
+
+  it("s12 is a bare code and passes through the vocabulary untouched", () => {
+    // No unanchored sports pattern may capture it, and no ruled rewrite moves
+    // it: s12 is already canonical.
+    expect(normalizeSetKey("s12")).toBe("s12");
+    expect(canonicalRuledSetKey("s12")).toBe("s12");
+  });
+
+  it("R3 adds no swsh12 rewrite — the EN key is reachable and unmoved", () => {
+    // If anyone ever adds "swsh12": ... to RULED_SET_KEY_REWRITES, this fails.
+    expect(canonicalRuledSetKey("swsh12")).toBe("swsh12");
+    expect(normalizeSetKey("swsh12")).toBe("swsh12");
   });
 });
