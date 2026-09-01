@@ -1,0 +1,65 @@
+{
+  "_doc": "CF-THE-CANARY-IS-A-HAND-VERIFIED-POOL (GREAT REMATCH, Drew 2026-09-01). The holdings whose pools Drew verified by hand. rematch-canary-check.cjs recomputes each pool's FMV inputs before and after a shard's apply-improve and FAILS the shard on any regression. Fetched read-only from the portfolio container 2026-09-01; poolRows are the measured row counts at that instant (cardId partition + hobbyiqCardId field, unioned) and are a FLOOR, never an equality assertion -- ingest adds sales legitimately.",
+  "_verifiedMarketDirection": "What Drew's verification established about the pool. `exact-pool` = the slug's own sales are the market and must stay reachable. `graded-from-raw` = the pool prices its graded tier off its own raw children through the empirical curve (D-graded-to-raw), so the RAW pool must stay reachable too. A canary regresses when its pool loses rows, when its anchor moves away from the verified market, or when any write touches a protected row.",
+  "_capturedAt": "2026-09-01",
+  "canaries": [
+    {
+      "name": "Verlander 2005 Bowman Chrome DP BDP129 PSA 10",
+      "holdingId": "bba3b7ad-32d1-44a5-8a77-e798183ae290",
+      "slug": "hiq:baseball:2005:bowman-chrome:bdp129:base:no-auto",
+      "poolRows": 6,
+      "verifiedMarketDirection": "graded-from-raw",
+      "note": "Drew pinned the slug: hobbyiqCardIdSource=manual-chrome-2026-08-10, 'Confirmed chrome by Drew; do not re-derive to paper'. A re-derivation that moves this pool toward bowman (paper) is a REGRESSION, never an improvement -- the pin is the ruling. The X-Fractor-in-base-pool shape belongs to THIS card number.",
+      "protectedIdentity": true
+    },
+    {
+      "name": "Figueroa 2026 Bowman Chrome CPA-VF Black & White Red Ink auto",
+      "holdingId": "9f082213-22c8-4c26-b488-55d3f9edb1b6",
+      "slug": "hiq:baseball:2026:bowman-chrome:cpa-vf:black-white-red-ink-refractor:auto",
+      "poolRows": 1,
+      "verifiedMarketDirection": "exact-pool",
+      "note": "Red Ink is the SSP of the B&W Shimmer auto and its OWN row (Drew 2026-08-30) -- never folded into a shade of red. The holding's stored cardId is still a vendor bubble id (1778815951741x...), so the pool lives under the hobbyiqCardId slug: the canary must read the UNION or it measures nothing. Single-sale pool: losing that row empties the pool.",
+      "protectedIdentity": true
+    },
+    {
+      "name": "Shaq 1993 Topps Finest #99 Refractor",
+      "holdingId": "fe7f69f7-6369-4095-81cd-43a0f55a821f",
+      "slug": "hiq:basketball:1993:topps-finest:99:refractor:no-auto",
+      "poolRows": 55,
+      "verifiedMarketDirection": "exact-pool",
+      "note": "2 rows sit in the slug's own partition, 55 carry it as hobbyiqCardId -- the split the union measures. Topps Finest #197 lists `Uncommon` AND `Uncommon Refractor` as two cards, which is why the retracted trailing-' Refractor' strip must never come back: it would fold this pool into its sibling."
+    },
+    {
+      "name": "Gonzalez 2026 Bowman CPA-JG Refractor auto /499",
+      "holdingId": "ca820b08-b1a0-465d-8d9b-2511cd552109",
+      "slug": "hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499",
+      "poolRows": 56,
+      "verifiedMarketDirection": "exact-pool",
+      "note": "Base-auto-on-refractor-slug shape. The stored key already carries parallel=refractor, isAuto and num-499; a re-derivation from a terse title that drops the print run or the auto flag is a REGRESSION (less specific), not an improvement. Direct match: 55 sales of this exact card."
+    },
+    {
+      "name": "Witt 2020 Bowman Draft BD-152 Image Variation PSA 9",
+      "holdingId": "3fe98abe-469e-497c-92ea-80b112fc4f78",
+      "slug": "hiq:baseball:2020:bowman-draft:bd-152:image-variation:no-auto",
+      "poolRows": 1,
+      "verifiedMarketDirection": "graded-from-raw",
+      "note": "An Image Variation is a NAMED card (#1613), not a finish -- a re-derivation that flattens image-variation to base is a regression. The D33 bcp-misfiled lane already worked this card number; the pool is thin (1 row) so any loss empties it."
+    },
+    {
+      "name": "Caglianone 2024 Bowman Draft CPA-JC Refractor auto /499 PSA 9",
+      "holdingId": "96f1a812-4aae-4dcd-9286-c96dad167caf",
+      "slug": "hiq:baseball:2024:bowman-draft:cpa-jc:refractor:auto:num-499",
+      "poolRows": 38,
+      "verifiedMarketDirection": "graded-from-raw",
+      "note": "Bowman Draft is its own family, not Bowman. 25 rows in the slug partition, 38 carrying it as hobbyiqCardId. The graded tier prices off this pool's own raw children, so the raw rows are load-bearing even for the PSA 9 holding."
+    },
+    {
+      "name": "Judge 2017 Topps Gold Label #86 Class 1 Blue PSA 9",
+      "holdingId": "077ede88-0d65-461e-a93d-9f9d712fefc6",
+      "slug": "hiq:baseball:2017:topps-gold-label:86:class-1-blue:no-auto",
+      "poolRows": 5,
+      "verifiedMarketDirection": "graded-from-raw",
+      "note": "Gold Label is its own family, not Topps flagship. Estimated from this card's own Raw sales x the empirical PSA 9 ratio (1.65x) -- there is no PSA 9 sale of this card in 180d, so the RAW rows in this pool ARE the valuation. All 5 rows sit in the cardId partition and none carry hobbyiqCardId; a re-key that moves them without the field following makes the pool unreadable."
+    }
+  ]
+}

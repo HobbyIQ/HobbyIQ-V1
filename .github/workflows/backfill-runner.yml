@@ -223,6 +223,28 @@ on:
           # explicit vocabulary, never a pattern (NNO and JOKER are real card
           # numbers), and zero comps is re-checked per row at delete time.
           - retire-wiki-footer-catalog-rows
+          # THE GREAT REMATCH (Drew, 2026-09-01). Full sales-index rematch of
+          # sold_comps (16,336,293 rows measured 2026-09-01) against the
+          # catalog. `mode` is the polymorphic selector and is REQUIRED:
+          #   mode=census        READ ONLY -- re-derives every row's identity
+          #                      from its own title + stored fields through
+          #                      today's parser, classifies AGREE / IMPROVE /
+          #                      CONFLICT / UNDERIVABLE with a provenance tier,
+          #                      and writes a shard census JSON. No write path.
+          #   mode=apply-improve applies ONLY IMPROVE-class AUTO-tier rows, and
+          #                      only after (a) a clean 500-row sample audit of
+          #                      that shard's IMPROVE bucket and (b) a clean
+          #                      rematch-canary-check. CONFLICT, UNDERIVABLE and
+          #                      provenance-protected rows are REPORT ONLY
+          #                      FOREVER -- they go to Drew.
+          # Sharded on the MEASURED composite axis (cardYear, sportClass,
+          # sha1(id) % parts) encoded in backend/data/rematch-shard-table.json:
+          # 158 units in 32 slots, 1.07x spread. slot/slots select the slice.
+          - rematch-sold-comps
+          # The canary gate the apply dispatcher runs BETWEEN census-clean and
+          # apply. MODE=before captures the hand-verified pools' FMV inputs,
+          # MODE=after compares and exits 5 on any regression. READ ONLY.
+          - rematch-canary-check
       apply:
         description: "Actually write (true) or dry-run only (false)"
         required: true
@@ -729,9 +751,55 @@ jobs:
           # RUN_MINUTES stays at the script's own 140 so the budget marker
           # lands inside the 150-minute step ceiling.
           DAYS: "90"
+          # THE GREAT REMATCH. Both are fixed paths, not knobs: this workflow
+          # already carries 24 inputs and a knob nobody sets is a knob that
+          # drifts. The census JSON lands where the artifact step can find it;
+          # the canary baseline is written by MODE=before and read by
+          # MODE=after within one dispatch pair.
+          CENSUS_OUT: /tmp/rematch-census
+          BASELINE: /tmp/rematch-canary-baseline.json
           NODE_OPTIONS: "--max-old-space-size=8192"
         run: node "backend/scripts/${{ inputs.script }}.cjs" | tee /tmp/backfill.log
         shell: bash
+
+      # THE GREAT REMATCH: keep the shard census. The census is the whole
+      # product of mode=census -- it is what the 500-row sample audit reads and
+      # what Drew reads for the CONFLICT and UNDERIVABLE classes, which are
+      # report-only forever. A census whose banner scrolled out of a log is a
+      # census that has to be re-run across 500k rows, so it is uploaded.
+      # if: always() -- a run that stopped at its budget still censused
+      # everything it reached, and that partial census is worth keeping.
+      - name: Upload the shard census
+        if: ${{ always() && inputs.script == 'rematch-sold-comps' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: rematch-census-slot-${{ inputs.slot }}-${{ github.run_id }}
+          path: /tmp/rematch-census/
+          if-no-files-found: warn
+          retention-days: 90
+
+      # THE GREAT REMATCH self-relaunch. The census re-reads its shard from the
+      # top each run (it is READ ONLY -- there is no predicate that shrinks as
+      # it works), so a relaunched census re-classifies rows it already saw.
+      # That is deliberate and cheap relative to the alternative: a census that
+      # resumed from a cursor could not be trusted as a census OF THE SHARD.
+      # An apply-improve relaunch genuinely resumes: a re-keyed row no longer
+      # classifies IMPROVE, so it is skipped at the write-time re-check.
+      # Relaunch iff the budget marker printed (#1361), forwarding every arg
+      # verbatim; a report relaunches as a report (#1578); never on cancel.
+      - name: Self-relaunch rematch-sold-comps until the shard is finished
+        if: ${{ !cancelled() && inputs.script == 'rematch-sold-comps' }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
+            N=$(grep -aoE "(re-keyed|would re-key) +[0-9,]+" /tmp/backfill.log | grep -oE "[0-9,]+" | tail -1)
+            echo "::notice::budget hit (written=${N:-0}) — re-dispatching slot ${{ inputs.slot }} to continue"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=rematch-sold-comps -f mode="${{ inputs.mode }}" -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f years="${{ inputs.years }}" -f limit="${{ inputs.limit }}"
+          else
+            echo "::notice::finished within budget — done, no re-dispatch."
+          fi
 
       # materialize-ungraded-parents: scope SPORT+YEAR+SET_KEY; the mint
       # re-queries missing parents each run, so a relaunch resumes exactly.
