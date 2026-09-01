@@ -1,0 +1,50 @@
+{
+  "scrapedAt": "2026-09-01T02:23:28.960Z",
+  "sourceUrl": "https://img.beckett.com/news/news-content/uploads/2026/08/2026-Topps-Chrome-Sapphire-Baseball-Checklist.xlsx",
+  "sport": "baseball",
+  "year": 2026,
+  "setName": "2026 Topps Chrome Sapphire",
+  "productKey": "2026-topps-chrome-sapphire",
+  "setKey": "topps-chrome-sapphire",
+  "rowCount": 402,
+  "parallelColumnAuthoritative": true,
+  "sectionsReport": [
+    {
+      "sheet": "Base",
+      "section": "Base Set",
+      "category": "base",
+      "cards": 300,
+      "role": "anchor"
+    },
+    {
+      "sheet": "Variations",
+      "section": "Image Variations",
+      "category": "insert-image-variations",
+      "cards": 50,
+      "role": "parallel",
+      "anchor": "Base>Base Set",
+      "rung": "Image Variation"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Hidden Gems",
+      "category": "insert-hidden-gems",
+      "cards": 5,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Sapphire Autographs",
+      "category": "auto-sapphire-autographs",
+      "cards": 34,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Sapphire Selections Autographs",
+      "category": "auto-sapphire-selections-autographs",
+      "cards": 13,
+      "role": "own-cards"
+    }
+  ]
+}
