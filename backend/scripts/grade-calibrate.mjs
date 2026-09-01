@@ -49,6 +49,17 @@ const SPORT_OVERLAY_CUTOFF = new Date(Date.now() - 730 * 86400000).toISOString()
 const BASELINE_FAMILIES = [
   { family: "bowman-chrome-draft", token: "Bowman Chrome Draft" },
   { family: "bowman-chrome", token: "Bowman Chrome" },
+  // CF-BOWMAN-DRAFT-IS-ITS-OWN-FAMILY (2026-09-01). "Bowman Draft" is a
+  // separate product from flagship Bowman: it is chrome-fronted and its
+  // Chrome Prospect Autographs (CPA-*) are the headline cards, so its grade
+  // curve tracks bowman-chrome, not paper bowman. Must sit ABOVE the bare
+  // "Bowman" token, which would otherwise swallow it — the same shadowing
+  // bug CF-OPTIC-BEFORE-DONRUSS fixed for Optic. Measured before adding:
+  // 6,378 identities in sold_comps carry BOTH a raw and a graded sale under
+  // a "bowman draft" set/title, giving matched-pair cells of PSA 10 n=23884
+  // and PSA 9 n=14777 — this family calibrates from OUR pool, it is not a
+  // hand-written multiplier.
+  { family: "bowman-draft", token: "Bowman Draft" },
   { family: "bowman-sterling", token: "Bowman Sterling" },
   { family: "bowman", token: "Bowman" },
   { family: "topps-chrome-update", token: "Topps Chrome Update" },
@@ -59,6 +70,17 @@ const BASELINE_FAMILIES = [
   { family: "topps-pristine", token: "Topps Pristine" },
   { family: "topps-allen-ginter", token: "Allen & Ginter" },
   { family: "topps-stadium-club", token: "Topps Stadium Club" },
+  // CF-GOLD-LABEL-IS-NOT-FLAGSHIP-TOPPS (2026-09-01). Gold Label is a
+  // premium chrome-stock product whose Class 1/2/3 tiers are serial-numbered
+  // parallels; its grade economics are nothing like flagship paper Topps.
+  // Before this row, classifyFamily("2017 Topps Gold Label") fell through to
+  // the bare "topps" token — a SUPERSET cell (PSA 9 n=2562) that pools tens
+  // of thousands of paper-Topps commons and drags a Gold Label estimate to
+  // the paper mean. Measured before adding: 219 identities in sold_comps
+  // carry BOTH a raw and a graded sale under a "gold label" set/title, with
+  // matched-pair cells PSA 9 n=476, PSA 10 n=262, PSA 8 n=190 — enough for
+  // the weekly refresh to populate this family empirically.
+  { family: "topps-gold-label", token: "Gold Label" },
   { family: "topps", token: "Topps" },
   { family: "panini-prizm", token: "Prizm" },
   { family: "panini-select", token: "Select" },
