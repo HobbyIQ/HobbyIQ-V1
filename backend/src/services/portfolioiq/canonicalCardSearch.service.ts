@@ -599,11 +599,43 @@ export async function canonicalCardSearch(input: CanonicalSearchInput): Promise<
   // (TOP 500) since fuzzy is O(N) in JS.
   if (candidates.length === 0 && searchTokens.length > 0) {
     try {
-      const sampleQ = `SELECT TOP 500 c.cardId, c.player, c.releaseId, c.releaseName, c.setName, c.year, c.number, c.parallels, c.attributes, c.sport, c.recentSaleCount, c.searchText FROM c WHERE c.source IN ('cardhedge', 'cardsight') AND c.sport = @sport${yearFilter !== null ? " AND c.year = @year" : ""} AND IS_DEFINED(c.searchText)`;
+      // CF-THE-CATALOG-IS-THE-SEARCH-SURFACE (2026-09-01). This sample was
+      // scoped `c.source IN ('cardhedge','cardsight')` — vendor-era scoping
+      // left behind when the primary path grew its tree/checklist arm above
+      // (CF-CATALOG-TREE-NODES-INTO-SEARCH). The catalog IS the search surface
+      // now: checklist rows carry neither vendor source, so a typo'd query for
+      // a checklist-backed card fell through the fuzzy path to sold_comps and
+      // came back as a stub — or as nothing.
+      //
+      // The fix is the clause the primary tree arm already uses, so BOTH arms
+      // answer "what may search return?" the same way and the next dead source
+      // is excluded from both at once rather than only from one. Ranking is
+      // unaffected: the fuzzy path feeds the same mapper and orders on
+      // recentSaleCount, which checklist rows carry as 0 — so a vendor row
+      // with real sales still outranks a checklist row of equal token match.
+      //
+      // Checklist rows spell their fields playerName / setKey / cardNumber,
+      // so they are remapped into the vendor row shape (exactly as the primary
+      // tree arm does) BEFORE the junk-row guard runs — otherwise every one of
+      // them would be dropped for having no `number`.
+      const sampleQ = `SELECT TOP 500 c.cardId, c.player, c.playerName, c.releaseId, c.releaseName, c.setName, c.setKey, c.year, c.cardYear, c.number, c.cardNumber, c.parallels, c.parallel, c.parallelSlug, c.attributes, c.isAuto, c.sport, c.recentSaleCount, c.searchText, c.searchTokens, c.imageUrl, c.source, c.kind FROM c WHERE ${input.includeProvisional ? `(${verifiedCatalogSqlClause("c")} OR ${provisionalCatalogSqlClause("c")})` : verifiedCatalogSqlClause("c")} AND c.sport = @sport${yearFilter !== null ? " AND c.year = @year" : ""} AND IS_DEFINED(c.searchText)`;
       const sampleParams = [{ name: "@sport", value: sport }];
       if (yearFilter !== null) sampleParams.push({ name: "@year", value: String(yearFilter) });
-      const { resources: sample } = await containers.catalog.items.query({ query: sampleQ, parameters: sampleParams }).fetchAll();
-      candidates = (sample || []).filter((c: any) => {
+      const { resources: rawSample } = await containers.catalog.items.query({ query: sampleQ, parameters: sampleParams }).fetchAll();
+      // Normalize both row shapes onto the vendor shape the guard, the auto
+      // filter and the downstream mapper all expect.
+      const sample = (rawSample || []).map((r: any) => ({
+        ...r,
+        player: r.player ?? r.playerName,
+        number: r.number ?? r.cardNumber,
+        setName: r.setName ?? r.setKey,
+        releaseName: r.releaseName ?? r.setKey,
+        year: r.year ?? r.cardYear,
+        parallels: r.parallels ?? (r.parallel ? [{ id: r.parallelSlug ?? r.parallel, name: r.parallel, numberedTo: null }] : []),
+        attributes: r.attributes ?? (r.isAuto ? ["auto"] : []),
+        recentSaleCount: r.recentSaleCount ?? 0,
+      }));
+      candidates = sample.filter((c: any) => {
         // Same junk-row guard as primary — no card number → no click-through.
         if (!c.number || String(c.number).toLowerCase() === "undefined") return false;
         const st = String(c.searchText || "");
