@@ -58,11 +58,39 @@ const WORKDIR = process.env.WORKDIR || path.join(os.tmpdir(), "hiq-checklists");
 // The runner caches WORKDIR across relaunches. Re-scraping what is already
 // staged costs 76 of the 140 available minutes and acquires nothing new.
 const FORCE_ACQUIRE = String(process.env.FORCE_ACQUIRE || "") === "true";
+// CF-BECKETT-DIRECT-URL-LANE (2026-09-01). The Beckett archive index is
+// effectively BASEBALL-ONLY: walking all 29 pages yields 719 set pages, of
+// which 708 are baseball and the nested basketball/football categories 404 in
+// every form. So no --sport value reaches, e.g., 2020-21 Panini Prizm
+// Basketball -- the index simply cannot name it. BECKETT_URLS carries the set
+// page (or the workbook) directly, the same shape the hobbymonitor lane's
+// direct-URL escape already uses for a release its index cannot name.
+// Carried on the EXISTING `titles` runner input (BCP_TITLES); no new
+// workflow_dispatch input -- 24/25 are used.
+const BECKETT_URLS = (process.env.BECKETT_URLS || "").trim();
 
 const f = (n) => Number(n).toLocaleString();
 const left = () => RUN_MS - (Date.now() - STARTED);
 const mins = (ms) => Math.max(1, Math.floor(ms / 60000));
 const staged = (p) => { try { return fs.statSync(p).size > 0; } catch { return false; } };
+
+/**
+ * The Beckett child's argument list, as a pure function so the two rules that
+ * defect D1/D2 turned on are assertable without spawning a scrape:
+ *   * --skipExisting is present by default and ABSENT under force-acquire.
+ *     The child skips before any fetch, so leaving the flag on made
+ *     FORCE_ACQUIRE a no-op for the one phase carrying the parallel ladder.
+ *   * --urls, when given, carries a direct set-page/workbook address for a
+ *     release the baseball-only archive index cannot name.
+ * Exported for the pin; main() calls exactly this.
+ */
+function beckettArgs({ sport, pages, outDir, forceAcquire, urls }) {
+  return [
+    `--sport=${sport}`, `--pages=${pages}`, "--delayMs=700", `--outDir=${outDir}`,
+    ...(forceAcquire ? [] : ["--skipExisting"]),
+    ...(urls ? [`--urls=${urls}`] : []),
+  ];
+}
 
 function run(script, args, env) {
   const out = execFileSync(process.execPath, [path.join(HERE, script), ...args], {
@@ -75,7 +103,7 @@ function run(script, args, env) {
   return out;
 }
 
-(async () => {
+async function main() {
   if (!process.env.COSMOS_CONNECTION_STRING) { console.error("FATAL: COSMOS_CONNECTION_STRING not set"); process.exit(1); }
   fs.mkdirSync(WORKDIR, { recursive: true });
   const beckettDir = path.join(WORKDIR, "beckett");
@@ -92,10 +120,18 @@ function run(script, args, env) {
   if (PHASES.includes("beckett") && left() > 20 * 60000) {
     console.log("── phase 1: Beckett archive ──");
     try {
-      run("scrape-beckett-checklists.cjs", [
-        `--sport=${SPORT}`, `--pages=${PAGES}`, "--delayMs=700",
-        `--outDir=${beckettDir}`, "--skipExisting",
-      ]);
+      // CF-FORCE-ACQUIRE-REACHES-BECKETT-TOO (2026-09-01). Every other phase
+      // honours FORCE_ACQUIRE; beckett was the lone omission, and it passed
+      // --skipExisting UNCONDITIONALLY. The child skips BEFORE any fetch (a
+      // staged CSV is enough), so a force-acquire dispatch printed
+      // "skipped (existing) 409" and re-acquired nothing at all -- the cache
+      // pierce the mode exists for never reached the one phase that carries
+      // the parallel ladder. FORCE_ACQUIRE now drops the flag, exactly as
+      // insider/clc/tcgdexja already drop their staged-and-skip branches.
+      run("scrape-beckett-checklists.cjs", beckettArgs({
+        sport: SPORT, pages: PAGES, outDir: beckettDir,
+        forceAcquire: FORCE_ACQUIRE, urls: BECKETT_URLS,
+      }));
       done.push("beckett-acquired");
     } catch (e) { console.error("  beckett acquire failed: " + String(e.message).slice(0, 120)); }
   }
@@ -208,7 +244,13 @@ function run(script, args, env) {
         // The restoration path for checklist rows deleted by a pass that turned
         // out to have the wrong premise (numbered Base IS legitimate where the
         // product checklist lists it -- Drew, 2026-08-28).
-        REINGEST: String(process.env.MODE || "").toLowerCase() === "reingest" ? "true" : "",
+        // CF-FORCE-ACQUIRE-PIERCES-ALL-CACHE-STATE (2026-09-01). Also true
+        // under force-acquire: re-scraping and then skipping the refreshed
+        // files on their stale `.ingested` markers acquires nothing that
+        // lands. The wrapper's own env is honoured first so the runner can
+        // set REINGEST directly, then MODE=reingest as before.
+        REINGEST: (String(process.env.REINGEST || "") === "true"
+          || String(process.env.MODE || "").toLowerCase() === "reingest") ? "true" : "",
         // The ingest has always sharded by file; nobody was passing it the
         // shard. One worker on 409 files makes "does it fit in one budget
         // window?" an open question every run. Eight workers on the same cached
@@ -224,4 +266,12 @@ function run(script, args, env) {
   console.log(`  phases done: ${done.length ? done.join(", ") : "(none)"}`);
   // The relaunch greps this line; it must print on every exit path.
   console.log(`  checklist_phases_done=${done.length}`);
-})().catch((e) => { console.error("FATAL:", e?.stack || e?.message); process.exit(3); });
+}
+
+// Exported so the argument-shape rules can be pinned without spawning a
+// 40-minute scrape; the pipeline still runs on direct invocation only.
+module.exports = { beckettArgs };
+
+if (require.main === module) {
+  main().catch((e) => { console.error("FATAL:", e?.stack || e?.message); process.exit(3); });
+}
