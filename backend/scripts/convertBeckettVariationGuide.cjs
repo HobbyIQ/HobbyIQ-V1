@@ -127,6 +127,85 @@ function parseGuide(html) {
     }
   }
 
+  // THIRD GALLERY SHAPE (2025-2026). The number moves onto its own line and
+  // the tier list names variation TYPES rather than rarity alone:
+  //
+  //     1
+  //     Shohei Ohtani, Los Angeles Dodgers
+  //     - Image | SSP | Award
+  //
+  // "Image" and "SSP" are the two rarity tiers of the image variation, and
+  // "Award" is a DIFFERENT variation (Award Winners) that happens to share the
+  // card number — so each type earns its own row, by the same rule that makes
+  // SP and SSP separate cards.
+  if (!cards.length) {
+    for (let i = 0; i < scope.length - 2; i++) {
+      if (!/^\d{1,4}$/.test(scope[i])) continue;
+      const pm = /^([A-Za-z.'\-À-ɏ ]{3,40}?)(?:,\s*.+)?$/.exec(scope[i + 1]);
+      if (!pm) continue;
+      const tm = /^-\s*((?:Image|SSP|Award|SP)(?:\s*\|\s*(?:Image|SSP|Award|SP))*)\s*$/i.exec(scope[i + 2]);
+      if (!tm) continue;
+      const player = pm[1].replace(/\s+(RC|SP)$/i, "").trim();
+      for (const raw of tm[1].split("|").map((s) => s.trim())) {
+        // "Image" is the plain image variation; its label is the tier the
+        // guide uses everywhere else, so it reads as "Image Variation SP".
+        const tier = /^image$/i.test(raw) ? "SP" : raw.toUpperCase();
+        const kind = /^award$/i.test(raw) ? "Award Winners" : null;
+        cards.push({ cardNumber: scope[i], player, photo: null, tier, kind });
+      }
+    }
+  }
+
+  // FOURTH GALLERY SHAPE. A guide for ONE named variation family lists its
+  // cards flat under a heading naming the family:
+  //
+  //     Facsimile Signature
+  //     BD-1 Royce Lewis
+  //     BD-25 MacKenzie Gore
+  //
+  // The heading IS the card's name, so these are "Facsimile Signature SP" —
+  // not image variations, which they are not. Card numbers here are the
+  // product's own (BD-1), so the pattern must accept an alpha prefix.
+  if (!cards.length) {
+    const FAMILY_RE = /^(Facsimile Signature|Photo Variation|Image Variation|Nickname|Throwback|Sepia|Negative)s?$/i;
+    let family = null;
+    for (const line of scope) {
+      const fm = FAMILY_RE.exec(line);
+      if (fm) { family = titleCase(fm[1]); continue; }
+      if (!family) continue;
+      const m = /^([A-Z]{1,6}-?\d{1,4}[A-Z]?)\s+([A-Za-z.'\-À-ɏ ]{3,40})$/.exec(line);
+      if (!m) {
+        // A long prose line ends the flat list; a short unmatched line is
+        // tolerated (captions, blanks) so one stray does not truncate a set.
+        if (line.length > 80) family = null;
+        continue;
+      }
+      cards.push({ cardNumber: m[1], player: m[2].trim(), photo: null, tier: "SP", kind: family });
+    }
+  }
+
+  // FIFTH GALLERY SHAPE. A flat list of "<number> <player>, <team>" with a
+  // lone "*" on the following line marking the cards that ALSO have an
+  // autograph version, explained by a footnote:
+  //
+  //     BDC-1 Eli Willits, Washington Nationals
+  //     *
+  //     BDC-4 Gage Wood, Philadelphia Phillies
+  //     *Also have Image Variation Autographs
+  //
+  // This is the one shape that STATES its autos, so they are emitted here
+  // rather than left to --autos. Everywhere else the autos live in prose and
+  // are not guessed at.
+  if (!cards.length) {
+    const starMeansAuto = scope.some((l) => /^\*\s*Also have .*Autograph/i.test(l));
+    for (let i = 0; i < scope.length; i++) {
+      const m = /^([A-Z]{1,6}-\d{1,4}[A-Z]?)\s+([A-Za-z.'\-À-ɏ ]{3,40}?),\s*.+$/.exec(scope[i]);
+      if (!m) continue;
+      const alsoAuto = starMeansAuto && /^\*$/.test(scope[i + 1] || "");
+      cards.push({ cardNumber: m[1], player: m[2].trim(), photo: null, tier: "SP", alsoAuto });
+    }
+  }
+
   // CMP code, when the guide states one — the definitive back-of-card check.
   const cmp = {};
   for (const l of lines) {
@@ -134,7 +213,17 @@ function parseGuide(html) {
     if (c) cmp[c[1].toLowerCase()] = c[2];
   }
   const odds = (lines.find((l) => /1:\d[\d,]*\s*(hobby\s*)?packs/i.test(l)) || "").slice(0, 200) || null;
-  return { cards, cmp, odds };
+  // A guide often prints its checklist AND a gallery of the same cards, so the
+  // flat shapes see each card twice. One card, one row — dedupe on the identity
+  // the row will carry, keeping the first (checklist) occurrence and any auto
+  // flag either copy asserted.
+  const seen = new Map();
+  for (const c of cards) {
+    const key = `${String(c.cardNumber).toUpperCase()}|${c.player.toLowerCase()}|${c.tier || ""}|${c.kind || ""}|${c.photo || ""}`;
+    if (!seen.has(key)) seen.set(key, c);
+    else if (c.alsoAuto) seen.get(key).alsoAuto = true;
+  }
+  return { cards: [...seen.values()], cmp, odds };
 }
 
 function main() {
@@ -157,16 +246,25 @@ function main() {
   const out = ["category,cardNumber,parallel,isAuto,printRun,player"];
   for (const c of cards) {
     // A named photo leads; where the guide gave none, the tier stands alone.
+    // `kind` names a DIFFERENT variation family (Award Winners), which must
+    // not be labelled an image variation just because it shares the number.
     const tier = c.tier || "SP";
-    const parallel = c.photo ? `${photoName(c.photo)} Image Variation ${tier}` : `Image Variation ${tier}`;
+    const family = c.kind || "Image Variation";
+    const parallel = c.photo
+      ? `${photoName(c.photo)} ${family} ${tier}`
+      : (c.kind ? `${family} SP` : `${family} ${tier}`);
     out.push(`insert-rookie-image-variations,${c.cardNumber},${parallel},false,,${c.player}`);
-    if (autoPlayers && autoPlayers.has(c.player)) {
+    // A guide that STATES its autos (the "*" shape) carries them per card.
+    if (c.alsoAuto) {
+      out.push(`auto-rookie-image-variations,${c.cardNumber},${parallel},true,,${c.player}`);
+    } else if (autoPlayers && autoPlayers.has(c.player)) {
       out.push(`auto-rookie-image-variations,${c.cardNumber},${parallel},true,,${c.player}`);
     }
   }
 
   for (const c of cards) {
-    const label = c.photo ? `${photoName(c.photo)} Image Variation ${c.tier || "SP"}` : `Image Variation ${c.tier || "SP"}`;
+    const fam = c.kind || "Image Variation";
+    const label = c.photo ? `${photoName(c.photo)} ${fam} ${c.tier || "SP"}` : (c.kind ? `${fam} SP` : `${fam} ${c.tier || "SP"}`);
     console.log(`   #${String(c.cardNumber).padEnd(5)} ${c.player.padEnd(22)} ${label}${c.photo ? `   [${c.photo}]` : ""}`);
   }
   if (Object.keys(cmp).length) console.log(`  CMP codes: ${JSON.stringify(cmp)}`);

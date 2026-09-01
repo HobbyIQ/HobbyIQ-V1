@@ -1,0 +1,403 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,1,,false,,Shohei Ohtani
+base,2,,false,,Cody Bellinger
+base,3,,false,,Yordan Alvarez
+base,4,,false,,Brice Turang
+base,5,,false,,Trea Turner
+base,6,,false,,Sal Stewart RC
+base,7,,false,,Samuel Basallo RC
+base,8,,false,,Ezequiel Tovar
+base,9,,false,,Cal Raleigh
+base,10,,false,,Andy Pages
+base,11,,false,,Noelvi Marte
+base,12,,false,,Bobby Witt Jr.
+base,13,,false,,Kyle Karros RC
+base,14,,false,,Jack Flaherty
+base,15,,false,,Christian Yelich
+base,16,,false,,Kevin McGonigle RC
+base,17,,false,,Juan Soto
+base,18,,false,,Dillon Dingler
+base,19,,false,,Heriberto Hernández RC
+base,20,,false,,Sandy Alcantara
+base,21,,false,,Shane Bieber
+base,22,,false,,Mason Barnett RC
+base,23,,false,,Cole Young RC
+base,24,,false,,Josh Bell
+base,25,,false,,J.P. Crawford
+base,26,,false,,Michael Busch
+base,27,,false,,Joey Ortiz
+base,28,,false,,Corey Seager
+base,29,,false,,Nico Hoerner
+base,30,,false,,Alex Bregman
+base,31,,false,,Bryan Woo
+base,32,,false,,Isaac Paredes
+base,33,,false,,Luisangel Acuña
+base,34,,false,,Seiya Suzuki
+base,35,,false,,Gleyber Torres
+base,36,,false,,Yusei Kikuchi
+base,37,,false,,Gavin Williams
+base,38,,false,,Eury Pérez
+base,39,,false,,Carter Jensen RC
+base,40,,false,,Spencer Steer
+base,41,,false,,MacKenzie Gore
+base,42,,false,,Chris Bassitt
+base,43,,false,,Carlos Rodón
+base,44,,false,,Max Muncy
+base,45,,false,,Pete Crow-Armstrong
+base,46,,false,,C.J. Kayfus RC
+base,47,,false,,Carlos Correa
+base,48,,false,,Kyle Stowers
+base,49,,false,,Miguel Vargas
+base,50,,false,,Tarik Skubal
+base,51,,false,,Jackson Chourio
+base,52,,false,,Jack Dreyer
+base,53,,false,,Victor Scott II
+base,54,,false,,Dylan Crews
+base,55,,false,,Pete Alonso
+base,56,,false,,Harry Ford RC
+base,57,,false,,Drew Rasmussen
+base,58,,false,,Kyle Tucker
+base,59,,false,,Brandon Sproat RC
+base,60,,false,,Sal Frelick
+base,61,,false,,Jazz Chisholm Jr.
+base,62,,false,,Luis Castillo
+base,63,,false,,Kyle Teel RC
+base,64,,false,,Shinnosuke Ogasawara RC
+base,65,,false,,Trevor Story
+base,66,,false,,Vladimir Guerrero Jr.
+base,67,,false,,Freddy Peralta
+base,68,,false,,Brendan Donovan
+base,69,,false,,Matt McLain
+base,70,,false,,Jhostynxon Garcia RC
+base,71,,false,,Edwin Díaz
+base,72,,false,,Brandon Lowe
+base,73,,false,,Justin Crawford RC
+base,74,,false,,Konnor Griffin RC
+base,75,,false,,Yoshinobu Yamamoto
+base,76,,false,,George Valera RC
+base,77,,false,,Zach Neto
+base,78,,false,,Kazuma Okamoto RC
+base,79,,false,,Trent Grisham
+base,80,,false,,Spencer Schwellenbach
+base,81,,false,,Javier Báez
+base,82,,false,,Iván Herrera
+base,83,,false,,Corbin Carroll
+base,84,,false,,Maikel Garcia
+base,85,,false,,Grant Taylor RC
+base,86,,false,,Trey Yesavage RC
+base,87,,false,,Carson Benge RC
+base,88,,false,,Marcelo Mayer
+base,89,,false,,Tanner Bibee
+base,90,,false,,Michael McGreevy
+base,91,,false,,Cole Ragans
+base,92,,false,,Gabriel Moreno
+base,93,,false,,Bubba Chandler RC
+base,94,,false,,Nolan Schanuel
+base,95,,false,,Jarren Duran
+base,96,,false,,Nick Pivetta
+base,97,,false,,Logan O'Hoppe
+base,98,,false,,Chase Meidroth
+base,99,,false,,Ketel Marte
+base,100,,false,,Aaron Judge
+base,101,,false,,Brandon Nimmo
+base,102,,false,,Alex Freeland RC
+base,103,,false,,Luke Weaver
+base,104,,false,,Taylor Walls
+base,105,,false,,Alejandro Kirk
+base,106,,false,,Ernie Clement
+base,107,,false,,Zach Cole RC
+base,108,,false,,Cam Smith
+base,109,,false,,Bo Bichette
+base,110,,false,,Spencer Strider
+base,111,,false,,Kevin Gausman
+base,112,,false,,Cody Ponce RC
+base,113,,false,,Max Fried
+base,114,,false,,Shane Baz
+base,115,,false,,Owen Caissie RC
+base,116,,false,,Otto Lopez
+base,117,,false,,Kyle Manzardo
+base,118,,false,,Noah Cameron
+base,119,,false,,JJ Wetherholt RC
+base,120,,false,,Taylor Ward
+base,121,,false,,Cade Horton
+base,122,,false,,Ryan Ritter RC
+base,123,,false,,Kyle Schwarber
+base,124,,false,,Ronald Acuña Jr.
+base,125,,false,,Brenton Doyle
+base,126,,false,,Drew Gilbert RC
+base,127,,false,,José Ramírez
+base,128,,false,,James Wood
+base,129,,false,,Connelly Early RC
+base,130,,false,,Junior Caminero
+base,131,,false,,Jac Caglianone RC
+base,132,,false,,Daylen Lile
+base,133,,false,,Justin Verlander
+base,134,,false,,Chase Burns RC
+base,135,,false,,Hunter Greene
+base,136,,false,,Jackson Holliday
+base,137,,false,,Jackson Merrill
+base,138,,false,,Kodai Senga
+base,139,,false,,Coby Mayo
+base,140,,false,,Willy Adames
+base,141,,false,,Hurston Waldrep
+base,142,,false,,Carson Whisenhunt RC
+base,143,,false,,Zach Maxwell RC
+base,144,,false,,Giancarlo Stanton
+base,145,,false,,Aroldis Chapman
+base,146,,false,,Randy Arozarena
+base,147,,false,,Colby Thomas RC
+base,148,,false,,Max Scherzer
+base,149,,false,,Julio Rodríguez
+base,150,,false,,Paul Skenes
+base,151,,false,,Royce Lewis
+base,152,,false,,Chandler Simpson
+base,153,,false,,Gunnar Henderson
+base,154,,false,,Manny Machado
+base,155,,false,,Xander Bogaerts
+base,156,,false,,Alec Burleson
+base,157,,false,,Jeremy Peña
+base,158,,false,,Zac Gallen
+base,159,,false,,Freddie Freeman
+base,160,,false,,Andrew Painter RC
+base,161,,false,,Shota Imanaga
+base,162,,false,,Vinnie Pasquantino
+base,163,,false,,Bryan Reynolds
+base,164,,false,,Jeff McNeil
+base,165,,false,,Wilyer Abreu
+base,166,,false,,Lourdes Gurriel Jr.
+base,167,,false,,Will Banfield RC
+base,168,,false,,Luis Arraez
+base,169,,false,,Brice Matthews RC
+base,170,,false,,Steven Kwan
+base,171,,false,,Austin Riley
+base,172,,false,,Michael King
+base,173,,false,,Byron Buxton
+base,174,,false,,Jonathan Aranda
+base,175,,false,,Jack Leiter
+base,176,,false,,Logan Gilbert
+base,177,,false,,Payton Tolle RC
+base,178,,false,,Mike Yastrzemski
+base,179,,false,,Brooks Lee
+base,180,,false,,Riley Greene
+base,181,,false,,T.J. Rumfield RC
+base,182,,false,,Nolan Arenado
+base,183,,false,,Rafael Devers
+base,184,,false,,Parker Messick RC
+base,185,,false,,Rafael Flores RC
+base,186,,false,,Brent Rooker
+base,187,,false,,Dansby Swanson
+base,188,,false,,Jung Hoo Lee
+base,189,,false,,Brady House RC
+base,190,,false,,Henry Davis
+base,191,,false,,Gerrit Cole
+base,192,,false,,Nathan Church RC
+base,193,,false,,Matt Chapman
+base,194,,false,,Devin Williams
+base,195,,false,,Carson Williams RC
+base,196,,false,,Jacob Misiorowski RC
+base,197,,false,,Patrick Bailey
+base,198,,false,,William Contreras
+base,199,,false,,Roki Sasaki
+base,200,,false,,Mike Trout
+base,201,,false,,Josh Naylor
+base,202,,false,,Troy Melton RC
+base,203,,false,,Eugenio Suárez
+base,204,,false,,Xavier Edwards
+base,205,,false,,Robert Suarez
+base,206,,false,,Adolis García
+base,207,,false,,Hunter Goodman
+base,208,,false,,Dylan Cease
+base,209,,false,,Caleb Durbin
+base,210,,false,,Joe Ryan
+base,211,,false,,Tyler Soderstrom
+base,212,,false,,Sean Murphy
+base,213,,false,,Wyatt Langford
+base,214,,false,,Andrew McCutchen
+base,215,,false,,Shane Smith
+base,216,,false,,George Kirby
+base,217,,false,,Masyn Winn
+base,218,,false,,Dylan Beavers RC
+base,219,,false,,Harrison Bader
+base,220,,false,,Luke Keaschall
+base,221,,false,,Jordan Walker
+base,222,,false,,Agustín Ramírez
+base,223,,false,,Lawrence Butler
+base,224,,false,,Daulton Varsho
+base,225,,false,,Roman Anthony RC
+base,226,,false,,Jordan Beck
+base,227,,false,,Jacob Wilson
+base,228,,false,,Geraldo Perdomo
+base,229,,false,,Otto Kemp RC
+base,230,,false,,Kerry Carpenter
+base,231,,false,,Seth Lugo
+base,232,,false,,Christian Moore RC
+base,233,,false,,J.T. Realmuto
+base,234,,false,,Ryan Jeffers
+base,235,,false,,Jo Adell
+base,236,,false,,Nolan McLean RC
+base,237,,false,,Corbin Burnes
+base,238,,false,,Logan Webb
+base,239,,false,,Maximo Acosta RC
+base,240,,false,,Will Smith
+base,241,,false,,Matt Olson
+base,242,,false,,Tatsuya Imai RC
+base,243,,false,,CJ Abrams
+base,244,,false,,Bryce Harper
+base,245,,false,,Jacob Melton RC
+base,246,,false,,Denzel Clarke
+base,247,,false,,Warming Bernabel RC
+base,248,,false,,Bryson Stott
+base,249,,false,,Oneil Cruz
+base,250,,false,,Nick Kurtz
+base,251,,false,,Isaac Collins
+base,252,,false,,Christian Walker
+base,253,,false,,George Springer
+base,254,,false,,Bryce Eldridge RC
+base,255,,false,,Cody Freeman RC
+base,256,,false,,Matthew Boyd
+base,257,,false,,Denzer Guzman RC
+base,258,,false,,Drake Baldwin
+base,259,,false,,Colson Montgomery RC
+base,260,,false,,Fernando Tatis Jr.
+base,261,,false,,Jakob Marsee RC
+base,262,,false,,Cam Schlittler RC
+base,263,,false,,Brett Baty
+base,264,,false,,Moisés Ballesteros
+base,265,,false,,Jesús Luzardo
+base,266,,false,,Jacob deGrom
+base,267,,false,,Luis Robert Jr.
+base,268,,false,,Mookie Betts
+base,269,,false,,Jonah Tong RC
+base,270,,false,,Cristopher Sánchez
+base,271,,false,,Matt Shaw
+base,272,,false,,Daniel Schneemann
+base,273,,false,,Shea Langeliers
+base,274,,false,,Munetaka Murakami RC
+base,275,,false,,Paul Goldschmidt
+base,276,,false,,Addison Barger
+base,277,,false,,Chase Dollander
+base,278,,false,,Blake Snell
+base,279,,false,,Elly De La Cruz
+base,280,,false,,Willson Contreras
+base,281,,false,,Marcus Semien
+base,282,,false,,Kristian Campbell
+base,283,,false,,Salvador Perez
+base,284,,false,,Chase DeLauter RC
+base,285,,false,,Hunter Brown
+base,286,,false,,Andrés Giménez
+base,287,,false,,Mason Miller
+base,288,,false,,Kris Bryant
+base,289,,false,,Spencer Torkelson
+base,290,,false,,Zack Wheeler
+base,291,,false,,Jimmy Crooks RC
+base,292,,false,,Lars Nootbaar
+base,293,,false,,Austin Hays
+base,294,,false,,Luis Morales RC
+base,295,,false,,Ben Rice
+base,296,,false,,Chris Sale
+base,297,,false,,Ozzie Albies
+base,298,,false,,Adley Rutschman
+base,299,,false,,Francisco Lindor
+base,300,,false,,Garrett Crochet
+base,1,Image Variation,false,,Shohei Ohtani
+base,2,Image Variation,false,,Cody Bellinger
+base,7,Image Variation,false,,Samuel Basallo
+base,9,Image Variation,false,,Cal Raleigh
+base,12,Image Variation,false,,Bobby Witt Jr.
+base,16,Image Variation,false,,Kevin McGonigle
+base,17,Image Variation,false,,Juan Soto
+base,45,Image Variation,false,,Pete Crow-Armstrong
+base,50,Image Variation,false,,Tarik Skubal
+base,51,Image Variation,false,,Jackson Chourio
+base,55,Image Variation,false,,Pete Alonso
+base,63,Image Variation,false,,Kyle Teel
+base,66,Image Variation,false,,Vladimir Guerrero Jr.
+base,75,Image Variation,false,,Yoshinobu Yamamoto
+base,83,Image Variation,false,,Corbin Carroll
+base,86,Image Variation,false,,Trey Yesavage
+base,87,Image Variation,false,,Carson Benge
+base,93,Image Variation,false,,Bubba Chandler
+base,100,Image Variation,false,,Aaron Judge
+base,119,Image Variation,false,,JJ Wetherholt
+base,124,Image Variation,false,,Ronald Acuña Jr.
+base,127,Image Variation,false,,José Ramírez
+base,128,Image Variation,false,,James Wood
+base,130,Image Variation,false,,Junior Caminero
+base,131,Image Variation,false,,Jac Caglianone
+base,134,Image Variation,false,,Chase Burns
+base,137,Image Variation,false,,Jackson Merrill
+base,149,Image Variation,false,,Julio Rodríguez
+base,150,Image Variation,false,,Paul Skenes
+base,154,Image Variation,false,,Manny Machado
+base,159,Image Variation,false,,Freddie Freeman
+base,195,Image Variation,false,,Carson Williams
+base,196,Image Variation,false,,Jacob Misiorowski
+base,200,Image Variation,false,,Mike Trout
+base,223,Image Variation,false,,Lawrence Butler
+base,225,Image Variation,false,,Roman Anthony
+base,227,Image Variation,false,,Jacob Wilson
+base,244,Image Variation,false,,Bryce Harper
+base,250,Image Variation,false,,Nick Kurtz
+base,253,Image Variation,false,,George Springer
+base,254,Image Variation,false,,Bryce Eldridge
+base,258,Image Variation,false,,Drake Baldwin
+base,259,Image Variation,false,,Colson Montgomery
+base,260,Image Variation,false,,Fernando Tatis Jr.
+base,261,Image Variation,false,,Jakob Marsee
+base,269,Image Variation,false,,Jonah Tong
+base,274,Image Variation,false,,Munetaka Murakami
+base,279,Image Variation,false,,Elly De La Cruz
+base,284,Image Variation,false,,Chase DeLauter
+base,299,Image Variation,false,,Francisco Lindor
+insert-hidden-gems,HG-6,,false,,Samuel Basallo
+insert-hidden-gems,HG-7,,false,,Bobby Witt Jr.
+insert-hidden-gems,HG-8,,false,,Nick Kurtz
+insert-hidden-gems,HG-9,,false,,Jac Caglianone
+insert-hidden-gems,HG-10,,false,,Shohei Ohtani
+auto-sapphire-autographs,RA-AP,,true,,Andrew Painter
+auto-sapphire-autographs,RA-BE,,true,,Bryce Eldridge
+auto-sapphire-autographs,RA-CD,,true,,Chase DeLauter
+auto-sapphire-autographs,RA-CJ,,true,,Carter Jensen
+auto-sapphire-autographs,RA-CK,,true,,C.J. Kayfus
+auto-sapphire-autographs,RA-CM,,true,,Colson Montgomery
+auto-sapphire-autographs,RA-CMO,,true,,Christian Moore
+auto-sapphire-autographs,RA-CSC,,true,,Cam Schlittler
+auto-sapphire-autographs,RA-CT,,true,,Colby Thomas
+auto-sapphire-autographs,RA-CWS,,true,,Carson Williams
+auto-sapphire-autographs,RA-CY,,true,,Cole Young
+auto-sapphire-autographs,RA-DB,,true,,Dylan Beavers
+auto-sapphire-autographs,RA-GV,,true,,George Valera
+auto-sapphire-autographs,RA-IMA,,true,,Tatsuya Imai
+auto-sapphire-autographs,RA-JC,,true,,Jac Caglianone
+auto-sapphire-autographs,RA-JGA,,true,,Jhostynxon Garcia
+auto-sapphire-autographs,RA-JJW,,true,,JJ Wetherholt
+auto-sapphire-autographs,RA-JM,,true,,Jacob Misiorowski
+auto-sapphire-autographs,RA-JTO,,true,,Jonah Tong
+auto-sapphire-autographs,RA-KG,,true,,Konnor Griffin
+auto-sapphire-autographs,RA-KK,,true,,Kyle Karros
+auto-sapphire-autographs,RA-KM,,true,,Kevin McGonigle
+auto-sapphire-autographs,RA-MMI,,true,,Munetaka Murakami
+auto-sapphire-autographs,RA-NM,,true,,Nolan McLean
+auto-sapphire-autographs,RA-OC,,true,,Owen Caissie
+auto-sapphire-autographs,RA-OK,,true,,Otto Kemp
+auto-sapphire-autographs,RA-OKA,,true,,Kazuma Okamoto
+auto-sapphire-autographs,RA-PM,,true,,Parker Messick
+auto-sapphire-autographs,RA-PT,,true,,Payton Tolle
+auto-sapphire-autographs,RA-RA,,true,,Roman Anthony
+auto-sapphire-autographs,RA-SB,,true,,Samuel Basallo
+auto-sapphire-autographs,RA-STE,,true,,Sal Stewart
+auto-sapphire-autographs,RA-TME,,true,,Troy Melton
+auto-sapphire-autographs,RA-TY,,true,,Trey Yesavage
+auto-sapphire-selections-autographs,SSA-AF,,true,,Alex Freeland
+auto-sapphire-selections-autographs,SSA-AJ,,true,,Aaron Judge
+auto-sapphire-selections-autographs,SSA-BC,,true,,Bubba Chandler
+auto-sapphire-selections-autographs,SSA-CM,,true,,Colson Montgomery
+auto-sapphire-selections-autographs,SSA-CW,,true,,Carson Williams
+auto-sapphire-selections-autographs,SSA-ED,,true,,Elly De La Cruz
+auto-sapphire-selections-autographs,SSA-HF,,true,,Harry Ford
+auto-sapphire-selections-autographs,SSA-JC,,true,,Jac Caglianone
+auto-sapphire-selections-autographs,SSA-MT,,true,,Mike Trout
+auto-sapphire-selections-autographs,SSA-NK,,true,,Nick Kurtz
+auto-sapphire-selections-autographs,SSA-PT,,true,,Payton Tolle
+auto-sapphire-selections-autographs,SSA-SO,,true,,Shohei Ohtani
+auto-sapphire-selections-autographs,SSA-SS,,true,,Sal Stewart

@@ -46,6 +46,8 @@
 const path = require("path");
 const backend = path.join(__dirname, "..");
 const { CosmosClient } = require(path.join(backend, "node_modules/@azure/cosmos"));
+// The row-op, not a hand-rolled patch: CF-GUARD-THE-CATALOG-WRITE-CONTRACT.
+const { patchCatalogRowFields } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
 
 const arg = (n, d) => {
   const hit = process.argv.find((a) => a.startsWith(`--${n}=`));
@@ -127,12 +129,8 @@ async function main() {
   for (const r of rows) {
     // /cardId is the partition key. Patch keeps every other field untouched
     // and preserves the previous value for reversal.
-    const ops = [
-      { op: "set", path: "/source", value: NEW },
-      { op: r.sourceBefore === undefined ? "add" : "set", path: "/sourceBefore", value: r.source },
-    ];
     try {
-      await cat.item(r.id, r.cardId).patch(ops);
+      await patchCatalogRowFields(cat, r.id, r.cardId, { source: NEW });
       ok++;
     } catch (e) {
       failed++;
