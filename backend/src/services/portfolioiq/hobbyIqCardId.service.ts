@@ -879,8 +879,58 @@ export function stripYearAndSport(slug: string): string {
   return out || slug;
 }
 
+/**
+ * CF-THE-JAPANESE-CODE-IS-THE-KEY (Drew, 2026-09-01, ruling R2).
+ *
+ * The canonical setKey for a modern Japanese Pokemon set is its BARE OFFICIAL
+ * CODE — `sv2a`, not `japanese-sv2a`. Two spellings reached the pool:
+ *
+ *   `japanese-<code>`  a "japanese" prefix glued onto the code by a minter that
+ *                      already had the vertical from the sport field. The
+ *                      prefix names the language, never the product, and it
+ *                      split each set's pool in two.
+ *   `swsh12a`          OUR OWN mistaken form of the JA VSTAR Universe code,
+ *                      which is `s12a`. swsh12a was never a real set code.
+ *
+ * EXACT-TOKEN, and that is the whole guard. These are whole-key rewrites, not
+ * patterns: the map is consulted with `===`, never a prefix or a substring
+ * test. It matters most for swsh12a, because the EN Silver Tempest product is
+ * `swsh12` and its Trainer Gallery is `swsh12tg` — a `startsWith("swsh12")`
+ * rule would swallow both and merge an English set into a Japanese one. Those
+ * keys are absent from this map and pass through untouched, which the unit
+ * tests pin as negatives.
+ *
+ * DELIBERATELY NOT A BLANKET `japanese-*` STRIP. Only the three products Drew
+ * ruled on are here. `1997-pokemon-japanese-rocket-gang` keeps its name — it is
+ * a ruled key in its own right (R1) and stripping "japanese" from it would
+ * produce a key naming no product at all.
+ *
+ * Applied BEFORE the product table and the regex vocabulary. 187 of the 188
+ * vocabulary patterns are unanchored (see the arbitration note below), so a
+ * bare code like `s12a` is exactly the kind of short token a longer unanchored
+ * rule can capture; deciding it first makes the ruling immune to line order.
+ */
+const RULED_SET_KEY_REWRITES: Readonly<Record<string, string>> = Object.freeze({
+  "japanese-sv2a": "sv2a",
+  "japanese-sv8a": "sv8a",
+  "japanese-s12a": "s12a",
+  swsh12a: "s12a",
+});
+
+/** The ruled canonical spelling of a setKey, or the key unchanged. Exact-token
+ *  by construction — callers that hold a KEY (not a product name) use this
+ *  without paying for slugify or the vocabulary. */
+export function canonicalRuledSetKey(setKey: string | null | undefined): string {
+  const s = String(setKey ?? "").trim().toLowerCase();
+  return RULED_SET_KEY_REWRITES[s] ?? s;
+}
+
 export function normalizeSetKey(setName: string): string {
   const s = stripYearAndSport(slugify(setName));
+  // CF-THE-JAPANESE-CODE-IS-THE-KEY (R2): a ruled key is decided here, before
+  // any unanchored pattern can reach it.
+  const ruled = RULED_SET_KEY_REWRITES[s];
+  if (ruled) return ruled;
   // CF-THE-ID-CARRIES-THE-PRODUCT (D23, Drew 2026-08-30). The product table
   // answers FIRST: "Topps Series 1" is topps-series-1, "Topps Update" and
   // "Topps Update Series" are one product (topps-update-series), "Bowman

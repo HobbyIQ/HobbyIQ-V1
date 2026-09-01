@@ -11,6 +11,10 @@
 // Keys are the slugified romanized name with accents folded, WITHOUT year,
 // "Pokemon", "Japanese" or the series prefix — the resolver strips those before
 // lookup, so one entry covers every vendor spelling.
+//
+// Two entries are RULED overrides, not scraped (see `RULED` in the generator):
+// "rocket-gang" -> japanese-rocket-gang and "vstar-universe" -> s12a. The
+// source page pointed both Japanese sets at an English product's code.
 
 export const JAPANESE_POKEMON_SET_ALIASES: Readonly<Record<string, string>> = Object.freeze({
   "25th-anniversary-collection": "swsh8a",
@@ -172,7 +176,13 @@ export const JAPANESE_POKEMON_SET_ALIASES: Readonly<Record<string, string>> = Ob
   "remix-bout": "sm11a",
   "reviving-legends": "l2",
   "rising-fist": "xy3",
-  "rocket-gang": "base4",
+  // CF-THE-JAPANESE-CODE-IS-THE-KEY (Drew, 2026-09-01, R1). Was "base4" — the
+  // code for the ENGLISH Base Set 2 (year 2000). The Japanese Rocket Gang set
+  // (1997) is a different product entirely, and this one line is what minted
+  // 43,724 JA sales onto the EN key. The catalog holds the JA checklist under
+  // `japanese-rocket-gang` (65 tcgdex-ja rows + 14 sales-attested), so that is
+  // the key the alias must answer with.
+  "rocket-gang": "japanese-rocket-gang",
   "rocket-gang-strikes-back": "pcg3",
   "ruler-of-the-black-flame": "sv3",
   "rulers-of-the-heavens": "adv3",
@@ -235,7 +245,13 @@ export const JAPANESE_POKEMON_SET_ALIASES: Readonly<Record<string, string>> = Ob
   "violet-ex": "sv1v",
   "vmax-climax": "swsh8b",
   "vmax-rising": "swsh1a",
-  "vstar-universe": "swsh12a",
+  // CF-THE-JAPANESE-CODE-IS-THE-KEY (Drew, 2026-09-01, R2). Was "swsh12a" —
+  // our own mistaken form. The JA VSTAR Universe code is s12a; swsh12a was
+  // never a real set code, and the swsh-prefixed spelling invited collision
+  // with the ENGLISH Sword & Shield codes (swsh12 IS Silver Tempest, a
+  // different product). Hand-corrected against the generator: re-running
+  // fetchJapanesePokemonAliases must preserve this line.
+  "vstar-universe": "s12a",
   "water-starter-set-v": "saw",
   "white-collection": "bw1w",
   "white-flare": "sv11w",
