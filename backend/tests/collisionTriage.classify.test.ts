@@ -96,15 +96,26 @@ describe("a shared item id IS the same sale, whoever ingested it", () => {
     expect(v.reason).toMatch(/same-source/);
   });
 
-  it("sameness WINS over a differing parallel — one ingester mislabelled it", () => {
-    // A shared item id is proof of one physical sale. A parallel disagreement
+  it("RETRACTED (D1): sameness no longer WINS over a differing parallel", () => {
+    // THIS TEST USED TO ASSERT THE OPPOSITE, and the reasoning it carried was:
+    // "a shared item id is proof of one physical sale; a parallel disagreement
     // between two rows carrying it is a matcher finding, not a licence to keep
-    // the sale twice and double-count it in every FMV.
+    // the sale twice and double-count it in every FMV."
+    //
+    // That is right about the arithmetic and wrong about the consequence. Under
+    // MODE=apply-true-dupes it resolved a wrong-card ingest by RICHNESS and
+    // stamped the loser `dedup-superseded`, destroying the matcher finding it
+    // had just named and leaving the surviving row on whichever card scored
+    // higher — possibly the wrong one. Contradiction is evidence, and evidence
+    // goes to a person. The class is CONFLICTED-DUPE and it is never
+    // auto-flagged; see collisionTriage.conflictedDupe.test.ts.
     const v = classifyCollision([
       row({ id: "tca-ebay::555", sourceExternalId: "555", parallel: "Base" }),
       row({ id: "cardhedge::555", source: "cardhedge", sourceExternalId: "555", parallel: "Blue Refractor" }),
     ]);
-    expect(v.class).toBe("TRUE-DUPE");
+    expect(v.class).toBe("CONFLICTED-DUPE");
+    expect(v.flag).toEqual([]);
+    expect(v.axes.map((a: { field: string }) => a.field)).toEqual(["parallel"]);
   });
 
   it("a third row with its own id is left alone while the shared pair clusters", () => {

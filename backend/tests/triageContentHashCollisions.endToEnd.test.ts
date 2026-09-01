@@ -172,11 +172,22 @@ describe("the triage classifies a real collision pair end to end", () => {
     expect(out).toMatch(/of which legacy-only\s+1/);
   });
 
-  it("names a true slug for each distinct card, and says move-not-delete", () => {
+  it("D6: BOTH rows here are checklist-backed and disagree, so the destination is UNRESOLVED", () => {
+    // The fixture is `beckett` vs `checklistinsider` -- two checklist sources
+    // naming two different addresses for one card. Neither outranks the other,
+    // so no row present has the authority to name the destination and the
+    // honest answer is a checklist ruling from a person.
+    //
+    // The FIRST build printed a confident slug here, derived from whichever id
+    // was the longer string (`base-uncommon`, by four characters). That was a
+    // destination nobody had vouched for, offered to the D31 relocation lane as
+    // though it had been decided.
     expect(out).toMatch(/RELOCATE/);
     expect(out).toMatch(/move, never delete/);
-    // the `Uncommon Refractor` sale is pointed at its OWN parallel segment
-    expect(out).toMatch(/hiq:football:2024:topps-finest:197:uncommon-refractor:no-auto/);
+    expect(out).toMatch(/BASIS\s+unresolved: 2 checklist-backed rows disagree/);
+    expect(out).toMatch(/UNRESOLVED -- checklist ruling needed/);
+    // and it never invents one
+    expect(out).not.toMatch(/->\s+hiq:football:2024:topps-finest:197:base-uncommon:no-auto\s/);
   });
 
   it("REPORT MODE WRITES NOTHING — not a patch, not a delete", () => {

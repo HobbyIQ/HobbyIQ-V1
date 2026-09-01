@@ -299,7 +299,7 @@ on:
         required: false
         default: "16"
       scope:
-        description: "For repair-refractor-mislabel: 'refractor' (plain segment only) or 'all' (every parallel pool). For rename-setkey-to-product MODE=product: comma-separated ruled product keys (e.g. topps-series-1,leaf-metal); the default here or 'all' = every ruled product."
+        description: "For repair-refractor-mislabel: 'refractor' (plain segment only) or 'all' (every parallel pool). For rename-setkey-to-product MODE=product: comma-separated ruled product keys (e.g. topps-series-1,leaf-metal); the default here or 'all' = every ruled product. NOTE the default is 'refractor' and it is INHERITED, not chosen -- for triage-contenthash-collisions and consolidate-catalog-duplicates it narrows NOTHING (both read SCOPE only as the 'all' escape hatch for the no-sports/no-years refusal), so the triage now REFUSES any non-'all' value rather than ignoring it: pass scope=all with those two and narrow with sports/years/slot instead."
         required: false
         default: "refractor"
         type: string
@@ -1563,18 +1563,24 @@ jobs:
         working-directory: backend
         run: |
           set +e
-          N=$(grep -aoE "^  COLLISIONS +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
-          echo "collisions=${N:-0}"
+          # D7: the report now prints TWO populations, each with its own
+          # COLLISIONS line, indented under its section header. The number worth
+          # echoing is the D30-REFUSAL SET's -- the one that reconciles against
+          # the fold's own refusal -- so this reads the line that carries "in N
+          # group(s)", which only that section prints. The FULL set's count is in
+          # the log either way; this notice is not the deliverable, the report is.
+          N=$(grep -aoE "^ +COLLISIONS +[0-9,]+ in [0-9,]+ group" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+ in" | grep -oE "^[0-9,]+" | tr -d ,)
+          echo "d30_refusal_set_collisions=${N:-0}"
           # CF-RELAUNCH-ONLY-ON-BUDGET (#1361): relaunch iff the script printed its
           # budget marker. NEVER on a count -- a slot whose every group classifies
           # clean has zero collisions and is FINISHED, not stalled -- and never on a
           # cancel (a killed job cannot report progress).
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
-            echo "::notice::budget hit (collisions=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
+            echo "::notice::budget hit (D30-refusal-set collisions=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
             # The scope travels with the slot: mode, sports, years and scope verbatim.
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=triage-contenthash-collisions -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}"
           else
-            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (collisions=${N:-0}) — done, no re-dispatch."
+            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (D30-refusal-set collisions=${N:-0}) — done, no re-dispatch."
           fi
 
       - name: Self-relaunch the user-comp re-key until the slot is clean

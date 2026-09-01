@@ -25,6 +25,13 @@
 // ids collapsed into one. A SHARED external id is now required before
 // anything is excluded.
 //
+// THAT RULE IS IMPORTED, NOT WRITTEN HERE (D3). It lived in this file and again
+// in sold-comps-cross-source-dedup.cjs, with a copy of `externalIdOf` in each,
+// and the tests guarding both asserted over SOURCE TEXT -- so a mutant reverting
+// either script to the whole-bucket collapse passed all 81 of them. It now lives
+// in scripts/lib/cross-source-cluster.cjs, both scripts import it, and the tests
+// EXECUTE both scripts and confirm each mutant is lethal.
+//
 // And the exclusion is a FLAG, not a delete. The pool is the moat: a vendor
 // may never re-emit a sale it has already reported, so a dedup never
 // hard-deletes. flaggedWrong=true is already filtered by every FMV read path
@@ -58,6 +65,14 @@
 //     MAX_CLUSTERS=100000        (cap for pilot runs)
 
 const { CosmosClient } = require("@azure/cosmos");
+const path = require("path");
+// THE DISCRIMINATOR IS IMPORTED, NOT COPIED. Both dedup scripts and the
+// contentHash triage must agree on what an item id is and on when a bucket has
+// PROVEN a duplicate. This file used to declare its own `externalIdOf` and its
+// own bucket-by-id loop; the tests that guarded them asserted over source text,
+// so a mutant reverting the whole-bucket collapse passed every one. The rule now
+// lives in scripts/lib/cross-source-cluster.cjs and the tests execute it.
+const { provenClustersOf, externalIdOf } = require(path.join(__dirname, "lib", "cross-source-cluster.cjs"));
 
 const CONN = process.env.COSMOS_CONNECTION_STRING;
 const DRY_RUN = String(process.env.DRY_RUN ?? "true").toLowerCase() !== "false";
@@ -95,22 +110,15 @@ function normGradeCo(s) {
   return t || "RAW";
 }
 
-/** The eBay item id, trimmed, or null when the row carries none. A row with no
- *  external id can never PROVE sameness with another, so it is never excluded
- *  on this rule -- absence of evidence is not evidence of duplication.
- *
- *  Deliberately NOT unwrapped to an inner listing id. CardHedge's two shapes
- *  (`ch-daily::<price_history_id>` and the composed
- *  `ch-comp::<cardId>::<soldAt>::<cents>`) share no listing id to extract, so
- *  any unwrapping here would be a guess dressed as a proof. That population has
- *  its own lane: scripts/collapse-ch-dual-ids.cjs, which pairs on (day, price)
- *  and REFUSES on parallel or grade variance. */
-function externalIdOf(row) {
-  const v = row?.sourceExternalId;
-  if (v === null || v === undefined || v === "") return null;
-  const s = String(v).trim();
-  return s.length ? s : null;
-}
+// `externalIdOf` is imported above from scripts/lib/collision-triage.cjs (via
+// cross-source-cluster). It returns the eBay item id trimmed, or null when the
+// row carries none -- a row with no external id can never PROVE sameness, so it
+// is never excluded on this rule. It is deliberately NOT unwrapped to an inner
+// listing id: CardHedge's two shapes (`ch-daily::<price_history_id>` and the
+// composed `ch-comp::<cardId>::<soldAt>::<cents>`) share no listing id to
+// extract, so any unwrapping would be a guess dressed as a proof. That
+// population has its own lane: scripts/collapse-ch-dual-ids.cjs, which pairs on
+// (day, price) and REFUSES on parallel or grade variance.
 
 // Fill score: more populated fields = better canonical candidate
 const FILL_FIELDS = ["hobbyiqCardId", "playerName", "cardNumber", "parallel",
@@ -235,19 +243,13 @@ async function main() {
   for (const [key, rows] of clusters) {
     if (rows.length < 2) continue;
 
-    const byExternal = new Map();
-    let noId = 0;
-    for (const r of rows) {
-      const ext = externalIdOf(r);
-      if (ext === null) { noId++; continue; }
-      const list = byExternal.get(ext) ?? [];
-      list.push(r);
-      byExternal.set(ext, list);
-    }
+    // THE RULING, imported. A shared item id is the only thing that proves two
+    // rows in one bucket are one sale; everything else this bucket holds is
+    // several real sales and is counted as refused.
+    const { proven, refusedNoId: noId, refusedDifferentIds: diff } = provenClustersOf(rows);
     refusedNoId += noId;
-
-    const proven = [...byExternal.values()].filter(list => list.length > 1);
-    if (proven.length === 0) { refusedDifferentIds += rows.length; continue; }
+    refusedDifferentIds += diff;
+    if (proven.length === 0) continue;
 
     for (const list of proven) {
       const sources = new Set(list.map(r => r.source));
@@ -375,7 +377,14 @@ async function main() {
   console.log(`  already flagged     : ${alreadyFlagged.toLocaleString()}   <- only-improve, left untouched`);
   console.log(`  flag-failed         : ${flagFailed.toLocaleString()}`);
   console.log(`  elapsed             : ${elapsed}s`);
-  console.log(`  reconciled: intended ${patchQueue.length.toLocaleString()} = written ${flagged.toLocaleString()} + skipped 0 + failed ${flagFailed.toLocaleString()}`);
+  // INTENDED IS EVERY LOSER THIS RUN PROVED, not just the ones it queued. The
+  // first form printed `skipped 0` as a literal while counting already-flagged
+  // rows on their own line -- self-consistent arithmetic that reconciled a
+  // narrower "intended" than the run actually decided, so a run whose losers
+  // were ALL already flagged reconciled 0 = 0 + 0 + 0 and said nothing about the
+  // rows it had ruled on. Skipped is the real number.
+  const intended = patchQueue.length + alreadyFlagged;
+  console.log(`  reconciled: intended ${intended.toLocaleString()} = written ${flagged.toLocaleString()} + skipped ${alreadyFlagged.toLocaleString()} + failed ${flagFailed.toLocaleString()}`);
 }
 
 main().catch(e => { console.error("[FATAL]", (e && e.stack) || e); process.exit(1); });
