@@ -224,6 +224,19 @@ export interface FeeEnrichmentInput {
   actualShippingCost: number | null;
 }
 
+/**
+ * D34 R2 (2026-09-01): the fetch provenance that accompanies an enrichment.
+ * Optional so every existing caller keeps compiling; when omitted the entry
+ * keeps whatever markers it already had, and a row whose breakdown was never
+ * fetched keeps reporting its fee lines as outstanding (which is the point).
+ */
+export interface FeeEnrichmentProvenance {
+  /** eBay answered this fetch — absent lines are now real absences. */
+  feeFetchedAt?: string | null;
+  /** The fetch completed and eBay sent no SHIPPING_LABEL for this order. */
+  shippingAbsentFromEbay?: boolean;
+}
+
 export interface AppliedEnrichment {
   entry: LedgerEntryForErp;
   adjustment: LedgerFeeAdjustment;
@@ -242,6 +255,7 @@ export function applyFeeEnrichment(
   entry: LedgerEntryForErp,
   enrichment: FeeEnrichmentInput,
   nowIso: string = new Date().toISOString(),
+  provenance: FeeEnrichmentProvenance = {},
 ): AppliedEnrichment {
   const prior: LedgerFeeAdjustment["priorValues"] = {
     finalValueFee: entry.finalValueFee ?? null,
@@ -271,6 +285,17 @@ export function applyFeeEnrichment(
     netPayout: enrichment.netPayout,
     actualShippingCost: enrichment.actualShippingCost,
     feeSource: "ebay_finances" as ReconciledVia,
+    // D34 R2: fetch provenance travels WITH the fees. missingFeeFields keys
+    // "still waiting on eBay" on feeFetchedAt, so a row enriched from a real
+    // answer stops asking for lines that answer did not contain — while a
+    // row that was never fetched keeps asking, which is what the pre-D34
+    // Ohtani row must do.
+    ...(provenance.feeFetchedAt !== undefined
+      ? { feeFetchedAt: provenance.feeFetchedAt }
+      : {}),
+    ...(provenance.shippingAbsentFromEbay !== undefined
+      ? { shippingAbsentFromEbay: provenance.shippingAbsentFromEbay }
+      : {}),
   };
   const merged: LedgerEntryForErp = tryFinalizeReconciliation(withFees);
 

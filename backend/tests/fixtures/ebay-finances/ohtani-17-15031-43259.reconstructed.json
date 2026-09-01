@@ -1,0 +1,50 @@
+{
+  "_provenance": "SHAPE MEASURED (eBay Sell Finances getTransactions response schema), PER-FEE SPLIT INFERRED. The fee TOTAL is pinned to the measured 603.14; how that total divides across FINAL_VALUE_FEE / fixed / promoted is a reconstruction at eBay's published card rate (13.25% + $0.30). Replace with the real payload from a REPORT ONLY run with EBAY_FINANCES_DUMP_TRANSACTIONS=true. See README.md.",
+  "_shapeNote": "Fees hang off orderLineItems[].marketplaceFees[]. There is no top-level fees[] on a SALE. This is the field path the pre-D34 mapper missed.",
+  "transactions": [
+    {
+      "transactionId": "RECONSTRUCTED-SALE-1",
+      "orderId": "17-15031-43259",
+      "transactionType": "SALE",
+      "transactionStatus": "FUNDS_AVAILABLE_FOR_PAYOUT",
+      "transactionDate": "2026-08-17T15:52:10.000Z",
+      "amount": { "value": "2999.99", "currency": "USD" },
+      "totalFeeAmount": { "value": "603.14", "currency": "USD" },
+      "orderLineItems": [
+        {
+          "lineItemId": "RECONSTRUCTED-LI-1",
+          "feeBasisAmount": { "value": "2999.99", "currency": "USD" },
+          "marketplaceFees": [
+            { "feeType": "FINAL_VALUE_FEE", "amount": { "value": "397.50", "currency": "USD" } },
+            { "feeType": "FINAL_VALUE_FEE_FIXED_PER_ORDER", "amount": { "value": "0.30", "currency": "USD" } },
+            { "feeType": "FINAL_VALUE_FEE_AD_FEE", "amount": { "value": "205.34", "currency": "USD" } }
+          ]
+        }
+      ]
+    },
+    {
+      "transactionId": "RECONSTRUCTED-SL-1",
+      "orderId": "17-15031-43259",
+      "transactionType": "SHIPPING_LABEL",
+      "transactionStatus": "FUNDS_AVAILABLE_FOR_PAYOUT",
+      "transactionDate": "2026-08-17T18:04:55.000Z",
+      "amount": { "value": "-5.97", "currency": "USD" },
+      "fees": []
+    }
+  ],
+  "expectedFeeMap": {
+    "finalValueFee": 397.8,
+    "paymentProcessingFee": null,
+    "promotedListingFee": 205.34,
+    "adFee": null,
+    "otherFees": null,
+    "netPayout": 2396.85,
+    "actualShippingCost": 5.97
+  },
+  "_expectedFeeMapNote": "D34 R2 (2026-09-01): paymentProcessingFee / adFee / otherFees were 0 here and that was wrong. This payload contains no line of those types, so their values are UNKNOWN. Writing 0 was the mapper's global-sighting fabrication, and this fixture pinned it. Under managed payments eBay generally folds processing into the final value fee and sends no separate line — 'no line' is not 'zero dollars'. If the real captured payload turns out to carry explicit 0.00 lines, THOSE become 0 here, because a stated zero is a fact.",
+  "invariants": {
+    "feeTotalEqualsMeasured": "finalValueFee + paymentProcessingFee + promotedListingFee + adFee + otherFees == 603.14 (nulls contribute nothing — they are absent lines, not zero-dollar ones)",
+    "netPayoutMatchesLedger": "amount - totalFeeAmount == 2396.85, the value already stored in prod",
+    "comment": "The first two hold for ANY correct split of 603.14, so they survive replacement by the real payload. The per-fee values in expectedFeeMap do not — that is deliberate."
+  }
+}

@@ -706,6 +706,43 @@ export function inferIsAuto(input: InferIsAutoInput): boolean {
   return false;
 }
 
+/** A `#`-prefixed token that is a PRODUCT-CODED card number (USC88, PDC-171,
+ *  CPA-EW, BCP-102) rather than a bare integer. Deliberately the letter-led
+ *  alternatives of DEFAULT_CARD_NUMBER_RE and nothing more: this decides only
+ *  which of two stated numbers wins, never whether a number is stated. */
+const PREFIXED_HASH_CARD_NUMBER_RE =
+  /#\s*([A-Z]{2,5}-[A-Z0-9]{1,6}|[A-Z]{1,3}\d{1,4})\b/gi;
+/** A bare `#N`, the shape a listing-position prefix also takes. */
+const BARE_HASH_CARD_NUMBER_RE = /#\s*(\d{1,4})\b/g;
+
+/**
+ * CF-A-PREFIXED-NUMBER-OUTRANKS-A-BARE-ONE. Returns the prefixed card number
+ * ONLY when the title states both a prefixed and a bare `#` number — the case
+ * where first-match order picks the wrong one. Returns null otherwise, leaving
+ * every single-number title to the regex that has always read it.
+ *
+ * Refuses when the title states SEVERAL DIFFERENT prefixed numbers: that is a
+ * lot or a title naming two cards, and picking one of them would be a guess.
+ */
+function preferPrefixedCardNumber(title: string): string | null {
+  const t = String(title);
+  const prefixed = [...t.matchAll(PREFIXED_HASH_CARD_NUMBER_RE)]
+    .map((m) => m[1].toUpperCase());
+  if (!prefixed.length) return null;
+  // Several distinct prefixed numbers = two cards named, not one card
+  // numbered twice. Refuse rather than pick.
+  if (new Set(prefixed).size > 1) return null;
+  // Only reorder when a bare number is ALSO present and comes first — that is
+  // precisely the listing-index collision. A title with only "#USC88" already
+  // parses correctly through the default regex.
+  const bare = BARE_HASH_CARD_NUMBER_RE.exec(t);
+  BARE_HASH_CARD_NUMBER_RE.lastIndex = 0;
+  if (!bare) return null;
+  const firstPrefixedAt = t.search(/#\s*(?:[A-Z]{2,5}-[A-Z0-9]{1,6}|[A-Z]{1,3}\d{1,4})\b/i);
+  if (firstPrefixedAt < 0 || bare.index < firstPrefixedAt) return prefixed[0];
+  return null;
+}
+
 function extractCardNumber(title: string, cardNumberRe?: RegExp, isTcg = false): string | null {
   // CF-TCG-NUMBER-BEFORE-HASH (Drew, 2026-08-14). In TCG the POS/TOTAL rule
   // must run FIRST. Sellers write the number both ways — "40/147" and
@@ -726,6 +763,33 @@ function extractCardNumber(title: string, cardNumberRe?: RegExp, isTcg = false):
     }
   }
   const re = cardNumberRe ?? DEFAULT_CARD_NUMBER_RE;
+  // CF-A-PREFIXED-NUMBER-OUTRANKS-A-BARE-ONE (Drew, 2026-08-31). `String.match`
+  // with a non-global regex returns the FIRST match in string order, and a
+  // seller's LISTING-POSITION prefix is written first:
+  //
+  //   "#1 2024 Topps Chrome Update X-Fractor #USC88 Paul Skenes RC PSA 10"
+  //        ^ listing index, not a card number      ^^^^^ the real card number
+  //
+  // The parse returned "1". That is not a near miss: it files a Chrome Update
+  // sale against flagship card #1 (a different player entirely), and because
+  // the SLUG was minted from the same wrong parse, the slug and the parse
+  // AGREE — so no cardNumber-mismatch check anywhere catches it. Two such rows
+  // were found in the 2026-08-31 setKey-misfile diagnosis, and the same shape
+  // reappears on "#5 2024 Topps Pro Debut #PDC-171".
+  //
+  // The discriminator is SHAPE, not position. Card numbers printed with a
+  // product prefix (USC88, PDC-171, CPA-EW, BCP-102) are unambiguous — nothing
+  // else in a title is written that way — whereas a bare small integer is
+  // exactly what a listing index also looks like. So when a title states BOTH,
+  // the prefixed one is the card number and the bare one is the seller's
+  // numbering. When the title states only a bare number, it is unchanged:
+  // "2024 Topps Chrome Shohei Ohtani #1 X-Fractor" still parses #1, because
+  // genuine #1 cards are everywhere and this rule must never invent a reason
+  // to skip one.
+  if (!cardNumberRe) {
+    const best = preferPrefixedCardNumber(title);
+    if (best) return best;
+  }
   const m = title.match(re);
   if (m) return m[1].toUpperCase();
   // CF-CARDNUM-STANDALONE fallback — only tried when the primary #-prefix
@@ -1445,7 +1509,29 @@ function capFirst(s: string): string {
  *  "2026 Bowman" title that omits "Paper") is handled by the
  *  cardNumber-aware overload below. */
 export function inferSetKeyFromTitle(title: string, cardNumber?: string | null): string {
-  const t = String(title ?? "").toLowerCase();
+  // CF-THE-YEAR-DOES-NOT-SPLIT-THE-PRODUCT (Drew, 2026-08-31). Every product
+  // rule below is written as adjacent words (/topps\s+chrome/), but sellers —
+  // and CardHedge's own slab-derived titles — routinely write the brand, then
+  // the year, then the rest of the product:
+  //
+  //   "2024 Topps Chrome Update ... X-Fractor"  -> Topps Chrome   (correct)
+  //   "Topps 2024 Chrome Update ... X-Fractor"  -> Topps          (the SAME card)
+  //
+  // The interposed year defeated the adjacency and the row collapsed to the
+  // bare brand. Measured on the 2026-08-31 setKey-misfile slice: 60 of 153
+  // rows, the single largest bucket, including every "Topps 2024 Chrome
+  // Update Paul Skenes" spelling. Lifting the year out ONCE fixes every
+  // product rule at the same time; adding a year-tolerant variant to each of
+  // the forty-odd regexes below is where they would drift apart.
+  //
+  // Only a 4-digit year in set-year range is lifted, and only when a brand
+  // word precedes it, so "Topps 2024" reads as the product it names while a
+  // genuine numeric token ("Topps Chrome 1989 Edition") is left alone.
+  const raw = String(title ?? "").toLowerCase();
+  const t = raw.replace(
+    /\b(topps|bowman|panini|leaf|fleer|donruss|upper\s+deck|score|select)\s+((?:19|20)\d{2})\s+/g,
+    "$1 ",
+  );
   const cn = String(cardNumber ?? "").toUpperCase();
 
   // Bowman Paper detection — title-first, then cardNumber-prefix fallback.

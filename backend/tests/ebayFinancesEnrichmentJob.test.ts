@@ -147,11 +147,11 @@ afterEach(() => {
 // ─── Tests ──────────────────────────────────────────────────────────────────
 
 describe("ebayFinancesEnrichment.job — candidate filter", () => {
-  it("targets only source=ebay + needsReconciliation=true + soldAt in (now-90d, now-2d)", async () => {
+  it("targets source=ebay + needsReconciliation=true within the 90-day window", async () => {
     userDocs.set("u-1", {
       ledger: [
         ebayEntry({ id: "e-good",      ageDays: 30 }), // candidate
-        ebayEntry({ id: "e-too-fresh", ageDays: 1 }),  // skip-fresh
+        ebayEntry({ id: "e-too-fresh", ageDays: 1 }),  // D34: NOW a candidate
         ebayEntry({ id: "e-too-old",   ageDays: 95 }), // skip-over
         ebayEntry({ id: "e-already-reconciled", ageDays: 30, needsRec: false }), // not candidate
         ebayEntry({ id: "e-manual",    ageDays: 30, source: "manual" }), // not candidate
@@ -162,9 +162,15 @@ describe("ebayFinancesEnrichment.job — candidate filter", () => {
 
     const summary = await runFinancesEnrichmentSweep({ now: NOW });
 
-    expect(summary.candidatesEvaluated).toBe(1);
-    expect(summary.enriched).toBe(1);
+    // D34 (2026-08-31): was 1. A <2d-old order is now FETCHED rather than
+    // skipped unasked — the defect that left Drew's Griffey (sold 1 day
+    // earlier) reporting "waiting on 7 fee fields" while no eBay call was
+    // ever made for it. It is still counted in skippedFresh, and now also
+    // in freshFetched.
+    expect(summary.candidatesEvaluated).toBe(2);
+    expect(summary.enriched).toBe(2);
     expect(summary.skippedFresh).toBe(1);
+    expect(summary.freshFetched).toBe(1);
     expect(summary.skippedOverWindow).toBe(1);
     expect(summary.shadow).toBe(true); // default
   });

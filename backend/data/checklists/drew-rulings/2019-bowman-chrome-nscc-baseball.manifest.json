@@ -1,0 +1,13 @@
+{
+  "source": "cardpedia-drew-ruling-2026-09-01",
+  "sourceUrl": "https://baseballcardpedia.com/index.php/2019_Bowman_Chrome_NSCC",
+  "year": 2019,
+  "setKey": "bowman-chrome-nscc",
+  "setName": "2019 Bowman Chrome National Convention",
+  "sport": "baseball",
+  "rows": 250,
+  "parallelColumnAuthoritative": true,
+  "handAuthored": true,
+  "note": "Topps NSCC wrapper-redemption Bowman Chrome, 50-card base set, BNR- prefix (BCP checklist transcribed verbatim). Same ladder as the 2018 edition: BCP states 'all 50 base cards are available in the following Prism Refractor parallels' -- Gold /50, Orange /25, Red /5, Black 1/1 -- over an unnumbered Prism Refractor base. BLACK IS THE 1/1. This is the year that made the bug visible: the $2,200 BGS 9.5 Guerrero sale is titled 'Black Prism Refractor ... (#1/1)' but sits on hiq:baseball:2019:bowman-chrome:bnr-vgj:prism-refractor:no-auto:num-1 -- colour dropped, wrong setKey (bowman-chrome, not bowman-chrome-nscc), and the 1/1 collapsed onto the plain-Prism name. BNR-VGJ is on BOTH years' base checklists, which is why Drew's 2018 card and this 2019 sale were never the same identity. Autographs (34 subjects, Red /5 + Black 1/1) are NOT emitted: BCP lists no print run for the VGJ auto and per-player runs vary, and blank means unknown, never guessed.",
+  "authoredAt": "2026-09-01"
+}

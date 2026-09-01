@@ -1,0 +1,29 @@
+{
+  "_provenance": "MEASURED ABSENCE. Read from the prod portfolio container 2026-08-31 (read-only). This order has never been fetched from eBay: both the 2026-08-31T18:46Z APPLY run and the 21:53Z REPORT ONLY run logged `skippedFresh=1 candidates=0`.",
+  "orderId": "11-15096-50302",
+  "playerName": "Ken Griffey Jr. Mariners",
+  "cardTitle": "1991 Score Ken Griffey Jr. #396",
+  "soldAt": "2026-08-30T01:42:30.000Z",
+  "needsReconciliation": true,
+  "reconciledVia": null,
+  "feeSource": null,
+  "userCostsProvidedAt": "2026-08-31T21:45:26.010Z",
+  "storedLedgerFields": {
+    "grossProceeds": 250,
+    "netProceeds": 250,
+    "realizedProfitLoss": 66.25,
+    "finalValueFee": null,
+    "paymentProcessingFee": null,
+    "promotedListingFee": null,
+    "adFee": null,
+    "otherFees": null,
+    "netPayout": null,
+    "actualShippingCost": null
+  },
+  "whyStuck": {
+    "ageAtSweepDays": 1.0,
+    "minAgeFloorDays": 2,
+    "verdict": "skip-fresh",
+    "comment": "Axis 2 was satisfied (userCostsProvidedAt is set), so the ONLY thing between this row and finalizing is the fee fetch the age floor prevented. netProceeds still equals grossProceeds because no fee has ever been subtracted."
+  }
+}
