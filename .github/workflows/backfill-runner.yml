@@ -635,6 +635,13 @@ jobs:
           BULK_START_DATE: ${{ inputs.bulk_start_date }}
           BULK_END_DATE: ${{ inputs.bulk_end_date }}
           BACKFILL_CARD_NUMBERS: ${{ inputs.card_numbers }}
+          # ingest-checklists-end-to-end only: mode=force-acquire bypasses the
+          # restored checklist cache (the script re-scrapes even when staged;
+          # YEARS against a stale cache otherwise matches nothing). Guarded on
+          # script so the token cannot leak into another lane's MODE. The
+          # budget relaunch deliberately does NOT forward mode: a continuation
+          # reuses the cache its own first pass just refreshed.
+          FORCE_ACQUIRE: ${{ inputs.script == 'ingest-checklists-end-to-end' && inputs.mode == 'force-acquire' && 'true' || '' }}
           # CF-ONE-NAME-FORMAT-FOR-EVERY-CARD: normalize-catalog-format owns one
           # partition per dispatch, computed from live row counts at startup and
           # balanced by row count (2025 alone is 7.1M, ~400x a vintage year).
