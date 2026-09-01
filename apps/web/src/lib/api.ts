@@ -1256,6 +1256,9 @@ export interface HoldingPricePoint {
   at: string;
   value: number;
   source?: string;
+  /** CF-AN-ESTIMATE-DRIFTS-IN-THE-DARK (2026-09-01). Absent means observed —
+   *  the endpoint returns the observed trail unless ?includeEstimated=true. */
+  valuationStatus?: "observed" | "estimated";
 }
 
 export async function fetchHoldingHistory(id: string): Promise<{ holdingId: string; count: number; points: HoldingPricePoint[] }> {

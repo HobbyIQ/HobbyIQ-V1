@@ -382,6 +382,28 @@ interface PortfolioPricePoint {
   at: string;
   value: number;
   source?: string;
+  /** CF-AN-ESTIMATE-DRIFTS-IN-THE-DARK (2026-09-01). The valuationStatus the
+   *  point was written under. ABSENT means "observed": every point written
+   *  before this field existed was observed-only (the append was gated on it),
+   *  so absence is not unknown — it is the old guarantee, and every reader
+   *  that wants the observed trail reads it through observedPricePoints().
+   *  Present and "estimated" = a grade-curve / fallback number, which drifts
+   *  as the engine re-anchors and must never be read as a comp-anchored
+   *  observation. */
+  valuationStatus?: "observed" | "estimated";
+}
+
+/**
+ * CF-AN-ESTIMATE-DRIFTS-IN-THE-DARK (2026-09-01). The observed-only trail —
+ * the series priceHistory meant before estimated points were appended.
+ *
+ * Every existing reader wants THIS, and gets it by construction: points
+ * written before the tag existed carry no valuationStatus and were
+ * observed-only by the append gate. New estimated points are tagged and
+ * filtered out here.
+ */
+export function observedPricePoints<T extends { valuationStatus?: string }>(points: readonly T[]): T[] {
+  return points.filter((p) => p.valuationStatus === undefined || p.valuationStatus === "observed");
 }
 
 interface PortfolioAlert {
@@ -2918,6 +2940,13 @@ async function emitUserEbayPurchaseComp(
   }
 }
 
+/** CF-A-UNION-IS-ONE-CARD (2026-09-01): stamp the refusal breadcrumb onto a
+ *  pricingSourceMeta when the pool-twin union was refused, leaving the meta
+ *  untouched (same three keys) when it was not. */
+function withUnionRefused<T extends object>(meta: T, attempt: { unionRefusedReason?: string }): T & { unionRefused?: string } {
+  return attempt.unionRefusedReason ? { ...meta, unionRefused: attempt.unionRefusedReason } : meta;
+}
+
 // ─── CF-EXACT-POOL-SUPREMACY (D4 "one valuation path", PR 5 — 2026-08-29) ──
 //
 // A fallback rung may never outrank an exact pool that has >= 1 sale. Every
@@ -2977,12 +3006,7 @@ function unifiedHoldingWrite(
     isEstimate: false,
     valuationStatus: "observed",
     pricingSource: "unified-pricing",
-    pricingSourceMeta: {
-      slug: exact.attempt.cardId,
-      method: u.rungLabel,
-      compsUsed: u.totalSampleCount,
-      ...(exact.attempt.unionRefusedReason ? { unionRefused: exact.attempt.unionRefusedReason } : {}),
-    },
+    pricingSourceMeta: withUnionRefused({ slug: exact.attempt.cardId, method: u.rungLabel, compsUsed: u.totalSampleCount }, exact.attempt),
     nearestGradedAnchor: undefined,
     verdict: "Observed",
     recommendation: holding.recommendation ?? "Hold",
@@ -3199,8 +3223,19 @@ async function autoPriceHolding(
   const oneEntry = await valueHoldingThroughOneEntry(holding, { userId: userId ?? null, caller: "autoPriceHolding.one-entry" });
   if (oneEntry.outcome === "observed" || oneEntry.outcome === "estimated") {
     const nowIso = (oneEntry.holding.lastUpdated as string) ?? new Date().toISOString();
-    if (oneEntry.outcome === "observed") {
-      appendPriceHistory(doc, holding.id, { at: nowIso, value: oneEntry.valuation.fairMarketValue as number, source });
+    // CF-AN-ESTIMATE-DRIFTS-IN-THE-DARK (2026-09-01): the grade-curve lane is
+    // where Verlander (96.34 -> 64.12 -> 96.34) and Judge (131.88 -> 106 ->
+    // 131.88) drifted across one day's crons with nothing recorded. Estimated
+    // points now append TAGGED; observedPricePoints() keeps every existing
+    // reader on the observed trail.
+    const oneEntryFmv = oneEntry.valuation.fairMarketValue;
+    if (typeof oneEntryFmv === "number" && Number.isFinite(oneEntryFmv)) {
+      appendPriceHistory(doc, holding.id, {
+        at: nowIso,
+        value: oneEntryFmv,
+        source,
+        ...(oneEntry.outcome === "estimated" ? { valuationStatus: "estimated" as const } : {}),
+      });
     }
     evaluateHoldingAlerts(doc, previous, oneEntry.holding);
     doc.holdings[holding.id] = oneEntry.holding;
@@ -4323,19 +4358,24 @@ async function autoPriceHolding(
     // marketPressure (Gate-2 β), freshnessStatus.
   };
 
-  // CF-GRADED-RAIL-WIRE-IN (2026-06-14): priceHistory stays observed-
-  // only. Estimated and pending holdings do NOT append — the trajectory
-  // iOS renders represents real comp-anchored value over time, never
-  // estimate points (which would drift as the engine re-anchors) or
-  // null gaps. When valuationStatus flips from observed to estimated
-  // (e.g., a graded holding refresh where the grade lost its last
-  // observed sale), we leave the prior observed trail intact and stop
-  // appending — the trajectory pauses honestly.
-  if (resolved.valuationStatus === "observed" && resolved.fairMarketValueOverride !== null) {
+  // CF-GRADED-RAIL-WIRE-IN (2026-06-14): the trajectory iOS renders is real
+  // comp-anchored value over time — never estimate points (which drift as the
+  // engine re-anchors) or null gaps. That guarantee is unchanged, and now it
+  // is enforced by a TAG rather than by silence.
+  //
+  // CF-AN-ESTIMATE-DRIFTS-IN-THE-DARK (2026-09-01). Refusing to append left
+  // estimated holdings with no record at all, so a grade-curve number could
+  // drift with nothing to compare against: Verlander 96.34 -> 64.12 -> 96.34
+  // and Judge 131.88 -> 106 -> 131.88 across a single day's crons, invisible.
+  // Estimated writes now append TAGGED; every reader of the observed trail
+  // goes through observedPricePoints(), which drops them.
+  if (resolved.fairMarketValueOverride !== null
+    && (resolved.valuationStatus === "observed" || resolved.valuationStatus === "estimated")) {
     appendPriceHistory(doc, holding.id, {
       at: now,
       value: resolved.fairMarketValueOverride,
       source,
+      ...(resolved.valuationStatus === "estimated" ? { valuationStatus: "estimated" as const } : {}),
     });
   }
 
@@ -4523,7 +4563,11 @@ function appendPriceHistory(
 ): void {
   const existing = doc.priceHistoryByHolding[holdingId] ?? [];
   const prev = existing.length > 0 ? existing[existing.length - 1] : null;
-  if (prev && Math.abs(prev.value - point.value) < 0.0001) {
+  // CF-AN-ESTIMATE-DRIFTS-IN-THE-DARK: the same number under a DIFFERENT
+  // status is a different fact (the pool went away, or came back) and is
+  // never de-duplicated away.
+  const sameStatus = (prev?.valuationStatus ?? "observed") === (point.valuationStatus ?? "observed");
+  if (prev && sameStatus && Math.abs(prev.value - point.value) < 0.0001) {
     const prevTime = new Date(prev.at).getTime();
     const currentTime = new Date(point.at).getTime();
     if (Number.isFinite(prevTime) && Number.isFinite(currentTime) && Math.abs(currentTime - prevTime) < 60_000) {
@@ -4788,7 +4832,11 @@ function buildCalibrationReport(doc: UserDoc) {
   const samples: Sample[] = [];
 
   for (const entry of doc.ledger) {
-    const history = (doc.priceHistoryByHolding[entry.holdingId] ?? [])
+    // CF-AN-ESTIMATE-DRIFTS-IN-THE-DARK (2026-09-01): calibration measures how
+    // close our OBSERVED price was to what the card actually sold for.
+    // Scoring an estimate against a real sale would measure the fill, not the
+    // prediction — the observed trail only.
+    const history = observedPricePoints(doc.priceHistoryByHolding[entry.holdingId] ?? [])
       .filter((p) => new Date(p.at).getTime() <= new Date(entry.soldAt).getTime())
       .sort((a, b) => a.at.localeCompare(b.at));
     const anchor = history.length > 0 ? history[history.length - 1] : null;
@@ -4817,7 +4865,10 @@ function buildWeeklyNarrative(doc: UserDoc) {
 
   const priceMoves = holdings
     .map((h) => {
-      const history = (doc.priceHistoryByHolding[h.id] ?? []).sort((a, b) => a.at.localeCompare(b.at));
+      // CF-AN-ESTIMATE-DRIFTS-IN-THE-DARK (2026-09-01): the weekly narrative
+      // reports what the market did. An estimate re-anchoring is not a move,
+      // so the observed trail only.
+      const history = observedPricePoints(doc.priceHistoryByHolding[h.id] ?? []).sort((a, b) => a.at.localeCompare(b.at));
       const latest = history.length > 0 ? history[history.length - 1] : null;
       const weekAnchor = history.find((p) => new Date(p.at).getTime() >= weekAgo) ?? history[0] ?? null;
       const latestValue = toNumber(latest?.value, computePerUnitValue(h) ?? 0);
@@ -5482,7 +5533,14 @@ export async function getHoldingPriceHistory(req: Request, res: Response) {
   // same id as holdings (one-to-one), so we resolve via holdings first.
   const canonical = findHoldingKey(doc, id);
   if (!canonical) return res.status(404).json({ error: { message: "Not found", code: "NOT_FOUND" } });
-  const points = doc.priceHistoryByHolding[canonical] ?? [];
+  const stored = doc.priceHistoryByHolding[canonical] ?? [];
+  // CF-AN-ESTIMATE-DRIFTS-IN-THE-DARK (2026-09-01). The shipped clients (iOS
+  // PortfolioPricePoint, apps/web HoldingPricePoint) decode { at, value,
+  // source } and plot every point as a real observation, so the DEFAULT stays
+  // exactly what they have always received: the observed trail. Estimated
+  // points are opt-in — `?includeEstimated=true` — for the drift view.
+  const includeEstimated = String(req.query.includeEstimated ?? "").toLowerCase() === "true";
+  const points = includeEstimated ? stored : observedPricePoints(stored);
   res.json({ holdingId: canonical, count: points.length, points });
 }
 
@@ -9290,6 +9348,21 @@ export async function repriceHoldingsForUser(
       // chain only.
       const bOneEntry = await valueHoldingThroughOneEntry(holding, { userId, caller: "repriceHoldingsForUser.one-entry" });
       if (bOneEntry.outcome === "observed" || bOneEntry.outcome === "estimated") {
+        // CF-AN-ESTIMATE-DRIFTS-IN-THE-DARK (2026-09-01). This is the 6h
+        // cron's own one-valuation-path exit, and it appended NOTHING — which
+        // is why the measured oscillations left no trail to compare against.
+        // Observed points append as they always did elsewhere; estimated ones
+        // append tagged, and observedPricePoints() keeps existing readers on
+        // the observed trail.
+        const bFmv = bOneEntry.valuation.fairMarketValue;
+        if (typeof bFmv === "number" && Number.isFinite(bFmv)) {
+          appendPriceHistory(doc, holding.id, {
+            at: (bOneEntry.holding.lastUpdated as string) ?? new Date().toISOString(),
+            value: bFmv,
+            source,
+            ...(bOneEntry.outcome === "estimated" ? { valuationStatus: "estimated" as const } : {}),
+          });
+        }
         evaluateHoldingAlerts(doc, doc.holdings[holding.id], bOneEntry.holding);
         doc.holdings[holding.id] = bOneEntry.holding;
         repriced += 1;
