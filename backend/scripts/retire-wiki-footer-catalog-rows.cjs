@@ -32,14 +32,23 @@
 const path = require("path");
 const backend = path.join(__dirname, "..");
 const { CosmosClient } = require(path.join(backend, "node_modules/@azure/cosmos"));
+// CF-ONE-WAY-TO-MOVE-A-CATALOG-ROW. A retire goes through catalogRowOps, not
+// through a hand-rolled container.item().delete(). The hand-rolled version
+// this replaces also left any GRADED CHILDREN of the deleted row pointing at
+// a parent that no longer existed; retireCatalogRow retires them first.
+const { retireCatalogRow } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
 
 const arg = (n, d) => {
   const hit = process.argv.find((a) => a.startsWith(`--${n}=`));
   return hit ? hit.slice(n.length + 3) : d;
 };
-const APPLY = process.argv.includes("--apply");
-const SET_KEY = arg("set-key", "");
-const EXPECT = arg("expect", "");
+// The runner exports BACKFILL_APPLY and SET_KEY/SETKEY_LIKE, not --flags
+// (CF-THE-RUNNER-EXPORTS-BACKFILL-APPLY-NOT-APPLY). Read both spellings, and
+// trim both sides (CF-ENV-VAR-TRIM-SYMMETRY).
+const env = (n, d = "") => String(process.env[n] ?? "").trim() || d;
+const APPLY = process.argv.includes("--apply") || env("BACKFILL_APPLY") === "true";
+const SET_KEY = arg("set-key", env("SET_KEY") || env("SETKEY_LIKE"));
+const EXPECT = arg("expect", env("EXPECT"));
 
 /** The exact spellings that are never a card number. NOT a pattern: "NNO"
  *  (no number) and "JOKER" are real, and a regex over words would delete them. */
@@ -94,12 +103,24 @@ async function main() {
 
   if (!APPLY) { console.log(`\n(dry-run; would delete ${deletable.length})`); return; }
 
-  let ok = 0, failed = 0;
+  // RECONCILED COUNTERS: intended is counted here, where the writes run, so
+  // intended == deleted + failed always holds.
+  const intended = deletable.length;
+  let ok = 0, failed = 0, children = 0;
   for (const r of deletable) {
-    try { await cat.item(r.id, r.cardId).delete(); ok++; }
-    catch (e) { failed++; if (failed <= 5) console.error(`  FAILED ${r.id}: ${String(e.message).slice(0, 130)}`); }
+    try {
+      const res = await retireCatalogRow(cat, r.id, r.cardId, "wiki page footer scraped as a card (zero comps, re-checked at delete)");
+      if (res.rowDeleted) ok++; else failed++;
+      children += res.gradedChildrenRetired;
+    } catch (e) {
+      failed++;
+      if (failed <= 5) console.error(`  FAILED ${r.id}: ${String(e.message).slice(0, 130)}`);
+    }
   }
-  console.log(`\n[done] deleted=${ok} failed=${failed}`);
+  console.log(`\n[done] deleted=${ok} gradedChildrenRetired=${children} failed=${failed}`);
+  const balanced = intended === ok + failed;
+  console.log(`[reconcile] intended(${intended}) == deleted(${ok}) + failed(${failed})  ->  ${balanced ? "OK" : "MISMATCH"}`);
+  if (!balanced) { console.error("FATAL: counters do not reconcile."); process.exit(4); }
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });

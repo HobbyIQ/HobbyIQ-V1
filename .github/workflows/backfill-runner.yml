@@ -210,6 +210,18 @@ on:
           # default -- card-as-parallel | chrome-ladder | first-edition |
           # names | number-glued. Sharded by sha1(id); SCOPE narrows to setKeys.
           - repair-bcp-misfiled-parallels
+          # CF-CHECKLIST-ROWS-MUST-BE-FINDABLE (2026-09-01): heal the derived
+          # search fields (searchText / searchTokens / displayName / setName)
+          # on rows ingested before deriveCatalogEntry built them (#1614).
+          # Scope is setkey_like + years + sports; shards by sha1(id) on
+          # slot/slots; fill-only-absent, so it is idempotent and a relaunch
+          # resumes on the predicate itself.
+          - repair-missing-search-fields
+          # CF-A-PAGE-FOOTER-IS-NOT-A-CARD (2026-09-01): retire wiki-scrape
+          # footer rows ("This page was last edited on..."). Deletion is by
+          # explicit vocabulary, never a pattern (NNO and JOKER are real card
+          # numbers), and zero comps is re-checked per row at delete time.
+          - retire-wiki-footer-catalog-rows
       apply:
         description: "Actually write (true) or dry-run only (false)"
         required: true
@@ -738,6 +750,25 @@ jobs:
             N=$(grep -aoE "parents minted +[0-9,]+" /tmp/backfill.log | grep -oE "[0-9,]+" | tail -1)
             echo "::notice::budget hit (minted=${N:-0}) — re-dispatching to continue"
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=materialize-ungraded-parents -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f setkey_like="${{ inputs.setkey_like }}" -f limit="${{ inputs.limit }}"
+          else
+            echo "::notice::finished within budget — done, no re-dispatch."
+          fi
+
+      # repair-missing-search-fields: scope SPORTS+YEARS+SETKEY_LIKE, sharded
+      # by sha1(id) on slot/slots. The heal predicate IS the resume cursor — a
+      # healed row stops matching — so a relaunch resumes exactly where the
+      # budget stopped the previous run. Relaunch iff the budget marker printed
+      # (#1361); a dry run relaunches as a dry run (#1578); never on cancel.
+      - name: Self-relaunch repair-missing-search-fields until the scope is healed
+        if: ${{ !cancelled() && inputs.script == 'repair-missing-search-fields' }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
+            N=$(grep -aoE "healed=[0-9,]+" /tmp/backfill.log | grep -oE "[0-9,]+" | tail -1)
+            echo "::notice::budget hit (healed=${N:-0}) — re-dispatching to continue"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-missing-search-fields -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f setkey_like="${{ inputs.setkey_like }}" -f limit="${{ inputs.limit }}"
           else
             echo "::notice::finished within budget — done, no re-dispatch."
           fi
