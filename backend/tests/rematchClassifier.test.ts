@@ -267,3 +267,65 @@ describe("provenanceTier", () => {
     expect(t.reasons).toEqual(expect.arrayContaining(["source:ebay-user-purchase", "verifiedByUser"]));
   });
 });
+
+describe("D2 -- a source that NAMES a Drew ruling is protected", () => {
+  it("source='drew-ruling-*' is PROTECTED, not a fleet-writable AUTO row", () => {
+    const t = K.provenanceTier(vendorRow({ source: "drew-ruling-2026-08-10" }));
+    expect(t.tier).toBe(K.PROTECTED);
+    expect(t.reasons.join(",")).toMatch(/source-marker/);
+  });
+
+  it("an IMPROVE-shaped diff on a ruling-named source is reported, never written", () => {
+    const derived = { ...verlanderStored, parallel: "X-Fractor", printRun: 250 };
+    const r = K.classifyRow({ row: vendorRow({ source: "drew-ruling-2026-08-10" }), stored: verlanderStored, derived, checklistBacked: true });
+    expect(r.klass).toBe(K.IMPROVE);
+    expect(r.writable).toBe(false);
+  });
+
+  it("hand-relocated / d31 named sources are protected too", () => {
+    for (const src of ["hand-relocated-2026-08", "d31-relocated", "D19-relocation"]) {
+      expect(K.provenanceTier(vendorRow({ source: src })).tier).toBe(K.PROTECTED);
+    }
+  });
+
+  it("an ordinary vendor source is still AUTO -- the guard is not a blanket refusal", () => {
+    for (const src of ["cardhedge", "tca-ebay", "cardsight"]) {
+      expect(K.provenanceTier(vendorRow({ source: src })).tier).toBe(K.AUTO);
+    }
+  });
+});
+
+describe("D1 -- the phantom-grade parser artifact is TAGGED but still contained", () => {
+  const pristineStored = { sport: "baseball", cardYear: 2024, setKey: "topps-pristine", cardNumber: "131", parallel: "base", isAuto: false, printRun: null, gradeCompany: null, gradeValue: null };
+
+  it("stored RAW + phantom PSA 10 is CONFLICT, not writable, and carries the artifact tag", () => {
+    const derived = { ...pristineStored, gradeCompany: "PSA", gradeValue: 10 };
+    const r = K.classifyRow({ row: vendorRow(), stored: pristineStored, derived, checklistBacked: true });
+    expect(r.klass).toBe(K.CONFLICT);
+    expect(r.writable).toBe(false);
+    expect(r.reasons).toContain("changed:grade/phantom-set-word");
+  });
+
+  it("a phantom grade riding along with a GENUINE fill still cannot be written", () => {
+    const derived = { ...pristineStored, gradeCompany: "PSA", gradeValue: 10, parallel: "Refractor", printRun: 499 };
+    const r = K.classifyRow({ row: vendorRow(), stored: pristineStored, derived, checklistBacked: true });
+    expect(r.klass).toBe(K.CONFLICT);
+    expect(r.writable).toBe(false);
+  });
+
+  it("the tag never fires on a non-Pristine set, so real grade conflicts stay visible", () => {
+    const stored = { ...pristineStored, setKey: "topps-chrome" };
+    const derived = { ...stored, gradeCompany: "PSA", gradeValue: 9 };
+    const r = K.classifyRow({ row: vendorRow(), stored, derived, checklistBacked: true });
+    expect(r.klass).toBe(K.CONFLICT);
+    expect(r.reasons).not.toContain("changed:grade/phantom-set-word");
+  });
+
+  it("a stored GRADED row losing its grade is never tagged as the artifact", () => {
+    const stored = { ...pristineStored, gradeCompany: "PSA", gradeValue: 9 };
+    const derived = { ...pristineStored };
+    const r = K.classifyRow({ row: vendorRow(), stored, derived, checklistBacked: true });
+    expect(r.klass).toBe(K.CONFLICT);
+    expect(r.reasons).not.toContain("changed:grade/phantom-set-word");
+  });
+});

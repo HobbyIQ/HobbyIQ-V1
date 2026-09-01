@@ -103,6 +103,11 @@ function provenanceTier(row) {
   const reasons = [];
   const source = lower(row?.source);
   if (PROTECTED_SOURCES.has(source)) reasons.push(`source:${source}`);
+  // The ruling protects `drew-ruling*` as a SOURCE, not only as a relocation
+  // reason. No such source exists in the pool today, so this is a guard
+  // against the day one is minted -- an exact-match set would silently let a
+  // fleet re-key a row whose own source names a Drew ruling.
+  else if (source && PROTECTED_REASON_RE.test(source)) reasons.push(`source-marker:${source}`);
   if (row?.verifiedByUser === true) reasons.push("verifiedByUser");
   for (const f of PROTECTED_MARKER_FIELDS) if (!isBlank(row?.[f])) reasons.push(`marker:${f}`);
   const reason = str(row?.rekeyedReason) || str(row?.relocatedReason);
@@ -212,6 +217,15 @@ function classifyRow({ row, stored, derived, checklistBacked = false, derivation
   if (axes.dropped.length) reasons.push(`dropped:${axes.dropped.join(",")}`);
   if (axes.changed.length) reasons.push(`changed:${axes.changed.join(",")}`);
   if (axes.dropped.length || axes.changed.length) {
+    // REPORT NOISE TAG ONLY -- never changes the class or `writable`.
+    // ingestGradeFromTitle reads the SET NAME "Topps Pristine" plus a 2+ digit
+    // card number as PSA 10 (verified: "2024 Topps Pristine Baseball #131
+    // Base" -> PSA 10; "#5" does not fire; no other set word collides). That
+    // makes ~41.6k stored-RAW rows report as identity CONFLICTs that are pure
+    // parser artifacts. They are already contained from writes -- a phantom
+    // grade CHANGES the grade axis, and changed => CONFLICT => not writable --
+    // so this only lets Drew filter the artifact out of the real conflicts.
+    if (isPhantomGradeArtifact(stored, derived, axes)) reasons.push("changed:grade/phantom-set-word");
     return { ...base, klass: CONFLICT, axes, reasons, writable: false };
   }
 
@@ -227,6 +241,21 @@ function classifyRow({ row, stored, derived, checklistBacked = false, derivation
   // class still says IMPROVE (that is what the census measured); `writable`
   // is what the apply pass reads, and it is false.
   return { ...base, klass: IMPROVE, axes, reasons, writable: prov.tier === AUTO };
+}
+
+/**
+ * The known parser artifact: a stored RAW row on a set whose NAME contains
+ * "pristine", re-derived as a graded row purely because the set word plus a
+ * 2+ digit card number reads as a grade. Detection is deliberately narrow --
+ * stored must be raw, derived must be graded, and grade must be the artifact
+ * shape -- so a genuine grade change is never tagged away.
+ */
+function isPhantomGradeArtifact(stored, derived, axes) {
+  if (!axes?.changed?.includes("grade")) return false;
+  if (gradeToken(stored) !== "RAW") return false;          // only a stored-raw row
+  if (gradeToken(derived) === "RAW") return false;          // derived must claim a grade
+  const set = `${lower(stored?.setKey)} ${lower(derived?.setKey)}`;
+  return /pristine/.test(set);
 }
 
 /** The defect axis a row contributes to the banner's per-class breakdown.

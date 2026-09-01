@@ -27,7 +27,7 @@
       "slug": "hiq:basketball:1993:topps-finest:99:refractor:no-auto",
       "poolRows": 55,
       "verifiedMarketDirection": "exact-pool",
-      "note": "2 rows sit in the slug's own partition, 55 carry it as hobbyiqCardId -- the split the union measures. Topps Finest #197 lists `Uncommon` AND `Uncommon Refractor` as two cards, which is why the retracted trailing-' Refractor' strip must never come back: it would fold this pool into its sibling."
+      "note": "The union is 55 = 2 rows in the slug's own partition + 53 carrying it as hobbyiqCardId -- the split the union measures. Topps Finest #197 lists `Uncommon` AND `Uncommon Refractor` as two cards, which is why the retracted trailing-' Refractor' strip must never come back: it would fold this pool into its sibling."
     },
     {
       "name": "Gonzalez 2026 Bowman CPA-JG Refractor auto /499",
@@ -51,7 +51,7 @@
       "slug": "hiq:baseball:2024:bowman-draft:cpa-jc:refractor:auto:num-499",
       "poolRows": 38,
       "verifiedMarketDirection": "graded-from-raw",
-      "note": "Bowman Draft is its own family, not Bowman. 25 rows in the slug partition, 38 carrying it as hobbyiqCardId. The graded tier prices off this pool's own raw children, so the raw rows are load-bearing even for the PSA 9 holding."
+      "note": "Bowman Draft is its own family, not Bowman. The union is 38-40 = 25 rows in the slug partition + 15 carrying it as hobbyiqCardId (poolRows is the captured floor; the pool gains rows as ingest runs). The graded tier prices off this pool's own raw children, so the raw rows are load-bearing even for the PSA 9 holding."
     },
     {
       "name": "Judge 2017 Topps Gold Label #86 Class 1 Blue PSA 9",
