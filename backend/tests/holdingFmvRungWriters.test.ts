@@ -94,8 +94,9 @@ describe("portfolioStore — every fairMarketValue writer also writes fmvRung", 
 // name (fmvRung.ts: `Exclude<HobbyIqFmvMethod, "direct-slug">`, because the
 // exact pool's rung is `exact-pool-*`, named by aggregation).
 //
-// Live symptom (Drew's dashboard, 2026-09-01): a genuine exact-pool price on
-// 2026 Bowman Justin Gonzalez #CPA-JG rendered its provenance chip as
+// Live symptom (2026-09-01): the one live holding stamped with the wrong
+// vocabulary was 2024 Bowman Draft #CPA-MS (pricingSource our-pool, correct
+// fmvRung exact-pool-leading-edge one field away); its provenance chip read
 //   ? unknown - unknown rung "direct-slug"
 // on a number that was in fact the strongest rung the engine has.
 //
