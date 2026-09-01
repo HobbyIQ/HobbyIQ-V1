@@ -152,6 +152,14 @@ on:
 
           - fold-unnumbered-twins
           - fold-umbrella-to-series
+          # CF-THE-JAPANESE-CODE-IS-THE-KEY (Drew, 2026-09-01, R1 + R2). Moves a
+          # whole product from one setKey to another across all three places an
+          # identity lives. MODE=catalog | pool | holdings, and the scope is
+          # SPORT + SETKEY(from) + `titles`(to), with YEAR additionally REQUIRED
+          # for MODE=pool -- 1997/base4 is the Japanese Rocket Gang set and
+          # 2000/base4 is the English Base Set 2, so a pool sweep with no year
+          # axis would take both. No new input: the TO key travels in `titles`.
+          - rekey-product-setkey
           - repair-truncated-card-year
           - repair-select-subbrand-misslug
           - fold-checklist-numbered-twins
@@ -268,7 +276,7 @@ on:
         default: ""
         type: string
       titles:
-        description: "For ingest-checklists-end-to-end (bcp phase): extra baseballcardpedia page titles, comma-separated (e.g. 2012_Topps_Allen_and_Ginter,1990_Donruss). Empty = the per-year flagship list."
+        description: "For ingest-checklists-end-to-end (bcp phase): extra baseballcardpedia page titles, comma-separated (e.g. 2012_Topps_Allen_and_Ginter,1990_Donruss). Empty = the per-year flagship list. For rekey-product-setkey: the TO setKey -- the product the rows move ONTO (e.g. japanese-rocket-gang); `setkey_like` is the FROM key."
         required: false
         default: ""
         type: string
@@ -307,7 +315,7 @@ on:
         default: false
         type: boolean
       mode:
-        description: "For canonicalize-vendor-shaped-rows: 'vendor' (id is not a hiq slug) or 'nopk' (cardId missing entirely). For repair-parallel-subset-fold: 'prefix' or 'glue'. For rename-setkey-to-product: 'product' (the catalog rename, sharded), 'hyphen' (needs sources), 'holdings' (slot 0), 'estimate' (read-only counts). For repair-card-number-from-title (D28): 'grade' | 'slash' | 'ordinal' | 'year' | 'nonumber' | 'all' (needs scope=all) -- REQUIRED, no default. For clean-base-cards-parallel-slug: 'cards' | 'subset' | 'both' (needs scope=all) -- REQUIRED. For measure-card-number-integrity: 'grade' | 'shapes' | 'months' | 'catalog-year'. For repair-bcp-misfiled-parallels (D33): 'card-as-parallel' (retire the rows whose parallel is another card) | 'chrome-ladder' (move the refractor ladder from the paper number to the chrome one) | 'first-edition' (move 1st Edition rows to their own product) | 'names' (the comma before Jr./Sr./II) | 'number-glued' (black-1 -> black:num-1) -- REQUIRED, no default. Empty = the script's default."
+        description: "For canonicalize-vendor-shaped-rows: 'vendor' (id is not a hiq slug) or 'nopk' (cardId missing entirely). For repair-parallel-subset-fold: 'prefix' or 'glue'. For rename-setkey-to-product: 'product' (the catalog rename, sharded), 'hyphen' (needs sources), 'holdings' (slot 0), 'estimate' (read-only counts). For repair-card-number-from-title (D28): 'grade' | 'slash' | 'ordinal' | 'year' | 'nonumber' | 'all' (needs scope=all) -- REQUIRED, no default. For clean-base-cards-parallel-slug: 'cards' | 'subset' | 'both' (needs scope=all) -- REQUIRED. For measure-card-number-integrity: 'grade' | 'shapes' | 'months' | 'catalog-year'. For repair-bcp-misfiled-parallels (D33): 'card-as-parallel' (retire the rows whose parallel is another card) | 'chrome-ladder' (move the refractor ladder from the paper number to the chrome one) | 'first-edition' (move 1st Edition rows to their own product) | 'names' (the comma before Jr./Sr./II) | 'number-glued' (black-1 -> black:num-1) -- REQUIRED, no default. For rekey-product-setkey: 'catalog' (move the catalog rows by id stem) | 'pool' (re-key the sold_comps rows; REQUIRES years) | 'holdings' (conform the holdings, slot 0) -- REQUIRED, no default. Empty = the script's default."
         required: false
         default: ""
       slug_prefix:
@@ -654,6 +662,12 @@ jobs:
           # colour-parallels, repair-refractor-mislabel).
           YEARS: ${{ inputs.years }}
           PHASES: ${{ inputs.phases }}
+          # rekey-product-setkey reads BCP_TITLES as its TO key (the product the
+          # rows move ONTO). GitHub caps workflow_dispatch at 25 inputs and 24
+          # are used, so a ruled rename carries its destination in an existing
+          # input rather than claiming the last one; `setkey_like` is the FROM
+          # half and `titles` is the TO half. Documented here because the name
+          # does not say so on its own.
           BCP_TITLES: ${{ inputs.titles }}
           SOURCES: ${{ inputs.sources }}
           # retire mode=source / audit-source-coverage: the per-product key
@@ -682,6 +696,13 @@ jobs:
           # of the three is empty -- a whole-scope write must be asked for by
           # name (CF-A-WHOLE-SOURCE-RETIRE-NEEDS-ITS-NAME). YEARS is the shared
           # input above.
+          # rekey-product-setkey (2026-09-01, CF-THE-JAPANESE-CODE-IS-THE-KEY)
+          # shares this same SPORT + SETKEY + YEAR scope, where SETKEY names the
+          # FROM key. It REFUSES when SPORT, SETKEY or the TO key is empty, and
+          # MODE=pool additionally refuses an empty YEAR: pokemon/1997/base4 is
+          # the Japanese Rocket Gang set and pokemon/2000/base4 is the English
+          # Base Set 2, so the year is the only thing keeping one product's
+          # repair off the other's pool.
           SPORT: ${{ inputs.sports }}
           SETKEY: ${{ inputs.setkey_like }}
           SET_KEY: ${{ inputs.setkey_like }}
@@ -837,6 +858,32 @@ jobs:
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (phases_done=${N:-0}) — done, no re-dispatch."
           fi
+      - name: Self-relaunch the ruled product re-key until the slot is clean
+        # CF-THE-JAPANESE-CODE-IS-THE-KEY (2026-09-01, R1 + R2). The pool lanes
+        # are large -- 43,724 rows at pokemon/1997/base4 and 25,886 at swsh12a --
+        # so a slot can genuinely exceed the 140-minute budget and must continue
+        # where it stopped.
+        if: ${{ !cancelled() && inputs.script == 'rekey-product-setkey' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        working-directory: backend
+        run: |
+          set +e
+          N=$(grep -aoE "^  (REKEYED|MOVED to|RE-POINTED) [a-z0-9 ->-]* +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          echo "rekeyed=${N:-0}"
+          # CF-RELAUNCH-ONLY-ON-BUDGET (#1361): the MARKER is the gate, never a
+          # count, and never the mode — a REPORT that hit its budget relaunches
+          # as a report (CF-REPORT-RELAUNCHES-AS-A-REPORT, D34). Every scope
+          # input is forwarded verbatim, `titles` (the TO key) included, or the
+          # relaunch would refuse for want of a destination.
+          if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
+            echo "::notice::budget hit (rekeyed=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=rekey-product-setkey -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f setkey_like="${{ inputs.setkey_like }}" -f titles="${{ inputs.titles }}" -f limit="${{ inputs.limit }}"
+          else
+            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (rekeyed=${N:-0}) — done, no re-dispatch."
+          fi
+
       - name: Self-relaunch the umbrella fold until nothing is left to fold
         # D39. Same contract as every fleet script here: fold-umbrella-to-series
         # stops at its OWN 140-minute budget and PRINTS its summary, so the
