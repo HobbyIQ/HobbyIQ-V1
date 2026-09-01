@@ -1,0 +1,40 @@
+{
+  "scrapedAt": "2026-09-01T01:03:31.960Z",
+  "sourceUrl": "https://www.beckett.com/news/2020-topps-chrome-baseball-image-variations/",
+  "source": "beckett",
+  "sport": "baseball",
+  "year": 2020,
+  "setName": "2020 Topps Chrome",
+  "productKey": "2020-topps-chrome-baseball-image-variations",
+  "setKey": "topps-chrome",
+  "rowCount": 20,
+  "photoDescriptions": {
+    "1 Mike Trout": "diving, black uniform",
+    "12 Juan Soto": "running",
+    "50 Aaron Judge": "catching",
+    "60 Luis Robert": "throwing",
+    "77 Cody Bellinger": "sliding",
+    "80 Pete Alonso": "back of jersey",
+    "81 Jacob deGrom": "blue jersey, face in glove",
+    "84 Fernando Tatis Jr.": "clapping",
+    "97 Bryce Harper": "bunting",
+    "111 Aristides Aquino": "throwing",
+    "112 Ronald Acuña Jr.": "throwing",
+    "125 Jose Berrios": "locker room, October Reign shirt",
+    "138 Christian Yelich": "blue jersey",
+    "148 Gavin Lux": "fielding",
+    "150 Bo Bichette": "blue shirt",
+    "161 Nico Hoerner": "white pinstripe jersey, no cap",
+    "174 Nolan Arenado": "purple jersey",
+    "186 Kyle Lewis": "blue jersey",
+    "198 Javier Baez": "with bat",
+    "200 Yordan Alvarez": "sliding, white uniform"
+  },
+  "parallelColumnAuthoritative": true,
+  "cmpCodes": {
+    "base": "595",
+    "variation": "635"
+  },
+  "packOdds": "Image Variations are definitely on the tough side, landing 1:406 retail blaster packs, 1:407 individual cello value packs and 1:407 hanger boxes. For hobby, they're 1:406 packs and 1:125 hobby jumbo.",
+  "note": "Rookie Image Variations. Parallel is '<Photo> Image Variation SP' so the name, 'variation' and 'SP' are all searchable; card details leads with the name. Autos emitted only where --autos named them; a guide states them in prose, not in the gallery."
+}

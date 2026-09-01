@@ -1,0 +1,34 @@
+{
+  "scrapedAt": "2026-09-01T01:03:06.345Z",
+  "sourceUrl": "https://www.beckett.com/news/2023-topps-chrome-platinum-anniversary-baseball-image-variations-guide/",
+  "source": "beckett",
+  "sport": "baseball",
+  "year": 2023,
+  "setName": "2023 Topps Chrome Platinum Anniversary",
+  "productKey": "2023-topps-chrome-platinum-anniversary-baseball-image-variations-guide",
+  "setKey": "topps-chrome-platinum-anniversary",
+  "rowCount": 14,
+  "photoDescriptions": {
+    "2 Brett Baty": "blue hoodie",
+    "100 Anthony Volpe": "grey jersey",
+    "110 Francisco Alvarez": "holding bat",
+    "133 Josh Jung": "blue jersey",
+    "175 Triston Casas": "no cap, red jersey",
+    "218 Mookie Betts": "wearing helmet, orange background",
+    "312 Babe Ruth": "holding bat, grey jersey",
+    "337 Bryce Harper": "wearing sunglasses",
+    "345 Julio Rodríguez": "wearing helmet, green background",
+    "346 Juan Soto": "holding bat, wearing cap",
+    "396 Derek Jeter": "warmup jersey",
+    "421 Roberto Clemente": "black cap",
+    "426 Jackie Robinson": "no undershirt",
+    "432 Hank Aaron": "striped jersey"
+  },
+  "parallelColumnAuthoritative": true,
+  "cmpCodes": {
+    "base": "112",
+    "variations": "147"
+  },
+  "packOdds": ". They land 1:348 hobby packs and 1:518 blaster packs.",
+  "note": "Rookie Image Variations. Parallel is '<Photo> Image Variation SP' so the name, 'variation' and 'SP' are all searchable; card details leads with the name. Autos emitted only where --autos named them; a guide states them in prose, not in the gallery."
+}

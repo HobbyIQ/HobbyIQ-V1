@@ -1,0 +1,39 @@
+{
+  "scrapedAt": "2026-09-01T01:02:55.241Z",
+  "sourceUrl": "https://www.beckett.com/news/2024-topps-chrome-baseball-variations-guide/",
+  "source": "beckett",
+  "sport": "baseball",
+  "year": 2024,
+  "setName": "2024 Topps Chrome",
+  "productKey": "2024-topps-chrome-baseball-variations-guide",
+  "setKey": "topps-chrome",
+  "rowCount": 20,
+  "photoDescriptions": {
+    "1 Shohei Ohtani": "tank top",
+    "16 Pete Crow-Armstrong": "sunglasses",
+    "28 Ronny Mauricio": "backwards cap",
+    "44 Elly De La Cruz": "at microphone",
+    "50 Aaron Judge": "black shirt",
+    "88 Jackson Holliday": "headset",
+    "89 Jasson Dominguez": "holding phone",
+    "118 Ceddanne Rafaela": "headphones and bandana",
+    "122 Wyatt Langford": "blue t-shirt",
+    "136 Evan Carter": "sitting in dugout",
+    "161 Jackson Chourio": "cap at chest",
+    "200 Mike Trout": "signing autographs",
+    "207 Jackson Merrill": "arms over head, Cit Connect jersey",
+    "209 Curtis Mead": "no cap",
+    "213 Junior Caminero": "sunglasses",
+    "229 Jordan Lawlar": "black jersey",
+    "250 Ronald Acuña Jr.": "reaching up",
+    "278 Colton Cowser": "cap on chest",
+    "296 Mookie Betts": "dugout pyro",
+    "300 Julio Rodríguez": "sunglasses"
+  },
+  "parallelColumnAuthoritative": true,
+  "cmpCodes": {
+    "base": "694"
+  },
+  "packOdds": "While the regular versions of the Image Variations aren't serial numbered, the odds suggest there are about 1,000 copies of each. They land 1:536 hobby packs and 1:163 jumbo packs, among others. Meanw",
+  "note": "Rookie Image Variations. Parallel is '<Photo> Image Variation SP' so the name, 'variation' and 'SP' are all searchable; card details leads with the name. Autos emitted only where --autos named them; a guide states them in prose, not in the gallery."
+}

@@ -1,0 +1,29 @@
+{
+  "scrapedAt": "2026-09-01T01:03:30.336Z",
+  "sourceUrl": "https://www.beckett.com/news/2020-bowman-chrome-mega-box-baseball-variations-guide/",
+  "source": "beckett",
+  "sport": "baseball",
+  "year": 2020,
+  "setName": "2020 Bowman Chrome Mega Box",
+  "productKey": "2020-bowman-chrome-mega-box-baseball-variations-guide",
+  "setKey": "bowman-chrome-mega-box",
+  "rowCount": 9,
+  "photoDescriptions": {
+    "BCP-25 Bobby Witt Jr.": "with bat",
+    "BCP-26 Andrew Vaughn": "blowing bubble",
+    "BCP-50 Adley Rutschman": "throwing",
+    "BCP-91 Jackson Rutledge": "navy blue jersey",
+    "BCP-94 Jarred Kelenic": "running",
+    "BCP-139 Anthony Volpe": "throwing",
+    "BCP-142 Casey Mize": "no cap",
+    "BCP-144 Jarren Duran": "navy blue jersey",
+    "BCP-145 Robert Puason": "green jersey"
+  },
+  "parallelColumnAuthoritative": true,
+  "cmpCodes": {
+    "base": "835",
+    "variation": "855"
+  },
+  "packOdds": "These cards, which cover some of the top players on the checklist, are also noticeably tougher to pull. They land 1:210 packs in the special",
+  "note": "Rookie Image Variations. Parallel is '<Photo> Image Variation SP' so the name, 'variation' and 'SP' are all searchable; card details leads with the name. Autos emitted only where --autos named them; a guide states them in prose, not in the gallery."
+}

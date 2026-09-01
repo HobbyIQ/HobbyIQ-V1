@@ -1,0 +1,39 @@
+{
+  "scrapedAt": "2026-09-01T01:03:07.939Z",
+  "sourceUrl": "https://www.beckett.com/news/2023-topps-chrome-update-baseball-variations-guide/",
+  "source": "beckett",
+  "sport": "baseball",
+  "year": 2023,
+  "setName": "2023 Topps Chrome Update",
+  "productKey": "2023-topps-chrome-update-baseball-variations-guide",
+  "setKey": "topps-chrome-update",
+  "rowCount": 20,
+  "photoDescriptions": {
+    "USC1 Adley Rutschman": "headset",
+    "USC10 Brett Baty": "blue shirt",
+    "USC16 Grayson Rodriguez": "towel on shoulder",
+    "USC35 Anthony Volpe": "bat under arm",
+    "USC50 Jacob deGrom": "blue jersey",
+    "USC78 Cody Bellinger": "waving, gray jersey",
+    "USC103 Francisco Alvarez": "wearing catcher's helmet",
+    "USC116 Carlos Rodón": "dark blue shirt",
+    "USC119 Brice Turang": "Gatorade bath",
+    "USC124 Kodai Senga": "blue hoodie",
+    "USC125 Triston Casas": "yelling, wearing helmet",
+    "USC128 Riley Greene": "wearing beanie",
+    "USC150 Jordan Walker": "wearing fielding glove",
+    "USC153 Michael Harris II": "looking at baseball card",
+    "USC168 Gabriel Moreno": "Diamondbacks, holding bat",
+    "USC174 Masataka Yoshida": "stretching",
+    "USC208 Gunnar Henderson": "black shirt, with glove",
+    "USC209 Taj Bradley": "light blue jersey, looking over shoulder",
+    "USC215 Oscar Colás": "wearing beanie",
+    "USC220 Corbin Carroll": "wearing helmet"
+  },
+  "parallelColumnAuthoritative": true,
+  "cmpCodes": {
+    "base": "119",
+    "variation": "864"
+  },
+  "note": "Rookie Image Variations. Parallel is '<Photo> Image Variation SP' so the name, 'variation' and 'SP' are all searchable; card details leads with the name. Autos emitted only where --autos named them; a guide states them in prose, not in the gallery."
+}

@@ -1,0 +1,33 @@
+{
+  "scrapedAt": "2026-09-01T01:03:22.353Z",
+  "sourceUrl": "https://www.beckett.com/news/2021-bowman-chrome-rookie-image-variations-guide/",
+  "source": "beckett",
+  "sport": "baseball",
+  "year": 2021,
+  "setName": "2021 Bowman Chrome",
+  "productKey": "2021-bowman-chrome-rookie-image-variations-guide",
+  "setKey": "bowman-chrome",
+  "rowCount": 14,
+  "photoDescriptions": {
+    "1 Bobby Dalbec": "pointing, white jersey",
+    "7 Nick Madrigal": "pinstripe jersey, no cap",
+    "12 Andres Gimenez": "wearing helmet",
+    "23 Joey Bart": "catcher's gear",
+    "29 Ke'Bryan Hayes": "with glove",
+    "42 Jo Adell": "catching, red jersey",
+    "45 Dylan Carlson": "red helmet, arm up",
+    "57 Jazz Chisholm": "bent over, no ball",
+    "64 Ryan Mountcastle": "orange jersey",
+    "68 Jake Cronenworth": "fielding",
+    "69 Cristian Pache": "fielding",
+    "74 Luis Garcia": "fielding",
+    "78 Sixto Sanchez": "grey jersey",
+    "94 Alec Bohm": "wearing headband"
+  },
+  "parallelColumnAuthoritative": true,
+  "cmpCodes": {
+    "variation": "622"
+  },
+  "packOdds": "2021 Bowman Chrome Baseball variations land 1:218 hobby packs, which works out to approximately 1:18 boxes.",
+  "note": "Rookie Image Variations. Parallel is '<Photo> Image Variation SP' so the name, 'variation' and 'SP' are all searchable; card details leads with the name. Autos emitted only where --autos named them; a guide states them in prose, not in the gallery."
+}

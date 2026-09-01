@@ -1,0 +1,31 @@
+{
+  "scrapedAt": "2026-09-01T01:03:01.580Z",
+  "sourceUrl": "https://www.beckett.com/news/2023-bowman-mega-box-baseball-variations-guide/",
+  "source": "beckett",
+  "sport": "baseball",
+  "year": 2023,
+  "setName": "2023 Bowman Chrome Mega Box",
+  "productKey": "2023-bowman-mega-box-baseball-variations-guide",
+  "setKey": "bowman-chrome-mega-box",
+  "rowCount": 13,
+  "photoDescriptions": {
+    "BCP-3 Justin Crawford": "pointing at cap",
+    "BCP-18 Jasson Domínguez": "with bag",
+    "BCP-20 Jackson Holliday": "signing autograph",
+    "BCP-25 Druw Jones": "throwing out first pitch",
+    "BCP-31 Brooks Lee": "white jersey, dress shirt",
+    "BCP-37 Bryan Acuña": "wearing sunglasses",
+    "BCP-65 Elly De La Cruz": "sitting in dugout",
+    "BCP-76 Jackson Chourio": "with football",
+    "BCP-88 Termarr Johnson": "with fielding glove, sunglasses",
+    "BCP-107 Marcelo Mayer": "with bat",
+    "BCP-108 Jacob Berry": "wearing sunglasses, fielding glove",
+    "BCP-125 Cam Collier": "fielding",
+    "BCP-135 Roderick Arias": "ball visible"
+  },
+  "parallelColumnAuthoritative": true,
+  "cmpCodes": {
+    "variations": "895"
+  },
+  "note": "Rookie Image Variations. Parallel is '<Photo> Image Variation SP' so the name, 'variation' and 'SP' are all searchable; card details leads with the name. Autos emitted only where --autos named them; a guide states them in prose, not in the gallery."
+}

@@ -1,0 +1,40 @@
+{
+  "scrapedAt": "2026-09-01T01:02:56.865Z",
+  "sourceUrl": "https://www.beckett.com/news/2024-topps-chrome-update-baseball-variations-guide/",
+  "source": "beckett",
+  "sport": "baseball",
+  "year": 2024,
+  "setName": "2024 Topps Chrome Update",
+  "productKey": "2024-topps-chrome-update-baseball-variations-guide",
+  "setKey": "topps-chrome-update",
+  "rowCount": 21,
+  "photoDescriptions": {
+    "USC8 Colt Keith": "bat on shoulder",
+    "USC18 Jackson Chourio": "Gatorade bath",
+    "USC20 Jordan Beck": "signing autographs",
+    "USC35 Wyatt Langford": "salute",
+    "USC48 Victor Scott II": "Breaking Barriers shirt",
+    "USC51 Jordan Lawlar": "World Series shirt, catching",
+    "USC70 Jasson Domínguez": "with Juan Soto",
+    "USC88 Paul Skenes": "black jersey",
+    "USC91 Noelvi Marte": "viking helmet",
+    "USC105 Jack Leiter": "close-up of face, no cap",
+    "USC120 Heston Kjerstad": "bag on shoulder",
+    "USC143 Jared Jones": "fist pump",
+    "USC147 Jonatan Clase": "wearing sunglasses",
+    "USC148 Andy Pages": "with glove",
+    "USC150 Elly De La Cruz": "wearing winter hat",
+    "USC154 Colton Cowser": "wearing headset",
+    "USC158 Pete Crow-Armstrong": "sliding",
+    "USC185 Jung Hoo Lee": "wearing hoodie",
+    "USC195 Joey Loperfido": "towel around neck",
+    "USC199 Evan Carter": "looking at World Series ring",
+    "USC200 Jackson Holliday": "close-up of face, black shirt"
+  },
+  "parallelColumnAuthoritative": true,
+  "cmpCodes": {
+    "base": "715",
+    "variation": "853"
+  },
+  "note": "Rookie Image Variations. Parallel is '<Photo> Image Variation SP' so the name, 'variation' and 'SP' are all searchable; card details leads with the name. Autos emitted only where --autos named them; a guide states them in prose, not in the gallery."
+}
