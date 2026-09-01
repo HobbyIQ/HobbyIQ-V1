@@ -21,7 +21,12 @@ describe("CF-JAPANESE-POKEMON-ALIASES", () => {
     const cases: Array<[string, string]> = [
       ["2023 Pokemon Japanese Scarlet & Violet 151", "sv2a"],
       ["2024 Pokemon Japanese Scarlet & Violet Terastal Festival EX", "sv8a"],
-      ["2022 Pokemon Japanese Sword & Shield VSTAR Universe", "swsh12a"],
+      // CF-THE-JAPANESE-CODE-IS-THE-KEY (Drew, 2026-09-01, R2). Was pinned to
+      // "swsh12a", which is not a real set code -- it was our own spelling,
+      // scraped wrong, and its swsh- prefix invited collision with the ENGLISH
+      // Sword & Shield codes (swsh12 IS Silver Tempest). The JA VSTAR Universe
+      // code is s12a.
+      ["2022 Pokemon Japanese Sword & Shield VSTAR Universe", "s12a"],
       ["2023 Pokemon Japanese Scarlet & Violet Shiny Treasure EX", "sv4a"],
       ["2021 Pokemon Japanese Sword & Shield VMAX Climax", "swsh8b"],
     ];
@@ -42,6 +47,25 @@ describe("CF-JAPANESE-POKEMON-ALIASES", () => {
     expect(jp).toBe("sv2a");
     expect(en).toBe("sv03-5");
     expect(jp).not.toBe(en);
+
+    // R2's own near-collision: the JA VSTAR Universe code (s12a) and the EN
+    // Silver Tempest code (swsh12) are one character apart in the spelling we
+    // used to carry ("swsh12a"), which is exactly why the ruled rewrite is
+    // exact-token rather than a prefix rule.
+    const jpVstar = resolveSetKeyForSlug("pokemon", "2022 Pokemon Japanese Sword & Shield VSTAR Universe", 2022);
+    const enTempest = resolveSetKeyForSlug("pokemon", "2022 Pokemon Sword & Shield Silver Tempest", 2022);
+    expect(jpVstar).toBe("s12a");
+    expect(enTempest).toBe("swsh12");
+    expect(jpVstar).not.toBe(enTempest);
+
+    // R1: the JA Rocket Gang set must not answer with the ENGLISH Base Set 2
+    // code. One alias line pointing here at `base4` minted 43,724 JA sales onto
+    // the English product.
+    const jpRocket = resolveSetKeyForSlug("pokemon", "1997 Pokemon Japanese Rocket Gang", 1997);
+    const enBase2 = resolveSetKeyForSlug("pokemon", "2000 Pokemon Base Set 2", 2000);
+    expect(jpRocket).toBe("japanese-rocket-gang");
+    expect(enBase2).toBe("base4");
+    expect(jpRocket).not.toBe(enBase2);
   });
 
   it("leaves the English table completely unaffected", () => {
