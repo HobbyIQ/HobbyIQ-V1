@@ -44,6 +44,7 @@ describe("no hard delete survives in any dedup path", () => {
     ["sold-comps-cross-source-dedup.cjs", soldCompsClean],
     ["triage-contenthash-collisions.cjs", triage],
     ["lib/collision-triage.cjs", triageLib],
+    ["lib/cross-source-cluster.cjs", read(path.join("lib", "cross-source-cluster.cjs"))],
   ] as const) {
     it(`${name} never deletes a pool row`, () => {
       expect(cosmosDeletes(src)).toEqual([]);
@@ -136,8 +137,10 @@ describe("flagWithRetry writes a reversible exclusion, never a delete", () => {
       .replace(/^const \{ CosmosClient \}.*$/m, "const CosmosClient = null;")
       .replace(/^main\(\).*$/m, "");
     const mod = { exports: {} as Record<string, unknown> };
-    const fn = new Function("module", "exports", "require", "process", `${src}\nmodule.exports = { flagWithRetry };`);
-    fn(mod, mod.exports, require_, { ...process, env: { ...process.env, COSMOS_CONNECTION_STRING: "x" } });
+    // `__dirname` is needed now that the script requires its rule from
+    // scripts/lib rather than declaring a copy of it (D3).
+    const fn = new Function("module", "exports", "require", "process", "__dirname", `${src}\nmodule.exports = { flagWithRetry };`);
+    fn(mod, mod.exports, require_, { ...process, env: { ...process.env, COSMOS_CONNECTION_STRING: "x" } }, path.join(backend, "scripts"));
     const flagWithRetry = mod.exports.flagWithRetry as (
       c: unknown, id: string, pk: string, o: { survivingId: string; reason: string }
     ) => Promise<boolean>;
@@ -163,7 +166,18 @@ describe("only-improve: a flag is never lifted and never re-stamped", () => {
   });
 
   it("sold-comps-cross-source-dedup skips a row that is already flagged", () => {
-    expect(soldCompsClean).toMatch(/if \(row\.flaggedWrong === true\) \{ already\+\+; continue; \}/);
+    // D3: the only-improve split moved into `resolveCluster` in
+    // scripts/lib/cross-source-cluster.cjs, so the script no longer carries an
+    // inline `flaggedWrong === true` branch to grep for. It is asserted
+    // BEHAVIOURALLY instead -- crossSourceDedup.behaviour.test.ts runs the whole
+    // script against a pool whose only loser is already flagged and proves it
+    // writes nothing and reconciles `1 = 0 + 1 + 0`. This assertion just holds
+    // the wiring in place: the script must take its losers from resolveCluster,
+    // which is where the skip now lives.
+    expect(soldCompsClean).toMatch(/const \{ survivor, toFlag, alreadyFlagged \} = resolveCluster\(list\)/);
+    expect(soldCompsClean).toMatch(/for \(const row of toFlag\)/);
+    const lib = read(path.join("lib", "cross-source-cluster.cjs"));
+    expect(lib).toMatch(/alreadyFlagged: losers\.filter\(\(r\) => r\.flaggedWrong === true\)/);
   });
 
   it("the triage's flag helper returns early on an already-flagged row", () => {

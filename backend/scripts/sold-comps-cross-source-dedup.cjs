@@ -34,6 +34,13 @@
 // Match key: (title-hash, price, soldAt-MINUTE) buckets the candidates; a
 // shared sourceExternalId PROVES they are one sale. Keep the richest row.
 //
+//   (d) THE COPY. That discriminator was written out twice -- here and in
+//       crossSourceDedupSoldComps.cjs -- with a copy of `externalIdOf` in each,
+//       and guarded only by regex-over-source tests. A mutant reverting either
+//       to the rev-2 whole-bucket collapse passed every one of them. The rule
+//       now lives in scripts/lib/cross-source-cluster.cjs, both scripts import
+//       it, and the tests execute both scripts against a stubbed pool (D3).
+//
 // Idempotent -- re-runs are safe (only-improve: an already-flagged row is
 // never re-stamped and never unflagged).
 //
@@ -52,7 +59,11 @@ const path = require("path");
 // disjoint: intended = rows proven duplicate; written = flags acknowledged;
 // skipped = already flagged; failed = patches that threw.
 const { reportWrites } = require(path.join(__dirname, "..", "dist/services/ops/writeReconciliation.js"));
-const { pickSurvivor } = require(path.join(__dirname, "lib", "collision-triage.cjs"));
+// THE DISCRIMINATOR IS IMPORTED, NOT COPIED -- see the header of
+// scripts/lib/cross-source-cluster.cjs. This file declared its own
+// `externalIdOf` and its own bucket-by-id loop, guarded only by regex-over-
+// source tests: a mutant collapsing the whole bucket passed every one of them.
+const { provenClustersOf, resolveCluster, externalIdOf } = require(path.join(__dirname, "lib", "cross-source-cluster.cjs"));
 
 const APPLY = process.env.APPLY === "true" || process.env.BACKFILL_APPLY === "true";
 const MAX_MINUTES = Math.max(1, Number(process.env.MAX_MINUTES || 50));
@@ -73,13 +84,8 @@ function groupKey(row) {
   return `${titleHash(row.title)}|${price}|${when}`;
 }
 
-/** The eBay item id, trimmed, or null. Null can never prove sameness. */
-function externalIdOf(row) {
-  const v = row?.sourceExternalId;
-  if (v === null || v === undefined || v === "") return null;
-  const s = String(v).trim();
-  return s.length ? s : null;
-}
+// `externalIdOf` is imported above: the eBay item id trimmed, or null. Null can
+// never prove sameness, and two nulls never prove it with each other.
 
 async function main() {
   if (!process.env.COSMOS_CONNECTION_STRING) { console.error("COSMOS_CONNECTION_STRING required"); process.exit(1); }
@@ -129,27 +135,16 @@ async function main() {
   for (const [key, arr] of groups.entries()) {
     if (arr.length < 2) continue;
 
-    // THE DISCRIMINATOR. Bucket by external id; only ids seen more than once
-    // are proven duplicates. Rows whose id is unique in the bucket -- or that
-    // carry no id at all -- are left completely alone.
-    const byExternal = new Map();
-    let noId = 0;
-    for (const row of arr) {
-      const ext = externalIdOf(row);
-      if (ext === null) { noId++; continue; }
-      const list = byExternal.get(ext) ?? [];
-      list.push(row);
-      byExternal.set(ext, list);
-    }
+    // THE DISCRIMINATOR, imported. Bucket by external id; only ids seen more
+    // than once are proven duplicates. Rows whose id is unique in the bucket --
+    // or that carry no id at all -- are left completely alone. A bucket that
+    // proves nothing is several real sales that share a title, a price and a
+    // minute: two people bought the same card at the same price in the same
+    // minute. That happens, and both sales are real.
+    const { proven, refusedNoId: noId, refusedDifferentIds: diff } = provenClustersOf(arr);
     refusedNoId += noId;
-    const proven = [...byExternal.values()].filter((list) => list.length > 1);
-    if (proven.length === 0) {
-      // Every row in this bucket is a distinct listing: identical title, price
-      // and minute, different item ids. Two people bought the same card at the
-      // same price in the same minute. That happens, and both sales are real.
-      refusedDifferentIds += arr.length;
-      continue;
-    }
+    refusedDifferentIds += diff;
+    if (proven.length === 0) continue;
 
     for (const list of proven) {
       const distinctSources = new Set(list.map((r) => r.source));
@@ -159,9 +154,15 @@ async function main() {
       sourcesCrossed.set(combo, (sourcesCrossed.get(combo) || 0) + 1);
 
       // Richest row survives (the store's own scoreForCanonical shape), ties to
-      // the earliest observed -- the record closest to the sale itself.
-      const survivor = pickSurvivor(list);
-      const losers = list.filter((r) => r !== survivor);
+      // the earliest observed -- the record closest to the sale itself. The
+      // already-flagged losers come back separately: only-improve, never
+      // re-stamped and never unflagged.
+      const { survivor, toFlag, alreadyFlagged } = resolveCluster(list);
+      const losers = [...toFlag, ...alreadyFlagged];
+      // Counted BEFORE the dry-run branch: the DONE line reports alreadyFlagged
+      // in both modes, and a dry run that reported 0 of them would understate
+      // exactly the population an apply is going to skip.
+      already += alreadyFlagged.length;
 
       if (!APPLY) {
         console.log(`  [would flag] ${key}  sources=${combo}`);
@@ -170,8 +171,7 @@ async function main() {
         continue;
       }
 
-      for (const row of losers) {
-        if (row.flaggedWrong === true) { already++; continue; }  // only-improve
+      for (const row of toFlag) {
         while (inflight.size >= CONCURRENCY) await Promise.race([...inflight]);
         attempted++;
         const p = sold.item(row.id, row.cardId).patch([
@@ -208,8 +208,15 @@ async function main() {
   }
   if (!APPLY) console.log("(dry-run — nothing written; the would-flag list is above)");
   if (APPLY) {
-    console.log(`  reconciled: intended ${attempted.toLocaleString()} = written ${flagged.toLocaleString()} + skipped 0 + failed ${errors.toLocaleString()}`);
-    reportWrites({ job: "sold-comps-cross-source-dedup", intended: attempted, written: flagged, skipped: 0, failed: errors });
+    // INTENDED IS EVERY LOSER THIS RUN PROVED. `attempted` counts only the
+    // patches queued, so the earlier form printed a literal `skipped 0` while
+    // reporting `alreadyFlagged` on its own line -- arithmetic that balanced
+    // against a narrower intent than the run had actually decided. A run whose
+    // losers were all already flagged reconciled 0 = 0 + 0 + 0 and vouched for
+    // nothing.
+    const intended = attempted + already;
+    console.log(`  reconciled: intended ${intended.toLocaleString()} = written ${flagged.toLocaleString()} + skipped ${already.toLocaleString()} + failed ${errors.toLocaleString()}`);
+    reportWrites({ job: "sold-comps-cross-source-dedup", intended, written: flagged, skipped: already, failed: errors });
   }
 }
 

@@ -94,6 +94,20 @@ jobs:
           fi
           if [ "$MODE" = "cross-source-dedup" ] || [ "$MODE" = "both" ]; then
             echo "=== cross-source-dedup ==="
+            # THE RULE LIVES IN A LIB, SO CHECK FOR THE LIB. The discriminator
+            # (a shared sourceExternalId is required before anything is
+            # excluded) was copy-pasted into each dedup script and guarded only
+            # by regex-over-source tests; it now lives in scripts/lib and both
+            # import it. The entrypoint being present proves nothing about the
+            # rule it requires, and a run that reached Cosmos and then died on a
+            # missing require would have scanned the pool for nothing.
+            for LIB in cross-source-cluster collision-triage; do
+              if [ ! -f "scripts/lib/$LIB.cjs" ]; then
+                echo "::error::backend/scripts/lib/$LIB.cjs is missing — the dedup would scan the pool and then have no rule to decide with"
+                exit 1
+              fi
+            done
+            echo "Dedup libs confirmed: cross-source-cluster, collision-triage"
             # The dedup requires dist/ (writeReconciliation). MODE=both builds
             # above, but MODE=cross-source-dedup alone reached this line with no
             # dist at all and would die on a MODULE_NOT_FOUND after nothing.

@@ -70,12 +70,33 @@
  *     rename having renamed the field while the id still reads the old spelling
  *     -- so `kindOf` compares the id segment too, as the measurement does.
  *
+ * (5) THE PRE-FLIGHT COUNTS LIVE ROWS ONLY (D5). `salesUnder` now filters
+ *     `flaggedWrong != true`. The contentHash triage
+ *     (triage-contenthash-collisions.cjs) resolves a collision by PROVING two
+ *     rows are one physical sale and marking the loser `flaggedWrong=true` --
+ *     the pool's exclusion mark, filtered by every FMV read path, never a
+ *     delete. Without the predicate the pre-flight kept hashing and counting the
+ *     rows the triage had just resolved, so the eight football shards would have
+ *     refused on the SAME 278 after a full apply-true-dupes pass and the unblock
+ *     could never unblock anything.
+ *
+ *     `moveSalesAndRow` is deliberately NOT filtered: the pre-flight asks "what
+ *     is still unresolved?", the move asks "what belongs to this card?", and a
+ *     flagged row belongs to it. It travels with its partition, flags intact.
+ *     See the comment on `moveSalesAndRow` for why leaving it behind would
+ *     orphan it and break its provenance trail.
+ *
  * -- WHAT THIS SCRIPT DOES NOT DO -------------------------------------------
  *
  * It never re-implements D29. MODE=numbered calls `decideChecklistNumberedFold`
  * for R1's population; MODE=cpa calls `decideCpaProduct`. Print-run conflicts
  * and player-differs are NOT duplicates and are never folded. A sale never
  * mints a row. FMV is never a median.
+ *
+ * SCOPE narrows NOTHING here -- it is read only as the `SCOPE=all` escape hatch
+ * for the no-sports/no-years refusal. The eight football shards' historical
+ * `-f scope=refractor` therefore narrowed nothing. SPORTS, YEARS and SLOT/SLOTS
+ * are the axes that do.
  *
  * Env: COSMOS_CONNECTION_STRING; BACKFILL_APPLY=true to write (report only by
  *      default -- the runner exports BACKFILL_APPLY, not APPLY); SLOT/SLOTS;
@@ -599,17 +620,39 @@ FATAL: ${f(preflight.collisions)} contentHash collisions across ${f(preflight.gr
  * place by the move. The two are counted separately and never summed.
  */
 /**
- * Every pool row under a slug -- the exact-match key AND the keys that extend
- * it (`:num-N`, a grade segment). READ ONLY: this is the pre-flight probe's
- * reader and never writes. Attribution to the longest matching row is the
- * CALLER's job (see `ownsKey`); here the full width is what the collision
+ * Every LIVE pool row under a slug -- the exact-match key AND the keys that
+ * extend it (`:num-N`, a grade segment). READ ONLY: this is the pre-flight
+ * probe's reader and never writes. Attribution to the longest matching row is
+ * the CALLER's job (see `ownsKey`); here the full width is what the collision
  * probe needs to see.
+ *
+ * -- WHY FLAGGED ROWS ARE EXCLUDED (D5) -------------------------------------
+ *
+ * `flaggedWrong = true` is the pool's exclusion mark. Every FMV read path
+ * already filters it (canonicalFmv.service.ts:1073,:1292; marketMovers,
+ * playerDetail, priceSeries, setDetail, verifyQueue; cohortBacktest), and the
+ * contentHash triage sets it on rows it has PROVED are the same physical sale.
+ *
+ * Without this predicate the pre-flight counted those rows, hashed them, and
+ * refused over them -- so the eight football shards would have refused
+ * IDENTICALLY after a full apply-true-dupes pass, and the triage that exists to
+ * unblock the fold could never unblock it. A flagged row is not a sale the
+ * store will ever serve; two of them hashing alike cannot swallow a genuine
+ * future sale, because the ingest-time dedup that would swallow it is comparing
+ * against rows the reads already ignore. Counting them is counting resolved
+ * work as outstanding.
+ *
+ * The row is still THERE -- the pool is the moat and nothing was deleted. It is
+ * merely not evidence of an unresolved collision any more.
  */
 async function salesUnder(pool, slug) {
   const out = [];
   const it = pool.items.query(
     {
-      query: "SELECT c.id, c.cardId, c.hobbyiqCardId, c.parallel, c.price, c.soldAt, c.gradeCompany, c.gradeValue, c.isAuto FROM c WHERE c.hobbyiqCardId = @s OR STARTSWITH(c.hobbyiqCardId, @p)",
+      query: `SELECT c.id, c.cardId, c.hobbyiqCardId, c.parallel, c.price, c.soldAt,
+                     c.gradeCompany, c.gradeValue, c.isAuto, c.flaggedWrong
+              FROM c WHERE (c.hobbyiqCardId = @s OR STARTSWITH(c.hobbyiqCardId, @p))
+                AND (NOT IS_DEFINED(c.flaggedWrong) OR c.flaggedWrong != true)`,
       parameters: [{ name: "@s", value: slug }, { name: "@p", value: `${slug}:` }],
     },
     { maxItemCount: 200 },
@@ -621,6 +664,35 @@ async function salesUnder(pool, slug) {
   return out;
 }
 
+/**
+ * -- THE FLAGGED ROW'S DISPOSITION UNDER A MOVE, DECIDED (D5) ---------------
+ *
+ * `salesUnder` above excludes flagged rows because the PRE-FLIGHT is asking
+ * "what is still unresolved?" and a flagged row is resolved. This function is
+ * asking a different question -- "what belongs to this loser?" -- and the answer
+ * for a flagged row is the same as for any other: it belongs to the card, and
+ * the card is moving.
+ *
+ * So the move is UNFILTERED, deliberately, and the flag travels untouched:
+ *
+ *   MOVED, not left behind. Leaving flagged rows on a retired loser slug orphans
+ *   them: the catalog row is gone, so the sale references an address nothing
+ *   resolves, and the provenance trail from `dedupSupersededBy` to the surviving
+ *   row crosses a partition that no longer has a card. The pool is the moat --
+ *   that includes the history of what we excluded and why.
+ *
+ *   STILL FLAGGED. `flaggedWrong`, `flaggedReason`, `dedupSupersededBy`,
+ *   `dedupReason` and `dedupAt` are not in the patch below and are not in the
+ *   `keep` projection's overrides, so the relocation carries them verbatim. A
+ *   fold is a change of address, not a re-adjudication: a row a human or the
+ *   triage ruled on stays ruled on. Clearing a flag here would silently
+ *   resurrect an excluded sale into a pool that had already excluded it, and
+ *   double-count it in every FMV built on that partition.
+ *
+ * The two behaviours are therefore asymmetric ON PURPOSE, and the asymmetry is
+ * the point: excluded from the COUNT of outstanding collisions, included in the
+ * MOVE of the card's history.
+ */
 async function moveSalesAndRow(cat, pool, { winner, loser, rows, reason, stats }) {
   const loserId = String(loser.id);
   const winnerId = String(winner.id);
