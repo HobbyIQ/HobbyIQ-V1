@@ -70,7 +70,16 @@ function cronInvoked(): string[] {
 // sold_comps row is an upsert and deletes the script itself never spells. A
 // `.patch(` is a write. A `.replace(` is a write only in its Cosmos shape:
 // `.replace(doc)`, never `.replace(/&/g, "&amp;")`.
-const WRITE_CALL = /items\.bulk\(|\.upsert\(|\.create\(|\.delete\(\)|\.replace\((?![/"'`])|\.patch\(|moveCatalogRow\(|retireCatalogRow\(|relocateSoldComp\(/;
+//
+// `patchCatalogRowFields(` (D35, 2026-09-01) is the healer class: a script
+// that fills derived fields in place spells none of the other verbs — it
+// never upserts, replaces or deletes, and its own `.patch(` lives inside
+// catalogRowOps rather than in the script. repair-missing-search-fields
+// swept 341,306 rows and was invisible to every list here, on both the
+// writer side and the debt side: not a writer, so not missing, so not debt.
+// A whole healer class outside the net is the "helper nobody calls" failure
+// one level up.
+const WRITE_CALL = /items\.bulk\(|\.upsert\(|\.create\(|\.delete\(\)|\.replace\((?![/"'`])|\.patch\(|moveCatalogRow\(|retireCatalogRow\(|relocateSoldComp\(|patchCatalogRowFields\(/;
 
 /** Writes to Cosmos that are not rows. `cosmos-throughput` replaces an
  *  OFFER (RU scaling); there is nothing to reconcile against. */
@@ -319,6 +328,20 @@ describe("every backfill that writes must reconcile", () => {
       "merge-bare-colour-parallels", "dedupe-catalog-partition-shadows",
       "annotate-checklist-backing", "emit-staging-to-pool",
     ]) {
+      expect(wiredFile(path.join(SCRIPTS, `${name}.cjs`)), `${name} lost its reconciliation`).toBe(true);
+    }
+  });
+
+  it("the healer class is inside the net — seen as a writer, and wired", () => {
+    // D35, 2026-09-01. Both halves matter, and the first is the one that was
+    // missing: repair-missing-search-fields patched 341,306 rows through
+    // patchCatalogRowFields and WRITE_CALL could not see it, so "not in the
+    // missing list" meant nothing. Asserting only `wired` would pass even if
+    // WRITE_CALL lost the verb again and the script fell back out of the
+    // population — so the writer-visibility is pinned by name too.
+    const writers = new Set(runnerWriters().map((s) => s.name));
+    for (const name of ["repair-missing-search-fields", "retire-wiki-footer-catalog-rows"]) {
+      expect(writers.has(name), `${name} writes to Cosmos but WRITE_CALL cannot see it — it is outside the net, not compliant with it`).toBe(true);
       expect(wiredFile(path.join(SCRIPTS, `${name}.cjs`)), `${name} lost its reconciliation`).toBe(true);
     }
   });

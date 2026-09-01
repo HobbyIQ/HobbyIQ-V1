@@ -37,6 +37,10 @@ const { CosmosClient } = require(path.join(backend, "node_modules/@azure/cosmos"
 // this replaces also left any GRADED CHILDREN of the deleted row pointing at
 // a parent that no longer existed; retireCatalogRow retires them first.
 const { retireCatalogRow } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
+// CF-A-GREEN-RUN-IS-NOT-A-DATA-FLOW. The reconciliation is the shared helper,
+// not a local print of the same equation — a hand-rolled one is invisible to
+// the net that asserts every writer reconciles.
+const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
 
 const arg = (n, d) => {
   const hit = process.argv.find((a) => a.startsWith(`--${n}=`));
@@ -118,9 +122,10 @@ async function main() {
     }
   }
   console.log(`\n[done] deleted=${ok} gradedChildrenRetired=${children} failed=${failed}`);
-  const balanced = intended === ok + failed;
-  console.log(`[reconcile] intended(${intended}) == deleted(${ok}) + failed(${failed})  ->  ${balanced ? "OK" : "MISMATCH"}`);
-  if (!balanced) { console.error("FATAL: counters do not reconcile."); process.exit(4); }
+  // RECONCILIATION, through the one helper. `intended` is the deletable set,
+  // so the kept rows are already outside it and there is nothing skipped to
+  // declare. A shortfall sets process.exitCode = 4 — red, not green.
+  reportWrites({ job: `retire-wiki-footer-catalog-rows ${SET_KEY}`, intended, written: ok, failed });
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });

@@ -80,6 +80,12 @@ const crypto = require("crypto");
 const backend = path.join(__dirname, "..");
 const { CosmosClient } = require(path.join(backend, "node_modules/@azure/cosmos"));
 const { rebuildSearchFields, patchCatalogRowFields } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
+// CF-A-GREEN-RUN-IS-NOT-A-DATA-FLOW. The reconciliation is the shared helper,
+// not a print of the same shape. The arithmetic was right; being a private
+// copy of it was the defect — a hand-rolled equation is invisible to the net
+// that asserts every writer reconciles, so this script could have lost its
+// reconciliation entirely and nothing would have said so.
+const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
 
 const arg = (n, d) => {
   const hit = process.argv.find((a) => a.startsWith(`--${n}=`));
@@ -323,10 +329,17 @@ async function main() {
   console.log(`           intended=${num(c.intended)}  ${APPLY ? "healed" : "would heal"}=${num(c.written)}  failed=${num(c.failed)}  alreadyOk=${num(c.alreadyOk)}`);
   console.log(`           notReached=${num(c.notReached)}`);
 
-  // RECONCILIATION. intended must equal written + failed, always.
-  const balanced = c.intended === c.written + c.failed;
-  console.log(`[reconcile] intended(${num(c.intended)}) == written(${num(c.written)}) + failed(${num(c.failed)})  ->  ${balanced ? "OK" : "MISMATCH"}`);
-  if (!balanced) { console.error("FATAL: counters do not reconcile."); process.exit(4); }
+  // RECONCILIATION, through the one helper. `intended` counts only rows this
+  // slot decided to patch, so there is nothing skipped to declare: every
+  // intended row was attempted and landed in written or failed. A shortfall
+  // (or an over-count) sets process.exitCode = 4 — red, not green — and the
+  // budget marker below still prints, so the runner can still re-dispatch.
+  reportWrites({
+    job: `repair-missing-search-fields slot ${SLOT}/${SLOTS}`,
+    intended: c.intended,
+    written: c.written,
+    failed: c.failed,
+  });
 
   if (stopped === "budget") {
     // The exact phrase the runner greps to re-dispatch (#1361).
