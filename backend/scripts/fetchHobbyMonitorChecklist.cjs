@@ -180,31 +180,12 @@ const runOf = (p) => (p.isOneOfOne === true ? 1 : (p.printRun != null ? p.printR
  *  converter's parallelNote. Never part of the parallel name. */
 const noteOf = (p) => String(p.odds == null ? "" : p.odds).replace(/\s+/g, " ").trim();
 
-async function main() {
-  if (has("--list")) {
-    const html = await get("https://www.hobbymonitor.com/releases");
-    const rel = extractObjects(html, '"manufacturer"').filter((o) => o.slug);
-    const uniq = [...new Map(rel.map((o) => [o.slug, o])).values()];
-    console.log(JSON.stringify(uniq.map((o) => ({
-      slug: o.slug, manufacturer: o.manufacturer, sport: o.sport, status: o.status,
-    })), null, 1));
-    console.log(`\n${uniq.length} releases`);
-    return;
-  }
-
-  const url = val("--url", "");
-  if (!url) { console.error("need --url <release page> (or --list)"); process.exit(1); }
-  const out = val("--out", "");
-
-  const html = await get(url);
-  const cards = extractObjects(html, '"cardNumber"');
-  const parallelGroups = extractArray(html, "cardParallels");
-
-  if (cards.length === 0) {
-    console.error("no cards found — the page shape may have changed");
-    process.exit(1);
-  }
-
+// THE EMITTER, lifted out of main() so a test can reach it
+// (CF-BLANK-MEANS-UNKNOWN-NEVER-BASE, 2026-09-01). All of this used to live
+// inline behind a network fetch, which is why the literal-"Base" defect
+// shipped with no test able to see it. Pure: (cards[], parallelGroups[]) in,
+// {rows, ...stats} out, no I/O.
+function buildRows(cards, parallelGroups) {
   // The product's own roster, for the misfiled-name guard.
   const roster = new Set();
   for (const c of cards) {
@@ -252,10 +233,10 @@ async function main() {
   const categoryOf = (set, auto) =>
     auto ? `auto-${slug(set)}` : (slug(set) === "base" ? "base" : `insert-${slug(set)}`);
 
-  // Emit: the base row for every card, then that card's own subset ladder.
-  // The BASE row's parallel is blank -- "blank means unknown, never Base" --
-  // except in the `base` category, whose card IS the base card. ingest reads
-  // "" as the base tier through normalizeParallel.
+  // Emit: the card's own row for every card, then that card's own subset
+  // ladder. EVERY card row's parallel is blank -- "blank means unknown, never
+  // Base" -- in every category, the base category included. ingest reads "" as
+  // the base tier through normalizeParallel.
   const rows = [];
   const bySubset = new Map();
   let ladderRows = 0, refusedSubsets = 0;
@@ -266,7 +247,30 @@ async function main() {
     const st = bySubset.get(c.set) || { cards: 0, rungs: rungs.length, rows: 0, refused: false };
     st.cards++;
     bySubset.set(c.set, st);
-    rows.push({ category: cat, cardNumber: c.num, parallel: cat === "base" ? "Base" : "",
+    // CF-BLANK-MEANS-UNKNOWN-NEVER-BASE (2026-09-01). The comment above has
+    // said "blank means unknown, never Base" since this emitter was written;
+    // the code contradicted it for the one category where it matters most.
+    // `cat === "base" ? "Base" : ""` wrote the literal word into the parallel
+    // column of every base card of every hobbymonitor release, and the source
+    // page never says it -- hobbymonitor states a finish only on the ladder
+    // (cardParallels[]), never on a card object. The word was ours, not the
+    // checklist's.
+    //
+    // Two consequences, both observed. A base-ONLY release emits zero rows the
+    // driver can see as base, so the zero-base gate REFUSES it (25 manifest
+    // entries, 1952 Topps and its 5,418 rows among them). A release WITH
+    // inserts passes that gate and ingests every base card carrying the
+    // parallel "Base" -- a second row beside the blank-parallel row every other
+    // source mints for the same card, which is a split pool and a wrong FMV.
+    //
+    // Identity grammar lives in the SLUG, not in the stored field:
+    // normalizeParallel("") is already the base tier, and ingest-scraped-
+    // checklist.cjs reads this column verbatim under
+    // parallelColumnAuthoritative. So the honest emission is the empty string
+    // -- the source stated no finish, and we store no finish. Insert and auto
+    // rows are unchanged: they emitted "" before and emit "" here, and their
+    // real rung names are written by the ladder loop below.
+    rows.push({ category: cat, cardNumber: c.num, parallel: "",
       isAuto: c.auto, printRun: "", player: c.player, parallelNote: "" });
     st.rows++;
   }
@@ -298,6 +302,38 @@ async function main() {
       const st = bySubset.get(c.set); if (st) st.rows++;
     }
   }
+
+
+  return { rows, cardRows, bySubset, rungStats, droppedNames, ladderRows, refusedSubsets, refusedNote };
+}
+
+async function main() {
+  if (has("--list")) {
+    const html = await get("https://www.hobbymonitor.com/releases");
+    const rel = extractObjects(html, '"manufacturer"').filter((o) => o.slug);
+    const uniq = [...new Map(rel.map((o) => [o.slug, o])).values()];
+    console.log(JSON.stringify(uniq.map((o) => ({
+      slug: o.slug, manufacturer: o.manufacturer, sport: o.sport, status: o.status,
+    })), null, 1));
+    console.log(`\n${uniq.length} releases`);
+    return;
+  }
+
+  const url = val("--url", "");
+  if (!url) { console.error("need --url <release page> (or --list)"); process.exit(1); }
+  const out = val("--out", "");
+
+  const html = await get(url);
+  const cards = extractObjects(html, '"cardNumber"');
+  const parallelGroups = extractArray(html, "cardParallels");
+
+  if (cards.length === 0) {
+    console.error("no cards found — the page shape may have changed");
+    process.exit(1);
+  }
+
+  const { rows, cardRows, bySubset, rungStats, droppedNames, ladderRows, refusedSubsets, refusedNote } =
+    buildRows(cards, parallelGroups);
 
   const header = "category,cardNumber,parallel,isAuto,printRun,player,parallelNote";
   const body = rows.map((r) => [r.category, r.cardNumber, r.parallel, r.isAuto, r.printRun, r.player, r.parallelNote]
@@ -382,4 +418,4 @@ if (require.main === module) {
   main().catch((e) => { console.error("FATAL", e.message); process.exit(1); });
 }
 
-module.exports = { classifyRung, foldName, runOf, noteOf, extractObjects, extractArray, PAR_MAX, NUM_MAX };
+module.exports = { buildRows, classifyRung, foldName, runOf, noteOf, extractObjects, extractArray, PAR_MAX, NUM_MAX };
