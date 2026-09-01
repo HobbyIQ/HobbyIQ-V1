@@ -211,6 +211,14 @@ on:
           # default -- card-as-parallel | chrome-ladder | first-edition |
           # names | number-glued. Sharded by sha1(id); SCOPE narrows to setKeys.
           - repair-bcp-misfiled-parallels
+          # D38 (2026-09-01): drives backend/data/ingest-universe.json -- the
+          # 7,755-set enumerated universe -- one entry at a time through the
+          # EXISTING lane scrapers. `sources` names the lane and is REQUIRED
+          # with no default (one lane per dispatch, so each gets its own budget
+          # and its own reconciliation); `scope=recheck` re-attempts entries
+          # that already carry a verdict. Per-entry status lives in a
+          # crawl_state control doc, because a runner job cannot push.
+          - ingest-universe-driver
           # CF-CHECKLIST-ROWS-MUST-BE-FINDABLE (2026-09-01): heal the derived
           # search fields (searchText / searchTokens / displayName / setName)
           # on rows ingested before deriveCatalogEntry built them (#1614).
@@ -603,6 +611,28 @@ jobs:
             echo "Child scripts confirmed: 4"
           fi
 
+          # D38. Same lesson, same shape: ingest-universe-driver SHELLS OUT to a
+          # different scraper per lane, so its own presence proves nothing about
+          # the lane it was dispatched for. It would acquire nothing and still
+          # write verdicts. Check the manifest and every lane child up front.
+          if [ "${{ inputs.script }}" = "ingest-universe-driver" ]; then
+            if [ ! -f "backend/data/ingest-universe.json" ]; then
+              echo "::error::backend/data/ingest-universe.json is missing — the driver has no universe to drive"
+              exit 1
+            fi
+            for CHILD in fetchHobbyMonitorChecklist scrape-checklistinsider \
+                         convertChecklistInsiderToChecklistCsv scrape-bcp-ladders \
+                         convertBeckettChecklistXlsx scrape-checklistcenter-products \
+                         convertChecklistCenterToChecklistCsv scrape-tcgdex-ja \
+                         ingest-checklist-csv-to-catalog; do
+              if [ ! -f "backend/scripts/$CHILD.cjs" ]; then
+                echo "::error::$CHILD.cjs is missing — the driver would acquire and then have nowhere to land the rows"
+                exit 1
+              fi
+            done
+            echo "Manifest + lane children confirmed: 9"
+          fi
+
       # A relaunch starts with an empty /tmp, so without this the job re-scrapes
       # 718 Beckett set pages and 604 insider pages every single time: 76 minutes
       # of a 140-minute budget spent re-acquiring what the previous run already
@@ -813,6 +843,44 @@ jobs:
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=reslugAllSoldComps -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f shard_hex="${{ inputs.shard_hex }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (touched=${N:-0}) — done, no re-dispatch."
+          fi
+      - name: Self-relaunch the universe driver until its lane is drained
+        # D38. One generation takes N entries for ONE lane, records a verdict per
+        # entry in crawl_state, and stops at its own 140-minute budget. Because
+        # the position lives in Cosmos and not on disk, a relaunch resumes from
+        # the verdicts rather than from the head of the list -- so this needs no
+        # cache, and a killed generation loses at most the entry in flight.
+        #
+        # Gated on the MARKER, never on a count. A count gate loops forever on a
+        # lane whose remainder is entries the source does not serve (they settle
+        # as `unreachable` and stay that way), and stops early on a generation
+        # that happened to refuse everything it took -- which is a real outcome
+        # here, not an error. The inputs are forwarded verbatim so the relaunch
+        # is the same dispatch against a smaller pending set.
+        # CF-REPORT-RELAUNCHES-AS-A-REPORT (D34). The gate is the MARKER and is
+        # mode-blind -- the driver prints the marker from the same line in both
+        # modes. Gating on `apply` would mean a REPORT longer than one budget
+        # could never finish, and hardcoding the forwarded apply input to true
+        # would bring an accidental relaunch of a report back as a WRITE. So
+        # `apply` is forwarded verbatim like every other input.
+        if: ${{ !cancelled() && inputs.script == 'ingest-universe-driver' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        working-directory: backend
+        run: |
+          set +e
+          N=$(grep -aoE "universe_entries_done=[0-9]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9]+$")
+          echo "universe_entries_done=${N:-0}"
+          if grep -aqE "RECONCILED +NO" /tmp/backfill.log; then
+            echo "::error::the driver did not reconcile — not re-dispatching; read the summary above"
+            exit 1
+          fi
+          if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
+            echo "::notice::budget hit (entries=${N:-0}) — re-dispatching lane ${{ inputs.sources }} to continue"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=ingest-universe-driver -f apply="${{ inputs.apply }}" -f sources="${{ inputs.sources }}" -f scope="${{ inputs.scope }}" -f years="${{ inputs.years }}" -f sports="${{ inputs.sports }}" -f limit="${{ inputs.limit }}" -f concurrency="${{ inputs.concurrency }}"
+          else
+            echo "::notice::lane ${{ inputs.sources }} finished within budget (entries=${N:-0}) — done, no re-dispatch."
           fi
       - name: Self-relaunch the checklist ingest until every phase completes
         # Acquire + convert + ingest is far longer than one 150-minute step, so

@@ -77,7 +77,11 @@ const LIMIT = Number(arg("limit", "0"));
 const YEARS = String(arg("years", ""));
 const ONLY = process.argv.includes("--onlyXlsx") ? "xlsx" : process.argv.includes("--onlyHtml") ? "html" : "";
 const REPORT = process.argv.includes("--report");
-const LIST = path.join(__dirname, "..", "data", "checklistcenter-products.json");
+// CF-THE-WORK-LIST-IS-AN-INPUT (D38, 2026-09-01). Mirrors the same override in
+// scrape-checklistcenter-products.cjs: the converter must read the SAME work
+// list the scraper staged, or a per-entry acquisition stages one page and then
+// converts the committed 547. Unset, the behaviour is exactly what it was.
+const LIST = process.env.CLC_LIST || path.join(__dirname, "..", "data", "checklistcenter-products.json");
 const PAR_MAX = 150, NUM_MAX = 2000;
 const f = (n) => Number(n).toLocaleString();
 const csvEsc = (s) => { const v = String(s ?? ""); return /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v; };

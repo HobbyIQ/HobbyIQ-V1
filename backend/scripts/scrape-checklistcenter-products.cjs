@@ -28,7 +28,14 @@ const DELAY_MS = Number(arg("delayMs", "800"));
 const LIMIT = Number(arg("limit", "0"));
 const YEARS = String(arg("years", ""));
 const FORCE = process.argv.includes("--force");
-const LIST = path.join(__dirname, "..", "data", "checklistcenter-products.json");
+// CF-THE-WORK-LIST-IS-AN-INPUT (D38, 2026-09-01). The committed list holds 547
+// products; the sitemap actually serves 2,367 checklist pages across 10 sports,
+// so 1,820 real pages had no address through this script at all. CLC_LIST lets
+// a caller (ingest-universe-driver) hand it a work list of its own -- the same
+// {products:[{url,sourceSlug,productName,year,sport}]} shape -- so one entry can
+// be acquired without editing the committed list or reimplementing the fetch.
+// Unset, the behaviour is exactly what it was.
+const LIST = process.env.CLC_LIST || path.join(__dirname, "..", "data", "checklistcenter-products.json");
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36";
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const f = (n) => Number(n).toLocaleString();
