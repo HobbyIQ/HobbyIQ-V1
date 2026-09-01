@@ -75,7 +75,23 @@ async function main() {
     { name: "@sk", value: SET_KEY },
     { name: "@yr", value: Number(YEAR) },
   ];
-  let where = "c.setKey = @sk AND c.cardYear = @yr AND NOT IS_DEFINED(c.searchTokens)";
+  // CF-HEAL-EVERY-DERIVED-FIELD (Drew, 2026-09-01: "yes widen it with what we
+  // can"). This used to match only `NOT IS_DEFINED(c.searchTokens)`, so a row
+  // that HAD tokens but no searchText or displayName reported "nothing to do"
+  // and stayed half-indexed. Measured on 1989 o-pee-chee: 560/560 had tokens
+  // while 139 lacked searchText and 11 lacked displayName — invisible to the
+  // repair that exists to find exactly that.
+  //
+  // All four are derived from the row by one pure function, so any one of them
+  // missing means the row was never fully indexed. An empty string counts as
+  // missing for the text fields: a row carrying searchText:"" is no more
+  // findable than one carrying none.
+  let where = `c.setKey = @sk AND c.cardYear = @yr AND (
+      NOT IS_DEFINED(c.searchTokens) OR ARRAY_LENGTH(c.searchTokens) = 0
+      OR NOT IS_DEFINED(c.searchText) OR c.searchText = ''
+      OR NOT IS_DEFINED(c.displayName) OR c.displayName = ''
+      OR NOT IS_DEFINED(c.setName) OR c.setName = ''
+    )`;
   if (PARALLEL) { where += " AND c.parallel = @par"; params.push({ name: "@par", value: PARALLEL }); }
   if (SOURCE_PREFIX) { where += " AND STARTSWITH(c.source ?? '', @sp)"; params.push({ name: "@sp", value: SOURCE_PREFIX }); }
 
@@ -84,7 +100,12 @@ async function main() {
     { enableCrossPartitionQuery: true },
   ).fetchAll();
 
-  console.log(`matched ${rows.length} rows missing searchTokens`);
+  // Report WHICH field was missing, so a run says what it actually found.
+  const miss = { searchTokens: 0, searchText: 0, displayName: 0, setName: 0 };
+  const blank = (v) => v === undefined || v === null || v === "" || (Array.isArray(v) && !v.length);
+  for (const r of rows) for (const f of Object.keys(miss)) if (blank(r[f])) miss[f]++;
+  console.log(`matched ${rows.length} rows missing at least one derived field`);
+  console.log(`  missing: ${Object.entries(miss).map(([k, v]) => `${k}=${v}`).join("  ")}`);
   if (EXPECT !== "" && rows.length !== Number(EXPECT)) {
     console.error(`\nFATAL: expected ${EXPECT}, matched ${rows.length}. Refusing.`);
     process.exit(3);
@@ -110,12 +131,15 @@ async function main() {
       shown++;
     }
     if (!APPLY) { ok++; continue; }
-    const patch = {
-      searchText: fields.searchText,
-      searchTokens: fields.searchTokens,
-      displayName: fields.displayName,
-      ...(r.setName ? {} : { setName }),
-    };
+    // Fill ONLY what is missing. A row with a good displayName keeps it —
+    // this is a heal, not a rewrite, and overwriting is how a better row's
+    // index gets clobbered by a worse one.
+    const patch = {};
+    if (blank(r.searchTokens)) patch.searchTokens = fields.searchTokens;
+    if (blank(r.searchText)) patch.searchText = fields.searchText;
+    if (blank(r.displayName)) patch.displayName = fields.displayName;
+    if (blank(r.setName)) patch.setName = setName;
+    if (!Object.keys(patch).length) { ok++; continue; }
     try {
       // Derived index fields: the previous value is absent by definition, so
       // no shadow copy is worth keeping.
