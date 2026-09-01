@@ -762,3 +762,81 @@ export async function retireCatalogRow(
     reason: why,
   };
 }
+
+/**
+ * CF-A-FIELD-REPAIR-IS-A-ROW-OP (Drew, 2026-09-01).
+ *
+ * A repair that corrects FIELDS on a row it does not move or retire had no
+ * compliant path: catalogRowOps offered only moveCatalogRow and
+ * retireCatalogRow, so every such script hand-rolled `container.item().patch()`
+ * and landed on the mutator debt list — a list whose contract is that it "may
+ * shrink and must never grow".
+ *
+ * This is that missing third operation. It patches named fields on ONE row,
+ * keeps the previous value of each under `<field>Before` so the repair is
+ * reversible, and refuses to touch the addressing contract: id, cardId and
+ * hobbyiqCardId are never patchable here, because changing where a row LIVES
+ * is moveCatalogRow's job and doing it by patch is what produced half-moved
+ * twins (CF-GUARD-THE-CATALOG-WRITE-CONTRACT).
+ *
+ * Returns "noop" when every requested value already matches, so a re-run is
+ * free and idempotent.
+ */
+export interface PatchCatalogRowFieldsOptions {
+  retry?: CatalogOpsRetry;
+  dryRun?: boolean;
+  /** Skip the `<field>Before` shadow — for a cosmetic field where the previous
+   *  value carries no information worth keeping. Off by default. */
+  noShadow?: boolean;
+}
+
+export interface PatchCatalogRowFieldsResult {
+  action: "patch" | "noop";
+  id: string;
+  fieldsChanged: string[];
+}
+
+/** Fields that address the row. Patching these is a MOVE, not a field repair. */
+const UNPATCHABLE = new Set(["id", "cardId", "hobbyiqCardId"]);
+
+export async function patchCatalogRowFields(
+  container: Container,
+  id: string,
+  cardId: string | null | undefined,
+  fields: Record<string, unknown>,
+  opts: PatchCatalogRowFieldsOptions = {},
+): Promise<PatchCatalogRowFieldsResult> {
+  const names = Object.keys(fields ?? {});
+  if (!names.length) throw new Error("patchCatalogRowFields: no fields given");
+  const illegal = names.filter((n) => UNPATCHABLE.has(n));
+  if (illegal.length) {
+    throw new Error(
+      `patchCatalogRowFields: ${illegal.join(", ")} address the row — use moveCatalogRow, not a field patch`,
+    );
+  }
+  const retry = opts.retry ?? noRetry;
+  const pk = cardId ? String(cardId) : id;
+
+  const { resource: row } = await retry(() => container.item(id, pk).read<CatalogRowDoc>());
+  if (!row) return { action: "noop", id, fieldsChanged: [] };
+
+  const current = row as unknown as Record<string, unknown>;
+  const changed = names.filter((n) => current[n] !== fields[n]);
+  if (!changed.length) return { action: "noop", id, fieldsChanged: [] };
+  if (opts.dryRun === true) return { action: "patch", id, fieldsChanged: changed };
+
+  const ops: Array<{ op: "add" | "set"; path: string; value: unknown }> = [];
+  for (const n of changed) {
+    ops.push({ op: current[n] === undefined ? "add" : "set", path: `/${n}`, value: fields[n] });
+    if (opts.noShadow !== true) {
+      const shadow = `${n}Before`;
+      ops.push({
+        op: current[shadow] === undefined ? "add" : "set",
+        path: `/${shadow}`,
+        value: current[n] ?? null,
+      });
+    }
+  }
+  await retry(() => container.item(id, pk).patch(ops));
+  return { action: "patch", id, fieldsChanged: changed };
+}

@@ -30,6 +30,8 @@
 import { CosmosClient, type Container } from "@azure/cosmos";
 import { computeHobbyIqCardId } from "./hobbyIqCardId.service.js";
 import { authorityRank } from "../catalog/catalogAuthority.service.js";
+import { buildSearchText, buildSearchTokens } from "./searchIndexing.service.js";
+import { canonicalCardName } from "../catalog/canonicalCardName.js";
 
 export interface CardCatalogEntry {
   id: string;                        // hobbyiqCardId slug (also the doc id)
@@ -287,11 +289,34 @@ export function mergeCatalogEntries(
     || incomingRank > existingRank
     || (incomingRank === existingRank && confidenceOf(entry.confidence) > confidenceOf(existing.confidence));
   if (!winnerIsIncoming) {
+    // CF-A-DERIVED-INDEX-IS-NOT-AN-AUTHORITY-CLAIM (Drew, 2026-09-01).
+    //
+    // The losing branch keeps the existing row wholesale, which is right for
+    // every field that ASSERTS something — player, parallel, printRun, source.
+    // searchText / searchTokens / displayName assert nothing: they are a pure
+    // function of the row, and a row that lacks them is not "winning", it is
+    // unfindable (catalogSearch discriminates on ARRAY_CONTAINS(searchTokens)).
+    //
+    // Without this, re-ingesting a checklist over rows that already existed
+    // left 153 of 646 variation rows with no tokens — the incoming row did not
+    // outrank them, so the fields it had just computed were discarded. Fill
+    // them in only where the existing row HAS none; never overwrite, so a
+    // better row's index is left alone and the merge stays idempotent.
+    const ex = existing!;
+    const backfill: Record<string, unknown> = {};
+    for (const f of ["searchText", "searchTokens", "displayName", "setName"] as const) {
+      const has = (ex as unknown as Record<string, unknown>)[f];
+      const incoming = (entry as unknown as Record<string, unknown>)[f];
+      if ((has === undefined || has === null || has === "") && incoming !== undefined) {
+        backfill[f] = incoming;
+      }
+    }
     return {
       winnerIsIncoming,
       merged: {
-        ...existing!,
-        vendorIds: { ...existing!.vendorIds, ...entry.vendorIds },
+        ...ex,
+        ...backfill,
+        vendorIds: { ...ex.vendorIds, ...entry.vendorIds },
         lastSeenAt: now,
       },
     };
@@ -388,6 +413,13 @@ export function deriveCatalogEntry(input: {
   source: CardCatalogEntry["source"];
   confidence: number;
   vendorIds?: Record<string, string>;
+  /** The publisher's own name for the product ("2018 Bowman Chrome"). Leads
+   *  the search text and the display name. Optional: when absent, both are
+   *  still built, from the setKey — a row with no setName is still findable,
+   *  which is the whole point of CF-DERIVE-BUILDS-ITS-OWN-SEARCH-FIELDS. */
+  setName?: string | null;
+  /** Named subset, when the source states one. Display only. */
+  subsetName?: string | null;
   /** Set when the caller knows the product for certain — a published
    *  checklist. Suppresses the cardNumber-prefix repair meant for untrusted
    *  vendor text, which would otherwise collapse 2026 Bowman CPA-AG
@@ -440,6 +472,55 @@ export function deriveCatalogEntry(input: {
   // catalogVerify — which reads by partition — never found it. Setting cardId
   // puts canonical rows back in their own single-document partition, which is
   // what makes the ~1 RU point read work.
+  // CF-DERIVE-BUILDS-ITS-OWN-SEARCH-FIELDS (Drew, 2026-09-01: "Fix the root
+  // cause — deriveCatalogEntry should build its own search fields").
+  //
+  // catalogSearch discriminates with ARRAY_CONTAINS(c.searchTokens, @t), so a
+  // row without them EXISTS and can never be returned by any query. This
+  // constructor did not write them, which is why every checklist ingested
+  // through ingest-scraped-checklist landed search-invisible and needed
+  // repair-missing-search-fields run behind it:
+  //
+  //     2026 bowman-chrome checklist rows   2179 / 2179 had searchTokens
+  //     the 78 rows ingested by #1612          0 /   78
+  //
+  // It is also the second half of the answer this file already gives for why
+  // 59 of 61 catalog writers hand-roll their own doc — a canonical path that
+  // silently drops 99%-present fields does not get adopted. Now it doesn't.
+  //
+  // The SAME derivation catalogRowOps.rebuildSearchFields uses, field for
+  // field, so a row minted here and a row healed there are byte-identical and
+  // neither reads as stale to the coverage canary. buildSearchText /
+  // buildSearchTokens are the single source of truth (CF-SEARCH-INDEXING);
+  // this is a caller of them, never a third copy.
+  const setName = typeof input.setName === "string" && input.setName.trim()
+    ? input.setName.trim()
+    : null;
+  const searchText = buildSearchText({
+    player: playerName,
+    setName,
+    set: setKey ? setKey.replace(/-/g, " ") : null,
+    number: cardNumber,
+    year,
+    variant: input.parallel && String(input.parallel).toLowerCase() !== "base" ? String(input.parallel) : null,
+    attributes: parallelSlug && parallelSlug !== input.parallel ? [parallelSlug.replace(/-/g, " ")] : null,
+  });
+  const searchFields = {
+    searchText,
+    searchTokens: buildSearchTokens(searchText),
+    displayName: canonicalCardName({
+      year,
+      setName,
+      setKey: parsedSlug[3] ?? setKey,
+      sport: input.sport,
+      cardNumber,
+      playerName,
+      parallel: input.parallel ? String(input.parallel) : null,
+      printRun: typeof input.printRun === "number" ? input.printRun : null,
+      subsetName: input.subsetName ?? null,
+    }),
+  };
+
   return {
     id: slug,
     cardId: slug,
@@ -469,6 +550,8 @@ export function deriveCatalogEntry(input: {
     vendorIds: input.vendorIds ?? {},
     source: input.source,
     confidence: input.confidence,
+    ...(setName ? { setName } : {}),
+    ...searchFields,
   } as Omit<CardCatalogEntry, "observedAt" | "lastSeenAt"> & { cardYear: number };
 }
 

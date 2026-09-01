@@ -1,0 +1,33 @@
+{
+  "scrapedAt": "2026-09-01T02:06:34.326Z",
+  "sourceUrl": "https://www.beckett.com/news/2018-bowman-chrome-draft-baseball-variation-refractors/",
+  "source": "beckett",
+  "sport": "baseball",
+  "year": 2018,
+  "setName": "2018 Bowman Chrome Draft",
+  "productKey": "2018-bowman-chrome-draft-baseball-variation-refractors",
+  "setKey": "bowman-chrome-draft",
+  "rowCount": 14,
+  "photoDescriptions": {
+    "BDC-1 Casey Mize": "white jersey",
+    "BDC-3 Brusdar Graterol": "hand in glove",
+    "BDC-6 Jarred Kelenic": "gray jersey",
+    "BDC-20 Trevor Stephan": "&#8216;New York' visible on jersey",
+    "BDC-25 Alec Bohm": "running, red jersey",
+    "BDC-32 Bo Bichette": "fielding",
+    "BDC-38 Nick Madrigal": "fielding",
+    "BDC-72 Aramis Ademan": "ball visible, turned to side",
+    "BDC-87 Royce Lewis": "both feet down",
+    "BDC-93 Carter Kieboom": "no helmet",
+    "BDC-112 Jonathan India": "running",
+    "BDC-135 Brady Singer": "fist pump",
+    "BDC-182 Ryan Weathers": "white jersey",
+    "BDC-198 Travis Swaggerty": "tipping helmet"
+  },
+  "parallelColumnAuthoritative": true,
+  "cmpCodes": {
+    "base": "892",
+    "variation": "916"
+  },
+  "note": "Rookie Image Variations. Parallel is '<Photo> Image Variation SP' so the name, 'variation' and 'SP' are all searchable; card details leads with the name. Autos emitted only where --autos named them; a guide states them in prose, not in the gallery."
+}

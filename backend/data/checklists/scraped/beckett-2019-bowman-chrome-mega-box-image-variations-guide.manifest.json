@@ -1,0 +1,30 @@
+{
+  "scrapedAt": "2026-09-01T02:06:28.605Z",
+  "sourceUrl": "https://www.beckett.com/news/2019-bowman-chrome-mega-box-image-variations-guide/",
+  "source": "beckett",
+  "sport": "baseball",
+  "year": 2019,
+  "setName": "2019 Bowman Chrome Mega Box",
+  "productKey": "2019-bowman-chrome-mega-box-image-variations-guide",
+  "setKey": "bowman-chrome-mega-box",
+  "rowCount": 10,
+  "photoDescriptions": {
+    "BCP-1 Vladimir Guerrero Jr.": "no helmet",
+    "BCP-4 Jo Adell": "throwing",
+    "BCP-25 Fernando Tatis Jr.": "running, wearing sunglasses",
+    "BCP-43 Nick Senzel": "throwing",
+    "BCP-49 Casey Mize": "cap at chest",
+    "BCP-50 Joey Bart": "holding bat",
+    "BCP-60 Nolan Gorman": "throwing",
+    "BCP-100 Wander Franco": "bat on shoulder",
+    "BCP-107 Ronny Mauricio": "no helmet",
+    "BCP-150 Eloy Jimenez": "with fielding glove"
+  },
+  "parallelColumnAuthoritative": true,
+  "cmpCodes": {
+    "base": "418",
+    "variations": "435"
+  },
+  "packOdds": "Variation odds are 1:140 packs. That might not seem too rare, however, with only two of the exclusive packs per",
+  "note": "Rookie Image Variations. Parallel is '<Photo> Image Variation SP' so the name, 'variation' and 'SP' are all searchable; card details leads with the name. Autos emitted only where --autos named them; a guide states them in prose, not in the gallery."
+}

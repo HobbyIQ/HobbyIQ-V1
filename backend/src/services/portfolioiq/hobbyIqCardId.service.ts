@@ -230,6 +230,34 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     // intended correction — distinct checklists, distinct prices — but it does
     // move existing comps out of the Bowman Chrome pool for those years.
     [/bowman-(?:chrome-)?mega(?:-box)?/, "bowman-chrome-mega-box"],
+    // CF-BOWMAN-NSCC-DISTINCT (Drew, 2026-08-31: "isn't it under bowman chrome
+    // set?" — asked of BNR-VGJ, then "ok, do it"). The National Sports
+    // Collectors Convention wrapper-redemption promo says "Bowman Chrome" on
+    // the card, so the question is fair. It is still its own product, by the
+    // same test the Mega Box rule above applies:
+    //
+    //   Numbering does NOT collide — every card is BNR- prefixed, while
+    //   Bowman Chrome base is 1..N and BCP1..BCP250. So unlike Mega Box this
+    //   collapse corrupts no individual card.
+    //
+    //   Prices do. 2018 #BNR-AJ, an Aaron Judge signed National card /3, sold
+    //   at $500 BGS 9 — BELOW his ordinary #100 Gold /50 at $725-$900 PSA 10.
+    //   Convention-exclusive redemption scarcity does not price like flagship
+    //   parallel scarcity, and FMV projects the next sale from a pool's trend.
+    //
+    // The catalog already settled this: 780 rows across 2017-2023 are keyed
+    // bowman-chrome-nscc from baseballcardpedia, INCLUDING
+    // hiq:baseball:2018:bowman-chrome-nscc:bnr-vgj:base:no-auto. They hold
+    // zero comps, because without this rule ingest normalises the key to
+    // bowman-chrome and the two sides can never meet. This connects stranded
+    // rows to their sales rather than minting a new product.
+    //
+    // Ordering is load-bearing for the same reason Mega Box is: this MUST
+    // precede /bowman-chrome/ below or the phrase is swallowed as plain
+    // bowman-chrome. Bowman-scoped so it cannot capture a Topps National
+    // promo, and "national" alone is never enough to match — Panini National
+    // Treasures owns that word further down.
+    [/bowman-(?:chrome-)?(?:nscc|national-sports-collectors-convention|national-convention|national-wrapper-redemption|national-promo)/, "bowman-chrome-nscc"],
     // CF-MATCH-THE-CATALOG (Drew, 2026-08-16: "it shuld fold into Draft since
     // it is draft" ... "they should match to the CATALOG"). This mapped Bowman Draft Chrome onto plain bowman-chrome,
     // which pools a Draft card with the standalone Bowman Chrome product —

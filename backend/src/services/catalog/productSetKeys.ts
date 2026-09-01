@@ -163,6 +163,9 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
   P("bowman-chrome-prospects", { family: "bowman-chrome", parent: "bowman-chrome" }),
   P("bowman-chrome-updates", { family: "bowman-chrome", parent: "bowman-chrome" }),
   P("bowman-chrome-mega-box", { family: "bowman-chrome", parent: "bowman-chrome" }),
+  // The NSCC wrapper-redemption promo — its own product (BNR- numbering, its
+  // own price curve) but still a Bowman Chrome child, like Mega Box above.
+  P("bowman-chrome-nscc", { family: "bowman-chrome", parent: "bowman-chrome" }),
   P("bowman-chrome-draft", { family: "bowman-chrome", parent: "bowman-chrome" }),
   P("bowman-chrome-sapphire", { parent: "bowman-chrome" }),
   P("bowman-chrome-draft-picks-and-prospects", { family: "bowman-chrome", parent: "bowman-draft-picks-and-prospects" }),

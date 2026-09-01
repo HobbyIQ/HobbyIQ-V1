@@ -1,0 +1,27 @@
+{
+  "scrapedAt": "2026-09-01T02:06:06.597Z",
+  "sourceUrl": "https://www.beckett.com/news/2022-bowman-chrome-mega-box-baseball-variations-guide/",
+  "source": "beckett",
+  "sport": "baseball",
+  "year": 2022,
+  "setName": "2022 Bowman Chrome Mega Box",
+  "productKey": "2022-bowman-chrome-mega-box-baseball-variations-guide",
+  "setKey": "bowman-chrome-mega-box",
+  "rowCount": 8,
+  "photoDescriptions": {
+    "BCP-152 Oscar Colas": "wearing glove, sunglasses",
+    "BCP-157 Cristhian Vaquero": "running, red jersey",
+    "BCP-160 Anthony Gutierrez": "batting, blue jersey",
+    "BCP-163 Ryan Reckley": "holding bat",
+    "BCP-211 Kahlil Watson": "wearing sunglasses",
+    "BCP-224 Elly De LA Cruz": "white jersey",
+    "BCP-235 Jordan Lawlar": "throwing out first pitch",
+    "BCP-237 Marcelo Mayer": "standing in front of Green Monster"
+  },
+  "parallelColumnAuthoritative": true,
+  "cmpCodes": {
+    "variation": "958"
+  },
+  "packOdds": "The checklist is on the small side with just 10 cards. However, at 1:198 packs, they're not easy pulls. Each",
+  "note": "Rookie Image Variations. Parallel is '<Photo> Image Variation SP' so the name, 'variation' and 'SP' are all searchable; card details leads with the name. Autos emitted only where --autos named them; a guide states them in prose, not in the gallery."
+}

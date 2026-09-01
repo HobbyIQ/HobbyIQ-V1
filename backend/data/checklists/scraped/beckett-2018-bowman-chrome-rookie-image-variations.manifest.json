@@ -1,0 +1,35 @@
+{
+  "scrapedAt": "2026-09-01T00:55:41.082Z",
+  "sourceUrl": "https://www.beckett.com/news/2018-bowman-chrome-baseball-variations-everything-you-need-to-spot-them-quickly-and-easily/",
+  "source": "beckett",
+  "sport": "baseball",
+  "year": 2018,
+  "setName": "2018 Bowman Chrome",
+  "productKey": "2018-bowman-chrome-baseball-variations-everything-you-need-to-spot-them-quickly-and-easily",
+  "setKey": "bowman-chrome",
+  "rowCount": 28,
+  "photoDescriptions": {
+    "1 Shohei Ohtani": "carrying bag",
+    "8 Rafael Devers": "with bat",
+    "11 Amed Rosario": "hand on waist",
+    "21 Clint Frazier": "wearing shorts",
+    "25 Rhys Hoskins": "wearing cap",
+    "33 Francisco Mejia": "wearing catcher's gear",
+    "35 Nick Williams": "gray jersey, wearing cap",
+    "44 Dominic Smith": "with ball, gray sleeves",
+    "47 Alex Verdugo": "facing forward",
+    "52 Victor Robles": "wearing white shirt",
+    "65 J.P. Crawford": "running",
+    "68 Harrison Bader": "arms raised, white jersey",
+    "72 Jack Flaherty": "batting",
+    "87 Austin Hays": "no helmet",
+    "92 Ozzie Albies": "wearing warm-up shirt"
+  },
+  "parallelColumnAuthoritative": true,
+  "cmpCodes": {
+    "base": "370",
+    "rookie variations": "393"
+  },
+  "packOdds": "These aren't the toughest short prints of the year, but they're not going to pop up in large numbers, either. 2018 Bowman Chrome Rookie Image Variations land 1:133 hobby packs. That's about every elev",
+  "note": "Rookie Image Variations. Parallel is '<Photo> Image Variation SP' so the name, 'variation' and 'SP' are all searchable; card details leads with the name. Autos emitted only where --autos named them; a guide states them in prose, not in the gallery."
+}

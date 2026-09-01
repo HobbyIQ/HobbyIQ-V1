@@ -145,6 +145,12 @@ async function main() {
       sport: manifest.sport,
       year: manifest.year,
       setKey: manifest.setKey || manifest.setName,
+      // The publisher's own product name, so the row's search text and display
+      // name lead with what a person would actually type. deriveCatalogEntry
+      // builds both now (CF-DERIVE-BUILDS-ITS-OWN-SEARCH-FIELDS); without a
+      // setName it still builds them from the setKey, so this improves the
+      // wording rather than deciding whether the row is findable at all.
+      setName: manifest.setName || null,
       cardNumber: row.cardNumber,
       parallel,
       isAuto: isAutoRow,

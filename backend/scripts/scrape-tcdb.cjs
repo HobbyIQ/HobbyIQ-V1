@@ -129,11 +129,23 @@ function extractAnchorRows($, rows, seen) {
       // Card numbers are frequently HYPHENATED, especially on inserts: S-1,
       // R-8, SS-3. An unhyphenated pattern silently drops the entire set —
       // Stackhouse's Scrapbook (all cards S-1..S-8) extracted 0 rows from a
-      // page that had every card in it. Require a digit so the pattern cannot
-      // swallow stray link text.
-      const num = text.replace(/^#/, "").trim();
-      if (!/^[A-Za-z0-9]{1,8}(?:-[A-Za-z0-9]{1,8})?$/.test(num)) return;
-      if (!/\d/.test(num)) return;
+      // page that had every card in it.
+      //
+      // CF-TCDB-INITIALS-NUMBERS (Drew, 2026-08-31): a card number need not
+      // contain a digit. Whole sets are numbered by the player's INITIALS —
+      // 2018 Bowman Chrome NSCC Wrapper Redemption is BNR-AA..BNR-WB, and
+      // #BowmanTrending is "#-VG" where the # is part of the number, not a
+      // decoration. Requiring a digit extracted 0 rows from a page holding
+      // all 50 BNR cards, which is why those checklists were never ingested
+      // and BNR-VGJ had no catalog row. Strip a LEADING number sign only
+      // when something follows it that is not the hyphen — "#12" is card 12,
+      // but "#-VG" is the card number in full.
+      const num = text.replace(/^#(?=[A-Za-z0-9])/, "").trim();
+      if (!/^#?[A-Za-z0-9]{0,8}(?:-[A-Za-z0-9]{1,8})?$/.test(num)) return;
+      if (!/[A-Za-z0-9]/.test(num)) return;
+      // A bare word with no digit and no hyphen is link text ("Base", "More"),
+      // not a card number. Initials numbers always carry the separator.
+      if (!/\d/.test(num) && !num.includes("-")) return;
       flush();
       pendingNum = num;
     } else if (/\/Person\.cfm\//i.test(href) && pendingNum) {

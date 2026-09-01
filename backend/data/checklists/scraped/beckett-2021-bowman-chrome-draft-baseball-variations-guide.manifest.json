@@ -1,0 +1,34 @@
+{
+  "scrapedAt": "2026-09-01T02:06:13.533Z",
+  "sourceUrl": "https://www.beckett.com/news/2021-bowman-chrome-draft-baseball-variations-guide/",
+  "source": "beckett",
+  "sport": "baseball",
+  "year": 2021,
+  "setName": "2021 Bowman Chrome Draft",
+  "productKey": "2021-bowman-chrome-draft-baseball-variations-guide",
+  "setKey": "bowman-chrome-draft",
+  "rowCount": 15,
+  "photoDescriptions": {
+    "BDC-20 Spencer Torkelson": "wearing glove, holding baseballs",
+    "BDC-48 Henry Davis": "batting, black jersey",
+    "BDC-65 Pedro Pineda": "swinging",
+    "BDC-77 Jasson Dominguez": "running",
+    "BDC-84 Benny Montgomery": "running, purple jersey",
+    "BDC-134 Luis Rodriguez": "batting",
+    "BDC-139 Maximo Acosta": "throwing",
+    "BDC-145 Julio Rodriguez": "batting",
+    "BDC-166 Colton Cowser": "with glove, orange jersey",
+    "BDC-171 Yoelqui Cespedes": "holding helmet",
+    "BDC-174 Marcelo Mayer": "fielding",
+    "BDC-182 Blaze Jordan": "with glove, wearing sunglasses",
+    "BDC-185 Liover Peguero": "with glove",
+    "BDC-186 Brady House": "fielding, gray jersey",
+    "BDC-194 Jordan Lawlar": "running, clenched fist"
+  },
+  "parallelColumnAuthoritative": true,
+  "cmpCodes": {
+    "base": "568",
+    "variation": "602"
+  },
+  "note": "Rookie Image Variations. Parallel is '<Photo> Image Variation SP' so the name, 'variation' and 'SP' are all searchable; card details leads with the name. Autos emitted only where --autos named them; a guide states them in prose, not in the gallery."
+}
