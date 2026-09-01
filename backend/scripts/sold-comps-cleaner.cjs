@@ -18,8 +18,11 @@
 // are safe.
 //
 // Cross-source dedup (#3 from Drew's list) is a SEPARATE script
-// (sold-comps-cross-source-dedup.cjs) because it deletes rows
-// instead of updating them.
+// (sold-comps-cross-source-dedup.cjs) because it decides which rows
+// are the SAME SALE, which this normalizer never does. It no longer
+// deletes anything: a duplicate is excluded with flaggedWrong=true
+// plus provenance naming the surviving row, so the mark is auditable
+// and reversible. The pool is the moat -- a dedup never hard-deletes.
 //
 // Env:
 //   COSMOS_CONNECTION_STRING   required
