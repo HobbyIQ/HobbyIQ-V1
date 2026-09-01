@@ -2969,11 +2969,20 @@ function unifiedHoldingWrite(
     estimateLow: null,
     estimateHigh: null,
     estimateConfidence: null,
-    estimateBasis: `unified: window=${u.windowDays}d median=$${u.fmv?.toFixed(0) ?? "?"} marketValue=$${u.marketValue?.toFixed(0) ?? "?"} predicted=$${u.predictedPrice?.toFixed(0) ?? "?"} trend=${u.trendDirection} ${u.trendPctPerWeek?.toFixed(1) ?? "?"}%/wk conf=${u.confidence.toFixed(2)} id=${exact.attempt.label}`,
+    // CF-A-UNION-IS-ONE-CARD (2026-09-01): when the pool-twin union was
+    // refused because the halves named different products, the price stands
+    // but says so — the pool it came from is narrower than the holding's two
+    // identities suggest.
+    estimateBasis: `unified: window=${u.windowDays}d median=$${u.fmv?.toFixed(0) ?? "?"} marketValue=$${u.marketValue?.toFixed(0) ?? "?"} predicted=$${u.predictedPrice?.toFixed(0) ?? "?"} trend=${u.trendDirection} ${u.trendPctPerWeek?.toFixed(1) ?? "?"}%/wk conf=${u.confidence.toFixed(2)} id=${exact.attempt.label}${exact.attempt.unionRefusedReason ? ` — ${exact.attempt.unionRefusedReason}` : ""}`,
     isEstimate: false,
     valuationStatus: "observed",
     pricingSource: "unified-pricing",
-    pricingSourceMeta: { slug: exact.attempt.cardId, method: u.rungLabel, compsUsed: u.totalSampleCount },
+    pricingSourceMeta: {
+      slug: exact.attempt.cardId,
+      method: u.rungLabel,
+      compsUsed: u.totalSampleCount,
+      ...(exact.attempt.unionRefusedReason ? { unionRefused: exact.attempt.unionRefusedReason } : {}),
+    },
     nearestGradedAnchor: undefined,
     verdict: "Observed",
     recommendation: holding.recommendation ?? "Hold",

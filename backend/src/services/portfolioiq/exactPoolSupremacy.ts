@@ -249,6 +249,39 @@ export async function judgeExactPoolSupremacyForHolding(
   return judgeExactPoolSupremacy(candidates, counts);
 }
 
+/**
+ * CF-A-UNION-IS-ONE-CARD (2026-09-01, holdings 9b971b03 RA-JC and ca820b08
+ * Gonzalez). The product a slug names: `sport:year:setKey`, the first three
+ * segments after `hiq:`. Null for anything that is not an hiq slug (a vendor
+ * id names no product and is never compared).
+ *
+ * Two slugs that agree here are the same product and may share a pool — the
+ * print-run suffix, the parallel and the grade are all WITHIN one product, so
+ * a `…:num-499` / bare-stem twin still unions (that is the twin's purpose).
+ * Two slugs that disagree are two cards, and a pool built from both is a
+ * fiction: whichever half the window happens to reach decides the price, so
+ * the projection alternates run to run on the 6h cron.
+ */
+export function productIdentityOf(slug: string | null | undefined): string | null {
+  if (!isHiqSlug(slug)) return null;
+  const seg = slug.trim().split(":");
+  // hiq : sport : year : setKey — anything shorter names no product.
+  return seg.length >= 4 ? `${seg[1]}:${seg[2]}:${seg[3]}` : null;
+}
+
+/**
+ * May these two identities be read as ONE pool? Yes when they name the same
+ * product, and yes when either names no product at all (a vendor id whose
+ * rows carry the slug — the cross-vendor storage the union exists for).
+ * Pure.
+ */
+export function mayUnionIdentities(a: string | null | undefined, b: string | null | undefined): boolean {
+  const pa = productIdentityOf(a);
+  const pb = productIdentityOf(b);
+  if (pa === null || pb === null) return true;
+  return pa === pb;
+}
+
 export interface ExactPoolAttempt {
   /** The id handed to computeUnifiedPrice as `cardId`. */
   cardId: string;
@@ -261,6 +294,11 @@ export interface ExactPoolAttempt {
    *  alone. */
   hobbyiqCardIds?: string[];
   label: "hobbyiqCardId" | "hobbyiqCardId+pool-twin" | "hobbyiqCardId-twin" | "cardId+hobbyiqCardId" | "cardId" | "cardId-twin";
+  /** CF-A-UNION-IS-ONE-CARD: set when a union this attempt would have made
+   *  was refused because the halves name different products — carried onto
+   *  estimateBasis / pricingSourceMeta so the single-sided price is
+   *  auditable rather than silently narrower. */
+  unionRefusedReason?: string;
 }
 
 /**
@@ -335,8 +373,39 @@ export function unifiedIdentityAttempts(h: HoldingIdentityFields, resolution?: C
     if (twin) add({ cardId: twin, hobbyiqCardId: twin, label: "hobbyiqCardId-twin" });
   }
   if (cid && cid !== hiq) {
-    add({ cardId: cid, hobbyiqCardId: hiq, label: hiq ? "cardId+hobbyiqCardId" : "cardId" });
-    if (isHiqSlug(cid)) {
+    // CF-A-UNION-IS-ONE-CARD (2026-09-01). This attempt is the ONE place two
+    // freely-chosen identities meet: readExactPoolRows ORs `c.cardId = @cid`
+    // with `c.hobbyiqCardId = @hiq` in a single query, with no stem check
+    // (poolReadIdsFor guards the twin union above; nothing guarded this one).
+    // Holding 9b971b03 carried cardId …2024:bowman-draft:ra-jc… beside
+    // hobbyiqCardId …2026:topps-chrome:ra-jc…:num-499 (catalogVerified=false):
+    // two products in one pool, and the 6h cron alternated 21.25 / 212.95 /
+    // 20.625 / 213.8 as the window reached one half or the other. When the
+    // halves name different products the union is refused and the holding is
+    // priced from its own slug half alone.
+    const unionOk = !hiq || mayUnionIdentities(cid, hiq);
+    if (unionOk) {
+      add({ cardId: cid, hobbyiqCardId: hiq, label: hiq ? "cardId+hobbyiqCardId" : "cardId" });
+    } else {
+      const reason = `union-refused: cardId ${productIdentityOf(cid)} != hobbyiqCardId ${productIdentityOf(hiq)} — different products, priced single-sided`;
+      console.warn(JSON.stringify({
+        event: "pool_twin_union_refused_cross_product",
+        source: "exactPoolSupremacy.unifiedIdentityAttempts",
+        cardId: cid,
+        hobbyiqCardId: hiq,
+        cardIdProduct: productIdentityOf(cid),
+        hobbyiqCardIdProduct: productIdentityOf(hiq),
+        detail: "the halves of the pool-twin union name different products; the holding is priced from its own slug half only",
+      }));
+      // The refusal is recorded on every attempt formed from the holding's own
+      // slug — the ones it IS priced from — so the narrower pool is auditable
+      // at the write. (The pool-twin attempt reports the resolved catalog row,
+      // which need not equal `hiq`; every attempt so far came from that slug.)
+      for (const a of attempts) {
+        if (a.unionRefusedReason === undefined) a.unionRefusedReason = reason;
+      }
+    }
+    if (unionOk && isHiqSlug(cid)) {
       const twin = twinOf(cid);
       if (twin) add({ cardId: twin, hobbyiqCardId: twin, label: "cardId-twin" });
     }
