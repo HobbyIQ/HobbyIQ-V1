@@ -94,6 +94,22 @@ const BASELINE_FAMILIES = [
   { family: "upper-deck", token: "Upper Deck" },
 ];
 
+// CF-A-THIN-SPECIFIC-CELL-IS-WORSE-THAN-A-COARSE-ONE (2026-09-01). Per-family
+// override of the company-level pair floor, for families that were split out
+// of a generic token and are NOT yet thick enough to outrank what they stopped
+// falling through to. Absent from this map = the caller's floor (5 baseline,
+// 3 sport) applies, which is right for a family with real volume.
+//
+// topps-gold-label: measured 2026-09-01 at 16 PSA pairs / 39 raw-anchored
+// cards across the whole 365d window, p25 1.10 p75 6.12, and NO tier reaching
+// the byTier floor of 8. Until it does, "other" (PSA n=23,778) is the better
+// evidenced answer and the fall-through is the correct behavior, not a gap.
+// bowman-draft needs no entry: it measured 1,575 PSA pairs with byTier cells
+// at PSA 10 (n=850) and PSA 9 (n=612) — thick enough to stand on its own.
+const FAMILY_MIN_PAIRS = {
+  "topps-gold-label": 60,
+};
+
 // Per-sport family sets. Runs against c["group"] = @sport rather than
 // blanket query. Football/Basketball share the Panini + Topps/Bowman
 // Chrome family set (both are Panini-dominant since ~2016). Pokemon has
@@ -436,6 +452,22 @@ async function calibrateFamilySet(families, sport, minSampleSize) {
   for (const [key, arr] of ratios) {
     if (arr.length < minSampleSize) continue;
     const [family, grader] = key.split("::");
+    // CF-A-THIN-SPECIFIC-CELL-IS-WORSE-THAN-A-COARSE-ONE (2026-09-01).
+    // A newly-split family only helps if its own number is better evidenced
+    // than the cell it stops falling through to. topps-gold-label measured 16
+    // PSA pairs across three tiers (8->3, 9->6, 10->7) with p25 1.10 / p75
+    // 6.12 — a 5.6x spread, no tier anywhere near the byTier floor of 8. At
+    // the baseline floor of 5 that ships as a company-level 2.17, and because
+    // no byTier cell survives, every grade reads it x subTierScaling: Aaron
+    // Judge's PSA 9 estimate would go 153.85 -> 70.88 on a card whose own
+    // market is $300. The generic "other" cell (PSA n=23,778) is the honest
+    // answer for a family this thin, and falling through to it is the
+    // designed behavior — so hold specific families to a real floor rather
+    // than letting a 16-pair median outrank a 23,778-pair one.
+    if (arr.length < (FAMILY_MIN_PAIRS[family] ?? 0)) {
+      console.error(`  ${family}::${grader} n=${arr.length} below its family floor ${FAMILY_MIN_PAIRS[family]} — left ABSENT, falls through to "other"`);
+      continue;
+    }
     const med = median(arr);
     const sorted = arr.slice().sort((a, b) => a - b);
     const p25 = sorted[Math.floor(sorted.length * 0.25)];

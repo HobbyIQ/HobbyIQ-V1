@@ -1,0 +1,746 @@
+{
+  "generatedAt": "2026-09-01T17:59:40.231Z",
+  "issue": "four-values R2",
+  "note": "This file IS the scope. relocate-pool-rows-by-list.cjs moves exactly these ids and nothing else.",
+  "rulings": [
+    "CPA-JG belongs to bowman, not bowman-chrome: all 117 2026 CPA-JG catalog rows carry setKey=bowman across every checklist source; zero carry bowman-chrome.",
+    "A row whose title names a different parallel is not a base auto and is excluded, not moved.",
+    "D3 Judge rows are genuinely mis-pooled but have no catalog target; excluded pending a product decision.",
+    "Judge's 2017 Gold Label rows are in the right partition; only hobbyiqCardId is wrong. That is a repoint in place, not a relocate — and it is what makes the real $300 PSA 9 sale visible to the engine."
+  ],
+  "entries": [
+    {
+      "id": "tca-ebay::157956055230",
+      "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "D1",
+      "price": 105,
+      "soldAt": "2026-05-31T23:46:33.000Z",
+      "evidence": "no refractor token and no /499 in \"2026 1st Bowman Chrome - Justin Gonzalez - On Card Auto - #CPA-JG\"; stored parallel=Base; the 2026 checklist puts CPA-JG in bowman (117/117 catalog rows, every source)"
+    },
+    {
+      "id": "tca-ebay::327185211258",
+      "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "D1",
+      "price": 129.99,
+      "soldAt": "2026-05-31T00:56:26.000Z",
+      "evidence": "no refractor token and no /499 in \"2026 Bowman Justin Gonzalez 1st Bowman Chrome On Card Auto #CPA-JG\"; stored parallel=Base; the 2026 checklist puts CPA-JG in bowman (117/117 catalog rows, every source)"
+    },
+    {
+      "id": "tca-ebay::127886906078",
+      "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "D1",
+      "price": 102.58,
+      "soldAt": "2026-06-01T02:00:01.000Z",
+      "evidence": "no refractor token and no /499 in \"2026 Bowman Chrome 1st Justin Gonzalez Auto #CPA-JG On Card Auto Red Sox\"; stored parallel=Base; the 2026 checklist puts CPA-JG in bowman (117/117 catalog rows, every source)"
+    },
+    {
+      "id": "tca-ebay::800049435703",
+      "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "D1",
+      "price": 112.5,
+      "soldAt": "2026-06-01T01:00:01.000Z",
+      "evidence": "no refractor token and no /499 in \"Justin Gonzales- Red Sox: 2026 1st Bowman Chrome Auto #CPA-JG\"; stored parallel=Base; the 2026 checklist puts CPA-JG in bowman (117/117 catalog rows, every source)"
+    },
+    {
+      "id": "tca-ebay::358868509348",
+      "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "D1",
+      "price": 86,
+      "soldAt": "2026-08-08T01:11:46.000Z",
+      "evidence": "no refractor token and no /499 in \"2026 Bowman Chrome Justin Gonzalez 1st Chrome Auto #CPA-JG Red Sox\"; stored parallel=Base; the 2026 checklist puts CPA-JG in bowman (117/117 catalog rows, every source)"
+    },
+    {
+      "id": "tca-ebay::377399589351",
+      "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "D1",
+      "price": 52,
+      "soldAt": "2026-08-12T02:13:28.000Z",
+      "evidence": "no refractor token and no /499 in \"2026 Bowman Justin Gonzales Chrome Auto Autograph 1st Prospect #CPA-JG Red Sox\"; stored parallel=Base; the 2026 checklist puts CPA-JG in bowman (117/117 catalog rows, every source)"
+    },
+    {
+      "id": "tca-ebay::278248218739",
+      "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "D1",
+      "price": 75,
+      "soldAt": "2026-08-12T03:15:00.000Z",
+      "evidence": "no refractor token and no /499 in \"2026 Bowman Chrome Justin Gonzales 1st Auto #CPA-JG Red Sox\"; stored parallel=Base; the 2026 checklist puts CPA-JG in bowman (117/117 catalog rows, every source)"
+    },
+    {
+      "id": "tca-ebay::358817557308",
+      "fromCardId": "hiq:baseball:2026:bowman:cpa-jg:refractor:auto",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "D1",
+      "price": 52.49,
+      "soldAt": "2026-07-23T12:02:46.000Z",
+      "evidence": "no refractor token and no /499 in \"2026 Bowman #CPA-JG Justin Gonzales Chrome Prospect Autographs\"; stored parallel=Base; the 2026 checklist puts CPA-JG in bowman (117/117 catalog rows, every source)"
+    },
+    {
+      "id": "tca-ebay::407132274228",
+      "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "D1",
+      "price": 69.99,
+      "soldAt": "2026-08-14T16:05:37.000Z",
+      "evidence": "no refractor token and no /499 in \"2026 Bowman Chrome Justin Gonzales 1st Bowman On-Card Auto CPA-JG Red Sox\"; stored parallel=Base; the 2026 checklist puts CPA-JG in bowman (117/117 catalog rows, every source)"
+    },
+    {
+      "id": "tca-ebay::398258087014",
+      "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "D1",
+      "price": 70,
+      "soldAt": "2026-08-14T01:22:11.000Z",
+      "evidence": "no refractor token and no /499 in \"2026 Bowman Chrome - Justin Gonzales Auto First Bowman #CPA-JG (AU)\"; stored parallel=Base; the 2026 checklist puts CPA-JG in bowman (117/117 catalog rows, every source)"
+    },
+    {
+      "id": "tca-ebay::377379955045",
+      "fromCardId": "hiq:baseball:2026:bowman:cpa-jg:refractor:auto",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "D1",
+      "price": 61,
+      "soldAt": "2026-08-04T00:07:03.000Z",
+      "evidence": "no refractor token and no /499 in \"2026 Bowman Justin Gonzales Chrome Auto Autograph 1st Prospect #CPA-JG Red Sox\"; stored parallel=Base; the 2026 checklist puts CPA-JG in bowman (117/117 catalog rows, every source)"
+    },
+    {
+      "id": "tca-ebay::127980234325",
+      "fromCardId": "hiq:baseball:2026:bowman:cpa-jg:refractor:auto",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "D1",
+      "price": 44.78,
+      "soldAt": "2026-07-23T01:30:00.000Z",
+      "evidence": "no refractor token and no /499 in \"2026 Bowman Justin Gonzales Chrome Auto Autograph 1st Prospect #CPA-JG Red Sox\"; stored parallel=Base; the 2026 checklist puts CPA-JG in bowman (117/117 catalog rows, every source)"
+    },
+    {
+      "id": "tca-ebay::127980234254",
+      "fromCardId": "hiq:baseball:2026:bowman:cpa-jg:refractor:auto",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "D1",
+      "price": 48,
+      "soldAt": "2026-07-23T01:12:00.000Z",
+      "evidence": "no refractor token and no /499 in \"2026 Bowman Justin Gonzales Chrome Auto Autograph 1st Prospect #CPA-JG Red Sox\"; stored parallel=Base; the 2026 checklist puts CPA-JG in bowman (117/117 catalog rows, every source)"
+    },
+    {
+      "id": "tca-ebay::377350186355",
+      "fromCardId": "hiq:baseball:2026:bowman:cpa-jg:refractor:auto",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "D1",
+      "price": 44,
+      "soldAt": "2026-07-23T01:24:00.000Z",
+      "evidence": "no refractor token and no /499 in \"2026 Bowman Justin Gonzales Chrome Auto Autograph 1st Prospect #CPA-JG Red Sox\"; stored parallel=Base; the 2026 checklist puts CPA-JG in bowman (117/117 catalog rows, every source)"
+    },
+    {
+      "id": "tca-ebay::377350380533",
+      "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "D1",
+      "price": 95,
+      "soldAt": "2026-08-15T22:30:22.000Z",
+      "evidence": "no refractor token and no /499 in \"2026 Topps Bowman Chrome Justin Gonzalez Bowman 1st Auto CPA-JG Red Sox\"; stored parallel=Base; the 2026 checklist puts CPA-JG in bowman (117/117 catalog rows, every source)"
+    },
+    {
+      "id": "tca-ebay::318365297385",
+      "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "D1",
+      "price": 69.99,
+      "soldAt": "2026-08-15T10:05:30.000Z",
+      "evidence": "no refractor token and no /499 in \"2026 Bowman Baseball Justin Gonzales CPA-JG Chrome Prospects Base Auto\"; stored parallel=Base; the 2026 checklist puts CPA-JG in bowman (117/117 catalog rows, every source)"
+    },
+    {
+      "id": "tca-ebay::168597310619",
+      "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "D1",
+      "price": 61,
+      "soldAt": "2026-08-15T04:43:33.000Z",
+      "evidence": "no refractor token and no /499 in \"2026 Bowman - Chrome Prospect Autographs Justin Gonzales #CPA-JG (AU, RC)\"; stored parallel=Base; the 2026 checklist puts CPA-JG in bowman (117/117 catalog rows, every source)"
+    },
+    {
+      "id": "tca-ebay::307042185705",
+      "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "D1",
+      "price": 78,
+      "soldAt": "2026-08-15T01:54:22.000Z",
+      "evidence": "no refractor token and no /499 in \"2026 Topps Bowman Chrome Justin Gonzalez Bowman 1st Auto CPA-JG Red Sox\"; stored parallel=Base; the 2026 checklist puts CPA-JG in bowman (117/117 catalog rows, every source)"
+    },
+    {
+      "id": "tca-ebay::298485938939",
+      "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "D1",
+      "price": 64.99,
+      "soldAt": "2026-08-16T21:29:37.000Z",
+      "evidence": "no refractor token and no /499 in \"Topps 2026 Bowman Chrome 1st Bowman Justin Gonzales Auto CPA-JG Red Sox\"; stored parallel=Base; the 2026 checklist puts CPA-JG in bowman (117/117 catalog rows, every source)"
+    },
+    {
+      "id": "tca-ebay::237004028205",
+      "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "D1",
+      "price": 63,
+      "soldAt": "2026-08-16T03:37:06.000Z",
+      "evidence": "no refractor token and no /499 in \"Topps 2026 Bowman Chrome Prospect Autographs Justin Gonzales Auto #CPA-JG RC\"; stored parallel=Base; the 2026 checklist puts CPA-JG in bowman (117/117 catalog rows, every source)"
+    },
+    {
+      "id": "tca-ebay::398292674647",
+      "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "D1",
+      "price": 75,
+      "soldAt": "2026-08-17T21:43:50.000Z",
+      "evidence": "no refractor token and no /499 in \"2026 Bowman - Chrome Prospect Autographs Justin Gonzales #CPA-JG (AU, RC)\"; stored parallel=Base; the 2026 checklist puts CPA-JG in bowman (117/117 catalog rows, every source)"
+    },
+    {
+      "id": "tca-ebay::377421531136",
+      "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "D1",
+      "price": 88,
+      "soldAt": "2026-08-17T06:24:10.000Z",
+      "evidence": "no refractor token and no /499 in \"2026 Topps Bowman Chrome Justin Gonzalez Bowman 1st Auto CPA-JG Red Sox\"; stored parallel=Base; the 2026 checklist puts CPA-JG in bowman (117/117 catalog rows, every source)"
+    },
+    {
+      "id": "tca-ebay::377226437806",
+      "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "D1",
+      "price": 100,
+      "soldAt": "2026-08-17T22:44:11.000Z",
+      "evidence": "no refractor token and no /499 in \"2026 Topps Bowman Chrome Justin Gonzalez Bowman 1st Base Auto CPA-JG Red Sox\"; stored parallel=Base; the 2026 checklist puts CPA-JG in bowman (117/117 catalog rows, every source)"
+    },
+    {
+      "id": "tca-ebay::366477330849",
+      "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "D1",
+      "price": 74.99,
+      "soldAt": "2026-08-17T04:14:45.000Z",
+      "evidence": "no refractor token and no /499 in \"2026 Bowman Chrome Justin Gonzales 1st Bowman Auto Prospect #CPA-JG\"; stored parallel=Base; the 2026 checklist puts CPA-JG in bowman (117/117 catalog rows, every source)"
+    },
+    {
+      "id": "tca-ebay::377342729043",
+      "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "D1",
+      "price": 65,
+      "soldAt": "2026-08-17T01:55:53.000Z",
+      "evidence": "no refractor token and no /499 in \"2026 Bowman Baseball Justin Gonzales #CPA-JG Chrome Prospect Autograph\"; stored parallel=Base; the 2026 checklist puts CPA-JG in bowman (117/117 catalog rows, every source)"
+    },
+    {
+      "id": "tca-ebay::800483595630",
+      "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "D1",
+      "price": 70,
+      "soldAt": "2026-08-18T23:35:49.000Z",
+      "evidence": "no refractor token and no /499 in \"2026 Topps Bowman Chrome Justin Gonzalez Bowman 1st Base Auto CPA-JG Red Sox\"; stored parallel=Base; the 2026 checklist puts CPA-JG in bowman (117/117 catalog rows, every source)"
+    },
+    {
+      "id": "tca-ebay::206313889720",
+      "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "D1",
+      "price": 79.99,
+      "soldAt": "2026-08-18T16:12:39.000Z",
+      "evidence": "no refractor token and no /499 in \"2026 JUSTIN GONZALES BOWMAN CHROME PROSPECT AUTO #CPA-JG (RED SOX)\"; stored parallel=Base; the 2026 checklist puts CPA-JG in bowman (117/117 catalog rows, every source)"
+    },
+    {
+      "id": "tca-ebay::336747082950",
+      "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "D1",
+      "price": 74.99,
+      "soldAt": "2026-08-18T13:10:12.000Z",
+      "evidence": "no refractor token and no /499 in \"Justin Gonzales 2026 Bowman Chrome #CPA-JG 1st Prospect Auto\"; stored parallel=Base; the 2026 checklist puts CPA-JG in bowman (117/117 catalog rows, every source)"
+    },
+    {
+      "id": "tca-ebay::117225928793",
+      "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "D1",
+      "price": 100,
+      "soldAt": "2026-08-18T01:28:15.000Z",
+      "evidence": "no refractor token and no /499 in \"Justin Gonzales- Red Sox: 2026 1st Bowman Chrome Auto #CPA-JG\"; stored parallel=Base; the 2026 checklist puts CPA-JG in bowman (117/117 catalog rows, every source)"
+    },
+    {
+      "id": "tca-ebay::366515936637",
+      "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "D1",
+      "price": 72,
+      "soldAt": "2026-08-18T01:26:46.000Z",
+      "evidence": "no refractor token and no /499 in \"2026 Bowman Justin Gonzales Chrome Prospect Autog  #CPA-JG - Boston Red Sox\"; stored parallel=Base; the 2026 checklist puts CPA-JG in bowman (117/117 catalog rows, every source)"
+    },
+    {
+      "id": "tca-ebay::800234613542",
+      "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "D1",
+      "price": 49.99,
+      "soldAt": "2026-08-19T22:17:37.000Z",
+      "evidence": "no refractor token and no /499 in \"2026 Topps Bowman Chrome Justin Gonzalez Bowman 1st Base Auto CPA-JG Red Sox\"; stored parallel=Base; the 2026 checklist puts CPA-JG in bowman (117/117 catalog rows, every source)"
+    },
+    {
+      "id": "tca-ebay::298601490906",
+      "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "D1",
+      "price": 75,
+      "soldAt": "2026-08-19T19:51:14.000Z",
+      "evidence": "no refractor token and no /499 in \"2026 Bowman - Chrome Prospect Autographs Justin Gonzales #CPA-JG (AU, RC)\"; stored parallel=Base; the 2026 checklist puts CPA-JG in bowman (117/117 catalog rows, every source)"
+    },
+    {
+      "id": "tca-ebay::128031498429",
+      "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "D1",
+      "price": 85,
+      "soldAt": "2026-08-19T14:58:52.000Z",
+      "evidence": "no refractor token and no /499 in \"Topps 2026 Bowman Chrome Justin Gonzales 1st Bowman Auto #CPA-JG Red Sox\"; stored parallel=Base; the 2026 checklist puts CPA-JG in bowman (117/117 catalog rows, every source)"
+    },
+    {
+      "id": "tca-ebay::278293231107",
+      "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "D1",
+      "price": 79.95,
+      "soldAt": "2026-08-19T12:59:24.000Z",
+      "evidence": "no refractor token and no /499 in \"2026 Bowman Chrome Justin Gonzalez Bowman 1st Auto Autograph #CPA-JG🔥⚾️🔥🔥\"; stored parallel=Base; the 2026 checklist puts CPA-JG in bowman (117/117 catalog rows, every source)"
+    },
+    {
+      "id": "tca-ebay::267683051031",
+      "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "D1",
+      "price": 59,
+      "soldAt": "2026-08-19T12:57:58.000Z",
+      "evidence": "no refractor token and no /499 in \"Justin Gonzales Bowman 1st Chrome Auto 2026 CPA-JG\"; stored parallel=Base; the 2026 checklist puts CPA-JG in bowman (117/117 catalog rows, every source)"
+    },
+    {
+      "id": "tca-ebay::820019089627",
+      "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "D1",
+      "price": 69,
+      "soldAt": "2026-08-19T00:37:59.000Z",
+      "evidence": "no refractor token and no /499 in \"2026 Bowman Chrome - Justin Gonzales 1st - AUTO - Red Sox Autograph #CPA-JG\"; stored parallel=Base; the 2026 checklist puts CPA-JG in bowman (117/117 catalog rows, every source)"
+    },
+    {
+      "id": "tca-ebay::198456198720",
+      "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "D1",
+      "price": 71.99,
+      "soldAt": "2026-08-20T00:10:24.000Z",
+      "evidence": "no refractor token and no /499 in \"2026 1st Bowman Chrome Justin Gonzales Base Prospect Auto Autograph RC SP RedSox\"; stored parallel=Base; the 2026 checklist puts CPA-JG in bowman (117/117 catalog rows, every source)"
+    },
+    {
+      "id": "tca-ebay::298580494158",
+      "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "D1",
+      "price": 113.5,
+      "soldAt": "2026-08-20T01:37:00.000Z",
+      "evidence": "no refractor token and no /499 in \"2026 BOWMAN CHROME PROSPECT AUTOS #CPA-JG JUSTIN GONZALES PSA 8\"; stored parallel=Base; the 2026 checklist puts CPA-JG in bowman (117/117 catalog rows, every source)"
+    },
+    {
+      "id": "tca-ebay::406954337698",
+      "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "D1",
+      "price": 75,
+      "soldAt": "2026-08-20T18:50:22.000Z",
+      "evidence": "no refractor token and no /499 in \"2026 Bowman Chrome JUSTIN GONZALES 1st Auto  Red Sox #CPA-JG Top Prospect 🔥\"; stored parallel=Base; the 2026 checklist puts CPA-JG in bowman (117/117 catalog rows, every source)"
+    },
+    {
+      "id": "tca-ebay::EBAY-v1|406954337698|0",
+      "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "D1",
+      "price": 123.49,
+      "soldAt": "2026-08-20T18:50:22.000Z",
+      "evidence": "no refractor token and no /499 in \"2026 Bowman Chrome JUSTIN GONZALES 1st Auto  Red Sox #CPA-JG Top Prospect 🔥\"; stored parallel=Base; the 2026 checklist puts CPA-JG in bowman (117/117 catalog rows, every source)"
+    },
+    {
+      "id": "tca-ebay::128026719625",
+      "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "D1",
+      "price": 80.13,
+      "soldAt": "2026-08-20T00:37:33.000Z",
+      "evidence": "no refractor token and no /499 in \"2026 Bowman Justin Gonzales Chrome Auto Autograph 1st Prospect #CPA-JG Red Sox\"; stored parallel=Base; the 2026 checklist puts CPA-JG in bowman (117/117 catalog rows, every source)"
+    },
+    {
+      "id": "tca-ebay::117359901103",
+      "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "D1",
+      "price": 104,
+      "soldAt": "2026-08-21T23:12:58.000Z",
+      "evidence": "no refractor token and no /499 in \"2026 Bowman Chrome Justin Gonzalez 1st Chrome Auto #CPA-JG Red Sox\"; stored parallel=Base; the 2026 checklist puts CPA-JG in bowman (117/117 catalog rows, every source)"
+    },
+    {
+      "id": "tca-ebay::EBAY-v1|800023135124|0",
+      "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "D1",
+      "price": 137.62,
+      "soldAt": "2026-08-21T06:25:43.000Z",
+      "evidence": "no refractor token and no /499 in \"2026 Bowman Chrome Justin Gonzales 1st Bowman auto CPA-JG Boston Red Sox\"; stored parallel=Base; the 2026 checklist puts CPA-JG in bowman (117/117 catalog rows, every source)"
+    },
+    {
+      "id": "tca-ebay::800023135124",
+      "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "D1",
+      "price": 89,
+      "soldAt": "2026-08-21T06:25:43.000Z",
+      "evidence": "no refractor token and no /499 in \"2026 Bowman Chrome Justin Gonzales 1st Bowman auto CPA-JG Boston Red Sox\"; stored parallel=Base; the 2026 checklist puts CPA-JG in bowman (117/117 catalog rows, every source)"
+    },
+    {
+      "id": "tca-ebay::EBAY-v1|327222961867|0",
+      "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "D1",
+      "price": 131.43,
+      "soldAt": "2026-08-21T06:25:36.000Z",
+      "evidence": "no refractor token and no /499 in \"2026 Bowman Chrome Justin Gonzales #CPA-JG 1st Bowman Auto Red Sox\"; stored parallel=Base; the 2026 checklist puts CPA-JG in bowman (117/117 catalog rows, every source)"
+    },
+    {
+      "id": "tca-ebay::318520720087",
+      "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "D1",
+      "price": 80,
+      "soldAt": "2026-08-21T06:25:38.000Z",
+      "evidence": "no refractor token and no /499 in \"2026 Bowman Chrome Justin Gonzales 1st Bowman On Card Auto (RC) Boston Red Sox\"; stored parallel=Base; the 2026 checklist puts CPA-JG in bowman (117/117 catalog rows, every source)"
+    },
+    {
+      "id": "tca-ebay::137643809233",
+      "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "D1",
+      "price": 90,
+      "soldAt": "2026-08-21T06:25:47.000Z",
+      "evidence": "no refractor token and no /499 in \"Topps 2026 Bowman Justin Gonzales Red Sox 1st Bowman Chrome Auto #CPA-JG\"; stored parallel=Base; the 2026 checklist puts CPA-JG in bowman (117/117 catalog rows, every source)"
+    },
+    {
+      "id": "tca-ebay::178230804128",
+      "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "D1",
+      "price": 75,
+      "soldAt": "2026-08-21T01:33:28.000Z",
+      "evidence": "no refractor token and no /499 in \"2026 Bowman 1st Justin Gonzales ON CARD  Autograph #CPA-JG Red Sox\"; stored parallel=Base; the 2026 checklist puts CPA-JG in bowman (117/117 catalog rows, every source)"
+    },
+    {
+      "id": "tca-ebay::188789758898",
+      "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "D1",
+      "price": 85,
+      "soldAt": "2026-08-21T00:11:09.000Z",
+      "evidence": "no refractor token and no /499 in \"2026 Bowman Chrome Justin Gonzales 1st Auto #CPA-JG Red Sox\"; stored parallel=Base; the 2026 checklist puts CPA-JG in bowman (117/117 catalog rows, every source)"
+    },
+    {
+      "id": "tca-ebay::198548313849",
+      "fromCardId": "hiq:baseball:2024:bowman-draft:cpa-jc:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2024:bowman-draft:cpa-jc:base:auto",
+      "section": "D4",
+      "price": 466,
+      "soldAt": "2026-08-12T02:54:41.000Z",
+      "evidence": "no refractor token and no /499 in \"2024 Bowman Draft Jac Caglianone Chrome Auto 1st Prospect #CPA-JC Royals PSA 10\"; stored parallel=Base"
+    },
+    {
+      "id": "tca-ebay::377210162500",
+      "fromCardId": "hiq:baseball:2024:bowman-draft:cpa-jc:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2024:bowman-draft:cpa-jc:base:auto",
+      "section": "D4",
+      "price": 176.5,
+      "soldAt": "2026-05-31T01:13:20.000Z",
+      "evidence": "no refractor token and no /499 in \"2024 Bowman Draft Jac Caglianone Chrome Auto 1st Prospect #CPA-JC Royals PSA 9\"; stored parallel=Base"
+    },
+    {
+      "id": "tca-ebay::287368328069",
+      "fromCardId": "hiq:baseball:2024:bowman-draft:cpa-jc:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2024:bowman-draft:cpa-jc:base:auto",
+      "section": "D4",
+      "price": 399.99,
+      "soldAt": "2026-06-02T00:07:38.000Z",
+      "evidence": "no refractor token and no /499 in \"2024 Bowman Draft JAC CAGLIANONE 1st Bowman Chrome AUTO #CPA-JC PSA 10\"; stored parallel=Base"
+    },
+    {
+      "id": "tca-ebay::137578866134",
+      "fromCardId": "hiq:baseball:2024:bowman-draft:cpa-jc:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2024:bowman-draft:cpa-jc:base:auto",
+      "section": "D4",
+      "price": 225,
+      "soldAt": "2026-08-12T16:52:00.000Z",
+      "evidence": "no refractor token and no /499 in \"2024 Bowman Draft - Chrome Prospect Autographs Jac Caglianone #CPA-JC (AU, RC)\"; stored parallel=Base"
+    },
+    {
+      "id": "tca-ebay::127999016039",
+      "fromCardId": "hiq:baseball:2024:bowman-draft:cpa-jc:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2024:bowman-draft:cpa-jc:base:auto",
+      "section": "D4",
+      "price": 209.27,
+      "soldAt": "2026-08-03T00:52:30.000Z",
+      "evidence": "no refractor token and no /499 in \"2024 Bowman Draft Jac Caglianone Chrome Auto 1st Prospect #CPA-JC Royals\"; stored parallel=Base"
+    },
+    {
+      "id": "tca-ebay::377363869865",
+      "fromCardId": "hiq:baseball:2024:bowman-draft:cpa-jc:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2024:bowman-draft:cpa-jc:base:auto",
+      "section": "D4",
+      "price": 209,
+      "soldAt": "2026-08-03T00:28:12.000Z",
+      "evidence": "no refractor token and no /499 in \"2024 Bowman Draft Jac Caglianone Chrome Auto 1st Prospect #CPA-JC Royals\"; stored parallel=Base"
+    },
+    {
+      "id": "tca-ebay::407105280369",
+      "fromCardId": "hiq:baseball:2024:bowman-draft:cpa-jc:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2024:bowman-draft:cpa-jc:base:auto",
+      "section": "D4",
+      "price": 550,
+      "soldAt": "2026-08-15T12:24:33.000Z",
+      "evidence": "no refractor token and no /499 in \"2024 Bowman Draft Jac Caglianone Chrome Auto 1st Prospect #CPA-JC Royals PSA 10\"; stored parallel=Base"
+    },
+    {
+      "id": "tca-ebay::168547617747",
+      "fromCardId": "hiq:baseball:2024:bowman-draft:cpa-jc:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2024:bowman-draft:cpa-jc:base:auto",
+      "section": "D4",
+      "price": 100,
+      "soldAt": "2026-08-16T16:01:56.000Z",
+      "evidence": "no refractor token and no /499 in \"Topps 2024 Bowman Draft Chrome Prospect Autographs Jac Caglianone #CPA-JC\"; stored parallel=Base"
+    },
+    {
+      "id": "tca-ebay::128028551010",
+      "fromCardId": "hiq:baseball:2024:bowman-draft:cpa-jc:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2024:bowman-draft:cpa-jc:base:auto",
+      "section": "D4",
+      "price": 475,
+      "soldAt": "2026-08-18T00:49:28.000Z",
+      "evidence": "no refractor token and no /499 in \"2024 Bowman Draft - Chrome Prospect Autographs Jac Caglianone #CPA-JC (AU, RC)\"; stored parallel=Base"
+    },
+    {
+      "id": "tca-ebay::287527759349",
+      "fromCardId": "hiq:baseball:2024:bowman-draft:cpa-jc:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2024:bowman-draft:cpa-jc:base:auto",
+      "section": "D4",
+      "price": 279.99,
+      "soldAt": "2026-08-19T18:25:33.000Z",
+      "evidence": "no refractor token and no /499 in \"2024 Bowman Draft Jac Caglianone #CPA-JC 1st Bowman Chrome Auto PSA 9 MINT\"; stored parallel=Base"
+    },
+    {
+      "id": "tca-ebay::137447533310",
+      "fromCardId": "hiq:baseball:2024:bowman-draft:cpa-jc:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2024:bowman-draft:cpa-jc:base:auto",
+      "section": "D4",
+      "price": 715,
+      "soldAt": "2026-08-19T16:25:27.000Z",
+      "evidence": "no refractor token and no /499 in \"JAC CAGLIANONE 2024 Bowman Draft Chrome Prospect 1st Autographs #CPA-JC | PSA 10\"; stored parallel=Base"
+    },
+    {
+      "id": "tca-ebay::377433653788",
+      "fromCardId": "hiq:baseball:2024:bowman-draft:cpa-jc:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2024:bowman-draft:cpa-jc:base:auto",
+      "section": "D4",
+      "price": 225,
+      "soldAt": "2026-08-20T00:55:08.000Z",
+      "evidence": "no refractor token and no /499 in \"2024 Bowman Draft - Chrome Prospect Autographs Jac Caglianone #CPA-JC (AU, RC)\"; stored parallel=Base"
+    },
+    {
+      "id": "tca-ebay::407161058857",
+      "fromCardId": "hiq:baseball:2024:bowman-draft:cpa-jc:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2024:bowman-draft:cpa-jc:base:auto",
+      "section": "D4",
+      "price": 445,
+      "soldAt": "2026-08-21T17:17:17.000Z",
+      "evidence": "no refractor token and no /499 in \"Topps 2024 Bowman Draft Jac Caglianone Royals Chrome Auto #CPA-JC RC PSA 10\"; stored parallel=Base"
+    },
+    {
+      "id": "tca-ebay::257687179855",
+      "fromCardId": "hiq:baseball:2024:bowman-draft:cpa-jc:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2024:bowman-draft:cpa-jc:base:auto",
+      "section": "D4",
+      "price": 207.5,
+      "soldAt": "2026-08-21T00:57:55.000Z",
+      "evidence": "no refractor token and no /499 in \"2024 Bowman Draft Jac Caglianone Chrome Auto 1st Prospect #CPA-JC Royals\"; stored parallel=Base"
+    },
+    {
+      "id": "tca-ebay::168615850062",
+      "fromCardId": "hiq:baseball:2024:bowman-draft:cpa-jc:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2024:bowman-draft:cpa-jc:base:auto",
+      "section": "D4",
+      "price": 425,
+      "soldAt": "2026-08-22T14:34:28.000Z",
+      "evidence": "no refractor token and no /499 in \"2024 Bowman Draft - Chrome Prospect Autographs Jac Caglianone #CPA-JC (AU, RC)\"; stored parallel=Base"
+    },
+    {
+      "id": "tca-ebay::EBAY-v1|168615850062|0",
+      "fromCardId": "hiq:baseball:2024:bowman-draft:cpa-jc:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2024:bowman-draft:cpa-jc:base:auto",
+      "section": "D4",
+      "price": 592.66,
+      "soldAt": "2026-08-22T14:34:28.000Z",
+      "evidence": "no refractor token and no /499 in \"2024 Bowman Draft - Chrome Prospect Autographs Jac Caglianone #CPA-JC (AU, RC)\"; stored parallel=Base"
+    },
+    {
+      "id": "tca-ebay::EBAY-v1|198588090221|0",
+      "fromCardId": "hiq:baseball:2024:bowman-draft:cpa-jc:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2024:bowman-draft:cpa-jc:base:auto",
+      "section": "D4",
+      "price": 765.44,
+      "soldAt": "2026-08-23T23:08:39.000Z",
+      "evidence": "no refractor token and no /499 in \"2024 Bowman Draft Jac Caglianone Chrome Auto 1st Prospect #CPA-JC Royals PSA 10\"; stored parallel=Base"
+    },
+    {
+      "id": "tca-ebay::198588090221",
+      "fromCardId": "hiq:baseball:2024:bowman-draft:cpa-jc:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2024:bowman-draft:cpa-jc:base:auto",
+      "section": "D4",
+      "price": 499,
+      "soldAt": "2026-08-23T23:08:39.000Z",
+      "evidence": "no refractor token and no /499 in \"2024 Bowman Draft Jac Caglianone Chrome Auto 1st Prospect #CPA-JC Royals PSA 10\"; stored parallel=Base"
+    },
+    {
+      "id": "tca-ebay::800530644540",
+      "fromCardId": "hiq:baseball:2024:bowman-draft:cpa-jc:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2024:bowman-draft:cpa-jc:base:auto",
+      "section": "D4",
+      "price": 452,
+      "soldAt": "2026-08-23T20:50:08.000Z",
+      "evidence": "no refractor token and no /499 in \"PSA 10 2024 BOWMAN DRAFT CHROME PROSPECT AUTO JAC CAGLIANONE\"; stored parallel=Base"
+    },
+    {
+      "id": "tca-ebay::EBAY-v1|307141033366|0",
+      "fromCardId": "hiq:baseball:2024:bowman-draft:cpa-jc:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2024:bowman-draft:cpa-jc:base:auto",
+      "section": "D4",
+      "price": 475,
+      "soldAt": "2026-08-28T17:23:17.000Z",
+      "evidence": "no refractor token and no /499 in \"2024 Bowman Draft - Chrome Prospect Autographs Jac Caglianone #CPA-JC (AU, RC)\"; stored parallel=Base"
+    },
+    {
+      "id": "hiq:baseball:2017:topps-gold-label:86:class-1-blue:no-auto::227365525893",
+      "fromCardId": "hiq:baseball:2017:topps-gold-label:86:class-1-blue:no-auto",
+      "toCardId": "hiq:baseball:2017:topps-gold-label:86:class-1-blue:no-auto",
+      "repointHobbyiqCardId": "hiq:baseball:2017:topps-gold-label:86:class-1-blue:no-auto",
+      "section": "D3-JUDGE",
+      "price": 100,
+      "soldAt": "2026-06-01T19:13:21.000Z",
+      "evidence": "row is in the right partition (cardId=hiq:baseball:2017:topps-gold-label:86:class-1-blue:no-auto) but hobbyiqCardId said \"hiq:baseball:2017:topps:86:class-1-blue:no-auto\" — the setKey lost \"-gold-label\". The engine reads hobbyiqCardId, so this Gold Label pool read as empty. Title: \"Aaron Judge 2017 Topps Gold Label CLASS 1  #86 Yankees Rookie Card RC\"; grade=raw "
+    },
+    {
+      "id": "hiq:baseball:2017:topps-gold-label:86:class-1-blue:no-auto::227368048750",
+      "fromCardId": "hiq:baseball:2017:topps-gold-label:86:class-1-blue:no-auto",
+      "toCardId": "hiq:baseball:2017:topps-gold-label:86:class-1-blue:no-auto",
+      "repointHobbyiqCardId": "hiq:baseball:2017:topps-gold-label:86:class-1-blue:no-auto",
+      "section": "D3-JUDGE",
+      "price": 100,
+      "soldAt": "2026-06-02T03:46:52.000Z",
+      "evidence": "row is in the right partition (cardId=hiq:baseball:2017:topps-gold-label:86:class-1-blue:no-auto) but hobbyiqCardId said \"hiq:baseball:2017:topps:86:class-1-blue:no-auto\" — the setKey lost \"-gold-label\". The engine reads hobbyiqCardId, so this Gold Label pool read as empty. Title: \"Aaron Judge 2017 Topps Gold Label CLASS 1  #86 Yankees Rookie Card RC\"; grade=raw "
+    },
+    {
+      "id": "hiq:baseball:2017:topps-gold-label:86:class-1-blue:no-auto::206430607378",
+      "fromCardId": "hiq:baseball:2017:topps-gold-label:86:class-1-blue:no-auto",
+      "toCardId": "hiq:baseball:2017:topps-gold-label:86:class-1-blue:no-auto",
+      "repointHobbyiqCardId": "hiq:baseball:2017:topps-gold-label:86:class-1-blue:no-auto",
+      "section": "D3-JUDGE",
+      "price": 80,
+      "soldAt": "2026-07-22T15:57:16.000Z",
+      "evidence": "row is in the right partition (cardId=hiq:baseball:2017:topps-gold-label:86:class-1-blue:no-auto) but hobbyiqCardId said \"hiq:baseball:2017:topps:86:class-1-blue:no-auto\" — the setKey lost \"-gold-label\". The engine reads hobbyiqCardId, so this Gold Label pool read as empty. Title: \"2017 AARON JUDGE TOPPS GOLD LABEL RC #86\"; grade=raw "
+    },
+    {
+      "id": "hiq:baseball:2017:topps-gold-label:86:class-1-blue:no-auto::389789382980",
+      "fromCardId": "hiq:baseball:2017:topps-gold-label:86:class-1-blue:no-auto",
+      "toCardId": "hiq:baseball:2017:topps-gold-label:86:class-1-blue:no-auto",
+      "repointHobbyiqCardId": "hiq:baseball:2017:topps-gold-label:86:class-1-blue:no-auto",
+      "section": "D3-JUDGE",
+      "price": 105,
+      "soldAt": "2026-08-12T22:41:00.000Z",
+      "evidence": "row is in the right partition (cardId=hiq:baseball:2017:topps-gold-label:86:class-1-blue:no-auto) but hobbyiqCardId said \"hiq:baseball:2017:topps:86:class-1-blue:no-auto\" — the setKey lost \"-gold-label\". The engine reads hobbyiqCardId, so this Gold Label pool read as empty. Title: \"2017 AARON JUDGE ROOKIE MINT Topps Gold Label - Class 1 #86 RC MLB Yankees NM\"; grade=PSA 1"
+    },
+    {
+      "id": "ebay-user-purchase::168606169718-10084051520414",
+      "fromCardId": "hiq:baseball:2017:topps-gold-label:86:class-1-blue:no-auto",
+      "toCardId": "hiq:baseball:2017:topps-gold-label:86:class-1-blue:no-auto",
+      "repointHobbyiqCardId": "hiq:baseball:2017:topps-gold-label:86:class-1-blue:no-auto",
+      "section": "D3-JUDGE",
+      "price": 300,
+      "soldAt": "2026-08-12T13:40:14.521Z",
+      "evidence": "row is in the right partition (cardId=hiq:baseball:2017:topps-gold-label:86:class-1-blue:no-auto) but hobbyiqCardId said \"hiq:baseball:2017:topps:86:class-1-blue:no-auto\" — the setKey lost \"-gold-label\". The engine reads hobbyiqCardId, so this Gold Label pool read as empty. Title: \"Topps 2017 Gold Label Aaron Judge #86 Class 1 Blue /150 RC PSA 9\"; grade=PSA 9"
+    }
+  ],
+  "excluded": [
+    {
+      "id": "tca-ebay::128013251252",
+      "section": "D1",
+      "reason": "title names a different parallel (Mini-Diamond) — the claim 'base auto' is not supported",
+      "title": "2026 Bowman - Chrome Prospect Autographs Justin Gonzales #CPA-JG Mini-Diamond..."
+    },
+    {
+      "id": "tca-ebay::227294259172",
+      "section": "D3",
+      "reason": "true product (Throwback Thursday / Topps Fire / Series One) has no card-level catalog row to land on — only a product-structure: stub. No target, no move.",
+      "title": "2017 TOPPS TBT FENCE BUSTERS #86 AARON JUDGE ROOKIE RC BGS 9.5"
+    },
+    {
+      "id": "tca-ebay::178368445468",
+      "section": "D3",
+      "reason": "true product (Throwback Thursday / Topps Fire / Series One) has no card-level catalog row to land on — only a product-structure: stub. No target, no move.",
+      "title": "2017 Topps Fire Blue Chip #86 ~ Andre Dawson  Montreal Expos"
+    },
+    {
+      "id": "tca-ebay::335473213864",
+      "section": "D3",
+      "reason": "true product (Throwback Thursday / Topps Fire / Series One) has no card-level catalog row to land on — only a product-structure: stub. No target, no move.",
+      "title": "2017 Topps Throwback Thursday 86 Aaron Judge PSA 9 Mint RC"
+    },
+    {
+      "id": "tca-ebay::398275317511",
+      "section": "D3",
+      "reason": "true product (Throwback Thursday / Topps Fire / Series One) has no card-level catalog row to land on — only a product-structure: stub. No target, no move.",
+      "title": "2017 Topps TBT 1967 Fence Busters  Aaron Judge #86 /2245 (RC) BGS 9.5 GEM MINT"
+    },
+    {
+      "id": "tca-ebay::117347266659",
+      "section": "D3",
+      "reason": "true product (Throwback Thursday / Topps Fire / Series One) has no card-level catalog row to land on — only a product-structure: stub. No target, no move.",
+      "title": "2017 TOPPS THROWBACK THURSDAY #86 AARON JUDGE ROOKIE RC PSA 9"
+    },
+    {
+      "id": "tca-ebay::820015681876",
+      "section": "D3",
+      "reason": "true product (Throwback Thursday / Topps Fire / Series One) has no card-level catalog row to land on — only a product-structure: stub. No target, no move.",
+      "title": "2017 Topps Throwback Thursday AARON JUDGE #86 RC 1967 Fence Busters"
+    },
+    {
+      "id": "tca-ebay::EBAY-v1|176807388712|0",
+      "section": "D3",
+      "reason": "true product (Throwback Thursday / Topps Fire / Series One) has no card-level catalog row to land on — only a product-structure: stub. No target, no move.",
+      "title": "Asdrubal Cabrera 2017 Topps Series One Sparkle Foil /175 #86 New York Mets"
+    },
+    {
+      "id": "tca-ebay::317708220093",
+      "section": "D3",
+      "reason": "true product (Throwback Thursday / Topps Fire / Series One) has no card-level catalog row to land on — only a product-structure: stub. No target, no move.",
+      "title": "2017 Topps #TBT - 1967 Fence Busters Design Aaron Judge #86 /2245 (RC)"
+    },
+    {
+      "id": "tca-ebay::278025494700",
+      "section": "D3",
+      "reason": "true product (Throwback Thursday / Topps Fire / Series One) has no card-level catalog row to land on — only a product-structure: stub. No target, no move.",
+      "title": "Topps 2017 1967 Fence Busters Aaron Judge #86 /2245 BGS 9"
+    }
+  ]
+}
