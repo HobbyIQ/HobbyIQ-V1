@@ -4467,6 +4467,55 @@ async function autoPriceHolding(
   return updated;
 }
 
+/**
+ * CF-A-SWING-IS-NOT-A-MARKET (2026-09-01, holdings 9b971b03 RA-JC ~10.4x and
+ * ca820b08 Gonzalez ~41x). The per-unit value a holding carries, for swing
+ * comparison only: fairMarketValue when it is a positive number, else the
+ * estimate. Null when the holding has no number at all — a first price is not
+ * a swing.
+ */
+export function perUnitFmvForSwing(h: {
+  fairMarketValue?: unknown;
+  estimatedValue?: unknown;
+}): number | null {
+  const fmv = h.fairMarketValue;
+  if (typeof fmv === "number" && Number.isFinite(fmv) && fmv > 0) return fmv;
+  const est = h.estimatedValue;
+  if (typeof est === "number" && Number.isFinite(est) && est > 0) return est;
+  return null;
+}
+
+/** The multiple between two positive values, in whichever direction is larger.
+ *  Null when either side is missing — nothing to compare. */
+export function swingRatio(from: number | null, to: number | null): number | null {
+  if (from === null || to === null || !(from > 0) || !(to > 0)) return null;
+  return from > to ? from / to : to / from;
+}
+
+/**
+ * The swing threshold: a newly computed value more than this multiple away
+ * from the previous persisted one, in EITHER direction, is a pool-composition
+ * flap and not a market. Override with PORTFOLIO_SWING_ALARM_RATIO.
+ *
+ * The value is PERSISTED either way — grade monotonicity is not an invariant
+ * and neither is price continuity: observe the swing, never clamp it
+ * (feedback_grade_monotonicity_is_not_an_invariant). This is an alarm, not a
+ * gate.
+ */
+export const DEFAULT_SWING_ALARM_RATIO = 2;
+
+export function swingAlarmRatio(): number {
+  const raw = Number(process.env.PORTFOLIO_SWING_ALARM_RATIO);
+  return Number.isFinite(raw) && raw > 1 ? raw : DEFAULT_SWING_ALARM_RATIO;
+}
+
+/** Pure: does this move deserve the alarm? Strictly greater than the ratio,
+ *  so an exact 2x is quiet and 2.01x is loud. */
+export function isSwingAlarming(from: number | null, to: number | null, ratio = DEFAULT_SWING_ALARM_RATIO): boolean {
+  const r = swingRatio(from, to);
+  return r !== null && r > ratio;
+}
+
 function appendPriceHistory(
   doc: UserDoc,
   holdingId: string,
@@ -9180,6 +9229,13 @@ export async function repriceHoldingsForUser(
   let skipped = 0;
   const updates: BatchRepriceResult["updates"] = [];
 
+  // CF-A-SWING-IS-NOT-A-MARKET (2026-09-01). The value each candidate carried
+  // BEFORE this cycle, so the post-loop sweep can see a pool-composition flap.
+  // Captured here because the loop has a dozen write sites, each with its own
+  // `continue`; the previous value is the one thing they all overwrite.
+  const priorFmv = new Map<string, number | null>();
+  for (const h of candidates) priorFmv.set(h.id, perUnitFmvForSwing(h));
+
   for (const holding of candidates) {
     // CF-EBAY-REVIEW-QUEUE (2026-07-12): skip pending-review rows. Those
     // aren't real inventory yet — pricing them would fire the CompIQ
@@ -10170,6 +10226,47 @@ export async function repriceHoldingsForUser(
   // dilutive rung fired past 2 real anchor sales — exactly the kind
   // of gap Drew wants surfaced automatically instead of catching by
   // eye.
+  // CF-A-SWING-IS-NOT-A-MARKET (2026-09-01). Every oscillation this session
+  // measured was persisted silently: holding 9b971b03 logged 21.25 x5 ->
+  // 212.95 -> 20.625 -> 20.625 -> 213.8 -> 20.625 on the 6h cron (~10.4x) and
+  // ca820b08 168.74 -> 4.17 -> ... -> 187 (~41x), with no alarm anywhere — the
+  // list renders the persisted value faithfully, so nothing looked wrong.
+  //
+  // The value STANDS: a swing is observed, never clamped (grade monotonicity
+  // is not an invariant, and neither is price continuity — a real market can
+  // double). What was missing is the signal, so App Insights can alert on
+  // pool-composition flapping.
+  const swingRatioLimit = swingAlarmRatio();
+  for (const u of updates) {
+    if (u.status !== "repriced") continue;
+    const h = doc.holdings[u.id];
+    if (!h) continue;
+    const from = priorFmv.get(u.id) ?? null;
+    const to = perUnitFmvForSwing(h);
+    if (!isSwingAlarming(from, to, swingRatioLimit)) continue;
+    console.warn(JSON.stringify({
+      event: "portfolio_reprice_value_swing",
+      source: "portfolioStore.repriceHoldingsForUser",
+      repriceSource: source,
+      userId,
+      holdingId: u.id,
+      from,
+      to,
+      ratio: Math.round((swingRatio(from, to) as number) * 100) / 100,
+      threshold: swingRatioLimit,
+      rung: (h as { fmvRung?: string | null }).fmvRung
+        ?? (h as { pricingSourceMeta?: { method?: string } }).pricingSourceMeta?.method
+        ?? null,
+      poolLabel: (h as { pricingSourceMeta?: { slug?: string } }).pricingSourceMeta?.slug
+        ?? (h as { hobbyiqCardId?: string | null }).hobbyiqCardId
+        ?? null,
+      valuationStatus: (h as { valuationStatus?: string }).valuationStatus ?? null,
+      unionRefused: (h as { pricingSourceMeta?: { unionRefused?: string } }).pricingSourceMeta?.unionRefused ?? null,
+      persisted: true,
+      detail: "the value moved by more than the swing threshold between reprice cycles; it is PERSISTED, not clamped — a repeating swing is pool composition, not a market",
+    }));
+  }
+
   try {
     const { recordCostBasisDivergenceIfNoteworthy } = await import("../compiq/boundedProjectionAlerts.service.js");
     for (const u of updates) {
