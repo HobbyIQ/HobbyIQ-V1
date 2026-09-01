@@ -1,0 +1,13 @@
+{
+  "scrapedAt": "2026-09-01T13:04:07.659Z",
+  "sourceUrl": "https://baseballcardpedia.com/index.php/1989_O-Pee-Chee",
+  "source": "baseballcardpedia",
+  "sport": "baseball",
+  "year": 1989,
+  "setName": "1989 O-Pee-Chee",
+  "productKey": "1989-o-pee-chee-baseball",
+  "setKey": "o-pee-chee",
+  "rowCount": 396,
+  "parallelColumnAuthoritative": true,
+  "note": "1989 O-Pee-Chee base set, 396 cards, 1..396 with no gaps (verified before write). One row per card number — no duplicates. parallel is BLANK: the source states no finish, and blank means unknown, never \"Base\". bcp annotations Rcup/UER/IA/TC are stripped from the player name (they describe the card, not the person, and would make the row unmatchable against a sale title); RC is kept, per the repo's CSV convention."
+}
