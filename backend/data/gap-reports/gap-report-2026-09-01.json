@@ -1,0 +1,397 @@
+{
+ "date": "2026-09-01",
+ "minComps": 500,
+ "generatedAt": "2026-09-01T10:17:29.410Z",
+ "gaps": [
+  {
+   "sport": "hockey",
+   "year": 2024,
+   "setKey": "upper-deck",
+   "comps": 13861,
+   "distinctNumbers": 1706,
+   "checklistRows": 0,
+   "coverage": 0,
+   "uncovered": 1706
+  },
+  {
+   "sport": "football",
+   "year": 2023,
+   "setKey": "panini-mosaic",
+   "comps": 15899,
+   "distinctNumbers": 689,
+   "checklistRows": 0,
+   "coverage": 0,
+   "uncovered": 689
+  },
+  {
+   "sport": "football",
+   "year": 2025,
+   "setKey": "panini-optic",
+   "comps": 26115,
+   "distinctNumbers": 661,
+   "checklistRows": 0,
+   "coverage": 0,
+   "uncovered": 661
+  },
+  {
+   "sport": "football",
+   "year": 2023,
+   "setKey": "panini-optic",
+   "comps": 54668,
+   "distinctNumbers": 600,
+   "checklistRows": 0,
+   "coverage": 0,
+   "uncovered": 600
+  },
+  {
+   "sport": "basketball",
+   "year": 2023,
+   "setKey": "panini-donruss",
+   "comps": 14601,
+   "distinctNumbers": 542,
+   "checklistRows": 0,
+   "coverage": 0,
+   "uncovered": 542
+  },
+  {
+   "sport": "football",
+   "year": 1976,
+   "setKey": "topps",
+   "comps": 13311,
+   "distinctNumbers": 523,
+   "checklistRows": 0,
+   "coverage": 0,
+   "uncovered": 523
+  },
+  {
+   "sport": "basketball",
+   "year": 2023,
+   "setKey": "panini-hoops",
+   "comps": 17310,
+   "distinctNumbers": 516,
+   "checklistRows": 0,
+   "coverage": 0,
+   "uncovered": 516
+  },
+  {
+   "sport": "football",
+   "year": 2020,
+   "setKey": "panini-select",
+   "comps": 14918,
+   "distinctNumbers": 513,
+   "checklistRows": 0,
+   "coverage": 0,
+   "uncovered": 513
+  },
+  {
+   "sport": "football",
+   "year": 2024,
+   "setKey": "panini-optic",
+   "comps": 102463,
+   "distinctNumbers": 507,
+   "checklistRows": 0,
+   "coverage": 0,
+   "uncovered": 507
+  },
+  {
+   "sport": "basketball",
+   "year": 2022,
+   "setKey": "panini-prizm",
+   "comps": 18254,
+   "distinctNumbers": 496,
+   "checklistRows": 0,
+   "coverage": 0,
+   "uncovered": 496
+  },
+  {
+   "sport": "basketball",
+   "year": 2024,
+   "setKey": "panini-optic",
+   "comps": 22541,
+   "distinctNumbers": 454,
+   "checklistRows": 0,
+   "coverage": 0,
+   "uncovered": 454
+  },
+  {
+   "sport": "football",
+   "year": 2025,
+   "setKey": "panini-rookies-and-stars",
+   "comps": 21628,
+   "distinctNumbers": 454,
+   "checklistRows": 0,
+   "coverage": 0,
+   "uncovered": 454
+  },
+  {
+   "sport": "basketball",
+   "year": 2020,
+   "setKey": "panini-prizm",
+   "comps": 23297,
+   "distinctNumbers": 448,
+   "checklistRows": 0,
+   "coverage": 0,
+   "uncovered": 448
+  },
+  {
+   "sport": "basketball",
+   "year": 2019,
+   "setKey": "panini-prizm",
+   "comps": 21062,
+   "distinctNumbers": 431,
+   "checklistRows": 0,
+   "coverage": 0,
+   "uncovered": 431
+  },
+  {
+   "sport": "basketball",
+   "year": 1992,
+   "setKey": "upper-deck",
+   "comps": 17692,
+   "distinctNumbers": 412,
+   "checklistRows": 0,
+   "coverage": 0,
+   "uncovered": 412
+  },
+  {
+   "sport": "football",
+   "year": 2020,
+   "setKey": "panini-mosaic",
+   "comps": 13856,
+   "distinctNumbers": 410,
+   "checklistRows": 0,
+   "coverage": 0,
+   "uncovered": 410
+  },
+  {
+   "sport": "basketball",
+   "year": 2019,
+   "setKey": "panini-select",
+   "comps": 27339,
+   "distinctNumbers": 372,
+   "checklistRows": 0,
+   "coverage": 0,
+   "uncovered": 372
+  },
+  {
+   "sport": "basketball",
+   "year": 2018,
+   "setKey": "panini-prizm",
+   "comps": 22853,
+   "distinctNumbers": 364,
+   "checklistRows": 0,
+   "coverage": 0,
+   "uncovered": 364
+  },
+  {
+   "sport": "football",
+   "year": 1972,
+   "setKey": "topps",
+   "comps": 17883,
+   "distinctNumbers": 353,
+   "checklistRows": 0,
+   "coverage": 0,
+   "uncovered": 353
+  },
+  {
+   "sport": "football",
+   "year": 2025,
+   "setKey": "panini-score",
+   "comps": 15953,
+   "distinctNumbers": 308,
+   "checklistRows": 0,
+   "coverage": 0,
+   "uncovered": 308
+  },
+  {
+   "sport": "football",
+   "year": 2020,
+   "setKey": "panini-optic",
+   "comps": 15930,
+   "distinctNumbers": 298,
+   "checklistRows": 0,
+   "coverage": 0,
+   "uncovered": 298
+  },
+  {
+   "sport": "football",
+   "year": 1969,
+   "setKey": "topps",
+   "comps": 14785,
+   "distinctNumbers": 274,
+   "checklistRows": 0,
+   "coverage": 0,
+   "uncovered": 274
+  },
+  {
+   "sport": "football",
+   "year": 1971,
+   "setKey": "topps",
+   "comps": 15267,
+   "distinctNumbers": 271,
+   "checklistRows": 0,
+   "coverage": 0,
+   "uncovered": 271
+  },
+  {
+   "sport": "football",
+   "year": 1970,
+   "setKey": "topps",
+   "comps": 15278,
+   "distinctNumbers": 270,
+   "checklistRows": 0,
+   "coverage": 0,
+   "uncovered": 270
+  },
+  {
+   "sport": "basketball",
+   "year": 2024,
+   "setKey": "panini-hoops",
+   "comps": 20195,
+   "distinctNumbers": 262,
+   "checklistRows": 0,
+   "coverage": 0,
+   "uncovered": 262
+  },
+  {
+   "sport": "baseball",
+   "year": 1952,
+   "setKey": "bowman",
+   "comps": 17181,
+   "distinctNumbers": 256,
+   "checklistRows": 1,
+   "coverage": 0.00390625,
+   "uncovered": 255
+  },
+  {
+   "sport": "pokemon",
+   "year": 2024,
+   "setKey": "sv8a",
+   "comps": 41766,
+   "distinctNumbers": 249,
+   "checklistRows": 0,
+   "coverage": 0,
+   "uncovered": 249
+  },
+  {
+   "sport": "pokemon",
+   "year": 2022,
+   "setKey": "swsh12a",
+   "comps": 25886,
+   "distinctNumbers": 244,
+   "checklistRows": 0,
+   "coverage": 0,
+   "uncovered": 244
+  },
+  {
+   "sport": "pokemon",
+   "year": 2023,
+   "setKey": "sv2a",
+   "comps": 48358,
+   "distinctNumbers": 237,
+   "checklistRows": 0,
+   "coverage": 0,
+   "uncovered": 237
+  },
+  {
+   "sport": "basketball",
+   "year": 2003,
+   "setKey": "upper-deck",
+   "comps": 15282,
+   "distinctNumbers": 218,
+   "checklistRows": 0,
+   "coverage": 0,
+   "uncovered": 218
+  },
+  {
+   "sport": "basketball",
+   "year": 1990,
+   "setKey": "fleer",
+   "comps": 15208,
+   "distinctNumbers": 208,
+   "checklistRows": 0,
+   "coverage": 0,
+   "uncovered": 208
+  },
+  {
+   "sport": "football",
+   "year": 1986,
+   "setKey": "topps",
+   "comps": 14065,
+   "distinctNumbers": 202,
+   "checklistRows": 0,
+   "coverage": 0,
+   "uncovered": 202
+  },
+  {
+   "sport": "basketball",
+   "year": 1996,
+   "setKey": "fleer",
+   "comps": 19092,
+   "distinctNumbers": 194,
+   "checklistRows": 0,
+   "coverage": 0,
+   "uncovered": 194
+  },
+  {
+   "sport": "basketball",
+   "year": 1996,
+   "setKey": "topps",
+   "comps": 13247,
+   "distinctNumbers": 189,
+   "checklistRows": 0,
+   "coverage": 0,
+   "uncovered": 189
+  },
+  {
+   "sport": "football",
+   "year": 1984,
+   "setKey": "topps",
+   "comps": 17276,
+   "distinctNumbers": 155,
+   "checklistRows": 0,
+   "coverage": 0,
+   "uncovered": 155
+  },
+  {
+   "sport": "baseball",
+   "year": 2001,
+   "setKey": "topps",
+   "comps": 21634,
+   "distinctNumbers": 1372,
+   "checklistRows": 1234,
+   "coverage": 0.8994169096209913,
+   "uncovered": 138
+  },
+  {
+   "sport": "basketball",
+   "year": 2024,
+   "setKey": "panini-prizm-monopoly-wnba",
+   "comps": 15138,
+   "distinctNumbers": 116,
+   "checklistRows": 0,
+   "coverage": 0,
+   "uncovered": 116
+  },
+  {
+   "sport": "pokemon",
+   "year": 1997,
+   "setKey": "base4",
+   "comps": 43724,
+   "distinctNumbers": 86,
+   "checklistRows": 0,
+   "coverage": 0,
+   "uncovered": 86
+  },
+  {
+   "sport": "basketball",
+   "year": 2024,
+   "setKey": "panini",
+   "comps": 15320,
+   "distinctNumbers": 59,
+   "checklistRows": 0,
+   "coverage": 0,
+   "uncovered": 59
+  }
+ ]
+}
