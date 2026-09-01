@@ -1,0 +1,34 @@
+{
+  "scrapedAt": "2026-09-01T02:06:23.095Z",
+  "sourceUrl": "https://www.beckett.com/news/2020-bowman-chrome-draft-variations-guide/",
+  "source": "beckett",
+  "sport": "baseball",
+  "year": 2020,
+  "setName": "2020 Bowman Chrome Draft",
+  "productKey": "2020-bowman-chrome-draft-variations-guide",
+  "setKey": "bowman-chrome-draft",
+  "rowCount": 15,
+  "photoDescriptions": {
+    "BD-12 Emerson Hancock": "white jersey",
+    "BD-34 Austin Hendrick": "gray jersey",
+    "BD-39 Robert Hassell": "camo jersey",
+    "BD-41 Reid Detmers": "white jersey",
+    "BD-81 Nick Gonzales": "running, gray jersey",
+    "BD-88 Asa Lacy": "gray jersey",
+    "BD-107 Zac Veen": "bat behind helmet",
+    "BD-121 Spencer Torkelson": "with glove",
+    "BD-122 Heston Kjerstad": "fielding",
+    "BD-146 Patrick Bailey": "batting",
+    "BD-151 Jasson Dominguez": "running",
+    "BD-152 Bobby Witt Jr.": "throwing",
+    "BD-153 Andrew Vaughn": "batting, gray jersey",
+    "BD-154 Adley Rutschman": "with bat",
+    "BD-155 Robert Puason": "no ball"
+  },
+  "parallelColumnAuthoritative": true,
+  "cmpCodes": {
+    "variations": "221"
+  },
+  "packOdds": "Variations are fairly tough to pull. In hobby jumbo, they're 1:203 pack. When it comes to super jumbo, SSP cards are 1:54 packs.",
+  "note": "Rookie Image Variations. Parallel is '<Photo> Image Variation SP' so the name, 'variation' and 'SP' are all searchable; card details leads with the name. Autos emitted only where --autos named them; a guide states them in prose, not in the gallery."
+}

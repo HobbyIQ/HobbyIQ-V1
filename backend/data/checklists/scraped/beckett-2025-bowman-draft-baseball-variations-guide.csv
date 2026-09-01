@@ -1,0 +1,16 @@
+category,cardNumber,parallel,isAuto,printRun,player
+insert-rookie-image-variations,BDC-1,Image Variation SP,false,,Eli Willits
+auto-rookie-image-variations,BDC-1,Image Variation SP,true,,Eli Willits
+insert-rookie-image-variations,BDC-3,Image Variation SP,false,,Kade Anderson
+auto-rookie-image-variations,BDC-3,Image Variation SP,true,,Kade Anderson
+insert-rookie-image-variations,BDC-4,Image Variation SP,false,,Gage Wood
+insert-rookie-image-variations,BDC-8,Image Variation SP,false,,JoJo Parker
+auto-rookie-image-variations,BDC-8,Image Variation SP,true,,JoJo Parker
+insert-rookie-image-variations,BDC-10,Image Variation SP,false,,Billy Carlson
+auto-rookie-image-variations,BDC-10,Image Variation SP,true,,Billy Carlson
+insert-rookie-image-variations,BDC-12,Image Variation SP,false,,Liam Doyle
+insert-rookie-image-variations,BDC-16,Image Variation SP,false,,Ike Irish
+insert-rookie-image-variations,BDC-25,Image Variation SP,false,,Seth Hernandez
+auto-rookie-image-variations,BDC-25,Image Variation SP,true,,Seth Hernandez
+insert-rookie-image-variations,BDC-30,Image Variation SP,false,,Jamie Arnold
+insert-rookie-image-variations,BDC-37,Image Variation SP,false,,Tyler Bremner

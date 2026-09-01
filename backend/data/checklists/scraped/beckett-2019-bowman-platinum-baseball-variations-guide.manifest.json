@@ -1,0 +1,29 @@
+{
+  "scrapedAt": "2026-09-01T02:06:29.944Z",
+  "sourceUrl": "https://www.beckett.com/news/2019-bowman-platinum-baseball-variations-guide/",
+  "source": "beckett",
+  "sport": "baseball",
+  "year": 2019,
+  "setName": "2019 Bowman Platinum",
+  "productKey": "2019-bowman-platinum-baseball-variations-guide",
+  "setKey": "bowman-platinum",
+  "rowCount": 10,
+  "photoDescriptions": {
+    "1 Mike Trout": "holding helmet",
+    "2 Shohei Ohtani": "running",
+    "9 Alex Bregman": "blue warm-up jersey, no helmet",
+    "18 Ronald Acuna Jr.": "fielding glove",
+    "22 Christian Yelich": "with bat",
+    "48 Yusei Kikuchi": "wearing shorts",
+    "56 Juan Soto": "pointing",
+    "63 Rhys Hoskins": "tipping cap",
+    "74 Mookie Betts": "Gatorade shower",
+    "97 Gleyber Torres": "flexing arm, running"
+  },
+  "parallelColumnAuthoritative": true,
+  "cmpCodes": {
+    "base": "674",
+    "variations": "722"
+  },
+  "note": "Rookie Image Variations. Parallel is '<Photo> Image Variation SP' so the name, 'variation' and 'SP' are all searchable; card details leads with the name. Autos emitted only where --autos named them; a guide states them in prose, not in the gallery."
+}

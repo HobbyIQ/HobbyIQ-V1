@@ -1,0 +1,24 @@
+{
+  "scrapedAt": "2026-09-01T02:05:57.484Z",
+  "sourceUrl": "https://www.beckett.com/news/2023-bowman-platinum-baseball-variations-guide/",
+  "source": "beckett",
+  "sport": "baseball",
+  "year": 2023,
+  "setName": "2023 Bowman Platinum",
+  "productKey": "2023-bowman-platinum-baseball-variations-guide",
+  "setKey": "bowman-platinum",
+  "rowCount": 5,
+  "photoDescriptions": {
+    "26 Riley Greene": "holding bat",
+    "31 Corbin Carroll": "with bat, white jersey",
+    "79 Gunnar Henderson": "with bat, white jersey",
+    "92 Michael Harris II": "white jersey",
+    "TOP-47 Druw Jones": "hands on hips, red shirt"
+  },
+  "parallelColumnAuthoritative": true,
+  "cmpCodes": {
+    "base": "046",
+    "variations": "097"
+  },
+  "note": "Rookie Image Variations. Parallel is '<Photo> Image Variation SP' so the name, 'variation' and 'SP' are all searchable; card details leads with the name. Autos emitted only where --autos named them; a guide states them in prose, not in the gallery."
+}

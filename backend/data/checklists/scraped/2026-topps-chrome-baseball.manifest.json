@@ -1,0 +1,389 @@
+{
+  "scrapedAt": "2026-09-01T02:16:47.437Z",
+  "sourceUrl": "https://img.beckett.com/news/news-content/uploads/2026/06/2026-Topps-Chrome-Baseball-Checklist-1.xlsx",
+  "sport": "baseball",
+  "year": 2026,
+  "setName": "2026 Topps Chrome",
+  "productKey": "2026-topps-chrome",
+  "setKey": "topps-chrome",
+  "rowCount": 1570,
+  "parallelColumnAuthoritative": true,
+  "sectionsReport": [
+    {
+      "sheet": "Base",
+      "section": "Base Set",
+      "category": "base",
+      "cards": 300,
+      "role": "anchor"
+    },
+    {
+      "sheet": "Variations",
+      "section": "Base - Lightboard Variations",
+      "category": "insert-base-lightboard-variations",
+      "cards": 300,
+      "role": "parallel",
+      "anchor": "Base>Base Set",
+      "rung": "Lightboard Variation"
+    },
+    {
+      "sheet": "Variations",
+      "section": "Base - Image Variations",
+      "category": "insert-base-image-variations",
+      "cards": 50,
+      "role": "parallel",
+      "anchor": "Base>Base Set",
+      "rung": "Image Variation"
+    },
+    {
+      "sheet": "Variations",
+      "section": "Base - Super Short Prints",
+      "category": "insert-base-super-short-prints",
+      "cards": 10,
+      "role": "parallel",
+      "anchor": "Base>Base Set",
+      "rung": "Super Short Print"
+    },
+    {
+      "sheet": "Variations",
+      "section": "Base - Award Winner Variations",
+      "category": "insert-base-award-winner-variations",
+      "cards": 6,
+      "role": "parallel",
+      "anchor": "Base>Base Set",
+      "rung": "Award Winner Variation"
+    },
+    {
+      "sheet": "Variations",
+      "section": "Base - Minions Variations",
+      "category": "insert-base-minions-variations",
+      "cards": 4,
+      "role": "parallel",
+      "anchor": "Base>Base Set",
+      "rung": "Minions Variation"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Autographs",
+      "category": "auto-rookie-autographs",
+      "cards": 94,
+      "role": "anchor"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Retail Rookie Autographs",
+      "category": "auto-retail-rookie-autographs",
+      "cards": 30,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Chrome Autographs",
+      "category": "auto-chrome-autographs",
+      "cards": 6,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Chrome Legend Autographs",
+      "category": "auto-chrome-legend-autographs",
+      "cards": 47,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "World Series Champion Autographs",
+      "category": "auto-world-series-champion-autographs",
+      "cards": 33,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "1991 Topps Baseball Autographs",
+      "category": "auto-1991-topps-baseball-autographs",
+      "cards": 6,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Future Stars Autographs",
+      "category": "auto-future-stars-autographs",
+      "cards": 8,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Perspectives Autographs",
+      "category": "auto-perspectives-autographs",
+      "cards": 6,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Ink Strokes",
+      "category": "auto-ink-strokes",
+      "cards": 71,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "75th Diamond Autographs",
+      "category": "auto-75th-diamond-autographs",
+      "cards": 69,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Chromographs",
+      "category": "auto-chromographs",
+      "cards": 32,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "2025 World Series Champions Refractor Autographs",
+      "category": "auto-2025-world-series-champions-refractor-autographs",
+      "cards": 17,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Radiating Rookies Autographs",
+      "category": "auto-radiating-rookies-autographs",
+      "cards": 15,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Dual Autographs",
+      "category": "auto-dual-autographs",
+      "cards": 8,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "2025 Chrome MVP Buyback Autographs",
+      "category": "auto-2025-chrome-mvp-buyback-autographs",
+      "cards": 2,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Cooperstown Calls Autographs",
+      "category": "auto-cooperstown-calls-autographs",
+      "cards": 3,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Numbers Live Forever Autographs",
+      "category": "auto-numbers-live-forever-autographs",
+      "cards": 2,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Jerry Seinfield Autograph",
+      "category": "auto-jerry-seinfield-autograph",
+      "cards": 1,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Gold Logoman Autographed Relics",
+      "category": "auto-gold-logoman-autographed-relics",
+      "cards": 6,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Dual Gold Logoman Autographed Relics",
+      "category": "auto-dual-gold-logoman-autographed-relics",
+      "cards": 3,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "Gold Logoman Relics",
+      "category": "insert-gold-logoman-relics",
+      "cards": 6,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "Dual Gold Logoman Relics",
+      "category": "insert-dual-gold-logoman-relics",
+      "cards": 3,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Future Stars",
+      "category": "insert-future-stars",
+      "cards": 10,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Perspectives",
+      "category": "insert-perspectives",
+      "cards": 10,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "World Series At Night",
+      "category": "insert-world-series-at-night",
+      "cards": 10,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Chrome Champion Refractors",
+      "category": "insert-chrome-champion-refractors",
+      "cards": 16,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Shadow Etch",
+      "category": "insert-shadow-etch",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Helix",
+      "category": "insert-helix",
+      "cards": 15,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Ultra Violet",
+      "category": "insert-ultra-violet",
+      "cards": 15,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Static Noise",
+      "category": "insert-static-noise",
+      "cards": 15,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Hobby Masters",
+      "category": "insert-hobby-masters",
+      "cards": 19,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Fanatical",
+      "category": "insert-fanatical",
+      "cards": 10,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Numbers Live Forever",
+      "category": "insert-numbers-live-forever",
+      "cards": 2,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Cooperstown Calls Class of 2026 Blue Refractors",
+      "category": "insert-cooperstown-calls-class-of-2026-blue-refractors",
+      "cards": 3,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Cooperstown Calls Class of 2025 Green Refractors",
+      "category": "insert-cooperstown-calls-class-of-2025-green-refractors",
+      "cards": 5,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Radiating Rookies",
+      "category": "insert-radiating-rookies",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Wild Style",
+      "category": "insert-wild-style",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Past To Present",
+      "category": "insert-past-to-present",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Exposé",
+      "category": "insert-expose",
+      "cards": 30,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Bg Ticket Players",
+      "category": "insert-bg-ticket-players",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Wrecking Crew",
+      "category": "insert-wrecking-crew",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "1991 Topps Baseball",
+      "category": "insert-1991-topps-baseball",
+      "cards": 30,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Diamond Moments",
+      "category": "insert-diamond-moments",
+      "cards": 50,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Chrome Rivals - Home",
+      "category": "insert-chrome-rivals-home",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Chrome Rivals - Away",
+      "category": "insert-chrome-rivals-away",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "2025 Chrome MVP Buybacks",
+      "category": "insert-2025-chrome-mvp-buybacks",
+      "cards": 2,
+      "role": "parallel",
+      "anchor": "Base>Base Set",
+      "rung": "2025 Chrome MVP Buyback"
+    }
+  ]
+}

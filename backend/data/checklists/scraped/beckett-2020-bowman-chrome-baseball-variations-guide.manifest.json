@@ -1,0 +1,34 @@
+{
+  "scrapedAt": "2026-09-01T02:06:21.774Z",
+  "sourceUrl": "https://www.beckett.com/news/2020-bowman-chrome-baseball-variations-guide/",
+  "source": "beckett",
+  "sport": "baseball",
+  "year": 2020,
+  "setName": "2020 Bowman Chrome",
+  "productKey": "2020-bowman-chrome-baseball-variations-guide",
+  "setKey": "bowman-chrome",
+  "rowCount": 14,
+  "photoDescriptions": {
+    "5 Brusdar Graterol": "sitting with towel",
+    "25 Yordan Alvarez": "running",
+    "34 A.J. Puk": "sitting",
+    "44 Nico Hoerner": "no cap",
+    "50 Bo Bichette": "running",
+    "51 Michel Baez": "looking up",
+    "62 Jesus Luzardo": "green jersey",
+    "72 Dylan Cease": "mound and grass in background",
+    "79 Aristides Aquino": "coming out of dugout",
+    "80 Brendan McKay": "running",
+    "83 Gavin Lux": "blue shirt",
+    "87 Sean Murphy": "leaning on bat",
+    "90 Kyle Lewis": "catching",
+    "96 Dustin May": "batting"
+  },
+  "parallelColumnAuthoritative": true,
+  "cmpCodes": {
+    "base": "623",
+    "variation": "647"
+  },
+  "packOdds": "2020 Bowman Chrome Rookie Image Variations are only available in regular hobby packs, landing at a rate of 1:152 packs. That makes them slightly tougher than a case hit.",
+  "note": "Rookie Image Variations. Parallel is '<Photo> Image Variation SP' so the name, 'variation' and 'SP' are all searchable; card details leads with the name. Autos emitted only where --autos named them; a guide states them in prose, not in the gallery."
+}

@@ -535,7 +535,21 @@ export function parseListingIdentity(
 export function isCardNumberAutoSubset(cardNumber: string | null): boolean {
   if (!cardNumber) return false;
   const cn = String(cardNumber).toUpperCase().replace(/^#/, "");
-  return /^(CPATWH|CPALD|APDCA|54FAV|FFDA|CUSA|SCCA|CCAR|RODA|ROTA|TTAR|DPPA|BSPA|BCPA|BCRA|TCRA|B96A|BGA|MRA|UAC|BSA|FSA|CPA|CDA|CRA|BPA|CBA|CCA|USA|DAS|NTS|SSM|DCA|CAA|GQA|AGA|ROA|FAR|FFA|BOA|T1A|SCA|PPA|ODA|IAP|UAR|C\d{2}A|BA|PA|RA|FA|TA|AA|AP)(-|$)/.test(cn);
+  const AUTO_PREFIX = /^(CPATWH|CPALD|APDCA|54FAV|FFDA|CUSA|SCCA|CCAR|RODA|ROTA|TTAR|DPPA|BSPA|BCPA|BCRA|TCRA|B96A|BGA|MRA|UAC|BSA|FSA|CPA|CDA|CRA|BPA|CBA|CCA|USA|DAS|NTS|SSM|DCA|CAA|GQA|AGA|ROA|FAR|FFA|BOA|T1A|SCA|PPA|ODA|IAP|UAR|C\d{2}A|BA|PA|RA|FA|TA|AA|AP)(-|$)/;
+  if (AUTO_PREFIX.test(cn)) return true;
+  // CF-THE-ID-CARRIES-THE-PRODUCT (D23, ruling d): a card-number comparison
+  // is hyphen-insensitive, and this one must be too. Sellers and CardHedge
+  // both print CPA-BR as CPABR, and sameCardNumber() already calls those the
+  // same card — so without this the auto flag disagrees with identity: the
+  // folded spelling is tagged no-auto and splits from its own hyphenated
+  // pool. Re-test with the separator restored after the longest prefix that
+  // actually matches, never on a bare fold (which would let ANY letters
+  // starting in BA/PA/RA read as an auto).
+  if (!cn.includes("-")) {
+    const m = /^(CPATWH|CPALD|APDCA|54FAV|FFDA|CUSA|SCCA|CCAR|RODA|ROTA|TTAR|DPPA|BSPA|BCPA|BCRA|TCRA|B96A|BGA|MRA|UAC|BSA|FSA|CPA|CDA|CRA|BPA|CBA|CCA|USA|DAS|NTS|SSM|DCA|CAA|GQA|AGA|ROA|FAR|FFA|BOA|T1A|SCA|PPA|ODA|IAP|UAR|C\d{2}A)([A-Z]{1,4})$/.exec(cn);
+    if (m) return true;
+  }
+  return false;
 }
 
 // CF-INSERT-DETECTION (Drew, 2026-07-30). Inserts are separate card

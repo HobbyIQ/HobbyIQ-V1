@@ -1,0 +1,23 @@
+{
+  "scrapedAt": "2026-09-01T02:06:07.833Z",
+  "sourceUrl": "https://www.beckett.com/news/2022-bowman-platinum-baseball-variations-guide/",
+  "source": "beckett",
+  "sport": "baseball",
+  "year": 2022,
+  "setName": "2022 Bowman Platinum",
+  "productKey": "2022-bowman-platinum-baseball-variations-guide",
+  "setKey": "bowman-platinum",
+  "rowCount": 5,
+  "photoDescriptions": {
+    "14 CJ Abrams": "gray jersey",
+    "27 Jarren Duran": "yellow jersey",
+    "41 Julio Rodriguez": "sunglasses, white jersey",
+    "68 Seiya Suzuki": "touching head",
+    "69 Wander Franco": "fielding"
+  },
+  "parallelColumnAuthoritative": true,
+  "cmpCodes": {
+    "base": "277"
+  },
+  "note": "Rookie Image Variations. Parallel is '<Photo> Image Variation SP' so the name, 'variation' and 'SP' are all searchable; card details leads with the name. Autos emitted only where --autos named them; a guide states them in prose, not in the gallery."
+}

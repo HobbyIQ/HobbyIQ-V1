@@ -1,0 +1,25 @@
+{
+  "scrapedAt": "2026-09-01T02:06:10.687Z",
+  "sourceUrl": "https://www.beckett.com/news/2022-topps-chrome-logofractor-baseball-variations-guide/",
+  "source": "beckett",
+  "sport": "baseball",
+  "year": 2022,
+  "setName": "2022 Topps Chrome",
+  "productKey": "2022-topps-chrome-logofractor-baseball-variations-guide",
+  "setKey": "topps-chrome",
+  "rowCount": 5,
+  "photoDescriptions": {
+    "4 Jarren Duran": "sliding",
+    "8 Shane Baz": "touching back of neck",
+    "22 Oneil Cruz": "with glove",
+    "25 Brandon Marsh": "with team",
+    "80 Wander Franco": "celebrating, teammates in background"
+  },
+  "parallelColumnAuthoritative": true,
+  "cmpCodes": {
+    "base": "815",
+    "variation": "835"
+  },
+  "packOdds": "2022 Topps Chrome Logofractor Baseball Variations land 1:38 packs. With two per mega box, it's approximately 1:19 boxes to get one.",
+  "note": "Rookie Image Variations. Parallel is '<Photo> Image Variation SP' so the name, 'variation' and 'SP' are all searchable; card details leads with the name. Autos emitted only where --autos named them; a guide states them in prose, not in the gallery."
+}

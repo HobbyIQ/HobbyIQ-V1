@@ -1,0 +1,29 @@
+{
+  "scrapedAt": "2026-09-01T02:06:14.849Z",
+  "sourceUrl": "https://www.beckett.com/news/2021-bowman-chrome-mega-box-variations-guide/",
+  "source": "beckett",
+  "sport": "baseball",
+  "year": 2021,
+  "setName": "2021 Bowman Chrome Mega Box",
+  "productKey": "2021-bowman-chrome-mega-box-variations-guide",
+  "setKey": "bowman-chrome-mega-box",
+  "rowCount": 9,
+  "photoDescriptions": {
+    "BCP-3 Zac Veen": "bat in front of body, back of jersey partially visible",
+    "BCP-34 Nick Gonzales": "wearing helmet",
+    "BCP-55 Austin Hendrick": "no helmet",
+    "BCP-57 Wander Franco": "blue jersey",
+    "BCP-71 Blaze Jordan": "running",
+    "BCP-87 Austin Martin": "fielding, white jersey",
+    "BCP-96 Spencer Torkelson": "no sunglasses",
+    "BCP-125 Aaron Sabato": "front of jersey visible",
+    "BCP-129 Garrett Mitchell": "holding helmet"
+  },
+  "parallelColumnAuthoritative": true,
+  "cmpCodes": {
+    "base": "697",
+    "variations": "723"
+  },
+  "packOdds": "Landing 1:310 packs, these cards are tough, particularly when you factor in that just two of the exclusive packs are in each Mega Box.",
+  "note": "Rookie Image Variations. Parallel is '<Photo> Image Variation SP' so the name, 'variation' and 'SP' are all searchable; card details leads with the name. Autos emitted only where --autos named them; a guide states them in prose, not in the gallery."
+}
