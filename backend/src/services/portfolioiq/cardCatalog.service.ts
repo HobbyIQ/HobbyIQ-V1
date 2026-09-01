@@ -289,11 +289,34 @@ export function mergeCatalogEntries(
     || incomingRank > existingRank
     || (incomingRank === existingRank && confidenceOf(entry.confidence) > confidenceOf(existing.confidence));
   if (!winnerIsIncoming) {
+    // CF-A-DERIVED-INDEX-IS-NOT-AN-AUTHORITY-CLAIM (Drew, 2026-09-01).
+    //
+    // The losing branch keeps the existing row wholesale, which is right for
+    // every field that ASSERTS something — player, parallel, printRun, source.
+    // searchText / searchTokens / displayName assert nothing: they are a pure
+    // function of the row, and a row that lacks them is not "winning", it is
+    // unfindable (catalogSearch discriminates on ARRAY_CONTAINS(searchTokens)).
+    //
+    // Without this, re-ingesting a checklist over rows that already existed
+    // left 153 of 646 variation rows with no tokens — the incoming row did not
+    // outrank them, so the fields it had just computed were discarded. Fill
+    // them in only where the existing row HAS none; never overwrite, so a
+    // better row's index is left alone and the merge stays idempotent.
+    const ex = existing!;
+    const backfill: Record<string, unknown> = {};
+    for (const f of ["searchText", "searchTokens", "displayName", "setName"] as const) {
+      const has = (ex as unknown as Record<string, unknown>)[f];
+      const incoming = (entry as unknown as Record<string, unknown>)[f];
+      if ((has === undefined || has === null || has === "") && incoming !== undefined) {
+        backfill[f] = incoming;
+      }
+    }
     return {
       winnerIsIncoming,
       merged: {
-        ...existing!,
-        vendorIds: { ...existing!.vendorIds, ...entry.vendorIds },
+        ...ex,
+        ...backfill,
+        vendorIds: { ...ex.vendorIds, ...entry.vendorIds },
         lastSeenAt: now,
       },
     };
