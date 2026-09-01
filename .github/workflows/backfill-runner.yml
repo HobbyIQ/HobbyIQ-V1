@@ -166,6 +166,14 @@ on:
           - apply-cpa-product-rule
           - consolidate-catalog-duplicates
           - revert-d30-base-onto-one-of-one
+          # D30 unblock: D30's contentHash pre-flight REFUSES with a count and
+          # names nothing (278 collisions in 103 groups across the eight
+          # football shards). This classifies each one -- TRUE-DUPE (rows share
+          # a sourceExternalId) / DISTINCT-CARDS (the retracted " Refractor"
+          # strip squashed two real cards) / AMBIGUOUS (to Drew). MODE=report
+          # is READ ONLY and has no write path; MODE=apply-true-dupes flags
+          # ONLY the class it proved, and needs apply=true on top of it.
+          - triage-contenthash-collisions
 
           - rekey-user-comps
           - collapse-ch-dual-ids
@@ -622,6 +630,21 @@ jobs:
             exit 1
           fi
           echo "Script confirmed: $SCRIPT"
+
+          # Same lesson, one layer down: the triage's CLASSIFICATION RULE lives
+          # in a lib so the tests pin the code that runs. The entrypoint being
+          # present proves nothing about the lib, and a dispatch that reached
+          # Cosmos and then died on a missing require would have read the pool
+          # for nothing. Both libs it requires are checked here.
+          if [ "${{ inputs.script }}" = "triage-contenthash-collisions" ]; then
+            for LIB in collision-triage relocate-sold-comp; do
+              if [ ! -f "backend/scripts/lib/$LIB.cjs" ]; then
+                echo "::error::backend/scripts/lib/$LIB.cjs is missing — the triage would read the pool and then have no rule to classify with"
+                exit 1
+              fi
+            done
+            echo "Triage libs confirmed: collision-triage, relocate-sold-comp"
+          fi
 
           # The wrapper SHELLS OUT, so its own presence proves nothing about
           # the scripts it calls. ingest-checklists-end-to-end passed this
@@ -1530,6 +1553,28 @@ jobs:
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=consolidate-catalog-duplicates -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (consolidated=${N:-0}) — done, no re-dispatch."
+          fi
+
+      - name: Self-relaunch the collision triage until the slot is classified
+        if: ${{ !cancelled() && inputs.script == 'triage-contenthash-collisions' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        working-directory: backend
+        run: |
+          set +e
+          N=$(grep -aoE "^  COLLISIONS +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          echo "collisions=${N:-0}"
+          # CF-RELAUNCH-ONLY-ON-BUDGET (#1361): relaunch iff the script printed its
+          # budget marker. NEVER on a count -- a slot whose every group classifies
+          # clean has zero collisions and is FINISHED, not stalled -- and never on a
+          # cancel (a killed job cannot report progress).
+          if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
+            echo "::notice::budget hit (collisions=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
+            # The scope travels with the slot: mode, sports, years and scope verbatim.
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=triage-contenthash-collisions -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}"
+          else
+            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (collisions=${N:-0}) — done, no re-dispatch."
           fi
 
       - name: Self-relaunch the user-comp re-key until the slot is clean

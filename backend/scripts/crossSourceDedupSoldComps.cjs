@@ -16,19 +16,35 @@
 //         | parallel_normalized | isAuto | gradeCompany | gradeValue
 //         | priceCents_rounded | soldDay_YYYYMMDD
 //
-// Any group with >1 distinct `source` values is a cross-source dupe
-// cluster. Pick a winner (fill-score + oldest observedAt), delete
-// the losers, keep provenance so we could recover.
+// The identity key above BUCKETS the candidates. It does NOT prove they are
+// one sale: `sourceExternalId` does. It is the eBay item id, it is present on
+// every row, and it is half of the doc id `{source}::{sourceExternalId}`. Two
+// rows with DIFFERENT external ids are two different listings -- two real
+// sales -- however identical the rest of the key looks. rev-2 ignored the
+// field entirely, so two $9.99 sales in the same minute with different item
+// ids collapsed into one. A SHARED external id is now required before
+// anything is excluded.
+//
+// And the exclusion is a FLAG, not a delete. The pool is the moat: a vendor
+// may never re-emit a sale it has already reported, so a dedup never
+// hard-deletes. flaggedWrong=true is already filtered by every FMV read path
+// (canonicalFmv.service.ts:1073,:1292; marketMovers, playerDetail,
+// priceSeries, setDetail, verifyQueue; cohortBacktest), and the provenance
+// fields name the surviving row -- auditable, and reversible by clearing one
+// boolean.
 //
 // Safety:
-//   - DRY_RUN default. Prints plan + sample clusters before writing.
+//   - DRY_RUN default. Prints plan + sample clusters + the full would-flag
+//     list before writing.
 //   - Requires the identity key to be complete (skips rows with any
 //     null identity field — those can't be safely deduped)
 //   - Fill-score winner selection prefers rows with more populated
 //     fields; ties broken by oldest observedAt (first-observed
 //     assumption: source of truth)
-//   - Never deletes the last row in a cluster; if all rows are
+//   - Never flags the last row in a cluster; if all rows are
 //     equally-scored, keep the earliest-observed
+//   - Only-improve: a row already flagged is never re-stamped and
+//     never unflagged, so a re-run cannot overwrite a human ruling
 //   - Bounded date window via BULK_START_DATE / BULK_END_DATE to
 //     limit blast radius per run
 //
@@ -64,14 +80,36 @@ if (!CONN) { console.error("COSMOS_CONNECTION_STRING required"); process.exit(1)
 
 function norm(s) { return String(s ?? "").trim().toLowerCase(); }
 function normCardNum(s) { return String(s ?? "").trim().toUpperCase().replace(/^#+/, ""); }
+/** D31: the trailing " Refractor" is NO LONGER stripped. The retracted rule
+ *  held that a colour and its colour-refractor sibling were one card; D31 says
+ *  the checklist decides per card, and Topps Finest #197 lists `Uncommon` AND
+ *  `Uncommon Refractor` as two of them. Stripping the word put two different
+ *  cards' sales in one cluster, where this script would have excluded one of
+ *  them as a duplicate of the other. Mirrors scripts/lib/relocate-sold-comp.cjs. */
 function normParallel(s) {
   return String(s ?? "").trim().toLowerCase()
-    .replace(/\s+/g, " ")
-    .replace(/ refractors?$/, "");
+    .replace(/\s+/g, " ");
 }
 function normGradeCo(s) {
   const t = String(s ?? "").trim().toUpperCase();
   return t || "RAW";
+}
+
+/** The eBay item id, trimmed, or null when the row carries none. A row with no
+ *  external id can never PROVE sameness with another, so it is never excluded
+ *  on this rule -- absence of evidence is not evidence of duplication.
+ *
+ *  Deliberately NOT unwrapped to an inner listing id. CardHedge's two shapes
+ *  (`ch-daily::<price_history_id>` and the composed
+ *  `ch-comp::<cardId>::<soldAt>::<cents>`) share no listing id to extract, so
+ *  any unwrapping here would be a guess dressed as a proof. That population has
+ *  its own lane: scripts/collapse-ch-dual-ids.cjs, which pairs on (day, price)
+ *  and REFUSES on parallel or grade variance. */
+function externalIdOf(row) {
+  const v = row?.sourceExternalId;
+  if (v === null || v === undefined || v === "") return null;
+  const s = String(v).trim();
+  return s.length ? s : null;
 }
 
 // Fill score: more populated fields = better canonical candidate
@@ -102,9 +140,20 @@ async function fetchNextWithRetry(iter, maxAttempts = 8) {
   throw new Error("exhausted retries");
 }
 
-async function deleteWithRetry(container, id, pk, maxAttempts = 5) {
+/** THE ONE WRITE. Exclude a row from every FMV read path, reversibly, and say
+ *  which row superseded it and why. Never a delete: see the header. */
+async function flagWithRetry(container, id, pk, { survivingId, reason }, maxAttempts = 5) {
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    try { await container.item(id, pk).delete(); return true; }
+    try {
+      await container.item(id, pk).patch([
+        { op: "set", path: "/flaggedWrong", value: true },
+        { op: "set", path: "/flaggedReason", value: "dedup-superseded" },
+        { op: "set", path: "/dedupSupersededBy", value: String(survivingId) },
+        { op: "set", path: "/dedupReason", value: String(reason) },
+        { op: "set", path: "/dedupAt", value: new Date().toISOString() },
+      ]);
+      return true;
+    }
     catch (err) {
       const code = err && (err.code ?? err.statusCode);
       if (code === 404) return true;
@@ -130,11 +179,11 @@ async function main() {
   console.log("");
 
   const iter = sc.items.query({
-    query: `SELECT c.id, c.cardId, c._ts, c.source, c.observedAt,
+    query: `SELECT c.id, c.cardId, c._ts, c.source, c.sourceExternalId, c.observedAt,
                    c.playerName, c.cardYear, c.cardNumber, c.parallel,
                    c.isAuto, c.gradeCompany, c.gradeValue, c.price, c.soldAt,
                    c.hobbyiqCardId, c.imageUrl, c.title, c.team, c.setName,
-                   c.sport, c.printRun, c.normalizedSetKey
+                   c.sport, c.printRun, c.normalizedSetKey, c.verifiedByUser, c.flaggedWrong
             FROM c
             WHERE c.soldAt >= @from AND c.soldAt < @to
               AND c.price > 0
@@ -176,16 +225,40 @@ async function main() {
     if (scanned % 100000 === 0) console.log(`  scanned=${scanned.toLocaleString()}  clusters=${clusters.size.toLocaleString()}  (${((Date.now()-t0)/1000).toFixed(0)}s)`);
   }
 
-  // Find multi-source clusters
+  // Find PROVEN dupe clusters. The identity key above only buckets candidates;
+  // a shared sourceExternalId is what proves two rows are one sale. A bucket
+  // whose rows all carry different item ids is several real sales that happen
+  // to match on price and minute, and is left entirely alone.
   const dupeClusters = [];
   const sourceBreakdown = new Map(); // multi-cluster combo → count
+  let refusedDifferentIds = 0, refusedNoId = 0, refusedSingleSource = 0;
   for (const [key, rows] of clusters) {
-    const sources = new Set(rows.map(r => r.source));
-    if (sources.size <= 1) continue;
-    // Real cross-source dupe cluster
-    dupeClusters.push({ key, rows });
-    const combo = [...sources].sort().join("+");
-    sourceBreakdown.set(combo, (sourceBreakdown.get(combo) || 0) + 1);
+    if (rows.length < 2) continue;
+
+    const byExternal = new Map();
+    let noId = 0;
+    for (const r of rows) {
+      const ext = externalIdOf(r);
+      if (ext === null) { noId++; continue; }
+      const list = byExternal.get(ext) ?? [];
+      list.push(r);
+      byExternal.set(ext, list);
+    }
+    refusedNoId += noId;
+
+    const proven = [...byExternal.values()].filter(list => list.length > 1);
+    if (proven.length === 0) { refusedDifferentIds += rows.length; continue; }
+
+    for (const list of proven) {
+      const sources = new Set(list.map(r => r.source));
+      // Same source AND same external id is still one sale written twice --
+      // an idempotent upsert that did not hold. Worth excluding, and counted
+      // on its own line rather than silently dropped as rev-2 did.
+      if (sources.size <= 1) refusedSingleSource++;
+      dupeClusters.push({ key, rows: list, crossSource: sources.size > 1 });
+      const combo = [...sources].sort().join("+");
+      sourceBreakdown.set(combo, (sourceBreakdown.get(combo) || 0) + 1);
+    }
   }
   dupeClusters.sort((a, b) => b.rows.length - a.rows.length);
 
@@ -196,8 +269,13 @@ async function main() {
   console.log(`  rows scanned                : ${scanned.toLocaleString()}`);
   console.log(`  rows skipped (no identity)  : ${skippedNoIdentity.toLocaleString()}`);
   console.log(`  distinct real-world sales   : ${clusters.size.toLocaleString()}`);
-  console.log(`  multi-source dupe clusters  : ${dupeClusters.length.toLocaleString()}`);
-  console.log(`  extra rows to delete        : ${totalExtras.toLocaleString()}`);
+  console.log(`  PROVEN dupe clusters        : ${dupeClusters.length.toLocaleString()}   (shared sourceExternalId)`);
+  console.log(`    of those, same-source     : ${refusedSingleSource.toLocaleString()}   <- one sale written twice by one path`);
+  console.log(`  extra rows to FLAG          : ${totalExtras.toLocaleString()}   <- flaggedWrong=true, never a delete`);
+  console.log("");
+  console.log("[refused -- left alone, every one a real sale]");
+  console.log(`  same key, different item ids: ${refusedDifferentIds.toLocaleString()}`);
+  console.log(`  rows carrying no item id    : ${refusedNoId.toLocaleString()}`);
   console.log("");
   console.log("[cross-source combo breakdown]");
   for (const [combo, n] of [...sourceBreakdown.entries()].sort((a, b) => b[1] - a[1])) {
@@ -206,7 +284,7 @@ async function main() {
 
   if (dupeClusters.length === 0) {
     console.log("");
-    console.log("[done] no cross-source dupes in the window.");
+    console.log("[done] no PROVEN dupes in the window (no two rows share an item id).");
     return;
   }
 
@@ -215,6 +293,7 @@ async function main() {
 
   // Pick winner per cluster: highest fill score, then earliest observedAt
   const patchQueue = [];
+  let alreadyFlagged = 0;
   for (const cluster of process_clusters) {
     const scored = cluster.rows.map(r => ({
       row: r,
@@ -225,12 +304,17 @@ async function main() {
     scored.sort((a, b) => (b.fill - a.fill) || (a.obsMs - b.obsMs) || (a.ts - b.ts));
     const winner = scored[0].row;
     for (const s of scored.slice(1)) {
+      // Only-improve: an already-flagged row is left exactly as it is, so a
+      // re-run can never overwrite an earlier (possibly human) ruling.
+      if (s.row.flaggedWrong === true) { alreadyFlagged++; continue; }
       patchQueue.push({
         id: s.row.id,
         pk: s.row.cardId,
         loserSource: s.row.source,
+        winnerId: winner.id,
         winnerSlug: winner.hobbyiqCardId ?? "(none)",
         winnerSource: winner.source,
+        sharedExternalId: externalIdOf(s.row),
       });
     }
   }
@@ -247,27 +331,37 @@ async function main() {
 
   if (DRY_RUN) {
     console.log("");
-    console.log("[DRY_RUN] no writes. Set DRY_RUN=false to delete losers.");
+    console.log(`[would flag] the FULL list -- ${patchQueue.length.toLocaleString()} row(s), each superseded by a row sharing its item id:`);
+    for (const p of patchQueue) {
+      console.log(`  FLAG ${p.id}  [${p.loserSource}]  ext=${p.sharedExternalId}`);
+      console.log(`       superseded by ${p.winnerId}  [${p.winnerSource}]  slug=${p.winnerSlug}`);
+    }
+    console.log("");
+    console.log(`[DRY_RUN] no writes. ${alreadyFlagged.toLocaleString()} row(s) already flagged and left untouched.`);
+    console.log("[DRY_RUN] Set DRY_RUN=false to flag the losers (flaggedWrong=true; nothing is ever deleted).");
     return;
   }
 
   console.log("");
-  console.log(`[apply] deleting ${patchQueue.length.toLocaleString()} loser rows…`);
-  let deleted = 0, deleteFailed = 0;
+  console.log(`[apply] flagging ${patchQueue.length.toLocaleString()} superseded rows (flaggedWrong=true -- never a delete)…`);
+  let flagged = 0, flagFailed = 0;
   const inflight = new Set();
   for (const p of patchQueue) {
     while (inflight.size >= CONCURRENCY) await Promise.race([...inflight]);
-    const task = deleteWithRetry(sc, p.id, p.pk)
+    const task = flagWithRetry(sc, p.id, p.pk, {
+      survivingId: p.winnerId,
+      reason: `cross-source-dedup:shared-sourceExternalId:${p.sharedExternalId}`,
+    })
       .then(() => {
-        deleted++;
-        if (deleted % 500 === 0) {
-          const eps = (deleted / ((Date.now() - t0) / 1000)).toFixed(0);
-          console.log(`  deleted ${deleted.toLocaleString()}/${patchQueue.length.toLocaleString()}  (${eps}/sec)`);
+        flagged++;
+        if (flagged % 500 === 0) {
+          const eps = (flagged / ((Date.now() - t0) / 1000)).toFixed(0);
+          console.log(`  flagged ${flagged.toLocaleString()}/${patchQueue.length.toLocaleString()}  (${eps}/sec)`);
         }
       })
       .catch(err => {
-        deleteFailed++;
-        if (deleteFailed <= 10) console.warn(`  delete-fail id=${p.id}: ${(err && err.message) || err}`);
+        flagFailed++;
+        if (flagFailed <= 10) console.warn(`  flag-fail id=${p.id}: ${(err && err.message) || err}`);
       })
       .finally(() => inflight.delete(task));
     inflight.add(task);
@@ -276,10 +370,12 @@ async function main() {
 
   const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
   console.log("");
-  console.log("[done]");
-  console.log(`  deleted        : ${deleted.toLocaleString()}`);
-  console.log(`  delete-failed  : ${deleteFailed.toLocaleString()}`);
-  console.log(`  elapsed        : ${elapsed}s`);
+  console.log("[done] nothing was deleted; every exclusion is a reversible flag.");
+  console.log(`  flagged             : ${flagged.toLocaleString()}`);
+  console.log(`  already flagged     : ${alreadyFlagged.toLocaleString()}   <- only-improve, left untouched`);
+  console.log(`  flag-failed         : ${flagFailed.toLocaleString()}`);
+  console.log(`  elapsed             : ${elapsed}s`);
+  console.log(`  reconciled: intended ${patchQueue.length.toLocaleString()} = written ${flagged.toLocaleString()} + skipped 0 + failed ${flagFailed.toLocaleString()}`);
 }
 
 main().catch(e => { console.error("[FATAL]", (e && e.stack) || e); process.exit(1); });
