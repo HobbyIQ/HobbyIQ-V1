@@ -1,0 +1,34 @@
+{
+  "scrapedAt": "2026-09-01T01:03:11.061Z",
+  "sourceUrl": "https://www.beckett.com/news/2022-bowman-chrome-draft-baseball-variations-guide/",
+  "source": "beckett",
+  "sport": "baseball",
+  "year": 2022,
+  "setName": "2022 Bowman Chrome Draft",
+  "productKey": "2022-bowman-chrome-draft-baseball-variations-guide",
+  "setKey": "bowman-chrome-draft",
+  "rowCount": 15,
+  "photoDescriptions": {
+    "BD-6 Gavin Cross": "holding helmet",
+    "BD-15 Jace Jung": "clapping",
+    "BD-19 Bryan Acuña": "throwing, white jersey",
+    "BD-23 Elijah Green": "wearing glove and cap",
+    "BD-47 Kevin Parada": "crouching",
+    "BD-51 Oscar Colas": "peace sign",
+    "BD-63 Samuel Munoz": "wearing helmet",
+    "BD-64 Cristhian Vaquero": "swinging, front of jersey visible",
+    "BD-79 Roderick Arias": "pointing",
+    "BD-80 Elly De La Cruz": "throwing, wearing sunglasses",
+    "BD-115 Jackson Chourio": "bag on shoulder",
+    "BD-130 Termarr Johnson": "bat on shoulder",
+    "BD-153 Brooks Lee": "holding bat",
+    "BD-164 Kumar Rocker": "blue jersey, leaning over",
+    "BD-168 Jackson Holliday": "black jersey, wearing cap"
+  },
+  "parallelColumnAuthoritative": true,
+  "cmpCodes": {
+    "variations": "346"
+  },
+  "packOdds": "Hobby HTA - 1:247 packs",
+  "note": "Rookie Image Variations. Parallel is '<Photo> Image Variation SP' so the name, 'variation' and 'SP' are all searchable; card details leads with the name. Autos emitted only where --autos named them; a guide states them in prose, not in the gallery."
+}

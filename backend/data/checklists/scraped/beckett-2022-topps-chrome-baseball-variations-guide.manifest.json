@@ -1,0 +1,15 @@
+{
+  "scrapedAt": "2026-09-01T01:03:15.020Z",
+  "sourceUrl": "https://www.beckett.com/news/2022-topps-chrome-baseball-variations-guide/",
+  "source": "beckett",
+  "sport": "baseball",
+  "year": 2022,
+  "setName": "2022 Topps Chrome",
+  "productKey": "2022-topps-chrome-baseball-variations-guide",
+  "setKey": "topps-chrome",
+  "rowCount": 25,
+  "photoDescriptions": {},
+  "parallelColumnAuthoritative": true,
+  "packOdds": "Hobby - 1:21,698 packs",
+  "note": "Rookie Image Variations. Parallel is '<Photo> Image Variation SP' so the name, 'variation' and 'SP' are all searchable; card details leads with the name. Autos emitted only where --autos named them; a guide states them in prose, not in the gallery."
+}

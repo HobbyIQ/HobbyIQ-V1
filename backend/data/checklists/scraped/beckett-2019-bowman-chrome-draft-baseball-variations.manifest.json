@@ -1,0 +1,33 @@
+{
+  "scrapedAt": "2026-09-01T01:03:33.327Z",
+  "sourceUrl": "https://www.beckett.com/news/2019-bowman-chrome-draft-baseball-variations/",
+  "source": "beckett",
+  "sport": "baseball",
+  "year": 2019,
+  "setName": "2019 Bowman Chrome Draft",
+  "productKey": "2019-bowman-chrome-draft-baseball-variations",
+  "setKey": "bowman-chrome-draft",
+  "rowCount": 14,
+  "photoDescriptions": {
+    "BDC-1 Adley Rutschman": "throwing",
+    "BDC-3 Alek Manoah": "tipping cap",
+    "BDC-7 Josh Jung": "no helmet",
+    "BDC-31 Hunter Bishop": "running, no bat",
+    "BDC-50 Riley Greene": "running",
+    "BDC-67 Shea Langeliers": "throwing",
+    "BDC-85 CJ Abrams": "batting",
+    "BDC-88 Victor Victor Mesa": "with bat, blue jersey",
+    "BDC-93 Wander Franco": "batting, blue jersey",
+    "BDC-100 Andrew Vaughn": "ball visible, glove open",
+    "BDC-134 Joey Bart": "with bat",
+    "BDC-150 J.J. Bleday": "running, black jersey",
+    "BDC-189 Nick Lodolo": "ball in front",
+    "BDC-192 Seth Beer": "fielding"
+  },
+  "parallelColumnAuthoritative": true,
+  "cmpCodes": {
+    "base": "737",
+    "variation": "763"
+  },
+  "note": "Rookie Image Variations. Parallel is '<Photo> Image Variation SP' so the name, 'variation' and 'SP' are all searchable; card details leads with the name. Autos emitted only where --autos named them; a guide states them in prose, not in the gallery."
+}

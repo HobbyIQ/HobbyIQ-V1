@@ -1,0 +1,35 @@
+{
+  "scrapedAt": "2026-09-01T01:02:58.449Z",
+  "sourceUrl": "https://www.beckett.com/news/2023-bowman-chrome-baseball-image-variations-guide/",
+  "source": "beckett",
+  "sport": "baseball",
+  "year": 2023,
+  "setName": "2023 Bowman Chrome",
+  "productKey": "2023-bowman-chrome-baseball-image-variations-guide",
+  "setKey": "bowman-chrome",
+  "rowCount": 15,
+  "photoDescriptions": {
+    "5 Corbin Carroll": "taking off helmet",
+    "10 Gunnar Henderson": "wearing chain in dugout",
+    "15 Brett Baty": "black jersey",
+    "17 Adley Rutschman": "bending over",
+    "23 Ezequiel Tovar": "batting",
+    "29 Riley Greene": "pinstripe throwback jersey",
+    "31 Michael Harris II": "red shirt, wearing sunglasses",
+    "32 Triston Casas": "long-sleeve shirt",
+    "35 Francisco Álvarez": "catcher's gear",
+    "40 Miguel Vargas": "long-sleeve shirt",
+    "44 Oswald Peraza": "fielding",
+    "48 Nolan Gorman": "camouflage cap, running out of dugout",
+    "71 Christopher Morel": "in corn field",
+    "75 Masataka Yoshida": "autographing jersey",
+    "77 Kodai Senga": "press conference"
+  },
+  "parallelColumnAuthoritative": true,
+  "cmpCodes": {
+    "base": "863",
+    "variations": "906"
+  },
+  "packOdds": "2023 Bowman Chrome Baseball Image Variations land 1:223 hobby packs.",
+  "note": "Rookie Image Variations. Parallel is '<Photo> Image Variation SP' so the name, 'variation' and 'SP' are all searchable; card details leads with the name. Autos emitted only where --autos named them; a guide states them in prose, not in the gallery."
+}

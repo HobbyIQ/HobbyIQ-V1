@@ -1,0 +1,23 @@
+{
+  "scrapedAt": "2026-09-01T01:03:24.790Z",
+  "sourceUrl": "https://www.beckett.com/news/2021-bowman-platinum-baseball-variations-guide/",
+  "source": "beckett",
+  "sport": "baseball",
+  "year": 2021,
+  "setName": "2021 Bowman Platinum",
+  "productKey": "2021-bowman-platinum-baseball-variations-guide",
+  "setKey": "bowman-platinum",
+  "rowCount": 3,
+  "photoDescriptions": {
+    "14 Joey Bart": "looking down",
+    "55 Fernando Tatis Jr.": "swinging",
+    "61 Mike Trout": "facing forward"
+  },
+  "parallelColumnAuthoritative": true,
+  "cmpCodes": {
+    "base": "631",
+    "variation": "678"
+  },
+  "packOdds": "The biggest draw is likely their rarity. Variations land 1:888 mega box packs. In blasters they're even tougher, appearing 1:1,365 packs.",
+  "note": "Rookie Image Variations. Parallel is '<Photo> Image Variation SP' so the name, 'variation' and 'SP' are all searchable; card details leads with the name. Autos emitted only where --autos named them; a guide states them in prose, not in the gallery."
+}

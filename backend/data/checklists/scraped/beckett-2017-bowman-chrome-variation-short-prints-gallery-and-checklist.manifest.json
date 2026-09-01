@@ -1,0 +1,31 @@
+{
+  "scrapedAt": "2026-09-01T01:03:47.212Z",
+  "sourceUrl": "https://www.beckett.com/news/2017-bowman-chrome-variation-short-prints-gallery-and-checklist/",
+  "source": "beckett",
+  "sport": "baseball",
+  "year": 2017,
+  "setName": "2017 Bowman Chrome",
+  "productKey": "2017-bowman-chrome-variation-short-prints-gallery-and-checklist",
+  "setKey": "bowman-chrome",
+  "rowCount": 15,
+  "photoDescriptions": {
+    "6 Alex Reyes": "pointing up",
+    "12 Alex Bregman": "sitting on bench",
+    "22 Jharel Cotton": "green jersey",
+    "31 David Dahl": "running",
+    "50 Yoan Moncada": "black jersey",
+    "56 Aaron Judge": "holding cap, in dugout",
+    "57 Yulieski Gurriel": "with glove, blue jersey",
+    "68 Andrew Benintendi": "Gatorade bath, interview",
+    "75 Jose De Leon": "facing Bowman logo",
+    "77 Orlando Arcia": "sitting with bat",
+    "80 Tyler Glasnow": "white jersey",
+    "81 Robert Gsellman": "at fence with fans, hat backwards",
+    "84 Jorge Alfaro": "batting",
+    "86 Dansby Swanson": "blue jersey, no cap",
+    "88 Hunter Renfroe": "blue jersey"
+  },
+  "parallelColumnAuthoritative": true,
+  "packOdds": "2017 Bowman Chrome variations are inserted 1:119 hobby packs. Basically, it's 1:10 boxes or slightly better than one per 12-box case.",
+  "note": "Rookie Image Variations. Parallel is '<Photo> Image Variation SP' so the name, 'variation' and 'SP' are all searchable; card details leads with the name. Autos emitted only where --autos named them; a guide states them in prose, not in the gallery."
+}

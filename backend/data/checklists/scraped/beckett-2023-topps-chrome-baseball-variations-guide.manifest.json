@@ -1,0 +1,18 @@
+{
+  "scrapedAt": "2026-09-01T01:03:04.638Z",
+  "sourceUrl": "https://www.beckett.com/news/2023-topps-chrome-baseball-variations-guide/",
+  "source": "beckett",
+  "sport": "baseball",
+  "year": 2023,
+  "setName": "2023 Topps Chrome",
+  "productKey": "2023-topps-chrome-baseball-variations-guide",
+  "setKey": "topps-chrome",
+  "rowCount": 25,
+  "photoDescriptions": {},
+  "parallelColumnAuthoritative": true,
+  "cmpCodes": {
+    "base": "121"
+  },
+  "packOdds": "Image Variations are on the tough side, landing 1:497 hobby packs, 1:221 jumbo packs and 1:861 blaster packs.",
+  "note": "Rookie Image Variations. Parallel is '<Photo> Image Variation SP' so the name, 'variation' and 'SP' are all searchable; card details leads with the name. Autos emitted only where --autos named them; a guide states them in prose, not in the gallery."
+}
