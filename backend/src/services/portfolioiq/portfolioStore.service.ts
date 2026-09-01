@@ -4004,7 +4004,9 @@ async function autoPriceHolding(
           estimateBasis: ourPool.estimateBasis,
           isEstimate: ourPool.valuationStatus === "estimated",
         };
-        ourPoolMeta = { slug: ourPool.slug, method: ourPool.method, compsUsed: ourPool.compsUsed };
+        // CF-RUNG-LABEL: the meta's `method` is read as a rung label (see the
+        // reprice writer below) — stamp the rung, not the HobbyIqFmvMethod.
+        ourPoolMeta = { slug: ourPool.slug, method: ourPool.rungLabel, compsUsed: ourPool.compsUsed };
         priceSurfaceRung = ourPool.rungLabel;
       }
     }
@@ -9817,9 +9819,20 @@ export async function repriceHoldingsForUser(
                 sourceVendor: "hobbyiq-pool" as any,
                 sourceVendorUpdatedAt: now,
                 pricingSource: "our-pool",
+                // CF-RUNG-LABEL: `pricingSourceMeta.method` is read as a RUNG
+                // label — the web's holdingProvenance() prefers it over the
+                // flat `fmvRung`, and rung.ts only knows the closed
+                // FmvRungLabel vocabulary. `ourPool.method` is the
+                // HobbyIqFmvMethod vocabulary, whose `direct-slug` is
+                // deliberately NOT a rung name (fmvRung.ts excludes it: the
+                // exact pool's rung is `exact-pool-*`, by aggregation). Writing
+                // the method here made the dashboard render
+                // `? unknown - unknown rung "direct-slug"` on genuine
+                // exact-pool prices. Stamp the rung the same literal that sets
+                // fmvRung above, so both fields carry one vocabulary.
                 pricingSourceMeta: {
                   slug: ourPool.slug,
-                  method: ourPool.method,
+                  method: ourPool.rungLabel,
                   compsUsed: ourPool.compsUsed,
                 },
               };

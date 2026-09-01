@@ -83,3 +83,50 @@ describe("portfolioStore — every fairMarketValue writer also writes fmvRung", 
     expect(src).toMatch(/fmvRung: \(h as \{ fmvRung\?: string \| null \}\)\.fmvRung \?\? null/);
   });
 });
+
+// CF-RUNG-LABEL, second vocabulary (2026-09-01).
+//
+// `pricingSourceMeta.method` is READ as a rung label: the web's
+// holdingProvenance() (apps/web/src/lib/rung.ts) prefers it over the flat
+// `fmvRung`, and describeRung() only knows the closed FmvRungLabel vocabulary.
+// The our-pool writers were stamping `ourPool.method` there instead — the
+// HobbyIqFmvMethod vocabulary, whose `direct-slug` is deliberately NOT a rung
+// name (fmvRung.ts: `Exclude<HobbyIqFmvMethod, "direct-slug">`, because the
+// exact pool's rung is `exact-pool-*`, named by aggregation).
+//
+// Live symptom (2026-09-01): the one live holding stamped with the wrong
+// vocabulary was 2024 Bowman Draft #CPA-MS (pricingSource our-pool, correct
+// fmvRung exact-pool-leading-edge one field away); its provenance chip read
+//   ? unknown - unknown rung "direct-slug"
+// on a number that was in fact the strongest rung the engine has.
+//
+// So: the persisted meta carries `rungLabel`, never `method`. The telemetry
+// and `updates[].reason` strings may still name the ladder method — they are
+// not read as rung labels.
+describe("portfolioStore — pricingSourceMeta.method carries the RUNG vocabulary", () => {
+  it("no persisted pricingSourceMeta literal stamps `method: ourPool.method`", () => {
+    const re = /pricingSourceMeta[\s]*[:=][\s]*\{/g;
+    const offenders: string[] = [];
+    let checked = 0;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(src)) !== null) {
+      const lit = enclosingLiteral(m.index + m[0].length - 1);
+      if (!lit) continue;
+      checked++;
+      const body = src.slice(lit.start, lit.end);
+      // `.method` on the our-pool / unified result is the ladder METHOD.
+      // Only `.rungLabel` (or a literal rung string) belongs here.
+      if (/method:\s*\w+\.method\b/.test(body)) offenders.push(`line ${lineOf(m.index)}`);
+    }
+    expect(checked, "the pin found no pricingSourceMeta literals — fix the pin").toBeGreaterThanOrEqual(2);
+    expect(offenders, "pricingSourceMeta stamped a ladder method instead of a rung label at").toEqual([]);
+  });
+
+  it("the our-pool reprice writer stamps ourPool.rungLabel", () => {
+    expect(src).toMatch(/pricingSourceMeta:\s*\{\s*\n\s*slug: ourPool\.slug,\s*\n\s*method: ourPool\.rungLabel,/);
+  });
+
+  it("the ourPoolMeta assignment stamps ourPool.rungLabel", () => {
+    expect(src).toMatch(/ourPoolMeta = \{ slug: ourPool\.slug, method: ourPool\.rungLabel, compsUsed: ourPool\.compsUsed \}/);
+  });
+});
