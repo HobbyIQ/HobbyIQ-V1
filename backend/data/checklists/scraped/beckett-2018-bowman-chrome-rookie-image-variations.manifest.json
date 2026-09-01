@@ -1,5 +1,5 @@
 {
-  "scrapedAt": "2026-08-31T23:48:36.548Z",
+  "scrapedAt": "2026-09-01T00:42:03.081Z",
   "sourceUrl": "https://www.beckett.com/news/2018-bowman-chrome-baseball-variations-everything-you-need-to-spot-them-quickly-and-easily/",
   "source": "beckett",
   "sport": "baseball",
@@ -9,5 +9,26 @@
   "setKey": "bowman-chrome",
   "rowCount": 28,
   "parallelColumnAuthoritative": true,
-  "note": "Rookie Image Variations: short prints sharing the base card number, 1:133 hobby packs, CMP code 393 (base 370). 13 of 15 have auto versions; Nick Williams and Alex Verdugo do not."
+  "note": "Rookie Image Variations: short prints sharing the base card number, 1:133 hobby packs, CMP code 393 (base 370). Parallel is '<Name> Image Variation SP' per Drew 2026-09-01, so the specific name, 'variation' and 'SP' are all searchable. 13 of 15 have autos; Nick Williams and Alex Verdugo do not.",
+  "marketAliases": {
+    "1 Carrying Bag": [
+      "bag over shoulder",
+      "with bag"
+    ],
+    "8 With Bat": [
+      "swinging bat"
+    ],
+    "33 Catchers Gear": [
+      "catching gear"
+    ],
+    "35 Gray Jersey": [
+      "grey jersey"
+    ],
+    "65 Running": [
+      "white pinstripe jersey"
+    ],
+    "87 No Helmet": [
+      "no cap"
+    ]
+  }
 }
