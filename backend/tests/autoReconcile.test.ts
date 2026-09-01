@@ -76,7 +76,18 @@ describe("Layer 2 — feesAxisSatisfied", () => {
 });
 
 describe("Layer 2 — missingFeeFields returns [] when axis satisfied", () => {
-  it("returns [] for netPayout+shipping shortcut even without granular breakdown", () => {
+  // D34 R2 (2026-09-01): REWRITTEN. This test previously asserted that the
+  // netPayout+shipping shortcut returns [] with NO granular breakdown and no
+  // provenance at all — and that is precisely the Ohtani shape: payout
+  // 2396.85, shipping 5.97, five fee lines null, $603.14 itemized nowhere.
+  // Keyed on field-nullness alone, the row reported nothing outstanding.
+  //
+  // The Layer-2 intent (2026-07-12) survives intact: a row that is ready to
+  // close should show a "ready to save" affordance, not a "waiting on fees"
+  // list. It is now keyed on the fee FETCH having answered, which is the
+  // thing that actually distinguishes "eBay sent no such line" from "we
+  // never asked".
+  it("returns [] for the netPayout+shipping shortcut once the fee fetch has answered", () => {
     const e = makeEntry({
       netPayout: 80,
       actualShippingCost: 5,
@@ -85,8 +96,29 @@ describe("Layer 2 — missingFeeFields returns [] when axis satisfied", () => {
       promotedListingFee: null,
       adFee: null,
       otherFees: null,
+      feeFetchedAt: "2026-09-01T12:00:00.000Z",
     });
     expect(missingFeeFields(e)).toEqual([]);
+  });
+
+  it("but NOT when the breakdown was never fetched — that is the Ohtani row", () => {
+    const e = makeEntry({
+      netPayout: 80,
+      actualShippingCost: 5,
+      finalValueFee: null,
+      paymentProcessingFee: null,
+      promotedListingFee: null,
+      adFee: null,
+      otherFees: null,
+      feeFetchedAt: null,
+    });
+    expect(missingFeeFields(e)).toEqual([
+      "finalValueFee", "paymentProcessingFee", "promotedListingFee",
+      "adFee", "otherFees",
+    ]);
+    // The row may still CLOSE on the shortcut — the axis is unchanged.
+    // What it may not do is claim nothing is outstanding.
+    expect(feesAxisSatisfied(e)).toBe(true);
   });
 
   it("returns fields list when axis not satisfied", () => {

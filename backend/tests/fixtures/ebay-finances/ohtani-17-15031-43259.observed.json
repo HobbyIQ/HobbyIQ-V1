@@ -1,0 +1,25 @@
+{
+  "_provenance": "MEASURED. Read from the prod portfolio container 2026-08-31 (read-only). These are the stored ledger values for the reconciled Ohtani sale, not an eBay payload.",
+  "orderId": "17-15031-43259",
+  "playerName": "Shohei Ohtani",
+  "soldAt": "2026-08-17T15:50:42.000Z",
+  "reconciledVia": "ebay_finances",
+  "needsReconciliation": false,
+  "storedLedgerFields": {
+    "grossProceeds": 2999.99,
+    "netProceeds": 2396.85,
+    "realizedProfitLoss": 46.84999999999991,
+    "finalValueFee": null,
+    "paymentProcessingFee": null,
+    "promotedListingFee": null,
+    "adFee": null,
+    "otherFees": null,
+    "netPayout": 2396.85,
+    "actualShippingCost": 5.97
+  },
+  "derived": {
+    "totalWithheldByEbay": 603.14,
+    "withheldPctOfGross": 20.1,
+    "comment": "gross - netPayout. Itemized in no field before D34. The five nulls are the bug: eBay DID send the breakdown, under orderLineItems[].marketplaceFees[], and the mapper looked only at a top-level fees[]."
+  }
+}
