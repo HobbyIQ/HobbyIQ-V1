@@ -318,6 +318,21 @@ export function classifyFamily(setName: string | null | undefined): string {
   }
   if (s.includes("bowman chrome draft") || s.includes("bowman draft chrome")) return "bowman-chrome-draft";
   if (s.includes("bowman chrome")) return "bowman-chrome";
+  // CF-BOWMAN-DRAFT-IS-ITS-OWN-FAMILY (2026-09-01). "Bowman Draft" is a
+  // distinct product from flagship Bowman — chrome-fronted, with the Chrome
+  // Prospect Autographs (CPA-*) as its headline cards — so its grade curve
+  // tracks bowman-chrome, not paper bowman. It MUST be tested before the bare
+  // "bowman" token, which was swallowing it: classifyFamily("Bowman Draft")
+  // returned "bowman" and a 2024 Bowman Draft CPA auto drew paper-Bowman
+  // multipliers (PSA 9 1.83x) instead of its own. Exactly the shadowing shape
+  // CF-OPTIC-BEFORE-DONRUSS fixed. Ordering is the whole fix.
+  //
+  // Paired with the { family: "bowman-draft", token: "Bowman Draft" } row in
+  // scripts/grade-calibrate.mjs BASELINE_FAMILIES — the classifier and the
+  // generator must name the same cell or the lookup misses. Until the weekly
+  // Grade Calibration Refresh runs, lookupGradeRatioByTier falls through to
+  // the "other" family, which is the honest answer for an uncalibrated cell.
+  if (s.includes("bowman draft")) return "bowman-draft";
   // CF-CLASSIFY-CPA-AS-BOWMAN-CHROME (Drew, 2026-07-31). "Chrome Prospects
   // Autographs" (CPA-* card numbers) is Topps' formal name for the Bowman
   // Chrome auto insert set. Rows arrive in sold_comps under multiple
@@ -340,6 +355,20 @@ export function classifyFamily(setName: string | null | undefined): string {
   if (s.includes("topps pristine")) return "topps-pristine";
   if (s.includes("allen & ginter") || s.includes("allen and ginter")) return "topps-allen-ginter";
   if (s.includes("topps stadium club") || s.includes("stadium club")) return "topps-stadium-club";
+  // CF-GOLD-LABEL-IS-NOT-FLAGSHIP-TOPPS (2026-09-01). Gold Label is a premium
+  // chrome-stock product whose Class 1/2/3 tiers are serial-numbered
+  // parallels; its grade economics are nothing like flagship paper Topps.
+  // Before this line, classifyFamily("2017 Topps Gold Label") returned
+  // "topps" — a SUPERSET cell (PSA 9 n=2562) pooled over tens of thousands of
+  // paper commons, which is the wrong cell for a Gold Label card in the same
+  // way panini-donruss was the wrong cell for an Optic card. Must be tested
+  // before the bare "topps" token that was shadowing it.
+  //
+  // Paired with the { family: "topps-gold-label", token: "Gold Label" } row in
+  // scripts/grade-calibrate.mjs BASELINE_FAMILIES. Until the weekly refresh
+  // populates it, lookupGradeRatioByTier falls through to the "other" family
+  // rather than silently reusing the paper-Topps number.
+  if (s.includes("gold label")) return "topps-gold-label";
   if (s.includes("topps")) return "topps";
   if (s.includes("prizm")) return "panini-prizm";
   if (s.includes("select")) return "panini-select";
