@@ -18,8 +18,15 @@ import { describe, expect, it } from "vitest";
 
 const backend = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const scriptPath = path.join(backend, "scripts", "triage-contenthash-collisions.cjs");
-const source = fs.readFileSync(scriptPath, "utf8");
-const consolidate = fs.readFileSync(path.join(backend, "scripts", "consolidate-catalog-duplicates.cjs"), "utf8");
+// LINE ENDINGS ARE NOT PART OF THE CONTRACT. This is a CRLF checkout with no
+// .gitattributes, so a source slice keyed on an LF-only literal (`"} else {\n"`)
+// silently returns -1 here and slices to EOF -- which swallowed the very
+// `flagSuperseded` call the DISTINCT-CARDS test asserts is absent. Normalize
+// once at read time so every grep-style assertion below reads the same string
+// on every machine.
+const readSource = (p: string) => fs.readFileSync(p, "utf8").replace(/\r\n/g, "\n");
+const source = readSource(scriptPath);
+const consolidate = readSource(path.join(backend, "scripts", "consolidate-catalog-duplicates.cjs"));
 
 function run(env: Record<string, string>): { code: number | null; out: string } {
   try {
