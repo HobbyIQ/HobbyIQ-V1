@@ -41,7 +41,7 @@
 const path = require("path");
 const backend = path.join(__dirname, "..");
 const { CosmosClient } = require(path.join(backend, "node_modules/@azure/cosmos"));
-const { rebuildSearchFields } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
+const { rebuildSearchFields, patchCatalogRowFields } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
 
 const arg = (n, d) => {
   const hit = process.argv.find((a) => a.startsWith(`--${n}=`));
@@ -110,14 +110,16 @@ async function main() {
       shown++;
     }
     if (!APPLY) { ok++; continue; }
-    const ops = [
-      { op: "add", path: "/searchText", value: fields.searchText },
-      { op: "add", path: "/searchTokens", value: fields.searchTokens },
-      { op: "add", path: "/displayName", value: fields.displayName },
-    ];
-    if (!r.setName) ops.push({ op: "add", path: "/setName", value: setName });
+    const patch = {
+      searchText: fields.searchText,
+      searchTokens: fields.searchTokens,
+      displayName: fields.displayName,
+      ...(r.setName ? {} : { setName }),
+    };
     try {
-      await cat.item(r.id, r.cardId).patch(ops);
+      // Derived index fields: the previous value is absent by definition, so
+      // no shadow copy is worth keeping.
+      await patchCatalogRowFields(cat, r.id, r.cardId, patch, { noShadow: true });
       ok++;
     } catch (e) {
       failed++;
