@@ -16,6 +16,7 @@
 //   - Trend: OLS regression when n≥3; anchor slope when n=2; flat below.
 
 import { CosmosClient, type Container } from "@azure/cosmos";
+import { asOfCutoffString, isBeforeAsOf } from "../compiq/asOfCutoff.js";
 import { cardNumberInClause, parseHobbyIqCardId, slugify } from "./hobbyIqCardId.service.js";
 import {
   filterCrossSetKeyComps,
@@ -82,6 +83,11 @@ export interface HobbyIqFmvInput {
    *  empty); it calls here for the GATED fallback ladder only. Skips the
    *  unified branch so the same engine is not asked twice. */
   skipExactPool?: boolean;
+  /** CF-AS-OF-IS-AN-UPPER-BOUND (#1651, the engine backtest, 2026-09-02).
+   *  Evaluate the ladder as of a PAST instant: `now` becomes this value, so
+   *  every window and trend reckons from it, and every rung's pool read
+   *  refuses rows at or after it. Undefined in production. */
+  asOfMs?: number | null;
 }
 
 export interface HobbyIqFmvComp {
@@ -216,10 +222,19 @@ async function queryPool(
   whereClause: string,
   parameters: Array<{ name: string; value: string | number | boolean | null }>,
   cutoffIso: string,
+  /** CF-AS-OF-IS-AN-UPPER-BOUND (#1651). Backtest only: no sale at or after
+   *  this instant may be read. This function is the ONE query behind all
+   *  eleven fallback rungs — cross-setkey, sibling, family baseline, the
+   *  rare-card anchor and the rest — so bounding it here bounds every rung
+   *  the backtest compares the speculation rung AGAINST. Bounding only the
+   *  exact pool would have made the new rung look good against a baseline
+   *  that could see the future. Null in production. */
+  asOfIso: string | null = null,
 ): Promise<PoolRow[]> {
   const params = [
     ...parameters,
     { name: "@from", value: cutoffIso },
+    ...(asOfIso ? [{ name: "@asOf", value: asOfIso }] : []),
   ];
   try {
     // Cosmos SQL rejects "NOT IN ()" (empty tuple), so only append the
@@ -239,12 +254,16 @@ async function queryPool(
                      c.isAuto, c.printRun, c.gradeCompany, c.gradeValue, c.qualityFlags,
                      c.hobbyiqCardId, c.playerName, c.product, c.cardYear
               FROM c
-              WHERE ${whereClause} AND c.soldAt > @from${sourceClause}
+              WHERE ${whereClause} AND c.soldAt > @from${asOfIso ? " AND c.soldAt < @asOf" : ""}${sourceClause}
                 AND (NOT IS_DEFINED(c.flaggedWrong) OR c.flaggedWrong = false)
               ORDER BY c.soldAt DESC`,
       parameters: params,
     }).fetchAll();
-    return resources as PoolRow[];
+    const rows = resources as PoolRow[];
+    // Belt and braces behind the string bound — see asOfCutoff.ts.
+    if (!asOfIso) return rows;
+    const asOfMs = Date.parse(asOfIso.endsWith("Z") ? asOfIso : `${asOfIso}Z`);
+    return Number.isFinite(asOfMs) ? rows.filter((r) => isBeforeAsOf(r.soldAt, asOfMs)) : rows;
   } catch {
     return [];
   }
@@ -310,7 +329,13 @@ function filterByGrade(
 
 export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIqFmvResult> {
   const slug = String(input.hobbyiqCardId ?? "").trim();
-  const now = new Date();
+  // CF-AS-OF-IS-AN-UPPER-BOUND (#1651). In a backtest `now` is the evaluation
+  // instant, and `asOfIso` is the ceiling every rung's pool read carries.
+  const asOfMs = typeof input.asOfMs === "number" && Number.isFinite(input.asOfMs) ? input.asOfMs : null;
+  const now = asOfMs !== null ? new Date(asOfMs) : new Date();
+  // asOfCutoffString, not toISOString — `soldAt` is compared as a string and
+  // the pool holds three serializations of one instant. See asOfCutoff.ts.
+  const asOfIso = asOfMs !== null ? asOfCutoffString(asOfMs) : null;
 
   const noBasis: HobbyIqFmvResult = {
     slug,
@@ -590,7 +615,7 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
       where += " AND c.composite.colorFamily = @cf";
       params.push({ name: "@cf", value: targetColor });
     }
-    return queryPool(container, where, params, cutoffIso);
+    return queryPool(container, where, params, cutoffIso, asOfIso);
   })
     .then((broaderRows) => {
       const kept = partitionByQuality(broaderRows).kept;
@@ -634,8 +659,7 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
         { name: "@auto", value: parsed.isAuto },
         { name: "@sport", value: parsed.sport },
       ],
-      cutoffIso,
-    );
+      cutoffIso, asOfIso,);
     // Filter by parallel using slug-side normalization on both sides.
     const targetParallelSlug = parsed.parallel;
     const parallelMatched = identityRows.filter((r) => slugify(r.parallel ?? "") === targetParallelSlug);
@@ -667,8 +691,7 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
     container,
     "c.hobbyiqCardId = @slug",
     [{ name: "@slug", value: slug }],
-    cutoffIso,
-  );
+    cutoffIso, asOfIso,);
   rows = filterByGrade(exactSlugRowsAnyGrade, gradeCompany, gradeValue);
   if (rows.length > 0) {
     return buildResult(slug, rows, "direct-slug",
@@ -713,8 +736,7 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
         { name: "@auto", value: parsed.isAuto },
         { name: "@sport", value: parsed.sport },
       ],
-      cutoffIso,
-    );
+      cutoffIso, asOfIso,);
     const targetParallelSlug = parsed.parallel;
     const parallelMatched = identityRows.filter(
       (r) => slugify(r.parallel ?? "") === targetParallelSlug,
@@ -778,8 +800,7 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
       container,
       "STARTSWITH(c.hobbyiqCardId, @stem)",
       [{ name: "@stem", value: slugNoPrintRun }],
-      cutoffIso,
-    );
+      cutoffIso, asOfIso,);
     rows = filterByGrade(rows, gradeCompany, gradeValue);
     if (rows.length > 0) {
       return buildResult(slug, rows, "cross-printrun",
@@ -807,8 +828,7 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
         { name: "@sport", value: parsed.sport },
         { name: "@pr", value: parsed.printRun },
       ],
-      cutoffIso,
-    );
+      cutoffIso, asOfIso,);
     if (rows.length > 0) rows = filterByGrade(rows, gradeCompany, gradeValue);
     if (rows.length > 0) {
       return buildResult(slug, rows, "same-printrun-cross-parallel",
@@ -836,8 +856,7 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
         { name: "@auto", value: parsed.isAuto },
         { name: "@sport", value: parsed.sport },
       ],
-      cutoffIso,
-    );
+      cutoffIso, asOfIso,);
     // Filter parallel in JS (persisted label vs slug fragment) then apply grade.
     const targetParallelSlug = parsed.parallel;
     rows = rows.filter((r) => slugify(r.parallel ?? "") === targetParallelSlug);
@@ -889,8 +908,7 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
         { name: "@auto", value: parsed.isAuto },
         { name: "@sport", value: parsed.sport },
       ],
-      cutoffIso,
-    );
+      cutoffIso, asOfIso,);
     if (rows.length > 0) {
       rows = filterByGrade(rows, gradeCompany, gradeValue);
     }
@@ -955,8 +973,7 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
         { name: "@cn", value: (parsed.cardNumber ?? "").toUpperCase() },
         { name: "@sport", value: parsed.sport },
       ],
-      cutoffIso,
-    );
+      cutoffIso, asOfIso,);
     if (rows.length > 0) {
       rows = filterByGrade(rows, gradeCompany, gradeValue);
     }
@@ -1027,7 +1044,7 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
       });
     }
     for (const rung of rawRungs) {
-      let rawRows = await queryPool(container, rung.where, rung.params, cutoffIso);
+      let rawRows = await queryPool(container, rung.where, rung.params, cutoffIso, asOfIso);
       // Cross-setKey rung applies its parallel filter in JS on top of the
       // SQL-side identity query. Other rungs skip this (their WHERE
       // clauses already scope to the intended pool).
@@ -1468,10 +1485,17 @@ export async function computeGradeBreakdownSingleScan(
      *  a raw anchor. */
     anchorGradeCompany?: string | null;
     anchorGradeValue?: number | null;
+    /** CF-AS-OF-IS-AN-UPPER-BOUND (#1651). Backtest only: scan as of a past
+     *  instant. This function shares `queryPool` with the ladder, so it takes
+     *  the same ceiling rather than being the one read that could still see
+     *  the future. Undefined in production. */
+    asOfMs?: number | null;
   } = {},
 ): Promise<GradeBreakdownResult> {
   const t0 = Date.now();
-  const now = new Date();
+  const asOfMs = typeof opts.asOfMs === "number" && Number.isFinite(opts.asOfMs) ? opts.asOfMs : null;
+  const now = asOfMs !== null ? new Date(asOfMs) : new Date();
+  const asOfIso = asOfMs !== null ? asOfCutoffString(asOfMs) : null;
   const empty: GradeBreakdownResult = {
     slug, tiers: [], totalCompsScanned: 0,
     processingMs: 0, computedAt: now.toISOString(),
@@ -1486,7 +1510,7 @@ export async function computeGradeBreakdownSingleScan(
   const cutoffIso = new Date(now.getTime() - maxAgeDays * 86_400_000).toISOString();
 
   // ONE query. Every tier gets computed from this pool.
-  const rows = await queryPool(container, "c.hobbyiqCardId = @slug", [{ name: "@slug", value: slug }], cutoffIso);
+  const rows = await queryPool(container, "c.hobbyiqCardId = @slug", [{ name: "@slug", value: slug }], cutoffIso, asOfIso);
   if (rows.length === 0) return { ...empty, processingMs: Date.now() - t0 };
 
   // Drop flagged rows (same discipline as the primary FMV path).

@@ -103,6 +103,7 @@ import {
   trendValue,
 } from "../insights/marketIndex.service.js";
 import { readPlayerPoolRows, type PlayerPoolRow } from "./playerIndexRead.js";
+import { asOfCutoffString } from "./asOfCutoff.js";
 
 /** A player needs this many cards with fresh sales before they have a
  *  "market" the rung is willing to speak for. */
@@ -395,12 +396,36 @@ async function readPlayerRowsMemoized(
   playerName: string,
   sport: string | null,
   nowMs: number,
+  asOfMs: number | null,
 ): Promise<PlayerPoolRow[] | null> {
-  const key = `${playerName.toLowerCase()}::${(sport ?? "").toLowerCase()}`;
+  // CF-AS-OF-IS-AN-UPPER-BOUND (#1651). The as-of instant is part of the KEY,
+  // not just of the query. A backtest prices many evaluation points for the
+  // same player at different past instants, and they arrive milliseconds apart
+  // in wall-clock time — so a memo keyed on (player, sport) alone would serve
+  // the FIRST point's basket to every later one. Whether that leaks the future
+  // then depends on the order the sample happens to be walked in, which is the
+  // worst possible property for a correctness guarantee to have: it would pass
+  // a test, pass a canary, and silently inflate a published number.
+  //
+  // Keying on asOfMs makes each evaluation point's basket its own cache entry.
+  // In production asOfMs is null, the key is what it always was, and the
+  // portfolio page still does one read for twenty cards of the same player.
+  const key = `${playerName.toLowerCase()}::${(sport ?? "").toLowerCase()}::${asOfMs ?? "live"}`;
   const hit = memo.get(key);
-  if (hit && nowMs - hit.at < MEMO_TTL_MS) return hit.rows;
+  // The TTL is a wall-clock freshness rule, so it applies only to the live
+  // entry. An as-of basket is immutable by construction — the window it reads
+  // is closed at both ends and cannot acquire new rows — so it never expires
+  // within a run.
+  if (hit && (asOfMs !== null || nowMs - hit.at < MEMO_TTL_MS)) return hit.rows;
   const fromIso = new Date(nowMs - BASKET_WINDOW_DAYS * DAY_MS).toISOString();
-  const rows = await readPlayerPoolRows({ playerName, sport, fromIso });
+  const rows = await readPlayerPoolRows({
+    playerName,
+    sport,
+    fromIso,
+    // asOfCutoffString, not toISOString: `soldAt` is compared as a string and
+    // the pool stores one instant three ways. See asOfCutoff.ts.
+    asOfIso: asOfMs !== null ? asOfCutoffString(asOfMs) : null,
+  });
   memo.set(key, { at: nowMs, rows });
   return rows;
 }
@@ -417,12 +442,20 @@ export async function playerIndexRatio(input: {
   targetValue: number;
   tierLabel?: string | null;
   excludeCardIds?: ReadonlySet<string>;
+  /** CF-AS-OF-IS-AN-UPPER-BOUND (#1651). Backtest only: the basket may read
+   *  no sale at or after this instant. Null / absent in production. */
+  asOfMs?: number | null;
 }): Promise<PlayerIndexResult> {
   const playerName = String(input.playerName ?? "").trim();
   if (!playerName) return { ok: false, reason: "no-player-name", freshCards: 0 };
   let rows: PlayerPoolRow[] | null;
   try {
-    rows = await readPlayerRowsMemoized(playerName, input.sport ?? null, input.nowMs);
+    rows = await readPlayerRowsMemoized(
+      playerName,
+      input.sport ?? null,
+      input.nowMs,
+      input.asOfMs ?? null,
+    );
   } catch { rows = null; }
   if (rows === null) return { ok: false, reason: "pool-unavailable", freshCards: 0 };
   return computePlayerIndexRatio(rows, {

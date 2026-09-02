@@ -99,6 +99,28 @@ export interface ValuationRequest {
   playerName?: string | null;
   /** Portfolio callers: keep the user's own purchases out of the pool. */
   excludeContributorUserId?: string | null;
+  /**
+   * CF-AS-OF-IS-AN-UPPER-BOUND (#1651, the engine backtest, 2026-09-02).
+   * Price this identity AS OF a past instant, reading ONLY data that existed
+   * before it. Undefined in production — every route leaves it unset and the
+   * engine behaves exactly as it always has.
+   *
+   * This single field is the backtest's whole no-lookahead guarantee, and it
+   * is a REQUEST field rather than a script-local convention on purpose: the
+   * evaluator cannot price a card except by going through this entry, so it
+   * cannot forget to pass the cutoff and quietly read the future. From here it
+   * reaches every rung on the ladder —
+   *
+   *   • the exact pool          unifiedPricing.asOfMs -> exactPoolReader
+   *   • the player's index      playerTrendRung -> playerIndex -> playerIndexRead
+   *   • the fallback ladder     computeHobbyIqFmv.asOfMs -> queryPool (all 11 rungs)
+   *
+   * — as both the CLOCK the rung reasons with and the CEILING on what it may
+   * read. Pinned by asOfLookaheadIsolation.test.ts, which inserts a
+   * future-dated sale into the fixture pool and requires every rung's answer
+   * to be byte-identical to the run without it.
+   */
+  asOfMs?: number | null;
 }
 
 /** Why there is no number, when there is none. */
@@ -329,7 +351,11 @@ export function curveFromUnified(u: UnifiedPriceResult, nowMs: number): Observed
  * requested tier is that tier's curve entry.
  */
 export async function valueIdentity(req: ValuationRequest): Promise<Valuation> {
-  const nowMs = Date.now();
+  // CF-AS-OF-IS-AN-UPPER-BOUND (#1651). The entry's single clock. In a
+  // backtest it is the evaluation instant; in production it is the wall clock
+  // and `asOfMs` is undefined, so nothing below can tell the difference.
+  const asOfMs = typeof req.asOfMs === "number" && Number.isFinite(req.asOfMs) ? req.asOfMs : null;
+  const nowMs = asOfMs ?? Date.now();
   const grade = normalizeGrade(req.grade);
   const requestedTier = tierLabelFor(grade);
   const printRunHint = typeof req.printRun === "number" && Number.isFinite(req.printRun) && req.printRun > 0
@@ -387,6 +413,7 @@ export async function valueIdentity(req: ValuationRequest): Promise<Valuation> {
       excludeContributorUserId: req.excludeContributorUserId ?? null,
       perTierWindows: true,
       resolution,
+      asOfMs,
     },
   );
   const v = base(identity);
@@ -445,6 +472,7 @@ export async function valueIdentity(req: ValuationRequest): Promise<Valuation> {
       ownTrendPctPerWeek: um?.trendPctPerWeek ?? null,
       sampleCount: tier.sampleCount,
       nowMs,
+      asOfMs,
     }).catch(() => null);
 
     if (playerRung) {
@@ -565,6 +593,7 @@ export async function valueIdentity(req: ValuationRequest): Promise<Valuation> {
       gradeValue: grade?.value ?? null,
       playerName,
       skipExactPool: true,
+      asOfMs,
     });
   } catch { fb = null; }
   v.fallback = fb;

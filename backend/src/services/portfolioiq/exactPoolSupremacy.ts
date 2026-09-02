@@ -443,6 +443,11 @@ export async function priceHoldingFromExactPool(
      *  portfolio callers (autoPriceHolding, the reprice job) read the same
      *  union the routes read. `null` = resolved to nothing, do not resolve. */
     resolution?: CatalogRowResolution | null;
+    /** CF-AS-OF-IS-AN-UPPER-BOUND (#1651). Backtest only: price as of a past
+     *  instant, reading no sale at or after it. Passed straight to the unified
+     *  engine, which owns both the clock and the read ceiling. Null in
+     *  production. */
+    asOfMs?: number | null;
   },
 ): Promise<ExactPoolPrice | null> {
   let resolution = opts.resolution;
@@ -474,6 +479,7 @@ export async function priceHoldingFromExactPool(
       playerName: opts.playerName ?? null,
       cardYear: opts.cardYear ?? null,
       perTierWindows: opts.perTierWindows === true,
+      asOfMs: opts.asOfMs ?? null,
     });
     const canonical = u.marketValue ?? u.predictedPrice ?? u.fmv;
     if (canonical !== null && canonical > 0 && u.totalSampleCount >= 1) {

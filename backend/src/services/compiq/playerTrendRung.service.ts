@@ -96,6 +96,13 @@ export interface PlayerTrendRungInput {
   nowMs: number;
   /** Test seam / #1646 alignment. */
   staleDays?: number;
+  /** CF-AS-OF-IS-AN-UPPER-BOUND (#1651). Backtest only: the player basket may
+   *  read no sale at or after this instant. Null / absent in production.
+   *  Distinct from `nowMs` on purpose — `nowMs` is the clock the rung reasons
+   *  with (anchor age, staleness), `asOfMs` is the ceiling on what may be
+   *  READ. In a backtest they hold the same value; keeping them separate
+   *  means production cannot acquire a ceiling by accident. */
+  asOfMs?: number | null;
 }
 
 export interface PlayerTrendRungResult {
@@ -173,6 +180,7 @@ export async function attemptPlayerTrendRung(
       playerName: input.playerName,
       sport: input.sport ?? null,
       nowMs: input.nowMs,
+      asOfMs: input.asOfMs ?? null,
       anchorMs,
       targetValue: anchorPrice,
       tierLabel: input.tierLabel,
