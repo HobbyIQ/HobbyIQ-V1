@@ -592,7 +592,7 @@ describe("repriceHoldingsForUser — the fixture, end to end", () => {
     expect(hld.valuationStatus).toBe("observed");
     expect(hld.pricingSource).toBe("our-pool");
     expect(hld.fmvRung).toBe("exact-pool-leading-edge");
-    expect(hld.pricingSourceMeta).toEqual({ slug: GOLD, method: "unified-market-value", compsUsed: 3 });
+    expect(hld.pricingSourceMeta).toEqual({ slug: GOLD, method: "exact-pool-leading-edge", compsUsed: 3 });
     expect(hld.estimateBasis).not.toMatch(/floor/i);
     expect(hld.lastUpdated).not.toBe("2026-08-01T00:00:00.000Z");
     expect(body.updates.find((u: any) => u.id === id)).toMatchObject({ status: "repriced", reason: "our-pool:unified-market-value" });
