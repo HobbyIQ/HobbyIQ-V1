@@ -4575,14 +4575,80 @@ function appendPriceHistory(
     }
   }
   existing.push(point);
-  // Cap price history per holding so the UserDoc doesn't grow unbounded as the
-  // scheduled reprice job + pull-to-refresh both append over time. Override
-  // with PORTFOLIO_PRICE_HISTORY_MAX (default 365).
-  const maxPoints = Math.max(
+  doc.priceHistoryByHolding[holdingId] = capPriceHistoryByClass(existing);
+}
+
+/**
+ * CF-AN-ESTIMATE-DRIFTS-IN-THE-DARK / CAP-EVICTION (2026-09-01).
+ *
+ * The cap used to be `existing.slice(-max)` over ONE interleaved array. Once
+ * estimated points began appending (the 6h cron writes up to 4/day for a
+ * holding sitting on the grade-curve rail), those appends walked the window
+ * forward and evicted the observed trail wholesale: at 4 estimated/day a
+ * 365-point window is pure estimate in ~91 days, observedPricePoints() then
+ * returns [], and getHoldingPriceHistory / buildCalibrationReport /
+ * buildWeeklyNarrative all see an EMPTY observed series for a holding whose
+ * comp-anchored history was real. The estimate would have silently eaten the
+ * observations it drifts against — the exact opposite of making drift visible.
+ *
+ * So retention is PER CLASS. The two series are different facts with different
+ * lifetimes and they never compete for one window:
+ *
+ *   • observed  — comp-anchored, the series every existing reader wants, and
+ *     the one the calibration report scores against real sales. Keeps the
+ *     existing PORTFOLIO_PRICE_HISTORY_MAX (default 365) semantics EXACTLY,
+ *     so an all-observed holding caps identically to before this change.
+ *     Never evicted by an estimated append.
+ *   • estimated — a drifting number, useful for seeing the drift and little
+ *     else. Capped separately at PORTFOLIO_ESTIMATED_HISTORY_MAX, default 180:
+ *     at the cron's 4/day that is ~45 days of drift visibility, enough to see
+ *     a flap develop without letting the noisy series dominate the UserDoc.
+ *
+ * Points keep their chronological interleaving in storage — readers that want
+ * one class filter (observedPricePoints), readers that want the whole picture
+ * (getHoldingPriceHistory with includeEstimated) get it in time order.
+ */
+export const DEFAULT_PORTFOLIO_PRICE_HISTORY_MAX = 365;
+export const DEFAULT_PORTFOLIO_ESTIMATED_HISTORY_MAX = 180;
+
+function historyCapFromEnv(envName: string, fallback: number): number {
+  return Math.max(
     30,
-    Math.floor(Number(process.env.PORTFOLIO_PRICE_HISTORY_MAX ?? 365)) || 365,
+    Math.floor(Number(process.env[envName] ?? fallback)) || fallback,
   );
-  doc.priceHistoryByHolding[holdingId] = existing.slice(-maxPoints);
+}
+
+export function observedHistoryMax(): number {
+  return historyCapFromEnv("PORTFOLIO_PRICE_HISTORY_MAX", DEFAULT_PORTFOLIO_PRICE_HISTORY_MAX);
+}
+
+export function estimatedHistoryMax(): number {
+  return historyCapFromEnv("PORTFOLIO_ESTIMATED_HISTORY_MAX", DEFAULT_PORTFOLIO_ESTIMATED_HISTORY_MAX);
+}
+
+/** Cap each valuation class against its OWN window, preserving the stored
+ *  order. Exported for the pin — an estimated flood must not evict observations. */
+export function capPriceHistoryByClass<T extends { valuationStatus?: "observed" | "estimated" | string }>(
+  points: readonly T[],
+): T[] {
+  const observedMax = observedHistoryMax();
+  const estimatedMax = estimatedHistoryMax();
+
+  // Walk backwards keeping the newest N of each class, so the survivors are
+  // the most recent per class rather than the most recent overall.
+  let observedKept = 0;
+  let estimatedKept = 0;
+  const keep = new Array<boolean>(points.length).fill(false);
+  for (let i = points.length - 1; i >= 0; i--) {
+    // Absence means observed — the pre-tag guarantee (see PortfolioPricePoint).
+    const isEstimated = points[i].valuationStatus === "estimated";
+    if (isEstimated) {
+      if (estimatedKept < estimatedMax) { keep[i] = true; estimatedKept++; }
+    } else if (observedKept < observedMax) {
+      keep[i] = true; observedKept++;
+    }
+  }
+  return points.filter((_, i) => keep[i]);
 }
 
 function addAlert(doc: UserDoc, alert: Omit<PortfolioAlert, "id" | "createdAt">): void {
