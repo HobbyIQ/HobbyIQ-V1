@@ -116,6 +116,9 @@
  */
 "use strict";
 
+const path = require("path");
+const SPLIT = require(path.join(__dirname, "split-identity.cjs"));
+
 // ── the classes ────────────────────────────────────────────────────────────
 const AGREE = "AGREE", IMPROVE = "IMPROVE", CONFLICT = "CONFLICT", UNDERIVABLE = "UNDERIVABLE";
 const PROTECTED = "PROTECTED", AUTO = "AUTO";
@@ -458,10 +461,46 @@ function classifyRow({
   storedSlug = null, baseDestSlug = null, baseDestBacked = false,
 }) {
   const prov = provenanceTier(row);
-  const base = { tier: prov.tier, provenanceReasons: prov.reasons };
+
+  // THE SPLIT-IDENTITY SIGNAL IS ORTHOGONAL TO THE DERIVATION CLASS.
+  //
+  // CF-A-SPLIT-ROW-POLLUTES-TWO-POOLS (Drew, 2026-09-02: "we need to go back
+  // and check ALL this way"). Every class above compares the row's identity
+  // against TODAY'S DERIVATION. This one compares the row against ITSELF: a
+  // sold_comps row carries `cardId` and `hobbyiqCardId`, the exact pool reader
+  // ORs them, and a row whose two fields name different cards is read into
+  // BOTH pools. That is true whatever the derivation says -- an AGREE row can
+  // be split (its stored fields match the title perfectly while its two
+  // ADDRESSES disagree), and so can an UNDERIVABLE one (a title we cannot read
+  // says nothing about the two keys already on the row).
+  //
+  // So the flag is computed from the row alone, folded into every return path,
+  // and never gated on `klass`. Hanging it off CONFLICT would have missed the
+  // AGREE-shaped majority -- the same trap the BASE-EVICTION subclass had to
+  // be evaluated early to avoid.
+  //
+  // It does NOT make a row writable, and it does not need to: the apply path
+  // lands BOTH identity fields, so a repair driven by any writable class
+  // already heals the split as a side effect. What the flag buys is that the
+  // census OUTPUT names the row, so an audited apply is known to be repairing
+  // both halves rather than silently relying on it.
+  //
+  // The vendor-design exemption is load-bearing here exactly as it is in the
+  // census: a CardHedge row keyed by a bubble id with our slug beside it is
+  // the designed partition, and flagging 13.5M of those would drown the real
+  // damage. lib/split-identity.cjs owns that predicate for all three consumers.
+  const split = SPLIT.classifyIdentity(row);
+  const base = {
+    tier: prov.tier,
+    provenanceReasons: prov.reasons,
+    splitIdentity: split.split,
+    splitClass: split.klass,
+    splitSegments: split.segments,
+  };
+  const splitReasons = split.split ? [`split-identity:${split.klass}:${split.reason}`] : [];
 
   if (!derived) {
-    return { ...base, klass: UNDERIVABLE, axes: { same: [], filled: [], dropped: [], changed: [] }, reasons: derivationReasons.length ? derivationReasons : ["no-derived-identity"], writable: false };
+    return { ...base, klass: UNDERIVABLE, axes: { same: [], filled: [], dropped: [], changed: [] }, reasons: [...(derivationReasons.length ? derivationReasons : ["no-derived-identity"]), ...splitReasons], writable: false };
   }
 
   const axes = diffAxes(stored, derived);
@@ -510,7 +549,7 @@ function classifyRow({
       // address contradict each other, and that is a conflict about the card's
       // identity whatever the fields say among themselves. Reporting it as
       // AGREE would put a written row in the one class that means "untouched".
-      klass: CONFLICT, subclass: BASE_EVICTION, axes, reasons,
+      klass: CONFLICT, subclass: BASE_EVICTION, axes, reasons: [...reasons, ...splitReasons],
       evidence: be.evidence,
       // The SAME tier gate as IMPROVE, AND the axis gate. A protected row is
       // report-only forever, subclass or no subclass -- see the mutation
@@ -520,7 +559,11 @@ function classifyRow({
   }
 
   if (!axes.filled.length && !axes.dropped.length && !axes.changed.length) {
-    return { ...base, klass: AGREE, axes, reasons: [], writable: false };
+    // AGREE carries the split flag too, and this is the case that matters
+    // most: the row's fields and the derivation agree completely while its two
+    // ADDRESSES name different cards. Nothing else in the census would ever
+    // look at this row again.
+    return { ...base, klass: AGREE, axes, reasons: splitReasons, writable: false };
   }
 
   // A demotion or a lateral change on ANY axis is a conflict, whatever else
@@ -546,17 +589,17 @@ function classifyRow({
     if (be.failed.length && !be.failed.includes("slug-names-no-parallel")) {
       reasons.push(`not-base-eviction:${be.failed.join(",")}`);
     }
-    return { ...base, klass: CONFLICT, axes, reasons, writable: false };
+    return { ...base, klass: CONFLICT, axes, reasons: [...reasons, ...splitReasons], writable: false };
   }
 
   // Strictly more specific: nothing dropped, nothing changed, something filled.
   // Now the second gate -- a match proves nothing unless checklist-backed.
   if (!checklistBacked) {
     reasons.push(`filled:${axes.filled.join(",")}`, "not-checklist-backed");
-    return { ...base, klass: CONFLICT, axes, reasons, writable: false };
+    return { ...base, klass: CONFLICT, axes, reasons: [...reasons, ...splitReasons], writable: false };
   }
 
-  reasons.push(`filled:${axes.filled.join(",")}`);
+  reasons.push(`filled:${axes.filled.join(",")}`, ...splitReasons);
   // PROTECTED rows are report-only forever, even when IMPROVE-shaped. The
   // class still says IMPROVE (that is what the census measured); `writable`
   // is what the apply pass reads, and it is false.
@@ -607,5 +650,12 @@ module.exports = {
   FINISH_TOKENS, FINISH_PHRASES, FINISH_COLOR_TOKENS,
   provenanceTier, gradeToken, axisValue, axisIsBlank, diffAxes, classifyRow,
   defectAxes, renderIdentity,
+  // The SPLIT-IDENTITY signal's own vocabulary, re-exported so a census banner
+  // reading this module does not have to know the lib is split in two.
+  SPLIT_CLASSES: {
+    COHERENT: SPLIT.COHERENT, VENDOR_DESIGN: SPLIT.VENDOR_DESIGN,
+    UNKNOWN_VENDOR: SPLIT.UNKNOWN_VENDOR, HIQ_SPLIT: SPLIT.HIQ_SPLIT, MALFORMED: SPLIT.MALFORMED,
+  },
+  classifyIdentity: SPLIT.classifyIdentity,
   titleNamesFinish, slugParallelSegment, slugNamesParallel, baseEvictionEvidence,
 };

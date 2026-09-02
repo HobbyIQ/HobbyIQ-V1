@@ -128,8 +128,22 @@ describe("a healthy holding passes clean", () => {
       basisRows: healthyPool,
       poolRows: [...healthyPool, foreign],
     });
+    // THE CLAIM OF THIS PIN: the BASIS invariants stay silent. The foreign row
+    // is not what the price cited, so it must not produce a cross-product.
     expect(kinds(res)).not.toContain("cross-product");
-    expect(res.findings).toEqual([]);
+    for (const i of ["BASIS-IDENTITY", "RUNG-HONESTY", "SUBSTITUTION", "DETERMINISM"]) {
+      expect(invariants(res)).not.toContain(i);
+    }
+
+    // ...but it is NOT silent overall any more, and that is a fix rather than a
+    // regression (Drew 2026-09-02). This fixture's `foreign` row -- cardId
+    // CHROME, hobbyiqCardId DRAFT -- is a textbook SPLIT-IDENTITY row: the
+    // pool reader ORs both fields, so it really is read into this holding's
+    // pool while naming a different card. The original pin asserted total
+    // silence because at the time nothing could see that; IDENTITY-COHERENCE
+    // now can, and reporting it is the point. The basis claim above is the
+    // part of this pin that was ever about readBasisRows.
+    expect(invariants(res)).toEqual(["IDENTITY-COHERENCE"]);
   });
 });
 
@@ -505,5 +519,84 @@ describe("graded-to-raw prices an empty raw pool from its own graded children", 
       userId: "user-drew", gradeMultipliers: {}, leaf,
     });
     expect(res.shadowRung).toBe("no-basis");
+  });
+});
+
+// ── IDENTITY-COHERENCE ───────────────────────────────────────────────────────
+
+/**
+ * CF-A-SPLIT-ROW-POLLUTES-TWO-POOLS (Drew, 2026-09-02: "we need to go back and
+ * check ALL this way").
+ *
+ * A comp row carries two identity fields and exactPoolReader.ts matches on
+ * EITHER of them, so a row whose `cardId` and `hobbyiqCardId` name different
+ * cards is read into BOTH pools -- one sale pricing two cards.
+ *
+ * The defect is invisible to BASIS-IDENTITY, and these pins say why: that check
+ * reads `row.hobbyiqCardId ?? row.cardId`, so it only ever sees ONE of the two
+ * identities -- and whichever it sees agrees with the holding, because that is
+ * the field the OR-query matched on. The row looks like a perfectly ordinary
+ * member of the pool it was asked for. Only reading BOTH fields off the SAME
+ * row exposes the contradiction.
+ */
+describe("IDENTITY-COHERENCE — a comp row that contradicts itself", () => {
+  /** A seeded split: partitioned under CHROME, slugged to the DRAFT card. */
+  const splitComp = sale({ id: "split-1", cardId: CHROME, hobbyiqCardId: DRAFT, price: 200 });
+
+  it("flags a comp whose two identity fields name different cards", () => {
+    const res = run(holding(), { basisRows: [splitComp], poolRows: [splitComp] });
+    expect(invariants(res)).toContain("IDENTITY-COHERENCE");
+    const finding = res.findings.find((f: { invariant: string }) => f.invariant === "IDENTITY-COHERENCE");
+    expect(finding).toBeTruthy();
+    // The violation QUOTES THE ROW: a repair needs both addresses, because the
+    // pool it sits in and the pool its slug names are each wrong by one row.
+    expect(finding.kind).toBe("split-identity/HIQ-SPLIT");
+    expect(finding.cardId).toBe(CHROME);
+    expect(finding.hobbyiqCardId).toBe(DRAFT);
+    expect(finding.compId).toBe("split-1");
+    expect(finding.detail).toContain(CHROME);
+    expect(finding.detail).toContain(DRAFT);
+    // The segments name the KIND of damage -- here a different year and set.
+    expect(finding.segments).toContain("setKey");
+  });
+
+  it("BASIS-IDENTITY alone would NOT have caught it — this is why the assert exists", () => {
+    // The split row's hobbyiqCardId is the DRAFT card, so BASIS-IDENTITY does
+    // fire here on the product axis. The point of THIS pin is the opposite
+    // shape: a split whose slug half matches the holding exactly. BASIS sees
+    // only that half and passes it; IDENTITY-COHERENCE still catches it.
+    const stealthy = sale({ id: "split-2", cardId: DRAFT, hobbyiqCardId: CHROME, price: 200 });
+    const res = run(holding(), { basisRows: [stealthy], poolRows: [stealthy] });
+    expect(invariants(res)).not.toContain("BASIS-IDENTITY");
+    expect(invariants(res)).toContain("IDENTITY-COHERENCE");
+  });
+
+  it("a healthy VENDOR-DESIGN row passes — the exemption is what keeps this usable", () => {
+    // #1650: a CardHedge row is partitioned under the vendor's bubble id and
+    // carries our slug beside it. 13.5M rows are shaped this way. Without the
+    // exemption this invariant would fire on nearly every holding in the
+    // portfolio and the real damage would never be seen.
+    const vendorRow = sale({
+      id: "ch-1", source: "cardhedge",
+      cardId: "1778542173652x303328120692600800",
+      hobbyiqCardId: CHROME,
+    });
+    const res = run(holding(), { basisRows: [vendorRow], poolRows: [vendorRow] });
+    expect(invariants(res)).not.toContain("IDENTITY-COHERENCE");
+  });
+
+  it("an ordinary coherent pool raises nothing", () => {
+    const clean = [sale({ id: "c1" }), sale({ id: "c2", price: 205 })];
+    const res = run(holding(), { basisRows: clean, poolRows: clean });
+    expect(invariants(res)).not.toContain("IDENTITY-COHERENCE");
+  });
+
+  it("reads poolRows, not basisRows — a split read but not cited still counts", () => {
+    // The question is what the pool READ reached: every row the OR-query
+    // returned, whether or not the persisted price ended up citing it. A split
+    // row filtered out by a window or an anomaly flag is still in that pool.
+    const clean = sale({ id: "c1" });
+    const res = run(holding(), { basisRows: [clean], poolRows: [clean, splitComp] });
+    expect(invariants(res)).toContain("IDENTITY-COHERENCE");
   });
 });
