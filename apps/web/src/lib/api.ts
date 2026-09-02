@@ -452,6 +452,17 @@ export interface PortfolioHolding {
     candidateId: string;
     verifiedAt: string;
   } | null;
+  /** CF-NEVER-AGAIN (Drew, 2026-09-02). Set by the nightly pricing invariant
+   *  auditor when it could not reconcile this holding's persisted value with
+   *  an independent re-derivation of the same pool. The row still shows the
+   *  value — this only adds a subtle "under review" badge beside it. Cleared
+   *  automatically on the next run that reconciles. */
+  auditFlag?: {
+    /** "<INVARIANT>: <kind>", e.g. "BASIS-IDENTITY: cross-product". */
+    reason: string;
+    at: string;
+    invariant: string;
+  } | null;
   /** CF-SURFACE-THE-PARKED-MATCH (2026-08-23). The catalog match the
    *  importer already found but did not pin, present ONLY when the holding
    *  has no identity of its own. 20 of 23 unidentified holdings carry one —

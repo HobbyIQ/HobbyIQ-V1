@@ -71,3 +71,7 @@ backend/.data/*.json
 
 # Windows `> nul` redirects create a real file under Git Bash (27MB and counting)
 nul
+
+# CF-NEVER-AGAIN: the pricing invariant auditor's DETERMINISM state
+# (previous-run provenance fingerprints). Run-local, cached by CI, never committed.
+backend/.audit-state/
