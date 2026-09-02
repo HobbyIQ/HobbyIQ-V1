@@ -79,18 +79,42 @@ describe("the seen-set is seeded with the WINNER's own sales", () => {
     expect(seed).toBeLessThan(losers);
   });
 
-  it("the set is scoped per WINNER PARTITION, not per loser", () => {
+  it("the hash index is scoped per WINNER PARTITION, not per loser", () => {
     // The first build scoped `seenHash` per LOSER inside moveSalesAndRow, so a
     // loser colliding with the WINNER's sales -- or with another loser's --
     // was never counted. Its reported 530 was a floor, not the count.
-    const perGroup = fn.indexOf("const seen = new Set()");
+    //
+    // D30-R3 replaced the seen-SET with a hash-keyed MAP of clusters, because
+    // the criterion is no longer "has this hash been seen?" but "what is IN
+    // this cluster?" -- a cluster blocks only when >= 2 of its rows share a
+    // sourceExternalId. The scope property is unchanged and still pinned here.
+    const perGroup = fn.indexOf("const byHash = new Map()");
     const perLoser = fn.indexOf("for (const loser of losers)");
     expect(perGroup).toBeGreaterThan(-1);
     expect(perGroup).toBeLessThan(perLoser);
   });
 
-  it("every loser probes against the SAME set, so cross-loser collisions count", () => {
-    expect(fn).toMatch(/if \(seen\.has\(h\)\) \{ hit\+\+; collisions\+\+; \} else seen\.add\(h\)/);
+  it("every loser adds into the SAME index, so cross-loser collisions count", () => {
+    // The winner's sales and every loser's go through one `add`, which appends
+    // to the cluster for that hash. Nothing is re-initialised per loser.
+    expect(fn).toMatch(/for \(const row of await salesUnder\(pool, winnerId\)\) add\(row\)/);
+    expect(fn).toMatch(/for \(const row of await salesUnder\(pool, String\(loser\.id\)\)\) add\(row\)/);
+    expect(fn).toMatch(/byHash\.set\(h, arr\)/);
+  });
+
+  it("a cluster of one is never a collision, and the count is rows-beyond-the-first", () => {
+    expect(fn).toMatch(/if \(cluster\.length < 2\) continue/);
+    expect(fn).toMatch(/const extra = cluster\.length - 1/);
+  });
+
+  it("only an unresolved true dupe blocks; the rest are counted as corroborated", () => {
+    // D30-R3. Distinct-externalId rows that merely hash alike are two REAL
+    // sales (af14c29c) and must never FATAL -- they are counted on their own
+    // non-blocking line instead. Both branches are pinned so neither can be
+    // dropped into the other.
+    expect(fn).toMatch(/if \(clusterIsBlocking\(cluster\)\)/);
+    expect(fn).toMatch(/blocking \+= extra/);
+    expect(fn).toMatch(/corroborated \+= extra/);
   });
 
   it("the pre-flight reader is read-only", () => {

@@ -61,6 +61,17 @@
  *     over. The seen-set is seeded with the WINNER's own sales; scoping it per
  *     loser made the first build's 530 a floor rather than a count.
  *
+ * (3c) ONLY AN UNRESOLVED TRUE DUPE BLOCKS (D30-R3). A hash cluster counts as
+ *     BLOCKING only when >= 2 LIVE rows in it share a `sourceExternalId`. Rows
+ *     with DISTINCT external ids that merely hash alike are two REAL sales that
+ *     happened at one price on one day -- corroborated data, never corruption --
+ *     and different sourceExternalId has never meant collapse (af14c29c). They
+ *     are printed as a non-blocking `corroborated` count and travel with the
+ *     partition like any other row. Measured: after the TRUE-DUPE flagging pass
+ *     the football/2024 residual was 729 of exactly that shape, and all eight
+ *     slots still refused -- a permanent block with nothing left to triage.
+ *     See `clusterIsBlocking` for why the key is the bare external id.
+ *
  * (4) THE GROUPING KEY IS D30's OWN (D30-R2). D29's `identityKeyOf` embeds the
  *     RAW setKey field -- right for R1, and pinned by its own tests -- but it
  *     means two SPELLINGS of one product never meet, so MODE=setkey was a no-op
@@ -340,31 +351,42 @@ async function main() {
   // set here is per WINNER PARTITION, which is the scope the dedup actually
   // uses.
   async function preflightHashCollisions(plan) {
-    let collisions = 0, groupsWithCollisions = 0, salesProbed = 0;
+    let blocking = 0, groupsWithCollisions = 0, salesProbed = 0, corroborated = 0, corroboratedGroups = 0;
     const examples = [];
     for (const { key, winner, losers } of plan) {
       const winnerId = String(winner.id);
-      const seen = new Set();
+      // Every row that lands in the winner's partition, bucketed by the hash it
+      // will carry there. A bucket of 1 is no collision at all; a bucket of >= 2
+      // is a cluster the classifier below rules on.
+      const byHash = new Map();
+      const add = (row) => {
+        salesProbed++;
+        const h = contentHashOf({ ...row, cardId: winnerId });
+        const arr = byHash.get(h) ?? [];
+        arr.push(row);
+        byHash.set(h, arr);
+      };
       // SEED: the sales already sitting on the winner. A loser's sale that
       // hashes to one of these collides the moment it lands.
-      for (const row of await salesUnder(pool, winnerId)) {
-        salesProbed++;
-        seen.add(contentHashOf({ ...row, cardId: winnerId }));
-      }
-      let hit = 0;
+      for (const row of await salesUnder(pool, winnerId)) add(row);
       for (const loser of losers) {
-        for (const row of await salesUnder(pool, String(loser.id))) {
-          salesProbed++;
-          const h = contentHashOf({ ...row, cardId: winnerId });
-          if (seen.has(h)) { hit++; collisions++; } else seen.add(h);
-        }
+        for (const row of await salesUnder(pool, String(loser.id))) add(row);
+      }
+
+      let hit = 0, ok = 0;
+      for (const cluster of byHash.values()) {
+        if (cluster.length < 2) continue;
+        const extra = cluster.length - 1;          // rows beyond the first = the collisions
+        if (clusterIsBlocking(cluster)) { hit += extra; blocking += extra; }
+        else { ok += extra; corroborated += extra; }
       }
       if (hit > 0) {
         groupsWithCollisions++;
-        if (examples.length < 10) examples.push(`    ${key}  ->  ${winnerId}  (${hit} colliding sale(s))`);
+        if (examples.length < 10) examples.push(`    ${key}  ->  ${winnerId}  (${hit} BLOCKING collision(s))`);
       }
+      if (ok > 0) corroboratedGroups++;
     }
-    return { collisions, groupsWithCollisions, salesProbed, examples };
+    return { collisions: blocking, groupsWithCollisions, salesProbed, examples, corroborated, corroboratedGroups };
   }
 
   let gi = 0;
@@ -490,15 +512,20 @@ async function main() {
   contentHash PRE-FLIGHT (read-only, before any write):`);
   console.log(`    groups planned             ${f(plan.length)}`);
   console.log(`    sales probed               ${f(preflight.salesProbed)}   <- the WINNER's own sales seed the set, then every loser's`);
-  console.log(`    COLLISIONS                 ${f(preflight.collisions)} in ${f(preflight.groupsWithCollisions)} group(s)`);
+  console.log(`    COLLISIONS                 ${f(preflight.collisions)} in ${f(preflight.groupsWithCollisions)} group(s)   <- BLOCKING only: >=2 live rows share a sourceExternalId`);
+  console.log(`    corroborated (non-blocking) ${f(preflight.corroborated)} in ${f(preflight.corroboratedGroups)} group(s)   <- DISTINCT external ids: two REAL sales, carried with the partition`);
   if (preflight.examples.length) { console.log(`    colliding groups:`); for (const ex of preflight.examples) console.log(ex); }
 
   if (APPLY && preflight.collisions > 0) {
     console.error(`
-FATAL: ${f(preflight.collisions)} contentHash collisions across ${f(preflight.groupsWithCollisions)} group(s).`);
-    console.error(`       These folds would put two sales that hash IDENTICALLY into one cardId partition, and`);
-    console.error(`       the store's pre-write dedup reads that as "the same sale" -- a genuine future sale`);
-    console.error(`       would be swallowed at ingest.`);
+FATAL: ${f(preflight.collisions)} BLOCKING contentHash collisions across ${f(preflight.groupsWithCollisions)} group(s).`);
+    console.error(`       Each is >= 2 LIVE rows sharing one sourceExternalId -- one listing ingested twice, still`);
+    console.error(`       unresolved. Folding them would put two sales the store reads as "the same sale" into one`);
+    console.error(`       cardId partition, and a genuine future sale would be swallowed at ingest.`);
+    console.error(`       Run triage-contenthash-collisions.cjs: it flags the TRUE-DUPE losers (which this pre-flight`);
+    console.error(`       then stops counting) and sends CONFLICTED-DUPE wrong-card ingests to a person.`);
+    console.error(`       Distinct-externalId sales that merely hash alike are NOT counted here -- different item id`);
+    console.error(`       is two real sales, and they never blocked a fold.`);
     console.error(`       NOTHING HAS BEEN WRITTEN. The refusal is PRE-FLIGHT by design: the first build probed`);
     console.error(`       inside the write loop and refused after it, so it wrote the collisions it then refused over.`);
     process.exit(2);
@@ -548,7 +575,7 @@ FATAL: ${f(preflight.collisions)} contentHash collisions across ${f(preflight.gr
   console.log(`    sales relocate failed      ${f(stats.salesRelocateFailed)}`);
   console.log(`    holdings re-pointed        ${f(stats.holdingsRepointed)}   (walked ${f(stats.holdingsWalked)} holdings / ${f(stats.holdingDocsWalked)} docs)`);
   console.log(`    graded children retired    ${f(stats.gradedRetired)}`);
-  console.log(`    contentHash COLLISIONS     ${f(stats.hashCollisionRisk)}   <- measured PRE-FLIGHT; APPLY refuses up front while any are outstanding`);
+  console.log(`    contentHash COLLISIONS     ${f(stats.hashCollisionRisk)}   <- BLOCKING (shared sourceExternalId); measured PRE-FLIGHT, APPLY refuses up front while any are outstanding`);
 
   if (stats.r1Reached + stats.r1Skipped > 0) {
     const tot = stats.r1Reached + stats.r1Skipped;
@@ -692,7 +719,8 @@ async function salesUnder(pool, slug) {
   const it = pool.items.query(
     {
       query: `SELECT c.id, c.cardId, c.hobbyiqCardId, c.parallel, c.price, c.soldAt,
-                     c.gradeCompany, c.gradeValue, c.isAuto, c.flaggedWrong
+                     c.gradeCompany, c.gradeValue, c.isAuto, c.flaggedWrong,
+                     c.source, c.sourceExternalId
               FROM c WHERE (c.hobbyiqCardId = @s OR STARTSWITH(c.hobbyiqCardId, @p))
                 AND (NOT IS_DEFINED(c.flaggedWrong) OR c.flaggedWrong != true)`,
       parameters: [{ name: "@s", value: slug }, { name: "@p", value: `${slug}:` }],
@@ -704,6 +732,68 @@ async function salesUnder(pool, slug) {
     for (const row of resources ?? []) out.push(row);
   }
   return out;
+}
+
+/**
+ * -- WHICH HASH CLUSTERS ACTUALLY BLOCK THE FOLD (D30-R3) -------------------
+ *
+ * THE DEFECT THIS ENDS. After a full TRUE-DUPE flagging pass -- 179 groups /
+ * 189 rows, now invisible to the flag-aware pre-flight of D5 -- ALL EIGHT
+ * football/2024 dry-run slots still refused. The residual is class AMBIGUOUS
+ * 729: rows with DISTINCT sourceExternalIds that hash identically because the
+ * same card genuinely sold at the same price on the same day, and contentHash
+ * -- (cardId, parallel, isAuto, grade, price, soldAt) -- has no field that can
+ * tell two such sales apart.
+ *
+ * Standing doctrine (the af14c29c lesson, and collision-triage's own rule):
+ * DIFFERENT sourceExternalId = TWO REAL SALES, NEVER collapsed. A pre-flight
+ * that FATALs on them calls legitimate corroborated data corruption and blocks
+ * the fold permanently -- there is no triage pass that can ever clear them,
+ * because there is nothing wrong to clear. The eight slots would refuse
+ * forever on data that is correct.
+ *
+ * THE CRITERION. A cluster BLOCKS only when it holds an UNRESOLVED TRUE DUPE:
+ * >= 2 live rows sharing a sourceExternalId. That is the triage's own proof of
+ * sameness, and it is exactly the entry condition for both classes that need a
+ * ruling before a fold is safe:
+ *
+ *   TRUE-DUPE       shared id, identity agrees   -> triage flags the loser; the
+ *                   D5 predicate then makes it invisible here and the fold
+ *                   proceeds. Blocking is what MAKES that pass meaningful.
+ *   CONFLICTED-DUPE shared id, identity DISAGREES -> a wrong-card ingest, and
+ *                   NEVER auto-flagged: a person rules on it. The triage writes
+ *                   no marker on the row for this class (verified: the CONFLICTED
+ *                   branch only reports), so shared-externalId IS the visible
+ *                   criterion -- and because a shared id is that class's own
+ *                   entry condition, keying on it catches every one of them.
+ *
+ * Everything else in a cluster is distinct-externalId: separate listings, each
+ * its own real sale. Those are counted and printed as CORROBORATED, and
+ * `moveSalesAndRow` carries them with the partition like any ordinary row.
+ *
+ * WHY THE BARE EXTERNAL ID AND NOT (source, sourceExternalId). collision-triage
+ * proves sameness on `externalIdOf` alone, and cross-SOURCE shared ids are the
+ * common real case -- the D5 fixture's own flag reason is
+ * `shared-sourceExternalId-cross-source`, one eBay item ingested by both
+ * tca-ebay and cardhedge. Adding `source` to the key would split those pairs
+ * apart and wave the exact true dupes the guard exists for straight through.
+ * The bare id is the strictly safer key and the one the triage already uses.
+ *
+ * A row with NO external id can never PROVE sameness with another, so it never
+ * blocks -- same rule, and same reasoning, as externalIdOf returning null.
+ */
+function clusterIsBlocking(cluster) {
+  const byExternal = new Map();
+  for (const row of cluster) {
+    const raw = row?.sourceExternalId;
+    if (raw === null || raw === undefined) continue;
+    const ext = String(raw).trim();
+    if (!ext.length) continue;
+    const n = (byExternal.get(ext) ?? 0) + 1;
+    if (n > 1) return true;   // two live rows, one listing: unresolved true dupe
+    byExternal.set(ext, n);
+  }
+  return false;
 }
 
 /**
