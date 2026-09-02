@@ -10,12 +10,22 @@
  *
  * THE NAME BRIDGE. Ja-exclusive sets carry no English names and their card
  * names are Japanese, which slugify to nothing. But every Pokemon card
- * carries dexId, and the 90s ja-exclusive era is Gen 1-2 -- a CLOSED
- * 251-species vocabulary, embedded below (fetched once from PokeAPI, the
- * canonical species registry). So the ja name never gets transliterated or
- * guessed: dex 23 IS ekans, deterministically. Trainer/Energy cards keep
- * their Japanese name verbatim -- the checklist's own words -- and rows the
- * bridge cannot key are counted, never invented.
+ * carries dexId, so the ja name never gets transliterated or guessed:
+ * dex 23 IS ekans, deterministically. Trainer/Energy cards keep their
+ * Japanese name verbatim -- the checklist's own words -- and rows the bridge
+ * cannot key are counted, never invented.
+ *
+ * CF-DEX-BRIDGE-ALL-GENERATIONS (Drew, 2026-09-02, gap-close verdict). The
+ * bridge USED TO BE a 251-entry Gen 1-2 array embedded right here, keyed
+ * `dex <= GEN12.length`. That fit the 90s ja-exclusive vintage it was written
+ * for, but it became the CEILING on every modern ruled JA set: sv8a staged 71
+ * of 249 traded numbers, s12a 73 of 244 -- the remainder refused by OUR array,
+ * not missing from tcgdex, which serves those cards with a dexId.
+ *
+ * The vocabulary now comes from data/pokemon-dex-bridge.json, DERIVED from the
+ * tcgdex EN corpus by scripts/fetchPokemonDexBridge.cjs and regression-pinned
+ * to those same 251 Gen 1-2 rows. Re-running the generator picks up whatever
+ * generations tcgdex has grown, so a new generation never re-caps this lane.
  *
  * SCOPE: ja sets ABSENT from the EN catalog only. A set that exists in EN
  * (sv-151 etc.) is already served by the EN pipeline, and ingesting its ja
@@ -37,8 +47,26 @@ const DELAY = Number(arg("delayMs", "150"));
 const LIMIT = Number(arg("limit", "0")) || Infinity;
 const ONLY = arg("sets", "").split(",").map((s) => s.trim()).filter(Boolean);
 
-/** Gen 1-2 species, index = dexId-1. PokeAPI canonical, fetched 2026-08-28. */
-const GEN12 = ["bulbasaur","ivysaur","venusaur","charmander","charmeleon","charizard","squirtle","wartortle","blastoise","caterpie","metapod","butterfree","weedle","kakuna","beedrill","pidgey","pidgeotto","pidgeot","rattata","raticate","spearow","fearow","ekans","arbok","pikachu","raichu","sandshrew","sandslash","nidoran-f","nidorina","nidoqueen","nidoran-m","nidorino","nidoking","clefairy","clefable","vulpix","ninetales","jigglypuff","wigglytuff","zubat","golbat","oddish","gloom","vileplume","paras","parasect","venonat","venomoth","diglett","dugtrio","meowth","persian","psyduck","golduck","mankey","primeape","growlithe","arcanine","poliwag","poliwhirl","poliwrath","abra","kadabra","alakazam","machop","machoke","machamp","bellsprout","weepinbell","victreebel","tentacool","tentacruel","geodude","graveler","golem","ponyta","rapidash","slowpoke","slowbro","magnemite","magneton","farfetchd","doduo","dodrio","seel","dewgong","grimer","muk","shellder","cloyster","gastly","haunter","gengar","onix","drowzee","hypno","krabby","kingler","voltorb","electrode","exeggcute","exeggutor","cubone","marowak","hitmonlee","hitmonchan","lickitung","koffing","weezing","rhyhorn","rhydon","chansey","tangela","kangaskhan","horsea","seadra","goldeen","seaking","staryu","starmie","mr-mime","scyther","jynx","electabuzz","magmar","pinsir","tauros","magikarp","gyarados","lapras","ditto","eevee","vaporeon","jolteon","flareon","porygon","omanyte","omastar","kabuto","kabutops","aerodactyl","snorlax","articuno","zapdos","moltres","dratini","dragonair","dragonite","mewtwo","mew","chikorita","bayleef","meganium","cyndaquil","quilava","typhlosion","totodile","croconaw","feraligatr","sentret","furret","hoothoot","noctowl","ledyba","ledian","spinarak","ariados","crobat","chinchou","lanturn","pichu","cleffa","igglybuff","togepi","togetic","natu","xatu","mareep","flaaffy","ampharos","bellossom","marill","azumarill","sudowoodo","politoed","hoppip","skiploom","jumpluff","aipom","sunkern","sunflora","yanma","wooper","quagsire","espeon","umbreon","murkrow","slowking","misdreavus","unown","wobbuffet","girafarig","pineco","forretress","dunsparce","gligar","steelix","snubbull","granbull","qwilfish","scizor","shuckle","heracross","sneasel","teddiursa","ursaring","slugma","magcargo","swinub","piloswine","corsola","remoraid","octillery","delibird","mantine","skarmory","houndour","houndoom","kingdra","phanpy","donphan","porygon2","stantler","smeargle","tyrogue","hitmontop","smoochum","elekid","magby","miltank","blissey","raikou","entei","suicune","larvitar","pupitar","tyranitar","lugia","ho-oh","celebi"];
+/** dexId -> English species slug, ALL generations tcgdex serves. Derived, not
+ *  typed: see scripts/fetchPokemonDexBridge.cjs. Refuses to run without it
+ *  rather than silently falling back to a narrower vocabulary, which is exactly
+ *  the failure this replaced. */
+const BRIDGE_PATH = path.join(__dirname, "..", "data", "pokemon-dex-bridge.json");
+let DEX_SPECIES, DEX_MAX;
+try {
+  const doc = JSON.parse(fs.readFileSync(BRIDGE_PATH, "utf8"));
+  DEX_SPECIES = doc.species || {};
+  DEX_MAX = Number(doc.maxDexId) || 0;
+  if (Object.keys(DEX_SPECIES).length < 251) throw new Error(`only ${Object.keys(DEX_SPECIES).length} species`);
+} catch (e) {
+  console.error(`FATAL: dex-bridge unusable at ${BRIDGE_PATH} (${e.message})`);
+  console.error("       regenerate with: node backend/scripts/fetchPokemonDexBridge.cjs");
+  process.exit(1);
+}
+
+/** LEGACY, kept only so the Gen 1-2 vocabulary this lane shipped with stays
+ *  readable next to the derivation that reproduces it. Not consulted. */
+const GEN12_LEGACY_UNUSED = ["bulbasaur","ivysaur","venusaur","charmander","charmeleon","charizard","squirtle","wartortle","blastoise","caterpie","metapod","butterfree","weedle","kakuna","beedrill","pidgey","pidgeotto","pidgeot","rattata","raticate","spearow","fearow","ekans","arbok","pikachu","raichu","sandshrew","sandslash","nidoran-f","nidorina","nidoqueen","nidoran-m","nidorino","nidoking","clefairy","clefable","vulpix","ninetales","jigglypuff","wigglytuff","zubat","golbat","oddish","gloom","vileplume","paras","parasect","venonat","venomoth","diglett","dugtrio","meowth","persian","psyduck","golduck","mankey","primeape","growlithe","arcanine","poliwag","poliwhirl","poliwrath","abra","kadabra","alakazam","machop","machoke","machamp","bellsprout","weepinbell","victreebel","tentacool","tentacruel","geodude","graveler","golem","ponyta","rapidash","slowpoke","slowbro","magnemite","magneton","farfetchd","doduo","dodrio","seel","dewgong","grimer","muk","shellder","cloyster","gastly","haunter","gengar","onix","drowzee","hypno","krabby","kingler","voltorb","electrode","exeggcute","exeggutor","cubone","marowak","hitmonlee","hitmonchan","lickitung","koffing","weezing","rhyhorn","rhydon","chansey","tangela","kangaskhan","horsea","seadra","goldeen","seaking","staryu","starmie","mr-mime","scyther","jynx","electabuzz","magmar","pinsir","tauros","magikarp","gyarados","lapras","ditto","eevee","vaporeon","jolteon","flareon","porygon","omanyte","omastar","kabuto","kabutops","aerodactyl","snorlax","articuno","zapdos","moltres","dratini","dragonair","dragonite","mewtwo","mew","chikorita","bayleef","meganium","cyndaquil","quilava","typhlosion","totodile","croconaw","feraligatr","sentret","furret","hoothoot","noctowl","ledyba","ledian","spinarak","ariados","crobat","chinchou","lanturn","pichu","cleffa","igglybuff","togepi","togetic","natu","xatu","mareep","flaaffy","ampharos","bellossom","marill","azumarill","sudowoodo","politoed","hoppip","skiploom","jumpluff","aipom","sunkern","sunflora","yanma","wooper","quagsire","espeon","umbreon","murkrow","slowking","misdreavus","unown","wobbuffet","girafarig","pineco","forretress","dunsparce","gligar","steelix","snubbull","granbull","qwilfish","scizor","shuckle","heracross","sneasel","teddiursa","ursaring","slugma","magcargo","swinub","piloswine","corsola","remoraid","octillery","delibird","mantine","skarmory","houndour","houndoom","kingdra","phanpy","donphan","porygon2","stantler","smeargle","tyrogue","hitmontop","smoochum","elekid","magby","miltank","blissey","raikou","entei","suicune","larvitar","pupitar","tyranitar","lugia","ho-oh","celebi"];
 
 /** English names for the classic ja-exclusive sets; fallback is the tcgdex id. */
 const SET_EN = {
@@ -74,7 +102,8 @@ async function main() {
   const enIds = new Set(en.map((s) => s.id));
   let work = ja.filter((s) => !enIds.has(s.id));
   if (ONLY.length) work = work.filter((s) => ONLY.includes(s.id));
-  console.log(`[tcgdex-ja] ${ja.length} ja sets, ${work.length} ja-EXCLUSIVE in scope\n`);
+  console.log(`[tcgdex-ja] ${ja.length} ja sets, ${work.length} ja-EXCLUSIVE in scope`);
+  console.log(`[dex-bridge] ${Object.keys(DEX_SPECIES).length} species, dexId 1..${DEX_MAX}\n`);
 
   let staged = 0, rows = 0, bridged = 0, unnamed = 0, skippedSets = 0, done = 0;
   for (const s of work) {
@@ -94,7 +123,10 @@ async function main() {
       if (!detail) continue;
       let player = null;
       const dex = Array.isArray(detail.dexId) ? detail.dexId[0] : null;
-      if (dex && dex >= 1 && dex <= GEN12.length) { player = GEN12[dex - 1]; setBridged++; }
+      // The ceiling is now whatever tcgdex itself knows, not a typed array's
+      // length. An unknown dexId still falls through to `unnamed` and is
+      // counted -- never guessed, never transliterated.
+      if (dex && DEX_SPECIES[String(dex)]) { player = DEX_SPECIES[String(dex)]; setBridged++; }
       else if (detail.category && detail.category !== "Pokemon") player = String(detail.name ?? "");
       if (!player) { unnamed++; continue; }
       rows++;
@@ -115,7 +147,11 @@ async function main() {
   console.log(`\n  sets staged        ${staged}`);
   console.log(`  card rows          ${rows}`);
   console.log(`  dex-bridged names  ${bridged}   <- Japanese species resolved to English, deterministically`);
-  console.log(`  unnameable         ${unnamed}   <- no dexId, no category; counted, not guessed`);
+  // The residual after the bridge was uncapped is a SOURCE limit, not ours:
+  // tcgdex serves some cards (SV8a's ex cards, notably) as category "Pokemon"
+  // with no dexId field at all. Those stay counted and unstaged -- inventing a
+  // name from the Japanese text is the one thing this lane must never do.
+  console.log(`  unnameable         ${unnamed}   <- no dexId served by the source; counted, not guessed`);
   console.log(`  sets skipped       ${skippedSets}`);
   console.log(`\nSTAGING ONLY — nothing written to Cosmos.`);
 }
