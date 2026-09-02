@@ -84,8 +84,16 @@ describe("the fleet still measures the collisions a fold WOULD create", () => {
   });
 
   it("APPLY exits non-zero while any collision is outstanding", () => {
-    const guard = source.slice(source.indexOf("if (APPLY && preflight.collisions > 0)"));
-    expect(guard.slice(0, 900)).toMatch(/process\.exit\(2\)/);
+    // Bounded to the guard's own block — from the `if` to the write phase that
+    // follows it — rather than a fixed character count. The count was 900 and
+    // D30-R3's longer refusal message (which now has to explain that only a
+    // SHARED sourceExternalId blocks) pushed `process.exit(2)` past the window,
+    // reddening a test whose subject had not changed at all.
+    const start = source.indexOf("if (APPLY && preflight.collisions > 0)");
+    const end = source.indexOf("-- the write phase", start);
+    expect(start).toBeGreaterThan(-1);
+    expect(end).toBeGreaterThan(start);
+    expect(source.slice(start, end)).toMatch(/process\.exit\(2\)/);
   });
 
   it("the refusal sits BEFORE the write reconciliation, so a blocked run never reports writes", () => {
