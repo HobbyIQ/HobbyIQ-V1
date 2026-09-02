@@ -244,6 +244,23 @@ describe("POST /api/alerts/advanced — body validation", () => {
     expect(r.body.error).toMatch(/not yet supported/i);
     expect(createRuleMock).not.toHaveBeenCalled();
   });
+  // CF-SELLER-INTELLIGENCE-SELL-WINDOW (Drew, 2026-09-02): the sell-window
+  // rule is wired into the evaluator but OFF BY DEFAULT — it is a transition
+  // condition with the same previous-slice dependency, so creating one today
+  // would build a rule that can only ever be false.
+  it("rejects sell_signal_becomes with 'not yet supported' message", async () => {
+    const r = await request(app)
+      .post("/api/alerts/advanced")
+      .set("x-session-id", "s")
+      .send({
+        ...VALID_BODY,
+        conditions: [{ kind: "sell_signal_becomes", becomes: "sell-window" }],
+      });
+    expect(r.status).toBe(400);
+    expect(r.body.error).toMatch(/sell_signal_becomes/);
+    expect(r.body.error).toMatch(/not yet supported/i);
+    expect(createRuleMock).not.toHaveBeenCalled();
+  });
   it("PATCH also rejects crossing conditions in conditions[] update", async () => {
     const r = await request(app)
       .patch("/api/alerts/advanced/r-1")

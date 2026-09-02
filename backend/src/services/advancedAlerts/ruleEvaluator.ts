@@ -40,6 +40,8 @@ import {
 } from "../portfolioiq/portfolioStore.service.js";
 import type { PortfolioHolding } from "../../types/portfolioiq.types.js";
 import { runSingleFlight } from "../../jobs/_singleFlight.js";
+import { deriveSellWindowSignal } from "../signals/sellWindow.service.js";
+import type { TrendIQResult } from "../compiq/trendIQ.types.js";
 
 export const ADVANCED_ALERT_TARGETS_PER_RULE_DEFAULT = 50;
 
@@ -220,6 +222,22 @@ export function sliceEstimate(est: Record<string, unknown>): EvaluationEstimateS
             coverage: trendIQ.coverage,
           }
         : null,
+    // CF-SELLER-INTELLIGENCE-SELL-WINDOW (Drew, 2026-09-02): derive the
+    // timing call from the FULL trendIQ on the estimate (not the three-field
+    // summary above — the derivation needs the components).
+    //
+    // `pricingConfidence` is 0..100 on this slice; deriveSellWindowSignal
+    // takes 0..1, so it is scaled here. Getting that wrong would silently
+    // put every holding under the confidence floor and emit a permanent
+    // "low-confidence" refusal — pinned in advancedAlerts.sellSignal.test.ts.
+    sellSignal:
+      trendIQ && typeof trendIQ === "object"
+        ? deriveSellWindowSignal({
+            trendIQ: trendIQ as TrendIQResult,
+            confidence: typeof pc === "number" ? pc / 100 : null,
+            trendUpdatedAt: (trendIQ as { lastUpdated?: string | null }).lastUpdated ?? null,
+          }).signal
+        : null,
   };
 }
 
@@ -250,6 +268,12 @@ function describeCondition(c: AdvancedAlertCondition): string {
       return `Price crossed ${c.op} $${c.value}`;
     case "predicted_price_crosses":
       return `Predicted price crossed ${c.op} $${c.value}`;
+    case "sell_signal_becomes":
+      return c.becomes === "sell-window"
+        ? "Sell window opened"
+        : c.becomes === "watch"
+        ? "Sell signal became watch"
+        : "Sell signal became hold";
   }
 }
 

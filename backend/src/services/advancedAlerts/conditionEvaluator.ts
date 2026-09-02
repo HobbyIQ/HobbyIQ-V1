@@ -18,6 +18,7 @@ import type {
   AdvancedAlertCombinator,
 } from "../../repositories/advancedAlertRules.repository.js";
 import type { TrendIQCoverage } from "../compiq/trendIQ.types.js";
+import type { SellSignal } from "../signals/sellWindow.service.js";
 
 /**
  * Minimum slice of a computeEstimate response needed by the evaluator.
@@ -33,6 +34,13 @@ export interface EvaluationEstimateSlice {
     direction: "up" | "flat" | "down";
     coverage: TrendIQCoverage;
   } | null;
+  /**
+   * CF-SELLER-INTELLIGENCE-SELL-WINDOW (Drew, 2026-09-02): the timing call
+   * derived from this same estimate, for `sell_signal_becomes`. Optional —
+   * a caller that does not derive it leaves it undefined and the condition
+   * simply never fires (it cannot see a transition it was not given).
+   */
+  sellSignal?: SellSignal | null;
 }
 
 const COVERAGE_RANK: Record<TrendIQCoverage, number> = {
@@ -112,6 +120,17 @@ export function evaluateCondition(
         return before < condition.value && after >= condition.value;
       }
       return before > condition.value && after <= condition.value;
+    }
+    case "sell_signal_becomes": {
+      // Transition semantics, exactly like the crossing conditions above:
+      // fire only on the pass where the signal ENTERS the target state.
+      // No previous slice → no transition observable → false. A signal the
+      // caller did not derive (undefined) is likewise not a transition.
+      if (!previousEstimate) return false;
+      const before = previousEstimate.sellSignal ?? null;
+      const after = currentEstimate.sellSignal ?? null;
+      if (before === null || after === null) return false;
+      return after === condition.becomes && before !== condition.becomes;
     }
     // Exhaustiveness check — tsc rejects unhandled future kinds.
     default: {
