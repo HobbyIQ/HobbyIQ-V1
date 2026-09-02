@@ -182,6 +182,10 @@ export interface PortfolioHolding {
     method: string;    // HobbyIqFmvMethod, but a plain string here to keep
                        // types.ts import-cycle-free
     compsUsed: number;
+    /** CF-A-UNION-IS-ONE-CARD (2026-09-01). Present when the pool-twin union
+     *  was refused because the holding's two identities named different
+     *  products: the price came from the slug half alone, and this says so. */
+    unionRefused?: string;
   };
   // CF-RUNG-LABEL (D4 "one valuation path", PR 1 — 2026-08-29). The
   // machine-readable name of the RUNG that produced this holding's current

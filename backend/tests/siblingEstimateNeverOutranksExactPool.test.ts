@@ -619,7 +619,15 @@ describe("portfolioStore — every estimate site asks the gate (source pin)", ()
     expect(src).toMatch(/fmvRung: "sibling-estimate",/);
     expect(src).toMatch(/pricingSource: "sibling-estimate",/);
     expect(src).toMatch(/method: "sibling-estimate",/);
-    expect((src.match(/pricingSourceMeta: \{ slug: [^}]*method: (u|bU|unified)\.rungLabel, compsUsed: (u|bU|unified)\.totalSampleCount \}/g) ?? []).length).toBe(4);
+    // CF-A-UNION-IS-ONE-CARD (2026-09-01): the unified write in
+    // unifiedHoldingWrite now wraps its meta in withUnionRefused(...) so a
+    // refused pool-twin union is auditable on the holding. The pin's subject
+    // is unchanged — FOUR unified writes still name their rung and sample
+    // count — so it accepts the wrapped form too.
+    expect((src.match(/pricingSourceMeta: (?:withUnionRefused\()?\{ slug: [^}]*method: (?:u|bU|unified)\.rungLabel, compsUsed: (?:u|bU|unified)\.totalSampleCount \}/g) ?? []).length).toBe(4);
+    // The wrap adds the breadcrumb and nothing else: same three keys when no
+    // union was refused.
+    expect(src).toMatch(/pricingSourceMeta: withUnionRefused\(\{ slug: exact\.attempt\.cardId,/);
   });
   it("every unified write prices a thin exact pool (>= 1 sample); no site demands confidence >= 0.3 any more", () => {
     expect(src).not.toMatch(/(unified|unifiedResult|bU|u)\.confidence >= 0\.3/);

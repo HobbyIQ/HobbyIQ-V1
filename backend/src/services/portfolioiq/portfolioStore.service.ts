@@ -382,6 +382,28 @@ interface PortfolioPricePoint {
   at: string;
   value: number;
   source?: string;
+  /** CF-AN-ESTIMATE-DRIFTS-IN-THE-DARK (2026-09-01). The valuationStatus the
+   *  point was written under. ABSENT means "observed": every point written
+   *  before this field existed was observed-only (the append was gated on it),
+   *  so absence is not unknown — it is the old guarantee, and every reader
+   *  that wants the observed trail reads it through observedPricePoints().
+   *  Present and "estimated" = a grade-curve / fallback number, which drifts
+   *  as the engine re-anchors and must never be read as a comp-anchored
+   *  observation. */
+  valuationStatus?: "observed" | "estimated";
+}
+
+/**
+ * CF-AN-ESTIMATE-DRIFTS-IN-THE-DARK (2026-09-01). The observed-only trail —
+ * the series priceHistory meant before estimated points were appended.
+ *
+ * Every existing reader wants THIS, and gets it by construction: points
+ * written before the tag existed carry no valuationStatus and were
+ * observed-only by the append gate. New estimated points are tagged and
+ * filtered out here.
+ */
+export function observedPricePoints<T extends { valuationStatus?: string }>(points: readonly T[]): T[] {
+  return points.filter((p) => p.valuationStatus === undefined || p.valuationStatus === "observed");
 }
 
 interface PortfolioAlert {
@@ -2918,6 +2940,13 @@ async function emitUserEbayPurchaseComp(
   }
 }
 
+/** CF-A-UNION-IS-ONE-CARD (2026-09-01): stamp the refusal breadcrumb onto a
+ *  pricingSourceMeta when the pool-twin union was refused, leaving the meta
+ *  untouched (same three keys) when it was not. */
+function withUnionRefused<T extends object>(meta: T, attempt: { unionRefusedReason?: string }): T & { unionRefused?: string } {
+  return attempt.unionRefusedReason ? { ...meta, unionRefused: attempt.unionRefusedReason } : meta;
+}
+
 // ─── CF-EXACT-POOL-SUPREMACY (D4 "one valuation path", PR 5 — 2026-08-29) ──
 //
 // A fallback rung may never outrank an exact pool that has >= 1 sale. Every
@@ -2969,11 +2998,15 @@ function unifiedHoldingWrite(
     estimateLow: null,
     estimateHigh: null,
     estimateConfidence: null,
-    estimateBasis: `unified: window=${u.windowDays}d median=$${u.fmv?.toFixed(0) ?? "?"} marketValue=$${u.marketValue?.toFixed(0) ?? "?"} predicted=$${u.predictedPrice?.toFixed(0) ?? "?"} trend=${u.trendDirection} ${u.trendPctPerWeek?.toFixed(1) ?? "?"}%/wk conf=${u.confidence.toFixed(2)} id=${exact.attempt.label}`,
+    // CF-A-UNION-IS-ONE-CARD (2026-09-01): when the pool-twin union was
+    // refused because the halves named different products, the price stands
+    // but says so — the pool it came from is narrower than the holding's two
+    // identities suggest.
+    estimateBasis: `unified: window=${u.windowDays}d median=$${u.fmv?.toFixed(0) ?? "?"} marketValue=$${u.marketValue?.toFixed(0) ?? "?"} predicted=$${u.predictedPrice?.toFixed(0) ?? "?"} trend=${u.trendDirection} ${u.trendPctPerWeek?.toFixed(1) ?? "?"}%/wk conf=${u.confidence.toFixed(2)} id=${exact.attempt.label}${exact.attempt.unionRefusedReason ? ` — ${exact.attempt.unionRefusedReason}` : ""}`,
     isEstimate: false,
     valuationStatus: "observed",
     pricingSource: "unified-pricing",
-    pricingSourceMeta: { slug: exact.attempt.cardId, method: u.rungLabel, compsUsed: u.totalSampleCount },
+    pricingSourceMeta: withUnionRefused({ slug: exact.attempt.cardId, method: u.rungLabel, compsUsed: u.totalSampleCount }, exact.attempt),
     nearestGradedAnchor: undefined,
     verdict: "Observed",
     recommendation: holding.recommendation ?? "Hold",
@@ -3190,8 +3223,19 @@ async function autoPriceHolding(
   const oneEntry = await valueHoldingThroughOneEntry(holding, { userId: userId ?? null, caller: "autoPriceHolding.one-entry" });
   if (oneEntry.outcome === "observed" || oneEntry.outcome === "estimated") {
     const nowIso = (oneEntry.holding.lastUpdated as string) ?? new Date().toISOString();
-    if (oneEntry.outcome === "observed") {
-      appendPriceHistory(doc, holding.id, { at: nowIso, value: oneEntry.valuation.fairMarketValue as number, source });
+    // CF-AN-ESTIMATE-DRIFTS-IN-THE-DARK (2026-09-01): the grade-curve lane is
+    // where Verlander (96.34 -> 64.12 -> 96.34) and Judge (131.88 -> 106 ->
+    // 131.88) drifted across one day's crons with nothing recorded. Estimated
+    // points now append TAGGED; observedPricePoints() keeps every existing
+    // reader on the observed trail.
+    const oneEntryFmv = oneEntry.valuation.fairMarketValue;
+    if (typeof oneEntryFmv === "number" && Number.isFinite(oneEntryFmv)) {
+      appendPriceHistory(doc, holding.id, {
+        at: nowIso,
+        value: oneEntryFmv,
+        source,
+        ...(oneEntry.outcome === "estimated" ? { valuationStatus: "estimated" as const } : {}),
+      });
     }
     evaluateHoldingAlerts(doc, previous, oneEntry.holding);
     doc.holdings[holding.id] = oneEntry.holding;
@@ -4314,19 +4358,24 @@ async function autoPriceHolding(
     // marketPressure (Gate-2 β), freshnessStatus.
   };
 
-  // CF-GRADED-RAIL-WIRE-IN (2026-06-14): priceHistory stays observed-
-  // only. Estimated and pending holdings do NOT append — the trajectory
-  // iOS renders represents real comp-anchored value over time, never
-  // estimate points (which would drift as the engine re-anchors) or
-  // null gaps. When valuationStatus flips from observed to estimated
-  // (e.g., a graded holding refresh where the grade lost its last
-  // observed sale), we leave the prior observed trail intact and stop
-  // appending — the trajectory pauses honestly.
-  if (resolved.valuationStatus === "observed" && resolved.fairMarketValueOverride !== null) {
+  // CF-GRADED-RAIL-WIRE-IN (2026-06-14): the trajectory iOS renders is real
+  // comp-anchored value over time — never estimate points (which drift as the
+  // engine re-anchors) or null gaps. That guarantee is unchanged, and now it
+  // is enforced by a TAG rather than by silence.
+  //
+  // CF-AN-ESTIMATE-DRIFTS-IN-THE-DARK (2026-09-01). Refusing to append left
+  // estimated holdings with no record at all, so a grade-curve number could
+  // drift with nothing to compare against: Verlander 96.34 -> 64.12 -> 96.34
+  // and Judge 131.88 -> 106 -> 131.88 across a single day's crons, invisible.
+  // Estimated writes now append TAGGED; every reader of the observed trail
+  // goes through observedPricePoints(), which drops them.
+  if (resolved.fairMarketValueOverride !== null
+    && (resolved.valuationStatus === "observed" || resolved.valuationStatus === "estimated")) {
     appendPriceHistory(doc, holding.id, {
       at: now,
       value: resolved.fairMarketValueOverride,
       source,
+      ...(resolved.valuationStatus === "estimated" ? { valuationStatus: "estimated" as const } : {}),
     });
   }
 
@@ -4458,6 +4507,55 @@ async function autoPriceHolding(
   return updated;
 }
 
+/**
+ * CF-A-SWING-IS-NOT-A-MARKET (2026-09-01, holdings 9b971b03 RA-JC ~10.4x and
+ * ca820b08 Gonzalez ~41x). The per-unit value a holding carries, for swing
+ * comparison only: fairMarketValue when it is a positive number, else the
+ * estimate. Null when the holding has no number at all — a first price is not
+ * a swing.
+ */
+export function perUnitFmvForSwing(h: {
+  fairMarketValue?: unknown;
+  estimatedValue?: unknown;
+}): number | null {
+  const fmv = h.fairMarketValue;
+  if (typeof fmv === "number" && Number.isFinite(fmv) && fmv > 0) return fmv;
+  const est = h.estimatedValue;
+  if (typeof est === "number" && Number.isFinite(est) && est > 0) return est;
+  return null;
+}
+
+/** The multiple between two positive values, in whichever direction is larger.
+ *  Null when either side is missing — nothing to compare. */
+export function swingRatio(from: number | null, to: number | null): number | null {
+  if (from === null || to === null || !(from > 0) || !(to > 0)) return null;
+  return from > to ? from / to : to / from;
+}
+
+/**
+ * The swing threshold: a newly computed value more than this multiple away
+ * from the previous persisted one, in EITHER direction, is a pool-composition
+ * flap and not a market. Override with PORTFOLIO_SWING_ALARM_RATIO.
+ *
+ * The value is PERSISTED either way — grade monotonicity is not an invariant
+ * and neither is price continuity: observe the swing, never clamp it
+ * (feedback_grade_monotonicity_is_not_an_invariant). This is an alarm, not a
+ * gate.
+ */
+export const DEFAULT_SWING_ALARM_RATIO = 2;
+
+export function swingAlarmRatio(): number {
+  const raw = Number(process.env.PORTFOLIO_SWING_ALARM_RATIO);
+  return Number.isFinite(raw) && raw > 1 ? raw : DEFAULT_SWING_ALARM_RATIO;
+}
+
+/** Pure: does this move deserve the alarm? Strictly greater than the ratio,
+ *  so an exact 2x is quiet and 2.01x is loud. */
+export function isSwingAlarming(from: number | null, to: number | null, ratio = DEFAULT_SWING_ALARM_RATIO): boolean {
+  const r = swingRatio(from, to);
+  return r !== null && r > ratio;
+}
+
 function appendPriceHistory(
   doc: UserDoc,
   holdingId: string,
@@ -4465,7 +4563,11 @@ function appendPriceHistory(
 ): void {
   const existing = doc.priceHistoryByHolding[holdingId] ?? [];
   const prev = existing.length > 0 ? existing[existing.length - 1] : null;
-  if (prev && Math.abs(prev.value - point.value) < 0.0001) {
+  // CF-AN-ESTIMATE-DRIFTS-IN-THE-DARK: the same number under a DIFFERENT
+  // status is a different fact (the pool went away, or came back) and is
+  // never de-duplicated away.
+  const sameStatus = (prev?.valuationStatus ?? "observed") === (point.valuationStatus ?? "observed");
+  if (prev && sameStatus && Math.abs(prev.value - point.value) < 0.0001) {
     const prevTime = new Date(prev.at).getTime();
     const currentTime = new Date(point.at).getTime();
     if (Number.isFinite(prevTime) && Number.isFinite(currentTime) && Math.abs(currentTime - prevTime) < 60_000) {
@@ -4473,14 +4575,80 @@ function appendPriceHistory(
     }
   }
   existing.push(point);
-  // Cap price history per holding so the UserDoc doesn't grow unbounded as the
-  // scheduled reprice job + pull-to-refresh both append over time. Override
-  // with PORTFOLIO_PRICE_HISTORY_MAX (default 365).
-  const maxPoints = Math.max(
+  doc.priceHistoryByHolding[holdingId] = capPriceHistoryByClass(existing);
+}
+
+/**
+ * CF-AN-ESTIMATE-DRIFTS-IN-THE-DARK / CAP-EVICTION (2026-09-01).
+ *
+ * The cap used to be `existing.slice(-max)` over ONE interleaved array. Once
+ * estimated points began appending (the 6h cron writes up to 4/day for a
+ * holding sitting on the grade-curve rail), those appends walked the window
+ * forward and evicted the observed trail wholesale: at 4 estimated/day a
+ * 365-point window is pure estimate in ~91 days, observedPricePoints() then
+ * returns [], and getHoldingPriceHistory / buildCalibrationReport /
+ * buildWeeklyNarrative all see an EMPTY observed series for a holding whose
+ * comp-anchored history was real. The estimate would have silently eaten the
+ * observations it drifts against — the exact opposite of making drift visible.
+ *
+ * So retention is PER CLASS. The two series are different facts with different
+ * lifetimes and they never compete for one window:
+ *
+ *   • observed  — comp-anchored, the series every existing reader wants, and
+ *     the one the calibration report scores against real sales. Keeps the
+ *     existing PORTFOLIO_PRICE_HISTORY_MAX (default 365) semantics EXACTLY,
+ *     so an all-observed holding caps identically to before this change.
+ *     Never evicted by an estimated append.
+ *   • estimated — a drifting number, useful for seeing the drift and little
+ *     else. Capped separately at PORTFOLIO_ESTIMATED_HISTORY_MAX, default 180:
+ *     at the cron's 4/day that is ~45 days of drift visibility, enough to see
+ *     a flap develop without letting the noisy series dominate the UserDoc.
+ *
+ * Points keep their chronological interleaving in storage — readers that want
+ * one class filter (observedPricePoints), readers that want the whole picture
+ * (getHoldingPriceHistory with includeEstimated) get it in time order.
+ */
+export const DEFAULT_PORTFOLIO_PRICE_HISTORY_MAX = 365;
+export const DEFAULT_PORTFOLIO_ESTIMATED_HISTORY_MAX = 180;
+
+function historyCapFromEnv(envName: string, fallback: number): number {
+  return Math.max(
     30,
-    Math.floor(Number(process.env.PORTFOLIO_PRICE_HISTORY_MAX ?? 365)) || 365,
+    Math.floor(Number(process.env[envName] ?? fallback)) || fallback,
   );
-  doc.priceHistoryByHolding[holdingId] = existing.slice(-maxPoints);
+}
+
+export function observedHistoryMax(): number {
+  return historyCapFromEnv("PORTFOLIO_PRICE_HISTORY_MAX", DEFAULT_PORTFOLIO_PRICE_HISTORY_MAX);
+}
+
+export function estimatedHistoryMax(): number {
+  return historyCapFromEnv("PORTFOLIO_ESTIMATED_HISTORY_MAX", DEFAULT_PORTFOLIO_ESTIMATED_HISTORY_MAX);
+}
+
+/** Cap each valuation class against its OWN window, preserving the stored
+ *  order. Exported for the pin — an estimated flood must not evict observations. */
+export function capPriceHistoryByClass<T extends { valuationStatus?: "observed" | "estimated" | string }>(
+  points: readonly T[],
+): T[] {
+  const observedMax = observedHistoryMax();
+  const estimatedMax = estimatedHistoryMax();
+
+  // Walk backwards keeping the newest N of each class, so the survivors are
+  // the most recent per class rather than the most recent overall.
+  let observedKept = 0;
+  let estimatedKept = 0;
+  const keep = new Array<boolean>(points.length).fill(false);
+  for (let i = points.length - 1; i >= 0; i--) {
+    // Absence means observed — the pre-tag guarantee (see PortfolioPricePoint).
+    const isEstimated = points[i].valuationStatus === "estimated";
+    if (isEstimated) {
+      if (estimatedKept < estimatedMax) { keep[i] = true; estimatedKept++; }
+    } else if (observedKept < observedMax) {
+      keep[i] = true; observedKept++;
+    }
+  }
+  return points.filter((_, i) => keep[i]);
 }
 
 function addAlert(doc: UserDoc, alert: Omit<PortfolioAlert, "id" | "createdAt">): void {
@@ -4730,7 +4898,11 @@ function buildCalibrationReport(doc: UserDoc) {
   const samples: Sample[] = [];
 
   for (const entry of doc.ledger) {
-    const history = (doc.priceHistoryByHolding[entry.holdingId] ?? [])
+    // CF-AN-ESTIMATE-DRIFTS-IN-THE-DARK (2026-09-01): calibration measures how
+    // close our OBSERVED price was to what the card actually sold for.
+    // Scoring an estimate against a real sale would measure the fill, not the
+    // prediction — the observed trail only.
+    const history = observedPricePoints(doc.priceHistoryByHolding[entry.holdingId] ?? [])
       .filter((p) => new Date(p.at).getTime() <= new Date(entry.soldAt).getTime())
       .sort((a, b) => a.at.localeCompare(b.at));
     const anchor = history.length > 0 ? history[history.length - 1] : null;
@@ -4759,7 +4931,10 @@ function buildWeeklyNarrative(doc: UserDoc) {
 
   const priceMoves = holdings
     .map((h) => {
-      const history = (doc.priceHistoryByHolding[h.id] ?? []).sort((a, b) => a.at.localeCompare(b.at));
+      // CF-AN-ESTIMATE-DRIFTS-IN-THE-DARK (2026-09-01): the weekly narrative
+      // reports what the market did. An estimate re-anchoring is not a move,
+      // so the observed trail only.
+      const history = observedPricePoints(doc.priceHistoryByHolding[h.id] ?? []).sort((a, b) => a.at.localeCompare(b.at));
       const latest = history.length > 0 ? history[history.length - 1] : null;
       const weekAnchor = history.find((p) => new Date(p.at).getTime() >= weekAgo) ?? history[0] ?? null;
       const latestValue = toNumber(latest?.value, computePerUnitValue(h) ?? 0);
@@ -5424,7 +5599,14 @@ export async function getHoldingPriceHistory(req: Request, res: Response) {
   // same id as holdings (one-to-one), so we resolve via holdings first.
   const canonical = findHoldingKey(doc, id);
   if (!canonical) return res.status(404).json({ error: { message: "Not found", code: "NOT_FOUND" } });
-  const points = doc.priceHistoryByHolding[canonical] ?? [];
+  const stored = doc.priceHistoryByHolding[canonical] ?? [];
+  // CF-AN-ESTIMATE-DRIFTS-IN-THE-DARK (2026-09-01). The shipped clients (iOS
+  // PortfolioPricePoint, apps/web HoldingPricePoint) decode { at, value,
+  // source } and plot every point as a real observation, so the DEFAULT stays
+  // exactly what they have always received: the observed trail. Estimated
+  // points are opt-in — `?includeEstimated=true` — for the drift view.
+  const includeEstimated = String(req.query.includeEstimated ?? "").toLowerCase() === "true";
+  const points = includeEstimated ? stored : observedPricePoints(stored);
   res.json({ holdingId: canonical, count: points.length, points });
 }
 
@@ -9171,6 +9353,13 @@ export async function repriceHoldingsForUser(
   let skipped = 0;
   const updates: BatchRepriceResult["updates"] = [];
 
+  // CF-A-SWING-IS-NOT-A-MARKET (2026-09-01). The value each candidate carried
+  // BEFORE this cycle, so the post-loop sweep can see a pool-composition flap.
+  // Captured here because the loop has a dozen write sites, each with its own
+  // `continue`; the previous value is the one thing they all overwrite.
+  const priorFmv = new Map<string, number | null>();
+  for (const h of candidates) priorFmv.set(h.id, perUnitFmvForSwing(h));
+
   for (const holding of candidates) {
     // CF-EBAY-REVIEW-QUEUE (2026-07-12): skip pending-review rows. Those
     // aren't real inventory yet — pricing them would fire the CompIQ
@@ -9225,6 +9414,21 @@ export async function repriceHoldingsForUser(
       // chain only.
       const bOneEntry = await valueHoldingThroughOneEntry(holding, { userId, caller: "repriceHoldingsForUser.one-entry" });
       if (bOneEntry.outcome === "observed" || bOneEntry.outcome === "estimated") {
+        // CF-AN-ESTIMATE-DRIFTS-IN-THE-DARK (2026-09-01). This is the 6h
+        // cron's own one-valuation-path exit, and it appended NOTHING — which
+        // is why the measured oscillations left no trail to compare against.
+        // Observed points append as they always did elsewhere; estimated ones
+        // append tagged, and observedPricePoints() keeps existing readers on
+        // the observed trail.
+        const bFmv = bOneEntry.valuation.fairMarketValue;
+        if (typeof bFmv === "number" && Number.isFinite(bFmv)) {
+          appendPriceHistory(doc, holding.id, {
+            at: (bOneEntry.holding.lastUpdated as string) ?? new Date().toISOString(),
+            value: bFmv,
+            source,
+            ...(bOneEntry.outcome === "estimated" ? { valuationStatus: "estimated" as const } : {}),
+          });
+        }
         evaluateHoldingAlerts(doc, doc.holdings[holding.id], bOneEntry.holding);
         doc.holdings[holding.id] = bOneEntry.holding;
         repriced += 1;
@@ -10161,6 +10365,47 @@ export async function repriceHoldingsForUser(
   // dilutive rung fired past 2 real anchor sales — exactly the kind
   // of gap Drew wants surfaced automatically instead of catching by
   // eye.
+  // CF-A-SWING-IS-NOT-A-MARKET (2026-09-01). Every oscillation this session
+  // measured was persisted silently: holding 9b971b03 logged 21.25 x5 ->
+  // 212.95 -> 20.625 -> 20.625 -> 213.8 -> 20.625 on the 6h cron (~10.4x) and
+  // ca820b08 168.74 -> 4.17 -> ... -> 187 (~41x), with no alarm anywhere — the
+  // list renders the persisted value faithfully, so nothing looked wrong.
+  //
+  // The value STANDS: a swing is observed, never clamped (grade monotonicity
+  // is not an invariant, and neither is price continuity — a real market can
+  // double). What was missing is the signal, so App Insights can alert on
+  // pool-composition flapping.
+  const swingRatioLimit = swingAlarmRatio();
+  for (const u of updates) {
+    if (u.status !== "repriced") continue;
+    const h = doc.holdings[u.id];
+    if (!h) continue;
+    const from = priorFmv.get(u.id) ?? null;
+    const to = perUnitFmvForSwing(h);
+    if (!isSwingAlarming(from, to, swingRatioLimit)) continue;
+    console.warn(JSON.stringify({
+      event: "portfolio_reprice_value_swing",
+      source: "portfolioStore.repriceHoldingsForUser",
+      repriceSource: source,
+      userId,
+      holdingId: u.id,
+      from,
+      to,
+      ratio: Math.round((swingRatio(from, to) as number) * 100) / 100,
+      threshold: swingRatioLimit,
+      rung: (h as { fmvRung?: string | null }).fmvRung
+        ?? (h as { pricingSourceMeta?: { method?: string } }).pricingSourceMeta?.method
+        ?? null,
+      poolLabel: (h as { pricingSourceMeta?: { slug?: string } }).pricingSourceMeta?.slug
+        ?? (h as { hobbyiqCardId?: string | null }).hobbyiqCardId
+        ?? null,
+      valuationStatus: (h as { valuationStatus?: string }).valuationStatus ?? null,
+      unionRefused: (h as { pricingSourceMeta?: { unionRefused?: string } }).pricingSourceMeta?.unionRefused ?? null,
+      persisted: true,
+      detail: "the value moved by more than the swing threshold between reprice cycles; it is PERSISTED, not clamped — a repeating swing is pool composition, not a market",
+    }));
+  }
+
   try {
     const { recordCostBasisDivergenceIfNoteworthy } = await import("../compiq/boundedProjectionAlerts.service.js");
     for (const u of updates) {
