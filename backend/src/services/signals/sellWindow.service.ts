@@ -373,7 +373,7 @@ export function deriveSellWindowSignal(input: DeriveSellWindowInput): SellWindow
       signalClass: "price",
       basis:
         `The player index is up ${playerPct}% while this card's own pool has only moved ${ownPct}% — ` +
-        `a ${divergence}-point gap in the card's favour that typically closes upward, so selling now would be selling before it does.`,
+        `a ${divergence}-point gap in the card's favour. Player-level moves often lead individual cards, so selling now may be early — watch this card's own pool for confirmation.`,
       reason: null,
       measures,
     };
