@@ -623,15 +623,6 @@
       "evidence": "no refractor token and no /499 in \"PSA 10 2024 BOWMAN DRAFT CHROME PROSPECT AUTO JAC CAGLIANONE\"; stored parallel=Base"
     },
     {
-      "id": "tca-ebay::EBAY-v1|307141033366|0",
-      "fromCardId": "hiq:baseball:2024:bowman-draft:cpa-jc:refractor:auto:num-499",
-      "toCardId": "hiq:baseball:2024:bowman-draft:cpa-jc:base:auto",
-      "section": "D4",
-      "price": 475,
-      "soldAt": "2026-08-28T17:23:17.000Z",
-      "evidence": "no refractor token and no /499 in \"2024 Bowman Draft - Chrome Prospect Autographs Jac Caglianone #CPA-JC (AU, RC)\"; stored parallel=Base"
-    },
-    {
       "id": "hiq:baseball:2017:topps-gold-label:86:class-1-blue:no-auto::227365525893",
       "fromCardId": "hiq:baseball:2017:topps-gold-label:86:class-1-blue:no-auto",
       "toCardId": "hiq:baseball:2017:topps-gold-label:86:class-1-blue:no-auto",
@@ -748,6 +739,12 @@
       "section": "D-03",
       "reason": "NOT a misfile — a DUPLICATE PAIR. Two documents share this id in two partitions (base:no-auto and base:no-auto:num-250) with cardId/hobbyiqCardId mirror-swapped, so the same $199.99 sale is counted on both addresses. Relocating either one would collapse onto its twin, and this lane keeps one row per id — it has no collapse semantics. The title also names X-Fractor, a first-class parallel in our vocabulary, so the correct address carries an x-fractor segment; no such catalog row exists for BDP129 and CF-NO-SYNTHETIC-PARALLELS forbids minting one here. Excluded pending a dedup pass that picks the survivor, plus an X-Fractor catalog row from a checklist source.",
       "title": "2005 Bowman Chrome Justin Verlander Rookie X-Fractor #BDP129 196/250"
+    },
+    {
+      "id": "tca-ebay::EBAY-v1|307141033366|0",
+      "section": "D4",
+      "reason": "duplicate pair — same id already at destination; true-dupe handling belongs to the collision-triage flaggedWrong lane, a relocation would silently collapse two docs. Verified live read-only 2026-09-01: TWO documents carry this id — one at hiq:baseball:2024:bowman-draft:cpa-jc:base:auto ($475, _ts=1788027899) and one at hiq:baseball:2024:bowman-draft:cpa-jc:refractor:auto:num-499 ($475, _ts=1788184466) — same price, same soldAt (2026-08-28T17:23:17.000Z), same title, each with hobbyiqCardId mirroring its own cardId. relocateSoldComp upserts keep.cardId=to under the UNCHANGED id, so this move would overwrite the existing destination doc and then delete the source: two documents become one, silently, with no duplicatesLeft signal. Same shape as the D-03 X-Fractor pair. A sweep of all 74 R3 entries against their destination partitions found this to be the ONLY such collision.",
+      "title": "2024 Bowman Draft - Chrome Prospect Autographs Jac Caglianone #CPA-JC (AU, RC)"
     }
   ]
 }
