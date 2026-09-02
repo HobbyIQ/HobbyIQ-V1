@@ -18,6 +18,9 @@
  *                                          (this is the Gonzalez DEMOTION)
  *   4. a PROTECTED source is never written           (mutation-checked below)
  *   5. no checklist-backed destination -> not tagged  (nowhere to evict to)
+ *   6. an identity contradiction (cardNumber/setKey/cardYear/sport/isAuto, or
+ *      a grade demotion) is TAGGED but never written -- the subclass moves an
+ *      address, and only the finish axes may move with it   (mutation-checked)
  *
  * Pin 3 is the load-bearing one. rematchClassifier.test.ts already pins that a
  * terse title must not flatten a stored `Refractor` field, and this file must
@@ -289,17 +292,20 @@ describe("MUTATION CHECK: the protected guard on BASE-EVICTION is load-bearing",
     const file = path.join(backend, "scripts", "lib", "rematch-classify.cjs");
     const src = fs.readFileSync(file, "utf8");
 
-    // The subclass's writable line, identified by the comment that precedes it
-    // so the mutation cannot accidentally hit IMPROVE's identical expression.
-    // Indentation-insensitive: this pins the GUARD, not the source's layout.
-    const marker = /(\/\/ forever, subclass or no subclass -- see the mutation check\.\s*\n\s*)writable: prov\.tier === AUTO,/;
-    expect(src).toMatch(marker);
-    const mutated = src.replace(marker, "$1writable: true,");
+    // The subclass's writable line. It is identified by its AXIS CONJUNCT,
+    // which IMPROVE's guard does not have -- so the mutation cannot
+    // accidentally hit IMPROVE's otherwise-identical expression. Only the
+    // TIER half is removed here; the axis half is mutated by its own check
+    // above, and the two guards are proven independently load-bearing.
+    const marker = "writable: prov.tier === AUTO && contradicting.length === 0,";
+    expect(src).toContain(marker);
+    expect(src.split(marker)).toHaveLength(2);
+    const mutated = src.replace(marker, "writable: contradicting.length === 0,");
     expect(mutated).not.toBe(src);
-    // ...and exactly ONE expression was mutated, so IMPROVE's own guard is
-    // untouched and the two answers below differ only by the subclass's.
+    // IMPROVE's own guard is untouched: it has no axis conjunct, so the count
+    // of bare tier guards is the same before and after.
     expect(mutated.match(/writable: prov\.tier === AUTO,/g) ?? []).toHaveLength(
-      (src.match(/writable: prov\.tier === AUTO,/g) ?? []).length - 1,
+      (src.match(/writable: prov\.tier === AUTO,/g) ?? []).length,
     );
 
     const tmp = path.join(backend, "scripts", "lib", `.rematch-classify.be-mutant-${process.pid}.cjs`);
@@ -318,6 +324,136 @@ describe("MUTATION CHECK: the protected guard on BASE-EVICTION is load-bearing",
       // The guard is the ONLY thing standing between these two answers.
       expect(real.writable).toBe(false);
       expect(broken.writable).toBe(true);
+    } finally {
+      if (fs.existsSync(tmp)) fs.unlinkSync(tmp);
+    }
+  });
+});
+
+// ── PIN 6 -- the axis gate ─────────────────────────────────────────────────
+//
+// The subclass is evaluated BEFORE the axis diff decides, because the
+// commonest form of the defect diffs as AGREE on all eight axes and would
+// otherwise be classified "nothing to do". That ordering is correct for
+// SEEING the shape and wrong for WRITING it: without this gate a row whose
+// derivation disagrees about WHICH CARD IT IS -- a different cardNumber,
+// setKey, year or sport, a flipped auto flag, or a grade demotion -- still
+// returned writable, and the apply pass builds the destination slug from that
+// DERIVED identity. The eviction's authority would have been used to file a
+// row against a card it was never proven to be.
+//
+// An eviction is defined to move the finish axes and nothing else. `parallel`
+// and `printRun` may differ; the other six may not. When one does, the census
+// still TAGS the shape (it was seen, and it is counted), the contradicting
+// axis is named in the reasons, and `writable` is false.
+describe("PIN 6 -- an identity contradiction is never writable, subclass or no subclass", () => {
+  it.each([
+    ["cardNumber", { cardNumber: "CPA-XX" }],
+    ["setKey", { setKey: "bowman-chrome" }],
+    ["cardYear", { cardYear: 2025 }],
+    ["sport", { sport: "basketball" }],
+    ["isAuto", { isAuto: false }],
+  ])("a changed %s tags the subclass but refuses the write", (axis, over) => {
+    const r = K.classifyRow(evictInput({ derived: { ...evictDerived, ...over } }));
+    // Still SEEN -- the census must not lose the shape...
+    expect(r.subclass).toBe(K.BASE_EVICTION);
+    expect(r.klass).toBe(K.CONFLICT);
+    expect(r.tier).toBe(K.AUTO);          // provenance is not what stops this
+    // ...and still refused.
+    expect(r.writable).toBe(false);
+    // The contradicting axis travels with the refusal, so the review queue
+    // says WHICH axis stopped it rather than "declined".
+    expect(r.axes.changed).toContain(axis);
+    expect(r.reasons.join(" ")).toContain(`base-eviction-contradicted:${axis}`);
+  });
+
+  it("a GRADE DEMOTION (PSA 9 -> raw) is refused -- a demotion is not a mis-filing", () => {
+    // The sixth shape, and the one that reads least like a contradiction: the
+    // row's finish fields agree perfectly, only the grade moved. `gradeToken`
+    // renders raw as "RAW" -- a real answer, not a blank -- so this lands in
+    // `changed`, not `dropped`. Grade monotonicity is not an invariant we
+    // clamp, but neither is a fleet allowed to strip a stored grade under an
+    // eviction's authority.
+    const stored: Identity = { ...evictStored, gradeCompany: "PSA", gradeValue: 9 };
+    const r = K.classifyRow(evictInput({ stored, derived: { ...evictDerived } }));
+    expect(r.subclass).toBe(K.BASE_EVICTION);
+    expect(r.axes.changed).toContain("grade");
+    expect(r.writable).toBe(false);
+    expect(r.reasons.join(" ")).toContain("base-eviction-contradicted:grade");
+  });
+
+  it("the CLEAN Gonzalez shape still writes -- the gate refuses contradictions, not evictions", () => {
+    // The ruling's own shape. If this went red the gate would have switched
+    // the subclass off rather than bounded it.
+    const r = K.classifyRow(evictInput());
+    expect(r.subclass).toBe(K.BASE_EVICTION);
+    expect(r.writable).toBe(true);
+    expect(r.axes.changed).toEqual([]);
+    expect(r.axes.dropped).toEqual([]);
+    expect(r.reasons.join(" ")).not.toContain("base-eviction-contradicted");
+  });
+
+  it("the finish axes are exactly what an eviction MAY move", () => {
+    // A row that also copied the slug's /499 into its printRun field: the
+    // sibling form named in the classifier's own comment. It drops printRun
+    // and must still write -- that axis is the defect being repaired, not a
+    // contradiction about the card.
+    const r = K.classifyRow(evictInput({ stored: { ...evictStored, printRun: 499 } }));
+    expect(r.subclass).toBe(K.BASE_EVICTION);
+    expect(r.axes.dropped).toContain("printRun");
+    expect(r.writable).toBe(true);
+    expect(r.reasons.join(" ")).not.toContain("base-eviction-contradicted");
+  });
+});
+
+describe("MUTATION CHECK: the axis gate on BASE-EVICTION is load-bearing", () => {
+  // The gate is one `&&` clause. A clause nothing tests is a clause that gets
+  // deleted -- and deleting THIS one restores the exact defect the verify
+  // proved. The mutation removes only the axis conjunct, leaving the tier
+  // check intact, so the two answers below differ by the gate alone.
+  it("removing the axis conjunct makes a contradicting row writable again", () => {
+    const file = path.join(backend, "scripts", "lib", "rematch-classify.cjs");
+    const src = fs.readFileSync(file, "utf8");
+
+    const marker = "writable: prov.tier === AUTO && contradicting.length === 0,";
+    expect(src).toContain(marker);
+    // Exactly one such expression exists -- IMPROVE's guard has no axis
+    // conjunct and is not touched by this replacement.
+    expect(src.split(marker)).toHaveLength(2);
+    const mutated = src.replace(marker, "writable: prov.tier === AUTO,");
+    expect(mutated).not.toBe(src);
+
+    const tmp = path.join(backend, "scripts", "lib", `.rematch-classify.axis-mutant-${process.pid}.cjs`);
+    try {
+      fs.writeFileSync(tmp, mutated);
+      const mutant = require_(tmp) as Classifier;
+
+      // Every one of the six contradiction shapes, through both modules.
+      const shapes: Array<[string, ClassifyInput]> = [
+        ["cardNumber", evictInput({ derived: { ...evictDerived, cardNumber: "CPA-XX" } })],
+        ["setKey", evictInput({ derived: { ...evictDerived, setKey: "bowman-chrome" } })],
+        ["cardYear", evictInput({ derived: { ...evictDerived, cardYear: 2025 } })],
+        ["sport", evictInput({ derived: { ...evictDerived, sport: "basketball" } })],
+        ["isAuto", evictInput({ derived: { ...evictDerived, isAuto: false } })],
+        ["grade", evictInput({
+          stored: { ...evictStored, gradeCompany: "PSA", gradeValue: 9 },
+          derived: { ...evictDerived },
+        })],
+      ];
+      for (const [label, input] of shapes) {
+        const real = K.classifyRow(input);
+        const broken = mutant.classifyRow(input);
+        // Both SEE the shape; only the guarded one refuses it.
+        expect(real.subclass, label).toBe(K.BASE_EVICTION);
+        expect(broken.subclass, label).toBe(K.BASE_EVICTION);
+        expect(real.writable, label).toBe(false);
+        expect(broken.writable, label).toBe(true);
+      }
+
+      // ...and the clean shape is unaffected by the mutation, which proves the
+      // conjunct is what changed and not the subclass as a whole.
+      expect(K.classifyRow(evictInput()).writable).toBe(true);
+      expect(mutant.classifyRow(evictInput()).writable).toBe(true);
     } finally {
       if (fs.existsSync(tmp)) fs.unlinkSync(tmp);
     }

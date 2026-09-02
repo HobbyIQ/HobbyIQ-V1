@@ -163,6 +163,22 @@ function provenanceTier(row) {
 /** The axes an identity is compared on. Order is the banner's order. */
 const AXES = ["sport", "cardYear", "setKey", "cardNumber", "parallel", "isAuto", "printRun", "grade"];
 
+/**
+ * The axes a BASE-EVICTION is DEFINED to move. An eviction takes one row off a
+ * parallel slug that nothing about the row supports and files it on the
+ * checklist-backed base slug -- so the finish axes are the ones expected to
+ * differ, and they are the ONLY ones a write may cross.
+ *
+ * The other six -- sport, cardYear, setKey, cardNumber, isAuto, grade -- name
+ * WHICH CARD this is. A derivation that disagrees on any of them is not a
+ * mis-filing, it is a rival reading, and the destination slug is built from
+ * that derived identity. `grade` is in this list and not in the movable one on
+ * purpose: a PSA 9 stored row re-derived as raw is a demotion, and a demotion
+ * is a conflict about the card whichever direction it runs (see the
+ * grade-monotonicity ruling -- observe the inversion, never act on it).
+ */
+const EVICTION_MOVABLE_AXES = new Set(["parallel", "printRun"]);
+
 /** A parallel that means "the writer could not read one". `base` is what every
  *  older writer emitted for an unreadable title, so it is treated as blank for
  *  the specificity test -- and only the checklist may displace it. */
@@ -227,6 +243,18 @@ function axisIsBlank(axis, value) {
  * COLOUR WORDS ARE HERE TOO, and for the same reason: "Gold", "Orange",
  * "Blue" name parallels across every modern product even with no finish noun
  * beside them. A title saying "Gold" is a title we do not evict on.
+ *
+ * KNOWN AND DELIBERATE -- DO NOT "FIX" THIS CASUALLY. Several entries here are
+ * PRODUCT words as well as finish words: chrome, prizm, mosaic, optic,
+ * sapphire, diamond. "2024 Topps Chrome Judge #150" names a SET, not a
+ * parallel, and this vocabulary disqualifies it anyway. That costs us
+ * evictions we could have made -- the measured yield of ~391 rows is therefore
+ * a FLOOR, not the true population -- and it costs them in the safe direction:
+ * a false "this title names a finish" only leaves a row where it already sits,
+ * while the opposite error writes a parallel row onto a base slug. Recovering
+ * the lost yield needs a product-word/finish-word split (read the set segment
+ * of the slug and drop a token from the test when it appears there), not the
+ * deletion of these entries. Until that split exists, the suppression stays.
  */
 const FINISH_TOKENS = [
   // finishes and formats
@@ -457,6 +485,25 @@ function classifyRow({
     reasons.push("subclass:BASE-EVICTION");
     if (axes.dropped.length) reasons.push(`dropped:${axes.dropped.join(",")}`);
     if (axes.changed.length) reasons.push(`changed:${axes.changed.join(",")}`);
+    // THE SUBCLASS MOVES A ROW'S ADDRESS, NOT ITS IDENTITY.
+    //
+    // Evaluating the subclass before the axis diff (above) is what lets the
+    // commonest shape be SEEN -- but seeing is not writing. An eviction is
+    // defined as moving one row off a parallel slug it does not support, and
+    // the only axes that may legitimately move under it are the ones that
+    // describe the finish: `parallel` and `printRun`. Any OTHER axis that
+    // dropped or changed is today's parser disagreeing with the row about
+    // WHICH CARD THIS IS -- a different cardNumber, a different setKey or
+    // year, a different sport, an auto flag flipped, or a grade demotion
+    // (PSA 9 -> raw). The destination slug is built from the DERIVED
+    // identity, so writing under any of those would file the row against a
+    // card it was never proven to be, using an eviction's authority to do it.
+    // A fleet never settles a contradiction about identity -- Drew does. The
+    // subclass TAG stays (the census must still count the shape), the
+    // contradicting axis is named in the reasons, and `writable` is false.
+    const contradicting = [...axes.changed, ...axes.dropped]
+      .filter((a) => !EVICTION_MOVABLE_AXES.has(a));
+    if (contradicting.length) reasons.push(`base-eviction-contradicted:${contradicting.join(",")}`);
     return {
       ...base,
       // The class is CONFLICT even when the eight axes AGREE: the row and its
@@ -465,9 +512,10 @@ function classifyRow({
       // AGREE would put a written row in the one class that means "untouched".
       klass: CONFLICT, subclass: BASE_EVICTION, axes, reasons,
       evidence: be.evidence,
-      // The SAME tier gate as IMPROVE. A protected row is report-only
-      // forever, subclass or no subclass -- see the mutation check.
-      writable: prov.tier === AUTO,
+      // The SAME tier gate as IMPROVE, AND the axis gate. A protected row is
+      // report-only forever, subclass or no subclass -- see the mutation
+      // check; so is a row whose identity axes contradict the derivation.
+      writable: prov.tier === AUTO && contradicting.length === 0,
     };
   }
 
