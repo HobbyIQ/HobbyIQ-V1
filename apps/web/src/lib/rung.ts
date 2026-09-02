@@ -214,3 +214,72 @@ export function holdingProvenance(h: HoldingProvenanceSource): HoldingProvenance
   }
   return { ...base, source, compsUsed };
 }
+
+// ─── Speculation pricing: a stale comp is not the price ─────────────────
+//
+// Drew, 2026-09-02: "the last comps from 2 months ago aren't a fair price.
+// It is priced based on speculation and today's market."
+//
+// The rung says WHICH POOL the number came from. It does not say HOW OLD
+// that pool is, and those are different facts: `exact-pool-projection`
+// off five sales from June reads exactly like one off five sales from
+// last week. A collector looking at the chip sees "projected from 5 sales
+// of this card" and reasonably assumes the sales are recent — so on a
+// thin, cold card the honest number looks like a stale one.
+//
+// The fix is additive on purpose. `describeRung` is pinned by rung.test.ts
+// (every fallback's words begin with "estimate", every exact-pool rung
+// says "this card") and those pins are doctrine, not incidental — so the
+// age is a SECOND, separate line beside the rung, never a rewrite of it.
+//
+// The age comes from `daysSinceNewestComp`, which price-by-id already
+// serves (compiqEstimate.service.ts: "daysSinceNewestComp + lastSale
+// derive from the SAME record in the unwindowed post-(grade + parallel)
+// pool"). Nothing is added to the envelope and no engine code moves.
+
+/** Days past which the newest direct comp is too old to BE the price.
+ *
+ *  45 days — inside Drew's ~30-60d band and chosen off the shape of the
+ *  data rather than the middle of the range: a card that trades monthly
+ *  has a comp inside 30 days on a normal week, so a 30d line would fire
+ *  on ordinary cards between sales and the copy would stop meaning
+ *  anything. Past ~6 weeks the pool has genuinely stopped tracking the
+ *  market, which is the case Drew is describing. */
+export const STALE_COMP_DAYS = 45;
+
+export interface StalenessNote {
+  /** Whole weeks since the newest direct comp (>= 1 when stale). */
+  weeks: number;
+  daysSinceNewestComp: number;
+  /** The chip line: short, sits beside the rung. */
+  short: string;
+  /** The long form for a tooltip / detail row. */
+  long: string;
+}
+
+/** The speculation line for a value whose newest direct comp has gone
+ *  cold, or null when it has not.
+ *
+ *  Null — no line at all — for every case that is not provably stale:
+ *  a missing / non-finite / negative age, and an age inside the
+ *  threshold. A value we cannot date does NOT get told it is old (the
+ *  same rule the rung vocabulary follows for a missing label: never
+ *  invent the fact, and never assume the bad case in the copy). */
+export function describeStaleness(
+  daysSinceNewestComp: number | null | undefined,
+  opts: { thresholdDays?: number } = {},
+): StalenessNote | null {
+  const threshold = opts.thresholdDays ?? STALE_COMP_DAYS;
+  const d = daysSinceNewestComp;
+  if (typeof d !== "number" || !Number.isFinite(d) || d < 0) return null;
+  if (d <= threshold) return null;
+  const weeks = Math.max(1, Math.round(d / 7));
+  return {
+    weeks,
+    daysSinceNewestComp: d,
+    short: `last sale ${weeks} weeks ago — priced to today's market`,
+    long:
+      `Last direct sale was ${weeks} weeks ago — old prints aren't fair value today. `
+      + `This price projects today's market from the card's trend.`,
+  };
+}
