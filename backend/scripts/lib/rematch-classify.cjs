@@ -72,12 +72,55 @@
  * re-derivation must carry the stored grade forward: a title that states no
  * grade does not make a stored PSA 9 row raw. Dropping the grade child is a
  * demotion and classifies CONFLICT.
+ *
+ * THE ONE CONFLICT SUBCLASS THAT MAY WRITE: BASE-EVICTION
+ *
+ * CF-A-SLUG-IS-NOT-EVIDENCE-AGAINST-THE-ROW (Drew 2026-09-02). CONFLICT is
+ * report-only as a CLASS, and stays so. But one shape inside it is not two
+ * rival readings of a card at all -- it is a row that was FILED on a parallel
+ * slug that nothing about the row itself supports:
+ *
+ *   the row sits on a slug carrying a finish child   (`...:refractor:...`)
+ *   its OWN stored parallel field says Base or blank (it names no parallel)
+ *   its TITLE names no finish either                 (nothing to read one from)
+ *   and a checklist-backed BASE destination exists   (the card is real)
+ *
+ * Three independent fields, and they agree: the row is a base card wearing a
+ * parallel's slug. The slug is the ONLY thing claiming a finish, and a slug is
+ * an artifact of whichever writer keyed the row -- it is not evidence about
+ * the card. The demotion rule exists to stop a terse title flattening a
+ * KNOWN parallel; here nothing is known to flatten.
+ *
+ * WHY THIS IS NOT THE GONZALEZ DEMOTION IT LOOKS LIKE
+ *
+ * The two shapes are one field apart, and that field decides:
+ *
+ *   DEMOTION (CONFLICT forever)  stored.parallel = "Refractor" -- the row's own
+ *                                field NAMES the parallel. A terse title never
+ *                                displaces it. This is the existing pin.
+ *   BASE-EVICTION (may write)    stored.parallel = "Base"/blank -- the row's own
+ *                                field names NOTHING. Only the slug disagrees.
+ *
+ * So `parallel` must be blank/generic on the STORED side for the subclass to
+ * apply, and that is asserted, not assumed: a stored parallel that names a real
+ * finish takes the row out of the subclass no matter what the slug says.
+ *
+ * THE RESIDUAL RISK IS NAMED, AND IT IS THE AUDIT'S JOB
+ *
+ * A seller who lists a genuine refractor and omits the word produces exactly
+ * this shape, and no field on the row can tell that apart from a mis-filing.
+ * The subclass does not pretend otherwise. It is authorized for AUDITED
+ * auto-apply on the same trust ladder as IMPROVE -- a per-shard 500-row audit
+ * plus rematch-canary-check before that shard's apply -- and the audit is what
+ * catches the seller who omitted the word. Protected tier is exempt as always.
  */
 "use strict";
 
 // ── the classes ────────────────────────────────────────────────────────────
 const AGREE = "AGREE", IMPROVE = "IMPROVE", CONFLICT = "CONFLICT", UNDERIVABLE = "UNDERIVABLE";
 const PROTECTED = "PROTECTED", AUTO = "AUTO";
+/** The one CONFLICT subclass authorized for audited auto-apply (Drew 2026-09-02). */
+const BASE_EVICTION = "BASE-EVICTION";
 
 /** Sources that are a real person's own record of their own transaction.
  *  These are never re-keyed by a fleet, only by Drew. */
@@ -159,6 +202,193 @@ function axisIsBlank(axis, value) {
   return false;
 }
 
+// ── BASE-EVICTION: the finish vocabulary and its three evidence fields ─────
+
+/**
+ * The finish/format words that name HOW a card is printed. A title containing
+ * ANY of these is a title that might be naming a parallel, and that is enough
+ * to take the row out of the subclass -- the test is deliberately over-broad
+ * on the DISQUALIFYING side, because a false "this title names a finish" only
+ * costs us an eviction we could have made, while a false negative writes.
+ *
+ * Grounded, not invented: every entry appears as a word in
+ * data/checklist-parallel-names.json (21,090 distinct checklist-sourced
+ * parallel names). Counts measured 2026-09-02 -- prizm 2,652, holo 877,
+ * refractor 857, mosaic 490, patch 449, plate 387, pulsar 298, wave 292,
+ * optic 260, mojo 250, laser 240, shimmer 237, foil 212, sapphire 208,
+ * diamond 174, disco 137, lava 124, die-cut 110, hyper 107, pandora 93,
+ * canvas 91, sparkle 86, scope 75, cracked ice 71, velocity 68, flash 56,
+ * atomic 52, marble 52, aqua 51, camo 48, fireworks 42, dragon 38,
+ * crystal 31, chrome 27, x-fractor 26, tiger 25, reactive 25, snakeskin 24,
+ * tie-dye 22, speckle 21, superfractor 15, vapor 13, genesis 12, zebra 10,
+ * pearl 8, stained glass 4. `PLURAL_PARALLEL_HEAD` in hobbyIqCardId.service
+ * is the same closed-vocabulary discipline applied to slug tails.
+ *
+ * COLOUR WORDS ARE HERE TOO, and for the same reason: "Gold", "Orange",
+ * "Blue" name parallels across every modern product even with no finish noun
+ * beside them. A title saying "Gold" is a title we do not evict on.
+ */
+const FINISH_TOKENS = [
+  // finishes and formats
+  "refractor", "refractors", "x-fractor", "xfractor", "fractor", "superfractor",
+  "prizm", "prizms", "shimmer", "wave", "holo", "holofoil", "foil", "sparkle",
+  "pulsar", "mojo", "mega", "atomic", "disco", "lava", "speckle", "canvas",
+  "velocity", "hyper", "optic", "mosaic", "sapphire", "laser", "pandora",
+  "flash", "aqua", "vapor", "scope", "tiger", "zebra", "snakeskin", "dragon",
+  "fireworks", "diamond", "crystal", "prismatic", "reactive", "pearl", "marble",
+  "camo", "genesis", "chrome", "ice", "glass", "cosmic", "nebula", "galactic",
+  "logofractor", "raywave", "shock", "hyperplaid", "choice", "dazzle",
+  // formats that are their own parallel families
+  "plate", "plates", "die-cut", "diecut", "parallel", "variation", "ssp",
+  // the numbered/limited vocabulary -- a title that says these is naming a
+  // parallel even when it never says which finish
+  "numbered", "serial",
+];
+// DELIBERATELY ABSENT, and asserted absent by the tests: `auto`, `autograph`,
+// `rc`, `rookie`, `1st`, `prospect`, `base`. These describe the CARD, not how
+// it is printed. Every 1st Bowman Auto title carries at least one of them --
+// the very shape this subclass was authorized for -- so admitting one here
+// would silently switch the whole thing off. `relic` and `patch` are absent
+// for the same reason from the other direction: they name a card's CONTENT,
+// and a relic card's parallel is still named separately when it has one.
+/** Multi-word finish phrases, matched with flexible separators. */
+const FINISH_PHRASES = [
+  "cracked ice", "stained glass", "ray wave", "tie dye", "mini diamond",
+  "printing plate", "short print", "gold rush", "black label",
+];
+/** Colour words that name a parallel on their own across modern products. */
+const FINISH_COLOR_TOKENS = [
+  "gold", "orange", "purple", "blue", "green", "red", "black", "pink", "yellow",
+  "teal", "aqua", "bronze", "silver", "platinum", "copper", "sepia", "magenta",
+  "cyan", "lime", "indigo", "violet", "rose", "amber", "onyx", "emerald",
+  "ruby", "sapphire", "gunmetal", "chartreuse", "fuchsia", "neon", "atomic",
+];
+
+const FINISH_WORD_SET = new Set([...FINISH_TOKENS, ...FINISH_COLOR_TOKENS]);
+/** Split a title into comparable words. `/` and `#` are boundaries, so a
+ *  print-run "/499" never glues itself to the word beside it. */
+const titleWords = (t) => lower(t).split(/[^a-z0-9-]+/).filter(Boolean);
+
+/**
+ * Does this title name a finish? Word-exact against the closed vocabulary,
+ * plus the multi-word phrases with flexible separators.
+ *
+ * Word-EXACT matters: a substring test would read "Goldschmidt" as "gold" and
+ * "Refractory" as "refractor", and a player's surname is not a parallel. The
+ * hyphenated entries ("x-fractor", "die-cut") are checked both as one word and
+ * as the un-hyphenated join, because titles spell them either way.
+ */
+function titleNamesFinish(title) {
+  const t = lower(title);
+  if (!t) return false;
+
+  // A SERIAL NUMBER IS A PARALLEL NAMED IN DIGITS.
+  //
+  // Measured on the live pool 2026-09-02: of the six qualifying examples the
+  // corpus probe surfaced, THREE carried a serial number in the title and no
+  // finish word -- "... Cole Young #PA-CY /50", "... Prized Pros. /250",
+  // "... JARLIN SUSANA 59/149 PSA 1". A base card is not serial-numbered, so a
+  // title stating a print run is a title telling us the card is from a limited
+  // parallel whose NAME the seller happened to omit. That is precisely the
+  // residual risk the ruling names, and it is cheap to catch here rather than
+  // leave to the audit.
+  //
+  // Matched as `/N` or `N/N` with the slash a real boundary, so a grade
+  // ("PSA 10") and a card number ("#140") are untouched. The DENOMINATOR is
+  // excluded when it looks like a year (19xx/20xx): "sold 8/2026" is a date,
+  // and no print run is 2,026 -- runs are 1/1, /5, /25, /50, /99, /150, /250,
+  // /499, /999. Being over-broad is otherwise SAFE here (a false "this names a
+  // finish" only costs an eviction we could have made, never a wrong write),
+  // so this is the one exclusion worth carving and no more.
+  const YEARISH = /^(19|20)\d{2}$/;
+  const numbered = t.match(/(?:^|[\s(\[#])(\d{1,5})\s*\/\s*(\d{1,5})(?=$|[\s)\],.])/);
+  if (numbered && !YEARISH.test(numbered[2])) return true;
+  const bare = t.match(/(?:^|[\s(\[])\/\s*(\d{1,5})(?=$|[\s)\],.])/);
+  if (bare && !YEARISH.test(bare[1])) return true;
+
+  for (const p of FINISH_PHRASES) {
+    if (new RegExp(`\\b${p.split(" ").join("[\\s-]+")}\\b`).test(t)) return true;
+  }
+  const words = titleWords(t);
+  for (const w of words) {
+    if (finishWord(w)) return true;
+    // A HYPHENATED COMPOUND IS ITS PARTS. "OPTIC-FLEX" tokenises whole and
+    // would never match bare "optic" -- and that row was in the probe's own
+    // qualifying sample, one hyphen away from being written to a base slug.
+    // Splitting is safe in this direction: a compound containing a finish word
+    // is a compound naming a finish.
+    if (w.includes("-") && w.split("-").some((part) => part && finishWord(part))) return true;
+  }
+  return false;
+}
+
+/** One word against the closed vocabulary, allowing a checklist's plural
+ *  ("Refractors" heads a section; the parallel one card carries is singular). */
+function finishWord(w) {
+  if (FINISH_WORD_SET.has(w)) return true;
+  return w.endsWith("s") && FINISH_WORD_SET.has(w.slice(0, -1));
+}
+
+/**
+ * The finish child a slug carries, or null. A hiq slug is
+ * `hiq:sport:year:setKey:cardNumber:parallel:autoFlag[:num-N][:grade]`, so the
+ * parallel is the 6th colon-segment. Reading the POSITION rather than
+ * scanning for a finish word anywhere is what keeps a set name from being
+ * mistaken for a parallel: `hiq:baseball:2024:topps-chrome:150:base:no-auto`
+ * carries "chrome" in its SET, and that row is on a base slug, not a parallel.
+ */
+function slugParallelSegment(slug) {
+  const parts = String(slug ?? "").split(":");
+  if (parts.length < 7 || parts[0] !== "hiq") return null;
+  const seg = parts[5];
+  return seg ? seg : null;
+}
+
+/** Is this slug's parallel segment a real parallel (not base/blank)? */
+function slugNamesParallel(slug) {
+  const seg = slugParallelSegment(slug);
+  if (!seg) return false;
+  return !GENERIC_PARALLELS.has(lower(seg));
+}
+
+/**
+ * The three evidence fields, quoted, for ONE row. Returns
+ * { qualifies, evidence } where evidence is what the census banner and the
+ * rekeyedReason both print -- the row is never evicted on a verdict alone,
+ * the quoted evidence travels with it.
+ *
+ * `baseDestBacked` is the caller's verdict that a CHECKLIST-BACKED base
+ * destination row exists for this card. Without it there is nowhere to evict
+ * TO, and a row is never moved to a slug the checklist does not list.
+ */
+function baseEvictionEvidence({ row, stored, derived, storedSlug, baseDestSlug, baseDestBacked }) {
+  const title = str(row?.title);
+  const slug = str(storedSlug ?? row?.cardId);
+  const ev = {
+    storedSlugParallel: slugParallelSegment(slug),
+    titleQuoted: title.slice(0, 160),
+    storedParallelField: stored?.parallel ?? null,
+    baseDestSlug: baseDestSlug ?? null,
+    baseDestChecklistBacked: !!baseDestBacked,
+  };
+  const fail = [];
+  // 1. the slug claims a finish the row itself never states
+  if (!slugNamesParallel(slug)) fail.push("slug-names-no-parallel");
+  // 2. the row's OWN parallel field names nothing. This is the field that
+  //    separates an eviction from the Gonzalez demotion, so it is checked on
+  //    the STORED identity, never on the derived one.
+  if (!axisIsBlank("parallel", axisValue(stored, "parallel"))) fail.push("stored-parallel-names-a-finish");
+  // 3. the title names no finish either
+  if (!title) fail.push("no-title");
+  else if (titleNamesFinish(title)) fail.push("title-names-a-finish");
+  // 4. somewhere checklist-backed to go
+  if (!baseDestBacked) fail.push("no-checklist-backed-base-destination");
+  // 5. the derived reading must itself be base -- if today's parser reads a
+  //    parallel off this row, this is not an eviction, it is a disagreement.
+  if (derived && !axisIsBlank("parallel", axisValue(derived, "parallel"))) fail.push("derived-names-a-finish");
+  return { qualifies: fail.length === 0, evidence: ev, failed: fail };
+}
+
 /**
  * Compare stored vs derived identity axis by axis.
  *   same     both name the same value (or both blank)
@@ -195,7 +425,10 @@ function diffAxes(stored, derived) {
  * conjunction of every gate -- so a future edit that loosens one class cannot
  * silently make a protected row writable.
  */
-function classifyRow({ row, stored, derived, checklistBacked = false, derivationReasons = [] }) {
+function classifyRow({
+  row, stored, derived, checklistBacked = false, derivationReasons = [],
+  storedSlug = null, baseDestSlug = null, baseDestBacked = false,
+}) {
   const prov = provenanceTier(row);
   const base = { tier: prov.tier, provenanceReasons: prov.reasons };
 
@@ -205,6 +438,38 @@ function classifyRow({ row, stored, derived, checklistBacked = false, derivation
 
   const axes = diffAxes(stored, derived);
   const reasons = [];
+
+  // THE SLUG IS A NINTH AXIS, AND IT IS NOT IN `AXES`.
+  //
+  // The eight axes compare the row's FIELDS against the derived reading. A
+  // base-eviction row is one where those eight agree perfectly -- fields and
+  // title both say "base auto" -- and the disagreement is with the row's own
+  // ADDRESS. Measured on the Gonzalez shape: a row whose printRun field is
+  // blank diffs as AGREE on all eight while sitting on `:refractor:num-499`.
+  //
+  // So the subclass is evaluated BEFORE the axis diff decides, or the commonest
+  // form of the defect is classified "nothing to do" and never seen again. Its
+  // sibling form -- the same row that also copied the slug's /499 into its
+  // printRun field -- would reach CONFLICT via dropped:printRun, and both must
+  // land in the same subclass or the census reports one defect as two.
+  const be = baseEvictionEvidence({ row, stored, derived, storedSlug, baseDestSlug, baseDestBacked });
+  if (be.qualifies) {
+    reasons.push("subclass:BASE-EVICTION");
+    if (axes.dropped.length) reasons.push(`dropped:${axes.dropped.join(",")}`);
+    if (axes.changed.length) reasons.push(`changed:${axes.changed.join(",")}`);
+    return {
+      ...base,
+      // The class is CONFLICT even when the eight axes AGREE: the row and its
+      // address contradict each other, and that is a conflict about the card's
+      // identity whatever the fields say among themselves. Reporting it as
+      // AGREE would put a written row in the one class that means "untouched".
+      klass: CONFLICT, subclass: BASE_EVICTION, axes, reasons,
+      evidence: be.evidence,
+      // The SAME tier gate as IMPROVE. A protected row is report-only
+      // forever, subclass or no subclass -- see the mutation check.
+      writable: prov.tier === AUTO,
+    };
+  }
 
   if (!axes.filled.length && !axes.dropped.length && !axes.changed.length) {
     return { ...base, klass: AGREE, axes, reasons: [], writable: false };
@@ -226,6 +491,13 @@ function classifyRow({ row, stored, derived, checklistBacked = false, derivation
     // grade CHANGES the grade axis, and changed => CONFLICT => not writable --
     // so this only lets Drew filter the artifact out of the real conflicts.
     if (isPhantomGradeArtifact(stored, derived, axes)) reasons.push("changed:grade/phantom-set-word");
+    // The subclass was already decided above and did not qualify. Diagnose only
+    // the NEAR misses: every ordinary conflict fails this test trivially, and a
+    // reason on all 16.3M of them tells the banner nothing -- a row whose slug
+    // names no parallel was never a candidate at all.
+    if (be.failed.length && !be.failed.includes("slug-names-no-parallel")) {
+      reasons.push(`not-base-eviction:${be.failed.join(",")}`);
+    }
     return { ...base, klass: CONFLICT, axes, reasons, writable: false };
   }
 
@@ -282,8 +554,10 @@ function renderIdentity(id) {
 }
 
 module.exports = {
-  AGREE, IMPROVE, CONFLICT, UNDERIVABLE, PROTECTED, AUTO,
+  AGREE, IMPROVE, CONFLICT, UNDERIVABLE, PROTECTED, AUTO, BASE_EVICTION,
   PROTECTED_SOURCES, PROTECTED_MARKER_FIELDS, AXES, GENERIC_PARALLELS,
+  FINISH_TOKENS, FINISH_PHRASES, FINISH_COLOR_TOKENS,
   provenanceTier, gradeToken, axisValue, axisIsBlank, diffAxes, classifyRow,
   defectAxes, renderIdentity,
+  titleNamesFinish, slugParallelSegment, slugNamesParallel, baseEvictionEvidence,
 };

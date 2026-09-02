@@ -22,7 +22,8 @@
  *                      Touches nothing, ever -- there is no write path in this
  *                      mode at all, not even behind APPLY.
  *   MODE=apply-improve Re-reads the shard and applies ONLY IMPROVE-class,
- *                      AUTO-tier rows, through scripts/lib/relocate-sold-comp
+ *                      AUTO-tier rows AND the BASE-EVICTION subclass of
+ *                      CONFLICT, through scripts/lib/relocate-sold-comp
  *                      .cjs so contentHash + provenance handling stays in ONE
  *                      place. Only-improve is RE-CHECKED at write time,
  *                      because the pool moves between the census and the
@@ -31,13 +32,30 @@
  *
  * WHAT NEVER WRITES, EVER
  *
- *   CONFLICT      a different reading, not a more specific one. To Drew.
+ *   CONFLICT      a different reading, not a more specific one. To Drew --
+ *                 EXCEPT the BASE-EVICTION subclass below.
  *   UNDERIVABLE   the title yields nothing that passes the slug guard.
  *   PROTECTED     ebay-user-purchase / ebay-user-sale / ebay-account /
  *                 manual-user-entry, any Drew ruling or hand/D31 relocation
  *                 marker, anything verifiedByUser. Report-only FOREVER, even
- *                 when the row is IMPROVE-shaped. Measured 2026-09-01: 160
- *                 user-sourced rows, 53 D19 relocations, 800 verified.
+ *                 when the row is IMPROVE-shaped OR BASE-EVICTION-shaped.
+ *                 Measured 2026-09-01: 160 user-sourced rows, 53 D19
+ *                 relocations, 800 verified.
+ *
+ * THE BASE-EVICTION SUBCLASS (Drew 2026-09-02)
+ *
+ * One shape inside CONFLICT is not two rival readings of a card: a row filed
+ * on a parallel slug (`...:refractor:...`) whose own stored parallel field
+ * says Base/blank and whose title names no finish, where a checklist-backed
+ * BASE destination exists. Three independent fields agree that the row names
+ * no parallel; only the slug disagrees, and a slug is an artifact of whichever
+ * writer keyed the row. This script computes the base destination (the derived
+ * identity with parallel forced to Base and the print run dropped), verifies
+ * it is checklist-backed exactly as IMPROVE's destination is, and hands all
+ * three fields to the classifier, which decides. The subclass rides the SAME
+ * trust ladder as IMPROVE -- per-shard 500-row audit plus rematch-canary-check
+ * before that shard's apply -- and the residual risk (a seller omitting
+ * "Refractor" on a genuine parallel) is what the audit is for.
  *
  * THE APPLY IS GATED TWICE, OUTSIDE THIS SCRIPT
  *
@@ -242,7 +260,19 @@ function deriveIdentity(row, deps) {
     sport: guard.sport, year: cardYear, setKey: setKeyRaw, cardNumber, parallel, isAuto, printRun,
     playerName: row.playerName ?? null, gradeCompany, gradeValue,
   });
-  return { ok: true, identity, slug, reasons: [] };
+
+  // The BASE destination for this same card: the identity as derived, with the
+  // parallel forced to Base and the print run dropped. A parallel's print run
+  // belongs to the parallel -- a base card that is not serial-numbered must not
+  // carry `/499` to its base slug, or the eviction lands on a slug that names a
+  // numbered base card the checklist may never list. Everything else (set,
+  // number, auto flag, grade) is the row's own and travels unchanged.
+  const baseSlug = deps.computeHobbyIqCardId({
+    sport: guard.sport, year: cardYear, setKey: setKeyRaw, cardNumber, parallel: "Base", isAuto,
+    printRun: null, playerName: row.playerName ?? null, gradeCompany, gradeValue,
+  });
+  const baseIdentity = { ...identity, parallel: "Base", printRun: null };
+  return { ok: true, identity, slug, baseSlug, baseIdentity, reasons: [] };
 }
 
 // ── main ───────────────────────────────────────────────────────────────────
@@ -318,7 +348,7 @@ async function main() {
 
   // ── page the shard ────────────────────────────────────────────────────────
   const counts = { [K.AGREE]: 0, [K.IMPROVE]: 0, [K.CONFLICT]: 0, [K.UNDERIVABLE]: 0 };
-  const byTier = new Map(), defects = new Map(), reasons = new Map(), samples = new Map();
+  const byTier = new Map(), defects = new Map(), reasons = new Map(), samples = new Map(), subclasses = new Map();
   const stats = { seen: 0, otherSlot: 0, intended: 0, written: 0, skipped: 0, failed: 0, duplicatesLeft: 0, alreadyGone: 0, notReached: 0 };
   const bump = (m, k, n = 1) => m.set(k, (m.get(k) ?? 0) + n);
   const sample = (klass, line) => { if (!samples.has(klass)) samples.set(klass, []); const a = samples.get(klass); if (a.length < SAMPLE_CAP) a.push(line); };
@@ -336,15 +366,29 @@ async function main() {
       const stored = storedIdentity(row, deps);
       const der = deriveIdentity(row, deps);
       const backed = der.ok ? await checklistBacked(der.slug) : false;
-      const res = K.classifyRow({ row, stored, derived: der.ok ? der.identity : null, checklistBacked: backed, derivationReasons: der.reasons });
+      // The base destination is only ever LOOKED UP for a row that could
+      // possibly be an eviction -- its slug must already name a parallel.
+      // Without this, every one of the shard's rows costs a second catalog
+      // read for a question that was answered by its own slug.
+      const beCandidate = der.ok && K.slugNamesParallel(row.cardId);
+      const baseBacked = beCandidate ? await checklistBacked(der.baseSlug) : false;
+      const res = K.classifyRow({
+        row, stored, derived: der.ok ? der.identity : null, checklistBacked: backed, derivationReasons: der.reasons,
+        storedSlug: row.cardId, baseDestSlug: der.baseSlug ?? null, baseDestBacked: baseBacked,
+      });
       counts[res.klass]++;
+      if (res.subclass) bump(subclasses, `${res.klass}/${res.subclass}/${res.tier}`);
       bump(byTier, `${res.klass}/${res.tier}`);
       for (const a of K.defectAxes(res)) bump(defects, `${res.klass}  ${a}`);
       for (const r of res.reasons) bump(reasons, `${res.klass}  ${r}`);
-      if ((samples.get(res.klass) ?? []).length < SAMPLE_CAP) {
-        sample(res.klass, `${row.id}  [${res.tier}]  "${String(row.title ?? "").slice(0, 68)}"  ${K.renderIdentity(stored)}  ->  ${K.renderIdentity(der.ok ? der.identity : null)}`);
+      const sampleKey = res.subclass ? `${res.klass}/${res.subclass}` : res.klass;
+      if ((samples.get(sampleKey) ?? []).length < SAMPLE_CAP) {
+        sample(sampleKey, `${row.id}  [${res.tier}]  "${String(row.title ?? "").slice(0, 68)}"  ${K.renderIdentity(stored)}  ->  ${K.renderIdentity(res.subclass === K.BASE_EVICTION ? der.baseIdentity : der.ok ? der.identity : null)}`);
       }
-      if (MODE === "apply-improve" && res.klass === K.IMPROVE && res.writable) improvable.push({ row, stored, slug: der.slug, identity: der.identity });
+      if (MODE === "apply-improve" && res.writable) {
+        if (res.klass === K.IMPROVE) improvable.push({ kind: K.IMPROVE, row, stored, slug: der.slug, identity: der.identity });
+        else if (res.subclass === K.BASE_EVICTION) improvable.push({ kind: K.BASE_EVICTION, row, stored, slug: der.baseSlug, identity: der.baseIdentity });
+      }
     }
   }
 
@@ -355,6 +399,19 @@ async function main() {
   for (const klass of [K.AGREE, K.IMPROVE, K.CONFLICT, K.UNDERIVABLE]) {
     const prot = byTier.get(`${klass}/${K.PROTECTED}`) ?? 0, auto = byTier.get(`${klass}/${K.AUTO}`) ?? 0;
     console.log(`  ${klass.padEnd(12)} ${f(counts[klass]).padStart(11)}  ${pct(counts[klass]).padStart(7)}   AUTO ${f(auto).padStart(10)}  PROTECTED ${f(prot).padStart(6)}`);
+    // The subclass is a NARROWING of the class above it, so it is printed
+    // indented under its parent and its count is INCLUDED in the parent's --
+    // it is not a fifth row of the census and must not read as one.
+    for (const [k, n] of [...subclasses].filter(([k]) => k.startsWith(`${klass}/`)).sort()) {
+      const [, sub, tier] = k.split("/");
+      console.log(`    of which ${sub.padEnd(16)} ${f(n).padStart(9)}  ${tier}${tier === K.AUTO ? "  <- writable under audit" : "  <- report only"}`);
+    }
+  }
+  const beAuto = subclasses.get(`${K.CONFLICT}/${K.BASE_EVICTION}/${K.AUTO}`) ?? 0;
+  const beProt = subclasses.get(`${K.CONFLICT}/${K.BASE_EVICTION}/${K.PROTECTED}`) ?? 0;
+  if (beAuto || beProt) {
+    console.log(`\n  BASE-EVICTION  ${f(beAuto + beProt)} rows: on a parallel slug, own parallel field blank/Base, title names no finish,`);
+    console.log(`                 checklist-backed base destination exists. ${f(beAuto)} AUTO (writable under audit), ${f(beProt)} PROTECTED (never).`);
   }
   console.log(`\n  top defect axes per class:`);
   for (const klass of [K.IMPROVE, K.CONFLICT]) {
@@ -365,10 +422,11 @@ async function main() {
   for (const [k, n] of [...reasons].sort((a, b) => b[1] - a[1]).slice(0, 15)) console.log(`    ${f(n).padStart(10)}  ${k}`);
   console.log(`\n  provenance: ${[...byTier].sort((a, b) => b[1] - a[1]).map(([k, n]) => `${k} ${f(n)}`).join(" | ")}`);
   console.log(`  PROTECTED + CONFLICT + UNDERIVABLE are REPORT ONLY FOREVER -- they go to Drew, never to a fleet.`);
-  for (const klass of [K.IMPROVE, K.CONFLICT, K.UNDERIVABLE, K.AGREE]) {
+  for (const klass of [K.IMPROVE, `${K.CONFLICT}/${K.BASE_EVICTION}`, K.CONFLICT, K.UNDERIVABLE, K.AGREE]) {
     const s = samples.get(klass) ?? [];
     if (!s.length) continue;
-    console.log(`\n  ${klass} evidence (${s.length} of ${f(counts[klass])}):`);
+    const of = klass.includes("/") ? f(beAuto + beProt) : f(counts[klass]);
+    console.log(`\n  ${klass} evidence (${s.length} of ${of}):`);
     for (const line of s) console.log(`    ${line}`);
   }
 
@@ -377,6 +435,9 @@ async function main() {
     axis: "(cardYear, sportClass, sha1(id) % parts)", measuredAt: SHARD_TABLE.measuredAt,
     units: q.units, expectedRows: expected, classified: total, otherSlot: stats.otherSlot,
     counts, byTier: Object.fromEntries(byTier), defects: Object.fromEntries(defects),
+    // Subclass counts are INCLUDED in `counts` -- BASE-EVICTION is a narrowing
+    // of CONFLICT, so an auditor summing both would double-count.
+    subclasses: Object.fromEntries(subclasses),
     reasons: Object.fromEntries(reasons), samples: Object.fromEntries(samples),
     stoppedAtBudget: !!stopReason, generatedAt: new Date().toISOString(),
   };
@@ -394,8 +455,11 @@ async function main() {
   }
 
   // ── apply-improve ─────────────────────────────────────────────────────────
-  console.log(`\nAPPLY-IMPROVE  ${APPLY ? "APPLYING" : "REPORT ONLY -- nothing written"}  candidates ${f(improvable.length)}  concurrency ${CONCURRENCY}`);
-  console.log(`  every candidate is re-checked at write time: the pool moves between the census and this pass.`);
+  const nImprove = improvable.filter((c) => c.kind === K.IMPROVE).length;
+  const nEvict = improvable.filter((c) => c.kind === K.BASE_EVICTION).length;
+  console.log(`\nAPPLY-IMPROVE  ${APPLY ? "APPLYING" : "REPORT ONLY -- nothing written"}  candidates ${f(improvable.length)} (IMPROVE ${f(nImprove)} + BASE-EVICTION ${f(nEvict)})  concurrency ${CONCURRENCY}`);
+  console.log(`  every candidate is re-checked at write time: the pool moves between the census and this pass,`);
+  console.log(`  and a candidate that re-checks as the OTHER kind is skipped, not written on the old verdict.`);
   stats.intended = improvable.length;
   const applied = [];
   let idx = 0;
@@ -413,33 +477,68 @@ async function main() {
       const stored = storedIdentity(fresh, deps);
       const der = deriveIdentity(fresh, deps);
       const backed = der.ok ? await checklistBacked(der.slug) : false;
-      const res = K.classifyRow({ row: fresh, stored, derived: der.ok ? der.identity : null, checklistBacked: backed, derivationReasons: der.reasons });
-      if (res.klass !== K.IMPROVE || !res.writable) { stats.skipped++; bump(reasons, `apply  no-longer-writable:${res.klass}/${res.tier}`); continue; }
-      if (der.slug === fresh.cardId) { stats.skipped++; bump(reasons, "apply  already-at-target"); continue; }
+      const beCand = der.ok && K.slugNamesParallel(fresh.cardId);
+      const baseBacked = beCand ? await checklistBacked(der.baseSlug) : false;
+      const res = K.classifyRow({
+        row: fresh, stored, derived: der.ok ? der.identity : null, checklistBacked: backed, derivationReasons: der.reasons,
+        storedSlug: fresh.cardId, baseDestSlug: der.baseSlug ?? null, baseDestBacked: baseBacked,
+      });
+      // The class is decided again on what is there NOW, and it must come back
+      // as the SAME kind the census queued. A row the census saw as an eviction
+      // that now reads IMPROVE (or the reverse) is a row the pool changed under
+      // us -- it is skipped, not written on the strength of the old verdict.
+      const nowKind = res.klass === K.IMPROVE ? K.IMPROVE : res.subclass === K.BASE_EVICTION ? K.BASE_EVICTION : null;
+      if (!res.writable || nowKind !== cand.kind) {
+        stats.skipped++;
+        bump(reasons, `apply  no-longer-writable:${res.klass}${res.subclass ? `/${res.subclass}` : ""}/${res.tier}`);
+        continue;
+      }
+      const target = cand.kind === K.BASE_EVICTION ? der.baseSlug : der.slug;
+      const identity = cand.kind === K.BASE_EVICTION ? der.baseIdentity : der.identity;
+      if (target === fresh.cardId) { stats.skipped++; bump(reasons, "apply  already-at-target"); continue; }
 
       const keep = stripSystem(fresh);
-      keep.cardId = der.slug;
-      keep.hobbyiqCardId = der.slug;
-      keep.setName = der.identity.setNameRaw || keep.setName;
-      keep.cardNumber = der.identity.cardNumber || keep.cardNumber;
-      keep.parallel = der.identity.parallel;
-      keep.isAuto = der.identity.isAuto;
-      if (der.identity.printRun !== null && der.identity.printRun !== undefined) keep.printRun = der.identity.printRun;
-      keep.sport = der.identity.sport;
-      keep.cardYear = der.identity.cardYear;
+      keep.cardId = target;
+      keep.hobbyiqCardId = target;
+      keep.setName = identity.setNameRaw || keep.setName;
+      keep.cardNumber = identity.cardNumber || keep.cardNumber;
+      keep.parallel = identity.parallel;
+      keep.isAuto = identity.isAuto;
+      if (cand.kind === K.BASE_EVICTION) {
+        // The print run belonged to the parallel the row was wrongly filed
+        // under. It does not travel to the base slug, and leaving it on the
+        // FIELD while the SLUG drops it is exactly the contradiction this
+        // subclass exists to end.
+        delete keep.printRun;
+      } else if (identity.printRun !== null && identity.printRun !== undefined) {
+        keep.printRun = identity.printRun;
+      }
+      keep.sport = identity.sport;
+      keep.cardYear = identity.cardYear;
       // A row that changes partition must carry the hash of its NEW cardId or
       // the store's pre-write dedup can never see it.
       keep.contentHash = contentHashOf(keep);
       keep.rekeyedFrom = [{ id: fresh.id, cardId: fresh.cardId, hobbyiqCardId: fresh.hobbyiqCardId ?? null, title: fresh.title ?? null }];
       keep.rekeyedAt = new Date().toISOString();
-      keep.rekeyedReason = `GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled ${res.axes.filled.join(",")}`;
+      if (cand.kind === K.BASE_EVICTION) {
+        // The three evidence fields travel WITH the row, quoted. A reason that
+        // only names the subclass is not auditable after the fact -- Drew must
+        // be able to read, from the row alone, exactly what was seen.
+        const e = res.evidence ?? {};
+        keep.rekeyedReason = `GREAT REMATCH (2026-09-02): CONFLICT/BASE-EVICTION -- slug parallel "${e.storedSlugParallel}" unsupported: stored parallel field ${JSON.stringify(e.storedParallelField)}, title "${e.titleQuoted}" names no finish, checklist-backed base destination ${e.baseDestSlug}`;
+        keep.baseEvictionEvidence = e;
+      } else {
+        keep.rekeyedReason = `GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled ${res.axes.filled.join(",")}`;
+      }
 
       const r = await relocateSoldComp(pool, { keep, drop: [{ id: fresh.id, cardId: fresh.cardId }], retry, verifyFields: ["cardId", "hobbyiqCardId", "rekeyedAt"], dryRun: !APPLY });
-      if (!APPLY) { stats.written++; if (applied.length < 20) applied.push(`  WOULD RE-KEY ${fresh.id}  ${fresh.cardId}  ->  ${der.slug}   filled ${res.axes.filled.join(",")}`); continue; }
+      const why = cand.kind === K.BASE_EVICTION ? `BASE-EVICTION (slug said "${res.evidence?.storedSlugParallel}", row and title say nothing)` : `IMPROVE filled ${res.axes.filled.join(",")}`;
+      if (!APPLY) { stats.written++; bump(reasons, `apply  would-write:${cand.kind}`); if (applied.length < 20) applied.push(`  WOULD RE-KEY ${fresh.id}  ${fresh.cardId}  ->  ${target}   ${why}`); continue; }
       if (!r.ok && r.stage !== "done") { stats.failed++; console.log(`  FAILED at ${r.stage} ${fresh.id}: ${String(r.error).slice(0, 110)}`); continue; }
       if (r.duplicatesLeft.length) { stats.failed++; stats.duplicatesLeft += r.duplicatesLeft.length; for (const dd of r.duplicatesLeft) console.log(`  DUPLICATE LEFT ${dd.id}@${dd.cardId}: ${String(dd.error).slice(0, 80)}`); continue; }
       stats.written++; stats.alreadyGone += r.alreadyGone.length;
-      if (applied.length < 20) applied.push(`  RE-KEYED ${fresh.id}  ${fresh.cardId}  ->  ${der.slug}   filled ${res.axes.filled.join(",")}`);
+      bump(reasons, `apply  wrote:${cand.kind}`);
+      if (applied.length < 20) applied.push(`  RE-KEYED ${fresh.id}  ${fresh.cardId}  ->  ${target}   ${why}`);
     }
   };
   await Promise.all(Array.from({ length: Math.min(CONCURRENCY, Math.max(improvable.length, 1)) }, worker));

@@ -224,8 +224,19 @@ describe("MUTATION CHECK: the protected-row guard is load-bearing", () => {
     const guard = "writable: prov.tier === AUTO";
     expect(src).toContain(guard);
 
-    const mutated = src.replace(guard, "writable: true");
+    // The SAME guard expression now appears twice -- once for IMPROVE and once
+    // for the BASE-EVICTION subclass (Drew 2026-09-02), which is evaluated
+    // FIRST and so is the earlier occurrence in the file. A bare replace()
+    // would mutate the subclass's guard and leave IMPROVE's intact, and this
+    // test would then be quietly checking the wrong thing while still passing
+    // for the wrong reason. IMPROVE's is the LAST occurrence; pin that one.
+    // (rematchBaseEviction.test.ts mutates the subclass's guard on its own.)
+    const at = src.lastIndexOf(guard);
+    expect(at).toBeGreaterThan(-1);
+    const mutated = src.slice(0, at) + "writable: true" + src.slice(at + guard.length);
     expect(mutated).not.toBe(src);
+    // The IMPROVE return is the one that follows the checklist-backed gate.
+    expect(src.slice(0, at)).toContain("not-checklist-backed");
 
     // Load the mutated module in isolation, without touching the real file.
     const tmp = path.join(backend, "scripts", "lib", `.rematch-classify.mutant-${process.pid}.cjs`);
