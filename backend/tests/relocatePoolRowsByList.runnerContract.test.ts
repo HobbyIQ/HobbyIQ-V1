@@ -160,4 +160,30 @@ describe("the committed list is well formed and says why it excludes what it exc
     const moved = new Set(list.entries.map((e: { id: string }) => e.id));
     expect(moved.has("tca-ebay::227476163462")).toBe(false);
   });
+
+  it("the BNR-VGJ Black Prism 1/1 is a relocate, and it names the NSCC product (D5-NSCC)", () => {
+    // Drew-flagged, and the row no automated lane reaches: the title-exclusivity
+    // pass refuses it as sameProduct, because inferSetKeyFromTitle reads
+    // "Bowman Chrome" out of "Bowman Chrome National Wrapper Redemption" -- the
+    // row's own setKey. A scoped 2018,2019 report run moves 0 of 15,195 rows.
+    // It is an ENTRY and not an exclusion because the destination partition was
+    // read live and holds no document with this id (the V-01 lesson: a
+    // relocation onto an occupied id silently collapses two docs into one).
+    const id = "tca-ebay::goldin_202301-3118-3115-83fa4718-53b0-4a58-a0ee-1cd0a283ec0e";
+    const e = list.entries.find((x: { id: string }) => x.id === id);
+    expect(e).toBeDefined();
+    expect(e.fromCardId).toBe("hiq:baseball:2019:bowman-chrome:bnr-vgj:prism-refractor:no-auto:num-1");
+    // CF-BOWMAN-NSCC-IS-ITS-OWN-PRODUCT: the destination is the NSCC ladder,
+    // and BLACK Prism is a different parallel from the flagship Prism it sat on.
+    expect(e.toCardId).toBe("hiq:baseball:2019:bowman-chrome-nscc:bnr-vgj:black-prism-refractor:no-auto:num-1");
+    expect(e.toCardId).not.toBe(e.fromCardId);
+    // A 1/1 keeps its print run across the move.
+    expect(e.fromCardId).toContain(":num-1");
+    expect(e.toCardId).toContain(":num-1");
+    // The grade caveat is load-bearing: the title states BGS 9.5 while the
+    // stored grade fields are empty. This lane moves identity only.
+    expect(e.evidence).toMatch(/BGS GEM MINT 9\.5/);
+    expect(e.evidence).toMatch(/identity only/i);
+    expect(list.excluded.some((x: { id: string }) => x.id === id)).toBe(false);
+  });
 });
