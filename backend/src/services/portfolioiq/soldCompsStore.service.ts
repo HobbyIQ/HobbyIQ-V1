@@ -1615,6 +1615,38 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
   // arbitration as the partition-scoped path — verifiedByUser=true
   // beats false, longer parallel beats shorter, newer observedAt breaks
   // ties.
+  //
+  // CF-A-FLAGGED-ROW-IS-NOT-A-DEDUP-PARTNER, cross-partition arm
+  // (2026-09-01, follow-up to #1633). This is the THIRD unguarded dedup
+  // path and the last one in `backend/src` that can destroy a row. #1633
+  // closed the partition-scoped contentHash query and the vendor-pool
+  // query; this one selected every cross-partition twin, flagged or not,
+  // and then HARD DELETES the losers at the loop below.
+  //
+  // #1633 also gave scoreForCanonical a floor-clearing -1000 penalty for
+  // a flagged row. That makes the damage here DETERMINISTIC rather than
+  // occasional: a flagged cross-partition twin now ALWAYS scores below
+  // the incoming live sale, so `incomingScore <= bestExistingScore` is
+  // always false and control always reaches the delete loop. Every
+  // flagged cross-partition twin would be hard-deleted on the next
+  // user-scoped write of the same sale, destroying the
+  // `dedupSupersededBy` provenance the triage lane exists to write.
+  //
+  // Same predicate, same asymmetry as #1633: a live write compares only
+  // against live rows, a flagged write keeps its flagged twins as dedup
+  // partners so the guards that mint the flag are not defeated by
+  // resurrection. The pool is sacred: flag, never delete.
+  //
+  // HONEST SCOPE of the asymmetry HERE: today it is unreachable. Both ingest
+  // flag mints (:1351 cardsight $0.99, :1381 cardsight outlier) are
+  // cardsight-only, and cardsight is not user-scoped, so no flagged doc
+  // currently reaches this branch — a mutant making the predicate
+  // unconditional does NOT go red, and no test pretends otherwise. It is
+  // written this way so the two dedup paths cannot drift: if a guard ever
+  // mints a flag on a user-scoped source, this path already behaves like the
+  // contentHash one instead of silently resurrecting duplicates. The
+  // behaviour itself IS pinned, on the reachable path, in
+  // ingestFlaggedDedupBehavior.test.ts.
   const isUserScoped = doc.source === "ebay-user-purchase"
     || doc.source === "ebay-user-sale"
     || doc.source === "manual-user-entry";
@@ -1628,7 +1660,8 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
                   AND c.contributorUserId = @u
                   AND c.price = @p
                   AND STARTSWITH(c.soldAt, @day)
-                  AND c.cardId != @cardId`,
+                  AND c.cardId != @cardId${incomingIsFlagged ? "" : `
+                  AND (NOT IS_DEFINED(c.flaggedWrong) OR c.flaggedWrong != true)`}`,
         parameters: [
           { name: "@slug", value: hobbyiqCardId },
           { name: "@src", value: doc.source },
