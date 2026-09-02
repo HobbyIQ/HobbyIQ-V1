@@ -393,3 +393,117 @@ describe("SUBSTITUTION is a wide band — it hunts substitution, not rounding", 
     expect(res.persisted).toBe(400);
   });
 });
+
+// ── the grade-multiplier loader ─────────────────────────────────────────────
+//
+// THE RUNG WAS DEAD CODE AND NOTHING SAID SO. loadGradeMultipliers() flattened
+// GRADE_CALIBRATION as if it were one level deep — `Object.entries(table)` and
+// then `.multiplier ?? .ratio` off each value. But the top level is a FAMILY
+// ("bowman"), whose value is a map of grading companies and carries neither
+// field, so every entry evaluated to NaN, the finite-guard dropped all of them,
+// and the loader returned {}. `gradeMultipliers=0` printed in the banner every
+// run. The graded-to-raw rung tests `Number.isFinite(mult)` before it fires, so
+// it could never fire for any holding: the rung above was live, tested, and
+// unreachable in production.
+//
+// The `catch { return {} }` is what hid it — a malformed table and a missing
+// one produced the identical empty map, so the safe-direction fallback silently
+// swallowed a real shape error. That is why these pins assert against the LIVE
+// shipped table rather than a fixture: a fixture would have been written to the
+// shape the loader expected, and agreed with the bug.
+describe("the grade multiplier loader reads the real GRADE_CALIBRATION shape", () => {
+  const audit = require_(path.join(backend, "scripts", "audit-pricing-invariants.cjs"));
+  const { GRADE_CALIBRATION } = require_(path.join(backend, "dist", "services", "compiq", "gradeCalibrationData.js"));
+
+  it("the live table yields a NON-EMPTY multiplier map", () => {
+    // The whole defect in one assertion. This was 0.
+    const mult = audit.flattenGradeCalibration(GRADE_CALIBRATION);
+    expect(Object.keys(mult).length).toBeGreaterThan(0);
+  });
+
+  it("the old one-level flatten yields nothing — the bug, pinned as the contrast", () => {
+    // Reproduces the shipped loader verbatim against the live table, so that if
+    // the table were ever reshaped to actually BE one level deep, this pin
+    // fails and tells the next reader these two are no longer different.
+    const old: Record<string, number> = {};
+    for (const [k, v] of Object.entries(GRADE_CALIBRATION as Record<string, unknown>)) {
+      const entry = v as { multiplier?: number; ratio?: number };
+      const n = typeof v === "number" ? v : Number(entry?.multiplier ?? entry?.ratio ?? NaN);
+      if (Number.isFinite(n) && n > 0) old[k.toUpperCase()] = n;
+    }
+    expect(Object.keys(old)).toEqual([]);
+  });
+
+  it("a known family/company/tier resolves to its empirical medianRatio", () => {
+    const mult = audit.flattenGradeCalibration(GRADE_CALIBRATION);
+    // PSA 10 is the most-sampled tier in the shipped table. The value must be
+    // a real premium, and must be the number the table actually carries — not
+    // a default, and not an invented constant (empirical-only doctrine).
+    expect(mult["PSA 10"]).toBeGreaterThan(1);
+    const psa10s = Object.values(GRADE_CALIBRATION as Record<string, Record<string, { byTier?: Record<string, { medianRatio: number }> }>>)
+      .map((companies) => companies?.PSA?.byTier?.["10"]?.medianRatio)
+      .filter((n): n is number => Number.isFinite(n));
+    expect(psa10s).toContain(mult["PSA 10"]);
+  });
+
+  it("keys are in the tier format the shadow pricer looks up by", () => {
+    // gradeTierOf builds "<COMPANY> <VALUE>". A loader keyed any other way
+    // returns a populated map whose every lookup still misses — the rung stays
+    // dead while the banner claims otherwise.
+    const mult = audit.flattenGradeCalibration(GRADE_CALIBRATION);
+    const tier = inv.gradeTierOf({ gradeCompany: "PSA", gradeValue: 10 }, parseGradeLabel);
+    expect(tier).toBe("PSA 10");
+    expect(mult[tier]).toBeGreaterThan(1);
+  });
+
+  it("only per-tier ratios are read — never the cross-tier company median", () => {
+    // The company-level medianRatio averages a PSA 10 and a PSA 6 into one
+    // number. Reading it would price a PSA 6 off a figure a PSA 10 dominates.
+    const table = {
+      fam: { PSA: { medianRatio: 99, sampleSize: 10000, byTier: { "9": { medianRatio: 2.5, sampleSize: 40 } } } },
+    };
+    const mult = audit.flattenGradeCalibration(table);
+    expect(mult["PSA 9"]).toBe(2.5);
+    expect(Object.values(mult)).not.toContain(99);
+  });
+
+  it("a malformed or absent table degrades to no multipliers, not to a wrong one", () => {
+    for (const bad of [null, undefined, {}, 42, "nope", { fam: null }, { fam: { PSA: {} } }]) {
+      expect(audit.flattenGradeCalibration(bad)).toEqual({});
+    }
+  });
+});
+
+// ── the rung, driven by the REAL multipliers ────────────────────────────────
+describe("graded-to-raw prices an empty raw pool from its own graded children", () => {
+  const audit = require_(path.join(backend, "scripts", "audit-pricing-invariants.cjs"));
+  const { GRADE_CALIBRATION } = require_(path.join(backend, "dist", "services", "compiq", "gradeCalibrationData.js"));
+  const real = audit.flattenGradeCalibration(GRADE_CALIBRATION) as Record<string, number>;
+
+  it("a raw holding with 3 PSA 10 children prices off them, through the shipped multiplier", () => {
+    // The end-to-end proof that the loader fix reaches the rung: this exact
+    // holding returned `no-basis` before it, because gradeMultipliers was {}.
+    const psa10 = real["PSA 10"];
+    expect(psa10).toBeGreaterThan(1);
+    const graded = [5, 15, 25].map((d, i) =>
+      sale({ id: `g${i}`, gradeCompany: "PSA", gradeValue: 10, price: 710, soldAt: daysAgo(d) }));
+    const res = inv.auditHolding(holding({ fairMarketValue: 100, fmvRung: "graded-pool-inverse" }), {
+      basisRows: [], poolRows: graded, previous: null, nowMs: NOW,
+      userId: "user-drew", gradeMultipliers: real, leaf,
+    });
+    expect(res.shadowRung).toBe("graded-pool-inverse");
+    // ~710 / the empirical PSA 10 multiplier — the value, not a median.
+    expect(res.shadowValue).toBeCloseTo(710 / psa10, 5);
+    expect(res.notes.join(" ")).toMatch(/raw pool empty/);
+  });
+
+  it("with an EMPTY multiplier map the rung cannot fire — the shape of the bug", () => {
+    const graded = [5, 15, 25].map((d, i) =>
+      sale({ id: `g${i}`, gradeCompany: "PSA", gradeValue: 10, price: 710, soldAt: daysAgo(d) }));
+    const res = inv.auditHolding(holding({ fairMarketValue: 100 }), {
+      basisRows: [], poolRows: graded, previous: null, nowMs: NOW,
+      userId: "user-drew", gradeMultipliers: {}, leaf,
+    });
+    expect(res.shadowRung).toBe("no-basis");
+  });
+});

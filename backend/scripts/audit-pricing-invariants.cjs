@@ -31,6 +31,15 @@
  * cleared, a flagged one's is written, and nothing else on the doc is read back
  * out and rewritten. Local runs are report-only by design.
  *
+ * ...and those writes RECONCILE (CF-A-GREEN-RUN-IS-NOT-A-DATA-FLOW). This is a
+ * cron writer: nightly, unattended, no dry-run. Every marker write it decides
+ * to make is counted as written / skipped / failed and checked against the
+ * intent by reportWrites, so a throttled run that silently dropped its markers
+ * turns the workflow red instead of green. That is the ONE way a finding-free
+ * exit code can be non-zero: findings never fail this job, but marker writes
+ * going missing means the badge quietly stopped appearing and the digest
+ * became a claim nobody can check. Requires dist/ — the workflow builds it.
+ *
  * Env:
  *   COSMOS_CONNECTION_STRING  required
  *   COSMOS_DATABASE           default "hobbyiq"
@@ -50,6 +59,13 @@ const {
   loadLeafUtilities, auditHolding, persistedValueOf, provenanceFingerprint,
   DIVERGENCE_PCT, WINDOW_DAYS,
 } = require(path.join(__dirname, "lib", "pricing-invariants.cjs"));
+// CF-A-GREEN-RUN-IS-NOT-A-DATA-FLOW. This is a CRON writer: it runs nightly,
+// unattended, with no dry-run switch, and under APPLY it patches the auditFlag
+// marker. A throttled patch that silently drops is exactly the failure
+// writeReconciliation exists to catch, so the marker writes are counted and
+// reconciled like any other write job's. Requires dist/ (compiled TS) — the
+// workflow builds it.
+const { reportWrites } = require(path.join(__dirname, "..", "dist", "services", "ops", "writeReconciliation.js"));
 
 const DB_NAME = process.env.COSMOS_DATABASE || "hobbyiq";
 const USER_ID = process.env.USER_ID || "";
@@ -190,40 +206,128 @@ async function readPoolRows(pool, holding) {
 /**
  * The empirical grade multipliers for the graded->raw rung, read from the
  * SHIPPED calibration table (GRADE_CALIBRATION only — empirical-only doctrine,
- * never a vendor-keyed or invented number). Missing table = the rung simply
- * does not fire, which is the safe direction for an auditor.
+ * never a vendor-keyed or invented number).
+ *
+ * THE SHAPE IS THREE LEVELS DEEP, NOT ONE. GRADE_CALIBRATION is
+ *
+ *   family -> company -> { medianRatio, p25, p75, sampleSize, byTier? }
+ *   byTier -> tierKey("10" | "9.5" | ...) -> { medianRatio, sampleSize }
+ *
+ * The first version of this loader read `Object.entries(table)` and asked each
+ * value for `.multiplier ?? .ratio` — but the top level is a FAMILY ("bowman"),
+ * whose value is a map of companies and has neither field. Every entry became
+ * NaN, the guard dropped all of them, gradeMultipliers came back {} with
+ * `gradeMultipliers=0` in the banner, and the graded-to-raw rung — which needs
+ * `Number.isFinite(mult)` — could never fire. It was dead code for every
+ * holding, and the `catch { return {} }` made a real shape error look exactly
+ * like a missing table. Hence the pins in tests/pricingInvariantAuditor.test.ts
+ * asserting the LIVE table yields a non-empty map: a loader that silently
+ * returns {} is indistinguishable from a rung that never applies.
+ *
+ * Keys are the shadow's tier format, `"<COMPANY> <VALUE>"` (gradeTierOf in
+ * lib/pricing-invariants.cjs) — the same format lookupGradeRatioByTier builds
+ * from (grader, gradeValue).
+ *
+ * ONLY `byTier` ratios are read. The company-level `medianRatio` is an average
+ * ACROSS tiers (a PSA 10 and a PSA 6 pooled into one number), so it answers a
+ * different question than "what does THIS tier trade at over raw" and would
+ * price a PSA 6 off a number a PSA 10 dominates. The engine's own
+ * lookupGradeRatioByTier reaches for byTier and falls through to the "other"
+ * family's byTier — never to the cross-tier median — and the auditor holds the
+ * same line. A tier with no empirical byTier entry gets no multiplier and the
+ * rung declines to fire for it, which is the refusal the shadow already knows
+ * how to express.
+ *
+ * Families are folded together by taking the widest-sampled entry per tier,
+ * because the auditor knows a holding's grade but not reliably its product
+ * family — and a multiplier from the wrong family is still an empirical number
+ * from OUR pool, where an invented one would not be.
+ *
+ * Missing table = the rung does not fire, which is the safe direction for an
+ * auditor. That is a legitimate outcome; a MALFORMED table is not, and the
+ * pin is what tells the two apart.
  */
 function loadGradeMultipliers() {
+  let table = null;
   try {
     const mod = require(path.join(__dirname, "..", "dist", "services", "compiq", "gradeCalibrationData.js"));
-    const table = mod.GRADE_CALIBRATION ?? mod.default?.GRADE_CALIBRATION ?? null;
-    if (!table || typeof table !== "object") return {};
-    const out = {};
-    for (const [k, v] of Object.entries(table)) {
-      const n = typeof v === "number" ? v : Number(v?.multiplier ?? v?.ratio ?? NaN);
-      if (Number.isFinite(n) && n > 0) out[String(k).toUpperCase()] = n;
-    }
-    return out;
+    table = mod.GRADE_CALIBRATION ?? mod.default?.GRADE_CALIBRATION ?? null;
   } catch {
+    // dist/ not built — the rung does not fire. Safe, and the banner says 0.
     return {};
   }
+  return flattenGradeCalibration(table);
+}
+
+/**
+ * The pure half of loadGradeMultipliers, split out so it is testable against
+ * the live table without a dist/ build in the way. Exported below.
+ */
+function flattenGradeCalibration(table) {
+  if (!table || typeof table !== "object") return {};
+  // tier -> { ratio, sampleSize, perTier } so a byTier entry always beats a
+  // company-level fallback, and among equals the larger sample wins.
+  const best = new Map();
+  const offer = (tier, ratio, sampleSize, perTier) => {
+    const n = Number(ratio);
+    if (!Number.isFinite(n) || n <= 0) return;
+    const size = Number.isFinite(Number(sampleSize)) ? Number(sampleSize) : 0;
+    const prev = best.get(tier);
+    if (!prev || (perTier && !prev.perTier) || (perTier === prev.perTier && size > prev.sampleSize)) {
+      best.set(tier, { ratio: n, sampleSize: size, perTier });
+    }
+  };
+
+  for (const companies of Object.values(table)) {
+    if (!companies || typeof companies !== "object") continue;
+    for (const [company, entry] of Object.entries(companies)) {
+      if (!entry || typeof entry !== "object") continue;
+      const grader = String(company).trim().toUpperCase();
+      if (!grader) continue;
+      const byTier = entry.byTier;
+      if (byTier && typeof byTier === "object") {
+        for (const [gradeValue, tierEntry] of Object.entries(byTier)) {
+          const v = Number(gradeValue);
+          if (!Number.isFinite(v)) continue;
+          offer(`${grader} ${v}`, tierEntry?.medianRatio, tierEntry?.sampleSize, true);
+        }
+      }
+    }
+  }
+  return Object.fromEntries([...best].map(([tier, v]) => [tier, v.ratio]));
+}
+
+/** The operation list the auditFlag write sends to Cosmos — one op, on the
+ *  marker path, never a price field. Exported so the pin in
+ *  tests/auditFlagMarkerIsOnlyImprove.test.ts asserts against THE patch this
+ *  job actually issues rather than a copy of it: a mirror in the test would go
+ *  on passing the day a price field was added here. */
+function auditFlagPatchOps(holdingId, marker) {
+  return marker === null
+    ? [{ op: "remove", path: `/holdings/${holdingId}/auditFlag` }]
+    : [{ op: "set", path: `/holdings/${holdingId}/auditFlag`, value: marker }];
 }
 
 /** The single write this job may do: the auditFlag marker, and nothing else.
  *  Never a price field. Uses a targeted patch so no other field on the doc is
- *  read-modify-written. */
+ *  read-modify-written.
+ *
+ *  Returns the reconciliation outcome for this one attempt, so the caller can
+ *  count it: "written" (the marker is on the server), "skipped" (a clear
+ *  against a doc that had no marker — deliberate, not loss), or "failed" (a
+ *  permanent error, already reported). A throw here would abort the audit; a
+ *  single unwritable holding must not cost the other thousands their run. */
 async function writeAuditFlag(portfolio, userId, holdingId, marker) {
-  const op = marker === null
-    ? { op: "remove", path: `/holdings/${holdingId}/auditFlag` }
-    : { op: "set", path: `/holdings/${holdingId}/auditFlag`, value: marker };
+  const ops = auditFlagPatchOps(holdingId, marker);
   try {
-    await retry(() => portfolio.item(userId, userId).patch([op]));
-    return true;
+    await retry(() => portfolio.item(userId, userId).patch(ops));
+    return "written";
   } catch (e) {
     // A "remove" on an absent path is a 400 — that is a no-op, not an error.
     const msg = String(e?.message ?? e);
-    if (marker === null && /400|not.*exist|absent/i.test(msg)) return false;
-    throw e;
+    if (marker === null && /400|not.*exist|absent/i.test(msg)) return "skipped";
+    console.warn(`  auditFlag write failed  user=${userId} holding=${holdingId}: ${msg.slice(0, 160)}`);
+    return "failed";
   }
 }
 
@@ -271,6 +375,11 @@ async function main() {
   const results = [];
   const byInvariant = new Map();
   let flaggedHoldings = 0, markersWritten = 0, markersCleared = 0;
+  // The reconciliation counters. `intended` is incremented at the point the
+  // job DECIDES a marker write is needed — not derived afterwards from the
+  // successes, which would make the equation self-satisfying and green by
+  // construction.
+  let markerIntended = 0, markerSkipped = 0, markerFailed = 0;
 
   for (const { userId, holding } of rows) {
     const [basisRows, poolRows] = [await readBasisRows(pool, holding), await readPoolRows(pool, holding)];
@@ -291,16 +400,22 @@ async function main() {
       flaggedHoldings++;
       if (APPLY) {
         const top = res.findings[0];
-        const wrote = await writeAuditFlag(portfolio, userId, holding.id, {
+        markerIntended++;
+        const outcome = await writeAuditFlag(portfolio, userId, holding.id, {
           reason: `${top.invariant}: ${top.kind}`,
           at: new Date(nowMs).toISOString(),
           invariant: top.invariant,
         });
-        if (wrote) markersWritten++;
+        if (outcome === "written") markersWritten++;
+        else if (outcome === "skipped") markerSkipped++;
+        else markerFailed++;
       }
     } else if (APPLY && holding.auditFlag) {
-      const cleared = await writeAuditFlag(portfolio, userId, holding.id, null);
-      if (cleared) markersCleared++;
+      markerIntended++;
+      const outcome = await writeAuditFlag(portfolio, userId, holding.id, null);
+      if (outcome === "written") markersCleared++;
+      else if (outcome === "skipped") markerSkipped++;
+      else markerFailed++;
     }
   }
 
@@ -359,9 +474,40 @@ async function main() {
   console.log(`findings are DATA, not failures — this job exits 0 whatever it found.`);
   console.log(`a red X here means the AUDITOR broke. Alert on the telemetry event`);
   console.log(`\`pricing_invariant_violation\` in App Insights, not on this exit code.`);
+
+  // CF-A-GREEN-RUN-IS-NOT-A-DATA-FLOW. Every marker write this run decided to
+  // make must be accounted for as written, deliberately skipped, or failed.
+  // Note what this does and does not turn red: a FINDING is data and never
+  // fails the job (the exit is forced 0 below), but marker writes that VANISH
+  // are an auditor malfunction — the badge silently stops appearing and the
+  // digest above becomes a claim nobody can trust. Report-only runs intend no
+  // writes and print no banner.
+  if (APPLY) {
+    reportWrites({
+      job: "audit-pricing-invariants",
+      intended: markerIntended,
+      written: markersWritten + markersCleared,
+      skipped: markerSkipped,
+      failed: markerFailed,
+    });
+  }
 }
 
-main().then(
-  () => process.exit(0),
-  (e) => { console.error("FATAL (audit machinery):", e?.stack || e?.message || e); process.exit(3); },
-);
+// Exported for the pins. `auditFlagPatchOps` is exported so the badge test
+// asserts against THE patch this job issues rather than a mirror of it, and
+// `flattenGradeCalibration` so the loader's shape handling can be pinned
+// against the live GRADE_CALIBRATION table. Requiring this file for its
+// exports must not run the audit, so main() is invoked only as a script.
+module.exports = { auditFlagPatchOps, flattenGradeCalibration, loadGradeMultipliers };
+
+if (require.main === module) {
+  main().then(
+    // Findings never fail this job — but a marker-write shortfall does.
+    // reportWrites sets process.exitCode = 4 when the counters do not add up,
+    // and a hardcoded exit(0) here would discard exactly the signal it was
+    // wired in to raise, leaving the reconciliation a banner that turns
+    // nothing red. So the forced 0 applies only when nothing set a code.
+    () => process.exit(process.exitCode ?? 0),
+    (e) => { console.error("FATAL (audit machinery):", e?.stack || e?.message || e); process.exit(3); },
+  );
+}

@@ -15,6 +15,9 @@
  *   3. Only-improve: a reconciled holding's marker is CLEARED, so the badge
  *      cannot outlive the finding that raised it.
  */
+import { createRequire } from "node:module";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 /** The price fields the auditor must never appear to write. */
@@ -25,15 +28,23 @@ const PRICE_FIELDS = [
 ];
 
 /**
- * The patch the runner builds. Mirrors writeAuditFlag() in
- * scripts/audit-pricing-invariants.cjs — the shape under test is the operation
- * list, which is what actually reaches Cosmos.
+ * THE patch the runner builds — imported, not mirrored.
+ *
+ * This was a local copy of writeAuditFlag()'s operation list, and a copy is
+ * not a pin: adding a price field to the real runner's patch left every
+ * assertion below green, because they were asserting about the copy. The
+ * import is the whole point of the test — the ops under test have to be the
+ * ops that actually reach Cosmos.
  */
-function auditFlagPatch(holdingId: string, marker: { reason: string; at: string; invariant: string } | null) {
-  return marker === null
-    ? [{ op: "remove", path: `/holdings/${holdingId}/auditFlag` }]
-    : [{ op: "set", path: `/holdings/${holdingId}/auditFlag`, value: marker }];
-}
+const require_ = createRequire(import.meta.url);
+const backend = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const { auditFlagPatchOps } = require_(path.join(backend, "scripts", "audit-pricing-invariants.cjs"));
+
+type PatchOp = { op: string; path: string; value?: Record<string, unknown> };
+const auditFlagPatch = (
+  holdingId: string,
+  marker: { reason: string; at: string; invariant: string } | null,
+): PatchOp[] => auditFlagPatchOps(holdingId, marker);
 
 const marker = { reason: "BASIS-IDENTITY: cross-product", at: "2026-09-02T05:00:00Z", invariant: "BASIS-IDENTITY" };
 
