@@ -63,12 +63,17 @@ export default function BuyerIqPage() {
             Card-show buying checklists. Add targets, set your ceiling, check them off as you find them on the floor.
           </p>
         </div>
-        <button
-          onClick={() => setShowCreate(true)}
-          className="hiq-btn-primary shrink-0"
-        >
-          + New list
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <Link href="/app/buyeriq/deals" className="hiq-btn-secondary text-sm">
+            Deals
+          </Link>
+          <button
+            onClick={() => setShowCreate(true)}
+            className="hiq-btn-primary"
+          >
+            + New list
+          </button>
+        </div>
       </div>
 
       {loading && (
