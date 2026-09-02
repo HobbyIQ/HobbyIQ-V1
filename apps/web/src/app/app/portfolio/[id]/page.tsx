@@ -26,6 +26,7 @@ import { GradeCalcModal } from "@/components/GradeCalcModal";
 import { RecentCompsList } from "@/components/RecentCompsList";
 import { IdentityBanner } from "@/components/IdentityBanner";
 import { GradeCurveView } from "@/components/GradeCurveView";
+import { HoldingMoveAlertCard } from "@/components/HoldingMoveAlertCard";
 import { fetchObservedGradeCurve, type ObservedGradeEntry } from "@/lib/api";
 import { ProvenanceChip } from "@/components/ProvenanceChip";
 import { describeRung, holdingProvenance, type RungDescription } from "@/lib/rung";
@@ -449,6 +450,12 @@ export default function HoldingDetailPage() {
           <GradeCurveView cardId={h.hobbyiqCardId || h.cardId!} entries={curve} loading={curveLoading} error={curveError} />
         </div>
       )}
+
+      {/* CF-USER-PRICE-ALERTS (Drew, 2026-09-02): manage the move alert on
+          this card. Sits under the evidence (comps + curve) it will quote. */}
+      <div className="mb-6">
+        <HoldingMoveAlertCard holdingId={holdingId} />
+      </div>
 
       {/* Meta */}
       <div className="hiq-card p-6">
