@@ -38,6 +38,14 @@ export const EXACT_POOL_RUNGS = [
 export const FALLBACK_RUNGS = [
   "cross-grade-fallback",
   "grade-curve-estimate",
+  "graded-pool-inverse",
+  // CF-PLAYER-TREND-SPECULATION (Drew, 2026-09-02): this card's own pool
+  // went cold and its own trend was unmeasurable, so its last REAL sale was
+  // carried forward on the PLAYER's market (#1644's fixed-basket index math
+  // scoped to one player's liquid cards). A fallback rung: the anchor is
+  // this card's real sale, but the number is that anchor moved by OTHER
+  // cards' sales.
+  "player-index-projection",
   "sibling-estimate",
   // canonical-fmv ladder (direct-comp IS the exact pool, so it is absent)
   "cross-parallel",
@@ -129,6 +137,19 @@ export function describeRung(
       return { kind: "estimate", text: "estimate from another grade of this card", label };
     case "grade-curve-estimate":
       return { kind: "estimate", text: "estimate from the grade curve", label };
+    case "graded-pool-inverse":
+      return { kind: "estimate", text: "estimate from this card's own graded sales", label };
+    // CF-PLAYER-TREND-SPECULATION (Drew, 2026-09-02). The words say both
+    // halves of the claim, because either alone would mislead: "this card's
+    // last sale" (a real trade of this exact card) and "the player's market
+    // trend" (what moved it). Begins with "estimate" — the doctrine
+    // rung.test.ts pins for every fallback.
+    case "player-index-projection":
+      return {
+        kind: "estimate",
+        text: "estimate from this card's last sale x the player's market trend",
+        label,
+      };
     case "sibling-estimate":
       return { kind: "estimate", text: "estimate from a sibling card x parallel premium", label };
     case "cross-parallel":

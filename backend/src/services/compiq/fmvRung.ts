@@ -84,6 +84,26 @@ export type FmvRungLabel =
    *  sales, wrong grade, so `isExactPoolRung` is false and the divergence
    *  digest does not notify on it. */
   | "graded-pool-inverse"
+  /** CF-PLAYER-TREND-SPECULATION (Drew, 2026-09-02): "this is where
+   *  speculation comes from." This card's own pool went COLD (newest comp
+   *  older than STALE_COMP_DAYS) and its own trend was UNMEASURABLE, so its
+   *  last REAL sale was carried forward on the PLAYER's market:
+   *
+   *      value = lastRealComp × playerIndex(today) / playerIndex(compDate)
+   *
+   *  The index is #1644's fixed-liquid-basket math (capped weights,
+   *  mix-shift immune, per-card v() = that card's own projected next sale)
+   *  scoped to ONE PLAYER's liquid cards and read at two times over one
+   *  frozen basket. Reached ONLY when the two rungs above it decline — a
+   *  fresh pool, or a measurable own-trend, both beat it, because a player
+   *  index is a proxy and a proxy never outranks the thing it proxies for.
+   *
+   *  A fallback rung, not an exact-pool one: the ANCHOR is a real sale of
+   *  this exact card at this exact tier, but the number served is that
+   *  anchor moved by OTHER cards' sales, so the digest must not notify on a
+   *  divergence it produces. Past 180 days of anchor age the basis says
+   *  "speculative" in those words and confidence is floored to that tier. */
+  | "player-index-projection"
   /** siblingCardPriceFallback (D4 PR 5): ANOTHER card — the same player's
    *  Base Auto / Base card — × the measured parallel premium. A model over
    *  a different identity; persisted only when the holding's own exact

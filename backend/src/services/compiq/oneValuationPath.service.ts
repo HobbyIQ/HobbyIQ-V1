@@ -23,6 +23,18 @@
  * entry, by construction. The rung label is the engine's, in the closed
  * vocabulary (fmvRung.ts).
  *
+ * CF-PLAYER-TREND-SPECULATION (Drew, 2026-09-02) inserts ONE rung into that
+ * path — never a second path. The order, top to bottom:
+ *
+ *   1. own FRESH pool                        exact-pool-*
+ *   2. own STALE pool + the card's OWN trend  exact-pool-*
+ *   3. stale comp × the PLAYER's index ratio  player-index-projection  (NEW)
+ *   4. family / sibling / cross-grade         grade-curve-estimate, …
+ *
+ * Rung 3 is reached only when 1 and 2 both decline (pool cold past
+ * STALE_COMP_DAYS AND the card's own trend unmeasurable), and it declines in
+ * turn — falling through to 4 — whenever its own guards fail.
+ *
  * When the requested tier has no exact pool:
  *   1. the identity's OTHER tiers anchor an empirical-ratio fill
  *      (`grade-curve-estimate` — this card's own sales × GRADE_CALIBRATION;
@@ -57,6 +69,7 @@ import {
   type ObservedGradeEntry,
 } from "./observedGradeCurve.service.js";
 import { logSubRawInversionObserved } from "./marketRead.service.js";
+import { attemptPlayerTrendRung } from "./playerTrendRung.service.js";
 import { priceHoldingFromExactPool } from "../portfolioiq/exactPoolSupremacy.js";
 import { computeHobbyIqFmv, type HobbyIqFmvResult } from "../portfolioiq/hobbyIqFmv.service.js";
 import { readCatalogIdentityBySlug } from "../catalog/catalogMatcher.service.js";
@@ -402,6 +415,70 @@ export async function valueIdentity(req: ValuationRequest): Promise<Valuation> {
   // number, the engine's label. Nothing else touches it.
   if (tier.valueSource === "observed" && tier.trendAdjustedValue != null && tier.trendAdjustedValue > 0 && u) {
     const um = u.gradeCurve.find((e) => e.grade === requestedTier);
+
+    // ── 1b. CF-PLAYER-TREND-SPECULATION (Drew, 2026-09-02) ───────────────
+    //
+    // "This is where speculation comes from." The tier HAS a pool, so the
+    // exact-pool rungs above own this branch — but only while that pool is
+    // still saying something about today. When it has gone cold (newest comp
+    // past STALE_COMP_DAYS, the same 45d line #1646's chip uses) AND the
+    // card's own trend is unmeasurable (the engine read no trendPctPerWeek —
+    // neither a leading edge nor a 14d-vs-prior ratio), the honest exact-pool
+    // number is a two-month-old quote wearing a fresh label.
+    //
+    // So between "own stale pool + OWN trend" and the family/sibling rungs
+    // below, this card's last REAL sale is carried forward on the PLAYER's
+    // market. Both rungs above still win outright: a fresh pool never reaches
+    // this block's guard, and a stale pool whose OWN trend is measurable is
+    // rejected by isPlayerTrendRungEligible. The rung DECLINES (returns null)
+    // on every guard — no player, no pool, too few liquid cards — and the
+    // exact-pool number below stands exactly as it did before this rung.
+    const playerRung = await attemptPlayerTrendRung({
+      slug,
+      alsoExclude: [v.identity.pooledAs, secondId || null],
+      playerName,
+      sport: identity.sport,
+      tierLabel: requestedTier,
+      lastRealComp: um?.sales?.[0] ?? (um?.newestSaleDate != null && tier.newestSalePrice != null
+        ? { price: tier.newestSalePrice, soldAt: um.newestSaleDate }
+        : { price: NaN, soldAt: "" }),
+      ownTrendPctPerWeek: um?.trendPctPerWeek ?? null,
+      sampleCount: tier.sampleCount,
+      nowMs,
+    }).catch(() => null);
+
+    if (playerRung) {
+      v.fairMarketValue = playerRung.fairMarketValue;
+      v.rungLabel = playerRung.rungLabel;
+      // Estimated, not observed: the ANCHOR is this card's real sale, but the
+      // number served is that anchor moved by OTHER cards' sales.
+      v.valueSource = "estimated";
+      v.compsUsed = tier.sampleCount;
+      v.confidence = playerRung.confidence;
+      v.windowDays = u.windowDays;
+      v.predictedPrice = playerRung.fairMarketValue;
+      v.weightedMedian = tier.weightedMedianPrice;
+      v.sales = (um?.sales ?? []).slice();
+      v.basis = playerRung.basis;
+      v.trend = {
+        direction: playerRung.ratio > 1.01 ? "up" : playerRung.ratio < 0.99 ? "down" : "flat",
+        pctPerWeek: null,
+      };
+      // The tier entry carries the same rung, so the curve and the headline
+      // cannot disagree about where this number came from (D16).
+      tier.value = playerRung.fairMarketValue;
+      tier.trendAdjustedValue = playerRung.fairMarketValue;
+      tier.valueSource = "estimated";
+      tier.rungLabel = playerRung.rungLabel;
+      tier.confidenceScore = playerRung.confidence;
+      await fillUnavailableTiersFromAnchor(v.gradeCurve, {
+        anchorFallback: null, setName: identity.setName, sport: identity.sport, slug,
+      });
+      capProjectedTiers(v.gradeCurve);
+      labelEstimates(v.gradeCurve);
+      return v;
+    }
+
     v.fairMarketValue = tier.trendAdjustedValue;
     v.rungLabel = tier.rungLabel ?? "exact-pool-projection";
     v.valueSource = "observed";
