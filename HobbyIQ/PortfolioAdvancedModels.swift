@@ -125,6 +125,53 @@ struct BatchRepriceResponse: Codable {
     /// True on dispatch: on-screen values are the last persisted ones until
     /// the background run lands. Surface this rather than implying "now".
     let stale: Bool?
+    /// CF-PORTFOLIO-FRESH-ON-OPEN (#1639, 2026-09-02): on a `throttled`
+    /// answer, WHEN the values on screen were last refreshed. A skip that
+    /// says only "no" is indistinguishable from a broken refresh; this lets
+    /// the header say "as of 10:42" instead of going quiet.
+    ///
+    /// Optional so an older server that answers a bare `{ throttled: true }`
+    /// still decodes — the UI falls back to the portfolio envelope's
+    /// `newestValuationAt`, and says nothing when neither is present.
+    let freshAsOf: String?
+    let freshAgeMs: Double?
+}
+
+/// CF-PORTFOLIO-FRESH-ON-OPEN (#1639, 2026-09-02): the `valuation` block on
+/// `GET /api/portfolio`.
+///
+/// These values are ALWAYS the last persisted ones — that endpoint has never
+/// computed a price. Now that opening the screen dispatches a reprice, the
+/// payload says so rather than letting the UI present possibly-superseded
+/// numbers as current.
+struct PortfolioValuationEnvelope: Decodable, Hashable {
+    /// A background reprice is working on this user's holdings right now —
+    /// AS SEEN BY THE WORKER THAT ANSWERED. App Insights shows 2 serving
+    /// instances, so this can read false while a run is alive on the other
+    /// one. The client must OR it with its own dispatch state rather than
+    /// treating it as the only "is it refreshing" signal.
+    let repricing: Bool?
+    /// `lastUpdated` of the STALEST holding, ISO-8601.
+    let oldestValuationAt: String?
+    let oldestValuationAgeMs: Double?
+    /// `lastUpdated` of the FRESHEST holding — the "as of" the UI shows.
+    let newestValuationAt: String?
+    /// Durable cross-instance marker of the last dispatched reprice.
+    let lastRepriceDispatchAt: String?
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        repricing = (try? c.decodeIfPresent(Bool.self, forKey: .repricing)) ?? nil
+        oldestValuationAt = (try? c.decodeIfPresent(String.self, forKey: .oldestValuationAt)) ?? nil
+        oldestValuationAgeMs = (try? c.decodeIfPresent(Double.self, forKey: .oldestValuationAgeMs)) ?? nil
+        newestValuationAt = (try? c.decodeIfPresent(String.self, forKey: .newestValuationAt)) ?? nil
+        lastRepriceDispatchAt = (try? c.decodeIfPresent(String.self, forKey: .lastRepriceDispatchAt)) ?? nil
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case repricing, oldestValuationAt, oldestValuationAgeMs
+        case newestValuationAt, lastRepriceDispatchAt
+    }
 }
 
 /// CF-PORTFOLIO-REFRESH-ASYNC (2026-08-31): GET /api/portfolio/reprice/status

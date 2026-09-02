@@ -28,6 +28,7 @@
  *   4. stale write racing a sale    (#1627) -> DETERMINISM
  *   5. phantom Pristine grades      (#1625) -> BASIS-IDENTITY (grade tier)
  *   6. empty pool priced self-comp  (#1622) -> SUBSTITUTION / RUNG-HONESTY
+ *   7. split-identity pool bleed    (#1649) -> IDENTITY-COHERENCE
  *
  * Pure: no Cosmos, no clock beyond an injected `now`. The runner
  * (audit-pricing-invariants.cjs) supplies rows; the tests supply fakes.
@@ -36,6 +37,9 @@
 
 const path = require("path");
 const backend = path.resolve(__dirname, "..", "..");
+// The SPLIT-IDENTITY predicate, shared with the census and the rematch
+// classifier so all three exempt exactly the same vendor shapes.
+const { classifyIdentity } = require(path.join(__dirname, "split-identity.cjs"));
 
 // LEAF UTILITIES ONLY. isExactPoolRung is the closed rung vocabulary
 // (fmvRung.ts) and parseGradeLabel is the grade tokenizer — both pure, neither
@@ -376,6 +380,61 @@ function checkBasisIdentity(holding, basisRows, shadow, leaf) {
 }
 
 /**
+ * (e) IDENTITY-COHERENCE — no row reached by this holding's pool read may
+ * contradict ITSELF.
+ *
+ * CF-A-SPLIT-ROW-POLLUTES-TWO-POOLS (Drew, 2026-09-02: "we need to go back and
+ * check ALL this way"). Every other invariant here compares a comp against the
+ * HOLDING. This one compares a comp against itself, and it catches a defect
+ * none of the others can see.
+ *
+ * A sold_comps row carries two identity fields, and exactPoolReader.ts matches
+ * on EITHER of them:
+ *
+ *     WHERE (c.cardId = @cid OR c.hobbyiqCardId = @hiq ...)
+ *
+ * So a row whose `cardId` and `hobbyiqCardId` name DIFFERENT cards is read into
+ * BOTH pools, and prices two cards off one sale. BASIS-IDENTITY cannot catch
+ * it: that check reads `row.hobbyiqCardId ?? row.cardId`, so it sees ONE of the
+ * two identities -- whichever it picks agrees with the holding, because that is
+ * the field the query matched on. The row looks like a perfectly legitimate
+ * member of the pool it was asked for, every single time it is asked. The
+ * contradiction is only visible by reading BOTH fields off the same row.
+ *
+ * THE VENDOR EXEMPTION IS LOAD-BEARING (#1650). A vendor ingest partitions its
+ * rows under the vendor's product id and carries our slug beside it, so the two
+ * fields disagree BY CONSTRUCTION on 13.5M CardHedge rows. Flagging those would
+ * make this invariant fire on almost every holding in the portfolio and the
+ * real damage would never be found. lib/split-identity.cjs owns the predicate
+ * so the census, the rematch classifier and this auditor all exempt exactly the
+ * same shapes -- and the mutation check proves that dropping it turns the
+ * control shape red.
+ *
+ * The violation QUOTES THE ROW, because the repair needs both addresses: the
+ * pool the row sits in and the pool its slug names are both wrong by one row.
+ */
+function checkIdentityCoherence(holding, poolRows) {
+  const violations = [];
+  for (const row of poolRows) {
+    const c = classifyIdentity(row);
+    if (!c.split) continue;
+    violations.push({
+      kind: `split-identity/${c.klass}`,
+      detail: `comp ${row.id ?? "(no id)"} contradicts itself: cardId="${c.cardId || "(empty)"}" vs hobbyiqCardId="${c.hobbyiqCardId || "(empty)"}"`
+        + `${c.segments?.length ? ` (differs on ${c.segments.join(",")})` : ""}`
+        + ` — the pool reader ORs both fields, so this sale is priced into both cards`,
+      compId: row.id ?? null,
+      price: Number(row.price) || null,
+      soldAt: row.soldAt ?? null,
+      cardId: c.cardId || null,
+      hobbyiqCardId: c.hobbyiqCardId || null,
+      segments: c.segments ?? [],
+    });
+  }
+  return violations;
+}
+
+/**
  * (b) RUNG HONESTY — a persisted exact-pool rung must be backed by an exact
  * pool the shadow can actually find. An "exact-pool-*" label over zero exact
  * comps is the #1640 shape: the engine believed it read a tier that does not
@@ -484,6 +543,11 @@ function auditHolding(holding, { basisRows = [], poolRows = [], previous = null,
   push("RUNG-HONESTY", checkRungHonesty(holding, shadow, leaf));
   push("SUBSTITUTION", checkSubstitution(holding, shadow));
   push("DETERMINISM", checkDeterminism(holding, basisRows, previous));
+  // Reads poolRows, not basisRows: the question is what the pool READ reached,
+  // which is every row the OR-query returned, whether or not the persisted
+  // price ended up citing it. A split row that was read and then filtered out
+  // by a window or an anomaly flag is still a split row in that pool.
+  push("IDENTITY-COHERENCE", checkIdentityCoherence(holding, poolRows));
   return {
     holdingId: holding.id ?? null,
     userId: userId ?? null,
@@ -513,6 +577,7 @@ module.exports = {
   checkRungHonesty,
   checkSubstitution,
   checkDeterminism,
+  checkIdentityCoherence,
   provenanceFingerprint,
   persistedValueOf,
   auditHolding,

@@ -65,6 +65,7 @@ import { PortfolioHolding } from "../../types/portfolioiq.types.js";
 import type { PricingEnvelope } from "../../types/pricingEnvelope.js";
 import { buildPricingEnvelope } from "./pricingEnvelope.builder.js";
 import { deriveHoldingSlug } from "./holdingSlug.service.js";
+import { deriveSellWindowSignal } from "../signals/sellWindow.service.js";
 import {
   computePerUnitValue,
   computeCostBasisTotal,
@@ -523,6 +524,17 @@ export interface PortfolioHoldingWire {
     | import("../compiq/trendIQ.types.js").TrendIQResult
     | null;
   confidence: number | null;
+  /**
+   * CF-SELLER-INTELLIGENCE-SELL-WINDOW (Drew, 2026-09-02). The per-holding
+   * timing call — {none|watch|sell-window|hold} with the horizon it is
+   * allowed to speak to and a basis sentence quoting its numbers.
+   *
+   * Derived, never stored: it is a pure read of the trendIQ + confidence
+   * already on this wire shape, so it costs no pool read and cannot drift
+   * from the numbers beside it. NOT a valuation — it says WHEN, never WHAT,
+   * and no price on this envelope is affected by it.
+   */
+  sellSignal: import("../signals/sellWindow.service.js").SellWindowSignal;
   /** CF-PRICING-ENVELOPE (Drew, 2026-07-31). Canonical pricing surface —
    *  the single shape iOS + web both bind to. Additive to the flat legacy
    *  fields above (fairMarketValue, estimatedValue, predictedPrice, etc.),
@@ -825,6 +837,20 @@ export function composeHoldingWireShape(
       typeof (holding as any).confidence === "number"
         ? (holding as any).confidence
         : null,
+    // CF-SELLER-INTELLIGENCE-SELL-WINDOW (Drew, 2026-09-02): derived from
+    // the two lines directly above plus the holding's own lastUpdated. Pure
+    // and synchronous — no pool read, no price computed, so the portfolio
+    // envelope keeps its "this endpoint has never computed a price"
+    // property. A holding with no trend gets a `none` carrying the reason.
+    sellSignal: deriveSellWindowSignal({
+      trendIQ: (holding as any).trendIQ ?? null,
+      confidence:
+        typeof (holding as any).confidence === "number"
+          ? (holding as any).confidence
+          : null,
+      trendUpdatedAt:
+        typeof holding.lastUpdated === "string" ? holding.lastUpdated : null,
+    }),
     // CF-CH-THIN-COMP-PRIMARY (2026-06-26): conditional spread so the key
     // is OMITTED entirely on every non-CH-last-sale holding (the universal
     // case). Preserves byte-identical wire emission for the existing

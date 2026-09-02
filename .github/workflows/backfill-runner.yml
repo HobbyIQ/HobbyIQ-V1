@@ -296,6 +296,15 @@ on:
           # its own RUN_MINUTES budget and prints the marker, so a sample
           # longer than one budget relaunches like any other.
           - engine-backtest
+          # CF-A-SPLIT-ROW-POLLUTES-TWO-POOLS (Drew, 2026-09-02: "we need to go
+          # back and check ALL this way"). READ ONLY census of every row whose
+          # cardId and hobbyiqCardId name different cards -- the exact pool
+          # reader ORs both fields, so such a row prices two cards at once.
+          # Walks the whole 16.4M-row corpus in _ts windows (a field-vs-field
+          # predicate is not index-served and times out); slot/slots shard the
+          # row-balanced chunk list. Vendor-partition rows are exempt and
+          # counted, never flagged (#1650). Never writes, in any mode.
+          - census-split-identity
       apply:
         description: "Actually write (true) or dry-run only (false)"
         required: true
@@ -443,6 +452,21 @@ jobs:
           client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+
+      # GATE 2 for census-split-identity: the census is READ ONLY, in every
+      # mode, with no write path in the script at all. A dispatch carrying
+      # apply=true is therefore a dispatch whose author believed it would
+      # repair something -- and it would silently report instead, while they
+      # waited for a repair that was never coming. Refuse rather than run:
+      # a wrong belief about what a job did is exactly what the
+      # green-run-is-not-a-data-flow rule exists to stop. Report the finding
+      # first, then repair through an audited lane that actually writes.
+      - name: Refuse an APPLY dispatch of the read-only census
+        if: ${{ inputs.script == 'census-split-identity' && inputs.apply == true }}
+        shell: bash
+        run: |
+          echo "::error::census-split-identity is READ ONLY — it has no write path. Re-dispatch with apply=false; the repair is a separate audited lane."
+          exit 1
 
       - name: Fetch COSMOS_CONNECTION_STRING from HobbyIQ3 App Service
         shell: bash
@@ -679,6 +703,19 @@ jobs:
             echo "Triage libs confirmed: collision-triage, relocate-sold-comp"
           fi
 
+          # Same lesson again: the census's CLASSIFICATION RULE -- including
+          # the vendor-design exemption that keeps 13.5M designed rows out of
+          # the findings -- lives in a lib so the tests pin the code that runs.
+          # A dispatch that reached Cosmos and then died on a missing require
+          # would have walked the corpus for nothing.
+          if [ "${{ inputs.script }}" = "census-split-identity" ]; then
+            if [ ! -f "backend/scripts/lib/split-identity.cjs" ]; then
+              echo "::error::backend/scripts/lib/split-identity.cjs is missing — the census would read 16.4M rows and have no rule to classify them with"
+              exit 1
+            fi
+            echo "Census lib confirmed: split-identity"
+          fi
+
           # The wrapper SHELLS OUT, so its own presence proves nothing about
           # the scripts it calls. ingest-checklists-end-to-end passed this
           # check, scraped 349 products, then died on a child that had never
@@ -891,7 +928,19 @@ jobs:
           # drifts. The census JSON lands where the artifact step can find it;
           # the canary baseline is written by MODE=before and read by
           # MODE=after within one dispatch pair.
-          CENSUS_OUT: /tmp/rematch-census
+          # census-split-identity writes its own census to its own directory,
+          # so the two lanes' artifacts can never overwrite each other. Guarded
+          # on script for the same reason MODE tokens are: one name, one
+          # meaning, and no chance of a path leaking into another lane.
+          CENSUS_OUT: ${{ inputs.script == 'census-split-identity' && '/tmp/split-identity-census' || '/tmp/rematch-census' }}
+          # CENSUS_FROM_TS is deliberately NOT wired to a dispatch input. A
+          # relaunch re-reads its shard from the top, exactly as the rematch
+          # census does and for the same reason: the walk is READ ONLY, so
+          # there is no predicate that shrinks as it works, and a census that
+          # resumed from a cursor would be a census of a SUFFIX of the shard
+          # rather than of the shard. The re-read is cheap next to the
+          # alternative -- a partial census nobody can quote. The env var
+          # exists for a local operator narrowing a re-run by hand.
           BASELINE: /tmp/rematch-canary-baseline.json
           NODE_OPTIONS: "--max-old-space-size=8192"
         run: node "backend/scripts/${{ inputs.script }}.cjs" | tee /tmp/backfill.log
@@ -912,6 +961,49 @@ jobs:
           path: /tmp/rematch-census/
           if-no-files-found: warn
           retention-days: 90
+
+      # The split-identity census IS the product of this lane -- the flagged
+      # rows, their two addresses and the damaged-slug ranking are what a
+      # repair list is built from, and re-deriving them costs another walk of
+      # 16.4M rows. always(): a run that stopped at its budget still censused
+      # everything it reached.
+      - name: Upload the split-identity census
+        if: ${{ always() && inputs.script == 'census-split-identity' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: split-identity-census-slot-${{ inputs.slot }}-${{ github.run_id }}
+          path: /tmp/split-identity-census/
+          if-no-files-found: warn
+          retention-days: 90
+
+      # Split-identity census self-relaunch. Relaunch iff the budget marker
+      # printed (#1361), forwarding every input verbatim -- `apply` included
+      # (#1578: a report that relaunches as a write is the defect that rule
+      # exists to stop, and hardcoding EITHER value is how it happens). There
+      # is no live apply case to forward here anyway: the gate above refuses an
+      # apply dispatch of this script before it reaches Cosmos, so a relaunch
+      # carrying apply=true fails at that gate exactly as its parent did,
+      # loudly, instead of quietly running as something it was not asked to be.
+      #
+      # A shard that cannot finish inside one budget will relaunch forever
+      # without making progress, because the continuation restarts from the
+      # top (see CENSUS_FROM_TS above). That is a REAL limit and the fix is
+      # more slots, not a cursor: raise `slots` so each shard fits a budget.
+      # The banner prints planned vs classified rows, so a shard that never
+      # completes is visible in the log rather than silent.
+      - name: Self-relaunch census-split-identity until the shard is finished
+        if: ${{ !cancelled() && inputs.script == 'census-split-identity' }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
+            N=$(grep -aoE "flagged +[0-9,]+" /tmp/backfill.log | grep -oE "[0-9,]+" | tail -1)
+            echo "::notice::budget hit (flagged=${N:-0}) — re-dispatching slot ${{ inputs.slot }} to continue"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=census-split-identity -f apply="${{ inputs.apply }}" -f mode="${{ inputs.mode }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f limit="${{ inputs.limit }}"
+          else
+            echo "::notice::finished within budget — done, no re-dispatch."
+          fi
 
       # THE GREAT REMATCH self-relaunch. The census re-reads its shard from the
       # top each run (it is READ ONLY -- there is no predicate that shrinks as

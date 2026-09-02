@@ -302,6 +302,19 @@ struct PortfolioHoldingHeroCard: View {
                 // 2026-07-18: canonical-FMV caveats + provenance caption.
                 // Renders only when we're using the canonical value.
                 if canonicalValue != nil {
+                    // CF-IOS-RUNG-PARITY (Drew, 2026-09-02): the rung, in
+                    // the closed vocabulary, for the number ON SCREEN.
+                    //
+                    // The confidence chip below is a different claim and
+                    // does not replace this: it fires only for
+                    // `product-tier` or confidence < 0.4, so a
+                    // `sibling-estimate` (another card entirely) or a
+                    // `player-index-projection` (this card's cold sale
+                    // moved by other cards' sales) previously rendered with
+                    // NO caveat at all, reading exactly like an observed
+                    // number. The rung says which pool; the chip says how
+                    // sure; both are true and neither implies the other.
+                    canonicalRungChip
                     canonicalFmvCaptionBlock
                 }
 
@@ -399,6 +412,35 @@ struct PortfolioHoldingHeroCard: View {
             return true
         }
         return false
+    }
+
+    /// CF-IOS-RUNG-PARITY (Drew, 2026-09-02): the rung behind the
+    /// canonical headline.
+    ///
+    /// Reads `rungLabel`, NOT `method`. `toCanonicalFmvResponse` collapses
+    /// the engine's rung into a six-value legacy `method` while emitting
+    /// the rung unchanged, so `method` alone cannot tell a
+    /// `player-index-projection` from a `family-baseline`.
+    ///
+    /// NO STALENESS LINE HERE, deliberately. #1646's rule: the age must
+    /// come from the path that supplied the number, and the canonical-FMV
+    /// response carries no comp-pool age. `nearestGradedAnchor.daysOld` is
+    /// another rung's anchor and `lastPricedAt` is when WE priced, not when
+    /// the market last traded — neither dates this pool, and using one
+    /// would invent the fact. The card-detail surface, whose panel entry
+    /// does carry its own `daysSinceNewestSale`, is where the speculation
+    /// chip renders.
+    @ViewBuilder
+    private var canonicalRungChip: some View {
+        if let response = canonicalFmv {
+            ProvenanceChipView(
+                label: response.rungLabel,
+                compsUsed: response.provenance?.compsUsed ?? response.provenance?.sampleSize,
+                source: "canonical-fmv",
+                daysSinceNewestComp: nil
+            )
+            .padding(.top, 2)
+        }
     }
 
     /// Small caveat chip + one-line provenance summary. Hidden entirely

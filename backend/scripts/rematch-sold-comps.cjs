@@ -349,6 +349,10 @@ async function main() {
   // ── page the shard ────────────────────────────────────────────────────────
   const counts = { [K.AGREE]: 0, [K.IMPROVE]: 0, [K.CONFLICT]: 0, [K.UNDERIVABLE]: 0 };
   const byTier = new Map(), defects = new Map(), reasons = new Map(), samples = new Map(), subclasses = new Map();
+  // SPLIT-IDENTITY tallies, kept beside the class counts rather than inside
+  // them: a row is split OR NOT independently of which class it landed in.
+  const splitByClass = new Map(), splitSegments = new Map(), splitSamples = [];
+  let splitTotal = 0;
   const stats = { seen: 0, otherSlot: 0, intended: 0, written: 0, skipped: 0, failed: 0, duplicatesLeft: 0, alreadyGone: 0, notReached: 0 };
   const bump = (m, k, n = 1) => m.set(k, (m.get(k) ?? 0) + n);
   const sample = (klass, line) => { if (!samples.has(klass)) samples.set(klass, []); const a = samples.get(klass); if (a.length < SAMPLE_CAP) a.push(line); };
@@ -377,6 +381,20 @@ async function main() {
         storedSlug: row.cardId, baseDestSlug: der.baseSlug ?? null, baseDestBacked: baseBacked,
       });
       counts[res.klass]++;
+      // THE SPLIT-IDENTITY SIGNAL, tallied ACROSS classes (Drew 2026-09-02).
+      // The row's own two identity fields disagree, which the exact pool
+      // reader turns into one sale priced into two cards. It is orthogonal to
+      // the derivation class -- most split rows classify AGREE -- so it is
+      // counted per class as well as in total, or the AGREE-shaped majority
+      // would never appear in this banner at all.
+      if (res.splitIdentity) {
+        splitTotal++;
+        bump(splitByClass, `${res.klass}/${res.splitClass}`);
+        for (const seg of res.splitSegments ?? []) bump(splitSegments, seg);
+        if ((splitSamples.length) < SAMPLE_CAP) {
+          splitSamples.push(`${row.id}  [${res.klass}/${res.tier}]  ${row.cardId}  ||  ${row.hobbyiqCardId}${res.splitSegments?.length ? `  [${res.splitSegments.join(",")}]` : ""}`);
+        }
+      }
       if (res.subclass) bump(subclasses, `${res.klass}/${res.subclass}/${res.tier}`);
       bump(byTier, `${res.klass}/${res.tier}`);
       for (const a of K.defectAxes(res)) bump(defects, `${res.klass}  ${a}`);
@@ -413,6 +431,18 @@ async function main() {
     console.log(`\n  BASE-EVICTION  ${f(beAuto + beProt)} rows: on a parallel slug, own parallel field blank/Base, title names no finish,`);
     console.log(`                 checklist-backed base destination exists. ${f(beAuto)} AUTO (writable under audit), ${f(beProt)} PROTECTED (never).`);
   }
+  // SPLIT-IDENTITY: reported as its own block, not as a class. A split row
+  // has already been counted under whichever derivation class it landed in;
+  // this says how many of those rows ALSO contradict themselves.
+  if (splitTotal) {
+    console.log(`\n  SPLIT-IDENTITY  ${f(splitTotal)} rows (${pct(splitTotal)}) carry two identity fields naming DIFFERENT cards.`);
+    console.log(`                  The exact pool reader ORs cardId and hobbyiqCardId, so each is priced into TWO pools.`);
+    console.log(`                  Vendor-partition rows (cardId = a vendor product id) are exempt and NOT counted here (#1650).`);
+    console.log(`                  by derivation class: ${[...splitByClass].sort((a, b) => b[1] - a[1]).map(([k, n]) => `${k} ${f(n)}`).join(" | ")}`);
+    if (splitSegments.size) console.log(`                  differing segments: ${[...splitSegments].sort((a, b) => b[1] - a[1]).map(([k, n]) => `${k} ${f(n)}`).join(" | ")}`);
+    for (const line of splitSamples) console.log(`      ${line}`);
+    console.log(`                  The apply path lands BOTH fields, so an audited apply repairs the split with the re-key.`);
+  }
   console.log(`\n  top defect axes per class:`);
   for (const klass of [K.IMPROVE, K.CONFLICT]) {
     const rows = [...defects].filter(([k]) => k.startsWith(`${klass}  `)).sort((a, b) => b[1] - a[1]).slice(0, 10);
@@ -439,6 +469,14 @@ async function main() {
     // of CONFLICT, so an auditor summing both would double-count.
     subclasses: Object.fromEntries(subclasses),
     reasons: Object.fromEntries(reasons), samples: Object.fromEntries(samples),
+    // Orthogonal to `counts` -- a split row is ALSO counted in its derivation
+    // class, so these must never be summed with the four class totals.
+    splitIdentity: {
+      total: splitTotal,
+      byClass: Object.fromEntries(splitByClass),
+      segments: Object.fromEntries(splitSegments),
+      samples: splitSamples,
+    },
     stoppedAtBudget: !!stopReason, generatedAt: new Date().toISOString(),
   };
   const outFile = path.join(CENSUS_OUT.endsWith(".json") ? path.dirname(CENSUS_OUT) : CENSUS_OUT, `census-slot-${SLOT}.json`);

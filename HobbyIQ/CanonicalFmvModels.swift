@@ -66,6 +66,19 @@ struct CanonicalFmvResponse: Decodable, Hashable {
     /// String form for forward compatibility; parse into `methodEnum`
     /// only when known.
     let method: String?
+    /// CF-IOS-RUNG-PARITY (Drew, 2026-09-02) / CF-RUNG-LABEL (D16).
+    ///
+    /// The rung in the CLOSED vocabulary — the authority over `method`.
+    /// `toCanonicalFmvResponse` collapses the rung into a `method` drawn
+    /// from a SIX-value legacy enum (`CanonicalFmvMethod` above) while
+    /// emitting `rungLabel` unchanged, so a `player-index-projection` or a
+    /// `graded-pool-inverse` arrives here as some coarser method name and
+    /// the rung is the only field that still says what actually happened.
+    ///
+    /// Read this, not `method`, wherever provenance is shown. Nil against
+    /// an engine older than D16 — `describeRung` then says "rung not
+    /// reported" rather than assuming the best case.
+    let rungLabel: String?
     let confidence: Double?
     let provenance: CanonicalFmvProvenance?
     /// ISO string — never surfaced to the user directly.

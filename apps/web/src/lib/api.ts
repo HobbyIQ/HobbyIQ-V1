@@ -478,6 +478,27 @@ export interface PortfolioHolding {
    *  no-price guard at the store door. */
   reviewReason?: string | null;
   needsReview?: boolean | null;
+  /** CF-SELLER-INTELLIGENCE-SELL-WINDOW (Drew, 2026-09-02). The per-holding
+   *  timing call. Derived server-side from the holding's own trend + the
+   *  player index; never a valuation. Optional during the rollout window —
+   *  older endpoints omit it and the chip simply does not render. */
+  sellSignal?: {
+    signal: "none" | "watch" | "sell-window" | "hold";
+    horizon: "none" | "days-7-14" | "days-14-30";
+    signalClass: "price" | "attention";
+    /** One sentence with the numbers quoted. Show it verbatim — it is the
+     *  basis, and paraphrasing it would drop the evidence. */
+    basis: string;
+    reason?: string | null;
+    measures?: {
+      playerIndexPct?: number | null;
+      ownPoolPct?: number | null;
+      divergencePct?: number | null;
+      ownPoolSales?: number | null;
+      trendAgeDays?: number | null;
+      confidence?: number | null;
+    } | null;
+  } | null;
   /** CF-PRICING-ENVELOPE (Drew, 2026-07-31). Canonical pricing surface.
    *  Optional during the migration window — new endpoints emit it, older
    *  endpoints may still return only the legacy flat fields above.

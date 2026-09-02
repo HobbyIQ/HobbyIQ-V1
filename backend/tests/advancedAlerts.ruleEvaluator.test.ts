@@ -141,6 +141,12 @@ describe("sliceEstimate", () => {
       predictedPrice: 135,
       pricingConfidence: 78,
       trendIQ: { composite: 1.18, direction: "up", coverage: "full" },
+      // CF-SELLER-INTELLIGENCE-SELL-WINDOW (Drew, 2026-09-02): this
+      // fixture's trendIQ is the three-field SUMMARY with no `components`,
+      // so the derivation has no player index and no own-pool trajectory to
+      // compare and correctly declines. A summary-shaped trendIQ must never
+      // produce a timing call — there is nothing in it to time.
+      sellSignal: "none",
     });
   });
   it("handles missing fields with nulls", () => {
@@ -150,6 +156,10 @@ describe("sliceEstimate", () => {
       predictedPrice: null,
       pricingConfidence: null,
       trendIQ: null,
+      // No trendIQ at all → the signal is not derived (null), which is
+      // distinct from a derived "none": the alert condition treats null as
+      // "cannot see a transition" rather than as a state.
+      sellSignal: null,
     });
   });
 });

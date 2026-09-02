@@ -11,6 +11,7 @@ import { BulkEbayListModal } from "@/components/BulkEbayListModal";
 import { BulkCostBasisModal } from "@/components/BulkCostBasisModal";
 import { AddCardModal } from "@/components/AddCardModal";
 import { ProvenanceChip } from "@/components/ProvenanceChip";
+import { SellSignalChip } from "@/components/SellSignalChip";
 import { holdingProvenance } from "@/lib/rung";
 import { formatAsOf } from "@/lib/asOf";
 
@@ -893,6 +894,10 @@ function HoldingRow({ h }: { h: PortfolioHolding }) {
             </span>
           )}
           {value != null && <ProvenanceChip rung={provenance} source={provenance.source} />}
+          {/* CF-SELLER-INTELLIGENCE-SELL-WINDOW (Drew, 2026-09-02): the
+              timing call, beside the provenance of the number it is timing.
+              Renders nothing unless there is an actual call to make. */}
+          <SellSignalChip sellSignal={h.sellSignal} />
           {/* CF-IDENTITY-VERIFIED (Drew, 2026-07-27) + CF-VERIFIED-IS-CHECKLIST-
               BACKED (Drew, 2026-08-30): VERIFIED means this holding's identity
               is a checklist-backed catalog card — confirmed by you in Edit, by
