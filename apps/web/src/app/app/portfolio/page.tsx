@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
-import { fetchPortfolio, holdingDisplayValue, refreshAllHoldings, getRepriceStatus, exportPortfolio, valuationStatusOf, fmvPerUnitOf, syncEbaySold, type PortfolioResponse, type PortfolioHolding } from "@/lib/api";
+import { fetchPortfolio, holdingDisplayValue, refreshAllHoldings, getRepriceStatus, exportPortfolio, valuationStatusOf, fmvPerUnitOf, syncEbaySold, type PortfolioResponse, type PortfolioHolding, type BatchRepriceResult } from "@/lib/api";
 import { PortfolioDashboard } from "@/components/PortfolioDashboard";
 import { formatUSD, formatUSDCompact, formatPct, formatCardTitle, formatGrade } from "@/lib/format";
 import { PortfolioValueChart } from "@/components/PortfolioValueChart";
@@ -12,6 +12,7 @@ import { BulkCostBasisModal } from "@/components/BulkCostBasisModal";
 import { AddCardModal } from "@/components/AddCardModal";
 import { ProvenanceChip } from "@/components/ProvenanceChip";
 import { holdingProvenance } from "@/lib/rung";
+import { formatAsOf } from "@/lib/asOf";
 
 type SortKey = "value" | "cost" | "gainPct" | "gain" | "title";
 type SortDir = "asc" | "desc";
@@ -68,6 +69,51 @@ function matchesHealthFilter(h: PortfolioHolding, filter: HealthFilter): boolean
   }
 }
 
+/**
+ * CF-PORTFOLIO-REFRESH-ASYNC (2026-08-31, judged blocker) — extracted to a
+ * shared helper by CF-PORTFOLIO-FRESH-ON-OPEN (2026-09-02) so the on-open
+ * pass and the explicit "Refresh prices" button poll by IDENTICAL rules.
+ * Two copies of this loop would be two chances to reintroduce the bug it
+ * exists to prevent.
+ *
+ * The backend serves from 2 instances and the job map is per-process, so a
+ * poll load-balances onto the worker that did not dispatch about half the
+ * time. That worker answers `unknown-here` (or `idle`, when we could not
+ * name the run) — neither of which is a completion. Only a status this
+ * client watched SETTLE ends the poll; ignorance is a reason to ask again.
+ */
+type PollOutcome =
+  | { kind: "settled"; result: BatchRepriceResult | null }
+  | { kind: "error"; message: string }
+  | { kind: "deadline" };
+
+async function pollUntilSettled(
+  jobId: string | null,
+  timeoutMs = 5 * 60_000,
+): Promise<PollOutcome> {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    await new Promise((r) => setTimeout(r, 3_000));
+    // We never saw it land. The run and the 6h scheduled job both still write
+    // to Cosmos, so the prices really will appear — but claiming "complete"
+    // here would be a guess we have no basis for.
+    if (Date.now() > deadline) return { kind: "deadline" };
+    const st = await getRepriceStatus(jobId).catch(() => null);
+    if (!st) continue;
+    // Not-settled statuses, every one of them a keep-polling:
+    //   running       — this worker is doing the work
+    //   unknown-here  — the run is on the other instance
+    //   idle          — this worker has no entry; we DID dispatch, so this
+    //                   cannot mean "no run"
+    if (st.running || st.status === "running") continue;
+    if (st.status === "unknown-here" || st.status === "idle") continue;
+    if (st.status === "error") {
+      return { kind: "error", message: st.error ?? "Refresh failed." };
+    }
+    return { kind: "settled", result: st.result ?? null };
+  }
+}
+
 function PortfolioPageBody() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -86,6 +132,11 @@ function PortfolioPageBody() {
   const [bulkCostOpen, setBulkCostOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [refreshBanner, setRefreshBanner] = useState<string | null>(null);
+  // CF-PORTFOLIO-FRESH-ON-OPEN (Drew, 2026-09-02): "when going to the
+  // portfolio, seems like the cache pricing is there, it needs to be fresh
+  // each time." The on-open pass is a quieter thing than the button: no
+  // banner, just a subtle indicator, because the user did not ask for it.
+  const [autoRefreshing, setAutoRefreshing] = useState(false);
   const [exporting, setExporting] = useState<null | "csv" | "xlsx">(null);
   const [exportError, setExportError] = useState<string | null>(null);
   // CF-UX-CLEANUP #4: AddCardModal state. Also auto-opens when
@@ -124,6 +175,12 @@ function PortfolioPageBody() {
         if (cancelled) return;
         setData(res);
         setLoading(false);
+        // CF-PORTFOLIO-FRESH-ON-OPEN (Drew, 2026-09-02): the persisted values
+        // are already on screen at this point — that is the contract, and it
+        // is why this fires AFTER the read resolves rather than racing it.
+        // The refresh never gates the render; if it fails, the user still has
+        // a working portfolio showing honestly-labelled stored prices.
+        void runOnOpenRefresh();
       })
       .catch((err) => {
         if (cancelled) return;
@@ -133,7 +190,49 @@ function PortfolioPageBody() {
     return () => {
       cancelled = true;
     };
+    // Mount only: opening the page is the trigger. Re-running this on every
+    // render would dispatch a run per keystroke in the filter box; the
+    // server-side throttle would absorb it, but the right place to not do
+    // that is here.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  /**
+   * CF-PORTFOLIO-FRESH-ON-OPEN (Drew, 2026-09-02): the on-open pass.
+   *
+   * Deliberately quiet. It dispatches the SAME server-side reprice the
+   * "Refresh prices" button and the 6h cron use — one valuation path, all
+   * the same guards (swing alarm, union guard) — then swaps the new values
+   * in when they land. No banner: the user opened a page, they did not ask
+   * for a status report. Failures are swallowed for the same reason; the
+   * stored values on screen remain valid and labelled, and the 6h job is
+   * still the guaranteed catch-all.
+   *
+   * NO CLIENT-SIDE PRICING happens here or anywhere else: this function
+   * dispatches and then re-reads. Every number it puts on screen was
+   * computed by the server and persisted to Cosmos first.
+   */
+  async function runOnOpenRefresh() {
+    try {
+      const res = await refreshAllHoldings();
+      // Throttled is the EXPECTED answer on a second open inside the window.
+      // Nothing to wait for, nothing to say — the values on screen are
+      // already as fresh as a refresh would make them.
+      if (res.throttled) return;
+      setAutoRefreshing(true);
+      const landed = await pollUntilSettled(res.jobId ?? null);
+      // Re-read regardless of HOW the poll ended. Even on a deadline we may
+      // have values that landed mid-run, and this read is ~77ms.
+      const next = await fetchPortfolio().catch(() => null);
+      if (next) setData(next);
+      void landed;
+    } catch {
+      // Silent by design — see the doc comment. A 402 (entitlement) lands
+      // here too: a Starter user simply keeps their stored values.
+    } finally {
+      setAutoRefreshing(false);
+    }
+  }
 
   if (loading) {
     return (
@@ -175,6 +274,51 @@ function PortfolioPageBody() {
             {Math.max(0, data.summary.cardCount - data.summary.estimatedCount - data.summary.pendingCount)}
             {" "}with observed FMV · {data.summary.estimatedCount} estimated · {data.summary.pendingCount} pending
           </p>
+          {/*
+            CF-PORTFOLIO-FRESH-ON-OPEN (Drew, 2026-09-02): freshness, stated.
+            Values are ALWAYS the last persisted ones — the list endpoint has
+            never computed a price — so the page says how old they are rather
+            than letting them read as live.
+
+            The row holds a fixed min-height and the indicator sits in its own
+            slot, so values swapping in when the run lands never reflows the
+            header. `busy` ORs the server's view with our own dispatch: the
+            server's `repricing` is per-worker and reads false when the run is
+            on the other instance.
+          */}
+          {(() => {
+            const busy = autoRefreshing || refreshing || data.valuation?.repricing === true;
+            const asOf = formatAsOf(
+              data.valuation?.newestValuationAt ?? data.valuation?.oldestValuationAt,
+            );
+            return (
+              <p
+                className="text-xs mt-1 flex items-center gap-2"
+                style={{ color: "var(--hiq-muted-text)", minHeight: "1.25rem" }}
+              >
+                {asOf ? <span>Prices as of {asOf}</span> : null}
+                {busy && (
+                  <span
+                    className="inline-flex items-center gap-1.5"
+                    // aria-live so a screen reader hears the refresh start and
+                    // stop; it is otherwise a purely visual cue.
+                    aria-live="polite"
+                  >
+                    <span
+                      aria-hidden="true"
+                      className="inline-block rounded-full animate-pulse"
+                      style={{
+                        width: "6px",
+                        height: "6px",
+                        background: "var(--color-accent)",
+                      }}
+                    />
+                    Refreshing…
+                  </span>
+                )}
+              </p>
+            );
+          })()}
           {/* CF-DATA-HEALTH-DRILLDOWN chip: shows the active filter with
               a Clear button. Clicking Clear strips the query param. */}
           {activeFilter && (
@@ -228,7 +372,18 @@ function PortfolioPageBody() {
                 // persisted ones, which the banner says out loud.
                 const res = await refreshAllHoldings();
                 if (res.throttled) {
-                  setRefreshBanner("Refresh cooldown active — try again in a minute.");
+                  // CF-PORTFOLIO-FRESH-ON-OPEN (2026-09-02): say fresh-as-of,
+                  // not just "cooldown". Opening the page now dispatches a
+                  // refresh on its own, so the most common reason this button
+                  // is throttled is that the on-open pass ALREADY ran seconds
+                  // ago — "try again in a minute" would read as a failure when
+                  // the truth is the values are current.
+                  const asOf = formatAsOf(res.freshAsOf);
+                  setRefreshBanner(
+                    asOf
+                      ? `Already refreshed as of ${asOf} — these are current prices.`
+                      : "Just refreshed — these are current prices.",
+                  );
                 } else {
                   setRefreshBanner(
                     res.alreadyRunning
@@ -249,41 +404,20 @@ function PortfolioPageBody() {
                   //
                   // The rule now: only a status this client can see SETTLE
                   // ends the poll. Ignorance is a reason to ask again.
-                  const jobId = res.jobId ?? null;
-                  const deadline = Date.now() + 5 * 60_000;
-                  for (;;) {
-                    await new Promise((r) => setTimeout(r, 3_000));
-                    if (Date.now() > deadline) {
-                      // We never saw it land. Say exactly that — the run and
-                      // the 6h scheduled job both still write to Cosmos, so
-                      // the prices really will appear; claiming "complete"
-                      // here would be a guess we have no basis for.
-                      setRefreshBanner(
-                        "Still refreshing — prices will land on their own; reopen this page in a minute.",
-                      );
-                      break;
-                    }
-                    const st = await getRepriceStatus(jobId).catch(() => null);
-                    if (!st) continue;
-                    // Not-settled statuses, every one of them a keep-polling:
-                    //   running       — this worker is doing the work
-                    //   unknown-here  — the run is on the other instance
-                    //   idle          — this worker has no entry; we DID
-                    //                   dispatch, so this cannot mean "no run"
-                    if (st.running || st.status === "running") continue;
-                    if (st.status === "unknown-here" || st.status === "idle") continue;
-                    if (st.status === "error") {
-                      setRefreshBanner(st.error ?? "Refresh failed.");
-                      break;
-                    }
-                    // Reached only for an observed done/error.
-                    const r = st.result;
+                  const outcome = await pollUntilSettled(res.jobId ?? null);
+                  if (outcome.kind === "deadline") {
+                    setRefreshBanner(
+                      "Still refreshing — prices will land on their own; reopen this page in a minute.",
+                    );
+                  } else if (outcome.kind === "error") {
+                    setRefreshBanner(outcome.message);
+                  } else {
+                    const r = outcome.result;
                     setRefreshBanner(
                       r
                         ? `Refreshed ${r.repriced} of ${r.requested} · ${r.freshSkipped ?? 0} already fresh`
                         : "Refresh complete.",
                     );
-                    break;
                   }
                   const next = await fetchPortfolio().catch(() => null);
                   if (next) setData(next);

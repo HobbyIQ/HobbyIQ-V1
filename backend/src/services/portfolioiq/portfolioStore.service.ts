@@ -230,6 +230,32 @@ interface UserDoc {
   // deviceTokens[] extension is a follow-up.
   apnsDeviceToken?: string | null;
   apnsDeviceTokenUpdatedAt?: string | null;
+  /**
+   * CF-PORTFOLIO-FRESH-ON-OPEN (Drew, 2026-09-02): ms-epoch of the most
+   * recent reprice DISPATCH for this user, persisted on the user doc.
+   *
+   * WHY DURABLE AND NOT JUST THE IN-PROCESS MAP
+   * -------------------------------------------
+   * `_lastRepriceAt` is a per-process Map and App Insights shows 2 serving
+   * instances. Opening the portfolio now fires a refresh automatically, so
+   * the throttle is no longer protecting against a user mashing a button —
+   * it is the only thing standing between "Drew opens the tab twice" and
+   * two concurrent 68s valuation runs. Round-robin puts open #2 on the
+   * OTHER worker roughly half the time, where the in-process map is empty
+   * and the throttle silently passes. That is the known in-process-lock
+   * caveat ('cycle skipped' on both workers = surviving lock) pointed the
+   * other way: here the *absence* of shared state lets work through
+   * instead of blocking it.
+   *
+   * So the marker lives where both workers can see it: the user doc they
+   * both already read on every reprice and every portfolio GET. It is
+   * stamped at DISPATCH (before the pricing runs), not at completion —
+   * a marker written only on success would leave a 68s window in which
+   * every open starts another run.
+   *
+   * This is a throttle marker, never a price and never a cache of one.
+   */
+  lastRepriceDispatchAt?: number;
 }
 
 // ─── CF-PURCHASE-LEDGER-FOUNDATION (2026-07-12) ─────────────────────────────
@@ -5400,7 +5426,15 @@ export async function getPortfolioWithSummary(req: Request, res: Response) {
   // `valuation.repricing` is true while a run is working on this user's
   // holdings, and `oldestValuationAt` is the age of the stalest row so the UI
   // can show "as of …" instead of implying now.
-  const valuation = buildValuationFreshness(auth.userId, rawItems);
+  // The marker comes off the doc already in hand — no extra Cosmos read. This
+  // endpoint still computes NO price; it only reports how old the stored ones
+  // are. (CF-PORTFOLIO-FRESH-ON-OPEN, 2026-09-02.)
+  const valuation = buildValuationFreshness(
+    auth.userId,
+    rawItems,
+    Date.now(),
+    doc.lastRepriceDispatchAt ?? null,
+  );
   res.json({ success: true, userId: auth.userId, items, summary, valuation });
 }
 
@@ -5417,22 +5451,48 @@ export function buildValuationFreshness(
   userId: string,
   holdings: PortfolioHolding[],
   now = Date.now(),
+  persistedDispatchAt?: number | null,
 ): {
   repricing: boolean;
   oldestValuationAt: string | null;
   oldestValuationAgeMs: number | null;
+  newestValuationAt: string | null;
+  lastRepriceDispatchAt: string | null;
 } {
   let oldestMs: number | null = null;
+  let newestMs: number | null = null;
   for (const h of holdings) {
     const lu = (h as any).lastUpdated;
     const t = typeof lu === "string" ? Date.parse(lu) : typeof lu === "number" ? lu : NaN;
     if (!Number.isFinite(t) || t <= 0) continue;
     if (oldestMs === null || t < oldestMs) oldestMs = t;
+    if (newestMs === null || t > newestMs) newestMs = t;
   }
   return {
+    // CF-PORTFOLIO-FRESH-ON-OPEN (2026-09-02): `repricing` is still only what
+    // THIS worker can see. A run dispatched on the other instance reads false
+    // here — which is why the client also branches on its own dispatch, and
+    // why the durable marker below is reported separately: it is the one
+    // freshness fact both workers agree on.
     repricing: repriceJobs.isRunning(userId, now),
     oldestValuationAt: oldestMs === null ? null : new Date(oldestMs).toISOString(),
     oldestValuationAgeMs: oldestMs === null ? null : Math.max(0, now - oldestMs),
+    /**
+     * lastUpdated of the FRESHEST holding. The "as of" the UI shows: it is
+     * the honest answer to "how current is what I'm looking at" for the rows
+     * that did get repriced, where the oldest is the honest answer to "is
+     * anything here stale". Both are reported; neither is derived from the
+     * other.
+     */
+    newestValuationAt: newestMs === null ? null : new Date(newestMs).toISOString(),
+    /**
+     * When a reprice was last DISPATCHED for this user, from the durable
+     * marker — visible across instances, unlike `repricing`.
+     */
+    lastRepriceDispatchAt:
+      typeof persistedDispatchAt === "number" && Number.isFinite(persistedDispatchAt) && persistedDispatchAt > 0
+        ? new Date(persistedDispatchAt).toISOString()
+        : null,
   };
 }
 
@@ -9260,6 +9320,114 @@ export function getLastRepriceAt(userId: string): number | undefined {
 }
 
 /**
+ * CF-PORTFOLIO-FRESH-ON-OPEN (Drew, 2026-09-02): the throttle decision,
+ * as a pure function so it can be pinned without Cosmos or two processes.
+ *
+ * Takes BOTH candidate markers and uses the more recent:
+ *
+ *   inProcessAt — `_lastRepriceAt` on THIS worker. Fast, and correct
+ *                 whenever the previous open happened to land here.
+ *   persistedAt — `lastRepriceDispatchAt` off the user doc. Shared by
+ *                 every worker, which is the whole point: an open that
+ *                 load-balances onto the instance that has never seen
+ *                 this user still sees that a run started 40s ago.
+ *
+ * Max, not "prefer one": the persisted marker is stamped at dispatch and
+ * the in-process one at completion, so on a single worker mid-run the
+ * persisted value is the newer of the two, and after a run completes the
+ * in-process one is. Taking the max means neither ordering can produce a
+ * throttle window shorter than intended.
+ *
+ * Returns the decision AND the timestamp it was made against, so the skip
+ * response can say fresh-as-of instead of a bare "throttled" — a client
+ * told only "no" cannot tell a working system from a broken one.
+ */
+export function evaluateRepriceThrottle(args: {
+  inProcessAt?: number | null;
+  persistedAt?: number | null;
+  throttleMs: number;
+  now?: number;
+}): {
+  throttled: boolean;
+  /** The marker the decision was made against, ms epoch; null if none. */
+  lastAt: number | null;
+  /** ms until the throttle lifts; 0 when not throttled. */
+  retryAfterMs: number;
+} {
+  const now = args.now ?? Date.now();
+  const candidates = [args.inProcessAt, args.persistedAt].filter(
+    (t): t is number => typeof t === "number" && Number.isFinite(t) && t > 0,
+  );
+  const lastAt = candidates.length > 0 ? Math.max(...candidates) : null;
+  if (args.throttleMs <= 0 || lastAt === null) {
+    return { throttled: false, lastAt, retryAfterMs: 0 };
+  }
+  const elapsed = now - lastAt;
+  // A marker from the future (clock skew between instances) must not throttle
+  // forever — treat anything not strictly inside the window as passable.
+  if (elapsed < 0 || elapsed >= args.throttleMs) {
+    return { throttled: false, lastAt, retryAfterMs: 0 };
+  }
+  return { throttled: true, lastAt, retryAfterMs: args.throttleMs - elapsed };
+}
+
+/**
+ * CF-PORTFOLIO-FRESH-ON-OPEN (2026-09-02): read the durable dispatch marker.
+ *
+ * Reads the user doc, which readUserDoc serves from its cache on the hot
+ * path — the same doc the reprice is about to read anyway. Never throws:
+ * a Cosmos hiccup degrades the throttle to in-process-only (the previous
+ * behaviour), it does not fail the open.
+ */
+export async function readPersistedRepriceDispatchAt(
+  userId: string,
+): Promise<number | null> {
+  try {
+    const doc = await readUserDoc(userId);
+    const t = doc.lastRepriceDispatchAt;
+    return typeof t === "number" && Number.isFinite(t) && t > 0 ? t : null;
+  } catch (err) {
+    console.warn(
+      JSON.stringify({
+        event: "reprice_throttle_marker_read_failed",
+        source: "portfolioStore.service",
+        userId,
+        error: (err as Error)?.message ?? String(err),
+      }),
+    );
+    return null;
+  }
+}
+
+/**
+ * CF-PORTFOLIO-FRESH-ON-OPEN (2026-09-02): stamp the durable dispatch marker.
+ *
+ * Called at DISPATCH, before the pricing work — see the field's doc comment
+ * for why completion would be too late. Best-effort: if this write fails the
+ * run still proceeds (the in-process marker still guards the common case),
+ * so a marker write can never cost the user their refresh.
+ */
+export async function stampRepriceDispatchMarker(
+  userId: string,
+  now = Date.now(),
+): Promise<void> {
+  try {
+    const doc = await readUserDoc(userId);
+    doc.lastRepriceDispatchAt = now;
+    await writeUserDoc(userId, doc);
+  } catch (err) {
+    console.warn(
+      JSON.stringify({
+        event: "reprice_throttle_marker_write_failed",
+        source: "portfolioStore.service",
+        userId,
+        error: (err as Error)?.message ?? String(err),
+      }),
+    );
+  }
+}
+
+/**
  * CF-REVIEW-QUEUE-CLEAN-DATA (2026-07-12): reprice ONE holding immediately.
  * Called fire-and-forget after a review-queue confirm with a picked cardId
  * so the user sees the clean data reflected in inventory pricing without
@@ -10651,18 +10819,41 @@ export async function runBatchReprice(req: Request, res: Response) {
   // Apply the user throttle HERE, synchronously, so a spamming client is
   // still cheap to answer and we don't spawn a run just to have it
   // short-circuit. repriceHoldingsForUser re-checks it anyway.
-  const lastAt = getLastRepriceAt(auth.userId);
-  if (throttleMs > 0 && lastAt && Date.now() - lastAt < throttleMs) {
+  //
+  // CF-PORTFOLIO-FRESH-ON-OPEN (Drew, 2026-09-02): the throttle now consults
+  // the DURABLE marker on the user doc as well as this worker's in-process
+  // map. Opening the portfolio dispatches a refresh automatically, so two
+  // opens a minute apart must collapse to one reprice even when they land on
+  // different instances — which, with 2 serving workers, is about half the
+  // time. In-process alone would have let the second one through.
+  const persistedAt = await readPersistedRepriceDispatchAt(auth.userId);
+  const decision = evaluateRepriceThrottle({
+    inProcessAt: getLastRepriceAt(auth.userId) ?? null,
+    persistedAt,
+    throttleMs,
+  });
+  if (decision.throttled) {
     return res.status(202).json({
       accepted: false,
       status: "throttled" as const,
       throttled: true,
-      retryAfterMs: Math.max(0, throttleMs - (Date.now() - lastAt)),
+      retryAfterMs: decision.retryAfterMs,
+      // Say fresh-as-of, not just "no". A skip that reports only that it
+      // skipped is indistinguishable from a broken refresh; this tells the
+      // client (and the UI) exactly how current the values on screen are.
+      freshAsOf:
+        decision.lastAt !== null ? new Date(decision.lastAt).toISOString() : null,
+      freshAgeMs: decision.lastAt !== null ? Math.max(0, Date.now() - decision.lastAt) : null,
       stale: true,
     });
   }
 
   const job = repriceJobs.markStarted(auth.userId);
+  // Stamp the durable marker BEFORE the work starts, so a concurrent open on
+  // the other instance sees it immediately rather than 68s from now. Awaited
+  // (not fire-and-forget) precisely because the next open may arrive during
+  // the very next event-loop turn.
+  await stampRepriceDispatchMarker(auth.userId, job.startedAt);
   // Fire-and-forget. Errors are captured onto the job entry and structured-
   // logged; they must never reject into an unhandled rejection, and there is
   // no response left to fail — the client already has its 202.
