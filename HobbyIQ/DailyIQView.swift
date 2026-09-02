@@ -82,10 +82,23 @@ struct DailyIQView: View {
                     )
                 }
 
-                // PR #546 (2026-07-17): Action Plan hero — sorted per-
-                // holding verdict feed. Self-suppresses when the response
-                // is nil / has no actions.
-                actionPlanSection
+                // CF-MARKET-INDEXES (#1644, Drew 2026-09-02): the per-sport
+                // index strip + the Action Plan hero, grouped so this
+                // VStack's child count is unchanged (it was already at 11).
+                //
+                // The strip is mounted HERE — above the segment control and
+                // OUTSIDE the `.lockedOverlay` phase gate on the two
+                // segments below — so a locked or errored brief does not
+                // take the strip down with it. Same placement rule the web
+                // component follows on the DailyIQ page.
+                VStack(spacing: 16) {
+                    MarketIndexesStrip()
+
+                    // PR #546 (2026-07-17): Action Plan hero — sorted per-
+                    // holding verdict feed. Self-suppresses when the response
+                    // is nil / has no actions.
+                    actionPlanSection
+                }
 
                 // PR #556 (2026-07-17): New Drops banner opens a sheet
                 // with recent CH catalog additions.

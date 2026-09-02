@@ -23,6 +23,18 @@ struct MarketTrendView: View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: HobbyIQTheme.Spacing.large) {
                 heroCard
+
+                // CF-MARKET-INDEXES (#1644, Drew 2026-09-02): the per-sport
+                // index strip, above the window picker because it is not
+                // scoped by it — the index is a 180d series, the picker
+                // below drives the movers list only.
+                //
+                // Mounted OUTSIDE `.lockedOverlay`'s subject? No: this whole
+                // screen is gated, and the strip is part of the screen the
+                // gate covers. The DailyIQ mount is the one that must sit
+                // outside its host's phase gate.
+                MarketIndexesStrip()
+
                 windowPicker
 
                 if let error {
