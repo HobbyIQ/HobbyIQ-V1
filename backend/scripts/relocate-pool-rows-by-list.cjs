@@ -69,6 +69,45 @@ if (RAW_SCOPE && !RAW_SCOPE.endsWith(".json")) {
 const SCOPE = RAW_SCOPE || DEFAULT_LIST;
 const f = (n) => Number(n).toLocaleString();
 
+/**
+ * CF-ONE-CARD-ONE-ROW-ONE-POOL -- a moved row carries ONE identity.
+ *
+ * A sold_comps row has TWO identity fields: `cardId` (the partition key) and
+ * `hobbyiqCardId` (what the pricing engine reads). The exact-pool reader ORs
+ * them, so a row whose two halves name different cards is pulled into BOTH
+ * pools -- and a relocation that moves only one half has not moved the sale,
+ * it has duplicated its influence.
+ *
+ * This lane used to rewrite hobbyiqCardId only when it already equalled
+ * `from`:
+ *
+ *     if (String(doc0.hobbyiqCardId ?? "") === from) keep.hobbyiqCardId = to;
+ *
+ * That guard is false for exactly the population these repairs target. A
+ * split-identity row is one whose hobbyiqCardId is ALREADY something other
+ * than its cardId, so the equality never held, the partition moved, the
+ * hobbyiqCardId stayed, and the old pool kept the row. The four-values apply
+ * half-moved 44 Gonzalez rows this way: every entry named
+ * fromCardId=...bowman-chrome:cpa-jg:refractor:auto:num-499 while the stored
+ * hobbyiqCardId read ...bowman:cpa-jg:refractor:auto:num-499 -- a THIRD slug,
+ * equal to neither `from` nor `to`, so the guard was false 44 times out of 44.
+ * Verification counted partitions only and looked exact.
+ *
+ * The rule has no exceptions: when an entry moves a row to `to`, both fields
+ * land at `to`. A stored third slug is still overwritten -- it is by
+ * definition not where this row belongs -- but it is RETURNED so the caller
+ * can name it in the row's outcome line, because silently discarding an
+ * identity we did not expect is how the first half-move went unnoticed.
+ *
+ * Returns { hobbyiqCardId, thirdSlug } where `thirdSlug` is the discarded
+ * stored value when it named neither `from` nor `to`, and null otherwise.
+ */
+function planRelocatedIdentity({ storedHobbyiqCardId, from, to }) {
+  const stored = String(storedHobbyiqCardId ?? "").trim();
+  const thirdSlug = stored && stored !== from && stored !== to ? stored : null;
+  return { hobbyiqCardId: to, thirdSlug };
+}
+
 async function main() {
   const { CosmosClient } = require("@azure/cosmos");
   const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
@@ -117,6 +156,7 @@ async function main() {
   };
 
   let relocated = 0, repointed = 0, alreadyRight = 0, notFound = 0, failed = 0, duplicatesLeft = 0;
+  let thirdSlug = 0;
   const intended = entries.length;
 
   for (const e of entries) {
@@ -161,17 +201,27 @@ async function main() {
 
     const keep = stripSystem(doc0);
     keep.cardId = to;
+    // A moved row carries ONE identity. Both fields land at `to`; a third slug
+    // in the stored hobbyiqCardId is overwritten too, and named in the log.
+    const identity = planRelocatedIdentity({ storedHobbyiqCardId: doc0.hobbyiqCardId, from, to });
+    keep.hobbyiqCardId = identity.hobbyiqCardId;
+    if (identity.thirdSlug) {
+      thirdSlug++;
+      console.log(`      THIRD SLUG: stored hobbyiqCardId was neither from nor to`);
+      console.log(`                  ${identity.thirdSlug.slice(0, 62)}`);
+      console.log(`               -> ${to.slice(0, 62)}`);
+    }
     // A row that moves partition must carry the hash of its NEW cardId, or the
-    // store's pre-write dedup can never match it again.
+    // store's pre-write dedup can never match it again. Hashed AFTER both
+    // identity fields are final.
     keep.contentHash = contentHashOf(keep);
-    // hobbyiqCardId is what the engine reads; a move that left it pointing at
-    // the old card would move the row and not the sale.
-    if (String(doc0.hobbyiqCardId ?? "") === from) keep.hobbyiqCardId = to;
 
     try {
       const res = await relocateSoldComp(pool, {
         keep, drop: [{ id, cardId: from }], retry,
-        verifyFields: ["cardId", "price", "soldAt", "contentHash"],
+        // hobbyiqCardId is verified, so a half-move FAILS instead of reporting
+        // success: the read-back must show the field actually landed at `to`.
+        verifyFields: ["cardId", "hobbyiqCardId", "price", "soldAt", "contentHash"],
       });
       if (res.ok) relocated++;
       else {
@@ -196,6 +246,7 @@ async function main() {
   console.log(`  not found at fromCardId ${f(notFound)}`);
   console.log(`  failed                  ${f(failed)}`);
   console.log(`  duplicates left in pool ${f(duplicatesLeft)}   <- must be 0`);
+  console.log(`  third-slug hobbyiqCardId ${f(thirdSlug)}   <- overwritten to the target, listed above`);
   if (APPLY) {
     reportWrites({
       job: "relocate-pool-rows-by-list", intended,
@@ -208,4 +259,4 @@ if (require.main === module) {
   main().catch((e) => { console.error("FATAL:", e?.stack || e?.message); process.exit(3); });
 }
 
-module.exports = { DEFAULT_LIST, SCOPE, APPLY };
+module.exports = { DEFAULT_LIST, SCOPE, APPLY, planRelocatedIdentity };
