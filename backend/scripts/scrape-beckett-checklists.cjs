@@ -13,12 +13,25 @@
  * own list, and it is the only thing that can contradict a sale.
  *
  * Beckett's baseball checklist archive runs 29 pages, roughly 1,100 set pages,
- * each linking a workbook at a predictable address:
+ * each linking a workbook. The host has MOVED: workbooks now serve from
  *
- *     https://img.beckett.com/news/news-content/uploads/YYYY/MM/<Set>-Checklist.xlsx
+ *     https://beckett-www.s3.amazonaws.com/news/news-content/uploads/YYYY/MM/<Set>-Checklist.xlsx
+ *
+ * and the old img.beckett.com form documented here until 2026-09-01 is stale.
+ * The extraction regex below is host-agnostic and was never wrong -- only this
+ * comment was, which is worth saying because a reader who trusts it will go
+ * looking for a bug in working code.
  *
  * The page 403s a plain fetch and serves fine with a browser user-agent, which
  * is why this exists rather than a WebFetch.
+ *
+ * THE ARCHIVE INDEX IS BASEBALL-ONLY (measured 2026-09-01: all 29 pages walked
+ * live -> 719 set pages, 708 baseball, 1 basketball, 1 football, 1 soccer; the
+ * nested basketball/football category 404s in every form). --sport therefore
+ * cannot reach, e.g., 2020-21 Panini Prizm Basketball. --urls is the escape:
+ * hand it the set page (or the workbook) directly and the archive walk is
+ * skipped. Same shape as the hobbymonitor direct-URL lane, for the same
+ * reason -- a release the index cannot name.
  *
  * WHAT IT DOES NOT DO. It does not write to Cosmos. Output is the canonical
  * CSV plus a manifest per set, staged for review -- a scraper that wrote
@@ -34,6 +47,7 @@
  *   node backend/scripts/scrape-beckett-checklists.cjs \
  *     [--sport=baseball] [--pages=29] [--limit=N] [--delayMs=1200]
  *     [--outDir=C:/tmp/beckett-bulk] [--skipExisting]
+ *     [--urls=<setPageOrWorkbookUrl>[,<url>...]]
  */
 const fs = require("node:fs");
 const path = require("node:path");
@@ -49,6 +63,10 @@ const LIMIT = Number(arg("limit", "0")) || Infinity;
 const DELAY_MS = Number(arg("delayMs", "1200"));
 const OUT_DIR = arg("outDir", "C:/tmp/beckett-bulk");
 const SKIP_EXISTING = process.argv.includes("--skipExisting");
+// Direct-URL lane: comma-separated set pages and/or workbook URLs. When given,
+// the archive walk is skipped entirely -- the index is baseball-only and
+// cannot name these releases.
+const DIRECT_URLS = String(arg("urls", "")).split(",").map((s) => s.trim()).filter(Boolean);
 
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36";
 const ARCHIVE = (p) =>
@@ -73,6 +91,19 @@ async function get(url, binary = false) {
  * keys a season product.
  */
 function identify(url) {
+  // A workbook URL carries the same identity in its FILENAME, one segment
+  // deeper and with "-Checklist[-N].xlsx" where a page says "-cards":
+  //   .../uploads/2021/03/2020-21-Panini-Prizm-Basketball-Checklist-1.xlsx
+  // The direct-URL lane accepts either form, so both parse here rather than
+  // the caller guessing which one it was handed.
+  if (/\.xlsx?$/i.test(url)) {
+    const file = decodeURIComponent((url.split("/").pop() || "").replace(/\.xlsx?$/i, ""));
+    const w = file.match(/^((?:19|20)\d{2})(?:-\d{2})?-(.+?)-(baseball|basketball|football|hockey|soccer|wrestling)-checklist(?:-\d+)?$/i);
+    if (!w) return null;
+    const [, year, middle, sport] = w;
+    const setName = middle.split("-").map((x) => (x.length > 2 ? x[0].toUpperCase() + x.slice(1).toLowerCase() : x.toLowerCase())).join(" ");
+    return { year: Number(year), sport: sport.toLowerCase(), setKey: slugify(middle), setName, slug: slugify(file), xlsxUrl: url };
+  }
   const slug = (url.match(/\/news\/([^/]+)\/?$/) || [])[1] || "";
   const m = slug.match(/^((?:19|20)\d{2})(?:-\d{2})?-(.+?)-(baseball|basketball|football|hockey|soccer|wrestling)-cards$/);
   if (!m) return null;
@@ -85,18 +116,40 @@ async function main() {
   fs.mkdirSync(OUT_DIR, { recursive: true });
   const converter = path.join(__dirname, "convertBeckettChecklistXlsx.cjs");
 
-  // ── 1. walk the archive ──────────────────────────────────────────────────
-  const setUrls = new Set();
-  for (let p = 1; p <= PAGES; p++) {
-    const html = await get(ARCHIVE(p));
-    await sleep(DELAY_MS);
-    if (!html) { console.error(`  archive page ${p} unreachable`); continue; }
-    for (const m of html.matchAll(/https:\/\/www\.beckett\.com\/news\/[a-z0-9-]+-cards\//g)) setUrls.add(m[0]);
-    process.stderr.write(`\r  archive page ${p}/${PAGES}  sets=${setUrls.size}   `);
+  // ── 1. the work list: direct URLs, or a walk of the archive ──────────────
+  let urls;
+  if (DIRECT_URLS.length) {
+    urls = DIRECT_URLS;
+    console.log(`direct-URL lane: ${f(urls.length)} url(s), archive walk SKIPPED`);
+    for (const u of urls) console.log(`  ${u}`);
+    console.log("");
+  } else {
+    const setUrls = new Set();
+    for (let p = 1; p <= PAGES; p++) {
+      const html = await get(ARCHIVE(p));
+      await sleep(DELAY_MS);
+      if (!html) { console.error(`  archive page ${p} unreachable`); continue; }
+      for (const m of html.matchAll(/https:\/\/www\.beckett\.com\/news\/[a-z0-9-]+-cards\//g)) setUrls.add(m[0]);
+      process.stderr.write(`\r  archive page ${p}/${PAGES}  sets=${setUrls.size}   `);
+    }
+    process.stderr.write("\n");
+    urls = [...setUrls];
+    console.log(`${f(urls.length)} set pages indexed\n`);
+
+    // AN EMPTY SCRAPE IS A FAILURE, not a quiet success. Exiting 0 here let the
+    // end-to-end wrapper record "beckett-acquired" and walk on to an ingest
+    // with nothing staged -- the same hole scrape-checklistinsider.cjs closed
+    // at its own sitemap step. Mirrored here because Beckett 403s a plain
+    // fetch: an IP block on the runner looks EXACTLY like an empty archive.
+    if (!urls.length) {
+      console.error(`FATAL: 0 set pages indexed across ${PAGES} archive page(s).`);
+      console.error("       The archive answers 200 from a residential IP and 403s an unbranded");
+      console.error("       fetch, so suspect an IP block or a user-agent rejection on the runner");
+      console.error("       before suspecting the regex. Read the HTTP lines above.");
+      console.error("       For a release the index cannot name, use --urls=<setPage|workbook>.");
+      process.exit(1);
+    }
   }
-  process.stderr.write("\n");
-  const urls = [...setUrls];
-  console.log(`${f(urls.length)} set pages indexed\n`);
 
   let done = 0, withXlsx = 0, converted = 0, rows = 0, noXlsx = 0, failed = 0, skipped = 0;
   const report = [];
@@ -111,11 +164,14 @@ async function main() {
     if (SKIP_EXISTING && fs.existsSync(csvPath)) { skipped++; continue; }
 
     try {
-      const html = await get(url);
-      await sleep(DELAY_MS);
-      if (!html) { failed++; report.push({ url, issue: "page unreachable" }); continue; }
-
-      const xlsxUrl = (html.match(/https?:\/\/[^"' ]+\.xlsx?/) || [])[0];
+      // A direct workbook URL is already the address; there is no page to fetch.
+      let xlsxUrl = id.xlsxUrl;
+      if (!xlsxUrl) {
+        const html = await get(url);
+        await sleep(DELAY_MS);
+        if (!html) { failed++; report.push({ url, issue: "page unreachable" }); continue; }
+        xlsxUrl = (html.match(/https?:\/\/[^"' ]+\.xlsx?/) || [])[0];
+      }
       if (!xlsxUrl) {
         // A set page with no workbook is a real gap in THEIR coverage, not a
         // parse failure -- recorded so the two never look alike.

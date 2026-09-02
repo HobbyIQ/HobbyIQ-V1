@@ -702,6 +702,34 @@ jobs:
           # budget relaunch deliberately does NOT forward mode: a continuation
           # reuses the cache its own first pass just refreshed.
           FORCE_ACQUIRE: ${{ inputs.script == 'ingest-checklists-end-to-end' && inputs.mode == 'force-acquire' && 'true' || '' }}
+          # CF-FORCE-ACQUIRE-PIERCES-ALL-CACHE-STATE (2026-09-01). There are TWO
+          # caches between a dispatch and a written row, and force-acquire was
+          # only piercing one. FORCE_ACQUIRE re-scrapes; the per-CSV `.ingested`
+          # marker then makes ingest-checklist-csv-to-catalog skip the very
+          # files that scrape just refreshed. That zeroed 2025 Rookies & Stars:
+          # a clean 605-page scrape staged 504 CSVs / 2,398,591 card rows and
+          # ingested none of them. REINGEST clears the marker, and it is wired
+          # from the SAME guarded expression -- one mode, one meaning, both
+          # caches -- rather than a new input (dispatch is at 24 of 25).
+          #
+          # NOT the same as MODE=reingest below. That token is the global
+          # `mode` input, so `mode=force-acquire` makes the end-to-end script's
+          # own MODE==='reingest' test false by construction; the two can never
+          # both be satisfied by one dispatch. This env var is what force-acquire
+          # uses to say the same thing. The budget relaunch keeps NOT forwarding
+          # mode: a continuation reuses the cache its own first pass refreshed,
+          # and must not re-ingest what it already landed.
+          REINGEST: ${{ inputs.script == 'ingest-checklists-end-to-end' && inputs.mode == 'force-acquire' && 'true' || '' }}
+          # The Beckett archive index is baseball-only (all 29 pages walked
+          # live 2026-09-01: 719 set pages, 708 baseball; the nested basketball
+          # and football categories 404 in every form), so no `sports` value
+          # reaches a basketball release. BECKETT_URLS is the direct-URL lane --
+          # a set page or the workbook itself -- carried on the existing
+          # `titles` input, which the header above already documents as the
+          # spare carrier for a lane that needs an address rather than a name.
+          # ingest-checklists-end-to-end ONLY; BCP_TITLES reads the same input
+          # for its own lane and the guard keeps them from crossing.
+          BECKETT_URLS: ${{ inputs.script == 'ingest-checklists-end-to-end' && inputs.titles || '' }}
           # CF-ONE-NAME-FORMAT-FOR-EVERY-CARD: normalize-catalog-format owns one
           # partition per dispatch, computed from live row counts at startup and
           # balanced by row count (2025 alone is 7.1M, ~400x a vintage year).
