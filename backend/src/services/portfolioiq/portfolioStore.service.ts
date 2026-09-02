@@ -32,7 +32,7 @@ import {
 } from "./holdingSaveDeferredWork.js";
 // CF-ONE-VALUATION-PATH (D17, 2026-08-30): the persist site prices the exact
 // pool through the ONE valuation entry (holdingValuation → valueIdentity).
-import { valueHoldingThroughOneEntry } from "./holdingValuation.js";
+import { valueHoldingThroughOneEntry, holdingGrade as holdingGradeOf } from "./holdingValuation.js";
 import { isPriceFromOurPoolEnabled, priceHoldingFromOurPool } from "./priceFromOurPool.service.js";
 import { composeHoldingWireShape, composePortfolioListResponse } from "./responseAssembly.js";
 // CF-PORTFOLIO-REFRESH-ASYNC (2026-08-31): background-run tracker for the
@@ -3145,8 +3145,11 @@ async function gateEstimateAgainstExactPool(input: {
   }
   const entryDecided = entry.outcome !== "unresolved";
   const gCo = holding.gradeCompany ? String(holding.gradeCompany).trim() : null;
-  const gValRaw = (holding as { gradeValue?: unknown }).gradeValue;
-  const gVal = typeof gValRaw === "number" ? gValRaw : (gValRaw ? Number(gValRaw) : null);
+  // CF-EXACT-GRADE-OUTRANKS-CROSS-GRADE (2026-09-02): NaN is not a grade.
+  // A bare Number(...) here yielded NaN on an unparseable gradeValue, which
+  // rendered the tier "PSA NaN", matched nothing, and demoted a real
+  // exact-grade pool to cross-grade-fallback. holdingGrade already filters it.
+  const gVal = holdingGradeOf(holding as PortfolioHolding)?.value ?? null;
   let exact: ExactPoolPrice | null = null;
   if (!entryDecided) {
     try {
@@ -3286,9 +3289,8 @@ async function autoPriceHolding(
       const gCo = (holding as any).gradeCompany
         ? String((holding as any).gradeCompany).trim()
         : null;
-      const gVal = typeof (holding as any).gradeValue === "number"
-        ? (holding as any).gradeValue
-        : ((holding as any).gradeValue ? Number((holding as any).gradeValue) : null);
+      // CF-EXACT-GRADE-OUTRANKS-CROSS-GRADE (2026-09-02): NaN is not a grade -- see gateEstimateAgainstExactPool.
+      const gVal = holdingGradeOf(holding as PortfolioHolding)?.value ?? null;
       // CF-EXACT-POOL-FIRST-BY-CHECKLIST-ID (D4 PR 5, 2026-08-29). The
       // checklist identity (hobbyiqCardId) ALONE first, then its twin, then
       // the cardId union — exactPoolSupremacy.unifiedIdentityAttempts. The
@@ -4493,8 +4495,8 @@ async function autoPriceHolding(
     try {
       const { computeHobbyIqFmv } = await import("./hobbyIqFmv.service.js");
       const gCo = (updated as any).gradeCompany ? String((updated as any).gradeCompany).trim() : null;
-      const gVal = typeof (updated as any).gradeValue === "number" ? (updated as any).gradeValue
-        : ((updated as any).gradeValue ? Number((updated as any).gradeValue) : null);
+      // CF-EXACT-GRADE-OUTRANKS-CROSS-GRADE (2026-09-02): NaN is not a grade -- see gateEstimateAgainstExactPool.
+      const gVal = holdingGradeOf(updated as PortfolioHolding)?.value ?? null;
       const hiq = await computeHobbyIqFmv({
         hobbyiqCardId: finalSlug,
         gradeCompany: gCo,
@@ -9619,9 +9621,8 @@ export async function repriceHoldingsForUser(
           const bGCo = (holding as any).gradeCompany
             ? String((holding as any).gradeCompany).trim()
             : null;
-          const bGVal = typeof (holding as any).gradeValue === "number"
-            ? (holding as any).gradeValue
-            : ((holding as any).gradeValue ? Number((holding as any).gradeValue) : null);
+          // CF-EXACT-GRADE-OUTRANKS-CROSS-GRADE (2026-09-02): NaN is not a grade -- see gateEstimateAgainstExactPool.
+          const bGVal = holdingGradeOf(holding as PortfolioHolding)?.value ?? null;
           // CF-EXACT-POOL-FIRST-BY-CHECKLIST-ID (D4 PR 5): hobbyiqCardId alone
           // first, then its twin, then the cardId union.
           const bExactEarly = await priceHoldingFromExactPool(holding as HoldingIdentityFields, {
