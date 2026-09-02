@@ -66,6 +66,25 @@
  * invent one -- a new filter surface would have to be threaded through every
  * one of those read paths before it excluded anything at all.
  *
+ * KNOWN RESIDUAL RISK (R2 judge, disclosed before apply-true-dupes runs).
+ * "Every FMV READ path filters it" is true. The pre-write INGEST dedup is not a
+ * read path and does NOT filter it: soldCompsStore.service.ts:1495 and
+ * persistVendorSalesToPool.service.ts:1081 both query contentHash with no
+ * flaggedWrong predicate, and scoreForCanonical never reads the flag. So a row
+ * this script flags can still (a) outscore and silently drop a genuine later
+ * sale that collides on the full contentHash, or (b) be HARD DELETED at
+ * soldCompsStore.service.ts:1524 when that later sale outscores it -- losing
+ * the provenance trail this script wrote.
+ *
+ * This is pre-existing (no file under backend/src is touched by this branch)
+ * and narrow: it needs a real later sale matching the flagged row on card,
+ * parallel, auto, grade, price AND soldAt-to-the-second. It is NOT fixed here,
+ * because fixing it means changing live pricing ingest and a deploy. It is
+ * called out because THIS script is what mass-produces flagged rows, in
+ * partitions that actively receive new sales -- so the volume of rows exposed
+ * to that gap is what apply-true-dupes changes. Fix the ingest queries before
+ * running apply-true-dupes broadly; football/2024 is a bounded first slice.
+ *
  * -- THE THREE CLASSES ------------------------------------------------------
  *
  * The rule itself lives in scripts/lib/collision-triage.cjs so the tests pin

@@ -636,14 +636,44 @@ FATAL: ${f(preflight.collisions)} contentHash collisions across ${f(preflight.gr
  * Without this predicate the pre-flight counted those rows, hashed them, and
  * refused over them -- so the eight football shards would have refused
  * IDENTICALLY after a full apply-true-dupes pass, and the triage that exists to
- * unblock the fold could never unblock it. A flagged row is not a sale the
- * store will ever serve; two of them hashing alike cannot swallow a genuine
- * future sale, because the ingest-time dedup that would swallow it is comparing
- * against rows the reads already ignore. Counting them is counting resolved
+ * unblock the fold could never unblock it. Counting them is counting resolved
  * work as outstanding.
  *
  * The row is still THERE -- the pool is the moat and nothing was deleted. It is
  * merely not evidence of an unresolved collision any more.
+ *
+ * -- WHAT THIS PREDICATE DOES *NOT* CLAIM (retraction, R2 judge) ------------
+ *
+ * An earlier draft of this comment justified the exclusion by asserting that a
+ * flagged row "cannot swallow a genuine future sale, because the ingest-time
+ * dedup that would swallow it is comparing against rows the reads already
+ * ignore." That is FALSE and is retracted here. The FMV *read* paths filter
+ * flaggedWrong; the pre-write dedup is a DIFFERENT query and does not:
+ *
+ *   soldCompsStore.service.ts:1495
+ *     SELECT * FROM c WHERE ARRAY_CONTAINS(@h, c.contentHash)   -- no predicate
+ *   persistVendorSalesToPool.service.ts:1081
+ *     SELECT c.id FROM c WHERE c.hobbyiqCardId=@hiq AND c.contentHash=@ch
+ *
+ * and `scoreForCanonical` (soldCompsStore.service.ts:676) never reads the flag.
+ * So a flagged row still participates in ingest dedup, with two consequences:
+ *
+ *   (1) it can OUTSCORE a genuine incoming sale (a real-eBay-id flagged row
+ *       scores 95.86 against a ch-daily:: incoming at 85.88), and the incoming
+ *       sale is dropped at :1519 as `deduped`; and
+ *   (2) if the incoming sale outscores it instead, :1524 HARD DELETES the
+ *       flagged row -- destroying the dedupSupersededBy provenance trail.
+ *
+ * Both are PRE-EXISTING (this branch changes no file under backend/src) and
+ * both are narrow: they need a genuine later sale colliding on the full
+ * contentHash -- (cardId, parallel, isAuto, grade, price, soldAt) -- with an
+ * already-flagged row, i.e. same card AND same price AND the same second.
+ *
+ * The exclusion above does NOT rest on that claim. It rests on the narrower
+ * true one: a flagged row is excluded from every FMV read, so it is not an
+ * outstanding collision for the PRE-FLIGHT to refuse over. The ingest gap is a
+ * separate, disclosed defect against backend/src -- not a reason to keep
+ * counting resolved work, and not something this script can fix from here.
  */
 async function salesUnder(pool, slug) {
   const out = [];
