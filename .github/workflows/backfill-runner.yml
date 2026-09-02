@@ -269,6 +269,11 @@ on:
           # apply. MODE=before captures the hand-verified pools' FMV inputs,
           # MODE=after compares and exits 5 on any regression. READ ONLY.
           - rematch-canary-check
+          # CF-THE-LIST-IS-THE-SCOPE (2026-09-01, four-values R2): move only the
+          # sold_comps rows named in a committed list file. `scope` carries the
+          # list path (default data/pool-relocations/2026-09-01-four-values.json);
+          # a missing or empty list is a refusal, never a silent no-op.
+          - relocate-pool-rows-by-list
       apply:
         description: "Actually write (true) or dry-run only (false)"
         required: true
