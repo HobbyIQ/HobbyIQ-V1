@@ -77,6 +77,56 @@ final class PortfolioIQViewModel: ObservableObject {
     /// abandoned by a newer trigger without racing state.
     private var fmvBatchGeneration: Int = 0
 
+    // MARK: - Fresh on open (CF-PORTFOLIO-FRESH-ON-OPEN, #1639, 2026-09-02)
+    //
+    // Drew: "when going to the portfolio, seems like the cache pricing is
+    // there, it needs to be fresh each time."
+    //
+    // Opening the portfolio now dispatches a reprice through the same
+    // endpoint the manual button uses, which runs the same
+    // repriceHoldingsForUser the 6h cron runs. ONE VALUATION PATH: this
+    // changes WHEN a reprice is triggered, never how anything is priced.
+    // There is no client-side pricing here — the screen dispatches, polls,
+    // then RE-READS the list.
+    //
+    // THE READ NEVER BLOCKS. Persisted values render immediately and the
+    // refresh runs behind them: the dispatch fires AFTER the read resolves,
+    // not racing it. If the refresh fails the user keeps a working
+    // portfolio of honestly-labelled stored prices.
+
+    /// The `valuation` block from the last list read: when the freshest
+    /// holding was priced, and whether the answering worker saw a run.
+    @Published private(set) var valuationEnvelope: PortfolioValuationEnvelope?
+
+    /// True while THIS client has a dispatched run it has not seen settle.
+    ///
+    /// Deliberately separate from `valuationEnvelope.repricing`: that flag
+    /// is the answering worker's view, and with 2 serving instances it can
+    /// read false while a run is alive on the other one. The header ORs the
+    /// two — see `isRepricing`.
+    @Published private(set) var isDispatchedRepriceInFlight = false
+
+    /// The "as of" the header shows: when the values ON SCREEN were last
+    /// refreshed. Prefers a throttled dispatch's own `freshAsOf` (the
+    /// server's answer to "why did you skip?"), then the list envelope's
+    /// `newestValuationAt`. Nil means we have nothing honest to say, and
+    /// the header renders no line rather than "just now".
+    @Published private(set) var pricesAsOf: String?
+
+    /// True when a reprice is running anywhere we can see one.
+    var isRepricing: Bool {
+        isDispatchedRepriceInFlight || (valuationEnvelope?.repricing ?? false)
+    }
+
+    /// The header line, or nil when no timestamp is known.
+    var pricesAsOfLine: String? { AsOf.line(pricesAsOf) }
+
+    /// Guards against a second dispatch from a re-appear while one is
+    /// already in flight on this client. The SERVER-side throttle is the
+    /// real guard (it is durable and cross-worker, which is what makes
+    /// on-open dispatch safe at all); this only avoids a redundant request.
+    private var repriceDispatchInFlight = false
+
     struct FmvKey: Hashable {
         let cardId: String
         let parallel: String?
@@ -797,6 +847,103 @@ final class PortfolioIQViewModel: ObservableObject {
         Task { await refreshCanonicalFmvCache(forceRefresh: true) }
     }
 
+    // MARK: - Fresh on open (#1639)
+
+    /// Dispatch a reprice for this user and swap the new values in when
+    /// they land.
+    ///
+    /// ORDER IS THE CONTRACT. The caller awaits the LIST READ first and
+    /// only then calls this, so persisted values are already on screen when
+    /// the dispatch goes out. Never call this before / concurrently with
+    /// the read — that is the race the web page's comment ("the dispatch
+    /// fires after the read resolves, not racing it") exists to forbid.
+    ///
+    /// A `throttled` answer is not a failure and not silence: the server
+    /// says WHEN the on-screen values were last refreshed, and that becomes
+    /// the header's "as of". A skip reporting only that it refused is
+    /// indistinguishable from a broken refresh.
+    func refreshPricesOnOpen() async {
+        guard repriceDispatchInFlight == false else { return }
+        repriceDispatchInFlight = true
+        defer { repriceDispatchInFlight = false }
+
+        let dispatch: BatchRepriceResponse
+        do {
+            dispatch = try await service.runBatchReprice()
+        } catch {
+            // Best-effort by design: the user keeps a working portfolio of
+            // stored prices, honestly labelled with whatever "as of" the
+            // list read established. No banner — this is a background
+            // refresh nobody asked for.
+            logger.info("on-open reprice dispatch failed: \(error.localizedDescription, privacy: .public)")
+            return
+        }
+
+        // Throttled: no run started. Adopt the server's freshness answer
+        // and stop — polling a run that does not exist would spin until the
+        // ceiling and then report nothing.
+        if dispatch.status == "throttled" || dispatch.throttled == true {
+            if let fresh = dispatch.freshAsOf { pricesAsOf = fresh }
+            return
+        }
+
+        isDispatchedRepriceInFlight = true
+        defer { isDispatchedRepriceInFlight = false }
+        await awaitRepriceThenReread(jobId: dispatch.jobId)
+    }
+
+    /// The poll loop for the ON-OPEN pass.
+    ///
+    /// NOT shared with the manual "Reprice all" button in
+    /// PortfolioAdvancedViews.runReprice(), and that is deliberate rather
+    /// than an oversight: the button is a user-initiated action with a
+    /// 300s ceiling and its own user-facing error / "still refreshing"
+    /// copy, because someone is watching it. This pass is a background
+    /// refresh nobody asked for — it must stay silent, and it must give up
+    /// sooner. Unifying them would mean either putting a banner on a
+    /// background refresh or taking the button's error reporting away.
+    ///
+    /// What the two DO share, and what actually matters, is the
+    /// settled-only end condition below. Both loops implement it; if a
+    /// third caller appears, extract it rather than writing it a third time.
+    ///
+    /// `settled == true` is the ONLY end condition. The backend serves from
+    /// 2 instances with a per-process job map, so a poll can land on the
+    /// worker that did not dispatch; that worker answers `unknown-here`,
+    /// which is NOT the run finishing. `idle` is likewise not completion.
+    /// Treating either as done would swap in values the run had not written
+    /// yet.
+    func awaitRepriceThenReread(jobId: String?) async {
+        // Own clock under a ceiling: a run we never see settle must not
+        // poll forever, and it must still re-read at the end — the values
+        // may well have landed on the other worker.
+        let deadline = Date().addingTimeInterval(Self.repricePollCeiling)
+        while Date() < deadline {
+            try? await Task.sleep(nanoseconds: UInt64(Self.repricePollInterval * 1_000_000_000))
+            if Task.isCancelled { return }
+            do {
+                let status = try await service.batchRepriceStatus(jobId: jobId)
+                if status.settled == true { break }
+            } catch {
+                // A failed poll is not a failed run. Keep polling until the
+                // ceiling, then re-read regardless.
+                logger.info("reprice status poll failed: \(error.localizedDescription, privacy: .public)")
+            }
+        }
+        if Task.isCancelled { return }
+        // Re-read the list: this endpoint serves stored values fast and is
+        // the ONLY place the new numbers come from. No client-side pricing.
+        await fetch(preserveExistingSummaryOnError: true)
+        await refreshCanonicalFmvCache(forceRefresh: true)
+    }
+
+    /// 3s between polls, 90s ceiling. A measured full run was 68s, so the
+    /// ceiling sits just above it — long enough for the common case to be
+    /// seen settle, short enough that a run we lose sight of still gets its
+    /// re-read within the session.
+    private static let repricePollInterval: TimeInterval = 3
+    private static let repricePollCeiling: TimeInterval = 90
+
     /// Reload the holdings list straight from `LocalPortfolioProvider`
     /// (already patched by the edit path's `save()`). Skips the backend
     /// re-fetch so an edit is reflected on the list immediately, even
@@ -1076,7 +1223,18 @@ final class PortfolioIQViewModel: ObservableObject {
         }
 
         do {
-            let liveHoldings = try await service.fetchPortfolioHoldings(userId: userId)
+            // CF-PORTFOLIO-FRESH-ON-OPEN (#1639): read the envelope, not
+            // just the rows, so the header can state how old the numbers
+            // it is about to render are.
+            let envelope = try await service.fetchPortfolioEnvelope(userId: userId)
+            let liveHoldings = envelope.holdings
+            if let valuation = envelope.valuation {
+                valuationEnvelope = valuation
+                // Only ADOPT a timestamp, never clear one: an older server
+                // (or a read that raced a write) omitting the block must not
+                // wipe an "as of" the previous read established.
+                if let newest = valuation.newestValuationAt { pricesAsOf = newest }
+            }
             didLoadLiveHoldings = true
             // Backend is the authoritative source. The previous "union
             // cached-only items" guard was removed (CF 2026-06-28): it

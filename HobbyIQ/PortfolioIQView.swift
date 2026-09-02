@@ -87,6 +87,10 @@ struct PortfolioIQView: View {
     @State private var backtestAccuracyLoadedAt: Date?
     @State private var showBacktestSheet = false
     private static let backtestAccuracyTTL: TimeInterval = 6 * 60 * 60
+    /// CF-PORTFOLIO-FRESH-ON-OPEN (#1639): one dispatch per view lifetime.
+    /// The re-read this pass performs republishes `inventoryCards`, which
+    /// would otherwise re-trigger the keyed task that started it.
+    @State private var hasDispatchedFreshOnOpen = false
 
     var body: some View {
         // CF-BACK-NAV-FIX (2026-07-06): removed a nested NavigationView here.
@@ -106,7 +110,20 @@ struct PortfolioIQView: View {
                 } else {
                     ScrollView(showsIndicators: false) {
                         VStack(spacing: 16) {
-                            header
+                            // CF-PORTFOLIO-FRESH-ON-OPEN (#1639): the hero
+                            // and its freshness line are ONE child here.
+                            //
+                            // Not a style choice — this VStack already held
+                            // 14 children before the line was added, and
+                            // SwiftUI's ViewBuilder arity is finite. Pairing
+                            // the line with the hero it describes keeps the
+                            // count where it was AND puts the two adjacent,
+                            // which is where the line belongs: it states how
+                            // old the number directly above it is.
+                            VStack(spacing: 6) {
+                                header
+                                pricesAsOfRow
+                            }
 
                             // PR #548 (2026-07-17): engine-accuracy trust
                             // badge sits directly under the total portfolio
@@ -183,6 +200,36 @@ struct PortfolioIQView: View {
                 // first paint that carries clear value for sell-side
                 // alerts, so it's the honest moment to ask.
                 await PushNotificationManager.shared.askIfFirstMeaningfulUse()
+            }
+            // CF-PORTFOLIO-FRESH-ON-OPEN (#1639, Drew 2026-09-02): "when
+            // going to the portfolio, seems like the cache pricing is
+            // there, it needs to be fresh each time."
+            //
+            // KEYED ON THE LOADED ROWS, not fired from `.task` above.
+            // `.onAppear` below dispatches `vm.load()` as a DETACHED,
+            // unawaited Task, so on a cold open the `.task` block runs
+            // concurrently with the read and `inventoryCards` is still
+            // empty when it gets there — the dispatch would silently never
+            // fire, in exactly the cold-open case Drew is describing.
+            //
+            // Observing `inventoryCards` instead gets the ordering right
+            // by construction: rows are published only after the list read
+            // resolved, so persisted values are provably on screen before
+            // the dispatch goes out. That is #1639's contract — "the
+            // dispatch fires after the read resolves, not racing it".
+            //
+            // `.task(id:)` also cancels and restarts on change, so a
+            // re-read that swaps the rows cannot leave two poll loops
+            // running. The `hasDispatchedFreshOnOpen` latch keeps a
+            // re-render (or the re-read this very pass performs) from
+            // dispatching a second time within one visit; the SERVER's
+            // durable cross-worker throttle is the real guard, and is what
+            // makes an on-appear dispatch safe at all.
+            .task(id: vm.inventoryCards.isEmpty) {
+                guard vm.inventoryCards.isEmpty == false else { return }
+                guard hasDispatchedFreshOnOpen == false else { return }
+                hasDispatchedFreshOnOpen = true
+                await vm.refreshPricesOnOpen()
             }
             .sheet(isPresented: $showBacktestSheet) {
                 if let response = backtestAccuracy {
@@ -601,6 +648,48 @@ struct PortfolioIQView: View {
                     .frame(maxWidth: .infinity, alignment: .center)
                 }
             }
+        )
+    }
+
+    // MARK: - Prices as of (CF-PORTFOLIO-FRESH-ON-OPEN, #1639)
+
+    /// "Prices as of 10:42", with a subtle pulse while a refresh runs.
+    ///
+    /// FIXED HEIGHT on purpose: opening the screen dispatches a reprice
+    /// behind the rendered values, so this row's content changes under the
+    /// user (line appears, spinner starts, line updates). A variable-height
+    /// row would reflow the whole hero each time. 18pt holds a caption.
+    ///
+    /// Says NOTHING when there is no timestamp, rather than "just now" — a
+    /// portfolio whose holdings carry no lastUpdated cannot support a
+    /// freshness claim, and inventing one is the exact misreading the "as
+    /// of" line exists to fix. A prior-day value carries its date, because
+    /// "as of 10:42" on a week-old price reads as current.
+    private var pricesAsOfRow: some View {
+        HStack(spacing: 6) {
+            if vm.isRepricing {
+                ProgressView()
+                    .controlSize(.mini)
+                    .tint(HobbyIQTheme.Colors.electricBlue)
+                Text(vm.pricesAsOfLine ?? "Refreshing prices…")
+                    .font(.caption2)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            } else if let line = vm.pricesAsOfLine {
+                Image(systemName: "clock")
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                Text(line)
+                    .font(.caption2)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            }
+            Spacer(minLength: 0)
+        }
+        .frame(height: 18)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(
+            vm.isRepricing
+                ? "Refreshing prices. \(vm.pricesAsOfLine ?? "")"
+                : (vm.pricesAsOfLine ?? "")
         )
     }
 

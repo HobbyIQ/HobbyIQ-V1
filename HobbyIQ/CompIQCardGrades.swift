@@ -109,6 +109,20 @@ struct CardPanelGradeEntry: Decodable, Identifiable, Hashable {
     let confidenceScore: Double?
     let value: Double?
     let valueSource: ValueSource
+    /// CF-IOS-RUNG-PARITY (Drew, 2026-09-02) / CF-RUNG-LABEL (D4 PR 1,
+    /// D17): the machine-readable name of the RUNG that produced THIS
+    /// TIER's value — `exact-pool-trajectory` for a tier read off its own
+    /// pool, `grade-curve-estimate` for a filled one, nil for an
+    /// unavailable tier. `observedGradeCurve.service.ts` stamps it and the
+    /// /card-panel route serializes `curve.entries` wholesale, so it rides
+    /// the existing wire; nil against an engine older than D17.
+    ///
+    /// Deliberately kept as the AUTHORITY over `valueSource` for the
+    /// provenance chip. `valueSource` is a two-value summary; the rung is
+    /// the closed vocabulary the engine actually named, and the D4 rule is
+    /// that a consumer reads the rung and never infers it from something
+    /// coarser.
+    let rungLabel: String?
     let estimatedMultiplier: Double?
     /// Trend-adjusted value from the panel — the headline the FMV
     /// hero prefers. Nil on fresh-comp / no-trend paths, in which
@@ -291,6 +305,7 @@ struct CardPanelGradeEntry: Decodable, Identifiable, Hashable {
         value: Double?,
         valueSource: ValueSource,
         estimatedMultiplier: Double?,
+        rungLabel: String? = nil,
         trendAdjustedValue: Double? = nil,
         trendAdjustmentPct: Double? = nil,
         daysSinceNewestSale: Int? = nil,
@@ -319,6 +334,7 @@ struct CardPanelGradeEntry: Decodable, Identifiable, Hashable {
         self.confidenceScore = confidenceScore
         self.value = value
         self.valueSource = valueSource
+        self.rungLabel = rungLabel
         self.estimatedMultiplier = estimatedMultiplier
         self.trendAdjustedValue = trendAdjustedValue
         self.trendAdjustmentPct = trendAdjustmentPct
@@ -353,6 +369,7 @@ struct CardPanelGradeEntry: Decodable, Identifiable, Hashable {
         confidenceScore = try? c.decodeIfPresent(Double.self, forKey: .confidenceScore)
         value = try? c.decodeIfPresent(Double.self, forKey: .value)
         valueSource = (try? c.decodeIfPresent(ValueSource.self, forKey: .valueSource)) ?? .unavailable
+        rungLabel = try? c.decodeIfPresent(String.self, forKey: .rungLabel)
         estimatedMultiplier = try? c.decodeIfPresent(Double.self, forKey: .estimatedMultiplier)
         trendAdjustedValue = try? c.decodeIfPresent(Double.self, forKey: .trendAdjustedValue)
         trendAdjustmentPct = try? c.decodeIfPresent(Double.self, forKey: .trendAdjustmentPct)
@@ -376,7 +393,7 @@ struct CardPanelGradeEntry: Decodable, Identifiable, Hashable {
         case weightedMedianPrice, plainMedianPrice
         case priceRangeLow, priceRangeHigh
         case newestSaleDate, oldestSaleDate
-        case confidenceScore, value, valueSource, estimatedMultiplier
+        case confidenceScore, value, valueSource, rungLabel, estimatedMultiplier
         case trendAdjustedValue, trendAdjustmentPct
         case daysSinceNewestSale
         case predictedPriceAt30d, predictedPricePct
