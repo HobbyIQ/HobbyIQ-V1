@@ -11,6 +11,7 @@ import {
   type NotableSale,
 } from "@/lib/api";
 import { formatPct, formatUSD, formatUSDCompact } from "@/lib/format";
+import { MarketIndexes } from "@/components/MarketIndexes";
 
 type Window = "1d" | "7d" | "30d";
 
@@ -134,6 +135,10 @@ export default function MarketPage() {
           </p>
         )}
       </div>
+
+      {/* CF-MARKET-INDEXES: same shared component the DailyIQ screen
+          mounts. No "Explore indexes" link here — this IS that page. */}
+      <MarketIndexes className="mb-8" showExploreLink={false} />
 
       <div className="mb-6 flex items-center gap-2 flex-wrap">
         {(["1d", "7d", "30d"] as Window[]).map((w) => (
