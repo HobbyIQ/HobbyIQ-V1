@@ -286,8 +286,35 @@ async function queryComps(
 
 function gradeLabel(company: string | null, value: number | null): string {
   if (!company) return "Raw";
-  return `${String(company).toUpperCase()} ${value ?? "?"}`;
+  return `${String(company).toUpperCase()} ${gradeValueToken(value)}`;
 }
+
+/**
+ * CF-EXACT-GRADE-OUTRANKS-CROSS-GRADE (2026-09-02). The tier label is an
+ * IDENTITY, and it is built by this function on BOTH sides of the tier match
+ * below — once from the caller's requested grade, once from each pool row. So
+ * the value must render the same way for a numerically identical grade,
+ * whatever type it arrives as; any difference demotes a real exact-grade pool
+ * to `cross-grade-fallback`.
+ *
+ *   10 / "10" / "10.0" / 10.0 / " 10"  ->  "10"     (one tier, one spelling)
+ *   NaN / null / undefined             ->  "?"      (not a grade at all)
+ *
+ * The previous `${value ?? "?"}` was the live defect: `??` does not catch
+ * NaN, so a gradeValue that failed to parse rendered "PSA NaN", matched no
+ * tier, and fell through to another grade's pool. Four portfolioStore call
+ * sites build the request grade with a bare `Number(...)` that can yield NaN
+ * (holdingGrade and normalizeGrade filter it; those four did not) and write
+ * the resulting rung straight onto the holding — so normalizing here fixes
+ * every caller at the one seam both sides of the comparison already share.
+ * "?" is deliberately kept unmatchable: see the fallback block for why an
+ * unreadable grade refuses rather than borrowing another tier's number.
+ */
+function gradeValueToken(value: number | null | undefined): string {
+  const n = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(n) ? String(n) : "?";
+}
+
 
 function weightedMedian(rows: RawCompRow[], nowMs: number): number | null {
   if (rows.length === 0) return null;
@@ -461,6 +488,18 @@ export async function computeUnifiedPrice(
     ? null
     : gradeLabel(opts.grade?.company ?? null, opts.grade?.value ?? null);
   const requestedIsRaw = requestedTier === "Raw";
+  // A GRADED request (a company was named) whose numeric value did not
+  // survive the caller's parsing: null, undefined or NaN. Renders "PSA ?" /
+  // "PSA NaN", which is a tier that cannot exist in the pool. See the
+  // fallback block below for why this refuses rather than falls back.
+  // `Number(null)` is 0, which is finite — so the value is tested directly
+  // rather than through a coercion that would read a missing grade as 0.
+  const requestedGradeValue = opts.grade?.value;
+  const requestedGradeIsUnreadable = !requestedIsRaw
+    && requestedTier !== null
+    && (requestedGradeValue === null
+      || requestedGradeValue === undefined
+      || !Number.isFinite(Number(requestedGradeValue)));
 
   // Adaptive window — start tight, widen until direct-grade density
   // supports the requested read. When opts.fixedWindowDays is passed
@@ -879,11 +918,38 @@ export async function computeUnifiedPrice(
     // marketValue / predictedPrice fields carry a real number instead of
     // null — which is what stops legacy fall-through from writing $18
     // sibling-rescue prices for cards that HAVE real pool data.
+    // CF-EXACT-GRADE-OUTRANKS-CROSS-GRADE (2026-09-02). The fallback below is
+    // for a tier with NO pool of its own. It is narrowed by one rule: an
+    // UNREADABLE grade value never silently reprices as some other grade.
+    //
+    // Measured: holding 6fc204f7 (Greg Maddux, 1987 Topps Traded Tiffany
+    // #70T, PSA 10) read $361.49 while its own pool held two genuine PSA 10
+    // sales, $1,900 and $1,850. A graded request whose numeric value did not
+    // survive parsing renders "PSA ?" (or "PSA NaN" -- `??` does not catch
+    // NaN), which is a tier no pool can contain. It matched nothing, fell
+    // through here, and took the largest OTHER tier -- the PSA 9s -- so the
+    // holding carried a PSA 9-derived number under a PSA 10 identity.
+    //
+    // A grade we cannot read is a MISSING answer, not a licence to answer
+    // about a different grade: it refuses to no-basis and the caller keeps
+    // whatever evidence it already had.
+    //
+    // The requested tier's own pool needs no rescue here -- `e.grade ===
+    // target` already matches it whenever it exists, because both sides of
+    // that comparison are built by the same gradeLabel. (Verified by
+    // mutation: adding a normalized-label rescue changed no assertion.)
+    // There is no minimum-sample gate on this path and there must not be
+    // one: one real sale of THIS card at THIS grade outranks a rescaled read
+    // of another grade at any n >= 1 -- last-sale doctrine.
     let matched = gradeCurve.find((e) => e.grade === target);
     let requestedButFallbackMatched = false;
     if (!matched && gradeCurve.length > 0) {
-      matched = gradeCurve[0];
-      requestedButFallbackMatched = true;
+      if (requestedGradeIsUnreadable) {
+        matched = undefined;   // refuse: no number beats a wrong-grade number
+      } else {
+        matched = gradeCurve[0];
+        requestedButFallbackMatched = true;
+      }
     }
     if (matched) {
       fmv = matched.weightedMedian;
