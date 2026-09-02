@@ -45,7 +45,7 @@ export default function LandingPage() {
           <FeatureCard
             iconPath="M4 6h16v12H4V6zm2 2v8h12V8H6zm8 3l-3 3-1.5-1.5L8 14l3 3 5-5-1.5-1.5z"
             title="Empirical FMV"
-            body="Every rung is a real sale. Observed medians when we have them, transparent estimates when we don't."
+            body="Every rung is a real sale — projected to today's market, not quoted off a two-month-old print."
           />
           <FeatureCard
             iconPath="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"

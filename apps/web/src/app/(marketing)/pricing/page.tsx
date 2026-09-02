@@ -132,6 +132,10 @@ export default function PricingPage() {
             a="Our FMV is the projected next sale price derived from the actual comp trend on OUR observed sales pool. Not a mean, not a median — a trend-projected value. Every rung is empirical; when we don't have real sales, we say so instead of guessing."
           />
           <FaqCard
+            q="The last sale of my card was two months ago. Is that the price?"
+            a="No — and we don't show it as one. An old sale is a receipt from a market that has already moved. Cards trade on speculation and on where the market is today, so we project the card's trend forward to what the next buyer is likely to pay now. When the newest sale behind a value has gone cold, the price says so."
+          />
+          <FaqCard
             q="Does the iOS subscription work on web (and vice versa)?"
             a="Same account across iOS + web. Subscription plans can be purchased via Apple StoreKit (iOS) or Stripe (web). Your effective tier is the higher of the two; you don't get double-billed."
           />

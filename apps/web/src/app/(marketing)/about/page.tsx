@@ -48,6 +48,22 @@ export default function AboutPage() {
             likely pay. When the market moves fast, so does our number.
           </p>
 
+          <p className="font-semibold text-white mt-6 mb-2">A two-month-old comp is not the price.</p>
+          <p>
+            Thin cards don&apos;t sell every week. When the last real sale of a card was
+            back in June, that print is a receipt from a market that has since moved —
+            it is not what the card is worth today, and pricing it there is just quoting
+            history. Cards trade on speculation: who&apos;s hot, what just happened, what
+            the market thinks is coming.
+          </p>
+          <p>
+            So we don&apos;t hand you the old number. We price to today&apos;s market —
+            projecting the card&apos;s trend forward to what the next buyer is likely to
+            pay right now. When the newest sale behind a value has gone cold, we say so
+            on the price itself, so you know you&apos;re looking at today&apos;s market and
+            not a stale print.
+          </p>
+
           <p className="font-semibold text-white mt-6 mb-2">Sport-aware calibration.</p>
           <p>
             Baseball, basketball, football, and Pokemon each have their own grade

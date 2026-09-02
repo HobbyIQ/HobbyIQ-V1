@@ -172,6 +172,15 @@ export function CardPriceDetail({
       ? describeRung(tile?.rungLabel, { compsUsed: tile?.sampleCount })
       : describeRung(detailRungLabel, { compsUsed: detail?.compsUsed });
   const shownRungSource = usingTile ? "observed-grade-curve" : "price-by-id";
+  // Speculation pricing (Drew, 2026-09-02) — how OLD the pool behind the
+  // number is, which the rung alone never says. Same rule as the rung
+  // above: the age comes from the path that supplied the value, never
+  // from the other one. The tile prices a single grade tier off its own
+  // pool and reports no age for it, so a tile-sourced number gets no
+  // staleness line — borrowing price-by-id's age here would repeat the
+  // exact bug the block above exists to prevent (one path's number
+  // labelled with another path's provenance).
+  const shownCompAgeDays = usingTile ? null : (detail?.daysSinceNewestComp ?? null);
   const parallels = candidate?.parallels ?? [];
   // CF-TITLE-CARD-IDENTITY (Drew, 2026-08-11). Backend enriches the
   // response with cardIdentity (player, year, set, number) precisely
@@ -304,7 +313,7 @@ export function CardPriceDetail({
               <Stat
                 label={grade ? `${grade.company} ${grade.value} FMV` : "Raw FMV"}
                 value={formatUSD(fmv, { hideCents: fmv != null && fmv >= 100 })}
-                sub={<ProvenanceChip rung={shownRung} source={shownRungSource} />}
+                sub={<ProvenanceChip rung={shownRung} source={shownRungSource} daysSinceNewestComp={shownCompAgeDays} />}
               />
               <Stat
                 label="Predicted sale"
