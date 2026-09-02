@@ -472,7 +472,7 @@ function renderMarkdown(r) {
     L.push("No scorable evaluation points.");
     return L.join("\n");
   }
-  L.push(`**HobbyIQ's projected price landed within ${pct(o.within25Pct)} → 25% of the actual next sale on ${num(o.n)} held-out sales**, with a median absolute error of **${pct(o.medianAbsPctError)}**.`);
+  L.push(`**On ${num(o.n)} held-out sales, HobbyIQ's projected price landed within 25% of the actual next sale ${pct(o.within25Pct)} of the time**, with a median absolute error of **${pct(o.medianAbsPctError)}**.`);
   L.push("");
   L.push(`- within 10%: **${pct(o.within10Pct)}**`);
   L.push(`- within 25%: **${pct(o.within25Pct)}**`);
