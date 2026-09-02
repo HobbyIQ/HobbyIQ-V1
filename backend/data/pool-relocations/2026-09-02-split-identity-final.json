@@ -1,0 +1,749 @@
+{
+  "generatedAt": "2026-09-02T21:49:50.860Z",
+  "issue": "split-identity final — the touched-set sweep after #1649",
+  "note": "This file IS the scope. relocate-pool-rows-by-list.cjs touches exactly these ids and nothing else. Every entry was read live by BOTH identity fields on 2026-09-02 and classified on its own stored evidence.",
+  "rulings": [
+    "The touched-set split census is 399 documents, not 21. 327 of them are NOT damage: their cardId is a CardHedge/Cardsight vendor product id (e.g. 1778541805492x752149343116845600) and their hobbyiqCardId is the hiq slug. That is the DESIGNED cardhedge ingest shape, proved by a control read on unrelated cards outside the touched set: 1242 of 1242 cardhedge rows on hiq:basketball:2003:topps-chrome:111:base:no-auto and hiq:baseball:2023:bowman-draft:bdc-1:base:no-auto are vendor-id-partitioned the same way. Relocating them would be a mass mis-repair of the entire CardHedge pool, so this lane leaves every one of them alone.",
+    "Real damage is the 72 hiq-vs-hiq splits, where BOTH identity fields are hiq slugs that name different cards. Those are the only rows this list touches.",
+    "CPA-JG belongs to bowman, not bowman-chrome: all 117 2026 CPA-JG catalog rows carry setKey=bowman across every checklist source; zero carry bowman-chrome. Re-confirmed live 2026-09-02.",
+    "hiq:baseball:2026:bowman:cpa-jg:refractor:auto (no print run) is NOT a real card — zero card_catalog rows carry it, and the only unnumbered CPA-JG refractor in the checklist is /89. The 7 rows sitting in that phantom partition are base autos and are MOVED onto the checklist-backed base-auto row, not left to price a card that does not exist.",
+    "The genuine /499 Refractor is real and its canonical address is the bowman slug: card_catalog carries hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499 (hobbymonitor-scraped-2026-08-31, parallel=Refractor, printRun=499). The bowman-chrome /499 slug is the same card at a stale address. Genuine /499 refractors mis-pointed there are REPOINTED to their own correct slug rather than flattened into the base pool — the earlier characterization of this partition as holding ONE genuine KEEP was wrong; it holds six.",
+    "A colour word only names a parallel when it is bound to a finish noun. 'Red Sox' is a team and '1st Bowman Chrome' is the product name — an earlier draft of the base-auto predicate rejected 30 legitimate base autos on those tokens alone. The predicate is quoted in each entry's evidence and every row failing it got individual treatment.",
+    "Duplicate pairs are deliberately OUT. 7 ids resolve to two documents at the same price and soldAt across different partitions; this lane patches or moves ONE document per id, and collapsing a pair is the dedup lane's job. Doing it here would silently lose a sale.",
+    "tca-ebay::127887746009 is Jeremy CIRIACO, not Jac Caglianone — CPA-JC is a colliding card number across two 2024 products. Per CF-BECKETT-INITIALS-COLLIDE a cardNumber alone is not identity, so it is excluded rather than swept into a Caglianone pool.",
+    "The two 2024 Caglianone ebay-user-purchase rows are excluded to the census: bowman-draft and bowman-chrome BOTH exist as catalog rows for CPA-JC /499 from different sources, so which one addresses 2024 Bowman Draft Chrome is an unresolved vocabulary decision, not a row repair — and these are user purchase rows, where a wrong move corrupts a cost basis."
+  ],
+  "expectedCounts": {
+    "touchedSetSplitDocuments": 399,
+    "vendorPartitionedNotDamage": 327,
+    "hiqVsHiqSplits": 72,
+    "entries": 60,
+    "moves": 16,
+    "repoints": 44,
+    "excluded": 12
+  },
+  "entries": [
+    {
+      "id": "tca-ebay::157956055230",
+      "fromCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "S1",
+      "price": 105,
+      "soldAt": "2026-05-31T23:46:33.000Z",
+      "title": "2026 1st Bowman Chrome - Justin Gonzalez - On Card Auto - #CPA-JG",
+      "evidence": "split identity verified live 2026-09-02 by BOTH fields: cardId=hiq:baseball:2026:bowman:cpa-jg:base:auto (relocated by the four-values apply) but hobbyiqCardId still reads hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499. Base-auto predicate holds: stored parallel=\"Base\", no finish token and no serial in \"2026 1st Bowman Chrome - Justin Gonzalez - On Card Auto - #CPA-JG\". Single document for this id across all partitions. REPOINT in place — the partition is already correct."
+    },
+    {
+      "id": "tca-ebay::327185211258",
+      "fromCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "S1",
+      "price": 129.99,
+      "soldAt": "2026-05-31T00:56:26.000Z",
+      "title": "2026 Bowman Justin Gonzalez 1st Bowman Chrome On Card Auto #CPA-JG",
+      "evidence": "split identity verified live 2026-09-02 by BOTH fields: cardId=hiq:baseball:2026:bowman:cpa-jg:base:auto (relocated by the four-values apply) but hobbyiqCardId still reads hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499. Base-auto predicate holds: stored parallel=\"Base\", no finish token and no serial in \"2026 Bowman Justin Gonzalez 1st Bowman Chrome On Card Auto #CPA-JG\". Single document for this id across all partitions. REPOINT in place — the partition is already correct."
+    },
+    {
+      "id": "tca-ebay::127886906078",
+      "fromCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "S1",
+      "price": 102.58,
+      "soldAt": "2026-06-01T02:00:01.000Z",
+      "title": "2026 Bowman Chrome 1st Justin Gonzalez Auto #CPA-JG On Card Auto Red Sox",
+      "evidence": "split identity verified live 2026-09-02 by BOTH fields: cardId=hiq:baseball:2026:bowman:cpa-jg:base:auto (relocated by the four-values apply) but hobbyiqCardId still reads hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499. Base-auto predicate holds: stored parallel=\"Base\", no finish token and no serial in \"2026 Bowman Chrome 1st Justin Gonzalez Auto #CPA-JG On Card Auto Red Sox\". Single document for this id across all partitions. REPOINT in place — the partition is already correct."
+    },
+    {
+      "id": "tca-ebay::800049435703",
+      "fromCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "S1",
+      "price": 112.5,
+      "soldAt": "2026-06-01T01:00:01.000Z",
+      "title": "Justin Gonzales- Red Sox: 2026 1st Bowman Chrome Auto #CPA-JG",
+      "evidence": "split identity verified live 2026-09-02 by BOTH fields: cardId=hiq:baseball:2026:bowman:cpa-jg:base:auto (relocated by the four-values apply) but hobbyiqCardId still reads hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499. Base-auto predicate holds: stored parallel=\"Base\", no finish token and no serial in \"Justin Gonzales- Red Sox: 2026 1st Bowman Chrome Auto #CPA-JG\". Single document for this id across all partitions. REPOINT in place — the partition is already correct."
+    },
+    {
+      "id": "tca-ebay::358868509348",
+      "fromCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "S1",
+      "price": 86,
+      "soldAt": "2026-08-08T01:11:46.000Z",
+      "title": "2026 Bowman Chrome Justin Gonzalez 1st Chrome Auto #CPA-JG Red Sox",
+      "evidence": "split identity verified live 2026-09-02 by BOTH fields: cardId=hiq:baseball:2026:bowman:cpa-jg:base:auto (relocated by the four-values apply) but hobbyiqCardId still reads hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499. Base-auto predicate holds: stored parallel=\"Base\", no finish token and no serial in \"2026 Bowman Chrome Justin Gonzalez 1st Chrome Auto #CPA-JG Red Sox\". Single document for this id across all partitions. REPOINT in place — the partition is already correct."
+    },
+    {
+      "id": "tca-ebay::377399589351",
+      "fromCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "S1",
+      "price": 52,
+      "soldAt": "2026-08-12T02:13:28.000Z",
+      "title": "2026 Bowman Justin Gonzales Chrome Auto Autograph 1st Prospect #CPA-JG Red Sox",
+      "evidence": "split identity verified live 2026-09-02 by BOTH fields: cardId=hiq:baseball:2026:bowman:cpa-jg:base:auto (relocated by the four-values apply) but hobbyiqCardId still reads hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499. Base-auto predicate holds: stored parallel=\"Base\", no finish token and no serial in \"2026 Bowman Justin Gonzales Chrome Auto Autograph 1st Prospect #CPA-JG Red Sox\". Single document for this id across all partitions. REPOINT in place — the partition is already correct."
+    },
+    {
+      "id": "tca-ebay::278248218739",
+      "fromCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "S1",
+      "price": 75,
+      "soldAt": "2026-08-12T03:15:00.000Z",
+      "title": "2026 Bowman Chrome Justin Gonzales 1st Auto #CPA-JG Red Sox",
+      "evidence": "split identity verified live 2026-09-02 by BOTH fields: cardId=hiq:baseball:2026:bowman:cpa-jg:base:auto (relocated by the four-values apply) but hobbyiqCardId still reads hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499. Base-auto predicate holds: stored parallel=\"Base\", no finish token and no serial in \"2026 Bowman Chrome Justin Gonzales 1st Auto #CPA-JG Red Sox\". Single document for this id across all partitions. REPOINT in place — the partition is already correct."
+    },
+    {
+      "id": "tca-ebay::407132274228",
+      "fromCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "S1",
+      "price": 69.99,
+      "soldAt": "2026-08-14T16:05:37.000Z",
+      "title": "2026 Bowman Chrome Justin Gonzales 1st Bowman On-Card Auto CPA-JG Red Sox",
+      "evidence": "split identity verified live 2026-09-02 by BOTH fields: cardId=hiq:baseball:2026:bowman:cpa-jg:base:auto (relocated by the four-values apply) but hobbyiqCardId still reads hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499. Base-auto predicate holds: stored parallel=\"Base\", no finish token and no serial in \"2026 Bowman Chrome Justin Gonzales 1st Bowman On-Card Auto CPA-JG Red Sox\". Single document for this id across all partitions. REPOINT in place — the partition is already correct."
+    },
+    {
+      "id": "tca-ebay::398258087014",
+      "fromCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "S1",
+      "price": 70,
+      "soldAt": "2026-08-14T01:22:11.000Z",
+      "title": "2026 Bowman Chrome - Justin Gonzales Auto First Bowman #CPA-JG (AU)",
+      "evidence": "split identity verified live 2026-09-02 by BOTH fields: cardId=hiq:baseball:2026:bowman:cpa-jg:base:auto (relocated by the four-values apply) but hobbyiqCardId still reads hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499. Base-auto predicate holds: stored parallel=\"Base\", no finish token and no serial in \"2026 Bowman Chrome - Justin Gonzales Auto First Bowman #CPA-JG (AU)\". Single document for this id across all partitions. REPOINT in place — the partition is already correct."
+    },
+    {
+      "id": "tca-ebay::377350380533",
+      "fromCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "S1",
+      "price": 95,
+      "soldAt": "2026-08-15T22:30:22.000Z",
+      "title": "2026 Topps Bowman Chrome Justin Gonzalez Bowman 1st Auto CPA-JG Red Sox",
+      "evidence": "split identity verified live 2026-09-02 by BOTH fields: cardId=hiq:baseball:2026:bowman:cpa-jg:base:auto (relocated by the four-values apply) but hobbyiqCardId still reads hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499. Base-auto predicate holds: stored parallel=\"Base\", no finish token and no serial in \"2026 Topps Bowman Chrome Justin Gonzalez Bowman 1st Auto CPA-JG Red Sox\". Single document for this id across all partitions. REPOINT in place — the partition is already correct."
+    },
+    {
+      "id": "tca-ebay::318365297385",
+      "fromCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "S1",
+      "price": 69.99,
+      "soldAt": "2026-08-15T10:05:30.000Z",
+      "title": "2026 Bowman Baseball Justin Gonzales CPA-JG Chrome Prospects Base Auto",
+      "evidence": "split identity verified live 2026-09-02 by BOTH fields: cardId=hiq:baseball:2026:bowman:cpa-jg:base:auto (relocated by the four-values apply) but hobbyiqCardId still reads hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499. Base-auto predicate holds: stored parallel=\"Base\", no finish token and no serial in \"2026 Bowman Baseball Justin Gonzales CPA-JG Chrome Prospects Base Auto\". Single document for this id across all partitions. REPOINT in place — the partition is already correct."
+    },
+    {
+      "id": "tca-ebay::168597310619",
+      "fromCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "S1",
+      "price": 61,
+      "soldAt": "2026-08-15T04:43:33.000Z",
+      "title": "2026 Bowman - Chrome Prospect Autographs Justin Gonzales #CPA-JG (AU, RC)",
+      "evidence": "split identity verified live 2026-09-02 by BOTH fields: cardId=hiq:baseball:2026:bowman:cpa-jg:base:auto (relocated by the four-values apply) but hobbyiqCardId still reads hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499. Base-auto predicate holds: stored parallel=\"Base\", no finish token and no serial in \"2026 Bowman - Chrome Prospect Autographs Justin Gonzales #CPA-JG (AU, RC)\". Single document for this id across all partitions. REPOINT in place — the partition is already correct."
+    },
+    {
+      "id": "tca-ebay::307042185705",
+      "fromCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "S1",
+      "price": 78,
+      "soldAt": "2026-08-15T01:54:22.000Z",
+      "title": "2026 Topps Bowman Chrome Justin Gonzalez Bowman 1st Auto CPA-JG Red Sox",
+      "evidence": "split identity verified live 2026-09-02 by BOTH fields: cardId=hiq:baseball:2026:bowman:cpa-jg:base:auto (relocated by the four-values apply) but hobbyiqCardId still reads hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499. Base-auto predicate holds: stored parallel=\"Base\", no finish token and no serial in \"2026 Topps Bowman Chrome Justin Gonzalez Bowman 1st Auto CPA-JG Red Sox\". Single document for this id across all partitions. REPOINT in place — the partition is already correct."
+    },
+    {
+      "id": "tca-ebay::298485938939",
+      "fromCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "S1",
+      "price": 64.99,
+      "soldAt": "2026-08-16T21:29:37.000Z",
+      "title": "Topps 2026 Bowman Chrome 1st Bowman Justin Gonzales Auto CPA-JG Red Sox",
+      "evidence": "split identity verified live 2026-09-02 by BOTH fields: cardId=hiq:baseball:2026:bowman:cpa-jg:base:auto (relocated by the four-values apply) but hobbyiqCardId still reads hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499. Base-auto predicate holds: stored parallel=\"Base\", no finish token and no serial in \"Topps 2026 Bowman Chrome 1st Bowman Justin Gonzales Auto CPA-JG Red Sox\". Single document for this id across all partitions. REPOINT in place — the partition is already correct."
+    },
+    {
+      "id": "tca-ebay::237004028205",
+      "fromCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "S1",
+      "price": 63,
+      "soldAt": "2026-08-16T03:37:06.000Z",
+      "title": "Topps 2026 Bowman Chrome Prospect Autographs Justin Gonzales Auto #CPA-JG RC",
+      "evidence": "split identity verified live 2026-09-02 by BOTH fields: cardId=hiq:baseball:2026:bowman:cpa-jg:base:auto (relocated by the four-values apply) but hobbyiqCardId still reads hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499. Base-auto predicate holds: stored parallel=\"Base\", no finish token and no serial in \"Topps 2026 Bowman Chrome Prospect Autographs Justin Gonzales Auto #CPA-JG RC\". Single document for this id across all partitions. REPOINT in place — the partition is already correct."
+    },
+    {
+      "id": "tca-ebay::398292674647",
+      "fromCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "S1",
+      "price": 75,
+      "soldAt": "2026-08-17T21:43:50.000Z",
+      "title": "2026 Bowman - Chrome Prospect Autographs Justin Gonzales #CPA-JG (AU, RC)",
+      "evidence": "split identity verified live 2026-09-02 by BOTH fields: cardId=hiq:baseball:2026:bowman:cpa-jg:base:auto (relocated by the four-values apply) but hobbyiqCardId still reads hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499. Base-auto predicate holds: stored parallel=\"Base\", no finish token and no serial in \"2026 Bowman - Chrome Prospect Autographs Justin Gonzales #CPA-JG (AU, RC)\". Single document for this id across all partitions. REPOINT in place — the partition is already correct."
+    },
+    {
+      "id": "tca-ebay::377421531136",
+      "fromCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "S1",
+      "price": 88,
+      "soldAt": "2026-08-17T06:24:10.000Z",
+      "title": "2026 Topps Bowman Chrome Justin Gonzalez Bowman 1st Auto CPA-JG Red Sox",
+      "evidence": "split identity verified live 2026-09-02 by BOTH fields: cardId=hiq:baseball:2026:bowman:cpa-jg:base:auto (relocated by the four-values apply) but hobbyiqCardId still reads hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499. Base-auto predicate holds: stored parallel=\"Base\", no finish token and no serial in \"2026 Topps Bowman Chrome Justin Gonzalez Bowman 1st Auto CPA-JG Red Sox\". Single document for this id across all partitions. REPOINT in place — the partition is already correct."
+    },
+    {
+      "id": "tca-ebay::377226437806",
+      "fromCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "S1",
+      "price": 100,
+      "soldAt": "2026-08-17T22:44:11.000Z",
+      "title": "2026 Topps Bowman Chrome Justin Gonzalez Bowman 1st Base Auto CPA-JG Red Sox",
+      "evidence": "split identity verified live 2026-09-02 by BOTH fields: cardId=hiq:baseball:2026:bowman:cpa-jg:base:auto (relocated by the four-values apply) but hobbyiqCardId still reads hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499. Base-auto predicate holds: stored parallel=\"Base\", no finish token and no serial in \"2026 Topps Bowman Chrome Justin Gonzalez Bowman 1st Base Auto CPA-JG Red Sox\". Single document for this id across all partitions. REPOINT in place — the partition is already correct."
+    },
+    {
+      "id": "tca-ebay::366477330849",
+      "fromCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "S1",
+      "price": 74.99,
+      "soldAt": "2026-08-17T04:14:45.000Z",
+      "title": "2026 Bowman Chrome Justin Gonzales 1st Bowman Auto Prospect #CPA-JG",
+      "evidence": "split identity verified live 2026-09-02 by BOTH fields: cardId=hiq:baseball:2026:bowman:cpa-jg:base:auto (relocated by the four-values apply) but hobbyiqCardId still reads hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499. Base-auto predicate holds: stored parallel=\"Base\", no finish token and no serial in \"2026 Bowman Chrome Justin Gonzales 1st Bowman Auto Prospect #CPA-JG\". Single document for this id across all partitions. REPOINT in place — the partition is already correct."
+    },
+    {
+      "id": "tca-ebay::377342729043",
+      "fromCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "S1",
+      "price": 65,
+      "soldAt": "2026-08-17T01:55:53.000Z",
+      "title": "2026 Bowman Baseball Justin Gonzales #CPA-JG Chrome Prospect Autograph",
+      "evidence": "split identity verified live 2026-09-02 by BOTH fields: cardId=hiq:baseball:2026:bowman:cpa-jg:base:auto (relocated by the four-values apply) but hobbyiqCardId still reads hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499. Base-auto predicate holds: stored parallel=\"Base\", no finish token and no serial in \"2026 Bowman Baseball Justin Gonzales #CPA-JG Chrome Prospect Autograph\". Single document for this id across all partitions. REPOINT in place — the partition is already correct."
+    },
+    {
+      "id": "tca-ebay::800483595630",
+      "fromCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "S1",
+      "price": 70,
+      "soldAt": "2026-08-18T23:35:49.000Z",
+      "title": "2026 Topps Bowman Chrome Justin Gonzalez Bowman 1st Base Auto CPA-JG Red Sox",
+      "evidence": "split identity verified live 2026-09-02 by BOTH fields: cardId=hiq:baseball:2026:bowman:cpa-jg:base:auto (relocated by the four-values apply) but hobbyiqCardId still reads hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499. Base-auto predicate holds: stored parallel=\"Base\", no finish token and no serial in \"2026 Topps Bowman Chrome Justin Gonzalez Bowman 1st Base Auto CPA-JG Red Sox\". Single document for this id across all partitions. REPOINT in place — the partition is already correct."
+    },
+    {
+      "id": "tca-ebay::206313889720",
+      "fromCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "S1",
+      "price": 79.99,
+      "soldAt": "2026-08-18T16:12:39.000Z",
+      "title": "2026 JUSTIN GONZALES BOWMAN CHROME PROSPECT AUTO #CPA-JG (RED SOX)",
+      "evidence": "split identity verified live 2026-09-02 by BOTH fields: cardId=hiq:baseball:2026:bowman:cpa-jg:base:auto (relocated by the four-values apply) but hobbyiqCardId still reads hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499. Base-auto predicate holds: stored parallel=\"Base\", no finish token and no serial in \"2026 JUSTIN GONZALES BOWMAN CHROME PROSPECT AUTO #CPA-JG (RED SOX)\". Single document for this id across all partitions. REPOINT in place — the partition is already correct."
+    },
+    {
+      "id": "tca-ebay::336747082950",
+      "fromCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "S1",
+      "price": 74.99,
+      "soldAt": "2026-08-18T13:10:12.000Z",
+      "title": "Justin Gonzales 2026 Bowman Chrome #CPA-JG 1st Prospect Auto",
+      "evidence": "split identity verified live 2026-09-02 by BOTH fields: cardId=hiq:baseball:2026:bowman:cpa-jg:base:auto (relocated by the four-values apply) but hobbyiqCardId still reads hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499. Base-auto predicate holds: stored parallel=\"Base\", no finish token and no serial in \"Justin Gonzales 2026 Bowman Chrome #CPA-JG 1st Prospect Auto\". Single document for this id across all partitions. REPOINT in place — the partition is already correct."
+    },
+    {
+      "id": "tca-ebay::117225928793",
+      "fromCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "S1",
+      "price": 100,
+      "soldAt": "2026-08-18T01:28:15.000Z",
+      "title": "Justin Gonzales- Red Sox: 2026 1st Bowman Chrome Auto #CPA-JG",
+      "evidence": "split identity verified live 2026-09-02 by BOTH fields: cardId=hiq:baseball:2026:bowman:cpa-jg:base:auto (relocated by the four-values apply) but hobbyiqCardId still reads hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499. Base-auto predicate holds: stored parallel=\"Base\", no finish token and no serial in \"Justin Gonzales- Red Sox: 2026 1st Bowman Chrome Auto #CPA-JG\". Single document for this id across all partitions. REPOINT in place — the partition is already correct."
+    },
+    {
+      "id": "tca-ebay::366515936637",
+      "fromCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "S1",
+      "price": 72,
+      "soldAt": "2026-08-18T01:26:46.000Z",
+      "title": "2026 Bowman Justin Gonzales Chrome Prospect Autog  #CPA-JG - Boston Red Sox",
+      "evidence": "split identity verified live 2026-09-02 by BOTH fields: cardId=hiq:baseball:2026:bowman:cpa-jg:base:auto (relocated by the four-values apply) but hobbyiqCardId still reads hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499. Base-auto predicate holds: stored parallel=\"Base\", no finish token and no serial in \"2026 Bowman Justin Gonzales Chrome Prospect Autog  #CPA-JG - Boston Red Sox\". Single document for this id across all partitions. REPOINT in place — the partition is already correct."
+    },
+    {
+      "id": "tca-ebay::800234613542",
+      "fromCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "S1",
+      "price": 49.99,
+      "soldAt": "2026-08-19T22:17:37.000Z",
+      "title": "2026 Topps Bowman Chrome Justin Gonzalez Bowman 1st Base Auto CPA-JG Red Sox",
+      "evidence": "split identity verified live 2026-09-02 by BOTH fields: cardId=hiq:baseball:2026:bowman:cpa-jg:base:auto (relocated by the four-values apply) but hobbyiqCardId still reads hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499. Base-auto predicate holds: stored parallel=\"Base\", no finish token and no serial in \"2026 Topps Bowman Chrome Justin Gonzalez Bowman 1st Base Auto CPA-JG Red Sox\". Single document for this id across all partitions. REPOINT in place — the partition is already correct."
+    },
+    {
+      "id": "tca-ebay::298601490906",
+      "fromCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "S1",
+      "price": 75,
+      "soldAt": "2026-08-19T19:51:14.000Z",
+      "title": "2026 Bowman - Chrome Prospect Autographs Justin Gonzales #CPA-JG (AU, RC)",
+      "evidence": "split identity verified live 2026-09-02 by BOTH fields: cardId=hiq:baseball:2026:bowman:cpa-jg:base:auto (relocated by the four-values apply) but hobbyiqCardId still reads hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499. Base-auto predicate holds: stored parallel=\"Base\", no finish token and no serial in \"2026 Bowman - Chrome Prospect Autographs Justin Gonzales #CPA-JG (AU, RC)\". Single document for this id across all partitions. REPOINT in place — the partition is already correct."
+    },
+    {
+      "id": "tca-ebay::128031498429",
+      "fromCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "S1",
+      "price": 85,
+      "soldAt": "2026-08-19T14:58:52.000Z",
+      "title": "Topps 2026 Bowman Chrome Justin Gonzales 1st Bowman Auto #CPA-JG Red Sox",
+      "evidence": "split identity verified live 2026-09-02 by BOTH fields: cardId=hiq:baseball:2026:bowman:cpa-jg:base:auto (relocated by the four-values apply) but hobbyiqCardId still reads hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499. Base-auto predicate holds: stored parallel=\"Base\", no finish token and no serial in \"Topps 2026 Bowman Chrome Justin Gonzales 1st Bowman Auto #CPA-JG Red Sox\". Single document for this id across all partitions. REPOINT in place — the partition is already correct."
+    },
+    {
+      "id": "tca-ebay::278293231107",
+      "fromCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "S1",
+      "price": 79.95,
+      "soldAt": "2026-08-19T12:59:24.000Z",
+      "title": "2026 Bowman Chrome Justin Gonzalez Bowman 1st Auto Autograph #CPA-JG🔥⚾️🔥🔥",
+      "evidence": "split identity verified live 2026-09-02 by BOTH fields: cardId=hiq:baseball:2026:bowman:cpa-jg:base:auto (relocated by the four-values apply) but hobbyiqCardId still reads hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499. Base-auto predicate holds: stored parallel=\"Base\", no finish token and no serial in \"2026 Bowman Chrome Justin Gonzalez Bowman 1st Auto Autograph #CPA-JG🔥⚾️🔥🔥\". Single document for this id across all partitions. REPOINT in place — the partition is already correct."
+    },
+    {
+      "id": "tca-ebay::267683051031",
+      "fromCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "S1",
+      "price": 59,
+      "soldAt": "2026-08-19T12:57:58.000Z",
+      "title": "Justin Gonzales Bowman 1st Chrome Auto 2026 CPA-JG",
+      "evidence": "split identity verified live 2026-09-02 by BOTH fields: cardId=hiq:baseball:2026:bowman:cpa-jg:base:auto (relocated by the four-values apply) but hobbyiqCardId still reads hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499. Base-auto predicate holds: stored parallel=\"Base\", no finish token and no serial in \"Justin Gonzales Bowman 1st Chrome Auto 2026 CPA-JG\". Single document for this id across all partitions. REPOINT in place — the partition is already correct."
+    },
+    {
+      "id": "tca-ebay::820019089627",
+      "fromCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "S1",
+      "price": 69,
+      "soldAt": "2026-08-19T00:37:59.000Z",
+      "title": "2026 Bowman Chrome - Justin Gonzales 1st - AUTO - Red Sox Autograph #CPA-JG",
+      "evidence": "split identity verified live 2026-09-02 by BOTH fields: cardId=hiq:baseball:2026:bowman:cpa-jg:base:auto (relocated by the four-values apply) but hobbyiqCardId still reads hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499. Base-auto predicate holds: stored parallel=\"Base\", no finish token and no serial in \"2026 Bowman Chrome - Justin Gonzales 1st - AUTO - Red Sox Autograph #CPA-JG\". Single document for this id across all partitions. REPOINT in place — the partition is already correct."
+    },
+    {
+      "id": "tca-ebay::198456198720",
+      "fromCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "S1",
+      "price": 71.99,
+      "soldAt": "2026-08-20T00:10:24.000Z",
+      "title": "2026 1st Bowman Chrome Justin Gonzales Base Prospect Auto Autograph RC SP RedSox",
+      "evidence": "split identity verified live 2026-09-02 by BOTH fields: cardId=hiq:baseball:2026:bowman:cpa-jg:base:auto (relocated by the four-values apply) but hobbyiqCardId still reads hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499. Base-auto predicate holds: stored parallel=\"Base\", no finish token and no serial in \"2026 1st Bowman Chrome Justin Gonzales Base Prospect Auto Autograph RC SP RedSox\". Single document for this id across all partitions. REPOINT in place — the partition is already correct."
+    },
+    {
+      "id": "tca-ebay::298580494158",
+      "fromCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "S1",
+      "price": 113.5,
+      "soldAt": "2026-08-20T01:37:00.000Z",
+      "title": "2026 BOWMAN CHROME PROSPECT AUTOS #CPA-JG JUSTIN GONZALES PSA 8",
+      "evidence": "split identity verified live 2026-09-02 by BOTH fields: cardId=hiq:baseball:2026:bowman:cpa-jg:base:auto (relocated by the four-values apply) but hobbyiqCardId still reads hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499. Base-auto predicate holds: stored parallel=\"Base\", no finish token and no serial in \"2026 BOWMAN CHROME PROSPECT AUTOS #CPA-JG JUSTIN GONZALES PSA 8\". Single document for this id across all partitions. REPOINT in place — the partition is already correct."
+    },
+    {
+      "id": "tca-ebay::406954337698",
+      "fromCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "S1",
+      "price": 75,
+      "soldAt": "2026-08-20T18:50:22.000Z",
+      "title": "2026 Bowman Chrome JUSTIN GONZALES 1st Auto  Red Sox #CPA-JG Top Prospect 🔥",
+      "evidence": "split identity verified live 2026-09-02 by BOTH fields: cardId=hiq:baseball:2026:bowman:cpa-jg:base:auto (relocated by the four-values apply) but hobbyiqCardId still reads hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499. Base-auto predicate holds: stored parallel=\"Base\", no finish token and no serial in \"2026 Bowman Chrome JUSTIN GONZALES 1st Auto  Red Sox #CPA-JG Top Prospect 🔥\". Single document for this id across all partitions. REPOINT in place — the partition is already correct."
+    },
+    {
+      "id": "tca-ebay::EBAY-v1|406954337698|0",
+      "fromCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "S1",
+      "price": 123.49,
+      "soldAt": "2026-08-20T18:50:22.000Z",
+      "title": "2026 Bowman Chrome JUSTIN GONZALES 1st Auto  Red Sox #CPA-JG Top Prospect 🔥",
+      "evidence": "split identity verified live 2026-09-02 by BOTH fields: cardId=hiq:baseball:2026:bowman:cpa-jg:base:auto (relocated by the four-values apply) but hobbyiqCardId still reads hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499. Base-auto predicate holds: stored parallel=\"Base\", no finish token and no serial in \"2026 Bowman Chrome JUSTIN GONZALES 1st Auto  Red Sox #CPA-JG Top Prospect 🔥\". Single document for this id across all partitions. REPOINT in place — the partition is already correct."
+    },
+    {
+      "id": "tca-ebay::128026719625",
+      "fromCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "S1",
+      "price": 80.13,
+      "soldAt": "2026-08-20T00:37:33.000Z",
+      "title": "2026 Bowman Justin Gonzales Chrome Auto Autograph 1st Prospect #CPA-JG Red Sox",
+      "evidence": "split identity verified live 2026-09-02 by BOTH fields: cardId=hiq:baseball:2026:bowman:cpa-jg:base:auto (relocated by the four-values apply) but hobbyiqCardId still reads hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499. Base-auto predicate holds: stored parallel=\"Base\", no finish token and no serial in \"2026 Bowman Justin Gonzales Chrome Auto Autograph 1st Prospect #CPA-JG Red Sox\". Single document for this id across all partitions. REPOINT in place — the partition is already correct."
+    },
+    {
+      "id": "tca-ebay::117359901103",
+      "fromCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "S1",
+      "price": 104,
+      "soldAt": "2026-08-21T23:12:58.000Z",
+      "title": "2026 Bowman Chrome Justin Gonzalez 1st Chrome Auto #CPA-JG Red Sox",
+      "evidence": "split identity verified live 2026-09-02 by BOTH fields: cardId=hiq:baseball:2026:bowman:cpa-jg:base:auto (relocated by the four-values apply) but hobbyiqCardId still reads hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499. Base-auto predicate holds: stored parallel=\"Base\", no finish token and no serial in \"2026 Bowman Chrome Justin Gonzalez 1st Chrome Auto #CPA-JG Red Sox\". Single document for this id across all partitions. REPOINT in place — the partition is already correct."
+    },
+    {
+      "id": "tca-ebay::EBAY-v1|800023135124|0",
+      "fromCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "S1",
+      "price": 137.62,
+      "soldAt": "2026-08-21T06:25:43.000Z",
+      "title": "2026 Bowman Chrome Justin Gonzales 1st Bowman auto CPA-JG Boston Red Sox",
+      "evidence": "split identity verified live 2026-09-02 by BOTH fields: cardId=hiq:baseball:2026:bowman:cpa-jg:base:auto (relocated by the four-values apply) but hobbyiqCardId still reads hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499. Base-auto predicate holds: stored parallel=\"Base\", no finish token and no serial in \"2026 Bowman Chrome Justin Gonzales 1st Bowman auto CPA-JG Boston Red Sox\". Single document for this id across all partitions. REPOINT in place — the partition is already correct."
+    },
+    {
+      "id": "tca-ebay::800023135124",
+      "fromCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "S1",
+      "price": 89,
+      "soldAt": "2026-08-21T06:25:43.000Z",
+      "title": "2026 Bowman Chrome Justin Gonzales 1st Bowman auto CPA-JG Boston Red Sox",
+      "evidence": "split identity verified live 2026-09-02 by BOTH fields: cardId=hiq:baseball:2026:bowman:cpa-jg:base:auto (relocated by the four-values apply) but hobbyiqCardId still reads hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499. Base-auto predicate holds: stored parallel=\"Base\", no finish token and no serial in \"2026 Bowman Chrome Justin Gonzales 1st Bowman auto CPA-JG Boston Red Sox\". Single document for this id across all partitions. REPOINT in place — the partition is already correct."
+    },
+    {
+      "id": "tca-ebay::EBAY-v1|327222961867|0",
+      "fromCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "S1",
+      "price": 131.43,
+      "soldAt": "2026-08-21T06:25:36.000Z",
+      "title": "2026 Bowman Chrome Justin Gonzales #CPA-JG 1st Bowman Auto Red Sox",
+      "evidence": "split identity verified live 2026-09-02 by BOTH fields: cardId=hiq:baseball:2026:bowman:cpa-jg:base:auto (relocated by the four-values apply) but hobbyiqCardId still reads hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499. Base-auto predicate holds: stored parallel=\"Base\", no finish token and no serial in \"2026 Bowman Chrome Justin Gonzales #CPA-JG 1st Bowman Auto Red Sox\". Single document for this id across all partitions. REPOINT in place — the partition is already correct."
+    },
+    {
+      "id": "tca-ebay::318520720087",
+      "fromCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "S1",
+      "price": 80,
+      "soldAt": "2026-08-21T06:25:38.000Z",
+      "title": "2026 Bowman Chrome Justin Gonzales 1st Bowman On Card Auto (RC) Boston Red Sox",
+      "evidence": "split identity verified live 2026-09-02 by BOTH fields: cardId=hiq:baseball:2026:bowman:cpa-jg:base:auto (relocated by the four-values apply) but hobbyiqCardId still reads hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499. Base-auto predicate holds: stored parallel=\"Base\", no finish token and no serial in \"2026 Bowman Chrome Justin Gonzales 1st Bowman On Card Auto (RC) Boston Red Sox\". Single document for this id across all partitions. REPOINT in place — the partition is already correct."
+    },
+    {
+      "id": "tca-ebay::137643809233",
+      "fromCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "S1",
+      "price": 90,
+      "soldAt": "2026-08-21T06:25:47.000Z",
+      "title": "Topps 2026 Bowman Justin Gonzales Red Sox 1st Bowman Chrome Auto #CPA-JG",
+      "evidence": "split identity verified live 2026-09-02 by BOTH fields: cardId=hiq:baseball:2026:bowman:cpa-jg:base:auto (relocated by the four-values apply) but hobbyiqCardId still reads hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499. Base-auto predicate holds: stored parallel=\"Base\", no finish token and no serial in \"Topps 2026 Bowman Justin Gonzales Red Sox 1st Bowman Chrome Auto #CPA-JG\". Single document for this id across all partitions. REPOINT in place — the partition is already correct."
+    },
+    {
+      "id": "tca-ebay::178230804128",
+      "fromCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "S1",
+      "price": 75,
+      "soldAt": "2026-08-21T01:33:28.000Z",
+      "title": "2026 Bowman 1st Justin Gonzales ON CARD  Autograph #CPA-JG Red Sox",
+      "evidence": "split identity verified live 2026-09-02 by BOTH fields: cardId=hiq:baseball:2026:bowman:cpa-jg:base:auto (relocated by the four-values apply) but hobbyiqCardId still reads hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499. Base-auto predicate holds: stored parallel=\"Base\", no finish token and no serial in \"2026 Bowman 1st Justin Gonzales ON CARD  Autograph #CPA-JG Red Sox\". Single document for this id across all partitions. REPOINT in place — the partition is already correct."
+    },
+    {
+      "id": "tca-ebay::188789758898",
+      "fromCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "S1",
+      "price": 85,
+      "soldAt": "2026-08-21T00:11:09.000Z",
+      "title": "2026 Bowman Chrome Justin Gonzales 1st Auto #CPA-JG Red Sox",
+      "evidence": "split identity verified live 2026-09-02 by BOTH fields: cardId=hiq:baseball:2026:bowman:cpa-jg:base:auto (relocated by the four-values apply) but hobbyiqCardId still reads hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499. Base-auto predicate holds: stored parallel=\"Base\", no finish token and no serial in \"2026 Bowman Chrome Justin Gonzales 1st Auto #CPA-JG Red Sox\". Single document for this id across all partitions. REPOINT in place — the partition is already correct."
+    },
+    {
+      "id": "tca-ebay::127892562211",
+      "fromCardId": "hiq:baseball:2026:bowman:cpa-jg:refractor:auto",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "S4",
+      "price": 83,
+      "soldAt": "2026-06-02T00:04:39.000Z",
+      "title": "2026 Bowman Justin Gonzales Chrome Auto Autograph 1st Prospect #CPA-JG Red Sox",
+      "evidence": "the partition hiq:baseball:2026:bowman:cpa-jg:refractor:auto is NOT a real card: zero card_catalog rows carry it, and the only unnumbered CPA-JG refractor in the checklist is /89. This row is a base auto — stored parallel=\"Base\", no finish token and no serial in \"2026 Bowman Justin Gonzales Chrome Auto Autograph 1st Prospect #CPA-JG Red Sox\" — and its hobbyiqCardId already reads hiq:baseball:2026:bowman:cpa-jg:base:auto. Full MOVE onto the checklist-backed base-auto row."
+    },
+    {
+      "id": "tca-ebay::127892562207",
+      "fromCardId": "hiq:baseball:2026:bowman:cpa-jg:refractor:auto",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "S4",
+      "price": 96,
+      "soldAt": "2026-06-02T00:00:00.000Z",
+      "title": "2026 Bowman Justin Gonzales Chrome Auto Autograph 1st Prospect #CPA-JG Red Sox",
+      "evidence": "the partition hiq:baseball:2026:bowman:cpa-jg:refractor:auto is NOT a real card: zero card_catalog rows carry it, and the only unnumbered CPA-JG refractor in the checklist is /89. This row is a base auto — stored parallel=\"Base\", no finish token and no serial in \"2026 Bowman Justin Gonzales Chrome Auto Autograph 1st Prospect #CPA-JG Red Sox\" — and its hobbyiqCardId already reads hiq:baseball:2026:bowman:cpa-jg:base:auto. Full MOVE onto the checklist-backed base-auto row."
+    },
+    {
+      "id": "tca-ebay::127980234220",
+      "fromCardId": "hiq:baseball:2026:bowman:cpa-jg:refractor:auto",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "S4",
+      "price": 46.5,
+      "soldAt": "2026-07-23T01:06:00.000Z",
+      "title": "2026 Bowman Justin Gonzales Chrome Auto Autograph 1st Prospect #CPA-JG Red Sox",
+      "evidence": "the partition hiq:baseball:2026:bowman:cpa-jg:refractor:auto is NOT a real card: zero card_catalog rows carry it, and the only unnumbered CPA-JG refractor in the checklist is /89. This row is a base auto — stored parallel=\"Base\", no finish token and no serial in \"2026 Bowman Justin Gonzales Chrome Auto Autograph 1st Prospect #CPA-JG Red Sox\" — and its hobbyiqCardId already reads hiq:baseball:2026:bowman:cpa-jg:base:auto. Full MOVE onto the checklist-backed base-auto row."
+    },
+    {
+      "id": "tca-ebay::377350186327",
+      "fromCardId": "hiq:baseball:2026:bowman:cpa-jg:refractor:auto",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "S4",
+      "price": 45.69,
+      "soldAt": "2026-07-23T01:17:51.000Z",
+      "title": "2026 Bowman Justin Gonzales Chrome Auto Autograph 1st Prospect #CPA-JG Red Sox",
+      "evidence": "the partition hiq:baseball:2026:bowman:cpa-jg:refractor:auto is NOT a real card: zero card_catalog rows carry it, and the only unnumbered CPA-JG refractor in the checklist is /89. This row is a base auto — stored parallel=\"Base\", no finish token and no serial in \"2026 Bowman Justin Gonzales Chrome Auto Autograph 1st Prospect #CPA-JG Red Sox\" — and its hobbyiqCardId already reads hiq:baseball:2026:bowman:cpa-jg:base:auto. Full MOVE onto the checklist-backed base-auto row."
+    },
+    {
+      "id": "tca-ebay::278286424532",
+      "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-jg:base:auto",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "S5",
+      "price": 86,
+      "soldAt": "2026-08-24T00:24:00.000Z",
+      "title": "JUSTIN GONZALES 2026 BOWMAN CHROME BASEBALL 1ST AUTO #CPA-JG SOX Q0M-645",
+      "evidence": "base auto in the bowman-CHROME base partition while hobbyiqCardId already reads hiq:baseball:2026:bowman:cpa-jg:base:auto. Stored parallel=\"Base\", no finish token and no serial in \"JUSTIN GONZALES 2026 BOWMAN CHROME BASEBALL 1ST AUTO #CPA-JG SOX Q0M-645\". CPA-JG is a bowman card in 117/117 catalog rows; the checklist-backed row is hiq:baseball:2026:bowman:cpa-jg:base:auto. Full MOVE."
+    },
+    {
+      "id": "tca-ebay::EBAY-v1|278286424532|0",
+      "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-jg:base:auto",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "S5",
+      "price": 119.93,
+      "soldAt": "2026-08-24T00:24:00.000Z",
+      "title": "JUSTIN GONZALES 2026 BOWMAN CHROME BASEBALL 1ST AUTO #CPA-JG SOX Q0M-645",
+      "evidence": "base auto in the bowman-CHROME base partition while hobbyiqCardId already reads hiq:baseball:2026:bowman:cpa-jg:base:auto. Stored parallel=\"Base\", no finish token and no serial in \"JUSTIN GONZALES 2026 BOWMAN CHROME BASEBALL 1ST AUTO #CPA-JG SOX Q0M-645\". CPA-JG is a bowman card in 117/117 catalog rows; the checklist-backed row is hiq:baseball:2026:bowman:cpa-jg:base:auto. Full MOVE."
+    },
+    {
+      "id": "tca-ebay::237010064019",
+      "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-jg:base:auto",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "S5",
+      "price": 77,
+      "soldAt": "2026-08-24T02:02:00.000Z",
+      "title": "Justin Gonzales 2026 Bowman Chrome Auto Boston Red Sox #CPA-JG 1st",
+      "evidence": "base auto in the bowman-CHROME base partition while hobbyiqCardId already reads hiq:baseball:2026:bowman:cpa-jg:base:auto. Stored parallel=\"Base\", no finish token and no serial in \"Justin Gonzales 2026 Bowman Chrome Auto Boston Red Sox #CPA-JG 1st\". CPA-JG is a bowman card in 117/117 catalog rows; the checklist-backed row is hiq:baseball:2026:bowman:cpa-jg:base:auto. Full MOVE."
+    },
+    {
+      "id": "tca-ebay::377376989677",
+      "fromCardId": "hiq:baseball:2026:bowman:cpa-jg:refractor:auto",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "S4",
+      "price": 60.99,
+      "soldAt": "2026-08-03T01:24:00.000Z",
+      "title": "2026 Bowman Justin Gonzales Chrome Auto Autograph 1st Prospect #CPA-JG Red Sox",
+      "evidence": "the partition hiq:baseball:2026:bowman:cpa-jg:refractor:auto is NOT a real card: zero card_catalog rows carry it, and the only unnumbered CPA-JG refractor in the checklist is /89. This row is a base auto — stored parallel=\"Base\", no finish token and no serial in \"2026 Bowman Justin Gonzales Chrome Auto Autograph 1st Prospect #CPA-JG Red Sox\" — and its hobbyiqCardId already reads hiq:baseball:2026:bowman:cpa-jg:base:auto. Full MOVE onto the checklist-backed base-auto row."
+    },
+    {
+      "id": "tca-ebay::127990473757",
+      "fromCardId": "hiq:baseball:2026:bowman:cpa-jg:refractor:auto",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "S4",
+      "price": 70,
+      "soldAt": "2026-08-03T00:38:34.000Z",
+      "title": "2026 Bowman Justin Gonzales Chrome Auto Autograph 1st Prospect #CPA-JG Red Sox",
+      "evidence": "the partition hiq:baseball:2026:bowman:cpa-jg:refractor:auto is NOT a real card: zero card_catalog rows carry it, and the only unnumbered CPA-JG refractor in the checklist is /89. This row is a base auto — stored parallel=\"Base\", no finish token and no serial in \"2026 Bowman Justin Gonzales Chrome Auto Autograph 1st Prospect #CPA-JG Red Sox\" — and its hobbyiqCardId already reads hiq:baseball:2026:bowman:cpa-jg:base:auto. Full MOVE onto the checklist-backed base-auto row."
+    },
+    {
+      "id": "tca-ebay::127980234197",
+      "fromCardId": "hiq:baseball:2026:bowman:cpa-jg:refractor:auto",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "section": "S4",
+      "price": 56.78,
+      "soldAt": "2026-07-23T01:00:00.000Z",
+      "title": "2026 Bowman Justin Gonzales Chrome Auto Autograph 1st Prospect #CPA-JG Red Sox",
+      "evidence": "the partition hiq:baseball:2026:bowman:cpa-jg:refractor:auto is NOT a real card: zero card_catalog rows carry it, and the only unnumbered CPA-JG refractor in the checklist is /89. This row is a base auto — stored parallel=\"Base\", no finish token and no serial in \"2026 Bowman Justin Gonzales Chrome Auto Autograph 1st Prospect #CPA-JG Red Sox\" — and its hobbyiqCardId already reads hiq:baseball:2026:bowman:cpa-jg:base:auto. Full MOVE onto the checklist-backed base-auto row."
+    },
+    {
+      "id": "tca-ebay::287538862055",
+      "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499",
+      "section": "S2",
+      "price": 224.99,
+      "soldAt": "2026-08-22T09:27:39.000Z",
+      "title": "2026 Bowman Chrome Justin Gonzales 1st Auto Refractor /499 #CPA-JG Red Sox",
+      "evidence": "genuine /499 Refractor — stored parallel=\"Refractor\" and the title \"2026 Bowman Chrome Justin Gonzales 1st Auto Refractor /499 #CPA-JG Red Sox\" names both a refractor token and /499 — but it sits in the bowman-CHROME partition while its hobbyiqCardId already reads hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499. The 2026 CPA-JG checklist is unanimous: 117/117 catalog rows carry setKey=\"bowman\", zero carry bowman-chrome, and a card_catalog row exists at hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499 (hobbymonitor-scraped-2026-08-31, parallel=Refractor, printRun=499). RELOCATE to its own correct slug; #1649 lands both identity fields there."
+    },
+    {
+      "id": "tca-ebay::198573811927",
+      "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499",
+      "section": "S2",
+      "price": 148,
+      "soldAt": "2026-08-16T21:47:39.000Z",
+      "title": "REDEMPTION : Justin Gonzales [Refractor /499] #CPA-JG 2026 Bowman Chrome Auto",
+      "evidence": "genuine /499 Refractor — stored parallel=\"Refractor\" and the title \"REDEMPTION : Justin Gonzales [Refractor /499] #CPA-JG 2026 Bowman Chrome Auto\" names both a refractor token and /499 — but it sits in the bowman-CHROME partition while its hobbyiqCardId already reads hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499. The 2026 CPA-JG checklist is unanimous: 117/117 catalog rows carry setKey=\"bowman\", zero carry bowman-chrome, and a card_catalog row exists at hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499 (hobbymonitor-scraped-2026-08-31, parallel=Refractor, printRun=499). RELOCATE to its own correct slug; #1649 lands both identity fields there."
+    },
+    {
+      "id": "tca-ebay::800444496685",
+      "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499",
+      "section": "S2",
+      "price": 175,
+      "soldAt": "2026-08-17T11:27:10.000Z",
+      "title": "2026 Bowman Chrome Justin Gonzales Auto 135/499 RC Rookie Auto Red Sox #CPA-JG",
+      "evidence": "genuine /499 Refractor — stored parallel=\"Refractor\" and the title \"2026 Bowman Chrome Justin Gonzales Auto 135/499 RC Rookie Auto Red Sox #CPA-JG\" names both a refractor token and /499 — but it sits in the bowman-CHROME partition while its hobbyiqCardId already reads hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499. The 2026 CPA-JG checklist is unanimous: 117/117 catalog rows carry setKey=\"bowman\", zero carry bowman-chrome, and a card_catalog row exists at hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499 (hobbymonitor-scraped-2026-08-31, parallel=Refractor, printRun=499). RELOCATE to its own correct slug; #1649 lands both identity fields there."
+    },
+    {
+      "id": "tca-ebay::407113176192",
+      "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499",
+      "section": "S2",
+      "price": 100,
+      "soldAt": "2026-08-19T13:52:43.000Z",
+      "title": "2026 Bowman Redemption Justin Gonzalez Refractor  Auto /499 Red Sox Redeemed B",
+      "evidence": "genuine /499 Refractor — stored parallel=\"Refractor\" and the title \"2026 Bowman Redemption Justin Gonzalez Refractor  Auto /499 Red Sox Redeemed B\" names both a refractor token and /499 — but it sits in the bowman-CHROME partition while its hobbyiqCardId already reads hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499. The 2026 CPA-JG checklist is unanimous: 117/117 catalog rows carry setKey=\"bowman\", zero carry bowman-chrome, and a card_catalog row exists at hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499 (hobbymonitor-scraped-2026-08-31, parallel=Refractor, printRun=499). RELOCATE to its own correct slug; #1649 lands both identity fields there."
+    },
+    {
+      "id": "tca-ebay::EBAY-v1|377390882146|0",
+      "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499",
+      "section": "S2",
+      "price": 277.89,
+      "soldAt": "2026-08-20T09:00:53.000Z",
+      "title": "2026 Bowman #CPA-JG Justin Gonzales Chrome Prospect Autographs Refractors #/499",
+      "evidence": "genuine /499 Refractor — stored parallel=\"Refractor\" and the title \"2026 Bowman #CPA-JG Justin Gonzales Chrome Prospect Autographs Refractors #/499\" names both a refractor token and /499 — but it sits in the bowman-CHROME partition while its hobbyiqCardId already reads hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499. The 2026 CPA-JG checklist is unanimous: 117/117 catalog rows carry setKey=\"bowman\", zero carry bowman-chrome, and a card_catalog row exists at hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499 (hobbymonitor-scraped-2026-08-31, parallel=Refractor, printRun=499). RELOCATE to its own correct slug; #1649 lands both identity fields there."
+    },
+    {
+      "id": "tca-ebay::377390882146",
+      "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499",
+      "toCardId": "hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499",
+      "section": "S2",
+      "price": 170,
+      "soldAt": "2026-08-20T09:00:53.000Z",
+      "title": "2026 Bowman #CPA-JG Justin Gonzales Chrome Prospect Autographs Refractors #/499",
+      "evidence": "genuine /499 Refractor — stored parallel=\"Refractor\" and the title \"2026 Bowman #CPA-JG Justin Gonzales Chrome Prospect Autographs Refractors #/499\" names both a refractor token and /499 — but it sits in the bowman-CHROME partition while its hobbyiqCardId already reads hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499. The 2026 CPA-JG checklist is unanimous: 117/117 catalog rows carry setKey=\"bowman\", zero carry bowman-chrome, and a card_catalog row exists at hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499 (hobbymonitor-scraped-2026-08-31, parallel=Refractor, printRun=499). RELOCATE to its own correct slug; #1649 lands both identity fields there."
+    }
+  ],
+  "excluded": [
+    {
+      "id": "tca-ebay::358880385667",
+      "price": 52,
+      "soldAt": "2026-08-11T00:21:01.000Z",
+      "title": "2026 Bowman Chrome Justin Gonzalez Autograph CPA-JG",
+      "cardId": "hiq:baseball:2026:bowman:cpa-jg:gold-refractor:auto:num-50",
+      "hobbyiqCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "reason": "census",
+      "evidence": "lives in the Gold Refractor /50 partition (hiq:baseball:2026:bowman:cpa-jg:gold-refractor:auto:num-50) but its hobbyiqCardId reads hiq:baseball:2026:bowman:cpa-jg:base:auto and its title \"2026 Bowman Chrome Justin Gonzalez Autograph CPA-JG\" names NO parallel and NO serial at all. The two identity halves disagree about a /50 card vs an unnumbered base auto, and the title cannot break the tie: it is equally consistent with a mis-partitioned base auto and with a Gold Refractor whose seller omitted the parallel. A /50 card and a base auto differ by an order of magnitude in price, so a wrong guess here materially corrupts an FMV. Census — derived identity uncertain."
+    },
+    {
+      "id": "tca-ebay::366454894551",
+      "price": 296,
+      "soldAt": "2026-06-07T10:09:17.000Z",
+      "title": "2026 Bowman Justin Gonzales #CPA-JG 1st Bowman Auto Aqua /125",
+      "cardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto:num-125",
+      "hobbyiqCardId": "hiq:baseball:2026:bowman:cpa-jg:base:auto",
+      "reason": "census",
+      "evidence": "title \"2026 Bowman Justin Gonzales #CPA-JG 1st Bowman Auto Aqua /125\" explicitly names \"Aqua /125\" and the checklist carries hiq:baseball:2026:bowman:cpa-jg:aqua-refractor:auto:num-125 (parallel=\"Aqua Refractor\", printRun=125) — so this row is neither of its two stored identities: cardId=hiq:baseball:2026:bowman:cpa-jg:base:auto:num-125 is a base:auto slug carrying a num-125 suffix that no catalog row backs, and hobbyiqCardId=hiq:baseball:2026:bowman:cpa-jg:base:auto drops the print run entirely. Its true address is the Aqua Refractor row, which is OUTSIDE this repair's touched set. Per CF-NO-SYNTHETIC-PARALLELS and the \"move don't delete\" retraction, routing it belongs with the Aqua parallel's own pass. Census."
+    },
+    {
+      "id": "tca-ebay::377439975936",
+      "price": 240,
+      "soldAt": "2026-08-22T05:03:10.000Z",
+      "title": "Topps 2026 Bowman Chrome Prospect Autographs Justin Gonzales RC Auto CPA-JG /100",
+      "cardId": "hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-100",
+      "hobbyiqCardId": "hiq:baseball:2026:bowman:cpa-jg:refractor:auto",
+      "reason": "duplicate-pair",
+      "evidence": "id resolves to 2 documents across different partitions at the same price/soldAt (hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499 | hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-100). This lane patches or moves ONE document per id; collapsing a duplicate pair is the dedup lane's job and doing it here would silently lose a sale."
+    },
+    {
+      "id": "tca-ebay::358817557308",
+      "price": 52.49,
+      "soldAt": "2026-07-23T12:02:46.000Z",
+      "title": "2026 Bowman #CPA-JG Justin Gonzales Chrome Prospect Autographs",
+      "cardId": "hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499",
+      "hobbyiqCardId": "hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499",
+      "reason": "duplicate-pair",
+      "evidence": "id resolves to 2 documents across different partitions at the same price/soldAt (hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499 | hiq:baseball:2026:bowman:cpa-jg:base:auto). This lane patches or moves ONE document per id; collapsing a duplicate pair is the dedup lane's job and doing it here would silently lose a sale."
+    },
+    {
+      "id": "tca-ebay::377379955045",
+      "price": 61,
+      "soldAt": "2026-08-04T00:07:03.000Z",
+      "title": "2026 Bowman Justin Gonzales Chrome Auto Autograph 1st Prospect #CPA-JG Red Sox",
+      "cardId": "hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499",
+      "hobbyiqCardId": "hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499",
+      "reason": "duplicate-pair",
+      "evidence": "id resolves to 2 documents across different partitions at the same price/soldAt (hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499 | hiq:baseball:2026:bowman:cpa-jg:base:auto). This lane patches or moves ONE document per id; collapsing a duplicate pair is the dedup lane's job and doing it here would silently lose a sale."
+    },
+    {
+      "id": "tca-ebay::127980234325",
+      "price": 44.78,
+      "soldAt": "2026-07-23T01:30:00.000Z",
+      "title": "2026 Bowman Justin Gonzales Chrome Auto Autograph 1st Prospect #CPA-JG Red Sox",
+      "cardId": "hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499",
+      "hobbyiqCardId": "hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499",
+      "reason": "duplicate-pair",
+      "evidence": "id resolves to 2 documents across different partitions at the same price/soldAt (hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499 | hiq:baseball:2026:bowman:cpa-jg:base:auto). This lane patches or moves ONE document per id; collapsing a duplicate pair is the dedup lane's job and doing it here would silently lose a sale."
+    },
+    {
+      "id": "tca-ebay::127980234254",
+      "price": 48,
+      "soldAt": "2026-07-23T01:12:00.000Z",
+      "title": "2026 Bowman Justin Gonzales Chrome Auto Autograph 1st Prospect #CPA-JG Red Sox",
+      "cardId": "hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499",
+      "hobbyiqCardId": "hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499",
+      "reason": "duplicate-pair",
+      "evidence": "id resolves to 2 documents across different partitions at the same price/soldAt (hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499 | hiq:baseball:2026:bowman:cpa-jg:base:auto). This lane patches or moves ONE document per id; collapsing a duplicate pair is the dedup lane's job and doing it here would silently lose a sale."
+    },
+    {
+      "id": "tca-ebay::377350186355",
+      "price": 44,
+      "soldAt": "2026-07-23T01:24:00.000Z",
+      "title": "2026 Bowman Justin Gonzales Chrome Auto Autograph 1st Prospect #CPA-JG Red Sox",
+      "cardId": "hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499",
+      "hobbyiqCardId": "hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499",
+      "reason": "duplicate-pair",
+      "evidence": "id resolves to 2 documents across different partitions at the same price/soldAt (hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499 | hiq:baseball:2026:bowman:cpa-jg:base:auto). This lane patches or moves ONE document per id; collapsing a duplicate pair is the dedup lane's job and doing it here would silently lose a sale."
+    },
+    {
+      "id": "tca-ebay::128013251252",
+      "price": 249.99,
+      "soldAt": "2026-08-16T00:22:38.000Z",
+      "title": "2026 Bowman - Chrome Prospect Autographs Justin Gonzales #CPA-JG Mini-Diamond...",
+      "cardId": "hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499",
+      "hobbyiqCardId": "hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499",
+      "reason": "census",
+      "evidence": "title is truncated at the source (\"2026 Bowman - Chrome Prospect Autographs Justin Gonzales #CPA-JG Mini-Diamond...\") and names a parallel token that the stored parallel field (\"Base\") contradicts, so the true card cannot be derived from stored evidence. Belongs to the census, not a guess."
+    },
+    {
+      "id": "ebay-user-purchase::358683557655",
+      "price": 228.62,
+      "soldAt": "2026-06-15T23:59:44.642Z",
+      "title": "2024 Bowman Chrome Jac Caglianone Kansas City #CPA-JC",
+      "cardId": "hiq:baseball:2024:bowman-draft:cpa-jc:refractor:auto:num-499",
+      "hobbyiqCardId": "hiq:baseball:2024:bowman-chrome:cpa-jc:refractor:auto:num-499",
+      "reason": "census",
+      "evidence": "2024 Caglianone CPA-JC: BOTH hiq:baseball:2024:bowman-draft:cpa-jc:refractor:auto:num-499 (checklistcenter-2026-08-29, setKey=\"bowman-draft\") and hiq:baseball:2024:bowman-chrome:cpa-jc:refractor:auto:num-499 (checklistinsider-2026-08-29, setKey=\"bowman-chrome\") exist as catalog rows from DIFFERENT sources, so the product-level question \"is 2024 Bowman Draft Chrome addressed as bowman-draft or bowman-chrome\" is unresolved in the catalog itself. The stored title \"2024 Bowman Chrome Jac Caglianone Kansas City #CPA-JC\" says only \"Bowman Chrome\" with no /499 and no draft token. Per CF-COUNT-BY-SOURCE this is a vocabulary decision, not a row repair; and these are ebay-user-purchase rows, where a wrong move corrupts a user's own cost basis. Census."
+    },
+    {
+      "id": "ebay-user-purchase::236848959183",
+      "price": 205.48,
+      "soldAt": "2026-06-16T13:45:52.802Z",
+      "title": "2024 Bowman Chrome Autographs Jac Caglianone #CPA-JC",
+      "cardId": "hiq:baseball:2024:bowman-draft:cpa-jc:refractor:auto:num-499",
+      "hobbyiqCardId": "hiq:baseball:2024:bowman-chrome:cpa-jc:refractor:auto:num-499",
+      "reason": "census",
+      "evidence": "2024 Caglianone CPA-JC: BOTH hiq:baseball:2024:bowman-draft:cpa-jc:refractor:auto:num-499 (checklistcenter-2026-08-29, setKey=\"bowman-draft\") and hiq:baseball:2024:bowman-chrome:cpa-jc:refractor:auto:num-499 (checklistinsider-2026-08-29, setKey=\"bowman-chrome\") exist as catalog rows from DIFFERENT sources, so the product-level question \"is 2024 Bowman Draft Chrome addressed as bowman-draft or bowman-chrome\" is unresolved in the catalog itself. The stored title \"2024 Bowman Chrome Autographs Jac Caglianone #CPA-JC\" says only \"Bowman Chrome\" with no /499 and no draft token. Per CF-COUNT-BY-SOURCE this is a vocabulary decision, not a row repair; and these are ebay-user-purchase rows, where a wrong move corrupts a user's own cost basis. Census."
+    },
+    {
+      "id": "tca-ebay::127887746009",
+      "price": 4.25,
+      "soldAt": "2026-06-01T23:53:46.000Z",
+      "title": "2024 Bowman Chrome Jeremy Ciriaco Auto Autograph 1st Prospect #CPA-JC Rockies",
+      "cardId": "hiq:baseball:2024:bowman-chrome:cpa-jc:refractor:auto",
+      "hobbyiqCardId": "hiq:baseball:2024:bowman-chrome:cpa-jc:refractor:auto:num-499",
+      "reason": "duplicate-pair",
+      "evidence": "id resolves to 2 documents across different partitions at the same price/soldAt (hiq:baseball:2024:bowman-chrome:cpa-jc:base:auto | hiq:baseball:2024:bowman-chrome:cpa-jc:refractor:auto). This lane patches or moves ONE document per id; collapsing a duplicate pair is the dedup lane's job and doing it here would silently lose a sale."
+    }
+  ]
+}
