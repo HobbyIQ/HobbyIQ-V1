@@ -655,6 +655,11 @@ FATAL: ${f(preflight.collisions)} contentHash collisions across ${f(preflight.gr
  *   persistVendorSalesToPool.service.ts:1081
  *     SELECT c.id FROM c WHERE c.hobbyiqCardId=@hiq AND c.contentHash=@ch
  *
+ * (Those line numbers are the ones the defect was FOUND at, kept so the
+ * retraction stays checkable against the history. The fix that closed it moved
+ * them: the queries now sit at soldCompsStore.service.ts:1544 and
+ * persistVendorSalesToPool.service.ts:1089.)
+ *
  * and `scoreForCanonical` (soldCompsStore.service.ts:676) never reads the flag.
  * So a flagged row still participates in ingest dedup, with two consequences:
  *
@@ -664,16 +669,23 @@ FATAL: ${f(preflight.collisions)} contentHash collisions across ${f(preflight.gr
  *   (2) if the incoming sale outscores it instead, :1524 HARD DELETES the
  *       flagged row -- destroying the dedupSupersededBy provenance trail.
  *
- * Both are PRE-EXISTING (this branch changes no file under backend/src) and
- * both are narrow: they need a genuine later sale colliding on the full
+ * Both were narrow: they needed a genuine later sale colliding on the full
  * contentHash -- (cardId, parallel, isAuto, grade, price, soldAt) -- with an
  * already-flagged row, i.e. same card AND same price AND the same second.
  *
- * The exclusion above does NOT rest on that claim. It rests on the narrower
- * true one: a flagged row is excluded from every FMV read, so it is not an
- * outstanding collision for the PRE-FLIGHT to refuse over. The ingest gap is a
- * separate, disclosed defect against backend/src -- not a reason to keep
- * counting resolved work, and not something this script can fix from here.
+ * CLOSED 2026-09-01. Both ingest queries now carry
+ * `(NOT IS_DEFINED(c.flaggedWrong) OR c.flaggedWrong != true)`, and
+ * `scoreForCanonical` subtracts a floor-clearing 1000 from a flagged row so it
+ * loses to every live one. A flagged row can no longer drop a genuine incoming
+ * sale, nor be hard-deleted by one. The one deliberate exception: when the
+ * INCOMING doc is itself flagged (the cardsight $0.99 / outlier guards mint
+ * that at ingest) it still dedups against flagged rows, or those guards would
+ * resurrect the duplicates they exist to suppress. Pinned in
+ * backend/tests/ingestFlaggedDedupProtection.test.ts.
+ *
+ * The exclusion above never rested on the retracted claim anyway. It rests on
+ * the narrower true one: a flagged row is excluded from every FMV read, so it
+ * is not an outstanding collision for the PRE-FLIGHT to refuse over.
  */
 async function salesUnder(pool, slug) {
   const out = [];

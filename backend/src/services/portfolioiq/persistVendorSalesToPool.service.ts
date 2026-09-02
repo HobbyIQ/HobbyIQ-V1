@@ -1077,8 +1077,16 @@ export async function persistVendorSalesToPool(
     }
 
     try {
+      // CF-A-FLAGGED-ROW-IS-NOT-A-DEDUP-PARTNER (2026-09-01). A row already
+      // ruled WRONG must not suppress an incoming genuine sale. This is a
+      // pure existence check -- a hit `continue`s and the sale is never
+      // written -- so an unfiltered match here silently DROPS a real sale
+      // against a row every FMV read path already excludes. Unlike the
+      // store's dedup this path never mints `flaggedWrong` (nothing in this
+      // file writes it), so there is no flagged-incoming case to preserve:
+      // the predicate is unconditional.
       const { resources: existing } = await container.items.query({
-        query: "SELECT c.id FROM c WHERE c.hobbyiqCardId = @hiq AND c.contentHash = @ch",
+        query: "SELECT c.id FROM c WHERE c.hobbyiqCardId = @hiq AND c.contentHash = @ch AND (NOT IS_DEFINED(c.flaggedWrong) OR c.flaggedWrong != true)",
         parameters: [{ name: "@hiq", value: slug }, { name: "@ch", value: contentHash }],
       }).fetchAll();
       if (existing.length > 0) { result.deduped++; continue; }
