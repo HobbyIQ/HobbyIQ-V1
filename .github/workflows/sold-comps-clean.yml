@@ -5,8 +5,17 @@ name: Sold Comps Cleaner
 # scripts:
 #   - sold-comps-cleaner: normalizes playerName / parallel / grade /
 #     cardNumber in-place
-#   - sold-comps-cross-source-dedup: deletes duplicate rows that
-#     represent the same physical sale ingested from multiple vendors
+#   - sold-comps-cross-source-dedup: EXCLUDES duplicate rows that
+#     represent the same physical sale ingested from multiple vendors.
+#     It does NOT delete: the pool is the moat and a vendor may never
+#     re-emit a sale it has already reported, so a duplicate is marked
+#     flaggedWrong=true (which every FMV read path already filters) with
+#     provenance naming the surviving row. Auditable, and reversible.
+#
+#     A shared `sourceExternalId` -- the eBay item id -- is REQUIRED
+#     before anything is excluded. Two rows with different item ids are
+#     two real sales however identical they look, and the earlier
+#     (title, price, DAY) key collapsed exactly those.
 
 on:
   workflow_dispatch:
@@ -18,7 +27,7 @@ on:
         options: ['normalize-fields', 'cross-source-dedup', 'both']
         default: 'normalize-fields'
       apply:
-        description: 'true to write / delete (else dry-run count)'
+        description: 'true to write (flags only — nothing is ever deleted); else dry-run + full would-flag list'
         required: false
         type: choice
         options: ['false', 'true']
@@ -85,6 +94,25 @@ jobs:
           fi
           if [ "$MODE" = "cross-source-dedup" ] || [ "$MODE" = "both" ]; then
             echo "=== cross-source-dedup ==="
+            # THE RULE LIVES IN A LIB, SO CHECK FOR THE LIB. The discriminator
+            # (a shared sourceExternalId is required before anything is
+            # excluded) was copy-pasted into each dedup script and guarded only
+            # by regex-over-source tests; it now lives in scripts/lib and both
+            # import it. The entrypoint being present proves nothing about the
+            # rule it requires, and a run that reached Cosmos and then died on a
+            # missing require would have scanned the pool for nothing.
+            for LIB in cross-source-cluster collision-triage; do
+              if [ ! -f "scripts/lib/$LIB.cjs" ]; then
+                echo "::error::backend/scripts/lib/$LIB.cjs is missing — the dedup would scan the pool and then have no rule to decide with"
+                exit 1
+              fi
+            done
+            echo "Dedup libs confirmed: cross-source-cluster, collision-triage"
+            # The dedup requires dist/ (writeReconciliation). MODE=both builds
+            # above, but MODE=cross-source-dedup alone reached this line with no
+            # dist at all and would die on a MODULE_NOT_FOUND after nothing.
+            # Idempotent, so building twice under `both` costs only time.
+            npm run build
             COSMOS_CONNECTION_STRING="$COSMOS_CONNECTION_STRING" \
             COSMOS_DATABASE=hobbyiq \
             APPLY="${{ inputs.apply || 'false' }}" \

@@ -3,61 +3,110 @@
 // + Cardsight). The existing contentHash dedup is per-source, so
 // cross-source duplicates slip through.
 //
-// This script identifies + deletes those cross-source dupes.
-// Match key: (title-hash, price, soldAt-day) — three sources
-// listing the same sale on the same day for the same price with
-// the same title text = same real sale.
+// -- WHAT THIS SCRIPT USED TO DO, AND WHY IT NEVER RAN ----------------------
 //
-// Keep the earliest observedAt (first ingest wins). Delete the rest.
+// rev-1 keyed on (title-hash, price, soldAt DAY) and HARD-DELETED every row
+// but the earliest. Both halves were wrong, and the workflow that dispatches
+// it (sold-comps-clean.yml) has ZERO runs ever -- so nothing has been lost.
+// It is a landmine to defuse, not a leak to stop.
 //
-// Idempotent — re-runs are safe (dupes only exist once).
+//   (a) THE DAY BUCKET. Two identical-title sales of the same card at the same
+//       price 19 hours apart are TWO REAL SALES. They share a day, so rev-1
+//       collapsed them. af14c29c fixed exactly this by moving to minute
+//       precision -- but only in crossSourceDedupSoldComps.cjs, its sibling.
+//       That fix is backported here as defence in depth.
+//
+//   (b) THE MISSING DISCRIMINATOR. Neither precision nor title nor price says
+//       whether two rows are one sale. `sourceExternalId` does: it is the eBay
+//       item id, it is present on every row, and it is half of the doc id
+//       `{source}::{sourceExternalId}`. Two rows with DIFFERENT external ids
+//       are two different listings -- two real sales -- however identical
+//       everything else looks. So a shared external id is now REQUIRED before
+//       anything is excluded, and time precision is only a secondary bucket.
+//
+//   (c) THE DELETE. The pool is the moat and a vendor may never re-emit a sale
+//       it has already reported. A dedup NEVER hard-deletes. Exclusion is
+//       flaggedWrong=true, which every FMV read path already filters
+//       (canonicalFmv.service.ts:1073,:1292; marketMovers, playerDetail,
+//       priceSeries, setDetail, verifyQueue; cohortBacktest), plus provenance
+//       naming the surviving row -- so the mark is auditable and reversible.
+//
+// Match key: (title-hash, price, soldAt-MINUTE) buckets the candidates; a
+// shared sourceExternalId PROVES they are one sale. Keep the richest row.
+//
+//   (d) THE COPY. That discriminator was written out twice -- here and in
+//       crossSourceDedupSoldComps.cjs -- with a copy of `externalIdOf` in each,
+//       and guarded only by regex-over-source tests. A mutant reverting either
+//       to the rev-2 whole-bucket collapse passed every one of them. The rule
+//       now lives in scripts/lib/cross-source-cluster.cjs, both scripts import
+//       it, and the tests execute both scripts against a stubbed pool (D3).
+//
+// Idempotent -- re-runs are safe (only-improve: an already-flagged row is
+// never re-stamped and never unflagged).
 //
 // Env:
 //   COSMOS_CONNECTION_STRING   required
-//   APPLY=true                 delete (else dry-run count of duplicate groups)
+//   APPLY=true                 flag (else dry-run: print the full would-flag list)
 //   MAX_MINUTES=50             wall-clock cap
 //   BATCH=1000                 rows per Cosmos query page
 //   MIN_PRICE=1                skip rows with price < this (avoid noise)
+//   TIME_PRECISION=minute      minute (default) | hour | day
 
 const { CosmosClient } = require("@azure/cosmos");
 const crypto = require("crypto");
 const path = require("path");
-// CF-A-GREEN-RUN-IS-NOT-A-DATA-FLOW (D18, 2026-08-29). This deletes. Counters,
-// disjoint: intended = non-survivor rows the loop took up; written = deletes
-// acknowledged; skipped = already gone (404); failed = deletes that threw.
+// CF-A-GREEN-RUN-IS-NOT-A-DATA-FLOW (D18, 2026-08-29). This writes. Counters,
+// disjoint: intended = rows proven duplicate; written = flags acknowledged;
+// skipped = already flagged; failed = patches that threw.
 const { reportWrites } = require(path.join(__dirname, "..", "dist/services/ops/writeReconciliation.js"));
+// THE DISCRIMINATOR IS IMPORTED, NOT COPIED -- see the header of
+// scripts/lib/cross-source-cluster.cjs. This file declared its own
+// `externalIdOf` and its own bucket-by-id loop, guarded only by regex-over-
+// source tests: a mutant collapsing the whole bucket passed every one of them.
+const { provenClustersOf, resolveCluster, externalIdOf } = require(path.join(__dirname, "lib", "cross-source-cluster.cjs"));
 
-const APPLY = process.env.APPLY === "true";
+const APPLY = process.env.APPLY === "true" || process.env.BACKFILL_APPLY === "true";
 const MAX_MINUTES = Math.max(1, Number(process.env.MAX_MINUTES || 50));
 const BATCH = Math.max(200, Number(process.env.BATCH || 1000));
 const CONCURRENCY = Math.max(1, Number(process.env.CONCURRENCY || 32));
 const MIN_PRICE = Math.max(0, Number(process.env.MIN_PRICE || 1));
+// af14c29c, backported. rev-1's day bucket collapsed real sales hours apart.
+const TIME_PRECISION = (process.env.TIME_PRECISION || "minute").toLowerCase();
+const TIME_SLICE_LEN = TIME_PRECISION === "day" ? 10 : TIME_PRECISION === "hour" ? 13 : 16;
 
 function titleHash(t) {
   return crypto.createHash("sha256").update(String(t ?? "").toLowerCase().trim()).digest("hex").slice(0, 16);
 }
 
 function groupKey(row) {
-  const day = String(row.soldAt ?? "").slice(0, 10);
+  const when = String(row.soldAt ?? "").slice(0, TIME_SLICE_LEN);
   const price = typeof row.price === "number" ? row.price.toFixed(2) : String(row.price);
-  return `${titleHash(row.title)}|${price}|${day}`;
+  return `${titleHash(row.title)}|${price}|${when}`;
 }
+
+// `externalIdOf` is imported above: the eBay item id trimmed, or null. Null can
+// never prove sameness, and two nulls never prove it with each other.
 
 async function main() {
   if (!process.env.COSMOS_CONNECTION_STRING) { console.error("COSMOS_CONNECTION_STRING required"); process.exit(1); }
   const cosmos = new CosmosClient(process.env.COSMOS_CONNECTION_STRING);
   const sold = cosmos.database(process.env.COSMOS_DATABASE || "hobbyiq").container("sold_comps");
-  console.log(`[xsrc-dedup] apply=${APPLY} maxMin=${MAX_MINUTES} batch=${BATCH} concurrency=${CONCURRENCY} minPrice=${MIN_PRICE}`);
+  console.log(`[xsrc-dedup] ${APPLY ? "APPLY (flag only -- never a delete)" : "DRY RUN"} maxMin=${MAX_MINUTES} batch=${BATCH} concurrency=${CONCURRENCY} minPrice=${MIN_PRICE} precision=${TIME_PRECISION}`);
+  console.log(`[xsrc-dedup] a shared sourceExternalId is REQUIRED to exclude anything; different external id = two real sales.`);
   const startMs = Date.now();
   const budgetMs = MAX_MINUTES * 60_000;
 
   // Phase 1: scan all rows, build grouping index
   const q = {
-    query: `SELECT c.id, c.cardId, c.title, c.price, c.soldAt, c.source, c.observedAt FROM c WHERE IS_DEFINED(c.title) AND c.price >= @minp`,
+    query: `SELECT c.id, c.cardId, c.title, c.price, c.soldAt, c.source, c.sourceExternalId,
+                   c.observedAt, c.parallel, c.gradeCompany, c.gradeValue, c.hobbyiqCardId,
+                   c.playerName, c.cardNumber, c.imageUrl, c.team, c.setName, c.cardYear,
+                   c.sport, c.printRun, c.normalizedSetKey, c.verifiedByUser, c.flaggedWrong
+            FROM c WHERE IS_DEFINED(c.title) AND c.price >= @minp`,
     parameters: [{ name: "@minp", value: MIN_PRICE }],
   };
   const iter = sold.items.query(q, { maxItemCount: BATCH });
-  const groups = new Map();  // key -> [{id, cardId, source, observedAt}, ...]
+  const groups = new Map();  // key -> [row, ...]
   let scanned = 0;
 
   while (iter.hasMoreResults()) {
@@ -69,7 +118,7 @@ async function main() {
       const key = groupKey(row);
       let arr = groups.get(key);
       if (!arr) { arr = []; groups.set(key, arr); }
-      arr.push({ id: row.id, cardId: row.cardId, source: row.source, observedAt: row.observedAt });
+      arr.push(row);
     }
     if (scanned % 100000 === 0) {
       const el = ((Date.now() - startMs) / 1000).toFixed(0);
@@ -77,53 +126,98 @@ async function main() {
     }
   }
 
-  // Phase 2: find duplicate groups (size > 1), delete all except earliest observedAt
-  let dupeGroups = 0, dupeRows = 0, deleted = 0, gone = 0, errors = 0, attempted = 0;
-  const sourcesCrossed = new Map(); // count how many cross-source combos
+  // Phase 2: within each bucket, a SHARED sourceExternalId proves one sale.
+  let dupeGroups = 0, dupeRows = 0, flagged = 0, already = 0, errors = 0, attempted = 0;
+  let refusedDifferentIds = 0, refusedNoId = 0;
+  const sourcesCrossed = new Map();
   const inflight = new Set();
 
   for (const [key, arr] of groups.entries()) {
     if (arr.length < 2) continue;
-    // Only count as cross-source if there are multiple distinct sources
-    const distinctSources = new Set(arr.map(r => r.source));
-    if (distinctSources.size < 2) continue;
-    dupeGroups++;
-    dupeRows += arr.length;
-    const combo = [...distinctSources].sort().join("+");
-    sourcesCrossed.set(combo, (sourcesCrossed.get(combo) || 0) + 1);
-    // Keep earliest observedAt; delete others
-    arr.sort((a, b) => String(a.observedAt || "").localeCompare(String(b.observedAt || "")));
-    const survivor = arr[0];
-    const toDelete = arr.slice(1);
-    if (!APPLY) continue;
-    for (const row of toDelete) {
-      while (inflight.size >= CONCURRENCY) await Promise.race([...inflight]);
-      attempted++;
-      const p = sold.item(row.id, row.cardId).delete()
-        .then(() => { deleted++; })
-        .catch((err) => {
-          if (err?.code === 404) { gone++; return; }
-          errors++;
-          if (errors < 10) console.warn(`  delete err id=${row.id}: ${err?.code ?? err?.message}`);
-        })
-        .finally(() => inflight.delete(p));
-      inflight.add(p);
+
+    // THE DISCRIMINATOR, imported. Bucket by external id; only ids seen more
+    // than once are proven duplicates. Rows whose id is unique in the bucket --
+    // or that carry no id at all -- are left completely alone. A bucket that
+    // proves nothing is several real sales that share a title, a price and a
+    // minute: two people bought the same card at the same price in the same
+    // minute. That happens, and both sales are real.
+    const { proven, refusedNoId: noId, refusedDifferentIds: diff } = provenClustersOf(arr);
+    refusedNoId += noId;
+    refusedDifferentIds += diff;
+    if (proven.length === 0) continue;
+
+    for (const list of proven) {
+      const distinctSources = new Set(list.map((r) => r.source));
+      dupeGroups++;
+      dupeRows += list.length;
+      const combo = [...distinctSources].sort().join("+");
+      sourcesCrossed.set(combo, (sourcesCrossed.get(combo) || 0) + 1);
+
+      // Richest row survives (the store's own scoreForCanonical shape), ties to
+      // the earliest observed -- the record closest to the sale itself. The
+      // already-flagged losers come back separately: only-improve, never
+      // re-stamped and never unflagged.
+      const { survivor, toFlag, alreadyFlagged } = resolveCluster(list);
+      const losers = [...toFlag, ...alreadyFlagged];
+      // Counted BEFORE the dry-run branch: the DONE line reports alreadyFlagged
+      // in both modes, and a dry run that reported 0 of them would understate
+      // exactly the population an apply is going to skip.
+      already += alreadyFlagged.length;
+
+      if (!APPLY) {
+        console.log(`  [would flag] ${key}  sources=${combo}`);
+        console.log(`      SURVIVOR ${survivor.id}  [${survivor.source}]  ext=${externalIdOf(survivor)}  $${survivor.price}  ${survivor.soldAt}`);
+        for (const r of losers) console.log(`      FLAG     ${r.id}  [${r.source}]  ext=${externalIdOf(r)}${r.flaggedWrong === true ? "   (already flagged)" : ""}`);
+        continue;
+      }
+
+      for (const row of toFlag) {
+        while (inflight.size >= CONCURRENCY) await Promise.race([...inflight]);
+        attempted++;
+        const p = sold.item(row.id, row.cardId).patch([
+          { op: "set", path: "/flaggedWrong", value: true },
+          { op: "set", path: "/flaggedReason", value: "dedup-superseded" },
+          { op: "set", path: "/dedupSupersededBy", value: String(survivor.id) },
+          { op: "set", path: "/dedupReason", value: `cross-source-dedup:shared-sourceExternalId:${externalIdOf(row)}` },
+          { op: "set", path: "/dedupAt", value: new Date().toISOString() },
+        ])
+          .then(() => { flagged++; })
+          .catch((err) => {
+            errors++;
+            if (errors < 10) console.warn(`  flag err id=${row.id}: ${err?.code ?? err?.message}`);
+          })
+          .finally(() => inflight.delete(p));
+        inflight.add(p);
+      }
     }
-    void survivor;
-    if (dupeGroups % 10000 === 0) {
+
+    if (dupeGroups % 10000 === 0 && dupeGroups > 0) {
       const el = ((Date.now() - startMs) / 1000).toFixed(0);
-      console.log(`  dedup: groups=${dupeGroups.toLocaleString()} deleted=${deleted.toLocaleString()} errors=${errors} el=${el}s`);
+      console.log(`  dedup: clusters=${dupeGroups.toLocaleString()} flagged=${flagged.toLocaleString()} errors=${errors} el=${el}s`);
     }
   }
   await Promise.all([...inflight]);
 
-  console.log(`\n[xsrc-dedup] DONE — scanned=${scanned.toLocaleString()} groups=${groups.size.toLocaleString()} dupeGroups=${dupeGroups.toLocaleString()} dupeRows=${dupeRows.toLocaleString()} deleted=${deleted.toLocaleString()} gone=${gone.toLocaleString()} errors=${errors} el=${((Date.now()-startMs)/1000).toFixed(0)}s`);
-  console.log("Cross-source combos:");
+  console.log(`\n[xsrc-dedup] DONE — scanned=${scanned.toLocaleString()} buckets=${groups.size.toLocaleString()} provenClusters=${dupeGroups.toLocaleString()} provenRows=${dupeRows.toLocaleString()} flagged=${flagged.toLocaleString()} alreadyFlagged=${already.toLocaleString()} errors=${errors} el=${((Date.now()-startMs)/1000).toFixed(0)}s`);
+  console.log(`  REFUSED (left alone, both sales real):`);
+  console.log(`    same bucket, different external ids   ${refusedDifferentIds.toLocaleString()}`);
+  console.log(`    rows carrying no external id          ${refusedNoId.toLocaleString()}`);
+  console.log("Cross-source combos (proven clusters only):");
   for (const [combo, n] of [...sourcesCrossed.entries()].sort((a, b) => b[1] - a[1])) {
     console.log(`  ${combo.padEnd(35)} ${n.toLocaleString()}`);
   }
-  if (!APPLY) console.log("(dry-run — no deletes)");
-  if (APPLY) reportWrites({ job: "sold-comps-cross-source-dedup", intended: attempted, written: deleted, skipped: gone, failed: errors });
+  if (!APPLY) console.log("(dry-run — nothing written; the would-flag list is above)");
+  if (APPLY) {
+    // INTENDED IS EVERY LOSER THIS RUN PROVED. `attempted` counts only the
+    // patches queued, so the earlier form printed a literal `skipped 0` while
+    // reporting `alreadyFlagged` on its own line -- arithmetic that balanced
+    // against a narrower intent than the run had actually decided. A run whose
+    // losers were all already flagged reconciled 0 = 0 + 0 + 0 and vouched for
+    // nothing.
+    const intended = attempted + already;
+    console.log(`  reconciled: intended ${intended.toLocaleString()} = written ${flagged.toLocaleString()} + skipped ${already.toLocaleString()} + failed ${errors.toLocaleString()}`);
+    reportWrites({ job: "sold-comps-cross-source-dedup", intended, written: flagged, skipped: already, failed: errors });
+  }
 }
 
 main().catch((err) => { console.error(err); process.exit(1); });
