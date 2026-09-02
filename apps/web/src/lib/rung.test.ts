@@ -47,6 +47,22 @@ describe("describeRung", () => {
     expect(describeRung("cross-grade-fallback").text).toBe("estimate from another grade of this card");
   });
 
+  // CF-PLAYER-TREND-SPECULATION (Drew, 2026-09-02). The words have to say
+  // BOTH halves of the claim, because either alone misleads: "this card's
+  // last sale" is a real trade of this exact card, and "the player's market
+  // trend" is what moved it. Saying only the first would read as an
+  // exact-pool number; saying only the second would hide that the anchor is
+  // this card's own.
+  it("the player-trend rung names its anchor AND what moved it", () => {
+    const d = describeRung("player-index-projection", { compsUsed: 2 });
+    expect(d.kind).toBe("estimate");
+    expect(d.text).toBe("estimate from this card's last sale x the player's market trend");
+    expect(d.text).toMatch(/last sale/);
+    expect(d.text).toMatch(/player's market trend/);
+    expect(isExactPoolRung("player-index-projection")).toBe(false);
+    expect(isKnownRung("player-index-projection")).toBe(true);
+  });
+
   it("decorates the exact-pool phrases with the pool size, singular and plural", () => {
     expect(describeRung("exact-pool-projection", { compsUsed: 5 }).text).toBe("projected from 5 sales of this card");
     expect(describeRung("exact-pool-weighted-median", { compsUsed: 1 }).text).toBe("from 1 sale of this card (thin pool)");
