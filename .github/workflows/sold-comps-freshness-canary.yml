@@ -26,6 +26,28 @@ name: Sold Comps Freshness Canary
 # exists for: if the firehose is confirmed back, raise the floor toward
 # 25000 (25% of the firehose-era minimum). cardhedge stays off (runtime,
 # demand-driven; a quiet day is not an outage).
+#
+# D33 (2026-09-02) — the VOLUME FLOOR axis. MIN_ROWS_24H has to be hand-set,
+# so only tca-ebay ever carried a number and every other source ran with no
+# volume alert. This axis derives the floor per source instead: last full day
+# vs the MEDIAN of the trailing 14 days, alerting under 0.5x. Sources whose
+# own baseline is under MIN_BASELINE_ROWS (1000) are exempt, so retired and
+# tiny feeds cannot flap and no exclusion list needs maintaining.
+#
+# Measured 2026-09-02 (read-only, per-source-per-day COUNT, 21 days).
+# What the axis reports on this data:
+#   tca-ebay    488 on 09-01 vs baseline  88027/day → floor 44013  FIRES (0.6%)
+#   cardhedge 100867 on 09-01 vs baseline  68093/day → floor 34046  ok
+#   cardsight       0         vs baseline      0/day → EXEMPT (retired)
+#   ch-daily        0         vs baseline      0/day → EXEMPT (no rows)
+# tca-ebay's decline is visible in the daily series: ~80-115k/day through
+# 08-25, then 9302 / 11906 / 9277 on 08-26..28, then 7077 / 573 / 488.
+#
+# Baseline is a MEDIAN, not a mean: the pool takes backfill spikes
+# (tca-ebay 438651 on 08-29) that a mean would absorb into the baseline and
+# then read the next normal day as a collapse. It is NOT weekday-aware —
+# measured per-weekday medians at n=3 are noise (tca-ebay dow0 spans
+# 7077..299151, which is the outage and the backfill, not a weekly cycle).
 
 on:
   schedule:
@@ -42,6 +64,21 @@ on:
         required: false
         type: string
         default: 'tca-ebay=25000'
+      volume_floor_fraction:
+        description: 'Volume axis: alert under this fraction of the rolling baseline. 0 = off. Default 0.5.'
+        required: false
+        type: string
+        default: '0.5'
+      baseline_days:
+        description: 'Volume axis: trailing full days in the median baseline. Default 14.'
+        required: false
+        type: string
+        default: '14'
+      min_baseline_rows:
+        description: 'Volume axis: a source whose baseline is under this is exempt (retired/tiny). Default 1000.'
+        required: false
+        type: string
+        default: '1000'
 
 jobs:
   check-freshness:
@@ -86,4 +123,7 @@ jobs:
           COSMOS_DATABASE=hobbyiq \
           MAX_STALENESS_HOURS="${{ inputs.max_staleness_hours || '25' }}" \
           MIN_ROWS_24H="${{ inputs.min_rows_24h || 'tca-ebay=25000' }}" \
+          VOLUME_FLOOR_FRACTION="${{ inputs.volume_floor_fraction || '0.5' }}" \
+          BASELINE_DAYS="${{ inputs.baseline_days || '14' }}" \
+          MIN_BASELINE_ROWS="${{ inputs.min_baseline_rows || '1000' }}" \
           node scripts/checkSoldCompsFreshness.cjs
