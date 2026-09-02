@@ -161,6 +161,68 @@ describe("the committed list is well formed and says why it excludes what it exc
     expect(moved.has("tca-ebay::227476163462")).toBe(false);
   });
 
+  it("the addendum list is well formed too, and is a REPOINT list end to end", () => {
+    // G1 (2026-09-02). The four-values APPLY moved 44 Gonzalez base autos'
+    // cardId and left every hobbyiqCardId behind on the refractor slug -- a
+    // half-move, because the caller rewrites hobbyiqCardId only when it equals
+    // fromCardId and here it never did. The rows are in the RIGHT partition
+    // already, so the fix is a repoint in place; a relocate would upsert onto
+    // an occupied address.
+    const addendum = JSON.parse(
+      readFileSync(join(__dirname, "..", "data", "pool-relocations", "2026-09-02-gonzalez-addendum.json"), "utf8"),
+    );
+    expect(addendum.entries.length).toBe(44);
+    for (const e of addendum.entries) {
+      // Every entry is a repoint: it names the new hobbyiqCardId and NEVER a
+      // toCardId, or the runner would take the relocate branch.
+      expect(e.repointHobbyiqCardId).toBe("hiq:baseball:2026:bowman:cpa-jg:base:auto");
+      expect(e.toCardId).toBeUndefined();
+      // The partition is already correct -- that is what makes this a repoint.
+      expect(e.fromCardId).toBe("hiq:baseball:2026:bowman:cpa-jg:base:auto");
+      expect(String(e.evidence ?? "").length).toBeGreaterThan(20);
+    }
+    for (const x of addendum.excluded) {
+      expect(String(x.id ?? "")).not.toBe("");
+      expect(String(x.reason ?? "").length).toBeGreaterThan(20);
+    }
+    const moved = new Set(addendum.entries.map((e: { id: string }) => e.id));
+    for (const x of addendum.excluded) expect(moved.has(x.id)).toBe(false);
+  });
+
+  it("the genuine /499 refractor is KEPT, never repointed into the base pool", () => {
+    // The one document in the refractor partition is a real refractor: stored
+    // parallel="Refractor" AND /499 in the title. Both halves of its identity
+    // agree and are correct. Repointing it would push a real /499 sale into
+    // the base pool -- the exact corruption this list exists to undo.
+    const addendum = JSON.parse(
+      readFileSync(join(__dirname, "..", "data", "pool-relocations", "2026-09-02-gonzalez-addendum.json"), "utf8"),
+    );
+    const id = "ebay-user-purchase::147349440137-10083282594225";
+    expect(addendum.entries.some((e: { id: string }) => e.id === id)).toBe(false);
+    const x = addendum.excluded.find((e: { id: string }) => e.id === id);
+    expect(x).toBeDefined();
+    expect(x.reason).toMatch(/genuine refractor/i);
+  });
+
+  it("duplicated ids stay out -- this lane cannot collapse a pair (D-03 shape)", () => {
+    const addendum = JSON.parse(
+      readFileSync(join(__dirname, "..", "data", "pool-relocations", "2026-09-02-gonzalez-addendum.json"), "utf8"),
+    );
+    // 5 three-way collisions + 3 cross-partition pairs, all verified live.
+    const dupes = [
+      "tca-ebay::358817557308", "tca-ebay::377379955045", "tca-ebay::127980234325",
+      "tca-ebay::127980234254", "tca-ebay::377350186355",
+      "tca-ebay::407031538581", "tca-ebay::EBAY-v1|407031538581|0", "tca-ebay::377439975936",
+    ];
+    const moved = new Set(addendum.entries.map((e: { id: string }) => e.id));
+    for (const id of dupes) {
+      expect(moved.has(id)).toBe(false);
+      const x = addendum.excluded.find((e: { id: string }) => e.id === id);
+      expect(x, `${id} must be excluded with a reason, not passed over`).toBeDefined();
+      expect(x.reason).toMatch(/dedup lane/i);
+    }
+  });
+
   it("the BNR-VGJ Black Prism 1/1 is a relocate, and it names the NSCC product (D5-NSCC)", () => {
     // Drew-flagged, and the row no automated lane reaches: the title-exclusivity
     // pass refuses it as sameProduct, because inferSetKeyFromTitle reads
