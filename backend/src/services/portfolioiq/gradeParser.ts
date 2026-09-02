@@ -106,6 +106,60 @@ const PSA_10_PATTERNS = [
   /\bpristine\b/i,
 ];
 
+// CF-PRISTINE-IS-A-PRODUCT-NOT-A-GRADE (2026-09-01).
+//
+// "Pristine" is the ONLY word in the PSA_10_PATTERNS descriptor vocabulary that
+// is also the name of a Topps product line. A 16-word sweep over the other set
+// words (Perfect / Gem / Mint / Chrome / Select / Optic / Prizm / Immaculate /
+// Flawless / Gold Label / Sterling / Diamond / ...) found no other collision, so
+// this guard is deliberately scoped to the one word rather than generalized.
+//
+// MEASURED MECHANISM (probe, origin/main 7e0087b):
+//   "2024 Topps Pristine Baseball #131 Base"  -> PSA 10   (phantom)
+//   "2024 Topps Pristine Baseball #5 Base"    -> null
+// The card number is NOT what feeds the grade. 131 fails the 0<v<=10 range
+// check, so detectedValue stays null and the descriptor-ONLY fallback fires on
+// the bare word. "#5" is a *valid* grade value, so it populates detectedValue,
+// which suppresses that fallback — i.e. the old code returned raw only by the
+// accident of the card number happening to look like a grade. Both branches
+// were wrong; this guard removes the dependence on that accident entirely.
+//
+// THE DISCRIMINATOR IS PRODUCT CONTEXT, NOT THE WORD. Topps Pristine is a real
+// graded-card-heavy product line, so its titles legitimately carry real slab
+// grades ("2024 Topps Pristine ... PSA 10") and those MUST survive. What must
+// not survive is the set word ALONE standing in for a grade. So the guard fires
+// only when the title reads as a product listing:
+//   - a 4-digit year or a known brand token sits next to the word, AND
+//   - no grading company is named anywhere in the title, AND
+//   - no standalone grade phrase ("Pristine 10", "10 Pristine") is present.
+//
+// The third clause is what keeps grader vocabulary working. BGS and CGC both
+// use "Pristine" as the LABEL for a ten — "CGC Pristine 10", "BGS 10 Pristine"
+// — but those name a company, so clause two already lets them through. The
+// numeric clause additionally protects a bare "Pristine 10" with no company.
+//
+// A bare "PRISTINE" label (the iOS card-scan input the descriptor fallback was
+// built for) has neither year nor brand beside it, so it is untouched and still
+// reads PSA 10 — the #1608-era pin in gradeParser.test.ts stays green.
+const PRODUCT_BRAND_TOKENS =
+  /\b(?:topps|panini|bowman|upper\s*deck|leaf|donruss|fleer|score|select|prizm|optic|immaculate|chronicles|absolute|obsidian|mosaic|hoops|contenders)\b/i;
+
+/** True when "Pristine" in this title is the Topps product line rather than a
+ *  grade word: product context present, no grader named, no numeric grade
+ *  phrase attached to the word. */
+function pristineIsProductContext(text: string): boolean {
+  if (!/\bpristine\b/i.test(text)) return false;
+  // A named grading company means the title is talking about a slab.
+  if (detectedCompanyOf(text)) return false;
+  // "Pristine 10" / "10 Pristine" states a grade even with no company token.
+  if (/\bpristine\b[\s-]*(?:10|[1-9](?:\.5)?)\b/i.test(text)) return false;
+  if (/\b(?:10|[1-9](?:\.5)?)[\s-]*\bpristine\b/i.test(text)) return false;
+  // Product context: a release year or a brand token in the same title.
+  const hasYear = /\b(?:19|20)\d{2}\b/.test(text);
+  const hasBrand = PRODUCT_BRAND_TOKENS.test(text);
+  return hasYear || hasBrand;
+}
+
 // PSA's full grade-label vernacular. The slab printing uses descriptor
 // words alongside the numeric grade ("MINT 9", "NM-MT 8", "EX-MT 6").
 // iOS card-scan path historically captured these labels verbatim. When
@@ -307,8 +361,16 @@ export function parseGradeLabel(label: string | null | undefined): ParsedGrade |
   // top-grade conventions. Only infer PSA 10 when the descriptor IS
   // present AND no other company token competes AND no numeric is found.
   if (!detectedCompany && !detectedValue) {
-    const isPsa10Descriptor = PSA_10_PATTERNS.some((re) => re.test(trimmed));
-    if (isPsa10Descriptor) {
+    // CF-PRISTINE-IS-A-PRODUCT-NOT-A-GRADE: when the ONLY descriptor carrying
+    // this title is a product-context "Pristine", there is no grade word here
+    // at all — fall through to raw rather than minting a PSA 10. A title that
+    // also says "Gem Mint" still resolves on that word.
+    const otherPsa10Descriptor = PSA_10_PATTERNS
+      .filter((re) => re.source !== /\bpristine\b/i.source)
+      .some((re) => re.test(trimmed));
+    const pristineIsGradeWord =
+      /\bpristine\b/i.test(trimmed) && !pristineIsProductContext(trimmed);
+    if (otherPsa10Descriptor || pristineIsGradeWord) {
       return { gradeCompany: "PSA", gradeValue: 10 };
     }
   }
