@@ -678,7 +678,24 @@ export function scoreForCanonical(row: {
   sourceExternalId?: string | null;
   parallel?: string | null;
   observedAt?: string;
+  flaggedWrong?: boolean;
 }): number {
+  // CF-A-FLAGGED-ROW-LOSES-TO-EVERY-LIVE-ROW (2026-09-01). Defense in
+  // depth for the ingest dedup gap fixed at the query above: a row we have
+  // ruled WRONG must never out-rank a live one, whatever its id shape,
+  // parallel length or recency say. Measured before this: a flagged row on
+  // a real eBay id scored 95.855424 against a genuine incoming
+  // `ch-daily::` sale at 85.882208, and the real sale was dropped.
+  //
+  // The penalty is a floor-clearing constant, not a tweak to the weights:
+  // the live scale is bounded well under 1000 (verifiedByUser 100 + prefix
+  // 60 + parallel length + a sub-1 recency term), so subtracting 1000
+  // puts EVERY flagged row below EVERY live row while preserving the exact
+  // relative order WITHIN each group. Ranking among flagged rows still
+  // matters -- when a flagged doc dedups against its flagged twins (the
+  // deliberate asymmetry at the dedup query), the richest flagged row must
+  // still win.
+  const flaggedPenalty = row.flaggedWrong === true ? -1000 : 0;
   const prefix = row.sourceExternalId ?? "";
   // CF-A-REAL-ID-OUTRANKS-A-SYNTHETIC-ONE (2026-08-29, checklist D7b). A row
   // keyed by the eBay item / order id IS the transaction; a "holding::" key is
@@ -690,6 +707,7 @@ export function scoreForCanonical(row: {
     : prefix ? 60
     : 0;
   return (
+    flaggedPenalty +
     (row.verifiedByUser === true ? 100 : 0) +
     prefixScore +
     (row.parallel ? String(row.parallel).length : 0) +
@@ -1490,9 +1508,41 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
   // same-contentHash-within-partition as the same sale regardless of
   // source. TCA + Cardsight rarely trip this because their externalId
   // is the eBay item id directly (already dedup-safe on id).
+  //
+  // CF-A-FLAGGED-ROW-IS-NOT-A-DEDUP-PARTNER (2026-09-01). A row we have
+  // already ruled WRONG must not decide the fate of an incoming genuine
+  // sale. Until now this query selected every same-hash row in the
+  // partition, flagged or not, and both outcomes were wrong:
+  //
+  //   - the flagged row OUTSCORES the incoming sale (measured against
+  //     dist/: a flagged row on a real eBay id scores 95.855424, a genuine
+  //     incoming `ch-daily::` sale 85.882208) -> the REAL sale is dropped
+  //     at the `incomingScore <= bestExistingScore` return below, and the
+  //     pool silently loses it.
+  //   - the incoming sale outscores it -> the delete loop below HARD
+  //     DELETES the flagged row, destroying the `dedupSupersededBy`
+  //     provenance trail the triage lane exists to write. The pool is
+  //     sacred: flag, never delete.
+  //
+  // Every FMV read path already filters `flaggedWrong`
+  // (canonicalFmv.service.ts:1073,:1292; marketMovers, playerDetail,
+  // priceSeries, setDetail, verifyQueue; cohortBacktest). The ingest-time
+  // dedup was the one comparison that did not, and it is the only one that
+  // can DESTROY data rather than merely hide it.
+  //
+  // ASYMMETRY, deliberate: when the INCOMING doc is itself flagged (the
+  // cardsight $0.99 / outlier guards above mint that at :1334/:1363), the
+  // stored flagged twin is still its dedup partner — excluding it there
+  // would resurrect exactly the duplicate rows those guards suppress. So a
+  // flagged write dedups against flagged rows, and a live write dedups
+  // only against live rows. Neither can reach across the line.
+  const incomingIsFlagged =
+    (doc as SoldCompDoc & Record<string, unknown>).flaggedWrong === true;
   try {
     const { resources: existing } = await c.items.query<SoldCompDoc>({
-      query: "SELECT * FROM c WHERE ARRAY_CONTAINS(@h, c.contentHash)",
+      query: incomingIsFlagged
+        ? "SELECT * FROM c WHERE ARRAY_CONTAINS(@h, c.contentHash)"
+        : "SELECT * FROM c WHERE ARRAY_CONTAINS(@h, c.contentHash) AND (NOT IS_DEFINED(c.flaggedWrong) OR c.flaggedWrong != true)",
       parameters: [{ name: "@h", value: contentHashLookup }],
     }, { partitionKey: doc.cardId }).fetchAll();
 

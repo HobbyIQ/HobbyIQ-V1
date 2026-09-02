@@ -66,24 +66,32 @@
  * invent one -- a new filter surface would have to be threaded through every
  * one of those read paths before it excluded anything at all.
  *
- * KNOWN RESIDUAL RISK (R2 judge, disclosed before apply-true-dupes runs).
- * "Every FMV READ path filters it" is true. The pre-write INGEST dedup is not a
- * read path and does NOT filter it: soldCompsStore.service.ts:1495 and
- * persistVendorSalesToPool.service.ts:1081 both query contentHash with no
- * flaggedWrong predicate, and scoreForCanonical never reads the flag. So a row
- * this script flags can still (a) outscore and silently drop a genuine later
- * sale that collides on the full contentHash, or (b) be HARD DELETED at
- * soldCompsStore.service.ts:1524 when that later sale outscores it -- losing
- * the provenance trail this script wrote.
+ * KNOWN RESIDUAL RISK -- CLOSED 2026-09-01. Recorded here because this script
+ * is what mass-produces flagged rows, and the hazard was real until the fix.
  *
- * This is pre-existing (no file under backend/src is touched by this branch)
- * and narrow: it needs a real later sale matching the flagged row on card,
- * parallel, auto, grade, price AND soldAt-to-the-second. It is NOT fixed here,
- * because fixing it means changing live pricing ingest and a deploy. It is
- * called out because THIS script is what mass-produces flagged rows, in
- * partitions that actively receive new sales -- so the volume of rows exposed
- * to that gap is what apply-true-dupes changes. Fix the ingest queries before
- * running apply-true-dupes broadly; football/2024 is a bounded first slice.
+ * The disclosure said: "Every FMV READ path filters it" is true, but the
+ * pre-write INGEST dedup is not a read path and does NOT filter it --
+ * soldCompsStore.service.ts:1495 and persistVendorSalesToPool.service.ts:1081
+ * both queried contentHash with no flaggedWrong predicate, and
+ * scoreForCanonical never read the flag. So a row this script flagged could
+ * (a) outscore and silently drop a genuine later sale colliding on the full
+ * contentHash, or (b) be HARD DELETED when that later sale outscored it --
+ * losing the provenance trail this script wrote.
+ *
+ * BOTH ARE FIXED. Both ingest queries now carry
+ * `(NOT IS_DEFINED(c.flaggedWrong) OR c.flaggedWrong != true)`, and
+ * scoreForCanonical subtracts a floor-clearing 1000 from a flagged row so it
+ * ranks below every live one. A flagged row is no longer a dedup partner for a
+ * live incoming sale in either direction. Deliberate exception: a flagged
+ * INCOMING doc (cardsight $0.99 / outlier guards) still dedups against flagged
+ * rows, or those guards would resurrect the duplicates they suppress.
+ * Pinned in backend/tests/ingestFlaggedDedupProtection.test.ts.
+ *
+ * The precondition on running apply-true-dupes broadly is therefore MET: the
+ * ingest queries were the blocker, and they are fixed. That fix is backend/src
+ * and reaches prod only on the "Daily 5AM ET Refresh & Deploy" dispatch --
+ * confirm the deployed /api/health shaShort carries it before a corpus-wide
+ * apply, not merely that the PR merged.
  *
  * -- THE THREE CLASSES ------------------------------------------------------
  *
