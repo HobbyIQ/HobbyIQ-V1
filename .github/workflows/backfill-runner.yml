@@ -247,6 +247,18 @@ on:
           # explicit vocabulary, never a pattern (NNO and JOKER are real card
           # numbers), and zero comps is re-checked per row at delete time.
           - retire-wiki-footer-catalog-rows
+          # CF-BLANK-MEANS-UNKNOWN-NEVER-BASE (2026-09-01): the stored half of
+          # #1634. The hobbymonitor fetcher wrote the literal word "Base" into
+          # the parallel column of every base card; a fixed emitter does not
+          # fix a stored row, and a re-ingest is a no-op because "" does not
+          # IMPROVE on "Base". Blanks the FIELD on the six audited groups
+          # (1,075 rows). Identity is unaffected -- "" and "Base" normalize to
+          # the same slug -- so this is a field patch through
+          # patchCatalogRowFields, never a re-key and never a pool movement.
+          # `sources` is REQUIRED and must be `hobbymonitor`: the script
+          # refuses any wider source scope, and the six groups are compiled in
+          # rather than passed, so no dispatch can widen them.
+          - repair-hobbymonitor-literal-base
           # THE GREAT REMATCH (Drew, 2026-09-01). Full sales-index rematch of
           # sold_comps (16,336,293 rows measured 2026-09-01) against the
           # catalog. `mode` is the polymorphic selector and is REQUIRED:
