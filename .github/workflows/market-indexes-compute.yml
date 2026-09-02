@@ -1,0 +1,88 @@
+name: Market Indexes Nightly Compute
+
+# CF-MARKET-INDEXES (Drew, 2026-09-02). Per-sport fixed-liquid-basket
+# index: recompute basket membership (frozen within a quarterly epoch)
+# and append the day's index point.
+#
+# Schedule: 04:20 UTC — after the CH fan-out and the sold_comps daily
+# delta have landed, before the 5AM ET refresh reads the surface.
+#
+# Idempotent: points are upserted by (sport, date), so a re-run of a day
+# overwrites rather than double-appends. Safe to dispatch repeatedly.
+#
+# FIRST RUN: dispatch manually with backfill=true to build the 180d
+# history from stored sales. Nightly scheduled runs append one day.
+
+on:
+  schedule:
+    - cron: '20 4 * * *'
+  workflow_dispatch:
+    inputs:
+      backfill:
+        description: 'Build the full 180d history instead of appending one day.'
+        required: false
+        type: boolean
+        default: false
+      as_of:
+        description: 'Target day YYYY-MM-DD (default: today UTC).'
+        required: false
+        type: string
+      sports:
+        description: 'Comma-separated sports (default: all five).'
+        required: false
+        type: string
+
+jobs:
+  compute:
+    name: Compute market indexes
+    runs-on: ubuntu-latest
+    # The 180d backfill reads ~6 months of pool rows per sport; 45 min
+    # leaves headroom over the ~5 min a nightly single-day append takes.
+    timeout-minutes: 45
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Build backend
+        working-directory: backend
+        run: npm run build
+
+      - name: Login to Azure
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+
+      - name: Compute market indexes
+        working-directory: backend
+        run: |
+          COSMOS_CONNECTION_STRING=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='COSMOS_CONNECTION_STRING'].value" -o tsv | tr -d '\r\n')
+          if [ -z "$COSMOS_CONNECTION_STRING" ]; then
+            echo "COSMOS_CONNECTION_STRING empty from App Service — cannot compute"
+            exit 1
+          fi
+          ARGS=""
+          if [ "${{ inputs.backfill }}" = "true" ]; then ARGS="$ARGS --backfill"; fi
+          if [ -n "${{ inputs.as_of }}" ]; then ARGS="$ARGS --as-of=${{ inputs.as_of }}"; fi
+          if [ -n "${{ inputs.sports }}" ]; then ARGS="$ARGS --sports=${{ inputs.sports }}"; fi
+          COSMOS_CONNECTION_STRING="$COSMOS_CONNECTION_STRING" \
+          COSMOS_DATABASE=hobbyiq \
+          node scripts/compute-market-indexes.cjs $ARGS

@@ -3295,6 +3295,36 @@ export async function fetchDailyBrief(): Promise<DailyBriefResponse> {
   return await request<DailyBriefResponse>("/api/dailyiq/brief");
 }
 
+// ─── Market indexes ────────────────────────────────────────────────
+// CF-MARKET-INDEXES (Drew, 2026-09-02). One call returns every sport's
+// series + latest values, so the tile strip renders without a fan-out.
+
+export interface IndexSeriesPoint {
+  date: string;
+  level: number;
+}
+
+export interface SportIndexSeries {
+  sport: string;
+  series: IndexSeriesPoint[];
+  latestLevel: number | null;
+  changePct: number | null;
+  windowDays: number;
+  basketSize: number | null;
+  asOf: string | null;
+}
+
+export interface MarketIndexesResponse {
+  success: boolean;
+  computedAt: string;
+  windowDays: number;
+  indexes: SportIndexSeries[];
+}
+
+export async function fetchMarketIndexes(days = 180): Promise<MarketIndexesResponse> {
+  return await request<MarketIndexesResponse>(`/api/compiq/market-indexes?days=${days}`);
+}
+
 // ─── Watchlist ─────────────────────────────────────────────────────
 
 export interface WatchlistItem {

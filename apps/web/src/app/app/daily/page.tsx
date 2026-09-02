@@ -14,6 +14,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { fetchDailyBrief, type DailyBriefResponse, type DailyPlayer } from "@/lib/api";
 import { formatPct } from "@/lib/format";
+import { MarketIndexes } from "@/components/MarketIndexes";
 
 type Phase = "loading" | "locked" | "empty" | "error" | "ready";
 
@@ -50,6 +51,11 @@ export default function DailyIQPage() {
             : "Top movers across MLB and MiLB, plus your watchlist."}
         </p>
       </header>
+
+      {/* CF-MARKET-INDEXES: mounted OUTSIDE the phase gate on purpose —
+          it fetches alongside fetchDailyBrief and renders whether the
+          brief is loading, locked (402), errored, or empty. */}
+      <MarketIndexes className="mb-8" />
 
       {phase === "loading" && (
         <div className="hiq-card p-8 text-sm text-[color:var(--color-muted)]">Loading brief…</div>
