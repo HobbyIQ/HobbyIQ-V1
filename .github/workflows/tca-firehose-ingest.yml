@@ -254,6 +254,16 @@ jobs:
         working-directory: backend
         run: npm ci
 
+      # CF-TCA-ENRICHER-DIST (2026-09-02). tca-match-enricher.cjs requires
+      # dist/services/ops/writeReconciliation.js at load time, but this job
+      # never built TS — so every scheduled run since 2026-08-30T00:57Z died
+      # with MODULE_NOT_FOUND before enriching a single row. The ingest job
+      # gets away with the same require only because it runs `npm run build`
+      # inline. Build here too.
+      - name: Build backend (dist/ for enricher requires)
+        working-directory: backend
+        run: npm run build
+
       - name: Login to Azure
         uses: azure/login@v3
         with:

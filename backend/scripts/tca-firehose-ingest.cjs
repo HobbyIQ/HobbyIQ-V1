@@ -83,10 +83,15 @@ const SORT = (process.env.SORT || "date_desc").toLowerCase();
 // meant the separation silently never applied in CI.
 const BASE_CRAWLER_ID = process.env.CRAWLER_ID
   || `tca-${PLATFORM.toLowerCase() || "all"}-${CATEGORY || "all"}-${SORT}`;
-const CRAWLER_ID = process.env.DAILY_FEED === "true"
-  ? `${BASE_CRAWLER_ID}-daily-${process.env.FEED_DATE
-      || new Date(Date.now() - 86_400_000).toISOString().slice(0, 10)}`
-  : BASE_CRAWLER_ID;
+// CF-TCA-WATERMARK-CLAMP (2026-09-02). The daily suffix must name the day we
+// actually pull, not the day we asked for — a clamped run resumes the cursor
+// for the clamped date. Resolved after the clamp via setCrawlerDate().
+let CRAWLER_DATE = process.env.FEED_DATE
+  || new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
+const crawlerId = () => (process.env.DAILY_FEED === "true"
+  ? `${BASE_CRAWLER_ID}-daily-${CRAWLER_DATE}`
+  : BASE_CRAWLER_ID);
+function setCrawlerDate(d) { CRAWLER_DATE = d; }
 
 const TCA_HOST = "www.thecardapi.com";
 const TCA_PATH = "/api/v1/market/sales";
@@ -181,7 +186,8 @@ function tcaToIdentityHint(t) {
 
 async function getState(container) {
   try {
-    const { resource } = await container.item(CRAWLER_ID, CRAWLER_ID).read();
+    const id = crawlerId();
+    const { resource } = await container.item(id, id).read();
     return resource;
   } catch (err) {
     if (err.code === 404) return null;
@@ -189,7 +195,7 @@ async function getState(container) {
   }
 }
 async function putState(container, state) {
-  await container.items.upsert({ ...state, id: CRAWLER_ID });
+  await container.items.upsert({ ...state, id: crawlerId() });
 }
 
 // ─── Main loop ───────────────────────────────────────────────────────
@@ -219,20 +225,10 @@ async function main() {
 
   console.log(`[tca-firehose] mode=${MODE} apply=${APPLY} platform=${PLATFORM} category=${CATEGORY} maxMinutes=${MAX_MINUTES}`);
 
-  // Load state
+  // State is loaded AFTER the daily-feed clamp below, because the crawler id
+  // is keyed to the day we actually pull (CF-TCA-WATERMARK-CLAMP).
   let cursor = null;
   let existing = null;
-  if (MODE === "incremental") {
-    existing = await getState(state);
-    if (existing) {
-      cursor = existing.cursor;
-      console.log(`[tca-firehose] resume from cursor: ${(cursor||'').slice(0,60)}…`);
-    } else {
-      console.log(`[tca-firehose] no prior cursor — starting from newest and walking back`);
-    }
-  } else {
-    console.log(`[tca-firehose] BACKFILL mode — ignoring stored cursor`);
-  }
 
   // Only include platform / category in the query when explicitly set.
   // Default = no filter = pull EVERYTHING TCA has (per Drew, 2026-08-02).
@@ -263,29 +259,47 @@ async function main() {
   // date params are date_from / date_to per TCA's docs — sale_date, sold_date
   // and date are NOT recognised and silently fall back to the capped path.
   const DAILY_FEED = process.env.DAILY_FEED === "true";
-  const FEED_DATE = process.env.FEED_DATE
+  const FEED_DATE_REQUESTED = process.env.FEED_DATE
     || new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
+  // Reassigned below when the platform watermark is behind the requested day.
+  let FEED_DATE = FEED_DATE_REQUESTED;
   if (DAILY_FEED) {
-    baseQs.set("date_from", FEED_DATE);
-    baseQs.set("date_to", FEED_DATE);
-    console.log(`[tca-firehose] DAILY FEED mode — date_from=date_to=${FEED_DATE} (unlimited window)`);
+    console.log(`[tca-firehose] DAILY FEED mode — requested ${FEED_DATE_REQUESTED}`);
 
-    // CF-TCA-PLATFORM-LAG (Drew, 2026-08-13). The free window is STRICTLY
-    // yesterday — 08-11 and 08-10 both 429 while 08-12 is served — and TCA's
-    // platforms publish on different schedules:
+    // CF-TCA-PLATFORM-LAG (Drew, 2026-08-13). TCA's platforms publish on
+    // different schedules, so a run asking eBay for yesterday can get a
+    // legitimate 0 rows: the data simply is not published yet.
     //
-    //     eBay       last_sale_date 2026-08-11   (a day behind)
-    //     TCGplayer  last_sale_date 2026-08-13   (current)
+    // CF-TCA-WATERMARK-CLAMP (2026-09-02). The original guard `return`ed when
+    // the watermark was behind the requested day, on the belief that the free
+    // window was STRICTLY yesterday and pulling an older day would burn the
+    // 200K cap. That belief is wrong, and the skip is why the eBay lane went
+    // to zero for four days.
     //
-    // so a run asking eBay for yesterday gets a legitimate 0 rows: the data
-    // simply is not published yet. Asking for eBay's newest available day
-    // instead would leave the free window and burn the 200K cap.
+    // eBay's watermark froze at 2026-08-28. FEED_DATE kept advancing with the
+    // clock (08-29 -> 09-01), so the gap widened every run and all 12 runs
+    // from 2026-08-30T00:57Z onward logged:
     //
-    // Check the platform's published watermark first (this endpoint is served
-    // even at remaining=0) and skip cleanly when it has not caught up. The job
-    // runs several times a day; repeat pulls of yesterday cost nothing and
-    // contentHash dedup makes the overlap a no-op, so eBay is picked up on the
-    // first run after TCA publishes it.
+    //   eBay has only published through 2026-08-28; <FEED_DATE> is not
+    //   available yet — skipping (not an error).
+    //   done — pages=0 fetched=0 written=0 skipped=0 errors=0 (platform behind)
+    //
+    // while 2026-08-28 sat there with 89,633 unpulled rows. So clamp to the
+    // watermark and PULL it instead of skipping. contentHash dedup makes
+    // re-pulling an already-ingested day a no-op, which is what makes the
+    // clamp safe to run on every pass.
+    //
+    // QUOTA, measured against prod 2026-09-02 — the "unlimited" window is
+    // narrower than the 2026-08-13 note assumed. The un-cursored first page of
+    // a date-scoped query is free, but cursor-paged continuations bill ~1 unit
+    // per row regardless of the date:
+    //
+    //   first page,  limit=1000, no cursor      delta remaining = 0
+    //   3 pages,     limit=1000, with cursor    delta remaining = 3001
+    //
+    // A full day of eBay (~90K rows) therefore costs ~90K of the 200K/day cap.
+    // That is affordable for the daily lane but means a multi-day backfill must
+    // be spread across days — see the MAX_MINUTES budget and the 429 auto-halt.
     if (PLATFORM) {
       try {
         const platforms = await new Promise((resolve, reject) => {
@@ -306,16 +320,48 @@ async function main() {
           (p) => String(p.platform || "").toLowerCase() === PLATFORM.toLowerCase());
         const watermark = row && row.last_sale_date;
         if (watermark && watermark < FEED_DATE) {
-          console.log(`[tca-firehose] ${PLATFORM} has only published through ${watermark}; ${FEED_DATE} is not available yet — skipping (not an error).`);
-          console.log(`[tca-firehose] done — pages=0 fetched=0 written=0 skipped=0 errors=0 elapsed=0s (platform behind)`);
-          return;
+          // An explicit FEED_DATE is an operator asking for one specific day.
+          // Honour it rather than silently pulling a different one.
+          if (process.env.FEED_DATE) {
+            console.log(`[tca-firehose] ${PLATFORM} has only published through ${watermark}; explicit FEED_DATE=${FEED_DATE} is not available yet — skipping (not an error).`);
+            console.log(`[tca-firehose] done — pages=0 fetched=0 written=0 skipped=0 errors=0 elapsed=0s (platform behind)`);
+            return;
+          }
+          const lagDays = Math.round(
+            (Date.parse(`${FEED_DATE}T00:00:00Z`) - Date.parse(`${watermark}T00:00:00Z`)) / 86_400_000);
+          console.log(`[tca-firehose] ${PLATFORM} published through ${watermark}, ${lagDays}d behind requested ${FEED_DATE} — clamping to ${watermark} and pulling it.`);
+          if (lagDays > 1) {
+            console.log(`::warning::${PLATFORM} feed is ${lagDays} days behind (watermark ${watermark}). Pulling the watermark day; days between it and ${FEED_DATE} are unpublished upstream.`);
+          }
+          FEED_DATE = watermark;
+        } else if (watermark) {
+          console.log(`[tca-firehose] ${PLATFORM} published through ${watermark} — ${FEED_DATE} available`);
         }
-        if (watermark) console.log(`[tca-firehose] ${PLATFORM} published through ${watermark} — ${FEED_DATE} available`);
       } catch (e) {
         // Never block the pull on the watermark check.
         console.warn(`[tca-firehose] platform watermark check failed (${e.message}) — proceeding`);
       }
     }
+
+    // Set the window AFTER the clamp, so the request carries the day we
+    // actually intend to pull.
+    baseQs.set("date_from", FEED_DATE);
+    baseQs.set("date_to", FEED_DATE);
+    setCrawlerDate(FEED_DATE);
+    console.log(`[tca-firehose] DAILY FEED window — date_from=date_to=${FEED_DATE} (unlimited window)`);
+  }
+
+  // Load state — now that the crawler id names the day we will pull.
+  if (MODE === "incremental") {
+    existing = await getState(state);
+    if (existing) {
+      cursor = existing.cursor;
+      console.log(`[tca-firehose] resume from cursor: ${(cursor||'').slice(0,60)}…`);
+    } else {
+      console.log(`[tca-firehose] no prior cursor — starting from newest and walking back`);
+    }
+  } else {
+    console.log(`[tca-firehose] BACKFILL mode — ignoring stored cursor`);
   }
 
   let page = 0;
