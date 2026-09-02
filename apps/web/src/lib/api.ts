@@ -564,11 +564,21 @@ export interface PortfolioResponse {
   // reprice can be running while this is served, the payload says so rather
   // than letting the UI present possibly-superseded numbers as current.
   valuation?: {
-    /** A background reprice is working on this user's holdings right now. */
+    /**
+     * A background reprice is working on this user's holdings right now —
+     * as seen by the worker that answered. CF-PORTFOLIO-FRESH-ON-OPEN
+     * (2026-09-02): with 2 serving instances this can read false while a run
+     * is alive on the other one, so the UI must not use it as the only
+     * "is it refreshing" signal — it ORs it with its own dispatch state.
+     */
     repricing: boolean;
     /** lastUpdated of the stalest holding, ISO-8601; null if none recorded. */
     oldestValuationAt: string | null;
     oldestValuationAgeMs: number | null;
+    /** lastUpdated of the FRESHEST holding — the "as of" the UI shows. */
+    newestValuationAt?: string | null;
+    /** Durable cross-instance marker of the last dispatched reprice. */
+    lastRepriceDispatchAt?: string | null;
   };
 }
 
@@ -2505,6 +2515,14 @@ export interface RepriceDispatch {
   startedAt?: string | null;
   /** Always true on dispatch: on-screen values are the last persisted ones. */
   stale?: boolean;
+  /**
+   * CF-PORTFOLIO-FRESH-ON-OPEN (2026-09-02): on a `throttled` answer, WHEN
+   * the values on screen were last refreshed. A skip that says only "no"
+   * looks identical to a broken refresh; this lets the UI say "as of 10:42"
+   * instead of going quiet.
+   */
+  freshAsOf?: string | null;
+  freshAgeMs?: number | null;
 }
 
 export async function refreshAllHoldings(): Promise<RepriceDispatch> {
