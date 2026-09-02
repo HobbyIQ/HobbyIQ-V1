@@ -316,6 +316,15 @@ export interface PortfolioHoldingWire {
     candidateId: string;
     verifiedAt: string;
   };
+  // CF-NEVER-AGAIN (Drew, 2026-09-02): the nightly pricing invariant auditor's
+  // marker. Present only when the last run could not reconcile this holding's
+  // value with an independent re-derivation. The value still shows — this only
+  // adds an "under review" badge beside it.
+  auditFlag?: {
+    reason: string;
+    at: string;
+    invariant: string;
+  } | null;
   // Cardsight FK
   cardId?: string | null;
   gradeId?: string | null;
@@ -714,6 +723,10 @@ export function composeHoldingWireShape(
     identityVerified: (holding as { identityVerified?: boolean }).identityVerified,
     identityVerifiedAt: (holding as { identityVerifiedAt?: string }).identityVerifiedAt,
     identityVerifiedBy: (holding as { identityVerifiedBy?: { source: string; candidateId: string; verifiedAt: string } }).identityVerifiedBy,
+    // CF-NEVER-AGAIN (Drew, 2026-09-02): the audit marker rides the envelope so
+    // the portfolio row can render "under review" without a second call. Null
+    // and undefined both mean "reconciled" — the badge is absence-safe.
+    auditFlag: (holding as { auditFlag?: { reason: string; at: string; invariant: string } | null }).auditFlag ?? null,
     // Cardsight FK
     cardId: holding.cardId,
     gradeId: holding.gradeId,

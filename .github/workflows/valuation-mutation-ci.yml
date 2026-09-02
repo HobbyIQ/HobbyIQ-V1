@@ -1,0 +1,90 @@
+name: Valuation Mutation CI
+
+# CF-NEVER-AGAIN (Drew, 2026-09-02). A guard nobody can break is a guard nobody
+# has tested. D29's lesson: a right guard with the wrong scope passed every test
+# it had, because none of them removed it.
+#
+# This job takes the shipped valuation core, applies the four doctrine-killing
+# mutants PROVEN LETHAL during the week of 2026-08-27..09-02, and asserts the
+# suite goes RED for each. A mutant that leaves the suite green means the guard
+# has stopped guarding — and THAT fails this job.
+#
+#   union-guard-off     (#1627) exactPoolSupremacy stops refusing a
+#                       cross-product pool-twin union
+#   grade-refusal-off   (#1640) an unreadable grade borrows the largest other
+#                       tier instead of refusing
+#   swing-capture-null  (#1627) isSwingAlarming never fires, so a 10.4x flap
+#                       passes in silence
+#   externalid-collapse (#1638) externalIdOf reduced to the base id, so two
+#                       real sales collapse into one
+#
+# Unlike the audit job, a red X HERE is real and must be chased: it means the
+# doctrine the pricing engine rests on is no longer defended by its tests.
+#
+# Mutation happens in a disposable copy of the tree — the canonical files are
+# never edited.
+
+on:
+  schedule:
+    # 04:40 UTC nightly — before the audit, so a broken guard is known before
+    # the audit's findings are read.
+    - cron: '40 4 * * *'
+  workflow_dispatch:
+    inputs:
+      mutants:
+        description: 'Comma-separated mutant names to run (blank = all four).'
+        required: false
+        type: string
+        default: ''
+  pull_request:
+    # The guards these mutants defend live in these files; a PR that touches
+    # them re-proves the mutants are still lethal before it merges.
+    paths:
+      - 'backend/src/services/compiq/unifiedPricing.service.ts'
+      - 'backend/src/services/portfolioiq/exactPoolSupremacy.ts'
+      - 'backend/src/services/portfolioiq/portfolioStore.service.ts'
+      - 'backend/scripts/lib/collision-triage.cjs'
+      - 'backend/scripts/mutation-valuation-core.cjs'
+      - '.github/workflows/valuation-mutation-ci.yml'
+
+concurrency:
+  group: valuation-mutation-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mutants:
+    name: Every doctrine-killing mutant must be caught
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend deps
+        working-directory: backend
+        run: npm ci
+
+      - name: Apply the mutants and assert each is caught
+        working-directory: backend
+        env:
+          MUTANTS: ${{ inputs.mutants || '' }}
+        run: node scripts/mutation-valuation-core.cjs 2>&1 | tee /tmp/mutation.log
+
+      - name: Post digest to run summary
+        if: always()
+        run: |
+          {
+            echo '## Valuation Mutation CI'
+            echo ''
+            echo '```'
+            sed -n '/MUTATION DIGEST/,$p' /tmp/mutation.log | head -40
+            echo '```'
+            echo ''
+            echo '_A surviving mutant means a guard has stopped guarding — chase it._'
+          } >> "$GITHUB_STEP_SUMMARY"

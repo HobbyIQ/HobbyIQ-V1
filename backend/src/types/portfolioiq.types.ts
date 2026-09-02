@@ -53,6 +53,33 @@ export interface PortfolioHolding {
     verifiedAt: string;      // ISO — mirrors identityVerifiedAt for audit
   };
   /**
+   * CF-NEVER-AGAIN (Drew, 2026-09-02). The ONE field the nightly pricing
+   * invariant auditor (scripts/audit-pricing-invariants.cjs) may write, and
+   * the only write that job does at all: a marker saying "the last audit run
+   * could not reconcile this holding's persisted value with an independent
+   * re-derivation".
+   *
+   * It is a MARKER, never a price. The auditor never writes fairMarketValue,
+   * estimatedValue, fmvRung or any other pricing field — a divergence is
+   * evidence for a human, never an auto-correction (a machine that silently
+   * rewrites prices to match its own shadow would hide the very defect it
+   * was built to surface).
+   *
+   * PUBLISH + LABEL doctrine: the value still shows. This flag adds a subtle
+   * "under review" badge beside it; it never blanks, clamps or hides the
+   * number the holding already carries.
+   *
+   * Cleared by the same job on the next run when the holding reconciles.
+   */
+  auditFlag?: {
+    /** Human-readable "<INVARIANT>: <kind>", e.g. "BASIS-IDENTITY: cross-product". */
+    reason: string;
+    /** ISO timestamp of the audit run that raised it. */
+    at: string;
+    /** The invariant class: BASIS-IDENTITY | RUNG-HONESTY | SUBSTITUTION | DETERMINISM. */
+    invariant: string;
+  } | null;
+  /**
    * CF-STOREFRONT-OPT-IN (Drew, 2026-07-27, rev 2): explicit per-card
    * opt-in for the public /u/<username> storefront. Default false —
    * NOTHING renders on the public page unless the owner has clicked

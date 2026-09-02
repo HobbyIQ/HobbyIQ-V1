@@ -1,0 +1,148 @@
+name: Pricing Invariant Audit
+
+# CF-NEVER-AGAIN (Drew, 2026-09-02: "rather than fixing one — how can we ensure
+# this NEVER happens again").
+#
+# Six pricing defects were found the week of 2026-08-27..09-02 — a NaN grade
+# reading the wrong tier, a pool-twin cross-product merge, base autos in a
+# refractor pool, a stale write racing a sale, phantom Pristine grades, an empty
+# identity pool priced from a self-comp. Every one was found by Drew's eyeballs
+# and then PROVEN by an adversarial recompute. This job is that recompute, run
+# nightly, so the seventh is found by the machine instead.
+#
+# WHAT IT ASSERTS. For every holding (and an env-capped top-traded sample) it
+# independently re-derives the value — reading the identity, querying the exact
+# pool, applying the doctrine ladder WITHOUT calling the engine's valuation code
+# — then checks four invariants:
+#   BASIS-IDENTITY  every cited comp shares product+parallel+printRun+grade,
+#                   or the persisted rung declares the transition
+#   RUNG-HONESTY    an exact-pool rung is backed by a pool that exists
+#   SUBSTITUTION    persisted value within 25% of the shadow value
+#   DETERMINISM     unchanged provenance must not produce a moved value
+#
+# FINDINGS ARE DATA, NOT FAILURES. Report mode exits 0 whatever it finds. A red
+# X on this job means the AUDITOR broke — never that a holding is wrong. Alert
+# on the `pricing_invariant_violation` telemetry event in App Insights, which is
+# emitted once per violation, not on this workflow's conclusion.
+#
+# The freshness canary (sold-comps-freshness-canary.yml) is the exemplar for
+# the Azure login + Cosmos connection-string pattern below.
+#
+# WRITES: report mode is READ-ONLY. `apply_marker: true` lets the job write the
+# single `auditFlag` marker field on flagged holdings (never a price field) so
+# the portfolio row can show its "under review" badge. Default off.
+
+on:
+  schedule:
+    # 06:20 UTC — after the 5AM ET daily refresh has repriced, so the audit
+    # judges the numbers the portfolio will actually serve today.
+    - cron: '20 6 * * *'
+  workflow_dispatch:
+    inputs:
+      user_id:
+        description: 'Scope to one userId (blank = every user).'
+        required: false
+        type: string
+        default: ''
+      top_cards:
+        description: 'Top-traded cards to sample beyond holdings (0 = off). Default 250.'
+        required: false
+        type: string
+        default: '250'
+      apply_marker:
+        description: 'Write the auditFlag marker onto flagged holdings (never a price field).'
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: pricing-invariant-audit
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    name: Re-derive every holding and reconcile
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend deps
+        working-directory: backend
+        run: npm ci
+
+      # The auditor reuses two LEAF utilities from dist — the closed rung
+      # vocabulary (fmvRung) and the grade tokenizer (gradeParser). It never
+      # loads a valuation path: the independence is the point.
+      - name: Build backend
+        working-directory: backend
+        run: npm run build
+
+      # DETERMINISM needs to remember what it saw yesterday: the previous run's
+      # provenance fingerprints and values. Restored best-effort — a cache miss
+      # simply re-baselines that invariant for one night.
+      - name: Restore audit state
+        uses: actions/cache/restore@v4
+        with:
+          path: backend/.audit-state
+          key: pricing-invariant-state-${{ github.run_id }}
+          restore-keys: |
+            pricing-invariant-state-
+
+      - name: Login to Azure
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+
+      - name: Run the pricing invariant audit
+        working-directory: backend
+        run: |
+          COSMOS_CONNECTION_STRING=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='COSMOS_CONNECTION_STRING'].value" -o tsv | tr -d '\r\n')
+          if [ -z "$COSMOS_CONNECTION_STRING" ]; then
+            echo "::error::COSMOS_CONNECTION_STRING empty from App Service"
+            exit 1
+          fi
+          COSMOS_CONNECTION_STRING="$COSMOS_CONNECTION_STRING" \
+          COSMOS_DATABASE=hobbyiq \
+          USER_ID="${{ inputs.user_id || '' }}" \
+          TOP_CARDS="${{ inputs.top_cards || '250' }}" \
+          APPLY="${{ inputs.apply_marker == true && 'true' || 'false' }}" \
+          STATE_BLOB=".audit-state/pricing-invariants.json" \
+          node scripts/audit-pricing-invariants.cjs 2>&1 | tee /tmp/audit.log
+
+      - name: Save audit state
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: backend/.audit-state
+          key: pricing-invariant-state-${{ github.run_id }}
+
+      # The digest goes into the run log AND the job summary, so a flagged
+      # holding is visible without opening the raw log.
+      - name: Post digest to run summary
+        if: always()
+        run: |
+          {
+            echo '## Pricing Invariant Audit'
+            echo ''
+            echo '```'
+            sed -n '/PRICING INVARIANT DIGEST/,$p' /tmp/audit.log | head -120
+            echo '```'
+            echo ''
+            echo '_Findings are data, not failures — this job exits 0 whatever it finds._'
+            echo '_Alert on the `pricing_invariant_violation` App Insights event, not on this conclusion._'
+          } >> "$GITHUB_STEP_SUMMARY"

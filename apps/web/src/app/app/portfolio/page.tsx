@@ -918,6 +918,24 @@ function HoldingRow({ h }: { h: PortfolioHolding }) {
               UNVERIFIED
             </span>
           )}
+          {/* CF-NEVER-AGAIN (Drew, 2026-09-02): the nightly pricing invariant
+              auditor could not reconcile this holding's value with an
+              independent re-derivation. PUBLISH + LABEL — the value above still
+              shows; this says only that a human should look. The reason and the
+              run time ride in the tooltip. */}
+          {h.auditFlag && (
+            <span
+              className="px-1.5 py-0.5 rounded text-[10px] font-medium"
+              style={{
+                background: "color-mix(in oklab, var(--hiq-warning) 15%, transparent)",
+                color: "var(--hiq-warning)",
+              }}
+              title={`Under review — ${h.auditFlag.reason} (audited ${h.auditFlag.at}). The value shown is unchanged; the nightly pricing audit flagged it for a human to check.`}
+              data-audit-invariant={h.auditFlag.invariant}
+            >
+              UNDER REVIEW
+            </span>
+          )}
           {/* CF-DATA-HEALTH-DRILLDOWN: MISSING pill for cards the engine
               couldn't price at all (no observed FMV, no estimate). Fix link
               jumps to the detail page where Edit + Refresh price live. */}
