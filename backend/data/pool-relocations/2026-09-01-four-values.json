@@ -671,6 +671,15 @@
       "price": 300,
       "soldAt": "2026-08-12T13:40:14.521Z",
       "evidence": "row is in the right partition (cardId=hiq:baseball:2017:topps-gold-label:86:class-1-blue:no-auto) but hobbyiqCardId said \"hiq:baseball:2017:topps:86:class-1-blue:no-auto\" — the setKey lost \"-gold-label\". The engine reads hobbyiqCardId, so this Gold Label pool read as empty. Title: \"Topps 2017 Gold Label Aaron Judge #86 Class 1 Blue /150 RC PSA 9\"; grade=PSA 9"
+    },
+    {
+      "id": "tca-ebay::goldin_202301-3118-3115-83fa4718-53b0-4a58-a0ee-1cd0a283ec0e",
+      "fromCardId": "hiq:baseball:2019:bowman-chrome:bnr-vgj:prism-refractor:no-auto:num-1",
+      "toCardId": "hiq:baseball:2019:bowman-chrome-nscc:bnr-vgj:black-prism-refractor:no-auto:num-1",
+      "section": "D5-NSCC",
+      "price": 2200,
+      "soldAt": "2023-03-10T02:44:38.000Z",
+      "evidence": "Drew-flagged. Title: \"2019 Bowman Chrome National Wrapper Redemption Black Prism Refractor #BNR-VGJ Vladimir Guerrero Jr. Rookie Card (#1/1) - BGS GEM MINT 9.5\"; price 2200, source tca-ebay. The title names National Wrapper Redemption (CF-BOWMAN-NSCC-IS-ITS-OWN-PRODUCT) and Black Prism Refractor, but the row is stored on flagship bowman-chrome with parallel=\"Prism Refractor\" — the wrapper-redemption product and the BLACK of the parallel were both dropped, so a 1/1 NSCC sale prices the flagship Prism pool. Verified live read-only 2026-09-01: the row still sits at fromCardId with that exact title and price 2200; NO document with this id exists at the destination partition (the destination partition holds ZERO rows, and a cross-partition sweep on this id returns exactly ONE document, the source) — so this is a relocate, not a V-01 duplicate-pair exclusion; the destination catalog row EXISTS (id/hobbyiqCardId hiq:baseball:2019:bowman-chrome-nscc:bnr-vgj:black-prism-refractor:no-auto:num-1, source cardpedia-drew-ruling-2026-09-01, parallel \"Black Prism Refractor\", printRun 1, cardNumber BNR-VGJ, Vladimir Guerrero Jr. — the drew-ruled NSCC ladder's 1/1). GRADE: the title states BGS GEM MINT 9.5 while the stored grade fields (gradeCompany, gradeValue, gradeQualifier) are all EMPTY. That is left alone — census picks up the grade; this lane moves identity only. The title-exclusivity lane (repair-setkey-from-title-parallel) provably cannot reach this row. Scoped report-only run 2026-09-01, SPORTS=baseball YEARS=2018,2019 SETKEYS=bowman-chrome: scanned 15,195, MOVES 0, wrote 0 (refusals: sameProduct 3,746; notExclusive 445; noDest 29; lot 13; noTitleProduct 0; wrongCard 0). This row lands in the sameProduct bucket, confirmed directly against the built parser: inferSetKeyFromTitle(title) = \"Bowman Chrome\" -> normalizeSetKey -> \"bowman-chrome\", which IS the row's current setKey, so the lane has no opinion and refuses. \"National Wrapper Redemption\" is invisible to the title-product vocabulary, and the same parser returns parallel \"Prism Refractor\" (printRun 1, cardNumber BNR-VGJ) — dropping BLACK — which is how the row acquired its wrong parallel to begin with. No automated lane reaches it; hence a hand-verified list entry."
     }
   ],
   "excluded": [
