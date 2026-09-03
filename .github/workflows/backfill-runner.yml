@@ -286,6 +286,16 @@ on:
           # list path (default data/pool-relocations/2026-09-01-four-values.json);
           # a missing or empty list is a refusal, never a silent no-op.
           - relocate-pool-rows-by-list
+          # CF-ENGINE-BACKTEST (#1651, 2026-09-02). The published accuracy
+          # number: the engine's projection AS OF just before each held-out
+          # sale, using only prior data, scored against what the card actually
+          # sold for. READ ONLY -- the script has no write path at all, and
+          # ignores `apply` deliberately. MODE=sample builds + scores this
+          # shard's points; MODE=combine merges the shard JSONs into one
+          # report + REPORT.md. Sharded on sha1(sold_comps row id); stops at
+          # its own RUN_MINUTES budget and prints the marker, so a sample
+          # longer than one budget relaunches like any other.
+          - engine-backtest
           # CF-A-SPLIT-ROW-POLLUTES-TWO-POOLS (Drew, 2026-09-02: "we need to go
           # back and check ALL this way"). READ ONLY census of every row whose
           # cardId and hobbyiqCardId name different cards -- the exact pool
@@ -534,8 +544,14 @@ jobs:
           echo "TIER1_HARNESS_TOKEN=$TOK" >> "$GITHUB_ENV"
           echo "TIER1_HARNESS_TOKEN fetched (length: ${#TOK})"
 
+      # CF-ENGINE-BACKTEST (#1651). Same module-load trap the eBay backfills
+      # hit: the backtest requires the compiled pricing engine, whose import
+      # graph reaches authService, which THROWS AT MODULE LOAD without this
+      # ("refusing to start"). The backtest signs nothing and reads no session
+      # — the import kills the process before it can say so. Found by running
+      # the script locally against prod Cosmos.
       - name: Fetch AUTH_SESSION_SECRET from HobbyIQ3 App Service
-        if: inputs.script == 'reprice-user-holdings' || inputs.script == 'backfill-ebay-purchase-comps'
+        if: inputs.script == 'reprice-user-holdings' || inputs.script == 'backfill-ebay-purchase-comps' || inputs.script == 'engine-backtest'
         shell: bash
         run: |
           SEC=$(az webapp config appsettings list \
@@ -2175,6 +2191,33 @@ jobs:
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=annotate-checklist-backing -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sports="${{ inputs.sports }}" -f mode="${{ inputs.mode }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (annotated=${N:-0}) — done, no re-dispatch."
+          fi
+
+      - name: Self-relaunch the engine backtest until its shard hits its target
+        # CF-ENGINE-BACKTEST (#1651). Each evaluation point is a full engine
+        # call against Cosmos, so a shard aiming at several thousand points
+        # will outlive one 150-minute step. The gate is the MARKER and nothing
+        # else (CF-RELAUNCH-ONLY-ON-BUDGET, #1361): a shard that reaches its
+        # target prints "[done]" and stops, a shard that runs out of clock
+        # prints the marker and continues.
+        #
+        # The backtest is READ ONLY, so `apply` is meaningless to it — but it
+        # is forwarded verbatim like every other input, because a relaunch must
+        # be the SAME dispatch (D34: a report relaunches as a report).
+        if: ${{ !cancelled() && inputs.script == 'engine-backtest' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        working-directory: backend
+        run: |
+          set +e
+          N=$(grep -aoE "scored +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          echo "engine_backtest_points_scored=${N:-0}"
+          if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
+            echo "::notice::budget hit (scored=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=engine-backtest -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f limit="${{ inputs.limit }}"
+          else
+            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (scored=${N:-0}) — done, no re-dispatch."
           fi
 
       - name: Self-relaunch graded identities until the pool is fully minted

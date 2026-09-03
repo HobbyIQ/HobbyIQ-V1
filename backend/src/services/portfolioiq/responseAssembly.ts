@@ -532,9 +532,25 @@ export interface PortfolioHoldingWire {
    * Derived, never stored: it is a pure read of the trendIQ + confidence
    * already on this wire shape, so it costs no pool read and cannot drift
    * from the numbers beside it. NOT a valuation — it says WHEN, never WHAT,
-   * and no price on this envelope is affected by it.
+   * and no price on this envelope is affected by it.   *
+   * CF-PRO-SELLER-GATE (Drew, 2026-09-02): "Gate all five to the Pro tiers."
+   * OPTIONAL as of this CF. The field is populated only when the caller
+   * passes `sellSignalEntitled: true` — free callers get a wire with the key
+   * ABSENT, not a key holding an empty signal.
+   *
+   * Absent, not emptied, and the distinction is the product. A `signal:
+   * "none"` means "we looked and there is no call to make" — it is a
+   * measurement, and every consumer renders it as one (SellSignalChip
+   * returns null; the Pro Seller section shows "No open sell windows"). A
+   * free user has not been looked at, so saying "none" to them would be
+   * telling them a fact we never established. Absence already carries the
+   * meaning "capability not live" on both clients by prior contract, which
+   * is the honest reading here. See apps/web/src/lib/api.ts (`sellSignal?:`
+   * — "Consumers MUST treat absence as capability-not-live ... rather than
+   * as 'no signal' — the two look identical on the wire but mean different
+   * things to a seller").
    */
-  sellSignal: import("../signals/sellWindow.service.js").SellWindowSignal;
+  sellSignal?: import("../signals/sellWindow.service.js").SellWindowSignal;
   /** CF-PRICING-ENVELOPE (Drew, 2026-07-31). Canonical pricing surface —
    *  the single shape iOS + web both bind to. Additive to the flat legacy
    *  fields above (fairMarketValue, estimatedValue, predictedPrice, etc.),
@@ -604,6 +620,25 @@ function proposedIdentityOf(holding: PortfolioHolding): PortfolioHoldingWire["pr
   };
 }
 
+/**
+ * CF-PRO-SELLER-GATE (Drew, 2026-09-02). Per-call entitlement facts the wire
+ * composer needs. Deliberately a plain data object, not a user or a plan: the
+ * composer must not learn to read entitlements itself. The ONE authority on
+ * whether a plan grants a feature is hasEntitlement() over the matrix in
+ * config/entitlements.ts, and it stays there — every caller resolves the
+ * boolean at the route edge (through effectivePlanFor, so comped owners are
+ * handled) and hands the answer down.
+ *
+ * DEFAULT IS FALSE, and that is the point. A new call site that forgets this
+ * option emits a wire WITHOUT the paid field — the failure mode is a missing
+ * signal, never a leaked one. The opposite default would make every future
+ * call site a potential bypass.
+ */
+export interface WireEntitlements {
+  /** Caller's effective plan grants `sellerIntelligence`. */
+  sellSignalEntitled?: boolean;
+}
+
 export function composeHoldingWireShape(
   holding: PortfolioHolding,
   /** CF-INVENTORY-CATALOG-IMAGE (2026-07-05): when the caller pre-resolved
@@ -611,6 +646,9 @@ export function composeHoldingWireShape(
    *  the URL by cardId. Undefined map / missing entry → catalogImageUrl
    *  is omitted from the wire (iOS falls back to its placeholder). */
   catalogImageByCardId?: ReadonlyMap<string, string>,
+  /** CF-PRO-SELLER-GATE (2026-09-02): gates paid fields. Omitted → nothing
+   *  paid is emitted. */
+  entitlements?: WireEntitlements,
 ): PortfolioHoldingWire {
   const fmvPerUnit = computePerUnitValue(holding);
 
@@ -842,15 +880,25 @@ export function composeHoldingWireShape(
     // and synchronous — no pool read, no price computed, so the portfolio
     // envelope keeps its "this endpoint has never computed a price"
     // property. A holding with no trend gets a `none` carrying the reason.
-    sellSignal: deriveSellWindowSignal({
-      trendIQ: (holding as any).trendIQ ?? null,
-      confidence:
-        typeof (holding as any).confidence === "number"
-          ? (holding as any).confidence
-          : null,
-      trendUpdatedAt:
-        typeof holding.lastUpdated === "string" ? holding.lastUpdated : null,
-    }),
+    //
+    // CF-PRO-SELLER-GATE (Drew, 2026-09-02): conditional-spread emit, the
+    // same pattern lastSaleSurface / modelExpectation / nearestGradedAnchor
+    // already use on this wire. Unentitled → the key is absent entirely and
+    // deriveSellWindowSignal is never even called, so the paid computation
+    // does not run for a caller who cannot see it.
+    ...(entitlements?.sellSignalEntitled
+      ? {
+          sellSignal: deriveSellWindowSignal({
+            trendIQ: (holding as any).trendIQ ?? null,
+            confidence:
+              typeof (holding as any).confidence === "number"
+                ? (holding as any).confidence
+                : null,
+            trendUpdatedAt:
+              typeof holding.lastUpdated === "string" ? holding.lastUpdated : null,
+          }),
+        }
+      : {}),
     // CF-CH-THIN-COMP-PRIMARY (2026-06-26): conditional spread so the key
     // is OMITTED entirely on every non-CH-last-sale holding (the universal
     // case). Preserves byte-identical wire emission for the existing
@@ -914,6 +962,9 @@ export function composePortfolioListResponse(
    *  hits are amortized across the whole portfolio. Optional — callers
    *  without it (tests, legacy paths) get the pre-CF wire shape verbatim. */
   catalogImageByCardId?: ReadonlyMap<string, string>,
+  /** CF-PRO-SELLER-GATE (2026-09-02): threaded to every entry. Omitted →
+   *  no paid field on any of them. */
+  entitlements?: WireEntitlements,
 ): PortfolioHoldingWire[] {
-  return items.map((h) => composeHoldingWireShape(h, catalogImageByCardId));
+  return items.map((h) => composeHoldingWireShape(h, catalogImageByCardId, entitlements));
 }

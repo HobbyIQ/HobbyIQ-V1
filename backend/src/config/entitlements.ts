@@ -32,7 +32,19 @@ export type GatedFeature =
   | "ebayIntegration"
   | "marketTrendIndexes"
   | "trendIQLayer3Full"
-  | "erpReconciliation";
+  | "erpReconciliation"
+  // CF-PRO-SELLER-GATE (Drew, 2026-09-02): "Gate all five to the Pro tiers."
+  // The seller-intelligence reads behind the Pro Seller workspace — sell-window
+  // signals, the deal-scanner feed, grade-arb opportunities and recent-sales
+  // velocity. (The fifth, fee/P&L, was already gated under erpReconciliation
+  // and is NOT moved onto this key — a pro_seller-only surface must not become
+  // investor-reachable by regrouping it.)
+  //
+  // Tiered at INVESTOR, not pro_seller, because every one of these four was
+  // reachable by paid tiers before this ruling — investor included. Gating them
+  // at pro_seller would REVOKE from paying investor customers, which the ruling
+  // did not ask for: it asked to turn the FREE tier away.
+  | "sellerIntelligence";
 
 export type GatedCap =
   | "priceChecksPerDay"
@@ -65,6 +77,7 @@ const INVESTOR_FEATURES: ReadonlySet<GatedFeature> = new Set<GatedFeature>([
   "trendIQComposite",
   "ebayIntegration",
   "marketTrendIndexes",
+  "sellerIntelligence",
 ]);
 
 const PRO_SELLER_FEATURES: ReadonlySet<GatedFeature> = new Set<GatedFeature>([

@@ -405,8 +405,21 @@ router.get(
 // CF-GRADE-WORTHY (Drew, 2026-07-17): portfolio-wide grade-worthy scan.
 // Iterates the user's raw holdings and returns those with a
 // grade_now recommendation, sorted by expectedGain DESC.
+//
+// CF-PRO-SELLER-GATE (Drew, 2026-09-02): this is the grade-arb opportunities
+// surface the Pro Seller workspace reads, so it is now entitlement-gated.
+// The rate limit stays and remains meaningful for the paid tiers that have a
+// finite one — this route fans out over every raw holding at concurrency 6,
+// so a cap is load protection, and load protection is not access control.
+//
+// The gate is BEFORE the limiter so a free caller is told to upgrade rather
+// than told to wait a day. Note the per-holding sibling above
+// (/holdings/:id/grade-arb) is intentionally left as-is: this CF gates the
+// portfolio-wide scan the paid workspace calls, not a user's ability to look
+// at one card they own.
 router.get(
   "/grade-worthy-alerts",
+  requireEntitlement("sellerIntelligence"),
   requireRateLimited("priceChecksPerDay"),
   async (req, res, next) => {
     try {
@@ -1074,7 +1087,7 @@ router.get("/export", async (req, res, next) => {
 
     const doc = await readUserDoc(userId);
     const items: PortfolioHolding[] = Object.values(doc.holdings ?? {});
-    const wire = composePortfolioListResponse(items);
+    const wire = composePortfolioListResponse(items, undefined, portfolio.wireEntitlementsFor(req));
     const payload = buildHoldingsExport(wire, format);
 
     res.setHeader("Content-Type", payload.contentType);

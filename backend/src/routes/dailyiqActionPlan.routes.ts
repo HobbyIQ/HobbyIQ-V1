@@ -35,6 +35,38 @@ async function requireUserId(req: Request, res: Response): Promise<string | null
 // grade-worthy, cascade), emits a sorted list of per-card verdicts
 // (SELL_NOW / GRADE_UP / LIST_HIGHER / WAIT_TO_LIST / HOLD) with
 // urgency scores. iOS renders the top N as the DailyIQ tab hero.
+//
+// ── CF-PRO-SELLER-GATE (Drew, 2026-09-02): DELIBERATELY LEFT UNGATED ──
+//
+// This route is the known conflict in that ruling, and it is recorded here
+// rather than resolved silently, because the next person to read the gate
+// list will otherwise find this route and assume it was simply missed.
+//
+// buildActionPlan() calls detectSellNowCandidates (the sell-now-radar
+// engine) at dailyIqActionPlanAnalyze.service.ts:93 and analyzeHoldingGradeWorthy
+// (the grade-arb engine) at :179 — the SAME two engines whose dedicated HTTP
+// routes this CF just put behind requireEntitlement("sellerIntelligence").
+// Those are in-process service calls, so gating the routes does not touch
+// this path: a free user still receives SELL_NOW and GRADE_UP verdicts here.
+//
+// That is INTENTIONAL and it is the ruling's own constraint. This surface
+// shipped free (PR #546, 2026-07-17) and iOS has rendered it as the DailyIQ
+// tab hero for a free user ever since. The ruling gates the five Pro Seller
+// routes; it does not authorize taking away a surface the free tier already
+// had. Gating this route would be a REGRESSION of a free surface, which was
+// explicitly excluded — so the free tier keeps the action plan exactly as it
+// is today, verdicts included.
+//
+// What the free tier does NOT get, after this CF: the dedicated seller
+// surfaces themselves — the ranked sell-now-radar candidate list with its
+// velocity multiples and urgency scores, the notable-sales deal feed, the
+// portfolio-wide grade-arb scan with expected-gain figures, the per-holding
+// sellSignal on the portfolio wire, and the fee/P&L summary. The action plan
+// emits a VERDICT per card ("SELL_NOW", with a reason sentence); the gated
+// surfaces emit the underlying seller intelligence — the measured numbers,
+// ranked and quantified. Free keeps the conclusion it already had; the paid
+// tiers get the evidence. Anyone narrowing that line later should change it
+// deliberately, with Drew, and not by adding a middleware here.
 // ────────────────────────────────────────────────────────────────────
 router.get("/action-plan", requireSession, async (req: Request, res: Response, next) => {
   try {
