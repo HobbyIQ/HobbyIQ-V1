@@ -102,8 +102,11 @@ async function main() {
   }
 
   // ---- AFTER: what the unified method produces ------------------------
-  // Report mode never writes, so the recompute runs against a container
-  // handle whose upsert is a no-op capture.
+  // Report mode never writes. It does not merely refrain from calling
+  // upsert: it drives the recompute through a container FACADE whose
+  // every write method throws, so a write that slipped back in would
+  // fail the run loudly rather than land in prod. Pinned in
+  // tests/marketIndexDryRunWriteFree.test.ts.
   const after = {};
   if (apply) {
     const results = await compute.runMarketIndexJob({ rebuild: true, asOf, sports });
@@ -124,8 +127,18 @@ async function main() {
       };
     }
   } else {
+    const guard = readOnlyContainer(series);
     for (const sport of sports) {
-      after[sport] = await dryRun(svc, compute, series, sport, asOf, from);
+      after[sport] = await dryRun(svc, compute, guard, sport, asOf, from);
+    }
+    // The guard counts what a write WOULD have been. Zero is the claim
+    // the banner makes; anything else is a bug, and the run says so.
+    if (guard.__writes.length > 0) {
+      console.error(JSON.stringify({
+        event: "market_index_rebuild_write_in_report_mode",
+        attempted: guard.__writes,
+      }));
+      process.exit(1);
     }
   }
 
@@ -155,6 +168,7 @@ async function main() {
             pointsWithheld: a.withheld,
             latestUsedWeight: a.latestUsedWeight,
             wouldWithholdLatest: a.wouldWithholdLatest,
+            carriedLevel: a.carriedLevel ?? null,
           },
     }));
   }
@@ -167,6 +181,50 @@ async function main() {
       ? "series recomputed under the unified method"
       : "no writes performed - re-run with --apply to persist",
   }));
+}
+
+/**
+ * A container facade that passes reads through and REFUSES every write.
+ *
+ * This is the mechanical guarantee behind "REPORT-ONLY (no writes)". The
+ * report lane used to hand the real container to ensureBasket, which
+ * upserts a basket doc whenever the epoch it is asked for has none
+ * stored - so a report over a 180-day span crossing an unbuilt quarter
+ * minted that quarter's basket from today's eligibility read. On
+ * 2026-09-03 that put nine basket docs into prod from runs that
+ * announced they wrote nothing.
+ *
+ * Attempts are recorded on `__writes` (rather than only thrown) so the
+ * caller can assert ZERO and report what was attempted.
+ */
+function readOnlyContainer(real) {
+  const writes = [];
+  const refuse = (method) => (...args) => {
+    const doc = args[0];
+    writes.push({ method, id: doc && doc.id, docType: doc && doc.docType });
+    throw new Error(
+      `REPORT-ONLY run attempted ${method} on ${doc && doc.id ? doc.id : "<unknown doc>"}`,
+    );
+  };
+  return {
+    __writes: writes,
+    // Reads pass straight through to the real container.
+    items: {
+      query: (...a) => real.items.query(...a),
+      readAll: (...a) => real.items.readAll(...a),
+      create: refuse("items.create"),
+      upsert: refuse("items.upsert"),
+    },
+    item: (id, pk) => {
+      const it = real.item(id, pk);
+      return {
+        read: (...a) => it.read(...a),
+        replace: refuse("item.replace"),
+        delete: refuse("item.delete"),
+        patch: refuse("item.patch"),
+      };
+    },
+  };
 }
 
 /** Read the stored series for a sport over [from, asOf]. */
@@ -209,12 +267,21 @@ async function dryRun(svc, compute, series, sport, asOf, reportFrom) {
   if (!soldComps) return { latestLevel: null, published: 0, withheld: 0 };
 
   const fullFrom = svc.addDays(asOf, -(svc.SERIES_DAYS - 1));
-  const ensured = await compute.ensureBasket(soldComps, series, sport, fullFrom);
-  if (!ensured) return { latestLevel: null, published: 0, withheld: 0 };
+  // persist:false — the would-be basket is computed in memory. Combined
+  // with the read-only facade this is belt and braces: the option keeps
+  // the write from being attempted, the facade proves none was.
+  //
+  // A null here means the span's FIRST epoch has too few eligible cards.
+  // That is not a reason to abandon the sport: later epochs may be fine
+  // (hockey's 2026-Q1 has 21 cards, its 2026-Q3 has 43). Those early days
+  // are withheld and the walk picks the basket up at the next roll.
+  const ensured = await compute.ensureBasket(soldComps, series, sport, fullFrom, {
+    persist: false,
+  });
 
-  let basket = ensured.basket;
-  let epoch = basket.epoch;
-  let memberIds = basket.members.map((m) => m.cardId);
+  let basket = ensured ? ensured.basket : null;
+  let epoch = basket ? basket.epoch : svc.rebalanceEpochFor(fullFrom);
+  let memberIds = basket ? basket.members.map((m) => m.cardId) : [];
   let memberSet = new Set(memberIds);
 
   const allRows = await svc.fetchSales(
@@ -241,18 +308,37 @@ async function dryRun(svc, compute, series, sport, asOf, reportFrom) {
   let latestLevel = null;
   let latestUsedWeight = null;
   let wouldWithholdLatest = false;
-  let priorLevel = null;
+  // Same seed the write path uses: a withheld day carries the last level
+  // actually PUBLISHED, never a level from a different computation.
+  let priorLevel = await compute.lastPublishedLevel(series, sport, fullFrom);
+  let carriedFrom = priorLevel;
 
   for (let day = fullFrom; day <= asOf; day = svc.addDays(day, 1)) {
     const dayEpoch = svc.rebalanceEpochFor(day);
     if (dayEpoch !== epoch) {
-      const rolled = await compute.ensureBasket(soldComps, series, sport, day);
+      const rolled = await compute.ensureBasket(soldComps, series, sport, day, {
+        persist: false,
+      });
       if (rolled) {
         basket = rolled.basket;
         epoch = basket.epoch;
         memberIds = basket.members.map((m) => m.cardId);
         memberSet = new Set(memberIds);
+      } else {
+        // Too few eligible cards for a basket this epoch - withhold the
+        // whole epoch rather than value it against the previous one.
+        basket = null;
+        epoch = dayEpoch;
+        memberIds = [];
+        memberSet = new Set();
       }
+    }
+    if (!basket) {
+      if (day >= reportFrom) withheld++;
+      wouldWithholdLatest = true;
+      latestUsedWeight = null;
+      if (priorLevel != null) latestLevel = priorLevel;
+      continue;
     }
     const windowFrom = svc.addDays(day, -svc.VALUE_WINDOW_DAYS);
     const windowTo = svc.addDays(day, 1);
@@ -279,7 +365,18 @@ async function dryRun(svc, compute, series, sport, asOf, reportFrom) {
     }
   }
 
-  return { latestLevel, published, withheld, latestUsedWeight, wouldWithholdLatest };
+  return {
+    latestLevel,
+    published,
+    withheld,
+    latestUsedWeight,
+    wouldWithholdLatest,
+    // What the tile would show on the newest day if it is withheld: the
+    // last published level, carried and labelled. Null means the tile
+    // goes empty because nothing was ever published to carry.
+    carriedLevel: wouldWithholdLatest ? latestLevel : null,
+    seededCarryFrom: carriedFrom,
+  };
 }
 
 function flag(args, name) {

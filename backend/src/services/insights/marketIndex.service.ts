@@ -106,6 +106,22 @@ export const MAX_CARD_WEIGHT = 0.06;
 /** A card needs at least this many sales in the eligibility window. */
 export const MIN_SALES_FOR_ELIGIBILITY = 8;
 
+/**
+ * A basket smaller than this is not an index and no basket is built.
+ *
+ * The usedWeight floor does NOT cover this case, and assuming it did put
+ * a real number on a real tile. A 4-card pokemon basket (2026-Q2, minted
+ * 2026-09-03) is fully valued by construction — usedWeight 1.00, every
+ * day clears the floor — so it published levels of 328.69, 257.51 and
+ * finally 181.94, each of them four cards wearing a whole sport's name.
+ * The floor bounds how much of a basket was valued; this bounds whether
+ * there was a basket to value.
+ *
+ * ASSUMPTION, not a Drew ruling — 25 is the value this PR proposes, a
+ * quarter of the 100 target.
+ */
+export const MIN_BASKET_SIZE = 25;
+
 /** Eligibility lookback at rebalance time. */
 export const ELIGIBILITY_WINDOW_DAYS = 90;
 

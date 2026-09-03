@@ -173,10 +173,10 @@ describe("H-11: the backfill basket never sees its own future", () => {
     const compute = read("backend/src/services/insights/marketIndexCompute.service.ts");
     // The basket is ensured for the span's START, then re-ensured as the
     // day's own epoch rolls — never ensured once at `toDate`.
-    expect(compute).toContain("ensureBasket(soldComps, series, sport, fromDate)");
+    expect(compute).toContain("ensureBasket(soldComps, series, sport, fromDate");
     expect(compute).toContain("const dayEpoch = rebalanceEpochFor(day)");
     expect(compute).toContain("if (dayEpoch !== epoch)");
-    expect(compute).not.toContain("ensureBasket(soldComps, series, sport, toDate)");
+    expect(compute).not.toContain("ensureBasket(soldComps, series, sport, toDate");
   });
 
   it("backfill and nightly are one method, so their points are comparable", () => {
