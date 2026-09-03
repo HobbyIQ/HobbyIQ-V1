@@ -141,6 +141,29 @@ describe("H-6 — adjacent-band rescue refuses beyond distance 1", () => {
     expect(res?.medianRatio).toBe(1.10);
   });
 
+  // The distance bound must hold ON ITS OWN, not only in the cases the
+  // order-of-magnitude guard would also catch. Here the neighbour is two
+  // bands away but its raw median ($320 vs a $2,500 anchor, 7.8x) is
+  // INSIDE the 10x anchor guard — so only MAX_ADJACENT_BAND_DISTANCE can
+  // refuse it.
+  //
+  // MUTATION: delete only the `near.distance > MAX_ADJACENT_BAND_DISTANCE`
+  // break and this goes red while every other test in this block stays
+  // green.
+  it("refuses a distance-2 neighbour the anchor guard would have allowed", async () => {
+    const { lookupValueBandMultiplierWithScope } = await loadWithFixture({}, {}, {
+      baseline: {},
+      bySport: {},
+      bySportFamily: {
+        // $250-499 is two bands from $2,500-4,999. rawMedian 320 vs a
+        // 2500 anchor is 7.8x — under the 10x order-of-magnitude bound.
+        "baseball|bowman-chrome": { "$250-499": { "PSA 9": band(1.10, 40, 320) } },
+      },
+    });
+    expect(lookupValueBandMultiplierWithScope(2500, "PSA", 9,
+      { sport: "baseball", family: "bowman-chrome" })).toBeNull();
+  });
+
   // The sample-size floor is independent of, and still enforced
   // alongside, the distance bound.
   it("still refuses a distance-1 rescue below the sample floor", async () => {
