@@ -1,7 +1,12 @@
 // CF-SELL-SIDE-NOTIFY (Drew, 2026-07-18). Nightly job that walks every
-// user's holdings, compares canonical FMV against the last
+// user's holdings, compares the holding's value against the last
 // notification snapshot, and emits a push when a holding lifts
-// materially. Turns HobbyIQ into a daily-open app: "your Hartman
+// materially.
+//
+// H-1 (audit 2026-09-03): the value is valueIdentity's — the ONE valuation
+// path, the same computation the card page and the persist site answer from.
+// This job ran computeCanonicalFmv until then, which made it possible to push
+// a user a lift that no screen in the app agreed with. Turns HobbyIQ into a daily-open app: "your Hartman
 // True Blue projected next sale $1,420, +8.8% in 10 days. List now?"
 //
 // Rate limits:
@@ -19,12 +24,17 @@ import {
   readUserDoc,
   writeUserDoc,
 } from "./portfolioStore.service.js";
-import { computeCanonicalFmv } from "../compiq/canonicalFmv.service.js";
+import { valueIdentity } from "../compiq/oneValuationPath.service.js";
+import { holdingValuationIds, holdingGrade } from "./holdingValuation.js";
+import type { PortfolioHolding } from "../../types/portfolioiq.types.js";
 import { sendPriceAlertNotification } from "../notification.service.js";
 
 interface HoldingWithNotifyState {
   id: string;
   cardId?: string;
+  /** The catalog slug, when the holding carries one — what the one entry
+   *  prices. H-1. */
+  hobbyiqCardId?: string;
   playerName?: string;
   parallel?: string;
   gradeCompany?: string | null;
@@ -144,22 +154,37 @@ export async function runSellSideNotifyJob(
 
       if (!h.cardId || !h.playerName) continue;
 
-      const canonical = await computeCanonicalFmv({
-        cardId: h.cardId,
-        parallel: h.parallel ?? null,
-        gradeCompany: h.gradeCompany ?? null,
-        gradeValue: h.gradeValue ?? null,
-        cardYear: h.cardYear ?? null,
-        product: h.product ?? null,
-        player: h.playerName,
-        cardNumber: h.cardNumber ?? null,
-      }).catch(() => null);
-
-      if (!canonical || canonical.fmv === null || canonical.fmv <= 0) {
+      // H-1 (audit 2026-09-03). This job used to price on computeCanonicalFmv
+      // — the SECOND engine — while every screen the user then opened priced
+      // the same holding through valueIdentity. The push and the card page
+      // could therefore disagree about the very number the push was about,
+      // and the "+8.8%" a user was woken for was measured on a curve nothing
+      // else served. One valuation path means this job reads it too.
+      //
+      // The identity comes from holdingValuationIds, the same resolver the
+      // persist site uses: the slug when the holding carries one, its vendor
+      // cardId beside it as the union partner. A holding with neither has no
+      // identity to price and is skipped, not guessed at.
+      const ids = holdingValuationIds(h as unknown as PortfolioHolding);
+      if (!ids) {
         summary.pushesSkipped.canonicalFmvUnavailable++;
         continue;
       }
-      const currentFmv = canonical.fmv;
+      const valuation = await valueIdentity({
+        id: ids.id,
+        cardId: ids.cardId,
+        grade: holdingGrade(h as unknown as PortfolioHolding),
+        playerName: h.playerName ?? null,
+        // The owner's own purchases stay out of the pool that decides whether
+        // to tell the owner to sell.
+        excludeContributorUserId: userId,
+      }).catch(() => null);
+
+      if (!valuation || valuation.fairMarketValue === null || valuation.fairMarketValue <= 0) {
+        summary.pushesSkipped.canonicalFmvUnavailable++;
+        continue;
+      }
+      const currentFmv = valuation.fairMarketValue;
       const previous = typeof h.sellSideProjectedAtLastNotify === "number"
         ? h.sellSideProjectedAtLastNotify
         : null;

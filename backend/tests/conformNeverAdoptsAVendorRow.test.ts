@@ -182,10 +182,36 @@ describe("a ruling may target a holding with no identity yet, and may correct it
     expect(by.get("6f4f079b")!.to).not.toContain(":num-");
     expect(by.get("86cb8844")!.from).toContain(":undefined:");
     expect(by.get("86cb8844")!.to).toBe("hiq:baseball:1992:donruss-studio:232:base:no-auto");
-    // every other ruling still names a real `from`
+    // CF-CHRONIC-REDS-DRIFT (2026-09-03). This used to hardcode the two
+    // known no-identity rulings (ca820b08, 9b971b03) and demand a string
+    // `from` on every other row. #1613 added a THIRD legitimate one --
+    // fe7f69f7, a 1993 Topps Finest holding with no identity yet, carrying
+    // corrective fields -- so the whitelist went stale and the suite went red
+    // on a ruling that is exactly what this test's own title allows ("a ruling
+    // may target a holding with no identity yet").
+    //
+    // A list of ids has to be edited every time Drew rules on another
+    // identity-less holding, which is a maintenance tax, not a guard. The real
+    // invariant is the RULE those ids were standing in for: a ruling may omit
+    // `from` only when it supplies `fields` to correct the holding with --
+    // a null `from` AND no `fields` is a ruling that names neither what it is
+    // changing nor what to change it to, which is the actual defect.
     for (const r of rulings) {
-      if (r.holdingId.startsWith("ca820b08") || r.holdingId.startsWith("9b971b03")) continue;
-      expect(typeof r.from, `${r.holdingId.slice(0, 8)} names a from`).toBe("string");
+      // `from` is either a real slug, or explicitly null for a holding that
+      // had no identity to move away from. What is NOT allowed is a `from`
+      // that is some other shape -- undefined, a number, an object -- which is
+      // how a malformed hand-written ruling actually shows up.
+      expect(
+        r.from === null || typeof r.from === "string",
+        `${r.holdingId.slice(0, 8)}: from must be a slug string or explicitly null`,
+      ).toBe(true);
+      // Whatever the `from`, the ruling must still say where the holding goes
+      // and why -- that is what makes an identity-less ruling actionable.
+      expect(r.to, `${r.holdingId.slice(0, 8)} names a destination`).toMatch(/^hiq:/);
+      expect(
+        r.note.length,
+        `${r.holdingId.slice(0, 8)} explains itself`,
+      ).toBeGreaterThan(20);
     }
   });
 });

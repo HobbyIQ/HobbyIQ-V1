@@ -3691,6 +3691,13 @@ export async function fetchDailyBrief(): Promise<DailyBriefResponse> {
 export interface IndexSeriesPoint {
   date: string;
   level: number;
+  /** Members with a fresh (non-carried) value on this date. */
+  freshMembers?: number;
+  /** Share of basket weight actually valued (0..1). */
+  usedWeight?: number;
+  /** Level carried from a prior day, not computed for this one. */
+  stale?: boolean;
+  withheldReason?: string;
 }
 
 export interface SportIndexSeries {
@@ -3701,6 +3708,14 @@ export interface SportIndexSeries {
   windowDays: number;
   basketSize: number | null;
   asOf: string | null;
+  /** Members with a fresh value on the newest point. The tile says
+   *  "n of N fresh" whenever this is below the full basket, so a level
+   *  computed from a thin basket cannot pass for a full one (H-12). */
+  freshMembers?: number | null;
+  usedWeight?: number | null;
+  /** The newest point is carried because the basket went thin. */
+  stale?: boolean;
+  withheldReason?: string | null;
 }
 
 export interface MarketIndexesResponse {

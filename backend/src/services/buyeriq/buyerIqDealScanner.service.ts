@@ -1,7 +1,14 @@
 // CF-BUYERIQ-DEAL-SCANNER (Drew, 2026-08-03). Walks every BuyerIQ
 // target (status='wanted') and checks live eBay listings against
-// current FMV. When any listing lands below FMV × threshold, fire a
-// push notification to the owner.
+// the target's value. When any listing lands below value × threshold,
+// fire a push notification to the owner.
+//
+// H-1 / H-2 (audit 2026-09-03). The value is valueIdentity's — the ONE
+// valuation path — read on the target's OWN catalog slug. A target that
+// carries no slug is refused by name and no alert is sent for it; see fmvOf
+// for what used to happen instead. A push additionally requires
+// MIN_ALERT_CONFIDENCE, because this notification is unprompted and is about
+// the user's money.
 //
 // Deduplication: sent notifications are tracked in a lightweight
 // Cosmos container `buyeriq_deals_sent` keyed by (userId, targetId,
@@ -18,9 +25,10 @@
 //   BUYERIQ_DEAL_THRESHOLD_PCT              0-1 (default 0.15 = 15% below FMV)
 //   BUYERIQ_DEAL_COOLDOWN_HOURS             default 24 (no re-notify within window)
 //   BUYERIQ_DEAL_MIN_FMV                    default 25 (skip cards < $25 FMV — too noisy)
+//   BUYERIQ_DEAL_MIN_CONFIDENCE             default 0.35 (below this we don't push)
 
 import { CosmosClient, type Container } from "@azure/cosmos";
-import { computeCanonicalFmv } from "../compiq/canonicalFmv.service.js";
+import { valueIdentity } from "../compiq/oneValuationPath.service.js";
 import { fetchCardActiveListings, type ActiveListing } from "../ebay/ebayListingSearch.service.js";
 import { sendBuyerIqDealNotification } from "../notification.service.js";
 import type { BuyerIqTarget } from "./buyeriqStore.service.js";
@@ -28,6 +36,17 @@ import type { BuyerIqTarget } from "./buyeriqStore.service.js";
 const DEAL_THRESHOLD_PCT = Math.max(0.02, Math.min(0.60, Number(process.env.BUYERIQ_DEAL_THRESHOLD_PCT ?? "0.15")));
 const COOLDOWN_HOURS = Math.max(1, Number(process.env.BUYERIQ_DEAL_COOLDOWN_HOURS ?? "24"));
 const MIN_FMV = Math.max(0, Number(process.env.BUYERIQ_DEAL_MIN_FMV ?? "25"));
+/**
+ * H-2 (audit 2026-09-03). The confidence an unprompted deal push requires.
+ *
+ * This scanner sends a notification nobody asked for, about a listing the user
+ * may act on with their own money, and until now it applied NO confidence gate
+ * of any kind — it alerted on whatever number came back, including numbers
+ * priced off a minted identity. The bar is the same one the sell-window timing
+ * call uses (sellWindow.MIN_CONFIDENCE): below it we decline to tell someone
+ * when to spend.
+ */
+const MIN_ALERT_CONFIDENCE = Math.max(0, Math.min(1, Number(process.env.BUYERIQ_DEAL_MIN_CONFIDENCE ?? "0.35")));
 
 // ── Sent-tracker container ────────────────────────────────────────────
 interface DealSentDoc {
@@ -128,23 +147,63 @@ export interface DealScannerSummary {
   notificationsSent: number;
   notificationsSkippedDedup: number;
   notificationsFailed: number;
+  /** H-2: targets that carry no catalog identity. These used to be priced on
+   *  a minted `hiq:baseball:…:unknown:…` slug and alerted on. */
+  targetsRefusedNoIdentity: number;
+  /** H-2: identity resolved, but the one entry produced no number for it. */
+  targetsRefusedNoValue: number;
+  /** H-2: priced, but below the confidence bar an unprompted push requires. */
+  targetsSkippedLowConfidence: number;
   errors: number;
 }
 
-function fmvOf(target: BuyerIqTarget) {
-  // Reuse canonicalFmv rails. Build input from BuyerIQ target fields.
-  return computeCanonicalFmv({
-    cardId: target.hobbyiqCardId ?? `hiq:baseball:${target.cardYear ?? 2024}:${target.setName ?? "unknown"}:${target.cardNumber ?? "unknown"}:base:no-auto`,
-    parallel: target.parallel ?? null,
-    gradeCompany: target.gradeCompany ?? null,
-    gradeValue: target.gradeValue ?? null,
-    cardYear: target.cardYear ?? null,
-    product: target.setName ?? null,
-    player: target.playerName,
-    cardNumber: target.cardNumber ?? null,
-    isAuto: target.isAuto ?? null,
-    freshCompute: false,
-  });
+/**
+ * H-1 / H-2 (audit 2026-09-03). What this function used to do:
+ *
+ *   cardId: target.hobbyiqCardId ?? `hiq:baseball:${cardYear ?? 2024}:` +
+ *           `${setName ?? "unknown"}:${cardNumber ?? "unknown"}:base:no-auto`
+ *
+ * A target with no slug got one MINTED, with the sport hardcoded to baseball,
+ * the year defaulted to 2024, and the literal string "unknown" standing in for
+ * the set and the card number. That string is not an identity. It was then
+ * priced — against whatever pool the collision happened to reach — and, if the
+ * resulting number sat far enough above a live listing, a DEAL ALERT was
+ * pushed to the user's phone about a card nobody had identified. No confidence
+ * gate stood anywhere on that path. Live today: 2 of the 4 wanted targets take
+ * this branch.
+ *
+ * Three doctrine rules break there at once: one valuation path (this was the
+ * second engine), a sport is never guessed, and a slug carrying "unknown"
+ * segments is not an identity and must not be priced or alerted on.
+ *
+ * What it does now: a target is priced ONLY through its own catalog identity —
+ * the slug the target actually carries — and through valueIdentity, the one
+ * entry. A target without one is REFUSED BY NAME (`no-catalog-identity`) and
+ * the caller sends no alert. Nothing is minted, nothing is guessed.
+ *
+ * A BuyerIQ target carries no sport field at all, so there is no honest way to
+ * ask the catalog matcher for an identity here — the sport would have to be
+ * invented, which is precisely the defect. The refusal is the correct answer
+ * until the target itself carries an identity; the add-target flow is where a
+ * slug should be attached, with the user present to confirm it.
+ */
+export type TargetPriceRefusal = "no-catalog-identity" | "no-value";
+
+export async function fmvOf(
+  target: BuyerIqTarget,
+): Promise<{ fmv: number; confidence: number } | { refused: TargetPriceRefusal }> {
+  const slug = typeof target.hobbyiqCardId === "string" ? target.hobbyiqCardId.trim() : "";
+  if (!slug.startsWith("hiq:")) return { refused: "no-catalog-identity" };
+  const v = await valueIdentity({
+    id: slug,
+    grade: target.gradeCompany
+      ? { company: target.gradeCompany, value: target.gradeValue ?? null }
+      : null,
+    printRun: null,
+    playerName: target.playerName ?? null,
+  }).catch(() => null);
+  if (!v || v.fairMarketValue === null || !(v.fairMarketValue > 0)) return { refused: "no-value" };
+  return { fmv: v.fairMarketValue, confidence: v.confidence };
 }
 
 function dealPct(listingPrice: number, fmv: number): number {
@@ -178,6 +237,9 @@ export async function runBuyerIqDealScan(): Promise<DealScannerSummary> {
     notificationsSent: 0,
     notificationsSkippedDedup: 0,
     notificationsFailed: 0,
+    targetsRefusedNoIdentity: 0,
+    targetsRefusedNoValue: 0,
+    targetsSkippedLowConfidence: 0,
     errors: 0,
   };
 
@@ -193,11 +255,34 @@ export async function runBuyerIqDealScan(): Promise<DealScannerSummary> {
     summary.targetsScanned++;
     if (!t.playerName) { summary.targetsSkipped++; continue; }
     try {
-      // 1. FMV
-      const fmvResult = await fmvOf(t);
-      const fmv = fmvResult?.fmv ?? null;
-      if (!fmv || fmv < MIN_FMV) {
+      // 1. Value — through the ONE valuation path, on the target's OWN
+      //    catalog identity, or a named refusal. H-1 / H-2.
+      const priced = await fmvOf(t);
+      if ("refused" in priced) {
+        if (priced.refused === "no-catalog-identity") {
+          summary.targetsRefusedNoIdentity++;
+          console.log(JSON.stringify({
+            event: "buyeriq_target_refused_no_identity",
+            source: "buyerIqDealScanner.runBuyerIqDealScan",
+            targetId: t.id,
+            player: t.playerName,
+            detail: "target carries no hiq slug; nothing was minted, priced or alerted",
+          }));
+        } else {
+          summary.targetsRefusedNoValue++;
+        }
         summary.targetsSkipped++;
+        continue;
+      }
+      const fmv = priced.fmv;
+      if (fmv < MIN_FMV) {
+        summary.targetsSkipped++;
+        continue;
+      }
+      // H-2: an UNPROMPTED push about someone's money needs the number behind
+      // it to be evidenced. Nothing gated this path at all before.
+      if (priced.confidence < MIN_ALERT_CONFIDENCE) {
+        summary.targetsSkippedLowConfidence++;
         continue;
       }
       // 2. Active listings — reuse the ranked/filtered path iOS uses.

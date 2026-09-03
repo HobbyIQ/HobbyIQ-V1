@@ -163,9 +163,16 @@ const sale = (slug: string, price: number, d: number, grade: { c: string; v: num
 });
 
 let app: import("express").Express;
+// CF-CHRONIC-REDS-SLOW (2026-09-03). This is the exact case the hookTimeout
+// note in vitest.config.ts describes -- `await import("../src/app")` triggers a
+// cold SWC transform of the whole compiq route graph. Measured at 122s in a
+// full-suite run, i.e. past even the raised 120s file-level ceiling, at which
+// point vitest SKIPS the suite: this file reported "24 tests | 24 skipped",
+// which is a silent gap, not a visible red. All 24 pass in isolation. Give the
+// hook its own headroom so the assertions actually run.
 beforeAll(async () => {
   app = (await import("../src/app")).default;
-});
+}, 300_000);
 beforeEach(() => {
   h.rows = [
     ...Array.from({ length: 10 }, (_, i) => sale(GOLD, 100 + i * 4, 45 - i * 5)),

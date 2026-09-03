@@ -1239,7 +1239,34 @@ export function getConditionSensitiveSetBump(
   return 1.0;
 }
 
-export function getGraderPremium(
+/**
+ * H-8 (audit 2026-09-03). The rung of this ladder that produced a multiplier.
+ *
+ * The grade curve used to LABEL its estimated values by separately re-querying
+ * whether the empirical-ratio lookups *would* have answered — a question this
+ * ladder had already asked and answered, sometimes differently. Four rungs
+ * above those lookups (gem-rate, vintage, the value-band table, PSA-8-equals-
+ * raw) and three below them (auto, base, static) outranked the label, so a
+ * value from the vintage table was published as `empirical-ratio` and drew
+ * that label's tighter confidence band.
+ *
+ * The ladder now says which rung it took, and the label is that answer.
+ */
+export type GraderPremiumRung =
+  | "no-grade"
+  | "psa8-equals-raw"
+  | "gem-rate-formula"
+  | "vintage-table"
+  | "empirical-value-band"
+  | "empirical-ratio-tier"
+  | "empirical-ratio"
+  | "auto-table"
+  | "base-table";
+  // ("static-table" and "no-table" retired 2026-09-03 with the
+  //  GRADER_PREMIUMS matrix — CF-EMPIRICAL-ONLY-NO-GRADER-MATRIX. A ladder
+  //  that reaches the end has no rung to name; it returns null.)
+
+function graderPremiumLadder(
   gradingCompany: string | null | undefined,
   grade: string | null | undefined,
   rawPrice?: number | null,
@@ -1254,8 +1281,8 @@ export function getGraderPremium(
    *  absent, the ladder walks the sport-agnostic layers only — still
    *  strictly better than the pre-calibration auto/base tables. */
   sportHint?: string | null,
-): number | null {
-  if (!gradingCompany || grade == null) return 1.0;
+): { multiplier: number; rung: GraderPremiumRung } | null {
+  if (!gradingCompany || grade == null) return { multiplier: 1.0, rung: "no-grade" };
   const company = String(gradingCompany).toUpperCase().trim();
   const gradeKey = String(grade).trim();
 
@@ -1268,7 +1295,7 @@ export function getGraderPremium(
   // year info default to modern behavior (safer for the common case).
   const isModernForOverride = !cardYear || cardYear >= 1990;
   if (company === "PSA" && (gradeKey === "8" || gradeKey === "8.0") && isModernForOverride) {
-    return 1.0;
+    return { multiplier: 1.0, rung: "psa8-equals-raw" };
   }
 
   // CF-GEM-RATE-WIRED (Drew, 2026-07-15, PR #495 follow-up): when the
@@ -1298,7 +1325,7 @@ export function getGraderPremium(
       formulaMultiplier,
       setBump,
     });
-    return formulaMultiplier * setBump;
+    return { multiplier: formulaMultiplier * setBump, rung: "gem-rate-formula" };
   }
 
   // CF-GEM-RATE-WIRED-LOWCONF-TELEMETRY (Drew, 2026-07-16): when we have
@@ -1343,7 +1370,7 @@ export function getGraderPremium(
       const tier = vintage.table[era][company][gradeKey];
       const vintageValue = resolveTierForTable(tier, rawPrice);
       if (vintageValue != null && Number.isFinite(vintageValue) && vintageValue > 0) {
-        return vintageValue * setBump;
+        return { multiplier: vintageValue * setBump, rung: "vintage-table" };
       }
     }
     // else fall through (vintage table may not cover every era/grade combo yet)
@@ -1414,12 +1441,12 @@ export function getGraderPremium(
       // in gradeCalibrationConfig.ts).
       const bandLookup = lookupValueBandMultiplierWithScope(rawPrice, company, gradeValueNum, { sport, family });
       if (bandLookup && Number.isFinite(bandLookup.medianRatio) && bandLookup.medianRatio > 0) {
-        return bandLookup.medianRatio * setBump;
+        return { multiplier: bandLookup.medianRatio * setBump, rung: "empirical-value-band" };
       }
 
       const tierRatio = lookupGradeRatioByTier(family, company, gradeValueNum, sport);
       if (tierRatio !== null && Number.isFinite(tierRatio) && tierRatio > 0) {
-        return tierRatio * setBump;
+        return { multiplier: tierRatio * setBump, rung: "empirical-ratio-tier" };
       }
 
       // Only run the family-scalar × subTierScaling layer for grades
@@ -1431,7 +1458,7 @@ export function getGraderPremium(
       if (gradeValueNum >= 5 && gradeValueNum <= 10) {
         const familyScalar = lookupGradeRatio(family, company, sport);
         if (familyScalar !== null && Number.isFinite(familyScalar) && familyScalar > 0) {
-          return familyScalar * subTierScalingForFallback(gradeValueNum) * setBump;
+          return { multiplier: familyScalar * subTierScalingForFallback(gradeValueNum) * setBump, rung: "empirical-ratio" };
         }
       }
       // else fall through to legacy auto/base tables below
@@ -1447,7 +1474,7 @@ export function getGraderPremium(
     const autoTier = auto?.table?.[company]?.[gradeKey];
     const autoValue = resolveTierForTable(autoTier, rawPrice);
     if (autoValue != null && Number.isFinite(autoValue) && autoValue > 0) {
-      return autoValue * setBump;
+      return { multiplier: autoValue * setBump, rung: "auto-table" };
     }
     // else fall through to base table (logged in telemetry as a calibration gap)
   }
@@ -1462,7 +1489,7 @@ export function getGraderPremium(
     const baseTier = base?.table?.[company]?.[gradeKey];
     const baseValue = resolveTierForTable(baseTier, rawPrice);
     if (baseValue != null && Number.isFinite(baseValue) && baseValue > 0) {
-      return baseValue * setBump;
+      return { multiplier: baseValue * setBump, rung: "base-table" };
     }
     // else fall through to static
   }
@@ -1471,16 +1498,15 @@ export function getGraderPremium(
   // This is where the hand-curated GRADER_PREMIUMS matrix used to sit —
   // a per-company/per-tier table of literal constants (BGS "10 Black
   // Label" at a sub-$25 anchor returned 12.0x; SGC 10 at $12,000
-  // returned 2.63x) that was the TERMINAL fallback, so getGraderPremium
-  // could never return null and no caller ever had to face a no-basis
-  // case. Every uncalibrated (company, grade, family, sport) combination
-  // silently published a number indistinguishable from a calibrated
-  // ratio.
+  // returned 2.63x) that was the TERMINAL fallback, so this ladder could
+  // never refuse and no caller ever had to face a no-basis case. Every
+  // uncalibrated (company, grade, family, sport) combination silently
+  // published a number indistinguishable from a calibrated ratio.
   //
   // It is the same class of constant the CF-EMPIRICAL-ONLY ruling removed
   // from observedGradeCurve and, in this same PR, from canonicalFmv's
-  // gradeTierMultiplier — but on the HIGHER-traffic path: getGraderPremium
-  // is the multiplier entry point for hobbyIqFmv, unifiedPricing, the
+  // gradeTierMultiplier — but on the HIGHER-traffic path: this ladder is
+  // the multiplier entry point for hobbyIqFmv, unifiedPricing, the
   // per-grade breakdown, the sibling fallback and the graded projection.
   //
   // Refuse instead. Every rung above this line is empirical — the vintage
@@ -1489,7 +1515,30 @@ export function getGraderPremium(
   // honest answer is that we have no basis for a grade multiplier, and
   // each caller degrades to its own existing no-basis path rather than
   // multiplying a real anchor by an invented constant.
+  //
+  // NOTE for the H-8 rung reporting merged from #1679: the "static-table"
+  // and "no-table" rungs are gone with the matrix that defined them. A
+  // ladder that reaches the end reports no rung at all, because there is
+  // no rung — it returns null.
   return null;
+}
+
+/**
+ * The multiplier alone — or null when no empirical rung covered the card.
+ * Callers that need to REPORT which rung produced it call
+ * `getGraderPremiumWithRung` instead of guessing.
+ */
+export function getGraderPremium(
+  ...args: Parameters<typeof graderPremiumLadder>
+): number | null {
+  return graderPremiumLadder(...args)?.multiplier ?? null;
+}
+
+/** The multiplier and the rung that produced it, or null on no basis. H-8. */
+export function getGraderPremiumWithRung(
+  ...args: Parameters<typeof graderPremiumLadder>
+): { multiplier: number; rung: GraderPremiumRung } | null {
+  return graderPremiumLadder(...args);
 }
 
 /**

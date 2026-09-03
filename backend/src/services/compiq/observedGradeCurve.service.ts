@@ -24,6 +24,7 @@
 import { getCardSales } from "./cardhedge.client.js";
 import { recordBoundedProjectionAlert } from "./boundedProjectionAlerts.service.js";
 import { logSubRawInversionObserved } from "./marketRead.service.js";
+import { decideIdentityUnion } from "./identityUnionGuard.js";
 import { readSoldCompsForGrade } from "./soldCompsGradeReader.js";
 import { isOwnComp } from "./selfComp.js";
 import type { FmvRungLabel } from "./fmvRung.js";
@@ -37,7 +38,7 @@ import {
   gradeCurveEntryLabel,
   unifiedTierHasPool,
 } from "./gradeCurveEntry.js";
-import { computeWeightedMedian, getGraderPremium } from "./compiqEstimate.service.js";
+import { computeWeightedMedian, getGraderPremium, getGraderPremiumWithRung, type GraderPremiumRung } from "./compiqEstimate.service.js";
 // CF-MATCHED-COHORT-TRAJECTORY (2026-07-05): swap the noisy raw
 // sales-stats-by-player signal for the mix-bias-free matched-cohort
 // medianRatio when available. Per project memory
@@ -204,7 +205,21 @@ export interface ObservedGradeEntry {
    *                          (last-resort fallback when reference
    *                           price is also unavailable)
    *  Null for observed / unavailable entries. */
-  estimatedFrom: "reference-price" | "raw-multiplier" | "sibling-card" | "empirical-ratio" | "empirical-ratio-tier" | null;
+  /** H-8 (audit 2026-09-03): the rung that ACTUALLY produced `value`, as
+   *  reported by the ladder that produced it — never a separate re-query of
+   *  what some other rung might have said. The three rungs added here
+   *  (gem-rate-formula, vintage-table, empirical-value-band) were always
+   *  reachable; they were simply published under another rung's name. */
+  estimatedFrom:
+    | "reference-price"
+    | "raw-multiplier"
+    | "sibling-card"
+    | "empirical-ratio"
+    | "empirical-ratio-tier"
+    | "empirical-value-band"
+    | "vintage-table"
+    | "gem-rate-formula"
+    | null;
   /** CF-ONE-TRAJECTORY (2026-07-04): fields that put Last Sale, Market
    *  Value, and Predicted on ONE trend line — the SAME per-week rate
    *  derives all three. Prevents the "$100 Market Value but $205
@@ -307,6 +322,12 @@ export interface ObservedGradeCurve {
     | "release-decay-only"
     | "raw-weekly"
     | null;
+  /** H-4 (audit 2026-09-03). Set when this curve's pool union was REFUSED
+   *  because the caller's slug and `cardId` name different products — the
+   *  curve then read the caller's slug side alone. Null when no union was
+   *  attempted or the guard allowed it. The guard's decision, recorded, so a
+   *  single-sided curve is auditable rather than silently narrower. */
+  unionRefusedReason: string | null;
   /** CF-SIBLING-LINEAGE-SURFACE (2026-07-07, Drew): when the sibling
    *  fallback drove any entry's `value`, this block surfaces the
    *  lineage so iOS can render a "Est via Base Auto × 15× Orange floor"
@@ -715,10 +736,17 @@ function pickBandWidthPct(entry: ObservedGradeEntry): number {
     return PREDICTED_RANGE_PCT;   // ±8%, unchanged
   }
   if (entry.valueSource === "estimated") {
+    // H-8 (audit 2026-09-03): `estimatedFrom` is now the rung that actually
+    // produced the value, so these widths are finally keyed off the real
+    // evidence rather than off a re-query's guess. The three rungs added here
+    // were always reachable — they were just wearing another rung's band.
     switch (entry.estimatedFrom) {
       case "reference-price":       return 0.15;   // third-party model, decent trust
+      case "empirical-value-band":  return 0.15;   // paired raw/graded sales in this price band
       case "empirical-ratio-tier":  return 0.15;   // per-grade calibration from ch_daily_sales
+      case "gem-rate-formula":      return 0.16;   // this card's own observed gem rate
       case "empirical-ratio":       return 0.18;   // company-level calibration × subtier
+      case "vintage-table":         return 0.18;   // era × price-tier pairs, thinner cells
       case "raw-multiplier":        return 0.20;
       case "sibling-card":          return 0.25;   // hobby-consensus floor territory
       default:                      return ESTIMATED_PREDICTED_RANGE_PCT;
@@ -1497,6 +1525,30 @@ function parseGradeValue(gradeLabel: string): number | null {
  *  empirical company-level ratio × sub-tier scaling when the tier cell
  *  is thin. Fall back further to hardcoded class-aware matrix when the
  *  family isn't calibrated at all. */
+/**
+ * H-8: the ladder's rung, in the vocabulary the wire already speaks.
+ *
+ * Only rungs that can produce an ESTIMATED grade value appear as themselves.
+ * The legacy auto/base tables are exactly what `raw-multiplier` has always
+ * meant — a table lookup off the raw price — so they keep that name and its
+ * wider band.
+ *
+ * CF-EMPIRICAL-ONLY-NO-GRADER-MATRIX (2026-09-03): the "static-table" and
+ * "no-table" rungs no longer exist. The ladder that used to end in the
+ * hand-curated matrix now returns null, and a null never reaches this
+ * function — there is no rung to label because no value was produced.
+ */
+export function estimatedFromRung(rung: GraderPremiumRung): NonNullable<ObservedGradeEntry["estimatedFrom"]> {
+  switch (rung) {
+    case "gem-rate-formula":     return "gem-rate-formula";
+    case "vintage-table":        return "vintage-table";
+    case "empirical-value-band": return "empirical-value-band";
+    case "empirical-ratio-tier": return "empirical-ratio-tier";
+    case "empirical-ratio":      return "empirical-ratio";
+    default:                     return "raw-multiplier";
+  }
+}
+
 function resolveMultiplier(args: {
   entry: ObservedGradeEntry;
   family: string | null;
@@ -1508,7 +1560,7 @@ function resolveMultiplier(args: {
   setName?: string | null;
   /** Card year — feeds getGraderPremium's vintage/modern branch. */
   cardYear?: number | null;
-}): number | undefined {
+}): { multiplier: number; rung: GraderPremiumRung } | undefined {
   const { entry, sport, cardClass, rawPrice, setName, cardYear } = args;
   // CF-MULTIPLIER-LADDER-SHARED (Drew, 2026-08-06). Prior local ladder
   // duplicated ~3 of the 9 rungs compiqEstimate.getGraderPremium runs
@@ -1521,7 +1573,7 @@ function resolveMultiplier(args: {
   // agreement on every rung — no future drift possible when new
   // multiplier layers are added to the ladder because there's only
   // one ladder now.
-  const premium = getGraderPremium(
+  const premium = getGraderPremiumWithRung(
     entry.grader,
     // getGraderPremium expects the grade VALUE (e.g. "10") not the
     // full "PSA 10" label — matches compiqEstimate's own callsites.
@@ -1533,15 +1585,22 @@ function resolveMultiplier(args: {
     null,      // gemRateSignal — not available at grade-curve site
     sport,
   );
-  if (premium !== null && Number.isFinite(premium) && premium > 0) return premium;
+  if (premium !== null && Number.isFinite(premium.multiplier) && premium.multiplier > 0) {
+    return premium;
+  }
   // CF-EMPIRICAL-ONLY-NO-GRADER-MATRIX (2026-09-03, audit H-7 residual).
-  // getGraderPremium now RETURNS NULL when no empirical cell covers this
-  // card — it is no longer true that "the function always returns a
-  // number". That refusal is the intended path here, not an anomaly:
-  // gradeMultiplierFor is a deliberate no-op returning undefined, so the
-  // entry surfaces as valueSource "unavailable" on the iOS pill and logs
-  // grade_multiplier_uncovered. Real accuracy > false completeness.
-  return gradeMultiplierFor(cardClass, entry.grade);
+  // The shared ladder now RETURNS NULL when no empirical cell covers this
+  // card — it is no longer true that "it always returns a number", and the
+  // "static-table" rung this branch used to name no longer exists, because
+  // the matrix that defined it is gone.
+  //
+  // The refusal is the intended path here, not an anomaly. gradeMultiplierFor
+  // is a deliberate no-op returning undefined, so the entry surfaces as
+  // valueSource "unavailable" on the iOS pill and logs
+  // grade_multiplier_uncovered — which is exactly what
+  // CF-EMPIRICAL-ONLY-MULTIPLIER asked for. Real accuracy > false
+  // completeness.
+  return undefined;
 }
 
 function fillEstimatedFallback(
@@ -1607,18 +1666,22 @@ function fillEstimatedFallback(
           setName,
           cardYear,
         });
-        if (typeof multiplier === "number" && multiplier > 0) {
-          entry.value = Math.round(rawObserved * multiplier * 100) / 100;
+        // H-8 (audit 2026-09-03). The label is the ladder's OWN answer.
+        //
+        // It used to be a separate re-query: the value came from
+        // getGraderPremium's nine-rung ladder, and then this block asked
+        // lookupGradeRatioByTier / lookupGradeRatio whether THOSE two rungs
+        // would have answered, and named the value after whichever did. Four
+        // rungs outrank them (gem-rate, vintage, the value-band table, and
+        // PSA-8-equals-raw) and three sit below (auto, base, static), so a
+        // vintage-table value was routinely published as "empirical-ratio" —
+        // and pickBandWidthPct keys the confidence band off this label, so
+        // the false name also bought a tighter band than the rung earned.
+        if (multiplier && Number.isFinite(multiplier.multiplier) && multiplier.multiplier > 0) {
+          entry.value = Math.round(rawObserved * multiplier.multiplier * 100) / 100;
           entry.valueSource = "estimated";
-          const gv = parseGradeValue(entry.grade);
-          if (family && gv !== null && lookupGradeRatioByTier(family, entry.grader, gv, sport) !== null) {
-            entry.estimatedFrom = "empirical-ratio-tier";
-          } else if (family && lookupGradeRatio(family, entry.grader, sport) !== null) {
-            entry.estimatedFrom = "empirical-ratio";
-          } else {
-            entry.estimatedFrom = "raw-multiplier";
-          }
-          entry.estimatedMultiplier = multiplier;
+          entry.estimatedFrom = estimatedFromRung(multiplier.rung);
+          entry.estimatedMultiplier = multiplier.multiplier;
         }
       }
     }
@@ -1674,10 +1737,39 @@ export function resolveUnionSlug(
   cardId: string,
   callerSlug: string | null | undefined,
 ): string | null {
+  return resolveUnionSlugDecided(cardId, callerSlug).partner;
+}
+
+/**
+ * H-4 (audit 2026-09-03). The same resolution, with the guard applied and the
+ * decision RETURNED so the caller can record it.
+ *
+ * This is the door the audit found open. `resolveUnionSlug` preferred the
+ * caller's slug and returned it with NO comparison against `cardId`, so a
+ * holding whose two identities named different products — c37ead87's Bowman
+ * Chrome refractor auto beside a Bowman Draft base auto — was refused on the
+ * portfolio path by exactPoolSupremacy and unioned here on the curve path.
+ * The same card, priced two ways, by two doors disagreeing about one rule.
+ *
+ * Now both doors ask `decideIdentityUnion`. On a refusal the curve reads the
+ * caller's slug side ALONE (the identity the caller actually named) rather
+ * than a pool welded from two cards, and `refusedReason` carries the sentence
+ * onto the result's provenance.
+ */
+export function resolveUnionSlugDecided(
+  cardId: string,
+  callerSlug: string | null | undefined,
+): { partner: string | null; refusedReason: string | null } {
   const supplied = typeof callerSlug === "string" ? callerSlug.trim() : "";
-  if (supplied.startsWith("hiq:")) return supplied;
   const own = String(cardId ?? "").trim();
-  return own.startsWith("hiq:") ? own : null;
+  if (supplied.startsWith("hiq:")) {
+    // The one place two freely-chosen identities meet on this path: `cardId`
+    // is about to be ORed with `supplied` in a single pool query.
+    const decision = decideIdentityUnion(own, supplied, "observedGradeCurve.resolveUnionSlug");
+    if (!decision.allowed) return { partner: null, refusedReason: decision.refusedReason };
+    return { partner: supplied, refusedReason: null };
+  }
+  return { partner: own.startsWith("hiq:") ? own : null, refusedReason: null };
 }
 
 export async function buildObservedGradeCurve(
@@ -1919,6 +2011,7 @@ export async function buildObservedGradeCurve(
     ratePerWeek: derivation?.cappedRate ?? null,
     signalSource: derivation?.signalSource ?? null,
     siblingFallback: siblingFallbackLineage,
+    unionRefusedReason: null,
   };
 
   // CF-SITE-CURVE-NO-BLANK-TIERS (2026-08-22). Captured from the unified
@@ -1965,8 +2058,10 @@ export async function buildObservedGradeCurve(
     const hiqOpt: Parameters<typeof computeUnifiedPrice>[1] = {
       perTierWindows: true,
     };
-    const unionSlug = resolveUnionSlug(cardId, opts.hobbyiqCardId);
-    if (unionSlug) hiqOpt.hobbyiqCardId = unionSlug;
+    // H-4: the guard decides, and its refusal is recorded on the curve.
+    const unionDecision = resolveUnionSlugDecided(cardId, opts.hobbyiqCardId);
+    if (unionDecision.partner) hiqOpt.hobbyiqCardId = unionDecision.partner;
+    if (unionDecision.refusedReason) curve.unionRefusedReason = unionDecision.refusedReason;
     const u = await computeUnifiedPrice(cardId, hiqOpt);
     unifiedAnchor = u.marketValue ?? u.fmv ?? null;
     const byLabel = new Map(u.gradeCurve.map((e) => [e.grade, e]));
@@ -2412,6 +2507,7 @@ export async function buildObservedGradeCurvesBulk(
           computedAt: new Date().toISOString(),
           ratePerWeek: null,
           signalSource: null,
+          unionRefusedReason: null,
           siblingFallback: null,
         });
       }

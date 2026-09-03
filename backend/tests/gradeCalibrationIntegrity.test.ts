@@ -479,8 +479,10 @@ describe("H-7 residual — the GRADER_PREMIUMS matrix is gone from getGraderPrem
         /const canRescale =/,
         /rungLabel = "no-basis";/,
       ]],
+      // Post-#1679 the shared ladder returns { multiplier, rung } | null,
+      // so the guard checks the null AND the multiplier inside it.
       ["src/services/compiq/observedGradeCurve.service.ts", [
-        /if \(premium !== null && Number\.isFinite\(premium\) && premium > 0\) return premium;/,
+        /if \(premium !== null && Number\.isFinite\(premium\.multiplier\) && premium\.multiplier > 0\) \{/,
       ]],
     ];
     for (const [rel, pats] of files) {

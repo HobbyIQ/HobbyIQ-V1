@@ -32,6 +32,7 @@ import { cardNumberInClause, normalizeSetKey, sameCardNumber } from "../portfoli
 // "bowman" query can recognise bowman-draft as one family step away.
 import { productAncestry, productEntry } from "./productSetKeys.js";
 import { authorityRank, catalogAuthorityOf, type CatalogAuthority } from "./catalogAuthority.service.js";
+import { foldSpelling } from "./parallelSpellingFold.js";
 
 const COSMOS_DATABASE = process.env.COSMOS_DATABASE ?? "hobbyiq";
 const CATALOG_CONTAINER = process.env.COSMOS_CARD_CATALOG_CONTAINER ?? "card_catalog";
@@ -422,6 +423,141 @@ export function narrowToNamedProduct<H extends { setKey?: string | null; setName
   return any.length > 0 ? any : hits;
 }
 
+const ANCHOR_STOPWORDS = new Set([
+  "bowman", "topps", "panini", "leaf", "upper", "deck", "fleer", "donruss", "score",
+  "chrome", "prizm", "select", "optic", "mosaic", "heritage", "sapphire", "finest",
+  "sterling", "inception", "platinum", "stadium", "club", "gallery", "archives",
+  "allen", "ginter", "gypsy", "queen", "immaculate", "obsidian", "contenders",
+  "refractor", "fractor", "prizms", "auto", "autograph", "autographs", "rookie",
+  "prospect", "prospects", "paper", "update", "series", "draft", "mega", "jumbo",
+  "base", "insert", "parallel", "variation", "numbered", "card", "cards",
+  "baseball", "basketball", "football", "hockey", "soccer", "wrestling",
+  // CF-SEARCH-FULL-NAME-DOMINATES (2026-08-30): grade words, so "psa 10"
+  // cannot become a name token now that three-letter tokens qualify.
+  "psa", "bgs", "sgc", "cgc", "hga", "csg", "tag", "gem", "mint", "raw", "rc", "graded", "slab",
+]);
+
+// CF-SEARCH-A-LISTING-IS-NOT-A-NAME (2026-09-03, identity triangulation
+// re-run: search -> same card 42.0%, and TEN of the search misses were
+// "(no hit)" on a card whose catalog row exists and scores fine).
+//
+// Every one of these tokens becomes a REQUIRED name token: `nameTokens`
+// falls back to `alphaTokens` whenever the caller passes no parsed
+// playerName (the triangulation harness, and every raw-title caller),
+// and `armExactAll` ANDs one ARRAY_CONTAINS per token. A word the
+// catalog does not put on the card is then a word no row can satisfy.
+//
+// Measured on "Freddie Freeman 2025 Bowman Chrome #33 Los Angeles
+// Dodgers FREE SHIPPING" (read-only, card_catalog):
+//
+//   freddie AND freeman                34,215 rows
+//   freddie AND freeman AND dodgers        20 rows
+//   freddie AND freeman AND shipping        1 row
+//
+// -> armExactAll returned 0, armFuzzyAll ANDs the same prefixes and also
+// returned 0, and the search reported "no such card" for a card sitting
+// in the catalog with a full searchTokens array. Dropping the trailing
+// " Los Angeles Dodgers FREE SHIPPING" from the SAME query returned it
+// as the top hit, which is the whole bug in one A/B.
+//
+// The team names are the subtle half: they DO occur in searchTokens
+// (dodgers 4,081 rows) so they are not "absent" words -- they are words
+// the catalog carries on a small minority of rows, which is precisely
+// what makes ANDing them lethal. A listing says the team; the checklist
+// row usually does not. Neither is wrong, so the query must not require
+// agreement. They stay full scoring signals -- this list only governs
+// the anchor and the ANDed SQL arms, never the score.
+// Team nicknames, as a listing writes them. City words ("los", "angeles",
+// "san", "new", "york") are covered above or are too short to qualify.
+const LISTING_NOISE = new Set([
+  // Marketplace boilerplate. None of it can identify a card, and each one
+  // ANDed into SQL removes rows that ARE the card.
+  "free", "shipping", "ship", "ships", "shipped", "lot", "lots", "bundle",
+  "see", "scan", "scans", "pic", "pics", "photo", "photos", "look",
+  "combined", "buy", "sell", "deal", "offer", "offers", "bid", "listing",
+  "condition", "excellent", "sharp", "clean", "mint",
+  "mlb", "nba", "nfl", "nhl", "milb", "nwsl", "wnba",
+  // Team nicknames a listing appends and a checklist row usually omits.
+  //
+  // DELIBERATELY OMITTED, though every one of them is also a team: the
+  // words that are a real playerName token or a real set word. Measured
+  // read-only against card_catalog before trusting this list --
+  //
+  //   royals    4,000 playerName rows   "Jalen Royals" is a person
+  //   giants    2,718                   and 44 setKeys
+  //   cardinals 2,783                   and 48 setKeys
+  //   angels    2,141                   Angels is also a set word
+  //   athletics 2,103
+  //   kings     1,550 playerName rows, 44,279 setKeys (Diamond Kings)
+  //   rare        804                   "Nick Kurtz Black Rare", and
+  //                                     Pokemon's "Rare Candy"
+  //   york     12,508                   "Nick Yorke" -- exact-token
+  //                                     matching spares Yorke, but "York"
+  //                                     alone still names New York cards
+  //   bay      14,365                   "Bayron Lora", "Kuribayashi"
+  //   new      24,224                   "Newman", "Newcomb", "Newton"
+  //
+  // A word that names a card is not noise, however often a listing also
+  // uses it as decoration. What is left below is unambiguous.
+  "yankees", "dodgers", "orioles", "reds", "rays", "rockies", "mariners",
+  "pirates", "jays", "sox", "braves", "guardians", "marlins", "twins",
+  "astros", "brewers", "rangers", "padres", "phillies", "mets",
+  "nationals", "cubs", "tigers", "diamondbacks", "dbacks",
+  // City words, under the same rule and the same check. "Los Angeles" alone
+  // still cut freddie+freeman from 34,215 rows to 17, so leaving the cities
+  // out would have left the bug half-fixed. Only cities that are never a
+  // given name or a surname in card_catalog are listed -- measured, and the
+  // omissions are the point:
+  //
+  //   francisco   "Francisco Lindor", "Francisco Liriano"
+  //   diego       "Diego Cartaya"
+  //   louis       "Louis Oliver"
+  //   boston      "Aliyah Boston", "Boston Bateman"
+  //   washington  "Claudell Washington"
+  //   denver      "Denver" appears inside team text only, but the surname
+  //               risk is the same shape, so it is left in play
+  "angeles", "cincinnati", "milwaukee", "pittsburgh", "seattle", "toronto",
+  "atlanta", "houston", "philadelphia", "baltimore", "minnesota", "colorado",
+  "arizona", "cleveland", "miami", "tampa", "oakland",
+]);
+// A MISSPELLED product word is still a product word. "2026 bowmen owen carey"
+// put "bowmen" (6) ahead of "carey" (5) on length, anchored the whole search
+// on the brand, and returned nothing at all. Stopwords are therefore matched
+// by bounded edit distance, the same tolerance the player scorer uses. Only
+// for tokens of 5+ so short words are never absorbed by a longer stopword.
+// LISTING_NOISE is matched EXACTLY, never by edit distance. The fuzzy rule
+// exists so a misspelled BRAND is still read as a brand, and brands are a
+// closed set a collector types deliberately. Listing noise is not: at
+// distance 1 "rays" absorbs the Homestead "Grays" and "ship" absorbs the
+// surname "Shipp", which would drop a real name token instead of a stray
+// word. Product words keep the tolerance they were given.
+const isStopword = (t: string) =>
+  ANCHOR_STOPWORDS.has(t)
+  || LISTING_NOISE.has(t)
+  || (t.length >= 5 && [...ANCHOR_STOPWORDS].some((w) =>
+    Math.abs(w.length - t.length) <= 1 && editDistance(w, t, 1) <= 1));
+// CF-SEARCH-FULL-NAME-DOMINATES (2026-08-30): three letters qualify. "max"
+// was under the old four-letter floor, so "2025 bowman refractor auto max
+// williams" reached Cosmos as "williams" alone -- 37,614 verified rows for
+// 2025, sampled at TOP 2000 with no ORDER BY, and the card was not in the
+// sample. Every one of the 597 Max Williams rows carries "max".
+/**
+ * The tokens of a query that may stand for a PLAYER NAME: the words left once
+ * brands, product lines, finishes, grades and marketplace noise are removed.
+ *
+ * Exported because these tokens are ANDed into Cosmos one ARRAY_CONTAINS
+ * apiece (`armExactAll`), so a single wrong word here does not merely
+ * misrank a page -- it empties it. That failure mode is invisible to
+ * `scoreCatalogRow`, which never sees the rows the SQL refused to fetch, and
+ * it is exactly the shape CF-SEARCH-A-LISTING-IS-NOT-A-NAME found. Pinned in
+ * searchAListingIsNotAName.test.ts.
+ */
+export function nameCandidateTokens(tokens: readonly string[]): string[] {
+  return tokens.filter(
+    (t) => /^[a-z]+$/.test(t) && t.length >= 3 && !isStopword(t),
+  );
+}
+
 /** The row's scoring, as a pure function so the identity triangulation
  *  harness and its tests can hold it to account.
  *
@@ -508,7 +644,29 @@ export function scoreCatalogRow(
     : (tokens.find((t) => /^(?:19|20)\d{2}$/.test(t) && Number(t) <= 2035) ?? null);
   const numberIsExact = rowNumber.length > 0 && tokens.some((t) => t === rowNumber && t !== yearToken);
   if (numberIsExact) score += 1.0;
-  const parallelWords = rowParallel ? rowParallel.split(/[\s-]+/).filter(Boolean) : [];
+  // CF-A-SPELLING-IS-NOT-A-SECOND-CARD, applied to RANKING (2026-09-03).
+  // `foldSpelling` already exists as the catalog's answer to "are these two
+  // strings the same rung spelled by two scrapers?" (D31), but only the
+  // dedup lane consulted it -- search still scored the raw string, so the
+  // scraper spelling that repeats the finish outscored the canonical row by
+  // carrying the word twice:
+  //
+  //   q "…#16 Yellow Refractor 74/75"
+  //     yellow-refractor             <- the checklist row, and the miss
+  //     yellow-refractors-refractor  <- beckett's section-plural, and the hit
+  //
+  //   q "…Superfractors #23 … 1/1"
+  //     superfractor                 <- the checklist row, and the miss
+  //     superfractors-refractor      <- and the hit
+  //
+  // Both pairs fold to ONE key, so neither is a different card and the query
+  // named the rung either way. Scoring the folded words costs the duplicate
+  // spelling its bonus token without rewarding or punishing either row for
+  // which scraper wrote it -- the tie is then broken by the rules that
+  // already exist (authority, and the unnamed-set penalty). This is a
+  // comparison only; nothing here renames a row or is written back.
+  const foldedParallel = foldSpelling(rowParallelSlug || rowParallel);
+  const parallelWords = foldedParallel ? foldedParallel.split(/[\s-]+/).filter(Boolean) : [];
   const isBaseRow = !rowParallel || rowParallel === "base";
   // The named-parallel bonus needs every non-finish word of the parallel in
   // the query: "Refractor" under "refractor" earns it, "Pearl Refractor" does
@@ -718,36 +876,7 @@ export async function searchCatalog(
   // FINISH, which is exactly the class that matches thousands of rows and
   // identifies no card. Real surnames of four-plus letters ("carey", "witt",
   // "soto") are what is left, which is what the anchor was always for.
-  const ANCHOR_STOPWORDS = new Set([
-    "bowman", "topps", "panini", "leaf", "upper", "deck", "fleer", "donruss", "score",
-    "chrome", "prizm", "select", "optic", "mosaic", "heritage", "sapphire", "finest",
-    "sterling", "inception", "platinum", "stadium", "club", "gallery", "archives",
-    "allen", "ginter", "gypsy", "queen", "immaculate", "obsidian", "contenders",
-    "refractor", "fractor", "prizms", "auto", "autograph", "autographs", "rookie",
-    "prospect", "prospects", "paper", "update", "series", "draft", "mega", "jumbo",
-    "base", "insert", "parallel", "variation", "numbered", "card", "cards",
-    "baseball", "basketball", "football", "hockey", "soccer", "wrestling",
-    // CF-SEARCH-FULL-NAME-DOMINATES (2026-08-30): grade words, so "psa 10"
-    // cannot become a name token now that three-letter tokens qualify.
-    "psa", "bgs", "sgc", "cgc", "hga", "csg", "tag", "gem", "mint", "raw", "rc", "graded", "slab",
-  ]);
-  // A MISSPELLED product word is still a product word. "2026 bowmen owen carey"
-  // put "bowmen" (6) ahead of "carey" (5) on length, anchored the whole search
-  // on the brand, and returned nothing at all. Stopwords are therefore matched
-  // by bounded edit distance, the same tolerance the player scorer uses. Only
-  // for tokens of 5+ so short words are never absorbed by a longer stopword.
-  const isStopword = (t: string) =>
-    ANCHOR_STOPWORDS.has(t)
-    || (t.length >= 5 && [...ANCHOR_STOPWORDS].some((w) =>
-      Math.abs(w.length - t.length) <= 1 && editDistance(w, t, 1) <= 1));
-  // CF-SEARCH-FULL-NAME-DOMINATES (2026-08-30): three letters qualify. "max"
-  // was under the old four-letter floor, so "2025 bowman refractor auto max
-  // williams" reached Cosmos as "williams" alone -- 37,614 verified rows for
-  // 2025, sampled at TOP 2000 with no ORDER BY, and the card was not in the
-  // sample. Every one of the 597 Max Williams rows carries "max".
-  const alphaTokens = tokens.filter(
-    (t) => /^[a-z]+$/.test(t) && t.length >= 3 && !isStopword(t),
-  );
+  const alphaTokens = nameCandidateTokens(tokens);
   // CF-SEARCH-ANCHOR-FROM-PARSER (2026-08-21). "Longest non-stopword token"
   // is a PROXY for the surname, and it loses whenever a colour or finish word
   // is longer than the name. The stopword list covers brands and product lines

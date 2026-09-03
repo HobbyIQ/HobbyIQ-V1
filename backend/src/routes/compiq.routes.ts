@@ -2262,6 +2262,107 @@ router.post("/search", requireSession, requireRateLimited("priceChecksPerDay"), 
       console.log(
         `[compiq.search] parsed query="${query}" â†’ player="${parsed.playerName}" year=${parsed.year} brand=${parsed.brand} parallel=${parsed.parallel} isAuto=${parsed.isAuto} confidence=${parsed.confidence} searchQuery="${searchQuery}"`
       );
+      // H-3 (audit 2026-09-03). /search went STRAIGHT to computeEstimate with
+      // no one-path attempt of any kind, while /price — its own documented
+      // alias, "same contract" — tried the canonical engine first. So the two
+      // endpoints answered the same query from different engines, and the
+      // cheaper way for a caller to get the second engine's number was simply
+      // to call the other URL. The alias now shares the gate as well as the
+      // rate limit: the catalog's identity, priced by the one valuation path,
+      // at the same 0.5 parser-confidence bar, falling through to
+      // computeEstimate on any miss exactly as /price does.
+      if (
+        !body.cardId &&
+        parsed.confidence >= 0.5 &&
+        typeof parsed.year === "number" &&
+        typeof parsed.cardNumber === "string" && parsed.cardNumber.length > 0 &&
+        typeof (parsed.set ?? parsed.brand) === "string" && String(parsed.set ?? parsed.brand).length > 0
+      ) {
+        try {
+          const { resolveSearchIdentity } = await import("../services/compiq/searchIdentityResolver.js");
+          const resolved = await resolveSearchIdentity({
+            year: parsed.year,
+            setSource: String(parsed.set ?? parsed.brand),
+            cardNumber: parsed.cardNumber,
+            parallel: parsed.parallel ?? null,
+            isAuto: parsed.isAuto ?? null,
+            playerName: parsed.playerName ?? null,
+          });
+          if (resolved) {
+            const { valueIdentity } = await import("../services/compiq/oneValuationPath.service.js");
+            const v = await valueIdentity({
+              id: resolved.slug,
+              grade: null,
+              playerName: parsed.playerName ?? null,
+            });
+            const fmv = v.fairMarketValue;
+            if (typeof fmv === "number" && fmv > 0 && v.compsUsed > 0) {
+              const method = String(v.rungLabel || "canonical-fmv");
+              const buyZone: [number, number] = [Math.round(fmv * 0.85), Math.round(fmv * 0.95)];
+              const holdZone: [number, number] = [Math.round(fmv * 0.95), Math.round(fmv * 1.10)];
+              const sellZone: [number, number] = [Math.round(fmv * 1.10), Math.round(fmv * 1.25)];
+              console.log(JSON.stringify({
+                event: "search_one_path_hit",
+                source: "compiq.routes.search",
+                query, slug: resolved.slug, sport: resolved.sport,
+                fmv, rung: method, compsUsed: v.compsUsed,
+              }));
+              return {
+                ...buildEngineMeta(),
+                success: true,
+                query: query.trim(),
+                source: method,
+                pricingTier: method,
+                summary: v.basis || undefined,
+                marketTier: { value: fmv, high: sellZone[1] },
+                buyZone, holdZone, sellZone,
+                fairMarketValue: fmv,
+                marketValue: fmv,
+                fairMarketValueLive: fmv,
+                predictedPrice: v.predictedPrice ?? fmv,
+                predictedPriceRange: [Math.round(fmv * 0.95), Math.round(fmv * 1.05)] as [number, number],
+                fairMarketValueLow: buyZone[0],
+                fairMarketValueHigh: sellZone[1],
+                confidence: v.confidence,
+                pricingConfidence: v.confidence,
+                fmvMechanism: method,
+                recentComps: (v.sales ?? []).slice(0, 20).map((c) => ({
+                  price: Number(c.price ?? 0),
+                  soldDate: String(c.soldAt ?? ""),
+                  grader: null, gradeValue: null,
+                  parallel: resolved.parallel ?? null,
+                  marketplace: c.source ?? undefined,
+                })).filter((r) => r.price > 0 && r.soldDate),
+                compsUsed: v.compsUsed,
+                compsAvailable: v.compsUsed,
+                verdict: v.basis || "Priced from the exact-identity pool.",
+                cardIdentity: {
+                  card_id: v.identity.slug ?? resolved.slug,
+                  slug: v.identity.slug ?? resolved.slug,
+                  sport: v.identity.sport ?? resolved.sport,
+                  year: v.identity.year ?? resolved.year,
+                  set: v.identity.setName ?? resolved.setName,
+                  setKey: v.identity.setKey ?? null,
+                  number: v.identity.cardNumber ?? resolved.cardNumber,
+                  cardNumber: v.identity.cardNumber ?? resolved.cardNumber,
+                  parallel: resolved.parallel,
+                  isAuto: v.identity.isAuto,
+                  player: v.identity.playerName ?? parsed.playerName ?? null,
+                  playerName: v.identity.playerName ?? parsed.playerName ?? null,
+                },
+              };
+            }
+          }
+        } catch (err) {
+          console.warn(JSON.stringify({
+            event: "search_one_path_error",
+            source: "compiq.routes.search",
+            query, error: (err as Error)?.message ?? String(err),
+          }));
+          // Best-effort, exactly as on /price — fall through to the ladder.
+        }
+      }
+
       // CF-PREDICTION-CORPUS-CALL-CONTEXT (2026-06-01): /api/compiq/search
       // is the free-text DashboardView search. Public route, no auth context.
       const est = await computeEstimate(body, {
@@ -2849,48 +2950,61 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
         typeof (parsed.set ?? parsed.brand) === "string" && String(parsed.set ?? parsed.brand).length > 0
       ) {
         try {
-          const { computeHobbyIqCardId } = await import("../services/portfolioiq/hobbyIqCardId.service.js");
-          const { computeCanonicalFmv } = await import("../services/compiq/canonicalFmv.service.js");
-          // parsed doesn't carry sport — inferred later downstream.
-          // For the canonical-first attempt, default baseball (highest
-          // pool coverage). If the slug doesn't hit in canonical, we
-          // fall through to computeEstimate which handles sport-detect.
-          const sportGuess = "baseball";
-          const slug = computeHobbyIqCardId({
-            sport: sportGuess,
+          // H-3 (audit 2026-09-03). This block used to MINT the slug it then
+          // priced:
+          //
+          //     const sportGuess = "baseball";
+          //     const slug = computeHobbyIqCardId({ sport: sportGuess, ... ,
+          //                    parallel: parsed.parallel || "Base", ... });
+          //
+          // Two doctrine breaks in three lines. A sport is never guessed —
+          // "2024 Bowman Chrome #1" is a real baseball card AND a real hockey
+          // card, and minting the baseball one prices whichever pool collides.
+          // And blank means unknown, never "Base": `parallel || "Base"` turned
+          // a query that said nothing about a parallel into a positive claim
+          // that it is the base card, which is a different card from the
+          // parallel the user was actually holding.
+          //
+          // The identity now comes from the CATALOG — the same lookup the
+          // cardNumber-less branch below already does, which reads the row's
+          // OWN sport and its OWN parallel. No row, no price: we fall through
+          // to computeEstimate exactly as a canonical miss always did.
+          const { resolveSearchIdentity } = await import("../services/compiq/searchIdentityResolver.js");
+          const resolved = await resolveSearchIdentity({
             year: parsed.year,
-            setKey: String(parsed.set ?? parsed.brand), // CF-PRODUCT-NOT-BRAND (2026-08-29): "Topps Chrome" is not "Topps",
+            setSource: String(parsed.set ?? parsed.brand),
             cardNumber: parsed.cardNumber,
-            parallel: parsed.parallel || "Base",
-            isAuto: parsed.isAuto ?? false,
-            printRun: parsed.printRun ?? null,
+            parallel: parsed.parallel ?? null,
+            isAuto: parsed.isAuto ?? null,
+            playerName: parsed.playerName ?? null,
           });
-          const canon = await computeCanonicalFmv({
-            cardId: slug,
-            parallel: parsed.parallel || "Base",
-            gradeCompany: null,
-            gradeValue: null,
-            cardYear: parsed.year,
-            product: parsed.set ?? parsed.brand,
-            player: parsed.playerName ?? null,
-            cardNumber: parsed.cardNumber,
-            freshCompute: false,
-          } as any);
-          const canonFmv = (canon as any)?.fmv;
-          const canonN = (canon as any)?.recentRange?.n ?? 0;
+          if (!resolved) throw new Error("no-catalog-identity");
+          const slug = resolved.slug;
+          // H-3: the ONE valuation path, on the catalog's identity. This route
+          // ran computeCanonicalFmv — the second engine — so the same card
+          // could be quoted one number here and another on its card page.
+          const { valueIdentity } = await import("../services/compiq/oneValuationPath.service.js");
+          const canon = await valueIdentity({
+            id: slug,
+            grade: null,
+            playerName: parsed.playerName ?? null,
+          });
+          const canonFmv = canon.fairMarketValue;
+          const canonN = canon.compsUsed;
           if (typeof canonFmv === "number" && canonFmv > 0 && canonN > 0) {
-            const method = String((canon as any).method || "canonical-fmv");
+            const method = String(canon.rungLabel || "canonical-fmv");
             const buyZone: [number, number] = [Math.round(canonFmv * 0.85), Math.round(canonFmv * 0.95)];
             const holdZone: [number, number] = [Math.round(canonFmv * 0.95), Math.round(canonFmv * 1.10)];
             const sellZone: [number, number] = [Math.round(canonFmv * 1.10), Math.round(canonFmv * 1.25)];
-            const provComps = ((canon as any).provenance?.comps ?? []).slice(0, 20).map((c: any) => ({
+            const provComps = (canon.sales ?? []).slice(0, 20).map((c) => ({
               price: Number(c.price ?? 0),
               soldDate: String(c.soldAt ?? ""),
               grader: null,
               gradeValue: null,
-              parallel: c.parallel ?? parsed.parallel ?? null,
+              // The catalog row's parallel, never `|| "Base"`: blank is unknown.
+              parallel: resolved.parallel ?? null,
               marketplace: c.source ?? undefined,
-            })).filter((r: any) => r.price > 0 && r.soldDate);
+            })).filter((r) => r.price > 0 && r.soldDate);
             // Resolved once — the lookup is cached per process, but calling it
             // twice in one object literal is just noise.
             const resolvedPlayerName = parsed.playerName
@@ -2907,7 +3021,7 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
               query: query.trim(),
               source: method,
               pricingTier: method,
-              summary: (canon as any).provenance?.summary ?? undefined,
+              summary: canon.basis || undefined,
               marketTier: { value: canonFmv, high: sellZone[1] },
               buyZone, holdZone, sellZone,
               fairMarketValue: canonFmv,
@@ -2917,13 +3031,13 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
               predictedPriceRange: [Math.round(canonFmv * 0.95), Math.round(canonFmv * 1.05)] as [number, number],
               fairMarketValueLow: buyZone[0],
               fairMarketValueHigh: sellZone[1],
-              confidence: (canon as any).confidence ?? 0.85,
-              pricingConfidence: (canon as any).confidence ?? 0.85,
+              confidence: canon.confidence,
+              pricingConfidence: canon.confidence,
               fmvMechanism: method,
               recentComps: provComps,
               compsUsed: canonN,
               compsAvailable: canonN,
-              verdict: (canon as any).provenance?.summary ?? "Canonical-FMV direct match.",
+              verdict: canon.basis || "Priced from the exact-identity pool.",
               // CF-CARD-IDENTITY-CANONICAL-KEYS (2026-08-22). This emitted
               // setKey / cardNumber / playerName, but every consumer reads the
               // engine's shape — card_id / set / number / player (see the
@@ -2938,17 +3052,20 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
               //
               // playerName comes from card_catalog because a slug has no
               // player in it — that is the whole gap.
+              // H-3: every field here is the CATALOG's, not the parser's
+              // guess — the sport most of all, which was hardcoded
+              // "baseball", and the parallel, which was `|| "Base"`.
               cardIdentity: {
-                card_id: slug,
-                slug,
-                sport: sportGuess,
-                year: parsed.year,
-                set: parsed.brand,
-                setKey: parsed.brand,
-                number: parsed.cardNumber,
-                cardNumber: parsed.cardNumber,
-                parallel: parsed.parallel || "Base",
-                isAuto: parsed.isAuto ?? false,
+                card_id: canon.identity.slug ?? slug,
+                slug: canon.identity.slug ?? slug,
+                sport: canon.identity.sport ?? resolved.sport,
+                year: canon.identity.year ?? resolved.year,
+                set: canon.identity.setName ?? resolved.setName,
+                setKey: canon.identity.setKey ?? null,
+                number: canon.identity.cardNumber ?? resolved.cardNumber,
+                cardNumber: canon.identity.cardNumber ?? resolved.cardNumber,
+                parallel: resolved.parallel,
+                isAuto: canon.identity.isAuto,
                 player: resolvedPlayerName,
                 playerName: resolvedPlayerName,
               },
@@ -3180,35 +3297,36 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
               const gradeCompany = parsed.gradingCompany || null;
               const gradeRaw = parsed.grade && parsed.grade !== "raw" ? Number(parsed.grade) : null;
               const gradeValue = Number.isFinite(gradeRaw) ? gradeRaw : null;
-              const { computeCanonicalFmv } = await import("../services/compiq/canonicalFmv.service.js");
-              const canon = await computeCanonicalFmv({
-                cardId: best.id,
-                parallel: parsed.parallel || "Base",
+              // H-3: the identity here is already the catalog's (best.id is a
+              // real row), so only the ENGINE was wrong — this ran
+              // computeCanonicalFmv while every other surface priced the same
+              // card through valueIdentity. One path now.
+              const { valueIdentity } = await import("../services/compiq/oneValuationPath.service.js");
+              const canon = await valueIdentity({
+                id: String(best.id ?? ""),
                 // Both must be present to name a tier; a bare "10" with no
                 // grader is not PSA 10, and the engine reads a company with no
                 // value as an incomplete tier.
-                gradeCompany: gradeValue != null ? gradeCompany : null,
-                gradeValue: gradeCompany ? gradeValue : null,
-                cardYear: best.year,
-                product: best.setName,
-                player: best.playerName,
-                cardNumber: best.cardNumber,
-                freshCompute: false,
-              } as any);
-              const canonFmv = (canon as any)?.fmv;
-              const canonN = (canon as any)?.recentRange?.n ?? 0;
+                grade: gradeCompany && gradeValue != null
+                  ? { company: String(gradeCompany), value: gradeValue }
+                  : null,
+                playerName: best.playerName != null ? String(best.playerName) : null,
+              });
+              const canonFmv = canon.fairMarketValue;
+              const canonN = canon.compsUsed;
               if (typeof canonFmv === "number" && canonFmv > 0 && canonN > 0) {
-                const method = String((canon as any).method || "canonical-fmv");
+                const method = String(canon.rungLabel || "canonical-fmv");
                 const buyZone: [number, number] = [Math.round(canonFmv * 0.85), Math.round(canonFmv * 0.95)];
                 const holdZone: [number, number] = [Math.round(canonFmv * 0.95), Math.round(canonFmv * 1.10)];
                 const sellZone: [number, number] = [Math.round(canonFmv * 1.10), Math.round(canonFmv * 1.25)];
-                const provComps = ((canon as any).provenance?.comps ?? []).slice(0, 20).map((c: any) => ({
+                const provComps = (canon.sales ?? []).slice(0, 20).map((c) => ({
                   price: Number(c.price ?? 0),
                   soldDate: String(c.soldAt ?? ""),
                   grader: null, gradeValue: null,
-                  parallel: c.parallel ?? best.parallel ?? null,
+                  // The catalog row's parallel; a pool sale carries none.
+                  parallel: best.parallel ?? null,
                   marketplace: c.source ?? undefined,
-                })).filter((r: any) => r.price > 0 && r.soldDate);
+                })).filter((r) => r.price > 0 && r.soldDate);
                 console.log(JSON.stringify({
                   event: "price_canonical_player_lookup_hit",
                   source: "compiq.routes.price",
@@ -3220,7 +3338,7 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
                   query: query.trim(),
                   source: method,
                   pricingTier: method,
-                  summary: (canon as any).provenance?.summary ?? undefined,
+                  summary: canon.basis || undefined,
                   marketTier: { value: canonFmv, high: sellZone[1] },
                   buyZone, holdZone, sellZone,
                   fairMarketValue: canonFmv,
@@ -3230,16 +3348,18 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
                   predictedPriceRange: [Math.round(canonFmv * 0.95), Math.round(canonFmv * 1.05)] as [number, number],
                   fairMarketValueLow: buyZone[0],
                   fairMarketValueHigh: sellZone[1],
-                  confidence: (canon as any).confidence ?? 0.85,
-                  pricingConfidence: (canon as any).confidence ?? 0.85,
+                  confidence: canon.confidence,
+                  pricingConfidence: canon.confidence,
                   fmvMechanism: method,
                   recentComps: provComps,
                   compsUsed: canonN,
                   compsAvailable: canonN,
-                  verdict: (canon as any).provenance?.summary ?? "Canonical-FMV via player lookup.",
+                  verdict: canon.basis || "Priced from the exact-identity pool.",
                   cardIdentity: {
                     slug: best.id,
-                    sport: best.sport ?? "baseball",
+                    // H-3: the catalog row's own sport. `?? "baseball"` here
+                    // was the same guess the minted slug made, one block up.
+                    sport: canon.identity.sport ?? best.sport ?? null,
                     year: best.year,
                     // CF-SETKEY-IS-ALWAYS-A-SLUG (2026-08-19). This returned the
                     // raw DISPLAY name — "Bowman's Best", "2024 Panini Donruss"

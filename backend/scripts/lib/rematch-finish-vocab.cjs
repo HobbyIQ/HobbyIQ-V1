@@ -252,6 +252,11 @@ const CORE_FINISH_TOKENS = [
 
 // ── the corpus, loaded once ────────────────────────────────────────────────
 
+const escapeRe = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/** Per-(year,setKey) vocabulary views, memoised for the process lifetime. */
+const _vocabCache = new Map();
+
 let _corpus = null;
 
 const productKey = (year, setKey) =>
@@ -360,7 +365,94 @@ function buildVocabulary(corpusPath = CORPUS_PATH) {
   for (const c of FINISH_COLOR_TOKENS) { global.add(lower(c)); adjudicated.add(lower(c)); }
   for (const c of CORE_FINISH_TOKENS) { global.add(lower(c)); adjudicated.add(lower(c)); }
 
-  return { global, byProduct, phrases, support, adjudicated, productCount, nameCount };
+  return {
+    global, byProduct, phrases, support, adjudicated, productCount, nameCount,
+    phraseIndex: buildPhraseIndex(phrases),
+  };
+}
+
+/**
+ * THE PHRASE INDEX -- why it exists, and why it cannot change a verdict.
+ *
+ * CF-CENSUS-THROUGHPUT (2026-09-03). The corpus carries 16,187 phrases, and
+ * `titleNamesFinish` was COMPILING A FRESH RegExp FOR EVERY ONE OF THEM, on
+ * every call, for every row -- with two calls per row on the IMPROVE path that
+ * is ~32,000 regex compilations per comp. Measured on 20,000 real slot-0 rows,
+ * classifyRow alone: 15-27 ms/row (37-66 rows/s) against the pre-#1667
+ * classifier's ~0.02-0.04 ms/row -- a three-orders-of-magnitude classifier
+ * slowdown that showed up in the field as slot 0 reading 328k rows in 140
+ * minutes where the old one walked 524k in 6.
+ *
+ * With the index, the same 20,000 rows classify at 0.12-0.28 ms/row
+ * (3,500-8,500 rows/s), against a runner-class target of ~700 rows/s -- and
+ * with ZERO verdict differences over all 20,000.
+ *
+ * The index is a pure lookup reordering, not a new test. A phrase can only
+ * match a title if EVERY one of its words appears there -- the phrase regex is
+ * `\bw1[\s\-&/]+w2...\b`, so each wI must be present at a word boundary. So:
+ * bucket every phrase under ONE of its words (see the anchor note below), and
+ * at match time test only the buckets the title's own words open. Every phrase
+ * the linear scan would have matched is still tested, and the regexes are
+ * compiled ONCE at corpus-build time rather than per call.
+ *
+ * The one subtlety is the separator class: `[\s\-&/]+` means a phrase's words
+ * may be spelled in the title joined by a hyphen ("tie-dye"), and `titleWords`
+ * keeps hyphenated compounds whole. So the candidate key set for a title is
+ * its words PLUS the hyphen-split parts of each -- which is exactly the same
+ * superset `isFinishToken` already walks below. Verdict equality over 20,000
+ * real rows is asserted by the pins.
+ *
+ * THE ANCHOR IS THE PHRASE'S RAREST WORD, NOT ITS FIRST
+ *
+ * ANY word of a phrase is a sound anchor -- all of them must appear for the
+ * phrase to match -- so the index is free to choose, and the choice is worth
+ * a lot. Anchoring on the first word buries 701 phrases under `rookie` and
+ * 466 under `2023`, and a title carrying either word then pays hundreds of
+ * regex tests anyway: measured 0.166 ms/row, most of what was left. Anchoring
+ * each phrase on its LEAST COMMON word spreads the same phrases over buckets
+ * that a title rarely opens, and the ones it does open are small.
+ *
+ * Rarity is counted over the phrase set itself, which is available here and
+ * needs no outside evidence. The match set is unchanged either way: a title
+ * matches a phrase iff it contains every word of it, so whichever word we
+ * anchor on, a matching title opens that bucket.
+ */
+function buildPhraseIndex(phrases) {
+  // Pass 1: split each phrase, and count how many phrases use each word.
+  const split = [];
+  const wordFreq = new Map();
+  for (const p of phrases) {
+    const parts = String(p).split(" ").filter(Boolean);
+    if (parts.length < 2) continue;   // same guard the linear scan applied
+    split.push(parts);
+    for (const w of new Set(parts)) wordFreq.set(w, (wordFreq.get(w) ?? 0) + 1);
+  }
+  // Pass 2: anchor each phrase on its rarest word.
+  const byAnchor = new Map();
+  for (const parts of split) {
+    let anchor = parts[0], best = Infinity;
+    for (const w of parts) {
+      const n = wordFreq.get(w) ?? 0;
+      if (n < best) { best = n; anchor = w; }
+    }
+    const re = new RegExp(`\\b${parts.map(escapeRe).join("[\\s\\-&/]+")}\\b`);
+    let bucket = byAnchor.get(anchor);
+    if (!bucket) { bucket = []; byAnchor.set(anchor, bucket); }
+    bucket.push(re);
+  }
+  return byAnchor;
+}
+
+/**
+ * Does any corpus phrase match this title? Equivalent to the linear scan over
+ * `vocab.phrases`, reached through the rarest-word anchor index.
+ */
+function phraseIndexMatches(index, lowerTitle, words) {
+  for (const w of words) {
+    const bucket = index.get(w);
+    if (bucket) { for (const re of bucket) if (re.test(lowerTitle)) return true; }
+  }
+  return false;
 }
 
 function corpus() {
@@ -368,8 +460,8 @@ function corpus() {
   return _corpus;
 }
 
-/** Reset the memoised corpus. Tests only. */
-function _reset() { _corpus = null; }
+/** Reset the memoised corpus AND the per-product vocabulary cache. Tests only. */
+function _reset() { _corpus = null; _vocabCache.clear(); }
 
 /**
  * Is this token the PRODUCT's own name on this card rather than a finish?
@@ -390,11 +482,23 @@ function isProductWord(token, setKey) {
  * whole product-word fix.
  */
 function vocabularyFor(year, setKey) {
-  const c = corpus();
+  // MEMOISED PER (year, setKey) FOR THE PROCESS LIFETIME.
+  //
+  // The view is a pure function of (year, setKey) and the immutable corpus:
+  // `own` is a corpus lookup and `setWords` is derived from the setKey string
+  // alone, so two calls with the same key are indistinguishable. A census
+  // shard is thousands of rows over a few hundred products, and the classifier
+  // asks for this view several times per row -- rebuilding a Set and a closure
+  // each time cost 0.33 ms/row measured over 20,000 slot-0 rows. `_reset()`
+  // clears this alongside the corpus so tests that swap the corpus file still
+  // see a rebuilt view.
   const pk = productKey(year, setKey);
+  const hit = _vocabCache.get(pk);
+  if (hit) return hit;
+  const c = corpus();
   const own = c.byProduct.get(pk) ?? null;
   const setWords = new Set(setKeyTokens(setKey));
-  return {
+  const view = {
     productListed: !!own,
     productTokens: own ?? new Set(),
     isFinishToken(tok) {
@@ -427,10 +531,12 @@ function vocabularyFor(year, setKey) {
       return false;
     },
     phrases: c.phrases,
+    phraseIndex: c.phraseIndex,
   };
+  _vocabCache.set(pk, view);
+  return view;
 }
 
-const escapeRe = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 /** Split a title into comparable words. `/` and `#` are boundaries. */
 const titleWords = (t) => lower(t).split(/[^a-z0-9-]+/).filter(Boolean);
@@ -479,13 +585,23 @@ function titleNamesFinish(title, ctx = {}) {
 
   const vocab = vocabularyFor(ctx?.year ?? ctx?.cardYear ?? null, ctx?.setKey ?? "");
 
-  for (const p of vocab.phrases) {
-    const parts = String(p).split(" ").filter(Boolean);
-    if (parts.length < 2) continue;
-    if (new RegExp(`\\b${parts.map(escapeRe).join("[\\s\\-&/]+")}\\b`).test(t)) return true;
+  // The title's words, plus the hyphen-split parts of any compound. This is
+  // the candidate key set for the phrase index AND the token walk below --
+  // computed once instead of twice.
+  const words = titleWords(t);
+  const keys = [];
+  for (const w of words) {
+    keys.push(w);
+    if (w.includes("-")) for (const part of w.split("-")) if (part) keys.push(part);
   }
 
-  for (const w of titleWords(t)) {
+  // PHRASES, through the rarest-word index rather than 16,187 fresh regexes.
+  // A phrase matches only where EVERY one of its words is present, so a title
+  // that matches necessarily opens its anchor bucket -- the same phrases the
+  // linear scan would have matched, and no others. See buildPhraseIndex.
+  if (phraseIndexMatches(vocab.phraseIndex, t, keys)) return true;
+
+  for (const w of words) {
     if (vocab.isFinishToken(w)) return true;
     // A hyphenated compound is its parts: "OPTIC-FLEX" tokenises whole and
     // would never match bare "optic".
@@ -541,6 +657,7 @@ module.exports = {
   CORPUS_PATH, HAND_SPELLINGS, HAND_PHRASES, HAND_LIST_CEILING,
   FINISH_COLOR_TOKENS, CORE_FINISH_TOKENS, CORPUS_STOPWORDS,
   buildVocabulary, vocabularyFor, vocabularyStats, isProductWord, setKeyTokens,
+  buildPhraseIndex, phraseIndexMatches,
   titleNamesFinish, titleStatesSerial, serialFromTitle, checklistListsParallel,
   productKey, nameTokens, titleWords, _reset,
 };

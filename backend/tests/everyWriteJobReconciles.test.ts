@@ -339,7 +339,28 @@ describe("every backfill that writes must reconcile", () => {
     expect(cron).toContain("comp-quality/backfill-search-fields");
   });
 
-  it("no runner write script outside the debt list can finish green having written nothing", () => {
+  // CF-CHRONIC-REDS-SLOW (2026-09-03). Same load-timeout class as the other
+  // suites this PR fixes, found by the full-suite run on the merged head:
+  // this case died on the inherited 30s vitest.config default at exactly
+  // "Test timed out in 30000ms". It is pure static analysis -- no network, no
+  // Cosmos -- so the assertion was never in question.
+  //
+  // Measured on the same box, and the spread is the whole story:
+  //
+  //     warm, isolated, this case      130 ms
+  //     full suite, under fork storm 38,578 ms
+  //
+  // ~300x. That is far too large to be the readFileSync sweep over
+  // backend/scripts (505 files, but only ~130ms of work). It is the same
+  // mechanism as signalFetchObservability: whichever case runs FIRST in a
+  // file pays the one-time cold SWC transform of that file's import graph,
+  // and under a fork storm that cost lands on this case. The file total is
+  // 19.3s isolated for all 26 tests, so nothing here is inherently slow.
+  //
+  // 120s matches vitest.config.ts's hookTimeout and sits ~3x above the worst
+  // contended cost actually observed. The assertion is untouched -- a
+  // genuinely unreconciled writer still fails it; only the clock moved.
+  it("no runner write script outside the debt list can finish green having written nothing", { timeout: 120_000 }, () => {
     const missing = runnerWriters()
       .filter((s) => !wired(s) && !UNRECONCILED.has(s.name))
       .map((s) => s.name);

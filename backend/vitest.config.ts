@@ -45,6 +45,14 @@ export default defineConfig({
     // all three fail in isolation at 30s and pass at a raised timeout with no
     // other change. This is I/O latency on the module load, not a hang — the
     // ceiling only has to clear the one-time cost.
+    // CF-CHRONIC-REDS-DIST (2026-09-03). Ten suites load a shipped ops
+    // script out of backend/scripts/*.cjs, and those scripts `require()`
+    // backend/dist/... because that is what runs in production. On a clone
+    // that has not built, every one of them dies at import and reports
+    // "0 test" -- a silent gap rather than a red assertion. This builds dist/
+    // once, and only when it is missing or stale. See the file for the
+    // per-test reasoning on which suites keep dist and which moved to src.
+    globalSetup: ["tests/setup/ensureDistBuilt.ts"],
     hookTimeout: 120000,
     // CF-TEST-TIMEOUT-BUMP (Drew, 2026-07-21). Bumped from 5s default
     // to 30s. Full-suite runs put heavy fork/import pressure on nodes

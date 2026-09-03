@@ -133,7 +133,15 @@ function makeSnapshot(rate: number, player: string, useMatchedCohort = true) {
   };
 }
 
-describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
+// CF-CHRONIC-REDS-SLOW (2026-09-03). Tests here `await import(...)` the
+// compiq module graph (cardhedge.client, the curve builder) from inside the
+// test body, so a case can pay the one-time cold SWC transform of that graph.
+// All 54 pass in isolation in ~31s; under a full 754-file run the fork
+// pressure pushes a single case past the 30s default and the suite goes red.
+// Same one-time-transform latency the hookTimeout note in vitest.config.ts
+// documents -- not a hang, and not a slow assertion. Ceiling raised for the
+// suite; every median, filter and threshold assertion is unchanged.
+describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", { timeout: 180_000 }, () => {
   describe("CF-FILTER-IP-TTM-AUTOS — reject unauthenticated autos from the median", () => {
     it("drops sales whose title flags them as In Person / TTM / hand-signed", async () => {
       const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
