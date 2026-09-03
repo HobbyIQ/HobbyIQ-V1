@@ -118,6 +118,7 @@
 
 const path = require("path");
 const SPLIT = require(path.join(__dirname, "split-identity.cjs"));
+const VOCAB = require(path.join(__dirname, "rematch-finish-vocab.cjs"));
 
 // ── the classes ────────────────────────────────────────────────────────────
 const AGREE = "AGREE", IMPROVE = "IMPROVE", CONFLICT = "CONFLICT", UNDERIVABLE = "UNDERIVABLE";
@@ -180,7 +181,33 @@ const AXES = ["sport", "cardYear", "setKey", "cardNumber", "parallel", "isAuto",
  * is a conflict about the card whichever direction it runs (see the
  * grade-monotonicity ruling -- observe the inversion, never act on it).
  */
-const EVICTION_MOVABLE_AXES = new Set(["parallel", "printRun"]);
+const EVICTION_MOVABLE_AXES = new Set(["parallel"]);
+
+/**
+ * A STORED PRINT RUN IS EVIDENCE, AND IT IS DISQUALIFYING (audit finding 2).
+ *
+ * `printRun` used to be in EVICTION_MOVABLE_AXES, and the apply path backed
+ * that up with a bare `delete keep.printRun` -- so an eviction did not merely
+ * move a row, it destroyed a stored field on the way. The audit found a /1 in
+ * the sample (Immaculate Pujols) and Carroll /499 among them.
+ *
+ * A base card is not serial-numbered. A row that STORES a print run is a row
+ * whose own field says "limited parallel", and that is a fourth independent
+ * field disagreeing with the eviction -- exactly the kind of evidence the
+ * subclass was built to require, pointing the other way. So a stored print run
+ * now takes the row OUT of the subclass rather than being erased by it, and
+ * `printRun` leaves the movable set: nothing an eviction does may touch it.
+ *
+ * The Gonzalez shape is unaffected and this is the field that separates them:
+ * that row's printRun FIELD is blank while its SLUG carries num-499. Blank
+ * means unknown, and an unknown is what an eviction is allowed to leave alone.
+ */
+function storedPrintRunNamesALimitedParallel(stored) {
+  const v = stored?.printRun;
+  if (v === null || v === undefined || v === "") return false;
+  const n = Number(v);
+  return Number.isFinite(n) && n > 0;
+}
 
 /** A parallel that means "the writer could not read one". `base` is what every
  *  older writer emitted for an unreadable title, so it is treated as blank for
@@ -224,140 +251,56 @@ function axisIsBlank(axis, value) {
 // ── BASE-EVICTION: the finish vocabulary and its three evidence fields ─────
 
 /**
- * The finish/format words that name HOW a card is printed. A title containing
- * ANY of these is a title that might be naming a parallel, and that is enough
- * to take the row out of the subclass -- the test is deliberately over-broad
- * on the DISQUALIFYING side, because a false "this title names a finish" only
- * costs us an eviction we could have made, while a false negative writes.
+ * THE FINISH VOCABULARY NOW COMES FROM THE CHECKLIST CORPUS.
  *
- * Grounded, not invented: every entry appears as a word in
- * data/checklist-parallel-names.json (21,090 distinct checklist-sourced
- * parallel names). Counts measured 2026-09-02 -- prizm 2,652, holo 877,
- * refractor 857, mosaic 490, patch 449, plate 387, pulsar 298, wave 292,
- * optic 260, mojo 250, laser 240, shimmer 237, foil 212, sapphire 208,
- * diamond 174, disco 137, lava 124, die-cut 110, hyper 107, pandora 93,
- * canvas 91, sparkle 86, scope 75, cracked ice 71, velocity 68, flash 56,
- * atomic 52, marble 52, aqua 51, camo 48, fireworks 42, dragon 38,
- * crystal 31, chrome 27, x-fractor 26, tiger 25, reactive 25, snakeskin 24,
- * tie-dye 22, speckle 21, superfractor 15, vapor 13, genesis 12, zebra 10,
- * pearl 8, stained glass 4. `PLURAL_PARALLEL_HEAD` in hobbyIqCardId.service
- * is the same closed-vocabulary discipline applied to slug tails.
+ * CF-THE-VOCABULARY-IS-THE-CHECKLIST (audit gate, 2026-09-03). What used to
+ * live here was a closed ~90-word hand list, and it is the single mechanism
+ * that failed all 32 shards of the census audit: 52% of the sampled
+ * BASE-EVICTION lines (200/385) named a REAL parallel the list omitted --
+ * Tiffany, Desert Shield, Rapture, Press Proof, Members Only, International,
+ * Embossed, Mahogany, Retro-Future. Slot 29 was 30/30 wrong (1990 Bowman
+ * Tiffany); slot 28 was folding 1991 Topps Desert Shield into base. Each of
+ * those evictions moves a genuine parallel INTO a base pool: one card, two
+ * rows, a split pool, a wrong FMV -- the exact defect the rematch exists to
+ * end, arriving from the other direction.
  *
- * COLOUR WORDS ARE HERE TOO, and for the same reason: "Gold", "Orange",
- * "Blue" name parallels across every modern product even with no finish noun
- * beside them. A title saying "Gold" is a title we do not evict on.
+ * lib/rematch-finish-vocab.cjs now derives the vocabulary from
+ * data/checklist-parallel-names.json -- 36,729 checklist-sourced parallel
+ * spellings over 576 (sport, year, setKey) products -- and matches it PER
+ * (year, setKey), which is also what finally resolves the product-word problem
+ * the old header named and declined to fix: "chrome" is the set's own name on
+ * `topps-heritage-chrome` and a finish anywhere else, and the setKey decides
+ * which. A small hand list covers the spellings the corpus lacks (its Beckett
+ * floor is 2020, so every vintage parallel is outside it).
  *
- * KNOWN AND DELIBERATE -- DO NOT "FIX" THIS CASUALLY. Several entries here are
- * PRODUCT words as well as finish words: chrome, prizm, mosaic, optic,
- * sapphire, diamond. "2024 Topps Chrome Judge #150" names a SET, not a
- * parallel, and this vocabulary disqualifies it anyway. That costs us
- * evictions we could have made -- the measured yield of ~391 rows is therefore
- * a FLOOR, not the true population -- and it costs them in the safe direction:
- * a false "this title names a finish" only leaves a row where it already sits,
- * while the opposite error writes a parallel row onto a base slug. Recovering
- * the lost yield needs a product-word/finish-word split (read the set segment
- * of the slug and drop a token from the test when it appears there), not the
- * deletion of these entries. Until that split exists, the suppression stays.
+ * The DIRECTION of the test is unchanged and load-bearing: this is a
+ * DISQUALIFYING test. A true answer takes a row out of the subclass and leaves
+ * it exactly where it sits, so a false positive costs an eviction we could
+ * have made while a false negative writes a parallel row onto a base slug. The
+ * corpus makes the test broader in precisely the direction that was hurting.
+ *
+ * Re-exported below under their old names so every existing caller and test
+ * keeps working.
  */
-const FINISH_TOKENS = [
-  // finishes and formats
-  "refractor", "refractors", "x-fractor", "xfractor", "fractor", "superfractor",
-  "prizm", "prizms", "shimmer", "wave", "holo", "holofoil", "foil", "sparkle",
-  "pulsar", "mojo", "mega", "atomic", "disco", "lava", "speckle", "canvas",
-  "velocity", "hyper", "optic", "mosaic", "sapphire", "laser", "pandora",
-  "flash", "aqua", "vapor", "scope", "tiger", "zebra", "snakeskin", "dragon",
-  "fireworks", "diamond", "crystal", "prismatic", "reactive", "pearl", "marble",
-  "camo", "genesis", "chrome", "ice", "glass", "cosmic", "nebula", "galactic",
-  "logofractor", "raywave", "shock", "hyperplaid", "choice", "dazzle",
-  // formats that are their own parallel families
-  "plate", "plates", "die-cut", "diecut", "parallel", "variation", "ssp",
-  // the numbered/limited vocabulary -- a title that says these is naming a
-  // parallel even when it never says which finish
-  "numbered", "serial",
-];
-// DELIBERATELY ABSENT, and asserted absent by the tests: `auto`, `autograph`,
-// `rc`, `rookie`, `1st`, `prospect`, `base`. These describe the CARD, not how
-// it is printed. Every 1st Bowman Auto title carries at least one of them --
-// the very shape this subclass was authorized for -- so admitting one here
-// would silently switch the whole thing off. `relic` and `patch` are absent
-// for the same reason from the other direction: they name a card's CONTENT,
-// and a relic card's parallel is still named separately when it has one.
-/** Multi-word finish phrases, matched with flexible separators. */
-const FINISH_PHRASES = [
-  "cracked ice", "stained glass", "ray wave", "tie dye", "mini diamond",
-  "printing plate", "short print", "gold rush", "black label",
-];
-/** Colour words that name a parallel on their own across modern products. */
-const FINISH_COLOR_TOKENS = [
-  "gold", "orange", "purple", "blue", "green", "red", "black", "pink", "yellow",
-  "teal", "aqua", "bronze", "silver", "platinum", "copper", "sepia", "magenta",
-  "cyan", "lime", "indigo", "violet", "rose", "amber", "onyx", "emerald",
-  "ruby", "sapphire", "gunmetal", "chartreuse", "fuchsia", "neon", "atomic",
-];
-
-const FINISH_WORD_SET = new Set([...FINISH_TOKENS, ...FINISH_COLOR_TOKENS]);
-/** Split a title into comparable words. `/` and `#` are boundaries, so a
- *  print-run "/499" never glues itself to the word beside it. */
-const titleWords = (t) => lower(t).split(/[^a-z0-9-]+/).filter(Boolean);
+const FINISH_TOKENS = VOCAB.CORE_FINISH_TOKENS;
+const FINISH_PHRASES = VOCAB.HAND_PHRASES;
+const FINISH_COLOR_TOKENS = VOCAB.FINISH_COLOR_TOKENS;
 
 /**
- * Does this title name a finish? Word-exact against the closed vocabulary,
- * plus the multi-word phrases with flexible separators.
+ * Does this title name a finish, read against THIS card's product?
  *
- * Word-EXACT matters: a substring test would read "Goldschmidt" as "gold" and
- * "Refractory" as "refractor", and a player's surname is not a parallel. The
- * hyphenated entries ("x-fractor", "die-cut") are checked both as one word and
- * as the un-hyphenated join, because titles spell them either way.
+ * `ctx` carries `{ year, setKey }` from the DERIVED identity -- that is what
+ * decides which product's checklist applies. Callers that pass nothing get the
+ * global union, which is broader and therefore safe.
  */
-function titleNamesFinish(title) {
-  const t = lower(title);
-  if (!t) return false;
-
-  // A SERIAL NUMBER IS A PARALLEL NAMED IN DIGITS.
-  //
-  // Measured on the live pool 2026-09-02: of the six qualifying examples the
-  // corpus probe surfaced, THREE carried a serial number in the title and no
-  // finish word -- "... Cole Young #PA-CY /50", "... Prized Pros. /250",
-  // "... JARLIN SUSANA 59/149 PSA 1". A base card is not serial-numbered, so a
-  // title stating a print run is a title telling us the card is from a limited
-  // parallel whose NAME the seller happened to omit. That is precisely the
-  // residual risk the ruling names, and it is cheap to catch here rather than
-  // leave to the audit.
-  //
-  // Matched as `/N` or `N/N` with the slash a real boundary, so a grade
-  // ("PSA 10") and a card number ("#140") are untouched. The DENOMINATOR is
-  // excluded when it looks like a year (19xx/20xx): "sold 8/2026" is a date,
-  // and no print run is 2,026 -- runs are 1/1, /5, /25, /50, /99, /150, /250,
-  // /499, /999. Being over-broad is otherwise SAFE here (a false "this names a
-  // finish" only costs an eviction we could have made, never a wrong write),
-  // so this is the one exclusion worth carving and no more.
-  const YEARISH = /^(19|20)\d{2}$/;
-  const numbered = t.match(/(?:^|[\s(\[#])(\d{1,5})\s*\/\s*(\d{1,5})(?=$|[\s)\],.])/);
-  if (numbered && !YEARISH.test(numbered[2])) return true;
-  const bare = t.match(/(?:^|[\s(\[])\/\s*(\d{1,5})(?=$|[\s)\],.])/);
-  if (bare && !YEARISH.test(bare[1])) return true;
-
-  for (const p of FINISH_PHRASES) {
-    if (new RegExp(`\\b${p.split(" ").join("[\\s-]+")}\\b`).test(t)) return true;
-  }
-  const words = titleWords(t);
-  for (const w of words) {
-    if (finishWord(w)) return true;
-    // A HYPHENATED COMPOUND IS ITS PARTS. "OPTIC-FLEX" tokenises whole and
-    // would never match bare "optic" -- and that row was in the probe's own
-    // qualifying sample, one hyphen away from being written to a base slug.
-    // Splitting is safe in this direction: a compound containing a finish word
-    // is a compound naming a finish.
-    if (w.includes("-") && w.split("-").some((part) => part && finishWord(part))) return true;
-  }
-  return false;
+function titleNamesFinish(title, ctx = {}) {
+  return VOCAB.titleNamesFinish(title, ctx);
 }
 
-/** One word against the closed vocabulary, allowing a checklist's plural
- *  ("Refractors" heads a section; the parallel one card carries is singular). */
-function finishWord(w) {
-  if (FINISH_WORD_SET.has(w)) return true;
-  return w.endsWith("s") && FINISH_WORD_SET.has(w.slice(0, -1));
+/** Does the title state a print run? `#/N`, `/N` and `N/N` all count -- the
+ *  `#/N` spelling was the audit's finding 3 and used to be missed. */
+function titleStatesSerial(title) {
+  return VOCAB.titleStatesSerial(title);
 }
 
 /**
@@ -399,6 +342,9 @@ function baseEvictionEvidence({ row, stored, derived, storedSlug, baseDestSlug, 
     storedSlugParallel: slugParallelSegment(slug),
     titleQuoted: title.slice(0, 160),
     storedParallelField: stored?.parallel ?? null,
+    // Quoted because it is now a VETO field: an eviction that ran despite a
+    // stored print run would have to explain itself against this line.
+    storedPrintRunField: stored?.printRun ?? null,
     baseDestSlug: baseDestSlug ?? null,
     baseDestChecklistBacked: !!baseDestBacked,
   };
@@ -409,15 +355,156 @@ function baseEvictionEvidence({ row, stored, derived, storedSlug, baseDestSlug, 
   //    separates an eviction from the Gonzalez demotion, so it is checked on
   //    the STORED identity, never on the derived one.
   if (!axisIsBlank("parallel", axisValue(stored, "parallel"))) fail.push("stored-parallel-names-a-finish");
-  // 3. the title names no finish either
+  // 3. the title names no finish either -- read against THIS card's product,
+  //    so `chrome` on a Topps Heritage Chrome card is the set's own name while
+  //    `Tiffany` on a 1990 Bowman is a parallel the corpus (or the hand list
+  //    beneath its 2020 floor) knows about.
   if (!title) fail.push("no-title");
-  else if (titleNamesFinish(title)) fail.push("title-names-a-finish");
+  else if (titleNamesFinish(title, { year: derived?.cardYear ?? stored?.cardYear ?? null, setKey: derived?.setKey ?? stored?.setKey ?? "" })) fail.push("title-names-a-finish");
   // 4. somewhere checklist-backed to go
   if (!baseDestBacked) fail.push("no-checklist-backed-base-destination");
+  // 4b. THE STORED PRINT RUN IS A FOURTH FIELD, AND IT VETOES. A base card is
+  //     not serial-numbered; a row storing /499 says "limited parallel" in its
+  //     own hand. Never erased, and never overridden.
+  if (storedPrintRunNamesALimitedParallel(stored)) fail.push(`stored-printrun-names-a-limited-parallel:${stored.printRun}`);
   // 5. the derived reading must itself be base -- if today's parser reads a
   //    parallel off this row, this is not an eviction, it is a disagreement.
   if (derived && !axisIsBlank("parallel", axisValue(derived, "parallel"))) fail.push("derived-names-a-finish");
   return { qualifies: fail.length === 0, evidence: ev, failed: fail };
+}
+
+// ── IMPROVE guards (audit finding 7: IMPROVE IS NOT SAFE) ──────────────────
+
+/**
+ * KNOWN DISTINCT PRODUCTS. A derived setKey that collapses one of these into
+ * its parent is not a more specific reading of the card -- it is a DIFFERENT
+ * card (audit finding 4).
+ *
+ * Measured in the census: the derivation collapses bowmans-best,
+ * bowman-sterling, bowman-heritage and bowman-chrome into `bowman`;
+ * allen-ginter and fire into `topps`; fleer-ultra into `ultra`;
+ * stadium-club-chrome and heritage-chrome into `paper`. The
+ * `contradicted:setKey` guard blocks those from BASE-EVICTION (316 rows in
+ * slot 19 alone) -- but IMPROVE never looked, so a collapse that ALSO filled a
+ * blank axis read as an improvement and was writable.
+ *
+ * bowman-vs-chrome and sapphire are DIFFERENT cards, and a product-family
+ * ladder nests specialized products under a flagship without merging them. A
+ * derived setKey that drops one of these words is a demotion in product space
+ * even when the axis diff calls it a fill somewhere else.
+ */
+const DISTINCT_PRODUCT_SETKEYS = [
+  "bowmans-best", "bowman-sterling", "bowman-heritage", "bowman-chrome",
+  "bowman-draft", "bowman-platinum", "bowman-inception", "bowman-1st-edition",
+  "bowman-chrome-sapphire", "topps-chrome", "topps-chrome-black",
+  "topps-heritage", "topps-heritage-chrome", "topps-allen-ginter",
+  "topps-allen-ginter-chrome", "topps-fire", "topps-finest", "topps-gold-label",
+  "topps-stadium-club", "topps-stadium-club-chrome", "topps-cosmic-chrome",
+  "fleer-ultra", "panini-prizm", "panini-mosaic", "panini-optic",
+];
+
+/**
+ * Does the derived setKey COLLAPSE a known distinct product into a parent?
+ *
+ * The test is structural, not a lookup table of pairs: a stored setKey that is
+ * a known distinct product, and a derived setKey that is a strict PREFIX of it
+ * (on a `-` boundary) or that the stored key otherwise contains, is a
+ * collapse. `bowman-chrome` -> `bowman` collapses; `bowman` -> `bowman-chrome`
+ * does not (that direction is a genuine refinement, and the ordinary axis test
+ * already treats a changed setKey as a CONFLICT anyway).
+ */
+function derivationCollapsesProduct(stored, derived) {
+  const s = lower(stored?.setKey), d = lower(derived?.setKey);
+  if (!s || !d || s === d) return null;
+  if (!DISTINCT_PRODUCT_SETKEYS.includes(s)) return null;
+  // a strict prefix on a segment boundary is the collapse shape:
+  // `bowman-chrome` -> `bowman`, `topps-allen-ginter` -> `topps`.
+  if (s.startsWith(`${d}-`)) return `${s}->${d}`;
+  // The derived key is a SEGMENT of the stored one -- `fleer-ultra` -> `ultra`
+  // drops the brand and keeps the tail, which is the same loss of product
+  // identity as dropping the tail. Either direction of truncation collapses.
+  const segs = s.split("-");
+  if (segs.includes(d)) return `${s}->${d}`;
+  // The derived key shares NO segment with the stored one at all:
+  // `topps-stadium-club-chrome` -> `paper`. That is not a refinement of this
+  // product under any reading -- it is a different product entirely.
+  const dSegs = d.split("-");
+  if (!segs.some((seg) => dSegs.includes(seg))) return `${s}->${d}`;
+  return null;
+}
+
+/**
+ * The three IMPROVE guards the audit demanded. Returns a list of refusals;
+ * empty means the IMPROVE may proceed to the tier gate.
+ *
+ * CF-IMPROVE-IS-NOT-SAFE (audit gate, 2026-09-03). The IMPROVE class was
+ * treated as the safe one and shipped without a title check of its own. The
+ * audit found it minting parallels out of PRODUCT words over titles that say
+ * "Base" -- "2024 Topps Heritage Chrome #399 Base" deriving parallel=Chrome,
+ * "Topps Chrome Black #191 Base" deriving Black Refractor -- and filling print
+ * runs onto Base rows from unrecognized qualifiers, minting numbered base
+ * cards the checklist never listed ("Tie-Dye Prizm #/25" -> Base:/25,
+ * "Disco /75" -> Base:/75).
+ */
+function improveRefusals({ row, stored, derived, axes }) {
+  const refusals = [];
+  const title = str(row?.title);
+  const year = derived?.cardYear ?? stored?.cardYear ?? null;
+  const setKey = derived?.setKey ?? stored?.setKey ?? "";
+
+  // GUARD 1: never mint a parallel out of a PRODUCT word over a title that
+  // says Base or names no finish at all.
+  //
+  // The parallel axis only matters here when the derivation FILLED it -- a
+  // parallel the stored row already named is not this shape.
+  if (axes.filled.includes("parallel")) {
+    const parallel = str(derived?.parallel);
+    const pTokens = VOCAB.nameTokens(parallel);
+    const fromProductWord = pTokens.length > 0 && pTokens.every((t) => VOCAB.isProductWord(t, setKey));
+    const titleSaysBase = /\bbase\b/i.test(title);
+    const titleNamesAFinish = title ? titleNamesFinish(title, { year, setKey }) : false;
+    if (fromProductWord && (titleSaysBase || !titleNamesAFinish)) {
+      refusals.push(`improve-parallel-from-product-word:${parallel}@${setKey}`);
+    }
+    // A derived parallel the product's own checklist does not list is not
+    // checklist-backed AS A PARALLEL, whatever the destination row's source
+    // says. The corpus is the same evidence the destination gate reads.
+    else if (!titleNamesAFinish && titleSaysBase) {
+      refusals.push(`improve-parallel-over-explicit-base:${parallel}`);
+    }
+  }
+
+  // GUARD 2: never fill a print run onto a Base/blank parallel when the title
+  // carries a qualifier we do not recognise.
+  //
+  // CF-NUMBERED-BASE-IS-CHECKLIST-DEFINED. A numbered base card exists only
+  // where the product's checklist says so. "Tie-Dye Prizm #/25" is a Tie-Dye
+  // Prizm numbered to 25, not a base card numbered to 25 -- and the parser
+  // that could not read "Tie-Dye Prizm" as a parallel is exactly the parser
+  // whose print run should not be trusted onto a base row.
+  if (axes.filled.includes("printRun")) {
+    const destParallel = axisValue(derived, "parallel");
+    if (axisIsBlank("parallel", destParallel)) {
+      const serial = VOCAB.serialFromTitle(title);
+      const namesAFinish = title ? titleNamesFinish(title, { year, setKey }) : false;
+      // The title states a print run AND names something finish-ish that the
+      // derivation failed to turn into a parallel -> the run belongs to that
+      // unnamed parallel, not to a base card.
+      if (serial !== null && namesAFinish) {
+        refusals.push(`improve-printrun-onto-base-with-unrecognized-qualifier:/${serial}`);
+      } else if (serial !== null && !VOCAB.checklistListsParallel("Base", year, setKey)) {
+        // No finish word read, but a numbered BASE still has to be
+        // checklist-defined. Absent that, blank stays blank.
+        refusals.push(`improve-numbered-base-not-checklist-defined:/${serial}`);
+      }
+    }
+  }
+
+  // GUARD 3: a setKey collapse never feeds IMPROVE.
+  const collapse = derivationCollapsesProduct(stored, derived);
+  if (collapse) refusals.push(`improve-setkey-collapses-distinct-product:${collapse}`);
+
+  return refusals;
 }
 
 /**
@@ -563,7 +650,19 @@ function classifyRow({
     // most: the row's fields and the derivation agree completely while its two
     // ADDRESSES name different cards. Nothing else in the census would ever
     // look at this row again.
-    return { ...base, klass: AGREE, axes, reasons: splitReasons, writable: false };
+    //
+    // A NEAR-MISS EVICTION IS NAMED HERE, NOT SWALLOWED (audit gate,
+    // 2026-09-03). The eight axes agree, so a row that sits on a parallel slug
+    // and was REFUSED an eviction lands in AGREE -- which means "nothing to
+    // do" and prints no reason at all. That is how a Tiffany row looked
+    // identical to a row that was never a candidate, and it is exactly the
+    // population an auditor has to be able to count: the guard's yield is only
+    // visible if the refusal is recorded. Tagged only when the row was a real
+    // candidate (its slug names a parallel), so the other 16.3M rows stay
+    // silent.
+    const near = be.failed.length && !be.failed.includes("slug-names-no-parallel")
+      ? [`not-base-eviction:${be.failed.join(",")}`] : [];
+    return { ...base, klass: AGREE, axes, reasons: [...near, ...splitReasons], writable: false };
   }
 
   // A demotion or a lateral change on ANY axis is a conflict, whatever else
@@ -599,11 +698,21 @@ function classifyRow({
     return { ...base, klass: CONFLICT, axes, reasons: [...reasons, ...splitReasons], writable: false };
   }
 
-  reasons.push(`filled:${axes.filled.join(",")}`, ...splitReasons);
+  reasons.push(`filled:${axes.filled.join(",")}`);
+
+  // THE IMPROVE GUARDS (audit finding 7). IMPROVE was the class treated as
+  // safe, and it was minting parallels out of product words and print runs
+  // onto base rows. A refusal keeps the CLASS -- the census must still count
+  // the shape, and Drew must be able to read what was refused and why -- and
+  // takes `writable` to false, the same way the provenance tier does.
+  const refusals = improveRefusals({ row, stored, derived, axes });
+  if (refusals.length) reasons.push(...refusals);
+  reasons.push(...splitReasons);
+
   // PROTECTED rows are report-only forever, even when IMPROVE-shaped. The
   // class still says IMPROVE (that is what the census measured); `writable`
   // is what the apply pass reads, and it is false.
-  return { ...base, klass: IMPROVE, axes, reasons, writable: prov.tier === AUTO };
+  return { ...base, klass: IMPROVE, axes, reasons, improveRefusals: refusals, writable: prov.tier === AUTO && refusals.length === 0 };
 }
 
 /**
@@ -657,5 +766,10 @@ module.exports = {
     UNKNOWN_VENDOR: SPLIT.UNKNOWN_VENDOR, HIQ_SPLIT: SPLIT.HIQ_SPLIT, MALFORMED: SPLIT.MALFORMED,
   },
   classifyIdentity: SPLIT.classifyIdentity,
-  titleNamesFinish, slugParallelSegment, slugNamesParallel, baseEvictionEvidence,
+  titleNamesFinish, titleStatesSerial, slugParallelSegment, slugNamesParallel, baseEvictionEvidence,
+  // The trust ladder's new gates, exported so the tests can drive each one
+  // directly and the mutation check can revert them one at a time.
+  EVICTION_MOVABLE_AXES, DISTINCT_PRODUCT_SETKEYS,
+  storedPrintRunNamesALimitedParallel, derivationCollapsesProduct, improveRefusals,
+  VOCAB,
 };

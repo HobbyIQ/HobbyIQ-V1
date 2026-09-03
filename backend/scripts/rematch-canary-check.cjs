@@ -155,6 +155,29 @@ async function main() {
   const canaries = doc.canaries ?? [];
   if (!canaries.length) { console.error(`FATAL: ${CANARIES} lists no canaries.`); process.exit(2); }
 
+  // THE SHARD BEING APPLIED MUST HAVE A CANARY (audit gate, 2026-09-03).
+  //
+  // The gate is per-shard by construction -- before, apply ONE shard, after --
+  // so a shard with no canary in it passes by construction: the pools measured
+  // are pools that shard's apply cannot touch. 25 of 32 shards were in that
+  // state, slot 29 among them, and slot 29 was the 30/30-wrong one.
+  //
+  // SLOT is read from the same env the runner passes to the fleet script, so
+  // the before/after pair and the apply are certainly talking about the same
+  // shard. A refusal here is a refusal to certify, which is the correct
+  // failure: better no verdict than a green one that measured nothing.
+  const SLOT = process.env.SLOT === undefined || process.env.SLOT === "" ? null : Number(process.env.SLOT);
+  if (SLOT !== null && Number.isFinite(SLOT)) {
+    const inShard = canaries.filter((c) => Number(c.shardSlot) === SLOT);
+    if (!inShard.length) {
+      console.error(`FATAL: SLOT=${SLOT} has NO canary in ${CANARIES}. A shard with no canary passes this gate by construction --`);
+      console.error(`       the pools it measures are pools that shard's apply cannot move. That is not a pass, it is an absence of measurement.`);
+      console.error(`       Run backend/scripts/derive-rematch-canaries.cjs to give every shard a canary before applying this one.`);
+      process.exit(2);
+    }
+    console.log(`  slot ${SLOT}: ${inShard.length} canary/canaries live in THIS shard -- ${inShard.map((c) => c.slug).join(", ")}`);
+  }
+
   const db = new CosmosClient({ connectionString: conn, connectionPolicy: { retryOptions: { maxRetryAttemptsOnThrottledRequests: 30, maxWaitTimeInSeconds: 120 } } }).database("hobbyiq");
   const pool = db.container("sold_comps");
 
