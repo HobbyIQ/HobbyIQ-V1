@@ -11,6 +11,10 @@ import { BulkEbayListModal } from "@/components/BulkEbayListModal";
 import { BulkCostBasisModal } from "@/components/BulkCostBasisModal";
 import { AddCardModal } from "@/components/AddCardModal";
 import { ProvenanceChip } from "@/components/ProvenanceChip";
+// CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (Drew, 2026-09-03): the caveats
+// beside the number they qualify. The rung chip says which pool; these say
+// what is wrong with it.
+import { PricingLabelChips } from "@/components/PricingLabelChips";
 import { SellSignalChip } from "@/components/SellSignalChip";
 import { holdingProvenance } from "@/lib/rung";
 import { formatAsOf } from "@/lib/asOf";
@@ -919,6 +923,16 @@ function HoldingRow({ h }: { h: PortfolioHolding }) {
             </span>
           )}
           {value != null && <ProvenanceChip rung={provenance} source={provenance.source} />}
+          {/* CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (Drew, 2026-09-03):
+              PUBLISH + LABEL. A self-anchored price — the only sale behind it
+              being the owner's own purchase — still shows, and now says so on
+              the row rather than only to a reader who opens the card page. */}
+          {value != null && (
+            <PricingLabelChips
+              labels={h.pricingLabels}
+              selfAnchored={h.selfAnchored}
+            />
+          )}
           {/* CF-SELLER-INTELLIGENCE-SELL-WINDOW (Drew, 2026-09-02): the
               timing call, beside the provenance of the number it is timing.
               Renders nothing unless there is an actual call to make. */}
