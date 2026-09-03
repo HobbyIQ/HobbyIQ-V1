@@ -16,8 +16,28 @@
  * `hobbyiqCardIds` carries the twin so the union is read in the SAME query
  * the readers use (soldCompsStore reads the same two keys) — one more
  * equality on the indexed field, +1–3 RU measured, never a STARTSWITH.
+ *
+ * CF-AS-OF-IS-AN-UPPER-BOUND (#1651, the engine backtest, 2026-09-02). The
+ * window was always a LOWER bound — `soldAt >= now - windowDays` — because in
+ * production there is no such thing as a sale from the future. A BACKTEST
+ * evaluates the engine as of a past instant, and there the future is sitting
+ * right there in the container: every sale that happened after the evaluation
+ * point, including THE ONE BEING PREDICTED.
+ *
+ * So `asOfMs` closes the window at the top, in the QUERY, not in a filter the
+ * caller remembers to apply. That placement is the point. A lookahead leak in
+ * a backtest is not a wrong number, it is a RIGHT-LOOKING number — the engine
+ * "predicts" a sale it can see, the error goes to zero, and the published
+ * accuracy figure is a lie that validates itself. Structural exclusion at the
+ * one read every pool rung goes through is the only version of this that can
+ * be trusted, and it is pinned by a test that puts a future-dated row in the
+ * fixture and requires the answer not to move (asOfLookaheadIsolation.test.ts).
+ *
+ * `asOfMs` is undefined in production, where the bound is absent and the query
+ * is byte-identical to the one that always ran.
  */
 import { CosmosClient, type Container } from "@azure/cosmos";
+import { asOfCutoffString, isBeforeAsOf } from "./asOfCutoff.js";
 
 const COSMOS_DATABASE = process.env.COSMOS_DATABASE ?? "hobbyiq";
 const SOLD_COMPS_CONTAINER = process.env.COSMOS_SOLD_COMPS_CONTAINER ?? "sold_comps";
@@ -58,6 +78,10 @@ export async function readExactPoolRows(input: {
   hobbyiqCardIds?: readonly string[] | null;
   windowDays: number;
   nowMs?: number;
+  /** CF-AS-OF-IS-AN-UPPER-BOUND (#1651). Backtest only: no sale at or after
+   *  this instant may be read. Undefined in production — the bound is then
+   *  absent from the query entirely. */
+  asOfMs?: number | null;
 }): Promise<ExactPoolRow[] | null> {
   const cont = getContainer();
   if (!cont) return null;
@@ -87,6 +111,19 @@ export async function readExactPoolRows(input: {
   const params: Array<{ name: string; value: string | number | boolean | null }> = [
     { name: "@cutoff", value: cutoff },
   ];
+  // The as-of ceiling. STRICTLY less than: a sale AT the evaluation instant is
+  // the sale being predicted, so it is future data like any other.
+  //
+  // The cutoff is asOfCutoffString's second-truncated form, NOT toISOString():
+  // `c.soldAt` is compared as a STRING and the pool stores the same instant as
+  // "…+00:00", "…Z" and "….000Z", which sort in ordinal order rather than time
+  // order. A `.000Z` ceiling admits the "+00:00" spelling of its own instant.
+  // See asOfCutoff.ts — this was a live lookahead leak, not a hypothetical.
+  const asOfMsIn = typeof input.asOfMs === "number" && Number.isFinite(input.asOfMs) ? input.asOfMs : null;
+  if (asOfMsIn !== null) {
+    parts.push("c.soldAt < @asOf");
+    params.push({ name: "@asOf", value: asOfCutoffString(asOfMsIn) });
+  }
   // Union: match by cardId OR hobbyiqCardId (covers cross-vendor storage),
   // and by the identity's twin key when the caller names one.
   const hiqIds: string[] = [];
@@ -103,6 +140,10 @@ export async function readExactPoolRows(input: {
       query: `SELECT c.price, c.soldAt, c.gradeCompany, c.gradeValue, c.priceAnomaly, c.contributorUserId, c.source FROM c WHERE ${parts.join(" AND ")}`,
       parameters: params,
     }, { maxItemCount: 500 }).fetchAll();
-    return resources || [];
+    const rows = resources || [];
+    // Belt and braces: re-check by PARSED time, so a row in some serialization
+    // the string bound does not anticipate cannot reach the engine. No-op in
+    // production (asOfMs null) and on every row the query already excluded.
+    return asOfMsIn === null ? rows : rows.filter((r) => isBeforeAsOf(r.soldAt, asOfMsIn));
   } catch { return []; }
 }
