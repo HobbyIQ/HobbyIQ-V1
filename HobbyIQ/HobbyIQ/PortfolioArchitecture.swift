@@ -78,6 +78,35 @@ struct CardEstimate: Identifiable, Hashable {
 /// in the detail view as "Anchor: PSA 9 $755, today" or, for raw anchors,
 /// "Last sold: $1185 raw, 4 days ago". `confidence` is 0.0–1.0 (engine-
 /// internal), not currently surfaced.
+/// CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (Drew, 2026-09-03).
+///
+/// A caveat the reader is entitled to see beside a price. Mirrors the
+/// backend's `SellDraftLabel` (ebaySellDraft.service.ts) — the CLOSED
+/// vocabulary, and the sentence composed there and served verbatim so the
+/// portfolio row, the card page, the sell draft and this chip all say the
+/// same thing in the same words.
+///
+/// Drew's standing ruling (2026-09-01): a self-comp PUBLISHES **and is
+/// LABELED**. The value still renders; this says what is behind it.
+struct PricingLabel: Codable, Hashable {
+    /// "speculative" | "self-anchored" | "fallback-rung" | "low-confidence".
+    /// Decoded as a raw String, not an enum: an unknown code from a newer
+    /// backend must still render its sentence rather than fail the decode
+    /// and take the whole holding down with it.
+    let code: String
+    /// The sentence. Never rewritten on the client.
+    let text: String
+}
+
+/// The self-anchored ratio: `own` of the evidence pool's `total` sales
+/// behind this price are the reader's own. `own == total` is the fully
+/// self-anchored case (Drew's Verlander PSA 10: 1 of 1). Stated against the
+/// POOL, never a truncated display sample.
+struct SelfAnchoredRatio: Codable, Hashable {
+    let own: Int
+    let total: Int
+}
+
 struct NearestGradedAnchor: Codable, Hashable {
     let grade: String
     let price: Double
@@ -412,6 +441,16 @@ struct InventoryCard: Identifiable, Hashable, Codable {
     let estimateConfidence: String?
     let nearestGradedAnchor: NearestGradedAnchor?
 
+    /// CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (Drew, 2026-09-03). The
+    /// caveats this holding's price must be read with, as the backend
+    /// stamped them at write time — the SAME set the live canonical-fmv
+    /// response carries for this card. Empty when the price carries no
+    /// caveats, or when the holding predates the field.
+    let pricingLabels: [PricingLabel]
+    /// The self-anchored ratio, when any published sale behind this price
+    /// is the reader's own. Nil in the universal case.
+    let selfAnchored: SelfAnchoredRatio?
+
     // CF-IOS-DIRECTION-SWEEP (2026-06-18): movement* fields removed —
     // direction-class signals every render site of which was stripped
     // in this same CF. Wire keys silently ignored on decode.
@@ -546,6 +585,8 @@ struct InventoryCard: Identifiable, Hashable, Codable {
         estimateBasis: String? = nil,
         estimateConfidence: String? = nil,
         nearestGradedAnchor: NearestGradedAnchor? = nil,
+        pricingLabels: [PricingLabel] = [],
+        selfAnchored: SelfAnchoredRatio? = nil,
         cardId: String? = nil,
         lastSaleSurface: LiveMarketLastSaleSurface? = nil,
         modelExpectation: LiveMarketModelExpectation? = nil,
@@ -624,6 +665,8 @@ struct InventoryCard: Identifiable, Hashable, Codable {
         self.estimateBasis = estimateBasis
         self.estimateConfidence = estimateConfidence
         self.nearestGradedAnchor = nearestGradedAnchor
+        self.pricingLabels = pricingLabels
+        self.selfAnchored = selfAnchored
         self.cardId = cardId
         self.lastSaleSurface = lastSaleSurface
         self.modelExpectation = modelExpectation

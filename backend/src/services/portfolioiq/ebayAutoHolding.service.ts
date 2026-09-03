@@ -38,6 +38,7 @@ import type { EbayItemDetails } from "../ebay/ebayItemDetails.service.js";
 // which strings are real parallels, so the aspect is vetted through it rather
 // than against a second, drifting list here.
 import { normalizeHoldingFields } from "./holdingFieldNormalizer.service.js";
+import { valueHoldingThroughOneEntry } from "./holdingValuation.js";
 
 /**
  * Threshold at which we auto-create a holding from a purchase.
@@ -62,6 +63,12 @@ export type AutoHoldingResult =
 export interface AutoHoldingDocShape {
   holdings: Record<string, PortfolioHolding>;
   purchases?: PortfolioPurchaseEntry[];
+  /** C-7 (2026-09-03): the owner, so the import's valuation can exclude this
+   *  user's OWN comps from the pool that prices their new card. The real
+   *  UserDoc always carries it; optional here only so the narrow test shapes
+   *  that construct this by hand keep compiling. A missing userId excludes
+   *  nothing, which is the pre-existing behaviour, never a wrong price. */
+  userId?: string;
 }
 
 /**
@@ -176,7 +183,34 @@ export async function autoCreateHoldingForPurchase(
   await resolveImportIdentity(holding);
   await recordImportSale(holding, purchase, doc);
 
-  doc.holdings[holding.id] = holding;
+  // CF-THE-SECOND-WRITER-NAMES-ITS-RUNG-TOO (C-7, 2026-09-03). This is the
+  // "second, older writer" the one-valuation-path work never scoped, and it is
+  // the one that produced EVERY key-absent holding in prod: measured 2026-09-03,
+  // all 52 holdings with no `fmvRung` key at all are `source: "ebay-auto"` /
+  // `cardStatus: "pending-review"` — created right here, and never priced.
+  //
+  // Nothing else on the import path prices them either: confirmHoldingReview
+  // promotes cardStatus to "active" without calling autoPriceHolding, so an
+  // imported card could go live carrying no value, no rung and no valueSource.
+  // Downstream that is indistinguishable from a holding the engine looked at
+  // and declined to price, which is exactly what made the 53 invisible to
+  // every rung gate.
+  //
+  // Route it through the SAME one entry every other writer uses. Not throwing
+  // and not blocking the import is deliberate: the identity was just resolved
+  // above and the pool may legitimately hold nothing for it, so an unpriced
+  // outcome leaves the holding exactly as it was (no value written) — but a
+  // priced one now carries fairMarketValue, fmvRung AND valueSource together,
+  // written by the one path rather than by this file's own hand.
+  const valued = await valueHoldingThroughOneEntry(holding, {
+    userId: doc.userId ?? null,
+    caller: "ebayAutoHolding.import",
+  });
+  const priced = valued.outcome === "observed" || valued.outcome === "estimated"
+    ? valued.holding
+    : holding;
+
+  doc.holdings[holding.id] = priced;
   // Idempotent Set-union merge, symmetric with PATCH /link-holdings.
   const merged = new Set([...purchase.holdingIds, holding.id]);
   purchase.holdingIds = [...merged];
@@ -190,7 +224,8 @@ export async function autoCreateHoldingForPurchase(
   // user-owned card seeds through the one canonical path in soldCompsStore
   // (USER_SEED_SOURCES -> ensureCatalogRow -> upsertCatalogEntry).
 
-  return { status: "created", holding, parsed, enriched: !!details };
+  // The caller gets the holding that was actually STORED, values and all.
+  return { status: "created", holding: priced, parsed, enriched: !!details };
 }
 
 // ─── Identity resolution ───────────────────────────────────────────────────

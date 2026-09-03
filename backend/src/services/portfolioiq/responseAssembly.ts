@@ -67,6 +67,10 @@ import { buildPricingEnvelope } from "./pricingEnvelope.builder.js";
 import { deriveHoldingSlug } from "./holdingSlug.service.js";
 import { deriveSellWindowSignal } from "../signals/sellWindow.service.js";
 import { resolvePricingConfidence } from "./pricingEnvelope.builder.js";
+// CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (Drew, 2026-09-03): the label
+// readers live beside resolvePricingConfidence — one validated read of the
+// writer's stamp, shared by the list wire and the detail envelope.
+import { pricingLabelsOf, selfAnchoredOf } from "./pricingEnvelope.builder.js";
 import {
   computePerUnitValue,
   computeCostBasisTotal,
@@ -327,6 +331,26 @@ export interface PortfolioHoldingWire {
     at: string;
     invariant: string;
   } | null;
+  // CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (Drew, 2026-09-03). The caveats
+  // this holding's price must be read with — the SAME set the live
+  // canonical-fmv response carries for it, because both come out of
+  // labelsForResult (compiq/valuationLabels.ts stamps them at write time).
+  //
+  // Drew's ruling (2026-09-01): a self-comp PUBLISHES **and is LABELED**.
+  // The label reached the card page and the sell draft and stopped there, so
+  // a portfolio row showed a self-anchored $251 — the tier's only sale being
+  // the owner's own purchase — as an ordinary market read. `pricingLabels`
+  // is that label set on the row itself; `selfAnchored` is its ratio in
+  // machine-readable form so a client can render "1 of 2" its own way
+  // instead of parsing it back out of the sentence.
+  //
+  // Empty array / null → this price carries no caveats, or predates the
+  // field. Never inferred from prose.
+  pricingLabels?: Array<{
+    code: "speculative" | "self-anchored" | "fallback-rung" | "low-confidence";
+    text: string;
+  }>;
+  selfAnchored?: { own: number; total: number } | null;
   // Cardsight FK
   cardId?: string | null;
   gradeId?: string | null;
@@ -778,6 +802,11 @@ export function composeHoldingWireShape(
     // the portfolio row can render "under review" without a second call. Null
     // and undefined both mean "reconciled" — the badge is absence-safe.
     auditFlag: (holding as { auditFlag?: { reason: string; at: string; invariant: string } | null }).auditFlag ?? null,
+    // CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (Drew, 2026-09-03): read off
+    // the meta the price writer stamped, never re-derived here — the wire
+    // reports what was persisted, so the row and the card page cannot drift.
+    pricingLabels: pricingLabelsOf(holding),
+    selfAnchored: selfAnchoredOf(holding),
     // Cardsight FK
     cardId: holding.cardId,
     gradeId: holding.gradeId,

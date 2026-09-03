@@ -443,6 +443,53 @@ function checkIdentityCoherence(holding, poolRows) {
 function checkRungHonesty(holding, shadow, leaf) {
   const rung = typeof holding.fmvRung === "string" && holding.fmvRung ? holding.fmvRung : null;
   const violations = [];
+
+  // CF-A-MISSING-KEY-IS-A-FINDING (C-7, 2026-09-03). This check used to
+  // `return []` the moment a holding had no rung — so the 53 holdings that
+  // carried a stored value and NO `fmvRung` key at all were not merely
+  // unflagged, they were the one shape the auditor could never see. A detector
+  // whose blind spot is "the writer never labelled it" cannot find an
+  // unlabelled writer.
+  //
+  // The three states are now distinguished, and only the middle one is silent:
+  //   - a value with NO rung key       -> a legacy writer wrote it (RED)
+  //   - a value with fmvRung === null  -> a lane that HONESTLY names no rung
+  //                                       (the resolver fallback, the ladder);
+  //                                       null is a statement, not an absence
+  //   - a value with a rung string     -> checked against the shadow below
+  //
+  // Absence of `valueSource` is folded into the same finding rather than its
+  // own: the two keys are written together by every non-legacy writer, so one
+  // missing key and both missing keys have the same cause and the same fix.
+  // CF-A-VALUE-IS-EITHER-FIELD (C-7 verifier, 2026-09-03). Reading only
+  // `fairMarketValue` reopened the blind spot this check exists to close: a
+  // holding that shows a number to the user via `estimatedValue` while
+  // `fairMarketValue` is null is EXACTLY the key-absent shape. Live proof from
+  // the same read-only census, holding 0a9afe09: fairMarketValue null,
+  // estimatedValue 241, pricingSourceMeta.method "rare-card-anchor", and no
+  // `fmvRung` key at all. A gate that skips it because the FMV field is null is
+  // judging the field rather than the value the collector actually sees.
+  const persistedNumber = typeof holding.fairMarketValue === "number" && holding.fairMarketValue > 0
+    ? holding.fairMarketValue
+    : (typeof holding.estimatedValue === "number" && holding.estimatedValue > 0 ? holding.estimatedValue : null);
+  const hasValue = persistedNumber !== null;
+  const rungKeyAbsent = !("fmvRung" in holding);
+  const valueSourceAbsent = !("valueSource" in holding)
+    || holding.valueSource === null
+    || holding.valueSource === undefined;
+  if (hasValue && (rungKeyAbsent || valueSourceAbsent)) {
+    const missing = [
+      rungKeyAbsent ? "fmvRung" : null,
+      valueSourceAbsent ? "valueSource" : null,
+    ].filter(Boolean);
+    violations.push({
+      kind: "value-carries-no-rung",
+      detail: `holding shows ${persistedNumber} (${typeof holding.fairMarketValue === "number" && holding.fairMarketValue > 0 ? "fairMarketValue" : "estimatedValue"}) but carries no ${missing.join(" and no ")} key — written by a legacy writer that never named its rung, so no rung gate can classify it (source=${holding.source ?? "(none)"}, cardStatus=${holding.cardStatus ?? "(none)"})`,
+      rung: null,
+      shadowRung: shadow.rung,
+    });
+  }
+
   if (rung === null) return violations;
   if (!leaf.isExactPoolRung(rung)) return violations;
 

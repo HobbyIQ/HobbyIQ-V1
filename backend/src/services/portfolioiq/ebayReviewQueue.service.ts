@@ -25,6 +25,7 @@ import type { SalePriceBasis } from "./ebayAutoHolding.service.js";
 import {
   readUserDoc,
   writeUserDoc,
+  reapPriceTrail,
 } from "./portfolioStore.service.js";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -833,6 +834,24 @@ export async function confirmHoldingInDoc(
   })();
   };
 
+  // CF-CONFIRM-PRICES-WHAT-IT-ACTIVATES (C-7, 2026-09-03). Approval is the
+  // moment a pending-review import becomes a real, counted holding, and the
+  // question "does confirm price what it activates?" is a live one for the 53
+  // key-absent holdings.
+  //
+  // It does, and NOT here. Both confirm routes — /holdings/:id/confirm and
+  // /holdings/confirm-batch — already fire repriceOneHolding for every
+  // confirmed holding, which runs autoPriceHolding and therefore stamps
+  // fmvRung and valueSource on the sanctioned path. Pricing a second time
+  // inside this function would be a duplicate engine call per approval on the
+  // AWAITED path, turning a fast approval into a slow one and writing the doc
+  // twice for one confirm.
+  //
+  // The import-side gap is real and is fixed at its own writer
+  // (ebayAutoHolding.service.ts), which is where every key-absent holding in
+  // prod was actually created. This comment exists so the next reader does not
+  // re-add the call: the reprice is one line up the stack, on purpose.
+
   return { status: "confirmed", holding, correctionCount: corrections.length, afterWrite };
 }
 
@@ -982,6 +1001,10 @@ export async function rejectHoldingReview(
 
   const sourcePurchaseId = ((holding as any).sourcePurchaseId as string | undefined) ?? null;
 
+  // H-9 (CF-A-DELETED-HOLDING-KEEPS-NO-TRAIL): a rejected review-queue
+  // holding is deleted outright, so its price trail must go with it. This is
+  // the lane that produced the bulk of the 238 orphans on user-199fcbc9.
+  reapPriceTrail(doc, holdingId);
   delete doc.holdings[holdingId];
 
   if (sourcePurchaseId && Array.isArray((doc as any).purchases)) {

@@ -347,6 +347,10 @@ export interface PricingEnvelope {
     pricingSourceMeta:
       | { slug: string; method: string; compsUsed: number }
       | null;
+    /** CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (Drew, 2026-09-03). The
+     *  caveats this price must be read with, as the writer stamped them. */
+    pricingLabels?: PricingLabel[];
+    selfAnchored?: { own: number; total: number } | null;
     nearestGradedAnchor: {
       grade: string;
       price: number;
@@ -395,6 +399,16 @@ export interface PricingEnvelope {
 // etc.) remain during the migration window. New reads should prefer
 // `pricing.*` — the flats stay populated by the backend for one
 // release, then get deleted in a follow-up CF.
+/** CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (Drew, 2026-09-03). A caveat the
+ *  reader is entitled to see beside a price. The codes are the backend's
+ *  closed vocabulary (ebaySellDraft.service.ts `SellDraftLabel`); `text` is
+ *  the sentence the sell draft uses, served verbatim so every surface says
+ *  the same thing in the same words. */
+export interface PricingLabel {
+  code: "speculative" | "self-anchored" | "fallback-rung" | "low-confidence";
+  text: string;
+}
+
 export interface PortfolioHolding {
   id: string;
   cardId?: string | null;   // legacy vendor/cardId — may diverge from hobbyiqCardId on old holdings (e.g. cardNumber prefix stripped). Prefer hobbyiqCardId for downstream queries.
@@ -426,6 +440,21 @@ export interface PortfolioHolding {
    *  which prefers the envelope's `method.ladderRung` /
    *  `provenance.pricingSourceMeta.method`. */
   fmvRung?: string | null;
+  /** CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (Drew, 2026-09-03). The caveats
+   *  this holding's price must be read with — the SAME set the live
+   *  canonical-fmv response carries for it, stamped at write time by the
+   *  writer that decided the price.
+   *
+   *  Drew's ruling (2026-09-01): a self-comp PUBLISHES **and is LABELED**.
+   *  Before this the label reached the card page and the sell draft and
+   *  stopped, so a row showed a self-anchored $251 — the tier's only sale
+   *  being the owner's own purchase — as an ordinary market read.
+   *
+   *  Absent / empty → no caveats, or a price surface predating the field. */
+  pricingLabels?: PricingLabel[];
+  /** The self-anchored ratio: `own` of the pool's `total` sales behind this
+   *  price are the owner's. `own === total` is fully self-anchored. */
+  selfAnchored?: { own: number; total: number } | null;
   // Per-unit estimate when no observed FMV exists.
   estimatedValue?: number | null;
   estimateLow?: number | null;
@@ -1875,6 +1904,13 @@ export interface RecentCompSale {
   confidenceScore?: number | null;
   confidenceBand?: string | null;
   confidenceExplain?: string | null;
+  // CF-OWN-PURCHASE-IS-A-SALE (Drew, 2026-09-03). True when this sale is
+  // the VIEWER'S own imported purchase. The row is shown either way -- an
+  // own purchase is a real sale -- and this drives the label, not a filter.
+  isOwn?: boolean | null;
+  /** The wording for that label, served by the backend so the phrase lives
+   *  in one place. "your purchase". */
+  ownLabel?: string | null;
 }
 
 // CF-USER-FLAG-CLIENT (Drew, 2026-08-01). Fires POST /api/user/flag-comp
