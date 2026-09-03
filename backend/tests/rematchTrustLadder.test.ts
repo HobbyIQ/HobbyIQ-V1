@@ -555,7 +555,15 @@ describe("F -- canary coverage: every one of the 32 shards has a pool that must 
   // (Verified: a slot that DOES have a canary gets past this point and then
   // blocks on the stub endpoint, so exit 2 is specific to the refusal.)
 
-  const runCanaryCheck = (slot: string, canariesFile: string, timeout = 30_000) =>
+  // CF-CHRONIC-REDS-SLOW (2026-09-03). This spawns a real node child running
+  // the shipped rematch-canary-check.cjs. Under a full-suite fork storm the
+  // child's own module load pushed the case past 30s -- and the spawnSync
+  // budget below was itself 30s, so the two ceilings raced and the test could
+  // die either way. It passes in isolation. Raised together, and the vitest
+  // ceiling is raised on the case below so the spawn budget is the one that
+  // actually governs. The spawn IS the test -- it proves the refusal in the
+  // real binary -- so the child is not stubbed and no assertion moves.
+  const runCanaryCheck = (slot: string, canariesFile: string, timeout = 120_000) =>
     spawnSync(process.execPath, [path.join(backend, "scripts", "rematch-canary-check.cjs")], {
       env: {
         ...process.env,
@@ -571,7 +579,7 @@ describe("F -- canary coverage: every one of the 32 shards has a pool that must 
       timeout,
     });
 
-  it("REFUSES (exit 2) a shard with no canary rather than passing it by construction", () => {
+  it("REFUSES (exit 2) a shard with no canary rather than passing it by construction", { timeout: 180_000 }, () => {
     const tmp = path.join(os.tmpdir(), `rematch-canaries-slot7-${process.pid}.json`);
     // one canary, in slot 7 only -- every other slot is genuinely uncovered
     fs.writeFileSync(tmp, JSON.stringify({
@@ -587,7 +595,7 @@ describe("F -- canary coverage: every one of the 32 shards has a pool that must 
     } finally { fs.rmSync(tmp, { force: true }); }
   });
 
-  it("REFUSES (exit 2) a canaries file that lists none at all", () => {
+  it("REFUSES (exit 2) a canaries file that lists none at all", { timeout: 180_000 }, () => {
     const tmp = path.join(os.tmpdir(), `rematch-canaries-empty-${process.pid}.json`);
     fs.writeFileSync(tmp, JSON.stringify({ canaries: [] }), "utf8");
     try {
@@ -597,7 +605,7 @@ describe("F -- canary coverage: every one of the 32 shards has a pool that must 
     } finally { fs.rmSync(tmp, { force: true }); }
   });
 
-  it("and the SHIPPED canaries file refuses no slot -- the refusal is specific", () => {
+  it("and the SHIPPED canaries file refuses no slot -- the refusal is specific", { timeout: 180_000 }, () => {
     // The behavioural complement: with the real file, a slot gets PAST the
     // refusal and announces the canaries it will measure. We assert on that
     // announcement rather than on an exit code, because past the refusal the
