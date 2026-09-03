@@ -9,9 +9,33 @@
 // and rate-limited by priceChecksPerDay — sell-radar iterates the
 // user's whole holding list, notable-sales runs a Cosmos range query;
 // neither should be a free-fire endpoint on the collector tier.
+//
+// CF-PRO-SELLER-GATE (Drew, 2026-09-02): "Gate all five to the Pro tiers."
+// Both endpoints now sit behind requireEntitlement("sellerIntelligence")
+// as well. Before this, the rate limiter was the ONLY thing standing
+// between a free user and these reads — and a cap is not a gate: it
+// metered the free tier's access rather than denying it (5 calls/day of
+// the deal-scanner feed is still the deal-scanner feed). The cap stays
+// for the tiers that have a finite one; the entitlement decides access.
+//
+// Order matters: entitlement BEFORE the rate limiter, so a free caller
+// gets 402 subscription_required (the upgrade prompt) rather than 402
+// rate_limit_exceeded (which would tell them to come back tomorrow for
+// a feature they cannot have at any hour).
+//
+// PER-ROUTE, NOT router.use(). This router is mounted on the BARE
+// /api/portfolio prefix (app.ts), ahead of portfolioiqRoutes on the same
+// prefix. Express runs a router's `use` middleware for every request that
+// matches the MOUNT path, before deciding that none of this router's own
+// paths match and falling through to the next router. So a router-level
+// entitlement gate here would 402 the entire /api/portfolio tree —
+// GET /api/portfolio itself, /holdings, every mutation — turning a
+// field-level gate into a total lockout of the free tier. It did exactly
+// that, and proSellerFreeSurfacesUnchanged.test.ts caught it.
 
 import { Router } from "express";
 import { requireSession } from "../middleware/requireSession.js";
+import { requireEntitlement } from "../middleware/requireEntitlement.js";
 import { requireRateLimited } from "../middleware/requireRateLimited.js";
 import { readUserDoc } from "../services/portfolioiq/portfolioStore.service.js";
 import { detectSellNowCandidates } from "../services/portfolioiq/sellNowRadarAnalyze.service.js";
@@ -34,6 +58,7 @@ router.use(requireSession);
  */
 router.get(
   "/sell-now-radar",
+  requireEntitlement("sellerIntelligence"),
   requireRateLimited("priceChecksPerDay"),
   async (req, res, next) => {
     try {
@@ -64,6 +89,7 @@ router.get(
  */
 router.get(
   "/notable-sales",
+  requireEntitlement("sellerIntelligence"),
   requireRateLimited("priceChecksPerDay"),
   async (req, res, next) => {
     try {

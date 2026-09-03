@@ -232,8 +232,9 @@ async function fetchPoolRows(
   windowDays: number,
   nowMs: number,
   hobbyiqCardIds: readonly string[] | null = null,
+  asOfMs: number | null = null,
 ): Promise<RawCompRow[] | null> {
-  const resources = await readExactPoolRows({ cardId, hobbyiqCardId, hobbyiqCardIds, windowDays, nowMs });
+  const resources = await readExactPoolRows({ cardId, hobbyiqCardId, hobbyiqCardIds, windowDays, nowMs, asOfMs });
   if (resources === null) return null;
   const raw = resources.filter((r) => Number.isFinite(r.price) && r.price > 0 && !!r.soldAt);
   // CF-DEDUPE-SOLD-COMPS (2026-08-22). One sale arrives up to three times —
@@ -279,8 +280,9 @@ async function queryComps(
   nowMs: number,
   excludeContributorUserId?: string | null,
   hobbyiqCardIds: readonly string[] | null = null,
+  asOfMs: number | null = null,
 ): Promise<RawCompRow[] | null> {
-  const rows = await fetchPoolRows(cardId, hobbyiqCardId, windowDays, nowMs, hobbyiqCardIds);
+  const rows = await fetchPoolRows(cardId, hobbyiqCardId, windowDays, nowMs, hobbyiqCardIds, asOfMs);
   return rows === null ? null : applySelfCompRule(rows, excludeContributorUserId);
 }
 
@@ -460,9 +462,22 @@ export async function computeUnifiedPrice(
     // longer reads the Raw pool at 180d while the headline read it at 60d.
     // When set, fixedWindowDays is ignored (the read is always 180d).
     perTierWindows?: boolean;
+    // CF-AS-OF-IS-AN-UPPER-BOUND (#1651, the engine backtest, 2026-09-02).
+    // Evaluate the engine as of a PAST instant: `nowMs` below becomes this
+    // value, so every window, weight, half-life, trend cutoff and confidence
+    // decay in this module reckons from it — this module was already fully
+    // nowMs-threaded, so one substitution moves the whole computation — and
+    // the pool read additionally refuses any row at or after it.
+    //
+    // Undefined in production, where nowMs is the wall clock and the read has
+    // no ceiling, exactly as before.
+    asOfMs?: number | null;
   } = {},
 ): Promise<UnifiedPriceResult> {
-  const nowMs = Date.now();
+  const asOfMs = typeof opts.asOfMs === "number" && Number.isFinite(opts.asOfMs) ? opts.asOfMs : null;
+  // The engine's single clock. In a backtest it is the evaluation instant, so
+  // "30 days of sales" means the 30 days before THAT point, not before today.
+  const nowMs = asOfMs ?? Date.now();
   const empty: UnifiedPriceResult = {
     cardId,
     fmv: null,
@@ -522,7 +537,7 @@ export async function computeUnifiedPrice(
   // D22: the cascade's path per tier, for the basis ("60d n=1, 90d n=1, 180d n=2").
   const tierWindowNotes = new Map<string, string>();
   if (opts.perTierWindows) {
-    const all = await fetchPoolRows(cardId, opts.hobbyiqCardId ?? null, maxWindow, nowMs, opts.hobbyiqCardIds ?? null);
+    const all = await fetchPoolRows(cardId, opts.hobbyiqCardId ?? null, maxWindow, nowMs, opts.hobbyiqCardIds ?? null, asOfMs);
     if (all === null || all.length === 0) return empty;
     const withinWindow = new Map<number, RawCompRow[]>();
     const rowsWithin = (days: number): RawCompRow[] => {
@@ -558,13 +573,13 @@ export async function computeUnifiedPrice(
     comps = rowsWithin(selectedWindow);
   } else if (opts.fixedWindowDays && opts.fixedWindowDays > 0) {
     selectedWindow = opts.fixedWindowDays;
-    const rows = await queryComps(cardId, opts.hobbyiqCardId ?? null, selectedWindow, nowMs, opts.excludeContributorUserId ?? null, opts.hobbyiqCardIds ?? null);
+    const rows = await queryComps(cardId, opts.hobbyiqCardId ?? null, selectedWindow, nowMs, opts.excludeContributorUserId ?? null, opts.hobbyiqCardIds ?? null, asOfMs);
     if (rows === null) return empty;
     comps = rows;
   } else {
     const path: string[] = [];
     for (const w of WINDOWS) {
-      const rows = await queryComps(cardId, opts.hobbyiqCardId ?? null, w.days, nowMs, opts.excludeContributorUserId ?? null, opts.hobbyiqCardIds ?? null);
+      const rows = await queryComps(cardId, opts.hobbyiqCardId ?? null, w.days, nowMs, opts.excludeContributorUserId ?? null, opts.hobbyiqCardIds ?? null, asOfMs);
       if (rows === null) return empty;
       comps = rows;
       // If a specific tier was requested, measure density on THAT tier

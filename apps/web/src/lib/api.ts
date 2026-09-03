@@ -3741,6 +3741,53 @@ export async function deleteBuyerIqTarget(targetId: string): Promise<{ success: 
   });
 }
 
+// ─── CF-USER-PRICE-ALERTS (Drew, 2026-09-02) ────────────────────────────────
+// Per-holding "tell me when this card moves N%" rules. One rule per holding;
+// PUT is an upsert keyed by holdingId, matching the backend's storage rule.
+
+export type HoldingMoveDirection = "up" | "down" | "any";
+
+export interface HoldingMoveRule {
+  ruleId: string;
+  userId: string;
+  holdingId: string;
+  thresholdPct: number;
+  direction: HoldingMoveDirection;
+  windowHours: number;
+  isActive: boolean;
+  createdAt: string;
+  lastFiredValue: number | null;
+  lastFiredAt: string | null;
+  triggerCount: number;
+}
+
+export async function fetchHoldingMoveRule(
+  holdingId: string,
+): Promise<{ success: boolean; rule: HoldingMoveRule | null; dailyCap: number }> {
+  return await request(`/api/alerts/holding-moves/${encodeURIComponent(holdingId)}`);
+}
+
+export async function saveHoldingMoveRule(
+  holdingId: string,
+  body: {
+    thresholdPct: number;
+    direction: HoldingMoveDirection;
+    windowHours: number;
+    isActive?: boolean;
+  },
+): Promise<{ success: boolean; rule: HoldingMoveRule }> {
+  return await request(`/api/alerts/holding-moves/${encodeURIComponent(holdingId)}`, {
+    method: "PUT",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function deleteHoldingMoveRule(holdingId: string): Promise<{ success: boolean }> {
+  return await request(`/api/alerts/holding-moves/${encodeURIComponent(holdingId)}`, {
+    method: "DELETE",
+  });
+}
+
 // ─── BuyerIQ deal scanner ─────────────────────────────────────────────
 // Backend: GET /api/buyeriq/deals (buyeriq.routes.ts → dealFeed.service).
 // Live asks compared against each card's canonical projected next sale.

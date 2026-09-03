@@ -34,7 +34,10 @@ import {
 // pool through the ONE valuation entry (holdingValuation → valueIdentity).
 import { valueHoldingThroughOneEntry, holdingGrade as holdingGradeOf } from "./holdingValuation.js";
 import { isPriceFromOurPoolEnabled, priceHoldingFromOurPool } from "./priceFromOurPool.service.js";
-import { composeHoldingWireShape, composePortfolioListResponse } from "./responseAssembly.js";
+import { composeHoldingWireShape, composePortfolioListResponse, type WireEntitlements } from "./responseAssembly.js";
+// CF-PRO-SELLER-GATE (Drew, 2026-09-02): the wire composer gates paid fields
+// on the caller's effective plan; these are the single authority for that.
+import { effectivePlanFor, hasEntitlement } from "../../config/entitlements.js";
 // CF-PORTFOLIO-REFRESH-ASYNC (2026-08-31): background-run tracker for the
 // dispatched batch reprice. Progress state only — never a price.
 import * as repriceJobs from "./repriceJobTracker.js";
@@ -445,7 +448,14 @@ interface PortfolioAlert {
     // driver that turns action-recommendations into a push-notification
     // product. Fires only on meaningful flips (SELL_NOW / HOLD entry),
     // never on LIST↔LIST or transitions in/out of INSUFFICIENT_DATA.
-    | "recommendation-flip";
+    | "recommendation-flip"
+    // CF-USER-PRICE-ALERTS (Drew, 2026-09-02): rule-driven per-holding move.
+    // DISTINCT from "value-move" on purpose. The legacy 10%/18% emitter and
+    // this one can both fire on the SAME holding in one reprice pass, and
+    // addAlert dedups on (holdingId, type) within 6h — sharing the type let
+    // the legacy row win and silently dropped the user's rule row (its rule
+    // text, basis and speculative label) from the feed. Own type, own row.
+    | "holding-move-rule";
   createdAt: string;
   holdingId: string;
   playerName: string;
@@ -5046,6 +5056,29 @@ async function requireUser(req: Request, res: Response): Promise<{ userId: strin
 }
 
 /**
+ * CF-PRO-SELLER-GATE (Drew, 2026-09-02). Resolve the paid-field entitlements
+ * for this request, for the wire composer.
+ *
+ * Reads req.user, which requireSession attached, and answers through the ONE
+ * authority — hasEntitlement() over the matrix, on the EFFECTIVE plan so a
+ * comped owner (entitlementOverride) is entitled here exactly as they are at
+ * every middleware gate. Reading `user.plan` directly instead would give
+ * comped owners a UI-unlocked / wire-stripped half-state, which is the bug
+ * effectivePlanFor exists to prevent.
+ *
+ * No req.user (a caller that reached a handler without requireSession) →
+ * not entitled. Denying on absence keeps the failure mode "paid field
+ * missing", never "paid field leaked to an unauthenticated caller".
+ */
+export function wireEntitlementsFor(req: Request): WireEntitlements {
+  const user = req.user;
+  if (!user) return { sellSignalEntitled: false };
+  return {
+    sellSignalEntitled: hasEntitlement(effectivePlanFor(user), "sellerIntelligence"),
+  };
+}
+
+/**
  * CF-PAYMENTS-A: count helper exposed for the requireCapacity middleware.
  * Reads UserDoc and returns the current number of holdings keys; used to
  * enforce holdingsCap on POST /api/portfolio/holdings before the new row
@@ -5121,7 +5154,7 @@ export async function getHoldings(req: Request, res: Response) {
   const items = includePending
     ? allItems
     : allItems.filter((h) => (h as any).cardStatus !== "pending-review");
-  const holdings = composePortfolioListResponse(items);
+  const holdings = composePortfolioListResponse(items, undefined, wireEntitlementsFor(req));
   res.json({ userId: auth.userId, count: holdings.length, holdings });
 }
 
@@ -5146,7 +5179,7 @@ export async function getPortfolioBreakdown(req: Request, res: Response) {
   const items = Object.values(doc.holdings).filter(
     (h) => (h as any).cardStatus !== "pending-review",
   );
-  const holdings = composePortfolioListResponse(items);
+  const holdings = composePortfolioListResponse(items, undefined, wireEntitlementsFor(req));
   const { analyzePortfolio, analyzeWithCustomTiers } = await import("./portfolioAnalytics.service.js");
 
   // CF-CUSTOM-TIERS (2026-08-17): when the user has defined their own buckets,
@@ -5220,7 +5253,7 @@ export async function getPendingReviewHoldings(req: Request, res: Response) {
   const items = Object.values(doc.holdings).filter(
     (h) => (h as any).cardStatus === "pending-review",
   );
-  const holdings = composePortfolioListResponse(items);
+  const holdings = composePortfolioListResponse(items, undefined, wireEntitlementsFor(req));
   res.json({ userId: auth.userId, count: holdings.length, holdings });
 }
 
@@ -5419,7 +5452,7 @@ export async function getPortfolioWithSummary(req: Request, res: Response) {
   // CF-PORTFOLIOHOLDING-FIELD-PRUNE Phase B: route through anti-corruption
   // layer; explicit wire-shape per contract_freeze_v1 §1.3. summary still
   // reads off raw holdings (uses Phase A compute-on-read helpers).
-  const items = composePortfolioListResponse(rawItems, catalogImageByCardId);
+  const items = composePortfolioListResponse(rawItems, catalogImageByCardId, wireEntitlementsFor(req));
   // CF-PORTFOLIO-REFRESH-ASYNC (2026-08-31): the refresh is now asynchronous,
   // so this payload can legitimately be answered while a reprice is still in
   // flight. Values here are ALWAYS the last persisted ones — this endpoint
@@ -5560,7 +5593,7 @@ export async function getPortfolioOpportunities(req: Request, res: Response) {
     };
     await Promise.all(Array.from({ length: CONCURRENCY }, () => worker()));
   }
-  const wires = composePortfolioListResponse(rawItems, catalogImageByCardId);
+  const wires = composePortfolioListResponse(rawItems, catalogImageByCardId, wireEntitlementsFor(req));
 
   const sellNow: typeof wires = [];
   const hold: typeof wires = [];
@@ -6345,7 +6378,7 @@ export async function getHoldingById(req: Request, res: Response) {
   // CF-PORTFOLIOHOLDING-FIELD-PRUNE Phase B: route through anti-corruption
   // layer; this endpoint runs no estimate, so β fields are null here too.
   // iOS detail-view β richness comes from POST /api/compiq/*.
-  res.json(composeHoldingWireShape(holding));
+  res.json(composeHoldingWireShape(holding, undefined, wireEntitlementsFor(req)));
 }
 
 export async function updateHolding(req: Request, res: Response) {
@@ -6593,7 +6626,7 @@ export async function updateHolding(req: Request, res: Response) {
   // matches what it sent. Prevents "I changed to Raw but it still shows
   // PSA 10" symptoms where iOS was relying on a refetch that raced or
   // never fired. Legacy {message, id} still present for existing consumers.
-  const holdingWire = composeHoldingWireShape(doc.holdings[id]);
+  const holdingWire = composeHoldingWireShape(doc.holdings[id], undefined, wireEntitlementsFor(req));
   res.json({ message: "Holding updated", id, holding: holdingWire, entry: { holding: holdingWire } });
 
   // CF-CARD-SAVE-FAST: the user's Save has returned. Everything below is the
@@ -6932,7 +6965,7 @@ export async function regradeHolding(req: Request, res: Response) {
   // across all mutation routes. `updatedHolding` preserved for existing
   // consumers; `holding` + `entry.holding` are the new parity fields
   // matching PATCH /holdings and confirm/reject flows.
-  const regradedWire = composeHoldingWireShape(doc.holdings[id]);
+  const regradedWire = composeHoldingWireShape(doc.holdings[id], undefined, wireEntitlementsFor(req));
   return res.json({
     message: "Holding regraded",
     id,
@@ -8088,7 +8121,7 @@ export async function sellHolding(req: Request, res: Response) {
   // remaining holding when qty remains so iOS reflects the new state
   // without a refetch. holdingRemoved=true means the row is gone — no
   // holding field then.
-  const remainingHolding = remainingQty > 0 ? composeHoldingWireShape(doc.holdings[id]) : null;
+  const remainingHolding = remainingQty > 0 ? composeHoldingWireShape(doc.holdings[id], undefined, wireEntitlementsFor(req)) : null;
   return res.json({
     message: "Holding sale recorded",
     sold: ledgerEntry,
@@ -9197,7 +9230,7 @@ export async function addHeldExpenseHandler(req: Request, res: Response) {
     return res.status(400).json({ success: false, error: result.reason });
   }
   // CF-MUTATION-ENVELOPE-PARITY (2026-07-12): entry.holding for iOS decoder.
-  const holdingWire = result.holding ? composeHoldingWireShape(result.holding) : null;
+  const holdingWire = result.holding ? composeHoldingWireShape(result.holding, undefined, wireEntitlementsFor(req)) : null;
   res.status(201).json({
     success: true,
     expense: result.expense,
@@ -9220,7 +9253,7 @@ export async function deleteHeldExpenseHandler(req: Request, res: Response) {
     return res.status(404).json({ success: false, error: "Expense not found" });
   }
   // CF-MUTATION-ENVELOPE-PARITY (2026-07-12): entry.holding for iOS decoder.
-  const holdingWire = result.holding ? composeHoldingWireShape(result.holding) : null;
+  const holdingWire = result.holding ? composeHoldingWireShape(result.holding, undefined, wireEntitlementsFor(req)) : null;
   res.json({
     success: true,
     holding: holdingWire,
@@ -9262,7 +9295,7 @@ export async function refreshHolding(req: Request, res: Response) {
   await writeUserDoc(auth.userId, doc);
   // CF-MUTATION-ENVELOPE-PARITY (2026-07-12): return the refreshed holding
   // so iOS shows the new price without a refetch.
-  const refreshedWire = composeHoldingWireShape(doc.holdings[id]);
+  const refreshedWire = composeHoldingWireShape(doc.holdings[id], undefined, wireEntitlementsFor(req));
   res.json({
     message: "Holding refreshed",
     id,
@@ -9529,6 +9562,21 @@ export async function repriceHoldingsForUser(
   // `continue`; the previous value is the one thing they all overwrite.
   const priorFmv = new Map<string, number | null>();
   for (const h of candidates) priorFmv.set(h.id, perUnitFmvForSwing(h));
+
+  // CF-USER-PRICE-ALERTS (Drew, 2026-09-02): the pre-cycle (value, rung) pair
+  // per holding, for the post-write move-alert sweep below. The rung is
+  // captured HERE, alongside priorFmv, for the same reason priorFmv is: the
+  // dozen write sites in the loop each overwrite it, and a move alert has to
+  // know whether BOTH ends of its comparison read the exact pool before it
+  // can call the move observed.
+  const priorAlertState = new Map<string, { fairMarketValue: number | null; fmvRung: string | null; lastUpdated: string | number | null }>();
+  for (const h of candidates) {
+    priorAlertState.set(h.id, {
+      fairMarketValue: typeof h.fairMarketValue === "number" ? h.fairMarketValue : null,
+      fmvRung: (h as { fmvRung?: string | null }).fmvRung ?? null,
+      lastUpdated: (h as { lastUpdated?: string | number | null }).lastUpdated ?? null,
+    });
+  }
 
   for (const holding of candidates) {
     // CF-EBAY-REVIEW-QUEUE (2026-07-12): skip pending-review rows. Those
@@ -10521,6 +10569,86 @@ export async function repriceHoldingsForUser(
       });
     }
   }
+
+  // CF-USER-PRICE-ALERTS (Drew, 2026-09-02): "tell me when my card moves N%".
+  //
+  // POST-VALUATION, NEVER INSIDE IT. Every holding in `updates` has already
+  // been priced and written into `doc.holdings` by the loop above; this sweep
+  // only READS the resulting (fairMarketValue, fmvRung) pair and compares it
+  // to the pre-cycle pair captured in `priorAlertState`. It calls no pricing
+  // entry point, and the whole block is wrapped so a Cosmos blip or an APNs
+  // failure can never fail a reprice that already succeeded.
+  //
+  // It sits immediately BEFORE writeUserDoc, not after it, because the feed
+  // rows it appends to `doc.alerts` have to land in the same persist as the
+  // prices they describe. (The telemetry-only sweeps below the write can
+  // safely run after it; this one mutates the doc, so it cannot.)
+  //
+  // Only holdings the user has an ACTIVE rule on cost anything: the context
+  // build is one query per user per pass and returns null when there are no
+  // rules, which is the overwhelmingly common case.
+  try {
+    const { buildHoldingMoveAlertContext, evaluateHoldingMoveAlert } = await import(
+      "../advancedAlerts/holdingMoveEvaluator.service.js"
+    );
+    const moveCtx = await buildHoldingMoveAlertContext(userId);
+    if (moveCtx) {
+      for (const u of updates) {
+        if (u.status !== "repriced") continue;
+        const h = doc.holdings[u.id];
+        if (!h) continue;
+        if (!moveCtx.rules.has(String(u.id))) continue;
+        const outcome = await evaluateHoldingMoveAlert(
+          moveCtx,
+          {
+            id: String(h.id),
+            playerName: (h as { playerName?: string | null }).playerName ?? null,
+            cardTitle: (h as { cardTitle?: string | null }).cardTitle ?? null,
+            fairMarketValue: typeof h.fairMarketValue === "number" ? h.fairMarketValue : null,
+            fmvRung: (h as { fmvRung?: string | null }).fmvRung ?? null,
+            lastUpdated: (h as { lastUpdated?: string | number | null }).lastUpdated ?? null,
+          },
+          priorAlertState.get(u.id),
+        );
+        // The feed row rides the same `doc.alerts` array as every other
+        // portfolio alert, so the web bell and the iOS feed pick it up with
+        // no second store. The type is "holding-move-rule", NOT "value-move":
+        // the legacy 10%/18% emitter runs earlier in THIS SAME pass and writes
+        // "value-move" for the same holding, and addAlert dedups on
+        // (holdingId, type) within 6h — sharing the type meant the legacy row
+        // won and the user's rule row (rule text, basis, speculative label)
+        // was silently dropped. Distinct type, so both rows land.
+        if (outcome?.feedAlert) {
+          addAlert(doc, {
+            level: outcome.feedAlert.level,
+            type: "holding-move-rule",
+            holdingId: outcome.feedAlert.holdingId,
+            playerName: outcome.feedAlert.playerName,
+            cardTitle: outcome.feedAlert.cardTitle,
+            message: outcome.feedAlert.message,
+            context: outcome.feedAlert.context,
+          });
+        }
+      }
+      if (moveCtx.fired > 0 || Object.keys(moveCtx.suppressed).length > 0) {
+        console.log(JSON.stringify({
+          event: "holding_move_alerts_pass",
+          source: "portfolioStore.repriceHoldingsForUser",
+          repriceSource: source,
+          userId,
+          rules: moveCtx.rules.size,
+          fired: moveCtx.fired,
+          suppressed: moveCtx.suppressed,
+          dailyCount: moveCtx.dailyCount,
+        }));
+      }
+    }
+  } catch (err: any) {
+    console.warn(
+      `[holding.move.alert] sweep failed user=${userId}: ${err?.message ?? err}`,
+    );
+  }
+
 
   await writeUserDoc(userId, doc);
   _lastRepriceAt.set(userId, Date.now());
