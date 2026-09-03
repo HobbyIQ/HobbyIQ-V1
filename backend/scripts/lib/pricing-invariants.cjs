@@ -443,6 +443,42 @@ function checkIdentityCoherence(holding, poolRows) {
 function checkRungHonesty(holding, shadow, leaf) {
   const rung = typeof holding.fmvRung === "string" && holding.fmvRung ? holding.fmvRung : null;
   const violations = [];
+
+  // CF-A-MISSING-KEY-IS-A-FINDING (C-7, 2026-09-03). This check used to
+  // `return []` the moment a holding had no rung — so the 53 holdings that
+  // carried a stored value and NO `fmvRung` key at all were not merely
+  // unflagged, they were the one shape the auditor could never see. A detector
+  // whose blind spot is "the writer never labelled it" cannot find an
+  // unlabelled writer.
+  //
+  // The three states are now distinguished, and only the middle one is silent:
+  //   - a value with NO rung key       -> a legacy writer wrote it (RED)
+  //   - a value with fmvRung === null  -> a lane that HONESTLY names no rung
+  //                                       (the resolver fallback, the ladder);
+  //                                       null is a statement, not an absence
+  //   - a value with a rung string     -> checked against the shadow below
+  //
+  // Absence of `valueSource` is folded into the same finding rather than its
+  // own: the two keys are written together by every non-legacy writer, so one
+  // missing key and both missing keys have the same cause and the same fix.
+  const hasValue = typeof holding.fairMarketValue === "number" && holding.fairMarketValue > 0;
+  const rungKeyAbsent = !("fmvRung" in holding);
+  const valueSourceAbsent = !("valueSource" in holding)
+    || holding.valueSource === null
+    || holding.valueSource === undefined;
+  if (hasValue && (rungKeyAbsent || valueSourceAbsent)) {
+    const missing = [
+      rungKeyAbsent ? "fmvRung" : null,
+      valueSourceAbsent ? "valueSource" : null,
+    ].filter(Boolean);
+    violations.push({
+      kind: "value-carries-no-rung",
+      detail: `holding stores fairMarketValue=${holding.fairMarketValue} but carries no ${missing.join(" and no ")} key — written by a legacy writer that never named its rung, so no rung gate can classify it (source=${holding.source ?? "(none)"}, cardStatus=${holding.cardStatus ?? "(none)"})`,
+      rung: null,
+      shadowRung: shadow.rung,
+    });
+  }
+
   if (rung === null) return violations;
   if (!leaf.isExactPoolRung(rung)) return violations;
 

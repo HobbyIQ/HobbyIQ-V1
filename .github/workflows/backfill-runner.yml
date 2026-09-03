@@ -82,6 +82,7 @@ on:
           - ingest-product-checklist
           - ingest-2026-bowman-auto-checklist
           - reprice-user-holdings
+          - reap-orphan-price-trails
           - backfill-cardsight-title-identity
           - backfill-canonicalize-chrome-slugs
           - backfill-catalog-driven-canonicalize
@@ -950,7 +951,21 @@ jobs:
           RETIRE_NO_PARTITION_KEY: ${{ inputs.retire_no_partition_key == true && 'true' || 'false' }}
           # CF-REPRICE-USER-HOLDINGS: pin Drew's userId + enable composite path
           # so the reprice writes new v2-calibrated FMVs.
-          REPRICE_USER_ID: user-199fcbc9-58ba-4643-a0c9-f75bcbc90bd4
+          #
+          # CF-A-PINNED-USER-CANNOT-BE-EVERY-USER (C-2, 2026-09-03). This was
+          # an unconditional pin, and reprice-user-holdings reads MODE=all to
+          # sweep EVERY user -- so the nightly cadence lane would have set out
+          # to reprice the whole corpus with one userId nailed to the env. The
+          # script prefers REPRICE_USER_ID over MODE, so the pin wins and the
+          # sweep silently becomes a single-user run that reports success.
+          #
+          # The pin now yields whenever a mode is named: mode=all is the
+          # corpus sweep and carries no user, any other dispatch keeps Drew's
+          # id as the default it always was. reap-orphan-price-trails reads the
+          # same var as its optional one-user scope, and gets the same
+          # treatment for the same reason -- the corpus repair must not be
+          # quietly narrowed to one doc.
+          REPRICE_USER_ID: ${{ inputs.mode == '' && 'user-199fcbc9-58ba-4643-a0c9-f75bcbc90bd4' || '' }}
           HOBBYIQFMV_COMPOSITE_ENABLED: "true"
           # CF-NODE-HEAP-8G (Drew, 2026-08-02). dedupe-catalog-by-hobbyiq
           # crashed at ~2M rows scanned with "JavaScript heap out of memory"

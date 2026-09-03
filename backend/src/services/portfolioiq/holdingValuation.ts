@@ -101,6 +101,9 @@ export function observedHoldingWrite(holding: PortfolioHolding, v: Valuation, no
     ...holding,
     fairMarketValue: fmv,
     fmvRung: v.rungLabel,
+    // C-7: the kind of evidence, alongside the ladder step. Observed = real
+    // comps in the exact pool; this is the branch that requires them.
+    valueSource: "observed",
     predictedPrice: v.predictedPrice ?? fmv,
     predictedPriceLow: null,
     predictedPriceHigh: null,
@@ -134,6 +137,9 @@ export function gradeCurveEstimateHoldingWrite(holding: PortfolioHolding, v: Val
     ...holding,
     fairMarketValue: fmv,
     fmvRung: "grade-curve-estimate",
+    // C-7: derived from this identity's OTHER tiers via the empirical ratio —
+    // never comps of this tier, so it can never claim "observed".
+    valueSource: "estimated",
     predictedPrice: v.predictedPrice ?? fmv,
     predictedPriceLow: null,
     predictedPriceHigh: null,

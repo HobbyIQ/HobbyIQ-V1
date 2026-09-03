@@ -4765,6 +4765,37 @@ export function capPriceHistoryByClass<T extends { valuationStatus?: "observed" 
   }
   return points.filter((_, i) => keep[i]);
 }
+/**
+ * CF-A-DELETED-HOLDING-KEEPS-NO-TRAIL (H-9, 2026-09-03). `priceHistoryByHolding`
+ * is keyed by holding id, and nothing ever removed an entry when the holding it
+ * belongs to was deleted — so every delete leaked its whole trail into the user
+ * doc forever.
+ *
+ * Measured on prod the day this shipped: 250 orphaned trails corpus-wide
+ * carrying 16,246 of 24,055 stored points (67.5%), and `user-199fcbc9`'s doc at
+ * 1,963,908 of the 2,097,152-byte Cosmos ceiling (93.7%) with 238 of its 281
+ * trails orphaned. At the ceiling every reprice AND every holding edit for that
+ * user fails. The per-class caps from #1627 bound a LIVE holding's trail; they
+ * bound nothing at all once the holding is gone.
+ *
+ * Every `delete doc.holdings[id]` in this codebase pairs with this call. It is
+ * deliberately keyed off the one id being deleted rather than sweeping the map:
+ * a sweep in the delete path would also reap a trail whose holding is being
+ * re-keyed in the same tick (the sell and trade lanes both delete and re-add).
+ * The corpus-wide sweep for trails ALREADY orphaned is the repair script,
+ * `backend/scripts/reap-orphan-price-trails.cjs`, which is report-first and
+ * reconciled.
+ *
+ * Returns the number of points reaped so callers can report a number rather
+ * than assert a success.
+ */
+export function reapPriceTrail(doc: UserDoc, holdingId: string): number {
+  const trail = doc.priceHistoryByHolding?.[holdingId];
+  if (!Array.isArray(trail)) return 0;
+  const points = trail.length;
+  delete doc.priceHistoryByHolding[holdingId];
+  return points;
+}
 
 function addAlert(doc: UserDoc, alert: Omit<PortfolioAlert, "id" | "createdAt">): void {
   const now = new Date().toISOString();
@@ -7328,6 +7359,8 @@ export async function deleteHolding(req: Request, res: Response) {
     }
   }
 
+  // H-9: the trail dies with the holding it belongs to (reapPriceTrail).
+  reapPriceTrail(doc, id);
   delete doc.holdings[id];
   await writeUserDoc(auth.userId, doc);
   res.json({ message: "Holding removed", id });
@@ -8069,6 +8102,8 @@ export async function sellHolding(req: Request, res: Response) {
 
   const remainingQty = quantityOwned - quantitySold;
   if (remainingQty <= 0) {
+    // H-9: fully sold out — the holding goes, and so does its trail.
+    reapPriceTrail(doc, id);
     delete doc.holdings[id];
   } else {
     const updatedCostBasis = avgUnitCost * remainingQty;
@@ -8445,6 +8480,8 @@ export async function markHoldingSoldFromEbay(
   // 6. Mutate holding state (mirrors sellHolding).
   const remainingQty = quantityOwned - quantitySold;
   if (remainingQty <= 0) {
+    // H-9: mirrors sellHolding — the trail dies with the holding.
+    reapPriceTrail(doc, canonicalHoldingId);
     delete doc.holdings[canonicalHoldingId];
   } else {
     const updatedCostBasis = avgUnitCost * remainingQty;
@@ -8704,6 +8741,9 @@ export async function recordTradeTransaction(
 
   // Mutate doc atomically.
   for (const o of outgoingResolved) {
+    // H-9: an outgoing side of a trade is gone; its trail goes with it. The
+    // incoming holdings below are NEW ids and start their own trails.
+    reapPriceTrail(doc, o.holding.id);
     delete doc.holdings[o.holding.id];
   }
   for (const h of newHoldings) {
