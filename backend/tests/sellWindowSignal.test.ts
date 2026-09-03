@@ -237,6 +237,63 @@ describe("sell-window: refusal is a result, and it names what was missing", () =
     assertHorizonDoctrine(sig);
   });
 
+  // ── CF-SELL-WINDOW-READS-PRICING-CONFIDENCE pins (2026-09-03) ──────────
+  //
+  // The signal gates on, and quotes to the user, the PRICING confidence. It
+  // used to read the holding's flat `confidence` field — identity/match
+  // confidence on unified-engine rows, and saturated to exactly 1.0 by the
+  // scaling defect fixed in the same PR. Two things are pinned here: that a
+  // real pricing confidence beats a flat 1.0, and that an UNRECORDED one is
+  // never silently treated as full confidence.
+
+  it("gates on the engine's pricing confidence, not a flat 1.0 identity score", () => {
+    // The exact defect shape: flat confidence 1.0 (saturated), real pricing
+    // confidence 0.30 — under the 0.35 floor. The gate must use 0.30.
+    const sig = deriveSellWindowSignal({
+      trendIQ: trend(playerMomentum(0.96, ["falling"]), cardTrajectory(1.11)),
+      confidence: 0.30,
+      trendUpdatedAt: FRESH,
+      nowMs: NOW,
+    });
+    expect(sig.signal).toBe("none");
+    expect(sig.reason).toBe("low-confidence");
+    // The percentage quoted is the pricing confidence, not 100%.
+    expect(sig.basis).toContain("30%");
+    expect(sig.basis).not.toContain("100%");
+    expect(sig.measures.confidence).toBe(0.30);
+    assertHorizonDoctrine(sig);
+  });
+
+  it("withholds the timing call when pricing confidence is not recorded, claiming no percentage", () => {
+    // null = not yet stamped by a reprice. Never 100%. The trend shape here
+    // is the FIRING one, so this proves the refusal is the confidence gate
+    // and not some other bar.
+    const sig = deriveSellWindowSignal({
+      trendIQ: trend(playerMomentum(0.96, ["falling"]), cardTrajectory(1.11)),
+      confidence: null,
+      trendUpdatedAt: FRESH,
+      nowMs: NOW,
+    });
+    expect(sig.signal).toBe("none");
+    expect(sig.reason).toBe("unknown-confidence");
+    expect(sig.measures.confidence).toBeNull();
+    // It must not claim a number it does not have.
+    expect(sig.basis).not.toMatch(/\d+%/);
+    expect(sig.basis).toContain("not been recorded");
+    assertHorizonDoctrine(sig);
+  });
+
+  it("an omitted confidence is treated as unrecorded, not as full confidence", () => {
+    const sig = deriveSellWindowSignal({
+      trendIQ: trend(playerMomentum(0.96, ["falling"]), cardTrajectory(1.11)),
+      trendUpdatedAt: FRESH,
+      nowMs: NOW,
+    });
+    expect(sig.signal).toBe("none");
+    expect(sig.reason).toBe("unknown-confidence");
+    assertHorizonDoctrine(sig);
+  });
+
   it("refuses with no trend at all", () => {
     const sig = deriveSellWindowSignal({ trendIQ: null, nowMs: NOW });
     expect(sig.signal).toBe("none");

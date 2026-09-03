@@ -1262,6 +1262,36 @@ function toNumber(value: unknown, fallback = 0): number {
   return Number.isFinite(num) ? num : fallback;
 }
 
+/**
+ * CF-PRICING-CONFIDENCE-SCALE (2026-09-03).
+ *
+ * Convert a CompIqEstimate `confidence.pricingConfidence` into the 0..1 scale
+ * the holding's flat `confidence` field is declared on.
+ *
+ * THE CONTRACT, made explicit because getting it wrong is silent:
+ *
+ *   input  — 0..100. This is the declared type (`compiq.types.ts`:
+ *            `confidence.pricingConfidence: number`) and what every producer
+ *            in compiqEstimate.service.ts emits: the literal rungs 0, 15, 25,
+ *            40, 55, and the calibrated value at ~7491 which is explicitly
+ *            clamped `Math.min(100, ...)` then tier-capped. The routes have
+ *            always read it as percent (`(pricingConfidence ?? 60) / 100`).
+ *   output — 0..1, clamped, or null when the input is not a usable number.
+ *
+ * We do NOT sniff the scale. A value of 0.37 on the wire is 0.37 PERCENT, not
+ * 37% — the one producer that emits a sub-1 value (the variant-mismatch branch
+ * at compiqEstimate.service.ts ~6007, `pricingConfidence: 0.2`) means "almost
+ * no confidence", so scaling it to 0.002 and letting it fall under every
+ * downstream floor is the correct, honest reading. Auto-detecting "looks
+ * already scaled" would silently promote that 0.2 to 20% and would make the
+ * function's output depend on the magnitude of its input, which is exactly the
+ * class of bug this replaces.
+ */
+export function scalePricingConfidence(raw: unknown): number | null {
+  if (typeof raw !== "number" || !Number.isFinite(raw)) return null;
+  return Math.min(1, Math.max(0, raw / 100));
+}
+
 function toIso(value: unknown, fallback = new Date()): string {
   if (typeof value === "string") {
     const d = new Date(value);
@@ -4399,10 +4429,19 @@ async function autoPriceHolding(
     // (written before this PR) load as `undefined` for these fields; the
     // wire coerces `undefined` → `null` and iOS decoders bind defensively.
     trendIQ: (estimate as any)?.trendIQ ?? null,
-    confidence:
-      typeof (estimate as any)?.confidence?.pricingConfidence === "number"
-        ? Math.min(1, Math.max(0, (estimate as any).confidence.pricingConfidence))
-        : null,
+    // CF-PRICING-CONFIDENCE-SCALE (2026-09-03). `confidence.pricingConfidence`
+    // on a CompIqEstimate is 0..100 — that is the declared type (compiq.types.ts)
+    // and what every producer in compiqEstimate.service.ts emits (0/15/25/40/55,
+    // and the calibrated value clamped by `Math.min(100, ...)` at ~7491). The
+    // holding's flat `confidence` field is 0..1 (portfolioiq.types.ts).
+    //
+    // This line used to `Math.min(1, ...)` the 0..100 input instead of dividing
+    // by 100, so every confidence at or above 1 saturated to exactly 1.0 — a
+    // pricing confidence of 37 and one of 91 both persisted as "1". That is the
+    // origin of the flat-1.0 population (17 of 43 holdings in Drew's portfolio).
+    // compiq.routes.ts has always divided (`... ?? 60) / 100`); this writer did
+    // not. scalePricingConfidence makes the conversion explicit and shared.
+    confidence: scalePricingConfidence((estimate as any)?.confidence?.pricingConfidence),
     predictedPriceAttribution:
       (estimate as any)?.predictedPriceAttribution ?? null,
     verdict: String((estimate as any)?.verdict ?? holding.verdict ?? "Hold"),
