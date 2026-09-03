@@ -22,6 +22,16 @@
 // gets 402 subscription_required (the upgrade prompt) rather than 402
 // rate_limit_exceeded (which would tell them to come back tomorrow for
 // a feature they cannot have at any hour).
+//
+// PER-ROUTE, NOT router.use(). This router is mounted on the BARE
+// /api/portfolio prefix (app.ts), ahead of portfolioiqRoutes on the same
+// prefix. Express runs a router's `use` middleware for every request that
+// matches the MOUNT path, before deciding that none of this router's own
+// paths match and falling through to the next router. So a router-level
+// entitlement gate here would 402 the entire /api/portfolio tree —
+// GET /api/portfolio itself, /holdings, every mutation — turning a
+// field-level gate into a total lockout of the free tier. It did exactly
+// that, and proSellerFreeSurfacesUnchanged.test.ts caught it.
 
 import { Router } from "express";
 import { requireSession } from "../middleware/requireSession.js";
@@ -37,10 +47,6 @@ const router = Router();
 // endpoints below live here — no health / no public surface.
 router.use(requireSession);
 
-// CF-PRO-SELLER-GATE: paid-tier only. Router-level rather than per-route
-// so a future endpoint added to this file cannot be born ungated.
-router.use(requireEntitlement("sellerIntelligence"));
-
 /**
  * GET /api/portfolio/sell-now-radar
  *
@@ -52,6 +58,7 @@ router.use(requireEntitlement("sellerIntelligence"));
  */
 router.get(
   "/sell-now-radar",
+  requireEntitlement("sellerIntelligence"),
   requireRateLimited("priceChecksPerDay"),
   async (req, res, next) => {
     try {
@@ -82,6 +89,7 @@ router.get(
  */
 router.get(
   "/notable-sales",
+  requireEntitlement("sellerIntelligence"),
   requireRateLimited("priceChecksPerDay"),
   async (req, res, next) => {
     try {

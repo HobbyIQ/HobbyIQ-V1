@@ -119,6 +119,27 @@ describe("CF-PRO-SELLER-GATE — free surfaces this CF must NOT regress", () => 
     }
   });
 
+  // REGRESSION PIN. The first cut of this CF put the gate on
+  // sellRadarNotableSales.routes.ts as router.use(requireEntitlement(...)).
+  // That router is mounted on the BARE /api/portfolio prefix, and Express
+  // runs a router's `use` middleware for every request matching the MOUNT
+  // path — before deciding none of its own paths match and falling through
+  // to portfolioiqRoutes. The result was a 402 on the ENTIRE /api/portfolio
+  // tree for free users: a field-level gate turned into a total lockout.
+  // These assertions are what caught it; a per-route gate is the fix.
+  it("gating the sell-radar router does not 402 the whole /api/portfolio tree", async () => {
+    setUser(freeUser);
+    for (const path of [
+      "/api/portfolio",
+      "/api/portfolio/holdings",
+      "/api/portfolio/breakdown",
+      "/api/portfolio/opportunities",
+    ]) {
+      const r = await request(app).get(path).set("x-session-id", "s");
+      expect({ path, status: r.status }).toEqual({ path, status: 200 });
+    }
+  });
+
   it("the per-holding grade-arb look-at-my-own-card route is not swept into the gate", async () => {
     // /holdings/:id/grade-arb is a user asking about ONE card they own. The
     // ruling gates the portfolio-wide grade-arb SCAN the paid workspace
