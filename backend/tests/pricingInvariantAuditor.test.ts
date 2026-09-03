@@ -51,14 +51,29 @@ const sale = (over: Row = {}): Row => ({
   ...over,
 });
 
-/** A holding, priced. */
+/**
+ * A holding, priced.
+ *
+ * CF-A-HEALTHY-FIXTURE-CARRIES-THE-CONTRACT (C-8, 2026-09-03). This fixture
+ * had no `valueSource` key, and #1683 made a missing `valueSource` a
+ * RUNG-HONESTY finding — so EVERY holding this factory built became a
+ * violation, three tests in this suite went red, and the "value-carries-no-rung"
+ * signal fired on the healthy baseline as loudly as on a real defect. A
+ * detector that flags its own control is not a detector; it is noise, and it is
+ * why the four live holdings Drew found were not surfaced by this suite.
+ *
+ * A healthy holding now carries the full C-7 contract — a rung AND the kind of
+ * evidence behind it — so "healthy passes clean" means what it says, and the
+ * absence pins below fail for the one reason they are about.
+ */
 const holding = (over: Row = {}): Row => ({
   id: "9b971b03",
   hobbyiqCardId: CHROME,
   cardId: CHROME,
   fairMarketValue: 200,
   fmvRung: "exact-pool-projection",
-  pricingSourceMeta: { slug: CHROME, method: "unified-market-value", compsUsed: 4 },
+  valueSource: "observed",
+  pricingSourceMeta: { slug: CHROME, method: "unified-market-value", compsUsed: 4, confidence: 0.8 },
   gradeCompany: null,
   gradeValue: null,
   quantity: 1,
@@ -333,6 +348,95 @@ describe("SHAPE 6 — a self-comp is labeled, never the market alone (#1622)", (
       basisRows: [], poolRows: [],
     });
     expect(invariants(res)).not.toContain("RUNG-HONESTY");
+  });
+});
+
+// ── SHAPE 7: a value that names no source (C-7 / C-8) ───────────────────────
+
+/**
+ * The live shape this suite could not see.
+ *
+ * Holding 277b05a3 (Cal Ripken Jr., PSA 8), read read-only from prod after
+ * reprice run 33807265583 on deploy 6acd213 — the deploy that made
+ * `valueSource` required at every lane:
+ *
+ *     fairMarketValue  49.99
+ *     fmvRung          "exact-pool-weighted-median"     <- present and honest
+ *     valueSource      (key ABSENT)                     <- the defect
+ *     lastUpdated      2026-09-03T21:20:02Z
+ *
+ * A rung WITHOUT a valueSource is the interesting half, and it is the half
+ * that had no pin: the auditor's `value-carries-no-rung` check ORs the two key
+ * absences, so a test that only ever removed `fmvRung` leaves the
+ * `valueSourceAbsent` clause free to be deleted with the suite still green.
+ * These are mutation pins — each fails if its clause is removed from
+ * checkRungHonesty.
+ */
+describe("SHAPE 7 — a persisted value always names its source (C-7, holding 277b05a3)", () => {
+  /** `delete`, not `undefined`: the live defect is an ABSENT key. */
+  const without = (h: Row, key: string): Row => {
+    const next = { ...h };
+    delete next[key];
+    return next;
+  };
+
+  const healthyPool = [
+    sale({ id: "p1", price: 198, soldAt: daysAgo(5) }),
+    sale({ id: "p2", price: 202, soldAt: daysAgo(20) }),
+    sale({ id: "p3", price: 195, soldAt: daysAgo(40) }),
+  ];
+
+  it("a value with an honest rung but NO valueSource is RUNG-HONESTY", () => {
+    // The Ripken shape exactly: the rung is present, correct, and backed by a
+    // real pool — only `valueSource` is missing. Every other check passes, so
+    // this fails if and only if the valueSource clause is live.
+    const res = run(without(holding({ fairMarketValue: 200 }), "valueSource"), {
+      basisRows: healthyPool, poolRows: healthyPool,
+    });
+    expect(kinds(res)).toContain("value-carries-no-rung");
+    expect(invariants(res)).toContain("RUNG-HONESTY");
+    expect(res.findings.find((f: { kind: string }) => f.kind === "value-carries-no-rung").detail)
+      .toMatch(/valueSource/);
+  });
+
+  it("a null valueSource is as absent as a missing key — neither is a source", () => {
+    const res = run(holding({ fairMarketValue: 200, valueSource: null }), {
+      basisRows: healthyPool, poolRows: healthyPool,
+    });
+    expect(kinds(res)).toContain("value-carries-no-rung");
+  });
+
+  it("a value with NO fmvRung key is RUNG-HONESTY (the other clause)", () => {
+    const res = run(without(holding({ fairMarketValue: 200 }), "fmvRung"), {
+      basisRows: healthyPool, poolRows: healthyPool,
+    });
+    expect(kinds(res)).toContain("value-carries-no-rung");
+    expect(res.findings.find((f: { kind: string }) => f.kind === "value-carries-no-rung").detail)
+      .toMatch(/fmvRung/);
+  });
+
+  it("a value shown via estimatedValue counts — the collector sees a number either way", () => {
+    const res = run(
+      without(holding({ fairMarketValue: null, estimatedValue: 241, fmvRung: "rare-card-anchor" }), "valueSource"),
+      { basisRows: healthyPool, poolRows: healthyPool },
+    );
+    expect(kinds(res)).toContain("value-carries-no-rung");
+  });
+
+  it("a holding carrying BOTH keys is clean — the check is about absence, not about the rung", () => {
+    const res = run(holding({ fairMarketValue: 200, valueSource: "observed" }), {
+      basisRows: healthyPool, poolRows: healthyPool,
+    });
+    expect(kinds(res)).not.toContain("value-carries-no-rung");
+  });
+
+  it("an UNPRICED holding missing both keys is not a finding — there is no value to source", () => {
+    // The withhold path: fairMarketValue null, nothing shown to anyone. A
+    // finding here would flag every legitimately unpriced row in the corpus.
+    const res = run(without(holding({ fairMarketValue: null, estimatedValue: null }), "valueSource"), {
+      basisRows: [], poolRows: [],
+    });
+    expect(kinds(res)).not.toContain("value-carries-no-rung");
   });
 });
 

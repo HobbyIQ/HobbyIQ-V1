@@ -10836,13 +10836,102 @@ export async function repriceHoldingsForUser(
         // catalog identity fields even when they take the variant-mismatch
         // skip branch on every tick (which the canary on fcf7c59 showed
         // they do).
-        doc.holdings[holding.id] = {
-          ...holding,
-          ...repriceIdentityPatch,
-          verdict: reasonLabel,
-          recommendation: "Hold",
-          lastUpdated: now,
-        };
+        // CF-A-RETAINED-VALUE-IS-STILL-A-WRITE (C-8, 2026-09-03). This branch
+        // was the LAST writer in repriceHoldingsForUser still hand-spreading a
+        // holding literal, and it is the one that produced the shape C-7 was
+        // built to abolish — a value with no `valueSource` — precisely BECAUSE
+        // it writes no new number.
+        //
+        // Live proof, holding 277b05a3 (Cal Ripken Jr., PSA 8), read read-only
+        // after reprice run 33807265583:
+        //
+        //     fairMarketValue        49.99
+        //     fmvRung                "exact-pool-weighted-median"
+        //     pricingSourceMeta      {slug, method: "exact-pool-weighted-median",
+        //                             compsUsed: 41}   <- no confidence, no labels
+        //     valueSource            (key ABSENT)
+        //     verdict                "Insufficient comps"
+        //     lastUpdated            2026-09-03T21:20:02Z   <- THIS branch
+        //     sourceVendorUpdatedAt  2026-09-03T15:50:14Z   <- the real pricer
+        //
+        // The `...holding` spread carried a PRE-#1683 pass's value, rung and
+        // meta forward verbatim while stamping a fresh `lastUpdated`. The row
+        // therefore reads as "repriced at 21:20Z" and carries none of the C-7
+        // contract, because the writer that actually decided the number ran
+        // hours earlier and the branch that touched the doc last declared
+        // nothing at all. Every sibling row repriced in the 21:24Z wave —
+        // Griffey, Maddux, Figueroa — went through the helper and carries
+        // valueSource and confidence; only the rows that took THIS branch do
+        // not. Freshening `lastUpdated` is a claim about the row; a claim is a
+        // write, and a write names its source.
+        //
+        // So the retention is DECLARED rather than silent. The prior rung and
+        // the prior valueSource are carried forward EXPLICITLY (they remain
+        // true of the number, which is unchanged), the reason is recorded on
+        // the row, and a holding whose prior pass named neither is stated as
+        // the unlabelled legacy value it is — `{ noRung: ... }` with the cause,
+        // so the auditor's RUNG-HONESTY check sees a statement instead of an
+        // absence it must guess at.
+        //
+        // No confidence is invented: this branch computed no pricing, so the
+        // meta it re-states carries the prior pass's confidence when there was
+        // one and an explicit `null` when there was not.
+        const keptFmv = typeof holding.fairMarketValue === "number" && Number.isFinite(holding.fairMarketValue)
+          ? holding.fairMarketValue
+          : null;
+        const priorRung = typeof (holding as { fmvRung?: unknown }).fmvRung === "string"
+          && (holding as { fmvRung?: string }).fmvRung
+          ? ((holding as { fmvRung: string }).fmvRung)
+          : null;
+        const priorValueSource = (holding as { valueSource?: unknown }).valueSource;
+        const priorMeta = (holding as { pricingSourceMeta?: Record<string, unknown> }).pricingSourceMeta;
+        const priorConfidence = typeof priorMeta?.confidence === "number" && Number.isFinite(priorMeta.confidence)
+          ? (priorMeta.confidence as number)
+          : null;
+        const retentionReason =
+          `value retained unchanged by the confidence-gated reprice (${failed.join(", ")}; source=${estSource || "ok"})`;
+        doc.holdings[holding.id] = writeHoldingValuation(holding, {
+          fairMarketValue: keptFmv,
+          // The rung the number was priced under still describes it — the
+          // number did not move. When the prior pass named none, say so.
+          rung: priorRung
+            ? { rung: priorRung }
+            : { noRung: `${retentionReason}; the prior pass named no rung` },
+          // "retained" is not a KIND of evidence, so it is not a valueSource.
+          // The kind of evidence behind the number is whatever produced it; a
+          // value whose prior pass declared none cannot be upgraded to
+          // "observed" by being kept, so it is stated as an estimate — the
+          // weaker of the two claims, which is the honest one to make about a
+          // number this branch did not verify.
+          valueSource: priorValueSource === "observed" || priorValueSource === "estimated"
+            ? priorValueSource
+            : "estimated",
+          nowIso: now,
+          // Re-state the meta so the retention carries the same shape a fresh
+          // write would, with the prior confidence or an explicit null.
+          ...(priorMeta
+            ? {
+                meta: {
+                  slug: typeof priorMeta.slug === "string" ? priorMeta.slug : null,
+                  compsUsed: typeof priorMeta.compsUsed === "number" ? priorMeta.compsUsed : null,
+                  confidence: priorConfidence,
+                  ...(Array.isArray(priorMeta.labels) ? { labels: priorMeta.labels as never } : {}),
+                  ...(priorMeta.selfAnchored !== undefined
+                    ? { selfAnchored: priorMeta.selfAnchored as never }
+                    : {}),
+                },
+              }
+            : { writeMeta: false }),
+          fields: {
+            ...repriceIdentityPatch,
+            verdict: reasonLabel,
+            recommendation: "Hold",
+            // The retention is recorded ON THE ROW, so "why does this say
+            // 21:20Z" is answerable without reading a log that has rolled.
+            fmvRetainedReason: retentionReason,
+            fmvRetainedAt: now,
+          },
+        });
         const reprCsid =
           typeof (holding as any).cardId === "string" &&
           ((holding as any).cardId as string).trim() !== ""
