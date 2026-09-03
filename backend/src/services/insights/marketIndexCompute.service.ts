@@ -141,7 +141,11 @@ export async function ensureBasket(
     computedAt: new Date().toISOString(),
   };
   if (!persist) return { basket: doc, reused: false, persisted: false };
-  await series.items.upsert(doc);
+  // PROVENANCE: stamped only on the path that actually writes, so the
+  // field means "a run that meant to persist this made it" rather than
+  // "some run computed it". The in-memory doc handed back by the dry run
+  // deliberately carries no stamp.
+  await series.items.upsert({ ...doc, builtBy: "apply" as const });
   return { basket: doc, reused: false, persisted: true };
 }
 

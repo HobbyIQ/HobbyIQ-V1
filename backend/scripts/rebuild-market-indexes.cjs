@@ -23,18 +23,61 @@
  *   COSMOS_CONNECTION_STRING="..." \
  *   node backend/scripts/rebuild-market-indexes.cjs --apply
  *
- * Flags:
- *   --apply          Persist the recomputed series. Without it: read-only.
+ * THE PURGE (Drew's ruling, 2026-09-03)
+ * -------------------------------------
+ * Nine basket documents were minted into prod on 2026-09-03 between
+ * 14:12Z and 14:36Z by rebuild runs whose "report-only" mode was not
+ * write-free (the defect #1675 fixed). Drew ruled they are to be
+ * DELETED, and every quarter's basket recreated from that quarter's own
+ * history under the unified method.
+ *
+ * WHICH DOCS, AND HOW WE KNOW
+ * ---------------------------
+ * A date alone is not a marker: it says when a doc was written, never
+ * what wrote it. Two stronger markers are used, and a doc must satisfy
+ * BOTH to be purged:
+ *
+ *   1. UNREFERENCED. No stored index point cites the basket's epoch for
+ *      that sport. A basket the published series was actually computed
+ *      against is load-bearing whatever its age; one that no point cites
+ *      is, by definition, a basket nothing was ever valued against.
+ *      Measured 2026-09-03: all 879 stored points carry epoch 2026-Q3,
+ *      so the nine Q1/Q2 baskets are cited by nothing.
+ *
+ *   2. NOT APPLY-STAMPED. `builtBy: "apply"` is stamped by the only path
+ *      that legitimately writes a basket. It did not exist when the nine
+ *      landed, so they cannot carry it. A stamped basket is never purged.
+ *
+ * The stray window is a REPORT field, not the selector — it is printed
+ * so the operator can see the nine line up with the incident, and a doc
+ * outside it that meets both markers is still listed (as an unreferenced
+ * basket) rather than silently kept.
+ *
+ * A basket the CURRENT run is about to rebuild anyway is safe to delete:
+ * apply mode purges first, then rebuilds every sport's every epoch from
+ * that epoch's own trailing window, with no lookahead.
+ *
+ * Flags / env:
+ *   --apply          Persist: purge the strays, then recompute the
+ *                    series. Without it: read-only, and the run proves
+ *                    it wrote nothing.
+ *   BACKFILL_APPLY=true  Same as --apply. This is how the backfill
+ *                    runner gates the lane (script=rebuild-market-indexes).
  *   --as-of=DATE     Target day, YYYY-MM-DD (default: today UTC).
  *   --sports=a,b     Restrict to these sports (default: all five).
+ *                    SPORTS=a,b from the runner does the same.
  *   --compare-days=N Days of before/after to print (default 30).
+ *   REPORT_OUT       Where to write the JSON report (the runner uploads
+ *                    it as an artifact).
  *
- * No dispatch input changes: this is a script, run by hand from the
- * runbook. The nightly workflow is untouched.
+ * Thresholds are RULED, not assumed (Drew, 2026-09-03):
+ *   MIN_USED_WEIGHT 0.50, MIN_BASKET_SIZE 25.
  *
  * Exit codes:
- *   0  report produced (and, with --apply, points written)
+ *   0  report produced (and, with --apply, purged + written)
  *   1  bad flags / no COSMOS_CONNECTION_STRING / nothing computed
+ *   2  a write was attempted in report mode, or the purge did not
+ *      reconcile (intended != deleted + skipped)
  */
 
 const path = require("path");
@@ -42,11 +85,33 @@ const fs = require("fs");
 
 const SPORTS = ["baseball", "basketball", "football", "hockey", "pokemon"];
 
+/**
+ * The incident window, in epoch SECONDS (Cosmos `_ts` is seconds).
+ * 2026-09-03 14:00:00Z .. 14:45:00Z — the nine strays landed between
+ * 14:12:57Z and 14:35:59Z, and the window is padded either side.
+ *
+ * This is REPORTING, not selection: a doc is purged on the two markers
+ * (unreferenced + unstamped), and this field only says whether it falls
+ * in the known incident. See THE PURGE in the header.
+ */
+const STRAY_WINDOW_START_TS = Math.floor(Date.parse("2026-09-03T14:00:00Z") / 1000);
+const STRAY_WINDOW_END_TS = Math.floor(Date.parse("2026-09-03T14:45:00Z") / 1000);
+
+/** Read a boolean env var the way the backfill runner sets it. */
+function envTrue(name) {
+  return String(process.env[name] ?? "").trim().toLowerCase() === "true";
+}
+
 async function main() {
   const args = process.argv.slice(2);
-  const apply = args.includes("--apply");
+  // The backfill runner execs this generically with no CLI args and
+  // gates every lane on BACKFILL_APPLY, so the env var is a first-class
+  // way to ask for the write — not a fallback.
+  const apply = args.includes("--apply") || envTrue("BACKFILL_APPLY");
   const asOfArg = flag(args, "--as-of");
-  const sportsArg = flag(args, "--sports");
+  // The runner passes SPORTS; the CLI flag wins when both are present.
+  const envSports = String(process.env.SPORTS ?? "").trim();
+  const sportsArg = flag(args, "--sports") ?? (envSports === "" ? undefined : envSports);
   const compareDays = Number(flag(args, "--compare-days") ?? 30);
 
   if (!process.env.COSMOS_CONNECTION_STRING) {
@@ -75,6 +140,17 @@ async function main() {
   const sports = sportsArg
     ? sportsArg.split(",").map((s) => s.trim()).filter(Boolean)
     : SPORTS;
+  // A sport this script does not know is a TYPO, not an empty scope. Left
+  // unchecked it would scope the purge to nothing, rebuild nothing, and
+  // print a clean banner — the shape of a run that silently did nothing
+  // (CF-SCOPE-FORMATS-ARE-PER-SCRIPT: the banner must prove the binding).
+  const unknown = sports.filter((sp) => !SPORTS.includes(sp));
+  if (unknown.length > 0) {
+    console.error(
+      `unknown sport(s): ${unknown.join(", ")} - known: ${SPORTS.join(", ")}`,
+    );
+    process.exit(1);
+  }
   const asOf = asOfArg ?? svc.isoDay(new Date());
   const from = svc.addDays(asOf, -(compareDays - 1));
 
@@ -83,10 +159,16 @@ async function main() {
   console.log(JSON.stringify({
     event: "market_index_rebuild_start",
     mode: apply ? "APPLY (writes)" : "REPORT-ONLY (no writes)",
+    applyVia: apply
+      ? (args.includes("--apply") ? "--apply" : "BACKFILL_APPLY=true")
+      : null,
     sports,
     asOf,
     compareWindow: `${from}..${asOf}`,
-    floor: svc.MIN_USED_WEIGHT,
+    // Both RULED by Drew 2026-09-03 - quoted from the service so the
+    // banner cannot drift from the constants the run actually uses.
+    ruledMinUsedWeight: svc.MIN_USED_WEIGHT,
+    ruledMinBasketSize: svc.MIN_BASKET_SIZE,
   }));
 
   const series = await svc.getSeriesContainer();
@@ -99,6 +181,77 @@ async function main() {
   const before = {};
   for (const sport of sports) {
     before[sport] = await readStored(series, sport, from, asOf);
+  }
+
+  // ---- PURGE: the stray baskets (Drew's ruling, 2026-09-03) ------------
+  // Identified in BOTH modes, deleted only under --apply. The report is
+  // the thing an operator reads before authorising the delete, so it has
+  // to name every doc precisely: id, sport, epoch, _ts and the marker
+  // that condemned it.
+  const allBaskets = await readAllBaskets(series);
+  const referenced = await readReferencedEpochs(series);
+  const { strays, kept } = identifyStrays(allBaskets, referenced, sports);
+
+  console.log(JSON.stringify({
+    event: "market_index_purge_plan",
+    mode: apply ? "APPLY (deletes)" : "REPORT-ONLY (lists)",
+    basketsStored: allBaskets.length,
+    referencedEpochs: [...referenced].sort(),
+    intended: strays.length,
+    strays,
+    kept,
+  }));
+
+  let purge = { deleted: [], skipped: [] };
+  if (apply && strays.length > 0) {
+    purge = await purgeStrays(series, strays);
+  }
+
+  // RECONCILE: intended = deleted + skipped. A purge that cannot account
+  // for every doc it named is a purge that did something else, so the run
+  // fails rather than proceeding to rebuild on top of it.
+  //
+  // The identity is asserted for an APPLY only. A report intends N and
+  // deletes none BY DESIGN, so scoring it against deleted+skipped would
+  // print `reconciled:false` on every correct read-only run - an alarm
+  // that fires when nothing is wrong is an alarm nobody reads.
+  const reconciled = apply
+    ? strays.length === purge.deleted.length + purge.skipped.length
+    : purge.deleted.length === 0 && purge.skipped.length === 0;
+  console.log(JSON.stringify({
+    event: "market_index_purge_reconcile",
+    mode: apply ? "APPLY" : "REPORT-ONLY",
+    intended: strays.length,
+    deleted: purge.deleted.length,
+    skipped: purge.skipped.length,
+    reconciled,
+    reconciles: apply
+      ? "intended == deleted + skipped"
+      : "report-only: deleted == 0 and skipped == 0",
+    deletedIds: purge.deleted,
+    skippedIds: purge.skipped,
+    note: apply
+      ? "strays deleted; baskets are recreated per epoch by the rebuild below"
+      : "no deletes performed - re-run with --apply (or BACKFILL_APPLY=true) to purge",
+  }));
+  // A report that somehow deleted something is the exact defect this
+  // whole PR exists to close, so it fails the run rather than warning.
+  if (!apply && !reconciled) {
+    console.error(JSON.stringify({
+      event: "market_index_purge_deleted_in_report_mode",
+      deleted: purge.deleted,
+      skipped: purge.skipped,
+    }));
+    process.exit(2);
+  }
+  if (apply && !reconciled) {
+    console.error(JSON.stringify({
+      event: "market_index_purge_did_not_reconcile",
+      intended: strays.length,
+      deleted: purge.deleted.length,
+      skipped: purge.skipped.length,
+    }));
+    process.exit(2);
   }
 
   // ---- AFTER: what the unified method produces ------------------------
@@ -138,7 +291,7 @@ async function main() {
         event: "market_index_rebuild_write_in_report_mode",
         attempted: guard.__writes,
       }));
-      process.exit(1);
+      process.exit(2);
     }
   }
 
@@ -173,14 +326,290 @@ async function main() {
     }));
   }
 
+  // ---- BASKETS RECREATED, per sport / epoch ---------------------------
+  // Named after the rebuild so the banner shows what the run left behind
+  // rather than what it found. Every quarter's basket is selected from
+  // that quarter's own trailing window (no lookahead) by ensureBasket.
+  const basketsAfter = await readAllBaskets(series);
+  const recreated = {};
+  for (const b of basketsAfter) {
+    if (!sports.includes(b.sport)) continue;
+    recreated[b.sport] = recreated[b.sport] ?? {};
+    recreated[b.sport][b.epoch] = {
+      members: b.memberCount,
+      builtBy: b.builtBy ?? null,
+      baseDate: b.baseDate,
+    };
+  }
+  console.log(JSON.stringify({
+    event: "market_index_baskets_recreated",
+    mode: apply ? "APPLY" : "REPORT-ONLY",
+    perSportEpoch: recreated,
+    note: apply
+      ? "each epoch selected from its OWN trailing window - no lookahead"
+      : "unchanged - report mode recreated nothing",
+  }));
+
+  // ---- VERIFY BY READ -------------------------------------------------
+  // The run's own return values are not evidence. These numbers come back
+  // out of Cosmos after the writes landed.
+  const verify = await verifyByRead(series, sports, svc.MIN_BASKET_SIZE, svc.MIN_USED_WEIGHT);
+  console.log(JSON.stringify({
+    event: "market_index_rebuild_verify",
+    mode: apply ? "APPLY" : "REPORT-ONLY",
+    ...verify,
+  }));
+
   console.log(JSON.stringify({
     event: "market_index_rebuild_done",
     mode: apply ? "APPLY" : "REPORT-ONLY",
     sports: sports.length,
+    straysIntended: strays.length,
+    straysDeleted: purge.deleted.length,
+    straysSkipped: purge.skipped.length,
+    verifyOk: verify.ok,
     note: apply
-      ? "series recomputed under the unified method"
-      : "no writes performed - re-run with --apply to persist",
+      ? "strays purged, baskets recreated per epoch, series recomputed under the unified method"
+      : "no writes performed - re-run with --apply (or BACKFILL_APPLY=true) to purge and persist",
   }));
+
+  // The report is uploaded as a runner artifact: a banner that scrolled
+  // out of a log cannot be quoted, and this run's whole job is to be read
+  // before the apply is authorised.
+  const reportOut = process.env.REPORT_OUT;
+  if (reportOut) {
+    try {
+      fs.mkdirSync(path.dirname(reportOut), { recursive: true });
+      fs.writeFileSync(
+        reportOut,
+        JSON.stringify(
+          {
+            mode: apply ? "APPLY" : "REPORT-ONLY",
+            asOf,
+            sports,
+            strays,
+            kept,
+            purge,
+            before,
+            after,
+            basketsRecreated: recreated,
+            verify,
+          },
+          null,
+          2,
+        ),
+      );
+      console.log(JSON.stringify({ event: "market_index_report_written", path: reportOut }));
+    } catch (err) {
+      console.error(`could not write REPORT_OUT: ${err && err.message ? err.message : String(err)}`);
+    }
+  }
+
+  // A verify failure is loud. In apply mode it is a failed run: the whole
+  // point of the rebuild is that these three properties hold afterwards.
+  if (apply && !verify.ok) {
+    console.error(JSON.stringify({
+      event: "market_index_rebuild_verify_failed",
+      undersizedBaskets: verify.undersizedBaskets,
+      publishedPointsBelowFloorCount: verify.publishedPointsBelowFloorCount,
+      remainingStrays: verify.remainingStrays,
+    }));
+    process.exit(2);
+  }
+}
+
+/**
+ * Every stored basket doc, newest marker fields included.
+ *
+ * Read across ALL sports rather than the dispatched subset: a stray in a
+ * sport this run was not asked to rebuild is still a stray, and the
+ * report says so. Only the purge itself is scoped (see identifyStrays).
+ */
+async function readAllBaskets(series) {
+  const iter = series.items.query({
+    query: `SELECT c.id, c.cardId, c.sport, c.epoch, c.baseDate, c.computedAt,
+                   c.builtBy, c._ts, ARRAY_LENGTH(c.members) AS memberCount
+            FROM c
+            WHERE c.docType = 'market_index_basket'`,
+  });
+  const rows = [];
+  while (iter.hasMoreResults()) {
+    const { resources } = await iter.fetchNext();
+    if (resources) rows.push(...resources);
+  }
+  return rows;
+}
+
+/**
+ * The (sport, epoch) pairs any stored point actually cites.
+ *
+ * This is marker 1, and it is the strong one. A basket that no published
+ * point was computed against is load-bearing for nothing; deleting it
+ * cannot change a level the UI renders, because no level was ever
+ * derived from it. A basket that IS cited is never purged here however
+ * old it looks — the rebuild overwrites it in place instead.
+ */
+async function readReferencedEpochs(series) {
+  const iter = series.items.query({
+    query: `SELECT c.sport, c.epoch
+            FROM c
+            WHERE c.docType = 'market_index_point'
+            GROUP BY c.sport, c.epoch`,
+  });
+  const refs = new Set();
+  while (iter.hasMoreResults()) {
+    const { resources } = await iter.fetchNext();
+    for (const r of resources ?? []) refs.add(`${r.sport}::${r.epoch}`);
+  }
+  return refs;
+}
+
+/**
+ * Classify every stored basket into purge / keep, with the REASON.
+ *
+ * A basket is purged only when BOTH markers agree:
+ *   unreferenced  - no stored point cites (sport, epoch)
+ *   unstamped     - no builtBy:"apply" from the path that legitimately writes
+ *
+ * Requiring both is what keeps this from being a date sweep. The
+ * incident window is attached for the operator's benefit and is not part
+ * of the test — a stray outside it is still a stray, and a legitimate
+ * basket inside it is still kept.
+ */
+function identifyStrays(baskets, referenced, sports) {
+  const scope = new Set(sports);
+  const strays = [];
+  const kept = [];
+  for (const b of baskets) {
+    const referencedByPoints = referenced.has(`${b.sport}::${b.epoch}`);
+    const applyStamped = b.builtBy === "apply";
+    const inStrayWindow = b._ts >= STRAY_WINDOW_START_TS && b._ts <= STRAY_WINDOW_END_TS;
+    const row = {
+      id: b.id,
+      sport: b.sport,
+      epoch: b.epoch,
+      baseDate: b.baseDate,
+      members: b.memberCount,
+      computedAt: b.computedAt,
+      ts: b._ts,
+      tsIso: new Date(b._ts * 1000).toISOString(),
+      marker: applyStamped
+        ? "apply-stamped"
+        : referencedByPoints
+          ? "referenced-by-points"
+          : inStrayWindow
+            ? "unreferenced+unstamped+in-stray-window"
+            : "unreferenced+unstamped",
+      referencedByPoints,
+      applyStamped,
+      inStrayWindow,
+    };
+    if (!referencedByPoints && !applyStamped) {
+      // Out of the dispatched sport scope: named in the report, never
+      // deleted by a run that was not asked to touch that sport.
+      if (!scope.has(b.sport)) {
+        kept.push({ ...row, keptBecause: "out-of-scope-for-this-run" });
+        continue;
+      }
+      strays.push(row);
+      continue;
+    }
+    kept.push({
+      ...row,
+      keptBecause: applyStamped ? "apply-stamped" : "referenced-by-points",
+    });
+  }
+  strays.sort((a, b) => (a.ts - b.ts) || (a.id < b.id ? -1 : 1));
+  return { strays, kept };
+}
+
+/**
+ * Delete exactly the listed ids and nothing else.
+ *
+ * The list is the scope. This never re-derives what to delete from a
+ * predicate at delete time: it walks the ids identifyStrays named, so
+ * what the report showed is precisely what goes. A delete that 404s is
+ * counted as skipped (already gone), never as a failure — but it is
+ * still reconciled, so the banner cannot claim a deletion it did not do.
+ */
+async function purgeStrays(series, strays) {
+  const deleted = [];
+  const skipped = [];
+  for (const st of strays) {
+    try {
+      await series.item(st.id, `index::${st.sport}`).delete();
+      deleted.push(st.id);
+    } catch (err) {
+      const code = err && (err.code ?? err.statusCode);
+      if (code === 404) {
+        skipped.push({ id: st.id, reason: "already-absent" });
+      } else {
+        skipped.push({ id: st.id, reason: `delete-failed: ${err && err.message ? err.message : String(err)}` });
+      }
+    }
+  }
+  return { deleted, skipped };
+}
+
+/**
+ * VERIFY BY READ. Re-reads prod after the writes and asserts the three
+ * properties the rebuild is supposed to establish. A green run is not
+ * evidence; the numbers read back are.
+ */
+async function verifyByRead(series, sports, minBasketSize, minUsedWeight) {
+  const baskets = await readAllBaskets(series);
+  const referenced = await readReferencedEpochs(series);
+
+  const perSportEpoch = {};
+  const undersized = [];
+  for (const b of baskets) {
+    if (!sports.includes(b.sport)) continue;
+    perSportEpoch[b.sport] = perSportEpoch[b.sport] ?? {};
+    perSportEpoch[b.sport][b.epoch] = b.memberCount;
+    if (b.memberCount < minBasketSize) {
+      undersized.push({ id: b.id, members: b.memberCount });
+    }
+  }
+
+  // No point may be PUBLISHED (not stale) below the ruled floor. The
+  // threshold is the service constant, passed in - a verification that
+  // hardcodes its own copy of a ruled number stops verifying the moment
+  // the ruling moves.
+  //
+  // A point with NO usedWeight field predates C-1 and was never
+  // floor-tested at all; `NOT IS_DEFINED` catches those too, because an
+  // unmeasured point is not a passing point.
+  const iter = series.items.query({
+    query: `SELECT c.id, c.sport, c.date, c.usedWeight
+            FROM c
+            WHERE c.docType = 'market_index_point'
+              AND (NOT IS_DEFINED(c.usedWeight) OR c.usedWeight < @floor)
+              AND (NOT IS_DEFINED(c.stale) OR c.stale = false)`,
+    parameters: [{ name: "@floor", value: minUsedWeight }],
+  });
+  const belowFloor = [];
+  while (iter.hasMoreResults()) {
+    const { resources } = await iter.fetchNext();
+    if (resources) belowFloor.push(...resources);
+  }
+
+  const remainingStrays = baskets.filter(
+    (b) => b.builtBy !== "apply" && !referenced.has(`${b.sport}::${b.epoch}`),
+  );
+
+  return {
+    basketsPerSportEpoch: perSportEpoch,
+    basketCount: baskets.length,
+    undersizedBaskets: undersized,
+    publishedPointsBelowFloor: belowFloor.slice(0, 20),
+    publishedPointsBelowFloorCount: belowFloor.length,
+    remainingStrayCount: remainingStrays.length,
+    remainingStrays: remainingStrays.map((b) => b.id),
+    ok:
+      undersized.length === 0 &&
+      belowFloor.length === 0 &&
+      remainingStrays.length === 0,
+  };
 }
 
 /**

@@ -122,8 +122,35 @@ describe("job wiring", () => {
   });
 
   it("does not touch the frozen backfill-runner inputs", () => {
+    // WHAT THIS GUARDS (restated 2026-09-03): workflow_dispatch caps at 25
+    // inputs and the runner is at 24. The index work must never claim the
+    // last one - that is the frozen thing.
+    //
+    // It used to be asserted as `not.toContain("market-index")`, i.e. by
+    // banning the STRING. That was a proxy, and it was wrong in both
+    // directions: it would have passed a new input named `index_epoch`,
+    // and it failed the purge lane (Drew's ruling, 2026-09-03), which adds
+    // a script-dropdown OPTION and no input at all. A dropdown option is
+    // not an input; conflating them blocks the safe change and permits the
+    // dangerous one. Assert the input count and names directly.
     const runner = read(".github/workflows/backfill-runner.yml");
-    expect(runner).not.toContain("market-index");
-    expect(runner).not.toContain("market_index");
+    const dispatchBlock = runner.slice(
+      runner.indexOf("  workflow_dispatch:"),
+      runner.indexOf("jobs:"),
+    );
+    const inputNames = [...dispatchBlock.matchAll(/^      ([a-z_]+):$/gm)].map((m) => m[1]);
+    expect(inputNames.length).toBeLessThanOrEqual(25);
+    // No input exists FOR the index work: the purge lane rides `script`,
+    // `apply` and `sports`, all of which long predate it.
+    expect(inputNames.filter((n) => n.includes("index"))).toEqual([]);
+    expect(inputNames.filter((n) => n.includes("market"))).toEqual([]);
+    expect(inputNames.filter((n) => n.includes("basket"))).toEqual([]);
+  });
+
+  it("the purge lane is a script OPTION on the runner, not a new input", () => {
+    // The other half of the same rule, stated positively so the lane's
+    // presence is pinned rather than merely tolerated.
+    const runner = read(".github/workflows/backfill-runner.yml");
+    expect(runner.replace(/\r\n/g, "\n")).toContain("          - rebuild-market-indexes\n");
   });
 });
