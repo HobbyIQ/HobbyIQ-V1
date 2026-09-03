@@ -239,6 +239,44 @@ describe("the runner contract", () => {
     expect(dispatch).not.toContain('-f apply="${{ inputs.apply }}"');
   });
 
+  it("the relaunch survives a banner that never says the re-key phrase (CF-CENSUS-THROUGHPUT)", () => {
+    // MEASURED 2026-09-03. Every wave-1 census run stopped at its budget and
+    // then FAILED to relaunch -- not because the marker was missing, but
+    // because the line that reads the count out of the banner exited 1:
+    //
+    //   N=$(grep -aoE "(re-keyed|would re-key) +[0-9,]+" ... | tail -1)
+    //
+    // A census banner (MODE=census, READ ONLY) re-keys nothing and never
+    // prints that phrase, so grep found no match and returned 1. GitHub runs
+    // `shell: bash` as `bash -e -o pipefail`, so the step aborted on the
+    // assignment and the dispatch below it never ran. The relaunch was dead
+    // for exactly the mode that needs it most.
+    //
+    // N is a COURTESY NUMBER in a ::notice:: line. It must never be able to
+    // decide whether the relaunch happens.
+    const step = runner.slice(runner.indexOf("Self-relaunch rematch-sold-comps"));
+    const body = step.slice(0, step.indexOf("\n      - name:") + 1);
+    const assignment = body.split("\n").find((l) => l.trim().startsWith("N=$("));
+    expect(assignment).toBeTruthy();
+    expect(assignment).toContain("|| true");
+    // and the value is still defaulted where it is read, so an empty N prints
+    // as 0 rather than as nothing.
+    expect(body).toContain("${N:-0}");
+  });
+
+  it("NO extraction pipeline in the runner can abort its own step", () => {
+    // The same shape appears at every self-relaunch step in this workflow, and
+    // every one of them is a step that MUST still dispatch when its phrase is
+    // absent -- a report banner, a dry run, a job that changed nothing. One
+    // unguarded pipeline is one silently dead relaunch, which is how this was
+    // found in the first place.
+    const unguarded = runner
+      .split("\n")
+      .map((l, i) => ({ l, n: i + 1 }))
+      .filter((x) => /^\s*[A-Z_]+=\$\(grep /.test(x.l) && !x.l.includes("|| true"));
+    expect(unguarded).toEqual([]);
+  });
+
   it("MODE is required and has no default -- a defaulted mode is a silent census or a silent write", () => {
     expect(script).toContain('const MODE = String(process.env.MODE || "").trim();');
     expect(script).toMatch(/MODE is required and has no default/);

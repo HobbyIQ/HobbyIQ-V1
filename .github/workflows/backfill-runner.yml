@@ -1073,7 +1073,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
-            N=$(grep -aoE "flagged +[0-9,]+" /tmp/backfill.log | grep -oE "[0-9,]+" | tail -1)
+            N=$(grep -aoE "flagged +[0-9,]+" /tmp/backfill.log | grep -oE "[0-9,]+" | tail -1 || true)
             echo "::notice::budget hit (flagged=${N:-0}) — re-dispatching slot ${{ inputs.slot }} to continue"
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=census-split-identity -f apply="${{ inputs.apply }}" -f mode="${{ inputs.mode }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f limit="${{ inputs.limit }}"
           else
@@ -1113,7 +1113,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
-            N=$(grep -aoE "(re-keyed|would re-key) +[0-9,]+" /tmp/backfill.log | grep -oE "[0-9,]+" | tail -1)
+            N=$(grep -aoE "(re-keyed|would re-key) +[0-9,]+" /tmp/backfill.log | grep -oE "[0-9,]+" | tail -1 || true)
             if [ "${{ inputs.apply }}" = "true" ]; then
               echo "::warning::budget hit on an APPLY of slot ${{ inputs.slot }} (written=${N:-0}) — re-dispatching as a REPORT (apply=false). The canary baseline lives on this runner and does not survive a re-dispatch, so a continuation apply would be ungated. Re-dispatch the apply by hand to get the before/apply/after triple."
             else
@@ -1138,7 +1138,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
-            N=$(grep -aoE "demoted +[0-9,]+" /tmp/backfill.log | grep -oE "[0-9,]+" | tail -1)
+            N=$(grep -aoE "demoted +[0-9,]+" /tmp/backfill.log | grep -oE "[0-9,]+" | tail -1 || true)
             echo "::notice::budget hit (demoted=${N:-0}) — re-dispatching to continue"
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-price-inferred-grades -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sources="${{ inputs.sources }}" -f limit="${{ inputs.limit }}"
           else
@@ -1152,7 +1152,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
-            N=$(grep -aoE "parents minted +[0-9,]+" /tmp/backfill.log | grep -oE "[0-9,]+" | tail -1)
+            N=$(grep -aoE "parents minted +[0-9,]+" /tmp/backfill.log | grep -oE "[0-9,]+" | tail -1 || true)
             echo "::notice::budget hit (minted=${N:-0}) — re-dispatching to continue"
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=materialize-ungraded-parents -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f setkey_like="${{ inputs.setkey_like }}" -f limit="${{ inputs.limit }}"
           else
@@ -1171,7 +1171,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
-            N=$(grep -aoE "healed=[0-9,]+" /tmp/backfill.log | grep -oE "[0-9,]+" | tail -1)
+            N=$(grep -aoE "healed=[0-9,]+" /tmp/backfill.log | grep -oE "[0-9,]+" | tail -1 || true)
             echo "::notice::budget hit (healed=${N:-0}) — re-dispatching to continue"
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-missing-search-fields -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f setkey_like="${{ inputs.setkey_like }}" -f limit="${{ inputs.limit }}"
           else
@@ -1194,7 +1194,7 @@ jobs:
         working-directory: backend
         run: |
           set +e
-          N=$(grep -aoE "touched=[0-9]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9]+$")
+          N=$(grep -aoE "touched=[0-9]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9]+$" || true)
           echo "reslug_touched=${N:-0}"
           # CF-RELAUNCH-ONLY-ON-BUDGET (2026-08-29). Relaunch iff the script says it
           # stopped at its budget with work left. Gating on "did anything" looped
@@ -1231,7 +1231,7 @@ jobs:
         working-directory: backend
         run: |
           set +e
-          N=$(grep -aoE "universe_entries_done=[0-9]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9]+$")
+          N=$(grep -aoE "universe_entries_done=[0-9]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9]+$" || true)
           echo "universe_entries_done=${N:-0}"
           if grep -aqE "RECONCILED +NO" /tmp/backfill.log; then
             echo "::error::the driver did not reconcile — not re-dispatching; read the summary above"
@@ -1255,7 +1255,7 @@ jobs:
         working-directory: backend
         run: |
           set +e
-          N=$(grep -aoE "checklist_phases_done=[0-9]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9]+$")
+          N=$(grep -aoE "checklist_phases_done=[0-9]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9]+$" || true)
           echo "phases_done=${N:-0}"
           # CF-RELAUNCH-ONLY-ON-BUDGET (2026-08-29). Relaunch iff the script says it
           # stopped at its budget with work left. Gating on "did anything" looped
@@ -1278,7 +1278,7 @@ jobs:
         working-directory: backend
         run: |
           set +e
-          N=$(grep -aoE "^  (REKEYED|MOVED to|RE-POINTED) [a-z0-9 ->-]* +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          N=$(grep -aoE "^  (REKEYED|MOVED to|RE-POINTED) [a-z0-9 ->-]* +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
           echo "rekeyed=${N:-0}"
           # CF-RELAUNCH-ONLY-ON-BUDGET (#1361): the MARKER is the gate, never a
           # count, and never the mode — a REPORT that hit its budget relaunches
@@ -1305,7 +1305,7 @@ jobs:
         working-directory: backend
         run: |
           set +e
-          N=$(grep -aoE "^  (FOLDED|WOULD FOLD) +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          N=$(grep -aoE "^  (FOLDED|WOULD FOLD) +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
           echo "folded=${N:-0}"
           # CF-RELAUNCH-ONLY-ON-BUDGET (#1361, D18 2026-08-29). Relaunch iff the
           # script printed its budget marker — never on a count. A count gate
@@ -1331,8 +1331,8 @@ jobs:
         working-directory: backend
         run: |
           set +e
-          A=$(grep -aoE "^  moved to the unfolded slug +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
-          B=$(grep -aoE "^  merged into an existing row +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          A=$(grep -aoE "^  moved to the unfolded slug +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
+          B=$(grep -aoE "^  merged into an existing row +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
           MOVED=$(( ${A:-0} + ${B:-0} ))
           echo "parallel_repaired=$MOVED"
           # CF-RELAUNCH-ONLY-ON-BUDGET (#1361, D18 2026-08-29). Relaunch iff the
@@ -1358,8 +1358,8 @@ jobs:
         working-directory: backend
         run: |
           set +e
-          A=$(grep -aoE "^  re-homed to their own slug +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
-          B=$(grep -aoE "^  retired as redundant copies +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          A=$(grep -aoE "^  re-homed to their own slug +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
+          B=$(grep -aoE "^  retired as redundant copies +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
           MOVED=$(( ${A:-0} + ${B:-0} ))
           echo "canonicalized=$MOVED"
           # CF-RELAUNCH-ONLY-ON-BUDGET (#1361, D18 2026-08-29). Relaunch iff the
@@ -1386,7 +1386,7 @@ jobs:
         working-directory: backend
         run: |
           set +e
-          N=$(grep -aoE "^  SALES IN THE POOL +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          N=$(grep -aoE "^  SALES IN THE POOL +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
           N=${N:-0}
           echo "ebay_account_sales_recorded=$N"
           # CF-RELAUNCH-ONLY-ON-BUDGET (#1361, D18 2026-08-29). Relaunch iff the
@@ -1415,7 +1415,7 @@ jobs:
         working-directory: backend
         run: |
           set +e
-          N=$(grep -aoE "^  rows written +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          N=$(grep -aoE "^  rows written +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
           N=${N:-0}
           echo "ebay_purchase_comps_written=$N"
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
@@ -1435,7 +1435,7 @@ jobs:
         working-directory: backend
         run: |
           set +e
-          N=$(grep -aoE "RETIRED — numbered .Base.[^0-9]+[0-9,]+" /tmp/backfill.log | grep -oE "[0-9,]+$" | tr -d ,)
+          N=$(grep -aoE "RETIRED — numbered .Base.[^0-9]+[0-9,]+" /tmp/backfill.log | grep -oE "[0-9,]+$" | tr -d , || true)
           N=${N:-0}
           echo "numbered_base_retired=$N"
           # CF-RELAUNCH-ONLY-ON-BUDGET (#1361, D18 2026-08-29). Relaunch iff the
@@ -1458,7 +1458,7 @@ jobs:
         working-directory: backend
         run: |
           set +e
-          N=$(grep -aoE "numbers UNGLUED[^0-9]+[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          N=$(grep -aoE "numbers UNGLUED[^0-9]+[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
           N=${N:-0}
           echo "unglued=$N"
           # CF-RELAUNCH-ONLY-ON-BUDGET (#1361, D18 2026-08-29). Relaunch iff the
@@ -1481,7 +1481,7 @@ jobs:
         working-directory: backend
         run: |
           set +e
-          N=$(grep -aoE "MOVES base -> finish[^0-9]+[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          N=$(grep -aoE "MOVES base -> finish[^0-9]+[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
           N=${N:-0}
           echo "moves=$N"
           # CF-RELAUNCH-ONLY-ON-BUDGET (#1361, D18 2026-08-29). Relaunch iff the
@@ -1506,7 +1506,7 @@ jobs:
         working-directory: backend
         run: |
           set +e
-          N=$(grep -aoE "MOVES setKey \+ finish[^0-9]+[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          N=$(grep -aoE "MOVES setKey \+ finish[^0-9]+[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
           N=${N:-0}
           echo "moves=$N"
           # CF-RELAUNCH-ONLY-ON-BUDGET (#1361, D18 2026-08-29). Relaunch iff the
@@ -1532,7 +1532,7 @@ jobs:
         working-directory: backend
         run: |
           set +e
-          N=$(grep -aoE "MOVED to checklist key[^0-9]+[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          N=$(grep -aoE "MOVED to checklist key[^0-9]+[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
           N=${N:-0}
           echo "moved=$N"
           # CF-RELAUNCH-ONLY-ON-BUDGET (#1361, D18 2026-08-29). Relaunch iff the
@@ -1557,7 +1557,7 @@ jobs:
         working-directory: backend
         run: |
           set +e
-          N=$(grep -aoE "MOVED to a checklist rung +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          N=$(grep -aoE "MOVED to a checklist rung +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
           echo "parallel_map_moved=${N:-0}"
           # CF-RELAUNCH-ONLY-ON-BUDGET (2026-08-29). Relaunch iff the script says it
           # stopped at its budget with work left. Gating on "did anything" looped
@@ -1599,7 +1599,7 @@ jobs:
         working-directory: backend
         run: |
           set +e
-          N=$(grep -aoE "playerSlug derived +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          N=$(grep -aoE "playerSlug derived +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
           N=${N:-0}
           echo "playerslug_derived=$N"
           # CF-RELAUNCH-ONLY-ON-BUDGET (#1361, D18 2026-08-29). Relaunch iff the
@@ -1624,7 +1624,7 @@ jobs:
         working-directory: backend
         run: |
           set +e
-          SEEN=$(grep -aoE "^  rows scanned +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          SEEN=$(grep -aoE "^  rows scanned +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
           SEEN=${SEEN:-0}
           echo "profile_conform_scanned=$SEEN"
           # CF-RELAUNCH-ONLY-ON-BUDGET (#1361, D18 2026-08-29). Relaunch iff the
@@ -1647,7 +1647,7 @@ jobs:
         working-directory: backend
         run: |
           set +e
-          N=$(grep -aoE "RETIRED \(sale-minted, unused\) +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          N=$(grep -aoE "RETIRED \(sale-minted, unused\) +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
           echo "retired=${N:-0}"
           # CF-RELAUNCH-ONLY-ON-BUDGET (2026-08-29): relaunch iff the script stopped at its budget.
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
@@ -1665,7 +1665,7 @@ jobs:
         working-directory: backend
         run: |
           set +e
-          N=$(grep -aoE "^  RETIRED +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          N=$(grep -aoE "^  RETIRED +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
           echo "retired=${N:-0}"
           # CF-RELAUNCH-ONLY-ON-BUDGET (2026-08-29): relaunch iff the script stopped at its budget.
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
@@ -1683,7 +1683,7 @@ jobs:
         working-directory: backend
         run: |
           set +e
-          N=$(grep -aoE "^  PURGED +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          N=$(grep -aoE "^  PURGED +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
           echo "purged=${N:-0}"
           # CF-RELAUNCH-ONLY-ON-BUDGET: relaunch iff the script stopped at its budget.
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
@@ -1701,7 +1701,7 @@ jobs:
         working-directory: backend
         run: |
           set +e
-          N=$(grep -aoE "^  REPAIRED +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          N=$(grep -aoE "^  REPAIRED +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
           echo "repaired=${N:-0}"
           # CF-RELAUNCH-ONLY-ON-BUDGET (2026-08-29): relaunch iff the script stopped at its budget.
           # The repair re-queries "parallel stamped, title silent" each run, so a relaunch
@@ -1724,7 +1724,7 @@ jobs:
           set +e
           # The fold prints FOLDED (apply) / WOULD FOLD (report), never REPAIRED --
           # the old grep was copy-paste from the repair step and always reported 0.
-          N=$(grep -aoE "^  (FOLDED|WOULD FOLD) +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          N=$(grep -aoE "^  (FOLDED|WOULD FOLD) +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
           echo "folded=${N:-0}"
           # CF-RELAUNCH-ONLY-ON-BUDGET (2026-08-29): relaunch iff the script stopped at its budget.
           # The fold re-queries the twins each run, so a relaunch resumes exactly
@@ -1744,7 +1744,7 @@ jobs:
         working-directory: backend
         run: |
           set +e
-          N=$(grep -aoE "^  (FOLDED|WOULD FOLD) +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          N=$(grep -aoE "^  (FOLDED|WOULD FOLD) +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
           echo "folded=${N:-0}"
           # CF-RELAUNCH-ONLY-ON-BUDGET: relaunch iff the script printed its budget line.
           # R1 re-derives its identity groups every run (the catalog is moving under
@@ -1765,7 +1765,7 @@ jobs:
         working-directory: backend
         run: |
           set +e
-          N=$(grep -aoE "^  ROWS MOVED +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          N=$(grep -aoE "^  ROWS MOVED +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
           echo "rowsMoved=${N:-0}"
           # CF-RELAUNCH-ONLY-ON-BUDGET (2026-08-29): relaunch iff the script printed its
           # budget marker. Never on a count -- a slot whose every identity abstains moves
@@ -1788,7 +1788,7 @@ jobs:
         working-directory: backend
         run: |
           set +e
-          N=$(grep -aoE "^  CONSOLIDATED \(groups\) +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+" | tail -1 | tr -d ,)
+          N=$(grep -aoE "^  CONSOLIDATED \(groups\) +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+" | tail -1 | tr -d , || true)
           echo "consolidated=${N:-0}"
           # CF-RELAUNCH-ONLY-ON-BUDGET: relaunch iff the script printed its budget marker.
           # Never on a count -- a slot whose every group is ambiguous consolidates zero and
@@ -1818,7 +1818,7 @@ jobs:
           # the fold's own refusal -- so this reads the line that carries "in N
           # group(s)", which only that section prints. The FULL set's count is in
           # the log either way; this notice is not the deliverable, the report is.
-          N=$(grep -aoE "^ +COLLISIONS +[0-9,]+ in [0-9,]+ group" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+ in" | grep -oE "^[0-9,]+" | tr -d ,)
+          N=$(grep -aoE "^ +COLLISIONS +[0-9,]+ in [0-9,]+ group" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+ in" | grep -oE "^[0-9,]+" | tr -d , || true)
           echo "d30_refusal_set_collisions=${N:-0}"
           # CF-RELAUNCH-ONLY-ON-BUDGET (#1361): relaunch iff the script printed its
           # budget marker. NEVER on a count -- a slot whose every group classifies
@@ -1840,7 +1840,7 @@ jobs:
         working-directory: backend
         run: |
           set +e
-          N=$(grep -aoE "^  RE-KEYED +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          N=$(grep -aoE "^  RE-KEYED +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
           echo "rekeyed=${N:-0}"
           # CF-RELAUNCH-ONLY-ON-BUDGET (2026-08-29): relaunch iff the script stopped at its budget.
           # Every run re-derives each row's target; a row already there counts as already-canonical,
@@ -1860,7 +1860,7 @@ jobs:
         working-directory: backend
         run: |
           set +e
-          N=$(grep -aoE "^  COLLAPSED +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          N=$(grep -aoE "^  COLLAPSED +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
           echo "collapsed=${N:-0}"
           # CF-RELAUNCH-ONLY-ON-BUDGET (2026-08-29): relaunch iff the script stopped at its budget.
           # A collapsed pair no longer has a ch-comp:: twin, so a relaunch re-reads only what is left.
@@ -1879,7 +1879,7 @@ jobs:
         working-directory: backend
         run: |
           set +e
-          N=$(grep -aoE "^  MOVED to [a-z0-9-]+ +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          N=$(grep -aoE "^  MOVED to [a-z0-9-]+ +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
           echo "renamed=${N:-0}"
           # CF-RELAUNCH-ONLY-ON-BUDGET (2026-08-29): relaunch iff the script stopped at its budget.
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
@@ -1897,7 +1897,7 @@ jobs:
         working-directory: backend
         run: |
           set +e
-          N=$(grep -aoE "PARSED from the checklist +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          N=$(grep -aoE "PARSED from the checklist +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
           echo "parsed=${N:-0}"
           # CF-RELAUNCH-ONLY-ON-BUDGET (2026-08-29): relaunch iff the script stopped at its budget.
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
@@ -1915,7 +1915,7 @@ jobs:
         working-directory: backend
         run: |
           set +e
-          N=$(grep -aoE "MOVED to the clean slug +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          N=$(grep -aoE "MOVED to the clean slug +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
           echo "annotations_moved=${N:-0}"
           # CF-RELAUNCH-ONLY-ON-BUDGET (2026-08-29): relaunch iff the script stopped at its budget.
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
@@ -1936,7 +1936,7 @@ jobs:
         working-directory: backend
         run: |
           set +e
-          N=$(grep -aoE "^  REPAIRED +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          N=$(grep -aoE "^  REPAIRED +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
           echo "repaired=${N:-0}"
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (repaired=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
@@ -1956,7 +1956,7 @@ jobs:
         working-directory: backend
         run: |
           set +e
-          N=$(grep -aoE "^  REPAIRED +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          N=$(grep -aoE "^  REPAIRED +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
           echo "repaired=${N:-0}"
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (repaired=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
@@ -1976,7 +1976,7 @@ jobs:
         working-directory: backend
         run: |
           set +e
-          N=$(grep -aoE "^  REPAIRED +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          N=$(grep -aoE "^  REPAIRED +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
           echo "repaired=${N:-0}"
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (repaired=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
@@ -1999,7 +1999,7 @@ jobs:
         working-directory: backend
         run: |
           set +e
-          N=$(grep -aoE "^  RENAMED +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          N=$(grep -aoE "^  RENAMED +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
           echo "renamed=${N:-0}"
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (renamed=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
@@ -2024,7 +2024,7 @@ jobs:
         working-directory: backend
         run: |
           set +e
-          N=$(grep -aoE "^  CHANGED +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          N=$(grep -aoE "^  CHANGED +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
           echo "changed=${N:-0}"
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (changed=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
@@ -2047,7 +2047,7 @@ jobs:
         working-directory: backend
         run: |
           set +e
-          N=$(grep -aoE "^  REPAIRED +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          N=$(grep -aoE "^  REPAIRED +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
           echo "repaired=${N:-0}"
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (repaired=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
@@ -2066,7 +2066,7 @@ jobs:
         working-directory: backend
         run: |
           set +e
-          N=$(grep -aoE "^  CLEANED +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          N=$(grep -aoE "^  CLEANED +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
           echo "cleaned=${N:-0}"
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (cleaned=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
@@ -2104,7 +2104,7 @@ jobs:
         working-directory: backend
         run: |
           set +e
-          N=$(grep -aoE "^  catalog rows written +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          N=$(grep -aoE "^  catalog rows written +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
           echo "written=${N:-0}"
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (written=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
@@ -2131,7 +2131,7 @@ jobs:
         working-directory: backend
         run: |
           set +e
-          N=$(grep -aoE "^  (REPAIRED|WOULD REPAIR) +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          N=$(grep -aoE "^  (REPAIRED|WOULD REPAIR) +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
           echo "repaired=${N:-0}"
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (repaired=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
@@ -2159,7 +2159,7 @@ jobs:
         working-directory: backend
         run: |
           set +e
-          N=$(grep -aoE "^  (MOVED|WOULD MOVE) +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          N=$(grep -aoE "^  (MOVED|WOULD MOVE) +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
           echo "moved=${N:-0}"
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (moved=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
@@ -2181,7 +2181,7 @@ jobs:
         working-directory: backend
         run: |
           set +e
-          N=$(grep -aoE "^  annotated +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          N=$(grep -aoE "^  annotated +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
           echo "checklist_backing_annotated=${N:-0}"
           # CF-RELAUNCH-ONLY-ON-BUDGET (2026-08-29). Relaunch iff the script says it
           # stopped at its budget with work left. Gating on "did anything" looped
@@ -2211,7 +2211,7 @@ jobs:
         working-directory: backend
         run: |
           set +e
-          N=$(grep -aoE "scored +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          N=$(grep -aoE "scored +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
           echo "engine_backtest_points_scored=${N:-0}"
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (scored=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
@@ -2232,7 +2232,7 @@ jobs:
         working-directory: backend
         run: |
           set +e
-          MADE=$(grep -aoE "^  written +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          MADE=$(grep -aoE "^  written +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
           MADE=${MADE:-0}
           echo "graded_identities_written=$MADE"
           # CF-RELAUNCH-ONLY-ON-BUDGET (#1361, D18 2026-08-29). Relaunch iff the
@@ -2259,7 +2259,7 @@ jobs:
         working-directory: backend
         run: |
           set +e
-          MOVED=$(grep -aoE "^  deleted +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          MOVED=$(grep -aoE "^  deleted +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
           MOVED=${MOVED:-0}
           echo "retire_deleted=$MOVED"
           # CF-RELAUNCH-ONLY-ON-BUDGET (#1361, D18 2026-08-29). Relaunch iff the
@@ -2300,7 +2300,7 @@ jobs:
           # terminates -- but a run SIGKILLed at the step ceiling prints no
           # summary, so that gate read 0 and stopped a fleet with work left.
           # The marker below is the script saying, itself, that work is left.
-          MOVED=$(grep -aoE "re-homed to their own slug +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d ,)
+          MOVED=$(grep -aoE "re-homed to their own slug +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
           MOVED=${MOVED:-0}
           echo "rehome_moved=$MOVED years=$REHOME_YEARS slot=${{ inputs.slot }}/${{ inputs.slots }}"
           # D18 (2026-08-29): the script now stops at its OWN RUN_MINUTES budget
@@ -2395,7 +2395,7 @@ jobs:
         shell: bash
         run: |
           set +e
-          NEXT_START=$(grep -oE 'next start date:\s+[0-9-]+' /tmp/backfill.log 2>/dev/null | tail -1 | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' | head -1)
+          NEXT_START=$(grep -oE 'next start date:\s+[0-9-]+' /tmp/backfill.log 2>/dev/null | tail -1 | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' | head -1 || true)
           END_DATE="${{ inputs.bulk_end_date }}"
           [ -z "$END_DATE" ] && END_DATE="2018-01-01"
           echo "next_start=$NEXT_START  end_date=$END_DATE"
@@ -2430,7 +2430,7 @@ jobs:
         shell: bash
         run: |
           set +e
-          RN=$(grep -E '^RELAUNCH_NEEDED=' /tmp/backfill.log 2>/dev/null | tail -1 | cut -d'=' -f2)
+          RN=$(grep -E '^RELAUNCH_NEEDED=' /tmp/backfill.log 2>/dev/null | tail -1 | cut -d'=' -f2 || true)
           echo "RELAUNCH_NEEDED=$RN"
           if [ "$RN" = "true" ]; then
             echo "::notice::${{ inputs.script }} has more tuples — re-dispatching"
