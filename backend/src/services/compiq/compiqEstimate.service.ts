@@ -1424,6 +1424,16 @@ export function getGraderPremium(
       const family = classifyFamily(productSet ?? null);
       const sport = sportHint ? String(sportHint).toLowerCase() : null;
 
+      // CF-POKEMON-ENGINE-WIRING applies to this rung too (2026-09-03,
+      // audit C-5). lookupValueBandMultiplierWithScope runs FIRST here,
+      // above the Pokemon-guarded lookup below — so before the guard was
+      // added inside that function, a Pokemon card resolved to the pooled
+      // (baseball-weighted) baseline band and the refusal two lines down
+      // was never reached. The guard now lives in the lookup itself, so
+      // every caller gets it in whatever order it runs them; this call
+      // returns null for Pokemon rather than a baseline band, and control
+      // reaches lookupGradeRatioByTier, which resolves pokemon's own
+      // byTier figure or refuses.
       const bandLookup = lookupValueBandMultiplierWithScope(rawPrice, company, gradeValueNum, { sport, family });
       if (bandLookup && Number.isFinite(bandLookup.medianRatio) && bandLookup.medianRatio > 0) {
         return bandLookup.medianRatio * setBump;

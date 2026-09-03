@@ -316,12 +316,23 @@ describe("lookupValueBandMultiplierWithScope adjacent-band rescue", () => {
         },
       },
     });
+    // CF-VALUE-BAND-ADJACENT-DISTANCE (2026-09-03, audit H-6). AMENDED.
+    // This fixture's nearest populated same-family cell is $500-999, which
+    // is TWO bands from the $2,500-4,999 target. The rescue is now bounded
+    // to distance 1, so it declines and the ladder falls to the bySport
+    // aggregate — which is what this lookup should have been using all
+    // along.
+    //
+    // The original assertion here preferred the same-family 1.10x at
+    // distance 2 over the mixed-family 1.28x. Measured against the shipped
+    // table, that preference does not hold up: across 358 held-out cells
+    // where the true same-family value IS known, a distance-2 neighbour
+    // beat the rung it displaces only 14% of the time (median |log error|
+    // 0.405 vs the fallback's 0.066). At distance 1 it is 17%. See the
+    // spread table in gradeCalibrationConfig.ts.
     const r = lookupValueBandMultiplierWithScope(2500, "PSA", 9, { sport: "baseball", family: "bowman-chrome" });
-    expect(r?.scope).toBe("sport-family-adjacent");
-    expect(r?.medianRatio).toBe(1.10);
-    // Should pick the nearest populated band, which is $1,000-2,499 if present,
-    // otherwise $5,000-9,999, otherwise $500-999. In this fixture $500-999 wins
-    // (nearest populated to $2,500-4,999 with the missing $1,000-2,499 gap).
+    expect(r?.scope).toBe("sport");
+    expect(r?.medianRatio).toBe(1.28);
   });
 
   it("skips adjacent-band cells below MIN_ADJACENT_BAND_SAMPLE (n=10)", async () => {
