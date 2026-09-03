@@ -130,6 +130,25 @@ export const VALUE_WINDOW_DAYS = 14;
 /** Series length the UI renders. */
 export const SERIES_DAYS = 180;
 
+/**
+ * Days of pool read BEFORE a span's first day, used to seed the walk's
+ * carry-forward so day one has real used weight.
+ *
+ * A recompute starts with whatever carry storage holds. On a rebuild
+ * that is a carry map keyed to the CURRENT epoch's members, so the
+ * span's early days - valued against an OLDER epoch's basket - find
+ * almost nothing carried and collapse below the floor. Reading one full
+ * eligibility window back and seeding each member from its last v()
+ * before day one is what the old 14-day lead-in was reaching for; 90
+ * days is the same window a basket's own eligibility is read over, so a
+ * member liquid enough to be picked is liquid enough to be seeded.
+ *
+ * VALUE_WINDOW_DAYS (14) is NOT enough: it only catches members that
+ * traded in the fortnight before the span, which for a thin sport is
+ * a handful of the basket.
+ */
+export const LEAD_IN_DAYS = 90;
+
 /** Index level at the basket's base date. */
 export const BASE_LEVEL = 100;
 
@@ -144,7 +163,17 @@ export const BASE_LEVEL = 100;
 export const MIN_USED_WEIGHT = 0.5;
 
 /** Why a day produced no published point. */
-export type WithheldReason = "used_weight_below_floor" | "no_valued_members";
+export type WithheldReason =
+  | "used_weight_below_floor"
+  | "no_valued_members"
+  /**
+   * Below the floor with NO prior published level to carry. The point is
+   * written with no `level` at all rather than skipped: skipping leaves
+   * whatever doc already sits at `point::<sport>::<date>` standing - and
+   * on 2026-09-03 that was a pre-C-1 doc with no usedWeight, published,
+   * fabricated. A recompute must OWN every id in its span.
+   */
+  | "series_start";
 
 /** Reserved synthetic partition key for a sport's index docs. */
 export function indexPartitionKey(sport: string): string {
@@ -196,7 +225,12 @@ export interface IndexPointDoc {
   docType: "market_index_point";
   sport: string;
   date: string;                    // YYYY-MM-DD
-  level: number;
+  /**
+   * Absent ONLY on a `series_start` withhold - a day below the floor with
+   * no prior level to carry. Every other point, published or carried,
+   * has one. The read side drops levelless points from the series.
+   */
+  level?: number;
   epoch: string;
   /** Members that had a fresh (non-carried) value on this date. */
   freshMembers: number;

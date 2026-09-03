@@ -254,6 +254,51 @@ async function main() {
     process.exit(2);
   }
 
+  // ---- PRE-SPAN POINTS: the day the walk can no longer reach ----------
+  // The recompute owns `[seriesFrom .. asOf]` and upserts every id in it.
+  // A point OLDER than seriesFrom is one the walk will never touch again
+  // - it was written by a run whose span started a day earlier - so it
+  // sits in storage forever at whatever the old method computed.
+  //
+  // On 2026-09-03 that was exactly four docs (`point::<sport>::2026-03-07`
+  // for baseball, basketball, football and pokemon), pre-C-1, published,
+  // with no usedWeight at all. verifyByRead reads across the whole
+  // container, so those four alone hold verifyOk false no matter how
+  // clean the walk is.
+  //
+  // Deleted, not rewritten: there is nothing to rewrite them TO. They are
+  // outside the series the UI renders and outside the span this run
+  // computes; the correct state for that id is absent.
+  const seriesFrom = svc.addDays(asOf, -(svc.SERIES_DAYS - 1));
+  const prePoints = await readPointsBefore(series, sports, seriesFrom);
+  let prePurge = { deleted: [], skipped: [] };
+  if (apply) {
+    prePurge = await purgeStrays(series, prePoints);
+  }
+  const preReconciled = apply
+    ? prePoints.length === prePurge.deleted.length + prePurge.skipped.length
+    : prePurge.deleted.length === 0 && prePurge.skipped.length === 0;
+  console.log(JSON.stringify({
+    event: "market_index_pre_span_points",
+    mode: apply ? "APPLY (deletes)" : "REPORT-ONLY (lists)",
+    seriesFrom,
+    intended: prePoints.length,
+    deleted: prePurge.deleted.length,
+    skipped: prePurge.skipped.length,
+    reconciled: preReconciled,
+    ids: prePoints.map((p) => p.id),
+    note: "points dated before the recompute span - the walk can never upsert them",
+  }));
+  if (!preReconciled) {
+    console.error(JSON.stringify({
+      event: "market_index_pre_span_purge_did_not_reconcile",
+      intended: prePoints.length,
+      deleted: prePurge.deleted.length,
+      skipped: prePurge.skipped.length,
+    }));
+    process.exit(2);
+  }
+
   // ---- AFTER: what the unified method produces ------------------------
   // Report mode never writes. It does not merely refrain from calling
   // upsert: it drives the recompute through a container FACADE whose
@@ -532,6 +577,30 @@ function identifyStrays(baskets, referenced, sports) {
  * counted as skipped (already gone), never as a failure — but it is
  * still reconciled, so the banner cannot claim a deletion it did not do.
  */
+/**
+ * Every index POINT dated before `boundary`, for the scoped sports.
+ *
+ * Shaped like a stray ({id, sport}) so it feeds the same purgeStrays and
+ * the same reconcile identity - one delete path, one accounting rule.
+ */
+async function readPointsBefore(series, sports, boundary) {
+  const iter = series.items.query({
+    query: `SELECT c.id, c.sport, c.date, c.usedWeight, c.stale, c.computedAt
+            FROM c
+            WHERE c.docType = 'market_index_point'
+              AND c.date < @boundary`,
+    parameters: [{ name: "@boundary", value: boundary }],
+  });
+  const rows = [];
+  while (iter.hasMoreResults()) {
+    const { resources } = await iter.fetchNext();
+    if (resources) rows.push(...resources);
+  }
+  // Scoped like the basket purge: a sport this dispatch did not name is
+  // not this run's to delete.
+  return rows.filter((r) => sports.includes(r.sport));
+}
+
 async function purgeStrays(series, strays) {
   const deleted = [];
   const skipped = [];
