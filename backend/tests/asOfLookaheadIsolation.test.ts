@@ -285,6 +285,90 @@ describe("the cutoff survives the pool's three timestamp serializations", () => 
     expect(isBeforeAsOf("2099-01-01T00:00:00Z", null)).toBe(true);
   });
 
+
+  it("the PARSED guard alone excludes the sale — a negative-offset spelling walks straight through the string bound", () => {
+    // The mirror of the case below, and the reason the parsed guard is not
+    // decoration. The block above measured the pool's three spellings, all of
+    // which are UTC and all of which begin with the same 19 characters as the
+    // cutoff — which is exactly why a 19-char prefix bound works on them.
+    //
+    // It works on them BECAUSE they are UTC. A zoned serialization of the same
+    // instant is not merely a fourth spelling; its first 19 characters are a
+    // DIFFERENT, EARLIER wall-clock reading:
+    //
+    //     "2026-06-04T19:09:00-04:00"  ===  "2026-06-04T23:09:00.000Z"
+    //      ^^^^^^^^^^^^^^^^^^^ sorts four hours below the cutoff
+    //
+    // So the string bound does not merely fail to sort it correctly — it admits
+    // it enthusiastically, as though it were a sale from earlier that evening.
+    // Nothing about the 19-char prefix argument covers this case, and no amount
+    // of care in choosing the cutoff's spelling would fix it: the row's own
+    // spelling is what carries the offset.
+    //
+    // `isBeforeAsOf` is the ONLY thing standing between that row and the pool,
+    // which is why it is asserted here on its own rather than only alongside
+    // the query bound. (Mutation-checked: weakening the guard's comparison
+    // leaves every UTC-spelled case in this file green, and reds only here and
+    // in the boundary case below.)
+    const asOf = Date.parse("2026-06-04T23:09:00.000Z");
+    const heldOutZoned = "2026-06-04T19:09:00-04:00";   // the SAME instant, -04:00
+
+    // Same instant, and the string bound is defeated by it.
+    expect(Date.parse(heldOutZoned)).toBe(asOf);
+    expect(heldOutZoned < asOfCutoffString(asOf)).toBe(true);   // query says ADMIT
+
+    // The parsed guard is what rejects it.
+    expect(isBeforeAsOf(heldOutZoned, asOf)).toBe(false);
+
+    // And a genuinely earlier sale in the same zoned spelling still gets in —
+    // the guard rejects the instant, not the offset notation.
+    expect(isBeforeAsOf("2026-06-04T19:08:59-04:00", asOf)).toBe(true);
+    // A zoned spelling of an instant AFTER the as-of is rejected too, even
+    // though its first 19 characters sort below the cutoff.
+    expect(isBeforeAsOf("2026-06-04T20:09:00-04:00", asOf)).toBe(false);
+  });
+
+  it("strict vs inclusive: at a mid-second as-of the guard admits exactly what the query admits", () => {
+    // The header's invariant, in the one place it can be violated: "Same second
+    // as the held-out sale is excluded, matching the string bound so the two
+    // filters can never disagree about a row."
+    //
+    // The query bound is second-granular — the cutoff is truncated to the
+    // second — so when the as-of instant falls MID-second, the query excludes
+    // the whole of that second, including the milliseconds before the as-of.
+    // The guard must floor to the same second to agree. Comparing against the
+    // raw `asOfMs` instead (`t < asOfMs`) is inclusive of those milliseconds,
+    // and the two filters then disagree about a real row: Cosmos never returns
+    // it, but the in-process guard would have let it through — so the guard
+    // stops being a re-check of the same rule and becomes a second, weaker one.
+    //
+    // That divergence is invisible when the as-of lands exactly on a second
+    // boundary, which is what every other case in this file uses. This case
+    // exists to make the mutation red.
+    const asOf = Date.parse("2026-06-04T23:09:00.500Z");   // MID-second
+    const cutoff = asOfCutoffString(asOf);
+    expect(cutoff).toBe("2026-06-04T23:09:00");
+
+    // Rows spanning the boundary, including the two that straddle the as-of
+    // WITHIN its own second.
+    for (const soldAt of [
+      "2026-06-04T23:09:00.200Z",     // before asOfMs, but inside the cut second
+      "2026-06-04T23:09:00.000Z",     // start of the cut second
+      "2026-06-04T23:09:00+00:00",    // same, other spelling
+      "2026-06-04T23:09:00.800Z",     // after asOfMs
+      "2026-06-04T23:08:59.999Z",     // strictly earlier second
+      "2026-05-30T10:00:00Z",         // long before
+    ]) {
+      // The invariant: whatever the query decides, the guard decides the same.
+      expect(isBeforeAsOf(soldAt, asOf)).toBe(soldAt < cutoff);
+    }
+
+    // Stated directly, because it is the mutation's exact escape: a row 300ms
+    // BEFORE the as-of instant but inside the cut second is excluded by both.
+    // `t < asOfMs` would admit it and disagree with the query.
+    expect("2026-06-04T23:09:00.200Z" < cutoff).toBe(false);
+    expect(isBeforeAsOf("2026-06-04T23:09:00.200Z", asOf)).toBe(false);
+  });
   it("the STRING bound alone excludes the sale — the parsed guard is a second layer, not the only one", () => {
     // Why this case is separate from the end-to-end one below. The two defenses
     // are independent by design, and a test that only ever exercises them
