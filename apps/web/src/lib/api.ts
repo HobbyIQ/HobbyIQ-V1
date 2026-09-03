@@ -2918,6 +2918,125 @@ export async function fetchWeeklyBrief(): Promise<WeeklyBriefResponse> {
   return await request<WeeklyBriefResponse>("/api/portfolio/insights/weekly-brief");
 }
 
+// ─── Weekly digest (CF-WEEKLY-DIGEST, Drew 2026-09-02) ────────────
+//
+// The persisted Sunday digest. Every section is OPTIONAL on the wire:
+// a section the digest did not have is ABSENT, not empty — `sections`
+// names what is there, and the page walks that list. Mirrors the
+// backend's WeeklyDigest exactly.
+
+export type DigestValueBasis = "observed" | "estimated" | "under-review" | "unpriced";
+export type DigestSectionName = "movers" | "reestimated" | "signals" | "audit" | "market";
+
+export interface DigestMover {
+  holdingId: string;
+  playerName: string;
+  cardTitle: string;
+  movePct: number;
+  value: number | null;
+  valueBasis: DigestValueBasis;
+  moveUsd: number | null;
+  fromValue: number | null;
+  fromAt: string | null;
+  toAt: string | null;
+  observationCount: number;
+  costBasis: number | null;
+  vsCostPct: number | null;
+  basisNote: string;
+  speculative: boolean;
+  /** CF-A-MOVER-NEEDS-CORROBORATION (2026-09-03). True iff both ends of
+   *  the move were exact-pool reads — a real sale of this card at each
+   *  end. Only corroborated rows appear under a movers heading. */
+  corroborated: boolean;
+  anchorRung: string | null;
+  latestRung: string | null;
+}
+
+export interface DigestSignalRow {
+  holdingId: string;
+  playerName: string;
+  cardTitle: string;
+  kind: "sell" | "watch";
+  value: number | null;
+  unrealizedGainUsd: number | null;
+  urgencyScore: number;
+  basisNote: string;
+}
+
+export interface DigestAuditItem {
+  holdingId: string;
+  playerName: string;
+  cardTitle: string;
+  invariant: string;
+  reason: string;
+  raisedAt: string;
+  value: number | null;
+  basisNote: string;
+}
+
+export interface DigestMarketRow {
+  sport: string;
+  changePct: number | null;
+  latestLevel: number;
+  basisNote: string;
+}
+
+export interface WeeklyDigest {
+  schemaVersion: number;
+  userId: string;
+  weekId: string;
+  weekStart: string;
+  weekEnd: string;
+  generatedAt: string;
+  headline: string;
+  summary: {
+    holdings: number;
+    pricedHoldings: number;
+    speculativeHoldings: number;
+    portfolioValue: number | null;
+    portfolioValueBasis: string;
+  };
+  sections: DigestSectionName[];
+  movers?: { gainers: DigestMover[]; decliners: DigestMover[] };
+  /** Value changes we could not corroborate with sales at both ends —
+   *  repricings, rendered under their own heading and never as movers. */
+  reestimated?: { items: DigestMover[]; total: number };
+  signals?: { sell: DigestSignalRow[]; watch: DigestSignalRow[] };
+  audit?: { items: DigestAuditItem[]; total: number };
+  market?: { rows: DigestMarketRow[] };
+  footnotes: string[];
+}
+
+export interface WeeklyDigestResponse {
+  /** null when no digest has been built for this user yet. */
+  digest: WeeklyDigest | null;
+  message?: string;
+  deliveredAt?: string | null;
+  deliveryChannel?: string | null;
+  computedAt?: string;
+}
+
+export interface WeeklyDigestIndexResponse {
+  count: number;
+  weeks: Array<{
+    weekId: string;
+    weekStart: string;
+    weekEnd: string;
+    headline: string;
+    sections: DigestSectionName[];
+    deliveredAt: string | null;
+  }>;
+}
+
+export async function fetchWeeklyDigest(weekId?: string): Promise<WeeklyDigestResponse> {
+  const q = weekId ? `?week=${encodeURIComponent(weekId)}` : "";
+  return await request<WeeklyDigestResponse>(`/api/portfolio/insights/weekly-digest${q}`);
+}
+
+export async function fetchWeeklyDigestIndex(): Promise<WeeklyDigestIndexResponse> {
+  return await request<WeeklyDigestIndexResponse>("/api/portfolio/insights/weekly-digests");
+}
+
 export interface SellRadarCandidate {
   holdingId: string;
   player: string;

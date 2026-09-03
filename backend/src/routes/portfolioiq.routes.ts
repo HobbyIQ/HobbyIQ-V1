@@ -1191,6 +1191,67 @@ router.get("/health/score", portfolio.getPortfolioHealth);
 // (collector+ per the matrix). 402 to free users.
 router.get("/analytics/calibration", requireEntitlement("predictions"), portfolio.getCalibration);
 router.get("/insights/weekly-brief", requireEntitlement("predictions"), portfolio.getWeeklyBrief);
+
+// CF-WEEKLY-DIGEST (Drew, 2026-09-02). The in-app digest view — the
+// delivery floor. Every digest the Sunday job builds is persisted, so
+// these read even when the mail could not go out (ACS unconfigured, no
+// verified address on file). Same entitlement class as weekly-brief.
+//
+//   GET /insights/weekly-digest            → newest persisted digest
+//   GET /insights/weekly-digest?week=2026-W36 → that week
+//   GET /insights/weekly-digests           → index, newest first
+//
+// Read-only: neither route builds or sends anything. A user with no
+// digest yet gets 200 + { digest: null } and a plain sentence, not a 404
+// — "your first one lands Sunday" is an answer, a 404 is not.
+router.get("/insights/weekly-digest", requireEntitlement("predictions"), async (req, res, next) => {
+  try {
+    const userId = req.user!.userId;
+    const { readWeeklyDigest, listWeeklyDigests } = await import(
+      "../services/portfolioiq/weeklyDigestStore.service.js"
+    );
+    const week = String(req.query.week ?? "").trim();
+    const doc = week
+      ? await readWeeklyDigest(userId, week)
+      : (await listWeeklyDigests(userId, 1))[0] ?? null;
+    if (!doc) {
+      return res.json({
+        digest: null,
+        message: week
+          ? "No digest on file for that week."
+          : "No weekly digest yet — your first one is built Sunday night.",
+      });
+    }
+    res.json({
+      digest: doc.digest,
+      deliveredAt: doc.deliveredAt ?? null,
+      deliveryChannel: doc.deliveryChannel ?? null,
+      computedAt: doc.computedAt,
+    });
+  } catch (err) { next(err); }
+});
+
+router.get("/insights/weekly-digests", requireEntitlement("predictions"), async (req, res, next) => {
+  try {
+    const userId = req.user!.userId;
+    const { listWeeklyDigests } = await import(
+      "../services/portfolioiq/weeklyDigestStore.service.js"
+    );
+    const limit = Number(req.query.limit ?? 12);
+    const docs = await listWeeklyDigests(userId, Number.isFinite(limit) ? limit : 12);
+    res.json({
+      count: docs.length,
+      weeks: docs.map((d) => ({
+        weekId: d.weekId,
+        weekStart: d.digest.weekStart,
+        weekEnd: d.digest.weekEnd,
+        headline: d.digest.headline,
+        sections: d.digest.sections,
+        deliveredAt: d.deliveredAt ?? null,
+      })),
+    });
+  } catch (err) { next(err); }
+});
 router.post("/feedback/recommendation", portfolio.addRecommendationFeedback);
 router.get("/ledger", portfolio.getLedger);
 router.patch("/ledger/:id", portfolio.updateLedgerEntry);

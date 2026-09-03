@@ -1,0 +1,178 @@
+name: Weekly Digest (Sunday)
+
+# CF-WEEKLY-DIGEST (Drew, 2026-09-02). Builds, persists and mails every
+# user's weekly digest once a week.
+#
+# Cadence: Sunday 22:00 UTC = 6PM ET. Late enough that Sunday's sales have
+# landed in the pool, early enough that the mail is waiting Monday morning.
+# The job reports the ISO week that is ENDING (it takes the week containing
+# "yesterday"), so a Sunday-evening run covers Mon–Sun of that same week.
+#
+# IDEMPOTENT BY CONSTRUCTION. Digests are keyed (userId, ISO week), so a
+# re-run of the same week upserts the same Cosmos doc — never a second row.
+# Delivery is gated on that doc's deliveredAt: a re-run mails nobody twice.
+# Re-running this workflow is therefore always safe, and the only way to
+# re-send is the explicit `force` input.
+#
+# DELIVERY FLOOR. Every digest is persisted before any mail is attempted,
+# and GET /api/portfolio/insights/weekly-digest serves it in-app. A run
+# with ACS unconfigured still leaves every user a digest to read.
+
+on:
+  schedule:
+    - cron: "0 22 * * 0"   # Sunday 22:00 UTC = 6PM ET
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Build only — persist nothing, send nothing'
+        required: false
+        type: choice
+        default: 'true'
+        options: ['true', 'false']
+      week_id:
+        description: 'ISO week to build (e.g. 2026-W36). Blank = the week just ended.'
+        required: false
+        type: string
+        default: ''
+      user_id:
+        description: 'Single userId to run (blank = every user)'
+        required: false
+        type: string
+        default: ''
+      force:
+        description: 'Re-send a week already delivered (breaks idempotence — deliberate)'
+        required: false
+        type: choice
+        default: 'false'
+        options: ['true', 'false']
+      max_users:
+        description: 'Cap users processed this run (blank = no cap)'
+        required: false
+        type: string
+        default: ''
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    timeout-minutes: 30
+
+    steps:
+      - name: Login to Azure
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+
+      - name: Guard — ADMIN_API_TOKEN present
+        env:
+          ADMIN_API_TOKEN: ${{ secrets.ADMIN_API_TOKEN }}
+        run: |
+          if [ -z "$ADMIN_API_TOKEN" ]; then
+            echo "::error::ADMIN_API_TOKEN secret missing"
+            exit 1
+          fi
+          echo "::add-mask::$ADMIN_API_TOKEN"
+
+      - name: POST weekly-digest/run
+        env:
+          ADMIN_API_TOKEN: ${{ secrets.ADMIN_API_TOKEN }}
+          DRY_RUN: ${{ inputs.dry_run || 'false' }}
+          FORCE: ${{ inputs.force || 'false' }}
+          WEEK_ID: ${{ inputs.week_id || '' }}
+          USER_ID: ${{ inputs.user_id || '' }}
+          MAX_USERS: ${{ inputs.max_users || '' }}
+        run: |
+          set -euo pipefail
+          # Optional fields are only included when non-empty, so a blank
+          # dispatch input can never be sent as an empty-string weekId
+          # that the job would then fail to parse.
+          BODY=$(jq -nc \
+            --argjson dryRun "$DRY_RUN" \
+            --argjson force "$FORCE" \
+            --arg weekId "$WEEK_ID" \
+            --arg userId "$USER_ID" \
+            --arg maxUsers "$MAX_USERS" \
+            '{ dryRun: $dryRun, force: $force }
+             + (if $weekId  == "" then {} else { weekId: $weekId } end)
+             + (if $userId  == "" then {} else { userId: $userId } end)
+             + (if $maxUsers == "" then {} else { maxUsers: ($maxUsers | tonumber) } end)')
+          HTTP=$(curl -sS -w '\n%{http_code}' \
+            -X POST \
+            -H "Authorization: Bearer $ADMIN_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            --data "$BODY" \
+            --max-time 1500 \
+            "https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net/api/portfolio/admin/weekly-digest/run" \
+            -o response.json) || true
+          STATUS=$(echo "$HTTP" | tail -n1)
+          echo "HTTP status: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "::error::weekly-digest failed: $STATUS"
+            cat response.json || true
+            exit 1
+          fi
+          jq '.summary' response.json
+
+      # [[green-workflow-is-not-data-flow]] — HTTP 200 proves the request
+      # landed, not that anyone got a digest. These gates read the numbers.
+      - name: Gate — the run actually produced digests
+        env:
+          DRY_RUN: ${{ inputs.dry_run || 'false' }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          WEEK=$(jq -r '.summary.weekId // "?"' response.json)
+          SCANNED=$(jq -r '.summary.usersScanned // 0' response.json)
+          BUILT=$(jq -r '.summary.digestsBuilt // 0' response.json)
+          PERSISTED=$(jq -r '.summary.digestsPersisted // 0' response.json)
+          SENT=$(jq -r '.summary.emailsSent // 0' response.json)
+          DUP=$(jq -r '.summary.skipped.alreadyDelivered // 0' response.json)
+          SIGNALS=$(jq -r 'if (.summary | has("signalsSurfaceAvailable")) then (.summary.signalsSurfaceAvailable | tostring) else "unknown" end' response.json)
+          MARKET=$(jq -r 'if (.summary | has("marketSurfaceAvailable")) then (.summary.marketSurfaceAvailable | tostring) else "unknown" end' response.json)
+          MAILCFG=$(jq -r 'if (.summary | has("emailConfigured")) then (.summary.emailConfigured | tostring) else "unknown" end' response.json)
+          echo "weekly digest $WEEK: scanned=$SCANNED built=$BUILT persisted=$PERSISTED sent=$SENT alreadyDelivered=$DUP signals=$SIGNALS market=$MARKET emailConfigured=$MAILCFG"
+
+          # A scheduled run that scanned users and built nothing is a
+          # defect, not a quiet week — every user with holdings gets a
+          # digest, even a short one.
+          if [ "$EVENT_NAME" = "schedule" ] && [ "$SCANNED" -gt 0 ] && [ "$BUILT" -eq 0 ]; then
+            echo "::error::weekly-digest scanned $SCANNED users and built 0 digests"
+            exit 1
+          fi
+
+          # The digest was BUILT but not written: the in-app view (the
+          # delivery floor) would have nothing to serve.
+          if [ "$DRY_RUN" != "true" ] && [ "$BUILT" -gt 0 ] && [ "$PERSISTED" -eq 0 ]; then
+            echo "::error::weekly-digest built $BUILT digests and persisted 0 — the in-app view has nothing to show"
+            exit 1
+          fi
+
+          # D13 shape: zero sends with no configured provider is the
+          # defect. Zero sends WITH a provider (everyone already had this
+          # week, or nobody has a verified address) stays green.
+          if [ "$EVENT_NAME" = "schedule" ] && [ "$DRY_RUN" != "true" ] && [ "$MAILCFG" = "false" ]; then
+            echo "::error::weekly-digest: ACS is NOT configured on the API — $BUILT digests were built and none could be mailed"
+            exit 1
+          fi
+
+          # Surfaces are OPTIONAL by design (feature-detected), so their
+          # absence is a warning that says which section went missing —
+          # never a red run.
+          if [ "$SIGNALS" = "false" ]; then
+            echo "::warning::sell/watch signals surface did not answer — digests shipped without that section"
+          fi
+          if [ "$MARKET" = "false" ]; then
+            echo "::warning::market-index surface did not answer — digests shipped without week-over-week context"
+          fi
+
+      - name: Upload response as artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: weekly-digest-response-${{ github.run_id }}
+          path: response.json
+          retention-days: 30
