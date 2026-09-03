@@ -4,7 +4,10 @@
 // in localStorage (matches how iOS keeps its session token via
 // Keychain — same wire contract).
 
-const API_BASE =
+// Exported so a caller that cannot use `request()` — funnelTelemetry.ts
+// needs `keepalive` and a swallowed failure — still points at the same
+// origin rather than resolving the base a second, drifting way.
+export const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE ??
   "https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net";
 
@@ -1619,6 +1622,34 @@ export async function dismissOnboarding(): Promise<{ success: boolean }> {
 
 export async function reopenOnboarding(): Promise<{ success: boolean }> {
   return await request("/api/onboarding/reopen", { method: "POST" });
+}
+
+// ─── CF-FIRST-RUN (Drew, 2026-09-02) ────────────────────────────────────
+//
+// The guided funnel's state. `progress` is null for an account that has
+// never started — lib/firstRun.ts's normalizeProgress() turns that into
+// the empty record, so exactly one module decides what "fresh" means.
+// `holdingCount` is derived server-side from the portfolio, which is what
+// lets the funnel stand down for a user who filled their collection on
+// iOS and has never opened the web app before.
+
+export interface FirstRunStateResponse {
+  success: boolean;
+  progress: unknown | null;
+  holdingCount: number;
+}
+
+export async function fetchFirstRun(): Promise<FirstRunStateResponse> {
+  return await request<FirstRunStateResponse>("/api/onboarding/first-run");
+}
+
+export async function saveFirstRun(
+  progress: unknown,
+): Promise<{ success: boolean; progress?: unknown }> {
+  return await request("/api/onboarding/first-run", {
+    method: "POST",
+    body: JSON.stringify({ progress }),
+  });
 }
 
 export async function setPublicShareEnabled(enabled: boolean): Promise<{ success: boolean; publicShareEnabled: boolean }> {
