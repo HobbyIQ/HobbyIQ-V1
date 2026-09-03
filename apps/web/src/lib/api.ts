@@ -494,27 +494,6 @@ export interface PortfolioHolding {
    *  no-price guard at the store door. */
   reviewReason?: string | null;
   needsReview?: boolean | null;
-  /** CF-SELLER-INTELLIGENCE-SELL-WINDOW (Drew, 2026-09-02). The per-holding
-   *  timing call. Derived server-side from the holding's own trend + the
-   *  player index; never a valuation. Optional during the rollout window —
-   *  older endpoints omit it and the chip simply does not render. */
-  sellSignal?: {
-    signal: "none" | "watch" | "sell-window" | "hold";
-    horizon: "none" | "days-7-14" | "days-14-30";
-    signalClass: "price" | "attention";
-    /** One sentence with the numbers quoted. Show it verbatim — it is the
-     *  basis, and paraphrasing it would drop the evidence. */
-    basis: string;
-    reason?: string | null;
-    measures?: {
-      playerIndexPct?: number | null;
-      ownPoolPct?: number | null;
-      divergencePct?: number | null;
-      ownPoolSales?: number | null;
-      trendAgeDays?: number | null;
-      confidence?: number | null;
-    } | null;
-  } | null;
   /** CF-PRICING-ENVELOPE (Drew, 2026-07-31). Canonical pricing surface.
    *  Optional during the migration window — new endpoints emit it, older
    *  endpoints may still return only the legacy flat fields above.
@@ -3059,12 +3038,56 @@ export interface EbayListingPrepared {
     bestOfferMinPriceCents: number | null;
     description: string;
     titleSuggested: string;
+    /** CF-EBAY-SELL-LOOP: the "how this price was set" HTML the backend
+     *  will append at publish. "" when the price is not HobbyIQ's. Shown
+     *  read-only — publish re-derives it server-side, so editing it here
+     *  would have no effect on what a buyer sees. */
+    basisBlock?: string;
+    /** One-line helper text under the price field. */
+    priceSummary?: string;
   };
+  /** CF-EBAY-SELL-LOOP (Drew, 2026-09-02). Where the listing price came
+   *  from. The price is the engine's canonical projection with its rung
+   *  label — never a stored snapshot and never a number the client
+   *  computed. `labels` are disclosures that MUST be shown to the seller. */
+  pricing?: EbayDraftPricing;
+  /** The sell-window signal for this holding, when its trend supports one.
+   *  Context for the seller's timing — it never moved the price. */
+  sellSignal?: EbaySellSignal | null;
   validation: {
     requiredMissing: string[];
     warnings: string[];
     readyToPublish: boolean;
   };
+}
+
+export interface EbayDraftLabel {
+  code: "speculative" | "self-anchored" | "fallback-rung" | "low-confidence";
+  text: string;
+}
+
+export interface EbayDraftPricing {
+  status: "engine" | "engine-declined" | "no-identity" | "engine-error";
+  priceCents: number | null;
+  /** The rung from the closed fmvRung vocabulary. */
+  rungLabel: string | null;
+  /** True iff the number came from the exact (identity, grade) pool. */
+  exactPool: boolean;
+  confidence: number | null;
+  basis: string | null;
+  compCount: number;
+  range: { n: number; min: number; median: number; max: number } | null;
+  computedAt: string | null;
+  labels: EbayDraftLabel[];
+  declineReason: string | null;
+}
+
+export interface EbaySellSignal {
+  signal: "none" | "watch" | "sell-window" | "hold";
+  horizon: "none" | "days-7-14" | "days-14-30";
+  signalClass: "price" | "attention";
+  basis: string;
+  reason: string | null;
 }
 
 export interface EbayPublishResult {
