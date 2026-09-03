@@ -811,6 +811,55 @@ router.post("/admin/sell-side-notify/run", requireAdmin, async (req: Request, re
   } catch (err) { next(err); }
 });
 
+// CF-WEEKLY-DIGEST (Drew, 2026-09-02). Admin trigger for the Sunday
+// weekly-digest fanout. Fires via GH Actions weekly; also manually
+// dispatchable for a single user or an older week.
+//
+// Auth: requireAdmin.
+// Body: { weekId?, userId?, dryRun?, force?, maxUsers? }
+//
+// `force` is the only way to re-send a week already delivered — it is
+// deliberately explicit, because it is the one flag that breaks the
+// idempotence the job otherwise guarantees.
+router.post("/admin/weekly-digest/run", requireAdmin, async (req: Request, res: Response, next) => {
+  try {
+    const { runWeeklyDigestJob } = await import(
+      "../services/portfolioiq/weeklyDigestJob.service.js"
+    );
+    const summary = await runWeeklyDigestJob({
+      weekId: typeof req.body?.weekId === "string" ? req.body.weekId : undefined,
+      userId: typeof req.body?.userId === "string" ? req.body.userId : undefined,
+      dryRun: req.body?.dryRun === true,
+      force: req.body?.force === true,
+      maxUsers: typeof req.body?.maxUsers === "number" ? req.body.maxUsers : undefined,
+    });
+    res.json({ computedAt: new Date().toISOString(), summary });
+  } catch (err) { next(err); }
+});
+
+// CF-WEEKLY-DIGEST. Build ONE user's digest and return it without
+// persisting or sending — the copy-review path. Read-only.
+router.post("/admin/weekly-digest/preview", requireAdmin, async (req: Request, res: Response, next) => {
+  try {
+    const userId = String(req.body?.userId ?? "").trim();
+    if (!userId) return res.status(400).json({ error: "userId is required" });
+    const { buildDigestForUser } = await import(
+      "../services/portfolioiq/weeklyDigestJob.service.js"
+    );
+    const { renderWeeklyDigestEmail } = await import(
+      "../services/portfolioiq/weeklyDigestRender.service.js"
+    );
+    const digest = await buildDigestForUser(userId, {
+      weekId: typeof req.body?.weekId === "string" ? req.body.weekId : undefined,
+    });
+    if (!digest) return res.status(404).json({ error: "No portfolio for that user" });
+    res.json({
+      digest,
+      email: req.body?.includeEmail === true ? renderWeeklyDigestEmail(digest) : undefined,
+    });
+  } catch (err) { next(err); }
+});
+
 // CF-SUB-RAW-INVERSION-SCAN (Drew, 2026-07-19). Admin trigger for the
 // nightly sub-raw inversion scanner. Emits sub_raw_inversion_observed
 // telemetry per SKU where a Raw sale exceeds the graded median.
