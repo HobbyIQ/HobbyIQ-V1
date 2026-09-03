@@ -46,6 +46,7 @@
 import type { PortfolioHolding } from "../../types/portfolioiq.types.js";
 import { valueIdentity, type Valuation } from "../compiq/oneValuationPath.service.js";
 import { isExactPoolRung } from "../compiq/fmvRung.js";
+import { persistedLabelsForValuation } from "../compiq/valuationLabels.js";
 
 export type HoldingValuationOutcome =
   | { outcome: "observed"; holding: PortfolioHolding; valuation: Valuation }
@@ -116,7 +117,17 @@ export function observedHoldingWrite(holding: PortfolioHolding, v: Valuation, no
     isEstimate: false,
     valuationStatus: "observed",
     pricingSource: "unified-pricing",
-    pricingSourceMeta: { slug: v.identity.pooledAs ?? v.identity.slug ?? v.identity.requestedId, method: v.rungLabel, compsUsed: v.compsUsed },
+    pricingSourceMeta: {
+      slug: v.identity.pooledAs ?? v.identity.slug ?? v.identity.requestedId,
+      method: v.rungLabel,
+      compsUsed: v.compsUsed,
+      // CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (Drew, 2026-09-03): the same
+      // label set the live canonical-fmv response carries for this holding,
+      // derived through the same two functions (valuationLabels.ts). A
+      // self-anchored $251 must SAY so on the portfolio row, not only to a
+      // reader who thinks to open the card page.
+      ...persistedLabelsForValuation(v),
+    },
     nearestGradedAnchor: undefined,
     verdict: "Observed",
     recommendation: holding.recommendation ?? "Hold",
@@ -149,7 +160,14 @@ export function gradeCurveEstimateHoldingWrite(holding: PortfolioHolding, v: Val
     isEstimate: true,
     valuationStatus: "estimated",
     pricingSource: "unified-pricing",
-    pricingSourceMeta: { slug: v.identity.pooledAs ?? v.identity.slug ?? v.identity.requestedId, method: "grade-curve-estimate", compsUsed: v.compsUsed },
+    pricingSourceMeta: {
+      slug: v.identity.pooledAs ?? v.identity.slug ?? v.identity.requestedId,
+      method: "grade-curve-estimate",
+      compsUsed: v.compsUsed,
+      // CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS: an estimate carries its
+      // labels too — a grade-curve fill IS a fallback rung, and it says so.
+      ...persistedLabelsForValuation(v),
+    },
     nearestGradedAnchor: undefined,
     verdict: "Estimated",
     recommendation: holding.recommendation ?? "Hold",

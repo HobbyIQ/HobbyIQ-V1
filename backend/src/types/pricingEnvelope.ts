@@ -208,6 +208,18 @@ export interface PricingProvenance {
   pricingSourceMeta:
     | { slug: string; method: string; compsUsed: number; confidence: number | null }
     | null;
+  /** CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (Drew, 2026-09-03). The caveats
+   *  this price must be read with, exactly as the writer stamped them — the
+   *  same set the live canonical-fmv response carries for this holding. The
+   *  holding DETAIL surface reads them here; the list row reads the flat
+   *  `pricingLabels` on the wire. One source, two shapes. */
+  pricingLabels: Array<{
+    code: "speculative" | "self-anchored" | "fallback-rung" | "low-confidence";
+    text: string;
+  }>;
+  /** The self-anchored ratio: `own` of the pool's `total` sales behind this
+   *  price are the owner's. Null when none is. */
+  selfAnchored: { own: number; total: number } | null;
   /** Grade-ladder rescue anchor. */
   nearestGradedAnchor: {
     grade: string;

@@ -35,6 +35,13 @@ export interface RawGradeSaleRow {
    * that carry the field.
    */
   listingType?: string | null;
+  /** CF-OWN-PURCHASE-IS-A-SALE (Drew, 2026-09-03). Who contributed the row,
+   *  so the curve tier can disclose how many of its samples are the viewer's
+   *  own purchases. Selected here because it is the only field that
+   *  distinguishes YOUR imported purchase from another user's -- source alone
+   *  does not: "ebay-user-purchase" is someone's own purchase, not necessarily
+   *  yours. */
+  contributorUserId?: string | null;
 }
 
 /**
@@ -124,7 +131,7 @@ export async function readSoldCompsForGrade(
 
   try {
     const { resources } = await container.items.query<RawGradeSaleRow>({
-      query: `SELECT TOP 500 c.price, c.soldAt, c.source, c.title, c.listingType
+      query: `SELECT TOP 500 c.price, c.soldAt, c.source, c.title, c.listingType, c.contributorUserId
               FROM c WHERE ${clauses.join(" AND ")}
               ORDER BY c.soldAt DESC`,
       parameters: params,

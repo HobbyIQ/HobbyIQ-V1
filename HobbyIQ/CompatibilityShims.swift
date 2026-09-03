@@ -1698,6 +1698,8 @@ extension InventoryCard {
         case valuationStatus
         // CF-IOS-NEAREST-GRADED-ANCHOR-UI (2026-06-29)
         case estimatedValue, estimateLow, estimateHigh, estimateBasis, estimateConfidence
+        // CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (Drew, 2026-09-03)
+        case pricingLabels, selfAnchored
         case nearestGradedAnchor
         case cardId
         // CF-IOS-MODEL-SIGNAL-RENDER (2026-06-26)
@@ -1764,6 +1766,8 @@ extension InventoryCard {
         case estimateBasis = "estimate_basis"
         case estimateConfidence = "estimate_confidence"
         case nearestGradedAnchor = "nearest_graded_anchor"
+        case pricingLabels = "pricing_labels"
+        case selfAnchored = "self_anchored"
         case cardId = "card_id"
         // CF-COMP-HOLDING-WIRE-PARITY (PR #484): snake_case fallbacks.
         case marketValue = "market_value"
@@ -1987,6 +1991,15 @@ extension InventoryCard {
             ?? (try? s.decode(String.self, forKey: .estimateConfidence))
         self.nearestGradedAnchor = (try? c.decodeIfPresent(NearestGradedAnchor.self, forKey: .nearestGradedAnchor))
             ?? (try? s.decodeIfPresent(NearestGradedAnchor.self, forKey: .nearestGradedAnchor))
+        // CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (Drew, 2026-09-03). Absent
+        // on any holding priced before the field, and on every legacy-engine
+        // row — an empty set, never a guess: a client must not infer a caveat
+        // the backend did not state, nor drop one it did.
+        self.pricingLabels = (try? c.decodeIfPresent([PricingLabel].self, forKey: .pricingLabels))
+            ?? (try? s.decodeIfPresent([PricingLabel].self, forKey: .pricingLabels))
+            ?? []
+        self.selfAnchored = (try? c.decodeIfPresent(SelfAnchoredRatio.self, forKey: .selfAnchored))
+            ?? (try? s.decodeIfPresent(SelfAnchoredRatio.self, forKey: .selfAnchored))
             ?? nil
         self.cardId = (try? c.decode(String.self, forKey: .cardId))
             ?? (try? s.decode(String.self, forKey: .cardId))
@@ -2146,6 +2159,8 @@ extension InventoryCard {
         try container.encodeIfPresent(estimateBasis, forKey: .estimateBasis)
         try container.encodeIfPresent(estimateConfidence, forKey: .estimateConfidence)
         try container.encodeIfPresent(nearestGradedAnchor, forKey: .nearestGradedAnchor)
+        try container.encodeIfPresent(pricingLabels, forKey: .pricingLabels)
+        try container.encodeIfPresent(selfAnchored, forKey: .selfAnchored)
         try container.encodeIfPresent(cardId, forKey: .cardId)
         try container.encodeIfPresent(lastSaleSurface, forKey: .lastSaleSurface)
         try container.encodeIfPresent(modelExpectation, forKey: .modelExpectation)
