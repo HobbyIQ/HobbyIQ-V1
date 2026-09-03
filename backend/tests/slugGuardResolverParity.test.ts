@@ -38,9 +38,25 @@ describe("CF-ONE-SETKEY-RESOLVER — guard and computation resolve identically",
 
   it("the guard ACCEPTS what it previously refused — the 615,140-row defect", () => {
     for (const row of POKEMON_ROWS) {
-      // The old wiring: normalizeSetKey straight into the guard.
-      const oldKey = normalizeSetKey(row.setName);
-      expect(isRawVendorSetKey(oldKey)).toBe(true); // leading year → refused
+      // CF-CHRONIC-REDS-DRIFT (2026-09-03). This block used to re-enact the
+      // ORIGINAL defect: `normalizeSetKey(setName)` kept the leading year, the
+      // guard saw `2024-pokemon-...`, and refused it as a raw vendor string.
+      //
+      // normalizeSetKey has since been taught to strip the leading year at the
+      // source (CF-YEAR-IS-NOT-A-SEGMENT, hobbyIqCardId.service.ts: "the year
+      // is duplicated into a segment the slug already carries"). So the old
+      // wiring can no longer PRODUCE a year-prefixed key, and asserting that
+      // it still does pinned a bug the codebase has legitimately outgrown --
+      // it was failing on all five rows.
+      //
+      // What this test is FOR is the parity of guard and computation, and that
+      // is unchanged and still asserted below. What is pinned here now is the
+      // invariant the old line MEANT: a year-prefixed key is what the guard
+      // refuses. Assert that against the guard directly, on a synthetic key,
+      // so it holds whichever upstream path stops producing one.
+      expect(isRawVendorSetKey(`${row.year}-${normalizeSetKey(row.setName)}`)).toBe(true);
+      // ...and the real normalizer no longer hands the guard such a key at all.
+      expect(normalizeSetKey(row.setName)).not.toMatch(/^\d{4}-/);
 
       // The new wiring: resolve first, then guard.
       const newKey = resolveSetKeyForSlug("pokemon", row.setName, row.year);

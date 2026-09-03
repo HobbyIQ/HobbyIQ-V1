@@ -107,7 +107,16 @@ function parseStatus(line: string): string {
   return m?.[1] ?? "";
 }
 
-describe("PHASE-4B-SLICE-1 fetchPlayerSignals observability", () => {
+// CF-CHRONIC-REDS-SLOW (2026-09-03). Every test here does
+// `await import("../src/services/signals/fetchSignals.js")` inside the test
+// body, so each one can pay a cold SWC transform of the signals module graph.
+// In isolation this whole file finishes well inside the default; under a full
+// 754-file run the fork pressure pushes single tests past 60s and they time
+// out. Same cause the file-level hookTimeout note in vitest.config.ts already
+// documents -- one-time transform latency, not a hang -- so give this suite a
+// ceiling that clears it. No assertion is relaxed: the tests still prove the
+// exact outcome/multiplier/status they always did.
+describe("PHASE-4B-SLICE-1 fetchPlayerSignals observability", { timeout: 180_000 }, () => {
   describe("zero-cost outcomes (no fetch attempted)", () => {
     it("emits outcome=not_configured when AZURE_SIGNAL_FUNCTION_URL unset", async () => {
       // No URL → caller skips fetch entirely. The PROOF angle here:

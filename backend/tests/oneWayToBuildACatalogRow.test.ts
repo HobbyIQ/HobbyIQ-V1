@@ -538,7 +538,15 @@ function catalogWriters(): Writer[] {
 const lines = (xs: string[]) => (xs.length ? `\n  ${xs.join("\n  ")}` : "");
 
 describe("one way to build a catalog row", () => {
-  it("finds the writers, and says which it could only text-match", () => {
+  // CF-CHRONIC-REDS-SLOW (2026-09-03). This census walks every file under
+  // backend/src AND backend/scripts and reads each one to classify catalog
+  // writers -- several thousand readFileSync calls. Measured at 79s IN
+  // ISOLATION on a cold clone, so the 30s default is simply below the honest
+  // cost of the work; it is not flake and not parallel-load contention. The
+  // scan is the point of the test (a writer it never reads is a writer it
+  // cannot police), so the fix is to let it finish rather than narrow what it
+  // walks. Assertions below are untouched.
+  it("finds the writers, and says which it could only text-match", { timeout: 240_000 }, () => {
     const all = catalogWriters();
     expect(all.length).toBeGreaterThan(20);
     const loose = all.filter((w) => w.fallback).map((w) => `${w.rel}  [${w.fallback}]`);

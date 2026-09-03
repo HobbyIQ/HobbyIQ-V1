@@ -16,10 +16,17 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { createRequire } from "node:module";
 import { describe, expect, it } from "vitest";
+import { qualifiedSetKeyFromTitle } from "../src/services/catalog/productQualifiers.js";
 
 const require_ = createRequire(import.meta.url);
 const L = require_(path.resolve(__dirname, "../scripts/scrape-bcp-ladders.cjs"));
-const { qualifiedSetKeyFromTitle } = require_(path.resolve(__dirname, "../dist/services/catalog/productQualifiers.js"));
+// CF-CHRONIC-REDS-DIST (2026-09-03). Was `require_("../dist/services/catalog/
+// productQualifiers.js")`, which made this suite fail at import on any clone
+// that had not run `npm run build`. Unlike the ops-script suites, nothing here
+// tests the compiled artifact: qualifiedSetKeyFromTitle is used purely as a
+// helper to express what the BCP ladder guard should decide. The contract under
+// test is the guard's behaviour, so the source module is the honest import.
+// Same assertions, same inputs, same expected values.
 const qualify = (setKey: string, title: string) => qualifiedSetKeyFromTitle(setKey, title);
 
 const fixture = (n: string) => fs.readFileSync(path.resolve(__dirname, `fixtures/bcp/${n}.trimmed.html`), "utf8");

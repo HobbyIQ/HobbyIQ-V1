@@ -87,9 +87,22 @@ describe("CF-ALL-CANONICAL-VERTICALS — every vertical gets detected", () => {
   it("leaves the major sports strict — a year-prefixed key there is a real parse failure", () => {
     // The fallback is scoped to long-tail verticals deliberately. For baseball a
     // year-prefixed key means the parse failed, and refusing is still correct.
+    //
+    // CF-CHRONIC-REDS-DRIFT (2026-09-03). This used to feed the guard
+    // `resolveSetKeyForSlug("baseball", "2019 Some Unknown Product", 2019)` and
+    // expect a refusal, relying on that call RETURNING a year-prefixed key.
+    // normalizeSetKey now strips the leading year upstream
+    // (CF-YEAR-IS-NOT-A-SEGMENT), so the resolver no longer emits one and the
+    // guard correctly accepted -- the test was asserting the old plumbing, not
+    // the rule. The rule itself is unchanged, so assert it directly: for a
+    // major sport, a year-prefixed key is still refused.
     const key = resolveSetKeyForSlug("baseball", "2019 Some Unknown Product", 2019);
-    const guard = guardSlugInputs({ sport: "baseball", year: 2019, normalizedSetKey: key, cardNumber: "1" });
-    expect(guard.ok).toBe(false);
+    expect(
+      guardSlugInputs({ sport: "baseball", year: 2019, normalizedSetKey: `2019-${key}`, cardNumber: "1" }).ok,
+      "a year-prefixed key on a major sport must still be refused",
+    ).toBe(false);
+    // And the resolver no longer hands the guard one in the first place.
+    expect(key).not.toMatch(/^\d{4}-/);
   });
 
   it("does not disturb the major sports", () => {
