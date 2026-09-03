@@ -63,6 +63,7 @@ import {
   deriveSellWindowSignal,
   type SellWindowSignal,
 } from "../signals/sellWindow.service.js";
+import { resolvePricingConfidence } from "../portfolioiq/pricingEnvelope.builder.js";
 import type { TrendIQResult } from "../compiq/trendIQ.types.js";
 
 // ---------------------------------------------------------------------------
@@ -90,6 +91,16 @@ export interface SellDraftHolding {
   sport?: string | null;
   /** Persisted trend result — the sell-window signal's only input. */
   trendIQ?: TrendIQResult | null;
+  /** CF-SELL-WINDOW-READS-PRICING-CONFIDENCE (2026-09-03). The engine's
+   *  pricing confidence for this price surface (0..1), written by the writer
+   *  that decided the price. This — not `confidence` — is what the sell
+   *  signal gates on. */
+  pricingSourceMeta?: { confidence?: unknown } | null;
+  /** Which path priced this holding; decides whether the flat `confidence`
+   *  below is a pricing confidence at all. */
+  pricingSource?: string | null;
+  /** Identity/match confidence on unified-engine rows. Only a PRICING
+   *  confidence on legacy-engine rows — see resolvePricingConfidence. */
   confidence?: number | null;
   lastUpdated?: string | null;
 }
@@ -331,7 +342,11 @@ export async function composeSellDraftPricing(
   // synchronous, zero pool reads, and it can never move the price.
   const sellSignal = deriveSellWindowSignal({
     trendIQ: holding.trendIQ ?? null,
-    confidence: typeof holding.confidence === "number" ? holding.confidence : null,
+    // CF-SELL-WINDOW-READS-PRICING-CONFIDENCE (2026-09-03). Pricing
+    // confidence, resolved the one way (pricingSourceMeta first, flat field
+    // only for legacy-engine rows) — never the flat field on its own. See
+    // responseAssembly.ts for the full note.
+    confidence: resolvePricingConfidence(holding as any),
     trendUpdatedAt: typeof holding.lastUpdated === "string" ? holding.lastUpdated : null,
   });
 

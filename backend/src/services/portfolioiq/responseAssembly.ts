@@ -66,6 +66,7 @@ import type { PricingEnvelope } from "../../types/pricingEnvelope.js";
 import { buildPricingEnvelope } from "./pricingEnvelope.builder.js";
 import { deriveHoldingSlug } from "./holdingSlug.service.js";
 import { deriveSellWindowSignal } from "../signals/sellWindow.service.js";
+import { resolvePricingConfidence } from "./pricingEnvelope.builder.js";
 import {
   computePerUnitValue,
   computeCostBasisTotal,
@@ -890,10 +891,17 @@ export function composeHoldingWireShape(
       ? {
           sellSignal: deriveSellWindowSignal({
             trendIQ: (holding as any).trendIQ ?? null,
-            confidence:
-              typeof (holding as any).confidence === "number"
-                ? (holding as any).confidence
-                : null,
+            // CF-SELL-WINDOW-READS-PRICING-CONFIDENCE (2026-09-03). The
+            // signal gates on, and quotes to the user as "Pricing confidence
+            // on this card is N%", the confidence behind the PRICE. That is
+            // pricingSourceMeta.confidence — the same quantity the report
+            // envelope publishes as confidence.pricing — not the flat
+            // `holding.confidence`, which on a unified-engine row is an
+            // identity/match score and was additionally saturated to 1.0 by
+            // the scaling defect this PR fixes. Reading the flat field here
+            // let cards with a barely-evidenced price pass the timing gate
+            // while telling the user their price was 100% confident.
+            confidence: resolvePricingConfidence(holding as any),
             trendUpdatedAt:
               typeof holding.lastUpdated === "string" ? holding.lastUpdated : null,
           }),
