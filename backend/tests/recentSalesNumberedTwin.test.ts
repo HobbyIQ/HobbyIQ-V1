@@ -118,9 +118,12 @@ describe("GET /cards/:cardId/recent-sales -- an un-numbered id reads itself AND 
     expect(res.body.windowDays).toBe(365);
     expect(Array.isArray(res.body.sales)).toBe(true);
     expect(res.body.sales).toHaveLength(35);
+    // CF-OWN-PURCHASE-IS-A-SALE (Drew, 2026-09-03) adds `isOwn` + `ownLabel`:
+    // the viewer's own imported purchase is LISTED like any other sale and
+    // says whose it is, instead of being filtered out of the list.
     expect(Object.keys(res.body.sales[0]).sort()).toEqual([
       "cardId", "cardNumber", "cardYear", "confidence", "confidenceBand", "confidenceExplain", "confidenceScore",
-      "contributorUserId", "gradeCompany", "gradeValue", "id", "imageUrl", "parallel", "price", "sellerHandle", "soldAt", "source", "title",
+      "contributorUserId", "gradeCompany", "gradeValue", "id", "imageUrl", "isOwn", "ownLabel", "parallel", "price", "sellerHandle", "soldAt", "source", "title",
     ]);
     expect(res.body.byGrade).toMatchObject([{ grader: "Raw", count: 35 }]);
     expect(res.body.byGrade[0].sales).toHaveLength(35);

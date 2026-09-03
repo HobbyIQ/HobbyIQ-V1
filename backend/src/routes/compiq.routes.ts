@@ -4222,6 +4222,10 @@ router.get("/card-panel/:cardId", requireSession, requireRateLimited("priceCheck
         playerName: identityPlayer,
         parallelTierKey,
         hobbyiqCardId: hiqSlug,
+        // CF-OWN-PURCHASE-IS-A-SALE (Drew, 2026-09-03). This route serves a
+        // signed-in user, so the curve's per-tier ownSampleCount can mean
+        // something: requireSession has already attached req.user.
+        viewerUserId: req.user?.userId ?? null,
         // CF-SIBLING-CARD-FALLBACK (2026-07-06): user-facing route → opt
         // in so thin-market cards get an estimate rather than a gray pill.
         enableSiblingFallback: true,
@@ -4489,7 +4493,7 @@ router.post("/observed-grade-curves-bulk", requireSession, requireEntitlement("p
       } catch { /* per-card meta failures are non-fatal */ }
     }));
     const map = legacyIds.length > 0
-      ? await buildObservedGradeCurvesBulk(legacyIds, perCardMeta)
+      ? await buildObservedGradeCurvesBulk(legacyIds, perCardMeta, req.user?.userId ?? null)
       : new Map<string, import("../services/compiq/observedGradeCurve.service.js").ObservedGradeCurve>();
     for (const curve of map.values()) curves.push(curve as unknown as Record<string, unknown>);
     const durationMs = Date.now() - start;
@@ -4692,6 +4696,9 @@ router.get("/observed-grade-curve/:cardId", requireSession, requireRateLimited("
       playerName,
       referencePriceByGrade,
       parallelTierKey,
+      // CF-OWN-PURCHASE-IS-A-SALE (Drew, 2026-09-03). Signed-in reader, so
+      // the tier disclosure has a viewer to be about.
+      viewerUserId: req.user?.userId ?? null,
       // CF-ONE-GRADE-CURVE (D4 PR 4, 2026-08-29). The slug was resolved to a
       // vendor id above and then dropped, so the curve's unified overlay
       // unioned the vendor id against nothing — a narrower pool than the
