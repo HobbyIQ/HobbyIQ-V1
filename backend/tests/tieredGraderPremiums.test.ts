@@ -82,22 +82,35 @@ describe("getGraderPremium — PSA tier values (post-CF-CALIBRATION-LADDER)", ()
   // Ranges below tolerate calibration-refresh drift while pinning the
   // ladder is what actually fires.
   it("PSA 10 — value-band baseline cells fire (>= article values across the tier boundaries)", () => {
-    expect(getGraderPremium("PSA", "10", 10)).toBeGreaterThan(8);
-    expect(getGraderPremium("PSA", "10", 35)).toBeGreaterThan(3.5);
-    expect(getGraderPremium("PSA", "10", 75)).toBeGreaterThan(2.9);
-    expect(getGraderPremium("PSA", "10", 500)).toBeGreaterThan(2.0);
-    expect(getGraderPremium("PSA", "10")).toBe(3.5); // fallback — ladder needs rawPrice > 0
+    // Thresholds lowered 2026-09-03: the C-4/H-10 regeneration re-derived
+    // these cells from sold_comps (our own pool) instead of ch_daily_sales
+    // (a vendor key), and the baseline PSA 10 band values came down across
+    // the board — 10.5 -> 6.80 at $10, 3.25 -> 2.32 at $75. What the test
+    // pins is that the empirical BAND cells fire and preserve the
+    // compression curve, not the pre-regeneration magnitudes.
+    expect(getGraderPremium("PSA", "10", 10)!).toBeGreaterThan(5.0);
+    expect(getGraderPremium("PSA", "10", 35)!).toBeGreaterThan(2.5);
+    expect(getGraderPremium("PSA", "10", 75)!).toBeGreaterThan(2.0);
+    expect(getGraderPremium("PSA", "10", 500)!).toBeGreaterThan(1.5);
+    // CF-EMPIRICAL-ONLY-NO-GRADER-MATRIX (2026-09-03, audit H-7 residual).
+    // With no rawPrice the value-band ladder cannot fire, and the static
+    // fallback that used to answer 3.5 here has been REMOVED. There is no
+    // empirical cell keyed on (company, grade) alone, so the honest answer
+    // is a refusal — not a hand-anchored constant.
+    expect(getGraderPremium("PSA", "10")).toBeNull();
   });
 
   it("PSA 9 — value-band baseline cells fire (empirical values ≥ article static)", () => {
-    expect(getGraderPremium("PSA", "9", 10)).toBeGreaterThan(3.0);
-    expect(getGraderPremium("PSA", "9", 35)).toBeGreaterThan(1.3);
-    expect(getGraderPremium("PSA", "9", 75)).toBeGreaterThan(1.2);
+    // Same regeneration note as PSA 10 above (3.78 -> 2.73 at $10).
+    expect(getGraderPremium("PSA", "9", 10)!).toBeGreaterThan(2.0);
+    expect(getGraderPremium("PSA", "9", 35)!).toBeGreaterThan(1.1);
+    expect(getGraderPremium("PSA", "9", 75)!).toBeGreaterThan(1.0);
     // Post-empirical: PSA 9 at $500-999 is ~1.16× (not sub-1.0 as the
     // article claimed). The article's "PSA 9 loses value above $50" is
     // superseded by the calibration data.
-    expect(getGraderPremium("PSA", "9", 500)).toBeGreaterThan(1.0);
-    expect(getGraderPremium("PSA", "9")).toBe(1.2);
+    expect(getGraderPremium("PSA", "9", 500)!).toBeGreaterThan(0.9);
+    // See above — no rawPrice, no band, no constant: refuse.
+    expect(getGraderPremium("PSA", "9")).toBeNull();
   });
 
   it("PSA 8 — modern PSA 8 = Raw hard override (PR #494 CF-PSA8-EQUALS-RAW)", () => {
@@ -117,20 +130,28 @@ describe("getGraderPremium — PSA tier values (post-CF-CALIBRATION-LADDER)", ()
 // 3. BACKWARD-COMPAT — callers without rawPrice get fallback (overall avg)
 // ─────────────────────────────────────────────────────────────────────────────
 
-describe("getGraderPremium — backward-compat fallback path", () => {
-  it("PSA 10 / no rawPrice → 3.5 (PR #494 modern anchor)", () => {
-    // CF-GRADER-PREMIUMS-MODERN-DEFAULTS (PR #494): fallback 3.43 → 3.5
-    expect(getGraderPremium("PSA", "10")).toBe(3.5);
-    expect(getGraderPremium("PSA", "10", null)).toBe(3.5);
-    expect(getGraderPremium("PSA", "10", undefined)).toBe(3.5);
+// CF-EMPIRICAL-ONLY-NO-GRADER-MATRIX (2026-09-03, audit H-7 residual).
+// This block used to pin the "backward-compat fallback path": with no raw
+// price, getGraderPremium answered from a hand-curated per-company matrix
+// (PSA 10 -> 3.5, PSA 9 -> 1.2, BGS 9.5 -> 2.8). Those constants are the
+// finding. Every empirical rung is keyed on a raw anchor (value band) or
+// on a family/sport cell; none can answer from (company, grade) alone.
+//
+// So the contract inverts: no anchor, no basis, no number. Pinned here so
+// a future "convenience default" cannot quietly reintroduce the matrix.
+describe("getGraderPremium — no raw anchor means no basis (was: static fallback)", () => {
+  it("PSA 10 with no rawPrice refuses instead of returning 3.5", () => {
+    expect(getGraderPremium("PSA", "10")).toBeNull();
+    expect(getGraderPremium("PSA", "10", null)).toBeNull();
+    expect(getGraderPremium("PSA", "10", undefined)).toBeNull();
   });
 
-  it("PSA 9 / no rawPrice → 1.2 (PR #495 modern anchor)", () => {
-    expect(getGraderPremium("PSA", "9")).toBe(1.2);
+  it("PSA 9 with no rawPrice refuses instead of returning 1.2", () => {
+    expect(getGraderPremium("PSA", "9")).toBeNull();
   });
 
-  it("BGS 9.5 / no rawPrice → 2.8 (PR #495 modern anchor, ~0.75 × PSA 10)", () => {
-    expect(getGraderPremium("BGS", "9.5")).toBe(2.8);
+  it("BGS 9.5 with no rawPrice refuses instead of returning 2.8", () => {
+    expect(getGraderPremium("BGS", "9.5")).toBeNull();
   });
 });
 
@@ -138,16 +159,22 @@ describe("getGraderPremium — backward-compat fallback path", () => {
 // 4. UNKNOWN INPUTS — defensive defaults
 // ─────────────────────────────────────────────────────────────────────────────
 
-describe("getGraderPremium — unknown inputs default to 1.0 (raw-equivalent)", () => {
-  it("unknown company → 1.0", () => {
-    expect(getGraderPremium("UNKNOWN", "10", 50)).toBe(1.0);
+describe("getGraderPremium — unknown inputs", () => {
+  // CF-EMPIRICAL-ONLY-NO-GRADER-MATRIX: an unknown grader or grade has no
+  // cell in any empirical layer. It used to fall to the matrix, miss, and
+  // return a bare 1.0 — which reads downstream as "graded is worth exactly
+  // raw", a pricing claim, rather than as "we do not know". Refuse.
+  it("unknown company → refuses (was 1.0)", () => {
+    expect(getGraderPremium("UNKNOWN", "10", 50)).toBeNull();
   });
 
-  it("unknown grade → 1.0", () => {
-    expect(getGraderPremium("PSA", "999", 50)).toBe(1.0);
+  it("unknown grade → refuses (was 1.0)", () => {
+    expect(getGraderPremium("PSA", "999", 50)).toBeNull();
   });
 
-  it("null company → 1.0", () => {
+  // A null company/grade is a different statement from an unknown one: the
+  // caller is saying the card is RAW, and raw is 1.0 by definition.
+  it("null company → 1.0 (raw by definition, not a fallback)", () => {
     expect(getGraderPremium(null, "10", 50)).toBe(1.0);
   });
 
@@ -170,20 +197,37 @@ describe("getGraderPremium — cross-grader directional ordering at same tier", 
     // CF-BGS-BLACK-LABEL-SPLIT (PR #495): Black Label is a separate grade
     // key from regular BGS 10. Drew: "the only grade that consistently
     // beats PSA 10, 2-4× PSA 10 prices, use ~9-10× raw."
-    const psa10 = getGraderPremium("PSA", "10", 50)!;
-    const bgs10bl = getGraderPremium("BGS", "10 Black Label", 50)!;
-    expect(bgs10bl).toBeGreaterThan(psa10);
+    // Post-CF-EMPIRICAL-ONLY-NO-GRADER-MATRIX the Black Label premium is
+    // no longer a 12.0/9.0/7.0/5.5 constant row; it resolves only where
+    // the empirical layers actually cover BGS "10 Black Label". Where they
+    // do not, the honest answer is null and there is no ordering to assert.
+    const psa10 = getGraderPremium("PSA", "10", 50);
+    const bgs10bl = getGraderPremium("BGS", "10 Black Label", 50);
+    expect(psa10).not.toBeNull();
+    if (bgs10bl === null) return;   // uncovered by the table: nothing to order
+    expect(bgs10bl).toBeGreaterThan(psa10!);
   });
 
-  it("BGS 10 (regular) ≈ PSA 10 (BGS 10 non-BL trades similar to PSA 10)", () => {
-    // CF-CALIBRATION-LADDER-IN-GRADER-PREMIUM: post-ladder, BGS 10 and
-    // PSA 10 pull from separate empirical value-band cells (different
-    // grader populations), so the exact equality that the static tables
-    // enforced no longer holds. The directional invariant — regular
-    // BGS 10 within ~30% of PSA 10 — is what we actually care about.
-    const psa10 = getGraderPremium("PSA", "10", 50)!;
-    const bgs10 = getGraderPremium("BGS", "10", 50)!;
-    expect(Math.abs(bgs10 - psa10) / psa10).toBeLessThan(0.3);
+  // CF-GRADE-MONOTONICITY-IS-NOT-AN-INVARIANT (Drew): observe the
+  // inversion, never clamp it.
+  //
+  // This test used to assert regular BGS 10 sits within ~30% of PSA 10.
+  // On the regenerated table (C-4/H-10, our own pool) BGS 10 is
+  // CONSISTENTLY ABOVE PSA 10 at every band — 7.17 vs 6.80 at $10, 3.48
+  // vs 2.32 at $50, 2.56 vs 1.73 at $500. That is not drift around a
+  // convention, it is a stable ordering in the data, and the BGS 10
+  // population is genuinely different (a BGS 10 with all-10 subgrades is
+  // a Black Label; the rest still grade tighter than the PSA 10 pool).
+  //
+  // So the pin becomes: both resolve empirically, and we RECORD the
+  // relationship rather than enforcing a hobby convention over the pool.
+  it("BGS 10 and PSA 10 both resolve empirically (ordering is observed, not enforced)", () => {
+    const psa10 = getGraderPremium("PSA", "10", 50);
+    const bgs10 = getGraderPremium("BGS", "10", 50);
+    expect(psa10).not.toBeNull();
+    expect(bgs10).not.toBeNull();
+    expect(psa10!).toBeGreaterThan(0);
+    expect(bgs10!).toBeGreaterThan(0);
   });
 
   it("PSA 10 > SGC 10 (SGC discount vs PSA)", () => {
@@ -192,23 +236,45 @@ describe("getGraderPremium — cross-grader directional ordering at same tier", 
     expect(psa10).toBeGreaterThan(sgc10);
   });
 
-  it("SGC 10 > CGC 10 (CGC further discount)", () => {
-    const sgc10 = getGraderPremium("SGC", "10", 50)!;
-    const cgc10 = getGraderPremium("CGC", "10", 50)!;
-    expect(sgc10).toBeGreaterThan(cgc10);
+  // Same ruling as above. The convention says SGC 10 > CGC 10; the
+  // regenerated pool says the opposite at every band (1.48 vs 1.75 at $50,
+  // 0.98 vs 1.78 at $500). We do not clamp the pool to the convention —
+  // we pin that both resolve, and leave the ordering to the data.
+  it("SGC 10 and CGC 10 both resolve empirically (ordering is observed, not enforced)", () => {
+    const sgc10 = getGraderPremium("SGC", "10", 50);
+    const cgc10 = getGraderPremium("CGC", "10", 50);
+    expect(sgc10).not.toBeNull();
+    expect(cgc10).not.toBeNull();
+    expect(sgc10!).toBeGreaterThan(0);
+    expect(cgc10!).toBeGreaterThan(0);
   });
 
-  it("ordering preserved at every tier: BL > PSA > SGC > CGC (regular BGS 10 ≈ PSA 10 by design)", () => {
-    // CF-BGS-BLACK-LABEL-SPLIT (PR #495): ordering now includes BL as its
-    // own tier above PSA 10; regular BGS 10 matches PSA 10 (not exceeds).
+  // The surviving cross-grader invariant, and the only one the data
+  // actually supports at every band: PSA 10 outranks SGC 10.
+  //
+  // The old version of this test also asserted BL > PSA and SGC > CGC.
+  // BGS "10 Black Label" has NO empirical cell at all now that the matrix
+  // is gone (it returns null at every band — its 12.0/9.0/7.0/5.5 row WAS
+  // the matrix), and SGC > CGC is contradicted by the pool. Asserting
+  // either would be re-importing a hand-curated ordering through the
+  // test suite, which is the thing this PR removes.
+  it("PSA 10 > SGC 10 at every band (the ordering the pool does support)", () => {
     for (const raw of [10, 35, 75, 500]) {
-      const psa10 = getGraderPremium("PSA", "10", raw)!;
-      const bgs10bl = getGraderPremium("BGS", "10 Black Label", raw)!;
-      const sgc10 = getGraderPremium("SGC", "10", raw)!;
-      const cgc10 = getGraderPremium("CGC", "10", raw)!;
-      expect(bgs10bl, `raw=${raw}`).toBeGreaterThan(psa10);
-      expect(psa10, `raw=${raw}`).toBeGreaterThan(sgc10);
-      expect(sgc10, `raw=${raw}`).toBeGreaterThan(cgc10);
+      const psa10 = getGraderPremium("PSA", "10", raw);
+      const sgc10 = getGraderPremium("SGC", "10", raw);
+      expect(psa10, `raw=${raw}`).not.toBeNull();
+      expect(sgc10, `raw=${raw}`).not.toBeNull();
+      expect(psa10!, `raw=${raw}`).toBeGreaterThan(sgc10!);
+    }
+  });
+
+  // BGS Black Label is now UNCOVERED, and that is the correct state: its
+  // only source was the deleted matrix. It must refuse rather than invent.
+  //
+  // MUTATION: restore a Black Label constant anywhere and this goes red.
+  it("BGS 10 Black Label refuses — its only source was the removed matrix", () => {
+    for (const raw of [10, 35, 75, 500]) {
+      expect(getGraderPremium("BGS", "10 Black Label", raw), `raw=${raw}`).toBeNull();
     }
   });
 });

@@ -920,86 +920,35 @@ export function applyCompQualityFilter(sales: RawComp[], card: CardIdentityLite)
 
 export type GradePriceTier = "<25" | "25-50" | "50-100" | "100+" | "fallback";
 
-interface GradeTierTable {
-  "<25": number;
-  "25-50": number;
-  "50-100": number;
-  "100+": number;
-  fallback: number;
-}
+// (GradeTierTable, the shape of the removed matrix, went with it — the
+//  surviving JSON-backed tables carry their own Record<string, number>
+//  tier maps and are read through resolveTierForTable.)
 
-// CF-GRADER-PREMIUMS-MODERN-DEFAULTS (Drew, 2026-07-15, PR #494): rebased
-// the static hand-curated fallback table to reflect post-2015 modern reality
-// per Drew's anchors — PSA 9 sits at 1.2× raw (not the 1.70 the 2018
-// Prospects Live article gave), PSA 8 at 0.7×, BGS 9 at 1.10×, SGC 9 at
-// 1.08×. The empirical `data/base-multipliers-latest.json` table (behind
-// MULTIPLIER_BASE_TABLE_ENABLED) still wins when it fires; this static
-// table is the last-resort fallback for cards outside its calibration
-// scope (rare grades, exotic graders, no rawPrice data).
+// CF-EMPIRICAL-ONLY-NO-GRADER-MATRIX (2026-09-03, audit H-7 residual).
+// REMOVED: the hand-curated GRADER_PREMIUMS matrix that stood here.
 //
-// The tiered $25/$50/$100 boundaries still express value-tier compression —
-// cheap cards ($5-20 raw) have inflated multipliers because a slab has a
-// ~$20-30 price floor regardless; expensive cards ($500+) compress toward
-// 1.5-2.5x for PSA 10 because raw buyers price in gem odds. Numbers below
-// preserve that curve at anchors matching Drew's proposal.
-// CF-GRADER-PREMIUMS-FULL-REBASE (Drew, 2026-07-15, PR #495): completed
-// the modern rebase started in PR #494. All grades on all graders now
-// match Drew's modern anchors. Also splits BGS "10" into TWO grade keys:
-//   "10"              — regular BGS 10 (at least one subgrade < 10)
-//   "10 Black Label"  — ALL FOUR subgrades = 10 (rare, "only grade that
-//                        consistently beats PSA 10, 2-4× PSA 10 prices")
-// Grade-detection updates in detectGradeFromTitle emit "10 Black Label"
-// when title contains "Black Label" / "BL" alongside a BGS 10.
-const GRADER_PREMIUMS: Record<string, Record<string, GradeTierTable>> = {
-  PSA: {
-    // PSA 10 anchor 3.5× (Drew: 3-4x); slab-floor bump on <$25 tier.
-    "10": { "<25": 5.0, "25-50": 3.6, "50-100": 2.8, "100+": 2.2, fallback: 3.5 },
-    // PSA 9 anchor 1.2× (Drew: 1.1-1.3; post-2015 cards trade at/near
-    // raw; named-rookie premium). Sub-$25 tier still slab-floor bumped.
-    "9":  { "<25": 2.0, "25-50": 1.3, "50-100": 1.05, "100+": 0.95, fallback: 1.2 },
-    // PSA 8 = Raw hard business rule (modern) — applied as override in
-    // getGraderPremium regardless of which table wins.
-    "8":  { "<25": 1.0, "25-50": 1.0, "50-100": 1.0, "100+": 1.0, fallback: 1.0 },
-    "7":  { "<25": 0.75, "25-50": 0.68, "50-100": 0.62, "100+": 0.55, fallback: 0.65 },
-    "6":  { "<25": 0.65, "25-50": 0.58, "50-100": 0.52, "100+": 0.48, fallback: 0.55 },
-    "5":  { "<25": 0.55, "25-50": 0.50, "50-100": 0.45, "100+": 0.40, fallback: 0.48 },
-  },
-  BGS: {
-    // BGS 10 Black Label — ALL FOUR subgrades = 10. Drew: "the only
-    // grade that consistently beats PSA 10, 2-4× PSA 10 prices, use
-    // ~9-10× raw." Tiers preserve value-compression curve.
-    "10 Black Label": { "<25": 12.0, "25-50": 9.0, "50-100": 7.0, "100+": 5.5, fallback: 9.0 },
-    // BGS 10 regular — at least one subgrade < 10. Similar to PSA 10.
-    "10":  { "<25": 5.0, "25-50": 3.6, "50-100": 2.8, "100+": 2.2, fallback: 3.5 },
-    // BGS 9.5 anchor 2.8× (Drew: ~0.75 × PSA 10; recent data pushes
-    // closer to PSA 9 than PSA 10 on liquid cards).
-    "9.5": { "<25": 4.0, "25-50": 2.88, "50-100": 2.24, "100+": 1.76, fallback: 2.8 },
-    // BGS 9 anchor 1.10× (Drew: 1.0-1.15; slight discount to PSA 9).
-    "9":   { "<25": 1.8, "25-50": 1.20, "50-100": 0.95, "100+": 0.85, fallback: 1.10 },
-    // BGS 8.5 anchor 0.78× (Drew: 0.7-0.85; below raw).
-    "8.5": { "<25": 0.95, "25-50": 0.82, "50-100": 0.76, "100+": 0.72, fallback: 0.78 },
-    // BGS 8 anchor 0.58× (Drew: 0.5-0.65).
-    "8":   { "<25": 0.70, "25-50": 0.62, "50-100": 0.56, "100+": 0.52, fallback: 0.58 },
-  },
-  SGC: {
-    // SGC 10 anchor 3.05× (Drew: ~0.87 × PSA 10; 85-90% of PSA 10 value).
-    "10":  { "<25": 4.35, "25-50": 3.13, "50-100": 2.44, "100+": 1.91, fallback: 3.05 },
-    "9.5": { "<25": 3.60, "25-50": 2.60, "50-100": 2.02, "100+": 1.59, fallback: 2.55 },
-    // SGC 9 anchor 1.08× (Drew: 1.0-1.15; ~90% of PSA 9).
-    "9":   { "<25": 1.75, "25-50": 1.15, "50-100": 0.95, "100+": 0.85, fallback: 1.08 },
-    "8.5": { "<25": 0.85, "25-50": 0.75, "50-100": 0.70, "100+": 0.65, fallback: 0.72 },
-    // SGC 8 anchor 0.62× (Drew: 0.55-0.7).
-    "8":   { "<25": 0.72, "25-50": 0.65, "50-100": 0.60, "100+": 0.55, fallback: 0.62 },
-  },
-  CGC: {
-    // CGC 10 ≈ PSA 10 × 0.80 → 2.80× anchor (thinner liquidity vs PSA/BGS).
-    "10":  { "<25": 4.00, "25-50": 2.88, "50-100": 2.24, "100+": 1.76, fallback: 2.80 },
-    "9.5": { "<25": 3.30, "25-50": 2.40, "50-100": 1.86, "100+": 1.47, fallback: 2.30 },
-    "9":   { "<25": 1.65, "25-50": 1.10, "50-100": 0.90, "100+": 0.82, fallback: 1.02 },
-    "8.5": { "<25": 0.80, "25-50": 0.72, "50-100": 0.68, "100+": 0.64, fallback: 0.70 },
-    "8":   { "<25": 0.68, "25-50": 0.62, "50-100": 0.58, "100+": 0.55, fallback: 0.60 },
-  },
-};
+// It was a Record<company, Record<grade, {"<25","25-50","50-100","100+",
+// fallback}>> of literal multipliers — PSA 10 at 5.0/3.6/2.8/2.2, BGS
+// "10 Black Label" at 12.0 on a sub-$25 anchor, SGC 10 at 1.91 above
+// $100 — hand-anchored on a 2018 article and rebased by hand twice
+// (PR #494, PR #495). It sat at the TERMINAL fallback of
+// getGraderPremium, so that function could never return null, and its
+// output was indistinguishable in the return value from a genuinely
+// calibrated ratio.
+//
+// That is the same class of constant CF-EMPIRICAL-ONLY removed from
+// observedGradeCurve, and that this PR removed from canonicalFmv's
+// gradeTierMultiplier — but on the higher-traffic path. getGraderPremium
+// is the multiplier entry point for hobbyIqFmv, unifiedPricing,
+// perGradeBreakdown, marketRead, the sibling fallback and the graded
+// projection.
+//
+// Every rung that remains is empirical: the vintage table, the value-band
+// ladder (bySportFamily -> bySport -> baseline, sample-floored), the
+// family byTier and family-scalar cells, and the auto/base tables. When
+// none of them covers a card, getGraderPremium returns null and each
+// caller degrades to its own no-basis path. Pinned in
+// tests/gradeCalibrationIntegrity.test.ts ("H-7 residual").
 
 /**
  * CF-CH-TIERED-GRADER-PREMIUMS (2026-06-28): map a raw anchor price to its
@@ -1065,9 +1014,10 @@ function vintageEraFor(year: number): string | null {
  * multiplier table calibrated from 848 prospect-autograph cards' CH
  * 90-day-avg prices. Loaded lazily on first access; refreshed by a
  * weekly Azure Function (CF-AUTO-MULTIPLIER-REFRESH-JOB follows).
- * Fall through to the static GRADER_PREMIUMS when (a) the calibration
- * file is missing or fails to parse OR (b) the requested cardClass
- * is not "autograph".
+ * Falls through to the next rung when (a) the calibration file is
+ * missing or fails to parse OR (b) the requested cardClass is not
+ * "autograph". Since CF-EMPIRICAL-ONLY-NO-GRADER-MATRIX there is no
+ * static matrix beneath it — an exhausted ladder returns null.
  */
 type AutoMultiplierTable = {
   calibratedAt?: string;
@@ -1101,11 +1051,12 @@ function getAutoTable(): AutoMultiplierTable | null {
  * CF-BASE-MULTIPLIER-ENGINE-WIRING (2026-06-29): empirical base-graded
  * multiplier table calibrated from 4,421 modern (1990+) base graded
  * observations across 6,880 unique cards. Replaces the static
- * GRADER_PREMIUMS table (hand-curated from a 2018 article) for modern
- * base graded cards.
+ * static hand-curated table (from a 2018 article) that used to serve
+ * modern base graded cards and has since been removed entirely
+ * (CF-EMPIRICAL-ONLY-NO-GRADER-MATRIX).
  *
  * GATED by env var MULTIPLIER_BASE_TABLE_ENABLED — default OFF so the
- * deployed engine continues using static GRADER_PREMIUMS. Flip to
+ * deployed engine relies on the rungs above it. Flip to
  * "true" in App Service application settings when ready to roll out.
  *
  * Expected impact on flip: modern PSA 10 base graded holdings see
@@ -1310,9 +1261,10 @@ export type GraderPremiumRung =
   | "empirical-ratio-tier"
   | "empirical-ratio"
   | "auto-table"
-  | "base-table"
-  | "static-table"
-  | "no-table";
+  | "base-table";
+  // ("static-table" and "no-table" retired 2026-09-03 with the
+  //  GRADER_PREMIUMS matrix — CF-EMPIRICAL-ONLY-NO-GRADER-MATRIX. A ladder
+  //  that reaches the end has no rung to name; it returns null.)
 
 function graderPremiumLadder(
   gradingCompany: string | null | undefined,
@@ -1329,7 +1281,7 @@ function graderPremiumLadder(
    *  absent, the ladder walks the sport-agnostic layers only — still
    *  strictly better than the pre-calibration auto/base tables. */
   sportHint?: string | null,
-): { multiplier: number; rung: GraderPremiumRung } {
+): { multiplier: number; rung: GraderPremiumRung } | null {
   if (!gradingCompany || grade == null) return { multiplier: 1.0, rung: "no-grade" };
   const company = String(gradingCompany).toUpperCase().trim();
   const gradeKey = String(grade).trim();
@@ -1450,6 +1402,43 @@ function graderPremiumLadder(
       const family = classifyFamily(productSet ?? null);
       const sport = sportHint ? String(sportHint).toLowerCase() : null;
 
+      // CF-POKEMON-ENGINE-WIRING applies to this rung too (2026-09-03,
+      // audit C-5). lookupValueBandMultiplierWithScope runs FIRST here,
+      // above the Pokemon-guarded lookup below — so before the guard was
+      // added inside that function, a Pokemon card resolved to the pooled
+      // (baseball-weighted) baseline band and the refusal two lines down
+      // was never reached. The guard now lives in the lookup itself, so
+      // every caller gets it in whatever order it runs them.
+      //
+      // WHAT THE GUARD DOES AND DOES NOT DO (corrected 2026-09-03 after
+      // the closeout verifier refuted the original claim here). The guard
+      // sits at the BASELINE rung only. Pokemon's own sport-family and
+      // sport band cells sit ABOVE it and still resolve — which is the
+      // point: they are Pokemon's own empirical data, not baseball's.
+      // So for a Pokemon card with populated band cells, control does NOT
+      // reach lookupGradeRatioByTier, and the earlier claim in this
+      // comment that it does was simply wrong.
+      //
+      // Measured end-to-end against the shipped table, PSA 10, family
+      // "pokemon" (the classifier catch-all):
+      //
+      //   raw    resolves    scope          n     (byTier would say 7.57x)
+      //   ────────────────────────────────────────────────────────────────
+      //   $30    3.57x       sport-family   472
+      //   $150   2.54x       sport-family   198
+      //   $300   2.25x       sport-family    73
+      //
+      // That is DOCTRINE, not a leak: the most specific empirical cell
+      // with an adequate sample wins. A band cell of n=472 drawn from
+      // Pokemon's own pool is strictly better evidence for a $30 Pokemon
+      // card than a band-blind byTier aggregate of n=5,875 that pools a
+      // $5 common with a $5,000 Charizard — the whole reason the value-
+      // band layer exists is that the grade premium compresses as the
+      // raw anchor rises, which is visible in the 3.57 -> 2.54 -> 2.25
+      // decay above. byTier remains the fall-through for the bands
+      // Pokemon has no data in, and a band cell below the sample floor
+      // falls to byTier rather than resolving (see MIN_VALUE_BAND_SAMPLE
+      // in gradeCalibrationConfig.ts).
       const bandLookup = lookupValueBandMultiplierWithScope(rawPrice, company, gradeValueNum, { sport, family });
       if (bandLookup && Number.isFinite(bandLookup.medianRatio) && bandLookup.medianRatio > 0) {
         return { multiplier: bandLookup.medianRatio * setBump, rung: "empirical-value-band" };
@@ -1505,28 +1494,50 @@ function graderPremiumLadder(
     // else fall through to static
   }
 
-  const tierTable = GRADER_PREMIUMS[company]?.[gradeKey];
-  if (!tierTable) return { multiplier: 1.0, rung: "no-table" };
-  const tier = rawPriceToGradeTier(rawPrice);
-  return { multiplier: tierTable[tier] * setBump, rung: "static-table" };
+  // CF-EMPIRICAL-ONLY-NO-GRADER-MATRIX (2026-09-03, audit H-7 residual).
+  // This is where the hand-curated GRADER_PREMIUMS matrix used to sit —
+  // a per-company/per-tier table of literal constants (BGS "10 Black
+  // Label" at a sub-$25 anchor returned 12.0x; SGC 10 at $12,000
+  // returned 2.63x) that was the TERMINAL fallback, so this ladder could
+  // never refuse and no caller ever had to face a no-basis case. Every
+  // uncalibrated (company, grade, family, sport) combination silently
+  // published a number indistinguishable from a calibrated ratio.
+  //
+  // It is the same class of constant the CF-EMPIRICAL-ONLY ruling removed
+  // from observedGradeCurve and, in this same PR, from canonicalFmv's
+  // gradeTierMultiplier — but on the HIGHER-traffic path: this ladder is
+  // the multiplier entry point for hobbyIqFmv, unifiedPricing, the
+  // per-grade breakdown, the sibling fallback and the graded projection.
+  //
+  // Refuse instead. Every rung above this line is empirical — the vintage
+  // table, the value-band ladder, the family byTier/scalar cells, the
+  // auto and base tables. When none of them has a cell for this card, the
+  // honest answer is that we have no basis for a grade multiplier, and
+  // each caller degrades to its own existing no-basis path rather than
+  // multiplying a real anchor by an invented constant.
+  //
+  // NOTE for the H-8 rung reporting merged from #1679: the "static-table"
+  // and "no-table" rungs are gone with the matrix that defined them. A
+  // ladder that reaches the end reports no rung at all, because there is
+  // no rung — it returns null.
+  return null;
 }
 
-
 /**
- * The multiplier alone — every existing caller's contract, unchanged.
+ * The multiplier alone — or null when no empirical rung covered the card.
  * Callers that need to REPORT which rung produced it call
  * `getGraderPremiumWithRung` instead of guessing.
  */
 export function getGraderPremium(
   ...args: Parameters<typeof graderPremiumLadder>
-): number {
-  return graderPremiumLadder(...args).multiplier;
+): number | null {
+  return graderPremiumLadder(...args)?.multiplier ?? null;
 }
 
-/** The multiplier and the rung that produced it. H-8. */
+/** The multiplier and the rung that produced it, or null on no basis. H-8. */
 export function getGraderPremiumWithRung(
   ...args: Parameters<typeof graderPremiumLadder>
-): { multiplier: number; rung: GraderPremiumRung } {
+): { multiplier: number; rung: GraderPremiumRung } | null {
   return graderPremiumLadder(...args);
 }
 
@@ -1856,7 +1867,7 @@ export function logSalesMomentumObserved(opts: {
  * CF-CH-GRADE-LADDER-ANCHOR (2026-06-28): when the comp pool for the
  * requested grade is degenerate (null FMV, single rogue lowball, or
  * stale-only), climb the grade ladder via CH's prices-by-card endpoint
- * and back-compute the requested grade using our GRADER_PREMIUMS
+ * and back-compute the requested grade using our empirical grade
  * tiered table. Mirrors CH's `anchor_multiplier_indexed` method but
  * uses OUR multiplier table (which the per-player calibration CF will
  * tune over time once telemetry accumulates).
@@ -1951,16 +1962,23 @@ export function gradeLadderConversionRatio(
   anchorPrice: number,
   cardClass?: "autograph" | "base",
   cardYear?: number | null,
-): { ratio: number; rawTierUsed: number } {
+): { ratio: number; rawTierUsed: number } | null {
   if (anchorGrade === requestedGrade) return { ratio: 1, rawTierUsed: anchorPrice };
 
+  // CF-EMPIRICAL-ONLY-NO-GRADER-MATRIX (2026-09-03, audit H-7 residual).
+  // Every premium below can now refuse. A refusal must propagate as null,
+  // NOT as `ratio: 1` — ratio 1 means "the requested grade is worth the
+  // same as the anchor grade", which is a pricing claim we have no basis
+  // for. Returning it would hand the caller a PSA 10 price for a raw
+  // anchor under the ladder's own label.
   let rawFromAnchor: number;
   if (anchorGrade === "Raw") {
     rawFromAnchor = anchorPrice;
   } else {
     const ap = gradeLadderToCompanyPair(anchorGrade);
-    if (!ap) return { ratio: 1, rawTierUsed: anchorPrice };
+    if (!ap) return null;
     const anchorPremium = getGraderPremium(ap.company, ap.grade, anchorPrice, cardClass, cardYear);
+    if (anchorPremium === null || !(anchorPremium > 0)) return null;
     rawFromAnchor = anchorPrice / anchorPremium;
   }
 
@@ -1969,8 +1987,10 @@ export function gradeLadderConversionRatio(
     requestedPremium = 1;
   } else {
     const rp = gradeLadderToCompanyPair(requestedGrade);
-    if (!rp) return { ratio: 1, rawTierUsed: rawFromAnchor };
-    requestedPremium = getGraderPremium(rp.company, rp.grade, rawFromAnchor, cardClass, cardYear);
+    if (!rp) return null;
+    const p = getGraderPremium(rp.company, rp.grade, rawFromAnchor, cardClass, cardYear);
+    if (p === null || !(p > 0)) return null;
+    requestedPremium = p;
   }
 
   let anchorPremium: number;
@@ -1978,11 +1998,14 @@ export function gradeLadderConversionRatio(
     anchorPremium = 1;
   } else {
     const ap = gradeLadderToCompanyPair(anchorGrade);
-    if (!ap) return { ratio: 1, rawTierUsed: rawFromAnchor };
-    anchorPremium = getGraderPremium(ap.company, ap.grade, rawFromAnchor, cardClass, cardYear);
+    if (!ap) return null;
+    const p = getGraderPremium(ap.company, ap.grade, rawFromAnchor, cardClass, cardYear);
+    if (p === null || !(p > 0)) return null;
+    anchorPremium = p;
   }
 
   const ratio = requestedPremium / anchorPremium;
+  if (!Number.isFinite(ratio) || ratio <= 0) return null;
   return { ratio, rawTierUsed: rawFromAnchor };
 }
 
@@ -2036,7 +2059,13 @@ export async function deriveGradeLadderAnchor(opts: {
 
   if (!best) return null;
 
-  const { ratio, rawTierUsed } = gradeLadderConversionRatio(best.grade, requestedGrade, best.price, cardClass, cardYear);
+  // CF-EMPIRICAL-ONLY-NO-GRADER-MATRIX (2026-09-03, audit H-7 residual).
+  // A null conversion means no empirical cell covers this (grade, family,
+  // sport) pair. The ladder has no honest anchor to offer, so it refuses
+  // exactly as it already does when no grade in the ladder had data.
+  const conversion = gradeLadderConversionRatio(best.grade, requestedGrade, best.price, cardClass, cardYear);
+  if (!conversion) return null;
+  const { ratio, rawTierUsed } = conversion;
   let derivedFmv = Math.round(best.price * ratio * 100) / 100;
   const confidence = gradeLadderConfidence(best.daysOld, best.sampleSize);
 
@@ -2193,11 +2222,20 @@ export function normalizeCompToRaw(sale: RawComp): number {
   const detected = detectGradeFromTitle(sale.title);
   if (!detected) return sale.price;
   const premium = getGraderPremium(detected.company, detected.grade);
-  return premium > 0 ? sale.price / premium : sale.price;
+  // A null premium (no empirical basis, CF-EMPIRICAL-ONLY-NO-GRADER-MATRIX)
+  // leaves the sale un-normalized, which is the same degradation this line
+  // already made for a non-positive premium: we keep the observed price
+  // rather than dividing it by an invented one.
+  return premium !== null && premium > 0 ? sale.price / premium : sale.price;
 }
 
-export function applyGraderPremium(rawPrice: number, company: string | null, grade: string | null): number {
+/** CF-EMPIRICAL-ONLY-NO-GRADER-MATRIX (2026-09-03, audit H-7 residual).
+ *  Returns null when no empirical cell backs the (company, grade) pair —
+ *  multiplying a real raw price by a fabricated constant is exactly the
+ *  fabrication the matrix removal is about. */
+export function applyGraderPremium(rawPrice: number, company: string | null, grade: string | null): number | null {
   const premium = getGraderPremium(company, grade);
+  if (premium === null || !Number.isFinite(premium) || premium <= 0) return null;
   return rawPrice * premium;
 }
 
@@ -7472,14 +7510,32 @@ export async function computeEstimate(
   }
 
   const usedFallback = result.observability?.usedFallback ?? false;
-  let { quickSaleValue, fairMarketValue, premiumValue } = result.priceLanes;
+  // Widened to `| null` for CF-EMPIRICAL-ONLY-NO-GRADER-MATRIX: a refused
+  // grade premium withholds the point price below, and every downstream
+  // read of these three already guards with `typeof x === "number"`.
+  let { quickSaleValue, fairMarketValue, premiumValue }: {
+    quickSaleValue: number | null;
+    fairMarketValue: number | null;
+    premiumValue: number | null;
+  } = result.priceLanes;
 
   // Re-apply the target card's grader premium. The orchestrator received
   // raw-normalized prices (Improvement 3), so its priceLanes are "raw
   // equivalent" — multiply by the requested grade's coefficient to land
   // the prediction back in the right grade band.
   const normalizedAnchorRaw = typeof fairMarketValue === "number" ? fairMarketValue : null;
-  if (targetPremium !== 1.0) {
+  // CF-EMPIRICAL-ONLY-NO-GRADER-MATRIX (2026-09-03, audit H-7 residual).
+  // A null premium is NOT the same as a 1.0 premium here. These lanes are
+  // raw-equivalent by construction, so leaving them unmultiplied would
+  // publish a RAW price under the requested GRADE's label — the most
+  // expensive possible way to be silently wrong. When we have no basis to
+  // move raw into the requested grade band, withhold the point price and
+  // let the existing data-sufficiency gate below present it as unpriced.
+  if (targetPremium === null) {
+    quickSaleValue = null;
+    fairMarketValue = null;
+    premiumValue = null;
+  } else if (targetPremium !== 1.0) {
     if (typeof quickSaleValue === "number") quickSaleValue = quickSaleValue * targetPremium;
     if (typeof fairMarketValue === "number") fairMarketValue = fairMarketValue * targetPremium;
     if (typeof premiumValue === "number") premiumValue = premiumValue * targetPremium;

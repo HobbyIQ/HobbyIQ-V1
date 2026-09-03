@@ -280,7 +280,7 @@ export async function attemptSiblingPriceFallback(
   // The calibrated PSA 10 / Raw ratio for this card class — the same
   // ladder (GRADE_CALIBRATION family x band x sport, vintage table,
   // gem-rate) hobbyIqFmv's grade-cross-raw rung and the grade curve use.
-  const psa10Premium = (rawAnchor: number | null): number =>
+  const psa10Premium = (rawAnchor: number | null): number | null =>
     getGraderPremium(
       "PSA",
       "10",
@@ -330,7 +330,7 @@ export async function attemptSiblingPriceFallback(
       if (psaUsable.length > 0) {
         const psaMedian = computeWeightedMedian(psaUsable);
         const ratio = psa10Premium(null);
-        if (psaMedian !== null && psaMedian > 0 && Number.isFinite(ratio) && ratio > 0) {
+        if (psaMedian !== null && psaMedian > 0 && ratio !== null && Number.isFinite(ratio) && ratio > 0) {
           siblingBaseMedianRaw = Math.round((psaMedian / ratio) * 100) / 100;
           siblingCompCount = psaUsable.length;
           const dates = psaUsable
@@ -410,7 +410,7 @@ export async function attemptSiblingPriceFallback(
     Math.round(siblingBaseProjectedToday * parallelPremium * 100) / 100;
   const psa10Ratio = psa10Premium(estimatedRawPrice);
   const estimatedPSA10Price =
-    Number.isFinite(psa10Ratio) && psa10Ratio > 0
+    psa10Ratio !== null && Number.isFinite(psa10Ratio) && psa10Ratio > 0
       ? Math.round(estimatedRawPrice * psa10Ratio * 100) / 100
       : null;
   // Predicted at 7d = today's estimate projected another week forward

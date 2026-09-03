@@ -710,10 +710,19 @@ function buildGradeLadder(
   // recover an implied raw base.
   let rawAnchor = result.fmv;
   const sport = inferSportFromContext(input.product ?? null, null, input.cardYear);
-  const inputGradeMult = input.gradeCompany && input.gradeValue !== null && input.gradeValue !== undefined
-    ? gradeTierMultiplier(input.gradeCompany, input.gradeValue, family, sport)
-    : 1;
-  if (inputGradeMult > 0) rawAnchor = result.fmv / inputGradeMult;
+  // CF-EMPIRICAL-ONLY-NO-MATRIX (2026-09-03, H-7). When the caller asked
+  // for a graded tier we must REVERSE its multiplier to recover a raw
+  // anchor. With the hardcoded matrix gone that multiplier can be null,
+  // and there is no honest way to invert an unknown: dividing by a
+  // fabricated 4x would put every rung of the ladder on a raw anchor we
+  // made up. Refuse the whole ladder instead — the same refusal
+  // observedGradeCurve makes when it has no basis.
+  let inputGradeMult: number | null = 1;
+  if (input.gradeCompany && input.gradeValue !== null && input.gradeValue !== undefined) {
+    inputGradeMult = gradeTierMultiplier(input.gradeCompany, input.gradeValue, family, sport);
+    if (inputGradeMult === null) return null;   // no basis to reverse — no ladder
+  }
+  if (inputGradeMult !== null && inputGradeMult > 0) rawAnchor = result.fmv / inputGradeMult;
 
   // For each grader we have calibration for, project the tier value.
   // Sub-tier scaling handled by gradeTierMultiplier.
@@ -739,7 +748,11 @@ function buildGradeLadder(
   for (const grader of graders) {
     for (const value of gradeValues[grader]) {
       const mult = gradeTierMultiplier(grader, value, family, sport);
-      if (mult <= 1) continue;   // no empirical uplift → skip
+      // null = no empirical basis for this tier (H-7: previously a
+      // hardcoded 4x/5x/3x would have rendered here as if it were data).
+      // Skipping is the honest answer — the ladder shows the tiers we can
+      // evidence and stays silent about the rest.
+      if (mult === null || mult <= 1) continue;
       const fmv = rawAnchor * mult;
       if (!Number.isFinite(fmv) || fmv <= 0) continue;
       tiers.push({
@@ -2132,6 +2145,15 @@ async function tryProductTier(
     : 1;
   const productFamily = classifyFamily(input.product);
   const gradeMult = gradeTierMultiplier(input.gradeCompany ?? null, input.gradeValue ?? null, productFamily, inferSportFromContext(input.product ?? null, null, input.cardYear));
+  // CF-EMPIRICAL-ONLY-NO-MATRIX (2026-09-03, H-7). This rung is already
+  // the last resort — a hardcoded product base times a stack of
+  // multipliers. It used to close its last evidential gap with the
+  // hardcoded grade matrix, so a PSA 10 of an uncalibrated family got a
+  // flat 4x on top of a made-up base and shipped as a number. With the
+  // matrix gone, a graded input whose family has no calibration has no
+  // basis at all: return null so the caller falls through to no-basis
+  // rather than publishing the product of two guesses.
+  if (gradeMult === null) return null;
   const era = eraDecayForYear(input.cardYear ?? null);
 
   const raw = productBase * autoMultiplier * parallelMult * gradeMult * era;
@@ -2259,43 +2281,33 @@ export function empiricalGradeMultiplier(
   return null;
 }
 
+/** CF-EMPIRICAL-ONLY-NO-MATRIX (2026-09-03, audit H-7). Grade multiplier
+ *  for a (company, grade, family, sport) — empirical or nothing.
+ *
+ *  This function used to fall back to a hardcoded per-company matrix
+ *  (PSA 10 = 4x, BGS 10 = 5x, SGC 10 = 3x, CGC 10 = 3.5x) whenever
+ *  calibration was missing. That is the exact class of constant Drew's
+ *  standing EMPIRICAL-ONLY ruling removed from observedGradeCurve:
+ *  GRADE_CALIBRATION only, never a hardcoded multiplier. The matrix was
+ *  not a rare edge case — 24 classifier families reach it because they
+ *  have no baseline entry for at least one grader (bowman-draft,
+ *  topps-gold-label, panini-national-treasures, panini-immaculate,
+ *  panini-flawless, upper-deck, and 18 more), and it is indistinguishable
+ *  in the return value from a real calibrated ratio.
+ *
+ *  It now returns null on no basis, which is the same refusal
+ *  observedGradeCurve already makes. Callers must handle null by
+ *  degrading honestly — suppressing the tier, or the whole result —
+ *  rather than by rendering a fabricated number.
+ *
+ *  Raw still returns 1: that is a definition, not a multiplier. */
 function gradeTierMultiplier(
   company: string | null,
   value: number | null,
   productFamily: string | null,
   sport?: string | null,
-): number {
-  const empirical = empiricalGradeMultiplier(company, value, productFamily, sport);
-  if (empirical !== null) return empirical;
-  // Unreachable for raw — empiricalGradeMultiplier returns 1 for it — but the
-  // narrowing has to be explicit for the fallback table below.
-  if (!company || value === null) return 1;
-  const c = company.toUpperCase();
-
-  // Fallback: hardcoded per-company/per-tier defaults.
-  if (c === "PSA") {
-    if (value >= 10) return 4;
-    if (value >= 9) return 1.6;
-    if (value >= 8) return 1.2;
-    return 1;
-  }
-  if (c === "BGS") {
-    if (value >= 10) return 5;
-    if (value >= 9.5) return 3;
-    if (value >= 9) return 1.5;
-    return 1;
-  }
-  if (c === "SGC") {
-    if (value >= 10) return 3;
-    if (value >= 9.5) return 2;
-    return 1;
-  }
-  if (c === "CGC") {
-    if (value >= 10) return 3.5;
-    if (value >= 9.5) return 2;
-    return 1;
-  }
-  return 1;
+): number | null {
+  return empiricalGradeMultiplier(company, value, productFamily, sport);
 }
 
 /** Shared era decay: <1y = 1.2× (hot), <2y = 1.0×, <4y = 0.85×, else 0.7×. */

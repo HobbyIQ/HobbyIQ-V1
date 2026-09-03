@@ -150,7 +150,7 @@ describe("H-8: the label is the ladder's own answer", () => {
 
     // A hard business rule reports itself by name rather than as a ratio.
     expect(
-      getGraderPremiumWithRung("PSA", "8", 100, "base", 2021, "Topps Chrome", null, "baseball").rung,
+      getGraderPremiumWithRung("PSA", "8", 100, "base", 2021, "Topps Chrome", null, "baseball")?.rung,
     ).toBe("psa8-equals-raw");
   });
 
@@ -166,7 +166,9 @@ describe("H-8: the label is the ladder's own answer", () => {
     expect(estimatedFromRung("empirical-ratio-tier")).toBe("empirical-ratio-tier");
     expect(estimatedFromRung("empirical-ratio")).toBe("empirical-ratio");
     // The table rungs are what "raw-multiplier" has always meant.
-    expect(estimatedFromRung("static-table")).toBe("raw-multiplier");
+    // ("static-table" retired 2026-09-03 with the GRADER_PREMIUMS matrix —
+    //  CF-EMPIRICAL-ONLY-NO-GRADER-MATRIX. That ladder end now returns null,
+    //  which never reaches estimatedFromRung: no value, so no label.)
     expect(estimatedFromRung("auto-table")).toBe("raw-multiplier");
     expect(estimatedFromRung("base-table")).toBe("raw-multiplier");
   });

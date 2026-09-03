@@ -26,9 +26,15 @@ describe("getGraderPremium — vintage cardYear gating", () => {
     const r = getGraderPremium("PSA", "10", 50);
     // CF-CALIBRATION-LADDER-IN-GRADER-PREMIUM (Drew, 2026-07-27): the
     // ladder replaces the static 2.8 with the value-band baseline
-    // empirical ~3.25× (PSA 10 / $50-99 / n=large). Range guard vs
-    // exact value so the assertion survives calibration refresh drift.
-    expect(r).toBeGreaterThan(2.5);
+    // empirical cell (PSA 10 / $50-99 / n=large). Range guard vs exact
+    // value so the assertion survives calibration refresh drift.
+    //
+    // Widened 2026-09-03: the C-4/H-10 regeneration moved the generator
+    // from ch_daily_sales (vendor card_id) to sold_comps (our own pool,
+    // grouped by hobbyiqCardId), and this baseline cell moved ~3.25x ->
+    // 2.32x. The band that matters is "the empirical ladder fired and
+    // beat a raw multiple of 1", not the specific pre-regeneration number.
+    expect(r).toBeGreaterThan(2.0);
     expect(r).toBeLessThan(5);
   });
 
@@ -38,9 +44,15 @@ describe("getGraderPremium — vintage cardYear gating", () => {
     const r = getGraderPremium("PSA", "10", 50, "base", 2024);
     // CF-CALIBRATION-LADDER-IN-GRADER-PREMIUM (Drew, 2026-07-27): the
     // ladder replaces the static 2.8 with the value-band baseline
-    // empirical ~3.25× (PSA 10 / $50-99 / n=large). Range guard vs
-    // exact value so the assertion survives calibration refresh drift.
-    expect(r).toBeGreaterThan(2.5);
+    // empirical cell (PSA 10 / $50-99 / n=large). Range guard vs exact
+    // value so the assertion survives calibration refresh drift.
+    //
+    // Widened 2026-09-03: the C-4/H-10 regeneration moved the generator
+    // from ch_daily_sales (vendor card_id) to sold_comps (our own pool,
+    // grouped by hobbyiqCardId), and this baseline cell moved ~3.25x ->
+    // 2.32x. The band that matters is "the empirical ladder fired and
+    // beat a raw multiple of 1", not the specific pre-regeneration number.
+    expect(r).toBeGreaterThan(2.0);
     expect(r).toBeLessThan(5);
   });
 
@@ -70,9 +82,15 @@ describe("getGraderPremium — vintage cardYear gating", () => {
     const r = getGraderPremium("PSA", "10", 50, "base", 1990);
     // CF-CALIBRATION-LADDER-IN-GRADER-PREMIUM (Drew, 2026-07-27): the
     // ladder replaces the static 2.8 with the value-band baseline
-    // empirical ~3.25× (PSA 10 / $50-99 / n=large). Range guard vs
-    // exact value so the assertion survives calibration refresh drift.
-    expect(r).toBeGreaterThan(2.5);
+    // empirical cell (PSA 10 / $50-99 / n=large). Range guard vs exact
+    // value so the assertion survives calibration refresh drift.
+    //
+    // Widened 2026-09-03: the C-4/H-10 regeneration moved the generator
+    // from ch_daily_sales (vendor card_id) to sold_comps (our own pool,
+    // grouped by hobbyiqCardId), and this baseline cell moved ~3.25x ->
+    // 2.32x. The band that matters is "the empirical ladder fired and
+    // beat a raw multiple of 1", not the specific pre-regeneration number.
+    expect(r).toBeGreaterThan(2.0);
     expect(r).toBeLessThan(5);  // matches static "50-100"
   });
 
@@ -80,9 +98,15 @@ describe("getGraderPremium — vintage cardYear gating", () => {
     const r = getGraderPremium("PSA", "10", 50, "base", 1947);
     // CF-CALIBRATION-LADDER-IN-GRADER-PREMIUM (Drew, 2026-07-27): the
     // ladder replaces the static 2.8 with the value-band baseline
-    // empirical ~3.25× (PSA 10 / $50-99 / n=large). Range guard vs
-    // exact value so the assertion survives calibration refresh drift.
-    expect(r).toBeGreaterThan(2.5);
+    // empirical cell (PSA 10 / $50-99 / n=large). Range guard vs exact
+    // value so the assertion survives calibration refresh drift.
+    //
+    // Widened 2026-09-03: the C-4/H-10 regeneration moved the generator
+    // from ch_daily_sales (vendor card_id) to sold_comps (our own pool,
+    // grouped by hobbyiqCardId), and this baseline cell moved ~3.25x ->
+    // 2.32x. The band that matters is "the empirical ladder fired and
+    // beat a raw multiple of 1", not the specific pre-regeneration number.
+    expect(r).toBeGreaterThan(2.0);
     expect(r).toBeLessThan(5);
   });
 });

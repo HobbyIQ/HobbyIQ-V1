@@ -1078,7 +1078,7 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
         // as the sportHint so the calibration ladder can route into the
         // sport-scoped cells (baseball × bowman-chrome × band × tier).
         const multiplier = getGraderPremium(gradeCompany, String(gradeValue), rawMedian, cardClass, parsed.year, parsed.setKey, null, parsed.sport);
-        if (!Number.isFinite(multiplier) || multiplier <= 0) continue;
+        if (multiplier === null || !Number.isFinite(multiplier) || multiplier <= 0) continue;
         const gradedFmv = rawMedian * multiplier;
 
         // CF-ESTIMATE-NO-SYNTH-POOLROW (Drew, 2026-07-28). Don't

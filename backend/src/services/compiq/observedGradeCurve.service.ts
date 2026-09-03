@@ -1529,9 +1529,14 @@ function parseGradeValue(gradeLabel: string): number | null {
  * H-8: the ladder's rung, in the vocabulary the wire already speaks.
  *
  * Only rungs that can produce an ESTIMATED grade value appear as themselves.
- * The two "no multiplier was found" rungs and the legacy auto/base/static
- * tables are all exactly what `raw-multiplier` has always meant — a table
- * lookup off the raw price — so they keep that name and its wider band.
+ * The legacy auto/base tables are exactly what `raw-multiplier` has always
+ * meant — a table lookup off the raw price — so they keep that name and its
+ * wider band.
+ *
+ * CF-EMPIRICAL-ONLY-NO-GRADER-MATRIX (2026-09-03): the "static-table" and
+ * "no-table" rungs no longer exist. The ladder that used to end in the
+ * hand-curated matrix now returns null, and a null never reaches this
+ * function — there is no rung to label because no value was produced.
  */
 export function estimatedFromRung(rung: GraderPremiumRung): NonNullable<ObservedGradeEntry["estimatedFrom"]> {
   switch (rung) {
@@ -1580,14 +1585,22 @@ function resolveMultiplier(args: {
     null,      // gemRateSignal — not available at grade-curve site
     sport,
   );
-  if (Number.isFinite(premium.multiplier) && premium.multiplier > 0) return premium;
-  // Fallback if the ladder returns invalid — shouldn't happen (it always
-  // returns a number) but belt-and-suspenders. It is a raw multiplier and
-  // says so.
-  const fallback = gradeMultiplierFor(cardClass, entry.grade);
-  return typeof fallback === "number" && Number.isFinite(fallback) && fallback > 0
-    ? { multiplier: fallback, rung: "static-table" as const }
-    : undefined;
+  if (premium !== null && Number.isFinite(premium.multiplier) && premium.multiplier > 0) {
+    return premium;
+  }
+  // CF-EMPIRICAL-ONLY-NO-GRADER-MATRIX (2026-09-03, audit H-7 residual).
+  // The shared ladder now RETURNS NULL when no empirical cell covers this
+  // card — it is no longer true that "it always returns a number", and the
+  // "static-table" rung this branch used to name no longer exists, because
+  // the matrix that defined it is gone.
+  //
+  // The refusal is the intended path here, not an anomaly. gradeMultiplierFor
+  // is a deliberate no-op returning undefined, so the entry surfaces as
+  // valueSource "unavailable" on the iOS pill and logs
+  // grade_multiplier_uncovered — which is exactly what
+  // CF-EMPIRICAL-ONLY-MULTIPLIER asked for. Real accuracy > false
+  // completeness.
+  return undefined;
 }
 
 function fillEstimatedFallback(

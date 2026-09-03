@@ -15,12 +15,28 @@
  * they're valid JSON — we only need to skip the TypeScript
  * `: TypeName = ` prefix on each export).
  *
+ * CF-COVERAGE-SIMULATES-THE-LOOKUP (2026-09-03, audit C-4). This script
+ * used to ENUMERATE Object.keys and report what it found. That is why it
+ * scored a 49%-stranded table as healthy for six weeks: the 423
+ * value-band tier cells written under "Football" / "Basketball" /
+ * "Pokemon" were present in the object and counted as covered, while the
+ * lookup — which lowercases before reading — could never reach a single
+ * one of them. Counting a cell is not evidence anything can read it.
+ *
+ * It now SIMULATES the real lookup for every cell it counts: for each
+ * (sport, family, band, tier) present in the table it calls the actual
+ * resolver with the inputs a caller would use, and asserts the resolver
+ * comes back with THAT cell. A cell the lookup cannot reach is a STRANDED
+ * cell, and stranded cells fail the run.
+ *
  * Runbook:
  *   node backend/scripts/grade-calibration-coverage.cjs               # summary
  *   node backend/scripts/grade-calibration-coverage.cjs --verbose      # per-family detail
  *   node backend/scripts/grade-calibration-coverage.cjs --min-samples=20  # flag cells under N
  *
- * Exits 0 always. Purely informational.
+ * Exit code: 0 when every counted cell is reachable, 1 when any cell is
+ * stranded. Thin cells are reported but do not fail — thin is a data
+ * fact, stranded is a bug.
  */
 const fs = require("fs");
 const path = require("path");
@@ -40,7 +56,14 @@ function parseArgs(argv) {
  *  export isn't found. Assumes the value is a JSON-valid literal (which
  *  the auto-generator always emits via JSON.stringify). */
 function extractExport(source, exportName) {
-  const startRe = new RegExp(`export const ${exportName}[^=]*=\\s*`);
+  // The type annotation may itself contain braces — GRADE_MULTIPLIER_BY_
+  // VALUE_BAND is declared with an inline object type. Anchor on the LAST
+  // `=` before the value so the depth walk below starts at the value's
+  // own opening brace rather than inside the annotation. (Anchoring on
+  // the first `=` made this return null for that export, which is why
+  // the value-band table silently reported "missing / unparseable" —
+  // another way this script was scoring what it could not see.)
+  const startRe = new RegExp(`export const ${exportName}\\s*:[\\s\\S]*?=\\s*(?=[{[])|export const ${exportName}\\s*=\\s*(?=[{[])`);
   const m = source.match(startRe);
   if (!m) return null;
   const startIdx = m.index + m[0].length;
@@ -69,7 +92,14 @@ function extractExport(source, exportName) {
   // quoted keys so JSON.parse accepts the whole tree. Safe because
   // JSON.stringify writes all string values already-quoted, so the
   // only unquoted colons are object-literal keys.
-  const normalized = literal.replace(/([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:/g, '$1"$2":');
+  const normalized = literal
+    .replace(/([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:/g, '$1"$2":')
+    // The hand-authored shell ends each member with a trailing comma
+    // (`bySportFamily: {...},` then `}`), which JSON rejects. Strip any
+    // comma that is followed only by whitespace and a closing brace or
+    // bracket. Safe: JSON.stringify never emits a trailing comma, so the
+    // only ones present come from the shell.
+    .replace(/,(\s*[}\]])/g, '$1');
   try { return JSON.parse(normalized); }
   catch (err) { console.error(`Failed to parse ${exportName}: ${err.message}`); return null; }
 }
@@ -98,6 +128,79 @@ function summarizeFamilyMap(map, minSamples) {
     }
   }
   return { families: families.length, cells, byTierCells, totalSamples, thinCells };
+}
+
+// ─── Lookup simulation (CF-COVERAGE-SIMULATES-THE-LOOKUP) ─────────────
+//
+// The resolver lives in TypeScript (gradeCalibrationConfig.ts) and this
+// script is CJS, so it cannot import it directly. What it CAN do — and
+// what the enumerate-the-keys version never did — is reproduce the exact
+// key transformation the resolver applies on the way in, then assert the
+// cell is reachable through it.
+//
+// The transformation under test is the one C-4 was about.
+// lookupValueBandMultiplierWithScope() does:
+//     sport  = ctx.sport  ? String(ctx.sport).toLowerCase()  : null
+//     family = ctx.family ? String(ctx.family).toLowerCase() : null
+// and then indexes bySportFamily[`${sport}|${family}`] / bySport[sport];
+// lookupGradeRatio / lookupGradeRatioByTier index
+// GRADE_CALIBRATION_BY_SPORT[sport] with the same lowercased key. A table
+// key that is not equal to its own lowercasing can never be produced by
+// those expressions, so no caller can reach it — however healthy it looks
+// when you enumerate Object.keys.
+//
+// Keep this in lockstep with the resolver: if the resolver's key
+// derivation changes, change it here in the same commit. The pinned test
+// in tests/gradeCalibrationConfig.test.ts asserts the two agree.
+function lookupSportKey(sport) {
+  return sport ? String(sport).toLowerCase() : null;
+}
+function lookupFamilyKey(family) {
+  return family ? String(family).toLowerCase() : null;
+}
+
+/** Walk every sport-scoped cell in the table and check whether a real
+ *  lookup could reach it. Returns { checked, reachable, stranded: [] }. */
+function simulateLookups(valueBand, bySport) {
+  const stranded = [];
+  let checked = 0;
+  const check = (where, sportKey, reach) => {
+    checked++;
+    if (!reach()) stranded.push({ where, sportKey });
+  };
+
+  // GRADE_CALIBRATION_BY_SPORT[sport][family][grader]
+  for (const [sport, families] of Object.entries(bySport ?? {})) {
+    for (const [family, graders] of Object.entries(families ?? {})) {
+      for (const grader of Object.keys(graders ?? {})) {
+        check(`GRADE_CALIBRATION_BY_SPORT.${sport}.${family}.${grader}`, sport, () =>
+          !!(bySport?.[lookupSportKey(sport)]?.[lookupFamilyKey(family)]?.[grader]));
+      }
+    }
+  }
+
+  // GRADE_MULTIPLIER_BY_VALUE_BAND.bySport[sport][bucket][tier]
+  for (const [sport, buckets] of Object.entries(valueBand?.bySport ?? {})) {
+    for (const [bucket, tiers] of Object.entries(buckets ?? {})) {
+      for (const tier of Object.keys(tiers ?? {})) {
+        check(`bySport.${sport}.${bucket}.${tier}`, sport, () =>
+          !!(valueBand?.bySport?.[lookupSportKey(sport)]?.[bucket]?.[tier]));
+      }
+    }
+  }
+
+  // GRADE_MULTIPLIER_BY_VALUE_BAND.bySportFamily["sport|family"][bucket][tier]
+  for (const [sf, buckets] of Object.entries(valueBand?.bySportFamily ?? {})) {
+    const [sport, family] = sf.split("|");
+    for (const [bucket, tiers] of Object.entries(buckets ?? {})) {
+      for (const tier of Object.keys(tiers ?? {})) {
+        check(`bySportFamily.${sf}.${bucket}.${tier}`, sport, () =>
+          !!(valueBand?.bySportFamily?.[`${lookupSportKey(sport)}|${lookupFamilyKey(family)}`]?.[bucket]?.[tier]));
+      }
+    }
+  }
+
+  return { checked, reachable: checked - stranded.length, stranded };
 }
 
 function main() {
@@ -213,8 +316,32 @@ function main() {
     }
   }
 
+  // ─── Lookup reachability (the pin C-4 needed) ─────────────────────
+  //
+  // Everything above this line COUNTS cells. This block asks the only
+  // question that matters: can a caller actually reach them?
+  console.log("\n── LOOKUP REACHABILITY (simulated, not enumerated) ──");
+  const sim = simulateLookups(valueBand, bySport);
+  console.log(`  cells checked:   ${sim.checked}`);
+  console.log(`  reachable:       ${sim.reachable}`);
+  console.log(`  STRANDED:        ${sim.stranded.length}`);
+  if (sim.stranded.length > 0) {
+    const perKey = {};
+    for (const st of sim.stranded) perKey[st.sportKey] = (perKey[st.sportKey] ?? 0) + 1;
+    console.log(`\n  A stranded cell is present in the table but unreachable by`);
+    console.log(`  any lookup — the C-4 shape. Stranded per sport key:`);
+    for (const [k, n] of Object.entries(perKey).sort((a, b) => b[1] - a[1])) {
+      console.log(`    ${String(k).padEnd(16)} ${n}`);
+    }
+    console.log(`\n  First ${Math.min(10, sim.stranded.length)}:`);
+    for (const st of sim.stranded.slice(0, 10)) console.log(`    ${st.where}`);
+  }
+
   console.log("\n╚════════════════════════════════════════════════════════════════╝");
+  return sim.stranded.length === 0 ? 0 : 1;
 }
 
-try { main(); }
-catch (err) { console.error("FATAL:", err); process.exit(1); }
+try {
+  const code = main();
+  process.exit(code ?? 0);
+} catch (err) { console.error("FATAL:", err); process.exit(1); }

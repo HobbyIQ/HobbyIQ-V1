@@ -1047,13 +1047,36 @@ export async function computeUnifiedPrice(
           const toMult = requestedGraded
             ? getGraderPremium(requestedGraded.company, requestedGraded.value, fmv ?? null, "autograph", opts.cardYear ?? null, null, null, null)
             : 1.0;
-          const rescale = fromMult > 0 && Number.isFinite(fromMult) ? (toMult / fromMult) : 1.0;
-          if (Number.isFinite(rescale) && rescale > 0 && rescale !== 1.0) {
+          // CF-EMPIRICAL-ONLY-NO-GRADER-MATRIX (2026-09-03, audit H-7
+          // residual). Either premium can now refuse. This whole block
+          // exists because `matched` is a DIFFERENT grade's pool: without a
+          // successful rescale the numbers are that other grade's, and
+          // shipping them under the "cross-grade-fallback" label is a
+          // false-confidence answer, not a conservative one. So a refusal
+          // has to withhold the price rather than leave it un-rescaled —
+          // the caller's own no-basis handling then applies.
+          const canRescale =
+            fromMult !== null && Number.isFinite(fromMult) && fromMult > 0
+            && toMult !== null && Number.isFinite(toMult) && toMult > 0;
+          const rescale = canRescale ? (toMult! / fromMult!) : null;
+          if (rescale === null || !Number.isFinite(rescale) || rescale <= 0) {
+            fmv = null;
+            marketValue = null;
+            predictedPrice = null;
+            rungLabel = "no-basis";
+          } else if (rescale !== 1.0) {
             if (fmv !== null) fmv = Math.round(fmv * rescale * 100) / 100;
             if (marketValue !== null) marketValue = Math.round(marketValue * rescale * 100) / 100;
             if (predictedPrice !== null) predictedPrice = Math.round(predictedPrice * rescale * 100) / 100;
           }
-        } catch { /* keep the raw-pool number as fallback */ }
+        } catch {
+          // A thrown lookup is no more evidence than a refused one. Same
+          // reasoning as above: the pool we matched is another grade's.
+          fmv = null;
+          marketValue = null;
+          predictedPrice = null;
+          rungLabel = "no-basis";
+        }
       }
 
       // CF-PLAYER-TREND-ADJUSTMENT (Drew, 2026-08-04). When the matched

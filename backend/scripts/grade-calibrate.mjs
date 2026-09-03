@@ -1,15 +1,47 @@
-// CF-GRADE-CALIBRATE (Drew, 2026-07-20 rewrite). Generates
-// gradeCalibrationData.ts (baseline baseball + per-sport overlays for
-// football & basketball) from 365d of ch_daily_sales.
+// CF-GRADE-CALIBRATE (Drew, 2026-07-20 rewrite; 2026-09-03 pool + sport-key
+// rewrite). Generates gradeCalibrationData.ts from OUR pool (sold_comps).
+//
+// ─── 2026-09-03: what changed and why (audit C-4 / H-10) ──────────────
+//
+// 1. SOURCE. This script used to read `ch_daily_sales` and group by
+//    `card_id` — a VENDOR key. That violates the calibration-from-our-
+//    pool-only doctrine (Drew, 2026-08-01): every calibration constant
+//    derives from sold_comps grouped by IDENTITY fields, never keyed by a
+//    vendor's cardId, so adding a vendor improves precision without
+//    changing the math. It also made H-10 unfixable: ch_daily_sales holds
+//    only Baseball / Basketball / Football / Pokemon rows — there is NO
+//    hockey in it at all (verified live: the four `group` values above
+//    plus 152 undefined), so no amount of key-fixing could populate a
+//    hockey cell from that container. sold_comps has 234,172 hockey rows,
+//    71,479 of them graded.
+//
+//    We now read sold_comps and group by `hobbyiqCardId`, the canonical
+//    identity slug. Two vendors reporting the same card contribute to the
+//    same pair, which is the whole premise of the unified pool.
+//
+// 2. ONE CANONICAL SPORT KEY. The old script wrote value-band sport keys
+//    from a display-cased SPORTS array ("Football" / "Basketball" /
+//    "Pokemon") while gradeCalibrationConfig lowercases before lookup — so
+//    those cells were unreachable (C-4: 423 of 864 sport-scoped value-band
+//    tier cells, 49.0%, stranded on the shipped table). SPORTS is now
+//    lowercase and IS the key at every layer: the sold_comps filter value,
+//    the accumulator key, and the emitted table key. There is exactly one
+//    spelling of a sport in this file, and a guard below refuses to write
+//    a table that reintroduces a second one.
+//
+// 3. ALL SPORTS. SPORTS now includes baseball and hockey (H-10). Baseball
+//    is ~40% of the graded pool and shipped an EMPTY
+//    GRADE_CALIBRATION_BY_SPORT.baseball; hockey silently drew baseball
+//    math through the baseline fall-through.
 //
 // Design:
-//   - Per-family per-year partitioned queries (each ~100-500 rows) to
-//     stay under Cosmos serverless RU. Unbounded GROUP BY on big
-//     families (topps, bowman, panini-prizm) 429s.
-//   - Baseline calibration = baseball-implicit (queried without
-//     sport filter, since ch_daily_sales is 99.7% baseball).
-//   - Per-sport overlays query WHERE c["group"] = @sport, populate
-//     GRADE_CALIBRATION_BY_SPORT.football + .basketball.
+//   - Per-family per-year partitioned queries (each bounded) to stay
+//     under Cosmos serverless RU. Unbounded GROUP BY on big families
+//     (topps, bowman, panini-prizm) 429s.
+//   - Baseline calibration = the baseball slice, named explicitly rather
+//     than implied by an unfiltered query.
+//   - Per-sport overlays query WHERE c.sport = @sport and populate
+//     GRADE_CALIBRATION_BY_SPORT for every sport in SPORTS.
 //   - Baseline threshold: n>=5 per (family, grader). Sport threshold:
 //     n>=3 (smaller pools).
 //   - Generic "other" family = sample-size-weighted average of the 19
@@ -33,7 +65,7 @@ if (!connStr) { console.error("COSMOS_CONNECTION_STRING missing"); process.exit(
 
 const client = new CosmosClient(connStr);
 const db = client.database(process.env.COSMOS_DATABASE ?? "hobbyiq");
-const container = db.container(process.env.COSMOS_CH_DAILY_SALES_CONTAINER ?? "ch_daily_sales");
+const container = db.container(process.env.COSMOS_SOLD_COMPS_CONTAINER ?? "sold_comps");
 // CF-CALIBRATION-LOOKBACK-V2 (Drew, 2026-07-26). Baseline stays 365d
 // (baseball is thick — 500k+ rows/mo, ratios are stable). Sport overlays
 // bump to 730d because FB/BB/Pokemon pool volume is 2-10× thinner per
@@ -212,17 +244,63 @@ const POKEMON_FAMILIES = [
 ];
 
 const YEARS = [2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026];
-// CF-POKEMON-CALIBRATION (Drew, 2026-07-26): "Pokemon" added.
-// SPORT_FAMILIES resolution moved to per-sport dispatch in the loop below.
-const SPORTS = ["Football", "Basketball", "Pokemon"];
 
-// Sport → family set. Each sport pulls only families that make sense
-// for it. Football/Basketball share the Panini + Topps/Bowman Chrome
-// set; Pokemon has its own family list.
+// CF-ONE-CANONICAL-SPORT-KEY (2026-09-03, audit C-4 / H-10). These
+// strings are THE sport key. The same value is used verbatim as the
+// sold_comps `c.sport` filter, as the in-memory accumulator key, and as
+// the key written into every emitted table. sold_comps stores sport
+// lowercase (verified live: baseball 7,982,256 / pokemon 3,190,031 /
+// football 2,551,470 / basketball 2,212,913 / hockey 234,172) and
+// gradeCalibrationConfig lowercases before lookup, so lowercase is the
+// one spelling that survives the whole round trip.
+//
+// Do NOT reintroduce a display-cased variant. C-4 was exactly a second
+// spelling: the value-band table was WRITTEN "Football" and READ
+// "football", so 49% of the sport-scoped cells could not be reached by
+// any lookup, and the coverage script scored them healthy because it
+// enumerated keys instead of simulating a lookup. Both halves are now
+// pinned — the guard below refuses to write a non-canonical key, and
+// grade-calibration-coverage.cjs simulates the real lookup per cell.
+//
+// baseball and hockey are new here (H-10): baseball is ~40% of the
+// graded pool and shipped an empty overlay; hockey has no rows at all in
+// the old ch_daily_sales source and silently drew baseball math.
+const SPORTS = ["baseball", "football", "basketball", "hockey", "pokemon"];
+
+// Which sport supplies the baseline (baseball-implicit) table. Named
+// explicitly rather than implied by an unfiltered query, so "baseline"
+// is a real, stated slice of our pool.
+const BASELINE_SPORT = "baseball";
+
+// Sport → family set. Pokemon has its own product taxonomy; the stick-
+// and-ball sports share the Panini + Topps/Bowman Chrome set. Baseball's
+// overlay uses the fuller BASELINE_FAMILIES list (it is the sport that
+// list was written for) and hockey is Upper-Deck-dominant, so it gets
+// the shared set plus the baseline brands.
 function familiesForSport(sport) {
-  if (sport === "Pokemon") return POKEMON_FAMILIES;
+  if (sport === "pokemon") return POKEMON_FAMILIES;
+  if (sport === "baseball") return BASELINE_FAMILIES;
+  if (sport === "hockey") return HOCKEY_FAMILIES;
   return PANINI_SPORT_FAMILIES;
 }
+
+// CF-HOCKEY-FAMILIES (2026-09-03, H-10). Hockey's product mix is Upper
+// Deck-led (Young Guns is the flagship rookie), with the Panini lines
+// present from the 2010s and Topps only in vintage. Built from the
+// PANINI set plus the Upper Deck / O-Pee-Chee brands that carry hockey's
+// graded volume, rather than reusing the baseball list wholesale.
+const HOCKEY_FAMILIES = [
+  { family: "upper-deck", token: "Upper Deck" },
+  { family: "topps-chrome", token: "Topps Chrome" },
+  { family: "topps", token: "Topps" },
+  { family: "panini-prizm", token: "Prizm" },
+  { family: "panini-select", token: "Select" },
+  { family: "panini-contenders", token: "Contenders" },
+  { family: "panini-immaculate", token: "Immaculate" },
+  { family: "panini-national-treasures", token: "National Treasures" },
+  { family: "panini-donruss", token: "Donruss" },
+  { family: "panini-optic", token: "Optic" },
+];
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const median = (arr) => {
@@ -242,8 +320,11 @@ async function fetchYearWithRetry(token, year, sport, cutoffOverride = null, att
   ];
   let sportClause = "";
   if (sport) {
+    // CF-ONE-CANONICAL-SPORT-KEY: `sport` is already the canonical
+    // lowercase key, and sold_comps stores c.sport lowercase, so the
+    // filter binds the same string the table will be keyed by.
     params.push({ name: "@sport", value: sport });
-    sportClause = " AND c[\"group\"] = @sport";
+    sportClause = " AND c.sport = @sport";
   }
   // CF-GRADE-CALIBRATE-PER-TIER (Drew, 2026-07-22). Group by full `grade`
   // string ("PSA 10", "PSA 9", "BGS 9.5") instead of just company. The
@@ -259,16 +340,21 @@ async function fetchYearWithRetry(token, year, sport, cutoffOverride = null, att
   const paramsPrelowered = params.map((p) =>
     p.name === "@token" ? { name: "@token", value: tokenLower } : p,
   );
+  // CF-CALIBRATE-FROM-OUR-POOL (2026-09-03). Reads sold_comps, grouped
+  // by `hobbyiqCardId` — the CANONICAL identity slug — not by a vendor
+  // cardId. Raw and graded sides of the same identity therefore pair up
+  // no matter which vendor reported each one.
   const iter = container.items.query({
-    query: `SELECT c.card_id, c.grader, c.grade, AVG(c.price) AS avgPrice, COUNT(1) AS n
+    query: `SELECT c.hobbyiqCardId, c.gradeCompany, c.gradeValue, AVG(c.price) AS avgPrice, COUNT(1) AS n
              FROM c
-             WHERE c.sale_date >= @cutoff
+             WHERE c.soldAt >= @cutoff
                AND c.price > 0
-               AND c.year = @year
-               AND CONTAINS(LOWER(c.card_set), @token)${sportClause}
-             GROUP BY c.card_id, c.grader, c.grade`,
+               AND c.cardYear = @year
+               AND IS_DEFINED(c.hobbyiqCardId) AND c.hobbyiqCardId != null
+               AND CONTAINS(LOWER(c.setName), @token)${sportClause}
+             GROUP BY c.hobbyiqCardId, c.gradeCompany, c.gradeValue`,
     parameters: paramsPrelowered,
-  }, { maxItemCount: 100 });
+  }, { maxItemCount: 1000 });
   const rows = [];
   try {
     for await (const batch of iter.getAsyncIterator()) {
@@ -381,15 +467,33 @@ async function calibrateFamilySet(families, sport, minSampleSize) {
       console.error(`  ${family.padEnd(28)} skipped (0 rows)`);
       continue;
     }
-    // Group per card: card_id → { "Raw": {avgPrice, n}, "PSA 10": {...}, "PSA 9": {...}, ... }
+    // Group per canonical identity: hobbyiqCardId →
+    //   { "Raw": {avgPrice, n}, "PSA 10": {...}, "PSA 9": {...}, ... }
+    //
+    // CF-CALIBRATE-FROM-OUR-POOL (2026-09-03). sold_comps carries the
+    // grade as two fields (gradeCompany + gradeValue) rather than
+    // ch_daily_sales' single `grade` string, and marks raw by a null
+    // gradeCompany rather than grader="Raw". Rebuild the same
+    // "PSA 10"-shaped key the value-band table is keyed by, so the
+    // emitted tier keys still match what the lookup constructs from
+    // (grader, gradeValue).
     const byCard = new Map();
     for (const r of familyRows) {
-      if (r.n < 2) continue;
-      // Use the full `grade` string as the bucket key; Raw doesn't have a
-      // grade string in ch_daily_sales but we get grader="Raw" alongside.
-      const gradeKey = r.grader === "Raw" ? "Raw" : (r.grade ?? r.grader);
-      if (!byCard.has(r.card_id)) byCard.set(r.card_id, {});
-      byCard.get(r.card_id)[gradeKey] = { avgPrice: r.avgPrice, n: r.n, grader: r.grader };
+      if (r.n < 2) continue;   // a single sale is not a price
+      const grader = r.gradeCompany ? String(r.gradeCompany).toUpperCase() : null;
+      const tierNum = r.gradeValue === null || r.gradeValue === undefined
+        ? null
+        : (Number.isFinite(Number(r.gradeValue)) && Number(r.gradeValue) > 0 ? Number(r.gradeValue) : null);
+      const isRaw = !grader || tierNum === null;
+      const gradeKey = isRaw ? "Raw" : `${grader} ${tierNum}`;
+      if (!byCard.has(r.hobbyiqCardId)) byCard.set(r.hobbyiqCardId, {});
+      const slot = byCard.get(r.hobbyiqCardId);
+      // Several vendor rows can land on the same identity+grade; keep the
+      // thickest observation rather than whichever arrived last.
+      const prev = slot[gradeKey];
+      if (!prev || r.n > prev.n) {
+        slot[gradeKey] = { avgPrice: r.avgPrice, n: r.n, grader: isRaw ? "Raw" : grader };
+      }
     }
     let cardsWithRatio = 0;
     for (const [, gradesByCard] of byCard) {
@@ -427,7 +531,10 @@ async function calibrateFamilySet(families, sport, minSampleSize) {
         // bySport[effectiveSport], bySportFamily[effectiveSport|family].
         // Consumers walk the ladder at read time.
         if (bucket !== null && tier !== null) {
-          const effectiveSport = sport ?? "baseball";
+          // CF-ONE-CANONICAL-SPORT-KEY: every caller now passes an
+          // explicit canonical sport (BASELINE_SPORT for the baseline
+          // pass), so there is no magic default to drift out of sync.
+          const effectiveSport = sport;
           // baseline (existing behavior — pooled across everything)
           const acc = bandAcc(bucket, gradeKey);
           acc.ratios.push(ratio);
@@ -556,15 +663,21 @@ function computeOtherFallback(baseline) {
   return out;
 }
 
-const baseline = await calibrateFamilySet(BASELINE_FAMILIES, null, 5);
+// Baseline = the baseball slice at the 365d window, emitted as
+// GRADE_CALIBRATION (the baseball-implicit table the fall-through ladder
+// has always meant). Passing BASELINE_SPORT rather than null makes the
+// slice explicit AND keys its value-band contributions under "baseball"
+// instead of a magic default.
+const baseline = await calibrateFamilySet(BASELINE_FAMILIES, BASELINE_SPORT, 5);
 baseline["other"] = computeOtherFallback(baseline);
 
-const bySport = { baseball: {}, hockey: {}, pokemon: {} };
+// Per-sport overlays at the 730d window. CF-ONE-CANONICAL-SPORT-KEY:
+// `sport` is already the canonical key, so it is used unchanged both as
+// the query filter and as the table key — no case conversion anywhere.
+// H-10: SPORTS now covers baseball and hockey too.
+const bySport = {};
 for (const sport of SPORTS) {
-  // CF-POKEMON-CALIBRATION (Drew, 2026-07-26): route each sport to its
-  // matching family set (Panini/Chrome for FB/BB, Pokemon-specific for
-  // Pokemon TCG). Both use the n>=3 sport threshold.
-  bySport[sport.toLowerCase()] = await calibrateFamilySet(familiesForSport(sport), sport, 3);
+  bySport[sport] = await calibrateFamilySet(familiesForSport(sport), sport, 3);
 }
 
 // CF-VALUE-BAND-CALIBRATION (Drew, 2026-07-22, issue #693). Emit the
@@ -646,6 +759,33 @@ for (const [sport, buckets] of Object.entries(valueBandBySport)) {
 }
 console.error(`  bySportFamily: ${Object.keys(valueBandBySportFamily).length} sport|family cells covered`);
 
+// CF-ONE-CANONICAL-SPORT-KEY guard (2026-09-03, audit C-4). Refuse to
+// WRITE a table whose sport keys the lookup could never read. This is the
+// generator-side half of the C-4 pin; grade-calibration-coverage.cjs,
+// which now SIMULATES the real lookup per cell, is the reader-side half.
+// A silently 49%-stranded table is exactly what shipped for six weeks, so
+// this exits non-zero rather than emitting one.
+const CANONICAL_SPORT_KEY = /^[a-z][a-z-]*$/;
+const badKeys = [];
+for (const k of Object.keys(bySport)) {
+  if (!CANONICAL_SPORT_KEY.test(k)) badKeys.push(`GRADE_CALIBRATION_BY_SPORT.${k}`);
+}
+for (const k of Object.keys(valueBandBySport)) {
+  if (!CANONICAL_SPORT_KEY.test(k)) badKeys.push(`GRADE_MULTIPLIER_BY_VALUE_BAND.bySport.${k}`);
+}
+for (const k of Object.keys(valueBandBySportFamily)) {
+  const sp = k.split("|")[0];
+  if (!CANONICAL_SPORT_KEY.test(sp)) badKeys.push(`GRADE_MULTIPLIER_BY_VALUE_BAND.bySportFamily.${k}`);
+}
+if (badKeys.length > 0) {
+  console.error(`
+FATAL: non-canonical sport keys would be written — this is the C-4 shape.`);
+  console.error(`Every sport key must match ${CANONICAL_SPORT_KEY} so the lookup (which lowercases) can reach it.`);
+  for (const k of badKeys.slice(0, 20)) console.error(`  ${k}`);
+  if (badKeys.length > 20) console.error(`  ... and ${badKeys.length - 20} more`);
+  process.exit(1);
+}
+
 // Sort output for stable diffs
 function sortObj(o) {
   return Object.keys(o).sort().reduce((acc, k) => {
@@ -654,16 +794,28 @@ function sortObj(o) {
   }, {});
 }
 const baselineSorted = sortObj(baseline);
-const bySportSorted = { baseball: {}, football: {}, basketball: {}, hockey: {} };
+// Seed with every canonical sport so the emitted shape is stable even if
+// one sport returns nothing this run — but never with a second spelling.
+const bySportSorted = Object.fromEntries(SPORTS.map((s) => [s, {}]));
 for (const s of Object.keys(bySport)) bySportSorted[s] = sortObj(bySport[s]);
 const valueBandBaselineSorted = sortObj(valueBandBaseline);
 const valueBandBySportSorted = sortObj(valueBandBySport);
 const valueBandBySportFamilySorted = sortObj(valueBandBySportFamily);
 
+const generatedAt = new Date().toISOString();
 const ts = `// AUTO-GENERATED by backend/scripts/grade-calibrate.mjs
 // Do not hand-edit; overwritten by the Grade Calibration Refresh workflow.
 // Human-maintained code (lookupGradeRatio, classifyFamily) lives in
 // gradeCalibrationConfig.ts and imports the constants exported here.
+//
+// ─── Generation banner ────────────────────────────────────────────────
+//   generatedAt   : ${generatedAt}
+//   source        : sold_comps (OUR pool), grouped by hobbyiqCardId
+//   sports        : ${SPORTS.join(", ")}
+//   baseline      : ${BASELINE_SPORT} slice, 365d lookback, n>=5 per (family, grader)
+//   sport overlays: 730d lookback, n>=3 per (family, grader)
+//   sport keys    : canonical lowercase at every layer (CF-ONE-CANONICAL-SPORT-KEY)
+// ──────────────────────────────────────────────────────────────────────
 
 export interface GradeCalibrationTierEntry {
   medianRatio: number;
@@ -714,6 +866,16 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
   bySport: ${JSON.stringify(valueBandBySportSorted, null, 2)},
   bySportFamily: ${JSON.stringify(valueBandBySportFamilySorted, null, 2)},
 };
+
+/** Generation provenance. Read by grade-calibration-coverage.cjs and
+ *  quoted in the refresh PR body. */
+export const GRADE_CALIBRATION_META = {
+  generatedAt: ${JSON.stringify(generatedAt)},
+  source: "sold_comps",
+  groupedBy: "hobbyiqCardId",
+  sports: ${JSON.stringify(SPORTS)},
+  baselineSport: ${JSON.stringify(BASELINE_SPORT)},
+} as const;
 `;
 
 const __filename = fileURLToPath(import.meta.url);
@@ -722,8 +884,7 @@ const outPath = join(__dirname, "..", "src", "services", "compiq", "gradeCalibra
 writeFileSync(outPath, ts, "utf-8");
 console.error(`\n✓ Wrote ${outPath}`);
 console.error(`  baseline: ${Object.keys(baselineSorted).length} families`);
-console.error(`  football: ${Object.keys(bySportSorted.football ?? {}).length} families`);
-console.error(`  basketball: ${Object.keys(bySportSorted.basketball ?? {}).length} families`);
+for (const sp of SPORTS) console.error(`  ${sp}: ${Object.keys(bySportSorted[sp] ?? {}).length} families`);
 console.error(`  value-band baseline: ${Object.keys(valueBandBaselineSorted).length} buckets covered`);
 console.error(`  value-band bySport: ${Object.keys(valueBandBySportSorted).length} sports`);
 console.error(`  value-band bySportFamily: ${Object.keys(valueBandBySportFamilySorted).length} sport|family cells`);

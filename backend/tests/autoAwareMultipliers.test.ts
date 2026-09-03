@@ -57,16 +57,22 @@ describe("getGraderPremium — base cardClass + calibration ladder", () => {
   // static/base tables. Value-band baseline cells cover the common
   // (grader, gradeValue, priceBand) combos so the empirical values win.
   // The old static PSA 10 / $50-99 / base = 2.8× is superseded by the
-  // baseline value-band's empirical ~3.25×.
-  it("PSA 10 at $50 raw, base → value-band baseline $50-99 (empirical ~3.25×, was static 2.8)", () => {
+  // baseline value-band's empirical cell.
+  //
+  // Widened 2026-09-03: the C-4/H-10 regeneration moved the generator from
+  // ch_daily_sales (vendor card_id) to sold_comps (our own pool, grouped by
+  // hobbyiqCardId), and this baseline cell moved ~3.25x -> 2.32x. What the
+  // test is for is that the empirical ladder FIRED rather than a static
+  // table, not the specific pre-regeneration number.
+  it("PSA 10 at $50 raw, base → value-band baseline $50-99 (empirical, was static 2.8)", () => {
     const r = getGraderPremium("PSA", "10", 50, "base");
-    expect(r).toBeGreaterThan(2.5);
+    expect(r).toBeGreaterThan(2.0);
     expect(r).toBeLessThan(5);
   });
 
   it("undefined cardClass → still routes through the ladder (backward compat)", () => {
     const r = getGraderPremium("PSA", "10", 50);
-    expect(r).toBeGreaterThan(2.5);
+    expect(r).toBeGreaterThan(2.0);
     expect(r).toBeLessThan(5);
   });
 
@@ -79,12 +85,18 @@ describe("getGraderPremium — base cardClass + calibration ladder", () => {
 });
 
 describe("getGraderPremium — fallthrough", () => {
-  it("autograph cardClass + nonexistent grade → falls through to 1.0 (static behavior)", () => {
-    // No "PSA 12" in either table — falls all the way through.
+  it("autograph cardClass + nonexistent grade → refuses (was: fell through to 1.0)", () => {
+    // No "PSA 12" in any table — the ladder is exhausted.
+    // CF-EMPIRICAL-ONLY-NO-GRADER-MATRIX (2026-09-03, audit H-7 residual):
+    // exhausting the ladder used to land on the static matrix, miss, and
+    // return 1.0. A bare 1.0 for a graded card is a pricing claim ("this
+    // PSA 12 is worth exactly raw"), not an absence of one. Refuse.
     const r = getGraderPremium("PSA", "12", 50, "autograph");
-    expect(r).toBe(1.0);
+    expect(r).toBeNull();
   });
 
+  // Still 1.0: a null company means the caller said RAW, and raw is 1.0
+  // by definition — an input contract, not a table lookup.
   it("null gradingCompany → 1.0", () => {
     expect(getGraderPremium(null, "10", 50, "autograph")).toBe(1.0);
   });

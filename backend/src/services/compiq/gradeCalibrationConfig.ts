@@ -76,6 +76,88 @@ export type ValueBandResolveScope =
 // promoting a noise cell.
 const MIN_ADJACENT_BAND_SAMPLE = 10;
 
+// CF-VALUE-BAND-SAMPLE-FLOOR (2026-09-03, closeout of audit C-5/H-6).
+// The EXACT-band rungs (1 and 2) had no sample floor of their own — they
+// trusted whatever the generator emitted. That was true-by-accident
+// rather than by construction: grade-calibrate.mjs happens to drop cells
+// under n=5 today (measured on the shipped table: min sampleSize is
+// exactly 5 at all three layers, 0 cells below it), so the lookup never
+// saw a thin cell. But nothing in the LOOKUP said so, and the doctrine
+// this PR is enforcing is "the most specific empirical cell WITH AN
+// ADEQUATE SAMPLE wins" — the sample clause has to be enforced where the
+// resolution decision is made, or a future generator change silently
+// promotes noise cells over the coarser rungs beneath them.
+//
+// Set to the generator's own floor. A cell below it does not resolve;
+// the ladder continues to the next rung (sport, then baseline, then the
+// caller's byTier fall-through), which is the whole point — a thin cell
+// falls THROUGH rather than winning on specificity alone.
+const MIN_VALUE_BAND_SAMPLE = 5;
+
+// CF-VALUE-BAND-ADJACENT-DISTANCE (2026-09-03, audit H-6). The rescue
+// above gated sample size but NOT how far it reached. Unbounded, it let
+// panini-contenders PSA 10 at $10,000+ borrow the "Under $25" ratio of
+// 20.88x — nine bands away — because that was the nearest cell with
+// n>=10. 602 such rescues were live; fixing C-4 alone would have raised
+// that to 1,199, which is why H-6 had to ship in the same PR: reaching
+// MORE stranded cells without bounding the reach makes pricing worse.
+//
+// The bound is measured, not chosen. Across every (sport|family, tier)
+// in the shipped bySportFamily table that has two or more populated
+// bands, the disagreement between two bands' medianRatio grows steeply
+// with distance (n = pairs of populated bands):
+//
+//   distance   n     median   p75    p90     max    >2x
+//   ────────────────────────────────────────────────────────
+//     1       355    1.21x   1.78x  2.42x   4.24x   21.4%
+//     2       262    1.39x   2.28x  3.09x   4.38x   30.5%
+//     3       191    2.04x   3.07x  3.72x   7.09x   50.3%
+//     4        96    2.40x   3.34x  4.11x  10.51x   58.3%
+//     5        44    2.88x   3.81x  5.20x   8.14x   72.7%
+//     6        19    4.08x   5.30x  6.95x   6.97x   84.2%
+//     7         3    4.02x   5.64x  5.64x   5.64x  100.0%
+//
+// Distance 1 is the only rung where the typical neighbouring band still
+// tells you what this band would have said: the median pair disagrees by
+// 1.21x, and the substitution is wrong by more than 2x a fifth of the
+// time. At distance 3 the MEDIAN pair already disagrees by more than 2x
+// — the rescue stops being an estimate of the missing cell and becomes a
+// different card's number. So: max distance 1.
+const MAX_ADJACENT_BAND_DISTANCE = 1;
+
+// OPEN QUESTION FOR DREW, raised by the same measurement (2026-09-03).
+// The bound above fixes the harm H-6 named. But a held-out check of the
+// rung itself suggests it may not deserve to outrank what it displaces at
+// ANY distance. Taking every (sport|family, tier, band) cell whose true
+// value the shipped table already knows, hiding it, and asking whether a
+// neighbour would have predicted it better than the rung the rescue
+// outranks (bySport, else baseline):
+//
+//   distance   n     rescue wins   displaced rung wins   median |log err|
+//   ──────────────────────────────────────────────────────────────────────
+//     1       394      67 (17%)         327 (83%)        0.266 vs 0.069
+//     2       358      51 (14%)         307 (86%)        0.405 vs 0.066
+//     3       300      21 (7%)          279 (93%)        0.810 vs 0.061
+//
+// The same-family signal loses to the mixed-family aggregate four times
+// out of five even next door, and its typical error is ~4x larger. That
+// argues for retiring rung 1.5 outright rather than bounding it — but
+// that is a bigger call than the audit asked for, it would move more
+// prices than this PR already does, and CF-VALUE-BAND-ADJACENT was an
+// explicit Drew ruling (2026-07-31) made on the Hartman case. Bounding it
+// removes the measured harm now; retiring it is Drew's call on this
+// evidence. Do not quietly widen the bound in the meantime.
+
+// Second, independent bound. Even a distance-1 neighbour is not a
+// substitute across an order-of-magnitude change in the raw anchor: the
+// bands themselves widen (the top band is $10,000+, unbounded), and the
+// grade premium is a function of where the card sits in the market, not
+// of the adjacent label. A rescue is refused when the neighbouring
+// band's own observed raw median differs from this lookup's anchor by
+// 10x or more. This is what actually stops the $10,000-borrows-from-
+// Under-$25 shape even if MAX_ADJACENT_BAND_DISTANCE were ever relaxed.
+const MAX_ADJACENT_BAND_ANCHOR_RATIO = 10;
+
 export interface ValueBandLookupContext {
   /** Sport name lowercased ("baseball" / "football" / "basketball" / "hockey"). */
   sport?: string | null;
@@ -119,8 +201,13 @@ export function lookupValueBandMultiplierWithScope(
   const sport = ctx.sport ? String(ctx.sport).toLowerCase() : null;
   const family = ctx.family ? String(ctx.family).toLowerCase() : null;
 
-  const isValid = (cell: { medianRatio?: number } | undefined): cell is { medianRatio: number; sampleSize: number } =>
-    !!cell && typeof cell.medianRatio === "number" && Number.isFinite(cell.medianRatio) && cell.medianRatio > 0;
+  // A cell resolves only when it is well-formed AND clears the sample
+  // floor (CF-VALUE-BAND-SAMPLE-FLOOR). A cell that fails either test is
+  // not "the answer we happen to have" — it is not evidence, and the
+  // ladder must keep walking to a rung that is.
+  const isValid = (cell: { medianRatio?: number; sampleSize?: number } | undefined): cell is { medianRatio: number; sampleSize: number; rawMedian?: number } =>
+    !!cell && typeof cell.medianRatio === "number" && Number.isFinite(cell.medianRatio) && cell.medianRatio > 0
+    && typeof cell.sampleSize === "number" && cell.sampleSize >= MIN_VALUE_BAND_SAMPLE;
 
   // 1. sport + family exact band
   if (sport && family) {
@@ -128,14 +215,32 @@ export function lookupValueBandMultiplierWithScope(
     const cell = GRADE_MULTIPLIER_BY_VALUE_BAND.bySportFamily?.[sfKey]?.[bucket]?.[tier];
     if (isValid(cell)) return { medianRatio: cell.medianRatio, scope: "sport-family", sampleSize: cell.sampleSize };
 
-    // 1.5 sport + family, adjacent-band interpolation. Walk in order of
-    // distance from the target bucket; take the first cell with
-    // sampleSize ≥ MIN_ADJACENT_BAND_SAMPLE.
-    for (const nearBucket of adjacentBandsFor(bucket)) {
-      const nearCell = GRADE_MULTIPLIER_BY_VALUE_BAND.bySportFamily?.[sfKey]?.[nearBucket]?.[tier];
-      if (isValid(nearCell) && nearCell.sampleSize >= MIN_ADJACENT_BAND_SAMPLE) {
-        return { medianRatio: nearCell.medianRatio, scope: "sport-family-adjacent", sampleSize: nearCell.sampleSize };
+    // 1.5 sport + family, adjacent-band interpolation. Walk outward from
+    // the target bucket and take the first cell that clears BOTH bounds:
+    // a sample-size floor (MIN_ADJACENT_BAND_SAMPLE) and a distance
+    // bound (MAX_ADJACENT_BAND_DISTANCE + the order-of-magnitude anchor
+    // guard). See CF-VALUE-BAND-ADJACENT-DISTANCE for the measured
+    // justification of the distance bound.
+    for (const near of adjacentBandsFor(bucket)) {
+      // Bound the reach. adjacentBandsFor returns nearest-first, so the
+      // first over-distance candidate means every remaining one is
+      // further still — stop rather than continue.
+      if (near.distance > MAX_ADJACENT_BAND_DISTANCE) break;
+      const nearCell = GRADE_MULTIPLIER_BY_VALUE_BAND.bySportFamily?.[sfKey]?.[near.label]?.[tier];
+      if (!isValid(nearCell) || nearCell.sampleSize < MIN_ADJACENT_BAND_SAMPLE) continue;
+      // Order-of-magnitude guard: refuse a neighbour whose own observed
+      // raw median is 10x away from this lookup's anchor. rawMedian is
+      // emitted by the generator for exactly this check; when it is
+      // absent (older table), fall back to the band's lower edge, which
+      // is the conservative reading.
+      const nearAnchor = typeof nearCell.rawMedian === "number" && nearCell.rawMedian > 0
+        ? nearCell.rawMedian
+        : bandLowerEdge(near.label);
+      if (nearAnchor > 0 && rawAnchor > 0) {
+        const spread = Math.max(nearAnchor, rawAnchor) / Math.min(nearAnchor, rawAnchor);
+        if (spread >= MAX_ADJACENT_BAND_ANCHOR_RATIO) continue;
       }
+      return { medianRatio: nearCell.medianRatio, scope: "sport-family-adjacent", sampleSize: nearCell.sampleSize };
     }
   }
   // 2. sport
@@ -143,24 +248,54 @@ export function lookupValueBandMultiplierWithScope(
     const cell = GRADE_MULTIPLIER_BY_VALUE_BAND.bySport?.[sport]?.[bucket]?.[tier];
     if (isValid(cell)) return { medianRatio: cell.medianRatio, scope: "sport", sampleSize: cell.sampleSize };
   }
-  // 3. baseline (pooled across everything)
+  // 3. baseline (pooled across everything).
+  //
+  // CF-POKEMON-ENGINE-WIRING applies to EVERY lookup order (2026-09-03,
+  // audit C-5). The Pokemon refusal was written into lookupGradeRatio and
+  // lookupGradeRatioByTier, but this function had no Pokemon guard and
+  // runs FIRST in getGraderPremium — so a Pokemon PSA 10 was resolving to
+  // the pooled (baseball-weighted) baseline band before the guarded
+  // lookups were ever reached: 4.18x at a $30 raw anchor, 2.66x at $150,
+  // 2.30x at $300, against pokemon's own byTier figure of 7.45x (n=1512).
+  // 968,155 graded Pokemon rows were understated 1.8x-3.2x.
+  //
+  // The refusal is the same one the other two lookups make, for the same
+  // reason: Pokemon grade math (PSA 10 vs 9 is often 10-30x) is nothing
+  // like baseball's 2-3x, so the pooled baseline is not a coarser answer
+  // for a Pokemon card — it is a wrong one, and a wrong number is worse
+  // than null in a pricing-icon context. Returning null here lets the
+  // caller fall through to the Pokemon-guarded byTier lookup, which
+  // resolves the sport-scoped figure or refuses honestly.
+  if (sport === "pokemon") return null;
+
   const baseCell = GRADE_MULTIPLIER_BY_VALUE_BAND.baseline?.[bucket]?.[tier];
   if (isValid(baseCell)) return { medianRatio: baseCell.medianRatio, scope: "baseline", sampleSize: baseCell.sampleSize };
 
   return null;
 }
 
-/** Return every value-band label except the target, sorted by index
- *  distance from the target's position in VALUE_BAND_EDGES. Used by
- *  the adjacent-band rung above. */
-function adjacentBandsFor(bucket: string): string[] {
+/** Return every value-band label except the target, nearest-first, each
+ *  carrying its index distance from the target's position in
+ *  VALUE_BAND_EDGES. The caller bounds the reach — see
+ *  CF-VALUE-BAND-ADJACENT-DISTANCE. Distance is returned rather than
+ *  discarded so the bound is enforced on real distance instead of on
+ *  iteration order, which would silently stop bounding anything if this
+ *  sort ever changed. */
+function adjacentBandsFor(bucket: string): Array<{ label: string; distance: number }> {
   const idx = VALUE_BAND_EDGES.findIndex(([,, l]) => l === bucket);
   if (idx < 0) return [];
   return VALUE_BAND_EDGES
-    .map(([,, l], i) => ({ label: l, dist: Math.abs(i - idx) }))
-    .filter((x) => x.dist > 0)
-    .sort((a, b) => a.dist - b.dist)
-    .map((x) => x.label);
+    .map(([,, l], i) => ({ label: l, distance: Math.abs(i - idx) }))
+    .filter((x) => x.distance > 0)
+    .sort((a, b) => a.distance - b.distance);
+}
+
+/** Lower edge ($) of a value band, by label. Used as a conservative
+ *  stand-in for a band's observed raw median when the shipped table
+ *  predates the rawMedian field. */
+function bandLowerEdge(label: string): number {
+  const row = VALUE_BAND_EDGES.find(([,, l]) => l === label);
+  return row ? row[0] : 0;
 }
 
 /** CF-VALUE-BAND-CALIBRATION (Drew, 2026-07-22). Scalar wrapper for the

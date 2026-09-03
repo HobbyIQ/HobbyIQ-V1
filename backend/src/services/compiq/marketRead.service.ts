@@ -1277,7 +1277,7 @@ export function applyCrossGradedInversionGuard(
           lower.entry.grade,
           rawAnchor ?? undefined,
         );
-        if (!Number.isFinite(higherPremium) || !Number.isFinite(lowerPremium) || lowerPremium <= 0) {
+        if (higherPremium === null || lowerPremium === null || !Number.isFinite(higherPremium) || !Number.isFinite(lowerPremium) || lowerPremium <= 0) {
           recordSkip(grader, higher.entry, lower.entry, "premium_unavailable", pass);
           continue;
         }
