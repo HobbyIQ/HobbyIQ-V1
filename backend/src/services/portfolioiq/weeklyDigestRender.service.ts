@@ -69,6 +69,17 @@ function moverLine(m: DigestMover): string {
   );
 }
 
+/** CF-A-MOVER-NEEDS-CORROBORATION. A re-estimate is NOT rendered with a
+ *  signed move percentage: a "+9433.9%" under any heading reads as market
+ *  news. The two values are shown, and the basis note says what happened. */
+function reestimatedLine(m: DigestMover): string {
+  return (
+    `  ${m.playerName} — ${m.cardTitle}
+` +
+    `     ${money(m.fromValue)} → ${money(m.value)}${valueLabel(m)}. ${m.basisNote}`
+  );
+}
+
 function signalLine(s: DigestSignal): string {
   return `  ${s.playerName} — ${s.cardTitle}\n     ${s.basisNote}`;
 }
@@ -102,6 +113,17 @@ export function renderWeeklyDigestText(digest: WeeklyDigest): string {
       }
       if (digest.movers.decliners.length > 0) {
         out.push("", "WHAT CAME DOWN", ...digest.movers.decliners.map(moverLine));
+      }
+    }
+    if (section === "reestimated" && digest.reestimated) {
+      out.push(
+        "",
+        `RE-ESTIMATED THIS WEEK — NOT A MARKET MOVE (${digest.reestimated.total})`,
+        "  These values changed because of how we priced the card, not because it sold.",
+        ...digest.reestimated.items.map(reestimatedLine),
+      );
+      if (digest.reestimated.total > digest.reestimated.items.length) {
+        out.push(`  …and ${digest.reestimated.total - digest.reestimated.items.length} more.`);
       }
     }
     if (section === "signals" && digest.signals) {
@@ -164,6 +186,17 @@ function moverHtml(m: DigestMover): string {
   );
 }
 
+/** CF-A-MOVER-NEEDS-CORROBORATION. No signed percentage, and a neutral
+ *  accent — nothing on this row may read as a market move. */
+function reestimatedHtml(m: DigestMover): string {
+  return rowHtml(
+    `${m.playerName} — ${m.cardTitle}`,
+    `${money(m.fromValue)} → ${money(m.value)}${valueLabel(m)}`,
+    m.basisNote,
+    "#6b7280",
+  );
+}
+
 function signalHtml(s: DigestSignal): string {
   return rowHtml(
     `${s.playerName} — ${s.cardTitle}`,
@@ -207,6 +240,18 @@ export function renderWeeklyDigestHtml(digest: WeeklyDigest): string {
       if (digest.movers.decliners.length > 0) {
         parts.push(`<h2 style="${SECTION_H}">What came down</h2>`);
         parts.push(...digest.movers.decliners.map(moverHtml));
+      }
+    }
+    if (section === "reestimated" && digest.reestimated) {
+      parts.push(`<h2 style="${SECTION_H}">Re-estimated this week — not a market move (${digest.reestimated.total})</h2>`);
+      parts.push(
+        `<p style="${NOTE}">${esc("These values changed because of how we priced the card, not because it sold.")}</p>`,
+      );
+      parts.push(...digest.reestimated.items.map(reestimatedHtml));
+      if (digest.reestimated.total > digest.reestimated.items.length) {
+        parts.push(
+          `<p style="${NOTE}">${esc(`…and ${digest.reestimated.total - digest.reestimated.items.length} more.`)}</p>`,
+        );
       }
     }
     if (section === "signals" && digest.signals) {

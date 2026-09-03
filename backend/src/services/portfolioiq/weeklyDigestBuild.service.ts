@@ -54,14 +54,21 @@
 // web view both walk one list and never special-case a hole.
 
 import type { PortfolioHolding } from "../../types/portfolioiq.types.js";
+import { isExactPoolRung } from "../compiq/fmvRung.js";
 
 // ── Inputs ──────────────────────────────────────────────────────────
 
-/** One observed price point off the holding's trail. */
+/** One price point off the holding's trail. */
 export interface DigestPricePoint {
   at: string;
   value: number;
   valuationStatus?: "observed" | "estimated" | "pending" | string;
+  /** CF-A-MOVER-NEEDS-CORROBORATION (2026-09-03). The rung that produced
+   *  this point, verbatim from the engine (portfolioStore's
+   *  PortfolioPricePoint.rungLabel). An `exact-pool-*` label is the ONLY
+   *  evidence that the number came from a real sale of this exact card at
+   *  this exact tier. Absent = uncorroborated, never "assume observed". */
+  rungLabel?: string;
 }
 
 /** A sell/watch candidate. Structurally the sell-now radar's
@@ -152,6 +159,17 @@ export interface DigestMover {
   basisNote: string;
   /** True when `value` is not comp-anchored. The renderer must label it. */
   speculative: boolean;
+  /** CF-A-MOVER-NEEDS-CORROBORATION (2026-09-03). True iff BOTH endpoints
+   *  of the move were read from the exact (identity, grade) pool — i.e.
+   *  real sales of this card bracket the move. Only a corroborated mover
+   *  may appear under a movers headline; an uncorroborated one is a
+   *  re-estimate and renders under its own honest heading. */
+  corroborated: boolean;
+  /** The rung each endpoint carried, for the basis note. Null = the point
+   *  carries no rung (written before the stamp, or by a lane that does not
+   *  name one) — which is why the move is not corroborated. */
+  anchorRung: string | null;
+  latestRung: string | null;
 }
 
 export interface DigestSignal {
@@ -183,7 +201,7 @@ export interface DigestMarketRow {
   basisNote: string;
 }
 
-export type DigestSectionName = "movers" | "signals" | "audit" | "market";
+export type DigestSectionName = "movers" | "reestimated" | "signals" | "audit" | "market";
 
 export interface WeeklyDigest {
   schemaVersion: 1;
@@ -204,7 +222,12 @@ export interface WeeklyDigest {
    *  section absent here has NO key on this object — the template walks
    *  this list and never tests for a hole. */
   sections: DigestSectionName[];
+  /** Corroborated market moves ONLY — both ends exact-pool. */
   movers?: { gainers: DigestMover[]; decliners: DigestMover[] };
+  /** CF-A-MOVER-NEEDS-CORROBORATION. Value changes we could not corroborate
+   *  with sales at both ends. Never merged into `movers`, never counted in
+   *  the headline as a move: these are repricings, and the heading says so. */
+  reestimated?: { items: DigestMover[]; total: number };
   signals?: { sell: DigestSignal[]; watch: DigestSignal[] };
   audit?: { items: DigestAuditItem[]; total: number };
   market?: { rows: DigestMarketRow[] };
@@ -245,9 +268,50 @@ function shortDay(iso: string | null): string {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 }
 
-/** Observed points only. An estimate re-anchoring is not a market move —
- *  same rule buildWeeklyNarrative already follows. */
-function observedOnly(points: readonly DigestPricePoint[]): DigestPricePoint[] {
+/**
+ * CF-A-MOVER-NEEDS-CORROBORATION (Drew, 2026-09-03).
+ *
+ * Is this point corroborated — i.e. did a real sale of THIS card at THIS
+ * tier produce it?
+ *
+ * The only admissible evidence is the rung the engine stamped on the
+ * point. `exact-pool-*` means the number was read from the exact
+ * (identity, grade) pool. Anything else — a fallback rung, or NO rung at
+ * all — is uncorroborated.
+ *
+ * Why the old test was a no-op. It read
+ * `(p.valuationStatus ?? "observed") !== "estimated"`, which defaults a
+ * MISSING status to observed. On the live portfolio container that
+ * default swallowed the filter whole: of 23,936 trail points, 52 carried
+ * a valuationStatus and NONE carried a rung, so 99.8% of points walked
+ * through a gate that was supposed to stop engine re-anchors. Every
+ * scheduled-reprice write then read as an observed sale, and the movers
+ * section reported repricing artifacts as market news — Michael Harris
+ * "up 9433.9%" ($1.18 -> $63.75 between two reprice writes), Shaq
+ * $199.99 -> $695.28 in one step, Chipper Jones $2.49 -> $374.83. 14 of
+ * 24 mover rows carried a >=300% intraday step.
+ *
+ * Absence is NOT the old guarantee here. portfolioStore's
+ * `observedPricePoints()` may read a missing valuationStatus as observed,
+ * because there the absence encoded a real append gate that predated the
+ * tag. `rungLabel` has no such history to inherit: a point without one
+ * carries no evidence of its rung, and a reader that needs corroboration
+ * must not assume the best case. The trail heals FORWARD — every engine
+ * write from 2026-09-03 stamps the rung (portfolioStore.service.ts), so
+ * this section fills in as the week's writes accumulate.
+ *
+ * The rule is the price-alerts one (#1659, boundedProjectionAlerts):
+ * `isExactPoolRung` decides, and the digest admits a move only when BOTH
+ * ends of it are corroborated.
+ */
+function isCorroborated(p: DigestPricePoint): boolean {
+  return isExactPoolRung(p.rungLabel);
+}
+
+/** Points that are not estimate re-anchors. Kept as the trail the move is
+ *  MEASURED over; corroboration is tested separately, on the two endpoints
+ *  the move is actually computed between. */
+function usablePoints(points: readonly DigestPricePoint[]): DigestPricePoint[] {
   return points.filter((p) => (p.valuationStatus ?? "observed") !== "estimated");
 }
 
@@ -290,6 +354,33 @@ export function resolveHoldingValue(h: PortfolioHolding): {
     return { value, basis: "under-review" };
   }
   return { value, basis: isFiniteNum(fmv) ? "observed" : "estimated" };
+}
+
+/** Plain words for one rung. The vocabulary is closed (fmvRung.ts); this
+ *  only has to be honest about the two cases a reader cares about —
+ *  "a sale of this exact card" vs "something else". */
+function rungWords(rung: string | null): string | null {
+  if (rung === null) return null;                       // no evidence at all
+  if (isExactPoolRung(rung)) return "a sale of this exact card";
+  if (rung === "player-index-projection") return "this player's wider market";
+  if (rung === "sibling-estimate") return "another card of this player";
+  return `a fallback estimate (${rung})`;
+}
+
+/** Names where each end of an uncorroborated move came from. The reader is
+ *  told which side is unbacked rather than being handed a bare percentage.
+ *  A null rung has no name to give, so the sentence says exactly that
+ *  instead of pretending to name a source. */
+function rungPhrase(anchorRung: string | null, latestRung: string | null): string {
+  const from = rungWords(anchorRung);
+  const to = rungWords(latestRung);
+  if (from === null && to === null) {
+    return "we have no record of which sales, if any, sat behind either reading";
+  }
+  if (from === to) return `both readings came from ${from}`;
+  const fromPart = from === null ? "we have no record of what priced the earlier reading" : `the earlier reading came from ${from}`;
+  const toPart = to === null ? "we have no record of what priced today's" : `today's came from ${to}`;
+  return `${fromPart}, and ${toPart}`;
 }
 
 /** Human words for a basis, used inline in collector-language prose. */
@@ -343,7 +434,7 @@ function buildMovers(
 
   for (const h of holdings) {
     const { value, basis } = resolveHoldingValue(h);
-    const history = observedOnly(historyByHolding[h.id] ?? [])
+    const history = usablePoints(historyByHolding[h.id] ?? [])
       .filter((p) => isFiniteNum(p.value))
       .slice()
       .sort((a, b) => a.at.localeCompare(b.at));
@@ -382,14 +473,46 @@ function buildMovers(
     const observationCount = inWindow.length;
     const staleAnchor = inWindow.length < 2;
 
+    // CF-A-MOVER-NEEDS-CORROBORATION. The move is a MARKET move only when
+    // both endpoints it was computed between were read from the exact pool.
+    // One corroborated end is not enough: a real sale on Monday followed by
+    // a fallback re-anchor on Sunday is an engine artifact wearing one real
+    // number, which is exactly the shape that produced the Harris row.
+    const corroborated = isCorroborated(anchor) && isCorroborated(latest);
+    const anchorRung = typeof anchor.rungLabel === "string" && anchor.rungLabel ? anchor.rungLabel : null;
+    const latestRung = typeof latest.rungLabel === "string" && latest.rungLabel ? latest.rungLabel : null;
+
     const parts: string[] = [];
-    parts.push(
-      `${money(fromValue)} on ${shortDay(anchor.at)} → ${money(toValue)} on ${shortDay(latest.at)}` +
-        (staleAnchor
-          ? `, with no new sales landing this week — that move is measured against the last reading before it.`
-          : `, across ${observationCount} readings this week.`),
-    );
-    parts.push(`Today's number is ${basisPhrase(basis)}.`);
+    if (corroborated) {
+      parts.push(
+        `${money(fromValue)} on ${shortDay(anchor.at)} → ${money(toValue)} on ${shortDay(latest.at)}` +
+          (staleAnchor
+            ? `, with no new sales landing this week — that move is measured against the last reading before it.`
+            : `, across ${observationCount} readings this week.`),
+      );
+      parts.push(`Today's number is ${basisPhrase(basis)}.`);
+    } else {
+      // Not a market move. Say what it IS: the value we hold for this card
+      // changed between two readings, and name the rung each end came from
+      // so the number is never self-refuting. Never the word "sales" here.
+      parts.push(
+        `We re-estimated this card from ${money(fromValue)} on ${shortDay(anchor.at)} ` +
+          `to ${money(toValue)} on ${shortDay(latest.at)}. That is a change in how we priced it, ` +
+          `not a sale — ${rungPhrase(anchorRung, latestRung)}.`,
+      );
+      // NOT basisPhrase() here. On an "observed" basis it reads "projected
+      // next sale from its comps" — a sales claim, one sentence after we
+      // said this was not a sale. The row would refute itself. The honest
+      // statement is about the MOVE's evidence, which is what is missing.
+      if (basis === "estimated" || basis === "under-review") {
+        parts.push(`Today's number is ${basisPhrase(basis)}.`);
+      } else {
+        parts.push(
+          `Today's ${money(toValue)} is the value we carry for it; ` +
+            `we cannot show a sale on both ends of this change, so we are not calling it a move.`,
+        );
+      }
+    }
     if (costBasis !== null && vsCostPct !== null) {
       parts.push(
         `You paid ${money(costBasis)}, so it sits ${pct(vsCostPct)} against what it cost you.`,
@@ -414,6 +537,9 @@ function buildMovers(
       vsCostPct,
       basisNote: parts.join(" "),
       speculative: basis === "estimated" || basis === "under-review",
+      corroborated,
+      anchorRung,
+      latestRung,
     });
   }
 
@@ -559,13 +685,24 @@ function buildHeadline(
   holdingCount: number,
   movers: DigestMover[],
   signalCount: number,
+  reestimatedCount: number,
 ): string {
   if (holdingCount === 0) {
     return "Nothing in your collection yet — add a card and next Sunday's digest will have something to say.";
   }
+  // `movers` is corroborated-only. CF-A-MOVER-NEEDS-CORROBORATION: when
+  // nothing is corroborated the headline says so PLAINLY rather than
+  // promoting a repricing — and it does not pretend the week was quiet if
+  // values did change, because that would be its own false claim.
   const top = movers[0];
   if (!top) {
-    return `Quiet week across your ${holdingCount} card${holdingCount === 1 ? "" : "s"} — nothing moved enough to call it news.`;
+    const base = reestimatedCount > 0
+      ? `No confirmed sales moved your ${holdingCount} card${holdingCount === 1 ? "" : "s"} this week — ` +
+        `we re-estimated ${reestimatedCount} of them, which is a change in our pricing, not the market.`
+      : `Quiet week across your ${holdingCount} card${holdingCount === 1 ? "" : "s"} — nothing moved enough to call it news.`;
+    return signalCount > 0
+      ? `${base} ${signalCount} card${signalCount === 1 ? "" : "s"} worth a look this week.`
+      : base;
   }
   // The biggest move is the story whichever way it went — but a card that
   // fell did not "lead" anything, so the verb follows the direction.
@@ -601,7 +738,14 @@ export function buildWeeklyDigest(input: WeeklyDigestInput): WeeklyDigest {
   const nowMs = now.getTime();
   const holdings = input.holdings ?? [];
 
-  const allMovers = buildMovers(holdings, input.priceHistoryByHolding ?? {}, nowMs);
+  // CF-A-MOVER-NEEDS-CORROBORATION (Drew, 2026-09-03). One pass builds every
+  // value change; the corroboration flag then SPLITS them. Only moves with a
+  // real sale of this exact card at BOTH ends are market moves. The rest are
+  // repricings — reported under their own heading, with the rung named, and
+  // never inside the movers headline.
+  const allChanges = buildMovers(holdings, input.priceHistoryByHolding ?? {}, nowMs);
+  const allMovers = allChanges.filter((m) => m.corroborated);
+  const reestimatedItems = allChanges.filter((m) => !m.corroborated);
   const gainers = allMovers.filter((m) => m.movePct > 0).slice(0, MAX_MOVERS_PER_SIDE);
   const decliners = allMovers.filter((m) => m.movePct < 0).slice(0, MAX_MOVERS_PER_SIDE);
 
@@ -647,7 +791,7 @@ export function buildWeeklyDigest(input: WeeklyDigestInput): WeeklyDigest {
     weekStart: input.weekStart,
     weekEnd: input.weekEnd,
     generatedAt: now.toISOString(),
-    headline: buildHeadline(holdings.length, allMovers, signalCount),
+    headline: buildHeadline(holdings.length, allMovers, signalCount, reestimatedItems.length),
     summary: {
       holdings: holdings.length,
       pricedHoldings: priced,
@@ -670,6 +814,15 @@ export function buildWeeklyDigest(input: WeeklyDigestInput): WeeklyDigest {
   if (gainers.length > 0 || decliners.length > 0) {
     sections.push("movers");
     digest.movers = { gainers, decliners };
+  }
+  // The re-estimated section is its own section, listed AFTER movers, and
+  // omitted entirely when empty — same missing-section tolerance as the rest.
+  if (reestimatedItems.length > 0) {
+    sections.push("reestimated");
+    digest.reestimated = {
+      items: reestimatedItems.slice(0, MAX_MOVERS_PER_SIDE * 2),
+      total: reestimatedItems.length,
+    };
   }
   // Available AND non-empty. An available-but-quiet week omits the
   // section rather than printing a heading over nothing.

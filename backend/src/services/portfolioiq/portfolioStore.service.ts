@@ -417,6 +417,19 @@ interface PortfolioPricePoint {
    *  as the engine re-anchors and must never be read as a comp-anchored
    *  observation. */
   valuationStatus?: "observed" | "estimated";
+  /** CF-A-MOVER-NEEDS-CORROBORATION (2026-09-03). The rung that produced
+   *  this point's value, verbatim from the engine (`fmvRung` /
+   *  `rungLabel`). An `exact-pool-*` label means the number was read from
+   *  the exact (identity, grade) pool: a real sale of THIS card.
+   *
+   *  ABSENT means unknown — NOT exact-pool. Unlike `valuationStatus`,
+   *  whose absence encoded the old append gate's guarantee, this field has
+   *  no legacy meaning to inherit: points written before it existed carry
+   *  no evidence of their rung, and a reader that needs corroboration
+   *  (the weekly digest's movers) must treat them as uncorroborated rather
+   *  than assume the best case. History heals forward — every write from
+   *  here on carries the label. */
+  rungLabel?: string;
 }
 
 /**
@@ -3264,6 +3277,12 @@ async function autoPriceHolding(
         value: oneEntryFmv,
         source,
         ...(oneEntry.outcome === "estimated" ? { valuationStatus: "estimated" as const } : {}),
+        // CF-A-MOVER-NEEDS-CORROBORATION: carry the rung onto the point, so a
+        // reader can tell a real sale of THIS card from an engine re-anchor
+        // without re-deriving anything.
+        ...(typeof oneEntry.valuation.rungLabel === "string" && oneEntry.valuation.rungLabel
+          ? { rungLabel: oneEntry.valuation.rungLabel }
+          : {}),
       });
     }
     evaluateHoldingAlerts(doc, previous, oneEntry.holding);
@@ -3385,7 +3404,9 @@ async function autoPriceHolding(
           sourceVendor: "cardhedge" as any,
           sourceVendorUpdatedAt: nowIso,
         };
-        appendPriceHistory(doc, holding.id, { at: nowIso, value: canonical, source });
+        // CF-A-MOVER-NEEDS-CORROBORATION: the unified engine names its rung;
+        // the point carries it.
+        appendPriceHistory(doc, holding.id, { at: nowIso, value: canonical, source, ...(typeof u.rungLabel === "string" && u.rungLabel ? { rungLabel: u.rungLabel } : {}) });
         evaluateHoldingAlerts(doc, previous, unified);
         doc.holdings[holding.id] = unified;
         return unified;
@@ -4302,7 +4323,18 @@ async function autoPriceHolding(
     });
     if (gate.outcome !== "allowed") {
       if (gate.outcome === "priced-from-exact-pool") {
-        appendPriceHistory(doc, holding.id, { at: String(gate.holding.lastUpdated), value: gate.canonical, source });
+        // CF-A-MOVER-NEEDS-CORROBORATION: this branch fired BECAUSE the exact
+        // pool priced the holding (`priced-from-exact-pool`); the rung the gate
+        // settled on is on the holding it returned.
+        appendPriceHistory(doc, holding.id, {
+          at: String(gate.holding.lastUpdated),
+          value: gate.canonical,
+          source,
+          ...(typeof (gate.holding as { fmvRung?: unknown }).fmvRung === "string"
+            && (gate.holding as { fmvRung?: string }).fmvRung
+            ? { rungLabel: (gate.holding as { fmvRung: string }).fmvRung }
+            : {}),
+        });
       }
       evaluateHoldingAlerts(doc, previous, gate.holding);
       doc.holdings[holding.id] = gate.holding;
@@ -4404,6 +4436,12 @@ async function autoPriceHolding(
       value: resolved.fairMarketValueOverride,
       source,
       ...(resolved.valuationStatus === "estimated" ? { valuationStatus: "estimated" as const } : {}),
+      // CF-A-MOVER-NEEDS-CORROBORATION: `priceSurfaceRung` is the same value
+      // this function stamps onto the holding as `fmvRung` a few lines up.
+      // The point and the holding therefore never disagree about the rung.
+      // It is null for the lanes that do not name one (the ladder, the legacy
+      // rungs) — and null is written as ABSENT, which reads as uncorroborated.
+      ...(priceSurfaceRung ? { rungLabel: priceSurfaceRung } : {}),
     });
   }
 
@@ -9597,6 +9635,11 @@ export async function repriceHoldingsForUser(
             value: bFmv,
             source,
             ...(bOneEntry.outcome === "estimated" ? { valuationStatus: "estimated" as const } : {}),
+            // CF-A-MOVER-NEEDS-CORROBORATION: same stamp as the single-holding
+            // one-entry site; the batch reprice writes the bulk of the trail.
+            ...(typeof bOneEntry.valuation.rungLabel === "string" && bOneEntry.valuation.rungLabel
+              ? { rungLabel: bOneEntry.valuation.rungLabel }
+              : {}),
           });
         }
         evaluateHoldingAlerts(doc, doc.holdings[holding.id], bOneEntry.holding);
@@ -10496,6 +10539,12 @@ export async function repriceHoldingsForUser(
         // compsUsed (holding), marketSpeed / marketPressure, freshnessStatus).
       };
 
+      // CF-A-MOVER-NEEDS-CORROBORATION: this legacy reprice lane stamps
+      // `fmvRung: null` on the holding above — it genuinely does not know which
+      // rung produced `fairValue`. The point is written WITHOUT a rungLabel to
+      // match, and absence reads as uncorroborated: the digest will not call a
+      // move measured against this point a market move. Naming a rung here
+      // would be inventing evidence this lane does not have.
       appendPriceHistory(doc, holding.id, {
         at: now,
         value: fairValue,

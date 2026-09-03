@@ -2926,7 +2926,7 @@ export async function fetchWeeklyBrief(): Promise<WeeklyBriefResponse> {
 // backend's WeeklyDigest exactly.
 
 export type DigestValueBasis = "observed" | "estimated" | "under-review" | "unpriced";
-export type DigestSectionName = "movers" | "signals" | "audit" | "market";
+export type DigestSectionName = "movers" | "reestimated" | "signals" | "audit" | "market";
 
 export interface DigestMover {
   holdingId: string;
@@ -2944,6 +2944,12 @@ export interface DigestMover {
   vsCostPct: number | null;
   basisNote: string;
   speculative: boolean;
+  /** CF-A-MOVER-NEEDS-CORROBORATION (2026-09-03). True iff both ends of
+   *  the move were exact-pool reads — a real sale of this card at each
+   *  end. Only corroborated rows appear under a movers heading. */
+  corroborated: boolean;
+  anchorRung: string | null;
+  latestRung: string | null;
 }
 
 export interface DigestSignalRow {
@@ -2992,6 +2998,9 @@ export interface WeeklyDigest {
   };
   sections: DigestSectionName[];
   movers?: { gainers: DigestMover[]; decliners: DigestMover[] };
+  /** Value changes we could not corroborate with sales at both ends —
+   *  repricings, rendered under their own heading and never as movers. */
+  reestimated?: { items: DigestMover[]; total: number };
   signals?: { sell: DigestSignalRow[]; watch: DigestSignalRow[] };
   audit?: { items: DigestAuditItem[]; total: number };
   market?: { rows: DigestMarketRow[] };

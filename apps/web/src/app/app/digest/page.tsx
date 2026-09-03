@@ -151,6 +151,25 @@ export default function DigestPage() {
                 </div>
               );
             }
+            if (section === "reestimated" && digest.reestimated) {
+              return (
+                <div key="reestimated">
+                  <Section title={`Re-estimated this week — not a market move (${digest.reestimated.total})`}>
+                    <p className="text-xs text-[color:var(--color-muted)] mb-2 leading-relaxed">
+                      These values changed because of how we priced the card, not because it sold.
+                    </p>
+                    {digest.reestimated.items.map((m) => (
+                      <ReestimatedRow key={m.holdingId} m={m} />
+                    ))}
+                    {digest.reestimated.total > digest.reestimated.items.length && (
+                      <p className="text-xs text-[color:var(--color-muted)] mt-2">
+                        …and {digest.reestimated.total - digest.reestimated.items.length} more.
+                      </p>
+                    )}
+                  </Section>
+                </div>
+              );
+            }
             if (section === "signals" && digest.signals) {
               return (
                 <div key="signals">
@@ -219,6 +238,30 @@ function BasisChip({ basis }: { basis: string }) {
     >
       {label}
     </span>
+  );
+}
+
+/**
+ * CF-A-MOVER-NEEDS-CORROBORATION (2026-09-03). A repricing, not a move.
+ * It deliberately does NOT render `movePct`: a coloured signed percentage
+ * IS the market-move claim, whatever heading sits above it. The two values
+ * are shown plainly and the basis note names the rung at each end.
+ */
+function ReestimatedRow({ m }: { m: DigestMover }) {
+  return (
+    <Link
+      href={`/app/portfolio/${encodeURIComponent(m.holdingId)}`}
+      className="block hiq-card p-3 mb-2 hover:bg-white/[0.02] transition-colors"
+      style={{ background: "var(--color-bg)" }}
+    >
+      <div className="font-medium text-sm truncate">{m.playerName}</div>
+      <div className="text-xs text-[color:var(--color-muted)] truncate mt-0.5">{m.cardTitle}</div>
+      <div className="text-sm mt-1.5 tabular-nums text-[color:var(--color-muted)]">
+        {formatUSD(m.fromValue, { hideCents: true })} → {formatUSD(m.value, { hideCents: true })}
+        <BasisChip basis={m.valueBasis} />
+      </div>
+      <p className="text-xs text-[color:var(--color-muted)] mt-1.5 leading-relaxed">{m.basisNote}</p>
+    </Link>
   );
 }
 

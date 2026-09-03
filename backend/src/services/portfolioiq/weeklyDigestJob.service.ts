@@ -250,7 +250,10 @@ export async function buildDigestForUser(
     holdings,
     priceHistoryByHolding: (doc.priceHistoryByHolding ?? {}) as Record<
       string,
-      { at: string; value: number; valuationStatus?: string }[]
+      // CF-A-MOVER-NEEDS-CORROBORATION: rungLabel MUST survive this cast —
+      // it is the only evidence the movers gate has. Dropping it here would
+      // silently re-open the "every reprice is a sale" bug.
+      { at: string; value: number; valuationStatus?: string; rungLabel?: string }[]
     >,
     signals,
     sportIndexes,
@@ -356,7 +359,8 @@ export async function runWeeklyDigestJob(
       holdings,
       priceHistoryByHolding: (doc.priceHistoryByHolding ?? {}) as Record<
         string,
-        { at: string; value: number; valuationStatus?: string }[]
+        // CF-A-MOVER-NEEDS-CORROBORATION: rungLabel must survive this cast too.
+        { at: string; value: number; valuationStatus?: string; rungLabel?: string }[]
       >,
       signals,
       sportIndexes,

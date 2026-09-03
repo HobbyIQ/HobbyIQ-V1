@@ -132,19 +132,23 @@ function fullFixture(): WeeklyDigestInput {
     userId: "user-a",
     ...isoWeekBounds(NOW),
     holdings,
+    // CF-A-MOVER-NEEDS-CORROBORATION (2026-09-03): a MOVER is a move
+    // bracketed by exact-pool reads at BOTH ends. The fixture's trails are
+    // stamped accordingly, so this fixture still exercises the movers path;
+    // the uncorroborated shapes get their own pins below.
     priceHistoryByHolding: {
       "h-riser": [
-        { at: ago(9), value: 940 },
-        { at: ago(6), value: 1010 },
-        { at: ago(2), value: 1180 },
+        { at: ago(9), value: 940, rungLabel: "exact-pool-projection" },
+        { at: ago(6), value: 1010, rungLabel: "exact-pool-projection" },
+        { at: ago(2), value: 1180, rungLabel: "exact-pool-projection" },
       ],
       "h-faller": [
-        { at: ago(6), value: 78 },
-        { at: ago(1), value: 62 },
+        { at: ago(6), value: 78, rungLabel: "exact-pool-last-sale" },
+        { at: ago(1), value: 62, rungLabel: "exact-pool-last-sale" },
       ],
       "h-flagged": [
-        { at: ago(6), value: 300 },
-        { at: ago(1), value: 340 },
+        { at: ago(6), value: 300, rungLabel: "exact-pool-leading-edge" },
+        { at: ago(1), value: 340, rungLabel: "exact-pool-leading-edge" },
       ],
     },
     signals,
@@ -550,5 +554,186 @@ describe("sport derivation", () => {
       holding({ hobbyiqCardId: "not-a-slug" }),
     ] as any);
     expect([...sports].sort()).toEqual(["baseball", "hockey"]);
+  });
+});
+
+// ── PIN 4 ───────────────────────────────────────────────────────────
+//
+// CF-A-MOVER-NEEDS-CORROBORATION (Drew, 2026-09-03).
+//
+// The movers section reported repricing-engine artifacts as market moves.
+// The gate meant to stop that read `(valuationStatus ?? "observed") !==
+// "estimated"` — and a MISSING status defaults to observed, so on the live
+// container (23,936 trail points, 52 with a valuationStatus, 0 with a rung)
+// it passed 99.8% of points. Every scheduled-reprice write read as a sale:
+// Michael Harris "up 9433.9%" ($1.18 -> $63.75 between two reprice writes),
+// Shaq $199.99 -> $695.28 in one step, Chipper Jones $2.49 -> $374.83.
+//
+// The rule is the price-alerts one (#1659): a move is a MARKET move only
+// when BOTH endpoints are exact-pool reads. These pins hold that line.
+
+describe("PIN 4 — a mover needs corroboration at both ends", () => {
+  const base = () => ({
+    userId: "user-corroboration",
+    ...isoWeekBounds(NOW),
+    holdings: [
+      holding({
+        id: "h-harris",
+        playerName: "Michael Harris",
+        cardTitle: "2022 Bowman Chrome Auto",
+        fairMarketValue: 63.75,
+        purchasePrice: 20,
+      }),
+    ],
+    signals: [] as DigestSignalCandidate[],
+    sportIndexes: [] as DigestSportIndex[],
+    now: NOW,
+  });
+
+  it("UNTAGGED trail yields ZERO movers — the Harris shape, verbatim", () => {
+    // The exact live shape: two reprice writes, neither carrying a rung.
+    const digest = buildWeeklyDigest({
+      ...base(),
+      priceHistoryByHolding: {
+        "h-harris": [
+          { at: ago(5), value: 1.18 },
+          { at: ago(1), value: 63.75 },
+        ],
+      },
+    } as WeeklyDigestInput);
+
+    expect(digest.movers).toBeUndefined();
+    expect(digest.sections).not.toContain("movers");
+
+    // And the 9433.9% never reaches a reader as a move — not in the
+    // headline, not under a movers heading, in either renderer.
+    const text = renderWeeklyDigestText(digest);
+    const html = renderWeeklyDigestHtml(digest);
+    expect(digest.headline).not.toMatch(/9433/);
+    expect(text).not.toContain("WHAT WENT UP");
+    expect(html).not.toContain("What went up");
+    expect(text).not.toMatch(/9433/);
+    expect(html).not.toMatch(/9433/);
+  });
+
+  it("an untagged change is RELABELED, and never claims sales it does not have", () => {
+    const digest = buildWeeklyDigest({
+      ...base(),
+      priceHistoryByHolding: {
+        "h-harris": [
+          { at: ago(5), value: 1.18 },
+          { at: ago(1), value: 63.75 },
+        ],
+      },
+    } as WeeklyDigestInput);
+
+    expect(digest.sections).toContain("reestimated");
+    const row = digest.reestimated!.items[0];
+    expect(row.corroborated).toBe(false);
+    expect(row.anchorRung).toBeNull();
+    expect(row.latestRung).toBeNull();
+
+    // The old note asserted a basis the numbers did not have. It must not
+    // claim readings-as-sales, nor "projected next sale from its comps".
+    expect(row.basisNote).toMatch(/not a sale/i);
+    expect(row.basisNote).not.toMatch(/readings this week/);
+    expect(row.basisNote).not.toMatch(/projected next sale from its comps/);
+
+    const text = renderWeeklyDigestText(digest);
+    expect(text).toContain("RE-ESTIMATED THIS WEEK — NOT A MARKET MOVE");
+    // The honest heading is present; the movers heading is not.
+    expect(text).not.toContain("WHAT WENT UP");
+    // A signed percentage IS the market-move claim; the re-estimate row
+    // shows the two values instead.
+    expect(text).not.toMatch(/\+9433\.9%/);
+  });
+
+  it("EXACT-POOL at both ends yields a real mover", () => {
+    const digest = buildWeeklyDigest({
+      ...base(),
+      priceHistoryByHolding: {
+        "h-harris": [
+          { at: ago(5), value: 50, rungLabel: "exact-pool-projection" },
+          { at: ago(1), value: 63.75, rungLabel: "exact-pool-last-sale" },
+        ],
+      },
+    } as WeeklyDigestInput);
+
+    expect(digest.sections).toContain("movers");
+    const m = digest.movers!.gainers.find((g) => g.holdingId === "h-harris")!;
+    expect(m).toBeDefined();
+    expect(m.corroborated).toBe(true);
+    expect(m.movePct).toBeCloseTo(27.5, 1);
+    expect(digest.sections).not.toContain("reestimated");
+    expect(renderWeeklyDigestText(digest)).toContain("WHAT WENT UP");
+  });
+
+  it("ONE end estimated / non-exact is EXCLUDED from movers and relabeled", () => {
+    // A real sale on one end and a fallback re-anchor on the other is an
+    // engine artifact wearing one real number. It is not a mover.
+    const digest = buildWeeklyDigest({
+      ...base(),
+      priceHistoryByHolding: {
+        "h-harris": [
+          { at: ago(5), value: 50, rungLabel: "exact-pool-projection" },
+          { at: ago(1), value: 63.75, rungLabel: "player-index-projection" },
+        ],
+      },
+    } as WeeklyDigestInput);
+
+    expect(digest.movers).toBeUndefined();
+    expect(digest.sections).toContain("reestimated");
+    const row = digest.reestimated!.items[0];
+    expect(row.corroborated).toBe(false);
+    expect(row.anchorRung).toBe("exact-pool-projection");
+    expect(row.latestRung).toBe("player-index-projection");
+    // The note NAMES the rung that broke corroboration.
+    expect(row.basisNote).toMatch(/wider market/);
+  });
+
+  it("no holding qualifies → the digest SAYS so, and invents no movers", () => {
+    const digest = buildWeeklyDigest({
+      ...base(),
+      priceHistoryByHolding: {
+        "h-harris": [
+          { at: ago(5), value: 1.18 },
+          { at: ago(1), value: 63.75 },
+        ],
+      },
+    } as WeeklyDigestInput);
+
+    expect(digest.movers).toBeUndefined();
+    // Not "quiet week" — values DID change; the headline must not claim
+    // nothing happened, nor claim a market move happened.
+    expect(digest.headline).toMatch(/No confirmed sales moved/);
+    expect(digest.headline).toMatch(/not the market/);
+    expect(digest.headline).not.toMatch(/led your week/);
+  });
+
+  it("MUTATION: defaulting a missing rung to exact-pool resurrects the artifact", () => {
+    // Guard the guard. If isCorroborated ever reads an absent rungLabel as
+    // exact-pool (the `?? "observed"` mistake, one field over), the untagged
+    // Harris trail becomes a 9433.9% mover again. This asserts the two
+    // fixtures land on OPPOSITE sides of the gate, so a default that
+    // collapses them fails here.
+    const untagged = buildWeeklyDigest({
+      ...base(),
+      priceHistoryByHolding: {
+        "h-harris": [{ at: ago(5), value: 1.18 }, { at: ago(1), value: 63.75 }],
+      },
+    } as WeeklyDigestInput);
+    const tagged = buildWeeklyDigest({
+      ...base(),
+      priceHistoryByHolding: {
+        "h-harris": [
+          { at: ago(5), value: 1.18, rungLabel: "exact-pool-projection" },
+          { at: ago(1), value: 63.75, rungLabel: "exact-pool-projection" },
+        ],
+      },
+    } as WeeklyDigestInput);
+
+    expect(untagged.sections).not.toContain("movers");
+    expect(tagged.sections).toContain("movers");
+    expect(tagged.movers!.gainers[0].movePct).toBeCloseTo(5302.54, 0);
   });
 });
