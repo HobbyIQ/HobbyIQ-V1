@@ -59,6 +59,17 @@ export const APP_NAV: NavItem[] = [
     prefixMatch: true,
   },
   {
+    // CF-PRO-SELLER-WORKSPACE (Drew, 2026-09-02). Sits directly above
+    // Financials: both are seller-business surfaces, and this one is the
+    // "what do I do today" read that Financials then explains after the fact.
+    // Entitlement-gated server-side on every backing route — a non-Pro-Seller
+    // who follows this link gets the upsell page, which is the same treatment
+    // Financials has always given them, so the nav does not need to hide it.
+    href: "/app/seller",
+    label: "Seller",
+    iconPath: "M3 13h2v8H3v-8zm4-5h2v13H7V8zm4-6h2v19h-2V2zm4 9h2v10h-2V11zm4-4h2v14h-2V7z",
+  },
+  {
     href: "/app/erp",
     label: "Financials",
     iconPath: "M3 3h18v4H3V3zm0 6h18v4H3V9zm0 6h18v4H3v-4z",

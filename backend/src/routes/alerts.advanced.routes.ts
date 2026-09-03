@@ -94,6 +94,19 @@ function validateScope(raw: unknown): AdvancedAlertScope | null {
 const NOT_YET_SUPPORTED_KINDS: ReadonlySet<string> = new Set([
   "price_crosses",
   "predicted_price_crosses",
+  // CF-SELLER-INTELLIGENCE-SELL-WINDOW (Drew, 2026-09-02):
+  // `sell_signal_becomes` is a TRANSITION condition and therefore has the
+  // same Phase 1 dependency as the two above — without per-rule previous-
+  // slice storage the evaluator always sees previousEstimate=null and the
+  // condition can only ever be false. Accepting it here would create
+  // exactly the launch trap this guard exists to prevent: a rule the user
+  // built that silently never fires.
+  //
+  // This is what "wired but off by default" means for this surface — the
+  // evaluator understands the condition and is pinned to fire on the
+  // transition when a previous slice IS supplied; only rule CREATION is
+  // gated. Deleting this one line arms it once last-slice storage lands.
+  "sell_signal_becomes",
 ]);
 
 type ConditionResult = { ok: AdvancedAlertCondition } | { error: string };
@@ -144,6 +157,16 @@ function validateCondition(raw: unknown): ConditionResult {
         return { error: "confidence_min.value must be 0..100" };
       }
       return { ok: { kind: "confidence_min", value: r.value } };
+    // CF-SELLER-INTELLIGENCE-SELL-WINDOW (Drew, 2026-09-02): unreachable
+    // while the kind sits in NOT_YET_SUPPORTED_KINDS above, which returns
+    // before this switch. Written now so arming the condition really is the
+    // one-line deletion that guard's comment promises, rather than a
+    // deletion plus a validator someone has to remember to add.
+    case "sell_signal_becomes":
+      if (r.becomes !== "sell-window" && r.becomes !== "watch" && r.becomes !== "hold") {
+        return { error: "sell_signal_becomes.becomes must be 'sell-window', 'watch' or 'hold'" };
+      }
+      return { ok: { kind: "sell_signal_becomes", becomes: r.becomes } };
     default:
       return { error: `unknown condition kind "${kind}"` };
   }

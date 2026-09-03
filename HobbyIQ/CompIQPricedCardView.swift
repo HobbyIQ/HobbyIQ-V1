@@ -1478,6 +1478,21 @@ struct CompIQPricedCardView: View {
                         .font(.caption)
                         .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                 }
+                // CF-IOS-RUNG-PARITY + speculation pricing (#1646/#1647,
+                // Drew 2026-09-02). Two facts, said separately:
+                //   - the RUNG: which pool this number came from.
+                //   - the AGE of that pool, past 45 days.
+                //
+                // BOTH read off the SAME PATH that supplied the headline.
+                // `unifiedMarketValue` sources exclusively from the
+                // /card-panel entry for the selected grade, so the chip
+                // reads that entry's own `rungLabel` and its own
+                // `daysSinceNewestSale` — never /price-by-id's
+                // `daysSinceNewestComp`. Borrowing price-by-id's age here
+                // would be the exact bug #1646 refused to ship on web's
+                // grade-curve tile: one path's number labelled with
+                // another path's provenance.
+                marketValueProvenanceChip
                 // CF-SIBLING-FALLBACK (2026-07-08, backend PR #311): small
                 // badge surfaces when the engine priced this card from a
                 // same-player Base Auto sibling × parallel-premium ×
@@ -1601,6 +1616,33 @@ struct CompIQPricedCardView: View {
             )
         }
         return nil
+    }
+
+    /// CF-IOS-RUNG-PARITY (Drew, 2026-09-02): the provenance chip under
+    /// the MARKET VALUE headline.
+    ///
+    /// Reads the SELECTED grade's panel entry — the same entry
+    /// `unifiedMarketValue` took the headline number from — so the rung
+    /// and the age both describe the number actually on screen.
+    ///
+    /// Renders NOTHING when there is no entry, because there is then no
+    /// headline either (`unifiedMarketValueHeader` self-suppresses on the
+    /// same guard). A tier that reports no rung still renders: the chip
+    /// says "rung not reported" rather than staying silent, because
+    /// silence would read as "observed" — the one reading the whole
+    /// vocabulary exists to prevent.
+    @ViewBuilder
+    private var marketValueProvenanceChip: some View {
+        if let entry = panelEntryForSelectedGrade() {
+            ProvenanceChipView(
+                label: entry.rungLabel,
+                compsUsed: entry.sampleCount,
+                source: "card-panel",
+                // This tier's OWN pool age, off this tier's own entry.
+                daysSinceNewestComp: entry.daysSinceNewestSale
+            )
+            .padding(.top, 2)
+        }
     }
 
     /// Matches `selectedGrade` (Raw or "PSA 10" / "BGS 9.5" / etc.)

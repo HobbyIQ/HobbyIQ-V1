@@ -91,6 +91,23 @@ interface CompRow {
 
 type QueryParam = { name: string; value: string | number | boolean | null };
 
+// POOL-1 residue (audit, 2026-09-03). Momentum read sold_comps directly rather
+// than through exactPoolReader, so it inherited none of that reader's
+// adjudication filter: a row already marked `flaggedWrong` / `excludedFromFmv`
+// still entered BOTH the card tier and the player-tier fallback, moving a
+// published momentum ratio with evidence the pool had already thrown out.
+//
+// Applied inside queryComps rather than at the two call sites on purpose --
+// this function is the single door both tiers go through, so a future third
+// tier cannot be added without the filter.
+//
+// Same store-form predicate as exactPoolReader:84-85: `!= true` rather than
+// `= false`, with the NOT IS_DEFINED disjunct that keeps the overwhelming
+// majority of rows (which carry neither flag) in the sample.
+const ADJUDICATION_FILTER =
+  "(NOT IS_DEFINED(c.flaggedWrong) OR c.flaggedWrong != true)"
+  + " AND (NOT IS_DEFINED(c.excludedFromFmv) OR c.excludedFromFmv != true)";
+
 async function queryComps(
   cont: Container,
   where: string,
@@ -99,7 +116,7 @@ async function queryComps(
   try {
     const { resources } = await cont.items
       .query<CompRow>({
-        query: `SELECT c.price, c.soldAt, c.identityMethod FROM c WHERE ${where}`,
+        query: `SELECT c.price, c.soldAt, c.identityMethod FROM c WHERE ${where} AND ${ADJUDICATION_FILTER}`,
         parameters,
       }, { maxItemCount: 500 })
       .fetchAll();
