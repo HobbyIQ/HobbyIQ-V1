@@ -168,7 +168,12 @@ export interface UnifiedGradeEntry {
   // CF-ONE-VALUATION-PATH (D16, 2026-08-30). The sales this tier was priced
   // from, newest first (capped), so a wire's comp list / sales history is
   // the SAME rows that produced the number — not a second read.
-  sales?: Array<{ price: number; soldAt: string; source: string | null }>;
+  // CF-SELF-COMP-LABEL-REACHES-THE-RESULT (Drew, 2026-09-03). The row's
+  // contributor rides with the sale. A sale the OWNER contributed is what
+  // makes a published result self-anchored, and the reprieve above can KEEP
+  // such a row in the priced pool; without this field every consumer
+  // downstream sees somebody else's sale and the label never fires.
+  sales?: Array<{ price: number; soldAt: string; source: string | null; contributorUserId: string | null }>;
   // CF-THE-PROJECTION-IS-THE-LEADING-EDGE (D22). What the rung did, in
   // prose for the basis: the anchor and how far back it sits, the trend
   // applied from there, the newest-sale band, or the one-sale policy's
@@ -925,10 +930,10 @@ export async function computeUnifiedPrice(
       projectionNote: trend.projectionNote,
       windowNote: tierWindowNotes.get(label) ?? null,
       sales: rows
-        .map((r) => ({ price: Number(r.price), soldAt: String(r.soldAt), source: r.source ?? null, t: Date.parse(r.soldAt) }))
+        .map((r) => ({ price: Number(r.price), soldAt: String(r.soldAt), source: r.source ?? null, contributorUserId: r.contributorUserId ?? null, t: Date.parse(r.soldAt) }))
         .sort((a, b) => (Number.isFinite(b.t) ? b.t : 0) - (Number.isFinite(a.t) ? a.t : 0))
         .slice(0, TIER_SALES_ON_WIRE)
-        .map(({ price, soldAt, source }) => ({ price, soldAt, source })),
+        .map(({ price, soldAt, source, contributorUserId }) => ({ price, soldAt, source, contributorUserId })),
     });
   }
   gradeCurve.sort((a, b) => (b.sampleCount - a.sampleCount));

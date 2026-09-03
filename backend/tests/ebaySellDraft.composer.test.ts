@@ -49,6 +49,9 @@ function holding(over: Partial<SellDraftHolding> = {}): SellDraftHolding {
   };
 }
 
+/** Drew's own user id — the owner in every self-comp shape below. */
+const OWNER = "user-199fcbc9-58ba-4643-a0c9-f75bcbc90bd4";
+
 type Comp = CanonicalFmvResult["provenance"]["comps"][number];
 
 function comp(over: Partial<Comp> = {}): Comp {
@@ -251,16 +254,26 @@ describe("speculative and self-anchored values carry their labels", () => {
   });
 
   it("counts a partly self-anchored pool honestly", () => {
+    // CF-SELF-COMP-LABEL-REACHES-THE-RESULT (Drew, 2026-09-03). Ownership is
+    // the CONTRIBUTOR, not `verifiedByUser` — that flag means "attested", and
+    // most of the owner's own rows do not carry it (prod 2026-09-03: 128
+    // ebay-user-purchase rows, 104 with a contributor, 56 with the flag). So
+    // the reader's own id is passed and the owner's row is stamped with it.
     const labels = labelsForResult(
       fmvResult({
         provenance: {
           summary: "mixed",
           compCount: 3,
-          comps: [comp({ verifiedByUser: true }), comp(), comp()],
+          comps: [
+            comp({ source: "ebay-user-purchase", contributorUserId: OWNER }),
+            comp(),
+            comp(),
+          ],
           trendPctPerMonth: null,
           multipliers: {},
         },
       }),
+      OWNER,
     );
     const self = labels.find((l) => l.code === "self-anchored");
     expect(self!.text).toContain("1 of 3");

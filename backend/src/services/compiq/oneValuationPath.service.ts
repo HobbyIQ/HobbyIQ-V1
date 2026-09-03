@@ -163,8 +163,17 @@ export interface Valuation {
   predictedPrice: number | null;
   /** DIAGNOSTIC: the pool's recency-weighted median. Never the headline. */
   weightedMedian: number | null;
-  /** The sales behind the headline, newest first (exact-pool rungs only). */
-  sales: Array<{ price: number; soldAt: string; source: string | null }>;
+  /** The sales behind the headline, newest first (exact-pool rungs only).
+   *  CF-SELF-COMP-LABEL-REACHES-THE-RESULT (Drew, 2026-09-03):
+   *  `contributorUserId` rides with each sale so a caller that passed
+   *  `excludeContributorUserId` can tell which of the KEPT rows are the
+   *  owner's own — the reprieve publishes those, and the doctrine says a
+   *  published self-comp must be labeled. */
+  sales: Array<{ price: number; soldAt: string; source: string | null; contributorUserId: string | null }>;
+  /** The owner this valuation was computed for, when the caller named one
+   *  (portfolio/reprice/sell-draft paths). Null on the public routes, which
+   *  pass no user and so can never call a comp "yours". */
+  ownerUserId: string | null;
   /** Every canonical tier (plus any tier the pool has that the canonical
    *  list does not), each from the same engine result; the requested tier's
    *  entry IS the headline. */
@@ -350,6 +359,7 @@ export async function valueIdentity(req: ValuationRequest): Promise<Valuation> {
     predictedPrice: null,
     weightedMedian: null,
     sales: [],
+    ownerUserId: req.excludeContributorUserId ?? null,
     gradeCurve: blankCurve(),
     totalSampleCount: 0,
     unified: null,
@@ -579,7 +589,11 @@ export async function valueIdentity(req: ValuationRequest): Promise<Valuation> {
       pctPerWeek: Number.isFinite(fb.trend.slopePerMonthPct) ? round2(fb.trend.slopePerMonthPct / (30 / 7)) : null,
     };
     v.basis = fb.basisNote;
-    v.sales = fb.recentComps.map((c) => ({ price: c.price, soldAt: c.soldAt, source: c.source ?? null }));
+    // A fallback rung prices off a family / sibling pool, not the owner's own
+    // tier, and HobbyIqFmvComp carries no contributor — so these are honestly
+    // nobody's own sale. A self-anchored label cannot fire here, which is
+    // right: the number is not anchored on the owner's purchase.
+    v.sales = fb.recentComps.map((c) => ({ price: c.price, soldAt: c.soldAt, source: c.source ?? null, contributorUserId: null }));
     tier = findTier();
     tier.value = v.fairMarketValue;
     tier.trendAdjustedValue = v.fairMarketValue;
