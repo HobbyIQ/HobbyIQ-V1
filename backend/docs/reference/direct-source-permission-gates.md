@@ -108,25 +108,26 @@ Adds no EN set, closes no JA gap → no build. The `sv8a` 67-no-dexId ex cards,
 
 ## 2. Topps official (topps.com) — **STOP: cannot obtain permission**
 
-topps.com returns **HTTP 403 Forbidden to every automated client on every
-path — including `/robots.txt` itself**:
+Verdict grounds (corrected by adversarial re-fetch 2026-09-02 — the original
+"403s everything" claim was FALSE: robots.txt is HTTP 200 `Allow: /`, the terms
+serve 200, the sitemap serves 200, and a checklist PDF with a text layer
+downloads fine; only the storefront root carries a Cloudflare challenge):
 
-```
-https://www.topps.com/                    -> 403
-https://topps.com/robots.txt              -> 403
-https://www.topps.com/robots.txt          -> 403
-https://www.topps.com/pages/terms-of-use  -> 403
-https://www.topps.com/blogs/news          -> 403
-```
+**Topps' Terms of Service prohibit the lane explicitly.** Quoted verbatim:
 
-Confirmed from two independent clients (a real-UA request and WebFetch).
+- **ToS 5.5** — no "manual or automated software, devices or other processes
+  (including but not limited to spiders, robots, scrapers, crawlers, avatars,
+  data mining tools or the like) to 'scrape' or download data from any portion
+  of the Properties".
+- **ToS 5.6** — no accessing the Properties "to build a similar or competitive
+  digital property".
+- **ToS 11.3.8** — no "software, technology, or device to send content or
+  messages, scrape, spider or crawl on the Properties, or harvest or manipulate
+  data"; plus no part "may be copied, reproduced, aggregated ... for any
+  commercial purpose whatsoever".
 
-There is no clause to quote because **the permission documents are themselves
-unreachable to a machine**. A site that 403s its own robots.txt is refusing
-automated access at the edge as a matter of policy; the pokellector/reverseholo
-precedent says STOP and report. Building a fetcher here would mean defeating an
-active block to reach terms we were never able to read — the opposite of a
-permission gate.
+A permissive robots.txt does not override contractual terms (the
+pokellector/reverseholo precedent). STOP.
 
 *Route if Topps checklists are wanted later:* a human downloads the per-release
 XLSX from a browser and it lands through the existing hand-fetched path
@@ -165,19 +166,13 @@ Sitemap: https://assets.paniniamerica.net/sitemap.xml
 Nothing in that file disallows release/checklist paths. **But the lane still
 fails, on two independent grounds:**
 
-**(a) Every content page aborts the connection.** `robots.txt` and the
-CDN-hosted sitemap serve fine; every `www.paniniamerica.net` HTML page closes
-the TLS connection unexpectedly, on 3 retries with backoff, real UA:
-
-```
-https://www.paniniamerica.net/                -> connection closed unexpectedly (x3)
-https://www.paniniamerica.net/terms-of-use    -> connection closed unexpectedly (x3)
-https://www.paniniamerica.net/privacy-policy  -> connection closed unexpectedly (x3)
-https://www.paniniamerica.net/blog            -> connection closed unexpectedly (x3)
-```
-
-The terms of use could not be read, so the gate cannot be cleared even though
-robots.txt is permissive — **robots.txt is not consent to the terms behind it.**
+**(a) The terms are unreadable to a machine — but not via TLS aborts.**
+(Corrected 2026-09-02: the original "connection closed" claim was FALSE — every
+path returns HTTP 200. The real behavior: the site serves one identical
+13,833-byte SPA shell for every URL, including nonsense paths, so the terms of
+use are client-rendered JavaScript and no terms text is machine-readable.) The
+gate cannot be cleared because the terms cannot be read —
+**robots.txt is not consent to the terms behind it.**
 
 **(b) There is no checklist corpus to build a lane on.** Panini's own sitemap
 advertises 3,676 URLs:
