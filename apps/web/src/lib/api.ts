@@ -4,7 +4,10 @@
 // in localStorage (matches how iOS keeps its session token via
 // Keychain — same wire contract).
 
-const API_BASE =
+// Exported so a caller that cannot use `request()` — funnelTelemetry.ts
+// needs `keepalive` and a swallowed failure — still points at the same
+// origin rather than resolving the base a second, drifting way.
+export const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE ??
   "https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net";
 
@@ -494,27 +497,14 @@ export interface PortfolioHolding {
    *  no-price guard at the store door. */
   reviewReason?: string | null;
   needsReview?: boolean | null;
-  /** CF-SELLER-INTELLIGENCE-SELL-WINDOW (Drew, 2026-09-02). The per-holding
-   *  timing call. Derived server-side from the holding's own trend + the
-   *  player index; never a valuation. Optional during the rollout window —
-   *  older endpoints omit it and the chip simply does not render. */
-  sellSignal?: {
-    signal: "none" | "watch" | "sell-window" | "hold";
-    horizon: "none" | "days-7-14" | "days-14-30";
-    signalClass: "price" | "attention";
-    /** One sentence with the numbers quoted. Show it verbatim — it is the
-     *  basis, and paraphrasing it would drop the evidence. */
-    basis: string;
-    reason?: string | null;
-    measures?: {
-      playerIndexPct?: number | null;
-      ownPoolPct?: number | null;
-      divergencePct?: number | null;
-      ownPoolSales?: number | null;
-      trendAgeDays?: number | null;
-      confidence?: number | null;
-    } | null;
-  } | null;
+  /** CF-SELLER-INTELLIGENCE-SELL-WINDOW (Drew, 2026-09-02). Declared once,
+   *  below, next to the pricing envelope. Two concurrent PRs each added an
+   *  identical `sellSignal` block to this interface and the merge kept both,
+   *  which is a duplicate-identifier error that fails `next build` — the web
+   *  app has not compiled on main since. The surviving declaration is the
+   *  one with the fuller contract note (absence means "capability not live",
+   *  not "no signal"); the types were byte-identical, so nothing changes on
+   *  the wire. */
   /** CF-PRICING-ENVELOPE (Drew, 2026-07-31). Canonical pricing surface.
    *  Optional during the migration window — new endpoints emit it, older
    *  endpoints may still return only the legacy flat fields above.
@@ -1640,6 +1630,34 @@ export async function dismissOnboarding(): Promise<{ success: boolean }> {
 
 export async function reopenOnboarding(): Promise<{ success: boolean }> {
   return await request("/api/onboarding/reopen", { method: "POST" });
+}
+
+// ─── CF-FIRST-RUN (Drew, 2026-09-02) ────────────────────────────────────
+//
+// The guided funnel's state. `progress` is null for an account that has
+// never started — lib/firstRun.ts's normalizeProgress() turns that into
+// the empty record, so exactly one module decides what "fresh" means.
+// `holdingCount` is derived server-side from the portfolio, which is what
+// lets the funnel stand down for a user who filled their collection on
+// iOS and has never opened the web app before.
+
+export interface FirstRunStateResponse {
+  success: boolean;
+  progress: unknown | null;
+  holdingCount: number;
+}
+
+export async function fetchFirstRun(): Promise<FirstRunStateResponse> {
+  return await request<FirstRunStateResponse>("/api/onboarding/first-run");
+}
+
+export async function saveFirstRun(
+  progress: unknown,
+): Promise<{ success: boolean; progress?: unknown }> {
+  return await request("/api/onboarding/first-run", {
+    method: "POST",
+    body: JSON.stringify({ progress }),
+  });
 }
 
 export async function setPublicShareEnabled(enabled: boolean): Promise<{ success: boolean; publicShareEnabled: boolean }> {

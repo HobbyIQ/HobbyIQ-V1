@@ -35,9 +35,16 @@ function LoginForm() {
           return;
         }
         await signUp(email, password, inviteCode, true);
-      } else {
-        await signIn(email, password);
+        // CF-FIRST-RUN (Drew, 2026-09-02). A brand-new account goes
+        // straight into the guided funnel rather than to an empty
+        // dashboard — the fastest path from signup to a valued card.
+        // Sign-IN still lands on /app: a returning user is never routed
+        // into onboarding, and /app/start itself bounces anyone whose
+        // funnel is done or skipped, so this cannot trap a repeat visitor.
+        router.push("/app/start");
+        return;
       }
+      await signIn(email, password);
       router.push("/app");
     } catch (err: unknown) {
       const msg =
