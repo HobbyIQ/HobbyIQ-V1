@@ -750,6 +750,26 @@ export async function setUserSubscriptionState(
 // the password hash on an existing row.
 
 /**
+ * CF-WEEKLY-DIGEST (Drew, 2026-09-02). Lookup by userId. The weekly
+ * digest fanout walks portfolio user IDs and needs each user's email +
+ * verification state to decide whether a digest can be mailed; every
+ * other userId→user path here was private to this module.
+ *
+ * Returns the same AuthUser projection every other export returns, so
+ * this adds a reader and no new shape. Never throws.
+ */
+export async function getAuthUserById(userId: string): Promise<AuthUser | null> {
+  const trimmed = (userId ?? "").trim();
+  if (!trimmed) return null;
+  try {
+    const record = await readUser(trimmed);
+    return record ? toAuthUser(record) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Lookup by email (case-insensitive). Returns null if not found. Wraps
  * the existing internal findUserByIdentifier path so the seed script
  * doesn't have to know about emailLower normalization.

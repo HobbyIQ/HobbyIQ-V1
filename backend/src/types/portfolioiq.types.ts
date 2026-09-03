@@ -209,6 +209,23 @@ export interface PortfolioHolding {
     method: string;    // HobbyIqFmvMethod, but a plain string here to keep
                        // types.ts import-cycle-free
     compsUsed: number;
+    /** CF-REPORT-CONFIDENCE-IS-PRICING (2026-09-03). The PRICING confidence
+     *  of the engine result that set this price surface: 0..1, how
+     *  well-evidenced the dollar figure is (pool depth, comp recency, how
+     *  far the rung reached from the exact card). It falls with each rung
+     *  down the ladder.
+     *
+     *  This is NOT `holding.confidence` — that field is written only by the
+     *  legacy computeEstimate path and carries a different quantity. Before
+     *  this field existed the engine's pricing confidence survived only as
+     *  the `conf=0.37` substring inside `estimateBasis` prose, which no
+     *  consumer could read without parsing text. Written by the writer that
+     *  decided the price, at the same time as the price.
+     *
+     *  Absent → this price surface predates the field, or came from a path
+     *  that does not report a pricing confidence. Render it as unknown;
+     *  never substitute a match confidence for it. */
+    confidence?: number | null;
     /** CF-A-UNION-IS-ONE-CARD (2026-09-01). Present when the pool-twin union
      *  was refused because the holding's two identities named different
      *  products: the price came from the slug half alone, and this says so. */

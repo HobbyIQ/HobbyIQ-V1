@@ -139,7 +139,20 @@ export interface CanonicalFmvProvenance {
     soldAt: string;
     source: string;
     parallel: string | null;
+    /** The user ATTESTED this row (manual add / confirmed import). NOT the
+     *  same as "this row is the reader's own sale": ebayImportRematch writes
+     *  `ebay-user-purchase` with `contributorUserId` set and this flag FALSE
+     *  (the matcher found the identity, Drew never confirmed it). Measured
+     *  2026-09-03: 128 ebay-user-purchase rows in prod, 104 with a
+     *  contributor, only 56 with this flag. Use `isOwnComp` for ownership. */
     verifiedByUser: boolean;
+    /** CF-SELF-COMP-LABEL-REACHES-THE-RESULT (Drew, 2026-09-03). Who
+     *  contributed the sale, when the pool row carried it. This is the field
+     *  that decides whether a published comp is the READER's own — the
+     *  self-anchored label and the "N of M sales are your own" ratio both
+     *  test it against the caller's own id. Null on vendor rows and on any
+     *  rung that prices off a family pool rather than the card's own. */
+    contributorUserId?: string | null;
     // Whether this comp was ratio-normalized from a sibling parallel.
     normalizedFromParallel?: string | null;
     /** The ratio applied when normalized; null for direct comps. */
@@ -1242,6 +1255,11 @@ async function tryDirectComp(
         source: c.source,
         parallel: c.parallel,
         verifiedByUser: c.verifiedByUser === true,
+        // CF-SELF-COMP-LABEL-REACHES-THE-RESULT: the contributor rides to the
+        // wire so a caller who knows its own id can tell which of these
+        // published sales are the reader's own. `verifiedByUser` cannot
+        // answer that — it means "attested", and most owner rows lack it.
+        contributorUserId: c.contributorUserId ?? null,
       })),
       trendPctPerMonth,
       multipliers: {},

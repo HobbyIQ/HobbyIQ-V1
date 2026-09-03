@@ -237,10 +237,41 @@ function labelForKind(kind: PricingMethod["kind"], rung: string | null): string 
 
 // ─── Confidence ────────────────────────────────────────────────────────
 
+/** 0..1, or null for anything that isn't a usable confidence. */
+function unitOrNull(raw: unknown): number | null {
+  return typeof raw === "number" && Number.isFinite(raw) && raw >= 0 && raw <= 1 ? raw : null;
+}
+
+/**
+ * CF-REPORT-CONFIDENCE-IS-PRICING (2026-09-03).
+ *
+ * `confidence.pricing` must be the PRICING confidence — how well-evidenced
+ * the dollar figure is. It used to read the flat `holding.confidence`
+ * field, which only the legacy computeEstimate path ever writes; on a
+ * unified/canonical-priced holding that field is stale or absent, so the
+ * envelope published a number that answered a different question (or a
+ * previous pass's answer) under the name "pricing".
+ *
+ * The engine's own pricing confidence now rides in `pricingSourceMeta`,
+ * written by the same writer that decided the price. Prefer it. Fall back
+ * to the flat field only when the price surface has no structured
+ * confidence AND the legacy path is the one that priced this holding —
+ * that is the population the flat field was actually written for.
+ *
+ * Anything else stays null: an unknown pricing confidence is reported as
+ * unknown, never filled in from a different quantity.
+ */
 function buildConfidence(holding: PortfolioHolding): PricingConfidence {
-  const raw = (holding as { confidence?: unknown }).confidence;
-  const pricing =
-    typeof raw === "number" && Number.isFinite(raw) && raw >= 0 && raw <= 1 ? raw : null;
+  const meta = (holding as { pricingSourceMeta?: { confidence?: unknown } | null }).pricingSourceMeta;
+  const fromEngine = unitOrNull(meta?.confidence);
+  if (fromEngine !== null) return { pricing: fromEngine, liquidity: null, timing: null };
+
+  const source = (holding as { pricingSource?: string | null }).pricingSource ?? null;
+  // "legacy-engine", and pre-CF holdings with no pricingSource at all, are
+  // the rows computeEstimate priced — the only rows whose flat `confidence`
+  // came from a pricing computation.
+  const legacyPriced = source === null || source === "legacy-engine";
+  const pricing = legacyPriced ? unitOrNull((holding as { confidence?: unknown }).confidence) : null;
   return { pricing, liquidity: null, timing: null };
 }
 
@@ -327,11 +358,18 @@ function buildProvenance(holding: PortfolioHolding): PricingProvenance {
       ? (holding as { sourceVendorUpdatedAt: string }).sourceVendorUpdatedAt
       : null;
   const pricingSource = coercePricingSource((holding as { pricingSource?: string }).pricingSource);
-  const meta = (holding as { pricingSourceMeta?: { slug?: string; method?: string; compsUsed?: number } })
+  const meta = (holding as { pricingSourceMeta?: { slug?: string; method?: string; compsUsed?: number; confidence?: unknown } })
     .pricingSourceMeta;
   const pricingSourceMeta =
     meta && typeof meta.slug === "string" && typeof meta.method === "string" && typeof meta.compsUsed === "number"
-      ? { slug: meta.slug, method: meta.method, compsUsed: meta.compsUsed }
+      ? {
+          slug: meta.slug,
+          method: meta.method,
+          compsUsed: meta.compsUsed,
+          // The engine's pricing confidence for THIS price surface. Absent
+          // on price surfaces written before CF-REPORT-CONFIDENCE-IS-PRICING.
+          confidence: unitOrNull(meta.confidence),
+        }
       : null;
 
   return {

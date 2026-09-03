@@ -59,7 +59,6 @@ import {
   type CanonicalFmvResult,
 } from "../compiq/canonicalFmv.service.js";
 import { isExactPoolRung, type FmvRungLabel } from "../compiq/fmvRung.js";
-import { isOwnCompForSingleUserContext } from "../compiq/selfComp.js";
 import {
   deriveSellWindowSignal,
   type SellWindowSignal,
@@ -184,20 +183,40 @@ function evidenceCount(result: CanonicalFmvResult): number {
   return (result.provenance?.comps ?? []).length;
 }
 
-/** Comp sources that mean "this sale was the seller's own transaction".
- *  soldCompsStore keys a holding-derived comp `holding::<id>`; an import
- *  that carried a real eBay order id keeps that id but is still flagged
- *  by `verifiedByUser`. Either one makes the pool self-anchored. */
-// CF-OWN-PURCHASE-IS-A-SALE (Drew, 2026-09-03). This predicate used to test
-// only `verifiedByUser === true` or a `holding::` source prefix. A D38 eBay
-// import satisfies NEITHER: it writes source "ebay-user-purchase" with
-// verifiedByUser FALSE on purpose (the identity came from the matcher, not
-// from the user confirming it by hand -- ebayImportRematch.routes.ts:186).
-// So the Verlander/Caglianone/Judge rows were self-comps that no surface ever
-// recognised as the user's own, and the "self-anchored" label never fired on
-// the very rows it exists for. Delegates to the shared predicate now.
-function isSelfComp(c: { source: string; verifiedByUser: boolean }): boolean {
-  return isOwnCompForSingleUserContext(c);
+/**
+ * Is this published sale the SELLER's own transaction?
+ *
+ * CF-SELF-COMP-LABEL-REACHES-THE-RESULT (Drew, 2026-09-03). This used to
+ * ask `verifiedByUser === true || source.startsWith("holding::")`, and both
+ * halves miss the rows that matter.
+ *
+ * `verifiedByUser` means ATTESTED, not OWNED: ebayImportRematch writes an
+ * `ebay-user-purchase` with `contributorUserId` set and the flag FALSE,
+ * because the matcher found the identity and the user never confirmed it.
+ * Measured in prod 2026-09-03: 128 `ebay-user-purchase` rows, 104 carrying
+ * a contributor, only 56 carrying the flag. And `holding::` is a legacy key
+ * shape — Drew's kept rows carry `source: "ebay-user-purchase"`.
+ *
+ * The consequence was live, not theoretical. #1662 made the thin-pool
+ * reprieve per-tier, so an owner's sale now SURVIVES into a published
+ * result when it is the tier's only evidence — Verlander PSA 10 ($251, the
+ * owner's single sale) and Caglianone CPA-JC PSA 9. Those came back labeled
+ * low-confidence only, never self-anchored, which is exactly what Drew's
+ * standing ruling (2026-09-01) forbids: a self-comp publishes AND is
+ * labeled.
+ *
+ * Ownership is `contributorUserId === the reader's own id`. `sellerUserId`
+ * is null wherever the caller named no user, and then nothing is "yours" —
+ * a public reader is never told a stranger's sale is their own.
+ */
+function isSelfComp(
+  c: { source: string; verifiedByUser: boolean; contributorUserId?: string | null },
+  sellerUserId: string | null,
+): boolean {
+  if (sellerUserId && c.contributorUserId) return c.contributorUserId === sellerUserId;
+  // Legacy holding-derived rows predate the contributor stamp; they are the
+  // owner's by construction. Kept so an old pool row still labels.
+  return typeof c.source === "string" && c.source.startsWith("holding::");
 }
 
 /**
@@ -207,7 +226,12 @@ function isSelfComp(c: { source: string; verifiedByUser: boolean }): boolean {
  * claim about the number's softness, then self-anchored, then the generic
  * fallback-rung note, then confidence. A draft can carry several.
  */
-export function labelsForResult(result: CanonicalFmvResult): SellDraftLabel[] {
+export function labelsForResult(
+  result: CanonicalFmvResult,
+  /** The reader's own user id, when the caller named one. Null on any path
+   *  that prices for no particular user — nothing there can be "yours". */
+  sellerUserId: string | null = null,
+): SellDraftLabel[] {
   const labels: SellDraftLabel[] = [];
   const rung = result.rungLabel ?? null;
 
@@ -227,7 +251,7 @@ export function labelsForResult(result: CanonicalFmvResult): SellDraftLabel[] {
   // no count at all.
   const comps = result.provenance?.comps ?? [];
   const poolTotal = evidenceCount(result);
-  const selfComps = comps.filter(isSelfComp);
+  const selfComps = comps.filter((c) => isSelfComp(c, sellerUserId));
   if (selfComps.length > 0) {
     // Self-comps are counted in the sample but stated against the pool,
     // so a truncated sample can only understate the ratio, never claim
@@ -294,8 +318,14 @@ export async function composeSellDraftPricing(
     computeFmv?: (
       input: Parameters<typeof computeCanonicalFmv>[0],
     ) => Promise<CanonicalFmvResult>;
+    /** CF-SELF-COMP-LABEL-REACHES-THE-RESULT (Drew, 2026-09-03). The seller's
+     *  own user id, so a comp the seller contributed is labeled as theirs.
+     *  Routes pass `req.user.userId`; omitted, no comp can be "yours" and the
+     *  draft simply carries no self-anchored label — the old behaviour. */
+    sellerUserId?: string | null;
   },
 ): Promise<SellDraftPriceContext> {
+  const sellerUserId = deps?.sellerUserId ?? null;
   // The sell signal rides on the holding's already-persisted trend, so it
   // is derived the same way the portfolio envelope derives it — pure,
   // synchronous, zero pool reads, and it can never move the price.
@@ -390,7 +420,7 @@ export async function composeSellDraftPricing(
       compCount: evidenceCount(result),
       range,
       computedAt: result.computedAt ?? null,
-      labels: labelsForResult(result),
+      labels: labelsForResult(result, sellerUserId),
       declineReason: null,
     },
     sellSignal,

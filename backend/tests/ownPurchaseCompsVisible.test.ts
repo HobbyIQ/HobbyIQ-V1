@@ -15,10 +15,8 @@ import { describe, it, expect } from "vitest";
 
 import {
   isOwnComp,
-  isOwnCompForSingleUserContext,
   OWN_COMP_ROW_LABEL,
   OWN_COMP_ANCHOR_LABEL,
-  USER_CONTRIBUTED_SOURCES,
 } from "../src/services/compiq/selfComp.js";
 
 const DREW = "user-drew";
@@ -95,18 +93,6 @@ describe("isOwnComp: the D38 import shape is recognised as the user's own", () =
     expect(isOwnComp(ownPurchaseRow(), "")).toBe(false);
   });
 
-  it("the single-user context (sell draft) uses the source class deliberately", () => {
-    expect(isOwnCompForSingleUserContext({ source: "ebay-user-purchase", verifiedByUser: false })).toBe(true);
-    expect(isOwnCompForSingleUserContext({ source: "holding::abc", verifiedByUser: false })).toBe(true);
-    expect(isOwnCompForSingleUserContext({ source: "cardhedge", verifiedByUser: false })).toBe(false);
-  });
-
-  it("every user-contributed source the import writers use is covered", () => {
-    for (const src of USER_CONTRIBUTED_SOURCES) {
-      expect(isOwnCompForSingleUserContext({ source: src, verifiedByUser: false })).toBe(true);
-      expect(isOwnComp({ source: src, contributorUserId: DREW, verifiedByUser: false }, DREW)).toBe(true);
-    }
-  });
 });
 
 // ---------------------------------------------------------------------------
@@ -216,7 +202,6 @@ describe("no other source's behaviour changes", () => {
   it("cardhedge / cardsight / browse-ended rows are never labelled own", () => {
     for (const src of ["cardhedge", "cardsight", "ebay-browse-ended", "tca-ebay"]) {
       expect(isOwnComp({ source: src, contributorUserId: null, verifiedByUser: false }, DREW)).toBe(false);
-      expect(isOwnCompForSingleUserContext({ source: src, contributorUserId: null, verifiedByUser: false })).toBe(false);
     }
   });
 

@@ -34,15 +34,6 @@
  * has always used.
  */
 
-/** The sources whose rows are, by construction, contributed by a user. */
-export const USER_CONTRIBUTED_SOURCES: readonly string[] = [
-  "ebay-user-purchase",
-  "ebay-user-sale",
-  "ebay-account",
-  "manual-user-entry",
-  "user-verified",
-];
-
 /** Shape a row must satisfy to be tested. Every field optional: the callers
  *  hold four different row types (pool row, wire comp, provenance comp,
  *  curve sale) and all of them carry some subset of these. */
@@ -62,32 +53,17 @@ export interface SelfCompRowLike {
  * purchase" on some other user's imported purchase. Source class says a row
  * is SOMEONE's own; only contributorUserId says it is YOURS.
  *
- * The one path that legitimately has no viewer id on the row is the sell
- * draft, whose provenance sample carries no contributor and whose rows all
- * belong to the single user the draft is for. It asks for the source-class
- * test explicitly via `isOwnCompForSingleUserContext`.
+ * The sell draft once needed a viewer-less source-class variant of this
+ * test, because its provenance sample carried no contributor. #1670 threaded
+ * a real sellerUserId through that path and it now answers by identity like
+ * everywhere else, so the variant is gone: there is ONE definition of "the
+ * viewer's own", and it is contribution.
  */
 export function isOwnComp(row: SelfCompRowLike, viewerUserId?: string | null): boolean {
   if (typeof viewerUserId !== "string" || viewerUserId.length === 0) return false;
   const contributor = typeof row.contributorUserId === "string" ? row.contributorUserId : null;
   return contributor === viewerUserId;
 }
-
-/**
- * The source-class test, for a context where every row already belongs to
- * one known user and the rows carry no contributor id -- today that is the
- * eBay sell draft, which builds its labels from a provenance sample.
- *
- * Named apart from `isOwnComp` so that using it is a deliberate statement
- * about the caller's context, never an accident on a shared surface.
- */
-export function isOwnCompForSingleUserContext(row: SelfCompRowLike): boolean {
-  if (row.verifiedByUser === true) return true;
-  const src = typeof row.source === "string" ? row.source : "";
-  if (src.startsWith("holding::")) return true;
-  return USER_CONTRIBUTED_SOURCES.includes(src);
-}
-
 
 /** The label a comp-list row carries when it is the viewer's own sale. */
 export const OWN_COMP_ROW_LABEL = "your purchase";

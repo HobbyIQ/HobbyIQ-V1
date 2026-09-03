@@ -21,6 +21,15 @@ import type { PortfolioHolding } from "../types/portfolioiq.types.js";
 // contract. See exportHoldings.service.ts for the column lock.
 import { buildHoldingsExport, type ExportFormat } from "../services/portfolioiq/exportHoldings.service.js";
 import { composePortfolioListResponse } from "../services/portfolioiq/responseAssembly.js";
+// CF-VALUATION-REPORT (Drew, 2026-09-02): the printable valuation report.
+// Reads the SAME wire path the export and the dashboard read — it prices
+// nothing of its own. See valuationReport.service.ts for why the document
+// is print-perfect HTML rather than a server-rendered PDF.
+import { buildValuationReport } from "../services/portfolioiq/valuationReport.service.js";
+import {
+  renderValuationReportHtml,
+  reportFilename,
+} from "../services/portfolioiq/valuationReportHtml.service.js";
 // CF-IMPORT-BE (2026-06-21): preview + commit endpoints. File arrives as
 // base64-encoded body (multipart not configured); preview is read-only,
 // commit is idempotency-token-gated. See importService.ts.
@@ -1099,6 +1108,51 @@ router.get("/export", async (req, res, next) => {
   }
 });
 
+// CF-VALUATION-REPORT (Drew, 2026-09-02):
+//   GET /api/portfolio/valuation-report?disposition=attachment|inline
+//
+// A dated, print-perfect valuation document: every holding with its
+// canonical FMV, the rung and basis that produced it, confidence, and an
+// as-of timestamp; totals split by how well-evidenced they are; a
+// methodology section; and the disclaimer that this is a valuation
+// opinion from market data, not an appraisal.
+//
+// READ-ONLY, and it prices NOTHING. Holdings come off the same
+// composePortfolioListResponse wire path /export and the dashboard use,
+// so the report cannot disagree with the app it was generated from. No
+// reprice is dispatched: a document is not a reason to move a number.
+//
+// `inline` renders in the browser with a Print button (the Save-as-PDF
+// path); `attachment` downloads the .html file. Default is inline, since
+// the point of the document is to be printed.
+router.get("/valuation-report", async (req, res, next) => {
+  try {
+    const userId = req.user!.userId;
+    const disposition = req.query.disposition === "attachment" ? "attachment" : "inline";
+
+    const doc = await readUserDoc(userId);
+    const items: PortfolioHolding[] = Object.values(doc.holdings ?? {});
+    const wire = composePortfolioListResponse(items);
+    const report = buildValuationReport(wire);
+    const html = renderValuationReportHtml(report, {
+      // Name first, then username, then email — the masthead of a document
+      // someone may hand to an insurer should carry a name, not an inbox.
+      ownerLabel: req.user?.fullName || req.user?.username || req.user?.email || null,
+      includePrintButton: disposition === "inline",
+    });
+    const filename = reportFilename(report.generatedAt);
+
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.setHeader("Content-Disposition", `${disposition}; filename="${filename}"`);
+    // Never cached by a shared cache: this is one user's collection.
+    res.setHeader("Cache-Control", "private, no-store");
+    res.setHeader("X-Holdings-Count", String(report.totals.holdingCount));
+    res.send(html);
+  } catch (err) {
+    next(err);
+  }
+});
+
 // CF-IMPORT-BE (2026-06-21):
 //   POST /api/portfolio/import/preview — read-only; parse + resolve + bucket.
 //   POST /api/portfolio/import/commit  — write; idempotency-token-gated.
@@ -1191,6 +1245,67 @@ router.get("/health/score", portfolio.getPortfolioHealth);
 // (collector+ per the matrix). 402 to free users.
 router.get("/analytics/calibration", requireEntitlement("predictions"), portfolio.getCalibration);
 router.get("/insights/weekly-brief", requireEntitlement("predictions"), portfolio.getWeeklyBrief);
+
+// CF-WEEKLY-DIGEST (Drew, 2026-09-02). The in-app digest view — the
+// delivery floor. Every digest the Sunday job builds is persisted, so
+// these read even when the mail could not go out (ACS unconfigured, no
+// verified address on file). Same entitlement class as weekly-brief.
+//
+//   GET /insights/weekly-digest            → newest persisted digest
+//   GET /insights/weekly-digest?week=2026-W36 → that week
+//   GET /insights/weekly-digests           → index, newest first
+//
+// Read-only: neither route builds or sends anything. A user with no
+// digest yet gets 200 + { digest: null } and a plain sentence, not a 404
+// — "your first one lands Sunday" is an answer, a 404 is not.
+router.get("/insights/weekly-digest", requireEntitlement("predictions"), async (req, res, next) => {
+  try {
+    const userId = req.user!.userId;
+    const { readWeeklyDigest, listWeeklyDigests } = await import(
+      "../services/portfolioiq/weeklyDigestStore.service.js"
+    );
+    const week = String(req.query.week ?? "").trim();
+    const doc = week
+      ? await readWeeklyDigest(userId, week)
+      : (await listWeeklyDigests(userId, 1))[0] ?? null;
+    if (!doc) {
+      return res.json({
+        digest: null,
+        message: week
+          ? "No digest on file for that week."
+          : "No weekly digest yet — your first one is built Sunday night.",
+      });
+    }
+    res.json({
+      digest: doc.digest,
+      deliveredAt: doc.deliveredAt ?? null,
+      deliveryChannel: doc.deliveryChannel ?? null,
+      computedAt: doc.computedAt,
+    });
+  } catch (err) { next(err); }
+});
+
+router.get("/insights/weekly-digests", requireEntitlement("predictions"), async (req, res, next) => {
+  try {
+    const userId = req.user!.userId;
+    const { listWeeklyDigests } = await import(
+      "../services/portfolioiq/weeklyDigestStore.service.js"
+    );
+    const limit = Number(req.query.limit ?? 12);
+    const docs = await listWeeklyDigests(userId, Number.isFinite(limit) ? limit : 12);
+    res.json({
+      count: docs.length,
+      weeks: docs.map((d) => ({
+        weekId: d.weekId,
+        weekStart: d.digest.weekStart,
+        weekEnd: d.digest.weekEnd,
+        headline: d.digest.headline,
+        sections: d.digest.sections,
+        deliveredAt: d.deliveredAt ?? null,
+      })),
+    });
+  } catch (err) { next(err); }
+});
 router.post("/feedback/recommendation", portfolio.addRecommendationFeedback);
 router.get("/ledger", portfolio.getLedger);
 router.patch("/ledger/:id", portfolio.updateLedgerEntry);

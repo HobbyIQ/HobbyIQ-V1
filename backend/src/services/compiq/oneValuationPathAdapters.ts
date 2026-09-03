@@ -57,6 +57,46 @@ export function hobbyIqMethodForRung(rung: FmvRungLabel): HobbyIqFmvMethod {
   return "family-baseline";
 }
 
+/**
+ * CF-SELF-COMP-LABEL-REACHES-THE-RESULT (Drew, 2026-09-03).
+ *
+ * Drew's standing ruling (2026-09-01) is that a self-comp PUBLISHES **and is
+ * LABELED**. #1662 made owner rows survive into published results — the
+ * per-tier reprieve keeps the owner's sale when it is the tier's only
+ * evidence — so the label became load-bearing rather than theoretical.
+ *
+ * It was not reaching the wire. This adapter stamped `verifiedByUser: false`
+ * on every comp unconditionally, and the only other test downstream
+ * (ebaySellDraft's `isSelfComp`) matched `source.startsWith("holding::")`.
+ * Drew's kept rows carry `source: "ebay-user-purchase"` — an import that
+ * brought a real eBay order id keeps that id, and `ebay-user-sale` /
+ * `manual-user-entry` are the same shape. So Verlander PSA 10 ($251, the
+ * owner's only sale) and Caglianone CPA-JC PSA 9 came back labeled
+ * low-confidence only, never self-anchored.
+ *
+ * A row is the owner's own comp when its `contributorUserId` — the field
+ * every user-contributed writer stamps (ebayImportRematch.routes,
+ * ebayReviewQueue.service, ebayOrderPoll.service, portfolioStore.service)
+ * and the field `applySelfCompRule` itself excludes on — equals the owner
+ * the caller named. Source prefix is a fallback for legacy holding-derived
+ * rows that predate the contributor stamp, never the test.
+ *
+ * `ownerUserId` is null on the public routes, which name no user; there,
+ * nothing is "yours" and no comp is marked.
+ */
+function isOwnComp(
+  sale: { source: string | null; contributorUserId: string | null },
+  ownerUserId: string | null,
+): boolean {
+  if (!ownerUserId) return false;
+  if (sale.contributorUserId && sale.contributorUserId === ownerUserId) return true;
+  // Legacy: soldCompsStore keyed a holding-derived comp `holding::<id>`
+  // before the contributor stamp existed. Those rows are the owner's by
+  // construction — the pool only ever reaches this adapter for the identity
+  // the owner asked about.
+  return typeof sale.source === "string" && sale.source.startsWith("holding::");
+}
+
 function recentRangeFrom(sales: ReadonlyArray<{ price: number }>): CanonicalFmvResult["recentRange"] {
   const prices = sales.map((s) => Number(s.price)).filter((p) => Number.isFinite(p) && p > 0).sort((a, b) => a - b);
   if (prices.length === 0) return null;
@@ -207,7 +247,12 @@ export function toCanonicalFmvResponse(
         soldAt: s.soldAt,
         source: s.source ?? "sold_comps",
         parallel: v.identity.parallel,
-        verifiedByUser: false,
+        // CF-SELF-COMP-LABEL-REACHES-THE-RESULT: this field is what the
+        // sell-draft composer reads to say "N of M sales behind this
+        // estimate are your own". Hardcoding false silently unlabeled every
+        // published self-comp. See isOwnComp above.
+        verifiedByUser: isOwnComp(s, v.ownerUserId),
+        contributorUserId: s.contributorUserId,
       })),
       trendPctPerMonth: v.trend.pctPerWeek != null ? round2(v.trend.pctPerWeek * (30 / 7)) : null,
       multipliers: {},
