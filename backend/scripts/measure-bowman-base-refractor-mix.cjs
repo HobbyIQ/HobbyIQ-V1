@@ -68,9 +68,25 @@ const f = (n) => Number(n).toLocaleString("en-US");
 const FINISH_WORDS = [
   "superfractor", "x-fractor", "xfractor", "atomic", "pulsar",
   "refractor", "refractors", "shimmer", "wave", "prism", "prizm", "mojo",
-  "lava", "speckle", "sparkle", "foilboard", "raywave", "sapphire",
+  "lava", "speckle", "sparkle", "foilboard", "raywave",
   "vector", "logofractor", "moonshot", "aqua", "fuchsia", "magenta",
 ];
+/**
+ * CF-A-PRODUCT-IS-NOT-A-FINISH (measured 2026-09-03, first full sample).
+ * "Sapphire" and "Platinum" are BOWMAN PRODUCTS -- Bowman Chrome Sapphire
+ * Edition, Bowman Platinum -- exactly as "Chrome" is, and for the same reason
+ * "Chrome" was excluded from FINISH_WORDS from the start.
+ *
+ * Counting them as finish evidence produced 10,593 phantom reverse rows in a
+ * 1.2M-row sample (sapphire 7,865 + platinum 2,728 of 36,280 = 29%), and the
+ * giveaway was that 6,356 of them already sat on a `bowman-chrome-sapphire`
+ * setKey: the title said "Sapphire Edition", the slug said the sapphire
+ * PRODUCT, and the two agreed perfectly. Nothing was mis-filed at all.
+ *
+ * They stay in COLOUR/finish detection nowhere, but remain recognisable to
+ * the slug side, because a slug segment `sapphire-refractor` IS a parallel.
+ */
+const PRODUCT_NOT_FINISH = ["sapphire", "platinum", "chrome"];
 /** Colour words. A colour in a title is finish evidence on a Chrome product
  *  (Colour = Refractor is a PER-CARD ruling) but is reported as its own class
  *  so a "green" title and a "green refractor" title are never merged. */
@@ -156,6 +172,23 @@ function slugClaimsFinish(seg) {
   const toks = s.split("-").filter(Boolean);
   if (toks.some((t) => FINISH_WORDS.includes(t) || t === "refractor")) return true;
   if (toks.some((t) => COLOUR_WORDS.includes(t))) return true;
+  // On the SLUG side a bare product word in the parallel segment IS a
+  // parallel claim (`…:sapphire-refractor:…`), even though the same word in a
+  // TITLE is only the product's name. The asymmetry is the point.
+  if (toks.length > 1 && toks.some((t) => PRODUCT_NOT_FINISH.includes(t))) return true;
+  return false;
+}
+
+/**
+ * CF-A-PRINTING-PLATE-IS-NOT-A-FINISH (measured 2026-09-03). A 1/1 printing
+ * plate sitting under a plain-auto title IS a mis-filing -- but it is a
+ * CARD-TYPE mis-filing, not the finish-mixing Drew named, and 1,537 of them
+ * in one sample would have been half the headline number. They are counted in
+ * their own class so the two defects cannot be confused for one.
+ */
+const CARD_TYPE_NOT_FINISH = /printing-plate|printing-plates|buyback|cut-signature|relic|patch|booklet/;
+function segIsCardType(seg) {
+  return CARD_TYPE_NOT_FINISH.test(String(seg || "").toLowerCase());
   return false;
 }
 
@@ -199,6 +232,7 @@ const slugGreenEvidence = new Map();
  *  blast radius in cards, and the two are reported separately so neither can be
  *  mistaken for the other. */
 const baseInRefrSlugs = new Set();
+const cardTypeMisfile = { total: 0, bySource: new Map(), byProduct: new Map(), bySlugParallel: new Map() };
 const reverseSlugs = new Set();
 const samples = { baseInRefractor: [], reverse: [], greenCollision: [] };
 const bowmanTotals = { rowsScanned: 0, bowmanRows: 0, finishSlugRows: 0, baseSlugRows: 0, nonHiq: 0, adjudicatedInBaseInRefr: 0 };
@@ -249,6 +283,13 @@ function record(row) {
       // BASE-IN-REFRACTOR: slug claims a finish, title names NONE, stored
       // parallel field says Base/blank. Three independent fields agreeing.
       if (ev.label === "NO-FINISH-WORD" && isBaseField(storedPar)) {
+        if (segIsCardType(seg)) {
+          cardTypeMisfile.total++;
+          bump(cardTypeMisfile.bySource, src);
+          bump(cardTypeMisfile.byProduct, product);
+          bump(cardTypeMisfile.bySlugParallel, seg);
+          continue;
+        }
         baseInRefr.total++;
         baseInRefrSlugs.add(fullSlug);
         if (adjudicated) bowmanTotals.adjudicatedInBaseInRefr++;
@@ -372,6 +413,12 @@ async function main() {
       byProduct: top(baseInRefr.byProduct, 20),
       bySlugParallel: top(baseInRefr.bySlugParallel, 40),
     },
+    cardTypeMisfile: {
+      total: cardTypeMisfile.total,
+      bySource: top(cardTypeMisfile.bySource, 20),
+      byProduct: top(cardTypeMisfile.byProduct, 20),
+      bySlugParallel: top(cardTypeMisfile.bySlugParallel, 20),
+    },
     reverse: {
       total: reverse.total,
       distinctSlugs: reverseSlugs.size,
@@ -387,7 +434,7 @@ async function main() {
   fs.writeFileSync(outFile, JSON.stringify(report, null, 2));
   console.log(`\nwrote ${outFile}`);
   console.log(`BOWMAN rows ${f(bowmanTotals.bowmanRows)}  finish-slug ${f(bowmanTotals.finishSlugRows)}  base-slug ${f(bowmanTotals.baseSlugRows)}`);
-  console.log(`BASE-IN-REFRACTOR ${f(baseInRefr.total)} rows / ${f(baseInRefrSlugs.size)} slugs   REVERSE ${f(reverse.total)} rows / ${f(reverseSlugs.size)} slugs   GREEN-COLLISION slugs ${f(greenCollisions.length)}`);
+  console.log(`BASE-IN-REFRACTOR ${f(baseInRefr.total)} rows / ${f(baseInRefrSlugs.size)} slugs   CARD-TYPE ${f(cardTypeMisfile.total)}   REVERSE ${f(reverse.total)} rows / ${f(reverseSlugs.size)} slugs   GREEN-COLLISION slugs ${f(greenCollisions.length)}`);
 }
 
 main().catch((e) => { console.error("FATAL", e?.message || e); process.exit(9); });
