@@ -563,6 +563,49 @@ describe("F -- canary coverage: every one of the 32 shards has a pool that must 
   // ceiling is raised on the case below so the spawn budget is the one that
   // actually governs. The spawn IS the test -- it proves the refusal in the
   // real binary -- so the child is not stubbed and no assertion moves.
+  //
+  // TWO BUDGET CLASSES, and which one a case wants is not a detail:
+  //
+  //   REFUSAL cases (the two below) assert the child EXITS -- status 2 with a
+  //   message on stderr. The refusal fires before the CosmosClient is ever
+  //   constructed, so the child is expected to die early and fast. The default
+  //   120s here is pure headroom for the cold module load; the case is over
+  //   long before it, and a tight budget would still be correct-ish for them.
+  //
+  //   The ANNOUNCEMENT case (the third) is the opposite shape: it asserts the
+  //   child ran FAR ENOUGH to PRINT, and past that print the child constructs
+  //   a CosmosClient against the unroutable stub and BLOCKS. Nothing makes it
+  //   exit on its own, so for that case the spawn budget is not headroom -- it
+  //   is a KILL TIMER that always runs out, and its whole value is spent on
+  //   every run. It has to clear the child's cold `require("@azure/cosmos")`
+  //   + classifier load with real margin, because a budget that expires
+  //   mid-load does not fail loudly: spawnSync returns stdout "" and the match
+  //   reds without the word "timeout" appearing anywhere. That is exactly how
+  //   6_000 broke it under fork pressure.
+  //
+  //   The temptation is to give the announcement case "the smallest budget
+  //   that clears the load", since it spends the whole thing. MEASURED on a
+  //   contended 2026-09-03 box, that instinct is a trap. Time from spawn to
+  //   the announcement line actually appearing on stdout:
+  //
+  //       cold  55,295 ms
+  //       warm   3,892 ms
+  //
+  //   (the cost is the child's own require("@azure/cosmos"), separately timed
+  //   at 59,451 ms cold vs 1,799-2,392 ms warm -- a ~30x spread.)
+  //
+  //   So the cold path needs ~55s before this test can see anything at all.
+  //   6_000 never had a chance cold; 30_000 would not either. Both fail the
+  //   same silent way -- stdout "", no "timeout" anywhere in the output. This
+  //   case therefore keeps the generous 120s default: ~2.2x the measured cold
+  //   cost, and still under the 180s vitest ceiling on the case, so the spawn
+  //   budget stays the governing clock instead of racing it.
+  //
+  //   Cost, named honestly: the child does NOT exit after announcing (verified
+  //   -- it blocks on the stub endpoint until killed), so this one case spends
+  //   its whole budget on every run, warm or cold. That is the price of
+  //   proving the branch in the real shipped binary. Do not "optimize" it back
+  //   down; the numbers above are what the machine actually did.
   const runCanaryCheck = (slot: string, canariesFile: string, timeout = 120_000) =>
     spawnSync(process.execPath, [path.join(backend, "scripts", "rematch-canary-check.cjs")], {
       env: {
@@ -614,11 +657,17 @@ describe("F -- canary coverage: every one of the 32 shards has a pool that must 
     // Slot 29 is the one the audit caught: 30/30 wrong, and no canary at all
     // before this PR. If any slot must be proven covered by RUNNING the gate,
     // it is that one.
+    //
+    // Takes the DEFAULT 120s budget -- this is the KILL-TIMER class. Measured
+    // time-to-announcement is 55s cold / 3.9s warm, so 6_000 (the value this
+    // replaces) could never see the line on a cold run and handed back
+    // stdout "", reddening the match without ever printing "timeout". See the
+    // two-budget-classes note on runCanaryCheck above for the measurements.
     const real = path.join(backend, "data", "rematch-canaries.json");
-    const r = runCanaryCheck("29", real, 6_000);
+    const r = runCanaryCheck("29", real);
     expect(String(r.stdout)).toMatch(/slot 29: \d+ canary\/canaries live in THIS shard/);
     expect(String(r.stderr)).not.toMatch(/has NO canary/);
-  }, 20_000);
+  });
 });
 
 // ═══ G. THE SAMPLE IS 500 AND SPREADS ACROSS CARDS (finding 7) ═════════════
