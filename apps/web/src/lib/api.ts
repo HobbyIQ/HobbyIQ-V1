@@ -2143,7 +2143,9 @@ export interface GradeArbTier {
   netGainPct: number | null;
   sampleCount: number;
   rungLabel: string | null;
-  valueSource: "observed" | "estimated";
+  /** Always "observed": the surface refuses any tier that is not real
+   *  sales of this card at this tier, with at least 3 of them. */
+  valueSource: "observed";
   confidence: number;
   basis: string;
 }

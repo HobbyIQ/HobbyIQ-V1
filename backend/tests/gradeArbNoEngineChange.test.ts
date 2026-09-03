@@ -65,4 +65,16 @@ describe("grade-arb does not change the valuation engine", () => {
     expect(text).toContain("classifyFamily");
     expect(text).not.toMatch(/lookupGradeRatio|subTierScalingForFallback|GRADE_CALIBRATION\[/);
   });
+
+  it("the empirical gate reads the curve's own count, never the ladder", () => {
+    const text = src(COMPUTE);
+    // canonicalFmv's gradeLadder tiers are {grader, medianRatio, fmv}:
+    // multiplication, with a placeholder sampleSize. A gate reading it
+    // would be a gate reading nothing.
+    const code = text.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+    expect(code).not.toMatch(/gradeLadder|medianRatio|sampleSize/);
+    // It reads the per-tier count and compares it to the floor.
+    expect(code).toContain("sampleCount");
+    expect(code).toContain("MIN_GRADED_COMPS");
+  });
 });

@@ -136,21 +136,19 @@ function TierRow({ tier }: { tier: GradeArbTier }) {
       <div className="min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="font-semibold text-sm">{tier.tier}</span>
-          {/* D20: say whether the number is observed or an estimate. */}
+          {/* Every tier that reaches this component is observed with at
+              least 3 real graded sales — an estimated tier is refused
+              server-side rather than badged. Show the count, which is
+              the thing that varies and the thing worth trusting. */}
           <span
             className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium leading-tight"
             style={{
-              color:
-                tier.valueSource === "observed"
-                  ? "var(--hiq-hobby-green)"
-                  : "var(--hiq-electric-blue)",
+              color: "var(--hiq-hobby-green)",
               background: "rgba(255,255,255,0.06)",
             }}
             title={tier.rungLabel ? `rung: ${tier.rungLabel}` : undefined}
           >
-            {tier.valueSource === "observed"
-              ? `● observed · n=${tier.sampleCount}`
-              : "≈ estimate"}
+            {`● observed · n=${tier.sampleCount}`}
           </span>
         </div>
         <p className="text-[11px] mt-1" style={{ color: "var(--hiq-muted-text)" }}>

@@ -9,6 +9,8 @@ import { describe, it, expect } from "vitest";
 import {
   computeGradeArb,
   tierHasEmpiricalBasis,
+  gateTier,
+  MIN_GRADED_COMPS,
   basisSentenceFor,
   resolveGradingCostUsd,
   GRADE_ARB_DISCLOSURE,
@@ -251,7 +253,10 @@ describe("disclosure + basis sentence", () => {
     expect(basisSentenceFor(observed("PSA 9", 180, 1))).toContain("1 sale");
   });
 
-  it("names the empirical ratio on an estimated tier and marks it estimated", () => {
+  it("refuses an estimated tier instead of quoting its ratio", () => {
+    // The pre-hardening build rendered this tier: "+$355, 4.8x empirical
+    // ratio". Its sampleCount is 0 — there is no PSA 10 sale of this
+    // card anywhere in the pool.
     const est = entry({
       grade: "PSA 10",
       value: 480,
@@ -259,21 +264,164 @@ describe("disclosure + basis sentence", () => {
       valueSource: "estimated",
       rungLabel: "grade-curve-estimate",
       estimatedMultiplier: 4.8,
-      estimatedFrom: "Raw",
+      estimatedFrom: "raw-multiplier",
     });
-    const s = basisSentenceFor(est, { family: "topps-chrome" });
-    expect(s).toContain("estimated");
-    expect(s).toContain("4.8x empirical ratio");
-    expect(s).toContain("from its Raw sales");
-
     const r = computeGradeArb({
       gradeCurve: [observed("Raw", 100, 12), est],
       isRaw: true,
       gradingCostUsd: 25,
     });
-    expect(r.tiers[0].valueSource).toBe("estimated");
-    // 480 - 100 - 25 = 355
-    expect(r.tiers[0].netGain).toBe(355);
+    expect(r.available).toBe(false);
+    expect(r.refusal).toBe("no-graded-basis");
+    expect(r.tiers).toEqual([]);
+    expect(r.bestTier).toBeNull();
+    expect(r.refusalReason).toContain("estimated");
+    // The number that must never reach a user.
+    expect(JSON.stringify(r)).not.toContain("355");
+  });
+});
+
+// ── The empirical gate ────────────────────────────────────────────────
+//
+// The counter-fixtures below are the shapes the verifier found on the
+// live curve. Each one printed a large, confident, actionable percentage
+// before the gate; each must now refuse and name its count.
+describe("the empirical gate — no dollar figure without real graded comps", () => {
+  it("A2: refuses a raw-multiplier tier that printed +540%", () => {
+    // Live shape: a $7.89 raw card, PSA 8 projected at $302.47 by a
+    // 38.34x family constant. netGain would have been 302.47-7.89-25 =
+    // $269.58 on a $32.89 outlay = +819%. No PSA 8 sale of this card
+    // exists. (observedGradeCurve.service.ts:197 — hand-tuned constant.)
+    const a2 = entry({
+      grade: "PSA 10",
+      value: 50,
+      sampleCount: 0,
+      valueSource: "estimated",
+      estimatedFrom: "raw-multiplier",
+      estimatedMultiplier: 6.34,
+      rungLabel: "grade-curve-estimate",
+    });
+    const r = computeGradeArb({
+      gradeCurve: [observed("Raw", 7.89, 74), a2],
+      isRaw: true,
+      gradingCostUsd: 25,
+    });
+    expect(r.available).toBe(false);
+    expect(r.refusal).toBe("no-graded-basis");
+    expect(r.tiers).toEqual([]);
+    // +540% was the shape of the old output. Nothing like it survives.
+    expect(JSON.stringify(r)).not.toMatch(/54\d(\.\d+)?/);
+    expect(gateTier(a2)).toMatchObject({ ok: false, reason: "estimated" });
+  });
+
+  it("A3: refuses a reference-price tier that printed +620%", () => {
+    // "reference-price" is a third-party model's number for this grade,
+    // not a sale we observed. It is the preferred estimate precisely
+    // because it is somebody else's model — which is why it cannot
+    // anchor our own arbitrage advice.
+    const a3 = entry({
+      grade: "PSA 10",
+      value: 620,
+      sampleCount: 0,
+      valueSource: "estimated",
+      estimatedFrom: "reference-price",
+      rungLabel: "grade-curve-estimate",
+    });
+    const r = computeGradeArb({
+      gradeCurve: [observed("Raw", 75, 20), a3],
+      isRaw: true,
+      gradingCostUsd: 25,
+    });
+    expect(r.available).toBe(false);
+    expect(r.refusal).toBe("no-graded-basis");
+    expect(r.tiers).toEqual([]);
+    expect(JSON.stringify(r)).not.toContain("520");
+    expect(gateTier(a3)).toMatchObject({ ok: false, reason: "estimated" });
+  });
+
+  it("refuses an observed tier thinner than three sales, and names the count", () => {
+    const r = computeGradeArb({
+      gradeCurve: [observed("Raw", 100, 12), observed("PSA 10", 900, 2)],
+      isRaw: true,
+      gradingCostUsd: 25,
+    });
+    expect(r.available).toBe(false);
+    expect(r.refusal).toBe("no-graded-basis");
+    // The count is named, so the user learns it is a depth problem.
+    expect(r.refusalReason).toContain("2 graded sales");
+    expect(r.refusalReason).toContain("3 required");
+    expect(JSON.stringify(r)).not.toContain("775");
+  });
+
+  it("admits a tier at exactly the floor", () => {
+    const r = computeGradeArb({
+      gradeCurve: [observed("Raw", 100, 12), observed("PSA 10", 520, MIN_GRADED_COMPS)],
+      isRaw: true,
+      gradingCostUsd: 25,
+    });
+    expect(r.available).toBe(true);
+    expect(r.tiers).toHaveLength(1);
+    expect(r.tiers[0].sampleCount).toBe(3);
+    expect(r.tiers[0].netGain).toBe(395);
+    expect(r.tiers[0].valueSource).toBe("observed");
+  });
+
+  it("keeps the deep tier and drops the thin one from the same curve", () => {
+    const r = computeGradeArb({
+      gradeCurve: [
+        observed("Raw", 100, 12),
+        observed("PSA 9", 180, 8),
+        observed("PSA 10", 900, 1),
+      ],
+      isRaw: true,
+      gradingCostUsd: 25,
+    });
+    expect(r.available).toBe(true);
+    expect(r.tiers.map((t) => t.tier)).toEqual(["PSA 9"]);
+    // The thin tier's number never appears, not even as the best tier.
+    expect(r.bestTier?.tier).toBe("PSA 9");
+    expect(JSON.stringify(r)).not.toContain("775");
+  });
+
+  it("refuses when the RAW baseline is estimated or thin", () => {
+    const estRaw = entry({
+      grade: "Raw", value: 100, sampleCount: 0,
+      valueSource: "estimated", estimatedFrom: "reference-price",
+    });
+    const r = computeGradeArb({
+      gradeCurve: [estRaw, observed("PSA 10", 520, 9)],
+      isRaw: true,
+      gradingCostUsd: 25,
+    });
+    expect(r.available).toBe(false);
+    expect(r.refusal).toBe("no-raw-basis");
+    expect(r.refusalReason).toContain("estimated");
+
+    const thinRaw = computeGradeArb({
+      gradeCurve: [observed("Raw", 100, 2), observed("PSA 10", 520, 9)],
+      isRaw: true,
+      gradingCostUsd: 25,
+    });
+    expect(thinRaw.available).toBe(false);
+    expect(thinRaw.refusal).toBe("no-raw-basis");
+    expect(thinRaw.refusalReason).toContain("2 sales");
+  });
+
+  it("gateTier reports the true count on every refusal", () => {
+    expect(gateTier(observed("PSA 10", 500, 2))).toEqual({ ok: false, reason: "thin-pool", sampleCount: 2 });
+    expect(gateTier(observed("PSA 10", 500, 7))).toEqual({ ok: true, reason: null, sampleCount: 7 });
+    expect(gateTier(entry({ grade: "PSA 10" }))).toEqual({ ok: false, reason: "unavailable", sampleCount: 0 });
+    expect(gateTier(undefined)).toEqual({ ok: false, reason: "unavailable", sampleCount: 0 });
+    // Priced but valueless label, and a value-bearing row with no pool.
+    expect(gateTier(entry({ grade: "PSA 10", value: 0, valueSource: "observed", sampleCount: 9 })))
+      .toEqual({ ok: false, reason: "no-value", sampleCount: 9 });
+  });
+
+  it("the basis sentence quotes only real sales", () => {
+    const s = basisSentenceFor(observed("PSA 10", 520, 6), { family: "topps-chrome" });
+    expect(s).toContain("6 sales");
+    expect(s).not.toContain("estimated");
+    expect(s).not.toContain("empirical ratio");
   });
 });
 

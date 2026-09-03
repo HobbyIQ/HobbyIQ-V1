@@ -36,6 +36,21 @@
 // and never a promise, never an expected value weighted by a gem rate we
 // have not measured for this card. A single un-caveated "+$400" here is
 // a user sending a $25 check on our say-so.
+//
+// ── The empirical gate (2026-09-02, hardening) ─────────────────────────
+//
+// Every dollar figure on this surface comes from OBSERVED sales of this
+// card at that tier, with a pool of at least MIN_GRADED_COMPS. This
+// module originally admitted "estimated" tiers on the argument that a
+// GRADE_CALIBRATION ratio is itself measured from our pool. That
+// argument does not survive contact with the live curve: its estimated
+// branches include a hand-tuned per-tier constant ("raw-multiplier",
+// observedGradeCurve.service.ts:197) and a third-party model number
+// ("reference-price"). Neither is a sale of this card. On a real
+// $7.89 raw card the multiplier path produces "PSA 8 = $302.47", and
+// this surface would have rendered "+$269 IF you grade it" beside a
+// $25 cheque. A family ratio is evidence about the family; the user is
+// grading one card.
 
 import type { ObservedGradeEntry } from "../compiq/observedGradeCurve.service.js";
 
@@ -77,15 +92,15 @@ export interface GradeArbTier {
   /** netGain / (rawValue + gradingCost) — return on the total outlay,
    *  null when that denominator is not positive. */
   netGainPct: number | null;
-  /** Pool size behind this tier's number. */
+  /** Real graded sales of this card at this tier behind the number.
+   *  Always >= MIN_GRADED_COMPS — a thinner tier is refused, not shown. */
   sampleCount: number;
   /** The engine's rung for this tier, in the closed vocabulary. */
   rungLabel: string | null;
-  /** How the engine got the tier: "observed" is a real pool at the
-   *  tier; "estimated" is this card's own sales carried across grades by
-   *  an empirical ratio. Both are empirical; the caller renders the
-   *  difference. */
-  valueSource: "observed" | "estimated";
+  /** Always "observed" on this surface: an estimated tier never reaches
+   *  a caller. Kept on the wire so a client that rendered an "est."
+   *  badge keeps compiling, and so the value is self-describing. */
+  valueSource: "observed";
   confidence: number;
   /** Prose naming the source of THIS tier's number: n, tier, family. */
   basis: string;
@@ -96,7 +111,8 @@ export type GradeArbRefusal =
   | "not-raw"
   /** The curve has no Raw number, so there is no baseline to subtract. */
   | "no-raw-basis"
-  /** Raw is priced, but no graded tier has any empirical basis. */
+  /** Raw is priced, but no graded tier is observed with a deep enough
+   *  pool. The reason names the counts that fell short. */
   | "no-graded-basis";
 
 export interface GradeArbResult {
@@ -131,28 +147,117 @@ export function resolveGradingCostUsd(
   return n;
 }
 
-/** True when a curve entry carries an empirical number this surface may
- *  speak from.
+/** The floor of REAL graded sales a tier must carry before this surface
+ *  will put a dollar figure on it. Three is the smallest pool from which
+ *  the engine reports a non-trivial confidence (observedGradeCurve:
+ *  n=1 -> 0.20, n=3 -> 0.50), and below it a single outlier IS the
+ *  "market": two sales of $8 and $302 average to a number no one has
+ *  ever paid. */
+export const MIN_GRADED_COMPS = 3;
+
+/** Why a tier was refused, in the vocabulary the caller renders. */
+export type TierRefusalReason = "unavailable" | "estimated" | "thin-pool" | "no-value";
+
+export interface TierGateResult {
+  ok: boolean;
+  reason: TierRefusalReason | null;
+  /** The tier's TRUE count of real graded sales. Always named on a
+   *  refusal so the message can quote it. */
+  sampleCount: number;
+}
+
+/** The empirical gate. A tier may carry a dollar figure on this surface
+ *  only when it is OBSERVED — real sales of this card at this tier —
+ *  and the pool is at least MIN_GRADED_COMPS deep.
  *
- *  "unavailable" is the engine saying it has nothing — refuse.
- *  A null or non-positive value is the same thing regardless of label.
+ *  Estimated tiers are REFUSED, and the earlier reading of this module
+ *  (that "estimated" is empirical enough because a GRADE_CALIBRATION
+ *  ratio is measured from our pool) was wrong on the facts. The live
+ *  curve's estimated branches include `estimatedFrom: "raw-multiplier"`
+ *  — a hand-tuned per-tier constant (observedGradeCurve.service.ts:197)
+ *  — and `"reference-price"`, a third-party model's number. Neither is
+ *  a sale of this card at this tier. Multiplying a $7.89 raw anchor by
+ *  a family constant yields rows like "PSA 8 = $302.47" (38.34x), which
+ *  this surface would have rendered as "+$269 if you grade it" next to
+ *  a $25 cheque. A ratio measured across a family is evidence about the
+ *  family, not about this card.
  *
- *  "estimated" IS allowed, and that is a deliberate reading of the
- *  empirical-only doctrine rather than a loophole: on the one-valuation
- *  path an estimated tier is THIS card's own observed sales carried
- *  across grades by a GRADE_CALIBRATION ratio measured from our own
- *  pool (family, byTier). It is not an invented or hand-tuned
- *  multiplier. The tier reports its source so the caller can mark it. */
+ *  So the gate is: observed, priced, and n >= MIN_GRADED_COMPS. The
+ *  count is the curve's own per-tier `sampleCount` — the number of real
+ *  sales behind that tier's median. (The canonical `gradeLadder` cannot
+ *  answer this: its tiers carry only {grader, medianRatio, fmv}, every
+ *  non-Raw row is rawAnchor x calibration multiplier, and its
+ *  `sampleSize` is a literal placeholder. A gate reading the ladder
+ *  would be a gate reading multiplication, which is why this surface
+ *  reads the curve.) */
+export function gateTier(
+  entry: Pick<ObservedGradeEntry, "value" | "valueSource" | "sampleCount"> | undefined | null,
+): TierGateResult {
+  const n = typeof entry?.sampleCount === "number" && Number.isFinite(entry.sampleCount)
+    ? entry.sampleCount
+    : 0;
+  if (!entry) return { ok: false, reason: "unavailable", sampleCount: 0 };
+  if (entry.valueSource === "unavailable") return { ok: false, reason: "unavailable", sampleCount: n };
+  const priced = typeof entry.value === "number" && Number.isFinite(entry.value) && entry.value > 0;
+  if (!priced) return { ok: false, reason: "no-value", sampleCount: n };
+  // Not a sale of this card at this tier — a projection. Refuse before
+  // the count is even consulted, so the reason names the real defect.
+  if (entry.valueSource !== "observed") return { ok: false, reason: "estimated", sampleCount: n };
+  if (n < MIN_GRADED_COMPS) return { ok: false, reason: "thin-pool", sampleCount: n };
+  return { ok: true, reason: null, sampleCount: n };
+}
+
+/** True when a curve entry may carry a dollar figure on this surface.
+ *  Thin wrapper over gateTier, kept because call sites read better as a
+ *  predicate. */
 export function tierHasEmpiricalBasis(
-  entry: Pick<ObservedGradeEntry, "value" | "valueSource"> | undefined | null,
+  entry: Pick<ObservedGradeEntry, "value" | "valueSource" | "sampleCount"> | undefined | null,
 ): boolean {
-  if (!entry) return false;
-  if (entry.valueSource === "unavailable") return false;
-  return typeof entry.value === "number" && Number.isFinite(entry.value) && entry.value > 0;
+  return gateTier(entry).ok;
+}
+
+/** The raw baseline is subtracted from every tier, so it is held to the
+ *  same standard: a raw anchor that is itself an estimate would make
+ *  every netGain on the surface an estimate wearing an observed label. */
+export function rawTierHasEmpiricalBasis(
+  entry: Pick<ObservedGradeEntry, "value" | "valueSource" | "sampleCount"> | undefined | null,
+): boolean {
+  return gateTier(entry).ok;
+}
+
+/** Name the shortfall when no graded tier survived the gate. Quotes the
+ *  real counts rather than saying "no data": "PSA 10 has 2 graded sales
+ *  (3 required)" is a fact a user can act on — wait for the market to
+ *  deepen — where a shrug is not. */
+export function describeGradedRefusal(
+  refused: ReadonlyArray<{ tier: string; gate: TierGateResult }>,
+): string {
+  const thin = refused.filter((r) => r.gate.reason === "thin-pool");
+  const estimated = refused.filter((r) => r.gate.reason === "estimated");
+  const parts: string[] = [];
+  if (thin.length > 0) {
+    parts.push(
+      thin
+        .map((r) => `${r.tier} has ${r.gate.sampleCount} graded ${r.gate.sampleCount === 1 ? "sale" : "sales"}`)
+        .join(", ") + ` (${MIN_GRADED_COMPS} required)`,
+    );
+  }
+  if (estimated.length > 0) {
+    parts.push(
+      `${estimated.map((r) => r.tier).join(", ")} ${estimated.length === 1 ? "is" : "are"} estimated from a family ratio, not sales of this card`,
+    );
+  }
+  if (parts.length === 0) {
+    return "This card has no graded sales of its own — no graded outcome to show.";
+  }
+  return `Not enough real graded sales of this card: ${parts.join("; ")}. No graded outcome to show.`;
 }
 
 /** Compose the basis sentence for one tier: n, tier, family/rung.
- *  Quotes the curve's own numbers — it never characterizes them. */
+ *  Quotes the curve's own numbers — it never characterizes them.
+ *
+ *  Only observed tiers reach this function (see gateTier), so there is
+ *  one branch and it names real sales. */
 export function basisSentenceFor(
   entry: ObservedGradeEntry,
   opts: { family?: string | null } = {},
@@ -161,19 +266,9 @@ export function basisSentenceFor(
   const family = opts.family?.trim();
   const familyPart = family ? ` in ${family}` : "";
   const rung = entry.rungLabel ? ` via ${entry.rungLabel}` : "";
-  if (entry.valueSource === "observed") {
-    const n = entry.sampleCount;
-    const sales = n === 1 ? "1 sale" : `${n} sales`;
-    return `${tier}${familyPart}: projected from ${sales} of this card at ${tier}${rung}.`;
-  }
-  // Estimated: this card's own sales carried across grades by an
-  // empirical ratio. Name the ratio when the curve carried one.
-  const mult = entry.estimatedMultiplier;
-  const from = entry.estimatedFrom ? ` from its ${entry.estimatedFrom} sales` : "";
-  const multPart = typeof mult === "number" && Number.isFinite(mult)
-    ? ` (${round2(mult)}x empirical ratio)`
-    : "";
-  return `${tier}${familyPart}: estimated${from}${multPart}${rung} — no ${tier} sale of this card in the window.`;
+  const n = entry.sampleCount;
+  const sales = n === 1 ? "1 sale" : `${n} sales`;
+  return `${tier}${familyPart}: projected from ${sales} of this card at ${tier}${rung}.`;
 }
 
 /**
@@ -219,23 +314,35 @@ export function computeGradeArb(input: {
   const rawCandidates = curve.filter(
     (e) => String(e.grade).trim().toLowerCase() === "raw" || e.grader === "Raw",
   );
-  const rawEntry = rawCandidates.find(tierHasEmpiricalBasis) ?? rawCandidates[0];
-  if (!tierHasEmpiricalBasis(rawEntry)) {
+  const rawEntry = rawCandidates.find(rawTierHasEmpiricalBasis) ?? rawCandidates[0];
+  const rawGate = gateTier(rawEntry);
+  if (!rawGate.ok) {
     return {
       ...base,
       refusal: "no-raw-basis",
-      refusalReason:
-        "No empirical raw value for this card — nothing to compare a graded outcome against.",
+      refusalReason: rawGate.reason === "thin-pool"
+        ? `Raw value for this card rests on ${rawGate.sampleCount} ${rawGate.sampleCount === 1 ? "sale" : "sales"} — fewer than the ${MIN_GRADED_COMPS} required — so there is no baseline to compare a graded outcome against.`
+        : rawGate.reason === "estimated"
+          ? "The raw value for this card is estimated, not observed — no measured baseline to compare a graded outcome against."
+          : "No empirical raw value for this card — nothing to compare a graded outcome against.",
     };
   }
   const rawValue = round2(rawEntry!.value as number);
 
   const wanted = input.tiers ?? GRADE_ARB_TIERS;
   const tiers: GradeArbTier[] = [];
+  // Why each refused tier was refused, so the whole-surface refusal can
+  // quote real counts instead of a shrug.
+  const refusedTiers: Array<{ tier: string; gate: TierGateResult }> = [];
   for (const label of wanted) {
     const matches = curve.filter((e) => String(e.grade).trim() === label);
     const entry = matches.find(tierHasEmpiricalBasis) ?? matches[0];
-    if (!tierHasEmpiricalBasis(entry)) continue; // refuse per-tier, silently
+    const gate = gateTier(entry);
+    if (!gate.ok) {
+      // A tier the curve never mentioned is absent, not refused.
+      if (matches.length > 0) refusedTiers.push({ tier: label, gate });
+      continue;
+    }
     const gradedValue = round2(entry!.value as number);
     const netGain = round2(gradedValue - rawValue - gradingCostUsd);
     const denom = rawValue + gradingCostUsd;
@@ -245,9 +352,9 @@ export function computeGradeArb(input: {
       gradedValue,
       netGain,
       netGainPct: denom > 0 ? Math.round((netGain / denom) * 10000) / 100 : null,
-      sampleCount: entry!.sampleCount ?? 0,
+      sampleCount: gate.sampleCount,
       rungLabel: entry!.rungLabel ?? null,
-      valueSource: entry!.valueSource === "observed" ? "observed" : "estimated",
+      valueSource: "observed",
       confidence: entry!.confidenceScore ?? 0,
       basis: basisSentenceFor(entry!, { family: input.family }),
     });
@@ -258,8 +365,7 @@ export function computeGradeArb(input: {
       ...base,
       rawValue,
       refusal: "no-graded-basis",
-      refusalReason:
-        "This card has no graded sales and no empirical ratio to project one — no graded outcome to show.",
+      refusalReason: describeGradedRefusal(refusedTiers),
     };
   }
 
