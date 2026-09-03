@@ -497,14 +497,6 @@ export interface PortfolioHolding {
    *  no-price guard at the store door. */
   reviewReason?: string | null;
   needsReview?: boolean | null;
-  /** CF-SELLER-INTELLIGENCE-SELL-WINDOW (Drew, 2026-09-02). Declared once,
-   *  below, next to the pricing envelope. Two concurrent PRs each added an
-   *  identical `sellSignal` block to this interface and the merge kept both,
-   *  which is a duplicate-identifier error that fails `next build` — the web
-   *  app has not compiled on main since. The surviving declaration is the
-   *  one with the fuller contract note (absence means "capability not live",
-   *  not "no signal"); the types were byte-identical, so nothing changes on
-   *  the wire. */
   /** CF-PRICING-ENVELOPE (Drew, 2026-07-31). Canonical pricing surface.
    *  Optional during the migration window — new endpoints emit it, older
    *  endpoints may still return only the legacy flat fields above.
@@ -3077,12 +3069,56 @@ export interface EbayListingPrepared {
     bestOfferMinPriceCents: number | null;
     description: string;
     titleSuggested: string;
+    /** CF-EBAY-SELL-LOOP: the "how this price was set" HTML the backend
+     *  will append at publish. "" when the price is not HobbyIQ's. Shown
+     *  read-only — publish re-derives it server-side, so editing it here
+     *  would have no effect on what a buyer sees. */
+    basisBlock?: string;
+    /** One-line helper text under the price field. */
+    priceSummary?: string;
   };
+  /** CF-EBAY-SELL-LOOP (Drew, 2026-09-02). Where the listing price came
+   *  from. The price is the engine's canonical projection with its rung
+   *  label — never a stored snapshot and never a number the client
+   *  computed. `labels` are disclosures that MUST be shown to the seller. */
+  pricing?: EbayDraftPricing;
+  /** The sell-window signal for this holding, when its trend supports one.
+   *  Context for the seller's timing — it never moved the price. */
+  sellSignal?: EbaySellSignal | null;
   validation: {
     requiredMissing: string[];
     warnings: string[];
     readyToPublish: boolean;
   };
+}
+
+export interface EbayDraftLabel {
+  code: "speculative" | "self-anchored" | "fallback-rung" | "low-confidence";
+  text: string;
+}
+
+export interface EbayDraftPricing {
+  status: "engine" | "engine-declined" | "no-identity" | "engine-error";
+  priceCents: number | null;
+  /** The rung from the closed fmvRung vocabulary. */
+  rungLabel: string | null;
+  /** True iff the number came from the exact (identity, grade) pool. */
+  exactPool: boolean;
+  confidence: number | null;
+  basis: string | null;
+  compCount: number;
+  range: { n: number; min: number; median: number; max: number } | null;
+  computedAt: string | null;
+  labels: EbayDraftLabel[];
+  declineReason: string | null;
+}
+
+export interface EbaySellSignal {
+  signal: "none" | "watch" | "sell-window" | "hold";
+  horizon: "none" | "days-7-14" | "days-14-30";
+  signalClass: "price" | "attention";
+  basis: string;
+  reason: string | null;
 }
 
 export interface EbayPublishResult {
