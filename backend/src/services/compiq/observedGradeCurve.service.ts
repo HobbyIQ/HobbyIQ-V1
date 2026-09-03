@@ -1733,10 +1733,24 @@ export async function buildObservedGradeCurve(
      *  ever have one id can omit it; the hiq:-prefix fallback below still
      *  covers them. */
     hobbyiqCardId?: string | null;
+    /** CF-OWN-PURCHASE-IS-A-SALE (Drew, 2026-09-03). The user this curve is
+     *  being built FOR, when there is one.
+     *
+     *  `ownSampleCount` on each tier is the basis disclosure the ruling asks
+     *  for: a PSA 10 tier priced off the viewer's own purchase must say so
+     *  rather than read as an anonymous market median. Ownership is
+     *  contribution (`contributorUserId === viewer`), so the count is
+     *  meaningless without a viewer — and a curve built with no viewer
+     *  (bulk reprice, cron, an anonymous read) correctly reports 0 on every
+     *  tier, because there is no "your" for the disclosure to mean.
+     *
+     *  Every route that serves a curve to a signed-in user threads this;
+     *  omitting it is a deliberate statement that the caller has no viewer. */
+    viewerUserId?: string | null;
   } = {},
 ): Promise<ObservedGradeCurve> {
   const entries = await Promise.all(
-    CANONICAL_GRADES.map((cfg) => aggregateGrade(cardId, cfg)),
+    CANONICAL_GRADES.map((cfg) => aggregateGrade(cardId, cfg, opts.viewerUserId ?? null)),
   );
   // Second pass — fills value/valueSource on non-observed grades,
   // preferring reference-price over Raw × multiplier when provided.
@@ -2354,6 +2368,11 @@ export interface BulkPerCardMeta {
 export async function buildObservedGradeCurvesBulk(
   cardIds: readonly string[],
   perCardMeta?: ReadonlyMap<string, BulkPerCardMeta>,
+  /** CF-OWN-PURCHASE-IS-A-SALE (Drew, 2026-09-03). The viewer these curves
+   *  are for, when a route serves a signed-in user. Threaded through to each
+   *  tier's ownSampleCount; omitted by bulk reprice / cron callers, which
+   *  correctly get 0 on every tier. */
+  viewerUserId?: string | null,
 ): Promise<Map<string, ObservedGradeCurve>> {
   const uniqueIds = Array.from(new Set(
     cardIds.filter((id) => typeof id === "string" && id.trim().length > 0)
@@ -2372,6 +2391,7 @@ export async function buildObservedGradeCurvesBulk(
           setName: meta.setName ?? null,
           sport: meta.sport ?? null,
           cardClass: meta.cardClass ?? "base",
+          viewerUserId: viewerUserId ?? null,
         });
         results.set(id, curve);
       } catch (err) {

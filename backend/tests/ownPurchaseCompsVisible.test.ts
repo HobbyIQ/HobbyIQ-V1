@@ -110,108 +110,47 @@ describe("isOwnComp: the D38 import shape is recognised as the user's own", () =
 });
 
 // ---------------------------------------------------------------------------
-// The curve: the PSA 10 tier INCLUDES the own row, and discloses n.
+// The curve and the comp list: SHAPE ONLY.
+//
+// These two surfaces are pinned for real elsewhere, and deliberately not
+// here:
+//
+//   - ownPurchaseCurveViewer.test.ts drives buildObservedGradeCurve and
+//     asserts the PSA 10 tier reports ownSampleCount 1.
+//   - ownPurchaseRoutePins.test.ts drives GET /cards/:cardId/recent-sales
+//     through the real app and asserts the own row survives a pool of 3
+//     independent sales, labelled.
+//
+// What lives here is only what this file can honestly test: the row shape
+// the D38 import writes, and the fields the tier matches on. An earlier
+// draft asserted on a local copy of the route wire mapping, which proved
+// nothing about the route -- restoring the exact bug left it green.
 // ---------------------------------------------------------------------------
 
-describe("grade curve: the PSA 10 tier includes the own purchase and discloses it", () => {
-  it("counts the own row in the tier and reports it in ownSampleCount", () => {
-    const rows = [
-      ownPurchaseRow(),
-      vendorRow(260, "2026-08-02T00:00:00.000Z"),
-      vendorRow(245, "2026-08-10T00:00:00.000Z"),
-    ];
-    // The tier basis, computed the way aggregateGrade does.
-    const sampleCount = rows.length;
-    const ownSampleCount = rows.filter((r) => isOwnComp(r, DREW)).length;
-    expect(sampleCount).toBe(3);
-    expect(ownSampleCount).toBe(1);
-    // n is DISCLOSED, not reduced: the own row is one of the three.
-    expect(ownSampleCount).toBeLessThan(sampleCount);
-  });
-
-  it("a tier whose ONLY sale is the own purchase still has n=1, not n=0", () => {
-    const rows = [ownPurchaseRow()];
-    expect(rows.length).toBe(1);
-    expect(rows.filter((r) => isOwnComp(r, DREW)).length).toBe(1);
-    // The tier is priceable and labelled -- not empty.
-    expect(rows.length).toBeGreaterThan(0);
-  });
-
-  it("the grade fields the import writes are the shape the tier matches on", () => {
+describe("the import row shape is what the curve and the comp list match on", () => {
+  it("carries the grade fields the tier matches on -- gradeCompany/gradeValue, not `grade`", () => {
     const row = ownPurchaseRow();
-    // The Verlander NaN/field lesson: gradeCompany/gradeValue, not `grade`.
     expect(row.gradeCompany).toBe("PSA");
     expect(row.gradeValue).toBe(10);
     expect(Number.isFinite(row.gradeValue)).toBe(true);
   });
-});
 
-// ---------------------------------------------------------------------------
-// The comp list: the row is present and LABELLED.
-// ---------------------------------------------------------------------------
-
-describe("comp list: the own purchase is shown, labelled 'your purchase'", () => {
-  /** The wire mapping recentSales.routes.ts performs, in miniature. */
-  function toWire(c: Record<string, unknown>, requesterId: string | null) {
-    const own = isOwnComp(
-      c as { source?: string | null; contributorUserId?: string | null },
-      requesterId,
-    );
-    return {
-      price: c.price as number,
-      source: c.source as string,
-      contributorUserId: (c.contributorUserId ?? null) as string | null,
-      isOwn: own,
-      ownLabel: own ? OWN_COMP_ROW_LABEL : null,
-    };
-  }
-
-  it("the own row survives to the wire and carries the label", () => {
-    const wire = toWire(ownPurchaseRow(), DREW);
-    expect(wire.isOwn).toBe(true);
-    expect(wire.ownLabel).toBe("your purchase");
+  it("carries the contributor the ownership predicate keys on", () => {
+    const row = ownPurchaseRow();
+    expect(row.contributorUserId).toBe(DREW);
+    expect(isOwnComp(row, DREW)).toBe(true);
+    expect(isOwnComp(row, SOMEONE_ELSE)).toBe(false);
   });
 
-  it("REGRESSION: with 3+ independent sales the own row USED to vanish; now it stays", () => {
-    const pool = [
-      ownPurchaseRow(),
-      vendorRow(260, "2026-08-02T00:00:00.000Z"),
-      vendorRow(245, "2026-08-10T00:00:00.000Z"),
-      vendorRow(255, "2026-08-14T00:00:00.000Z"),
-    ];
-    // Old path: the route passed excludeContributorUserId, and the store
-    // dropped self-comps whenever >= 3 others survived.
-    const others = pool.filter((r) => r.contributorUserId !== DREW);
-    expect(others.length).toBeGreaterThanOrEqual(3);
-    expect(others).toHaveLength(3);   // the own row was gone from the list
-    // New path: every row is shown, the own one labelled.
-    const shown = pool.map((r) => toWire(r, DREW));
-    expect(shown).toHaveLength(4);
-    expect(shown.filter((s) => s.isOwn)).toHaveLength(1);
+  it("the label wording lives in one place", () => {
+    expect(OWN_COMP_ROW_LABEL).toBe("your purchase");
+    expect(OWN_COMP_ANCHOR_LABEL).toBe("anchored by your own purchase");
   });
 
-  it("another user's row is shown UNLABELLED -- it is an ordinary comp", () => {
-    const wire = toWire(ownPurchaseRow({ contributorUserId: SOMEONE_ELSE }), DREW);
-    expect(wire.isOwn).toBe(false);
-    expect(wire.ownLabel).toBeNull();
-  });
-
-  it("an anonymous read labels nothing", () => {
-    const wire = toWire(ownPurchaseRow(), null);
-    expect(wire.isOwn).toBe(false);
-    expect(wire.ownLabel).toBeNull();
-  });
-
-  it("the tier summary counts the own row in n and discloses ownCount", () => {
-    const pool = [
-      ownPurchaseRow(),
-      vendorRow(260, "2026-08-02T00:00:00.000Z"),
-      vendorRow(245, "2026-08-10T00:00:00.000Z"),
-    ].map((r) => toWire(r, DREW));
-    const count = pool.length;
-    const ownCount = pool.filter((s) => s.isOwn).length;
-    expect(count).toBe(3);
-    expect(ownCount).toBe(1);
+  it("a vendor row is an independent sample, whoever is looking", () => {
+    const v = vendorRow(260, "2026-08-02T00:00:00.000Z");
+    expect(isOwnComp(v, DREW)).toBe(false);
+    expect(isOwnComp(v, SOMEONE_ELSE)).toBe(false);
   });
 });
 
