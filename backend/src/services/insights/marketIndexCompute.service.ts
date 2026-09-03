@@ -15,6 +15,7 @@ import {
   MIN_BASKET_SIZE,
   ELIGIBILITY_WINDOW_DAYS,
   VALUE_WINDOW_DAYS,
+  LEAD_IN_DAYS,
   SERIES_DAYS,
   type BasketMember,
   type IndexBasketDoc,
@@ -222,21 +223,31 @@ export async function computeSeriesForSport(
 
   // One pool read covers the whole span plus the lead-in. Membership can
   // change across an epoch roll, so this is NOT filtered to one basket.
-  const readFrom = addDays(fromDate, -VALUE_WINDOW_DAYS);
+  const readFrom = addDays(fromDate, -LEAD_IN_DAYS);
   const readTo = addDays(toDate, 1);
   const allRows = await fetchSales(soldComps, sport, readFrom, readTo);
 
   // Persisted carry-forward: the full history, not a 14-day lead-in.
   const carryForward = await loadCarryForward(series, sport);
-  // Still seed from the lead-in so a first run (empty members doc) has
-  // day-one values; a stored value is not overwritten by the seed.
-  const seed = groupByCard(allRows.filter((r) => r.soldAt < fromDate && memberSet.has(r.cardId)));
-  for (const id of memberIds) {
-    const agg = seed.get(id);
-    if (agg && agg.values.length > 0) {
-      const v = agg.values[agg.values.length - 1];
-      if (v > 0 && !carryForward.has(id)) carryForward.set(id, { value: v, asOf: fromDate });
-    }
+
+  // SEED THE WALK (2026-09-03). Every row before day one, grouped per
+  // card: each member's last observed value becomes its day-one carry.
+  //
+  // Seeded for EVERY card in the lead-in, not just the first epoch's
+  // members, because the walk re-resolves its basket as epochs roll and
+  // a later epoch's members need a day-one value too. Filtering the seed
+  // to `memberSet` is what left the 2026-Q1 and Q2 stretches unseeded on
+  // the 2026-09-03 rebuild: the stored carry map was keyed to 2026-Q3's
+  // basket, so the early days found almost nothing and collapsed below
+  // the floor.
+  //
+  // A STORED value still wins: it is the full history, and the lead-in
+  // is only a 90-day view. The seed fills gaps, it does not overwrite.
+  const seed = groupByCard(allRows.filter((r) => r.soldAt < fromDate));
+  for (const [cardId, agg] of seed) {
+    if (carryForward.has(cardId)) continue;
+    const v = agg.values[agg.values.length - 1];
+    if (v > 0) carryForward.set(cardId, { value: v, asOf: fromDate });
   }
 
   let pointsWritten = 0;
@@ -309,27 +320,32 @@ export async function computeSeriesForSport(
 
     if (!decision.publish) {
       // Withheld: carry the prior level, flagged stale, with the reason.
-      // Never publish the fabricated level - and where there is no prior
-      // level to carry, write nothing rather than invent one.
+      // Never publish the fabricated level.
+      //
+      // NO PRIOR LEVEL (2026-09-03): the point is still WRITTEN, with no
+      // `level` at all and reason `series_start`. Skipping the upsert -
+      // what this did before - leaves whatever doc already occupies
+      // `point::<sport>::<date>` standing untouched, and on the
+      // 2026-09-03 rebuild that was 203 pre-C-1 docs: no usedWeight, not
+      // stale, carrying fabricated levels (hockey 553.89, pokemon 15.72)
+      // that the run believed it had withheld. A recompute OWNS every id
+      // in its span; the levelless doc is how it says "nothing here".
       pointsWithheld++;
-      if (priorLevel == null) continue;
-      const doc: IndexPointDoc = {
-        ...base,
-        level: priorLevel,
-        stale: true,
-        withheldReason: decision.withheldReason,
-      };
+      const doc: IndexPointDoc = priorLevel == null
+        ? { ...base, stale: true, withheldReason: "series_start" }
+        : { ...base, level: priorLevel, stale: true, withheldReason: decision.withheldReason };
       await series.items.upsert(doc);
       lastDate = day;
       if (!firstDate) firstDate = day;
       continue;
     }
 
-    const doc: IndexPointDoc = { ...base, level: Math.round(decision.level * 100) / 100 };
+    const level = Math.round(decision.level * 100) / 100;
+    const doc: IndexPointDoc = { ...base, level };
     await series.items.upsert(doc);
     pointsWritten++;
-    priorLevel = doc.level;
-    latestLevel = doc.level;
+    priorLevel = level;
+    latestLevel = level;
     latestUsedWeight = base.usedWeight;
     if (!firstDate) firstDate = day;
     lastDate = day;

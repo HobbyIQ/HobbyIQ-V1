@@ -346,13 +346,32 @@ describe("PIN-1: report mode performs zero writes over the stray shape", () => {
     expect(series.deleted).toEqual([]);
   });
 
-  it("the script calls purgeStrays ONLY under apply", () => {
+  it("EVERY purgeStrays call sits under apply", () => {
     // The guard is structural: a purge outside `if (apply ...)` is the
     // defect this PR closes, re-introduced.
+    //
+    // There are two delete lanes now - the stray BASKETS, and the points
+    // dated before the recompute span (2026-09-03: the four
+    // point::<sport>::2026-03-07 docs the walk can never reach). Counting
+    // call sites would red on the second lane merely for existing, so the
+    // pin asserts the property that actually matters: each call is inside
+    // an `if (apply` block, and none stands outside one.
     expect(script).toContain("if (apply && strays.length > 0) {");
     expect(script).toContain("purge = await purgeStrays(series, strays);");
-    const calls = script.match(/await purgeStrays\(/g) ?? [];
-    expect(calls).toHaveLength(1);
+    expect(script).toContain("prePurge = await purgeStrays(series, prePoints);");
+
+    const lines = script.split("\n");
+    const callLines = lines
+      .map((line, i) => ({ line, i }))
+      .filter((x) => /await purgeStrays\(/.test(x.line));
+    expect(callLines.length).toBeGreaterThanOrEqual(2);
+    for (const { i } of callLines) {
+      // The nearest preceding control line must be an apply gate. Walking
+      // back a couple of lines is enough: both lanes gate immediately
+      // above the call.
+      const preceding = lines.slice(Math.max(0, i - 3), i).join("\n");
+      expect(preceding).toMatch(/if \(apply/);
+    }
   });
 
   it("a report that somehow deleted something FAILS the run", () => {

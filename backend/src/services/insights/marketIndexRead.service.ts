@@ -90,16 +90,22 @@ async function readSeries(sport: string, windowDays: number): Promise<SportIndex
         { name: "@from", value: from },
       ],
     });
-    const rows: IndexPointDoc[] = [];
+    const all: IndexPointDoc[] = [];
     while (iter.hasMoreResults()) {
       const { resources } = await iter.fetchNext();
-      rows.push(...resources);
+      all.push(...resources);
     }
+    // A `series_start` withhold carries NO level: it is a day below the
+    // floor with no prior level to carry, written only so the recompute
+    // owns its id. There is nothing to plot, so it is dropped here and
+    // the tile shows nothing for those days rather than a gap-filling
+    // zero (which would print a -100% change on the very first point).
+    const rows = all.filter((r) => Number.isFinite(r.level) && (r.level as number) > 0);
     if (rows.length === 0) return empty;
 
     const series: IndexSeriesPoint[] = rows.map((r) => ({
       date: r.date,
-      level: r.level,
+      level: r.level as number,
       freshMembers: r.freshMembers,
       usedWeight: r.usedWeight,
       ...(r.stale ? { stale: true, withheldReason: r.withheldReason } : {}),
