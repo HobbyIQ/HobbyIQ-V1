@@ -70,6 +70,9 @@ function fmvResult(over: Partial<CanonicalFmvResult> = {}): CanonicalFmvResult {
     confidence: 0.82,
     provenance: {
       summary: "6 same-parallel comps + 4%/mo player momentum",
+      // 6 comps priced it; `comps` carries the display sample the engine
+      // truncates to. compCount is the pool, comps.length is the sample.
+      compCount: 6,
       comps: [comp(), comp({ price: 750 })],
       trendPctPerMonth: 4,
       multipliers: {},
@@ -108,7 +111,8 @@ describe("draft price comes from the engine, labelled", () => {
     expect(pricing.exactPool).toBe(true);
     expect(pricing.confidence).toBe(0.82);
     expect(pricing.basis).toBe("6 same-parallel comps + 4%/mo player momentum");
-    expect(pricing.compCount).toBe(2);
+    // The POOL that priced it (6), not the 2-row display sample.
+    expect(pricing.compCount).toBe(6);
     expect(pricing.range).toEqual({ n: 6, min: 640, median: 715, max: 810 });
     // A clean exact-pool answer needs no disclosure.
     expect(pricing.labels).toEqual([]);
@@ -229,6 +233,9 @@ describe("speculative and self-anchored values carry their labels", () => {
       fmvResult({
         provenance: {
           summary: "1 self-comp",
+          // The whole pool is that one self-comp — pool and sample agree,
+          // so "the only sale" is literally true.
+          compCount: 1,
           comps: [comp({ source: "holding::abc-123" })],
           trendPctPerMonth: null,
           multipliers: {},
@@ -248,6 +255,7 @@ describe("speculative and self-anchored values carry their labels", () => {
       fmvResult({
         provenance: {
           summary: "mixed",
+          compCount: 3,
           comps: [comp({ verifiedByUser: true }), comp(), comp()],
           trendPctPerMonth: null,
           multipliers: {},
@@ -294,7 +302,8 @@ describe("the basis block", () => {
     expect(block).toContain("$729.50");
     expect(block).toContain("projected next sale");
     expect(block).toContain("the sales trend for this exact card and grade");
-    expect(block).toContain("2 sales");
+    // The pool that priced it (6), not the 2-row display sample.
+    expect(block).toContain("6 sales");
     expect(block).toContain("$640.00");
     expect(block).toContain("$810.00");
     expect(block).toContain("Projection, not a guarantee");
@@ -309,6 +318,7 @@ describe("the basis block", () => {
         confidence: 0.15,
         provenance: {
           summary: "cold pool",
+          compCount: 1,
           comps: [comp({ source: "holding::abc" })],
           trendPctPerMonth: null,
           multipliers: {},
@@ -396,5 +406,112 @@ describe("sell-signal context", () => {
     const { sellSignal } = await composeSellDraftPricing(holding(), { computeFmv: e.computeFmv });
     expect(sellSignal!.signal).toBe("none");
     expect(sellSignal!.reason).toBe("no-trend-data");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PIN — the count a buyer reads is the POOL, never the display sample
+// ---------------------------------------------------------------------------
+//
+// CF-COMP-COUNT-IS-THE-POOL (Drew, 2026-09-02). canonicalFmv.service.ts
+// truncates `provenance.comps` to the first 8-10 rows at every rung that
+// has comps — it is a display sample for the transparency sheet, not the
+// evidence pool. Reading its length told a buyer "Based on 8 sales" for a
+// card with 726 same-parallel comps, and "1 of 8 are your own" when the
+// truth was 1 of 15. Both numbers reach listing text a buyer acts on, so
+// both must come from the engine's own pool total.
+//
+// The fixture is exactly that shape: a pool of 15 with a sample of 8.
+
+describe("the sale count is the evidence pool, not the truncated sample", () => {
+  /** 8 sampled rows out of a 15-comp pool — one of them the seller's own. */
+  const truncated = () =>
+    fmvResult({
+      provenance: {
+        summary: "15 same-parallel comps + 4%/mo player momentum",
+        compCount: 15,
+        comps: [
+          comp({ source: "holding::mine-1" }),
+          comp({ price: 705 }),
+          comp({ price: 710 }),
+          comp({ price: 715 }),
+          comp({ price: 720 }),
+          comp({ price: 725 }),
+          comp({ price: 730 }),
+          comp({ price: 735 }),
+        ],
+        trendPctPerMonth: 4,
+        multipliers: {},
+      },
+    });
+
+  it("reports the pool total, not the sample length", async () => {
+    const e = engine(truncated());
+    const { pricing } = await composeSellDraftPricing(holding(), { computeFmv: e.computeFmv });
+
+    // The sample really is 8 rows — that is the shape being defended against.
+    expect(truncated().provenance.comps).toHaveLength(8);
+    expect(pricing.compCount).toBe(15);
+    expect(pricing.compCount).not.toBe(8);
+  });
+
+  it("writes the pool total into the buyer-facing basis block", async () => {
+    const e = engine(truncated());
+    const { pricing } = await composeSellDraftPricing(holding(), { computeFmv: e.computeFmv });
+    const block = buildBasisBlock(pricing);
+
+    expect(block).toContain("Based on 15 sales");
+    expect(block).not.toContain("Based on 8 sales");
+  });
+
+  it("states the self-anchored ratio against the same denominator", async () => {
+    const e = engine(truncated());
+    const { pricing } = await composeSellDraftPricing(holding(), { computeFmv: e.computeFmv });
+
+    const self = pricing.labels.find((l) => l.code === "self-anchored");
+    expect(self).toBeDefined();
+    expect(self!.text).toContain("1 of 15");
+    expect(self!.text).not.toContain("1 of 8");
+    // And it reaches the text a buyer actually reads.
+    expect(buildBasisBlock(pricing)).toContain("1 of 15");
+  });
+
+  it("does not call a sampled pool wholly self-anchored", async () => {
+    // Every SAMPLED row is the seller's own, but the pool is 15. Saying
+    // "the only sale behind this estimate is your own" would be false.
+    const e = engine(
+      fmvResult({
+        provenance: {
+          summary: "15 comps",
+          compCount: 15,
+          comps: [comp({ source: "holding::a" }), comp({ source: "holding::b" })],
+          trendPctPerMonth: null,
+          multipliers: {},
+        },
+      }),
+    );
+    const { pricing } = await composeSellDraftPricing(holding(), { computeFmv: e.computeFmv });
+
+    const self = pricing.labels.find((l) => l.code === "self-anchored");
+    expect(self!.text).toContain("2 of 15");
+    expect(self!.text).not.toContain("the only sale");
+  });
+
+  it("falls back to the sample only when the engine reports no count", async () => {
+    // Results minted before compCount existed still render a number, and
+    // it can only understate the pool, never overstate it.
+    const e = engine(
+      fmvResult({
+        provenance: {
+          summary: "legacy result",
+          compCount: null,
+          comps: [comp(), comp()],
+          trendPctPerMonth: null,
+          multipliers: {},
+        },
+      }),
+    );
+    const { pricing } = await composeSellDraftPricing(holding(), { computeFmv: e.computeFmv });
+    expect(pricing.compCount).toBe(2);
   });
 });

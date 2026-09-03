@@ -197,6 +197,11 @@ export function toCanonicalFmvResponse(
     confidence: v.confidence,
     provenance: {
       summary: v.basis,
+      // CF-COMP-COUNT-IS-THE-POOL (Drew, 2026-09-02). `compsUsed` is the
+      // tier's pool size (see Valuation.compsUsed); `comps` below is the
+      // truncated display sample. A reader is told the pool, never the
+      // sample length.
+      compCount: v.compsUsed,
       comps: v.sales.slice(0, 8).map((s) => ({
         price: s.price,
         soldAt: s.soldAt,

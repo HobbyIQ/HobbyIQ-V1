@@ -125,7 +125,11 @@ export interface SellDraftPricing {
   confidence: number | null;
   /** The engine's own provenance sentence. Never rewritten here. */
   basis: string | null;
-  /** How many comps fed the projection. */
+  /** How many comps fed the projection — the EVIDENCE POOL total from
+   *  the engine (`provenance.compCount`), not the length of the display
+   *  sample. `provenance.comps` is truncated to 8-10 rows by
+   *  canonicalFmv.service.ts, so its length would understate a 726-comp
+   *  pool as "8 sales" in buyer-facing listing text. */
   compCount: number;
   /** Observed range behind the point projection, when the engine gave one. */
   range: { n: number; min: number; median: number; max: number } | null;
@@ -152,6 +156,32 @@ export interface SellDraftPriceContext {
  *  window module's MIN_CONFIDENCE floor — the same line the rest of the
  *  seller surface already treats as "thin". */
 export const DRAFT_LOW_CONFIDENCE = 0.35;
+
+/**
+ * The number of sales a reader is entitled to hear, for THIS result.
+ *
+ * CF-COMP-COUNT-IS-THE-POOL (Drew, 2026-09-02). The engine reports the
+ * evidence pool on `provenance.compCount`; `provenance.comps` is only a
+ * display sample, truncated to the first 8-10 rows
+ * (canonicalFmv.service.ts slices it at every rung that has comps). A
+ * card with 726 same-parallel comps would otherwise tell a buyer "Based
+ * on 8 sales", and a self-anchored draft would say "1 of 8" when the
+ * truth is "1 of 15".
+ *
+ * Rungs 4-5 anchor on a family median rather than a comp pool and report
+ * `compCount: null` — those drafts say nothing about sale counts, which
+ * is why null degrades to the sample length (itself empty there, so the
+ * "Based on N sales" line is correctly suppressed). The sample is the
+ * fallback for results minted before this field existed, and it can only
+ * understate, never overstate.
+ */
+function evidenceCount(result: CanonicalFmvResult): number {
+  const total = result.provenance?.compCount;
+  if (typeof total === "number" && Number.isFinite(total) && total >= 0) {
+    return Math.floor(total);
+  }
+  return (result.provenance?.comps ?? []).length;
+}
 
 /** Comp sources that mean "this sale was the seller's own transaction".
  *  soldCompsStore keys a holding-derived comp `holding::<id>`; an import
@@ -183,16 +213,24 @@ export function labelsForResult(result: CanonicalFmvResult): SellDraftLabel[] {
     });
   }
 
+  // `provenance.comps` is a DISPLAY SAMPLE (truncated to 8-10 by
+  // canonicalFmv.service.ts). The honest denominator is the engine's
+  // own pool total; fall back to the sample only when the rung reports
+  // no count at all.
   const comps = result.provenance?.comps ?? [];
+  const poolTotal = evidenceCount(result);
   const selfComps = comps.filter(isSelfComp);
   if (selfComps.length > 0) {
-    const allSelf = selfComps.length === comps.length;
+    // Self-comps are counted in the sample but stated against the pool,
+    // so a truncated sample can only understate the ratio, never claim
+    // more of the pool is self-anchored than actually is.
+    const allSelf = selfComps.length === poolTotal;
     labels.push({
       code: "self-anchored",
       text: allSelf
         ? "Self-anchored: the only sale behind this estimate is your own purchase " +
           "of this card. No independent sale supports it yet."
-        : `Partly self-anchored: ${selfComps.length} of ${comps.length} sales behind ` +
+        : `Partly self-anchored: ${selfComps.length} of ${poolTotal} sales behind ` +
           "this estimate are your own.",
     });
   }
@@ -322,7 +360,6 @@ export async function composeSellDraftPricing(
     return ctx;
   }
 
-  const comps = result.provenance?.comps ?? [];
   const range = result.recentRange
     ? {
         n: result.recentRange.n,
@@ -342,7 +379,7 @@ export async function composeSellDraftPricing(
       exactPool: isExactPoolRung(result.rungLabel),
       confidence: typeof result.confidence === "number" ? result.confidence : null,
       basis: result.provenance?.summary ?? null,
-      compCount: comps.length,
+      compCount: evidenceCount(result),
       range,
       computedAt: result.computedAt ?? null,
       labels: labelsForResult(result),

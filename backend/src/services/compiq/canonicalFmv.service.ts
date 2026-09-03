@@ -124,7 +124,16 @@ export interface CanonicalFmvProvenance {
    *  user comps + 8%/mo player momentum"). Included in log events + iOS
    *  transparency sheet. */
   summary: string;
-  /** Comps that fed the projection (empty for rungs 4-5). */
+  /** CF-COMP-COUNT-IS-THE-POOL (Drew, 2026-09-02). How many comps
+   *  actually fed the projection. `comps` below is a DISPLAY SAMPLE,
+   *  truncated to the first 8-10 rows for the transparency sheet and
+   *  the log event — its length is a rendering artifact, never the
+   *  evidence count. Any surface that tells a reader "based on N sales"
+   *  MUST read this field. Null when the rung produced no comp pool at
+   *  all (rungs 4-5 anchor on a family median, not on sales). */
+  compCount: number | null;
+  /** DISPLAY SAMPLE of the comps that fed the projection — truncated
+   *  (empty for rungs 4-5). Use `compCount` for the pool total. */
   comps: Array<{
     price: number;
     soldAt: string;
@@ -256,7 +265,7 @@ const NULL_RESULT = (reason: string): CanonicalFmvResult => ({
   method: "no-basis",
   rungLabel: "no-basis",
   confidence: 0,
-  provenance: { summary: reason, comps: [], trendPctPerMonth: null, multipliers: {} },
+  provenance: { summary: reason, compCount: null, comps: [], trendPctPerMonth: null, multipliers: {} },
   computedAt: new Date().toISOString(),
 });
 
@@ -503,6 +512,7 @@ async function computeCanonicalFmvUncached(
           confidence: t.tier === "card" ? 0.4 : 0.25,
           provenance: {
             summary: `tiered-momentum(${t.tier}): baselineMedian=${t.baseline.medianPrice ?? "null"}, recentMedian=${t.compsWindow.medianPrice ?? "null"}, ratio=${t.momentumRatio?.toFixed(3) ?? "null"}, n_recent=${t.compsWindow.n}, n_baseline=${t.baseline.n}${t.attribution.playerFallbackRowsIncluded > 0 ? `, incl_pf=${t.attribution.playerFallbackRowsIncluded}` : ""}`,
+            compCount: null,
             comps: [],
             trendPctPerMonth,
             multipliers: {},
@@ -1225,6 +1235,7 @@ async function tryDirectComp(
     confidence: Math.min(0.95, projection.confidence + 0.05),
     provenance: {
       summary: `${fresh.length} same-parallel user comp${fresh.length === 1 ? "" : "s"} · ${projection.method === "linear-regression" ? "regression" : "anchor"} ${actualSlopePct >= 0 ? "+" : ""}${actualSlopePct.toFixed(1)}%/mo`,
+      compCount: fresh.length,
       comps: fresh.slice(0, 8).map((c) => ({
         price: c.price,
         soldAt: c.soldAt,
@@ -1342,6 +1353,7 @@ async function tryCrossParallel(
       summary: `${normalized.length} sibling-parallel comp${normalized.length === 1 ? "" : "s"} × parallel ratio + ${
         trendPctPerMonth === null ? "no trend" : `${trendPctPerMonth.toFixed(1)}%/mo trend`
       }`,
+      compCount: normalized.length,
       comps: normalized.slice(0, 8).map((n) => ({
         price: n.price,
         soldAt: n.soldAt,
@@ -1508,6 +1520,7 @@ async function tryNeighborParallel(
         summary: `${normalized.length} neighbor-year comp${normalized.length === 1 ? "" : "s"} for ${input.parallel} × year-delta + ${
           trendPctPerMonth === null ? "no trend" : `${trendPctPerMonth.toFixed(1)}%/mo trend`
         }`,
+        compCount: normalized.length,
         comps: normalized.slice(0, 8).map((n) => ({
           price: n.price,
           soldAt: n.soldDate,
@@ -1663,6 +1676,7 @@ async function trySiblingParallel(
       confidence: 0.35,
       provenance: {
         summary: `sibling-parallel estimate from ${variantMedians.length} sibling variants of #${input.cardNumber} in ${input.cardYear} ${productToken}`,
+        compCount: variantMedians.length,
         comps: variantMedians.slice(0, 10).map((v) => ({
           price: v.median,
           soldAt: new Date().toISOString(),
@@ -1903,6 +1917,7 @@ async function tryHotRawSameCardAnchor(
     confidence: anchorConfidence,
     provenance: {
       summary: `hot-Raw anchor: ${priced.length} Raw same-card comp${priced.length === 1 ? "" : "s"} in ${HOT_RAW_WINDOW_DAYS}d (range $${Math.min(...prices).toFixed(0)}–$${Math.max(...prices).toFixed(0)}, ${slopeLabel})${trendCapFired ? `, projected Raw ${rawProjection.nextSaleValue.toFixed(0)} → capped at $${rawAnchorCapped.toFixed(0)}` : `, projected Raw $${rawAnchorCapped.toFixed(2)}`}, × ${effectiveMultiplier.toFixed(2)} ${gradeTierLabel_}${multiplierCapFired ? ` (${calibrationSource === "byTier" ? "empirical per-tier" : "empirical company × subtier"} ${gradeMultiplier.toFixed(2)} capped by value-tier ceiling)` : ` ${calibrationSource === "byTier" ? "empirical per-tier" : "empirical company × subtier"}`} → $${gradedFmv.toFixed(2)}.`,
+      compCount: priced.length,
       comps: priced.slice(0, 10).map((c) => ({
         price: c.price,
         soldAt: c.soldAt,
@@ -2042,6 +2057,7 @@ async function tryFamilyBaseline(
     confidence,
     provenance: {
       summary: `guestimate: ${familyLabel} baseline × player-${playerTier} × parallel × ${isAuto ? "auto" : "no-auto"} × ${gradeTier} × era + ${monthlyPct.toFixed(1)}%/mo trend (${g.confidence} tier, ${g.hops} hops)`,
+      compCount: null,
       comps: [],
       trendPctPerMonth,
       multipliers: {
@@ -2117,6 +2133,7 @@ async function tryProductTier(
     confidence: 0.18,
     provenance: {
       summary: `product-tier fallback: ${input.product ?? "generic"} × auto${isAuto ? "" : "-not"} × parallel × grade × era + ${monthlyPct.toFixed(1)}%/mo trend`,
+      compCount: null,
       comps: [],
       trendPctPerMonth,
       multipliers: {
