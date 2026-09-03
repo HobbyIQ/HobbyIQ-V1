@@ -2218,6 +2218,58 @@ export async function fetchGradeAnalysis(holdingId: string): Promise<GradeAnalys
   );
 }
 
+// ─── Grade arbitrage (CF-GRADE-ARB, 2026-09-02) ───────────────────
+//
+// Conditional value of a RAW holding at each graded tier, from the
+// card's OWN empirical grade curve, minus a disclosed grading-cost
+// assumption. Refuses (available:false) when there is no empirical
+// basis — the UI must render `refusalReason`, never a guess.
+
+export type GradeArbRefusal = "not-raw" | "no-raw-basis" | "no-graded-basis";
+
+export interface GradeArbTier {
+  tier: string;
+  grader: string;
+  gradedValue: number;
+  netGain: number;
+  netGainPct: number | null;
+  sampleCount: number;
+  rungLabel: string | null;
+  /** Always "observed": the surface refuses any tier that is not real
+   *  sales of this card at this tier, with at least 3 of them. */
+  valueSource: "observed";
+  confidence: number;
+  basis: string;
+}
+
+export interface GradeArbResult {
+  available: boolean;
+  refusal: GradeArbRefusal | null;
+  refusalReason: string | null;
+  rawValue: number | null;
+  gradingCostUsd: number;
+  tiers: GradeArbTier[];
+  bestTier: GradeArbTier | null;
+  /** The condition caveat. Always present — render it with any number. */
+  disclosure: string;
+}
+
+export interface GradeArbResponse {
+  holdingId: string;
+  player: string | null;
+  year: number | null;
+  cardNumber: string | null;
+  set: string | null;
+  variant: string | null;
+  gradeArb: GradeArbResult;
+}
+
+export async function fetchGradeArb(holdingId: string): Promise<GradeArbResponse> {
+  return await request<GradeArbResponse>(
+    `/api/portfolio/holdings/${encodeURIComponent(holdingId)}/grade-arb`,
+  );
+}
+
 export interface PurchaseEntry {
   id: string;
   userId: string;
