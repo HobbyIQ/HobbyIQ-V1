@@ -302,6 +302,20 @@ export interface PortfolioHolding {
   // RungDeclaration, so a null rung is a STATEMENT carrying its cause rather
   // than an absence a reader has to guess at. Null when a rung was named.
   fmvRungAbsentReason?: string | null;
+  // CF-A-RETAINED-VALUE-IS-STILL-A-WRITE (C-8, 2026-09-03). When a reprice
+  // pass touches a holding but does NOT re-derive its number — the
+  // confidence-gated skip branch, which freshens `lastUpdated` and carries the
+  // prior value, rung and meta forward — it says so here rather than leaving
+  // the row indistinguishable from one that was genuinely repriced at that
+  // timestamp. Holding 277b05a3 (Cal Ripken Jr.) was the live proof: a 15:50Z
+  // price wearing a 21:20Z `lastUpdated` and no `valueSource` at all, because
+  // the branch that touched it last declared nothing.
+  //
+  // `fmvRetainedAt` is the pass that KEPT the number; `sourceVendorUpdatedAt`
+  // remains the pass that DERIVED it. The two differing is the honest record
+  // of a retention, and consumers can tell a fresh number from a kept one.
+  fmvRetainedReason?: string | null;
+  fmvRetainedAt?: string | null;
   // CF-NEXT-SALE-PREDICTION-LAYER (design d531939) — forward-looking
   // predicted price (FMV × TrendIQ-derived bounded factor). Mechanism
   // attribution distinguishes trendiq-projection (success path) from
