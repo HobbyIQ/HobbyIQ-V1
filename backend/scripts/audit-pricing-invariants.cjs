@@ -12,13 +12,17 @@
  * doc) and an env-capped sample of top-traded cards, it INDEPENDENTLY re-derives
  * the value — reading the identity, querying the exact pool directly, applying
  * the doctrine ladder — WITHOUT calling the engine's valuation code. Then it
- * asserts four invariants (see scripts/lib/pricing-invariants.cjs):
+ * asserts five invariants (see scripts/lib/pricing-invariants.cjs):
  *
- *   BASIS-IDENTITY  every cited comp shares product+parallel+printRun+grade,
- *                   or the persisted rung declares the transition
- *   RUNG-HONESTY    an exact-pool rung is backed by an exact pool that exists
- *   SUBSTITUTION    persisted vs shadow value within 25%
- *   DETERMINISM     unchanged provenance must not produce a moved value
+ *   BASIS-IDENTITY     every cited comp shares product+parallel+printRun+grade,
+ *                      or the persisted rung declares the transition
+ *   RUNG-HONESTY       an exact-pool rung is backed by an exact pool that exists
+ *   SUBSTITUTION       persisted vs shadow value within 25%
+ *   DETERMINISM        unchanged provenance must not produce a moved value
+ *   IDENTITY-COHERENCE no row the pool read reached contradicts ITSELF -- its
+ *                      cardId and hobbyiqCardId naming different cards, which
+ *                      the OR-query turns into one sale pricing two cards.
+ *                      Vendor-partition rows are exempt by design (#1650).
  *
  * FINDINGS ARE DATA, NOT FAILURES. Report mode exits 0 whatever it finds — a
  * red X on this job means the AUDITOR broke, never that the portfolio has a

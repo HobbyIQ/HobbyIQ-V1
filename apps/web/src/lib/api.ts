@@ -4,7 +4,10 @@
 // in localStorage (matches how iOS keeps its session token via
 // Keychain — same wire contract).
 
-const API_BASE =
+// Exported so a caller that cannot use `request()` — funnelTelemetry.ts
+// needs `keepalive` and a swallowed failure — still points at the same
+// origin rather than resolving the base a second, drifting way.
+export const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE ??
   "https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net";
 
@@ -56,6 +59,18 @@ export interface ApiError {
   status: number;
   code?: string;
   message: string;
+  /**
+   * CF-PRO-SELLER-WORKSPACE (2026-09-02). The tier the backend says this
+   * call needs, lifted off the 402 body that `requireEntitlement` writes
+   * ({ error: "subscription_required", requiredTier, currentTier, feature }).
+   * Only present on entitlement rejections. Callers that render an upsell
+   * can name the actual tier instead of guessing "Pro Seller" — the matrix
+   * in backend/src/config/entitlements.ts is the one authority on which
+   * tier owns which feature, and it has moved before.
+   */
+  requiredTier?: string | null;
+  /** The gated feature key from the same 402 body, for telemetry/debugging. */
+  feature?: string | null;
 }
 
 async function request<T>(
@@ -108,6 +123,10 @@ async function request<T>(
       status: res.status,
       code: body.error ?? undefined,
       message: body.error ?? body.reason ?? res.statusText,
+      // Additive: absent on every response that does not carry them, so
+      // existing callers that only read status/code/message are unaffected.
+      requiredTier: typeof body.requiredTier === "string" ? body.requiredTier : undefined,
+      feature: typeof body.feature === "string" ? body.feature : undefined,
     };
     throw err;
   }
@@ -485,6 +504,34 @@ export interface PortfolioHolding {
    *  and fall back to the flats when null. See backend
    *  responseAssembly.ts for the source contract. */
   pricing?: PricingEnvelope | null;
+  /** The sell-window timing call, derived server-side from the holding's own
+   *  comp-pool trend against the player index. A TIMING signal, never a
+   *  valuation — it says when the market may be ahead of this card, and the
+   *  price it quotes is still the canonical FMV computed elsewhere.
+   *
+   *  Optional by design: this field arrives with the sell-window backend
+   *  (open PR at time of writing), and until that deploys /api/portfolio
+   *  answers 200 with the field simply absent. Consumers MUST treat absence
+   *  as "capability not live" and render nothing, rather than as "no signal"
+   *  — the two look identical on the wire but mean different things to a
+   *  seller. The Pro Seller workspace does exactly that. */
+  sellSignal?: {
+    signal: "none" | "watch" | "sell-window" | "hold";
+    horizon: "none" | "days-7-14" | "days-14-30";
+    signalClass: "price" | "attention";
+    /** One sentence with the numbers quoted. Show it verbatim — it is the
+     *  basis, and paraphrasing it would drop the evidence. */
+    basis: string;
+    reason?: string | null;
+    measures?: {
+      playerIndexPct?: number | null;
+      ownPoolPct?: number | null;
+      divergencePct?: number | null;
+      ownPoolSales?: number | null;
+      trendAgeDays?: number | null;
+      confidence?: number | null;
+    } | null;
+  } | null;
 }
 
 // CF-PRICING-ENVELOPE (2026-07-31). Envelope-first valuation status
@@ -1124,8 +1171,35 @@ export interface EntitlementsMeResponse {
   success: boolean;
   plan: "free" | "collector" | "investor" | "pro_seller" | string;
   entitlementOverride?: "free" | "collector" | "investor" | "pro_seller" | null;
-  features?: Record<string, boolean>;
+  /**
+   * The granted feature keys.
+   *
+   * CF-PRO-SELLER-WORKSPACE (2026-09-02). The backend sends an ARRAY —
+   * `resolveEntitlementsFor()` returns `Array.from(features).sort()`, so the
+   * wire shape is `["predictions", "watchlist", ...]`. This was typed as
+   * `Record<string, boolean>` and nothing had read it yet, so the mistake
+   * was invisible: an `if (features.someKey)` against an array is
+   * `undefined`, which reads as "not entitled" and would have locked out
+   * every paying user. Both shapes are declared because the type is the
+   * contract and the array is what actually arrives; read it through
+   * `hasFeature()` rather than indexing it directly.
+   */
+  features?: string[] | Record<string, boolean>;
   caps?: Record<string, unknown>;
+}
+
+/**
+ * Is `feature` granted, whichever shape the endpoint used? Presentation only —
+ * the server re-checks with requireEntitlement on every gated route, so a
+ * wrong answer here can hide a feature but can never unlock one.
+ */
+export function hasFeature(
+  features: EntitlementsMeResponse["features"],
+  feature: string,
+): boolean {
+  if (Array.isArray(features)) return features.includes(feature);
+  if (features && typeof features === "object") return features[feature] === true;
+  return false;
 }
 
 export async function fetchEntitlements(): Promise<EntitlementsMeResponse> {
@@ -1548,6 +1622,34 @@ export async function dismissOnboarding(): Promise<{ success: boolean }> {
 
 export async function reopenOnboarding(): Promise<{ success: boolean }> {
   return await request("/api/onboarding/reopen", { method: "POST" });
+}
+
+// ─── CF-FIRST-RUN (Drew, 2026-09-02) ────────────────────────────────────
+//
+// The guided funnel's state. `progress` is null for an account that has
+// never started — lib/firstRun.ts's normalizeProgress() turns that into
+// the empty record, so exactly one module decides what "fresh" means.
+// `holdingCount` is derived server-side from the portfolio, which is what
+// lets the funnel stand down for a user who filled their collection on
+// iOS and has never opened the web app before.
+
+export interface FirstRunStateResponse {
+  success: boolean;
+  progress: unknown | null;
+  holdingCount: number;
+}
+
+export async function fetchFirstRun(): Promise<FirstRunStateResponse> {
+  return await request<FirstRunStateResponse>("/api/onboarding/first-run");
+}
+
+export async function saveFirstRun(
+  progress: unknown,
+): Promise<{ success: boolean; progress?: unknown }> {
+  return await request("/api/onboarding/first-run", {
+    method: "POST",
+    body: JSON.stringify({ progress }),
+  });
 }
 
 export async function setPublicShareEnabled(enabled: boolean): Promise<{ success: boolean; publicShareEnabled: boolean }> {
@@ -2123,6 +2225,58 @@ export interface GradeAnalysisResponse {
 export async function fetchGradeAnalysis(holdingId: string): Promise<GradeAnalysisResponse> {
   return await request<GradeAnalysisResponse>(
     `/api/portfolio/holdings/${encodeURIComponent(holdingId)}/grade-analysis`,
+  );
+}
+
+// ─── Grade arbitrage (CF-GRADE-ARB, 2026-09-02) ───────────────────
+//
+// Conditional value of a RAW holding at each graded tier, from the
+// card's OWN empirical grade curve, minus a disclosed grading-cost
+// assumption. Refuses (available:false) when there is no empirical
+// basis — the UI must render `refusalReason`, never a guess.
+
+export type GradeArbRefusal = "not-raw" | "no-raw-basis" | "no-graded-basis";
+
+export interface GradeArbTier {
+  tier: string;
+  grader: string;
+  gradedValue: number;
+  netGain: number;
+  netGainPct: number | null;
+  sampleCount: number;
+  rungLabel: string | null;
+  /** Always "observed": the surface refuses any tier that is not real
+   *  sales of this card at this tier, with at least 3 of them. */
+  valueSource: "observed";
+  confidence: number;
+  basis: string;
+}
+
+export interface GradeArbResult {
+  available: boolean;
+  refusal: GradeArbRefusal | null;
+  refusalReason: string | null;
+  rawValue: number | null;
+  gradingCostUsd: number;
+  tiers: GradeArbTier[];
+  bestTier: GradeArbTier | null;
+  /** The condition caveat. Always present — render it with any number. */
+  disclosure: string;
+}
+
+export interface GradeArbResponse {
+  holdingId: string;
+  player: string | null;
+  year: number | null;
+  cardNumber: string | null;
+  set: string | null;
+  variant: string | null;
+  gradeArb: GradeArbResult;
+}
+
+export async function fetchGradeArb(holdingId: string): Promise<GradeArbResponse> {
+  return await request<GradeArbResponse>(
+    `/api/portfolio/holdings/${encodeURIComponent(holdingId)}/grade-arb`,
   );
 }
 
@@ -3025,12 +3179,56 @@ export interface EbayListingPrepared {
     bestOfferMinPriceCents: number | null;
     description: string;
     titleSuggested: string;
+    /** CF-EBAY-SELL-LOOP: the "how this price was set" HTML the backend
+     *  will append at publish. "" when the price is not HobbyIQ's. Shown
+     *  read-only — publish re-derives it server-side, so editing it here
+     *  would have no effect on what a buyer sees. */
+    basisBlock?: string;
+    /** One-line helper text under the price field. */
+    priceSummary?: string;
   };
+  /** CF-EBAY-SELL-LOOP (Drew, 2026-09-02). Where the listing price came
+   *  from. The price is the engine's canonical projection with its rung
+   *  label — never a stored snapshot and never a number the client
+   *  computed. `labels` are disclosures that MUST be shown to the seller. */
+  pricing?: EbayDraftPricing;
+  /** The sell-window signal for this holding, when its trend supports one.
+   *  Context for the seller's timing — it never moved the price. */
+  sellSignal?: EbaySellSignal | null;
   validation: {
     requiredMissing: string[];
     warnings: string[];
     readyToPublish: boolean;
   };
+}
+
+export interface EbayDraftLabel {
+  code: "speculative" | "self-anchored" | "fallback-rung" | "low-confidence";
+  text: string;
+}
+
+export interface EbayDraftPricing {
+  status: "engine" | "engine-declined" | "no-identity" | "engine-error";
+  priceCents: number | null;
+  /** The rung from the closed fmvRung vocabulary. */
+  rungLabel: string | null;
+  /** True iff the number came from the exact (identity, grade) pool. */
+  exactPool: boolean;
+  confidence: number | null;
+  basis: string | null;
+  compCount: number;
+  range: { n: number; min: number; median: number; max: number } | null;
+  computedAt: string | null;
+  labels: EbayDraftLabel[];
+  declineReason: string | null;
+}
+
+export interface EbaySellSignal {
+  signal: "none" | "watch" | "sell-window" | "hold";
+  horizon: "none" | "days-7-14" | "days-14-30";
+  signalClass: "price" | "attention";
+  basis: string;
+  reason: string | null;
 }
 
 export interface EbayPublishResult {
@@ -3643,5 +3841,207 @@ export async function updateBuyerIqTarget(targetId: string, body: BuyerIqTargetU
 export async function deleteBuyerIqTarget(targetId: string): Promise<{ success: boolean }> {
   return await request(`/api/buyeriq/targets/${encodeURIComponent(targetId)}`, {
     method: "DELETE",
+  });
+}
+
+// ─── BuyerIQ deal scanner ─────────────────────────────────────────────
+// Backend: GET /api/buyeriq/deals (buyeriq.routes.ts → dealFeed.service).
+// Live asks compared against each card's canonical projected next sale.
+
+/** Why a target did not produce a deal. */
+export type BuyerIqDealRefusal =
+  | "no-basis"
+  | "speculative-confidence"
+  | "below-threshold"
+  | "no-listing-price";
+
+/** Why a LISTING was not comparable to the target (CF-BUYERIQ-GRADE-
+ *  AWARE-MATCH, 2026-09-03). Identity includes grade tier: a raw ask is
+ *  not a discount on a PSA 10, and a listing whose grade we cannot read
+ *  is not scored at all rather than assumed into either tier. */
+export type BuyerIqGradeMismatchReason =
+  | "grade-unknown"
+  | "listing-raw-target-graded"
+  | "listing-graded-target-raw"
+  | "grade-company-mismatch"
+  | "grade-value-mismatch";
+
+/** The evidence behind a flagged deal — what the discount is measured
+ *  against, and how much that projection is trusted. */
+export interface BuyerIqDealBasis {
+  projection: number;
+  rung: string | null;
+  exactPool: boolean;
+  confidence: number;
+  discountPct: number;
+  requiredDiscountPct: number;
+}
+
+export interface BuyerIqDealListing {
+  listingId: string;
+  title: string;
+  price: number;
+  currency: string;
+  itemWebUrl: string;
+  imageUrl: string | null;
+  sellerHandle: string | null;
+  endsAt: string | null;
+}
+
+export interface BuyerIqDeal {
+  targetId: string;
+  listId: string;
+  playerName: string;
+  cardYear: number | null;
+  setName: string | null;
+  cardNumber: string | null;
+  parallel: string | null;
+  gradeCompany: string | null;
+  gradeValue: number | null;
+  listing: BuyerIqDealListing;
+  /** The grade tier read off the listing title and verified equal to
+   *  the target tier before scoring ("PSA 10", "Raw"). */
+  matchedTier: string;
+  basis: BuyerIqDealBasis;
+  discountPctDisplay: number;
+  requiredDiscountPctDisplay: number;
+  savingsVsProjection: number;
+}
+
+export interface BuyerIqSkippedTarget {
+  targetId: string;
+  playerName: string;
+  reason: BuyerIqDealRefusal | BuyerIqGradeMismatchReason | "no-listings" | "no-player-name";
+  basis: BuyerIqDealBasis | null;
+  /** Listings that matched the card but not the TIER, by reason. Lets
+   *  the page say "2 listed, both raw" instead of "nothing listed". */
+  gradeRejections?: Partial<Record<BuyerIqGradeMismatchReason, number>>;
+}
+
+export interface BuyerIqDealFeed {
+  success: boolean;
+  deals: BuyerIqDeal[];
+  /** False when the vendor-call budget ran out mid-scan. The feed is
+   *  then a PARTIAL view — do not present it as the whole market. */
+  complete: boolean;
+  stoppedReason: "vendor-call-budget-exhausted" | null;
+  targetsUnexamined: number;
+  targetsScanned: number;
+  targetsEligible: number;
+  skipped: BuyerIqSkippedTarget[];
+  budget: { remaining: number; spent: number; cacheHits: number; limit: number };
+  baseDiscountPct: number;
+  scannedAt: string;
+}
+
+export async function fetchBuyerIqDeals(opts?: {
+  listId?: string;
+  /** Base discount at full confidence, as a fraction (0.20 = 20% under). */
+  threshold?: number;
+}): Promise<BuyerIqDealFeed> {
+  const qs = new URLSearchParams();
+  if (opts?.listId) qs.set("listId", opts.listId);
+  if (typeof opts?.threshold === "number") qs.set("threshold", String(opts.threshold));
+  const suffix = qs.toString() ? `?${qs.toString()}` : "";
+  return await request(`/api/buyeriq/deals${suffix}`);
+}
+
+// ─── Pro Seller workspace (CF-PRO-SELLER-WORKSPACE, 2026-09-02) ─────
+//
+// One page composes six independent seller surfaces. Several of them are
+// still in open PRs on the day this ships, so the page is written to merge
+// in ANY order relative to them: each section asks its own endpoint, and an
+// endpoint the deployed backend does not have yet answers 404. A 404 is not
+// a failure here — it means "not built yet", and the section hides.
+//
+// The three outcomes a section can land on, and why they are different:
+//
+//   404 / 501  → the backing PR has not merged (or has not deployed). The
+//                section renders NOTHING. No error, no empty state, no
+//                "coming soon" — the page simply has one fewer section.
+//   402 / 403  → the API exists and the caller has not paid for it. That is
+//                the ENTITLEMENT gate, enforced server-side by
+//                requireEntitlement("erpReconciliation") and friends; the
+//                page renders the upsell, never data.
+//   anything   → a real failure. The section says so, in its own box, and
+//   else         the rest of the page still renders.
+//
+// Keeping 404 and 402 apart is the whole point. Collapsing them would make a
+// free-tier user think the feature does not exist (losing the upsell), and
+// make a paying user think they had not paid (a support ticket).
+
+/** What a feature-detected section resolved to. */
+export type SectionOutcome<T> =
+  | { state: "ready"; data: T }
+  /** Backing API absent from this deployment — render nothing at all. */
+  | { state: "absent" }
+  /** API present, caller not entitled. `requiredTier` comes from the 402 body. */
+  | { state: "locked"; requiredTier?: string | null }
+  | { state: "error"; message: string };
+
+/**
+ * Statuses that mean "this deployment does not serve that route".
+ *
+ * 404 is the honest one — Express has no handler, so the app's 404 fires.
+ * 501 is included because a route may land ahead of its implementation
+ * behind a not-implemented guard. 405 is NOT here: a wrong method on a real
+ * route is our bug, and should surface as an error rather than vanish.
+ */
+const ABSENT_STATUSES = new Set([404, 501]);
+
+/** Statuses the entitlement middleware answers with. `requireEntitlement`
+ *  returns 402; some older gated routes answer 403. Both mean "pay for it",
+ *  and both are handled identically everywhere else in this app (see
+ *  /app/erp, /app/daily, /app/insights). */
+const LOCKED_STATUSES = new Set([402, 403]);
+
+/**
+ * Run one section's fetch and classify the result. Never throws: a section
+ * failing is a section-shaped hole, never a blank page.
+ */
+export async function resolveSection<T>(
+  load: () => Promise<T>,
+): Promise<SectionOutcome<T>> {
+  try {
+    return { state: "ready", data: await load() };
+  } catch (err) {
+    const e = err as ApiError & { requiredTier?: string | null };
+    const status = e?.status;
+    if (status != null && ABSENT_STATUSES.has(status)) return { state: "absent" };
+    if (status != null && LOCKED_STATUSES.has(status)) {
+      return { state: "locked", requiredTier: e.requiredTier ?? null };
+    }
+    return { state: "error", message: e?.message ?? "Failed to load" };
+  }
+}
+
+// Grade arbitrage — the portfolio-wide grade-worthy scan. Already served by
+// GET /api/portfolio/grade-worthy-alerts; typed here for the first time.
+// Each candidate reuses the GradeWorthyAnalysis shape the per-holding
+// grade-analysis endpoint already returns, so the two surfaces cannot drift.
+export interface GradeArbCandidate {
+  holdingId: string;
+  cardTitle: string;
+  player: string;
+  year: number | null;
+  set: string;
+  variant: string;
+  number: string;
+  analysis: GradeWorthyAnalysis;
+}
+
+export interface GradeArbResponse {
+  scannedHoldings: number;
+  gradeWorthyCount: number;
+  candidates: GradeArbCandidate[];
+}
+
+export async function fetchGradeArbOpportunities(): Promise<GradeArbResponse> {
+  // Slow by construction: the route fans out over every raw holding at
+  // concurrency 6, each hitting Cosmos. The default 30s timeout aborts a
+  // real answer on a large portfolio, so this one gets the longer budget
+  // rather than reporting a timeout the server did not have.
+  return await request<GradeArbResponse>("/api/portfolio/grade-worthy-alerts", {
+    timeoutMs: 90_000,
   });
 }

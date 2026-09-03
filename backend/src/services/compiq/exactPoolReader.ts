@@ -63,7 +63,27 @@ export async function readExactPoolRows(input: {
   if (!cont) return null;
   const nowMs = input.nowMs ?? Date.now();
   const cutoff = new Date(nowMs - input.windowDays * 86400_000).toISOString();
-  const parts: string[] = ["c.soldAt >= @cutoff", "c.price > 0", "(NOT IS_DEFINED(c.priceAnomaly) OR c.priceAnomaly != true)"];
+  // POOL-1 (audit, 2026-09-03). An ADJUDICATED-WRONG row re-entered every live
+  // pool through this reader. `flaggedWrong` / `excludedFromFmv` is the verdict
+  // a human or a triage pass already recorded about a row -- soldCompsStore
+  // writes BOTH flags together when a row is adjudicated, and every other read
+  // path filters them (soldCompsGradeReader:104-105, soldCompsStore:1545,1664).
+  // This reader, the one behind the unified engine, filtered neither: a row
+  // flagged wrong and excluded from FMV was still read straight back into the
+  // pool it had been removed from, so a repair that flagged a mis-filed
+  // refractor row changed nothing about the price the engine published.
+  //
+  // The predicate is the store's (`!= true`, not `= false`): the flags are
+  // absent on the overwhelming majority of rows, so the IS_DEFINED disjunct is
+  // what keeps those rows in, and `!= true` additionally tolerates a row that
+  // stored the flag as something other than a strict boolean.
+  const parts: string[] = [
+    "c.soldAt >= @cutoff",
+    "c.price > 0",
+    "(NOT IS_DEFINED(c.priceAnomaly) OR c.priceAnomaly != true)",
+    "(NOT IS_DEFINED(c.flaggedWrong) OR c.flaggedWrong != true)",
+    "(NOT IS_DEFINED(c.excludedFromFmv) OR c.excludedFromFmv != true)",
+  ];
   const params: Array<{ name: string; value: string | number | boolean | null }> = [
     { name: "@cutoff", value: cutoff },
   ];

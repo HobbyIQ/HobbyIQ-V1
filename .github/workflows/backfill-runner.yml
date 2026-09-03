@@ -286,6 +286,15 @@ on:
           # list path (default data/pool-relocations/2026-09-01-four-values.json);
           # a missing or empty list is a refusal, never a silent no-op.
           - relocate-pool-rows-by-list
+          # CF-A-SPLIT-ROW-POLLUTES-TWO-POOLS (Drew, 2026-09-02: "we need to go
+          # back and check ALL this way"). READ ONLY census of every row whose
+          # cardId and hobbyiqCardId name different cards -- the exact pool
+          # reader ORs both fields, so such a row prices two cards at once.
+          # Walks the whole 16.4M-row corpus in _ts windows (a field-vs-field
+          # predicate is not index-served and times out); slot/slots shard the
+          # row-balanced chunk list. Vendor-partition rows are exempt and
+          # counted, never flagged (#1650). Never writes, in any mode.
+          - census-split-identity
       apply:
         description: "Actually write (true) or dry-run only (false)"
         required: true
@@ -433,6 +442,21 @@ jobs:
           client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+
+      # GATE 2 for census-split-identity: the census is READ ONLY, in every
+      # mode, with no write path in the script at all. A dispatch carrying
+      # apply=true is therefore a dispatch whose author believed it would
+      # repair something -- and it would silently report instead, while they
+      # waited for a repair that was never coming. Refuse rather than run:
+      # a wrong belief about what a job did is exactly what the
+      # green-run-is-not-a-data-flow rule exists to stop. Report the finding
+      # first, then repair through an audited lane that actually writes.
+      - name: Refuse an APPLY dispatch of the read-only census
+        if: ${{ inputs.script == 'census-split-identity' && inputs.apply == true }}
+        shell: bash
+        run: |
+          echo "::error::census-split-identity is READ ONLY — it has no write path. Re-dispatch with apply=false; the repair is a separate audited lane."
+          exit 1
 
       - name: Fetch COSMOS_CONNECTION_STRING from HobbyIQ3 App Service
         shell: bash
@@ -663,6 +687,19 @@ jobs:
             echo "Triage libs confirmed: collision-triage, relocate-sold-comp"
           fi
 
+          # Same lesson again: the census's CLASSIFICATION RULE -- including
+          # the vendor-design exemption that keeps 13.5M designed rows out of
+          # the findings -- lives in a lib so the tests pin the code that runs.
+          # A dispatch that reached Cosmos and then died on a missing require
+          # would have walked the corpus for nothing.
+          if [ "${{ inputs.script }}" = "census-split-identity" ]; then
+            if [ ! -f "backend/scripts/lib/split-identity.cjs" ]; then
+              echo "::error::backend/scripts/lib/split-identity.cjs is missing — the census would read 16.4M rows and have no rule to classify them with"
+              exit 1
+            fi
+            echo "Census lib confirmed: split-identity"
+          fi
+
           # The wrapper SHELLS OUT, so its own presence proves nothing about
           # the scripts it calls. ingest-checklists-end-to-end passed this
           # check, scraped 349 products, then died on a child that had never
@@ -716,6 +753,48 @@ jobs:
           key: hiq-checklists-${{ github.run_id }}
           restore-keys: |
             hiq-checklists-
+
+      # ── THE CANARY GATE, WIRED INSIDE THE APPLY (audit gate, 2026-09-03) ──
+      #
+      # It was not wired at all. `rematch-canary-check` was an enum value in
+      # the script dropdown and nothing else: there were no before/after steps,
+      # so the baseline MODE=before wrote to /tmp on an ephemeral runner was
+      # gone by the time any later dispatch ran MODE=after -- which then exited
+      # 2 ("no baseline") rather than gating anything. A gate that cannot run
+      # is not a gate, and the apply was reachable without it.
+      #
+      # before / apply / after now live in ONE JOB, on ONE runner, so /tmp
+      # persists across all three and the baseline is the same file. The
+      # baseline is ALSO uploaded as an artifact -- not because the after step
+      # needs it (it does not, same runner) but because a shard that fails
+      # needs its before-state readable by Drew without re-running anything.
+      #
+      # Gated on `mode == 'apply-improve' && apply == true`: a census is READ
+      # ONLY and has nothing to regress, and a report-only apply-improve dry
+      # run writes nothing either. SLOT is exported so the check refuses a
+      # shard that has no canary in it, instead of measuring pools this shard
+      # cannot touch and calling that a pass.
+      - name: Canary gate BEFORE the rematch apply
+        if: ${{ inputs.script == 'rematch-sold-comps' && inputs.mode == 'apply-improve' && inputs.apply == true }}
+        shell: bash
+        env:
+          MODE: before
+          BASELINE: /tmp/rematch-canary-baseline.json
+          SLOT: ${{ inputs.slot }}
+          NODE_OPTIONS: "--max-old-space-size=8192"
+        run: node backend/scripts/rematch-canary-check.cjs
+
+      # Keep the before-state whatever happens next. A shard that regresses is
+      # a shard whose baseline Drew has to read, and re-deriving it after the
+      # apply is impossible -- the pools have already moved.
+      - name: Upload the canary baseline
+        if: ${{ always() && inputs.script == 'rematch-sold-comps' && inputs.mode == 'apply-improve' && inputs.apply == true }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: rematch-canary-baseline-slot-${{ inputs.slot }}-${{ github.run_id }}
+          path: /tmp/rematch-canary-baseline.json
+          if-no-files-found: warn
+          retention-days: 90
 
       - name: Run backfill (${{ inputs.apply == true && 'APPLY' || 'DRY-RUN' }})
         # Both RESLUG_APPLY and APPROVE_APPLY env vars are set so this
@@ -875,11 +954,56 @@ jobs:
           # drifts. The census JSON lands where the artifact step can find it;
           # the canary baseline is written by MODE=before and read by
           # MODE=after within one dispatch pair.
-          CENSUS_OUT: /tmp/rematch-census
+          # census-split-identity writes its own census to its own directory,
+          # so the two lanes' artifacts can never overwrite each other. Guarded
+          # on script for the same reason MODE tokens are: one name, one
+          # meaning, and no chance of a path leaking into another lane.
+          CENSUS_OUT: ${{ inputs.script == 'census-split-identity' && '/tmp/split-identity-census' || '/tmp/rematch-census' }}
+          # CENSUS_FROM_TS is deliberately NOT wired to a dispatch input. A
+          # relaunch re-reads its shard from the top, exactly as the rematch
+          # census does and for the same reason: the walk is READ ONLY, so
+          # there is no predicate that shrinks as it works, and a census that
+          # resumed from a cursor would be a census of a SUFFIX of the shard
+          # rather than of the shard. The re-read is cheap next to the
+          # alternative -- a partial census nobody can quote. The env var
+          # exists for a local operator narrowing a re-run by hand.
           BASELINE: /tmp/rematch-canary-baseline.json
           NODE_OPTIONS: "--max-old-space-size=8192"
         run: node "backend/scripts/${{ inputs.script }}.cjs" | tee /tmp/backfill.log
         shell: bash
+
+      # ── THE CANARY GATE, AFTER ───────────────────────────────────────────
+      #
+      # Same runner, same /tmp, same baseline the BEFORE step wrote. The script
+      # exits 5 on any regression -- a canary pool that lost rows, went empty,
+      # lost a protected row, or moved its anchor past tolerance -- and this
+      # step does not swallow it, so exit 5 FAILS THE JOB. That is the whole
+      # point: the shard's own banner cannot certify the shard.
+      #
+      # `always()` is deliberate and is NOT an unconditional pass: if the apply
+      # step itself failed or hit its timeout, the pool has already been
+      # partially written and the canaries are exactly what has to be measured.
+      # Skipping the check on a failed apply would leave the damage unmeasured.
+      #
+      # This step runs BEFORE the self-relaunch step below, so a regressed
+      # shard fails the job and `!cancelled()` on the relaunch is false --
+      # a damaged shard never re-dispatches itself.
+      - name: Canary gate AFTER the rematch apply (exit 5 fails this job)
+        if: ${{ always() && inputs.script == 'rematch-sold-comps' && inputs.mode == 'apply-improve' && inputs.apply == true }}
+        shell: bash
+        env:
+          MODE: after
+          BASELINE: /tmp/rematch-canary-baseline.json
+          SLOT: ${{ inputs.slot }}
+          NODE_OPTIONS: "--max-old-space-size=8192"
+        run: |
+          set -o pipefail
+          node backend/scripts/rematch-canary-check.cjs | tee /tmp/canary-after.log
+          rc=${PIPESTATUS[0]}
+          if [ "$rc" = "5" ]; then
+            echo "::error::CANARY REGRESSION on slot ${{ inputs.slot }} — a hand-verified or provenance-anchored pool lost rows. The fleet STOPS here; the diff goes to Drew."
+          fi
+          exit "$rc"
 
       # THE GREAT REMATCH: keep the shard census. The census is the whole
       # product of mode=census -- it is what the 500-row sample audit reads and
@@ -897,6 +1021,49 @@ jobs:
           if-no-files-found: warn
           retention-days: 90
 
+      # The split-identity census IS the product of this lane -- the flagged
+      # rows, their two addresses and the damaged-slug ranking are what a
+      # repair list is built from, and re-deriving them costs another walk of
+      # 16.4M rows. always(): a run that stopped at its budget still censused
+      # everything it reached.
+      - name: Upload the split-identity census
+        if: ${{ always() && inputs.script == 'census-split-identity' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: split-identity-census-slot-${{ inputs.slot }}-${{ github.run_id }}
+          path: /tmp/split-identity-census/
+          if-no-files-found: warn
+          retention-days: 90
+
+      # Split-identity census self-relaunch. Relaunch iff the budget marker
+      # printed (#1361), forwarding every input verbatim -- `apply` included
+      # (#1578: a report that relaunches as a write is the defect that rule
+      # exists to stop, and hardcoding EITHER value is how it happens). There
+      # is no live apply case to forward here anyway: the gate above refuses an
+      # apply dispatch of this script before it reaches Cosmos, so a relaunch
+      # carrying apply=true fails at that gate exactly as its parent did,
+      # loudly, instead of quietly running as something it was not asked to be.
+      #
+      # A shard that cannot finish inside one budget will relaunch forever
+      # without making progress, because the continuation restarts from the
+      # top (see CENSUS_FROM_TS above). That is a REAL limit and the fix is
+      # more slots, not a cursor: raise `slots` so each shard fits a budget.
+      # The banner prints planned vs classified rows, so a shard that never
+      # completes is visible in the log rather than silent.
+      - name: Self-relaunch census-split-identity until the shard is finished
+        if: ${{ !cancelled() && inputs.script == 'census-split-identity' }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
+            N=$(grep -aoE "flagged +[0-9,]+" /tmp/backfill.log | grep -oE "[0-9,]+" | tail -1)
+            echo "::notice::budget hit (flagged=${N:-0}) — re-dispatching slot ${{ inputs.slot }} to continue"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=census-split-identity -f apply="${{ inputs.apply }}" -f mode="${{ inputs.mode }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f limit="${{ inputs.limit }}"
+          else
+            echo "::notice::finished within budget — done, no re-dispatch."
+          fi
+
       # THE GREAT REMATCH self-relaunch. The census re-reads its shard from the
       # top each run (it is READ ONLY -- there is no predicate that shrinks as
       # it works), so a relaunched census re-classifies rows it already saw.
@@ -906,6 +1073,23 @@ jobs:
       # classifies IMPROVE, so it is skipped at the write-time re-check.
       # Relaunch iff the budget marker printed (#1361), forwarding every arg
       # verbatim; a report relaunches as a report (#1578); never on cancel.
+      # THE RELAUNCH NEVER FORWARDS apply=true (audit gate, 2026-09-03).
+      #
+      # It used to forward `apply` verbatim, so an apply that stopped at its
+      # 140-minute budget re-dispatched itself as ANOTHER APPLY -- and the
+      # re-dispatch is a fresh workflow run with a fresh runner and a fresh
+      # /tmp, so the canary baseline the first run captured is gone. The second
+      # apply ran with no before-state, past a budget cut, ungated. The gate
+      # was skippable by simply being slow.
+      #
+      # The relaunch is now always `apply=false`: the continuation runs as a
+      # REPORT, prints what it would have written, and a human re-dispatches
+      # the apply -- which brings the before/apply/after triple back with it.
+      # A report relaunch still finishes the census of the shard (#1578), so
+      # nothing is lost except the ability to write unwatched.
+      #
+      # This step is also ordered AFTER the canary gate above, so a shard that
+      # regressed has already failed the job and `!cancelled()` is false here.
       - name: Self-relaunch rematch-sold-comps until the shard is finished
         if: ${{ !cancelled() && inputs.script == 'rematch-sold-comps' }}
         shell: bash
@@ -914,8 +1098,12 @@ jobs:
         run: |
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             N=$(grep -aoE "(re-keyed|would re-key) +[0-9,]+" /tmp/backfill.log | grep -oE "[0-9,]+" | tail -1)
-            echo "::notice::budget hit (written=${N:-0}) — re-dispatching slot ${{ inputs.slot }} to continue"
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=rematch-sold-comps -f mode="${{ inputs.mode }}" -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f years="${{ inputs.years }}" -f limit="${{ inputs.limit }}"
+            if [ "${{ inputs.apply }}" = "true" ]; then
+              echo "::warning::budget hit on an APPLY of slot ${{ inputs.slot }} (written=${N:-0}) — re-dispatching as a REPORT (apply=false). The canary baseline lives on this runner and does not survive a re-dispatch, so a continuation apply would be ungated. Re-dispatch the apply by hand to get the before/apply/after triple."
+            else
+              echo "::notice::budget hit (written=${N:-0}) — re-dispatching slot ${{ inputs.slot }} to continue"
+            fi
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=rematch-sold-comps -f mode="${{ inputs.mode }}" -f apply=false -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f years="${{ inputs.years }}" -f limit="${{ inputs.limit }}"
           else
             echo "::notice::finished within budget — done, no re-dispatch."
           fi
