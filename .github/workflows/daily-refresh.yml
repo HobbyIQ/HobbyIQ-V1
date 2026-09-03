@@ -240,11 +240,18 @@ jobs:
   #
   # THE ASSUMPTION THIS JOB MAKES, STATED OUT LOUD:
   #   Drew's standing intent is that pricing "needs to be fresh each time."
-  #   This job takes that to mean EVERY user's holdings are repriced once a
-  #   day, immediately after the deploy, with no per-user opt-in. If the
-  #   intent was narrower -- only Drew, or only holdings older than N days --
-  #   this is the knob to turn, and turning it is a one-line change to
-  #   REPRICE_MAX_HOLDINGS / the script's minHoldingAgeMs.
+  #   This job takes that to mean EVERY user's holdings, once a day,
+  #   immediately after the deploy, with no per-user opt-in.
+  #
+  #   "Fresh" is read as CORRECT, not as RECOMPUTED: the sweep skips a holding
+  #   priced within the last 20h WHOSE EXACT POOL HAS NOT GROWN, and reprices
+  #   everything else. A card somebody traded is always repriced; a card
+  #   nobody traded is not re-derived nightly to produce the same number. That
+  #   keeps the bill proportional to change instead of to corpus size, which
+  #   is the difference between ~1 kRU today and ~100 kRU at 100x with no
+  #   corresponding gain. If the intent was narrower still -- only Drew, or a
+  #   multi-day cadence -- REPRICE_MAX_HOLDINGS and the script's
+  #   NIGHTLY_MIN_HOLDING_AGE_MS are the knobs.
   #
   # WHY IT EXISTS: nothing repriced holdings on a schedule. The audit found 20
   # of 118 live holdings more than 7 days stale (max 18.2 days) and 28 sitting
@@ -325,9 +332,15 @@ jobs:
       - name: Reprice every user's holdings
         working-directory: backend
         env:
-          # MODE=all sweeps every user in the portfolio container. REPRICE_USER_ID
-          # is deliberately UNSET here: the script prefers it over MODE, so a
-          # value would silently narrow the corpus sweep to one user.
+          # MODE=all sweeps every user in the portfolio container.
+          #
+          # PRECEDENCE (verified against the script, 2026-09-03): MODE=all
+          # WINS -- reprice-user-holdings.cjs tests ALL_USERS first and returns
+          # from that branch, so a REPRICE_USER_ID set alongside it is ignored.
+          # REPRICE_USER_ID is still deliberately UNSET here: relying on the
+          # script's internal ordering to protect a corpus sweep is not a
+          # guarantee, it is a coincidence that survives until someone
+          # reorders two ifs.
           MODE: all
           BACKFILL_APPLY: "true"
           HOBBYIQFMV_COMPOSITE_ENABLED: "true"
@@ -352,6 +365,14 @@ jobs:
           # holdings) a pass is ~100 kRU, still ~10 seconds of the floor.
           # Revisit the budget, not the cadence, if the corpus outgrows that.
           #
+          # THAT IS THE CEILING, NOT THE BILL. The nightly lane skips holdings
+          # priced within the last 20h whose exact pool has NOT grown, so the
+          # steady-state cost is proportional to CHANGE rather than to corpus:
+          # one cheap partition-keyed COUNT (3.42 RU) per fresh holding, and a
+          # full reprice only where a sale actually landed. A holding whose
+          # pool grew is repriced regardless of age -- freshness never hides a
+          # market move. Manual dispatches keep the full bypass.
+          #
           # Concurrency: the script walks users SERIALLY and repriceHoldingsForUser
           # walks holdings serially inside each. That is the budget -- one
           # in-flight query at a time -- and it is deliberate: the reprice
@@ -359,6 +380,11 @@ jobs:
           # a parallel sweep is the shape that produces 429s on the read path
           # a collector is using. It is fast enough serially (a full pass is
           # ~130 queries) that parallelism buys nothing worth that risk.
+          #
+          # This variable is now READ AND VALIDATED by the script (it was
+          # decorative -- set here, read nowhere). Only "1" is accepted; any
+          # other value exits 1 rather than being silently ignored, so nobody
+          # can believe they have bounded a sweep they have not.
           REPRICE_CONCURRENCY: "1"
           # Per-user cap. 200 is the script's own default and comfortably
           # exceeds the largest live portfolio (43 holdings). It is a runaway

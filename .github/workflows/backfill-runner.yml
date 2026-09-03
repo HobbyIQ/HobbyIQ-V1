@@ -953,18 +953,26 @@ jobs:
           # so the reprice writes new v2-calibrated FMVs.
           #
           # CF-A-PINNED-USER-CANNOT-BE-EVERY-USER (C-2, 2026-09-03). This was
-          # an unconditional pin, and reprice-user-holdings reads MODE=all to
-          # sweep EVERY user -- so the nightly cadence lane would have set out
-          # to reprice the whole corpus with one userId nailed to the env. The
-          # script prefers REPRICE_USER_ID over MODE, so the pin wins and the
-          # sweep silently becomes a single-user run that reports success.
+          # an unconditional pin to Drew's userId, and reprice-user-holdings
+          # reads MODE=all to sweep EVERY user -- so the nightly cadence lane
+          # would have set out to reprice the whole corpus with one userId
+          # nailed to the env.
           #
-          # The pin now yields whenever a mode is named: mode=all is the
-          # corpus sweep and carries no user, any other dispatch keeps Drew's
-          # id as the default it always was. reap-orphan-price-trails reads the
-          # same var as its optional one-user scope, and gets the same
-          # treatment for the same reason -- the corpus repair must not be
-          # quietly narrowed to one doc.
+          # THE REAL PRECEDENCE (verified against the script, 2026-09-03):
+          # MODE=all WINS. reprice-user-holdings.cjs tests ALL_USERS first and
+          # returns from that branch, so a REPRICE_USER_ID set alongside
+          # MODE=all is IGNORED, not honoured. An earlier revision of this
+          # comment said the opposite; it was wrong, and a wrong comment about
+          # precedence is how a corpus sweep silently becomes a one-user run
+          # in someone's head.
+          #
+          # The pin still yields whenever a mode is named -- belt and braces,
+          # and it keeps the env honest about intent rather than relying on the
+          # script's ordering. mode=all is the corpus sweep and carries no
+          # user; any other dispatch keeps Drew's id as the default it always
+          # was. reap-orphan-price-trails reads the same var as its optional
+          # one-user scope and gets the same treatment, for the same reason --
+          # the corpus repair must not be quietly narrowed to one doc.
           REPRICE_USER_ID: ${{ inputs.mode == '' && 'user-199fcbc9-58ba-4643-a0c9-f75bcbc90bd4' || '' }}
           HOBBYIQFMV_COMPOSITE_ENABLED: "true"
           # CF-NODE-HEAP-8G (Drew, 2026-08-02). dedupe-catalog-by-hobbyiq

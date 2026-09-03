@@ -295,6 +295,13 @@ export interface PortfolioHolding {
   // auditor's RUNG-HONESTY check now says so out loud (kind
   // "value-carries-no-rung") rather than returning silently.
   valueSource?: "observed" | "estimated" | null;
+  // CF-ONE-PERSIST-HELPER (C-7, 2026-09-03). Why `fmvRung` is null, when a
+  // lane genuinely cannot name a rung — "resolver fallback names no rung",
+  // "legacy confidence-gated reprice", "grade ladder anchor". Written by
+  // writeHoldingValuation from the `{ noRung: <reason> }` arm of its required
+  // RungDeclaration, so a null rung is a STATEMENT carrying its cause rather
+  // than an absence a reader has to guess at. Null when a rung was named.
+  fmvRungAbsentReason?: string | null;
   // CF-NEXT-SALE-PREDICTION-LAYER (design d531939) — forward-looking
   // predicted price (FMV × TrendIQ-derived bounded factor). Mechanism
   // attribution distinguishes trendiq-projection (success path) from

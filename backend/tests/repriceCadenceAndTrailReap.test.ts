@@ -10,6 +10,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "fs";
 import { resolve } from "path";
+import { writeHoldingValuation } from "../src/services/portfolioiq/writeHoldingValuation.js";
 
 const repoRoot = resolve(__dirname, "..", "..");
 const read = (p: string) => readFileSync(resolve(repoRoot, p), "utf8");
@@ -125,9 +126,10 @@ describe("C-2 — a nightly reprice runs inside the daily refresh", () => {
   });
 
   it("the reprice sweeps EVERY user and is not silently pinned to one", () => {
-    // reprice-user-holdings prefers REPRICE_USER_ID over MODE, so a stray
-    // user id here would turn the corpus sweep into a single-user run that
-    // still reported success. MUTATION: set REPRICE_USER_ID in this job.
+    // MODE=all WINS over REPRICE_USER_ID (ALL_USERS is tested first), but the
+    // job still sets no user id: relying on the script's internal ordering to
+    // protect a corpus sweep is a coincidence, not a guarantee.
+    // MUTATION: set REPRICE_USER_ID in this job.
     const repriceBlock = raw.slice(raw.indexOf("reprice-holdings:"));
     expect(repriceBlock).toContain("MODE: all");
     expect(repriceBlock).toContain("BACKFILL_APPLY: \"true\"");
@@ -141,6 +143,73 @@ describe("C-2 — a nightly reprice runs inside the daily refresh", () => {
     // The measured cost has to survive in the file — a budget nobody can
     // read is a budget nobody can revisit.
     expect(repriceBlock).toMatch(/RU/);
+  });
+
+  it("REPRICE_CONCURRENCY is READ by the script, not decorative", () => {
+    // It was set in the workflow and read by nothing. A knob that appears to
+    // bound a corpus sweep and does not is worse than no knob at all.
+    //
+    // MUTATION: delete the CONCURRENCY read from the script and this reds.
+    const script = read("backend/scripts/reprice-user-holdings.cjs");
+    expect(script).toContain("process.env.REPRICE_CONCURRENCY");
+    // Only 1 is accepted; anything else refuses rather than being ignored.
+    expect(script).toMatch(/CONCURRENCY !== 1/);
+    expect(script).toMatch(/process\.exit\(1\)/);
+  });
+
+  it("the nightly lane skips fresh holdings whose pool has NOT grown", () => {
+    // The bypass this closes: userThrottleMs:0 AND minHoldingAgeMs:0 on the
+    // corpus sweep, so every holding was re-derived nightly whether or not
+    // anything about it had changed.
+    //
+    // MUTATION: set minHoldingAgeMs back to 0 in the MODE=all branch and
+    // this pin goes red.
+    const script = read("backend/scripts/reprice-user-holdings.cjs");
+    expect(script).toContain("NIGHTLY_MIN_HOLDING_AGE_MS");
+    expect(script).toMatch(/20 \* 60 \* 60 \* 1000/);
+    const allBranch = script.slice(script.indexOf("if (ALL_USERS)"), script.indexOf("console.log(`[reprice-user-holdings]`)"));
+    expect(allBranch).toContain("minHoldingAgeMs: NIGHTLY_MIN_HOLDING_AGE_MS");
+    expect(allBranch).toContain("skipFreshOnlyWhenPoolUnchanged: true");
+    expect(allBranch).not.toMatch(/minHoldingAgeMs: 0/);
+  });
+
+  it("a MANUAL single-user dispatch keeps the full bypass", () => {
+    // A human repricing after a calibration change is asking for every
+    // number to be recomputed; a freshness skip there defeats the dispatch.
+    const script = read("backend/scripts/reprice-user-holdings.cjs");
+    const manualBranch = script.slice(script.indexOf("console.log(`[reprice-user-holdings]`)"));
+    expect(manualBranch).toContain("minHoldingAgeMs: 0");
+    expect(manualBranch).not.toContain("skipFreshOnlyWhenPoolUnchanged");
+  });
+
+  it("freshness never hides a market move: growth beats age", () => {
+    // The guarantee that makes the skip safe. The service must re-check the
+    // pool for every holding the age filter would drop, and must FAIL OPEN.
+    //
+    // MUTATION: delete the `live > 0` guard and a throttled Cosmos (which
+    // returns 0 on a query error) starts reading as "nothing changed".
+    const store = read("backend/src/services/portfolioiq/portfolioStore.service.ts");
+    expect(store).toContain("skipFreshOnlyWhenPoolUnchanged");
+    expect(store).toContain("countExactSalesInWindow");
+    expect(store).toMatch(/poolUnchanged = live > 0 && live <= \(persistedCount as number\)/);
+    // Any throw reprices rather than skipping.
+    expect(store).toMatch(/catch \{\s*\n\s*poolUnchanged = false;/);
+  });
+
+  it("both workflows state the REAL precedence: MODE=all wins", () => {
+    // The comments said the opposite of what the script does — the script
+    // tests ALL_USERS first and returns from that branch, so MODE=all wins
+    // and a REPRICE_USER_ID beside it is ignored. A wrong comment about
+    // precedence is how a corpus sweep becomes a one-user run in someone's
+    // head while the code is fine.
+    const runner = read(".github/workflows/backfill-runner.yml");
+    expect(runner).toMatch(/MODE=all WINS/);
+    expect(runner).not.toMatch(/script prefers REPRICE_USER_ID over MODE/);
+    expect(raw).toMatch(/MODE=all\n\s*#\s*WINS|MODE=all\s+WINS/);
+    expect(raw).not.toMatch(/the script prefers it over MODE/);
+    // And the script's own docblock agrees.
+    const script = read("backend/scripts/reprice-user-holdings.cjs");
+    expect(script).toMatch(/MODE=all WINS/);
   });
 
   it("secrets reach the job from App Service, never from the repo", () => {
@@ -187,10 +256,12 @@ describe("C-7 — every persisted value names its rung and its source", () => {
   });
 
   it("both one-entry write shapes stamp valueSource beside fmvRung", () => {
-    // valueSource was absent on all 118 live holdings: the engine computes
-    // it and every holding writer dropped it.
-    expect(valuation).toMatch(/fmvRung: v\.rungLabel,\s*(\/\/[^\n]*\n\s*)*valueSource: "observed"/);
-    expect(valuation).toMatch(/fmvRung: "grade-curve-estimate",\s*(\/\/[^\n]*\n\s*)*valueSource: "estimated"/);
+    // valueSource was absent on all 129 live holdings: the engine computes
+    // it and every holding writer dropped it. Both shapes now go through
+    // writeHoldingValuation, which REQUIRES the pair.
+    expect(valuation).toContain("writeHoldingValuation");
+    expect(valuation).toMatch(/rung: \{ rung: v\.rungLabel \},\s*(\/\/[^\n]*\n\s*)*valueSource: "observed"/);
+    expect(valuation).toMatch(/rung: \{ rung: "grade-curve-estimate" \},\s*(\/\/[^\n]*\n\s*)*valueSource: "estimated"/);
   });
 
   it("valueSource is part of the holding contract, not an untyped extra", () => {
@@ -222,6 +293,112 @@ describe("C-7 — every persisted value names its rung and its source", () => {
     // fallback, the ladder). Only an ABSENT key means a legacy writer.
     // Conflating the two would flag every honest lane as a defect.
     expect(inv).toContain("if (rung === null) return violations;");
+  });
+
+  // ── The helper itself: the contract, exercised rather than grepped ────────
+  it("writeHoldingValuation stamps rung + valueSource on EVERY write", () => {
+    // The behavioural core of C-7. A value cannot reach a holding without
+    // both keys, because both are required arguments.
+    const h = { id: "h1", playerName: "Devin Taylor" } as any;
+    const observed = writeHoldingValuation(h, {
+      fairMarketValue: 251,
+      rung: { rung: "exact-pool-last-sale" },
+      valueSource: "observed",
+      nowIso: "2026-09-03T16:00:00.000Z",
+      meta: { slug: "hiq:baseball:2025:bowman-chrome:cpa-dt:black-refractor:auto", compsUsed: 4 },
+    });
+    expect(observed.fairMarketValue).toBe(251);
+    expect(observed.fmvRung).toBe("exact-pool-last-sale");
+    expect(observed.valueSource).toBe("observed");
+    // The meta's `method` is the SAME rung — one vocabulary in both fields,
+    // which is what made the dashboard render `unknown rung "direct-slug"`.
+    expect((observed as any).pricingSourceMeta.method).toBe("exact-pool-last-sale");
+    expect((observed as any).fmvRungAbsentReason).toBeNull();
+  });
+
+  it("an explicit refusal persists null WITH its reason — never an absent key", () => {
+    const h = { id: "h2" } as any;
+    const refused = writeHoldingValuation(h, {
+      fairMarketValue: 68.68,
+      rung: { noRung: "resolver fallback (cardsight) names no rung" },
+      valueSource: "estimated",
+      nowIso: "2026-09-03T16:00:00.000Z",
+      writeMeta: false,
+    });
+    // The KEY is present and null: the auditor's "honest lane" case, which
+    // must stay unflagged, as distinct from a key that was never written.
+    expect("fmvRung" in refused).toBe(true);
+    expect(refused.fmvRung).toBeNull();
+    expect("valueSource" in refused).toBe(true);
+    expect(refused.valueSource).toBe("estimated");
+    expect((refused as any).fmvRungAbsentReason).toContain("names no rung");
+  });
+
+  it("a caller's spread cannot overwrite the rung or the valueSource", () => {
+    // The ordering guarantee. `fields` is merged UNDER the contract, so a
+    // legacy literal carrying its own stale fmvRung cannot win — which is
+    // exactly how eleven hand-assembled literals drifted apart.
+    const h = { id: "h3", fmvRung: "stale-rung", valueSource: "observed" } as any;
+    const out = writeHoldingValuation(h, {
+      fairMarketValue: 10,
+      rung: { rung: "sibling-estimate" },
+      valueSource: "estimated",
+      nowIso: "2026-09-03T16:00:00.000Z",
+      writeMeta: false,
+      fields: { fmvRung: "hijacked", valueSource: "observed" } as any,
+    });
+    expect(out.fmvRung).toBe("sibling-estimate");
+    expect(out.valueSource).toBe("estimated");
+  });
+
+  it("every persisted-value writer in portfolioStore routes through the helper", () => {
+    // MUTATION: restore any one hand-assembled literal — e.g. put
+    // `fairMarketValue: match.price, fmvRung: "sibling-estimate",` back at
+    // the sibling site — and this pin goes red.
+    //
+    // The census that motivates it: valueSource absent on 129/129 live
+    // holdings, fmvRung key absent on 53, 73 holdings carrying a value with
+    // one or both missing. Two of them (60a7cfcc, afbebf9c) were written
+    // that same morning by these very sites.
+    const store = read("backend/src/services/portfolioiq/portfolioStore.service.ts");
+    // No raw `fairMarketValue:` assignment may sit in an object literal
+    // beside a raw `fmvRung:` — that pairing IS the hand-assembled shape.
+    //
+    // `\r?\n`, not `\n`: this checkout stores the file CRLF, and the first
+    // draft of this pin used `\n` and therefore matched NOTHING — it passed
+    // against a deliberately re-broken sibling site. A pin that cannot fail
+    // is not a pin. (Same CRLF trap as d38.addHoldingEmitCarriesBasis.)
+    //
+    // Two shapes are legitimately exempt and are NOT persisted values:
+    //   `fairMarketValue: null as any` — a value CLEAR (the unidentified-card
+    //      withhold), which writes no number and names its null rung; and
+    //   `fairMarketValue: typeof h.fairMarketValue === "number" ? ...` — the
+    //      read-only prior-state snapshots the alert sweep compares against.
+    // Everything else pairing a written value with a hand-written `fmvRung:`
+    // is the hand-assembled shape this pin forbids.
+    const rawPairs = (store.match(/fairMarketValue: [^\r\n]*,\r?\n\s*fmvRung:/g) ?? [])
+      .filter((m) => !/fairMarketValue: null as any,/.test(m))
+      .filter((m) => !/fairMarketValue: typeof h\.fairMarketValue/.test(m));
+    expect(rawPairs).toEqual([]);
+    // And the helper is actually used at the sites the audit named.
+    expect(store).toContain("writeHoldingValuation");
+    // TWELVE sites, not the eleven the audit first named: the batch lane's
+    // second unified write was found by an existing pin in
+    // siblingEstimateNeverOutranksExactPool when the first pass missed it.
+    const calls = store.match(/writeHoldingValuation\(/g) ?? [];
+    expect(calls.length).toBeGreaterThanOrEqual(12);
+  });
+
+  it("RUNG-HONESTY sees a value carried by estimatedValue, not just FMV", () => {
+    // C-7 verifier: reading only `fairMarketValue` reopened the blind spot.
+    // Live proof, holding 0a9afe09: fairMarketValue null, estimatedValue 241,
+    // meta.method "rare-card-anchor", no fmvRung key at all.
+    //
+    // MUTATION: narrow `persistedNumber` back to fairMarketValue only and
+    // this pin goes red.
+    const inv = read("backend/scripts/lib/pricing-invariants.cjs");
+    expect(inv).toContain("persistedNumber");
+    expect(inv).toMatch(/estimatedValue === "number" && holding\.estimatedValue > 0/);
   });
 });
 

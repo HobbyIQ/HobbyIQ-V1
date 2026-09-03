@@ -622,9 +622,19 @@ describe("portfolioStore — every estimate site asks the gate (source pin)", ()
     expect((src.match(/applyGate\(await gateEstimateAgainstExactPool\(/g) ?? []).length).toBe(6);
   });
   it("the sibling write names itself and the unified writes name their rung", () => {
-    expect(src).toMatch(/fmvRung: "sibling-estimate",/);
+    // CF-ONE-PERSIST-HELPER (C-7, 2026-09-03): every one of these writes now
+    // goes through writeHoldingValuation, which REQUIRES a rung declaration
+    // and a valueSource. The subject of this pin is unchanged — the sibling
+    // write still names itself, the four unified writes still name their rung,
+    // sample count, confidence and labels — but the rung now arrives as the
+    // helper's `rung:` argument rather than a hand-written `fmvRung:` literal,
+    // and `method` is derived FROM that same argument (so the two can no
+    // longer carry different vocabularies at all, which is the defect the old
+    // separate-literals shape allowed).
+    expect(src).toMatch(/rung: \{ rung: "sibling-estimate" \},/);
     expect(src).toMatch(/pricingSource: "sibling-estimate",/);
-    expect(src).toMatch(/method: "sibling-estimate",/);
+    // A sibling × premium is another card's evidence: never "observed".
+    expect(src).toMatch(/rung: \{ rung: "sibling-estimate" \},[\s\S]{0,200}?valueSource: "estimated",/);
     // CF-A-UNION-IS-ONE-CARD (2026-09-01): the unified write in
     // unifiedHoldingWrite now wraps its meta in withUnionRefused(...) so a
     // refused pool-twin union is auditable on the holding. The pin's subject
@@ -638,13 +648,18 @@ describe("portfolioStore — every estimate site asks the gate (source pin)", ()
     // CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (2026-09-03): and the LABELS,
     // derived per-tier through the one derivation. The metas are multi-line
     // now, so the pin matches across newlines; its subject is still FOUR.
+    // CF-ONE-PERSIST-HELPER: the meta is now the helper's `meta:` argument.
+    // `method` is no longer written here at all — the helper derives it from
+    // the required rung declaration — so the pin's subject is the rung + the
+    // sample count + the confidence + the labels travelling together, which
+    // is what it always actually protected.
     const unifiedMetas = src.match(
-      /pricingSourceMeta: (?:withUnionRefused\()?\{[\s\S]*?method: (?:u|bU|unified)\.rungLabel,[\s\S]*?compsUsed: (?:u|bU|unified)\.totalSampleCount,[\s\S]*?confidence: (?:u|bU|unified)\.confidence,[\s\S]*?persistedLabelsForUnifiedResult\([\s\S]*?\}/g,
+      /rung: \{ rung: (?:u|bU|unified)\.rungLabel \},[\s\S]*?valueSource: "observed",[\s\S]*?meta: (?:withUnionRefused\()?\{[\s\S]*?compsUsed: (?:u|bU|unified)\.totalSampleCount,[\s\S]*?confidence: (?:u|bU|unified)\.confidence,[\s\S]*?persistedLabelsForUnifiedResult\(/g,
     ) ?? [];
     expect(unifiedMetas.length).toBe(4);
     // The wrap adds the breadcrumb and nothing else: the same keys when no
     // union was refused. Multi-line since the labels joined the meta.
-    expect(src).toMatch(/pricingSourceMeta: withUnionRefused\(\{\s+slug: exact\.attempt\.cardId,/);
+    expect(src).toMatch(/meta: withUnionRefused\(\{\s+slug: exact\.attempt\.cardId,/);
   });
   it("every unified write prices a thin exact pool (>= 1 sample); no site demands confidence >= 0.3 any more", () => {
     expect(src).not.toMatch(/(unified|unifiedResult|bU|u)\.confidence >= 0\.3/);

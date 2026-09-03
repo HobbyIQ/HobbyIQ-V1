@@ -461,7 +461,18 @@ function checkRungHonesty(holding, shadow, leaf) {
   // Absence of `valueSource` is folded into the same finding rather than its
   // own: the two keys are written together by every non-legacy writer, so one
   // missing key and both missing keys have the same cause and the same fix.
-  const hasValue = typeof holding.fairMarketValue === "number" && holding.fairMarketValue > 0;
+  // CF-A-VALUE-IS-EITHER-FIELD (C-7 verifier, 2026-09-03). Reading only
+  // `fairMarketValue` reopened the blind spot this check exists to close: a
+  // holding that shows a number to the user via `estimatedValue` while
+  // `fairMarketValue` is null is EXACTLY the key-absent shape. Live proof from
+  // the same read-only census, holding 0a9afe09: fairMarketValue null,
+  // estimatedValue 241, pricingSourceMeta.method "rare-card-anchor", and no
+  // `fmvRung` key at all. A gate that skips it because the FMV field is null is
+  // judging the field rather than the value the collector actually sees.
+  const persistedNumber = typeof holding.fairMarketValue === "number" && holding.fairMarketValue > 0
+    ? holding.fairMarketValue
+    : (typeof holding.estimatedValue === "number" && holding.estimatedValue > 0 ? holding.estimatedValue : null);
+  const hasValue = persistedNumber !== null;
   const rungKeyAbsent = !("fmvRung" in holding);
   const valueSourceAbsent = !("valueSource" in holding)
     || holding.valueSource === null
@@ -473,7 +484,7 @@ function checkRungHonesty(holding, shadow, leaf) {
     ].filter(Boolean);
     violations.push({
       kind: "value-carries-no-rung",
-      detail: `holding stores fairMarketValue=${holding.fairMarketValue} but carries no ${missing.join(" and no ")} key — written by a legacy writer that never named its rung, so no rung gate can classify it (source=${holding.source ?? "(none)"}, cardStatus=${holding.cardStatus ?? "(none)"})`,
+      detail: `holding shows ${persistedNumber} (${typeof holding.fairMarketValue === "number" && holding.fairMarketValue > 0 ? "fairMarketValue" : "estimatedValue"}) but carries no ${missing.join(" and no ")} key — written by a legacy writer that never named its rung, so no rung gate can classify it (source=${holding.source ?? "(none)"}, cardStatus=${holding.cardStatus ?? "(none)"})`,
       rung: null,
       shadowRung: shadow.rung,
     });
