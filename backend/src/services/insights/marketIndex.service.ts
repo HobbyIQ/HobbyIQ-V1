@@ -597,15 +597,35 @@ export async function loadCarryForward(
  * Persist carry-forward. Never REMOVES a member's last known value: a
  * member absent from this run keeps whatever was stored, which is the
  * whole point — the value survives beyond any read window.
+ *
+ * BOUNDED TO MEMBERS (2026-09-03). `keep` is the set of cardIds the doc
+ * is allowed to hold — the union of every basket the walk actually used,
+ * so at most INDEX epochs × MARKET_INDEX_BASKET_SIZE entries. The walk's
+ * in-memory carry is deliberately much larger: the lead-in seed loads
+ * every card that traded in the 90 days before day one, because a later
+ * epoch's members need a day-one value too. Persisting THAT map is what
+ * failed Backfill Runner 33813892106 with "Request size is too large" —
+ * baseball's lead-in holds 49,511 distinct cards, ≈4.2 MB of carry
+ * against a 2 MB document ceiling.
+ *
+ * A card outside `keep` is not lost: it is not a basket member, so
+ * nothing values it, and if a future epoch picks it up the lead-in seed
+ * finds it again from the pool. What the doc must survive with is its
+ * MEMBERS' history — a member with no recent sale keeps its last known
+ * value however long ago that was (C-1) — and that is exactly what
+ * `keep` preserves, including members carried over from a stored doc
+ * whose epoch has since rolled.
  */
 export async function saveCarryForward(
   series: Container,
   sport: string,
   epoch: string,
   carry: Map<string, { value: number; asOf: string }>,
+  keep: ReadonlySet<string>,
 ): Promise<void> {
   const record: Record<string, { value: number; asOf: string }> = {};
   for (const [cardId, v] of carry) {
+    if (!keep.has(cardId)) continue;
     if (Number.isFinite(v.value) && v.value > 0) record[cardId] = v;
   }
   const doc: IndexMembersDoc = {

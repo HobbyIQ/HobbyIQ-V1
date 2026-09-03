@@ -221,6 +221,15 @@ export async function computeSeriesForSport(
   let memberSet = new Set(memberIds);
   const epochsUsed: string[] = basket ? [epoch] : [];
 
+  /**
+   * Every cardId that was a basket member at some point in this walk —
+   * the union across epoch rolls. This, and only this, is what gets
+   * PERSISTED as carry-forward (see saveCarryForward): the in-memory
+   * carry map below is seeded from the whole lead-in and is far too
+   * large for a Cosmos document.
+   */
+  const persistableMembers = new Set<string>(memberIds);
+
   // One pool read covers the whole span plus the lead-in. Membership can
   // change across an epoch roll, so this is NOT filtered to one basket.
   const readFrom = addDays(fromDate, -LEAD_IN_DAYS);
@@ -229,6 +238,10 @@ export async function computeSeriesForSport(
 
   // Persisted carry-forward: the full history, not a 14-day lead-in.
   const carryForward = await loadCarryForward(series, sport);
+  // Snapshot the STORED keys before the lead-in seed adds to the map, so
+  // the save below can tell a member's persisted history apart from a
+  // seed entry that exists only to give the walk's early days weight.
+  const storedCarryIds = new Set<string>(carryForward.keys());
 
   // SEED THE WALK (2026-09-03). Every row before day one, grouped per
   // card: each member's last observed value becomes its day-one carry.
@@ -278,6 +291,7 @@ export async function computeSeriesForSport(
         epoch = basket.epoch;
         memberIds = basket.members.map((m) => m.cardId);
         memberSet = new Set(memberIds);
+        for (const id of memberIds) persistableMembers.add(id);
         epochsUsed.push(epoch);
       } else {
         // This epoch has too few eligible cards to form a basket. Keeping
@@ -353,7 +367,21 @@ export async function computeSeriesForSport(
 
   // Persist carry-forward for the next run. This is what makes the
   // nightly append seed from the full history rather than 14 days.
-  await saveCarryForward(series, sport, epoch, carryForward);
+  //
+  // BOUNDED (2026-09-03). Only basket members are persisted. The map in
+  // hand also holds every card that traded in the 90-day lead-in — for
+  // baseball that is 49,511 cards, ≈4.2 MB, and upserting it is what
+  // failed run 33813892106 against Cosmos' 2 MB document ceiling. The
+  // seed has done its job by now: it gave the early days real used
+  // weight. It has no business outliving the walk.
+  //
+  // Cards already in the STORED doc are kept too, so a nightly run
+  // (which only ever resolves one epoch) never prunes the members of an
+  // epoch it did not walk. That set is itself bounded by this same rule
+  // on every prior run, so it cannot grow without bound.
+  const keep = new Set<string>(persistableMembers);
+  for (const cardId of storedCarryIds) keep.add(cardId);
+  await saveCarryForward(series, sport, epoch, carryForward, keep);
 
   return {
     sport,
