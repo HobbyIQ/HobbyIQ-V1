@@ -218,13 +218,25 @@ describe("the runner contract", () => {
     expect(runner).toContain('if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then');
   });
 
-  it("the relaunch forwards mode verbatim, or a census relaunches as an apply", () => {
+  it("the relaunch forwards mode verbatim, and NEVER forwards apply=true", () => {
     const step = runner.slice(runner.indexOf("Self-relaunch rematch-sold-comps"));
     const dispatch = step.slice(0, step.indexOf("\n      - name:") + 1);
     expect(dispatch).toContain('-f mode="${{ inputs.mode }}"');
-    expect(dispatch).toContain('-f apply="${{ inputs.apply }}"');
     expect(dispatch).toContain('-f slot="${{ inputs.slot }}"');
     expect(dispatch).toContain('-f slots="${{ inputs.slots }}"');
+
+    // AMENDED 2026-09-03 (audit finding 5). `apply` used to be forwarded
+    // verbatim, so an apply that stopped at its 140-minute budget re-dispatched
+    // itself as ANOTHER APPLY -- onto a fresh runner with a fresh /tmp, where
+    // the canary baseline captured by the first run no longer exists. The
+    // continuation then wrote with no before-state and no gate. The gate was
+    // skippable by being slow.
+    //
+    // The relaunch is now always a REPORT. A report relaunch still finishes
+    // the shard's census (#1578); the apply is re-dispatched by hand, which
+    // brings the before/apply/after triple back with it.
+    expect(dispatch).toContain("-f apply=false");
+    expect(dispatch).not.toContain('-f apply="${{ inputs.apply }}"');
   });
 
   it("MODE is required and has no default -- a defaulted mode is a silent census or a silent write", () => {
@@ -305,16 +317,40 @@ describe("the canary gate", () => {
 
 describe("the canary set itself", () => {
   const doc = JSON.parse(fs.readFileSync(path.join(backend, "data", "rematch-canaries.json"), "utf8")) as {
-    canaries: { name: string; holdingId: string; slug: string; poolRows: number; verifiedMarketDirection: string }[];
+    canaries: { name: string; holdingId?: string; slug: string; poolRows: number; verifiedMarketDirection: string; derivedFrom?: string; shardSlot?: number | null }[];
+    _shardCoverage?: { of: number; covered: number; uncovered: number[] };
   };
+  /** Drew's own, as distinct from the ones derive-rematch-canaries.cjs added. */
+  const hand = doc.canaries.filter((c) => !c.derivedFrom);
 
   it("carries all seven hand-verified holdings with a slug and a verified direction", () => {
-    expect(doc.canaries).toHaveLength(7);
-    for (const c of doc.canaries) {
+    // AMENDED 2026-09-03 (audit finding 6). The file used to hold exactly the
+    // seven, and the gate is per-shard -- so the other 25 shards had nothing
+    // that could regress and passed by construction. Slot 29, the 30/30-wrong
+    // Tiffany shard, was one of them.
+    //
+    // The seven are still the seven, and this still pins every one of their
+    // properties. What changed is that they are no longer the whole file.
+    expect(hand).toHaveLength(7);
+    for (const c of hand) {
       expect(c.slug).toMatch(/^hiq:/);
       expect(c.holdingId).toBeTruthy();
       expect(["exact-pool", "graded-from-raw"]).toContain(c.verifiedMarketDirection);
       expect(c.poolRows).toBeGreaterThan(0);
+    }
+  });
+
+  it("gives EVERY shard a canary, so no shard passes the gate by construction", () => {
+    const slots = new Set(doc.canaries.map((c) => c.shardSlot).filter((s) => s !== null && s !== undefined));
+    for (let s = 0; s < 32; s++) expect(slots.has(s)).toBe(true);
+    expect(doc._shardCoverage?.uncovered ?? []).toEqual([]);
+  });
+
+  it("labels every derived canary, so none is ever quoted as hand-verified", () => {
+    for (const c of doc.canaries.filter((x) => x.derivedFrom)) {
+      expect(["provenance", "largest-pool"]).toContain(c.derivedFrom);
+      expect(c.poolRows).toBeGreaterThan(0);
+      expect(c.slug).toMatch(/^hiq:/);
     }
   });
 
