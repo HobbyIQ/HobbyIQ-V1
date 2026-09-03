@@ -61,8 +61,16 @@ function holdingWithTrend(): PortfolioHolding {
   } as unknown as PortfolioHolding;
 }
 
-const ENTITLED = { sellSignalEntitled: true };
-const NOT_ENTITLED = { sellSignalEntitled: false };
+// H-13 (audit 2026-09-03): the sell-window signal's player side is the
+// measured #1644/#1647 index, handed to the assembler by the caller. The
+// fixture supplies one for h-1 (player -6%) so these cases still exercise a
+// REAL derived signal — which is the whole point of the entitled case: an
+// entitlement gate that only ever passed refusals would prove nothing.
+const PLAYER_INDEX = new Map([
+  ["h-1", { ratio: 0.94, basketSize: 11, tierScope: "same-tier" }],
+]);
+const ENTITLED = { sellSignalEntitled: true, playerIndexByHoldingId: PLAYER_INDEX };
+const NOT_ENTITLED = { sellSignalEntitled: false, playerIndexByHoldingId: PLAYER_INDEX };
 
 describe("CF-PRO-SELLER-GATE — sellSignal is gated on the field, not the route", () => {
   it("entitled: the key is present and carries a real derived signal", () => {

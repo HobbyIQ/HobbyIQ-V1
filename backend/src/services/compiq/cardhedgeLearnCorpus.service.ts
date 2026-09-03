@@ -30,6 +30,7 @@
 
 import { CosmosClient, type Container } from "@azure/cosmos";
 import { DefaultAzureCredential } from "@azure/identity";
+import type { ObservedGradeEntry } from "./observedGradeCurve.service.js";
 
 const DB_NAME = process.env.COSMOS_DB ?? process.env.COSMOS_DATABASE ?? "hobbyiq";
 const CONTAINER_NAME =
@@ -146,7 +147,10 @@ interface ObservedGradeCurveDoc extends BaseCorpusDoc {
      *  produced the value when valueSource === "estimated". Enables
      *  corpus queries like "does reference-price beat raw-multiplier
      *  for prediction accuracy?" */
-    estimatedFrom: "reference-price" | "raw-multiplier" | "sibling-card" | "empirical-ratio" | "empirical-ratio-tier" | null;
+    /** H-8 (audit 2026-09-03): the ONE vocabulary, imported rather than
+     *  re-spelled — this copy silently forbade the three rungs the curve can
+     *  now name, so widening the curve alone failed to compile here. */
+    estimatedFrom: ObservedGradeEntry["estimatedFrom"];
     confidenceScore: number;
     newestSaleDate: string | null;
     daysSinceNewestSale: number | null;
@@ -331,7 +335,7 @@ export function persistObservedGradeCurve(input: {
     observedMedian: number | null;
     valueSource: "observed" | "estimated" | "unavailable";
     estimatedMultiplier: number | null;
-    estimatedFrom?: "reference-price" | "raw-multiplier" | "sibling-card" | "empirical-ratio" | "empirical-ratio-tier" | null;
+    estimatedFrom?: ObservedGradeEntry["estimatedFrom"];
     confidenceScore: number;
     newestSaleDate: string | null;
     daysSinceNewestSale?: number | null;

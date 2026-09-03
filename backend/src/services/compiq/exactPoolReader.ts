@@ -38,6 +38,7 @@
  */
 import { CosmosClient, type Container } from "@azure/cosmos";
 import { asOfCutoffString, isBeforeAsOf } from "./asOfCutoff.js";
+import { mayUnionIdentities, productIdentityOf } from "./identityUnionGuard.js";
 
 const COSMOS_DATABASE = process.env.COSMOS_DATABASE ?? "hobbyiq";
 const SOLD_COMPS_CONTAINER = process.env.COSMOS_SOLD_COMPS_CONTAINER ?? "sold_comps";
@@ -126,10 +127,28 @@ export async function readExactPoolRows(input: {
   }
   // Union: match by cardId OR hobbyiqCardId (covers cross-vendor storage),
   // and by the identity's twin key when the caller names one.
+  //
+  // H-4 (audit 2026-09-03). This OR is where the union physically happens, so
+  // it is the last door the guard stands at. Callers above decide and record;
+  // this is defense in depth for any caller the call graph has not reached —
+  // an id that names a DIFFERENT PRODUCT from `cardId` is dropped from the
+  // union here rather than silently welding two cards into one pool. A vendor
+  // id names no product and is never dropped (that union is the point).
   const hiqIds: string[] = [];
   for (const v of [input.hobbyiqCardId, ...(input.hobbyiqCardIds ?? [])]) {
     const s = typeof v === "string" ? v.trim() : "";
-    if (s && !hiqIds.includes(s)) hiqIds.push(s);
+    if (!s || hiqIds.includes(s)) continue;
+    if (s !== input.cardId && !mayUnionIdentities(input.cardId, s)) {
+      console.warn(JSON.stringify({
+        event: "identity_union_refused_cross_product",
+        source: "exactPoolReader.readExactPoolRows",
+        a: input.cardId, b: s,
+        aProduct: productIdentityOf(input.cardId), bProduct: productIdentityOf(s),
+        detail: "the halves of this union name different products; the read is single-sided",
+      }));
+      continue;
+    }
+    hiqIds.push(s);
   }
   const hiqClauses = hiqIds.map((_, i) => ` OR c.hobbyiqCardId = @hiq${i === 0 ? "" : i}`).join("");
   parts.push(`(c.cardId = @cid${hiqClauses})`);

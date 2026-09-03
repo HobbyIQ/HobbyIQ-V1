@@ -199,6 +199,27 @@ export async function resolveTargets(
 
 // ─── Estimate slicing ───────────────────────────────────────────────────────
 
+/**
+ * H-13: the measured player index on an estimate, when the pricing path that
+ * produced it measured one. Shape is `playerIndexRatio`'s. Null is normal and
+ * means "not measured", never "flat".
+ */
+function playerIndexOf(
+  est: Record<string, unknown>,
+): { ratio: number; basketSize: number; tierScope?: string | null } | null {
+  const pi = (est as { playerIndex?: unknown }).playerIndex;
+  if (!pi || typeof pi !== "object") return null;
+  const ratio = (pi as { ratio?: unknown }).ratio;
+  if (typeof ratio !== "number" || !Number.isFinite(ratio) || ratio <= 0) return null;
+  const basketSize = (pi as { basketSize?: unknown }).basketSize;
+  const tierScope = (pi as { tierScope?: unknown }).tierScope;
+  return {
+    ratio,
+    basketSize: typeof basketSize === "number" ? basketSize : 0,
+    tierScope: typeof tierScope === "string" ? tierScope : null,
+  };
+}
+
 export function sliceEstimate(est: Record<string, unknown>): EvaluationEstimateSlice {
   const fmv = (est as { fairMarketValue?: unknown }).fairMarketValue;
   const pred = (est as { predictedPrice?: unknown }).predictedPrice;
@@ -234,6 +255,14 @@ export function sliceEstimate(est: Record<string, unknown>): EvaluationEstimateS
       trendIQ && typeof trendIQ === "object"
         ? deriveSellWindowSignal({
             trendIQ: trendIQ as TrendIQResult,
+            // H-13 (audit 2026-09-03): the player side is the measured
+            // #1644/#1647 index, carried on the estimate by whoever priced it
+            // (playerIndexRatio's shape). Absent — an estimate from a path
+            // that did not measure the player's market — the derivation
+            // refuses BY NAME rather than timing an alert off the clamped
+            // median-of-medians it used to read. An alert that fires on a
+            // statistic doctrine forbids is worse than one that does not fire.
+            playerIndex: playerIndexOf(est),
             confidence: typeof pc === "number" ? pc / 100 : null,
             trendUpdatedAt: (trendIQ as { lastUpdated?: string | null }).lastUpdated ?? null,
           }).signal

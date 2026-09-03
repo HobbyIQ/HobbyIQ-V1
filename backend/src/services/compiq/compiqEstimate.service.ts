@@ -1288,7 +1288,33 @@ export function getConditionSensitiveSetBump(
   return 1.0;
 }
 
-export function getGraderPremium(
+/**
+ * H-8 (audit 2026-09-03). The rung of this ladder that produced a multiplier.
+ *
+ * The grade curve used to LABEL its estimated values by separately re-querying
+ * whether the empirical-ratio lookups *would* have answered — a question this
+ * ladder had already asked and answered, sometimes differently. Four rungs
+ * above those lookups (gem-rate, vintage, the value-band table, PSA-8-equals-
+ * raw) and three below them (auto, base, static) outranked the label, so a
+ * value from the vintage table was published as `empirical-ratio` and drew
+ * that label's tighter confidence band.
+ *
+ * The ladder now says which rung it took, and the label is that answer.
+ */
+export type GraderPremiumRung =
+  | "no-grade"
+  | "psa8-equals-raw"
+  | "gem-rate-formula"
+  | "vintage-table"
+  | "empirical-value-band"
+  | "empirical-ratio-tier"
+  | "empirical-ratio"
+  | "auto-table"
+  | "base-table"
+  | "static-table"
+  | "no-table";
+
+function graderPremiumLadder(
   gradingCompany: string | null | undefined,
   grade: string | null | undefined,
   rawPrice?: number | null,
@@ -1303,8 +1329,8 @@ export function getGraderPremium(
    *  absent, the ladder walks the sport-agnostic layers only — still
    *  strictly better than the pre-calibration auto/base tables. */
   sportHint?: string | null,
-): number {
-  if (!gradingCompany || grade == null) return 1.0;
+): { multiplier: number; rung: GraderPremiumRung } {
+  if (!gradingCompany || grade == null) return { multiplier: 1.0, rung: "no-grade" };
   const company = String(gradingCompany).toUpperCase().trim();
   const gradeKey = String(grade).trim();
 
@@ -1317,7 +1343,7 @@ export function getGraderPremium(
   // year info default to modern behavior (safer for the common case).
   const isModernForOverride = !cardYear || cardYear >= 1990;
   if (company === "PSA" && (gradeKey === "8" || gradeKey === "8.0") && isModernForOverride) {
-    return 1.0;
+    return { multiplier: 1.0, rung: "psa8-equals-raw" };
   }
 
   // CF-GEM-RATE-WIRED (Drew, 2026-07-15, PR #495 follow-up): when the
@@ -1347,7 +1373,7 @@ export function getGraderPremium(
       formulaMultiplier,
       setBump,
     });
-    return formulaMultiplier * setBump;
+    return { multiplier: formulaMultiplier * setBump, rung: "gem-rate-formula" };
   }
 
   // CF-GEM-RATE-WIRED-LOWCONF-TELEMETRY (Drew, 2026-07-16): when we have
@@ -1392,7 +1418,7 @@ export function getGraderPremium(
       const tier = vintage.table[era][company][gradeKey];
       const vintageValue = resolveTierForTable(tier, rawPrice);
       if (vintageValue != null && Number.isFinite(vintageValue) && vintageValue > 0) {
-        return vintageValue * setBump;
+        return { multiplier: vintageValue * setBump, rung: "vintage-table" };
       }
     }
     // else fall through (vintage table may not cover every era/grade combo yet)
@@ -1426,12 +1452,12 @@ export function getGraderPremium(
 
       const bandLookup = lookupValueBandMultiplierWithScope(rawPrice, company, gradeValueNum, { sport, family });
       if (bandLookup && Number.isFinite(bandLookup.medianRatio) && bandLookup.medianRatio > 0) {
-        return bandLookup.medianRatio * setBump;
+        return { multiplier: bandLookup.medianRatio * setBump, rung: "empirical-value-band" };
       }
 
       const tierRatio = lookupGradeRatioByTier(family, company, gradeValueNum, sport);
       if (tierRatio !== null && Number.isFinite(tierRatio) && tierRatio > 0) {
-        return tierRatio * setBump;
+        return { multiplier: tierRatio * setBump, rung: "empirical-ratio-tier" };
       }
 
       // Only run the family-scalar × subTierScaling layer for grades
@@ -1443,7 +1469,7 @@ export function getGraderPremium(
       if (gradeValueNum >= 5 && gradeValueNum <= 10) {
         const familyScalar = lookupGradeRatio(family, company, sport);
         if (familyScalar !== null && Number.isFinite(familyScalar) && familyScalar > 0) {
-          return familyScalar * subTierScalingForFallback(gradeValueNum) * setBump;
+          return { multiplier: familyScalar * subTierScalingForFallback(gradeValueNum) * setBump, rung: "empirical-ratio" };
         }
       }
       // else fall through to legacy auto/base tables below
@@ -1459,7 +1485,7 @@ export function getGraderPremium(
     const autoTier = auto?.table?.[company]?.[gradeKey];
     const autoValue = resolveTierForTable(autoTier, rawPrice);
     if (autoValue != null && Number.isFinite(autoValue) && autoValue > 0) {
-      return autoValue * setBump;
+      return { multiplier: autoValue * setBump, rung: "auto-table" };
     }
     // else fall through to base table (logged in telemetry as a calibration gap)
   }
@@ -1474,15 +1500,34 @@ export function getGraderPremium(
     const baseTier = base?.table?.[company]?.[gradeKey];
     const baseValue = resolveTierForTable(baseTier, rawPrice);
     if (baseValue != null && Number.isFinite(baseValue) && baseValue > 0) {
-      return baseValue * setBump;
+      return { multiplier: baseValue * setBump, rung: "base-table" };
     }
     // else fall through to static
   }
 
   const tierTable = GRADER_PREMIUMS[company]?.[gradeKey];
-  if (!tierTable) return 1.0;
+  if (!tierTable) return { multiplier: 1.0, rung: "no-table" };
   const tier = rawPriceToGradeTier(rawPrice);
-  return tierTable[tier] * setBump;
+  return { multiplier: tierTable[tier] * setBump, rung: "static-table" };
+}
+
+
+/**
+ * The multiplier alone — every existing caller's contract, unchanged.
+ * Callers that need to REPORT which rung produced it call
+ * `getGraderPremiumWithRung` instead of guessing.
+ */
+export function getGraderPremium(
+  ...args: Parameters<typeof graderPremiumLadder>
+): number {
+  return graderPremiumLadder(...args).multiplier;
+}
+
+/** The multiplier and the rung that produced it. H-8. */
+export function getGraderPremiumWithRung(
+  ...args: Parameters<typeof graderPremiumLadder>
+): { multiplier: number; rung: GraderPremiumRung } {
+  return graderPremiumLadder(...args);
 }
 
 /**
