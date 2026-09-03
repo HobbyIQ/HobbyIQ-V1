@@ -425,7 +425,10 @@ router.post("/listings/prepare", async (req: Request, res: Response) => {
     // answers. It computes nothing itself, so this is not a valuation
     // change: the number a draft shows is now the same number
     // /api/compiq/canonical-fmv would return for the same holding.
-    const priceContext = await composeSellDraftPricing(h as SellDraftHolding);
+    // CF-SELF-COMP-LABEL-REACHES-THE-RESULT (Drew, 2026-09-03): the seller's
+    // own id, so a comp THEY contributed reaches the draft labeled as theirs
+    // rather than passing for an independent sale.
+    const priceContext = await composeSellDraftPricing(h as SellDraftHolding, { sellerUserId: userId });
     const priceCents = priceContext.pricing.priceCents ?? 0;
 
     const titleSuggested = (() => {
@@ -800,7 +803,7 @@ async function attachBasisToDescription(
     const h = key ? (doc.holdings[key] as unknown as SellDraftHolding) : undefined;
     if (!h) return input;
 
-    const { pricing } = await composeSellDraftPricing(h);
+    const { pricing } = await composeSellDraftPricing(h, { sellerUserId: userId });
     if (pricing.status !== "engine" || pricing.priceCents === null) return input;
 
     // Did the seller keep OUR number? Compare in cents, the unit the wire

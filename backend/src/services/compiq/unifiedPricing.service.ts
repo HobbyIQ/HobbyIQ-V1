@@ -168,7 +168,12 @@ export interface UnifiedGradeEntry {
   // CF-ONE-VALUATION-PATH (D16, 2026-08-30). The sales this tier was priced
   // from, newest first (capped), so a wire's comp list / sales history is
   // the SAME rows that produced the number — not a second read.
-  sales?: Array<{ price: number; soldAt: string; source: string | null }>;
+  // CF-SELF-COMP-LABEL-REACHES-THE-RESULT (Drew, 2026-09-03). The row's
+  // contributor rides with the sale. A sale the OWNER contributed is what
+  // makes a published result self-anchored, and the reprieve above can KEEP
+  // such a row in the priced pool; without this field every consumer
+  // downstream sees somebody else's sale and the label never fires.
+  sales?: Array<{ price: number; soldAt: string; source: string | null; contributorUserId: string | null }>;
   // CF-THE-PROJECTION-IS-THE-LEADING-EDGE (D22). What the rung did, in
   // prose for the basis: the anchor and how far back it sits, the trend
   // applied from there, the newest-sale band, or the one-sale policy's
@@ -264,13 +269,45 @@ async function fetchPoolRows(
 /** Post-filter: exclude self-comps ONLY when the surviving other-pool is
  *  large enough to price on its own. See SELF_COMP_MIN_OTHER_SAMPLES. Pure,
  *  so the per-tier window mode can apply it to each window exactly as the
- *  cascade applied it to each query. */
+ *  cascade applied it to each query.
+ *
+ * CF-SELF-COMP-THIN-POOL-IS-PER-TIER (Drew, 2026-09-02). The thin-pool
+ * reprieve is measured PER TIER, because a tier is what gets priced. The
+ * whole-card count answered the wrong question: it asked "does this CARD
+ * have 3 other sales?" when the number being served is "what is this card
+ * worth in PSA 10?".
+ *
+ * Measured on Justin Verlander 2005 Bowman Chrome BDP129 PSA 10
+ * (bba3b7ad): the PSA 10 pool is one sale — Drew's own $251. The card also
+ * carries 5 Raw/BGS rows, so the card-wide test saw `others.length = 5 >= 3`
+ * and dropped the only PSA 10 sale there is. The tier went empty and the
+ * holding fell to `grade-curve-estimate` $96.34, while /canonical-fmv —
+ * which passes no user and so never ran this filter — served the real
+ * $251 `exact-pool-last-sale`. Same function, same pool, same moment: the
+ * $155 gap was this count, and the Raw sales it counted can say nothing
+ * about a PSA 10.
+ *
+ * Per tier, the reprieve now fires exactly where Drew wrote it to: a tier
+ * whose only evidence is the owner's own purchase keeps that purchase (and
+ * is published labeled, per the self-comp doctrine), while a tier with a
+ * real market of its own still excludes the owner's sale from it. */
 function applySelfCompRule(rows: RawCompRow[], excludeContributorUserId?: string | null): RawCompRow[] {
   if (!excludeContributorUserId) return rows;
-  const others = rows.filter((r) => r.contributorUserId !== excludeContributorUserId);
-  if (others.length >= SELF_COMP_MIN_OTHER_SAMPLES) return others;
-  // else: keep self-comps in — they carry the only market signal we have
-  return rows;
+  const kept: RawCompRow[] = [];
+  const byTier = new Map<string, RawCompRow[]>();
+  for (const r of rows) {
+    const label = gradeLabel(r.gradeCompany, r.gradeValue);
+    let arr = byTier.get(label);
+    if (!arr) { arr = []; byTier.set(label, arr); }
+    arr.push(r);
+  }
+  for (const tierRowsForLabel of byTier.values()) {
+    const others = tierRowsForLabel.filter((r) => r.contributorUserId !== excludeContributorUserId);
+    // The tier can price itself without the owner: drop the self-comps.
+    // Otherwise keep them — they carry the only market signal this tier has.
+    kept.push(...(others.length >= SELF_COMP_MIN_OTHER_SAMPLES ? others : tierRowsForLabel));
+  }
+  return kept;
 }
 
 async function queryComps(
@@ -908,10 +945,10 @@ export async function computeUnifiedPrice(
       projectionNote: trend.projectionNote,
       windowNote: tierWindowNotes.get(label) ?? null,
       sales: rows
-        .map((r) => ({ price: Number(r.price), soldAt: String(r.soldAt), source: r.source ?? null, t: Date.parse(r.soldAt) }))
+        .map((r) => ({ price: Number(r.price), soldAt: String(r.soldAt), source: r.source ?? null, contributorUserId: r.contributorUserId ?? null, t: Date.parse(r.soldAt) }))
         .sort((a, b) => (Number.isFinite(b.t) ? b.t : 0) - (Number.isFinite(a.t) ? a.t : 0))
         .slice(0, TIER_SALES_ON_WIRE)
-        .map(({ price, soldAt, source }) => ({ price, soldAt, source })),
+        .map(({ price, soldAt, source, contributorUserId }) => ({ price, soldAt, source, contributorUserId })),
     });
   }
   gradeCurve.sort((a, b) => (b.sampleCount - a.sampleCount));
