@@ -3745,6 +3745,17 @@ export type BuyerIqDealRefusal =
   | "below-threshold"
   | "no-listing-price";
 
+/** Why a LISTING was not comparable to the target (CF-BUYERIQ-GRADE-
+ *  AWARE-MATCH, 2026-09-03). Identity includes grade tier: a raw ask is
+ *  not a discount on a PSA 10, and a listing whose grade we cannot read
+ *  is not scored at all rather than assumed into either tier. */
+export type BuyerIqGradeMismatchReason =
+  | "grade-unknown"
+  | "listing-raw-target-graded"
+  | "listing-graded-target-raw"
+  | "grade-company-mismatch"
+  | "grade-value-mismatch";
+
 /** The evidence behind a flagged deal — what the discount is measured
  *  against, and how much that projection is trusted. */
 export interface BuyerIqDealBasis {
@@ -3778,6 +3789,9 @@ export interface BuyerIqDeal {
   gradeCompany: string | null;
   gradeValue: number | null;
   listing: BuyerIqDealListing;
+  /** The grade tier read off the listing title and verified equal to
+   *  the target tier before scoring ("PSA 10", "Raw"). */
+  matchedTier: string;
   basis: BuyerIqDealBasis;
   discountPctDisplay: number;
   requiredDiscountPctDisplay: number;
@@ -3787,8 +3801,11 @@ export interface BuyerIqDeal {
 export interface BuyerIqSkippedTarget {
   targetId: string;
   playerName: string;
-  reason: BuyerIqDealRefusal | "no-listings" | "no-player-name";
+  reason: BuyerIqDealRefusal | BuyerIqGradeMismatchReason | "no-listings" | "no-player-name";
   basis: BuyerIqDealBasis | null;
+  /** Listings that matched the card but not the TIER, by reason. Lets
+   *  the page say "2 listed, both raw" instead of "nothing listed". */
+  gradeRejections?: Partial<Record<BuyerIqGradeMismatchReason, number>>;
 }
 
 export interface BuyerIqDealFeed {

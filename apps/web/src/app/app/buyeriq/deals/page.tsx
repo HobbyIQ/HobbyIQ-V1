@@ -178,7 +178,7 @@ function DealCard({ deal }: { deal: BuyerIqDeal }) {
           <div className="flex items-baseline gap-3 mt-2 flex-wrap">
             <span className="text-lg font-bold">${listing.price.toFixed(2)}</span>
             <span className="text-sm text-[color:var(--color-muted)]">
-              vs ${basis.projection.toFixed(2)} projected
+              vs ${basis.projection.toFixed(2)} projected for {deal.matchedTier}
             </span>
             <span className="text-sm" style={{ color: "var(--color-success)" }}>
               save ${deal.savingsVsProjection.toFixed(2)}
@@ -290,6 +290,20 @@ function SkippedSection({ skipped }: { skipped: BuyerIqSkippedTarget[] }) {
     "no-listing-price": "Listing had no usable price.",
     "no-listings": "Nothing matching is listed right now.",
     "no-player-name": "Target has no player name.",
+    // CF-BUYERIQ-GRADE-AWARE-MATCH (2026-09-03). Identity includes the
+    // grade tier, so these say "there ARE listings, they're just not
+    // your card" — which is a different and more useful answer than
+    // "nothing is listed".
+    "grade-unknown":
+      "Listings found, but their titles don't state a grade — we can't tell which tier they're in, so we didn't score them.",
+    "listing-raw-target-graded":
+      "The listings we found are raw. Your target is graded, and a raw card isn't a discount on a slab.",
+    "listing-graded-target-raw":
+      "The listings we found are graded. Your target is raw, and they price off a different pool.",
+    "grade-company-mismatch":
+      "Listings found, but graded by a different company than your target.",
+    "grade-value-mismatch":
+      "Listings found, but at a different grade than your target. Each grade has its own price.",
   };
   return (
     <div className="mt-6">

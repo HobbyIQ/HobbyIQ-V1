@@ -16,7 +16,20 @@
 //   - titleMatchesParallel — the SAME post-fetch verification
 //     listing-range applies, so a Blue Refractor target cannot be
 //     "discounted" against a base-card listing
+//   - listingMatchesGrade — the grade half of that identity check, so a
+//     RAW listing cannot be "discounted" against a PSA 10 projection
 // No new vendor integration, no new scraper, no new quota consumer.
+//
+// IDENTITY INCLUDES GRADE (CF-BUYERIQ-GRADE-AWARE-MATCH, 2026-09-03).
+// Verification is two-dimensional: parallel AND grade tier. The
+// parallel half shipped first and the grade half did not, so the
+// scanner compared listings against projections belonging to a
+// different tier — 6 of 8 sampled deals were a raw or lower-grade ask
+// measured against a higher tier's number. FMV is per exact identity
+// INCLUDING grade (D21: the grade curve IS the graded card), so a deal
+// is a listing under the projection of ITS OWN tier. A listing whose
+// grade cannot be read is NOT SCORED — never defaulted to raw, never
+// to the target's tier. See listingGradeMatch.ts.
 //
 // Budget: ScanBudget charges live Browse calls only (cache reads are
 // free). When it runs out the scan STOPS and reports truncation rather
@@ -31,6 +44,11 @@ import {
   writeCachedActiveListings,
 } from "../ebay/ebayActiveListingsCache.service.js";
 import { titleMatchesParallel } from "../compiq/titleParallelMatch.js";
+import {
+  listingMatchesGrade,
+  type GradeMismatchReason,
+  type ListingGradeReading,
+} from "./listingGradeMatch.js";
 import { computeCanonicalFmv } from "../compiq/canonicalFmv.service.js";
 import { listTargets, type BuyerIqTarget } from "./buyeriqStore.service.js";
 import {
@@ -68,6 +86,11 @@ export interface Deal {
   gradeCompany: string | null;
   gradeValue: number | null;
   listing: DealListing;
+  /** The grade tier read off the LISTING title, verified equal to the
+   *  target's tier before this deal was scored. "raw" for an ungraded
+   *  listing matched to a raw target. Never null on a flagged deal —
+   *  an unreadable grade is refused, not scored. */
+  matchedTier: string;
   /** Why this is a deal: the projection, the rung it came from, the
    *  confidence in it, the discount carried and the discount required. */
   basis: DealBasis;
@@ -81,9 +104,14 @@ export interface Deal {
 export interface SkippedTarget {
   targetId: string;
   playerName: string;
-  reason: DealRefusal | "no-listings" | "no-player-name";
+  reason: DealRefusal | GradeMismatchReason | "no-listings" | "no-player-name";
   /** Present when a projection existed but did not clear the gate. */
   basis: DealBasis | null;
+  /** How many listings passed the parallel gate but failed the grade
+   *  gate, by reason. Present only on a grade-mismatch skip — this is
+   *  what lets the feed say "2 listed, both raw, your target is PSA 10"
+   *  instead of the misleading "nothing listed". */
+  gradeRejections?: Partial<Record<GradeMismatchReason, number>>;
 }
 
 export interface DealFeedResult {
@@ -183,14 +211,86 @@ async function listingsForTarget(
   return { listings: fetched.listings ?? [] };
 }
 
-/** Apply listing-range's title verification so cross-parallel listings
- *  cannot masquerade as a discount on this card. */
-function verifiedListings(listings: ActiveListing[], t: BuyerIqTarget): ActiveListing[] {
-  return listings
-    .filter((l) =>
-      titleMatchesParallel(l.title ?? "", t.parallel ?? null, t.cardNumber ?? null, t.playerName ?? null),
-    )
-    .slice(0, MAX_LISTINGS_PER_TARGET);
+/** A listing that survived parallel verification, with its grade read. */
+interface VerifiedListing {
+  listing: ActiveListing;
+  reading: ListingGradeReading;
+}
+
+/** Why nothing on this target was scoreable. */
+interface VerificationOutcome {
+  verified: VerifiedListing[];
+  /** Grade-rejection tallies, for the "why isn't X here?" feed. */
+  gradeRejections: Partial<Record<GradeMismatchReason, number>>;
+  /** Listings that passed parallel verification, before the grade gate. */
+  parallelMatched: number;
+}
+
+/**
+ * Two-dimensional verification: PARALLEL then GRADE.
+ *
+ * The parallel gate (titleMatchesParallel) is listing-range's own, and
+ * stops a Blue Refractor target being priced off a base-card ask. The
+ * grade gate (listingMatchesGrade) stops the same error along the axis
+ * the original scanner ignored: a raw or PSA 9 ask priced off the PSA
+ * 10 projection.
+ *
+ * A listing whose grade the title does not settle is DROPPED, not
+ * assumed into either tier — counted under "grade-unknown" so the feed
+ * can say "3 listings, grade not stated, not scored" rather than
+ * silently scoring them or silently showing nothing.
+ */
+function verifiedListings(listings: ActiveListing[], t: BuyerIqTarget): VerificationOutcome {
+  const gradeRejections: Partial<Record<GradeMismatchReason, number>> = {};
+  const verified: VerifiedListing[] = [];
+  let parallelMatched = 0;
+
+  for (const l of listings) {
+    const title = l.title ?? "";
+    if (!titleMatchesParallel(title, t.parallel ?? null, t.cardNumber ?? null, t.playerName ?? null)) {
+      continue;
+    }
+    parallelMatched++;
+
+    const grade = listingMatchesGrade(title, {
+      gradeCompany: t.gradeCompany ?? null,
+      gradeValue: t.gradeValue ?? null,
+    });
+    if (!grade.ok) {
+      gradeRejections[grade.reason] = (gradeRejections[grade.reason] ?? 0) + 1;
+      continue;
+    }
+
+    verified.push({ listing: l, reading: grade.reading });
+    if (verified.length >= MAX_LISTINGS_PER_TARGET) break;
+  }
+
+  return { verified, gradeRejections, parallelMatched };
+}
+
+/** Render a verified grade reading as the tier label shown on the deal
+ *  ("PSA 10", "BGS 10 Black Label", "Raw"). Only ever called for a
+ *  reading that already matched the target, so "unknown" cannot occur. */
+function tierLabel(reading: ListingGradeReading): string {
+  if (reading.kind === "raw") return "Raw";
+  if (reading.kind === "unknown") return "Unknown";
+  const base = `${reading.company} ${reading.value}`;
+  return reading.isBlackLabel ? `${base} Black Label` : base;
+}
+
+/** The dominant reason a target with listings produced no scoreable one. */
+function dominantGradeRejection(
+  rejections: Partial<Record<GradeMismatchReason, number>>,
+): GradeMismatchReason | null {
+  let best: GradeMismatchReason | null = null;
+  let bestN = 0;
+  for (const [reason, n] of Object.entries(rejections) as Array<[GradeMismatchReason, number]>) {
+    if (n > bestN) {
+      best = reason;
+      bestN = n;
+    }
+  }
+  return best;
 }
 
 function toDealListing(l: ActiveListing): DealListing {
@@ -245,9 +345,21 @@ export async function scanDeals(opts: ScanDealsOptions): Promise<DealFeedResult>
     }
     scanned++;
 
-    const verified = verifiedListings(fetchResult.listings, t);
+    const { verified, gradeRejections, parallelMatched } = verifiedListings(fetchResult.listings, t);
     if (verified.length === 0) {
-      skipped.push({ targetId: t.id, playerName: t.playerName, reason: "no-listings", basis: null });
+      // Distinguish "nothing is listed" from "things are listed but none
+      // of them are THIS card in THIS tier". Reporting the latter as
+      // "no listings" hides the very confusion that produced the false
+      // positives — a user seeing raw asks on the page needs to be told
+      // we did not score them, and why.
+      const dominant = parallelMatched > 0 ? dominantGradeRejection(gradeRejections) : null;
+      skipped.push({
+        targetId: t.id,
+        playerName: t.playerName,
+        reason: dominant ?? "no-listings",
+        basis: null,
+        ...(dominant ? { gradeRejections } : {}),
+      });
       continue;
     }
 
@@ -266,10 +378,10 @@ export async function scanDeals(opts: ScanDealsOptions): Promise<DealFeedResult>
     });
 
     // Evaluate every verified listing; keep the deepest qualifying one.
-    let best: { listing: ActiveListing; basis: DealBasis } | null = null;
+    let best: { listing: ActiveListing; basis: DealBasis; reading: ListingGradeReading } | null = null;
     let lastRefusal: { reason: DealRefusal; basis: DealBasis | null } | null = null;
 
-    for (const l of verified) {
+    for (const { listing: l, reading } of verified) {
       const verdict = evaluateDeal({
         listingPrice: l.price,
         fmv: fmvResult?.fmv ?? null,
@@ -280,7 +392,7 @@ export async function scanDeals(opts: ScanDealsOptions): Promise<DealFeedResult>
       });
       if (verdict.flagged && verdict.basis) {
         if (!best || verdict.basis.discountPct > best.basis.discountPct) {
-          best = { listing: l, basis: verdict.basis };
+          best = { listing: l, basis: verdict.basis, reading };
         }
       } else if (verdict.refusal) {
         // Keep the closest near-miss for the explanation feed.
@@ -307,6 +419,7 @@ export async function scanDeals(opts: ScanDealsOptions): Promise<DealFeedResult>
         gradeCompany: t.gradeCompany ?? null,
         gradeValue: t.gradeValue ?? null,
         listing: toDealListing(best.listing),
+        matchedTier: tierLabel(best.reading),
         basis: best.basis,
         discountPctDisplay: Math.round(best.basis.discountPct * 1000) / 10,
         requiredDiscountPctDisplay: Math.round(best.basis.requiredDiscountPct * 1000) / 10,
@@ -350,6 +463,16 @@ export async function scanDeals(opts: ScanDealsOptions): Promise<DealFeedResult>
     targetsScanned: result.targetsScanned,
     targetsUnexamined: result.targetsUnexamined,
     dealsFound: deals.length,
+    // Grade-gate telemetry: how many targets were skipped because the
+    // only listings were in a DIFFERENT tier than the target. A rising
+    // count here is the false-positive population the old scanner was
+    // silently reporting as deals.
+    skippedGradeUnknown: skipped.filter((s) => s.reason === "grade-unknown").length,
+    skippedGradeMismatch: skipped.filter((s) =>
+      s.reason === "listing-raw-target-graded" ||
+      s.reason === "listing-graded-target-raw" ||
+      s.reason === "grade-company-mismatch" ||
+      s.reason === "grade-value-mismatch").length,
     complete,
     stoppedReason,
     budget: result.budget,

@@ -49,7 +49,13 @@ function target(id: string, over: Record<string, unknown> = {}) {
   };
 }
 
-function listing(id: string, price: number, title = "2026 Bowman Chrome Eric Hartman CPA-EHA") {
+// CF-BUYERIQ-GRADE-AWARE-MATCH (2026-09-03): the default target below is
+// RAW (gradeCompany null), so the default listing title must SAY raw.
+// Since the grade fix, a title that does not settle its grade tier is
+// "grade unknown" and is not scored at all — which is the point of the
+// fix, and which would otherwise silently empty every test here. Tests
+// that care about the grade axis pass their own title.
+function listing(id: string, price: number, title = "2026 Bowman Chrome Eric Hartman CPA-EHA Raw") {
   return {
     id,
     title,
@@ -147,8 +153,8 @@ describe("scanDeals — the deals feed", () => {
       target("t2", { playerName: "Player B" }),
     ]);
     fetchCardActiveListings
-      .mockResolvedValueOnce({ listings: [listing("i1", 75, "2026 Bowman Chrome Player A CPA-EHA")], totalReported: 1, effectiveQuery: "q", snapshottedAt: "" })
-      .mockResolvedValueOnce({ listings: [listing("i2", 40, "2026 Bowman Chrome Player B CPA-EHA")], totalReported: 1, effectiveQuery: "q", snapshottedAt: "" });
+      .mockResolvedValueOnce({ listings: [listing("i1", 75, "2026 Bowman Chrome Player A CPA-EHA Raw")], totalReported: 1, effectiveQuery: "q", snapshottedAt: "" })
+      .mockResolvedValueOnce({ listings: [listing("i2", 40, "2026 Bowman Chrome Player B CPA-EHA Raw")], totalReported: 1, effectiveQuery: "q", snapshottedAt: "" });
     computeCanonicalFmv.mockResolvedValue(fmv(100, 0.9));
 
     const res = await scanDeals({ userId: "u1" });
@@ -259,5 +265,118 @@ describe("reuse: title verification gates the comparison", () => {
 
     expect(res.deals).toHaveLength(0);
     expect(res.skipped[0].reason).toBe("no-listings");
+  });
+});
+
+// CF-BUYERIQ-GRADE-AWARE-MATCH (Drew, 2026-09-03). The grade half of the
+// same identity check, at the SERVICE level — the pure-function pins
+// live in buyeriqListingGradeMatch.test.ts. These prove the refusal
+// survives the round trip and actually changes what the feed returns.
+describe("PINNED: identity includes GRADE — the false positives the verifier found", () => {
+  it("does NOT price a PSA 10 target against a RAW listing", async () => {
+    listTargets.mockResolvedValue([
+      target("t1", { gradeCompany: "PSA", gradeValue: 10 }),
+    ]);
+    fetchCardActiveListings.mockResolvedValue({
+      // A raw card at a raw price. Against the PSA 10 projection of 100
+      // this is a 70% "discount" — the exact shape of 6 of the 8 sampled
+      // false positives.
+      listings: [listing("i1", 30, "2026 Bowman Chrome Eric Hartman CPA-EHA Raw Ungraded")],
+      totalReported: 1, effectiveQuery: "q", snapshottedAt: "",
+    });
+    computeCanonicalFmv.mockResolvedValue(fmv(100, 0.9));
+
+    const res = await scanDeals({ userId: "u1" });
+
+    expect(res.deals).toHaveLength(0);
+    expect(res.skipped[0].reason).toBe("listing-raw-target-graded");
+    // The feed must say listings EXIST but were the wrong tier — not the
+    // misleading "nothing is listed".
+    expect(res.skipped[0].gradeRejections).toMatchObject({ "listing-raw-target-graded": 1 });
+  });
+
+  it("does NOT price a PSA 10 target against a PSA 9 listing", async () => {
+    listTargets.mockResolvedValue([
+      target("t1", { gradeCompany: "PSA", gradeValue: 10 }),
+    ]);
+    fetchCardActiveListings.mockResolvedValue({
+      listings: [listing("i1", 55, "2026 Bowman Chrome Eric Hartman CPA-EHA PSA 9")],
+      totalReported: 1, effectiveQuery: "q", snapshottedAt: "",
+    });
+    computeCanonicalFmv.mockResolvedValue(fmv(100, 0.9));
+
+    const res = await scanDeals({ userId: "u1" });
+
+    expect(res.deals).toHaveLength(0);
+    expect(res.skipped[0].reason).toBe("grade-value-mismatch");
+  });
+
+  it("DOES flag a PSA 10 listing against a PSA 10 target, and names the tier", async () => {
+    listTargets.mockResolvedValue([
+      target("t1", { gradeCompany: "PSA", gradeValue: 10 }),
+    ]);
+    fetchCardActiveListings.mockResolvedValue({
+      listings: [listing("i1", 70, "2026 Bowman Chrome Eric Hartman CPA-EHA PSA 10 GEM MINT")],
+      totalReported: 1, effectiveQuery: "q", snapshottedAt: "",
+    });
+    computeCanonicalFmv.mockResolvedValue(fmv(100, 0.9));
+
+    const res = await scanDeals({ userId: "u1" });
+
+    expect(res.deals).toHaveLength(1);
+    expect(res.deals[0].matchedTier).toBe("PSA 10");
+    expect(res.deals[0].discountPctDisplay).toBeCloseTo(30, 5);
+  });
+
+  it("PINNED: an unreadable grade is not scored, at any discount", async () => {
+    listTargets.mockResolvedValue([
+      target("t1", { gradeCompany: "PSA", gradeValue: 10 }),
+    ]);
+    fetchCardActiveListings.mockResolvedValue({
+      // Says nothing about grade. A 95% "discount" must NOT rescue it.
+      listings: [listing("i1", 5, "2026 Bowman Chrome Eric Hartman CPA-EHA")],
+      totalReported: 1, effectiveQuery: "q", snapshottedAt: "",
+    });
+    computeCanonicalFmv.mockResolvedValue(fmv(100, 0.9));
+
+    const res = await scanDeals({ userId: "u1" });
+
+    expect(res.deals).toHaveLength(0);
+    expect(res.skipped[0].reason).toBe("grade-unknown");
+  });
+
+  it("PINNED: a silent title is not assumed RAW for a raw target either", async () => {
+    listTargets.mockResolvedValue([target("t1")]);   // raw target
+    fetchCardActiveListings.mockResolvedValue({
+      listings: [listing("i1", 30, "2026 Bowman Chrome Eric Hartman CPA-EHA")],
+      totalReported: 1, effectiveQuery: "q", snapshottedAt: "",
+    });
+    computeCanonicalFmv.mockResolvedValue(fmv(100, 0.9));
+
+    const res = await scanDeals({ userId: "u1" });
+
+    expect(res.deals).toHaveLength(0);
+    expect(res.skipped[0].reason).toBe("grade-unknown");
+  });
+
+  it("picks the deepest listing IN TIER, not the deepest overall", async () => {
+    listTargets.mockResolvedValue([
+      target("t1", { gradeCompany: "PSA", gradeValue: 10 }),
+    ]);
+    fetchCardActiveListings.mockResolvedValue({
+      listings: [
+        // Cheapest, but RAW — must not win, and must not appear at all.
+        listing("i1", 20, "2026 Bowman Chrome Eric Hartman CPA-EHA Raw"),
+        listing("i2", 70, "2026 Bowman Chrome Eric Hartman CPA-EHA PSA 10"),
+      ],
+      totalReported: 2, effectiveQuery: "q", snapshottedAt: "",
+    });
+    computeCanonicalFmv.mockResolvedValue(fmv(100, 0.9));
+
+    const res = await scanDeals({ userId: "u1" });
+
+    expect(res.deals).toHaveLength(1);
+    expect(res.deals[0].listing.listingId).toBe("i2");
+    expect(res.deals[0].matchedTier).toBe("PSA 10");
   });
 });
