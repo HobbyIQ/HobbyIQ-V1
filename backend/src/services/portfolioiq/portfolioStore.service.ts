@@ -34,7 +34,10 @@ import {
 // pool through the ONE valuation entry (holdingValuation → valueIdentity).
 import { valueHoldingThroughOneEntry, holdingGrade as holdingGradeOf } from "./holdingValuation.js";
 import { isPriceFromOurPoolEnabled, priceHoldingFromOurPool } from "./priceFromOurPool.service.js";
-import { composeHoldingWireShape, composePortfolioListResponse } from "./responseAssembly.js";
+import { composeHoldingWireShape, composePortfolioListResponse, type WireEntitlements } from "./responseAssembly.js";
+// CF-PRO-SELLER-GATE (Drew, 2026-09-02): the wire composer gates paid fields
+// on the caller's effective plan; these are the single authority for that.
+import { effectivePlanFor, hasEntitlement } from "../../config/entitlements.js";
 // CF-PORTFOLIO-REFRESH-ASYNC (2026-08-31): background-run tracker for the
 // dispatched batch reprice. Progress state only — never a price.
 import * as repriceJobs from "./repriceJobTracker.js";
@@ -5046,6 +5049,29 @@ async function requireUser(req: Request, res: Response): Promise<{ userId: strin
 }
 
 /**
+ * CF-PRO-SELLER-GATE (Drew, 2026-09-02). Resolve the paid-field entitlements
+ * for this request, for the wire composer.
+ *
+ * Reads req.user, which requireSession attached, and answers through the ONE
+ * authority — hasEntitlement() over the matrix, on the EFFECTIVE plan so a
+ * comped owner (entitlementOverride) is entitled here exactly as they are at
+ * every middleware gate. Reading `user.plan` directly instead would give
+ * comped owners a UI-unlocked / wire-stripped half-state, which is the bug
+ * effectivePlanFor exists to prevent.
+ *
+ * No req.user (a caller that reached a handler without requireSession) →
+ * not entitled. Denying on absence keeps the failure mode "paid field
+ * missing", never "paid field leaked to an unauthenticated caller".
+ */
+export function wireEntitlementsFor(req: Request): WireEntitlements {
+  const user = req.user;
+  if (!user) return { sellSignalEntitled: false };
+  return {
+    sellSignalEntitled: hasEntitlement(effectivePlanFor(user), "sellerIntelligence"),
+  };
+}
+
+/**
  * CF-PAYMENTS-A: count helper exposed for the requireCapacity middleware.
  * Reads UserDoc and returns the current number of holdings keys; used to
  * enforce holdingsCap on POST /api/portfolio/holdings before the new row
@@ -5121,7 +5147,7 @@ export async function getHoldings(req: Request, res: Response) {
   const items = includePending
     ? allItems
     : allItems.filter((h) => (h as any).cardStatus !== "pending-review");
-  const holdings = composePortfolioListResponse(items);
+  const holdings = composePortfolioListResponse(items, undefined, wireEntitlementsFor(req));
   res.json({ userId: auth.userId, count: holdings.length, holdings });
 }
 
@@ -5146,7 +5172,7 @@ export async function getPortfolioBreakdown(req: Request, res: Response) {
   const items = Object.values(doc.holdings).filter(
     (h) => (h as any).cardStatus !== "pending-review",
   );
-  const holdings = composePortfolioListResponse(items);
+  const holdings = composePortfolioListResponse(items, undefined, wireEntitlementsFor(req));
   const { analyzePortfolio, analyzeWithCustomTiers } = await import("./portfolioAnalytics.service.js");
 
   // CF-CUSTOM-TIERS (2026-08-17): when the user has defined their own buckets,
@@ -5220,7 +5246,7 @@ export async function getPendingReviewHoldings(req: Request, res: Response) {
   const items = Object.values(doc.holdings).filter(
     (h) => (h as any).cardStatus === "pending-review",
   );
-  const holdings = composePortfolioListResponse(items);
+  const holdings = composePortfolioListResponse(items, undefined, wireEntitlementsFor(req));
   res.json({ userId: auth.userId, count: holdings.length, holdings });
 }
 
@@ -5419,7 +5445,7 @@ export async function getPortfolioWithSummary(req: Request, res: Response) {
   // CF-PORTFOLIOHOLDING-FIELD-PRUNE Phase B: route through anti-corruption
   // layer; explicit wire-shape per contract_freeze_v1 §1.3. summary still
   // reads off raw holdings (uses Phase A compute-on-read helpers).
-  const items = composePortfolioListResponse(rawItems, catalogImageByCardId);
+  const items = composePortfolioListResponse(rawItems, catalogImageByCardId, wireEntitlementsFor(req));
   // CF-PORTFOLIO-REFRESH-ASYNC (2026-08-31): the refresh is now asynchronous,
   // so this payload can legitimately be answered while a reprice is still in
   // flight. Values here are ALWAYS the last persisted ones — this endpoint
@@ -5560,7 +5586,7 @@ export async function getPortfolioOpportunities(req: Request, res: Response) {
     };
     await Promise.all(Array.from({ length: CONCURRENCY }, () => worker()));
   }
-  const wires = composePortfolioListResponse(rawItems, catalogImageByCardId);
+  const wires = composePortfolioListResponse(rawItems, catalogImageByCardId, wireEntitlementsFor(req));
 
   const sellNow: typeof wires = [];
   const hold: typeof wires = [];
@@ -6345,7 +6371,7 @@ export async function getHoldingById(req: Request, res: Response) {
   // CF-PORTFOLIOHOLDING-FIELD-PRUNE Phase B: route through anti-corruption
   // layer; this endpoint runs no estimate, so β fields are null here too.
   // iOS detail-view β richness comes from POST /api/compiq/*.
-  res.json(composeHoldingWireShape(holding));
+  res.json(composeHoldingWireShape(holding, undefined, wireEntitlementsFor(req)));
 }
 
 export async function updateHolding(req: Request, res: Response) {
@@ -6593,7 +6619,7 @@ export async function updateHolding(req: Request, res: Response) {
   // matches what it sent. Prevents "I changed to Raw but it still shows
   // PSA 10" symptoms where iOS was relying on a refetch that raced or
   // never fired. Legacy {message, id} still present for existing consumers.
-  const holdingWire = composeHoldingWireShape(doc.holdings[id]);
+  const holdingWire = composeHoldingWireShape(doc.holdings[id], undefined, wireEntitlementsFor(req));
   res.json({ message: "Holding updated", id, holding: holdingWire, entry: { holding: holdingWire } });
 
   // CF-CARD-SAVE-FAST: the user's Save has returned. Everything below is the
@@ -6932,7 +6958,7 @@ export async function regradeHolding(req: Request, res: Response) {
   // across all mutation routes. `updatedHolding` preserved for existing
   // consumers; `holding` + `entry.holding` are the new parity fields
   // matching PATCH /holdings and confirm/reject flows.
-  const regradedWire = composeHoldingWireShape(doc.holdings[id]);
+  const regradedWire = composeHoldingWireShape(doc.holdings[id], undefined, wireEntitlementsFor(req));
   return res.json({
     message: "Holding regraded",
     id,
@@ -8088,7 +8114,7 @@ export async function sellHolding(req: Request, res: Response) {
   // remaining holding when qty remains so iOS reflects the new state
   // without a refetch. holdingRemoved=true means the row is gone — no
   // holding field then.
-  const remainingHolding = remainingQty > 0 ? composeHoldingWireShape(doc.holdings[id]) : null;
+  const remainingHolding = remainingQty > 0 ? composeHoldingWireShape(doc.holdings[id], undefined, wireEntitlementsFor(req)) : null;
   return res.json({
     message: "Holding sale recorded",
     sold: ledgerEntry,
@@ -9197,7 +9223,7 @@ export async function addHeldExpenseHandler(req: Request, res: Response) {
     return res.status(400).json({ success: false, error: result.reason });
   }
   // CF-MUTATION-ENVELOPE-PARITY (2026-07-12): entry.holding for iOS decoder.
-  const holdingWire = result.holding ? composeHoldingWireShape(result.holding) : null;
+  const holdingWire = result.holding ? composeHoldingWireShape(result.holding, undefined, wireEntitlementsFor(req)) : null;
   res.status(201).json({
     success: true,
     expense: result.expense,
@@ -9220,7 +9246,7 @@ export async function deleteHeldExpenseHandler(req: Request, res: Response) {
     return res.status(404).json({ success: false, error: "Expense not found" });
   }
   // CF-MUTATION-ENVELOPE-PARITY (2026-07-12): entry.holding for iOS decoder.
-  const holdingWire = result.holding ? composeHoldingWireShape(result.holding) : null;
+  const holdingWire = result.holding ? composeHoldingWireShape(result.holding, undefined, wireEntitlementsFor(req)) : null;
   res.json({
     success: true,
     holding: holdingWire,
@@ -9262,7 +9288,7 @@ export async function refreshHolding(req: Request, res: Response) {
   await writeUserDoc(auth.userId, doc);
   // CF-MUTATION-ENVELOPE-PARITY (2026-07-12): return the refreshed holding
   // so iOS shows the new price without a refetch.
-  const refreshedWire = composeHoldingWireShape(doc.holdings[id]);
+  const refreshedWire = composeHoldingWireShape(doc.holdings[id], undefined, wireEntitlementsFor(req));
   res.json({
     message: "Holding refreshed",
     id,
