@@ -116,6 +116,26 @@ const CORPUS_STOPWORDS = new Set([
   "topps", "panini", "bowman", "fleer", "donruss", "upper", "deck", "leaf",
   "score", "pinnacle", "skybox", "pacific", "playoff", "sage",
   "chronicles", "contenders", "immaculate", "flawless", "certified",
+  // SPORT names. These reach the corpus the same way the brands do -- through
+  // checklist names that quote a whole product or a sport-themed insert ("USA
+  // Baseball", "Football Stars") -- and they clear the support floor
+  // comfortably: basketball 22 products, football 17, usa 11, baseball 8,
+  // american 5, world 4, hockey 2. A sport names WHICH CHECKLIST the card
+  // belongs to, never how the card is printed, so admitting one disqualifies
+  // an entire sport from eviction: "2025 Topps Chrome Football Colston
+  // Loveland Rookie Auto" is refused on the word `football` alone, and no
+  // football card is evictable again.
+  "baseball", "basketball", "football", "hockey", "soccer",
+  "usa", "world", "american", "america",
+  // GRADE words. `gem` clears the floor on 10 products through "Gem Mint"
+  // insert and parallel names, and a graded title is the pool's most common
+  // shape: "... PSA 10 GEM MINT" is then refused on `gem`. A grade describes
+  // the SLAB, not the print -- and the grade already lives on the identity as
+  // gradeCompany/gradeValue, where the classifier reads it properly. The
+  // grader initialisms (psa/bgs/sgc/cgc) and `mint` do not clear the floor
+  // today, but they are stopped for the same reason so a corpus rebuild
+  // cannot quietly admit them.
+  "gem", "mint", "pristine", "psa", "bgs", "sgc", "cgc", "grade", "graded",
 ]);
 
 /** A corpus token is worth keeping only if it is a word, not a fragment. */
@@ -125,18 +145,33 @@ const MIN_TOKEN_LEN = 3;
  * A corpus token must appear in at least this many DISTINCT products before it
  * counts as vocabulary.
  *
- * Measured on the corpus 2026-09-03: 2,274 distinct tokens appear in at least
- * one product, 1,508 in at least two. The 766 the floor removes are player
- * surnames and typos that leaked in from long checklist names -- "judge" (1
- * product), "ohtani" (1), "mckenzie", "smoltz", "rivera", "fuschia", "ornage".
- * Every real finish word clears it comfortably: refractor 80 products,
- * prizm 32, draft 29, chrome 4, gold 485.
+ * Measured on the corpus 2026-09-03, counting AFTER the stopword pass: 2,024
+ * distinct tokens appear in at least one product, 1,377 in at least two. The
+ * 647 the floor removes are player surnames and typos that leaked in from long
+ * checklist names -- "ohtani" (1 product), "mckenzie", "smoltz", "rivera",
+ * "fuschia", "ornage". Real finish words clear it comfortably: refractor 80
+ * products, gold 485, prizm 32, chrome 4.
  *
  * This is the ONE narrowing in a module whose every other choice is broadening,
- * and it is justified by what the excluded tokens are: "judge" as a finish word
- * makes every Aaron Judge card permanently un-evictable, which is not caution,
- * it is the vocabulary failing to be a vocabulary. A word that genuinely names
- * a finish on exactly one product is reachable through HAND_SPELLINGS.
+ * and it is justified by what the excluded tokens are: a surname as a finish
+ * word makes every card of that player permanently un-evictable, which is not
+ * caution, it is the vocabulary failing to be a vocabulary. A word that
+ * genuinely names a finish on exactly one product is reachable through
+ * HAND_SPELLINGS.
+ *
+ * WHAT THE FLOOR DOES NOT REMOVE -- AND WHY THE STOPWORDS EXIST
+ *
+ * The floor is a frequency test, not a meaning test, so it removes only what
+ * is RARE. A word that is common in the corpus and still never names a
+ * parallel sails through it, and the audit found two whole families in that
+ * state: BRANDS (topps, 13 products) and -- the same defect, found later --
+ * SPORTS (basketball 22, football 17, usa 11, baseball 8) and GRADE words
+ * (gem 10). Raising the floor cannot reach them without cutting genuine
+ * finishes that are legitimately rare, and the product-word suppression only
+ * removes THIS card's own setKey words, so it cannot reach a sport either.
+ * They are stopped by name in CORPUS_STOPWORDS instead, on the same rationale
+ * as topps and draft: the word names the manufacturer, the checklist or the
+ * slab, never how the card is printed.
  */
 const MIN_PRODUCT_SUPPORT = 2;
 
@@ -280,7 +315,22 @@ function buildVocabulary(corpusPath = CORPUS_PATH) {
         // matters as a phrase, not only as the words black/white/red/ink --
         // a title carrying the whole phrase is unambiguously naming it.
         const norm = lower(sp).replace(/[^a-z0-9]+/g, " ").trim();
-        if (norm.includes(" ") && norm.length <= 40) phrases.add(norm);
+        // A PHRASE MADE ENTIRELY OF STOPWORDS IS NOT EVIDENCE OF A FINISH.
+        //
+        // The stopword pass runs on TOKENS, so a corpus name whose every word
+        // is stopped still became a phrase and matched titles on its own --
+        // defeating the stopword list at the phrase level. Measured 2026-09-03:
+        // 353 such phrases, "rookie auto" among them (and pack-size noise like
+        // "10 cards"), which disqualified EVERY rookie-auto title in the pool
+        // regardless of what it was printed on. `rookie` and `auto` are stopped
+        // individually for describing the card rather than the print; joining
+        // them changes nothing about that. A phrase earns its place only if at
+        // least one word carries finish meaning of its own.
+        const phraseWords = norm.split(" ").filter(Boolean);
+        const carriesFinishWord = phraseWords.some(
+          (w) => w.length >= MIN_TOKEN_LEN && !CORPUS_STOPWORDS.has(w) && !/^\d+$/.test(w),
+        );
+        if (norm.includes(" ") && norm.length <= 40 && carriesFinishWord) phrases.add(norm);
         for (const t of nameTokens(sp)) { bucket.add(t); seenHere.add(t); }
       }
     }

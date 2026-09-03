@@ -30,6 +30,8 @@
  */
 import path from "node:path";
 import fs from "node:fs";
+import os from "node:os";
+import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 import { describe, expect, it } from "vitest";
@@ -162,6 +164,74 @@ describe("A -- the finish vocabulary is derived from the checklist parallel corp
     // parallel of Topps Heritage Chrome -- it is that product's own name.
     expect(V.checklistListsParallel("Refractor", 2021, "bowman-chrome")).toBe(true);
     expect(V.checklistListsParallel("Chrome", 2024, "topps-heritage-chrome")).toBe(false);
+  });
+
+  // ── A2. SPORT AND GRADE WORDS ARE NOT FINISHES (verifier, 2026-09-03) ────
+  //
+  // The support floor is a FREQUENCY test, so it only removes what is rare. A
+  // word that is common in the corpus and still never names a parallel sails
+  // through: brands did (topps, 13 products) and so did sports (basketball 22,
+  // football 17, usa 11, baseball 8) and grade words (gem 10). Measured before
+  // the fix: 19 of 1,278 sampled titles (1.5%) were disqualified from eviction
+  // by one of those words ALONE. A sport names which checklist the card is in
+  // and a grade describes the slab; neither says how the card is printed.
+
+  it("no sport word is a finish token -- a sport names the checklist, not the print", () => {
+    for (const sport of ["baseball", "basketball", "football", "hockey", "soccer", "usa", "world", "american"]) {
+      expect(V.CORPUS_STOPWORDS.has(sport)).toBe(true);
+      // stopped on every product, including one whose corpus slice contains it
+      expect(V.vocabularyFor(2025, "topps-chrome").isFinishToken(sport)).toBe(false);
+      expect(V.vocabularyFor(2025, "panini-prizm").isFinishToken(sport)).toBe(false);
+    }
+  });
+
+  it("no grade word is a finish token -- the grade is on the identity, not the print", () => {
+    for (const g of ["gem", "mint", "pristine", "psa", "bgs", "sgc", "cgc"]) {
+      expect(V.CORPUS_STOPWORDS.has(g)).toBe(true);
+      expect(V.vocabularyFor(2025, "topps-chrome").isFinishToken(g)).toBe(false);
+    }
+  });
+
+  it("the two verifier counterexamples do NOT name a finish", () => {
+    const ctx = { year: 2025, setKey: "topps-chrome" };
+    // disqualified only by `football` before the fix
+    expect(V.titleNamesFinish("2025 Topps Chrome Football Colston Loveland Rookie Auto", ctx)).toBe(false);
+    // ...and by `football` + `gem`
+    expect(V.titleNamesFinish("2025 Topps Chrome Football Colston Loveland Rookie Auto PSA 10 GEM MINT", ctx)).toBe(false);
+  });
+
+  it("and the real parallels STILL name one -- the fix narrows nothing that matters", () => {
+    expect(V.titleNamesFinish("1990 Bowman Tiffany Frank Thomas #320", { year: 1990, setKey: "bowman" })).toBe(true);
+    expect(V.titleNamesFinish("1991 Topps Desert Shield Chipper Jones #1", { year: 1991, setKey: "topps" })).toBe(true);
+    expect(V.titleNamesFinish("2018 Panini Rapture Luka Doncic RC", { year: 2018, setKey: "panini" })).toBe(true);
+    // the hand phrases survive the corpus-phrase filter below
+    expect(V.titleNamesFinish("2020 Topps Press Proof Mike Trout", { year: 2020, setKey: "topps" })).toBe(true);
+    expect(V.titleNamesFinish("2019 Topps Gold Refractor Acuna", { year: 2019, setKey: "topps-chrome" })).toBe(true);
+  });
+
+  // ── A3. A PHRASE OF PURE STOPWORDS IS NOT EVIDENCE ──────────────────────
+  //
+  // The stopword pass runs on TOKENS, so a corpus name whose every word is
+  // stopped still became a PHRASE and matched on its own -- defeating the
+  // stopword list one level up. "Rookie Auto" is the case that bites: both
+  // words are stopped individually, yet the phrase disqualified every
+  // rookie-auto title in the pool. Measured: 353 such phrases.
+
+  it("no corpus phrase is made entirely of stopwords", () => {
+    const c = V.buildVocabulary();
+    const hand = new Set(V.HAND_PHRASES.map((p: string) => p.toLowerCase()));
+    const allStop = [...c.phrases].filter((p: string) => {
+      if (hand.has(p)) return false;               // hand phrases are adjudicated
+      const parts = String(p).split(" ").filter(Boolean);
+      if (parts.length < 2) return false;
+      return parts.every((w) => V.CORPUS_STOPWORDS.has(w) || /^\d+$/.test(w) || w.length < 3);
+    });
+    expect(allStop).toEqual([]);
+  });
+
+  it("'rookie auto' is not a phrase, and a plain rookie-auto title names no finish", () => {
+    expect(V.buildVocabulary().phrases.has("rookie auto")).toBe(false);
+    expect(V.titleNamesFinish("2023 Topps Chrome Rookie Auto Corbin Carroll", { year: 2023, setKey: "topps-chrome" })).toBe(false);
   });
 });
 
@@ -471,11 +541,76 @@ describe("F -- canary coverage: every one of the 32 shards has a pool that must 
     for (const c of derived) expect(["provenance", "largest-pool"]).toContain(c.derivedFrom);
   });
 
-  it("the check refuses a shard with no canary rather than passing it by construction", () => {
-    const src = fs.readFileSync(path.join(backend, "scripts", "rematch-canary-check.cjs"), "utf8");
-    expect(src).toMatch(/has NO canary/);
-    expect(src).toMatch(/passes this gate by construction/);
+  // THE REFUSAL IS TESTED BY RUNNING IT, NOT BY READING ITS SOURCE (verifier,
+  // 2026-09-03). This assertion used to be `expect(src).toMatch(/has NO
+  // canary/)` -- which a mutation to `if (false)` survives untouched, because
+  // the string it greps for is still in the file. The gate is a process exit
+  // code, so the test spawns the script and asserts the exit code.
+  //
+  // The script reads its canary file from CANARIES and its shard from SLOT, so
+  // the seam is honest: a real canaries file with a slot that is genuinely
+  // absent from it. COSMOS_CONNECTION_STRING is set to a syntactically valid
+  // but unroutable stub -- the refusal fires BEFORE the CosmosClient is
+  // constructed, which is itself part of what makes this gate worth having.
+  // (Verified: a slot that DOES have a canary gets past this point and then
+  // blocks on the stub endpoint, so exit 2 is specific to the refusal.)
+
+  const runCanaryCheck = (slot: string, canariesFile: string, timeout = 30_000) =>
+    spawnSync(process.execPath, [path.join(backend, "scripts", "rematch-canary-check.cjs")], {
+      env: {
+        ...process.env,
+        // vitest exports MODE=test, and the script validates MODE before it
+        // ever looks at the canaries -- inheriting it would fail the run for
+        // the wrong reason and prove nothing about this gate.
+        MODE: "check",
+        SLOT: slot,
+        CANARIES: canariesFile,
+        COSMOS_CONNECTION_STRING: "AccountEndpoint=https://stub.invalid:443/;AccountKey=c3R1Yg==;",
+      },
+      encoding: "utf8",
+      timeout,
+    });
+
+  it("REFUSES (exit 2) a shard with no canary rather than passing it by construction", () => {
+    const tmp = path.join(os.tmpdir(), `rematch-canaries-slot7-${process.pid}.json`);
+    // one canary, in slot 7 only -- every other slot is genuinely uncovered
+    fs.writeFileSync(tmp, JSON.stringify({
+      canaries: [{
+        name: "stub canary in slot 7", slug: "hiq:baseball:2020:topps:1:base:no-auto",
+        shardSlot: 7, poolRows: 3, verifiedMarketDirection: "flat",
+      }],
+    }), "utf8");
+    try {
+      const r = runCanaryCheck("19", tmp);
+      expect(r.status).toBe(2);
+      expect(String(r.stderr)).toMatch(/SLOT=19 has NO canary/);
+    } finally { fs.rmSync(tmp, { force: true }); }
   });
+
+  it("REFUSES (exit 2) a canaries file that lists none at all", () => {
+    const tmp = path.join(os.tmpdir(), `rematch-canaries-empty-${process.pid}.json`);
+    fs.writeFileSync(tmp, JSON.stringify({ canaries: [] }), "utf8");
+    try {
+      const r = runCanaryCheck("19", tmp);
+      expect(r.status).toBe(2);
+      expect(String(r.stderr)).toMatch(/lists no canaries/);
+    } finally { fs.rmSync(tmp, { force: true }); }
+  });
+
+  it("and the SHIPPED canaries file refuses no slot -- the refusal is specific", () => {
+    // The behavioural complement: with the real file, a slot gets PAST the
+    // refusal and announces the canaries it will measure. We assert on that
+    // announcement rather than on an exit code, because past the refusal the
+    // script reaches Cosmos -- against the stub endpoint it would simply block,
+    // and a test must not wait on a network timeout to prove a branch.
+    // Slot 29 is the one the audit caught: 30/30 wrong, and no canary at all
+    // before this PR. If any slot must be proven covered by RUNNING the gate,
+    // it is that one.
+    const real = path.join(backend, "data", "rematch-canaries.json");
+    const r = runCanaryCheck("29", real, 6_000);
+    expect(String(r.stdout)).toMatch(/slot 29: \d+ canary\/canaries live in THIS shard/);
+    expect(String(r.stderr)).not.toMatch(/has NO canary/);
+  }, 20_000);
 });
 
 // ═══ G. THE SAMPLE IS 500 AND SPREADS ACROSS CARDS (finding 7) ═════════════
