@@ -93,9 +93,21 @@ describe("sliceEstimate: confidence unit scaling", () => {
     },
   };
 
+  // H-13 (audit 2026-09-03): the player side is the measured #1644/#1647
+  // index carried on the estimate, not the clamped playerInSetMomentum
+  // component. -4% here matches the rollover shape the fixture always meant.
+  const playerIndex = { ratio: 0.96, basketSize: 10, tierScope: "same-tier" };
+
   it("treats pricingConfidence 70 as 0.70, not 70.0 — the signal still fires", () => {
-    const s = sliceEstimate({ fairMarketValue: 100, predictedPrice: 105, confidence: 70, trendIQ });
+    const s = sliceEstimate({ fairMarketValue: 100, predictedPrice: 105, confidence: 70, trendIQ, playerIndex });
     expect(s.sellSignal).toBe("sell-window");
+  });
+
+  it("an estimate with no measured player index refuses instead of firing", () => {
+    // H-13: the same trend, the same confidence, no index — the component
+    // that used to answer is still sitting right there on the fixture.
+    const s = sliceEstimate({ fairMarketValue: 100, predictedPrice: 105, confidence: 70, trendIQ });
+    expect(s.sellSignal).toBe("none");
   });
 
   it("a genuinely low confidence still suppresses the call", () => {

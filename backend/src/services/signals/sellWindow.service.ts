@@ -22,10 +22,30 @@
  * costs ZERO new pool reads on the portfolio path (that endpoint has never
  * computed a price and still doesn't — CF-PORTFOLIO-REFRESH-ASYNC):
  *
- *   PLAYER SIDE  — components.playerMomentum.multiplier. The player-in-set
- *                  momentum built from the #1644/#1647 basket machinery:
- *                  the player's OTHER cards, weighted, read at two times.
+ *   PLAYER SIDE  — the #1644/#1647 player index ratio, supplied by the caller
+ *                  as `playerIndex`: the fixed liquid basket of the player's
+ *                  OTHER cards, each valued as the projected next sale from
+ *                  its OWN pool, weighted and capped, read at two times.
  *                  This is the market the card floats on.
+ *
+ *                  H-13 (audit 2026-09-03). This header claimed that basket
+ *                  from the day it was written, but the module had ONE import
+ *                  and read `components.playerMomentum.multiplier` — which is
+ *                  playerInSetMomentum: the MEDIAN of per-card median ratios,
+ *                  then `clamp(ratio, 0.85, 1.20)`. Two standing rulings broken
+ *                  at once. FMV doctrine says the answer is a projection from
+ *                  a pool's trend and NEVER a median; and grade monotonicity's
+ *                  rule generalizes — an inversion is OBSERVED and reported,
+ *                  never clamped away. A player whose market had genuinely
+ *                  fallen 40% was read as -15%, because 0.85 was the floor,
+ *                  and the divergence this module exists to measure was
+ *                  therefore capped at the exact moment it mattered most.
+ *
+ *                  So the index is now an INPUT, computed by the caller from
+ *                  playerIndex.service (the real #1644 machinery), and there
+ *                  is no fallback to the clamped number: a caller that cannot
+ *                  supply it gets `no-player-index`, which is the honest
+ *                  answer and was already a supported refusal.
  *
  *   OWN-POOL SIDE — components.cardTrajectory.multiplier, with its
  *                  recentCount / olderCount. This is THIS card's own pool:
@@ -220,6 +240,36 @@ function pct(multiplier: number | null | undefined): number | null {
   return Math.round((multiplier - 1) * 1000) / 10;
 }
 
+/**
+ * H-13: the player index ratio as a percentage move, with NO clamp.
+ *
+ * The number that reaches the seller is the number the basket measured. A
+ * market down 40% reads -40, not the -15 that `clamp(ratio, 0.85, 1.20)` used
+ * to report; a market up 60% reads +60, not +20. Where the old floor and
+ * ceiling would have bitten, the move is instead OBSERVED — logged as an
+ * inversion-scale reading so the magnitudes that used to be invisible are
+ * measurable — exactly as the grade-curve doctrine treats a sub-raw tier.
+ */
+export const INDEX_OBSERVE_LO = 0.85;
+export const INDEX_OBSERVE_HI = 1.20;
+
+function indexPct(index: DeriveSellWindowInput["playerIndex"]): number | null {
+  const ratio = index?.ratio;
+  if (typeof ratio !== "number" || !Number.isFinite(ratio) || ratio <= 0) return null;
+  if (ratio < INDEX_OBSERVE_LO || ratio > INDEX_OBSERVE_HI) {
+    console.log(JSON.stringify({
+      event: "sell_window_player_index_beyond_legacy_clamp",
+      source: "sellWindow.deriveSellWindowSignal",
+      ratio,
+      pct: Math.round((ratio - 1) * 1000) / 10,
+      basketSize: index?.basketSize ?? null,
+      tierScope: index?.tierScope ?? null,
+      detail: "the player index moved past the range the retired clamp allowed; the move is reported at its measured size",
+    }));
+  }
+  return Math.round((ratio - 1) * 1000) / 10;
+}
+
 function round1(n: number): number {
   return Math.round(n * 10) / 10;
 }
@@ -270,6 +320,24 @@ export interface DeriveSellWindowInput {
   confidence?: number | null;
   /** When the trend was last written (holding.lastUpdated / trendIQ.lastUpdated). */
   trendUpdatedAt?: string | null;
+  /**
+   * H-13 (audit 2026-09-03). THE PLAYER SIDE: the #1644/#1647 index ratio
+   * between two dates, as `playerIndexRatio()` returns it — 1.0 flat, 0.72 a
+   * market down 28%. Unclamped by construction: every term is a card's value
+   * relative to itself, so the level says what it measured.
+   *
+   * This module used to read `components.playerMomentum.multiplier` instead,
+   * a clamped median-of-medians, and its own header claimed this basket while
+   * doing so. There is deliberately NO fallback to that number: supplying it
+   * is how a caller says "I measured the player's market", and a caller that
+   * has not gets the `no-player-index` refusal rather than a signal timed off
+   * a statistic doctrine forbids.
+   *
+   * Callers that can afford the pool read (the sell-draft path, the alerts
+   * evaluator) compute it; the portfolio envelope, which must stay at zero
+   * pool reads, passes nothing and renders the refusal.
+   */
+  playerIndex?: { ratio: number; basketSize: number; tierScope?: string | null } | null;
   nowMs?: number;
 }
 
@@ -285,10 +353,12 @@ export function deriveSellWindowSignal(input: DeriveSellWindowInput): SellWindow
     return none("no-trend-data", "No trend has been measured for this card yet.", EMPTY_MEASURES);
   }
 
-  const player = trend.components.playerMomentum;
   const card = trend.components.cardTrajectory;
 
-  const playerPct = pct(player?.multiplier);
+  // H-13: the player side is the supplied index ratio, or nothing. The
+  // clamped playerInSetMomentum multiplier is NOT consulted as a fallback —
+  // see `playerIndex` on the input for why a missing index is a refusal.
+  const playerPct = indexPct(input.playerIndex);
   const ownPct = pct(card?.multiplier);
   const ownSales =
     card && Number.isFinite(card.recentCount) && Number.isFinite(card.olderCount)
@@ -377,7 +447,9 @@ export function deriveSellWindowSignal(input: DeriveSellWindowInput): SellWindow
       horizon,
       signalClass: "price",
       basis:
-        `${player?.flags?.includes("falling") ? "The player index is falling" : "The player index is flat to falling"} at ` +
+        // H-13: "falling" is now read off the index that produced the number,
+        // not off the retired playerInSetMomentum component's flags.
+        `${playerPct < 0 ? "The player index is falling" : "The player index is flat to falling"} at ` +
         `${playerPct > 0 ? "+" : ""}${playerPct}% while this card's own pool is still up ${ownPct}% across ${ownSales ?? "its"} recent sales — ` +
         `a ${Math.abs(divergence)}-point gap that has historically closed toward the player's market, not away from it.`,
       reason: null,

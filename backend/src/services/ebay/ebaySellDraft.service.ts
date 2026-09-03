@@ -65,6 +65,7 @@ import {
 } from "../signals/sellWindow.service.js";
 import { resolvePricingConfidence } from "../portfolioiq/pricingEnvelope.builder.js";
 import type { TrendIQResult } from "../compiq/trendIQ.types.js";
+import { sellWindowPlayerIndex } from "../signals/sellWindowPlayerIndex.js";
 
 // ---------------------------------------------------------------------------
 // Inputs / outputs
@@ -89,8 +90,13 @@ export interface SellDraftHolding {
   printRun?: number | null;
   isAuto?: boolean | null;
   sport?: string | null;
-  /** Persisted trend result — the sell-window signal's only input. */
+  /** Persisted trend result — the card-trajectory side of the sell signal. */
   trendIQ?: TrendIQResult | null;
+  /** H-13: the holding's own value, which the player basket weights toward
+   *  (a player's $8 commons and their $4,000 1/1 do not share a beta). Read,
+   *  never written — nothing here can move a price. */
+  predictedPrice?: number | null;
+  fairMarketValue?: number | null;
   /** CF-SELL-WINDOW-READS-PRICING-CONFIDENCE (2026-09-03). The engine's
    *  pricing confidence for this price surface (0..1), written by the writer
    *  that decided the price. This — not `confidence` — is what the sell
@@ -340,8 +346,25 @@ export async function composeSellDraftPricing(
   // The sell signal rides on the holding's already-persisted trend, so it
   // is derived the same way the portfolio envelope derives it — pure,
   // synchronous, zero pool reads, and it can never move the price.
+  // H-13 (audit 2026-09-03): the player side is the real #1644/#1647 index,
+  // measured here because this path is async and can afford the one pool
+  // read. Null when the player's market has too few liquid cards to measure,
+  // and the derivation then refuses by name rather than reading the clamped
+  // median-of-medians it used to.
+  const playerIndex = await sellWindowPlayerIndex({
+    playerName: holding.playerName ?? null,
+    sport: holding.sport ?? null,
+    targetValue: typeof holding.predictedPrice === "number"
+      ? holding.predictedPrice
+      : (typeof holding.fairMarketValue === "number" ? holding.fairMarketValue : null),
+    tierLabel: holding.gradeCompany
+      ? `${String(holding.gradeCompany).toUpperCase()} ${holding.gradeValue ?? ""}`.trim()
+      : "Raw",
+    excludeCardIds: new Set([String(holding.hobbyiqCardId ?? "").trim()].filter(Boolean)),
+  });
   const sellSignal = deriveSellWindowSignal({
     trendIQ: holding.trendIQ ?? null,
+    playerIndex,
     // CF-SELL-WINDOW-READS-PRICING-CONFIDENCE (2026-09-03). Pricing
     // confidence, resolved the one way (pricingSourceMeta first, flat field
     // only for legacy-engine rows) — never the flat field on its own. See

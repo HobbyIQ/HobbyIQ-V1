@@ -638,6 +638,32 @@ function proposedIdentityOf(holding: PortfolioHolding): PortfolioHoldingWire["pr
 export interface WireEntitlements {
   /** Caller's effective plan grants `sellerIntelligence`. */
   sellSignalEntitled?: boolean;
+  /**
+   * H-13 (audit 2026-09-03). The measured #1644/#1647 player index per
+   * holding id, when the caller has measured it.
+   *
+   * The sell-window signal's player side is that index, and measuring it
+   * costs a bounded pool read per PLAYER — which this synchronous assembler
+   * cannot do (the portfolio envelope has never computed a price, and that
+   * property is load-bearing). So a caller that can afford the reads measures
+   * them once for the page's players and hands the map down; a caller that
+   * cannot passes nothing, and the derivation returns its honest
+   * `no-player-index` refusal instead of reading the clamped
+   * median-of-medians it used to.
+   *
+   * MEASURED, live, 2026-09-03: of 40 sampled holdings carrying a trend, 27
+   * were evaluable and the real index was measurable for 14 of them (baskets
+   * of 25-197 cards). So the refusal on this wire is NOT permanent blindness —
+   * it is this endpoint declining to buy the reads, and the map is the seam
+   * through which a caller that wants the signal supplies them. Two of those
+   * 14 measured OUTSIDE the retired [0.85, 1.20] clamp (+23.4%, +23.6%),
+   * which is exactly the magnitude the old code could not report.
+   *
+   * The per-holding routes in portfolioStore are synchronous and pass nothing
+   * today; wiring them is a follow-up, deliberately not bundled here, because
+   * it changes what those endpoints COST rather than what they claim.
+   */
+  playerIndexByHoldingId?: ReadonlyMap<string, { ratio: number; basketSize: number; tierScope?: string | null }>;
 }
 
 export function composeHoldingWireShape(
@@ -891,6 +917,14 @@ export function composeHoldingWireShape(
       ? {
           sellSignal: deriveSellWindowSignal({
             trendIQ: (holding as any).trendIQ ?? null,
+            // H-13 (audit 2026-09-03): the #1644/#1647 index, when the caller
+            // measured it (see WireEntitlements.playerIndexByHoldingId). This
+            // assembler is synchronous and reads no pool of its own, so an
+            // unmeasured player yields the derivation's `no-player-index`
+            // refusal — a truthful "we did not look" — rather than the clamped
+            // median-of-medians the module used to read while its header
+            // claimed this very basket.
+            playerIndex: entitlements?.playerIndexByHoldingId?.get(String((holding as { id?: unknown }).id ?? "")) ?? null,
             // CF-SELL-WINDOW-READS-PRICING-CONFIDENCE (2026-09-03). The
             // signal gates on, and quotes to the user as "Pricing confidence
             // on this card is N%", the confidence behind the PRICE. That is
