@@ -23,6 +23,7 @@ import { EbayListModal } from "@/components/EbayListModal";
 import { EditHoldingModal } from "@/components/EditHoldingModal";
 import { RegradeModal } from "@/components/RegradeModal";
 import { GradeCalcModal } from "@/components/GradeCalcModal";
+import { GradeArbSection } from "@/components/GradeArbSection";
 import { RecentCompsList } from "@/components/RecentCompsList";
 import { IdentityBanner } from "@/components/IdentityBanner";
 import { GradeCurveView } from "@/components/GradeCurveView";
@@ -447,6 +448,15 @@ export default function HoldingDetailPage() {
       {(h.hobbyiqCardId || h.cardId) && (
         <div className="mb-6">
           <GradeCurveView cardId={h.hobbyiqCardId || h.cardId!} entries={curve} loading={curveLoading} error={curveError} />
+        </div>
+      )}
+
+      {/* CF-GRADE-ARB (Drew, 2026-09-02): conditional value at each
+          graded tier, for raw holdings only. The section refuses on its
+          own when the card has no empirical basis. */}
+      {!h.gradeCompany && (
+        <div className="mb-6">
+          <GradeArbSection holding={h} />
         </div>
       )}
 

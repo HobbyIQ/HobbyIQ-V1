@@ -125,6 +125,23 @@ interface AuthUserRecord {
   // CF-ONBOARDING (Drew, 2026-07-27): user clicked "hide the checklist"
   // on the /app/welcome banner. Persists across sessions.
   onboardingDismissed?: boolean;
+  // CF-FIRST-RUN (Drew, 2026-09-02): the guided first-run funnel's
+  // progress — which steps are done, which lane they picked, and whether
+  // they skipped or finished. Lives HERE, on the user doc, rather than in
+  // a new container: it is small, it is read exactly once per session
+  // alongside the fields around it, and it is per-user by definition.
+  // Absent on every pre-2026-09-02 row, which reads as "never started" —
+  // correct, since those accounts predate the funnel. The shape mirrors
+  // FirstRunProgress in apps/web/src/lib/firstRun.ts; that module's
+  // normalizeProgress() is the one parser and tolerates anything stored
+  // here that it does not recognise.
+  firstRun?: {
+    status?: "active" | "skipped" | "completed";
+    completedSteps?: string[];
+    lane?: string | null;
+    startedAt?: string | null;
+    updatedAt?: string | null;
+  };
   // CF-EMAIL-VERIFICATION (Drew, 2026-07-27): opt-in email verification.
   // Absent on legacy rows → treat as unverified. `verifiedAt` set when
   // the user clicks the link in the verification email. `pending` holds
@@ -576,6 +593,33 @@ export async function setOnboardingDismissed(userId: string, dismissed: boolean)
   const user = await readUser(userId);
   if (!user) return false;
   user.onboardingDismissed = dismissed;
+  await writeUser(user);
+  return true;
+}
+
+/** CF-FIRST-RUN (Drew, 2026-09-02): read/write the guided-funnel progress
+ *  record. Same read-modify-write-the-whole-doc lane as every helper
+ *  above, which is what keeps a concurrent write to an unrelated field
+ *  (a Stripe webhook, say) from clobbering progress and vice versa.
+ *
+ *  Absent → undefined, and the route turns that into the empty record.
+ *  This layer does NOT validate the shape: apps/web's normalizeProgress()
+ *  is the single parser, and duplicating its rules here would give us two
+ *  places for them to disagree. */
+export async function readFirstRunProgress(
+  userId: string,
+): Promise<AuthUserRecord["firstRun"] | undefined> {
+  const user = await readUser(userId);
+  return user?.firstRun;
+}
+
+export async function setFirstRunProgress(
+  userId: string,
+  progress: NonNullable<AuthUserRecord["firstRun"]>,
+): Promise<boolean> {
+  const user = await readUser(userId);
+  if (!user) return false;
+  user.firstRun = progress;
   await writeUser(user);
   return true;
 }

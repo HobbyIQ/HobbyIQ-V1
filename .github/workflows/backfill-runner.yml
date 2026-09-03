@@ -754,6 +754,48 @@ jobs:
           restore-keys: |
             hiq-checklists-
 
+      # ── THE CANARY GATE, WIRED INSIDE THE APPLY (audit gate, 2026-09-03) ──
+      #
+      # It was not wired at all. `rematch-canary-check` was an enum value in
+      # the script dropdown and nothing else: there were no before/after steps,
+      # so the baseline MODE=before wrote to /tmp on an ephemeral runner was
+      # gone by the time any later dispatch ran MODE=after -- which then exited
+      # 2 ("no baseline") rather than gating anything. A gate that cannot run
+      # is not a gate, and the apply was reachable without it.
+      #
+      # before / apply / after now live in ONE JOB, on ONE runner, so /tmp
+      # persists across all three and the baseline is the same file. The
+      # baseline is ALSO uploaded as an artifact -- not because the after step
+      # needs it (it does not, same runner) but because a shard that fails
+      # needs its before-state readable by Drew without re-running anything.
+      #
+      # Gated on `mode == 'apply-improve' && apply == true`: a census is READ
+      # ONLY and has nothing to regress, and a report-only apply-improve dry
+      # run writes nothing either. SLOT is exported so the check refuses a
+      # shard that has no canary in it, instead of measuring pools this shard
+      # cannot touch and calling that a pass.
+      - name: Canary gate BEFORE the rematch apply
+        if: ${{ inputs.script == 'rematch-sold-comps' && inputs.mode == 'apply-improve' && inputs.apply == true }}
+        shell: bash
+        env:
+          MODE: before
+          BASELINE: /tmp/rematch-canary-baseline.json
+          SLOT: ${{ inputs.slot }}
+          NODE_OPTIONS: "--max-old-space-size=8192"
+        run: node backend/scripts/rematch-canary-check.cjs
+
+      # Keep the before-state whatever happens next. A shard that regresses is
+      # a shard whose baseline Drew has to read, and re-deriving it after the
+      # apply is impossible -- the pools have already moved.
+      - name: Upload the canary baseline
+        if: ${{ always() && inputs.script == 'rematch-sold-comps' && inputs.mode == 'apply-improve' && inputs.apply == true }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: rematch-canary-baseline-slot-${{ inputs.slot }}-${{ github.run_id }}
+          path: /tmp/rematch-canary-baseline.json
+          if-no-files-found: warn
+          retention-days: 90
+
       - name: Run backfill (${{ inputs.apply == true && 'APPLY' || 'DRY-RUN' }})
         # Both RESLUG_APPLY and APPROVE_APPLY env vars are set so this
         # single step works for both reslug-* and approve-* scripts;
@@ -930,6 +972,39 @@ jobs:
         run: node "backend/scripts/${{ inputs.script }}.cjs" | tee /tmp/backfill.log
         shell: bash
 
+      # ── THE CANARY GATE, AFTER ───────────────────────────────────────────
+      #
+      # Same runner, same /tmp, same baseline the BEFORE step wrote. The script
+      # exits 5 on any regression -- a canary pool that lost rows, went empty,
+      # lost a protected row, or moved its anchor past tolerance -- and this
+      # step does not swallow it, so exit 5 FAILS THE JOB. That is the whole
+      # point: the shard's own banner cannot certify the shard.
+      #
+      # `always()` is deliberate and is NOT an unconditional pass: if the apply
+      # step itself failed or hit its timeout, the pool has already been
+      # partially written and the canaries are exactly what has to be measured.
+      # Skipping the check on a failed apply would leave the damage unmeasured.
+      #
+      # This step runs BEFORE the self-relaunch step below, so a regressed
+      # shard fails the job and `!cancelled()` on the relaunch is false --
+      # a damaged shard never re-dispatches itself.
+      - name: Canary gate AFTER the rematch apply (exit 5 fails this job)
+        if: ${{ always() && inputs.script == 'rematch-sold-comps' && inputs.mode == 'apply-improve' && inputs.apply == true }}
+        shell: bash
+        env:
+          MODE: after
+          BASELINE: /tmp/rematch-canary-baseline.json
+          SLOT: ${{ inputs.slot }}
+          NODE_OPTIONS: "--max-old-space-size=8192"
+        run: |
+          set -o pipefail
+          node backend/scripts/rematch-canary-check.cjs | tee /tmp/canary-after.log
+          rc=${PIPESTATUS[0]}
+          if [ "$rc" = "5" ]; then
+            echo "::error::CANARY REGRESSION on slot ${{ inputs.slot }} — a hand-verified or provenance-anchored pool lost rows. The fleet STOPS here; the diff goes to Drew."
+          fi
+          exit "$rc"
+
       # THE GREAT REMATCH: keep the shard census. The census is the whole
       # product of mode=census -- it is what the 500-row sample audit reads and
       # what Drew reads for the CONFLICT and UNDERIVABLE classes, which are
@@ -998,6 +1073,23 @@ jobs:
       # classifies IMPROVE, so it is skipped at the write-time re-check.
       # Relaunch iff the budget marker printed (#1361), forwarding every arg
       # verbatim; a report relaunches as a report (#1578); never on cancel.
+      # THE RELAUNCH NEVER FORWARDS apply=true (audit gate, 2026-09-03).
+      #
+      # It used to forward `apply` verbatim, so an apply that stopped at its
+      # 140-minute budget re-dispatched itself as ANOTHER APPLY -- and the
+      # re-dispatch is a fresh workflow run with a fresh runner and a fresh
+      # /tmp, so the canary baseline the first run captured is gone. The second
+      # apply ran with no before-state, past a budget cut, ungated. The gate
+      # was skippable by simply being slow.
+      #
+      # The relaunch is now always `apply=false`: the continuation runs as a
+      # REPORT, prints what it would have written, and a human re-dispatches
+      # the apply -- which brings the before/apply/after triple back with it.
+      # A report relaunch still finishes the census of the shard (#1578), so
+      # nothing is lost except the ability to write unwatched.
+      #
+      # This step is also ordered AFTER the canary gate above, so a shard that
+      # regressed has already failed the job and `!cancelled()` is false here.
       - name: Self-relaunch rematch-sold-comps until the shard is finished
         if: ${{ !cancelled() && inputs.script == 'rematch-sold-comps' }}
         shell: bash
@@ -1006,8 +1098,12 @@ jobs:
         run: |
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             N=$(grep -aoE "(re-keyed|would re-key) +[0-9,]+" /tmp/backfill.log | grep -oE "[0-9,]+" | tail -1)
-            echo "::notice::budget hit (written=${N:-0}) — re-dispatching slot ${{ inputs.slot }} to continue"
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=rematch-sold-comps -f mode="${{ inputs.mode }}" -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f years="${{ inputs.years }}" -f limit="${{ inputs.limit }}"
+            if [ "${{ inputs.apply }}" = "true" ]; then
+              echo "::warning::budget hit on an APPLY of slot ${{ inputs.slot }} (written=${N:-0}) — re-dispatching as a REPORT (apply=false). The canary baseline lives on this runner and does not survive a re-dispatch, so a continuation apply would be ungated. Re-dispatch the apply by hand to get the before/apply/after triple."
+            else
+              echo "::notice::budget hit (written=${N:-0}) — re-dispatching slot ${{ inputs.slot }} to continue"
+            fi
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=rematch-sold-comps -f mode="${{ inputs.mode }}" -f apply=false -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f years="${{ inputs.years }}" -f limit="${{ inputs.limit }}"
           else
             echo "::notice::finished within budget — done, no re-dispatch."
           fi
