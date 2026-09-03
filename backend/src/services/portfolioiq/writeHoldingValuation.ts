@@ -44,10 +44,14 @@
  *   valueSource  "observed" (comps of THIS identity and tier) or "estimated"
  *                (anything derived — another tier, another identity, a vendor,
  *                a sibling). There is no third option and no default.
+ *   confidence   (on `meta`, when a meta is written) the engine's PRICING
+ *                confidence 0..1, or an explicit `null`. Added 2026-09-03
+ *                after the same class of defect recurred one field over: see
+ *                the field's own note below.
  *
- * Because both are required positional fields on a required argument object, a
- * write that omits either does not COMPILE. That is the enforcement: not a
- * lint rule, not a review checklist, not a runtime warning that fires in a log
+ * Because all three are required fields on a required argument object, a write
+ * that omits any of them does not COMPILE. That is the enforcement: not a lint
+ * rule, not a review checklist, not a runtime warning that fires in a log
  * nobody reads — the build fails.
  *
  * `pricingSourceMeta` is composed here too, so the #1674 labels are preserved
@@ -90,7 +94,27 @@ export interface HoldingValuationWrite {
   meta?: {
     slug?: string | null;
     compsUsed?: number | null;
-    confidence?: number | null;
+    /**
+     * REQUIRED whenever a meta is written (CF-CONFIDENCE-IS-NOT-OPTIONAL,
+     * 2026-09-03). The engine's PRICING confidence, 0..1 — the quantity
+     * `resolvePricingConfidence` reads and `#1672`'s sell-window gate needs.
+     *
+     * This was `confidence?: number | null` and that optionality is exactly
+     * how it went missing: `holdingValuation.ts` — the lane the 2026-09-03
+     * reprice wave actually used — built its meta with slug, compsUsed and
+     * labels, never named confidence, and COMPILED. Measured read-only after
+     * two reprices: `pricingSourceMeta.confidence` absent on 43 of Drew's 43
+     * holdings, while the sibling lane in portfolioStore stamped it fine. The
+     * engine had the number the whole time (a label read "Low confidence
+     * (0.23)"); only the writer dropped it, and the sell-window feature went
+     * dark for every unified row ("unknown-confidence", timing withheld).
+     *
+     * So it is required and explicitly nullable, exactly like `fmvRung` and
+     * `valueSource`: a lane with no confidence to give writes `null` and SAYS
+     * so. Absence is no longer expressible, so a lane cannot silently drop it
+     * again — the build fails instead.
+     */
+    confidence: number | null;
     unionRefused?: string | null;
   } & Partial<PersistedPricingLabels>;
   /** When false, no pricingSourceMeta is written (the lanes that deliberately

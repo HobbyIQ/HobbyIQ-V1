@@ -4487,7 +4487,13 @@ async function autoPriceHolding(
     meta: unifiedIsFinalAuthority && unifiedResult
       ? { slug: unifiedResult.pricedId, compsUsed: unifiedResult.totalSampleCount, confidence: unifiedResult.confidence }
       : (ourPoolMeta
-        ? { slug: (ourPoolMeta as { slug?: string | null }).slug ?? null, compsUsed: (ourPoolMeta as { compsUsed?: number | null }).compsUsed ?? null }
+        // CF-CONFIDENCE-IS-NOT-OPTIONAL (2026-09-03): explicit null, not a
+        // number invented to satisfy the type. priceFromOurPool collapses the
+        // engine's numeric confidence to a TIER STRING and never returns the
+        // scalar (pinned by siblingEstimateNeverOutranksExactPool), so this
+        // lane genuinely has no pricing confidence to give. Null is the honest
+        // statement and renders as "—"; a fabricated 1.0 would not.
+        ? { slug: (ourPoolMeta as { slug?: string | null }).slug ?? null, compsUsed: (ourPoolMeta as { compsUsed?: number | null }).compsUsed ?? null, confidence: null }
         : undefined),
     writeMeta: Boolean((unifiedIsFinalAuthority && unifiedResult) || ourPoolMeta),
     fields: {
@@ -10591,7 +10597,11 @@ export async function repriceHoldingsForUser(
                   : { noRung: `our-pool ${ourPool.method} named no rung` },
                 valueSource: ourPool.valuationStatus === "observed" ? "observed" : "estimated",
                 nowIso: now,
-                meta: { slug: ourPool.slug, compsUsed: ourPool.compsUsed },
+                // CF-CONFIDENCE-IS-NOT-OPTIONAL (2026-09-03): explicit null.
+                // priceFromOurPool collapses the engine's numeric confidence
+                // to a tier string (confidenceTier) and never returns the
+                // scalar, so this lane has none to give and says so.
+                meta: { slug: ourPool.slug, compsUsed: ourPool.compsUsed, confidence: null },
                 fields: {
                 ...repriceIdentityPatch,
                 estimatedValue: ourPool.estimatedValue,
@@ -10745,6 +10755,12 @@ export async function repriceHoldingsForUser(
                   meta: {
                     slug: String((holding as any).hobbyiqCardId ?? (holding as any).cardId ?? holding.id),
                     compsUsed: sibling.siblingCompCount,
+                    // CF-CONFIDENCE-IS-NOT-OPTIONAL (2026-09-03): explicit
+                    // null. A sibling × premium is ANOTHER card's evidence and
+                    // the sibling read carries no pricing confidence for THIS
+                    // identity; null reports it unknown rather than borrowing
+                    // a number that answers a different question.
+                    confidence: null,
                   },
                   fields: {
                   ...repriceIdentityPatch,

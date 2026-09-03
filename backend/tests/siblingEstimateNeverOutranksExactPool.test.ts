@@ -671,4 +671,61 @@ describe("portfolioStore — every estimate site asks the gate (source pin)", ()
   });
 });
 
+// CF-CONFIDENCE-IS-NOT-OPTIONAL (2026-09-03) — the source pin, extended.
+//
+// The #1658 pin above requires rung + compsUsed + confidence + labels to
+// travel together on the FOUR unified writes in portfolioStore. That file was
+// its entire scope, and that is precisely how the defect shipped: the reprice
+// wave ran through holdingValuation.ts, a DIFFERENT module the pin never read,
+// whose two lanes built a meta with slug, compsUsed and labels and no
+// confidence at all. Measured after run 33801195439: absent on 43 of 43.
+//
+// Extending the pin to those lanes is the point. A source pin that covers one
+// of two sibling write paths cannot see the path that disagrees with it.
+describe("holdingValuation — the unified lanes carry the engine's confidence", () => {
+  const src = read("../src/services/portfolioiq/holdingValuation.ts");
+
+  it("BOTH lanes stamp confidence: v.confidence in their meta", () => {
+    // observed + grade-curve-estimate. Not `>= 1`: exactly the two lanes this
+    // module has, so a third added without a confidence fails here.
+    const metas = src.match(
+      /meta: \{[\s\S]*?compsUsed: v\.compsUsed,[\s\S]*?confidence: v\.confidence,/g,
+    ) ?? [];
+    expect(metas.length, "a holdingValuation lane built a meta without the engine's confidence").toBe(2);
+  });
+
+  it("every writeHoldingValuation meta in the module names a confidence", () => {
+    // One `confidence:` for each `meta: {` the module opens — no meta may be
+    // built here without naming one.
+    const metaOpens = (src.match(/meta: \{/g) ?? []).length;
+    const confidences = (src.match(/^\s*confidence: /gm) ?? []).length;
+    expect(metaOpens).toBeGreaterThanOrEqual(2);
+    expect(confidences, "a meta in holdingValuation.ts names no confidence").toBe(metaOpens);
+  });
+
+  it("the engine's 0..1 confidence is passed through UNSCALED", () => {
+    // scalePricingConfidence converts the legacy 0..100 pricingConfidence.
+    // computeConfidence already emits 0..1, so scaling here would turn 0.23
+    // into 0.0023 and fail unitOrNull -> "unknown-confidence" all over again.
+    // Matched as a CALL, so the comment naming the trap does not trip the pin.
+    expect(src).not.toMatch(/scalePricingConfidence\(/);
+  });
+});
+
+// The helper's contract: confidence is REQUIRED on a written meta, so a lane
+// cannot omit it and still compile. This pin guards the TYPE, because the type
+// is the enforcement — if `confidence?:` comes back, every lane may silently
+// drop it again and only prod would say so.
+describe("writeHoldingValuation — confidence is a required meta field", () => {
+  const src = read("../src/services/portfolioiq/writeHoldingValuation.ts");
+
+  it("declares `confidence: number | null`, never optional", () => {
+    expect(src).toMatch(/^\s*confidence: number \| null;/m);
+    // The DECLARATION, not the docblock that quotes the old optional shape as
+    // the defect it describes: a leading-whitespace, line-start match.
+    expect(src, "confidence went back to optional — a lane can drop it again")
+      .not.toMatch(/^\s*confidence\?:/m);
+  });
+});
+
 export { GOLD, GOLD_50 };
