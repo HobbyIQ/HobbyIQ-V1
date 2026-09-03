@@ -494,7 +494,7 @@ describe("repriceHoldingsForUser — the fixture, end to end", () => {
     expect(hld.valuationStatus).toBe("observed");
     expect(hld.pricingSource).toBe("unified-pricing");
     expect(hld.fmvRung).toBe("exact-pool-leading-edge");
-    expect(hld.pricingSourceMeta).toEqual({ slug: GOLD, method: "exact-pool-leading-edge", compsUsed: 3 });
+    expect(hld.pricingSourceMeta).toEqual({ slug: GOLD, method: "exact-pool-leading-edge", compsUsed: 3, confidence: expect.any(Number) });
     expect(hld.estimateBasis).toMatch(/^unified: /);
     expect(hld.estimateBasis).toContain("id=hobbyiqCardId");
     expect(hld.estimateBasis).not.toMatch(/floor/i);
@@ -592,6 +592,12 @@ describe("repriceHoldingsForUser — the fixture, end to end", () => {
     expect(hld.valuationStatus).toBe("observed");
     expect(hld.pricingSource).toBe("our-pool");
     expect(hld.fmvRung).toBe("exact-pool-leading-edge");
+    // CF-REPORT-CONFIDENCE-IS-PRICING (2026-09-03): the our-pool writer does
+    // NOT stamp a pricing confidence — priceFromOurPool collapses the
+    // engine's numeric confidence to a tier string and never returns the
+    // number, so there is nothing truthful to stamp here yet. These rows
+    // render "—" in the report's confidence column, which is the honest
+    // answer; carrying the numeric through this path is its own change.
     expect(hld.pricingSourceMeta).toEqual({ slug: GOLD, method: "exact-pool-leading-edge", compsUsed: 3 });
     expect(hld.estimateBasis).not.toMatch(/floor/i);
     expect(hld.lastUpdated).not.toBe("2026-08-01T00:00:00.000Z");
@@ -624,7 +630,12 @@ describe("portfolioStore — every estimate site asks the gate (source pin)", ()
     // refused pool-twin union is auditable on the holding. The pin's subject
     // is unchanged — FOUR unified writes still name their rung and sample
     // count — so it accepts the wrapped form too.
-    expect((src.match(/pricingSourceMeta: (?:withUnionRefused\()?\{ slug: [^}]*method: (?:u|bU|unified)\.rungLabel, compsUsed: (?:u|bU|unified)\.totalSampleCount \}/g) ?? []).length).toBe(4);
+    // CF-REPORT-CONFIDENCE-IS-PRICING (2026-09-03): the meta now also
+    // carries the engine's PRICING confidence, so the report can render the
+    // figure the basis prose already quoted as conf=. The pin's subject is
+    // unchanged — FOUR unified writes still name their rung and sample count
+    // — and it now also requires the confidence to travel with them.
+    expect((src.match(/pricingSourceMeta: (?:withUnionRefused\()?\{ slug: [^}]*method: (?:u|bU|unified)\.rungLabel, compsUsed: (?:u|bU|unified)\.totalSampleCount, confidence: (?:u|bU|unified)\.confidence \}/g) ?? []).length).toBe(4);
     // The wrap adds the breadcrumb and nothing else: same three keys when no
     // union was refused.
     expect(src).toMatch(/pricingSourceMeta: withUnionRefused\(\{ slug: exact\.attempt\.cardId,/);

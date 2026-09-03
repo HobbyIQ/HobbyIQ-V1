@@ -343,3 +343,80 @@ describe("buildPricingEnvelope", () => {
     expect(env.headline.value).toBe(100);
   });
 });
+
+
+// ─── CF-REPORT-CONFIDENCE-IS-PRICING (2026-09-03) ────────────────────────
+//
+// `confidence.pricing` used to be filled from the flat `holding.confidence`
+// field. The canonical/unified writer never sets that field, so on a
+// unified-priced holding the envelope published whatever a previous legacy
+// reprice had left behind — under a name promising a pricing confidence.
+//
+// The engine's pricing confidence now rides in pricingSourceMeta, stamped
+// by the writer that decided the price. The envelope must prefer it, and
+// must not present the flat field as a pricing confidence on rows the
+// legacy path did not price.
+describe("confidence.pricing carries the engine's pricing confidence", () => {
+  const inputs = {
+    fmvPerUnit: 121,
+    displayable: { value: 121, source: "observed" as const },
+    quantity: 1,
+    freshness: "Live" as const,
+  };
+
+  it("prefers the engine's pricing confidence over the flat field", () => {
+    const env = buildPricingEnvelope(fixture({
+      fairMarketValue: 121,
+      pricingSource: "unified-pricing",
+      // The matcher is certain; the evidence is thin. The envelope must
+      // publish the evidence figure.
+      confidence: 1,
+      pricingSourceMeta: {
+        slug: "hiq:baseball:1987:topps-traded-tiffany:70t",
+        method: "exact-pool-projection",
+        compsUsed: 3,
+        confidence: 0.37,
+      },
+    }), inputs);
+    expect(env.confidence.pricing).toBe(0.37);
+    expect(env.provenance.pricingSourceMeta?.confidence).toBe(0.37);
+  });
+
+  it("does not publish a unified holding's flat confidence as a pricing confidence", () => {
+    const env = buildPricingEnvelope(fixture({
+      fairMarketValue: 121,
+      pricingSource: "unified-pricing",
+      confidence: 1,
+      pricingSourceMeta: {
+        slug: "s", method: "exact-pool-projection", compsUsed: 3,
+      },
+    }), inputs);
+    expect(env.confidence.pricing).toBeNull();
+    expect(env.provenance.pricingSourceMeta?.confidence).toBeNull();
+  });
+
+  it("still reads the flat field for the legacy path that writes it", () => {
+    const env = buildPricingEnvelope(fixture({
+      fairMarketValue: 121,
+      pricingSource: "legacy-engine",
+      confidence: 0.64,
+    }), inputs);
+    expect(env.confidence.pricing).toBe(0.64);
+  });
+
+  it("treats a pre-CF holding with no pricingSource as legacy-priced", () => {
+    const env = buildPricingEnvelope(fixture({ fairMarketValue: 121, confidence: 0.5 }), inputs);
+    expect(env.confidence.pricing).toBe(0.5);
+  });
+
+  it("rejects an out-of-range confidence rather than publishing it", () => {
+    // The legacy writer saturates a 0..100 input at 1 via Math.min; a raw
+    // 0..100 value reaching here is not a 0..1 confidence.
+    const env = buildPricingEnvelope(fixture({
+      fairMarketValue: 121,
+      pricingSource: "unified-pricing",
+      pricingSourceMeta: { slug: "s", method: "m", compsUsed: 1, confidence: 64 },
+    }), inputs);
+    expect(env.confidence.pricing).toBeNull();
+  });
+});

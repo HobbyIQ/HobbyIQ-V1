@@ -2763,6 +2763,42 @@ export async function exportPortfolio(format: "csv" | "xlsx" = "xlsx"): Promise<
   URL.revokeObjectURL(url);
 }
 
+// CF-VALUATION-REPORT (Drew, 2026-09-02): GET /portfolio/valuation-report
+// — the printable valuation document. Opens in a new tab so the user can
+// read it and hit Print / Save as PDF; the backend has no PDF renderer, so
+// the browser's print pipeline IS the PDF path (see
+// backend/src/services/portfolioiq/valuationReport.service.ts).
+//
+// It goes through fetch + a blob URL rather than a plain link because the
+// route needs the session header, which an <a href> cannot carry. The
+// object URL is revoked on a timer rather than immediately: revoking it
+// synchronously races the new tab's load and yields a blank page.
+export async function openValuationReport(): Promise<void> {
+  const sid = getStoredSessionId();
+  const res = await fetch(`${API_BASE}/api/portfolio/valuation-report`, {
+    method: "GET",
+    headers: sid ? { "x-session-id": sid } : {},
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(text || `Could not generate the report (${res.status})`);
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const win = window.open(url, "_blank", "noopener");
+  if (!win) {
+    // Popup blocked — fall back to downloading the file so the click is
+    // never silently swallowed.
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "hobbyiq-valuation-report.html";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
 /** CF-ACCEPT-THE-PARKED-MATCH (2026-08-23). One click from "we think this is
  *  X" to a pinned identity. The route is state-agnostic on purpose — a
  *  holding does not have to be sitting in the eBay review queue for its owner

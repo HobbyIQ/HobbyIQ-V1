@@ -3055,7 +3055,7 @@ function unifiedHoldingWrite(
     isEstimate: false,
     valuationStatus: "observed",
     pricingSource: "unified-pricing",
-    pricingSourceMeta: withUnionRefused({ slug: exact.attempt.cardId, method: u.rungLabel, compsUsed: u.totalSampleCount }, exact.attempt),
+    pricingSourceMeta: withUnionRefused({ slug: exact.attempt.cardId, method: u.rungLabel, compsUsed: u.totalSampleCount, confidence: u.confidence }, exact.attempt),
     nearestGradedAnchor: undefined,
     verdict: "Observed",
     recommendation: holding.recommendation ?? "Hold",
@@ -3409,7 +3409,7 @@ async function autoPriceHolding(
           pricingSource: "unified-pricing",
           // CF-LABELS-TELL-THE-TRUTH (D4 PR 5): the meta names THIS price's
           // rung and pool; a previous pass's "cross-setkey" cannot survive.
-          pricingSourceMeta: { slug: exact?.attempt.cardId ?? String(earlyResolvedId), method: u.rungLabel, compsUsed: u.totalSampleCount },
+          pricingSourceMeta: { slug: exact?.attempt.cardId ?? String(earlyResolvedId), method: u.rungLabel, compsUsed: u.totalSampleCount, confidence: u.confidence },
           lastUpdated: nowIso,
           sourceVendor: "cardhedge" as any,
           sourceVendorUpdatedAt: nowIso,
@@ -4375,7 +4375,7 @@ async function autoPriceHolding(
     // unified price, and a previous pass's meta rode along.
     pricingSource: unifiedIsFinalAuthority ? "unified-pricing" : ourPoolMeta ? "our-pool" : "legacy-engine",
     pricingSourceMeta: unifiedIsFinalAuthority && unifiedResult
-      ? { slug: unifiedResult.pricedId, method: unifiedResult.rungLabel, compsUsed: unifiedResult.totalSampleCount }
+      ? { slug: unifiedResult.pricedId, method: unifiedResult.rungLabel, compsUsed: unifiedResult.totalSampleCount, confidence: unifiedResult.confidence }
       : (ourPoolMeta ?? undefined),
     // CF-RUNG-LABEL (D4 PR 1): the rung behind the final price surface;
     // null when the legacy engine, which does not name its rung, produced it.
@@ -9781,7 +9781,7 @@ export async function repriceHoldingsForUser(
               isEstimate: false,
               valuationStatus: "observed",
               pricingSource: "unified-pricing",
-              pricingSourceMeta: { slug: bExactEarly?.attempt.cardId ?? String(bEarlyId), method: bU.rungLabel, compsUsed: bU.totalSampleCount },
+              pricingSourceMeta: { slug: bExactEarly?.attempt.cardId ?? String(bEarlyId), method: bU.rungLabel, compsUsed: bU.totalSampleCount, confidence: bU.confidence },
               lastUpdated: bNow,
               sourceVendor: "cardhedge" as any,
               sourceVendorUpdatedAt: bNow,
@@ -9894,7 +9894,7 @@ export async function repriceHoldingsForUser(
                 isEstimate: false,
                 valuationStatus: "observed",
                 pricingSource: "unified-pricing",
-                pricingSourceMeta: { slug: bExact?.attempt.cardId ?? String(bResolvedId), method: unified.rungLabel, compsUsed: unified.totalSampleCount },
+                pricingSourceMeta: { slug: bExact?.attempt.cardId ?? String(bResolvedId), method: unified.rungLabel, compsUsed: unified.totalSampleCount, confidence: unified.confidence },
                 verdict: holding.verdict ?? "Hold",
                 recommendation: holding.recommendation ?? "Hold",
                 lastUpdated: uNow,

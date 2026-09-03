@@ -21,6 +21,15 @@ import type { PortfolioHolding } from "../types/portfolioiq.types.js";
 // contract. See exportHoldings.service.ts for the column lock.
 import { buildHoldingsExport, type ExportFormat } from "../services/portfolioiq/exportHoldings.service.js";
 import { composePortfolioListResponse } from "../services/portfolioiq/responseAssembly.js";
+// CF-VALUATION-REPORT (Drew, 2026-09-02): the printable valuation report.
+// Reads the SAME wire path the export and the dashboard read — it prices
+// nothing of its own. See valuationReport.service.ts for why the document
+// is print-perfect HTML rather than a server-rendered PDF.
+import { buildValuationReport } from "../services/portfolioiq/valuationReport.service.js";
+import {
+  renderValuationReportHtml,
+  reportFilename,
+} from "../services/portfolioiq/valuationReportHtml.service.js";
 // CF-IMPORT-BE (2026-06-21): preview + commit endpoints. File arrives as
 // base64-encoded body (multipart not configured); preview is read-only,
 // commit is idempotency-token-gated. See importService.ts.
@@ -1094,6 +1103,51 @@ router.get("/export", async (req, res, next) => {
     res.setHeader("Content-Disposition", `attachment; filename="${payload.filename}"`);
     res.setHeader("X-Holdings-Count", String(wire.length));
     res.send(payload.buffer);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// CF-VALUATION-REPORT (Drew, 2026-09-02):
+//   GET /api/portfolio/valuation-report?disposition=attachment|inline
+//
+// A dated, print-perfect valuation document: every holding with its
+// canonical FMV, the rung and basis that produced it, confidence, and an
+// as-of timestamp; totals split by how well-evidenced they are; a
+// methodology section; and the disclaimer that this is a valuation
+// opinion from market data, not an appraisal.
+//
+// READ-ONLY, and it prices NOTHING. Holdings come off the same
+// composePortfolioListResponse wire path /export and the dashboard use,
+// so the report cannot disagree with the app it was generated from. No
+// reprice is dispatched: a document is not a reason to move a number.
+//
+// `inline` renders in the browser with a Print button (the Save-as-PDF
+// path); `attachment` downloads the .html file. Default is inline, since
+// the point of the document is to be printed.
+router.get("/valuation-report", async (req, res, next) => {
+  try {
+    const userId = req.user!.userId;
+    const disposition = req.query.disposition === "attachment" ? "attachment" : "inline";
+
+    const doc = await readUserDoc(userId);
+    const items: PortfolioHolding[] = Object.values(doc.holdings ?? {});
+    const wire = composePortfolioListResponse(items);
+    const report = buildValuationReport(wire);
+    const html = renderValuationReportHtml(report, {
+      // Name first, then username, then email — the masthead of a document
+      // someone may hand to an insurer should carry a name, not an inbox.
+      ownerLabel: req.user?.fullName || req.user?.username || req.user?.email || null,
+      includePrintButton: disposition === "inline",
+    });
+    const filename = reportFilename(report.generatedAt);
+
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.setHeader("Content-Disposition", `${disposition}; filename="${filename}"`);
+    // Never cached by a shared cache: this is one user's collection.
+    res.setHeader("Cache-Control", "private, no-store");
+    res.setHeader("X-Holdings-Count", String(report.totals.holdingCount));
+    res.send(html);
   } catch (err) {
     next(err);
   }
