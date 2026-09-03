@@ -59,6 +59,7 @@ import {
   type CanonicalFmvResult,
 } from "../compiq/canonicalFmv.service.js";
 import { isExactPoolRung, type FmvRungLabel } from "../compiq/fmvRung.js";
+import { isOwnCompForSingleUserContext } from "../compiq/selfComp.js";
 import {
   deriveSellWindowSignal,
   type SellWindowSignal,
@@ -187,9 +188,16 @@ function evidenceCount(result: CanonicalFmvResult): number {
  *  soldCompsStore keys a holding-derived comp `holding::<id>`; an import
  *  that carried a real eBay order id keeps that id but is still flagged
  *  by `verifiedByUser`. Either one makes the pool self-anchored. */
+// CF-OWN-PURCHASE-IS-A-SALE (Drew, 2026-09-03). This predicate used to test
+// only `verifiedByUser === true` or a `holding::` source prefix. A D38 eBay
+// import satisfies NEITHER: it writes source "ebay-user-purchase" with
+// verifiedByUser FALSE on purpose (the identity came from the matcher, not
+// from the user confirming it by hand -- ebayImportRematch.routes.ts:186).
+// So the Verlander/Caglianone/Judge rows were self-comps that no surface ever
+// recognised as the user's own, and the "self-anchored" label never fired on
+// the very rows it exists for. Delegates to the shared predicate now.
 function isSelfComp(c: { source: string; verifiedByUser: boolean }): boolean {
-  if (c.verifiedByUser === true) return true;
-  return typeof c.source === "string" && c.source.startsWith("holding::");
+  return isOwnCompForSingleUserContext(c);
 }
 
 /**

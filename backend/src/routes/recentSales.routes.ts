@@ -49,6 +49,7 @@ import { requireSession } from "../middleware/requireSession.js";
 import { requireRateLimited } from "../middleware/requireRateLimited.js";
 import { readCompsByCardId } from "../services/portfolioiq/soldCompsStore.service.js";
 import { poolReadIdsFor, resolveIdentityToCatalogRow } from "../services/catalog/catalogIdentityResolver.js";
+import { isOwnComp, OWN_COMP_ROW_LABEL } from "../services/compiq/selfComp.js";
 
 const router = Router();
 
@@ -140,11 +141,18 @@ router.get("/cards/:cardId/recent-sales", requireSession, requireRateLimited("pr
       parallel: parallel !== undefined ? parallel : undefined,
       gradeCompany: gradeCompany,
       gradeValue: gradeValue,
-      // CF-EXCLUDE-SELF-COMPS (Drew, 2026-08-04). Don't surface the
-      // requester's own eBay purchases back to them as market "comps"
-      // — see Bobby Witt Jr. BGS 9.5 case where the sole $1,260
-      // ebay-user-purchase row was pushing median = purchase price.
-      excludeContributorUserId: requesterId,
+      // CF-OWN-PURCHASE-IS-A-SALE (Drew, 2026-09-03). Was
+      // `excludeContributorUserId: requesterId` -- CF-EXCLUDE-SELF-COMPS
+      // (2026-08-04), which dropped the requester's own eBay purchases from
+      // this list entirely. The 2026-09-02 ruling supersedes it: an own
+      // purchase IS a real sale and appears in the comp list, LABELLED. The
+      // original concern (Bobby Witt Jr. BGS 9.5, where a sole $1,260
+      // own-purchase row became median = purchase price) is about what may
+      // ANCHOR a published value, and that stays governed by
+      // SELF_COMP_MIN_OTHER_SAMPLES inside the engine -- a rule about the
+      // number, never about whether the row is visible. Hiding the row made
+      // this list disagree with the pool the FMV was computed from: the user
+      // saw N-1 comps behind a value derived from N.
     });
 
     // CF-RECENT-SALES-DEDUP (Drew, 2026-08-06). CardHedge occasionally
@@ -211,6 +219,12 @@ router.get("/cards/:cardId/recent-sales", requireSession, requireRateLimited("pr
     // bucketed re-merge above scrambles it).
     gatedComps.sort((a, b) => String(b.soldAt ?? "").localeCompare(String(a.soldAt ?? "")));
 
+    // CF-OWN-PURCHASE-IS-A-SALE (Drew, 2026-09-03). One predicate for the
+    // row flag and the per-tier count below, so a tier can never disclose a
+    // different number of own sales than the rows it lists.
+    const ownRow = (c: { source?: string | null; contributorUserId?: string | null }): boolean =>
+      isOwnComp(c, requesterId);
+
     const sales = gatedComps
       .slice(0, limit)
       .map((c) => ({
@@ -235,6 +249,14 @@ router.get("/cards/:cardId/recent-sales", requireSession, requireRateLimited("pr
         contributorUserId: requesterId && c.contributorUserId === requesterId
           ? c.contributorUserId
           : null,
+        // CF-OWN-PURCHASE-IS-A-SALE (Drew, 2026-09-03). The row stays in the
+        // list and says whose it is. `isOwn` is the flag a client renders the
+        // "your purchase" chip from; `ownLabel` carries the wording so the
+        // phrase lives in one place rather than being re-invented per client.
+        // Both are computed against the REQUESTER: another user's imported
+        // purchase is an ordinary independent comp from here.
+        isOwn: ownRow(c),
+        ownLabel: ownRow(c) ? OWN_COMP_ROW_LABEL : null,
         // Confidence lets iOS de-emphasize weakly-verified entries in
         // the list (lower opacity, footnote, etc.).
         confidence: typeof c.confidence === "number" ? c.confidence : null,
@@ -263,15 +285,23 @@ router.get("/cards/:cardId/recent-sales", requireSession, requireRateLimited("pr
       graderBuckets.set(key, arr);
     }
 
+    // CF-OWN-PURCHASE-IS-A-SALE (Drew, 2026-09-03). `ownCount` is the tier
+    // basis disclosure the ruling asks for: the tier states how many of its n
+    // sales are the viewer's own, so a PSA 10 tier priced off one own purchase
+    // reads as "1 sale, 1 of them yours" rather than as an anonymous market
+    // median. The own rows are COUNTED IN `count` -- they are real sales.
     function summarize(rows: typeof sales) {
-      const prices = rows.map((r) => r.price).filter((p) => Number.isFinite(p) && p > 0).sort((a, b) => a - b);
-      if (prices.length === 0) return { count: 0, min: null, max: null, median: null };
+      const priced = rows.filter((r) => Number.isFinite(r.price) && r.price > 0);
+      const prices = priced.map((r) => r.price).sort((a, b) => a - b);
+      const ownCount = priced.filter((r) => r.isOwn === true).length;
+      if (prices.length === 0) return { count: 0, min: null, max: null, median: null, ownCount: 0 };
       const median = prices[Math.floor(prices.length / 2)];
       return {
         count: prices.length,
         min: Math.round(prices[0] * 100) / 100,
         max: Math.round(prices[prices.length - 1] * 100) / 100,
         median: Math.round(median * 100) / 100,
+        ownCount,
       };
     }
 

@@ -25,6 +25,7 @@ import { getCardSales } from "./cardhedge.client.js";
 import { recordBoundedProjectionAlert } from "./boundedProjectionAlerts.service.js";
 import { logSubRawInversionObserved } from "./marketRead.service.js";
 import { readSoldCompsForGrade } from "./soldCompsGradeReader.js";
+import { isOwnComp } from "./selfComp.js";
 import type { FmvRungLabel } from "./fmvRung.js";
 // CF-ONE-GRADE-CURVE (D4 PR 4, 2026-08-29). The ONE writer of a tier's
 // numbers from the unified engine, and the field-population contract iOS
@@ -143,6 +144,11 @@ export interface ObservedGradeEntry {
   grade: string;
   grader: string;
   sampleCount: number;
+  /** CF-OWN-PURCHASE-IS-A-SALE (Drew, 2026-09-03). How many of `sampleCount`
+   *  are the viewer's OWN purchases. The ruling keeps those rows in the tier
+   *  -- they are real sales -- and requires the basis be disclosed rather than
+   *  the row hidden. 0 when no viewer is known, which is every anonymous read. */
+  ownSampleCount: number;
   /** Velocity-weighted median. Uses recency-decay so a $200 sale from
    *  48h ago carries 5× the weight of a $200 sale from 30 days ago.
    *  Null when the pool is empty. */
@@ -431,7 +437,7 @@ export function isBlackLabelSale(title: string | null | undefined): boolean {
 async function fetchRawSalesForGrade(
   cardId: string,
   grade: string,
-): Promise<Array<{ price: number; date: string | null; saleType: string | null }>> {
+): Promise<Array<{ price: number; date: string | null; saleType: string | null; source: string | null; contributorUserId: string | null }>> {
   // CF-GRADE-CURVE-TEST-SEAM (2026-08-16). The Cosmos read moved to
   // soldCompsGradeReader so tests can mock a seam of our own instead of
   // "@azure/cosmos" — mocking that module hits every other Cosmos consumer in
@@ -465,6 +471,14 @@ async function fetchRawSalesForGrade(
     // `listingType`, populated on 518,595 rows — so computeWeightedMedian's
     // BIN lift had been disabled by a field rename rather than by design.
     saleType: r.listingType ?? null,
+    // CF-OWN-PURCHASE-IS-A-SALE (Drew, 2026-09-03). Carried so the tier can
+    // DISCLOSE how many of its samples are the viewer's own purchases. The
+    // rows were always in this pool -- the read filters on grade, price and
+    // the adjudication flags, never on source -- but nothing downstream could
+    // say so, which is why a curve tier built on an own purchase looked
+    // identical to one built on an arm's-length sale.
+    source: r.source ?? null,
+    contributorUserId: (r as { contributorUserId?: string | null }).contributorUserId ?? null,
   }));
 }
 
@@ -517,6 +531,7 @@ export function computeConfidence(sampleCount: number, newestDate: string | null
 async function aggregateGrade(
   cardId: string,
   cfg: (typeof CANONICAL_GRADES)[number],
+  viewerUserId?: string | null,
 ): Promise<ObservedGradeEntry> {
   const sales = await fetchRawSalesForGrade(cardId, cfg.label);
   const prices = sales.map((s) => s.price);
@@ -557,7 +572,7 @@ async function aggregateGrade(
   // answer different questions — weighted median is the pool's smoothed
   // center; newestSalePrice is the freshest datapoint.
   const salesWithDates = sales.filter(
-    (s): s is { price: number; date: string; saleType: string | null } =>
+    (s): s is { price: number; date: string; saleType: string | null; source: string | null; contributorUserId: string | null } =>
       typeof s.date === "string" && s.date.length > 0,
   );
   salesWithDates.sort((a, b) => a.date.localeCompare(b.date));
@@ -571,6 +586,10 @@ async function aggregateGrade(
     grade: cfg.label,
     grader: cfg.grader,
     sampleCount: sales.length,
+    // CF-OWN-PURCHASE-IS-A-SALE (Drew, 2026-09-03). n is disclosed, not
+    // reduced: own purchases are counted in `sampleCount` because they are
+    // real sales, and `ownSampleCount` says how many of that n they are.
+    ownSampleCount: sales.filter((s) => isOwnComp(s, viewerUserId)).length,
     weightedMedianPrice: weighted,
     plainMedianPrice: plain,
     priceRangeLow: low,

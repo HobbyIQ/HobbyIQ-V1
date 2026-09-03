@@ -1875,6 +1875,13 @@ export interface RecentCompSale {
   confidenceScore?: number | null;
   confidenceBand?: string | null;
   confidenceExplain?: string | null;
+  // CF-OWN-PURCHASE-IS-A-SALE (Drew, 2026-09-03). True when this sale is
+  // the VIEWER'S own imported purchase. The row is shown either way -- an
+  // own purchase is a real sale -- and this drives the label, not a filter.
+  isOwn?: boolean | null;
+  /** The wording for that label, served by the backend so the phrase lives
+   *  in one place. "your purchase". */
+  ownLabel?: string | null;
 }
 
 // CF-USER-FLAG-CLIENT (Drew, 2026-08-01). Fires POST /api/user/flag-comp
