@@ -306,6 +306,26 @@ on:
           # row-balanced chunk list. Vendor-partition rows are exempt and
           # counted, never flagged (#1650). Never writes, in any mode.
           - census-split-identity
+          # CF-MARKET-INDEXES purge + rebuild (Drew's ruling, 2026-09-03).
+          # Deletes the nine basket docs minted into prod on 2026-09-03
+          # between 14:12Z and 14:36Z by rebuild runs whose "report-only"
+          # mode was not write-free, then recreates every quarter's basket
+          # from that quarter's OWN trailing window (no lookahead) and
+          # recomputes the stored 180-day series under the unified method.
+          #
+          # REPORT BY DEFAULT. The default dispatch writes nothing and is
+          # provably write-free: the recompute is driven through a
+          # container facade whose every write method throws, and the run
+          # asserts the attempted-write count is zero. `apply=true` (which
+          # this workflow already exports as BACKFILL_APPLY) is what turns
+          # on the delete and the persist.
+          #
+          # A stray is condemned by TWO markers, never by a date: it is
+          # cited by no stored index point, AND it carries no
+          # builtBy:"apply" stamp from the path that legitimately writes.
+          # `sports` narrows the scope; the purge never touches a sport the
+          # dispatch did not name.
+          - rebuild-market-indexes
       apply:
         description: "Actually write (true) or dry-run only (false)"
         required: true
@@ -735,6 +755,22 @@ jobs:
             echo "Child scripts confirmed: 4"
           fi
 
+          # CF-MARKET-INDEXES. The rebuild does not implement the index: it
+          # requires the COMPILED services out of backend/dist and drives
+          # them. Its own presence proves nothing about those, and a
+          # dispatch that reached Cosmos and then died on a missing require
+          # would have read the pool for nothing -- and, in an apply, could
+          # have deleted baskets before failing to rebuild them.
+          if [ "${{ inputs.script }}" = "rebuild-market-indexes" ]; then
+            for SVC in marketIndex.service.js marketIndexCompute.service.js; do
+              if [ ! -f "backend/dist/services/insights/$SVC" ]; then
+                echo "::error::backend/dist/services/insights/$SVC is missing — the rebuild would purge baskets and then have nothing to recreate them with"
+                exit 1
+              fi
+            done
+            echo "Compiled index services confirmed: marketIndex, marketIndexCompute"
+          fi
+
           # D38. Same lesson, same shape: ingest-universe-driver SHELLS OUT to a
           # different scraper per lane, so its own presence proves nothing about
           # the lane it was dispatched for. It would acquire nothing and still
@@ -1007,9 +1043,78 @@ jobs:
           # alternative -- a partial census nobody can quote. The env var
           # exists for a local operator narrowing a re-run by hand.
           BASELINE: /tmp/rematch-canary-baseline.json
+          # CF-MARKET-INDEXES: the rebuild's report is the document an
+          # operator reads BEFORE authorising the purge, so it is written
+          # to a file and uploaded rather than left in a log that scrolls.
+          # A fixed path, not an input -- this workflow is at 24 of 25 and
+          # a knob nobody sets is a knob that drifts.
+          REPORT_OUT: /tmp/market-index-rebuild/report.json
           NODE_OPTIONS: "--max-old-space-size=8192"
         run: node "backend/scripts/${{ inputs.script }}.cjs" | tee /tmp/backfill.log
         shell: bash
+
+      # ── THE MARKET-INDEX REBUILD SAYS WHAT IT DID ────────────────────────
+      #
+      # CF-GREEN-WORKFLOW-IS-NOT-DATA-FLOW. This lane can DELETE documents,
+      # so a zero exit code is not enough: the banner has to prove the run
+      # bound the mode and scope it was dispatched for, and that the purge
+      # accounted for every doc it named.
+      #
+      # Three assertions, all read off the run's own banner:
+      #   1. the mode line matches the dispatch (an apply that printed
+      #      REPORT-ONLY bound the wrong thing and deleted nothing);
+      #   2. the purge reconciled (intended == deleted + skipped);
+      #   3. no write was attempted in report mode.
+      #
+      # The script already exits 2 on 2 and 3, so this is belt and braces
+      # for the case where the banner and the exit code disagree -- which
+      # is exactly the class of defect that put nine baskets in prod.
+      - name: The rebuild banner reconciles
+        if: ${{ always() && inputs.script == 'rebuild-market-indexes' }}
+        shell: bash
+        run: |
+          if [ ! -s /tmp/backfill.log ]; then
+            echo "::error::no run log — the rebuild produced no banner at all"
+            exit 1
+          fi
+
+          EXPECTED='REPORT-ONLY'
+          if [ "${{ inputs.apply }}" = "true" ]; then EXPECTED='APPLY'; fi
+          if ! grep -q "\"event\":\"market_index_rebuild_start\".*\"mode\":\"$EXPECTED" /tmp/backfill.log; then
+            echo "::error::the run did not bind mode=$EXPECTED — read the start banner"
+            grep -o '"event":"market_index_rebuild_start"[^}]*}' /tmp/backfill.log || true
+            exit 1
+          fi
+
+          if ! grep -q '"event":"market_index_purge_reconcile".*"reconciled":true' /tmp/backfill.log; then
+            echo "::error::the purge did not reconcile — intended != deleted + skipped"
+            grep -o '"event":"market_index_purge_reconcile"[^}]*}' /tmp/backfill.log || true
+            exit 1
+          fi
+
+          if grep -q 'market_index_rebuild_write_in_report_mode\|market_index_purge_deleted_in_report_mode' /tmp/backfill.log; then
+            echo "::error::a REPORT-ONLY run attempted a write — this is the defect the lane exists to close"
+            exit 1
+          fi
+
+          echo "Banner reconciles: mode=$EXPECTED, purge accounted for."
+          grep -o '"event":"market_index_purge_reconcile"[^}]*}' /tmp/backfill.log || true
+          grep -o '"event":"market_index_rebuild_verify"[^}]*"ok":[a-z]*' /tmp/backfill.log || true
+          grep -o '"event":"market_index_rebuild_done"[^}]*}' /tmp/backfill.log || true
+
+      # The report names every doc the purge would delete (or did), with the
+      # marker that condemned it. A report that only ever lived in a log is
+      # a report nobody can quote when authorising the apply.
+      - name: Upload the market-index rebuild report
+        if: ${{ always() && inputs.script == 'rebuild-market-indexes' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: market-index-rebuild-${{ inputs.apply == true && 'apply' || 'report' }}-${{ github.run_id }}
+          path: |
+            /tmp/market-index-rebuild/report.json
+            /tmp/backfill.log
+          if-no-files-found: warn
+          retention-days: 90
 
       # ── THE CANARY GATE, AFTER ───────────────────────────────────────────
       #

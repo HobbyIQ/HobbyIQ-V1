@@ -64,7 +64,7 @@
 //      the floor the point is WITHHELD: the series carries the prior
 //      level flagged stale, and never a fabricated number.
 //
-// ASSUMPTION (Drew has not ruled; PR flags this): the floor is 0.50.
+// RULED 2026-09-03 (Drew): the floor is 0.50, and MIN_BASKET_SIZE is 25.
 //
 // REBALANCE RULE
 // --------------
@@ -117,8 +117,7 @@ export const MIN_SALES_FOR_ELIGIBILITY = 8;
  * The floor bounds how much of a basket was valued; this bounds whether
  * there was a basket to value.
  *
- * ASSUMPTION, not a Drew ruling — 25 is the value this PR proposes, a
- * quarter of the 100 target.
+ * RULED 2026-09-03 (Drew): 25 — a quarter of the 100 target.
  */
 export const MIN_BASKET_SIZE = 25;
 
@@ -140,7 +139,7 @@ export const BASE_LEVEL = 100;
  * members happened to trade (see THE usedWeight FLOOR above) and the
  * point is withheld instead.
  *
- * ASSUMPTION, not a Drew ruling — 0.50 is the value this PR proposes.
+ * RULED 2026-09-03 (Drew): 0.50.
  */
 export const MIN_USED_WEIGHT = 0.5;
 
@@ -172,6 +171,23 @@ export interface IndexBasketDoc {
   baseDate: string;                // YYYY-MM-DD
   members: BasketMember[];
   computedAt: string;
+  /**
+   * PROVENANCE (2026-09-03). Which path minted this basket.
+   *
+   * Every basket doc in prod before this field existed carried an
+   * IDENTICAL key set whether it came from the nightly apply or from a
+   * report run that was not write-free — so there was no way to tell a
+   * legitimate basket from a stray except by reading its `_ts` and
+   * guessing. `_ts` is a weak marker: it dates a doc, it does not say
+   * what made it.
+   *
+   * The apply path now stamps this. A basket with no `builtBy` predates
+   * the stamp; a basket with `builtBy: "apply"` was minted by a run that
+   * meant to write. Nothing else ever writes a basket — the report lane
+   * is write-free by construction (ensureBasket persist:false, behind a
+   * write-refusing container facade).
+   */
+  builtBy?: "apply";
 }
 
 export interface IndexPointDoc {
