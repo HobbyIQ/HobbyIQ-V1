@@ -782,23 +782,29 @@ async function dryRun(svc, compute, series, sport, asOf, reportFrom) {
   let memberIds = basket ? basket.members.map((m) => m.cardId) : [];
   let memberSet = new Set(memberIds);
 
+  // LEAD_IN_DAYS, not VALUE_WINDOW_DAYS: the write path reads 90 days
+  // before day one to seed its carry, and a report lane reading only 14
+  // sees a thinner seed and predicts withholds the apply lane will not
+  // make.
   const allRows = await svc.fetchSales(
     soldComps,
     sport,
-    svc.addDays(fullFrom, -svc.VALUE_WINDOW_DAYS),
+    svc.addDays(fullFrom, -svc.LEAD_IN_DAYS),
     svc.addDays(asOf, 1),
   );
 
   const carry = await svc.loadCarryForward(series, sport);
-  const seed = svc.groupByCard(
-    allRows.filter((r) => r.soldAt < fullFrom && memberSet.has(r.cardId)),
-  );
-  for (const id of memberIds) {
-    const agg = seed.get(id);
-    if (agg && agg.values.length > 0) {
-      const v = agg.values[agg.values.length - 1];
-      if (v > 0 && !carry.has(id)) carry.set(id, { value: v, asOf: fullFrom });
-    }
+  // MIRROR THE WRITE PATH (2026-09-03). This seeded only the FIRST
+  // epoch's members while computeSeriesForSport seeds every card in the
+  // lead-in, so the report lane predicted published/withheld counts the
+  // apply lane would not produce - the report is worthless the moment it
+  // stops modelling the thing it reports on. Unbounded here is safe:
+  // the dry run persists nothing.
+  const seed = svc.groupByCard(allRows.filter((r) => r.soldAt < fullFrom));
+  for (const [cardId, agg] of seed) {
+    if (carry.has(cardId)) continue;
+    const v = agg.values[agg.values.length - 1];
+    if (v > 0) carry.set(cardId, { value: v, asOf: fullFrom });
   }
 
   let published = 0;
