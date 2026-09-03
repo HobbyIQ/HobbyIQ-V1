@@ -380,6 +380,14 @@ function confidenceScore(sampleCount: number, newestMs: number | null, nowMs: nu
  * (thin wider pool, no signal). Clamped to [0.5, 3.0] to prevent
  * runaway adjustments on outlier player-pool moves.
  */
+// POOL-1 residue (audit, 2026-09-03). The player-trend rung already excluded
+// `priceAnomaly` rows but not adjudicated ones, so a row a human had marked
+// wrong still moved the ratio that projects a stale exact-card median forward.
+// Same store-form predicate as exactPoolReader:84-85.
+const ADJUDICATION_FILTER =
+  "(NOT IS_DEFINED(c.flaggedWrong) OR c.flaggedWrong != true)"
+  + " AND (NOT IS_DEFINED(c.excludedFromFmv) OR c.excludedFromFmv != true)";
+
 async function computePlayerPoolTrendRatio(
   cont: Container,
   playerName: string,
@@ -392,12 +400,12 @@ async function computePlayerPoolTrendRatio(
   try {
     // Recent 30d
     const { resources: recent } = await cont.items.query<{ price: number }>({
-      query: "SELECT c.price FROM c WHERE c.playerName = @p AND c.cardYear = @y AND c.soldAt >= @cut AND c.price > 0 AND (NOT IS_DEFINED(c.priceAnomaly) OR c.priceAnomaly != true)",
+      query: `SELECT c.price FROM c WHERE c.playerName = @p AND c.cardYear = @y AND c.soldAt >= @cut AND c.price > 0 AND (NOT IS_DEFINED(c.priceAnomaly) OR c.priceAnomaly != true) AND ${ADJUDICATION_FILTER}`,
       parameters: [{ name: "@p", value: playerName }, { name: "@y", value: cardYear }, { name: "@cut", value: cutoffRecent }],
     }, { maxItemCount: 300 }).fetchAll();
     // Prior 30d (30-90 days ago)
     const { resources: prior } = await cont.items.query<{ price: number }>({
-      query: "SELECT c.price FROM c WHERE c.playerName = @p AND c.cardYear = @y AND c.soldAt >= @from AND c.soldAt < @to AND c.price > 0 AND (NOT IS_DEFINED(c.priceAnomaly) OR c.priceAnomaly != true)",
+      query: `SELECT c.price FROM c WHERE c.playerName = @p AND c.cardYear = @y AND c.soldAt >= @from AND c.soldAt < @to AND c.price > 0 AND (NOT IS_DEFINED(c.priceAnomaly) OR c.priceAnomaly != true) AND ${ADJUDICATION_FILTER}`,
       parameters: [{ name: "@p", value: playerName }, { name: "@y", value: cardYear }, { name: "@from", value: cutoffPrior }, { name: "@to", value: priorEnd }],
     }, { maxItemCount: 300 }).fetchAll();
     if (recent.length < 5 || prior.length < 5) return 1.0;

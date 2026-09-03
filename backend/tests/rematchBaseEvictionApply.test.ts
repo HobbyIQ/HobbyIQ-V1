@@ -100,16 +100,25 @@ function buildEvictionKeep(fresh: Doc, evidence: Doc) {
 }
 
 describe("a BASE-EVICTION candidate classifies, then writes", () => {
+  // THE GONZALEZ SHAPE, AND THE FIELD THAT DEFINES IT.
+  //
+  // The row's printRun FIELD is blank; the /499 lives only on the SLUG. That
+  // asymmetry IS the defect the subclass exists to repair, and blank means
+  // unknown -- an unknown is what an eviction may leave alone.
+  //
+  // This fixture used to carry `printRun: 499` on the STORED side, and the
+  // suite asserted the eviction wrote anyway and dropped the field. The
+  // 2026-09-03 audit named that as finding 2: a stored print run is the row's
+  // own field saying "limited parallel", and the sample it would have erased
+  // included a /1 (Immaculate Pujols) and Carroll /499. That shape is now a
+  // VETO, pinned below and in rematchTrustLadder.test.ts.
   const stored = {
     sport: "baseball", cardYear: 2026, setKey: "bowman", cardNumber: "CPA-JG",
-    parallel: "Base", isAuto: true, printRun: 499,
+    parallel: "Base", isAuto: true, printRun: null,
   };
-  const derived = { ...stored, printRun: null };
+  const derived = { ...stored };
 
-  it("the sibling form -- the row also copied the slug's /499 -- still tags", () => {
-    // This form reaches the classifier as dropped:printRun, so it arrives via
-    // the CONFLICT branch rather than the all-axes-agree one. Both forms are
-    // one defect and must land in one subclass, or the census reports it twice.
+  it("the Gonzalez form -- the run is on the SLUG, not the field -- tags and is writable", () => {
     const r = K.classifyRow({
       row: storedRow(), stored, derived, checklistBacked: true,
       storedSlug: EVICT_SLUG, baseDestSlug: BASE_DEST, baseDestBacked: true,
@@ -117,7 +126,19 @@ describe("a BASE-EVICTION candidate classifies, then writes", () => {
     expect(r.klass).toBe(K.CONFLICT);
     expect(r.subclass).toBe(K.BASE_EVICTION);
     expect(r.writable).toBe(true);
-    expect(r.axes.dropped).toContain("printRun");
+  });
+
+  it("the sibling form -- the row also copied the slug's /499 -- is now REFUSED", () => {
+    // Finding 2. A base card is not serial-numbered, so a row whose own field
+    // stores /499 is a fourth independent field disagreeing with the eviction.
+    // It leaves the subclass rather than being erased by it.
+    const r = K.classifyRow({
+      row: storedRow(), stored: { ...stored, printRun: 499 },
+      derived: { ...derived, printRun: 499 }, checklistBacked: true,
+      storedSlug: EVICT_SLUG, baseDestSlug: BASE_DEST, baseDestBacked: true,
+    });
+    expect(r.writable).toBe(false);
+    expect(r.reasons.join(" ")).toMatch(/stored-printrun-names-a-limited-parallel/);
   });
 
   it("writes the sale to the base slug and removes the old row, in that order", async () => {

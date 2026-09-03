@@ -12,6 +12,16 @@
 import { CosmosClient, type Container } from "@azure/cosmos";
 import { parseHobbyIqCardId } from "./hobbyIqCardId.service.js";
 
+// POOL-1 residue (audit, 2026-09-03). The discovery surfaces are a SIGNAL
+// class -- trending, breakout, movers -- computed straight off sold_comps
+// prices. An adjudicated-wrong row is exactly the kind of row that makes a
+// card look like it moved, so leaving these unfiltered surfaced the pool's
+// known-bad rows as discoveries. Same store-form predicate as
+// exactPoolReader:84-85.
+const ADJUDICATION_FILTER =
+  "(NOT IS_DEFINED(c.flaggedWrong) OR c.flaggedWrong != true)"
+  + " AND (NOT IS_DEFINED(c.excludedFromFmv) OR c.excludedFromFmv != true)";
+
 export interface TrendingCard {
   hobbyiqCardId: string;
   player: string | null;
@@ -101,7 +111,7 @@ export async function computeTrending(opts: {
     const cutoff30 = new Date(now - 30 * 86_400_000).toISOString();
     const cutoff90 = new Date(now - 90 * 86_400_000).toISOString();
     const query = `SELECT c.hobbyiqCardId, c.playerName, c.cardYear, c.setName, c.cardNumber, c.parallel, c.isAuto, c.printRun, c.price, c.soldAt, c.imageUrl, c.gradeCompany, c.gradeValue
-                   FROM c WHERE c.sport = @sp AND c.soldAt >= @from AND c.price >= 20`;
+                   FROM c WHERE c.sport = @sp AND c.soldAt >= @from AND c.price >= 20 AND ${ADJUDICATION_FILTER}`;
     const params = [{ name: "@sp", value: sport }, { name: "@from", value: cutoff90 }];
     let rows: Array<Record<string, unknown>> = [];
     try {
@@ -179,7 +189,7 @@ export async function computeRelatedCards(slug: string, limit = 8): Promise<Rela
     async function group(where: string, params: Array<{ name: string; value: string | number | boolean | null }>): Promise<TrendingCard[]> {
       try {
         const q = `SELECT TOP 200 c.hobbyiqCardId, c.playerName, c.cardYear, c.setName, c.cardNumber, c.parallel, c.isAuto, c.price, c.soldAt, c.imageUrl
-                   FROM c WHERE ${where} AND c.soldAt >= @from ORDER BY c.soldAt DESC`;
+                   FROM c WHERE ${where} AND c.soldAt >= @from AND ${ADJUDICATION_FILTER} ORDER BY c.soldAt DESC`;
         const it = container!.items.query({ query: q, parameters: [...params, { name: "@from", value: cutoff90 }] }, { maxItemCount: 500 });
         const rows: Array<Record<string, unknown>> = [];
         while (it.hasMoreResults()) {
@@ -261,7 +271,7 @@ export async function computeTrendingPlayers(opts: {
     const now = Date.now();
     const cutoff30 = new Date(now - 30 * 86_400_000).toISOString();
     const cutoff90 = new Date(now - 90 * 86_400_000).toISOString();
-    const query = `SELECT c.playerName, c.price, c.soldAt FROM c WHERE c.sport = @sp AND c.soldAt >= @from AND IS_DEFINED(c.playerName) AND c.playerName != null AND c.playerName != '' AND c.price >= 20`;
+    const query = `SELECT c.playerName, c.price, c.soldAt FROM c WHERE c.sport = @sp AND c.soldAt >= @from AND IS_DEFINED(c.playerName) AND c.playerName != null AND c.playerName != '' AND c.price >= 20 AND ${ADJUDICATION_FILTER}`;
     const params = [{ name: "@sp", value: sport }, { name: "@from", value: cutoff90 }];
     const byPlayer = new Map<string, { recent: number[]; prior: number[] }>();
     try {
