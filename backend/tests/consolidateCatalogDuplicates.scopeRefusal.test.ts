@@ -37,7 +37,14 @@ function run(env: Record<string, string>): { code: number | null; out: string } 
   }
 }
 
-describe("consolidate-catalog-duplicates -- the scope refusal", () => {
+// CF-CHRONIC-REDS-SLOW (2026-09-03). Each test here spawns a real node
+// child (execFileSync) to run the shipped consolidate script and read its
+// refusal banner. Process spawn plus that script's own module load is
+// seconds per case in isolation and multiples of that under a full-suite
+// fork storm, which pushed "accepts SCOPE=all" past the 30s default. The
+// spawn IS the test -- it proves the refusal ordering in the real binary --
+// so raise the ceiling rather than stub the child. Assertions unchanged.
+describe("consolidate-catalog-duplicates -- the scope refusal", { timeout: 180_000 }, () => {
   it("REFUSES with exit 1 and ONE line when given no SPORTS and no YEARS", () => {
     const { code, out } = run({ COSMOS_CONNECTION_STRING: "dummy" });
     expect(code).toBe(1);

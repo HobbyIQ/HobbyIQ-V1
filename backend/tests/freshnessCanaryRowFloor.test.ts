@@ -71,9 +71,31 @@ describe("the workflow arms the axis from measured numbers", () => {
   it("passes MIN_ROWS_24H with a tca-ebay floor", () => {
     expect(yml).toMatch(/MIN_ROWS_24H="\$\{\{ inputs\.min_rows_24h \|\| 'tca-ebay=\d+' \}\}"/);
   });
-  it("records the 7-day measurement the floor was derived from", () => {
-    expect(yml).toContain("9280");
-    expect(yml).toMatch(/tca-ebay=2300/);
+  it("records the measurement the armed floor was derived from", () => {
+    // CF-CHRONIC-REDS-DRIFT (2026-09-03). This asserted the literal
+    // `tca-ebay=2300`. D33 re-derived the floor and the workflow now arms
+    // `tca-ebay=25000`, so the pin failed on a number that was never the
+    // point -- a floor is SUPPOSED to move when it is re-measured, and a test
+    // that forbids that is a test that has to be edited every time the axis is
+    // tuned.
+    //
+    // The invariant it MEANT is provenance: the number the workflow arms must
+    // be a measured one, written down in the file next to it, not a guess.
+    // Assert the mechanism -- whatever floor is armed appears in the recorded
+    // measurement block -- so re-tuning stays green and an UNDOCUMENTED floor
+    // still goes red.
+    const armed = yml.match(/MIN_ROWS_24H="\$\{\{ inputs\.min_rows_24h \|\| 'tca-ebay=(\d+)' \}\}"/);
+    expect(armed, "the workflow must arm a tca-ebay floor").not.toBeNull();
+    const floor = Number(armed![1]);
+    expect(floor).toBeGreaterThan(0);
+
+    // The measurement block that justifies it: a dated read-only measurement,
+    // and the armed number cited in the prose around it.
+    expect(yml).toMatch(/Measured \d{4}-\d{2}-\d{2}/);
+    expect(
+      yml.split("\n").some((l) => l.startsWith("#") && l.includes(String(floor))),
+      `the armed floor ${floor} must be justified in a comment, not unexplained`,
+    ).toBe(true);
   });
 });
 

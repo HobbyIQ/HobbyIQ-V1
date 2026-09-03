@@ -14,3 +14,19 @@
 *.sh text eol=lf
 *.yml text eol=lf
 *.yaml text eol=lf
+
+# CF-CHRONIC-REDS-CRLF (2026-09-03). `* text=auto` above normalizes what is
+# STORED, but still checks out platform-native -- CRLF on Windows. A whole
+# class of tests reads a source file off disk and slices it on an LF literal
+# (`EMIT.indexOf("\n}\n")` in d38.addHoldingEmitCarriesBasis). On a Windows
+# clone that anchor is `\r\n}\r\n`, indexOf returns -1, and the suite fails at
+# FILE SCOPE before a single assertion runs -- green for a WSL/CI author, red
+# on a fresh Windows clone. The 2026-08 note above diagnosed this exact shape
+# and normalized storage; it did not pin the CHECKOUT, so the reds came back.
+#
+# Pin the checkout for the files those tests read. This is checkout
+# portability, not a test change: no assertion moves.
+*.ts text eol=lf
+*.cjs text eol=lf
+*.mjs text eol=lf
+*.js text eol=lf
