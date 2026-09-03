@@ -542,5 +542,5 @@ module.exports = {
   FINISH_COLOR_TOKENS, CORE_FINISH_TOKENS, CORPUS_STOPWORDS,
   buildVocabulary, vocabularyFor, vocabularyStats, isProductWord, setKeyTokens,
   titleNamesFinish, titleStatesSerial, serialFromTitle, checklistListsParallel,
-  productKey, nameTokens, _reset,
+  productKey, nameTokens, titleWords, _reset,
 };

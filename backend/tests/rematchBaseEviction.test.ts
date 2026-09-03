@@ -298,10 +298,10 @@ describe("MUTATION CHECK: the protected guard on BASE-EVICTION is load-bearing",
     // accidentally hit IMPROVE's otherwise-identical expression. Only the
     // TIER half is removed here; the axis half is mutated by its own check
     // above, and the two guards are proven independently load-bearing.
-    const marker = "writable: prov.tier === AUTO && contradicting.length === 0,";
+    const marker = "writable: prov.tier === AUTO && contradicting.length === 0 && !family.qualifies,";
     expect(src).toContain(marker);
     expect(src.split(marker)).toHaveLength(2);
-    const mutated = src.replace(marker, "writable: contradicting.length === 0,");
+    const mutated = src.replace(marker, "writable: contradicting.length === 0 && !family.qualifies,");
     expect(mutated).not.toBe(src);
     // IMPROVE's own guard is untouched: it has no axis conjunct, so the count
     // of bare tier guards is the same before and after.
@@ -424,12 +424,12 @@ describe("MUTATION CHECK: the axis gate on BASE-EVICTION is load-bearing", () =>
     const file = path.join(backend, "scripts", "lib", "rematch-classify.cjs");
     const src = fs.readFileSync(file, "utf8");
 
-    const marker = "writable: prov.tier === AUTO && contradicting.length === 0,";
+    const marker = "writable: prov.tier === AUTO && contradicting.length === 0 && !family.qualifies,";
     expect(src).toContain(marker);
     // Exactly one such expression exists -- IMPROVE's guard has no axis
     // conjunct and is not touched by this replacement.
     expect(src.split(marker)).toHaveLength(2);
-    const mutated = src.replace(marker, "writable: prov.tier === AUTO,");
+    const mutated = src.replace(marker, "writable: prov.tier === AUTO && !family.qualifies,");
     expect(mutated).not.toBe(src);
 
     const tmp = path.join(backend, "scripts", "lib", `.rematch-classify.axis-mutant-${process.pid}.cjs`);
