@@ -24,6 +24,8 @@
 import type { CHDailySaleRow } from "../../types/chDailySales.types.js";
 import type { RecordSoldCompInput } from "./soldCompsStore.service.js";
 import { judgeCardNumber, logCardNumberVerdict, type CardNumberVerdict } from "./cardNumberIntegrity.js";
+import { parseListingTitle } from "./ebayTitleParser.service.js";
+import { parallelTheTitleAllows } from "./titleOutranksVendorTag.js";
 
 /** CH `group` → our canonical sport tag. Returns null for groups we
  *  don't carry (the caller decides whether that's a skip or an accept).
@@ -99,7 +101,15 @@ export type MapSkipReason =
   | "no-sale-date";
 
 export type MapResult =
-  | { ok: true; input: RecordSoldCompInput; cardNumberVerdict: CardNumberVerdict }
+  | {
+      ok: true;
+      input: RecordSoldCompInput;
+      cardNumberVerdict: CardNumberVerdict;
+      /** The CH product variant the title refused, when it disagreed. The
+       *  caller counts these -- a run whose overrule count is a large share of
+       *  its rows is a run whose product tags were describing other cards. */
+      vendorParallelOverruled?: string | null;
+    }
   | { ok: false; skip: MapSkipReason };
 
 /**
@@ -151,17 +161,48 @@ export function mapChRowToSoldComp(row: CHDailySaleRow, opts: MapOptions = {}): 
 
   // D28. `row.number` is a candidate, not the answer -- the title decides.
   const verdict = cardNumberForChRow(row);
+
+  // CF-THE-TITLE-OUTRANKS-THE-VENDOR-TAG reaches the CH-daily writer too
+  // (Drew, 2026-09-03: "Bases are mixed in with refractors in ALL of Bowman").
+  //
+  // `row.variant` is CardHedge's PRODUCT variant, and this mapper stamped it
+  // onto every SALE of that product as the sale's own parallel. It is a vendor
+  // TAG -- exactly what the rule eleven lines above already says about
+  // `row.number` ("a candidate, not the answer -- the title decides"). The
+  // parallel axis simply never got the same treatment, and recordSoldComp,
+  // unlike persistVendorSalesToPool, runs no title check of its own, so on
+  // this path nothing ever read the title before writing a finish.
+  //
+  // Live damage, measured 2026-09-03:
+  // hiq:baseball:2026:bowman-chrome:cpa-vf:black-white-red-ink-refractor:auto
+  // held 51 rows, 50 of them cardhedge with titles naming NO finish, priced
+  // $5.00-19.95 (median $10.10) against the one genuine Red Ink sale at $270 --
+  // while those same base autos ALSO sat on ...:cpa-vf:base:auto. One card,
+  // two pools, both wrong. Corpus-wide 166 sampled CH rows carry a finish slug
+  // no title supports, a 10.3% rate of CH Bowman finish-slug rows.
+  //
+  // The tag is now a candidate the title can overrule: a title naming no
+  // finish writes Base -- under the base slug, where the card belongs -- and a
+  // title naming a different finish keeps its own. The vendor tag can still
+  // REFINE a finish the title already states (that rule and its pins are
+  // unchanged in titleOutranksVendorTag.ts).
+  const title = row.description || row.card_description || null;
+  const parsedTitle = parseListingTitle(title ?? "");
+  const parallelDecision = parallelTheTitleAllows(parsedTitle.parallel, row.variant ?? null, {
+    variationMarker: parsedTitle.variationMarker ?? null,
+  });
   logCardNumberVerdict("ch-daily", verdict, { candidate: row.number ?? null, title: row.description || row.card_description || null, cardId });
 
   return {
     ok: true,
     cardNumberVerdict: verdict,
+    vendorParallelOverruled: parallelDecision.vendorTagOverruled,
     input: {
       cardId,
       playerName,
       cardYear: Number.isFinite(year) && year > 0 ? year : null,
       setName: row.card_set || row.card_set_type || null,
-      parallel: row.variant || "Base",
+      parallel: parallelDecision.parallel ?? "Base",
       cardNumber: verdict.cardNumber,
       isAuto: inferIsAutoFromCH(row),
       sport,
@@ -173,7 +214,7 @@ export function mapChRowToSoldComp(row: CHDailySaleRow, opts: MapOptions = {}): 
       // MUST match bulk-import-ch-daily-to-sold-comps.cjs — see header.
       sourceExternalId: `ch-daily::${row.price_history_id}`,
       contributorUserId: null,
-      title: row.description || row.card_description || null,
+      title,
       imageUrl: row.image_url || null,
       // Threaded for verify_queue triage only — recordSoldComp does not
       // write this to sold_comps and it is not part of the contentHash,

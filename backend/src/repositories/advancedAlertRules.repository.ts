@@ -36,7 +36,21 @@ export type AdvancedAlertCondition =
   | { kind: "trendiq_coverage_min"; value: TrendIQCoverage }
   | { kind: "confidence_min"; value: number }
   | { kind: "price_crosses"; op: "above" | "below"; value: number }
-  | { kind: "predicted_price_crosses"; op: "above" | "below"; value: number };
+  | { kind: "predicted_price_crosses"; op: "above" | "below"; value: number }
+  /**
+   * CF-SELLER-INTELLIGENCE-SELL-WINDOW (Drew, 2026-09-02). Fires when a
+   * holding's sell-window signal TRANSITIONS INTO `becomes`.
+   *
+   * Transition, not state — the same reason `price_crosses` is a crossing:
+   * a card that has been in a sell window for a week should not re-alert
+   * every evaluation pass. Like the other crossing conditions, this returns
+   * FALSE without a previous slice, so a rule never fires on its first
+   * observation of an already-open window.
+   *
+   * OFF BY DEFAULT: no preset creates this condition, and no rule carries
+   * it until a user builds one. The plumbing exists; nothing is armed.
+   */
+  | { kind: "sell_signal_becomes"; becomes: "sell-window" | "watch" | "hold" };
 
 export type AdvancedAlertCombinator = "AND" | "OR";
 

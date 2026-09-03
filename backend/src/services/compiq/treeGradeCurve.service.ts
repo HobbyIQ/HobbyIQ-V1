@@ -180,7 +180,23 @@ async function fetchSalesForGrade(
   windowDays: number,
 ): Promise<SaleRow[]> {
   const cutoff = new Date(Date.now() - windowDays * 86400_000).toISOString();
-  const clauses = ["c.price > 0", "c.soldAt >= @cutoff", "c.hobbyiqCardId = @slug"];
+  // POOL-1 residue (audit, 2026-09-03). The grade curve reads sold_comps
+  // directly, not through exactPoolReader, and so inherited none of that
+  // reader's adjudication filter: a row a human or a triage pass had already
+  // marked `flaggedWrong` / `excludedFromFmv` still entered the tier's price
+  // sample here. The curve IS the graded card's price (D21), so a wrong row
+  // that the pool had removed still moved a published number.
+  //
+  // Same store-form predicate as exactPoolReader:84-85 -- `!= true` rather
+  // than `= false`, with the NOT IS_DEFINED disjunct that keeps the
+  // overwhelming majority of rows (which carry neither flag) in the sample.
+  const clauses = [
+    "c.price > 0",
+    "c.soldAt >= @cutoff",
+    "c.hobbyiqCardId = @slug",
+    "(NOT IS_DEFINED(c.flaggedWrong) OR c.flaggedWrong != true)",
+    "(NOT IS_DEFINED(c.excludedFromFmv) OR c.excludedFromFmv != true)",
+  ];
   const params: Array<{ name: string; value: string | number | null }> = [
     { name: "@slug", value: variantSlug },
     { name: "@cutoff", value: cutoff },

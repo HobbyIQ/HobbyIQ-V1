@@ -65,7 +65,7 @@ function listing(id: string, price: number, title = "2026 Bowman Chrome Eric Har
 }
 
 function fmv(value: number | null, confidence: number, method = "direct-comp", rungLabel = "exact-pool-projection") {
-  return { fmv: value, confidence, method, rungLabel, provenance: { summary: "", comps: [], trendPctPerMonth: null, multipliers: {} }, computedAt: "2026-09-02T00:00:00Z" };
+  return { fmv: value, confidence, method, rungLabel, provenance: { summary: "", compCount: null, comps: [], trendPctPerMonth: null, multipliers: {} }, computedAt: "2026-09-02T00:00:00Z" };
 }
 
 beforeEach(() => {

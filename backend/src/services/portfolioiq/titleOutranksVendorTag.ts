@@ -38,8 +38,40 @@ const BARE_COLOURS = new Set(["gold", "blue", "green", "orange", "red", "purple"
  *  tag "Gold Refractor" against that title REFINES what the title says --
  *  adopting it is right; a title that names no finish at all, or a different
  *  one, still overrules the tag. */
+/** CF-A-COLOUR-IS-NOT-A-FINISH-FAMILY (Drew, 2026-09-03: "Green refractors and
+ *  bases are mixed in ... Bases are mixed in with refractors in ALL of
+ *  Bowman"). The suffix rule above ("gold refractor" ends with "refractor")
+ *  reads in BOTH directions if it is not bounded, and the unbounded direction
+ *  is the one that merges pools: a title saying bare "Green" would adopt a
+ *  vendor tag of "Green Wave", "Green Shimmer" or "Green Mojo Refractor",
+ *  because each of those ends with " green"'s counterpart word. Measured on
+ *  the live pool 2026-09-03: 122 Bowman slugs carry rows whose titles name
+ *  green, green-refractor and green-wave at once.
+ *
+ *  Green, Green Refractor, Green Shimmer and Green Wave are FOUR cards with
+ *  four checklist rows and four price curves. Only ONE promotion of a bare
+ *  colour is a ruled refinement -- "{Colour}" to "{Colour} Refractor", the
+ *  Colour-IS-Refractor ruling already encoded in BARE_COLOURS below. Every
+ *  other finish family the vendor names is a DIFFERENT card, and the tag is
+ *  overruled exactly as an unrelated colour already is.
+ *
+ *  So: when the title is nothing but a bare colour, the tag may only add the
+ *  word "refractor". This narrows the suffix rule alone; a title that already
+ *  names a finish ("Refractor" -> "Blue"/"Gold Refractor") is untouched, and
+ *  so is the fuller-spelling subset rule, both of which stay pinned. */
+function vendorAddsADifferentFinishFamily(vendor: string, title: string): boolean {
+  if (!BARE_COLOURS.has(title)) return false;
+  // The words the tag adds on top of the bare colour the title states.
+  const added = vendor.split(/[^a-z0-9]+/).filter((w) => w && w !== title);
+  if (added.length === 0) return false;
+  return !added.every((w) => w === "refractor");
+}
+
 function refines(vendor: string, title: string): boolean {
   const v = vendor.toLowerCase(), t = title.toLowerCase();
+  // A bare colour is promoted only to its OWN refractor, never into another
+  // finish family -- checked before the suffix rule, which would allow both.
+  if (vendorAddsADifferentFinishFamily(v, t)) return false;
   if (v.endsWith(" " + t)) return true;               // "gold refractor" refines "refractor"
   if (t === "refractor" && BARE_COLOURS.has(v)) return true; // "blue" IS "blue refractor"
   if (vendorSpellsTheSameFinish(v, t)) return true;

@@ -21,6 +21,15 @@ const MIN_POOL_SIZE = 5;
 const MIN_MEDIAN = 20;
 const FLOOR_MULT = 0.2;
 const CEILING_MULT = 5.0;
+// POOL-1 residue (audit, 2026-09-03). This gate decides whether an INCOMING
+// price is an outlier by comparing it to the slug's own median. An
+// adjudicated-wrong row left in that reference pool moves the median, and so
+// moves the floor/ceiling the gate admits new rows by -- a bad row defending
+// the next bad row. Same store-form predicate as exactPoolReader:84-85.
+const ADJUDICATION_FILTER =
+  "(NOT IS_DEFINED(c.flaggedWrong) OR c.flaggedWrong != true)"
+  + " AND (NOT IS_DEFINED(c.excludedFromFmv) OR c.excludedFromFmv != true)";
+
 const CONFIRMED_SOURCES = ["cardhedge", "ebay-user-purchase", "manual-user-entry", "ebay-user-sale", "ebay-account", "ebay-browse-ended"];
 
 interface SanityResult {
@@ -42,7 +51,7 @@ async function computeMedianForSlug(container: Container, slug: string): Promise
     const params = CONFIRMED_SOURCES.map((_, i) => ({ name: `@s${i}`, value: CONFIRMED_SOURCES[i] }));
     const sourceList = CONFIRMED_SOURCES.map((_, i) => `@s${i}`).join(",");
     const { resources } = await container.items.query({
-      query: `SELECT c.price FROM c WHERE c.hobbyiqCardId = @slug AND c.source IN (${sourceList}) AND IS_DEFINED(c.price)`,
+      query: `SELECT c.price FROM c WHERE c.hobbyiqCardId = @slug AND c.source IN (${sourceList}) AND IS_DEFINED(c.price) AND ${ADJUDICATION_FILTER}`,
       parameters: [{ name: "@slug", value: slug }, ...params],
     }, { maxItemCount: 500 }).fetchAll();
     const prices = (resources ?? [])

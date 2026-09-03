@@ -1,6 +1,27 @@
-// CF-GRADE-WORTHY (Drew, 2026-07-17). Orchestration: given a holding,
-// pull the SKU's grader premium curve from local comp store, pull
-// applicable grading costs from the catalog, and analyze.
+// CF-GRADE-WORTHY (Drew, 2026-07-17). Orchestration for the
+// /grade-analysis surface (the web Grade Calculator modal).
+//
+// ── CF-GRADE-ARB-UNIFY (2026-09-02): the engine underneath ────────────
+//
+// This endpoint's PRICES now come from the gated grade-arb computation
+// (gradeArbCompute), which reads the ONE valuation path's grade curve.
+// The endpoint, its response shape, and the modal above it are
+// unchanged — only the source of the numbers moved.
+//
+// It had to move. The previous path read ch_daily_sales through
+// localCompStore/localCompPremiums and anchored every tier on
+// `mean(prices)` (localCompPremiums.service.ts:47). FMV at HobbyIQ is
+// the projected next sale from a pool's trend — never a mean, never a
+// median — so this surface was quoting a number the rest of the product
+// does not consider a price, and it could disagree with the same card's
+// own headline FMV. It also had no floor on estimated tiers: a family
+// multiplier could carry a card with zero graded sales.
+//
+// What is preserved: the whole GradeWorthyAnalysis wire shape, the
+// recommendation vocabulary, the failure-rate sibling block, the
+// diagnostics, and the local-corpus read that feeds them. What changed:
+// `gradedMedianPrice` per tier is now a projected next sale from real
+// observed comps at that tier, gated at MIN_GRADED_COMPS.
 //
 // v1 scope:
 //  - Analyzes a SINGLE holding (per-card endpoint)
@@ -9,12 +30,14 @@
 // The pure math is in gradeWorthyCompute.service.ts.
 
 import { lookupLocalComps } from "./localCompStore.service.js";
+import { analyzeHoldingGradeArb } from "./gradeArbAnalyze.service.js";
+import { MIN_GRADED_COMPS, type GradeArbResult } from "./gradeArbCompute.service.js";
 import { readPlayerTrend } from "./playerTrendStore.service.js";
-import { analyzeGradeWorthy } from "./gradeWorthyCompute.service.js";
 import { GRADING_TIERS, type GraderId } from "./gradingTiers.js";
 import type { PortfolioHolding } from "../../types/portfolioiq.types.js";
 import type {
   GradeWorthyAnalysis,
+  GradeWorthyTier,
   GraderPremiumInput,
 } from "../../types/gradeWorthy.types.js";
 // CF-GRADE-WORTHY-FAMILY-BLENDING (Drew, 2026-07-17): observed family
@@ -110,6 +133,86 @@ export function blendFamilyMultipliersIntoGraderPremiums(
     familyBlendedTiers.push(fm.graderTier);
   }
   return { premiums: merged, familyBlendedTiers };
+}
+
+
+/** CF-GRADE-ARB-UNIFY (2026-09-02). Render a gated grade-arb result in
+ *  the GradeWorthyAnalysis shape the /grade-analysis response and the
+ *  web modal already speak.
+ *
+ *  This is a projection, not a re-computation: every dollar figure comes
+ *  from `arb`, which came from the one valuation path. The only work
+ *  here is vocabulary — arb's `netGain`/`netGainPct` are the analysis's
+ *  `expectedGain`/`expectedRoi`, and the recommendation verdict is
+ *  derived from the same thresholds the old compute used, so a card
+ *  that read "grade now" for a real reason still does.
+ *
+ *  Momentum keeps its old role: a falling player market demotes a
+ *  marginal recommendation to "wait", because grading is a 60-90 day
+ *  commitment and the margin can evaporate during turnaround. */
+export function gradeWorthyFromArb(
+  arb: GradeArbResult,
+  opts: { playerMomentumDirection?: "up" | "flat" | "down" | null } = {},
+): GradeWorthyAnalysis {
+  const rawPrice = arb.rawValue ?? 0;
+
+  if (!arb.available || arb.tiers.length === 0) {
+    return {
+      rawPrice,
+      bestTier: null,
+      allTiers: [],
+      overallRecommendation: arb.refusal === "not-raw" ? "not_worth" : "insufficient_data",
+      // The refusal reason names the real counts — carry it verbatim
+      // rather than flattening it to "no data".
+      reason: arb.refusalReason
+        ?? `No graded sales of this card to compare against (${MIN_GRADED_COMPS} required per tier).`,
+    };
+  }
+
+  const down = opts.playerMomentumDirection === "down";
+  const allTiers: GradeWorthyTier[] = arb.tiers.map((t) => {
+    const roi = t.netGainPct !== null ? t.netGainPct / 100 : 0;
+    let recommendation: GradeWorthyTier["recommendation"];
+    let reason: string;
+    if (t.netGain <= 0) {
+      recommendation = "not_worth";
+      reason = `${t.tier} sells for ${usd(t.gradedValue)} — after ${usd(arb.gradingCostUsd)} grading on a ${usd(rawPrice)} raw card, that is ${usd(t.netGain)}.`;
+    } else if (down && roi < 0.5) {
+      recommendation = "grade_worthy_but_wait";
+      reason = `${t.tier} would gain ${usd(t.netGain)}, but this player's market is falling and grading takes 60-90 days.`;
+    } else {
+      recommendation = "grade_now";
+      reason = `${t.tier} would gain ${usd(t.netGain)} on a ${usd(rawPrice)} raw card, from ${t.sampleCount} graded ${t.sampleCount === 1 ? "sale" : "sales"} of this card.`;
+    }
+    return {
+      graderTier: t.tier,
+      gradedMedianPrice: t.gradedValue,
+      gradedSampleSize: t.sampleCount,
+      gradingCostAssumed: arb.gradingCostUsd,
+      expectedGain: t.netGain,
+      expectedRoi: Math.round(roi * 1000) / 1000,
+      recommendation,
+      reason,
+    };
+  });
+
+  const best = allTiers.reduce<GradeWorthyTier | null>(
+    (acc, t) => (acc === null || t.expectedGain > acc.expectedGain ? t : acc),
+    null,
+  );
+
+  return {
+    rawPrice,
+    bestTier: best,
+    allTiers,
+    overallRecommendation: best ? best.recommendation : "insufficient_data",
+    reason: best ? best.reason : "No graded tier cleared the evidence floor.",
+  };
+}
+
+function usd(n: number): string {
+  const sign = n < 0 ? "-" : "";
+  return `${sign}$${Math.abs(Math.round(n)).toLocaleString("en-US")}`;
 }
 
 /** Analyze a single holding. Bails cleanly (insufficient_data) when
@@ -244,12 +347,14 @@ export async function analyzeHoldingGradeWorthy(
     }
   }
 
-  const analysis = analyzeGradeWorthy({
-    rawPrice,
-    graderPremiums: mergedPremiums,
-    gradingCosts: buildGradingCostCatalog(),
-    playerMomentumDirection: playerMomentumDirection ?? undefined,
-  });
+  // CF-GRADE-ARB-UNIFY (2026-09-02). The prices come from the gated
+  // grade-arb computation on the ONE valuation path — not from
+  // mean(prices) over ch_daily_sales. `mergedPremiums` above is still
+  // computed because the failure-rate block below reads its per-tier
+  // prices and the diagnostics report the local corpus, but it no
+  // longer sets the numbers the user is shown.
+  const arb = await analyzeHoldingGradeArb(holding);
+  const analysis = gradeWorthyFromArb(arb, { playerMomentumDirection });
 
   // CF-GRADE-FAILURE-RATE (Drew, 2026-07-17): compute the failure-rate
   // block from the family's observed grader-outcome distribution.

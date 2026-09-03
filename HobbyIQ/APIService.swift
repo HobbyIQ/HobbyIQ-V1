@@ -463,6 +463,21 @@ struct APIService {
         )
     }
 
+    /// CF-MARKET-INDEXES (#1644, Drew 2026-09-02): every sport's index
+    /// series in ONE call, so the tile strip renders without a fan-out.
+    ///
+    /// The server clamps `days` to 30...180 itself; iOS sends the same
+    /// 180d default the web tiles use so the two surfaces show the same
+    /// window. No client computation — `latestLevel` and `changePct` are
+    /// read off the response, never derived from `series`.
+    func fetchMarketIndexes(days: Int = 180) async throws -> MarketIndexesResponse {
+        try await get(
+            path: "/api/compiq/market-indexes",
+            queryItems: [URLQueryItem(name: "days", value: String(days))],
+            responseType: MarketIndexesResponse.self
+        )
+    }
+
     func fetchTopMovers(window: String = "7d", limit: Int = 20) async throws -> TopMoversResponse {
         try await get(
             path: "/api/compiq/market-trend/top-movers",
@@ -1862,17 +1877,26 @@ struct APIService {
     }
 
     func fetchPortfolioHoldings(userId: String = "") async throws -> [InventoryCard] {
+        try await fetchPortfolioEnvelope(userId: userId).holdings
+    }
+
+    /// CF-PORTFOLIO-FRESH-ON-OPEN (#1639, 2026-09-02): the same read, with
+    /// the `valuation` freshness block kept.
+    ///
+    /// `fetchPortfolioHoldings` above stays as-is and now forwards here, so
+    /// the dozen existing call sites that only want the rows are untouched
+    /// and there is still exactly ONE place that issues this request.
+    func fetchPortfolioEnvelope(userId: String = "") async throws -> PortfolioIQHoldingsEnvelope {
         // Azure App Service cold-start on /api/portfolio routinely exceeds the
         // default 10s budget, surfacing as URLError.cancelled (-999) and the
         // "Live holdings unavailable" banner. 30s mirrors the cardsearch /
         // price-by-id headroom and is the longest single-request override.
-        let envelope: PortfolioIQHoldingsEnvelope = try await get(
+        try await get(
             path: "/api/portfolio",
             queryItems: portfolioUserQueryItems(userId: userId),
             responseType: PortfolioIQHoldingsEnvelope.self,
             timeoutSeconds: 30
         )
-        return envelope.holdings
     }
 
     /// CF-ADD-TO-INVENTORY (2026-06-12): POST /api/portfolioiq/holdings.
@@ -4315,10 +4339,15 @@ struct CompIQScanCertInfo: Decodable, Hashable {
 
 struct PortfolioIQHoldingsEnvelope: Decodable {
     let holdings: [InventoryCard]
+    /// CF-PORTFOLIO-FRESH-ON-OPEN (#1639, 2026-09-02): the freshness block.
+    /// Nil against an older server that doesn't emit it — the header then
+    /// says nothing about "as of" rather than guessing.
+    let valuation: PortfolioValuationEnvelope?
 
     private enum CodingKeys: String, CodingKey {
         case holdings
         case items
+        case valuation
     }
 
     init(from decoder: Decoder) throws {
@@ -4330,6 +4359,7 @@ struct PortfolioIQHoldingsEnvelope: Decodable {
         } else {
             self.holdings = []
         }
+        self.valuation = try? container.decodeIfPresent(PortfolioValuationEnvelope.self, forKey: .valuation)
     }
 }
 
