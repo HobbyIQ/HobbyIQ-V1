@@ -21,6 +21,10 @@
 //     with no points rather than omitting it precisely so the tile order
 //     is stable; a client that filtered them would undo that.
 //   - an older server omitting the optional halves still decodes.
+//   - FRESHNESS (H-12, 2026-09-03): freshMembers / usedWeight / stale
+//     decode, and `freshnessNote` says "n of N fresh" only when the
+//     newest point came off less than the full basket. A level from 1
+//     member must not render identically to one from 94.
 //
 
 import Foundation
@@ -155,4 +159,109 @@ final class MarketIndexesDecodeTests: XCTestCase {
             "an unrecognised sport is title-cased, never dropped — a new backend sport must still appear"
         )
     }
+
+    // MARK: - Freshness (H-12)
+
+    func testFreshnessNoteNamesThinBasket() throws {
+        let json = """
+        {
+          "indexes": [
+            {
+              "sport": "hockey",
+              "series": [
+                { "date": "2026-09-02", "level": 100.0, "freshMembers": 40, "usedWeight": 0.93 },
+                { "date": "2026-09-03", "level": 101.2, "freshMembers": 1, "usedWeight": 0.0006 }
+              ],
+              "latestLevel": 101.2,
+              "changePct": 1.2,
+              "windowDays": 180,
+              "basketSize": 43,
+              "asOf": "2026-09-03",
+              "freshMembers": 1,
+              "usedWeight": 0.0006
+            }
+          ]
+        }
+        """
+        let res = try decode(json)
+        let hockey = try XCTUnwrap(res.indexes.first)
+        XCTAssertEqual(hockey.freshMembers, 1)
+        XCTAssertEqual(hockey.usedWeight ?? 0, 0.0006, accuracy: 1e-9)
+        // The tile must SAY the level came off one card of forty-three.
+        XCTAssertEqual(hockey.freshnessNote, "1 of 43 fresh")
+        XCTAssertEqual(hockey.series.last?.freshMembers, 1)
+    }
+
+    func testFullBasketShowsNoFreshnessQualifier() throws {
+        let json = """
+        {
+          "indexes": [
+            {
+              "sport": "baseball",
+              "series": [
+                { "date": "2026-09-02", "level": 109.1 },
+                { "date": "2026-09-03", "level": 109.59 }
+              ],
+              "latestLevel": 109.59,
+              "changePct": 0.4,
+              "windowDays": 180,
+              "basketSize": 100,
+              "asOf": "2026-09-03",
+              "freshMembers": 100,
+              "usedWeight": 1.0
+            }
+          ]
+        }
+        """
+        let baseball = try XCTUnwrap(try decode(json).indexes.first)
+        XCTAssertNil(baseball.freshnessNote)
+    }
+
+    func testCarriedLevelSaysItIsCarried() throws {
+        let json = """
+        {
+          "indexes": [
+            {
+              "sport": "hockey",
+              "series": [{ "date": "2026-09-03", "level": 98.4, "stale": true }],
+              "latestLevel": 98.4,
+              "windowDays": 180,
+              "basketSize": 43,
+              "asOf": "2026-09-03",
+              "freshMembers": 1,
+              "usedWeight": 0.02,
+              "stale": true,
+              "withheldReason": "used_weight_below_floor"
+            }
+          ]
+        }
+        """
+        let hockey = try XCTUnwrap(try decode(json).indexes.first)
+        XCTAssertEqual(hockey.stale, true)
+        XCTAssertEqual(hockey.withheldReason, "used_weight_below_floor")
+        XCTAssertEqual(hockey.freshnessNote, "Carried \u{00B7} basket too thin to price")
+    }
+
+    func testOlderServerWithoutFreshnessFieldsStillDecodes() throws {
+        let json = """
+        {
+          "indexes": [
+            {
+              "sport": "football",
+              "series": [{ "date": "2026-09-03", "level": 102.64 }],
+              "latestLevel": 102.64,
+              "windowDays": 180,
+              "basketSize": 100,
+              "asOf": "2026-09-03"
+            }
+          ]
+        }
+        """
+        let football = try XCTUnwrap(try decode(json).indexes.first)
+        XCTAssertNil(football.freshMembers)
+        XCTAssertNil(football.usedWeight)
+        XCTAssertNil(football.freshnessNote)
+        XCTAssertEqual(football.latestLevel, 102.64)
+    }
+
 }

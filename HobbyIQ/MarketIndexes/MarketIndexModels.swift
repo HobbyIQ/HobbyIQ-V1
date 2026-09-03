@@ -28,8 +28,28 @@ struct MarketIndexPoint: Decodable, Hashable, Identifiable {
     /// ISO day, e.g. "2026-09-02".
     let date: String
     let level: Double
+    /// Members with a fresh (non-carried) value on this date.
+    let freshMembers: Int?
+    /// Share of basket weight actually valued (0..1).
+    let usedWeight: Double?
+    /// The level is carried from a prior day, not computed for this one.
+    let stale: Bool?
 
     var id: String { date }
+
+    /// Tolerant of a server that predates the freshness fields.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        date = try c.decode(String.self, forKey: .date)
+        level = try c.decode(Double.self, forKey: .level)
+        freshMembers = (try? c.decodeIfPresent(Int.self, forKey: .freshMembers)) ?? nil
+        usedWeight = (try? c.decodeIfPresent(Double.self, forKey: .usedWeight)) ?? nil
+        stale = (try? c.decodeIfPresent(Bool.self, forKey: .stale)) ?? nil
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case date, level, freshMembers, usedWeight, stale
+    }
 }
 
 struct SportIndexSeries: Decodable, Hashable, Identifiable {
@@ -45,6 +65,15 @@ struct SportIndexSeries: Decodable, Hashable, Identifiable {
     let basketSize: Int?
     /// ISO day of the newest point.
     let asOf: String?
+    /// Members with a fresh value on the newest point (H-12). A level
+    /// off 1 member used to render identically to one off 94 - the strip
+    /// now says "n of N fresh" whenever this is below the basket.
+    let freshMembers: Int?
+    /// Share of basket weight valued on the newest point (0..1).
+    let usedWeight: Double?
+    /// The newest point was withheld and the prior level carried.
+    let stale: Bool?
+    let withheldReason: String?
 
     var id: String { sport }
 
@@ -60,10 +89,24 @@ struct SportIndexSeries: Decodable, Hashable, Identifiable {
         windowDays = (try? c.decodeIfPresent(Int.self, forKey: .windowDays)) ?? nil
         basketSize = (try? c.decodeIfPresent(Int.self, forKey: .basketSize)) ?? nil
         asOf = (try? c.decodeIfPresent(String.self, forKey: .asOf)) ?? nil
+        freshMembers = (try? c.decodeIfPresent(Int.self, forKey: .freshMembers)) ?? nil
+        usedWeight = (try? c.decodeIfPresent(Double.self, forKey: .usedWeight)) ?? nil
+        stale = (try? c.decodeIfPresent(Bool.self, forKey: .stale)) ?? nil
+        withheldReason = (try? c.decodeIfPresent(String.self, forKey: .withheldReason)) ?? nil
     }
 
     private enum CodingKeys: String, CodingKey {
         case sport, series, latestLevel, changePct, windowDays, basketSize, asOf
+        case freshMembers, usedWeight, stale, withheldReason
+    }
+
+    /// Copy for the freshness caption, or nil when the tile is on a full
+    /// basket and needs no qualifier. Server-served counts only - the
+    /// client derives no number here, per the file header.
+    var freshnessNote: String? {
+        if stale == true { return "Carried \u{00B7} basket too thin to price" }
+        guard let fresh = freshMembers, let basket = basketSize, fresh < basket else { return nil }
+        return "\(fresh) of \(basket) fresh"
     }
 
     /// The sparkline's y-values, oldest first.

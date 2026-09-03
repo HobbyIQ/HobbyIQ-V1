@@ -45,6 +45,27 @@
 // value unchanged, leaves every v(c, D) unchanged and therefore leaves
 // the level unchanged. Pinned in tests/marketIndexMixShift.test.ts.
 //
+// THE usedWeight FLOOR (C-1, 2026-09-03)
+// -------------------------------------
+// `indexLevel` renormalizes by the weight actually valued (usedWeight)
+// so members with no value history do not drag the level to zero. That
+// renormalization is correct ONLY while most of the basket is valued.
+// As usedWeight collapses, the surviving members inherit the whole
+// index: 100 members at 1%, one doubles -> 101.00 with all valued, but
+// 200.00 with the other 99 unvalued. The 6% cap does NOT bound this —
+// the cap bounds a member's share of the BASKET, not its share of the
+// weight that survived.
+//
+// Two defenses, both required:
+//   1. Carry-forward is PERSISTED (members::<sport> doc), so the nightly
+//      run seeds from the whole history rather than a 14-day lead-in.
+//      This is what keeps usedWeight near 1.0 in normal operation.
+//   2. A point publishes only when usedWeight >= MIN_USED_WEIGHT. Below
+//      the floor the point is WITHHELD: the series carries the prior
+//      level flagged stale, and never a fabricated number.
+//
+// ASSUMPTION (Drew has not ruled; PR flags this): the floor is 0.50.
+//
 // REBALANCE RULE
 // --------------
 // Basket membership is recomputed quarterly (Jan 1 / Apr 1 / Jul 1 /
@@ -97,6 +118,19 @@ export const SERIES_DAYS = 180;
 /** Index level at the basket's base date. */
 export const BASE_LEVEL = 100;
 
+/**
+ * A point publishes only when at least this share of basket weight was
+ * actually valued. Below it the level is a fabrication of whichever few
+ * members happened to trade (see THE usedWeight FLOOR above) and the
+ * point is withheld instead.
+ *
+ * ASSUMPTION, not a Drew ruling — 0.50 is the value this PR proposes.
+ */
+export const MIN_USED_WEIGHT = 0.5;
+
+/** Why a day produced no published point. */
+export type WithheldReason = "used_weight_below_floor" | "no_valued_members";
+
 /** Reserved synthetic partition key for a sport's index docs. */
 export function indexPartitionKey(sport: string): string {
   return `index::${sport}`;
@@ -135,7 +169,28 @@ export interface IndexPointDoc {
   /** Members that had a fresh (non-carried) value on this date. */
   freshMembers: number;
   basketSize: number;
+  /** Share of basket weight actually valued on this date (0..1). */
+  usedWeight?: number;
+  /** Set when the point was withheld: level carries the prior level. */
+  stale?: boolean;
+  withheldReason?: WithheldReason;
   computedAt: string;
+}
+
+/**
+ * Persisted carry-forward. One doc per sport holds each member's last
+ * known value and the day it was observed, so the nightly append seeds
+ * from the full history instead of a 14-day lead-in (C-1).
+ */
+export interface IndexMembersDoc {
+  id: string;                      // members::<sport>
+  cardId: string;                  // partition key: index::<sport>
+  docType: "market_index_members";
+  sport: string;
+  epoch: string;
+  /** cardId -> { value, asOf } for every member ever valued. */
+  carry: Record<string, { value: number; asOf: string }>;
+  updatedAt: string;
 }
 
 interface CompRow {
@@ -288,13 +343,18 @@ export function trendValue(pricesChronological: number[]): number {
 }
 
 /**
- * Index level for one day. Every term is a card's value RELATIVE to its
- * own base value, so the level is immune to which cards happened to sell.
+ * Index level for one day, with the weight it was computed from. Every
+ * term is a card's value RELATIVE to its own base value, so the level is
+ * immune to which cards happened to sell.
+ *
+ * `usedWeight` is the share of basket weight that actually had a value.
+ * It is returned rather than hidden because the level is only meaningful
+ * when most of the basket is valued — see THE usedWeight FLOOR above.
  */
-export function indexLevel(
+export function indexLevelDetailed(
   members: { weight: number; baseValue: number }[],
   valuesToday: number[],
-): number {
+): { level: number; usedWeight: number } {
   let acc = 0;
   let usedWeight = 0;
   members.forEach((m, i) => {
@@ -303,10 +363,48 @@ export function indexLevel(
     acc += m.weight * (v / m.baseValue);
     usedWeight += m.weight;
   });
-  if (!(usedWeight > 0)) return 0;
+  if (!(usedWeight > 0)) return { level: 0, usedWeight: 0 };
   // Renormalize by the weight actually used so a member with no value
-  // history at all doesn't drag the level toward zero.
-  return (acc / usedWeight) * BASE_LEVEL;
+  // history at all doesn't drag the level toward zero. Valid only above
+  // the floor; the caller enforces that.
+  return { level: (acc / usedWeight) * BASE_LEVEL, usedWeight };
+}
+
+/** Level only. Prefer indexLevelDetailed on any path that publishes. */
+export function indexLevel(
+  members: { weight: number; baseValue: number }[],
+  valuesToday: number[],
+): number {
+  return indexLevelDetailed(members, valuesToday).level;
+}
+
+/**
+ * The publish decision for one day. A level computed off a collapsed
+ * usedWeight is a fabrication of whichever few members traded, so it is
+ * withheld rather than published — the series then carries the prior
+ * level flagged stale.
+ */
+export function decidePoint(
+  members: { weight: number; baseValue: number }[],
+  valuesToday: number[],
+  floor = MIN_USED_WEIGHT,
+): {
+  publish: boolean;
+  level: number;
+  usedWeight: number;
+  withheldReason?: WithheldReason;
+} {
+  const { level, usedWeight } = indexLevelDetailed(members, valuesToday);
+  if (!(usedWeight > 0) || !(level > 0)) {
+    return { publish: false, level: 0, usedWeight, withheldReason: "no_valued_members" };
+  }
+  // Compare with a tolerance: usedWeight is a sum of renormalized floats,
+  // and a basket exactly at the floor sums to 0.4999999999999999. Without
+  // this, a point clearing the floor would be withheld by rounding noise.
+  if (usedWeight < floor - 1e-9) {
+    return { publish: false, level, usedWeight, withheldReason: "used_weight_below_floor" };
+  }
+  return { publish: true, level, usedWeight };
 }
 
 /** Fetch every qualifying sale for a sport in [from, to). */
@@ -374,4 +472,84 @@ export function valueMembersOnDay(
     return carryForward.get(cardId) ?? 0;
   });
   return { values, fresh };
+}
+
+/**
+ * As valueMembersOnDay, but over the DATED carry map that is persisted
+ * between runs. A fresh value stamps `asOf` with the day it was observed
+ * so the stored carry says how old each member's value is.
+ */
+export function valueMembersOnDayDated(
+  memberIds: string[],
+  salesInWindow: Map<string, { sales: number; values: number[] }>,
+  carryForward: Map<string, { value: number; asOf: string }>,
+  day: string,
+): { values: number[]; fresh: number } {
+  let fresh = 0;
+  const values = memberIds.map((cardId) => {
+    const agg = salesInWindow.get(cardId);
+    if (agg && agg.values.length > 0) {
+      const v = trendValue(agg.values);
+      if (v > 0) {
+        carryForward.set(cardId, { value: v, asOf: day });
+        fresh++;
+        return v;
+      }
+    }
+    return carryForward.get(cardId)?.value ?? 0;
+  });
+  return { values, fresh };
+}
+
+/** Doc id for a sport's persisted carry-forward. */
+export function membersDocId(sport: string): string {
+  return `members::${sport}`;
+}
+
+/**
+ * Load persisted carry-forward for a sport. Returns an empty map when
+ * none is stored yet (first run after this change), in which case the
+ * caller still seeds from the lead-in and the floor protects the point.
+ */
+export async function loadCarryForward(
+  series: Container,
+  sport: string,
+): Promise<Map<string, { value: number; asOf: string }>> {
+  const out = new Map<string, { value: number; asOf: string }>();
+  try {
+    const { resource } = await series
+      .item(membersDocId(sport), indexPartitionKey(sport))
+      .read<IndexMembersDoc>();
+    for (const [cardId, v] of Object.entries(resource?.carry ?? {})) {
+      if (v && Number.isFinite(v.value) && v.value > 0) out.set(cardId, v);
+    }
+  } catch { /* no doc yet */ }
+  return out;
+}
+
+/**
+ * Persist carry-forward. Never REMOVES a member's last known value: a
+ * member absent from this run keeps whatever was stored, which is the
+ * whole point — the value survives beyond any read window.
+ */
+export async function saveCarryForward(
+  series: Container,
+  sport: string,
+  epoch: string,
+  carry: Map<string, { value: number; asOf: string }>,
+): Promise<void> {
+  const record: Record<string, { value: number; asOf: string }> = {};
+  for (const [cardId, v] of carry) {
+    if (Number.isFinite(v.value) && v.value > 0) record[cardId] = v;
+  }
+  const doc: IndexMembersDoc = {
+    id: membersDocId(sport),
+    cardId: indexPartitionKey(sport),
+    docType: "market_index_members",
+    sport,
+    epoch,
+    carry: record,
+    updatedAt: new Date().toISOString(),
+  };
+  await series.items.upsert(doc);
 }

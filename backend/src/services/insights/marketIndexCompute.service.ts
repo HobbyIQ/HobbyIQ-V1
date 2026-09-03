@@ -28,9 +28,13 @@ import {
   indexLevel,
   indexPartitionKey,
   isoDay,
+  loadCarryForward,
   rebalanceEpochFor,
+  saveCarryForward,
   selectBasket,
-  valueMembersOnDay,
+  valueMembersOnDayDated,
+  decidePoint,
+  MIN_USED_WEIGHT,
 } from "./marketIndex.service.js";
 
 export interface SportComputeResult {
@@ -38,10 +42,16 @@ export interface SportComputeResult {
   epoch: string;
   basketSize: number;
   pointsWritten: number;
+  /** Days whose level fell below the usedWeight floor and were withheld. */
+  pointsWithheld: number;
   firstDate: string | null;
   lastDate: string | null;
   latestLevel: number | null;
+  /** usedWeight of the newest published point. */
+  latestUsedWeight: number | null;
   reusedBasket?: boolean;
+  /** Epochs whose basket was selected while walking the span (H-11). */
+  epochsUsed?: string[];
 }
 
 /** Load the in-force basket for a sport+epoch, if one was already built. */
@@ -60,7 +70,14 @@ export async function loadBasket(
 
 /**
  * Build (or reuse) the basket in force for `asOf`. Membership is frozen
- * within a quarterly epoch — we only reselect when the epoch rolls.
+ * within a quarterly epoch - we only reselect when the epoch rolls.
+ *
+ * NO LOOKAHEAD (H-11): eligibility is read over the 90 days ENDING at
+ * the epoch's own base date, so a basket is always selected from rows
+ * that existed on or before the days it values. Selecting once at a
+ * span's END date and valuing the whole span against it - what the
+ * backfill used to do - valued 116 of 181 points on a basket chosen
+ * with their own future.
  */
 export async function ensureBasket(
   soldComps: Container,
@@ -107,7 +124,19 @@ export async function ensureBasket(
 /**
  * Compute and persist index points for [fromDate, toDate] inclusive.
  * Used for both the nightly single-day append (from === to) and the
- * first-run 180d backfill.
+ * first-run 180d backfill - ONE method, so backfilled and nightly points
+ * are comparable (they were not before: the nightly seeded carry-forward
+ * from a 14-day lead-in while the backfill accumulated it across the
+ * whole walk, and the backfill picked its basket at the end date).
+ *
+ * Three integrity properties, all load-bearing:
+ *   1. Carry-forward is loaded from the persisted members doc, so a
+ *      member with no recent sale keeps its last known value however
+ *      long ago that was (C-1).
+ *   2. The basket is re-resolved as each day's own epoch rolls, never
+ *      chosen from the span's end (H-11).
+ *   3. A day whose usedWeight is below the floor is WITHHELD, not
+ *      published (C-1).
  */
 export async function computeSeriesForSport(
   sport: string,
@@ -118,84 +147,145 @@ export async function computeSeriesForSport(
   const series = await getSeriesContainer();
   if (!soldComps || !series) return null;
 
-  const ensured = await ensureBasket(soldComps, series, sport, toDate);
-  if (!ensured) return null;
-  const { basket } = ensured;
-  const memberIds = basket.members.map((m) => m.cardId);
-  const memberSet = new Set(memberIds);
+  // The basket in force at the START of the span. Later days re-resolve
+  // as the epoch rolls, so no day is valued against a future basket.
+  const firstEnsured = await ensureBasket(soldComps, series, sport, fromDate);
+  if (!firstEnsured) return null;
+  let basket = firstEnsured.basket;
+  let epoch = basket.epoch;
+  let memberIds = basket.members.map((m) => m.cardId);
+  let memberSet = new Set(memberIds);
+  const epochsUsed: string[] = [epoch];
 
-  // One pool read covers the whole span plus the lead-in needed to value
-  // the first day. Filtering to basket members in memory keeps this to a
-  // single query instead of one per day.
+  // One pool read covers the whole span plus the lead-in. Membership can
+  // change across an epoch roll, so this is NOT filtered to one basket.
   const readFrom = addDays(fromDate, -VALUE_WINDOW_DAYS);
   const readTo = addDays(toDate, 1);
-  const allRows = (await fetchSales(soldComps, sport, readFrom, readTo))
-    .filter((r) => memberSet.has(r.cardId));
+  const allRows = await fetchSales(soldComps, sport, readFrom, readTo);
 
-  const carryForward = new Map<string, number>();
-  // Seed carry-forward from the lead-in window so day one is not blank.
-  const seed = groupByCard(allRows.filter((r) => r.soldAt < fromDate));
+  // Persisted carry-forward: the full history, not a 14-day lead-in.
+  const carryForward = await loadCarryForward(series, sport);
+  // Still seed from the lead-in so a first run (empty members doc) has
+  // day-one values; a stored value is not overwritten by the seed.
+  const seed = groupByCard(allRows.filter((r) => r.soldAt < fromDate && memberSet.has(r.cardId)));
   for (const id of memberIds) {
     const agg = seed.get(id);
-    if (agg && agg.values.length > 0) carryForward.set(id, agg.values[agg.values.length - 1]);
+    if (agg && agg.values.length > 0) {
+      const v = agg.values[agg.values.length - 1];
+      if (v > 0 && !carryForward.has(id)) carryForward.set(id, { value: v, asOf: fromDate });
+    }
   }
 
   let pointsWritten = 0;
+  let pointsWithheld = 0;
   let latestLevel: number | null = null;
+  let latestUsedWeight: number | null = null;
   let firstDate: string | null = null;
   let lastDate: string | null = null;
+  /** Last published level - what a withheld day carries forward. */
+  let priorLevel: number | null = null;
 
   for (let day = fromDate; day <= toDate; day = addDays(day, 1)) {
+    // H-11: re-resolve the basket when this day's own epoch differs.
+    const dayEpoch = rebalanceEpochFor(day);
+    if (dayEpoch !== epoch) {
+      const rolled = await ensureBasket(soldComps, series, sport, day);
+      if (rolled) {
+        basket = rolled.basket;
+        epoch = basket.epoch;
+        memberIds = basket.members.map((m) => m.cardId);
+        memberSet = new Set(memberIds);
+        epochsUsed.push(epoch);
+      }
+    }
+
     const windowFrom = addDays(day, -VALUE_WINDOW_DAYS);
     const windowTo = addDays(day, 1);
-    const windowRows = allRows.filter((r) => r.soldAt >= windowFrom && r.soldAt < windowTo);
+    const windowRows = allRows.filter(
+      (r) => r.soldAt >= windowFrom && r.soldAt < windowTo && memberSet.has(r.cardId),
+    );
     const inWindow = groupByCard(windowRows);
-    const { values, fresh } = valueMembersOnDay(memberIds, inWindow, carryForward);
-    const level = indexLevel(basket.members, values);
-    if (!(level > 0)) continue;
+    const { values, fresh } = valueMembersOnDayDated(memberIds, inWindow, carryForward, day);
+    const decision = decidePoint(basket.members, values);
 
-    const doc: IndexPointDoc = {
+    const base = {
       id: `point::${sport}::${day}`,
       cardId: indexPartitionKey(sport),
-      docType: "market_index_point",
+      docType: "market_index_point" as const,
       sport,
       date: day,
-      level: Math.round(level * 100) / 100,
-      epoch: basket.epoch,
+      epoch,
       freshMembers: fresh,
       basketSize: memberIds.length,
+      usedWeight: Math.round(decision.usedWeight * 10000) / 10000,
       computedAt: new Date().toISOString(),
     };
+
+    if (!decision.publish) {
+      // Withheld: carry the prior level, flagged stale, with the reason.
+      // Never publish the fabricated level - and where there is no prior
+      // level to carry, write nothing rather than invent one.
+      pointsWithheld++;
+      if (priorLevel == null) continue;
+      const doc: IndexPointDoc = {
+        ...base,
+        level: priorLevel,
+        stale: true,
+        withheldReason: decision.withheldReason,
+      };
+      await series.items.upsert(doc);
+      lastDate = day;
+      if (!firstDate) firstDate = day;
+      continue;
+    }
+
+    const doc: IndexPointDoc = { ...base, level: Math.round(decision.level * 100) / 100 };
     await series.items.upsert(doc);
     pointsWritten++;
+    priorLevel = doc.level;
     latestLevel = doc.level;
+    latestUsedWeight = base.usedWeight;
     if (!firstDate) firstDate = day;
     lastDate = day;
   }
 
+  // Persist carry-forward for the next run. This is what makes the
+  // nightly append seed from the full history rather than 14 days.
+  await saveCarryForward(series, sport, epoch, carryForward);
+
   return {
     sport,
-    epoch: basket.epoch,
+    epoch,
     basketSize: memberIds.length,
     pointsWritten,
+    pointsWithheld,
     firstDate,
     lastDate,
     latestLevel,
-    reusedBasket: ensured.reused,
+    latestUsedWeight,
+    reusedBasket: firstEnsured.reused,
+    epochsUsed,
   };
 }
 
 /**
- * Nightly entry point. `backfill` runs the full SERIES_DAYS window (the
- * first-run history build); otherwise only the target day is appended.
+ * Nightly entry point. `backfill` (or `rebuild`, its alias for the
+ * recompute lane) runs the full SERIES_DAYS window; otherwise only the
+ * target day is appended.
+ *
+ * Backfill and nightly are ONE method now, so rebuilding history does
+ * not silently rewrite it to values computed a different way - that
+ * divergence is exactly what made the stored series non-comparable.
  */
 export async function runMarketIndexJob(opts: {
   backfill?: boolean;
+  rebuild?: boolean;
   asOf?: string;
   sports?: readonly string[];
 } = {}): Promise<SportComputeResult[]> {
   const asOf = opts.asOf ?? isoDay(new Date());
-  const from = opts.backfill ? addDays(asOf, -(SERIES_DAYS - 1)) : asOf;
+  const full = opts.backfill === true || opts.rebuild === true;
+  const from = full ? addDays(asOf, -(SERIES_DAYS - 1)) : asOf;
   const sports = opts.sports ?? INDEX_SPORTS;
   const results: SportComputeResult[] = [];
   for (const sport of sports) {
@@ -204,3 +294,7 @@ export async function runMarketIndexJob(opts: {
   }
   return results;
 }
+
+/** The floor a point must clear to publish. Re-exported so the scripts
+ *  and the read side quote one number rather than each hardcoding it. */
+export { MIN_USED_WEIGHT };
