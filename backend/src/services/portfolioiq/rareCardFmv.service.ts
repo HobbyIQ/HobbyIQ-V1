@@ -31,6 +31,15 @@
 import { CosmosClient, type Container } from "@azure/cosmos";
 import { parseHobbyIqCardId, computeHobbyIqCardId } from "./hobbyIqCardId.service.js";
 
+// POOL-1 residue (audit, 2026-09-03). The rare-card rung reads sold_comps
+// directly, so an adjudicated-wrong row could BE the "last actual sale" this
+// whole method anchors to -- the thinner the pool, the more one bad row
+// decides the published number. Same store-form predicate as
+// exactPoolReader:84-85.
+const ADJUDICATION_FILTER =
+  "(NOT IS_DEFINED(c.flaggedWrong) OR c.flaggedWrong != true)"
+  + " AND (NOT IS_DEFINED(c.excludedFromFmv) OR c.excludedFromFmv != true)";
+
 export interface RareCardFmvInput {
   hobbyiqCardId: string;
   /** Freshness threshold used to detect the rare-card case. Default: if
@@ -134,7 +143,7 @@ export async function computeRareCardFmv(input: RareCardFmvInput): Promise<RareC
   let recentCount = 0;
   try {
     const { resources } = await container.items.query({
-      query: "SELECT VALUE COUNT(1) FROM c WHERE c.hobbyiqCardId = @slug AND c.soldAt >= @from",
+      query: `SELECT VALUE COUNT(1) FROM c WHERE c.hobbyiqCardId = @slug AND c.soldAt >= @from AND ${ADJUDICATION_FILTER}`,
       parameters: [{ name: "@slug", value: slug }, { name: "@from", value: rareCutoff }],
     }).fetchAll();
     recentCount = Number(resources[0]) || 0;
@@ -148,7 +157,7 @@ export async function computeRareCardFmv(input: RareCardFmvInput): Promise<RareC
   let lastSale: RareCardFmvResult["lastSale"] = null;
   try {
     const { resources } = await container.items.query({
-      query: "SELECT TOP 1 c.price, c.soldAt, c.source FROM c WHERE c.hobbyiqCardId = @slug AND IS_DEFINED(c.price) AND c.price > 0 ORDER BY c.soldAt DESC",
+      query: `SELECT TOP 1 c.price, c.soldAt, c.source FROM c WHERE c.hobbyiqCardId = @slug AND IS_DEFINED(c.price) AND c.price > 0 AND ${ADJUDICATION_FILTER} ORDER BY c.soldAt DESC`,
       parameters: [{ name: "@slug", value: slug }],
     }).fetchAll();
     if (resources.length > 0 && Number.isFinite(Number(resources[0].price))) {
@@ -186,7 +195,7 @@ export async function computeRareCardFmv(input: RareCardFmvInput): Promise<RareC
   let parentAfter: number[] = [];
   try {
     const { resources } = await container.items.query({
-      query: "SELECT c.price, c.soldAt FROM c WHERE c.hobbyiqCardId = @slug AND IS_DEFINED(c.price) AND c.price > 0 ORDER BY c.soldAt DESC",
+      query: `SELECT c.price, c.soldAt FROM c WHERE c.hobbyiqCardId = @slug AND IS_DEFINED(c.price) AND c.price > 0 AND ${ADJUDICATION_FILTER} ORDER BY c.soldAt DESC`,
       parameters: [{ name: "@slug", value: parentSlug }],
     }).fetchAll();
     for (const r of resources || []) {

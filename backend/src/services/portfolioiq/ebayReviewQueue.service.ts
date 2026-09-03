@@ -703,6 +703,28 @@ export async function confirmHoldingInDoc(
   // loop moves on to the next holding.
   const compTitle = extractEbayTitleFromHolding(doc, holdingId) ?? (holding as any).cardTitle ?? null;
 
+  // The parallel is derived HERE, on the awaited path, for the same two
+  // reasons the comp identity above is: the parallel IS part of the sale's
+  // identity (it decides which pool the row lands in), and its dynamic imports
+  // must not still be resolving after the caller has finished -- in the
+  // detached emit they pushed the write past the window a test gives the
+  // fire-and-forget thunk, and past test-environment teardown.
+  //
+  // It also reads `holding` and `compTitle`, which the batch caller keeps
+  // mutating for the rest of its loop; deciding later would read a doc that
+  // has moved on.
+  let parallelForComp: string | null = null;
+  if (wantsComp) {
+    const { parseListingTitle } = await import("./ebayTitleParser.service.js");
+    const { parallelTheTitleAllows } = await import("./titleOutranksVendorTag.js");
+    const parsedForParallel = parseListingTitle(compTitle ?? "");
+    parallelForComp = parallelTheTitleAllows(
+      parsedForParallel.parallel,
+      holding.parallel ?? null,
+      { variationMarker: parsedForParallel.variationMarker ?? null },
+    ).parallel;
+  }
+
   // Everything below is deferred to afterWrite(): it is auxiliary
   // fire-and-forget work that must not start until the doc is durable, and in
   // batch it must not start once per holding before the single write lands.
@@ -726,20 +748,18 @@ export async function confirmHoldingInDoc(
           // own transaction, never re-keyed by a fleet -- so this guard only
           // stops NEW rows from being written wrong. The rows already in the
           // pool are reported to Drew, never auto-repaired.
-          const { parseListingTitle } = await import("./ebayTitleParser.service.js");
-          const { parallelTheTitleAllows } = await import("./titleOutranksVendorTag.js");
-          const parsedForParallel = parseListingTitle(compTitle ?? "");
-          const parallelDecision = parallelTheTitleAllows(
-            parsedForParallel.parallel,
-            holding.parallel ?? null,
-            { variationMarker: parsedForParallel.variationMarker ?? null },
-          );
           await recordSoldComp({
             cardId: confirmedCardId,
             playerName: holding.playerName!,
             cardYear: holding.cardYear ?? null,
             setName: holding.setName ?? null,
-            parallel: parallelDecision.parallel,
+            // `?? "Base"` for the same reason chRowToSoldComp:205 spells it:
+            // a title naming no finish means the sale IS the base card, and
+            // "Base" is the pool's word for that. Leaving the null bare would
+            // store a row whose parallel field says "unknown" while the slug
+            // the store derives from it says "base" -- the same row disagreeing
+            // with itself, and unfindable by a parallel filter.
+            parallel: parallelForComp ?? "Base",
             cardNumber: holding.cardNumber ?? null,
             isAuto: holding.isAuto === true,
             printRun: typeof (holding as any).printRun === "number" ? (holding as any).printRun : null,
