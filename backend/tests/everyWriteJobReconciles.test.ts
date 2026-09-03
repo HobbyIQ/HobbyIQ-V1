@@ -532,8 +532,13 @@ describe("a marker-gated relaunch fires in report mode, and as a report", () => 
     // second log file a report would write instead.
     expect(step).toContain("| tee /tmp/backfill.log");
     expect(step).not.toMatch(/^\s*if:/m);
-    const logs = new Set([...yml.matchAll(/\/tmp\/[a-z._-]+\.log/g)].map((m) => m[0]));
-    expect([...logs], "the relaunch greps exactly the file the run step writes").toEqual(["/tmp/backfill.log"]);
+    // The invariant is about the RELAUNCH's evidence: every marker grep must
+    // read the one log the single run step tees, or a relaunch decides on a
+    // file nothing wrote. Scoped to the grep lines for that reason -- the
+    // canary gate's own /tmp/canary-after.log (added 2026-09-03) is written
+    // and read inside one step and no relaunch ever greps it.
+    const grepped = new Set([...yml.matchAll(/grep -[a-zA-Z]*\s+"[^"]*"\s+(\/tmp\/[a-z._-]+\.log)/g)].map((m) => m[1]));
+    expect([...grepped], "the relaunch greps exactly the file the run step writes").toEqual(["/tmp/backfill.log"]);
   });
 
   it("no marker-gated step gates itself on apply — the marker is the gate", () => {
@@ -549,11 +554,36 @@ describe("a marker-gated relaunch fires in report mode, and as a report", () => 
     expect(unguarded.map((r) => r.name)).toEqual([]);
   });
 
-  it("every marker-gated step forwards apply verbatim, never hardcoded", () => {
-    const hardcoded = markerGated().filter((r) => r.applyForwards.some((v) => !/inputs\.apply/.test(v)));
-    expect(hardcoded.map((r) => `${r.name}: ${r.applyForwards.join(" ")}`),
+  it("no marker-gated step ESCALATES a relaunch into a write", () => {
+    // The defect this guards is one-directional and always was: a relaunch
+    // that hardcodes `apply=true` turns a REPORT that ran out of budget into a
+    // WRITE nobody dispatched (#1578). That is what must stay at zero.
+    const escalating = markerGated().filter((r) => r.applyForwards.some((v) => /true/.test(v) && !/inputs\.apply/.test(v)));
+    expect(escalating.map((r) => `${r.name}: ${r.applyForwards.join(" ")}`),
       "a report relaunch would come back as a WRITE:")
       .toEqual([]);
+  });
+
+  it("only the rematch DE-escalates, and only because its gate cannot survive a re-dispatch", () => {
+    // AMENDED 2026-09-03 (audit finding 5). `apply=false` is the opposite
+    // direction and cannot produce an unrequested write -- but it is still a
+    // deviation from "forward verbatim", so it is named here rather than
+    // waved through, and every OTHER step must still forward verbatim.
+    //
+    // The rematch is the one lane whose apply is gated by a canary baseline
+    // captured on THIS runner's /tmp. A re-dispatch is a fresh runner with a
+    // fresh /tmp, so a continuation apply would run with no before-state and
+    // no gate -- the gate would be skippable by simply being slow. The
+    // continuation therefore runs as a REPORT (which still finishes the
+    // shard's census), and the apply is re-dispatched by hand with its
+    // before/apply/after triple intact.
+    const deEscalating = markerGated().filter((r) => r.applyForwards.some((v) => /false/.test(v) && !/inputs\.apply/.test(v)));
+    expect(deEscalating.map((r) => r.name)).toEqual([
+      "Self-relaunch rematch-sold-comps until the shard is finished",
+    ]);
+    // everything else forwards verbatim, exactly as before
+    const others = markerGated().filter((r) => !/rematch-sold-comps/.test(r.name));
+    expect(others.filter((r) => r.applyForwards.some((v) => !/inputs\.apply/.test(v))).map((r) => r.name)).toEqual([]);
   });
 
   it("every marker-gated step re-dispatches apply exactly once", () => {

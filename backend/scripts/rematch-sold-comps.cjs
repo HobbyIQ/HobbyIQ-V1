@@ -114,7 +114,23 @@ const RUN_MINUTES = Number(process.env.RUN_MINUTES || 140);
 const LIMIT = Number(process.env.LIMIT || 0);
 const YEARS = String(process.env.YEARS || "").split(",").map((s) => s.trim()).filter(Boolean).map(Number).filter(Number.isFinite);
 const CENSUS_OUT = String(process.env.CENSUS_OUT || "/tmp/rematch-census").trim();
-const SAMPLE_CAP = 30;
+/**
+ * THE AUDIT SAMPLE IS 500 ROWS, SPREAD ACROSS DISTINCT CARDS (audit finding 7).
+ *
+ * This was 30, so the "500-row sample audit" the trust ladder is defined
+ * around was arithmetically impossible -- and the 30 that were kept were the
+ * first 30 in COSMOS PAGE ORDER, which is partition order, which is card
+ * order. Slot 27's sample was 23 of 30 lines from one single card. A sample
+ * that is one card is not a sample of a shard.
+ *
+ * 500, and one reservoir PER cardId rather than one for the whole class, so
+ * the lines the auditor reads span the shard's cards instead of its first
+ * partition. `sampleLine` below implements it.
+ */
+const SAMPLE_CAP = Number(process.env.SAMPLE_CAP || 500);
+/** At most this many lines from any ONE card, so no single pool can crowd the
+ *  sample the way slot 27's did. 500 / 4 still leaves room for 125 cards. */
+const SAMPLE_PER_CARD_CAP = Math.max(1, Number(process.env.SAMPLE_PER_CARD_CAP || 4));
 
 const f = (n) => Number(n ?? 0).toLocaleString();
 const started = Date.now();
@@ -355,7 +371,53 @@ async function main() {
   let splitTotal = 0;
   const stats = { seen: 0, otherSlot: 0, intended: 0, written: 0, skipped: 0, failed: 0, duplicatesLeft: 0, alreadyGone: 0, notReached: 0 };
   const bump = (m, k, n = 1) => m.set(k, (m.get(k) ?? 0) + n);
-  const sample = (klass, line) => { if (!samples.has(klass)) samples.set(klass, []); const a = samples.get(klass); if (a.length < SAMPLE_CAP) a.push(line); };
+
+  /**
+   * THE SAMPLE IS A RESERVOIR PER cardId, NOT THE FIRST N ROWS (finding 7).
+   *
+   * Cosmos returns a shard in partition order, so "the first 30" was "the
+   * first two or three cards" -- slot 27's sample was 23 of 30 lines from a
+   * single card, and an auditor reading it learned about one pool. A per-card
+   * reservoir spends the 500 lines across distinct cardIds instead: each card
+   * contributes at most SAMPLE_PER_CARD_CAP lines, and once a class is full,
+   * a NEW card still displaces a line from the most over-represented card
+   * seen so far. So a shard with 500+ distinct cards yields ~500 distinct
+   * cards, and one with few cards degrades to an even spread over what exists.
+   *
+   * `sampleCards` tracks, per class, how many lines each cardId holds.
+   */
+  const sampleCards = new Map();   // klass -> Map(cardId -> line count)
+  const sample = (klass, cardId, line) => {
+    if (!samples.has(klass)) { samples.set(klass, []); sampleCards.set(klass, new Map()); }
+    const arr = samples.get(klass);
+    const perCard = sampleCards.get(klass);
+    const key = String(cardId ?? "");
+    const mine = perCard.get(key) ?? 0;
+    if (mine >= SAMPLE_PER_CARD_CAP) return;          // this card has had its share
+    if (arr.length < SAMPLE_CAP) {
+      arr.push({ cardId: key, line });
+      perCard.set(key, mine + 1);
+      return;
+    }
+    // Full. A card not yet represented displaces a line from whichever card
+    // holds the most -- that is what keeps the tail of the shard reachable
+    // instead of the sample being decided by the first page.
+    if (mine > 0) return;
+    let worstCard = null, worstN = 1;
+    for (const [c, n] of perCard) if (n > worstN) { worstCard = c; worstN = n; }
+    if (!worstCard) return;                            // already one line per card
+    const idx = arr.findIndex((e) => e.cardId === worstCard);
+    if (idx < 0) return;
+    arr[idx] = { cardId: key, line };
+    perCard.set(worstCard, worstN - 1);
+    perCard.set(key, 1);
+  };
+  /** The census JSON and the banner both want plain lines. */
+  const sampleLines = (klass) => (samples.get(klass) ?? []).map((e) => e.line);
+  /** How many DISTINCT cards a class's sample actually spans -- the number
+   *  that says whether finding 7 is fixed, printed in the banner and carried
+   *  in the census JSON so the audit gate can assert on it. */
+  const sampleCardCount = (klass) => (sampleCards.get(klass) ?? new Map()).size;
 
   const it = pool.items.query(q, { maxItemCount: 500 });
   const improvable = [];
@@ -400,9 +462,10 @@ async function main() {
       for (const a of K.defectAxes(res)) bump(defects, `${res.klass}  ${a}`);
       for (const r of res.reasons) bump(reasons, `${res.klass}  ${r}`);
       const sampleKey = res.subclass ? `${res.klass}/${res.subclass}` : res.klass;
-      if ((samples.get(sampleKey) ?? []).length < SAMPLE_CAP) {
-        sample(sampleKey, `${row.id}  [${res.tier}]  "${String(row.title ?? "").slice(0, 68)}"  ${K.renderIdentity(stored)}  ->  ${K.renderIdentity(res.subclass === K.BASE_EVICTION ? der.baseIdentity : der.ok ? der.identity : null)}`);
-      }
+      // The reservoir decides admission itself (per-card caps and displacement),
+      // so it is called for EVERY row rather than only while the class is short
+      // -- a length check here is what made the sample the first page.
+      sample(sampleKey, row.cardId, `${row.id}  [${res.tier}]  "${String(row.title ?? "").slice(0, 68)}"  ${K.renderIdentity(stored)}  ->  ${K.renderIdentity(res.subclass === K.BASE_EVICTION ? der.baseIdentity : der.ok ? der.identity : null)}`);
       if (MODE === "apply-improve" && res.writable) {
         if (res.klass === K.IMPROVE) improvable.push({ kind: K.IMPROVE, row, stored, slug: der.slug, identity: der.identity });
         else if (res.subclass === K.BASE_EVICTION) improvable.push({ kind: K.BASE_EVICTION, row, stored, slug: der.baseSlug, identity: der.baseIdentity });
@@ -453,10 +516,13 @@ async function main() {
   console.log(`\n  provenance: ${[...byTier].sort((a, b) => b[1] - a[1]).map(([k, n]) => `${k} ${f(n)}`).join(" | ")}`);
   console.log(`  PROTECTED + CONFLICT + UNDERIVABLE are REPORT ONLY FOREVER -- they go to Drew, never to a fleet.`);
   for (const klass of [K.IMPROVE, `${K.CONFLICT}/${K.BASE_EVICTION}`, K.CONFLICT, K.UNDERIVABLE, K.AGREE]) {
-    const s = samples.get(klass) ?? [];
+    const s = sampleLines(klass);
     if (!s.length) continue;
     const of = klass.includes("/") ? f(beAuto + beProt) : f(counts[klass]);
-    console.log(`\n  ${klass} evidence (${s.length} of ${of}):`);
+    // The DISTINCT-CARD count is the number that says the sample is a sample.
+    // Slot 27's old 30 lines spanned 3 cards; an auditor has to be able to see
+    // that from the banner without re-deriving it.
+    console.log(`\n  ${klass} evidence (${s.length} of ${of}, spanning ${f(sampleCardCount(klass))} distinct cards; cap ${f(SAMPLE_CAP)} @ ${SAMPLE_PER_CARD_CAP}/card):`);
     for (const line of s) console.log(`    ${line}`);
   }
 
@@ -468,7 +534,18 @@ async function main() {
     // Subclass counts are INCLUDED in `counts` -- BASE-EVICTION is a narrowing
     // of CONFLICT, so an auditor summing both would double-count.
     subclasses: Object.fromEntries(subclasses),
-    reasons: Object.fromEntries(reasons), samples: Object.fromEntries(samples),
+    reasons: Object.fromEntries(reasons),
+    // THE SAMPLE THE AUDIT GATE READS. 500 lines per class, spread across
+    // distinct cardIds by a per-card reservoir (finding 7) -- `sampleSpread`
+    // carries the distinct-card count per class so the gate can assert the
+    // sample is a sample rather than one pool repeated.
+    samples: Object.fromEntries([...samples.keys()].map((k) => [k, sampleLines(k)])),
+    sampleSpread: Object.fromEntries([...samples.keys()].map((k) => [k, { lines: sampleLines(k).length, distinctCards: sampleCardCount(k) }])),
+    sampleCap: SAMPLE_CAP, samplePerCardCap: SAMPLE_PER_CARD_CAP,
+    // The vocabulary this census was classified under. A census quoted in an
+    // audit has to name the vocabulary that produced it, or a re-run under a
+    // different corpus is indistinguishable from the same measurement.
+    finishVocabulary: K.VOCAB.vocabularyStats(),
     // Orthogonal to `counts` -- a split row is ALSO counted in its derivation
     // class, so these must never be summed with the four class totals.
     splitIdentity: {
@@ -543,11 +620,21 @@ async function main() {
       keep.parallel = identity.parallel;
       keep.isAuto = identity.isAuto;
       if (cand.kind === K.BASE_EVICTION) {
-        // The print run belonged to the parallel the row was wrongly filed
-        // under. It does not travel to the base slug, and leaving it on the
-        // FIELD while the SLUG drops it is exactly the contradiction this
-        // subclass exists to end.
-        delete keep.printRun;
+        // A STORED PRINT RUN IS NEVER DELETED (audit finding 2). This used to
+        // be `delete keep.printRun` -- an eviction destroyed a stored field on
+        // its way past, and the audit's sample carried a /1 (Immaculate
+        // Pujols) and Carroll /499 among the rows it would have erased.
+        //
+        // The classifier now VETOES the eviction outright when the row stores
+        // a print run (storedPrintRunNamesALimitedParallel), so reaching this
+        // branch with one set means the classifier and the writer disagree.
+        // Refuse rather than write: a fleet never resolves that by guessing,
+        // and the row is reported instead.
+        if (keep.printRun !== null && keep.printRun !== undefined && keep.printRun !== "") {
+          stats.skipped++;
+          bump(reasons, `apply  refused:eviction-would-delete-stored-printrun:/${keep.printRun}`);
+          continue;
+        }
       } else if (identity.printRun !== null && identity.printRun !== undefined) {
         keep.printRun = identity.printRun;
       }

@@ -10,7 +10,8 @@
       "poolRows": 6,
       "verifiedMarketDirection": "graded-from-raw",
       "note": "Drew pinned the slug: hobbyiqCardIdSource=manual-chrome-2026-08-10, 'Confirmed chrome by Drew; do not re-derive to paper'. A re-derivation that moves this pool toward bowman (paper) is a REGRESSION, never an improvement -- the pin is the ruling. The X-Fractor-in-base-pool shape belongs to THIS card number.",
-      "protectedIdentity": true
+      "protectedIdentity": true,
+      "shardSlot": 30
     },
     {
       "name": "Figueroa 2026 Bowman Chrome CPA-VF Black & White Red Ink auto",
@@ -19,7 +20,8 @@
       "poolRows": 1,
       "verifiedMarketDirection": "exact-pool",
       "note": "Red Ink is the SSP of the B&W Shimmer auto and its OWN row (Drew 2026-08-30) -- never folded into a shade of red. The holding's stored cardId is still a vendor bubble id (1778815951741x...), so the pool lives under the hobbyiqCardId slug: the canary must read the UNION or it measures nothing. Single-sale pool: losing that row empties the pool.",
-      "protectedIdentity": true
+      "protectedIdentity": true,
+      "shardSlot": 6
     },
     {
       "name": "Shaq 1993 Topps Finest #99 Refractor",
@@ -27,7 +29,8 @@
       "slug": "hiq:basketball:1993:topps-finest:99:refractor:no-auto",
       "poolRows": 55,
       "verifiedMarketDirection": "exact-pool",
-      "note": "The union is 55 = 2 rows in the slug's own partition + 53 carrying it as hobbyiqCardId -- the split the union measures. Topps Finest #197 lists `Uncommon` AND `Uncommon Refractor` as two cards, which is why the retracted trailing-' Refractor' strip must never come back: it would fold this pool into its sibling."
+      "note": "The union is 55 = 2 rows in the slug's own partition + 53 carrying it as hobbyiqCardId -- the split the union measures. Topps Finest #197 lists `Uncommon` AND `Uncommon Refractor` as two cards, which is why the retracted trailing-' Refractor' strip must never come back: it would fold this pool into its sibling.",
+      "shardSlot": 25
     },
     {
       "name": "Gonzalez 2026 Bowman CPA-JG Refractor auto /499",
@@ -35,7 +38,8 @@
       "slug": "hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499",
       "poolRows": 56,
       "verifiedMarketDirection": "exact-pool",
-      "note": "Base-auto-on-refractor-slug shape. The stored key already carries parallel=refractor, isAuto and num-499; a re-derivation from a terse title that drops the print run or the auto flag is a REGRESSION (less specific), not an improvement. Direct match: 55 sales of this exact card."
+      "note": "Base-auto-on-refractor-slug shape. The stored key already carries parallel=refractor, isAuto and num-499; a re-derivation from a terse title that drops the print run or the auto flag is a REGRESSION (less specific), not an improvement. Direct match: 55 sales of this exact card.",
+      "shardSlot": 5
     },
     {
       "name": "Witt 2020 Bowman Draft BD-152 Image Variation PSA 9",
@@ -43,7 +47,8 @@
       "slug": "hiq:baseball:2020:bowman-draft:bd-152:image-variation:no-auto",
       "poolRows": 1,
       "verifiedMarketDirection": "graded-from-raw",
-      "note": "An Image Variation is a NAMED card (#1613), not a finish -- a re-derivation that flattens image-variation to base is a regression. The D33 bcp-misfiled lane already worked this card number; the pool is thin (1 row) so any loss empties it."
+      "note": "An Image Variation is a NAMED card (#1613), not a finish -- a re-derivation that flattens image-variation to base is a regression. The D33 bcp-misfiled lane already worked this card number; the pool is thin (1 row) so any loss empties it.",
+      "shardSlot": 16
     },
     {
       "name": "Caglianone 2024 Bowman Draft CPA-JC Refractor auto /499 PSA 9",
@@ -51,7 +56,8 @@
       "slug": "hiq:baseball:2024:bowman-draft:cpa-jc:refractor:auto:num-499",
       "poolRows": 38,
       "verifiedMarketDirection": "graded-from-raw",
-      "note": "Bowman Draft is its own family, not Bowman. The union is 38-40 = 25 rows in the slug partition + 15 carrying it as hobbyiqCardId (poolRows is the captured floor; the pool gains rows as ingest runs). The graded tier prices off this pool's own raw children, so the raw rows are load-bearing even for the PSA 9 holding."
+      "note": "Bowman Draft is its own family, not Bowman. The union is 38-40 = 25 rows in the slug partition + 15 carrying it as hobbyiqCardId (poolRows is the captured floor; the pool gains rows as ingest runs). The graded tier prices off this pool's own raw children, so the raw rows are load-bearing even for the PSA 9 holding.",
+      "shardSlot": 9
     },
     {
       "name": "Judge 2017 Topps Gold Label #86 Class 1 Blue PSA 9",
@@ -59,7 +65,487 @@
       "slug": "hiq:baseball:2017:topps-gold-label:86:class-1-blue:no-auto",
       "poolRows": 5,
       "verifiedMarketDirection": "graded-from-raw",
-      "note": "Gold Label is its own family, not Topps flagship. Estimated from this card's own Raw sales x the empirical PSA 9 ratio (1.65x) -- there is no PSA 9 sale of this card in 180d, so the RAW rows in this pool ARE the valuation. All 5 rows sit in the cardId partition and none carry hobbyiqCardId; a re-key that moves them without the field following makes the pool unreadable."
+      "note": "Gold Label is its own family, not Topps flagship. Estimated from this card's own Raw sales x the empirical PSA 9 ratio (1.65x) -- there is no PSA 9 sale of this card in 180d, so the RAW rows in this pool ARE the valuation. All 5 rows sit in the cardId partition and none carry hobbyiqCardId; a re-key that moves them without the field following makes the pool unreadable.",
+      "shardSlot": 30
+    },
+    {
+      "name": "[derived] slot 1 1956 topps 292 base",
+      "slug": "hiq:baseball:1956:topps:292:base:no-auto",
+      "shardSlot": 1,
+      "poolRows": 362,
+      "verifiedMarketDirection": "exact-pool",
+      "derivedFrom": "provenance",
+      "protectedAnchors": 1,
+      "protectedAnchorReasons": [
+        "verifiedByUser"
+      ],
+      "anchorRowId": "cardhedge::ch-daily::1634086379933x322637656714903550::2026-07-12T23:38:00+00:00::3200",
+      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 1 provenance-protected row(s) -- verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 1's apply means sales moved away from a card a person vouched for. poolRows 362 is a FLOOR measured at capture (40 in the slug partition + 322 carrying it), never an equality assertion.",
+      "protectedIdentity": true
+    },
+    {
+      "name": "[derived] slot 2 2023 bowman-draft cda-zt base",
+      "slug": "hiq:baseball:2023:bowman-draft:cda-zt:base:auto",
+      "shardSlot": 2,
+      "poolRows": 173,
+      "verifiedMarketDirection": "exact-pool",
+      "derivedFrom": "provenance",
+      "protectedAnchors": 4,
+      "protectedAnchorReasons": [
+        "verifiedByUser"
+      ],
+      "anchorRowId": "cardhedge::ch-daily::1702858667469x135853617159703570::2026-07-12T22:16:00+00:00::2000",
+      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 4 provenance-protected row(s) -- verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 2's apply means sales moved away from a card a person vouched for. poolRows 173 is a FLOOR measured at capture (25 in the slug partition + 148 carrying it), never an equality assertion.",
+      "protectedIdentity": true
+    },
+    {
+      "name": "[derived] slot 3 2024 panini-prizm 365 base",
+      "slug": "hiq:football:2024:panini-prizm:365:base:no-auto",
+      "shardSlot": 3,
+      "poolRows": 539,
+      "verifiedMarketDirection": "exact-pool",
+      "derivedFrom": "provenance",
+      "protectedAnchors": 1,
+      "protectedAnchorReasons": [
+        "source:ebay-user-purchase",
+        "relocation-reason"
+      ],
+      "anchorRowId": "ebay-user-purchase::holding::de2df53a-e7e6-4ea6-b15c-3d183d238f42",
+      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 1 provenance-protected row(s) -- source:ebay-user-purchase, relocation-reason -- which a rematch may never re-key. The pool losing rows during slot 3's apply means sales moved away from a card a person vouched for. poolRows 539 is a FLOOR measured at capture (52 in the slug partition + 487 carrying it), never an equality assertion.",
+      "protectedIdentity": true
+    },
+    {
+      "name": "[derived] slot 4 1979 topps 390 base",
+      "slug": "hiq:baseball:1979:topps:390:base:no-auto",
+      "shardSlot": 4,
+      "poolRows": 173,
+      "verifiedMarketDirection": "exact-pool",
+      "derivedFrom": "provenance",
+      "protectedAnchors": 1,
+      "protectedAnchorReasons": [
+        "verifiedByUser"
+      ],
+      "anchorRowId": "cardhedge::ch-daily::1652374510774x395061266713136600::2026-07-12T19:34:00+00:00::999",
+      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 1 provenance-protected row(s) -- verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 4's apply means sales moved away from a card a person vouched for. poolRows 173 is a FLOOR measured at capture (68 in the slug partition + 105 carrying it), never an equality assertion.",
+      "protectedIdentity": true
+    },
+    {
+      "name": "[derived] slot 5 2026 bowman bcp-102 base",
+      "slug": "hiq:baseball:2026:bowman:bcp-102:base:no-auto",
+      "shardSlot": 5,
+      "poolRows": 1087,
+      "verifiedMarketDirection": "exact-pool",
+      "derivedFrom": "provenance",
+      "protectedAnchors": 23,
+      "protectedAnchorReasons": [
+        "verifiedByUser",
+        "source:ebay-user-purchase",
+        "relocation-reason"
+      ],
+      "anchorRowId": "cardhedge::1778476701364x910727469486951600::2026-07-08T04:43:00.000Z::1050",
+      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 23 provenance-protected row(s) -- verifiedByUser, source:ebay-user-purchase, relocation-reason -- which a rematch may never re-key. The pool losing rows during slot 5's apply means sales moved away from a card a person vouched for. poolRows 1087 is a FLOOR measured at capture (84 in the slug partition + 1003 carrying it), never an equality assertion.",
+      "protectedIdentity": true
+    },
+    {
+      "name": "[derived] slot 6 2026 bowman bcp-102 base",
+      "slug": "hiq:baseball:2026:bowman:bcp-102:base:no-auto",
+      "shardSlot": 6,
+      "poolRows": 1087,
+      "verifiedMarketDirection": "exact-pool",
+      "derivedFrom": "provenance",
+      "protectedAnchors": 17,
+      "protectedAnchorReasons": [
+        "verifiedByUser",
+        "source:ebay-user-purchase",
+        "relocation-reason"
+      ],
+      "anchorRowId": "cardhedge::1778476701364x910727469486951600::2026-07-08T15:42:00.000Z::125",
+      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 17 provenance-protected row(s) -- verifiedByUser, source:ebay-user-purchase, relocation-reason -- which a rematch may never re-key. The pool losing rows during slot 6's apply means sales moved away from a card a person vouched for. poolRows 1087 is a FLOOR measured at capture (84 in the slug partition + 1003 carrying it), never an equality assertion.",
+      "protectedIdentity": true
+    },
+    {
+      "name": "[derived] slot 8 1963 fleer 43 base",
+      "slug": "hiq:baseball:1963:fleer:43:base:no-auto",
+      "shardSlot": 8,
+      "poolRows": 193,
+      "verifiedMarketDirection": "exact-pool",
+      "derivedFrom": "provenance",
+      "protectedAnchors": 1,
+      "protectedAnchorReasons": [
+        "verifiedByUser"
+      ],
+      "anchorRowId": "cardhedge::ch-daily::1636154968575x780234440235219700::2026-07-12T19:30:00+00:00::1900",
+      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 1 provenance-protected row(s) -- verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 8's apply means sales moved away from a card a person vouched for. poolRows 193 is a FLOOR measured at capture (21 in the slug partition + 172 carrying it), never an equality assertion.",
+      "protectedIdentity": true
+    },
+    {
+      "name": "[derived] slot 9 2024 bowman tp-18 refractor",
+      "slug": "hiq:baseball:2024:bowman:tp-18:refractor:no-auto",
+      "shardSlot": 9,
+      "poolRows": 95,
+      "verifiedMarketDirection": "exact-pool",
+      "derivedFrom": "provenance",
+      "protectedAnchors": 2,
+      "protectedAnchorReasons": [
+        "verifiedByUser"
+      ],
+      "anchorRowId": "cardhedge::ch-daily::1743883858460x300410920565069400::2026-07-12T19:39:00+00:00::200",
+      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 2 provenance-protected row(s) -- verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 9's apply means sales moved away from a card a person vouched for. poolRows 95 is a FLOOR measured at capture (4 in the slug partition + 91 carrying it), never an equality assertion.",
+      "protectedIdentity": true
+    },
+    {
+      "name": "[derived] slot 10 2024 bowman-chrome 85 base",
+      "slug": "hiq:baseball:2024:bowman-chrome:85:base:no-auto",
+      "shardSlot": 10,
+      "poolRows": 1210,
+      "verifiedMarketDirection": "exact-pool",
+      "derivedFrom": "provenance",
+      "protectedAnchors": 3,
+      "protectedAnchorReasons": [
+        "verifiedByUser"
+      ],
+      "anchorRowId": "cardsight::hiq:baseball:2024:bowman-chrome:85:base:no-auto::2026-07-26T10:18:05.048Z",
+      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 3 provenance-protected row(s) -- verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 10's apply means sales moved away from a card a person vouched for. poolRows 1210 is a FLOOR measured at capture (551 in the slug partition + 659 carrying it), never an equality assertion.",
+      "protectedIdentity": true
+    },
+    {
+      "name": "[derived] slot 11 2024 panini-prizm 263 silver",
+      "slug": "hiq:basketball:2024:panini-prizm:263:silver:no-auto",
+      "shardSlot": 11,
+      "poolRows": 133,
+      "verifiedMarketDirection": "exact-pool",
+      "derivedFrom": "provenance",
+      "protectedAnchors": 1,
+      "protectedAnchorReasons": [
+        "verifiedByUser"
+      ],
+      "anchorRowId": "cardhedge::ch-daily::1740417866662x284254947827462080::2026-07-21T22:42:00+00:00::159",
+      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 1 provenance-protected row(s) -- verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 11's apply means sales moved away from a card a person vouched for. poolRows 133 is a FLOOR measured at capture (2 in the slug partition + 131 carrying it), never an equality assertion.",
+      "protectedIdentity": true
+    },
+    {
+      "name": "[derived] slot 12 2025 topps ha-41 base",
+      "slug": "hiq:baseball:2025:topps:ha-41:base:no-auto",
+      "shardSlot": 12,
+      "poolRows": 111,
+      "verifiedMarketDirection": "exact-pool",
+      "derivedFrom": "provenance",
+      "protectedAnchors": 2,
+      "protectedAnchorReasons": [
+        "verifiedByUser"
+      ],
+      "anchorRowId": "cardhedge::ch-daily::1763012892287x915926767590543900::2026-07-12T02:58:00+00:00::7800",
+      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 2 provenance-protected row(s) -- verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 12's apply means sales moved away from a card a person vouched for. poolRows 111 is a FLOOR measured at capture (7 in the slug partition + 104 carrying it), never an equality assertion.",
+      "protectedIdentity": true
+    },
+    {
+      "name": "[derived] slot 13 2025 bowman-chrome cpa-fa purple-refractor",
+      "slug": "hiq:baseball:2025:bowman-chrome:cpa-fa:purple-refractor:auto",
+      "shardSlot": 13,
+      "poolRows": 44,
+      "verifiedMarketDirection": "exact-pool",
+      "derivedFrom": "provenance",
+      "protectedAnchors": 2,
+      "protectedAnchorReasons": [
+        "source:ebay-user-purchase",
+        "verifiedByUser"
+      ],
+      "anchorRowId": "ebay-user-purchase::holding::60900941-28a5-411d-9dc4-1133b3d41c4d",
+      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 2 provenance-protected row(s) -- source:ebay-user-purchase, verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 13's apply means sales moved away from a card a person vouched for. poolRows 44 is a FLOOR measured at capture (0 in the slug partition + 44 carrying it), never an equality assertion.",
+      "protectedIdentity": true
+    },
+    {
+      "name": "[derived] slot 14 2025 bowman-draft bdc-1 base",
+      "slug": "hiq:baseball:2025:bowman-draft:bdc-1:base:no-auto",
+      "shardSlot": 14,
+      "poolRows": 580,
+      "verifiedMarketDirection": "exact-pool",
+      "derivedFrom": "provenance",
+      "protectedAnchors": 3,
+      "protectedAnchorReasons": [
+        "verifiedByUser"
+      ],
+      "anchorRowId": "cardsight::1768677198934x586733556995573000::2026-07-16T01:10:00+00:00::8900",
+      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 3 provenance-protected row(s) -- verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 14's apply means sales moved away from a card a person vouched for. poolRows 580 is a FLOOR measured at capture (269 in the slug partition + 311 carrying it), never an equality assertion.",
+      "protectedIdentity": true
+    },
+    {
+      "name": "[derived] slot 15 2021 topps-update-series bg-13 base",
+      "slug": "hiq:baseball:2021:topps-update-series:bg-13:base:no-auto",
+      "shardSlot": 15,
+      "poolRows": 228,
+      "verifiedMarketDirection": "exact-pool",
+      "derivedFrom": "provenance",
+      "protectedAnchors": 1,
+      "protectedAnchorReasons": [
+        "verifiedByUser"
+      ],
+      "anchorRowId": "cardhedge::ch-daily::1686113091610x863257329294377000::2026-07-12T22:37:00+00:00::925",
+      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 1 provenance-protected row(s) -- verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 15's apply means sales moved away from a card a person vouched for. poolRows 228 is a FLOOR measured at capture (0 in the slug partition + 228 carrying it), never an equality assertion.",
+      "protectedIdentity": true
+    },
+    {
+      "name": "[derived] slot 17 2025 bowman bcv-7 mojo-refractor",
+      "slug": "hiq:basketball:2025:bowman:bcv-7:mojo-refractor:no-auto",
+      "shardSlot": 17,
+      "poolRows": 2,
+      "verifiedMarketDirection": "exact-pool",
+      "derivedFrom": "provenance",
+      "protectedAnchors": 2,
+      "protectedAnchorReasons": [
+        "verifiedByUser"
+      ],
+      "anchorRowId": "cardhedge::ch-daily::1778124642854x340694505094857340::2026-07-21T22:50:00+00:00::170",
+      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 2 provenance-protected row(s) -- verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 17's apply means sales moved away from a card a person vouched for. poolRows 2 is a FLOOR measured at capture (2 in the slug partition + 0 carrying it), never an equality assertion.",
+      "protectedIdentity": true
+    },
+    {
+      "name": "[derived] slot 18 1984 fleer 301 base",
+      "slug": "hiq:baseball:1984:fleer:301:base:no-auto",
+      "shardSlot": 18,
+      "poolRows": 347,
+      "verifiedMarketDirection": "exact-pool",
+      "derivedFrom": "provenance",
+      "protectedAnchors": 1,
+      "protectedAnchorReasons": [
+        "verifiedByUser"
+      ],
+      "anchorRowId": "cardhedge::ch-daily::1649128357900x579706666502983800::2026-07-12T20:13:00+00:00::124",
+      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 1 provenance-protected row(s) -- verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 18's apply means sales moved away from a card a person vouched for. poolRows 347 is a FLOOR measured at capture (49 in the slug partition + 298 carrying it), never an equality assertion.",
+      "protectedIdentity": true
+    },
+    {
+      "name": "[derived] slot 19 2022 bowman-chrome cpa-yms base",
+      "slug": "hiq:baseball:2022:bowman-chrome:cpa-yms:base:auto",
+      "shardSlot": 19,
+      "poolRows": 133,
+      "verifiedMarketDirection": "exact-pool",
+      "derivedFrom": "provenance",
+      "protectedAnchors": 1,
+      "protectedAnchorReasons": [
+        "verifiedByUser"
+      ],
+      "anchorRowId": "cardhedge::ch-daily::1671466768413x271188192012757470::2026-07-12T00:43:00+00:00::1500",
+      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 1 provenance-protected row(s) -- verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 19's apply means sales moved away from a card a person vouched for. poolRows 133 is a FLOOR measured at capture (20 in the slug partition + 113 carrying it), never an equality assertion.",
+      "protectedIdentity": true
+    },
+    {
+      "name": "[derived] slot 20 2022 topps-chrome 221 refractor-image-variation",
+      "slug": "hiq:baseball:2022:topps-chrome:221:refractor-image-variation:no-auto",
+      "shardSlot": 20,
+      "poolRows": 2,
+      "verifiedMarketDirection": "exact-pool",
+      "derivedFrom": "provenance",
+      "protectedAnchors": 2,
+      "protectedAnchorReasons": [
+        "source:ebay-user-purchase",
+        "verifiedByUser"
+      ],
+      "anchorRowId": "ebay-user-purchase::128012724525-10083011221909",
+      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 2 provenance-protected row(s) -- source:ebay-user-purchase, verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 20's apply means sales moved away from a card a person vouched for. poolRows 2 is a FLOOR measured at capture (1 in the slug partition + 1 carrying it), never an equality assertion.",
+      "protectedIdentity": true
+    },
+    {
+      "name": "[derived] slot 21 2018 topps c-25 coins",
+      "slug": "hiq:baseball:2018:topps:c-25:coins:no-auto",
+      "shardSlot": 21,
+      "poolRows": 2,
+      "verifiedMarketDirection": "exact-pool",
+      "derivedFrom": "provenance",
+      "protectedAnchors": 2,
+      "protectedAnchorReasons": [
+        "verifiedByUser"
+      ],
+      "anchorRowId": "cardhedge::ch-daily::1640041554098x143543069683753860::2026-07-12T18:33:00+00:00::8000",
+      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 2 provenance-protected row(s) -- verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 21's apply means sales moved away from a card a person vouched for. poolRows 2 is a FLOOR measured at capture (2 in the slug partition + 0 carrying it), never an equality assertion.",
+      "protectedIdentity": true
+    },
+    {
+      "name": "[derived] slot 22 2001 2001-fleer-game-time-baseball nno base",
+      "slug": "hiq:baseball:2001:2001-fleer-game-time-baseball:nno:base:no-auto",
+      "shardSlot": 22,
+      "poolRows": 4,
+      "verifiedMarketDirection": "exact-pool",
+      "derivedFrom": "provenance",
+      "protectedAnchors": 1,
+      "protectedAnchorReasons": [
+        "verifiedByUser"
+      ],
+      "anchorRowId": "cardhedge::ch-daily::1741472690019x659446530999842700::2026-07-12T19:55:00+00:00::300",
+      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 1 provenance-protected row(s) -- verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 22's apply means sales moved away from a card a person vouched for. poolRows 4 is a FLOOR measured at capture (4 in the slug partition + 0 carrying it), never an equality assertion.",
+      "protectedIdentity": true
+    },
+    {
+      "name": "[derived] slot 23 1998 bowman 81 base",
+      "slug": "hiq:baseball:1998:bowman:81:base:no-auto",
+      "shardSlot": 23,
+      "poolRows": 19,
+      "verifiedMarketDirection": "exact-pool",
+      "derivedFrom": "provenance",
+      "protectedAnchors": 3,
+      "protectedAnchorReasons": [
+        "verifiedByUser"
+      ],
+      "anchorRowId": "cardhedge::ch-daily::1692321164862x599062654126575600::2026-07-12T01:04:00+00:00::225",
+      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 3 provenance-protected row(s) -- verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 23's apply means sales moved away from a card a person vouched for. poolRows 19 is a FLOOR measured at capture (4 in the slug partition + 15 carrying it), never an equality assertion.",
+      "protectedIdentity": true
+    },
+    {
+      "name": "[derived] slot 24 1992 topps 603 members-choice",
+      "slug": "hiq:baseball:1992:topps:603:members-choice:no-auto",
+      "shardSlot": 24,
+      "poolRows": 1,
+      "verifiedMarketDirection": "exact-pool",
+      "derivedFrom": "provenance",
+      "protectedAnchors": 1,
+      "protectedAnchorReasons": [
+        "verifiedByUser"
+      ],
+      "anchorRowId": "cardhedge::ch-daily::1673848651039x889237367006063000::2026-07-12T20:04:00+00:00::300",
+      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 1 provenance-protected row(s) -- verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 24's apply means sales moved away from a card a person vouched for. poolRows 1 is a FLOOR measured at capture (0 in the slug partition + 1 carrying it), never an equality assertion.",
+      "protectedIdentity": true
+    },
+    {
+      "name": "[derived] slot 25 1999 topps-finest ha8 base",
+      "slug": "hiq:baseball:1999:topps-finest:ha8:base:no-auto",
+      "shardSlot": 25,
+      "poolRows": 65,
+      "verifiedMarketDirection": "exact-pool",
+      "derivedFrom": "provenance",
+      "protectedAnchors": 2,
+      "protectedAnchorReasons": [
+        "source:ebay-user-purchase",
+        "verifiedByUser"
+      ],
+      "anchorRowId": "ebay-user-purchase::306924667443-10084385993211",
+      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 2 provenance-protected row(s) -- source:ebay-user-purchase, verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 25's apply means sales moved away from a card a person vouched for. poolRows 65 is a FLOOR measured at capture (12 in the slug partition + 53 carrying it), never an equality assertion.",
+      "protectedIdentity": true
+    },
+    {
+      "name": "[derived] slot 26 1986 fleer-stickers 8 base",
+      "slug": "hiq:basketball:1986:fleer-stickers:8:base:no-auto",
+      "shardSlot": 26,
+      "poolRows": 1839,
+      "verifiedMarketDirection": "exact-pool",
+      "derivedFrom": "provenance",
+      "protectedAnchors": 3,
+      "protectedAnchorReasons": [
+        "verifiedByUser"
+      ],
+      "anchorRowId": "cardsight::hiq:basketball:1986:fleer-stickers:8:base:no-auto::2026-07-26T10:12:39.369Z",
+      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 3 provenance-protected row(s) -- verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 26's apply means sales moved away from a card a person vouched for. poolRows 1839 is a FLOOR measured at capture (192 in the slug partition + 1647 carrying it), never an equality assertion.",
+      "protectedIdentity": true
+    },
+    {
+      "name": "[derived] slot 27 1985 bowman 273 base",
+      "slug": "hiq:baseball:1985:bowman:273:base:no-auto",
+      "shardSlot": 27,
+      "poolRows": 10,
+      "verifiedMarketDirection": "exact-pool",
+      "derivedFrom": "provenance",
+      "protectedAnchors": 3,
+      "protectedAnchorReasons": [
+        "verifiedByUser"
+      ],
+      "anchorRowId": "cardhedge::ch-daily::1718903521946x907074909112107000::2026-07-12T19:55:00+00:00::591",
+      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 3 provenance-protected row(s) -- verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 27's apply means sales moved away from a card a person vouched for. poolRows 10 is a FLOOR measured at capture (1 in the slug partition + 9 carrying it), never an equality assertion.",
+      "protectedIdentity": true
+    },
+    {
+      "name": "[derived] slot 28 1991 score 396 base",
+      "slug": "hiq:baseball:1991:score:396:base:no-auto",
+      "shardSlot": 28,
+      "poolRows": 937,
+      "verifiedMarketDirection": "exact-pool",
+      "derivedFrom": "provenance",
+      "protectedAnchors": 2,
+      "protectedAnchorReasons": [
+        "source:ebay-user-purchase",
+        "verifiedByUser",
+        "relocation-reason",
+        "source:ebay-account"
+      ],
+      "anchorRowId": "ebay-user-purchase::800385158282-10082928422705",
+      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 2 provenance-protected row(s) -- source:ebay-user-purchase, verifiedByUser, relocation-reason, source:ebay-account -- which a rematch may never re-key. The pool losing rows during slot 28's apply means sales moved away from a card a person vouched for. poolRows 937 is a FLOOR measured at capture (461 in the slug partition + 476 carrying it), never an equality assertion.",
+      "protectedIdentity": true
+    },
+    {
+      "name": "[derived] slot 29 1990 topps 4 5000-k-astros",
+      "slug": "hiq:baseball:1990:topps:4:5000-k-astros:no-auto",
+      "shardSlot": 29,
+      "poolRows": 42,
+      "verifiedMarketDirection": "exact-pool",
+      "derivedFrom": "provenance",
+      "protectedAnchors": 1,
+      "protectedAnchorReasons": [
+        "verifiedByUser"
+      ],
+      "anchorRowId": "cardhedge::ch-daily::1653537039893x443127328283493100::2026-07-12T02:55:00+00:00::136",
+      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 1 provenance-protected row(s) -- verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 29's apply means sales moved away from a card a person vouched for. poolRows 42 is a FLOOR measured at capture (2 in the slug partition + 40 carrying it), never an equality assertion.",
+      "protectedIdentity": true
+    },
+    {
+      "name": "[derived] slot 30 2017 topps-chrome 169 pink-refractor",
+      "slug": "hiq:baseball:2017:topps-chrome:169:pink-refractor:no-auto",
+      "shardSlot": 30,
+      "poolRows": 95,
+      "verifiedMarketDirection": "exact-pool",
+      "derivedFrom": "provenance",
+      "protectedAnchors": 2,
+      "protectedAnchorReasons": [
+        "verifiedByUser"
+      ],
+      "anchorRowId": "cardsight::hiq:baseball:2017:topps-chrome:169:pink-refractor:no-auto::2026-07-13T12:23:09.486Z",
+      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 2 provenance-protected row(s) -- verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 30's apply means sales moved away from a card a person vouched for. poolRows 95 is a FLOOR measured at capture (8 in the slug partition + 87 carrying it), never an equality assertion.",
+      "protectedIdentity": true
+    },
+    {
+      "name": "[derived] slot 31 1995 bowman 200 base",
+      "slug": "hiq:baseball:1995:bowman:200:base:no-auto",
+      "shardSlot": 31,
+      "poolRows": 39,
+      "verifiedMarketDirection": "exact-pool",
+      "derivedFrom": "provenance",
+      "protectedAnchors": 2,
+      "protectedAnchorReasons": [
+        "verifiedByUser"
+      ],
+      "anchorRowId": "cardhedge::ch-daily::1671322426403x305833575979941900::2026-07-12T19:39:00+00:00::299",
+      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 2 provenance-protected row(s) -- verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 31's apply means sales moved away from a card a person vouched for. poolRows 39 is a FLOOR measured at capture (3 in the slug partition + 36 carrying it), never an equality assertion.",
+      "protectedIdentity": true
+    },
+    {
+      "name": "[derived] slot 0 2025 2025-pokemon-japanese-mega-evolution-promos 020m-p base",
+      "slug": "hiq:pokemon:2025:2025-pokemon-japanese-mega-evolution-promos:020m-p:base:no-auto",
+      "shardSlot": 0,
+      "poolRows": 596,
+      "verifiedMarketDirection": "exact-pool",
+      "derivedFrom": "largest-pool",
+      "protectedAnchors": 0,
+      "protectedAnchorReasons": [],
+      "anchorRowId": null,
+      "note": "Derived canary (2026-09-03), FALLBACK tier: slot 0 holds no provenance-protected row at all (Pokemon-dominant shard, no user holdings), so there is no human verification to anchor on. This is simply the LARGEST pool in the shard, and the assertion it carries is the one that still matters -- a pool this size must not LOSE rows to an apply. Not a verified market direction; never to be quoted as one. poolRows 596 is a FLOOR measured at capture (596 in the slug partition + 0 carrying it).",
+      "protectedIdentity": false
+    },
+    {
+      "name": "[derived] slot 7 2007 topps 40 bushmantle",
+      "slug": "hiq:baseball:2007:topps:40:bushmantle:no-auto",
+      "shardSlot": 7,
+      "poolRows": 747,
+      "verifiedMarketDirection": "exact-pool",
+      "derivedFrom": "largest-pool",
+      "protectedAnchors": 0,
+      "protectedAnchorReasons": [],
+      "anchorRowId": null,
+      "note": "Derived canary (2026-09-03), FALLBACK tier: slot 7 holds no provenance-protected row at all (Pokemon-dominant shard, no user holdings), so there is no human verification to anchor on. This is simply the LARGEST pool in the shard, and the assertion it carries is the one that still matters -- a pool this size must not LOSE rows to an apply. Not a verified market direction; never to be quoted as one. poolRows 747 is a FLOOR measured at capture (364 in the slug partition + 383 carrying it).",
+      "protectedIdentity": false
     }
-  ]
+  ],
+  "_derivedCanaries": "CF-A-CANARY-PER-SHARD (2026-09-03). The gate is per-shard, so a shard with no canary passes by construction -- 25 of 32 did, slot 29 among them. Entries with derivedFrom='provenance' are DERIVED, not hand-verified: each is a pool anchored by rows a person's own transaction, a Drew ruling or a verification placed there, which the rematch may never re-key. They are a floor on damage, never a substitute for Drew's seven.",
+  "_shardCoverage": {
+    "of": 32,
+    "covered": 32,
+    "uncovered": []
+  },
+  "_derivedAt": "2026-09-03"
 }

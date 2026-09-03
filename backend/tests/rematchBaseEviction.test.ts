@@ -59,9 +59,10 @@ type Classifier = {
   AGREE: string; IMPROVE: string; CONFLICT: string; UNDERIVABLE: string;
   PROTECTED: string; AUTO: string; BASE_EVICTION: string;
   FINISH_TOKENS: string[]; FINISH_COLOR_TOKENS: string[]; FINISH_PHRASES: string[];
-  titleNamesFinish: (t: string) => boolean;
+  titleNamesFinish: (t: string, ctx?: { year?: number | null; setKey?: string | null }) => boolean;
   slugParallelSegment: (s: string) => string | null;
   slugNamesParallel: (s: string) => boolean;
+  EVICTION_MOVABLE_AXES: Set<string>;
   classifyRow: (i: ClassifyInput) => Result;
 };
 const K = require_(path.join(backend, "scripts", "lib", "rematch-classify.cjs")) as Classifier;
@@ -126,7 +127,7 @@ describe("PIN 1 -- the Gonzalez shape tags BASE-EVICTION and is writable", () =>
     // family, and every one of their titles says "Auto". If "auto" were read
     // as a finish word the subclass would never fire on the shape it was
     // authorized for.
-    expect(K.titleNamesFinish(GONZALEZ_TITLE)).toBe(false);
+    expect(K.titleNamesFinish(GONZALEZ_TITLE, { year: 2026, setKey: "bowman" })).toBe(false);
   });
 });
 
@@ -147,7 +148,7 @@ describe("PIN 2 -- a title naming ANY finish token is NOT tagged", () => {
     // The title alone decides this, so it is asserted on the vocabulary
     // directly as well as through the classifier -- the row is left where it
     // is, whatever class the eight axes then report it as.
-    expect(K.titleNamesFinish(title)).toBe(true);
+    expect(K.titleNamesFinish(title, { year: 2026, setKey: "bowman" })).toBe(true);
     const r = K.classifyRow(evictInput({ row: evictRow({ title }) }));
     expect(r.subclass).toBeUndefined();
     expect(r.writable).toBe(false);
@@ -167,7 +168,7 @@ describe("PIN 2 -- a title naming ANY finish token is NOT tagged", () => {
       "2025 Bowman Draft Kade Anderson #Pp-15 Prized Pros. /250 Oakland",
       "2025 PANINI DONRUSS #140 JARLIN SUSANA 59/149 PSA 1",
     ]) {
-      expect(K.titleNamesFinish(t)).toBe(true);
+      expect(K.titleNamesFinish(t, { year: 2026, setKey: "bowman" })).toBe(true);
     }
     const r = K.classifyRow(evictInput({
       row: evictRow({ title: "2026 Bowman Justin Gonzalez Auto CPA-JG /499" }),
@@ -184,7 +185,7 @@ describe("PIN 2 -- a title naming ANY finish token is NOT tagged", () => {
       "2024 Topps #140 Susana Base",
       "2026 Bowman Gonzalez CPA-JG sold 8/2026",
     ]) {
-      expect(K.titleNamesFinish(t)).toBe(false);
+      expect(K.titleNamesFinish(t, { year: 2026, setKey: "bowman" })).toBe(false);
     }
   });
 
@@ -192,19 +193,19 @@ describe("PIN 2 -- a title naming ANY finish token is NOT tagged", () => {
     // This row was in the probe's own qualifying sample, one hyphen away from
     // being written to a base slug: "optic-flex" tokenises whole and never
     // matched bare "optic".
-    expect(K.titleNamesFinish("2025 PANINI DONRUSS OPTIC-FLEX #140 JARLIN SUSANA")).toBe(true);
-    expect(K.titleNamesFinish("2024 Topps Chrome-Refractor Judge 99")).toBe(true);
+    expect(K.titleNamesFinish("2025 PANINI DONRUSS OPTIC-FLEX #140 JARLIN SUSANA", { year: 2025, setKey: "panini-donruss" })).toBe(true);
+    expect(K.titleNamesFinish("2024 Topps Chrome-Refractor Judge 99", { year: 2024, setKey: "topps" })).toBe(true);
     // ...but a hyphenated name that contains no finish word is still clean.
-    expect(K.titleNamesFinish("2026 Bowman Jean-Carlos Rodriguez CPA-JR Auto")).toBe(false);
+    expect(K.titleNamesFinish("2026 Bowman Jean-Carlos Rodriguez CPA-JR Auto", { year: 2026, setKey: "bowman" })).toBe(false);
   });
 
   it("matches finish words WHOLE -- a surname is not a parallel", () => {
     // A substring test would read "Goldschmidt" as "gold" and strand a real
     // eviction; it would also read "Refractory" as "refractor". Neither word
     // is naming how the card is printed.
-    expect(K.titleNamesFinish("2024 Topps Paul Goldschmidt 12")).toBe(false);
-    expect(K.titleNamesFinish("2024 Topps Goldschmidt Gold 12")).toBe(true);
-    expect(K.titleNamesFinish("2019 Panini Chromed Rookie 5")).toBe(false);
+    expect(K.titleNamesFinish("2024 Topps Paul Goldschmidt 12", { year: 2024, setKey: "topps" })).toBe(false);
+    expect(K.titleNamesFinish("2024 Topps Goldschmidt Gold 12", { year: 2024, setKey: "topps" })).toBe(true);
+    expect(K.titleNamesFinish("2019 Panini Chromed Rookie 5", { year: 2019, setKey: "panini" })).toBe(false);
   });
 
   it("an empty title is never an eviction -- absent beats wrong", () => {
@@ -393,16 +394,24 @@ describe("PIN 6 -- an identity contradiction is never writable, subclass or no s
     expect(r.reasons.join(" ")).not.toContain("base-eviction-contradicted");
   });
 
-  it("the finish axes are exactly what an eviction MAY move", () => {
-    // A row that also copied the slug's /499 into its printRun field: the
-    // sibling form named in the classifier's own comment. It drops printRun
-    // and must still write -- that axis is the defect being repaired, not a
-    // contradiction about the card.
+  it("`parallel` is the ONLY axis an eviction may move", () => {
+    // AMENDED 2026-09-03 (audit finding 2). This assertion used to read "the
+    // finish axes", plural, and pinned that a row which also copied the slug's
+    // /499 into its printRun FIELD still wrote -- dropping the field on the
+    // way. The audit found a /1 (Immaculate Pujols) and Carroll /499 in the
+    // sample that shape would have erased.
+    //
+    // A base card is not serial-numbered. A row that STORES a print run is a
+    // fourth independent field saying "limited parallel", pointing the
+    // opposite way to the eviction, so it now VETOES rather than being erased.
+    // `printRun` has left the movable set entirely: nothing an eviction does
+    // may touch it.
+    expect(K.EVICTION_MOVABLE_AXES.has("parallel")).toBe(true);
+    expect(K.EVICTION_MOVABLE_AXES.has("printRun")).toBe(false);
+
     const r = K.classifyRow(evictInput({ stored: { ...evictStored, printRun: 499 } }));
-    expect(r.subclass).toBe(K.BASE_EVICTION);
-    expect(r.axes.dropped).toContain("printRun");
-    expect(r.writable).toBe(true);
-    expect(r.reasons.join(" ")).not.toContain("base-eviction-contradicted");
+    expect(r.writable).toBe(false);
+    expect(r.reasons.join(" ")).toMatch(/stored-printrun-names-a-limited-parallel/);
   });
 });
 
@@ -531,7 +540,7 @@ describe("the finish vocabulary is closed and grounded", () => {
     for (const c of ["gold", "orange", "blue", "red", "black"]) {
       expect(K.FINISH_COLOR_TOKENS).toContain(c);
     }
-    expect(K.titleNamesFinish("2026 Bowman Gonzalez Orange CPA-JG")).toBe(true);
+    expect(K.titleNamesFinish("2026 Bowman Gonzalez Orange CPA-JG", { year: 2026, setKey: "bowman" })).toBe(true);
   });
 
   it("does NOT contain words that are not about how a card is printed", () => {
@@ -542,6 +551,6 @@ describe("the finish vocabulary is closed and grounded", () => {
       expect(K.FINISH_TOKENS).not.toContain(w);
       expect(K.FINISH_COLOR_TOKENS).not.toContain(w);
     }
-    expect(K.titleNamesFinish("2026 Bowman Justin Gonzalez 1st Bowman Auto RC Prospect")).toBe(false);
+    expect(K.titleNamesFinish("2026 Bowman Justin Gonzalez 1st Bowman Auto RC Prospect", { year: 2026, setKey: "bowman" })).toBe(false);
   });
 });
