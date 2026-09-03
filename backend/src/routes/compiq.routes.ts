@@ -3709,8 +3709,8 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
           : null;
       if (noUsableLiveFmv && !hasSyntheticFallback && resolvedCardIdForCanonical) {
         try {
-          const { computeCanonicalFmv } = await import(
-            "../services/compiq/canonicalFmv.service.js"
+          const { computeCanonicalValuation } = await import(
+            "../services/compiq/canonicalValuation.js"
           );
           const identity = (est as { cardIdentity?: {
             player?: string | null;
@@ -3719,7 +3719,7 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
             number?: string | null;
             variant?: string | null;
           } }).cardIdentity ?? {};
-          const canon = await computeCanonicalFmv({
+          const canon = await computeCanonicalValuation({
             cardId: resolvedCardIdForCanonical,
             parallel: parsed.parallel ?? identity.variant ?? null,
             gradeCompany: parsed.gradingCompany ?? null,
@@ -5327,9 +5327,9 @@ router.post("/lookup-by-cert", requireSession, requireRateLimited("priceChecksPe
           let canonical: unknown = null;
           if (resolved.cardId) {
             try {
-              const { computeCanonicalFmv } = await import("../services/compiq/canonicalFmv.service.js");
+              const { computeCanonicalValuation } = await import("../services/compiq/canonicalValuation.js");
               const gradeNum = resolved.grade ? Number(resolved.grade) : null;
-              canonical = await computeCanonicalFmv({
+              canonical = await computeCanonicalValuation({
                 cardId: resolved.cardId,
                 parallel: resolved.parallel || "Base",
                 gradeCompany: resolved.grader,
@@ -5435,8 +5435,8 @@ router.post("/lookup-by-cert", requireSession, requireRateLimited("priceChecksPe
       : null;
     let canonicalFmvBlock: unknown = null;
     try {
-      const { computeCanonicalFmv } = await import("../services/compiq/canonicalFmv.service.js");
-      const result = await computeCanonicalFmv({
+      const { computeCanonicalValuation } = await import("../services/compiq/canonicalValuation.js");
+      const result = await computeCanonicalValuation({
         cardId: card.card_id,
         parallel: card.variant ?? null,
         gradeCompany: graderUC,
@@ -6196,8 +6196,8 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
       let canonicalFmvFallbackUsed: { fmv: number; method: string; confidence: number } | null = null;
       if (noUsableLiveFmv && !hasSyntheticFallback) {
         try {
-          const { computeCanonicalFmv } = await import(
-            "../services/compiq/canonicalFmv.service.js"
+          const { computeCanonicalValuation } = await import(
+            "../services/compiq/canonicalValuation.js"
           );
           const identity = (est as { cardIdentity?: {
             player?: string | null;
@@ -6206,7 +6206,7 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
             number?: string | null;
             variant?: string | null;
           } }).cardIdentity ?? {};
-          const canon = await computeCanonicalFmv({
+          const canon = await computeCanonicalValuation({
             cardId: resolvedCardId,
             parallel: resolvedParallelName ?? identity.variant ?? null,
             gradeCompany: typeof gradeCompany === "string" ? gradeCompany : null,

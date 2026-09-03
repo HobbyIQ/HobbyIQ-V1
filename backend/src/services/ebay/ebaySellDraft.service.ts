@@ -24,7 +24,8 @@
  * label, never a client-side number and never a stored one recomputed by
  * hand. FMV is the projected next sale from the comp pool's trend — never
  * a median, never a mean (feedback_no_medians_project_next_sale). So this
- * module calls computeCanonicalFmv and serves what it answers, together
+ * module prices through valueIdentity — the one valuation path — and
+ * serves what it answers, together
  * with `rungLabel` from the closed vocabulary in fmvRung.ts.
  *
  * It computes NOTHING. There is no multiplier here, no blend, no rounding
@@ -55,9 +56,9 @@
  */
 
 import {
-  computeCanonicalFmv,
   type CanonicalFmvResult,
 } from "../compiq/canonicalFmv.service.js";
+import { computeCanonicalValuation } from "../compiq/canonicalValuation.js";
 import { isExactPoolRung, type FmvRungLabel } from "../compiq/fmvRung.js";
 import {
   deriveSellWindowSignal,
@@ -333,7 +334,7 @@ export async function composeSellDraftPricing(
   holding: SellDraftHolding,
   deps?: {
     computeFmv?: (
-      input: Parameters<typeof computeCanonicalFmv>[0],
+      input: Parameters<typeof computeCanonicalValuation>[0],
     ) => Promise<CanonicalFmvResult>;
     /** CF-SELF-COMP-LABEL-REACHES-THE-RESULT (Drew, 2026-09-03). The seller's
      *  own user id, so a comp the seller contributed is labeled as theirs.
@@ -402,7 +403,7 @@ export async function composeSellDraftPricing(
     );
   }
 
-  const compute = deps?.computeFmv ?? computeCanonicalFmv;
+  const compute = deps?.computeFmv ?? computeCanonicalValuation;
 
   let result: CanonicalFmvResult;
   try {
@@ -415,6 +416,11 @@ export async function composeSellDraftPricing(
       product: holding.product ?? holding.setName ?? null,
       player: holding.playerName ?? null,
       cardNumber: holding.cardNumber ?? null,
+      // The seller's own purchases do not price the listing they are about
+      // to post. Their comps are still LABELED in provenance (the
+      // verifiedByUser flag labelsForResult reads) — they are excluded from
+      // the pool, not hidden from the reader.
+      excludeContributorUserId: sellerUserId,
     });
   } catch (err) {
     return empty(

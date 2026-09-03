@@ -4,8 +4,8 @@
 // under to be worth a look — each carrying the basis that justified it.
 //
 // This is a READ. It changes no valuation, writes no comp, and persists
-// nothing. computeCanonicalFmv is called exactly as Card Detail calls
-// it; the scanner only decides what to SHOW.
+// nothing. It prices through valueIdentity — the one valuation path —
+// exactly as Card Detail does; the scanner only decides what to SHOW.
 //
 // REUSE, not new scraping. Every live price here comes from the paths
 // that already exist:
@@ -49,7 +49,7 @@ import {
   type GradeMismatchReason,
   type ListingGradeReading,
 } from "./listingGradeMatch.js";
-import { computeCanonicalFmv } from "../compiq/canonicalFmv.service.js";
+import { computeCanonicalValuation } from "../compiq/canonicalValuation.js";
 import { listTargets, type BuyerIqTarget } from "./buyeriqStore.service.js";
 import {
   evaluateDeal,
@@ -104,7 +104,15 @@ export interface Deal {
 export interface SkippedTarget {
   targetId: string;
   playerName: string;
-  reason: DealRefusal | GradeMismatchReason | "no-listings" | "no-player-name";
+  /** "no-catalog-identity": the target carries no hiq: slug, so there is no
+   *  pool to price it from. It is REFUSED rather than priced off a minted
+   *  cache key (H-2, audit 2026-09-03) — the same refusal the scanner makes. */
+  reason:
+    | DealRefusal
+    | GradeMismatchReason
+    | "no-listings"
+    | "no-player-name"
+    | "no-catalog-identity";
   /** Present when a projection existed but did not clear the gate. */
   basis: DealBasis | null;
   /** How many listings passed the parallel gate but failed the grade
@@ -363,9 +371,32 @@ export async function scanDeals(opts: ScanDealsOptions): Promise<DealFeedResult>
       continue;
     }
 
-    // The projection. Same call Card Detail makes — no valuation change.
-    const fmvResult = await computeCanonicalFmv({
-      cardId: t.hobbyiqCardId ?? cacheCardId(t),
+    // The projection. The ONE valuation path — the same entry Card Detail,
+    // the scanner and the sell loop price through.
+    //
+    // H-2 (audit 2026-09-03) reached this file too. The old call passed
+    // `t.hobbyiqCardId ?? cacheCardId(t)`, and cacheCardId mints
+    // `buyeriq-identity:<year>:<set>:<player>:<number>:<parallel>` for a
+    // target with no slug. That string is a CACHE KEY — it names no catalog
+    // row — and handing it to the engine priced whatever pool it collided
+    // with, then published the result as DealBasis.projection with a rung
+    // and a confidence. The scanner was fixed to refuse such a target by
+    // name; the feed, which is what the user actually reads, was not.
+    //
+    // A target is priced only through its own catalog slug. One without a
+    // slug is refused by name: no price, no deal, no basis.
+    const slug = typeof t.hobbyiqCardId === "string" ? t.hobbyiqCardId.trim() : "";
+    if (!slug.startsWith("hiq:")) {
+      skipped.push({
+        targetId: t.id,
+        playerName: t.playerName,
+        reason: "no-catalog-identity",
+        basis: null,
+      });
+      continue;
+    }
+    const fmvResult = await computeCanonicalValuation({
+      cardId: slug,
       parallel: t.parallel ?? null,
       gradeCompany: t.gradeCompany ?? null,
       gradeValue: t.gradeValue ?? null,
@@ -374,7 +405,6 @@ export async function scanDeals(opts: ScanDealsOptions): Promise<DealFeedResult>
       player: t.playerName,
       cardNumber: t.cardNumber ?? null,
       isAuto: t.isAuto ?? null,
-      freshCompute: false,
     });
 
     // Evaluate every verified listing; keep the deepest qualifying one.

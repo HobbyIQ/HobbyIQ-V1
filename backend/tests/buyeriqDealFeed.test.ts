@@ -22,8 +22,12 @@ vi.mock("../src/services/ebay/ebayActiveListingsCache.service.js", () => ({
   readCachedActiveListings: (...a: unknown[]) => readCachedActiveListings(...a),
   writeCachedActiveListings: (...a: unknown[]) => writeCachedActiveListings(...a),
 }));
-vi.mock("../src/services/compiq/canonicalFmv.service.js", () => ({
-  computeCanonicalFmv: (...a: unknown[]) => computeCanonicalFmv(...a),
+// The feed prices through the one valuation path's canonical-shaped door
+// (canonicalValuation.ts -> valueIdentity), so THAT is what a unit test of the
+// feed's SELECTION logic stubs. The old mock named computeCanonicalFmv, the
+// second engine the feed no longer calls.
+vi.mock("../src/services/compiq/canonicalValuation.js", () => ({
+  computeCanonicalValuation: (...a: unknown[]) => computeCanonicalFmv(...a),
 }));
 
 const { scanDeals } = await import("../src/services/buyeriq/dealFeed.service.js");
@@ -34,6 +38,11 @@ function target(id: string, over: Record<string, unknown> = {}) {
     userId: "u1",
     docType: "target" as const,
     listId: "l1",
+    // H-2 (audit 2026-09-03): a target with no slug is REFUSED, never priced
+    // off a minted `buyeriq-identity:...` cache key. Every fixture here is a
+    // target that HAS a catalog identity, which is the case these tests are
+    // about; the refusal itself is pinned separately below.
+    hobbyiqCardId: "hiq:baseball:2026:bowman-chrome:cpa-eha:base:auto",
     playerName: "Eric Hartman",
     cardYear: 2026,
     setName: "Bowman Chrome",
@@ -378,5 +387,32 @@ describe("PINNED: identity includes GRADE — the false positives the verifier f
     expect(res.deals).toHaveLength(1);
     expect(res.deals[0].listing.listingId).toBe("i2");
     expect(res.deals[0].matchedTier).toBe("PSA 10");
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+// H-2 reached the FEED too (audit follow-up to #1679)
+// ────────────────────────────────────────────────────────────────────────────
+describe("PINNED: a target with no catalog identity is refused, never minted", () => {
+  it("refuses by name, prices nothing, and never reaches the engine", async () => {
+    listTargets.mockResolvedValue([target("t1", { hobbyiqCardId: null })]);
+    // Listings ARE available and deeply discounted, so nothing but the
+    // identity refusal can be what stops this becoming a deal.
+    fetchCardActiveListings.mockResolvedValue({
+      listings: [listing("i1", 70)], totalReported: 1, effectiveQuery: "q", snapshottedAt: "",
+    });
+    computeCanonicalFmv.mockResolvedValue(fmv(100, 0.9));
+    // The live shape: a wanted target the user added by hand, with no slug.
+    // The old feed passed `cacheCardId(t)` — "buyeriq-identity:2026:bowman
+    // chrome:eric hartman:cpa-eha:" — into the engine, priced whatever pool
+    // that collided with, and published it as DealBasis.projection.
+    // MUTATION: restoring `cardId: t.hobbyiqCardId ?? cacheCardId(t)` makes
+    // this red — the engine would be called and a deal could be flagged.
+    const res = await scanDeals({ userId: "u1" });
+    expect(res.deals).toEqual([]);
+    expect(res.skipped).toEqual([
+      { targetId: "t1", playerName: "Eric Hartman", reason: "no-catalog-identity", basis: null },
+    ]);
+    expect(computeCanonicalFmv).not.toHaveBeenCalled();
   });
 });

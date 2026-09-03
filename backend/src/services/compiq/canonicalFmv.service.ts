@@ -368,10 +368,27 @@ export async function invalidateCanonicalFmvCache(input: {
 }
 
 /**
- * The one function. Every FMV emission across the codebase should
- * eventually call this. Deterministic given inputs. Idempotent.
- * Fire-and-forget safe (never throws in production — returns
- * no-basis on any failure).
+ * NOT the one function any more, and no longer a door anything outside this
+ * module may open (audit 2026-09-03, the follow-up to #1679).
+ *
+ * THE GRAPH. This is a SEPARATE ENGINE from `valueIdentity`, not the inner
+ * computation it wraps. The two reach sold_comps through disjoint readers —
+ * valueIdentity via priceHoldingFromExactPool -> exactPoolReader, this via
+ * readCompsByCardId / readCompsByIdentity / readCompsByHobbyIqCardId — and
+ * neither module imports the other's. So calling this directly did not merely
+ * "skip a wrapper": it ran a different ladder AND skipped, in full, the one
+ * path's owner exclusion, adjudication filters, union guard, rung-meta,
+ * labels, twin refusal and swing alarm.
+ *
+ * Every published number now goes through `valueIdentity`. The callers that
+ * must keep speaking CanonicalFmvResult go through `computeCanonicalValuation`
+ * (canonicalValuation.ts), which calls the one entry and renders its answer in
+ * this shape. This export survives for the ladder helpers and the pinning
+ * tests that characterize it; `tests/engineBoundaryOneValuationPath.test.ts`
+ * fails if any module outside the one path imports it again.
+ *
+ * Deterministic given inputs. Idempotent. Fire-and-forget safe (never throws
+ * in production — returns no-basis on any failure).
  *
  * Cache: Redis TTL 15 min, keyed on (cardId, parallel, grade).
  * Bypass with input.freshCompute = true.

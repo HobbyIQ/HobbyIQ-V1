@@ -745,3 +745,88 @@ describe("D17 — the portfolio persist site: what is written is what the routes
     expect(EXACT.has(String(hld.fmvRung))).toBe(false);
   });
 });
+
+// ────────────────────────────────────────────────────────────────────────────
+// The moved sites (audit follow-up to #1679) — each returns the SAME NUMBER
+// valueIdentity returns, over this same fixture pool.
+//
+// These are the six sites the verifier found still on computeCanonicalFmv.
+// Each now goes through computeCanonicalValuation, which calls the one entry
+// and renders its answer in the canonical wire shape — so "same number" here
+// is byte-identical, not approximately equal.
+// ────────────────────────────────────────────────────────────────────────────
+describe("the moved sites return what the one entry returns", () => {
+  it("computeCanonicalValuation === valueIdentity, in the canonical wire shape", async () => {
+    const { valueIdentity } = await import("../src/services/compiq/oneValuationPath.service.js");
+    const { toCanonicalFmvResponse } = await import("../src/services/compiq/oneValuationPathAdapters.js");
+    const { computeCanonicalValuation } = await import("../src/services/compiq/canonicalValuation.js");
+
+    const v = await valueIdentity({ id: GOLD, grade: null, printRun: null, playerName: null });
+    const expected = toCanonicalFmvResponse(v);
+    const actual = await computeCanonicalValuation({ cardId: GOLD });
+
+    // computedAt is a wall-clock stamp taken per call; everything that carries
+    // a VALUE is compared byte-for-byte.
+    expect({ ...actual, computedAt: null }).toEqual({ ...expected, computedAt: null });
+    expect(actual.fmv).toBe(v.fairMarketValue);
+    expect(actual.rungLabel).toBe(v.rungLabel);
+    expect(actual.confidence).toBe(v.confidence);
+    expect(EXACT.has(String(actual.rungLabel))).toBe(true);
+    // MUTATION: pointing the door back at computeCanonicalFmv makes this red —
+    // the second engine reads a different pool and answers a different number.
+    expect(h.calls.canonical).toBe(0);
+  });
+
+  it("POST /canonical-fmv agrees with the one entry for a VENDOR id too — the tail that used to be the second engine", async () => {
+    const { valueIdentity } = await import("../src/services/compiq/oneValuationPath.service.js");
+    // VENDOR maps to GOLD through lookupHobbyIqCardIdForVendorCardId, which is
+    // resolveValuationIdentity's own mapping — so the one path can answer it,
+    // and the computeCanonicalFmv fallthrough was never needed.
+    const res = await request(app).post("/api/compiq/canonical-fmv").set(H).send({ cardId: VENDOR });
+    expect(res.status).toBe(200);
+    const v = await valueIdentity({ id: VENDOR, grade: null, printRun: null, playerName: null });
+    expect(res.body.fmv).toBe(v.fairMarketValue);
+    expect(res.body.rungLabel).toBe(v.rungLabel);
+    expect(res.body.identity.slug).toBe(GOLD);
+    expect(h.calls.canonical).toBe(0);
+  });
+
+  it("the sell draft prices a holding at exactly the one entry's number", async () => {
+    const { valueIdentity } = await import("../src/services/compiq/oneValuationPath.service.js");
+    const { composeSellDraftPricing } = await import("../src/services/ebay/ebaySellDraft.service.js");
+
+    const v = await valueIdentity({ id: GOLD, grade: null, printRun: null, playerName: null });
+    const ctx = await composeSellDraftPricing({
+      hobbyiqCardId: GOLD,
+      playerName: "Test Player",
+      cardYear: 2018,
+      setName: "2018 Bowman Chrome",
+      cardNumber: "49",
+      parallel: "Gold Refractor",
+    } as never);
+
+    expect(ctx.pricing.status).toBe("engine");
+    // Cents, from the entry's dollars — a representation change, not a
+    // valuation one. MUTATION: restoring computeCanonicalFmv here makes the
+    // draft quote a different pool's number and turns this red.
+    expect(ctx.pricing.priceCents).toBe(Math.round((v.fairMarketValue as number) * 100));
+    expect(ctx.pricing.rungLabel).toBe(v.rungLabel);
+    expect(ctx.pricing.confidence).toBe(v.confidence);
+    expect(h.calls.canonical).toBe(0);
+  });
+
+  it("the sell draft declines — rather than guessing — when the entry has no number", async () => {
+    const { composeSellDraftPricing } = await import("../src/services/ebay/ebaySellDraft.service.js");
+    const ctx = await composeSellDraftPricing({
+      hobbyiqCardId: EMPTY,
+      playerName: "Test Player",
+      cardYear: 2020,
+      setName: "2020 Topps Chrome",
+      cardNumber: "1",
+      parallel: "Base",
+    } as never);
+    expect(ctx.pricing.status).not.toBe("engine");
+    expect(ctx.pricing.priceCents).toBeNull();
+    expect(h.calls.canonical).toBe(0);
+  });
+});
