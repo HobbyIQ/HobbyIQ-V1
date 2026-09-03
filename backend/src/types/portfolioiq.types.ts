@@ -230,6 +230,39 @@ export interface PortfolioHolding {
      *  was refused because the holding's two identities named different
      *  products: the price came from the slug half alone, and this says so. */
     unionRefused?: string;
+    /** CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (Drew, 2026-09-03). The caveats
+     *  this price must be read with — the SAME set the live canonical-fmv
+     *  response carries for this holding, derived through the same two
+     *  functions (compiq/valuationLabels.ts routes the Valuation through
+     *  toCanonicalFmvResponse then labelsForResult). Codes are the sell
+     *  draft's closed vocabulary:
+     *
+     *    speculative      the card's own sales went cold; the number is its
+     *                     last real sale carried on the player's market
+     *    self-anchored    at least one sale behind it is the OWNER'S OWN
+     *    fallback-rung    no sale of this exact card at this grade
+     *    low-confidence   thin evidence (< 0.35)
+     *
+     *  Drew's ruling (2026-09-01): a self-comp PUBLISHES **and is LABELED**.
+     *  Before this field the label reached the card page and the sell draft
+     *  and never the holding, so a portfolio row showed a self-anchored $251
+     *  as if it were an ordinary market read. Written by the writer that
+     *  decided the price, at the same time as the price — a label can never
+     *  outlive the number it described.
+     *
+     *  Absent / empty → this price surface carries no caveats, or predates
+     *  the field. Never infer a caveat from prose. */
+    labels?: Array<{
+      code: "speculative" | "self-anchored" | "fallback-rung" | "low-confidence";
+      text: string;
+    }>;
+    /** The self-anchored ratio in machine-readable form: how many of the
+     *  evidence pool's `total` sales are the owner's `own`. `own === total`
+     *  is the fully self-anchored case (Drew's Verlander PSA 10: 1 of 1).
+     *  Stated against the POOL, never the truncated display sample —
+     *  CF-COMP-COUNT-IS-THE-POOL. Null/absent when no published sale is the
+     *  owner's, which is the universal case. */
+    selfAnchored?: { own: number; total: number } | null;
   };
   // CF-RUNG-LABEL (D4 "one valuation path", PR 1 — 2026-08-29). The
   // machine-readable name of the RUNG that produced this holding's current

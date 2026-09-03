@@ -494,7 +494,7 @@ describe("repriceHoldingsForUser — the fixture, end to end", () => {
     expect(hld.valuationStatus).toBe("observed");
     expect(hld.pricingSource).toBe("unified-pricing");
     expect(hld.fmvRung).toBe("exact-pool-leading-edge");
-    expect(hld.pricingSourceMeta).toEqual({ slug: GOLD, method: "exact-pool-leading-edge", compsUsed: 3, confidence: expect.any(Number) });
+    expect(hld.pricingSourceMeta).toEqual({ slug: GOLD, method: "exact-pool-leading-edge", compsUsed: 3, confidence: expect.any(Number), labels: [], selfAnchored: null });
     expect(hld.estimateBasis).toMatch(/^unified: /);
     expect(hld.estimateBasis).toContain("id=hobbyiqCardId");
     expect(hld.estimateBasis).not.toMatch(/floor/i);
@@ -635,10 +635,16 @@ describe("portfolioStore — every estimate site asks the gate (source pin)", ()
     // figure the basis prose already quoted as conf=. The pin's subject is
     // unchanged — FOUR unified writes still name their rung and sample count
     // — and it now also requires the confidence to travel with them.
-    expect((src.match(/pricingSourceMeta: (?:withUnionRefused\()?\{ slug: [^}]*method: (?:u|bU|unified)\.rungLabel, compsUsed: (?:u|bU|unified)\.totalSampleCount, confidence: (?:u|bU|unified)\.confidence \}/g) ?? []).length).toBe(4);
-    // The wrap adds the breadcrumb and nothing else: same three keys when no
-    // union was refused.
-    expect(src).toMatch(/pricingSourceMeta: withUnionRefused\(\{ slug: exact\.attempt\.cardId,/);
+    // CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (2026-09-03): and the LABELS,
+    // derived per-tier through the one derivation. The metas are multi-line
+    // now, so the pin matches across newlines; its subject is still FOUR.
+    const unifiedMetas = src.match(
+      /pricingSourceMeta: (?:withUnionRefused\()?\{[\s\S]*?method: (?:u|bU|unified)\.rungLabel,[\s\S]*?compsUsed: (?:u|bU|unified)\.totalSampleCount,[\s\S]*?confidence: (?:u|bU|unified)\.confidence,[\s\S]*?persistedLabelsForUnifiedResult\([\s\S]*?\}/g,
+    ) ?? [];
+    expect(unifiedMetas.length).toBe(4);
+    // The wrap adds the breadcrumb and nothing else: the same keys when no
+    // union was refused. Multi-line since the labels joined the meta.
+    expect(src).toMatch(/pricingSourceMeta: withUnionRefused\(\{\s+slug: exact\.attempt\.cardId,/);
   });
   it("every unified write prices a thin exact pool (>= 1 sample); no site demands confidence >= 0.3 any more", () => {
     expect(src).not.toMatch(/(unified|unifiedResult|bU|u)\.confidence >= 0\.3/);

@@ -33,6 +33,12 @@ import {
 // CF-ONE-VALUATION-PATH (D17, 2026-08-30): the persist site prices the exact
 // pool through the ONE valuation entry (holdingValuation → valueIdentity).
 import { valueHoldingThroughOneEntry, holdingGrade as holdingGradeOf } from "./holdingValuation.js";
+// CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (Drew, 2026-09-03). The legacy
+// exact-pool writers below persist prices too — only for identities the
+// catalog cannot name, but persist they do. They stamp the same label set
+// the one-entry writer does, through the same derivation.
+import { persistedLabelsForUnifiedResult } from "../compiq/valuationLabels.js";
+import { tierLabelFor } from "../compiq/oneValuationPath.service.js";
 import { isPriceFromOurPoolEnabled, priceHoldingFromOurPool } from "./priceFromOurPool.service.js";
 import { composeHoldingWireShape, composePortfolioListResponse, type WireEntitlements } from "./responseAssembly.js";
 // CF-PRO-SELLER-GATE (Drew, 2026-09-02): the wire composer gates paid fields
@@ -3058,6 +3064,10 @@ function unifiedHoldingWrite(
   holding: PortfolioHolding,
   exact: ExactPoolPrice,
   nowIso: string,
+  /** CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (Drew, 2026-09-03): the owner
+   *  this price is being written for, so a sale THEY contributed is labeled
+   *  as theirs. Null on any path that names no user — nothing is "yours". */
+  ownerUserId: string | null = null,
 ): PortfolioHolding {
   const u = exact.u;
   return {
@@ -3085,7 +3095,14 @@ function unifiedHoldingWrite(
     isEstimate: false,
     valuationStatus: "observed",
     pricingSource: "unified-pricing",
-    pricingSourceMeta: withUnionRefused({ slug: exact.attempt.cardId, method: u.rungLabel, compsUsed: u.totalSampleCount, confidence: u.confidence }, exact.attempt),
+    pricingSourceMeta: withUnionRefused({
+      slug: exact.attempt.cardId,
+      method: u.rungLabel,
+      compsUsed: u.totalSampleCount,
+      confidence: u.confidence,
+      // CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (Drew, 2026-09-03).
+      ...persistedLabelsForUnifiedResult(u, tierLabelFor(holdingGradeOf(holding)), ownerUserId),
+    }, exact.attempt),
     nearestGradedAnchor: undefined,
     verdict: "Observed",
     recommendation: holding.recommendation ?? "Hold",
@@ -3257,7 +3274,7 @@ async function gateEstimateAgainstExactPool(input: {
     }));
     return {
       outcome: "priced-from-exact-pool",
-      holding: unifiedHoldingWrite(holding, exact, nowIso),
+      holding: unifiedHoldingWrite(holding, exact, nowIso, input.userId ?? null),
       blockingId: verdict.blockingId as string,
       canonical: exact.canonical,
     };
@@ -3439,7 +3456,14 @@ async function autoPriceHolding(
           pricingSource: "unified-pricing",
           // CF-LABELS-TELL-THE-TRUTH (D4 PR 5): the meta names THIS price's
           // rung and pool; a previous pass's "cross-setkey" cannot survive.
-          pricingSourceMeta: { slug: exact?.attempt.cardId ?? String(earlyResolvedId), method: u.rungLabel, compsUsed: u.totalSampleCount, confidence: u.confidence },
+          pricingSourceMeta: {
+            slug: exact?.attempt.cardId ?? String(earlyResolvedId),
+            method: u.rungLabel,
+            compsUsed: u.totalSampleCount,
+            confidence: u.confidence,
+            // CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (Drew, 2026-09-03).
+            ...persistedLabelsForUnifiedResult(u, tierLabelFor(holdingGradeOf(holding as PortfolioHolding)), userId ?? null),
+          },
           lastUpdated: nowIso,
           sourceVendor: "cardhedge" as any,
           sourceVendorUpdatedAt: nowIso,
@@ -9860,7 +9884,14 @@ export async function repriceHoldingsForUser(
               isEstimate: false,
               valuationStatus: "observed",
               pricingSource: "unified-pricing",
-              pricingSourceMeta: { slug: bExactEarly?.attempt.cardId ?? String(bEarlyId), method: bU.rungLabel, compsUsed: bU.totalSampleCount, confidence: bU.confidence },
+              pricingSourceMeta: {
+                slug: bExactEarly?.attempt.cardId ?? String(bEarlyId),
+                method: bU.rungLabel,
+                compsUsed: bU.totalSampleCount,
+                confidence: bU.confidence,
+                // CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (Drew, 2026-09-03).
+                ...persistedLabelsForUnifiedResult(bU, tierLabelFor(holdingGradeOf(holding as PortfolioHolding)), userId ?? null),
+              },
               lastUpdated: bNow,
               sourceVendor: "cardhedge" as any,
               sourceVendorUpdatedAt: bNow,
@@ -9973,7 +10004,14 @@ export async function repriceHoldingsForUser(
                 isEstimate: false,
                 valuationStatus: "observed",
                 pricingSource: "unified-pricing",
-                pricingSourceMeta: { slug: bExact?.attempt.cardId ?? String(bResolvedId), method: unified.rungLabel, compsUsed: unified.totalSampleCount, confidence: unified.confidence },
+                pricingSourceMeta: {
+                  slug: bExact?.attempt.cardId ?? String(bResolvedId),
+                  method: unified.rungLabel,
+                  compsUsed: unified.totalSampleCount,
+                  confidence: unified.confidence,
+                  // CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (Drew, 2026-09-03).
+                  ...persistedLabelsForUnifiedResult(unified, tierLabelFor(holdingGradeOf(holding as PortfolioHolding)), userId ?? null),
+                },
                 verdict: holding.verdict ?? "Hold",
                 recommendation: holding.recommendation ?? "Hold",
                 lastUpdated: uNow,
