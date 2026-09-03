@@ -73,9 +73,11 @@ async function main() {
       epoch: r.epoch,
       basketSize: r.basketSize,
       pointsWritten: r.pointsWritten,
+      pointsWithheld: r.pointsWithheld,
       firstDate: r.firstDate,
       lastDate: r.lastDate,
       latestLevel: r.latestLevel,
+      latestUsedWeight: r.latestUsedWeight,
       reusedBasket: r.reusedBasket === true,
     }));
   }
@@ -85,6 +87,7 @@ async function main() {
     sportsRequested: (sports ?? ["baseball", "basketball", "football", "hockey", "pokemon"]).length,
     sportsComputed: results.length,
     totalPointsWritten: totalPoints,
+    totalPointsWithheld: results.reduce((s, r) => s + (r.pointsWithheld || 0), 0),
     elapsedSec: Math.round((Date.now() - started) / 1000),
   }));
 

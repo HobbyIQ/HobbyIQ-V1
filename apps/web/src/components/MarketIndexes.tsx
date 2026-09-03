@@ -11,6 +11,12 @@
 // area fill, and an "Index: N · 180d" footer. Sparkline follows the
 // inline-SVG convention already used by PortfolioValueChart (viewBox +
 // preserveAspectRatio + a linearGradient area fill), not a chart lib.
+//
+// FRESHNESS (H-12, 2026-09-03): the tile shows "n of N fresh" whenever
+// the newest point was computed from less than the full basket. A level
+// off 1 member used to render identically to one off 94, which is how a
+// 36x fabricated hockey print stayed invisible. A carried (stale) level
+// says so outright.
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -128,6 +134,31 @@ function IndexTile({ data }: { data: SportIndexSeries }) {
       <div className="mt-3 text-[11px] text-[color:var(--color-muted)] tabular-nums">
         Index: {data.latestLevel != null ? data.latestLevel.toFixed(1) : "—"} · {data.windowDays}d
       </div>
+      <FreshnessNote data={data} />
+    </div>
+  );
+}
+
+/**
+ * "n of N fresh" — shown only when the newest point was computed from
+ * less than the whole basket, so a full-basket tile stays uncluttered.
+ * A stale tile (the point was withheld and the prior level carried) says
+ * that instead, because the number on screen is not today's.
+ */
+function FreshnessNote({ data }: { data: SportIndexSeries }) {
+  const fresh = data.freshMembers;
+  const basket = data.basketSize;
+  if (data.stale) {
+    return (
+      <div className="mt-1 text-[11px]" style={{ color: "var(--color-muted)" }}>
+        Carried · basket too thin to price
+      </div>
+    );
+  }
+  if (fresh == null || basket == null || fresh >= basket) return null;
+  return (
+    <div className="mt-1 text-[11px] tabular-nums" style={{ color: "var(--color-muted)" }}>
+      {fresh} of {basket} fresh
     </div>
   );
 }

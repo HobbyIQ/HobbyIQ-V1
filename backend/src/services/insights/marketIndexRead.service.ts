@@ -1,6 +1,13 @@
 // CF-MARKET-INDEXES (Drew, 2026-09-02). Read side: one call returns
 // every sport's series + latest values, which is exactly what the
 // MarketIndexes tile strip needs to render without a fan-out.
+//
+// H-12 (2026-09-03): freshMembers used to be STORED and never read back,
+// so a level computed from 1 member rendered identically to one computed
+// from 94 - which is why the hockey collapse (C-1) was invisible for as
+// long as it was. The SELECT now carries freshMembers, usedWeight and
+// the withheld flags, and the response surfaces them, so a thin point
+// can say so on the tile instead of passing for a real one.
 
 import {
   INDEX_SPORTS,
@@ -14,6 +21,13 @@ import {
 export interface IndexSeriesPoint {
   date: string;
   level: number;
+  /** Members with a fresh (non-carried) value on this date. */
+  freshMembers?: number;
+  /** Share of basket weight actually valued (0..1). */
+  usedWeight?: number;
+  /** True when the level is carried from a prior day, not computed. */
+  stale?: boolean;
+  withheldReason?: string;
 }
 
 export interface SportIndexSeries {
@@ -26,6 +40,13 @@ export interface SportIndexSeries {
   windowDays: number;
   basketSize: number | null;
   asOf: string | null;
+  /** Members with a fresh value on the newest point. */
+  freshMembers: number | null;
+  /** Share of basket weight valued on the newest point (0..1). */
+  usedWeight: number | null;
+  /** The newest point is carried, not computed - the basket went thin. */
+  stale: boolean;
+  withheldReason: string | null;
 }
 
 export interface MarketIndexesResponse {
@@ -46,6 +67,10 @@ async function readSeries(sport: string, windowDays: number): Promise<SportIndex
     windowDays,
     basketSize: null,
     asOf: null,
+    freshMembers: null,
+    usedWeight: null,
+    stale: false,
+    withheldReason: null,
   };
   const container = await getSeriesContainer();
   if (!container) return empty;
@@ -53,7 +78,8 @@ async function readSeries(sport: string, windowDays: number): Promise<SportIndex
   const from = addDays(isoDay(new Date()), -(windowDays - 1));
   try {
     const iter = container.items.query<IndexPointDoc>({
-      query: `SELECT c.date, c.level, c.basketSize
+      query: `SELECT c.date, c.level, c.basketSize, c.freshMembers,
+                     c.usedWeight, c.stale, c.withheldReason
               FROM c
               WHERE c.cardId = @pk
                 AND c.docType = 'market_index_point'
@@ -71,18 +97,29 @@ async function readSeries(sport: string, windowDays: number): Promise<SportIndex
     }
     if (rows.length === 0) return empty;
 
-    const series = rows.map((r) => ({ date: r.date, level: r.level }));
+    const series: IndexSeriesPoint[] = rows.map((r) => ({
+      date: r.date,
+      level: r.level,
+      freshMembers: r.freshMembers,
+      usedWeight: r.usedWeight,
+      ...(r.stale ? { stale: true, withheldReason: r.withheldReason } : {}),
+    }));
     const first = series[0].level;
     const last = series[series.length - 1].level;
     const changePct = first > 0 ? Math.round(((last - first) / first) * 1000) / 10 : null;
+    const newest = rows[rows.length - 1];
     return {
       sport,
       series,
       latestLevel: last,
       changePct,
       windowDays,
-      basketSize: rows[rows.length - 1].basketSize ?? null,
+      basketSize: newest.basketSize ?? null,
       asOf: series[series.length - 1].date,
+      freshMembers: newest.freshMembers ?? null,
+      usedWeight: newest.usedWeight ?? null,
+      stale: newest.stale === true,
+      withheldReason: newest.withheldReason ?? null,
     };
   } catch {
     return empty;

@@ -176,6 +176,14 @@ struct MarketIndexTile: View {
                         .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                 }
             }
+
+            // Freshness (H-12). Shown only when the newest point came off
+            // less than the full basket, so a healthy tile stays quiet.
+            if let note = index.freshnessNote {
+                Text(note)
+                    .font(.caption2)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            }
         }
         .padding(12)
         .frame(width: 148, alignment: .leading)
@@ -198,6 +206,7 @@ struct MarketIndexTile: View {
             parts.append(changeText)
         }
         if let basket = index.basketSize { parts.append("basket of \(basket) cards") }
+        if let note = index.freshnessNote { parts.append(note) }
         return parts.joined(separator: ", ")
     }
 }
