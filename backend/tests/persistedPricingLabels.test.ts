@@ -51,9 +51,9 @@ import { computeUnifiedPrice } from "../src/services/compiq/unifiedPricing.servi
 import { toCanonicalFmvResponse } from "../src/services/compiq/oneValuationPathAdapters.js";
 import { labelsForResult } from "../src/services/ebay/ebaySellDraft.service.js";
 import { persistedLabelsForValuation } from "../src/services/compiq/valuationLabels.js";
-import { observedHoldingWrite } from "../src/services/portfolioiq/holdingValuation.js";
+import { observedHoldingWrite, gradeCurveEstimateHoldingWrite } from "../src/services/portfolioiq/holdingValuation.js";
 import { composeHoldingWireShape } from "../src/services/portfolioiq/responseAssembly.js";
-import { buildPricingEnvelope } from "../src/services/portfolioiq/pricingEnvelope.builder.js";
+import { buildPricingEnvelope, resolvePricingConfidence } from "../src/services/portfolioiq/pricingEnvelope.builder.js";
 import type { Valuation } from "../src/services/compiq/oneValuationPath.service.js";
 import type { PortfolioHolding } from "../src/types/portfolioiq.types.js";
 
@@ -317,5 +317,80 @@ describe("the derivation is the one derivation", () => {
         .map((l) => ({ code: l.code, text: l.text }));
       expect(persistedLabelsForValuation(v).labels).toEqual(direct);
     }
+  });
+});
+
+// CF-CONFIDENCE-IS-NOT-OPTIONAL (2026-09-03).
+//
+// The same class of defect as the labels above, one field over, found the same
+// way: read-only in prod after reprice run 33801195439, `pricingSourceMeta.
+// confidence` was ABSENT on 43 of Drew's 43 holdings — after TWO reprices.
+//
+// The engine had the number the whole time; Caglianone's own persisted label
+// read "Low confidence (0.23)". What dropped it was the writer:
+// holdingValuation.ts — the lane the reprice wave actually used — built its
+// meta with slug, compsUsed and labels and never named confidence, while the
+// sibling lane in portfolioStore stamped `confidence: u.confidence` correctly.
+// Two write paths, one contract, and the type permitted the disagreement:
+// `confidence?: number | null` on the helper's meta, and writeHoldingValuation
+// (#1677) only emits the key when non-null, so an omission vanished silently.
+//
+// It is not cosmetic. #1672 made the pricing envelope and the sell window READ
+// this field; null means "unknown-confidence" and the sell timing is withheld.
+// A dropped field kept the sell-window feature dark for every unified row.
+//
+// So: the fixture goes through observedHoldingWrite and the persisted
+// confidence must EQUAL the engine's, on the same 0..1 scale the consumer
+// requires — pinned all the way to resolvePricingConfidence, because equality
+// with the engine is only half the contract; the number must also survive the
+// reader that #1672 gates the feature on.
+describe("the writer persists the engine's pricing confidence", () => {
+  it("observedHoldingWrite stamps pricingSourceMeta.confidence === the engine's value", async () => {
+    const v = await valuationFor({
+      rows: VERLANDER, grade: { company: "PSA", value: 10 }, owner: OWNER,
+      confidence: 0.23,  // Caglianone's live figure
+    });
+    const written = observedHoldingWrite(HOLDING, v, new Date().toISOString());
+    const meta = written.pricingSourceMeta as unknown as { confidence?: unknown };
+
+    // MUTATION: drop `confidence: v.confidence` from observedHoldingWrite's
+    // meta and this is `undefined` — exactly the live shape — and red.
+    expect(meta.confidence).toBe(0.23);
+    expect(meta.confidence).toBe(v.confidence);
+    // Present as an OWN key, not merely undefined-equal: absence was the bug.
+    expect(Object.keys(meta as object)).toContain("confidence");
+  });
+
+  it("gradeCurveEstimateHoldingWrite stamps it too — an estimate carries its confidence", async () => {
+    const v = await valuationFor({
+      rows: VERLANDER, grade: { company: "PSA", value: 10 }, owner: OWNER,
+      confidence: 0.41,
+    });
+    const written = gradeCurveEstimateHoldingWrite(HOLDING, v, new Date().toISOString());
+    const meta = written.pricingSourceMeta as unknown as { confidence?: unknown };
+    expect(meta.confidence).toBe(0.41);
+    expect(Object.keys(meta as object)).toContain("confidence");
+  });
+
+  it("the persisted number is the 0..1 quantity the #1672 consumer reads back", async () => {
+    // The scale is load-bearing: resolvePricingConfidence rejects anything
+    // outside 0..1 (unitOrNull) and returns null — which the sell window
+    // reports as "unknown-confidence" and withholds timing for. Passing the
+    // engine's value through scalePricingConfidence (the LEGACY 0..100 path's
+    // converter) would make 0.23 into 0.0023; passing it raw is correct
+    // because observedGradeCurve.computeConfidence already emits 0..1.
+    const v = await valuationFor({
+      rows: VERLANDER, grade: { company: "PSA", value: 10 }, owner: OWNER,
+      confidence: 0.23,
+    });
+    const written = observedHoldingWrite(HOLDING, v, new Date().toISOString());
+    expect(resolvePricingConfidence(written)).toBe(0.23);
+    // And the envelope publishes it as the PRICING confidence.
+    expect(buildPricingEnvelope(written, {
+      fmvPerUnit: 251,
+      displayable: { value: 251, source: "observed" },
+      quantity: 1,
+      freshness: "Live",
+    }).confidence.pricing).toBe(0.23);
   });
 });

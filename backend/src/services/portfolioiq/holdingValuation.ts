@@ -113,6 +113,14 @@ export function observedHoldingWrite(holding: PortfolioHolding, v: Valuation, no
     meta: {
       slug: v.identity.pooledAs ?? v.identity.slug ?? v.identity.requestedId,
       compsUsed: v.compsUsed,
+      // CF-CONFIDENCE-IS-NOT-OPTIONAL (2026-09-03): the engine's own pricing
+      // confidence, already 0..1 (observedGradeCurve.computeConfidence emits
+      // that scale), passed through unscaled — the same quantity and the same
+      // way the sibling lane in portfolioStore stamps `u.confidence`. NOT
+      // scalePricingConfidence: that converts the LEGACY estimate path's
+      // 0..100 `pricingConfidence`, and putting a 0..1 value through it would
+      // report 0.23 as 0.0023 and fail resolvePricingConfidence's unit check.
+      confidence: v.confidence,
       // CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (Drew, 2026-09-03): the same
       // label set the live canonical-fmv response carries for this holding,
       // derived through the same two functions (valuationLabels.ts). A
@@ -159,6 +167,11 @@ export function gradeCurveEstimateHoldingWrite(holding: PortfolioHolding, v: Val
     meta: {
       slug: v.identity.pooledAs ?? v.identity.slug ?? v.identity.requestedId,
       compsUsed: v.compsUsed,
+      // CF-CONFIDENCE-IS-NOT-OPTIONAL (2026-09-03): an estimate carries its
+      // confidence too — a grade-curve fill is exactly the population whose
+      // confidence a reader most needs, and withholding the number is what
+      // left the sell window dark. Same 0..1 engine scale, passed through.
+      confidence: v.confidence,
       // CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS: an estimate carries its
       // labels too — a grade-curve fill IS a fallback rung, and it says so.
       ...persistedLabelsForValuation(v),
