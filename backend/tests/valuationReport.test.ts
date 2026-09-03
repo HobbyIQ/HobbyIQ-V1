@@ -621,3 +621,147 @@ describe("report rows", () => {
     expect(r.lineTotal).toBe(20);
   });
 });
+
+
+// ─── CF-REPORT-CONFIDENCE-IS-PRICING (2026-09-03) ────────────────────────
+//
+// The "Conf." column promises, in the methodology section, that it says
+// how well-evidenced the VALUE is. It was rendering the holding's
+// match/identity confidence instead — the certainty that we know WHICH
+// card this is, which is a different question with a different answer.
+//
+// Live, Drew's Greg Maddux 1987 Topps Traded Tiffany #70T rendered "100%"
+// (match confidence 1.0) beside a basis line that said conf=0.37. On a
+// document a reader may hand to an insurer, that is the report claiming
+// evidence it does not have.
+//
+// These pin the shape of the fix: the column carries the ENGINE's pricing
+// confidence, and it is never filled in from a match confidence.
+describe("the confidence column is the PRICING confidence", () => {
+  /** The live Maddux shape: identity certain, evidence thin. */
+  function maddux(): PortfolioHoldingWire {
+    return holding({
+      id: "h-maddux",
+      playerName: "Greg Maddux",
+      cardYear: 1987,
+      product: "Topps Traded Tiffany",
+      cardNumber: "70T",
+      quantity: 1,
+      lastUpdated: daysAgo(2),
+      // The matcher is certain which card this is.
+      confidence: 1,
+      catalogMatchConfidence: 1,
+      estimateBasis:
+        "unified: window=180d median=$120 marketValue=$118 predicted=$121 trend=flat 0.1%/wk conf=0.37",
+      pricing: {
+        ...(envelope({
+          observedFmv: 121,
+          headlineValue: 121,
+          headlineSource: "observed",
+          rung: "exact-pool-projection",
+          compsUsed: 3,
+          lastSaleDate: daysAgo(40),
+        }) as Record<string, unknown>),
+        // The engine's pricing confidence, where the price-writer stamps it.
+        provenance: {
+          vendor: "hobbyiq-pool",
+          vendorUpdatedAt: null,
+          pricingSource: "unified-pricing",
+          pricingSourceMeta: {
+            slug: "hiq:baseball:1987:topps-traded-tiffany:70t",
+            method: "exact-pool-projection",
+            compsUsed: 3,
+            confidence: 0.37,
+          },
+          nearestGradedAnchor: null,
+          lastSaleSurface: null,
+        },
+      },
+    } as Partial<PortfolioHoldingWire> as never);
+  }
+
+  it("renders the engine's 37%, not the matcher's 100%", () => {
+    const row = buildReportRow(maddux(), NOW_MS);
+    expect(row.confidence).toBe(0.37);
+    // The specific regression: match confidence must never reach this column.
+    expect(row.confidence).not.toBe(1);
+  });
+
+  it("prints 37% in the row's confidence cell, and never the matcher's 100%", () => {
+    const r = buildValuationReport([maddux()]);
+    const html = renderValuationReportHtml(r, { ownerLabel: "Drew", includePrintButton: false });
+    // Scope to the confidence cell: "100%" also occurs in the stylesheet.
+    const cells = [...html.matchAll(/<td class="c-conf">([^<]*)<\/td>/g)].map(m => m[1].trim());
+    expect(cells).toEqual(["37%"]);
+  });
+
+  it("renders a pricing confidence even when the holding carries no match confidence", () => {
+    // The 26-of-43 population: holding.confidence unset, but the engine
+    // reported a pricing confidence. These rendered "—" and should not.
+    const h = maddux();
+    delete (h as { confidence?: unknown }).confidence;
+    delete (h as { catalogMatchConfidence?: unknown }).catalogMatchConfidence;
+    expect(buildReportRow(h, NOW_MS).confidence).toBe(0.37);
+  });
+
+  it("renders a dash when no path reported a pricing confidence", () => {
+    const h = holding({
+      id: "h-no-conf",
+      lastUpdated: daysAgo(2),
+      // A match confidence is present and must NOT be borrowed.
+      confidence: 0.95,
+      pricing: envelope({
+        observedFmv: 40,
+        headlineValue: 40,
+        headlineSource: "observed",
+        rung: "exact-pool-projection",
+        lastSaleDate: daysAgo(3),
+      }),
+    } as Partial<PortfolioHoldingWire> as never);
+    const row = buildReportRow(h, NOW_MS);
+    expect(row.confidence).toBeNull();
+
+    const html = renderValuationReportHtml(
+      buildValuationReport([h]),
+      { ownerLabel: "Drew", includePrintButton: false },
+    );
+    // And the legend says what the dash means, so it is not read as a zero.
+    expect(html).toMatch(/dash means no confidence figure was recorded/i);
+  });
+
+  it("says the column is about the value, not the card's identity", () => {
+    const html = renderValuationReportHtml(
+      buildValuationReport(FIXTURE_PORTFOLIO),
+      { ownerLabel: "Drew", includePrintButton: false },
+    );
+    expect(html).toMatch(/not about the card&rsquo;s\s+identity/i);
+  });
+});
+
+
+// The report can only render the engine's pricing confidence if the writer
+// that decides a price actually stamps it. Before this change the figure
+// existed only as the `conf=0.37` substring inside estimateBasis prose,
+// which no consumer can read without parsing text — and types.ts already
+// warns consumers never to infer structured facts from that prose.
+//
+// This pins the persistence end: every unified/canonical write that stamps
+// a pricingSourceMeta must stamp its confidence alongside the comp count.
+// A new pricing writer that forgets it silently reintroduces the "—".
+describe("the price writer stamps its pricing confidence", () => {
+  it("every unified pricingSourceMeta write carries a confidence", async () => {
+    const { readFile } = await import("node:fs/promises");
+    const src = await readFile(
+      new URL("../src/services/portfolioiq/portfolioStore.service.ts", import.meta.url),
+      "utf8",
+    );
+    const writes = [...src.matchAll(/pricingSourceMeta:\s*(?:withUnionRefused\()?\{[^}]*\}/g)]
+      .map(m => m[0])
+      .filter(w => /compsUsed:\s*(?:u|bU|unified|unifiedResult)\./.test(w));
+
+    // Guard the guard: if the writes move or get renamed, this test must
+    // fail loudly rather than vacuously passing over an empty list.
+    expect(writes.length).toBeGreaterThanOrEqual(4);
+    for (const w of writes) expect(w).toMatch(/confidence:/);
+  });
+});

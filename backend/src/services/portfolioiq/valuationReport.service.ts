@@ -284,9 +284,32 @@ export function tierLabel(h: PortfolioHoldingWire): string {
     : company.toUpperCase();
 }
 
+/**
+ * The PRICING confidence behind this row's dollar figure — how
+ * well-evidenced the value is, which is what the methodology section
+ * promises this column means.
+ *
+ * CF-REPORT-CONFIDENCE-IS-PRICING (2026-09-03). This is deliberately NOT
+ * the holding's match/identity confidence. Those answer different
+ * questions: "we are certain WHICH card this is" and "the dollar figure is
+ * well-evidenced" can and do diverge — a perfectly identified card with a
+ * thin, cold comp pool is match 1.0 and pricing 0.37, and a report that
+ * printed 100% beside that number would be claiming evidence it does not
+ * have, on the document a reader may hand to an insurer.
+ *
+ * Read order mirrors rungLabelOf/compsUsedOf: the structured pricing meta
+ * the price-writer stamped, then the envelope's confidence. Both now carry
+ * the pricing quantity. Null when no path reported one — the row renders
+ * "—", and the legend says why.
+ */
 function confidenceOf(h: PortfolioHoldingWire): number | null {
-  const p = (h as { pricing?: { confidence?: { pricing?: number | null } | null } | null }).pricing ?? null;
-  return finiteOrNull(p?.confidence?.pricing ?? null);
+  const p = (h as { pricing?: {
+    confidence?: { pricing?: number | null } | null;
+    provenance?: { pricingSourceMeta?: { confidence?: number | null } | null } | null;
+  } | null }).pricing ?? null;
+  return finiteOrNull(
+    p?.provenance?.pricingSourceMeta?.confidence ?? p?.confidence?.pricing ?? null,
+  );
 }
 
 function basisOf(h: PortfolioHoldingWire): string | null {

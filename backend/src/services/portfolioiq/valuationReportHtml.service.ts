@@ -284,10 +284,24 @@ function renderMethodology(report: ValuationReport): string {
       <h3>Confidence</h3>
       <p>
         The confidence figure on each row reflects how well-evidenced that
-        specific value is — how many sales stood behind it, how recent they
+        specific value is &mdash; how many sales stood behind it, how recent they
         were, and how far the method reached from the exact card. It is a
         measure of evidence, not a probability that a particular sale price
         will be achieved.
+      </p>
+      <p>
+        It is a statement about the <em>value</em>, not about the card&rsquo;s
+        identity. A card we have identified with complete certainty can still
+        carry a low confidence here, because the sales behind its price were
+        few, old, or drawn from a method that reached beyond the exact card.
+        Those are separate questions and this column answers only the second.
+      </p>
+      <p>
+        A dash means no confidence figure was recorded for that value &mdash;
+        typically a price set before this figure was tracked, or one from a
+        path that does not report one. It is not a low score, and it should
+        not be read as one; the row&rsquo;s basis and method still say where
+        the number came from.
       </p>
 
       <h3>Basis of value</h3>
