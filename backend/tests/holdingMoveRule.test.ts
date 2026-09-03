@@ -11,6 +11,7 @@
 //   5. no double-fire on an idempotent reprice
 
 import { describe, expect, it, afterEach } from "vitest";
+import { readFileSync } from "node:fs";
 import {
   decideFire,
   fireFingerprint,
@@ -373,5 +374,96 @@ describe("normalizeRuleInput", () => {
   it("rejects a non-object body", () => {
     expect(normalizeRuleInput(null)).toBeNull();
     expect(normalizeRuleInput("10%")).toBeNull();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// 6. The rule row is its OWN feed type.
+//
+// The pre-existing hardcoded 10%/18% emitter (evaluateHoldingAlerts) writes
+// type "value-move", and it runs inside the holding loop of
+// repriceHoldingsForUser — ABOVE the rule sweep, in the SAME pass. addAlert
+// dedups on (holdingId, type) within 6h. So when both fire on one holding,
+// a shared type means the legacy row wins and the user's rule row — its rule
+// text, its basis, its speculative label — is silently dropped from the feed.
+//
+// The pin reads the REAL emitter out of portfolioStore.service.ts, so
+// reverting the type to "value-move" reds it.
+describe("the rule-driven feed row survives a legacy value-move in the same pass", () => {
+  const storeSrc = readFileSync(
+    new URL("../src/services/portfolioiq/portfolioStore.service.ts", import.meta.url),
+    "utf8",
+  );
+
+  /** addAlert's dedup rule, verbatim from portfolioStore.service.ts. */
+  type FeedRow = { id: string; createdAt: string; holdingId: string; type: string; message: string };
+  function addAlert(doc: { alerts: FeedRow[] }, alert: Omit<FeedRow, "id" | "createdAt">): void {
+    const now = new Date().toISOString();
+    const lastSimilar = [...doc.alerts]
+      .reverse()
+      .find((a) => a.holdingId === alert.holdingId && a.type === alert.type);
+    if (lastSimilar) {
+      const lastTime = new Date(lastSimilar.createdAt).getTime();
+      const currentTime = new Date(now).getTime();
+      if (Number.isFinite(lastTime) && Number.isFinite(currentTime) && currentTime - lastTime < 6 * 3600_000) {
+        return;
+      }
+    }
+    doc.alerts.push({ ...alert, id: String(doc.alerts.length + 1), createdAt: now });
+  }
+
+  /** The type string the rule sweep actually passes to addAlert. */
+  function ruleSweepFeedType(): string {
+    const anchor = storeSrc.indexOf("outcome.feedAlert.level");
+    expect(anchor, "rule sweep addAlert call not found").toBeGreaterThan(-1);
+    const m = /type:\s*"([a-z-]+)"/.exec(storeSrc.slice(anchor, anchor + 400));
+    expect(m, "no type on the rule sweep addAlert call").not.toBeNull();
+    return m![1];
+  }
+
+  it("the legacy emitter still writes value-move", () => {
+    // Guards the premise: if the legacy type ever changes, this pin's
+    // reasoning has to be revisited rather than silently passing.
+    const anchor = storeSrc.indexOf("function evaluateHoldingAlerts");
+    expect(anchor).toBeGreaterThan(-1);
+    expect(storeSrc.slice(anchor, anchor + 2500)).toContain('type: "value-move"');
+  });
+
+  it("the rule sweep does NOT reuse the legacy type", () => {
+    expect(ruleSweepFeedType()).not.toBe("value-move");
+  });
+
+  it("legacy + rule on the SAME holding in one pass yields BOTH feed rows", () => {
+    const doc = { alerts: [] as FeedRow[] };
+    // The legacy 10%/18% emitter fires first — it runs above the sweep.
+    addAlert(doc, { holdingId: "h1", type: "value-move", message: "Judge moved +12.0% (100 -> 112)." });
+    // Then the user's rule fires on that same holding, with the real type.
+    addAlert(doc, {
+      holdingId: "h1",
+      type: ruleSweepFeedType(),
+      message: "Your 10% rule fired — +12.0% over 24h.",
+    });
+    // Both land. Revert the type to "value-move" and this drops to 1.
+    expect(doc.alerts).toHaveLength(2);
+    expect(doc.alerts.map((a) => a.message)).toEqual([
+      "Judge moved +12.0% (100 -> 112).",
+      "Your 10% rule fired — +12.0% over 24h.",
+    ]);
+  });
+
+  it("the rule type still dedups against ITSELF within 6h", () => {
+    // The distinct type must not cost the rule its own rate guard.
+    const doc = { alerts: [] as FeedRow[] };
+    const t = ruleSweepFeedType();
+    addAlert(doc, { holdingId: "h1", type: t, message: "first" });
+    addAlert(doc, { holdingId: "h1", type: t, message: "second" });
+    expect(doc.alerts).toHaveLength(1);
+    expect(doc.alerts[0].message).toBe("first");
+  });
+
+  it("the new type is declared on the PortfolioAlert union", () => {
+    // An emitter writing a type the union does not carry would not compile,
+    // but the union is also what every reader switches on. Pin both.
+    expect(storeSrc).toContain(`| "${ruleSweepFeedType()}"`);
   });
 });

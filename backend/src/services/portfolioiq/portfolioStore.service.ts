@@ -445,7 +445,14 @@ interface PortfolioAlert {
     // driver that turns action-recommendations into a push-notification
     // product. Fires only on meaningful flips (SELL_NOW / HOLD entry),
     // never on LIST↔LIST or transitions in/out of INSUFFICIENT_DATA.
-    | "recommendation-flip";
+    | "recommendation-flip"
+    // CF-USER-PRICE-ALERTS (Drew, 2026-09-02): rule-driven per-holding move.
+    // DISTINCT from "value-move" on purpose. The legacy 10%/18% emitter and
+    // this one can both fire on the SAME holding in one reprice pass, and
+    // addAlert dedups on (holdingId, type) within 6h — sharing the type let
+    // the legacy row win and silently dropped the user's rule row (its rule
+    // text, basis and speculative label) from the feed. Own type, own row.
+    | "holding-move-rule";
   createdAt: string;
   holdingId: string;
   playerName: string;
@@ -10579,12 +10586,16 @@ export async function repriceHoldingsForUser(
         );
         // The feed row rides the same `doc.alerts` array as every other
         // portfolio alert, so the web bell and the iOS feed pick it up with
-        // no second store. addAlert's own 6h same-(holding,type) dedup is a
-        // second belt over the rule's fingerprint guard.
+        // no second store. The type is "holding-move-rule", NOT "value-move":
+        // the legacy 10%/18% emitter runs earlier in THIS SAME pass and writes
+        // "value-move" for the same holding, and addAlert dedups on
+        // (holdingId, type) within 6h — sharing the type meant the legacy row
+        // won and the user's rule row (rule text, basis, speculative label)
+        // was silently dropped. Distinct type, so both rows land.
         if (outcome?.feedAlert) {
           addAlert(doc, {
             level: outcome.feedAlert.level,
-            type: "value-move",
+            type: "holding-move-rule",
             holdingId: outcome.feedAlert.holdingId,
             playerName: outcome.feedAlert.playerName,
             cardTitle: outcome.feedAlert.cardTitle,
