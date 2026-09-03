@@ -448,7 +448,14 @@ interface PortfolioAlert {
     // driver that turns action-recommendations into a push-notification
     // product. Fires only on meaningful flips (SELL_NOW / HOLD entry),
     // never on LIST↔LIST or transitions in/out of INSUFFICIENT_DATA.
-    | "recommendation-flip";
+    | "recommendation-flip"
+    // CF-USER-PRICE-ALERTS (Drew, 2026-09-02): rule-driven per-holding move.
+    // DISTINCT from "value-move" on purpose. The legacy 10%/18% emitter and
+    // this one can both fire on the SAME holding in one reprice pass, and
+    // addAlert dedups on (holdingId, type) within 6h — sharing the type let
+    // the legacy row win and silently dropped the user's rule row (its rule
+    // text, basis and speculative label) from the feed. Own type, own row.
+    | "holding-move-rule";
   createdAt: string;
   holdingId: string;
   playerName: string;
@@ -9556,6 +9563,21 @@ export async function repriceHoldingsForUser(
   const priorFmv = new Map<string, number | null>();
   for (const h of candidates) priorFmv.set(h.id, perUnitFmvForSwing(h));
 
+  // CF-USER-PRICE-ALERTS (Drew, 2026-09-02): the pre-cycle (value, rung) pair
+  // per holding, for the post-write move-alert sweep below. The rung is
+  // captured HERE, alongside priorFmv, for the same reason priorFmv is: the
+  // dozen write sites in the loop each overwrite it, and a move alert has to
+  // know whether BOTH ends of its comparison read the exact pool before it
+  // can call the move observed.
+  const priorAlertState = new Map<string, { fairMarketValue: number | null; fmvRung: string | null; lastUpdated: string | number | null }>();
+  for (const h of candidates) {
+    priorAlertState.set(h.id, {
+      fairMarketValue: typeof h.fairMarketValue === "number" ? h.fairMarketValue : null,
+      fmvRung: (h as { fmvRung?: string | null }).fmvRung ?? null,
+      lastUpdated: (h as { lastUpdated?: string | number | null }).lastUpdated ?? null,
+    });
+  }
+
   for (const holding of candidates) {
     // CF-EBAY-REVIEW-QUEUE (2026-07-12): skip pending-review rows. Those
     // aren't real inventory yet — pricing them would fire the CompIQ
@@ -10547,6 +10569,86 @@ export async function repriceHoldingsForUser(
       });
     }
   }
+
+  // CF-USER-PRICE-ALERTS (Drew, 2026-09-02): "tell me when my card moves N%".
+  //
+  // POST-VALUATION, NEVER INSIDE IT. Every holding in `updates` has already
+  // been priced and written into `doc.holdings` by the loop above; this sweep
+  // only READS the resulting (fairMarketValue, fmvRung) pair and compares it
+  // to the pre-cycle pair captured in `priorAlertState`. It calls no pricing
+  // entry point, and the whole block is wrapped so a Cosmos blip or an APNs
+  // failure can never fail a reprice that already succeeded.
+  //
+  // It sits immediately BEFORE writeUserDoc, not after it, because the feed
+  // rows it appends to `doc.alerts` have to land in the same persist as the
+  // prices they describe. (The telemetry-only sweeps below the write can
+  // safely run after it; this one mutates the doc, so it cannot.)
+  //
+  // Only holdings the user has an ACTIVE rule on cost anything: the context
+  // build is one query per user per pass and returns null when there are no
+  // rules, which is the overwhelmingly common case.
+  try {
+    const { buildHoldingMoveAlertContext, evaluateHoldingMoveAlert } = await import(
+      "../advancedAlerts/holdingMoveEvaluator.service.js"
+    );
+    const moveCtx = await buildHoldingMoveAlertContext(userId);
+    if (moveCtx) {
+      for (const u of updates) {
+        if (u.status !== "repriced") continue;
+        const h = doc.holdings[u.id];
+        if (!h) continue;
+        if (!moveCtx.rules.has(String(u.id))) continue;
+        const outcome = await evaluateHoldingMoveAlert(
+          moveCtx,
+          {
+            id: String(h.id),
+            playerName: (h as { playerName?: string | null }).playerName ?? null,
+            cardTitle: (h as { cardTitle?: string | null }).cardTitle ?? null,
+            fairMarketValue: typeof h.fairMarketValue === "number" ? h.fairMarketValue : null,
+            fmvRung: (h as { fmvRung?: string | null }).fmvRung ?? null,
+            lastUpdated: (h as { lastUpdated?: string | number | null }).lastUpdated ?? null,
+          },
+          priorAlertState.get(u.id),
+        );
+        // The feed row rides the same `doc.alerts` array as every other
+        // portfolio alert, so the web bell and the iOS feed pick it up with
+        // no second store. The type is "holding-move-rule", NOT "value-move":
+        // the legacy 10%/18% emitter runs earlier in THIS SAME pass and writes
+        // "value-move" for the same holding, and addAlert dedups on
+        // (holdingId, type) within 6h — sharing the type meant the legacy row
+        // won and the user's rule row (rule text, basis, speculative label)
+        // was silently dropped. Distinct type, so both rows land.
+        if (outcome?.feedAlert) {
+          addAlert(doc, {
+            level: outcome.feedAlert.level,
+            type: "holding-move-rule",
+            holdingId: outcome.feedAlert.holdingId,
+            playerName: outcome.feedAlert.playerName,
+            cardTitle: outcome.feedAlert.cardTitle,
+            message: outcome.feedAlert.message,
+            context: outcome.feedAlert.context,
+          });
+        }
+      }
+      if (moveCtx.fired > 0 || Object.keys(moveCtx.suppressed).length > 0) {
+        console.log(JSON.stringify({
+          event: "holding_move_alerts_pass",
+          source: "portfolioStore.repriceHoldingsForUser",
+          repriceSource: source,
+          userId,
+          rules: moveCtx.rules.size,
+          fired: moveCtx.fired,
+          suppressed: moveCtx.suppressed,
+          dailyCount: moveCtx.dailyCount,
+        }));
+      }
+    }
+  } catch (err: any) {
+    console.warn(
+      `[holding.move.alert] sweep failed user=${userId}: ${err?.message ?? err}`,
+    );
+  }
+
 
   await writeUserDoc(userId, doc);
   _lastRepriceAt.set(userId, Date.now());

@@ -61,6 +61,7 @@ import psaRoutes from "./routes/psa.routes.js";
 import devicesRoutes from "./routes/devices.routes.js";
 import alertsRoutes from "./routes/alerts.routes.js";
 import alertsAdvancedRoutes from "./routes/alerts.advanced.routes.js";
+import alertsHoldingMovesRoutes from "./routes/alerts.holdingMoves.routes.js";
 import accountRoutes from "./routes/account.routes.js";
 import opsRoutes from "./routes/ops.routes.js";
 import searchRoutes from "./routes/search.routes.js";
@@ -267,6 +268,10 @@ app.use("/api/devices", devicesRoutes);
 // order; mounting /api/alerts first would let alertsRoutes consume
 // /api/alerts/advanced before it ever reaches alertsAdvancedRoutes.
 app.use("/api/alerts/advanced", alertsAdvancedRoutes);
+// CF-USER-PRICE-ALERTS (Drew, 2026-09-02): same mount-order rule as
+// /api/alerts/advanced above — the subrouter MUST precede /api/alerts or
+// alertsRoutes consumes the path first.
+app.use("/api/alerts/holding-moves", alertsHoldingMovesRoutes);
 app.use("/api/alerts", alertsRoutes);
 app.use("/api/ops", opsRoutes);
 app.use("/api/search", searchRoutes);
