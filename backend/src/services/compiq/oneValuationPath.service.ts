@@ -99,6 +99,28 @@ export interface ValuationRequest {
   playerName?: string | null;
   /** Portfolio callers: keep the user's own purchases out of the pool. */
   excludeContributorUserId?: string | null;
+  /**
+   * CF-AS-OF-IS-AN-UPPER-BOUND (#1651, the engine backtest, 2026-09-02).
+   * Price this identity AS OF a past instant, reading ONLY data that existed
+   * before it. Undefined in production — every route leaves it unset and the
+   * engine behaves exactly as it always has.
+   *
+   * This single field is the backtest's whole no-lookahead guarantee, and it
+   * is a REQUEST field rather than a script-local convention on purpose: the
+   * evaluator cannot price a card except by going through this entry, so it
+   * cannot forget to pass the cutoff and quietly read the future. From here it
+   * reaches every rung on the ladder —
+   *
+   *   • the exact pool          unifiedPricing.asOfMs -> exactPoolReader
+   *   • the player's index      playerTrendRung -> playerIndex -> playerIndexRead
+   *   • the fallback ladder     computeHobbyIqFmv.asOfMs -> queryPool (all 11 rungs)
+   *
+   * — as both the CLOCK the rung reasons with and the CEILING on what it may
+   * read. Pinned by asOfLookaheadIsolation.test.ts, which inserts a
+   * future-dated sale into the fixture pool and requires every rung's answer
+   * to be byte-identical to the run without it.
+   */
+  asOfMs?: number | null;
 }
 
 /** Why there is no number, when there is none. */
@@ -163,8 +185,17 @@ export interface Valuation {
   predictedPrice: number | null;
   /** DIAGNOSTIC: the pool's recency-weighted median. Never the headline. */
   weightedMedian: number | null;
-  /** The sales behind the headline, newest first (exact-pool rungs only). */
-  sales: Array<{ price: number; soldAt: string; source: string | null }>;
+  /** The sales behind the headline, newest first (exact-pool rungs only).
+   *  CF-SELF-COMP-LABEL-REACHES-THE-RESULT (Drew, 2026-09-03):
+   *  `contributorUserId` rides with each sale so a caller that passed
+   *  `excludeContributorUserId` can tell which of the KEPT rows are the
+   *  owner's own — the reprieve publishes those, and the doctrine says a
+   *  published self-comp must be labeled. */
+  sales: Array<{ price: number; soldAt: string; source: string | null; contributorUserId: string | null }>;
+  /** The owner this valuation was computed for, when the caller named one
+   *  (portfolio/reprice/sell-draft paths). Null on the public routes, which
+   *  pass no user and so can never call a comp "yours". */
+  ownerUserId: string | null;
   /** Every canonical tier (plus any tier the pool has that the canonical
    *  list does not), each from the same engine result; the requested tier's
    *  entry IS the headline. */
@@ -329,7 +360,11 @@ export function curveFromUnified(u: UnifiedPriceResult, nowMs: number): Observed
  * requested tier is that tier's curve entry.
  */
 export async function valueIdentity(req: ValuationRequest): Promise<Valuation> {
-  const nowMs = Date.now();
+  // CF-AS-OF-IS-AN-UPPER-BOUND (#1651). The entry's single clock. In a
+  // backtest it is the evaluation instant; in production it is the wall clock
+  // and `asOfMs` is undefined, so nothing below can tell the difference.
+  const asOfMs = typeof req.asOfMs === "number" && Number.isFinite(req.asOfMs) ? req.asOfMs : null;
+  const nowMs = asOfMs ?? Date.now();
   const grade = normalizeGrade(req.grade);
   const requestedTier = tierLabelFor(grade);
   const printRunHint = typeof req.printRun === "number" && Number.isFinite(req.printRun) && req.printRun > 0
@@ -350,6 +385,7 @@ export async function valueIdentity(req: ValuationRequest): Promise<Valuation> {
     predictedPrice: null,
     weightedMedian: null,
     sales: [],
+    ownerUserId: req.excludeContributorUserId ?? null,
     gradeCurve: blankCurve(),
     totalSampleCount: 0,
     unified: null,
@@ -387,6 +423,7 @@ export async function valueIdentity(req: ValuationRequest): Promise<Valuation> {
       excludeContributorUserId: req.excludeContributorUserId ?? null,
       perTierWindows: true,
       resolution,
+      asOfMs,
     },
   );
   const v = base(identity);
@@ -445,6 +482,7 @@ export async function valueIdentity(req: ValuationRequest): Promise<Valuation> {
       ownTrendPctPerWeek: um?.trendPctPerWeek ?? null,
       sampleCount: tier.sampleCount,
       nowMs,
+      asOfMs,
     }).catch(() => null);
 
     if (playerRung) {
@@ -565,6 +603,7 @@ export async function valueIdentity(req: ValuationRequest): Promise<Valuation> {
       gradeValue: grade?.value ?? null,
       playerName,
       skipExactPool: true,
+      asOfMs,
     });
   } catch { fb = null; }
   v.fallback = fb;
@@ -579,7 +618,11 @@ export async function valueIdentity(req: ValuationRequest): Promise<Valuation> {
       pctPerWeek: Number.isFinite(fb.trend.slopePerMonthPct) ? round2(fb.trend.slopePerMonthPct / (30 / 7)) : null,
     };
     v.basis = fb.basisNote;
-    v.sales = fb.recentComps.map((c) => ({ price: c.price, soldAt: c.soldAt, source: c.source ?? null }));
+    // A fallback rung prices off a family / sibling pool, not the owner's own
+    // tier, and HobbyIqFmvComp carries no contributor — so these are honestly
+    // nobody's own sale. A self-anchored label cannot fire here, which is
+    // right: the number is not anchored on the owner's purchase.
+    v.sales = fb.recentComps.map((c) => ({ price: c.price, soldAt: c.soldAt, source: c.source ?? null, contributorUserId: null }));
     tier = findTier();
     tier.value = v.fairMarketValue;
     tier.trendAdjustedValue = v.fairMarketValue;

@@ -347,6 +347,10 @@ export interface PricingEnvelope {
     pricingSourceMeta:
       | { slug: string; method: string; compsUsed: number }
       | null;
+    /** CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (Drew, 2026-09-03). The
+     *  caveats this price must be read with, as the writer stamped them. */
+    pricingLabels?: PricingLabel[];
+    selfAnchored?: { own: number; total: number } | null;
     nearestGradedAnchor: {
       grade: string;
       price: number;
@@ -395,6 +399,16 @@ export interface PricingEnvelope {
 // etc.) remain during the migration window. New reads should prefer
 // `pricing.*` — the flats stay populated by the backend for one
 // release, then get deleted in a follow-up CF.
+/** CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (Drew, 2026-09-03). A caveat the
+ *  reader is entitled to see beside a price. The codes are the backend's
+ *  closed vocabulary (ebaySellDraft.service.ts `SellDraftLabel`); `text` is
+ *  the sentence the sell draft uses, served verbatim so every surface says
+ *  the same thing in the same words. */
+export interface PricingLabel {
+  code: "speculative" | "self-anchored" | "fallback-rung" | "low-confidence";
+  text: string;
+}
+
 export interface PortfolioHolding {
   id: string;
   cardId?: string | null;   // legacy vendor/cardId — may diverge from hobbyiqCardId on old holdings (e.g. cardNumber prefix stripped). Prefer hobbyiqCardId for downstream queries.
@@ -426,6 +440,21 @@ export interface PortfolioHolding {
    *  which prefers the envelope's `method.ladderRung` /
    *  `provenance.pricingSourceMeta.method`. */
   fmvRung?: string | null;
+  /** CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (Drew, 2026-09-03). The caveats
+   *  this holding's price must be read with — the SAME set the live
+   *  canonical-fmv response carries for it, stamped at write time by the
+   *  writer that decided the price.
+   *
+   *  Drew's ruling (2026-09-01): a self-comp PUBLISHES **and is LABELED**.
+   *  Before this the label reached the card page and the sell draft and
+   *  stopped, so a row showed a self-anchored $251 — the tier's only sale
+   *  being the owner's own purchase — as an ordinary market read.
+   *
+   *  Absent / empty → no caveats, or a price surface predating the field. */
+  pricingLabels?: PricingLabel[];
+  /** The self-anchored ratio: `own` of the pool's `total` sales behind this
+   *  price are the owner's. `own === total` is fully self-anchored. */
+  selfAnchored?: { own: number; total: number } | null;
   // Per-unit estimate when no observed FMV exists.
   estimatedValue?: number | null;
   estimateLow?: number | null;
@@ -1875,6 +1904,13 @@ export interface RecentCompSale {
   confidenceScore?: number | null;
   confidenceBand?: string | null;
   confidenceExplain?: string | null;
+  // CF-OWN-PURCHASE-IS-A-SALE (Drew, 2026-09-03). True when this sale is
+  // the VIEWER'S own imported purchase. The row is shown either way -- an
+  // own purchase is a real sale -- and this drives the label, not a filter.
+  isOwn?: boolean | null;
+  /** The wording for that label, served by the backend so the phrase lives
+   *  in one place. "your purchase". */
+  ownLabel?: string | null;
 }
 
 // CF-USER-FLAG-CLIENT (Drew, 2026-08-01). Fires POST /api/user/flag-comp
@@ -2763,6 +2799,42 @@ export async function exportPortfolio(format: "csv" | "xlsx" = "xlsx"): Promise<
   URL.revokeObjectURL(url);
 }
 
+// CF-VALUATION-REPORT (Drew, 2026-09-02): GET /portfolio/valuation-report
+// — the printable valuation document. Opens in a new tab so the user can
+// read it and hit Print / Save as PDF; the backend has no PDF renderer, so
+// the browser's print pipeline IS the PDF path (see
+// backend/src/services/portfolioiq/valuationReport.service.ts).
+//
+// It goes through fetch + a blob URL rather than a plain link because the
+// route needs the session header, which an <a href> cannot carry. The
+// object URL is revoked on a timer rather than immediately: revoking it
+// synchronously races the new tab's load and yields a blank page.
+export async function openValuationReport(): Promise<void> {
+  const sid = getStoredSessionId();
+  const res = await fetch(`${API_BASE}/api/portfolio/valuation-report`, {
+    method: "GET",
+    headers: sid ? { "x-session-id": sid } : {},
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(text || `Could not generate the report (${res.status})`);
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const win = window.open(url, "_blank", "noopener");
+  if (!win) {
+    // Popup blocked — fall back to downloading the file so the click is
+    // never silently swallowed.
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "hobbyiq-valuation-report.html";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
 /** CF-ACCEPT-THE-PARKED-MATCH (2026-08-23). One click from "we think this is
  *  X" to a pinned identity. The route is state-agnostic on purpose — a
  *  holding does not have to be sitting in the eBay review queue for its owner
@@ -2916,6 +2988,125 @@ export interface WeeklyBriefResponse {
 
 export async function fetchWeeklyBrief(): Promise<WeeklyBriefResponse> {
   return await request<WeeklyBriefResponse>("/api/portfolio/insights/weekly-brief");
+}
+
+// ─── Weekly digest (CF-WEEKLY-DIGEST, Drew 2026-09-02) ────────────
+//
+// The persisted Sunday digest. Every section is OPTIONAL on the wire:
+// a section the digest did not have is ABSENT, not empty — `sections`
+// names what is there, and the page walks that list. Mirrors the
+// backend's WeeklyDigest exactly.
+
+export type DigestValueBasis = "observed" | "estimated" | "under-review" | "unpriced";
+export type DigestSectionName = "movers" | "reestimated" | "signals" | "audit" | "market";
+
+export interface DigestMover {
+  holdingId: string;
+  playerName: string;
+  cardTitle: string;
+  movePct: number;
+  value: number | null;
+  valueBasis: DigestValueBasis;
+  moveUsd: number | null;
+  fromValue: number | null;
+  fromAt: string | null;
+  toAt: string | null;
+  observationCount: number;
+  costBasis: number | null;
+  vsCostPct: number | null;
+  basisNote: string;
+  speculative: boolean;
+  /** CF-A-MOVER-NEEDS-CORROBORATION (2026-09-03). True iff both ends of
+   *  the move were exact-pool reads — a real sale of this card at each
+   *  end. Only corroborated rows appear under a movers heading. */
+  corroborated: boolean;
+  anchorRung: string | null;
+  latestRung: string | null;
+}
+
+export interface DigestSignalRow {
+  holdingId: string;
+  playerName: string;
+  cardTitle: string;
+  kind: "sell" | "watch";
+  value: number | null;
+  unrealizedGainUsd: number | null;
+  urgencyScore: number;
+  basisNote: string;
+}
+
+export interface DigestAuditItem {
+  holdingId: string;
+  playerName: string;
+  cardTitle: string;
+  invariant: string;
+  reason: string;
+  raisedAt: string;
+  value: number | null;
+  basisNote: string;
+}
+
+export interface DigestMarketRow {
+  sport: string;
+  changePct: number | null;
+  latestLevel: number;
+  basisNote: string;
+}
+
+export interface WeeklyDigest {
+  schemaVersion: number;
+  userId: string;
+  weekId: string;
+  weekStart: string;
+  weekEnd: string;
+  generatedAt: string;
+  headline: string;
+  summary: {
+    holdings: number;
+    pricedHoldings: number;
+    speculativeHoldings: number;
+    portfolioValue: number | null;
+    portfolioValueBasis: string;
+  };
+  sections: DigestSectionName[];
+  movers?: { gainers: DigestMover[]; decliners: DigestMover[] };
+  /** Value changes we could not corroborate with sales at both ends —
+   *  repricings, rendered under their own heading and never as movers. */
+  reestimated?: { items: DigestMover[]; total: number };
+  signals?: { sell: DigestSignalRow[]; watch: DigestSignalRow[] };
+  audit?: { items: DigestAuditItem[]; total: number };
+  market?: { rows: DigestMarketRow[] };
+  footnotes: string[];
+}
+
+export interface WeeklyDigestResponse {
+  /** null when no digest has been built for this user yet. */
+  digest: WeeklyDigest | null;
+  message?: string;
+  deliveredAt?: string | null;
+  deliveryChannel?: string | null;
+  computedAt?: string;
+}
+
+export interface WeeklyDigestIndexResponse {
+  count: number;
+  weeks: Array<{
+    weekId: string;
+    weekStart: string;
+    weekEnd: string;
+    headline: string;
+    sections: DigestSectionName[];
+    deliveredAt: string | null;
+  }>;
+}
+
+export async function fetchWeeklyDigest(weekId?: string): Promise<WeeklyDigestResponse> {
+  const q = weekId ? `?week=${encodeURIComponent(weekId)}` : "";
+  return await request<WeeklyDigestResponse>(`/api/portfolio/insights/weekly-digest${q}`);
+}
+
+export async function fetchWeeklyDigestIndex(): Promise<WeeklyDigestIndexResponse> {
+  return await request<WeeklyDigestIndexResponse>("/api/portfolio/insights/weekly-digests");
 }
 
 export interface SellRadarCandidate {
@@ -3732,6 +3923,155 @@ export async function deleteBuyerIqTarget(targetId: string): Promise<{ success: 
   return await request(`/api/buyeriq/targets/${encodeURIComponent(targetId)}`, {
     method: "DELETE",
   });
+}
+
+// ─── CF-USER-PRICE-ALERTS (Drew, 2026-09-02) ────────────────────────────────
+// Per-holding "tell me when this card moves N%" rules. One rule per holding;
+// PUT is an upsert keyed by holdingId, matching the backend's storage rule.
+
+export type HoldingMoveDirection = "up" | "down" | "any";
+
+export interface HoldingMoveRule {
+  ruleId: string;
+  userId: string;
+  holdingId: string;
+  thresholdPct: number;
+  direction: HoldingMoveDirection;
+  windowHours: number;
+  isActive: boolean;
+  createdAt: string;
+  lastFiredValue: number | null;
+  lastFiredAt: string | null;
+  triggerCount: number;
+}
+
+export async function fetchHoldingMoveRule(
+  holdingId: string,
+): Promise<{ success: boolean; rule: HoldingMoveRule | null; dailyCap: number }> {
+  return await request(`/api/alerts/holding-moves/${encodeURIComponent(holdingId)}`);
+}
+
+export async function saveHoldingMoveRule(
+  holdingId: string,
+  body: {
+    thresholdPct: number;
+    direction: HoldingMoveDirection;
+    windowHours: number;
+    isActive?: boolean;
+  },
+): Promise<{ success: boolean; rule: HoldingMoveRule }> {
+  return await request(`/api/alerts/holding-moves/${encodeURIComponent(holdingId)}`, {
+    method: "PUT",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function deleteHoldingMoveRule(holdingId: string): Promise<{ success: boolean }> {
+  return await request(`/api/alerts/holding-moves/${encodeURIComponent(holdingId)}`, {
+    method: "DELETE",
+  });
+}
+
+// ─── BuyerIQ deal scanner ─────────────────────────────────────────────
+// Backend: GET /api/buyeriq/deals (buyeriq.routes.ts → dealFeed.service).
+// Live asks compared against each card's canonical projected next sale.
+
+/** Why a target did not produce a deal. */
+export type BuyerIqDealRefusal =
+  | "no-basis"
+  | "speculative-confidence"
+  | "below-threshold"
+  | "no-listing-price";
+
+/** Why a LISTING was not comparable to the target (CF-BUYERIQ-GRADE-
+ *  AWARE-MATCH, 2026-09-03). Identity includes grade tier: a raw ask is
+ *  not a discount on a PSA 10, and a listing whose grade we cannot read
+ *  is not scored at all rather than assumed into either tier. */
+export type BuyerIqGradeMismatchReason =
+  | "grade-unknown"
+  | "listing-raw-target-graded"
+  | "listing-graded-target-raw"
+  | "grade-company-mismatch"
+  | "grade-value-mismatch";
+
+/** The evidence behind a flagged deal — what the discount is measured
+ *  against, and how much that projection is trusted. */
+export interface BuyerIqDealBasis {
+  projection: number;
+  rung: string | null;
+  exactPool: boolean;
+  confidence: number;
+  discountPct: number;
+  requiredDiscountPct: number;
+}
+
+export interface BuyerIqDealListing {
+  listingId: string;
+  title: string;
+  price: number;
+  currency: string;
+  itemWebUrl: string;
+  imageUrl: string | null;
+  sellerHandle: string | null;
+  endsAt: string | null;
+}
+
+export interface BuyerIqDeal {
+  targetId: string;
+  listId: string;
+  playerName: string;
+  cardYear: number | null;
+  setName: string | null;
+  cardNumber: string | null;
+  parallel: string | null;
+  gradeCompany: string | null;
+  gradeValue: number | null;
+  listing: BuyerIqDealListing;
+  /** The grade tier read off the listing title and verified equal to
+   *  the target tier before scoring ("PSA 10", "Raw"). */
+  matchedTier: string;
+  basis: BuyerIqDealBasis;
+  discountPctDisplay: number;
+  requiredDiscountPctDisplay: number;
+  savingsVsProjection: number;
+}
+
+export interface BuyerIqSkippedTarget {
+  targetId: string;
+  playerName: string;
+  reason: BuyerIqDealRefusal | BuyerIqGradeMismatchReason | "no-listings" | "no-player-name";
+  basis: BuyerIqDealBasis | null;
+  /** Listings that matched the card but not the TIER, by reason. Lets
+   *  the page say "2 listed, both raw" instead of "nothing listed". */
+  gradeRejections?: Partial<Record<BuyerIqGradeMismatchReason, number>>;
+}
+
+export interface BuyerIqDealFeed {
+  success: boolean;
+  deals: BuyerIqDeal[];
+  /** False when the vendor-call budget ran out mid-scan. The feed is
+   *  then a PARTIAL view — do not present it as the whole market. */
+  complete: boolean;
+  stoppedReason: "vendor-call-budget-exhausted" | null;
+  targetsUnexamined: number;
+  targetsScanned: number;
+  targetsEligible: number;
+  skipped: BuyerIqSkippedTarget[];
+  budget: { remaining: number; spent: number; cacheHits: number; limit: number };
+  baseDiscountPct: number;
+  scannedAt: string;
+}
+
+export async function fetchBuyerIqDeals(opts?: {
+  listId?: string;
+  /** Base discount at full confidence, as a fraction (0.20 = 20% under). */
+  threshold?: number;
+}): Promise<BuyerIqDealFeed> {
+  const qs = new URLSearchParams();
+  if (opts?.listId) qs.set("listId", opts.listId);
+  if (typeof opts?.threshold === "number") qs.set("threshold", String(opts.threshold));
+  const suffix = qs.toString() ? `?${qs.toString()}` : "";
+  return await request(`/api/buyeriq/deals${suffix}`);
 }
 
 // ─── Pro Seller workspace (CF-PRO-SELLER-WORKSPACE, 2026-09-02) ─────

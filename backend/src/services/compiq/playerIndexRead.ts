@@ -21,6 +21,7 @@
  * [] (an empty basket, which fails the breadth floor and falls through).
  */
 import { CosmosClient, type Container } from "@azure/cosmos";
+import { isBeforeAsOf } from "./asOfCutoff.js";
 
 const COSMOS_DATABASE = process.env.COSMOS_DATABASE ?? "hobbyiq";
 const SOLD_COMPS_CONTAINER = process.env.COSMOS_SOLD_COMPS_CONTAINER ?? "sold_comps";
@@ -62,6 +63,13 @@ export async function readPlayerPoolRows(input: {
   sport?: string | null;
   fromIso: string;
   limit?: number;
+  /** CF-AS-OF-IS-AN-UPPER-BOUND (#1651). Backtest only: no sale at or after
+   *  this instant may enter the basket. The ceiling matters MORE here than on
+   *  the exact pool — this rung's whole claim is "the player's market moved
+   *  R× since this card last traded", and a basket that could see next week's
+   *  sales would be reporting a move it had already been told the answer to.
+   *  Undefined in production; the bound is then absent from the query. */
+  asOfIso?: string | null;
 }): Promise<PlayerPoolRow[] | null> {
   const container = getContainer();
   if (!container) return null;
@@ -69,6 +77,7 @@ export async function readPlayerPoolRows(input: {
   if (!player) return [];
   const limit = Math.min(4000, Math.max(1, Math.trunc(input.limit ?? 2000)));
   const sport = String(input.sport ?? "").trim().toLowerCase();
+  const asOf = typeof input.asOfIso === "string" && input.asOfIso ? input.asOfIso : null;
 
   const parameters: Array<{ name: string; value: string | number }> = [
     { name: "@lim", value: limit },
@@ -76,12 +85,19 @@ export async function readPlayerPoolRows(input: {
     { name: "@from", value: input.fromIso },
   ];
   if (sport) parameters.push({ name: "@sport", value: sport });
+  if (asOf) parameters.push({ name: "@asOf", value: asOf });
 
+  // NOTE the interaction with TOP + ORDER BY soldAt DESC: without the ceiling
+  // a backtest basket would fill its TOP N with the newest sales in the
+  // container — which are the ones AFTER the evaluation point — and could
+  // return a basket made entirely of the future. The bound is in the query for
+  // that reason, not merely for tidiness.
   const query = `SELECT TOP @lim c.hobbyiqCardId, c.cardId, c.price, c.soldAt,
                         c.gradeCompany, c.gradeValue
                  FROM c
                  WHERE LOWER(c.playerName) = @player
                    AND c.soldAt >= @from
+                   ${asOf ? "AND c.soldAt < @asOf" : ""}
                    AND c.price > 0
                    AND (NOT IS_DEFINED(c.priceAnomaly) OR c.priceAnomaly != true)
                    AND (NOT IS_DEFINED(c.flaggedWrong) OR c.flaggedWrong = false)
@@ -90,7 +106,14 @@ export async function readPlayerPoolRows(input: {
 
   try {
     const { resources } = await container.items.query<PlayerPoolRow>({ query, parameters }).fetchAll();
-    return resources ?? [];
+    const rows = resources ?? [];
+    // Belt and braces behind the string bound — see asOfCutoff.ts. `soldAt` is
+    // compared as a string and the pool holds three serializations of the same
+    // instant, so the parsed re-check is what makes the ceiling independent of
+    // which ingest wrote the row.
+    if (!asOf) return rows;
+    const asOfMs = Date.parse(asOf);
+    return Number.isFinite(asOfMs) ? rows.filter((r) => isBeforeAsOf(r.soldAt, asOfMs)) : rows;
   } catch (err) {
     console.warn(JSON.stringify({
       event: "player_index_pool_read_error",

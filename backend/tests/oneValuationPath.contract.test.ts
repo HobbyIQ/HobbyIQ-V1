@@ -635,7 +635,13 @@ describe("D17 — the portfolio persist site: what is written is what the routes
     expect(hld.isEstimate).toBe(false);
     expect(hld.valuationStatus).toBe("observed");
     expect(hld.pricingSource).toBe("unified-pricing");
-    expect(hld.pricingSourceMeta).toEqual({ slug: GOLD, method: pb.rungLabel, compsUsed: pb.compsUsed });
+    // CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (Drew, 2026-09-03): the meta now
+    // also carries the price's LABELS and, when one applies, the self-anchored
+    // ratio. Still asserted exactly — this pin's job is that a previous pass's
+    // rung and pool cannot survive, so the shape stays closed rather than
+    // becoming a toMatchObject that would let a stale key ride along. These
+    // fixtures have no owner-contributed sale, so the self label never fires.
+    expect(hld.pricingSourceMeta).toEqual({ slug: GOLD, method: pb.rungLabel, compsUsed: pb.compsUsed, labels: [], selfAnchored: null });
     expect(hld.predictedPrice).toBe(pb.predictedPrice);
     expect(hld.estimateBasis).toMatch(/^unified: Raw window=/);
     expect(hld.estimateBasis).toContain("id=hobbyiqCardId");
@@ -649,7 +655,7 @@ describe("D17 — the portfolio persist site: what is written is what the routes
     const again = await stored(id);
     expect(again.fairMarketValue).toBe(pb.marketValue);
     expect(again.fmvRung).toBe(pb.rungLabel);
-    expect(again.pricingSourceMeta).toEqual({ slug: GOLD, method: pb.rungLabel, compsUsed: pb.compsUsed });
+    expect(again.pricingSourceMeta).toEqual({ slug: GOLD, method: pb.rungLabel, compsUsed: pb.compsUsed, labels: [], selfAnchored: null });
     // No second engine, no legacy chain, on either site.
     expect(h.calls.estimate).toBe(0);
     expect(h.calls.curve).toBe(0);
@@ -666,7 +672,13 @@ describe("D17 — the portfolio persist site: what is written is what the routes
     expect(hld.fairMarketValue).toBe(psa10.pb.marketValue);
     expect(hld.fairMarketValue).not.toBe(raw.pb.marketValue);
     expect(hld.fmvRung).toBe(psa10.pb.rungLabel);
-    expect(hld.pricingSourceMeta).toEqual({ slug: GOLD, method: psa10.pb.rungLabel, compsUsed: psa10.pb.compsUsed });
+    // CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (Drew, 2026-09-03): the meta now
+    // also carries the price's LABELS and, when one applies, the self-anchored
+    // ratio. Still asserted exactly — this pin's job is that a previous pass's
+    // rung and pool cannot survive, so the shape stays closed rather than
+    // becoming a toMatchObject that would let a stale key ride along. These
+    // fixtures have no owner-contributed sale, so the self label never fires.
+    expect(hld.pricingSourceMeta).toEqual({ slug: GOLD, method: psa10.pb.rungLabel, compsUsed: psa10.pb.compsUsed, labels: [], selfAnchored: null });
   });
 
   it("(slug, PSA 8 — no pool at the tier): the same entry's grade-curve-estimate is persisted as an ESTIMATE under its rung — never the engine's cross-grade rescale as observed", async () => {
@@ -682,7 +694,13 @@ describe("D17 — the portfolio persist site: what is written is what the routes
     expect(hld.isEstimate).toBe(true);
     expect(hld.valuationStatus).toBe("estimated");
     expect(hld.pricingSource).toBe("unified-pricing");
-    expect(hld.pricingSourceMeta).toEqual({ slug: GOLD, method: "grade-curve-estimate", compsUsed: 0 });
+    // CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (Drew, 2026-09-03): the meta now
+    // also carries the price's LABELS and, when one applies, the self-anchored
+    // ratio. Still asserted exactly — this pin's job is that a previous pass's
+    // rung and pool cannot survive, so the shape stays closed rather than
+    // becoming a toMatchObject that would let a stale key ride along. These
+    // fixtures have no owner-contributed sale, so the self label never fires.
+    expect(hld.pricingSourceMeta).toEqual({ slug: GOLD, method: "grade-curve-estimate", compsUsed: 0, labels: [{ code: "fallback-rung", text: expect.stringContaining("no sales of this exact card at this grade") }], selfAnchored: null });
     expect(hld.estimateBasis).toMatch(/^Estimated from this card's own Raw sales/);
     await refresh(id);
     const again = await stored(id);

@@ -90,6 +90,7 @@ export function blankGradeCurveEntry(grade: string, grader: string): ObservedGra
     grade,
     grader,
     sampleCount: 0,
+    ownSampleCount: 0,
     weightedMedianPrice: null,
     plainMedianPrice: null,
     priceRangeLow: null,

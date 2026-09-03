@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
-import { fetchPortfolio, holdingDisplayValue, refreshAllHoldings, getRepriceStatus, exportPortfolio, valuationStatusOf, fmvPerUnitOf, syncEbaySold, type PortfolioResponse, type PortfolioHolding, type BatchRepriceResult } from "@/lib/api";
+import { fetchPortfolio, holdingDisplayValue, refreshAllHoldings, getRepriceStatus, exportPortfolio, openValuationReport, valuationStatusOf, fmvPerUnitOf, syncEbaySold, type PortfolioResponse, type PortfolioHolding, type BatchRepriceResult } from "@/lib/api";
 import { PortfolioDashboard } from "@/components/PortfolioDashboard";
 import { formatUSD, formatUSDCompact, formatPct, formatCardTitle, formatGrade } from "@/lib/format";
 import { PortfolioValueChart } from "@/components/PortfolioValueChart";
@@ -11,6 +11,10 @@ import { BulkEbayListModal } from "@/components/BulkEbayListModal";
 import { BulkCostBasisModal } from "@/components/BulkCostBasisModal";
 import { AddCardModal } from "@/components/AddCardModal";
 import { ProvenanceChip } from "@/components/ProvenanceChip";
+// CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (Drew, 2026-09-03): the caveats
+// beside the number they qualify. The rung chip says which pool; these say
+// what is wrong with it.
+import { PricingLabelChips } from "@/components/PricingLabelChips";
 import { SellSignalChip } from "@/components/SellSignalChip";
 import { holdingProvenance } from "@/lib/rung";
 import { formatAsOf } from "@/lib/asOf";
@@ -138,7 +142,10 @@ function PortfolioPageBody() {
   // each time." The on-open pass is a quieter thing than the button: no
   // banner, just a subtle indicator, because the user did not ask for it.
   const [autoRefreshing, setAutoRefreshing] = useState(false);
-  const [exporting, setExporting] = useState<null | "csv" | "xlsx">(null);
+  // CF-VALUATION-REPORT (Drew, 2026-09-02): "report" joins the export
+  // formats — it is a third thing this menu can produce, and sharing the
+  // in-flight state keeps the menu from firing two at once.
+  const [exporting, setExporting] = useState<null | "csv" | "xlsx" | "report">(null);
   const [exportError, setExportError] = useState<string | null>(null);
   // CF-UX-CLEANUP #4: AddCardModal state. Also auto-opens when
   // ?add=1 is present (that's how the old /app/portfolio/add route
@@ -445,9 +452,13 @@ function PortfolioPageBody() {
               setExporting(fmt);
               setExportError(null);
               try {
-                await exportPortfolio(fmt);
+                if (fmt === "report") await openValuationReport();
+                else await exportPortfolio(fmt);
               } catch (err) {
-                setExportError((err as { message?: string }).message ?? "Export failed.");
+                setExportError(
+                  (err as { message?: string }).message
+                  ?? (fmt === "report" ? "Could not generate the report." : "Export failed."),
+                );
               } finally {
                 setExporting(null);
               }
@@ -713,10 +724,12 @@ function ExportMenu({
   exporting,
   onExport,
 }: {
-  exporting: null | "csv" | "xlsx";
-  onExport: (fmt: "csv" | "xlsx") => void;
+  exporting: null | "csv" | "xlsx" | "report";
+  onExport: (fmt: "csv" | "xlsx" | "report") => void;
 }) {
   const [open, setOpen] = useState(false);
+  const busyLabel =
+    exporting === "report" ? "Building report…" : `Exporting ${exporting?.toUpperCase()}…`;
   return (
     <div className="relative">
       <button
@@ -724,7 +737,7 @@ function ExportMenu({
         disabled={exporting != null}
         className="hiq-btn-secondary text-sm disabled:opacity-60"
       >
-        {exporting != null ? `Exporting ${exporting.toUpperCase()}…` : "Export ▾"}
+        {exporting != null ? busyLabel : "Export ▾"}
       </button>
       {open && exporting == null && (
         <>
@@ -738,12 +751,28 @@ function ExportMenu({
               boxShadow: "0 8px 16px rgba(0,0,0,0.35)",
             }}
           >
+            {/* CF-VALUATION-REPORT (Drew, 2026-09-02): the printable
+                valuation document. First in the menu — it is the thing a
+                collector actually wants to hand to someone, where the
+                spreadsheets are for their own bookkeeping. */}
+            <button
+              onClick={() => {
+                setOpen(false);
+                onExport("report");
+              }}
+              className="block w-full text-left px-4 py-2 text-sm hover:bg-white/5"
+            >
+              <div>Valuation report</div>
+              <div className="text-xs text-[color:var(--color-muted)] mt-0.5">
+                Dated report — opens to print or save as PDF
+              </div>
+            </button>
             <button
               onClick={() => {
                 setOpen(false);
                 onExport("xlsx");
               }}
-              className="block w-full text-left px-4 py-2 text-sm hover:bg-white/5"
+              className="block w-full text-left px-4 py-2 text-sm hover:bg-white/5 border-t border-[color:var(--hiq-border)]"
             >
               Excel (.xlsx)
             </button>
@@ -894,6 +923,16 @@ function HoldingRow({ h }: { h: PortfolioHolding }) {
             </span>
           )}
           {value != null && <ProvenanceChip rung={provenance} source={provenance.source} />}
+          {/* CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (Drew, 2026-09-03):
+              PUBLISH + LABEL. A self-anchored price — the only sale behind it
+              being the owner's own purchase — still shows, and now says so on
+              the row rather than only to a reader who opens the card page. */}
+          {value != null && (
+            <PricingLabelChips
+              labels={h.pricingLabels}
+              selfAnchored={h.selfAnchored}
+            />
+          )}
           {/* CF-SELLER-INTELLIGENCE-SELL-WINDOW (Drew, 2026-09-02): the
               timing call, beside the provenance of the number it is timing.
               Renders nothing unless there is an actual call to make. */}

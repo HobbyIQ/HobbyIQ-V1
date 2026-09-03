@@ -63,6 +63,7 @@ import {
   deriveSellWindowSignal,
   type SellWindowSignal,
 } from "../signals/sellWindow.service.js";
+import { resolvePricingConfidence } from "../portfolioiq/pricingEnvelope.builder.js";
 import type { TrendIQResult } from "../compiq/trendIQ.types.js";
 
 // ---------------------------------------------------------------------------
@@ -90,6 +91,16 @@ export interface SellDraftHolding {
   sport?: string | null;
   /** Persisted trend result — the sell-window signal's only input. */
   trendIQ?: TrendIQResult | null;
+  /** CF-SELL-WINDOW-READS-PRICING-CONFIDENCE (2026-09-03). The engine's
+   *  pricing confidence for this price surface (0..1), written by the writer
+   *  that decided the price. This — not `confidence` — is what the sell
+   *  signal gates on. */
+  pricingSourceMeta?: { confidence?: unknown } | null;
+  /** Which path priced this holding; decides whether the flat `confidence`
+   *  below is a pricing confidence at all. */
+  pricingSource?: string | null;
+  /** Identity/match confidence on unified-engine rows. Only a PRICING
+   *  confidence on legacy-engine rows — see resolvePricingConfidence. */
   confidence?: number | null;
   lastUpdated?: string | null;
 }
@@ -183,12 +194,39 @@ function evidenceCount(result: CanonicalFmvResult): number {
   return (result.provenance?.comps ?? []).length;
 }
 
-/** Comp sources that mean "this sale was the seller's own transaction".
- *  soldCompsStore keys a holding-derived comp `holding::<id>`; an import
- *  that carried a real eBay order id keeps that id but is still flagged
- *  by `verifiedByUser`. Either one makes the pool self-anchored. */
-function isSelfComp(c: { source: string; verifiedByUser: boolean }): boolean {
-  if (c.verifiedByUser === true) return true;
+/**
+ * Is this published sale the SELLER's own transaction?
+ *
+ * CF-SELF-COMP-LABEL-REACHES-THE-RESULT (Drew, 2026-09-03). This used to
+ * ask `verifiedByUser === true || source.startsWith("holding::")`, and both
+ * halves miss the rows that matter.
+ *
+ * `verifiedByUser` means ATTESTED, not OWNED: ebayImportRematch writes an
+ * `ebay-user-purchase` with `contributorUserId` set and the flag FALSE,
+ * because the matcher found the identity and the user never confirmed it.
+ * Measured in prod 2026-09-03: 128 `ebay-user-purchase` rows, 104 carrying
+ * a contributor, only 56 carrying the flag. And `holding::` is a legacy key
+ * shape — Drew's kept rows carry `source: "ebay-user-purchase"`.
+ *
+ * The consequence was live, not theoretical. #1662 made the thin-pool
+ * reprieve per-tier, so an owner's sale now SURVIVES into a published
+ * result when it is the tier's only evidence — Verlander PSA 10 ($251, the
+ * owner's single sale) and Caglianone CPA-JC PSA 9. Those came back labeled
+ * low-confidence only, never self-anchored, which is exactly what Drew's
+ * standing ruling (2026-09-01) forbids: a self-comp publishes AND is
+ * labeled.
+ *
+ * Ownership is `contributorUserId === the reader's own id`. `sellerUserId`
+ * is null wherever the caller named no user, and then nothing is "yours" —
+ * a public reader is never told a stranger's sale is their own.
+ */
+function isSelfComp(
+  c: { source: string; verifiedByUser: boolean; contributorUserId?: string | null },
+  sellerUserId: string | null,
+): boolean {
+  if (sellerUserId && c.contributorUserId) return c.contributorUserId === sellerUserId;
+  // Legacy holding-derived rows predate the contributor stamp; they are the
+  // owner's by construction. Kept so an old pool row still labels.
   return typeof c.source === "string" && c.source.startsWith("holding::");
 }
 
@@ -199,7 +237,12 @@ function isSelfComp(c: { source: string; verifiedByUser: boolean }): boolean {
  * claim about the number's softness, then self-anchored, then the generic
  * fallback-rung note, then confidence. A draft can carry several.
  */
-export function labelsForResult(result: CanonicalFmvResult): SellDraftLabel[] {
+export function labelsForResult(
+  result: CanonicalFmvResult,
+  /** The reader's own user id, when the caller named one. Null on any path
+   *  that prices for no particular user — nothing there can be "yours". */
+  sellerUserId: string | null = null,
+): SellDraftLabel[] {
   const labels: SellDraftLabel[] = [];
   const rung = result.rungLabel ?? null;
 
@@ -219,7 +262,7 @@ export function labelsForResult(result: CanonicalFmvResult): SellDraftLabel[] {
   // no count at all.
   const comps = result.provenance?.comps ?? [];
   const poolTotal = evidenceCount(result);
-  const selfComps = comps.filter(isSelfComp);
+  const selfComps = comps.filter((c) => isSelfComp(c, sellerUserId));
   if (selfComps.length > 0) {
     // Self-comps are counted in the sample but stated against the pool,
     // so a truncated sample can only understate the ratio, never claim
@@ -286,14 +329,24 @@ export async function composeSellDraftPricing(
     computeFmv?: (
       input: Parameters<typeof computeCanonicalFmv>[0],
     ) => Promise<CanonicalFmvResult>;
+    /** CF-SELF-COMP-LABEL-REACHES-THE-RESULT (Drew, 2026-09-03). The seller's
+     *  own user id, so a comp the seller contributed is labeled as theirs.
+     *  Routes pass `req.user.userId`; omitted, no comp can be "yours" and the
+     *  draft simply carries no self-anchored label — the old behaviour. */
+    sellerUserId?: string | null;
   },
 ): Promise<SellDraftPriceContext> {
+  const sellerUserId = deps?.sellerUserId ?? null;
   // The sell signal rides on the holding's already-persisted trend, so it
   // is derived the same way the portfolio envelope derives it — pure,
   // synchronous, zero pool reads, and it can never move the price.
   const sellSignal = deriveSellWindowSignal({
     trendIQ: holding.trendIQ ?? null,
-    confidence: typeof holding.confidence === "number" ? holding.confidence : null,
+    // CF-SELL-WINDOW-READS-PRICING-CONFIDENCE (2026-09-03). Pricing
+    // confidence, resolved the one way (pricingSourceMeta first, flat field
+    // only for legacy-engine rows) — never the flat field on its own. See
+    // responseAssembly.ts for the full note.
+    confidence: resolvePricingConfidence(holding as any),
     trendUpdatedAt: typeof holding.lastUpdated === "string" ? holding.lastUpdated : null,
   });
 
@@ -382,7 +435,7 @@ export async function composeSellDraftPricing(
       compCount: evidenceCount(result),
       range,
       computedAt: result.computedAt ?? null,
-      labels: labelsForResult(result),
+      labels: labelsForResult(result, sellerUserId),
       declineReason: null,
     },
     sellSignal,

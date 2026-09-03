@@ -27,8 +27,10 @@ import { GradeArbSection } from "@/components/GradeArbSection";
 import { RecentCompsList } from "@/components/RecentCompsList";
 import { IdentityBanner } from "@/components/IdentityBanner";
 import { GradeCurveView } from "@/components/GradeCurveView";
+import { HoldingMoveAlertCard } from "@/components/HoldingMoveAlertCard";
 import { fetchObservedGradeCurve, type ObservedGradeEntry } from "@/lib/api";
 import { ProvenanceChip } from "@/components/ProvenanceChip";
+import { PricingLabelChips } from "@/components/PricingLabelChips";
 import { describeRung, holdingProvenance, type RungDescription } from "@/lib/rung";
 
 export default function HoldingDetailPage() {
@@ -131,6 +133,11 @@ export default function HoldingDetailPage() {
   const grade = formatGrade(h);
   // CF-PRICING-ENVELOPE (2026-07-31). Envelope-first with legacy fallback
   // during migration; every subsequent field read below prefers pricing.*.
+  // CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (Drew, 2026-09-03): the envelope
+  // carries them for the detail surface, the flat wire for the list row; read
+  // the envelope first and fall back, exactly as every other price field here.
+  const pricingLabels = h.pricing?.provenance?.pricingLabels ?? h.pricingLabels ?? [];
+  const selfAnchored = h.pricing?.provenance?.selfAnchored ?? h.selfAnchored ?? null;
   const fmv = h.pricing?.observed?.fairMarketValue ?? h.fairMarketValue;
   const vs = valuationStatusOf(h);
   const estValue = h.pricing?.estimate?.value ?? h.estimatedValue;
@@ -282,6 +289,30 @@ export default function HoldingDetailPage() {
           <Stat label="Gain/loss" value={formatUSDCompact(gain)} color={gainColor} />
           <Stat label="Return" value={formatPct(gainPct)} color={gainColor} />
         </div>
+
+        {/* CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (Drew, 2026-09-03).
+            PUBLISH + LABEL. The detail sheet has room for the whole sentence,
+            so it shows the sentence — the same words the sell draft puts in
+            front of a buyer, served from the wire rather than restated here.
+            The value above is unchanged; this says what is behind it. */}
+        {pricingLabels.length > 0 && (
+          <div className="mt-4 pt-4 border-t border-[color:var(--color-border)] space-y-2">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <PricingLabelChips labels={pricingLabels} selfAnchored={selfAnchored} />
+            </div>
+            <ul className="space-y-1">
+              {pricingLabels.map((l) => (
+                <li
+                  key={l.code}
+                  className="text-xs leading-snug text-[color:var(--color-muted)]"
+                  data-pricing-label-text={l.code}
+                >
+                  {l.text}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {/* Cost breakdown — matters when totalCostBasis != purchasePrice (fees) */}
         {feesAdded != null && Math.abs(feesAdded) > 0.005 && (
@@ -450,6 +481,12 @@ export default function HoldingDetailPage() {
           <GradeCurveView cardId={h.hobbyiqCardId || h.cardId!} entries={curve} loading={curveLoading} error={curveError} />
         </div>
       )}
+
+      {/* CF-USER-PRICE-ALERTS (Drew, 2026-09-02): manage the move alert on
+          this card. Sits under the evidence (comps + curve) it will quote. */}
+      <div className="mb-6">
+        <HoldingMoveAlertCard holdingId={holdingId} />
+      </div>
 
       {/* CF-GRADE-ARB (Drew, 2026-09-02): conditional value at each
           graded tier, for raw holdings only. The section refuses on its

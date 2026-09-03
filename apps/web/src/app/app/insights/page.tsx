@@ -17,11 +17,23 @@ import { formatUSD, formatUSDCompact, formatPct } from "@/lib/format";
 export default function InsightsPage() {
   return (
     <div className="max-w-6xl mx-auto px-6 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-1">Insights</h1>
-        <p className="text-sm text-[color:var(--color-muted)]">
-          Weekly brief, sell-now radar, and the market&apos;s biggest recent sales.
-        </p>
+      <div className="mb-8 flex items-end justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-3xl font-bold mb-1">Insights</h1>
+          <p className="text-sm text-[color:var(--color-muted)]">
+            Weekly brief, sell-now radar, and the market&apos;s biggest recent sales.
+          </p>
+        </div>
+        {/* CF-WEEKLY-DIGEST (Drew, 2026-09-02). The sidebar is deliberately
+            capped at 10 items (CF-SIDEBAR-TRIM), so the digest is reached
+            from here — the surface it most belongs beside. */}
+        <Link
+          href="/app/digest"
+          className="text-sm font-medium hover:underline flex-shrink-0"
+          style={{ color: "var(--color-accent)" }}
+        >
+          Your week in cards →
+        </Link>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">

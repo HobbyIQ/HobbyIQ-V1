@@ -237,11 +237,62 @@ function labelForKind(kind: PricingMethod["kind"], rung: string | null): string 
 
 // ─── Confidence ────────────────────────────────────────────────────────
 
+/** 0..1, or null for anything that isn't a usable confidence. */
+function unitOrNull(raw: unknown): number | null {
+  return typeof raw === "number" && Number.isFinite(raw) && raw >= 0 && raw <= 1 ? raw : null;
+}
+
+/**
+ * CF-REPORT-CONFIDENCE-IS-PRICING (2026-09-03).
+ *
+ * `confidence.pricing` must be the PRICING confidence — how well-evidenced
+ * the dollar figure is. It used to read the flat `holding.confidence`
+ * field, which only the legacy computeEstimate path ever writes; on a
+ * unified/canonical-priced holding that field is stale or absent, so the
+ * envelope published a number that answered a different question (or a
+ * previous pass's answer) under the name "pricing".
+ *
+ * The engine's own pricing confidence now rides in `pricingSourceMeta`,
+ * written by the same writer that decided the price. Prefer it. Fall back
+ * to the flat field only when the price surface has no structured
+ * confidence AND the legacy path is the one that priced this holding —
+ * that is the population the flat field was actually written for.
+ *
+ * Anything else stays null: an unknown pricing confidence is reported as
+ * unknown, never filled in from a different quantity.
+ */
 function buildConfidence(holding: PortfolioHolding): PricingConfidence {
-  const raw = (holding as { confidence?: unknown }).confidence;
-  const pricing =
-    typeof raw === "number" && Number.isFinite(raw) && raw >= 0 && raw <= 1 ? raw : null;
-  return { pricing, liquidity: null, timing: null };
+  return { pricing: resolvePricingConfidence(holding), liquidity: null, timing: null };
+}
+
+/**
+ * The single resolver for "how well-evidenced is THIS holding's price", 0..1,
+ * or null when that is genuinely not recorded.
+ *
+ * Extracted from buildConfidence (CF-SELL-WINDOW-READS-PRICING-CONFIDENCE,
+ * 2026-09-03) so every consumer that needs a pricing confidence — the report
+ * envelope, the sell-window signal, the eBay sell draft — reads the SAME
+ * quantity by the same rule, instead of each reaching for the flat field and
+ * getting identity/match confidence under a pricing name.
+ *
+ * Callers must treat null as UNKNOWN and say so; it is never 1.0.
+ */
+export function resolvePricingConfidence(
+  holding: Pick<PortfolioHolding, never> & {
+    pricingSourceMeta?: { confidence?: unknown } | null;
+    pricingSource?: string | null;
+    confidence?: unknown;
+  },
+): number | null {
+  const fromEngine = unitOrNull(holding.pricingSourceMeta?.confidence);
+  if (fromEngine !== null) return fromEngine;
+
+  const source = holding.pricingSource ?? null;
+  // "legacy-engine", and pre-CF holdings with no pricingSource at all, are
+  // the rows computeEstimate priced — the only rows whose flat `confidence`
+  // came from a pricing computation.
+  const legacyPriced = source === null || source === "legacy-engine";
+  return legacyPriced ? unitOrNull(holding.confidence) : null;
 }
 
 // ─── Predicted ─────────────────────────────────────────────────────────
@@ -320,6 +371,44 @@ function buildBands(fmvPerUnit: number | null): PricingBands | null {
 
 // ─── Provenance ────────────────────────────────────────────────────────
 
+/** CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (Drew, 2026-09-03). The label set
+ *  the price writer stamped into `pricingSourceMeta`, validated on the way
+ *  out. A malformed or absent stamp yields `[]` — the wire never invents a
+ *  caveat, and never drops one it was given. */
+export function pricingLabelsOf(
+  holding: PortfolioHolding,
+): PricingProvenance["pricingLabels"] {
+  const raw = (holding as {
+    pricingSourceMeta?: { labels?: unknown } | null;
+  }).pricingSourceMeta?.labels;
+  if (!Array.isArray(raw)) return [];
+  return raw.flatMap((l) => {
+    const code = (l as { code?: unknown })?.code;
+    const text = (l as { text?: unknown })?.text;
+    return typeof code === "string" && typeof text === "string"
+      ? [{ code: code as "speculative" | "self-anchored" | "fallback-rung" | "low-confidence", text }]
+      : [];
+  });
+}
+
+/** The self-anchored ratio the writer stamped: how many of the pool's
+ *  `total` sales behind this price are the owner's `own`. Null unless both
+ *  halves are finite non-negative numbers with `own > 0` — a ratio that
+ *  cannot be stated is not stated. */
+export function selfAnchoredOf(
+  holding: PortfolioHolding,
+): { own: number; total: number } | null {
+  const raw = (holding as {
+    pricingSourceMeta?: { selfAnchored?: unknown } | null;
+  }).pricingSourceMeta?.selfAnchored;
+  if (!raw || typeof raw !== "object") return null;
+  const own = (raw as { own?: unknown }).own;
+  const total = (raw as { total?: unknown }).total;
+  if (typeof own !== "number" || !Number.isFinite(own) || own <= 0) return null;
+  if (typeof total !== "number" || !Number.isFinite(total) || total < own) return null;
+  return { own, total };
+}
+
 function buildProvenance(holding: PortfolioHolding): PricingProvenance {
   const vendor = coerceVendor((holding as { sourceVendor?: string }).sourceVendor);
   const vendorUpdatedAt =
@@ -327,11 +416,18 @@ function buildProvenance(holding: PortfolioHolding): PricingProvenance {
       ? (holding as { sourceVendorUpdatedAt: string }).sourceVendorUpdatedAt
       : null;
   const pricingSource = coercePricingSource((holding as { pricingSource?: string }).pricingSource);
-  const meta = (holding as { pricingSourceMeta?: { slug?: string; method?: string; compsUsed?: number } })
+  const meta = (holding as { pricingSourceMeta?: { slug?: string; method?: string; compsUsed?: number; confidence?: unknown } })
     .pricingSourceMeta;
   const pricingSourceMeta =
     meta && typeof meta.slug === "string" && typeof meta.method === "string" && typeof meta.compsUsed === "number"
-      ? { slug: meta.slug, method: meta.method, compsUsed: meta.compsUsed }
+      ? {
+          slug: meta.slug,
+          method: meta.method,
+          compsUsed: meta.compsUsed,
+          // The engine's pricing confidence for THIS price surface. Absent
+          // on price surfaces written before CF-REPORT-CONFIDENCE-IS-PRICING.
+          confidence: unitOrNull(meta.confidence),
+        }
       : null;
 
   return {
@@ -339,6 +435,11 @@ function buildProvenance(holding: PortfolioHolding): PricingProvenance {
     vendorUpdatedAt,
     pricingSource,
     pricingSourceMeta,
+    // CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (Drew, 2026-09-03): the same
+    // validated read the list wire does, so the detail sheet and the row
+    // cannot disagree about whether a price is self-anchored.
+    pricingLabels: pricingLabelsOf(holding),
+    selfAnchored: selfAnchoredOf(holding),
     nearestGradedAnchor: holding.nearestGradedAnchor ?? null,
     lastSaleSurface: holding.lastSaleSurface ?? null,
     modelExpectation: (holding as { modelExpectation?: unknown }).modelExpectation ?? null,

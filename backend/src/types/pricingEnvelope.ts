@@ -128,7 +128,21 @@ export interface PricingMethod {
 }
 
 export interface PricingConfidence {
-  /** 0..1. Populated on our-pool + engine paths. */
+  /** 0..1 — the PRICING confidence: how well-evidenced the dollar figure
+   *  is (pool depth, comp recency, how far the rung reached from the exact
+   *  card). It falls with each rung down the ladder.
+   *
+   *  CF-REPORT-CONFIDENCE-IS-PRICING (2026-09-03): this used to be filled
+   *  from the flat `holding.confidence` field, which the canonical/unified
+   *  writer never sets — so on a unified-priced holding it was whatever a
+   *  previous legacy reprice happened to leave behind, published under a
+   *  name that promised something else. It now prefers the engine's own
+   *  pricing confidence off `pricingSourceMeta.confidence`, and falls back
+   *  to the legacy field only for holdings the legacy path priced.
+   *
+   *  null when no path reported one — render it as unknown rather than
+   *  substituting a match/identity confidence, which is a different
+   *  quantity and answers a different question. */
   pricing: number | null;
   /** Reserved. Always null today; caller shouldn't render when null. */
   liquidity: number | null;
@@ -192,8 +206,20 @@ export interface PricingProvenance {
   pricingSource: "our-pool" | "legacy-engine" | "unified-pricing" | "sibling-estimate" | null;
   /** Metadata about the winning our-pool call. */
   pricingSourceMeta:
-    | { slug: string; method: string; compsUsed: number }
+    | { slug: string; method: string; compsUsed: number; confidence: number | null }
     | null;
+  /** CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (Drew, 2026-09-03). The caveats
+   *  this price must be read with, exactly as the writer stamped them — the
+   *  same set the live canonical-fmv response carries for this holding. The
+   *  holding DETAIL surface reads them here; the list row reads the flat
+   *  `pricingLabels` on the wire. One source, two shapes. */
+  pricingLabels: Array<{
+    code: "speculative" | "self-anchored" | "fallback-rung" | "low-confidence";
+    text: string;
+  }>;
+  /** The self-anchored ratio: `own` of the pool's `total` sales behind this
+   *  price are the owner's. Null when none is. */
+  selfAnchored: { own: number; total: number } | null;
   /** Grade-ladder rescue anchor. */
   nearestGradedAnchor: {
     grade: string;

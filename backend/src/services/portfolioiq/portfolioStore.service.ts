@@ -33,8 +33,17 @@ import {
 // CF-ONE-VALUATION-PATH (D17, 2026-08-30): the persist site prices the exact
 // pool through the ONE valuation entry (holdingValuation → valueIdentity).
 import { valueHoldingThroughOneEntry, holdingGrade as holdingGradeOf } from "./holdingValuation.js";
+// CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (Drew, 2026-09-03). The legacy
+// exact-pool writers below persist prices too — only for identities the
+// catalog cannot name, but persist they do. They stamp the same label set
+// the one-entry writer does, through the same derivation.
+import { persistedLabelsForUnifiedResult } from "../compiq/valuationLabels.js";
+import { tierLabelFor } from "../compiq/oneValuationPath.service.js";
 import { isPriceFromOurPoolEnabled, priceHoldingFromOurPool } from "./priceFromOurPool.service.js";
-import { composeHoldingWireShape, composePortfolioListResponse } from "./responseAssembly.js";
+import { composeHoldingWireShape, composePortfolioListResponse, type WireEntitlements } from "./responseAssembly.js";
+// CF-PRO-SELLER-GATE (Drew, 2026-09-02): the wire composer gates paid fields
+// on the caller's effective plan; these are the single authority for that.
+import { effectivePlanFor, hasEntitlement } from "../../config/entitlements.js";
 // CF-PORTFOLIO-REFRESH-ASYNC (2026-08-31): background-run tracker for the
 // dispatched batch reprice. Progress state only — never a price.
 import * as repriceJobs from "./repriceJobTracker.js";
@@ -417,6 +426,19 @@ interface PortfolioPricePoint {
    *  as the engine re-anchors and must never be read as a comp-anchored
    *  observation. */
   valuationStatus?: "observed" | "estimated";
+  /** CF-A-MOVER-NEEDS-CORROBORATION (2026-09-03). The rung that produced
+   *  this point's value, verbatim from the engine (`fmvRung` /
+   *  `rungLabel`). An `exact-pool-*` label means the number was read from
+   *  the exact (identity, grade) pool: a real sale of THIS card.
+   *
+   *  ABSENT means unknown — NOT exact-pool. Unlike `valuationStatus`,
+   *  whose absence encoded the old append gate's guarantee, this field has
+   *  no legacy meaning to inherit: points written before it existed carry
+   *  no evidence of their rung, and a reader that needs corroboration
+   *  (the weekly digest's movers) must treat them as uncorroborated rather
+   *  than assume the best case. History heals forward — every write from
+   *  here on carries the label. */
+  rungLabel?: string;
 }
 
 /**
@@ -445,7 +467,14 @@ interface PortfolioAlert {
     // driver that turns action-recommendations into a push-notification
     // product. Fires only on meaningful flips (SELL_NOW / HOLD entry),
     // never on LIST↔LIST or transitions in/out of INSUFFICIENT_DATA.
-    | "recommendation-flip";
+    | "recommendation-flip"
+    // CF-USER-PRICE-ALERTS (Drew, 2026-09-02): rule-driven per-holding move.
+    // DISTINCT from "value-move" on purpose. The legacy 10%/18% emitter and
+    // this one can both fire on the SAME holding in one reprice pass, and
+    // addAlert dedups on (holdingId, type) within 6h — sharing the type let
+    // the legacy row win and silently dropped the user's rule row (its rule
+    // text, basis and speculative label) from the feed. Own type, own row.
+    | "holding-move-rule";
   createdAt: string;
   holdingId: string;
   playerName: string;
@@ -1237,6 +1266,36 @@ function normalizeId(value: unknown): string {
 function toNumber(value: unknown, fallback = 0): number {
   const num = Number(value);
   return Number.isFinite(num) ? num : fallback;
+}
+
+/**
+ * CF-PRICING-CONFIDENCE-SCALE (2026-09-03).
+ *
+ * Convert a CompIqEstimate `confidence.pricingConfidence` into the 0..1 scale
+ * the holding's flat `confidence` field is declared on.
+ *
+ * THE CONTRACT, made explicit because getting it wrong is silent:
+ *
+ *   input  — 0..100. This is the declared type (`compiq.types.ts`:
+ *            `confidence.pricingConfidence: number`) and what every producer
+ *            in compiqEstimate.service.ts emits: the literal rungs 0, 15, 25,
+ *            40, 55, and the calibrated value at ~7491 which is explicitly
+ *            clamped `Math.min(100, ...)` then tier-capped. The routes have
+ *            always read it as percent (`(pricingConfidence ?? 60) / 100`).
+ *   output — 0..1, clamped, or null when the input is not a usable number.
+ *
+ * We do NOT sniff the scale. A value of 0.37 on the wire is 0.37 PERCENT, not
+ * 37% — the one producer that emits a sub-1 value (the variant-mismatch branch
+ * at compiqEstimate.service.ts ~6007, `pricingConfidence: 0.2`) means "almost
+ * no confidence", so scaling it to 0.002 and letting it fall under every
+ * downstream floor is the correct, honest reading. Auto-detecting "looks
+ * already scaled" would silently promote that 0.2 to 20% and would make the
+ * function's output depend on the magnitude of its input, which is exactly the
+ * class of bug this replaces.
+ */
+export function scalePricingConfidence(raw: unknown): number | null {
+  if (typeof raw !== "number" || !Number.isFinite(raw)) return null;
+  return Math.min(1, Math.max(0, raw / 100));
 }
 
 function toIso(value: unknown, fallback = new Date()): string {
@@ -3005,6 +3064,10 @@ function unifiedHoldingWrite(
   holding: PortfolioHolding,
   exact: ExactPoolPrice,
   nowIso: string,
+  /** CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (Drew, 2026-09-03): the owner
+   *  this price is being written for, so a sale THEY contributed is labeled
+   *  as theirs. Null on any path that names no user — nothing is "yours". */
+  ownerUserId: string | null = null,
 ): PortfolioHolding {
   const u = exact.u;
   return {
@@ -3032,7 +3095,14 @@ function unifiedHoldingWrite(
     isEstimate: false,
     valuationStatus: "observed",
     pricingSource: "unified-pricing",
-    pricingSourceMeta: withUnionRefused({ slug: exact.attempt.cardId, method: u.rungLabel, compsUsed: u.totalSampleCount }, exact.attempt),
+    pricingSourceMeta: withUnionRefused({
+      slug: exact.attempt.cardId,
+      method: u.rungLabel,
+      compsUsed: u.totalSampleCount,
+      confidence: u.confidence,
+      // CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (Drew, 2026-09-03).
+      ...persistedLabelsForUnifiedResult(u, tierLabelFor(holdingGradeOf(holding)), ownerUserId),
+    }, exact.attempt),
     nearestGradedAnchor: undefined,
     verdict: "Observed",
     recommendation: holding.recommendation ?? "Hold",
@@ -3204,7 +3274,7 @@ async function gateEstimateAgainstExactPool(input: {
     }));
     return {
       outcome: "priced-from-exact-pool",
-      holding: unifiedHoldingWrite(holding, exact, nowIso),
+      holding: unifiedHoldingWrite(holding, exact, nowIso, input.userId ?? null),
       blockingId: verdict.blockingId as string,
       canonical: exact.canonical,
     };
@@ -3264,6 +3334,12 @@ async function autoPriceHolding(
         value: oneEntryFmv,
         source,
         ...(oneEntry.outcome === "estimated" ? { valuationStatus: "estimated" as const } : {}),
+        // CF-A-MOVER-NEEDS-CORROBORATION: carry the rung onto the point, so a
+        // reader can tell a real sale of THIS card from an engine re-anchor
+        // without re-deriving anything.
+        ...(typeof oneEntry.valuation.rungLabel === "string" && oneEntry.valuation.rungLabel
+          ? { rungLabel: oneEntry.valuation.rungLabel }
+          : {}),
       });
     }
     evaluateHoldingAlerts(doc, previous, oneEntry.holding);
@@ -3380,12 +3456,21 @@ async function autoPriceHolding(
           pricingSource: "unified-pricing",
           // CF-LABELS-TELL-THE-TRUTH (D4 PR 5): the meta names THIS price's
           // rung and pool; a previous pass's "cross-setkey" cannot survive.
-          pricingSourceMeta: { slug: exact?.attempt.cardId ?? String(earlyResolvedId), method: u.rungLabel, compsUsed: u.totalSampleCount },
+          pricingSourceMeta: {
+            slug: exact?.attempt.cardId ?? String(earlyResolvedId),
+            method: u.rungLabel,
+            compsUsed: u.totalSampleCount,
+            confidence: u.confidence,
+            // CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (Drew, 2026-09-03).
+            ...persistedLabelsForUnifiedResult(u, tierLabelFor(holdingGradeOf(holding as PortfolioHolding)), userId ?? null),
+          },
           lastUpdated: nowIso,
           sourceVendor: "cardhedge" as any,
           sourceVendorUpdatedAt: nowIso,
         };
-        appendPriceHistory(doc, holding.id, { at: nowIso, value: canonical, source });
+        // CF-A-MOVER-NEEDS-CORROBORATION: the unified engine names its rung;
+        // the point carries it.
+        appendPriceHistory(doc, holding.id, { at: nowIso, value: canonical, source, ...(typeof u.rungLabel === "string" && u.rungLabel ? { rungLabel: u.rungLabel } : {}) });
         evaluateHoldingAlerts(doc, previous, unified);
         doc.holdings[holding.id] = unified;
         return unified;
@@ -4302,7 +4387,18 @@ async function autoPriceHolding(
     });
     if (gate.outcome !== "allowed") {
       if (gate.outcome === "priced-from-exact-pool") {
-        appendPriceHistory(doc, holding.id, { at: String(gate.holding.lastUpdated), value: gate.canonical, source });
+        // CF-A-MOVER-NEEDS-CORROBORATION: this branch fired BECAUSE the exact
+        // pool priced the holding (`priced-from-exact-pool`); the rung the gate
+        // settled on is on the holding it returned.
+        appendPriceHistory(doc, holding.id, {
+          at: String(gate.holding.lastUpdated),
+          value: gate.canonical,
+          source,
+          ...(typeof (gate.holding as { fmvRung?: unknown }).fmvRung === "string"
+            && (gate.holding as { fmvRung?: string }).fmvRung
+            ? { rungLabel: (gate.holding as { fmvRung: string }).fmvRung }
+            : {}),
+        });
       }
       evaluateHoldingAlerts(doc, previous, gate.holding);
       doc.holdings[holding.id] = gate.holding;
@@ -4333,7 +4429,7 @@ async function autoPriceHolding(
     // unified price, and a previous pass's meta rode along.
     pricingSource: unifiedIsFinalAuthority ? "unified-pricing" : ourPoolMeta ? "our-pool" : "legacy-engine",
     pricingSourceMeta: unifiedIsFinalAuthority && unifiedResult
-      ? { slug: unifiedResult.pricedId, method: unifiedResult.rungLabel, compsUsed: unifiedResult.totalSampleCount }
+      ? { slug: unifiedResult.pricedId, method: unifiedResult.rungLabel, compsUsed: unifiedResult.totalSampleCount, confidence: unifiedResult.confidence }
       : (ourPoolMeta ?? undefined),
     // CF-RUNG-LABEL (D4 PR 1): the rung behind the final price surface;
     // null when the legacy engine, which does not name its rung, produced it.
@@ -4357,10 +4453,19 @@ async function autoPriceHolding(
     // (written before this PR) load as `undefined` for these fields; the
     // wire coerces `undefined` → `null` and iOS decoders bind defensively.
     trendIQ: (estimate as any)?.trendIQ ?? null,
-    confidence:
-      typeof (estimate as any)?.confidence?.pricingConfidence === "number"
-        ? Math.min(1, Math.max(0, (estimate as any).confidence.pricingConfidence))
-        : null,
+    // CF-PRICING-CONFIDENCE-SCALE (2026-09-03). `confidence.pricingConfidence`
+    // on a CompIqEstimate is 0..100 — that is the declared type (compiq.types.ts)
+    // and what every producer in compiqEstimate.service.ts emits (0/15/25/40/55,
+    // and the calibrated value clamped by `Math.min(100, ...)` at ~7491). The
+    // holding's flat `confidence` field is 0..1 (portfolioiq.types.ts).
+    //
+    // This line used to `Math.min(1, ...)` the 0..100 input instead of dividing
+    // by 100, so every confidence at or above 1 saturated to exactly 1.0 — a
+    // pricing confidence of 37 and one of 91 both persisted as "1". That is the
+    // origin of the flat-1.0 population (17 of 43 holdings in Drew's portfolio).
+    // compiq.routes.ts has always divided (`... ?? 60) / 100`); this writer did
+    // not. scalePricingConfidence makes the conversion explicit and shared.
+    confidence: scalePricingConfidence((estimate as any)?.confidence?.pricingConfidence),
     predictedPriceAttribution:
       (estimate as any)?.predictedPriceAttribution ?? null,
     verdict: String((estimate as any)?.verdict ?? holding.verdict ?? "Hold"),
@@ -4404,6 +4509,12 @@ async function autoPriceHolding(
       value: resolved.fairMarketValueOverride,
       source,
       ...(resolved.valuationStatus === "estimated" ? { valuationStatus: "estimated" as const } : {}),
+      // CF-A-MOVER-NEEDS-CORROBORATION: `priceSurfaceRung` is the same value
+      // this function stamps onto the holding as `fmvRung` a few lines up.
+      // The point and the holding therefore never disagree about the rung.
+      // It is null for the lanes that do not name one (the ladder, the legacy
+      // rungs) — and null is written as ABSENT, which reads as uncorroborated.
+      ...(priceSurfaceRung ? { rungLabel: priceSurfaceRung } : {}),
     });
   }
 
@@ -5046,6 +5157,29 @@ async function requireUser(req: Request, res: Response): Promise<{ userId: strin
 }
 
 /**
+ * CF-PRO-SELLER-GATE (Drew, 2026-09-02). Resolve the paid-field entitlements
+ * for this request, for the wire composer.
+ *
+ * Reads req.user, which requireSession attached, and answers through the ONE
+ * authority — hasEntitlement() over the matrix, on the EFFECTIVE plan so a
+ * comped owner (entitlementOverride) is entitled here exactly as they are at
+ * every middleware gate. Reading `user.plan` directly instead would give
+ * comped owners a UI-unlocked / wire-stripped half-state, which is the bug
+ * effectivePlanFor exists to prevent.
+ *
+ * No req.user (a caller that reached a handler without requireSession) →
+ * not entitled. Denying on absence keeps the failure mode "paid field
+ * missing", never "paid field leaked to an unauthenticated caller".
+ */
+export function wireEntitlementsFor(req: Request): WireEntitlements {
+  const user = req.user;
+  if (!user) return { sellSignalEntitled: false };
+  return {
+    sellSignalEntitled: hasEntitlement(effectivePlanFor(user), "sellerIntelligence"),
+  };
+}
+
+/**
  * CF-PAYMENTS-A: count helper exposed for the requireCapacity middleware.
  * Reads UserDoc and returns the current number of holdings keys; used to
  * enforce holdingsCap on POST /api/portfolio/holdings before the new row
@@ -5121,7 +5255,7 @@ export async function getHoldings(req: Request, res: Response) {
   const items = includePending
     ? allItems
     : allItems.filter((h) => (h as any).cardStatus !== "pending-review");
-  const holdings = composePortfolioListResponse(items);
+  const holdings = composePortfolioListResponse(items, undefined, wireEntitlementsFor(req));
   res.json({ userId: auth.userId, count: holdings.length, holdings });
 }
 
@@ -5146,7 +5280,7 @@ export async function getPortfolioBreakdown(req: Request, res: Response) {
   const items = Object.values(doc.holdings).filter(
     (h) => (h as any).cardStatus !== "pending-review",
   );
-  const holdings = composePortfolioListResponse(items);
+  const holdings = composePortfolioListResponse(items, undefined, wireEntitlementsFor(req));
   const { analyzePortfolio, analyzeWithCustomTiers } = await import("./portfolioAnalytics.service.js");
 
   // CF-CUSTOM-TIERS (2026-08-17): when the user has defined their own buckets,
@@ -5220,7 +5354,7 @@ export async function getPendingReviewHoldings(req: Request, res: Response) {
   const items = Object.values(doc.holdings).filter(
     (h) => (h as any).cardStatus === "pending-review",
   );
-  const holdings = composePortfolioListResponse(items);
+  const holdings = composePortfolioListResponse(items, undefined, wireEntitlementsFor(req));
   res.json({ userId: auth.userId, count: holdings.length, holdings });
 }
 
@@ -5419,7 +5553,7 @@ export async function getPortfolioWithSummary(req: Request, res: Response) {
   // CF-PORTFOLIOHOLDING-FIELD-PRUNE Phase B: route through anti-corruption
   // layer; explicit wire-shape per contract_freeze_v1 §1.3. summary still
   // reads off raw holdings (uses Phase A compute-on-read helpers).
-  const items = composePortfolioListResponse(rawItems, catalogImageByCardId);
+  const items = composePortfolioListResponse(rawItems, catalogImageByCardId, wireEntitlementsFor(req));
   // CF-PORTFOLIO-REFRESH-ASYNC (2026-08-31): the refresh is now asynchronous,
   // so this payload can legitimately be answered while a reprice is still in
   // flight. Values here are ALWAYS the last persisted ones — this endpoint
@@ -5560,7 +5694,7 @@ export async function getPortfolioOpportunities(req: Request, res: Response) {
     };
     await Promise.all(Array.from({ length: CONCURRENCY }, () => worker()));
   }
-  const wires = composePortfolioListResponse(rawItems, catalogImageByCardId);
+  const wires = composePortfolioListResponse(rawItems, catalogImageByCardId, wireEntitlementsFor(req));
 
   const sellNow: typeof wires = [];
   const hold: typeof wires = [];
@@ -6345,7 +6479,7 @@ export async function getHoldingById(req: Request, res: Response) {
   // CF-PORTFOLIOHOLDING-FIELD-PRUNE Phase B: route through anti-corruption
   // layer; this endpoint runs no estimate, so β fields are null here too.
   // iOS detail-view β richness comes from POST /api/compiq/*.
-  res.json(composeHoldingWireShape(holding));
+  res.json(composeHoldingWireShape(holding, undefined, wireEntitlementsFor(req)));
 }
 
 export async function updateHolding(req: Request, res: Response) {
@@ -6593,7 +6727,7 @@ export async function updateHolding(req: Request, res: Response) {
   // matches what it sent. Prevents "I changed to Raw but it still shows
   // PSA 10" symptoms where iOS was relying on a refetch that raced or
   // never fired. Legacy {message, id} still present for existing consumers.
-  const holdingWire = composeHoldingWireShape(doc.holdings[id]);
+  const holdingWire = composeHoldingWireShape(doc.holdings[id], undefined, wireEntitlementsFor(req));
   res.json({ message: "Holding updated", id, holding: holdingWire, entry: { holding: holdingWire } });
 
   // CF-CARD-SAVE-FAST: the user's Save has returned. Everything below is the
@@ -6932,7 +7066,7 @@ export async function regradeHolding(req: Request, res: Response) {
   // across all mutation routes. `updatedHolding` preserved for existing
   // consumers; `holding` + `entry.holding` are the new parity fields
   // matching PATCH /holdings and confirm/reject flows.
-  const regradedWire = composeHoldingWireShape(doc.holdings[id]);
+  const regradedWire = composeHoldingWireShape(doc.holdings[id], undefined, wireEntitlementsFor(req));
   return res.json({
     message: "Holding regraded",
     id,
@@ -8088,7 +8222,7 @@ export async function sellHolding(req: Request, res: Response) {
   // remaining holding when qty remains so iOS reflects the new state
   // without a refetch. holdingRemoved=true means the row is gone — no
   // holding field then.
-  const remainingHolding = remainingQty > 0 ? composeHoldingWireShape(doc.holdings[id]) : null;
+  const remainingHolding = remainingQty > 0 ? composeHoldingWireShape(doc.holdings[id], undefined, wireEntitlementsFor(req)) : null;
   return res.json({
     message: "Holding sale recorded",
     sold: ledgerEntry,
@@ -9197,7 +9331,7 @@ export async function addHeldExpenseHandler(req: Request, res: Response) {
     return res.status(400).json({ success: false, error: result.reason });
   }
   // CF-MUTATION-ENVELOPE-PARITY (2026-07-12): entry.holding for iOS decoder.
-  const holdingWire = result.holding ? composeHoldingWireShape(result.holding) : null;
+  const holdingWire = result.holding ? composeHoldingWireShape(result.holding, undefined, wireEntitlementsFor(req)) : null;
   res.status(201).json({
     success: true,
     expense: result.expense,
@@ -9220,7 +9354,7 @@ export async function deleteHeldExpenseHandler(req: Request, res: Response) {
     return res.status(404).json({ success: false, error: "Expense not found" });
   }
   // CF-MUTATION-ENVELOPE-PARITY (2026-07-12): entry.holding for iOS decoder.
-  const holdingWire = result.holding ? composeHoldingWireShape(result.holding) : null;
+  const holdingWire = result.holding ? composeHoldingWireShape(result.holding, undefined, wireEntitlementsFor(req)) : null;
   res.json({
     success: true,
     holding: holdingWire,
@@ -9262,7 +9396,7 @@ export async function refreshHolding(req: Request, res: Response) {
   await writeUserDoc(auth.userId, doc);
   // CF-MUTATION-ENVELOPE-PARITY (2026-07-12): return the refreshed holding
   // so iOS shows the new price without a refetch.
-  const refreshedWire = composeHoldingWireShape(doc.holdings[id]);
+  const refreshedWire = composeHoldingWireShape(doc.holdings[id], undefined, wireEntitlementsFor(req));
   res.json({
     message: "Holding refreshed",
     id,
@@ -9530,6 +9664,21 @@ export async function repriceHoldingsForUser(
   const priorFmv = new Map<string, number | null>();
   for (const h of candidates) priorFmv.set(h.id, perUnitFmvForSwing(h));
 
+  // CF-USER-PRICE-ALERTS (Drew, 2026-09-02): the pre-cycle (value, rung) pair
+  // per holding, for the post-write move-alert sweep below. The rung is
+  // captured HERE, alongside priorFmv, for the same reason priorFmv is: the
+  // dozen write sites in the loop each overwrite it, and a move alert has to
+  // know whether BOTH ends of its comparison read the exact pool before it
+  // can call the move observed.
+  const priorAlertState = new Map<string, { fairMarketValue: number | null; fmvRung: string | null; lastUpdated: string | number | null }>();
+  for (const h of candidates) {
+    priorAlertState.set(h.id, {
+      fairMarketValue: typeof h.fairMarketValue === "number" ? h.fairMarketValue : null,
+      fmvRung: (h as { fmvRung?: string | null }).fmvRung ?? null,
+      lastUpdated: (h as { lastUpdated?: string | number | null }).lastUpdated ?? null,
+    });
+  }
+
   for (const holding of candidates) {
     // CF-EBAY-REVIEW-QUEUE (2026-07-12): skip pending-review rows. Those
     // aren't real inventory yet — pricing them would fire the CompIQ
@@ -9597,6 +9746,11 @@ export async function repriceHoldingsForUser(
             value: bFmv,
             source,
             ...(bOneEntry.outcome === "estimated" ? { valuationStatus: "estimated" as const } : {}),
+            // CF-A-MOVER-NEEDS-CORROBORATION: same stamp as the single-holding
+            // one-entry site; the batch reprice writes the bulk of the trail.
+            ...(typeof bOneEntry.valuation.rungLabel === "string" && bOneEntry.valuation.rungLabel
+              ? { rungLabel: bOneEntry.valuation.rungLabel }
+              : {}),
           });
         }
         evaluateHoldingAlerts(doc, doc.holdings[holding.id], bOneEntry.holding);
@@ -9690,7 +9844,14 @@ export async function repriceHoldingsForUser(
               isEstimate: false,
               valuationStatus: "observed",
               pricingSource: "unified-pricing",
-              pricingSourceMeta: { slug: bExactEarly?.attempt.cardId ?? String(bEarlyId), method: bU.rungLabel, compsUsed: bU.totalSampleCount },
+              pricingSourceMeta: {
+                slug: bExactEarly?.attempt.cardId ?? String(bEarlyId),
+                method: bU.rungLabel,
+                compsUsed: bU.totalSampleCount,
+                confidence: bU.confidence,
+                // CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (Drew, 2026-09-03).
+                ...persistedLabelsForUnifiedResult(bU, tierLabelFor(holdingGradeOf(holding as PortfolioHolding)), userId ?? null),
+              },
               lastUpdated: bNow,
               sourceVendor: "cardhedge" as any,
               sourceVendorUpdatedAt: bNow,
@@ -9803,7 +9964,14 @@ export async function repriceHoldingsForUser(
                 isEstimate: false,
                 valuationStatus: "observed",
                 pricingSource: "unified-pricing",
-                pricingSourceMeta: { slug: bExact?.attempt.cardId ?? String(bResolvedId), method: unified.rungLabel, compsUsed: unified.totalSampleCount },
+                pricingSourceMeta: {
+                  slug: bExact?.attempt.cardId ?? String(bResolvedId),
+                  method: unified.rungLabel,
+                  compsUsed: unified.totalSampleCount,
+                  confidence: unified.confidence,
+                  // CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (Drew, 2026-09-03).
+                  ...persistedLabelsForUnifiedResult(unified, tierLabelFor(holdingGradeOf(holding as PortfolioHolding)), userId ?? null),
+                },
                 verdict: holding.verdict ?? "Hold",
                 recommendation: holding.recommendation ?? "Hold",
                 lastUpdated: uNow,
@@ -10496,6 +10664,12 @@ export async function repriceHoldingsForUser(
         // compsUsed (holding), marketSpeed / marketPressure, freshnessStatus).
       };
 
+      // CF-A-MOVER-NEEDS-CORROBORATION: this legacy reprice lane stamps
+      // `fmvRung: null` on the holding above — it genuinely does not know which
+      // rung produced `fairValue`. The point is written WITHOUT a rungLabel to
+      // match, and absence reads as uncorroborated: the digest will not call a
+      // move measured against this point a market move. Naming a rung here
+      // would be inventing evidence this lane does not have.
       appendPriceHistory(doc, holding.id, {
         at: now,
         value: fairValue,
@@ -10521,6 +10695,86 @@ export async function repriceHoldingsForUser(
       });
     }
   }
+
+  // CF-USER-PRICE-ALERTS (Drew, 2026-09-02): "tell me when my card moves N%".
+  //
+  // POST-VALUATION, NEVER INSIDE IT. Every holding in `updates` has already
+  // been priced and written into `doc.holdings` by the loop above; this sweep
+  // only READS the resulting (fairMarketValue, fmvRung) pair and compares it
+  // to the pre-cycle pair captured in `priorAlertState`. It calls no pricing
+  // entry point, and the whole block is wrapped so a Cosmos blip or an APNs
+  // failure can never fail a reprice that already succeeded.
+  //
+  // It sits immediately BEFORE writeUserDoc, not after it, because the feed
+  // rows it appends to `doc.alerts` have to land in the same persist as the
+  // prices they describe. (The telemetry-only sweeps below the write can
+  // safely run after it; this one mutates the doc, so it cannot.)
+  //
+  // Only holdings the user has an ACTIVE rule on cost anything: the context
+  // build is one query per user per pass and returns null when there are no
+  // rules, which is the overwhelmingly common case.
+  try {
+    const { buildHoldingMoveAlertContext, evaluateHoldingMoveAlert } = await import(
+      "../advancedAlerts/holdingMoveEvaluator.service.js"
+    );
+    const moveCtx = await buildHoldingMoveAlertContext(userId);
+    if (moveCtx) {
+      for (const u of updates) {
+        if (u.status !== "repriced") continue;
+        const h = doc.holdings[u.id];
+        if (!h) continue;
+        if (!moveCtx.rules.has(String(u.id))) continue;
+        const outcome = await evaluateHoldingMoveAlert(
+          moveCtx,
+          {
+            id: String(h.id),
+            playerName: (h as { playerName?: string | null }).playerName ?? null,
+            cardTitle: (h as { cardTitle?: string | null }).cardTitle ?? null,
+            fairMarketValue: typeof h.fairMarketValue === "number" ? h.fairMarketValue : null,
+            fmvRung: (h as { fmvRung?: string | null }).fmvRung ?? null,
+            lastUpdated: (h as { lastUpdated?: string | number | null }).lastUpdated ?? null,
+          },
+          priorAlertState.get(u.id),
+        );
+        // The feed row rides the same `doc.alerts` array as every other
+        // portfolio alert, so the web bell and the iOS feed pick it up with
+        // no second store. The type is "holding-move-rule", NOT "value-move":
+        // the legacy 10%/18% emitter runs earlier in THIS SAME pass and writes
+        // "value-move" for the same holding, and addAlert dedups on
+        // (holdingId, type) within 6h — sharing the type meant the legacy row
+        // won and the user's rule row (rule text, basis, speculative label)
+        // was silently dropped. Distinct type, so both rows land.
+        if (outcome?.feedAlert) {
+          addAlert(doc, {
+            level: outcome.feedAlert.level,
+            type: "holding-move-rule",
+            holdingId: outcome.feedAlert.holdingId,
+            playerName: outcome.feedAlert.playerName,
+            cardTitle: outcome.feedAlert.cardTitle,
+            message: outcome.feedAlert.message,
+            context: outcome.feedAlert.context,
+          });
+        }
+      }
+      if (moveCtx.fired > 0 || Object.keys(moveCtx.suppressed).length > 0) {
+        console.log(JSON.stringify({
+          event: "holding_move_alerts_pass",
+          source: "portfolioStore.repriceHoldingsForUser",
+          repriceSource: source,
+          userId,
+          rules: moveCtx.rules.size,
+          fired: moveCtx.fired,
+          suppressed: moveCtx.suppressed,
+          dailyCount: moveCtx.dailyCount,
+        }));
+      }
+    }
+  } catch (err: any) {
+    console.warn(
+      `[holding.move.alert] sweep failed user=${userId}: ${err?.message ?? err}`,
+    );
+  }
+
 
   await writeUserDoc(userId, doc);
   _lastRepriceAt.set(userId, Date.now());
