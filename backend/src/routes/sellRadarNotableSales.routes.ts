@@ -9,9 +9,23 @@
 // and rate-limited by priceChecksPerDay — sell-radar iterates the
 // user's whole holding list, notable-sales runs a Cosmos range query;
 // neither should be a free-fire endpoint on the collector tier.
+//
+// CF-PRO-SELLER-GATE (Drew, 2026-09-02): "Gate all five to the Pro tiers."
+// Both endpoints now sit behind requireEntitlement("sellerIntelligence")
+// as well. Before this, the rate limiter was the ONLY thing standing
+// between a free user and these reads — and a cap is not a gate: it
+// metered the free tier's access rather than denying it (5 calls/day of
+// the deal-scanner feed is still the deal-scanner feed). The cap stays
+// for the tiers that have a finite one; the entitlement decides access.
+//
+// Order matters: entitlement BEFORE the rate limiter, so a free caller
+// gets 402 subscription_required (the upgrade prompt) rather than 402
+// rate_limit_exceeded (which would tell them to come back tomorrow for
+// a feature they cannot have at any hour).
 
 import { Router } from "express";
 import { requireSession } from "../middleware/requireSession.js";
+import { requireEntitlement } from "../middleware/requireEntitlement.js";
 import { requireRateLimited } from "../middleware/requireRateLimited.js";
 import { readUserDoc } from "../services/portfolioiq/portfolioStore.service.js";
 import { detectSellNowCandidates } from "../services/portfolioiq/sellNowRadarAnalyze.service.js";
@@ -22,6 +36,10 @@ const router = Router();
 // Every route in this router is session-required. Only the two
 // endpoints below live here — no health / no public surface.
 router.use(requireSession);
+
+// CF-PRO-SELLER-GATE: paid-tier only. Router-level rather than per-route
+// so a future endpoint added to this file cannot be born ungated.
+router.use(requireEntitlement("sellerIntelligence"));
 
 /**
  * GET /api/portfolio/sell-now-radar
