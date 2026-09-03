@@ -1,5 +1,5 @@
 {
-  "calibratedAt": "2026-08-08T00:05:13.931Z",
+  "calibratedAt": "2026-09-03T12:18:53.580Z",
   "method": "parallel_over_base_from_sold_comps_pool",
   "source": "sold_comps",
   "windowDays": 180,
