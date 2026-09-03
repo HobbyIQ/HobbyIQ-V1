@@ -215,6 +215,12 @@ function CompRow({ s }: { s: RecentCompSale }) {
           <span>{grade}</span>
           {s.parallel && s.parallel.toLowerCase() !== "base" && <span>{s.parallel}</span>}
           <SourcePill src={s.source} />
+          {/* CF-OWN-PURCHASE-IS-A-SALE (Drew, 2026-09-03). The viewer's own
+              imported purchase is a real sale and is listed like any other --
+              it just says whose it is. It used to be filtered out of this list
+              entirely, so the comp count disagreed with the pool the FMV came
+              from. */}
+          {s.isOwn && <OwnCompPill label={s.ownLabel ?? "your purchase"} />}
         </div>
       </div>
       <div className="text-right flex-shrink-0 ml-2">
@@ -291,6 +297,27 @@ function SourcePill({ src }: { src: string }) {
     <span
       className="px-1.5 py-0.5 rounded text-[9px] font-medium uppercase tracking-wide"
       style={{ background: "var(--color-bg)", color: "var(--color-muted)" }}
+    >
+      {label}
+    </span>
+  );
+}
+
+// CF-OWN-PURCHASE-IS-A-SALE (Drew, 2026-09-03). The chip that says a comp is
+// the viewer's own imported purchase. Deliberately quiet -- the row is an
+// ordinary sale in the list and reads as one; the label is context, not a
+// warning. Only the viewer ever sees it: the backend computes `isOwn`
+// against the requesting session, so another user's purchase is unlabelled.
+function OwnCompPill({ label }: { label: string }) {
+  return (
+    <span
+      className="px-1.5 py-0.5 rounded text-[10px] font-medium border"
+      style={{
+        borderColor: "var(--color-border)",
+        color: "var(--color-muted)",
+        background: "var(--color-bg)",
+      }}
+      title="This sale is your own purchase, imported from eBay. It is a real sale and counts as a comp."
     >
       {label}
     </span>

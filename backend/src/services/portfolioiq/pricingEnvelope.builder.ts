@@ -371,6 +371,44 @@ function buildBands(fmvPerUnit: number | null): PricingBands | null {
 
 // ─── Provenance ────────────────────────────────────────────────────────
 
+/** CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (Drew, 2026-09-03). The label set
+ *  the price writer stamped into `pricingSourceMeta`, validated on the way
+ *  out. A malformed or absent stamp yields `[]` — the wire never invents a
+ *  caveat, and never drops one it was given. */
+export function pricingLabelsOf(
+  holding: PortfolioHolding,
+): PricingProvenance["pricingLabels"] {
+  const raw = (holding as {
+    pricingSourceMeta?: { labels?: unknown } | null;
+  }).pricingSourceMeta?.labels;
+  if (!Array.isArray(raw)) return [];
+  return raw.flatMap((l) => {
+    const code = (l as { code?: unknown })?.code;
+    const text = (l as { text?: unknown })?.text;
+    return typeof code === "string" && typeof text === "string"
+      ? [{ code: code as "speculative" | "self-anchored" | "fallback-rung" | "low-confidence", text }]
+      : [];
+  });
+}
+
+/** The self-anchored ratio the writer stamped: how many of the pool's
+ *  `total` sales behind this price are the owner's `own`. Null unless both
+ *  halves are finite non-negative numbers with `own > 0` — a ratio that
+ *  cannot be stated is not stated. */
+export function selfAnchoredOf(
+  holding: PortfolioHolding,
+): { own: number; total: number } | null {
+  const raw = (holding as {
+    pricingSourceMeta?: { selfAnchored?: unknown } | null;
+  }).pricingSourceMeta?.selfAnchored;
+  if (!raw || typeof raw !== "object") return null;
+  const own = (raw as { own?: unknown }).own;
+  const total = (raw as { total?: unknown }).total;
+  if (typeof own !== "number" || !Number.isFinite(own) || own <= 0) return null;
+  if (typeof total !== "number" || !Number.isFinite(total) || total < own) return null;
+  return { own, total };
+}
+
 function buildProvenance(holding: PortfolioHolding): PricingProvenance {
   const vendor = coerceVendor((holding as { sourceVendor?: string }).sourceVendor);
   const vendorUpdatedAt =
@@ -397,6 +435,11 @@ function buildProvenance(holding: PortfolioHolding): PricingProvenance {
     vendorUpdatedAt,
     pricingSource,
     pricingSourceMeta,
+    // CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (Drew, 2026-09-03): the same
+    // validated read the list wire does, so the detail sheet and the row
+    // cannot disagree about whether a price is self-anchored.
+    pricingLabels: pricingLabelsOf(holding),
+    selfAnchored: selfAnchoredOf(holding),
     nearestGradedAnchor: holding.nearestGradedAnchor ?? null,
     lastSaleSurface: holding.lastSaleSurface ?? null,
     modelExpectation: (holding as { modelExpectation?: unknown }).modelExpectation ?? null,

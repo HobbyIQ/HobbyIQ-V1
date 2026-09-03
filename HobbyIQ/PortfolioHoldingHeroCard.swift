@@ -315,6 +315,10 @@ struct PortfolioHoldingHeroCard: View {
                     // number. The rung says which pool; the chip says how
                     // sure; both are true and neither implies the other.
                     canonicalRungChip
+                    // CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (Drew,
+                    // 2026-09-03): the caveats, under the rung that names the
+                    // pool they qualify.
+                    pricingLabelChips
                     canonicalFmvCaptionBlock
                 }
 
@@ -441,6 +445,31 @@ struct PortfolioHoldingHeroCard: View {
             )
             .padding(.top, 2)
         }
+    }
+
+    /// CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (Drew, 2026-09-03).
+    ///
+    /// PUBLISH + LABEL. The caveats the backend stamped on this holding when
+    /// it decided the price — a self-anchored number, whose only evidence is
+    /// the owner's own purchase, still shows its dollars AND says so.
+    ///
+    /// Read off the HOLDING, not the canonical response: the hero's headline
+    /// falls back to the cached holding value while the canonical fetch is in
+    /// flight, and a caveat that disappears for the first second of every
+    /// render is worse than one that is simply late. The two agree by
+    /// construction — the writer derives them through the same two functions
+    /// the canonical response is built from.
+    ///
+    /// Sentences shown, not just chips: this is the surface with the room,
+    /// and the sentence is the half that carries the meaning.
+    @ViewBuilder
+    private var pricingLabelChips: some View {
+        PricingLabelChipsView(
+            labels: card.pricingLabels,
+            selfAnchored: card.selfAnchored,
+            showSentences: true
+        )
+        .padding(.top, 2)
     }
 
     /// Small caveat chip + one-line provenance summary. Hidden entirely
