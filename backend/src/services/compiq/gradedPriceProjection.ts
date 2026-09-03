@@ -760,7 +760,7 @@ function findSameParallelObservedAnchor(
       const gradeStr = String(g.grade_value ?? "").trim();
       if (!gradeStr) continue;
       const premium = getGraderPremium(coName, gradeStr);
-      if (!(premium > 0)) continue;
+      if (premium === null || !(premium > 0)) continue;
       const label = `${coName} ${gradeStr}`;
       for (const r of (g.records ?? [])) {
         if (!Number.isFinite(r.price) || r.price <= 0) continue;
@@ -875,7 +875,7 @@ function findSiblingParallelObservedAnchor(
       const gradeStr = String(g.grade_value ?? "").trim();
       if (!gradeStr) continue;
       const premium = getGraderPremium(coName, gradeStr);
-      if (!(premium > 0)) continue;
+      if (premium === null || !(premium > 0)) continue;
       const label = `${coName} ${gradeStr}`;
       for (const r of (g.records ?? [])) {
         if (!Number.isFinite(r.price) || r.price <= 0) continue;
@@ -1518,7 +1518,7 @@ function resolveRatio(
     undefined,
     gemRateSignal,
   );
-  if (marketPremium > 0 && marketPremium !== 1.0) {
+  if (marketPremium !== null && marketPremium > 0 && marketPremium !== 1.0) {
     return {
       ratio: marketPremium,
       source: "market",
@@ -1819,7 +1819,7 @@ export function computeGradedProjection(
         gemRateSignal,
       );
       const observed = anchor.observedSource;
-      if (!(generic > 0)) {
+      if (generic === null || !(generic > 0)) {
         results.push({
           grade: tg.label,
           estimatedValue: null,
@@ -2079,7 +2079,7 @@ export function computeGradedProjection(
     const rCandidates: RCandidate[] = [];
     for (const [label, info] of observedValues) {
       const generic = getGraderPremium(info.company, info.gradeStr);
-      if (!(generic > 1.0)) continue;
+      if (generic === null || !(generic > 1.0)) continue;
       const gradeRank = Number(info.gradeStr);
       if (!Number.isFinite(gradeRank)) continue;
       const confidenceRank = info.n >= TIER1_MIN_BASE_SAMPLES ? 100 : 70;
@@ -2099,7 +2099,7 @@ export function computeGradedProjection(
       const m = r.grade.match(/^([A-Z]+)\s+([0-9]+(?:\.[0-9]+)?)$/);
       if (!m) continue;
       const generic = getGraderPremium(m[1]!, m[2]!);
-      if (!(generic > 1.0)) continue;
+      if (generic === null || !(generic > 1.0)) continue;
       const gradeRank = Number(m[2]!);
       if (!Number.isFinite(gradeRank)) continue;
       rCandidates.push({
@@ -2138,7 +2138,7 @@ export function computeGradedProjection(
         const m = r.grade.match(/^([A-Z]+)\s+([0-9]+(?:\.[0-9]+)?)$/);
         if (!m) continue;
         const generic = getGraderPremium(m[1]!, m[2]!);
-        if (!(generic > 0)) {
+        if (generic === null || !(generic > 0)) {
           demoteToNoData(r, `no generic premium for ${r.grade}`);
           continue;
         }
@@ -2239,7 +2239,7 @@ export function computeGradedProjection(
           undefined,
           gemRateSignal,
         );
-        if (!Number.isFinite(generic) || generic < 1.0) {
+        if (generic === null || !Number.isFinite(generic) || generic < 1.0) {
           demoteToNoData(r, reason);
           return;
         }

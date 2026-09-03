@@ -209,8 +209,48 @@ describe("C-5 — the Pokemon refusal applies to the value-band lookup too", () 
   // MUTATION: delete `if (sport === "pokemon") return null;` from the
   // baseline rung of lookupValueBandMultiplierWithScope — all three of
   // these go red.
+  // The fixture is REAL-TABLE-SHAPED on purpose. An earlier version of
+  // this test shipped an EMPTY bySport, which meant the only thing left
+  // for the lookup to reach WAS the baseline — so it could not tell a
+  // working guard apart from a Pokemon card that had no data of its own,
+  // and it certified a claim about the resolution order that was false.
+  // Here bySport carries Pokemon's own cells at the same three anchors,
+  // exactly as the shipped table does. The guard must refuse the
+  // BASELINE while leaving Pokemon's own rung reachable.
   it.each([[30], [150], [300]])(
     "refuses the baseline band for a Pokemon PSA 10 at a $%s raw anchor",
+    async (anchor) => {
+      const { lookupValueBandMultiplierWithScope } = await loadWithFixture({}, {}, {
+        baseline: {
+          "$25-49":   { "PSA 10": band(4.18, 1958, 34) },
+          "$100-249": { "PSA 10": band(2.66, 1526, 150) },
+          "$250-499": { "PSA 10": band(2.30, 757, 330) },
+        },
+        // Populated, mirroring the shipped table's pokemon bySport cells.
+        bySport: {
+          pokemon: {
+            "$25-49":   { "PSA 10": band(3.55, 929, 34) },
+            "$100-249": { "PSA 10": band(2.50, 377, 150) },
+            "$250-499": { "PSA 10": band(2.25, 137, 330) },
+          },
+        },
+        bySportFamily: {},
+      });
+      // A family with no cells of its own falls to Pokemon's OWN sport
+      // rung — never to the pooled baseline underneath it.
+      const res = lookupValueBandMultiplierWithScope(anchor, "PSA", 10,
+        { sport: "pokemon", family: "pokemon-151" });
+      expect(res?.scope).toBe("sport");
+      expect(res?.scope).not.toBe("baseline");
+    });
+
+  // The guard proper: with Pokemon's own rungs EMPTY, the baseline is the
+  // only cell left and it must still be refused.
+  //
+  // MUTATION: delete `if (sport === "pokemon") return null;` from the
+  // baseline rung of lookupValueBandMultiplierWithScope and this goes red.
+  it.each([[30], [150], [300]])(
+    "refuses baseline outright when Pokemon has no cells of its own ($%s)",
     async (anchor) => {
       const { lookupValueBandMultiplierWithScope } = await loadWithFixture({}, {}, {
         baseline: {
@@ -224,6 +264,25 @@ describe("C-5 — the Pokemon refusal applies to the value-band lookup too", () 
       expect(lookupValueBandMultiplierWithScope(anchor, "PSA", 10,
         { sport: "pokemon", family: "pokemon-151" })).toBeNull();
     });
+
+  // CF-VALUE-BAND-SAMPLE-FLOOR. A cell below the floor is not evidence:
+  // it must NOT win on specificity. Here the sport-family cell is n=2,
+  // so the lookup has to walk past it to the (adequately sampled) sport
+  // rung rather than resolving the thin cell.
+  //
+  // MUTATION: drop the `cell.sampleSize >= MIN_VALUE_BAND_SAMPLE` clause
+  // from `isValid` in gradeCalibrationConfig.ts and this goes red.
+  it("a band cell below the sample floor falls through instead of resolving", async () => {
+    const { lookupValueBandMultiplierWithScope } = await loadWithFixture({}, {}, {
+      baseline: {},
+      bySport: { pokemon: { "$25-49": { "PSA 10": band(3.55, 929, 34) } } },
+      bySportFamily: { "pokemon|pokemon-151": { "$25-49": { "PSA 10": band(99.0, 2, 34) } } },
+    });
+    const res = lookupValueBandMultiplierWithScope(30, "PSA", 10,
+      { sport: "pokemon", family: "pokemon-151" });
+    expect(res?.scope).toBe("sport");
+    expect(res?.medianRatio).toBe(3.55);
+  });
 
   // The refusal is Pokemon-specific: every other sport still gets the
   // baseline band, which is a coarser but honest answer for them.
@@ -253,24 +312,59 @@ describe("C-5 — the Pokemon refusal applies to the value-band lookup too", () 
     expect(res?.medianRatio).toBe(9.35);
   });
 
-  // The end-to-end shape Drew asked to see: with the real shipped table,
-  // a Pokemon PSA 10 must resolve to pokemon's own byTier figure, or
-  // refuse — never to a baseline value band.
-  it("resolves Pokemon PSA 10 to the pokemon byTier figure, not baseline", async () => {
+  // The end-to-end resolution, pinned to the REAL shipped table with the
+  // REAL sample sizes.
+  //
+  // This replaces an earlier pin that asserted `resolved > 5` — i.e. that
+  // a Pokemon PSA 10 lands on the byTier figure of 7.57x. That assertion
+  // was FALSE, and passed only because the family it happened to pick
+  // ("pokemon-151") has no band cells, so it fell to byTier. The
+  // classifier catch-all family "pokemon" DOES have band cells, and the
+  // real end-to-end answer through getGraderPremium is 3.57x / 2.54x /
+  // 2.25x — Pokemon's own sport-family band data, at rung 1.
+  //
+  // That is the doctrine working, not a leak: the most specific empirical
+  // cell with an adequate sample wins, and a band-scoped n=472 beats a
+  // band-blind n=5,875 aggregate that pools $5 commons with $5,000
+  // Charizards. The decay across the three anchors (3.57 -> 2.54 -> 2.25)
+  // is the value-band compression the layer exists to capture.
+  //
+  // MUTATION: remove the pokemon bySportFamily cells from the shipped
+  // table (or reorder byTier above the band rungs) and these go red.
+  it.each([
+    [30,  "$25-49",   3.57, 472],
+    [150, "$100-249", 2.54, 198],
+    [300, "$250-499", 2.25, 73],
+  ])("Pokemon PSA 10 at $%s resolves to the sport-family band cell", async (anchor, _band, ratio, n) => {
     vi.resetModules();
-    const { lookupValueBandMultiplierWithScope, lookupGradeRatioByTier, classifyFamily } =
+    vi.doUnmock("../src/services/compiq/gradeCalibrationData.js");
+    const { lookupValueBandMultiplierWithScope, classifyFamily } =
       await import("../src/services/compiq/gradeCalibrationConfig.js");
-    for (const anchor of [30, 150, 300]) {
-      const family = classifyFamily("2023 Pokemon Scarlet & Violet 151");
-      const viaBand = lookupValueBandMultiplierWithScope(anchor, "PSA", 10,
-        { sport: "pokemon", family });
-      // Whatever the band lookup says, it must not be a baseline cell.
-      expect(viaBand?.scope).not.toBe("baseline");
-      const viaTier = lookupGradeRatioByTier(family, "PSA", 10, "pokemon");
-      const resolved = viaBand?.medianRatio ?? viaTier;
-      // Either a real Pokemon-scoped number, or an honest refusal — but
-      // never the 2.3x-4.2x baseline band the audit measured.
-      if (resolved !== null) expect(resolved).toBeGreaterThan(5);
+    const family = classifyFamily("Pokemon");
+    expect(family).toBe("pokemon");
+    const res = lookupValueBandMultiplierWithScope(anchor as number, "PSA", 10,
+      { sport: "pokemon", family });
+    expect(res?.scope).toBe("sport-family");
+    expect(res?.medianRatio).toBeCloseTo(ratio as number, 2);
+    expect(res?.sampleSize).toBe(n);
+  });
+
+  // Whatever family a Pokemon card classifies to, and at every anchor,
+  // the one thing that must never happen is a baseline cell.
+  it("no Pokemon family resolves to a baseline band at any anchor", async () => {
+    vi.resetModules();
+    vi.doUnmock("../src/services/compiq/gradeCalibrationData.js");
+    const { lookupValueBandMultiplierWithScope, classifyFamily } =
+      await import("../src/services/compiq/gradeCalibrationConfig.js");
+    const sets = ["Pokemon", "2023 Pokemon Scarlet & Violet 151", "Pokemon Base Set",
+      "Pokemon Japanese Promo", "Pokemon Evolving Skies", "Pokemon Fossil"];
+    for (const set of sets) {
+      const family = classifyFamily(set);
+      for (const anchor of [5, 30, 150, 300, 1200, 8000, 40000]) {
+        const res = lookupValueBandMultiplierWithScope(anchor, "PSA", 10,
+          { sport: "pokemon", family });
+        expect(res?.scope, `${set} @ $${anchor}`).not.toBe("baseline");
+      }
     }
   });
 });
@@ -313,4 +407,145 @@ describe("H-7 — no hardcoded per-company multiplier matrix survives", () => {
     expect(svc).toMatch(/if \(gradeMult === null\) return null;/);
     expect(svc).toMatch(/if \(mult === null \|\| mult <= 1\) continue;/);
   });
+});
+
+// ─── H-7 residual: GRADER_PREMIUMS, on the higher-traffic path ────────
+
+describe("H-7 residual — the GRADER_PREMIUMS matrix is gone from getGraderPremium", () => {
+  const est = readFileSync(
+    join(REPO_BACKEND, "src/services/compiq/compiqEstimate.service.ts"), "utf8");
+
+  // canonicalFmv's matrix (above) was only half of H-7. The SAME class of
+  // hand-curated constant sat at the terminal fallback of
+  // getGraderPremium — a per-company/per-tier table (BGS "10 Black Label"
+  // at a sub-$25 anchor = 12.0x; SGC 10 at $12,000 = 2.63x) — on the
+  // higher-traffic path: getGraderPremium is the multiplier entry point
+  // for hobbyIqFmv, unifiedPricing, perGradeBreakdown, the sibling
+  // fallback, marketRead and the graded projection.
+  //
+  // Because it was TERMINAL, getGraderPremium could never return null,
+  // so no caller had ever been written to face a no-basis case.
+  //
+  // MUTATION: restore the `const GRADER_PREMIUMS = {...}` table and its
+  // `return tierTable[tier] * setBump` terminal fallback — this goes red.
+  it("the GRADER_PREMIUMS symbol no longer exists", () => {
+    expect(est).not.toMatch(/const GRADER_PREMIUMS\b/);
+    expect(est).not.toMatch(/GRADER_PREMIUMS\s*\[/);
+  });
+
+  it("no literal grade constants survive in a tier-table shape", () => {
+    // The removed table's signature rows. Any of these reappearing means
+    // a hand-curated multiplier is back on this path.
+    expect(est).not.toMatch(/"10 Black Label":\s*\{\s*"<25":/);
+    expect(est).not.toMatch(/\{\s*"<25":\s*[0-9.]+,\s*"25-50":\s*[0-9.]+,\s*"50-100":/);
+  });
+
+  it("getGraderPremium returns number | null", () => {
+    expect(est).toMatch(/export function getGraderPremium\([\s\S]*?\n\)\s*:\s*number \| null \{/);
+  });
+
+  // Every caller must face the refusal rather than coerce it. These are
+  // the sites the closeout traced; each one's guard is quoted here so a
+  // silent removal of a guard shows up as a red test rather than as a
+  // fabricated price in production.
+  it("every getGraderPremium caller guards the null", async () => {
+    const files: Array<[string, RegExp[]]> = [
+      ["src/services/compiq/gradedPriceProjection.ts", [
+        /if \(premium === null \|\| !\(premium > 0\)\) continue;/,
+        /if \(marketPremium !== null && marketPremium > 0/,
+        /if \(generic === null \|\| !\(generic > 0\)\) \{/,
+        /if \(generic === null \|\| !\(generic > 1\.0\)\) continue;/,
+        /if \(generic === null \|\| !Number\.isFinite\(generic\) \|\| generic < 1\.0\) \{/,
+      ]],
+      ["src/services/compiq/marketRead.service.ts", [
+        /if \(higherPremium === null \|\| lowerPremium === null \|\|/,
+      ]],
+      ["src/services/compiq/perGradeBreakdown.service.ts", [
+        /if \(multiplier !== null && Number\.isFinite\(multiplier\) && multiplier > 0\) \{/,
+      ]],
+      ["src/services/compiq/siblingCardPriceFallback.service.ts", [
+        /const psa10Premium = \(rawAnchor: number \| null\): number \| null =>/,
+        /ratio !== null && Number\.isFinite\(ratio\) && ratio > 0/,
+        /psa10Ratio !== null && Number\.isFinite\(psa10Ratio\) && psa10Ratio > 0/,
+      ]],
+      ["src/services/portfolioiq/hobbyIqFmv.service.ts", [
+        /if \(multiplier === null \|\| !Number\.isFinite\(multiplier\) \|\| multiplier <= 0\) continue;/,
+      ]],
+      ["src/services/portfolioiq/portfolioStore.service.ts", [
+        /if \(multiplier === null \|\| !Number\.isFinite\(multiplier\) \|\| multiplier <= 0\) \{/,
+        /autoprice_grade_ladder_fallback_refused/,
+      ]],
+      ["src/services/compiq/unifiedPricing.service.ts", [
+        /const canRescale =/,
+        /rungLabel = "no-basis";/,
+      ]],
+      ["src/services/compiq/observedGradeCurve.service.ts", [
+        /if \(premium !== null && Number\.isFinite\(premium\) && premium > 0\) return premium;/,
+      ]],
+    ];
+    for (const [rel, pats] of files) {
+      const src = readFileSync(join(REPO_BACKEND, rel), "utf8");
+      for (const p of pats) {
+        expect(src, `${rel} missing guard ${p}`).toMatch(p);
+      }
+    }
+  });
+
+  // The behavioural pin: over a broad sweep of identities, a multiplier
+  // is returned ONLY when a table cell backs it. Never a literal.
+  //
+  // MUTATION: return any constant instead of null at the end of
+  // getGraderPremium and this goes red — every uncovered identity would
+  // start producing a number with no cell behind it.
+  it("never returns a value without a table cell behind it (200 identities)", async () => {
+    vi.resetModules();
+    vi.doUnmock("../src/services/compiq/gradeCalibrationData.js");
+    const { getGraderPremium } = await import("../src/services/compiq/compiqEstimate.service.js");
+    const { lookupValueBandMultiplierWithScope, lookupGradeRatioByTier, lookupGradeRatio, classifyFamily } =
+      await import("../src/services/compiq/gradeCalibrationConfig.js");
+
+    // Deliberately includes uncalibrated families and exotic graders —
+    // exactly the combinations the matrix used to paper over.
+    const sets = ["Bowman Chrome", "Topps Chrome", "Panini Prizm", "Upper Deck",
+      "Panini Flawless", "Topps Gold Label", "Bowman Sterling", "Panini Obsidian",
+      "Pokemon", "Some Unknown Brand 1998"];
+    const sports = ["baseball", "football", "basketball", "hockey", "pokemon"];
+    const graders: Array<[string, string]> = [["PSA", "10"], ["BGS", "10 Black Label"], ["SGC", "9.5"], ["CGC", "8.5"]];
+    const anchors = [8, 40, 300, 12000];
+
+    let checked = 0, returned = 0, refused = 0;
+    for (const set of sets) {
+      for (const sport of sports) {
+        for (const [co, gr] of graders) {
+          for (const raw of anchors) {
+            if (checked >= 200) break;
+            checked++;
+            const v = getGraderPremium(co, gr, raw, "base", 2021, set, null, sport);
+            if (v === null) { refused++; continue; }
+            returned++;
+            // PSA 8 modern is a documented business rule, not a table cell.
+            if (co === "PSA" && gr === "8") continue;
+            // Anything returned must be traceable to a real cell in one of
+            // the empirical layers.
+            const family = classifyFamily(set);
+            const gradeNum = Number(gr);
+            const band = Number.isFinite(gradeNum)
+              ? lookupValueBandMultiplierWithScope(raw, co, gradeNum, { sport, family })
+              : null;
+            const byTier = Number.isFinite(gradeNum)
+              ? lookupGradeRatioByTier(family, co, gradeNum, sport)
+              : null;
+            const scalar = lookupGradeRatio(family, co, sport);
+            const hasCell = band !== null || byTier !== null || scalar !== null;
+            expect(hasCell,
+              `${set}/${sport}/${co} ${gr} @ $${raw} returned ${v} with no backing cell`).toBe(true);
+          }
+        }
+      }
+    }
+    // The sweep must actually exercise both outcomes, or it proves nothing.
+    expect(checked).toBeGreaterThanOrEqual(200);
+    expect(refused, "no identity refused — the sweep is not reaching uncovered cells").toBeGreaterThan(0);
+    expect(returned, "no identity resolved — the sweep is not reaching covered cells").toBeGreaterThan(0);
+  }, 120_000);
 });

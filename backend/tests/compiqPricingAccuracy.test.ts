@@ -299,23 +299,31 @@ describe("Improvement 2 — comp quality filter", () => {
 });
 
 describe("Improvement 3 — grader premiums (round-trip)", () => {
-  it("returns 1.0 for unknown grader/grade combos", () => {
+  it("raw inputs are 1.0; unknown grader/grade REFUSES", () => {
+    // A null company/grade means the caller is telling us the card is raw,
+    // and raw is 1.0 by definition — that is an input contract, not a
+    // multiplier lookup.
     expect(getGraderPremium(null, null)).toBe(1.0);
     expect(getGraderPremium("PSA", null)).toBe(1.0);
-    expect(getGraderPremium("HGA", "10")).toBe(1.0);
-    expect(getGraderPremium("PSA", "11")).toBe(1.0);
+    // CF-EMPIRICAL-ONLY-NO-GRADER-MATRIX (2026-09-03, audit H-7 residual).
+    // An unknown grader ("HGA") or an out-of-range grade ("PSA 11") is a
+    // different thing: we were asked about a graded card and have no cell
+    // for it. That used to miss the hand-curated matrix and return a bare
+    // 1.0, which downstream reads as "graded is worth exactly raw" — a
+    // pricing claim we cannot evidence. It must refuse.
+    expect(getGraderPremium("HGA", "10")).toBeNull();
+    expect(getGraderPremium("PSA", "11")).toBeNull();
   });
 
-  it("PSA 10 fallback is 3.5x, BGS 9.5 fallback is 3.05x (PR #494 PSA-only rebase; BGS/SGC deferred)", () => {
-    // CF-GRADER-PREMIUMS-MODERN-DEFAULTS (Drew, 2026-07-15, PR #494):
-    // PSA rebased to modern anchors (3.43 → 3.5). BGS/SGC/CGC kept at
-    // prior calibration in this PR to bound the test cascade blast
-    // radius; follow-up PR will rebase them alongside the KQL-driven
-    // calibration refresh job.
-    expect(getGraderPremium("PSA", "10")).toBe(3.5);
-    expect(getGraderPremium("psa", "10")).toBe(3.5);
-    // CF-GRADER-PREMIUMS-FULL-REBASE (PR #495): BGS 9.5 rebased 3.05 → 2.8
-    expect(getGraderPremium("BGS", "9.5")).toBe(2.8);
+  it("no raw anchor → refuses (the 3.5x / 2.8x fallbacks are gone)", () => {
+    // CF-EMPIRICAL-ONLY-NO-GRADER-MATRIX (2026-09-03, audit H-7 residual).
+    // These exact constants — PSA 10 = 3.5, BGS 9.5 = 2.8, hand-anchored
+    // across PR #494 and PR #495 — ARE the finding. Every surviving rung
+    // needs a raw anchor (value band) or a family/sport cell; none can
+    // answer from (company, grade) alone, so this is now a refusal.
+    expect(getGraderPremium("PSA", "10")).toBeNull();
+    expect(getGraderPremium("psa", "10")).toBeNull();
+    expect(getGraderPremium("BGS", "9.5")).toBeNull();
   });
 
   it("detects graded comps from free-text titles", () => {
@@ -330,18 +338,25 @@ describe("Improvement 3 — grader premiums (round-trip)", () => {
     expect(detectGradeFromTitle("Acuna RC Bowman Chrome Refractor")).toBeNull();
   });
 
-  it("normalizeCompToRaw inverts applyGraderPremium", () => {
-    // CF-GRADER-PREMIUMS-MODERN-DEFAULTS (PR #494): PSA 10 multiplier
-    // rebased to 3.5 (no rawPrice → fallback path). 200 * 3.5 = 700.
+  it("applyGraderPremium refuses without an anchor, and normalizeCompToRaw leaves the sale alone", () => {
+    // CF-EMPIRICAL-ONLY-NO-GRADER-MATRIX (2026-09-03, audit H-7 residual).
+    // The round-trip this test used to assert (200 -> 700 -> 200) only
+    // worked because BOTH directions divided by the same fabricated 3.5.
+    // With the matrix gone there is no anchor-free PSA 10 multiplier, so
+    // applyGraderPremium refuses rather than inventing one...
     const raw = 200;
-    const psa10Price = applyGraderPremium(raw, "PSA", "10");
-    expect(psa10Price).toBe(700);
+    expect(applyGraderPremium(raw, "PSA", "10")).toBeNull();
+
+    // ...and normalizeCompToRaw degrades by leaving the observed sale
+    // price untouched, which is the same degradation it already made for
+    // a non-positive premium. It never divides by a number we cannot
+    // evidence.
     const back = normalizeCompToRaw({
-      price: psa10Price,
+      price: 700,
       title: "Card PSA 10",
       soldDate: new Date().toISOString(),
     });
-    expect(back).toBe(raw);
+    expect(back).toBe(700);
   });
 
   it("leaves ungraded comps unchanged", () => {

@@ -1533,9 +1533,14 @@ function resolveMultiplier(args: {
     null,      // gemRateSignal — not available at grade-curve site
     sport,
   );
-  if (Number.isFinite(premium) && premium > 0) return premium;
-  // Fallback if getGraderPremium returns invalid — shouldn't happen
-  // (function always returns a number) but belt-and-suspenders.
+  if (premium !== null && Number.isFinite(premium) && premium > 0) return premium;
+  // CF-EMPIRICAL-ONLY-NO-GRADER-MATRIX (2026-09-03, audit H-7 residual).
+  // getGraderPremium now RETURNS NULL when no empirical cell covers this
+  // card — it is no longer true that "the function always returns a
+  // number". That refusal is the intended path here, not an anomaly:
+  // gradeMultiplierFor is a deliberate no-op returning undefined, so the
+  // entry surfaces as valueSource "unavailable" on the iOS pill and logs
+  // grade_multiplier_uncovered. Real accuracy > false completeness.
   return gradeMultiplierFor(cardClass, entry.grade);
 }
 

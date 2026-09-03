@@ -79,12 +79,18 @@ describe("getGraderPremium — base cardClass + calibration ladder", () => {
 });
 
 describe("getGraderPremium — fallthrough", () => {
-  it("autograph cardClass + nonexistent grade → falls through to 1.0 (static behavior)", () => {
-    // No "PSA 12" in either table — falls all the way through.
+  it("autograph cardClass + nonexistent grade → refuses (was: fell through to 1.0)", () => {
+    // No "PSA 12" in any table — the ladder is exhausted.
+    // CF-EMPIRICAL-ONLY-NO-GRADER-MATRIX (2026-09-03, audit H-7 residual):
+    // exhausting the ladder used to land on the static matrix, miss, and
+    // return 1.0. A bare 1.0 for a graded card is a pricing claim ("this
+    // PSA 12 is worth exactly raw"), not an absence of one. Refuse.
     const r = getGraderPremium("PSA", "12", 50, "autograph");
-    expect(r).toBe(1.0);
+    expect(r).toBeNull();
   });
 
+  // Still 1.0: a null company means the caller said RAW, and raw is 1.0
+  // by definition — an input contract, not a table lookup.
   it("null gradingCompany → 1.0", () => {
     expect(getGraderPremium(null, "10", 50, "autograph")).toBe(1.0);
   });

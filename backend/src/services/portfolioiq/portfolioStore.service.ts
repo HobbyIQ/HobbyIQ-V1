@@ -2618,7 +2618,30 @@ async function applyGradeLadderFallback(opts: {
         null,
         sportHint ?? null,
       );
-      if (Number.isFinite(multiplier) && multiplier > 0 && Math.abs(multiplier - 1) > 0.01) {
+      // CF-EMPIRICAL-ONLY-NO-GRADER-MATRIX (2026-09-03, audit H-7 residual).
+      // A null multiplier must REFUSE, not fall through. `rawEstimate` is a
+      // Raw-tier number and the holding is graded; leaving it in place is
+      // precisely the CF-LADDER-APPLY-USER-GRADE bug this block was written
+      // to fix (a BGS 9.5 holding persisted at $902 against a $2,200 market).
+      // The caller already accepts null and skips the ladder entirely.
+      if (multiplier === null || !Number.isFinite(multiplier) || multiplier <= 0) {
+        try {
+          console.log(JSON.stringify({
+            event: "autoprice_grade_ladder_fallback_refused",
+            source: opts.source,
+            holdingId: opts.holding.id,
+            cardId: opts.cardId,
+            reason: "no-empirical-grade-multiplier",
+            gradeCompany,
+            gradeValue: gradeValueNum,
+            sport: sportHint ?? null,
+            productSet: productSetHint,
+            timestamp: new Date().toISOString(),
+          }));
+        } catch { /* telemetry must never propagate */ }
+        return null;
+      }
+      if (Math.abs(multiplier - 1) > 0.01) {
         finalFmv = rawEstimate * multiplier;
         finalExplanation =
           `Raw-tier estimate $${Math.round(rawEstimate)} (from ${ladder.anchorGrade} anchor `

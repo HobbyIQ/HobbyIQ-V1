@@ -76,6 +76,24 @@ export type ValueBandResolveScope =
 // promoting a noise cell.
 const MIN_ADJACENT_BAND_SAMPLE = 10;
 
+// CF-VALUE-BAND-SAMPLE-FLOOR (2026-09-03, closeout of audit C-5/H-6).
+// The EXACT-band rungs (1 and 2) had no sample floor of their own — they
+// trusted whatever the generator emitted. That was true-by-accident
+// rather than by construction: grade-calibrate.mjs happens to drop cells
+// under n=5 today (measured on the shipped table: min sampleSize is
+// exactly 5 at all three layers, 0 cells below it), so the lookup never
+// saw a thin cell. But nothing in the LOOKUP said so, and the doctrine
+// this PR is enforcing is "the most specific empirical cell WITH AN
+// ADEQUATE SAMPLE wins" — the sample clause has to be enforced where the
+// resolution decision is made, or a future generator change silently
+// promotes noise cells over the coarser rungs beneath them.
+//
+// Set to the generator's own floor. A cell below it does not resolve;
+// the ladder continues to the next rung (sport, then baseline, then the
+// caller's byTier fall-through), which is the whole point — a thin cell
+// falls THROUGH rather than winning on specificity alone.
+const MIN_VALUE_BAND_SAMPLE = 5;
+
 // CF-VALUE-BAND-ADJACENT-DISTANCE (2026-09-03, audit H-6). The rescue
 // above gated sample size but NOT how far it reached. Unbounded, it let
 // panini-contenders PSA 10 at $10,000+ borrow the "Under $25" ratio of
@@ -183,8 +201,13 @@ export function lookupValueBandMultiplierWithScope(
   const sport = ctx.sport ? String(ctx.sport).toLowerCase() : null;
   const family = ctx.family ? String(ctx.family).toLowerCase() : null;
 
-  const isValid = (cell: { medianRatio?: number } | undefined): cell is { medianRatio: number; sampleSize: number; rawMedian?: number } =>
-    !!cell && typeof cell.medianRatio === "number" && Number.isFinite(cell.medianRatio) && cell.medianRatio > 0;
+  // A cell resolves only when it is well-formed AND clears the sample
+  // floor (CF-VALUE-BAND-SAMPLE-FLOOR). A cell that fails either test is
+  // not "the answer we happen to have" — it is not evidence, and the
+  // ladder must keep walking to a rung that is.
+  const isValid = (cell: { medianRatio?: number; sampleSize?: number } | undefined): cell is { medianRatio: number; sampleSize: number; rawMedian?: number } =>
+    !!cell && typeof cell.medianRatio === "number" && Number.isFinite(cell.medianRatio) && cell.medianRatio > 0
+    && typeof cell.sampleSize === "number" && cell.sampleSize >= MIN_VALUE_BAND_SAMPLE;
 
   // 1. sport + family exact band
   if (sport && family) {

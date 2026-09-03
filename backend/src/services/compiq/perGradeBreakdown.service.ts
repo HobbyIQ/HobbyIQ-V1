@@ -281,7 +281,7 @@ export function buildGradeBreakdownRow(
       rawAnchor.isAutograph ? "autograph" : "base",
       rawAnchor.cardYear ?? null,
     );
-    if (Number.isFinite(multiplier) && multiplier > 0) {
+    if (multiplier !== null && Number.isFinite(multiplier) && multiplier > 0) {
       const projected = round(rawAnchor.price * multiplier);
       const spread = Math.max(1, projected * 0.2);
       return {
