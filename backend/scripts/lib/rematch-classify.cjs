@@ -124,6 +124,10 @@ const AGREE = "AGREE", IMPROVE = "IMPROVE", CONFLICT = "CONFLICT", UNDERIVABLE =
 const PROTECTED = "PROTECTED", AUTO = "AUTO";
 /** The one CONFLICT subclass authorized for audited auto-apply (Drew 2026-09-02). */
 const BASE_EVICTION = "BASE-EVICTION";
+/** REPORT-ONLY subclass (Drew 2026-09-03). A pool holding rows whose titles
+ *  name DIFFERENT members of one colour family -- Green vs Green Refractor vs
+ *  Green Wave. Never writable; see FINISH_FAMILY_COLLISION below. */
+const FINISH_FAMILY_COLLISION = "FINISH-FAMILY-COLLISION";
 
 /** Sources that are a real person's own record of their own transaction.
  *  These are never re-keyed by a fleet, only by Drew. */
@@ -420,6 +424,117 @@ function baseEvictionEvidence({ row, stored, derived, storedSlug, baseDestSlug, 
   return { qualifies: fail.length === 0, evidence: ev, failed: fail };
 }
 
+// ── FINISH-FAMILY-COLLISION: one colour, several parallels, one pool ───────
+//
+// CF-A-COLOUR-FAMILY-IS-SEVERAL-CARDS (Drew, 2026-09-03: "Green refractors and
+// bases are mixed in").
+//
+// This is the shape BASE-EVICTION cannot see. An eviction is defined by the
+// title naming NO finish; here every title names one -- they just name
+// DIFFERENT ones that share a colour word. Measured on the live pool
+// 2026-09-03: 122 Bowman slugs carry rows whose titles variously say "green",
+// "green refractor" and "green wave", e.g.
+// hiq:baseball:2025:bowman-chrome:7:green-geometric-refractor:no-auto.
+//
+// Green, Green Refractor, Green Shimmer, Green Wave and Green Mojo Refractor
+// are five checklist rows with five price curves. Pooled together their trend
+// is the trend of no real card, so the FMV the engine projects is a number
+// nothing ever sold for.
+//
+// WHY THIS IS REPORT-ONLY, AND PERMANENTLY SO
+//
+// BASE-EVICTION may write because its destination is DERIVED FROM ABSENCE: the
+// row names no finish, so the base row is the only card it can be, and a
+// checklist-backed base destination is required before it moves. Here the
+// title names a finish POSITIVELY, and choosing between "the title is right
+// and the slug is wrong" and "the title is terse and the slug is right" is a
+// judgement about which card a sale is -- exactly the contradiction the census
+// hands to Drew rather than settling. A fleet that guessed here would move
+// genuine Green Wave sales onto a Green pool as readily as the reverse.
+//
+// So this subclass TAGS and COUNTS. It never sets `writable`. Its product is
+// the ranked list of collided slugs, which is what a repair list is built from
+// once Drew rules on the family.
+
+/** The colour words a family collision is measured on -- the same bare-colour
+ *  vocabulary the writer-side guard uses (titleOutranksVendorTag.ts), so the
+ *  census counts exactly the shape the writer now refuses to create. */
+const FAMILY_COLOURS = new Set([
+  "gold", "blue", "green", "orange", "red", "purple", "black", "silver",
+  "pink", "yellow", "aqua", "sapphire", "bronze", "teal", "copper",
+]);
+
+/**
+ * The colour family a parallel name belongs to, or null. "Green Wave" and
+ * "Green" are both the `green` family; "Refractor" alone belongs to none
+ * (it names no colour), and neither does a two-colour name like "Black &
+ * White Red Ink" -- ambiguous membership is no membership, because a
+ * collision must be unambiguous to be worth reporting.
+ */
+function colourFamilyOf(parallelName) {
+  const words = lower(parallelName).split(/[^a-z0-9]+/).filter(Boolean);
+  const hits = [...new Set(words.filter((w) => FAMILY_COLOURS.has(w)))];
+  return hits.length === 1 ? hits[0] : null;
+}
+
+/**
+ * Does this row's TITLE name a finish in the same colour family as its SLUG,
+ * but not the same parallel? That is the collision: both agree the card is
+ * green, and they disagree about which green card it is.
+ *
+ * Returns { qualifies, evidence }. The evidence quotes both sides, because a
+ * subclass that only reported a verdict would be unactionable -- Drew rules on
+ * the family by reading the titles.
+ */
+function finishFamilyCollision({ row, storedSlug, stored }) {
+  const title = str(row?.title);
+  const slug = str(storedSlug ?? row?.cardId);
+  const slugParallel = slugParallelSegment(slug);
+  const ev = {
+    storedSlugParallel: slugParallel,
+    titleQuoted: title.slice(0, 160),
+    storedParallelField: stored?.parallel ?? null,
+    family: null,
+    titleFamilyWords: [],
+  };
+  if (!slugParallel || !slugNamesParallel(slug)) return { qualifies: false, evidence: ev };
+  const family = colourFamilyOf(slugParallel.replace(/-/g, " "));
+  if (!family) return { qualifies: false, evidence: ev };
+  ev.family = family;
+
+  // The title must name the SAME colour -- otherwise this is an ordinary
+  // disagreement about the card, not a family collision.
+  const words = titleWords(title);
+  if (!words.includes(family)) return { qualifies: false, evidence: ev };
+
+  // ...and it must name a finish word BESIDE the colour that the slug's
+  // parallel does not carry (or vice versa). A title saying exactly what the
+  // slug says is agreement, and agreement is not a collision.
+  //
+  // TWO WORDS ARE EXCLUDED FROM THE COMPARISON, both learned from real rows:
+  //
+  // 1. PRODUCT WORDS THE SLUG'S OWN SET SEGMENT CARRIES. "2025 Bowman CHROME
+  //    Green Wave" names the PRODUCT in the title and the slug says
+  //    `bowman-chrome`; counting "chrome" as a finish the slug's parallel
+  //    lacks would report every Bowman Chrome row as collided. The same
+  //    suppression FINISH_TOKENS documents for the eviction vocabulary,
+  //    applied where the set segment can actually be read.
+  // 2. WORDS OUTSIDE THE FINISH VOCABULARY ENTIRELY, on the SLUG side --
+  //    "geometric" in `green-geometric-refractor` is a real parallel word we
+  //    do not carry in FINISH_TOKENS, and treating our own vocabulary gap as
+  //    the title "dropping" a word would flag agreement as collision. Only
+  //    words we can actually adjudicate are compared, in both directions.
+  const setWords = new Set(String(slug.split(":")[3] ?? "").split(/[^a-z0-9]+/).filter(Boolean));
+  const comparable = (w) => w !== family && finishWord(w) && !setWords.has(w);
+  const slugWords = new Set(slugParallel.split(/[^a-z0-9]+/).filter(Boolean));
+  const titleFinishWords = words.filter(comparable);
+  ev.titleFamilyWords = titleFinishWords;
+  const titleAddsOrDrops =
+    titleFinishWords.some((w) => !slugWords.has(w)) ||
+    [...slugWords].some((w) => comparable(w) && !words.includes(w));
+  return { qualifies: titleAddsOrDrops, evidence: ev };
+}
+
 /**
  * Compare stored vs derived identity axis by axis.
  *   same     both name the same value (or both blank)
@@ -490,14 +605,25 @@ function classifyRow({
   // the designed partition, and flagging 13.5M of those would drown the real
   // damage. lib/split-identity.cjs owns that predicate for all three consumers.
   const split = SPLIT.classifyIdentity(row);
+  // The finish-family collision is computed from the row alone and folded into
+  // EVERY return path, for the same reason the split flag is: the commonest
+  // collided row diffs as AGREE (its fields and its title say "Green Wave"
+  // while its ADDRESS says green-geometric-refractor), and hanging the flag
+  // off CONFLICT would miss exactly the rows the census exists to surface.
+  // It is a report tag: it never appears in `writable`.
+  const family = finishFamilyCollision({ row, storedSlug, stored });
   const base = {
     tier: prov.tier,
     provenanceReasons: prov.reasons,
     splitIdentity: split.split,
     splitClass: split.klass,
     splitSegments: split.segments,
+    finishFamilyCollision: family.qualifies,
+    finishFamily: family.qualifies ? family.evidence.family : null,
+    finishFamilyEvidence: family.qualifies ? family.evidence : null,
   };
   const splitReasons = split.split ? [`split-identity:${split.klass}:${split.reason}`] : [];
+  if (family.qualifies) splitReasons.push(`subclass:${FINISH_FAMILY_COLLISION}:${family.evidence.family}`);
 
   if (!derived) {
     return { ...base, klass: UNDERIVABLE, axes: { same: [], filled: [], dropped: [], changed: [] }, reasons: [...(derivationReasons.length ? derivationReasons : ["no-derived-identity"]), ...splitReasons], writable: false };
@@ -554,7 +680,9 @@ function classifyRow({
       // The SAME tier gate as IMPROVE, AND the axis gate. A protected row is
       // report-only forever, subclass or no subclass -- see the mutation
       // check; so is a row whose identity axes contradict the derivation.
-      writable: prov.tier === AUTO && contradicting.length === 0,
+      // ...and never while the row's colour family is collided and unruled
+      // (see the IMPROVE path below for the case that surfaced this).
+      writable: prov.tier === AUTO && contradicting.length === 0 && !family.qualifies,
     };
   }
 
@@ -600,10 +728,21 @@ function classifyRow({
   }
 
   reasons.push(`filled:${axes.filled.join(",")}`, ...splitReasons);
-  // PROTECTED rows are report-only forever, even when IMPROVE-shaped. The
-  // class still says IMPROVE (that is what the census measured); `writable`
-  // is what the apply pass reads, and it is false.
-  return { ...base, klass: IMPROVE, axes, reasons, writable: prov.tier === AUTO };
+  // A FLAGGED FAMILY COLLISION IS NEVER WRITTEN, INCLUDING AS AN IMPROVE.
+  //
+  // Found by the pin, 2026-09-03: a row with a BLANK stored parallel, a "Green
+  // Wave" title and a `green-geometric-refractor` slug diffs as filled:parallel
+  // -- strictly more specific, checklist-backed -- and so reached IMPROVE with
+  // `writable` true. The fleet would have moved it onto the parallel its title
+  // names while the family it belongs to is exactly what Drew has not yet ruled
+  // on, and while its POOL still holds the other family members. Filling a
+  // blank axis is only an improvement when the destination is settled; inside a
+  // collided family it is picking a side of the open question.
+  //
+  // The class stays IMPROVE -- that is what the census measured, and hiding the
+  // shape would lose the count -- and `writable` is what the apply pass reads.
+  if (family.qualifies) reasons.push("finish-family-collision:not-writable-until-ruled");
+  return { ...base, klass: IMPROVE, axes, reasons, writable: prov.tier === AUTO && !family.qualifies };
 }
 
 /**
@@ -646,6 +785,7 @@ function renderIdentity(id) {
 
 module.exports = {
   AGREE, IMPROVE, CONFLICT, UNDERIVABLE, PROTECTED, AUTO, BASE_EVICTION,
+  FINISH_FAMILY_COLLISION, FAMILY_COLOURS, colourFamilyOf, finishFamilyCollision,
   PROTECTED_SOURCES, PROTECTED_MARKER_FIELDS, AXES, GENERIC_PARALLELS,
   FINISH_TOKENS, FINISH_PHRASES, FINISH_COLOR_TOKENS,
   provenanceTier, gradeToken, axisValue, axisIsBlank, diffAxes, classifyRow,

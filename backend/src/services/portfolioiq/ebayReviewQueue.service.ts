@@ -712,12 +712,34 @@ export async function confirmHoldingInDoc(
       void (async () => {
         try {
           const { recordSoldComp } = await import("./soldCompsStore.service.js");
+          // CF-THE-TITLE-OUTRANKS-THE-VENDOR-TAG reaches the user-purchase
+          // writer too (Drew, 2026-09-03). `holding.parallel` is a TAG on the
+          // buyer's holding -- typed by a person, inherited from an import, or
+          // guessed by a matcher -- and it was stamped onto the SALE as fact.
+          // Measured 2026-09-03: ebay-user-purchase has the HIGHEST silent
+          // rate of any source, 15.9% of its Bowman finish-slug rows carry a
+          // parallel no title names. The listing title is the sale's own
+          // evidence, so it decides here exactly as it does on every other
+          // ingest path; a title naming no finish records the sale as Base.
+          //
+          // These rows are PROTECTED tier -- a real person's record of their
+          // own transaction, never re-keyed by a fleet -- so this guard only
+          // stops NEW rows from being written wrong. The rows already in the
+          // pool are reported to Drew, never auto-repaired.
+          const { parseListingTitle } = await import("./ebayTitleParser.service.js");
+          const { parallelTheTitleAllows } = await import("./titleOutranksVendorTag.js");
+          const parsedForParallel = parseListingTitle(compTitle ?? "");
+          const parallelDecision = parallelTheTitleAllows(
+            parsedForParallel.parallel,
+            holding.parallel ?? null,
+            { variationMarker: parsedForParallel.variationMarker ?? null },
+          );
           await recordSoldComp({
             cardId: confirmedCardId,
             playerName: holding.playerName!,
             cardYear: holding.cardYear ?? null,
             setName: holding.setName ?? null,
-            parallel: holding.parallel ?? null,
+            parallel: parallelDecision.parallel,
             cardNumber: holding.cardNumber ?? null,
             isAuto: holding.isAuto === true,
             printRun: typeof (holding as any).printRun === "number" ? (holding as any).printRun : null,
