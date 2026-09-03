@@ -56,6 +56,18 @@ export interface ApiError {
   status: number;
   code?: string;
   message: string;
+  /**
+   * CF-PRO-SELLER-WORKSPACE (2026-09-02). The tier the backend says this
+   * call needs, lifted off the 402 body that `requireEntitlement` writes
+   * ({ error: "subscription_required", requiredTier, currentTier, feature }).
+   * Only present on entitlement rejections. Callers that render an upsell
+   * can name the actual tier instead of guessing "Pro Seller" — the matrix
+   * in backend/src/config/entitlements.ts is the one authority on which
+   * tier owns which feature, and it has moved before.
+   */
+  requiredTier?: string | null;
+  /** The gated feature key from the same 402 body, for telemetry/debugging. */
+  feature?: string | null;
 }
 
 async function request<T>(
@@ -108,6 +120,10 @@ async function request<T>(
       status: res.status,
       code: body.error ?? undefined,
       message: body.error ?? body.reason ?? res.statusText,
+      // Additive: absent on every response that does not carry them, so
+      // existing callers that only read status/code/message are unaffected.
+      requiredTier: typeof body.requiredTier === "string" ? body.requiredTier : undefined,
+      feature: typeof body.feature === "string" ? body.feature : undefined,
     };
     throw err;
   }
@@ -506,6 +522,34 @@ export interface PortfolioHolding {
    *  and fall back to the flats when null. See backend
    *  responseAssembly.ts for the source contract. */
   pricing?: PricingEnvelope | null;
+  /** The sell-window timing call, derived server-side from the holding's own
+   *  comp-pool trend against the player index. A TIMING signal, never a
+   *  valuation — it says when the market may be ahead of this card, and the
+   *  price it quotes is still the canonical FMV computed elsewhere.
+   *
+   *  Optional by design: this field arrives with the sell-window backend
+   *  (open PR at time of writing), and until that deploys /api/portfolio
+   *  answers 200 with the field simply absent. Consumers MUST treat absence
+   *  as "capability not live" and render nothing, rather than as "no signal"
+   *  — the two look identical on the wire but mean different things to a
+   *  seller. The Pro Seller workspace does exactly that. */
+  sellSignal?: {
+    signal: "none" | "watch" | "sell-window" | "hold";
+    horizon: "none" | "days-7-14" | "days-14-30";
+    signalClass: "price" | "attention";
+    /** One sentence with the numbers quoted. Show it verbatim — it is the
+     *  basis, and paraphrasing it would drop the evidence. */
+    basis: string;
+    reason?: string | null;
+    measures?: {
+      playerIndexPct?: number | null;
+      ownPoolPct?: number | null;
+      divergencePct?: number | null;
+      ownPoolSales?: number | null;
+      trendAgeDays?: number | null;
+      confidence?: number | null;
+    } | null;
+  } | null;
 }
 
 // CF-PRICING-ENVELOPE (2026-07-31). Envelope-first valuation status
@@ -1145,8 +1189,35 @@ export interface EntitlementsMeResponse {
   success: boolean;
   plan: "free" | "collector" | "investor" | "pro_seller" | string;
   entitlementOverride?: "free" | "collector" | "investor" | "pro_seller" | null;
-  features?: Record<string, boolean>;
+  /**
+   * The granted feature keys.
+   *
+   * CF-PRO-SELLER-WORKSPACE (2026-09-02). The backend sends an ARRAY —
+   * `resolveEntitlementsFor()` returns `Array.from(features).sort()`, so the
+   * wire shape is `["predictions", "watchlist", ...]`. This was typed as
+   * `Record<string, boolean>` and nothing had read it yet, so the mistake
+   * was invisible: an `if (features.someKey)` against an array is
+   * `undefined`, which reads as "not entitled" and would have locked out
+   * every paying user. Both shapes are declared because the type is the
+   * contract and the array is what actually arrives; read it through
+   * `hasFeature()` rather than indexing it directly.
+   */
+  features?: string[] | Record<string, boolean>;
   caps?: Record<string, unknown>;
+}
+
+/**
+ * Is `feature` granted, whichever shape the endpoint used? Presentation only —
+ * the server re-checks with requireEntitlement on every gated route, so a
+ * wrong answer here can hide a feature but can never unlock one.
+ */
+export function hasFeature(
+  features: EntitlementsMeResponse["features"],
+  feature: string,
+): boolean {
+  if (Array.isArray(features)) return features.includes(feature);
+  if (features && typeof features === "object") return features[feature] === true;
+  return false;
 }
 
 export async function fetchEntitlements(): Promise<EntitlementsMeResponse> {
@@ -3554,5 +3625,105 @@ export async function updateBuyerIqTarget(targetId: string, body: BuyerIqTargetU
 export async function deleteBuyerIqTarget(targetId: string): Promise<{ success: boolean }> {
   return await request(`/api/buyeriq/targets/${encodeURIComponent(targetId)}`, {
     method: "DELETE",
+  });
+}
+
+// ─── Pro Seller workspace (CF-PRO-SELLER-WORKSPACE, 2026-09-02) ─────
+//
+// One page composes six independent seller surfaces. Several of them are
+// still in open PRs on the day this ships, so the page is written to merge
+// in ANY order relative to them: each section asks its own endpoint, and an
+// endpoint the deployed backend does not have yet answers 404. A 404 is not
+// a failure here — it means "not built yet", and the section hides.
+//
+// The three outcomes a section can land on, and why they are different:
+//
+//   404 / 501  → the backing PR has not merged (or has not deployed). The
+//                section renders NOTHING. No error, no empty state, no
+//                "coming soon" — the page simply has one fewer section.
+//   402 / 403  → the API exists and the caller has not paid for it. That is
+//                the ENTITLEMENT gate, enforced server-side by
+//                requireEntitlement("erpReconciliation") and friends; the
+//                page renders the upsell, never data.
+//   anything   → a real failure. The section says so, in its own box, and
+//   else         the rest of the page still renders.
+//
+// Keeping 404 and 402 apart is the whole point. Collapsing them would make a
+// free-tier user think the feature does not exist (losing the upsell), and
+// make a paying user think they had not paid (a support ticket).
+
+/** What a feature-detected section resolved to. */
+export type SectionOutcome<T> =
+  | { state: "ready"; data: T }
+  /** Backing API absent from this deployment — render nothing at all. */
+  | { state: "absent" }
+  /** API present, caller not entitled. `requiredTier` comes from the 402 body. */
+  | { state: "locked"; requiredTier?: string | null }
+  | { state: "error"; message: string };
+
+/**
+ * Statuses that mean "this deployment does not serve that route".
+ *
+ * 404 is the honest one — Express has no handler, so the app's 404 fires.
+ * 501 is included because a route may land ahead of its implementation
+ * behind a not-implemented guard. 405 is NOT here: a wrong method on a real
+ * route is our bug, and should surface as an error rather than vanish.
+ */
+const ABSENT_STATUSES = new Set([404, 501]);
+
+/** Statuses the entitlement middleware answers with. `requireEntitlement`
+ *  returns 402; some older gated routes answer 403. Both mean "pay for it",
+ *  and both are handled identically everywhere else in this app (see
+ *  /app/erp, /app/daily, /app/insights). */
+const LOCKED_STATUSES = new Set([402, 403]);
+
+/**
+ * Run one section's fetch and classify the result. Never throws: a section
+ * failing is a section-shaped hole, never a blank page.
+ */
+export async function resolveSection<T>(
+  load: () => Promise<T>,
+): Promise<SectionOutcome<T>> {
+  try {
+    return { state: "ready", data: await load() };
+  } catch (err) {
+    const e = err as ApiError & { requiredTier?: string | null };
+    const status = e?.status;
+    if (status != null && ABSENT_STATUSES.has(status)) return { state: "absent" };
+    if (status != null && LOCKED_STATUSES.has(status)) {
+      return { state: "locked", requiredTier: e.requiredTier ?? null };
+    }
+    return { state: "error", message: e?.message ?? "Failed to load" };
+  }
+}
+
+// Grade arbitrage — the portfolio-wide grade-worthy scan. Already served by
+// GET /api/portfolio/grade-worthy-alerts; typed here for the first time.
+// Each candidate reuses the GradeWorthyAnalysis shape the per-holding
+// grade-analysis endpoint already returns, so the two surfaces cannot drift.
+export interface GradeArbCandidate {
+  holdingId: string;
+  cardTitle: string;
+  player: string;
+  year: number | null;
+  set: string;
+  variant: string;
+  number: string;
+  analysis: GradeWorthyAnalysis;
+}
+
+export interface GradeArbResponse {
+  scannedHoldings: number;
+  gradeWorthyCount: number;
+  candidates: GradeArbCandidate[];
+}
+
+export async function fetchGradeArbOpportunities(): Promise<GradeArbResponse> {
+  // Slow by construction: the route fans out over every raw holding at
+  // concurrency 6, each hitting Cosmos. The default 30s timeout aborts a
+  // real answer on a large portfolio, so this one gets the longer budget
+  // rather than reporting a timeout the server did not have.
+  return await request<GradeArbResponse>("/api/portfolio/grade-worthy-alerts", {
+    timeoutMs: 90_000,
   });
 }
