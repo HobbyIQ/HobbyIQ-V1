@@ -3734,6 +3734,108 @@ export async function deleteBuyerIqTarget(targetId: string): Promise<{ success: 
   });
 }
 
+// ─── BuyerIQ deal scanner ─────────────────────────────────────────────
+// Backend: GET /api/buyeriq/deals (buyeriq.routes.ts → dealFeed.service).
+// Live asks compared against each card's canonical projected next sale.
+
+/** Why a target did not produce a deal. */
+export type BuyerIqDealRefusal =
+  | "no-basis"
+  | "speculative-confidence"
+  | "below-threshold"
+  | "no-listing-price";
+
+/** Why a LISTING was not comparable to the target (CF-BUYERIQ-GRADE-
+ *  AWARE-MATCH, 2026-09-03). Identity includes grade tier: a raw ask is
+ *  not a discount on a PSA 10, and a listing whose grade we cannot read
+ *  is not scored at all rather than assumed into either tier. */
+export type BuyerIqGradeMismatchReason =
+  | "grade-unknown"
+  | "listing-raw-target-graded"
+  | "listing-graded-target-raw"
+  | "grade-company-mismatch"
+  | "grade-value-mismatch";
+
+/** The evidence behind a flagged deal — what the discount is measured
+ *  against, and how much that projection is trusted. */
+export interface BuyerIqDealBasis {
+  projection: number;
+  rung: string | null;
+  exactPool: boolean;
+  confidence: number;
+  discountPct: number;
+  requiredDiscountPct: number;
+}
+
+export interface BuyerIqDealListing {
+  listingId: string;
+  title: string;
+  price: number;
+  currency: string;
+  itemWebUrl: string;
+  imageUrl: string | null;
+  sellerHandle: string | null;
+  endsAt: string | null;
+}
+
+export interface BuyerIqDeal {
+  targetId: string;
+  listId: string;
+  playerName: string;
+  cardYear: number | null;
+  setName: string | null;
+  cardNumber: string | null;
+  parallel: string | null;
+  gradeCompany: string | null;
+  gradeValue: number | null;
+  listing: BuyerIqDealListing;
+  /** The grade tier read off the listing title and verified equal to
+   *  the target tier before scoring ("PSA 10", "Raw"). */
+  matchedTier: string;
+  basis: BuyerIqDealBasis;
+  discountPctDisplay: number;
+  requiredDiscountPctDisplay: number;
+  savingsVsProjection: number;
+}
+
+export interface BuyerIqSkippedTarget {
+  targetId: string;
+  playerName: string;
+  reason: BuyerIqDealRefusal | BuyerIqGradeMismatchReason | "no-listings" | "no-player-name";
+  basis: BuyerIqDealBasis | null;
+  /** Listings that matched the card but not the TIER, by reason. Lets
+   *  the page say "2 listed, both raw" instead of "nothing listed". */
+  gradeRejections?: Partial<Record<BuyerIqGradeMismatchReason, number>>;
+}
+
+export interface BuyerIqDealFeed {
+  success: boolean;
+  deals: BuyerIqDeal[];
+  /** False when the vendor-call budget ran out mid-scan. The feed is
+   *  then a PARTIAL view — do not present it as the whole market. */
+  complete: boolean;
+  stoppedReason: "vendor-call-budget-exhausted" | null;
+  targetsUnexamined: number;
+  targetsScanned: number;
+  targetsEligible: number;
+  skipped: BuyerIqSkippedTarget[];
+  budget: { remaining: number; spent: number; cacheHits: number; limit: number };
+  baseDiscountPct: number;
+  scannedAt: string;
+}
+
+export async function fetchBuyerIqDeals(opts?: {
+  listId?: string;
+  /** Base discount at full confidence, as a fraction (0.20 = 20% under). */
+  threshold?: number;
+}): Promise<BuyerIqDealFeed> {
+  const qs = new URLSearchParams();
+  if (opts?.listId) qs.set("listId", opts.listId);
+  if (typeof opts?.threshold === "number") qs.set("threshold", String(opts.threshold));
+  const suffix = qs.toString() ? `?${qs.toString()}` : "";
+  return await request(`/api/buyeriq/deals${suffix}`);
+}
+
 // ─── Pro Seller workspace (CF-PRO-SELLER-WORKSPACE, 2026-09-02) ─────
 //
 // One page composes six independent seller surfaces. Several of them are
