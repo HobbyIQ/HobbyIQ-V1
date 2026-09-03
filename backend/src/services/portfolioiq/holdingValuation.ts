@@ -47,6 +47,7 @@ import type { PortfolioHolding } from "../../types/portfolioiq.types.js";
 import { valueIdentity, type Valuation } from "../compiq/oneValuationPath.service.js";
 import { isExactPoolRung } from "../compiq/fmvRung.js";
 import { persistedLabelsForValuation } from "../compiq/valuationLabels.js";
+import { writeHoldingValuation } from "./writeHoldingValuation.js";
 
 export type HoldingValuationOutcome =
   | { outcome: "observed"; holding: PortfolioHolding; valuation: Valuation }
@@ -98,10 +99,28 @@ const round2 = (n: number): number => Math.round(n * 100) / 100;
  *  unified early exits and the supremacy gate always wrote. */
 export function observedHoldingWrite(holding: PortfolioHolding, v: Valuation, nowIso: string): PortfolioHolding {
   const fmv = v.fairMarketValue as number;
-  return {
-    ...holding,
+  // CF-ONE-PERSIST-HELPER (C-7): even the one-entry path — which always did
+  // stamp both fields — goes through the single helper, so "every persisted
+  // value names its source" is enforced by the type at EVERY site rather than
+  // being true here by good behaviour and false at eleven others.
+  return writeHoldingValuation(holding, {
     fairMarketValue: fmv,
-    fmvRung: v.rungLabel,
+    rung: { rung: v.rungLabel },
+    // C-7: the kind of evidence, alongside the ladder step. Observed = real
+    // comps in the exact pool; this is the branch that requires them.
+    valueSource: "observed",
+    nowIso,
+    meta: {
+      slug: v.identity.pooledAs ?? v.identity.slug ?? v.identity.requestedId,
+      compsUsed: v.compsUsed,
+      // CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (Drew, 2026-09-03): the same
+      // label set the live canonical-fmv response carries for this holding,
+      // derived through the same two functions (valuationLabels.ts). A
+      // self-anchored $251 must SAY so on the portfolio row, not only to a
+      // reader who thinks to open the card page.
+      ...persistedLabelsForValuation(v),
+    },
+    fields: {
     predictedPrice: v.predictedPrice ?? fmv,
     predictedPriceLow: null,
     predictedPriceHigh: null,
@@ -117,34 +136,34 @@ export function observedHoldingWrite(holding: PortfolioHolding, v: Valuation, no
     isEstimate: false,
     valuationStatus: "observed",
     pricingSource: "unified-pricing",
-    pricingSourceMeta: {
-      slug: v.identity.pooledAs ?? v.identity.slug ?? v.identity.requestedId,
-      method: v.rungLabel,
-      compsUsed: v.compsUsed,
-      // CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (Drew, 2026-09-03): the same
-      // label set the live canonical-fmv response carries for this holding,
-      // derived through the same two functions (valuationLabels.ts). A
-      // self-anchored $251 must SAY so on the portfolio row, not only to a
-      // reader who thinks to open the card page.
-      ...persistedLabelsForValuation(v),
-    },
     nearestGradedAnchor: undefined,
     verdict: "Observed",
     recommendation: holding.recommendation ?? "Hold",
-    lastUpdated: nowIso,
     sourceVendor: "hobbyiq-pool" as unknown as PortfolioHolding["sourceVendor"],
     sourceVendorUpdatedAt: nowIso,
-  };
+    },
+  });
 }
 
 /** The estimate write: this identity's other tiers × the empirical ratio,
  *  persisted as an estimate with its rung named — never as observed. */
 export function gradeCurveEstimateHoldingWrite(holding: PortfolioHolding, v: Valuation, nowIso: string): PortfolioHolding {
   const fmv = round2(v.fairMarketValue as number);
-  return {
-    ...holding,
+  return writeHoldingValuation(holding, {
     fairMarketValue: fmv,
-    fmvRung: "grade-curve-estimate",
+    rung: { rung: "grade-curve-estimate" },
+    // C-7: derived from this identity's OTHER tiers via the empirical ratio —
+    // never comps of this tier, so it can never claim "observed".
+    valueSource: "estimated",
+    nowIso,
+    meta: {
+      slug: v.identity.pooledAs ?? v.identity.slug ?? v.identity.requestedId,
+      compsUsed: v.compsUsed,
+      // CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS: an estimate carries its
+      // labels too — a grade-curve fill IS a fallback rung, and it says so.
+      ...persistedLabelsForValuation(v),
+    },
+    fields: {
     predictedPrice: v.predictedPrice ?? fmv,
     predictedPriceLow: null,
     predictedPriceHigh: null,
@@ -160,21 +179,13 @@ export function gradeCurveEstimateHoldingWrite(holding: PortfolioHolding, v: Val
     isEstimate: true,
     valuationStatus: "estimated",
     pricingSource: "unified-pricing",
-    pricingSourceMeta: {
-      slug: v.identity.pooledAs ?? v.identity.slug ?? v.identity.requestedId,
-      method: "grade-curve-estimate",
-      compsUsed: v.compsUsed,
-      // CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS: an estimate carries its
-      // labels too — a grade-curve fill IS a fallback rung, and it says so.
-      ...persistedLabelsForValuation(v),
-    },
     nearestGradedAnchor: undefined,
     verdict: "Estimated",
     recommendation: holding.recommendation ?? "Hold",
-    lastUpdated: nowIso,
     sourceVendor: "hobbyiq-pool" as unknown as PortfolioHolding["sourceVendor"],
     sourceVendorUpdatedAt: nowIso,
-  };
+    },
+  });
 }
 
 /**

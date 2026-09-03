@@ -17,6 +17,10 @@ jobs:
     permissions:
       id-token: write
       contents: read
+    outputs:
+      # The reprice job below gates on this: a UTC trigger the ET gate closed
+      # deployed nothing and must reprice nothing.
+      should_run: ${{ steps.gate-out.outputs.should_run }}
 
     steps:
       - name: Checkout repo
@@ -222,3 +226,168 @@ jobs:
         run: |
           TIER1_HARNESS_TOKEN="${{ steps.harness-token.outputs.token }}" \
           node scripts/smoke-test-pricing-tiers.cjs
+
+      # Tell the reprice job below whether the ET gate actually opened. A
+      # skipped UTC trigger must not reprice: the whole point of the gate is
+      # that only ONE of the two cron entries is the real 5AM ET run.
+      - name: Publish gate decision
+        id: gate-out
+        if: always()
+        shell: bash
+        run: echo "should_run=${{ steps.et-gate.outputs.should_run }}" >> "$GITHUB_OUTPUT"
+
+  # ── NIGHTLY REPRICE (C-2, 2026-09-03) ─────────────────────────────────────
+  #
+  # THE ASSUMPTION THIS JOB MAKES, STATED OUT LOUD:
+  #   Drew's standing intent is that pricing "needs to be fresh each time."
+  #   This job takes that to mean EVERY user's holdings, once a day,
+  #   immediately after the deploy, with no per-user opt-in.
+  #
+  #   "Fresh" is read as CORRECT, not as RECOMPUTED: the sweep skips a holding
+  #   priced within the last 20h WHOSE EXACT POOL HAS NOT GROWN, and reprices
+  #   everything else. A card somebody traded is always repriced; a card
+  #   nobody traded is not re-derived nightly to produce the same number. That
+  #   keeps the bill proportional to change instead of to corpus size, which
+  #   is the difference between ~1 kRU today and ~100 kRU at 100x with no
+  #   corresponding gain. If the intent was narrower still -- only Drew, or a
+  #   multi-day cadence -- REPRICE_MAX_HOLDINGS and the script's
+  #   NIGHTLY_MIN_HOLDING_AGE_MS are the knobs.
+  #
+  # WHY IT EXISTS: nothing repriced holdings on a schedule. The audit found 20
+  # of 118 live holdings more than 7 days stale (max 18.2 days) and 28 sitting
+  # on pools that had GROWN since the value was written. Worse,
+  # pricing-invariant-audit.yml:36-39 says in its own cron comment that it runs
+  # "after the 5AM ET daily refresh has repriced" -- the refresh did not
+  # reprice, so the detector was judging numbers nobody had refreshed. This
+  # closes that loop: the refresh reprices, THEN the 06:20 UTC audit judges it.
+  #
+  # WHY HERE AND NOT A NEW WORKFLOW: the sanctioned lane already exists
+  # (reprice-user-holdings via the backfill runner) and the ordering matters --
+  # the reprice must run against the code that was just deployed, not the
+  # previous day's. `needs:` gives that ordering for free.
+  #
+  # WHY IT CALLS THE SCRIPT DIRECTLY rather than dispatching backfill-runner:
+  # a `gh workflow run` would be fire-and-forget -- this job would go green
+  # while the reprice was still queued, and a failure would land in a workflow
+  # nobody was watching. The runner's reprice lane is four steps (checkout,
+  # build, az login, run) and they are reproduced here so the result is part of
+  # THIS run's red/green. The manual runner lane is unchanged and still works.
+  reprice-holdings:
+    name: Reprice All Holdings (post-refresh)
+    needs: deploy-and-refresh
+    if: needs.deploy-and-refresh.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    # The measured full pass is minutes, not hours (see the RU budget below).
+    # 60 is generous headroom for pool growth, and well under the point where
+    # a hung reprice would collide with the next day's run.
+    timeout-minutes: 60
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v5
+        with:
+          node-version: "20"
+
+      - name: Install backend deps
+        working-directory: backend
+        run: npm ci
+
+      - name: Build backend dist
+        # The reprice script requires compiled JS from backend/dist.
+        working-directory: backend
+        run: npm run build
+
+      - name: Login to Azure
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+
+      # Same fetch-and-mask pattern the runner and the warm steps use: the
+      # value goes straight from App Service into the job env, never to disk
+      # and never to stdout.
+      - name: Fetch Cosmos + auth secrets from HobbyIQ3 App Service
+        shell: bash
+        run: |
+          for NAME in COSMOS_CONNECTION_STRING AUTH_SESSION_SECRET; do
+            V=$(az webapp config appsettings list \
+              --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+              --query "[?name=='$NAME'].value | [0]" -o tsv)
+            if [ -z "$V" ] || [ "$V" = "None" ]; then
+              echo "::error::FAILED to fetch $NAME from App Service"
+              exit 1
+            fi
+            echo "::add-mask::$V"
+            echo "$NAME=$V" >> "$GITHUB_ENV"
+            echo "$NAME fetched (length: ${#V})"
+          done
+
+      - name: Reprice every user's holdings
+        working-directory: backend
+        env:
+          # MODE=all sweeps every user in the portfolio container.
+          #
+          # PRECEDENCE (verified against the script, 2026-09-03): MODE=all
+          # WINS -- reprice-user-holdings.cjs tests ALL_USERS first and returns
+          # from that branch, so a REPRICE_USER_ID set alongside it is ignored.
+          # REPRICE_USER_ID is still deliberately UNSET here: relying on the
+          # script's internal ordering to protect a corpus sweep is not a
+          # guarantee, it is a coincidence that survives until someone
+          # reorders two ifs.
+          MODE: all
+          BACKFILL_APPLY: "true"
+          HOBBYIQFMV_COMPOSITE_ENABLED: "true"
+          # ── THE RU / CONCURRENCY BUDGET ──────────────────────────────────
+          #
+          # Measured read-only against prod 2026-09-03, 12 users / 130 holdings:
+          #   portfolio doc reads   194.55 RU for all 12 docs (145.9 of it is
+          #                         user-199fcbc9's 1.96 MB doc alone)
+          #   pool query per card   3.42 RU average (partition-keyed, TOP 60)
+          #
+          # One full pass ~= 12 doc reads + 130 pool queries + 12 doc writes:
+          #   reads   194.55 RU
+          #   pools   130 x 3.42  = 444.6 RU
+          #   writes  ~= 2x reads = 389.1 RU  (Cosmos writes cost ~2x a read)
+          #   TOTAL   ~1,028 RU per full pass -- about 1.0 kRU.
+          #
+          # sold_comps sits at a 10,000 RU/s floor, so a full pass is roughly
+          # ONE TENTH OF ONE SECOND of provisioned throughput. The bill is
+          # noise; the reason to bound it at all is blast radius, not cost.
+          #
+          # Growth is linear in holdings: at 100x today's corpus (13,000
+          # holdings) a pass is ~100 kRU, still ~10 seconds of the floor.
+          # Revisit the budget, not the cadence, if the corpus outgrows that.
+          #
+          # THAT IS THE CEILING, NOT THE BILL. The nightly lane skips holdings
+          # priced within the last 20h whose exact pool has NOT grown, so the
+          # steady-state cost is proportional to CHANGE rather than to corpus:
+          # one cheap partition-keyed COUNT (3.42 RU) per fresh holding, and a
+          # full reprice only where a sale actually landed. A holding whose
+          # pool grew is repriced regardless of age -- freshness never hides a
+          # market move. Manual dispatches keep the full bypass.
+          #
+          # Concurrency: the script walks users SERIALLY and repriceHoldingsForUser
+          # walks holdings serially inside each. That is the budget -- one
+          # in-flight query at a time -- and it is deliberate: the reprice
+          # shares the sold_comps floor with live user traffic at 5AM ET, and
+          # a parallel sweep is the shape that produces 429s on the read path
+          # a collector is using. It is fast enough serially (a full pass is
+          # ~130 queries) that parallelism buys nothing worth that risk.
+          #
+          # This variable is now READ AND VALIDATED by the script (it was
+          # decorative -- set here, read nowhere). Only "1" is accepted; any
+          # other value exits 1 rather than being silently ignored, so nobody
+          # can believe they have bounded a sweep they have not.
+          REPRICE_CONCURRENCY: "1"
+          # Per-user cap. 200 is the script's own default and comfortably
+          # exceeds the largest live portfolio (43 holdings). It is a runaway
+          # guard, not a throttle.
+          REPRICE_MAX_HOLDINGS: "200"
+        run: node scripts/reprice-user-holdings.cjs
