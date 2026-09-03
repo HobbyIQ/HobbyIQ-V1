@@ -7,8 +7,8 @@
  * pin that would also pass against the broken code pins nothing.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { readFileSync, readdirSync, statSync } from "node:fs";
+import { join, sep } from "node:path";
 
 const SRC = join(__dirname, "..", "src");
 const read = (rel: string): string => readFileSync(join(SRC, rel), "utf8");
@@ -470,5 +470,106 @@ describe("H-13: the sell window reads the player index, unclamped", () => {
     const src = read("services/compiq/playerInSetMomentum.service.ts");
     expect(src).toMatch(/const aggregatedRatio = median\(/);
     expect(src).toMatch(/clamp\(aggregatedRatio/);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+// The engine boundary itself — the remaining sites (audit follow-up, #1679)
+//
+// THE GRAPH, established before any of this was moved:
+//   valueIdentity ──> priceHoldingFromExactPool ──> exactPoolReader ──> sold_comps
+//   computeCanonicalFmv ──> readCompsBy{CardId,Identity,HobbyIqCardId} ──> sold_comps
+// Disjoint readers, neither importing the other's. computeCanonicalFmv was a
+// genuinely SEPARATE engine, not the inner computation valueIdentity wraps —
+// so each direct call ran a different ladder AND skipped the one path's owner
+// exclusion, adjudication filters, union guard, rung-meta, labels, twin
+// refusal and swing alarm.
+// ────────────────────────────────────────────────────────────────────────────
+describe("the engine boundary: computeCanonicalFmv has no importer outside the one path", () => {
+  const walk = (dir: string): string[] => {
+    const out: string[] = [];
+    for (const name of readdirSync(dir)) {
+      if (name === "node_modules" || name === "dist") continue;
+      const full = join(dir, name);
+      if (statSync(full).isDirectory()) out.push(...walk(full));
+      else if (name.endsWith(".ts")) out.push(full);
+    }
+    return out;
+  };
+
+  /** The only modules permitted to name the second engine's entry point. */
+  const ALLOWED = new Set([
+    // the engine itself
+    join(SRC, "services", "compiq", "canonicalFmv.service.ts"),
+    // the one path's canonical-shaped door
+    join(SRC, "services", "compiq", "canonicalValuation.ts"),
+  ]);
+
+  it("no module outside the one path IMPORTS computeCanonicalFmv", () => {
+    const offenders: string[] = [];
+    for (const file of walk(SRC)) {
+      if (ALLOWED.has(file)) continue;
+      const code = codeLines(readFileSync(file, "utf8"));
+      // Both import forms: the static named import and the dynamic
+      // `const { computeCanonicalFmv } = await import(...)` the routes used.
+      if (/\bcomputeCanonicalFmv\b/.test(code)) {
+        offenders.push(file.slice(SRC.length + 1).split(sep).join("/"));
+      }
+    }
+    // MUTATION: restoring ANY of the moved call sites — dealFeed.service,
+    // ebaySellDraft.service, canonicalFmv.routes, listingRange.routes, the
+    // four compiq.routes sites, compiqEstimate.service — makes this red by
+    // name. This is the pin that keeps the second engine from growing a
+    // second set of callers.
+    expect(offenders).toEqual([]);
+  });
+
+  it("the canonical-shaped door calls the one entry and adds no valuation of its own", () => {
+    const src = read("services/compiq/canonicalValuation.ts");
+    expect(src).toMatch(/valueIdentity\(/);
+    expect(src).toMatch(/toCanonicalFmvResponse\(/);
+    // It renders; it does not price. No pool reader, no multiplier, no math.
+    expect(codeLines(src)).not.toMatch(/priceHoldingFromExactPool|readCompsBy|Math\.(max|min|pow)/);
+  });
+
+  it("every moved site now names the one path's door", () => {
+    for (const rel of [
+      "services/buyeriq/dealFeed.service.ts",
+      "services/ebay/ebaySellDraft.service.ts",
+      "routes/canonicalFmv.routes.ts",
+      "routes/listingRange.routes.ts",
+      "services/compiq/compiqEstimate.service.ts",
+    ]) {
+      expect(codeLines(read(rel))).toMatch(/computeCanonicalValuation/);
+    }
+    // compiq.routes had four separate sites; all four are dynamic imports.
+    const compiq = codeLines(read("routes/compiq.routes.ts"));
+    expect(compiq.match(/computeCanonicalValuation/g)?.length).toBeGreaterThanOrEqual(7);
+  });
+
+  it("the deal FEED refuses a guessed identity exactly as the scanner does", () => {
+    const src = read("services/buyeriq/dealFeed.service.ts");
+    const code = codeLines(src);
+    // H-2 reached this file too: the feed priced `t.hobbyiqCardId ??
+    // cacheCardId(t)`, and cacheCardId mints a `buyeriq-identity:...` CACHE
+    // KEY that names no catalog row — then published the result as
+    // DealBasis.projection with a rung and a confidence.
+    // MUTATION: restoring `cardId: t.hobbyiqCardId ?? cacheCardId(t)` makes
+    // this red.
+    expect(code).not.toMatch(/cardId: t\.hobbyiqCardId \?\? cacheCardId\(t\)/);
+    // It is priced only through its own catalog slug, and refused by name.
+    expect(code).toMatch(/slug\.startsWith\("hiq:"\)/);
+    expect(code).toMatch(/reason: "no-catalog-identity"/);
+  });
+
+  it("the sell draft prices the seller's listing with the seller's own comps excluded", () => {
+    const src = read("services/ebay/ebaySellDraft.service.ts");
+    // The live canonical value for a holding (holdingValuation.ts) passes
+    // `excludeContributorUserId: opts.userId`. The draft passing the same id
+    // is what makes "draft price === live canonical value" TRUE rather than
+    // approximately true.
+    // MUTATION: dropping this line makes the draft price a different pool
+    // than the holding's own value and turns the live-parity pin red.
+    expect(codeLines(src)).toMatch(/excludeContributorUserId: sellerUserId/);
   });
 });

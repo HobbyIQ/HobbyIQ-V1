@@ -70,13 +70,19 @@ describe("D16 pins — the four routes price through the one valuation path only
     for (const call of ENGINE_CALLS) expect(body.includes(call), call).toBe(false);
   });
 
-  it("/canonical-fmv: valueIdentity decides first; computeCanonicalFmv only after, for vendor ids the catalog cannot name", () => {
+  it("/canonical-fmv: the one entry decides BOTH branches — the vendor-id tail is no longer a second engine", () => {
     const body = handlerBody(canon, "post", "/canonical-fmv");
     const entry = body.indexOf("valueIdentity(");
-    const legacy = body.indexOf("computeCanonicalFmv(");
     expect(entry).toBeGreaterThanOrEqual(0);
-    expect(legacy).toBeGreaterThan(entry);
-    for (const call of ENGINE_CALLS.filter((c) => c !== "computeCanonicalFmv(")) expect(body.includes(call), call).toBe(false);
+    // The tail that used to call computeCanonicalFmv for ids the catalog
+    // could not name now calls computeCanonicalValuation — the one path's
+    // canonical-shaped door, which resolves a vendor id through
+    // resolveValuationIdentity's own lookupHobbyIqCardIdForVendorCardId
+    // mapping. Same wire shape, one engine.
+    // MUTATION: restoring the computeCanonicalFmv tail makes this red.
+    const door = body.indexOf("computeCanonicalValuation(");
+    expect(door).toBeGreaterThan(entry);
+    for (const call of ENGINE_CALLS) expect(body.includes(call), call).toBe(false);
   });
 
   it("the adapters are pure shapers: no engine is called in oneValuationPathAdapters.ts", () => {

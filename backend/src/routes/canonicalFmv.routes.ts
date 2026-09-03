@@ -24,7 +24,7 @@
 import { Router, type Request, type Response } from "express";
 import { requireSession } from "../middleware/requireSession.js";
 import { requireRateLimited } from "../middleware/requireRateLimited.js";
-import { computeCanonicalFmv } from "../services/compiq/canonicalFmv.service.js";
+import { computeCanonicalValuation } from "../services/compiq/canonicalValuation.js";
 import { valueIdentity } from "../services/compiq/oneValuationPath.service.js";
 import { toCanonicalFmvResponse, toHobbyIqFmvResponse } from "../services/compiq/oneValuationPathAdapters.js";
 import { computeHobbyIqCardId } from "../services/portfolioiq/hobbyIqCardId.service.js";
@@ -180,7 +180,14 @@ router.post("/canonical-fmv", requireSession, requireRateLimited("priceChecksPer
         return;
       }
     }
-    const result = await computeCanonicalFmv({
+    // The vendor-id tail. `valueIdentity` above answered only when the
+    // catalog could name the id; this is the same entry called for an id it
+    // could not — resolveValuationIdentity maps a vendor id to its slug via
+    // lookupHobbyIqCardIdForVendorCardId, so this is NOT a second engine, it
+    // is the one path told to try the mapping. When there is no mapping it
+    // returns a no-basis Valuation with fmvReason "no-catalog-identity",
+    // which is the honest answer and the wire shape iOS already decodes.
+    const result = await computeCanonicalValuation({
       cardId,
       parallel: typeof req.body?.parallel === "string" ? req.body.parallel : null,
       gradeCompany: typeof req.body?.gradeCompany === "string" ? req.body.gradeCompany : null,
@@ -189,7 +196,6 @@ router.post("/canonical-fmv", requireSession, requireRateLimited("priceChecksPer
       product: typeof req.body?.product === "string" ? req.body.product : null,
       player: typeof req.body?.player === "string" ? req.body.player : null,
       cardNumber: typeof req.body?.cardNumber === "string" ? req.body.cardNumber : null,
-      freshCompute: req.body?.freshCompute === true,
     });
     res.json(result);
   } catch (err) { next(err); }

@@ -8767,8 +8767,8 @@ export async function computeEstimate(
   //   - canonical call fails (silently).
   if (process.env.CANONICAL_FMV_OVERRIDE_LEGACY_ENABLED === "true") {
     try {
-      const { computeCanonicalFmv } = await import("./canonicalFmv.service.js");
-      const canonical = await computeCanonicalFmv({
+      const { computeCanonicalValuation } = await import("./canonicalValuation.js");
+      const canonical = await computeCanonicalValuation({
         cardId: String(body.cardId ?? "").trim(),
         parallel: (body.parallel as string | null | undefined) ?? null,
         gradeCompany: (body.gradeCompany as string | null | undefined) ?? null,

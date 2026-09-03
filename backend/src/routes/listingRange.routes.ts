@@ -40,7 +40,7 @@ import { Router, type Request, type Response } from "express";
 import { requireSession } from "../middleware/requireSession.js";
 import { requireRateLimited } from "../middleware/requireRateLimited.js";
 import { fetchCardActiveListings } from "../services/ebay/ebayListingSearch.service.js";
-import { computeCanonicalFmv } from "../services/compiq/canonicalFmv.service.js";
+import { computeCanonicalValuation } from "../services/compiq/canonicalValuation.js";
 import { titleMatchesParallel } from "../services/compiq/titleParallelMatch.js";
 
 const router = Router();
@@ -101,7 +101,7 @@ router.get("/cards/:cardId/listing-range", requireSession, requireRateLimited("p
         gradeCompany,
         gradeValue,
       }),
-      computeCanonicalFmv({
+      computeCanonicalValuation({
         cardId,
         parallel: parallel ?? null,
         gradeCompany: gradeCompany ?? null,
