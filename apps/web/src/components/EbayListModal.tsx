@@ -9,6 +9,7 @@ import {
   fetchEbayStatus,
   uploadHoldingPhoto,
   type EbayListingPrepared,
+  type EbaySellSignal,
 } from "@/lib/api";
 
 interface Props {
@@ -323,6 +324,15 @@ function ListingEditor({
             />
           </Field>
         </div>
+        {/* CF-EBAY-SELL-LOOP: where the price came from, and every
+            disclosure it carries. Read-only by design — the number is the
+            engine's, and the caveats are re-derived server-side at publish
+            so they cannot be edited away here. */}
+        <PriceBasis
+          pricing={prep.pricing}
+          sellSignal={prep.sellSignal ?? null}
+          editedCents={listing.priceCents}
+        />
         <Field label="Description">
           <textarea
             value={listing.description}
@@ -663,6 +673,142 @@ function Checkbox({ label, checked, onChange }: { label: string; checked: boolea
       />
       <span>{label}</span>
     </label>
+  );
+}
+
+/**
+ * CF-EBAY-SELL-LOOP (Drew, 2026-09-02). The price's provenance, shown to
+ * the seller before they list.
+ *
+ * The doctrine this renders: the number in the price field is HobbyIQ's
+ * projected next sale, produced by a named rung, and a soft number says
+ * so in words. Nothing here is editable and nothing here is computed
+ * client-side — the panel reports what the backend decided.
+ *
+ * Three states worth distinguishing, because they mean different things
+ * to someone about to sell a card:
+ *
+ *   - HobbyIQ priced it, and the seller kept that number. The rung, the
+ *     evidence and every disclosure are shown, and the same disclosures
+ *     will be appended to the listing.
+ *   - HobbyIQ priced it and the seller CHANGED it. Then the listing is
+ *     their number, no basis is attached at publish, and the panel says
+ *     so rather than continuing to display a basis for a price that is no
+ *     longer on the listing.
+ *   - HobbyIQ declined. The reason is shown, and the price field is the
+ *     seller's own to fill.
+ */
+function PriceBasis({
+  pricing,
+  sellSignal,
+  editedCents,
+}: {
+  pricing: EbayListingPrepared["pricing"];
+  sellSignal: EbaySellSignal | null;
+  editedCents: number;
+}) {
+  if (!pricing) return null;
+
+  const muted = { color: "var(--color-text-muted)" };
+
+  // No engine price: show why, so "enter a price" is an informed act.
+  if (pricing.status !== "engine" || pricing.priceCents === null) {
+    return (
+      <div className="mt-3 text-xs rounded-lg p-3 hiq-card" style={muted}>
+        <span className="font-medium">No HobbyIQ price for this card.</span>{" "}
+        {pricing.declineReason ?? "Enter your own asking price."}
+      </div>
+    );
+  }
+
+  // The seller overrode our number — one cent of tolerance for the
+  // dollars/cents round-trip, matching the backend's own gate.
+  const overridden = Math.abs(editedCents - pricing.priceCents) > 1;
+  const enginePrice = (pricing.priceCents / 100).toFixed(2);
+
+  return (
+    <div className="mt-3 text-xs rounded-lg p-3 hiq-card space-y-2">
+      <div className="flex items-baseline justify-between gap-3 flex-wrap">
+        <span className="font-medium">
+          HobbyIQ projects ${enginePrice}
+        </span>
+        {pricing.rungLabel && (
+          <span
+            className="px-2 py-0.5 rounded-full text-[10px] uppercase tracking-wide"
+            style={{
+              background: pricing.exactPool
+                ? "color-mix(in oklab, var(--color-success) 16%, transparent)"
+                : "color-mix(in oklab, var(--color-accent) 16%, transparent)",
+              color: pricing.exactPool ? "var(--color-success)" : "var(--color-accent)",
+            }}
+            title={
+              pricing.exactPool
+                ? "Read from sales of this exact card at this grade"
+                : "Read from a related pool, not this exact card at this grade"
+            }
+          >
+            {pricing.rungLabel}
+          </span>
+        )}
+      </div>
+
+      <div style={muted}>
+        Projected next sale
+        {pricing.compCount > 0 && (
+          <> from {pricing.compCount} sale{pricing.compCount === 1 ? "" : "s"}</>
+        )}
+        {pricing.range && (
+          <> (range ${pricing.range.min.toFixed(2)}-${pricing.range.max.toFixed(2)})</>
+        )}
+        {typeof pricing.confidence === "number" && (
+          <> · confidence {pricing.confidence.toFixed(2)}</>
+        )}
+        .
+      </div>
+
+      {/* Every disclosure, shown in full. These are the same sentences the
+          backend writes into the listing description. */}
+      {pricing.labels.map((l) => (
+        <div
+          key={l.code}
+          className="rounded p-2"
+          style={{
+            background: "color-mix(in oklab, var(--color-accent) 10%, transparent)",
+            color: "var(--color-accent)",
+          }}
+        >
+          {l.text}
+        </div>
+      ))}
+
+      {overridden ? (
+        <div style={muted}>
+          You changed the price, so this listing is your number — HobbyIQ&apos;s
+          basis will not be added to the description.
+        </div>
+      ) : (
+        <div style={muted}>
+          This basis is added to the listing description when you publish.
+        </div>
+      )}
+
+      {/* Timing context. It never moved the price above. */}
+      {sellSignal && sellSignal.signal !== "none" && (
+        <div
+          className="rounded p-2"
+          style={{
+            background: "color-mix(in oklab, var(--color-success) 10%, transparent)",
+            color: "var(--color-success)",
+          }}
+        >
+          <span className="font-medium uppercase text-[10px] tracking-wide">
+            {sellSignal.signal}
+            {sellSignal.horizon !== "none" && ` · ${sellSignal.horizon.replace(/-/g, " ")}`}
+          </span>
+          <div>{sellSignal.basis}</div>
+        </div>
+      )}
+    </div>
   );
 }
 

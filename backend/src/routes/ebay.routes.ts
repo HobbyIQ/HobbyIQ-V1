@@ -50,6 +50,13 @@ import {
   readUserDoc,
   listEbayAccountSales,
 } from "../services/portfolioiq/portfolioStore.service.js";
+import {
+  composeSellDraftPricing,
+  buildBasisBlock,
+  appendBasisBlock,
+  priceSummaryLine,
+  type SellDraftHolding,
+} from "../services/ebay/ebaySellDraft.service.js";
 import { requireSession } from "../middleware/requireSession.js";
 import { requireEntitlement } from "../middleware/requireEntitlement.js";
 
@@ -406,11 +413,20 @@ router.post("/listings/prepare", async (req: Request, res: Response) => {
       ? (h.ebayItemAspects as Record<string, string>)
       : {};
 
-    const priceCents = (() => {
-      const guess = (h.predictedPrice ?? h.fairMarketValue ?? h.estimatedValue) as number | undefined;
-      if (typeof guess === "number" && guess > 0) return Math.round(guess * 100);
-      return 0;
-    })();
+    // CF-EBAY-SELL-LOOP (Drew, 2026-09-02). The price in a draft is the
+    // ENGINE's canonical projection with its rung label — never a stored
+    // snapshot. This used to read `h.predictedPrice ?? h.fairMarketValue ??
+    // h.estimatedValue`: whatever number the last reprice happened to leave
+    // on the holding, with no rung, no age and no way to tell a speculative
+    // value from a pool-backed one. A seller cannot price honestly off a
+    // field, and cannot be told what the field means.
+    //
+    // composeSellDraftPricing calls computeCanonicalFmv and serves what it
+    // answers. It computes nothing itself, so this is not a valuation
+    // change: the number a draft shows is now the same number
+    // /api/compiq/canonical-fmv would return for the same holding.
+    const priceContext = await composeSellDraftPricing(h as SellDraftHolding);
+    const priceCents = priceContext.pricing.priceCents ?? 0;
 
     const titleSuggested = (() => {
       const parts: string[] = [];
@@ -478,13 +494,30 @@ router.post("/listings/prepare", async (req: Request, res: Response) => {
       language: captured["Language"] ?? "English",
     };
 
+    // CF-EBAY-SELL-LOOP: the description carries the basis block whenever
+    // HobbyIQ set the price. Its labels are NOT optional decoration — a
+    // speculative or self-anchored number reaches the buyer with the
+    // sentence that says so, or it does not reach them at all. When the
+    // seller supplies the price themselves the block is empty by
+    // construction (buildBasisBlock returns "" off a non-engine status),
+    // because HobbyIQ makes no claim about a number it did not produce.
+    const descriptionBody = (typeof h.ebayShortDescription === "string"
+      ? h.ebayShortDescription
+      : titleSuggested);
+    const basisBlock = buildBasisBlock(priceContext.pricing);
+
     const listing = {
       quantity: 1,
       priceCents,
       bestOfferEnabled: false,
       bestOfferMinPriceCents: null as number | null,
-      description: (typeof h.ebayShortDescription === "string" ? h.ebayShortDescription : titleSuggested),
+      description: descriptionBody,
       titleSuggested,
+      /** The honest "how this price was set" HTML, or "" when the price is
+       *  the seller's own. Appended to `description` at publish time. */
+      basisBlock,
+      /** One line for the price field's helper text. */
+      priceSummary: priceSummaryLine(priceContext.pricing),
     };
 
     // Validation — what's still needed before eBay will accept the payload
@@ -499,7 +532,16 @@ router.post("/listings/prepare", async (req: Request, res: Response) => {
     if (!categoryAspects.type) requiredMissing.push("categoryAspects.type");
     if (!categoryAspects.countryOfManufacture) requiredMissing.push("categoryAspects.countryOfManufacture");
     if (!categoryAspects.yearManufactured) requiredMissing.push("categoryAspects.yearManufactured");
-    if (!listing.priceCents || listing.priceCents <= 0) requiredMissing.push("listing.priceCents");
+    if (!listing.priceCents || listing.priceCents <= 0) {
+      requiredMissing.push("listing.priceCents");
+      // CF-EBAY-SELL-LOOP: say WHY there is no price. "priceCents missing"
+      // alone sends the seller looking for a broken field; the engine's own
+      // decline reason tells them whether the fix is an identity, a thin
+      // pool, or simply their own judgement.
+      if (priceContext.pricing.declineReason) {
+        warnings.push(priceContext.pricing.declineReason);
+      }
+    }
     if (!listing.titleSuggested) requiredMissing.push("listing.title");
     else if (listing.titleSuggested.length > 80) warnings.push("Title exceeds eBay's 80-char cap and will be truncated");
 
@@ -533,6 +575,14 @@ router.post("/listings/prepare", async (req: Request, res: Response) => {
       categoryAspects,
       photos,
       listing,
+      /** CF-EBAY-SELL-LOOP: where the price came from. `status` says whether
+       *  the engine answered at all; `rungLabel` names the rung in the closed
+       *  fmvRung vocabulary; `labels` are the disclosures that must be shown
+       *  AND must travel into the listing text. */
+      pricing: priceContext.pricing,
+      /** The sell-window signal, when the holding's trend supports one. Pure
+       *  context for the seller — it never moved the price above. */
+      sellSignal: priceContext.sellSignal,
       validation: {
         requiredMissing,
         warnings,
@@ -610,6 +660,10 @@ interface PreparedListingBody {
     bestOfferMinPriceCents?: number | null;
     description?: string;
     titleSuggested?: string;
+    /** CF-EBAY-SELL-LOOP: the basis block /prepare produced. Accepted so a
+     *  client can round-trip it, but NOT trusted — publish re-derives it
+     *  from the holding (see attachBasisToDescription). */
+    basisBlock?: string;
   };
   // Also allow legacy overrides via top-level fields
   categoryId?: string;
@@ -703,6 +757,93 @@ function preparedToHoldingListingInput(body: PreparedListingBody): Partial<Holdi
   };
 }
 
+/**
+ * CF-EBAY-SELL-LOOP (Drew, 2026-09-02). Re-derive the price basis at
+ * publish time and append it to the description.
+ *
+ * WHY THIS IS SERVER-SIDE AND NOT A PASS-THROUGH
+ * ----------------------------------------------
+ * /prepare hands the client a `basisBlock` carrying the disclosures a
+ * speculative or self-anchored price must be sold with. If publish simply
+ * used whatever description the client sent, every one of those
+ * disclosures would be optional in practice: an old iOS build that does
+ * not know the field, a web form that overwrites `description`, or a
+ * direct API caller would each publish HobbyIQ's number stripped of the
+ * sentence that qualifies it. The label doctrine would then hold only for
+ * clients that chose to honour it, which is not a doctrine.
+ *
+ * So publish asks the engine again, off the holding, and appends what IT
+ * produces. The client's own basisBlock is ignored — it is echoed back by
+ * /prepare for display, never trusted as input.
+ *
+ * The gate is `listingPrice === the engine's price`. When the seller has
+ * overridden the number, HobbyIQ did not set it and makes no claim about
+ * it, so no basis is attached (the same rule buildBasisBlock applies to a
+ * non-engine status). A seller is free to price how they like; they are
+ * not free to attribute their price to us.
+ *
+ * Best-effort by construction: a pricing failure here must never block a
+ * publish the seller already confirmed. It returns the description
+ * unchanged and says so in the log.
+ */
+async function attachBasisToDescription(
+  userId: string,
+  input: Partial<HoldingListingInput>,
+): Promise<Partial<HoldingListingInput>> {
+  const holdingId = String(input.holdingId ?? "").trim();
+  if (!holdingId) return input;
+
+  try {
+    const doc = await readUserDoc(userId);
+    const target = holdingId.toLowerCase();
+    const key = Object.keys(doc.holdings ?? {}).find((k) => k.toLowerCase() === target);
+    const h = key ? (doc.holdings[key] as unknown as SellDraftHolding) : undefined;
+    if (!h) return input;
+
+    const { pricing } = await composeSellDraftPricing(h);
+    if (pricing.status !== "engine" || pricing.priceCents === null) return input;
+
+    // Did the seller keep OUR number? Compare in cents, the unit the wire
+    // carries, so a float round-trip cannot make an equal price look
+    // overridden. One cent of tolerance absorbs the dollars->cents
+    // conversion in preparedToHoldingListingInput.
+    const sentCents = Math.round((input.listingPrice ?? 0) * 100);
+    if (Math.abs(sentCents - pricing.priceCents) > 1) {
+      console.log(JSON.stringify({
+        event: "ebay_publish_basis_skipped_price_overridden",
+        source: "ebay.publish",
+        holdingId,
+        enginePriceCents: pricing.priceCents,
+        sentCents,
+        rungLabel: pricing.rungLabel,
+      }));
+      return input;
+    }
+
+    const block = buildBasisBlock(pricing);
+    if (!block) return input;
+
+    const body = typeof input.description === "string" ? input.description : "";
+    console.log(JSON.stringify({
+      event: "ebay_publish_basis_attached",
+      source: "ebay.publish",
+      holdingId,
+      rungLabel: pricing.rungLabel,
+      exactPool: pricing.exactPool,
+      labelCodes: pricing.labels.map((l) => l.code),
+    }));
+    return { ...input, description: appendBasisBlock(body, pricing) };
+  } catch (err) {
+    console.warn(JSON.stringify({
+      event: "ebay_publish_basis_attach_failed",
+      source: "ebay.publish",
+      holdingId,
+      error: err instanceof Error ? err.message : String(err),
+    }));
+    return input;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Publish
 // ---------------------------------------------------------------------------
@@ -741,7 +882,10 @@ router.post("/listings/publish", async (req: Request, res: Response) => {
     });
     return;
   }
-  const input = await hydratePhotosFromHolding(userId, raw);
+  const hydrated = await hydratePhotosFromHolding(userId, raw);
+  // CF-EBAY-SELL-LOOP: the disclosure is attached HERE, from the engine,
+  // so no client can publish HobbyIQ's price without HobbyIQ's caveats.
+  const input = await attachBasisToDescription(userId, hydrated);
 
   const result = await createListing(userId, input as HoldingListingInput);
   if (!result.success) {

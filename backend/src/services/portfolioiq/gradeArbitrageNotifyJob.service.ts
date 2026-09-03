@@ -1,7 +1,29 @@
 // CF-GRADE-ARBITRAGE (Drew, 2026-07-19). Nightly job that walks every
-// user's RAW holdings, reads the canonical FMV response's gradeLadder,
-// and pushes an alert when the top graded tier's fmv exceeds the raw
-// fmv by more than a configurable multiple. Turns "you have $150 raw
+// user's RAW holdings and pushes an alert when a graded tier is worth
+// more than a configurable multiple of the raw value.
+//
+// ── CF-GRADE-ARB-UNIFY (2026-09-02): the engine underneath ────────────
+//
+// The uplift now comes from the gated grade-arb computation
+// (gradeArbCompute, via analyzeHoldingGradeArb), not from the canonical
+// FMV response's `gradeLadder`. The alerts, thresholds, cooldowns, caps
+// and persisted state are unchanged.
+//
+// The ladder could not stay the source for a push notification. Its
+// tiers carry only {grader, medianRatio, fmv}: every non-Raw row is
+// `rawAnchor x calibration multiplier` (canonicalFmv.service.ts,
+// buildGradeLadder), and its `sampleSize` is a placeholder
+// (`Math.max(n, 5)` — "approximate"). Nothing in it distinguishes a
+// tier with forty real sales from one with none. Because the job took
+// the MAXIMUM fmv across all tiers, it selected precisely the largest
+// multiplier — on an observed $7.89 raw card the live ladder offers
+// "PSA 8 = $302.47" at 38.34x, which cleared the 3x threshold and would
+// have pushed "PSA 8 sells for $302, grade it" to a phone. A push is
+// the most expensive surface we have: it costs the user a $25 cheque
+// and a 90-day wait to discover the number was multiplication.
+//
+// Now a tier must be OBSERVED with >= MIN_GRADED_COMPS real sales of
+// that card at that grade, and the alert names the count. Turns "you have $150 raw
 // Bobby Witt sitting in a box" into "PSA 10 sells for $1,600, grade it."
 //
 // Rate limits:
@@ -21,8 +43,9 @@ import {
   readUserDoc,
   writeUserDoc,
 } from "./portfolioStore.service.js";
-import { computeCanonicalFmv } from "../compiq/canonicalFmv.service.js";
 import { sendPriceAlertNotification } from "../notification.service.js";
+import { analyzeHoldingGradeArb } from "./gradeArbAnalyze.service.js";
+import type { PortfolioHolding } from "../../types/portfolioiq.types.js";
 
 interface HoldingWithGradeArbState {
   id: string;
@@ -167,40 +190,37 @@ export async function runGradeArbitrageNotifyJob(
 
       if (!h.cardId || !h.playerName) continue;
 
-      // Get canonical FMV WITH gradeLadder — always request as raw
-      // (gradeCompany null) so the ladder anchors on raw fmv.
-      const canonical = await computeCanonicalFmv({
-        cardId: h.cardId,
-        parallel: h.parallel ?? null,
-        gradeCompany: null,
-        gradeValue: null,
-        cardYear: h.cardYear ?? null,
-        product: h.product ?? null,
-        player: h.playerName,
-        cardNumber: h.cardNumber ?? null,
-      }).catch(() => null);
+      // CF-GRADE-ARB-UNIFY (2026-09-02): the gated computation on the
+      // ONE valuation path. Refuses any tier that is not observed with
+      // real graded comps, so the maximum it reports is a maximum over
+      // tiers that actually traded.
+      const arb = await analyzeHoldingGradeArb(h as unknown as PortfolioHolding)
+        .catch(() => null);
 
-      if (!canonical || canonical.fmv === null || canonical.fmv <= 0) {
+      if (!arb || arb.rawValue === null || arb.rawValue <= 0) {
         summary.pushesSkipped.rawFmvUnavailable++;
         continue;
       }
-      const rawFmv = canonical.fmv;
+      const rawFmv = arb.rawValue;
       if (rawFmv < minRawFmv) {
         summary.pushesSkipped.rawFmvTooLow++;
         continue;
       }
-      if (!canonical.gradeLadder || canonical.gradeLadder.tiers.length < 2) {
+      // No tier cleared the evidence floor — the same skip bucket the
+      // ladder-unavailable case used, so the job's telemetry keeps its
+      // shape.
+      if (!arb.available || arb.tiers.length === 0) {
         summary.pushesSkipped.gradeLadderUnavailable++;
         continue;
       }
 
-      // Find the best-uplift tier that isn't Raw. Prefers 10-tier
-      // grades (PSA 10, BGS 10, SGC 10) — these are what drive most
-      // grade-arb decisions.
-      let bestTier: { grader: string; fmv: number } | null = null;
-      for (const t of canonical.gradeLadder.tiers) {
-        if (t.grader === "Raw" || !t.fmv || t.fmv <= 0) continue;
-        if (!bestTier || t.fmv > bestTier.fmv) bestTier = t;
+      // Highest graded value among tiers that survived the gate.
+      let bestTier: { grader: string; fmv: number; sampleCount: number } | null = null;
+      for (const t of arb.tiers) {
+        if (!t.gradedValue || t.gradedValue <= 0) continue;
+        if (!bestTier || t.gradedValue > bestTier.fmv) {
+          bestTier = { grader: t.tier, fmv: t.gradedValue, sampleCount: t.sampleCount };
+        }
       }
       if (!bestTier) {
         summary.pushesSkipped.gradeLadderUnavailable++;

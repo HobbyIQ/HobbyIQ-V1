@@ -12,9 +12,11 @@
 //   POST   /api/buyeriq/targets               — create target
 //   PUT    /api/buyeriq/targets/:targetId     — update target
 //   DELETE /api/buyeriq/targets/:targetId     — delete target
+//   GET    /api/buyeriq/deals                 — deal scan over the user's targets
 
 import { Router, type Request, type Response } from "express";
 import { requireSession } from "../middleware/requireSession.js";
+import { requireRateLimited } from "../middleware/requireRateLimited.js";
 import { randomUUID } from "node:crypto";
 import {
   listLists,
@@ -26,6 +28,8 @@ import {
   type BuyerIqList,
   type BuyerIqTarget,
 } from "../services/buyeriq/buyeriqStore.service.js";
+import { scanDeals } from "../services/buyeriq/dealFeed.service.js";
+import { DEFAULT_BASE_DISCOUNT_PCT, MAX_REQUIRED_DISCOUNT_PCT } from "../services/buyeriq/dealGate.js";
 
 const router = Router();
 router.use(requireSession);
@@ -191,6 +195,48 @@ router.delete("/targets/:targetId", async (req: Request, res: Response) => {
   const ok = await deleteTarget(userId, String(req.params.targetId));
   if (!ok) return res.status(404).json({ success: false, error: "target not found" });
   res.json({ success: true });
+});
+
+// ─── Deal scanner ─────────────────────────────────────────────────────
+// CF-BUYERIQ-DEAL-FEED (Drew, 2026-09-02). Compares live asks on the
+// user's wanted targets against each card's canonical projected next
+// sale and returns the ones listed far enough under to matter.
+//
+// GET /api/buyeriq/deals?listId=<id>&threshold=0.20
+//
+//   listId     optional — restrict to one buying list
+//   threshold  optional — base discount at FULL confidence, as a
+//              fraction (0.20 = 20% under) or a percent (20 = 20%).
+//              Default 0.20. The REQUIRED discount slides up from here
+//              as the projection's confidence falls.
+//
+// Read-only: no valuation is computed differently, nothing is written.
+// Rate-limited on priceChecksPerDay — one scan prices many cards, the
+// same budget listing-range draws on.
+//
+// A scan that ran out of vendor-call budget returns 200 with
+// complete:false and stoppedReason set. Callers MUST NOT render a
+// truncated feed as though it were the whole market.
+function parseThreshold(raw: unknown): number | undefined {
+  if (typeof raw !== "string" || raw.trim().length === 0) return undefined;
+  const n = Number(raw.trim());
+  if (!Number.isFinite(n) || n <= 0) return undefined;
+  // Accept both 0.20 and 20 — the query string is user-facing.
+  const asFraction = n > 1 ? n / 100 : n;
+  return Math.max(0.02, Math.min(MAX_REQUIRED_DISCOUNT_PCT, asFraction));
+}
+
+router.get("/deals", requireRateLimited("priceChecksPerDay"), async (req: Request, res: Response, next) => {
+  try {
+    const userId = req.user!.userId;
+    const listId = typeof req.query.listId === "string" && req.query.listId.trim().length > 0
+      ? req.query.listId.trim()
+      : undefined;
+    const threshold = parseThreshold(req.query.threshold) ?? DEFAULT_BASE_DISCOUNT_PCT;
+
+    const result = await scanDeals({ userId, listId, baseDiscountPct: threshold });
+    res.json({ success: true, ...result });
+  } catch (err) { next(err); }
 });
 
 export default router;

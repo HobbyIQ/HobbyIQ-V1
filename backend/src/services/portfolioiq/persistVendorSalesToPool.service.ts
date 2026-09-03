@@ -812,8 +812,29 @@ export async function persistVendorSalesToPool(
               cardNumber = scored[0].cardNumber;
               checklistConfidence = scored[0].confidence;
             } else if (filtered.length <= 3) {
-              // Fallback: pick first with low confidence
-              cardNumber = filtered[0].number;
+              // CF-AN-AMBIGUOUS-TITLE-RESOLVES-TO-THE-BASE (Drew, 2026-09-03).
+              // "Pick the first" at confidence 0.5 sorts by catalog CONFIDENCE,
+              // which is a statement about how well-sourced a catalog row is --
+              // not about which card this sale is. When the title names no
+              // parallel there is nothing choosing between the candidates, and
+              // whichever refractor row happened to sort first won. Measured
+              // 2026-09-03: this path is the minority contributor here (4 of
+              // 1,578 sampled rows; the parallel guard at the bottom of this
+              // loop is why cardsight/tca sit at 2.1%/1.4%) but it fails in
+              // the same direction as the two primary roots, so it is closed
+              // with them.
+              //
+              // A title-silent sale prefers a candidate whose checklist
+              // actually lists a BASE row: that is the card a title naming no
+              // finish is describing. Only when no candidate offers one does
+              // the old first-wins fallback stand -- and either way the
+              // confidence stays 0.5, because this is still a guess about
+              // WHICH CARD, and downstream gates read that number.
+              const titleNamesNoParallel = !parsed.parallel || parsed.parallel === "Base";
+              const baseBacked = titleNamesNoParallel
+                ? filtered.filter((c) => c.parallels.some((p) => /^(base|)$/i.test(String(p ?? "").trim())))
+                : [];
+              cardNumber = (baseBacked.length > 0 ? baseBacked[0] : filtered[0]).number;
               checklistConfidence = 0.5;
             }
           }

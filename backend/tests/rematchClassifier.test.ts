@@ -42,10 +42,16 @@ type Identity = {
 type Result = {
   klass: string; tier: string; writable: boolean; reasons: string[];
   axes: { same: string[]; filled: string[]; dropped: string[]; changed: string[] };
+  // The SPLIT-IDENTITY signal (Drew 2026-09-02), carried on every class.
+  splitIdentity: boolean; splitClass: string; splitSegments: string[];
 };
 type Classifier = {
   AGREE: string; IMPROVE: string; CONFLICT: string; UNDERIVABLE: string;
   PROTECTED: string; AUTO: string;
+  SPLIT_CLASSES: {
+    COHERENT: string; VENDOR_DESIGN: string; UNKNOWN_VENDOR: string;
+    HIQ_SPLIT: string; MALFORMED: string;
+  };
   provenanceTier: (row: Record<string, unknown>) => { tier: string; reasons: string[] };
   gradeToken: (id: Identity) => string;
   diffAxes: (a: Identity, b: Identity) => Result["axes"];
@@ -338,5 +344,107 @@ describe("D1 -- the phantom-grade parser artifact is TAGGED but still contained"
     const r = K.classifyRow({ row: vendorRow(), stored, derived, checklistBacked: true });
     expect(r.klass).toBe(K.CONFLICT);
     expect(r.reasons).not.toContain("changed:grade/phantom-set-word");
+  });
+});
+
+/**
+ * THE SPLIT-IDENTITY SIGNAL (Drew, 2026-09-02: "we need to go back and check
+ * ALL this way").
+ *
+ * A row's two identity fields can contradict EACH OTHER, independently of what
+ * today's parser derives from its title. exactPoolReader.ts ORs `cardId` and
+ * `hobbyiqCardId`, so such a row is read into both pools and prices two cards.
+ *
+ * The signal is therefore orthogonal to the four derivation classes, and the
+ * pins below are exactly that claim: a split row surfaces the flag whatever
+ * class it lands in -- INCLUDING AGREE, which is where most of them land and
+ * which no other part of the census would ever look at again -- and a
+ * vendor-design row does not surface it at all.
+ */
+describe("SPLIT-IDENTITY signal: a row that contradicts itself", () => {
+  /** A real hiq-vs-hiq split sampled from the pool 2026-09-02. */
+  const splitRow = (over: Record<string, unknown> = {}) => ({
+    id: "sp1", source: "cardhedge",
+    cardId: "hiq:baseball:2026:topps-finest:196:base:no-auto",
+    hobbyiqCardId: "hiq:baseball:2026:topps-series-1:196:base:no-auto",
+    ...over,
+  });
+  /** The designed CardHedge partition (#1650): bubble id beside our slug. */
+  const vendorDesignRow = (over: Record<string, unknown> = {}) => ({
+    id: "vd1", source: "cardhedge",
+    cardId: "1778542173652x303328120692600800",
+    hobbyiqCardId: "hiq:baseball:2026:bowman-chrome:cpa-eha:base:auto",
+    ...over,
+  });
+
+  it("a split row surfaces the flag even when the derivation AGREES", () => {
+    // THE CASE THAT MATTERS MOST. The row's fields and the title agree
+    // perfectly, so every axis is `same` and the class is AGREE -- the one
+    // class that means "nothing to do". Its two ADDRESSES still name different
+    // cards. Hanging the signal off CONFLICT would have missed this entirely.
+    const r = K.classifyRow({
+      row: splitRow(), stored: verlanderStored, derived: { ...verlanderStored }, checklistBacked: true,
+    });
+    expect(r.klass).toBe(K.AGREE);
+    expect(r.splitIdentity).toBe(true);
+    expect(r.splitClass).toBe(K.SPLIT_CLASSES.HIQ_SPLIT);
+    expect(r.splitSegments).toContain("setKey");
+    expect(r.reasons.some((x) => x.startsWith("split-identity:"))).toBe(true);
+  });
+
+  it("the flag rides on every other class too -- IMPROVE, CONFLICT, UNDERIVABLE", () => {
+    const improve = K.classifyRow({
+      row: splitRow(), stored: verlanderStored,
+      derived: { ...verlanderStored, parallel: "X-Fractor", printRun: 250 }, checklistBacked: true,
+    });
+    expect(improve.klass).toBe(K.IMPROVE);
+    expect(improve.splitIdentity).toBe(true);
+
+    const conflict = K.classifyRow({
+      row: splitRow(), stored: verlanderStored,
+      derived: { ...verlanderStored, setKey: "bowman" }, checklistBacked: true,
+    });
+    expect(conflict.klass).toBe(K.CONFLICT);
+    expect(conflict.splitIdentity).toBe(true);
+
+    const underivable = K.classifyRow({
+      row: splitRow(), stored: verlanderStored, derived: null, derivationReasons: ["slug-guard"],
+    });
+    expect(underivable.klass).toBe(K.UNDERIVABLE);
+    expect(underivable.splitIdentity).toBe(true);
+    expect(underivable.reasons).toContain("slug-guard");
+  });
+
+  it("the flag does NOT make a row writable — it is a report signal", () => {
+    // The apply path already lands BOTH identity fields, so a repair driven by
+    // a writable class heals the split as a side effect. The flag must never
+    // become its own licence to write.
+    const r = K.classifyRow({
+      row: splitRow(), stored: verlanderStored, derived: { ...verlanderStored }, checklistBacked: true,
+    });
+    expect(r.splitIdentity).toBe(true);
+    expect(r.writable).toBe(false);
+  });
+
+  it("a VENDOR-DESIGN row does NOT surface the flag", () => {
+    // #1650: 327 of 399 touched-set "splits" were this shape, and a control
+    // read found 1242 of 1242 rows on untouched cards partitioned the same
+    // way. Flagging these would drown the 72 real ones.
+    const r = K.classifyRow({
+      row: vendorDesignRow(), stored: verlanderStored, derived: { ...verlanderStored }, checklistBacked: true,
+    });
+    expect(r.klass).toBe(K.AGREE);
+    expect(r.splitIdentity).toBe(false);
+    expect(r.splitClass).toBe(K.SPLIT_CLASSES.VENDOR_DESIGN);
+    expect(r.reasons.some((x) => x.startsWith("split-identity:"))).toBe(false);
+  });
+
+  it("an ordinary one-sided row is unaffected", () => {
+    // The existing fixtures carry a cardId and no hobbyiqCardId. Nothing to
+    // contradict, so no flag -- and no existing pin changes meaning.
+    const r = K.classifyRow({
+      row: vendorRow(), stored: verlanderStored, derived: { ...verlanderStored }, checklistBacked: true,
+    });
+    expect(r.splitIdentity).toBe(false);
   });
 });

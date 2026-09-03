@@ -362,6 +362,55 @@ router.get(
   },
 );
 
+// CF-GRADE-ARB (Drew, 2026-09-02): grade-arbitrage surface for a RAW
+// holding — what it is worth IF it grades PSA 9/10 (and BGS where the
+// card's own pool sampled it), from the ONE valuation path's grade
+// curve, minus a disclosed grading-cost assumption.
+//
+// Distinct from /grade-analysis above (CF-GRADE-WORTHY, 2026-07-17),
+// which reads ch_daily_sales directly and anchors on mean prices. This
+// one consumes the same curve the holding's own FMV comes from, so it
+// cannot disagree with the headline. See gradeArbCompute.service.ts.
+//
+// Refuses (available:false + a reason) rather than guessing when the
+// card has no empirical basis at any graded tier.
+router.get(
+  "/holdings/:id/grade-arb",
+  requireRateLimited("priceChecksPerDay"),
+  async (req, res, next) => {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) return res.status(401).json({ error: "unauthorized" });
+      const holdingId = String(req.params.id ?? "").trim();
+      if (!holdingId) return res.status(400).json({ error: "holding id required" });
+
+      const doc = await portfolio.readUserDoc(userId);
+      // Case-insensitive key match — same pattern as portfolio.getHoldingById.
+      const key = Object.keys(doc.holdings ?? {}).find(
+        (k) => k.toLowerCase() === holdingId.toLowerCase(),
+      );
+      const holding = key ? doc.holdings[key] : undefined;
+      if (!holding) return res.status(404).json({ error: "holding not found" });
+
+      const { analyzeHoldingGradeArb } = await import(
+        "../services/portfolioiq/gradeArbAnalyze.service.js"
+      );
+      const gradeArb = await analyzeHoldingGradeArb(holding, { userId });
+      res.json({
+        holdingId: holding.id ?? holdingId,
+        player: holding.playerName ?? null,
+        year: holding.cardYear ?? null,
+        cardNumber: holding.cardNumber ?? null,
+        set: holding.setName ?? holding.product ?? null,
+        variant: holding.parallel ?? null,
+        gradeArb,
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
 // CF-GRADE-WORTHY (Drew, 2026-07-17): portfolio-wide grade-worthy scan.
 // Iterates the user's raw holdings and returns those with a
 // grade_now recommendation, sorted by expectedGain DESC.

@@ -15,6 +15,14 @@ import { CosmosClient, type Container } from "@azure/cosmos";
 import { computeDhashFromBytes, computeDhashFromUrl, hammingHex } from "../attribution/phashCompute.service.js";
 import { parseHobbyIqCardId } from "./hobbyIqCardId.service.js";
 
+// POOL-1 residue (audit, 2026-09-03). The phash INDEX query below deliberately
+// reads every row -- identity lookup wants all the evidence, adjudicated or
+// not. The recentMedian ENRICHMENT is a price shown to a user, so it takes the
+// filter. Same store-form predicate as exactPoolReader:84-85.
+const ADJUDICATION_FILTER =
+  "(NOT IS_DEFINED(c.flaggedWrong) OR c.flaggedWrong != true)"
+  + " AND (NOT IS_DEFINED(c.excludedFromFmv) OR c.excludedFromFmv != true)";
+
 export interface ImageLookupInput {
   imageBase64?: string;       // "iVBORw0KGgoAAAA..." (raw base64, no data: prefix)
   imageUrl?: string;          // alternative — remote URL to fetch
@@ -162,7 +170,7 @@ export async function lookupByImage(input: ImageLookupInput): Promise<ImageLooku
     await Promise.all(hits.map(async (h) => {
       try {
         const { resources } = await container.items.query({
-          query: "SELECT c.price FROM c WHERE c.hobbyiqCardId = @s AND c.soldAt >= @f",
+          query: `SELECT c.price FROM c WHERE c.hobbyiqCardId = @s AND c.soldAt >= @f AND ${ADJUDICATION_FILTER}`,
           parameters: [{ name: "@s", value: h.hobbyiqCardId }, { name: "@f", value: cutoff }],
         }).fetchAll();
         const prices = resources.map((r) => Number(r.price)).filter((p) => Number.isFinite(p) && p > 0).sort((a, b) => a - b);
