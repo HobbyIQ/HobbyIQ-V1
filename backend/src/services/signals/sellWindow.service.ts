@@ -105,6 +105,7 @@ export type SellSignalReason =
   | "thin-own-pool"
   | "stale-trend"
   | "low-confidence"
+  | "unknown-confidence"
   | "no-divergence"
   | "player-and-pool-agree";
 
@@ -248,7 +249,24 @@ const EMPTY_MEASURES: SellWindowSignal["measures"] = {
 export interface DeriveSellWindowInput {
   /** The holding's persisted TrendIQ result. */
   trendIQ: TrendIQResult | null | undefined;
-  /** The holding's persisted pricing confidence, 0..1. */
+  /** CF-SELL-WINDOW-READS-PRICING-CONFIDENCE (2026-09-03).
+   *
+   *  The PRICING confidence for this holding's current price surface, 0..1 —
+   *  how well-evidenced the dollar figure is. Callers MUST source it the way
+   *  the pricing envelope does (`pricingEnvelope.builder.buildConfidence`):
+   *  `pricingSourceMeta.confidence` first, falling back to the flat
+   *  `holding.confidence` field ONLY for legacy-engine-priced rows.
+   *
+   *  It is NOT the holding's flat `confidence` field in general. That field
+   *  carries identity/match confidence on unified-engine rows, and until the
+   *  CF-PRICING-CONFIDENCE-SCALE fix it saturated to exactly 1.0 for anything
+   *  at or above 1 — so reading it here quoted a match score to the user as
+   *  "Pricing confidence on this card is 100%" and opened the timing gate on
+   *  cards whose price is barely evidenced.
+   *
+   *  `null` means NOT RECORDED (the holding has not been repriced since the
+   *  engine began stamping it) — not "confident". The derivation withholds
+   *  the timing call rather than assuming a number it does not have. */
   confidence?: number | null;
   /** When the trend was last written (holding.lastUpdated / trendIQ.lastUpdated). */
   trendUpdatedAt?: string | null;
@@ -320,7 +338,24 @@ export function deriveSellWindowSignal(input: DeriveSellWindowInput): SellWindow
       measures,
     );
   }
-  if (confidence !== null && confidence < MIN_CONFIDENCE) {
+  // CF-SELL-WINDOW-READS-PRICING-CONFIDENCE (2026-09-03). Two distinct
+  // refusals, because "measured and too low" and "never measured" are
+  // different facts and the user is owed the difference.
+  //
+  // A null confidence previously fell straight through this gate and the
+  // signal fired as though the price were fully evidenced. It is not: it is
+  // unmeasured. Per this file's own doctrine — every threshold here is a
+  // disclosure bar, and we refuse rather than read a call out of noise — an
+  // unrecorded pricing confidence withholds the timing call and NAMES why,
+  // quoting no percentage it cannot substantiate.
+  if (confidence === null) {
+    return none(
+      "unknown-confidence",
+      "The pricing confidence behind this card's value has not been recorded yet, so there is no basis to say how well-evidenced the price is — timing a sale on it would be guessing. It will be available after this card's next reprice.",
+      measures,
+    );
+  }
+  if (confidence < MIN_CONFIDENCE) {
     return none(
       "low-confidence",
       `Pricing confidence on this card is ${Math.round(confidence * 100)}%, below the ${Math.round(MIN_CONFIDENCE * 100)}% needed to time a sale.`,

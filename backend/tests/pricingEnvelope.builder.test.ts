@@ -4,7 +4,8 @@
 // mapping, confidence tier coercion).
 
 import { describe, it, expect } from "vitest";
-import { buildPricingEnvelope } from "../src/services/portfolioiq/pricingEnvelope.builder.js";
+import { buildPricingEnvelope, resolvePricingConfidence } from "../src/services/portfolioiq/pricingEnvelope.builder.js";
+import { scalePricingConfidence } from "../src/services/portfolioiq/portfolioStore.service.js";
 import type { PortfolioHolding } from "../src/types/portfolioiq.types.js";
 
 // Minimal holding factory — enough to exercise the builder without
@@ -418,5 +419,82 @@ describe("confidence.pricing carries the engine's pricing confidence", () => {
       pricingSourceMeta: { slug: "s", method: "m", compsUsed: 1, confidence: 64 },
     }), inputs);
     expect(env.confidence.pricing).toBeNull();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// CF-PRICING-CONFIDENCE-SCALE (2026-09-03)
+//
+// portfolioStore's holding writer used to do `Math.min(1, pricingConfidence)`
+// on a 0..100 input instead of dividing by 100, so every confidence at or
+// above 1 persisted as exactly 1.0. That is the origin of the flat-1.0
+// population (17 of 43 holdings in Drew's portfolio) and, because the sell
+// signal read that same flat field, of "Pricing confidence on this card is
+// 100%" on cards whose price was barely evidenced.
+// ─────────────────────────────────────────────────────────────────────────
+
+describe("scalePricingConfidence: the 0..100 -> 0..1 contract", () => {
+  it("divides by 100 — 37 becomes 0.37, not 1", () => {
+    expect(scalePricingConfidence(37)).toBeCloseTo(0.37, 10);
+  });
+
+  it("100 becomes 1.0 (the top of the scale, not a saturation artifact)", () => {
+    expect(scalePricingConfidence(100)).toBe(1);
+  });
+
+  it("does NOT saturate mid-scale values — 91 and 37 stay distinct", () => {
+    // The defect: Math.min(1, 91) === Math.min(1, 37) === 1.
+    expect(scalePricingConfidence(91)).toBeCloseTo(0.91, 10);
+    expect(scalePricingConfidence(91)).not.toBe(scalePricingConfidence(37));
+  });
+
+  it("an already-sub-1 input is NOT re-interpreted as already-scaled", () => {
+    // The only producer emitting a sub-1 value is the variant-mismatch branch
+    // (compiqEstimate.service.ts ~6007, `pricingConfidence: 0.2`), which means
+    // "almost no confidence". Scaling it to 0.002 is the honest reading; magic
+    // scale-sniffing would promote it to 20% and reintroduce a magnitude-
+    // dependent bug of exactly the kind this replaces.
+    expect(scalePricingConfidence(0.37)).toBeCloseTo(0.0037, 10);
+    expect(scalePricingConfidence(0.2)).toBeCloseTo(0.002, 10);
+  });
+
+  it("clamps out of range and rejects non-numbers as null", () => {
+    expect(scalePricingConfidence(140)).toBe(1);
+    expect(scalePricingConfidence(-5)).toBe(0);
+    expect(scalePricingConfidence(0)).toBe(0);
+    expect(scalePricingConfidence(null)).toBeNull();
+    expect(scalePricingConfidence(undefined)).toBeNull();
+    expect(scalePricingConfidence("55")).toBeNull();
+    expect(scalePricingConfidence(NaN)).toBeNull();
+  });
+});
+
+describe("resolvePricingConfidence: pricing confidence, never a match score", () => {
+  it("prefers the engine's pricingSourceMeta.confidence over the flat field", () => {
+    const h = fixture({
+      confidence: 1.0, // saturated identity/match score
+      pricingSource: "unified-pricing",
+      pricingSourceMeta: { slug: "hiq:x", method: "exact-pool", compsUsed: 9, confidence: 0.30 },
+    });
+    expect(resolvePricingConfidence(h as any)).toBe(0.30);
+  });
+
+  it("returns null — not the flat field — for a unified row with no engine confidence", () => {
+    const h = fixture({
+      confidence: 1.0,
+      pricingSource: "unified-pricing",
+      pricingSourceMeta: { slug: "hiq:x", method: "exact-pool", compsUsed: 9 },
+    });
+    expect(resolvePricingConfidence(h as any)).toBeNull();
+  });
+
+  it("falls back to the flat field only for legacy-engine-priced rows", () => {
+    expect(resolvePricingConfidence(fixture({ confidence: 0.62, pricingSource: "legacy-engine" }) as any)).toBe(0.62);
+    // Pre-CF rows carry no pricingSource at all; computeEstimate priced them.
+    expect(resolvePricingConfidence(fixture({ confidence: 0.62 }) as any)).toBe(0.62);
+  });
+
+  it("rejects an out-of-unit flat value rather than passing it through", () => {
+    expect(resolvePricingConfidence(fixture({ confidence: 62, pricingSource: "legacy-engine" }) as any)).toBeNull();
   });
 });

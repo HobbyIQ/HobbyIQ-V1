@@ -183,3 +183,56 @@ describe("CF-PRO-SELLER-GATE — wireEntitlementsFor resolves against the matrix
     }
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────
+// CF-SELL-WINDOW-READS-PRICING-CONFIDENCE (2026-09-03).
+//
+// The wire seam. The gate tests above use a legacy-priced fixture, where the
+// flat `confidence` field and the resolved pricing confidence agree — so they
+// cannot tell whether responseAssembly reads the right one. These pin the
+// UNIFIED row, where the two disagree, which is the whole population the
+// defect affected.
+// ─────────────────────────────────────────────────────────────────────────
+
+/** The defect shape: a unified-engine row whose flat confidence is the
+ *  saturated 1.0 match score, and whose real pricing confidence is 0.30. */
+function unifiedHolding(pricingConfidence: number | null): PortfolioHolding {
+  const h = holdingWithTrend() as Record<string, unknown>;
+  h.confidence = 1.0;
+  h.pricingSource = "unified-pricing";
+  h.pricingSourceMeta = {
+    slug: "hiq:2024-bowman-chrome-bcp-1",
+    method: "exact-pool-raw",
+    compsUsed: 20,
+    ...(pricingConfidence === null ? {} : { confidence: pricingConfidence }),
+  };
+  return h as unknown as PortfolioHolding;
+}
+
+describe("sellSignal gates on pricing confidence, not the flat match score", () => {
+  it("a unified row with pricing confidence 0.30 is refused, despite flat confidence 1.0", () => {
+    const wire = composeHoldingWireShape(unifiedHolding(0.30), undefined, ENTITLED) as any;
+    expect(wire.sellSignal.signal).toBe("none");
+    expect(wire.sellSignal.reason).toBe("low-confidence");
+    expect(wire.sellSignal.measures.confidence).toBe(0.30);
+    // Reading the flat field would have quoted 100% and fired the signal.
+    expect(wire.sellSignal.basis).toContain("30%");
+    expect(wire.sellSignal.basis).not.toContain("100%");
+  });
+
+  it("a unified row with no recorded pricing confidence withholds the call, not assumes 1.0", () => {
+    const wire = composeHoldingWireShape(unifiedHolding(null), undefined, ENTITLED) as any;
+    expect(wire.sellSignal.signal).toBe("none");
+    expect(wire.sellSignal.reason).toBe("unknown-confidence");
+    expect(wire.sellSignal.measures.confidence).toBeNull();
+    expect(wire.sellSignal.basis).not.toMatch(/\d+%/);
+  });
+
+  it("a unified row with a strong pricing confidence still fires the signal", () => {
+    // Proves the two tests above refuse for the confidence reason and not
+    // because a unified fixture broke the derivation outright.
+    const wire = composeHoldingWireShape(unifiedHolding(0.88), undefined, ENTITLED) as any;
+    expect(wire.sellSignal.signal).toBe("sell-window");
+    expect(wire.sellSignal.measures.confidence).toBe(0.88);
+  });
+});

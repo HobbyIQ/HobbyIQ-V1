@@ -262,17 +262,37 @@ function unitOrNull(raw: unknown): number | null {
  * unknown, never filled in from a different quantity.
  */
 function buildConfidence(holding: PortfolioHolding): PricingConfidence {
-  const meta = (holding as { pricingSourceMeta?: { confidence?: unknown } | null }).pricingSourceMeta;
-  const fromEngine = unitOrNull(meta?.confidence);
-  if (fromEngine !== null) return { pricing: fromEngine, liquidity: null, timing: null };
+  return { pricing: resolvePricingConfidence(holding), liquidity: null, timing: null };
+}
 
-  const source = (holding as { pricingSource?: string | null }).pricingSource ?? null;
+/**
+ * The single resolver for "how well-evidenced is THIS holding's price", 0..1,
+ * or null when that is genuinely not recorded.
+ *
+ * Extracted from buildConfidence (CF-SELL-WINDOW-READS-PRICING-CONFIDENCE,
+ * 2026-09-03) so every consumer that needs a pricing confidence — the report
+ * envelope, the sell-window signal, the eBay sell draft — reads the SAME
+ * quantity by the same rule, instead of each reaching for the flat field and
+ * getting identity/match confidence under a pricing name.
+ *
+ * Callers must treat null as UNKNOWN and say so; it is never 1.0.
+ */
+export function resolvePricingConfidence(
+  holding: Pick<PortfolioHolding, never> & {
+    pricingSourceMeta?: { confidence?: unknown } | null;
+    pricingSource?: string | null;
+    confidence?: unknown;
+  },
+): number | null {
+  const fromEngine = unitOrNull(holding.pricingSourceMeta?.confidence);
+  if (fromEngine !== null) return fromEngine;
+
+  const source = holding.pricingSource ?? null;
   // "legacy-engine", and pre-CF holdings with no pricingSource at all, are
   // the rows computeEstimate priced — the only rows whose flat `confidence`
   // came from a pricing computation.
   const legacyPriced = source === null || source === "legacy-engine";
-  const pricing = legacyPriced ? unitOrNull((holding as { confidence?: unknown }).confidence) : null;
-  return { pricing, liquidity: null, timing: null };
+  return legacyPriced ? unitOrNull(holding.confidence) : null;
 }
 
 // ─── Predicted ─────────────────────────────────────────────────────────
