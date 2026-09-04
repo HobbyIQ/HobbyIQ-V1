@@ -74,7 +74,18 @@ const SETKEY = String(process.env.SETKEY || "").trim().toLowerCase();
 const LIMIT = Number(process.env.LIMIT || 0);
 const RUN_MS = Number(process.env.RUN_MINUTES || 140) * 60000;
 const CONCURRENCY = Math.max(1, Number(process.env.CONCURRENCY || process.env.BACKFILL_CONCURRENCY || 8));
-const SLOT = Number(process.env.SLOT || 0), SLOTS = Number(process.env.SLOTS || 1);
+// CF-AN-INHERITED-SLOTS-IS-NOT-A-CHOSEN-SHARD (#1756, generalised 2026-09-04).
+// The runner exports `slots` for EVERY script with a workflow-wide DEFAULT of
+// "16", so `process.env.SLOTS ?? 1` NEVER saw undefined and this lane sharded
+// itself sixteen ways on a dispatch that asked for no sharding -- sweeping slot
+// 0 and leaving fifteen sixteenths untouched, green and honestly reconciled.
+// Sharding is now OPT-IN: a non-zero slot, or an explicit SHARD=true for slot 0
+// of a real fan-out. Everything else -- including the inherited slot=0 slots=16
+// -- sweeps EVERY row. SLOTS binds to 1 when unsharded, so `% SLOTS` and
+// `SLOTS === 1` guards below keep working unchanged.
+const { runnerShardScope } = require("./lib/runner-shard-scope.cjs");
+const SHARD_SCOPE = runnerShardScope({ label: "repair-select-subbrand-misslug" });
+const { SHARDED, SLOT, SLOTS } = SHARD_SCOPE;
 
 const f = (n) => Number(n).toLocaleString();
 const started = Date.now();
@@ -185,6 +196,7 @@ async function main() {
   const dryRun = !APPLY;
   console.log(`repair-select-subbrand-misslug   ${APPLY ? "APPLY" : "REPORT ONLY -- nothing will be written"}`);
   console.log(`scope: sport=${SPORT} cardYear=${YEAR} setKey=${SETKEY}   slot ${SLOT}/${SLOTS}`);
+  console.log(`  ${SHARD_SCOPE.banner()}`);
   console.log(`whitelisted destinations: ${[...WHITELIST].join(", ")}\n`);
 
   const stats = { candidates: 0, written: 0, skipped: 0, failed: 0, notReached: 0, otherShard: 0 };

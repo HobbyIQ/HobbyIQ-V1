@@ -191,10 +191,20 @@ Module._load = function (request) {
 
   /**
    * The consequence, measured on the REAL ingest child rather than argued
-   * about: with SLOTS=16 in the environment it takes one staged file in
-   * sixteen, and the file it keeps for 2015 Bowman Chrome is a parallel scope.
+   * about. It USED to be: handed SLOTS=16 the child took one staged file in
+   * sixteen, and the file it kept for 2015 Bowman Chrome was a parallel scope
+   * with no base cards in it -- which is what run 33845791358 shipped.
+   *
+   * CF-AN-INHERITED-SLOTS-IS-NOT-A-CHOSEN-SHARD (generalised 2026-09-04). The
+   * child now defends ITSELF: `SLOT=0 SLOTS=16` is the runner's inherited
+   * default, not a chosen shard, so it ingests ALL THREE files. The driver's
+   * env-stripping above is still the first line of defence and still pinned --
+   * this is the second, and it is the one that also covers a DIRECT dispatch
+   * of the child, which no driver is in a position to strip for.
+   *
+   * A real fan-out still shards: that half is asserted below.
    */
-  it("the real ingest child, handed SLOTS=16, sees one of three staged files", { timeout: 60000 }, () => {
+  it("the real ingest child, handed the INHERITED SLOTS=16, ingests all three staged files", { timeout: 60000 }, () => {
     const dir = stageDir({
       "2015-bowman-chrome-baseball--prospects-light-blue-refractors.csv":
         Array.from({ length: 5 }, (_, i) => `base,BCP${i + 1},Prospects Light Blue Refractor,false,150,Player ${i + 1} Name`),
@@ -222,9 +232,48 @@ Module._load = function (request) {
         timeout: 15000,
       });
     } catch (e: any) { out = String(e.stdout ?? "") + String(e.stderr ?? ""); }
-    // The child says the denominator out loud -- that banner is why this is
-    // diagnosable at all, and it names the loss precisely.
-    expect(out).toMatch(/SHARD 0\/16 — this run owns 1 of 3 files/);
+    // RED on the old code, which printed
+    // "SHARD 0/16 — this run owns 1 of 3 files".
+    expect(out, "an inherited slots=16 must not drop two of three staged files")
+      .not.toMatch(/owns 1 of 3 files/);
+    // And it must SAY that it swept everything, so a reader of the log knows
+    // the denominator rather than inferring it.
+    expect(out).toMatch(/sweeps EVERY row/);
+  });
+
+  /**
+   * The other half of the same rule: a REAL fan-out still shards. Without this
+   * the fix above would read as "sharding was removed", and a genuine 16-way
+   * ingest would silently do the whole set sixteen times over.
+   */
+  it("an EXPLICIT non-zero slot still shards the staged files", { timeout: 60000 }, () => {
+    const dir = stageDir({
+      "2015-bowman-chrome-baseball--prospects-light-blue-refractors.csv":
+        Array.from({ length: 5 }, (_, i) => `base,BCP${i + 1},Prospects Light Blue Refractor,false,150,Player ${i + 1} Name`),
+      "2015-bowman-chrome-baseball--prospects-wave-refractors.csv":
+        Array.from({ length: 5 }, (_, i) => `base,BCP${i + 1},Prospects Wave Refractor,false,,Player ${i + 1} Name`),
+      "2015-bowman-chrome-baseball.csv":
+        Array.from({ length: 5 }, (_, i) => `base,${i + 1},Base,false,,Player ${i + 1} Name`),
+    });
+    let out = "";
+    try {
+      out = execFileSync(process.execPath, [ingestChild], {
+        cwd: backend,
+        env: {
+          PATH: process.env.PATH ?? "",
+          SystemRoot: process.env.SystemRoot ?? "",
+          COSMOS_CONNECTION_STRING: "AccountEndpoint=https://stub/;AccountKey=c3R1Yg==;",
+          DIR: dir, SOURCE: "baseballcardpedia-ladders-2026-09-04",
+          // A non-zero slot is self-evidently deliberate: no default names one.
+          SLOT: "1", SLOTS: "3",
+        },
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
+        timeout: 15000,
+      });
+    } catch (e: any) { out = String(e.stdout ?? "") + String(e.stderr ?? ""); }
+    expect(out, "a chosen shard must still narrow, and still say so")
+      .toMatch(/SHARD 1\/3 — this run owns 1 of 3 files/);
   });
 });
 

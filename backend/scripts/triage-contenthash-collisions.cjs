@@ -203,7 +203,18 @@ const isChecklistSource = (source) => catalogAuthorityOf(String(source ?? "")) =
 // runner dispatch that carries apply=true for some other lane cannot turn a
 // report into a write by accident.
 const APPLY = (process.env.BACKFILL_APPLY === "true" || process.env.APPLY === "true") && MODE === "apply-true-dupes";
-const SLOT = Number(process.env.SLOT || 0), SLOTS = Number(process.env.SLOTS || 1);
+// CF-AN-INHERITED-SLOTS-IS-NOT-A-CHOSEN-SHARD (#1756, generalised 2026-09-04).
+// The runner exports `slots` for EVERY script with a workflow-wide DEFAULT of
+// "16", so `process.env.SLOTS ?? 1` NEVER saw undefined and this lane sharded
+// itself sixteen ways on a dispatch that asked for no sharding -- sweeping slot
+// 0 and leaving fifteen sixteenths untouched, green and honestly reconciled.
+// Sharding is now OPT-IN: a non-zero slot, or an explicit SHARD=true for slot 0
+// of a real fan-out. Everything else -- including the inherited slot=0 slots=16
+// -- sweeps EVERY row. SLOTS binds to 1 when unsharded, so `% SLOTS` and
+// `SLOTS === 1` guards below keep working unchanged.
+const { runnerShardScope } = require("./lib/runner-shard-scope.cjs");
+const SHARD_SCOPE = runnerShardScope({ label: "triage-contenthash-collisions" });
+const { SHARDED, SLOT, SLOTS } = SHARD_SCOPE;
 const RUN_MINUTES = Number(process.env.RUN_MINUTES || 140);
 const RUN_MS = RUN_MINUTES * 60000;
 const LIMIT = Number(process.env.LIMIT || 0);
@@ -354,6 +365,7 @@ async function main() {
   console.log(`  scope        sports=${SPORTS.length ? SPORTS.join(",") : "(all)"}  years=${YEARS.length ? YEARS.join(",") : "(all)"}${SCOPE === "all" ? "  SCOPE=all" : ""}`);
   console.log(`               SCOPE narrows NOTHING in this script or in D30 -- SPORTS/YEARS/SLOT are the axes that do. A non-'all' SCOPE is refused, not ignored.`);
   console.log(`  shard        slot ${SLOT}/${SLOTS}  on hash(groupKey) -- the SAME axis D30 shards on, so slot N here reads slot N's groups there`);
+  console.log(`  ${SHARD_SCOPE.banner()}`);
   console.log(`  budget       ${RUN_MINUTES}m`);
   console.log(`  populations  (a) D30-REFUSAL SET [D30_MODE=${D30_MODE}] -- D30's own plan, fresh hash, live rows: reconciles against the fold's refusal`);
   console.log(`               (b) FULL COLLISION SET -- every multi-row group, legacy hashes included: wider, and where DISTINCT-CARDS lives`);

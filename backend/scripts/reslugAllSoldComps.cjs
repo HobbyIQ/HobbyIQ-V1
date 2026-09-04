@@ -52,8 +52,19 @@ const RESOLVE = String(process.env.RESOLVE ?? "true") !== "false";
 const RUN_MS = Number(process.env.RUN_MINUTES || 140) * 60000;
 // CF-SHARD-THE-REMATCH (2026-08-28): 15.9M sales on one worker is a day.
 // Page-modulo split, same pattern as every other fleet.
-const SLOT = Number(process.env.SLOT ?? 0);
-const SLOTS = Number(process.env.SLOTS ?? 1);
+// CF-AN-INHERITED-SLOTS-IS-NOT-A-CHOSEN-SHARD (#1756, generalised 2026-09-04).
+// The runner exports `slots` for EVERY script with a workflow-wide DEFAULT of
+// "16", so `process.env.SLOTS ?? 1` NEVER saw undefined and this lane sharded
+// itself sixteen ways on a dispatch that asked for no sharding -- sweeping slot
+// 0 and leaving fifteen sixteenths untouched, green and honestly reconciled.
+// Sharding is now OPT-IN: a non-zero slot, or an explicit SHARD=true for slot 0
+// of a real fan-out. Everything else -- including the inherited slot=0 slots=16
+// -- sweeps EVERY row. SLOTS binds to 1 when unsharded, so `% SLOTS` and
+// `SLOTS === 1` guards below keep working unchanged.
+const { runnerShardScope } = require("./lib/runner-shard-scope.cjs");
+const SHARD_SCOPE = runnerShardScope({ label: "reslugAllSoldComps" });
+const { SHARDED, SLOT, SLOTS } = SHARD_SCOPE;
+
 let _seen = 0;
 const STARTED_AT = Date.now();
 
@@ -71,6 +82,7 @@ async function main() {
   if (!conn) { console.error("COSMOS_CONNECTION_STRING required"); process.exit(2); }
   const sold = new CosmosClient(conn).database("hobbyiq").container("sold_comps");
   console.log(`▸ ${APPLY ? "APPLY" : "DRY-RUN"}  concurrency=${CONCURRENCY}  cap=${MAX_ROWS || "∞"}  shards=${SHARD_HEX.join(",") || "all"}`);
+  console.log(`  ${SHARD_SCOPE.banner()}`);
 
   const where = ["IS_STRING(c.hobbyiqCardId)", "IS_DEFINED(c.cardYear)", "IS_DEFINED(c.cardNumber)", "IS_DEFINED(c.sport)"];
   const params = [];

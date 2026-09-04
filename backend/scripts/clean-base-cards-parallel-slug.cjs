@@ -61,7 +61,18 @@ const MODE = String(process.env.MODE || "").trim().toLowerCase();
 const SCOPE = String(process.env.SCOPE || "").trim().toLowerCase();
 const SPORTS = String(process.env.SPORTS || "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
 const SOURCES = String(process.env.SOURCES || "").split(",").map((s) => s.trim()).filter(Boolean);
-const SLOT = Number(process.env.SLOT ?? 0), SLOTS = Math.max(1, Number(process.env.SLOTS ?? 1));
+// CF-AN-INHERITED-SLOTS-IS-NOT-A-CHOSEN-SHARD (#1756, generalised 2026-09-04).
+// The runner exports `slots` for EVERY script with a workflow-wide DEFAULT of
+// "16", so `process.env.SLOTS ?? 1` NEVER saw undefined and this lane sharded
+// itself sixteen ways on a dispatch that asked for no sharding -- sweeping slot
+// 0 and leaving fifteen sixteenths untouched, green and honestly reconciled.
+// Sharding is now OPT-IN: a non-zero slot, or an explicit SHARD=true for slot 0
+// of a real fan-out. Everything else -- including the inherited slot=0 slots=16
+// -- sweeps EVERY row. SLOTS binds to 1 when unsharded, so `% SLOTS` and
+// `SLOTS === 1` guards below keep working unchanged.
+const { runnerShardScope } = require("./lib/runner-shard-scope.cjs");
+const SHARD_SCOPE = runnerShardScope({ label: "clean-base-cards-parallel-slug" });
+const { SHARDED, SLOT, SLOTS } = SHARD_SCOPE;
 const CONCURRENCY = Math.max(1, Number(process.env.CONCURRENCY || process.env.BACKFILL_CONCURRENCY || 16));
 const RUN_MS = Number(process.env.RUN_MINUTES || 140) * 60000;
 const LIMIT = Number(process.env.LIMIT || 0);
@@ -126,6 +137,7 @@ async function main() {
   const cat = db.container("card_catalog"), pool = db.container("sold_comps");
 
   console.log(`clean-base-cards-parallel-slug  MODE=${MODE}  slot ${SLOT}/${SLOTS}  ${APPLY ? "APPLY (moves card_catalog rows, re-points sales)" : "REPORT ONLY -- nothing written"}  concurrency ${CONCURRENCY}  budget ${RUN_MS / 60000}m  sports=${SPORTS.join(",") || "all"}  sources=${SOURCES.join(",") || "every checklist source"}${LIMIT ? `  LIMIT=${f(LIMIT)}` : ""}`);
+  console.log(`  ${SHARD_SCOPE.banner()}`);
   console.log(`only checklist-authority rows are touched; a rung name with no subset evidence is counted and left.\n`);
 
   const s = {

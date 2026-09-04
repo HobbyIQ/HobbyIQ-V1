@@ -85,8 +85,19 @@ const list = (v) => String(v || "").split(",").map((s) => s.trim().toLowerCase()
 const SPORTS = list(process.env.SPORTS);
 const YEARS = list(process.env.YEARS).map(Number).filter((n) => Number.isFinite(n) && n > 0);
 const SETKEYS = list(process.env.SETKEYS);
-const SLOT = Number(process.env.SLOT || 0);
-const SLOTS = Math.max(1, Number(process.env.SLOTS || 1));
+// CF-AN-INHERITED-SLOTS-IS-NOT-A-CHOSEN-SHARD (#1756, generalised 2026-09-04).
+// The runner exports `slots` for EVERY script with a workflow-wide DEFAULT of
+// "16", so `process.env.SLOTS ?? 1` NEVER saw undefined and this lane sharded
+// itself sixteen ways on a dispatch that asked for no sharding -- sweeping slot
+// 0 and leaving fifteen sixteenths untouched, green and honestly reconciled.
+// Sharding is now OPT-IN: a non-zero slot, or an explicit SHARD=true for slot 0
+// of a real fan-out. Everything else -- including the inherited slot=0 slots=16
+// -- sweeps EVERY row. SLOTS binds to 1 when unsharded, so `% SLOTS` and
+// `SLOTS === 1` guards below keep working unchanged.
+const { runnerShardScope } = require("./lib/runner-shard-scope.cjs");
+const SHARD_SCOPE = runnerShardScope({ label: "repair-base-to-title-finish" });
+const { SHARDED, SLOT, SLOTS } = SHARD_SCOPE;
+
 const RUN_MINUTES = Number(process.env.RUN_MINUTES || 140);
 const LIMIT = Number(process.env.LIMIT || 0);
 
@@ -155,6 +166,7 @@ function retarget(slug, parallelSlug, printRun) {
               `  sports=${SPORTS.join(",") || "ALL"}  years=${YEARS.join(",") || "ALL"}` +
               `  setKeys=${SETKEYS.join(",") || "ALL"}  slot ${SLOT}/${SLOTS}` +
               `  budget ${RUN_MINUTES}m${LIMIT ? `  limit ${f(LIMIT)}` : ""}`);
+  console.log(`  ${SHARD_SCOPE.banner()}`);
 
   // A ':base:' row, scoped. CONTAINS on the slug is the cheap filter; the
   // parser decides after.

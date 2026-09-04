@@ -22,8 +22,14 @@ const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === 
 // Work units come from partitions.json: {y, lo, hi} where lo/hi optionally
 // bound setKey so a mega-year (2025 alone is 7.1M rows) can be split across
 // workers. Balanced to 1.01x spread.
-const SLOT = Number(process.env.SLOT ?? 0);
-const SLOTS = Number(process.env.SLOTS ?? 16);
+// CF-AN-INHERITED-SLOTS-IS-NOT-A-CHOSEN-SHARD: this lane's NORMAL mode is a
+// fan-out -- it declares its own multi-slot default (16) and is always
+// dispatched per slot -- so it shards on the env alone. The helper is shared so
+// the banner and the arithmetic are the same everywhere.
+const { runnerShardScope } = require("./lib/runner-shard-scope.cjs");
+const SHARD_SCOPE = runnerShardScope({ alwaysShard: true, defaultSlots: 16, label: "normalize-catalog-format" });
+const { SHARDED, SLOT, SLOTS } = SHARD_SCOPE;
+
 const MEGA_CUT = 1500000;
 const RANGES = [["", "g"], ["g", "n"], ["n", "t"], ["t", "~"]];
 
@@ -86,6 +92,7 @@ const STOP = new Set(["the","a","of","and","psa","bgs","sgc","cgc","raw","rc","h
   if (!mine) { console.error(`FATAL: SLOT ${SLOT} out of range for SLOTS ${SLOTS}`); process.exit(1); }
   const UNITS = mine.u;
   console.log(`[${TAG}] slot ${SLOT}/${SLOTS}  APPLY=${APPLY}  units=${UNITS.length}  ~rows=${mine.n}`);
+  console.log(`  ${SHARD_SCOPE.banner()}`);
 
   let seen = 0, changed = 0, wrote = 0, failed = 0;
 

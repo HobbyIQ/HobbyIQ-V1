@@ -79,8 +79,19 @@ const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === 
 const SPORT = process.env.SPORT || process.env.SPORTS || "baseball";
 const CONCURRENCY = Math.max(1, Number(process.env.CONCURRENCY || 48));
 const LIMIT = Number(process.env.LIMIT || 0);
-const SLOT = Number(process.env.SLOT ?? 0);
-const SLOTS = Number(process.env.SLOTS ?? 1);
+// CF-AN-INHERITED-SLOTS-IS-NOT-A-CHOSEN-SHARD (#1756, generalised 2026-09-04).
+// The runner exports `slots` for EVERY script with a workflow-wide DEFAULT of
+// "16", so `process.env.SLOTS ?? 1` NEVER saw undefined and this lane sharded
+// itself sixteen ways on a dispatch that asked for no sharding -- sweeping slot
+// 0 and leaving fifteen sixteenths untouched, green and honestly reconciled.
+// Sharding is now OPT-IN: a non-zero slot, or an explicit SHARD=true for slot 0
+// of a real fan-out. Everything else -- including the inherited slot=0 slots=16
+// -- sweeps EVERY row. SLOTS binds to 1 when unsharded, so `% SLOTS` and
+// `SLOTS === 1` guards below keep working unchanged.
+const { runnerShardScope } = require("./lib/runner-shard-scope.cjs");
+const SHARD_SCOPE = runnerShardScope({ label: "annotate-checklist-backing" });
+const { SHARDED, SLOT, SLOTS } = SHARD_SCOPE;
+
 const RUN_MS = Number(process.env.RUN_MINUTES || 140) * 60000;
 const STARTED = Date.now();
 const f = (n) => Number(n).toLocaleString();
@@ -175,6 +186,7 @@ async function main() {
   const mine = all.filter((p) => owner.get(`${p.year}|${p.setKey}`) === SLOT);
   const mineRows = mine.reduce((s, p) => s + p.n, 0);
   console.log(`slot ${SLOT}/${SLOTS}  sport=${SPORT}  ${APPLY ? "APPLY" : "REPORT ONLY"}`);
+  console.log(`  ${SHARD_SCOPE.banner()}`);
   console.log(`  ${f(all.length)} products, ${f(all.reduce((s, p) => s + p.n, 0))} derived rows total`);
   console.log(`  this slot owns ${f(mine.length)} products, ${f(mineRows)} rows\n`);
 

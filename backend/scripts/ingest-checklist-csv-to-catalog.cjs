@@ -82,8 +82,19 @@ const SOURCE = process.env.SOURCE || "";
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
 const CONCURRENCY = Math.max(1, Number(process.env.CONCURRENCY || 48));
 const LIMIT = Number(process.env.LIMIT || 0);
-const SLOT = Number(process.env.SLOT ?? 0);
-const SLOTS = Number(process.env.SLOTS ?? 1);
+// CF-AN-INHERITED-SLOTS-IS-NOT-A-CHOSEN-SHARD (#1756, generalised 2026-09-04).
+// The runner exports `slots` for EVERY script with a workflow-wide DEFAULT of
+// "16", so `process.env.SLOTS ?? 1` NEVER saw undefined and this lane sharded
+// itself sixteen ways on a dispatch that asked for no sharding -- sweeping slot
+// 0 and leaving fifteen sixteenths untouched, green and honestly reconciled.
+// Sharding is now OPT-IN: a non-zero slot, or an explicit SHARD=true for slot 0
+// of a real fan-out. Everything else -- including the inherited slot=0 slots=16
+// -- sweeps EVERY row. SLOTS binds to 1 when unsharded, so `% SLOTS` and
+// `SLOTS === 1` guards below keep working unchanged.
+const { runnerShardScope } = require("./lib/runner-shard-scope.cjs");
+const SHARD_SCOPE = runnerShardScope({ label: "ingest-checklist-csv-to-catalog" });
+const { SHARDED, SLOT, SLOTS } = SHARD_SCOPE;
+
 const RUN_MS = Number(process.env.RUN_MINUTES || 140) * 60000;
 const STARTED = Date.now();
 
@@ -204,11 +215,19 @@ async function main() {
   // reconciliation, a full phases-done line and a green check. The totals were
   // all internally consistent; they were just consistent about a sixteenth of
   // the job. Say the denominator out loud so that can never read as complete.
-  if (SLOTS > 1) {
+  //
+  // The denominator is stated on EVERY path, not only the sharded one. An
+  // unsharded run that says nothing about coverage is exactly how `slot 0/16`
+  // came to read as configuration rather than as "this covers a sixteenth" --
+  // silence is what made the loss invisible.
+  if (SHARDED) {
     console.log(`SHARD ${SLOT}/${SLOTS} — this run owns ${f(files.length)} of ${f(allFiles.length)} files.`);
     console.log(`  The other ${f(allFiles.length - files.length)} belong to sibling slots and are NOT ingested here.`);
-    console.log(`  Dispatch every slot 0..${SLOTS - 1}, or pass slots=1 for the whole set.\n`);
+    console.log(`  Dispatch every slot 0..${SLOTS - 1}, or pass slots=1 for the whole set.`);
+  } else {
+    console.log(`ALL ${f(allFiles.length)} staged files — this run ingests every one of them.`);
   }
+  console.log(`  ${SHARD_SCOPE.banner()}\n`);
 
   // A file that finished completely leaves a marker beside its CSV, and the
   // marker rides the same cache the CSVs do. Without this, a budget stop sends

@@ -90,7 +90,18 @@ const MIN_COVERAGE_PCT = Number(process.env.MIN_COVERAGE_PCT || 95);
 const { measureProductCoverage, coverageLine } = require("./lib/sourceCoverage.cjs");
 const PAR_MAX = Number(process.env.PAR_MAX || 150), NUM_MAX = Number(process.env.NUM_MAX || 2000), TAIL_MIN = Number(process.env.TAIL_MIN || 5);
 const CARD_LINE = /^\d+[a-z]?\s+[A-Za-z]/;
-const SLOT = Number(process.env.SLOT ?? 0), SLOTS = Math.max(1, Number(process.env.SLOTS ?? 1));
+// CF-AN-INHERITED-SLOTS-IS-NOT-A-CHOSEN-SHARD (#1756, generalised 2026-09-04).
+// The runner exports `slots` for EVERY script with a workflow-wide DEFAULT of
+// "16", so `process.env.SLOTS ?? 1` NEVER saw undefined and this lane sharded
+// itself sixteen ways on a dispatch that asked for no sharding -- sweeping slot
+// 0 and leaving fifteen sixteenths untouched, green and honestly reconciled.
+// Sharding is now OPT-IN: a non-zero slot, or an explicit SHARD=true for slot 0
+// of a real fan-out. Everything else -- including the inherited slot=0 slots=16
+// -- sweeps EVERY row. SLOTS binds to 1 when unsharded, so `% SLOTS` and
+// `SLOTS === 1` guards below keep working unchanged.
+const { runnerShardScope } = require("./lib/runner-shard-scope.cjs");
+const SHARD_SCOPE = runnerShardScope({ label: "retire-exploded-checklist-rows" });
+const { SHARDED, SLOT, SLOTS } = SHARD_SCOPE;
 const CONCURRENCY = Math.max(1, Number(process.env.CONCURRENCY || 32));
 const RUN_MS = Number(process.env.RUN_MINUTES || 140) * 60000;
 const LIMIT = Number(process.env.LIMIT || 0);
@@ -117,6 +128,7 @@ async function main() {
   const db = new CosmosClient({ connectionString: conn, connectionPolicy: { retryOptions: { maxRetryAttemptsOnThrottledRequests: 30, maxWaitTimeInSeconds: 120 } } }).database("hobbyiq");
   const cat = db.container("card_catalog"), pool = db.container("sold_comps");
   console.log(`mode=${MODE}  slot ${SLOT}/${SLOTS}  ${APPLY ? "APPLY (deletes)" : "REPORT ONLY"}  budget ${RUN_MS / 60000}m`);
+  console.log(`  ${SHARD_SCOPE.banner()}`);
 
   // ---- the product list (exploded mode): computed, not hand-typed
   let products = [];

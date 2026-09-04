@@ -40,7 +40,18 @@ const rm = ruling.match(/^([a-z0-9-]+):([a-z0-9-]+)>([a-z0-9-]+)$/i);
 const SPORT = String(process.env.SPORT || (rm ? rm[1] : "")).toLowerCase();
 const FROM = String(process.env.FROM || (rm ? rm[2] : "")).toLowerCase();
 const TO = String(process.env.TO || (rm ? rm[3] : "")).toLowerCase();
-const SLOT = Number(process.env.SLOT ?? 0), SLOTS = Math.max(1, Number(process.env.SLOTS ?? 1));
+// CF-AN-INHERITED-SLOTS-IS-NOT-A-CHOSEN-SHARD (#1756, generalised 2026-09-04).
+// The runner exports `slots` for EVERY script with a workflow-wide DEFAULT of
+// "16", so `process.env.SLOTS ?? 1` NEVER saw undefined and this lane sharded
+// itself sixteen ways on a dispatch that asked for no sharding -- sweeping slot
+// 0 and leaving fifteen sixteenths untouched, green and honestly reconciled.
+// Sharding is now OPT-IN: a non-zero slot, or an explicit SHARD=true for slot 0
+// of a real fan-out. Everything else -- including the inherited slot=0 slots=16
+// -- sweeps EVERY row. SLOTS binds to 1 when unsharded, so `% SLOTS` and
+// `SLOTS === 1` guards below keep working unchanged.
+const { runnerShardScope } = require("./lib/runner-shard-scope.cjs");
+const SHARD_SCOPE = runnerShardScope({ label: "rename-setkey" });
+const { SHARDED, SLOT, SLOTS } = SHARD_SCOPE;
 const CONCURRENCY = Math.max(1, Number(process.env.CONCURRENCY || 16));
 const RUN_MS = Number(process.env.RUN_MINUTES || 140) * 60000;
 const LIMIT = Number(process.env.LIMIT || 0);
@@ -67,6 +78,7 @@ async function main() {
   const db = new CosmosClient({ connectionString: conn, connectionPolicy: { retryOptions: { maxRetryAttemptsOnThrottledRequests: 30, maxWaitTimeInSeconds: 120 } } }).database("hobbyiq");
   const cat = db.container("card_catalog"), pool = db.container("sold_comps");
   console.log(`RULING ${SPORT}: ${FROM} -> ${TO}   slot ${SLOT}/${SLOTS}  ${APPLY ? "APPLY" : "REPORT ONLY"}  budget ${RUN_MS / 60000}m\n`);
+  console.log(`  ${SHARD_SCOPE.banner()}`);
 
   let scanned = 0, otherShards = 0, moved = 0, folded = 0, replaced = 0, malformed = 0, salesRepointed = 0, gradedDeleted = 0, failed = 0, notReached = 0;
   let stopReason = null, token;

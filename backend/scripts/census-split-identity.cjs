@@ -67,8 +67,15 @@ const S = require(path.join(__dirname, "lib", "split-identity.cjs"));
 
 const DB_NAME = process.env.COSMOS_DATABASE || "hobbyiq";
 const CONTAINER = process.env.COSMOS_SOLD_COMPS_CONTAINER || "sold_comps";
-const SLOT = Number(process.env.SLOT || 0);
-const SLOTS = Number(process.env.SLOTS || 1);
+// CF-AN-INHERITED-SLOTS-IS-NOT-A-CHOSEN-SHARD (#1756, generalised 2026-09-04).
+// This census lane is a REAL fan-out -- it is always dispatched across every
+// slot (the 2026-09-03 runs walked all 64, twice) and it never writes -- so it
+// keeps sharding on the env alone. It uses the SHARED helper so its banner
+// states its coverage in the same words as every other lane, and so the rule
+// lives in one place rather than in 56 copies.
+const { runnerShardScope } = require("./lib/runner-shard-scope.cjs");
+const SHARD_SCOPE = runnerShardScope({ alwaysShard: true, label: "census-split-identity" });
+const { SHARDED, SLOT, SLOTS } = SHARD_SCOPE;
 const ROWS_PER_CHUNK = Number(process.env.ROWS_PER_CHUNK || 200000);
 const RUN_MINUTES = Number(process.env.RUN_MINUTES || 140);
 const LIMIT = Number(process.env.LIMIT || 0);
@@ -116,6 +123,7 @@ async function main() {
       [{ name: "@lo", value: lo }, { name: "@hi", value: hi }]))[0] ?? 0);
 
   console.log(`census-split-identity  READ ONLY  slot ${SLOT}/${SLOTS}  budget ${RUN_MINUTES}m  target ${f(ROWS_PER_CHUNK)} rows/chunk${LIMIT ? `  limit ${f(LIMIT)}` : ""}`);
+  console.log(`  ${SHARD_SCOPE.banner()}`);
 
   // ── bounds + row-balanced chunk plan ─────────────────────────────────────
   const minTs = Number((await q("SELECT VALUE MIN(c._ts) FROM c"))[0] ?? 0);

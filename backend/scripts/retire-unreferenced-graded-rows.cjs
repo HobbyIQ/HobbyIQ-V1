@@ -79,8 +79,19 @@ const PAGE = Number(process.env.PAGE_SIZE || 2000);
 const RUN_MS = Number(process.env.RUN_MINUTES || 140) * 60000;
 const STARTED = Date.now();
 
-const SLOT = Number(process.env.SLOT ?? 0);
-const SLOTS = Number(process.env.SLOTS ?? 1);
+// CF-AN-INHERITED-SLOTS-IS-NOT-A-CHOSEN-SHARD (#1756, generalised 2026-09-04).
+// The runner exports `slots` for EVERY script with a workflow-wide DEFAULT of
+// "16", so `process.env.SLOTS ?? 1` NEVER saw undefined and this lane sharded
+// itself sixteen ways on a dispatch that asked for no sharding -- sweeping slot
+// 0 and leaving fifteen sixteenths untouched, green and honestly reconciled.
+// Sharding is now OPT-IN: a non-zero slot, or an explicit SHARD=true for slot 0
+// of a real fan-out. Everything else -- including the inherited slot=0 slots=16
+// -- sweeps EVERY row. SLOTS binds to 1 when unsharded, so `% SLOTS` and
+// `SLOTS === 1` guards below keep working unchanged.
+const { runnerShardScope } = require("./lib/runner-shard-scope.cjs");
+const SHARD_SCOPE = runnerShardScope({ label: "retire-unreferenced-graded-rows" });
+const { SHARDED, SLOT, SLOTS } = SHARD_SCOPE;
+
 
 /** Graded rows stranded under a foreign partition key. */
 const TARGET =
@@ -176,6 +187,7 @@ const TARGET =
     const mine = all.filter((_, i) => i % SLOTS === SLOT);
     if (mine.length === 0) {
       console.log(`slot ${SLOT}/${SLOTS} owns none of ${all.length} tiers — nothing to do`);
+      console.log(`  ${SHARD_SCOPE.banner()}`);
       return;
     }
     scopedParams = mine.map((r, i) => ({ name: `@t${i}`, value: r.t }));
