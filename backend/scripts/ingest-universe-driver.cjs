@@ -1340,6 +1340,38 @@ function acquireEntry(entry, dir) {
           // rather than in `failed`, where it would advance the streak.
           throw new Error(`bcp page is gone at the source (${(saidStr.match(/HTTP 40[34]/) || ["HTTP 404"])[0]})`);
         }
+        // CF-A-CHECKLIST-WITHOUT-CARD-NUMBERS-IS-NOT-A-PARSER-GAP (2026-09-04).
+        //
+        // #1729 ruled "0 base cards — layout not understood" a parser gap, and
+        // #1732/#1738/#1762 each closed one. 62 control docs still carried it,
+        // and a probe of 14 of those pages says the rest are not that at all:
+        // the wiki publishes them with NO CARD NUMBERS, so there is nothing a
+        // parser could key even in principle.
+        //
+        //   UNNUMBERED ROSTER  1999 Team Best Autographs — 70 bare names.
+        //   STUB               2010 SP Authentic — full heading tree, 0 <li>.
+        //   SINGLE-CARD PROMO  2004-05 Speed Stick A-Rod — "Alex Rodriguez 100".
+        //
+        // The catalog keys a card by cardNumber and the ingester drops any row
+        // without one, so reading these would mean INVENTING numbers the source
+        // never published — which `no synthetic parallels — actuals only`
+        // forbids, and which the older pin "a body of ordinary names is NOT
+        // read as an initials-numbered set" already refuses.
+        //
+        // So this is the source answering, and its answer is that it has no
+        // keyable card here: EMPTY, the same flag #1717/#1718 give every other
+        // "the source has nothing" path, and streak-neutral for the same
+        // reason. It is deliberately matched on the scraper's three distinct
+        // per-shape strings rather than a catch-all, so a shape we have NOT
+        // classified still falls through to the parser-gap verdict below.
+        if (/checklist is an UNNUMBERED ROSTER|page is a STUB|page is a SINGLE-CARD promo/.test(saidStr)) {
+          // The scraper's own words for the shape, carried into the verdict so the
+          // control doc says WHICH of the three it was.
+          const shapeSaid = (saidStr.match(/checklist is an UNNUMBERED ROSTER|page is a STUB[^\n]*|page is a SINGLE-CARD promo[^\n]*/) || ["no keyable card number"])[0].trim();
+          const e = new Error(`bcp page states no card numbers — ${shapeSaid}`);
+          e.emptyAtSource = true;
+          throw e;
+        }
         if (/0 base cards — layout not understood/.test(saidStr)) {
           // Named distinctly so the control doc says WHICH defect, and so a
           // future fix to the Checklist-heading layout can find its own rows.
