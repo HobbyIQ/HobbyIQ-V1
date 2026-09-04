@@ -637,6 +637,56 @@ async function main() {
     checklistNamesCache.set(key, out);
     return out;
   };
+  /** CF-A-SELLER-NAME-IS-NOT-A-SIGNATURE (2026-09-04). The CHECKLIST's isAuto
+   *  per cardNumber for ONE (year, setKey), cached -- leg S3 of
+   *  SELLER-NAME-AUTO, and the only thing that may authorize taking an
+   *  autograph flag OFF a stored row.
+   *
+   *  ONE QUERY PER PRODUCT, for the reason `flagshipNumbers` and
+   *  `checklistNames` above both state: a per-row catalog query over 16.3M
+   *  rows is not a census, it is an outage
+   *  (CF-FLEET-SCRIPTS-MEASURE-THROUGHPUT-BEFORE-DISPATCH). Every row of the
+   *  product then reads its own answer out of the map for free.
+   *
+   *  ONLY A STRICT CHECKLIST SOURCE MAY ANSWER, exactly as L3 demands. A
+   *  vendor row's isAuto is the SAME FIELD, from the same title parse, that
+   *  this PR exists to repair -- citing one would be citing the defect as its
+   *  own cure. A product with no strictly-sourced rows yields an empty map,
+   *  every lookup returns null, and null is a REFUSAL: absent beats wrong. */
+  const checklistAutoCache = new Map();
+  const checklistAutos = async (year, setKey) => {
+    const key = `${year}|${setKey}`;
+    if (checklistAutoCache.has(key)) return checklistAutoCache.get(key);
+    let out = new Map();
+    try {
+      const { resources } = await retry(() => cat.items.query({
+        query: `SELECT c.cardNumber, c.isAuto, c.source FROM c WHERE c.setKey = @sk AND c.cardYear = @y`,
+        parameters: [{ name: "@sk", value: setKey }, { name: "@y", value: Number(year) }],
+      }, { maxItemCount: -1 }).fetchAll());
+      for (const r of resources ?? []) {
+        if (!K.isStrictChecklistSource(r?.source)) continue;
+        const num = String(r?.cardNumber ?? "").toUpperCase();
+        // A checklist row with NO isAuto field states nothing. Blank means
+        // unknown, never "Base" (CF-EVERY-INGEST-USES-THE-ONE-CHECKLIST-FORMAT).
+        if (!num || r?.isAuto === null || r?.isAuto === undefined || out.has(num)) continue;
+        out.set(num, r.isAuto === true);
+      }
+    } catch { out = new Map(); }
+    checklistAutoCache.set(key, out);
+    return out;
+  };
+  /** S3 as a tri-state, read off the STORED identity -- the row being repaired,
+   *  not a re-derivation of it:
+   *    true   a strictly-sourced checklist row says this card is NOT an auto
+   *    false  ...says it IS one (the shop sold a real autograph)
+   *    null   unanswered -- no row, or none strictly sourced. A refusal. */
+  const checklistSaysNotAutoFor = async (identity) => {
+    const y = identity?.cardYear, sk = identity?.setKey, num = identity?.cardNumber;
+    if (y === null || y === undefined || !sk || !num) return null;
+    const m = await checklistAutos(y, sk);
+    const hit = m.get(String(num).toUpperCase());
+    return hit === undefined ? null : hit === false;
+  };
   /** This row's checklist name, or null. Read off the DERIVED identity, which
    *  is the reading the eviction destination is computed from. */
   const checklistPlayerNameFor = async (identity) => {
@@ -822,6 +872,14 @@ async function main() {
         checklistPlayerName: beName,
         parserSaysLot: safeIsLot(row.title),
         autoByCardNumber: der.autoByCardNumber === true,
+        // S3, and ONLY for a row that is actually a candidate: stored isAuto
+        // is true and the title's only autograph witness is a shop name. A row
+        // that is not a candidate costs no catalog read for a question it
+        // never asks -- the same discipline `beName` above follows.
+        checklistSaysNotAuto: (stored?.isAuto === true
+          && K.autographWitnessIsSellerNameOnly(row.title))
+          ? await checklistSaysNotAutoFor(stored)
+          : null,
         ...spec,
         // CF-UNPARSED-IS-NOT-UNNUMBERED (Drew, 2026-09-04). A fact about the
         // ROW, not a verdict about the derivation: does its own title state a
@@ -1087,6 +1145,15 @@ async function main() {
         ...spec,
         // Re-read from the FRESH row at write time, exactly as the class is.
         titleStatesNumber: K.titleStatesCardNumber(fresh.title),
+        // S3 at write time, for the reason the comment above gives for
+        // `spec`: without it the apply pass could not reproduce the census
+        // verdict, every qualifying row would come back AGREE, and the
+        // class-match check below would skip the whole population while the
+        // census reported it writable. Read off the FRESH row.
+        checklistSaysNotAuto: (stored?.isAuto === true
+          && K.autographWitnessIsSellerNameOnly(fresh.title))
+          ? await checklistSaysNotAutoFor(stored)
+          : null,
         // CF-A-SUBSET-IS-PART-OF-THE-IDENTITY-WHEN-IT-HAS-TO-BE. Supplied here
         // for the reason the comment above gives for `spec`: omitting it would
         // let the apply pass write a row the census refused, because the

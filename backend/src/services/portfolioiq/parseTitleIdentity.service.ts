@@ -258,7 +258,88 @@ const STANDALONE_PREFIXED_CARD_NUMBER_RE = /(?:^|\s)([A-Z]{2,6}-[A-Z0-9]{1,6})(?
 // similar non-auto phrases exist. Explicit \bauto\b or "autograph" or
 // "hard signed" are required. When "On Card Auto" appears, \bauto\b
 // picks it up.
-const AUTO_RE = /\bauto\b|autograph|hard[-\s]signed/i;
+//
+// CF-A-SELLER-NAME-IS-NOT-A-SIGNATURE (measured 2026-09-04).
+//
+// This regex bounded `auto` on BOTH sides and `autograph` on NEITHER, so any
+// title containing the letters a-u-t-o-g-r-a-p-h anywhere inside a longer
+// word read as an autograph. eBay shop names are appended to the title by the
+// seller, and one shop is enormous:
+//
+//   "Vladimir Guerrero Jr. 2025 Bowman #27 Blue Jays MLB READ FREE SHIP AutographDen"
+//
+// 102,621 of 271,664 scanned sold_comps rows carried isAuto=true on this
+// defect, 102,482 of them from the single phrase "autographden", across ~40
+// years of base cards. Base cards were priced as autographs, and every real
+// autograph pool was diluted with base sales.
+//
+// THE FIX IS THE WORD BOUNDARY, AND THE BOUNDARY DOES MOST OF THE WORK.
+// Bounding `autograph` to its real inflections (`autograph`, `autographs`,
+// `autographed`) already excludes `AutographDen`, because `Den` is not one of
+// them -- no seller list is needed for the general case. The corpus agrees:
+// over 61,793 titles containing the letters, the only forms appearing at
+// scale are
+//
+//   28,638  autographden      <- a shop name, never a card
+//   19,681  autograph         <- real
+//   12,397  autographs        <- real
+//      940  autographed       <- real
+//      190  autographics      <- a REAL Skybox insert set, see below
+//
+// plus a 9-row tail of typos ("chromeautograph", "metalautograph").
+//
+// WHY THERE IS STILL AN EXPLICIT SELLER LIST. The boundary is necessary but
+// not sufficient: a shop name can END in a real inflection ("Autographs
+// Unlimited"), and would then read as evidence. So known shop tokens are
+// named and subtracted BEFORE the witness test. The list is DERIVED FROM THE
+// CORPUS, not invented -- `autographden` is the one seller token measured
+// here, and a speculative list of store suffixes would be vocabulary the data
+// does not support.
+//
+// `autographics` IS NOT ON THAT LIST AND MUST NEVER BE, AND IT IS NAMED IN THE
+// WITNESS. It looks exactly like a shop name and is not one: it is Skybox's
+// autograph INSERT SET (1996-97 Skybox Premium Autographics, 2004-05 Skybox
+// Autographics, 2006 Flair Showcase Autographics), 190 rows here.
+//
+// It is listed explicitly BECAUSE the boundary would otherwise drop it. It is
+// not an inflection of `autograph`, so `\bautograph(?:ed|s)?\b` does not
+// match it, and AUTO_SETNAME_RE does not either (its `autographs?` is bounded
+// the same way). Measured on the shipped parser before this change, all three
+// of those titles read isAuto=true; without this alternation the fix would
+// have SILENTLY FLIPPED REAL AUTOGRAPHS TO FALSE -- the exact damage this PR
+// exists to undo, running in the opposite direction. The seller-name fix must
+// cost nothing on the cards that really are signed.
+const SELLER_SHOP_TOKEN_RE = /\bautographden\b/i;
+
+/** The autograph witness in a title. `autograph` is bounded to its real
+ *  inflections, so a longer word that merely contains it is not evidence.
+ *  Exported as THE ONE SOURCE: the attestation guard and the rematch
+ *  classifier's mirror read this exact shape, and a second copy would drift
+ *  silently back into the defect described above. */
+export const AUTO_RE =
+  /\bauto\b|\bautograph(?:ed|s)?\b|\bautographics\b|hard[-\s]signed/i;
+
+/** THE DEFECTIVE SHAPE, KEPT ON PURPOSE -- `autograph` unbounded, the exact
+ *  regex that minted the 102,621 wrong rows. `autographWitnessIsSellerNameOnly`
+ *  asks its question against THIS, not against the fixed witness above: under
+ *  the fixed one `AutographDen` is already not a witness, so "strip the shop
+ *  and the witness disappears" would be false for every row, and the predicate
+ *  would identify nothing at all. For a STORED row the question is not "is
+ *  this an autograph?" but "what did the reader that wrote this flag see?" --
+ *  and that reader is this one. Exported so the rematch mirror pins the same
+ *  shape, and so that deleting it is a test failure rather than a silent
+ *  no-op. */
+export const LEGACY_AUTO_RE = /\bauto\b|autograph|hard[-\s]signed/i;
+
+/** True when the title's ONLY autograph witness is a known seller/shop token.
+ *  Strip the shop name, then ask the question again: if nothing states an
+ *  autograph any more, the shop name was the whole case. Exported so the
+ *  rematch classifier can name the same witness rather than restate it. */
+export function autographWitnessIsSellerNameOnly(title: string): boolean {
+  if (!title || !SELLER_SHOP_TOKEN_RE.test(title)) return false;
+  const withoutShop = title.replace(new RegExp(SELLER_SHOP_TOKEN_RE.source, "gi"), " ");
+  return LEGACY_AUTO_RE.test(title) && !LEGACY_AUTO_RE.test(withoutShop);
+}
 
 /** Chrome products, where a bare colour IS that colour's Refractor.
  *  The chrome-auto SKU prefixes count as product context on their own: real
@@ -947,6 +1028,10 @@ function extractCardNumber(title: string, cardNumberRe?: RegExp, isTcg = false):
 }
 
 function extractIsAuto(title: string): boolean {
+  // A shop name is not a signature. When the ONLY thing in the title that
+  // says "autograph" is the seller's own store token, the title states
+  // nothing about this card -- see CF-A-SELLER-NAME-IS-NOT-A-SIGNATURE.
+  if (autographWitnessIsSellerNameOnly(title)) return false;
   return AUTO_RE.test(title) && !AUTO_NEGATIVE_RE.test(title);
 }
 
