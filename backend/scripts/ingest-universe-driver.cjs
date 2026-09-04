@@ -1184,14 +1184,62 @@ function acquireEntry(entry, dir) {
       // entries -- this never touches /search/, which robots.txt Disallows via
       // `/?*` and which returns the wrong sets anyway (the survey measured
       // "1972 topps football" returning 18 results, none of them set-11959).
-      run("fetchSportsCardChecklist.cjs", [
-        "--url", entry.sourceRef,
-        "--out", csvPath,
-        "--year", String(entry.year || ""),
-        "--set-key", setKeyFor(entry) || "",
-        "--set-name", String(entry.setName || ""),
-        "--sport", String(entry.sport || ""),
-      ]);
+      // CF-ZERO-ROWS-MUST-NAME-WHY, the sportscardchecklist side (2026-09-04,
+      // run 33902098944). The fetcher exits 9 for THREE different reasons and
+      // this lane read all of them the same way. Worse, it read them as
+      // `failed`: the shared isGone test matches "exited ... code 9", never the
+      // "exit 9" that run() actually produces, so a zero-row refusal was
+      // reported as OUR pipe breaking rather than as the host not serving us.
+      // Entries set-20411, set-29386 and set-20412 made a 3-streak that aborted
+      // the era with 1,246 entries unattempted.
+      //
+      // Probed directly (2026-09-04): all three serve HTTP 200 with a FULL
+      // checklist -- 220, 27 and 220 card headers -- and all three parse
+      // cleanly through the current parser, as do 20 more entries sampled
+      // across 1990-1999. There is no second layout and no empty page here;
+      // those bodies were transient, and the era is healthy. What the lane
+      // lacked was any way to say so. Classified on the fetcher's own words:
+      //
+      //   "nothing new to add"     -> EMPTY. The page is a set page and carries
+      //      no cards. A verdict about the set, excluded from the streak,
+      //      exactly as the same phrase means on bcp, tcgdex and hobbymonitor.
+      //   "challenge/interstitial" / "did not serve a set page"
+      //                            -> UNREACHABLE. The host is not serving us;
+      //      terminal for the entry, and a STREAK of them is the lane being
+      //      blocked, which is precisely when the tripwire should fire. This is
+      //      where a degraded/truncated body lands, so a repeat of THIS
+      //      incident still trips -- on the honest reason.
+      //   "layout not understood"  -> stays `failed`. That is OUR parser and it
+      //      must keep bringing someone back to it. It is also positive
+      //      evidence the host is UP -- we fetched and read every byte -- so it
+      //      carries laneProvenHealthy and does not advance the streak.
+      try {
+        run("fetchSportsCardChecklist.cjs", [
+          "--url", entry.sourceRef,
+          "--out", csvPath,
+          "--year", String(entry.year || ""),
+          "--set-key", setKeyFor(entry) || "",
+          "--set-name", String(entry.setName || ""),
+          "--sport", String(entry.sport || ""),
+        ]);
+      } catch (err) {
+        const said = String(err?.message || err);
+        if (/nothing new to add/.test(said)) {
+          const e = new Error(`sportscardchecklist lists this set but cards none of it — ${said.slice(0, 200)}`);
+          e.emptyAtSource = true;
+          throw e;
+        }
+        if (/challenge\/interstitial|did not serve a set page/.test(said)) {
+          // Shaped for the shared isGone test so it lands in `unreachable`.
+          throw new Error(`sportscardchecklist did not serve the set page (HTTP 403-equivalent: a 200 carrying no checklist) — ${said.slice(0, 200)}`);
+        }
+        if (/layout not understood/.test(said)) {
+          const e = new Error(`sportscardchecklist served a set page our parser does not read — a parser gap, not an empty page: ${said.slice(0, 200)}`);
+          e.laneProvenHealthy = true;
+          throw e;
+        }
+        throw err;
+      }
       // csvPathS. The fetcher writes `<stem>.csv` beside `<stem>.manifest.json`
       // and, for a ladder rung, `<stem>.parallels.json`; the ingest child reads
       // the DIRECTORY, so the sidecars need no naming here. Only the CSV is
@@ -2597,7 +2645,12 @@ if (require.main !== module) return;
       const msg = String(e.message || e).slice(0, 1200);
       // A 404/403 from the source is the source not serving this set -- not a
       // defect in our pipe, and a different verdict from a broken acquisition.
-      const isGone = /HTTP 40[34]|ENOTFOUND|exit(ed)? .*code 9|workbook empty or unreachable/i.test(msg);
+      // `exit 9` is the form run() actually builds ("${script} exit ${status}: ...");
+      // the old alternation only matched Node's own "exited ... code 9" wording,
+      // so the beckett downloader's 9 was recognised and every OTHER child's was
+      // not. The sportscardchecklist zero-row refusal exits 9 and fell through to
+      // `failed` -- our pipe broke -- when the host had simply not served us.
+      const isGone = /HTTP 40[34]|ENOTFOUND|exit(ed)?\s+(?:with\s+)?(?:code\s+)?9|workbook empty or unreachable/i.test(msg);
       // The acquisition itself says when the SOURCE answered "nothing here".
       // That is a verdict about the set, never a symptom of a broken lane.
       const status = e?.emptyAtSource ? EMPTY_STATUS : isGone ? "unreachable" : "failed";

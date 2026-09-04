@@ -418,6 +418,80 @@ function splitCardHeader(raw) {
   return { cardNumber, player: rest.replace(/\s+/g, " ").trim(), subset };
 }
 
+/**
+ * CF-ZERO-ROWS-MUST-NAME-WHY (2026-09-04, run 33902098944).
+ *
+ * The vintage/1990s walker aborted after three consecutive
+ *
+ *   "!! 0 rows — refusing to write an empty checklist"   (exit 9)
+ *
+ * on set-20411, set-29386 and set-20412 (1993-94 Topps Finest base, Main
+ * Attractions and Refractors), stranding 1,246 entries of the era.
+ *
+ * PROBED DIRECTLY (2026-09-04, polite fetch, HobbyIQ UA):
+ *
+ *   set-20411  HTTP 200  1,148,623 bytes  220 <h5> headers  220 hidden inputs
+ *   set-29386  HTTP 200    180,371 bytes   27 <h5> headers   27 hidden inputs
+ *   set-20412  HTTP 200  1,010,228 bytes  220 <h5> headers  220 hidden inputs
+ *
+ * All three parse to a FULL checklist through the existing H5_RE, with zero
+ * skipped rows and both anchors agreeing. Twenty more entries spread across
+ * 1990-1999 were probed the same way: 20/20 served 200 with a populated header
+ * list and 20/20 parsed. THERE IS NO SECOND LAYOUT on this lane and no empty
+ * set page at the source -- the era's markup is uniform.
+ *
+ * So the zero-row run was TRANSIENT: the source served a short or partial body
+ * to a walker running concurrency=16, whose politeness delay is per-process and
+ * therefore not a rate limit at all. What is NOT transient is that the fetcher
+ * refused with one sentence for every possible cause, so the driver could not
+ * tell a degraded response from a layout we cannot read from a set the source
+ * genuinely does not card. "0 rows" is an observation, never a diagnosis, and a
+ * lane that cannot name the cause classifies all three the same way -- which is
+ * how three transient bodies took an era down.
+ *
+ * Named on the same terms hobbymonitor's zeroCardReason uses, so the driver
+ * classifies on the fetcher's own words:
+ *
+ *   CHALLENGE      no checklist scaffolding at all: an interstitial, an error
+ *      body or a truncated response served with a 200. The host is not serving
+ *      us; terminal for the entry, and a STREAK of them is the lane being
+ *      blocked, which is exactly when the tripwire should fire.
+ *   EMPTY AT SOURCE the page IS a set page -- it has the card-list scaffolding
+ *      -- and carries no card rows. A verdict about the set, not our pipe.
+ *   UNKNOWN LAYOUT  headers are present but none parsed, or the anchors
+ *      disagree. OUR parser, and it stays a lane fault so someone comes back.
+ */
+function zeroCardReason(html, stats) {
+  const h = String(html || "");
+  const st = stats || {};
+
+  // A set page always carries the card-list scaffolding: the per-card eBay
+  // search inputs and the <h5> headers. Neither present means we were not
+  // served a set page at all. Checked FIRST -- everything below assumes the
+  // page is really ours.
+  if (!st.headers && !st.hiddenRows) {
+    const challenged = /cf-browser-verification|cf_chl|__cf_bm|Just a moment|Attention Required|Checking your browser|Access denied|Please enable (?:JS|JavaScript)/i.test(h);
+    if (challenged) {
+      return `no checklist on the page — the host served a challenge/interstitial page with HTTP 200 (${h.length} bytes)`;
+    }
+    // A real set page is ~100 KB at its smallest (the 10-card sets measured
+    // 100,316 bytes). A body far under that carrying no scaffolding is a
+    // truncated or error response, not a set with nothing in it.
+    if (h.length < 40000 || !/set-\d+|trading-card-checklist/i.test(h)) {
+      return `no checklist on the page — the host did not serve a set page with HTTP 200 (${h.length} bytes)`;
+    }
+    // Scaffolding absent on a page that IS ours: the source lists this set and
+    // carries no cards for it. A verdict about the set -- nothing new to add.
+    return `the set page carries no cards at the source — nothing new to add (${h.length} bytes)`;
+  }
+
+  // Scaffolding IS there. Anything that got this far is our reader.
+  if (st.anchorMismatch) {
+    return `0 rows — ${st.headers} card headers and ${st.hiddenRows} hidden rows disagree; layout not understood`;
+  }
+  return `0 rows — ${st.headers} card headers are on the page but none parsed; layout not understood`;
+}
+
 /** Every card header on the page, in document order. */
 const H5_RE = /<h5[^>]*>[\s\S]*?<\/a>\s*#([^<]*)<\/h5>/g;
 const HIDDEN_RE = /name="ebay_search"[^>]*value="([^"]*)"/g;
@@ -557,7 +631,9 @@ async function main() {
     console.log(`  subsets: ${[...stats.subsets.entries()].map((e) => `${e[0]}=${e[1]}`).join(" | ")}`);
   }
   if (!rows.length) {
-    console.error("  !! 0 rows — refusing to write an empty checklist");
+    // THE REFUSAL NAMES ITS CAUSE. Same exit code, but the sentence is what the
+    // driver classifies on -- see CF-ZERO-ROWS-MUST-NAME-WHY above.
+    console.error(`  !! ${zeroCardReason(html, stats)}`);
     process.exit(9);
   }
   if (!rows.some((r) => r.category === "base")) {
@@ -655,7 +731,7 @@ if (require.main === module) {
 }
 
 module.exports = {
-  parseSetUrl, parallelFromSlug, parallelTailOf, splitParentAndSubset, splitCardHeader, buildRows, toCsv,
+  zeroCardReason, parseSetUrl, parallelFromSlug, parallelTailOf, splitParentAndSubset, splitCardHeader, buildRows, toCsv,
   extractCardHeaders, countHiddenRows, autoEvidence, unescapeCell,
   SUBSET_TAGS, NOISE_TAGS, HEADER, SET_URL_RE,
 };
