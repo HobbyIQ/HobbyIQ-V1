@@ -121,7 +121,13 @@ const SUBSET = require(path.join(__dirname, "lib", "subset-identity.cjs"));
 
 const MODE = String(process.env.MODE || "").trim();
 const APPLY = process.env.BACKFILL_APPLY === "true" || process.env.APPLY === "true"; // the runner exports BACKFILL_APPLY, not APPLY
-const SLOT = Number(process.env.SLOT || 0), SLOTS = Number(process.env.SLOTS || 32);
+// CF-AN-INHERITED-SLOTS-IS-NOT-A-CHOSEN-SHARD: this lane's NORMAL mode is a
+// fan-out -- it declares its own multi-slot default (32) and is always
+// dispatched per slot -- so it shards on the env alone. The helper is shared so
+// the banner and the arithmetic are the same everywhere.
+const { runnerShardScope } = require("./lib/runner-shard-scope.cjs");
+const SHARD_SCOPE = runnerShardScope({ alwaysShard: true, defaultSlots: 32, label: "rematch-sold-comps" });
+const { SHARDED, SLOT, SLOTS } = SHARD_SCOPE;
 const CONCURRENCY = Math.max(1, Number(process.env.BACKFILL_CONCURRENCY || 8));
 const RUN_MINUTES = Number(process.env.RUN_MINUTES || 140);
 const LIMIT = Number(process.env.LIMIT || 0);
@@ -464,6 +470,7 @@ async function main() {
 
   const expected = units.reduce((a, u) => a + Number(u.rows ?? 0), 0);
   console.log(`rematch-sold-comps  MODE=${MODE}  ${MODE === "census" ? "READ ONLY" : APPLY ? "APPLY" : "REPORT ONLY"}  slot ${SLOT}/${SLOTS}  budget ${RUN_MINUTES}m  limit ${LIMIT || "none"}`);
+  console.log(`  ${SHARD_SCOPE.banner()}`);
   console.log(`  shard axis: (cardYear, sportClass, sha1(id) % parts) -- measured ${SHARD_TABLE.measuredAt}, ${f(SHARD_TABLE.totalRows)} rows in ${SHARD_TABLE.slots.length} slots, spread ${SHARD_TABLE.spread}`);
   console.log(`  this slot owns ${q.units.length} unit(s), ${f(expected)} rows measured at capture:`);
   for (const u of q.units) console.log(`    ${String(u.key).padEnd(28)} ${f(u.rows).padStart(11)}`);

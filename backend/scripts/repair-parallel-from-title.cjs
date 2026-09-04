@@ -101,7 +101,18 @@ const { relocateSoldComp, stripSystem, contentHashesForLookup } = require(path.j
 
 const APPLY = process.env.APPLY === "true" || process.env.BACKFILL_APPLY === "true"; // the runner exports BACKFILL_APPLY, not APPLY
 const SOURCES = String(process.env.SOURCES || "cardhedge,tca-ebay,cardsight").split(",").map((s) => s.trim()).filter(Boolean);
-const SLOT = Number(process.env.SLOT || 0), SLOTS = Number(process.env.SLOTS || 1);
+// CF-AN-INHERITED-SLOTS-IS-NOT-A-CHOSEN-SHARD (#1756, generalised 2026-09-04).
+// The runner exports `slots` for EVERY script with a workflow-wide DEFAULT of
+// "16", so `process.env.SLOTS ?? 1` NEVER saw undefined and this lane sharded
+// itself sixteen ways on a dispatch that asked for no sharding -- sweeping slot
+// 0 and leaving fifteen sixteenths untouched, green and honestly reconciled.
+// Sharding is now OPT-IN: a non-zero slot, or an explicit SHARD=true for slot 0
+// of a real fan-out. Everything else -- including the inherited slot=0 slots=16
+// -- sweeps EVERY row. SLOTS binds to 1 when unsharded, so `% SLOTS` and
+// `SLOTS === 1` guards below keep working unchanged.
+const { runnerShardScope } = require("./lib/runner-shard-scope.cjs");
+const SHARD_SCOPE = runnerShardScope({ label: "repair-parallel-from-title" });
+const { SHARDED, SLOT, SLOTS } = SHARD_SCOPE;
 const RUN_MINUTES = Number(process.env.RUN_MINUTES || 140);
 const LIMIT = Number(process.env.LIMIT || 0);
 const MODE = String(process.env.MODE || "colours").toLowerCase();
@@ -157,6 +168,7 @@ async function main() {
   if (!conn) { console.error("FATAL: COSMOS_CONNECTION_STRING not set"); process.exit(1); }
   const pool = new CosmosClient({ connectionString: conn, connectionPolicy: { retryOptions: { maxRetryAttemptsOnThrottledRequests: 30, maxWaitTimeInSeconds: 120 } } }).database("hobbyiq").container("sold_comps");
   console.log(`repair-parallel-from-title  ${APPLY ? "APPLY" : "REPORT ONLY"}  mode=${MODE}  sources=${SOURCES.join(",")}  slot ${SLOT}/${SLOTS}  budget ${RUN_MINUTES}m${LIMIT ? `  limit ${f(LIMIT)}` : ""}`);
+  console.log(`  ${SHARD_SCOPE.banner()}`);
   const stats = {
     scanned: 0, otherShard: 0, repaired: 0, toBase: 0, toOther: 0, kept: 0, keptRefinement: 0, failed: 0, noSlug: 0, resolvedByMatcher: 0,
     // variation

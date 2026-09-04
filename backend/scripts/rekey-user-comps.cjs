@@ -58,7 +58,18 @@ const { relocateSoldComp, stripSystem, isMissing, cents, day, normParallel, grad
 
 const APPLY = process.env.BACKFILL_APPLY === "true" || process.env.APPLY === "true"; // the runner exports BACKFILL_APPLY, not APPLY
 const SOURCES = String(process.env.SOURCES || "ebay-user-purchase,ebay-user-sale").split(",").map((s) => s.trim()).filter(Boolean);
-const SLOT = Number(process.env.SLOT || 0), SLOTS = Number(process.env.SLOTS || 1);
+// CF-AN-INHERITED-SLOTS-IS-NOT-A-CHOSEN-SHARD (#1756, generalised 2026-09-04).
+// The runner exports `slots` for EVERY script with a workflow-wide DEFAULT of
+// "16", so `process.env.SLOTS ?? 1` NEVER saw undefined and this lane sharded
+// itself sixteen ways on a dispatch that asked for no sharding -- sweeping slot
+// 0 and leaving fifteen sixteenths untouched, green and honestly reconciled.
+// Sharding is now OPT-IN: a non-zero slot, or an explicit SHARD=true for slot 0
+// of a real fan-out. Everything else -- including the inherited slot=0 slots=16
+// -- sweeps EVERY row. SLOTS binds to 1 when unsharded, so `% SLOTS` and
+// `SLOTS === 1` guards below keep working unchanged.
+const { runnerShardScope } = require("./lib/runner-shard-scope.cjs");
+const SHARD_SCOPE = runnerShardScope({ label: "rekey-user-comps" });
+const { SHARDED, SLOT, SLOTS } = SHARD_SCOPE;
 const RUN_MINUTES = Number(process.env.RUN_MINUTES || 140);
 const LIMIT = Number(process.env.LIMIT || 0);
 const PURCHASE = "ebay-user-purchase", SALE = "ebay-user-sale";
@@ -304,6 +315,7 @@ async function main() {
   const db = new CosmosClient({ connectionString: conn, connectionPolicy: { retryOptions: { maxRetryAttemptsOnThrottledRequests: 30, maxWaitTimeInSeconds: 120 } } }).database("hobbyiq");
   const pool = db.container("sold_comps"), portfolio = db.container("portfolio"), cat = db.container("card_catalog");
   console.log(`rekey-user-comps  ${APPLY ? "APPLY" : "REPORT ONLY"}  sources=${SOURCES.join(",")}  slot ${SLOT}/${SLOTS}  budget ${RUN_MINUTES}m  limit ${LIMIT || "none"}`);
+  console.log(`  ${SHARD_SCOPE.banner()}`);
   const q = async (c, query, parameters = [], opts = {}) => (await retry(() => c.items.query({ query, parameters }, { maxItemCount: 1000, ...opts }).fetchAll())).resources;
   const readAll = async (c, query, parameters, cap) => {
     const out = [];

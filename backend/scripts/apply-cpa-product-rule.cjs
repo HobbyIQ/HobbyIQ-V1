@@ -75,7 +75,18 @@ const SPORTS = envOr("SPORTS", "baseball").split(",").map((s) => s.trim().toLowe
 const YEARS = envOr("YEARS", "2020-2026").trim();
 const PREFIXES = envOr("PREFIXES", "CPA,BCPA").split(",").map((s) => s.trim().toUpperCase()).filter(Boolean);
 const FAMILY = envOr("FAMILY", "bowman").trim().toLowerCase();
-const SLOT = Number(process.env.SLOT ?? 0), SLOTS = Math.max(1, Number(process.env.SLOTS ?? 1));
+// CF-AN-INHERITED-SLOTS-IS-NOT-A-CHOSEN-SHARD (#1756, generalised 2026-09-04).
+// The runner exports `slots` for EVERY script with a workflow-wide DEFAULT of
+// "16", so `process.env.SLOTS ?? 1` NEVER saw undefined and this lane sharded
+// itself sixteen ways on a dispatch that asked for no sharding -- sweeping slot
+// 0 and leaving fifteen sixteenths untouched, green and honestly reconciled.
+// Sharding is now OPT-IN: a non-zero slot, or an explicit SHARD=true for slot 0
+// of a real fan-out. Everything else -- including the inherited slot=0 slots=16
+// -- sweeps EVERY row. SLOTS binds to 1 when unsharded, so `% SLOTS` and
+// `SLOTS === 1` guards below keep working unchanged.
+const { runnerShardScope } = require("./lib/runner-shard-scope.cjs");
+const SHARD_SCOPE = runnerShardScope({ label: "apply-cpa-product-rule" });
+const { SHARDED, SLOT, SLOTS } = SHARD_SCOPE;
 const CONCURRENCY = Math.max(1, Number(process.env.CONCURRENCY || process.env.BACKFILL_CONCURRENCY || 8));
 const RUN_MS = Number(process.env.RUN_MINUTES || 140) * 60000;
 const LIMIT = Number(process.env.LIMIT || 0);
@@ -187,6 +198,7 @@ async function main() {
   const cat = db.container("card_catalog"), pool = db.container("sold_comps");
 
   console.log(`apply-cpa-product-rule  MODE=${MODE}  slot ${SLOT}/${SLOTS}  ${APPLY && MODE === "fold" ? "APPLY (moves card_catalog rows, re-points sales)" : "REPORT ONLY -- nothing written"}  concurrency ${CONCURRENCY}  budget ${RUN_MS / 60000}m`);
+  console.log(`  ${SHARD_SCOPE.banner()}`);
   console.log(`SCOPE: sport=${SPORTS.join(",")}  years=${years[0]}-${years[years.length - 1]}  cardNumber prefixes=${PREFIXES.join(",")}  setKey family=${FAMILY || "(ALL — SCOPE=all)"}  un-graded identity rows only${LIMIT ? `  LIMIT=${f(LIMIT)}` : ""}`);
   console.log(`only a DEDICATED checklist names a product; bcp-family and derived rows fold onto it. Two dedicated products for the same player are KEPT and reported, never merged.`);
   console.log(`the player gate is absolute: an initials collision (CPA-ED = Eddy Diaz and Elijah Dunham) abstains and is NOT a product conflict.\n`);

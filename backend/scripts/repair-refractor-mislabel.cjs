@@ -39,8 +39,19 @@ const { unparsedVariantReason } = require(path.join(ROOT, "dist/services/catalog
 
 const APPLY = String(process.env.BACKFILL_APPLY || "") === "true";
 const YEARS = String(process.env.YEARS || "").split(",").map(Number).filter(Boolean);
-const SLOT = Number(process.env.SLOT || 0);
-const SLOTS = Math.max(1, Number(process.env.SLOTS || 1));
+// CF-AN-INHERITED-SLOTS-IS-NOT-A-CHOSEN-SHARD (#1756, generalised 2026-09-04).
+// The runner exports `slots` for EVERY script with a workflow-wide DEFAULT of
+// "16", so `process.env.SLOTS ?? 1` NEVER saw undefined and this lane sharded
+// itself sixteen ways on a dispatch that asked for no sharding -- sweeping slot
+// 0 and leaving fifteen sixteenths untouched, green and honestly reconciled.
+// Sharding is now OPT-IN: a non-zero slot, or an explicit SHARD=true for slot 0
+// of a real fan-out. Everything else -- including the inherited slot=0 slots=16
+// -- sweeps EVERY row. SLOTS binds to 1 when unsharded, so `% SLOTS` and
+// `SLOTS === 1` guards below keep working unchanged.
+const { runnerShardScope } = require("./lib/runner-shard-scope.cjs");
+const SHARD_SCOPE = runnerShardScope({ label: "repair-refractor-mislabel" });
+const { SHARDED, SLOT, SLOTS } = SHARD_SCOPE;
+
 // "refractor" = only the plain-refractor segment (the original, narrow pass).
 // "all"       = every slug whose parallel segment disagrees with its title.
 const SCOPE = String(process.env.SCOPE || "refractor").toLowerCase();
@@ -98,6 +109,7 @@ async function yearsPresent(sold) {
   const years = all.filter((_, i) => i % SLOTS === SLOT);
   console.log("years with ':refractor:' sales: " + all.length +
               "   this worker (slot " + SLOT + "/" + SLOTS + "): " + years.length);
+  console.log(`  ${SHARD_SCOPE.banner()}`);
 
   const total = { seen: 0, correct: 0, toBase: 0, toColour: 0, other: 0, noDest: 0, held: 0, wrote: 0, failed: 0 };
   const destCache = new Map();

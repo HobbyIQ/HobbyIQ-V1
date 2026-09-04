@@ -109,7 +109,18 @@ const { reportWrites } = require(path.join(backend, "dist", "services", "ops", "
 const { relocateSoldComp, stripSystem, contentHashOf } = require(path.join(backend, "scripts", "lib", "relocate-sold-comp.cjs"));
 
 const APPLY = process.env.BACKFILL_APPLY === "true" || process.env.APPLY === "true";
-const SLOT = Number(process.env.SLOT || 0), SLOTS = Number(process.env.SLOTS || 1);
+// CF-AN-INHERITED-SLOTS-IS-NOT-A-CHOSEN-SHARD (#1756, generalised 2026-09-04).
+// The runner exports `slots` for EVERY script with a workflow-wide DEFAULT of
+// "16", so `process.env.SLOTS ?? 1` NEVER saw undefined and this lane sharded
+// itself sixteen ways on a dispatch that asked for no sharding -- sweeping slot
+// 0 and leaving fifteen sixteenths untouched, green and honestly reconciled.
+// Sharding is now OPT-IN: a non-zero slot, or an explicit SHARD=true for slot 0
+// of a real fan-out. Everything else -- including the inherited slot=0 slots=16
+// -- sweeps EVERY row. SLOTS binds to 1 when unsharded, so `% SLOTS` and
+// `SLOTS === 1` guards below keep working unchanged.
+const { runnerShardScope } = require("./lib/runner-shard-scope.cjs");
+const SHARD_SCOPE = runnerShardScope({ label: "fold-checklist-numbered-twins" });
+const { SHARDED, SLOT, SLOTS } = SHARD_SCOPE;
 const RUN_MINUTES = Number(process.env.RUN_MINUTES || 140);
 const RUN_MS = RUN_MINUTES * 60000;
 // SPORTS / YEARS / SCOPE are parsed and enforced at the top of this file, above
@@ -146,6 +157,7 @@ async function main() {
   console.log(`fold-checklist-numbered-twins  MODE=checklist-numbered  ${APPLY ? "APPLY" : "REPORT ONLY -- nothing is written"}`);
   console.log(`  scope        sports=${SPORTS.length ? SPORTS.join(",") : "(all)"}  years=${YEARS.length ? YEARS.join(",") : "(all)"}${SCOPE === "all" ? "  SCOPE=all" : ""}`);
   console.log(`  shard        slot ${SLOT}/${SLOTS}  on hash(identityKey) -- a whole identity group lands on ONE slot`);
+  console.log(`  ${SHARD_SCOPE.banner()}`);
   console.log(`  budget       ${RUN_MINUTES}m   force-auto prefixes: ${FORCE_AUTO_PREFIXES.join(",")}`);
   console.log(`  NOTE         the catalog is MOVING under the D23 rename and D28 base-cards fleets;`);
   console.log(`               these counts are re-derived every run and will not reproduce exactly.`);

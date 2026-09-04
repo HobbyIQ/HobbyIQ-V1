@@ -112,8 +112,22 @@ const env = (name, dflt = "") => {
 };
 
 const MODE = (arg("mode", env("MODE", "sample")) || "sample").toLowerCase();
-const SLOT = Number(arg("slot", env("SLOT", "0")));
-const SLOTS = Number(arg("slots", env("SLOTS", "1")));
+// CF-AN-INHERITED-SLOTS-IS-NOT-A-CHOSEN-SHARD (#1756, generalised 2026-09-04).
+// The runner exports `slots` for EVERY script with a workflow-wide DEFAULT of
+// "16", so the env fallback below NEVER saw an absent value and this lane
+// sharded itself sixteen ways on a dispatch that asked for no sharding --
+// sweeping slot 0 and leaving fifteen sixteenths untouched, green and honestly
+// reconciled. Sharding is now OPT-IN: an explicit --slot/--slots on the command
+// line (a flag IS a choice, `--slot 0` included), a non-zero SLOT, or SHARD=true
+// for slot 0 of a real fan-out. The inherited slot=0 slots=16 sweeps EVERY row.
+// SLOTS binds to 1 when unsharded, so `% SLOTS` and `SLOTS > 1` guards below
+// keep working unchanged.
+const { runnerShardScope } = require("./lib/runner-shard-scope.cjs");
+const SHARD_SCOPE = runnerShardScope({
+  slotArg: arg("slot", ""), slotsArg: arg("slots", ""),
+  label: "engine-backtest",
+});
+const { SHARDED, SLOT, SLOTS } = SHARD_SCOPE;
 const OUT_DIR = arg("out", env("OUT_DIR", path.join(backend, "data", "engine-backtest")));
 
 // The evaluation period.
@@ -236,6 +250,7 @@ async function runSample() {
   console.log(`[engine-backtest] mode=SAMPLE  (READ ONLY — this script has no write path)`);
   console.log(`  period: ${periodStart.slice(0, 10)} .. ${periodEnd.slice(0, 10)}  (${PERIOD_DAYS}d, lag ${FRESHNESS_LAG_DAYS}d)`);
   console.log(`  shard:  slot ${SLOT} of ${SLOTS}   target=${num(SAMPLE_LIMIT)} points  maxPerCard=${MAX_PER_CARD}`);
+  console.log(`  ${SHARD_SCOPE.banner()}`);
   console.log(`  budget: ${RUN_MINUTES} min   concurrency=${CONCURRENCY}${SPORT ? `   sport=${SPORT}` : ""}\n`);
 
   const db = new CosmosClient(process.env.COSMOS_CONNECTION_STRING)
