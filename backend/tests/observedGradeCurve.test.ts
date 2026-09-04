@@ -608,25 +608,28 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", { timeout: 180_0
       expect(psa9.value).toBeCloseTo(140, 0);                 // 100 × (4.0 × 0.35)
     });
 
-    it("without setName → still estimates, from empirical calibration", async () => {
-      // CF-ALL-GRADES-AVAILABLE (Drew, 2026-08-20: "no we need to be able to
-      // give estimates"; earlier, "we want to have all grades available for
-      // people").
+    it("without setName → REFUSES rather than inventing a multiplier", async () => {
+      // CF-EMPIRICAL-ONLY-NO-GRADER-MATRIX (#1676, 2026-09-03, audit H-7).
       //
-      // THIS TEST USED TO ASSERT "unavailable". That was correct on 2026-07-21,
-      // when gradeMultiplierFor had just been reduced to a no-op (PR #633) and
-      // the ONLY alternative to a family-specific calibration was the hardcoded
-      // matrix the empirical-only doctrine bans. Showing nothing beat showing an
-      // invented number.
+      // This assertion has now flipped twice, so the history matters. It read
+      // "unavailable" until 2026-08-20, then "estimated" under
+      // CF-ALL-GRADES-AVAILABLE on the strength of a family-AGNOSTIC empirical
+      // multiplier (PSA 10 = 2.66 from the baseline band table).
       //
-      // It is not correct now. A family-agnostic EMPIRICAL multiplier exists, so
-      // a grade with no observed comps can be estimated from GRADE_CALIBRATION
-      // rather than from a matrix someone typed. Both rules are satisfied at
-      // once: the estimate is empirical, and the user sees every grade.
+      // #1676 deleted the terminal fallback: GRADER_PREMIUMS, the hand-curated
+      // per-company table, was the last rung of getGraderPremium, so the ladder
+      // could never return null and no caller had been written to face a
+      // no-basis case. It now returns `number | null` and resolveMultiplier's
+      // own comment names this exact path: "the refusal is the intended path
+      // here, not an anomaly ... the entry surfaces as valueSource
+      // 'unavailable' ... Real accuracy > false completeness."
       //
-      // Verified numerically before retiring the old assertion, not merely
-      // asserted to exist: Raw observed = 100, PSA 10 multiplier = 2.66 from
-      // gradeCalibrationData.ts, value = 266.
+      // Without a setName there is no family and no sport to scope a cell to,
+      // so no EMPIRICAL cell covers the card and the honest answer is that we
+      // have no basis. CF-ALL-GRADES-AVAILABLE is not retired — the sibling
+      // test above ("with setName") still pins that every grade is offered when
+      // a calibrated cell exists. What is retired is offering one when it does
+      // not.
       const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
       vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
         if (grade === "Raw") {
@@ -643,18 +646,15 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", { timeout: 180_0
       );
       const curve = await buildObservedGradeCurve("c1"); // no setName
       const psa10 = curve.entries.find((e) => e.grade === "PSA 10")!;
-      expect(psa10.valueSource).toBe("estimated");
-      expect(psa10.estimatedMultiplier).toBeGreaterThan(1);
-      // The value must be Raw x the multiplier — pinning the ARITHMETIC, not
-      // just that some number appeared. A multiplier that stops being applied
-      // to the observed anchor would otherwise pass silently.
+      expect(psa10.valueSource).toBe("unavailable");
+      // The refusal is total: no number, and no multiplier to imply one. A
+      // value surfacing here would be the deleted matrix having crept back.
+      expect(psa10.value).toBeNull();
+      expect(psa10.estimatedMultiplier ?? null).toBeNull();
+      // Raw itself is still observed — the refusal is scoped to the grades we
+      // cannot evidence, not to the whole curve.
       const raw = curve.entries.find((e) => e.grade === "Raw")!;
-      expect(psa10.value).toBeCloseTo(
-        (raw.value as number) * (psa10.estimatedMultiplier as number),
-        1,
-      );
-      // Every grade is offered, per "we want to have all grades available".
-      expect(curve.entries.every((e) => e.valueSource !== "unavailable")).toBe(true);
+      expect(raw.value).toBe(100);
     });
 
     it("observed grade WINS over estimation even when fallback is available", async () => {
@@ -1467,6 +1467,35 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", { timeout: 180_0
     });
 
     it("guarantees Raw ≤ every graded value with multiplier > 1 after cap fires", async () => {
+      // CF-EMPIRICAL-ONLY-NO-GRADER-MATRIX (#1676, 2026-09-03): this case needs
+      // the same calibration fixture and setName its sibling above already
+      // uses. It used to call buildObservedGradeCurve with a playerName only,
+      // and got graded values anyway because getGraderPremium's terminal rung
+      // was the hand-curated GRADER_PREMIUMS matrix. #1676 deleted that rung,
+      // so an unscoped card now yields NO graded entry carrying a multiplier —
+      // and the loop below, which searches for a graded value that raw
+      // out-runs, had nothing to iterate and failed vacuously.
+      //
+      // That is a fixture gap, not the clamp returning: with no graded numbers
+      // there is no inversion to observe either way. Scoping the card restores
+      // the graded values so the assertion tests what it was written to test.
+      vi.resetModules();
+      vi.doMock("../src/services/compiq/gradeCalibrationData.js", () => ({
+        GRADE_CALIBRATION: {
+          "bowman-chrome": {
+            PSA: {
+              medianRatio: 3.5, p25: 2, p75: 5, sampleSize: 100,
+              byTier: {
+                "10": { medianRatio: 8.0, sampleSize: 60 },
+                "9":  { medianRatio: 1.3, sampleSize: 40 },
+                "8":  { medianRatio: 1.1, sampleSize: 30 },
+              },
+            },
+          },
+        },
+        GRADE_CALIBRATION_BY_SPORT: {},
+        GRADE_MULTIPLIER_BY_VALUE_BAND: { baseline: {}, bySport: {}, bySportFamily: {} },
+      }));
       const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
       const { getPlayerTrendSnapshot } = await import("../src/services/playerTrend/index.js");
       vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
@@ -1488,9 +1517,17 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", { timeout: 180_0
       );
       const curve = await buildObservedGradeCurve("c1", {
         playerName: "VeryHot",
+        setName: "2025 Bowman Chrome",
       });
       const raw = curve.entries.find((e) => e.grade === "Raw")!;
       const rawShown = raw.trendAdjustedValue ?? raw.value;
+      // The fixture must actually offer a graded value to out-run, or the
+      // search below would pass/fail on emptiness rather than on the clamp.
+      expect(
+        curve.entries.some(
+          (e) => e.grader !== "Raw" && typeof e.estimatedMultiplier === "number" && (e.estimatedMultiplier as number) > 1.0 && typeof e.value === "number" && (e.value as number) > 0,
+        ),
+      ).toBe(true);
 
       // CF-SUB-RAW-IS-REAL (Drew, 2026-08-20). Grade monotonicity is NOT an
       // invariant of this system. A hot raw is allowed to exceed graded tiers,
