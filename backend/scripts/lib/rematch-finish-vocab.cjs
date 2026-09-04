@@ -318,6 +318,30 @@ const HAND_PHRASES = [
   "peel and reveal", "retro future", "cracked ice", "stained glass",
   "ray wave", "tie dye", "mini diamond", "printing plate", "short print",
   "gold rush", "black label", "image variation",
+  // 1990s Collector's Choice, and the phrase form is load-bearing (GATE 3
+  // slot-31 audit, 2026-09-04). "Gold Signature" and "Silver Signature" are
+  // the two parallels of Upper Deck's Collector's Choice, and the CATALOG
+  // knows them: measured 2026-09-04 on `collectors-choice`, "Silver Signature"
+  // holds 1,761 rows and "Gold Signature" 1,654, second and third only to
+  // "Base" itself. The CORPUS does not -- `checklist-parallel-names.json`
+  // carries no 1990s Collector's Choice slice at all -- which is exactly what
+  // this hand list is for.
+  //
+  // THEY MUST BE PHRASES, NOT TOKENS. `signature` is a CORPUS STOPWORD and
+  // stays one: its stop rests on "this describes the CARD, not how it is
+  // printed" (a Rookie Signatures subset, a dual-auto relic), and the
+  // stopword-exception rule above states outright that nothing stopped for
+  // that reason is eligible to be un-stopped -- un-stopping it reaches 46
+  // products and disqualifies every rookie-auto title in the pool. The COLOUR
+  // half cannot carry it either: a bare "gold" is a colour, and colours are
+  // deliberately not sufficient evidence on their own (see GUARD 9, where
+  // "Pete Rose" and "Red Sox" are the false positives that proves it).
+  //
+  // The two-word phrase is the whole card's name and collides with neither.
+  // The audit's row is "1995 Collectors Choice - NOLAN RYAN - GOLD Signature
+  // #46 PSA 9", which the derivation read as Base and would have filed into
+  // the flagship base pool.
+  "gold signature", "silver signature",
 ];
 
 /**
@@ -1097,9 +1121,42 @@ function buildPhraseIndex(phrases) {
     const re = new RegExp(`\\b${parts.map(escapeRe).join("[\\s\\-&/]+")}\\b`);
     let bucket = byAnchor.get(anchor);
     if (!bucket) { bucket = []; byAnchor.set(anchor, bucket); }
-    bucket.push(re);
+    // The PHRASE TEXT is carried beside its regex so a caller that needs to
+    // name the evidence (GUARD 9's `titleFinishWitness`) can, without a second
+    // index or a reverse lookup that could drift from this one.
+    bucket.push({ re, phrase: parts.join(" ") });
   }
   return byAnchor;
+}
+
+/**
+ * EVERY corpus phrase that matches this title. The one implementation;
+ * `phraseIndexMatch` and `phraseIndexMatches` are its first-hit and boolean
+ * faces, so none of the three can disagree with the others.
+ */
+function phraseIndexMatchAll(index, lowerTitle, words) {
+  const out = [];
+  const seen = new Set();
+  for (const w of words) {
+    const bucket = index.get(w);
+    if (!bucket) continue;
+    for (const e of bucket) {
+      if (seen.has(e.phrase)) continue;
+      if (e.re.test(lowerTitle)) { seen.add(e.phrase); out.push(e.phrase); }
+    }
+  }
+  return out;
+}
+
+/**
+ * WHICH corpus phrase matches this title, or null -- the first hit.
+ */
+function phraseIndexMatch(index, lowerTitle, words) {
+  for (const w of words) {
+    const bucket = index.get(w);
+    if (bucket) { for (const e of bucket) if (e.re.test(lowerTitle)) return e.phrase; }
+  }
+  return null;
 }
 
 /**
@@ -1107,11 +1164,7 @@ function buildPhraseIndex(phrases) {
  * `vocab.phrases`, reached through the rarest-word anchor index.
  */
 function phraseIndexMatches(index, lowerTitle, words) {
-  for (const w of words) {
-    const bucket = index.get(w);
-    if (bucket) { for (const re of bucket) if (re.test(lowerTitle)) return true; }
-  }
-  return false;
+  return phraseIndexMatch(index, lowerTitle, words) !== null;
 }
 
 function corpus() {
@@ -1328,6 +1381,76 @@ function titleNamesFinish(title, ctx = {}) {
 }
 
 /**
+ * WHICH WORD MADE `titleNamesFinish` SAY YES -- excluding the serial.
+ *
+ * CF-A-SERIAL-ALONE-IS-NOT-A-FINISH-NAME (GATE 3 slot-31 audit, 2026-09-04).
+ * `titleNamesFinish` opens with `if (titleStatesSerial(t)) return true`, which
+ * is right for the question IT answers ("could this sale be a parallel?") and
+ * wrong for the question GUARD 9 asks ("does this title NAME a finish the
+ * derivation dropped?"). A plain base card listed "#/999" states a serial and
+ * names no finish at all; refusing it would refuse every serial-numbered base
+ * the checklist genuinely defines, which is GUARD 2's question and not this
+ * one.
+ *
+ * So this returns the WORD -- the phrase or token from the product's own
+ * vocabulary -- or null when the only witness was the serial. It is the same
+ * walk `titleNamesFinish` performs, in the same order, minus that first line,
+ * so the two can never disagree about anything except the serial: a title this
+ * returns a word for is a title `titleNamesFinish` answers true for, by
+ * construction.
+ *
+ * The word is returned rather than a boolean because a refusal that names its
+ * evidence is what a repair list is built from -- the same discipline GUARD 4's
+ * `checklist-lists:` suffix follows.
+ */
+function titleFinishWitness(title, ctx = {}) {
+  const t = lower(title);
+  if (!t) return null;
+  const vocab = vocabularyFor(ctx?.year ?? ctx?.cardYear ?? null, ctx?.setKey ?? "");
+  const words = titleWords(t);
+  const keys = [];
+  for (const w of words) {
+    keys.push(w);
+    if (w.includes("-")) for (const part of w.split("-")) if (part) keys.push(part);
+  }
+  // Phrases first, exactly as `titleNamesFinish` orders them: a two-word
+  // finish ("silver foil") is a better witness than either of its halves.
+  // THE PRODUCT-WORD SUPPRESSION APPLIES TO PHRASES TOO, and the token walk
+  // gets it for free while the phrase index does not. `isFinishToken` refuses
+  // a word that is one of THIS card's own setKey words ("a token that is one
+  // of this card's own setKey words names the set on this card, whatever it
+  // names elsewhere"); the phrase index is a separate structure and never
+  // consulted it. Two defects followed, both measured:
+  //
+  //   "2000 Upper Deck Black Diamond #22 Base" on `upper-deck-black-diamond`
+  //       matched the phrase "black diamond" -- the PRODUCT'S OWN NAME read as
+  //       a finish, refusing a control the collapse suite pins as writable.
+  //   "1995 Collectors Choice GOLD Signature #46" on `collectors-choice`
+  //       matched "choice gold" (from the real parallel "Choice Gold Optic")
+  //       ahead of "gold signature", because the index returns the FIRST
+  //       bucket hit and `choice` is this product's own set word.
+  //
+  // So a phrase is judged on the words it contributes BEYOND the set name: the
+  // set's own words are struck out, and a phrase left with nothing is the
+  // product's name and is skipped. The remaining candidates are ranked by how
+  // many words they contribute, longest first, so the phrase that says the
+  // most about the FINISH wins over one that merely overlaps the set name.
+  const setWords = new Set(setKeyTokens(ctx?.setKey ?? ""));
+  const contributes = (p) => p.split(/[\s-]+/).filter((w) => w && !setWords.has(w)).length;
+  const phrases = phraseIndexMatchAll(vocab.phraseIndex, t, keys)
+    .filter((p) => contributes(p) > 0)
+    .sort((a, b) => contributes(b) - contributes(a) || b.length - a.length);
+  if (phrases.length) return phrases[0];
+  for (const w of words) {
+    if (vocab.isFinishToken(w)) return w;
+    if (w.includes("-")) {
+      for (const part of w.split("-")) if (part && vocab.isFinishToken(part)) return part;
+    }
+  }
+  return null;
+}
+
+/**
  * Does the checklist list this parallel name for this product? The IMPROVE
  * guard's positive evidence: a derived parallel that the product's own
  * checklist names is a real parallel of THIS card, not a product word the
@@ -1399,7 +1522,8 @@ module.exports = {
   HAND_STOPWORD_EXCEPTIONS, HAND_STOPWORD_EXCEPTION_CEILING,
   buildVocabulary, vocabularyFor, vocabularyStats, isProductWord, setKeyTokens,
   buildPhraseIndex, phraseIndexMatches,
-  titleNamesFinish, titleStatesSerial, serialFromTitle, checklistListsParallel,
+  titleNamesFinish, titleFinishWitness, titleStatesSerial, serialFromTitle, checklistListsParallel,
+  phraseIndexMatch, phraseIndexMatchAll, phraseIndexMatches,
   productKey, nameTokens, titleWords, _reset,
   // ---- the audit-gate leak fixes (2026-09-03) ----
   // leak 1: the derived parallel must carry every finish family the title names

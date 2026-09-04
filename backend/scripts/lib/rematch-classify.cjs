@@ -1485,6 +1485,19 @@ const DISTINCT_PRODUCT_SETKEYS = [
   // was collapsing every one of these into `leaf` inside matchKnownProductLine.
   "leaf-metal", "leaf-limited", "leaf-certified", "leaf-certified-materials",
   "leaf-signature-series", "leaf-rookies-and-stars",
+  // -- The 1990s named inserts and food issues (GATE 3 slot-31 audit,
+  //    2026-09-04). A named insert shares its flagship's brand word and NOT
+  //    its checklist: Upper Deck Special Edition #31 is Olajuwon while base
+  //    1995-96 Upper Deck #31 is another player, and 1978 Topps Holsum is a
+  //    33-card food issue against Topps's 528. Folding either way merges two
+  //    different cards' pools.
+  "upper-deck-special-edition", "upper-deck-jordan-collection",
+  "upper-deck-milk-caps", "topps-holsum",
+  // 1995 Collector's Choice Special Edition is the one product in this family
+  // the catalog ALREADY backs (313 baseballcardpedia rows) and already a
+  // reconciliation fixed point -- named here so GUARD 6 and
+  // `derivationCollapsesProduct` fire on the rows that exist.
+  "collectors-choice-special-edition",
 ];
 
 /**
@@ -2159,7 +2172,6 @@ const SPECIALIZATION_PARENTS = Object.freeze({
   "pacific-prism": "pacific",
   "pacific-crown-collection": "pacific",
   "pacific-gold-crown-die-cuts": "pacific",
-  "uc3": "pinnacle",
 });
 
 /** The keys whose ladder edge this module mirrors from productSetKeys.ts --
@@ -2386,6 +2398,123 @@ function specializationStatedEvidence({
  * cards the checklist never listed ("Tie-Dye Prizm #/25" -> Base:/25,
  * "Disco /75" -> Base:/75).
  */
+
+/**
+ * IS THIS FINISH WITNESS STRONG ENOUGH TO REFUSE A WRITE?
+ *
+ * CF-A-COLOUR-IS-NOT-A-FINISH-CLAIM (GATE 3 slot-31 audit, 2026-09-04). The
+ * per-card vocabulary answers "could this word name a parallel of some
+ * product?", which is the right question for `titleNamesFinish` and TOO WIDE
+ * to refuse a write on. Measured over the 374 evidence rows of run
+ * 33915911825, refusing on ANY witness refuses 222 of them -- the witnesses
+ * include `astros`, `hof`, `two`, `championship`, `leaders` and `larry`,
+ * because a product with no corpus slice falls through to the 1,465-word
+ * global token set, where a team name that is somebody's parallel colour
+ * elsewhere reads as a finish here.
+ *
+ * NARROWING TO THE ADJUDICATED CORE cuts that to 33 and is still wrong, and
+ * the residue is the interesting part -- every remaining false positive is a
+ * BARE COLOUR standing for a person or a team:
+ *
+ *   "1978 Topps #20 Pete Rose"                 witness `rose`   (8 rows)
+ *   "1995 Bowman Nomar Garciaparra #249 Red Sox"  witness `red`
+ *   "Roberto Alomar 1995 Bowman #368 Blue Jays"   witness `blue`
+ *
+ * Refusing those would cost eight genuine improvements on one of the most
+ * traded vintage cards there is, and a FALSE refusal is a repair nobody can
+ * find -- the same cost GUARD 6's singular/plural note weighs.
+ *
+ * SO THE WITNESS MUST NAME A FINISH, NOT MERELY A COLOUR. A colour qualifies
+ * only in company: "Silver Foil" and "Gold Signature" are finishes, "Rose" and
+ * "Blue" are a man and a bird. This is the same ruling GUARD 6 makes one
+ * screen up ("A COLOUR IS NOT A PRODUCT NAME") applied to the finish axis, and
+ * it is why `signature` had to enter the vocabulary as the PHRASE "gold
+ * signature" rather than as a token.
+ *
+ * Measured with this rule on the same 374 rows: 15 refusals, and every one of
+ * them is a real product or a real parallel -- 11 Pacific Prism, 3 Topps Mini
+ * (both of which GUARD 6 independently refuses, so this guard is not carrying
+ * them alone), plus the Silver Foil and Gold Signature rows that no other
+ * guard sees. Zero false positives.
+ */
+const FINISH_NOUNS = new Set(
+  [...VOCAB.CORE_FINISH_TOKENS, ...VOCAB.FINISH_FAMILY_TOKENS, ...VOCAB.HAND_SPELLINGS]
+    .map((w) => lower(w)),
+);
+function finishWitnessIsNamed(witness) {
+  const parts = lower(witness).split(/[\s-]+/).filter(Boolean);
+  if (!parts.length) return false;
+  // Every word must be vocabulary this module recognises -- a phrase carrying
+  // an unrecognised word is a corpus artifact, not a finish name...
+  if (!parts.every((p) => FINISH_NOUNS.has(p) || FAMILY_COLOURS.has(p))) {
+    // ...unless the WHOLE phrase is a hand-listed one, which is a measured
+    // claim about a real parallel and outranks the token test that could not
+    // see it ("gold signature": `signature` is a corpus stopword by design).
+    return VOCAB.HAND_PHRASES.includes(lower(witness));
+  }
+  // ...and at least one of them must be a FINISH, not just a colour.
+  return parts.some((p) => FINISH_NOUNS.has(p));
+}
+
+/**
+ * NON-CARD FORMATS -- the things sold in the hobby that are NOT cards
+ * (GATE 3 slot-31 audit, Drew 2026-09-04: "a Pog is not a card").
+ *
+ * A milk cap, a pog, a disc, a coin, a pin and a sticker are collectibles a
+ * card brand printed and a card seller lists, and the derivation reads the
+ * brand and the `#N` off them exactly as it reads a card's:
+ *
+ *   "1995 UD Upper Deck Michael Jordan PSA 9 #1 Milk Cap"  -> upper-deck:1
+ *   "Michael Jordan 1995 UD Upper Deck #9 Milk Caps Pog"   -> upper-deck:9
+ *
+ * `upper-deck:1` is a CARD -- a different player's card -- and a pog's price
+ * in that pool is a number the card never sold for. The format is not a
+ * parallel of the card and not a lesser reading of it; it is a different
+ * object that happens to carry a number.
+ *
+ * THE RULE IS NEVER MINT, NOT NEVER MENTION. The refusal is on the WRITE, and
+ * only when the destination key is not itself the non-card product. That
+ * matters because several non-card formats ARE declared products with their
+ * own catalog rows -- `topps-coins` (49 rows), `king-b-discs` (301),
+ * `sportflics-superstar-discs` (20), `topps-stickers` (2,070), measured
+ * 2026-09-04 -- and a row ALREADY correctly filed on one of those is right
+ * where it is. Refusing it would be the mirror of the defect: a guard that
+ * cannot tell "this pog belongs on the pog product" from "this pog belongs on
+ * the card" would drive both to the same place.
+ *
+ * So the destination is asked first. If the key the write would land on
+ * already NAMES the format -- its segments contain the matched word -- the
+ * guard stands down and the ordinary gates decide. Otherwise the write is
+ * refused and the row stays exactly where it is, reported to Drew, which is
+ * what "never mint" means here: the classifier does not create the pog product
+ * and does not move the row onto it. A checklist for these formats is a
+ * separate acquisition, and until one exists the honest answer is absence.
+ *
+ * DELIBERATELY NOT `-cards`-suffixed formats. "Trading Card Game", "card" and
+ * "insert" are card words and are absent from this list; every entry here is
+ * an object you cannot put in a nine-pocket page.
+ */
+const NON_CARD_FORMAT_RE = /\b(?:milk[\s-]?caps?|pogs?|slammers?|discs?|coins?|pins?|stickers?|decals?|tattoos?|magnets?|bottle[\s-]?caps?)\b/i;
+
+/** The non-card format word this title states, or null. */
+function nonCardFormatNamed(title) {
+  const m = NON_CARD_FORMAT_RE.exec(String(title ?? ""));
+  return m ? lower(m[0]).replace(/[\s-]+/g, "-") : null;
+}
+
+/** Does `setKey` itself name this format? A key whose segments carry the
+ *  format's own word IS the format's product, and a row there is filed
+ *  correctly. Compared on the SINGULAR stem in both directions, the same
+ *  spelling-not-identity rule GUARD 6 uses: `topps-coins` names "coin". */
+function setKeyNamesFormat(setKey, format) {
+  if (!setKey || !format) return false;
+  const segs = new Set(lower(setKey).split("-").filter(Boolean));
+  const stem = (w) => (w.endsWith("s") ? w.slice(0, -1) : w);
+  // "milk-caps" arrives hyphenated; every one of its words must be present.
+  const words = format.split("-").filter(Boolean);
+  return words.every((w) => segs.has(w) || segs.has(stem(w)) || segs.has(`${stem(w)}s`));
+}
+
 function improveRefusals({ row, stored, derived, axes, parserSaysLot = false }) {
   const refusals = [];
   const title = str(row?.title);
@@ -2678,12 +2807,70 @@ function improveRefusals({ row, stored, derived, axes, parserSaysLot = false }) 
   // the Tiffany rows that SPECIALIZATION-STATED legitimately promotes are
   // untouched -- verified read-only on slot 19: 281 SPECIALIZATION-STATED
   // sample rows, and this guard refuses only the 7 that DROP the word.
+  //
+  // IT RUNS ON THE STORED KEY TOO, NOT ONLY THE DERIVED ONE -- THE FILL ARM
+  // (GATE 3 slot-31 audit, 2026-09-04). Nine of the twelve wrong rows in that
+  // audit changed NOTHING BUT `cardNumber`, because the stored setKey ALREADY
+  // equalled the flagship and the re-derivation agreed with it:
+  //
+  //   "1995-96 Upper Deck Special Edition #31 Hakeem Olajuwon"
+  //       upper-deck:?  ->  upper-deck:31      filled:cardNumber only
+  //   "1995 UD Upper Deck Michael Jordan PSA 9 #1 Milk Cap"
+  //       upper-deck:?  ->  upper-deck:1       filled:cardNumber only
+  //   "1978 Topps Holsum #32 Ken Houston"
+  //       topps:?       ->  topps:32           filled:cardNumber only
+  //
+  // Reading only `derived.setKey` was not wrong, it was HALF THE QUESTION. The
+  // guard's rule is "the title names a child of this key and the derivation
+  // answered the parent", and a derivation that answers the parent because the
+  // STORED row already said the parent is the same collapse -- it simply
+  // arrives with the setKey axis standing still. Filing Upper Deck Special
+  // Edition #31 onto `upper-deck:31` puts Olajuwon's price in another player's
+  // pool whether the key MOVED there or was already there.
+  //
+  // So the guard asks its question of BOTH keys, and refuses on either. The
+  // union is deliberate rather than a switch on which axis moved: a rule that
+  // depended on the axis diff would have to be re-derived every time a new
+  // axis becomes fillable, and this one does not care WHICH field the write
+  // touches -- a row whose product cannot be read has not earned a write on
+  // any axis of it, the same conclusion GUARD 5 reaches for a lot.
   {
-    const derivedKey = lower(derived?.setKey);
-    if (derivedKey && title) {
-      const children = SPECIALIZATION_CHILDREN_OF(derivedKey);
-      for (const child of children) {
-        const words = distinguishingWords(child, derivedKey);
+    const keys = [...new Set([lower(derived?.setKey), lower(stored?.setKey)].filter(Boolean))];
+    if (keys.length && title) {
+      const derivedSegs = new Set(lower(derived?.setKey).split("-").filter(Boolean));
+      const children = [...new Set(keys.flatMap((k) => SPECIALIZATION_CHILDREN_OF(k).map((c) => `${k}\u0000${c}`)))];
+      for (const pair of children) {
+        const [parentKey, child] = pair.split("\u0000");
+        // IT STAYS ONE-DIRECTIONAL, AND THE UNION IS WHY THAT NEEDED SAYING
+        // OUT LOUD (GATE 3 slot-31, 2026-09-04). The guard refuses a
+        // derivation that answered the PARENT to a title naming the CHILD. A
+        // derivation that already CARRIES the child's words states them itself
+        // and is the SPECIALIZATION-STATED promotion this classifier exists to
+        // make -- "1987 Topps Traded Tiffany #70T", stored `topps`, derived
+        // `topps-traded-tiffany`.
+        //
+        // Reading the STORED key as well as the derived one put that promotion
+        // in range for the first time: `topps` names `topps-tiffany` AND
+        // `topps-traded` as children, the title states both words, and the
+        // guard refused the very rows Drew ruled on (eed10b9b, 2,760 rows out
+        // of the base pools). Its own suite caught it -- 15 reds, four files.
+        //
+        // THE TEST IS THE WORDS, NOT THE LADDER, and two weaker drafts prove
+        // why. `child === derived.setKey` still refused the Maddux row: the
+        // offending child was `topps-tiffany` while the derivation answered
+        // `topps-traded-tiffany`. And the ladder cannot rescue it either --
+        // `specializationAncestry("topps-traded-tiffany")` is
+        // ["topps-traded", "topps"], so the two keys are SIBLINGS, not
+        // ancestor and descendant, and `isSpecializationOf` answers false.
+        //
+        // What is actually true of that row is that the derived key ALREADY
+        // SPELLS every word the refusal is about to complain was dropped:
+        // `tiffany` is right there in `topps-traded-tiffany`. A word the
+        // derivation carries is a word the derivation did not drop, whichever
+        // key surfaced the child -- which is the guard's own rule, stated
+        // about the answer rather than about the ladder that reached it.
+        const words = distinguishingWords(child, parentKey);
+        if (words.length && words.every((w) => derivedSegs.has(w))) continue;
         // EVERY distinguishing word must be stated. A child whose name adds
         // two words ("crown-collection") is not named by a title that states
         // only one of them, and a one-word test would refuse half the pool on
@@ -2729,9 +2916,121 @@ function improveRefusals({ row, stored, derived, axes, parserSaysLot = false }) 
           || (w.endsWith("s") && titleStatesWord(title, w.slice(0, -1)))
           || (!w.endsWith("s") && titleStatesWord(title, `${w}s`));
         if (words.every(statesWord)) {
-          refusals.push(`improve-title-names-a-product-the-derivation-dropped:${words.join("+")}@${derivedKey}|title-names:${child}`);
+          refusals.push(`improve-title-names-a-product-the-derivation-dropped:${words.join("+")}@${parentKey}|title-names:${child}`);
           break;
         }
+      }
+    }
+  }
+
+  // GUARD 8: A NON-CARD FORMAT NEVER LANDS ON A CARD.
+  //
+  // CF-A-POG-IS-NOT-A-CARD (Drew, GATE 3 slot-31 audit, 2026-09-04). Three of
+  // that audit's twelve wrong rows were milk caps -- a 1990s promotional disc
+  // Upper Deck printed with Jordan on it -- filed onto `upper-deck:1`,
+  // `upper-deck:5` and `upper-deck:9`, which are three other players' base
+  // cards. The derivation is not misreading anything: the title really does
+  // say "1995 UD Upper Deck" and really does say "#9". The object it names is
+  // simply not a card, so no card's pool is the right home for its price.
+  //
+  // See NON_CARD_FORMAT_RE above for the vocabulary and for why the
+  // destination is asked first -- `topps-coins` and `king-b-discs` are real
+  // products with real catalog rows, and a row already sitting on one of them
+  // is filed correctly and must not be refused.
+  //
+  // THE REFUSAL IS ON EVERY AXIS, not only the number. A pog's YEAR and BRAND
+  // are as right as any card's, but a row whose price does not belong in this
+  // pool is not improved by making its address more precise -- the same
+  // reasoning GUARD 5 applies to a lot. The row is reported and left alone.
+  {
+    const format = title ? nonCardFormatNamed(title) : null;
+    if (format) {
+      // The key the write would land on. `derived` when the derivation moved
+      // it, the stored key when the write only sharpens another axis -- the
+      // same both-keys reading GUARD 6's fill arm uses, and for the same
+      // reason: a fill onto a standing key is still a write into that pool.
+      const dest = [lower(derived?.setKey), lower(stored?.setKey)].filter(Boolean);
+      const landsOnTheFormat = dest.some((k) => setKeyNamesFormat(k, format));
+      if (!landsOnTheFormat) {
+        refusals.push(`improve-non-card-format:${format}@${dest[0] || "(none)"}`);
+      }
+    }
+  }
+
+  // GUARD 9: A TITLE THAT STATES A FINISH NEVER LANDS ON THE BASE POOL.
+  //
+  // CF-A-STATED-PARALLEL-IS-NOT-BASE (GATE 3 slot-31 audit, 2026-09-04 -- the
+  // last two of the twelve wrong rows).
+  //
+  //   "1995 Bowman *Silver Foil* HIDEO NOMO #238"
+  //       base-set:238:Base  ->  bowman:238:BASE
+  //   "1995 Collectors Choice - NOLAN RYAN - GOLD Signature #46"
+  //       unknown:46:Base    ->  collectors-choice:46:BASE
+  //
+  // while the CONTROL in the same evidence, one row apart, is right:
+  //
+  //   "1995 BOWMAN GOLD FOIL FOIL #254 JOHNNY DAMON"
+  //       base-set:254:Gold Foil -> bowman:254:Gold Foil
+  //
+  // WHY THE EXISTING GUARDS ALL STOOD DOWN, measured on these three rows:
+  //
+  //   GUARD 1 and GUARD 2 open with `axes.filled.includes("parallel")` and
+  //     `axes.filled.includes("printRun")`. Neither axis was FILLED here --
+  //     the stored parallel was already the string "Base" and the derivation
+  //     answered "Base" too, so the axis never moved and both guards were
+  //     unreachable. They are written for the derivation that INVENTS a
+  //     parallel, and this is the derivation that LOSES one.
+  //
+  //   GUARD 4 asks `familyTokensDroppedByDerivation`, and its vocabulary is
+  //     FINISH_FAMILY_TOKENS -- wave, vapor, etch, shimmer, mojo, prism: the
+  //     words that turn "<Colour> Refractor" into a different sibling. That
+  //     list deliberately excludes bare colours AND the base finishes, and
+  //     "foil" and "signature" are in NEITHER it nor the colour list. Measured:
+  //     `familyTokensDroppedByDerivation("...Silver Foil...", "", "bowman")`
+  //     returns [] -- the empty list, meaning "nothing dropped" -- so GUARD 4
+  //     had no opinion at all. It is not a bug in GUARD 4: a foil is not a
+  //     family sibling of a refractor, it is a finish in its own right.
+  //
+  // So the gap is exactly this: `titleNamesFinish` answers TRUE for all three
+  // titles (verified), the vocabulary KNOWS "Silver Foil" and "Gold Signature"
+  // are finishes, and nothing was asking it on this shape. The Gold Foil
+  // control passes not because a guard cleared it but because its parallel is
+  // NOT Base -- and that is precisely the test to write.
+  //
+  // THE RULE: if the title names a finish and the destination parallel is
+  // Base or blank, the write is refused. It is a claim about the DESTINATION,
+  // not about which axis moved, so it catches the fill arm and the standing
+  // arm alike -- the same lesson GUARD 6's fill arm records.
+  //
+  // IT IS NOT A DUPLICATE OF GUARD 1. Guard 1 refuses a parallel MINTED from a
+  // product word over a Base title -- the derivation claiming too much. This
+  // refuses a Base destination under a title that STATES a finish -- the
+  // derivation claiming too little. Opposite directions, and the audit found
+  // both.
+  //
+  // WHY IT DOES NOT REFUSE HALF THE POOL. `titleNamesFinish` is the per-card
+  // corpus vocabulary, which suppresses the product's OWN setKey words, so
+  // "1995 Bowman #254" does not read `bowman` as a finish and a plain base
+  // sale is untouched. The control that proves the boundary is pinned beside
+  // the fixtures: a bare "1989 Bowman #126 Bo Jackson Rookie" stays writable.
+  {
+    const destParallel = axisValue(derived, "parallel");
+    const storedParallel = axisValue(stored, "parallel");
+    // BOTH ends must be Base/blank. A row whose STORED parallel already names
+    // the finish is not this shape -- that is the Gold Foil control, and the
+    // question there is whether the derivation KEPT it, which GUARD 4 owns.
+    if (title && derived
+      && axisIsBlank("parallel", destParallel)
+      && axisIsBlank("parallel", storedParallel)) {
+      // A SERIAL ALONE IS NOT A FINISH NAME. `titleNamesFinish` opens with
+      // `if (titleStatesSerial(t)) return true`, so a plain base card listed
+      // "#/999" answers true on its print run alone and would be refused for
+      // naming no finish at all. GUARD 2 already owns the print-run question
+      // on a Base destination, so this guard asks `titleFinishWitness` --
+      // the same walk minus that first line, returning the WORD or null.
+      const witness = VOCAB.titleFinishWitness(title, { year, setKey });
+      if (witness && finishWitnessIsNamed(witness)) {
+        refusals.push(`improve-title-states-a-finish-over-a-base-destination:${witness}@${setKey}`);
       }
     }
   }
@@ -3967,6 +4266,10 @@ module.exports = {
   titleStatesWord, specializationStatedEvidence,
   PROTECTED_SOURCES, PROTECTED_MARKER_FIELDS, AXES, GENERIC_PARALLELS,
   GENERIC_SETKEYS, storedSetKeyIsBlank, RULED_COLLAPSE_PAIRS, ruledCollapsePair,
+  // GATE 3 slot-31 (2026-09-04): GUARD 8 and GUARD 9, exported piece by piece
+  // so a pin can drive one alone and the mutation check can revert one alone.
+  NON_CARD_FORMAT_RE, nonCardFormatNamed, setKeyNamesFormat,
+  FINISH_NOUNS, finishWitnessIsNamed,
   DISTINCT_PRODUCT_SETKEYS, SPECIALIZATION_CHILDREN_OF,
   FINISH_TOKENS, FINISH_PHRASES, FINISH_COLOR_TOKENS,
   provenanceTier, gradeToken, axisValue, axisIsBlank, diffAxes, classifyRow,
