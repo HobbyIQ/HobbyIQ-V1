@@ -49,6 +49,11 @@ struct EbayConnectView: View {
             .buttonStyle(.plain)
             .disabled(ebayStore.isConnecting || isReconnecting)
 
+            // CF-EBAY-RECONNECT-SURFACE (found by #1721). Only a WORKING
+            // connection gets the sync block and the routine reconnect row.
+            // In `.reconnectRequired` the notice above already carries the
+            // single primary action, and offering "Sync now" against a
+            // connection eBay has refused just produces an error.
             if ebayStore.connectionState == .connected {
                 syncPurchasesBlock
 
@@ -229,6 +234,13 @@ struct EbayConnectView: View {
         }
     }
 
+    // MARK: Connection status
+
+    /// CF-EBAY-RECONNECT-SURFACE (found by #1721). Three states, not two.
+    /// `connectionState == .connected` used to be the only thing this read,
+    /// so a connection eBay had already refused rendered in electric blue
+    /// with a generic message. The `.reconnectRequired` state now gets its
+    /// own colour, its own words, and its own primary action.
     private var connectionStatus: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("eBay Connection")
@@ -238,14 +250,81 @@ struct EbayConnectView: View {
 
             Text(ebayStore.connectedUser ?? "Not connected")
                 .font(.subheadline.weight(.bold))
-                .foregroundStyle(ebayStore.connectionState == .connected ? HobbyIQTheme.Colors.electricBlue : HobbyIQTheme.textSecondary)
+                .foregroundStyle(connectedUserTint)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-            Text(ebayStore.statusMessage ?? "Sign in to connect eBay.")
-                .font(.caption)
-                .foregroundStyle(HobbyIQTheme.textSecondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            if ebayStore.needsReconnect {
+                reconnectNotice
+            } else {
+                Text(ebayStore.statusMessage ?? "Sign in to connect eBay.")
+                    .font(.caption)
+                    .foregroundStyle(HobbyIQTheme.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
+    }
+
+    private var connectedUserTint: Color {
+        switch ebayStore.connectionState {
+        case .connected:
+            return HobbyIQTheme.Colors.electricBlue
+        case .reconnectRequired:
+            return HobbyIQTheme.Colors.warning
+        default:
+            return HobbyIQTheme.textSecondary
+        }
+    }
+
+    /// What happened, what it costs, and the single thing to do about it.
+    /// Copy mirrors apps/web/src/lib/ebayConnection.ts so the two clients
+    /// cannot drift into saying different things about the same state.
+    private var reconnectNotice: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(HobbyIQTheme.Colors.warning)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Reconnect required")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(HobbyIQTheme.Colors.warning)
+                    Text(ebayStore.reconnectDetail ?? "Your eBay connection stopped working. Purchases are not syncing. Reconnect to resume.")
+                        .font(.caption)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if let reason = ebayStore.reconnectReason, reason.isEmpty == false {
+                        Text("eBay said: \(reason)")
+                            .font(.caption2)
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                Spacer(minLength: 0)
+            }
+
+            Button {
+                Task { await reconnectEbay() }
+            } label: {
+                HStack(spacing: 6) {
+                    if isReconnecting {
+                        ProgressView().tint(HobbyIQTheme.Colors.pureWhite).controlSize(.small)
+                    }
+                    Text(isReconnecting ? "Starting…" : "Reconnect eBay")
+                        .font(.caption.weight(.bold))
+                }
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(HobbyIQTheme.Colors.electricBlue)
+                .clipShape(Capsule(style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .disabled(isReconnecting || ebayStore.isConnecting)
+            .accessibilityLabel("Reconnect eBay")
+        }
+        .padding(HobbyIQTheme.Spacing.medium)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(HobbyIQTheme.Colors.warning.opacity(0.12))
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
     }
 }
 

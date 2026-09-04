@@ -277,11 +277,36 @@ on:
           # Sharded on the MEASURED composite axis (cardYear, sportClass,
           # sha1(id) % parts) encoded in backend/data/rematch-shard-table.json:
           # 158 units in 32 slots, 1.07x spread. slot/slots select the slice.
+          #
+          # THE IMPROVE SUBCLASS: SPECIALIZATION-STATED (Drew's Maddux,
+          # 2026-09-04). #1715 taught the parser to read "Topps Traded
+          # Tiffany", but a setKey that MOVES lands in CONFLICT
+          # (changed:setKey) and CONFLICT never writes -- so the rematch could
+          # not repair one of the 365 rows in the pool that published $148
+          # against a $1,500 market. The subclass admits exactly one shape of
+          # changed:setKey: the stored key is an ANCESTOR of the derived key on
+          # the productSetKeys ladder AND the title states every word that
+          # distinguishes them AND the derived identity is backed by a named
+          # SCRAPED checklist AND no other axis moved AND the stored flagship's
+          # own checklist does not list the card. Any leg failing leaves the row
+          # CONFLICT, and the failing leg is named in the census.
+          #
+          # It needs NO new workflow input: the class IS IMPROVE, so
+          # `scope=improve` arms it and the existing canary gate covers it.
           - rematch-sold-comps
           # The canary gate the apply dispatcher runs BETWEEN census-clean and
           # apply. MODE=before captures the hand-verified pools' FMV inputs,
           # MODE=after compares and exits 5 on any regression. READ ONLY.
           - rematch-canary-check
+          # The SPECIALIZATION-STATED report, READ ONLY and with no --apply at
+          # all. Scoped by title vocabulary (tiffany | traded) rather than by
+          # shard, because that is how #1715 measured the two populations it
+          # named. Reports per (year, storedKey, derivedKey): eligible now,
+          # pending-a-checklist, and stays-CONFLICT broken out by failing leg --
+          # plus the report-only side census of pools carrying both a Tiffany
+          # and a non-Tiffany sale in ONE grade tier, which is the pricing
+          # damage as it stands today.
+          - census-specialization-stated
           # CF-THE-LIST-IS-THE-SCOPE (2026-09-01, four-values R2): move only the
           # sold_comps rows named in a committed list file. `scope` carries the
           # list path (default data/pool-relocations/2026-09-01-four-values.json);

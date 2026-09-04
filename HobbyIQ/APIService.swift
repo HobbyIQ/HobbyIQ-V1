@@ -4747,9 +4747,19 @@ struct PortfolioIQActionResponse: Decodable {
 struct EBayConnectionStatusResponse: Decodable {
     let connected: Bool?
     let connectedUser: String?
+    /// CF-EBAY-RECONNECT-SURFACE (found by #1721). "ok" or
+    /// "reconnect-required" from the backend's `getConnectionStatus`. This
+    /// field was already decoded but only ever used as fallback display text
+    /// for `statusMessage` — never branched on. `connected` stays TRUE when
+    /// eBay has refused the refresh token (a token record still exists), so
+    /// `connected` alone cannot tell a working connection from a dead one.
     let status: String?
     let message: String?
     let lastCheckedAt: String?
+    /// Why re-authorisation is needed. Null when the connection is healthy.
+    let reconnectReason: String?
+    /// ISO timestamp the connection was marked dead. Null when healthy.
+    let reconnectRequiredAt: String?
 }
 
 struct EBayConnectStartResponse: Decodable {
