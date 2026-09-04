@@ -35,17 +35,25 @@ describe("authority ordering, which the merge now follows", () => {
     }
   });
 
-  it("GAP: sales-attested is undeclared and falls to unknown", () => {
-    // It is a sales-derived source (attest-unnumbered-by-player builds rows
-    // from corroborated comps) but catalogAuthority does not name it, so it
-    // lands at rank 0 rather than the derived class's rank 1.
+  it("CLOSED: sales-attested is declared DERIVED, and ranks with its siblings", () => {
+    // This case was written as a GAP: sales-attested is a sales-derived source
+    // (attest-unnumbered-by-player builds rows from corroborated comps) that
+    // catalogAuthority did not name, so it landed at rank 0 instead of the
+    // derived class. The pin said so on the record, and said that declaring it
+    // later would be "a deliberate change with a failing test".
     //
-    // Safe in this direction — rank 0 loses to everything, so it can never
-    // outvote a checklist, which is the property that matters here. Pinned so
-    // the misclassification is on record rather than mistaken for intent, and
-    // so declaring it later is a deliberate change with a failing test.
-    expect(catalogAuthorityOf("sales-attested")).toBe("unknown");
-    expect(authorityRank("sales-attested")).toBeLessThan(authorityRank("ingest-auto-seed"));
+    // #1733 made exactly that change. Its ruling: a source's CLASS is decided
+    // by what produced the row, not by a word in its name — a derived row is
+    // not promoted by the word "checklist" and an attested one is not demoted
+    // by the word "attested". `sales-attested` is a derived row, so it is
+    // DERIVED, rank 1, alongside `ingest-auto-seed` rather than below it.
+    //
+    // The safety property the GAP relied on is unchanged and is re-pinned
+    // below: derived still loses to a checklist, so an attested row still
+    // cannot outvote a printed one.
+    expect(catalogAuthorityOf("sales-attested")).toBe("derived");
+    expect(authorityRank("sales-attested")).toBe(authorityRank("ingest-auto-seed"));
+    expect(authorityRank("sales-attested")).toBeLessThan(authorityRank("beckett-checklist"));
   });
 
   it("puts the scraped checklists in the checklist class", () => {

@@ -28,7 +28,18 @@ import {
 } from "../src/services/compiq/marketRead.service.js";
 import type { CardsightPricingResponse } from "../src/services/compiq/catalogSource.js";
 
-function makePricingWith(graded: Array<{ grader: string; grade: string; prices: number[] }>): CardsightPricingResponse {
+/**
+ * `rawPrices` feeds `pricing.raw.records`, which buildGradeBreakdown reduces
+ * to `observedRawMedian` — the value it passes to applyCrossGradedInversionGuard
+ * as the anchor, and therefore the value getGraderPremium buckets into a price
+ * band. Cases that only observe telemetry can leave it empty; a case that
+ * expects RECONSTRUCTION must supply it. See CF-EMPIRICAL-ONLY-NO-GRADER-MATRIX
+ * on the same-grader case below.
+ */
+function makePricingWith(
+  graded: Array<{ grader: string; grade: string; prices: number[] }>,
+  rawPrices: number[] = [],
+): CardsightPricingResponse {
   return {
     card: {
       card_id: "test-card",
@@ -36,7 +47,17 @@ function makePricingWith(graded: Array<{ grader: string; grade: string; prices: 
       number: "1",
       set: { set_id: "test", name: "Test Set", year: "2025", release: "Test" },
     } as never,
-    raw: { count: 0, records: [] },
+    raw: {
+      count: rawPrices.length,
+      records: rawPrices.map((p, i) => ({
+        title: `raw sample ${i}`,
+        price: p,
+        date: "2026-06-15T00:00:00Z",
+        source: "ebay",
+        url: null,
+        parallel_id: null,
+      } as never)),
+    },
     graded: graded.map(({ grader, grade, prices }) => ({
       company_name: grader,
       grades: [
@@ -250,10 +271,24 @@ describe("CF-CROSS-GRADER-INVERSION-TELEMETRY — same-grader guard still fires 
   });
 
   it("same-grader (PSA 10 < PSA 9) fires reconstruction AND cross-grader stays quiet", () => {
+    // CF-EMPIRICAL-ONLY-NO-GRADER-MATRIX (#1676, audit H-7, Drew's ruling):
+    // the reconstruction rebuilds the inverted median from the RATIO of two
+    // getGraderPremium answers, and that ladder now REFUSES (returns null)
+    // when no empirical cell covers the call. With no raw records this
+    // fixture passed no anchor at all, so the ladder had no price band to
+    // bucket into, both premiums came back null, and the guard correctly
+    // recorded `premium_unavailable` instead of reconstructing — it would
+    // otherwise have been rebuilding a real median on the deleted
+    // hand-curated matrix, which is exactly what the ruling forbids.
+    //
+    // A raw anchor is what a real card carries here, so the fixture now
+    // carries one: ~$40 raw buckets into "$25-49", where PSA 9 and PSA 10
+    // are both calibrated, and the reconstruction the case is named for
+    // runs on measured evidence.
     const pricing = makePricingWith([
       { grader: "PSA", grade: "10", prices: [100, 110, 120] },
       { grader: "PSA", grade: "9", prices: [200, 210, 220, 230] },
-    ]);
+    ], [38, 40, 42]);
     buildGradeBreakdown(pricing, null);
     const events = logSpy.mock.calls
       .map((c) => { try { return JSON.parse(String(c[0])); } catch { return null; } })

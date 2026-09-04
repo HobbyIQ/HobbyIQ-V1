@@ -1,57 +1,57 @@
 {
- "_note": "CF-HM-A-VARIATION-IS-A-RUNG golden. The rows the pre-change emitter produced for the part of each release this change makes NO claim about: everything outside a folded variation subset, outside the base category, and outside any anchor that received a fold. Those three are the only places rows are allowed to move. Regenerate only alongside a deliberate ruling.",
- "2026-topps-series-1-baseball": {
-  "rowCount": 10222,
-  "sha256": "cc46abafa9ad73cc5f8af7a43f4ad10f57f9ddf47ea16e3a4f77a5634e951d5d",
-  "firstFive": [
-   "insert-fanatics-redemption|FAN-9||false||Jordan Lawlar|",
-   "insert-in-the-name|ITN-KM||false||Ketel Marte|",
-   "insert-in-the-name|ITN-ES||false||Eugenio Suárez|",
-   "insert-real-one-relic|314||false||Corbin Carroll|",
-   "insert-real-one-relic|257||false||Geraldo Perdomo|"
-  ],
-  "lastFive": [
-   "auto-1991-topps-autograph|91A-CA|Gold|true|50|CJ Abrams|",
-   "auto-1991-topps-autograph|91A-CA|Orange|true|25|CJ Abrams|",
-   "auto-1991-topps-autograph|91A-CA|Black|true|10|CJ Abrams|",
-   "auto-1991-topps-autograph|91A-CA|Red|true|5|CJ Abrams|",
-   "auto-1991-topps-autograph|91A-CA|FoilFractor|true|1|CJ Abrams|"
-  ]
- },
- "2026-topps-chrome-baseball": {
-  "rowCount": 5609,
-  "sha256": "c87684e65cdfabc71b176e55206df1dbc4352b42e112ae9c5b66d501c1532879",
-  "firstFive": [
-   "insert-2025-mlb-commissioners-trophy|CT-1||false||Los Angeles Dodgers|",
-   "insert-diamond-moments|DM-33||false||George Bush|",
-   "insert-ink-strokes|IS-CC||false||Corbin Carroll|",
-   "insert-diamond-moments|DM-32||false||Luis Gonzalez|",
-   "insert-past-to-present|PTP-12||false||Luis Gonzalez|"
-  ],
-  "lastFive": [
-   "insert-big-ticket-players|BTP-15|Black Wave Refractor|false|10|James Wood|",
-   "insert-big-ticket-players|BTP-15|Black Refractor|false|10|James Wood|",
-   "insert-big-ticket-players|BTP-15|Red Refractor|false|5|James Wood|",
-   "insert-big-ticket-players|BTP-15|Red Wave Refractor|false|5|James Wood|",
-   "insert-big-ticket-players|BTP-15|SuperFractor|false|1|James Wood|"
-  ]
- },
- "2026-bowman-baseball": {
-  "rowCount": 18263,
-  "sha256": "1a961904aea6a1b5570b1d047f0d24e1c63609a248fe29eb80a5f0f606e7d58b",
-  "firstFive": [
-   "insert-bowman-scouts-top-100|BTP-81||false||Slade Caldwell|",
-   "insert-bowman-scouts-top-100|BTP-92||false||Tommy Troy|",
-   "insert-under-the-radar|UR-10||false||Ryan Waldschmidt|",
-   "insert-chrome-prospects|BCP-28||false||Carlos Virahonda|",
-   "insert-chrome-prospects|BCP-71||false||Enyervert Perez|"
-  ],
-  "lastFive": [
-   "auto-chrome-prospect-autograph|CPA-EW|SuperFractor|true|1|Eli Willits|1:65,916 Hobby; 1:17,035 Jumbo; 1:4,091 Breaker",
-   "auto-chrome-prospect-autograph|CPA-EW|Printing Plates|true|1|Eli Willits|1:17,282 Hobby; 1:4,311 Jumbo; 1:977 Breaker",
-   "insert-anime|BA-1|Black Refractor|false|10|Sadaharu Oh|1:25,870 Hobby; 1:9,156 Jumbo; 1:524 Breaker; 1:127,575 Blaster",
-   "insert-anime|BA-1|Red Refractor|false|5|Sadaharu Oh|1:46,565 Hobby; 1:18,312 Jumbo; 1:1,257 Breaker; 1:255,150 Blaster",
-   "insert-anime|BA-1|SuperFractor|false|1|Sadaharu Oh|1:211,659 Hobby; 1:91,560 Jumbo; 1:6,282 Breaker; 1:2,041,200 Blaster"
-  ]
- }
+  "_note": "CF-HM-A-VARIATION-IS-A-RUNG golden. The rows the pre-change emitter produced for the part of each release this change makes NO claim about: everything outside a folded variation subset, outside the base category, and outside any anchor that received a fold. Those three are the only places rows are allowed to move. Regenerate only alongside a deliberate ruling. REGENERATED 2026-09-04 for #1694 (CF-BLANK-MEANS-UNKNOWN-NEVER-BASE): classifyRung had required a printRun, a 1/1 flag or pack odds before it would believe a parallel was real, and dropped every unnumbered rung a source states without one. #1694 keeps those rungs with printRun BLANK. #1701 regenerated only 2026-bowman-baseball, so the series-1 and chrome entries here stayed on the pre-#1694 emitter and were red from the day they were written. The delta is exactly the unnumbered-parallel rows: +592 on series 1, +108 on chrome, 0 on bowman.",
+  "2026-topps-series-1-baseball": {
+    "rowCount": 10814,
+    "sha256": "20b9c4bdf3e11ec49e2ba052cdc8d5521fdea2cc5ac9c83da88d9ffb840f1dba",
+    "firstFive": [
+      "insert-fanatics-redemption|FAN-9||false||Jordan Lawlar|",
+      "insert-in-the-name|ITN-KM||false||Ketel Marte|",
+      "insert-in-the-name|ITN-ES||false||Eugenio Suárez|",
+      "insert-real-one-relic|314||false||Corbin Carroll|",
+      "insert-real-one-relic|257||false||Geraldo Perdomo|"
+    ],
+    "lastFive": [
+      "auto-1991-topps-autograph|91A-CA|Gold|true|50|CJ Abrams|",
+      "auto-1991-topps-autograph|91A-CA|Orange|true|25|CJ Abrams|",
+      "auto-1991-topps-autograph|91A-CA|Black|true|10|CJ Abrams|",
+      "auto-1991-topps-autograph|91A-CA|Red|true|5|CJ Abrams|",
+      "auto-1991-topps-autograph|91A-CA|FoilFractor|true|1|CJ Abrams|"
+    ]
+  },
+  "2026-topps-chrome-baseball": {
+    "rowCount": 5717,
+    "sha256": "2f559051cd182c9d47c830889203a35a563d360fa75190514df3d7280694fc91",
+    "firstFive": [
+      "insert-2025-mlb-commissioners-trophy|CT-1||false||Los Angeles Dodgers|",
+      "insert-diamond-moments|DM-33||false||George Bush|",
+      "insert-ink-strokes|IS-CC||false||Corbin Carroll|",
+      "insert-diamond-moments|DM-32||false||Luis Gonzalez|",
+      "insert-past-to-present|PTP-12||false||Luis Gonzalez|"
+    ],
+    "lastFive": [
+      "insert-big-ticket-players|BTP-15|Black Refractor|false|10|James Wood|",
+      "insert-big-ticket-players|BTP-15|Red Refractor|false|5|James Wood|",
+      "insert-big-ticket-players|BTP-15|Red Wave Refractor|false|5|James Wood|",
+      "insert-big-ticket-players|BTP-15|SuperFractor|false|1|James Wood|",
+      "insert-big-ticket-players|BTP-15|Geometric Refractor|false||James Wood|"
+    ]
+  },
+  "2026-bowman-baseball": {
+    "rowCount": 18263,
+    "sha256": "1a961904aea6a1b5570b1d047f0d24e1c63609a248fe29eb80a5f0f606e7d58b",
+    "firstFive": [
+      "insert-bowman-scouts-top-100|BTP-81||false||Slade Caldwell|",
+      "insert-bowman-scouts-top-100|BTP-92||false||Tommy Troy|",
+      "insert-under-the-radar|UR-10||false||Ryan Waldschmidt|",
+      "insert-chrome-prospects|BCP-28||false||Carlos Virahonda|",
+      "insert-chrome-prospects|BCP-71||false||Enyervert Perez|"
+    ],
+    "lastFive": [
+      "auto-chrome-prospect-autograph|CPA-EW|SuperFractor|true|1|Eli Willits|1:65,916 Hobby; 1:17,035 Jumbo; 1:4,091 Breaker",
+      "auto-chrome-prospect-autograph|CPA-EW|Printing Plates|true|1|Eli Willits|1:17,282 Hobby; 1:4,311 Jumbo; 1:977 Breaker",
+      "insert-anime|BA-1|Black Refractor|false|10|Sadaharu Oh|1:25,870 Hobby; 1:9,156 Jumbo; 1:524 Breaker; 1:127,575 Blaster",
+      "insert-anime|BA-1|Red Refractor|false|5|Sadaharu Oh|1:46,565 Hobby; 1:18,312 Jumbo; 1:1,257 Breaker; 1:255,150 Blaster",
+      "insert-anime|BA-1|SuperFractor|false|1|Sadaharu Oh|1:211,659 Hobby; 1:91,560 Jumbo; 1:6,282 Breaker; 1:2,041,200 Blaster"
+    ]
+  }
 }

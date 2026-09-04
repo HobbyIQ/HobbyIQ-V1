@@ -136,6 +136,17 @@ async function main() {
   const compute = require(
     path.join(distRoot, "services", "insights", "marketIndexCompute.service.js"),
   );
+  // CF-EVERY-WRITE-JOB-RECONCILES: this script has always reconciled its
+  // DELETES against their own intended lists, and verified the result by
+  // reading prod back. What it never did was reconcile the POINTS it
+  // upserts, and it did so under a private accounting rule the fleet-wide
+  // net cannot read — so `tests/everyWriteJobReconciles.test.ts` scored it
+  // as a writer that can finish green having written nothing, which was
+  // fair: nothing in the run tied `intended` to `written` for the rebuild
+  // itself. Same equation, stated in the shared vocabulary.
+  const { reportWrites } = require(
+    path.join(distRoot, "services", "ops", "writeReconciliation.js"),
+  );
 
   const sports = sportsArg
     ? sportsArg.split(",").map((s) => s.trim()).filter(Boolean)
@@ -317,6 +328,40 @@ async function main() {
         epochsUsed: r.epochsUsed,
       };
     }
+    // RECONCILE THE REBUILD ITSELF. A recompute OWNS every id in its span:
+    // `SERIES_DAYS` days per sport, and each day upserts exactly one point
+    // doc. `pointsWritten` counts the days that published a LEVEL;
+    // `pointsWithheld` counts the days that did not — the usedWeight floor
+    // fired, or the epoch had no basket — and since #1686 / #1687 those
+    // days upsert a LEVELLESS doc rather than skipping the write and
+    // leaving a stale doc standing. Both are writes.
+    //
+    // So `written` here is both counters: the reconciliation asks whether
+    // the docs the run owns actually landed, and every day's doc did.
+    // Withheld days are reported alongside — they are the number that says
+    // how much of the span published a level — but they are not `skipped`
+    // in the shared vocabulary, because nothing was skipped. Counting them
+    // as skipped would have reconciled by the same arithmetic while
+    // claiming the run declined writes it in fact performed, which is the
+    // class of untrue banner this whole net exists to catch.
+    const spanDays = svc.SERIES_DAYS;
+    const totalWritten = results.reduce((n, r) => n + (r.pointsWritten ?? 0), 0);
+    const totalWithheld = results.reduce((n, r) => n + (r.pointsWithheld ?? 0), 0);
+    console.log(JSON.stringify({
+      event: "market_index_rebuild_points_reconcile",
+      spanDays,
+      sports: results.length,
+      pointsPublished: totalWritten,
+      pointsWithheld: totalWithheld,
+      note: "a withheld day still upserts a levelless doc - both counters are writes",
+    }));
+    reportWrites({
+      job: "rebuild-market-indexes",
+      intended: spanDays * results.length,
+      written: totalWritten + totalWithheld,
+      skipped: 0,
+      failed: 0,
+    });
     // Re-read so the report quotes what actually landed.
     for (const sport of sports) {
       after[sport] = {

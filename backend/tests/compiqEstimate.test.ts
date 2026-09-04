@@ -154,8 +154,21 @@ describe("/api/compiq/estimate", () => {
     if (res.body.fairMarketValue !== null) {
       expect(typeof res.body.fairMarketValue).toBe("number");
       expect(res.body.fairMarketValue).toBeGreaterThanOrEqual(0);
-      expect(res.body.quickSaleValue).toBeLessThanOrEqual(res.body.fairMarketValue);
-      expect(res.body.premiumValue).toBeGreaterThanOrEqual(res.body.fairMarketValue);
+      // CF-EMPIRICAL-ONLY-NO-GRADER-MATRIX (#1676, audit H-7, Drew's
+      // ruling): the price LANES are nullable independently of
+      // fairMarketValue. computeEstimate receives raw-equivalent lanes and
+      // re-applies the requested grade's premium; when getGraderPremium
+      // refuses — no empirical cell for this (company, grade, family,
+      // sport) — quickSaleValue and premiumValue are set to null rather
+      // than published as a RAW price wearing a GRADE label. That is the
+      // point of the ruling, so the ordering only holds where both lanes
+      // are actually numbers.
+      if (typeof res.body.quickSaleValue === "number") {
+        expect(res.body.quickSaleValue).toBeLessThanOrEqual(res.body.fairMarketValue);
+      }
+      if (typeof res.body.premiumValue === "number") {
+        expect(res.body.premiumValue).toBeGreaterThanOrEqual(res.body.fairMarketValue);
+      }
     } else {
       // When FMV is null the sufficiency gate must explain why.
       expect(res.body.dataSufficiency).toBeDefined();
@@ -204,9 +217,17 @@ describe("/api/compiq/estimate", () => {
     expect(res.status).toBe(200);
     expect(res.body.failureReason).not.toBe("uncurated-subject-parallel");
     expect(res.body.mechanism).not.toBe("multiplier-anchored");
-    expect(typeof res.body.compsUsed).toBe("number");
-    expect(res.body.compsUsed).toBeGreaterThan(0);
-    expect(typeof res.body.estimate).toBe("number");
-    expect(res.body.estimate).toBeGreaterThan(0);
+    // The defect this case guards is mechanism-1 false-firing on an
+    // explicit "Base" parallel — asserted directly above. What it must NOT
+    // do is re-assert a priced number as a side condition: post
+    // CF-EMPIRICAL-ONLY-NO-GRADER-MATRIX (#1676, H-7) a response may
+    // legitimately carry a null price lane when no empirical grade cell
+    // covers the card, and `compsUsed`/`estimate` are not fields this
+    // route emits at all. Pin the priced-ness through the field the route
+    // actually publishes, and only when it published one.
+    expect(res.body.fairMarketValue === null || typeof res.body.fairMarketValue === "number").toBe(true);
+    if (typeof res.body.fairMarketValue === "number") {
+      expect(res.body.fairMarketValue).toBeGreaterThan(0);
+    }
   });
 });

@@ -369,14 +369,31 @@ describe("writeHoldingValuation — the helper upholds the contract it requires"
 // on a number that was in fact the strongest rung the engine has.
 //
 // #1677 made this structural rather than a per-site habit: the helper composes
-// `pricingSourceMeta` itself and stamps `method: rung ?? undefined` from the
-// SAME RungDeclaration it writes to `fmvRung`. One vocabulary in both fields,
-// by construction, at every routed site. The two vocabularies can no longer
-// diverge because there is now only one source for them.
+// `pricingSourceMeta` itself and stamps `method` from the SAME RungDeclaration
+// it writes to `fmvRung`. One vocabulary in both fields, by construction, at
+// every routed site. The two vocabularies can no longer diverge because there
+// is now only one source for them.
+//
+// CF-A-WITHHOLD-IS-VISIBLE-TO-THE-AUDITOR (#1690) refined the else-branch:
+// where the stamp used to read `rung ?? undefined`, a REFUSAL — which has no
+// rung by definition — now names its kind, `rung ?? (w.meta.withheld ?
+// "withheld" : undefined)`. An auditor filtering on `method` sees the
+// withhold instead of skipping a row that looks like it was never written.
+//
+// That does not touch the ruling this case exists for: when there IS a rung,
+// `method` is that rung and nothing else, and no caller-supplied method can
+// reach the field. So the pin asserts the load-bearing half — `method: rung`
+// with a fallback that is NOT a caller value — rather than the exact literal,
+// which was guarding an incidental spelling.
 describe("pricingSourceMeta.method carries the RUNG vocabulary", () => {
   it("the helper stamps method from the rung it writes, never from a caller's method field", () => {
     const composed = helperSrc.slice(helperSrc.indexOf("const meta = shouldWriteMeta"));
-    expect(composed, "the helper must stamp method from its own rung").toMatch(/method: rung \?\? undefined,/);
+    // The rung is the source, and the fallback may only be a literal or
+    // `undefined` — never anything read off `w.meta`'s method.
+    expect(composed, "the helper must stamp method from its own rung")
+      .toMatch(/method: rung \?\?[^,]*,/);
+    expect(composed, "the method fallback must not come from the caller")
+      .not.toMatch(/method: rung \?\? w\.meta\.method/);
     // The caller's meta has no `method` to pass — the field is not on the
     // interface, so a ladder method cannot reach `pricingSourceMeta.method`.
     const iface = helperSrc.slice(helperSrc.indexOf("meta?: {"), helperSrc.indexOf("writeMeta?:"));

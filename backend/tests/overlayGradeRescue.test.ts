@@ -22,16 +22,33 @@ const baseQuery = {
   cardNumber: "CPA-EHA",
 } as const;
 
+// confidenceFor() applies a 0.7 age penalty once the NEWEST sale in a bucket
+// is more than 60 days old, so a fixture written with literal 2026-07 dates
+// asserts one confidence before 2026-09-03 and a different one after. That is
+// not a property of the code under test — the same input silently changes
+// answer with the wall clock — and it is what turned this file red on
+// 2026-09-04 with no commit touching it (0.20 became 0.20 x 0.7 = 0.14).
+//
+// The dates are therefore anchored to `now`, keeping the exact day-to-day
+// ORDERING the assertions below depend on (newest/oldest per bucket, and the
+// raw span) while staying inside the recency window on every future run. The
+// window boundary itself is pinned separately, by a case that deliberately
+// sits outside it.
+const DAY_MS = 86_400_000;
+/** `days` ago, as the YYYY-MM-DD the helper parses. */
+const daysAgo = (days: number): string =>
+  new Date(Date.now() - days * DAY_MS).toISOString().slice(0, 10);
+
 const gradedComps = [
-  { saleDate: "2026-07-05", price: 500, gradeCompany: "PSA", gradeValue: 10 },
-  { saleDate: "2026-07-06", price: 550, gradeCompany: "PSA", gradeValue: 10 },
-  { saleDate: "2026-07-04", price: 300, gradeCompany: "PSA", gradeValue: 9 },
-  { saleDate: "2026-07-02", price: 100, gradeCompany: "BGS", gradeValue: 10 },
+  { saleDate: daysAgo(8), price: 500, gradeCompany: "PSA", gradeValue: 10 },
+  { saleDate: daysAgo(7), price: 550, gradeCompany: "PSA", gradeValue: 10 },
+  { saleDate: daysAgo(9), price: 300, gradeCompany: "PSA", gradeValue: 9 },
+  { saleDate: daysAgo(11), price: 100, gradeCompany: "BGS", gradeValue: 10 },
 ];
 const rawComps = [
-  { saleDate: "2026-07-01", price: 90 },
-  { saleDate: "2026-07-03", price: 110 },
-  { saleDate: "2026-07-02", price: 100 },
+  { saleDate: daysAgo(12), price: 90 },
+  { saleDate: daysAgo(10), price: 110 },
+  { saleDate: daysAgo(11), price: 100 },
 ];
 
 afterEach(() => {
@@ -76,6 +93,23 @@ describe("buildRescuedGradeEntries", () => {
     );
     // 2 comps in the < 60d recency window → base 0.20, no age penalty
     expect(psa10?.confidenceScore).toBe(0.2);
+  });
+
+  // The other half of the same rule, and the reason the fixture above is
+  // anchored to `now` rather than left to drift across the boundary: past 60
+  // days the base tier is multiplied by 0.7. Pinned explicitly so the penalty
+  // has a test of its own instead of being something the suite trips over
+  // once the calendar passes a literal date.
+  it("applies the 0.7 age penalty once the newest sale is over 60 days old", () => {
+    const stale = [
+      { saleDate: daysAgo(75), price: 500, gradeCompany: "PSA", gradeValue: 10 },
+      { saleDate: daysAgo(80), price: 550, gradeCompany: "PSA", gradeValue: 10 },
+    ];
+    const psa10 = buildRescuedGradeEntries(stale).find(
+      (e) => e.grade === "10" && e.grader === "PSA",
+    );
+    // base 0.20 (2 comps) x 0.7 age penalty
+    expect(psa10?.confidenceScore).toBe(0.14);
   });
 });
 
