@@ -224,6 +224,13 @@ async function main() {
   console.log(`${f(files.length)} files  source=${SOURCE} (${authority})  ${APPLY ? "APPLY" : "REPORT ONLY"}\n`);
 
   let rows = 0, written = 0, skippedRow = 0, noProduct = 0, failed = 0, files_ok = 0;
+  // Signed rows, counted alongside written. The BCP autograph work (#1700 /
+  // #1703) exists to make a signed card its own row, and "N rows written" is
+  // silent about whether any of them were autographs -- a lane that dropped
+  // every §Autographs section reports exactly the same number as one that read
+  // them. The canary for that work is "isAuto=true > 1 for 2011 topps-chrome",
+  // so the run has to state the figure the canary is about.
+  let signed = 0;
   // Counted directly, never by subtraction: a remainder derived as
   // intended-minus-everything-else makes the reconciliation balance by
   // construction and so can never disagree with itself.
@@ -312,7 +319,7 @@ async function main() {
             printRun: r.printRun ? Number(r.printRun) : null,
           });
           if (!slug || !slug.startsWith("hiq:")) { skippedRow++; return; }
-          if (!APPLY) { written++; return; }
+          if (!APPLY) { written++; if (r.isAuto === "true") signed++; return; }
 
           // TRUST THE CHECKLIST (Drew, 2026-08-28: "we have to stop looking for
           // just base and trust the checklist").
@@ -369,6 +376,7 @@ async function main() {
           // reconciles green having lost rows.
           if (!landed) { failed++; return; }
           written++;
+          if (r.isAuto === "true") signed++;
           // CF-THE-LABEL-IS-NOT-THE-ATTESTATION (2026-08-29, D3b). When the
           // merge keeps the existing row (another source, equal or higher
           // authority, equal or higher confidence), the write refreshed
@@ -412,6 +420,7 @@ async function main() {
   console.log(`  rows with player-name parallel ${f(playerNameParallel)}   <- a roster line, not a rung; skipped`);
   console.log(`  csv rows read          ${f(rows)}`);
   console.log(`  catalog rows written   ${f(written)}`);
+  console.log(`  ${APPLY ? "ingested" : "would ingest"} ${f(written)} rows (${f(signed)} signed)   <- signed = isAuto, from a section the page attested; never inferred from a rung name`);
   if (APPLY) console.log(`    of which kept the existing row ${f(keptExisting)}   <- same id already held by another source at equal/higher authority and confidence; only lastSeenAt moved, the row does NOT carry source=${SOURCE}`);
   {
     // The number that decides whether another cycle is needed, stated rather
