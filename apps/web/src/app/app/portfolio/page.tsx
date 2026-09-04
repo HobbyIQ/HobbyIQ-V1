@@ -16,6 +16,7 @@ import { ProvenanceChip } from "@/components/ProvenanceChip";
 // what is wrong with it.
 import { PricingLabelChips } from "@/components/PricingLabelChips";
 import { SellSignalChip } from "@/components/SellSignalChip";
+import { RowStretchedLink, RowEscapeHatch } from "@/components/HoldingRowLink";
 import { holdingProvenance } from "@/lib/rung";
 import { formatAsOf } from "@/lib/asOf";
 
@@ -657,9 +658,14 @@ function PortfolioPageBody() {
               </div>
             </label>
           ) : (
-            <Link key={h.id} href={`/app/portfolio/${encodeURIComponent(h.id)}`} className="block">
-              <HoldingRow h={h} />
-            </Link>
+            // CF-WEB-NO-NESTED-ANCHOR (Drew, 2026-09-04): the row is a plain
+            // container, NOT an anchor. Its link is stretched over each
+            // layout card from inside (see RowStretchedLink), which leaves
+            // the MISSING-identity fixer a sibling of that anchor instead of
+            // a descendant of it.
+            <div key={h.id} className="block">
+              <HoldingRow h={h} href={`/app/portfolio/${encodeURIComponent(h.id)}`} />
+            </div>
           ),
         )}
       </div>
@@ -843,7 +849,15 @@ function SortDirBtn({ value, onChange }: { value: SortDir; onChange: (d: SortDir
   );
 }
 
-function HoldingRow({ h }: { h: PortfolioHolding }) {
+// CF-WEB-NO-NESTED-ANCHOR (Drew, 2026-09-04): `href` is the row's own
+// destination. When given, each layout card carries ONE stretched anchor
+// covering it — replacing the outer <Link> that used to wrap this component
+// and swallow the "Fix identity" link into an invalid nested <a>. Omitted in
+// select mode, where the row is a checkbox <label> and must not navigate.
+function HoldingRow({ h, href }: { h: PortfolioHolding; href?: string }) {
+  const rowLink = href ? (
+    <RowStretchedLink href={href} label={`Open ${formatCardTitle(h)}`} />
+  ) : null;
   const title = formatCardTitle(h);
   const grade = formatGrade(h);
   const value = holdingDisplayValue(h);
@@ -985,14 +999,15 @@ function HoldingRow({ h }: { h: PortfolioHolding }) {
           >
             MISSING
           </span>
-          <Link
-            href={`/app/portfolio/${encodeURIComponent(h.id)}`}
-            className="text-[10px] font-semibold underline"
-            style={{ color: "var(--color-accent)" }}
-            onClick={(e) => e.stopPropagation()}
-          >
+          {/* CF-WEB-NO-NESTED-ANCHOR (Drew, 2026-09-04): this used to be a
+              bare <Link> INSIDE the row's outer <Link> — an <a> in an <a>.
+              The parser hoists the inner one out, and measured at 390px and
+              1280px the tap at this link's centre landed on the ROW, not on
+              the fixer. It is now a sibling of the row's stretched link
+              rather than a descendant of it. */}
+          <RowEscapeHatch href={`/app/portfolio/${encodeURIComponent(h.id)}`}>
             {h.proposedIdentity ? "Confirm identity →" : "Fix identity →"}
-          </Link>
+          </RowEscapeHatch>
         </>
       )}
     </>
@@ -1043,6 +1058,7 @@ function HoldingRow({ h }: { h: PortfolioHolding }) {
           3. The chips, wrapping freely in their own band where nothing can
              draw over them. */}
       <div className="hiq-card p-4 flex flex-col gap-3 md:hidden">
+        {rowLink}
         {/* The identity line. `formatCardTitle` composes year + product +
             parallel + player + number in that order, which is right for a
             wide row but puts the two parts that NAME the card — the player
@@ -1095,6 +1111,7 @@ function HoldingRow({ h }: { h: PortfolioHolding }) {
 
       {/* ── Desktop (md+): the original single-row layout, unchanged ─────── */}
       <div className="hiq-card p-4 md:p-5 hidden md:flex items-center gap-4">
+        {rowLink}
         {thumb}
 
         {/* Title + grade */}
