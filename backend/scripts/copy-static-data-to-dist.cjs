@@ -26,7 +26,18 @@ if (!fs.existsSync(src)) {
 // setkey-reconciliation.json is read by setKeyReconciliation.ts, which
 // normalizeSetKey calls on EVERY id it mints — so a missing copy here is not a
 // degraded feature, it is a throw on the first slug of the first request.
-const BUNDLED_FILES = ["bowman-parallels.json", "parallel-vocabulary.json", "setkey-reconciliation.json"];
+// checklist-parallel-names.json is read by playerSegmentIsAPerson.ts, which
+// every parseCardQuery call goes through. It is the vocabulary that keeps a
+// parallel out of a person's name ("Kawhi Leonard Tie-Dye"). Without the copy
+// the module degrades to its vintage hand list instead of throwing, so a
+// missing bundle here is SILENT -- it looks like a working deploy that has
+// quietly stopped stripping 36,699 checklist parallels. 6MB, copied once.
+const BUNDLED_FILES = [
+  "bowman-parallels.json",
+  "parallel-vocabulary.json",
+  "setkey-reconciliation.json",
+  "checklist-parallel-names.json",
+];
 
 fs.mkdirSync(dst, { recursive: true });
 let copied = 0;

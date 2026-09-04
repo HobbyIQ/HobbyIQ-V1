@@ -1,0 +1,1323 @@
+{
+  "_doc": "CF-A-PLAYER-SEGMENT-IS-A-PERSON census. READ-ONLY measurement of how corrupted the PLAYER field is on sold_comps rows. Nothing was written.",
+  "asOf": "2026-09-04",
+  "container": "sold_comps",
+  "requestCharge": 147074,
+  "pseudoNumberPopulation": {
+    "scanned": 115535,
+    "stored": {
+      "counts": {
+        "clean": 85865,
+        "finishToken": 6976,
+        "productToken": 15207,
+        "truncated": 4569,
+        "notPerson": 2902,
+        "blank": 16
+      },
+      "examples": {
+        "clean": [
+          {
+            "title": "1951 Topps Connie Mack's All-Stars Baseball #NNO Base",
+            "stored": "Walter Johnson",
+            "derived": "Walter Johnson",
+            "setKey": null,
+            "year": 1951,
+            "hobbyiqCardId": "hiq:baseball:1951:topps:player-connie-macks-all:base:no-auto",
+            "defects": [],
+            "finishHits": [],
+            "productHits": []
+          },
+          {
+            "title": "1923 V100 Willard's Chocolate Baseball #NNO Base",
+            "stored": "Ralph Perkins",
+            "derived": "Ralph Perkins",
+            "setKey": null,
+            "year": 1923,
+            "hobbyiqCardId": "hiq:baseball:1923:v100-willards-chocolate:player-willards-chocolate:base:no-auto",
+            "defects": [],
+            "finishHits": [],
+            "productHits": []
+          },
+          {
+            "title": "2003 Donruss Studio Baseball #NNO Jersey",
+            "stored": "Freddy Garcia",
+            "derived": "Freddy Garcia",
+            "setKey": null,
+            "year": 2003,
+            "hobbyiqCardId": "hiq:baseball:2003:donruss-studio:player-studio-jersey:jersey:no-auto",
+            "defects": [],
+            "finishHits": [],
+            "productHits": []
+          },
+          {
+            "title": "2003 Donruss Studio Baseball #NNO Jersey",
+            "stored": "Paul Konerko",
+            "derived": "Paul Konerko",
+            "setKey": null,
+            "year": 2003,
+            "hobbyiqCardId": "hiq:baseball:2003:donruss-studio:player-studio-jersey:jersey:no-auto",
+            "defects": [],
+            "finishHits": [],
+            "productHits": []
+          },
+          {
+            "title": "1947 Tip-Top Bread Baseball #NNO Base",
+            "stored": "Connie Ryan",
+            "derived": "Connie Ryan",
+            "setKey": null,
+            "year": 1947,
+            "hobbyiqCardId": "hiq:baseball:1947:tip-top-bread:player-tip-top-bread:base:no-auto",
+            "defects": [],
+            "finishHits": [],
+            "productHits": []
+          },
+          {
+            "title": "1947 Tip-Top Bread Baseball #NNO Base",
+            "stored": "Kirby Higbe",
+            "derived": "Kirby Higbe",
+            "setKey": null,
+            "year": 1947,
+            "hobbyiqCardId": "hiq:baseball:1947:tip-top-bread:player-tip-top-bread:base:no-auto",
+            "defects": [],
+            "finishHits": [],
+            "productHits": []
+          },
+          {
+            "title": "1964 Topps Stand-Up Baseball #NNO Base",
+            "stored": "Billy Williams",
+            "derived": "Billy Williams",
+            "setKey": null,
+            "year": 1964,
+            "hobbyiqCardId": "hiq:baseball:1964:topps:player-stand-up:base:no-auto",
+            "defects": [],
+            "finishHits": [],
+            "productHits": []
+          },
+          {
+            "title": "1947 Tip-Top Bread Baseball #NNO Base",
+            "stored": "Connie Ryan",
+            "derived": "Connie Ryan",
+            "setKey": null,
+            "year": 1947,
+            "hobbyiqCardId": "hiq:baseball:1947:tip-top-bread:player-tip-top-bread:base:no-auto",
+            "defects": [],
+            "finishHits": [],
+            "productHits": []
+          }
+        ],
+        "finishToken": [
+          {
+            "title": "1950 Callahan Hall of Fame Baseball #NNO Base",
+            "stored": "Ray Cracker Schalk",
+            "derived": "Ray Cracker Schalk",
+            "setKey": null,
+            "year": 1950,
+            "hobbyiqCardId": "hiq:baseball:1950:callahan-hall-of-fame:player-callahan-hall-fame:base:no-auto",
+            "defects": [
+              "finishToken"
+            ],
+            "finishHits": [
+              "ray"
+            ],
+            "productHits": []
+          },
+          {
+            "title": "1936 National Chicle Fine Pen Premiums R313 Baseball #NNO Base",
+            "stored": "Red Lucas",
+            "derived": "Red Lucas",
+            "setKey": null,
+            "year": 1936,
+            "hobbyiqCardId": "hiq:baseball:1936:national-chicle-fine-pen-premiums-r313:player-chicle-fine-pen-premiums:base:no-auto",
+            "defects": [
+              "finishToken"
+            ],
+            "finishHits": [
+              "red"
+            ],
+            "productHits": []
+          },
+          {
+            "title": "1964 Topps Stand-Up Baseball #NNO Base",
+            "stored": "Ray Culp",
+            "derived": "Ray Culp",
+            "setKey": null,
+            "year": 1964,
+            "hobbyiqCardId": "hiq:baseball:1964:topps:player-stand-up:base:no-auto",
+            "defects": [
+              "finishToken"
+            ],
+            "finishHits": [
+              "ray"
+            ],
+            "productHits": []
+          },
+          {
+            "title": "Milton Bradley 1970 Pete Rose Cincinnati Baseball Card Base Set OF 4/14/42 - Raw",
+            "stored": "Pete Rose",
+            "derived": "Pete Rose",
+            "setKey": null,
+            "year": 1970,
+            "hobbyiqCardId": "hiq:baseball:1970:milton-bradley:player-milton-bradley-pete-rose:base:no-auto",
+            "defects": [
+              "finishToken"
+            ],
+            "finishHits": [
+              "rose"
+            ],
+            "productHits": []
+          },
+          {
+            "title": "MTG Beta Edition, Ice Storm! 1993 Vintage Magic! - Raw 10",
+            "stored": "Ice Storm",
+            "derived": "Ice Storm",
+            "setKey": null,
+            "year": 1993,
+            "hobbyiqCardId": "hiq:tcg-other:1993:unknown:player-mtg-beta-ice-storm:base:no-auto",
+            "defects": [
+              "finishToken"
+            ],
+            "finishHits": [
+              "ice"
+            ],
+            "productHits": []
+          },
+          {
+            "title": "1952 Berk Ross RED SCHOENDIENST VGEX-EX St Louis Cardinals HOF Baseball Card - Raw 10",
+            "stored": "Red Schoendienst",
+            "derived": "Red Schoendienst",
+            "setKey": null,
+            "year": 1952,
+            "hobbyiqCardId": "hiq:baseball:1952:berk-ross:player-berk-ross-schoendienst:base:no-auto",
+            "defects": [
+              "finishToken"
+            ],
+            "finishHits": [
+              "red"
+            ],
+            "productHits": []
+          },
+          {
+            "title": "1952 Berk Ross Red Schoendienst St Louis Cardinals Poor Crease  - Raw 10",
+            "stored": "Red Schoendienst",
+            "derived": "Red Schoendienst",
+            "setKey": null,
+            "year": 1952,
+            "hobbyiqCardId": "hiq:baseball:1952:unknown:player-berk-ross-schoendienst-poor:base:no-auto",
+            "defects": [
+              "finishToken"
+            ],
+            "finishHits": [
+              "red"
+            ],
+            "productHits": []
+          },
+          {
+            "title": "1952 Berk Ross Ray Noble New York Giants VG - Raw 10",
+            "stored": "Ray Noble",
+            "derived": "Ray Noble",
+            "setKey": null,
+            "year": 1952,
+            "hobbyiqCardId": "hiq:baseball:1952:unknown:player-berk-ross-ray-noble:base:no-auto",
+            "defects": [
+              "finishToken"
+            ],
+            "finishHits": [
+              "ray"
+            ],
+            "productHits": []
+          }
+        ],
+        "productToken": [
+          {
+            "title": "1992 Hoops Basketball #NNO Base",
+            "stored": "USA Basketball Team",
+            "derived": "USA Basketball Team",
+            "setKey": null,
+            "year": 1992,
+            "hobbyiqCardId": "hiq:basketball:1992:unknown:player-hoops:base:no-auto",
+            "defects": [
+              "productToken"
+            ],
+            "finishHits": [],
+            "productHits": [
+              "usa",
+              "team"
+            ]
+          },
+          {
+            "title": "1992 Hoops Basketball #NNO Base",
+            "stored": "USA Basketball Team",
+            "derived": "USA Basketball Team",
+            "setKey": null,
+            "year": 1992,
+            "hobbyiqCardId": "hiq:basketball:1992:unknown:player-hoops:base:no-auto",
+            "defects": [
+              "productToken"
+            ],
+            "finishHits": [],
+            "productHits": [
+              "usa",
+              "team"
+            ]
+          },
+          {
+            "title": "1992 Hoops Basketball #NNO Base",
+            "stored": "USA Basketball Team",
+            "derived": "USA Basketball Team",
+            "setKey": null,
+            "year": 1992,
+            "hobbyiqCardId": "hiq:basketball:1992:unknown:player-hoops:base:no-auto",
+            "defects": [
+              "productToken"
+            ],
+            "finishHits": [],
+            "productHits": [
+              "usa",
+              "team"
+            ]
+          },
+          {
+            "title": "1992 Hoops Basketball #NNO Base",
+            "stored": "USA Basketball Team",
+            "derived": "USA Basketball Team",
+            "setKey": null,
+            "year": 1992,
+            "hobbyiqCardId": "hiq:basketball:1992:unknown:player-hoops:base:no-auto",
+            "defects": [
+              "productToken"
+            ],
+            "finishHits": [],
+            "productHits": [
+              "usa",
+              "team"
+            ]
+          },
+          {
+            "title": "1992 Hoops Basketball #NNO Base",
+            "stored": "USA Basketball Team",
+            "derived": "USA Basketball Team",
+            "setKey": null,
+            "year": 1992,
+            "hobbyiqCardId": "hiq:basketball:1992:unknown:player-hoops:base:no-auto",
+            "defects": [
+              "productToken"
+            ],
+            "finishHits": [],
+            "productHits": [
+              "usa",
+              "team"
+            ]
+          },
+          {
+            "title": "1992 Hoops Basketball #NNO Base",
+            "stored": "USA Basketball Team",
+            "derived": "USA Basketball Team",
+            "setKey": null,
+            "year": 1992,
+            "hobbyiqCardId": "hiq:basketball:1992:unknown:player-hoops:base:no-auto",
+            "defects": [
+              "productToken"
+            ],
+            "finishHits": [],
+            "productHits": [
+              "usa",
+              "team"
+            ]
+          },
+          {
+            "title": "1992 Hoops Basketball #NNO Base",
+            "stored": "USA Basketball Team",
+            "derived": "USA Basketball Team",
+            "setKey": null,
+            "year": 1992,
+            "hobbyiqCardId": "hiq:basketball:1992:unknown:player-hoops:base:no-auto",
+            "defects": [
+              "productToken"
+            ],
+            "finishHits": [],
+            "productHits": [
+              "usa",
+              "team"
+            ]
+          },
+          {
+            "title": "1992 Hoops Basketball #NNO Base",
+            "stored": "USA Basketball Team",
+            "derived": "USA Basketball Team",
+            "setKey": null,
+            "year": 1992,
+            "hobbyiqCardId": "hiq:basketball:1992:unknown:player-hoops:base:no-auto",
+            "defects": [
+              "productToken"
+            ],
+            "finishHits": [],
+            "productHits": [
+              "usa",
+              "team"
+            ]
+          }
+        ],
+        "truncated": [
+          {
+            "title": "2007 Pokemon Japanese Diamond & Pearl Secret of the Lakes #NNO Base",
+            "stored": "Magmortar LV.X",
+            "derived": "Magmortar LV.X",
+            "setKey": null,
+            "year": 2007,
+            "hobbyiqCardId": "hiq:pokemon:2007:unknown:player-pokemon-japanese-pearl-secret:base:no-auto",
+            "defects": [
+              "truncated"
+            ],
+            "finishHits": [],
+            "productHits": []
+          },
+          {
+            "title": "2007 Pokemon Japanese Diamond & Pearl Secret of the Lakes #NNO Base",
+            "stored": "Magmortar LV.X",
+            "derived": "Magmortar LV.X",
+            "setKey": null,
+            "year": 2007,
+            "hobbyiqCardId": "hiq:pokemon:2007:unknown:player-pokemon-japanese-pearl-secret:base:no-auto",
+            "defects": [
+              "truncated"
+            ],
+            "finishHits": [],
+            "productHits": []
+          },
+          {
+            "title": "2007 Pokemon Japanese Dawn Dash #NNO 1st Edition",
+            "stored": "Glaceon LV.X",
+            "derived": "Glaceon LV.X",
+            "setKey": null,
+            "year": 2007,
+            "hobbyiqCardId": "hiq:pokemon:2007:unknown:player-pokemon-japanese-dawn-dash:base:no-auto",
+            "defects": [
+              "truncated"
+            ],
+            "finishHits": [],
+            "productHits": []
+          },
+          {
+            "title": "2007 Pokemon Japanese Diamond & Pearl Secret of the Lakes #NNO Base",
+            "stored": "Magmortar LV.X",
+            "derived": "Magmortar LV.X",
+            "setKey": null,
+            "year": 2007,
+            "hobbyiqCardId": "hiq:pokemon:2007:unknown:player-pokemon-japanese-pearl-secret:base:no-auto",
+            "defects": [
+              "truncated"
+            ],
+            "finishHits": [],
+            "productHits": []
+          },
+          {
+            "title": "2007 POKEMON JAPANESE D&P GLACEON LVX HOLO DAWN DASH 1ST EDITION PSA 9",
+            "stored": "Glaceon LV.X",
+            "derived": "Glaceon LV.X",
+            "setKey": null,
+            "year": 2007,
+            "hobbyiqCardId": "hiq:pokemon:2007:unknown:player-pokemon-japanese-glaceon-lvx:base:no-auto",
+            "defects": [
+              "truncated"
+            ],
+            "finishHits": [],
+            "productHits": []
+          },
+          {
+            "title": "HP - Pokemon Japanese Dawn Dash DP4 Glaceon LVX Holo 1ST ED - Raw 10",
+            "stored": "Glaceon LV.X",
+            "derived": "Glaceon LV.X",
+            "setKey": null,
+            "year": 2007,
+            "hobbyiqCardId": "hiq:pokemon:2007:unknown:player-hp-pokemon-japanese-dawn:base:no-auto",
+            "defects": [
+              "truncated"
+            ],
+            "finishHits": [],
+            "productHits": []
+          },
+          {
+            "title": "2007 POKEMON JAPANESE DP DAWN DASH 1ST EDITION HOLO GLACEON LVX CGC 7.5 NRMT+",
+            "stored": "Glaceon LV.X",
+            "derived": "Glaceon LV.X",
+            "setKey": null,
+            "year": 2007,
+            "hobbyiqCardId": "hiq:pokemon:2007:unknown:player-pokemon-japanese-dp-dawn:base:no-auto",
+            "defects": [
+              "truncated"
+            ],
+            "finishHits": [],
+            "productHits": []
+          },
+          {
+            "title": "Glaceon LVX Holo 1st Edition DP4 Dawn Dash - Japanese Pokemon Card - 2007 - Raw 10",
+            "stored": "Glaceon LV.X",
+            "derived": "Glaceon LV.X",
+            "setKey": null,
+            "year": 2007,
+            "hobbyiqCardId": "hiq:pokemon:2007:unknown:player-glaceon-lvx-holo-dawn:base:no-auto",
+            "defects": [
+              "truncated"
+            ],
+            "finishHits": [],
+            "productHits": []
+          }
+        ],
+        "notPerson": [
+          {
+            "title": "2021 Pokemon SWSH FA/Mew Vmax Fusion Strike 114/264 PSA 10 Gem Mint",
+            "stored": "Pokemon Swsh Fa Mew",
+            "derived": "Pokemon Swsh Fa Mew",
+            "setKey": null,
+            "year": 2021,
+            "hobbyiqCardId": "hiq:pokemon:2021:bowman:player-pokemon-swsh-fa-mew:base:no-auto",
+            "defects": [
+              "notPerson",
+              "notPerson"
+            ],
+            "finishHits": [],
+            "productHits": []
+          },
+          {
+            "title": "2022 POKEMON BRILLIANT STARS GLORIA FULL ART TG26 RARE - PSA 10 GEM MINT",
+            "stored": "Pokemon Brilliant Gloria Full",
+            "derived": "Pokemon Brilliant Gloria Full",
+            "setKey": null,
+            "year": 2022,
+            "hobbyiqCardId": "hiq:pokemon:2022:unknown:player-pokemon-brilliant-gloria-full:base:no-auto",
+            "defects": [
+              "notPerson"
+            ],
+            "finishHits": [],
+            "productHits": []
+          },
+          {
+            "title": "Eevee 042/051 - B&W Spiral Force 1st Edition 2012 Pokemon Card - PSA 8 NM-MT",
+            "stored": "Eevee Spiral Force Pokemon",
+            "derived": "Eevee Spiral Force Pokemon",
+            "setKey": null,
+            "year": 2012,
+            "hobbyiqCardId": "hiq:pokemon:2012:unknown:player-eevee-spiral-force-pokemon:base:no-auto",
+            "defects": [
+              "notPerson"
+            ],
+            "finishHits": [],
+            "productHits": []
+          },
+          {
+            "title": "Pokemon Cresselia EX 1st Edition 2012 Freeze Bolt PSA 10 GEM MINT Full Art",
+            "stored": "Pokemon Cresselia Ex Freeze",
+            "derived": "Pokemon Cresselia Ex Freeze",
+            "setKey": null,
+            "year": 2012,
+            "hobbyiqCardId": "hiq:pokemon:2012:unknown:player-pokemon-cresselia-ex-freeze:base:no-auto",
+            "defects": [
+              "notPerson"
+            ],
+            "finishHits": [],
+            "productHits": []
+          },
+          {
+            "title": "2023 UD Nscc Promo #A-1 Bryce Young Achievement Purple #/75 PSA 10 GEM MT",
+            "stored": "Ud Nscc Promo Bryce",
+            "derived": "Ud Nscc Promo Bryce",
+            "setKey": null,
+            "year": 2023,
+            "hobbyiqCardId": "hiq:baseball:2023:unknown:player-ud-nscc-promo-bryce:base:no-auto:num-75",
+            "defects": [
+              "notPerson"
+            ],
+            "finishHits": [],
+            "productHits": []
+          },
+          {
+            "title": "PSA 10 GEM MT 2025 Pokemon CHN Pikachu G CBB1C 07 08/09",
+            "stored": "Mt Pokemon Chn Pikachu",
+            "derived": "Mt Pokemon Chn Pikachu",
+            "setKey": null,
+            "year": 2025,
+            "hobbyiqCardId": "hiq:pokemon:2025:unknown:player-mt-pokemon-chn-pikachu:base:no-auto",
+            "defects": [
+              "notPerson"
+            ],
+            "finishHits": [],
+            "productHits": []
+          },
+          {
+            "title": "PSA 10 GEM MINT 2020 Pokemon Full Art Butterfree VMAX SWSH Darkness Ablaze Card",
+            "stored": "Pokemon Full Art Butterfree",
+            "derived": "Pokemon Full Art Butterfree",
+            "setKey": null,
+            "year": 2020,
+            "hobbyiqCardId": "hiq:pokemon:2020:bowman:player-pokemon-full-art-butterfree:base:no-auto",
+            "defects": [
+              "notPerson"
+            ],
+            "finishHits": [],
+            "productHits": []
+          },
+          {
+            "title": "​2016 Pokemon XY Breakpoint M Scizor EX Full Art 120/122 PSA 8 NM-MT Holo Mega",
+            "stored": "Pokemon Xy Breakpoint Scizor",
+            "derived": "Pokemon Xy Breakpoint Scizor",
+            "setKey": null,
+            "year": 2016,
+            "hobbyiqCardId": "hiq:pokemon:2016:unknown:player-pokemon-xy-breakpoint-scizor:base:no-auto:num-122",
+            "defects": [
+              "notPerson",
+              "notPerson"
+            ],
+            "finishHits": [],
+            "productHits": []
+          }
+        ],
+        "blank": [
+          {
+            "title": "1966 Topps Rub-Offs Baseball #NNO Base",
+            "stored": "",
+            "derived": "",
+            "setKey": null,
+            "year": 1966,
+            "hobbyiqCardId": "hiq:baseball:1966:topps:player-rub-offs:base:no-auto",
+            "defects": [],
+            "finishHits": [],
+            "productHits": []
+          },
+          {
+            "title": "1966 Topps Rub-Offs Baseball #NNO Base",
+            "stored": "",
+            "derived": "",
+            "setKey": null,
+            "year": 1966,
+            "hobbyiqCardId": "hiq:baseball:1966:topps:player-rub-offs:base:no-auto",
+            "defects": [],
+            "finishHits": [],
+            "productHits": []
+          },
+          {
+            "title": "1966 Topps Rub-Offs Baseball #NNO Base",
+            "stored": "",
+            "derived": "",
+            "setKey": null,
+            "year": 1966,
+            "hobbyiqCardId": "hiq:baseball:1966:topps:player-rub-offs:base:no-auto",
+            "defects": [],
+            "finishHits": [],
+            "productHits": []
+          },
+          {
+            "title": "1966 Topps Rub-Offs Baseball #NNO Base",
+            "stored": "",
+            "derived": "",
+            "setKey": null,
+            "year": 1966,
+            "hobbyiqCardId": "hiq:baseball:1966:topps:player-rub-offs:base:no-auto",
+            "defects": [],
+            "finishHits": [],
+            "productHits": []
+          },
+          {
+            "title": "1966 Topps Rub-Offs Baseball #NNO Base",
+            "stored": "",
+            "derived": "",
+            "setKey": null,
+            "year": 1966,
+            "hobbyiqCardId": "hiq:baseball:1966:topps:player-rub-offs:base:no-auto",
+            "defects": [],
+            "finishHits": [],
+            "productHits": []
+          },
+          {
+            "title": "1966 Topps Rub-Offs Baseball #NNO Base",
+            "stored": "",
+            "derived": "",
+            "setKey": null,
+            "year": 1966,
+            "hobbyiqCardId": "hiq:baseball:1966:topps:player-rub-offs:base:no-auto",
+            "defects": [],
+            "finishHits": [],
+            "productHits": []
+          },
+          {
+            "title": "1966 Topps Rub-Offs Baseball #NNO Base",
+            "stored": "",
+            "derived": "",
+            "setKey": null,
+            "year": 1966,
+            "hobbyiqCardId": "hiq:baseball:1966:topps:player-rub-offs:base:no-auto",
+            "defects": [],
+            "finishHits": [],
+            "productHits": []
+          },
+          {
+            "title": "1966 Topps Rub-Offs Baseball #NNO Base",
+            "stored": "",
+            "derived": "",
+            "setKey": null,
+            "year": 1966,
+            "hobbyiqCardId": "hiq:baseball:1966:topps:player-rub-offs:base:no-auto",
+            "defects": [],
+            "finishHits": [],
+            "productHits": []
+          }
+        ]
+      }
+    },
+    "derived": {
+      "counts": {
+        "clean": 51583,
+        "finishToken": 75,
+        "productToken": 1016,
+        "truncated": 1171,
+        "notPerson": 2,
+        "blank": 61688
+      },
+      "examples": {
+        "truncated": [
+          {
+            "title": "1951 Topps Connie Mack's All-Stars Baseball #NNO Base",
+            "stored": "Walter Johnson",
+            "derived": "Connie Mack's",
+            "setKey": null,
+            "year": 1951,
+            "hobbyiqCardId": "hiq:baseball:1951:topps:player-connie-macks-all:base:no-auto",
+            "defects": [
+              "truncated"
+            ],
+            "finishHits": [],
+            "productHits": []
+          },
+          {
+            "title": "1964 Topps Stand-Up Baseball #NNO Base",
+            "stored": "Billy Williams",
+            "derived": "Stand-up",
+            "setKey": null,
+            "year": 1964,
+            "hobbyiqCardId": "hiq:baseball:1964:topps:player-stand-up:base:no-auto",
+            "defects": [
+              "truncated"
+            ],
+            "finishHits": [],
+            "productHits": []
+          },
+          {
+            "title": "2001 Fleer E-X Baseball #NNO Base",
+            "stored": "Chipper Jones",
+            "derived": "E-x",
+            "setKey": null,
+            "year": 2001,
+            "hobbyiqCardId": "hiq:baseball:2001:fleer:player-e-x:base:no-auto",
+            "defects": [
+              "truncated"
+            ],
+            "finishHits": [],
+            "productHits": []
+          },
+          {
+            "title": "1964 Topps Stand-Up Baseball #NNO Base",
+            "stored": "Bill Mazeroski",
+            "derived": "Stand-up",
+            "setKey": null,
+            "year": 1964,
+            "hobbyiqCardId": "hiq:baseball:1964:topps:player-stand-up:base:no-auto",
+            "defects": [
+              "truncated"
+            ],
+            "finishHits": [],
+            "productHits": []
+          },
+          {
+            "title": "1964 Topps Stand-Up Baseball #NNO Base",
+            "stored": "Billy Williams",
+            "derived": "Stand-up",
+            "setKey": null,
+            "year": 1964,
+            "hobbyiqCardId": "hiq:baseball:1964:topps:player-stand-up:base:no-auto",
+            "defects": [
+              "truncated"
+            ],
+            "finishHits": [],
+            "productHits": []
+          },
+          {
+            "title": "1964 Topps Stand-Up Baseball #NNO Base",
+            "stored": "Bill Mazeroski",
+            "derived": "Stand-up",
+            "setKey": null,
+            "year": 1964,
+            "hobbyiqCardId": "hiq:baseball:1964:topps:player-stand-up:base:no-auto",
+            "defects": [
+              "truncated"
+            ],
+            "finishHits": [],
+            "productHits": []
+          },
+          {
+            "title": "1964 Topps Stand-Up Baseball #NNO Base",
+            "stored": "Ray Culp",
+            "derived": "Stand-up",
+            "setKey": null,
+            "year": 1964,
+            "hobbyiqCardId": "hiq:baseball:1964:topps:player-stand-up:base:no-auto",
+            "defects": [
+              "truncated"
+            ],
+            "finishHits": [],
+            "productHits": []
+          },
+          {
+            "title": "1964 Topps Stand-Up Baseball #NNO Base",
+            "stored": "Bill White",
+            "derived": "Stand-up",
+            "setKey": null,
+            "year": 1964,
+            "hobbyiqCardId": "hiq:baseball:1964:topps:player-stand-up:base:no-auto",
+            "defects": [
+              "truncated"
+            ],
+            "finishHits": [],
+            "productHits": []
+          }
+        ],
+        "clean": [
+          {
+            "title": "1923 V100 Willard's Chocolate Baseball #NNO Base",
+            "stored": "Ralph Perkins",
+            "derived": "Willard's Chocolate",
+            "setKey": null,
+            "year": 1923,
+            "hobbyiqCardId": "hiq:baseball:1923:v100-willards-chocolate:player-willards-chocolate:base:no-auto",
+            "defects": [],
+            "finishHits": [],
+            "productHits": []
+          },
+          {
+            "title": "1947 Tip-Top Bread Baseball #NNO Base",
+            "stored": "Connie Ryan",
+            "derived": "Tip-top Bread",
+            "setKey": null,
+            "year": 1947,
+            "hobbyiqCardId": "hiq:baseball:1947:tip-top-bread:player-tip-top-bread:base:no-auto",
+            "defects": [],
+            "finishHits": [],
+            "productHits": []
+          },
+          {
+            "title": "1947 Tip-Top Bread Baseball #NNO Base",
+            "stored": "Kirby Higbe",
+            "derived": "Tip-top Bread",
+            "setKey": null,
+            "year": 1947,
+            "hobbyiqCardId": "hiq:baseball:1947:tip-top-bread:player-tip-top-bread:base:no-auto",
+            "defects": [],
+            "finishHits": [],
+            "productHits": []
+          },
+          {
+            "title": "1947 Tip-Top Bread Baseball #NNO Base",
+            "stored": "Connie Ryan",
+            "derived": "Tip-top Bread",
+            "setKey": null,
+            "year": 1947,
+            "hobbyiqCardId": "hiq:baseball:1947:tip-top-bread:player-tip-top-bread:base:no-auto",
+            "defects": [],
+            "finishHits": [],
+            "productHits": []
+          },
+          {
+            "title": "1966 Topps Rub-Offs Baseball #NNO Base",
+            "stored": "John Roseboro",
+            "derived": "Rub-offs",
+            "setKey": null,
+            "year": 1966,
+            "hobbyiqCardId": "hiq:baseball:1966:topps:player-rub-offs:base:no-auto",
+            "defects": [],
+            "finishHits": [],
+            "productHits": []
+          },
+          {
+            "title": "1950 Callahan Hall of Fame Baseball #NNO Base",
+            "stored": "Ray Cracker Schalk",
+            "derived": "Callahan",
+            "setKey": null,
+            "year": 1950,
+            "hobbyiqCardId": "hiq:baseball:1950:callahan-hall-of-fame:player-callahan-hall-fame:base:no-auto",
+            "defects": [],
+            "finishHits": [],
+            "productHits": []
+          },
+          {
+            "title": "1909 American Caramel E91-B Baseball #NNO Base",
+            "stored": "James P. Archer",
+            "derived": "Caramel",
+            "setKey": null,
+            "year": 1909,
+            "hobbyiqCardId": "hiq:baseball:1909:american-caramel-e91-b:player-american-caramel:base:no-auto",
+            "defects": [],
+            "finishHits": [],
+            "productHits": []
+          },
+          {
+            "title": "1969 Globe Imports Playing Cards Baseball #NNO 6 of Spades",
+            "stored": "Tommy John",
+            "derived": "Imports Spades",
+            "setKey": null,
+            "year": 1969,
+            "hobbyiqCardId": "hiq:baseball:1969:globe-imports-playing-cards:player-globe-imports-playing-cards:6-of-spades:no-auto",
+            "defects": [],
+            "finishHits": [],
+            "productHits": []
+          }
+        ],
+        "blank": [
+          {
+            "title": "2003 Donruss Studio Baseball #NNO Jersey",
+            "stored": "Freddy Garcia",
+            "derived": "",
+            "setKey": null,
+            "year": 2003,
+            "hobbyiqCardId": "hiq:baseball:2003:donruss-studio:player-studio-jersey:jersey:no-auto",
+            "defects": [],
+            "finishHits": [],
+            "productHits": []
+          },
+          {
+            "title": "2003 Donruss Studio Baseball #NNO Jersey",
+            "stored": "Paul Konerko",
+            "derived": "",
+            "setKey": null,
+            "year": 2003,
+            "hobbyiqCardId": "hiq:baseball:2003:donruss-studio:player-studio-jersey:jersey:no-auto",
+            "defects": [],
+            "finishHits": [],
+            "productHits": []
+          },
+          {
+            "title": "2001 Fleer Greats of the Game Baseball #NNO Base",
+            "stored": "Hack Wilson",
+            "derived": "",
+            "setKey": null,
+            "year": 2001,
+            "hobbyiqCardId": "hiq:baseball:2001:fleer:player-the-game:base:no-auto",
+            "defects": [],
+            "finishHits": [],
+            "productHits": []
+          },
+          {
+            "title": "2001 Donruss Signature Series Baseball #NNO Master Series",
+            "stored": "Orel Hershiser",
+            "derived": "",
+            "setKey": null,
+            "year": 2001,
+            "hobbyiqCardId": "hiq:baseball:2001:donruss-signature-series:player-master:master-series:no-auto",
+            "defects": [],
+            "finishHits": [],
+            "productHits": []
+          },
+          {
+            "title": "2001 Donruss Signature Series Baseball #NNO Master Series",
+            "stored": "Chipper Jones",
+            "derived": "",
+            "setKey": null,
+            "year": 2001,
+            "hobbyiqCardId": "hiq:baseball:2001:donruss-signature-series:player-master:master-series:no-auto",
+            "defects": [],
+            "finishHits": [],
+            "productHits": []
+          },
+          {
+            "title": "2002 Leaf Baseball #NNO Silver",
+            "stored": "Phil Rizzuto",
+            "derived": "",
+            "setKey": null,
+            "year": 2002,
+            "hobbyiqCardId": "hiq:baseball:2002:leaf:player-leaf:silver:no-auto",
+            "defects": [],
+            "finishHits": [],
+            "productHits": []
+          },
+          {
+            "title": "2001 Donruss Signature Series Baseball #NNO Master Series",
+            "stored": "Johnny Bench",
+            "derived": "",
+            "setKey": null,
+            "year": 2001,
+            "hobbyiqCardId": "hiq:baseball:2001:donruss-signature-series:player-master:master-series:no-auto",
+            "defects": [],
+            "finishHits": [],
+            "productHits": []
+          },
+          {
+            "title": "1931 W517 Baseball #NNO No Card Number Hand Cut",
+            "stored": "Paul Waner",
+            "derived": "",
+            "setKey": null,
+            "year": 1931,
+            "hobbyiqCardId": "hiq:baseball:1931:w517:player-no-number-hand:no-card-number-hand-cut:no-auto",
+            "defects": [],
+            "finishHits": [],
+            "productHits": []
+          }
+        ],
+        "productToken": [
+          {
+            "title": "1969 O-Pee-Chee Deckle Edge Baseball #NNO Base",
+            "stored": "Willie Mays",
+            "derived": "O-pee-chee",
+            "setKey": null,
+            "year": 1969,
+            "hobbyiqCardId": "hiq:baseball:1969:bowman:player-o-pee-chee-deckle-edge:base:no-auto",
+            "defects": [
+              "productToken"
+            ],
+            "finishHits": [],
+            "productHits": [
+              "pee",
+              "chee"
+            ]
+          },
+          {
+            "title": "1999-00 FLEER / SKYBOX FOCUS FRESH INK ON CARD AUTO OF ROSHOWN McLEOD - HAWKS - Raw",
+            "stored": "Roshown McLeod",
+            "derived": "Skybox On Roshown McLeod",
+            "setKey": null,
+            "year": 1999,
+            "hobbyiqCardId": "hiq:basketball:1999:fleer:player-skybox-focus-fresh-ink:base:auto",
+            "defects": [
+              "productToken"
+            ],
+            "finishHits": [],
+            "productHits": [
+              "skybox"
+            ]
+          },
+          {
+            "title": "1973-74 O-Pee-Chee Logo Decals Atlanta Flames Team #ATL - Raw 10",
+            "stored": "Atlanta Flames",
+            "derived": "O-pee-chee Decals Anta",
+            "setKey": null,
+            "year": 1973,
+            "hobbyiqCardId": "hiq:hockey:1973:o-pee-chee:player-o-pee-chee-decals-anta-team:base:no-auto",
+            "defects": [
+              "productToken"
+            ],
+            "finishHits": [],
+            "productHits": [
+              "pee",
+              "chee"
+            ]
+          },
+          {
+            "title": "1969-70 O-pee-Chee Stamps Red Berenson #NNO A - Raw 10",
+            "stored": "Red Berenson",
+            "derived": "O-pee-chee Stamps Berenson",
+            "setKey": null,
+            "year": 1969,
+            "hobbyiqCardId": "hiq:hockey:1969:o-pee-chee:player-o-pee-chee-stamps-berenson:base:no-auto",
+            "defects": [
+              "productToken"
+            ],
+            "finishHits": [],
+            "productHits": [
+              "pee",
+              "chee"
+            ]
+          },
+          {
+            "title": "1969-70 O-Pee-Chee With Player Stamp Red Berenson #20 - Raw 10",
+            "stored": "Red Berenson",
+            "derived": "O-pee-chee Stamp Berenson",
+            "setKey": null,
+            "year": 1969,
+            "hobbyiqCardId": "hiq:hockey:1969:o-pee-chee:player-o-pee-chee-with-player-stamp:base:no-auto",
+            "defects": [
+              "productToken"
+            ],
+            "finishHits": [],
+            "productHits": [
+              "pee",
+              "chee"
+            ]
+          },
+          {
+            "title": "2024 PWHL 1st Edition Young Guns Exclusives /100 Brianne Jenner PSA 9 Rookie RC",
+            "stored": "Pwhl Exclusives Brianne Jenner",
+            "derived": "Pwhl Brianne Jenner",
+            "setKey": null,
+            "year": 2024,
+            "hobbyiqCardId": "hiq:baseball:2024:unknown:player-pwhl-exclusives-brianne-jenner:base:no-auto",
+            "defects": [
+              "productToken"
+            ],
+            "finishHits": [],
+            "productHits": [
+              "pwhl"
+            ]
+          },
+          {
+            "title": "2023 Topps Composite Resurgence Peyton Manning Red Refractor /10 - PSA 9 Mint",
+            "stored": "Composite Resurgence Peyton Manning",
+            "derived": "Composite Resurgence Peyton Manning",
+            "setKey": null,
+            "year": 2023,
+            "hobbyiqCardId": "hiq:football:2023:topps:player-composite-resurgence-peyton-manning:red-refractor:no-auto",
+            "defects": [
+              "productToken"
+            ],
+            "finishHits": [],
+            "productHits": [
+              "resurgence"
+            ]
+          },
+          {
+            "title": "1980-81 O-Pee-Chee Guy Lafleur #82 Montreal Canadiens - Raw 10",
+            "stored": "Guy LaFleur",
+            "derived": "O-pee-chee Guy Lafleur",
+            "setKey": null,
+            "year": 1980,
+            "hobbyiqCardId": "hiq:hockey:1980:o-pee-chee:player-guy-lafleur:base:no-auto",
+            "defects": [
+              "productToken"
+            ],
+            "finishHits": [],
+            "productHits": [
+              "pee",
+              "chee"
+            ]
+          }
+        ],
+        "finishToken": [
+          {
+            "title": "Dipplin (Master Ball Pattern) Prismatic Evolutions #010/131 - Raw 10",
+            "stored": "Dipplin",
+            "derived": "Dipplin Prismatic Evolutions",
+            "setKey": null,
+            "year": 2025,
+            "hobbyiqCardId": "hiq:pokemon:2025:sv08-5:player-dipplin:master-ball:no-auto",
+            "defects": [
+              "finishToken"
+            ],
+            "finishHits": [
+              "prismatic"
+            ],
+            "productHits": []
+          },
+          {
+            "title": "Kim Zolciak-Biermann Auto 2024 Leaf Metal Pop Century 24/25 Prismatic Silver",
+            "stored": "Kim Zolciak-biermann Pop Century",
+            "derived": "Kim Zolciak-biermann Pop Prismatic",
+            "setKey": null,
+            "year": 2024,
+            "hobbyiqCardId": "hiq:baseball:2024:unknown:player-kim-zolciak-biermann-pop-century:base:auto:num-25",
+            "defects": [
+              "finishToken"
+            ],
+            "finishHits": [
+              "prismatic"
+            ],
+            "productHits": []
+          },
+          {
+            "title": "2024 Leaf Optichrome #B-2 GG Jackson Super Prismatic GOLD Superfractor #1/1",
+            "stored": "Leaf Optichrome Gg Jackson",
+            "derived": "Optichrome Gg Jackson Prismatic",
+            "setKey": null,
+            "year": 2024,
+            "hobbyiqCardId": "hiq:baseball:2024:bowman:player-leaf-optichrome-gg-jackson:superfractor:no-auto:num-1",
+            "defects": [
+              "finishToken"
+            ],
+            "finishHits": [
+              "prismatic"
+            ],
+            "productHits": []
+          },
+          {
+            "title": "2014 Leaf Metal Draft Prismatic Blue Trea Turner Rookie Auto /50 BGS 10 RC",
+            "stored": "Prismatic Trea Turner",
+            "derived": "Prismatic Trea Turner",
+            "setKey": null,
+            "year": 2014,
+            "hobbyiqCardId": "hiq:baseball:2014:bowman:player-prismatic-trea-turner:base:auto",
+            "defects": [
+              "finishToken"
+            ],
+            "finishHits": [
+              "prismatic"
+            ],
+            "productHits": []
+          },
+          {
+            "title": "Stephen Tobolowsky Auto 2024 Leaf Metal Pop Century 3/25 Prismatic Silver",
+            "stored": "Stephen Tobolowsky Pop Century",
+            "derived": "Stephen Tobolowsky Pop Prismatic",
+            "setKey": null,
+            "year": 2024,
+            "hobbyiqCardId": "hiq:baseball:2024:leaf:player-stephen-tobolowsky-pop-century:prismatic-silver:auto:num-25",
+            "defects": [
+              "finishToken"
+            ],
+            "finishHits": [
+              "prismatic"
+            ],
+            "productHits": []
+          },
+          {
+            "title": "RIGHT ARM OF THE FORBIDDEN ONE YUGIOH WPP3-JPS02 2022 PRISMATIC CGC 10 GEM MINT",
+            "stored": "Right Arm The Forbidden",
+            "derived": "Right Forbidden Yugioh Prismatic",
+            "setKey": null,
+            "year": 2022,
+            "hobbyiqCardId": "hiq:yugioh:2022:bowman:player-right-arm-the-forbidden:base:no-auto",
+            "defects": [
+              "finishToken"
+            ],
+            "finishHits": [
+              "prismatic"
+            ],
+            "productHits": []
+          },
+          {
+            "title": "Kate Harpring 2025 Leaf Metal On-Card Auto Prismatic /49 CGC Pristine 10 Graded",
+            "stored": "Kate Harpring Prismatic Pristine",
+            "derived": "Kate Harpring Prismatic Graded",
+            "setKey": null,
+            "year": 2025,
+            "hobbyiqCardId": "hiq:baseball:2025:leaf:player-kate-harpring-prismatic-pristine:base:auto",
+            "defects": [
+              "finishToken"
+            ],
+            "finishHits": [
+              "prismatic"
+            ],
+            "productHits": []
+          },
+          {
+            "title": "2025 Eevee 173 Prismatic Evolutions Elite Trainer Box CGC 9 Mint",
+            "stored": "Eevee Prismatic Evolutions Elite",
+            "derived": "Eevee Prismatic Evolutions Trainer",
+            "setKey": null,
+            "year": 2025,
+            "hobbyiqCardId": "hiq:pokemon:2025:unknown:player-eevee-prismatic-evolutions-elite:base:no-auto",
+            "defects": [
+              "finishToken"
+            ],
+            "finishHits": [
+              "prismatic"
+            ],
+            "productHits": []
+          }
+        ],
+        "notPerson": [
+          {
+            "title": "PSA 8 NM-MINT Gengar 70/214 Sm-Unbroken Bonds Reverse Holo",
+            "stored": "Gengar Sm-unbroken Bonds Reverse",
+            "derived": "Gengar Sm-unbroken Bonds Reverse",
+            "setKey": null,
+            "year": 2019,
+            "hobbyiqCardId": "hiq:pokemon:2019:unknown:player-gengar-sm-unbroken-bonds-reverse:base:no-auto",
+            "defects": [
+              "notPerson"
+            ],
+            "finishHits": [],
+            "productHits": []
+          },
+          {
+            "title": "2025 Gundam Card Game—Char's Gelgoog #GD01-023 Newtype Rising—Legend Rare Foil",
+            "stored": "Gundam Game Promo Duo",
+            "derived": "Gundam Char's Gelgoog Newtype",
+            "setKey": null,
+            "year": 2025,
+            "hobbyiqCardId": "hiq:baseball:2025:unknown:player-gundam-game-promo-duo:base:no-auto",
+            "defects": [
+              "notPerson"
+            ],
+            "finishHits": [],
+            "productHits": []
+          }
+        ]
+      }
+    }
+  },
+  "normalPopulation": {
+    "scanned": 500,
+    "counts": {
+      "clean": 500,
+      "finishToken": 0,
+      "productToken": 0,
+      "truncated": 0,
+      "notPerson": 0,
+      "blank": 0
+    },
+    "examples": {
+      "clean": [
+        {
+          "title": "2026 Bowman Eric Hartman Chrome Auto Gold Refractor 1st Prospect #/50 Braves",
+          "stored": "Eric Hartman",
+          "derived": "Eric Hartman",
+          "setKey": null,
+          "year": 2026,
+          "hobbyiqCardId": "hiq:baseball:2026:bowman:cpa-eha:gold-refractor:auto:num-50",
+          "defects": [],
+          "finishHits": [],
+          "productHits": []
+        },
+        {
+          "title": "Bowman Chrome 2026 1st Bowman Auto Eric Hartman Braves BCP-102 JSA auth CL69084",
+          "stored": "Eric Hartman",
+          "derived": "Eric Hartman",
+          "setKey": null,
+          "year": 2026,
+          "hobbyiqCardId": "hiq:baseball:2026:bowman:cpa-eha:base:auto",
+          "defects": [],
+          "finishHits": [],
+          "productHits": []
+        },
+        {
+          "title": "2026 Bowman Eric Hartman Chrome Auto Aqua Refractor /125 1st Prospect Braves",
+          "stored": "Eric Hartman",
+          "derived": "Eric Hartman",
+          "setKey": null,
+          "year": 2026,
+          "hobbyiqCardId": "hiq:baseball:2026:bowman:cpa-eha:aqua-refractor:auto",
+          "defects": [],
+          "finishHits": [],
+          "productHits": []
+        },
+        {
+          "title": "2026 Bowman Eric Hartman Chrome 1st Auto Atlanta Braves #CPA-EHA",
+          "stored": "Eric Hartman",
+          "derived": "Eric Hartman",
+          "setKey": null,
+          "year": 2026,
+          "hobbyiqCardId": "hiq:baseball:2026:bowman:cpa-eha:base:auto",
+          "defects": [],
+          "finishHits": [],
+          "productHits": []
+        },
+        {
+          "title": "Topps 2026 Bowman Eric Hartman CPA-EHA Chrome Prospect Auto 1st Braves",
+          "stored": "Eric Hartman",
+          "derived": "Eric Hartman",
+          "setKey": null,
+          "year": 2026,
+          "hobbyiqCardId": "hiq:baseball:2026:topps:cpa-eha:base:auto",
+          "defects": [],
+          "finishHits": [],
+          "productHits": []
+        },
+        {
+          "title": "ERIC HARTMAN 2026 Bowman 1st Chrome Prospect Auto Atlanta Braves #CPA-EHA",
+          "stored": "Eric Hartman",
+          "derived": "Eric Hartman",
+          "setKey": null,
+          "year": 2026,
+          "hobbyiqCardId": "hiq:baseball:2026:bowman:cpa-eha:base:auto",
+          "defects": [],
+          "finishHits": [],
+          "productHits": []
+        }
+      ]
+    }
+  }
+}

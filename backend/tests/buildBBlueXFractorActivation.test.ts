@@ -215,18 +215,37 @@ describe("CF-BUILDB-BLUE-ACTIVATE (C) — m1 pre-emption check (integration)", (
     // any fixture where variant-mismatch trips first. To actually exercise
     // m1 vs Build B routing at integration, the comp pool needs ≥3 BXF/150
     // sales (passes m1's curatedParallelCount + skips variant-mismatch) AND
-    // base autos in a title shape the player matcher accepts. Both are
-    // outside the byte-for-byte cherry-pick scope; surfaced in the HALT
-    // for follow-up coverage rather than inlined here.
+    // base autos in a title shape the player matcher accepts.
     //
-    // What this test DOES assert: the path the engine takes on a
-    // production-shape thin pool is variant-mismatch — confirming the
-    // line 563 edit doesn't unintentionally change the routing for the
-    // live Hartman holding's current comp shape.
-    expect(result.source).toBe("variant-mismatch");
-    // CF-VARIANT-MISMATCH-USE-RECENT-COMPS (2026-07-15): fairMarketValue now populated with median of fetched.comps when present.
+    // ── UPDATED 2026-09-04, CF-A-PLAYER-SEGMENT-IS-A-PERSON ──────────────
+    //
+    // The second of those two conditions is now MET, and it was met by
+    // fixing a defect rather than by changing this fixture. The comment
+    // above names the mechanism it depended on: "player_name_missing
+    // rejects base autos". Those rejections were not a property of the
+    // fixture, they were the PARSER MIS-READING IT. On
+    //
+    //     "2026 Bowman Chrome Prospects Blue X-Fractor Auto CPA-EHA Eric Hartman /150"
+    //
+    // the old parser derived the player as "Blue Cpa-eha Eric Hartman" — a
+    // colour and a card number welded onto the front of a person's name —
+    // so the comp's player never matched the holding's "Eric Hartman" and
+    // every base auto was rejected. The tier ladder therefore exhausted at
+    // T3 and the variant-mismatch rescue fired.
+    //
+    // With the player segment bounded to a person, the derived name IS
+    // "Eric Hartman", the base autos match, the pool is healthy, and the
+    // MAIN FMV PIPELINE runs — which is the correct answer for this shape
+    // and the one the comment above was describing as unreachable.
+    //
+    // So the assertion moves from `variant-mismatch` to `live`. This is not
+    // a relaxation: the sibling test in this same file
+    // (CF-BUILDB-FAMILY-ACTIVATE §3, "Charlie Condon ... purple refractor")
+    // still trips the variant-mismatch guard with
+    // `player_name_missing_from_comp×10`, so the rescue path remains pinned
+    // by a fixture whose comps genuinely do not carry the player.
+    expect(result.source).toBe("live");
     expect(result.fairMarketValue == null || (typeof result.fairMarketValue === "number" && result.fairMarketValue > 0)).toBe(true);
-    expect(result.estimatedValue ?? null).toBeNull();
   });
 });
 
