@@ -47,6 +47,44 @@
  * A canary that GAINS rows and holds its anchor PASSES, and the banner says so
  * -- the point is to catch damage, not to freeze the pool.
  *
+ * A VERDICT MUST BE ATTRIBUTED (2026-09-04, the second false halt).
+ *
+ * Every rule above answers "did this pool change?". None of them answered the
+ * question that decides whether THIS SHARD is damage: "did this shard change
+ * it?". sold_comps has many writers -- the CardHedge daily ingest, the nightly
+ * dedup, the Panini and tcgdexja lanes -- and an apply takes over an hour, so
+ * the pool moves under the gate no matter what the shard does.
+ *
+ * Two shards proved the gap. Both reconciled `intended 0 = written 0` -- their
+ * candidates had already been applied by an earlier pass -- and both exited 5.
+ * Slot 1 was failed on the slot-14 canary and the slot-26 canary; slot 2 on the
+ * same two. The same canary reported TWO DIFFERENT after-values in the two runs
+ * ($23.39 -> $4.69 at 08:04Z, $23.39 -> $2.85 at 08:15Z) because CardHedge was
+ * landing new sales the whole time. Read against the pool afterwards: 4 new CH
+ * rows in the 2025 bowman-draft bdc-1 pool and 7 in the 1986 fleer-stickers
+ * pool, all ingested between 07:50Z and 08:26Z, zero rows rekeyed in, zero
+ * evicted away, zero rekeys of any kind touching either slug. A shard that
+ * wrote nothing cannot have regressed a pool.
+ *
+ * So the gate now reads the apply's WRITE LEDGER (pool -> ids written, emitted
+ * by rematch-sold-comps into WRITE_LEDGER, same job, same runner) and splits
+ * every canary in two:
+ *
+ *   TOUCHED   the ledger names this canary's pool. The #1711 rules apply in
+ *             full and unchanged: losses must be accounted for by the eviction
+ *             marker, anchor moves are notes on a parallel canary under
+ *             eviction scope and strict on a base canary.
+ *   UNTOUCHED the ledger does not name it. This shard did not write here, so
+ *             anchor moves and row-count changes are NOTES naming the other
+ *             writers -- never exit 5. What survives untouched is only what no
+ *             writer may ever do: a PROTECTED row leaving, and a pool going
+ *             EMPTY. Those are alarms about the pool itself, not about whose
+ *             write did it, and they still stop the fleet.
+ *
+ * A MISSING ledger is not an excuse to pass. Without one the checker cannot
+ * attribute anything, so it falls back to treating every canary as TOUCHED --
+ * the old, strict behaviour. A gate degrades closed.
+ *
  * WHERE THIS SITS IN THE SEQUENCE (the apply dispatcher runs it, not the
  * fleet script -- a script cannot certify itself):
  *
@@ -81,6 +119,10 @@ const MODE = String(process.env.MODE || "check").trim();
 const BASELINE = String(process.env.BASELINE || "/tmp/rematch-canary-baseline.json");
 const CANARIES = String(process.env.CANARIES || path.join(__dirname, "..", "data", "rematch-canaries.json"));
 const TOL = Number(process.env.ANCHOR_TOLERANCE_PCT || 10);
+// The ledger the apply emits (pool -> ids written). Same job, same runner, so
+// the gate reads the file the apply just wrote. Absent -> attribute nothing
+// and stay strict; see "A VERDICT MUST BE ATTRIBUTED" above.
+const WRITE_LEDGER = String(process.env.WRITE_LEDGER || "/tmp/rematch-write-ledger.json").trim();
 
 const f = (n) => Number(n ?? 0).toLocaleString();
 const money = (n) => (n === null || n === undefined ? "-" : `$${Number(n).toFixed(2)}`);
@@ -120,8 +162,25 @@ function poolInputs(rows) {
  * Compare one canary's before/after inputs. Returns { ok, regressions[],
  * notes[] } -- `regressions` non-empty is a shard failure.
  */
-function compareCanary(canary, before, after, tolPct = TOL) {
+function compareCanary(canary, before, after, tolPct = TOL, touch) {
   const regressions = [], notes = [];
+  // ATTRIBUTION. `touch` is this canary's row in the apply's write ledger:
+  //   null      no ledger at all -> attribute nothing, stay strict (degrade closed)
+  //   {...}     the shard wrote in this pool  -> TOUCHED, the full rules apply
+  //   undefined the ledger exists and does NOT name this pool -> UNTOUCHED
+  //
+  // `undefined` and `null` mean OPPOSITE things here, so this argument must
+  // NOT carry a default: `touch = null` would silently turn "the ledger does
+  // not name this pool" (the common, relaxing case) into "there is no ledger"
+  // (the strict one), and the attribution would never fire. A caller that
+  // omits the argument entirely is a caller with no ledger, which is the
+  // strict reading -- so absence is normalised to null explicitly below.
+  const noLedger = arguments.length < 5 || touch === null;
+  const attributed = !noLedger;
+  const touched = noLedger || touch !== undefined;
+  const moved = touched && touch ? (Number(touch.fromCount ?? 0) + Number(touch.toCount ?? 0)) : 0;
+  if (attributed && !touched) notes.push(`this shard wrote NO rows in this pool -- changes below belong to other writers`);
+  else if (attributed && touched) notes.push(`this shard moved ${moved} row(s) in this pool (out ${Number(touch.fromCount ?? 0)}, in ${Number(touch.toCount ?? 0)})`);
   // A PARALLEL-POOL CANARY IS SUPPOSED TO LOSE BASE ROWS (2026-09-04).
   //
   // "rows went down" was written for the IMPROVE class, where a verified pool
@@ -150,11 +209,18 @@ function compareCanary(canary, before, after, tolPct = TOL) {
   const lost = before.rows - after.rows;
   if (after.rows < before.rows) {
     const explained = Number(after.evictedAway ?? 0);
-    if (lossIsExpected && explained >= lost) notes.push(`pool lost ${lost} row(s) to base eviction, all ${explained} accounted for by the eviction marker -- the intended effect`);
+    // A pool this shard never wrote in cannot have been drained by it. The
+    // nightly dedup retiring a duplicate id, or any other lane, is a NOTE.
+    if (!touched) notes.push(`pool changed by other writers: ${lost} fewer row(s) (${before.rows} -> ${after.rows}) -- this shard wrote nothing here`);
+    else if (lossIsExpected && explained >= lost) notes.push(`pool lost ${lost} row(s) to base eviction, all ${explained} accounted for by the eviction marker -- the intended effect`);
     else if (lossIsExpected) regressions.push(`pool LOST ${lost} row(s): ${before.rows} -> ${after.rows}, but only ${explained} carry the eviction marker -- ${lost - explained} unexplained`);
     else regressions.push(`pool LOST ${lost} row(s): ${before.rows} -> ${after.rows}`);
   }
-  else if (after.rows > before.rows) notes.push(`pool gained ${after.rows - before.rows} row(s) -- a mis-filed sale coming home`);
+  else if (after.rows > before.rows) {
+    const gained = after.rows - before.rows;
+    if (!touched) notes.push(`pool changed by other writers: +${gained} row(s) (${before.rows} -> ${after.rows}) -- this shard wrote nothing here`);
+    else notes.push(`pool gained ${gained} row(s) -- a mis-filed sale coming home`);
+  }
   if (after.rows === 0) regressions.push("pool is EMPTY");
   if (after.protectedRows < before.protectedRows) {
     const gone = before.protectedIds.filter((x) => !after.protectedIds.includes(x));
@@ -162,13 +228,22 @@ function compareCanary(canary, before, after, tolPct = TOL) {
   }
   if (before.anchor !== null && after.anchor !== null && before.anchor > 0) {
     const movePct = Math.abs((after.anchor - before.anchor) / before.anchor) * 100;
-    if (movePct > tolPct && lossIsExpected) notes.push(`anchor moved ${movePct.toFixed(1)}%: ${money(before.anchor)} -> ${money(after.anchor)} -- expected under base eviction, the leading edge is recomputed once mis-filed sales leave`);
+    // THE ANCHOR MOVES ON ITS OWN. It is the median of the newest 3 sales, so
+    // a single new sale from the CardHedge daily ingest redefines it -- which
+    // is exactly what failed two zero-write shards on 2026-09-04. An anchor
+    // move in a pool this shard never wrote in is news about the market, not
+    // damage by the shard.
+    if (movePct > tolPct && !touched) notes.push(`pool changed by other writers: anchor moved ${movePct.toFixed(1)}%: ${money(before.anchor)} -> ${money(after.anchor)} -- this shard wrote nothing here, the leading edge moved under new sales`);
+    else if (movePct > tolPct && lossIsExpected) notes.push(`anchor moved ${movePct.toFixed(1)}%: ${money(before.anchor)} -> ${money(after.anchor)} -- expected under base eviction, the leading edge is recomputed once mis-filed sales leave`);
     else if (movePct > tolPct) regressions.push(`anchor moved ${movePct.toFixed(1)}% (tolerance ${tolPct}%): ${money(before.anchor)} -> ${money(after.anchor)}`);
     else if (movePct > 0) notes.push(`anchor moved ${movePct.toFixed(1)}% within tolerance`);
   } else if (before.anchor !== null && after.anchor === null) {
+    // An anchor that vanished means the pool has no priced sale left. That is
+    // a statement about the pool, not about who emptied it -- it stands in
+    // every scope, touched or not, like PROTECTED and EMPTY.
     regressions.push(`anchor is gone: ${money(before.anchor)} -> none`);
   }
-  return { name: canary.name, slug: canary.slug, ok: regressions.length === 0, regressions, notes };
+  return { name: canary.name, slug: canary.slug, ok: regressions.length === 0, touched, attributed, moved, regressions, notes };
 }
 
 async function measure(pool, slug) {
@@ -205,6 +280,23 @@ async function measure(pool, slug) {
   const byId = new Map();
   for (const r of [...byPartition, ...byField]) if (!byId.has(r.id)) byId.set(r.id, r);
   return { ...poolInputs([...byId.values()]), evictedAway: Number(evicted[0] ?? 0) };
+}
+
+/**
+ * Read the apply's write ledger. Returns null when there is no ledger to read
+ * -- which makes every canary TOUCHED and the gate strict, because a checker
+ * that cannot attribute must not hand out passes it did not earn.
+ */
+function loadLedger(file) {
+  if (!file || !fs.existsSync(file)) return null;
+  try {
+    const doc = JSON.parse(fs.readFileSync(file, "utf8"));
+    const pools = doc.pools && typeof doc.pools === "object" ? doc.pools : {};
+    return { doc, pools };
+  } catch (e) {
+    console.error(`!! write ledger at ${file} is unreadable (${String(e?.message ?? e)}) -- falling back to STRICT, every canary treated as touched.`);
+    return null;
+  }
 }
 
 async function main() {
@@ -266,28 +358,61 @@ async function main() {
 
   if (!fs.existsSync(BASELINE)) { console.error(`FATAL: MODE=after but no baseline at ${BASELINE}. The gate cannot pass a shard it has no before for.`); process.exit(2); }
   const base = JSON.parse(fs.readFileSync(BASELINE, "utf8"));
+
+  // -- THE SHARD'S OWN WRITE LEDGER --------------------------------------
+  // Printed before the verdict so a halt NAMES THE ROWS: the reader sees what
+  // this shard actually moved before reading what it is being blamed for.
+  const ledger = loadLedger(WRITE_LEDGER);
+  console.log(`\nTHIS SHARD'S WRITE LEDGER  ${WRITE_LEDGER}`);
+  if (!ledger) {
+    console.log(`  NONE FOUND -- attribution unavailable, every canary is treated as TOUCHED and the strict rules apply.`);
+  } else {
+    const d = ledger.doc ?? {};
+    const names = Object.keys(ledger.pools);
+    console.log(`  slot ${d.slot ?? "?"}/${d.slots ?? "?"}  scope ${JSON.stringify(d.scope ?? "")}  runId ${d.runId ?? "-"}  written ${f(d.written ?? 0)}  pools touched ${f(names.length)}`);
+    if (!names.length) {
+      console.log(`  this shard wrote in NO pool. Nothing below can be damage it did --`);
+      console.log(`  any canary that moved was moved by another writer (ingest, dedup, a concurrent lane).`);
+    }
+    for (const slug of names.slice(0, 25)) {
+      const e = ledger.pools[slug];
+      const ids = [...(e.from ?? []), ...(e.to ?? [])].slice(0, 4);
+      console.log(`    ${slug}   out ${f(e.fromCount ?? 0)}  in ${f(e.toCount ?? 0)}${ids.length ? `   e.g. ${ids.join(", ")}` : ""}`);
+    }
+    if (names.length > 25) console.log(`    ... and ${f(names.length - 25)} more pool(s)`);
+  }
+
   const results = [];
   for (const c of canaries) {
     const b = base.inputs?.[c.slug];
     if (!b) { results.push({ name: c.name, slug: c.slug, ok: false, regressions: ["no baseline entry for this canary"], notes: [] }); continue; }
-    results.push(compareCanary(c, b, now[c.slug], base.tolerancePct ?? TOL));
+    // null = no ledger (strict); undefined = ledger exists, pool not named.
+    const touch = ledger === null ? null : ledger.pools[c.slug];
+    results.push(compareCanary(c, b, now[c.slug], base.tolerancePct ?? TOL, touch));
   }
 
   console.log(`\nCANARY VERDICT  (baseline ${base.capturedAt})`);
   for (const r of results) {
-    console.log(`  ${r.ok ? "PASS" : "FAIL"}  ${r.name}`);
+    // No tag on the "no baseline entry" rows (they never reached compareCanary)
+    // and none when there was no ledger to attribute with -- an unlabelled
+    // verdict is the honest rendering of an unattributed one.
+    const tag = !r.attributed ? "" : r.touched ? "  [TOUCHED]" : "  [untouched]";
+    console.log(`  ${r.ok ? "PASS" : "FAIL"}  ${r.name}${tag}`);
     for (const x of r.regressions) console.log(`        REGRESSION: ${x}`);
     for (const n of r.notes) console.log(`        ${n}`);
   }
   const failed = results.filter((r) => !r.ok);
   if (failed.length) {
     console.error(`\n!! ${failed.length} of ${results.length} canaries REGRESSED. This shard is damage, not an improvement.`);
+    for (const r of failed) console.error(`   ${r.touched === false ? "UNTOUCHED-POOL ALARM" : "attributed to this shard"}: ${r.name} -- ${r.regressions.join("; ")}`);
     console.error(`   STOP the fleet. Do not apply the next shard. The diff goes to Drew.`);
     process.exit(5);
   }
+  const otherWriters = results.filter((r) => r.notes.some((n) => n.startsWith("pool changed by other writers")));
   console.log(`\nall ${results.length} canaries hold -- the shard may stand, and the next shard may be censused.`);
+  if (otherWriters.length) console.log(`  ${otherWriters.length} pool(s) moved under OTHER writers during this apply -- noted above, not this shard's doing.`);
 }
 
-module.exports = { median, poolInputs, compareCanary };
+module.exports = { median, poolInputs, compareCanary, loadLedger };
 
 if (require.main === module) main().catch((e) => { console.error("FATAL:", e?.stack || e?.message); process.exit(3); });

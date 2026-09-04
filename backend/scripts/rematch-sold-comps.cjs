@@ -126,6 +126,16 @@ const RUN_MINUTES = Number(process.env.RUN_MINUTES || 140);
 const LIMIT = Number(process.env.LIMIT || 0);
 const YEARS = String(process.env.YEARS || "").split(",").map((s) => s.trim()).filter(Boolean).map(Number).filter(Number.isFinite);
 const CENSUS_OUT = String(process.env.CENSUS_OUT || "/tmp/rematch-census").trim();
+// THE WRITE LEDGER (2026-09-04): where the apply records which POOLS it moved
+// rows in and out of, so the canary gate that runs after it can ATTRIBUTE a
+// verdict instead of blaming this shard for every writer's changes. Written
+// even when nothing was written -- an empty ledger is the positive claim
+// "this shard touched no pool", which is the claim the 2026-09-04 halt needed.
+const WRITE_LEDGER_OUT = String(process.env.WRITE_LEDGER_OUT || "/tmp/rematch-write-ledger.json").trim();
+// Ids are capped per pool so a shard that moves 40k rows does not write a
+// 40k-id file; the COUNTS are exact regardless, and the counts are what the
+// gate's attribution decision reads.
+const LEDGER_IDS_PER_POOL = Math.max(1, Number(process.env.LEDGER_IDS_PER_POOL || 50));
 /**
  * THE APPLY CLASS SCOPE (audit gate item 8, 2026-09-03).
  *
@@ -770,6 +780,31 @@ async function main() {
   const perClass = {};
   for (const kind of [K.IMPROVE, K.BASE_EVICTION]) perClass[kind] = { intended: 0, written: 0, skipped: 0, failed: 0, notReached: 0 };
   for (const c of improvable) perClass[c.kind].intended++;
+  /**
+   * THE WRITE LEDGER -- pool -> the ids this run actually moved (2026-09-04).
+   *
+   * The canary gate exits 5 on "this shard is damage", but it had no way to
+   * ask whether the shard touched the pool it was failing. Two shards that
+   * reconciled `intended 0 = written 0` were failed on anchor moves in pools
+   * belonging to OTHER slots: the CardHedge daily ingest had landed new sales
+   * between the before and the after, and the check read another writer's
+   * normal work as its own shard's damage.
+   *
+   * A verdict has to be ATTRIBUTED, and attribution needs evidence the gate
+   * can read. So the apply emits, per POOL, the ids it wrote -- both the pool
+   * a row LEFT (`from`) and the pool it LANDED IN (`to`), because a re-key
+   * changes two pools and either can hold a canary. An empty ledger is the
+   * positive statement "this shard moved nothing anywhere", which is exactly
+   * what these two runs needed to say and could not.
+   */
+  const ledger = new Map();
+  const ledgerNote = (slug, id, side) => {
+    if (!slug) return;
+    let e = ledger.get(slug);
+    if (!e) { e = { from: [], to: [] }; ledger.set(slug, e); }
+    if (e[side].length < LEDGER_IDS_PER_POOL) e[side].push(id);
+    e[`${side}Count`] = (e[`${side}Count`] ?? 0) + 1;
+  };
   let idx = 0;
   const worker = async () => {
     while (idx < improvable.length) {
@@ -862,10 +897,14 @@ async function main() {
 
       const r = await relocateSoldComp(pool, { keep, drop: [{ id: fresh.id, cardId: fresh.cardId }], retry, verifyFields: ["cardId", "hobbyiqCardId", "rekeyedAt"], dryRun: !APPLY });
       const why = cand.kind === K.BASE_EVICTION ? `BASE-EVICTION (slug said "${res.evidence?.storedSlugParallel}", row and title say nothing)` : `IMPROVE filled ${res.axes.filled.join(",")}`;
-      if (!APPLY) { stats.written++; perClass[cand.kind].written++; bump(reasons, `apply  would-write:${cand.kind}`); if (applied.length < 20) applied.push(`  WOULD RE-KEY ${fresh.id}  ${fresh.cardId}  ->  ${target}   ${why}`); continue; }
+      if (!APPLY) { stats.written++; perClass[cand.kind].written++; ledgerNote(fresh.cardId, fresh.id, "from"); ledgerNote(target, fresh.id, "to"); bump(reasons, `apply  would-write:${cand.kind}`); if (applied.length < 20) applied.push(`  WOULD RE-KEY ${fresh.id}  ${fresh.cardId}  ->  ${target}   ${why}`); continue; }
       if (!r.ok && r.stage !== "done") { stats.failed++; perClass[cand.kind].failed++; console.log(`  FAILED at ${r.stage} ${fresh.id}: ${String(r.error).slice(0, 110)}`); continue; }
       if (r.duplicatesLeft.length) { stats.failed++; perClass[cand.kind].failed++; stats.duplicatesLeft += r.duplicatesLeft.length; for (const dd of r.duplicatesLeft) console.log(`  DUPLICATE LEFT ${dd.id}@${dd.cardId}: ${String(dd.error).slice(0, 80)}`); continue; }
       stats.written++; perClass[cand.kind].written++; stats.alreadyGone += r.alreadyGone.length;
+      // The ledger records BOTH pools a re-key changes: the one the row left
+      // and the one it landed in. Either may hold a canary.
+      ledgerNote(fresh.cardId, fresh.id, "from");
+      ledgerNote(target, fresh.id, "to");
       bump(reasons, `apply  wrote:${cand.kind}`);
       if (applied.length < 20) applied.push(`  RE-KEYED ${fresh.id}  ${fresh.cardId}  ->  ${target}   ${why}`);
     }
@@ -901,6 +940,38 @@ async function main() {
   const recon = stats.written + stats.skipped + stats.failed + stats.notReached;
   if (recon !== stats.intended) { console.error(`!! reconciliation drift: ${recon} accounted vs ${stats.intended} intended (${recon - stats.intended}). Exit 4.`); process.exitCode = 4; }
   if (classDrift && !process.exitCode) process.exitCode = 4;
+  // ── THE WRITE LEDGER GOES TO DISK AND TO THE LOG ────────────────────────
+  //
+  // The canary gate runs in the SAME JOB on the same runner, so it reads this
+  // file directly; the workflow also uploads it as an artifact so a halt can
+  // be re-read without re-running anything. It is written on every apply-mode
+  // pass including a dry run, and an apply that wrote nothing still writes the
+  // file -- "touched 0 pools" is the whole point.
+  {
+    const pools = {};
+    for (const [slug, e] of ledger) pools[slug] = { fromCount: e.fromCount ?? 0, toCount: e.toCount ?? 0, from: e.from, to: e.to };
+    const doc = {
+      job: "rematch-sold-comps",
+      mode: MODE, apply: APPLY, scope: APPLY_SCOPE_RAW,
+      slot: SLOT, slots: SLOTS,
+      runId: process.env.GITHUB_RUN_ID ?? null,
+      finishedAt: new Date().toISOString(),
+      written: stats.written,
+      poolsTouched: ledger.size,
+      pools,
+    };
+    try {
+      fs.mkdirSync(path.dirname(WRITE_LEDGER_OUT), { recursive: true });
+      fs.writeFileSync(WRITE_LEDGER_OUT, JSON.stringify(doc, null, 1));
+      console.log(`\n  WRITE LEDGER  ${f(ledger.size)} pool(s) touched, ${f(stats.written)} row(s) ${APPLY ? "written" : "would be written"}  ->  ${WRITE_LEDGER_OUT}`);
+    } catch (e) {
+      console.error(`!! could not write the ledger to ${WRITE_LEDGER_OUT}: ${String(e?.message ?? e)}`);
+    }
+    if (!ledger.size) console.log(`    no pool was touched by this shard -- a canary anchor that moved did so under another writer.`);
+    for (const [slug, e] of [...ledger].sort((a, b) => (b[1].fromCount ?? 0) + (b[1].toCount ?? 0) - ((a[1].fromCount ?? 0) + (a[1].toCount ?? 0))).slice(0, 25)) {
+      console.log(`    ${slug}   out ${f(e.fromCount ?? 0)}  in ${f(e.toCount ?? 0)}`);
+    }
+  }
   if (APPLY) reportWrites({ job: "rematch-sold-comps", intended: stats.intended, written: stats.written, skipped: stats.skipped, failed: stats.failed });
   if (stopReason) console.log(`\n${stopReason}`);
 }
