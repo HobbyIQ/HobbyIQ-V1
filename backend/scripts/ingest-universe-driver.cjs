@@ -90,6 +90,46 @@ const LANE_ALIASES = {
   tcdb: "tcdb",
 };
 
+/**
+ * CF-THE-LANE-NAME-IS-NOT-THE-SOURCE-NAME (2026-09-04).
+ *
+ * The ingest child stamps `source` on every row it writes, and
+ * catalogAuthorityOf reads that string to decide whether the row may
+ * adjudicate. The driver was building it from its OWN lane key --
+ * `${lane}-${date}` -- and two of the six lane keys are not source names the
+ * authority vocabulary knows:
+ *
+ *   hobbymonitor-2026-09-04       checklist   ok
+ *   checklistinsider-2026-09-04   checklist   ok
+ *   beckett-2026-09-04            checklist   ok
+ *   tcgdexja-2026-09-04           checklist   ok
+ *   bcp-2026-09-04                UNKNOWN  <- the CHECKLIST regex spells it
+ *   clc-2026-09-04                UNKNOWN     `cardpedia`/`bccp`, never `bcp`
+ *
+ * The child refuses an unknown source ON PURPOSE -- rows written under it rank
+ * BELOW the derived rows the ingest exists to correct -- so it printed FATAL
+ * and exited 2. Every bcp and clc entry the driver has ever attempted failed
+ * at that line, which is what run 33839532087 was actually reporting.
+ *
+ * The names below are not new: ingest-checklists-end-to-end.cjs, the sibling
+ * wrapper over the same staged directories, already ingests bcp as
+ * `baseballcardpedia-ladders-<stamp>` and clc as `checklistcenter-<stamp>`.
+ * The driver invented a parallel vocabulary for the same rows. Using the
+ * wrapper's names also keeps `isBcpFamily` true for the bcp rows, so D29/R2's
+ * product-filing rule keeps applying to them -- a row stamped `bcp-` would
+ * have escaped that rule as well as the authority one.
+ *
+ * The lane keys stay what they are; only the stamped provenance is mapped.
+ */
+const LANE_SOURCE = {
+  hobbymonitor: "hobbymonitor",
+  checklistinsider: "checklistinsider",
+  bcp: "baseballcardpedia-ladders",
+  beckett: "beckett-checklist",
+  clc: "checklistcenter",
+  tcgdexja: "tcgdex-ja",
+};
+
 /** Per-entry minutes, measured from D37's own acquisition timings. Used to size
  *  N against the budget so a run stops on its own clock and prints the marker,
  *  rather than being SIGKILLed at the step ceiling having printed nothing. */
@@ -191,8 +231,13 @@ function gateStagedCsv(csvPath) {
   // it joins rungs onto a subset that was never parsed. Note this is a floor on
   // BASE rows, not on the blank-parallel reading: a blank parallel means
   // unknown, never "Base", and those rows are still cards.
+  //
+  // The code is load-bearing: this is the ONE rule of the gate that a single
+  // scope file may legitimately break, because a page's base set can live in a
+  // sibling scope (see gateStagedEntry). Every other rule below is a defect in
+  // the file itself and stays fatal per file.
   if (stats.base === 0) {
-    return { ok: false, reason: `zero base cards (${f(stats.rows)} rows, all carry a parallel)`, stats };
+    return { ok: false, code: "zero-base", reason: `zero base cards (${f(stats.rows)} rows, all carry a parallel)`, stats };
   }
 
   // PLAYERS-AS-PARALLELS LEAKAGE. A parallel equal to a player name IN THIS
@@ -271,21 +316,153 @@ function gateStagedCsv(csvPath) {
   return { ok: true, reason: null, stats };
 }
 
+/**
+ * THE ENTRY-LEVEL GATE. One BCP page stages one CSV PER SCOPE, and the verdict
+ * this driver records is about the PAGE, so the judgment has to be made over
+ * all of them at once.
+ *
+ * Every rule of gateStagedCsv stays fatal per file -- a bad header, a
+ * players-as-rungs leak or a cartesian category is a defect in that file no
+ * sibling can excuse, and admitting the entry would land exactly the dirty
+ * rows the per-entry gate exists to keep out.
+ *
+ * `zero-base` is the one exception, and it is not a weakening. "This ladder
+ * has nothing to attach to" was always a claim about the PAGE; it only read as
+ * a claim about a file back when a page was a file. 2015 Bowman Chrome's
+ * Prospects Light Blue Refractors scope genuinely has no base cards of its
+ * own, and it is not supposed to -- the base cards are the page's, in the bare
+ * stem file, and the rung attaches to them. So the rule is asked of the entry:
+ * refused only when NO staged file of the page carries a base card, which is
+ * the cross-join shape the rule was written for and which the 11.49M-row
+ * graveyard actually had.
+ *
+ * Stats are summed across the files, so `ladder`/`withPrintRun` -- which
+ * decide `partial` vs `ingested` downstream -- describe the whole page.
+ */
+function gateStagedEntry(csvPaths) {
+  const paths = Array.isArray(csvPaths) ? csvPaths : [csvPaths];
+  const total = { rows: 0, base: 0, ladder: 0, withPrintRun: 0, categories: 0, playersAsParallel: 0, cardLineParallel: 0 };
+  if (!paths.length) return { ok: false, reason: "no staged CSV", stats: total, files: [] };
+
+  const files = [];
+  let zeroBase = null;
+  for (const p of paths) {
+    const g = gateStagedCsv(p);
+    files.push({ file: path.basename(p), ok: g.ok, code: g.code ?? null, reason: g.reason, stats: g.stats });
+    for (const k of Object.keys(total)) total[k] += g.stats?.[k] ?? 0;
+    // A per-file defect other than zero-base condemns the entry immediately,
+    // and it names the FILE -- "the gate refused" with no filename is
+    // unactionable when a page stages five of them.
+    if (!g.ok && g.code !== "zero-base") {
+      return { ok: false, reason: `${path.basename(p)}: ${g.reason}`, stats: total, files };
+    }
+    if (!g.ok) zeroBase = zeroBase ?? g;
+  }
+
+  if (total.base === 0) {
+    return {
+      ok: false,
+      reason: `zero base cards across all ${f(paths.length)} staged file(s) (${f(total.rows)} rows, all carry a parallel)`,
+      stats: total, files,
+    };
+  }
+  return { ok: true, reason: null, stats: total, files, zeroBaseFiles: files.filter((x) => x.code === "zero-base").map((x) => x.file) };
+}
+
 // ── acquisition, per lane, through the EXISTING scripts ──────────────────────
 
+/** How many trailing lines of a failed child's stderr reach the verdict. */
+const CHILD_STDERR_LINES = 15;
+
+/**
+ * CF-A-COMMAND-FAILED-IS-NOT-A-DIAGNOSIS (2026-09-04).
+ *
+ * Backfill Runner 33839532087 aborted the bcp lane on a 3-streak and left
+ * exactly this in the log, twice:
+ *
+ *   FAILED — Command failed: /opt/.../node /home/.../ingest-checklist-csv-
+ *
+ * That is execFileSync's own message -- the ARGV, truncated by the verdict's
+ * 140-char slice -- and it names the command rather than the complaint. The
+ * child had in fact printed the reason on stderr and exited 2:
+ *
+ *   FATAL: SOURCE "bcp-2026-09-04" classifies as unknown, not checklist.
+ *
+ * The driver captured that on the pipe and threw it away, so the run reported
+ * a broken lane where the truth was a one-line naming defect. A whole dispatch
+ * (20 entries, the canary acceptance among them) was spent to learn nothing.
+ *
+ * execFileSync hangs stdout/stderr off the error, so the fix is to read them.
+ * The TAIL, not the head: a child that fails prints its diagnosis last, and
+ * `FATAL:` on the final line is exactly the shape being lost here. The child's
+ * words come first in the message so the verdict's own truncation cuts the
+ * argv, never the reason.
+ */
 function run(script, args, env, timeoutMs) {
-  const isMjs = script.endsWith(".mjs");
-  const out = execFileSync(process.execPath, [path.join(HERE, script), ...args], {
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "pipe"],
-    env: { ...process.env, ...env },
-    maxBuffer: 64 * 1024 * 1024,
-    timeout: timeoutMs || 10 * 60000,
-  });
-  return out;
+  try {
+    return execFileSync(process.execPath, [path.join(HERE, script), ...args], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+      env: { ...process.env, ...env },
+      maxBuffer: 64 * 1024 * 1024,
+      timeout: timeoutMs || 10 * 60000,
+    });
+  } catch (e) {
+    // stdout is read too: a child that dies on a guard sometimes says why on
+    // stdout and leaves stderr empty, and "no output at all" is itself worth
+    // saying out loud rather than reporting as a bare command failure.
+    const tail = (buf) => String(buf ?? "")
+      .split(/\r?\n/).map((l) => l.trimEnd()).filter(Boolean)
+      .slice(-CHILD_STDERR_LINES).join(" | ");
+    const said = tail(e.stderr) || tail(e.stdout) || "(the child printed nothing)";
+    const how = e.status != null ? `exit ${e.status}` : e.signal ? `signal ${e.signal}` : "no exit status";
+    const err = new Error(`${script} ${how}: ${said}`);
+    err.childStatus = e.status;
+    err.childStderr = String(e.stderr ?? "");
+    throw err;
+  }
 }
 
 const slugOf = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80);
+
+/**
+ * CF-A-SCOPE-FILE-IS-NOT-THE-PAGE (2026-09-04).
+ *
+ * Every multi-file lane took `csvs[0]` off a raw readdirSync -- the FIRST name
+ * in lexical order -- and threw the rest away. That was survivable while a
+ * page staged one file. It is not survivable now: since CF-ONE-FILE-PER-SCOPE
+ * the BCP scraper writes one CSV PER SCOPE of a page, and the bare stem (the
+ * scope that holds the base cards, the inserts and the typed sections) sorts
+ * LAST, because every qualified sibling carries a `--<scope>` suffix that
+ * sorts before the `.csv` extension.
+ *
+ * Measured on 2015 Bowman Chrome, the entry run 33839532087 refused:
+ *
+ *   2015-bowman-chrome-baseball--prospects-light-blue-refractors.csv   600 rows, 0 base
+ *   2015-bowman-chrome-baseball--prospects-wave-refractors.csv       1,200 rows, 0 base
+ *   2015-bowman-chrome-baseball.csv                                  4,430 rows, 227 base
+ *
+ * csvs[0] is the light-blue PARALLEL scope, so the zero-base-cards gate saw a
+ * file that is all parallel -- correctly, for that file -- and refused the
+ * whole entry as "600 rows, all carry a parallel". The page's base set was in
+ * the third file and was never looked at. A page whose base set lives in
+ * another scope must not be refused as all-parallel, and the other two scopes
+ * are real rows that were being discarded even on the pages that DID pass.
+ *
+ * So the acquisition returns every staged file and the caller judges the
+ * ENTRY, not an arbitrary member of it. Sorted, so a re-run reads them in the
+ * same order a previous run did.
+ */
+function stagedCsvs(dir) {
+  return fs.readdirSync(dir).filter((n) => n.endsWith(".csv")).sort().map((n) => path.join(dir, n));
+}
+
+/** The provenance stamped on this lane's rows. See LANE_SOURCE. */
+function sourceLabelFor(lane, stamp) {
+  const base = LANE_SOURCE[lane];
+  if (!base) throw new Error(`no checklist source name declared for lane ${lane} — declare it in LANE_SOURCE`);
+  return `${base}-${stamp || new Date().toISOString().slice(0, 10)}`;
+}
 
 /**
  * Acquire ONE entry into its own directory. Returns { csvPath, log } or throws.
@@ -309,7 +486,7 @@ function acquireEntry(entry, dir) {
         "--set-name", String(entry.setName || ""),
         "--sport", String(entry.sport || "baseball"),
       ]);
-      return { csvPath };
+      return { csvPaths: [csvPath] };
     }
     case "sportscardchecklist": {
       // The direct-URL lane, same shape as hobbymonitor: the sourceRef IS the
@@ -337,7 +514,7 @@ function acquireEntry(entry, dir) {
       run("convertChecklistInsiderToChecklistCsv.cjs", [`--in=${jsonl}`, `--outDir=${dir}`]);
       const csvs = fs.readdirSync(dir).filter((n) => n.endsWith(".csv"));
       if (!csvs.length) throw new Error("converter produced no CSV");
-      return { csvPath: path.join(dir, csvs[0]) };
+      return { csvPaths: stagedCsvs(dir) };
     }
     case "bcp": {
       // --titles names the exact mainspace page; BCP has no index, so the page
@@ -350,7 +527,7 @@ function acquireEntry(entry, dir) {
       ]);
       const csvs = fs.readdirSync(dir).filter((n) => n.endsWith(".csv"));
       if (!csvs.length) throw new Error("bcp scrape produced no CSV");
-      return { csvPath: path.join(dir, csvs[0]) };
+      return { csvPaths: stagedCsvs(dir) };
     }
     case "beckett": {
       // sourceRef is the workbook itself, so the archive walk is skipped
@@ -372,7 +549,7 @@ function acquireEntry(entry, dir) {
         "--out", csvPath, "--source-url", entry.sourceRef,
       ]);
       fs.rmSync(xlsxPath, { force: true });
-      return { csvPath };
+      return { csvPaths: [csvPath] };
     }
     case "clc": {
       // Both CLC scripts are driven by a work-list JSON, not by a URL argument,
@@ -392,7 +569,7 @@ function acquireEntry(entry, dir) {
       run("convertChecklistCenterToChecklistCsv.cjs", [`--pagesDir=${pagesDir}`, `--outDir=${dir}`], { CLC_LIST: listPath });
       const csvs = fs.readdirSync(dir).filter((n) => n.endsWith(".csv"));
       if (!csvs.length) throw new Error("clc converter produced no CSV (page fetched but refused, or no page served)");
-      return { csvPath: path.join(dir, csvs[0]) };
+      return { csvPaths: stagedCsvs(dir) };
     }
     case "tcgdexja": {
       const setId = entry.sourceRef.split("/").pop();
@@ -409,7 +586,7 @@ function acquireEntry(entry, dir) {
       run(script, [`--outDir=${dir}`, `--sets=${setId}`, "--delayMs=150"]);
       const csvs = fs.readdirSync(dir).filter((n) => n.endsWith(".csv"));
       if (!csvs.length) throw new Error(`tcgdex produced no CSV (${script}, set ${setId})`);
-      return { csvPath: path.join(dir, csvs[0]) };
+      return { csvPaths: stagedCsvs(dir) };
     }
     default:
       throw new Error(`no acquisition machinery for lane ${entry.lane}`);
@@ -655,7 +832,7 @@ function orderQueue(queue, titlesRaw) {
 // The gate is exported so its rules can be asserted directly against fixture
 // CSVs, rather than only through a full acquisition. `require`d as a module the
 // script does nothing; run as a CLI it drives.
-module.exports = { gateStagedCsv, splitCsv, isPersonName, setKeyFor, LANE_ALIASES, CANONICAL_HEADER, cosmosSafeId, controlId, orderQueue, SYSTEMIC_FAILURE_STREAK };
+module.exports = { gateStagedCsv, gateStagedEntry, stagedCsvs, sourceLabelFor, splitCsv, isPersonName, setKeyFor, LANE_ALIASES, LANE_SOURCE, LANE_MINUTES, CANONICAL_HEADER, CHILD_STDERR_LINES, cosmosSafeId, controlId, orderQueue, SYSTEMIC_FAILURE_STREAK };
 if (require.main !== module) return;
 
 (async () => {
@@ -682,6 +859,28 @@ if (require.main !== module) return;
     console.error("        title). It stays a per-URL backup, and it needs a refusal-on-zero-rows guard of its");
     console.error("        own before any driver trusts it. Driving it here would record fabricated successes.");
     process.exit(2);
+  }
+  // REFUSE THE UNSTAMPABLE LANE UP FRONT. The ingest child checks the source
+  // name it is handed and exits 2, which is correct -- but it does so per
+  // ENTRY, after a fetch, so a lane whose name the authority vocabulary does
+  // not know burns a fetch and a verdict per entry until the systemic tripwire
+  // stops it. That is exactly what run 33839532087 spent its budget on. The
+  // name is knowable before the first fetch, so it is checked before the first
+  // fetch, and the refusal names the file the declaration lives in.
+  {
+    let label;
+    try { label = sourceLabelFor(lane); }
+    catch { console.error(`REFUSE: no checklist source name declared for lane "${lane}" — add it to LANE_SOURCE`); process.exit(2); }
+    let authorityOf = null;
+    try { ({ catalogAuthorityOf: authorityOf } = require(path.join(HERE, "..", "dist/services/catalog/catalogAuthority.service.js"))); }
+    catch { /* dist not built (a unit-test run); the child re-checks anyway */ }
+    if (authorityOf && authorityOf(label) !== "checklist") {
+      console.error(`REFUSE: lane "${lane}" would stamp source="${label}", which catalogAuthority classifies as ${authorityOf(label)}, not checklist.`);
+      console.error(`        Rows written under it rank BELOW the derived rows this ingest exists to correct, so`);
+      console.error(`        ingest-checklist-csv-to-catalog.cjs refuses them one entry at a time, after the fetch.`);
+      console.error(`        Fix LANE_SOURCE here, or declare the name in catalogAuthority.service.ts.`);
+      process.exit(2);
+    }
   }
   if (!process.env.COSMOS_CONNECTION_STRING) { console.error("REFUSE: COSMOS_CONNECTION_STRING not set"); process.exit(2); }
   if (!fs.existsSync(MANIFEST_PATH)) { console.error(`REFUSE: manifest not found at ${MANIFEST_PATH}`); process.exit(2); }
@@ -799,7 +998,8 @@ if (require.main !== module) return;
       }[entry.lane];
       const inCatalog = await countCatalogRows(entry).catch(() => null);
       console.log(`      would drive: ${plan}`);
-      console.log(`      gates: canonical header · zero-base-cards · players-as-parallels · card-line-as-rung · cross-join arithmetic`);
+      console.log(`      gates: canonical header · zero-base-cards (per ENTRY, across every staged scope file) · players-as-parallels · card-line-as-rung · cross-join arithmetic`);
+      console.log(`      would stamp source: ${sourceLabelFor(lane)}`);
       console.log(`      catalog now: ${inCatalog === null ? "(setKey/year not derivable — verify would refuse)" : f(inCatalog) + " rows"}   seeded=${entry.seededStatus}   prior=${prior?.status || "(none)"}`);
       perEntry.push({ id: entry.id, label, status: "would-attempt", reason: null, rowsInCatalog: inCatalog, seeded: entry.seededStatus });
       inspected++;
@@ -810,18 +1010,21 @@ if (require.main !== module) return;
     let verdict;
     try {
       const before = await countCatalogRows(entry);
-      const { csvPath } = acquireEntry(entry, dir);
+      const { csvPaths } = acquireEntry(entry, dir);
 
       // GATE BEFORE INGEST. A staged file that violates doctrine is refused as
       // a whole entry -- never a dirty ingest, and never a silent skip.
-      const gate = gateStagedCsv(csvPath);
+      const gate = gateStagedEntry(csvPaths);
+      if (csvPaths.length > 1) {
+        console.log(`      ${f(csvPaths.length)} staged scope files: ${csvPaths.map((p) => path.basename(p)).join(", ")}`);
+      }
       if (!gate.ok) {
         verdict = { status: "failed", reason: `cleanliness gate: ${gate.reason}`, rowsCreated: 0, stats: gate.stats };
         console.log(`      REFUSED — ${gate.reason}`);
       } else {
         run("ingest-checklist-csv-to-catalog.cjs", [], {
-          DIR: path.dirname(csvPath),
-          SOURCE: `${lane}-${new Date().toISOString().slice(0, 10)}`,
+          DIR: dir,
+          SOURCE: sourceLabelFor(lane),
           BACKFILL_APPLY: "true",
           RUN_MINUTES: String(Math.max(2, Math.floor(left() / 60000 / 2))),
           CONCURRENCY: process.env.CONCURRENCY || "16",
@@ -850,12 +1053,15 @@ if (require.main !== module) return;
         }
       }
     } catch (e) {
-      const msg = String(e.message || e).slice(0, 200);
+      // Wide enough for the child's own words. The old 200/140 pair was set
+      // when the message was ours; now it carries up to CHILD_STDERR_LINES of
+      // the child's stderr, and truncating THAT is the defect this run hit.
+      const msg = String(e.message || e).slice(0, 1200);
       // A 404/403 from the source is the source not serving this set -- not a
       // defect in our pipe, and a different verdict from a broken acquisition.
       const isGone = /HTTP 40[34]|ENOTFOUND|exit(ed)? .*code 9|workbook empty or unreachable/i.test(msg);
       verdict = { status: isGone ? "unreachable" : "failed", reason: `acquisition: ${msg}`, rowsCreated: 0 };
-      console.log(`      ${isGone ? "UNREACHABLE" : "FAILED"} — ${msg.slice(0, 140)}`);
+      console.log(`      ${isGone ? "UNREACHABLE" : "FAILED"} — ${msg}`);
     }
 
     verdicts[verdict.status]++;
