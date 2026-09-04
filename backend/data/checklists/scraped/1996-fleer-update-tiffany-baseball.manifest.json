@@ -1,0 +1,32 @@
+{
+ "scrapedAt": "2026-09-04T15:36:49.032Z",
+ "source": "sportscardchecklist",
+ "sourceUrl": "https://www.sportscardchecklist.com/set-13371/1996-fleer-update-tiffany-baseball-trading-card-checklist",
+ "sport": "baseball",
+ "year": 1996,
+ "season": "1996",
+ "setName": "1996 Fleer Update Tiffany",
+ "productKey": "1996-fleer-update-tiffany",
+ "setKey": "fleer-update-tiffany",
+ "setKeyRequested": "fleer-update-tiffany",
+ "parallelOfParent": false,
+ "parallelName": null,
+ "subset": null,
+ "rowCount": 250,
+ "parallelColumnAuthoritative": true,
+ "cardRows": 250,
+ "ladderRows": 0,
+ "subsetRows": 5,
+ "printRunsFound": 0,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Checklist",
+   "category": "insert-checklist",
+   "playerCount": 5,
+   "rungs": 0,
+   "rowCount": 5,
+   "refused": false,
+   "printRun": null
+  }
+ ]
+}

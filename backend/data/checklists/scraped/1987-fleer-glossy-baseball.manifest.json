@@ -1,0 +1,32 @@
+{
+ "scrapedAt": "2026-09-04T15:36:58.277Z",
+ "source": "sportscardchecklist",
+ "sourceUrl": "https://www.sportscardchecklist.com/set-12466/1987-fleer-glossy-baseball-trading-card-checklist",
+ "sport": "baseball",
+ "year": 1987,
+ "season": "1987",
+ "setName": "1987 Fleer Glossy",
+ "productKey": "1987-fleer-glossy",
+ "setKey": "fleer-glossy",
+ "setKeyRequested": "fleer-glossy",
+ "parallelOfParent": false,
+ "parallelName": null,
+ "subset": null,
+ "rowCount": 672,
+ "parallelColumnAuthoritative": true,
+ "cardRows": 672,
+ "ladderRows": 0,
+ "subsetRows": 1,
+ "printRunsFound": 0,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > All-Stars",
+   "category": "insert-all-stars",
+   "playerCount": 1,
+   "rungs": 0,
+   "rowCount": 1,
+   "refused": false,
+   "printRun": null
+  }
+ ]
+}

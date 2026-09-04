@@ -1,0 +1,22 @@
+{
+ "scrapedAt": "2026-09-04T15:36:45.983Z",
+ "source": "sportscardchecklist",
+ "sourceUrl": "https://www.sportscardchecklist.com/set-13357/1996-fleer-tiffany-baseball-trading-card-checklist",
+ "sport": "baseball",
+ "year": 1996,
+ "season": "1996",
+ "setName": "1996 Fleer Tiffany",
+ "productKey": "1996-fleer-tiffany",
+ "setKey": "fleer-tiffany",
+ "setKeyRequested": "fleer-tiffany",
+ "parallelOfParent": false,
+ "parallelName": null,
+ "subset": null,
+ "rowCount": 600,
+ "parallelColumnAuthoritative": true,
+ "cardRows": 600,
+ "ladderRows": 0,
+ "subsetRows": 0,
+ "printRunsFound": 0,
+ "sectionsReport": []
+}

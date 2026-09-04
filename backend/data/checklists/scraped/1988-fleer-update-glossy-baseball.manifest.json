@@ -1,0 +1,22 @@
+{
+ "scrapedAt": "2026-09-04T15:37:10.832Z",
+ "source": "sportscardchecklist",
+ "sourceUrl": "https://www.sportscardchecklist.com/set-137268/1988-fleer-update-glossy-baseball-trading-card-checklist",
+ "sport": "baseball",
+ "year": 1988,
+ "season": "1988",
+ "setName": "1988 Fleer Update Glossy",
+ "productKey": "1988-fleer-update-glossy",
+ "setKey": "fleer-update-glossy",
+ "setKeyRequested": "fleer-update-glossy",
+ "parallelOfParent": false,
+ "parallelName": null,
+ "subset": null,
+ "rowCount": 132,
+ "parallelColumnAuthoritative": true,
+ "cardRows": 132,
+ "ladderRows": 0,
+ "subsetRows": 0,
+ "printRunsFound": 0,
+ "sectionsReport": []
+}
