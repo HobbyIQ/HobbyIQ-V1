@@ -317,6 +317,52 @@ function isPseudoCardNumber(v) {
 }
 
 /**
+ * A CORRUPTED PLAYER NAME IS NOT A LESS-GOOD NAME, IT IS NOT A NAME
+ * (CF-A-PLAYER-SEGMENT-IS-A-PERSON, Drew 2026-09-04).
+ *
+ * hobbyIqCardId.service.ts argues the pseudo-number is "SAFE BECAUSE THE NAMES
+ * ARE CLEAN", and it checked that claim the only way it could at the time: it
+ * looked for names that COLLIDE under slugify, found 20 case/punctuation groups
+ * out of 3,997, and folded them. What it never asked was whether each name was
+ * A PERSON. The census in data/gap-reports/2026-09-04-player-field-corruption-
+ * census.json asks that question and answers it: 29,654 of 115,535 rows (25.7%)
+ * carry a player field with a parallel, a product, a truncation or a set code
+ * inside it --
+ *
+ *     player-kawhi-leonard-tie-dye     a finish inside the name
+ *     player-mega-box-elly-de          a product inside it, and cut mid-name
+ *     player-pokemon-swsh-fa-mew       a set code, and not a person at all
+ *
+ * So the premise the shape rests on is false for a quarter of the population,
+ * and those rows are keyed to people who do not exist. That splits the real
+ * player's pool and prices a card against sales of nothing.
+ *
+ * THE SAME CONDITIONAL SHAPE AS THE PSEUDO-NUMBER ABOVE, FOR THE SAME REASON.
+ *
+ * A corrupted stored player counts as BLANK on the STORED SIDE ONLY, and only
+ * when the caller supplies the fact `storedPlayerCorrupted` -- computed by the
+ * census from the checklist corpus, never from the derivation's confidence. A
+ * re-derivation that produces a clean name then FILLS an axis the stored key
+ * never really named, which is IMPROVE rather than `changed`.
+ *
+ * AND THE CHECKLIST GATE IS NOT OPTIONAL. Even blanked, the IMPROVE only
+ * proceeds when the derived identity is CHECKLIST-BACKED for the same
+ * (year, setKey, cardNumber) -- the ordinary `checklistBacked` gate every
+ * IMPROVE passes. A corrupted name whose replacement is not checklist-backed is
+ * REPORT-ONLY: we know the stored name is wrong, and knowing that is not the
+ * same as knowing the right one. Absent beats wrong on both sides of the swap.
+ */
+function isCorruptedPlayerName(v) {
+  const s = lower(v).trim();
+  if (!s) return false;
+  // Ends on a name particle -> the name was cut ("Elly De").
+  if (/\s(de|la|del|van|von|mc|mac|dos|das|di|da)$/.test(s)) return true;
+  // Carries a franchise/layout token that is never part of a person's name.
+  if (/\b(pokemon|swsh|vmax|vstar|full art|reverse holo)\b/.test(s)) return true;
+  return false;
+}
+
+/**
  * Does the TITLE state a card number? The same `#N` / `No. N` reading the
  * deriver uses (extractCardNumberFromTitle in soldCompsStore), narrowed to the
  * PREFIXED form only.
@@ -2197,8 +2243,22 @@ function diffAxes(stored, derived, opts = {}) {
   // that reads one FILLS the axis rather than changing it. Gated on the
   // caller's title fact -- never on the derivation -- and applied to the STORED
   // side only.
-  const storedBlankCardNumber = opts.titleStatesNumber === true
-    && isPseudoCardNumber(stored?.cardNumber);
+  // CF-A-PLAYER-SEGMENT-IS-A-PERSON. The player reaches identity ONLY through
+  // the cardNumber segment, as `player-<name>` -- so a corrupted NAME is a
+  // corrupted cardNumber VALUE on exactly these rows, and it blanks the same
+  // axis for the same reason. Two independent facts, either of which makes the
+  // stored pseudo-number not-an-answer:
+  //
+  //   titleStatesNumber        the row was never unnumbered (#1728)
+  //   storedPlayerCorrupted    the name in the pseudo-number is not a person
+  //
+  // Both are facts about the ROW supplied by the caller, never verdicts about
+  // the derivation, and both are STORED-side only. The derived side is never
+  // blanked: a derivation that produces `player-…` produced it deliberately.
+  const storedBlankCardNumber = isPseudoCardNumber(stored?.cardNumber)
+    && (opts.titleStatesNumber === true
+      || opts.storedPlayerCorrupted === true
+      || isCorruptedPlayerName(String(stored?.cardNumber ?? "").replace(/^player-/i, "").replace(/-/g, " ")));
   for (const axis of AXES) {
     const a = axisValue(stored, axis), b = axisValue(derived, axis);
     const aBlank = (axis === "setKey" && storedBlankSetKey)
@@ -2812,7 +2872,7 @@ module.exports = {
   // CF-UNPARSED-IS-NOT-UNNUMBERED (2026-09-04). The pseudo-number predicate and
   // the title-states-a-number fact, exported so the census can supply the fact
   // and a mutation check can revert each half alone.
-  isPseudoCardNumber, titleStatesCardNumber,
+  isPseudoCardNumber, titleStatesCardNumber, isCorruptedPlayerName,
   GRADER_RE, RAW_CONDITION_RE,
   // The trust ladder's new gates, exported so the tests can drive each one
   // directly and the mutation check can revert them one at a time.

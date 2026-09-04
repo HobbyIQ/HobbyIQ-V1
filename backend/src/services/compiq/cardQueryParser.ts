@@ -28,8 +28,17 @@ export interface ParsedCardQuery {
   rawQuery: string;              // original input preserved
 }
 
+import { playerSegmentIsAPerson } from "./playerSegmentIsAPerson.js";
+
 function escapeRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/** "Topps Chrome" → "topps-chrome", so the parser's display-form set name can
+ *  address the checklist corpus, which is keyed by slug. */
+function setSlug(s: string | null): string | null {
+  if (!s) return null;
+  return s.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || null;
 }
 
 // ---------------------------------------------------------------------------
@@ -462,24 +471,32 @@ export function parseCardQuery(input: string): ParsedCardQuery {
   // First collapse standalone dashes to spaces so tokens become clean,
   // THEN split — otherwise "- -" tokens survive splitting even with
   // the standalone-dash filter.
+  // CF-A-PLAYER-SEGMENT-IS-A-PERSON (Drew, 2026-09-04). `/` and `&` are KEPT
+  // here where the old expression stripped them, because they are the
+  // separators on a multi-player card — "Ken Dryden/Glenn Resch/Bernie Parent"
+  // is ONE card with three people on it, and losing the separator turned it
+  // into a two-word residue the `.slice(0, 4)` below then cut to two names.
   const cleaned = remaining
-    .replace(/[^a-zA-Z\s'-]/g, " ")
+    .replace(/[^a-zA-Z\s'&/-]/g, " ")
     .replace(/\s+-\s+|\s+-+$|^-+\s+/g, " ")   // strip standalone dashes surrounded by whitespace
     .replace(/(^|\s)-+/g, "$1")               // strip leading dashes on words
     .replace(/-+(\s|$)/g, "$1")               // strip trailing dashes on words
     .replace(/\s+/g, " ")
     .trim();
-  const playerName = cleaned
-    .split(" ")
-    .filter((w) => w.length > 0)
-    .filter((w) => !/^-+$/.test(w))              // extra guard: no dash-only survivors
-    .filter((w) => w.length >= 2 || w === "&")   // drop single-char noise (except '&')
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-    // Keep at most the first 4 words — most real player names are 2-3
-    // words (Mike Trout, Jose de la Rosa is the outlier at 4). Longer
-    // strings are almost always trailing noise the NOISE list missed.
-    .slice(0, 4)
-    .join(" ") || null;
+
+  // CF-A-PLAYER-SEGMENT-IS-A-PERSON. `cleaned` is the RESIDUE of the strip
+  // passes above — it is not yet a name, and the defect this replaces was the
+  // assumption that it was. The old expression title-cased the residue and cut
+  // it to four words, which meant every token the ~250-word NOISE list did not
+  // know was PROMOTED INTO A PERSON'S NAME ("Kawhi Leonard Tie-dye"), and every
+  // real name with noise ahead of it was CUT ("Mega Box Elly De" from "Mega Box
+  // Elly De La Cruz"). playerSegmentIsAPerson strips the checklist corpus's
+  // parallel vocabulary — 36,699 names, the same vocabulary the GREAT REMATCH
+  // audit gate reads — and then BOUNDS the survivor into a name or returns
+  // null. It never truncates: a residue it cannot bound is unknown, and blank
+  // means unknown. The `.slice(0, 4)` is pinned by ABSENCE in
+  // playerSegmentIsAPerson.mutation.test.ts.
+  const playerName = playerSegmentIsAPerson(cleaned, { year, setKey: setSlug(set ?? brand) }).player;
 
   // --- CONFIDENCE ---
   let confidence = 0;

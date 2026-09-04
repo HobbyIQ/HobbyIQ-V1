@@ -163,10 +163,25 @@ describe("MUTATION CHECK: the title-fact gate is load-bearing", () => {
     const src = fs.readFileSync(file, "utf8");
 
     // The gate: the stored pseudo-number counts as blank ONLY when the caller
-    // says the title states a number.
-    const GUARD = "const storedBlankCardNumber = opts.titleStatesNumber === true\n    && isPseudoCardNumber(stored?.cardNumber);";
-    expect(src).toContain(GUARD);
-    const mutated = src.replace(GUARD, "const storedBlankCardNumber = isPseudoCardNumber(stored?.cardNumber);");
+    // supplies a FACT ABOUT THE ROW saying it is not an answer.
+    //
+    // CF-A-PLAYER-SEGMENT-IS-A-PERSON (2026-09-04) added a second such fact
+    // alongside `titleStatesNumber` -- `storedPlayerCorrupted`, for the 25.7%
+    // of the population whose pseudo-number names something that is not a
+    // person. The guard is now a disjunction of row-facts rather than a single
+    // one, and what this mutation check protects is unchanged and is the
+    // CONJUNCTION with `isPseudoCardNumber`: at least one fact must hold. The
+    // mutant below drops every fact, which is the unconditional blanking the
+    // original defect would have been.
+    const GUARD_HEAD = "const storedBlankCardNumber = isPseudoCardNumber(stored?.cardNumber)\n    && (opts.titleStatesNumber === true";
+    expect(src).toContain(GUARD_HEAD);
+    // Replace the whole multi-line guard with the unconditional form.
+    const start = src.indexOf(GUARD_HEAD);
+    const end = src.indexOf(";", src.indexOf('.replace(/-/g, " ")', start));
+    expect(end).toBeGreaterThan(start);
+    const mutated = src.slice(0, start)
+      + "const storedBlankCardNumber = isPseudoCardNumber(stored?.cardNumber)"
+      + src.slice(end);
     expect(mutated).not.toBe(src);
 
     const tmp = path.join(backend, "scripts", "lib", `.rematch-classify.pseudo-mutant-${process.pid}.cjs`);
