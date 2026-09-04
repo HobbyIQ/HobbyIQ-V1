@@ -330,6 +330,43 @@ const AUTO_NEGATIVE_RE =
  *  so the repair re-derives the split with THIS detector rather than
  *  inheriting that number, and the counters it prints are the ones to trust. */
 
+/** CF-A-NAMED-PARALLEL-IS-A-DISTINCT-CARD, at the source (audit gate 2026-09-03).
+ *
+ *  Every pattern-family rule below -- Shimmer, Lava, Wave, Ray Wave, Grass --
+ *  enumerated its own colour list, and every one of those lists was
+ *
+ *      (orange|red|green|gold|blue|purple|yellow|aqua)
+ *
+ *  which omits black, pink, white, fuchsia, silver and bronze. A title the
+ *  list could not match fell PAST the family rule and landed on the bare-colour
+ *  scan below, which reads the colour and stops -- so
+ *
+ *      "BLACK WAVE /10"    ->  Black Refractor
+ *      "Pink Wave"         ->  Pink Refractor
+ *      "Fuchsia Wave"      ->  Fuchsia Refractor
+ *      "Black Ray Wave"    ->  Black Refractor
+ *
+ *  Black Wave Refractor and Black Refractor are BOTH on the 2025 Topps Chrome
+ *  football checklist. They are two cards with two print runs and two price
+ *  curves, and collapsing one onto the other splits a pool and prices a /10
+ *  against a /299. That is 22 of the writable IMPROVE lines the audit gate
+ *  found, and the derivation is where they start.
+ *
+ *  ONE ladder, used by every family rule, so a colour cannot be present for
+ *  Speckle (whose list already carried pink/black/silver) and absent for Wave.
+ *  It matches the colours the bare-colour scan below already accepts, which is
+ *  the ONLY way a family rule can be guaranteed to win the race against it --
+ *  a colour that scan can read is a colour a family rule must be able to read
+ *  first, or the family word is silently dropped.
+ *
+ *  The classifier guards this independently (GUARD 4 in rematch-classify.cjs
+ *  refuses any write whose derived parallel lacks a finish family the title
+ *  names), because a fixed enumeration is a fix, not a guarantee: the next
+ *  family word nobody has enumerated fails exactly the same way, and the guard
+ *  catches it as a refusal instead of a wrong write. Fixed at the source AND
+ *  guarded at the write. */
+const PATTERN_COLOUR = String.raw`(orange|red|green|gold|blue|purple|yellow|aqua|pink|black|white|fuchsia|silver|bronze|teal|sepia)`;
+
 /** Nouns that mean "a card", for the count-adjacency tests below. */
 const LOT_CARD_NOUN = String.raw`(?:cards?|commons?|rookies|rc'?s|singles?|slabs?|autos?|refractors?|parallels?|inserts?|prospects?)`;
 /** Nouns that mean "packaging", which a count in front of does NOT make a lot. */
@@ -1017,17 +1054,52 @@ function extractParallel(title: string): string {
   // literals — string-concatenated regexes were dropping the \s+ escape
   // when constructed via new RegExp().
   let m: RegExpMatchArray | null;
-  m = T.match(/(orange|red|green|gold|blue|purple|yellow|aqua)\s+shimmer/i);
+  // THE TWO-COLOUR CARDS ARE TESTED BEFORE THE ONE-COLOUR LADDER.
+  //
+  // CF-RED-INK-IS-ITS-OWN-CARD (Drew ruling 2026-08-30) gives "Red Ink" and
+  // "Black & White Shimmer" their own rows, and both are spelled with TWO
+  // colour words. Widening PATTERN_COLOUR to carry `white` (so "Pink Wave" and
+  // "Fuchsia Wave" stop collapsing) put "white" in reach of the single-colour
+  // rules below — and "Black & White Shimmer Auto" then matched `white shimmer`
+  // and answered "White Shimmer Refractor", a card that does not exist, while
+  // the Drew-ruled rule that would have answered correctly sits further down
+  // and never ran. Caught by tests/redInkIsItsOwnCard.test.ts.
+  //
+  // A two-colour name is strictly more specific than either colour alone, so
+  // it is asked first. The duplicate rules further down are harmless and are
+  // left where they are: they are the ones the ruling's own comment documents,
+  // and a reader looking for Red Ink should find it beside its explanation.
+  if (/\bred\s+ink\b/i.test(T)) return "Black & White Red Ink";
+  if (/\bblack\s*(?:&|and)?\s*(?:\/)?\s*white\s+shimmer/i.test(T)) return "Black & White Shimmer Refractor";
+  if (/\bb\s*&\s*w\s+shimmer\b/i.test(T)) return "Black & White Shimmer Refractor";
+  m = T.match(new RegExp(PATTERN_COLOUR + String.raw`\s+shimmer`, "i"));
   if (m) return capFirst(m[1]) + " Shimmer Refractor";
-  m = T.match(/(orange|red|green|gold|blue|purple|yellow|aqua)\s+lava/i);
+  m = T.match(new RegExp(PATTERN_COLOUR + String.raw`\s+lava`, "i"));
   if (m) return capFirst(m[1]) + " Lava Refractor";
   // Ray Wave — check BEFORE plain Wave so "Ray Wave" doesn't get
   // swallowed by the wave-only pattern. Accepts three spellings:
   // "Ray Wave" (space), "Ray-Wave" (hyphen), "RayWave" (compound).
-  m = T.match(/(orange|red|green|gold|blue|purple|yellow|aqua)\s+ray[\s-]?wave/i);
+  m = T.match(new RegExp(PATTERN_COLOUR + String.raw`\s+ray[\s-]?wave`, "i"));
   if (m) return capFirst(m[1]) + " Ray Wave Refractor";
-  m = T.match(/(orange|red|green|gold|blue|purple|yellow|aqua)\s+wave/i);
+  m = T.match(new RegExp(PATTERN_COLOUR + String.raw`\s+wave`, "i"));
   if (m) return capFirst(m[1]) + " Wave Refractor";
+  // VAPOR and EQUINOX are pattern families with no rule at all before now, so
+  // "Yellow Vapor /75" and "Aqua Equinox" fell straight through to the
+  // bare-colour scan. 2023 bowman-chrome has NO plain Yellow Refractor, so
+  // that collapse did not merely split a pool -- it invented a card.
+  m = T.match(new RegExp(PATTERN_COLOUR + String.raw`\s+vapou?r`, "i"));
+  if (m) return capFirst(m[1]) + " Vapor Refractor";
+  if (/\bvapou?r\s+refractors?\b/i.test(T)) return "Vapor Refractor";
+  m = T.match(new RegExp(PATTERN_COLOUR + String.raw`\s+equinox`, "i"));
+  if (m) return capFirst(m[1]) + " Equinox Refractor";
+  if (/\bequinox\b/i.test(T)) return "Equinox Refractor";
+  // ETCH / ETCHED. "Black Etch SSP" is a Black Etch, not a Black Refractor.
+  // The bare "Etched In Glass Variation" is a checklist row in its own right
+  // and is listed SEPARATELY from "Image Variation" -- two cards, and reading
+  // one as the other pooled them.
+  if (/\betched\s+in\s+glass\b/i.test(T)) return "Etched In Glass Variation";
+  m = T.match(new RegExp(PATTERN_COLOUR + String.raw`\s+etch(?:ed)?\b`, "i"));
+  if (m) return capFirst(m[1]) + " Etch";
   // CF-BARE-WAVE-REFRACTOR (Drew, 2026-07-29). Wave Refractor exists
   // as a bare (silver-based) parallel too — "2026 Bowman Eric Hartman
   // Wave Refractor /350 #BCP-102" landed at parallel="Refractor"
@@ -1038,7 +1110,14 @@ function extractParallel(title: string): string {
   // beats bare "Refractor". Same for Ray Wave.
   if (/ray[\s-]?wave\s+refractor/i.test(T)) return "Ray Wave Refractor";
   if (/wave\s+refractor/i.test(T)) return "Wave Refractor";
-  m = T.match(/(orange|red|green|gold|blue|purple|yellow|aqua)\s+grass/i);
+  // BARE SHIMMER, for the same reason bare Wave exists. "2022 Bowman Chrome
+  // Shimmer Refractors #BCP-1" carries no colour, so every colour-prefixed
+  // rule above missed and the bare "Refractor" fallback near the bottom
+  // answered "Refractor" — pooling a Shimmer with the plain refractors, which
+  // is one card in two pools. Plural because a checklist heads its section in
+  // the plural ("Shimmer Refractors") and sellers copy the heading verbatim.
+  if (/\bshimmer\s+refractors?\b/i.test(T)) return "Shimmer Refractor";
+  m = T.match(new RegExp(PATTERN_COLOUR + String.raw`\s+grass`, "i"));
   if (m) return capFirst(m[1]) + " Grass Refractor";
   // CF-SPECKLE-REFRACTOR (Drew, 2026-07-29). Speckle is a Bowman Chrome
   // pattern refractor — small-dot foil overlay. Ships as bare Speckle
@@ -1046,7 +1125,7 @@ function extractParallel(title: string): string {
   // Speckle, etc.). Same treatment shape as Shimmer/Lava/Wave/Grass.
   // OBSERVED: Bowman Chrome Speckle Refractor rows landed at
   // setKey=bowman parallel=Base because "Speckle" had no rule.
-  m = T.match(/(orange|red|green|gold|blue|purple|yellow|aqua|pink|black|silver)\s+speckle/i);
+  m = T.match(new RegExp(PATTERN_COLOUR + String.raw`\s+speckle`, "i"));
   if (m) return capFirst(m[1]) + " Speckle Refractor";
   if (/speckle\s+refractor/i.test(T)) return "Speckle Refractor";
   if (/\bspeckle\b/i.test(T)) return "Speckle Refractor";
