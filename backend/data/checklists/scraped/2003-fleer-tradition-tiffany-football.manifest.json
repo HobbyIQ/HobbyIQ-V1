@@ -1,0 +1,22 @@
+{
+ "scrapedAt": "2026-09-04T15:37:16.870Z",
+ "source": "sportscardchecklist",
+ "sourceUrl": "https://www.sportscardchecklist.com/set-150131/2003-fleer-tradition-tiffany-football-trading-card-checklist",
+ "sport": "football",
+ "year": 2003,
+ "season": "2003",
+ "setName": "2003 Fleer Tradition Tiffany",
+ "productKey": "2003-fleer-tradition-tiffany",
+ "setKey": "fleer-tradition-tiffany",
+ "setKeyRequested": "fleer-tradition-tiffany",
+ "parallelOfParent": false,
+ "parallelName": null,
+ "subset": null,
+ "rowCount": 300,
+ "parallelColumnAuthoritative": true,
+ "cardRows": 300,
+ "ladderRows": 0,
+ "subsetRows": 0,
+ "printRunsFound": 0,
+ "sectionsReport": []
+}

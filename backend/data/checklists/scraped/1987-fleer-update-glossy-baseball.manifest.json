@@ -1,0 +1,22 @@
+{
+ "scrapedAt": "2026-09-04T15:37:07.837Z",
+ "source": "sportscardchecklist",
+ "sourceUrl": "https://www.sportscardchecklist.com/set-137197/1987-fleer-update-glossy-baseball-trading-card-checklist",
+ "sport": "baseball",
+ "year": 1987,
+ "season": "1987",
+ "setName": "1987 Fleer Update Glossy",
+ "productKey": "1987-fleer-update-glossy",
+ "setKey": "fleer-update-glossy",
+ "setKeyRequested": "fleer-update-glossy",
+ "parallelOfParent": false,
+ "parallelName": null,
+ "subset": null,
+ "rowCount": 132,
+ "parallelColumnAuthoritative": true,
+ "cardRows": 132,
+ "ladderRows": 0,
+ "subsetRows": 0,
+ "printRunsFound": 0,
+ "sectionsReport": []
+}

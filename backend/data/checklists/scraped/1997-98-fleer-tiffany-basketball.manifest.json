@@ -1,0 +1,22 @@
+{
+ "scrapedAt": "2026-09-04T15:37:13.840Z",
+ "source": "sportscardchecklist",
+ "sourceUrl": "https://www.sportscardchecklist.com/set-30130/1997-98-fleer-tiffany-basketball-trading-card-checklist",
+ "sport": "basketball",
+ "year": 1997,
+ "season": "1997-98",
+ "setName": "1997-98 Fleer Tiffany",
+ "productKey": "1997-fleer-tiffany",
+ "setKey": "fleer-tiffany",
+ "setKeyRequested": "fleer-tiffany",
+ "parallelOfParent": false,
+ "parallelName": null,
+ "subset": null,
+ "rowCount": 350,
+ "parallelColumnAuthoritative": true,
+ "cardRows": 350,
+ "ladderRows": 0,
+ "subsetRows": 0,
+ "printRunsFound": 0,
+ "sectionsReport": []
+}

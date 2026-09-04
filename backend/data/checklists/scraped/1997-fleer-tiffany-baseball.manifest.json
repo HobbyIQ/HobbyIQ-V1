@@ -1,0 +1,32 @@
+{
+ "scrapedAt": "2026-09-04T15:36:52.183Z",
+ "source": "sportscardchecklist",
+ "sourceUrl": "https://www.sportscardchecklist.com/set-13785/1997-fleer-tiffany-baseball-trading-card-checklist",
+ "sport": "baseball",
+ "year": 1997,
+ "season": "1997",
+ "setName": "1997 Fleer Tiffany",
+ "productKey": "1997-fleer-tiffany",
+ "setKey": "fleer-tiffany",
+ "setKeyRequested": "fleer-tiffany",
+ "parallelOfParent": false,
+ "parallelName": null,
+ "subset": null,
+ "rowCount": 761,
+ "parallelColumnAuthoritative": true,
+ "cardRows": 761,
+ "ladderRows": 0,
+ "subsetRows": 40,
+ "printRunsFound": 0,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Checklist",
+   "category": "insert-checklist",
+   "playerCount": 40,
+   "rungs": 0,
+   "rowCount": 40,
+   "refused": false,
+   "printRun": null
+  }
+ ]
+}

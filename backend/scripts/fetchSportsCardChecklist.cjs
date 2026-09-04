@@ -257,6 +257,39 @@ const PARENT_BRANDS = [
   "o-pee-chee", "topps", "bowman", "fleer", "donruss", "score", "leaf", "panini",
 ];
 
+/**
+ * CF-A-TIFFANY-IS-NOT-A-SUBSET (2026-09-04, follow-on to #1741 and #1719).
+ *
+ * #1741 ruled that a page whose slug extends a known brand belongs to that
+ * brand's product -- correct for `topps-chrome-cards-that-never-were`, which is
+ * an INSERT inside Topps Chrome and has no pool of its own. Applied without an
+ * exception it also swallows the products this repo has already RULED are their
+ * own: measured on main today, re-fetching the URL #1719 shipped from,
+ *
+ *   set-138544/1990-topps-tiffany-traded-baseball...
+ *     -> parentSetKey=topps  subset="Tiffany Traded"
+ *
+ * writes `setKey: "topps"` over a checklist that shipped as
+ * `topps-traded-tiffany`, folding 132 Tiffany cards into flagship Topps. That is
+ * the split pool in reverse -- two products, one row -- and #1743 is the record
+ * of a recheck re-breaking 1991 Tiffany by exactly this shape.
+ *
+ * A GLOSS IS A PRINTING, NOT A SUBSET. Topps Tiffany, Bowman Tiffany, Fleer
+ * Tiffany and Fleer Glossy each reprint the parent's FULL checklist on coated
+ * stock, at the parent's own numbers, and each trades at its own price. They
+ * are declared products in src/services/catalog/productSetKeys.ts, so
+ * normalizeSetKey returns them unchanged (CF-A-RULED-KEY-IS-A-FIXED-POINT) --
+ * and a fetcher that reparents them puts the manifest and the catalog
+ * vocabulary into direct disagreement.
+ *
+ * KEPT AS A LOCAL LIST, DELIBERATELY. This file requires nothing but node
+ * builtins so it runs offline against cached HTML and never depends on a stale
+ * dist/ (project_bowman_nscc_is_its_own_product). The pin below asserts this
+ * list against the real product table, so the two cannot drift silently.
+ */
+const PRODUCT_TAIL_RE = /(?:^|-)(tiffany|glossy)(?:-|$)/;
+
+
 /** The rung tail this slug matched, or null. Returned separately from the LABEL
  *  so the parent split can strip exactly what was recognised. */
 function parallelTailOf(rest) {
@@ -280,6 +313,11 @@ function parallelTailOf(rest) {
 function splitParentAndSubset(rest, tailRe) {
   let r = String(rest || "");
   if (tailRe) r = r.replace(tailRe, "");
+  // THE RULED PRODUCT WINS OVER THE BRAND SPLIT. A remainder naming a coated
+  // reprint (`fleer-tiffany`, `topps-tiffany-traded`, `fleer-update-glossy`) is
+  // its OWN product; splitting it would reparent it onto the paper set whose
+  // numbers it shares, which is the one collapse this lane must never make.
+  if (PRODUCT_TAIL_RE.test(r)) return { parentSetKey: "", subset: "" };
   for (const b of PARENT_BRANDS) {
     if (r === b) return { parentSetKey: b, subset: "" };
     if (r.startsWith(b + "-")) {

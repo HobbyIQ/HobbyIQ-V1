@@ -1,0 +1,22 @@
+{
+ "scrapedAt": "2026-09-04T15:36:55.175Z",
+ "source": "sportscardchecklist",
+ "sourceUrl": "https://www.sportscardchecklist.com/set-144298/2002-fleer-tiffany-baseball-trading-card-checklist",
+ "sport": "baseball",
+ "year": 2002,
+ "season": "2002",
+ "setName": "2002 Fleer Tiffany",
+ "productKey": "2002-fleer-tiffany",
+ "setKey": "fleer-tiffany",
+ "setKeyRequested": "fleer-tiffany",
+ "parallelOfParent": false,
+ "parallelName": null,
+ "subset": null,
+ "rowCount": 540,
+ "parallelColumnAuthoritative": true,
+ "cardRows": 540,
+ "ladderRows": 0,
+ "subsetRows": 0,
+ "printRunsFound": 0,
+ "sectionsReport": []
+}
