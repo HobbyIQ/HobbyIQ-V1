@@ -210,6 +210,16 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
   // Its OWN family for the same reason: rookie-only and veteran checklists do
   // not share a price curve.
   P("black-diamond-rookie-edition", { parent: "upper-deck" }),
+  // CF-EXQUISITE-IS-ITS-OWN-PRODUCT (Drew 2026-09-04). Upper Deck Exquisite
+  // Collection is its OWN product with its own pool, never folded into
+  // `upper-deck`. Same shape as Black Diamond Rookie Edition directly above,
+  // and for a sharper version of the same reason: Exquisite is the 2003-04
+  // rookie-patch-auto product, so `refines` is deliberately ABSENT — a matcher
+  // that widened from an Exquisite RPA into the UD base pool would price a
+  // four-figure LeBron rookie off base-card comps. Its OWN family: a
+  // 99-copy patch auto and a base set do not share a price curve.
+  // `parent` is the Upper Deck root for provenance only.
+  P("upper-deck-exquisite", { parent: "upper-deck" }),
   P("sp-authentic", { parent: "upper-deck" }),
   P("sp-prospects", { parent: "upper-deck" }),
   P("spx"),
@@ -299,6 +309,41 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
   ...["fleer-stickers", "fleer-tradition", "fleer-update", "fleer-metal-universe"].map((k) => P(k, { parent: "fleer" })),
   P("fleer-tradition-update", { family: "fleer-tradition", parent: "fleer-tradition" }),
   P("fleer-tradition-glossy", { family: "fleer-tradition", parent: "fleer-tradition" }),
+  /**
+   * THE FLEER COATED REPRINTS (#1745 follow-on, 2026-09-04). Each reprints its
+   * parent's FULL checklist on coated stock at the parent's own numbers, and
+   * each trades at its own price -- so each is a PRODUCT, `parallel` blank,
+   * exactly as Topps Tiffany is (Drew 2026-09-01). Declared here because a
+   * ruled key must be a normalizeSetKey fixed point; undeclared, all five fell
+   * to the unanchored `fleer` family rule and collapsed onto the paper set.
+   *
+   * The repair lane of #1745 gates 1,339 catalog rows and 994 comps on these
+   * keys existing with rows behind them -- "acquire before retire", because
+   * retiring a Fleer Tiffany rung with no sibling product would delete the only
+   * rows those cards have.
+   *
+   * TWO DISTRIBUTIONS, ONE DOCTRINE. `fleer-glossy` 1987-1989 is the tin
+   * factory set ("Custom Coated Collector's Edition", 660 cards each year,
+   * discontinued after 1989 -- there is NO 1990 or 1991 Fleer Glossy).
+   * `fleer-tiffany` 1996/1997/2002 is pack-inserted (1996 one per pack across
+   * all 600; 1997 one in 20 across 751; 2002 serial numbered to 200). The
+   * distribution decides the scarcity, never the identity: both are the parent
+   * checklist on coated stock, and both get their own row and their own pool.
+   *
+   * SPELLED (`S`), not `P`, and that is the whole point: only a spelled product
+   * answers productSetKeyForName, which is the leg of normalizeSetKey that runs
+   * BEFORE the unanchored brand patterns. Declared with `P` these keys still
+   * collapsed to `fleer` -- verified by running the function, not by reading it.
+   * They cannot take the reconciliation's route to a fixed point either: that
+   * one is fed by the census, and a key with no catalog rows yet has no census
+   * entry to be ruled from ("acquire before retire" means the rows arrive
+   * after the ruling, not before).
+   */
+  S("fleer-tiffany", { family: "fleer", parent: "fleer" }),
+  S("fleer-glossy", { family: "fleer", parent: "fleer" }),
+  S("fleer-update-tiffany", { family: "fleer-update", parent: "fleer-update" }),
+  S("fleer-update-glossy", { family: "fleer-update", parent: "fleer-update" }),
+  S("fleer-tradition-tiffany", { family: "fleer-tradition", parent: "fleer-tradition" }),
   P("flair", { parent: "fleer" }),
   P("ultra"),
   P("skybox"),
@@ -492,6 +537,14 @@ export const SAME_NUMBER_PARALLEL_SETS: ReadonlyArray<{ readonly setKey: string;
   // Bowman Tiffany, 1989-1991: same shape, same numbers (1989 Bowman lists
   // #220 and #27 and so does its Tiffany).
   { setKey: "bowman-tiffany", parent: "bowman" },
+  // The Fleer coated reprints, same shape: the Tiffany/Glossy card carries the
+  // paper card's number, so the number cannot tell them apart and only the
+  // title can. 1996 Fleer Tiffany lists #1-600 and so does 1996 Fleer.
+  { setKey: "fleer-tiffany", parent: "fleer" },
+  { setKey: "fleer-glossy", parent: "fleer" },
+  { setKey: "fleer-update-tiffany", parent: "fleer-update" },
+  { setKey: "fleer-update-glossy", parent: "fleer-update" },
+  { setKey: "fleer-tradition-tiffany", parent: "fleer-tradition" },
 ];
 
 /** True iff `setKey` reprints `parent`'s checklist on `parent`'s own card

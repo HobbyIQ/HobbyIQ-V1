@@ -181,11 +181,17 @@ describe("a product with no print runs is not PARTIAL", () => {
 
   it("the verdict consults the lane before calling a print-run-less ladder incomplete", () => {
     const src = fs.readFileSync(script, "utf8");
-    expect(src).toMatch(/const printRunsExpected = !LANES_WITHOUT_PRINT_RUNS\.has\(lane\);/);
+    // THE LANE IS CONSULTED FIRST, and it is still the only thing that can drop
+    // the print-run expectation lane-wide. CF-A-RUNG-PAGE-CARRIES-NO-PRINT-RUN
+    // (2026-09-04) added a second, NARROWER term beside it -- an attested rung
+    // page on a sibling-pages lane -- so this pins the base term rather than
+    // the whole expression, and the added term is pinned in its own file.
+    expect(src).toMatch(/const printRunsExpected = !LANES_WITHOUT_PRINT_RUNS\.has\(lane\)/);
     // CF-A-VINTAGE-BASE-SET-IS-NOT-PARTIAL (2026-09-04) gated the LADDER half
-    // of this expression the same way the print-run half already was. Both
-    // halves are pinned so neither can quietly lose its guard.
-    expect(src).toMatch(/const ladderExpected = !ladderlessByEra\(lane, entry\);/);
+    // of this expression the same way the print-run half already was, and
+    // CF-A-LADDER-ON-SIBLING-PAGES-IS-NOT-A-GAP added its modern counterpart.
+    // Both halves are pinned so neither can quietly lose its guard.
+    expect(src).toMatch(/const ladderExpected = !ladderlessByEra\(lane, entry\)/);
     expect(src).toMatch(/const incomplete = \(ladderExpected && gate\.stats\.ladder === 0\)\s*\|\| \(printRunsExpected && gate\.stats\.withPrintRun === 0\);/);
   });
 

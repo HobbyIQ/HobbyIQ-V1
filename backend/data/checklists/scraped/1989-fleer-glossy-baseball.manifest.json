@@ -1,0 +1,41 @@
+{
+ "scrapedAt": "2026-09-04T15:37:04.951Z",
+ "source": "sportscardchecklist",
+ "sourceUrl": "https://www.sportscardchecklist.com/set-11856/1989-fleer-glossy-baseball-trading-card-checklist",
+ "sport": "baseball",
+ "year": 1989,
+ "season": "1989",
+ "setName": "1989 Fleer Glossy",
+ "productKey": "1989-fleer-glossy",
+ "setKey": "fleer-glossy",
+ "setKeyRequested": "fleer-glossy",
+ "parallelOfParent": false,
+ "parallelName": null,
+ "subset": null,
+ "rowCount": 660,
+ "parallelColumnAuthoritative": true,
+ "cardRows": 660,
+ "ladderRows": 0,
+ "subsetRows": 8,
+ "printRunsFound": 0,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Double Print",
+   "category": "insert-double-print",
+   "playerCount": 1,
+   "rungs": 0,
+   "rowCount": 1,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Checklist",
+   "category": "insert-checklist",
+   "playerCount": 7,
+   "rungs": 0,
+   "rowCount": 7,
+   "refused": false,
+   "printRun": null
+  }
+ ]
+}

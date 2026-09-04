@@ -161,6 +161,27 @@ const CELLS = [
    */
   { sport: "baseball",   setKey: "topps",      from: 1980, to: 1999, label: "baseball/topps/1980-1999" },
   { sport: "baseball",   setKey: "bowman",     from: 1980, to: 1999, label: "baseball/bowman/1980-1999" },
+  /**
+   * CF-THE-FLEER-COATED-REPRINTS-WERE-INVISIBLE-TOO (2026-09-04).
+   *
+   * The note above says the remaining baseball cells are "a later, deliberate
+   * widening -- and this file is now the place that widening happens". This is
+   * that widening, and #1745 is what forced it: its repair lane gates 1,339
+   * catalog rows and 994 comps on Fleer Tiffany / Fleer Glossy products that
+   * the catalog had never minted, and NEITHER key was reachable from here
+   * because baseball was scoped to Topps and Bowman.
+   *
+   * The source serves all of them -- 1987/1988/1989 Fleer Glossy, 1987/1988
+   * Fleer Update Glossy, 1996 Fleer Tiffany, 1996 Fleer Update Tiffany, 1997
+   * Fleer Tiffany, 2002 Fleer Tiffany -- and every one had to be found by
+   * grepping a cached sitemap by hand, which is the same "the discovery never
+   * knew about it" failure this cell list already carries a note about.
+   *
+   * 1985-2003 covers the Glossy Tin run (1987-1989) at its front and Fleer
+   * Tradition at its back; `fleer` is anchored at the head of the slug
+   * remainder, so `1996-97-skybox-e-x2000-fleer-...` stays out.
+   */
+  { sport: "baseball",   setKey: "fleer",      from: 1985, to: 2003, label: "baseball/fleer/1985-2003" },
 ];
 
 /**

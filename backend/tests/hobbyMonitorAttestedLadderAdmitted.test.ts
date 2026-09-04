@@ -119,8 +119,12 @@ describe("B: the verification asks for both keys the child may have written", ()
   // ingest-checklist-csv-to-catalog resolves `m.setKey || normalizeSetKey(...)`,
   // so a manifest that STATES a key is honoured verbatim. The driver normalized
   // before querying, so it read a key the rows were never written under.
+  // Exquisite is NOT in this list any more: #1747 made it its own product, so
+  // `upper-deck-exquisite` is now a normalizeSetKey fixed point and there is no
+  // second spelling to ask for. It has its own case below -- a ruling that
+  // stops a key collapsing must SHRINK the candidate list, and that is the
+  // outcome worth pinning.
   const cases: Array<[string, number, string]> = [
-    ["2003/04 Upper Deck Exquisite Basketball", 2003, "upper-deck"],
     ["2025/26 Topps Three Basketball", 2025, "topps"],
     ["2024 Panini Clearly Donruss Football", 2024, "panini-donruss"],
     ["2025 Panini Score-A-Treat Football", 2025, "panini-score"],
@@ -134,9 +138,24 @@ describe("B: the verification asks for both keys the child may have written", ()
       expect(keys).toContain(driver.setKeyFor({ lane: "hobbymonitor", setName, year }));
       // And the collapsed one, so a product whose manifest omitted a setKey is
       // still counted rather than reported wholly missing.
-      if (driver.canonicalSetKey(keys[0]) !== keys[0]) expect(keys).toContain(collapsed);
+      expect(keys).toContain(collapsed);
+      expect(keys[0]).not.toBe(collapsed);
     });
   }
+
+  it("Exquisite needs only ONE key now that #1747 made it its own product", () => {
+    // Before #1747 `upper-deck-exquisite -> upper-deck` and the driver counted
+    // 44,840 Upper Deck rows against a 705-row product. The ruling makes the
+    // stated key a fixed point, so the candidate list collapses to one -- and
+    // the 705 rows the lane reported "missing" were always right there.
+    const keys = driver.setKeyCandidates({
+      lane: "hobbymonitor",
+      setName: "2003/04 Upper Deck Exquisite Basketball",
+      year: 2003,
+    });
+    expect(keys).toEqual(["upper-deck-exquisite"]);
+    expect(driver.canonicalSetKey("upper-deck-exquisite")).toBe("upper-deck-exquisite");
+  });
 
   it("never drops the stated key in favour of the alias", () => {
     // The regression: normalizing ALONE reported 2,105 of 2,482 Sapphire

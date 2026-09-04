@@ -1,0 +1,50 @@
+{
+ "scrapedAt": "2026-09-04T15:37:01.857Z",
+ "source": "sportscardchecklist",
+ "sourceUrl": "https://www.sportscardchecklist.com/set-11826/1988-fleer-glossy-baseball-trading-card-checklist",
+ "sport": "baseball",
+ "year": 1988,
+ "season": "1988",
+ "setName": "1988 Fleer Glossy",
+ "productKey": "1988-fleer-glossy",
+ "setKey": "fleer-glossy",
+ "setKeyRequested": "fleer-glossy",
+ "parallelOfParent": false,
+ "parallelName": null,
+ "subset": null,
+ "rowCount": 660,
+ "parallelColumnAuthoritative": true,
+ "cardRows": 660,
+ "ladderRows": 0,
+ "subsetRows": 8,
+ "printRunsFound": 0,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Highlight",
+   "category": "insert-highlight",
+   "playerCount": 1,
+   "rungs": 0,
+   "rowCount": 1,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > All-Stars",
+   "category": "insert-all-stars",
+   "playerCount": 1,
+   "rungs": 0,
+   "rowCount": 1,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Checklist",
+   "category": "insert-checklist",
+   "playerCount": 6,
+   "rungs": 0,
+   "rowCount": 6,
+   "refused": false,
+   "printRun": null
+  }
+ ]
+}

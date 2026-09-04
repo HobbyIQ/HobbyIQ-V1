@@ -98,8 +98,11 @@ describe("an absent year does not buy the exemption", () => {
 describe("the rule narrows the ladder expectation and NOTHING else", () => {
   const src = fs.readFileSync(DRIVER, "utf8");
 
-  it("only the ladder half of `incomplete` is gated -- print runs are untouched", () => {
-    expect(src).toContain("const ladderExpected = !ladderlessByEra(lane, entry);");
+  it("the era rule gates the ladder half of `incomplete`", () => {
+    // The era rule is one of the two ladder exemptions; its SIBLING is
+    // CF-A-LADDER-ON-SIBLING-PAGES-IS-NOT-A-GAP, pinned in its own file. Both
+    // narrow `ladderExpected` and neither touches the print-run term here.
+    expect(src).toContain("!ladderlessByEra(lane, entry)");
     expect(src).toContain("const incomplete = (ladderExpected && gate.stats.ladder === 0)");
     expect(src).toContain("|| (printRunsExpected && gate.stats.withPrintRun === 0);");
   });
