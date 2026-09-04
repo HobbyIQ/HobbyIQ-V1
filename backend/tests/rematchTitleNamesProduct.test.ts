@@ -115,6 +115,43 @@ const LEAKS: Array<{ what: string; title: string; year: number; key: string; num
     title: "1995 Pinnacle UC3 - Ken Griffey Jr - #73 - Seattle Mariners - Raw 10",
     year: 1995, key: "pinnacle", num: "73", names: "pinnacle-uc3",
   },
+  // -- GATE 4 slot-31 (2026-09-04). The judge's five remaining collapse
+  //    cases, 12 of 924 writable rows. FOUR OF THE FIVE WERE ALREADY REFUSED
+  //    by this guard on main -- the gate's NO-GO was read off a STALE
+  //    pre-#1773 artifact, taken before the guard learned to ask its question
+  //    of the STORED key as well as the derived one. They are pinned here so
+  //    the claim "already covered" is a test and not a memory, and so the
+  //    coverage cannot regress silently the way it was believed to be absent.
+  //
+  //    The FIFTH, `upper-deck-uda`, was genuinely open, and the gap was
+  //    vocabulary alone: no table declared UDA a child of upper-deck, so the
+  //    guard had nothing to match. Declaring it in DISTINCT_PRODUCT_SETKEYS is
+  //    the entire fix -- no new guard. See MUTATION 3 below.
+  {
+    what: "GATE 4: Upper Deck Special Edition #31 is Olajuwon; base UD #31 is another player",
+    title: "1991 Upper Deck Special Edition #31 Hakeem Olajuwon Houston Rockets",
+    year: 1991, key: "upper-deck", num: "31", names: "upper-deck-special-edition",
+  },
+  {
+    what: "GATE 4: Topps Micro/Mini is a physically different card",
+    title: "1991 Topps Micro/Mini Ken Griffey Jr #790 Seattle Mariners - Raw 10",
+    year: 1991, key: "topps", num: "790", names: "topps-mini",
+  },
+  {
+    what: "GATE 4: Topps Holsum is a 33-card food issue against Topps's 528",
+    title: "1990 Topps Holsum Ken Griffey Jr #4 - Raw 10",
+    year: 1990, key: "topps", num: "4", names: "topps-holsum",
+  },
+  {
+    what: "GATE 4: Upper Deck Minors runs its own 1-N, not the flagship checklist",
+    title: "1992 Upper Deck Minors Derek Jeter #5 Greensboro Hornets RC",
+    year: 1992, key: "upper-deck", num: "5", names: "upper-deck-minors",
+  },
+  {
+    what: "GATE 4: UDA is Upper Deck AUTHENTICATED -- signed memorabilia, not a set card",
+    title: "1991 Upper Deck UDA Michael Jordan #1 Authenticated Chicago Bulls",
+    year: 1991, key: "upper-deck", num: "1", names: "upper-deck-uda",
+  },
 ];
 
 /**
@@ -130,6 +167,11 @@ const CONTROLS: Array<{ title: string; year: number; key: string; num: string }>
   { title: "1978 Topps #400 Nolan Ryan - Raw", year: 1978, key: "topps", num: "400" },
   { title: "1989 Fleer Ken Griffey Jr. Rookie RC #548 - Raw", year: 1989, key: "fleer", num: "548" },
   { title: "1989 Bowman #220 Ken Griffey, Jr. - Raw", year: 1989, key: "bowman", num: "220" },
+  // GATE 4: `uda` is a THREE-LETTER token, so its controls matter more than
+  // most. `titleStatesWord` is boundary-anchored and these prove it -- a
+  // substring hit would refuse the whole Upper Deck flagship pool.
+  { title: "1992 Upper Deck Bermuda Triangle Insert #12 - Raw", year: 1992, key: "upper-deck", num: "12" },
+  { title: "1991 Upper Deck #500 Nolan Ryan Baseball Update", year: 1991, key: "upper-deck", num: "500" },
 ];
 
 describe("GUARD 6 -- a title naming a distinct product refuses the IMPROVE", () => {
@@ -240,5 +282,35 @@ describe("GUARD 6 -- a title naming a distinct product refuses the IMPROVE", () 
       expect(children, `${leak.key} declares no child ${leak.names} -- guard 6 is inert for it`)
         .toContain(leak.names);
     }
+  });
+
+  /**
+   * MUTATION CHECK 3 -- THE `upper-deck-uda` DECLARATION IS THE WHOLE FIX.
+   *
+   * GATE 4 opened asking for a new "GUARD 10". Four of its five cases were
+   * already refused (pinned above), and the fifth failed for one reason only:
+   * `SPECIALIZATION_CHILDREN_OF("upper-deck")` did not list `upper-deck-uda`,
+   * so GUARD 6's question -- "is there a declared child of this key whose
+   * distinguishing word the title states?" -- had nothing to match.
+   *
+   * This drives the guard's own predicate with the declaration REMOVED from
+   * the child list, exactly as it stood before this change, and asserts the
+   * refusal disappears. Delete the DISTINCT_PRODUCT_SETKEYS entry and this
+   * goes red -- which is what makes it a pin rather than a restatement.
+   */
+  it("MUTATION: removing the upper-deck-uda declaration reopens the leak", () => {
+    const title = "1991 Upper Deck UDA Michael Jordan #1 Authenticated Chicago Bulls";
+    const statesChild = (child: string) => {
+      const words = K.distinguishingWords(child, "upper-deck");
+      return words.length > 0 && words.every((w: string) => K.titleStatesWord(title, w));
+    };
+    const shipped = K.SPECIALIZATION_CHILDREN_OF("upper-deck");
+    expect(shipped, "upper-deck-uda is not declared -- guard 6 is inert for it")
+      .toContain("upper-deck-uda");
+    // The shipped vocabulary names a child this title states...
+    expect(shipped.some(statesChild)).toBe(true);
+    // ...and the pre-fix vocabulary, with that one entry gone, names none.
+    const reverted = shipped.filter((c: string) => c !== "upper-deck-uda");
+    expect(reverted.some(statesChild)).toBe(false);
   });
 });

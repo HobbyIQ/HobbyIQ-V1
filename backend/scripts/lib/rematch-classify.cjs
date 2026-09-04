@@ -1493,6 +1493,22 @@ const DISTINCT_PRODUCT_SETKEYS = [
   //    different cards' pools.
   "upper-deck-special-edition", "upper-deck-jordan-collection",
   "upper-deck-milk-caps", "topps-holsum",
+  // UDA is UPPER DECK AUTHENTICATED -- the company's autographed-memorabilia
+  // arm, not a set in the Upper Deck checklist at all (GATE 4 slot-31,
+  // 2026-09-04). It was the ONE case of the gate's five that GUARD 6 did not
+  // already refuse, and the reason was vocabulary and nothing else: the guard
+  // asks "is there a declared child of this key whose distinguishing word the
+  // title states?", and no table declared one. The other four
+  // (upper-deck-special-edition, topps-mini, topps-holsum, upper-deck-minors)
+  // were already declared here or in SPECIALIZATION_PARENTS, and the guard
+  // refuses them today -- measured, and pinned in
+  // rematchTitleNamesProduct.test.ts.
+  //
+  // Declaring it is the whole fix. A UDA item is signed memorabilia whose
+  // price is a different order of magnitude from a base card's, so folding it
+  // onto `upper-deck:<n>` corrupts that pool in the direction the audit
+  // opened on. Same shape as the milk caps above, one line up.
+  "upper-deck-uda",
   // 1995 Collector's Choice Special Edition is the one product in this family
   // the catalog ALREADY backs (313 baseballcardpedia rows) and already a
   // reconciliation fixed point -- named here so GUARD 6 and
