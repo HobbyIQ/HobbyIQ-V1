@@ -174,12 +174,57 @@ number ships in the data file so it travels with the finding.
 
 ---
 
-## 6. Pins
+## 6. A decision beats a derivation
+
+The mechanical rules call a checklist-backed key `distinct`, which would make it
+a fixed point. **Eleven of those collapses are deliberate** — somebody decided
+them, wrote the rule, and pinned it with a test that states the reasoning. The
+census can see that two spellings exist; it cannot see that a human already
+chose between them.
+
+```
+bowman-sapphire                -> bowman-chrome-sapphire    "vendors write Bowman
+bowman-mega-box                -> bowman-chrome-mega-box     Sapphire as shorthand;
+bowman-mega-box-chrome         -> bowman-chrome-mega-box     there is no standalone
+bowman-chrome-sapphire-edition -> bowman-chrome-sapphire     product"
+bowman-draft-sapphire-edition  -> bowman-draft-sapphire
+bowman-draft-sapphire-chrome   -> bowman-draft-sapphire
+topps-chrome-sapphire-edition  -> topps-chrome-sapphire
+flair-showcase                 -> flair                     marked DELIBERATE
+panini-contenders-optic        -> panini-contenders         opticIsOneProduct
+donruss-champions              -> panini-donruss            parent brand, pinned
+fleer-ultra                    -> ultra                     CF-ULTRA-IS-NOT-FLEER
+```
+
+The list is **derived, not guessed**: it is every key for which a test in this
+repo asserts a destination our verdict would forbid, extracted by grepping the
+suite for the assertion form.
+
+**Two keys are deliberately absent, and they are the interesting ones.**
+`select-certified` and `studio` also had tests asserting a collapse, and the
+evidence overturned both — 1,376 and 7,867 checklist rows against **zero** on
+their destinations, in disjoint eras. A pin is evidence that a decision was
+made, not proof it was right. Each of the eleven was read; each states a reason
+the census cannot see. Several are also live `needs-ruling` questions — Drew
+answering one moves it out of this list.
+
+### The era key is not a fixed point either
+
+`donruss` is stale *because* `normalizeSetKey` rewrites it, and the instinct is
+to stop that. But `normalizeSetKey` has no year, and with no year the modern
+spelling is the right default —
+`resolveSetKeyForSlug("baseball", "Donruss", 1987)` already answers `donruss`
+correctly because **it** has the year. The era split is resolved by
+`spellSetKeyForEra` at the call sites that know the year; pinning the bare key
+would break the year-less default without fixing anything.
+
+## 7. Pins
 
 - **Fixed-point test over the real catalog** — every checklist-backed catalog
-  setKey is a fixed point, a declared alias landing on its canonical, or a
-  declared malformed key. Measured: 1,950 keys → 1,911 fixed points, 20
-  aliases, 19 catalog-malformed, **0 unexplained**.
+  setKey falls in exactly one bucket. Measured across all 1,950: **1,882** fixed
+  points, **20** declared aliases, **11** ruled collapses, **1** era key, **19**
+  catalog-malformed, **17** open questions — **0 unexplained**. A key in none of
+  them is a collapse nobody declared, which is what the test catches.
 - **No cycles, no chains** — every alias target is itself a fixed point; no key
   is both an alias and a fixed point.
 - **No distinct-product merges** — no two checklist-backed `distinct` keys land
@@ -195,12 +240,15 @@ number ships in the data file so it travels with the finding.
 - **Throughput** — baseline 15,525 calls/s, reconciled **37,270** (2.4× faster:
   an exact map hit returns before the 188-pattern regex scan).
 
-## 7. One test changed, and why
+## 8. Two tests changed, and why
 
-`hobbyIqCardId.test.ts` asserted `normalizeSetKey("Select Certified") ===
-"score-select"`. That pinned a real pool fusion. Measured: `select-certified`
-holds 1,376 checklist rows (baseballcardpedia, 1995-1996), `score-select` holds
-**zero** — and the two names never share a year:
+Both pinned a real pool fusion, and in both the destination holds **zero**
+checklist rows.
+
+**1. `hobbyIqCardId.test.ts`** asserted
+`normalizeSetKey("Select Certified") === "score-select"`. Measured:
+`select-certified` holds 1,376 checklist rows (baseballcardpedia, 1995-1996),
+`score-select` holds **zero** — and the two names never share a year:
 
 ```
 1995/1996 Select Certified   baseball 1,246 + 1,447   football 962 + 37
@@ -210,6 +258,15 @@ holds 1,376 checklist rows (baseballcardpedia, 1995-1996), `score-select` holds
 Two products, disjoint eras, one destination. The test's original concern — that
 a careless bare-`certified` rule would steal the key — is still pinned; only the
 destination changed.
+
+**2. `idCarriesTheProduct.test.ts`** asserted
+`resolveSetKeyForSlug("baseball", "1995 Studio", 1995) === "donruss-studio"`.
+The 1991-2005 Studio checklists live under **`studio`** (7,867 checklist rows,
+baseballcardpedia); `donruss-studio` holds **zero** checklist rows against 1,191
+derived/vendor ones. The pool agrees — the sales are titled "1992 Studio
+Baseball", and "Donruss Studio" only from 2003. Same rule as Select Certified:
+a destination no checklist has ever written cannot be the canonical spelling of
+one that is checklist-backed.
 
 ---
 

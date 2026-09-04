@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { normalizeSetKey } from "../src/services/portfolioiq/hobbyIqCardId.service.js";
 import {
   ERA_SPLIT_TABLE,
+  alreadyRuledCollapses,
   needsRulingQuestions,
   reconciledFixedPoints,
   reconciliationEntry,
@@ -123,8 +124,11 @@ describe("the fixed-point invariant, over the real catalog", () => {
     // rests on the key's shape alone, and shape is not enough to overturn a
     // ruling the vocabulary made deliberately — "Bowman Chrome Prospects"
     // folds to `bowman-chrome` and holds zero checklist rows.
+    // Keys a prior ruling already decided are excluded too: those collapses
+    // are deliberate, and a derivation does not overturn a decision.
+    const ruled = new Set(alreadyRuledCollapses().map(([from]) => from));
     const distinct = DOC.entries
-      .filter((e) => e.verdict === "distinct" && e.evidence.checklistRows > 0)
+      .filter((e) => e.verdict === "distinct" && e.evidence.checklistRows > 0 && !ruled.has(e.setKey))
       .map((e) => e.setKey);
     const landing = new Map<string, string[]>();
     for (const k of distinct) {
@@ -133,6 +137,36 @@ describe("the fixed-point invariant, over the real catalog", () => {
     }
     const merged = [...landing.entries()].filter(([to, keys]) => keys.length > 1 || keys[0] !== to);
     expect(merged.map(([to, keys]) => `${keys.join(" + ")} -> ${to}`), "distinct products merged onto one key").toEqual([]);
+  });
+});
+
+describe("every checklist-backed catalog key is accounted for", () => {
+  it("is a fixed point, a declared alias, a ruled collapse, an era key, malformed, or an open question — nothing else", () => {
+    // THE INVARIANT, over the real catalog rather than a fixture. Measured
+    // 2026-09-03 across the 1,950 checklist-backed catalog setKeys:
+    //   1,882 fixed points        the deriver leaves them alone
+    //      20 declared aliases    land on their declared canonical
+    //      11 ruled collapses     a prior decision, kept
+    //       1 era key             resolved by year at the call site
+    //      19 catalog-malformed   the stored key leaked a year/sport word
+    //      17 needs-ruling        report-only, today's behaviour, Drew decides
+    // Every key falls in exactly one bucket. A key in NONE of them is a
+    // collapse nobody declared, which is the failure this test exists to catch.
+    const aliases = new Map(setKeyAliases());
+    const ruled = new Map(alreadyRuledCollapses());
+    const unexplained: string[] = [];
+    for (const e of DOC.entries) {
+      if (e.evidence.checklistRows === 0) continue;
+      const got = normalizeSetKey(e.setKey);
+      if (got === e.setKey) continue;                       // fixed point
+      if (aliases.get(e.setKey) === got) continue;          // declared alias
+      if (ruled.get(e.setKey) === got) continue;            // prior ruling
+      if (e.verdict === "era-split") continue;              // year-aware path
+      if (e.verdict === "malformed" || e.verdict === "catalog-key-malformed") continue;
+      if (e.verdict === "needs-ruling") continue;           // report-only
+      unexplained.push(`${e.setKey} -> ${got} (${e.verdict})`);
+    }
+    expect(unexplained, `collapses nobody declared:\n${unexplained.join("\n")}`).toEqual([]);
   });
 });
 
@@ -175,6 +209,40 @@ describe("the mutation the alias table must reject", () => {
     // `ex6-firered-leafgreen` is a 2004 Pokemon set the bare /leaf/ rule
     // captured on the word "leafgreen". Two verticals are never one product.
     expect(normalizeSetKey("ex6-firered-leafgreen")).not.toBe("leaf");
+  });
+});
+
+describe("a decision beats a derivation", () => {
+  it("keeps every already-ruled collapse collapsing", () => {
+    // These keys hold checklist rows, so the mechanical rules call them
+    // `distinct` and would make them fixed points. Each is a collapse somebody
+    // DECIDED, wrote a rule for, and pinned with a test that states why — the
+    // census can see two spellings exist, it cannot see that a human already
+    // chose between them.
+    const wrong: string[] = [];
+    for (const [from, to] of alreadyRuledCollapses()) {
+      if (normalizeSetKey(from) !== to) wrong.push(`${from} -> ${normalizeSetKey(from)}, ruled ${to}`);
+    }
+    expect(wrong, `already-ruled collapses that stopped collapsing:\n${wrong.join("\n")}`).toEqual([]);
+  });
+
+  it("does not promote an already-ruled key to a fixed point", () => {
+    const fixed = new Set(reconciledFixedPoints());
+    for (const [from] of alreadyRuledCollapses()) {
+      expect(fixed.has(from), `${from} was promoted despite a prior ruling`).toBe(false);
+    }
+  });
+
+  it("leaves the era keys to the year-aware path", () => {
+    // `donruss` is stale BECAUSE normalizeSetKey rewrites it — but that
+    // function has no year, and with no year the modern spelling is the right
+    // default. The split is resolved by spellSetKeyForEra at the call sites
+    // that know the year; pinning the bare key here would break the year-less
+    // default without fixing anything the year-aware path gets wrong.
+    expect(normalizeSetKey("Donruss")).toBe("panini-donruss");
+    expect(normalizeSetKey("2024 Donruss Baseball")).toBe("panini-donruss");
+    expect(spellSetKeyForEra(normalizeSetKey("Donruss"), 1987)).toBe("donruss");
+    expect(reconciledFixedPoints()).not.toContain("donruss");
   });
 });
 

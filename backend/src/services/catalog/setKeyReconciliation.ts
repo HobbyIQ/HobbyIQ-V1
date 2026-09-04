@@ -206,6 +206,63 @@ export function spellSetKeyForEra(setKey: string, year: number | null | undefine
   return s;
 }
 
+/**
+ * ALREADY-RULED COLLAPSES — a decision beats a derivation.
+ *
+ * These keys hold checklist rows and the mechanical rules therefore call them
+ * `distinct`, which would make them fixed points. But each one is a collapse
+ * somebody DECIDED, wrote a rule for, and pinned with a test that states the
+ * reasoning. The census can see that two spellings exist; it cannot see that a
+ * human already ruled which of them is the product.
+ *
+ *   bowman-sapphire        -> bowman-chrome-sapphire   "vendors write Bowman
+ *   bowman-mega-box        -> bowman-chrome-mega-box    Sapphire as shorthand;
+ *   bowman-mega-box-chrome -> bowman-chrome-mega-box    there is no standalone
+ *   topps-chrome-sapphire-edition -> topps-chrome-sapphire  product" (the
+ *   bowman-draft-sapphire-chrome  -> bowman-draft-sapphire  vocabulary says so
+ *                                                           outright)
+ *   flair-showcase         -> flair                    marked DELIBERATE in
+ *                                                      collapsedProductsBatch1
+ *   panini-contenders-optic -> panini-contenders       ruled by opticIsOneProduct
+ *   donruss-champions      -> panini-donruss           parent brand, pinned in
+ *                                                      slugRegression
+ *
+ * This list is DERIVED, not guessed: it is every key for which a test in this
+ * repo asserts `normalizeSetKey(x) === y` with a y our verdict would forbid
+ * (extractable by grepping the suite for the assertion form). If Drew rules
+ * differently later, the entry comes out here and the test changes with it —
+ * one place, and the reason travels with it.
+ *
+ * The ones NOT here are the ones worth noticing: `select-certified` had a test
+ * asserting a collapse too, and it is absent because the evidence overturned
+ * it (1,376 checklist rows against zero, disjoint eras). A pin is evidence of
+ * a decision, not proof it was the right one — so each of these was read, and
+ * each states a reason the census cannot see. Several are also live
+ * `needs-ruling` questions in the data file; Drew answering one moves it.
+ */
+const ALREADY_RULED_COLLAPSES: Readonly<Record<string, string>> = Object.freeze({
+  "bowman-sapphire": "bowman-chrome-sapphire",
+  "bowman-mega-box": "bowman-chrome-mega-box",
+  "bowman-mega-box-chrome": "bowman-chrome-mega-box",
+  "bowman-draft-sapphire-chrome": "bowman-draft-sapphire",
+  "topps-chrome-sapphire-edition": "topps-chrome-sapphire",
+  "flair-showcase": "flair",
+  // CF-ULTRA-IS-NOT-FLEER, explicit and pinned. The catalog's split is real
+  // (`ultra` 14,586 checklist rows 1991-2007, `fleer-ultra` 3,639 in 2025
+  // alone) but which spelling wins is exactly what that ruling decided.
+  "fleer-ultra": "ultra",
+  // The sapphire ruling in the vocabulary, applied to its "Edition" spelling.
+  "bowman-chrome-sapphire-edition": "bowman-chrome-sapphire",
+  "bowman-draft-sapphire-edition": "bowman-draft-sapphire",
+  "panini-contenders-optic": "panini-contenders",
+  "donruss-champions": "panini-donruss",
+});
+
+/** The keys a prior ruling already decided, with the destination it ruled. */
+export function alreadyRuledCollapses(): Array<[string, string]> {
+  return Object.entries(ALREADY_RULED_COLLAPSES).sort((a, b) => a[0].localeCompare(b[0]));
+}
+
 // -- the alias table and the fixed points ------------------------------------
 
 const ALIASES = new Map<string, string>();
@@ -257,6 +314,23 @@ for (const e of ENTRIES) {
   // question. Changing it would be acting on the absence of a rule, which is
   // the opposite of what an open question means.
   if (e.verdict === "needs-ruling") continue;
+  // AN ERA KEY IS NOT A FIXED POINT — IT IS A KEY THAT NEEDS A YEAR.
+  //
+  // `donruss` is stale precisely BECAUSE normalizeSetKey rewrites it, and the
+  // instinct is to stop that. But normalizeSetKey has no year, and with no
+  // year the modern spelling is the right default -- the vocabulary has said
+  // so since CF-PANINI-IS-ANACHRONISTIC-BEFORE-2009, and
+  // `resolveSetKeyForSlug("baseball", "Donruss", 1987)` already answers
+  // `donruss` correctly because IT has the year.
+  //
+  // So the era split is not resolved here at all. It is resolved by
+  // spellSetKeyForEra / spellForEra at the call sites that know the year, and
+  // pinning the bare key here would break the year-less default without
+  // fixing anything the year-aware path gets wrong.
+  if (e.verdict === "era-split") continue;
+  // A DECISION BEATS A DERIVATION. Where somebody already ruled this collapse
+  // and pinned it, the ruling stands and the verdict is report-only.
+  if (ALREADY_RULED_COLLAPSES[key]) continue;
   if (e.evidence.checklistRows > 0) FIXED_POINTS.add(key);
 }
 
