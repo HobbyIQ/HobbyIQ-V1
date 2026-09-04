@@ -316,8 +316,21 @@ describe("ingest-universe-driver — a bcp page with nothing left to give is set
     // ...and the streak counts only genuine failure and unreachability, so a
     // run of harmless oddballs cannot take a working lane down.
     expect(src).toMatch(/STREAK_STATUSES = new Set\(\["failed", "unreachable"\]\)/);
-    expect(src).toMatch(/if \(STREAK_STATUSES\.has\(verdict\.status\)\) consecutiveFailures\+\+;/);
-    expect(src).toMatch(/else if \(verdict\.status !== EMPTY_STATUS\) consecutiveFailures = 0;/);
+    // The arithmetic itself, not a grep for it. It used to be inline in the run
+    // loop and this pin matched that literal line; it is now the exported
+    // streakAfter, so the pin CALLS it -- a behavioural assert cannot rot the
+    // way a text match does when the code is refactored underneath it.
+    const { streakAfter, EMPTY_STATUS: EMPTY, SYSTEMIC_FAILURE_STREAK: N } = require_(script);
+    expect(streakAfter(0, { status: "failed" })).toBe(1);
+    expect(streakAfter(1, { status: "unreachable" })).toBe(2);
+    // A run of harmless oddballs cannot take a working lane down.
+    let s2 = 0;
+    for (let i = 0; i < N + 2; i++) s2 = streakAfter(s2, { status: EMPTY });
+    expect(s2).toBeLessThan(N);
+    // (was a text match on the same inline line; the behavioural asserts above
+    // cover it, including that `empty` does not RESET either -- so a real
+    // outage interrupted by one empty set still trips on its own run.)
+    expect(streakAfter(2, { status: EMPTY })).toBe(2);
   });
 
   it("it reconciles as an accounted entry, in both modes", () => {

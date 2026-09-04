@@ -78,6 +78,35 @@ const EMPTY_STATUS = "empty";
  *  construction: it is the source answering, not the lane refusing. */
 const STREAK_STATUSES = new Set(["failed", "unreachable"]);
 
+/**
+ * The systemic tripwire's whole arithmetic, in one exported place so a test can
+ * reach it. It was inline in the run loop, which meant the only way to pin it
+ * was to restate it in the test -- and a restated rule pins nothing, because
+ * the copy in the test keeps passing while the real one regresses.
+ *
+ * The streak may conclude exactly one thing: THE HOST IS DOWN. So:
+ *
+ *   laneProvenHealthy  resets. A verdict we could only reach by fetching and
+ *      parsing the page successfully -- a cleanliness-gate CONTENT refusal. It
+ *      stays `failed` because a cartesian staging is a real defect, but it is
+ *      positive evidence the lane is UP. Run 33857627732 aborted a healthy
+ *      lane because two of these counted as a down host.
+ *      NOT every gate refusal: "staged file unreadable" means acquisition
+ *      delivered no file at all, which is a broken pipe and must still trip
+ *      the tripwire. gateStagedEntry draws that line with contentRefusal.
+ *   empty              neither advances nor resets. The source answering "I
+ *      have nothing for this set" is no evidence either way, so a genuine
+ *      outage interrupted by an empty set still trips on its own run.
+ *   failed/unreachable advance.
+ *   anything else      resets.
+ */
+function streakAfter(streak, verdict) {
+  if (verdict?.laneProvenHealthy) return 0;
+  if (STREAK_STATUSES.has(verdict?.status)) return streak + 1;
+  if (verdict?.status !== EMPTY_STATUS) return 0;
+  return streak;
+}
+
 const f = (n) => Number(n).toLocaleString();
 const left = () => RUN_MS - (Date.now() - STARTED);
 
@@ -580,7 +609,14 @@ function gateStagedEntry(csvPaths, lane) {
     // and it names the FILE -- "the gate refused" with no filename is
     // unactionable when a page stages five of them.
     if (!g.ok && g.code !== "zero-base") {
-      return { ok: false, reason: `${path.basename(p)}: ${g.reason}`, stats: total, files };
+      // CONTENT REFUSAL vs BROKEN PIPE. Everything the gate judges past the
+      // read is a verdict about a file the source actually served, and
+      // reaching it proves the lane works. "staged file unreadable" is the one
+      // refusal that means the opposite: acquisition delivered nothing, which
+      // is exactly the shape a real lane failure takes. Only the former may
+      // reset the systemic streak -- see streakAfter.
+      const contentRefusal = !/staged file unreadable/.test(String(g.reason || ""));
+      return { ok: false, reason: `${path.basename(p)}: ${g.reason}`, stats: total, files, contentRefusal };
     }
     if (!g.ok) zeroBase = zeroBase ?? g;
   }
@@ -822,14 +858,46 @@ function acquireEntry(entry, dir) {
     case "hobbymonitor": {
       // The direct-URL lane (#1565): fetch this exact release page, bypassing
       // hmSlugFor, which cannot name a release absent from the thin --list index.
-      run("fetchHobbyMonitorChecklist.cjs", [
-        "--url", entry.sourceRef,
-        "--out", csvPath,
-        "--year", String(entry.year || ""),
-        "--set-key", setKeyFor(entry) || "",
-        "--set-name", String(entry.setName || ""),
-        "--sport", String(entry.sport || "baseball"),
-      ]);
+      //
+      // CF-AN-UNRELEASED-PRODUCT-IS-NOT-A-BROKEN-LANE (2026-09-04, run
+      // 33857627732). The fetcher exits 1 for THREE different reasons and this
+      // lane read all of them as `failed`. Entry 18 (2026 Panini Prizm WNBA,
+      // effective 2026-09-25) is a product hobbymonitor has not published a
+      // checklist for yet; it became the third `failed` in a row and aborted
+      // the lane with 81 entries unattempted. The bcp lane learned exactly this
+      // (CF-A-REFUSAL-PATH-IS-NOT-A-CRASH); hobbymonitor never did. Classified
+      // on the fetcher's own words, which now name the cause:
+      //
+      //   "nothing new to add"        -> EMPTY. The release exists and carries
+      //      no checklist at all. A verdict about the product, excluded from
+      //      the streak, exactly as the same phrase means on bcp and tcgdex.
+      //   "challenge/interstitial"    -> UNREACHABLE. The host is not serving
+      //      us; terminal for the entry, and a STREAK of them is the lane
+      //      being blocked, which is precisely when the tripwire should fire.
+      //   "layout not understood"     -> stays `failed`. That is OUR parser and
+      //      it must keep bringing someone back to it.
+      try {
+        run("fetchHobbyMonitorChecklist.cjs", [
+          "--url", entry.sourceRef,
+          "--out", csvPath,
+          "--year", String(entry.year || ""),
+          "--set-key", setKeyFor(entry) || "",
+          "--set-name", String(entry.setName || ""),
+          "--sport", String(entry.sport || "baseball"),
+        ]);
+      } catch (err) {
+        const said = String(err?.message || err);
+        if (/nothing new to add/.test(said)) {
+          const e = new Error(`hobbymonitor serves no checklist for this release yet — ${(said.match(/\(status[^)]*\)/) || ["the source carries nothing"])[0]}`);
+          e.emptyAtSource = true;
+          throw e;
+        }
+        if (/challenge\/interstitial|not a hobbymonitor release page/.test(said)) {
+          // Shaped for the shared isGone test so it lands in `unreachable`.
+          throw new Error(`hobbymonitor did not serve the release page (HTTP 403-equivalent: a 200 carrying no release payload) — ${said.slice(0, 200)}`);
+        }
+        throw err;
+      }
       return { csvPaths: [csvPath] };
     }
     case "sportscardchecklist": {
@@ -1436,7 +1504,7 @@ for (const lane of ACQUIRE_LANES) {
   }
 }
 
-module.exports = { gateStagedCsv, gateStagedEntry, ladderIsAttested, CARTESIAN_MIN_RUNGS, CARTESIAN_MIN_CARDS, stagedCsvs, LANES_WITHOUT_PRINT_RUNS, LANES_WITH_BASELESS_PRODUCTS, LANES_WITH_VINTAGE_ERA_PRODUCTS, PARALLEL_ERA_FIRST_YEAR, ladderlessByEra, sourceLabelFor, splitCsv, isPersonName, setKeyFor, planFor, tcgdexModern, acquireStaged, ACQUIRE_LANES, LANE_ALIASES, LANE_SOURCE, LANE_MINUTES, CANONICAL_HEADER, CHILD_STDERR_LINES, cosmosSafeId, controlId, orderQueue, SYSTEMIC_FAILURE_STREAK, EMPTY_STATUS, STREAK_STATUSES, isStaged, stagedSourceRefs };
+module.exports = { streakAfter, gateStagedCsv, gateStagedEntry, ladderIsAttested, CARTESIAN_MIN_RUNGS, CARTESIAN_MIN_CARDS, stagedCsvs, LANES_WITHOUT_PRINT_RUNS, LANES_WITH_BASELESS_PRODUCTS, LANES_WITH_VINTAGE_ERA_PRODUCTS, PARALLEL_ERA_FIRST_YEAR, ladderlessByEra, sourceLabelFor, splitCsv, isPersonName, setKeyFor, planFor, tcgdexModern, acquireStaged, ACQUIRE_LANES, LANE_ALIASES, LANE_SOURCE, LANE_MINUTES, CANONICAL_HEADER, CHILD_STDERR_LINES, cosmosSafeId, controlId, orderQueue, SYSTEMIC_FAILURE_STREAK, EMPTY_STATUS, STREAK_STATUSES, isStaged, stagedSourceRefs };
 if (require.main !== module) return;
 
 (async () => {
@@ -1661,7 +1729,19 @@ if (require.main !== module) return;
         console.log(`      ${f(csvPaths.length)} staged scope files: ${csvPaths.map((p) => path.basename(p)).join(", ")}`);
       }
       if (!gate.ok) {
-        verdict = { status: "failed", reason: `cleanliness gate: ${gate.reason}`, rowsCreated: 0, stats: gate.stats };
+        // CF-A-GATE-REFUSAL-IS-NOT-EVIDENCE-THE-LANE-IS-DOWN (2026-09-04, run
+        // 33857627732). A refusal here is a verdict about the STAGED FILE, and
+        // reaching it PROVES the lane works: we fetched the page, parsed it and
+        // staged a CSV. Yet it wrote plain `failed`, which advances the
+        // systemic streak -- so entries 16 and 17 (2024 and 2025 Panini Prizm
+        // Football, both refused as cartesian) plus one unreleased product made
+        // a 3-streak that aborted a HEALTHY lane with 81 entries unattempted.
+        //
+        // It stays `failed`: a cartesian staging is a real defect in the
+        // converter and must keep bringing someone back to it. What changes is
+        // that it no longer counts as evidence the HOST is down, which is the
+        // only thing the streak is allowed to conclude.
+        verdict = { status: "failed", reason: `cleanliness gate: ${gate.reason}`, rowsCreated: 0, stats: gate.stats, laneProvenHealthy: gate.contentRefusal === true };
         console.log(`      REFUSED — ${gate.reason}`);
       } else {
         run("ingest-checklist-csv-to-catalog.cjs", [], {
@@ -1803,8 +1883,7 @@ if (require.main !== module) return;
     // `empty` neither advances the streak NOR resets it: the source having no
     // cards for this set is no evidence either way about the lane's health, so
     // a genuine outage interrupted by an empty set still trips on its own run.
-    if (STREAK_STATUSES.has(verdict.status)) consecutiveFailures++;
-    else if (verdict.status !== EMPTY_STATUS) consecutiveFailures = 0;
+    consecutiveFailures = streakAfter(consecutiveFailures, verdict);
     if (consecutiveFailures >= SYSTEMIC_FAILURE_STREAK) {
       systemicAbort = `${consecutiveFailures} consecutive entries failed or were unreachable — the lane, not the entries`;
       notReached = take.length - (i + 1);
