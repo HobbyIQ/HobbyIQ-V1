@@ -61,7 +61,7 @@ afterAll(() => { try { fs.rmSync(tmp, { recursive: true, force: true }); } catch
 // stubbed Cosmos. Each `yields` reproduces one real exit shape of the scraper,
 // on the lines the acquisition actually reads.
 
-type Yield = "csv" | "noLadder" | "noBase" | "gone" | "throw";
+type Yield = "csv" | "noLadder" | "noBase" | "gone" | "throw" | "roster" | "stub" | "singleCard";
 type Spec = { title: string; year: number; setName: string; yields: Yield };
 
 function manifestOf(specs: Spec[]): string {
@@ -121,6 +121,18 @@ cp.execFileSync = function (file, args, options) {
     if (mode === "gone") {
       // get() :90 -- the wiki says the page is not there.
       return "   HTTP 404 http://www.baseballcardpedia.com/index.php/" + title + "\\n\\npages fetched     0\\n  staged          0   (0 csv rows)\\n  unreachable     1\\n";
+    }
+    // CF-A-CHECKLIST-WITHOUT-CARD-NUMBERS-IS-NOT-A-PARSER-GAP. Three shapes
+    // the wiki publishes with no card number at all; each has its OWN wording
+    // so the driver can map them per shape rather than on a catch-all.
+    if (mode === "roster") {
+      return "  " + title + ": checklist is an UNNUMBERED ROSTER (70 lines) \\u2014 the source states no card numbers, nothing to add\\n\\npages fetched     1\\n  staged          0   (0 csv rows)\\n";
+    }
+    if (mode === "stub") {
+      return "  " + title + ": page is a STUB \\u2014 headings with no checklist under them (0 lines) \\u2014 the source states no card numbers, nothing to add\\n\\npages fetched     1\\n  staged          0   (0 csv rows)\\n";
+    }
+    if (mode === "singleCard") {
+      return "  " + title + ": page is a SINGLE-CARD promo, not a numbered set (1 line) \\u2014 the source states no card numbers, nothing to add\\n\\npages fetched     1\\n  staged          0   (0 csv rows)\\n";
     }
     // scrape-bcp-ladders.cjs:1415 -- OUR parser, not the source.
     return "  " + title + ": 0 base cards \\u2014 layout not understood, SKIPPED (not emitted)\\n\\npages fetched     1\\n  staged          0   (0 csv rows)\\n  no base cards   1   <- layout gap, listed above, NOT silently emitted\\n";
@@ -226,6 +238,60 @@ describe("bcp — a refusal path is classified on what the scraper said", () => 
     const r = drive([{ title: "1990_Missing_Page", year: 1990, setName: "Missing Page", yields: "gone" }],
       { LIMIT: "1", BACKFILL_APPLY: "true" });
     expect(statusOf(r.control, "Missing_Page")).toBe("unreachable");
+  });
+
+  it("an UNNUMBERED ROSTER is EMPTY — the source states no card number to key", () => {
+    // 1999 Team Best Autographs: 70 real player names, and the wiki publishes
+    // not one card number. The catalog keys a card by cardNumber and the
+    // ingester drops a row without one, so the only way to "read" this page
+    // would be to invent a numbering the source never published.
+    const r = drive([{ title: "1999_Team_Best_Autographs", year: 1999, setName: "Team Best Autographs", yields: "roster" }],
+      { LIMIT: "1", BACKFILL_APPLY: "true" });
+    expect(statusOf(r.control, "Team_Best_Autographs")).toBe(EMPTY_STATUS);
+    expect(r.code).toBe(0);
+    // The control doc says WHICH shape, so the 62 can be told apart later.
+    expect(String(docFor(r.control, "Team_Best_Autographs").reason)).toMatch(/UNNUMBERED ROSTER/);
+  });
+
+  it("a STUB page is EMPTY — headings with nothing under them", () => {
+    const r = drive([{ title: "2010_SP_Authentic", year: 2010, setName: "SP Authentic", yields: "stub" }],
+      { LIMIT: "1", BACKFILL_APPLY: "true" });
+    expect(statusOf(r.control, "SP_Authentic")).toBe(EMPTY_STATUS);
+    expect(String(docFor(r.control, "SP_Authentic").reason)).toMatch(/STUB/);
+  });
+
+  it("a SINGLE-CARD promo page is EMPTY, not a set we failed to parse", () => {
+    const r = drive([{ title: "2004-05_Speed_Stick", year: 2004, setName: "Bowman Chrome Speed Stick", yields: "singleCard" }],
+      { LIMIT: "1", BACKFILL_APPLY: "true" });
+    expect(statusOf(r.control, "Speed_Stick")).toBe(EMPTY_STATUS);
+    expect(String(docFor(r.control, "Speed_Stick").reason)).toMatch(/SINGLE-CARD/);
+  });
+
+  it("the three no-number shapes are streak-neutral, so they cannot abort the lane", () => {
+    // This is the whole point: 62 control docs carried the parser-gap message,
+    // and three consecutive `failed` entries abort the lane. Before this
+    // change a run that met three of these in a row stranded everything
+    // behind them.
+    const specs: Spec[] = [
+      { title: "1993_Nabisco", year: 1993, setName: "Nabisco All-Star Autographs", yields: "roster" },
+      { title: "2010_SP_Authentic", year: 2010, setName: "SP Authentic", yields: "stub" },
+      { title: "2004-05_Speed_Stick", year: 2004, setName: "Speed Stick", yields: "singleCard" },
+      { title: "2011_Topps_Chrome", year: 2011, setName: "Topps Chrome", yields: "csv" },
+    ];
+    const r = drive(specs, { LIMIT: "4", BACKFILL_APPLY: "true",
+      TITLES: "1993 Nabisco All-Star Autographs,2010 SP Authentic,2004 Speed Stick,2011 Topps Chrome" });
+    // The work BEHIND the three still ran, which it could not have done if
+    // they had advanced the streak.
+    expect(statusOf(r.control, "Topps_Chrome")).toBe("ingested");
+    expect(r.out).not.toMatch(/systemic/i);
+  });
+
+  it("a shape we have NOT classified still stays a parser gap", () => {
+    // The mapping matches three explicit strings, never a catch-all, so an
+    // unrecognised layout keeps its fault verdict rather than going quiet.
+    const r = drive([{ title: "1990_Bazooka", year: 1990, setName: "Bazooka", yields: "noBase" }],
+      { LIMIT: "1", BACKFILL_APPLY: "true" });
+    expect(statusOf(r.control, "Bazooka")).not.toBe(EMPTY_STATUS);
   });
 
   it("a scraper that genuinely crashes is still FAILED", () => {

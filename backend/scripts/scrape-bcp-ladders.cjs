@@ -196,6 +196,103 @@ function baseCards(html) {
     : { cards: [], viaChecklistHeading: false };
 }
 
+/**
+ * The wording per shape. Each is a DISTINCT string so a control doc says which
+ * of the three it was, and so the driver's mapping can be pinned per shape
+ * rather than on one catch-all substring.
+ */
+const SHAPE_NOTE = {
+  "unnumbered-roster": "checklist is an UNNUMBERED ROSTER",
+  "stub": "page is a STUB — headings with no checklist under them",
+  "single-card": "page is a SINGLE-CARD promo, not a numbered set",
+};
+
+/**
+ * CF-A-CHECKLIST-WITHOUT-CARD-NUMBERS-IS-NOT-A-PARSER-GAP (2026-09-04).
+ *
+ * #1732 / #1738 / #1762 each closed a real gap behind the message
+ *
+ *   "0 base cards — layout not understood, SKIPPED"
+ *
+ * and the driver maps that message to `failed` + laneProvenHealthy, on the
+ * #1729 ruling that a checklist we cannot read is OUR defect. That ruling was
+ * right for the layouts it was made about: the rows were there and a heading
+ * level hid them.
+ *
+ * 62 control docs still carry it, and a probe of 14 of those pages (fetched
+ * live 2026-09-04) says the remaining population is NOT that. Three shapes,
+ * and only one of them is a parser at fault:
+ *
+ *   UNNUMBERED ROSTER — the page carries a real checklist, and the wiki
+ *     publishes it with NO card numbers at all:
+ *       1999_Team_Best_Autographs      70 lines, "Rick Ankiel", "Tony Armas"
+ *       1993_Nabisco_All-Star_Autographs  6 lines, "Ernie Banks"
+ *       2013_Bowman_Blue_Sapphire_...    64 lines, "Andrew McCutchen"
+ *     Measured: 0 of those lines carry a leading number, 100% are person
+ *     names. There is no card number to read because the SOURCE states none.
+ *
+ *   STUB — the headings are scaffolded and there is no content under any of
+ *     them. 2010_SP_Authentic: a full Base_Set/Parallels/Inserts heading tree,
+ *     772 chars of Base_Set slice, and ZERO <li> in the entire Checklist body.
+ *
+ *   SINGLE-CARD PROMO — a one-card page whose sole line is a name and a print
+ *     run, not a numbered card. 2004-05 Bowman Chrome Speed Stick A-Rod:
+ *     one line, "Alex Rodriguez 100".
+ *
+ * WHY NONE OF THESE MAY BE PARSED INTO ROWS. The catalog keys a card by its
+ * cardNumber, and ingest-checklist-csv-to-catalog skips any row whose
+ * cardNumber is blank (`if (!cardNumber || !player) { skippedRow++; }`). So a
+ * roster of bare names cannot become rows unless we INVENT numbers for it,
+ * and `no synthetic parallels — actuals only` forbids exactly that. Minting
+ * 1..70 for Team Best would state a numbering the source never published.
+ *
+ * The existing pin agrees and is older than this change: "a body of ordinary
+ * names is NOT read as an initials-numbered set" (bcpReadsTheThirdAndFourth
+ * Layouts) deliberately holds a bare-name roster at zero cards. This function
+ * does not touch that ruling; it only lets the DRIVER tell the three shapes
+ * apart from a genuine parser gap, so a page with nothing keyable stops
+ * counting as our defect and stops burning the systemic streak.
+ *
+ * Returns null when the body is none of these -- which is the genuine
+ * "layout not understood" and keeps its old message and its old verdict.
+ */
+
+function classifyUnreadableBody(html) {
+  // NEVER CONTRADICT A SUCCESSFUL PARSE. `section(html, "Base_Set", 2)` is the
+  // FIRST slice baseCards tries, not the one it necessarily used: on 2016
+  // Topps Sapphire that slice holds 798 chars and zero <li> while the cards
+  // (515 of them) come from the h1 Checklist fallback, and on 1988 Upper Deck
+  // Promo the Checklist body parses to six "A1 DeWayne Buice" cards. Choosing
+  // a narrower body than the parser did would let this call a page that reads
+  // perfectly well a stub. The classification is only ever about a page that
+  // yielded NOTHING, so ask baseCards first and refuse outright otherwise.
+  if (baseCards(html).cards.length) return null;
+  // Every body baseCards consults, in its order, so the classification is made
+  // on exactly what failed to parse rather than on a slice it never used.
+  const body = [section(html, "Base_Set", 2), section(html, "Base_Set", 3), checklistSection(html)]
+    .find((b) => b && /<li>/.test(b)) ?? checklistSection(html);
+  if (!body) return null;
+  const items = [...body.matchAll(/<li>([\s\S]*?)<\/li>/g)].map((m) => detag(m[1])).filter(Boolean);
+  // A heading tree with no list content at all. The page exists and says
+  // nothing -- there is no layout here to misread.
+  if (!items.length) return { shape: "stub", lines: 0 };
+  // EVERY line must be a bare person name, and that single rule carries both
+  // halves of the decision.
+  //
+  // isPersonName refuses a leading-digit token outright (`!/^\d/.test(t[0])`)
+  // and wants 2-5 name-shaped tokens, so it already rejects every numbered
+  // line -- "24 Ken Griffey", "US150 Mike Trout", "BD-72 Juan Soto". A
+  // separate leading-digit guard was tried here and removed: measured over the
+  // 20-page probe corpus it changed ZERO outcomes, and a guard that cannot
+  // change an outcome cannot be pinned, which is worse than not having it.
+  //
+  // Asked of EVERY line rather than of a majority, because one line we cannot
+  // read means this is a layout we have not classified -- and an unclassified
+  // layout must stay a parser gap rather than be laundered into EMPTY.
+  if (!items.every((t) => isPersonName(t))) return null;
+  return { shape: items.length === 1 ? "single-card" : "unnumbered-roster", lines: items.length };
+}
+
 /** "108" / "US150" / "BD-72" -> a card number; "Juan Soto" is not. */
 const CARD_NUM = /^([A-Z]{0,4}-?\d+[a-z]?|[A-Z0-9]{1,6}-[A-Z0-9]{1,6})$/i;
 /**
@@ -1648,7 +1745,21 @@ async function main(opts = {}) {
     // from the page's own statement of the split. {} when it does not say.
     const subsetRuns = subsetRanges(html, cards.length);
     const scopes = parseScopedLadders(par, { html, setName, setKey: paperSetKey, playerNames: players, qualify, subsetRuns });
-    if (!cards.length) { noCards++; console.log(`  ${title}: 0 base cards — layout not understood, SKIPPED (not emitted)`); continue; }
+    if (!cards.length) {
+      noCards++;
+      // CF-A-CHECKLIST-WITHOUT-CARD-NUMBERS-IS-NOT-A-PARSER-GAP. Three shapes
+      // carry no card number the catalog could key, so there is nothing here
+      // for us to read wrongly and nothing to fix in the parser. Each says so
+      // in its own words: the driver maps these to EMPTY, and anything this
+      // does NOT recognise keeps the old message and stays a lane fault.
+      const shape = classifyUnreadableBody(html);
+      if (shape) {
+        console.log(`  ${title}: ${SHAPE_NOTE[shape.shape]} (${shape.lines} line${shape.lines === 1 ? "" : "s"}) — the source states no card numbers, nothing to add`);
+        continue;
+      }
+      console.log(`  ${title}: 0 base cards — layout not understood, SKIPPED (not emitted)`);
+      continue;
+    }
     const ladderScopes = scopes.filter((s) => s.rungs.length);
     if (!ladderScopes.length) {
       noLadder++;
@@ -1883,6 +1994,7 @@ async function main(opts = {}) {
 // (leadingCardNumber / foldRoster / foldName): the number-prefix defences the
 // scrapeBcpLaddersCardLineGuard pins drive directly.
 module.exports = {
+  classifyUnreadableBody, SHAPE_NOTE,
   main, normalizeSport,
   parseCards, parseLadder, parseScopedLadders, section,
   // CF-A-YEAR-IS-NOT-A-PRINT-RUN: exported so the guard is pinnable directly.
