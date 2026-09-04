@@ -472,21 +472,103 @@ async function main() {
   // A match proves nothing unless checklist-backed. The catalog row's SOURCE
   // is the evidence: a checklist ingest, never a vendor row.
   const CHECKLIST_SOURCE_RE = /checklist|beckett|tcdb|insider|bcp|baseballcardpedia|tcgdex/i;
+  // SPECIALIZATION-STATED reads a DIFFERENT, STRICTER predicate -- an
+  // allowlist of named scraped sources, `K.isStrictChecklistSource`. See
+  // STRICT_CHECKLIST_SOURCES in the classifier for the measurement that
+  // retired the subtractive version. It is deliberately a second function and
+  // not a tightening of the first: tightening `checklistBacked` would silently
+  // change the ordinary IMPROVE population across the whole 16.3M-row pool,
+  // which is a different ruling nobody made.
   const backedCache = new Map();
+  const strictCache = new Map();
+  const catRowCache = new Map();
+  /** The catalog row for a slug, cached, or null. One read serves both
+   *  predicates -- the strict gate must not double the census's catalog RU. */
+  const catRow = async (slug) => {
+    if (!slug) return null;
+    if (catRowCache.has(slug)) return catRowCache.get(slug);
+    let out = null;
+    try { out = (await retry(() => cat.item(slug, slug).read())).resource ?? null; }
+    catch (e) { if (e?.code !== 404 && e?.statusCode !== 404) throw e; }
+    catRowCache.set(slug, out);
+    return out;
+  };
+  const sourceText = (r) => `${String(r?.source ?? r?.sourceSystem ?? "")},${Array.isArray(r?.sources) ? r.sources.join(",") : ""}`;
   const checklistBacked = async (slug) => {
     if (!slug) return false;
     if (backedCache.has(slug)) return backedCache.get(slug);
+    const resource = await catRow(slug);
     let backed = false;
-    try {
-      const { resource } = await retry(() => cat.item(slug, slug).read());
-      if (resource) {
-        const src = String(resource.source ?? resource.sourceSystem ?? "");
-        const sources = Array.isArray(resource.sources) ? resource.sources.join(",") : "";
-        backed = CHECKLIST_SOURCE_RE.test(src) || CHECKLIST_SOURCE_RE.test(sources) || resource.checklistBacked === true;
-      }
-    } catch (e) { if (e?.code !== 404 && e?.statusCode !== 404) throw e; }
+    if (resource) {
+      const src = sourceText(resource);
+      backed = CHECKLIST_SOURCE_RE.test(src) || resource.checklistBacked === true;
+    }
     backedCache.set(slug, backed);
     return backed;
+  };
+  /** L3. Backed by a REAL SCRAPED checklist source -- one NAMED in
+   *  STRICT_CHECKLIST_SOURCES. A row whose only evidence is
+   *  `checklistBacked: true` with no named source is NOT strict backing: that
+   *  flag says someone believed it, not who measured it. Any of the row's
+   *  sources may carry the proof, so `sources[]` is checked alongside
+   *  `source`. */
+  const checklistBackedStrict = async (slug) => {
+    if (!slug) return false;
+    if (strictCache.has(slug)) return strictCache.get(slug);
+    const resource = await catRow(slug);
+    let backed = false;
+    if (resource) {
+      const named = [resource.source, resource.sourceSystem, ...(Array.isArray(resource.sources) ? resource.sources : [])];
+      backed = named.some((s) => K.isStrictChecklistSource(s));
+    }
+    strictCache.set(slug, backed);
+    return backed;
+  };
+  /** L5. Does the STORED flagship's own checklist list this cardNumber?
+   *  `null` when the question cannot be answered, which the classifier treats
+   *  as a refusal. ONE query per (year, setKey), cached: a per-row query over
+   *  16.3M rows is not a census, it is an outage.
+   *  CF-FLEET-SCRIPTS-MEASURE-THROUGHPUT-BEFORE-DISPATCH. */
+  const flagshipNumbersCache = new Map();
+  const flagshipNumbers = async (year, setKey) => {
+    const key = `${year}|${setKey}`;
+    if (flagshipNumbersCache.has(key)) return flagshipNumbersCache.get(key);
+    let out = null;
+    try {
+      const { resources } = await retry(() => cat.items.query({
+        query: `SELECT c.cardNumber, c.source FROM c WHERE c.setKey = @sk AND c.cardYear = @y`,
+        parameters: [{ name: "@sk", value: setKey }, { name: "@y", value: Number(year) }],
+      }, { maxItemCount: -1 }).fetchAll());
+      // A flagship with NO real checklist rows cannot answer the question --
+      // "not listed" and "nothing to list from" are different facts and only
+      // the first is evidence. Null is the refusal.
+      const real = (resources ?? []).filter((r) => K.isStrictChecklistSource(r?.source));
+      out = real.length ? new Set(real.map((r) => String(r.cardNumber ?? "").toUpperCase())) : null;
+    } catch { out = null; }
+    flagshipNumbersCache.set(key, out);
+    return out;
+  };
+  const flagshipListsCardNumber = async (stored) => {
+    const year = stored?.cardYear, setKey = String(stored?.setKey ?? "").toLowerCase();
+    const num = String(stored?.cardNumber ?? "").toUpperCase();
+    if (!year || !setKey || !num) return null;
+    const nums = await flagshipNumbers(year, setKey);
+    return nums ? nums.has(num) : null;
+  };
+  /** SPECIALIZATION-STATED's two catalog facts, computed ONLY for a row whose
+   *  setKey actually moved along the ladder. Every other row -- the
+   *  overwhelming majority of 16.3M -- pays nothing: the ladder test is pure
+   *  string work on two keys already in hand, and a row that fails it can
+   *  never qualify however the catalog answers. Without this gate the census
+   *  would issue two extra catalog reads per row and stop being a census. */
+  const specInputs = async (stored, der) => {
+    const none = { derivedBackedStrict: false, storedFlagshipListsCardNumber: null };
+    if (!der?.ok) return none;
+    if (!K.isSpecializationOf(der.identity?.setKey, stored?.setKey)) return none;
+    return {
+      derivedBackedStrict: await checklistBackedStrict(der.slug),
+      storedFlagshipListsCardNumber: await flagshipListsCardNumber(stored),
+    };
   };
 
   // ── page the shard ────────────────────────────────────────────────────────
@@ -578,11 +660,13 @@ async function main() {
       // read for a question that was answered by its own slug.
       const beCandidate = der.ok && K.slugNamesParallel(row.cardId);
       const baseBacked = beCandidate ? await checklistBacked(der.baseSlug) : false;
+      const spec = await specInputs(stored, der);
       const res = K.classifyRow({
         row, stored, derived: der.ok ? der.identity : null, checklistBacked: backed, derivationReasons: der.reasons,
         storedSlug: row.cardId, baseDestSlug: der.baseSlug ?? null, baseDestBacked: baseBacked,
         parserSaysLot: safeIsLot(row.title),
         autoByCardNumber: der.autoByCardNumber === true,
+        ...spec,
       });
       counts[res.klass]++;
       // THE SPLIT-IDENTITY SIGNAL, tallied ACROSS classes (Drew 2026-09-02).
@@ -792,11 +876,19 @@ async function main() {
       const backed = der.ok ? await checklistBacked(der.slug) : false;
       const beCand = der.ok && K.slugNamesParallel(fresh.cardId);
       const baseBacked = beCand ? await checklistBacked(der.baseSlug) : false;
+      // THE WRITE-TIME RE-CHECK GETS THE SAME INPUTS AS THE CENSUS.
+      // `classifyRow` refuses SPECIALIZATION-STATED without them, so omitting
+      // them here would not be a leak -- it would be the opposite, every
+      // qualifying row silently declining to write while the census reported
+      // it writable. A gate that disagrees with itself between the two passes
+      // is a gate nobody can audit.
+      const spec = await specInputs(stored, der);
       const res = K.classifyRow({
         row: fresh, stored, derived: der.ok ? der.identity : null, checklistBacked: backed, derivationReasons: der.reasons,
         storedSlug: fresh.cardId, baseDestSlug: der.baseSlug ?? null, baseDestBacked: baseBacked,
         parserSaysLot: safeIsLot(fresh.title),
         autoByCardNumber: der.autoByCardNumber === true,
+        ...spec,
       });
       // The class is decided again on what is there NOW, and it must come back
       // as the SAME kind the census queued. A row the census saw as an eviction
