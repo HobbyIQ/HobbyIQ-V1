@@ -1001,6 +1001,21 @@ jobs:
           # one can be re-run alone — the script skips rows already normalised.
           SLOT: ${{ inputs.slot }}
           SLOTS: ${{ inputs.slots }}
+          # CF-AN-INHERITED-SLOTS-IS-NOT-A-CHOSEN-SHARD (2026-09-04). `slot` and
+          # `slots` BOTH carry workflow-wide defaults ("0" and "16"), so a
+          # script cannot tell "I chose slot 0 of 16" from "I chose nothing".
+          # repair-tiffany-* therefore shard only on a non-zero slot or on this
+          # explicit opt-in, and otherwise sweep every row. Set it when you
+          # really are fanning out and slot 0 is one of the shards.
+          # #1745 and #1752 both APPLIED at 1/16th coverage without it, green
+          # and honestly reconciled: "intended 11 = written 0 + skipped 11".
+          # The opt-in rides `parents_only`, a BOOLEAN input already in the
+          # dispatch form and read by exactly one unrelated script
+          # (rehome-catalog-rows-to-own-partition), so it cannot collide with
+          # the repair-tiffany-* lanes' own `mode`. Ticking it on a
+          # repair-tiffany-* dispatch means "slot 0 really is one shard of a
+          # fan-out I am running in full".
+          SHARD: ${{ (inputs.script == 'repair-tiffany-pool-enumeration' || inputs.script == 'repair-tiffany-rung-to-product') && inputs.parents_only == true && 'true' || '' }}
           # Optional year scoping (ingest-checklists-end-to-end, rehome-catalog-
           # rows-to-own-partition, dedupe-catalog-partition-shadows, merge-bare-
           # colour-parallels, repair-refractor-mislabel).
