@@ -186,7 +186,16 @@ describe("the maker prefix is kept on Panini-era Donruss (ruling b)", () => {
     // Panini-era-only -- it needs no era boundary of its own.
     expect(resolveSetKeyForSlug("baseball", "2024 Donruss Optic", 2024)).toBe("donruss-optic");
     expect(resolveSetKeyForSlug("baseball", "2024 Donruss Elite", 2024)).toBe("donruss-elite");
-    expect(resolveSetKeyForSlug("baseball", "1995 Studio", 1995)).toBe("donruss-studio");
+    // CF-A-RULED-KEY-IS-A-FIXED-POINT (2026-09-03). This read
+    // `.toBe("donruss-studio")`, and the census overturned it the same way it
+    // overturned Select Certified: measured read-only against prod, the
+    // checklists for 1991-2005 Studio live under `studio` (7,867 checklist
+    // rows, baseballcardpedia) while `donruss-studio` holds ZERO checklist
+    // rows against 1,191 derived/vendor ones. Count by source, not row count —
+    // a destination no checklist has ever written cannot be the canonical
+    // spelling of one that is checklist-backed. The pool agrees: the sales are
+    // titled "1992 Studio Baseball", and "Donruss Studio" only from 2003.
+    expect(resolveSetKeyForSlug("baseball", "1995 Studio", 1995)).toBe("studio");
   });
 });
 

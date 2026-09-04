@@ -75,3 +75,9 @@ nul
 # CF-NEVER-AGAIN: the pricing invariant auditor's DETERMINISM state
 # (previous-run provenance fingerprints). Run-local, cached by CI, never committed.
 backend/.audit-state/
+
+# setKey reconciliation census: raw read-only Cosmos aggregates, regenerable by
+# scripts/setkey-reconciliation/census-stale-setkeys.cjs. The VERDICTS derived
+# from them are committed (backend/data/setkey-reconciliation.json); the 5MB of
+# input is not.
+backend/scripts/setkey-reconciliation/out/

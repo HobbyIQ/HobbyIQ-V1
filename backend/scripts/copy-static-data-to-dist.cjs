@@ -23,7 +23,10 @@ if (!fs.existsSync(src)) {
 // Only copy the files we deliberately bundle for runtime. Adding more
 // files here is a deliberate act; grepping the runtime code for
 // require("../../../data/<name>.json") tells you what to add.
-const BUNDLED_FILES = ["bowman-parallels.json", "parallel-vocabulary.json"];
+// setkey-reconciliation.json is read by setKeyReconciliation.ts, which
+// normalizeSetKey calls on EVERY id it mints — so a missing copy here is not a
+// degraded feature, it is a throw on the first slug of the first request.
+const BUNDLED_FILES = ["bowman-parallels.json", "parallel-vocabulary.json", "setkey-reconciliation.json"];
 
 fs.mkdirSync(dst, { recursive: true });
 let copied = 0;

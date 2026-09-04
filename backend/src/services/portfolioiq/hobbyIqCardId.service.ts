@@ -43,6 +43,7 @@ import { POKEMON_SET_ALIASES } from "../catalog/pokemonSetAliases.js";
 import { YUGIOH_SET_ALIASES, MTG_SET_ALIASES } from "../catalog/tcgSetAliases.js";
 import { JAPANESE_POKEMON_SET_ALIASES } from "../catalog/japanesePokemonAliases.js";
 import { productParentOf, productSetKeyForName, spellForEra } from "../catalog/productSetKeys.js";
+import { reconcileSetKey } from "../catalog/setKeyReconciliation.js";
 export interface HobbyIqCardIdComponents {
   sport: string;              // e.g. "baseball"
   year: number;               // e.g. 2026
@@ -948,6 +949,23 @@ export function normalizeSetKey(setName: string): string {
   // any unanchored pattern can reach it.
   const ruled = RULED_SET_KEY_REWRITES[s];
   if (ruled) return ruled;
+  // CF-A-RULED-KEY-IS-A-FIXED-POINT (2026-09-03, follow-on to #1689). The
+  // reconciliation answers next, and it answers in BOTH directions:
+  //
+  //   an ALIAS      returns the CATALOG's spelling, because a key the catalog
+  //                 uses must survive this function unchanged or the pool can
+  //                 never name the checklist it already has;
+  //   a FIXED POINT returns itself and STOPS, because 187 of the 188 patterns
+  //                 below are unanchored and a brand rule would otherwise
+  //                 swallow every product whose name contains the brand --
+  //                 `topps-triple-threads` -> `topps`. Drew ruled 2026-09-03
+  //                 that product-family collapse is forbidden.
+  //
+  // It sits ABOVE the product table for the same reason the Japanese-code
+  // ruling does: these are whole-key decisions taken against the real catalog,
+  // and a rule decided by measurement must not be re-litigated by line order.
+  const reconciled = reconcileSetKey(s);
+  if (reconciled.final) return reconciled.key;
   // CF-THE-ID-CARRIES-THE-PRODUCT (D23, Drew 2026-08-30). The product table
   // answers FIRST: "Topps Series 1" is topps-series-1, "Topps Update" and
   // "Topps Update Series" are one product (topps-update-series), "Bowman
