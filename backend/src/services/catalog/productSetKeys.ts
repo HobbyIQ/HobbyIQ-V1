@@ -225,6 +225,57 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
   P("spx"),
   P("spx-finite", { parent: "spx" }),
   P("collectors-choice"),
+  /**
+   * THE 1990s NAMED INSERTS AND FOOD ISSUES THE IMPROVE GATE FOLDED INTO THEIR
+   * FLAGSHIP (GATE 3 slot-31 audit, 2026-09-04 -- 12 of 209 writable IMPROVE
+   * rows wrong, and every one of them a collapse of one of these).
+   *
+   * Each of these is a SEPARATE PRODUCT that shares its flagship's brand word
+   * and NOT its checklist. The derivation reads the brand, answers the
+   * flagship, and a named insert's sale lands in the base card's pool:
+   *
+   *   "1995-96 Upper Deck Special Edition #31 Hakeem Olajuwon"  -> upper-deck:31
+   *   "Upper Deck 1995 Jordan Collection ... #JC7"              -> upper-deck:JC7
+   *   "1978 Topps Holsum #32 Ken Houston"                       -> topps:32
+   *   "1995 UD Upper Deck Michael Jordan #1 Milk Cap"           -> upper-deck:1
+   *
+   * Upper Deck Special Edition #31 is Olajuwon; base 1995-96 Upper Deck #31 is
+   * a different player entirely. Holsum is a 33-card FOOD ISSUE whose #32 has
+   * nothing to do with the 528-card 1978 Topps set. Neither pool may be merged
+   * with the flagship's, in either direction.
+   *
+   * WHAT THIS DECLARATION IS FOR, AND WHAT IT IS NOT. These are `P` rows, so
+   * they are a FAMILY/PARENT registry and NOT a spelling: they do not make
+   * "Upper Deck Special Edition" resolve to `upper-deck-special-edition`, and
+   * it still normalizes to `upper-deck` exactly as it does on main today
+   * (verified by running the function, the #1748 lesson). Promoting them to
+   * `S` is a vocabulary decision with its own blast radius and is deliberately
+   * NOT made here -- what these rows buy is that the rematch classifier's
+   * GUARD 6 can name them as DECLARED CHILDREN of their flagship and REFUSE an
+   * IMPROVE whose title states the child's words. Absent beats wrong: a row
+   * GUARD 6 refuses stays exactly where it is and is reported to Drew.
+   *
+   * MEASURED BEFORE DECLARED, on the live catalog and pool 2026-09-04. Each
+   * key holds ZERO card_catalog rows under EVERY spelling probed
+   * (`upper-deck-special-edition`, `special-edition`, `upper-deck-se`,
+   * `upper-deck-jordan-collection`, `jordan-collection`, `topps-holsum`,
+   * `holsum`, `upper-deck-milk-caps`, `milk-caps`, `upper-deck-pogs`, `pogs`),
+   * so unlike #1758's products there is no catalog spelling to defer to and no
+   * populated rival to split. The SALES are real and sized:
+   * 1,603 "Upper Deck ... Special Edition", 1,017 "Jordan Collection",
+   * 18 "Holsum", 109 "milk cap". `collectors-choice-special-edition` is the
+   * counter-example that proves the measurement: it holds 313
+   * baseballcardpedia rows and is ALREADY a reconciliation fixed point, so it
+   * is not re-declared here.
+   *
+   * The checklists are a separate acquisition. Declaring the key without one
+   * is exactly the state that makes GUARD 6 refuse rather than redirect -- a
+   * specialization needs its OWN checklist row before anything may land on it.
+   */
+  P("upper-deck-special-edition", { family: "upper-deck", parent: "upper-deck" }),
+  P("upper-deck-jordan-collection", { names: ["ud-jordan-collection"], family: "upper-deck", parent: "upper-deck" }),
+  P("upper-deck-milk-caps", { names: ["upper-deck-pogs"], family: "upper-deck", parent: "upper-deck" }),
+  P("topps-holsum", { family: "topps", parent: "topps" }),
 
   // -- Leaf: every product the catalog's own field spellings name (measured
   //    2026-08-30; the bare `leaf` rule collapsed all of them). Own family
