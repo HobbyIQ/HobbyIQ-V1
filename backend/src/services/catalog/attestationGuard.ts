@@ -26,13 +26,18 @@
 // fire on "Crusade Camo" (no colour word), on a bare "/99", or on a dropped
 // auto. This adds those three.
 import { isParserProbablyWrong } from "../portfolioiq/parserSuspicionDetector";
+/** ONE REGEX SOURCE (CF-A-SELLER-NAME-IS-NOT-A-SIGNATURE, 2026-09-04). This
+ *  file used to carry its own copy of the auto-in-title shape, with the same
+ *  unbounded `autograph` defect: a title ending "... AutographDen" made the
+ *  guard suspect the parser had DROPPED an auto on a plain base card. The
+ *  witness now comes from parseTitleIdentity, which is the authority, so the
+ *  two cannot drift apart again. */
+import { AUTO_RE as AUTO_IN_TITLE_RE, autographWitnessIsSellerNameOnly } from "../portfolioiq/parseTitleIdentity.service";
 
 /** Parallel vocabulary that carries no colour word with it, so the shipped
  *  colour+context detector cannot see it. */
 const PARALLEL_HINT_RE =
   /\b(camo|mojo|disco|hyper|scope|sparkle|velocity|tie[- ]?dye|speckle|atomic|cracked[- ]ice|reactive|shimmer|wave|prizm|refractor|x-?fractor|holo(?:foil|gram)?|foil|lava|pulsar|snakeskin|dragon[- ]scale|kaleidoscope|nebula|genesis|fast[- ]break|die[- ]?cut|sapphire|superfractor|negative|prismatic|rainbow|starburst|downtown|kaboom|[a-z]+fractor)\b/i;
-
-const AUTO_IN_TITLE_RE = /\bauto\b|autograph|hard[-\s]signed/i;
 
 /** A print run stated as "/99" or "21/25". Not a card number: requires the
  *  slash. Capped at 5 digits so a date or a cert number cannot match. */
@@ -80,7 +85,9 @@ export function unparsedVariantReason(c: AttestCandidate): string | null {
     if (isParserProbablyWrong({ parsedParallel: "Base", title: withoutSet })) return "colour+parallel word";
     if (PARALLEL_HINT_RE.test(withoutSet)) return "parallel word";
   }
-  if (!c.parsedIsAuto && AUTO_IN_TITLE_RE.test(title)) return "auto in title";
+  if (!c.parsedIsAuto && AUTO_IN_TITLE_RE.test(title) && !autographWitnessIsSellerNameOnly(title)) {
+    return "auto in title";
+  }
   if (!c.parsedPrintRun && PRINT_RUN_IN_TITLE_RE.test(title)) return "print run in title";
   return null;
 }

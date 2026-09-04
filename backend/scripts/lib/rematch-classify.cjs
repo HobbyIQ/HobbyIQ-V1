@@ -1787,6 +1787,175 @@ function isStrictChecklistSource(raw) {
 // APPLY PLUMBING: none. `applyKindOf` returns IMPROVE for these rows because
 // their `klass` IS IMPROVE, so `scope=improve` arms them and the existing
 // canary gate covers them. No new workflow input, no new apply class.
+// ─────────────────────────────────────────────────────────────────────────────
+// SELLER-NAME-AUTO -- A SHOP NAME IS NOT A SIGNATURE (measured 2026-09-04)
+//
+// THE DEFECT. The pool-side title parser bounded `auto` on both sides but
+// `autograph` on NEITHER:
+//
+//     /\bauto\b|autograph|hard[-\s]signed/i
+//
+// so the letters a-u-t-o-g-r-a-p-h anywhere inside a longer word read as an
+// autograph. eBay sellers append their shop name to the title, and one shop is
+// enormous:
+//
+//   "Vladimir Guerrero Jr. 2025 Bowman #27 Blue Jays MLB READ FREE SHIP AutographDen"
+//
+// 102,621 of 271,664 scanned sold_comps rows carry isAuto=true on this defect,
+// 102,482 of them from the single phrase "autographden", across ~40 years:
+// 1991 panini-donruss 1,869; 1983 fleer 1,804; 2024 panini-donruss 1,645; 2019
+// bowman 1,644; 1982 fleer 1,499. Base cards priced as autographs, and every
+// real autograph pool diluted with base sales -- BOTH pools wrong.
+//
+// THE PARSER IS FIXED (parseTitleIdentity.service.ts). That stops NEW rows.
+// It does not move the 102k already stored, and it CANNOT, because the runner
+// computes `isAuto` as `parsed.isAuto || row.isAuto === true` -- the stored
+// flag is OR'd in, so a fixed parser still re-derives `auto` on these rows and
+// they classify AGREE forever. This subclass is what moves them.
+//
+// THE RULE, BOUNDED EXACTLY LIKE SPECIALIZATION-STATED. A stored isAuto=true
+// row whose ONLY autograph witness is a seller token, and whose CHECKLIST ROW
+// for (year, setKey, cardNumber) is a NON-AUTO card, classifies IMPROVE onto
+// the base identity. Five legs, all of which must hold; any one failing leaves
+// the row exactly where it is today, and the failing leg is NAMED so the
+// census can count it.
+//
+//   S1  SELLER-ONLY   the stored title's ONLY autograph witness is a known
+//                     seller/shop token. Strip the shop name and ask again: if
+//                     something else still states an autograph ("Bowman Chrome
+//                     Prospect Autographs ... AutographDen"), this is a real
+//                     auto the shop happened to sell, and the row STAYS.
+//   S2  STORED-AUTO   the row is actually stored isAuto=true. This subclass
+//                     repairs a wrong flag; it never sets one.
+//   S3  BACKED        the CHECKLIST row for (year, setKey, cardNumber) exists,
+//                     from a REAL SCRAPED SOURCE (the same named allowlist L3
+//                     uses -- `isStrictChecklistSource`), and says the card is
+//                     NOT an autograph. This is the leg that makes the
+//                     subclass EVIDENCE rather than inference, and it is the
+//                     leg the mutation pin drops. A row with NO checklist
+//                     stays CONFLICT: absent beats wrong, exactly as L5.
+//   S4  NUMBER        the cardNumber is not itself an auto-subset number
+//                     (CPA-, BCPA-, BDA-, ...). CF-ISAUTO-BOUNDARY-IS-
+//                     CARDNUMBER is the ruling this whole area runs on: the
+//                     card number is SUFFICIENT evidence of an autograph and
+//                     it outranks the title in both directions. If the number
+//                     says auto, no title reading may take the flag off.
+//   S5  IDENTITY      every axis EXCEPT isAuto is unchanged -- grade, parallel,
+//                     cardNumber, setKey, year, sport, printRun. `isAuto` is
+//                     the one axis this subclass exists to move; a derivation
+//                     moving any other is disagreeing about identity, not
+//                     reading a shop name the old parser mistook for a
+//                     signature, and a fleet never settles that.
+//
+// WHY `autographics` IS NOT A SELLER TOKEN. It looks exactly like one and is
+// not: it is Skybox's autograph INSERT SET (1996-97 Skybox Premium
+// Autographics, 2004-05 Skybox Autographics, 2006 Flair Showcase
+// Autographics), 190 rows in the corpus. Naming it a shop would strip the flag
+// off real autographs. The seller list is DERIVED FROM THE CORPUS -- over
+// 61,793 titles carrying the letters, `autographden` is the one seller token
+// that appears -- never invented, because a speculative list of store suffixes
+// is vocabulary the data does not support.
+//
+// G1-G6 STILL APPLY, exactly as for SPECIALIZATION-STATED: the subclass rides
+// the IMPROVE arm and is evaluated ALONGSIDE `allImproveRefusals` and the
+// provenance tier, every one of which can still refuse it. It widens WHICH
+// ROWS REACH the IMPROVE gate; it does not weaken the gate.
+const SELLER_NAME_AUTO = "SELLER-NAME-AUTO";
+
+/**
+ * THE AUTOGRAPH WITNESS, MIRRORED.
+ *
+ * `parseTitleIdentity.service.ts` is the authority and stays that way. This
+ * module is pure .cjs by contract -- no dist/, no TypeScript, so a unit test
+ * can drive the classifier without a build -- so the witness shape is mirrored
+ * here and `sellerNameAutoRepair.test.ts` pins the mirror against the compiled
+ * export, character for character. A mirror nothing compares is a second
+ * source of truth; a mirror a test compares is a cache. #1753 is the precedent
+ * and the reason: the Fleer ladder shipped in the authority and never reached
+ * the mirror, so the gate it armed could not be read by the classifier that
+ * production actually runs.
+ */
+const AUTO_WITNESS_RE = /\bauto\b|\bautograph(?:ed|s)?\b|\bautographics\b|hard[-\s]signed/i;
+
+/** The seller/shop tokens, mirrored from `SELLER_SHOP_TOKEN_RE`. Corpus-
+ *  derived, and `autographics` is deliberately absent -- it is a real Skybox
+ *  insert set, not a store. */
+const SELLER_SHOP_TOKEN_RE = /\bautographden\b/i;
+
+/** THE DEFECTIVE SHAPE, KEPT ON PURPOSE. `autograph` unbounded -- the exact
+ *  regex that minted the 102,621 stored rows. It is what "this row's flag came
+ *  from a shop name" MEANS, so the repair has to be able to state it. Without
+ *  it the predicate is unanswerable: under the FIXED witness `AutographDen` is
+ *  already not a witness, so "strip the shop and the witness disappears" is
+ *  false for every row and the subclass would never fire on the population it
+ *  exists to repair. */
+const LEGACY_AUTO_WITNESS_RE = /\bauto\b|autograph|hard[-\s]signed/i;
+
+/** S1. True when the title's ONLY autograph witness is a seller/shop token --
+ *  i.e. the OLD detector called this an autograph, and the only reason it did
+ *  is the shop name. Strip the shop and ask the old question again: if nothing
+ *  is left that the legacy reader would have called an autograph, the shop
+ *  name was the whole case.
+ *
+ *  Asked against the LEGACY shape deliberately. The fixed witness is the right
+ *  question for a NEW title; for a STORED row the right question is "what did
+ *  the reader that wrote this flag see?", and that reader is the defective
+ *  one. */
+function autographWitnessIsSellerNameOnly(title) {
+  const t = str(title);
+  if (!t || !SELLER_SHOP_TOKEN_RE.test(t)) return false;
+  const withoutShop = t.replace(new RegExp(SELLER_SHOP_TOKEN_RE.source, "gi"), " ");
+  return LEGACY_AUTO_WITNESS_RE.test(t) && !LEGACY_AUTO_WITNESS_RE.test(withoutShop);
+}
+
+/**
+ * The five legs. `checklistSaysNotAuto` is the caller's read of the CHECKLIST
+ * row for this (year, setKey, cardNumber) -- a catalog read, so the runner
+ * supplies it and this module stays pure:
+ *
+ *   true   a checklist row from a real scraped source exists and is NOT an auto
+ *   false  a checklist row exists and IS an auto -- the seller sold a real one
+ *   null   no checklist row, or no strictly-sourced one. UNANSWERED, which is
+ *          a refusal: absent beats wrong.
+ */
+function sellerNameAutoEvidence({
+  row, stored, derived, axes,
+  checklistSaysNotAuto = null,
+  autoByCardNumber = false,
+}) {
+  const failed = [];
+  const title = str(row?.title);
+
+  // S1 -- the shop name is the whole case.
+  const sellerOnly = autographWitnessIsSellerNameOnly(title);
+  if (!sellerOnly) failed.push("autograph-witness-is-not-seller-only");
+
+  // S2 -- the row really does carry the wrong flag.
+  if (stored?.isAuto !== true) failed.push("stored-is-not-auto");
+
+  // S3 -- the checklist decides, and it must say NOT an auto.
+  if (checklistSaysNotAuto === null) failed.push("checklist-unknown");
+  else if (checklistSaysNotAuto === false) failed.push("checklist-says-auto");
+
+  // S4 -- the cardNumber outranks every title reading, in BOTH directions.
+  if (autoByCardNumber) failed.push("cardnumber-is-auto-subset");
+
+  // S5 -- nothing but isAuto may move.
+  const moved = [...(axes?.changed ?? []), ...(axes?.dropped ?? [])].filter((a) => a !== "isAuto");
+  if (moved.length) failed.push(`identity-axis-moved:${moved.join(",")}`);
+
+  return {
+    qualifies: failed.length === 0,
+    failed,
+    evidence: {
+      sellerWitnessOnly: sellerOnly,
+      storedIsAuto: stored?.isAuto === true,
+      checklistSaysNotAuto,
+      autoByCardNumber,
+    },
+  };
+}
+
 const SPECIALIZATION_STATED = "SPECIALIZATION-STATED";
 
 /**
@@ -2996,6 +3165,18 @@ function classifyRow({
   // real number classifies IMPROVE instead of `changed:cardNumber`. Absent it,
   // a genuinely unnumbered T206 row is compared as the real answer it is.
   titleStatesNumber = false,
+  // SELLER-NAME-AUTO (2026-09-04). The CHECKLIST's verdict on whether this
+  // (year, setKey, cardNumber) is an autograph card -- a catalog read, so the
+  // caller supplies it and this module stays pure.
+  //
+  //   true   a strictly-sourced checklist row exists and says NOT an auto
+  //   false  a strictly-sourced checklist row exists and says IT IS an auto
+  //   null   unanswered (no row, or none from a real scraped source), which is
+  //          a REFUSAL -- absent beats wrong, exactly like L5's coverage gate.
+  //
+  // Defaults null, so a caller that does not supply it gets no subclass at all
+  // and today's behaviour is unchanged.
+  checklistSaysNotAuto = null,
 }) {
   const prov = provenanceTier(row);
   // THE SLUG-SHAPE DEFECTS ARE COMPUTED FOR EVERY ROW AND CHANGE NOTHING.
@@ -3193,7 +3374,61 @@ function classifyRow({
     // silent.
     const near = be.failed.length && !be.failed.includes("slug-names-no-parallel")
       ? [`not-base-eviction:${be.failed.join(",")}`] : [];
-    return { ...base, klass: AGREE, axes, reasons: [...near, ...splitReasons], writable: false };
+
+    // SELLER-NAME-AUTO: THE ROW THAT AGREES WITH ITS OWN DEFECT.
+    //
+    // These rows land HERE, in AGREE, and that is the whole problem. The
+    // runner computes `isAuto` as `parsed.isAuto || row.isAuto === true`, so
+    // the stored wrong flag is OR'd into the derivation: a FIXED parser still
+    // re-derives `auto` on a base card whose title ends "... AutographDen",
+    // the eight axes agree, and the row reports "nothing to do" forever. The
+    // 102,621-row population cannot be reached from the CONFLICT arm, because
+    // it never gets there.
+    //
+    // So the subclass is evaluated on the AGREE path, and it is the ONLY
+    // thing that may leave it. Every leg is checked in
+    // `sellerNameAutoEvidence`; the derived identity written is the stored one
+    // with `isAuto` FALSE -- the base identity of the very same card. Nothing
+    // else moves: not the number, not the grade, not the parallel (S5).
+    //
+    // It takes THE ORDINARY IMPROVE GATE, through the same
+    // `allImproveRefusals` the other two IMPROVE arms call, for the reason
+    // #1753 spells out: two copies of a gate is one gate that silently is not
+    // there. A row that fails a leg falls straight through to the AGREE return
+    // it reaches today, carrying its failed legs so the census can count
+    // exactly which one held it back.
+    const sna = sellerNameAutoEvidence({
+      row, stored, derived, axes, checklistSaysNotAuto, autoByCardNumber,
+    });
+    if (sna.qualifies) {
+      const refusals = allImproveRefusals({ row, stored, derived, axes, parserSaysLot, family, derivationRefused });
+      const snaReasons = [
+        `subclass:${SELLER_NAME_AUTO}`,
+        "seller-name-auto:isAuto true->false",
+        "checklist-says-not-auto",
+      ];
+      return {
+        ...base,
+        klass: IMPROVE, subclass: SELLER_NAME_AUTO,
+        axes: { ...axes, changed: ["isAuto"] },
+        // The repair target: this card's own base identity. The stored
+        // identity is already right on every other axis -- that is what S5
+        // asserts -- so the write is the one flag.
+        derived: { ...(derived ?? stored), isAuto: false },
+        reasons: [...near, ...snaReasons, ...refusals, ...splitReasons],
+        improveRefusals: refusals,
+        sellerNameAutoEvidence: sna.evidence,
+        writable: prov.tier === AUTO && refusals.length === 0,
+      };
+    }
+    // A NEAR MISS IS NAMED, NOT SWALLOWED -- but only for rows that were real
+    // candidates. Gating on S1 keeps the other ~16M AGREE rows silent instead
+    // of each carrying a reason that says only "this title has no shop name",
+    // which is a count of the corpus and not of the defect.
+    const snaNear = sna.failed.includes("autograph-witness-is-not-seller-only")
+      ? [] : [`not-seller-name-auto:${sna.failed.join(",")}`];
+
+    return { ...base, klass: AGREE, axes, reasons: [...near, ...snaNear, ...splitReasons], writable: false };
   }
 
   // A demotion or a lateral change on ANY axis is a conflict, whatever else
@@ -3537,6 +3772,13 @@ module.exports = {
   // ladder and each of its legs, exported piece by piece so a pin can drive
   // one alone and the mutation check can revert one alone. A leg nothing can
   // call alone is a leg nothing can prove.
+  // SELLER-NAME-AUTO (2026-09-04) -- the subclass, the MIRRORED witness regex
+  // and each leg, exported piece by piece so a pin can drive one alone and the
+  // mutation check can revert one alone. AUTO_WITNESS_RE and
+  // SELLER_SHOP_TOKEN_RE are exported specifically so the mirror test can
+  // compare them against the compiled authority, character for character.
+  SELLER_NAME_AUTO, AUTO_WITNESS_RE, LEGACY_AUTO_WITNESS_RE, SELLER_SHOP_TOKEN_RE,
+  autographWitnessIsSellerNameOnly, sellerNameAutoEvidence,
   SPECIALIZATION_STATED, SPECIALIZATION_PARENTS, LADDER_MIRRORED_KEYS,
   SAME_NUMBER_PARALLEL_SETS, isSameNumberParallelSet,
   STRICT_CHECKLIST_SOURCES, normalizeCatalogSource, isStrictChecklistSource,

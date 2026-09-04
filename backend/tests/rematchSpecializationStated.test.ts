@@ -368,12 +368,23 @@ ${line}
     }
   });
 
-  it("both arms call allImproveRefusals — neither restates its pushes", () => {
-    // Two CALL sites (the ordinary arm and the subclass arm) and exactly one
-    // definition. `const refusals = ` is what distinguishes a call from the
+  it("every IMPROVE arm calls allImproveRefusals — none restates its pushes", () => {
+    // THREE CALL sites and exactly one definition:
+    //   1. the ordinary IMPROVE arm
+    //   2. SPECIALIZATION-STATED (this file's subject)
+    //   3. SELLER-NAME-AUTO (CF-A-SELLER-NAME-IS-NOT-A-SIGNATURE, 2026-09-04),
+    //      which rides the same gate from the AGREE path.
+    //
+    // The NUMBER is incidental; the invariant is that it equals the number of
+    // arms and that the definition stays singular. A new arm that restated the
+    // pushes instead of calling this would leave itself unguarded by the
+    // mutation checks that revert them — which is the whole reason this pin
+    // counts rather than trusting the reader.
+    //
+    // `const refusals = ` is what distinguishes a call from the
     // `function allImproveRefusals({` declaration, which contains the same
     // characters.
-    expect(src.split("const refusals = allImproveRefusals({").length - 1).toBe(2);
+    expect(src.split("const refusals = allImproveRefusals({").length - 1).toBe(3);
     expect(src.split("function allImproveRefusals").length - 1).toBe(1);
   });
 
