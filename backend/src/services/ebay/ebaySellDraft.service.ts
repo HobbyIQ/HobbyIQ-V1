@@ -68,6 +68,11 @@ import { resolvePricingConfidence } from "../portfolioiq/pricingEnvelope.builder
 import type { TrendIQResult } from "../compiq/trendIQ.types.js";
 import { sellWindowPlayerIndex } from "../signals/sellWindowPlayerIndex.js";
 
+import {
+  assessSellerIndependence,
+  INDEPENDENCE_UNVERIFIED_CODE,
+  MIN_INDEPENDENT_SELLERS,
+} from "../compiq/sellerIndependence.js";
 // ---------------------------------------------------------------------------
 // Inputs / outputs
 // ---------------------------------------------------------------------------
@@ -126,7 +131,12 @@ export type SellDraftPriceStatus =
 /** A label the seller must see, and that travels into the description. */
 export interface SellDraftLabel {
   /** Machine-readable, for clients that want to style it. */
-  code: "speculative" | "self-anchored" | "fallback-rung" | "low-confidence";
+  code:
+    | "speculative"
+    | "self-anchored"
+    | "fallback-rung"
+    | "low-confidence"
+    | typeof INDEPENDENCE_UNVERIFIED_CODE;
   /** The sentence shown to the seller and written into the draft text. */
   text: string;
 }
@@ -282,6 +292,41 @@ export function labelsForResult(
           "of this card. No independent sale supports it yet."
         : `Partly self-anchored: ${selfComps.length} of ${poolTotal} sales behind ` +
           "this estimate are your own.",
+    });
+  }
+
+  // CF-INDEPENDENCE-MUST-NAME-ITS-BASIS (2026-09-04). Drew's ruling is that
+  // a published FMV needs three INDEPENDENT sellers behind it. The engine
+  // cannot see sellers on essentially any row — sold_comps carries a
+  // `sellerHandle` on 24 of 6.87M rows, every vendor ingest passing a
+  // literal null — so on almost every result the honest statement is that
+  // independence is UNVERIFIED, not that it is satisfied. Saying nothing
+  // here is what let a row count masquerade as a seller count.
+  //
+  // Only the exact-pool rungs are covered: a family/sibling rung is already
+  // labeled `fallback-rung`, and stacking an independence caveat on a number
+  // that never claimed to come from this card's own sales adds noise, not
+  // information. A fully self-anchored result is likewise already told the
+  // strongest possible version of this ("no independent sale supports it").
+  const independence = assessSellerIndependence(comps);
+  const alreadySelfAnchoredWhole = selfComps.length > 0 && selfComps.length === poolTotal;
+  if (rung && isExactPoolRung(rung) && !alreadySelfAnchoredWhole && independence.basis !== "seller-identity") {
+    labels.push({
+      code: INDEPENDENCE_UNVERIFIED_CODE,
+      text:
+        `Independence unverified: ${poolTotal} sale${poolTotal === 1 ? "" : "s"} back this ` +
+        "estimate, but our sources do not tell us who sold them, so we cannot " +
+        `confirm ${MIN_INDEPENDENT_SELLERS} independent sellers stand behind it.`,
+    });
+  } else if (rung && isExactPoolRung(rung) && !alreadySelfAnchoredWhole && !independence.meets) {
+    // Sellers ARE visible and there are too few of them. This is the only
+    // branch entitled to speak about seller counts as fact.
+    labels.push({
+      code: INDEPENDENCE_UNVERIFIED_CODE,
+      text:
+        `Thin seller base: only ${independence.count} independent seller` +
+        `${independence.count === 1 ? "" : "s"} stand behind this estimate ` +
+        `(${MIN_INDEPENDENT_SELLERS} is our threshold).`,
     });
   }
 

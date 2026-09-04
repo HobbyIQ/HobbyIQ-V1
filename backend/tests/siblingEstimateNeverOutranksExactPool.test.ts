@@ -494,7 +494,12 @@ describe("repriceHoldingsForUser — the fixture, end to end", () => {
     expect(hld.valuationStatus).toBe("observed");
     expect(hld.pricingSource).toBe("unified-pricing");
     expect(hld.fmvRung).toBe("exact-pool-leading-edge");
-    expect(hld.pricingSourceMeta).toEqual({ slug: GOLD, method: "exact-pool-leading-edge", compsUsed: 3, confidence: expect.any(Number), labels: [], selfAnchored: null });
+    // CF-INDEPENDENCE-MUST-NAME-ITS-BASIS (2026-09-04). `labels` was `[]`.
+    // The three exact sales carry no seller (as no real sold_comps row
+    // does), so the persisted price now states that seller independence
+    // could not be verified. The claim this test makes — the exact pool
+    // outranks the sibling estimate, observed and labelled — is unchanged.
+    expect(hld.pricingSourceMeta).toEqual({ slug: GOLD, method: "exact-pool-leading-edge", compsUsed: 3, confidence: expect.any(Number), labels: [{ code: "independence-unverified", text: expect.stringContaining("do not tell us who sold them") }], selfAnchored: null });
     expect(hld.estimateBasis).toMatch(/^unified: /);
     expect(hld.estimateBasis).toContain("id=hobbyiqCardId");
     expect(hld.estimateBasis).not.toMatch(/floor/i);

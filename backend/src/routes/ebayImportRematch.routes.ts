@@ -14,6 +14,7 @@ import { requireSession } from "../middleware/requireSession.js";
 import { requireAdmin } from "../middleware/requireAdmin.js";
 import { isRematchCandidate, rematchOne, type RematchResult } from "../services/portfolioiq/ebayImportRematch.service.js";
 
+import { sellerHandleFromHolding } from "../services/compiq/sellerIndependence.js";
 const router = Router();
 
 async function requireUserId(req: Request, res: Response): Promise<string | null> {
@@ -188,7 +189,14 @@ router.post("/rematch-ebay-imports", requireSession, async (req: Request, res: R
                       contributorUserId: userId,
                       title: String(sourcePurchase?.notes ?? "") || r.ebayTitle || null,
                       imageUrl: (h.ebayImageUrl as string | null) ?? null,
-                      sellerHandle: null,
+                      // CF-INDEPENDENCE-MUST-NAME-ITS-BASIS (2026-09-04).
+                      // The seller was on the holding all along: eBay
+                      // enrichment stores the Browse seller object as
+                      // `ebaySeller`, and this emitter read `ebayImageUrl`
+                      // off the very same object while passing a literal
+                      // null here. Without it the 3-independent-seller
+                      // threshold has nothing to evaluate.
+                      sellerHandle: sellerHandleFromHolding(h),
                       // NOT user-verified (Drew hasn't manually confirmed);
                       // the identity comes from the matcher's strict-mode
                       // + price-validator survivors, which carry a 0.8
@@ -484,7 +492,9 @@ router.post("/admin/rematch-ebay-imports/batch-backfill", requireAdmin, async (r
                 contributorUserId: userId,
                 title: r.ebayTitle ?? null,
                 imageUrl: (h.ebayImageUrl as string | null) ?? null,
-                sellerHandle: null,
+                // Same fix as the interactive path above: the holding's
+                // enriched `ebaySeller` is the sale's seller.
+                sellerHandle: sellerHandleFromHolding(h),
                 verifiedByUser: false,
                 confidence: r.after.matchConfidence ?? 0.8,
               });

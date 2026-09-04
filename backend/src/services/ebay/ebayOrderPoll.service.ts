@@ -74,6 +74,7 @@ import {
   type EbayAccountSaleEntry,
 } from "../portfolioiq/portfolioStore.service.js";
 import { recordSoldComp } from "../portfolioiq/soldCompsStore.service.js";
+import { normalizeSellerHandle } from "../compiq/sellerIndependence.js";
 import {
   resolveEbaySaleIdentity,
   type EbaySaleIdentity,
@@ -237,6 +238,12 @@ export async function pollEbayOrdersForUser(
   if (!record) {
     return { ...empty, status: "no-token" };
   }
+  // The connected account's storefront name, normalized. `ebayAuth` writes
+  // the literal "unknown" when eBay's identity call fails; that is an
+  // absence, not a seller, and must not become a pool row's seller.
+  const rawEbayUser = (record as { ebayUserId?: string | null }).ebayUserId ?? null;
+  const sellerHandle =
+    rawEbayUser && rawEbayUser !== "unknown" ? normalizeSellerHandle(rawEbayUser) : null;
   const cursorBefore = record.lastPolledAt ?? record.connectedAt ?? null;
   empty.cursorBefore = cursorBefore;
   empty.cursorAfter = cursorBefore;
@@ -338,7 +345,7 @@ export async function pollEbayOrdersForUser(
     for (const line of lineItems) {
       r.lineItemsProcessed++;
       try {
-        const outcome = await processSoldLine(userId, order, orderId, line, dryRun);
+        const outcome = await processSoldLine(userId, order, orderId, line, dryRun, sellerHandle);
         r.resolvedAuto += outcome.resolvedAuto;
         r.parked += outcome.parked;
         r.unresolvable += outcome.unresolvable;
@@ -447,6 +454,12 @@ async function processSoldLine(
   orderId: string,
   line: EbayOrderLineItem,
   dryRun: boolean,
+  /** CF-INDEPENDENCE-MUST-NAME-ITS-BASIS (2026-09-04). The connected eBay
+   *  account's own storefront name. On THIS path the seller is not a guess:
+   *  these are the connected user's own completed orders, so the account
+   *  that sold the card is the account we polled. Null when eBay's identity
+   *  call never resolved a username (`ebayAuth` stores "unknown"). */
+  sellerHandle: string | null,
 ): Promise<LineOutcome> {
   const out = zeroOutcome();
   const listingId = String(line.legacyItemId ?? line.listingId ?? "").trim() || null;
@@ -605,7 +618,11 @@ async function processSoldLine(
         contributorUserId: userId,
         title,
         imageUrl: identity.fields.imageUrl,
-        sellerHandle: null,
+        // The seller of an `ebay-account` row is the connected account
+        // itself — see the parameter's note. This is the one vendor-side
+        // path where seller identity is known WITHOUT the vendor exposing
+        // it, because the sale is the user's own.
+        sellerHandle,
         verifiedByUser: true,
         confidence: 1.0,
       });

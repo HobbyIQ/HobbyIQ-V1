@@ -646,7 +646,13 @@ describe("D17 — the portfolio persist site: what is written is what the routes
     // serve, not as a literal — that keeps this a persist-equals-serve pin
     // (which is this suite's whole thesis) instead of a float that any future
     // calibration rebase would have to hand-edit.
-    expect(hld.pricingSourceMeta).toEqual({ slug: GOLD, method: pb.rungLabel, compsUsed: pb.compsUsed, labels: [], selfAnchored: null, confidence: cf.confidence });
+    // CF-INDEPENDENCE-MUST-NAME-ITS-BASIS (2026-09-04). `labels` was `[]`
+    // here. These fixture comps carry no seller — like every real
+    // sold_comps row — so the exact-pool result now persists the honest
+    // caveat that seller independence could not be checked. The contract
+    // this suite exists to hold is unchanged: what is PERSISTED is exactly
+    // what the routes SERVE, labels included.
+    expect(hld.pricingSourceMeta).toEqual({ slug: GOLD, method: pb.rungLabel, compsUsed: pb.compsUsed, labels: [{ code: "independence-unverified", text: expect.stringContaining("do not tell us who sold them") }], selfAnchored: null, confidence: cf.confidence });
     expect(hld.predictedPrice).toBe(pb.predictedPrice);
     expect(hld.estimateBasis).toMatch(/^unified: Raw window=/);
     expect(hld.estimateBasis).toContain("id=hobbyiqCardId");
@@ -660,7 +666,13 @@ describe("D17 — the portfolio persist site: what is written is what the routes
     const again = await stored(id);
     expect(again.fairMarketValue).toBe(pb.marketValue);
     expect(again.fmvRung).toBe(pb.rungLabel);
-    expect(again.pricingSourceMeta).toEqual({ slug: GOLD, method: pb.rungLabel, compsUsed: pb.compsUsed, labels: [], selfAnchored: null, confidence: cf.confidence });
+    // CF-INDEPENDENCE-MUST-NAME-ITS-BASIS (2026-09-04). `labels` was `[]`
+    // here. These fixture comps carry no seller — like every real
+    // sold_comps row — so the exact-pool result now persists the honest
+    // caveat that seller independence could not be checked. The contract
+    // this suite exists to hold is unchanged: what is PERSISTED is exactly
+    // what the routes SERVE, labels included.
+    expect(again.pricingSourceMeta).toEqual({ slug: GOLD, method: pb.rungLabel, compsUsed: pb.compsUsed, labels: [{ code: "independence-unverified", text: expect.stringContaining("do not tell us who sold them") }], selfAnchored: null, confidence: cf.confidence });
     // No second engine, no legacy chain, on either site.
     expect(h.calls.estimate).toBe(0);
     expect(h.calls.curve).toBe(0);
@@ -688,7 +700,13 @@ describe("D17 — the portfolio persist site: what is written is what the routes
     // serve, not as a literal — that keeps this a persist-equals-serve pin
     // (which is this suite's whole thesis) instead of a float that any future
     // calibration rebase would have to hand-edit.
-    expect(hld.pricingSourceMeta).toEqual({ slug: GOLD, method: psa10.pb.rungLabel, compsUsed: psa10.pb.compsUsed, labels: [], selfAnchored: null, confidence: psa10.cf.confidence });
+    // CF-INDEPENDENCE-MUST-NAME-ITS-BASIS (2026-09-04). `labels` was `[]`
+    // here. These fixture comps carry no seller — like every real
+    // sold_comps row — so the exact-pool result now persists the honest
+    // caveat that seller independence could not be checked. The contract
+    // this suite exists to hold is unchanged: what is PERSISTED is exactly
+    // what the routes SERVE, labels included.
+    expect(hld.pricingSourceMeta).toEqual({ slug: GOLD, method: psa10.pb.rungLabel, compsUsed: psa10.pb.compsUsed, labels: [{ code: "independence-unverified", text: expect.stringContaining("do not tell us who sold them") }], selfAnchored: null, confidence: psa10.cf.confidence });
   });
 
   it("(slug, PSA 8 — no pool at the tier): the same entry's grade-curve-estimate is persisted as an ESTIMATE under its rung — never the engine's cross-grade rescale as observed", async () => {

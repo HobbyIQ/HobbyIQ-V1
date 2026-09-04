@@ -191,7 +191,7 @@ export interface Valuation {
    *  `excludeContributorUserId` can tell which of the KEPT rows are the
    *  owner's own — the reprieve publishes those, and the doctrine says a
    *  published self-comp must be labeled. */
-  sales: Array<{ price: number; soldAt: string; source: string | null; contributorUserId: string | null }>;
+  sales: Array<{ price: number; soldAt: string; source: string | null; contributorUserId: string | null; sellerHandle?: string | null }>;
   /** The owner this valuation was computed for, when the caller named one
    *  (portfolio/reprice/sell-draft paths). Null on the public routes, which
    *  pass no user and so can never call a comp "yours". */
