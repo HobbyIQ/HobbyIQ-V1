@@ -3,13 +3,15 @@
 // human-readable. The "we set the market" identity primitive.
 //
 // FORMAT
-//   hiq:{sport}:{year}:{setKey}:{cardNumber}:{parallelSlug}:{autoFlag}[:num-{printRun}]
+//   hiq:{sport}:{year}:{setKey}[:sub-{subsetSlug}]:{cardNumber}:{parallelSlug}:{autoFlag}[:num-{printRun}]
 //
 // EXAMPLES
 //   hiq:baseball:2026:bowman:cpa-eha:gold-refractor:auto:num-50
 //   hiq:baseball:2026:bowman-chrome:bcp-102:orange-shimmer-refractor:no-auto
 //   hiq:basketball:2024:panini-prizm:1:silver-prizm:no-auto:num-99
 //   hiq:pokemon:2023:sv1:151:full-art:no-auto
+//   hiq:basketball:2000:topps-chrome:sub-cards-that-never-were:mj1:refractor:no-auto
+//   hiq:basketball:2000:topps-chrome:sub-johnson-reprints:mj1:refractor:no-auto
 //
 // DESIGN CONSTRAINTS
 //   - Deterministic: same normalized inputs ALWAYS produce the same slug.
@@ -32,6 +34,11 @@
 //   parallelSlug  → slug of the specific variant (NOT the lossy label —
 //                   caller must pass the specific variant, extracted from
 //                   the title if necessary)
+//   subsetSlug    → "sub-{slug}" optional segment, present ONLY for a card
+//                   whose number is shared by more than one named subset of
+//                   the same product. The caller states the clash; this
+//                   module never infers one. See
+//                   CF-A-SUBSET-IS-PART-OF-THE-IDENTITY-WHEN-IT-HAS-TO-BE.
 //   autoFlag      → "auto" | "no-auto"  (never omitted)
 //   printRun      → "num-{N}" optional suffix (omitted when card is
 //                   unnumbered, e.g. Base or general Refractor)
@@ -64,6 +71,17 @@ export interface HobbyIqCardIdComponents {
    *  player-as-the-number shape is correct. Vendor paths never set this: for
    *  them a blank cardNumber is a parse failure and the identity is refused. */
   unnumberedByChecklist?: boolean;
+  /** CF-A-SUBSET-IS-PART-OF-THE-IDENTITY-WHEN-IT-HAS-TO-BE. The named subset
+   *  this card belongs to ("Cards That Never Were"). Carried for EVERY row
+   *  that has one — it is display data on most of them. Blank/absent means
+   *  UNKNOWN, never "no subset" and never "Base". */
+  subsetName?: string | null;
+  /** The CLASH FLAG, and the only thing that puts the subset in the slug.
+   *  True when the checklist for this (year, setKey) lists this cardNumber
+   *  under MORE THAN ONE subset at this rung. Derived at ingest from the
+   *  catalog and persisted on the catalog row; never inferred here, and never
+   *  read off a sale title. See below. */
+  subsetInId?: boolean;
 }
 
 /**
@@ -1677,6 +1695,60 @@ export function resolveSetKeyForSlug(sport: string, setName: string, year: numbe
 /** Compute the canonical hobbyiqCardId slug for a card. Same inputs
  *  ALWAYS produce the same slug — the function has no side effects and
  *  no I/O. */
+/**
+ * CF-A-SUBSET-IS-PART-OF-THE-IDENTITY-WHEN-IT-HAS-TO-BE (Drew ruling,
+ * 2026-09-04).
+ *
+ * THE DEFECT. The slug carries sport/year/setKey/cardNumber/parallel/isAuto/
+ * printRun and NO subset. One product can publish two subsets that number
+ * their cards alike, and then those cards share one slug — one pool holding
+ * two different cards. Measured, not hypothesised (#1741): 2000-01 Topps
+ * Chrome publishes both "Cards That Never Were" (MJ1-MJ10) and "Johnson
+ * Reprints" (MJ1-MJ7), every row Magic Johnson, both Refractor. #1741 stopped
+ * the merge by REFUSING the second write and counting it, which made the
+ * collision a reported number instead of a silent pool — but left those cards
+ * uningestable.
+ *
+ * THE RULING. For those cards, and ONLY those cards, the subset becomes part
+ * of the identity: each gets its own pool. Everything else is unchanged — a
+ * card whose number is unique within its product gets no subset segment, so
+ * the ~31M slugs already in the catalog keep the shape they have. This is not
+ * a new axis on every card; it is a disambiguator applied exactly where the
+ * product forced a collision.
+ *
+ * THE DECISION IS THE CATALOG'S, NOT THE TITLE'S. `subsetInId` is computed at
+ * ingest by asking the checklist for (year, setKey) whether this cardNumber
+ * appears under more than one subset at this rung, and is PERSISTED on the
+ * catalog row. This function never infers a clash, because the only place a
+ * clash is visible is the whole product — one row cannot see it, and a sale
+ * title certainly cannot. A matcher that read "Aptitude for Altitude" out of a
+ * title and appended it would mint a subset-bearing id for a card that has no
+ * clash, which is the fragmentation this rule exists to avoid.
+ *
+ * BLANK MEANS UNKNOWN. A row flagged `subsetInId` whose `subsetName` is blank
+ * is REFUSED here rather than minted without the segment — minting it would
+ * put it back on the plain id, which is the very slug the clash makes
+ * ambiguous. That refusal is what #1741's counter goes on counting.
+ *
+ * WHY `sub-` AND WHY AFTER THE SETKEY. The segment reads product > subset >
+ * card, which is how the checklist itself is organised. The `sub-` prefix
+ * makes the segment self-describing, so parseHobbyIqCardId can tell a
+ * 7-segment slug with a subset from a 7-segment slug with a print run without
+ * counting fields — the same reason printRun carries `num-`. No card number
+ * or parallel slug produced by this module can begin with `sub-` and be
+ * mistaken for it, because both of those live in fixed positions AFTER it.
+ */
+function formatSubsetSegment(components: HobbyIqCardIdComponents): string {
+  if (components.subsetInId !== true) return "";
+  const slug = slugify(String(components.subsetName ?? ""));
+  if (!slug) {
+    // The caller says this number clashes across subsets but cannot say WHICH
+    // subset this row is. Blank is unknown, never invented: refuse.
+    throw new Error("hobbyiq-cardid: cardNumber clashes across subsets but the subset is UNKNOWN — identity is UNDERIVABLE (CF-A-SUBSET-IS-PART-OF-THE-IDENTITY-WHEN-IT-HAS-TO-BE)");
+  }
+  return `:sub-${slug}`;
+}
+
 export function computeHobbyIqCardId(components: HobbyIqCardIdComponents): string {
   const sport = normalizeSport(components.sport);
   const year = Number.isFinite(components.year) ? Math.trunc(components.year) : 0;
@@ -1832,7 +1904,10 @@ export function computeHobbyIqCardId(components: HobbyIqCardIdComponents): strin
 
   const autoFlag = isAuto ? "auto" : "no-auto";
   const printRun = formatPrintRun(components.printRun);
-  return `hiq:${sport}:${year}:${setKey}:${cardNumber}:${parallelSlug}:${autoFlag}${printRun}`;
+  // CF-A-SUBSET-IS-PART-OF-THE-IDENTITY-WHEN-IT-HAS-TO-BE: empty for every card
+  // whose number is unique within its product, which is almost all of them.
+  const subset = formatSubsetSegment(components);
+  return `hiq:${sport}:${year}:${setKey}${subset}:${cardNumber}:${parallelSlug}:${autoFlag}${printRun}`;
 }
 
 /** Best-effort reverse parse of a hobbyiqCardId. Returns null when the
@@ -1841,9 +1916,21 @@ export function computeHobbyIqCardId(components: HobbyIqCardIdComponents): strin
 export function parseHobbyIqCardId(hiqId: string): HobbyIqCardIdComponents | null {
   if (typeof hiqId !== "string" || !hiqId.startsWith("hiq:")) return null;
   const parts = hiqId.split(":");
-  // Minimum: hiq + 6 fields = 7 parts. With print run = 8.
-  if (parts.length !== 7 && parts.length !== 8) return null;
-  const [, sport, yearStr, setKey, cardNumber, parallelSlug, autoFlag, printRunPart] = parts;
+  // Minimum: hiq + 6 fields = 7 parts. With print run OR a subset = 8, with
+  // both = 9. The two optional segments are told apart by their PREFIXES
+  // (`sub-` right after the setKey, `num-` at the end) rather than by counting
+  // — a 8-part slug can be either one.
+  if (parts.length < 7 || parts.length > 9) return null;
+  const [, sport, yearStr, setKey] = parts;
+  let rest = parts.slice(4);
+  let subsetSlug: string | null = null;
+  if (rest.length && rest[0].startsWith("sub-")) {
+    subsetSlug = rest[0].slice("sub-".length);
+    if (!subsetSlug) return null;
+    rest = rest.slice(1);
+  }
+  if (rest.length !== 3 && rest.length !== 4) return null;
+  const [cardNumber, parallelSlug, autoFlag, printRunPart] = rest;
   const year = Number(yearStr);
   if (!Number.isFinite(year) || year <= 0) return null;
   if (autoFlag !== "auto" && autoFlag !== "no-auto") return null;
@@ -1862,5 +1949,9 @@ export function parseHobbyIqCardId(hiqId: string): HobbyIqCardIdComponents | nul
     parallel: parallelSlug,
     isAuto: autoFlag === "auto",
     printRun,
+    // The slug carries the SLUG of the subset, not the checklist's words, so
+    // this is the round-trippable form and not a display name. `subsetInId` is
+    // stated because the segment being present IS the clash flag.
+    ...(subsetSlug ? { subsetName: subsetSlug, subsetInId: true } : {}),
   };
 }

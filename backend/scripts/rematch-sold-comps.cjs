@@ -117,6 +117,7 @@ const crypto = require("crypto");
 const { CosmosClient } = require("@azure/cosmos");
 const { relocateSoldComp, stripSystem, contentHashOf } = require(path.join(__dirname, "lib", "relocate-sold-comp.cjs"));
 const K = require(path.join(__dirname, "lib", "rematch-classify.cjs"));
+const SUBSET = require(path.join(__dirname, "lib", "subset-identity.cjs"));
 
 const MODE = String(process.env.MODE || "").trim();
 const APPLY = process.env.BACKFILL_APPLY === "true" || process.env.APPLY === "true"; // the runner exports BACKFILL_APPLY, not APPLY
@@ -558,6 +559,59 @@ async function main() {
     flagshipNumbersCache.set(key, out);
     return out;
   };
+  /** CF-A-SUBSET-IS-PART-OF-THE-IDENTITY-WHEN-IT-HAS-TO-BE (Drew, 2026-09-04).
+   *  Every subsetName the catalog holds at ONE rung -- the whole identity
+   *  minus the subset. Two or more means this product numbers this card under
+   *  more than one subset and the plain id answers for two different cards.
+   *
+   *  ONE QUERY PER (year, setKey), cached, for the same reason flagshipNumbers
+   *  is: a per-row query over 16.3M rows is not a census, it is an outage
+   *  (CF-FLEET-SCRIPTS-MEASURE-THROUGHPUT-BEFORE-DISPATCH). The product's
+   *  clash map is built once and every row of that product reads it for free.
+   *
+   *  Measured 2026-09-04: 17 clash sets exist across 4 products in the whole
+   *  catalog, so this returns empty for effectively every row and the subset
+   *  rule stays silent -- which is the design, not an accident of the data. */
+  const clashMapCache = new Map();
+  const clashMap = async (year, setKey) => {
+    const key = `${year}|${setKey}`;
+    if (clashMapCache.has(key)) return clashMapCache.get(key);
+    let out = new Map();
+    try {
+      const { resources } = await retry(() => cat.items.query({
+        // A range predicate on subsetName is index-served; IS_DEFINED is a
+        // scan. Blank is unknown and can neither create nor join a clash, so
+        // excluding it here is the rule, not an optimisation.
+        query: `SELECT c.cardNumber, c.parallelSlug, c.isAuto, c.printRun, c.subsetName FROM c WHERE c.setKey = @sk AND c.year = @y AND c.subsetName > ''`,
+        parameters: [{ name: "@sk", value: setKey }, { name: "@y", value: Number(year) }],
+      }, { maxItemCount: -1 }).fetchAll());
+      for (const r of resources ?? []) {
+        const sub = String(r?.subsetName ?? "").trim();
+        if (!sub) continue;
+        // ONE key builder for both sides. The catalog spells the parallel
+        // `parallelSlug` and a sale row spells it `parallel`; a key built from
+        // whichever field was to hand would miss every clash silently.
+        const rk = SUBSET.rungKey(r);
+        if (!out.has(rk)) out.set(rk, new Set());
+        out.get(rk).add(sub);
+      }
+      // Keep only the rungs that actually clash, so the per-row read is a hit
+      // test against a map that is usually empty.
+      for (const [k, v] of [...out]) if (v.size < 2) out.delete(k);
+    } catch { out = new Map(); }
+    clashMapCache.set(key, out);
+    return out;
+  };
+  /** The clashing subsets at THIS row's rung, or [] -- which is the state of
+   *  effectively every row and means the subset rule says nothing. */
+  const clashSubsetsFor = async (stored) => {
+    const year = stored?.cardYear, setKey = String(stored?.setKey ?? "").toLowerCase();
+    if (!year || !setKey) return [];
+    const m = await clashMap(year, setKey);
+    if (!m.size) return [];
+    const hit = m.get(SUBSET.rungKey(stored));
+    return hit ? [...hit] : [];
+  };
   const flagshipListsCardNumber = async (stored) => {
     const year = stored?.cardYear, setKey = String(stored?.setKey ?? "").toLowerCase();
     const num = String(stored?.cardNumber ?? "").toUpperCase();
@@ -684,6 +738,9 @@ async function main() {
         // classifies IMPROVE instead of changed:cardNumber. Without it a
         // genuinely unnumbered card is compared as the real answer it is.
         titleStatesNumber: K.titleStatesCardNumber(row.title),
+        // CF-A-SUBSET-IS-PART-OF-THE-IDENTITY-WHEN-IT-HAS-TO-BE: the catalog's
+        // answer, never the title's. Empty for effectively every row.
+        clashSubsets: await clashSubsetsFor(stored),
       });
       counts[res.klass]++;
       // THE SPLIT-IDENTITY SIGNAL, tallied ACROSS classes (Drew 2026-09-02).
@@ -933,6 +990,12 @@ async function main() {
         ...spec,
         // Re-read from the FRESH row at write time, exactly as the class is.
         titleStatesNumber: K.titleStatesCardNumber(fresh.title),
+        // CF-A-SUBSET-IS-PART-OF-THE-IDENTITY-WHEN-IT-HAS-TO-BE. Supplied here
+        // for the reason the comment above gives for `spec`: omitting it would
+        // let the apply pass write a row the census refused, because the
+        // classifier cannot see a clash it is not told about. The clash map is
+        // per (year, setKey) and cached, so the re-check costs nothing new.
+        clashSubsets: await clashSubsetsFor(stored),
       });
       // The class is decided again on what is there NOW, and it must come back
       // as the SAME kind the census queued. A row the census saw as an eviction

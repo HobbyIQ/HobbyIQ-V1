@@ -118,10 +118,16 @@
 
 const path = require("path");
 const SPLIT = require(path.join(__dirname, "split-identity.cjs"));
+const SUBSET = require(path.join(__dirname, "subset-identity.cjs"));
 const VOCAB = require(path.join(__dirname, "rematch-finish-vocab.cjs"));
 
 // ── the classes ────────────────────────────────────────────────────────────
 const AGREE = "AGREE", IMPROVE = "IMPROVE", CONFLICT = "CONFLICT", UNDERIVABLE = "UNDERIVABLE";
+// CF-A-SUBSET-IS-PART-OF-THE-IDENTITY-WHEN-IT-HAS-TO-BE (Drew, 2026-09-04).
+// A row sitting on a PLAIN id whose rung the catalog says is shared by two or
+// more subsets, and whose title names none of them. Report-only forever: there
+// is no more-specific reading to write, only a question for Drew.
+const UNDERIVABLE_FOR_SUBSET = SUBSET.UNDERIVABLE_FOR_SUBSET;
 const PROTECTED = "PROTECTED", AUTO = "AUTO";
 /** The one CONFLICT subclass authorized for audited auto-apply (Drew 2026-09-02). */
 const BASE_EVICTION = "BASE-EVICTION";
@@ -2282,6 +2288,12 @@ function diffAxes(stored, derived, opts = {}) {
  * `opts.checklistBacked`  did the derived identity land on a CHECKLIST-backed
  *            catalog row? Anything else is not evidence.
  * `opts.derivationReasons` why the derivation produced nothing (UNDERIVABLE).
+ * `opts.clashSubsets`  every subsetName the CATALOG holds at this row's rung.
+ *            Two or more means the product numbers this card under more than
+ *            one subset, and the identity needs a `:sub-` segment the row does
+ *            not have. Empty or one -- the state of virtually every row -- and
+ *            the subset rule says nothing at all. Supplied by the caller
+ *            because only a catalog read can see it; never inferred here.
  * `row`      the stored document, for the provenance tier.
  *
  * Returns { klass, tier, axes, reasons, writable }.
@@ -2292,6 +2304,7 @@ function diffAxes(stored, derived, opts = {}) {
 function classifyRow({
   row, stored, derived, checklistBacked = false, derivationReasons = [],
   storedSlug = null, baseDestSlug = null, baseDestBacked = false,
+  clashSubsets = [],
   // The PARSER'S own multi-card-lot verdict (`isMultiCardLot` from
   // parseTitleIdentity). Passed IN rather than imported: this module is pure
   // and must not require dist/. Two detectors, one decision -- the
@@ -2391,6 +2404,14 @@ function classifyRow({
   // derivation is absent, which is why it can still run on the UNDERIVABLE
   // path below.
   const family = finishFamilyCollision({ row, storedSlug, stored, derived });
+  // CF-A-SUBSET-IS-PART-OF-THE-IDENTITY-WHEN-IT-HAS-TO-BE. Computed BEFORE the
+  // class returns, because a clashing rung the title does not settle is
+  // UNDERIVABLE-for-subset whatever the eight axes say -- a row can agree on
+  // every field it has and still be one of two cards sharing that address. A
+  // title that DOES name the subset is not this class: the derivation is
+  // sound, so it falls through to the normal classification, carrying its
+  // reason so a report can show which subset the seller named.
+  const subset = SUBSET.subsetVerdict(row && row.title, clashSubsets);
   const base = {
     tier: prov.tier,
     provenanceReasons: prov.reasons,
@@ -2405,12 +2426,30 @@ function classifyRow({
     // defects whatever class it lands in, and a count that only appeared for
     // some classes would be a count of the classes, not of the defect.
     slugShapeDefects: slugShape,
+    // Same discipline for the subset clash: reported whatever class the row
+    // lands in, so the count is of the defect and not of the classes.
+    subsetClash: subset.applies,
+    subsetCandidates: subset.applies ? clashSubsets.length : 0,
+    subsetNamedByTitle: subset.subsetName,
   };
   const splitReasons = split.split ? [`split-identity:${split.klass}:${split.reason}`] : [];
   // Carried alongside the split reasons for the same reason: every return
   // path prints them, so a refusal is never silent.
   splitReasons.push(...derivationRefused.map((r) => `derivation-refused:${r}`));
   if (family.qualifies) splitReasons.push(`subclass:${FINISH_FAMILY_COLLISION}:${family.evidence.family}`);
+  splitReasons.push(...subset.reasons);
+
+  // THE SUBSET REFUSAL OUTRANKS THE CLASS. The row's address is shared by two
+  // cards and its title does not say which one it is, so no class that could
+  // move it is honest -- not AGREE (it agrees with an ambiguous address), and
+  // not IMPROVE (there is nothing more specific to write). Report it and stop.
+  if (subset.applies && subset.klass === UNDERIVABLE_FOR_SUBSET) {
+    return {
+      ...base, klass: UNDERIVABLE_FOR_SUBSET,
+      axes: { same: [], filled: [], dropped: [], changed: [] },
+      reasons: [...splitReasons], writable: false,
+    };
+  }
 
   if (!derived) {
     return { ...base, klass: UNDERIVABLE, axes: { same: [], filled: [], dropped: [], changed: [] }, reasons: [...(derivationReasons.length ? derivationReasons : ["no-derived-identity"]), ...splitReasons], writable: false };
@@ -2832,6 +2871,9 @@ function renderIdentity(id) {
 
 module.exports = {
   AGREE, IMPROVE, CONFLICT, UNDERIVABLE, PROTECTED, AUTO, BASE_EVICTION,
+  UNDERIVABLE_FOR_SUBSET, subsetVerdict: SUBSET.subsetVerdict,
+  resolveSubsetFromTitle: SUBSET.resolveSubsetFromTitle,
+  titleNamesSubset: SUBSET.titleNamesSubset,
   FINISH_FAMILY_COLLISION, FAMILY_COLOURS, colourFamilyOf, finishFamilyCollision,
   // SPECIALIZATION-STATED (2026-09-04) -- the IMPROVE subclass, its mirrored
   // ladder and each of its legs, exported piece by piece so a pin can drive
