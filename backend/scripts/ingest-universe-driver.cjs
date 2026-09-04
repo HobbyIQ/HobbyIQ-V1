@@ -207,6 +207,53 @@ const EXPLODED_PAR_MAX = Number(process.env.EXPLODED_PAR_MAX || 150);
 const EXPLODED_NUM_MAX = Number(process.env.EXPLODED_NUM_MAX || 2000);
 
 /**
+ * CF-A-PRODUCT-WITH-NO-PRINT-RUNS-IS-NOT-PARTIAL (2026-09-04).
+ *
+ * Backfill Runner 33847867665 (tcgdexja, 2021-2025, apply) recorded 46 of 48
+ * entries `partial`, and 30 of those with the reason "ladder present but zero
+ * print runs". Not one of them is incomplete. Japanese Pokemon has NO numbered
+ * parallels: the rarity ladder (Art Rare, Special Art Rare, Ultra Rare,
+ * Character Rare) IS the parallel axis, and tcgdex serves no print run for any
+ * JA set. `scrape-tcgdex-ja-modern.cjs` says so in its own header -- "printRun
+ * stays EMPTY ... this lane will not invent one: blank means unknown, never
+ * Base" -- and its own summary prints "printRun 0 written" on every run.
+ *
+ * So `withPrintRun === 0` is the EXPECTED, CORRECT shape for this lane, and a
+ * verdict of `partial` on it is a false gap: it tells the next pass to
+ * re-acquire a set that is already complete, forever, because no re-scrape can
+ * ever produce a print run the source does not have.
+ *
+ * The rule is a property of the PRODUCT, not of the file, so it is declared per
+ * lane BY NAME rather than inferred from a file that happens to be empty in
+ * that column -- inferring it would excuse a Topps Chrome scrape that simply
+ * lost the column. A lane absent from this set keeps the print-run expectation.
+ */
+const LANES_WITHOUT_PRINT_RUNS = new Set(["tcgdexja"]);
+
+/**
+ * CF-A-PROMO-SET-HAS-NO-BASE-CARDS (2026-09-04).
+ *
+ * The same run's only two failures were both promo products:
+ *
+ *   [32/48] SV-P  REFUSED -- zero base cards (288 rows, all carry a parallel)
+ *   [47/48] M-P   REFUSED -- zero base cards (132 rows, all carry a parallel)
+ *
+ * Staged and read back from the source: all 132 M-P rows carry `parallel=Promo`,
+ * which is the source's own and entirely correct rarity for every card in the
+ * set. A promo product IS its promos -- there is no base print underneath them
+ * to attach to, the way a Refractor scope attaches to its page's base set. The
+ * zero-base rule was written for a cross-join that joined rungs onto a subset
+ * never parsed; this is the opposite shape: a complete checklist of a set that
+ * has exactly one rung by design.
+ *
+ * A lane declared here is one whose products may legitimately be rung-only, and
+ * the entry is admitted only when EVERY row carries the SAME SINGLE rung -- a
+ * one-rung file being the honest shape of "these are all promos", while a
+ * multi-rung file with no base cards is still the cross-join the rule catches.
+ */
+const LANES_WITH_BASELESS_PRODUCTS = new Set(["tcgdexja"]);
+
+/**
  * THE PER-ENTRY CLEANLINESS GATE.
  *
  * The ingest's own guards are per-category and per-row: they drop the bad part
@@ -219,7 +266,7 @@ const EXPLODED_NUM_MAX = Number(process.env.EXPLODED_NUM_MAX || 2000);
  * Returns { ok, reason, stats }.
  */
 function gateStagedCsv(csvPath) {
-  const stats = { rows: 0, base: 0, ladder: 0, withPrintRun: 0, categories: 0, playersAsParallel: 0, cardLineParallel: 0 };
+  const stats = { rows: 0, base: 0, ladder: 0, withPrintRun: 0, categories: 0, playersAsParallel: 0, cardLineParallel: 0, rungNames: [] };
   let text;
   try { text = fs.readFileSync(csvPath, "utf8"); }
   catch (e) { return { ok: false, reason: `staged file unreadable: ${e.code || e.message}`, stats }; }
@@ -267,10 +314,15 @@ function gateStagedCsv(csvPath) {
   // mistaken for a rung. The two spellings now agree, and a page that says
   // "Base" out loud is no longer punished for saying it.
   const isBaseParallel = (p) => !p || /^base(?:\s+set)?$/i.test(String(p).trim());
+  // The DISTINCT rung names are kept, not merely a count of ladder rows: a
+  // promo product is ONE rung over every card and a cross-join is MANY rungs
+  // over every card, and only the distinct list tells those two apart.
+  const rungSet = new Set();
   for (const r of rows) {
     if (isBaseParallel(r.parallel)) stats.base++;
-    else { stats.ladder++; if (r.printRun) stats.withPrintRun++; }
+    else { stats.ladder++; rungSet.add(String(r.parallel).trim()); if (r.printRun) stats.withPrintRun++; }
   }
+  stats.rungNames = Array.from(rungSet);
 
   // ZERO BASE CARDS. A checklist with a parallel ladder but no base cards is a
   // ladder that has nothing to attach to -- the shape a cross-join leaves when
@@ -385,9 +437,9 @@ function gateStagedCsv(csvPath) {
  * Stats are summed across the files, so `ladder`/`withPrintRun` -- which
  * decide `partial` vs `ingested` downstream -- describe the whole page.
  */
-function gateStagedEntry(csvPaths) {
+function gateStagedEntry(csvPaths, lane) {
   const paths = Array.isArray(csvPaths) ? csvPaths : [csvPaths];
-  const total = { rows: 0, base: 0, ladder: 0, withPrintRun: 0, categories: 0, playersAsParallel: 0, cardLineParallel: 0 };
+  const total = { rows: 0, base: 0, ladder: 0, withPrintRun: 0, categories: 0, playersAsParallel: 0, cardLineParallel: 0, rungNames: [] };
   if (!paths.length) return { ok: false, reason: "no staged CSV", stats: total, files: [] };
 
   const files = [];
@@ -395,7 +447,8 @@ function gateStagedEntry(csvPaths) {
   for (const p of paths) {
     const g = gateStagedCsv(p);
     files.push({ file: path.basename(p), ok: g.ok, code: g.code ?? null, reason: g.reason, stats: g.stats });
-    for (const k of Object.keys(total)) total[k] += g.stats?.[k] ?? 0;
+    for (const k of Object.keys(total)) { if (k === "rungNames") continue; total[k] += g.stats?.[k] ?? 0; }
+    for (const n of g.stats?.rungNames ?? []) if (!total.rungNames.includes(n)) total.rungNames.push(n);
     // A per-file defect other than zero-base condemns the entry immediately,
     // and it names the FILE -- "the gate refused" with no filename is
     // unactionable when a page stages five of them.
@@ -406,13 +459,27 @@ function gateStagedEntry(csvPaths) {
   }
 
   if (total.base === 0) {
-    return {
-      ok: false,
-      reason: `zero base cards across all ${f(paths.length)} staged file(s) (${f(total.rows)} rows, all carry a parallel)`,
-      stats: total, files,
-    };
+    // CF-A-PROMO-SET-HAS-NO-BASE-CARDS. On a lane whose products may be
+    // rung-only, a page whose every row carries the SAME SINGLE rung is a
+    // complete promo checklist, not a ladder with nothing to attach to. Two
+    // distinct rungs or more with no base card is still the cross-join shape
+    // the rule was written for, and stays refused on every lane.
+    const singleRung = total.rungNames.length === 1;
+    if (!(LANES_WITH_BASELESS_PRODUCTS.has(lane) && singleRung)) {
+      return {
+        ok: false,
+        reason: `zero base cards across all ${f(paths.length)} staged file(s) (${f(total.rows)} rows, all carry a parallel)`,
+        stats: total, files,
+      };
+    }
   }
-  return { ok: true, reason: null, stats: total, files, zeroBaseFiles: files.filter((x) => x.code === "zero-base").map((x) => x.file) };
+  return {
+    ok: true, reason: null, stats: total, files,
+    // A baseless single-rung product admitted by the lane exception, named so
+    // the log can say WHY a zero-base page was allowed through.
+    baselessSingleRung: total.base === 0 ? (total.rungNames[0] ?? null) : null,
+    zeroBaseFiles: files.filter((x) => x.code === "zero-base").map((x) => x.file),
+  };
 }
 
 // ── acquisition, per lane, through the EXISTING scripts ──────────────────────
@@ -479,6 +546,9 @@ const CHILD_STDERR_LINES = 15;
  * so a child that genuinely wants one can still be given it in `env`.
  */
 const RUNNER_SCOPE_VARS = ["LIMIT", "SLOT", "SLOTS", "SCAN_LIMIT", "MAX_ROWS"];
+
+
+
 
 function run(script, args, env, timeoutMs) {
   const childEnv = { ...process.env, ...env };
@@ -797,6 +867,9 @@ async function writeControl(entry, verdict) {
     reason: verdict.reason || null,
     rowsCreated: verdict.rowsCreated ?? null,
     rowsInCatalog: verdict.rowsInCatalog ?? null,
+    // Staged-row count, so "did every row land?" is answerable from the
+    // control doc alone -- the question run 33847867665 needed a log to answer.
+    rowsStaged: verdict.rowsStaged ?? null,
     stagedStats: verdict.stats || null,
     lastAttempt: new Date().toISOString(),
     attempts: (verdict.priorAttempts || 0) + 1,
@@ -1037,7 +1110,7 @@ function orderQueue(queue, titlesRaw) {
 // The gate is exported so its rules can be asserted directly against fixture
 // CSVs, rather than only through a full acquisition. `require`d as a module the
 // script does nothing; run as a CLI it drives.
-module.exports = { gateStagedCsv, gateStagedEntry, stagedCsvs, sourceLabelFor, splitCsv, isPersonName, setKeyFor, LANE_ALIASES, LANE_SOURCE, LANE_MINUTES, CANONICAL_HEADER, CHILD_STDERR_LINES, cosmosSafeId, controlId, orderQueue, SYSTEMIC_FAILURE_STREAK, EMPTY_STATUS, STREAK_STATUSES, isStaged, stagedSourceRefs };
+module.exports = { gateStagedCsv, gateStagedEntry, stagedCsvs, LANES_WITHOUT_PRINT_RUNS, LANES_WITH_BASELESS_PRODUCTS, sourceLabelFor, splitCsv, isPersonName, setKeyFor, LANE_ALIASES, LANE_SOURCE, LANE_MINUTES, CANONICAL_HEADER, CHILD_STDERR_LINES, cosmosSafeId, controlId, orderQueue, SYSTEMIC_FAILURE_STREAK, EMPTY_STATUS, STREAK_STATUSES, isStaged, stagedSourceRefs };
 if (require.main !== module) return;
 
 (async () => {
@@ -1265,7 +1338,7 @@ if (require.main !== module) return;
 
       // GATE BEFORE INGEST. A staged file that violates doctrine is refused as
       // a whole entry -- never a dirty ingest, and never a silent skip.
-      const gate = gateStagedEntry(csvPaths);
+      const gate = gateStagedEntry(csvPaths, lane);
       if (csvPaths.length > 1) {
         console.log(`      ${f(csvPaths.length)} staged scope files: ${csvPaths.map((p) => path.basename(p)).join(", ")}`);
       }
@@ -1285,22 +1358,68 @@ if (require.main !== module) return;
         const after = await countCatalogRows(entry);
         const created = (after ?? 0) - (before ?? 0);
         rowsCreatedTotal += Math.max(0, created);
+
+        /**
+         * CF-EVERY-STAGED-ROW-OR-IT-IS-NOT-INGESTED (2026-09-04).
+         *
+         * Run 33847867665 landed EXACTLY 64 catalog rows for set after set --
+         * S10a, S12, S5I, S8, S9a, S6H, S9, S8b, S11 ... thirty-nine of the
+         * forty-eight -- while the staging held 92 rows for SV1V, 108 for SV9
+         * and 367 for SV4a. 64 is not a number this lane can produce: it is
+         * ceil(LIMIT/CONCURRENCY) * CONCURRENCY = ceil(52/16) * 16, the leaked
+         * runner LIMIT rounded up to the child's write-chunk boundary.
+         *
+         * #1718 deleted the leak. This is the ASSERTION that would have caught
+         * it without a human reading a log: the driver already knows how many
+         * rows the gate parsed out of the staged files, and a complete ingest
+         * of a product the catalog had none of must leave that many rows
+         * behind. A count short of staging is a TRUNCATED ingest -- a verdict
+         * of its own, never `ingested`, and never `partial` (which claims the
+         * SOURCE was thin when in fact our own pipe dropped rows).
+         *
+         * The comparison is made only when the product started EMPTY. With
+         * rows already present the arithmetic cannot separate "created 64 of
+         * 92 staged" from "58 of the 92 were already there", and asserting on
+         * a difference we cannot attribute would fire on every honest re-run.
+         */
+        const staged = gate.stats.rows;
+        const startedEmpty = (before ?? 0) === 0;
+        const truncated = startedEmpty && after !== null && staged > 0 && after < staged;
+
+        /**
+         * CF-A-PRODUCT-WITH-NO-PRINT-RUNS-IS-NOT-PARTIAL. On a lane whose
+         * products carry no numbered parallels, an empty print-run column is
+         * the source telling the truth, not a gap for a later pass to close.
+         */
+        const printRunsExpected = !LANES_WITHOUT_PRINT_RUNS.has(lane);
+        const incomplete = gate.stats.ladder === 0 || (printRunsExpected && gate.stats.withPrintRun === 0);
+
         if (after === null) {
           verdict = { status: "failed", reason: "cannot verify by read — setKey/year not derivable for this entry", rowsCreated: 0, stats: gate.stats };
           console.log(`      FAILED — unverifiable`);
         } else if (after === 0) {
           verdict = { status: "failed", reason: "ingest reported success but the catalog holds 0 rows for this product", rowsCreated: 0, rowsInCatalog: 0, stats: gate.stats };
           console.log(`      FAILED — green ingest, 0 rows landed`);
-        } else if (gate.stats.ladder === 0 || gate.stats.withPrintRun === 0) {
-          // Landed and clean, but incomplete: base-only, or a ladder with no
-          // print runs. That is `partial` -- the exact shape D37 counted 1,873
-          // + 172 of. Recording it `ingested` would close a gap still open.
+        } else if (truncated) {
+          verdict = {
+            status: "failed",
+            reason: `truncated ingest — ${f(staged)} rows staged, ${f(after)} in catalog`,
+            rowsCreated: created, rowsInCatalog: after, rowsStaged: staged, stats: gate.stats,
+          };
+          console.log(`      FAILED — truncated: ${f(staged)} staged, only ${f(after)} landed (${f(staged - after)} rows lost in our own pipe)`);
+        } else if (incomplete) {
+          // Landed and clean, but incomplete: base-only, or -- on a lane whose
+          // products ARE numbered -- a ladder with no print runs. Recording it
+          // `ingested` would close a gap still open.
           const why = gate.stats.ladder === 0 ? "base-only, no parallel ladder" : "ladder present but zero print runs";
-          verdict = { status: "partial", reason: why, rowsCreated: created, rowsInCatalog: after, stats: gate.stats };
+          verdict = { status: "partial", reason: why, rowsCreated: created, rowsInCatalog: after, rowsStaged: staged, stats: gate.stats };
           console.log(`      PARTIAL — ${why} (${f(created)} rows created, ${f(after)} in catalog)`);
         } else {
-          verdict = { status: "ingested", reason: null, rowsCreated: created, rowsInCatalog: after, stats: gate.stats };
-          console.log(`      INGESTED — ${f(created)} rows created, ${f(after)} in catalog, ${f(gate.stats.withPrintRun)} with print runs`);
+          const note = printRunsExpected
+            ? `${f(gate.stats.withPrintRun)} with print runs`
+            : "no print runs — this lane's products carry none";
+          verdict = { status: "ingested", reason: null, rowsCreated: created, rowsInCatalog: after, rowsStaged: staged, stats: gate.stats };
+          console.log(`      INGESTED — ${f(created)} rows created, ${f(after)} in catalog of ${f(staged)} staged, ${note}`);
         }
       }
     } catch (e) {
