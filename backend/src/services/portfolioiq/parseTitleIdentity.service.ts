@@ -42,6 +42,7 @@
 // two cannot disagree.
 import { classifyTcg } from "./tcgVertical.service.js";
 import { canonicalVariationName, readVariationFromTitle, type VariationMarker } from "../catalog/variationVocabulary.js";
+import { checklistSaysAuto, type ChecklistAutoResolver } from "../catalog/checklistAutoLookup.js";
 
 /** TCG `POS/TOTAL` card number, e.g. "008/132". Position CAN exceed the total
  *  (secret/hyper rares are numbered above set size), so only the <=400 bound
@@ -673,6 +674,24 @@ export interface InferIsAutoInput {
   cardNumber?: string | null;
   setName?: string | null;             // full product/insert name if known
   titleHasAutoText?: boolean;          // pre-computed from extractIsAuto if available
+  /** CF-A-CARDNUMBER-PREFIX-IS-SUFFICIENT-NEVER-NECESSARY (Drew, 2026-09-04).
+   *  The product's year + setKey, so the CHECKLIST can answer for a card whose
+   *  signed variant SHARES the base card number (2011 Topps Chrome #173
+   *  Freddie Freeman: one number, a base rookie and an Autographed Rookie).
+   *  Optional: without a resolver nothing changes. */
+  year?: number | null;
+  setKey?: string | null;
+  /** Injected checklist index. A title parse never does I/O, so the caller
+   *  supplies an in-memory index; absent means "unknown", which is `false`. */
+  checklistAuto?: ChecklistAutoResolver | null;
+  /** The signal that says THIS sale is the signed row, where the checklist
+   *  says a signed row EXISTS at this number. Title auto-words are the usual
+   *  source; a slab OCR reading "AUTOGRAPH" off the label is another. Note
+   *  that `titleHasAutoText` cannot serve here -- it short-circuits to `true`
+   *  at the top of `inferIsAuto`, so by the time the checklist rule runs it
+   *  is always false. That is exactly the case this rule is FOR: a title too
+   *  terse to prove the auto, on a number the checklist says is signed. */
+  autoCorroboration?: boolean;
 }
 
 /** Sport-aware isAuto inference — the ONE function callers should use
@@ -702,6 +721,28 @@ export function inferIsAuto(input: InferIsAutoInput): boolean {
 
   // Any sport: setName keyword.
   if (input.setName && AUTO_SETNAME_RE.test(input.setName)) return true;
+
+  // CF-A-CARDNUMBER-PREFIX-IS-SUFFICIENT-NEVER-NECESSARY. Everything above is
+  // a PREFIX or a NAME rule, and both are structurally blind to a signed card
+  // that shares the base card's number -- the "traps" named above as needing
+  // slab OCR. They do not need OCR: the product's own checklist lists the
+  // auto row at that number. Last, and additive: it can only turn a `false`
+  // into a `true`, and only where a checklist actually says so.
+  //
+  // Gated on corroboration, because a checklist saying "#173 has a signed
+  // variant" makes the auto POSSIBLE, not certain -- most #173 sales are the
+  // base rookie, and tagging those would wreck the base pool. The caller
+  // passes what says THIS sale is the signed one (`autoCorroboration`).
+  if (input.checklistAuto) {
+    if (checklistSaysAuto({
+      sport: input.sport ?? null,
+      year: input.year ?? null,
+      setKey: input.setKey ?? null,
+      cardNumber: input.cardNumber ?? null,
+      corroborated: input.autoCorroboration === true,
+      resolve: input.checklistAuto,
+    })) return true;
+  }
 
   return false;
 }
