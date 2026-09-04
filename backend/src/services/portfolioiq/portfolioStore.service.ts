@@ -10747,6 +10747,29 @@ export async function repriceHoldingsForUser(
               const costBasis = toNumber(holding.totalCostBasis, toNumber(holding.purchasePrice, 0) * qty);
               const proposedTotal = fmv * qty;
               if (costBasis > 50 && (proposedTotal / costBasis) < 0.15) {
+                // CF-ONE-FLOOR-ONE-WRITE (2026-09-04). This lane was the THIRD
+                // cost-basis floor and the one #1754 did not reach: it logged
+                // that it was retaining the prior value and then wrote NOTHING,
+                // leaving the holding's `pricingSourceMeta` as whatever the last
+                // pass happened to leave — the same silent fall-through, under a
+                // different event name. A refusal is a decision and a decision names
+                // itself, so it goes through the ONE shared refusal write (the
+                // number is kept, `method: "withheld"`, reason
+                // `cost-basis-floor`, the refused number preserved as
+                // evidence) — never a second implementation of it here.
+                //
+                // This lane holds an `OurPoolPricingResult`, not a `Valuation`,
+                // so it passes the narrow refusal facts; the write is the same
+                // one both one-entry lanes call.
+                const cbf = costBasisFloorRefusalWrite(holding, {
+                  rungLabel: ourPool.rungLabel,
+                  proposedUnit: fmv,
+                  proposedTotal,
+                  costBasis,
+                  pooledAs: ourPool.slug ?? null,
+                  compsUsed: ourPool.compsUsed ?? 0,
+                }, now);
+                doc.holdings[holding.id] = cbf.holding;
                 console.warn(JSON.stringify({
                   event: "our_pool_reprice_rejected_cost_basis_floor",
                   source: "portfolioStore.repriceHoldingsForUser",
@@ -10756,9 +10779,17 @@ export async function repriceHoldingsForUser(
                   proposedPct: Math.round((proposedTotal / costBasis) * 10000) / 100,
                   method: ourPool.method,
                   slug: ourPool.slug,
-                  keepingPrior: true,
+                  // The refusal is now PERSISTED, not merely logged: the prior
+                  // number is kept and the row says why.
+                  refusalPersisted: true,
+                  summary: cbf.summary,
                 }));
-                // Fall through — legacy path continues.
+                // The fall-through is DELIBERATELY unchanged: the floor faults
+                // this lane's number, and the sibling / legacy lanes below may
+                // still price the holding legitimately. If one does, its write
+                // supersedes this refusal — which is correct, a published price
+                // outranks a withhold. If none does, the refusal is what the
+                // row carries, instead of the untouched meta it carried before.
               } else {
               // CF-EXACT-POOL-SUPREMACY (D4 PR 5): an our-pool ESTIMATE from a
               // cross-identity rung (cross-setkey, sibling-parallel, family-

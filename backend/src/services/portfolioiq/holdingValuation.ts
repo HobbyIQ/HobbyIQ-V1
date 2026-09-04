@@ -148,14 +148,56 @@ const round2 = (n: number): number => Math.round(n * 100) / 100;
  *     the prior pass's confidence when there was one and an explicit `null`
  *     when there was not.
  *
- * Shared by both one-entry call sites (the batch reprice and
- * `autoPriceHolding`) so the two cannot drift.
+ * Shared by EVERY cost-basis-floor refusal, so no two can drift.
+ *
+ * CF-ONE-FLOOR-ONE-WRITE (2026-09-04, follow-up). #1754 routed the two
+ * one-entry lanes here and left a THIRD floor standing: the our-pool lane of
+ * `repriceHoldingsForUser` (`our_pool_reprice_rejected_cost_basis_floor`),
+ * which logged `keepingPrior: true`, wrote nothing, and fell through — the
+ * identical defect under a different event name. That lane holds no
+ * `Valuation`; it holds an `OurPoolPricingResult`. So the input is the narrow
+ * facts a refusal actually needs — the rung refused, what it proposed, the
+ * pool it read, the basis it failed against — and the one-entry outcome is
+ * accepted as-is and normalized to them. A second implementation of this
+ * write is the thing being prevented; a second SHAPE of caller is not.
  */
+
+/** The facts a refusal needs, independent of which lane produced the price. */
+export interface CostBasisFloorRefusalFacts {
+  /** The rung that produced the refused number, in the closed vocabulary. */
+  rungLabel: string;
+  /** The refused number, per unit — kept as evidence, never published. */
+  proposedUnit: number | null;
+  /** The refused number × quantity, as compared against the basis. */
+  proposedTotal: number;
+  /** The cost basis it was compared against. */
+  costBasis: number;
+  /** The pool that produced it, for `withheld.blockingId`. */
+  pooledAs: string | null;
+  /** That pool's size, for `withheld.blockingCount`. */
+  compsUsed: number;
+}
+
+function refusalFacts(
+  entry: Extract<HoldingValuationOutcome, { outcome: "cost-basis-floor" }> | CostBasisFloorRefusalFacts,
+): CostBasisFloorRefusalFacts {
+  if (!("outcome" in entry)) return entry;
+  return {
+    rungLabel: entry.valuation.rungLabel,
+    proposedUnit: entry.valuation.fairMarketValue ?? null,
+    proposedTotal: entry.proposedTotal,
+    costBasis: entry.costBasis,
+    pooledAs: entry.valuation.identity.pooledAs ?? entry.valuation.identity.slug ?? null,
+    compsUsed: entry.valuation.compsUsed ?? 0,
+  };
+}
+
 export function costBasisFloorRefusalWrite(
   holding: PortfolioHolding,
-  entry: Extract<HoldingValuationOutcome, { outcome: "cost-basis-floor" }>,
+  input: Extract<HoldingValuationOutcome, { outcome: "cost-basis-floor" }> | CostBasisFloorRefusalFacts,
   nowIso: string,
 ): { holding: PortfolioHolding; prose: string; summary: string } {
+  const entry = refusalFacts(input);
   const kept = typeof holding.fairMarketValue === "number" && Number.isFinite(holding.fairMarketValue)
     ? holding.fairMarketValue
     : null;
@@ -168,10 +210,10 @@ export function costBasisFloorRefusalWrite(
   const pct = entry.costBasis > 0 ? round2((entry.proposedTotal / entry.costBasis) * 100) : null;
   const summary =
     `proposed $${round2(entry.proposedTotal)} is ${pct}% of a $${round2(entry.costBasis)} basis `
-    + `(rung=${entry.valuation.rungLabel})`;
+    + `(rung=${entry.rungLabel})`;
   const prose =
     `price refused by the cost-basis sanity floor: the valuation path returned `
-    + `$${round2(entry.proposedTotal)} under rung ${entry.valuation.rungLabel}, ${pct}% of a `
+    + `$${round2(entry.proposedTotal)} under rung ${entry.rungLabel}, ${pct}% of a `
     + `$${round2(entry.costBasis)} cost basis (floor: 15%). The prior value is kept unchanged; `
     + `a price this far under basis is a pool or identity mismatch, not a market.`;
   return {
@@ -191,7 +233,7 @@ export function costBasisFloorRefusalWrite(
       meta: {
         slug: typeof priorMeta?.slug === "string"
           ? (priorMeta.slug as string)
-          : (entry.valuation.identity.slug ?? null),
+          : (entry.pooledAs ?? null),
         compsUsed: typeof priorMeta?.compsUsed === "number" ? (priorMeta.compsUsed as number) : null,
         confidence: typeof priorMeta?.confidence === "number" && Number.isFinite(priorMeta.confidence as number)
           ? (priorMeta.confidence as number)
@@ -199,9 +241,9 @@ export function costBasisFloorRefusalWrite(
         ...(Array.isArray(priorMeta?.labels) ? { labels: priorMeta.labels as never } : {}),
         withheld: {
           reason: "cost-basis-floor",
-          blockingId: entry.valuation.identity.pooledAs ?? entry.valuation.identity.slug ?? null,
-          blockingCount: entry.valuation.compsUsed ?? 0,
-          proposed: entry.valuation.fairMarketValue ?? null,
+          blockingId: entry.pooledAs,
+          blockingCount: entry.compsUsed,
+          proposed: entry.proposedUnit,
         },
       },
       fields: {
