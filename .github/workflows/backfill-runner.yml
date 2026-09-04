@@ -363,6 +363,31 @@ on:
           # `sports` narrows the scope; the purge never touches a sport the
           # dispatch did not name.
           - rebuild-market-indexes
+          # CF-TIFFANY-IS-A-PRODUCT (Drew, 2026-09-01, restated 2026-09-04).
+          # Tiffany has its own setKey (topps-tiffany / topps-traded-tiffany /
+          # bowman-tiffany) and a BLANK parallel; a row filed
+          # `parallel: "Tiffany"` on the paper product is a SPLIT POOL. MODE is
+          # REQUIRED and has no default:
+          #   MODE=catalog  retire the rung row (a MARKER -- retired/retiredAt
+          #                 /retiredIntoSetKey -- never a delete) when the
+          #                 sibling already holds that cardNumber; otherwise
+          #                 CONVERT it into the sibling product row through
+          #                 moveCatalogRow, so a checklist-backed incumbent
+          #                 wins on authority and is never downgraded.
+          #   MODE=pool     re-key the sold_comps rows -- cardId AND
+          #                 hobbyiqCardId -- onto the sibling identity, keeping
+          #                 the grade and auto segments, ONLY when the row's own
+          #                 title states Tiffany. The 93 rows whose title says
+          #                 "Base" under a :tiffany: slug are report-only
+          #                 CONFLICT: moving one carries a base sale into the
+          #                 Tiffany pool.
+          # THE SIBLING GATE is a live per-(sport,year) count, not a compiled
+          # list: fleer / fleer-update / fleer-tradition / base-set have NO
+          # Tiffany product, so those 1,215+ rungs are reported and LEFT
+          # (acquire before retire). Acquiring the checklist arms them by
+          # itself. No new dispatch input -- mode/years/scope/sports/limit and
+          # slot/slots are the shared ones above.
+          - repair-tiffany-rung-to-product
       apply:
         description: "Actually write (true) or dry-run only (false)"
         required: true
