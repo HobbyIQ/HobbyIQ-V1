@@ -1,0 +1,28 @@
+{
+ "scrapedAt": "2026-09-04T05:32:31.473Z",
+ "source": "sportscardchecklist",
+ "sourceUrl": "file:1957-topps-basketball.trimmed.html",
+ "sport": "basketball",
+ "year": 1957,
+ "season": "1957",
+ "setName": "1957 Topps Basketball",
+ "productKey": "1957-topps",
+ "setKey": "topps",
+ "rowCount": 80,
+ "parallelColumnAuthoritative": true,
+ "cardRows": 80,
+ "ladderRows": 0,
+ "subsetRows": 47,
+ "printRunsFound": 0,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Double Print",
+   "category": "insert-double-print",
+   "playerCount": 47,
+   "rungs": 0,
+   "rowCount": 47,
+   "refused": false,
+   "printRun": null
+  }
+ ]
+}
