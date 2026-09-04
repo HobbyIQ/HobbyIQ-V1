@@ -128,8 +128,48 @@ const crypto = require("crypto");
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
 const MODE = String(process.env.MODE || "").trim().toLowerCase();
 const MODES = ["pool", "num1951"];
-const SLOT = Number(process.env.SLOT ?? 0);
-const SLOTS = Math.max(1, Number(process.env.SLOTS ?? 1));
+// CF-AN-INHERITED-SLOTS-IS-NOT-A-CHOSEN-SHARD (2026-09-04).
+//
+// The runner exports `slots` for EVERY script with a workflow-wide DEFAULT OF
+// "16", so `process.env.SLOTS ?? 1` never saw undefined and this lane sharded
+// itself 16 ways on a dispatch that asked for no sharding. Run 33899174030
+// (report) and 33899784003 (APPLY) both printed `slot 0/16` and
+// `rows scanned 11 (+2,046 other slots)` -- reconciling honestly as
+// "intended 11 = written 0 + skipped 11" while 2,046 rows sat in fifteen
+// slots nobody dispatched. The same shape ran #1745's applies: `slot 0/16`,
+// which is why 896 catalog rows became 20+28 and 1,107 comps became 71.
+//
+// A shard is now OPT-IN. Sharding happens only when the dispatch names a
+// slot explicitly -- SLOT is set to a non-empty value AND SLOTS > 1 -- so an
+// unset, empty, or inherited-default input means ALL ROWS, which is what a
+// scope nobody chose has to mean. This is the same doctrine that already
+// makes the inherited `scope=refractor` mean "no setKey filter".
+const rawSlot = String(process.env.SLOT ?? "").trim();
+const rawSlots = String(process.env.SLOTS ?? "").trim();
+const SLOT = Number(rawSlot || 0);
+const SLOTS_REQUESTED = Math.max(1, Number(rawSlots || 1));
+// The dispatcher OPTED IN only if it named a slot. `slots` alone is the
+// runner's own default and never shards on its own.
+// BOTH inputs carry a workflow-wide DEFAULT (`slot: "0"`, `slots: "16"`), so
+// the environment alone can never tell "I chose slot 0 of 16" from "I chose
+// nothing and inherited both" -- they are the same bytes. The tie is broken
+// the only way it honestly can be:
+//
+//   slot > 0      only a deliberate dispatch names a non-zero slot, and such
+//                 a run is by definition one of a fan-out.
+//   SHARD=true    the explicit opt-in for slot 0 of a REAL fan-out, so
+//                 `slot=0 slots=16 SHARD=true` still works. It rides an env
+//                 var, not a new dispatch input (GitHub caps
+//                 workflow_dispatch at 25 and 24 are used).
+//
+// Everything else -- including the inherited `slot=0 slots=16` that ran
+// #1745's and #1752's applies at 1/16th coverage -- sweeps EVERY row. An
+// under-sweep that reconciles honestly is the worst failure mode available:
+// run 33899784003 printed "APPLIED ... intended 11 = written 0 + skipped 11"
+// and was GREEN, while 2,046 rows sat in fifteen slots nobody dispatched.
+const SHARD_OPT_IN = /^(1|true|yes)$/i.test(String(process.env.SHARD ?? "").trim());
+const SHARDED = SLOTS_REQUESTED > 1 && Number.isFinite(SLOT) && (SLOT > 0 || SHARD_OPT_IN);
+const SLOTS = SHARDED ? SLOTS_REQUESTED : 1;
 const CONCURRENCY = Math.max(1, Number(process.env.CONCURRENCY || process.env.BACKFILL_CONCURRENCY || 16));
 const RUN_MS = Number(process.env.RUN_MINUTES || 140) * 60000;
 const LIMIT = Number(process.env.LIMIT || 0);
@@ -148,7 +188,7 @@ const SPORTS = csv(process.env.SPORTS || process.env.SPORT);
 const SETKEYS = csv(process.env.SCOPE).filter((s) => s !== "refractor" && s !== "all");
 
 const shardOf = (key) => parseInt(crypto.createHash("sha1").update(String(key)).digest("hex").slice(0, 8), 16) % SLOTS;
-const mineByShard = (key) => SLOTS === 1 || shardOf(str(key)) === SLOT;
+const mineByShard = (key) => !SHARDED || shardOf(str(key)) === SLOT;
 
 // ── vocabulary ──────────────────────────────────────────────────────────────
 
@@ -345,7 +385,8 @@ async function main() {
   console.log(`repair-tiffany-pool-enumeration  MODE=${MODE}  ${APPLY ? "APPLY" : "REPORT ONLY -- nothing written"}`);
   console.log(`  ruling   ${MODE === "num1951" ? REASON_1951 : REASON_LONG}`);
   console.log(`  scope    years=${YEARS.length ? YEARS.join(",") : "(all)"}  sports=${SPORTS.length ? SPORTS.join(",") : "(all)"}  setKeys=${SETKEYS.length ? SETKEYS.join(",") : "(all)"}`);
-  console.log(`  slot ${SLOT}/${SLOTS}  concurrency ${CONCURRENCY}  budget ${RUN_MS / 60000}m${LIMIT ? `  LIMIT=${f(LIMIT)}` : ""}`);
+  console.log(`  sharding ${SHARDED ? `ON -- slot ${SLOT}/${SLOTS}. THIS RUN COVERS 1/${SLOTS} OF THE POPULATION; dispatch every slot 0..${SLOTS - 1} or the sweep is partial.` : `OFF -- this run sweeps EVERY row${SLOTS_REQUESTED > 1 ? ` (slots=${rawSlots} is the runner's inherited default, not a chosen shard; pass SHARD=true with slot=0 to fan out)` : ""}`}`);
+  console.log(`  concurrency ${CONCURRENCY}  budget ${RUN_MS / 60000}m${LIMIT ? `  LIMIT=${f(LIMIT)}` : ""}`);
   console.log(`  staged Tiffany/Glossy checklists: ${f(staged.size)}  (the sibling table -- a naming rule would send 1987-1989 Fleer to a product that will never exist)`);
   console.log("");
 
@@ -684,6 +725,9 @@ module.exports = {
   statesTiffany, isYearShapedPrintRun, parallelNamesProduct, slugParts, axesOf,
   toSiblingSlug, inScope, isPoolRung, loadStagedSiblings, siblingFor,
   siblingCandidates, resolveSibling, REASON, REASON_1951,
+  // CF-AN-INHERITED-SLOTS-IS-NOT-A-CHOSEN-SHARD: exported so the pins can
+  // assert the opt-in directly under the runner's own env.
+  SHARDED, SLOT, SLOTS, SHARD_OPT_IN,
 };
 
 if (require.main === module) {
