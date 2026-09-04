@@ -1,0 +1,348 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,001,,false,,paras
+base,001,Reverse Holo,false,,paras
+base,002,,false,,parasect
+base,002,Reverse Holo,false,,parasect
+base,003,,false,,voltorb
+base,003,Reverse Holo,false,,voltorb
+base,004,,false,,electrode
+base,004,Reverse Holo,false,,electrode
+base,005,Double rare,false,,electrode
+base,006,,false,,turtwig
+base,006,Reverse Holo,false,,turtwig
+base,007,,false,,grotle
+base,007,Reverse Holo,false,,grotle
+base,008,,false,,torterra
+base,009,,false,,kricketot
+base,009,Reverse Holo,false,,kricketot
+base,010,,false,,kricketune
+base,010,Reverse Holo,false,,kricketune
+base,011,Double rare,false,,leafeon
+base,012,Triple Rare,false,,leafeon
+base,013,Double rare,false,,charizard
+base,014,Triple Rare,false,,charizard
+base,015,Radiant Rare,false,,charizard
+base,016,,false,,magmar
+base,016,Reverse Holo,false,,magmar
+base,017,,false,,magmortar
+base,017,Reverse Holo,false,,magmortar
+base,018,,false,,moltres
+base,019,Double rare,false,,entei
+base,020,Double rare,false,,simisear
+base,021,Triple Rare,false,,simisear
+base,022,,false,,oricorio
+base,022,Reverse Holo,false,,oricorio
+base,023,,false,,lapras
+base,023,Reverse Holo,false,,lapras
+base,024,Double rare,false,,suicune
+base,025,,false,,regice
+base,025,Reverse Holo,false,,regice
+base,026,Double rare,false,,lumineon
+base,027,Double rare,false,,palkia
+base,028,Triple Rare,false,,palkia
+base,029,,false,,manaphy
+base,029,Reverse Holo,false,,manaphy
+base,030,,false,,basculin
+base,030,Reverse Holo,false,,basculin
+base,031,,false,,basculegion
+base,032,,false,,keldeo
+base,033,Radiant Rare,false,,greninja
+base,034,,false,,electabuzz
+base,034,Reverse Holo,false,,electabuzz
+base,035,,false,,electivire
+base,035,Reverse Holo,false,,electivire
+base,036,,false,,mareep
+base,036,Reverse Holo,false,,mareep
+base,037,,false,,flaaffy
+base,037,Reverse Holo,false,,flaaffy
+base,038,Double rare,false,,raikou
+base,039,Radiant Rare,false,,charjabug
+base,040,Double rare,false,,zeraora
+base,041,Triple Rare,false,,zeraora
+base,042,Triple Rare,false,,zeraora
+base,043,,false,,toxel
+base,043,Reverse Holo,false,,toxel
+base,044,,false,,toxtricity
+base,045,,false,,regieleki
+base,045,Reverse Holo,false,,regieleki
+base,046,,false,,gastly
+base,046,Reverse Holo,false,,gastly
+base,047,,false,,haunter
+base,047,Reverse Holo,false,,haunter
+base,048,,false,,gengar
+base,049,,false,,articuno
+base,050,Double rare,false,,mewtwo
+base,051,Triple Rare,false,,mewtwo
+base,052,,false,,mew
+base,053,Double rare,false,,mew
+base,054,Triple Rare,false,,mew
+base,055,Radiant Rare,false,,gardevoir
+base,056,,false,,lunatone
+base,056,Reverse Holo,false,,lunatone
+base,057,,false,,duskull
+base,057,Reverse Holo,false,,duskull
+base,058,,false,,dusclops
+base,058,Reverse Holo,false,,dusclops
+base,059,,false,,dusknoir
+base,060,,false,,deoxys
+base,061,,false,,pumpkaboo
+base,061,Reverse Holo,false,,pumpkaboo
+base,062,,false,,gourgeist
+base,062,Reverse Holo,false,,gourgeist
+base,063,,false,,diancie
+base,064,,false,,comfey
+base,064,Reverse Holo,false,,comfey
+base,065,Double rare,false,,hatterene
+base,066,Triple Rare,false,,hatterene
+base,067,Double rare,false,,zacian
+base,068,Double rare,false,,enamorus
+base,069,,false,,growlithe
+base,069,Reverse Holo,false,,growlithe
+base,070,,false,,arcanine
+base,071,Double rare,false,,machamp
+base,072,Triple Rare,false,,machamp
+base,073,,false,,zapdos
+base,074,,false,,solrock
+base,074,Reverse Holo,false,,solrock
+base,075,,false,,regirock
+base,075,Reverse Holo,false,,regirock
+base,076,,false,,riolu
+base,076,Reverse Holo,false,,riolu
+base,077,,false,,lucario
+base,078,Radiant Rare,false,,hawlucha
+base,079,,false,,moltres
+base,080,Double rare,false,,moltres
+base,081,,false,,poochyena
+base,081,Reverse Holo,false,,poochyena
+base,082,,false,,mightyena
+base,082,Reverse Holo,false,,mightyena
+base,083,,false,,absol
+base,084,,false,,spiritomb
+base,084,Reverse Holo,false,,spiritomb
+base,085,Double rare,false,,drapion
+base,086,Double rare,false,,samurott
+base,087,Triple Rare,false,,samurott
+base,088,,false,,purrloin
+base,088,Reverse Holo,false,,purrloin
+base,089,,false,,liepard
+base,089,Reverse Holo,false,,liepard
+base,090,,false,,zorua
+base,090,Reverse Holo,false,,zorua
+base,091,,false,,zoroark
+base,092,,false,,nickit
+base,092,Reverse Holo,false,,nickit
+base,093,,false,,thievul
+base,093,Reverse Holo,false,,thievul
+base,094,,false,,magnemite
+base,094,Reverse Holo,false,,magnemite
+base,095,,false,,magneton
+base,095,Reverse Holo,false,,magneton
+base,096,,false,,magnezone
+base,097,,false,,registeel
+base,097,Reverse Holo,false,,registeel
+base,098,,false,,bronzor
+base,098,Reverse Holo,false,,bronzor
+base,099,,false,,bronzong
+base,100,Double rare,false,,dialga
+base,101,Triple Rare,false,,dialga
+base,102,Double rare,false,,genesect
+base,103,Double rare,false,,zamazenta
+base,104,,false,,altaria
+base,104,Reverse Holo,false,,altaria
+base,105,,false,,latias
+base,105,Reverse Holo,false,,latias
+base,106,,false,,latios
+base,107,Double rare,false,,rayquaza
+base,108,Triple Rare,false,,rayquaza
+base,109,Double rare,false,,garchomp
+base,110,Double rare,false,,giratina
+base,111,Triple Rare,false,,giratina
+base,112,,false,,goomy
+base,112,Reverse Holo,false,,goomy
+base,113,,false,,sliggoo
+base,113,Reverse Holo,false,,sliggoo
+base,114,,false,,goodra
+base,115,Radiant Rare,false,,eternatus
+base,116,,false,,regidrago
+base,116,Reverse Holo,false,,regidrago
+base,117,,false,,ditto
+base,118,,false,,dunsparce
+base,118,Reverse Holo,false,,dunsparce
+base,119,,false,,miltank
+base,120,,false,,swablu
+base,120,Reverse Holo,false,,swablu
+base,121,,false,,bidoof
+base,121,Reverse Holo,false,,bidoof
+base,122,,false,,bibarel
+base,123,,false,,regigigas
+base,124,Double rare,false,,regigigas
+base,125,Triple Rare,false,,regigigas
+base,126,Double rare,false,,arceus
+base,127,Triple Rare,false,,arceus
+base,128,Double rare,false,,zoroark
+base,129,Triple Rare,false,,zoroark
+base,130,Double rare,false,,oranguru
+base,131,Double rare,false,,wyrdeer
+base,132,,false,,うねりの扇
+base,132,Reverse Holo,false,,うねりの扇
+base,133,,false,,ガッツのつるはし
+base,133,Reverse Holo,false,,ガッツのつるはし
+base,134,,false,,霧の水晶
+base,134,Reverse Holo,false,,霧の水晶
+base,135,,false,,ダークパッチ
+base,135,Reverse Holo,false,,ダークパッチ
+base,136,,false,,ダメージポンプ
+base,136,Reverse Holo,false,,ダメージポンプ
+base,137,,false,,トレッキングシューズ
+base,137,Reverse Holo,false,,トレッキングシューズ
+base,138,,false,,ハイパーボール
+base,138,Reverse Holo,false,,ハイパーボール
+base,139,,false,,パワータブレット
+base,139,Reverse Holo,false,,パワータブレット
+base,140,,false,,ヒスイのヘビーボール
+base,140,Reverse Holo,false,,ヒスイのヘビーボール
+base,141,,false,,ミラージュゲート
+base,141,Reverse Holo,false,,ミラージュゲート
+base,142,,false,,レスキューキャリー
+base,142,Reverse Holo,false,,レスキューキャリー
+base,143,,false,,レベルボール
+base,143,Reverse Holo,false,,レベルボール
+base,144,,false,,ロストスイーパー
+base,144,Reverse Holo,false,,ロストスイーパー
+base,145,,false,,こだわりベルト
+base,145,Reverse Holo,false,,こだわりベルト
+base,146,,false,,空の封印石
+base,147,,false,,葉隠れポンチョ
+base,147,Reverse Holo,false,,葉隠れポンチョ
+base,148,,false,,アクロマの実験
+base,148,Reverse Holo,false,,アクロマの実験
+base,149,,false,,カイ
+base,150,,false,,カミツレのきらめき
+base,150,Reverse Holo,false,,カミツレのきらめき
+base,151,,false,,キバナ
+base,151,Reverse Holo,false,,キバナ
+base,152,,false,,ザクロ
+base,152,Reverse Holo,false,,ザクロ
+base,153,,false,,シロナの覇気
+base,153,Reverse Holo,false,,シロナの覇気
+base,154,,false,,シンオウの仲間たち
+base,154,Reverse Holo,false,,シンオウの仲間たち
+base,155,,false,,セキ
+base,156,,false,,チェレンの気くばり
+base,156,Reverse Holo,false,,チェレンの気くばり
+base,157,,false,,ツツジ
+base,157,Reverse Holo,false,,ツツジ
+base,158,,false,,ナタネの活気
+base,158,Reverse Holo,false,,ナタネの活気
+base,159,,false,,博士の研究
+base,160,,false,,ヒスイの仲間たち
+base,160,Reverse Holo,false,,ヒスイの仲間たち
+base,161,,false,,ボスの指令
+base,162,,false,,メロン
+base,162,Reverse Holo,false,,メロン
+base,163,,false,,モミ
+base,163,Reverse Holo,false,,モミ
+base,164,,false,,嵐の山脈
+base,164,Reverse Holo,false,,嵐の山脈
+base,165,,false,,頂への雪道
+base,165,Reverse Holo,false,,頂への雪道
+base,166,,false,,大口の沼
+base,166,Reverse Holo,false,,大口の沼
+base,167,,false,,崩れたスタジアム
+base,167,Reverse Holo,false,,崩れたスタジアム
+base,168,,false,,コトブキムラ
+base,168,Reverse Holo,false,,コトブキムラ
+base,169,,false,,シンオウ神殿
+base,169,Reverse Holo,false,,シンオウ神殿
+base,170,,false,,マグマの滝壺
+base,170,Reverse Holo,false,,マグマの滝壺
+base,171,,false,,ダブルターボエネルギー
+base,171,Reverse Holo,false,,ダブルターボエネルギー
+base,172,,false,,フュージョンエネルギー
+base,172,Reverse Holo,false,,フュージョンエネルギー
+base,173,Illustration rare,false,,voltorb
+base,174,Illustration rare,false,,kricketune
+base,175,Illustration rare,false,,magmortar
+base,176,Illustration rare,false,,oricorio
+base,177,Illustration rare,false,,lapras
+base,178,Illustration rare,false,,manaphy
+base,179,Illustration rare,false,,keldeo
+base,180,Illustration rare,false,,electivire
+base,181,Illustration rare,false,,toxtricity
+base,182,Illustration rare,false,,articuno
+base,183,Illustration rare,false,,mew
+base,184,Illustration rare,false,,lunatone
+base,185,Illustration rare,false,,deoxys
+base,186,Illustration rare,false,,diancie
+base,187,Illustration rare,false,,comfey
+base,188,Illustration rare,false,,zapdos
+base,189,Illustration rare,false,,solrock
+base,190,Illustration rare,false,,moltres
+base,191,Illustration rare,false,,absol
+base,192,Illustration rare,false,,thievul
+base,193,Illustration rare,false,,magnezone
+base,194,Illustration rare,false,,altaria
+base,195,Illustration rare,false,,latias
+base,196,Illustration rare,false,,goodra
+base,197,Illustration rare,false,,ditto
+base,198,Illustration rare,false,,dunsparce
+base,199,Illustration rare,false,,miltank
+base,200,Illustration rare,false,,bibarel
+base,201,Illustration rare,false,,riolu
+base,202,Illustration rare,false,,swablu
+base,203,Illustration rare,false,,duskull
+base,204,Illustration rare,false,,bidoof
+base,205,Illustration rare,false,,pikachu
+base,206,Illustration rare,false,,turtwig
+base,207,Illustration rare,false,,paras
+base,208,Illustration rare,false,,poochyena
+base,209,Illustration rare,false,,mareep
+base,210,Special illustration rare,false,,leafeon
+base,211,Special illustration rare,false,,charizard
+base,212,Special illustration rare,false,,charizard
+base,213,Special illustration rare,false,,entei
+base,214,Special illustration rare,false,,simisear
+base,215,Special illustration rare,false,,suicune
+base,216,Special illustration rare,false,,lumineon
+base,217,Special illustration rare,false,,glaceon
+base,218,Special illustration rare,false,,raikou
+base,219,Special illustration rare,false,,zeraora
+base,220,Special illustration rare,false,,zeraora
+base,221,Special illustration rare,false,,mewtwo
+base,222,Special illustration rare,false,,deoxys
+base,223,Special illustration rare,false,,deoxys
+base,224,Special illustration rare,false,,hatterene
+base,225,Special illustration rare,false,,zacian
+base,226,Special illustration rare,false,,lucario
+base,227,Special illustration rare,false,,drapion
+base,228,Special illustration rare,false,,darkrai
+base,229,Special illustration rare,false,,samurott
+base,230,Special illustration rare,false,,samurott
+base,231,Special illustration rare,false,,hoopa
+base,232,Special illustration rare,false,,zamazenta
+base,233,Special illustration rare,false,,regigigas
+base,234,Special illustration rare,false,,zoroark
+base,235,Special illustration rare,false,,アクロマの実験
+base,236,Special illustration rare,false,,カイ
+base,237,Special illustration rare,false,,キバナ
+base,238,Special illustration rare,false,,ザクロ
+base,239,Special illustration rare,false,,シロナの覇気
+base,240,Special illustration rare,false,,セキ
+base,241,Special illustration rare,false,,チェレンの気くばり
+base,242,Special illustration rare,false,,ツツジ
+base,243,Special illustration rare,false,,ナタネの活気
+base,244,Special illustration rare,false,,メロン
+base,245,Ultra Rare,false,,ウォロ
+base,246,Ultra Rare,false,,カミツレのきらめき
+base,247,Ultra Rare,false,,シンオウの仲間たち
+base,248,Ultra Rare,false,,博士の研究
+base,249,Ultra Rare,false,,ヒスイの仲間たち
+base,250,Ultra Rare,false,,ボスの指令
+base,255,Ultra Rare,false,,基本超エネルギー
+base,256,Ultra Rare,false,,基本闘エネルギー
+base,257,Ultra Rare,false,,基本悪エネルギー
+base,258,Ultra Rare,false,,基本鋼エネルギー
+base,259,Secret Rare,false,,palkia
+base,260,Secret Rare,false,,dialga
+base,261,Secret Rare,false,,giratina
+base,262,Secret Rare,false,,arceus

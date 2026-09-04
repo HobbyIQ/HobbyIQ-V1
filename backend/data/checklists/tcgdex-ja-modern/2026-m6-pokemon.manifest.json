@@ -1,0 +1,14 @@
+{
+  "productKey": "2026-m6",
+  "sport": "pokemon",
+  "year": 2026,
+  "setKey": "m6",
+  "source": "tcgdex-ja-modern",
+  "confidence": 0.9,
+  "provenance": "api.tcgdex.net/v2/ja/sets/M6 (MIT, tcgdex/cards-database) fetched 2026-09-04 -- 113 rows, 3 ladder entries",
+  "setName": "Japanese ストームエメラルダ",
+  "tcgdexId": "M6",
+  "sourceUrl": "https://api.tcgdex.net/v2/ja/sets/M6",
+  "rowCount": 113,
+  "parallelColumnAuthoritative": true
+}

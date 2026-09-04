@@ -933,6 +933,42 @@ const RULED_SET_KEY_REWRITES: Readonly<Record<string, string>> = Object.freeze({
   "japanese-sv8a": "sv8a",
   "japanese-s12a": "s12a",
   swsh12a: "s12a",
+  // CF-THE-JAPANESE-CODE-IS-THE-KEY, the SWSH era (2026-09-04). swsh12a was
+  // never the only one: the alias source spells twelve modern Japanese sets
+  // with the EN-era `swsh` prefix of their own code, and the tcgdex-ja modern
+  // lane stages all twelve under the bare official code. Measured read-only on
+  // 2026-09-04: 29,075 live sold_comps rows whose titles name these sets, and
+  // the stored slug segment on the plurality of each is the swsh spelling —
+  // rows that could not reach their own checklist.
+  //
+  // NINE OF THE TWELVE ARE HERE. The other three are DELIBERATELY ABSENT and
+  // this is the whole point of the entry:
+  //
+  //   swsh8   IS a real EN set — Fusion Strike   (the JA s8   is Fusion Arts)
+  //   swsh11  IS a real EN set — Lost Origin     (the JA s11  is Lost Abyss)
+  //   swsh9   IS a real EN set — Brilliant Stars (the JA s9   is Star Birth)
+  //
+  // verified against api.tcgdex.net/v2/en/sets (218 sets) and against the pool
+  // itself, which holds live English rows under each: "2021 Pokemon SWSH
+  // Fusion Strike #282 Training Court PSA 10", "2022 Pokemon Lost Origin #69",
+  // "2022 Pokemon Brilliant Stars #TG03 Full Art". Rewriting those keys would
+  // merge three ENGLISH pools into three JAPANESE ones — the exact failure the
+  // note above this map warns about, and the reason a general `swsh` -> `s`
+  // pattern is refused even though it holds for 28 of the 29 aliases. Those
+  // three sets are reached by the TITLE alias instead
+  // (japanesePokemonAliases: "fusion-arts" -> s8), which reads the Japanese
+  // name and so cannot touch an English row.
+  //
+  // A `swsh` key is only rewritable when NO English set owns that id.
+  swsh9a: "s9a",
+  swsh10a: "s10a",
+  swsh11a: "s11a",
+  swsh6k: "s6k",
+  swsh6h: "s6h",
+  swsh5i: "s5i",
+  swsh7d: "s7d",
+  swsh10p: "s10p",
+  swsh8b: "s8b",
 });
 
 /** The ruled canonical spelling of a setKey, or the key unchanged. Exact-token
@@ -1433,7 +1469,7 @@ function stripVerticalPrefix(setName: string): string {
  * Vendor names carry year + "Pokemon" + "Japanese" + the SERIES before the set:
  *
  *   "2023 Pokemon Japanese Scarlet & Violet 151"      -> sv2a
- *   "2022 Pokemon Japanese Sword & Shield VSTAR Universe" -> swsh12a
+ *   "2022 Pokemon Japanese Sword & Shield VSTAR Universe" -> s12a
  *
  * so the lookup is tried twice: once with the series stripped (the set name
  * alone, which is how the source lists it) and once with it retained, because

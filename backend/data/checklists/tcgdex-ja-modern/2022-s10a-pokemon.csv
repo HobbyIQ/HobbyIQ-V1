@@ -1,0 +1,149 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,001,,false,,paras
+base,001,Reverse Holo,false,,paras
+base,002,,false,,parasect
+base,002,Reverse Holo,false,,parasect
+base,003,Double rare,false,,electrode
+base,004,,false,,wurmple
+base,004,Reverse Holo,false,,wurmple
+base,005,,false,,silcoon
+base,005,Reverse Holo,false,,silcoon
+base,006,,false,,beautifly
+base,007,,false,,cascoon
+base,007,Reverse Holo,false,,cascoon
+base,008,,false,,dustox
+base,008,Reverse Holo,false,,dustox
+base,009,,false,,snover
+base,009,Reverse Holo,false,,snover
+base,010,,false,,abomasnow
+base,010,Reverse Holo,false,,abomasnow
+base,011,,false,,phione
+base,011,Reverse Holo,false,,phione
+base,012,,false,,basculin
+base,012,Reverse Holo,false,,basculin
+base,013,,false,,basculegion
+base,014,,false,,pikachu
+base,014,Reverse Holo,false,,pikachu
+base,015,,false,,raichu
+base,015,Reverse Holo,false,,raichu
+base,016,Double rare,false,,magnezone
+base,017,Triple Rare,false,,magnezone
+base,018,,false,,rotom
+base,018,Reverse Holo,false,,rotom
+base,019,,false,,clefairy
+base,019,Reverse Holo,false,,clefairy
+base,020,,false,,clefable
+base,020,Reverse Holo,false,,clefable
+base,021,,false,,gastly
+base,021,Reverse Holo,false,,gastly
+base,022,,false,,haunter
+base,022,Reverse Holo,false,,haunter
+base,023,,false,,gengar
+base,024,,false,,mr-mime
+base,024,Reverse Holo,false,,mr-mime
+base,025,,false,,misdreavus
+base,025,Reverse Holo,false,,misdreavus
+base,026,,false,,mismagius
+base,026,Reverse Holo,false,,mismagius
+base,027,Radiant Rare,false,,gardevoir
+base,028,,false,,chimecho
+base,028,Reverse Holo,false,,chimecho
+base,029,,false,,zorua
+base,029,Reverse Holo,false,,zorua
+base,030,,false,,zoroark
+base,031,Double rare,false,,enamorus
+base,032,,false,,growlithe
+base,032,Reverse Holo,false,,growlithe
+base,033,,false,,arcanine
+base,034,,false,,machop
+base,034,Reverse Holo,false,,machop
+base,035,,false,,machoke
+base,035,Reverse Holo,false,,machoke
+base,036,,false,,machamp
+base,037,,false,,sudowoodo
+base,037,Reverse Holo,false,,sudowoodo
+base,038,,false,,gligar
+base,038,Reverse Holo,false,,gligar
+base,039,,false,,gliscor
+base,039,Reverse Holo,false,,gliscor
+base,040,Double rare,false,,gallade
+base,041,,false,,zubat
+base,041,Reverse Holo,false,,zubat
+base,042,,false,,golbat
+base,042,Reverse Holo,false,,golbat
+base,043,,false,,crobat
+base,044,,false,,murkrow
+base,044,Reverse Holo,false,,murkrow
+base,045,,false,,honchkrow
+base,045,Reverse Holo,false,,honchkrow
+base,046,Radiant Rare,false,,sneasler
+base,047,,false,,spiritomb
+base,047,Reverse Holo,false,,spiritomb
+base,048,,false,,croagunk
+base,048,Reverse Holo,false,,croagunk
+base,049,,false,,toxicroak
+base,049,Reverse Holo,false,,toxicroak
+base,050,Radiant Rare,false,,steelix
+base,051,,false,,bronzor
+base,051,Reverse Holo,false,,bronzor
+base,052,,false,,bronzong
+base,052,Reverse Holo,false,,bronzong
+base,053,,false,,goomy
+base,053,Reverse Holo,false,,goomy
+base,054,,false,,sliggoo
+base,054,Reverse Holo,false,,sliggoo
+base,055,,false,,goodra
+base,056,Double rare,false,,goodra
+base,057,Triple Rare,false,,goodra
+base,058,,false,,snorlax
+base,059,,false,,aipom
+base,059,Reverse Holo,false,,aipom
+base,060,,false,,ambipom
+base,060,Reverse Holo,false,,ambipom
+base,061,Double rare,false,,zoroark
+base,062,Triple Rare,false,,zoroark
+base,063,,false,,アルセウスフォン
+base,063,Reverse Holo,false,,アルセウスフォン
+base,064,,false,,ダメージポンプ
+base,064,Reverse Holo,false,,ダメージポンプ
+base,065,,false,,からくりアーム
+base,065,Reverse Holo,false,,からくりアーム
+base,066,,false,,災いの箱
+base,066,Reverse Holo,false,,災いの箱
+base,067,,false,,ウォロ
+base,068,,false,,ススキ
+base,068,Reverse Holo,false,,ススキ
+base,069,,false,,ヒナツ
+base,069,Reverse Holo,false,,ヒナツ
+base,070,,false,,野盗三姉妹
+base,070,Reverse Holo,false,,野盗三姉妹
+base,071,,false,,エイチ湖
+base,071,Reverse Holo,false,,エイチ湖
+base,072,Character Rare,false,,parasect
+base,073,Character Rare,false,,pikachu
+base,074,Character Rare,false,,gengar
+base,075,Character Rare,false,,arcanine
+base,076,Character Rare,false,,spiritomb
+base,077,Character Rare,false,,snorlax
+base,078,Ultra Rare,false,,electrode
+base,079,Ultra Rare,false,,magnezone
+base,080,Ultra Rare,false,,enamorus
+base,081,Ultra Rare,false,,gallade
+base,082,Ultra Rare,false,,goodra
+base,083,Ultra Rare,false,,zoroark
+base,084,Ultra Rare,false,,ウォロ
+base,085,Ultra Rare,false,,ススキ
+base,086,Ultra Rare,false,,ヒナツ
+base,087,Ultra Rare,false,,野盗三姉妹
+base,088,Character Super Rare,false,,enamorus
+base,089,Character Super Rare,false,,gallade
+base,090,Holo Rare,false,,magnezone
+base,091,Holo Rare,false,,goodra
+base,092,Holo Rare,false,,zoroark
+base,093,Holo Rare,false,,ウォロ
+base,094,Holo Rare,false,,ススキ
+base,095,Holo Rare,false,,ヒナツ
+base,096,Holo Rare,false,,野盗三姉妹
+base,097,Mega Hyper Rare,false,,zoroark
+base,098,Mega Hyper Rare,false,,ダークパッチ
+base,099,Mega Hyper Rare,false,,災いの箱

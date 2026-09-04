@@ -1,0 +1,14 @@
+{
+  "productKey": "2024-svk",
+  "sport": "pokemon",
+  "year": 2024,
+  "setKey": "svk",
+  "source": "tcgdex-ja-modern",
+  "confidence": 0.9,
+  "provenance": "api.tcgdex.net/v2/ja/sets/SVK (MIT, tcgdex/cards-database) fetched 2026-09-04 -- 37 rows, 1 ladder entries",
+  "setName": "Japanese デッキビルドBOX ステラミラクル",
+  "tcgdexId": "SVK",
+  "sourceUrl": "https://api.tcgdex.net/v2/ja/sets/SVK",
+  "rowCount": 37,
+  "parallelColumnAuthoritative": true
+}

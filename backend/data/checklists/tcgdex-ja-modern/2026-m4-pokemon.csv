@@ -1,0 +1,121 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,001,,false,,weedle
+base,002,,false,,kakuna
+base,003,Double rare,false,,beedrill
+base,004,,false,,carnivine
+base,005,,false,,chespin
+base,006,,false,,quilladin
+base,007,,false,,chesnaught
+base,008,,false,,vulpix
+base,009,,false,,ninetales
+base,010,,false,,ho-oh
+base,011,,false,,fennekin
+base,012,,false,,braixen
+base,013,,false,,delphox
+base,014,,false,,litleo
+base,015,Double rare,false,,pyroar
+base,016,,false,,remoraid
+base,017,,false,,octillery
+base,018,,false,,delibird
+base,019,,false,,keldeo
+base,020,,false,,froakie
+base,021,,false,,frogadier
+base,022,Double rare,false,,greninja
+base,023,,false,,bergmite
+base,024,,false,,avalugg
+base,025,,false,,wimpod
+base,026,,false,,golisopod
+base,027,,false,,mareep
+base,028,,false,,flaaffy
+base,029,,false,,ampharos
+base,030,,false,,emolga
+base,031,,false,,deoxys
+base,032,,false,,deoxys
+base,033,,false,,deoxys
+base,034,,false,,deoxys
+base,035,Double rare,false,,floette
+base,036,,false,,espurr
+base,037,,false,,meowstic
+base,038,,false,,phantump
+base,039,,false,,trevenant
+base,040,,false,,pumpkaboo
+base,041,Double rare,false,,gourgeist
+base,042,,false,,xerneas
+base,043,,false,,sudowoodo
+base,044,,false,,phanpy
+base,045,,false,,donphan
+base,046,,false,,baltoy
+base,047,,false,,claydol
+base,048,,false,,zubat
+base,049,,false,,golbat
+base,050,,false,,crobat
+base,051,,false,,qwilfish
+base,052,,false,,stunky
+base,053,,false,,skuntank
+base,054,,false,,trubbish
+base,055,,false,,garbodor
+base,056,,false,,skrelp
+base,057,,false,,beldum
+base,058,,false,,metang
+base,059,,false,,metagross
+base,060,,false,,ferroseed
+base,061,,false,,ferrothorn
+base,062,Double rare,false,,cobalion
+base,063,Double rare,false,,dragalge
+base,064,,false,,goomy
+base,065,,false,,sliggoo
+base,066,,false,,goodra
+base,067,,false,,tauros
+base,068,,false,,patrat
+base,069,,false,,watchog
+base,070,,false,,minccino
+base,071,Double rare,false,,cinccino
+base,072,,false,,スペシャルレッドカード
+base,073,,false,,大漁ネット
+base,074,,false,,変化の書
+base,075,,false,,AZの安らぎ
+base,076,,false,,ジプソ
+base,077,,false,,ホミカの演奏
+base,078,,false,,マチエール
+base,079,,false,,アンジュフラエッテ
+base,080,,false,,プリズムタワー
+base,081,,false,,ニトロ炎エネルギー
+base,082,,false,,バブル水エネルギー
+base,083,,false,,マグネット鋼エネルギー
+base,084,Illustration rare,false,,chespin
+base,085,Illustration rare,false,,fennekin
+base,086,Illustration rare,false,,froakie
+base,087,Illustration rare,false,,frogadier
+base,088,Illustration rare,false,,ampharos
+base,089,Illustration rare,false,,xerneas
+base,090,Illustration rare,false,,claydol
+base,091,Illustration rare,false,,crobat
+base,092,Illustration rare,false,,metang
+base,093,Illustration rare,false,,sliggoo
+base,094,Illustration rare,false,,tauros
+base,095,Illustration rare,false,,watchog
+base,096,Ultra Rare,false,,beedrill
+base,097,Ultra Rare,false,,pyroar
+base,098,Ultra Rare,false,,greninja
+base,099,Ultra Rare,false,,floette
+base,100,Ultra Rare,false,,gourgeist
+base,101,Ultra Rare,false,,cobalion
+base,102,Ultra Rare,false,,dragalge
+base,103,Ultra Rare,false,,cinccino
+base,104,Ultra Rare,false,,エネルギー回収
+base,105,Ultra Rare,false,,ジャンボアイス
+base,106,Ultra Rare,false,,スペシャルレッドカード
+base,107,Ultra Rare,false,,ツールスクラッパー
+base,108,Ultra Rare,false,,AZの安らぎ
+base,109,Ultra Rare,false,,ジプソ
+base,110,Ultra Rare,false,,ホミカの演奏
+base,111,Ultra Rare,false,,マチエール
+base,112,Ultra Rare,false,,なみのりビーチ
+base,113,Ultra Rare,false,,プリズムタワー
+base,114,Special illustration rare,false,,greninja
+base,115,Special illustration rare,false,,floette
+base,116,Special illustration rare,false,,dragalge
+base,117,Special illustration rare,false,,cinccino
+base,118,Special illustration rare,false,,AZの安らぎ
+base,119,Special illustration rare,false,,ホミカの演奏
+base,120,Mega Hyper Rare,false,,greninja

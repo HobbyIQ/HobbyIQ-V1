@@ -1,0 +1,255 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,001,,false,,snivy
+base,001,Reverse Holo,false,,snivy
+base,002,,false,,servine
+base,002,Reverse Holo,false,,servine
+base,003,Double rare,false,,serperior
+base,004,,false,,pansage
+base,004,Reverse Holo,false,,pansage
+base,005,,false,,simisage
+base,005,Reverse Holo,false,,simisage
+base,006,,false,,petilil
+base,006,Reverse Holo,false,,petilil
+base,007,,false,,lilligant
+base,007,Reverse Holo,false,,lilligant
+base,008,,false,,maractus
+base,008,Reverse Holo,false,,maractus
+base,009,,false,,karrablast
+base,009,Reverse Holo,false,,karrablast
+base,010,,false,,foongus
+base,010,Reverse Holo,false,,foongus
+base,011,,false,,amoonguss
+base,011,Reverse Holo,false,,amoonguss
+base,012,,false,,victini
+base,012,Reverse Holo,false,,victini
+base,013,,false,,darumaka
+base,013,Reverse Holo,false,,darumaka
+base,014,,false,,darmanitan
+base,014,Reverse Holo,false,,darmanitan
+base,015,,false,,litwick
+base,015,Reverse Holo,false,,litwick
+base,016,,false,,lampent
+base,016,Reverse Holo,false,,lampent
+base,017,,false,,chandelure
+base,017,Reverse Holo,false,,chandelure
+base,018,,false,,larvesta
+base,018,Reverse Holo,false,,larvesta
+base,019,,false,,volcarona
+base,019,Reverse Holo,false,,volcarona
+base,020,,false,,panpour
+base,020,Reverse Holo,false,,panpour
+base,021,,false,,simipour
+base,021,Reverse Holo,false,,simipour
+base,022,,false,,tympole
+base,022,Reverse Holo,false,,tympole
+base,023,,false,,palpitoad
+base,023,Reverse Holo,false,,palpitoad
+base,024,,false,,seismitoad
+base,024,Reverse Holo,false,,seismitoad
+base,025,,false,,tirtouga
+base,025,Reverse Holo,false,,tirtouga
+base,026,,false,,carracosta
+base,026,Reverse Holo,false,,carracosta
+base,027,,false,,alomomola
+base,027,Reverse Holo,false,,alomomola
+base,028,,false,,cubchoo
+base,028,Reverse Holo,false,,cubchoo
+base,029,,false,,beartic
+base,029,Reverse Holo,false,,beartic
+base,030,,false,,cryogonal
+base,030,Reverse Holo,false,,cryogonal
+base,031,Double rare,false,,kyurem
+base,032,,false,,emolga
+base,032,Reverse Holo,false,,emolga
+base,033,,false,,tynamo
+base,033,Reverse Holo,false,,tynamo
+base,034,,false,,eelektrik
+base,034,Reverse Holo,false,,eelektrik
+base,035,,false,,eelektross
+base,035,Reverse Holo,false,,eelektross
+base,036,,false,,thundurus
+base,036,Reverse Holo,false,,thundurus
+base,037,Double rare,false,,zekrom
+base,038,,false,,munna
+base,038,Reverse Holo,false,,munna
+base,039,,false,,musharna
+base,039,Reverse Holo,false,,musharna
+base,040,,false,,solosis
+base,040,Reverse Holo,false,,solosis
+base,041,,false,,duosion
+base,041,Reverse Holo,false,,duosion
+base,042,,false,,reuniclus
+base,042,Reverse Holo,false,,reuniclus
+base,043,,false,,elgyem
+base,043,Reverse Holo,false,,elgyem
+base,044,,false,,beheeyem
+base,044,Reverse Holo,false,,beheeyem
+base,045,,false,,golett
+base,045,Reverse Holo,false,,golett
+base,046,,false,,golurk
+base,046,Reverse Holo,false,,golurk
+base,047,Double rare,false,,meloetta
+base,048,,false,,drilbur
+base,048,Reverse Holo,false,,drilbur
+base,049,Double rare,false,,excadrill
+base,050,,false,,timburr
+base,050,Reverse Holo,false,,timburr
+base,051,,false,,gurdurr
+base,051,Reverse Holo,false,,gurdurr
+base,052,,false,,conkeldurr
+base,052,Reverse Holo,false,,conkeldurr
+base,053,,false,,throh
+base,053,Reverse Holo,false,,throh
+base,054,,false,,dwebble
+base,054,Reverse Holo,false,,dwebble
+base,055,,false,,crustle
+base,055,Reverse Holo,false,,crustle
+base,056,,false,,landorus
+base,056,Reverse Holo,false,,landorus
+base,057,,false,,venipede
+base,057,Reverse Holo,false,,venipede
+base,058,,false,,whirlipede
+base,058,Reverse Holo,false,,whirlipede
+base,059,,false,,scolipede
+base,059,Reverse Holo,false,,scolipede
+base,060,,false,,sandile
+base,060,Reverse Holo,false,,sandile
+base,061,,false,,krokorok
+base,061,Reverse Holo,false,,krokorok
+base,062,,false,,krookodile
+base,062,Reverse Holo,false,,krookodile
+base,063,,false,,vullaby
+base,063,Reverse Holo,false,,vullaby
+base,064,,false,,mandibuzz
+base,064,Reverse Holo,false,,mandibuzz
+base,065,,false,,escavalier
+base,065,Reverse Holo,false,,escavalier
+base,066,,false,,pawniard
+base,066,Reverse Holo,false,,pawniard
+base,067,,false,,bisharp
+base,067,Reverse Holo,false,,bisharp
+base,068,,false,,cobalion
+base,068,Reverse Holo,false,,cobalion
+base,069,Double rare,false,,genesect
+base,070,,false,,axew
+base,070,Reverse Holo,false,,axew
+base,071,,false,,fraxure
+base,071,Reverse Holo,false,,fraxure
+base,072,,false,,haxorus
+base,072,Reverse Holo,false,,haxorus
+base,073,,false,,pidove
+base,073,Reverse Holo,false,,pidove
+base,074,,false,,tranquill
+base,074,Reverse Holo,false,,tranquill
+base,075,,false,,unfezant
+base,075,Reverse Holo,false,,unfezant
+base,076,,false,,audino
+base,076,Reverse Holo,false,,audino
+base,077,,false,,minccino
+base,077,Reverse Holo,false,,minccino
+base,078,,false,,cinccino
+base,078,Reverse Holo,false,,cinccino
+base,079,,false,,エネルギーコイン
+base,079,Reverse Holo,false,,エネルギーコイン
+base,080,,false,,古びたふたの化石
+base,080,Reverse Holo,false,,古びたふたの化石
+base,081,,false,,ポケギア3.0
+base,081,Reverse Holo,false,,ポケギア3.0
+base,082,,false,,ふうせん
+base,082,Reverse Holo,false,,ふうせん
+base,083,,false,,Nの筋書き
+base,083,Reverse Holo,false,,Nの筋書き
+base,084,,false,,博士の研究
+base,084,Reverse Holo,false,,博士の研究
+base,085,,false,,マコモ
+base,085,Reverse Holo,false,,マコモ
+base,086,,false,,プリズムエネルギー
+base,086,Reverse Holo,false,,プリズムエネルギー
+base,087,Illustration rare,false,,snivy
+base,088,Illustration rare,false,,servine
+base,089,Illustration rare,false,,pansage
+base,090,Illustration rare,false,,simisage
+base,091,Illustration rare,false,,petilil
+base,092,Illustration rare,false,,lilligant
+base,093,Illustration rare,false,,maractus
+base,094,Illustration rare,false,,karrablast
+base,095,Illustration rare,false,,foongus
+base,096,Illustration rare,false,,amoonguss
+base,097,Illustration rare,false,,victini
+base,098,Illustration rare,false,,darumaka
+base,099,Illustration rare,false,,darmanitan
+base,100,Illustration rare,false,,litwick
+base,101,Illustration rare,false,,lampent
+base,102,Illustration rare,false,,chandelure
+base,103,Illustration rare,false,,larvesta
+base,104,Illustration rare,false,,volcarona
+base,105,Illustration rare,false,,panpour
+base,106,Illustration rare,false,,simipour
+base,107,Illustration rare,false,,tympole
+base,108,Illustration rare,false,,palpitoad
+base,109,Illustration rare,false,,seismitoad
+base,110,Illustration rare,false,,tirtouga
+base,111,Illustration rare,false,,carracosta
+base,112,Illustration rare,false,,alomomola
+base,113,Illustration rare,false,,cubchoo
+base,114,Illustration rare,false,,beartic
+base,115,Illustration rare,false,,cryogonal
+base,116,Illustration rare,false,,emolga
+base,117,Illustration rare,false,,tynamo
+base,118,Illustration rare,false,,eelektrik
+base,119,Illustration rare,false,,eelektross
+base,120,Illustration rare,false,,thundurus
+base,121,Illustration rare,false,,munna
+base,122,Illustration rare,false,,musharna
+base,123,Illustration rare,false,,solosis
+base,124,Illustration rare,false,,duosion
+base,125,Illustration rare,false,,reuniclus
+base,126,Illustration rare,false,,elgyem
+base,127,Illustration rare,false,,beheeyem
+base,128,Illustration rare,false,,golett
+base,129,Illustration rare,false,,golurk
+base,130,Illustration rare,false,,drilbur
+base,131,Illustration rare,false,,timburr
+base,132,Illustration rare,false,,gurdurr
+base,133,Illustration rare,false,,conkeldurr
+base,134,Illustration rare,false,,throh
+base,135,Illustration rare,false,,dwebble
+base,136,Illustration rare,false,,crustle
+base,137,Illustration rare,false,,landorus
+base,138,Illustration rare,false,,venipede
+base,139,Illustration rare,false,,whirlipede
+base,140,Illustration rare,false,,scolipede
+base,141,Illustration rare,false,,sandile
+base,142,Illustration rare,false,,krokorok
+base,143,Illustration rare,false,,krookodile
+base,144,Illustration rare,false,,vullaby
+base,145,Illustration rare,false,,mandibuzz
+base,146,Illustration rare,false,,escavalier
+base,147,Illustration rare,false,,pawniard
+base,148,Illustration rare,false,,bisharp
+base,149,Illustration rare,false,,cobalion
+base,150,Illustration rare,false,,axew
+base,151,Illustration rare,false,,fraxure
+base,152,Illustration rare,false,,haxorus
+base,153,Illustration rare,false,,pidove
+base,154,Illustration rare,false,,tranquill
+base,155,Illustration rare,false,,unfezant
+base,156,Illustration rare,false,,audino
+base,157,Illustration rare,false,,minccino
+base,158,Illustration rare,false,,cinccino
+base,159,Ultra Rare,false,,serperior
+base,160,Ultra Rare,false,,kyurem
+base,161,Ultra Rare,false,,zekrom
+base,162,Ultra Rare,false,,meloetta
+base,163,Ultra Rare,false,,excadrill
+base,164,Ultra Rare,false,,genesect
+base,165,Ultra Rare,false,,Nの筋書き
+base,166,Ultra Rare,false,,マコモ
+base,167,Special illustration rare,false,,serperior
+base,168,Special illustration rare,false,,kyurem
+base,169,Special illustration rare,false,,zekrom
+base,170,Special illustration rare,false,,meloetta
+base,171,Special illustration rare,false,,excadrill
+base,172,Special illustration rare,false,,genesect
+base,173,Special illustration rare,false,,Nの筋書き
+base,174,Black White Rare,false,,zekrom

@@ -185,3 +185,154 @@ describe("ruled JA Paradigm Trigger (R3): the bare code s12 is the key", () => {
     expect(normalizeSetKey("swsh12")).toBe("swsh12");
   });
 });
+
+// CF-THE-JAPANESE-CODE-IS-THE-KEY, THE SWSH ERA (R4, 2026-09-04).
+//
+// R2 ruled swsh12a. It was never the only one: the alias source spells TWELVE
+// modern Japanese sets with the EN-era `swsh` prefix, and the tcgdex-ja modern
+// lane stages all twelve under the bare official code. Until this ruling the
+// catalog and the resolver disagreed on every one of them, so the checklists
+// were unreachable from the pool.
+//
+// MEASURED READ-ONLY, 2026-09-04, sold_comps: 29,075 rows whose titles name
+// these twelve sets, and on each set the plurality stored slug segment is the
+// swsh spelling. Per set: vmax-climax 14,454, dark-phantasma 4,168,
+// incandescent-arcana 2,415, star-birth 2,209, battle-region 1,928,
+// lost-abyss 1,262, fusion-arts 971, space-juggler 478, jet-black-spirit 435,
+// silver-lance 361, single-strike-master 227, skyscraping-perfection 167.
+//
+// R4 IS TWO DIFFERENT REPAIRS, and which set gets which is the whole ruling —
+// it is the R2-vs-R3 distinction applied twelve times. See the negatives.
+const R4_STAGED_KEYS: Readonly<Record<string, string>> = {
+  "battle-region": "s9a",
+  "dark-phantasma": "s10a",
+  "fusion-arts": "s8",
+  "incandescent-arcana": "s11a",
+  "jet-black-spirit": "s6k",
+  "lost-abyss": "s11",
+  "silver-lance": "s6h",
+  "single-strike-master": "s5i",
+  "skyscraping-perfection": "s7d",
+  "space-juggler": "s10p",
+  "star-birth": "s9",
+  "vmax-climax": "s8b",
+};
+
+/** The three whose swsh spelling is a REAL English set. Rewriting a stored key
+ *  for these would merge an English pool into a Japanese one. */
+const R4_EN_COLLISIONS: Readonly<Record<string, string>> = {
+  swsh8: "Fusion Strike",
+  swsh11: "Lost Origin",
+  swsh9: "Brilliant Stars",
+};
+
+describe("ruled JA SWSH-era setKeys (R4): the bare code is the key, twelve times", () => {
+  it("every staged JA title mints its bare official code, never a swsh spelling", () => {
+    for (const [title, key] of Object.entries(R4_STAGED_KEYS)) {
+      expect(JAPANESE_POKEMON_SET_ALIASES[title]).toBe(key);
+      expect(JAPANESE_POKEMON_SET_ALIASES[title]).not.toMatch(/^swsh/);
+    }
+  });
+
+  it("every one of the twelve bare codes is a normalizeSetKey FIXED POINT", () => {
+    // The standing requirement on a ruled key: it must survive the vocabulary
+    // unchanged, or the ruling is undone by the next unanchored pattern.
+    for (const key of Object.values(R4_STAGED_KEYS)) {
+      expect(normalizeSetKey(key)).toBe(key);
+      expect(canonicalRuledSetKey(key)).toBe(key);
+    }
+  });
+
+  it("a vendor title for each of the twelve resolves to the STAGED key", () => {
+    // End to end through the real mint path — this is what makes the staged
+    // checklist reachable from a pool row.
+    const titles: [string, string, number][] = [
+      ["2022 Pokemon Japanese Battle Region", "s9a", 2022],
+      ["2022 Pokemon Japanese Dark Phantasma", "s10a", 2022],
+      ["2021 Pokemon Japanese Fusion Arts", "s8", 2021],
+      ["2022 Pokemon Japanese Incandescent Arcana", "s11a", 2022],
+      ["2021 Pokemon Japanese Jet-Black Spirit", "s6k", 2021],
+      ["2022 Pokemon Japanese Lost Abyss", "s11", 2022],
+      ["2021 Pokemon Japanese Silver Lance", "s6h", 2021],
+      ["2021 Pokemon Japanese Single Strike Master", "s5i", 2021],
+      ["2021 Pokemon Japanese Skyscraping Perfection", "s7d", 2021],
+      ["2022 Pokemon Japanese Space Juggler", "s10p", 2022],
+      ["2022 Pokemon Japanese Star Birth", "s9", 2022],
+      ["2021 Pokemon Japanese VMAX Climax", "s8b", 2021],
+    ];
+    for (const [title, key, year] of titles) {
+      expect(resolveSetKeyForSlug("pokemon", title, year)).toBe(key);
+    }
+  });
+
+  it("carries the series prefix too — 'Sword & Shield <set>' is the same set", () => {
+    expect(resolveSetKeyForSlug("pokemon", "2021 Pokemon Japanese Sword & Shield VMAX Climax", 2021))
+      .toBe("s8b");
+    expect(resolveSetKeyForSlug("pokemon", "2022 Pokemon Japanese Sword & Shield Dark Phantasma", 2022))
+      .toBe("s10a");
+  });
+
+  // THE NINE. A stored swsh key with no English owner is safe to rewrite, so
+  // rows already minted under it join the checklist's pool.
+  it("rewrites the NINE collision-free stored keys onto the bare code", () => {
+    for (const [swsh, bare] of Object.entries({
+      swsh9a: "s9a", swsh10a: "s10a", swsh11a: "s11a", swsh6k: "s6k", swsh6h: "s6h",
+      swsh5i: "s5i", swsh7d: "s7d", swsh10p: "s10p", swsh8b: "s8b",
+    })) {
+      expect(canonicalRuledSetKey(swsh)).toBe(bare);
+      expect(normalizeSetKey(swsh)).toBe(bare);
+    }
+  });
+
+  // THE THREE. This is the R3 restraint, and it is the pin that matters most:
+  // swsh8 / swsh11 / swsh9 are LIVE ENGLISH SETS holding live English rows
+  // ("2021 Pokemon SWSH Fusion Strike #282 Training Court PSA 10", "2022
+  // Pokemon Lost Origin #69", "2022 Pokemon Brilliant Stars #TG03 Full Art").
+  // They are reached by the JAPANESE TITLE alias instead, which cannot touch
+  // an English row. If anyone ever "completes the pattern" by adding these to
+  // RULED_SET_KEY_REWRITES, three English pools merge into three Japanese
+  // ones and these fail.
+  it("does NOT rewrite the three swsh keys that ARE English sets", () => {
+    for (const swsh of Object.keys(R4_EN_COLLISIONS)) {
+      expect(canonicalRuledSetKey(swsh)).toBe(swsh);
+      expect(normalizeSetKey(swsh)).toBe(swsh);
+    }
+  });
+
+  it("the three English sets still mint their own key from an English title", () => {
+    expect(resolveSetKeyForSlug("pokemon", "2021 Pokemon Sword & Shield Fusion Strike", 2021)).toBe("swsh8");
+    expect(resolveSetKeyForSlug("pokemon", "2022 Pokemon Sword & Shield Lost Origin", 2022)).toBe("swsh11");
+    expect(resolveSetKeyForSlug("pokemon", "2022 Pokemon Sword & Shield Brilliant Stars", 2022)).toBe("swsh9");
+  });
+
+  it("the JA set and its EN near-namesake are DIFFERENT keys", () => {
+    // Fusion Arts (JA s8) is not Fusion Strike (EN swsh8); Lost Abyss (JA s11)
+    // is not Lost Origin (EN swsh11); Star Birth (JA s9) is not Brilliant
+    // Stars (EN swsh9). One market each.
+    expect(resolveSetKeyForSlug("pokemon", "2021 Pokemon Japanese Fusion Arts", 2021))
+      .not.toBe(resolveSetKeyForSlug("pokemon", "2021 Pokemon Sword & Shield Fusion Strike", 2021));
+    expect(resolveSetKeyForSlug("pokemon", "2022 Pokemon Japanese Lost Abyss", 2022))
+      .not.toBe(resolveSetKeyForSlug("pokemon", "2022 Pokemon Sword & Shield Lost Origin", 2022));
+    expect(resolveSetKeyForSlug("pokemon", "2022 Pokemon Japanese Star Birth", 2022))
+      .not.toBe(resolveSetKeyForSlug("pokemon", "2022 Pokemon Sword & Shield Brilliant Stars", 2022));
+  });
+
+  // The general rule, stated and bounded. It HOLDS as a fact about the two
+  // universes (no `swsh*` id exists in tcgdex's 184 Japanese sets — the prefix
+  // is EN-era by construction, and 28 of the 29 swsh-valued aliases have a
+  // real bare-`s` JA counterpart), but it is REFUSED as a rewrite pattern.
+  it("refuses the general swsh->s pattern: swshp has no bare-s JA set", () => {
+    // The JA promo lines are S-P, SV-P and M-P. `sp` names no Japanese set, so
+    // a mechanical strip would mint a key for a product that does not exist.
+    expect(canonicalRuledSetKey("swshp")).toBe("swshp");
+    expect(normalizeSetKey("swshp")).toBe("swshp");
+  });
+
+  it("leaves the swsh aliases whose checklists have NOT landed as they are", () => {
+    // Same defect, not yet ruled: a key with no checklist behind it is not one
+    // this lane may move. They stay scraped until their checklist lands.
+    for (const title of ["eevee-heroes", "time-gazer", "shiny-star-v", "vmax-rising"]) {
+      expect(JAPANESE_POKEMON_SET_ALIASES[title]).toMatch(/^swsh/);
+    }
+  });
+});

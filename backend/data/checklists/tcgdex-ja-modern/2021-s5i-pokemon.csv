@@ -1,0 +1,92 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,001,,false,,cacnea
+base,002,,false,,cacturne
+base,003,,false,,durant
+base,004,,false,,scatterbug
+base,005,,false,,spewpa
+base,006,,false,,vivillon
+base,007,Double rare,false,,flapple
+base,008,Triple Rare,false,,flapple
+base,009,,false,,entei
+base,010,,false,,tepig
+base,011,,false,,pignite
+base,012,,false,,emboar
+base,013,,false,,salandit
+base,014,,false,,salazzle
+base,015,,false,,electabuzz
+base,016,,false,,electivire
+base,017,Double rare,false,,tapu-koko
+base,018,Triple Rare,false,,tapu-koko
+base,019,,false,,yamper
+base,020,,false,,boltund
+base,021,,false,,slowpoke
+base,022,,false,,spoink
+base,023,,false,,grumpig
+base,024,,false,,chimecho
+base,025,,false,,espurr
+base,026,,false,,meowstic
+base,027,Double rare,false,,mimikyu
+base,028,,false,,mankey
+base,029,,false,,primeape
+base,030,,false,,gligar
+base,031,,false,,gliscor
+base,032,,false,,rolycoly
+base,033,,false,,carkol
+base,034,,false,,coalossal
+base,035,,false,,stonjourner
+base,036,Double rare,false,,rapid-strike-urshifu
+base,037,Triple Rare,false,,rapid-strike-urshifu
+base,038,,false,,zubat
+base,039,,false,,golbat
+base,040,,false,,crobat
+base,041,,false,,slowbro
+base,042,,false,,murkrow
+base,043,,false,,honchkrow
+base,044,,false,,houndour
+base,045,,false,,houndoom
+base,046,Double rare,false,,tyranitar
+base,047,,false,,morpeko
+base,048,,false,,mawile
+base,049,,false,,bronzor
+base,050,,false,,bronzong
+base,051,,false,,honedge
+base,052,,false,,doublade
+base,053,,false,,aegislash
+base,054,,false,,aegislash
+base,055,,false,,spearow
+base,056,,false,,fearow
+base,057,,false,,lickitung
+base,058,,false,,lickilicky
+base,059,Double rare,false,,stoutland
+base,060,,false,,drampa
+base,061,,false,,あなぬけのヒモ
+base,062,,false,,活力の壺
+base,063,,false,,キャンプセット
+base,064,,false,,いちげきの巻物 怒りの巻
+base,065,,false,,学習装置
+base,066,,false,,シバ
+base,067,,false,,フヨウ
+base,068,,false,,マスタード いちげきのかた
+base,069,,false,,あくの塔
+base,070,,false,,いちげきエネルギー
+base,071,Ultra Rare,false,,flapple
+base,072,Ultra Rare,false,,tapu-koko
+base,073,Ultra Rare,false,,mimikyu
+base,074,Ultra Rare,false,,rapid-strike-urshifu
+base,075,Ultra Rare,false,,rapid-strike-urshifu
+base,076,Ultra Rare,false,,tyranitar
+base,077,Ultra Rare,false,,tyranitar
+base,078,Ultra Rare,false,,stoutland
+base,079,Ultra Rare,false,,シバ
+base,080,Ultra Rare,false,,フヨウ
+base,081,Ultra Rare,false,,マスタード いちげきのかた
+base,082,Hyper rare,false,,flapple
+base,083,Hyper rare,false,,tapu-koko
+base,084,Hyper rare,false,,rapid-strike-urshifu
+base,085,Secret Rare,false,,rapid-strike-urshifu
+base,086,Hyper rare,false,,シバ
+base,087,Hyper rare,false,,フヨウ
+base,088,Hyper rare,false,,マスタード いちげきのかた
+base,089,Secret Rare,false,,houndoom
+base,090,Secret Rare,false,,学習装置
+base,091,Secret Rare,false,,いちげきエネルギー

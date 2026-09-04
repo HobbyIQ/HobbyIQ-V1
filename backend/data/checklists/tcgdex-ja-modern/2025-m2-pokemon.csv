@@ -1,0 +1,117 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,001,,false,,oddish
+base,002,,false,,gloom
+base,003,,false,,vileplume
+base,004,Double rare,false,,heracross
+base,005,,false,,lotad
+base,006,,false,,lombre
+base,007,,false,,ludicolo
+base,008,,false,,genesect
+base,009,,false,,nymble
+base,010,,false,,lokix
+base,011,,false,,charmander
+base,012,,false,,charmeleon
+base,013,Double rare,false,,charizard
+base,014,,false,,moltres
+base,015,,false,,darumaka
+base,016,,false,,darmanitan
+base,017,,false,,reshiram
+base,018,Double rare,false,,oricorio
+base,019,,false,,charcadet
+base,020,,false,,ceruledge
+base,021,,false,,seel
+base,022,,false,,dewgong
+base,023,,false,,swinub
+base,024,,false,,piloswine
+base,025,,false,,mamoswine
+base,026,,false,,suicune
+base,027,,false,,piplup
+base,028,,false,,prinplup
+base,029,Double rare,false,,rotom
+base,030,,false,,yamper
+base,031,,false,,boltund
+base,032,,false,,pawmi
+base,033,,false,,pawmo
+base,034,,false,,pawmot
+base,035,,false,,misdreavus
+base,036,Double rare,false,,mismagius
+base,037,,false,,cottonee
+base,038,,false,,whimsicott
+base,039,,false,,zacian
+base,040,,false,,bramblin
+base,041,,false,,brambleghast
+base,042,,false,,tauros
+base,043,,false,,gligar
+base,044,,false,,gliscor
+base,045,,false,,trapinch
+base,046,,false,,vibrava
+base,047,,false,,flygon
+base,048,,false,,sneasel
+base,049,,false,,weavile
+base,050,,false,,carvanha
+base,051,Double rare,false,,sharpedo
+base,052,,false,,seviper
+base,053,,false,,sandile
+base,054,,false,,krokorok
+base,055,,false,,krookodile
+base,056,,false,,toxel
+base,057,,false,,toxtricity
+base,058,Double rare,false,,empoleon
+base,059,,false,,bronzor
+base,060,,false,,bronzong
+base,061,,false,,togedemaru
+base,062,,false,,duraludon
+base,063,,false,,archaludon
+base,064,,false,,jigglypuff
+base,065,,false,,wigglytuff
+base,066,,false,,aipom
+base,067,,false,,ambipom
+base,068,,false,,smeargle
+base,069,,false,,zigzagoon
+base,070,,false,,linoone
+base,071,,false,,buneary
+base,072,Double rare,false,,lopunny
+base,073,,false,,ジャンボアイス
+base,074,,false,,ヒートバーナー
+base,075,,false,,せいなるおまもり
+base,076,,false,,ギーマの一手
+base,077,,false,,ヒカリ
+base,078,,false,,ひふきやろう
+base,079,,false,,バトルコロシアム
+base,080,,false,,めまいの谷
+base,081,Illustration rare,false,,ludicolo
+base,082,Illustration rare,false,,nymble
+base,083,Illustration rare,false,,charcadet
+base,084,Illustration rare,false,,dewgong
+base,085,Illustration rare,false,,piplup
+base,086,Illustration rare,false,,yamper
+base,087,Illustration rare,false,,zacian
+base,088,Illustration rare,false,,flygon
+base,089,Illustration rare,false,,toxtricity
+base,090,Illustration rare,false,,togedemaru
+base,091,Illustration rare,false,,wigglytuff
+base,092,Illustration rare,false,,ambipom
+base,093,Ultra Rare,false,,heracross
+base,094,Ultra Rare,false,,charizard
+base,095,Ultra Rare,false,,oricorio
+base,096,Ultra Rare,false,,rotom
+base,097,Ultra Rare,false,,mismagius
+base,098,Ultra Rare,false,,sharpedo
+base,099,Ultra Rare,false,,empoleon
+base,100,Ultra Rare,false,,lopunny
+base,101,Ultra Rare,false,,ヒートバーナー
+base,102,Ultra Rare,false,,ポケモンいれかえ
+base,103,Ultra Rare,false,,せいなるおまもり
+base,104,Ultra Rare,false,,パンクメット
+base,105,Ultra Rare,false,,ギーマの一手
+base,106,Ultra Rare,false,,ヒカリ
+base,107,Ultra Rare,false,,ひふきやろう
+base,108,Ultra Rare,false,,バトルコロシアム
+base,109,Ultra Rare,false,,イグニッションエネルギー
+base,110,Special illustration rare,false,,charizard
+base,111,Special illustration rare,false,,oricorio
+base,112,Special illustration rare,false,,rotom
+base,113,Special illustration rare,false,,sharpedo
+base,114,Special illustration rare,false,,lopunny
+base,115,Special illustration rare,false,,ヒカリ
+base,116,Mega Hyper Rare,false,,charizard

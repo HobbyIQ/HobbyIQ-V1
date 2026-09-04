@@ -1,0 +1,364 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,001,,false,,bulbasaur
+base,001,Reverse Holo,false,,bulbasaur
+base,002,,false,,ivysaur
+base,002,Reverse Holo,false,,ivysaur
+base,003,Double rare,false,,venusaur
+base,004,,false,,charmander
+base,004,Reverse Holo,false,,charmander
+base,005,,false,,charmeleon
+base,005,Reverse Holo,false,,charmeleon
+base,006,Double rare,false,,charizard
+base,007,,false,,squirtle
+base,007,Reverse Holo,false,,squirtle
+base,008,,false,,wartortle
+base,008,Reverse Holo,false,,wartortle
+base,009,Double rare,false,,blastoise
+base,010,,false,,caterpie
+base,010,Reverse Holo,false,,caterpie
+base,011,,false,,metapod
+base,011,Reverse Holo,false,,metapod
+base,012,,false,,butterfree
+base,012,Reverse Holo,false,,butterfree
+base,013,,false,,weedle
+base,013,Reverse Holo,false,,weedle
+base,014,,false,,kakuna
+base,014,Reverse Holo,false,,kakuna
+base,015,,false,,beedrill
+base,015,Reverse Holo,false,,beedrill
+base,016,,false,,pidgey
+base,016,Reverse Holo,false,,pidgey
+base,017,,false,,pidgeotto
+base,017,Reverse Holo,false,,pidgeotto
+base,018,,false,,pidgeot
+base,018,Reverse Holo,false,,pidgeot
+base,019,,false,,rattata
+base,019,Reverse Holo,false,,rattata
+base,020,,false,,raticate
+base,020,Reverse Holo,false,,raticate
+base,021,,false,,spearow
+base,021,Reverse Holo,false,,spearow
+base,022,,false,,fearow
+base,022,Reverse Holo,false,,fearow
+base,023,,false,,ekans
+base,023,Reverse Holo,false,,ekans
+base,024,Double rare,false,,arbok
+base,025,,false,,pikachu
+base,025,Reverse Holo,false,,pikachu
+base,026,,false,,raichu
+base,026,Reverse Holo,false,,raichu
+base,027,,false,,sandshrew
+base,027,Reverse Holo,false,,sandshrew
+base,028,,false,,sandslash
+base,028,Reverse Holo,false,,sandslash
+base,029,,false,,nidoran-f
+base,029,Reverse Holo,false,,nidoran-f
+base,030,,false,,nidorina
+base,030,Reverse Holo,false,,nidorina
+base,031,,false,,nidoqueen
+base,031,Reverse Holo,false,,nidoqueen
+base,032,,false,,nidoran-m
+base,032,Reverse Holo,false,,nidoran-m
+base,033,,false,,nidorino
+base,033,Reverse Holo,false,,nidorino
+base,034,,false,,nidoking
+base,034,Reverse Holo,false,,nidoking
+base,035,,false,,clefairy
+base,035,Reverse Holo,false,,clefairy
+base,036,,false,,clefable
+base,036,Reverse Holo,false,,clefable
+base,037,,false,,vulpix
+base,037,Reverse Holo,false,,vulpix
+base,038,Double rare,false,,ninetales
+base,039,,false,,jigglypuff
+base,039,Reverse Holo,false,,jigglypuff
+base,040,Double rare,false,,wigglytuff
+base,041,,false,,zubat
+base,041,Reverse Holo,false,,zubat
+base,042,,false,,golbat
+base,042,Reverse Holo,false,,golbat
+base,043,,false,,oddish
+base,043,Reverse Holo,false,,oddish
+base,044,,false,,gloom
+base,044,Reverse Holo,false,,gloom
+base,045,,false,,vileplume
+base,045,Reverse Holo,false,,vileplume
+base,046,,false,,paras
+base,046,Reverse Holo,false,,paras
+base,047,,false,,parasect
+base,047,Reverse Holo,false,,parasect
+base,048,,false,,venonat
+base,048,Reverse Holo,false,,venonat
+base,049,,false,,venomoth
+base,049,Reverse Holo,false,,venomoth
+base,050,,false,,diglett
+base,050,Reverse Holo,false,,diglett
+base,051,,false,,dugtrio
+base,051,Reverse Holo,false,,dugtrio
+base,052,,false,,meowth
+base,052,Reverse Holo,false,,meowth
+base,053,,false,,persian
+base,053,Reverse Holo,false,,persian
+base,054,,false,,psyduck
+base,054,Reverse Holo,false,,psyduck
+base,055,,false,,golduck
+base,055,Reverse Holo,false,,golduck
+base,056,,false,,mankey
+base,056,Reverse Holo,false,,mankey
+base,057,,false,,primeape
+base,057,Reverse Holo,false,,primeape
+base,058,,false,,growlithe
+base,058,Reverse Holo,false,,growlithe
+base,059,,false,,arcanine
+base,059,Reverse Holo,false,,arcanine
+base,060,,false,,poliwag
+base,060,Reverse Holo,false,,poliwag
+base,061,,false,,poliwhirl
+base,061,Reverse Holo,false,,poliwhirl
+base,062,,false,,poliwrath
+base,062,Reverse Holo,false,,poliwrath
+base,063,,false,,abra
+base,063,Reverse Holo,false,,abra
+base,064,,false,,kadabra
+base,064,Reverse Holo,false,,kadabra
+base,065,Double rare,false,,alakazam
+base,066,,false,,machop
+base,066,Reverse Holo,false,,machop
+base,067,,false,,machoke
+base,067,Reverse Holo,false,,machoke
+base,068,,false,,machamp
+base,068,Reverse Holo,false,,machamp
+base,069,,false,,bellsprout
+base,069,Reverse Holo,false,,bellsprout
+base,070,,false,,weepinbell
+base,070,Reverse Holo,false,,weepinbell
+base,071,,false,,victreebel
+base,071,Reverse Holo,false,,victreebel
+base,072,,false,,tentacool
+base,072,Reverse Holo,false,,tentacool
+base,073,,false,,tentacruel
+base,073,Reverse Holo,false,,tentacruel
+base,074,,false,,geodude
+base,074,Reverse Holo,false,,geodude
+base,075,,false,,graveler
+base,075,Reverse Holo,false,,graveler
+base,076,Double rare,false,,golem
+base,077,,false,,ponyta
+base,077,Reverse Holo,false,,ponyta
+base,078,,false,,rapidash
+base,078,Reverse Holo,false,,rapidash
+base,079,,false,,slowpoke
+base,079,Reverse Holo,false,,slowpoke
+base,080,,false,,slowbro
+base,080,Reverse Holo,false,,slowbro
+base,081,,false,,magnemite
+base,081,Reverse Holo,false,,magnemite
+base,082,,false,,magneton
+base,082,Reverse Holo,false,,magneton
+base,083,,false,,farfetchd
+base,083,Reverse Holo,false,,farfetchd
+base,084,,false,,doduo
+base,084,Reverse Holo,false,,doduo
+base,085,,false,,dodrio
+base,085,Reverse Holo,false,,dodrio
+base,086,,false,,seel
+base,086,Reverse Holo,false,,seel
+base,087,,false,,dewgong
+base,087,Reverse Holo,false,,dewgong
+base,088,,false,,grimer
+base,088,Reverse Holo,false,,grimer
+base,089,,false,,muk
+base,089,Reverse Holo,false,,muk
+base,090,,false,,shellder
+base,090,Reverse Holo,false,,shellder
+base,091,,false,,cloyster
+base,091,Reverse Holo,false,,cloyster
+base,092,,false,,gastly
+base,092,Reverse Holo,false,,gastly
+base,093,,false,,haunter
+base,093,Reverse Holo,false,,haunter
+base,094,,false,,gengar
+base,094,Reverse Holo,false,,gengar
+base,095,,false,,onix
+base,095,Reverse Holo,false,,onix
+base,096,,false,,drowzee
+base,096,Reverse Holo,false,,drowzee
+base,097,,false,,hypno
+base,097,Reverse Holo,false,,hypno
+base,098,,false,,krabby
+base,098,Reverse Holo,false,,krabby
+base,099,,false,,kingler
+base,099,Reverse Holo,false,,kingler
+base,100,,false,,voltorb
+base,100,Reverse Holo,false,,voltorb
+base,101,,false,,electrode
+base,101,Reverse Holo,false,,electrode
+base,102,,false,,exeggcute
+base,102,Reverse Holo,false,,exeggcute
+base,103,,false,,exeggutor
+base,103,Reverse Holo,false,,exeggutor
+base,104,,false,,cubone
+base,104,Reverse Holo,false,,cubone
+base,105,,false,,marowak
+base,105,Reverse Holo,false,,marowak
+base,106,,false,,hitmonlee
+base,106,Reverse Holo,false,,hitmonlee
+base,107,,false,,hitmonchan
+base,107,Reverse Holo,false,,hitmonchan
+base,108,,false,,lickitung
+base,108,Reverse Holo,false,,lickitung
+base,109,,false,,koffing
+base,109,Reverse Holo,false,,koffing
+base,110,,false,,weezing
+base,110,Reverse Holo,false,,weezing
+base,111,,false,,rhyhorn
+base,111,Reverse Holo,false,,rhyhorn
+base,112,,false,,rhydon
+base,112,Reverse Holo,false,,rhydon
+base,113,,false,,chansey
+base,113,Reverse Holo,false,,chansey
+base,114,,false,,tangela
+base,114,Reverse Holo,false,,tangela
+base,115,Double rare,false,,kangaskhan
+base,116,,false,,horsea
+base,116,Reverse Holo,false,,horsea
+base,117,,false,,seadra
+base,117,Reverse Holo,false,,seadra
+base,118,,false,,goldeen
+base,118,Reverse Holo,false,,goldeen
+base,119,,false,,seaking
+base,119,Reverse Holo,false,,seaking
+base,120,,false,,staryu
+base,120,Reverse Holo,false,,staryu
+base,121,,false,,starmie
+base,121,Reverse Holo,false,,starmie
+base,122,,false,,mr-mime
+base,122,Reverse Holo,false,,mr-mime
+base,123,,false,,scyther
+base,123,Reverse Holo,false,,scyther
+base,124,Double rare,false,,jynx
+base,125,,false,,electabuzz
+base,125,Reverse Holo,false,,electabuzz
+base,126,,false,,magmar
+base,126,Reverse Holo,false,,magmar
+base,127,,false,,pinsir
+base,127,Reverse Holo,false,,pinsir
+base,128,,false,,tauros
+base,128,Reverse Holo,false,,tauros
+base,129,,false,,magikarp
+base,129,Reverse Holo,false,,magikarp
+base,130,,false,,gyarados
+base,130,Reverse Holo,false,,gyarados
+base,131,,false,,lapras
+base,131,Reverse Holo,false,,lapras
+base,132,,false,,ditto
+base,132,Reverse Holo,false,,ditto
+base,133,,false,,eevee
+base,133,Reverse Holo,false,,eevee
+base,134,,false,,vaporeon
+base,134,Reverse Holo,false,,vaporeon
+base,135,,false,,jolteon
+base,135,Reverse Holo,false,,jolteon
+base,136,,false,,flareon
+base,136,Reverse Holo,false,,flareon
+base,137,,false,,porygon
+base,137,Reverse Holo,false,,porygon
+base,138,,false,,omanyte
+base,138,Reverse Holo,false,,omanyte
+base,139,,false,,omastar
+base,139,Reverse Holo,false,,omastar
+base,140,,false,,kabuto
+base,140,Reverse Holo,false,,kabuto
+base,141,,false,,kabutops
+base,141,Reverse Holo,false,,kabutops
+base,142,,false,,aerodactyl
+base,142,Reverse Holo,false,,aerodactyl
+base,143,,false,,snorlax
+base,143,Reverse Holo,false,,snorlax
+base,144,,false,,articuno
+base,144,Reverse Holo,false,,articuno
+base,145,Double rare,false,,zapdos
+base,146,,false,,moltres
+base,146,Reverse Holo,false,,moltres
+base,147,,false,,dratini
+base,147,Reverse Holo,false,,dratini
+base,148,,false,,dragonair
+base,148,Reverse Holo,false,,dragonair
+base,149,,false,,dragonite
+base,149,Reverse Holo,false,,dragonite
+base,150,,false,,mewtwo
+base,150,Reverse Holo,false,,mewtwo
+base,151,Double rare,false,,mew
+base,152,,false,,エネルギーシール
+base,152,Reverse Holo,false,,エネルギーシール
+base,153,,false,,スナッチアーム
+base,153,Reverse Holo,false,,スナッチアーム
+base,154,,false,,古びたかいの化石
+base,154,Reverse Holo,false,,古びたかいの化石
+base,155,,false,,古びたこうらの化石
+base,155,Reverse Holo,false,,古びたこうらの化石
+base,156,,false,,古びたひみつのコハク
+base,156,Reverse Holo,false,,古びたひみつのコハク
+base,157,,false,,安全ゴーグル
+base,157,Reverse Holo,false,,安全ゴーグル
+base,158,,false,,大きなふうせん
+base,158,Reverse Holo,false,,大きなふうせん
+base,159,,false,,ガチガチバンド
+base,159,Reverse Holo,false,,ガチガチバンド
+base,160,,false,,たべのこし
+base,160,Reverse Holo,false,,たべのこし
+base,161,,false,,エリカの招待
+base,161,Reverse Holo,false,,エリカの招待
+base,162,,false,,サカキのカリスマ
+base,162,Reverse Holo,false,,サカキのカリスマ
+base,163,,false,,ナナミの手助け
+base,163,Reverse Holo,false,,ナナミの手助け
+base,164,,false,,マサキの転送
+base,164,Reverse Holo,false,,マサキの転送
+base,165,,false,,サイクリングロード
+base,165,Reverse Holo,false,,サイクリングロード
+base,166,Illustration rare,false,,bulbasaur
+base,167,Illustration rare,false,,ivysaur
+base,168,Illustration rare,false,,charmander
+base,169,Illustration rare,false,,charmeleon
+base,170,Illustration rare,false,,squirtle
+base,171,Illustration rare,false,,wartortle
+base,172,Illustration rare,false,,caterpie
+base,173,Illustration rare,false,,pikachu
+base,174,Illustration rare,false,,nidoking
+base,175,Illustration rare,false,,psyduck
+base,176,Illustration rare,false,,poliwhirl
+base,177,Illustration rare,false,,machoke
+base,178,Illustration rare,false,,tangela
+base,179,Illustration rare,false,,mr-mime
+base,180,Illustration rare,false,,omanyte
+base,181,Illustration rare,false,,snorlax
+base,182,Illustration rare,false,,dragonair
+base,183,Illustration rare,false,,mewtwo
+base,184,Ultra Rare,false,,venusaur
+base,185,Ultra Rare,false,,charizard
+base,186,Ultra Rare,false,,blastoise
+base,187,Ultra Rare,false,,arbok
+base,188,Ultra Rare,false,,ninetales
+base,189,Ultra Rare,false,,wigglytuff
+base,190,Ultra Rare,false,,alakazam
+base,191,Ultra Rare,false,,golem
+base,192,Ultra Rare,false,,kangaskhan
+base,193,Ultra Rare,false,,jynx
+base,194,Ultra Rare,false,,zapdos
+base,195,Ultra Rare,false,,mew
+base,196,Ultra Rare,false,,エリカの招待
+base,197,Ultra Rare,false,,サカキのカリスマ
+base,198,Ultra Rare,false,,ナナミの手助け
+base,199,Ultra Rare,false,,マサキの転送
+base,200,Special illustration rare,false,,venusaur
+base,201,Special illustration rare,false,,charizard
+base,202,Special illustration rare,false,,blastoise
+base,203,Special illustration rare,false,,alakazam
+base,204,Special illustration rare,false,,zapdos
+base,205,Special illustration rare,false,,mew
+base,206,Special illustration rare,false,,エリカの招待
+base,207,Special illustration rare,false,,サカキのカリスマ
+base,208,Mega Hyper Rare,false,,mew
+base,209,Mega Hyper Rare,false,,ポケモンいれかえ
+base,210,Mega Hyper Rare,false,,基本超エネルギー

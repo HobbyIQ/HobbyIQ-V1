@@ -1,0 +1,368 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,001,,false,,oddish
+base,001,Reverse Holo,false,,oddish
+base,002,,false,,gloom
+base,002,Reverse Holo,false,,gloom
+base,003,,false,,vileplume
+base,004,,false,,scyther
+base,004,Reverse Holo,false,,scyther
+base,005,,false,,hoppip
+base,005,Reverse Holo,false,,hoppip
+base,006,,false,,skiploom
+base,006,Reverse Holo,false,,skiploom
+base,007,,false,,jumpluff
+base,008,,false,,pineco
+base,008,Reverse Holo,false,,pineco
+base,010,,false,,snover
+base,010,Reverse Holo,false,,snover
+base,011,,false,,abomasnow
+base,012,,false,,sprigatito
+base,012,Reverse Holo,false,,sprigatito
+base,013,,false,,floragato
+base,013,Reverse Holo,false,,floragato
+base,015,,false,,smoliv
+base,015,Reverse Holo,false,,smoliv
+base,016,,false,,dolliv
+base,016,Reverse Holo,false,,dolliv
+base,017,,false,,arboliva
+base,018,,false,,toedscool
+base,018,Reverse Holo,false,,toedscool
+base,020,,false,,capsakid
+base,020,Reverse Holo,false,,capsakid
+base,021,,false,,scovillain
+base,022,,false,,rellor
+base,022,Reverse Holo,false,,rellor
+base,025,,false,,charmander
+base,025,Reverse Holo,false,,charmander
+base,026,,false,,charmeleon
+base,026,Reverse Holo,false,,charmeleon
+base,027,,false,,tauros
+base,027,Reverse Holo,false,,tauros
+base,028,,false,,entei
+base,029,,false,,oricorio
+base,030,,false,,fuecoco
+base,030,Reverse Holo,false,,fuecoco
+base,031,,false,,crocalor
+base,031,Reverse Holo,false,,crocalor
+base,033,,false,,charcadet
+base,033,Reverse Holo,false,,charcadet
+base,034,,false,,armarouge
+base,036,,false,,slowpoke
+base,036,Reverse Holo,false,,slowpoke
+base,037,,false,,slowbro
+base,038,,false,,staryu
+base,038,Reverse Holo,false,,staryu
+base,039,,false,,starmie
+base,040,,false,,tauros
+base,040,Reverse Holo,false,,tauros
+base,041,,false,,quaxly
+base,041,Reverse Holo,false,,quaxly
+base,042,,false,,quaxwell
+base,042,Reverse Holo,false,,quaxwell
+base,044,,false,,wiglett
+base,044,Reverse Holo,false,,wiglett
+base,045,,false,,wugtrio
+base,045,Reverse Holo,false,,wugtrio
+base,046,,false,,finizen
+base,046,Reverse Holo,false,,finizen
+base,047,,false,,palafin
+base,048,,false,,veluza
+base,049,,false,,dondozo
+base,050,,false,,tatsugiri
+base,050,Reverse Holo,false,,tatsugiri
+base,051,,false,,frigibax
+base,051,Reverse Holo,false,,frigibax
+base,052,,false,,arctibax
+base,052,Reverse Holo,false,,arctibax
+base,053,,false,,baxcalibur
+base,055,,false,,pikachu
+base,055,Reverse Holo,false,,pikachu
+base,056,,false,,raichu
+base,057,,false,,voltorb
+base,057,Reverse Holo,false,,voltorb
+base,058,,false,,electrode
+base,059,,false,,shinx
+base,059,Reverse Holo,false,,shinx
+base,060,,false,,luxio
+base,060,Reverse Holo,false,,luxio
+base,061,,false,,luxray
+base,062,,false,,pachirisu
+base,062,Reverse Holo,false,,pachirisu
+base,063,,false,,thundurus
+base,064,,false,,toxel
+base,064,Reverse Holo,false,,toxel
+base,065,,false,,toxtricity
+base,066,,false,,pawmi
+base,066,Reverse Holo,false,,pawmi
+base,067,,false,,pawmo
+base,067,Reverse Holo,false,,pawmo
+base,068,,false,,pawmot
+base,069,,false,,wattrel
+base,069,Reverse Holo,false,,wattrel
+base,070,,false,,kilowattrel
+base,070,Reverse Holo,false,,kilowattrel
+base,072,,false,,wigglytuff
+base,073,,false,,abra
+base,073,Reverse Holo,false,,abra
+base,074,,false,,kadabra
+base,074,Reverse Holo,false,,kadabra
+base,077,,false,,cleffa
+base,077,Reverse Holo,false,,cleffa
+base,078,,false,,natu
+base,078,Reverse Holo,false,,natu
+base,079,,false,,xatu
+base,079,Reverse Holo,false,,xatu
+base,080,,false,,ralts
+base,080,Reverse Holo,false,,ralts
+base,081,,false,,kirlia
+base,081,Reverse Holo,false,,kirlia
+base,083,,false,,drifloon
+base,083,Reverse Holo,false,,drifloon
+base,084,,false,,drifblim
+base,084,Reverse Holo,false,,drifblim
+base,085,,false,,mime-jr
+base,085,Reverse Holo,false,,mime-jr
+base,086,,false,,spiritomb
+base,087,,false,,klefki
+base,088,,false,,mimikyu
+base,089,,false,,fidough
+base,089,Reverse Holo,false,,fidough
+base,090,,false,,dachsbun
+base,090,Reverse Holo,false,,dachsbun
+base,091,,false,,ceruledge
+base,092,,false,,rabsca
+base,093,,false,,flittle
+base,093,Reverse Holo,false,,flittle
+base,094,,false,,tinkatink
+base,094,Reverse Holo,false,,tinkatink
+base,095,,false,,tinkatuff
+base,095,Reverse Holo,false,,tinkatuff
+base,096,,false,,tinkaton
+base,097,,false,,greavard
+base,097,Reverse Holo,false,,greavard
+base,098,,false,,houndstone
+base,099,,false,,gimmighoul
+base,099,Reverse Holo,false,,gimmighoul
+base,100,,false,,mankey
+base,100,Reverse Holo,false,,mankey
+base,101,,false,,primeape
+base,101,Reverse Holo,false,,primeape
+base,102,,false,,annihilape
+base,103,,false,,tauros
+base,103,Reverse Holo,false,,tauros
+base,104,,false,,riolu
+base,104,Reverse Holo,false,,riolu
+base,105,,false,,lucario
+base,105,Reverse Holo,false,,lucario
+base,106,,false,,hawlucha
+base,107,,false,,nacli
+base,107,Reverse Holo,false,,nacli
+base,108,,false,,naclstack
+base,108,Reverse Holo,false,,naclstack
+base,109,,false,,garganacl
+base,110,,false,,glimmet
+base,110,Reverse Holo,false,,glimmet
+base,116,,false,,wooper
+base,116,Reverse Holo,false,,wooper
+base,118,,false,,murkrow
+base,118,Reverse Holo,false,,murkrow
+base,119,,false,,sneasel
+base,119,Reverse Holo,false,,sneasel
+base,120,,false,,weavile
+base,121,,false,,sableye
+base,122,,false,,pawniard
+base,122,Reverse Holo,false,,pawniard
+base,123,,false,,bisharp
+base,123,Reverse Holo,false,,bisharp
+base,124,,false,,kingambit
+base,125,,false,,maschiff
+base,125,Reverse Holo,false,,maschiff
+base,126,,false,,mabosstiff
+base,126,Reverse Holo,false,,mabosstiff
+base,147,,false,,pelipper
+base,147,Reverse Holo,false,,pelipper
+base,168,,false,,まけんきハチマキ
+base,168,Reverse Holo,false,,まけんきハチマキ
+base,169,,false,,勇気のおまもり
+base,169,Reverse Holo,false,,勇気のおまもり
+base,170,,false,,ワザマシン かじばのいっぱつ
+base,170,Reverse Holo,false,,ワザマシン かじばのいっぱつ
+base,171,,false,,オモダカ
+base,172,,false,,クラベル
+base,172,Reverse Holo,false,,クラベル
+base,173,,false,,サカキのカリスマ
+base,173,Reverse Holo,false,,サカキのカリスマ
+base,174,,false,,ナンジャモ
+base,174,Reverse Holo,false,,ナンジャモ
+base,175,,false,,ネルケ
+base,175,Reverse Holo,false,,ネルケ
+base,176,,false,,博士の研究
+base,177,,false,,博士の研究
+base,178,,false,,パルデアの学生
+base,178,Reverse Holo,false,,パルデアの学生
+base,179,,false,,パルデアの学生
+base,179,Reverse Holo,false,,パルデアの学生
+base,180,,false,,ペパー
+base,180,Reverse Holo,false,,ペパー
+base,181,,false,,ボスの指令
+base,182,,false,,ボタン
+base,182,Reverse Holo,false,,ボタン
+base,183,,false,,タウンデパート
+base,183,Reverse Holo,false,,タウンデパート
+base,184,,false,,ビーチコート
+base,184,Reverse Holo,false,,ビーチコート
+base,185,,false,,ボウルタウン
+base,185,Reverse Holo,false,,ボウルタウン
+base,186,,false,,ポケモンリーグ本部
+base,186,Reverse Holo,false,,ポケモンリーグ本部
+base,187,,false,,レッスンスタジオ
+base,187,Reverse Holo,false,,レッスンスタジオ
+base,188,,false,,セラピーエネルギー
+base,188,Reverse Holo,false,,セラピーエネルギー
+base,189,,false,,リバーサルエネルギー
+base,189,Reverse Holo,false,,リバーサルエネルギー
+base,190,,false,,ルミナスエネルギー
+base,190,Reverse Holo,false,,ルミナスエネルギー
+base,191,,false,,oddish
+base,192,,false,,gloom
+base,193,,false,,vileplume
+base,194,,false,,scyther
+base,195,,false,,hoppip
+base,196,,false,,skiploom
+base,197,,false,,jumpluff
+base,198,,false,,pineco
+base,199,,false,,snover
+base,200,,false,,abomasnow
+base,201,,false,,sprigatito
+base,202,,false,,floragato
+base,203,,false,,smoliv
+base,204,,false,,dolliv
+base,205,,false,,arboliva
+base,206,,false,,toedscool
+base,207,,false,,capsakid
+base,208,,false,,scovillain
+base,209,,false,,rellor
+base,210,,false,,charmander
+base,211,,false,,charmeleon
+base,212,,false,,tauros
+base,213,,false,,entei
+base,214,,false,,oricorio
+base,215,,false,,fuecoco
+base,216,,false,,crocalor
+base,217,,false,,charcadet
+base,218,,false,,armarouge
+base,219,,false,,slowpoke
+base,220,,false,,slowbro
+base,221,,false,,staryu
+base,222,,false,,starmie
+base,223,,false,,tauros
+base,224,,false,,quaxly
+base,225,,false,,quaxwell
+base,226,,false,,wiglett
+base,227,,false,,wugtrio
+base,228,,false,,finizen
+base,229,,false,,palafin
+base,230,,false,,veluza
+base,231,,false,,dondozo
+base,232,,false,,tatsugiri
+base,233,,false,,frigibax
+base,234,,false,,arctibax
+base,235,,false,,baxcalibur
+base,236,,false,,pikachu
+base,237,,false,,raichu
+base,238,,false,,voltorb
+base,239,,false,,electrode
+base,240,,false,,shinx
+base,241,,false,,luxio
+base,242,,false,,luxray
+base,243,,false,,pachirisu
+base,244,,false,,thundurus
+base,245,,false,,toxel
+base,246,,false,,toxtricity
+base,247,,false,,pawmi
+base,248,,false,,pawmo
+base,249,,false,,pawmot
+base,250,,false,,wattrel
+base,251,,false,,kilowattrel
+base,252,,false,,wigglytuff
+base,253,,false,,abra
+base,254,,false,,kadabra
+base,255,,false,,cleffa
+base,256,,false,,natu
+base,257,,false,,xatu
+base,258,,false,,ralts
+base,259,,false,,kirlia
+base,260,,false,,drifloon
+base,261,,false,,drifblim
+base,262,,false,,mime-jr
+base,263,,false,,spiritomb
+base,264,,false,,klefki
+base,265,,false,,mimikyu
+base,266,,false,,fidough
+base,267,,false,,dachsbun
+base,268,,false,,ceruledge
+base,269,,false,,rabsca
+base,270,,false,,flittle
+base,271,,false,,tinkatink
+base,272,,false,,tinkatuff
+base,273,,false,,tinkaton
+base,274,,false,,greavard
+base,275,,false,,houndstone
+base,276,,false,,mankey
+base,277,,false,,primeape
+base,278,,false,,annihilape
+base,279,,false,,tauros
+base,280,,false,,riolu
+base,281,,false,,lucario
+base,282,,false,,hawlucha
+base,283,,false,,nacli
+base,284,,false,,naclstack
+base,285,,false,,garganacl
+base,286,,false,,glimmet
+base,287,,false,,wooper
+base,288,,false,,murkrow
+base,289,,false,,sneasel
+base,290,,false,,weavile
+base,291,,false,,sableye
+base,292,,false,,pawniard
+base,293,,false,,bisharp
+base,294,,false,,kingambit
+base,295,,false,,maschiff
+base,296,,false,,mabosstiff
+base,297,,false,,shroodle
+base,298,,false,,grafaiai
+base,299,,false,,scizor
+base,300,,false,,varoom
+base,301,,false,,revavroom
+base,302,,false,,noibat
+base,303,,false,,cyclizar
+base,304,,false,,pidgey
+base,305,,false,,pidgeotto
+base,306,,false,,jigglypuff
+base,307,,false,,doduo
+base,308,,false,,dodrio
+base,309,,false,,ditto
+base,310,,false,,snorlax
+base,311,,false,,wingull
+base,312,,false,,pelipper
+base,313,,false,,skwovet
+base,314,,false,,greedent
+base,315,,false,,lechonk
+base,316,,false,,oinkologne
+base,317,,false,,tandemaus
+base,318,,false,,maushold
+base,319,,false,,flamigo
+base,338,,false,,wugtrio
+base,339,,false,,palafin
+base,340,,false,,pawmi
+base,341,,false,,mimikyu
+base,342,,false,,ジャッジマン
+base,343,,false,,ネモ
+base,344,,false,,ネルケ
+base,345,,false,,パルデアの学生
+base,346,,false,,パルデアの学生
+base,350,,false,,ナンジャモ
+base,351,,false,,ネモ
+base,352,,false,,ネルケ
+base,353,,false,,ペパー
+base,354,,false,,ボタン

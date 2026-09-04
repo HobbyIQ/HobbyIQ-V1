@@ -1,0 +1,95 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,001,,false,,joltik
+base,002,,false,,galvantula
+base,003,,false,,rowlet
+base,004,,false,,dartrix
+base,005,,false,,decidueye
+base,006,,false,,tapu-bulu
+base,007,,false,,houndour
+base,008,,false,,houndoom
+base,009,,false,,iron-moth
+base,010,,false,,horsea
+base,011,,false,,seadra
+base,012,Double rare,false,,kingdra
+base,013,,false,,sneasel
+base,014,,false,,weavile
+base,015,Double rare,false,,revavroom
+base,016,,false,,drowzee
+base,017,,false,,hypno
+base,018,,false,,duskull
+base,019,,false,,dusclops
+base,020,,false,,dusknoir
+base,021,,false,,cresselia
+base,022,,false,,sylveon
+base,023,,false,,croagunk
+base,024,,false,,toxicroak
+base,025,,false,,ursaluna
+base,026,,false,,slither-wing
+base,027,,false,,zubat
+base,028,,false,,golbat
+base,029,,false,,crobat
+base,030,,false,,absol
+base,031,,false,,zorua
+base,032,,false,,zoroark
+base,033,,false,,inkay
+base,034,,false,,malamar
+base,035,,false,,yveltal
+base,036,Double rare,false,,okidogi
+base,037,Double rare,false,,munkidori
+base,038,Double rare,false,,fezandipiti
+base,039,Double rare,false,,pecharunt
+base,040,,false,,genesect
+base,041,,false,,cufant
+base,042,,false,,copperajah
+base,043,,false,,varoom
+base,044,,false,,axew
+base,045,,false,,fraxure
+base,046,,false,,haxorus
+base,047,,false,,kyurem
+base,048,,false,,meowth
+base,049,,false,,persian
+base,050,,false,,eevee
+base,051,,false,,furfrou
+base,052,,false,,stufful
+base,053,,false,,bewear
+base,054,ACE SPEC Rare,false,,デンジャラス光線
+base,055,ACE SPEC Rare,false,,ポケバイタルA
+base,056,,false,,夜のタンカ
+base,057,,false,,くさりもち
+base,058,,false,,力の砂時計
+base,059,,false,,アクロマの執念
+base,060,,false,,アンズの秘技
+base,061,,false,,カシオペア
+base,062,,false,,クセロシキのたくらみ
+base,063,ACE SPEC Rare,false,,ニュートラルセンター
+base,064,,false,,夜のアカデミー
+base,065,Illustration rare,false,,tapu-bulu
+base,066,Illustration rare,false,,houndoom
+base,067,Illustration rare,false,,horsea
+base,068,Illustration rare,false,,duskull
+base,069,Illustration rare,false,,dusclops
+base,070,Illustration rare,false,,dusknoir
+base,071,Illustration rare,false,,cresselia
+base,072,Illustration rare,false,,zorua
+base,073,Illustration rare,false,,cufant
+base,074,Illustration rare,false,,fraxure
+base,075,Illustration rare,false,,persian
+base,076,Illustration rare,false,,bewear
+base,077,Ultra Rare,false,,kingdra
+base,078,Ultra Rare,false,,revavroom
+base,079,Ultra Rare,false,,okidogi
+base,080,Ultra Rare,false,,munkidori
+base,081,Ultra Rare,false,,fezandipiti
+base,082,Ultra Rare,false,,pecharunt
+base,083,Ultra Rare,false,,アクロマの執念
+base,084,Ultra Rare,false,,アンズの秘技
+base,085,Ultra Rare,false,,カシオペア
+base,086,Ultra Rare,false,,クセロシキのたくらみ
+base,087,Special illustration rare,false,,okidogi
+base,088,Special illustration rare,false,,munkidori
+base,089,Special illustration rare,false,,fezandipiti
+base,090,Special illustration rare,false,,pecharunt
+base,091,Special illustration rare,false,,カシオペア
+base,092,Mega Hyper Rare,false,,pecharunt
+base,093,Mega Hyper Rare,false,,大地の器
+base,094,Mega Hyper Rare,false,,力の砂時計

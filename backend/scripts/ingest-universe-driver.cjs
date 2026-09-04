@@ -396,9 +396,19 @@ function acquireEntry(entry, dir) {
     }
     case "tcgdexja": {
       const setId = entry.sourceRef.split("/").pop();
-      run("scrape-tcgdex-ja.cjs", [`--outDir=${dir}`, `--sets=${setId}`, "--delayMs=150"]);
+      // CF-JA-MODERN-PARALLEL-LADDER (gap doc 2026-09-03, recommendation 5).
+      // The vintage scraper stages BASE-ONLY -- every row `parallel=""` -- and a
+      // base-only checklist does not unblock the comps behind these cells, which
+      // are waiting on the parallel axis. For the modern codes (SV*, S*, M*, CS*)
+      // the JA rarity ladder IS that axis, so those sets route to the scraper
+      // that carries it. The vintage PMCG/neo titles keep the original lane:
+      // tcgdex serves them no rarity ladder, so pointing them at the modern
+      // scraper would change nothing but the provenance string.
+      const modern = /^(SV|S\d|CS|M[0-9]|M-P|SVK|SVLN|SVLS)/i.test(setId);
+      const script = modern ? "scrape-tcgdex-ja-modern.cjs" : "scrape-tcgdex-ja.cjs";
+      run(script, [`--outDir=${dir}`, `--sets=${setId}`, "--delayMs=150"]);
       const csvs = fs.readdirSync(dir).filter((n) => n.endsWith(".csv"));
-      if (!csvs.length) throw new Error("tcgdex produced no CSV");
+      if (!csvs.length) throw new Error(`tcgdex produced no CSV (${script}, set ${setId})`);
       return { csvPath: path.join(dir, csvs[0]) };
     }
     default:
@@ -778,7 +788,13 @@ if (require.main !== module) return;
         bcp: "scrape-bcp-ladders.cjs --titles=<page> --titlesOnly → ingest-checklist-csv-to-catalog.cjs",
         beckett: "fetch <sourceRef>.xlsx → convertBeckettChecklistXlsx.cjs → ingest-checklist-csv-to-catalog.cjs",
         clc: "scrape-checklistcenter-products.cjs --urls → convertChecklistCenterToChecklistCsv.cjs → ingest-checklist-csv-to-catalog.cjs",
-        tcgdexja: "scrape-tcgdex-ja.cjs --sets=<id> → ingest-checklist-csv-to-catalog.cjs",
+        // The lane is TWO scrapers and the dry run must say WHICH, or the plan
+        // it prints is not the plan the apply runs: a modern code (SV*, S*,
+        // CS*, M*) routes to the ladder-carrying scraper, the vintage
+        // PMCG/neo titles to the original.
+        tcgdexja: `${/^(SV|S\d|CS|M[0-9]|M-P|SVK|SVLN|SVLS)/i.test(String(entry.sourceRef || "").split("/").pop() || "")
+          ? "scrape-tcgdex-ja-modern.cjs (rarity ladder → parallel)"
+          : "scrape-tcgdex-ja.cjs (base-only; tcgdex serves no ladder for these)"} --sets=<id> → ingest-checklist-csv-to-catalog.cjs`,
         sportscardchecklist: "fetchSportsCardChecklist.cjs --url <sourceRef> (direct-URL lane) → ingest-checklist-csv-to-catalog.cjs",
       }[entry.lane];
       const inCatalog = await countCatalogRows(entry).catch(() => null);

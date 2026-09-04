@@ -84704,11 +84704,11 @@
    "lane": "tcgdexja",
    "sourceRef": "https://api.tcgdex.net/v2/ja/sets/S10a",
    "sport": "pokemon",
-   "year": null,
+   "year": 2022,
    "setName": "S10a ダークファンタズマ",
    "estimatedCards": 99,
    "seededStatus": "missing",
-   "seededNote": "ja-exclusive set, 99 cards stated by source; no catalog key"
+   "seededNote": "modern ja-exclusive, setKey s10a; 148 rows staged from 99 source cards; parallel ladder 10 (8 named rarities, 49 reverse-holo); 0 unbridgeable (no dexId served)"
   },
   {
    "id": "tcgdexja::https://api.tcgdex.net/v2/ja/sets/S7R",
@@ -84726,11 +84726,11 @@
    "lane": "tcgdexja",
    "sourceRef": "https://api.tcgdex.net/v2/ja/sets/S12a",
    "sport": "pokemon",
-   "year": null,
+   "year": 2022,
    "setName": "S12a VSTARユニバース",
    "estimatedCards": 258,
    "seededStatus": "missing",
-   "seededNote": "ja-exclusive set, 258 cards stated by source; no catalog key"
+   "seededNote": "modern ja-exclusive, setKey s12a; 347 rows staged from 258 source cards; parallel ladder 9 (7 named rarities, 89 reverse-holo); 0 unbridgeable (no dexId served)"
   },
   {
    "id": "tcgdexja::https://api.tcgdex.net/v2/ja/sets/S8a",
@@ -84759,88 +84759,88 @@
    "lane": "tcgdexja",
    "sourceRef": "https://api.tcgdex.net/v2/ja/sets/S12",
    "sport": "pokemon",
-   "year": null,
+   "year": 2022,
    "setName": "S12 パラダイムトリガー",
    "estimatedCards": 125,
    "seededStatus": "missing",
-   "seededNote": "ja-exclusive set, 125 cards stated by source; no catalog key"
+   "seededNote": "modern ja-exclusive, setKey s12; 96 rows staged from 125 source cards; BASE-ONLY -- source serves no ladder for this set; 29 unbridgeable (no dexId served)"
   },
   {
    "id": "tcgdexja::https://api.tcgdex.net/v2/ja/sets/S5I",
    "lane": "tcgdexja",
    "sourceRef": "https://api.tcgdex.net/v2/ja/sets/S5I",
    "sport": "pokemon",
-   "year": null,
+   "year": 2021,
    "setName": "S5I 一撃マスター",
    "estimatedCards": 91,
    "seededStatus": "missing",
-   "seededNote": "ja-exclusive set, 91 cards stated by source; no catalog key"
+   "seededNote": "modern ja-exclusive, setKey s5i; 91 rows staged from 91 source cards; parallel ladder 6 (5 named rarities, 0 reverse-holo); 0 unbridgeable (no dexId served)"
   },
   {
    "id": "tcgdexja::https://api.tcgdex.net/v2/ja/sets/S8",
    "lane": "tcgdexja",
    "sourceRef": "https://api.tcgdex.net/v2/ja/sets/S8",
    "sport": "pokemon",
-   "year": null,
+   "year": 2021,
    "setName": "S8 フュージョンアーツ",
    "estimatedCards": 129,
    "seededStatus": "missing",
-   "seededNote": "ja-exclusive set, 129 cards stated by source; no catalog key"
+   "seededNote": "modern ja-exclusive, setKey s8; 129 rows staged from 129 source cards; parallel ladder 6 (5 named rarities, 0 reverse-holo); 0 unbridgeable (no dexId served)"
   },
   {
    "id": "tcgdexja::https://api.tcgdex.net/v2/ja/sets/S9a",
    "lane": "tcgdexja",
    "sourceRef": "https://api.tcgdex.net/v2/ja/sets/S9a",
    "sport": "pokemon",
-   "year": null,
+   "year": 2022,
    "setName": "S9a バトルリージョン",
    "estimatedCards": 93,
    "seededStatus": "missing",
-   "seededNote": "ja-exclusive set, 93 cards stated by source; no catalog key"
+   "seededNote": "modern ja-exclusive, setKey s9a; 117 rows staged from 93 source cards; parallel ladder 2 (0 named rarities, 45 reverse-holo); 21 unbridgeable (no dexId served)"
   },
   {
    "id": "tcgdexja::https://api.tcgdex.net/v2/ja/sets/S6H",
    "lane": "tcgdexja",
    "sourceRef": "https://api.tcgdex.net/v2/ja/sets/S6H",
    "sport": "pokemon",
-   "year": null,
+   "year": 2021,
    "setName": "S6H 白銀のランス",
    "estimatedCards": 95,
    "seededStatus": "missing",
-   "seededNote": "ja-exclusive set, 95 cards stated by source; no catalog key"
+   "seededNote": "modern ja-exclusive, setKey s6h; 95 rows staged from 95 source cards; parallel ladder 6 (5 named rarities, 0 reverse-holo); 0 unbridgeable (no dexId served)"
   },
   {
    "id": "tcgdexja::https://api.tcgdex.net/v2/ja/sets/S9",
    "lane": "tcgdexja",
    "sourceRef": "https://api.tcgdex.net/v2/ja/sets/S9",
    "sport": "pokemon",
-   "year": null,
+   "year": 2022,
    "setName": "S9 スターバース",
    "estimatedCards": 127,
    "seededStatus": "missing",
-   "seededNote": "ja-exclusive set, 127 cards stated by source; no catalog key"
+   "seededNote": "modern ja-exclusive, setKey s9; 98 rows staged from 127 source cards; BASE-ONLY -- source serves no ladder for this set; 29 unbridgeable (no dexId served)"
   },
   {
    "id": "tcgdexja::https://api.tcgdex.net/v2/ja/sets/S8b",
    "lane": "tcgdexja",
    "sourceRef": "https://api.tcgdex.net/v2/ja/sets/S8b",
    "sport": "pokemon",
-   "year": null,
+   "year": 2021,
    "setName": "S8b VMAXクライマックス",
    "estimatedCards": 285,
    "seededStatus": "missing",
-   "seededNote": "ja-exclusive set, 285 cards stated by source; no catalog key"
+   "seededNote": "modern ja-exclusive, setKey s8b; 395 rows staged from 285 source cards; parallel ladder 8 (6 named rarities, 110 reverse-holo); 0 unbridgeable (no dexId served)"
   },
   {
    "id": "tcgdexja::https://api.tcgdex.net/v2/ja/sets/S11",
    "lane": "tcgdexja",
    "sourceRef": "https://api.tcgdex.net/v2/ja/sets/S11",
    "sport": "pokemon",
-   "year": null,
+   "year": 2022,
    "setName": "S11 ロストアビス",
    "estimatedCards": 127,
    "seededStatus": "missing",
-   "seededNote": "ja-exclusive set, 127 cards stated by source; no catalog key"
+   "seededNote": "modern ja-exclusive, setKey s11; 127 rows staged from 127 source cards; parallel ladder 6 (5 named rarities, 0 reverse-holo); 0 unbridgeable (no dexId served)"
   },
   {
    "id": "tcgdexja::https://api.tcgdex.net/v2/ja/sets/S5a",
@@ -84858,11 +84858,11 @@
    "lane": "tcgdexja",
    "sourceRef": "https://api.tcgdex.net/v2/ja/sets/S11a",
    "sport": "pokemon",
-   "year": null,
+   "year": 2022,
    "setName": "S11a 白熱のアルカナ",
    "estimatedCards": 94,
    "seededStatus": "missing",
-   "seededNote": "ja-exclusive set, 94 cards stated by source; no catalog key"
+   "seededNote": "modern ja-exclusive, setKey s11a; 140 rows staged from 94 source cards; parallel ladder 10 (8 named rarities, 46 reverse-holo); 0 unbridgeable (no dexId served)"
   },
   {
    "id": "tcgdexja::https://api.tcgdex.net/v2/ja/sets/S2a",
@@ -84913,33 +84913,33 @@
    "lane": "tcgdexja",
    "sourceRef": "https://api.tcgdex.net/v2/ja/sets/S10P",
    "sport": "pokemon",
-   "year": null,
+   "year": 2022,
    "setName": "S10P スペースジャグラー",
    "estimatedCards": 88,
    "seededStatus": "missing",
-   "seededNote": "ja-exclusive set, 88 cards stated by source; no catalog key"
+   "seededNote": "modern ja-exclusive, setKey s10p; 88 rows staged from 88 source cards; parallel ladder 6 (5 named rarities, 0 reverse-holo); 0 unbridgeable (no dexId served)"
   },
   {
    "id": "tcgdexja::https://api.tcgdex.net/v2/ja/sets/S6K",
    "lane": "tcgdexja",
    "sourceRef": "https://api.tcgdex.net/v2/ja/sets/S6K",
    "sport": "pokemon",
-   "year": null,
+   "year": 2021,
    "setName": "S6K 漆黒のガイスト",
    "estimatedCards": 95,
    "seededStatus": "missing",
-   "seededNote": "ja-exclusive set, 95 cards stated by source; no catalog key"
+   "seededNote": "modern ja-exclusive, setKey s6k; 95 rows staged from 95 source cards; parallel ladder 6 (5 named rarities, 0 reverse-holo); 0 unbridgeable (no dexId served)"
   },
   {
    "id": "tcgdexja::https://api.tcgdex.net/v2/ja/sets/S7D",
    "lane": "tcgdexja",
    "sourceRef": "https://api.tcgdex.net/v2/ja/sets/S7D",
    "sport": "pokemon",
-   "year": null,
+   "year": 2021,
    "setName": "S7D 摩天パーフェクト",
    "estimatedCards": 90,
    "seededStatus": "missing",
-   "seededNote": "ja-exclusive set, 90 cards stated by source; no catalog key"
+   "seededNote": "modern ja-exclusive, setKey s7d; 90 rows staged from 90 source cards; parallel ladder 6 (5 named rarities, 0 reverse-holo); 0 unbridgeable (no dexId served)"
   },
   {
    "id": "tcgdexja::https://api.tcgdex.net/v2/ja/sets/S10D",
@@ -84968,121 +84968,121 @@
    "lane": "tcgdexja",
    "sourceRef": "https://api.tcgdex.net/v2/ja/sets/SVLS",
    "sport": "pokemon",
-   "year": null,
+   "year": 2024,
    "setName": "SVLS スターターセット テラスタイプ：ステラ ソウブレイズex",
    "estimatedCards": 22,
    "seededStatus": "missing",
-   "seededNote": "ja-exclusive set, 22 cards stated by source; no catalog key"
+   "seededNote": "modern ja-exclusive, setKey svls; 21 rows staged from 22 source cards; BASE-ONLY -- source serves no ladder for this set; 1 unbridgeable (no dexId served)"
   },
   {
    "id": "tcgdexja::https://api.tcgdex.net/v2/ja/sets/SV4M",
    "lane": "tcgdexja",
    "sourceRef": "https://api.tcgdex.net/v2/ja/sets/SV4M",
    "sport": "pokemon",
-   "year": null,
+   "year": 2023,
    "setName": "SV4M 未来の一閃",
    "estimatedCards": 95,
    "seededStatus": "missing",
-   "seededNote": "ja-exclusive set, 95 cards stated by source; no catalog key"
+   "seededNote": "modern ja-exclusive, setKey sv4m; 79 rows staged from 95 source cards; BASE-ONLY -- source serves no ladder for this set; 16 unbridgeable (no dexId served)"
   },
   {
    "id": "tcgdexja::https://api.tcgdex.net/v2/ja/sets/SV8",
    "lane": "tcgdexja",
    "sourceRef": "https://api.tcgdex.net/v2/ja/sets/SV8",
    "sport": "pokemon",
-   "year": null,
+   "year": 2024,
    "setName": "SV8 超電ブレイカー",
    "estimatedCards": 138,
    "seededStatus": "missing",
-   "seededNote": "ja-exclusive set, 138 cards stated by source; no catalog key"
+   "seededNote": "modern ja-exclusive, setKey sv8; 138 rows staged from 138 source cards; parallel ladder 8 (7 named rarities, 0 reverse-holo); 0 unbridgeable (no dexId served)"
   },
   {
    "id": "tcgdexja::https://api.tcgdex.net/v2/ja/sets/SV7",
    "lane": "tcgdexja",
    "sourceRef": "https://api.tcgdex.net/v2/ja/sets/SV7",
    "sport": "pokemon",
-   "year": null,
+   "year": 2024,
    "setName": "SV7 ステラミラクル",
    "estimatedCards": 135,
    "seededStatus": "missing",
-   "seededNote": "ja-exclusive set, 135 cards stated by source; no catalog key"
+   "seededNote": "modern ja-exclusive, setKey sv7; 114 rows staged from 135 source cards; BASE-ONLY -- source serves no ladder for this set; 21 unbridgeable (no dexId served)"
   },
   {
    "id": "tcgdexja::https://api.tcgdex.net/v2/ja/sets/SV5M",
    "lane": "tcgdexja",
    "sourceRef": "https://api.tcgdex.net/v2/ja/sets/SV5M",
    "sport": "pokemon",
-   "year": null,
+   "year": 2024,
    "setName": "SV5M サイバージャッジ",
    "estimatedCards": 100,
    "seededStatus": "missing",
-   "seededNote": "ja-exclusive set, 100 cards stated by source; no catalog key"
+   "seededNote": "modern ja-exclusive, setKey sv5m; 100 rows staged from 100 source cards; parallel ladder 7 (6 named rarities, 0 reverse-holo); 0 unbridgeable (no dexId served)"
   },
   {
    "id": "tcgdexja::https://api.tcgdex.net/v2/ja/sets/SV9a",
    "lane": "tcgdexja",
    "sourceRef": "https://api.tcgdex.net/v2/ja/sets/SV9a",
    "sport": "pokemon",
-   "year": null,
+   "year": 2025,
    "setName": "SV9a 熱風のアリーナ",
    "estimatedCards": 92,
    "seededStatus": "missing",
-   "seededNote": "ja-exclusive set, 92 cards stated by source; no catalog key"
+   "seededNote": "modern ja-exclusive, setKey sv9a; 74 rows staged from 92 source cards; BASE-ONLY -- source serves no ladder for this set; 18 unbridgeable (no dexId served)"
   },
   {
    "id": "tcgdexja::https://api.tcgdex.net/v2/ja/sets/SV9",
    "lane": "tcgdexja",
    "sourceRef": "https://api.tcgdex.net/v2/ja/sets/SV9",
    "sport": "pokemon",
-   "year": null,
+   "year": 2025,
    "setName": "SV9 バトルパートナーズ",
    "estimatedCards": 132,
    "seededStatus": "missing",
-   "seededNote": "ja-exclusive set, 132 cards stated by source; no catalog key"
+   "seededNote": "modern ja-exclusive, setKey sv9; 108 rows staged from 132 source cards; BASE-ONLY -- source serves no ladder for this set; 24 unbridgeable (no dexId served)"
   },
   {
    "id": "tcgdexja::https://api.tcgdex.net/v2/ja/sets/SVK",
    "lane": "tcgdexja",
    "sourceRef": "https://api.tcgdex.net/v2/ja/sets/SVK",
    "sport": "pokemon",
-   "year": null,
+   "year": 2024,
    "setName": "SVK デッキビルドBOX ステラミラクル",
    "estimatedCards": 44,
    "seededStatus": "missing",
-   "seededNote": "ja-exclusive set, 44 cards stated by source; no catalog key"
+   "seededNote": "modern ja-exclusive, setKey svk; 37 rows staged from 44 source cards; BASE-ONLY -- source serves no ladder for this set; 7 unbridgeable (no dexId served)"
   },
   {
    "id": "tcgdexja::https://api.tcgdex.net/v2/ja/sets/SV2D",
    "lane": "tcgdexja",
    "sourceRef": "https://api.tcgdex.net/v2/ja/sets/SV2D",
    "sport": "pokemon",
-   "year": null,
+   "year": 2023,
    "setName": "SV2D クレイバースト",
    "estimatedCards": 99,
    "seededStatus": "missing",
-   "seededNote": "ja-exclusive set, 99 cards stated by source; no catalog key"
+   "seededNote": "modern ja-exclusive, setKey sv2d; 83 rows staged from 99 source cards; BASE-ONLY -- source serves no ladder for this set; 16 unbridgeable (no dexId served)"
   },
   {
    "id": "tcgdexja::https://api.tcgdex.net/v2/ja/sets/SV3a",
    "lane": "tcgdexja",
    "sourceRef": "https://api.tcgdex.net/v2/ja/sets/SV3a",
    "sport": "pokemon",
-   "year": null,
+   "year": 2023,
    "setName": "SV3a レイジングサーフ",
    "estimatedCards": 92,
    "seededStatus": "missing",
-   "seededNote": "ja-exclusive set, 92 cards stated by source; no catalog key"
+   "seededNote": "modern ja-exclusive, setKey sv3a; 76 rows staged from 92 source cards; BASE-ONLY -- source serves no ladder for this set; 16 unbridgeable (no dexId served)"
   },
   {
    "id": "tcgdexja::https://api.tcgdex.net/v2/ja/sets/SV1a",
    "lane": "tcgdexja",
    "sourceRef": "https://api.tcgdex.net/v2/ja/sets/SV1a",
    "sport": "pokemon",
-   "year": null,
+   "year": 2023,
    "setName": "SV1a トリプレットビート",
    "estimatedCards": 103,
    "seededStatus": "missing",
-   "seededNote": "ja-exclusive set, 103 cards stated by source; no catalog key"
+   "seededNote": "modern ja-exclusive, setKey sv1a; 85 rows staged from 103 source cards; BASE-ONLY -- source serves no ladder for this set; 18 unbridgeable (no dexId served)"
   },
   {
    "id": "tcgdexja::https://api.tcgdex.net/v2/ja/sets/SV10",
@@ -85093,194 +85093,194 @@
    "setName": "SV10 ロケット団の栄光",
    "estimatedCards": 132,
    "seededStatus": "partial",
-   "seededNote": "689 rows, NO parallel ladder (base-only)"
+   "seededNote": "modern ja-exclusive, setKey sv10; 132 rows staged from 132 source cards; parallel ladder 6 (5 named rarities, 0 reverse-holo); 0 unbridgeable (no dexId served)"
   },
   {
    "id": "tcgdexja::https://api.tcgdex.net/v2/ja/sets/SV5K",
    "lane": "tcgdexja",
    "sourceRef": "https://api.tcgdex.net/v2/ja/sets/SV5K",
    "sport": "pokemon",
-   "year": null,
+   "year": 2024,
    "setName": "SV5K ワイルドフォース",
    "estimatedCards": 100,
    "seededStatus": "missing",
-   "seededNote": "ja-exclusive set, 100 cards stated by source; no catalog key"
+   "seededNote": "modern ja-exclusive, setKey sv5k; 100 rows staged from 100 source cards; parallel ladder 7 (6 named rarities, 0 reverse-holo); 0 unbridgeable (no dexId served)"
   },
   {
    "id": "tcgdexja::https://api.tcgdex.net/v2/ja/sets/SV7a",
    "lane": "tcgdexja",
    "sourceRef": "https://api.tcgdex.net/v2/ja/sets/SV7a",
    "sport": "pokemon",
-   "year": null,
+   "year": 2024,
    "setName": "SV7a 楽園ドラゴーナ",
    "estimatedCards": 94,
    "seededStatus": "missing",
-   "seededNote": "ja-exclusive set, 94 cards stated by source; no catalog key"
+   "seededNote": "modern ja-exclusive, setKey sv7a; 78 rows staged from 94 source cards; BASE-ONLY -- source serves no ladder for this set; 16 unbridgeable (no dexId served)"
   },
   {
    "id": "tcgdexja::https://api.tcgdex.net/v2/ja/sets/SV11W",
    "lane": "tcgdexja",
    "sourceRef": "https://api.tcgdex.net/v2/ja/sets/SV11W",
    "sport": "pokemon",
-   "year": null,
+   "year": 2025,
    "setName": "SV11W ホワイトフレア",
    "estimatedCards": 174,
    "seededStatus": "missing",
-   "seededNote": "ja-exclusive set, 174 cards stated by source; no catalog key"
+   "seededNote": "modern ja-exclusive, setKey sv11w; 254 rows staged from 174 source cards; parallel ladder 7 (5 named rarities, 80 reverse-holo); 0 unbridgeable (no dexId served)"
   },
   {
    "id": "tcgdexja::https://api.tcgdex.net/v2/ja/sets/SV5a",
    "lane": "tcgdexja",
    "sourceRef": "https://api.tcgdex.net/v2/ja/sets/SV5a",
    "sport": "pokemon",
-   "year": null,
+   "year": 2024,
    "setName": "SV5a クリムゾンヘイズ",
    "estimatedCards": 96,
    "seededStatus": "missing",
-   "seededNote": "ja-exclusive set, 96 cards stated by source; no catalog key"
+   "seededNote": "modern ja-exclusive, setKey sv5a; 80 rows staged from 96 source cards; BASE-ONLY -- source serves no ladder for this set; 16 unbridgeable (no dexId served)"
   },
   {
    "id": "tcgdexja::https://api.tcgdex.net/v2/ja/sets/SV1V",
    "lane": "tcgdexja",
    "sourceRef": "https://api.tcgdex.net/v2/ja/sets/SV1V",
    "sport": "pokemon",
-   "year": null,
+   "year": 2023,
    "setName": "SV1V バイオレットex",
    "estimatedCards": 108,
    "seededStatus": "missing",
-   "seededNote": "ja-exclusive set, 108 cards stated by source; no catalog key"
+   "seededNote": "modern ja-exclusive, setKey sv1v; 92 rows staged from 108 source cards; BASE-ONLY -- source serves no ladder for this set; 16 unbridgeable (no dexId served)"
   },
   {
    "id": "tcgdexja::https://api.tcgdex.net/v2/ja/sets/SV-P",
    "lane": "tcgdexja",
    "sourceRef": "https://api.tcgdex.net/v2/ja/sets/SV-P",
    "sport": "pokemon",
-   "year": null,
+   "year": 2022,
    "setName": "SV-P スカーレット&バイオレット プロモカード",
    "estimatedCards": 288,
    "seededStatus": "missing",
-   "seededNote": "ja-exclusive set, 288 cards stated by source; no catalog key"
+   "seededNote": "modern ja-exclusive, setKey sv-p; 288 rows staged from 288 source cards; BASE-ONLY -- source serves no ladder for this set; 0 unbridgeable (no dexId served)"
   },
   {
    "id": "tcgdexja::https://api.tcgdex.net/v2/ja/sets/SV6",
    "lane": "tcgdexja",
    "sourceRef": "https://api.tcgdex.net/v2/ja/sets/SV6",
    "sport": "pokemon",
-   "year": null,
+   "year": 2024,
    "setName": "SV6 変幻の仮面",
    "estimatedCards": 133,
    "seededStatus": "missing",
-   "seededNote": "ja-exclusive set, 133 cards stated by source; no catalog key"
+   "seededNote": "modern ja-exclusive, setKey sv6; 133 rows staged from 133 source cards; parallel ladder 7 (6 named rarities, 0 reverse-holo); 0 unbridgeable (no dexId served)"
   },
   {
    "id": "tcgdexja::https://api.tcgdex.net/v2/ja/sets/SV4K",
    "lane": "tcgdexja",
    "sourceRef": "https://api.tcgdex.net/v2/ja/sets/SV4K",
    "sport": "pokemon",
-   "year": null,
+   "year": 2023,
    "setName": "SV4K 古代の咆哮",
    "estimatedCards": 95,
    "seededStatus": "missing",
-   "seededNote": "ja-exclusive set, 95 cards stated by source; no catalog key"
+   "seededNote": "modern ja-exclusive, setKey sv4k; 79 rows staged from 95 source cards; BASE-ONLY -- source serves no ladder for this set; 16 unbridgeable (no dexId served)"
   },
   {
    "id": "tcgdexja::https://api.tcgdex.net/v2/ja/sets/SV1S",
    "lane": "tcgdexja",
    "sourceRef": "https://api.tcgdex.net/v2/ja/sets/SV1S",
    "sport": "pokemon",
-   "year": null,
+   "year": 2023,
    "setName": "SV1S スカーレットex",
    "estimatedCards": 108,
    "seededStatus": "missing",
-   "seededNote": "ja-exclusive set, 108 cards stated by source; no catalog key"
+   "seededNote": "modern ja-exclusive, setKey sv1s; 92 rows staged from 108 source cards; BASE-ONLY -- source serves no ladder for this set; 16 unbridgeable (no dexId served)"
   },
   {
    "id": "tcgdexja::https://api.tcgdex.net/v2/ja/sets/SV2a",
    "lane": "tcgdexja",
    "sourceRef": "https://api.tcgdex.net/v2/ja/sets/SV2a",
    "sport": "pokemon",
-   "year": null,
+   "year": 2023,
    "setName": "SV2a ポケモンカード151",
    "estimatedCards": 210,
    "seededStatus": "missing",
-   "seededNote": "ja-exclusive set, 210 cards stated by source; no catalog key"
+   "seededNote": "modern ja-exclusive, setKey sv2a; 363 rows staged from 210 source cards; parallel ladder 7 (5 named rarities, 153 reverse-holo); 0 unbridgeable (no dexId served)"
   },
   {
    "id": "tcgdexja::https://api.tcgdex.net/v2/ja/sets/SVLN",
    "lane": "tcgdexja",
    "sourceRef": "https://api.tcgdex.net/v2/ja/sets/SVLN",
    "sport": "pokemon",
-   "year": null,
+   "year": 2024,
    "setName": "SVLN スターターセット テラスタイプ：ステラ ニンフィアex",
    "estimatedCards": 22,
    "seededStatus": "missing",
-   "seededNote": "ja-exclusive set, 22 cards stated by source; no catalog key"
+   "seededNote": "modern ja-exclusive, setKey svln; 21 rows staged from 22 source cards; BASE-ONLY -- source serves no ladder for this set; 1 unbridgeable (no dexId served)"
   },
   {
    "id": "tcgdexja::https://api.tcgdex.net/v2/ja/sets/SV11B",
    "lane": "tcgdexja",
    "sourceRef": "https://api.tcgdex.net/v2/ja/sets/SV11B",
    "sport": "pokemon",
-   "year": null,
+   "year": 2025,
    "setName": "SV11B ブラックボルト",
    "estimatedCards": 174,
    "seededStatus": "missing",
-   "seededNote": "ja-exclusive set, 174 cards stated by source; no catalog key"
+   "seededNote": "modern ja-exclusive, setKey sv11b; 254 rows staged from 174 source cards; parallel ladder 7 (5 named rarities, 80 reverse-holo); 0 unbridgeable (no dexId served)"
   },
   {
    "id": "tcgdexja::https://api.tcgdex.net/v2/ja/sets/SV4a",
    "lane": "tcgdexja",
    "sourceRef": "https://api.tcgdex.net/v2/ja/sets/SV4a",
    "sport": "pokemon",
-   "year": null,
+   "year": 2023,
    "setName": "SV4a レイジングサーフ",
    "estimatedCards": 320,
    "seededStatus": "missing",
-   "seededNote": "ja-exclusive set, 320 cards stated by source; no catalog key"
+   "seededNote": "modern ja-exclusive, setKey sv4a; 367 rows staged from 320 source cards; parallel ladder 2 (0 named rarities, 93 reverse-holo); 46 unbridgeable (no dexId served)"
   },
   {
    "id": "tcgdexja::https://api.tcgdex.net/v2/ja/sets/SV8a",
    "lane": "tcgdexja",
    "sourceRef": "https://api.tcgdex.net/v2/ja/sets/SV8a",
    "sport": "pokemon",
-   "year": null,
+   "year": 2024,
    "setName": "SV8a テラスタルフェスex",
    "estimatedCards": 237,
    "seededStatus": "missing",
-   "seededNote": "ja-exclusive set, 237 cards stated by source; no catalog key"
+   "seededNote": "modern ja-exclusive, setKey sv8a; 315 rows staged from 237 source cards; parallel ladder 2 (0 named rarities, 145 reverse-holo); 67 unbridgeable (no dexId served)"
   },
   {
    "id": "tcgdexja::https://api.tcgdex.net/v2/ja/sets/SV6a",
    "lane": "tcgdexja",
    "sourceRef": "https://api.tcgdex.net/v2/ja/sets/SV6a",
    "sport": "pokemon",
-   "year": null,
+   "year": 2024,
    "setName": "SV6a ナイトワンダラー",
    "estimatedCards": 94,
    "seededStatus": "missing",
-   "seededNote": "ja-exclusive set, 94 cards stated by source; no catalog key"
+   "seededNote": "modern ja-exclusive, setKey sv6a; 94 rows staged from 94 source cards; parallel ladder 7 (6 named rarities, 0 reverse-holo); 0 unbridgeable (no dexId served)"
   },
   {
    "id": "tcgdexja::https://api.tcgdex.net/v2/ja/sets/SV3",
    "lane": "tcgdexja",
    "sourceRef": "https://api.tcgdex.net/v2/ja/sets/SV3",
    "sport": "pokemon",
-   "year": null,
+   "year": 2023,
    "setName": "SV3 黒炎の支配者",
    "estimatedCards": 141,
    "seededStatus": "missing",
-   "seededNote": "ja-exclusive set, 141 cards stated by source; no catalog key"
+   "seededNote": "modern ja-exclusive, setKey sv3; 120 rows staged from 141 source cards; BASE-ONLY -- source serves no ladder for this set; 21 unbridgeable (no dexId served)"
   },
   {
    "id": "tcgdexja::https://api.tcgdex.net/v2/ja/sets/SV2P",
    "lane": "tcgdexja",
    "sourceRef": "https://api.tcgdex.net/v2/ja/sets/SV2P",
    "sport": "pokemon",
-   "year": null,
+   "year": 2023,
    "setName": "SV2P スノーハザード",
    "estimatedCards": 99,
    "seededStatus": "missing",
-   "seededNote": "ja-exclusive set, 99 cards stated by source; no catalog key"
+   "seededNote": "modern ja-exclusive, setKey sv2p; 83 rows staged from 99 source cards; BASE-ONLY -- source serves no ladder for this set; 16 unbridgeable (no dexId served)"
   },
   {
    "id": "tcgdexja::https://api.tcgdex.net/v2/ja/sets/SM1p",
@@ -85342,44 +85342,44 @@
    "lane": "tcgdexja",
    "sourceRef": "https://api.tcgdex.net/v2/ja/sets/M3",
    "sport": "pokemon",
-   "year": null,
+   "year": 2026,
    "setName": "M3 ムニキスゼロ",
    "estimatedCards": 117,
    "seededStatus": "missing",
-   "seededNote": "ja-exclusive set, 117 cards stated by source; no catalog key"
+   "seededNote": "modern ja-exclusive, setKey m3; 117 rows staged from 117 source cards; parallel ladder 6 (5 named rarities, 0 reverse-holo); 0 unbridgeable (no dexId served)"
   },
   {
    "id": "tcgdexja::https://api.tcgdex.net/v2/ja/sets/M1L",
    "lane": "tcgdexja",
    "sourceRef": "https://api.tcgdex.net/v2/ja/sets/M1L",
    "sport": "pokemon",
-   "year": null,
+   "year": 2025,
    "setName": "M1L メガブレイブ",
    "estimatedCards": 92,
    "seededStatus": "missing",
-   "seededNote": "ja-exclusive set, 92 cards stated by source; no catalog key"
+   "seededNote": "modern ja-exclusive, setKey m1l; 92 rows staged from 92 source cards; parallel ladder 6 (5 named rarities, 0 reverse-holo); 0 unbridgeable (no dexId served)"
   },
   {
    "id": "tcgdexja::https://api.tcgdex.net/v2/ja/sets/M2a",
    "lane": "tcgdexja",
    "sourceRef": "https://api.tcgdex.net/v2/ja/sets/M2a",
    "sport": "pokemon",
-   "year": null,
+   "year": 2025,
    "setName": "M2a MEGAドリームex",
    "estimatedCards": 250,
    "seededStatus": "missing",
-   "seededNote": "ja-exclusive set, 250 cards stated by source; no catalog key"
+   "seededNote": "modern ja-exclusive, setKey m2a; 368 rows staged from 250 source cards; parallel ladder 7 (5 named rarities, 118 reverse-holo); 0 unbridgeable (no dexId served)"
   },
   {
    "id": "tcgdexja::https://api.tcgdex.net/v2/ja/sets/M6",
    "lane": "tcgdexja",
    "sourceRef": "https://api.tcgdex.net/v2/ja/sets/M6",
    "sport": "pokemon",
-   "year": null,
+   "year": 2026,
    "setName": "M6 ストームエメラルダ",
    "estimatedCards": 113,
    "seededStatus": "missing",
-   "seededNote": "ja-exclusive set, 113 cards stated by source; no catalog key"
+   "seededNote": "modern ja-exclusive, setKey m6; 113 rows staged from 113 source cards; parallel ladder 3 (2 named rarities, 0 reverse-holo); 0 unbridgeable (no dexId served)"
   },
   {
    "id": "tcgdexja::https://api.tcgdex.net/v2/ja/sets/MC",
@@ -85397,55 +85397,55 @@
    "lane": "tcgdexja",
    "sourceRef": "https://api.tcgdex.net/v2/ja/sets/M1S",
    "sport": "pokemon",
-   "year": null,
+   "year": 2025,
    "setName": "M1S メガシンフォニア",
    "estimatedCards": 92,
    "seededStatus": "missing",
-   "seededNote": "ja-exclusive set, 92 cards stated by source; no catalog key"
+   "seededNote": "modern ja-exclusive, setKey m1s; 90 rows staged from 92 source cards; parallel ladder 6 (5 named rarities, 0 reverse-holo); 2 unbridgeable (no dexId served)"
   },
   {
    "id": "tcgdexja::https://api.tcgdex.net/v2/ja/sets/M4",
    "lane": "tcgdexja",
    "sourceRef": "https://api.tcgdex.net/v2/ja/sets/M4",
    "sport": "pokemon",
-   "year": null,
+   "year": 2026,
    "setName": "M4 ニンジャスピナー",
    "estimatedCards": 120,
    "seededStatus": "missing",
-   "seededNote": "ja-exclusive set, 120 cards stated by source; no catalog key"
+   "seededNote": "modern ja-exclusive, setKey m4; 120 rows staged from 120 source cards; parallel ladder 6 (5 named rarities, 0 reverse-holo); 0 unbridgeable (no dexId served)"
   },
   {
    "id": "tcgdexja::https://api.tcgdex.net/v2/ja/sets/M5",
    "lane": "tcgdexja",
    "sourceRef": "https://api.tcgdex.net/v2/ja/sets/M5",
    "sport": "pokemon",
-   "year": null,
+   "year": 2026,
    "setName": "M5 アビスアイ",
    "estimatedCards": 118,
    "seededStatus": "missing",
-   "seededNote": "ja-exclusive set, 118 cards stated by source; no catalog key"
+   "seededNote": "modern ja-exclusive, setKey m5; 118 rows staged from 118 source cards; parallel ladder 6 (5 named rarities, 0 reverse-holo); 0 unbridgeable (no dexId served)"
   },
   {
    "id": "tcgdexja::https://api.tcgdex.net/v2/ja/sets/M-P",
    "lane": "tcgdexja",
    "sourceRef": "https://api.tcgdex.net/v2/ja/sets/M-P",
    "sport": "pokemon",
-   "year": null,
+   "year": 2025,
    "setName": "M-P メガ プロモカード",
    "estimatedCards": 132,
    "seededStatus": "missing",
-   "seededNote": "ja-exclusive set, 132 cards stated by source; no catalog key"
+   "seededNote": "modern ja-exclusive, setKey m-p; 132 rows staged from 132 source cards; BASE-ONLY -- source serves no ladder for this set; 0 unbridgeable (no dexId served)"
   },
   {
    "id": "tcgdexja::https://api.tcgdex.net/v2/ja/sets/M2",
    "lane": "tcgdexja",
    "sourceRef": "https://api.tcgdex.net/v2/ja/sets/M2",
    "sport": "pokemon",
-   "year": null,
+   "year": 2025,
    "setName": "M2 インフェルノX",
    "estimatedCards": 116,
    "seededStatus": "missing",
-   "seededNote": "ja-exclusive set, 116 cards stated by source; no catalog key"
+   "seededNote": "modern ja-exclusive, setKey m2; 116 rows staged from 116 source cards; parallel ladder 6 (5 named rarities, 0 reverse-holo); 0 unbridgeable (no dexId served)"
   },
   {
    "id": "sportscardchecklist::https://www.sportscardchecklist.com/set-11904/1950-topps-felt-backs-football-trading-card-checklist",

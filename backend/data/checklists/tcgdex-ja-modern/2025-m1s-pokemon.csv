@@ -1,0 +1,91 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,001,,false,,tangela
+base,002,,false,,tangrowth
+base,003,,false,,chikorita
+base,004,,false,,bayleef
+base,005,,false,,meganium
+base,006,,false,,shuckle
+base,007,,false,,nincada
+base,008,,false,,ninjask
+base,009,,false,,dhelmise
+base,010,,false,,litleo
+base,011,,false,,pyroar
+base,012,,false,,sizzlipede
+base,013,,false,,centiskorch
+base,014,,false,,chi-yu
+base,015,,false,,mantine
+base,016,,false,,kyogre
+base,017,,false,,snover
+base,019,,false,,clauncher
+base,020,,false,,clawitzer
+base,021,,false,,sobble
+base,022,,false,,drizzile
+base,023,,false,,inteleon
+base,024,,false,,snom
+base,025,,false,,frosmoth
+base,026,,false,,eiscue
+base,027,,false,,magnemite
+base,028,,false,,magneton
+base,029,,false,,magnezone
+base,030,,false,,raikou
+base,031,,false,,electrike
+base,032,Double rare,false,,manectric
+base,033,,false,,pachirisu
+base,034,,false,,helioptile
+base,035,,false,,heliolisk
+base,036,,false,,abra
+base,037,,false,,kadabra
+base,038,,false,,alakazam
+base,039,,false,,jynx
+base,040,,false,,ralts
+base,041,,false,,kirlia
+base,042,Double rare,false,,gardevoir
+base,043,,false,,shedinja
+base,044,,false,,spoink
+base,045,,false,,grumpig
+base,046,,false,,xerneas
+base,047,,false,,greavard
+base,048,,false,,houndstone
+base,049,Double rare,false,,latias
+base,050,,false,,latios
+base,051,Double rare,false,,kangaskhan
+base,052,,false,,delibird
+base,053,,false,,buneary
+base,054,,false,,lopunny
+base,055,,false,,stufful
+base,056,,false,,bewear
+base,057,,false,,あやしい時計
+base,058,,false,,メガシグナル
+base,059,,false,,アセロラのいたずら
+base,060,,false,,ミツルの思いやり
+base,061,,false,,活力の森
+base,062,,false,,なみのりビーチ
+base,063,,false,,ミステリーガーデン
+base,064,Illustration rare,false,,shuckle
+base,065,Illustration rare,false,,ninjask
+base,066,Illustration rare,false,,litleo
+base,067,Illustration rare,false,,snover
+base,068,Illustration rare,false,,clawitzer
+base,069,Illustration rare,false,,inteleon
+base,070,Illustration rare,false,,helioptile
+base,071,Illustration rare,false,,alakazam
+base,072,Illustration rare,false,,shedinja
+base,073,Illustration rare,false,,houndstone
+base,074,Illustration rare,false,,delibird
+base,075,Illustration rare,false,,stufful
+base,077,Secret Rare,false,,manectric
+base,078,Secret Rare,false,,gardevoir
+base,079,Secret Rare,false,,latias
+base,080,Secret Rare,false,,kangaskhan
+base,081,Secret Rare,false,,なかよしポフィン
+base,082,Secret Rare,false,,ふしぎなアメ
+base,083,Secret Rare,false,,メガシグナル
+base,084,Secret Rare,false,,アセロラのいたずら
+base,085,Secret Rare,false,,ミツルの思いやり
+base,086,Secret Rare,false,,ミステリーガーデン
+base,087,Special illustration rare,false,,gardevoir
+base,088,Special illustration rare,false,,latias
+base,089,Special illustration rare,false,,kangaskhan
+base,090,Special illustration rare,false,,アセロラのいたずら
+base,091,Special illustration rare,false,,ミツルの思いやり
+base,092,Mega Hyper Rare,false,,gardevoir

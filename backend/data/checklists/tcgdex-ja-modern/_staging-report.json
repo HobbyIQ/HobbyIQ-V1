@@ -1,0 +1,1641 @@
+[
+ {
+  "setId": "S1W",
+  "staged": false,
+  "reason": "source serves no cards"
+ },
+ {
+  "setId": "S1H",
+  "staged": false,
+  "reason": "source serves no cards"
+ },
+ {
+  "setId": "S1a",
+  "staged": false,
+  "reason": "source serves no cards"
+ },
+ {
+  "setId": "S2",
+  "staged": false,
+  "reason": "source serves no cards"
+ },
+ {
+  "setId": "S3",
+  "staged": false,
+  "reason": "source serves no cards"
+ },
+ {
+  "setId": "S3a",
+  "staged": false,
+  "reason": "source serves no cards"
+ },
+ {
+  "setId": "CS2b",
+  "staged": false,
+  "reason": "source serves no cards"
+ },
+ {
+  "setId": "CS2.5",
+  "staged": false,
+  "reason": "source serves no cards"
+ },
+ {
+  "setId": "CS4",
+  "staged": false,
+  "reason": "source serves no cards"
+ },
+ {
+  "setId": "CS1.5",
+  "staged": false,
+  "reason": "source serves no cards"
+ },
+ {
+  "setId": "CS3.5",
+  "staged": false,
+  "reason": "source serves no cards"
+ },
+ {
+  "setId": "CS3b",
+  "staged": false,
+  "reason": "source serves no cards"
+ },
+ {
+  "setId": "CS2a",
+  "staged": false,
+  "reason": "source serves no cards"
+ },
+ {
+  "setId": "CS3a",
+  "staged": false,
+  "reason": "source serves no cards"
+ },
+ {
+  "setId": "CS4a",
+  "staged": false,
+  "reason": "source serves no cards"
+ },
+ {
+  "setId": "CS1a",
+  "staged": false,
+  "reason": "source serves no cards"
+ },
+ {
+  "setId": "CS1b",
+  "staged": false,
+  "reason": "source serves no cards"
+ },
+ {
+  "setId": "CS4b",
+  "staged": false,
+  "reason": "source serves no cards"
+ },
+ {
+  "setId": "CSA",
+  "staged": false,
+  "reason": "source serves no cards"
+ },
+ {
+  "setId": "CS3D",
+  "staged": false,
+  "reason": "source serves no cards"
+ },
+ {
+  "setId": "CS4Da",
+  "staged": false,
+  "reason": "source serves no cards"
+ },
+ {
+  "setId": "SV1V",
+  "setKey": "sv1v",
+  "year": 2023,
+  "staged": true,
+  "rows": 92,
+  "sourceCards": 108,
+  "reverseRows": 0,
+  "unbridgeable": 16,
+  "ladder": [
+   {
+    "parallel": "(base)",
+    "rows": 92
+   }
+  ]
+ },
+ {
+  "setId": "SV9",
+  "setKey": "sv9",
+  "year": 2025,
+  "staged": true,
+  "rows": 108,
+  "sourceCards": 132,
+  "reverseRows": 0,
+  "unbridgeable": 24,
+  "ladder": [
+   {
+    "parallel": "(base)",
+    "rows": 108
+   }
+  ]
+ },
+ {
+  "setId": "SV11B",
+  "setKey": "sv11b",
+  "year": 2025,
+  "staged": true,
+  "rows": 254,
+  "sourceCards": 174,
+  "reverseRows": 80,
+  "unbridgeable": 0,
+  "ladder": [
+   {
+    "parallel": "(base)",
+    "rows": 80
+   },
+   {
+    "parallel": "Reverse Holo",
+    "rows": 80
+   },
+   {
+    "parallel": "Illustration rare",
+    "rows": 72
+   },
+   {
+    "parallel": "Ultra Rare",
+    "rows": 8
+   },
+   {
+    "parallel": "Special illustration rare",
+    "rows": 7
+   },
+   {
+    "parallel": "Double rare",
+    "rows": 6
+   },
+   {
+    "parallel": "Black White Rare",
+    "rows": 1
+   }
+  ]
+ },
+ {
+  "setId": "SV4M",
+  "setKey": "sv4m",
+  "year": 2023,
+  "staged": true,
+  "rows": 79,
+  "sourceCards": 95,
+  "reverseRows": 0,
+  "unbridgeable": 16,
+  "ladder": [
+   {
+    "parallel": "(base)",
+    "rows": 79
+   }
+  ]
+ },
+ {
+  "setId": "SV4a",
+  "setKey": "sv4a",
+  "year": 2023,
+  "staged": true,
+  "rows": 367,
+  "sourceCards": 320,
+  "reverseRows": 93,
+  "unbridgeable": 46,
+  "ladder": [
+   {
+    "parallel": "(base)",
+    "rows": 274
+   },
+   {
+    "parallel": "Reverse Holo",
+    "rows": 93
+   }
+  ]
+ },
+ {
+  "setId": "SV-P",
+  "setKey": "sv-p",
+  "year": 2022,
+  "staged": true,
+  "rows": 288,
+  "sourceCards": 288,
+  "reverseRows": 0,
+  "unbridgeable": 0,
+  "ladder": [
+   {
+    "parallel": "Promo",
+    "rows": 288
+   }
+  ]
+ },
+ {
+  "setId": "SV6",
+  "setKey": "sv6",
+  "year": 2024,
+  "staged": true,
+  "rows": 133,
+  "sourceCards": 133,
+  "reverseRows": 0,
+  "unbridgeable": 0,
+  "ladder": [
+   {
+    "parallel": "(base)",
+    "rows": 90
+   },
+   {
+    "parallel": "Illustration rare",
+    "rows": 12
+   },
+   {
+    "parallel": "Ultra Rare",
+    "rows": 11
+   },
+   {
+    "parallel": "Double rare",
+    "rows": 8
+   },
+   {
+    "parallel": "Special illustration rare",
+    "rows": 6
+   },
+   {
+    "parallel": "ACE SPEC Rare",
+    "rows": 3
+   },
+   {
+    "parallel": "Mega Hyper Rare",
+    "rows": 3
+   }
+  ]
+ },
+ {
+  "setId": "SV3a",
+  "setKey": "sv3a",
+  "year": 2023,
+  "staged": true,
+  "rows": 76,
+  "sourceCards": 92,
+  "reverseRows": 0,
+  "unbridgeable": 16,
+  "ladder": [
+   {
+    "parallel": "(base)",
+    "rows": 76
+   }
+  ]
+ },
+ {
+  "setId": "SV6a",
+  "setKey": "sv6a",
+  "year": 2024,
+  "staged": true,
+  "rows": 94,
+  "sourceCards": 94,
+  "reverseRows": 0,
+  "unbridgeable": 0,
+  "ladder": [
+   {
+    "parallel": "(base)",
+    "rows": 55
+   },
+   {
+    "parallel": "Illustration rare",
+    "rows": 12
+   },
+   {
+    "parallel": "Ultra Rare",
+    "rows": 10
+   },
+   {
+    "parallel": "Double rare",
+    "rows": 6
+   },
+   {
+    "parallel": "Special illustration rare",
+    "rows": 5
+   },
+   {
+    "parallel": "ACE SPEC Rare",
+    "rows": 3
+   },
+   {
+    "parallel": "Mega Hyper Rare",
+    "rows": 3
+   }
+  ]
+ },
+ {
+  "setId": "SV9a",
+  "setKey": "sv9a",
+  "year": 2025,
+  "staged": true,
+  "rows": 74,
+  "sourceCards": 92,
+  "reverseRows": 0,
+  "unbridgeable": 18,
+  "ladder": [
+   {
+    "parallel": "(base)",
+    "rows": 74
+   }
+  ]
+ },
+ {
+  "setId": "SV3",
+  "setKey": "sv3",
+  "year": 2023,
+  "staged": true,
+  "rows": 120,
+  "sourceCards": 141,
+  "reverseRows": 0,
+  "unbridgeable": 21,
+  "ladder": [
+   {
+    "parallel": "(base)",
+    "rows": 120
+   }
+  ]
+ },
+ {
+  "setId": "SV5a",
+  "setKey": "sv5a",
+  "year": 2024,
+  "staged": true,
+  "rows": 80,
+  "sourceCards": 96,
+  "reverseRows": 0,
+  "unbridgeable": 16,
+  "ladder": [
+   {
+    "parallel": "(base)",
+    "rows": 80
+   }
+  ]
+ },
+ {
+  "setId": "SV8a",
+  "setKey": "sv8a",
+  "year": 2024,
+  "staged": true,
+  "rows": 315,
+  "sourceCards": 237,
+  "reverseRows": 145,
+  "unbridgeable": 67,
+  "ladder": [
+   {
+    "parallel": "(base)",
+    "rows": 170
+   },
+   {
+    "parallel": "Reverse Holo",
+    "rows": 145
+   }
+  ]
+ },
+ {
+  "setId": "SV1a",
+  "setKey": "sv1a",
+  "year": 2023,
+  "staged": true,
+  "rows": 85,
+  "sourceCards": 103,
+  "reverseRows": 0,
+  "unbridgeable": 18,
+  "ladder": [
+   {
+    "parallel": "(base)",
+    "rows": 85
+   }
+  ]
+ },
+ {
+  "setId": "SVLN",
+  "setKey": "svln",
+  "year": 2024,
+  "staged": true,
+  "rows": 21,
+  "sourceCards": 22,
+  "reverseRows": 0,
+  "unbridgeable": 1,
+  "ladder": [
+   {
+    "parallel": "(base)",
+    "rows": 21
+   }
+  ]
+ },
+ {
+  "setId": "SVLS",
+  "setKey": "svls",
+  "year": 2024,
+  "staged": true,
+  "rows": 21,
+  "sourceCards": 22,
+  "reverseRows": 0,
+  "unbridgeable": 1,
+  "ladder": [
+   {
+    "parallel": "(base)",
+    "rows": 21
+   }
+  ]
+ },
+ {
+  "setId": "SVK",
+  "setKey": "svk",
+  "year": 2024,
+  "staged": true,
+  "rows": 37,
+  "sourceCards": 44,
+  "reverseRows": 0,
+  "unbridgeable": 7,
+  "ladder": [
+   {
+    "parallel": "(base)",
+    "rows": 37
+   }
+  ]
+ },
+ {
+  "setId": "SV2P",
+  "setKey": "sv2p",
+  "year": 2023,
+  "staged": true,
+  "rows": 83,
+  "sourceCards": 99,
+  "reverseRows": 0,
+  "unbridgeable": 16,
+  "ladder": [
+   {
+    "parallel": "(base)",
+    "rows": 83
+   }
+  ]
+ },
+ {
+  "setId": "SV7",
+  "setKey": "sv7",
+  "year": 2024,
+  "staged": true,
+  "rows": 114,
+  "sourceCards": 135,
+  "reverseRows": 0,
+  "unbridgeable": 21,
+  "ladder": [
+   {
+    "parallel": "(base)",
+    "rows": 114
+   }
+  ]
+ },
+ {
+  "setId": "SV2a",
+  "setKey": "sv2a",
+  "year": 2023,
+  "staged": true,
+  "rows": 363,
+  "sourceCards": 210,
+  "reverseRows": 153,
+  "unbridgeable": 0,
+  "ladder": [
+   {
+    "parallel": "(base)",
+    "rows": 153
+   },
+   {
+    "parallel": "Reverse Holo",
+    "rows": 153
+   },
+   {
+    "parallel": "Illustration rare",
+    "rows": 18
+   },
+   {
+    "parallel": "Ultra Rare",
+    "rows": 16
+   },
+   {
+    "parallel": "Double rare",
+    "rows": 12
+   },
+   {
+    "parallel": "Special illustration rare",
+    "rows": 8
+   },
+   {
+    "parallel": "Mega Hyper Rare",
+    "rows": 3
+   }
+  ]
+ },
+ {
+  "setId": "SV5M",
+  "setKey": "sv5m",
+  "year": 2024,
+  "staged": true,
+  "rows": 100,
+  "sourceCards": 100,
+  "reverseRows": 0,
+  "unbridgeable": 0,
+  "ladder": [
+   {
+    "parallel": "(base)",
+    "rows": 62
+   },
+   {
+    "parallel": "Illustration rare",
+    "rows": 12
+   },
+   {
+    "parallel": "Ultra Rare",
+    "rows": 9
+   },
+   {
+    "parallel": "Double rare",
+    "rows": 6
+   },
+   {
+    "parallel": "Special illustration rare",
+    "rows": 5
+   },
+   {
+    "parallel": "ACE SPEC Rare",
+    "rows": 3
+   },
+   {
+    "parallel": "Mega Hyper Rare",
+    "rows": 3
+   }
+  ]
+ },
+ {
+  "setId": "SV10",
+  "setKey": "sv10",
+  "year": 2025,
+  "staged": true,
+  "rows": 132,
+  "sourceCards": 132,
+  "reverseRows": 0,
+  "unbridgeable": 0,
+  "ladder": [
+   {
+    "parallel": "(base)",
+    "rows": 90
+   },
+   {
+    "parallel": "Ultra Rare",
+    "rows": 13
+   },
+   {
+    "parallel": "Illustration rare",
+    "rows": 12
+   },
+   {
+    "parallel": "Double rare",
+    "rows": 8
+   },
+   {
+    "parallel": "Special illustration rare",
+    "rows": 6
+   },
+   {
+    "parallel": "Mega Hyper Rare",
+    "rows": 3
+   }
+  ]
+ },
+ {
+  "setId": "SV8",
+  "setKey": "sv8",
+  "year": 2024,
+  "staged": true,
+  "rows": 138,
+  "sourceCards": 138,
+  "reverseRows": 0,
+  "unbridgeable": 0,
+  "ladder": [
+   {
+    "parallel": "(base)",
+    "rows": 96
+   },
+   {
+    "parallel": "Illustration rare",
+    "rows": 12
+   },
+   {
+    "parallel": "Ultra Rare",
+    "rows": 11
+   },
+   {
+    "parallel": "Double rare",
+    "rows": 8
+   },
+   {
+    "parallel": "Special illustration rare",
+    "rows": 6
+   },
+   {
+    "parallel": "ACE SPEC Rare",
+    "rows": 2
+   },
+   {
+    "parallel": "Mega Hyper Rare",
+    "rows": 2
+   },
+   {
+    "parallel": "Secret Rare",
+    "rows": 1
+   }
+  ]
+ },
+ {
+  "setId": "SV7a",
+  "setKey": "sv7a",
+  "year": 2024,
+  "staged": true,
+  "rows": 78,
+  "sourceCards": 94,
+  "reverseRows": 0,
+  "unbridgeable": 16,
+  "ladder": [
+   {
+    "parallel": "(base)",
+    "rows": 78
+   }
+  ]
+ },
+ {
+  "setId": "SV1S",
+  "setKey": "sv1s",
+  "year": 2023,
+  "staged": true,
+  "rows": 92,
+  "sourceCards": 108,
+  "reverseRows": 0,
+  "unbridgeable": 16,
+  "ladder": [
+   {
+    "parallel": "(base)",
+    "rows": 92
+   }
+  ]
+ },
+ {
+  "setId": "SV4K",
+  "setKey": "sv4k",
+  "year": 2023,
+  "staged": true,
+  "rows": 79,
+  "sourceCards": 95,
+  "reverseRows": 0,
+  "unbridgeable": 16,
+  "ladder": [
+   {
+    "parallel": "(base)",
+    "rows": 79
+   }
+  ]
+ },
+ {
+  "setId": "SV11W",
+  "setKey": "sv11w",
+  "year": 2025,
+  "staged": true,
+  "rows": 254,
+  "sourceCards": 174,
+  "reverseRows": 80,
+  "unbridgeable": 0,
+  "ladder": [
+   {
+    "parallel": "(base)",
+    "rows": 80
+   },
+   {
+    "parallel": "Reverse Holo",
+    "rows": 80
+   },
+   {
+    "parallel": "Illustration rare",
+    "rows": 72
+   },
+   {
+    "parallel": "Ultra Rare",
+    "rows": 8
+   },
+   {
+    "parallel": "Special illustration rare",
+    "rows": 7
+   },
+   {
+    "parallel": "Double rare",
+    "rows": 6
+   },
+   {
+    "parallel": "Black White Rare",
+    "rows": 1
+   }
+  ]
+ },
+ {
+  "setId": "SV2D",
+  "setKey": "sv2d",
+  "year": 2023,
+  "staged": true,
+  "rows": 83,
+  "sourceCards": 99,
+  "reverseRows": 0,
+  "unbridgeable": 16,
+  "ladder": [
+   {
+    "parallel": "(base)",
+    "rows": 83
+   }
+  ]
+ },
+ {
+  "setId": "SV5K",
+  "setKey": "sv5k",
+  "year": 2024,
+  "staged": true,
+  "rows": 100,
+  "sourceCards": 100,
+  "reverseRows": 0,
+  "unbridgeable": 0,
+  "ladder": [
+   {
+    "parallel": "(base)",
+    "rows": 62
+   },
+   {
+    "parallel": "Illustration rare",
+    "rows": 12
+   },
+   {
+    "parallel": "Ultra Rare",
+    "rows": 9
+   },
+   {
+    "parallel": "Double rare",
+    "rows": 6
+   },
+   {
+    "parallel": "Special illustration rare",
+    "rows": 5
+   },
+   {
+    "parallel": "ACE SPEC Rare",
+    "rows": 3
+   },
+   {
+    "parallel": "Mega Hyper Rare",
+    "rows": 3
+   }
+  ]
+ },
+ {
+  "setId": "S5a",
+  "staged": false,
+  "reason": "source serves no cards"
+ },
+ {
+  "setId": "S6K",
+  "setKey": "s6k",
+  "year": 2021,
+  "staged": true,
+  "rows": 95,
+  "sourceCards": 95,
+  "reverseRows": 0,
+  "unbridgeable": 0,
+  "ladder": [
+   {
+    "parallel": "(base)",
+    "rows": 61
+   },
+   {
+    "parallel": "Ultra Rare",
+    "rows": 13
+   },
+   {
+    "parallel": "Hyper rare",
+    "rows": 7
+   },
+   {
+    "parallel": "Double rare",
+    "rows": 6
+   },
+   {
+    "parallel": "Secret Rare",
+    "rows": 5
+   },
+   {
+    "parallel": "Triple Rare",
+    "rows": 3
+   }
+  ]
+ },
+ {
+  "setId": "S8b",
+  "setKey": "s8b",
+  "year": 2021,
+  "staged": true,
+  "rows": 395,
+  "sourceCards": 285,
+  "reverseRows": 110,
+  "unbridgeable": 0,
+  "ladder": [
+   {
+    "parallel": "(base)",
+    "rows": 140
+   },
+   {
+    "parallel": "Reverse Holo",
+    "rows": 110
+   },
+   {
+    "parallel": "Character Super Rare",
+    "rows": 42
+   },
+   {
+    "parallel": "Character Rare",
+    "rows": 28
+   },
+   {
+    "parallel": "Double rare",
+    "rows": 25
+   },
+   {
+    "parallel": "Ultra Rare",
+    "rows": 23
+   },
+   {
+    "parallel": "Triple Rare",
+    "rows": 19
+   },
+   {
+    "parallel": "Secret Rare",
+    "rows": 8
+   }
+  ]
+ },
+ {
+  "setId": "S4a",
+  "staged": false,
+  "reason": "source serves no cards"
+ },
+ {
+  "setId": "S10b",
+  "staged": false,
+  "reason": "source serves no cards"
+ },
+ {
+  "setId": "S10D",
+  "staged": false,
+  "reason": "source serves no cards"
+ },
+ {
+  "setId": "S12a",
+  "setKey": "s12a",
+  "year": 2022,
+  "staged": true,
+  "rows": 347,
+  "sourceCards": 258,
+  "reverseRows": 89,
+  "unbridgeable": 0,
+  "ladder": [
+   {
+    "parallel": "(base)",
+    "rows": 119
+   },
+   {
+    "parallel": "Reverse Holo",
+    "rows": 89
+   },
+   {
+    "parallel": "Illustration rare",
+    "rows": 37
+   },
+   {
+    "parallel": "Special illustration rare",
+    "rows": 35
+   },
+   {
+    "parallel": "Double rare",
+    "rows": 30
+   },
+   {
+    "parallel": "Triple Rare",
+    "rows": 17
+   },
+   {
+    "parallel": "Ultra Rare",
+    "rows": 10
+   },
+   {
+    "parallel": "Radiant Rare",
+    "rows": 6
+   },
+   {
+    "parallel": "Secret Rare",
+    "rows": 4
+   }
+  ]
+ },
+ {
+  "setId": "S9a",
+  "setKey": "s9a",
+  "year": 2022,
+  "staged": true,
+  "rows": 117,
+  "sourceCards": 93,
+  "reverseRows": 45,
+  "unbridgeable": 21,
+  "ladder": [
+   {
+    "parallel": "(base)",
+    "rows": 72
+   },
+   {
+    "parallel": "Reverse Holo",
+    "rows": 45
+   }
+  ]
+ },
+ {
+  "setId": "S5I",
+  "setKey": "s5i",
+  "year": 2021,
+  "staged": true,
+  "rows": 91,
+  "sourceCards": 91,
+  "reverseRows": 0,
+  "unbridgeable": 0,
+  "ladder": [
+   {
+    "parallel": "(base)",
+    "rows": 61
+   },
+   {
+    "parallel": "Ultra Rare",
+    "rows": 11
+   },
+   {
+    "parallel": "Double rare",
+    "rows": 6
+   },
+   {
+    "parallel": "Hyper rare",
+    "rows": 6
+   },
+   {
+    "parallel": "Secret Rare",
+    "rows": 4
+   },
+   {
+    "parallel": "Triple Rare",
+    "rows": 3
+   }
+  ]
+ },
+ {
+  "setId": "S10a",
+  "setKey": "s10a",
+  "year": 2022,
+  "staged": true,
+  "rows": 148,
+  "sourceCards": 99,
+  "reverseRows": 49,
+  "unbridgeable": 0,
+  "ladder": [
+   {
+    "parallel": "(base)",
+    "rows": 59
+   },
+   {
+    "parallel": "Reverse Holo",
+    "rows": 49
+   },
+   {
+    "parallel": "Ultra Rare",
+    "rows": 10
+   },
+   {
+    "parallel": "Holo Rare",
+    "rows": 7
+   },
+   {
+    "parallel": "Double rare",
+    "rows": 6
+   },
+   {
+    "parallel": "Character Rare",
+    "rows": 6
+   },
+   {
+    "parallel": "Triple Rare",
+    "rows": 3
+   },
+   {
+    "parallel": "Radiant Rare",
+    "rows": 3
+   },
+   {
+    "parallel": "Mega Hyper Rare",
+    "rows": 3
+   },
+   {
+    "parallel": "Character Super Rare",
+    "rows": 2
+   }
+  ]
+ },
+ {
+  "setId": "S8a",
+  "staged": false,
+  "reason": "source serves no cards"
+ },
+ {
+  "setId": "S6H",
+  "setKey": "s6h",
+  "year": 2021,
+  "staged": true,
+  "rows": 95,
+  "sourceCards": 95,
+  "reverseRows": 0,
+  "unbridgeable": 0,
+  "ladder": [
+   {
+    "parallel": "(base)",
+    "rows": 61
+   },
+   {
+    "parallel": "Ultra Rare",
+    "rows": 13
+   },
+   {
+    "parallel": "Hyper rare",
+    "rows": 7
+   },
+   {
+    "parallel": "Double rare",
+    "rows": 6
+   },
+   {
+    "parallel": "Secret Rare",
+    "rows": 5
+   },
+   {
+    "parallel": "Triple Rare",
+    "rows": 3
+   }
+  ]
+ },
+ {
+  "setId": "S11",
+  "setKey": "s11",
+  "year": 2022,
+  "staged": true,
+  "rows": 127,
+  "sourceCards": 127,
+  "reverseRows": 0,
+  "unbridgeable": 0,
+  "ladder": [
+   {
+    "parallel": "(base)",
+    "rows": 88
+   },
+   {
+    "parallel": "Ultra Rare",
+    "rows": 16
+   },
+   {
+    "parallel": "Double rare",
+    "rows": 8
+   },
+   {
+    "parallel": "Holo Rare",
+    "rows": 8
+   },
+   {
+    "parallel": "Triple Rare",
+    "rows": 4
+   },
+   {
+    "parallel": "Mega Hyper Rare",
+    "rows": 3
+   }
+  ]
+ },
+ {
+  "setId": "S11a",
+  "setKey": "s11a",
+  "year": 2022,
+  "staged": true,
+  "rows": 140,
+  "sourceCards": 94,
+  "reverseRows": 46,
+  "unbridgeable": 0,
+  "ladder": [
+   {
+    "parallel": "(base)",
+    "rows": 56
+   },
+   {
+    "parallel": "Reverse Holo",
+    "rows": 46
+   },
+   {
+    "parallel": "Ultra Rare",
+    "rows": 9
+   },
+   {
+    "parallel": "Double rare",
+    "rows": 6
+   },
+   {
+    "parallel": "Character Rare",
+    "rows": 6
+   },
+   {
+    "parallel": "Holo Rare",
+    "rows": 6
+   },
+   {
+    "parallel": "Triple Rare",
+    "rows": 3
+   },
+   {
+    "parallel": "Radiant Rare",
+    "rows": 3
+   },
+   {
+    "parallel": "Mega Hyper Rare",
+    "rows": 3
+   },
+   {
+    "parallel": "Character Super Rare",
+    "rows": 2
+   }
+  ]
+ },
+ {
+  "setId": "S7R",
+  "staged": false,
+  "reason": "source serves no cards"
+ },
+ {
+  "setId": "S9",
+  "setKey": "s9",
+  "year": 2022,
+  "staged": true,
+  "rows": 98,
+  "sourceCards": 127,
+  "reverseRows": 0,
+  "unbridgeable": 29,
+  "ladder": [
+   {
+    "parallel": "(base)",
+    "rows": 98
+   }
+  ]
+ },
+ {
+  "setId": "S5R",
+  "staged": false,
+  "reason": "source serves no cards"
+ },
+ {
+  "setId": "S2a",
+  "staged": false,
+  "reason": "source serves no cards"
+ },
+ {
+  "setId": "S7D",
+  "setKey": "s7d",
+  "year": 2021,
+  "staged": true,
+  "rows": 90,
+  "sourceCards": 90,
+  "reverseRows": 0,
+  "unbridgeable": 0,
+  "ladder": [
+   {
+    "parallel": "(base)",
+    "rows": 58
+   },
+   {
+    "parallel": "Ultra Rare",
+    "rows": 12
+   },
+   {
+    "parallel": "Double rare",
+    "rows": 6
+   },
+   {
+    "parallel": "Hyper rare",
+    "rows": 6
+   },
+   {
+    "parallel": "Secret Rare",
+    "rows": 5
+   },
+   {
+    "parallel": "Triple Rare",
+    "rows": 3
+   }
+  ]
+ },
+ {
+  "setId": "S4",
+  "staged": false,
+  "reason": "source serves no cards"
+ },
+ {
+  "setId": "S6a",
+  "staged": false,
+  "reason": "source serves no cards"
+ },
+ {
+  "setId": "S8",
+  "setKey": "s8",
+  "year": 2021,
+  "staged": true,
+  "rows": 129,
+  "sourceCards": 129,
+  "reverseRows": 0,
+  "unbridgeable": 0,
+  "ladder": [
+   {
+    "parallel": "(base)",
+    "rows": 88
+   },
+   {
+    "parallel": "Ultra Rare",
+    "rows": 15
+   },
+   {
+    "parallel": "Double rare",
+    "rows": 8
+   },
+   {
+    "parallel": "Hyper rare",
+    "rows": 8
+   },
+   {
+    "parallel": "Secret Rare",
+    "rows": 6
+   },
+   {
+    "parallel": "Triple Rare",
+    "rows": 4
+   }
+  ]
+ },
+ {
+  "setId": "S12",
+  "setKey": "s12",
+  "year": 2022,
+  "staged": true,
+  "rows": 96,
+  "sourceCards": 125,
+  "reverseRows": 0,
+  "unbridgeable": 29,
+  "ladder": [
+   {
+    "parallel": "(base)",
+    "rows": 96
+   }
+  ]
+ },
+ {
+  "setId": "S10P",
+  "setKey": "s10p",
+  "year": 2022,
+  "staged": true,
+  "rows": 88,
+  "sourceCards": 88,
+  "reverseRows": 0,
+  "unbridgeable": 0,
+  "ladder": [
+   {
+    "parallel": "(base)",
+    "rows": 58
+   },
+   {
+    "parallel": "Ultra Rare",
+    "rows": 12
+   },
+   {
+    "parallel": "Double rare",
+    "rows": 6
+   },
+   {
+    "parallel": "Holo Rare",
+    "rows": 6
+   },
+   {
+    "parallel": "Triple Rare",
+    "rows": 3
+   },
+   {
+    "parallel": "Mega Hyper Rare",
+    "rows": 3
+   }
+  ]
+ },
+ {
+  "setId": "M1L",
+  "setKey": "m1l",
+  "year": 2025,
+  "staged": true,
+  "rows": 92,
+  "sourceCards": 92,
+  "reverseRows": 0,
+  "unbridgeable": 0,
+  "ladder": [
+   {
+    "parallel": "(base)",
+    "rows": 58
+   },
+   {
+    "parallel": "Illustration rare",
+    "rows": 12
+   },
+   {
+    "parallel": "Ultra Rare",
+    "rows": 11
+   },
+   {
+    "parallel": "Double rare",
+    "rows": 5
+   },
+   {
+    "parallel": "Special illustration rare",
+    "rows": 5
+   },
+   {
+    "parallel": "Mega Hyper Rare",
+    "rows": 1
+   }
+  ]
+ },
+ {
+  "setId": "M2a",
+  "setKey": "m2a",
+  "year": 2025,
+  "staged": true,
+  "rows": 368,
+  "sourceCards": 250,
+  "reverseRows": 118,
+  "unbridgeable": 0,
+  "ladder": [
+   {
+    "parallel": "(base)",
+    "rows": 166
+   },
+   {
+    "parallel": "Reverse Holo",
+    "rows": 118
+   },
+   {
+    "parallel": "Double rare",
+    "rows": 27
+   },
+   {
+    "parallel": "Illustration rare",
+    "rows": 20
+   },
+   {
+    "parallel": "Ultra Rare",
+    "rows": 19
+   },
+   {
+    "parallel": "Special illustration rare",
+    "rows": 17
+   },
+   {
+    "parallel": "Mega Hyper Rare",
+    "rows": 1
+   }
+  ]
+ },
+ {
+  "setId": "M3",
+  "setKey": "m3",
+  "year": 2026,
+  "staged": true,
+  "rows": 117,
+  "sourceCards": 117,
+  "reverseRows": 0,
+  "unbridgeable": 0,
+  "ladder": [
+   {
+    "parallel": "(base)",
+    "rows": 72
+   },
+   {
+    "parallel": "Ultra Rare",
+    "rows": 18
+   },
+   {
+    "parallel": "Illustration rare",
+    "rows": 12
+   },
+   {
+    "parallel": "Double rare",
+    "rows": 8
+   },
+   {
+    "parallel": "Special illustration rare",
+    "rows": 6
+   },
+   {
+    "parallel": "Mega Hyper Rare",
+    "rows": 1
+   }
+  ]
+ },
+ {
+  "setId": "M6",
+  "setKey": "m6",
+  "year": 2026,
+  "staged": true,
+  "rows": 113,
+  "sourceCards": 113,
+  "reverseRows": 0,
+  "unbridgeable": 0,
+  "ladder": [
+   {
+    "parallel": "(base)",
+    "rows": 68
+   },
+   {
+    "parallel": "Mega Hyper Rare",
+    "rows": 37
+   },
+   {
+    "parallel": "Double rare",
+    "rows": 8
+   }
+  ]
+ },
+ {
+  "setId": "M5",
+  "setKey": "m5",
+  "year": 2026,
+  "staged": true,
+  "rows": 118,
+  "sourceCards": 118,
+  "reverseRows": 0,
+  "unbridgeable": 0,
+  "ladder": [
+   {
+    "parallel": "(base)",
+    "rows": 73
+   },
+   {
+    "parallel": "Ultra Rare",
+    "rows": 18
+   },
+   {
+    "parallel": "Illustration rare",
+    "rows": 12
+   },
+   {
+    "parallel": "Double rare",
+    "rows": 8
+   },
+   {
+    "parallel": "Special illustration rare",
+    "rows": 6
+   },
+   {
+    "parallel": "Mega Hyper Rare",
+    "rows": 1
+   }
+  ]
+ },
+ {
+  "setId": "M-P",
+  "setKey": "m-p",
+  "year": 2025,
+  "staged": true,
+  "rows": 132,
+  "sourceCards": 132,
+  "reverseRows": 0,
+  "unbridgeable": 0,
+  "ladder": [
+   {
+    "parallel": "Promo",
+    "rows": 132
+   }
+  ]
+ },
+ {
+  "setId": "M2",
+  "setKey": "m2",
+  "year": 2025,
+  "staged": true,
+  "rows": 116,
+  "sourceCards": 116,
+  "reverseRows": 0,
+  "unbridgeable": 0,
+  "ladder": [
+   {
+    "parallel": "(base)",
+    "rows": 72
+   },
+   {
+    "parallel": "Ultra Rare",
+    "rows": 17
+   },
+   {
+    "parallel": "Illustration rare",
+    "rows": 12
+   },
+   {
+    "parallel": "Double rare",
+    "rows": 8
+   },
+   {
+    "parallel": "Special illustration rare",
+    "rows": 6
+   },
+   {
+    "parallel": "Mega Hyper Rare",
+    "rows": 1
+   }
+  ]
+ },
+ {
+  "setId": "M1S",
+  "setKey": "m1s",
+  "year": 2025,
+  "staged": true,
+  "rows": 90,
+  "sourceCards": 92,
+  "reverseRows": 0,
+  "unbridgeable": 2,
+  "ladder": [
+   {
+    "parallel": "(base)",
+    "rows": 58
+   },
+   {
+    "parallel": "Illustration rare",
+    "rows": 12
+   },
+   {
+    "parallel": "Secret Rare",
+    "rows": 10
+   },
+   {
+    "parallel": "Special illustration rare",
+    "rows": 5
+   },
+   {
+    "parallel": "Double rare",
+    "rows": 4
+   },
+   {
+    "parallel": "Mega Hyper Rare",
+    "rows": 1
+   }
+  ]
+ },
+ {
+  "setId": "M4",
+  "setKey": "m4",
+  "year": 2026,
+  "staged": true,
+  "rows": 120,
+  "sourceCards": 120,
+  "reverseRows": 0,
+  "unbridgeable": 0,
+  "ladder": [
+   {
+    "parallel": "(base)",
+    "rows": 75
+   },
+   {
+    "parallel": "Ultra Rare",
+    "rows": 18
+   },
+   {
+    "parallel": "Illustration rare",
+    "rows": 12
+   },
+   {
+    "parallel": "Double rare",
+    "rows": 8
+   },
+   {
+    "parallel": "Special illustration rare",
+    "rows": 6
+   },
+   {
+    "parallel": "Mega Hyper Rare",
+    "rows": 1
+   }
+  ]
+ }
+]

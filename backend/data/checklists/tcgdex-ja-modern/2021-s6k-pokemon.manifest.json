@@ -1,0 +1,14 @@
+{
+  "productKey": "2021-s6k",
+  "sport": "pokemon",
+  "year": 2021,
+  "setKey": "s6k",
+  "source": "tcgdex-ja-modern",
+  "confidence": 0.9,
+  "provenance": "api.tcgdex.net/v2/ja/sets/S6K (MIT, tcgdex/cards-database) fetched 2026-09-04 -- 95 rows, 6 ladder entries",
+  "setName": "Japanese 漆黒のガイスト",
+  "tcgdexId": "S6K",
+  "sourceUrl": "https://api.tcgdex.net/v2/ja/sets/S6K",
+  "rowCount": 95,
+  "parallelColumnAuthoritative": true
+}

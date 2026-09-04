@@ -1,0 +1,118 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,001,,false,,spinarak
+base,002,,false,,ariados
+base,003,,false,,shaymin
+base,004,,false,,snivy
+base,005,,false,,servine
+base,006,,false,,serperior
+base,007,,false,,scatterbug
+base,008,,false,,spewpa
+base,009,,false,,vivillon
+base,010,,false,,rowlet
+base,011,,false,,dartrix
+base,012,Double rare,false,,decidueye
+base,013,,false,,fletchinder
+base,014,,false,,talonflame
+base,015,,false,,salandit
+base,016,Double rare,false,,salazzle
+base,017,,false,,turtonator
+base,018,,false,,seel
+base,019,,false,,dewgong
+base,020,,false,,staryu
+base,021,Double rare,false,,starmie
+base,022,,false,,amaura
+base,023,,false,,aurorus
+base,024,,false,,volcanion
+base,025,,false,,shinx
+base,026,,false,,luxio
+base,027,,false,,luxray
+base,028,,false,,dedenne
+base,029,,false,,clefairy
+base,030,Double rare,false,,clefable
+base,031,,false,,mawile
+base,032,,false,,espurr
+base,033,,false,,meowstic
+base,034,,false,,spritzee
+base,035,,false,,aromatisse
+base,036,,false,,nosepass
+base,037,,false,,probopass
+base,038,,false,,hippopotas
+base,039,,false,,hippowdon
+base,040,,false,,landorus
+base,041,,false,,binacle
+base,042,,false,,barbaracle
+base,043,,false,,tyrunt
+base,044,,false,,tyrantrum
+base,045,,false,,hawlucha
+base,046,Double rare,false,,zygarde
+base,047,,false,,gastly
+base,048,,false,,haunter
+base,049,,false,,gengar
+base,050,,false,,skorupi
+base,051,,false,,drapion
+base,052,Double rare,false,,yveltal
+base,053,,false,,chien-pao
+base,054,Double rare,false,,skarmory
+base,055,,false,,honedge
+base,056,,false,,doublade
+base,057,,false,,aegislash
+base,058,,false,,klefki
+base,059,,false,,rattata
+base,060,,false,,raticate
+base,061,Double rare,false,,meowth
+base,062,,false,,snorlax
+base,063,,false,,bunnelby
+base,064,,false,,diggersby
+base,065,,false,,fletchling
+base,066,,false,,furfrou
+base,067,,false,,エネはたき
+base,068,,false,,古びたアゴの化石
+base,069,,false,,古びたヒレの化石
+base,070,,false,,ポケパッド
+base,071,,false,,ミアレガレット
+base,072,,false,,コアメモリ
+base,073,,false,,タラゴン
+base,074,,false,,ピュール
+base,075,,false,,メイのはげまし
+base,076,,false,,ユカリ
+base,077,,false,,ミアレシティ
+base,078,,false,,グロウ草エネルギー
+base,079,,false,,テレパス超エネルギー
+base,080,,false,,ロック闘エネルギー
+base,081,Illustration rare,false,,spewpa
+base,082,Illustration rare,false,,rowlet
+base,083,Illustration rare,false,,talonflame
+base,084,Illustration rare,false,,aurorus
+base,085,Illustration rare,false,,dedenne
+base,086,Illustration rare,false,,clefairy
+base,087,Illustration rare,false,,espurr
+base,088,Illustration rare,false,,probopass
+base,089,Illustration rare,false,,tyrunt
+base,090,Illustration rare,false,,drapion
+base,091,Illustration rare,false,,doublade
+base,092,Illustration rare,false,,raticate
+base,093,Ultra Rare,false,,decidueye
+base,094,Ultra Rare,false,,salazzle
+base,095,Ultra Rare,false,,starmie
+base,096,Ultra Rare,false,,clefable
+base,097,Ultra Rare,false,,zygarde
+base,098,Ultra Rare,false,,yveltal
+base,099,Ultra Rare,false,,skarmory
+base,100,Ultra Rare,false,,meowth
+base,101,Ultra Rare,false,,エネルギーリサイクル
+base,102,Ultra Rare,false,,せいなるはい
+base,103,Ultra Rare,false,,ポケパッド
+base,104,Ultra Rare,false,,ワンダーパッチ
+base,105,Ultra Rare,false,,タラゴン
+base,106,Ultra Rare,false,,ピュール
+base,107,Ultra Rare,false,,メイのはげまし
+base,108,Ultra Rare,false,,ユカリ
+base,109,Ultra Rare,false,,活力の森
+base,110,Ultra Rare,false,,ミアレシティ
+base,111,Special illustration rare,false,,starmie
+base,112,Special illustration rare,false,,clefable
+base,113,Special illustration rare,false,,zygarde
+base,114,Special illustration rare,false,,meowth
+base,115,Special illustration rare,false,,メイのはげまし
+base,116,Special illustration rare,false,,ユカリ
+base,117,Mega Hyper Rare,false,,zygarde
