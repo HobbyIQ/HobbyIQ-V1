@@ -261,7 +261,19 @@ describe("C-7 — every persisted value names its rung and its source", () => {
     // writeHoldingValuation, which REQUIRES the pair.
     expect(valuation).toContain("writeHoldingValuation");
     expect(valuation).toMatch(/rung: \{ rung: v\.rungLabel \},\s*(\/\/[^\n]*\n\s*)*valueSource: "observed"/);
-    expect(valuation).toMatch(/rung: \{ rung: "grade-curve-estimate" \},\s*(\/\/[^\n]*\n\s*)*valueSource: "estimated"/);
+    // CF-RUNG-IS-THE-VOCABULARY (#1690): the estimate write no longer hardcodes
+    // `grade-curve-estimate`. That literal named ONE fallback rung, and the
+    // helper it feeds was then asked to persist every other one — a player-trend
+    // estimate, a family baseline, a graded-to-raw rung — under a label that did
+    // not describe them, which is how a priced card came back showing no price.
+    // The write now carries `v.rungLabel`, so the rung the ladder actually
+    // reached is the rung persisted.
+    //
+    // What C-7 pins is unchanged and is the pairing: a write that names a rung
+    // names its valueSource in the same literal. So this asserts the estimated
+    // write states BOTH, with the rung read from the valuation rather than
+    // frozen to one label.
+    expect(valuation).toMatch(/rung: \{ rung: v\.rungLabel \},\s*(\/\/[^\n]*\n\s*)*valueSource: "estimated"/);
   });
 
   it("valueSource is part of the holding contract, not an untyped extra", () => {

@@ -283,6 +283,21 @@ describe("a base run named 'Base Cards' is still the base category", () => {
   });
 });
 
+// CF-BLANK-MEANS-UNKNOWN-NEVER-BASE (#1694, 2026-09-04) — why the golden was
+// regenerated. classifyRung used to require a printRun, a 1/1 flag or pack odds
+// before it would believe a parallel was real. That scarcity proxy holds on
+// 2026 Bowman, where everything is numbered, and is wrong on everything older:
+// hobbymonitor states unnumbered parallels with no print run at all, and the
+// proxy silently dropped 958 real rungs across the lane it was measured on.
+// #1694 keeps an unnumbered rung with its printRun BLANK.
+//
+// #1701 wrote this golden but regenerated only the bowman entry, so the
+// series-1 and chrome entries stayed on the pre-#1694 emitter and were red from
+// the commit that introduced them — never green, at any commit. The difference
+// is exactly the unnumbered-parallel rows the ruling restored (+592 series 1,
+// +108 chrome, 0 bowman, which was already current). Verified as that and
+// nothing else: excluding rows with a parallel and no printRun from today's
+// emitter reproduces the old digests byte-for-byte.
 describe("the rows this change does not touch are byte-identical", () => {
   const golden = JSON.parse(
     fs.readFileSync(path.join(FIXTURES, "golden-unchanged-rows.json"), "utf8"),

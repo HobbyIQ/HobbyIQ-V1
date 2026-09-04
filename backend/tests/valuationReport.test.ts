@@ -748,6 +748,18 @@ describe("the confidence column is the PRICING confidence", () => {
 // This pins the persistence end: every unified/canonical write that stamps
 // a pricingSourceMeta must stamp its confidence alongside the comp count.
 // A new pricing writer that forgets it silently reintroduces the "—".
+//
+// CF-ONE-PERSIST-HELPER (#1677) moved every one of those writes behind
+// `writeHoldingValuation(...)`, which composes `pricingSourceMeta` itself —
+// #1684's companion pin now asserts that NO write site hand-builds that
+// object at all. So the literal this scanned for (`pricingSourceMeta: { … }`)
+// is deliberately extinct in portfolioStore, and scanning for it found zero
+// writes and tripped its own guard-the-guard.
+//
+// The RULING is unchanged (CF-CONFIDENCE-IS-NOT-OPTIONAL, #1683: a persisted
+// price states the confidence the engine computed for it). Only the shape the
+// ruling lives in moved, so the scan follows it to the `meta:` blocks passed
+// into the helper — which is where a new writer would now forget it.
 describe("the price writer stamps its pricing confidence", () => {
   it("every unified pricingSourceMeta write carries a confidence", async () => {
     const { readFile } = await import("node:fs/promises");
@@ -755,7 +767,11 @@ describe("the price writer stamps its pricing confidence", () => {
       new URL("../src/services/portfolioiq/portfolioStore.service.ts", import.meta.url),
       "utf8",
     );
-    const writes = [...src.matchAll(/pricingSourceMeta:\s*(?:withUnionRefused\()?\{[^}]*\}/g)]
+    // Each `meta:` payload handed to writeHoldingValuation, up to the line
+    // that closes it. The `compsUsed:` filter keeps this on the unified /
+    // canonical pricing writes — the population the ruling names — rather
+    // than on every meta in the file.
+    const writes = [...src.matchAll(/meta:\s*(?:withUnionRefused\()?\{[\s\S]*?\n\s*\}/g)]
       .map(m => m[0])
       .filter(w => /compsUsed:\s*(?:u|bU|unified|unifiedResult)\./.test(w));
 

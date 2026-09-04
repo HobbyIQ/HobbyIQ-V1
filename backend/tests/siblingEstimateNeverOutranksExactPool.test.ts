@@ -537,9 +537,19 @@ describe("repriceHoldingsForUser — the fixture, end to end", () => {
     const body = await reprice();
     const hld = await stored(id);
 
-    expect(hld.fairMarketValue).toBeUndefined();
+    // CF-A-RETENTION-IS-STATED-ON-THE-ROW (#1685): the confidence gate no
+    // longer leaves the row silent. It routes through writeHoldingValuation,
+    // which states the outcome explicitly — so a holding this pass could not
+    // price carries `fairMarketValue: null` and an `fmvRungAbsentReason`
+    // naming the gate, rather than an absent field a reader has to interpret.
+    // Null IS the "no price" statement; the defect this case guards is a
+    // NUMBER appearing where nothing was measured, and that is what is
+    // asserted. `isEstimate` and `estimateBasis` stay absent: no estimate was
+    // made, and no floor stood in for one.
+    expect(hld.fairMarketValue == null).toBe(true);
     expect(hld.isEstimate).not.toBe(true);
     expect(hld.estimateBasis).toBeUndefined();
+    expect(hld.fmvRungAbsentReason).toMatch(/confidence-gated reprice/);
     expect(body.updates.find((u: any) => u.id === id).status).toBe("skipped");
   });
 

@@ -296,10 +296,21 @@ describe("the source classifies DERIVED, and that is load-bearing", () => {
 
   it("guards the naming trap that would have shipped", () => {
     // Pinned as a decision on record: this is why the source is not called
-    // `graded-attested`. The prod rows named `sales-attested` show the same bug.
+    // `graded-attested`. A plain descriptive name matches no DERIVED prefix,
+    // so it falls to `unknown` — ranking BELOW derived and skipped by
+    // isDerived sweeps — which is the trap this source's name avoids by
+    // extending `ingest-auto-seed`.
     expect(catalogAuthorityOf("graded-attested")).toBe("unknown");
-    expect(catalogAuthorityOf("sales-attested")).toBe("unknown");
     expect(authorityRank(PARENT_SOURCE)).toBeGreaterThan(authorityRank("graded-attested"));
+
+    // The prod rows named `sales-attested` USED to show the same bug, and
+    // that is no longer true: #1733 declared `sales-attested` in the DERIVED
+    // prefix set, on the ruling that a source's class is decided by what
+    // produced the row and not by a word in its name. So it is now the
+    // counter-example rather than a second instance of the trap — a derived
+    // row correctly classified derived, which is what this source's naming
+    // was working around.
+    expect(catalogAuthorityOf("sales-attested")).toBe("derived");
   });
 
   it("can never adjudicate a setKey, and is never VERIFIED-able by provenance", () => {
