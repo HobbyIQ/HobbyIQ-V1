@@ -257,15 +257,21 @@ describe("D17 pins — card-detail, card-panel, the bulk curves and the persist 
     // and the count is only ever a proxy: what this pin is really asserting is
     // that no site in this file sets fairMarketValue WITHOUT going through the
     // helper, whose `rung:` argument is required and therefore unskippable.
+    // CF-A-STALE-VALUE-IS-NOT-A-PRICE (2026-09-04) added the FOURTH writer,
+    // `noBasisRefusalWrite`: the `pool-migrating` refusal, which keeps the
+    // prior number and names the withhold rather than letting another lane
+    // substitute a number for a pool that is still arriving. Its rung is
+    // conditional for the same reason the floor's is — a refusal never borrows
+    // a rung — so `rungs` stays at 2 while the other counts move together.
     const literals = src.split("fairMarketValue: ").length - 1;
     const rungs = src.split("rung: { rung:").length - 1;
-    expect(literals).toBe(3);
+    expect(literals).toBe(4);
     expect(rungs).toBe(2);
     // The property the counts stand in for: every `fairMarketValue:` in this
     // file is an argument to `writeHoldingValuation`, never a bare literal on
-    // a holding object. Three writers, three helper calls.
+    // a holding object. Four writers, four helper calls.
     const helperCalls = src.split("writeHoldingValuation(holding, {").length - 1;
-    expect(helperCalls).toBe(3);
+    expect(helperCalls).toBe(4);
     // And the refusal writer names a rung the same required way — either the
     // prior pass's, or an explicit refusal carrying its reason.
     expect(src).toMatch(/rung: priorRung \? \{ rung: priorRung \} : \{ noRung: prose \},/);

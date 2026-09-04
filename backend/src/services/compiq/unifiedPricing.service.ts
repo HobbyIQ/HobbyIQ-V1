@@ -323,8 +323,42 @@ async function queryComps(
   return rows === null ? null : applySelfCompRule(rows, excludeContributorUserId);
 }
 
+/**
+ * CF-A-GRADED-SALE-NEVER-ENTERS-THE-RAW-TIER (Drew, 2026-09-04).
+ *
+ * This function used to read `if (!company) return "Raw"` — a falsy
+ * `gradeCompany` was taken as a POSITIVE ASSERTION that the sale was raw.
+ * It is not. It is an ABSENCE, and the pool is full of rows where the absence
+ * means "never populated at ingest", not "ungraded": `gradeParser.ts` records
+ * ~7,900 AUTH slabs in the wrong bucket, and `backfill-grade-from-title.cjs`
+ * exists solely to fill this field from titles — its query targets exactly the
+ * three shapes this branch called Raw (`NOT IS_DEFINED`, `null`, `""`). That
+ * script defaults to dry mode, so those rows are still in the pool.
+ *
+ * Measured in the 2026-09-04 audit: a raw 1997 Metal Universe Chipper Jones
+ * #31 priced $2.00 off a weighted median on n=3 whose largest member was a
+ * PSA 9 sale at $40 that had landed in the RAW tier by this branch. The
+ * engine cannot contradict it downstream: `exactPoolReader`'s projection does
+ * not select `c.title`, so the one field that proves the row is graded never
+ * reaches the engine at all.
+ *
+ * The fix is to stop asserting. A row is Raw only when it is raw the way
+ * `gradeLadder.isRaw` already defines it — no company AND no grade value.
+ * A row carrying a grade VALUE with no company is a graded sale of an
+ * unrecorded grader, and it gets the same treatment `gradeValueToken` already
+ * gives an unreadable value: a deliberately unmatchable token. It matches no
+ * requested tier, so it prices nothing and contaminates nothing — it is
+ * excluded from the raw pool without being silently deleted from the curve,
+ * which is what makes the population visible instead of invisible.
+ */
+export const UNKNOWN_GRADER_TIER = "GRADED ?";
+
 function gradeLabel(company: string | null, value: number | null): string {
-  if (!company) return "Raw";
+  if (!company) {
+    // Not "no company therefore raw" — "no company AND no grade therefore raw".
+    const token = gradeValueToken(value);
+    return token === "?" ? "Raw" : UNKNOWN_GRADER_TIER;
+  }
   return `${String(company).toUpperCase()} ${gradeValueToken(value)}`;
 }
 
@@ -350,6 +384,14 @@ function gradeLabel(company: string | null, value: number | null): string {
  * unreadable grade refuses rather than borrowing another tier's number.
  */
 function gradeValueToken(value: number | null | undefined): string {
+  // CF-A-GRADED-SALE-NEVER-ENTERS-THE-RAW-TIER (2026-09-04): absence is
+  // rejected BEFORE the numeric parse. `Number(null)` and `Number("")` are
+  // both 0 — finite — so a row with no grade value used to render the token
+  // "0". That was harmless while a falsy company short-circuited to "Raw"
+  // above; now that the company branch consults this token to tell a raw row
+  // from a graded-but-companyless one, a null rendering as "0" would evict
+  // every genuinely raw sale from the raw tier. Absence first, parse second.
+  if (value === null || value === undefined || (value as unknown) === "") return "?";
   const n = typeof value === "number" ? value : Number(value);
   return Number.isFinite(n) ? String(n) : "?";
 }
