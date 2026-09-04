@@ -243,10 +243,32 @@ describe("D17 pins — card-detail, card-panel, the bulk curves and the persist 
     expect(src).not.toMatch(/v\.rungLabel === "grade-curve-estimate"/);
     // Every write that sets fairMarketValue names a rung (the rung-writers
     // rule) — through the C-7 helper's required `rung:` argument.
+    //
+    // CF-A-REFUSED-PRICE-IS-STILL-A-DECISION (2026-09-04) added the THIRD
+    // writer, `costBasisFloorRefusalWrite`: the cost-basis-floor outcome used
+    // to write nothing at all ("the caller falls through"), which is how two
+    // live rows — 9f082213 (Figueroa Red Ink) and 277b05a3 (Ripken PSA 8) —
+    // reached prod carrying a bare number with `pricingSourceMeta.method`
+    // undefined. It keeps the prior number and names `method: "withheld"`.
+    //
+    // Its rung is CONDITIONAL (`priorRung ? { rung: priorRung } : { noRung }`)
+    // rather than an unconditional `rung: { rung:` literal, because a refusal
+    // must never borrow the rung it just refused. So the two counts diverge,
+    // and the count is only ever a proxy: what this pin is really asserting is
+    // that no site in this file sets fairMarketValue WITHOUT going through the
+    // helper, whose `rung:` argument is required and therefore unskippable.
     const literals = src.split("fairMarketValue: ").length - 1;
     const rungs = src.split("rung: { rung:").length - 1;
-    expect(literals).toBe(2);
+    expect(literals).toBe(3);
     expect(rungs).toBe(2);
+    // The property the counts stand in for: every `fairMarketValue:` in this
+    // file is an argument to `writeHoldingValuation`, never a bare literal on
+    // a holding object. Three writers, three helper calls.
+    const helperCalls = src.split("writeHoldingValuation(holding, {").length - 1;
+    expect(helperCalls).toBe(3);
+    // And the refusal writer names a rung the same required way — either the
+    // prior pass's, or an explicit refusal carrying its reason.
+    expect(src).toMatch(/rung: priorRung \? \{ rung: priorRung \} : \{ noRung: prose \},/);
     // The entry takes the holding's second identity and asks in #1462's order.
     const entry = stripComments(read("src/services/compiq/oneValuationPath.service.ts"));
     expect(entry).toMatch(/cardId: secondId && secondId !== slug \? secondId : null, printRun: identity\.printRun/);

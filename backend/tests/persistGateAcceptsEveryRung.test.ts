@@ -377,7 +377,16 @@ describe("CF-A-REFUSAL-STATES-WHAT-ACTUALLY-HAPPENED — the withhold prose", ()
     // invariant auditor — and a refusal is the event it most needs to see.
     expect(src).toMatch(/withheld: \{ reason: withholdReasonCode\(reason\), blockingId: verdict\.blockingId, blockingCount: verdict\.blockingCount, proposed \}/);
     const writer = read("src/services/portfolioiq/writeHoldingValuation.ts");
-    expect(writer).toMatch(/method: rung \?\? \(w\.meta\.withheld \? "withheld" : undefined\)/);
+    // CF-EVERY-META-NAMES-A-METHOD (2026-09-04). This used to pin the literal
+    // `: undefined` tail, which pinned the very hole it was written to close:
+    // a `{ noRung }` write with an ORDINARY meta (no `withheld`) still fell
+    // through to `method: undefined`. Two live rows reached prod that way —
+    // 9f082213 (Figueroa Red Ink) and 277b05a3 (Ripken PSA 8), both
+    // cost-basis-floor refusals in run 33893507773. The property this pin
+    // actually cares about is that a withhold names its method AND that no
+    // branch of the expression can yield `undefined`.
+    expect(writer).toMatch(/method: rung \?\? \(w\.meta\.withheld \? "withheld" : "[a-z-]+"\)/);
+    expect(writer).not.toMatch(/method: rung \?\? \(w\.meta\.withheld \? "withheld" : undefined\)/);
   });
 
   it("a withhold does not destroy the evidence the one path produced", () => {

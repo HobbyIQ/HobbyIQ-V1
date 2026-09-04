@@ -26,7 +26,13 @@
  *                  fallback (D4 PR 6's tables are not consulted);
  *   cost-basis-floor  the entry's number failed CF-COST-BASIS-SANITY-FLOOR
  *                  (< 15% of a > $50 cost basis is a slug mismatch, not a
- *                  market) — nothing written, the caller falls through;
+ *                  market). The outcome carries no holding because the
+ *                  DECISION is the caller's — but the caller must persist
+ *                  that decision, never fall through silently: see
+ *                  `costBasisFloorRefusalWrite` below and
+ *                  CF-A-REFUSED-PRICE-IS-STILL-A-DECISION (2026-09-04), which
+ *                  is the defect this comment used to describe as intended
+ *                  behaviour ("nothing written, the caller falls through");
  *   unresolved     the catalog holds no identity for the holding (no slug
  *                  on a catalog row, a vendor id no slug maps to) — the
  *                  entry declines; the caller's legacy chain is the only
@@ -94,6 +100,120 @@ export function costBasisFloor(holding: PortfolioHolding, proposedUnit: number):
 }
 
 const round2 = (n: number): number => Math.round(n * 100) / 100;
+
+/**
+ * CF-A-REFUSED-PRICE-IS-STILL-A-DECISION (2026-09-04).
+ *
+ * `cost-basis-floor` was the one outcome of the one valuation path that
+ * produced NO holding. The doctrine block at the top of this file said so in
+ * as many words — "nothing written, the caller falls through" — and the
+ * fall-through is precisely how a bare number with no `pricingSourceMeta`
+ * reached prod, the shape #1674 and C-7 were both written to abolish.
+ *
+ * Measured read-only after the sanctioned reprice (run 33893507773, user
+ * user-199fcbc9): 41 of 43 holdings carry a `pricingSourceMeta.method` and
+ * TWO do not. Both took this branch in that run, and they are the only two:
+ *
+ *   9f082213  Victor Figueroa CPA-VF Black & White Red Ink auto, raw, on a
+ *             $278.60 basis. The ladder returned $8.70 under
+ *             `exact-pool-projection`; the floor rejected it at 3.1% of
+ *             basis. The row fell through to the confidence-gated retention
+ *             branch, which re-stated the prior pass's pre-C-7 meta —
+ *             `{slug, compsUsed: 1}`, no method, no confidence, no labels —
+ *             and stamped a fresh `lastUpdated`. Live: fairMarketValue 11,
+ *             fmvRung null, method undefined.
+ *   277b05a3  Cal Ripken Jr. 1997 Metal Universe #8 PSA 8, $52.98 basis,
+ *             proposed $5.40 under `exact-pool-weighted-median`. Identical
+ *             shape, meta `{compsUsed: 50}`.
+ *
+ * The floor was RIGHT both times. 9f082213's slug pool holds 57 rows of which
+ * exactly ONE ($270) is a Black & White Red Ink sale; the other 56 are plain
+ * base Chrome prospect autos at $5-$20 mis-slugged onto the SSP row. Per
+ * Drew's 2026-08-30 ruling the Red Ink is a distinct card with its own row,
+ * and that row exists and is `user-verified` — it is the POOL that is
+ * contaminated. $8.70 is the base auto's price, not this card's.
+ *
+ * So this helper does not second-guess the floor. It makes the refusal
+ * VISIBLE:
+ *
+ *   - the number is KEPT. The floor's claim is that the NEW number is wrong,
+ *     never that the old one is; erasing a value the floor said nothing about
+ *     would be a second, unrelated decision.
+ *   - `pricingSourceMeta.method` becomes `"withheld"` with reason
+ *     `cost-basis-floor`, so the invariant auditor sees a stated refusal
+ *     rather than a row that reads as never written.
+ *   - the refused number is preserved as evidence under `withheld.proposed`
+ *     rather than discarded (CF-A-WITHHOLD-DOES-NOT-DESTROY-EVIDENCE).
+ *   - no confidence is invented: this branch priced nothing, so it carries
+ *     the prior pass's confidence when there was one and an explicit `null`
+ *     when there was not.
+ *
+ * Shared by both one-entry call sites (the batch reprice and
+ * `autoPriceHolding`) so the two cannot drift.
+ */
+export function costBasisFloorRefusalWrite(
+  holding: PortfolioHolding,
+  entry: Extract<HoldingValuationOutcome, { outcome: "cost-basis-floor" }>,
+  nowIso: string,
+): { holding: PortfolioHolding; prose: string; summary: string } {
+  const kept = typeof holding.fairMarketValue === "number" && Number.isFinite(holding.fairMarketValue)
+    ? holding.fairMarketValue
+    : null;
+  const priorMeta = (holding as { pricingSourceMeta?: Record<string, unknown> }).pricingSourceMeta;
+  const priorRung = typeof (holding as { fmvRung?: unknown }).fmvRung === "string"
+    && (holding as { fmvRung?: string }).fmvRung
+    ? ((holding as { fmvRung: string }).fmvRung)
+    : null;
+  const priorValueSource = (holding as { valueSource?: unknown }).valueSource;
+  const pct = entry.costBasis > 0 ? round2((entry.proposedTotal / entry.costBasis) * 100) : null;
+  const summary =
+    `proposed $${round2(entry.proposedTotal)} is ${pct}% of a $${round2(entry.costBasis)} basis `
+    + `(rung=${entry.valuation.rungLabel})`;
+  const prose =
+    `price refused by the cost-basis sanity floor: the valuation path returned `
+    + `$${round2(entry.proposedTotal)} under rung ${entry.valuation.rungLabel}, ${pct}% of a `
+    + `$${round2(entry.costBasis)} cost basis (floor: 15%). The prior value is kept unchanged; `
+    + `a price this far under basis is a pool or identity mismatch, not a market.`;
+  return {
+    prose,
+    summary,
+    holding: writeHoldingValuation(holding, {
+      fairMarketValue: kept,
+      // The kept number's OWN rung still describes it. When the pass that
+      // produced it named none, say so — never borrow the rung the floor just
+      // refused, which priced a number this row does not carry.
+      rung: priorRung ? { rung: priorRung } : { noRung: prose },
+      // A refusal verifies nothing, so it cannot upgrade the claim.
+      valueSource: priorValueSource === "observed" || priorValueSource === "estimated"
+        ? priorValueSource
+        : "estimated",
+      nowIso,
+      meta: {
+        slug: typeof priorMeta?.slug === "string"
+          ? (priorMeta.slug as string)
+          : (entry.valuation.identity.slug ?? null),
+        compsUsed: typeof priorMeta?.compsUsed === "number" ? (priorMeta.compsUsed as number) : null,
+        confidence: typeof priorMeta?.confidence === "number" && Number.isFinite(priorMeta.confidence as number)
+          ? (priorMeta.confidence as number)
+          : null,
+        ...(Array.isArray(priorMeta?.labels) ? { labels: priorMeta.labels as never } : {}),
+        withheld: {
+          reason: "cost-basis-floor",
+          blockingId: entry.valuation.identity.pooledAs ?? entry.valuation.identity.slug ?? null,
+          blockingCount: entry.valuation.compsUsed ?? 0,
+          proposed: entry.valuation.fairMarketValue ?? null,
+        },
+      },
+      fields: {
+        // Recorded ON THE ROW, so "why is this stamped now and unchanged" is
+        // answerable without reading a log that has rolled.
+        fmvRetainedReason: prose,
+        fmvRetainedAt: nowIso,
+      },
+    }),
+  };
+}
+
 
 /** The observed write: the exact-pool rung on the holding, in the shape the
  *  unified early exits and the supremacy gate always wrote. */

@@ -32,7 +32,7 @@ import {
 } from "./holdingSaveDeferredWork.js";
 // CF-ONE-VALUATION-PATH (D17, 2026-08-30): the persist site prices the exact
 // pool through the ONE valuation entry (holdingValuation → valueIdentity).
-import { valueHoldingThroughOneEntry, holdingGrade as holdingGradeOf } from "./holdingValuation.js";
+import { valueHoldingThroughOneEntry, holdingGrade as holdingGradeOf, costBasisFloorRefusalWrite } from "./holdingValuation.js";
 // CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (Drew, 2026-09-03). The legacy
 // exact-pool writers below persist prices too — only for identities the
 // catalog cannot name, but persist they do. They stamp the same label set
@@ -3492,6 +3492,21 @@ async function autoPriceHolding(
     evaluateHoldingAlerts(doc, previous, oneEntry.holding);
     doc.holdings[holding.id] = oneEntry.holding;
     return oneEntry.holding;
+  }
+  // CF-A-REFUSED-PRICE-IS-STILL-A-DECISION (2026-09-04): the on-demand path
+  // has the same hole as the batch reprice — a floor rejection wrote nothing
+  // and the holding fell through to a lane that re-stated whatever meta was
+  // already there. Same shared write, so the two paths cannot drift.
+  if (oneEntry.outcome === "cost-basis-floor") {
+    const cbf = costBasisFloorRefusalWrite(holding, oneEntry, new Date().toISOString());
+    doc.holdings[holding.id] = cbf.holding;
+    console.warn(JSON.stringify({
+      event: "cost_basis_floor_refusal_persisted",
+      source: "portfolioStore.autoPriceHolding",
+      holdingId: holding.id,
+      summary: cbf.summary,
+    }));
+    return cbf.holding;
   }
   const entryDecidedExactPool = oneEntry.outcome !== "unresolved";
 
@@ -10089,6 +10104,64 @@ export async function repriceHoldingsForUser(
         doc.holdings[holding.id] = bOneEntry.holding;
         repriced += 1;
         updates.push({ id: holding.id, status: "repriced", reason: `one-valuation-path:${bOneEntry.valuation.rungLabel}` });
+        continue;
+      }
+      // CF-A-REFUSED-PRICE-IS-STILL-A-DECISION (2026-09-04). The cost-basis
+      // floor is the ONE outcome of the one valuation path that wrote
+      // NOTHING. Its own doctrine comment said so — "nothing written, the
+      // caller falls through" — and the fall-through is exactly how a bare
+      // number with no meta reached prod.
+      //
+      // Measured read-only after the sanctioned reprice (run 33893507773,
+      // user user-199fcbc9): 41 of 43 holdings carry a
+      // `pricingSourceMeta.method` and TWO do not. Both are floor rejections
+      // from THIS run, and they are the only two:
+      //
+      //   9f082213  Victor Figueroa CPA-VF Black & White Red Ink auto, raw,
+      //             $278.60 basis. The ladder returned $8.70 under
+      //             `exact-pool-projection`; the floor rejected it (3.1% of
+      //             basis). The row fell through to the confidence-gated
+      //             retention branch, which faithfully re-stated the prior
+      //             pass's pre-C-7 meta — `{slug, compsUsed: 1}`, no method,
+      //             no confidence, no labels — and stamped a fresh
+      //             `lastUpdated`. Live: fairMarketValue 11, fmvRung null.
+      //   277b05a3  Cal Ripken Jr. 1997 Metal Universe #8 PSA 8, $52.98
+      //             basis, proposed $5.40 under `exact-pool-weighted-median`.
+      //             Identical shape, meta `{compsUsed: 50}`.
+      //
+      // The floor was RIGHT in both cases. 9f082213's slug pool holds 57 rows
+      // of which exactly one ($270) is a Black & White Red Ink sale — the
+      // other 56 are plain base Chrome prospect autos at $5-$20, mis-slugged
+      // onto the SSP row. Per Drew's 2026-08-30 ruling the Red Ink IS a
+      // distinct card with its own row, and the row exists
+      // (`hiq:baseball:2026:bowman-chrome:cpa-vf:black-white-red-ink-refractor:auto`,
+      // source `user-verified`) — its POOL is contaminated. $8.70 is the base
+      // auto's price, not this card's, and refusing it is correct.
+      //
+      // What was wrong is that a correct refusal left no trace on the row. A
+      // refusal is a valuation decision, and a decision names itself: the
+      // number is KEPT (the floor says the new one is wrong, not that the old
+      // one is), and the row records `method: "withheld"` with the machine-
+      // readable reason, the rung that was refused and the number that was
+      // refused — so the invariant auditor sees a stated refusal instead of a
+      // row that reads as never written.
+      if (bOneEntry.outcome === "cost-basis-floor") {
+        const cbf = costBasisFloorRefusalWrite(holding, bOneEntry, new Date().toISOString());
+        doc.holdings[holding.id] = cbf.holding;
+        console.warn(JSON.stringify({
+          event: "cost_basis_floor_refusal_persisted",
+          source: "portfolioStore.repriceHoldingsForUser",
+          holdingId: holding.id,
+          summary: cbf.summary,
+        }));
+        updates.push({
+          id: holding.id,
+          status: "skipped",
+          reason: `cost-basis-floor: ${cbf.summary}`,
+          cardId: typeof (holding as any).cardId === "string" && ((holding as any).cardId as string).trim() !== ""
+            ? ((holding as any).cardId as string).trim()
+            : null,
+        });
         continue;
       }
       const bEntryDecided = bOneEntry.outcome !== "unresolved";

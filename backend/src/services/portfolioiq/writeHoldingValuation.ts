@@ -179,7 +179,42 @@ export function writeHoldingValuation(
         // it names its KIND instead of leaving `method` undefined — an
         // auditor filtering on `method` sees the withhold rather than
         // skipping a row that looks like it was never written.
-        method: rung ?? (w.meta.withheld ? "withheld" : undefined),
+        //
+        // CF-EVERY-META-NAMES-A-METHOD (2026-09-04). The clause above closed
+        // the case where a lane passed `withheld`, and left open the one that
+        // actually reached prod: a `{ noRung }` write with an ORDINARY meta.
+        // `rung` is null and `w.meta.withheld` is undefined, so `method` was
+        // `undefined` — the exact absence #1674 was written to abolish, now
+        // reintroduced by the very helper that abolished it.
+        //
+        // Measured read-only against prod on 2026-09-04 after the sanctioned
+        // reprice (run 33893507773, user user-199fcbc9): 41 of Drew's 43
+        // holdings carry a method and TWO do not —
+        //
+        //   9f082213  Victor Figueroa CPA-VF Black & White Red Ink auto, raw.
+        //             $11 on a $278.60 basis. The ladder priced it at $8.70
+        //             (exact-pool-projection) and CF-COST-BASIS-SANITY-FLOOR
+        //             REJECTED that number — correctly; the slug's pool is
+        //             contaminated with 56 base-auto sales. The rejection
+        //             wrote nothing, the row fell through to the retention
+        //             branch, and the retention faithfully re-stated a
+        //             pre-C-7 meta of `{slug, compsUsed}` under `{ noRung }`.
+        //   277b05a3  Cal Ripken Jr. 1997 Metal Universe #8, PSA 8. $49.99 on
+        //             a $52.98 basis, proposed $5.40, same floor, same fall-
+        //             through, meta `{compsUsed: 50}`.
+        //
+        // Both rows therefore carry a bare number with `method` undefined —
+        // INVISIBLE to every rung gate and to the invariant auditor, which is
+        // the precise failure mode #1674 named. There are twelve `{ noRung }`
+        // sites in portfolioStore and every one of them could reach this.
+        //
+        // So the fallback is total: a meta that names no rung and no withhold
+        // still names its KIND. `unlabelled-carry` is that kind — a number
+        // this write did not derive and whose origin pass named no rung. It is
+        // deliberately NOT a rung name (fmvRung.ts does not know it), so no
+        // reader mistakes it for a pricing decision; it is the auditor's
+        // handle on a row that would otherwise have none.
+        method: rung ?? (w.meta.withheld ? "withheld" : "unlabelled-carry"),
         ...(w.meta.withheld ? { withheld: w.meta.withheld } : {}),
         ...(w.meta.compsUsed != null ? { compsUsed: w.meta.compsUsed } : {}),
         ...(w.meta.confidence != null ? { confidence: w.meta.confidence } : {}),
