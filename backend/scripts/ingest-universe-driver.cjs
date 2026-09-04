@@ -206,6 +206,35 @@ const isPersonName = (v) => {
 const EXPLODED_PAR_MAX = Number(process.env.EXPLODED_PAR_MAX || 150);
 const EXPLODED_NUM_MAX = Number(process.env.EXPLODED_NUM_MAX || 2000);
 
+/** The floor under the cross-join signature. Below two rungs, or with no more
+ *  cards than rungs, "every card carries every rung" says nothing: a one-rung
+ *  set is dense by definition (the Tiffany shape), and a handful of cards
+ *  against a handful of rungs is arithmetic noise, not the 11.49M-row spine. */
+const CARTESIAN_MIN_RUNGS = 2;
+const CARTESIAN_MIN_CARDS = 4;
+
+/**
+ * Does this CSV's sidecar manifest attest that its parallel column is a real
+ * ladder read off a checklist?
+ *
+ * Every converter that parses a published ladder stamps
+ * `parallelColumnAuthoritative: true` beside its CSV -- the same flag
+ * ingest-scraped-checklist.cjs reads to take the rung from the column instead
+ * of re-deriving one from the category slug. A file carrying it is claiming
+ * its ladder is the checklist's own and COMPLETE, which is exactly the shape
+ * that is legitimately dense.
+ *
+ * Absence is the safe answer: a missing, unreadable or unflagged manifest
+ * means the file is unattested and gets the strict rule. This never throws --
+ * a gate that crashes on a malformed sidecar refuses nothing.
+ */
+function ladderIsAttested(csvPath) {
+  try {
+    const m = JSON.parse(fs.readFileSync(String(csvPath).replace(/\.csv$/i, ".manifest.json"), "utf8"));
+    return m?.parallelColumnAuthoritative === true;
+  } catch { return false; }
+}
+
 /**
  * CF-A-PRODUCT-WITH-NO-PRINT-RUNS-IS-NOT-PARTIAL (2026-09-04).
  *
@@ -363,13 +392,19 @@ function gateStagedCsv(csvPath) {
   }
 
   // CROSS-JOIN ARITHMETIC, per category -- the 11.49M-row graveyard.
+  const ladderAttested = ladderIsAttested(csvPath);
   const byCat = new Map();
   for (const r of rows) {
     const c = String(r.category || "base");
     if (!byCat.has(c)) byCat.set(c, { pars: new Set(), nums: new Set(), rows: 0, ladderRows: 0 });
     const g = byCat.get(c);
-    g.pars.add(r.parallel); g.nums.add(r.cardNumber); g.rows++;
-    if (r.parallel) g.ladderRows++;
+    // A literal "Base" is a base card, not a rung -- the same reading
+    // isBaseParallel applies above. Counting it as a rung turns 1990 Bowman's
+    // 529 x {Base, Tiffany} into a 2-rung product and reads a correct
+    // two-spelling checklist as a cartesian (CF-THE-LITERAL-BASE-IS-A-BASE-CARD).
+    const isBase = isBaseParallel(r.parallel);
+    g.pars.add(isBase ? "" : r.parallel); g.nums.add(r.cardNumber); g.rows++;
+    if (!isBase) g.ladderRows++;
   }
   stats.categories = byCat.size;
   for (const [c, g] of byCat) {
@@ -389,24 +424,54 @@ function gateStagedCsv(csvPath) {
     // The 11.49M-row graveyard was cards × PLAYERS, not cards × rungs, and the
     // two are told apart by WHAT is in the parallel column — which the
     // players-as-parallels and card-line-as-rung guards above already decide,
-    // per row, on this file's own roster. What is left for arithmetic to catch
-    // is a ladder too WIDE to be one subset's rung list: the ceilings above
-    // (EXPLODED_PAR_MAX / EXPLODED_NUM_MAX) do that.
+    // per row, on this file's own roster. The ceilings above (EXPLODED_PAR_MAX
+    // / EXPLODED_NUM_MAX) catch a ladder too WIDE to be one subset's rung list.
+    // What is left for arithmetic is the gapless product itself.
     //
-    // So the shape is refused only when the rung list is implausibly wide AND
-    // perfectly dense — a full cartesian product against a large rung set, with
-    // no card missing a single rung. A real ladder is ragged: short prints,
-    // rookie-only rungs and per-card variations leave holes. Measured on the
-    // lane, the widest legitimate per-subset ladder is 2023/24 Donruss Optic's
-    // base at 253 rungs; a file that beats EXPLODED_PAR_MAX is already refused
-    // above, so this only fires on a dense product inside that ceiling.
+    // So the shape is refused when the rung list is MULTI-RUNG and perfectly
+    // dense — every card carrying every rung, no card missing one — and the
+    // file has nothing attesting that its parallel column is a real, complete
+    // ladder. A real scraped ladder is ragged: short prints, rookie-only rungs
+    // and per-card variations leave holes.
+    //
+    // CF-DENSITY-IS-THE-SIGNAL-NOT-SIZE (2026-09-04). #1694 fixed the right
+    // defect the wrong way. Its predecessor refused every modern Panini file
+    // because `rows ≈ cards × rungs` is what a correctly read per-subset ladder
+    // looks like; the fix bolted `rungCount > 60 && nums > 200` onto the
+    // density test, which admits those files — and unpins the guard at the low
+    // end, where the 11.49M-row spine's own signature lives. A 60-card × 6-rung
+    // cross-join is the same defect as a 3,000 × 60 one; the graveyard is not
+    // defined by its size.
+    //
+    // What actually separates the two is PROVENANCE, not magnitude. A converter
+    // that read a ladder off a checklist stamps `parallelColumnAuthoritative:
+    // true` in the CSV's sidecar manifest — the same flag ingest-scraped-
+    // checklist reads to take the rung from the column instead of re-deriving
+    // it from the category slug. That flag is the file saying "this column is
+    // the checklist's own ladder", and a complete ladder is EXPECTED to be
+    // dense: a 132-card set × Tiffany is 132 rows with no holes, and so is
+    // 2022 Panini Prizm's 300 × 56 base. Measured across all 102 staged CSVs in
+    // this repo: 343 category groups are perfectly dense, and 342 of them carry
+    // the flag — including every wide base ladder the size thresholds were
+    // widened to admit (300x56, 314x45, 250x46). The one that does not is a
+    // 50-card × 1-rung TCDB file, which the multi-rung floor below keeps safe.
+    //
+    // So an unattested file gets the size-free rule, and an attested one is
+    // trusted for density but still bounded by EXPLODED_PAR_MAX /
+    // EXPLODED_NUM_MAX above — the flag buys density, never unlimited width.
+    //
     // Density is measured against the NON-BLANK rungs. A blank parallel is a
     // base row, one per card, and counting it as a rung drags a true cartesian
     // just under any threshold — a 300 x 80 product reads as 300 x 81 and
     // slips through at 98.8% of the wrong denominator.
     const rungCount = g.pars.size - (g.pars.has("") ? 1 : 0);
     const cartesian = rungCount > 0 && g.ladderRows >= rungCount * g.nums.size * 0.995;
-    if (cartesian && rungCount > 60 && g.nums.size > 200) {
+    // ONE rung against N cards is a set with a single parallel — the Tiffany
+    // shape — and is dense by definition; it carries no cross-join information
+    // either way. The signature needs at least two rungs, and more cards than
+    // rungs, to mean anything.
+    const bigEnough = rungCount >= CARTESIAN_MIN_RUNGS && g.nums.size >= CARTESIAN_MIN_CARDS;
+    if (cartesian && bigEnough && !ladderAttested) {
       return { ok: false, reason: `category "${c}" pairs every one of ${f(g.nums.size)} cards with every one of ${f(rungCount)} rungs (${f(g.ladderRows)} ladder rows, no gaps) — a cartesian product, not a ladder`, stats };
     }
   }
@@ -1309,7 +1374,7 @@ for (const lane of ACQUIRE_LANES) {
   }
 }
 
-module.exports = { gateStagedCsv, gateStagedEntry, stagedCsvs, LANES_WITHOUT_PRINT_RUNS, LANES_WITH_BASELESS_PRODUCTS, sourceLabelFor, splitCsv, isPersonName, setKeyFor, planFor, tcgdexModern, acquireStaged, ACQUIRE_LANES, LANE_ALIASES, LANE_SOURCE, LANE_MINUTES, CANONICAL_HEADER, CHILD_STDERR_LINES, cosmosSafeId, controlId, orderQueue, SYSTEMIC_FAILURE_STREAK, EMPTY_STATUS, STREAK_STATUSES, isStaged, stagedSourceRefs };
+module.exports = { gateStagedCsv, gateStagedEntry, ladderIsAttested, CARTESIAN_MIN_RUNGS, CARTESIAN_MIN_CARDS, stagedCsvs, LANES_WITHOUT_PRINT_RUNS, LANES_WITH_BASELESS_PRODUCTS, sourceLabelFor, splitCsv, isPersonName, setKeyFor, planFor, tcgdexModern, acquireStaged, ACQUIRE_LANES, LANE_ALIASES, LANE_SOURCE, LANE_MINUTES, CANONICAL_HEADER, CHILD_STDERR_LINES, cosmosSafeId, controlId, orderQueue, SYSTEMIC_FAILURE_STREAK, EMPTY_STATUS, STREAK_STATUSES, isStaged, stagedSourceRefs };
 if (require.main !== module) return;
 
 (async () => {
