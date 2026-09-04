@@ -75,3 +75,35 @@ describe("the -fractor family is parallel vocabulary", () => {
     })).toBeNull();
   });
 });
+
+describe("a seller handle is not a signature", () => {
+  // CF-A-SELLER-HANDLE-IS-NOT-A-SIGNATURE (census, 2026-09-04). The "autograph"
+  // alternative carried no right-hand boundary, so it matched inside the eBay
+  // store name "AutographDen" and attested every base card that seller listed.
+  // 102,439 sold_comps rows carry isAuto=true off this handle alone.
+  it("does not read AutographDen as an attestation", () => {
+    expect(unparsedVariantReason({
+      title: "Ken Caminiti 1992 Stadium Club #142 Astros MLB READ FREE SHIPPING AutographDen",
+      parsedParallel: "Base", parsedIsAuto: false,
+    })).toBeNull();
+    expect(unparsedVariantReason({
+      title: "David Justice 1992 Stadium Club #182 Braves MLB READ FREE SHIPPING AutographDen",
+      parsedParallel: "Base", parsedIsAuto: false,
+    })).toBeNull();
+  });
+
+  it("still holds a dropped auto the title really states", () => {
+    // The behaviour the boundary must NOT cost: every form of the real word.
+    // Every form of the real word still attests. These titles carry no colour
+    // or parallel vocabulary, so "auto in title" is the rule that must fire --
+    // if the boundary had cost us the word, the reason would be null.
+    for (const title of [
+      "2011 Topps Chrome Freddie Freeman Rookie Autograph #173",
+      "2025 Bowman Chrome Prospect Autographs CPA-EW Eli Willits",
+      "Shohei Ohtani Autographed Baseball Card 2024 Topps",
+      "Mike Trout hard-signed rookie card",
+    ]) {
+      expect(unparsedVariantReason({ title, parsedParallel: "Base", parsedIsAuto: false })).toBe("auto in title");
+    }
+  });
+});

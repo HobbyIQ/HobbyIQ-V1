@@ -32,7 +32,16 @@ import { isParserProbablyWrong } from "../portfolioiq/parserSuspicionDetector";
 const PARALLEL_HINT_RE =
   /\b(camo|mojo|disco|hyper|scope|sparkle|velocity|tie[- ]?dye|speckle|atomic|cracked[- ]ice|reactive|shimmer|wave|prizm|refractor|x-?fractor|holo(?:foil|gram)?|foil|lava|pulsar|snakeskin|dragon[- ]scale|kaleidoscope|nebula|genesis|fast[- ]break|die[- ]?cut|sapphire|superfractor|negative|prismatic|rainbow|starburst|downtown|kaboom|[a-z]+fractor)\b/i;
 
-const AUTO_IN_TITLE_RE = /\bauto\b|autograph|hard[-\s]signed/i;
+// CF-A-SELLER-HANDLE-IS-NOT-A-SIGNATURE (census, 2026-09-04). "autograph" was
+// the one alternative here with no RIGHT-hand boundary, so it matched INSIDE
+// the eBay store name "AutographDen" -- and every 1992 Stadium Club base card
+// that seller listed was attested as signed. 102,439 sold_comps rows carry
+// isAuto=true off that handle, 102,379 of them with no other signature word in
+// the title, which is 9.9% of every auto row in the pool. Those sales price
+// against auto anchors and mint `...:base:auto` slugs for cards that were never
+// signed. \b on both ends; the s/ed suffixes stay explicit so "Autographs" and
+// "Autographed" still read as attestations.
+const AUTO_IN_TITLE_RE = /\bauto\b|\bautograph(?:s|ed)?\b|hard[-\s]signed/i;
 
 /** A print run stated as "/99" or "21/25". Not a card number: requires the
  *  slash. Capped at 5 digits so a date or a cert number cannot match. */
