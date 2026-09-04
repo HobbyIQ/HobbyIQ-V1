@@ -29,7 +29,7 @@
 
 import { CosmosClient, type Container } from "@azure/cosmos";
 import { computeHobbyIqCardId } from "./hobbyIqCardId.service.js";
-import { authorityRank } from "../catalog/catalogAuthority.service.js";
+import { authorityRank, catalogAuthorityOf } from "../catalog/catalogAuthority.service.js";
 import { buildSearchText, buildSearchTokens } from "./searchIndexing.service.js";
 import { canonicalCardName } from "../catalog/canonicalCardName.js";
 
@@ -259,6 +259,13 @@ const PRESERVED_ON_REPLACE = [
 /** A confidence the row never declared is no confidence, not a high one. */
 const confidenceOf = (v: unknown): number => (typeof v === "number" && Number.isFinite(v) ? v : 0);
 
+/** The literal word "Base" — the finish no checklist states (#1634). Matches
+ *  the predicate repair-hobbymonitor-literal-base.cjs applies to stored rows. */
+export const isLiteralBaseParallel = (v: unknown): boolean => /^\s*base\s*$/i.test(String(v ?? ""));
+
+/** The checklist said nothing in the parallel column. Blank, never "Base". */
+export const isBlankParallel = (v: unknown): boolean => String(v ?? "").trim() === "";
+
 /**
  * The merge rule behind upsertCatalogEntry, on its own so it can be tested
  * without a container -- the test that pinned "the cleanest one wins" carried
@@ -310,6 +317,30 @@ export function mergeCatalogEntries(
       if ((has === undefined || has === null || has === "") && incoming !== undefined) {
         backfill[f] = incoming;
       }
+    }
+    // CF-BLANK-MEANS-UNKNOWN-NEVER-BASE, on the losing branch (2026-09-04).
+    //
+    // The literal word "Base" in a stored `parallel` is the one identity field
+    // a losing checklist row may still correct, and it is not an exception to
+    // the rule above so much as the rule applied honestly: "Base" asserts a
+    // finish that no checklist ever states (#1634), and the incoming row is a
+    // CHECKLIST saying the field is blank. Blanking it cannot move the row --
+    // "", "Base", null and " Base " all normalise to the same `:base:` slug
+    // segment, verified in repair-hobbymonitor-literal-base.cjs -- so no pool
+    // splits and no FMV moves. It removes a word we invented.
+    //
+    // Deliberately narrow, on all three axes at once, exactly as the repair
+    // script is: only when the INCOMING row is checklist authority, only when
+    // the incoming parallel is genuinely blank, and only when the stored value
+    // is the literal word. A real parallel name is never touched, and a
+    // checklist that names a rung is not "blank" and so cannot erase one.
+    if (
+      catalogAuthorityOf(entry.source) === "checklist"
+      && isBlankParallel(entry.parallel)
+      && isLiteralBaseParallel(ex.parallel)
+    ) {
+      backfill.parallel = null;
+      backfill.parallelBefore = ex.parallel;
     }
     return {
       winnerIsIncoming,

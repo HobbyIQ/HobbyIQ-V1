@@ -283,6 +283,68 @@ const LANES_WITHOUT_PRINT_RUNS = new Set(["tcgdexja"]);
 const LANES_WITH_BASELESS_PRODUCTS = new Set(["tcgdexja"]);
 
 /**
+ * CF-A-VINTAGE-BASE-SET-IS-NOT-PARTIAL (2026-09-04).
+ *
+ * The SCC-CANARY2 apply (sportscardchecklist, scope=recheck, three titles)
+ * landed three complete vintage products and recorded all three `partial`:
+ *
+ *   1979-80 O-Pee-Chee Hockey      49 rows created, 1,403 in catalog
+ *   1972 Topps Football           351 rows created, 7,309 in catalog
+ *   1957 Topps Basketball          80 rows created, 4,770 in catalog
+ *
+ * every one of them for the reason "base-only, no parallel ladder". Not one of
+ * them is incomplete. A 1957, 1972 or 1979 base set HAS no parallel ladder --
+ * the parallel as a product axis does not exist before the chrome/refractor era
+ * -- so `ladder === 0` is the checklist telling the truth about the product,
+ * exactly as `withPrintRun === 0` is on tcgdexja. Recording `partial` tells the
+ * next pass to re-acquire a set that is already complete, forever, because no
+ * re-scrape can produce a ladder the product never had.
+ *
+ * WHY AN ERA RULE AND NOT A LANE RULE. LANES_WITHOUT_PRINT_RUNS is declared by
+ * lane BY NAME because "Japanese Pokemon has no print runs" is a property of
+ * everything that lane serves. Vintage is NOT that shape: sportscardchecklist
+ * spans 1933-2009, and its 2000s cells (1990-2009) sit squarely in the era when
+ * parallels DO exist. Declaring the whole lane would excuse a 2003 Topps Chrome
+ * scrape that lost its refractor ladder -- the same defect
+ * LANES_WITHOUT_PRINT_RUNS is careful not to excuse for Topps Chrome.
+ *
+ * So the axis is the PRODUCT ERA, and the lane opts in to being judged by it.
+ * A lane not named here keeps the flat expectation at every year.
+ *
+ * THE BOUNDARY IS 1990, and it is the boundary the repo already uses: valueRank
+ * scores era in the same steps off the 2026-09-03 autograph-yield probe, whose
+ * measurement was 0% pre-1990. The parallel era begins with the 1993 Topps
+ * Finest refractor; 1990 is the conservative side of that line, so a product
+ * from 1990-1992 that genuinely has no ladder is still reported PARTIAL rather
+ * than quietly closed.
+ *
+ * This narrows ONLY the ladder expectation, and only for pre-1990 entries on a
+ * declared lane. A vintage entry that lands zero rows, or lands short of what
+ * was staged, is still FAILED -- the era says a product has no ladder, never
+ * that our pipe may lose rows.
+ */
+const LANES_WITH_VINTAGE_ERA_PRODUCTS = new Set(["sportscardchecklist"]);
+
+/** The first year a parallel ladder is an expected product axis. Below it, on a
+ *  declared lane, `ladder === 0` is the product's shape, not a gap. */
+const PARALLEL_ERA_FIRST_YEAR = 1990;
+
+/**
+ * Is a missing parallel ladder the honest shape of THIS entry's product?
+ *
+ * True only when the lane opts into era judgement AND the entry's year is
+ * genuinely pre-1990. A year the manifest never carried is NOT vintage: an
+ * absent year must not silently buy the exemption, so it falls through to the
+ * flat expectation and the entry reports PARTIAL as before.
+ */
+function ladderlessByEra(lane, entry) {
+  if (!LANES_WITH_VINTAGE_ERA_PRODUCTS.has(lane)) return false;
+  const y = Number(entry && entry.year);
+  if (!Number.isFinite(y) || y <= 0) return false;
+  return y < PARALLEL_ERA_FIRST_YEAR;
+}
+
+/**
  * THE PER-ENTRY CLEANLINESS GATE.
  *
  * The ingest's own guards are per-category and per-row: they drop the bad part
@@ -1374,7 +1436,7 @@ for (const lane of ACQUIRE_LANES) {
   }
 }
 
-module.exports = { gateStagedCsv, gateStagedEntry, ladderIsAttested, CARTESIAN_MIN_RUNGS, CARTESIAN_MIN_CARDS, stagedCsvs, LANES_WITHOUT_PRINT_RUNS, LANES_WITH_BASELESS_PRODUCTS, sourceLabelFor, splitCsv, isPersonName, setKeyFor, planFor, tcgdexModern, acquireStaged, ACQUIRE_LANES, LANE_ALIASES, LANE_SOURCE, LANE_MINUTES, CANONICAL_HEADER, CHILD_STDERR_LINES, cosmosSafeId, controlId, orderQueue, SYSTEMIC_FAILURE_STREAK, EMPTY_STATUS, STREAK_STATUSES, isStaged, stagedSourceRefs };
+module.exports = { gateStagedCsv, gateStagedEntry, ladderIsAttested, CARTESIAN_MIN_RUNGS, CARTESIAN_MIN_CARDS, stagedCsvs, LANES_WITHOUT_PRINT_RUNS, LANES_WITH_BASELESS_PRODUCTS, LANES_WITH_VINTAGE_ERA_PRODUCTS, PARALLEL_ERA_FIRST_YEAR, ladderlessByEra, sourceLabelFor, splitCsv, isPersonName, setKeyFor, planFor, tcgdexModern, acquireStaged, ACQUIRE_LANES, LANE_ALIASES, LANE_SOURCE, LANE_MINUTES, CANONICAL_HEADER, CHILD_STDERR_LINES, cosmosSafeId, controlId, orderQueue, SYSTEMIC_FAILURE_STREAK, EMPTY_STATUS, STREAK_STATUSES, isStaged, stagedSourceRefs };
 if (require.main !== module) return;
 
 (async () => {
@@ -1648,7 +1710,14 @@ if (require.main !== module) return;
          * the source telling the truth, not a gap for a later pass to close.
          */
         const printRunsExpected = !LANES_WITHOUT_PRINT_RUNS.has(lane);
-        const incomplete = gate.stats.ladder === 0 || (printRunsExpected && gate.stats.withPrintRun === 0);
+        /**
+         * CF-A-VINTAGE-BASE-SET-IS-NOT-PARTIAL. On a declared lane, a pre-1990
+         * product has no parallel ladder to lose, so `ladder === 0` is the
+         * checklist telling the truth rather than a gap for a later pass.
+         */
+        const ladderExpected = !ladderlessByEra(lane, entry);
+        const incomplete = (ladderExpected && gate.stats.ladder === 0)
+          || (printRunsExpected && gate.stats.withPrintRun === 0);
 
         if (after === null) {
           verdict = { status: "failed", reason: "cannot verify by read — setKey/year not derivable for this entry", rowsCreated: 0, stats: gate.stats };
@@ -1667,15 +1736,23 @@ if (require.main !== module) return;
           // Landed and clean, but incomplete: base-only, or -- on a lane whose
           // products ARE numbered -- a ladder with no print runs. Recording it
           // `ingested` would close a gap still open.
-          const why = gate.stats.ladder === 0 ? "base-only, no parallel ladder" : "ladder present but zero print runs";
+          const why = (ladderExpected && gate.stats.ladder === 0)
+            ? "base-only, no parallel ladder"
+            : "ladder present but zero print runs";
           verdict = { status: "partial", reason: why, rowsCreated: created, rowsInCatalog: after, rowsStaged: staged, stats: gate.stats };
           console.log(`      PARTIAL — ${why} (${f(created)} rows created, ${f(after)} in catalog)`);
         } else {
           const note = printRunsExpected
             ? `${f(gate.stats.withPrintRun)} with print runs`
             : "no print runs — this lane's products carry none";
+          // Say the era exemption out loud. A vintage base set reporting
+          // INGESTED with no ladder must not read like a ladder that was
+          // scraped and silently dropped.
+          const era = !ladderExpected && gate.stats.ladder === 0
+            ? `; base-only is the shape of a pre-${PARALLEL_ERA_FIRST_YEAR} product, not a gap`
+            : "";
           verdict = { status: "ingested", reason: null, rowsCreated: created, rowsInCatalog: after, rowsStaged: staged, stats: gate.stats };
-          console.log(`      INGESTED — ${f(created)} rows created, ${f(after)} in catalog of ${f(staged)} staged, ${note}`);
+          console.log(`      INGESTED — ${f(created)} rows created, ${f(after)} in catalog of ${f(staged)} staged, ${note}${era}`);
         }
       }
     } catch (e) {
