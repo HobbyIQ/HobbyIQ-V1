@@ -429,3 +429,149 @@ export function parseGradeLabel(label: string | null | undefined): ParsedGrade |
   // them before re-running.
   return null;
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// CF-A-GRADE-IS-A-GRADER-TOKEN-PLUS-A-NUMERAL (Drew, 2026-09-04).
+//
+// parseGradeLabel above reads a SLAB LABEL — the string printed on the
+// holder, or captured by the iOS card-scan: "GEM MT 10", "MINT 9",
+// "NM-MT 8". On that input the PSA descriptor vernacular IS the grade,
+// and the any-number fallback has exactly one number to find. Both are
+// correct there and stay.
+//
+// A MARKETPLACE TITLE IS NOT A LABEL. It carries a card number, a year, a
+// print run, a team name and a seller's condition prose, and on that input
+// the same two heuristics compose into a card-number reader:
+//
+//   "Mickey Mantle #5 NM"            -> PSA 5    (NM is the descriptor,
+//   "Ted Williams #8 EX"             -> PSA 8     #N is the "grade")
+//   "Nolan Ryan #1 VG"               -> PSA 1
+//   "Roberto Clemente NM-MT #9"      -> PSA 9
+//   "Raw ungraded NM-MT 8 vintage"   -> PSA 8    (the title says RAW)
+//   "Card GEM MINT 10 no grader"     -> PSA 10
+//
+// MEASURED on origin/main (probe, this branch's parent): every line above
+// is this parser's output today. The mechanism is compositional — the
+// adjective satisfies PSA_DESCRIPTOR_PATTERNS, which licenses the inference,
+// and the any-number fallback then supplies the CARD NUMBER as its value.
+// Neither half is a grade. A wrong grade is a wrong card: the row lands on a
+// graded slug it was never in, the raw pool loses a real sale, and the row
+// then feeds GRADE_CALIBRATION as evidence for a curve it is not on.
+//
+// THE CONTRACT, on a title:
+//   - a grade requires an explicit GRADER TOKEN (PSA/BGS/SGC/CGC/CSG/HGA/
+//     TAG/...), and the numeral is the one that FOLLOWS it, skipping the
+//     slab-label words a holder actually prints between the two (GRADED,
+//     GEM, MINT, MT, PRISTINE, AUTHENTIC, BLACK LABEL, EX-MT);
+//   - "#N" is a card number, never a grade;
+//   - a raw condition adjective with no grader (VG, EX, NM, VG-EX, EX-MT,
+//     NM-MT, "or better") describes an UNGRADED card — it is raw-with-
+//     condition, not a tier;
+//   - ABSENT BEATS WRONG. A title that states no grade returns null, which
+//     is a real answer meaning "raw / leave the stored grade alone", never
+//     a licence to guess one.
+//
+// This is the same reading #1691 shipped as gradeFromTitleStrict in the
+// census classifier, which refuses these rows. That classifier is a
+// READER and this is the WRITER: until this function is the one the write
+// path calls, the census keeps refusing rows the ingest keeps creating.
+// gradeParserStrictEquivalence.test.ts pins the two to the same answers.
+
+/** Grader tokens. A grade exists on a title only if one of these appears. */
+export const TITLE_GRADER_RE = /\b(PSA|BGS|BVG|SGC|CGC|CSG|HGA|TAG|ISA|GMA|KSA)\b/i;
+
+/** Raw-condition adjectives. WITHOUT a grader token beside them these are a
+ *  seller describing an ungraded card, and they are not grades. */
+export const TITLE_RAW_CONDITION_RE =
+  /\b(?:VG-?VGEX|VG-?EX|EX-?MT|NM-?MT|GD-?VG|P-?FR|VG|EX|NM|GD|FR|PR|GEM\s*MINT|MINT|NEAR\s*MINT|EXCELLENT|VERY\s*GOOD|GOOD|POOR|FAIR)\b/i;
+
+/**
+ * Read a grade off a marketplace TITLE under the strict contract above.
+ *
+ * Returns null when the title states no grade — a real answer, not a
+ * missing one. Callers holding a SLAB LABEL (iOS card-scan, PSA cert
+ * `gradeDescription`) want parseGradeLabel instead: on a label the
+ * descriptor vernacular is the grade.
+ */
+export function parseGradeFromTitle(title: string | null | undefined): ParsedGrade | null {
+  const t = String(title ?? "").trim();
+  if (!t) return null;
+
+  // CF-THE-GRADER-WITH-THE-NUMBER-WINS (Drew, 2026-08-31), carried over from
+  // parseGradeLabel. A title may name more than one grader and only one of
+  // them is the holder this card is in — the others are a comparison, a
+  // cross-over pitch or a regrade question:
+  //
+  //   "2021 Panini Chronicles Elite PSA #29 Isaac Paredes RC SGC 10 Gem Mint"
+  //   "1968 TOPPS #230 PETE ROSE SGC 6 ... Not PSA or BVG"
+  //
+  // Taking the FIRST token attributes both to PSA, which carries no numeral,
+  // and the whole parse then reads null on a correctly-stated grade. So every
+  // grader token in the title is tried, and the one with a numeral adjacent
+  // to it wins; ties fall to the leftmost, which is the single-grader case.
+  const graderRe = new RegExp(TITLE_GRADER_RE.source, "gi");
+  const candidates: Array<{ company: string; after: string }> = [];
+  for (const g of t.matchAll(graderRe)) {
+    if (g.index === undefined) continue;
+    candidates.push({ company: g[1].toUpperCase(), after: t.slice(g.index + g[0].length) });
+  }
+  if (!candidates.length) return null;
+
+  // Read FORWARD from the grader token only. A digit EARLIER in the title is
+  // a year, a card number or a print run — never this card's grade.
+  const NUMERAL_AFTER_GRADER =
+    /^[\s.:\-]*(?:(?:GRADED|GRADE|AUTH(?:ENTIC(?:ATED)?)?|CARD|GEM|MINT|NEAR|MT|PRISTINE|BLACK|LABEL|[A-Z]{2}(?:-[A-Z]{2})?)[\s.:\-]*){0,4}(10(?:\.0)?|[1-9](?:\.5|\.0)?)(?!\d)/i;
+  const winner = candidates.find((c) => {
+    const hit = c.after.match(NUMERAL_AFTER_GRADER);
+    if (!hit) return false;
+    const v = Number(hit[1]);
+    return Number.isFinite(v) && v > 0 && v <= 10;
+  }) ?? candidates[0];
+
+  // BVG is Beckett's vintage label — the same house as BGS, and the pool
+  // keys on BGS. Every other token is already its own canonical company.
+  const gradeCompany = winner.company === "BVG" ? "BGS" : winner.company;
+  const after = winner.after;
+  const m = after.match(NUMERAL_AFTER_GRADER);
+
+  if (!m) {
+    // No numeral belongs to this grader. An AUTHENTICATED-but-ungraded slab
+    // is still a real answer — the CF-AUTHENTIC-BUCKET row — and it is the
+    // one grade-bearing outcome that carries no numeral. Card numbers and
+    // years are stripped first so "#1" and "2018" cannot stand in for one.
+    if (/\bauth(?:entic|enticated)?\b/i.test(t)) {
+      const withoutNoise = t
+        .replace(/\b(?:19|20)\d{2}\b/g, " ")
+        .replace(/#\s*[\w-]+/g, " ");
+      if (!/\b(?:10|[1-9](?:\.5)?)\b/.test(withoutNoise)) {
+        return { gradeCompany, gradeValue: 0, isAuthentic: true };
+      }
+    }
+    return null;
+  }
+
+  const gradeValue = Number(m[1]);
+  if (!Number.isFinite(gradeValue) || gradeValue <= 0 || gradeValue > 10) return null;
+
+  // Black Label is a BGS-10-only tier, scoped exactly as parseGradeLabel
+  // scopes it — same rule, same one place it can fire.
+  if (
+    gradeCompany === "BGS"
+    && gradeValue === 10
+    && BGS_BLACK_LABEL_PATTERNS.some((re) => re.test(t))
+  ) {
+    return { gradeCompany, gradeValue, isBlackLabel: true };
+  }
+
+  // PSA qualifier flags (issue #713). BGS/SGC/CGC use half-point deductions
+  // rather than qualifiers, so detection stays scoped to PSA. The qualifier
+  // is read from the text AFTER the numeral, so a two-letter word earlier in
+  // the title cannot supply one.
+  if (gradeCompany === "PSA") {
+    const tail = after.slice(m[0].length);
+    const qualifier = detectQualifier(tail);
+    if (qualifier) return { gradeCompany, gradeValue, qualifier };
+  }
+
+  return { gradeCompany, gradeValue };
+}

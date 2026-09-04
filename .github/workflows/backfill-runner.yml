@@ -356,7 +356,7 @@ on:
         required: false
         default: "16"
       scope:
-        description: "For repair-refractor-mislabel: 'refractor' (plain segment only) or 'all' (every parallel pool). For rename-setkey-to-product MODE=product: comma-separated ruled product keys (e.g. topps-series-1,leaf-metal); the default here or 'all' = every ruled product. NOTE the default is 'refractor' and it is INHERITED, not chosen -- for triage-contenthash-collisions and consolidate-catalog-duplicates it narrows NOTHING (both read SCOPE only as the 'all' escape hatch for the no-sports/no-years refusal), so the triage now REFUSES any non-'all' value rather than ignoring it: pass scope=all with those two and narrow with sports/years/slot instead."
+        description: "For repair-refractor-mislabel: 'refractor' (plain segment only) or 'all' (every parallel pool). For rename-setkey-to-product MODE=product: comma-separated ruled product keys (e.g. topps-series-1,leaf-metal); the default here or 'all' = every ruled product. NOTE the default is 'refractor' and it is INHERITED, not chosen -- for triage-contenthash-collisions and consolidate-catalog-duplicates it narrows NOTHING (both read SCOPE only as the 'all' escape hatch for the no-sports/no-years refusal), so the triage now REFUSES any non-'all' value rather than ignoring it: pass scope=all with those two and narrow with sports/years/slot instead. For rematch-sold-comps MODE=apply-improve this is the APPLY CLASS SCOPE: 'base-eviction' | 'improve' | 'both' -- REQUIRED, and the inherited default 'refractor' is REFUSED (exit 2), because an apply names the class it writes. MODE=census ignores it."
         required: false
         default: "refractor"
         type: string
@@ -927,6 +927,21 @@ jobs:
           MIN_COVERAGE_PCT: ${{ inputs.min_coverage_pct }}
           # repair-refractor-mislabel: "refractor" (plain segment only) or
           # "all" (every slug whose parallel disagrees with its own title).
+          #
+          # rematch-sold-comps MODE=apply-improve reads SCOPE as its APPLY CLASS
+          # SCOPE (audit gate item 8, 2026-09-03): base-eviction | improve |
+          # both. The two writable classes were measured separately and came
+          # back unequal -- BASE-EVICTION is clean corpus-wide (0 bad in 1,236
+          # audited lines over 16 shards) while IMPROVE is dirty at 4.9%
+          # (298/6,106) -- so the class that earned its apply can now have it
+          # without dragging the other along. This input carries it because
+          # workflow_dispatch is capped at 25 inputs and 24 are used; a new one
+          # is not available.
+          #
+          # The runner-wide default "refractor" is INHERITED, not chosen, and
+          # the script REFUSES it (exit 2) rather than treating it as "both":
+          # an apply says which class it writes, by name. MODE=census ignores
+          # SCOPE entirely and counts every class.
           SCOPE: ${{ inputs.scope }}
           # dedupe-catalog-partition-shadows: which products to sweep.
           SETKEY_LIKE: ${{ inputs.setkey_like }}

@@ -115,6 +115,36 @@ const LIMIT = Number(process.env.LIMIT || 0);
 const YEARS = String(process.env.YEARS || "").split(",").map((s) => s.trim()).filter(Boolean).map(Number).filter(Number.isFinite);
 const CENSUS_OUT = String(process.env.CENSUS_OUT || "/tmp/rematch-census").trim();
 /**
+ * THE APPLY CLASS SCOPE (audit gate item 8, 2026-09-03).
+ *
+ * MODE=apply-improve wrote BOTH writable classes -- IMPROVE and the
+ * BASE-EVICTION subclass of CONFLICT -- under one verdict. The second audit
+ * gate measured them separately and they came back UNEQUAL: BASE-EVICTION is
+ * clean corpus-wide (0 bad in 1,236 audited lines across all 16 shards), while
+ * IMPROVE is dirty at 4.9% (298/6,106). A class that has earned its apply
+ * could not have it without dragging along the class that has not.
+ *
+ * So the apply is SCOPABLE, and it rides the EXISTING free-form `scope`
+ * dispatch input, which backfill-runner.yml already exports as SCOPE. GitHub
+ * caps workflow_dispatch at 25 inputs and 24 are used, so a new one is not
+ * available -- and this is the input whose own description documents it as the
+ * per-script narrowing carrier.
+ *
+ *   SCOPE=base-eviction   apply evictions only   <- the clean class
+ *   SCOPE=improve         apply IMPROVE only
+ *   SCOPE=both            apply both (the pre-2026-09-03 behaviour)
+ *
+ * THE INHERITED DEFAULT IS NOT A SCOPE. That input's runner-wide default is
+ * "refractor" and its description says the value is INHERITED rather than
+ * chosen. An inherited default must never arm a write, so `parseApplyScope`
+ * refuses anything it does not recognise and the apply exits 2 -- it does not
+ * fall back to "both". A write happens because somebody asked for it by name.
+ *
+ * MODE=census ignores this entirely: a census writes nothing and must count
+ * every class regardless of what an apply would later be scoped to.
+ */
+const APPLY_SCOPE_RAW = String(process.env.SCOPE || "").trim();
+/**
  * THE AUDIT SAMPLE IS 500 ROWS, SPREAD ACROSS DISTINCT CARDS (audit finding 7).
  *
  * This was 30, so the "500-row sample audit" the trust ladder is defined
@@ -269,6 +299,15 @@ function deriveIdentity(row, deps) {
   if (!guard.ok) return { ok: false, reasons: guard.reasons.map((r) => `guard:${r}`) };
 
   const isAuto = parsed.isAuto || row.isAuto === true;
+  // THE ONE THING THAT LEGITIMATELY MAKES A ROW AN AUTO.
+  //
+  // parseListingIdentity ORs a title-word reader with the cardNumber reader
+  // and returns one flag, so by the time it lands here the evidence is gone.
+  // The census reported 33,283 rows flipped no-auto -> auto, 100% of them on
+  // the title word alone -- a cut signature mounted with a base card reads
+  // "PSA AUTHENTIC AUTO" and is still a base card. Carry the cardNumber
+  // verdict out separately so the classifier can tell the two apart.
+  const autoByCardNumber = deps.isCardNumberAutoSubset ? !!deps.isCardNumberAutoSubset(cardNumber) : false;
   const parallel = parsed.parallel || row.parallel || "Base";
   const printRun = parsed.printRun ?? row.printRun ?? null;
   const identity = { sport: guard.sport, cardYear, setKey, setNameRaw: setKeyRaw, cardNumber, parallel, isAuto, printRun, gradeCompany, gradeValue };
@@ -288,7 +327,7 @@ function deriveIdentity(row, deps) {
     printRun: null, playerName: row.playerName ?? null, gradeCompany, gradeValue,
   });
   const baseIdentity = { ...identity, parallel: "Base", printRun: null };
-  return { ok: true, identity, slug, baseSlug, baseIdentity, reasons: [] };
+  return { ok: true, identity, slug, baseSlug, baseIdentity, autoByCardNumber, reasons: [] };
 }
 
 // ── main ───────────────────────────────────────────────────────────────────
@@ -297,6 +336,18 @@ async function main() {
     console.error(`FATAL: MODE is required and has no default -- 'census' (read only) or 'apply-improve'. Got ${JSON.stringify(MODE)}.`);
     process.exit(2);
   }
+  // THE CLASS SCOPE IS PARSED BEFORE ANYTHING IS READ, and a scope the apply
+  // cannot read is a REFUSAL, not a default. See APPLY_SCOPE_RAW above.
+  const applyScope = K.parseApplyScope(APPLY_SCOPE_RAW);
+  if (MODE === "apply-improve" && !applyScope.ok) {
+    console.error(`FATAL: MODE=apply-improve needs a class scope on the 'scope' input, and ${JSON.stringify(APPLY_SCOPE_RAW)} is not one.`);
+    console.error(`       ${applyScope.reason}`);
+    console.error(`       Use scope=base-eviction (the class the audit gate cleared), scope=improve, or scope=both.`);
+    console.error(`       The runner's inherited default 'refractor' is deliberately NOT accepted -- an apply says which class it writes.`);
+    process.exit(2);
+  }
+  const ARMED = applyScope.classes;
+
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) { console.error("FATAL: COSMOS_CONNECTION_STRING not set"); process.exit(1); }
   if (!Number.isFinite(SLOT) || !Number.isFinite(SLOTS) || SLOT < 0 || SLOT >= SLOTS) {
@@ -321,9 +372,20 @@ async function main() {
   const { reportWrites } = d(["ops", "writeReconciliation.js"]);
   const deps = {
     parseListingIdentity: pti.parseListingIdentity,
+    // isAuto's boundary is the CARD NUMBER, never title text
+    // (CF-ISAUTO-BOUNDARY-IS-CARDNUMBER). The classifier needs this verdict
+    // separately from parseListingIdentity's OR'd `isAuto`, because that OR
+    // is exactly what the D7 guard has to be able to see through.
+    isCardNumberAutoSubset: pti.isCardNumberAutoSubset,
     inferSetKeyFromTitle: pti.inferSetKeyFromTitle,
     inferSportFromTitle: pti.inferSportFromTitle,
     ingestGradeFromTitle: pvs.ingestGradeFromTitle,
+    // The parser's own count-anchored multi-card-lot detector. GUARD 5 in the
+    // classifier refuses a cardNumber minted off a lot or a range, and it
+    // consults BOTH detectors: the range and pick/singles vocabulary live in
+    // rematch-finish-vocab.cjs (pure, no dist/), the count-anchored lot idioms
+    // ("Lot of 6", "40x Refractors", "(12 Cards)") live here and are passed in.
+    isMultiCardLot: pti.isMultiCardLot,
     normalizeSetKey: hic.normalizeSetKey,
     computeHobbyIqCardId: hic.computeHobbyIqCardId,
     guardSlugInputs: guard.guardSlugInputs,
@@ -340,6 +402,16 @@ async function main() {
   console.log(`  this slot owns ${q.units.length} unit(s), ${f(expected)} rows measured at capture:`);
   for (const u of q.units) console.log(`    ${String(u.key).padEnd(28)} ${f(u.rows).padStart(11)}`);
   if (YEARS.length) console.log(`  YEARS filter: ${YEARS.join(",")}`);
+  // THE BANNER SAYS WHICH CLASSES ARE ARMED, BEFORE A ROW IS READ. A run whose
+  // log does not name its own scope cannot be audited after the fact.
+  if (MODE === "apply-improve") {
+    console.log(`  APPLY CLASS SCOPE: scope=${JSON.stringify(APPLY_SCOPE_RAW)} -> ${[...ARMED].join(" + ")}`);
+    for (const kind of [K.IMPROVE, K.BASE_EVICTION]) {
+      console.log(`    ${kind.padEnd(15)} ${ARMED.has(kind) ? "ARMED   -- candidates of this class may be written" : "DISARMED -- candidates of this class are counted and never written"}`);
+    }
+  } else {
+    console.log(`  MODE=census counts every class; the apply class scope does not apply (and nothing is written).`);
+  }
 
   // ── checklist backing, cached per slug ────────────────────────────────────
   // A match proves nothing unless checklist-backed. The catalog row's SOURCE
@@ -421,6 +493,13 @@ async function main() {
 
   const it = pool.items.query(q, { maxItemCount: 500 });
   const improvable = [];
+  /** Writable candidates the class scope held back, per class. Counted so the
+   *  reconcile can show what a scoped run declined to write. */
+  const disarmed = Object.create(null);
+  /** The parser's lot detector, defensive: a parser throw must not take out a
+   *  census pass over 16.3M rows, and the classifier's own range/pick half of
+   *  GUARD 5 still fires without it. */
+  const safeIsLot = (t) => { try { return deps.isMultiCardLot ? !!deps.isMultiCardLot(t) : false; } catch { return false; } };
   let stopReason = null;
   page: while (it.hasMoreResults()) {
     if (budgetLeft() < 90000) { stopReason = `stopped at the ${RUN_MINUTES}-minute budget`; break; }
@@ -441,6 +520,8 @@ async function main() {
       const res = K.classifyRow({
         row, stored, derived: der.ok ? der.identity : null, checklistBacked: backed, derivationReasons: der.reasons,
         storedSlug: row.cardId, baseDestSlug: der.baseSlug ?? null, baseDestBacked: baseBacked,
+        parserSaysLot: safeIsLot(row.title),
+        autoByCardNumber: der.autoByCardNumber === true,
       });
       counts[res.klass]++;
       // THE SPLIT-IDENTITY SIGNAL, tallied ACROSS classes (Drew 2026-09-02).
@@ -466,9 +547,21 @@ async function main() {
       // so it is called for EVERY row rather than only while the class is short
       // -- a length check here is what made the sample the first page.
       sample(sampleKey, row.cardId, `${row.id}  [${res.tier}]  "${String(row.title ?? "").slice(0, 68)}"  ${K.renderIdentity(stored)}  ->  ${K.renderIdentity(res.subclass === K.BASE_EVICTION ? der.baseIdentity : der.ok ? der.identity : null)}`);
+      // THE SCOPE IS A REFUSAL AT QUEUE TIME, NOT A FILTER ON A REPORT. A
+      // candidate of a disarmed class is never queued, so it can never be
+      // written -- and it is COUNTED, so the census still says how many the
+      // scope held back. `writableUnderScope` is the only place `writable`
+      // and the scope are combined, so a caller cannot arm a class by reading
+      // `writable` and forgetting the scope.
       if (MODE === "apply-improve" && res.writable) {
-        if (res.klass === K.IMPROVE) improvable.push({ kind: K.IMPROVE, row, stored, slug: der.slug, identity: der.identity });
-        else if (res.subclass === K.BASE_EVICTION) improvable.push({ kind: K.BASE_EVICTION, row, stored, slug: der.baseSlug, identity: der.baseIdentity });
+        const kind = K.applyKindOf(res);
+        if (kind && !ARMED.has(kind)) {
+          disarmed[kind] = (disarmed[kind] ?? 0) + 1;
+          bump(reasons, `apply  not-armed-by-scope:${kind}`);
+        } else if (K.writableUnderScope(res, ARMED)) {
+          if (res.klass === K.IMPROVE) improvable.push({ kind: K.IMPROVE, row, stored, slug: der.slug, identity: der.identity });
+          else if (res.subclass === K.BASE_EVICTION) improvable.push({ kind: K.BASE_EVICTION, row, stored, slug: der.baseSlug, identity: der.baseIdentity });
+        }
       }
     }
   }
@@ -573,22 +666,38 @@ async function main() {
   const nImprove = improvable.filter((c) => c.kind === K.IMPROVE).length;
   const nEvict = improvable.filter((c) => c.kind === K.BASE_EVICTION).length;
   console.log(`\nAPPLY-IMPROVE  ${APPLY ? "APPLYING" : "REPORT ONLY -- nothing written"}  candidates ${f(improvable.length)} (IMPROVE ${f(nImprove)} + BASE-EVICTION ${f(nEvict)})  concurrency ${CONCURRENCY}`);
+  console.log(`  class scope    scope=${JSON.stringify(APPLY_SCOPE_RAW)} -> ${[...ARMED].join(" + ")}`);
+  for (const kind of [K.IMPROVE, K.BASE_EVICTION]) {
+    const held = disarmed[kind] ?? 0;
+    if (!ARMED.has(kind)) console.log(`    ${kind.padEnd(15)} DISARMED -- ${f(held)} writable candidate(s) NOT queued and NOT written`);
+  }
   console.log(`  every candidate is re-checked at write time: the pool moves between the census and this pass,`);
   console.log(`  and a candidate that re-checks as the OTHER kind is skipped, not written on the old verdict.`);
   stats.intended = improvable.length;
   const applied = [];
+  /** Per-class tallies, so the reconcile balances PER CLASS and not only in
+   *  total -- a scoped apply has to be able to prove it wrote nothing of the
+   *  class it disarmed. */
+  const perClass = {};
+  for (const kind of [K.IMPROVE, K.BASE_EVICTION]) perClass[kind] = { intended: 0, written: 0, skipped: 0, failed: 0, notReached: 0 };
+  for (const c of improvable) perClass[c.kind].intended++;
   let idx = 0;
   const worker = async () => {
     while (idx < improvable.length) {
       const my = idx++;
-      if (budgetLeft() < 90000) { stopReason = stopReason ?? `stopped at the ${RUN_MINUTES}-minute budget`; stats.notReached += improvable.length - my; return; }
+      if (budgetLeft() < 90000) {
+        stopReason = stopReason ?? `stopped at the ${RUN_MINUTES}-minute budget`;
+        stats.notReached += improvable.length - my;
+        for (let z = my; z < improvable.length; z++) perClass[improvable[z].kind].notReached++;
+        return;
+      }
       const cand = improvable[my];
       // RE-READ: the row may have been re-keyed, enriched or deleted since the
       // census page. The class is decided again on what is there NOW.
       let fresh = null;
       try { fresh = (await retry(() => pool.item(cand.row.id, cand.row.cardId).read())).resource ?? null; }
-      catch (e) { if (e?.code !== 404 && e?.statusCode !== 404) { stats.failed++; continue; } }
-      if (!fresh) { stats.skipped++; bump(reasons, "apply  row-gone-since-census"); continue; }
+      catch (e) { if (e?.code !== 404 && e?.statusCode !== 404) { stats.failed++; perClass[cand.kind].failed++; continue; } }
+      if (!fresh) { stats.skipped++; perClass[cand.kind].skipped++; bump(reasons, "apply  row-gone-since-census"); continue; }
       const stored = storedIdentity(fresh, deps);
       const der = deriveIdentity(fresh, deps);
       const backed = der.ok ? await checklistBacked(der.slug) : false;
@@ -597,20 +706,26 @@ async function main() {
       const res = K.classifyRow({
         row: fresh, stored, derived: der.ok ? der.identity : null, checklistBacked: backed, derivationReasons: der.reasons,
         storedSlug: fresh.cardId, baseDestSlug: der.baseSlug ?? null, baseDestBacked: baseBacked,
+        parserSaysLot: safeIsLot(fresh.title),
+        autoByCardNumber: der.autoByCardNumber === true,
       });
       // The class is decided again on what is there NOW, and it must come back
       // as the SAME kind the census queued. A row the census saw as an eviction
       // that now reads IMPROVE (or the reverse) is a row the pool changed under
       // us -- it is skipped, not written on the strength of the old verdict.
-      const nowKind = res.klass === K.IMPROVE ? K.IMPROVE : res.subclass === K.BASE_EVICTION ? K.BASE_EVICTION : null;
-      if (!res.writable || nowKind !== cand.kind) {
-        stats.skipped++;
+      // THE SCOPE IS RE-CHECKED AT WRITE TIME TOO, exactly as the class is.
+      // The queue was built under the scope, so this cannot normally fire --
+      // and that is the point: a guard that is only applied where it is
+      // convenient is a guard that a later edit can walk around.
+      const nowKind = K.applyKindOf(res);
+      if (!K.writableUnderScope(res, ARMED) || nowKind !== cand.kind) {
+        stats.skipped++; perClass[cand.kind].skipped++;
         bump(reasons, `apply  no-longer-writable:${res.klass}${res.subclass ? `/${res.subclass}` : ""}/${res.tier}`);
         continue;
       }
       const target = cand.kind === K.BASE_EVICTION ? der.baseSlug : der.slug;
       const identity = cand.kind === K.BASE_EVICTION ? der.baseIdentity : der.identity;
-      if (target === fresh.cardId) { stats.skipped++; bump(reasons, "apply  already-at-target"); continue; }
+      if (target === fresh.cardId) { stats.skipped++; perClass[cand.kind].skipped++; bump(reasons, "apply  already-at-target"); continue; }
 
       const keep = stripSystem(fresh);
       keep.cardId = target;
@@ -631,7 +746,7 @@ async function main() {
         // Refuse rather than write: a fleet never resolves that by guessing,
         // and the row is reported instead.
         if (keep.printRun !== null && keep.printRun !== undefined && keep.printRun !== "") {
-          stats.skipped++;
+          stats.skipped++; perClass[cand.kind].skipped++;
           bump(reasons, `apply  refused:eviction-would-delete-stored-printrun:/${keep.printRun}`);
           continue;
         }
@@ -658,10 +773,10 @@ async function main() {
 
       const r = await relocateSoldComp(pool, { keep, drop: [{ id: fresh.id, cardId: fresh.cardId }], retry, verifyFields: ["cardId", "hobbyiqCardId", "rekeyedAt"], dryRun: !APPLY });
       const why = cand.kind === K.BASE_EVICTION ? `BASE-EVICTION (slug said "${res.evidence?.storedSlugParallel}", row and title say nothing)` : `IMPROVE filled ${res.axes.filled.join(",")}`;
-      if (!APPLY) { stats.written++; bump(reasons, `apply  would-write:${cand.kind}`); if (applied.length < 20) applied.push(`  WOULD RE-KEY ${fresh.id}  ${fresh.cardId}  ->  ${target}   ${why}`); continue; }
-      if (!r.ok && r.stage !== "done") { stats.failed++; console.log(`  FAILED at ${r.stage} ${fresh.id}: ${String(r.error).slice(0, 110)}`); continue; }
-      if (r.duplicatesLeft.length) { stats.failed++; stats.duplicatesLeft += r.duplicatesLeft.length; for (const dd of r.duplicatesLeft) console.log(`  DUPLICATE LEFT ${dd.id}@${dd.cardId}: ${String(dd.error).slice(0, 80)}`); continue; }
-      stats.written++; stats.alreadyGone += r.alreadyGone.length;
+      if (!APPLY) { stats.written++; perClass[cand.kind].written++; bump(reasons, `apply  would-write:${cand.kind}`); if (applied.length < 20) applied.push(`  WOULD RE-KEY ${fresh.id}  ${fresh.cardId}  ->  ${target}   ${why}`); continue; }
+      if (!r.ok && r.stage !== "done") { stats.failed++; perClass[cand.kind].failed++; console.log(`  FAILED at ${r.stage} ${fresh.id}: ${String(r.error).slice(0, 110)}`); continue; }
+      if (r.duplicatesLeft.length) { stats.failed++; perClass[cand.kind].failed++; stats.duplicatesLeft += r.duplicatesLeft.length; for (const dd of r.duplicatesLeft) console.log(`  DUPLICATE LEFT ${dd.id}@${dd.cardId}: ${String(dd.error).slice(0, 80)}`); continue; }
+      stats.written++; perClass[cand.kind].written++; stats.alreadyGone += r.alreadyGone.length;
       bump(reasons, `apply  wrote:${cand.kind}`);
       if (applied.length < 20) applied.push(`  RE-KEYED ${fresh.id}  ${fresh.cardId}  ->  ${target}   ${why}`);
     }
@@ -675,12 +790,32 @@ async function main() {
   console.log(`  not reached    ${f(stats.notReached)}`);
   for (const [k, n] of [...reasons].filter(([k]) => k.startsWith("apply  ")).sort((a, b) => b[1] - a[1])) console.log(`    ${f(n).padStart(8)}  ${k.slice(7)}`);
   console.log(`\n  intended ${f(stats.intended)} = written ${f(stats.written)} + skipped ${f(stats.skipped)} + failed ${f(stats.failed)} + not reached ${f(stats.notReached)}`);
+  // THE RECONCILE BALANCES PER CLASS, NOT ONLY IN TOTAL (audit gate item 8).
+  // A scoped apply has to be able to PROVE it wrote nothing of the class it
+  // disarmed, and a single total cannot say that -- one class's writes can
+  // hide inside another's. Each armed class balances on its own, each
+  // disarmed class must show intended 0 / written 0, and a disarmed class
+  // with a nonzero write is a scope failure that exits nonzero.
+  console.log(`\n  PER CLASS (scope=${JSON.stringify(APPLY_SCOPE_RAW)} -> ${[...ARMED].join(" + ")}):`);
+  let classDrift = 0;
+  for (const kind of [K.IMPROVE, K.BASE_EVICTION]) {
+    const c = perClass[kind];
+    const armed = ARMED.has(kind);
+    const acc = c.written + c.skipped + c.failed + c.notReached;
+    console.log(`    ${kind.padEnd(15)} ${armed ? "ARMED   " : "DISARMED"}  intended ${f(c.intended).padStart(9)} = written ${f(c.written).padStart(9)} + skipped ${f(c.skipped).padStart(8)} + failed ${f(c.failed).padStart(6)} + not reached ${f(c.notReached).padStart(8)}${armed ? "" : `   (held back ${f(disarmed[kind] ?? 0)} writable candidate(s))`}`);
+    if (acc !== c.intended) { console.error(`!! ${kind} reconciliation drift: ${acc} accounted vs ${c.intended} intended.`); classDrift++; }
+    if (!armed && (c.intended || c.written)) {
+      console.error(`!! SCOPE FAILURE: ${kind} is DISARMED and yet ${f(c.intended)} candidate(s) were queued and ${f(c.written)} written. Exit 6.`);
+      process.exitCode = 6;
+    }
+  }
   const recon = stats.written + stats.skipped + stats.failed + stats.notReached;
   if (recon !== stats.intended) { console.error(`!! reconciliation drift: ${recon} accounted vs ${stats.intended} intended (${recon - stats.intended}). Exit 4.`); process.exitCode = 4; }
+  if (classDrift && !process.exitCode) process.exitCode = 4;
   if (APPLY) reportWrites({ job: "rematch-sold-comps", intended: stats.intended, written: stats.written, skipped: stats.skipped, failed: stats.failed });
   if (stopReason) console.log(`\n${stopReason}`);
 }
 
-module.exports = { unitsForSlot, unitPredicate, slotQuery, rowInSlot, storedIdentity, deriveIdentity, hashPartOf, SPORT_CLASSES, SHARD_TABLE };
+module.exports = { unitsForSlot, unitPredicate, slotQuery, rowInSlot, storedIdentity, deriveIdentity, hashPartOf, SPORT_CLASSES, SHARD_TABLE, APPLY_SCOPE_RAW };
 
 if (require.main === module) main().catch((e) => { console.error("FATAL:", e?.stack || e?.message); process.exit(3); });

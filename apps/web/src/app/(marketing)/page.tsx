@@ -17,12 +17,13 @@ export default function LandingPage() {
           />
         </div>
         <h1 className="text-5xl md:text-6xl font-bold tracking-tight leading-tight max-w-3xl mx-auto">
-          The card market,{" "}
-          <span className="hiq-hero-stroke text-transparent bg-clip-text">priced honestly</span>
+          Comps Look Back.{" "}
+          <span className="hiq-hero-stroke text-transparent bg-clip-text">Markets Move Forward.</span>
         </h1>
         <p className="mt-4 text-lg md:text-xl text-[color:var(--color-muted)] max-w-2xl mx-auto leading-relaxed">
-          Every price rung sourced from real transactions. No hand-tuned matrix, no guesses.
-          Multi-sport, full grade ladder, actionable sell/hold/list signals.
+          Every price rung sourced from real transactions, then projected to the next sale —
+          not a median of where the market already was. Multi-sport, full grade ladder,
+          actionable sell/hold/list signals.
         </p>
         <div className="mt-6">
           <WaitlistCta source="homepage-hero" />

@@ -26,7 +26,7 @@
 import { CosmosClient, type Container } from "@azure/cosmos";
 import { parseListingIdentity } from "./parseTitleIdentity.service.js";
 import { slugify, computeHobbyIqCardId } from "./hobbyIqCardId.service.js";
-import { parseGradeLabel } from "./gradeParser.js";
+import { parseGradeFromTitle } from "./gradeParser.js";
 import { recordSoldComp } from "./soldCompsStore.service.js";
 import type { StagingDoc } from "./compsStaging.service.js";
 
@@ -124,7 +124,7 @@ export async function runAutoTriageBatch(opts: { limit?: number } = {}): Promise
       // legacy staging rows classified before that fix may still have
       // gradeCompany/gradeValue null. Re-parse defensively so PSA 7
       // in the title becomes a real (PSA, 7) tuple on the promotion.
-      const gradeParsed = parseGradeLabel(title);
+      const gradeParsed = parseGradeFromTitle(title);
       const gradeCompany = row.clean?.gradeCompany ?? gradeParsed?.gradeCompany ?? null;
       const gradeValue = row.clean?.gradeValue ?? gradeParsed?.gradeValue ?? null;
 

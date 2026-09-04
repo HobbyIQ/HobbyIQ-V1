@@ -1,0 +1,73 @@
+{
+ "scrapedAt": "2026-09-04T02:00:12.004Z",
+ "sourceUrl": "https://www.hobbymonitor.com/release/2012-13-panini-prizm-basketball",
+ "sport": "basketball",
+ "year": 2012,
+ "setName": "panini-prizm",
+ "productKey": "2012-panini-prizm",
+ "setKey": "panini-prizm",
+ "rowCount": 1800,
+ "parallelColumnAuthoritative": true,
+ "cardRows": 500,
+ "ladderRows": 1300,
+ "rungsReal": 16,
+ "rungsDroppedPlayerName": 0,
+ "rungsUnnumbered": 16,
+ "refusedSubsets": 0,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Autographs",
+   "category": "autographs",
+   "playerCount": 100,
+   "rungs": 1,
+   "rowCount": 200,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Base",
+   "category": "base",
+   "playerCount": 300,
+   "rungs": 3,
+   "rowCount": 1200,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Finalists",
+   "category": "finalists",
+   "playerCount": 38,
+   "rungs": 3,
+   "rowCount": 152,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Most Valuable Players",
+   "category": "most-valuable-players",
+   "playerCount": 25,
+   "rungs": 3,
+   "rowCount": 100,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Downtown Bound",
+   "category": "downtown-bound",
+   "playerCount": 25,
+   "rungs": 3,
+   "rowCount": 100,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > USA Basketball",
+   "category": "usa-basketball",
+   "playerCount": 12,
+   "rungs": 3,
+   "rowCount": 48,
+   "refused": false,
+   "printRun": null
+  }
+ ]
+}
