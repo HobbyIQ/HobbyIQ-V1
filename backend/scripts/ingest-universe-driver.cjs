@@ -128,6 +128,12 @@ const LANE_SOURCE = {
   beckett: "beckett-checklist",
   clc: "checklistcenter",
   tcgdexja: "tcgdex-ja",
+  // #1710's vintage lane. Its own name already classifies as checklist, so
+  // this entry is the declaration rather than a translation -- but it is still
+  // REQUIRED, because a lane absent from this map now refuses up front instead
+  // of failing one fetch at a time. That is the point: adding a lane is a
+  // decision about provenance, and the map is where the decision is recorded.
+  sportscardchecklist: "sportscardchecklist",
 };
 
 /** Per-entry minutes, measured from D37's own acquisition timings. Used to size
@@ -894,9 +900,53 @@ if (require.main !== module) return;
   if (years.length) candidates = candidates.filter((e) => years.includes(String(e.year)));
   if (sports.length) candidates = candidates.filter((e) => sports.includes(String(e.sport || "").toLowerCase()));
 
-  // The unreachable list travels with the manifest so a run never spends its
-  // budget re-probing what a direct 404 already settled.
-  const unreachable = new Set((manifest.unreachable || []).map((u) => `${u.sport}|${u.year}|${u.setKey}`));
+  /**
+   * CF-A-404-BELONGS-TO-THE-HOST-THAT-SERVED-IT (2026-09-04).
+   *
+   * The unreachable list travels with the manifest so a run never spends its
+   * budget re-probing what a direct 404 already settled. But the mark was keyed
+   * `sport|year|setKey` -- the SET, with no lane and no sourceRef in it -- so it
+   * settled the set everywhere, on every host, forever.
+   *
+   * Run 33841276495 is what that costs. `football|1972|topps` is on the list
+   * because the lanes that existed when it was probed could not serve it. #1710
+   * then added sportscardchecklist, whose sitemap survey fetched that very set
+   * (set-11959, 351 cards) without trouble, and the manifest RECORDS this:
+   *
+   *   nowCoveredBy: "sportscardchecklist"
+   *   note: "...the mark records that the ORIGINAL lane could not reach it"
+   *
+   * The driver read neither field. It matched the set key, printed
+   * "UNREACHABLE — direct 404 probe, no lane serves it", and skipped an entry
+   * seeded `missing` that a working lane was standing right there to fetch. 7
+   * of the 8 marks carry nowCoveredBy, so the new lane was inheriting almost
+   * the whole list as permanent refusals.
+   *
+   * A 404 is a fact about a URL, so the mark is keyed by the lane whose
+   * sourceRef earned it. A record naming the lane it belongs to binds only that
+   * lane; `nowCoveredBy` releases the lane that has since been proven to serve
+   * it; and a legacy record naming neither keeps its old set-wide reach for the
+   * lanes that existed when it was written, which is the only reading under
+   * which it was ever true.
+   */
+  const unreachableMarks = (manifest.unreachable || []).map((u) => ({
+    key: `${u.sport}|${u.year}|${u.setKey}`,
+    lane: u.lane || null,
+    sourceRef: u.sourceRef || null,
+    nowCoveredBy: u.nowCoveredBy || null,
+  }));
+  const isUnreachable = (entry) => {
+    const key = `${entry.sport}|${entry.year}|${setKeyFor(entry) || ""}`;
+    return unreachableMarks.some((m) => {
+      if (m.key !== key) return false;
+      // Proven reachable HERE since the probe: the mark is history, not a veto.
+      if (m.nowCoveredBy && m.nowCoveredBy === entry.lane) return false;
+      // A mark that names its own address binds that address only.
+      if (m.sourceRef) return m.sourceRef === entry.sourceRef;
+      if (m.lane) return m.lane === entry.lane;
+      return true;
+    });
+  };
 
   const perEntryMin = LANE_MINUTES[lane] || 1.5;
   const budgetSized = Math.max(1, Math.floor((RUN_MS / 60000) * 0.85 / perEntryMin));
@@ -966,8 +1016,7 @@ if (require.main !== module) return;
     if (left() < perEntryMin * 60000 * 1.5) { notReached = take.length - i; stoppedOnBudget = true; break; }
 
     const label = `${entry.lane}/${entry.setName || entry.sourceRef}`;
-    const ukey = `${entry.sport}|${entry.year}|${setKeyFor(entry) || ""}`;
-    if (unreachable.has(ukey)) {
+    if (isUnreachable(entry)) {
       verdicts.unreachable++;
       perEntry.push({ id: entry.id, label, status: "unreachable", reason: "on the manifest's probed-404 list", rowsCreated: 0 });
       if (APPLY) await writeControl(entry, { status: "unreachable", reason: "on the manifest's probed-404 list", rowsCreated: 0, priorAttempts: prior?.attempts });
@@ -1115,7 +1164,24 @@ if (require.main !== module) return;
 
   // ── reconciliation ────────────────────────────────────────────────────────
   const written = verdicts.ingested + verdicts.partial + verdicts.failed + verdicts.unreachable;
-  const accounted = APPLY ? written : inspected;
+  // CF-AN-UNREACHABLE-ENTRY-IS-ACCOUNTED-FOR (2026-09-04).
+  //
+  // Run 33841276495 (sportscardchecklist, report mode, limit=20) printed
+  //
+  //   intended 20 / inspected 19 / unreachable 1 / not reached 0
+  //   RECONCILED NO — 19 + 0 != 20
+  //
+  // and exited 4, so the runner refused to relaunch a lane that had done
+  // nothing wrong. The entry WAS accounted for -- it was settled from the
+  // manifest and printed on its own line one row above the failing sum -- but
+  // report mode counted only `inspected`, and an entry settled without a fetch
+  // is never inspected. The banner and the arithmetic were reading different
+  // columns.
+  //
+  // APPLY's `written` already sums all four verdict buckets, unreachable
+  // included, which is why only report mode ever went red on this. Report mode
+  // now says the same thing: every entry the loop DECIDED, by whichever route.
+  const accounted = APPLY ? written : inspected + verdicts.unreachable;
   const spent = Math.round((Date.now() - STARTED) / 60000);
   console.log(`\n── driver complete in ${spent}m ──`);
   console.log(`  lane                ${lane}`);
@@ -1167,7 +1233,11 @@ if (require.main !== module) return;
   // and exactly what run 33837346045 preceding report reported. Report mode
   // reconciles against what it INSPECTED, so the marker says that. APPLY is
   // unchanged: `written` is still the control docs upserted.
-  console.log(`  universe_entries_done=${APPLY ? written : inspected}`);
+  //
+  // It counts `accounted`, not `inspected`, for the same reason the
+  // reconciliation does: an entry settled from the manifest without a fetch is
+  // DONE, and a marker that omits it leaves the lane permanently short of draining.
+  console.log(`  universe_entries_done=${APPLY ? written : accounted}`);
 
   // THE BUDGET MARKER. Printed only when entries remain AND this run stopped on
   // its own clock -- the relaunch gates on this line, never on a count, because
