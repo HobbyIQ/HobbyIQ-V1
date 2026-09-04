@@ -159,15 +159,24 @@ describe("A. verdict equality -- the fix bought speed and nothing else", () => {
   });
 
   it("every row reproduces the PRE-FIX verdict exactly -- class, writable, reasons, subclass, tier, refusals", { timeout: 60_000 }, () => {
-    // The recorded verdicts come from the pre-fix classifier (73a4fe25) over
+    // The recorded verdicts came from the pre-fix classifier (73a4fe25) over
     // these exact rows. A future change that moves any one of them has moved
     // a RULING, and must argue for it in its own PR rather than arriving
     // inside a performance patch. Regenerate this file only alongside such a
     // change.
+    //
+    // RE-RECORDED ONCE, for CF-COLLAPSE-IS-FORBIDDEN + CF-UNSUPPORTED-IS-A-GAP
+    // (Drew, 2026-09-03, rulings V1 and V6) -- which is exactly the "such a
+    // change" the paragraph above anticipates. 22 of the 200 verdicts moved,
+    // the argument for each is the pin below, and `supersedes` keeps the old
+    // provenance readable. The equality contract itself is unchanged: from
+    // here the fixture pins THIS classifier, and the next change that moves a
+    // verdict must argue for it in turn.
     const recorded = JSON.parse(
       fs.readFileSync(path.join(backend, "tests", "fixtures", "rematch-verdict-equality-200.expected.json"), "utf8"),
-    ) as { verdicts: string[]; recordedFrom: string };
-    expect(recorded.recordedFrom).toBe("73a4fe25");
+    ) as { verdicts: string[]; recordedFrom: string; supersedes?: string; movedRows?: number[] };
+    expect(recorded.recordedFrom).toBe("pr-collapse-and-coverage-v1-v6");
+    expect(recorded.supersedes).toBe("73a4fe25");
     // The pin is only as strong as the variety it recorded.
     expect(new Set(recorded.verdicts).size).toBeGreaterThanOrEqual(10);
 
@@ -178,6 +187,60 @@ describe("A. verdict equality -- the fix bought speed and nothing else", () => {
       .filter(Boolean);
     expect(diffs).toEqual([]);
   });
+
+  /**
+   * THE ARGUMENT FOR THE 22 MOVED VERDICTS (V1 + V6).
+   *
+   * Re-recording a verdict fixture is how a ruling quietly becomes a
+   * regression: the numbers all go green again and nobody has to say what
+   * moved. So the moved rows are pinned by SHAPE, not merely re-recorded.
+   *
+   * Every moved verdict is one of exactly three ruled shapes, and the fourth
+   * assertion is the one that matters most: NOT ONE of them became writable.
+   * A ruling that made a row writable inside a re-recorded fixture is the
+   * failure mode this test exists to make impossible.
+   */
+  it("the moved verdicts are all ruled moves, and none became writable", { timeout: 60_000 }, () => {
+    const moved = recordedMovedRows();
+    expect(moved.length).toBe(22);
+
+    for (const i of moved) {
+      const e = rows[i];
+      const r = K.classifyRow(inputFor(e));
+      const reasons = (r.reasons ?? []).join(" ");
+      const stored = String((e.stored as Record<string, unknown>)?.setKey ?? "");
+      const derived = String((e.derived as Record<string, unknown>)?.setKey ?? "");
+
+      // SHAPE 1 -- a ruled COLLAPSE that is now NAMED. Class and writable are
+      // unchanged; the row simply says which collapse it is.
+      const named = reasons.includes("collapses-distinct-product");
+      // SHAPE 2 -- a generic/defaulted stored key (`unknown`, or the old
+      // `bowman` default over a title that never says Bowman) against a
+      // derived key the title names: a FILL, not a lateral change.
+      const filledFromBlank = (r.axes?.filled ?? []).includes("setKey")
+        && (stored === "unknown" || stored === "bowman" || stored === "");
+      // SHAPE 3 -- a title-named refinement of a real stored key
+      // (`topps` -> `topps-cosmic-chrome`, `topps` -> `topps-resurgence`).
+      const refined = derived.startsWith(`${stored}-`)
+        && !(r.axes?.changed ?? []).includes("setKey");
+
+      expect(named || filledFromBlank || refined,
+        `row ${i} (${stored} -> ${derived}) moved for an UNRULED reason: ${reasons}`).toBe(true);
+
+      // THE INVARIANT. Nothing in V1 or V6 makes a row writable: the collapse
+      // side is refused, and the IMPROVE side still has to clear the
+      // checklist-backed gate, which this fixture holds false for every row.
+      expect(r.writable, `row ${i} became writable`).toBe(false);
+    }
+  });
+
+  /** The row indices the expected fixture records as moved, for the pin above. */
+  function recordedMovedRows(): number[] {
+    const recorded = JSON.parse(
+      fs.readFileSync(path.join(backend, "tests", "fixtures", "rematch-verdict-equality-200.expected.json"), "utf8"),
+    ) as { movedRows?: number[] };
+    return recorded.movedRows ?? [];
+  }
 });
 
 describe("B. throughput -- a 40x regression fails, a 1.5x does not", () => {

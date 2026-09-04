@@ -1545,6 +1545,161 @@ export function inferSetKeyFromTitle(title: string, cardNumber?: string | null):
     return "Bowman Paper";
   }
 
+  // ── CF-COLLAPSE-IS-FORBIDDEN (Drew, 2026-09-03, ruling V1) ───────────────
+  //
+  // A PRODUCT FAMILY LADDER NESTS; IT NEVER MERGES. Every pair below is two
+  // DIFFERENT cards, and the derivation was reading only the flagship brand
+  // out of the title -- so a sale of the specialized product was filed onto
+  // the flagship's slug, split its pool, and moved its FMV.
+  //
+  // Measured across the 32 census slots (1,461,057 CONFLICT changed:setKey
+  // rows). Every rule here was written from a title the census SAMPLED, and
+  // the sampled count for the pair is quoted beside it. Tested directly, the
+  // parser produced the flagship for all 21 of the ruled shapes -- not one of
+  // them survived -- so this is the whole defect, not a tail of it.
+  //
+  // ORDER IS THE MECHANISM. This function is an ordered ladder of `if`
+  // returns: the FIRST rule that matches wins, so a specialized product must
+  // be read BEFORE its flagship or the flagship eats it. That is why the block
+  // sits here -- above `topps chrome`, `fleer`, `bowman chrome`, `panini
+  // donruss`, `panini prizm`, `topps`, `skybox`, `score` and `upper deck`
+  // alike -- and why the pins in rematchSetKeyCollapse.test.ts assert the
+  // DERIVED key for each census title rather than the regex text. Move a rule
+  // below its flagship and its pin goes red.
+  //
+  // A ruled key MUST be a normalizeSetKey fixed point (the standing rule), and
+  // every key this block returns is pinned as one.
+
+  // Bowman's Best is not Bowman, and not Bowman Chrome. 267 + 79 sampled --
+  // the single largest collapse pair in the census. The apostrophe is optional
+  // in the wild ("2023 BOWMANS BEST HENRY BOLTE AUTO"), and "Bowman Best
+  // University" is its own product (9 sampled), so it is read first.
+  if (/bowman'?s?\s+best\s+university/i.test(t)) return "Bowman Best University";
+  if (/bowman'?s\s+best|bowmans\s+best/i.test(t)) return "Bowmans Best";
+  // Bowman Sterling (22) and Bowman Heritage (64) -- both collapsed to bowman.
+  if (/bowman\s+sterling/i.test(t)) return "Bowman Sterling";
+  if (/bowman\s+heritage/i.test(t)) return "Bowman Heritage";
+  // Bowman Draft Sapphire is NOT Bowman Chrome Sapphire (68 sampled). The bare
+  // /sapphire/ rule below returns Bowman Chrome Sapphire for every title with
+  // the word in it, which is how a Draft Sapphire card reached the Chrome
+  // Sapphire pool. Draft is read first; Chrome Sapphire keeps the remainder.
+  if (/bowman\s+draft\s+sapphire|bowman\s+draft\s+chrome\s+sapphire/i.test(t)) return "Bowman Draft Sapphire";
+  // Bowman Draft Picks & Prospects (49) is the 2000s-era product, distinct from
+  // the modern Bowman Draft. Read before /bowman\s+draft/.
+  if (/bowman\s+draft\s+picks?\s*(?:&|and)\s*prospects?/i.test(t)) return "Bowman Draft Picks and Prospects";
+  // Mega Box is an edition of Bowman Chrome, not Bowman Chrome (10 sampled).
+  // The pre-existing /bowman\s+mega\s+box/ rule sits BELOW /bowman\s+chrome/,
+  // so "2024 Bowman Chrome Mega Box" -- which names both -- reached Chrome
+  // first and the edition was lost. Read here, above its own flagship.
+  if (/bowman\s+(?:chrome\s+)?mega\s?box/i.test(t)) return "Bowman Chrome Mega Box";
+
+  // Topps Chrome family -- three specialized products, all collapsing to
+  // topps-chrome: Update Series (186), Platinum (117), Black (58).
+  if (/topps\s+chrome\s+update\s+(?:series\s+)?sapphire|chrome\s+update\s+(?:series\s+)?sapphire/i.test(t)) return "Topps Chrome Update Sapphire";
+  if (/topps\s+chrome\s+update|chrome\s+update\s+series/i.test(t)) return "Topps Chrome Update Series";
+  if (/topps\s+chrome\s+platinum|chrome\s+platinum\s+anniversary/i.test(t)) return "Topps Chrome Platinum";
+  if (/topps\s+chrome\s+black|chrome\s+black\b/i.test(t)) return "Topps Chrome Black";
+  // Topps Chrome Sapphire is its own product and NOT Bowman Chrome Sapphire --
+  // the bare /sapphire/ rule below sent every one of them to Bowman (393
+  // sampled UNDERIVABLE rows stored as topps-chrome-sapphire).
+  //
+  // THE BRAND MUST BE READ, NOT THE PHRASE. "Chrome Sapphire Edition" appears
+  // in BOTH products' titles -- "2023 Bowman Chrome Sapphire Edition Baseball
+  // #320 Orange" and "2025 Topps Chrome Sapphire Football #125 Gold" -- so a
+  // rule keyed on the phrase alone claims every Bowman Sapphire card for
+  // Topps. Caught by the V6 pin for bowman-chrome-sapphire (83,489 estimated
+  // rows). Bowman is checked first and returns its own product; only a title
+  // that says Topps, or names no brand at all, reaches the Topps rule.
+  if (/bowman\s+chrome\s+sapphire|bowman\s+sapphire/i.test(t)) return "Bowman Chrome Sapphire";
+  if (/topps\s+chrome\s+sapphire/i.test(t)) return "Topps Chrome Sapphire";
+  if (/chrome\s+sapphire\s+edition/i.test(t) && !/bowman/i.test(t)) return "Topps Chrome Sapphire";
+
+  // Topps flagship specializations. Allen & Ginter (180) already had a rule
+  // above; these did not. Gold Label, Traded, Total and Composite each
+  // collapsed to bare `topps`.
+  if (/topps\s+gold\s+label|gold\s+label/i.test(t)) return "Topps Gold Label";
+  if (/topps\s+traded/i.test(t)) return "Topps Traded";
+  if (/topps\s+total/i.test(t)) return "Topps Total";
+  if (/topps\s+composite/i.test(t)) return "Topps Composite";
+  // Finest Flashbacks (22) is not Topps Finest, and Topps Finest is not Topps.
+  if (/topps\s+finest\s+flashbacks|finest\s+flashbacks/i.test(t)) return "Topps Finest Flashbacks";
+
+  // Donruss specializations. Panini owns Donruss today, so the bare /donruss/
+  // rule below returns "Panini Donruss" -- which swallowed Elite (170), Studio
+  // (61) and Diamond Kings (26). Each is its own product with its own pool.
+  if (/donruss\s+elite|\belite\s+extra\s+edition\b/i.test(t)) return "Donruss Elite";
+  if (/donruss\s+studio|\bstudio\b/i.test(t)) return "Donruss Studio";
+  // TWO Diamond Kings products, and the brand word decides which. "Panini
+  // Diamond Kings" is the modern standalone product (16,577 catalog rows,
+  // 16,448 checklist-backed); "Donruss Diamond Kings" is the Donruss insert
+  // line (2003 #TT-9). A single rule for both merged two pools -- caught by
+  // the V6 pin for panini-diamond-kings. Panini is read first.
+  if (/panini\s+diamond\s+kings/i.test(t)) return "Panini Diamond Kings";
+  if (/(?:donruss\s+)?diamond\s+kings/i.test(t)) return "Diamond Kings";
+
+  // Prizm specializations -- WNBA (61) and Draft Picks (42) are separate
+  // products with separate checklists, not parallels of the flagship.
+  if (/prizm\s+draft\s+picks?/i.test(t)) return "Panini Prizm Draft Picks";
+  if (/prizm\s+wnba|wnba\s+prizm/i.test(t)) return "Panini Prizm WNBA";
+
+  // Panini Score is not Score. 55 sampled. The bare /score/ rule at the bottom
+  // of this function is the manufacturer Score (Pinnacle-era); a 2025 "Panini
+  // Score Football" is the modern Panini product.
+  if (/panini\s+score/i.test(t)) return "Panini Score";
+
+  // Fleer specializations. Tradition (71) and Metal Universe (49) both
+  // collapsed to bare `fleer` -- and Metal Universe reached it through
+  // /fleer\s+metal|metal\s+universe/ returning "Fleer Metal", whose
+  // normalizeSetKey is `fleer`. It is its own product line.
+  if (/fleer\s+tradition\s+update/i.test(t)) return "Fleer Tradition Update";
+  if (/fleer\s+tradition/i.test(t)) return "Fleer Tradition";
+  if (/metal\s+universe/i.test(t)) return "Metal Universe";
+  if (/\bflair\b/i.test(t)) return "Flair";
+
+  // Skybox specializations (Premium 69, Molten Metal 16, Thunder 9).
+  if (/skybox\s+premium/i.test(t)) return "Skybox Premium";
+  if (/skybox\s+molten\s+metal|molten\s+metal/i.test(t)) return "Skybox Molten Metal";
+  if (/skybox\s+thunder/i.test(t)) return "Skybox Thunder";
+
+  // Upper Deck specializations (Black Diamond 26, Retro 8, MVP 4).
+  if (/upper\s+deck\s+black\s+diamond|black\s+diamond/i.test(t)) return "Upper Deck Black Diamond";
+  if (/upper\s+deck\s+retro/i.test(t)) return "Upper Deck Retro";
+  if (/upper\s+deck\s+mvp/i.test(t)) return "Upper Deck MVP";
+  // SPx Finite (12) is not SPx.
+  if (/spx\s+finite/i.test(t)) return "SPx Finite";
+
+  // ── CF-UNSUPPORTED-IS-A-GAP (Drew, 2026-09-03, ruling V6) ────────────────
+  //
+  // 4,202,405 rows are UNDERIVABLE for `setkey-unknown-unsupported` alone. The
+  // derivation could not name their product, so the census could say nothing
+  // about them at all. Each rule below names a product the pool already stores
+  // and card_catalog already holds rows for -- the counts are quoted in the
+  // PR body, per key, alongside how many of those rows are checklist-backed.
+  //
+  // RECOGNIZING A KEY IS NOT A CLAIM THAT ITS DESTINATIONS ARE BACKED. No
+  // synthetic parallels: a key whose catalog rows carry no checklist source is
+  // SUPPORTED (the derivation can name it) while its destinations stay
+  // not-checklist-backed until checklists land. That gate belongs to the
+  // classifier's `checklistBacked` input and is untouched here -- which is
+  // what keeps panini-hoops, ultra, pacific and the other zero-backed keys
+  // report-only rather than writable.
+  if (/panini\s+origins|\borigins\b/i.test(t)) return "Panini Origins";
+  if (/panini\s+prestige|\bprestige\b/i.test(t)) return "Panini Prestige";
+  if (/panini\s+hoops|nba\s+hoops|\bhoops\b/i.test(t)) return "Panini Hoops";
+  if (/panini\s+certified/i.test(t)) return "Panini Certified";
+  if (/panini\s+zenith|\bzenith\b/i.test(t)) return "Panini Zenith";
+  if (/panini\s+photogenic|\bphotogenic\b/i.test(t)) return "Panini PhotoGenic";
+  if (/panini\s+rookies?\s*(?:&|and)\s*stars/i.test(t)) return "Panini Rookies and Stars";
+  if (/panini\s+prospect\s+edition/i.test(t)) return "Panini Prospect Edition";
+  if (/panini\s+court\s+kings|court\s+kings/i.test(t)) return "Panini Court Kings";
+  if (/panini\s+diamond\s+kings/i.test(t)) return "Panini Diamond Kings";
+  if (/panini\s+crusade|\bcrusade\b/i.test(t)) return "Panini Crusade";
+  if (/panini\s+impeccable|\bimpeccable\b/i.test(t)) return "Panini Impeccable";
+  if (/panini\s+luminance|\bluminance\b/i.test(t)) return "Panini Luminance";
+  if (/panini\s+recon\b|\brecon\b/i.test(t)) return "Panini Recon";
+  if (/leaf\s+limited/i.test(t)) return "Leaf Limited";
+  if (/\bpacific\b/i.test(t)) return "Pacific";
+
   if (/sapphire/.test(t)) return "Bowman Chrome Sapphire";
   if (/topps\s+update/.test(t)) return "Topps Update";
   if (/topps\s+heritage/.test(t)) return "Topps Heritage";
@@ -1564,7 +1719,13 @@ export function inferSetKeyFromTitle(title: string, cardNumber?: string | null):
   if (/topps\s+five[-\s]?star|five[-\s]?star/i.test(t)) return "Topps Five Star";
   if (/topps\s+museum|museum\s+collection/i.test(t)) return "Topps Museum Collection";
   if (/topps\s+stadium\s+club|stadium\s+club/i.test(t)) return "Topps Stadium Club";
-  if (/topps\s+allen[-\s]?(and\s+)?ginter|allen[-\s]?(and\s+)?ginter/i.test(t)) return "Topps Allen Ginter";
+  // CF-COLLAPSE-IS-FORBIDDEN (V1): the ampersand spelling was not matched, so
+  // "2007 Topps Allen & Ginter's #90 Miguel Cabrera" fell through to bare
+  // `topps` -- 180 sampled rows, the third-largest collapse pair in the
+  // census. The product is written "Allen & Ginter" far more often than "Allen
+  // and Ginter", and the possessive apostrophe is routine. All three separator
+  // spellings (&, "and", hyphen/space) and the trailing 's are read here.
+  if (/topps\s+allen[-\s]?(?:&|and\s+)?\s*ginter|allen[-\s]?(?:&|and\s+)?\s*ginter/i.test(t)) return "Topps Allen Ginter";
   if (/topps\s+gypsy\s+queen|gypsy\s+queen/i.test(t)) return "Topps Gypsy Queen";
   if (/topps\s+archives/i.test(t)) return "Topps Archives";
   if (/topps\s+big\s+league|big\s+league/i.test(t)) return "Topps Big League";
@@ -1727,6 +1888,14 @@ export function inferSetKeyFromTitle(title: string, cardNumber?: string | null):
   if (/\bpinnacle\b/.test(t)) return "Pinnacle";
   if (/\bstadium\s+club\b/.test(t)) return "Topps Stadium Club";
   if (/\bscore\b/.test(t)) return "Score";
+  // CF-UNSUPPORTED-IS-A-GAP (V6). Leaf the manufacturer had no bare rule at
+  // all -- only `leaf-metal`, `leaf-limited` and the other named products --
+  // so "2023 Leaf Perfect Game Karson Grout Auto MA-KG2 Marble 1/1" and every
+  // other Leaf title the taxonomy does not name fell through to Unknown.
+  // 76,213 estimated UNDERIVABLE rows; card_catalog holds 15,787 leaf rows.
+  // LAST among the Leaf rules on purpose: every named Leaf product above must
+  // win, and this catches only what none of them claimed.
+  if (/\bleaf\b/.test(t)) return "Leaf";
 
   // Only default to Bowman when the title actually says something Bowman-ish.
   // It used to be enough to contain "baseball" or "rookie", which is how every

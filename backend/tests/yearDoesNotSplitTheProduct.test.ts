@@ -21,8 +21,17 @@ describe("an interposed year does not split a product name", () => {
   it("reads the product when the year sits between brand and product", () => {
     expect(inferSetKeyFromTitle("Topps 2024 Chrome Yamamoto X-Fractor RC #18"))
       .toBe("Topps Chrome");
+    // CF-COLLAPSE-IS-FORBIDDEN (Drew, 2026-09-03, ruling V1). This line used
+    // to expect "Topps Chrome": the year-lifting worked, but the product it
+    // then read was the FLAGSHIP, because Topps Chrome Update Series had no
+    // rule of its own. That is the ruled collapse -- 186 rows sampled by the
+    // census, 199,838 catalog rows on topps-chrome-update-series.
+    //
+    // The rule this file pins is UNCHANGED and is what makes the assertion
+    // possible: "Topps 2024 Chrome Update" still reads as one product name
+    // across the interposed year. It now reads as the RIGHT one.
     expect(inferSetKeyFromTitle("Topps 2024 Chrome Update Paul Skenes X-Fractor #USC88"))
-      .toBe("Topps Chrome");
+      .toBe("Topps Chrome Update Series");
     expect(inferSetKeyFromTitle("Topps 2024 Finest Aaron Judge X-Fractor"))
       .toBe("Topps Finest");
     expect(inferSetKeyFromTitle("Bowman 2024 Chrome Prospects BCP-102 Refractor"))

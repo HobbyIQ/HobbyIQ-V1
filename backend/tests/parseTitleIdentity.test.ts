@@ -996,7 +996,15 @@ describe("inferSetKeyFromTitle — sub-products that had no rule", () => {
     ["2024 Bowman Platinum Top Prospects #TP-5", "Bowman Platinum"],
     ["2023 Bowman Inception Auto #BI-JD", "Bowman Inception"],
     ["1994 Fleer Ultra #200 Griffey", "Fleer Ultra"],
-    ["1996 Fleer Metal Universe #2 Barry Bonds", "Fleer Metal"],
+    // CF-COLLAPSE-IS-FORBIDDEN (Drew, 2026-09-03, ruling V1): metal-universe
+    // is its OWN product, not Fleer. This line used to expect "Fleer Metal" --
+    // whose normalizeSetKey is `fleer`, so the pin was asserting the very
+    // collapse its own describe() block exists to prevent. The census sampled
+    // 49 `metal-universe -> fleer` rows and card_catalog holds 4,692
+    // metal-universe rows; the product is real and its pool is its own.
+    ["1996 Fleer Metal Universe #2 Barry Bonds", "Metal Universe"],
+    // "Fleer Metal" without "Universe" is still the Fleer Metal insert line.
+    ["1995 Fleer Metal #12 Frank Thomas", "Fleer Metal"],
     ["1990 Fleer Update #U-87", "Fleer Update"],
     ["2023 Leaf Metal Sports Heroes Auto #5", "Leaf Metal"],
   ])("%s -> %s", (title, want) => {

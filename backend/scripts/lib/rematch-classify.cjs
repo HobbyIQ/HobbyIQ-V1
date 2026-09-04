@@ -244,11 +244,129 @@ function axisValue(id, axis) {
   }
 }
 
+/**
+ * A stored setKey that means "the writer could not name the product".
+ *
+ * CF-COLLAPSE-IS-FORBIDDEN, the OTHER direction (Drew, 2026-09-03, ruling V1):
+ * "a stored setKey that is 'unknown' or the old default 'bowman'
+ * (setkey-bowman-default-unsupported) counts as BLANK for the specificity
+ * test."
+ *
+ * Both are the derivation's own historic FALLBACKS, not readings:
+ *
+ *   unknown   what inferSetKeyFromTitle returns when it recognises nothing.
+ *             1,327,401 estimated UNDERIVABLE rows carry it.
+ *   bowman    the pre-2026-08-16 default. Any title containing "baseball" or
+ *             "rookie" became a Bowman card, which is how ~90,732 upper-deck
+ *             and ~27,013 score comps were slugged Bowman. 795,828 estimated
+ *             UNDERIVABLE rows carry it, and the census names the shape
+ *             `setkey-bowman-default-unsupported`.
+ *
+ * A row whose stored key is one of these against a derived key the TITLE
+ * NAMES is not two rival readings of the card -- it is a blank being filled,
+ * which is the definition of strictly-more-specific. Treating it as `changed`
+ * sent every one of them to CONFLICT, where nothing would ever look again.
+ *
+ * IT IS NOT A BLANKET "BOWMAN IS BLANK" RULE, and it must not become one. A
+ * genuine Bowman card's stored key is also `bowman`, and the only thing that
+ * separates the two is whether the TITLE says Bowman. That test lives in
+ * `storedSetKeyIsDefaulted` below, which takes the title -- so a real Bowman
+ * row keeps a real setKey and a `bowman -> topps` move stays the CONFLICT it
+ * has always been.
+ */
+const DEFAULTED_SET_KEYS = new Set(["unknown", "bowman"]);
+
+/**
+ * Is the stored setKey one of the derivation's own defaults REACHED BY
+ * DEFAULT -- i.e. blank in disguise?
+ *
+ * `unknown` always is: it names no product under any reading.
+ * `bowman` is only when the title does not say Bowman. That is exactly the
+ * predicate the derivation itself uses to refuse the key
+ * (`setKey.startsWith("bowman") && !/bowman/i.test(title)` ->
+ * setkey-bowman-default-unsupported), quoted here so the two cannot drift:
+ * a row the derivation calls a defaulted Bowman is the same row this calls
+ * blank.
+ */
+function storedSetKeyIsDefaulted(storedSetKey, title) {
+  const s = lower(storedSetKey);
+  if (!DEFAULTED_SET_KEYS.has(s)) return false;
+  if (s === "unknown") return true;
+  // AN ABSENT TITLE IS NOT EVIDENCE THE KEY WAS DEFAULTED.
+  //
+  // Found by the existing pin ("a different card -- same number, different
+  // product -- is CONFLICT"): its row carries no title at all, and
+  // `!/bowman/.test("")` is true, so a stored `bowman` was being called blank
+  // on NO evidence and `bowman -> bowman-chrome` re-classified from CONFLICT
+  // to a writable IMPROVE. The whole rule rests on reading the title and
+  // finding no Bowman in it; with no title there is nothing to read, and
+  // absent beats wrong. A blank title cannot be re-derived anyway (the runner
+  // returns UNDERIVABLE for it), so this costs nothing real and closes the
+  // one path where the rung could fire without evidence.
+  const t = String(title ?? "").trim();
+  if (!t) return false;
+  return !/bowman/i.test(t);
+}
+
+/**
+ * Does the derived setKey REFINE the stored one -- the exact inverse of a
+ * collapse (Drew, 2026-09-03, ruling V1)?
+ *
+ * The ruling's own worked example is `bowman` + "Bowman University Chrome" ->
+ * `bowman-chrome`, and it is the case `storedSetKeyIsDefaulted` cannot reach:
+ * the title DOES say "bowman", so the stored key is a real reading rather than
+ * the old default, yet the derivation has still named a strictly more specific
+ * product that the title itself names.
+ *
+ * Three conditions, all required, and each one is load-bearing:
+ *
+ *   1. STRUCTURAL. The stored key is a strict prefix of the derived key on a
+ *      segment boundary (`bowman` -> `bowman-chrome`). This is
+ *      `derivationCollapsesProduct`'s prefix test run backwards, so the two can
+ *      never both fire on one pair.
+ *   2. NOT A RULED COLLAPSE IN THIS DIRECTION. The pair `stored->derived` is
+ *      not itself a ruled collapse. Note what this does NOT check: whether the
+ *      REVERSE pair is ruled. `bowman-chrome -> bowman` IS a ruled collapse and
+ *      `bowman -> bowman-chrome` IS an improvement -- Drew ruled both, and they
+ *      are the same pair read in opposite directions. That is the whole shape
+ *      of the ruling: specialized -> flagship is forbidden, flagship ->
+ *      specialized (when the title names it) is exactly what IMPROVE is for.
+ *      Excluding a pair because its mirror is ruled would have refused the
+ *      ruling's own worked example.
+ *   3. TITLE-NAMED. Every segment the derived key ADDS must appear in the
+ *      title. This is what separates a reading from a guess: "Bowman
+ *      University Chrome" names `chrome`, so bowman -> bowman-chrome is a
+ *      reading; a bare "2020 Bowman #45" title names nothing extra, and a
+ *      derivation that produced bowman-chrome from it would be inventing the
+ *      product. Without this test the rung would launder exactly the
+ *      confident-wrong-slug shape the census exists to find.
+ *
+ * The checklist-backed gate still applies on top of all three -- it is the
+ * classifier's second gate and this rung never bypasses it.
+ */
+function derivationRefinesProduct(stored, derived, title) {
+  const s = lower(stored?.setKey), d = lower(derived?.setKey);
+  if (!s || !d || s === d) return null;
+  if (!d.startsWith(`${s}-`)) return null;                       // (1)
+  if (RULED_COLLAPSE_SET.has(`${s}->${d}`)) return null;         // (2)
+  const t = String(title ?? "").toLowerCase();
+  const added = d.slice(s.length + 1).split("-").filter(Boolean);
+  if (!added.length) return null;
+  for (const seg of added) if (!t.includes(seg)) return null;    // (3)
+  return `${s}->${d}`;
+}
+
 /** Is this axis' value the "unknown" one? Blank everywhere; additionally the
- *  generic parallels, and RAW is NOT blank -- raw is an answer. */
-function axisIsBlank(axis, value) {
+ *  generic parallels, and RAW is NOT blank -- raw is an answer.
+ *
+ *  `setKey` takes an optional title: with one, a DEFAULTED stored key
+ *  (`unknown`, or `bowman` over a title that never says Bowman) is blank too
+ *  (V1, the IMPROVE direction). Without a title the old behaviour stands, so
+ *  every existing caller is unchanged. */
+function axisIsBlank(axis, value, title) {
   if (value === "") return true;
   if (axis === "parallel") return GENERIC_PARALLELS.has(value);
+  if (axis === "setKey" && title !== undefined) return storedSetKeyIsDefaulted(value, title);
   return false;
 }
 
@@ -523,7 +641,113 @@ const DISTINCT_PRODUCT_SETKEYS = [
   "topps-allen-ginter-chrome", "topps-fire", "topps-finest", "topps-gold-label",
   "topps-stadium-club", "topps-stadium-club-chrome", "topps-cosmic-chrome",
   "fleer-ultra", "panini-prizm", "panini-mosaic", "panini-optic",
+  // CF-COLLAPSE-IS-FORBIDDEN (Drew, 2026-09-03, ruling V1). Every specialized
+  // product named in RULED_COLLAPSE_PAIRS below is a distinct product in its
+  // own right, so it belongs here too -- the list is what the structural test
+  // reads, and a product that is only in the pair table would be invisible to
+  // it. Sorted by family, deduped against the entries above.
+  "topps-chrome-platinum", "topps-chrome-update-series", "topps-chrome-sapphire",
+  "topps-chrome-update-sapphire", "topps-traded", "topps-total", "topps-composite",
+  "topps-finest-flashbacks", "bowman-draft-sapphire", "bowman-draft-picks-and-prospects",
+  "bowman-best-university", "bowman-chrome-mega-box", "donruss-elite", "donruss-studio",
+  "diamond-kings", "panini-prizm-wnba", "panini-prizm-draft-picks", "panini-score",
+  "fleer-tradition", "fleer-tradition-update", "metal-universe", "flair",
+  "skybox-premium", "skybox-molten-metal", "skybox-thunder",
+  "upper-deck-black-diamond", "upper-deck-retro", "upper-deck-mvp", "spx-finite",
 ];
+
+/**
+ * THE RULED COLLAPSE PAIRS (Drew, 2026-09-03, ruling V1).
+ *
+ * PRODUCT-FAMILY COLLAPSE IS FORBIDDEN. Each pair is `specialized -> flagship`
+ * and names two DIFFERENT cards; a derivation that reads the specialized
+ * product's title and emits the flagship has not been less precise, it has
+ * named the wrong card. Refused by name, never writable.
+ *
+ * WHY A TABLE AND NOT ONLY THE STRUCTURAL TEST. `derivationCollapsesProduct`
+ * used to be purely structural -- a prefix on a segment boundary, a shared
+ * segment, or no shared segment at all -- and that test MISSES 26 of the 34
+ * ruled pairs, including the largest one in the census. Three shapes defeat it:
+ *
+ *   bowmans-best -> bowman          "bowmans" is not the segment "bowman", so
+ *                                   neither the prefix nor the segment test
+ *                                   fires; it survived only via the
+ *                                   no-shared-segment fallback.
+ *   donruss-elite -> panini-donruss the flagship is LONGER than the
+ *                                   specialized key (Panini owns Donruss), so
+ *                                   nothing about it looks like a truncation.
+ *   bowman-draft-sapphire ->        the two keys share `bowman` and
+ *     bowman-chrome-sapphire        `sapphire`; neither is a prefix of the
+ *                                   other. Structurally it reads as a lateral
+ *                                   move, and laterally is exactly how a
+ *                                   Draft Sapphire card reached the Chrome
+ *                                   Sapphire pool.
+ *
+ * So the ruling is stored as the ruling: an explicit pair table, consulted by
+ * exact match on both sides, with the structural test kept BELOW it for the
+ * shapes nobody has had to name yet. Sampled counts from the 32-slot census
+ * are in the PR body, per pair.
+ */
+const RULED_COLLAPSE_PAIRS = Object.freeze([
+  // Bowman family -- the flagship never absorbs a specialized Bowman product.
+  ["bowmans-best", "bowman"],
+  ["bowmans-best", "bowman-chrome"],
+  ["bowman-sterling", "bowman"],
+  ["bowman-sterling", "bowman-chrome"],
+  ["bowman-heritage", "bowman"],
+  ["bowman-chrome", "bowman"],
+  ["bowman-best-university", "bowman"],
+  ["bowman-draft-picks-and-prospects", "bowman-draft"],
+  ["bowman-chrome-mega-box", "bowman-chrome"],
+  // Sapphire is an edition, and the two Sapphire products are not each other.
+  ["bowman-draft-sapphire", "bowman-chrome-sapphire"],
+  ["topps-chrome-sapphire", "bowman-chrome-sapphire"],
+  ["topps-chrome-update-sapphire", "bowman-chrome-sapphire"],
+  // Topps Chrome family.
+  ["topps-chrome-platinum", "topps-chrome"],
+  ["topps-chrome-update-series", "topps-chrome"],
+  ["topps-chrome-black", "topps-chrome"],
+  ["topps-chrome-sapphire", "topps-chrome"],
+  ["topps-chrome-update-sapphire", "topps-chrome-update-series"],
+  // Topps flagship specializations.
+  ["topps-allen-ginter", "topps"],
+  ["topps-gold-label", "topps"],
+  ["topps-traded", "topps"],
+  ["topps-total", "topps"],
+  ["topps-composite", "topps"],
+  ["topps-finest", "topps"],
+  ["topps-chrome", "topps"],
+  ["topps-finest-flashbacks", "topps-finest"],
+  // Donruss is Panini-owned, so the flagship key is LONGER than its children.
+  ["donruss-elite", "panini-donruss"],
+  ["donruss-studio", "panini-donruss"],
+  ["diamond-kings", "panini-donruss"],
+  ["panini-diamond-kings", "panini-donruss"],
+  // Prizm.
+  ["panini-prizm-wnba", "panini-prizm"],
+  ["panini-prizm-draft-picks", "panini-prizm"],
+  // Panini Score is the modern Panini product; Score is the manufacturer.
+  ["panini-score", "score"],
+  // Fleer.
+  ["fleer-tradition", "fleer"],
+  ["fleer-tradition-update", "fleer"],
+  ["metal-universe", "fleer"],
+  ["flair", "fleer"],
+  ["fleer-ultra", "fleer"],
+  ["fleer-ultra", "ultra"],
+  // Skybox.
+  ["skybox-premium", "skybox"],
+  ["skybox-molten-metal", "skybox"],
+  ["skybox-thunder", "skybox"],
+  // Upper Deck.
+  ["upper-deck-black-diamond", "upper-deck"],
+  ["upper-deck-retro", "upper-deck"],
+  ["upper-deck-mvp", "upper-deck"],
+  ["spx-finite", "spx"],
+]);
+
+/** The ruled pairs as a Set of `stored->derived` for an O(1) exact lookup. */
+const RULED_COLLAPSE_SET = new Set(RULED_COLLAPSE_PAIRS.map(([s, d]) => `${s}->${d}`));
 
 /**
  * Does the derived setKey COLLAPSE a known distinct product into a parent?
@@ -538,6 +762,12 @@ const DISTINCT_PRODUCT_SETKEYS = [
 function derivationCollapsesProduct(stored, derived) {
   const s = lower(stored?.setKey), d = lower(derived?.setKey);
   if (!s || !d || s === d) return null;
+  // THE RULING FIRST, AND BY EXACT MATCH (V1). A ruled pair is refused whatever
+  // the structural test would have said about it -- three of the ruled shapes
+  // (bowmans-best->bowman, donruss-elite->panini-donruss,
+  // bowman-draft-sapphire->bowman-chrome-sapphire) are invisible to structure,
+  // and one of them is the largest collapse pair in the census.
+  if (RULED_COLLAPSE_SET.has(`${s}->${d}`)) return `${s}->${d}`;
   if (!DISTINCT_PRODUCT_SETKEYS.includes(s)) return null;
   // a strict prefix on a segment boundary is the collapse shape:
   // `bowman-chrome` -> `bowman`, `topps-allen-ginter` -> `topps`.
@@ -636,12 +866,31 @@ function improveRefusals({ row, stored, derived, axes }) {
  *   dropped  stored names something, derived is blank/generic  -> a DEMOTION
  *   changed  both name something, and they differ              -> a CONFLICT
  */
-function diffAxes(stored, derived) {
+function diffAxes(stored, derived, title) {
   const same = [], filled = [], dropped = [], changed = [];
   for (const axis of AXES) {
     const a = axisValue(stored, axis), b = axisValue(derived, axis);
-    const aBlank = axisIsBlank(axis, a), bBlank = axisIsBlank(axis, b);
+    // THE DEFAULTED-setKey RULE IS ASYMMETRIC, AND THAT IS THE POINT (V1).
+    //
+    // `title` is passed for the STORED side only. A stored `unknown`/defaulted
+    // `bowman` is a blank the derivation may fill; a DERIVED `unknown` is the
+    // derivation failing, and the row is UNDERIVABLE before it ever reaches
+    // here (the runner refuses both keys outright). Passing the title to both
+    // sides would make `bowmans-best -> bowman` read as `dropped` rather than
+    // `changed` -- still a CONFLICT, but reported as a demotion instead of the
+    // ruled collapse it is, and the collapse guard's reason would never print.
+    const aBlank = axisIsBlank(axis, a, axis === "setKey" ? title : undefined);
+    const bBlank = axisIsBlank(axis, b);
     if (a === b) { same.push(axis); continue; }
+    // A TITLE-NAMED REFINEMENT IS A FILL, NOT A CHANGE (V1, the IMPROVE
+    // direction). `bowman` + "Bowman University Chrome" -> `bowman-chrome` is
+    // the ruling's own worked example: the stored key is a real reading, so
+    // the defaulted-key test above declines it, and without this the pair
+    // reads as `changed:setKey` -> CONFLICT and is never looked at again.
+    // derivationRefinesProduct is the strict inverse of the collapse test and
+    // requires the title to name every segment the derived key adds.
+    if (axis === "setKey" && title !== undefined
+        && derivationRefinesProduct(stored, derived, title)) { filled.push(axis); continue; }
     if (aBlank && !bBlank) { filled.push(axis); continue; }
     if (!aBlank && bBlank) { dropped.push(axis); continue; }
     changed.push(axis);
@@ -728,7 +977,9 @@ function classifyRow({
     return { ...base, klass: UNDERIVABLE, axes: { same: [], filled: [], dropped: [], changed: [] }, reasons: [...(derivationReasons.length ? derivationReasons : ["no-derived-identity"]), ...splitReasons], writable: false };
   }
 
-  const axes = diffAxes(stored, derived);
+  // The title decides whether a stored `unknown`/`bowman` is a reading or the
+  // derivation's own default -- see storedSetKeyIsDefaulted (V1).
+  const axes = diffAxes(stored, derived, str(row?.title));
   const reasons = [];
 
   // THE SLUG IS A NINTH AXIS, AND IT IS NOT IN `AXES`.
@@ -812,6 +1063,22 @@ function classifyRow({
   if (axes.dropped.length) reasons.push(`dropped:${axes.dropped.join(",")}`);
   if (axes.changed.length) reasons.push(`changed:${axes.changed.join(",")}`);
   if (axes.dropped.length || axes.changed.length) {
+    // A COLLAPSE IS NAMED HERE, NOT ONLY IN IMPROVE (Drew, 2026-09-03, V1).
+    //
+    // The IMPROVE guard (GUARD 3 below) was the only place the collapse was
+    // ever named -- and a collapse arrives as `changed:setKey`, which returns
+    // CONFLICT from this branch BEFORE improveRefusals is ever called. So the
+    // 1,461,057 changed:setKey rows the census counted carried no reason
+    // beyond "changed:setKey": the ruled collapses and the ordinary
+    // disagreements were one undifferentiated pile, and the ruling could not
+    // be counted, audited or canaried.
+    //
+    // The class does not move -- CONFLICT is already report-only, and that is
+    // the correct class -- but the row now says WHICH collapse it is, by name.
+    // `writable` on this path is the literal `false` below and always has
+    // been; the reason is what was missing.
+    const collapse = derivationCollapsesProduct(stored, derived);
+    if (collapse) reasons.push(`conflict-setkey-collapses-distinct-product:${collapse}`);
     // REPORT NOISE TAG ONLY -- never changes the class or `writable`.
     // ingestGradeFromTitle reads the SET NAME "Topps Pristine" plus a 2+ digit
     // card number as PSA 10 (verified: "2024 Topps Pristine Baseball #131
@@ -931,5 +1198,9 @@ module.exports = {
   // directly and the mutation check can revert them one at a time.
   EVICTION_MOVABLE_AXES, DISTINCT_PRODUCT_SETKEYS,
   storedPrintRunNamesALimitedParallel, derivationCollapsesProduct, improveRefusals,
+  // CF-COLLAPSE-IS-FORBIDDEN (V1): the ruled pairs and the defaulted-setKey
+  // predicate, exported so the pins can drive each ruling directly and the
+  // mutation check can revert them one at a time.
+  RULED_COLLAPSE_PAIRS, DEFAULTED_SET_KEYS, storedSetKeyIsDefaulted, derivationRefinesProduct,
   VOCAB,
 };
