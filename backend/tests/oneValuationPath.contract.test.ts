@@ -646,13 +646,19 @@ describe("D17 — the portfolio persist site: what is written is what the routes
     // serve, not as a literal — that keeps this a persist-equals-serve pin
     // (which is this suite's whole thesis) instead of a float that any future
     // calibration rebase would have to hand-edit.
-    // CF-INDEPENDENCE-MUST-NAME-ITS-BASIS (2026-09-04). `labels` was `[]`
-    // here. These fixture comps carry no seller — like every real
-    // sold_comps row — so the exact-pool result now persists the honest
-    // caveat that seller independence could not be checked. The contract
-    // this suite exists to hold is unchanged: what is PERSISTED is exactly
-    // what the routes SERVE, labels included.
-    expect(hld.pricingSourceMeta).toEqual({ slug: GOLD, method: pb.rungLabel, compsUsed: pb.compsUsed, labels: [{ code: "independence-unverified", text: expect.stringContaining("do not tell us who sold them") }], selfAnchored: null, confidence: cf.confidence });
+    // CF-A-CAVEAT-THAT-FIRES-EVERYWHERE-SAYS-NOTHING (Drew, 2026-09-04).
+    // `labels` was `[]`, then briefly carried `independence-unverified`
+    // under #1775, and is `[]` again — for a DIFFERENT reason than the
+    // first time. These fixture comps carry no seller (like every real
+    // sold_comps row), so independence is genuinely unverifiable here; what
+    // changed is that Drew ruled the caveat belongs only on THIN pools,
+    // where one seller could plausibly be behind every sale. This pool
+    // clears the measured floor of 5, so the reader is not told something
+    // that would be true of every card they own. The basis itself is still
+    // on the API for any caller that asks. The contract this suite exists
+    // to hold is untouched: what is PERSISTED is exactly what the routes
+    // SERVE, labels included — here, both empty.
+    expect(hld.pricingSourceMeta).toEqual({ slug: GOLD, method: pb.rungLabel, compsUsed: pb.compsUsed, labels: [], selfAnchored: null, confidence: cf.confidence });
     expect(hld.predictedPrice).toBe(pb.predictedPrice);
     expect(hld.estimateBasis).toMatch(/^unified: Raw window=/);
     expect(hld.estimateBasis).toContain("id=hobbyiqCardId");
@@ -666,13 +672,19 @@ describe("D17 — the portfolio persist site: what is written is what the routes
     const again = await stored(id);
     expect(again.fairMarketValue).toBe(pb.marketValue);
     expect(again.fmvRung).toBe(pb.rungLabel);
-    // CF-INDEPENDENCE-MUST-NAME-ITS-BASIS (2026-09-04). `labels` was `[]`
-    // here. These fixture comps carry no seller — like every real
-    // sold_comps row — so the exact-pool result now persists the honest
-    // caveat that seller independence could not be checked. The contract
-    // this suite exists to hold is unchanged: what is PERSISTED is exactly
-    // what the routes SERVE, labels included.
-    expect(again.pricingSourceMeta).toEqual({ slug: GOLD, method: pb.rungLabel, compsUsed: pb.compsUsed, labels: [{ code: "independence-unverified", text: expect.stringContaining("do not tell us who sold them") }], selfAnchored: null, confidence: cf.confidence });
+    // CF-A-CAVEAT-THAT-FIRES-EVERYWHERE-SAYS-NOTHING (Drew, 2026-09-04).
+    // `labels` was `[]`, then briefly carried `independence-unverified`
+    // under #1775, and is `[]` again — for a DIFFERENT reason than the
+    // first time. These fixture comps carry no seller (like every real
+    // sold_comps row), so independence is genuinely unverifiable here; what
+    // changed is that Drew ruled the caveat belongs only on THIN pools,
+    // where one seller could plausibly be behind every sale. This pool
+    // clears the measured floor of 5, so the reader is not told something
+    // that would be true of every card they own. The basis itself is still
+    // on the API for any caller that asks. The contract this suite exists
+    // to hold is untouched: what is PERSISTED is exactly what the routes
+    // SERVE, labels included — here, both empty.
+    expect(again.pricingSourceMeta).toEqual({ slug: GOLD, method: pb.rungLabel, compsUsed: pb.compsUsed, labels: [], selfAnchored: null, confidence: cf.confidence });
     // No second engine, no legacy chain, on either site.
     expect(h.calls.estimate).toBe(0);
     expect(h.calls.curve).toBe(0);
@@ -700,13 +712,19 @@ describe("D17 — the portfolio persist site: what is written is what the routes
     // serve, not as a literal — that keeps this a persist-equals-serve pin
     // (which is this suite's whole thesis) instead of a float that any future
     // calibration rebase would have to hand-edit.
-    // CF-INDEPENDENCE-MUST-NAME-ITS-BASIS (2026-09-04). `labels` was `[]`
-    // here. These fixture comps carry no seller — like every real
-    // sold_comps row — so the exact-pool result now persists the honest
-    // caveat that seller independence could not be checked. The contract
-    // this suite exists to hold is unchanged: what is PERSISTED is exactly
-    // what the routes SERVE, labels included.
-    expect(hld.pricingSourceMeta).toEqual({ slug: GOLD, method: psa10.pb.rungLabel, compsUsed: psa10.pb.compsUsed, labels: [{ code: "independence-unverified", text: expect.stringContaining("do not tell us who sold them") }], selfAnchored: null, confidence: psa10.cf.confidence });
+    // CF-A-CAVEAT-THAT-FIRES-EVERYWHERE-SAYS-NOTHING (Drew, 2026-09-04).
+    // `labels` was `[]`, then briefly carried `independence-unverified`
+    // under #1775, and is `[]` again — for a DIFFERENT reason than the
+    // first time. These fixture comps carry no seller (like every real
+    // sold_comps row), so independence is genuinely unverifiable here; what
+    // changed is that Drew ruled the caveat belongs only on THIN pools,
+    // where one seller could plausibly be behind every sale. This pool
+    // clears the measured floor of 5, so the reader is not told something
+    // that would be true of every card they own. The basis itself is still
+    // on the API for any caller that asks. The contract this suite exists
+    // to hold is untouched: what is PERSISTED is exactly what the routes
+    // SERVE, labels included — here, both empty.
+    expect(hld.pricingSourceMeta).toEqual({ slug: GOLD, method: psa10.pb.rungLabel, compsUsed: psa10.pb.compsUsed, labels: [], selfAnchored: null, confidence: psa10.cf.confidence });
   });
 
   it("(slug, PSA 8 — no pool at the tier): the same entry's grade-curve-estimate is persisted as an ESTIMATE under its rung — never the engine's cross-grade rescale as observed", async () => {
