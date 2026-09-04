@@ -560,7 +560,12 @@ function titleEchoesSlugParallel(title, slugParallel) {
   if (!seg || GENERIC_PARALLELS.has(seg)) return null;
   const words = seg.split(/[^a-z0-9]+/).filter((w) => w.length >= 3 && w !== "base");
   if (!words.length) return null;
-  const hay = new Set(lower(str(title)).split(/[^a-z0-9]+/).filter(Boolean));
+  // Team phrases are stripped from the witness here for the same reason they
+  // are in `storedParallelStatedInTitle` -- see TEAM_NAME_PHRASES. This half
+  // is superseded by G6 on the live path but is exported and pinned, and a
+  // predicate that answers differently from its own generalisation is a trap
+  // for the next reader.
+  const hay = new Set(titleWithoutTeamNames(title).split(/[^a-z0-9]+/).filter(Boolean));
   return words.every((w) => hay.has(w)) ? seg : null;
 }
 
@@ -742,8 +747,70 @@ function slugShapeDefects({ slug, stored }) {
  * Topps Cosmic Chrome's Planetary Pursuit Mercury, 2025 Score's Signatures --
  * still defends itself.
  */
+/**
+ * A TEAM NAME IS NOT A PARALLEL, AND G6 READS THE TITLE AS A BAG OF WORDS.
+ *
+ * CF-A-TEAM-NAME-IS-NOT-A-FINISH, at G6 (measured on the live pool after the
+ * base-eviction apply, 2026-09-04).
+ *
+ * G6 asks whether the title repeats the stored parallel word for word. On a
+ * MULTI-word parallel that is self-evidently safe -- "pink refractor" appears
+ * in a title only when the seller named the parallel. On a ONE-word COLOUR
+ * parallel it is not, because the colour words are also the words baseball
+ * teams are named with:
+ *
+ *   slug ...:red:...   "Jon Papelbon 2006 Bowman #76 Boston RED SOX"
+ *   slug ...:blue:...  "Vladimir Guerrero Jr. 2025 Bowman #27 BLUE JAYS"
+ *   slug ...:white:... "... #12 Chicago WHITE SOX ..."
+ *   slug ...:green:... "... GREEN BAY Packers ..."
+ *
+ * In each the title's ONLY occurrence of the colour is the team, the seller
+ * named no finish at all, and the row is exactly the base-in-refractor sale
+ * the eviction exists to move. G6 refused all of them -- the over-broad
+ * direction this guard's own test file warns about, which "silently halts the
+ * program rather than announcing itself".
+ *
+ * THE PRECEDENT IS ALREADY IN THE TREE, TWICE. `titleNearMissesFinish` was
+ * narrowed for precisely this shape ("Diamondbacks" read as a typo of the
+ * finish word "diamond", refusing a genuine eviction), and the census script
+ * strips the same phrases before tokenizing. This is the third site and the
+ * only one that still had the hole.
+ *
+ * WHY PHRASE-STRIPPING AND NOT A COLOUR BLOCKLIST. Dropping the colour word
+ * outright would break the honest case -- a genuine "2025 Bowman Chrome Blue
+ * Refractor /150 Blue Jays" must still defend itself. So the TEAM PHRASES are
+ * removed from the witness and the colour is then looked for in what remains:
+ * a title that names the colour anywhere outside the team name still refuses,
+ * and a title whose only colour is the team no longer does.
+ *
+ * Directionally this is the narrowing that costs refusals and admits
+ * evictions, so it is the direction that CAN do damage -- which is why it is
+ * confined to the team PHRASES (never a bare colour) and pinned both ways.
+ */
+const TEAM_NAME_PHRASES = [
+  /\bred\s+sox\b/g, /\bwhite\s+sox\b/g, /\bblue\s+jays\b/g,
+  /\bblue\s+jackets\b/g, /\bred\s+wings\b/g, /\bred\s+raiders\b/g,
+  /\bcincinnati\s+reds\b/g, /\bthe\s+reds\b/g,
+  /\bgreen\s+bay\b/g, /\bbowling\s+green\b/g,
+  /\bblackhawks\b/g, /\bredskins\b/g, /\bredbirds\b/g, /\bbrowns\b/g,
+  /\bgolden\s+(?:state|knights|bears|gophers|hurricanes|eagles|flashes)\b/g,
+  /\bgold\s+glove\b/g, /\bsilver\s+slugger\b/g,
+  /\borange\s+bowl\b/g, /\bsyracuse\s+orange\b/g,
+];
+
+/** The title with the team phrases removed, for G6's witness only. */
+function titleWithoutTeamNames(title) {
+  let t = lower(str(title));
+  for (const re of TEAM_NAME_PHRASES) t = t.replace(re, " ");
+  return t;
+}
+
 function storedParallelStatedInTitle({ title, storedSlug, stored, setKey }) {
-  const hay = new Set(lower(str(title)).split(/[^a-z0-9]+/).filter(Boolean));
+  // The witness is read with team PHRASES removed, so a colour that appears
+  // only inside a team name is not evidence that the seller named a finish.
+  // A title naming the colour anywhere else still echoes, and a multi-word
+  // parallel is unaffected by construction.
+  const hay = new Set(titleWithoutTeamNames(title).split(/[^a-z0-9]+/).filter(Boolean));
   if (!hay.size) return null;
   for (const c of parallelTokensOfStoredIdentity({ storedSlug, stored, setKey })) {
     if (c.words.every((w) => hay.has(w))) return { phrase: c.phrase, from: c.from };
@@ -787,8 +854,41 @@ function baseEvictionEvidence({ row, stored, derived, storedSlug, baseDestSlug, 
   //    beneath its 2020 floor) knows about.
   const beYear = derived?.cardYear ?? stored?.cardYear ?? null;
   const beSetKey = derived?.setKey ?? stored?.setKey ?? "";
+  // A TEAM NAME IS NOT THE SELLER NAMING A FINISH.
+  //
+  // CF-A-TEAM-NAME-IS-NOT-A-FINISH, at guard 3 (measured on the live pool
+  // AFTER the base-eviction apply ran on all 32 shards, 2026-09-04).
+  //
+  // The finish vocabulary is the checklist corpus's, and Bowman really does
+  // print a bare "Red", "Blue", "White" and "Green" parallel -- so each of
+  // those is a legitimate finish TOKEN. The defect is not the word, it is the
+  // OCCURRENCE: the only place the colour appears in these titles is the
+  // team.
+  //
+  //   ...:red:...    "Jon Papelbon 2006 Bowman #76 Boston RED SOX"
+  //   ...:blue:...   "Vladimir Guerrero Jr. 2025 Bowman #27 BLUE JAYS"
+  //   ...:white:...  "... #12 Chicago WHITE SOX ..."
+  //   ...:green:...  "... GREEN BAY Packers ..."
+  //
+  // Measured over 921,000 rows of the live pool: 193 of 1,501 surviving
+  // base-in-refractor rows -- 12.9% -- are refused by this guard and by this
+  // guard alone, on a colour that occurs ONLY inside a team name. Every one is
+  // a base sale stranded on a colour slug, which is the exact split pool the
+  // GREAT REMATCH exists to end.
+  //
+  // THE STRIP IS LOCAL TO THIS CALL SITE, DELIBERATELY. `titleNamesFinish` is
+  // also consulted by the IMPROVE guards, where a FALSE answer makes the guard
+  // MORE conservative -- so silencing a team name there would loosen a
+  // different lane that no measurement here has cleared. Base-eviction is the
+  // lane the audit gate cleared and the only one this changes.
+  //
+  // Phrase-stripping, never a colour blocklist: "Blue Refractor /150 Blue
+  // Jays" still names a finish once the team is gone, so an honest parallel
+  // keeps defending its row. Verified on the six colour-plus-team shapes --
+  // none drops to false.
+  const beTitleWitness = titleWithoutTeamNames(title);
   if (!title) fail.push("no-title");
-  else if (titleNamesFinish(title, { year: beYear, setKey: beSetKey })) fail.push("title-names-a-finish");
+  else if (titleNamesFinish(beTitleWitness, { year: beYear, setKey: beSetKey })) fail.push("title-names-a-finish");
   else {
     // 3b. A MISSPELLED FINISH WORD IS STILL A FINISH WORD, ON THE DISQUALIFYING
     //     SIDE (first audit gate, leak 3 -- 7 writable BASE-EVICTION lines).
@@ -2903,6 +3003,9 @@ module.exports = {
   // eviction whatever the vocabulary knows. Exported piece by piece so each
   // half can be driven alone and reverted alone by the mutation check.
   slugIsWellFormed, parallelTokensOfStoredIdentity, storedParallelStatedInTitle,
+  // The team-name suppression G6 reads its witness through, exported so the
+  // pin can drive it alone and the mutation check can revert it alone.
+  TEAM_NAME_PHRASES, titleWithoutTeamNames,
   // The two report-only slug-shape census subclasses (2026-09-04).
   SLUG_SHAPE_DEFECTS, slugShapeDefects,
   // The derivation-defect guards (D1, D6, D7, D8, V3), exported so each pin
