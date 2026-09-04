@@ -2600,6 +2600,63 @@ jobs:
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (moved=$MOVED) — done, no re-dispatch."
           fi
 
+      - name: Self-relaunch the Tiffany rung repair until the slot is clean
+        # CF-TIFFANY-IS-A-PRODUCT (#1745). The script stops at its own
+        # RUN_MINUTES budget and PRINTS the marker; a run SIGKILLed at the
+        # 150-minute step ceiling prints nothing, which is exactly why the gate
+        # is the marker and never a count (CF-RELAUNCH-ONLY-ON-BUDGET, #1361).
+        #
+        # It shipped in #1745 with the marker and the sentence "the relaunch
+        # continues from here", and no relaunch step to make that sentence
+        # true: a slot that ran out of budget stopped after one cycle, green,
+        # with work left and nothing saying so.
+        #
+        # MODE is forwarded because the script REQUIRES it and exits 1 without
+        # one rather than picking a population itself, and `parents_only` is
+        # forwarded because it carries the CF-AN-INHERITED-SLOTS-IS-NOT-A-
+        # CHOSEN-SHARD opt-in (#1756) — a continuation that dropped it would
+        # silently widen from one shard to a full sweep mid-fleet. Every other
+        # input is forwarded verbatim, so the relaunch is the same dispatch.
+        if: ${{ !cancelled() && inputs.script == 'repair-tiffany-rung-to-product' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        working-directory: backend
+        run: |
+          set +e
+          N=$(grep -aoE "^  rows scanned \(this slot\) +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
+          echo "scanned=${N:-0}"
+          if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
+            echo "::notice::budget hit (scanned=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-tiffany-rung-to-product -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f sources="${{ inputs.sources }}" -f parents_only="${{ inputs.parents_only }}" -f limit="${{ inputs.limit }}"
+          else
+            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (scanned=${N:-0}) — done, no re-dispatch."
+          fi
+
+      - name: Self-relaunch the Tiffany pool enumeration until the slot is clean
+        # CF-THE-POOL-IS-ENUMERATED-FROM-THE-POOL (#1752). Same contract as the
+        # rung repair above: stops at its own RUN_MINUTES budget, prints the
+        # marker, and the relaunch is keyed on the marker alone.
+        #
+        # MODE (pool | num1951) is REQUIRED with no default, and `parents_only`
+        # carries the #1756 shard opt-in for this lane too — both forwarded, or
+        # the continuation is a different dispatch from the one that stopped.
+        if: ${{ !cancelled() && inputs.script == 'repair-tiffany-pool-enumeration' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        working-directory: backend
+        run: |
+          set +e
+          N=$(grep -aoE "^  rows scanned \(this slot\) +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
+          echo "scanned=${N:-0}"
+          if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
+            echo "::notice::budget hit (scanned=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-tiffany-pool-enumeration -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f sources="${{ inputs.sources }}" -f parents_only="${{ inputs.parents_only }}" -f limit="${{ inputs.limit }}"
+          else
+            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (scanned=${N:-0}) — done, no re-dispatch."
+          fi
+
       - name: Self-relaunch until composite backfill fully drains
         # CF-COMPOSITE-BACKFILL-SELF-RELAUNCH (Drew, 2026-07-30). Composite
         # backfill covers ~3.4M sold_comps rows and one 150-min iteration
