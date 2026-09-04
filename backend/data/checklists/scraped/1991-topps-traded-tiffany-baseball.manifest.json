@@ -1,0 +1,23 @@
+{
+  "scrapedAt": "2026-09-04T07:16:28.821Z",
+  "source": "baseballcardpedia",
+  "sourceUrl": "https://baseballcardpedia.com/index.php/1991_Topps_Traded",
+  "sport": "baseball",
+  "year": 1991,
+  "season": "1991",
+  "setName": "1991 Topps Traded Tiffany",
+  "productKey": "1991-topps-traded-tiffany",
+  "setKey": "topps-traded-tiffany",
+  "rowCount": 132,
+  "parallelColumnAuthoritative": true,
+  "cardRows": 132,
+  "ladderRows": 0,
+  "subsetRows": 0,
+  "printRunsFound": 0,
+  "rarity": "believed the scarcest Topps Traded Tiffany set produced; production figures never disclosed",
+  "note": "1991 Topps Traded Tiffany — the ONLY year www.sportscardchecklist.com serves no separate Traded Tiffany set page, so the checklist comes from baseballcardpedia's 1991 Topps Traded page, which states: 'For the eighth, and final, year, Topps issued a \"high-end\" Tiffany version. 1991 Topps Traded Tiffany cards are printed on white cardstock with a glossy coating and were produced at Topps' factory in Ireland.' Tiffany is a factory-set-exclusive parallel of the SAME 132-card Traded list, so that list mints the Tiffany product — the same ruling Drew made for 1987 Topps Tiffany on 2026-09-01. Scraped with the committed scrape-baseballcardpedia.cjs; the raw emit carried parallel='Base' (contract forbids the word — blank means plain) and checklist annotations in the player cell (RC/USA/UER/*), both normalized. No row invented: all 132 card numbers and players are on the scraped page.",
+  "normalizations": [
+    "parallel 'Base' -> blank, per docs/reference/checklist-csv-contract.md",
+    "trailing checklist annotations (RC, USA, UER, *) stripped from 46 player names; they describe the card, not the person"
+  ]
+}
