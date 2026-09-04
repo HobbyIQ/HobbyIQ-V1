@@ -134,7 +134,7 @@ ruling.
 
 ---
 
-## 4. Questions for Drew — 20 keys, 8 families, 74,038 checklist rows
+## 4. Questions for Drew — 20 keys, 74,038 checklist rows
 
 `needs-ruling` is **report-only**: these keys keep today's behaviour until they
 are answered. Refusing to merge sounds like the safe direction, but
@@ -144,16 +144,29 @@ Chrome Sapphire, so the collapse is intended, not a bug"), and a verdict that
 says "I could not decide this mechanically" has no authority to overturn a
 decision someone made deliberately.
 
-| # | Family | Keys | Checklist rows | The question |
-|---:|---|---|---:|---|
-| 1 | **Bowman Mega Box** | `bowman-mega-box`, `bowman-mega-box-chrome`, `bowman-mega` | 39,908 | Is a Bowman Mega Box its own product, or shorthand for `bowman-chrome-mega-box`? |
-| 2 | **Sapphire spelling** | `bowman-sapphire`, `bowman-sapphire-edition`, `bowman-sapphire-chrome`, `topps-sapphire-chrome`, `topps-sapphire-chrome-factory-set` | 24,199 | The vocabulary says there is no standalone Bowman Sapphire product. But 24k checklist rows are filed under these spellings — is the *catalog* wrong, or the rule? |
-| 3 | **Black Diamond** | `black-diamond`, `black-diamond-rookie-edition` | 2,870 | Is 1999-2000 `black-diamond` the same product as `upper-deck-black-diamond`, and is Rookie Edition a separate set? |
-| 4 | **Allen & Ginter subsets** | `topps-allen-and-ginter-chrome`, `topps-allen-and-ginters-national-die-cuts` | 1,836 | Chrome and the National die-cuts — subsets of Allen & Ginter, or products of their own? |
-| 5 | **NSCC** | `bowman-nscc`, `topps-nscc-bowman-national-convention` | 1,075 | #1612 ruled Bowman NSCC its own product. Do these two spellings both mean `bowman-chrome-nscc`? |
-| 6 | **Prizm draft** | `panini-prizm-perennial-draft-picks` | 3,748 | Is 2013-14 "Perennial Draft Picks" the same product as `panini-prizm-draft-picks`? |
-| 7 | **eTopps** | `etopps`, `etopps-cards-that-never-were` | 204 | eTopps was a separate digital-delivery product line. Own key, or `topps`? |
-| 8 | **Score family** | `scoreboard-mantle`, `scoremasters` | 197 | 1997 Scoreboard Mantle and 1989 Scoremasters — own keys, or `score`? |
+**3 of the 20 (47,218 rows) already have a ruling and keep collapsing.** They
+are listed because the catalog disagrees with the rule loudly enough to be worth
+re-asking, not because anything changes today:
+
+| Key | Checklist rows | Collapses to | The question |
+|---|---:|---|---|
+| `bowman-mega-box` | 33,137 | `bowman-chrome-mega-box` | Own product, or shorthand? |
+| `bowman-sapphire` | 7,722 | `bowman-chrome-sapphire` | The rule says no standalone product — but 7,722 checklist rows are filed here. |
+| `bowman-mega-box-chrome` | 6,359 | `bowman-chrome-mega-box` | Same question, third spelling. |
+
+**The other 17 (26,820 rows) are genuinely open:**
+
+| Family | Keys | Rows | The question |
+|---|---|---:|---|
+| **Sapphire spellings** | `bowman-sapphire-edition`, `bowman-sapphire-chrome`, `topps-sapphire-chrome`, `topps-sapphire-chrome-factory-set` | 16,477 | Are "Edition", "Sapphire Chrome" and the factory set the same product as the ruled key, or their own? |
+| **Prizm draft** | `panini-prizm-perennial-draft-picks` | 3,748 | Is 2013-14 "Perennial Draft Picks" the same as `panini-prizm-draft-picks`? |
+| **Black Diamond** | `black-diamond`, `black-diamond-rookie-edition` | 2,870 | Same as `upper-deck-black-diamond`? Is Rookie Edition separate? |
+| **Allen & Ginter subsets** | `topps-allen-and-ginter-chrome`, `topps-allen-and-ginters-national-die-cuts` | 1,836 | Chrome / National die-cuts — subsets, or own products? |
+| **NSCC** | `bowman-nscc`, `topps-nscc-bowman-national-convention` | 1,075 | Do both spellings mean `bowman-chrome-nscc`? (#1612 ruled NSCC its own product) |
+| **Bowman Mega** | `bowman-mega` | 412 | The 2026 spelling — same product as Mega Box? |
+| **eTopps** | `etopps`, `etopps-cards-that-never-were` | 204 | A separate digital-delivery line — own key, or `topps`? |
+| **Score family** | `scoreboard-mantle`, `scoremasters` | 197 | 1997 Scoreboard Mantle / 1989 Scoremasters — own keys, or `score`? |
+| **Topps Update Japan** | `topps-update-japan` | 1 | A Japanese release of Update, or its own set? |
 
 The other 9 `needs-ruling` keys carry **zero** checklist rows and are listed in
 the data file for completeness.
