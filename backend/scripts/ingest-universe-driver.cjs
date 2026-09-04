@@ -1147,6 +1147,73 @@ function acquireEntry(entry, dir) {
  * so it says so by name rather than surfacing as an undefined path five frames
  * down in an unrelated gate.
  */
+/**
+ * CF-A-STAGED-FILE-WINS (2026-09-04).
+ *
+ * #1719 committed eight Topps Traded Tiffany checklists -- 1984-1990 from
+ * sportscardchecklist, 1991 from baseballcardpedia -- as CSVs with manifest
+ * sidecars under backend/data/checklists/scraped/. #1717 then taught the queue
+ * to put staged entries FIRST. Nothing taught the driver to USE them: the
+ * acquisition re-fetched every one, and the re-fetch is not the staged file.
+ *
+ * Measured in the catalog on 2026-09-04, after run 33854416984:
+ *
+ *   1984-1990  setKey topps-traded-tiffany  132 rows/yr  source sportscardchecklist-2026-09-04   ok
+ *   1991       setKey topps-traded          396 rows     source baseballcardpedia-ladders-2026-09-04
+ *
+ * The 1991 entry is the whole argument. Its staged CSV is 132 rows, setKey
+ * `topps-traded-tiffany`, parallel BLANK. What the re-fetch landed instead:
+ *
+ *   - scrape-bcp-ladders.cjs derives its key from the PAGE TITLE
+ *     ("1991_Topps_Traded" -> normalizeSetKeyLocal -> `topps-traded`), so the
+ *     rows are filed under the Traded product, not the Tiffany one;
+ *   - it emits the literal "Base" in the parallel column, which the CSV
+ *     contract forbids -- blank means plain, and "Base" is a rung name;
+ *   - Tiffany itself came back as a PARALLEL of Topps Traded ("Topps Traded
+ *     Tiffany", 132 rows) alongside "Grey Backs", so the 132-card Tiffany
+ *     product became a rung of another product -- the split-pool shape
+ *     (memory: one card, one row, one pool).
+ *
+ * The staged file has none of those defects, because a human resolved them
+ * once and wrote the answer down. Re-deriving it from the source slug throws
+ * that ruling away every run.
+ *
+ * So: when the manifest sidecar for an entry's sourceRef is on disk, the
+ * driver INGESTS IT AS-IS -- byte for byte, with its own manifest, which is
+ * what the ingest child reads product identity from. No fetch, no network, no
+ * re-derivation. The verdict records `acquired: "staged"` so a control doc
+ * says which files landed and a later reader can tell a staged ingest from a
+ * fetched one.
+ *
+ * SCOPE=recheck is the way back. A recheck is the operator saying "go and look
+ * again", and re-fetching is exactly what that means -- so recheck bypasses
+ * this and drives the lane's own machinery, which is how a staged file that
+ * has gone stale is ever replaced.
+ *
+ * The staged files are COPIED into the run's workdir rather than ingested in
+ * place: the child is handed a DIR and the caller deletes that DIR when the
+ * entry is done, and pointing it at the repo would delete committed work.
+ */
+function acquireFromStaging(entry, dir) {
+  const staged = stagedFilesFor(entry);
+  if (!staged.length) return null;
+  fs.mkdirSync(dir, { recursive: true });
+  const out = [];
+  for (const s of staged) {
+    const csv = path.join(dir, path.basename(s.csv));
+    fs.copyFileSync(s.csv, csv);
+    // The manifest travels WITH the CSV. ingest-checklist-csv-to-catalog.cjs
+    // reads sport/year/setKey/setName from the sidecar next to the file (and
+    // falls back to parsing the FILENAME when there is none), so copying the
+    // CSV alone would hand the child a different product identity than the one
+    // the staged manifest states -- the very re-derivation this rule exists to
+    // stop.
+    fs.copyFileSync(s.manifest, path.join(dir, path.basename(s.manifest)));
+    out.push(csv);
+  }
+  return out;
+}
+
 function acquireStaged(entry, dir) {
   const got = acquireEntry(entry, dir);
   const paths = got && got.csvPaths;
@@ -1220,6 +1287,13 @@ async function writeControl(entry, verdict) {
     sourceRef: entry.sourceRef,
     sport: entry.sport, year: entry.year, setName: entry.setName,
     status: verdict.status,
+    // "staged" = the committed CSV+manifest were ingested as-is (no fetch);
+    // "fetched" = the lane's own scraper ran. See CF-A-STAGED-FILE-WINS.
+    acquired: verdict.acquired || null,
+    // Rows the catalog holds for this product UNDER THIS RUN'S SOURCE -- the
+    // number that answers "did my rows land", as opposed to rowsInCatalog,
+    // which counts synthetic rows too.
+    rowsUnderSource: verdict.rowsUnderSource ?? null,
     reason: verdict.reason || null,
     rowsCreated: verdict.rowsCreated ?? null,
     rowsInCatalog: verdict.rowsInCatalog ?? null,
@@ -1291,6 +1365,49 @@ async function countCatalogRows(entry) {
     : {
         query: "SELECT VALUE COUNT(1) FROM c WHERE c.year = @y AND c.setKey = @k",
         parameters: [{ name: "@y", value: Number(entry.year) }, { name: "@k", value: setKey }],
+      };
+  const { resources } = await cosmos().container("card_catalog").items.query(q, { maxItemCount: 1 }).fetchAll();
+  return resources[0] ?? 0;
+}
+
+/**
+ * CF-THE-VERIFICATION-MUST-COUNT-THE-ROWS-THIS-RUN-WROTE (2026-09-04).
+ *
+ * countCatalogRows counts EVERY row of a (year, setKey), whatever wrote it.
+ * That is the right number for "did this product end up populated", and the
+ * wrong number for "did MY ingest land". Measured for 1984 Topps Traded
+ * Tiffany after run 33854416984:
+ *
+ *   sportscardchecklist-2026-09-04            132   <- the checklist
+ *   derived-from-base-checklist-2026-08-23      1   } rows we SYNTHESISED from
+ *   derived-from-base-checklist-2026-08-23-...   3   } sales, not a checklist
+ *                                             ----
+ *                                              136   <- what the driver read
+ *
+ * So the run reported "136 in catalog, 0 rows created" -- 0 because the 132
+ * were already there from the staging pass, and 136 because four synthetic
+ * rows were counted as if they were checklist rows. Neither number answers the
+ * question the operator asked, which is "are the 132 staged rows in the
+ * catalog under the source that staged them".
+ *
+ * This counts by SOURCE. It is a strictly additional read, used for the
+ * verdict's `rowsUnderSource` field and printed in the banner; the existing
+ * whole-product count is unchanged, because the truncation and partial rules
+ * are written against it.
+ */
+async function countCatalogRowsBySource(entry, source) {
+  const setKey = setKeyFor(entry);
+  if (!setKey || !source) return null;
+  const byKeyOnly = entry.lane === "tcgdexja";
+  if (!byKeyOnly && !entry.year) return null;
+  const q = byKeyOnly
+    ? {
+        query: "SELECT VALUE COUNT(1) FROM c WHERE c.setKey = @k AND c.source = @s",
+        parameters: [{ name: "@k", value: setKey }, { name: "@s", value: source }],
+      }
+    : {
+        query: "SELECT VALUE COUNT(1) FROM c WHERE c.year = @y AND c.setKey = @k AND c.source = @s",
+        parameters: [{ name: "@y", value: Number(entry.year) }, { name: "@k", value: setKey }, { name: "@s", value: source }],
       };
   const { resources } = await cosmos().container("card_catalog").items.query(q, { maxItemCount: 1 }).fetchAll();
   return resources[0] ?? 0;
@@ -1386,11 +1503,19 @@ function valueRank(entry) {
  * banner. Keyed by the staged manifest's own `sourceUrl`, which is the address
  * the universe entry was built from, so no name normalization can drift.
  */
-const CHECKLIST_DIR = path.join(HERE, "..", "data", "checklists");
+/** The committed staging root. Overridable so a test can point the staged-file
+ *  rule at a fixture instead of the repo's own checklists. */
+const CHECKLIST_DIR = process.env.CHECKLIST_DIR || path.join(HERE, "..", "data", "checklists");
 let _stagedIndex = null;
-function stagedSourceRefs() {
+/**
+ * The staged index: sourceUrl -> the CSV(s) staged under it, WITH their
+ * manifest sidecars. One page may stage several scope files, so the value is a
+ * list and the entry-level gate judges all of them together, exactly as it
+ * does for a freshly-acquired page.
+ */
+function stagedIndex() {
   if (_stagedIndex) return _stagedIndex;
-  const refs = new Set();
+  const byRef = new Map();
   const walk = (dir) => {
     let names;
     try { names = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
@@ -1399,21 +1524,36 @@ function stagedSourceRefs() {
       if (d.isDirectory()) { walk(full); continue; }
       if (!d.name.endsWith(".manifest.json")) continue;
       // A manifest with no CSV beside it is not staged work.
-      if (!fs.existsSync(full.replace(/\.manifest\.json$/, ".csv"))) continue;
+      const csv = full.replace(/\.manifest\.json$/, ".csv");
+      if (!fs.existsSync(csv)) continue;
       try {
         const m = JSON.parse(fs.readFileSync(full, "utf8"));
-        if (m && m.sourceUrl) refs.add(String(m.sourceUrl));
+        if (!m || !m.sourceUrl) continue;
+        const ref = String(m.sourceUrl);
+        if (!byRef.has(ref)) byRef.set(ref, []);
+        byRef.get(ref).push({ csv, manifest: full, source: m.source ? String(m.source) : null });
       } catch { /* an unreadable manifest simply stages nothing */ }
     }
   };
   walk(CHECKLIST_DIR);
-  _stagedIndex = refs;
-  return refs;
+  // Sorted, so a re-run reads a page's scope files in the same order.
+  for (const v of byRef.values()) v.sort((a, b) => a.csv.localeCompare(b.csv));
+  _stagedIndex = byRef;
+  return byRef;
+}
+
+function stagedSourceRefs() {
+  return new Set(stagedIndex().keys());
+}
+
+/** The staged CSV+manifest pairs for this entry, keyed by the manifest's own sourceUrl. */
+function stagedFilesFor(entry) {
+  return stagedIndex().get(String(entry?.sourceRef || "")) || [];
 }
 
 /** True when this entry's checklist is already staged on disk. */
 function isStaged(entry) {
-  return stagedSourceRefs().has(String(entry?.sourceRef || ""));
+  return stagedFilesFor(entry).length > 0;
 }
 
 /**
@@ -1504,7 +1644,7 @@ for (const lane of ACQUIRE_LANES) {
   }
 }
 
-module.exports = { streakAfter, gateStagedCsv, gateStagedEntry, ladderIsAttested, CARTESIAN_MIN_RUNGS, CARTESIAN_MIN_CARDS, stagedCsvs, LANES_WITHOUT_PRINT_RUNS, LANES_WITH_BASELESS_PRODUCTS, LANES_WITH_VINTAGE_ERA_PRODUCTS, PARALLEL_ERA_FIRST_YEAR, ladderlessByEra, sourceLabelFor, splitCsv, isPersonName, setKeyFor, planFor, tcgdexModern, acquireStaged, ACQUIRE_LANES, LANE_ALIASES, LANE_SOURCE, LANE_MINUTES, CANONICAL_HEADER, CHILD_STDERR_LINES, cosmosSafeId, controlId, orderQueue, SYSTEMIC_FAILURE_STREAK, EMPTY_STATUS, STREAK_STATUSES, isStaged, stagedSourceRefs };
+module.exports = { streakAfter, gateStagedCsv, gateStagedEntry, ladderIsAttested, CARTESIAN_MIN_RUNGS, CARTESIAN_MIN_CARDS, stagedCsvs, LANES_WITHOUT_PRINT_RUNS, LANES_WITH_BASELESS_PRODUCTS, LANES_WITH_VINTAGE_ERA_PRODUCTS, PARALLEL_ERA_FIRST_YEAR, ladderlessByEra, sourceLabelFor, splitCsv, isPersonName, setKeyFor, planFor, tcgdexModern, acquireStaged, ACQUIRE_LANES, LANE_ALIASES, LANE_SOURCE, LANE_MINUTES, CANONICAL_HEADER, CHILD_STDERR_LINES, cosmosSafeId, controlId, orderQueue, SYSTEMIC_FAILURE_STREAK, EMPTY_STATUS, STREAK_STATUSES, isStaged, stagedSourceRefs, stagedIndex, stagedFilesFor, acquireFromStaging };
 if (require.main !== module) return;
 
 (async () => {
@@ -1705,9 +1845,18 @@ if (require.main !== module) return;
       // pipe the apply does not run is worse than no report at all: it was
       // believed as a rehearsal on 2026-09-04 and the apply threw on every
       // entry it had just called clean.
-      const plan = planFor(entry);
+      // A STAGED ENTRY DRIVES A DIFFERENT PIPE, so the report must say so --
+      // the plan and the apply are one decision (CF-THE-PLAN-AND-THE-APPLY-
+      // ARE-ONE-FUNCTION), and the staged short-circuit is part of it.
+      const stagedNow = RECHECK ? [] : stagedFilesFor(entry);
+      const plan = stagedNow.length
+        ? `STAGED (${stagedNow.length} committed file(s)) → ingest-checklist-csv-to-catalog.cjs — no fetch; ${planFor(entry)} is bypassed`
+        : planFor(entry);
       const inCatalog = await countCatalogRows(entry).catch(() => null);
       console.log(`      would drive: ${plan}`);
+      if (stagedNow.length) {
+        console.log(`      staged files: ${stagedNow.map((s) => path.basename(s.csv)).join(", ")}`);
+      }
       console.log(`      gates: canonical header · zero-base-cards (per ENTRY, across every staged scope file) · players-as-parallels · card-line-as-rung · cross-join arithmetic`);
       console.log(`      would stamp source: ${sourceLabelFor(lane)}`);
       console.log(`      catalog now: ${inCatalog === null ? "(setKey/year not derivable — verify would refuse)" : f(inCatalog) + " rows"}   seeded=${entry.seededStatus}   prior=${prior?.status || "(none)"}`);
@@ -1718,9 +1867,24 @@ if (require.main !== module) return;
 
     const dir = path.join(WORKDIR, lane, slugOf(entry.id).slice(0, 60));
     let verdict;
+    // Declared out here so the catch below, and the control doc after it, both
+    // say how the entry was acquired -- a failure while fetching and a failure
+    // while ingesting a staged file are different findings.
+    let acquired = "fetched";
+    // The by-source count, hoisted for the same reason as `acquired`: it
+    // belongs on the control doc whichever verdict the entry ends with.
+    let rowsUnderSource = null;
     try {
       const before = await countCatalogRows(entry);
-      const csvPaths = acquireStaged(entry, dir);
+      // A STAGED FILE WINS. See CF-A-STAGED-FILE-WINS: an entry whose checklist
+      // is committed with its manifest is ingested as-is, and only a
+      // SCOPE=recheck re-fetches it.
+      const fromStaging = RECHECK ? null : acquireFromStaging(entry, dir);
+      const csvPaths = fromStaging || acquireStaged(entry, dir);
+      acquired = fromStaging ? "staged" : "fetched";
+      if (fromStaging) {
+        console.log(`      STAGED — ingesting ${f(fromStaging.length)} committed file(s) as-is, no fetch: ${fromStaging.map((p) => path.basename(p)).join(", ")}`);
+      }
 
       // GATE BEFORE INGEST. A staged file that violates doctrine is refused as
       // a whole entry -- never a dirty ingest, and never a silent skip.
@@ -1756,6 +1920,14 @@ if (require.main !== module) return;
         const after = await countCatalogRows(entry);
         const created = (after ?? 0) - (before ?? 0);
         rowsCreatedTotal += Math.max(0, created);
+
+        // AND VERIFY BY SOURCE. `after` counts every row of the product,
+        // synthetic ones included; this counts only what this run's source
+        // wrote. See CF-THE-VERIFICATION-MUST-COUNT-THE-ROWS-THIS-RUN-WROTE.
+        rowsUnderSource = await countCatalogRowsBySource(entry, sourceLabelFor(lane)).catch(() => null);
+        if (rowsUnderSource !== null) {
+          console.log(`      under source ${sourceLabelFor(lane)}: ${f(rowsUnderSource)} rows (of ${f(after ?? 0)} for the product)`);
+        }
 
         /**
          * CF-EVERY-STAGED-ROW-OR-IT-IS-NOT-INGESTED (2026-09-04).
@@ -1850,8 +2022,14 @@ if (require.main !== module) return;
       console.log(`      ${status.toUpperCase()} — ${msg}`);
     }
 
+    // HOW IT WAS ACQUIRED IS PART OF THE VERDICT. A control doc that does not
+    // say whether the rows came from a committed checklist or from a fresh
+    // fetch cannot answer the question this run exists to settle.
+    verdict.acquired = acquired;
+    verdict.rowsUnderSource = rowsUnderSource;
+
     verdicts[verdict.status]++;
-    perEntry.push({ id: entry.id, label, status: verdict.status, reason: verdict.reason, rowsCreated: verdict.rowsCreated });
+    perEntry.push({ id: entry.id, label, status: verdict.status, reason: verdict.reason, rowsCreated: verdict.rowsCreated, acquired });
 
     // CF-A-REFUSED-ENTRY-IS-NOT-A-BROKEN-LANE (2026-09-04).
     //

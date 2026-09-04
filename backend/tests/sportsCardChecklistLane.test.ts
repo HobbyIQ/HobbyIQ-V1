@@ -42,7 +42,7 @@ const {
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { setKeyFor, gateStagedCsv, LANE_ALIASES } = require("../scripts/ingest-universe-driver.cjs");
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const { classify, setNameFrom, CELLS } = require("../scripts/discoverSportsCardChecklistSets.cjs");
+const { classify, setNameFrom, CELLS, BRAND_RE } = require("../scripts/discoverSportsCardChecklistSets.cjs");
 import { normalizeSetKey } from "../src/services/portfolioiq/hobbyIqCardId.service";
 
 const FIX = join(__dirname, "fixtures", "sportscardchecklist");
@@ -349,13 +349,58 @@ describe("discovery: every emitted setKey is a normalizeSetKey fixed point", () 
     expect(entries.every((e: { year: number }) => Number.isFinite(e.year))).toBe(true);
   });
 
-  it("all eight cells are represented", () => {
+  /**
+   * A CELL IS DECLARED BEFORE IT IS APPLIED, and the two are separate acts.
+   *
+   * This asserted that EVERY declared cell already has entries in the
+   * committed manifest, which conflates "the discovery knows about this cell"
+   * with "someone has run --apply for it". The baseball cells added on
+   * 2026-09-04 (CF-THE-DISCOVERY-NEVER-KNEW-ABOUT-BASEBALL) are declared and
+   * deliberately NOT applied: appending 810 entries is a queue decision, made
+   * by a dispatch, not by a cell declaration.
+   *
+   * So the invariant is asserted where it is actually true. The seven original
+   * football/basketball/hockey cells plus the hockey bonus WERE applied, and
+   * they must stay populated -- a cell silently going to zero is the
+   * split-year false negative this lane's own header warns about.
+   */
+  const APPLIED_CELLS = new Set([
+    "football/topps/1948-1989",
+    "basketball/topps/1948-1988",
+    "basketball/topps/1991-2009",
+    "basketball/upper-deck/1991-2009",
+    "basketball/fleer/1990-2009",
+    "basketball/skybox/1991-2008",
+    "hockey/o-pee-chee/1933-1989",
+    "hockey/topps/pre-1990",
+  ]);
+
+  it("every APPLIED cell is represented in the manifest", () => {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const manifest = require("../data/ingest-universe.json");
     const entries = manifest.entries.filter((e: { lane: string }) => e.lane === "sportscardchecklist");
     for (const cell of CELLS) {
+      if (!APPLIED_CELLS.has(cell.label)) continue;
       const n = entries.filter((e: { seededNote: string }) => e.seededNote.includes(`cell ${cell.label}`)).length;
       expect(n, cell.label).toBeGreaterThan(0);
     }
+  });
+
+  it("every applied cell is still a declared cell — a rename must not orphan one", () => {
+    // The other direction. If a cell label is edited, APPLIED_CELLS above
+    // would quietly stop matching anything and the test above would pass by
+    // checking nothing.
+    const declared = new Set(CELLS.map((c: { label: string }) => c.label));
+    for (const label of APPLIED_CELLS) expect(declared.has(label), label).toBe(true);
+  });
+
+  it("the baseball cells are declared, so the discovery can see the sport at all", () => {
+    // CF-THE-DISCOVERY-NEVER-KNEW-ABOUT-BASEBALL: 40,699 of the sitemap's
+    // 141,482 set URLs are baseball and the classifier returned null for every
+    // one of them, which is why #1719's eight Topps Traded Tiffany entries had
+    // to be hand-written into the manifest.
+    const baseball = CELLS.filter((c: { sport: string }) => c.sport === "baseball");
+    expect(baseball.length).toBeGreaterThan(0);
+    for (const c of baseball) expect(BRAND_RE[c.setKey], c.label).toBeTruthy();
   });
 });

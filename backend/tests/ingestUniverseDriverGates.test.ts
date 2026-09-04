@@ -383,10 +383,17 @@ describe("ingest-universe-driver — the manifest is the durable universe", () =
     // 5,850 sportscardchecklist entries for the seven vintage football/basketball/
     // hockey cells (plus the hockey/topps bonus cell). Both halves are pinned, so
     // a lane that silently loses its entries is still caught.
+    //
+    // +7 on 2026-09-04: #1719 hand-wrote the 1984-1990 Topps Traded Tiffany
+    // entries (the eighth, 1991, is on the bcp lane) and the survey's own
+    // 1997-98 Fleer Tiffany set, because the discovery had no baseball cell to
+    // mint them from. That gap is closed in
+    // discoverSportsCardChecklistSets.cjs; these seven stay hand-written, so
+    // the pinned count moves with them.
     const scc = manifest.entries.filter((e: any) => e.lane === "sportscardchecklist");
-    expect(scc.length).toBe(5850);
-    expect(manifest.entries.length - scc.length).toBe(7755);
-    expect(manifest.entries.length).toBe(13605);
+    expect(scc.length).toBe(5857);
+    expect(manifest.entries.length - scc.length).toBe(7756);
+    expect(manifest.entries.length).toBe(13613);
     const ids = new Set(manifest.entries.map((e: any) => e.id));
     expect(ids.size).toBe(manifest.entries.length);
     expect(manifest.entries.every((e: any) => typeof e.sourceRef === "string" && /^https?:\/\//.test(e.sourceRef))).toBe(true);
