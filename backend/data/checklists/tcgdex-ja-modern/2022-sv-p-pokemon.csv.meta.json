@@ -1,0 +1,12 @@
+{
+  "productKey": "2022-sv-p",
+  "sport": "pokemon",
+  "year": 2022,
+  "setKey": "sv-p",
+  "source": "tcgdex-ja-modern",
+  "confidence": 0.9,
+  "provenance": "api.tcgdex.net/v2/ja/sets/SV-P (MIT, tcgdex/cards-database) fetched 2026-09-04 -- 288 rows, 1 ladder entries",
+  "setName": "Japanese スカーレット&バイオレット プロモカード",
+  "tcgdexId": "SV-P",
+  "sourceUrl": "https://api.tcgdex.net/v2/ja/sets/SV-P"
+}

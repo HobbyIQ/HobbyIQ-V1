@@ -1,0 +1,12 @@
+{
+  "productKey": "2022-s11a",
+  "sport": "pokemon",
+  "year": 2022,
+  "setKey": "s11a",
+  "source": "tcgdex-ja-modern",
+  "confidence": 0.9,
+  "provenance": "api.tcgdex.net/v2/ja/sets/S11a (MIT, tcgdex/cards-database) fetched 2026-09-04 -- 140 rows, 10 ladder entries",
+  "setName": "Japanese 白熱のアルカナ",
+  "tcgdexId": "S11a",
+  "sourceUrl": "https://api.tcgdex.net/v2/ja/sets/S11a"
+}

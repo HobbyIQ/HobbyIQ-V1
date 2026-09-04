@@ -1,0 +1,12 @@
+{
+  "productKey": "2022-s10a",
+  "sport": "pokemon",
+  "year": 2022,
+  "setKey": "s10a",
+  "source": "tcgdex-ja-modern",
+  "confidence": 0.9,
+  "provenance": "api.tcgdex.net/v2/ja/sets/S10a (MIT, tcgdex/cards-database) fetched 2026-09-04 -- 148 rows, 10 ladder entries",
+  "setName": "Japanese ダークファンタズマ",
+  "tcgdexId": "S10a",
+  "sourceUrl": "https://api.tcgdex.net/v2/ja/sets/S10a"
+}

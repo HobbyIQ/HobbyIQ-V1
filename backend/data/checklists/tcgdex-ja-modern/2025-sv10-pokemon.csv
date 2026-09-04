@@ -1,0 +1,133 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,001,,false,,pineco
+base,002,,false,,shroomish
+base,003,,false,,breloom
+base,004,,false,,rotom
+base,005,,false,,fomantis
+base,006,,false,,lurantis
+base,007,,false,,blipbug
+base,008,,false,,tarountula
+base,009,,false,,spidops
+base,010,,false,,smoliv
+base,011,,false,,dolliv
+base,012,Double rare,false,,arboliva
+base,013,,false,,growlithe
+base,014,,false,,arcanine
+base,015,Double rare,false,,moltres
+base,016,,false,,houndour
+base,017,,false,,houndoom
+base,018,,false,,torchic
+base,019,,false,,combusken
+base,020,,false,,blaziken
+base,021,,false,,rotom
+base,022,,false,,articuno
+base,023,,false,,clamperl
+base,024,,false,,huntail
+base,025,,false,,gorebyss
+base,026,,false,,snover
+base,027,,false,,abomasnow
+base,028,,false,,rotom
+base,029,,false,,arrokuda
+base,030,,false,,barraskewda
+base,031,,false,,cetoddle
+base,032,Double rare,false,,cetitan
+base,033,,false,,zapdos
+base,034,,false,,mareep
+base,035,,false,,flaaffy
+base,036,,false,,ampharos
+base,037,,false,,drowzee
+base,038,,false,,hypno
+base,039,Double rare,false,,mewtwo
+base,040,,false,,wobbuffet
+base,041,,false,,chingling
+base,042,,false,,mimikyu
+base,043,,false,,dottler
+base,044,,false,,orbeetle
+base,045,,false,,mankey
+base,046,,false,,primeape
+base,047,,false,,annihilape
+base,048,,false,,larvitar
+base,049,,false,,pupitar
+base,050,,false,,tyranitar
+base,051,,false,,nosepass
+base,052,,false,,probopass
+base,053,,false,,meditite
+base,054,,false,,medicham
+base,055,Double rare,false,,regirock
+base,056,,false,,ekans
+base,057,,false,,arbok
+base,058,,false,,nidoran-f
+base,059,,false,,nidorina
+base,060,,false,,nidoqueen
+base,061,,false,,nidoran-m
+base,062,,false,,nidorino
+base,063,Double rare,false,,nidoking
+base,064,,false,,zubat
+base,065,,false,,golbat
+base,066,Double rare,false,,crobat
+base,067,,false,,grimer
+base,068,,false,,muk
+base,069,,false,,koffing
+base,070,,false,,weezing
+base,071,,false,,murkrow
+base,072,,false,,sneasel
+base,073,,false,,forretress
+base,074,,false,,skarmory
+base,075,,false,,zamazenta
+base,076,,false,,rattata
+base,077,,false,,raticate
+base,078,,false,,meowth
+base,079,Double rare,false,,persian
+base,080,,false,,kangaskhan
+base,081,,false,,porygon
+base,082,,false,,porygon2
+base,083,,false,,porygon-z
+base,084,,false,,taillow
+base,085,,false,,swellow
+base,086,,false,,squawkabilly
+base,087,,false,,ロケット団のおじゃまロボ
+base,088,,false,,ロケット団のスーパーボール
+base,089,,false,,ロケット団のびっくりボム
+base,090,,false,,ロケット団のレシーバー
+base,091,,false,,ロケット団のアテナ
+base,092,,false,,ロケット団のアポロ
+base,093,,false,,ロケット団のサカキ
+base,094,,false,,ロケット団のラムダ
+base,095,,false,,ロケット団のランス
+base,096,,false,,ロケット団の監視塔
+base,097,,false,,ロケット団のファクトリー
+base,098,,false,,ロケット団エネルギー
+base,099,Illustration rare,false,,spidops
+base,100,Illustration rare,false,,houndoom
+base,101,Illustration rare,false,,blaziken
+base,102,Illustration rare,false,,clamperl
+base,103,Illustration rare,false,,wobbuffet
+base,104,Illustration rare,false,,orbeetle
+base,105,Illustration rare,false,,weezing
+base,106,Illustration rare,false,,murkrow
+base,107,Illustration rare,false,,zamazenta
+base,108,Illustration rare,false,,raticate
+base,109,Illustration rare,false,,meowth
+base,110,Illustration rare,false,,kangaskhan
+base,111,Ultra Rare,false,,arboliva
+base,112,Ultra Rare,false,,moltres
+base,113,Ultra Rare,false,,cetitan
+base,114,Ultra Rare,false,,mewtwo
+base,115,Ultra Rare,false,,regirock
+base,116,Ultra Rare,false,,nidoking
+base,117,Ultra Rare,false,,crobat
+base,118,Ultra Rare,false,,persian
+base,119,Ultra Rare,false,,ロケット団のアテナ
+base,120,Ultra Rare,false,,ロケット団のアポロ
+base,121,Ultra Rare,false,,ロケット団のサカキ
+base,122,Ultra Rare,false,,ロケット団のラムダ
+base,123,Ultra Rare,false,,ロケット団のランス
+base,124,Special illustration rare,false,,moltres
+base,125,Special illustration rare,false,,mewtwo
+base,126,Special illustration rare,false,,nidoking
+base,127,Special illustration rare,false,,crobat
+base,128,Special illustration rare,false,,ロケット団のアテナ
+base,129,Special illustration rare,false,,ロケット団のサカキ
+base,130,Mega Hyper Rare,false,,mewtwo
+base,131,Mega Hyper Rare,false,,crobat
+base,132,Mega Hyper Rare,false,,ジャミングタワー

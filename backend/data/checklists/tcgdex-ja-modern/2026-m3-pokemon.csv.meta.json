@@ -1,0 +1,12 @@
+{
+  "productKey": "2026-m3",
+  "sport": "pokemon",
+  "year": 2026,
+  "setKey": "m3",
+  "source": "tcgdex-ja-modern",
+  "confidence": 0.9,
+  "provenance": "api.tcgdex.net/v2/ja/sets/M3 (MIT, tcgdex/cards-database) fetched 2026-09-04 -- 117 rows, 6 ladder entries",
+  "setName": "Japanese ムニキスゼロ",
+  "tcgdexId": "M3",
+  "sourceUrl": "https://api.tcgdex.net/v2/ja/sets/M3"
+}

@@ -1,0 +1,12 @@
+{
+  "productKey": "2024-sv6a",
+  "sport": "pokemon",
+  "year": 2024,
+  "setKey": "sv6a",
+  "source": "tcgdex-ja-modern",
+  "confidence": 0.9,
+  "provenance": "api.tcgdex.net/v2/ja/sets/SV6a (MIT, tcgdex/cards-database) fetched 2026-09-04 -- 94 rows, 7 ladder entries",
+  "setName": "Japanese ナイトワンダラー",
+  "tcgdexId": "SV6a",
+  "sourceUrl": "https://api.tcgdex.net/v2/ja/sets/SV6a"
+}

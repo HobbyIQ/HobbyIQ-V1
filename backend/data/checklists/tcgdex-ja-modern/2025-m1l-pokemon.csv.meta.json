@@ -1,0 +1,12 @@
+{
+  "productKey": "2025-m1l",
+  "sport": "pokemon",
+  "year": 2025,
+  "setKey": "m1l",
+  "source": "tcgdex-ja-modern",
+  "confidence": 0.9,
+  "provenance": "api.tcgdex.net/v2/ja/sets/M1L (MIT, tcgdex/cards-database) fetched 2026-09-04 -- 92 rows, 6 ladder entries",
+  "setName": "Japanese メガブレイブ",
+  "tcgdexId": "M1L",
+  "sourceUrl": "https://api.tcgdex.net/v2/ja/sets/M1L"
+}

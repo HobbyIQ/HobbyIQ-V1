@@ -1,0 +1,12 @@
+{
+  "productKey": "2024-sv8a",
+  "sport": "pokemon",
+  "year": 2024,
+  "setKey": "sv8a",
+  "source": "tcgdex-ja-modern",
+  "confidence": 0.9,
+  "provenance": "api.tcgdex.net/v2/ja/sets/SV8a (MIT, tcgdex/cards-database) fetched 2026-09-04 -- 315 rows, 2 ladder entries",
+  "setName": "Japanese テラスタルフェスex",
+  "tcgdexId": "SV8a",
+  "sourceUrl": "https://api.tcgdex.net/v2/ja/sets/SV8a"
+}

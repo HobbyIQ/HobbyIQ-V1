@@ -1,0 +1,101 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,001,,false,,scyther
+base,002,,false,,pineco
+base,003,,false,,seedot
+base,004,,false,,nuzleaf
+base,005,,false,,shiftry
+base,006,,false,,shroomish
+base,007,,false,,breloom
+base,008,,false,,deerling
+base,009,,false,,sawsbuck
+base,010,,false,,grubbin
+base,011,,false,,dhelmise
+base,012,,false,,bramblin
+base,013,,false,,brambleghast
+base,014,,false,,rellor
+base,015,,false,,rabsca
+base,016,Double rare,false,,iron-leaves
+base,017,,false,,slugma
+base,018,,false,,magcargo
+base,019,,false,,victini
+base,020,,false,,litten
+base,021,,false,,torracat
+base,022,Double rare,false,,incineroar
+base,023,,false,,pikachu
+base,024,,false,,raichu
+base,025,,false,,electabuzz
+base,026,,false,,electivire
+base,027,,false,,charjabug
+base,028,,false,,vikavolt
+base,029,,false,,zeraora
+base,030,,false,,iron-thorns
+base,031,,false,,mr-mime
+base,032,,false,,girafarig
+base,033,,false,,cutiefly
+base,034,,false,,ribombee
+base,035,,false,,iron-valiant
+base,036,Double rare,false,,iron-crown
+base,037,,false,,meditite
+base,038,,false,,medicham
+base,039,,false,,drilbur
+base,040,,false,,excadrill
+base,041,Double rare,false,,iron-boulder
+base,042,Double rare,false,,farigiraf
+base,043,,false,,forretress
+base,044,Double rare,false,,scizor
+base,045,,false,,mawile
+base,046,,false,,beldum
+base,047,,false,,metang
+base,048,,false,,metagross
+base,049,,false,,meltan
+base,050,,false,,melmetal
+base,051,,false,,iron-treads
+base,052,,false,,miraidon
+base,053,,false,,lickitung
+base,054,,false,,lickilicky
+base,055,,false,,skitty
+base,056,,false,,delcatty
+base,057,,false,,pidove
+base,058,,false,,tranquill
+base,059,,false,,unfezant
+base,060,,false,,drampa
+base,061,,false,,ハンドトリマー
+base,062,ACE SPEC Rare,false,,プライムキャッチャー
+base,063,ACE SPEC Rare,false,,リブートポッド
+base,064,ACE SPEC Rare,false,,ヒーローマント
+base,065,,false,,ブーストエナジー 未来
+base,066,,false,,ヘビーバトン
+base,067,,false,,暗号マニアの解読
+base,068,,false,,セイジ
+base,069,,false,,ベルのまごころ
+base,070,,false,,フルメタルラボ
+base,071,,false,,ミストエネルギー
+base,072,Illustration rare,false,,shiftry
+base,073,Illustration rare,false,,deerling
+base,074,Illustration rare,false,,sawsbuck
+base,075,Illustration rare,false,,litten
+base,076,Illustration rare,false,,charjabug
+base,077,Illustration rare,false,,iron-thorns
+base,078,Illustration rare,false,,cutiefly
+base,079,Illustration rare,false,,excadrill
+base,080,Illustration rare,false,,metagross
+base,081,Illustration rare,false,,meltan
+base,082,Illustration rare,false,,lickitung
+base,083,Illustration rare,false,,drampa
+base,084,Ultra Rare,false,,iron-leaves
+base,085,Ultra Rare,false,,incineroar
+base,086,Ultra Rare,false,,iron-crown
+base,087,Ultra Rare,false,,iron-boulder
+base,088,Ultra Rare,false,,farigiraf
+base,089,Ultra Rare,false,,scizor
+base,090,Ultra Rare,false,,暗号マニアの解読
+base,091,Ultra Rare,false,,セイジ
+base,092,Ultra Rare,false,,ベルのまごころ
+base,093,Special illustration rare,false,,iron-leaves
+base,094,Special illustration rare,false,,iron-crown
+base,095,Special illustration rare,false,,iron-boulder
+base,096,Special illustration rare,false,,セイジ
+base,097,Special illustration rare,false,,ベルのまごころ
+base,098,Mega Hyper Rare,false,,iron-leaves
+base,099,Mega Hyper Rare,false,,iron-crown
+base,100,Mega Hyper Rare,false,,iron-boulder

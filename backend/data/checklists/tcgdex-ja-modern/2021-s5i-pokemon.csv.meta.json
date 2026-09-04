@@ -1,0 +1,12 @@
+{
+  "productKey": "2021-s5i",
+  "sport": "pokemon",
+  "year": 2021,
+  "setKey": "s5i",
+  "source": "tcgdex-ja-modern",
+  "confidence": 0.9,
+  "provenance": "api.tcgdex.net/v2/ja/sets/S5I (MIT, tcgdex/cards-database) fetched 2026-09-04 -- 91 rows, 6 ladder entries",
+  "setName": "Japanese 一撃マスター",
+  "tcgdexId": "S5I",
+  "sourceUrl": "https://api.tcgdex.net/v2/ja/sets/S5I"
+}

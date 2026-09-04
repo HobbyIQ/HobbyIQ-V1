@@ -1,0 +1,12 @@
+{
+  "productKey": "2025-m-p",
+  "sport": "pokemon",
+  "year": 2025,
+  "setKey": "m-p",
+  "source": "tcgdex-ja-modern",
+  "confidence": 0.9,
+  "provenance": "api.tcgdex.net/v2/ja/sets/M-P (MIT, tcgdex/cards-database) fetched 2026-09-04 -- 132 rows, 1 ladder entries",
+  "setName": "Japanese メガ プロモカード",
+  "tcgdexId": "M-P",
+  "sourceUrl": "https://api.tcgdex.net/v2/ja/sets/M-P"
+}

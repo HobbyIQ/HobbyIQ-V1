@@ -1,0 +1,12 @@
+{
+  "productKey": "2021-s6h",
+  "sport": "pokemon",
+  "year": 2021,
+  "setKey": "s6h",
+  "source": "tcgdex-ja-modern",
+  "confidence": 0.9,
+  "provenance": "api.tcgdex.net/v2/ja/sets/S6H (MIT, tcgdex/cards-database) fetched 2026-09-04 -- 95 rows, 6 ladder entries",
+  "setName": "Japanese 白銀のランス",
+  "tcgdexId": "S6H",
+  "sourceUrl": "https://api.tcgdex.net/v2/ja/sets/S6H"
+}

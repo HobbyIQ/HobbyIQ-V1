@@ -1,0 +1,130 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,001,,false,,caterpie
+base,002,,false,,metapod
+base,003,,false,,butterfree
+base,004,,false,,shroomish
+base,005,,false,,breloom
+base,006,,false,,maractus
+base,007,,false,,shelmet
+base,008,,false,,accelgor
+base,009,,false,,virizion
+base,010,,false,,grubbin
+base,011,Double rare,false,,tsareena
+base,012,,false,,growlithe
+base,013,,false,,arcanine
+base,014,Double rare,false,,chandelure
+base,015,Triple Rare,false,,chandelure
+base,016,,false,,heatmor
+base,017,,false,,oricorio
+base,018,,false,,staryu
+base,019,,false,,starmie
+base,020,,false,,totodile
+base,021,,false,,croconaw
+base,022,,false,,feraligatr
+base,023,,false,,clamperl
+base,024,,false,,huntail
+base,025,,false,,gorebyss
+base,026,Double rare,false,,crabominable
+base,027,,false,,pyukumuku
+base,028,,false,,snom
+base,029,,false,,frosmoth
+base,030,,false,,helioptile
+base,031,,false,,heliolisk
+base,032,,false,,charjabug
+base,033,,false,,vikavolt
+base,034,Double rare,false,,boltund
+base,035,Triple Rare,false,,boltund
+base,036,,false,,toxel
+base,037,,false,,toxtricity
+base,038,,false,,jynx
+base,039,Double rare,false,,mew
+base,040,Triple Rare,false,,mew
+base,041,,false,,snubbull
+base,042,,false,,granbull
+base,043,,false,,corsola
+base,044,,false,,cursola
+base,045,,false,,deoxys
+base,046,,false,,munna
+base,047,,false,,musharna
+base,048,,false,,meloetta
+base,049,,false,,dreepy
+base,050,,false,,drakloak
+base,051,,false,,dragapult
+base,052,,false,,geodude
+base,053,,false,,graveler
+base,054,,false,,golem
+base,055,,false,,onix
+base,056,,false,,steelix
+base,057,,false,,drilbur
+base,058,,false,,falinks
+base,059,,false,,zigzagoon
+base,060,,false,,linoone
+base,061,,false,,obstagoon
+base,062,,false,,trubbish
+base,063,,false,,garbodor
+base,064,,false,,vullaby
+base,065,,false,,mandibuzz
+base,066,Double rare,false,,hoopa
+base,067,,false,,excadrill
+base,068,,false,,durant
+base,069,Double rare,false,,genesect
+base,070,,false,,togedemaru
+base,071,,false,,meltan
+base,072,,false,,melmetal
+base,073,,false,,corviknight
+base,074,,false,,latias
+base,075,,false,,latios
+base,076,,false,,goomy
+base,077,,false,,sliggoo
+base,078,,false,,goodra
+base,079,,false,,dunsparce
+base,080,,false,,smeargle
+base,081,,false,,skitty
+base,082,,false,,delcatty
+base,083,,false,,bunnelby
+base,084,,false,,diggersby
+base,085,Double rare,false,,greedent
+base,086,Triple Rare,false,,greedent
+base,087,,false,,rookidee
+base,088,,false,,corvisquire
+base,089,,false,,クロスシーバー
+base,090,,false,,クロススイッチャー
+base,091,,false,,バトルVIPパス
+base,092,,false,,パワータブレット
+base,093,,false,,スポンジグローブ
+base,094,,false,,なごりの大鈴
+base,095,,false,,カゲツ
+base,096,,false,,カミツレのきらめき
+base,097,,false,,ダンサー
+base,098,,false,,ポッドとデントとコーン
+base,099,,false,,スケーターズパーク
+base,100,,false,,フュージョンエネルギー
+base,101,Ultra Rare,false,,tsareena
+base,102,Ultra Rare,false,,chandelure
+base,103,Ultra Rare,false,,crabominable
+base,104,Ultra Rare,false,,boltund
+base,105,Ultra Rare,false,,mew
+base,106,Ultra Rare,false,,mew
+base,107,Ultra Rare,false,,hoopa
+base,108,Ultra Rare,false,,genesect
+base,109,Ultra Rare,false,,genesect
+base,110,Ultra Rare,false,,greedent
+base,111,Ultra Rare,false,,greedent
+base,112,Ultra Rare,false,,カゲツ
+base,113,Ultra Rare,false,,カミツレのきらめき
+base,114,Ultra Rare,false,,ダンサー
+base,115,Ultra Rare,false,,ポッドとデントとコーン
+base,116,Hyper rare,false,,chandelure
+base,117,Hyper rare,false,,boltund
+base,118,Hyper rare,false,,mew
+base,119,Secret Rare,false,,mew
+base,120,Hyper rare,false,,greedent
+base,121,Hyper rare,false,,カゲツ
+base,122,Hyper rare,false,,カミツレのきらめき
+base,123,Hyper rare,false,,ダンサー
+base,124,Hyper rare,false,,ポッドとデントとコーン
+base,125,Secret Rare,false,,flaaffy
+base,126,Secret Rare,false,,トレーニングコート
+base,127,Secret Rare,false,,基本草エネルギー
+base,128,Secret Rare,false,,基本炎エネルギー
+base,129,Secret Rare,false,,パワータブレット

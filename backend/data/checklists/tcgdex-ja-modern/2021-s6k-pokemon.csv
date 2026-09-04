@@ -1,0 +1,96 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,001,,false,,ledyba
+base,002,,false,,ledian
+base,003,Double rare,false,,celebi
+base,004,Triple Rare,false,,celebi
+base,005,,false,,seedot
+base,006,,false,,grookey
+base,007,,false,,thwackey
+base,008,,false,,rillaboom
+base,009,,false,,psyduck
+base,010,,false,,golduck
+base,011,,false,,sneasel
+base,012,,false,,weavile
+base,013,,false,,castform
+base,014,,false,,luvdisc
+base,015,,false,,tympole
+base,016,,false,,tapu-fini
+base,017,Double rare,false,,arctozolt
+base,018,,false,,mareep
+base,019,,false,,flaaffy
+base,020,,false,,ampharos
+base,021,,false,,blitzle
+base,022,,false,,zebstrika
+base,023,,false,,emolga
+base,024,Double rare,false,,zeraora
+base,025,,false,,gastly
+base,026,,false,,haunter
+base,027,,false,,gengar
+base,028,,false,,sableye
+base,029,,false,,cresselia
+base,030,,false,,golett
+base,031,,false,,golurk
+base,032,,false,,inkay
+base,033,,false,,malamar
+base,034,,false,,cutiefly
+base,035,,false,,ribombee
+base,036,Double rare,false,,calyrex
+base,037,Triple Rare,false,,calyrex
+base,038,,false,,palpitoad
+base,039,,false,,seismitoad
+base,040,,false,,crabrawler
+base,041,,false,,crabominable
+base,042,,false,,clobbopus
+base,043,,false,,grapploct
+base,044,,false,,koffing
+base,045,,false,,weezing
+base,046,,false,,weezing
+base,047,,false,,nuzleaf
+base,048,,false,,shiftry
+base,049,Double rare,false,,metagross
+base,050,Triple Rare,false,,metagross
+base,051,,false,,cobalion
+base,052,Double rare,false,,blissey
+base,053,,false,,castform
+base,054,,false,,kecleon
+base,055,,false,,fletchling
+base,056,,false,,fletchinder
+base,057,,false,,talonflame
+base,058,,false,,skwovet
+base,059,,false,,greedent
+base,060,,false,,霧の水晶
+base,061,,false,,草取りグローブ
+base,062,,false,,正義のグローブ
+base,063,,false,,れんげきの巻物 天の巻
+base,064,,false,,カトレア
+base,065,,false,,キクコ
+base,066,,false,,シャクヤ
+base,067,,false,,ズミ
+base,068,,false,,いにしえの墓地
+base,069,,false,,スパイラルエネルギー
+base,070,,false,,ラッキーエネルギー
+base,071,Ultra Rare,false,,celebi
+base,072,Ultra Rare,false,,arctozolt
+base,073,Ultra Rare,false,,zeraora
+base,074,Ultra Rare,false,,zeraora
+base,075,Ultra Rare,false,,calyrex
+base,076,Ultra Rare,false,,calyrex
+base,077,Ultra Rare,false,,metagross
+base,078,Ultra Rare,false,,blissey
+base,079,Ultra Rare,false,,blissey
+base,080,Ultra Rare,false,,カトレア
+base,081,Ultra Rare,false,,キクコ
+base,082,Ultra Rare,false,,シャクヤ
+base,083,Ultra Rare,false,,ズミ
+base,084,Hyper rare,false,,celebi
+base,085,Hyper rare,false,,calyrex
+base,086,Secret Rare,false,,calyrex
+base,087,Hyper rare,false,,metagross
+base,088,Hyper rare,false,,カトレア
+base,089,Hyper rare,false,,キクコ
+base,090,Hyper rare,false,,シャクヤ
+base,091,Hyper rare,false,,ズミ
+base,092,Secret Rare,false,,electrode
+base,093,Secret Rare,false,,霧の水晶
+base,094,Secret Rare,false,,やまびこホーン
+base,095,Secret Rare,false,,基本超エネルギー

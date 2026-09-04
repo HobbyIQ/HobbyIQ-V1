@@ -1,0 +1,128 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,001,,false,,venonat
+base,002,,false,,venomoth
+base,003,,false,,sunkern
+base,004,,false,,sunflora
+base,005,,false,,seedot
+base,006,,false,,nuzleaf
+base,007,,false,,shiftry
+base,008,,false,,foongus
+base,009,,false,,amoonguss
+base,010,,false,,durant
+base,011,,false,,phantump
+base,012,,false,,trevenant
+base,013,,false,,vulpix
+base,014,,false,,ninetales
+base,015,,false,,slugma
+base,016,,false,,magcargo
+base,017,Double rare,false,,delphox
+base,018,,false,,fletchinder
+base,019,,false,,talonflame
+base,020,,false,,seel
+base,021,,false,,dewgong
+base,022,,false,,horsea
+base,023,,false,,seadra
+base,024,,false,,kingdra
+base,025,,false,,wailmer
+base,026,,false,,wailord
+base,027,,false,,finneon
+base,028,,false,,lumineon
+base,029,Double rare,false,,kyurem
+base,030,Triple Rare,false,,kyurem
+base,031,,false,,dewpider
+base,032,,false,,araquanid
+base,033,,false,,cramorant
+base,034,,false,,glastrier
+base,035,,false,,chinchou
+base,036,,false,,lanturn
+base,037,Double rare,false,,rotom
+base,038,,false,,emolga
+base,039,,false,,tynamo
+base,040,,false,,eelektrik
+base,041,,false,,eelektross
+base,042,,false,,drowzee
+base,043,,false,,hypno
+base,044,,false,,sableye
+base,045,,false,,shuppet
+base,046,,false,,banette
+base,047,,false,,swirlix
+base,048,,false,,slurpuff
+base,049,,false,,comfey
+base,050,,false,,mimikyu
+base,051,,false,,indeedee
+base,052,,false,,dreepy
+base,053,,false,,drakloak
+base,054,,false,,dragapult
+base,055,,false,,spectrier
+base,056,Double rare,false,,aerodactyl
+base,057,Triple Rare,false,,aerodactyl
+base,058,,false,,phanpy
+base,059,,false,,donphan
+base,060,,false,,binacle
+base,061,,false,,barbaracle
+base,062,,false,,hawlucha
+base,063,,false,,sandygast
+base,064,,false,,palossand
+base,065,,false,,stonjourner
+base,066,Double rare,false,,drapion
+base,067,Triple Rare,false,,drapion
+base,068,,false,,sandile
+base,069,,false,,krokorok
+base,070,,false,,krookodile
+base,071,,false,,mareanie
+base,072,,false,,toxapex
+base,073,,false,,beldum
+base,074,,false,,metang
+base,075,,false,,metagross
+base,076,,false,,ferroseed
+base,077,,false,,ferrothorn
+base,078,,false,,stunfisk
+base,079,Double rare,false,,perrserker
+base,080,Double rare,false,,giratina
+base,081,Triple Rare,false,,giratina
+base,082,Double rare,false,,pidgeot
+base,083,,false,,porygon
+base,084,,false,,porygon2
+base,085,,false,,porygon-z
+base,086,,false,,spinda
+base,087,,false,,buneary
+base,088,,false,,lopunny
+base,089,,false,,bouffalant
+base,090,,false,,fletchling
+base,091,,false,,ツールボックス
+base,092,,false,,ミラージュゲート
+base,093,,false,,ロストスイーパー
+base,094,,false,,パニックマスク
+base,095,,false,,アクロマの実験
+base,096,,false,,おじょうさま
+base,097,,false,,ネジキ
+base,098,,false,,メリッサ
+base,099,,false,,ロストシティ
+base,100,,false,,ギフトエネルギー
+base,101,Ultra Rare,false,,delphox
+base,102,Ultra Rare,false,,kyurem
+base,103,Ultra Rare,false,,rotom
+base,104,Ultra Rare,false,,rotom
+base,105,Ultra Rare,false,,aerodactyl
+base,106,Ultra Rare,false,,aerodactyl
+base,107,Ultra Rare,false,,drapion
+base,108,Ultra Rare,false,,perrserker
+base,109,Ultra Rare,false,,perrserker
+base,110,Ultra Rare,false,,giratina
+base,111,Ultra Rare,false,,giratina
+base,112,Ultra Rare,false,,pidgeot
+base,113,Ultra Rare,false,,アクロマの実験
+base,114,Ultra Rare,false,,おじょうさま
+base,115,Ultra Rare,false,,ネジキ
+base,116,Ultra Rare,false,,メリッサ
+base,117,Holo Rare,false,,kyurem
+base,118,Holo Rare,false,,aerodactyl
+base,119,Holo Rare,false,,drapion
+base,120,Holo Rare,false,,giratina
+base,121,Holo Rare,false,,アクロマの実験
+base,122,Holo Rare,false,,おじょうさま
+base,123,Holo Rare,false,,ネジキ
+base,124,Holo Rare,false,,メリッサ
+base,125,Mega Hyper Rare,false,,giratina
+base,126,Mega Hyper Rare,false,,ロストスイーパー
+base,127,Mega Hyper Rare,false,,崩れたスタジアム

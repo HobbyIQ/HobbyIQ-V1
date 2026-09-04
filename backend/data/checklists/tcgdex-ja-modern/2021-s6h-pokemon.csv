@@ -1,0 +1,96 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,001,,false,,snover
+base,002,,false,,abomasnow
+base,003,,false,,dwebble
+base,004,,false,,crustle
+base,005,,false,,deerling
+base,006,,false,,sawsbuck
+base,007,,false,,bounsweet
+base,008,,false,,steenee
+base,009,,false,,tsareena
+base,010,,false,,zarude
+base,011,,false,,castform
+base,012,,false,,litleo
+base,013,,false,,pyroar
+base,014,Double rare,false,,volcanion
+base,015,,false,,scorbunny
+base,016,,false,,raboot
+base,017,,false,,cinderace
+base,018,,false,,lapras
+base,019,,false,,castform
+base,020,,false,,snorunt
+base,021,,false,,froslass
+base,022,,false,,spheal
+base,023,,false,,sealeo
+base,024,,false,,walrein
+base,025,,false,,bergmite
+base,026,,false,,avalugg
+base,027,Double rare,false,,calyrex
+base,028,Triple Rare,false,,calyrex
+base,029,Double rare,false,,rapidash
+base,030,,false,,slowpoke
+base,031,,false,,drowzee
+base,032,,false,,hypno
+base,033,,false,,ralts
+base,034,,false,,kirlia
+base,035,,false,,gardevoir
+base,036,,false,,shuppet
+base,037,,false,,banette
+base,038,,false,,hippopotas
+base,039,,false,,hippowdon
+base,040,,false,,gallade
+base,041,,false,,rockruff
+base,042,,false,,lycanroc
+base,043,Double rare,false,,sandaconda
+base,044,Triple Rare,false,,sandaconda
+base,045,,false,,slowking
+base,046,,false,,qwilfish
+base,047,Double rare,false,,liepard
+base,048,,false,,aron
+base,049,,false,,lairon
+base,050,,false,,aggron
+base,051,,false,,tauros
+base,052,,false,,porygon
+base,053,,false,,porygon2
+base,054,,false,,porygon-z
+base,055,,false,,teddiursa
+base,056,,false,,ursaring
+base,057,Double rare,false,,tornadus
+base,058,Triple Rare,false,,tornadus
+base,059,,false,,furfrou
+base,060,,false,,サバイバルセット
+base,061,,false,,いかついメット
+base,062,,false,,いちげきの巻物 貫通の巻
+base,063,,false,,耐火グローブ
+base,064,,false,,ブレイクグローブ
+base,065,,false,,アスナ
+base,066,,false,,ドクター
+base,067,,false,,ピオニー
+base,068,,false,,メロン
+base,069,,false,,頂への雪道
+base,070,,false,,インパクトエネルギー
+base,071,Ultra Rare,false,,volcanion
+base,072,Ultra Rare,false,,calyrex
+base,073,Ultra Rare,false,,calyrex
+base,074,Ultra Rare,false,,rapidash
+base,075,Ultra Rare,false,,rapidash
+base,076,Ultra Rare,false,,sandaconda
+base,077,Ultra Rare,false,,liepard
+base,078,Ultra Rare,false,,tornadus
+base,079,Ultra Rare,false,,tornadus
+base,080,Ultra Rare,false,,アスナ
+base,081,Ultra Rare,false,,ドクター
+base,082,Ultra Rare,false,,ピオニー
+base,083,Ultra Rare,false,,メロン
+base,084,Hyper rare,false,,calyrex
+base,085,Secret Rare,false,,calyrex
+base,086,Hyper rare,false,,sandaconda
+base,087,Hyper rare,false,,tornadus
+base,088,Hyper rare,false,,アスナ
+base,089,Hyper rare,false,,ドクター
+base,090,Hyper rare,false,,ピオニー
+base,091,Hyper rare,false,,メロン
+base,092,Secret Rare,false,,bronzong
+base,093,Secret Rare,false,,おむかえちょうちん
+base,094,Secret Rare,false,,いかついメット
+base,095,Secret Rare,false,,基本水エネルギー

@@ -1,0 +1,93 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,001,,false,,bulbasaur
+base,002,,false,,ivysaur
+base,003,Double rare,false,,venusaur
+base,004,,false,,exeggcute
+base,005,,false,,exeggutor
+base,006,,false,,celebi
+base,007,,false,,seedot
+base,008,,false,,nuzleaf
+base,009,,false,,shiftry
+base,010,,false,,vulpix
+base,011,,false,,ninetales
+base,012,,false,,numel
+base,013,Double rare,false,,camerupt
+base,014,,false,,volcanion
+base,015,,false,,scorbunny
+base,016,,false,,raboot
+base,017,,false,,cinderace
+base,018,,false,,corphish
+base,019,,false,,gimmighoul
+base,020,,false,,sandshrew
+base,021,,false,,sandslash
+base,022,,false,,onix
+base,023,,false,,tyrogue
+base,024,,false,,makuhita
+base,025,,false,,hariyama
+base,026,,false,,lunatone
+base,027,,false,,solrock
+base,028,,false,,riolu
+base,029,Double rare,false,,lucario
+base,030,,false,,croagunk
+base,031,,false,,toxicroak
+base,032,,false,,marshadow
+base,033,,false,,stonjourner
+base,034,,false,,nacli
+base,035,,false,,naclstack
+base,036,,false,,garganacl
+base,037,,false,,crawdaunt
+base,038,Double rare,false,,absol
+base,039,,false,,spiritomb
+base,040,,false,,yveltal
+base,041,,false,,nickit
+base,042,,false,,thievul
+base,043,,false,,shroodle
+base,044,,false,,grafaiai
+base,045,,false,,steelix
+base,046,Double rare,false,,mawile
+base,047,,false,,dialga
+base,048,,false,,tinkatink
+base,049,,false,,tinkatuff
+base,050,,false,,tinkaton
+base,051,,false,,gholdengo
+base,052,,false,,spearow
+base,053,,false,,fearow
+base,054,,false,,miltank
+base,055,,false,,yungoos
+base,056,,false,,gumshoos
+base,057,,false,,アイアンディフェンダー
+base,058,,false,,パワープロテイン
+base,059,,false,,ファイトゴング
+base,060,,false,,むしよけスプレー
+base,061,,false,,マチスの取引
+base,062,,false,,リーリエの決心
+base,063,,false,,危ない廃墟
+base,064,Illustration rare,false,,bulbasaur
+base,065,Illustration rare,false,,ivysaur
+base,066,Illustration rare,false,,exeggutor
+base,067,Illustration rare,false,,vulpix
+base,068,Illustration rare,false,,riolu
+base,069,Illustration rare,false,,marshadow
+base,070,Illustration rare,false,,garganacl
+base,071,Illustration rare,false,,spiritomb
+base,072,Illustration rare,false,,shroodle
+base,073,Illustration rare,false,,steelix
+base,074,Illustration rare,false,,spearow
+base,075,Illustration rare,false,,gumshoos
+base,076,Ultra Rare,false,,venusaur
+base,077,Ultra Rare,false,,camerupt
+base,078,Ultra Rare,false,,lucario
+base,079,Ultra Rare,false,,absol
+base,080,Ultra Rare,false,,mawile
+base,081,Ultra Rare,false,,パワープロテイン
+base,082,Ultra Rare,false,,ファイトゴング
+base,083,Ultra Rare,false,,夜のタンカ
+base,084,Ultra Rare,false,,ふうせん
+base,085,Ultra Rare,false,,マチスの取引
+base,086,Ultra Rare,false,,リーリエの決心
+base,087,Special illustration rare,false,,venusaur
+base,088,Special illustration rare,false,,lucario
+base,089,Special illustration rare,false,,absol
+base,090,Special illustration rare,false,,マチスの取引
+base,091,Special illustration rare,false,,リーリエの決心
+base,092,Mega Hyper Rare,false,,lucario

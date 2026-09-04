@@ -1,0 +1,12 @@
+{
+  "productKey": "2023-sv3",
+  "sport": "pokemon",
+  "year": 2023,
+  "setKey": "sv3",
+  "source": "tcgdex-ja-modern",
+  "confidence": 0.9,
+  "provenance": "api.tcgdex.net/v2/ja/sets/SV3 (MIT, tcgdex/cards-database) fetched 2026-09-04 -- 120 rows, 1 ladder entries",
+  "setName": "Japanese 黒炎の支配者",
+  "tcgdexId": "SV3",
+  "sourceUrl": "https://api.tcgdex.net/v2/ja/sets/SV3"
+}

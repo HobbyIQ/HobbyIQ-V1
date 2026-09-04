@@ -1,0 +1,134 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,001,,false,,sunkern
+base,002,,false,,sunflora
+base,003,,false,,heracross
+base,004,,false,,volbeat
+base,005,,false,,illumise
+base,006,,false,,phantump
+base,007,,false,,trevenant
+base,008,,false,,grookey
+base,009,,false,,thwackey
+base,010,,false,,rillaboom
+base,011,,false,,applin
+base,012,,false,,dipplin
+base,013,,false,,poltchageist
+base,014,,false,,sinistcha
+base,015,,false,,ogerpon
+base,016,Double rare,false,,ogerpon
+base,017,,false,,darumaka
+base,018,,false,,darmanitan
+base,019,,false,,litwick
+base,020,,false,,lampent
+base,021,,false,,chandelure
+base,022,Double rare,false,,ogerpon
+base,023,,false,,poliwag
+base,024,,false,,poliwhirl
+base,025,,false,,poliwrath
+base,026,,false,,goldeen
+base,027,,false,,seaking
+base,028,,false,,jynx
+base,029,,false,,feebas
+base,030,,false,,milotic
+base,031,,false,,snorunt
+base,032,,false,,glalie
+base,033,,false,,froslass
+base,034,,false,,finizen
+base,035,,false,,palafin
+base,036,Double rare,false,,palafin
+base,037,,false,,iron-bundle
+base,038,Double rare,false,,ogerpon
+base,039,,false,,shinx
+base,040,,false,,luxio
+base,041,Double rare,false,,luxray
+base,042,,false,,emolga
+base,043,,false,,wattrel
+base,044,,false,,kilowattrel
+base,045,,false,,clefairy
+base,046,,false,,clefable
+base,047,,false,,abra
+base,048,,false,,kadabra
+base,049,,false,,alakazam
+base,050,,false,,chimecho
+base,051,,false,,swirlix
+base,052,,false,,slurpuff
+base,053,,false,,sandygast
+base,054,,false,,palossand
+base,055,,false,,munkidori
+base,056,,false,,fezandipiti
+base,057,,false,,sandshrew
+base,058,,false,,sandslash
+base,059,,false,,timburr
+base,060,,false,,gurdurr
+base,061,,false,,conkeldurr
+base,062,,false,,glimmet
+base,063,,false,,glimmora
+base,064,,false,,okidogi
+base,065,Double rare,false,,ogerpon
+base,066,,false,,poochyena
+base,067,,false,,mightyena
+base,068,,false,,venipede
+base,069,,false,,whirlipede
+base,070,,false,,scolipede
+base,071,,false,,brute-bonnet
+base,072,,false,,skarmory
+base,073,,false,,aron
+base,074,,false,,lairon
+base,075,,false,,aggron
+base,076,,false,,heatran
+base,077,,false,,varoom
+base,078,,false,,revavroom
+base,079,,false,,dreepy
+base,080,,false,,drakloak
+base,081,Double rare,false,,dragapult
+base,082,,false,,tatsugiri
+base,083,,false,,farfetchd
+base,084,,false,,chansey
+base,085,Double rare,false,,blissey
+base,086,,false,,aipom
+base,087,,false,,ambipom
+base,088,,false,,ducklett
+base,089,,false,,swanna
+base,090,,false,,鬼の仮面
+base,091,,false,,おはやし笛
+base,092,ACE SPEC Rare,false,,シークレットボックス
+base,093,ACE SPEC Rare,false,,ポケモン回収サイクロン
+base,094,,false,,むしとりセット
+base,095,,false,,ハンディサーキュレーター
+base,096,,false,,スグリ
+base,097,,false,,ゼイユ
+base,098,,false,,ハッサク
+base,099,,false,,お祭り会場
+base,100,,false,,ジャミングタワー
+base,101,ACE SPEC Rare,false,,レガシーエネルギー
+base,102,Illustration rare,false,,sunflora
+base,103,Illustration rare,false,,dipplin
+base,104,Illustration rare,false,,froslass
+base,105,Illustration rare,false,,wattrel
+base,106,Illustration rare,false,,chimecho
+base,107,Illustration rare,false,,munkidori
+base,108,Illustration rare,false,,fezandipiti
+base,109,Illustration rare,false,,timburr
+base,110,Illustration rare,false,,okidogi
+base,111,Illustration rare,false,,lairon
+base,112,Illustration rare,false,,tatsugiri
+base,113,Illustration rare,false,,chansey
+base,114,Ultra Rare,false,,ogerpon
+base,115,Ultra Rare,false,,ogerpon
+base,116,Ultra Rare,false,,palafin
+base,117,Ultra Rare,false,,ogerpon
+base,118,Ultra Rare,false,,luxray
+base,119,Ultra Rare,false,,ogerpon
+base,120,Ultra Rare,false,,dragapult
+base,121,Ultra Rare,false,,blissey
+base,122,Ultra Rare,false,,スグリ
+base,123,Ultra Rare,false,,ゼイユ
+base,124,Ultra Rare,false,,ハッサク
+base,125,Special illustration rare,false,,ogerpon
+base,126,Special illustration rare,false,,ogerpon
+base,127,Special illustration rare,false,,ogerpon
+base,128,Special illustration rare,false,,ogerpon
+base,129,Special illustration rare,false,,スグリ
+base,130,Special illustration rare,false,,ゼイユ
+base,131,Mega Hyper Rare,false,,ogerpon
+base,132,Mega Hyper Rare,false,,改造ハンマー
+base,133,Mega Hyper Rare,false,,なかよしポフィン

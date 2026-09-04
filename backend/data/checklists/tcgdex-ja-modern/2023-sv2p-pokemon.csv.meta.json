@@ -1,0 +1,12 @@
+{
+  "productKey": "2023-sv2p",
+  "sport": "pokemon",
+  "year": 2023,
+  "setKey": "sv2p",
+  "source": "tcgdex-ja-modern",
+  "confidence": 0.9,
+  "provenance": "api.tcgdex.net/v2/ja/sets/SV2P (MIT, tcgdex/cards-database) fetched 2026-09-04 -- 83 rows, 1 ladder entries",
+  "setName": "Japanese スノーハザード",
+  "tcgdexId": "SV2P",
+  "sourceUrl": "https://api.tcgdex.net/v2/ja/sets/SV2P"
+}

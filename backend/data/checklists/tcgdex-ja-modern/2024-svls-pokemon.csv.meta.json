@@ -1,0 +1,12 @@
+{
+  "productKey": "2024-svls",
+  "sport": "pokemon",
+  "year": 2024,
+  "setKey": "svls",
+  "source": "tcgdex-ja-modern",
+  "confidence": 0.9,
+  "provenance": "api.tcgdex.net/v2/ja/sets/SVLS (MIT, tcgdex/cards-database) fetched 2026-09-04 -- 21 rows, 1 ladder entries",
+  "setName": "Japanese スターターセット テラスタイプ：ステラ ソウブレイズex",
+  "tcgdexId": "SVLS",
+  "sourceUrl": "https://api.tcgdex.net/v2/ja/sets/SVLS"
+}

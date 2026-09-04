@@ -1,0 +1,101 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,001,,false,,roselia
+base,002,,false,,roserade
+base,003,,false,,turtwig
+base,004,,false,,grotle
+base,005,Double rare,false,,torterra
+base,006,,false,,shaymin
+base,007,,false,,cottonee
+base,008,,false,,whimsicott
+base,009,,false,,heatmor
+base,010,,false,,sizzlipede
+base,011,,false,,centiskorch
+base,012,Double rare,false,,gouging-fire
+base,013,,false,,totodile
+base,014,,false,,croconaw
+base,015,,false,,feraligatr
+base,016,,false,,carvanha
+base,017,,false,,sharpedo
+base,018,,false,,keldeo
+base,019,,false,,snom
+base,020,,false,,frosmoth
+base,021,,false,,wiglett
+base,022,,false,,finizen
+base,023,,false,,palafin
+base,024,Double rare,false,,walking-wake
+base,025,Double rare,false,,wugtrio
+base,026,,false,,marill
+base,027,,false,,azumarill
+base,028,,false,,bronzor
+base,029,,false,,bronzong
+base,030,,false,,solosis
+base,031,,false,,duosion
+base,032,,false,,reuniclus
+base,033,,false,,flutter-mane
+base,034,,false,,relicanth
+base,035,,false,,golett
+base,036,,false,,golurk
+base,037,,false,,mudbray
+base,038,,false,,mudsdale
+base,039,,false,,rolycoly
+base,040,,false,,carkol
+base,041,,false,,coalossal
+base,042,,false,,great-tusk
+base,043,,false,,ekans
+base,044,,false,,arbok
+base,045,,false,,gastly
+base,046,,false,,haunter
+base,047,Double rare,false,,gengar
+base,048,,false,,poochyena
+base,049,,false,,mightyena
+base,050,,false,,sableye
+base,051,,false,,roaring-moon
+base,052,,false,,koraidon
+base,053,Double rare,false,,raging-bolt
+base,054,,false,,hoothoot
+base,055,,false,,noctowl
+base,056,,false,,dunsparce
+base,057,,false,,dudunsparce
+base,058,,false,,chatot
+base,059,,false,,minccino
+base,060,,false,,cinccino
+base,061,,false,,おとりよせボックス
+base,062,ACE SPEC Rare,false,,覚醒のドラム
+base,063,,false,,なかよしポフィン
+base,064,,false,,緊急ボード
+base,065,,false,,ブーストエナジー 古代
+base,066,ACE SPEC Rare,false,,マキシマムベルト
+base,067,,false,,探検家の先導
+base,068,,false,,ビワ
+base,069,,false,,マツバの確信
+base,070,,false,,危険な密林
+base,071,ACE SPEC Rare,false,,ネオアッパーエネルギー
+base,072,Illustration rare,false,,grotle
+base,073,Illustration rare,false,,snom
+base,074,Illustration rare,false,,bronzor
+base,075,Illustration rare,false,,reuniclus
+base,076,Illustration rare,false,,flutter-mane
+base,077,Illustration rare,false,,relicanth
+base,078,Illustration rare,false,,mudsdale
+base,079,Illustration rare,false,,arbok
+base,080,Illustration rare,false,,gastly
+base,081,Illustration rare,false,,chatot
+base,082,Illustration rare,false,,minccino
+base,083,Illustration rare,false,,cinccino
+base,084,Ultra Rare,false,,torterra
+base,085,Ultra Rare,false,,gouging-fire
+base,086,Ultra Rare,false,,walking-wake
+base,087,Ultra Rare,false,,wugtrio
+base,088,Ultra Rare,false,,gengar
+base,089,Ultra Rare,false,,raging-bolt
+base,090,Ultra Rare,false,,探検家の先導
+base,091,Ultra Rare,false,,ビワ
+base,092,Ultra Rare,false,,マツバの確信
+base,093,Special illustration rare,false,,gouging-fire
+base,094,Special illustration rare,false,,walking-wake
+base,095,Special illustration rare,false,,raging-bolt
+base,096,Special illustration rare,false,,ビワ
+base,097,Special illustration rare,false,,マツバの確信
+base,098,Mega Hyper Rare,false,,gouging-fire
+base,099,Mega Hyper Rare,false,,walking-wake
+base,100,Mega Hyper Rare,false,,raging-bolt

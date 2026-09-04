@@ -1,0 +1,12 @@
+{
+  "productKey": "2022-s12",
+  "sport": "pokemon",
+  "year": 2022,
+  "setKey": "s12",
+  "source": "tcgdex-ja-modern",
+  "confidence": 0.9,
+  "provenance": "api.tcgdex.net/v2/ja/sets/S12 (MIT, tcgdex/cards-database) fetched 2026-09-04 -- 96 rows, 1 ladder entries",
+  "setName": "Japanese パラダイムトリガー",
+  "tcgdexId": "S12",
+  "sourceUrl": "https://api.tcgdex.net/v2/ja/sets/S12"
+}

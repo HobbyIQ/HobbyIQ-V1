@@ -1,0 +1,118 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,001,,false,,oddish
+base,001,Reverse Holo,false,,oddish
+base,002,,false,,gloom
+base,002,Reverse Holo,false,,gloom
+base,003,,false,,vileplume
+base,004,,false,,scyther
+base,004,Reverse Holo,false,,scyther
+base,005,,false,,heracross
+base,005,Reverse Holo,false,,heracross
+base,006,,false,,roselia
+base,006,Reverse Holo,false,,roselia
+base,007,,false,,roserade
+base,007,Reverse Holo,false,,roserade
+base,008,,false,,combee
+base,008,Reverse Holo,false,,combee
+base,009,,false,,vespiquen
+base,009,Reverse Holo,false,,vespiquen
+base,011,,false,,heatran
+base,012,,false,,litwick
+base,012,Reverse Holo,false,,litwick
+base,013,,false,,lampent
+base,013,Reverse Holo,false,,lampent
+base,014,,false,,chandelure
+base,015,,false,,litleo
+base,015,Reverse Holo,false,,litleo
+base,016,,false,,pyroar
+base,018,,false,,swinub
+base,018,Reverse Holo,false,,swinub
+base,019,,false,,piloswine
+base,019,Reverse Holo,false,,piloswine
+base,020,,false,,mamoswine
+base,020,Reverse Holo,false,,mamoswine
+base,021,,false,,barboach
+base,021,Reverse Holo,false,,barboach
+base,022,,false,,whiscash
+base,022,Reverse Holo,false,,whiscash
+base,023,,false,,basculin
+base,023,Reverse Holo,false,,basculin
+base,024,,false,,basculegion
+base,024,Reverse Holo,false,,basculegion
+base,025,,false,,keldeo
+base,026,,false,,greninja
+base,027,,false,,jynx
+base,027,Reverse Holo,false,,jynx
+base,030,,false,,misdreavus
+base,030,Reverse Holo,false,,misdreavus
+base,031,,false,,mismagius
+base,031,Reverse Holo,false,,mismagius
+base,032,,false,,ralts
+base,032,Reverse Holo,false,,ralts
+base,033,,false,,kirlia
+base,033,Reverse Holo,false,,kirlia
+base,034,,false,,gallade
+base,035,,false,,diancie
+base,036,,false,,wyrdeer
+base,037,,false,,rhyhorn
+base,037,Reverse Holo,false,,rhyhorn
+base,038,,false,,rhydon
+base,038,Reverse Holo,false,,rhydon
+base,039,,false,,rhyperior
+base,039,Reverse Holo,false,,rhyperior
+base,040,,false,,relicanth
+base,040,Reverse Holo,false,,relicanth
+base,041,,false,,hippopotas
+base,041,Reverse Holo,false,,hippopotas
+base,042,,false,,hippowdon
+base,042,Reverse Holo,false,,hippowdon
+base,043,,false,,hawlucha
+base,046,,false,,kleavor
+base,047,,false,,qwilfish
+base,047,Reverse Holo,false,,qwilfish
+base,048,,false,,overqwil
+base,048,Reverse Holo,false,,overqwil
+base,049,,false,,poochyena
+base,049,Reverse Holo,false,,poochyena
+base,050,,false,,mightyena
+base,050,Reverse Holo,false,,mightyena
+base,051,,false,,absol
+base,055,,false,,hoothoot
+base,055,Reverse Holo,false,,hoothoot
+base,056,,false,,noctowl
+base,056,Reverse Holo,false,,noctowl
+base,057,,false,,stantler
+base,057,Reverse Holo,false,,stantler
+base,058,,false,,miltank
+base,059,,false,,glameow
+base,059,Reverse Holo,false,,glameow
+base,060,,false,,purugly
+base,060,Reverse Holo,false,,purugly
+base,061,,false,,あとだしターボ
+base,061,Reverse Holo,false,,あとだしターボ
+base,062,,false,,あまいミツ
+base,062,Reverse Holo,false,,あまいミツ
+base,063,,false,,キャンセルコロン
+base,063,Reverse Holo,false,,キャンセルコロン
+base,064,,false,,シマボシ
+base,064,Reverse Holo,false,,シマボシ
+base,065,,false,,ツツジ
+base,065,Reverse Holo,false,,ツツジ
+base,066,,false,,デンボク
+base,066,Reverse Holo,false,,デンボク
+base,067,,false,,コトブキムラ
+base,067,Reverse Holo,false,,コトブキムラ
+base,068,,false,,roserade
+base,069,,false,,chandelure
+base,070,,false,,wyrdeer
+base,071,,false,,kleavor
+base,072,,false,,mightyena
+base,073,,false,,hoothoot
+base,080,,false,,シマボシ
+base,081,,false,,ツツジ
+base,082,,false,,デンボク
+base,088,,false,,シマボシ
+base,089,,false,,ツツジ
+base,090,,false,,デンボク
+base,092,,false,,こだわりベルト
+base,093,,false,,コトブキムラ

@@ -1,0 +1,91 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,001,Double rare,false,,suicune
+base,002,,false,,lotad
+base,003,,false,,lombre
+base,004,,false,,ludicolo
+base,005,,false,,panpour
+base,006,,false,,simipour
+base,007,,false,,clauncher
+base,008,,false,,clawitzer
+base,009,,false,,eiscue
+base,010,,false,,jigglypuff
+base,011,,false,,wigglytuff
+base,012,,false,,articuno
+base,013,,false,,wobbuffet
+base,014,,false,,sigilyph
+base,015,Double rare,false,,golurk
+base,016,,false,,pumpkaboo
+base,017,,false,,gourgeist
+base,018,,false,,hitmonchan
+base,019,,false,,zapdos
+base,020,,false,,gligar
+base,021,,false,,gliscor
+base,022,,false,,makuhita
+base,023,,false,,hariyama
+base,024,Double rare,false,,lycanroc
+base,025,Triple Rare,false,,lycanroc
+base,026,,false,,moltres
+base,027,,false,,absol
+base,028,,false,,croagunk
+base,029,,false,,toxicroak
+base,030,Double rare,false,,garbodor
+base,031,Triple Rare,false,,garbodor
+base,032,,false,,nickit
+base,033,,false,,thievul
+base,034,,false,,meowth
+base,035,,false,,perrserker
+base,036,,false,,skarmory
+base,037,,false,,klefki
+base,038,,false,,cufant
+base,039,,false,,copperajah
+base,040,,false,,altaria
+base,041,,false,,dialga
+base,042,,false,,deino
+base,043,,false,,zweilous
+base,044,,false,,hydreigon
+base,045,,false,,kyurem
+base,046,Double rare,false,,noivern
+base,047,,false,,drampa
+base,048,Double rare,false,,duraludon
+base,049,Triple Rare,false,,duraludon
+base,050,,false,,slakoth
+base,051,,false,,vigoroth
+base,052,,false,,slaking
+base,053,,false,,swablu
+base,054,,false,,wooloo
+base,055,,false,,dubwool
+base,056,,false,,あなぬけのヒモ
+base,057,,false,,しんかのおこう
+base,058,,false,,すりかえカップ
+base,059,,false,,レスキューキャリー
+base,060,,false,,穴掘りグローブ
+base,061,,false,,いちげきの巻物 牙竜の巻
+base,062,,false,,フルフェイスガード
+base,063,,false,,キバナ
+base,064,,false,,スクールガール
+base,065,,false,,モノマネむすめ
+base,066,,false,,結晶の洞窟
+base,067,,false,,ツインエネルギー
+base,068,Ultra Rare,false,,suicune
+base,069,Ultra Rare,false,,golurk
+base,070,Ultra Rare,false,,golurk
+base,071,Ultra Rare,false,,lycanroc
+base,072,Ultra Rare,false,,garbodor
+base,073,Ultra Rare,false,,noivern
+base,074,Ultra Rare,false,,noivern
+base,075,Ultra Rare,false,,duraludon
+base,076,Ultra Rare,false,,duraludon
+base,077,Ultra Rare,false,,キバナ
+base,078,Ultra Rare,false,,スクールガール
+base,079,Ultra Rare,false,,モノマネむすめ
+base,080,Hyper rare,false,,lycanroc
+base,081,Hyper rare,false,,garbodor
+base,082,Hyper rare,false,,duraludon
+base,083,Secret Rare,false,,duraludon
+base,084,Hyper rare,false,,キバナ
+base,085,Hyper rare,false,,スクールガール
+base,086,Hyper rare,false,,モノマネむすめ
+base,087,Secret Rare,false,,cresselia
+base,088,Secret Rare,false,,フルフェイスガード
+base,089,Secret Rare,false,,結晶の洞窟
+base,090,Secret Rare,false,,基本鋼エネルギー

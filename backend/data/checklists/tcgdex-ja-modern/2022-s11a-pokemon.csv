@@ -1,0 +1,141 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,001,,false,,scyther
+base,001,Reverse Holo,false,,scyther
+base,002,,false,,yanma
+base,002,Reverse Holo,false,,yanma
+base,003,,false,,yanmega
+base,003,Reverse Holo,false,,yanmega
+base,004,,false,,carnivine
+base,004,Reverse Holo,false,,carnivine
+base,005,Double rare,false,,serperior
+base,006,Triple Rare,false,,serperior
+base,007,,false,,petilil
+base,007,Reverse Holo,false,,petilil
+base,008,,false,,lilligant
+base,008,Reverse Holo,false,,lilligant
+base,009,Radiant Rare,false,,tsareena
+base,010,,false,,zarude
+base,011,,false,,calyrex
+base,012,,false,,growlithe
+base,012,Reverse Holo,false,,growlithe
+base,013,,false,,arcanine
+base,013,Reverse Holo,false,,arcanine
+base,014,,false,,entei
+base,015,Double rare,false,,reshiram
+base,016,,false,,fennekin
+base,016,Reverse Holo,false,,fennekin
+base,017,,false,,braixen
+base,017,Reverse Holo,false,,braixen
+base,018,,false,,delphox
+base,018,Reverse Holo,false,,delphox
+base,019,,false,,volcanion
+base,020,,false,,salandit
+base,020,Reverse Holo,false,,salandit
+base,021,,false,,salazzle
+base,021,Reverse Holo,false,,salazzle
+base,022,Double rare,false,,vulpix
+base,023,Triple Rare,false,,vulpix
+base,024,,false,,articuno
+base,025,,false,,wailmer
+base,025,Reverse Holo,false,,wailmer
+base,026,,false,,wailord
+base,026,Reverse Holo,false,,wailord
+base,027,,false,,feebas
+base,027,Reverse Holo,false,,feebas
+base,028,,false,,milotic
+base,028,Reverse Holo,false,,milotic
+base,029,,false,,luvdisc
+base,029,Reverse Holo,false,,luvdisc
+base,030,,false,,kyogre
+base,031,Radiant Rare,false,,alakazam
+base,032,,false,,exeggcute
+base,032,Reverse Holo,false,,exeggcute
+base,033,,false,,exeggutor
+base,033,Reverse Holo,false,,exeggutor
+base,034,,false,,jynx
+base,034,Reverse Holo,false,,jynx
+base,035,,false,,mewtwo
+base,036,,false,,ralts
+base,036,Reverse Holo,false,,ralts
+base,037,,false,,kirlia
+base,037,Reverse Holo,false,,kirlia
+base,038,,false,,gardevoir
+base,038,Reverse Holo,false,,gardevoir
+base,039,Double rare,false,,mawile
+base,040,Triple Rare,false,,mawile
+base,041,,false,,espurr
+base,041,Reverse Holo,false,,espurr
+base,042,,false,,meowstic
+base,042,Reverse Holo,false,,meowstic
+base,043,,false,,tapu-lele
+base,044,,false,,scizor
+base,044,Reverse Holo,false,,scizor
+base,045,Radiant Rare,false,,jirachi
+base,046,,false,,klink
+base,046,Reverse Holo,false,,klink
+base,047,,false,,klang
+base,047,Reverse Holo,false,,klang
+base,048,,false,,klinklang
+base,048,Reverse Holo,false,,klinklang
+base,049,,false,,pawniard
+base,049,Reverse Holo,false,,pawniard
+base,050,,false,,bisharp
+base,050,Reverse Holo,false,,bisharp
+base,051,Double rare,false,,magearna
+base,052,,false,,zacian
+base,053,,false,,zamazenta
+base,054,,false,,smeargle
+base,054,Reverse Holo,false,,smeargle
+base,055,Double rare,false,,ho-oh
+base,056,,false,,swablu
+base,056,Reverse Holo,false,,swablu
+base,057,,false,,altaria
+base,057,Reverse Holo,false,,altaria
+base,058,,false,,chatot
+base,058,Reverse Holo,false,,chatot
+base,059,,false,,エネルギーつけかえ
+base,059,Reverse Holo,false,,エネルギーつけかえ
+base,060,,false,,キャプチャーアロマ
+base,060,Reverse Holo,false,,キャプチャーアロマ
+base,061,,false,,ポケモンいれかえ
+base,061,Reverse Holo,false,,ポケモンいれかえ
+base,062,,false,,きんきゅうゼリー
+base,062,Reverse Holo,false,,きんきゅうゼリー
+base,063,,false,,ジャッジマン
+base,063,Reverse Holo,false,,ジャッジマン
+base,064,,false,,セレナ
+base,064,Reverse Holo,false,,セレナ
+base,065,,false,,ふりそで
+base,065,Reverse Holo,false,,ふりそで
+base,066,,false,,ミクリ
+base,066,Reverse Holo,false,,ミクリ
+base,067,,false,,ダブルターボエネルギー
+base,067,Reverse Holo,false,,ダブルターボエネルギー
+base,068,,false,,Vガードエネルギー
+base,068,Reverse Holo,false,,Vガードエネルギー
+base,069,Character Rare,false,,braixen
+base,070,Character Rare,false,,milotic
+base,071,Character Rare,false,,jynx
+base,072,Character Rare,false,,gardevoir
+base,073,Character Rare,false,,smeargle
+base,074,Character Rare,false,,altaria
+base,075,Ultra Rare,false,,serperior
+base,076,Ultra Rare,false,,reshiram
+base,077,Ultra Rare,false,,vulpix
+base,078,Ultra Rare,false,,mawile
+base,079,Ultra Rare,false,,magearna
+base,080,Ultra Rare,false,,ho-oh
+base,081,Ultra Rare,false,,セレナ
+base,082,Ultra Rare,false,,ふりそで
+base,083,Ultra Rare,false,,ミクリ
+base,084,Character Super Rare,false,,serperior
+base,085,Character Super Rare,false,,mawile
+base,086,Holo Rare,false,,serperior
+base,087,Holo Rare,false,,vulpix
+base,088,Holo Rare,false,,mawile
+base,089,Holo Rare,false,,セレナ
+base,090,Holo Rare,false,,ふりそで
+base,091,Holo Rare,false,,ミクリ
+base,092,Mega Hyper Rare,false,,serperior
+base,093,Mega Hyper Rare,false,,エネルギーつけかえ
+base,094,Mega Hyper Rare,false,,Vガードエネルギー

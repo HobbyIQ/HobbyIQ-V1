@@ -1,0 +1,12 @@
+{
+  "productKey": "2022-s12a",
+  "sport": "pokemon",
+  "year": 2022,
+  "setKey": "s12a",
+  "source": "tcgdex-ja-modern",
+  "confidence": 0.9,
+  "provenance": "api.tcgdex.net/v2/ja/sets/S12a (MIT, tcgdex/cards-database) fetched 2026-09-04 -- 347 rows, 9 ladder entries",
+  "setName": "Japanese VSTARユニバース",
+  "tcgdexId": "S12a",
+  "sourceUrl": "https://api.tcgdex.net/v2/ja/sets/S12a"
+}

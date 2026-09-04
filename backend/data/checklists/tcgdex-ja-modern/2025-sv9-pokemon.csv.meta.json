@@ -1,0 +1,12 @@
+{
+  "productKey": "2025-sv9",
+  "sport": "pokemon",
+  "year": 2025,
+  "setKey": "sv9",
+  "source": "tcgdex-ja-modern",
+  "confidence": 0.9,
+  "provenance": "api.tcgdex.net/v2/ja/sets/SV9 (MIT, tcgdex/cards-database) fetched 2026-09-04 -- 108 rows, 1 ladder entries",
+  "setName": "Japanese バトルパートナーズ",
+  "tcgdexId": "SV9",
+  "sourceUrl": "https://api.tcgdex.net/v2/ja/sets/SV9"
+}
