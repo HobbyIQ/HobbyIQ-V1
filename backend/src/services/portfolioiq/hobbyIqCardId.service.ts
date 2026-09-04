@@ -258,7 +258,27 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     // bowman-chrome. Bowman-scoped so it cannot capture a Topps National
     // promo, and "national" alone is never enough to match — Panini National
     // Treasures owns that word further down.
-    [/bowman-(?:chrome-)?(?:nscc|national-sports-collectors-convention|national-convention|national-wrapper-redemption|national-promo)/, "bowman-chrome-nscc"],
+    //
+    // CF-NSCC-BOWMAN-SCOPE-IS-EXPLICIT (Drew 2026-09-04). The Bowman scope
+    // above was REAL but INCIDENTAL: the pattern was unanchored, so "bowman"
+    // only had to appear SOMEWHERE in the key. #1699 found the case that
+    // exposes it — `topps-nscc-bowman-national-convention` matched on the
+    // trailing `bowman-national-convention` substring, and the reconciliation
+    // could not tell whether that was the rule working or the very leak this
+    // comment warns about. Drew ruled it the 2021 BOWMAN National release
+    // (the "topps" is the parent company, not a second maker), so the rule was
+    // working — but a scope you cannot read off the pattern is a scope that
+    // will be re-litigated the next time a key carries both makers.
+    //
+    // The `(?:^|-)` prefix makes it explicit: "bowman" must start the key or
+    // start a segment of it. Every real spelling still matches (`bowman-nscc`,
+    // `bowman-chrome-nscc`, `2021-bowman-national-convention`, and the ruled
+    // `topps-nscc-bowman-national-convention`, which folds by DECLARATION in
+    // setKeyReconciliation.ts before this pattern is ever consulted). What it
+    // now refuses is a mid-word accident — `superbowman-nscc` — which is the
+    // same prefix-match-is-not-an-identity defect that put `scoremasters` in
+    // the `score` pool.
+    [/(?:^|-)bowman-(?:chrome-)?(?:nscc|national-sports-collectors-convention|national-convention|national-wrapper-redemption|national-promo)/, "bowman-chrome-nscc"],
     // CF-MATCH-THE-CATALOG (Drew, 2026-08-16: "it shuld fold into Draft since
     // it is draft" ... "they should match to the CATALOG"). This mapped Bowman Draft Chrome onto plain bowman-chrome,
     // which pools a Draft card with the standalone Bowman Chrome product —
@@ -624,7 +644,20 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     // Double #76 Griffey is a wholly different card from a 1999 UD main-set
     // #76). Order matters — these must match BEFORE the bare /upper-deck/
     // catchall below.
-    [/upper-deck-black-diamond|(?:^|-)black-diamond/, "upper-deck-black-diamond"],
+    //
+    // CF-BLACK-DIAMOND-ROOKIE-EDITION-DISTINCT (Drew 2026-09-04). Black
+    // Diamond Rookie Edition is its OWN PRODUCT and must never fold into the
+    // base line — a rookie-only checklist fused into a full veteran one drags
+    // a rookie card's FMV toward veteran comps and back. It matched here on
+    // its own prefix, so it is excluded by an explicit negative lookahead and
+    // given the rule ABOVE, where it must stay: a longer product name always
+    // precedes the family pattern it contains, exactly as Mega Box and NSCC
+    // precede /bowman-chrome/. setKeyReconciliation.ts also declares it a
+    // fixed point, which returns before this vocabulary runs at all; this
+    // anchor is what holds if that table is ever absent (its loader degrades
+    // to an EMPTY doc by design, so "absent" is a state that really occurs).
+    [/(?:^|-)(?:upper-deck-)?black-diamond-rookie-edition/, "black-diamond-rookie-edition"],
+    [/(?:^|-)(?:upper-deck-)?black-diamond(?!-rookie-edition)/, "upper-deck-black-diamond"],
     [/upper-deck-retro/, "upper-deck-retro"],
     [/(?:^|-)spx-finite/, "spx-finite"],
     [/(?:^|-)spx/, "spx"],

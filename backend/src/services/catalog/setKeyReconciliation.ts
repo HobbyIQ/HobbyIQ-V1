@@ -298,6 +298,60 @@ const RULED_ALIASES: Readonly<Record<string, { to: string; why: string }>> = Obj
   // ALLEN & GINTER SPELLING. `and` vs `&` is orthography, not product.
   "topps-allen-and-ginter-chrome": { to: "topps-allen-ginter-chrome",
     why: "SPELLING ONLY ('and' vs the vocabulary's elided form). The CHROME SUBSET ITSELF IS DISTINCT and is declared a fixed point below — this entry exists so the two spellings of that one subset do not split its pool." },
+  // ---------------------------------------------------------------------
+  // DREW RULED 2026-09-04. The five keys #1699 shipped as still-open.
+  // ---------------------------------------------------------------------
+
+  // THE THREE SHORT BOWMAN SPELLINGS — "KEEP THE COLLAPSE" (Drew 2026-09-04).
+  //
+  // These three already collapsed, via ALREADY_RULED_COLLAPSES, and #1699 left
+  // them in `needs-ruling` because the CATALOG DISAGREED: 47,218 checklist rows
+  // are filed under the short keys, and for 2025 Sapphire the short spelling
+  // (8,962 pool rows) outnumbers the long one (2,805) better than 3:1. A
+  // collapse that survives only because a prior test pins it, while the corpus
+  // votes the other way, is a collapse nobody has actually re-affirmed.
+  //
+  // Drew re-affirmed it: they are SPELLINGS, not products. So they move OUT of
+  // "a prior decision we are not revisiting" and INTO the declared alias table,
+  // where the canonical is stated and the evidence travels with it. Nothing
+  // about the deriver's OUTPUT changes — `bowman-sapphire` folded to
+  // `bowman-chrome-sapphire` before this ruling and folds there after it. What
+  // changes is that the catalog's disagreement is now EXPLAINED rather than
+  // filed as an unanswered question: these keys are re-keyed by the catalog
+  // reconciliation, not honoured by the vocabulary.
+  //
+  // The card-coincidence test — the one Drew uses every time — points the same
+  // way. Mega Box #52 Ohtani vs Bowman Chrome #52 Wetherholt is what made
+  // `bowman-chrome-mega-box` DISTINCT FROM `bowman-chrome`, and that ruling is
+  // untouched. Within the mega-box line itself there is no such split: "2023
+  // Bowman Chrome Mega Box" and "2020 Bowman Mega Box Chrome" are the same
+  // cards under two word orders, so the alias fuses nothing.
+  "bowman-mega-box": { to: "bowman-chrome-mega-box",
+    why: "Drew 2026-09-04 KEEP THE COLLAPSE: a spelling of `bowman-chrome-mega-box`, not a product. CF-BOWMAN-MEGA-BOX-DISTINCT (Drew 2026-08-12) makes the mega-box LINE distinct from bowman-chrome, and that stands — but within the line the short key names the same cards. 33,137 checklist rows across 2022-2026 and ZERO pool rows at the key: the catalog writes the short spelling, the market writes the long one, and the sample titles ('2023 Bowman Chrome Mega Box Baseball', '2020 Bowman Mega Box Chrome Baseball') are one release each year." },
+  "bowman-mega-box-chrome": { to: "bowman-chrome-mega-box",
+    why: "Drew 2026-09-04 KEEP THE COLLAPSE: the third word order of the same product (6,359 checklist rows, 2021-2022, zero pool rows at the key). 'Mega Box Chrome' and 'Chrome Mega Box' are the same release — the census's own sample titles carry both spellings for consecutive years of one line." },
+  "bowman-sapphire": { to: "bowman-chrome-sapphire",
+    why: "Drew 2026-09-04 KEEP THE COLLAPSE, re-affirming CF-SAPPHIRE-ONE-NAME ('there is no standalone Bowman Sapphire product') against the corpus that disagrees: 7,722 checklist rows from four independent Beckett scrapes sit under the short key, and '2025 Bowman Sapphire Baseball' (8,962 pool rows) outnumbers '2025 Bowman Chrome Sapphire Baseball' (2,805) better than 3:1. The market's shorthand is still shorthand — the catalog rows are re-keyed, not honoured." },
+
+  // TOPPS NSCC / BOWMAN NATIONAL CONVENTION — ALIAS (Drew 2026-09-04).
+  //
+  // #1699 left this open because it reads both ways, and the ambiguity was
+  // real: the key names BOTH makers, and the vocabulary's NSCC rule is
+  // Bowman-scoped precisely "so it cannot capture a Topps National promo" —
+  // yet it captures this key anyway, on the `bowman-national-convention`
+  // substring. Either the rule is working or it is leaking, and the census
+  // cannot tell which.
+  //
+  // Drew ruled ALIAS: this is the Bowman National release, and the stray
+  // "topps" is the parent company on a Bowman product, not a second maker.
+  // Declaring it here means the key now folds BY DECLARATION — an exact-token
+  // map hit that returns before the regex vocabulary is ever consulted — so
+  // the outcome no longer depends on the substring leak the comment warns
+  // about. The vocabulary rule is separately re-anchored (see
+  // hobbyIqCardId.service.ts) so its Bowman scope is explicit rather than
+  // incidental; this entry is what makes THIS key's fold independent of it.
+  "topps-nscc-bowman-national-convention": { to: "bowman-chrome-nscc",
+    why: "Drew 2026-09-04: the Bowman National release, with 'topps' present as the parent company rather than a second maker — an ALIAS onto the #1612 product key. 221 checklist rows, all 2021, and every census sample title for the key is '<year> Bowman Chrome National Convention Baseball'. Declared here so the fold is BY DECLARATION and no longer rides on the `bowman-national-convention` substring leak the NSCC rule's own comment warns about." },
 });
 
 /**
@@ -314,16 +368,18 @@ const RULED_DISTINCT: Readonly<Record<string, string>> = Object.freeze({
   // 2018 BNR-AJ Judge /3 sold at $500 BGS 9, BELOW his ordinary #100 Gold
   // /50). These two keys name NSCC releases; they must not fold into a
   // flagship, and `bowman-chrome-nscc` is itself a distinct product.
-  // NOTE ON `topps-nscc-bowman-national-convention` — LEFT OPEN ON PURPOSE.
-  // It reads both ways and the census cannot separate them. The key names
-  // BOTH makers ("topps-nscc" and "bowman-national-convention"), and the
+  // NOTE ON `topps-nscc-bowman-national-convention` — RULED 2026-09-04, and
+  // it is an ALIAS, so it lives in RULED_ALIASES rather than here. #1699 left
+  // it open because it read both ways: the key names BOTH makers, and the
   // vocabulary's NSCC rule is deliberately Bowman-scoped "so it cannot
-  // capture a Topps National promo" — yet it captures this key anyway, on the
-  // 'bowman-national-convention' substring. Either that is the rule working
-  // (a 2021 Bowman National release whose key picked up a stray 'topps'), or
-  // it is exactly the leak the comment warns about (a Topps National release
-  // being pulled into a Bowman pool). 221 checklist rows ride on which. Drew
-  // decides; it stays in needsRulingQuestions().
+  // capture a Topps National promo" — yet it captured this key anyway, on the
+  // 'bowman-national-convention' substring, which is the leak that comment
+  // warns about. Drew ruled it the 2021 Bowman National release with 'topps'
+  // present as the parent company, so the rule was WORKING and not leaking.
+  // Two things now make that outcome independent of the substring: the alias
+  // declaration folds the key before the vocabulary is consulted at all, and
+  // the NSCC rule itself is re-anchored in hobbyIqCardId.service.ts so its
+  // Bowman scope is explicit rather than incidental.
 
   // ALLEN & GINTER SUBSETS. The Chrome subset needed no ruling — the census
   // already calls `topps-allen-ginter-chrome` distinct on 21,442 checklist
@@ -366,6 +422,40 @@ const RULED_DISTINCT: Readonly<Record<string, string>> = Object.freeze({
   // the Japanese-code ruling is the same shape (the market's own key wins).
   "topps-update-japan":
     "A Japan-market release, not US Topps Update Series. 1 checklist row (2025) — small, but Drew's standing rule is that a small number is never dismissed as noise, and the Japanese-market ruling elsewhere in this file says the market's own key wins. Folding it into the 206,546-row `topps-update-series` pool would price a Japanese release off US comps.",
+  // BLACK DIAMOND ROOKIE EDITION — DISTINCT (Drew 2026-09-04).
+  //
+  // #1699 left this open between two readings: "Rookie Edition" as a subset
+  // name that CF-UD-INSERT-LINES rightly folds, or a separately-released
+  // product the bare `black-diamond` pattern swallows. Drew ruled DISTINCT:
+  // its own product, and it must NEVER fold into `upper-deck-black-diamond`.
+  //
+  // The census shows the fusion this stops. Black Diamond Rookie Edition is a
+  // rookie-only release with its own checklist — 194 checklist rows, all 2000,
+  // from baseballcardpedia — while the destination pool holds the base sets
+  // ("1999 Upper Deck Black Diamond Baseball", 857 rows; "1999 Upper Deck
+  // Black Diamond Basketball", 594). A rookie-only pool and a base pool price
+  // differently by construction: the base set is a full veteran checklist and
+  // the Rookie Edition is first-year cards only, so a fused pool would drag a
+  // rookie card's FMV toward veteran comps and back again. That is precisely
+  // the "one card, one row, one pool" damage the whole reconciliation exists
+  // to stop, and it is the same shape as CF-BOWMAN-NSCC-DISTINCT: a separate
+  // release with its own scarcity does not price off the flagship's trend.
+  //
+  // Note the sample titles also carry "1998 Upper Deck Black Diamond Rookie
+  // Edition Football" (176 pool rows) sitting in the destination pool today —
+  // rows this ruling stops adding to.
+  //
+  // CF-UD-INSERT-LINES MUST NOT CAPTURE IT. That rule's second branch is
+  // `(?:^|-)black-diamond`, which matches this key on its own prefix. Two
+  // things now stop it, and the redundancy is deliberate: this entry makes the
+  // key a fixed point that returns from `reconcileSetKey` BEFORE the regex
+  // vocabulary runs, and the rule itself is re-anchored in
+  // hobbyIqCardId.service.ts with an explicit negative lookahead so it cannot
+  // reach the key even if the reconciliation is ever unloaded (the loader
+  // degrades to an EMPTY doc by design, so "the table is absent" is a state
+  // that really occurs).
+  "black-diamond-rookie-edition":
+    "Drew 2026-09-04: its OWN PRODUCT — a rookie-only Upper Deck release (194 checklist rows, all 2000, baseballcardpedia), never `upper-deck-black-diamond`. The destination pool is the base sets ('1999 Upper Deck Black Diamond Baseball', 857 rows), and a rookie-only checklist fused into a full veteran one prices both wrong. Pinned against CF-UD-INSERT-LINES, whose `(?:^|-)black-diamond` branch would otherwise capture it on the prefix.",
 });
 
 /**
@@ -403,9 +493,16 @@ const RULED_DISTINCT: Readonly<Record<string, string>> = Object.freeze({
  * `needs-ruling` questions in the data file; Drew answering one moves it.
  */
 const ALREADY_RULED_COLLAPSES: Readonly<Record<string, string>> = Object.freeze({
-  "bowman-sapphire": "bowman-chrome-sapphire",
-  "bowman-mega-box": "bowman-chrome-mega-box",
-  "bowman-mega-box-chrome": "bowman-chrome-mega-box",
+  // NOTE (Drew 2026-09-04): `bowman-sapphire`, `bowman-mega-box` and
+  // `bowman-mega-box-chrome` USED TO LIVE HERE. They were the three keys
+  // #1699 could not close: a prior test pinned the collapse, but the catalog
+  // disagreed with 47,218 checklist rows, so they stayed `needs-ruling` and
+  // this list kept their behaviour by default. Drew ruled KEEP THE COLLAPSE
+  // and they moved to RULED_ALIASES, where the canonical is DECLARED and the
+  // evidence travels with it. They are deliberately not repeated here — a key
+  // in both lists is one truth in two places, and this list means "a decision
+  // nobody has re-affirmed", which is exactly what these no longer are. The
+  // deriver's output is unchanged either way; only the explanation moved.
   "bowman-draft-sapphire-chrome": "bowman-draft-sapphire",
   "topps-chrome-sapphire-edition": "topps-chrome-sapphire",
   "flair-showcase": "flair",

@@ -12,7 +12,7 @@ import {
   ruledAliases,
   ruledDistinct,
 } from "../src/services/catalog/setKeyReconciliation.js";
-import { spellForEra } from "../src/services/catalog/productSetKeys.js";
+import { productEntry, spellForEra } from "../src/services/catalog/productSetKeys.js";
 
 /**
  * CF-A-RULED-KEY-IS-A-FIXED-POINT. The pins for the setKey reconciliation.
@@ -144,14 +144,19 @@ describe("the fixed-point invariant, over the real catalog", () => {
 
 describe("every checklist-backed catalog key is accounted for", () => {
   it("is a fixed point, a declared alias, a ruled collapse, an era key, malformed, or an open question — nothing else", () => {
-    // THE INVARIANT, over the real catalog rather than a fixture. Measured
-    // 2026-09-03 across the 1,950 checklist-backed catalog setKeys:
-    //   1,882 fixed points        the deriver leaves them alone
-    //      20 declared aliases    land on their declared canonical
-    //      11 ruled collapses     a prior decision, kept
+    // THE INVARIANT, over the real catalog rather than a fixture. Re-measured
+    // 2026-09-04 across the 1,950 checklist-backed catalog setKeys:
+    //   1,891 fixed points        the deriver leaves them alone
+    //      31 declared aliases    land on their declared canonical
+    //       8 ruled collapses     a prior decision, kept
     //       1 era key             resolved by year at the call site
     //      19 catalog-malformed   the stored key leaked a year/sport word
-    //      17 needs-ruling        report-only, today's behaviour, Drew decides
+    //       0 needs-ruling        Drew ruled the last five on 2026-09-04
+    //
+    // Before those rulings it was 1,882 / 20 / 11 / 1 / 19 / 17. Three Bowman
+    // keys moved from `ruled collapse` to `declared alias`,
+    // `topps-nscc-bowman-national-convention` from open to declared alias, and
+    // `black-diamond-rookie-edition` from open to fixed point.
     // Every key falls in exactly one bucket. A key in NONE of them is a
     // collapse nobody declared, which is the failure this test exists to catch.
     const aliases = new Map(setKeyAliases());
@@ -431,16 +436,112 @@ describe("the rulings taken from evidence", () => {
     expect(normalizeSetKey("topps-update-japan")).not.toBe("topps-update-series");
   });
 
-  it("leaves the genuinely split cases open, and only those", () => {
-    // Report-only: these keep today's behaviour and travel to Drew. The list
-    // is asserted so answering one is a deliberate edit, not a silent drift.
+  it("leaves NOTHING checklist-backed open — Drew ruled the last five", () => {
+    // #1699 shipped five still-open keys. Drew ruled all five on 2026-09-04,
+    // so the checklist-backed open list is now EMPTY. Asserted as a set rather
+    // than a count so a regeneration that re-opens a key fails loudly instead
+    // of quietly growing the list back.
     const open = needsRulingQuestions().filter((q) => q.checklistRows > 0).map((q) => q.setKey);
-    expect(new Set(open)).toEqual(new Set([
-      "bowman-mega-box",
-      "bowman-sapphire",
-      "bowman-mega-box-chrome",
-      "topps-nscc-bowman-national-convention",
-      "black-diamond-rookie-edition",
-    ]));
+    expect(open).toEqual([]);
+  });
+
+  it("still lists the zero-row keys, which are completeness not questions", () => {
+    // The remaining `needs-ruling` entries all hold ZERO checklist rows. They
+    // stay in the data file for completeness and change nothing: with no
+    // checklist behind them there is no pool to fuse or split.
+    const open = needsRulingQuestions();
+    expect(open.length).toBeGreaterThan(0);
+    for (const q of open) expect(q.checklistRows, `${q.setKey} is checklist-backed and still open`).toBe(0);
+  });
+});
+
+/**
+ * DREW'S RULINGS OF 2026-09-04 — the five keys #1699 could not close.
+ *
+ * Three "keep the collapse" re-affirmations, one alias, one distinct. The
+ * pins below assert the OUTCOME of each, and — for the two that turn on a
+ * vocabulary pattern — that the outcome survives the pattern being consulted,
+ * because the reconciliation table's loader degrades to an EMPTY doc by
+ * design and "the table is absent" is a state that really occurs.
+ */
+describe("Drew's rulings, 2026-09-04", () => {
+  it("keeps the three short Bowman spellings collapsing, now as DECLARED aliases", () => {
+    // KEEP THE COLLAPSE. The output is unchanged from before the ruling; what
+    // changed is that these are now declared with a canonical and evidence,
+    // instead of riding on an unrevisited prior decision.
+    const aliases = new Map(setKeyAliases());
+    for (const [from, to] of [
+      ["bowman-mega-box", "bowman-chrome-mega-box"],
+      ["bowman-mega-box-chrome", "bowman-chrome-mega-box"],
+      ["bowman-sapphire", "bowman-chrome-sapphire"],
+    ] as Array<[string, string]>) {
+      expect(normalizeSetKey(from), `${from} stopped folding onto ${to}`).toBe(to);
+      expect(aliases.get(from), `${from} is not a DECLARED alias`).toBe(to);
+      expect(normalizeSetKey(to), `${to} is not a fixed point`).toBe(to);
+    }
+  });
+
+  it("does not leave the three in ALREADY_RULED_COLLAPSES as well", () => {
+    // One truth in one place: a key ruled in the alias table is no longer an
+    // un-re-affirmed prior decision, so it must not be listed as both.
+    const ruled = new Set(alreadyRuledCollapses().map(([from]) => from));
+    for (const k of ["bowman-mega-box", "bowman-mega-box-chrome", "bowman-sapphire"]) {
+      expect(ruled.has(k), `${k} is declared in two places`).toBe(false);
+    }
+  });
+
+  it("folds topps-nscc-bowman-national-convention onto the NSCC product", () => {
+    expect(normalizeSetKey("topps-nscc-bowman-national-convention")).toBe("bowman-chrome-nscc");
+    expect(new Map(setKeyAliases()).get("topps-nscc-bowman-national-convention")).toBe("bowman-chrome-nscc");
+  });
+
+  it("makes the NSCC rule's Bowman scope explicit, not incidental", () => {
+    // The scope was real but unanchored — "bowman" only had to appear
+    // somewhere. Every real spelling still matches; a mid-word accident no
+    // longer does, which is the `scoremasters` -> `score` defect in miniature.
+    expect(normalizeSetKey("bowman-nscc")).toBe("bowman-chrome-nscc");
+    expect(normalizeSetKey("bowman-chrome-nscc")).toBe("bowman-chrome-nscc");
+    expect(normalizeSetKey("2021 Bowman National Convention Baseball")).toBe("bowman-chrome-nscc");
+    expect(normalizeSetKey("superbowman-nscc")).not.toBe("bowman-chrome-nscc");
+    // and the standing negative the rule was always scoped for
+    expect(normalizeSetKey("panini-national-treasures")).not.toBe("bowman-chrome-nscc");
+  });
+
+  it("makes black-diamond-rookie-edition a DISTINCT product, never the base line", () => {
+    // The expensive direction: a rookie-only checklist fused into a full
+    // veteran one prices both wrong.
+    expect(normalizeSetKey("black-diamond-rookie-edition")).toBe("black-diamond-rookie-edition");
+    expect(normalizeSetKey("black-diamond-rookie-edition")).not.toBe("upper-deck-black-diamond");
+    expect(reconciledFixedPoints()).toContain("black-diamond-rookie-edition");
+  });
+
+  it("keeps CF-UD-INSERT-LINES off the Rookie Edition in BOTH its spellings", () => {
+    // The reconciliation returns before the vocabulary runs, so these assert
+    // the pattern itself is anchored — the guard that holds if the table is
+    // ever absent.
+    expect(normalizeSetKey("2000 Upper Deck Black Diamond Rookie Edition Baseball"))
+      .toBe("black-diamond-rookie-edition");
+    expect(normalizeSetKey("1998 Upper Deck Black Diamond Rookie Edition Football"))
+      .toBe("black-diamond-rookie-edition");
+  });
+
+  it("spells black-diamond-rookie-edition in the product table, its own family", () => {
+    // A vocabulary destination must have a family entry (productFamilyIsATable
+    // asserts it), and the entry is what makes the census DERIVE the distinct
+    // verdict mechanically instead of reading it off a hand-maintained list.
+    // No `refines`: the table's own note says "1st Edition is another set, not
+    // a refinement", and a rookie-only release is another set by the same
+    // reasoning — the matcher must not widen from it into the base pool.
+    const e = productEntry("black-diamond-rookie-edition");
+    expect(e, "black-diamond-rookie-edition has no product entry").toBeTruthy();
+    expect(e?.setKey).toBe("black-diamond-rookie-edition");
+    expect(e?.refines, "a rookie-only release must not refine the base line").toBeUndefined();
+    expect(reconciliationEntry("black-diamond-rookie-edition")?.verdict).toBe("distinct");
+  });
+
+  it("still folds the Black Diamond BASE line, which was never in question", () => {
+    // CF-UD-INSERT-LINES is narrowed, not retired: the bare key still folds.
+    expect(normalizeSetKey("black-diamond")).toBe("upper-deck-black-diamond");
+    expect(normalizeSetKey("1999 Upper Deck Black Diamond Baseball")).toBe("upper-deck-black-diamond");
   });
 });

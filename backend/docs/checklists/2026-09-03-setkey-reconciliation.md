@@ -37,14 +37,23 @@ fused pool prices both cards wrong.
 
 | Verdict | Keys | Checklist rows | What it means |
 |---|---:|---:|---|
-| `distinct` | 686 | **2,091,770** | Two products the deriver merges. The key becomes a fixed point. |
+| `distinct` | 687 | **2,091,964** | Two products the deriver merges. The key becomes a fixed point. |
 | `catalog-key-malformed` | 1,899 | 21,051 | The **catalog** key carries a year prefix or trailing sport word (`bowman-baseball`, `2024-25-panini-prizm`). The deriver is right; the stored key is the defect. Rename-fleet work, left alone here. |
 | `alias` | 24 | 229,530 | One product, two spellings. Canonical declared. |
-| `needs-ruling` | 29 | 74,038 | No mechanical rule fires. **Report-only — changes nothing.** |
+| `needs-ruling` | 28 | 73,844 | No mechanical rule fires. **Report-only — changes nothing.** Since 2026-09-04 every one of these holds **zero** checklist rows. |
 | `era-split` | 1 | 72,302 | `donruss`, one brand across two owners. |
 | `malformed` | 7 | 0 | Raw spaced titles, no checklist behind them. |
 
 **84% of the stranded rows are the collapse, not the aliases.**
+
+> **Re-generated 2026-09-04.** `distinct` moved 686 -> 687 and `needs-ruling`
+> 29 -> 28: giving `black-diamond-rookie-edition` a `productSetKeys.ts` entry
+> (which Drew's DISTINCT ruling requires anyway — a vocabulary destination must
+> have a family) made rule (2b) fire, so the ruling is now **derived
+> mechanically from the product table** instead of resting only on a
+> hand-maintained list. That is the direction this file is supposed to move:
+> the census re-derives the verdict on its own. Nothing else in the file
+> changed — the regeneration is byte-identical apart from this one entry.
 
 ---
 
@@ -134,11 +143,12 @@ ruling.
 
 ---
 
-## 4. The open questions, answered from evidence — 15 ruled, 5 left for Drew
+## 4. The open questions, answered from evidence — all 20 now ruled
 
 The first cut sent all 20 `needs-ruling` keys to Drew. Reading the evidence
 already in this repo answered **15 of them**, and a question whose answer is
-written down is not an open question. Each verdict cites what settled it: a
+written down is not an open question. **Drew ruled the remaining 5 on
+2026-09-04** (section 4a), so no checklist-backed key is open. Each verdict cites what settled it: a
 `productSetKeys.ts` entry, a standing CF ruling in the vocabulary, a sibling
 service that already disagrees, or checklist counts and sample titles that only
 fit one reading.
@@ -150,7 +160,7 @@ it. Distinct products are **never** collapsed, because a fused pool prices both
 cards wrong. The tie-break, where the census is ambiguous, is the one Drew has
 used every time: *does the collapse put different cards in one pool?*
 
-### Ruled ALIAS — 7 keys, one product spelled more than one way
+### Ruled ALIAS — 11 keys, one product spelled more than one way
 
 | Key | Folds onto | What settled it |
 |---|---|---|
@@ -161,8 +171,12 @@ used every time: *does the collapse put different cards in one pool?*
 | `topps-sapphire-chrome-factory-set` (1,044) | `topps-chrome-sapphire` | 2016 Chrome Sapphire was *sold* as a factory set. A box configuration is not an identity. |
 | `black-diamond` (2,676) | `upper-deck-black-diamond` | CF-UD-INSERT-LINES anchors the bare spelling **on purpose**; every sample title is "Upper Deck Black Diamond". |
 | `topps-allen-and-ginter-chrome` (1,690) | `topps-allen-ginter-chrome` | Spelling only ("and" vs the elided form). The Chrome subset itself was **already** distinct (21,442 checklist rows) — this stops its pool splitting across two spellings. |
+| `bowman-mega-box` (33,137) | `bowman-chrome-mega-box` | **Drew 2026-09-04 — KEEP THE COLLAPSE.** A spelling, not a product. CF-BOWMAN-MEGA-BOX-DISTINCT still separates the mega-box *line* from `bowman-chrome`; within the line the short key names the same cards. |
+| `bowman-sapphire` (7,722) | `bowman-chrome-sapphire` | **Drew 2026-09-04 — KEEP THE COLLAPSE**, re-affirming CF-SAPPHIRE-ONE-NAME against the corpus that disagreed (four Beckett scrapes, and the short 2025 title outnumbering the long one 3:1). |
+| `bowman-mega-box-chrome` (6,359) | `bowman-chrome-mega-box` | **Drew 2026-09-04 — KEEP THE COLLAPSE.** The third word order of one release. |
+| `topps-nscc-bowman-national-convention` (221) | `bowman-chrome-nscc` | **Drew 2026-09-04.** The 2021 **Bowman** National release; the "topps" is the parent company, not a second maker. Every census sample title is "&lt;year&gt; Bowman Chrome National Convention Baseball". |
 
-### Ruled DISTINCT — 8 keys the deriver must stop collapsing
+### Ruled DISTINCT — 9 keys the deriver must stop collapsing
 
 | Key | Was collapsing to | What settled it |
 |---|---|---|
@@ -174,28 +188,114 @@ used every time: *does the collapse put different cards in one pool?*
 | `topps-allen-and-ginters-national-die-cuts` (146) | `topps-allen-ginter` | A National-convention die-cut release. Convention exclusives price on their own scarcity (CF-BOWMAN-NSCC-DISTINCT reasoning). |
 | `bowman-mega` (412) | `bowman-chrome-mega-box` | CF-BOWMAN-MEGA-BOX-DISTINCT: "Mega box is different from 2026 bowman." The 2026 short spelling of that distinct line. |
 | `topps-update-japan` (1) | `topps-update-series` | A Japan-market release. Small — but a small number is never dismissed as noise, and the market's own key wins. |
+| `black-diamond-rookie-edition` (194) | `upper-deck-black-diamond` | **Drew 2026-09-04 — its own product, never the base line.** A rookie-only release (all 2000, baseballcardpedia) against a destination pool holding the base sets ("1999 Upper Deck Black Diamond Baseball", 857 rows). A rookie-only checklist fused into a full veteran one drags a rookie card's FMV toward veteran comps and back. CF-UD-INSERT-LINES is **pinned off it** in both spellings. |
 
-### Still open — 5 keys Drew decides
+### 4a. Still open — none: Drew ruled the last five (2026-09-04)
 
-**3 already carry a ruling and keep collapsing** (47,218 rows). They stay
-consistent with the standing rulings; the catalog's disagreement is the reason
-they are worth re-asking, not a reason anything changes today:
+**Drew ruled all five on 2026-09-04.** The checklist-backed `needs-ruling` list
+is now **empty**; `needsRulingQuestions()` is pinned to return nothing with a
+checklist row behind it.
 
-| Key | Rows | Ruled destination | The disagreement |
+| Key | Rows | Ruling | Effect on the deriver |
 |---|---:|---|---|
-| `bowman-mega-box` | 33,137 | `bowman-chrome-mega-box` | CF-BOWMAN-MEGA-BOX-DISTINCT names `bowman-chrome-mega-box` the one product; 33,137 checklist rows are filed under the short key. |
-| `bowman-sapphire` | 7,722 | `bowman-chrome-sapphire` | The rule says "no standalone product", but 7,722 rows from **four independent Beckett scrapes** are filed here, and "2025 Bowman Sapphire Baseball" (8,962) outnumbers "2025 Bowman Chrome Sapphire Baseball" (2,805) better than 3:1. |
-| `bowman-mega-box-chrome` | 6,359 | `bowman-chrome-mega-box` | Third spelling, same question. |
+| `bowman-mega-box` | 33,137 | **alias** -> `bowman-chrome-mega-box` | none — it already collapsed; the collapse is now *declared* |
+| `bowman-sapphire` | 7,722 | **alias** -> `bowman-chrome-sapphire` | none — same |
+| `bowman-mega-box-chrome` | 6,359 | **alias** -> `bowman-chrome-mega-box` | none — same |
+| `topps-nscc-bowman-national-convention` | 221 | **alias** -> `bowman-chrome-nscc` | none to the output; the fold is now by **declaration** rather than by a substring match |
+| `black-diamond-rookie-edition` | 194 | **distinct** — a fixed point | **changed**: it no longer folds into `upper-deck-black-diamond` |
 
-**2 are genuinely split** — the evidence points both ways:
+The other 9 `needs-ruling` keys carry **zero** checklist rows and remain in the
+data file for completeness. With no checklist behind them there is no pool to
+fuse or split, so they are a listing, not a question.
 
-| Key | Rows | Option A | Option B |
-|---|---:|---|---|
-| `topps-nscc-bowman-national-convention` | 221 | **alias** onto `bowman-chrome-nscc` — a 2021 Bowman National release whose key picked up a stray "topps" | **distinct** — the vocabulary's NSCC rule is deliberately Bowman-scoped "so it cannot capture a Topps National promo", and it is capturing this key on the `bowman-national-convention` substring, which is exactly the leak the comment warns about |
-| `black-diamond-rookie-edition` | 194 | **alias** onto `upper-deck-black-diamond` — "Rookie Edition" is a subset name, and CF-UD-INSERT-LINES already folds the bare key | **distinct** — Black Diamond Rookie Edition is a separately-released product (the census's own titles show a 1998 football Rookie Edition alongside the 1999 base sets), and folding it fuses a rookie-only pool into the base one |
+#### The three "keep the collapse" rulings changed the EXPLANATION, not the output
 
-The other 9 `needs-ruling` keys carry **zero** checklist rows and are listed in
-the data file for completeness.
+`bowman-mega-box`, `bowman-sapphire` and `bowman-mega-box-chrome` already
+collapsed, via `ALREADY_RULED_COLLAPSES` — the list meaning *"a decision
+somebody made that a derivation may not overturn"*. #1699 could not close them
+because the **catalog disagreed**: 47,218 checklist rows are filed under the
+short keys, and for 2025 Sapphire the short spelling (8,962 pool rows)
+outnumbers the long one (2,805) better than 3:1. A collapse that survives only
+because an old test pins it, while the corpus votes the other way, is a
+collapse nobody has actually re-affirmed.
+
+Drew re-affirmed it. So the three **move out of** `ALREADY_RULED_COLLAPSES`
+and **into** `RULED_ALIASES`, where the canonical is stated and the evidence
+travels with it. They are deliberately **not** in both lists: one truth in one
+place, and "an un-re-affirmed prior decision" is exactly what they are no
+longer. `normalizeSetKey` emits the same key it did before.
+
+#### Why the NSCC ruling also re-anchored the vocabulary rule
+
+The NSCC pattern's Bowman scope was **real but incidental**: it was unanchored,
+so "bowman" only had to appear *somewhere* in the key.
+`topps-nscc-bowman-national-convention` matched on the trailing
+`bowman-national-convention` substring, and the reconciliation could not tell
+whether that was the rule working or the leak its own comment warns about.
+
+Drew ruled it a Bowman release, so the rule **was** working. But a scope you
+cannot read off the pattern gets re-litigated the next time a key carries two
+makers, so the pattern is now `(?:^|-)bowman-...`: "bowman" must start the key
+or start a segment of it. Every real spelling still matches. What it now
+refuses is a mid-word accident like `superbowman-nscc` — the same
+prefix-match-is-not-an-identity defect that put `scoremasters` in the `score`
+pool.
+
+The key itself no longer depends on that pattern at all: an alias declaration
+is an exact-token map hit that returns from `reconcileSetKey` **before** the
+regex vocabulary is consulted.
+
+#### Why the Black Diamond ruling needed a pin in two places
+
+`black-diamond-rookie-edition` is the one ruling that **changes the deriver's
+output**, so it is guarded twice, and the redundancy is deliberate:
+
+1. `productSetKeys.ts` spells it as its own product, which makes the census's
+   own rule (2b) derive `distinct` **mechanically** — the verdict no longer
+   rests on a hand-maintained list. (`RULED_DISTINCT` still names it, and both
+   agree; the table is now the authority.) Either way it is a fixed point,
+   returning from `reconcileSetKey` before the vocabulary runs.
+2. CF-UD-INSERT-LINES is re-anchored to
+   `(?:^|-)(?:upper-deck-)?black-diamond(?!-rookie-edition)`, with the Rookie
+   Edition given its own rule **above** it — a longer product name always
+   precedes the family pattern it contains, exactly as Mega Box and NSCC
+   precede `/bowman-chrome/`.
+
+The product-table entry is not optional bookkeeping: `productFamilyIsATable`
+asserts that **every key the regex vocabulary can emit has a family entry**, and
+adding the Rookie Edition rule made it a new destination. It gets its **own
+family** and no `refines` — the table's own note says "1st Edition is another
+set, not a refinement", and a rookie-only release is another set by the same
+reasoning, so the matcher must not widen from it into the base pool.
+
+Guard (2) is what holds if the reconciliation table is ever absent, which is a
+state that really occurs: the loader degrades to an **EMPTY doc** by design
+(CF-RECONCILIATION-DEFENSIVE-LOAD), and on the empty doc there are no fixed
+points at all. Both spellings are covered — bare and `upper-deck-` prefixed —
+because the ruling is about the product, not about one way of writing it.
+
+---
+## 4b. What the catalog-key reconciliation must re-key
+
+Read-only count from the same 2026-09-03 census. **No writes were made.**
+
+| Key | Catalog rows | Checklist rows | Re-key to |
+|---|---:|---:|---|
+| `bowman-mega-box` | 33,219 | 33,137 | `bowman-chrome-mega-box` |
+| `bowman-sapphire` | 7,865 | 7,722 | `bowman-chrome-sapphire` |
+| `bowman-mega-box-chrome` | 6,370 | 6,359 | `bowman-chrome-mega-box` |
+| `topps-nscc-bowman-national-convention` | 221 | 221 | `bowman-chrome-nscc` |
+| **Total to re-key** | **47,675** | **47,439** | |
+
+`black-diamond-rookie-edition` (195 catalog rows, 194 checklist) is **excluded
+on purpose**: it was ruled DISTINCT, so it becomes a fixed point and its rows
+**stay where they are**. A distinct ruling is the one verdict that creates no
+re-keying work — the catalog was already right.
+
+Every alias above has **zero pool rows at the key** and its demand at the
+destination, which is the shape that makes re-keying safe: the catalog writes
+the short spelling, the market writes the long one, and nothing is currently
+pooled under the key being retired.
 
 ---
 ## 5. The mis-sported class is a sport-field defect, not a setKey one
@@ -215,19 +315,16 @@ number ships in the data file so it travels with the finding.
 ## 6. A decision beats a derivation
 
 The mechanical rules call a checklist-backed key `distinct`, which would make it
-a fixed point. **Eleven of those collapses are deliberate** — somebody decided
+a fixed point. **Eight of those collapses are deliberate** — somebody decided
 them, wrote the rule, and pinned it with a test that states the reasoning. The
 census can see that two spellings exist; it cannot see that a human already
 chose between them.
 
 ```
-bowman-sapphire                -> bowman-chrome-sapphire    "vendors write Bowman
-bowman-mega-box                -> bowman-chrome-mega-box     Sapphire as shorthand;
-bowman-mega-box-chrome         -> bowman-chrome-mega-box     there is no standalone
-bowman-chrome-sapphire-edition -> bowman-chrome-sapphire     product"
-bowman-draft-sapphire-edition  -> bowman-draft-sapphire
-bowman-draft-sapphire-chrome   -> bowman-draft-sapphire
-topps-chrome-sapphire-edition  -> topps-chrome-sapphire
+bowman-chrome-sapphire-edition -> bowman-chrome-sapphire    "vendors write Bowman
+bowman-draft-sapphire-edition  -> bowman-draft-sapphire      Sapphire as shorthand;
+bowman-draft-sapphire-chrome   -> bowman-draft-sapphire      there is no standalone
+topps-chrome-sapphire-edition  -> topps-chrome-sapphire      product"
 flair-showcase                 -> flair                     marked DELIBERATE
 panini-contenders-optic        -> panini-contenders         opticIsOneProduct
 donruss-champions              -> panini-donruss            parent brand, pinned
@@ -238,13 +335,22 @@ The list is **derived, not guessed**: it is every key for which a test in this
 repo asserts a destination our verdict would forbid, extracted by grepping the
 suite for the assertion form.
 
+**It was eleven until 2026-09-04.** `bowman-sapphire`, `bowman-mega-box` and
+`bowman-mega-box-chrome` were on this list precisely *because* nobody had
+re-affirmed them — the catalog's 47,218 rows disagreed and the list held the
+line by default. Drew re-affirmed all three, so they graduated to
+`RULED_ALIASES` with a stated canonical and the evidence attached. That is the
+intended direction of travel for this list: it should shrink as questions get
+answered, never grow. A key belongs here only while it is a decision **nobody
+has revisited**.
+
 **Two keys are deliberately absent, and they are the interesting ones.**
 `select-certified` and `studio` also had tests asserting a collapse, and the
 evidence overturned both — 1,376 and 7,867 checklist rows against **zero** on
 their destinations, in disjoint eras. A pin is evidence that a decision was
-made, not proof it was right. Each of the eleven was read; each states a reason
-the census cannot see. Several are also live `needs-ruling` questions — Drew
-answering one moves it out of this list.
+made, not proof it was right. Each was read; each states a reason the census
+cannot see. Drew answering a question moves the key out of this list — which is
+exactly what happened to the three Bowman spellings on 2026-09-04.
 
 ### The era key is not a fixed point either
 
@@ -259,10 +365,18 @@ would break the year-less default without fixing anything.
 ## 7. Pins
 
 - **Fixed-point test over the real catalog** — every checklist-backed catalog
-  setKey falls in exactly one bucket. Measured across all 1,950: **1,882** fixed
-  points, **20** declared aliases, **11** ruled collapses, **1** era key, **19**
-  catalog-malformed, **17** open questions — **0 unexplained**. A key in none of
-  them is a collapse nobody declared, which is what the test catches.
+  setKey falls in exactly one bucket. Re-measured after the 2026-09-04 rulings,
+  across all 1,950: **1,891** fixed points, **31** declared aliases, **8** ruled
+  collapses, **1** era key, **19** catalog-malformed, **0** open questions —
+  **0 unexplained**. A key in none of them is a collapse nobody declared, which
+  is what the test catches. (Was 1,882 / 20 / 11 / 1 / 19 / 17 before the
+  rulings: three Bowman keys moved from *ruled collapse* to *declared alias*,
+  `topps-nscc-bowman-national-convention` from *open* to *declared alias*, and
+  `black-diamond-rookie-edition` from *open* to *fixed point*.)
+- **No checklist-backed key is still open** — `needsRulingQuestions()` returns
+  nothing with a checklist row behind it, asserted as an empty list so a
+  regeneration that re-opens one fails loudly. The 9 remaining entries hold
+  zero checklist rows and are a listing, not a question.
 - **No cycles, no chains** — every alias target is itself a fixed point; no key
   is both an alias and a fixed point.
 - **No distinct-product merges** — no two checklist-backed `distinct` keys land
@@ -276,7 +390,15 @@ would break the year-less default without fixing anything.
 - **Pokemon codes** — `sv2a`/`sv8a`/`s12a` fixed points; `japanese-*` and
   `swsh12a` still fold; `swsh12`/`swsh12tg` (English Silver Tempest) untouched.
 - **Throughput** — baseline 15,525 calls/s, reconciled **37,270** (2.4× faster:
-  an exact map hit returns before the 188-pattern regex scan).
+  an exact map hit returns before the 188-pattern regex scan). The floor is
+  re-asserted after the 2026-09-04 rulings, which add four exact-token map
+  entries and two anchors — both changes make the fast path shorter, not longer.
+- **The 2026-09-04 rulings** — the three Bowman spellings still fold *and* are
+  declared aliases *and* are no longer double-listed in
+  `ALREADY_RULED_COLLAPSES`; `topps-nscc-bowman-national-convention` folds onto
+  `bowman-chrome-nscc`; the NSCC pattern keeps every real spelling and refuses
+  `superbowman-nscc`; `black-diamond-rookie-edition` is a fixed point in **both**
+  spellings while the Black Diamond base line still folds.
 
 ## 8. Two tests changed, and why
 

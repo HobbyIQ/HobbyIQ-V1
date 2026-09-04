@@ -198,6 +198,18 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
   // 146 Extended Series sales it can name.
   S("upper-deck-extended-series", { names: ["upper-deck-extended"], family: "upper-deck", parent: "upper-deck", refines: "upper-deck" }),
   ...["upper-deck-black-diamond", "upper-deck-retro", "upper-deck-choice", "upper-deck-mvp"].map((k) => P(k, { family: "upper-deck", parent: "upper-deck" })),
+  // CF-BLACK-DIAMOND-ROOKIE-EDITION-DISTINCT (Drew 2026-09-04). Black Diamond
+  // Rookie Edition is its OWN product, not a spelling of the base line: a
+  // rookie-only checklist (194 catalog rows, 2000, baseballcardpedia) against
+  // a base line that is a full veteran set. `parent` is the Upper Deck root
+  // rather than `upper-deck-black-diamond`, and there is deliberately NO
+  // `refines` — refines() is for VERIFIED refinements (a series split, an
+  // update series), and this table's own note says "1st Edition is another
+  // set, not a refinement". A rookie-only release is another set by the same
+  // reasoning, so the matcher must not widen from it into the base pool.
+  // Its OWN family for the same reason: rookie-only and veteran checklists do
+  // not share a price curve.
+  P("black-diamond-rookie-edition", { parent: "upper-deck" }),
   P("sp-authentic", { parent: "upper-deck" }),
   P("sp-prospects", { parent: "upper-deck" }),
   P("spx"),

@@ -17,10 +17,10 @@
   "staleSetKeys": 2646,
   "checklistRowsStranded": 2488691,
   "verdicts": {
-   "distinct": 686,
+   "distinct": 687,
    "alias": 24,
    "era-split": 1,
-   "needs-ruling": 29,
+   "needs-ruling": 28,
    "catalog-key-malformed": 1899,
    "malformed": 7
   }
@@ -16152,10 +16152,9 @@
   {
    "setKey": "black-diamond-rookie-edition",
    "derivesToToday": "upper-deck-black-diamond",
-   "verdict": "needs-ruling",
-   "canonical": null,
-   "derivesTo": "upper-deck-black-diamond",
-   "question": "`black-diamond-rookie-edition` (194 checklist rows, 2000-2000, baseball) derives to `upper-deck-black-diamond`: the key says \"rookie edition\" where the destination says \"upper deck\". One product spelled two ways, or two products?",
+   "verdict": "distinct",
+   "canonical": "black-diamond-rookie-edition",
+   "rule": "productSetKeys.ts spells `black-diamond-rookie-edition` as its own product — the table is the authority, so the key is a fixed point and the vocabulary must stop collapsing it to `upper-deck-black-diamond`",
    "evidence": {
     "catalogRows": 195,
     "checklistRows": 194,
