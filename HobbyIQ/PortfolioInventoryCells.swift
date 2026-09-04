@@ -13,6 +13,42 @@ import SwiftUI
 
 // MARK: - Shared Inventory Card Components
 
+/// CF-VERIFIED-IS-A-CHECK (Drew, 2026-09-04).
+///
+/// The green check that marks a holding whose identity is a checklist-backed
+/// catalog card. Replaces the web's old `✓ VERIFIED` pill; iOS never had a
+/// marker for this state at all, so this is the first one.
+///
+/// ONE component, used by the list row, the grid tile and the detail hero, so
+/// the three can never drift the way three hand-rolled `Image(systemName:)`
+/// calls would. It renders NOTHING unless `verified == true`: the field is
+/// tri-state on the wire, and `nil` — a legacy holding, or a payload from
+/// before the field shipped — must never paint a claim the backend did not
+/// make.
+///
+/// There is deliberately no "unverified" counterpart here. On web an
+/// unverified identity keeps its worded chip because it is ACTIONABLE ("open
+/// Edit and pick the card"); iOS has never shown that state on the row and
+/// this change does not invent it.
+struct IdentityVerifiedCheck: View {
+    let verified: Bool?
+
+    var body: some View {
+        if verified == true {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.caption)
+                .foregroundStyle(HobbyIQTheme.Colors.successGreen)
+                // The glyph IS the marker, so it carries the name. Without
+                // this VoiceOver reads it as an unlabeled image, which is
+                // strictly less than the word it replaced.
+                .accessibilityLabel("Verified identity")
+                .accessibilityHint(
+                    "This holding is a checklist-backed catalog card, so pricing reads that card's exact pool."
+                )
+        }
+    }
+}
+
 struct PortfolioCardRow: View {
     let card: InventoryCard
     /// Fully-resolved market value for THIS holding (already scaled by
@@ -50,6 +86,21 @@ struct PortfolioCardRow: View {
                             .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
                             .lineLimit(1)
                             .truncationMode(.tail)
+                            // The name truncates; the check must not be the
+                            // thing that gets squeezed out, so the name takes
+                            // the compression and the glyph keeps its box.
+                            .layoutPriority(1)
+                        // CF-VERIFIED-IS-A-CHECK (Drew, 2026-09-04): "Rather
+                        // than say Verified — let's just do a green check for
+                        // it next to the card details." Verified is a claim
+                        // about the CARD, so the mark rides the identity line
+                        // rather than joining the chip row below.
+                        //
+                        // It is deliberately NOT one of the chips at line 93:
+                        // those are conditional SIGNAL a holder may need to
+                        // act on. A verified identity is the resting state of
+                        // a healthy row — a mark, not an announcement.
+                        IdentityVerifiedCheck(verified: card.identityVerified)
                         // Corpus signals (2026-07-17): matched-cohort
                         // momentum arrow. Self-suppresses when the trend
                         // is unloaded / flat / directionless.
@@ -230,10 +281,17 @@ struct PortfolioCardGridCard: View {
             )
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(card.playerName)
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                    .lineLimit(1)
+                // CF-VERIFIED-IS-A-CHECK (Drew, 2026-09-04): the grid tile is
+                // kept in sync with the row above by hand, so the mark lands
+                // here too — the same component, so the two cannot drift.
+                HStack(spacing: 4) {
+                    Text(card.playerName)
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                        .lineLimit(1)
+                        .layoutPriority(1)
+                    IdentityVerifiedCheck(verified: card.identityVerified)
+                }
 
                 // 2026-07-17: single consolidated metadata line (same as
                 // the row layout). Grade tier is baked in — no separate pill.

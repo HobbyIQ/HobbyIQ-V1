@@ -461,6 +461,23 @@ struct InventoryCard: Identifiable, Hashable, Codable {
     /// with this as nil and continue to work via text-based matching.
     let cardId: String?
 
+    /// CF-VERIFIED-IS-A-CHECK (Drew, 2026-09-04): the holding's identity is a
+    /// checklist-backed catalog card — confirmed in Edit, by an import, by the
+    /// catalog sweep, or by a ruling. The backend has emitted this on the
+    /// holdings wire since CF-IDENTITY-VERIFIED (responseAssembly.ts:824); iOS
+    /// simply never decoded it, so the field was silently dropped.
+    ///
+    /// NOT the same claim as `cardId != nil`. A holding can carry a resolved
+    /// cardId that is NOT checklist-backed — backend `ebayReviewQueue.service`
+    /// warns explicitly against inferring verification from a cardId alone —
+    /// so this is its own flag and must never be derived from that one.
+    ///
+    /// Tri-state on purpose: `nil` means the wire did not say (a legacy
+    /// holding, or a payload from before the field shipped). Only an explicit
+    /// `true` earns the check; `nil` is treated as unverified, exactly as the
+    /// web's `identityVerified !== true` does.
+    let identityVerified: Bool?
+
     /// CF-IOS-MODEL-SIGNAL-RENDER (2026-06-26): LiveMarket headline +
     /// model-line + lean-badge wire fields surfaced on the holdings
     /// list. All three independently optional — render whichever blocks
@@ -588,6 +605,7 @@ struct InventoryCard: Identifiable, Hashable, Codable {
         pricingLabels: [PricingLabel] = [],
         selfAnchored: SelfAnchoredRatio? = nil,
         cardId: String? = nil,
+        identityVerified: Bool? = nil,
         lastSaleSurface: LiveMarketLastSaleSurface? = nil,
         modelExpectation: LiveMarketModelExpectation? = nil,
         modelSignal: LiveMarketModelSignal? = nil,
@@ -668,6 +686,7 @@ struct InventoryCard: Identifiable, Hashable, Codable {
         self.pricingLabels = pricingLabels
         self.selfAnchored = selfAnchored
         self.cardId = cardId
+        self.identityVerified = identityVerified
         self.lastSaleSurface = lastSaleSurface
         self.modelExpectation = modelExpectation
         self.modelSignal = modelSignal

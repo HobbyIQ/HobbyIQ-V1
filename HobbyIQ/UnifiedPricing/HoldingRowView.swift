@@ -34,6 +34,15 @@ struct HoldingRowModel: Identifiable, Hashable {
     let quantity: Double
     let isEstimated: Bool
 
+    /// CF-VERIFIED-IS-A-CHECK (Drew, 2026-09-04): the holding's identity is a
+    /// checklist-backed catalog card. Defaulted so every existing call site
+    /// that projects onto this model keeps compiling and simply renders no
+    /// mark until it passes the flag through.
+    ///
+    /// Tri-state, like `InventoryCard.identityVerified`: only an explicit
+    /// `true` earns the check. `nil` means the wire did not say.
+    var identityVerified: Bool? = nil
+
     /// TOTAL value for this row, following the unified fallback:
     ///   fairMarketValue × qty → estimatedValue × qty → nil
     var displayTotal: Double? {
@@ -116,11 +125,36 @@ struct HoldingRowView: View {
 
     private var identityStack: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(model.title)
+            // CF-VERIFIED-IS-A-CHECK (Drew, 2026-09-04): "Rather than say
+            // Verified — let's just do a green check for it next to the card
+            // details." The mark rides the TITLE, because verified is a claim
+            // about the CARD, not about the price.
+            //
+            // The check is appended to the title's own Text via interpolation
+            // rather than placed in an HStack beside it, so it flows with the
+            // last word and wraps with it. An HStack sibling would hold a
+            // column of its own and push the two-line title narrower on every
+            // row, verified or not.
+            //
+            // NOTE ON SCOPE: this view is currently reached only by the
+            // storefront picker (APIService.swift `StorefrontHolding.rowModel`),
+            // which does not carry the flag — so `identityVerified` arrives nil
+            // there and no mark renders. The marker is wired here so the two
+            // row implementations agree the day the storefront wire carries it;
+            // the surface Drew sees is `PortfolioCardRow`.
+            titleWithOptionalCheck
                 .font(HobbyIQTheme.Typography.bodyEmphasis)
                 .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
+                // VoiceOver reads the glyph as an unnamed image otherwise. The
+                // label names the whole line so the check is announced as part
+                // of the card it qualifies, not as a stray icon after it.
+                .accessibilityLabel(
+                    model.identityVerified == true
+                        ? "\(model.title), verified identity"
+                        : model.title
+                )
 
             if let subtitle = model.subtitle, !subtitle.isEmpty {
                 Text(subtitle)
@@ -131,6 +165,23 @@ struct HoldingRowView: View {
 
             gradeChip
         }
+    }
+
+    /// The title, with the green check appended ONLY when the identity is
+    /// verified. Returns a `Text` (not `some View`) so the caller can apply
+    /// the font and line limits to one composed string — an unverified row
+    /// renders exactly the title it always did, with no spacer and no gap.
+    ///
+    /// `identityVerified` is tri-state; only an explicit `true` earns the
+    /// mark. A `nil` from a legacy holding, or from a payload that predates
+    /// the field, must never paint a checklist-backed claim.
+    private var titleWithOptionalCheck: Text {
+        let title = Text(model.title)
+        guard model.identityVerified == true else { return title }
+        return title
+            + Text(verbatim: "  ")
+            + Text(Image(systemName: "checkmark.circle.fill"))
+                .foregroundColor(HobbyIQTheme.Colors.successGreen)
     }
 
     private var gradeChip: some View {
@@ -205,7 +256,10 @@ struct HoldingRowView: View {
                 estimatedValue: nil,
                 costBasis: 2349.86,
                 quantity: 1,
-                isEstimated: false
+                isEstimated: false,
+                // CF-VERIFIED-IS-A-CHECK: the verified row — a green check on
+                // the title, no word, no chip.
+                identityVerified: true
             ))
 
             HoldingRowView(model: HoldingRowModel(

@@ -1702,6 +1702,8 @@ extension InventoryCard {
         case pricingLabels, selfAnchored
         case nearestGradedAnchor
         case cardId
+        // CF-VERIFIED-IS-A-CHECK (Drew, 2026-09-04)
+        case identityVerified
         // CF-IOS-MODEL-SIGNAL-RENDER (2026-06-26)
         case lastSaleSurface, modelExpectation, modelSignal
         // CF-EBAY-BROWSE-ENRICHMENT (backend PR #383, 2026-07-12)
@@ -1769,6 +1771,8 @@ extension InventoryCard {
         case pricingLabels = "pricing_labels"
         case selfAnchored = "self_anchored"
         case cardId = "card_id"
+        // CF-VERIFIED-IS-A-CHECK (Drew, 2026-09-04)
+        case identityVerified = "identity_verified"
         // CF-COMP-HOLDING-WIRE-PARITY (PR #484): snake_case fallbacks.
         case marketValue = "market_value"
         case fairMarketValueLive = "fair_market_value_live"
@@ -2003,6 +2007,16 @@ extension InventoryCard {
             ?? nil
         self.cardId = (try? c.decode(String.self, forKey: .cardId))
             ?? (try? s.decode(String.self, forKey: .cardId))
+        // CF-VERIFIED-IS-A-CHECK (Drew, 2026-09-04): the wire has carried this
+        // since CF-IDENTITY-VERIFIED (responseAssembly.ts:824); nothing here
+        // decoded it, so it was dropped on the floor and no row could mark a
+        // verified card. camelCase first, snake_case fallback, like every
+        // field around it. Stays nil when absent — nil is "the wire did not
+        // say", which the view treats as unverified. It is NEVER inferred
+        // from cardId: a resolved cardId is not a checklist-backed identity.
+        self.identityVerified = (try? c.decodeIfPresent(Bool.self, forKey: .identityVerified))
+            ?? (try? s.decodeIfPresent(Bool.self, forKey: .identityVerified))
+            ?? nil
         // CF-IOS-MODEL-SIGNAL-RENDER (2026-06-26): LiveMarket headline +
         // model + lean badge wire envelope. All three independently
         // optional; defensive `try?` so any absent/null/malformed entry
@@ -2162,6 +2176,7 @@ extension InventoryCard {
         try container.encodeIfPresent(pricingLabels, forKey: .pricingLabels)
         try container.encodeIfPresent(selfAnchored, forKey: .selfAnchored)
         try container.encodeIfPresent(cardId, forKey: .cardId)
+        try container.encodeIfPresent(identityVerified, forKey: .identityVerified)
         try container.encodeIfPresent(lastSaleSurface, forKey: .lastSaleSurface)
         try container.encodeIfPresent(modelExpectation, forKey: .modelExpectation)
         try container.encodeIfPresent(modelSignal, forKey: .modelSignal)
