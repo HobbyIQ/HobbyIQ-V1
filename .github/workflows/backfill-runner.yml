@@ -1088,6 +1088,15 @@ jobs:
           # alternative -- a partial census nobody can quote. The env var
           # exists for a local operator narrowing a re-run by hand.
           BASELINE: /tmp/rematch-canary-baseline.json
+          # THE WRITE LEDGER (2026-09-04): pool -> the ids this apply actually
+          # moved. The AFTER canary gate reads this file, in this same job on
+          # this same runner, so its verdict can be ATTRIBUTED -- a canary pool
+          # this shard never wrote in cannot be regressed by it. Two shards
+          # that reconciled `intended 0 = written 0` were failed on anchor
+          # moves caused by the CardHedge daily ingest landing new sales
+          # mid-apply; the ledger is what makes that distinguishable. A fixed
+          # path for the same reason BASELINE is one.
+          WRITE_LEDGER_OUT: /tmp/rematch-write-ledger.json
           # CF-MARKET-INDEXES: the rebuild's report is the document an
           # operator reads BEFORE authorising the purge, so it is written
           # to a file and uploaded rather than left in a log that scrolls.
@@ -1183,6 +1192,12 @@ jobs:
         env:
           MODE: after
           BASELINE: /tmp/rematch-canary-baseline.json
+          # The ledger the apply step just wrote, same runner, same /tmp. It is
+          # what lets a regression be ATTRIBUTED to this shard instead of to
+          # whichever ingest lane happened to be running. If the apply died
+          # before writing it, the checker finds no file and degrades CLOSED --
+          # every canary treated as touched, the old strict rules.
+          WRITE_LEDGER: /tmp/rematch-write-ledger.json
           SLOT: ${{ inputs.slot }}
           SCOPE: ${{ inputs.scope }}
           NODE_OPTIONS: "--max-old-space-size=8192"
@@ -1191,9 +1206,24 @@ jobs:
           node backend/scripts/rematch-canary-check.cjs | tee /tmp/canary-after.log
           rc=${PIPESTATUS[0]}
           if [ "$rc" = "5" ]; then
-            echo "::error::CANARY REGRESSION on slot ${{ inputs.slot }} — a hand-verified or provenance-anchored pool lost rows. The fleet STOPS here; the diff goes to Drew."
+            echo "::error::CANARY REGRESSION on slot ${{ inputs.slot }} — a canary pool THIS SHARD WROTE IN regressed, or a protected row left / a pool went empty. The fleet STOPS here; the diff and the write ledger go to Drew."
           fi
           exit "$rc"
+
+      # The write ledger is the shard's own answer to "what did YOU move?", and
+      # it is the evidence the AFTER gate's verdict rests on. Uploaded so a
+      # halt can be re-read without re-running anything -- the same reason the
+      # baseline is. `always()` because a shard that FAILED is exactly the one
+      # whose ledger has to be readable. It sits AFTER both the apply that
+      # writes it and the gate that reads it.
+      - name: Upload the shard's write ledger
+        if: ${{ always() && inputs.script == 'rematch-sold-comps' && inputs.mode == 'apply-improve' && inputs.apply == true }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: rematch-write-ledger-slot-${{ inputs.slot }}-${{ github.run_id }}
+          path: /tmp/rematch-write-ledger.json
+          if-no-files-found: warn
+          retention-days: 90
 
       # THE GREAT REMATCH: keep the shard census. The census is the whole
       # product of mode=census -- it is what the 500-row sample audit reads and
