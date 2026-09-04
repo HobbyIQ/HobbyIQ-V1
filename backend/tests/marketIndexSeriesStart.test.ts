@@ -297,6 +297,38 @@ describe("PIN: the read side shows nothing for a series-start day", () => {
   });
 });
 
+describe("PIN: an all-levelless sport keeps its withheld reason", () => {
+  // On 2026-09-04 pokemon was 180/180 levelless. The read side returned
+  // the bare `empty` shape for it, which threw away withheldReason - so a
+  // sport we track and deliberately did not price arrived at the UI
+  // looking exactly like a sport that has no basket doc at all, and the
+  // web tile strip dropped it without a word. The reason must survive.
+  it("returns the newest point's reason instead of a bare empty", () => {
+    const readSvc = read("backend/src/services/insights/marketIndexRead.service.ts");
+    expect(readSvc).toContain("if (rows.length === 0) {");
+    expect(readSvc).toContain("const newestAny = all[all.length - 1];");
+    expect(readSvc).toContain("withheldReason: newestAny.withheldReason ?? null");
+    expect(readSvc).toContain("stale: newestAny.stale === true");
+  });
+
+  it("still has NO level and NO series - a withheld day is never plotted", () => {
+    const readSvc = read("backend/src/services/insights/marketIndexRead.service.ts");
+    const branch = readSvc.slice(
+      readSvc.indexOf("if (rows.length === 0) {"),
+      readSvc.indexOf("const series: IndexSeriesPoint[]"),
+    );
+    // Spreading `empty` is what keeps series: [] and latestLevel: null.
+    expect(branch).toContain("...empty,");
+    expect(branch).not.toContain("level: newestAny.level");
+    expect(branch).not.toContain("series:");
+  });
+
+  it("a sport with no points at all still returns the bare empty", () => {
+    const readSvc = read("backend/src/services/insights/marketIndexRead.service.ts");
+    expect(readSvc).toContain("if (!newestAny) return empty;");
+  });
+});
+
 describe("PIN: verify reds on any published point below the floor", () => {
   const script = read("backend/scripts/rebuild-market-indexes.cjs");
 
