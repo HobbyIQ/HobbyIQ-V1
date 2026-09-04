@@ -37,6 +37,24 @@ describe("CF-ULTRA-IS-NOT-FLEER — Ultra resolves to its own setKey", () => {
     expect(normalizeSetKey("Flair")).toBe("flair");
   });
 
+  it("keeps `ultra` the canonical spelling and folds `fleer-ultra` onto it (Drew 2026-09-04)", () => {
+    // Drew ruled Ultra a DISTINCT PRODUCT with its own pool. It already was
+    // one — the rule above keeps it out of `fleer` entirely — so what the
+    // ruling settled is which SPELLING names it, decided by source:
+    //   `ultra`       19,002 catalog rows / twelve sources / 1991-2007,
+    //                 66,071 pool rows
+    //   `fleer-ultra`  3,672 rows from one checklistinsider window and FOUR
+    //                 pool rows, all Marvel/Spider-Man non-sport cards
+    // The bare key carries the checklists, so it is the fixed point.
+    expect(normalizeSetKey("ultra")).toBe("ultra");
+    expect(normalizeSetKey("fleer-ultra")).toBe("ultra");
+    // The half that matters: the canonical must be a FIXED POINT, or the pool
+    // can never name the checklist it already has.
+    expect(normalizeSetKey(normalizeSetKey("fleer-ultra"))).toBe("ultra");
+    // And it must not have become a fold into the Fleer parent on the way.
+    expect(normalizeSetKey("fleer-ultra")).not.toBe("fleer");
+  });
+
   it("matches `ultra` only as a whole segment", () => {
     // Must not fire on a word that merely starts with the letters.
     expect(normalizeSetKey("Ultraviolet")).not.toBe("ultra");

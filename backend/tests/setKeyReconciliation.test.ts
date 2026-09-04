@@ -128,7 +128,18 @@ describe("the fixed-point invariant, over the real catalog", () => {
     // folds to `bowman-chrome` and holds zero checklist rows.
     // Keys a prior ruling already decided are excluded too: those collapses
     // are deliberate, and a derivation does not overturn a decision.
-    const ruled = new Set(alreadyRuledCollapses().map(([from]) => from));
+    //
+    // BOTH ruling lists count, not just ALREADY_RULED_COLLAPSES. A key in
+    // RULED_ALIASES was decided just as explicitly and states its destination
+    // as well as its evidence — `fleer-ultra` -> `ultra` is Drew's 2026-09-04
+    // Ultra ruling, and the census calling it `distinct` is exactly the
+    // mechanical verdict that ruling overrode. Excluding only the one list
+    // would let a derivation veto a decision, which is the inversion the
+    // module's own guard (0) exists to prevent.
+    const ruled = new Set([
+      ...alreadyRuledCollapses().map(([from]) => from),
+      ...ruledAliases().map((r) => r.setKey),
+    ]);
     const distinct = DOC.entries
       .filter((e) => e.verdict === "distinct" && e.evidence.checklistRows > 0 && !ruled.has(e.setKey))
       .map((e) => e.setKey);
