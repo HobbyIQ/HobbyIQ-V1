@@ -306,7 +306,41 @@ export async function computeSeriesForSport(
       }
     }
     if (!basket) {
+      // NO BASKET FOR THIS EPOCH. The pool is too thin for this quarter to
+      // form a basket at all, so there is nothing to value the day
+      // against and it is withheld.
+      //
+      // The point is still WRITTEN (2026-09-04). `continue` here - what
+      // this did before - increments the withheld counter and leaves
+      // whatever doc already occupies `point::<sport>::<date>` standing
+      // untouched. On rebuild run 33819336946 that was 181 pre-C-1 docs:
+      // hockey 2026-04-02..06-30 (90, level 553.89) and pokemon
+      // 2026-04-01..06-30 (91, level 14.46..), no usedWeight, not stale,
+      // still rendering as live. The run reported them withheld - hockey
+      // 115, pokemon 180 - and its own verifyByRead then failed on the
+      // very docs it believed it had replaced.
+      //
+      // This is the SAME defect #1686 fixed for the below-floor branch,
+      // in the one path that fix did not reach. A recompute OWNS every id
+      // in its span; a levelless doc is how it says "nothing here".
       pointsWithheld++;
+      const doc: IndexPointDoc = {
+        id: `point::${sport}::${day}`,
+        cardId: indexPartitionKey(sport),
+        docType: "market_index_point" as const,
+        sport,
+        date: day,
+        epoch,
+        freshMembers: 0,
+        basketSize: 0,
+        usedWeight: 0,
+        computedAt: new Date().toISOString(),
+        stale: true,
+        withheldReason: "no_basket",
+      };
+      await series.items.upsert(doc);
+      lastDate = day;
+      if (!firstDate) firstDate = day;
       continue;
     }
 
