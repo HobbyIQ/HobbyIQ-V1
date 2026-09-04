@@ -1613,6 +1613,48 @@ function capFirst(s: string): string {
   return s[0].toUpperCase() + s.slice(1).toLowerCase();
 }
 
+/**
+ * CF-A-BARE-PRODUCT-WORD-NEVER-OUTRANKS-A-NAMED-BRAND (Drew, 2026-09-03).
+ *
+ * The V6 coverage ruling added bare-word aliases for products whose names are
+ * NOT unique to one manufacturer: "Certified", "Prestige", "Origins",
+ * "Studio", "Hoops", "Zenith", "Recon", "Finest". Unlike Prizm / Optic /
+ * Select — which only Panini has ever printed, and which is why the older
+ * Panini block may match them bare — these words appear inside the product
+ * names of half a dozen other brands:
+ *
+ *   "1998 Upper Deck Eminent Prestige"          -> panini-prestige
+ *   "2005 Upper Deck Origins"                   -> panini-origins
+ *   "1998 Bowman Certified Blue Autographs"     -> panini-certified
+ *   "1998 Bowman's Best ... Certified Auto"     -> panini-certified
+ *
+ * Measured read-only over 1,623 real sold_comps titles that name exactly one
+ * manufacturer and contain one of these words (the population the defect
+ * touches): 23.6% came back under a brand the title never names -- 84.8%
+ * (178/210) of the Upper Deck rows, 66.2% of Bowman, 15.9% of Fleer. With the
+ * guard, 0.2% and zero on Upper Deck. That is the SAME defect class as the
+ * /sapphire/ bug this PR fixed one screen up: not a generic key that failed
+ * to specialize, but a confidently WRONG one, which is worse, because a wrong
+ * key still passes the slug guard and files a real sale into another brand's
+ * pool.
+ *
+ * The rule: a bare product word may only claim a title that names NO other
+ * manufacturer. When the seller wrote the brand, the brand wins — the
+ * brand-explicit rules further down (Upper Deck, Skybox, Pinnacle, Score,
+ * Bowman) are reached instead, and a genuinely unbranded "2025 Finest #168"
+ * still matches. `noRivalBrand` is the guard; every bare alias below carries
+ * it, and a mutation test proves each one is load-bearing.
+ */
+const RIVAL_BRAND_WORDS = /\b(?:upper\s*deck|bowman'?s?|topps|fleer|donruss|score|skybox|pinnacle|leaf|panini|pacific|flair|ultra|playoff|sage|press\s+pass)\b/i;
+
+/** True when `t` names no manufacturer other than the ones in `own`. */
+function noRivalBrand(t: string, own: RegExp | null = null): boolean {
+  const hits = t.match(new RegExp(RIVAL_BRAND_WORDS.source, "gi")) ?? [];
+  if (hits.length === 0) return true;
+  if (!own) return false;
+  return hits.every((h) => own.test(h));
+}
+
 /** Infer setKey from a title. Best-effort — recognizes the common
  *  Bowman/Topps/Panini product lines. When nothing matches, returns
  *  a generic "Bowman" fallback (callers should override when they
@@ -1665,7 +1707,40 @@ export function inferSetKeyFromTitle(title: string, cardNumber?: string | null):
     return "Bowman Paper";
   }
 
-  if (/sapphire/.test(t)) return "Bowman Chrome Sapphire";
+  // CF-SAPPHIRE-IS-NOT-ALWAYS-BOWMAN (Drew, 2026-09-03, V6 coverage ruling).
+  //
+  // This rule read `if (/sapphire/.test(t)) return "Bowman Chrome Sapphire"`,
+  // which handed EVERY Sapphire product to Bowman on the strength of one
+  // unqualified word. Topps prints Sapphire too, and the census measured the
+  // cost: `topps-chrome-sapphire` is the 7th largest UNDERIVABLE setKey in the
+  // pool at ~77,119 rows and `topps-chrome-update-sapphire` another ~18,138 --
+  // every one of them a Topps card the parser called Bowman.
+  //
+  // Verified against the live parser before the fix: the title
+  // "A.J. BROWN 2025 TOPPS CHROME SAPPHIRE ORANGE /25 #243 EAGLES" -- which
+  // says TOPPS twice and never says Bowman -- inferred "Bowman Chrome
+  // Sapphire". That is not a generic key that failed to get more specific; it
+  // is a confidently WRONG product, which is worse, because a wrong key still
+  // passes the slug guard and files a real sale into another brand's pool.
+  //
+  // Most specific first, and the brand must be NAMED. The bare fallback stays
+  // Bowman -- that is the historical behaviour and Bowman Sapphire is by far
+  // the commonest -- but it now fires only when nothing says Topps.
+  if (/sapphire/.test(t)) {
+    if (/topps\s+chrome\s+update|chrome\s+update\s+series/.test(t)) return "Topps Chrome Update Sapphire";
+    if (/topps\s+update/.test(t)) return "Topps Update Sapphire";
+    if (/\btopps\b/.test(t)) return "Topps Chrome Sapphire";
+    if (/bowman\s+draft/.test(t)) return "Bowman Draft Sapphire";
+    // The bare fallback is Bowman because Bowman Sapphire is by far the
+    // commonest -- but only when the seller named no OTHER manufacturer.
+    // Measured on the sapphire population: "2023 Panini Court Kings
+    // Basketball #BR-ALP Sapphire" still inferred Bowman Chrome Sapphire
+    // after the Topps half of this fix landed, for exactly the reason the
+    // Topps half existed. A title that names another manufacturer FALLS
+    // THROUGH to that brand`s own rules below rather than being claimed here
+    // -- refusing outright would trade one wrong answer for no answer.
+    if (noRivalBrand(t, /bowman/i)) return "Bowman Chrome Sapphire";
+  }
   if (/topps\s+update/.test(t)) return "Topps Update";
   if (/topps\s+heritage/.test(t)) return "Topps Heritage";
   if (/topps\s+heavy\s+lumber|heavy\s+lumber/.test(t)) return "Topps Heavy Lumber";
@@ -1674,7 +1749,14 @@ export function inferSetKeyFromTitle(title: string, cardNumber?: string | null):
   // (which pollutes pricing pools and misroutes the family ladder). All
   // must match BEFORE /topps\s+chrome/ where possible; Finest/Pristine/
   // Stadium Club/Allen-Ginter are their own products, not chrome variants.
-  if (/topps\s+finest/i.test(t)) return "Topps Finest";
+  // D36 (Drew, 2026-08-30): the product is topps-finest, and collectors write
+  // it "Finest" -- "2025 Finest #168 Xavier Worthy Purple Refractor" names no
+  // brand at all. The rule required the brand word, so ~192,725 UNDERIVABLE
+  // rows (the LARGEST single reclassifiable key in the census) fell to
+  // "Unknown". The bare word is unambiguous: Topps is the only manufacturer
+  // that prints a product called Finest, and the regex vocabulary already
+  // carries the same bare alias (/(^|-)finest(-|$)/ -> topps-finest).
+  if (/topps\s+finest/i.test(t) || (/\bfinest\b/i.test(t) && noRivalBrand(t, /topps/i))) return "Topps Finest";
   if (/topps\s+pristine/i.test(t)) return "Topps Pristine";
   if (/topps\s+transcendent/i.test(t)) return "Topps Transcendent";
   if (/topps\s+dynasty/i.test(t)) return "Topps Dynasty";
@@ -1682,7 +1764,10 @@ export function inferSetKeyFromTitle(title: string, cardNumber?: string | null):
   if (/topps\s+inception/i.test(t)) return "Topps Inception";
   if (/topps\s+definitive/i.test(t)) return "Topps Definitive";
   if (/topps\s+five[-\s]?star|five[-\s]?star/i.test(t)) return "Topps Five Star";
-  if (/topps\s+museum|museum\s+collection/i.test(t)) return "Topps Museum Collection";
+  // The bare "Museum Collection" is not Topps-exclusive -- Donruss Zenith
+  // printed one too ("2005 Donruss Zenith Museum Collection"), and the bare
+  // arm claimed it. Same guard, same reason as the bare product words below.
+  if (/topps\s+museum/i.test(t) || (/museum\s+collection/i.test(t) && noRivalBrand(t, /topps/i))) return "Topps Museum Collection";
   if (/topps\s+stadium\s+club|stadium\s+club/i.test(t)) return "Topps Stadium Club";
   if (/topps\s+allen[-\s]?(and\s+)?ginter|allen[-\s]?(and\s+)?ginter/i.test(t)) return "Topps Allen Ginter";
   if (/topps\s+gypsy\s+queen|gypsy\s+queen/i.test(t)) return "Topps Gypsy Queen";
@@ -1798,7 +1883,7 @@ export function inferSetKeyFromTitle(title: string, cardNumber?: string | null):
   if (/panini\s+crown\s+royale|crown\s+royale/i.test(t)) return "Panini Crown Royale";
   if (/panini\s+select|\bselect\b/i.test(t)) return "Panini Select";
   if (/panini\s+mosaic|\bmosaic\b/i.test(t)) return "Panini Mosaic";
-  if (/panini\s+optic|donruss\s+optic|\boptic\b/i.test(t)) return "Panini Optic";
+  if (/panini\s+optic|donruss\s+optic/i.test(t) || (/\boptic\b/i.test(t) && noRivalBrand(t, /panini|donruss/i))) return "Panini Optic";
   if (/panini\s+donruss|\bdonruss\b/i.test(t)) return "Panini Donruss";
   if (/panini\s+prizm|\bprizm\b/i.test(t)) return "Panini Prizm";
   if (/topps/.test(t)) return "Topps";
@@ -1837,6 +1922,103 @@ export function inferSetKeyFromTitle(title: string, cardNumber?: string | null):
   //
   // Longest name first within a family, so "Upper Deck SP Authentic" is not
   // eaten by the bare "Upper Deck" rule.
+  // ── CF-SUPPORTED-SETKEYS-BY-ROW-COUNT (Drew, 2026-09-03, ruling V6) ───────
+  //
+  // 4.2M rows in the Great Rematch census are UNDERIVABLE for one reason:
+  // `setkey-unknown-unsupported`. They are not unreadable titles -- they are
+  // titles naming a product THIS FUNCTION HAS NO RULE FOR, so it returns
+  // "Unknown", normalizeSetKey turns that into `unknown`, and the derivation
+  // refuses the row rather than mint a guess.
+  //
+  // Drew ruled the keys are added BY ROW COUNT, largest first. Each line below
+  // carries the estimated UNDERIVABLE rows it reclassifies, scaled from the 32
+  // census artifacts (sampled UNDERIVABLE lines per shard, weighted by that
+  // shard`s own `setkey-unknown-unsupported` + `setkey-bowman-default-
+  // unsupported` population; 8,526,430 rows total), and whether card_catalog
+  // holds CHECKLIST-BACKED rows for it -- read-only counts taken 2026-09-03.
+  //
+  // WHAT "SUPPORTED" MEANS, AND WHAT IT DOES NOT. Adding a key here means the
+  // derivation can MINT it and normalizeSetKey holds it as a fixed point. It
+  // does NOT mean the row becomes writable: the checklist-backed gate is a
+  // separate and later test, and a key whose product has no checklist rows in
+  // the parallel corpus stays not-checklist-backed until real checklists land.
+  // That is CF-NO-SYNTHETIC-PARALLELS applied to coverage -- recognizing a
+  // product is not the same as claiming to know its parallels, and no product
+  // row is hand-written into data/checklist-parallel-names.json here.
+  //
+  //   key                          est rows   catalog   checklist-backed
+  //   topps-finest                  192,725   223,575    197,799  (rule existed)
+  //   panini-hoops                  127,431     2,680          0
+  //   leaf                          102,007    15,787     11,442
+  //   panini-origins                100,501    25,114     23,958
+  //   flair                          90,966     8,280      5,475
+  //   topps-chrome-sapphire          77,119    48,576     43,120  (sapphire fix)
+  //   panini-prestige                61,248    15,187     13,569
+  //   panini-zenith                  59,635     6,288      4,862
+  //   ultra                          49,763    19,002     14,455  (rule existed)
+  //   pacific                        43,744    10,054      9,108
+  //   panini-certified               43,446    17,476     17,363
+  //   panini-rookies-and-stars       42,375       211          0
+  //   panini-diamond-kings           36,019    16,577     16,448
+  //   leaf-rookies-and-stars         35,257     1,744      1,508
+  //   donruss-studio                 33,321     1,191          0
+  //   panini-photogenic              32,681    16,501     16,501
+  //   panini-court-kings             27,438    13,996     13,464
+  //   panini-recon                   19,028     6,413      6,413
+  //   leaf-limited                   18,712     4,926      4,620
+  //   topps-chrome-update-sapphire   18,138    19,729     18,901  (sapphire fix)
+  //   leaf-certified                 19,063       192          0
+  //   leaf-signature-series          15,935     9,394      9,394
+  //   leaf-certified-materials       14,717     3,027      2,943
+  //   parkhurst                      19,105     6,897      6,887
+  //   post-cereal                    19,895       491          0
+  //   goudey                         19,818       229          0
+  //   t206                           19,092        26          0
+  //
+  // ORDER MATTERS, exactly as it does for the Topps and Panini blocks above:
+  // longest / most specific name first within a family, and every one of these
+  // must precede the bare brand rules below it -- `leaf-certified-materials`
+  // before `leaf-certified` before `leaf`, or the shorter name eats the longer.
+  //
+  // Panini specialized lines. Placed before the bare Panini rules further up
+  // is not possible (they run earlier in the function), so each is anchored on
+  // its own product word, which no earlier rule claims.
+  if (/panini\s+rookies?\s*(?:&|and)\s*stars/i.test(t) || (/rookies?\s*(?:&|and)\s*stars/i.test(t) && noRivalBrand(t, /panini/i))) return "Panini Rookies and Stars";
+  if (/panini\s+court\s+kings/i.test(t) || (/court\s+kings/i.test(t) && noRivalBrand(t, /panini/i))) return "Panini Court Kings";
+  if (/panini\s+diamond\s+kings/i.test(t) || (/diamond\s+kings/i.test(t) && noRivalBrand(t, /panini|donruss/i))) return "Panini Diamond Kings";
+  if (/panini\s+photogenic/i.test(t) || (/photogenic/i.test(t) && noRivalBrand(t, /panini/i))) return "Panini PhotoGenic";
+  if (/panini\s+origins/i.test(t) || (/\borigins\b/i.test(t) && noRivalBrand(t, /panini/i))) return "Panini Origins";
+  if (/panini\s+prestige/i.test(t) || (/\bprestige\b/i.test(t) && noRivalBrand(t, /panini/i))) return "Panini Prestige";
+  if (/panini\s+certified/i.test(t) || (/\bcertified\b/i.test(t) && noRivalBrand(t, /panini/i))) return "Panini Certified";
+  if (/panini\s+zenith/i.test(t) || (/\bzenith\b/i.test(t) && noRivalBrand(t, /panini/i))) return "Panini Zenith";
+  if (/panini\s+recon/i.test(t) || (/\brecon\b/i.test(t) && noRivalBrand(t, /panini/i))) return "Panini Recon";
+  if (/panini\s+hoops/i.test(t) || (/\bhoops\b/i.test(t) && noRivalBrand(t, /panini/i))) return "Panini Hoops";
+  // Leaf specialized lines. `leaf-metal` already had a rule further up; these
+  // are the rest, longest first, ahead of the bare `leaf`.
+  if (/leaf\s+certified\s+materials/i.test(t)) return "Leaf Certified Materials";
+  if (/leaf\s+signature\s+series/i.test(t)) return "Leaf Signature Series";
+  if (/leaf\s+rookies?\s*(?:&|and)\s*stars/i.test(t)) return "Leaf Rookies and Stars";
+  if (/leaf\s+certified/i.test(t)) return "Leaf Certified";
+  if (/leaf\s+limited/i.test(t)) return "Leaf Limited";
+  if (/\bleaf\b/i.test(t)) return "Leaf";
+  // Fleer family. "Flair" and "Ultra" are their OWN products, not Fleer
+  // variants -- CF-ULTRA-IS-NOT-FLEER (Drew, 2026-08-17) already ruled Ultra,
+  // and Flair is the same shape. Both must precede the bare /fleer/ rule,
+  // which runs earlier in this function, so they are anchored on their own
+  // brand word and reached only when no Fleer rule matched.
+  if (/\bflair\b/i.test(t) && noRivalBrand(t, /fleer|flair/i)) return "Flair";
+  if (/\bultra\b/i.test(t) && !/ultra\s*-?\s*pro|ultra\s+rare|ultraman/i.test(t) && noRivalBrand(t, /fleer|ultra/i)) return "Ultra";
+  // Donruss Studio -- the product is "Studio"; `donruss-studio` is our
+  // spelling of it (the regex vocabulary already maps both).
+  if (/donruss\s+studio/i.test(t) || (/\bstudio\b/i.test(t) && noRivalBrand(t, /donruss|leaf/i))) return "Donruss Studio";
+  // Vintage manufacturers and issues. None of these had any rule, so every
+  // one of their sales fell through to "Unknown".
+  if (/\bt206\b/i.test(t) && noRivalBrand(t)) return "T206";
+  if (/\bgoudey\b/i.test(t) && noRivalBrand(t, /upper\s*deck/i)) return "Goudey";
+  if (/\bparkhurst\b/i.test(t) && noRivalBrand(t, /upper\s*deck/i)) return "Parkhurst";
+  if (/post\s+cereal/i.test(t) && noRivalBrand(t)) return "Post Cereal";
+  if (/\bpacific\b/i.test(t) && !/pacific\s+(?:coast|ocean|northwest)/i.test(t) && noRivalBrand(t, /pacific/i)) return "Pacific";
+
   if (/\bo-?pee-?chee\b/.test(t)) return "O-Pee-Chee";
   if (/\bcollector'?s\s+choice\b/.test(t)) return "Collectors Choice";
   if (/\bsp\s+authentic\b/.test(t)) return "SP Authentic";

@@ -181,10 +181,112 @@ describe("A. verdict equality -- the fix bought speed and nothing else", () => {
 
     const got = rows.map((e) => verdict(K.classifyRow(inputFor(e))));
     expect(got).toHaveLength(recorded.verdicts.length);
-    const diffs = got
-      .map((v, i) => (v === recorded.verdicts[i] ? null : { i, was: recorded.verdicts[i], now: v }))
-      .filter(Boolean);
-    expect(diffs).toEqual([]);
+
+    // CF-PRODUCT-FAMILY-COLLAPSE-IS-FORBIDDEN (Drew, 2026-09-03) IS THE
+    // ARGUED CHANGE THIS PIN ASKED FOR.
+    //
+    // The header above says a change that moves a verdict has moved a RULING
+    // and must argue for it in its own PR rather than arrive inside a
+    // performance patch. This is that PR, and this is the argument.
+    //
+    // The collapse ruling adds a NAMED REASON to rows that were already
+    // CONFLICT and already not writable: `changed:setKey` alone could not tell
+    // Drew which of 2,922,114 rows were product-family collapses and which
+    // were genuine rival readings, so a ruling nobody could count was a ruling
+    // nobody could verify had been applied. 19 of these 200 rows gain that
+    // reason.
+    //
+    // WHAT MAY NOT MOVE STAYS PINNED EXACTLY. The class, `writable`, the
+    // subclass and the tier are the safety-bearing fields -- they are what the
+    // apply pass reads -- and they are compared with full equality below,
+    // unchanged. Only the reason STRING is allowed to differ, and only by
+    // gaining `setkey-collapses-distinct-product:...`. A reason that
+    // disappears, a reason that changes to anything else, or any movement at
+    // all in class/writable/subclass/tier still fails.
+    const SEGMENTS = ["klass", "writable", "reasons", "subclass", "tier", "refusals"] as const;
+    const parts = (v: string) => v.split("|");
+    const COLLAPSE_REASON = /^setkey-collapses-distinct-product:/;
+
+    const moved: Array<{ i: number; field: string; was: string; now: string }> = [];
+    const gainedCollapseReason: number[] = [];
+    const setKeyNoLongerConflicts: number[] = [];
+    got.forEach((v, i) => {
+      const now = parts(v), was = parts(recorded.verdicts[i]);
+      SEGMENTS.forEach((field, k) => {
+        if (now[k] === was[k]) return;
+        if (field !== "reasons") {
+          moved.push({ i, field, was: was[k] ?? "", now: now[k] ?? "" });
+          return;
+        }
+        // The reasons differ, and the ONLY licensed difference is a GAINED
+        // collapse refusal.
+        //
+        // Compared as whole strings, not as a comma-split list: several
+        // reasons carry commas INSIDE them (`split-identity:...:segments:
+        // sport,printRun`), so splitting on "," fragments one reason into
+        // pieces and makes an order-preserving comparison impossible. Deleting
+        // the added refusals from the new string must reproduce the old string
+        // EXACTLY -- which proves nothing else was added, removed, reordered
+        // or rewritten, commas and all.
+        const wasR = was[k] ?? "", nowR = now[k] ?? "";
+        const stripped = nowR
+          .split(",")
+          .filter((r) => !COLLAPSE_REASON.test(r))
+          .join(",");
+        const gained = nowR.split(",").some((r) => COLLAPSE_REASON.test(r));
+        if (gained && stripped === wasR) {
+          gainedCollapseReason.push(i);
+          return;
+        }
+        // THE SECOND LICENSED DIFFERENCE, AND IT IS THE OTHER HALF OF THE SAME
+        // RULING (Drew, 2026-09-03).
+        //
+        // A stored setKey of `unknown` -- or the old defaulted `bowman` -- is
+        // BLANK for the specificity test, so a derivation that names the
+        // product the title names FILLS that axis instead of changing it. Such
+        // a row therefore drops `setKey` from its `changed:` list.
+        //
+        // Fixture row 195 is exactly this shape: stored setKey `unknown`, a
+        // title reading "2025 Leaf Metal Football ... Calvin Russell", derived
+        // `leaf-metal`. It was reported as a rival reading of the product; it
+        // is the FIRST reading of the product.
+        //
+        // This is only licensed in the direction that REMOVES setKey from the
+        // conflict list, and only when everything else about the reasons is
+        // untouched. A row that gains a setKey conflict, or that changes any
+        // other reason, still fails -- and the class and `writable` are
+        // compared with full equality above regardless, so a row cannot become
+        // writable through this branch.
+        if (wasR.replace(/^changed:([^,]*),setKey,/, "changed:$1,") === nowR ||
+            wasR.replace(/^changed:setKey,/, "changed:") === nowR ||
+            wasR.replace(/^changed:([^,]*),setKey(,|$)/, "changed:$1$2") === nowR) {
+          setKeyNoLongerConflicts.push(i);
+          return;
+        }
+        moved.push({ i, field, was: wasR, now: nowR });
+      });
+    });
+
+    // Nothing the apply pass reads moved, and no reason was lost or rewritten.
+    expect(moved).toEqual([]);
+    // Guard the guard: if the collapse refusal ever stops firing on this
+    // fixture, this pin must fail loudly rather than pass vacuously over a
+    // list that no longer exercises the ruling at all.
+    expect(gainedCollapseReason.length).toBeGreaterThan(0);
+    // Every row that gained the reason is still CONFLICT and still unwritable.
+    for (const i of gainedCollapseReason) {
+      const r = K.classifyRow(inputFor(rows[i]));
+      expect(r.klass).toBe("CONFLICT");
+      expect(r.writable).toBe(false);
+    }
+    // A row whose setKey stopped conflicting did NOT thereby become writable:
+    // it kept its other conflicting axes, and the class equality above already
+    // pinned that. Asserted explicitly so the intent survives a refactor.
+    for (const i of setKeyNoLongerConflicts) {
+      const r = K.classifyRow(inputFor(rows[i]));
+      expect(r.writable).toBe(false);
+      expect(r.axes.changed).not.toContain("setKey");
+    }
   });
 });
 

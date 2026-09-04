@@ -218,6 +218,63 @@ function storedPrintRunNamesALimitedParallel(stored) {
  *  the specificity test -- and only the checklist may displace it. */
 const GENERIC_PARALLELS = new Set(["", "base", "[base]", "none", "unknown"]);
 
+/**
+ * A setKey that means "the writer could not read one" (Drew, 2026-09-03).
+ *
+ * THE OTHER DIRECTION OF THE COLLAPSE RULING. Drew ruled that specialized ->
+ * flagship is forbidden; the REVERSE -- a stored setKey that names no product
+ * at all, re-derived into the specific product the TITLE names -- is strictly
+ * more specific and belongs in IMPROVE, not CONFLICT.
+ *
+ * Two values mean "unknown", and the census names both:
+ *
+ *   `unknown`  the explicit one. 4.2M UNDERIVABLE rows carry
+ *              `setkey-unknown-unsupported`; where the derivation DOES resolve
+ *              a product, the row diffs `unknown -> upper-deck` and read as a
+ *              lateral CHANGE -- a rival reading of the card -- when it is in
+ *              fact the first reading of the card. ~36,479 rows measured on
+ *              that pair alone.
+ *
+ *   `bowman`   the OLD DEFAULT, and this is the subtle one. Before
+ *              CF-CROSS-PRODUCT-MIS-SLUG-FIX, backfills that could not extract
+ *              a setKey wrote the literal string "bowman", which landed
+ *              Panini/Topps/Upper Deck rows in the Bowman namespace. The
+ *              census reports 121,620 rows under
+ *              `setkey-bowman-default-unsupported` -- that reason is exactly
+ *              the marker that says "this `bowman` was never read off the
+ *              card". So a `bowman -> upper-deck` diff on such a row is a fill,
+ *              not a change: ~67,398 rows measured.
+ *
+ * THE MARKER IS REQUIRED, AND THAT IS THE WHOLE SAFETY ARGUMENT. `bowman` is
+ * also a REAL product with millions of legitimate rows, and treating every
+ * stored `bowman` as blank would hand the fleet a licence to re-key genuine
+ * Bowman sales onto whatever a noisy title happened to say -- the exact damage
+ * the default caused in the first place, running the other way. So this set is
+ * consulted ONLY for `unknown`; a stored `bowman` counts as blank only when the
+ * row itself carries the defaulted marker (see `storedSetKeyIsBlank`).
+ */
+const GENERIC_SETKEYS = new Set(["", "unknown", "none", "unspecified", "base-set"]);
+
+/** The census reason that marks a stored `bowman` as the old unread default
+ *  rather than a product read off the card. */
+const BOWMAN_DEFAULT_MARKER = /setkey-bowman-default-unsupported/i;
+const BOWMAN_DEFAULT_SETKEY = "bowman";
+
+/**
+ * Is the STORED setKey the "unknown" one, for the specificity test?
+ *
+ * `derivationReasons` is the census`s own signal, not a guess about the row.
+ * A stored `bowman` is blank ONLY when the derivation reported the defaulted
+ * marker for this row; every other `bowman` is the product Bowman and is
+ * compared as a real answer.
+ */
+function storedSetKeyIsBlank(stored, derivationReasons = []) {
+  const v = lower(stored?.setKey);
+  if (GENERIC_SETKEYS.has(v)) return true;
+  if (v !== BOWMAN_DEFAULT_SETKEY) return false;
+  return (derivationReasons ?? []).some((r) => BOWMAN_DEFAULT_MARKER.test(String(r)));
+}
+
 /** Grade as one comparable token. Raw is a real answer ("RAW"), not a missing
  *  one, so a stored raw row and a derived raw row AGREE on this axis. */
 function gradeToken(id) {
@@ -245,10 +302,17 @@ function axisValue(id, axis) {
 }
 
 /** Is this axis' value the "unknown" one? Blank everywhere; additionally the
- *  generic parallels, and RAW is NOT blank -- raw is an answer. */
+ *  generic parallels and the generic setKeys, and RAW is NOT blank -- raw is
+ *  an answer.
+ *
+ *  The DEFAULTED `bowman` is deliberately NOT here: deciding it needs the
+ *  row's derivation reasons, which this function does not see, and a blanket
+ *  rule would blank every genuine Bowman row. `diffAxes` takes the marker as
+ *  an argument and applies it to the STORED side only. */
 function axisIsBlank(axis, value) {
   if (value === "") return true;
   if (axis === "parallel") return GENERIC_PARALLELS.has(value);
+  if (axis === "setKey") return GENERIC_SETKEYS.has(value);
   return false;
 }
 
@@ -545,14 +609,139 @@ function finishFamilyCollision({ row, storedSlug, stored, derived }) {
  * even when the axis diff calls it a fill somewhere else.
  */
 const DISTINCT_PRODUCT_SETKEYS = [
-  "bowmans-best", "bowman-sterling", "bowman-heritage", "bowman-chrome",
-  "bowman-draft", "bowman-platinum", "bowman-inception", "bowman-1st-edition",
-  "bowman-chrome-sapphire", "topps-chrome", "topps-chrome-black",
+  // -- Bowman ---------------------------------------------------------------
+  // Drew, 2026-09-03: bowmans-best, bowman-sterling and bowman-heritage are
+  // each DISTINCT from bowman, and bowman is DISTINCT from bowman-chrome.
+  "bowmans-best", "bowman-best-university", "bowman-sterling", "bowman-heritage",
+  "bowman-chrome", "bowman-chrome-sapphire", "bowman-chrome-mega-box",
+  "bowman-chrome-nscc", "bowman-chrome-draft",
+  "bowman-draft", "bowman-draft-sapphire", "bowman-draft-picks-and-prospects",
+  "bowman-draft-1st-edition", "bowman-platinum", "bowman-inception",
+  "bowman-1st-edition", "bowman-paper",
+  // -- Topps ----------------------------------------------------------------
+  "topps-chrome", "topps-chrome-platinum", "topps-chrome-black",
+  "topps-chrome-sapphire", "topps-chrome-update-series",
+  "topps-chrome-update-sapphire", "topps-update-series", "topps-update-sapphire",
   "topps-heritage", "topps-heritage-chrome", "topps-allen-ginter",
-  "topps-allen-ginter-chrome", "topps-fire", "topps-finest", "topps-gold-label",
-  "topps-stadium-club", "topps-stadium-club-chrome", "topps-cosmic-chrome",
-  "fleer-ultra", "panini-prizm", "panini-mosaic", "panini-optic",
+  "topps-allen-ginter-chrome", "topps-fire", "topps-finest",
+  "topps-finest-flashbacks", "topps-gold-label", "topps-stadium-club",
+  "topps-stadium-club-chrome", "topps-cosmic-chrome", "topps-signature-class",
+  "topps-composite", "topps-archives", "topps-museum-collection", "topps-now",
+  "topps-traded", "topps-traded-tiffany", "topps-tiffany", "topps-total",
+  "topps-pristine", "topps-resurgence",
+  // -- Panini / Donruss -----------------------------------------------------
+  // Drew, 2026-09-03: donruss-elite, donruss-studio and diamond-kings are each
+  // DISTINCT from panini-donruss.
+  "donruss-elite", "donruss-studio", "diamond-kings", "panini-diamond-kings",
+  "donruss-optic", "panini-donruss",
+  "panini-prizm", "panini-prizm-wnba", "panini-prizm-draft-picks",
+  "panini-prizm-monopoly-wnba", "panini-mosaic", "panini-optic",
+  "panini-select", "score-select", "panini-score",
+  "panini-origins", "panini-prestige", "panini-hoops", "panini-certified",
+  "panini-zenith", "panini-photogenic", "panini-court-kings", "panini-recon",
+  "panini-rookies-and-stars", "panini-impeccable", "panini-chronicles",
+  "panini-luminance", "panini-crusade", "panini-signature-series",
+  "panini-boys-of-summer", "panini-three-and-two",
+  // -- Fleer / SkyBox -------------------------------------------------------
+  // Drew, 2026-09-03: fleer-tradition and metal-universe are DISTINCT from
+  // fleer; skybox-premium is DISTINCT from skybox.
+  "fleer-tradition", "fleer-tradition-update", "metal-universe",
+  "skybox-metal-universe", "marvel-metal", "fleer-ultra", "ultra", "flair",
+  "skybox-premium", "skybox-molten-metal", "skybox-thunder", "circa-thunder",
+  // -- Upper Deck -----------------------------------------------------------
+  // Drew, 2026-09-03: upper-deck-black-diamond is DISTINCT from upper-deck.
+  "upper-deck-black-diamond", "upper-deck-mvp", "sp-authentic", "sp-game-used",
+  "spx", "spx-finite", "collectors-choice",
+  // -- Leaf -----------------------------------------------------------------
+  // Census-found: the /(?:^|-)leaf/ family catch-all in the regex vocabulary
+  // was collapsing every one of these into `leaf` inside matchKnownProductLine.
+  "leaf-metal", "leaf-limited", "leaf-certified", "leaf-certified-materials",
+  "leaf-signature-series", "leaf-rookies-and-stars",
 ];
+
+/**
+ * THE RULED COLLAPSE PAIRS (Drew, 2026-09-03).
+ *
+ * `derivationCollapsesProduct` is STRUCTURAL and stays that way -- it catches
+ * shapes nobody enumerated. This table is the NAMED half: every pair Drew ruled
+ * on explicitly, plus the pairs the census found, each carrying the row count
+ * the Great Rematch measured across all 32 shards. It exists so a refusal can
+ * name the RULING and not only the shape, and so a test can pin each pair
+ * individually -- a structural guard that silently stopped matching one pair
+ * would still pass a test that only exercised the structure.
+ *
+ * `est` is the scaled estimate from the census artifacts: sampled CONFLICT
+ * lines per shard, weighted by that shard`s own `CONFLICT changed:setKey`
+ * population. Total measured `changed:setKey` population across the 32 runs:
+ * 2,922,114 rows.
+ */
+const RULED_COLLAPSE_PAIRS = Object.freeze([
+  // -- ruled by Drew, >=200 sampled rows --
+  { from: "topps-chrome-update-series", to: "topps-chrome", sampled: 496, est: 287655, ruled: true },
+  { from: "topps-chrome-platinum", to: "topps-chrome", sampled: 974, est: 229345, ruled: true },
+  { from: "topps-allen-ginter", to: "topps", sampled: 446, est: 214366, ruled: true },
+  { from: "bowmans-best", to: "bowman", sampled: 622, est: 200863, ruled: true },
+  { from: "donruss-elite", to: "panini-donruss", sampled: 542, est: 168392, ruled: true },
+  { from: "panini-prizm-wnba", to: "panini-prizm", sampled: 226, est: 152382, ruled: true },
+  { from: "bowmans-best", to: "bowman-chrome", sampled: 380, est: 105816, ruled: true },
+  // -- ruled by Drew, below the 200-sample line but named in the ruling --
+  { from: "panini-prizm-draft-picks", to: "panini-prizm", sampled: 196, est: 118860, ruled: true },
+  { from: "bowman-draft-sapphire", to: "bowman-chrome-sapphire", sampled: 176, est: 90000, ruled: true },
+  { from: "panini-score", to: "score", sampled: 132, est: 48808, ruled: true },
+  { from: "skybox-premium", to: "skybox", sampled: 176, est: 30437, ruled: true },
+  { from: "metal-universe", to: "fleer", sampled: 134, est: 28629, ruled: true },
+  { from: "fleer-tradition", to: "fleer", sampled: 160, est: 24025, ruled: true },
+  { from: "donruss-studio", to: "panini-donruss", sampled: 140, est: 23213, ruled: true },
+  { from: "bowman-draft-picks-and-prospects", to: "bowman-draft", sampled: 120, est: 16855, ruled: true },
+  { from: "topps-gold-label", to: "topps", sampled: 82, est: 15830, ruled: true },
+  { from: "bowman-heritage", to: "bowman", sampled: 158, est: 14992, ruled: true },
+  { from: "bowman-sterling", to: "bowman", sampled: 58, est: 10767, ruled: true },
+  { from: "diamond-kings", to: "panini-donruss", sampled: 78, est: 8966, ruled: true },
+  { from: "upper-deck-black-diamond", to: "upper-deck", sampled: 56, est: 8546, ruled: true },
+  // -- census-found, not individually ruled -- same shape, same refusal --
+  { from: "panini-donruss", to: "donruss-optic", sampled: 226, est: 108520, ruled: false },
+  { from: "topps-chrome-black", to: "topps-chrome", sampled: 222, est: 76485, ruled: false },
+  { from: "topps-signature-class", to: "topps", sampled: 120, est: 55556, ruled: false },
+  { from: "topps-cosmic-chrome", to: "topps", sampled: 92, est: 36704, ruled: false },
+  { from: "panini-prizm-monopoly-wnba", to: "panini-prizm", sampled: 16, est: 22122, ruled: false },
+  { from: "topps-composite", to: "topps", sampled: 58, est: 19876, ruled: false },
+  { from: "bowman-best-university", to: "bowman-chrome", sampled: 20, est: 16715, ruled: false },
+  { from: "topps-finest-flashbacks", to: "topps-finest", sampled: 62, est: 15248, ruled: false },
+  { from: "score-select", to: "panini-select", sampled: 70, est: 12561, ruled: false },
+  { from: "bowman-chrome-mega-box", to: "bowman-chrome", sampled: 26, est: 12324, ruled: false },
+  { from: "bowman-best-university", to: "bowman", sampled: 22, est: 12156, ruled: false },
+  { from: "topps-traded", to: "topps", sampled: 74, est: 10838, ruled: false },
+  { from: "topps-now", to: "topps", sampled: 48, est: 10294, ruled: false },
+  { from: "spx-finite", to: "spx", sampled: 26, est: 8910, ruled: false },
+  { from: "topps-total", to: "topps", sampled: 18, est: 5094, ruled: false },
+  { from: "skybox-molten-metal", to: "skybox", sampled: 38, est: 5087, ruled: false },
+  { from: "fleer-tradition-update", to: "fleer", sampled: 32, est: 4555, ruled: false },
+  { from: "skybox-metal-universe", to: "fleer", sampled: 26, est: 3200, ruled: false },
+  { from: "marvel-metal", to: "fleer", sampled: 24, est: 2900, ruled: false },
+  { from: "skybox-thunder", to: "skybox", sampled: 20, est: 2400, ruled: false },
+  { from: "flair", to: "fleer", sampled: 20, est: 2300, ruled: false },
+  // The Leaf family catch-all. `/(?:^|-)leaf/` in the regex vocabulary
+  // swallowed every specialized Leaf product inside matchKnownProductLine --
+  // this is the exemplar pair the ruling itself is written around
+  // ("2002 Leaf Certified Materials #62"  table: leaf-certified-materials,
+  // regexes: leaf). It was named in the ruling and measured by the coverage
+  // census, but never carried its own row here, so the refusal could name the
+  // SHAPE and not the PAIR. `est` is the coverage census`s measured row count
+  // for the KEY (14,717), the same figure the V6 table carries. `sampled` is
+  // null on purpose: the coverage census counted the key, not this
+  // stored -> derived direction, and a sample count nobody measured is a
+  // number this table must not carry. The remaining Leaf specializations
+  // (certified, limited, signature-series, rookies-and-stars, metal) are in
+  // SPECIALIZED_PRODUCT_KEYS and are refused STRUCTURALLY; they get named rows
+  // here when a census measures their directions.
+  { from: "leaf-certified-materials", to: "leaf", sampled: null, est: 14717, ruled: true },
+]);
+
+/** The ruled pair for this stored -> derived direction, or null. */
+function ruledCollapsePair(from, to) {
+  const f = lower(from), t = lower(to);
+  return RULED_COLLAPSE_PAIRS.find((p) => p.from === f && p.to === t) ?? null;
+}
 
 /**
  * Does the derived setKey COLLAPSE a known distinct product into a parent?
@@ -567,6 +756,14 @@ const DISTINCT_PRODUCT_SETKEYS = [
 function derivationCollapsesProduct(stored, derived) {
   const s = lower(stored?.setKey), d = lower(derived?.setKey);
   if (!s || !d || s === d) return null;
+  // THE NAMED PAIRS ANSWER FIRST (Drew, 2026-09-03). A ruled pair is a
+  // collapse whatever its shape, so the refusal can cite the ruling and the
+  // measured row count rather than only the structure. `panini-donruss ->
+  // donruss-optic` and `flair -> fleer` are exactly why: neither is a prefix
+  // nor a segment of the other, and the third structural clause below would
+  // have caught them only by accident of sharing no segment.
+  const ruled = ruledCollapsePair(s, d);
+  if (ruled) return `${s}->${d}`;
   if (!DISTINCT_PRODUCT_SETKEYS.includes(s)) return null;
   // a strict prefix on a segment boundary is the collapse shape:
   // `bowman-chrome` -> `bowman`, `topps-allen-ginter` -> `topps`.
@@ -1153,11 +1350,18 @@ function derivationRefusals({ row, stored, derived, autoByCardNumber = false }) 
  *   dropped  stored names something, derived is blank/generic  -> a DEMOTION
  *   changed  both name something, and they differ              -> a CONFLICT
  */
-function diffAxes(stored, derived) {
+function diffAxes(stored, derived, opts = {}) {
   const same = [], filled = [], dropped = [], changed = [];
+  // CF-A-DEFAULTED-SETKEY-IS-BLANK (Drew, 2026-09-03). The stored side only:
+  // a row whose `bowman` carries the defaulted marker never read a product off
+  // the card, so a derivation that names one FILLS the axis rather than
+  // changing it. The DERIVED side is never blanked this way -- a derivation
+  // that produces `bowman` produced an answer.
+  const storedBlankSetKey = opts.storedSetKeyBlank === true;
   for (const axis of AXES) {
     const a = axisValue(stored, axis), b = axisValue(derived, axis);
-    const aBlank = axisIsBlank(axis, a), bBlank = axisIsBlank(axis, b);
+    const aBlank = (axis === "setKey" && storedBlankSetKey) || axisIsBlank(axis, a);
+    const bBlank = axisIsBlank(axis, b);
     if (a === b) { same.push(axis); continue; }
     if (aBlank && !bBlank) { filled.push(axis); continue; }
     if (!aBlank && bBlank) { dropped.push(axis); continue; }
@@ -1274,7 +1478,8 @@ function classifyRow({
     return { ...base, klass: UNDERIVABLE, axes: { same: [], filled: [], dropped: [], changed: [] }, reasons: [...(derivationReasons.length ? derivationReasons : ["no-derived-identity"]), ...splitReasons], writable: false };
   }
 
-  const axes = diffAxes(stored, derived);
+  const storedSetKeyBlank = storedSetKeyIsBlank(stored, derivationReasons);
+  const axes = diffAxes(stored, derived, { storedSetKeyBlank });
   const reasons = [];
 
   // THE SLUG IS A NINTH AXIS, AND IT IS NOT IN `AXES`.
@@ -1363,6 +1568,27 @@ function classifyRow({
   if (axes.dropped.length) reasons.push(`dropped:${axes.dropped.join(",")}`);
   if (axes.changed.length) reasons.push(`changed:${axes.changed.join(",")}`);
   if (axes.dropped.length || axes.changed.length) {
+    // A PRODUCT-FAMILY COLLAPSE IS REFUSED BY NAME (Drew, 2026-09-03).
+    //
+    // `changed:setKey` already lands in CONFLICT, and CONFLICT is already
+    // never writable -- so the row was contained before this line existed.
+    // What it was NOT was NAMEABLE: 2,922,114 rows reported as the same
+    // undifferentiated `changed:setKey` defect, with the ~1.5M of them that
+    // are product-family collapses indistinguishable from the genuine rival
+    // readings. Drew ruled every pair below DISTINCT; a ruling that cannot be
+    // counted in the census output is a ruling nobody can verify was applied.
+    //
+    // So the reason names the pair, says it was ruled, and carries the
+    // measured row count. `writable` is untouched -- it is false on this path
+    // by construction, and the mutation test pins that flipping this reason
+    // off does not make one of these rows writable.
+    const collapse = derivationCollapsesProduct(stored, derived);
+    if (collapse) {
+      const pair = ruledCollapsePair(stored?.setKey, derived?.setKey);
+      reasons.push(pair
+        ? `setkey-collapses-distinct-product:${collapse}:${pair.ruled ? "ruled" : "census-found"}:est-${pair.est}`
+        : `setkey-collapses-distinct-product:${collapse}:structural`);
+    }
     // REPORT NOISE TAG ONLY -- never changes the class or `writable`.
     // ingestGradeFromTitle reads the SET NAME "Topps Pristine" plus a 2+ digit
     // card number as PSA 10 (verified: "2024 Topps Pristine Baseball #131
@@ -1589,6 +1815,8 @@ module.exports = {
   AGREE, IMPROVE, CONFLICT, UNDERIVABLE, PROTECTED, AUTO, BASE_EVICTION,
   FINISH_FAMILY_COLLISION, FAMILY_COLOURS, colourFamilyOf, finishFamilyCollision,
   PROTECTED_SOURCES, PROTECTED_MARKER_FIELDS, AXES, GENERIC_PARALLELS,
+  GENERIC_SETKEYS, storedSetKeyIsBlank, RULED_COLLAPSE_PAIRS, ruledCollapsePair,
+  DISTINCT_PRODUCT_SETKEYS,
   FINISH_TOKENS, FINISH_PHRASES, FINISH_COLOR_TOKENS,
   provenanceTier, gradeToken, axisValue, axisIsBlank, diffAxes, classifyRow,
   defectAxes, renderIdentity,
