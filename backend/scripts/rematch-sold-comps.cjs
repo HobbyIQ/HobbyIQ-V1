@@ -871,7 +871,25 @@ async function main() {
       // The reservoir decides admission itself (per-card caps and displacement),
       // so it is called for EVERY row rather than only while the class is short
       // -- a length check here is what made the sample the first page.
-      sample(sampleKey, row.cardId, `${row.id}  [${res.tier}]  "${String(row.title ?? "").slice(0, 68)}"  ${K.renderIdentity(stored)}  ->  ${K.renderIdentity(res.subclass === K.BASE_EVICTION ? der.baseIdentity : der.ok ? der.identity : null)}`);
+      // THE EVIDENCE LINE MUST CARRY THE EVIDENCE (GUARD 7, 2026-09-04).
+      //
+      // The title was cut at 68 characters, and an audit is a reading of the
+      // TITLE against the two identities -- so the cut removed exactly the
+      // tokens the verdict turns on. Quoted from the slot-19 evidence, with
+      // the old cut marked:
+      //
+      //   "2022 Bowman's Best - Top Prospects James Wood #TP-7 Blue Refractor /|150"
+      //   "1987 TOPPS TIFFANY #648 BARRY LARKIN RC HOF REDS NM-MT OR BETTER SET|-BREAK"
+      //
+      // The print run and the set-break idiom both fall off the end, and both
+      // decide a class: `/150` is what separates a numbered parallel from a
+      // base card, and "Set-Break" is what separates one card from a lot. An
+      // auditor reading these lines cannot see what the classifier saw.
+      //
+      // 160 matches `baseEvictionEvidence`'s own `titleQuoted` cap, so the two
+      // places an auditor reads a title agree, and it is the width the eBay
+      // title limit makes near-lossless in practice.
+      sample(sampleKey, row.cardId, `${row.id}  [${res.tier}]  "${String(row.title ?? "").slice(0, 160)}"  ${K.renderIdentity(stored)}  ->  ${K.renderIdentity(res.subclass === K.BASE_EVICTION ? der.baseIdentity : der.ok ? der.identity : null)}`);
       // THE SCOPE IS A REFUSAL AT QUEUE TIME, NOT A FILTER ON A REPORT. A
       // candidate of a disarmed class is never queued, so it can never be
       // written -- and it is COUNTED, so the census still says how many the
