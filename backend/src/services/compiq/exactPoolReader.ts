@@ -52,6 +52,12 @@ export interface ExactPoolRow {
   contributorUserId?: string | null;
   /** The ingest source of the row, for the wire's comp list (D16). */
   source?: string | null;
+  /** CF-INDEPENDENCE-MUST-NAME-ITS-BASIS (2026-09-04). The seller behind
+   *  the sale, when the ingest path could see one. Projected because the
+   *  3-independent-seller threshold is evaluated on it; absent on the vast
+   *  majority of rows, which is exactly what makes the basis `row-count`
+   *  rather than a silent claim of independence. */
+  sellerHandle?: string | null;
 }
 
 let _container: Container | null = null;
@@ -156,7 +162,7 @@ export async function readExactPoolRows(input: {
   hiqIds.forEach((v, i) => params.push({ name: `@hiq${i === 0 ? "" : i}`, value: v }));
   try {
     const { resources } = await cont.items.query<ExactPoolRow>({
-      query: `SELECT c.price, c.soldAt, c.gradeCompany, c.gradeValue, c.priceAnomaly, c.contributorUserId, c.source FROM c WHERE ${parts.join(" AND ")}`,
+      query: `SELECT c.price, c.soldAt, c.gradeCompany, c.gradeValue, c.priceAnomaly, c.contributorUserId, c.source, c.sellerHandle FROM c WHERE ${parts.join(" AND ")}`,
       parameters: params,
     }, { maxItemCount: 500 }).fetchAll();
     const rows = resources || [];

@@ -117,8 +117,16 @@ describe("draft price comes from the engine, labelled", () => {
     // The POOL that priced it (6), not the 2-row display sample.
     expect(pricing.compCount).toBe(6);
     expect(pricing.range).toEqual({ n: 6, min: 640, median: 715, max: 810 });
-    // A clean exact-pool answer needs no disclosure.
-    expect(pricing.labels).toEqual([]);
+    // CF-INDEPENDENCE-MUST-NAME-ITS-BASIS (2026-09-04). This assertion used
+    // to read "a clean exact-pool answer needs no disclosure" and expect no
+    // labels at all. That is the assumption the independence work overturns:
+    // these 6 fixture comps carry no seller, exactly like the 6.87M real
+    // sold_comps rows that carry none, so the engine CANNOT see whether
+    // three independent sellers stand behind the number. The honest answer
+    // is to say so — not to stay silent and let a row count pass for a
+    // seller count. The price, rung, pool and range are all unchanged.
+    expect(pricing.labels.map((l) => l.code)).toEqual(["independence-unverified"]);
+    expect(pricing.labels[0]!.text).toMatch(/do not tell us who sold them/i);
   });
 
   it("asks the engine with the holding's identity, not a re-derived one", async () => {
