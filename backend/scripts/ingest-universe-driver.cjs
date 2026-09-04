@@ -2062,7 +2062,7 @@ for (const lane of ACQUIRE_LANES) {
   }
 }
 
-module.exports = { streakAfter, gateStagedCsv, gateStagedEntry, ladderIsAttested, setKeyCandidates, canonicalSetKey, TERMINAL_STATUSES, LANES_WITH_SIBLING_PARALLEL_PAGES, ladderOnSiblingPages, allFilesAreParallelOfParent, CARTESIAN_MIN_RUNGS, CARTESIAN_MIN_CARDS, stagedCsvs, LANES_WITHOUT_PRINT_RUNS, LANES_WITH_BASELESS_PRODUCTS, LANES_WITH_VINTAGE_ERA_PRODUCTS, PARALLEL_ERA_FIRST_YEAR, ladderlessByEra, sourceLabelFor, splitCsv, isPersonName, setKeyFor, planFor, tcgdexModern, acquireStaged, ACQUIRE_LANES, LANE_ALIASES, LANE_SOURCE, LANE_MINUTES, CANONICAL_HEADER, CHILD_STDERR_LINES, cosmosSafeId, controlId, orderQueue, SYSTEMIC_FAILURE_STREAK, EMPTY_STATUS, STREAK_STATUSES, isStaged, stagedSourceRefs, stagedIndex, stagedFilesFor, acquireFromStaging };
+module.exports = { streakAfter, RUNNER_SCOPE_VARS, gateStagedCsv, gateStagedEntry, ladderIsAttested, setKeyCandidates, canonicalSetKey, TERMINAL_STATUSES, LANES_WITH_SIBLING_PARALLEL_PAGES, ladderOnSiblingPages, allFilesAreParallelOfParent, CARTESIAN_MIN_RUNGS, CARTESIAN_MIN_CARDS, stagedCsvs, LANES_WITHOUT_PRINT_RUNS, LANES_WITH_BASELESS_PRODUCTS, LANES_WITH_VINTAGE_ERA_PRODUCTS, PARALLEL_ERA_FIRST_YEAR, ladderlessByEra, sourceLabelFor, splitCsv, isPersonName, setKeyFor, planFor, tcgdexModern, acquireStaged, ACQUIRE_LANES, LANE_ALIASES, LANE_SOURCE, LANE_MINUTES, CANONICAL_HEADER, CHILD_STDERR_LINES, cosmosSafeId, controlId, orderQueue, SYSTEMIC_FAILURE_STREAK, EMPTY_STATUS, STREAK_STATUSES, isStaged, stagedSourceRefs, stagedIndex, stagedFilesFor, acquireFromStaging };
 if (require.main !== module) return;
 
 (async () => {
