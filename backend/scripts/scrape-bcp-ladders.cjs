@@ -346,6 +346,47 @@ const RUN_NOTE = /(?:#'?d?\s*(?:to|\/)\s*|numbered\s+to\s+|:\s*)([\d,]+)\s*(?:co
 function isYearShaped(n) {
   return Number.isInteger(n) && n >= 1900 && n <= 2100;
 }
+/**
+ * CF-A-YEAR-GUARD-IS-SCOPED-TO-THE-BARE-COLON-ARM (2026-09-04).
+ *
+ * #1752 refused every year-shaped figure. But a year-shaped number is only
+ * ever SUSPECT, never wrong by itself: 1999 Black Diamond's Double Diamond
+ * exception rung really is "serial-numbered to 1998" -- the three 1998
+ * home-run-chase cards (Sosa, Griffey, McGwire) numbered to the YEAR. The
+ * blanket guard erased a real print run that §3.2 pins.
+ *
+ * What separates them is not the value, it is WHICH ARM OF `RUN_NOTE` matched.
+ * The navbox bleed ("Classic Era: 1951 - 1952") can only ever reach us through
+ * the bare `:\s*` arm, which has no serial vocabulary in it at all -- it reads
+ * a colon and some digits out of arbitrary page chrome. Every other arm is an
+ * explicit STATEMENT OF A SERIAL by the page: `numbered to N`, `#'d to N`,
+ * `#/N`, `(N copies)`. A statement like that is the page telling us the print
+ * run, and we take it at its word even when the figure looks like a year.
+ *
+ * So the guard applies to the bare-colon arm ONLY. The navbox is additionally
+ * excluded structurally by `PAGE_CHROME`'s navbox terminator, which is the
+ * real fix; this stays as the belt to that pair of braces.
+ */
+function isBareColonRun(match) {
+  // Arm 2 -- `(N copies)` -- is an explicit serial statement.
+  if (!match || match[1] == null) return false;
+  // Arms `#'d to N`, `#/N` and `numbered to N` all state a serial; only the
+  // bare-colon arm reaches the digits with no serial vocabulary before them.
+  return /^[^#\d]*:\s*[\d,]/.test(match[0]) && !/numbered\s+to\s*$/i.test(match[0]);
+}
+/**
+ * The print run a note states, or null when the page states none. Applies the
+ * year guard ONLY where it belongs: to a figure scraped out of a bare
+ * `colon + digits`, never to one the page explicitly serial-numbered.
+ */
+function runFromNote(text) {
+  const m = String(text == null ? "" : text).match(RUN_NOTE);
+  if (!m) return null;
+  const n = Number((m[1] || m[2] || "").replace(/,/g, ""));
+  if (!Number.isFinite(n)) return null;
+  if (isBareColonRun(m) && isYearShaped(n)) return null;
+  return n;
+}
 // CF-A-SCOPE-HEADING-IS-NOT-A-RUNG (D33). "Chrome", "1st Edition",
 // "Sapphire Edition" and "Chrome Gimmicks" name a SCOPE (a product or a
 // sub-family), never a finish -- yet prod carries all four as literal
@@ -958,16 +999,19 @@ function parseLadder(parallelsBody, playerNames = new Set(), opts = {}) {
     // card. A heading whose body states per-range runs NAMES A FAMILY; its
     // rungs are its children.
     if (hasRangeClause(body)) continue;
-    const run = text.match(RUN_NOTE);
-    const n = run ? Number((run[1] || run[2] || "").replace(/,/g, "")) : null;
     // CF-A-YEAR-IS-NOT-A-PRINT-RUN (2026-09-04). The gate `1..100000` admits
     // every four-digit year, which is how a navbox link ("Classic Era: 1951")
     // became a print run of 1951. `extractRarity` already carries the
     // mirror-image plausibility floor (n >= 1000) so a small number is not
     // read as set production; this is the missing counterpart. Belt and
     // braces with the PAGE_CHROME fix: the slice should no longer contain a
-    // navbox at all, but a year-shaped run is never right on this source.
-    const ok = n && n >= 1 && n <= 100000 && !isYearShaped(n) && !hasOdds(text);
+    // navbox at all.
+    //
+    // The guard is SCOPED to the bare-colon arm (see `runFromNote`): a page
+    // that explicitly writes "serial-numbered to 1998" is stating a serial,
+    // and 1999 Black Diamond's Double Diamond really is numbered to 1998.
+    const n = runFromNote(text);
+    const ok = n && n >= 1 && n <= 100000 && !hasOdds(text);
     // The heading's own text may state pack odds or a set-production figure.
     // Those are refused as a print run and RECORDED as rarity.
     //
@@ -1030,12 +1074,15 @@ function parseLadder(parallelsBody, playerNames = new Set(), opts = {}) {
     // The range clause lives in the SAME parenthetical as the run:
     // "(cards 171-180; serial-numbered to 100)".
     const cardRange = parseCardRange(note) || parseCardRange(text);
-    const run = note.match(RUN_NOTE);
-    let n = run ? Number((run[1] || run[2] || "").replace(/,/g, "")) : null;
+    // Year-shaped figures are refused ONLY when they came from the bare-colon
+    // arm, i.e. from page chrome rather than from a serial statement. A ladder
+    // row that says "Double (serial-numbered to 1998)" is stating a real print
+    // run -- the 1998 home-run-chase exception on Sosa, Griffey and McGwire --
+    // and #1752's blanket year guard erased it. See `runFromNote`.
+    let n = runFromNote(note);
     if (n == null && ONE_OF_ONE.test(note)) n = 1;      // "one-of-one" is /1
     if (n == null) n = spelledRun(note);                // "numbered to ten" is /10
     if (hasOdds(note)) n = null;                        // 1:12 is odds, not a run
-    if (isYearShaped(n)) n = null;                      // "Classic Era: 1951" is a year
 
     // Whatever the guards refuse is still a fact the page stated. Keep it in
     // the descriptive field rather than dropping it. CF-RARITY-IS-NOT-A-PRINT-RUN.
@@ -1839,7 +1886,7 @@ module.exports = {
   main, normalizeSport,
   parseCards, parseLadder, parseScopedLadders, section,
   // CF-A-YEAR-IS-NOT-A-PRINT-RUN: exported so the guard is pinnable directly.
-  isYearShaped, PAGE_CHROME,
+  isYearShaped, isBareColonRun, runFromNote, PAGE_CHROME,
   // CF-THE-CHECKLIST-HEADING-IS-A-BASE-SET: the h1 fallback slice and the
   // precedence that uses it, pinned against the four live 1990 pages that used
   // to be refused. `baseCards` is what the page loop calls, so deleting the

@@ -383,9 +383,24 @@ describe("the scraper defence", () => {
   });
 
   it("the guard is wired into BOTH parse paths", () => {
-    // The heading-rung gate and the <li> gate both read RUN_NOTE.
-    expect(SRC).toContain("!isYearShaped(n) && !hasOdds(text)");
-    expect(SRC).toContain("if (isYearShaped(n)) n = null;");
+    // The heading-rung gate and the <li> gate both take their figure from
+    // `runFromNote`, which is where the year guard now lives. Asserting the
+    // CALL rather than the old inline expressions: #1758 moved the guard into
+    // that helper to scope it to the bare-colon arm, and a pin that greps for
+    // a line the fix rewrote pins the file's history, not its behaviour.
+    expect(SRC).toContain("const n = runFromNote(text);");   // heading rungs
+    expect(SRC).toContain("let n = runFromNote(note);");     // <li> rungs
+    expect(SRC).toContain("if (isBareColonRun(m) && isYearShaped(n)) return null;");
+    // ...and the behaviour those two paths inherit: the navbox year is refused.
+    expect(scraper.runFromNote("Classic Era: 1951 - 1952")).toBeNull();
+  });
+
+  it("but a STATED serial that looks like a year survives — #1758", () => {
+    // #1752's blanket guard also erased 1999 Black Diamond's real Double
+    // Diamond exception rung, "serial-numbered to 1998" on the three 1998
+    // home-run-chase cards. Only figures scraped from a bare colon are chrome.
+    expect(scraper.runFromNote("(serial-numbered to 1998)")).toBe(1998);
+    expect(scraper.isBareColonRun("Classic Era: 1951".match(/(?::\s*)([\d,]+)/))).toBe(true);
   });
 
   it("MUTATION RED — without the guard, 1951 is accepted as a print run", () => {
