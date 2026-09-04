@@ -8,8 +8,20 @@
 // After the fix:
 //
 //   getGraderPremium("PSA", "10", 100, "autograph", 2023, "Bowman Chrome", null, "baseball")
-//     → 2.55×   (GRADE_MULTIPLIER_BY_VALUE_BAND.bySportFamily
-//                "baseball|bowman-chrome" × "$100-249" × "PSA 10", n=144)
+//     → 1.84×   (GRADE_MULTIPLIER_BY_VALUE_BAND.bySportFamily
+//                "baseball|bowman-chrome" × "$100-249" × "PSA 10", n=714)
+//
+// CF-CALIBRATION-FROM-OUR-POOL-ONLY (#1676, 2026-09-03): that cell read
+// 2.55× at n=144 when the table was generated from ch_daily_sales, keyed
+// by the VENDOR's card_id. #1676 regenerated it from `sold_comps` grouped
+// by hobbyiqCardId — our own canonical identity, as the doctrine has
+// always required — and the same cell is 1.84× at n=714. The pin follows
+// the table, because the table is the evidence: a 5x larger sample drawn
+// from the pool we actually price against is the better measurement, and
+// pinning the old number would be pinning the vendor's grouping.
+//
+// What this file pins is therefore the LADDER, not a magic constant: the
+// most specific populated cell wins, and each layer beats the one below.
 //
 // The observed uplift on baseball bowman-chrome at $100 raw is modest
 // because the family's empirical Raw→PSA10 gap really IS ~2.5× at that
@@ -25,12 +37,12 @@ import { describe, expect, it } from "vitest";
 import { getGraderPremium } from "../src/services/compiq/compiqEstimate.service.js";
 
 describe("getGraderPremium — CF-CALIBRATION-LADDER-IN-GRADER-PREMIUM", () => {
-  it("Baseball bowman-chrome PSA 10 at $100 raw with sport hint → uses value-band bySportFamily (>=2.5×)", () => {
+  it("Baseball bowman-chrome PSA 10 at $100 raw with sport hint → uses value-band bySportFamily (1.84×)", () => {
     // Empirical value-band bySportFamily["baseball|bowman-chrome"]["$100-249"]["PSA 10"]
-    // = 2.55× (n=144). Before this fix the flat auto-table returned 2.30×.
+    // = 1.84× (n=714) on the #1676 our-pool table.
     const withSportHint = getGraderPremium("PSA", "10", 100, "autograph", 2023, "Bowman Chrome", null, "baseball");
-    expect(withSportHint).toBeGreaterThanOrEqual(2.4);
-    expect(withSportHint).toBeLessThan(6);
+    expect(withSportHint).toBeGreaterThan(1.5);
+    expect(withSportHint).toBeLessThan(2.4);
   });
 
   it("Slug-form setKey ('bowman-chrome') classifies same as human string ('Bowman Chrome')", () => {
@@ -44,12 +56,20 @@ describe("getGraderPremium — CF-CALIBRATION-LADDER-IN-GRADER-PREMIUM", () => {
     expect(slugStyle).toBeCloseTo(humanStyle, 5);
   });
 
-  it("No sport hint → still walks the ladder via family + baseline band (better than flat auto-table)", () => {
+  it("No sport hint → still walks the ladder via family + baseline band", () => {
     // Without a sport hint, bySportFamily can't fire but the baseline
-    // value-band layer still does. Baseline["$100-249"]["PSA 10"] = 2.66×
-    // (n=1526). Strictly better than the auto-table's 2.30×.
+    // value-band layer still does. Baseline["$100-249"]["PSA 10"] = 2.01×
+    // (n=6,881) on the #1676 our-pool table.
+    //
+    // The LADDER is what is pinned: the coarser baseline layer is a
+    // DIFFERENT cell from the sport-family one above, not a better or
+    // worse version of it. Here the broad cell happens to read higher than
+    // baseball|bowman-chrome's 1.84× — that is real dispersion across
+    // sports and families, not a defect, and nothing here may clamp it
+    // into a monotone story (CF-GRADE-MONOTONICITY-IS-NOT-AN-INVARIANT).
     const noSport = getGraderPremium("PSA", "10", 100, "autograph", 2023, "Bowman Chrome");
-    expect(noSport).toBeGreaterThanOrEqual(2.5);
+    expect(noSport).toBeGreaterThan(1.5);
+    expect(noSport).toBeLessThan(3);
   });
 
   it("Vintage still wins — 1955 PSA 8 does NOT drop into the calibration ladder", () => {
