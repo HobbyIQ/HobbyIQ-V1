@@ -138,6 +138,47 @@ const CORPUS_STOPWORDS = new Set([
   "gem", "mint", "pristine", "psa", "bgs", "sgc", "cgc", "grade", "graded",
 ]);
 
+/**
+ * STOPWORDS ELIGIBLE FOR A PER-PRODUCT EXCEPTION (first audit gate, leak 4).
+ *
+ * `america` is in CORPUS_STOPWORDS, added alongside usa/world/american on the
+ * sound reasoning that a sport or a country names WHICH CHECKLIST a card
+ * belongs to and never how it is printed. But "2023 Donruss America #240" is a
+ * real Donruss insert/parallel, and Panini Stars & Stripes USA lists `America`
+ * as a parallel NAME outright (2024 and 2025, verified in the corpus). An
+ * unconditional stop reads a genuine parallel as silence and evicts the card
+ * into base -- the same one-card-two-rows defect from the other direction.
+ *
+ * So a stopword the corpus proves is a PARALLEL NAME for a (year, setKey) is
+ * un-stopped FOR THAT PRODUCT. The rule is per-product by construction: the
+ * word keeps its stop everywhere else.
+ *
+ * WHY THIS IS A LIST AND NOT "ANY STOPWORD THE CORPUS NAMES"
+ *
+ * Measured on the committed corpus, the unrestricted rule un-stops 121
+ * products on 22 words -- `signature` (46 products), `auto` (28), `dual` (18),
+ * `rookie` (13), `patch`, `jersey`, `gem`, `cards`. Every one of those is a
+ * word the stopword list exists to stop, and each is stopped for a reason that
+ * a checklist row does NOT overturn: they describe the CARD or the SLAB (a
+ * rookie auto patch, a gem-mint grade), not how the card is printed, and a
+ * checklist that heads a section "Rookie Signatures" is naming a SUBSET. Letting
+ * the corpus lift those stops would disqualify every rookie-auto title in the
+ * pool from eviction -- exactly the 353-phrase defect the phrase filter closed.
+ *
+ * The eligible words are the ones whose stop rests on "this word names a
+ * COUNTRY, A SPORT or A CHECKLIST" -- a claim a product's own checklist can
+ * genuinely rebut by listing the word as a parallel of that product. Nothing
+ * whose stop rests on "this describes the card or the slab" is eligible.
+ */
+const STOPWORD_EXCEPTION_ELIGIBLE = new Set([
+  "america", "american", "usa", "world", "national",
+  "baseball", "basketball", "football", "hockey", "soccer",
+]);
+
+/** The names a checklist heads its BASE section with. Anything longer names a
+ *  PARALLEL of the base card ("Base Refractor"), never the base card. */
+const BASE_ROW_NAMES = new Set(["base", "base set", "base card", "base cards"]);
+
 /** A corpus token is worth keeping only if it is a word, not a fragment. */
 const MIN_TOKEN_LEN = 3;
 
@@ -250,6 +291,383 @@ const CORE_FINISH_TOKENS = [
   "retro", "sterling", "inception", "heritage", "finest", "mini",
 ];
 
+/**
+ * FINISH-FAMILY TOKENS -- the word that says WHICH member of a colour family
+ * a card is (first audit gate, leak 1).
+ *
+ * CF-A-NAMED-PARALLEL-IS-A-DISTINCT-CARD. A 2025 Topps Chrome football
+ * checklist lists BOTH "Black Wave Refractor" AND "Black Refractor". They are
+ * two cards, two print runs, two price curves. The derivation collapsed the
+ * first onto the second -- "BLACK WAVE /10" -> Black Refractor -- because the
+ * parser's Wave rule enumerates a colour list that omits black, so the title
+ * fell through to the bare-colour scan, which reads `black` and stops.
+ *
+ * Every leak of that shape shares one signature: the TITLE names a family word
+ * -- Wave, Vapor, Equinox, Etch, Shimmer, Ray, Mojo, Prism, Atomic, X-Fractor,
+ * Sparkle, Lava, Geometric -- and the DERIVED parallel does not carry it. The
+ * derived name is not a less specific reading of the same card, it is a
+ * SIBLING card in the same family, and writing it splits one pool into two and
+ * prices a /10 Black Wave against a /299 Black Refractor.
+ *
+ * This list is the vocabulary that test reads. It is deliberately NOT the
+ * whole finish vocabulary: a family token is a word that MODIFIES a colour or
+ * a base finish into a distinct sibling, not every word a parallel name can
+ * contain. Colour words are excluded on purpose (a colour the derivation drops
+ * is a different defect, and the axis diff already sees it), and so are the
+ * generic base finishes -- "refractor" and "prizm" name the family's ROOT, and
+ * requiring a title's "refractor" to appear in a derived "Gold Refractor" is
+ * satisfied trivially while requiring it in a derived "Gold Prizm" would flag
+ * a genuine product difference the setKey already settles.
+ *
+ * DIRECTION: this is a REFUSING test on the IMPROVE side. A token the title
+ * names and the derivation lacks REFUSES the write; it never mints a parallel
+ * of its own. Absent beats wrong.
+ */
+const FINISH_FAMILY_TOKENS = [
+  // the pattern families -- each turns "<Colour> Refractor" into a different card
+  "wave", "waves", "vapor", "vapour", "equinox", "etch", "etched", "glass",
+  "shimmer", "ray", "raywave", "mojo", "prism", "prismatic", "atomic",
+  "sparkle", "lava", "geometric", "speckle", "grass", "disco", "pulsar",
+  "velocity", "pandora", "zebra", "tiger", "snakeskin", "dragon", "camo",
+  "cracked", "marble", "nebula", "galactic", "logofractor",
+  "hyperplaid", "dazzle", "scope", "fireworks", "flash", "laser", "canvas",
+  "die-cut", "diecut", "sapphire", "superfractor", "x-fractor", "xfractor",
+  "aurora", "eclipse", "tectonic", "kaleidoscope", "genesis", "cosmic",
+];
+const FINISH_FAMILY_SET = new Set(FINISH_FAMILY_TOKENS.map(lower));
+
+/**
+ * FAMILY-TOKEN ALIASES. One family is spelled several ways across sellers and
+ * checklists, and a title spelling that the derived name spells differently is
+ * NOT a dropped family. Each alias group collapses to one canonical token so
+ * the comparison below is about the FAMILY, not about the spelling.
+ *
+ * "Etched In Glass Variation" and "Image Variation" are listed SEPARATELY on
+ * the checklist and are two cards, so `etched`/`glass` map to one family and
+ * a derived "Image Variation" carrying neither is a genuine drop.
+ */
+const FAMILY_ALIASES = new Map([
+  ["waves", "wave"], ["raywave", "ray"], ["vapour", "vapor"],
+  ["etched", "etch"], ["glass", "etch"],
+  ["xfractor", "x-fractor"], ["diecut", "die-cut"],
+  ["prismatic", "prism"],
+]);
+const canonFamily = (t) => FAMILY_ALIASES.get(lower(t)) ?? lower(t);
+
+/**
+ * The finish-family tokens a TITLE names, canonicalised and de-duplicated.
+ *
+ * The title's own words only -- no corpus lookup, because the question is not
+ * "is this a parallel of this product" (the checklist answers that) but "did
+ * the seller write a family word that the derivation threw away". A word the
+ * seller wrote is evidence whether or not our corpus carries the product.
+ *
+ * The product's OWN setKey words are removed, for the same reason they are in
+ * `isFinishToken`: "2025 Topps Chrome Sapphire ..." names the SET on a
+ * `topps-chrome-sapphire` card, and demanding the derived parallel carry
+ * "sapphire" would refuse every write on that product.
+ */
+function titleFinishFamilyTokens(title, setKey) {
+  const own = new Set(setKeyTokens(setKey ?? ""));
+  const out = new Set();
+  for (const w of titleWords(title)) {
+    const cands = w.includes("-") ? [w, ...w.split("-")] : [w];
+    for (const c of cands) {
+      if (!c || own.has(c)) continue;
+      if (FINISH_FAMILY_SET.has(c)) out.add(canonFamily(c));
+    }
+  }
+  return [...out];
+}
+
+/** The family tokens a derived PARALLEL NAME carries, canonicalised. */
+function parallelFinishFamilyTokens(parallel) {
+  const out = new Set();
+  for (const w of titleWords(parallel)) {
+    const cands = w.includes("-") ? [w, ...w.split("-")] : [w];
+    for (const c of cands) if (FINISH_FAMILY_SET.has(c)) out.add(canonFamily(c));
+  }
+  return [...out];
+}
+
+/**
+ * The family tokens the TITLE names that the DERIVED PARALLEL does not carry.
+ * Empty means the derivation kept every family the title stated -- which is
+ * the only shape allowed to write.
+ */
+function familyTokensDroppedByDerivation(title, parallel, setKey) {
+  const have = new Set(parallelFinishFamilyTokens(parallel));
+  return titleFinishFamilyTokens(title, setKey).filter((t) => !have.has(t));
+}
+
+/**
+ * The checklist parallel NAMES this product lists, lowercased and space-
+ * normalised. The corpus stores TOKENS per product for the vocabulary; the
+ * family test needs whole NAMES, so the corpus build now keeps both and this
+ * is the reader.
+ */
+function checklistParallelNamesFor(year, setKey) {
+  const c = corpus();
+  return c.namesByProduct.get(productKey(year, setKey)) ?? null;
+}
+
+/**
+ * Does this product's checklist list a parallel whose name carries EVERY
+ * family token the title names? Returns that name (the most specific match)
+ * or null.
+ *
+ * This is the positive half of leak 1's rule: when the checklist lists the
+ * title's exact family for this (year, setKey), the derived parallel MUST be
+ * that row -- so the classifier can name the row the write should have gone
+ * to, not merely refuse.
+ */
+function checklistParallelForFamily(title, year, setKey) {
+  const fams = titleFinishFamilyTokens(title, setKey);
+  if (!fams.length) return null;
+  const names = checklistParallelNamesFor(year, setKey);
+  if (!names) return null;
+  const words = new Set(titleWords(title));
+  const colourSet = new Set(FINISH_COLOR_TOKENS.map(lower));
+  let best = null;
+  for (const n of names) {
+    const nf = new Set(parallelFinishFamilyTokens(n));
+    if (!fams.every((f) => nf.has(f))) continue;
+    // Every COLOUR the checklist name states must also be in the title, or
+    // "Black Wave Refractor" would be offered for a "Pink Wave" title.
+    const colours = titleWords(n).filter((w) => colourSet.has(w));
+    if (!colours.every((c) => words.has(c))) continue;
+    // THE SHORTEST MATCH, NOT THE LONGEST. Corpus names carry pack-size and
+    // channel noise ("Wave Refractor 1:14 Hobby, 1:24 Jumbo"), and the longest
+    // match is reliably the noisiest one. The row a write should have gone to
+    // is the parallel NAME; the shortest name carrying every family the title
+    // states is that name, and the noise is always a suffix on it.
+    if (!best || n.length < best.length) best = n;
+  }
+  return best;
+}
+
+// -- LOT / RANGE LISTINGS: a multi-card sale never mints a cardNumber ------
+//
+// CF-A-LOT-IS-NOT-A-CARD, at the classifier (audit gates 1 and 2, leaks 2+6).
+//
+// 23 IMPROVE lines in shards 0-15 and 117 more in shards 16-31 are one shape:
+// a title selling MANY cards, whose card-number RANGE the derivation read as
+// the range's FIRST number.
+//
+//   "Complete Set #1-726"                     -> cardNumber 1
+//   "#1-150 Pick Your Cards"                  -> cardNumber 1
+//   "Singles #1-251"                          -> cardNumber 1
+//   "#8-40 Insert"                            -> cardNumber 8
+//   "Lot 110 different #1-125"                -> cardNumber 1
+//   "Complete Set of 792 Cards with Frank Thomas #414" -> cardNumber 692
+//   "LOT OF THREE (3)"
+//
+// Each of those writes ONE lot's price into ONE card's pool. The FMV that pool
+// projects is then the price of a box, attributed to a single card -- and a
+// range's first number is not even a card the sale contained more of than any
+// other. Absent beats wrong: a lot title names no card, so it mints none.
+//
+// The parser's own `isMultiCardLot` is the sibling detector and covers the LOT
+// idioms (it is deliberately count-anchored so a surname "Lot" is not a lot).
+// It does NOT cover the two shapes that dominate these lines -- a card-number
+// RANGE, and the "you pick / pick your / singles" multi-listing vocabulary --
+// so this detector adds exactly those and the classifier consults BOTH.
+
+/** A card-number RANGE: `#1-726`, `# 8 - 40`, `#US1-US50`. Two card numbers
+ *  joined by a dash after a `#` is a span of cards, never one card. Hyphenated
+ *  card numbers are real (`CPA-JG`, `BCP-102`), so a range requires the SECOND
+ *  half to be numeric and STRICTLY GREATER than the first -- `BDC-1` and
+ *  `1-1` can never satisfy that, and a genuine span always does. */
+const CARD_NUMBER_RANGE_RE = /#\s*([a-z]{0,4})\s*(\d{1,4})\s*[-–—]\s*(?:[a-z]{0,4})\s*(\d{1,4})\b/i;
+
+function cardNumberRangeFromTitle(title) {
+  const m = String(title ?? "").match(CARD_NUMBER_RANGE_RE);
+  if (!m) return null;
+  const a = Number(m[2]), b = Number(m[3]);
+  if (!Number.isFinite(a) || !Number.isFinite(b) || b <= a) return null;
+  return { from: `${m[1] ?? ""}${a}`, to: b, quoted: m[0].trim() };
+}
+
+/** The multi-card VOCABULARY the parser's count-anchored lot lexicon does not
+ *  reach. Each idiom means "this listing is more than one card" on its own.
+ *
+ *  `singles` is here in its LOT sense only -- "Singles #1-251" is a range of
+ *  singles to choose from -- so it is required to sit beside a range or a
+ *  pick idiom, never counted alone (a "Set Break Single" is one card, and the
+ *  parser's detector already says so). */
+const LOT_VOCAB_RE = new RegExp([
+  String.raw`\bcomplete\s+set\b(?!\s*break\b)`,
+  String.raw`\bcomplete\s+base\s+set\b`,
+  String.raw`\bfull\s+set\b`,
+  String.raw`\byou\s+pick\b`,
+  String.raw`\bu\s+pick\b`,
+  String.raw`\bpick\s+your\b`,
+  String.raw`\bpick\s+a\s+card\b`,
+  String.raw`\byour\s+choice\b`,
+  String.raw`\bset\s+break\b(?!\s*single\b)`,
+  String.raw`\blot\s+of\s+\w+`,
+  String.raw`\blot\s+\d+`,
+  String.raw`\b\d+\s+different\b`,
+  String.raw`\bteam\s+set\b`,
+].join("|"), "i");
+
+/** The "singles" lot sense -- only beside a range or a pick idiom. */
+const SINGLES_RE = /\bsingles\b/i;
+
+/**
+ * Is this title a LOT or a RANGE listing -- a sale of more than one card?
+ *
+ * Returns { lot, reasons, range } so the classifier can quote WHY, and the
+ * report can carry a candidate for excludedFromFmv.
+ *
+ * `parserSaysLot` is the parser's own `isMultiCardLot` verdict, passed in
+ * rather than required here: this module is pure and must not depend on
+ * dist/. Two detectors, one decision, and neither is allowed to be the only
+ * one -- the count-anchored idioms live there, the range and pick vocabulary
+ * live here.
+ */
+function isLotOrRangeListing(title, parserSaysLot) {
+  const t = String(title ?? "");
+  const reasons = [];
+  // ONE CARD, SAID EXPLICITLY, SETTLES IT FIRST -- the same escape hatch the
+  // parser's detector opens, for the same reason: "Set Break Single" and
+  // "Single Card" name exactly one card whatever else the title says.
+  const singleSaid = /\bbreak\s+single\b|\bsingle\s+card\b/i.test(t);
+  const range = singleSaid ? null : cardNumberRangeFromTitle(t);
+  if (range) reasons.push(`card-number-range:${range.quoted}`);
+  if (!singleSaid) {
+    const m = t.match(LOT_VOCAB_RE);
+    if (m) reasons.push(`lot-vocabulary:${String(m[0]).trim().toLowerCase()}`);
+    if (SINGLES_RE.test(t) && (range || /\bpick\b/i.test(t))) reasons.push("lot-vocabulary:singles");
+    if (parserSaysLot === true) reasons.push("parser-isMultiCardLot");
+  }
+  return { lot: reasons.length > 0, reasons, range };
+}
+
+// -- NEAR-MISS FINISH SPELLINGS: a typo is still a finish ------------
+//
+// CF-ABSENT-BEATS-WRONG at the lexer (first audit gate, leak 3). Seven
+// BASE-EVICTION lines say "Refactor", "Refracor", "Refractpr". Each is a
+// GENUINE refractor whose title our vocabulary could not read, so
+// `titleNamesFinish` returned false, the eviction qualified, and the row was
+// written onto the BASE slug -- one card, two rows, a split pool.
+//
+// The fix is edit-distance tolerance, applied ON THE DISQUALIFYING SIDE ONLY.
+// A near-miss makes a title "name a finish" for the purpose of REFUSING an
+// eviction. It never mints a parallel, never names WHICH finish, and never
+// reaches the IMPROVE positive path -- a typo is evidence that we cannot read
+// the title, and the answer to that is to leave the row alone.
+//
+// The 7-character floor is what keeps it safe. Every 1-edit neighbourhood of a
+// short word is full of real other words ("gold"/"bold", "wave"/"cave"), and a
+// vocabulary that matched those would disqualify half the pool. At 7+ chars
+// the neighbourhoods are empty of English: refractor, superfractor, x-fractor,
+// prismatic, holofoil, sapphire.
+
+/** Finish words long enough that a 1-edit neighbour is a typo, not a word. */
+const NEAR_MISS_MIN_LEN = 7;
+
+/**
+ * Is the edit distance between `a` and `b` at most 1 -- counting an adjacent
+ * TRANSPOSITION as one edit? Sellers make all three ("refractpr" is a
+ * substitution, "refracor" a deletion, "refratcor" a transposition).
+ */
+function editDistanceAtMost1(a, b) {
+  if (a === b) return true;
+  const la = a.length, lb = b.length;
+  if (Math.abs(la - lb) > 1) return false;
+  if (la === lb) {
+    let diff = -1;
+    for (let i = 0; i < la; i++) {
+      if (a[i] === b[i]) continue;
+      if (diff >= 0) {
+        // a second mismatch is allowed ONLY as the far half of an adjacent
+        // transposition, and nothing may differ after it.
+        return diff === i - 1 && a[diff] === b[i] && a[i] === b[diff]
+          && a.slice(i + 1) === b.slice(i + 1);
+      }
+      diff = i;
+    }
+    return true;
+  }
+  // one insertion / deletion
+  const s1 = la < lb ? a : b, s2 = la < lb ? b : a;
+  let i = 0, j = 0, skipped = false;
+  while (i < s1.length && j < s2.length) {
+    if (s1[i] === s2[j]) { i++; j++; continue; }
+    if (skipped) return false;
+    skipped = true; j++;
+  }
+  return true;
+}
+
+/** The long finish words a near-miss is measured against. Built once. */
+let _nearMissWords = null;
+function nearMissVocabulary() {
+  if (_nearMissWords) return _nearMissWords;
+  const out = new Set();
+  for (const w of [...CORE_FINISH_TOKENS, ...HAND_SPELLINGS, ...FINISH_FAMILY_TOKENS]) {
+    const t = lower(w);
+    if (t.length >= NEAR_MISS_MIN_LEN) out.add(t);
+  }
+  _nearMissWords = [...out];
+  return _nearMissWords;
+}
+
+/**
+ * Does this title carry a NEAR-MISS spelling of a long finish word?
+ *
+ * DISQUALIFYING ONLY. Returns the {word, matched} it found so the refusal can
+ * quote it; the caller must never use `matched` as a parallel name.
+ */
+function titleNearMissesFinish(title, setKey) {
+  const own = new Set(setKeyTokens(setKey ?? ""));
+  const vocab = nearMissVocabulary();
+  const view = vocabularyFor(null, setKey ?? "");
+  for (const w of titleWords(title)) {
+    const cands = w.includes("-") ? [w, ...w.split("-")] : [w];
+    for (const c of cands) {
+      if (!c || c.length < NEAR_MISS_MIN_LEN || own.has(c)) continue;
+      // A WORD THE ORDINARY VOCABULARY ALREADY READS IS NOT A NEAR MISS.
+      // "Refractor" is one edit from "refractors", so without this a correct
+      // spelling reports as a typo -- harmless to the verdict (both mean the
+      // title names a finish) but a lie in the reason, and the pins read the
+      // reason. This predicate answers only "we could NOT read this word, and
+      // it is one edit from a word we could".
+      if (view.isFinishToken(c)) continue;
+      for (const v of vocab) {
+        // an EXACT hit is the ordinary vocabulary's job, not this one
+        if (c === v) continue;
+        // A WORD THAT MERELY EXTENDS OR TRUNCATES THE FINISH WORD IS NOT A
+        // TYPO (found by re-classifying slot 13, 2026-09-03).
+        //
+        //   "2025 Bowman Chrome Draft ... Auto #CPA-KC Diamondb"
+        //
+        // is "Diamondbacks", the TEAM, cut off by the census sample's 68-char
+        // title truncation -- and "diamondb" is one insertion from "diamond",
+        // which IS a finish word. Read as a typo it disqualified a genuine
+        // eviction: the guard would have refused to move a base auto off a
+        // refractor slug because the seller named the team.
+        //
+        // A real typo DIVERGES INSIDE the word -- refactor, refracor,
+        // refractpr, refrqctor all break in the middle and none of them is a
+        // prefix of "refractor" or has it as a prefix. A word that contains
+        // the vocabulary word as a leading or trailing run is a longer word
+        // that STARTS with it (Diamondbacks, Refractors' own plural) or a
+        // truncation of one, and neither is evidence of a misspelling.
+        //
+        // Directionally this is the SAFE narrowing: it can only cost a
+        // refusal we would have made, never admit an eviction the ordinary
+        // vocabulary already disqualifies -- "refractors" is read exactly by
+        // `isFinishToken` above and never reaches here.
+        if (c.startsWith(v) || v.startsWith(c)) continue;
+        if (editDistanceAtMost1(c, v)) return { word: c, matched: v };
+      }
+    }
+  }
+  return null;
+}
+
 // ── the corpus, loaded once ────────────────────────────────────────────────
 
 const escapeRe = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -293,6 +711,60 @@ function nameTokens(name) {
  */
 function buildVocabulary(corpusPath = CORPUS_PATH) {
   const byProduct = new Map();
+  /**
+   * The whole parallel NAMES per product, beside the tokens.
+   *
+   * `byProduct` holds TOKENS, which is what a word-at-a-time vocabulary test
+   * needs. The finish-family rule needs whole names -- "when the checklist
+   * lists the title's exact family for this (year, setKey), the derived
+   * parallel must be THAT row" -- and a set of tokens cannot say which row.
+   * Built in the same pass so the corpus is still read once.
+   */
+  const namesByProduct = new Map();
+  /**
+   * The PRINT RUNS this product's checklist gives its BASE row, if any.
+   *
+   * CF-NUMBERED-BASE-IS-CHECKLIST-DEFINED (Drew's ruling) is a claim about the
+   * CARD, and a card is a (name, print run) pair. `checklistListsParallel`
+   * cannot answer it -- it is a token-membership test, and "base" is a token of
+   * every product -- so the corpus's own `printRun` field is read here and the
+   * numbered-base guard asks THIS instead.
+   *
+   * Measured on the committed corpus 2026-09-03: 36,699 parallel rows, 27,009
+   * carrying a print run, and exactly ZERO whose NAME is bare "Base". Five rows
+   * begin with the word (Base Refractor /499, Base Chrome /699, Base Gold
+   * Sparkle Mosaic /24 ...) and every one of them is a NAMED PARALLEL of the
+   * base card, not a numbered base. So the honest answer today is that no
+   * product in the corpus defines a numbered base, and the guard refuses every
+   * one -- which is the ruling, applied. A future checklist that does list one
+   * lands here and the guard admits it without a code change.
+   */
+  const baseRunsByProduct = new Map();
+  /**
+   * THE PER-PRODUCT STOPWORD EXCEPTION (first audit gate, leak 4).
+   *
+   * CORPUS_STOPWORDS suppresses `america` UNCONDITIONALLY -- it was added with
+   * usa/world/american as a SPORT word ("USA Baseball", "Football Stars"), on
+   * the sound reasoning that a sport names which checklist a card belongs to
+   * and never how it is printed. But "2023 Donruss America #240" is a real
+   * Donruss insert/parallel: on THAT product the checklist itself lists
+   * `America` as a parallel name, and an unconditional stop reads a genuine
+   * parallel as silence and evicts the card into base.
+   *
+   * A stopword is a statement about a word's meaning IN GENERAL. The corpus is
+   * a statement about this product in particular, and the particular wins: any
+   * stopword that a (year, setKey)'s own checklist lists as a parallel NAME is
+   * un-stopped FOR THAT PRODUCT ONLY. `america` stays stopped on the 575 other
+   * products, and the same exception covers every other stopword the corpus
+   * proves out somewhere -- `national`, `series`, `star` -- without either list
+   * having to be edited again.
+   *
+   * The exception reads the checklist NAME, not the token stream: a word that
+   * merely appears INSIDE a longer name ("America's Pastime Red") is not the
+   * parallel, and admitting it would re-open the leak the stopword closed. The
+   * name must BE the word, alone.
+   */
+  const stopwordExceptions = new Map();
   const phrases = new Set(HAND_PHRASES.map(lower));
   const support = new Map();   // token -> how many distinct products use it
   let productCount = 0, nameCount = 0;
@@ -336,7 +808,32 @@ function buildVocabulary(corpusPath = CORPUS_PATH) {
           (w) => w.length >= MIN_TOKEN_LEN && !CORPUS_STOPWORDS.has(w) && !/^\d+$/.test(w),
         );
         if (norm.includes(" ") && norm.length <= 40 && carriesFinishWord) phrases.add(norm);
+        if (norm && norm.length <= 60) {
+          let names = namesByProduct.get(pk);
+          if (!names) { names = new Set(); namesByProduct.set(pk, names); }
+          names.add(norm);
+          // A SINGLE-WORD checklist parallel that the global stopword list
+          // suppresses is un-stopped for THIS product -- see the note above.
+          if (!norm.includes(" ") && CORPUS_STOPWORDS.has(norm) && STOPWORD_EXCEPTION_ELIGIBLE.has(norm)) {
+            let ex = stopwordExceptions.get(pk);
+            if (!ex) { ex = new Set(); stopwordExceptions.set(pk, ex); }
+            ex.add(norm);
+          }
+        }
         for (const t of nameTokens(sp)) { bucket.add(t); seenHere.add(t); }
+      }
+      // The print run belongs to the PARALLEL ROW, not to a spelling of it.
+      // Only a row whose name IS "Base" (or "Base Set" / "Base Card" -- the
+      // three ways a checklist heads the same section) can define a numbered
+      // base; "Base Refractor /499" is a Refractor.
+      {
+        const nm = lower(par?.name).replace(/[^a-z0-9]+/g, " ").trim();
+        const run = Number(par?.printRun);
+        if (BASE_ROW_NAMES.has(nm) && Number.isFinite(run) && run > 0) {
+          let runs = baseRunsByProduct.get(pk);
+          if (!runs) { runs = new Set(); baseRunsByProduct.set(pk, runs); }
+          runs.add(run);
+        }
       }
     }
     // support counts PRODUCTS, not names: a token repeated 300 times inside one
@@ -366,7 +863,8 @@ function buildVocabulary(corpusPath = CORPUS_PATH) {
   for (const c of CORE_FINISH_TOKENS) { global.add(lower(c)); adjudicated.add(lower(c)); }
 
   return {
-    global, byProduct, phrases, support, adjudicated, productCount, nameCount,
+    global, byProduct, namesByProduct, stopwordExceptions, baseRunsByProduct,
+    phrases, support, adjudicated, productCount, nameCount,
     phraseIndex: buildPhraseIndex(phrases),
   };
 }
@@ -461,7 +959,7 @@ function corpus() {
 }
 
 /** Reset the memoised corpus AND the per-product vocabulary cache. Tests only. */
-function _reset() { _corpus = null; _vocabCache.clear(); }
+function _reset() { _corpus = null; _vocabCache.clear(); _nearMissWords = null; }
 
 /**
  * Is this token the PRODUCT's own name on this card rather than a finish?
@@ -498,12 +996,24 @@ function vocabularyFor(year, setKey) {
   const c = corpus();
   const own = c.byProduct.get(pk) ?? null;
   const setWords = new Set(setKeyTokens(setKey));
+  // The stopwords THIS product's own checklist lists as parallel names, and so
+  // does not stop here (leak 4). Empty for all but a handful of products.
+  const unstopped = c.stopwordExceptions.get(pk) ?? null;
   const view = {
     productListed: !!own,
     productTokens: own ?? new Set(),
+    stopwordExceptions: unstopped ?? new Set(),
     isFinishToken(tok) {
       const t = lower(tok);
       if (!t || t.length < MIN_TOKEN_LEN) return false;
+      // A STOPWORD THIS PRODUCT'S CHECKLIST NAMES AS A PARALLEL IS NOT STOPPED
+      // HERE (leak 4). "2023 Donruss America #240" is a real Donruss parallel
+      // and `america` is a global stopword; the corpus for THAT product settles
+      // it, and every other product keeps the stop. Checked before the stopword
+      // test so the exception can actually reach it, and AFTER nothing else --
+      // the product-word suppression below still outranks it, because a word
+      // that is this product's own set name is its set name whatever else it is.
+      if (unstopped && unstopped.has(t)) return !setWords.has(t);
       if (CORPUS_STOPWORDS.has(t)) return false;
       // THE PRODUCT-WORD SUPPRESSION IS THE POINT, AND IT OUTRANKS EVERYTHING.
       //
@@ -557,16 +1067,45 @@ function titleStatesSerial(title) {
 }
 
 /**
+ * THE SERIAL TAIL ACCEPTS ANY NON-DIGIT BOUNDARY (second audit gate, leak 5).
+ *
+ * The tail used to be `(?=$|[\s)\],.])` -- end of string, whitespace, or one of
+ * four punctuation marks. eBay titles do not end there. Measured over the
+ * shards 16-31 IMPROVE sample, 168 of the 298 dirty lines are this ONE gap:
+ *
+ *   "... Blue Disco 1/25!"            the "!" rejects the match  -> serial null
+ *   "... Bowman Chrome #/99<fire><fire>"  an emoji rejects it    -> serial null
+ *   "... 100/100***BOOK"              the "*" rejects it         -> serial null
+ *
+ * A null serial defeats GUARD 2 entirely: the guard's whole job is "the title
+ * states a print run AND names a parallel the derivation dropped, so the run
+ * belongs to that parallel and not to a base card", and it never fires when
+ * the serial reads null. So a title that named a parallel AND a serial minted
+ * a NUMBERED BASE row -- the exact defect CF-NUMBERED-BASE-IS-CHECKLIST-DEFINED
+ * exists to stop, arriving through the lexer instead of the rule.
+ *
+ * The correct boundary is not a list of punctuation, it is "not another digit".
+ * `/250` followed by `0` would be `/2500` and a different number; `/250`
+ * followed by ANYTHING else -- a bang, a star, an emoji, a bracket, a letter --
+ * is still the serial 250. `\D` would reject a serial at end-of-string, so the
+ * class is spelled as end-or-non-digit. It cannot widen the MATCH SET in the
+ * dangerous direction: a longer digit run still binds greedily to \d{1,5}
+ * first, and the year guard (19xx/20xx denominators are dates, not runs) is
+ * unchanged and still applied by both callers.
+ */
+const SERIAL_TAIL = String.raw`(?=$|\D)`;
+
+/**
  * The print run the title states, or null. Used by the IMPROVE guard to tell a
  * fill the title SUPPORTS from one it does not.
  */
 function serialFromTitle(title) {
   const t = lower(title);
   const YEARISH = /^(19|20)\d{2}$/;
-  const numbered = t.match(/(?:^|[\s(\[#])(\d{1,5})\s*\/\s*(\d{1,5})(?=$|[\s)\],.])/);
+  const numbered = t.match(new RegExp(String.raw`(?:^|[\s(\[#])(\d{1,5})\s*\/\s*(\d{1,5})` + SERIAL_TAIL));
   if (numbered && !YEARISH.test(numbered[2])) return Number(numbered[2]);
   // bare `/N` and the `#/N` spelling -- `#` is a lead-in, not a digit holder.
-  const bare = t.match(/(?:^|[\s(\[]|#)\s*\/\s*(\d{1,5})(?=$|[\s)\],.])/);
+  const bare = t.match(new RegExp(String.raw`(?:^|[\s(\[]|#)\s*\/\s*(\d{1,5})` + SERIAL_TAIL));
   if (bare && !YEARISH.test(bare[1])) return Number(bare[1]);
   return null;
 }
@@ -639,6 +1178,28 @@ function checklistListsParallel(parallel, year, setKey) {
   return toks.every(inOwn);
 }
 
+/**
+ * DOES THIS PRODUCT'S CHECKLIST DEFINE A NUMBERED BASE CARD AT THIS PRINT RUN?
+ *
+ * CF-NUMBERED-BASE-IS-CHECKLIST-DEFINED (Drew's ruling), asked the way the
+ * ruling states it (second audit gate, leak 7). The guard it replaces asked
+ * `checklistListsParallel("Base", year, setKey)`, which is a TOKEN-membership
+ * test -- and `base` is a token of every product's checklist, so it answered
+ * true for every product and the refusal never fired. 13 IMPROVE lines in
+ * shards 16-31 minted a numbered base through that hole.
+ *
+ * A numbered base is a CARD: a Base row WITH that print run on it. The corpus
+ * carries `printRun` per parallel row, so the question is answerable directly.
+ * Absent the evidence, blank stays blank -- absent beats wrong.
+ */
+function checklistDefinesNumberedBase(year, setKey, printRun) {
+  const run = Number(printRun);
+  if (!Number.isFinite(run) || run <= 0) return false;
+  const c = corpus();
+  const runs = c.baseRunsByProduct.get(productKey(year, setKey));
+  return !!runs && runs.has(run);
+}
+
 /** Diagnostics for the census banner and the tests. */
 function vocabularyStats() {
   const c = corpus();
@@ -656,8 +1217,21 @@ function vocabularyStats() {
 module.exports = {
   CORPUS_PATH, HAND_SPELLINGS, HAND_PHRASES, HAND_LIST_CEILING,
   FINISH_COLOR_TOKENS, CORE_FINISH_TOKENS, CORPUS_STOPWORDS,
+  STOPWORD_EXCEPTION_ELIGIBLE,
   buildVocabulary, vocabularyFor, vocabularyStats, isProductWord, setKeyTokens,
   buildPhraseIndex, phraseIndexMatches,
   titleNamesFinish, titleStatesSerial, serialFromTitle, checklistListsParallel,
   productKey, nameTokens, titleWords, _reset,
+  // ---- the audit-gate leak fixes (2026-09-03) ----
+  // leak 1: the derived parallel must carry every finish family the title names
+  FINISH_FAMILY_TOKENS, FAMILY_ALIASES, SERIAL_TAIL,
+  titleFinishFamilyTokens, parallelFinishFamilyTokens,
+  familyTokensDroppedByDerivation, checklistParallelNamesFor,
+  checklistParallelForFamily,
+  // leaks 2 + 6: a lot or a range never mints a cardNumber
+  isLotOrRangeListing, cardNumberRangeFromTitle,
+  // leak 7: a numbered base is checklist-defined AT ITS PRINT RUN
+  BASE_ROW_NAMES, checklistDefinesNumberedBase,
+  // leak 3: a misspelled long finish word still DISQUALIFIES an eviction
+  NEAR_MISS_MIN_LEN, editDistanceAtMost1, titleNearMissesFinish, nearMissVocabulary,
 };

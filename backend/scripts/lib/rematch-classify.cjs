@@ -363,8 +363,37 @@ function baseEvictionEvidence({ row, stored, derived, storedSlug, baseDestSlug, 
   //    so `chrome` on a Topps Heritage Chrome card is the set's own name while
   //    `Tiffany` on a 1990 Bowman is a parallel the corpus (or the hand list
   //    beneath its 2020 floor) knows about.
+  const beYear = derived?.cardYear ?? stored?.cardYear ?? null;
+  const beSetKey = derived?.setKey ?? stored?.setKey ?? "";
   if (!title) fail.push("no-title");
-  else if (titleNamesFinish(title, { year: derived?.cardYear ?? stored?.cardYear ?? null, setKey: derived?.setKey ?? stored?.setKey ?? "" })) fail.push("title-names-a-finish");
+  else if (titleNamesFinish(title, { year: beYear, setKey: beSetKey })) fail.push("title-names-a-finish");
+  else {
+    // 3b. A MISSPELLED FINISH WORD IS STILL A FINISH WORD, ON THE DISQUALIFYING
+    //     SIDE (first audit gate, leak 3 -- 7 writable BASE-EVICTION lines).
+    //
+    //     "Refactor", "Refracor", "Refractpr". Each of those titles is a
+    //     GENUINE refractor that our vocabulary could not read, so
+    //     titleNamesFinish said false, the eviction qualified on all four
+    //     fields, and the row moved onto the BASE slug -- one card, two rows,
+    //     a split pool, which is precisely the defect the rematch exists to
+    //     end, arriving through a typo.
+    //
+    //     Edit distance 1 (substitutions, insertions, deletions and adjacent
+    //     transpositions) over finish words of 7+ characters. The length floor
+    //     is what makes it safe: at 4 letters every 1-edit neighbourhood is
+    //     full of ordinary English, at 7+ it is empty of it.
+    //
+    //     DISQUALIFYING ONLY, and that is a rule about this call site, not a
+    //     property of the predicate: a near miss says "we cannot read this
+    //     title", and the answer to an unreadable title is to leave the row
+    //     exactly where it is. It never mints a parallel and it is never
+    //     consulted on the IMPROVE positive path.
+    const near = VOCAB.titleNearMissesFinish(title, beSetKey);
+    if (near) {
+      ev.titleNearMiss = near;
+      fail.push(`title-near-misses-a-finish:${near.word}~${near.matched}`);
+    }
+  }
   // 4. somewhere checklist-backed to go
   if (!baseDestBacked) fail.push("no-checklist-backed-base-destination");
   // 4b. THE STORED PRINT RUN IS A FOURTH FIELD, AND IT VETOES. A base card is
@@ -568,7 +597,7 @@ function derivationCollapsesProduct(stored, derived) {
  * cards the checklist never listed ("Tie-Dye Prizm #/25" -> Base:/25,
  * "Disco /75" -> Base:/75).
  */
-function improveRefusals({ row, stored, derived, axes }) {
+function improveRefusals({ row, stored, derived, axes, parserSaysLot = false }) {
   const refusals = [];
   const title = str(row?.title);
   const year = derived?.cardYear ?? stored?.cardYear ?? null;
@@ -596,29 +625,145 @@ function improveRefusals({ row, stored, derived, axes }) {
     }
   }
 
-  // GUARD 2: never fill a print run onto a Base/blank parallel when the title
-  // carries a qualifier we do not recognise.
+  // GUARD 2: never fill a print run onto a Base/blank parallel unless the
+  // product's checklist actually defines a numbered base AT THAT PRINT RUN.
   //
-  // CF-NUMBERED-BASE-IS-CHECKLIST-DEFINED. A numbered base card exists only
-  // where the product's checklist says so. "Tie-Dye Prizm #/25" is a Tie-Dye
-  // Prizm numbered to 25, not a base card numbered to 25 -- and the parser
-  // that could not read "Tie-Dye Prizm" as a parallel is exactly the parser
-  // whose print run should not be trusted onto a base row.
+  // CF-NUMBERED-BASE-IS-CHECKLIST-DEFINED (Drew's ruling). A numbered base
+  // card exists only where the product's checklist says so. "Tie-Dye Prizm
+  // #/25" is a Tie-Dye Prizm numbered to 25, not a base card numbered to 25 --
+  // and the parser that could not read "Tie-Dye Prizm" as a parallel is
+  // exactly the parser whose print run should not be trusted onto a base row.
+  //
+  // TWO DEFECTS FIXED HERE, AND THEY WERE STACKED (second audit gate, leak 7
+  // -- 13 lines minted a numbered base the checklist never listed).
+  //
+  // 1. THE CHECKLIST BRANCH WAS UNREACHABLE. The two branches used to run
+  //    finish-word-first, and `titleNamesFinish` opens with
+  //    `if (titleStatesSerial(t)) return true` -- a title stating a print run
+  //    names a finish BY DEFINITION in that predicate. So on every path where
+  //    `serial !== null`, `namesAFinish` was also true, the first branch always
+  //    won, and the numbered-base refusal never fired at all.
+  //
+  // 2. ITS TEST COULD NOT HAVE REFUSED ANYWAY. It asked
+  //    `checklistListsParallel("Base", year, setKey)`, a TOKEN-membership test
+  //    -- and `base` is a token of every product's checklist. It answered true
+  //    for every product in the corpus.
+  //
+  // The ruling is a claim about a CARD, and a card is a (name, print run)
+  // pair, so the question is asked that way: does this product's checklist
+  // list a Base row carrying THIS run? `checklistDefinesNumberedBase` reads
+  // the corpus's own printRun field to answer it. Measured on the committed
+  // corpus: 36,699 parallel rows, 27,009 with a print run, and ZERO whose name
+  // is bare "Base" -- so today the guard refuses every numbered base, which is
+  // the ruling applied. A future checklist that lists one is admitted without
+  // a code change.
+  //
+  // The checklist test is asked FIRST because it is the stronger claim. When
+  // the checklist DOES define the numbered base, the older question -- "did
+  // the title also name a finish the derivation dropped?" -- is the right
+  // follow-up, and it is kept below, now reachable.
   if (axes.filled.includes("printRun")) {
     const destParallel = axisValue(derived, "parallel");
     if (axisIsBlank("parallel", destParallel)) {
       const serial = VOCAB.serialFromTitle(title);
       const namesAFinish = title ? titleNamesFinish(title, { year, setKey }) : false;
-      // The title states a print run AND names something finish-ish that the
-      // derivation failed to turn into a parallel -> the run belongs to that
-      // unnamed parallel, not to a base card.
-      if (serial !== null && namesAFinish) {
-        refusals.push(`improve-printrun-onto-base-with-unrecognized-qualifier:/${serial}`);
-      } else if (serial !== null && !VOCAB.checklistListsParallel("Base", year, setKey)) {
-        // No finish word read, but a numbered BASE still has to be
-        // checklist-defined. Absent that, blank stays blank.
+      if (serial !== null && !VOCAB.checklistDefinesNumberedBase(year, setKey, serial)) {
         refusals.push(`improve-numbered-base-not-checklist-defined:/${serial}`);
+      } else if (serial !== null && namesAFinish) {
+        // The run belongs to the parallel the title names and the derivation
+        // could not read, not to the base card that shares its number.
+        refusals.push(`improve-printrun-onto-base-with-unrecognized-qualifier:/${serial}`);
       }
+    }
+  }
+
+  // GUARD 4: THE DERIVED PARALLEL MUST CARRY EVERY FINISH FAMILY THE TITLE
+  // NAMES (first audit gate, leak 1 -- 22 writable IMPROVE lines).
+  //
+  // CF-A-NAMED-PARALLEL-IS-A-DISTINCT-CARD. GUARD 1 above refuses a parallel
+  // built ENTIRELY of product words; nothing compared the derived parallel
+  // against the finish family the TITLE names. So a derivation that read
+  // "BLACK WAVE /10" and answered "Black Refractor" passed every gate: the
+  // parallel is not a product word, the title does not say Base, the title
+  // DOES name a finish, and the destination is checklist-backed -- because
+  // 2025 topps-chrome football lists Black Refractor too. It lists Black WAVE
+  // Refractor as well. Those are two cards.
+  //
+  // Every leak of this shape is a SIBLING, not a demotion:
+  //   "BLACK WAVE /10"           -> Black Refractor
+  //   "Pink Wave"                -> Pink Refractor
+  //   "Yellow Vapor /75"         -> Yellow Refractor   (2023 bowman-chrome has
+  //                                                     NO plain Yellow Refractor)
+  //   "Aqua Equinox"             -> Aqua Refractor
+  //   "Black Etch SSP"           -> Black Refractor
+  //   "Etched In Glass Variation"-> Image Variation     (both listed separately)
+  //   "Shimmer Refractors"       -> Refractor
+  //   "Fuchsia Wave"             -> Fuchsia Refractor
+  //   "Black Ray Wave"           -> Black Refractor
+  //
+  // The axis diff cannot see it: `parallel` moved from blank to a real name,
+  // which is a FILL, which is an improvement by every test the classifier had.
+  // The evidence that it is not is in the title, and it is one word.
+  //
+  // THE RULE, stated as the audit stated it: if the title names a finish-family
+  // token the derived parallel LACKS, the write is refused. And when the
+  // product's own checklist lists the title's exact family, the refusal NAMES
+  // the row the write should have gone to -- a census is a diff before a write,
+  // and a refusal that says "and here is the right answer" is what a repair
+  // list is built from.
+  //
+  // Runs on ANY derived parallel, filled or not: the collapse is just as wrong
+  // when the row already carried a sibling's name, and the fix at the source
+  // (parseTitleIdentity's colour alternations) is a fix, not a guarantee.
+  {
+    const parallel = str(derived?.parallel);
+    if (title && parallel && !axisIsBlank("parallel", axisValue(derived, "parallel"))) {
+      const dropped = VOCAB.familyTokensDroppedByDerivation(title, parallel, setKey);
+      if (dropped.length) {
+        const listed = VOCAB.checklistParallelForFamily(title, year, setKey);
+        refusals.push(
+          `improve-title-names-a-finish-family-the-derivation-dropped:${dropped.join("+")}` +
+          `@${parallel}${listed ? `|checklist-lists:${listed}` : ""}`,
+        );
+      }
+    }
+  }
+
+  // GUARD 5: A LOT OR A RANGE LISTING NEVER MINTS A CARD NUMBER
+  // (audit gates 1 and 2, leaks 2 and 6 -- 23 + 117 writable IMPROVE lines).
+  //
+  // CF-A-LOT-IS-NOT-A-CARD. A title selling many cards states no single card's
+  // number, and the derivation read the FIRST number of a range as if it did:
+  //
+  //   "Complete Set #1-726"                 -> cardNumber 1
+  //   "#1-150 Pick Your Cards"              -> cardNumber 1
+  //   "Singles #1-251"                      -> cardNumber 1
+  //   "#8-40 Insert"                        -> cardNumber 8
+  //   "Lot 110 different #1-125"            -> cardNumber 1
+  //   "Complete Set of 792 Cards ... #414"  -> cardNumber 692
+  //   "LOT OF THREE (3)"
+  //
+  // Filing a lot's price on card #1 puts a whole box's price into one card's
+  // pool, and the FMV that pool projects is a number that card never sold for.
+  // The first number of a range is not even the most-represented card in the
+  // sale -- it is an artifact of how the seller wrote the span.
+  //
+  // The refusal is on the cardNumber FILL specifically, because that is the
+  // axis a lot title corrupts. The other axes a lot title fills (year, setKey,
+  // sport) are read off product words and are as right as any other title's --
+  // but a row whose cardNumber came from a range is not improvable at all
+  // while the range is what named it, so the refusal is unconditional once the
+  // title is a lot and the derivation filled or changed the number.
+  //
+  // The row is ALSO reported as an excludedFromFmv candidate: a multi-card
+  // sale in a single card's pool is wrong wherever it sits, and refusing to
+  // MOVE it does not make it right where it is. That is Drew's call, so the
+  // classifier flags and the census counts -- it never sets the field.
+  {
+    const lot = VOCAB.isLotOrRangeListing(title, parserSaysLot === true);
+    if (lot.lot) {
+      const touchesNumber = axes.filled.includes("cardNumber") || axes.changed.includes("cardNumber");
+      if (touchesNumber) refusals.push(`improve-lot-or-range-listing:${lot.reasons.join(",")}`);
     }
   }
 
@@ -668,6 +813,14 @@ function diffAxes(stored, derived) {
 function classifyRow({
   row, stored, derived, checklistBacked = false, derivationReasons = [],
   storedSlug = null, baseDestSlug = null, baseDestBacked = false,
+  // The PARSER'S own multi-card-lot verdict (`isMultiCardLot` from
+  // parseTitleIdentity). Passed IN rather than imported: this module is pure
+  // and must not require dist/. Two detectors, one decision -- the
+  // count-anchored lot idioms live in the parser, the card-number range and
+  // the pick/singles vocabulary live in rematch-finish-vocab.cjs, and GUARD 5
+  // refuses on either. A caller that cannot supply it loses only the idioms
+  // the parser owns; the range half still fires.
+  parserSaysLot = false,
 }) {
   const prov = provenanceTier(row);
 
@@ -845,7 +998,7 @@ function classifyRow({
   // onto base rows. A refusal keeps the CLASS -- the census must still count
   // the shape, and Drew must be able to read what was refused and why -- and
   // takes `writable` to false, the same way the provenance tier does.
-  const refusals = improveRefusals({ row, stored, derived, axes });
+  const refusals = improveRefusals({ row, stored, derived, axes, parserSaysLot });
 
   // A FLAGGED FAMILY COLLISION IS A REFUSAL LIKE THE OTHER THREE.
   //
@@ -887,6 +1040,117 @@ function isPhantomGradeArtifact(stored, derived, axes) {
   if (gradeToken(derived) === "RAW") return false;          // derived must claim a grade
   const set = `${lower(stored?.setKey)} ${lower(derived?.setKey)}`;
   return /pristine/.test(set);
+}
+
+// -- THE APPLY CLASS SCOPE (audit gate item 8) -----------------------------
+//
+// CF-A-CENSUS-IS-A-DIFF-BEFORE-A-WRITE, applied to the classes separately.
+//
+// The second audit gate measured the two writable classes and they came back
+// UNEQUAL: BASE-EVICTION is clean corpus-wide (0 bad in 1,236 audited lines
+// over all 16 shards -- Tiffany, Desert Shield, Rapture, Press Proof, Members
+// Only, Embossed and Mahogany all resolve), while IMPROVE is dirty at 4.9%
+// (298 of 6,106). Before this, `MODE=apply-improve` wrote BOTH: one verdict
+// gated two populations, so the class that earned its apply could not have it
+// without dragging along the class that had not.
+//
+// So the apply takes a CLASS SCOPE. `base-eviction` alone, `improve` alone, or
+// both -- and the scope is a REFUSAL, not a filter on a report: a candidate of
+// an unarmed class is never queued and never written, and the banner says
+// which classes are armed before a single row is read.
+//
+// NO NEW WORKFLOW INPUT. GitHub caps workflow_dispatch at 25 inputs and 24 are
+// used, so the scope rides the existing free-form `scope` input, which the
+// backfill runner already exports as SCOPE. That input's documented default is
+// "refractor" and it is INHERITED rather than chosen (its own description says
+// so), which is why an unrecognised value is not silently treated as "both":
+// an inherited default must not arm a write. The parse below maps the value to
+// classes and reports how it read it, and the runner refuses an apply it
+// cannot read.
+
+/** The classes an apply may be scoped to. */
+const APPLY_CLASSES = { IMPROVE, BASE_EVICTION };
+
+/** Spellings of each class a dispatch may use. Deliberately generous on
+ *  punctuation (base-eviction / base_eviction / baseeviction) and deliberately
+ *  NOT generous on meaning: nothing here means "both" except the words that
+ *  say both. */
+const APPLY_SCOPE_ALIASES = new Map([
+  ["improve", [IMPROVE]],
+  ["improves", [IMPROVE]],
+  ["improve-only", [IMPROVE]],
+  ["base-eviction", [BASE_EVICTION]],
+  ["baseeviction", [BASE_EVICTION]],
+  ["base-evictions", [BASE_EVICTION]],
+  ["eviction", [BASE_EVICTION]],
+  ["evictions", [BASE_EVICTION]],
+  ["base-eviction-only", [BASE_EVICTION]],
+  ["both", [IMPROVE, BASE_EVICTION]],
+  ["all", [IMPROVE, BASE_EVICTION]],
+  ["all-classes", [IMPROVE, BASE_EVICTION]],
+]);
+
+/**
+ * Parse a dispatch `scope` value into the set of classes an apply may write.
+ *
+ * Returns { classes, ok, reason, raw }. `ok` false means the value named no
+ * class the apply understands -- including the runner-wide inherited default
+ * "refractor" and the empty string. The caller REFUSES on !ok rather than
+ * defaulting: a scope that arms a write has to have been asked for.
+ *
+ * A comma list arms the union ("improve,base-eviction"), so a single dispatch
+ * can still do both by naming both.
+ */
+function parseApplyScope(raw) {
+  const v = lower(raw).replace(/[_\s]+/g, "-");
+  const out = { classes: new Set(), ok: false, reason: "", raw: str(raw) };
+  if (!v) { out.reason = "scope is empty -- an apply must name the class it writes"; return out; }
+  const parts = v.split(",").map((x) => x.trim()).filter(Boolean);
+  const unknown = [];
+  for (const part of parts) {
+    const hit = APPLY_SCOPE_ALIASES.get(part);
+    if (hit) for (const k of hit) out.classes.add(k);
+    else unknown.push(part);
+  }
+  if (!out.classes.size) {
+    out.reason = `scope ${JSON.stringify(str(raw))} names no apply class ` +
+      `(expected one of: improve, base-eviction, both)`;
+    return out;
+  }
+  if (unknown.length) {
+    // A scope that is PART understood is not understood. Half a scope is how a
+    // typo arms a class the dispatcher did not mean to arm.
+    out.classes.clear();
+    out.reason = `scope ${JSON.stringify(str(raw))} carries unrecognised token(s) ${unknown.join(",")}`;
+    return out;
+  }
+  out.ok = true;
+  out.reason = `armed: ${[...out.classes].join(" + ")}`;
+  return out;
+}
+
+/**
+ * Is this classified row writable UNDER THIS SCOPE?
+ *
+ * The conjunction of the row's own `writable` (every gate the classifier
+ * applies) and the scope. Both halves are required, and this function is the
+ * ONLY place the two are combined -- so a caller cannot arm a class by reading
+ * `writable` directly and forgetting the scope.
+ */
+function writableUnderScope(result, classes) {
+  if (!result?.writable) return false;
+  const kind = applyKindOf(result);
+  if (!kind) return false;
+  return !!classes && classes.has(kind);
+}
+
+/** Which apply class a classified row belongs to, or null. IMPROVE by class,
+ *  BASE-EVICTION by subclass; nothing else is ever an apply candidate. */
+function applyKindOf(result) {
+  if (!result) return null;
+  if (result.klass === IMPROVE) return IMPROVE;
+  if (result.subclass === BASE_EVICTION) return BASE_EVICTION;
+  return null;
 }
 
 /** The defect axis a row contributes to the banner's per-class breakdown.
@@ -931,5 +1195,8 @@ module.exports = {
   // directly and the mutation check can revert them one at a time.
   EVICTION_MOVABLE_AXES, DISTINCT_PRODUCT_SETKEYS,
   storedPrintRunNamesALimitedParallel, derivationCollapsesProduct, improveRefusals,
+  // The apply class scope (audit gate item 8) -- BASE-EVICTION is clean
+  // corpus-wide while IMPROVE is not, so the apply is scopable to a class.
+  APPLY_CLASSES, APPLY_SCOPE_ALIASES, parseApplyScope, applyKindOf, writableUnderScope,
   VOCAB,
 };
