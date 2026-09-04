@@ -3,13 +3,30 @@ name: TCA Portfolio Priority Comp Pull
 # CF-PORTFOLIO-PRIORITY-PULL (Drew, 2026-08-04). Prioritize TCA
 # /sales quota on cards users actually own. Walks portfolios,
 # extracts (player, year) tuples, pulls TCA for each — all grades,
-# raw, all parallels. Runs at 00:00 UTC (right at quota reset) so
-# these targeted queries hit before the broad firehose burns the
-# remaining quota at 00:05 UTC.
+# raw, all parallels.
+#
+# CF-TCA-QUOTA-WINDOW (Drew, 2026-09-04). Moved 00:00 UTC → 21:00 UTC.
+#
+# The original 00:00 slot was reasoned as "right at quota reset, so the
+# targeted queries hit before the broad firehose burns the rest at 00:05".
+# It does the opposite. Both jobs draw on the SAME 200K/day TCA /sales cap,
+# and this one is given a 15-minute wall-clock budget — so it is still
+# running, still pulling, when the firehose's 00:05 reset-window run starts.
+# The firehose then arrives to a budget this job is actively draining, which
+# is exactly the "something else is draining the 200K/day cap before this
+# cron runs" case its own quota-visibility guard was written to report.
+#
+# 21:00 UTC gives the two jobs disjoint windows: this run finishes ~21:15,
+# three hours of slack before the 00:00 reset, and the firehose opens the
+# fresh day's cap alone at 00:05. Nothing downstream keys on the old time —
+# no workflow, script, doc or runbook referenced it (verified 2026-09-04);
+# the pull is cursor-free and idempotent, so the hour is a scheduling
+# choice only.
 
 on:
   schedule:
-    - cron: '0 0 * * *'
+    # 21:00 UTC — clear of the 00:00 TCA quota reset and the 00:05 firehose.
+    - cron: '0 21 * * *'
   workflow_dispatch:
     inputs:
       apply:
