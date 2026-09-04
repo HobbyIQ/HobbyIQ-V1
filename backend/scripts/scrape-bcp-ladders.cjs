@@ -115,6 +115,56 @@ function section(html, id, level) {
   return m ? m[0] : "";
 }
 
+/**
+ * CF-THE-CHECKLIST-HEADING-IS-A-BASE-SET (2026-09-04).
+ *
+ * Run 33852199385 verdicted six 1990 pages "bcp scrape produced no CSV", and
+ * #1729 classified that message as a PARSER GAP rather than an empty page
+ * because the probe found the rows were there all along. This is that gap.
+ *
+ * Every BCP page carries an `<h1 id="Checklist">`. On a page with parallels the
+ * cards live one level down, under an `<h2 id="Base_Set">`, and `section(html,
+ * "Base_Set", 2)` reads them. The 1990 boxed and retail sets have no parallels
+ * and no such subheading -- their cards sit DIRECTLY under the h1:
+ *
+ *   1990_Baseball_Wit    <h1 Checklist> <h2 Base_Set> 109 cards   <- read
+ *   1990_Bazooka         <h1 Checklist> 22 cards                  <- missed
+ *
+ * `parseCards` handles both bodies identically; only the slice was missing. It
+ * cannot go through `section(html, "Checklist", 1)` because that builds the
+ * character range `<h[2-1] id=` -- an inverted range -- so the h1 boundary is
+ * its own expression: end at the next h1, or at the page chrome.
+ *
+ * STRICTLY A FALLBACK, and the ordering is the safety property. `Base_Set` is
+ * still read first and still wins whenever it is present, so every page that
+ * parsed before parses identically -- on 1990_Baseball_Wit both slices yield
+ * the same 109 cards. Only a page that yielded ZERO base cards consults this,
+ * which is exactly the population that used to be refused.
+ */
+function checklistSection(html) {
+  const re = new RegExp(`<h1 id="Checklist"[\\s\\S]*?(?=<h1 id=|${PAGE_CHROME}|$)`);
+  const m = html.match(re);
+  return m ? m[0] : "";
+}
+
+/**
+ * THE page's base cards, and where they came from. `Base_Set` first, the h1
+ * Checklist body only if that yielded nothing.
+ *
+ * This is a function rather than four lines inline at the call site so the
+ * ORDER is a testable object: a pin that re-implemented the precedence in the
+ * test would still pass with the fallback deleted from the scraper, which is
+ * no pin at all.
+ */
+function baseCards(html) {
+  const cards = parseCards(section(html, "Base_Set", 2));
+  if (cards.length) return { cards, viaChecklistHeading: false };
+  const viaChecklist = parseCards(checklistSection(html));
+  return viaChecklist.length
+    ? { cards: viaChecklist, viaChecklistHeading: true }
+    : { cards: [], viaChecklistHeading: false };
+}
+
 /** "108" / "US150" / "BD-72" -> a card number; "Juan Soto" is not. */
 const CARD_NUM = /^([A-Z]{0,4}-?\d+[a-z]?|[A-Z0-9]{1,6}-[A-Z0-9]{1,6})$/i;
 /**
@@ -1401,9 +1451,11 @@ async function main(opts = {}) {
     const year = Number((title.match(/^(\d{4})/) || [])[1]);
     const setName = title.replace(/_/g, " ").replace(/^\d{4} /, "");
     const paperSetKey = normalizeSetKeyLocal(setName);
-    const base = section(html, "Base_Set", 2);
     const par = section(html, "Parallels", 2);
-    const cards = parseCards(base);
+    // Base_Set wins wherever it exists; the h1 Checklist body is consulted only
+    // when it yielded nothing, so no page that parsed before changes. See
+    // CF-THE-CHECKLIST-HEADING-IS-A-BASE-SET on checklistSection.
+    const { cards, viaChecklistHeading: baseFromChecklistHeading } = baseCards(html);
     const players = new Set(cards.map((c) => c.player).filter(isPersonName).map(foldName));
     // CF-THE-H3-IS-A-PRODUCT-BOUNDARY: one ladder PER PRODUCT, not one flat
     // ladder cross-joined over the paper cards.
@@ -1414,7 +1466,15 @@ async function main(opts = {}) {
     const scopes = parseScopedLadders(par, { html, setName, setKey: paperSetKey, playerNames: players, qualify, subsetRuns });
     if (!cards.length) { noCards++; console.log(`  ${title}: 0 base cards — layout not understood, SKIPPED (not emitted)`); continue; }
     const ladderScopes = scopes.filter((s) => s.rungs.length);
-    if (!ladderScopes.length) { noLadder++; console.log(`  ${title}: base ok (${cards.length}) but 0 rungs — nothing new to add`); continue; }
+    if (!ladderScopes.length) {
+      noLadder++;
+      // Naming the h1 fallback here is the whole audit trail for it: the page
+      // used to be refused as a layout gap, and this line is what says it is
+      // now READ and merely has nothing further to add.
+      const via = baseFromChecklistHeading ? ` [base read from the h1 Checklist heading]` : "";
+      console.log(`  ${title}: base ok (${cards.length}) but 0 rungs — nothing new to add${via}`);
+      continue;
+    }
 
     // The sport is part of the product key, so it is part of the IDENTITY of
     // every file staged here -- not decoration. It comes from the run input.
@@ -1641,6 +1701,11 @@ async function main(opts = {}) {
 module.exports = {
   main, normalizeSport,
   parseCards, parseLadder, parseScopedLadders, section,
+  // CF-THE-CHECKLIST-HEADING-IS-A-BASE-SET: the h1 fallback slice and the
+  // precedence that uses it, pinned against the four live 1990 pages that used
+  // to be refused. `baseCards` is what the page loop calls, so deleting the
+  // fallback turns its pins red.
+  checklistSection, baseCards,
   // CF-A-SECTION-CLASS-IS-A-CARD-TYPE: the typed-section reader and the
   // classification table the pins drive directly.
   parseInserts, parseTypedSection, parseTypedSections, parseTypedCards, SECTION_CLASSES, platePrintRun,

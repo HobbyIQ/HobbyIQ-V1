@@ -59,6 +59,11 @@ export interface HobbyIqCardIdComponents {
   /** CF-PLAYER-IS-THE-NUMBER. Required ONLY for genuinely unnumbered cards.
    *  See UNNUMBERED_CARD_NUMBER below for why. */
   playerName?: string | null;
+  /** CF-UNPARSED-IS-NOT-UNNUMBERED. The caller has a CHECKLIST that lists this
+   *  card with no number, so a blank cardNumber is an ANSWER and the
+   *  player-as-the-number shape is correct. Vendor paths never set this: for
+   *  them a blank cardNumber is a parse failure and the identity is refused. */
+  unnumberedByChecklist?: boolean;
 }
 
 /**
@@ -110,10 +115,49 @@ const UNNUMBERED_CARD_NUMBER: ReadonlySet<string> = new Set([
   "nno", "no-number", "nonumber", "n-a", "na", "none", "unnumbered",
 ]);
 
-/** True when the vendor said "this card has no number". */
+/**
+ * CF-UNPARSED-IS-NOT-UNNUMBERED (Drew, 2026-09-04: "blank means UNKNOWN,
+ * never a value").
+ *
+ * These two facts were one function and they are opposites:
+ *
+ *   UNNUMBERED  the source SAYS the card has no number -- a vendor writing
+ *               `nno`, a checklist listing a card with no number column. That
+ *               is an ANSWER, and CF-PLAYER-IS-THE-NUMBER encodes it as
+ *               `player-<name>`.
+ *   UNPARSED    nothing was found. No vendor field, no `#` in the title,
+ *               nothing the parser could read. That is the ABSENCE of an
+ *               answer, and it must produce NO identity at all.
+ *
+ * The old `isUnnumberedCardNumber` returned true on `!s` -- an empty string --
+ * so a PARSE FAILURE was read as "this card has no number" and fell straight
+ * into the pseudo-number shape. A 1987 Topps Traded Tiffany Maddux PSA 10
+ * whose title states `#70T` was filed at
+ * `hiq:baseball:1987:topps:player-todd-worrell:base:no-auto` -- a card number
+ * the title spelled out, thrown away, and replaced with a player the VENDOR
+ * mis-attributed. Two wrongs, and the first one is what let the second land:
+ * absence beats wrong, so a row the parser could not read must stay unkeyed
+ * and be re-derived later, never minted onto a pseudo-number.
+ *
+ * 89,138 pool rows carry the `player-` shape. The census (scripts/
+ * census-player-pseudo-number.cjs) is what says which of them were the
+ * genuine article and which were this defect.
+ */
+const UNPARSED_SENTINELS: ReadonlySet<string> = new Set(["null", "undefined"]);
+
+/** True when the source SAID the card has no number (`nno`, `unnumbered`, ...).
+ *  An empty/absent cardNumber is NOT this -- see isUnparsedCardNumber. */
 export function isUnnumberedCardNumber(raw: string | null | undefined): boolean {
   const s = slugify(String(raw ?? ""));
-  return !s || UNNUMBERED_CARD_NUMBER.has(s);
+  if (!s) return false;                      // absence is not an answer
+  return UNNUMBERED_CARD_NUMBER.has(s);
+}
+
+/** True when nothing readable was supplied: blank, whitespace, or a stringified
+ *  null/undefined a vendor feed wrote literally. The identity is UNDERIVABLE. */
+export function isUnparsedCardNumber(raw: string | null | undefined): boolean {
+  const s = slugify(String(raw ?? ""));
+  return !s || UNPARSED_SENTINELS.has(s);
 }
 
 /** The cardNumber segment for an unnumbered card, or null when there is no
@@ -1648,9 +1692,32 @@ export function computeHobbyIqCardId(components: HobbyIqCardIdComponents): strin
   // CF-PLAYER-IS-THE-NUMBER: an unnumbered card is identified by its player,
   // never by the shared literal "nno". Falls back to the plain normalized form
   // when there is no player, so slugGuard is the one place that refuses.
-  const cardNumber = isUnnumberedCardNumber(components.cardNumber)
+  //
+  // CF-UNPARSED-IS-NOT-UNNUMBERED (Drew, 2026-09-04). The pseudo-number is
+  // reachable ONLY from a source that SAID the card has no number -- an
+  // explicit `nno`/`unnumbered` marker, or a caller asserting
+  // `unnumberedByChecklist` because a published checklist lists the card with
+  // no number. A cardNumber that is merely BLANK is a parse failure, and this
+  // function refuses it outright rather than minting an identity out of a
+  // player name. Refusing here (rather than returning a malformed `::` slug)
+  // is what makes every call site fail the same way: the three ingest paths
+  // already wrap this in try/catch and skip, and deriveHobbyIqSlug's guard
+  // reports `cardnumber-unparsed` before it ever gets here.
+  const unnumbered = isUnnumberedCardNumber(components.cardNumber)
+    || (components.unnumberedByChecklist === true && isUnparsedCardNumber(components.cardNumber));
+  if (!unnumbered && isUnparsedCardNumber(components.cardNumber)) {
+    throw new Error("hobbyiq-cardid: cardNumber is unparsed — identity is UNDERIVABLE (CF-UNPARSED-IS-NOT-UNNUMBERED)");
+  }
+  const cardNumber = unnumbered
     ? (unnumberedCardSegment(components.playerName) ?? normalizeCardNumber(components.cardNumber))
     : normalizeCardNumber(components.cardNumber);
+  // An unnumbered card with no player to name it has no identity either. The
+  // old code let `normalizeCardNumber("nno")` through as the literal `nno`,
+  // which is the shared-slug collapse CF-PLAYER-IS-THE-NUMBER was written to
+  // end (395 players, one pool, $3.49 to $103,700).
+  if (unnumbered && !cardNumber.startsWith("player-")) {
+    throw new Error("hobbyiq-cardid: unnumbered card has no player to identify it — identity is UNDERIVABLE");
+  }
   // CF-CHROME-PREFIX-OVERRIDE-NARROW (Drew, 2026-08-10). Cards with
   // BCP-/CPA-/BDC-/TCPA-/CRA- cardNumbers get upgraded from bare to
   // chrome family. See CHROME_PREFIX_OVERRIDES for the rule table +

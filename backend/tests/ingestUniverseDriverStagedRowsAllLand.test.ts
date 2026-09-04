@@ -159,8 +159,7 @@ describe("a product with no print runs is not PARTIAL", () => {
     // of this expression the same way the print-run half already was. Both
     // halves are pinned so neither can quietly lose its guard.
     expect(src).toMatch(/const ladderExpected = !ladderlessByEra\(lane, entry\);/);
-    expect(src).toMatch(/const incomplete = \(ladderExpected && gate\.stats\.ladder === 0\)\s*
-\s*\|\| \(printRunsExpected && gate\.stats\.withPrintRun === 0\);/);
+    expect(src).toMatch(/const incomplete = \(ladderExpected && gate\.stats\.ladder === 0\)\s*\|\| \(printRunsExpected && gate\.stats\.withPrintRun === 0\);/);
   });
 
   it("the scraper this lane runs still writes no print run — the premise of the exception", () => {

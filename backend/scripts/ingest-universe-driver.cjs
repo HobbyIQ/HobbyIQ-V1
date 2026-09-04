@@ -206,6 +206,35 @@ const isPersonName = (v) => {
 const EXPLODED_PAR_MAX = Number(process.env.EXPLODED_PAR_MAX || 150);
 const EXPLODED_NUM_MAX = Number(process.env.EXPLODED_NUM_MAX || 2000);
 
+/** The floor under the cross-join signature. Below two rungs, or with no more
+ *  cards than rungs, "every card carries every rung" says nothing: a one-rung
+ *  set is dense by definition (the Tiffany shape), and a handful of cards
+ *  against a handful of rungs is arithmetic noise, not the 11.49M-row spine. */
+const CARTESIAN_MIN_RUNGS = 2;
+const CARTESIAN_MIN_CARDS = 4;
+
+/**
+ * Does this CSV's sidecar manifest attest that its parallel column is a real
+ * ladder read off a checklist?
+ *
+ * Every converter that parses a published ladder stamps
+ * `parallelColumnAuthoritative: true` beside its CSV -- the same flag
+ * ingest-scraped-checklist.cjs reads to take the rung from the column instead
+ * of re-deriving one from the category slug. A file carrying it is claiming
+ * its ladder is the checklist's own and COMPLETE, which is exactly the shape
+ * that is legitimately dense.
+ *
+ * Absence is the safe answer: a missing, unreadable or unflagged manifest
+ * means the file is unattested and gets the strict rule. This never throws --
+ * a gate that crashes on a malformed sidecar refuses nothing.
+ */
+function ladderIsAttested(csvPath) {
+  try {
+    const m = JSON.parse(fs.readFileSync(String(csvPath).replace(/\.csv$/i, ".manifest.json"), "utf8"));
+    return m?.parallelColumnAuthoritative === true;
+  } catch { return false; }
+}
+
 /**
  * CF-A-PRODUCT-WITH-NO-PRINT-RUNS-IS-NOT-PARTIAL (2026-09-04).
  *
@@ -425,13 +454,19 @@ function gateStagedCsv(csvPath) {
   }
 
   // CROSS-JOIN ARITHMETIC, per category -- the 11.49M-row graveyard.
+  const ladderAttested = ladderIsAttested(csvPath);
   const byCat = new Map();
   for (const r of rows) {
     const c = String(r.category || "base");
     if (!byCat.has(c)) byCat.set(c, { pars: new Set(), nums: new Set(), rows: 0, ladderRows: 0 });
     const g = byCat.get(c);
-    g.pars.add(r.parallel); g.nums.add(r.cardNumber); g.rows++;
-    if (r.parallel) g.ladderRows++;
+    // A literal "Base" is a base card, not a rung -- the same reading
+    // isBaseParallel applies above. Counting it as a rung turns 1990 Bowman's
+    // 529 x {Base, Tiffany} into a 2-rung product and reads a correct
+    // two-spelling checklist as a cartesian (CF-THE-LITERAL-BASE-IS-A-BASE-CARD).
+    const isBase = isBaseParallel(r.parallel);
+    g.pars.add(isBase ? "" : r.parallel); g.nums.add(r.cardNumber); g.rows++;
+    if (!isBase) g.ladderRows++;
   }
   stats.categories = byCat.size;
   for (const [c, g] of byCat) {
@@ -451,24 +486,54 @@ function gateStagedCsv(csvPath) {
     // The 11.49M-row graveyard was cards × PLAYERS, not cards × rungs, and the
     // two are told apart by WHAT is in the parallel column — which the
     // players-as-parallels and card-line-as-rung guards above already decide,
-    // per row, on this file's own roster. What is left for arithmetic to catch
-    // is a ladder too WIDE to be one subset's rung list: the ceilings above
-    // (EXPLODED_PAR_MAX / EXPLODED_NUM_MAX) do that.
+    // per row, on this file's own roster. The ceilings above (EXPLODED_PAR_MAX
+    // / EXPLODED_NUM_MAX) catch a ladder too WIDE to be one subset's rung list.
+    // What is left for arithmetic is the gapless product itself.
     //
-    // So the shape is refused only when the rung list is implausibly wide AND
-    // perfectly dense — a full cartesian product against a large rung set, with
-    // no card missing a single rung. A real ladder is ragged: short prints,
-    // rookie-only rungs and per-card variations leave holes. Measured on the
-    // lane, the widest legitimate per-subset ladder is 2023/24 Donruss Optic's
-    // base at 253 rungs; a file that beats EXPLODED_PAR_MAX is already refused
-    // above, so this only fires on a dense product inside that ceiling.
+    // So the shape is refused when the rung list is MULTI-RUNG and perfectly
+    // dense — every card carrying every rung, no card missing one — and the
+    // file has nothing attesting that its parallel column is a real, complete
+    // ladder. A real scraped ladder is ragged: short prints, rookie-only rungs
+    // and per-card variations leave holes.
+    //
+    // CF-DENSITY-IS-THE-SIGNAL-NOT-SIZE (2026-09-04). #1694 fixed the right
+    // defect the wrong way. Its predecessor refused every modern Panini file
+    // because `rows ≈ cards × rungs` is what a correctly read per-subset ladder
+    // looks like; the fix bolted `rungCount > 60 && nums > 200` onto the
+    // density test, which admits those files — and unpins the guard at the low
+    // end, where the 11.49M-row spine's own signature lives. A 60-card × 6-rung
+    // cross-join is the same defect as a 3,000 × 60 one; the graveyard is not
+    // defined by its size.
+    //
+    // What actually separates the two is PROVENANCE, not magnitude. A converter
+    // that read a ladder off a checklist stamps `parallelColumnAuthoritative:
+    // true` in the CSV's sidecar manifest — the same flag ingest-scraped-
+    // checklist reads to take the rung from the column instead of re-deriving
+    // it from the category slug. That flag is the file saying "this column is
+    // the checklist's own ladder", and a complete ladder is EXPECTED to be
+    // dense: a 132-card set × Tiffany is 132 rows with no holes, and so is
+    // 2022 Panini Prizm's 300 × 56 base. Measured across all 102 staged CSVs in
+    // this repo: 343 category groups are perfectly dense, and 342 of them carry
+    // the flag — including every wide base ladder the size thresholds were
+    // widened to admit (300x56, 314x45, 250x46). The one that does not is a
+    // 50-card × 1-rung TCDB file, which the multi-rung floor below keeps safe.
+    //
+    // So an unattested file gets the size-free rule, and an attested one is
+    // trusted for density but still bounded by EXPLODED_PAR_MAX /
+    // EXPLODED_NUM_MAX above — the flag buys density, never unlimited width.
+    //
     // Density is measured against the NON-BLANK rungs. A blank parallel is a
     // base row, one per card, and counting it as a rung drags a true cartesian
     // just under any threshold — a 300 x 80 product reads as 300 x 81 and
     // slips through at 98.8% of the wrong denominator.
     const rungCount = g.pars.size - (g.pars.has("") ? 1 : 0);
     const cartesian = rungCount > 0 && g.ladderRows >= rungCount * g.nums.size * 0.995;
-    if (cartesian && rungCount > 60 && g.nums.size > 200) {
+    // ONE rung against N cards is a set with a single parallel — the Tiffany
+    // shape — and is dense by definition; it carries no cross-join information
+    // either way. The signature needs at least two rungs, and more cards than
+    // rungs, to mean anything.
+    const bigEnough = rungCount >= CARTESIAN_MIN_RUNGS && g.nums.size >= CARTESIAN_MIN_CARDS;
+    if (cartesian && bigEnough && !ladderAttested) {
       return { ok: false, reason: `category "${c}" pairs every one of ${f(g.nums.size)} cards with every one of ${f(rungCount)} rungs (${f(g.ladderRows)} ladder rows, no gaps) — a cartesian product, not a ladder`, stats };
     }
   }
@@ -831,14 +896,60 @@ function acquireEntry(entry, dir) {
         // 6 on pages with nothing to give, called them failures, and they
         // became two thirds of the 3-streak that aborted the lane. A lane is
         // not broken because the wiki has nothing to add for a 1990 oddball.
-        if (/nothing new to add/.test(String(said || ""))) {
-          const e = new Error(`bcp page has a base set but no parallel ladder — the wiki carries no rungs for it`);
+        // CF-A-REFUSAL-PATH-IS-NOT-A-CRASH (2026-09-04, run 33852199385).
+        //
+        // #1718 mapped exactly ONE of the scraper's refusal messages to EMPTY.
+        // The 1990 boxed/retail sets exit by a DIFFERENT path and were still
+        // read as `failed`: entries 6, 11, 12, 15, 16 and 17 of that run, and
+        // 15/16/17 were three in a row, so the lane aborted with 2,621 entries
+        // left. Every path below is the scraper EXITING 0 having said why it
+        // staged nothing, so each is classified on its own message rather than
+        // on the absence of a CSV, which is the same for all of them.
+        //
+        // The probe (2026-09-04, pages fetched directly) settles which of these
+        // is a verdict and which is a defect:
+        //
+        //   "base ok (N) but 0 rungs — nothing new to add"  -> EMPTY. The page
+        //      has a Base_Set heading and no parallel ladder. 1990_Baseball_Wit
+        //      is exactly this. Nothing here, and never was.
+        //
+        //   "0 base cards — layout not understood, SKIPPED" -> NOT empty. The
+        //      probe found these pages carry a FULL checklist (1990_Bazooka 22
+        //      cards, 1990_Fleer_Award_Winners 44, 1990_Donruss_Learning_Series
+        //      and 1990_Fleer_Baseball_All-Stars likewise) under a plain
+        //      `Checklist` heading, with NO `Base_Set` heading -- which is the
+        //      only heading parseCards reads. The rows are there and we cannot
+        //      see them. That is OUR parser, so it stays a lane fault worth a
+        //      verdict that brings someone back to it, exactly as the scraper's
+        //      own wording says. It does NOT become EMPTY: calling a gap in our
+        //      parser "the source has nothing" is how a defect goes quiet.
+        //
+        //   "HTTP 404" / "HTTP 410"                          -> the page is gone;
+        //      the shared isGone test downstream already lifts these out of
+        //      `failed` and into `unreachable`, so they need nothing here.
+        const saidStr = String(said || "");
+        if (/nothing new to add/.test(saidStr)) {
           // #1717's flag, and deliberately the SAME one: "the source answered,
           // and its answer is that it has nothing here" is ONE concept, and it
           // earns one status and one exclusion from the streak whether the
           // source is tcgdex or the wiki.
+          const e = new Error(`bcp page has a base set but no parallel ladder — the wiki carries no rungs for it`);
           e.emptyAtSource = true;
           throw e;
+        }
+        if (/HTTP 40[34]/.test(saidStr)) {
+          // The wiki answered, and its answer is that the page is not there.
+          // get() prints this and returns null on a 4xx, so the scraper exits 0
+          // and the 404 never reaches the catch below -- a gone page read as a
+          // broken pipe. Rethrown in the shape the shared isGone test already
+          // recognises, so it lands in `unreachable` (terminal, not our defect)
+          // rather than in `failed`, where it would advance the streak.
+          throw new Error(`bcp page is gone at the source (${(saidStr.match(/HTTP 40[34]/) || ["HTTP 404"])[0]})`);
+        }
+        if (/0 base cards — layout not understood/.test(saidStr)) {
+          // Named distinctly so the control doc says WHICH defect, and so a
+          // future fix to the Checklist-heading layout can find its own rows.
+          throw new Error("bcp page carries a checklist our parser does not read (no Base_Set heading) — a parser gap, not an empty page");
         }
         throw new Error("bcp scrape produced no CSV");
       }
@@ -1248,16 +1359,19 @@ function isStaged(entry) {
  */
 function orderQueue(queue, titlesRaw) {
   const wanted = String(titlesRaw || "").split(",").map((t) => t.trim()).filter(Boolean);
-  if (!wanted.length) {
-    // Stable: equal rank keeps manifest order, so a re-dispatch takes the same
-    // twenty rather than a fresh shuffle of a tie. STAGED FIRST, then the value
-    // proxy within each group -- work already on disk cannot be lost to a
-    // source outage, so it never queues behind work that can.
-    const decorated = queue.map((q, i) => ({ q, i, s: isStaged(q.entry) ? 1 : 0, r: valueRank(q.entry) }));
+  // Stable: equal rank keeps manifest order, so a re-dispatch takes the same
+  // twenty rather than a fresh shuffle of a tie. STAGED FIRST, then the value
+  // proxy within each group -- work already on disk cannot be lost to a source
+  // outage, so it never queues behind work that can.
+  const byValue = (qs) => {
+    const decorated = qs.map((q, i) => ({ q, i, s: isStaged(q.entry) ? 1 : 0, r: valueRank(q.entry) }));
     decorated.sort((a, b) => (b.s - a.s) || (b.r - a.r) || (a.i - b.i));
-    const staged = decorated.filter((d) => d.s).length;
+    return { queue: decorated.map((d) => d.q), staged: decorated.filter((d) => d.s).length };
+  };
+  if (!wanted.length) {
+    const { queue: sorted, staged } = byValue(queue);
     return {
-      queue: decorated.map((d) => d.q),
+      queue: sorted,
       mode: staged
         ? `staged-first (${staged} with a checklist on disk), then value-proxy (product family + era)`
         : "value-proxy (product family + era)",
@@ -1278,7 +1392,29 @@ function orderQueue(queue, titlesRaw) {
     if (at < 0) { unmatched.push(w); continue; }
     lead.push(rest.splice(at, 1)[0]);
   }
-  return { queue: [...lead, ...rest], mode: "explicit list (titles / BCP_TITLES)", named: lead.length, unmatched, staged: 0 };
+  // CF-THE-REST-FOLLOW-BENEATH-IN-VALUE-ORDER (2026-09-04, run 33852199385).
+  //
+  // `rest` used to be the eligible queue in MANIFEST order, which for bcp is
+  // alphabetical. So the canary named four Chrome pages, ingested them, and
+  // then spent entries 5-20 on 1990 Baseball Wit, Bazooka, Bowman, Classic,
+  // Donruss ... -- the alphabetical head of 1990, the least valuable end of the
+  // lane, and precisely the order #1708's proxy exists to prevent. The docblock
+  // above already promised "the rest follow beneath"; it never said in what
+  // order, and the code answered "alphabetically".
+  //
+  // The two mechanisms are not alternatives. The explicit list ranks what the
+  // operator named; the proxy ranks EVERYTHING ELSE. A LIMIT larger than the
+  // list is the normal case -- 4 named, 20 taken -- so the remainder is most of
+  // what actually runs, and it gets the same staged-first + family + era order
+  // it would get with no titles at all.
+  const { queue: restSorted, staged } = byValue(rest);
+  return {
+    queue: [...lead, ...restSorted],
+    mode: `explicit list (titles / BCP_TITLES), then ${staged ? `staged-first (${staged} on disk), then ` : ""}value-proxy (product family + era) for the rest`,
+    named: lead.length,
+    unmatched,
+    staged,
+  };
 }
 
 
@@ -1300,7 +1436,7 @@ for (const lane of ACQUIRE_LANES) {
   }
 }
 
-module.exports = { gateStagedCsv, gateStagedEntry, stagedCsvs, LANES_WITHOUT_PRINT_RUNS, LANES_WITH_BASELESS_PRODUCTS, LANES_WITH_VINTAGE_ERA_PRODUCTS, PARALLEL_ERA_FIRST_YEAR, ladderlessByEra, sourceLabelFor, splitCsv, isPersonName, setKeyFor, planFor, tcgdexModern, acquireStaged, ACQUIRE_LANES, LANE_ALIASES, LANE_SOURCE, LANE_MINUTES, CANONICAL_HEADER, CHILD_STDERR_LINES, cosmosSafeId, controlId, orderQueue, SYSTEMIC_FAILURE_STREAK, EMPTY_STATUS, STREAK_STATUSES, isStaged, stagedSourceRefs };
+module.exports = { gateStagedCsv, gateStagedEntry, ladderIsAttested, CARTESIAN_MIN_RUNGS, CARTESIAN_MIN_CARDS, stagedCsvs, LANES_WITHOUT_PRINT_RUNS, LANES_WITH_BASELESS_PRODUCTS, LANES_WITH_VINTAGE_ERA_PRODUCTS, PARALLEL_ERA_FIRST_YEAR, ladderlessByEra, sourceLabelFor, splitCsv, isPersonName, setKeyFor, planFor, tcgdexModern, acquireStaged, ACQUIRE_LANES, LANE_ALIASES, LANE_SOURCE, LANE_MINUTES, CANONICAL_HEADER, CHILD_STDERR_LINES, cosmosSafeId, controlId, orderQueue, SYSTEMIC_FAILURE_STREAK, EMPTY_STATUS, STREAK_STATUSES, isStaged, stagedSourceRefs };
 if (require.main !== module) return;
 
 (async () => {
@@ -1775,8 +1911,37 @@ if (require.main !== module) return;
   // stops early on a budget stop that happened to change nothing.
   if (systemicAbort) {
     console.log(`  lane aborted — NOT printing the budget marker; a relaunch would meet the same wall. Fix the cause, then re-dispatch.`);
-  } else if (remaining > 0 && (stoppedOnBudget || written >= LIMIT)) {
+  } else if (remaining > 0 && stoppedOnBudget && notReached > 0) {
+    // CF-A-LIMIT-BOUND-RUN-IS-NOT-A-BUDGET-STOP (2026-09-04, run 33854416984).
+    //
+    // The condition used to be `stoppedOnBudget || written >= LIMIT`. That
+    // second clause made a run that CLEANLY FINISHED its slice look like one
+    // the clock cut short: sportscardchecklist with limit=3 took exactly its
+    // three entries, reported "intended 3 = written 3" and RECONCILED yes, and
+    // still printed the marker because 3 >= 3. The runner's relaunch step gates
+    // on this line, so it re-dispatched the SAME inputs, which took the same
+    // three entries, and the lane looped (33854423019, 33854625169) until it
+    // was cancelled by hand.
+    //
+    // `written >= LIMIT` cannot distinguish the two cases at all: LIMIT is
+    // either the operator's explicit slice or `budgetSized`, so on a full run
+    // it is TRUE by construction whether or not the clock was ever consulted.
+    //
+    // The marker means one thing -- "there is more work and I ran out of time
+    // before I could take it" -- so it now asserts exactly that, in the two
+    // facts that make it true and that nothing else sets:
+    //   stoppedOnBudget  the loop broke on `left() < perEntryMin * 1.5`
+    //   notReached > 0   entries of THIS run's slice were never attempted
+    // A run that exhausted an explicit LIMIT, or drained the eligible list,
+    // has notReached === 0 and never trips the clock, so it falls through to
+    // the branches below and the relaunch stops -- which is the whole point.
     console.log(`stopped at the ${RUN_MS / 60000}-minute budget — the relaunch continues from here`);
+  } else if (remaining > 0 && notReached === 0) {
+    // The slice this run was asked for is DONE and the lane still has more.
+    // That is a complete run, not an early exit, so it does not read as one --
+    // and it deliberately does not print the marker, because the operator (or
+    // the sizing) chose the slice and a relaunch is theirs to decide.
+    console.log(`  slice complete — ${f(remaining)} entries remain in the lane; re-dispatch to continue`);
   } else if (remaining > 0) {
     console.log(`  ${f(remaining)} entries remain but this run ended early — inspect the failures before re-dispatching`);
   } else {

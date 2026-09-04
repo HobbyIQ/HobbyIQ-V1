@@ -624,7 +624,7 @@ describe("D17 — the portfolio persist site: what is written is what the routes
   }
 
   it("(slug, Raw): the batch reprice AND the refresh persist the four routes' number and rung, labelled observed, with the routes' comp count", async () => {
-    const { pb } = await four(GOLD);
+    const { pb, cf } = await four(GOLD);
     const id = await seed({ hobbyiqCardId: GOLD });
     const res = await store.repriceHoldingsForUser(USER);
     expect(res.updates.find((u) => u.id === id)).toMatchObject({ status: "repriced", reason: `one-valuation-path:${pb.rungLabel}` });
@@ -641,7 +641,12 @@ describe("D17 — the portfolio persist site: what is written is what the routes
     // rung and pool cannot survive, so the shape stays closed rather than
     // becoming a toMatchObject that would let a stale key ride along. These
     // fixtures have no owner-contributed sale, so the self label never fires.
-    expect(hld.pricingSourceMeta).toEqual({ slug: GOLD, method: pb.rungLabel, compsUsed: pb.compsUsed, labels: [], selfAnchored: null });
+    // CF-CONFIDENCE-IS-NOT-OPTIONAL (#1683, 2026-09-03): the meta also carries
+    // the engine's own 0..1 confidence. It is asserted from the WIRE the routes
+    // serve, not as a literal — that keeps this a persist-equals-serve pin
+    // (which is this suite's whole thesis) instead of a float that any future
+    // calibration rebase would have to hand-edit.
+    expect(hld.pricingSourceMeta).toEqual({ slug: GOLD, method: pb.rungLabel, compsUsed: pb.compsUsed, labels: [], selfAnchored: null, confidence: cf.confidence });
     expect(hld.predictedPrice).toBe(pb.predictedPrice);
     expect(hld.estimateBasis).toMatch(/^unified: Raw window=/);
     expect(hld.estimateBasis).toContain("id=hobbyiqCardId");
@@ -655,7 +660,7 @@ describe("D17 — the portfolio persist site: what is written is what the routes
     const again = await stored(id);
     expect(again.fairMarketValue).toBe(pb.marketValue);
     expect(again.fmvRung).toBe(pb.rungLabel);
-    expect(again.pricingSourceMeta).toEqual({ slug: GOLD, method: pb.rungLabel, compsUsed: pb.compsUsed, labels: [], selfAnchored: null });
+    expect(again.pricingSourceMeta).toEqual({ slug: GOLD, method: pb.rungLabel, compsUsed: pb.compsUsed, labels: [], selfAnchored: null, confidence: cf.confidence });
     // No second engine, no legacy chain, on either site.
     expect(h.calls.estimate).toBe(0);
     expect(h.calls.curve).toBe(0);
@@ -678,7 +683,12 @@ describe("D17 — the portfolio persist site: what is written is what the routes
     // rung and pool cannot survive, so the shape stays closed rather than
     // becoming a toMatchObject that would let a stale key ride along. These
     // fixtures have no owner-contributed sale, so the self label never fires.
-    expect(hld.pricingSourceMeta).toEqual({ slug: GOLD, method: psa10.pb.rungLabel, compsUsed: psa10.pb.compsUsed, labels: [], selfAnchored: null });
+    // CF-CONFIDENCE-IS-NOT-OPTIONAL (#1683, 2026-09-03): the meta also carries
+    // the engine's own 0..1 confidence. It is asserted from the WIRE the routes
+    // serve, not as a literal — that keeps this a persist-equals-serve pin
+    // (which is this suite's whole thesis) instead of a float that any future
+    // calibration rebase would have to hand-edit.
+    expect(hld.pricingSourceMeta).toEqual({ slug: GOLD, method: psa10.pb.rungLabel, compsUsed: psa10.pb.compsUsed, labels: [], selfAnchored: null, confidence: psa10.cf.confidence });
   });
 
   it("(slug, PSA 8 — no pool at the tier): the same entry's grade-curve-estimate is persisted as an ESTIMATE under its rung — never the engine's cross-grade rescale as observed", async () => {
@@ -700,7 +710,12 @@ describe("D17 — the portfolio persist site: what is written is what the routes
     // rung and pool cannot survive, so the shape stays closed rather than
     // becoming a toMatchObject that would let a stale key ride along. These
     // fixtures have no owner-contributed sale, so the self label never fires.
-    expect(hld.pricingSourceMeta).toEqual({ slug: GOLD, method: "grade-curve-estimate", compsUsed: 0, labels: [{ code: "fallback-rung", text: expect.stringContaining("no sales of this exact card at this grade") }], selfAnchored: null });
+    // CF-CONFIDENCE-IS-NOT-OPTIONAL (#1683, 2026-09-03): the meta also carries
+    // the engine's own 0..1 confidence. It is asserted from the WIRE the routes
+    // serve, not as a literal — that keeps this a persist-equals-serve pin
+    // (which is this suite's whole thesis) instead of a float that any future
+    // calibration rebase would have to hand-edit.
+    expect(hld.pricingSourceMeta).toEqual({ slug: GOLD, method: "grade-curve-estimate", compsUsed: 0, labels: [{ code: "fallback-rung", text: expect.stringContaining("no sales of this exact card at this grade") }], selfAnchored: null, confidence: psa8.cf.confidence });
     expect(hld.estimateBasis).toMatch(/^Estimated from this card's own Raw sales/);
     await refresh(id);
     const again = await stored(id);

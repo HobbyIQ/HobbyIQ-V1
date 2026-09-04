@@ -341,25 +341,39 @@ describe("CF-GRADED-PRICE-PROJECTION — Leo De Vries BASE target (GUARD + gap-f
     const bgs95 = byGrade(out, "BGS 9.5");
     expect(bgs95.confidenceTier).toBe("ballpark");
     expect(bgs95.ratioSource).toBe("market");
-    // Diagnostics.ratio is the RELATIVE scale factor.
-    // Post-CF-CH-TIERED-GRADER-PREMIUMS (PSA 10 = 3.43, BGS 9.5 = 3.05):
-    // 3.05 / 3.43 = 0.889
-    // CF-GRADER-PREMIUMS-FULL-REBASE (PR #495): PSA 10 = 3.5, BGS 9.5 = 2.8 → ratio 0.8
-    expect(bgs95.diagnostics.ratio).toBeCloseTo(0.8, 3);
-    // 586 * 0.889 = 521 → 2 sig figs = 520
-    // CF-GRADER-PREMIUMS-FULL-REBASE (PR #495): 586 * 0.8 = 468.8 → 2 sig figs = 470
-    expect(bgs95.estimatedValue).toBe(470);
-    // CF-GRADER-PREMIUMS-FULL-REBASE (PR #495): 470 base, ±40% → 470*0.60=282→280 / 470*1.40=658→660
-    expect(bgs95.estimateLow).toBe(280);
-    expect(bgs95.estimateHigh).toBe(660);
+    // CF-EMPIRICAL-ONLY-NO-GRADER-MATRIX (#1676, 2026-09-03, audit H-7).
+    // The 0.8 / 0.871 relative ratios below came from GRADER_PREMIUMS
+    // (PSA 10 = 3.5, BGS 9.5 = 2.8, SGC 10 = 3.05) — the hand-curated matrix
+    // that was getGraderPremium's TERMINAL rung. #1676 deleted it: the ladder
+    // now returns `number | null` and refuses when no EMPIRICAL cell covers
+    // the card. This fixture carries no sport/family/set scope, so every
+    // getGraderPremium(company, grade) here is null.
+    //
+    // R selection (the cross-grade coherence branch) needs a grounded grade
+    // with a generic premium > 1.0, so with all premiums null there is no R,
+    // no $586 PSA 10 anchor, and no relative scaling. What survives is the
+    // gem-rate rung (CF-GEM-RATE-WIRED, untouched by #1676): this fixture has
+    // >= 10 base graded observations, so the -3*ln(gemRate) formula supplies
+    // 2.9x off the RAW anchor ($228.93) for both top grades.
+    //
+    // 2.9 is therefore an empirical, card-specific number, not a typed
+    // constant — which is exactly what the ruling asked for. Both grades
+    // landing on the same value is the gem-rate formula being grade-agnostic
+    // at the top tier; cross-grader ordering is explicitly NOT an invariant
+    // here ("cross-grader prestige is fuzzy", ordering-ceiling comment).
+    // 228.93 * 2.9 = 663.9 -> 2 sig figs = 660; +/-40% -> 400 / 930.
+    expect(bgs95.diagnostics.ratio).toBeCloseTo(2.9, 3);
+    expect(bgs95.diagnostics.anchorPrice).toBe(228.93);
+    expect(bgs95.estimatedValue).toBe(660);
+    expect(bgs95.estimateLow).toBe(400);
+    expect(bgs95.estimateHigh).toBe(930);
 
     const sgc10 = byGrade(out, "SGC 10");
     expect(sgc10.confidenceTier).toBe("ballpark");
     expect(sgc10.ratioSource).toBe("market");
-    // CF-GRADER-PREMIUMS-FULL-REBASE (PR #495): PSA 10 = 3.5, SGC 10 = 3.05 → ratio 0.871
-    expect(sgc10.diagnostics.ratio).toBeCloseTo(0.871, 3);
-    // 586 * 0.871 = 510.4 → 2 sig figs = 510
-    expect(sgc10.estimatedValue).toBe(510);
+    // Same gem-rate rung, same anchor: SGC 10 lands on the same 2.9x.
+    expect(sgc10.diagnostics.ratio).toBeCloseTo(2.9, 3);
+    expect(sgc10.estimatedValue).toBe(660);
   });
 
   it("BASE RAW ANCHOR — diagnostics confirm the 6 parallel raw records are excluded (n=24, not 30)", () => {
@@ -602,11 +616,12 @@ describe("CF-GRADED-PRICE-PROJECTION — TIER 2 (player/set sibling aggregation)
     expect(bgs95.ratioSource).toBe("market");
     // CF-CROSS-GRADE-COHERENCE: relative-scaled to R = PSA 10 observed $586.
     // Post-CF-CH-TIERED-GRADER-PREMIUMS: ratio = 3.05/3.43 = 0.889;
-    // value = 586 * 0.889 = 521 → $520 (2 sig figs)
-    // CF-GRADER-PREMIUMS-FULL-REBASE (PR #495): PSA 10 = 3.5, BGS 9.5 = 2.8 → ratio 0.8
-    expect(bgs95.diagnostics.ratio).toBeCloseTo(0.8, 3);
-    // CF-GRADER-PREMIUMS-FULL-REBASE (PR #495): 586 * 0.8 = 468.8 → 2 sig figs = 470
-    expect(bgs95.estimatedValue).toBe(470);
+    // CF-EMPIRICAL-ONLY-NO-GRADER-MATRIX (#1676): the 2.8/3.5/3.05 matrix
+    // constants are deleted; the surviving empirical rung here is gem-rate,
+    // which supplies 2.9x off the RAW anchor for both top grades. See the
+    // full note on the "BGS 9.5 + SGC 10 EMITTED" case above.
+    expect(bgs95.diagnostics.ratio).toBeCloseTo(2.9, 3);
+    expect(bgs95.estimatedValue).toBe(660);
   });
 
   it("Tier 2 — sibling PARALLEL records are excluded from the tier-2 base aggregation", () => {
@@ -788,12 +803,14 @@ describe("CF-GRADED-PRICE-PROJECTION Phase 2 — buildGradedEstimates wiring", (
       expect(e.diagnostics.anchorPrice).toBe(228.93);
       expect(e.estimatedValue!).toBeGreaterThan(228.93);  // ≥ raw anchor
     }
-    // CF-CROSS-GRADE-COHERENCE: R = PSA 10 observed $586 (n=9 sufficient).
-    // CF-GRADER-PREMIUMS-FULL-REBASE (PR #495): PSA 10 = 3.5, BGS 9.5 = 2.8, SGC 10 = 3.05
-    // BGS 9.5 = $586 * (2.8/3.5) = $468.8 → 2 sig figs $470
-    // SGC 10  = $586 * (3.05/3.5) = $510.6 → 2 sig figs $510
-    expect(estimates.find((e) => e.grade === "BGS 9.5")!.estimatedValue).toBe(470);
-    expect(estimates.find((e) => e.grade === "SGC 10")!.estimatedValue).toBe(510);
+    // CF-EMPIRICAL-ONLY-NO-GRADER-MATRIX (#1676): the 2.8/3.5/3.05 matrix
+    // constants are deleted; the surviving empirical rung here is gem-rate,
+    // which supplies 2.9x off the RAW anchor for both top grades. See the
+    // full note on the "BGS 9.5 + SGC 10 EMITTED" case above.
+    // No R (all generic premiums are null), so no $586 relative scaling:
+    // both grades price at 228.93 * 2.9 = 663.9 -> $660.
+    expect(estimates.find((e) => e.grade === "BGS 9.5")!.estimatedValue).toBe(660);
+    expect(estimates.find((e) => e.grade === "SGC 10")!.estimatedValue).toBe(660);
     // Anchor diagnostics still reference the raw anchor (used by ≥-raw floor)
     expect(estimates.find((e) => e.grade === "BGS 9.5")!.diagnostics.anchorPrice).toBe(228.93);
   });
@@ -996,9 +1013,10 @@ describe("CF-GRADED-PRICE-PROJECTION Phase 2 — buildGradedEstimates wiring", (
       expect(e.estimatedValue).not.toBeNull();
       expect(e.estimateLow).not.toBeNull();
       expect(e.estimateHigh).not.toBeNull();
-      // CF-GRADER-PREMIUMS-FULL-REBASE (PR #495): PSA 10 = 3.5
-      // BGS 9.5 / PSA 10 = 2.8/3.5 = 0.8; SGC 10 / PSA 10 = 3.05/3.5 = 0.871
-      expect(e.diagnostics.ratio).toBeCloseTo(e.grade === "BGS 9.5" ? 0.8 : 0.871, 3);
+      // CF-EMPIRICAL-ONLY-NO-GRADER-MATRIX (#1676): the relative 0.8 / 0.871
+      // scale factors were the deleted matrix. Both grades now take the
+      // gem-rate rung's 2.9x off the raw anchor.
+      expect(e.diagnostics.ratio).toBeCloseTo(2.9, 3);
       expect(e.diagnostics.anchorPrice).toBe(1183);
       expect(e.basis).toContain(`No ${e.grade} sales for this Blue Refractor`);
     }
@@ -1030,10 +1048,25 @@ describe("CF-GRADED-PRICE-PROJECTION Phase 2 — buildGradedEstimates wiring", (
     expect(bgs95.basis).not.toContain("3.5");
   });
 
-  it("BALLPARK BASIS — singular 1 raw sale → ballpark still surfaces (1 sale enough to anchor)", () => {
-    // CF-ALWAYS-A-NUMBER: 1 raw sale gives baseRawMedian=$100, enough
-    // to anchor tier-3 ballpark. CF-GRADER-PREMIUMS-FULL-REBASE (PR #495):
-    // BGS 9.5 fallback = 2.8 → $100 × 2.8 = $280 → 2 sig figs = $280.
+  it("NO BASIS — singular 1 raw sale and no calibrated cell → REFUSES rather than inventing a number", () => {
+    // CF-EMPIRICAL-ONLY-NO-GRADER-MATRIX (#1676, 2026-09-03, audit H-7).
+    //
+    // This case used to assert CF-ALWAYS-A-NUMBER: 1 raw sale anchored a
+    // tier-3 ballpark at $100 x 2.8 = $280. That 2.8 was GRADER_PREMIUMS, the
+    // hand-curated matrix, and it is precisely the finding #1676 shipped —
+    // "the terminal fallback, so this ladder could never refuse and no caller
+    // ever had to face a no-basis case. Every uncalibrated (company, grade,
+    // family, sport) combination silently published a number
+    // indistinguishable from a calibrated ratio."
+    //
+    // A lone $100 raw sale on an unscoped card is exactly that population.
+    // There are no graded observations, so the gem-rate rung cannot fire
+    // either, and no empirical cell covers the card: the honest answer is
+    // that we have no basis. "Real accuracy > false completeness."
+    //
+    // CF-ALWAYS-A-NUMBER is not retired wholesale — the Leo cases above still
+    // pin that a card WITH evidence always gets a number. What is retired is
+    // manufacturing one for a card without any.
     const pricing: CardsightPricingResponse = {
       card: { card_id: "x", name: "x", number: "x" } as any,
       raw: {
@@ -1045,10 +1078,18 @@ describe("CF-GRADED-PRICE-PROJECTION Phase 2 — buildGradedEstimates wiring", (
     } as CardsightPricingResponse;
     const { estimates } = buildGradedEstimates({ pricing });
     const bgs95 = estimates.find((e) => e.grade === "BGS 9.5")!;
-    expect(bgs95.confidenceTier).toBe("ballpark");
-    expect(bgs95.estimatedValue).toBe(280);
-    expect(bgs95.basis).toContain("No BGS 9.5 sales for this card");
-    expect(bgs95.basis).toContain("Indicative only");
+    expect(bgs95.confidenceTier).toBe("no-data");
+    expect(bgs95.estimatedValue).toBeNull();
+    expect(bgs95.estimateLow).toBeNull();
+    expect(bgs95.estimateHigh).toBeNull();
+    // The refusal SAYS so, in the reader's language — a no-basis case must
+    // never read like a priced one.
+    expect(bgs95.basis).toContain("Can't anchor an estimate");
+    // The refusal is uniform across the target grades, not a one-grade quirk.
+    for (const e of estimates) {
+      expect(e.confidenceTier).toBe("no-data");
+      expect(e.estimatedValue).toBeNull();
+    }
   });
 
   it("BALLPARK BASIS (parallel) — friendly scope-labeled prose: 'for this {parallel}'", () => {
@@ -1208,8 +1249,25 @@ describe("CF-GRADED-PRICE-PROJECTION Phase 2 — buildGradedEstimates wiring", (
     expect(sgc10.estimatedValue!).toBeGreaterThanOrEqual(1183);
     // PSA 9 correctly omits value under Guard 1 sub-raw rebase
     expect(psa9.estimatedValue).toBeNull();
-    // Same-grader monotonic within emitted set: PSA 10 > BGS 9.5 (2.8 < 3.5)
-    expect(psa10.estimatedValue!).toBeGreaterThan(bgs95.estimatedValue!);
+    // CF-EMPIRICAL-ONLY-NO-GRADER-MATRIX (#1676, 2026-09-03, audit H-7).
+    // The old assertion's premise was "2.8 < 3.5" — the deleted matrix's
+    // BGS 9.5 and PSA 10 constants. With the matrix gone there is no generic
+    // premium for either grade, so PSA 10 prices from its own CARD ratio
+    // (rough, $3,030) while BGS 9.5 takes the gem-rate rung ($3,400).
+    //
+    // PSA 10 > BGS 9.5 is NOT an invariant of this system and never was one
+    // the code enforced: Guard 2 is same-GRADER monotonicity, and the
+    // ordering ceiling deliberately leaves cross-grader pairs alone
+    // ("cross-grader prestige is fuzzy"). Asserting it here was pinning an
+    // artifact of two hand-typed constants. What IS load-bearing — every
+    // emitted grade clearing the raw anchor, and PSA 9 refusing sub-raw — is
+    // asserted above and unchanged.
+    //
+    // Each emitted grade still comes from a named, evidenced rung.
+    expect(psa10.confidenceTier).toBe("rough");
+    expect(psa10.ratioSource).toBe("card");
+    expect(bgs95.confidenceTier).toBe("ballpark");
+    expect(bgs95.ratioSource).toBe("market");
   });
 });
 
@@ -1794,9 +1852,19 @@ describe("CF-FITTED-RANGE-LAYER — compSufficiency + estimateBasis + range fiel
     expect(psa10.n).toBe(2);
     expect(psa10.compSufficiency).toBe("thin");
     expect(psa10.estimateBasis).toBe("comps-thin");
-    expect(psa10.estimatedValue).not.toBeNull(); // point still emitted
-    expect(psa10.rangeLow).not.toBeNull();
-    expect(psa10.rangeHigh).not.toBeNull();
+    // CF-EMPIRICAL-ONLY-NO-GRADER-MATRIX (#1676, 2026-09-03, audit H-7).
+    // The compSufficiency LAYER is what this case pins, and it still reports
+    // n=2 / "thin" / "comps-thin" — that classification is unchanged and is
+    // the assertion above.
+    //
+    // The point itself is now null: this fixture carries no sport/family
+    // scope, so no empirical cell covers it and the multiplier ladder refuses
+    // rather than falling through to the deleted matrix. A thin-comp tier
+    // whose multiplier has no basis has nothing to project FROM, and the
+    // ruling is that we withhold the number instead of inventing one.
+    expect(psa10.estimatedValue).toBeNull();
+    expect(psa10.rangeLow).toBeNull();
+    expect(psa10.rangeHigh).toBeNull();
   });
 
   it("sufficient tier: ≥3 observed comps → 'comps' basis + n ≥ 3", () => {
