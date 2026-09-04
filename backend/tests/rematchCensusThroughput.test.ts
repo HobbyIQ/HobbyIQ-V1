@@ -159,15 +159,23 @@ describe("A. verdict equality -- the fix bought speed and nothing else", () => {
   });
 
   it("every row reproduces the PRE-FIX verdict exactly -- class, writable, reasons, subclass, tier, refusals", { timeout: 60_000 }, () => {
-    // The recorded verdicts come from the pre-fix classifier (73a4fe25) over
-    // these exact rows. A future change that moves any one of them has moved
-    // a RULING, and must argue for it in its own PR rather than arriving
-    // inside a performance patch. Regenerate this file only alongside such a
-    // change.
+    // The recorded verdicts come from the classifier over these exact rows. A
+    // future change that moves any one of them has moved a RULING, and must
+    // argue for it in its own PR rather than arriving inside a performance
+    // patch. Regenerate this file only alongside such a change.
+    //
+    // RE-RECORDED for the five derivation-defect guards (D1/D6/D7/D8/V3),
+    // which was such a change and argued for it. 13 of the 200 rows gained an
+    // additive `derivation-refused:` reason -- 12 V3 genericizations (Prism
+    // Refractor -> Refractor) and one D8 (a 1953 Topps "VG-VGEX" read as PSA
+    // 10). What was CHECKED before re-recording, and what this pin still
+    // holds, is that no ruling moved with them: class, writable, subclass,
+    // tier, splitIdentity, splitClass and improveRefusals are identical on all
+    // 200 rows. The guards refuse a bad reading; they do not reclassify.
     const recorded = JSON.parse(
       fs.readFileSync(path.join(backend, "tests", "fixtures", "rematch-verdict-equality-200.expected.json"), "utf8"),
     ) as { verdicts: string[]; recordedFrom: string };
-    expect(recorded.recordedFrom).toBe("73a4fe25");
+    expect(recorded.recordedFrom).toBe("derivation-defects");
     // The pin is only as strong as the variety it recorded.
     expect(new Set(recorded.verdicts).size).toBeGreaterThanOrEqual(10);
 
