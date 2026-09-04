@@ -101,7 +101,27 @@ async function readSeries(sport: string, windowDays: number): Promise<SportIndex
     // the tile shows nothing for those days rather than a gap-filling
     // zero (which would print a -100% change on the very first point).
     const rows = all.filter((r) => Number.isFinite(r.level) && (r.level as number) > 0);
-    if (rows.length === 0) return empty;
+    if (rows.length === 0) {
+      // Every point in the window is levelless. That is NOT "no such
+      // sport" — it is a sport we track and deliberately did not price,
+      // and the two must not look alike downstream. Returning the bare
+      // `empty` here threw away the newest point's withheldReason, so a
+      // withheld sport arrived at the UI indistinguishable from one that
+      // has no basket doc at all, and the tile strip dropped it silently
+      // (pokemon, 180/180 levelless on 2026-09-04). Carry the reason so
+      // the tile can say why there is no number.
+      const newestAny = all[all.length - 1];
+      if (!newestAny) return empty;
+      return {
+        ...empty,
+        basketSize: newestAny.basketSize ?? null,
+        asOf: newestAny.date,
+        freshMembers: newestAny.freshMembers ?? null,
+        usedWeight: newestAny.usedWeight ?? null,
+        stale: newestAny.stale === true,
+        withheldReason: newestAny.withheldReason ?? null,
+      };
+    }
 
     const series: IndexSeriesPoint[] = rows.map((r) => ({
       date: r.date,
