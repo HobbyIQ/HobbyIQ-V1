@@ -1,0 +1,14 @@
+{
+  "productKey": "2023-sv2d",
+  "sport": "pokemon",
+  "year": 2023,
+  "setKey": "sv2d",
+  "source": "tcgdex-ja-modern",
+  "confidence": 0.9,
+  "provenance": "api.tcgdex.net/v2/ja/sets/SV2D (MIT, tcgdex/cards-database) fetched 2026-09-04 -- 83 rows, 1 ladder entries",
+  "setName": "Japanese クレイバースト",
+  "tcgdexId": "SV2D",
+  "sourceUrl": "https://api.tcgdex.net/v2/ja/sets/SV2D",
+  "rowCount": 83,
+  "parallelColumnAuthoritative": true
+}

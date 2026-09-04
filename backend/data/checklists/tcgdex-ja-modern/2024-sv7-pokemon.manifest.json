@@ -1,0 +1,14 @@
+{
+  "productKey": "2024-sv7",
+  "sport": "pokemon",
+  "year": 2024,
+  "setKey": "sv7",
+  "source": "tcgdex-ja-modern",
+  "confidence": 0.9,
+  "provenance": "api.tcgdex.net/v2/ja/sets/SV7 (MIT, tcgdex/cards-database) fetched 2026-09-04 -- 114 rows, 1 ladder entries",
+  "setName": "Japanese ステラミラクル",
+  "tcgdexId": "SV7",
+  "sourceUrl": "https://api.tcgdex.net/v2/ja/sets/SV7",
+  "rowCount": 114,
+  "parallelColumnAuthoritative": true
+}

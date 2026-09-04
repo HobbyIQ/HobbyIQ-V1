@@ -614,7 +614,13 @@ if (require.main !== module) return;
         bcp: "scrape-bcp-ladders.cjs --titles=<page> --titlesOnly → ingest-checklist-csv-to-catalog.cjs",
         beckett: "fetch <sourceRef>.xlsx → convertBeckettChecklistXlsx.cjs → ingest-checklist-csv-to-catalog.cjs",
         clc: "scrape-checklistcenter-products.cjs --urls → convertChecklistCenterToChecklistCsv.cjs → ingest-checklist-csv-to-catalog.cjs",
-        tcgdexja: "scrape-tcgdex-ja.cjs --sets=<id> → ingest-checklist-csv-to-catalog.cjs",
+        // The lane is TWO scrapers and the dry run must say WHICH, or the plan
+        // it prints is not the plan the apply runs: a modern code (SV*, S*,
+        // CS*, M*) routes to the ladder-carrying scraper, the vintage
+        // PMCG/neo titles to the original.
+        tcgdexja: `${/^(SV|S\d|CS|M[0-9]|M-P|SVK|SVLN|SVLS)/i.test(String(entry.sourceRef || "").split("/").pop() || "")
+          ? "scrape-tcgdex-ja-modern.cjs (rarity ladder → parallel)"
+          : "scrape-tcgdex-ja.cjs (base-only; tcgdex serves no ladder for these)"} --sets=<id> → ingest-checklist-csv-to-catalog.cjs`,
       }[entry.lane];
       const inCatalog = await countCatalogRows(entry).catch(() => null);
       console.log(`      would drive: ${plan}`);

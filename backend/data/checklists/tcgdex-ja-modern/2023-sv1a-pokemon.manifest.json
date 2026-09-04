@@ -1,0 +1,14 @@
+{
+  "productKey": "2023-sv1a",
+  "sport": "pokemon",
+  "year": 2023,
+  "setKey": "sv1a",
+  "source": "tcgdex-ja-modern",
+  "confidence": 0.9,
+  "provenance": "api.tcgdex.net/v2/ja/sets/SV1a (MIT, tcgdex/cards-database) fetched 2026-09-04 -- 85 rows, 1 ladder entries",
+  "setName": "Japanese トリプレットビート",
+  "tcgdexId": "SV1a",
+  "sourceUrl": "https://api.tcgdex.net/v2/ja/sets/SV1a",
+  "rowCount": 85,
+  "parallelColumnAuthoritative": true
+}

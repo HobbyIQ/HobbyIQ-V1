@@ -1,0 +1,14 @@
+{
+  "productKey": "2026-m4",
+  "sport": "pokemon",
+  "year": 2026,
+  "setKey": "m4",
+  "source": "tcgdex-ja-modern",
+  "confidence": 0.9,
+  "provenance": "api.tcgdex.net/v2/ja/sets/M4 (MIT, tcgdex/cards-database) fetched 2026-09-04 -- 120 rows, 6 ladder entries",
+  "setName": "Japanese ニンジャスピナー",
+  "tcgdexId": "M4",
+  "sourceUrl": "https://api.tcgdex.net/v2/ja/sets/M4",
+  "rowCount": 120,
+  "parallelColumnAuthoritative": true
+}

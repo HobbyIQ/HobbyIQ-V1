@@ -12,10 +12,12 @@
 // "Pokemon", "Japanese" or the series prefix — the resolver strips those before
 // lookup, so one entry covers every vendor spelling.
 //
-// Three entries are RULED overrides, not scraped (see `RULED` in the
-// generator): "rocket-gang" -> japanese-rocket-gang, "vstar-universe" -> s12a
-// and "paradigm-trigger" -> s12. The source page pointed all three Japanese
-// sets at an English product's code.
+// Fifteen entries are RULED overrides, not scraped (see `RULED` in the
+// generator): "rocket-gang" -> japanese-rocket-gang, "vstar-universe" -> s12a,
+// "paradigm-trigger" -> s12, and the twelve SWSH-era Japanese sets the
+// tcgdex-ja modern lane stages ("dark-phantasma" -> s10a, "vmax-climax" ->
+// s8b, ...). The source page points every one of them at an English
+// product's code.
 
 export const JAPANESE_POKEMON_SET_ALIASES: Readonly<Record<string, string>> = Object.freeze({
   "25th-anniversary-collection": "swsh8a",
@@ -34,7 +36,7 @@ export const JAPANESE_POKEMON_SET_ALIASES: Readonly<Record<string, string>> = Ob
   "base-expansion-pack": "ecard1",
   "base-set": "base",
   "battle-partners": "sv9",
-  "battle-region": "swsh9a",
+  "battle-region": "s9a",
   "beat-of-the-frontier": "pt3",
   "black-amp-white-promos": "bwp",
   "black-bolt": "sv11b",
@@ -59,7 +61,7 @@ export const JAPANESE_POKEMON_SET_ALIASES: Readonly<Record<string, string>> = Ob
   "cry-from-the-mysterious": "dp5c",
   "cyber-judge": "sv5m",
   "dark-order": "sm8a",
-  "dark-phantasma": "swsh10a",
+  "dark-phantasma": "s10a",
   "dark-rush": "bw4",
   "darkness-and-to-light": "neo4",
   "darkness-that-consumes-light": "sm3n",
@@ -86,7 +88,7 @@ export const JAPANESE_POKEMON_SET_ALIASES: Readonly<Record<string, string>> = Ob
   "forbidden-light": "sm6",
   "freeze-bolt": "bw6f",
   "full-metal-wall": "sm9b",
-  "fusion-arts": "swsh8",
+  "fusion-arts": "s8",
   "future-flash": "sv4m",
   "gaia-volcano": "xy5g",
   "galactic-x27-s-conquest": "pt1",
@@ -103,7 +105,7 @@ export const JAPANESE_POKEMON_SET_ALIASES: Readonly<Record<string, string>> = Ob
   "holon-phantom": "pcg7",
   "holon-research-tower": "pcg6",
   "hot-air-arena": "sv9a",
-  "incandescent-arcana": "swsh11a",
+  "incandescent-arcana": "s11a",
   "inferno-x": "m2",
   "infinity-zone": "swsh3",
   "intense-fight-in-the-destroyed-sky": "dp6",
@@ -111,14 +113,14 @@ export const JAPANESE_POKEMON_SET_ALIASES: Readonly<Record<string, string>> = Ob
   "intro-pack-squirtle": "ips",
   "islands-await-you": "sm2k",
   "j-promos": "miscpj",
-  "jet-black-spirit": "swsh6k",
+  "jet-black-spirit": "s6k",
   "jungle": "base2",
   "leaders-x27-stadium": "gym1",
   "legend-promos": "lp",
   "legendary-heartbeat": "swsh3a",
   "legendary-shine-collection": "cp2",
   "lightning-starter-set-v": "sal",
-  "lost-abyss": "swsh11",
+  "lost-abyss": "s11",
   "lost-link": "ll1",
   "magma-gang-vs-aqua-gang-double-crisis": "cp1",
   "magma-vs-aqua-two-ambitions": "adv4",
@@ -213,18 +215,18 @@ export const JAPANESE_POKEMON_SET_ALIASES: Readonly<Record<string, string>> = Ob
   "shiny-collection": "sc1",
   "shiny-star-v": "swsh4a",
   "shiny-treasure-ex": "sv4a",
-  "silver-lance": "swsh6h",
-  "single-strike-master": "swsh5i",
+  "silver-lance": "s6h",
+  "single-strike-master": "s5i",
   "sky-legend": "sm10b",
   "sky-splitting-charisma": "sm7",
-  "skyscraping-perfection": "swsh7d",
+  "skyscraping-perfection": "s7d",
   "snow-hazard": "sv2p",
   "soulsilver-collection": "l1ss",
-  "space-juggler": "swsh10p",
+  "space-juggler": "s10p",
   "space-time-creation": "dp1",
   "spiral-force": "bw8s",
   "split-earth": "ecard4",
-  "star-birth": "swsh9",
+  "star-birth": "s9",
   "start-deck-100-battle-collection": "mc",
   "start-deck-100-battle-collection-corociao-version": "mp1",
   "stellar-miracle": "sv7",
@@ -261,7 +263,7 @@ export const JAPANESE_POKEMON_SET_ALIASES: Readonly<Record<string, string>> = Ob
   "vending-machine-series-2-red": "vnd2",
   "vending-machine-series-3-green": "vnd3",
   "violet-ex": "sv1v",
-  "vmax-climax": "swsh8b",
+  "vmax-climax": "s8b",
   "vmax-rising": "swsh1a",
   // CF-THE-JAPANESE-CODE-IS-THE-KEY (Drew, 2026-09-01, R2). Was "swsh12a" —
   // our own mistaken form. The JA VSTAR Universe code is s12a; swsh12a was

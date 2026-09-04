@@ -1,0 +1,14 @@
+{
+  "productKey": "2024-svln",
+  "sport": "pokemon",
+  "year": 2024,
+  "setKey": "svln",
+  "source": "tcgdex-ja-modern",
+  "confidence": 0.9,
+  "provenance": "api.tcgdex.net/v2/ja/sets/SVLN (MIT, tcgdex/cards-database) fetched 2026-09-04 -- 21 rows, 1 ladder entries",
+  "setName": "Japanese スターターセット テラスタイプ：ステラ ニンフィアex",
+  "tcgdexId": "SVLN",
+  "sourceUrl": "https://api.tcgdex.net/v2/ja/sets/SVLN",
+  "rowCount": 21,
+  "parallelColumnAuthoritative": true
+}

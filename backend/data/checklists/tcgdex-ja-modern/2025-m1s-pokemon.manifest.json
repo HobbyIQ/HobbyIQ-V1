@@ -1,0 +1,14 @@
+{
+  "productKey": "2025-m1s",
+  "sport": "pokemon",
+  "year": 2025,
+  "setKey": "m1s",
+  "source": "tcgdex-ja-modern",
+  "confidence": 0.9,
+  "provenance": "api.tcgdex.net/v2/ja/sets/M1S (MIT, tcgdex/cards-database) fetched 2026-09-04 -- 90 rows, 6 ladder entries",
+  "setName": "Japanese メガシンフォニア",
+  "tcgdexId": "M1S",
+  "sourceUrl": "https://api.tcgdex.net/v2/ja/sets/M1S",
+  "rowCount": 90,
+  "parallelColumnAuthoritative": true
+}

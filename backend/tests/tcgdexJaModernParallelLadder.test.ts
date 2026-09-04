@@ -157,3 +157,65 @@ describe("the emitted line is the one checklist format", () => {
     expect(csvLine(rows[0])).toBe('base,231,,false,,"アオキ, リーダー"');
   });
 });
+
+// ── THE LANE IS DISPATCHABLE (closeout, 2026-09-04) ─────────────────────────
+//
+// A staged checklist nobody can drive is a file, not a lane. These pin the
+// three things a dispatch depends on: the universe knows every staged set, the
+// driver routes every one of them to the scraper that carries the ladder, and
+// the key it verifies by is the key the manifest stages.
+describe("the 52 staged sets are drivable from the universe manifest", () => {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const fsx = require("node:fs") as typeof import("node:fs");
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const pathx = require("node:path") as typeof import("node:path");
+
+  const DIR = pathx.join(__dirname, "..", "data", "checklists", "tcgdex-ja-modern");
+  const manifests = fsx.readdirSync(DIR)
+    .filter((f) => f.endsWith(".manifest.json"))
+    .map((f) => JSON.parse(fsx.readFileSync(pathx.join(DIR, f), "utf8")));
+  const universe = JSON.parse(
+    fsx.readFileSync(pathx.join(__dirname, "..", "data", "ingest-universe.json"), "utf8"),
+  );
+  const laneEntries = universe.entries.filter((e: { lane: string }) => e.lane === "tcgdexja");
+
+  /** The driver's own routing predicate — kept in sync by the pin below. */
+  const isModern = (setId: string) => /^(SV|S\d|CS|M[0-9]|M-P|SVK|SVLN|SVLS)/i.test(setId);
+
+  it("stages 52 sets and 7,182 rows", () => {
+    expect(manifests).toHaveLength(52);
+    const rows = manifests.reduce((s: number, m: { rowCount: number }) => s + m.rowCount, 0);
+    expect(rows).toBe(7182);
+  });
+
+  it("every staged set has a universe entry, matched on sourceRef", () => {
+    const refs = new Set(laneEntries.map((e: { sourceRef: string }) => e.sourceRef));
+    for (const m of manifests) {
+      expect(refs.has(m.sourceUrl), `${m.setKey} is not in ingest-universe.json`).toBe(true);
+    }
+  });
+
+  it("every staged set's universe entry carries the YEAR the driver reports by", () => {
+    const staged = new Set(manifests.map((m: { sourceUrl: string }) => m.sourceUrl));
+    for (const e of laneEntries.filter((x: { sourceRef: string }) => staged.has(x.sourceRef))) {
+      expect(e.year, `${e.sourceRef} has no year`).toBeTypeOf("number");
+    }
+  });
+
+  it("every staged set routes to the MODERN scraper — the one that carries the ladder", () => {
+    // A staged set that routed to the vintage scraper would re-stage itself
+    // base-only and undo the whole lane.
+    for (const m of manifests) {
+      expect(isModern(m.tcgdexId), `${m.tcgdexId} would route to the vintage scraper`).toBe(true);
+    }
+  });
+
+  it("the driver verifies by the BARE setKey the manifest stages", () => {
+    // setKeyFor() lowercases the set id off the sourceRef; the manifest stages
+    // the same string. If these ever diverge, a clean ingest records `failed`.
+    for (const m of manifests) {
+      const fromRef = String(m.sourceUrl).split("/").pop()!.toLowerCase();
+      expect(fromRef).toBe(m.setKey);
+    }
+  });
+});

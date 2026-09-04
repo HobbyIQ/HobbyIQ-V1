@@ -214,7 +214,29 @@ async function main() {
     const setKey = s.id.toLowerCase();
     const file = `${year}-${setKey}-pokemon`;
     fs.writeFileSync(path.join(OUT_DIR, `${file}.csv`), lines.join("\n") + "\n");
-    fs.writeFileSync(path.join(OUT_DIR, `${file}.csv.meta.json`), JSON.stringify({
+    // SIDECAR NAME = `<stem>.manifest.json`, NOT `<stem>.csv.meta.json`.
+    //
+    // The ingest this lane feeds -- ingest-checklist-csv-to-catalog.cjs,
+    // productOf() -- reads `csvPath.replace(/\.csv$/, ".manifest.json")`, and
+    // so do build-parallel-vocabulary.cjs, ingest-scraped-checklist.cjs and
+    // migrate-checklists-to-one-format.cjs. Every scraper lane in the repo
+    // (Beckett, ChecklistCenter, Cardboard, HobbyMonitor, BCP, the other
+    // Pokemon fetchers) emits that name. `.csv.meta.json` is read by exactly
+    // one script, ingest-product-checklist.cjs, which is NOT this lane's
+    // ingest.
+    //
+    // The failure was SILENT, which is why it needs a comment and a pin. On a
+    // missing manifest productOf() falls back to parsing the FILENAME, and
+    // `2022-s12a-pokemon` parses -- it matches the fallback regex and yields
+    // sport=pokemon, year=2022, setKey=s12a. So nothing errors and the rows
+    // land. What is LOST is everything the filename cannot carry:
+    //
+    //   setName    "2022 s12a"  instead of  "Japanese VSTARユニバース"
+    //   sourceUrl  null         instead of  the tcgdex set URL
+    //
+    // -- a catalog row named after its own key, and 7,182 rows with no
+    // provenance back to the source that minted them.
+    fs.writeFileSync(path.join(OUT_DIR, `${file}.manifest.json`), JSON.stringify({
       productKey: `${year}-${setKey}`,
       sport: "pokemon",
       year,
@@ -225,6 +247,9 @@ async function main() {
       setName: `Japanese ${d.name ?? s.id}`,
       tcgdexId: s.id,
       sourceUrl: `https://api.tcgdex.net/v2/ja/sets/${s.id}`,
+      rowCount: rows,
+      parallelColumnAuthoritative: true,
+      scrapedAt: new Date().toISOString(),
     }, null, 2) + "\n");
 
     staged++; totalRows += rows;

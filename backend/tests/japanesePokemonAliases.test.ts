@@ -28,7 +28,14 @@ describe("CF-JAPANESE-POKEMON-ALIASES", () => {
       // code is s12a.
       ["2022 Pokemon Japanese Sword & Shield VSTAR Universe", "s12a"],
       ["2023 Pokemon Japanese Scarlet & Violet Shiny Treasure EX", "sv4a"],
-      ["2021 Pokemon Japanese Sword & Shield VMAX Climax", "swsh8b"],
+      // CF-THE-JAPANESE-CODE-IS-THE-KEY, THE SWSH ERA (R4, 2026-09-04). The
+      // same amendment as the line above, for the same reason: swsh8b was the
+      // EN-era spelling of the JA VMAX Climax code, which is s8b. R2 ruled one
+      // of these; R4 ruled the twelve the tcgdex-ja modern lane stages, of
+      // which this is the largest by pool volume (14,454 rows). See
+      // tests/ruledJapaneseSetKeys.test.ts for the full ruling and for the
+      // three swsh keys it deliberately does NOT move.
+      ["2021 Pokemon Japanese Sword & Shield VMAX Climax", "s8b"],
     ];
     for (const [name, want] of cases) {
       expect(resolveSetKeyForSlug("pokemon", name, 2023), `"${name}"`).toBe(want);

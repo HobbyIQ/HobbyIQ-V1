@@ -1,0 +1,14 @@
+{
+  "productKey": "2023-sv1s",
+  "sport": "pokemon",
+  "year": 2023,
+  "setKey": "sv1s",
+  "source": "tcgdex-ja-modern",
+  "confidence": 0.9,
+  "provenance": "api.tcgdex.net/v2/ja/sets/SV1S (MIT, tcgdex/cards-database) fetched 2026-09-04 -- 92 rows, 1 ladder entries",
+  "setName": "Japanese スカーレットex",
+  "tcgdexId": "SV1S",
+  "sourceUrl": "https://api.tcgdex.net/v2/ja/sets/SV1S",
+  "rowCount": 92,
+  "parallelColumnAuthoritative": true
+}

@@ -89,8 +89,8 @@ const MANUAL = {
  *
  *  Note the source's systematic failure mode, visible in the neighbours: it
  *  hands a Japanese set its contemporaneous ENGLISH counterpart's code
- *  (lost-abyss -> swsh11, dark-phantasma -> swsh10a). These three are the ones
- *  Drew has ruled on; others stay as scraped until ruled.
+ *  (lost-abyss -> swsh11, dark-phantasma -> swsh10a). The SWSH-era block below
+ *  rules those twelve; others stay as scraped until ruled.
  *
  *  Keep these until the upstream page is corrected; a scrape that already
  *  agrees leaves them as no-ops. */
@@ -98,6 +98,49 @@ const RULED = {
   "rocket-gang": "japanese-rocket-gang",
   "vstar-universe": "s12a",
   "paradigm-trigger": "s12",
+  // CF-THE-JAPANESE-CODE-IS-THE-KEY, the SWSH era (2026-09-04). The same
+  // failure the three above name, applied to the twelve sets the tcgdex-ja
+  // modern lane stages -- each one is the JA set whose romanized title this
+  // source files under the EN-era `swsh` spelling of its own code.
+  //
+  // WHY THESE TWELVE AND NOT THE OTHER SEVENTEEN swsh-valued aliases. Every
+  // one of these has a staged checklist in
+  // data/checklists/tcgdex-ja-modern/, whose setKey is the bare official code
+  // -- so the catalog spelling and the resolver output disagreed and 29,075
+  // live pool rows could not reach their own checklist. The other seventeen
+  // (eevee-heroes, time-gazer, shiny-star-v, ...) are the same defect and will
+  // be ruled the same way when their checklists land; a key with no checklist
+  // behind it is not yet a key this lane may move.
+  //
+  // PROVEN PER SET, NOT PATTERN-MATCHED (2026-09-04, api.tcgdex.net/v2/ja/sets,
+  // 184 JA sets). NO `swsh*` id exists anywhere in the Japanese universe --
+  // the prefix is EN-era by construction -- and each bare code below is a real
+  // JA set whose name is the Japanese name of the title on the left:
+  //
+  //   s9a  バトルリージョン (Battle Region)      s11   ロストアビス (Lost Abyss)
+  //   s10a ダークファンタズマ (Dark Phantasma)    s6h   白銀のランス (Silver Lance)
+  //   s8   フュージョンアーツ (Fusion Arts)      s5i   一撃マスター (Single Strike Master)
+  //   s11a 白熱のアルカナ (Incandescent Arcana)  s7d   摩天パーフェクト (Skyscraping Perfection)
+  //   s6k  漆黒のガイスト (Jet-Black Spirit)     s10p  スペースジャグラー (Space Juggler)
+  //   s9   スターバース (Star Birth)             s8b   VMAXクライマックス (VMAX Climax)
+  //
+  // NOT A BLANKET swsh->s REWRITE, though it holds for 28 of the 29: `swshp`
+  // is the exception that forbids the general rule as a rewrite. Its bare form
+  // `sp` names NO Japanese set -- the JA promo lines are S-P, SV-P and M-P --
+  // so a mechanical strip would mint a key for a product that does not exist.
+  // An exact-token table cannot make that mistake; a pattern can.
+  "battle-region": "s9a",
+  "dark-phantasma": "s10a",
+  "fusion-arts": "s8",
+  "incandescent-arcana": "s11a",
+  "jet-black-spirit": "s6k",
+  "lost-abyss": "s11",
+  "silver-lance": "s6h",
+  "single-strike-master": "s5i",
+  "skyscraping-perfection": "s7d",
+  "space-juggler": "s10p",
+  "star-birth": "s9",
+  "vmax-climax": "s8b",
 };
 
 (async () => {
