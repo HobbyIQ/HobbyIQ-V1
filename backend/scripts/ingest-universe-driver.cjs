@@ -236,6 +236,53 @@ function ladderIsAttested(csvPath) {
 }
 
 /**
+ * CF-A-PRODUCT-WITH-NO-PRINT-RUNS-IS-NOT-PARTIAL (2026-09-04).
+ *
+ * Backfill Runner 33847867665 (tcgdexja, 2021-2025, apply) recorded 46 of 48
+ * entries `partial`, and 30 of those with the reason "ladder present but zero
+ * print runs". Not one of them is incomplete. Japanese Pokemon has NO numbered
+ * parallels: the rarity ladder (Art Rare, Special Art Rare, Ultra Rare,
+ * Character Rare) IS the parallel axis, and tcgdex serves no print run for any
+ * JA set. `scrape-tcgdex-ja-modern.cjs` says so in its own header -- "printRun
+ * stays EMPTY ... this lane will not invent one: blank means unknown, never
+ * Base" -- and its own summary prints "printRun 0 written" on every run.
+ *
+ * So `withPrintRun === 0` is the EXPECTED, CORRECT shape for this lane, and a
+ * verdict of `partial` on it is a false gap: it tells the next pass to
+ * re-acquire a set that is already complete, forever, because no re-scrape can
+ * ever produce a print run the source does not have.
+ *
+ * The rule is a property of the PRODUCT, not of the file, so it is declared per
+ * lane BY NAME rather than inferred from a file that happens to be empty in
+ * that column -- inferring it would excuse a Topps Chrome scrape that simply
+ * lost the column. A lane absent from this set keeps the print-run expectation.
+ */
+const LANES_WITHOUT_PRINT_RUNS = new Set(["tcgdexja"]);
+
+/**
+ * CF-A-PROMO-SET-HAS-NO-BASE-CARDS (2026-09-04).
+ *
+ * The same run's only two failures were both promo products:
+ *
+ *   [32/48] SV-P  REFUSED -- zero base cards (288 rows, all carry a parallel)
+ *   [47/48] M-P   REFUSED -- zero base cards (132 rows, all carry a parallel)
+ *
+ * Staged and read back from the source: all 132 M-P rows carry `parallel=Promo`,
+ * which is the source's own and entirely correct rarity for every card in the
+ * set. A promo product IS its promos -- there is no base print underneath them
+ * to attach to, the way a Refractor scope attaches to its page's base set. The
+ * zero-base rule was written for a cross-join that joined rungs onto a subset
+ * never parsed; this is the opposite shape: a complete checklist of a set that
+ * has exactly one rung by design.
+ *
+ * A lane declared here is one whose products may legitimately be rung-only, and
+ * the entry is admitted only when EVERY row carries the SAME SINGLE rung -- a
+ * one-rung file being the honest shape of "these are all promos", while a
+ * multi-rung file with no base cards is still the cross-join the rule catches.
+ */
+const LANES_WITH_BASELESS_PRODUCTS = new Set(["tcgdexja"]);
+
+/**
  * THE PER-ENTRY CLEANLINESS GATE.
  *
  * The ingest's own guards are per-category and per-row: they drop the bad part
@@ -248,7 +295,7 @@ function ladderIsAttested(csvPath) {
  * Returns { ok, reason, stats }.
  */
 function gateStagedCsv(csvPath) {
-  const stats = { rows: 0, base: 0, ladder: 0, withPrintRun: 0, categories: 0, playersAsParallel: 0, cardLineParallel: 0 };
+  const stats = { rows: 0, base: 0, ladder: 0, withPrintRun: 0, categories: 0, playersAsParallel: 0, cardLineParallel: 0, rungNames: [] };
   let text;
   try { text = fs.readFileSync(csvPath, "utf8"); }
   catch (e) { return { ok: false, reason: `staged file unreadable: ${e.code || e.message}`, stats }; }
@@ -296,10 +343,15 @@ function gateStagedCsv(csvPath) {
   // mistaken for a rung. The two spellings now agree, and a page that says
   // "Base" out loud is no longer punished for saying it.
   const isBaseParallel = (p) => !p || /^base(?:\s+set)?$/i.test(String(p).trim());
+  // The DISTINCT rung names are kept, not merely a count of ladder rows: a
+  // promo product is ONE rung over every card and a cross-join is MANY rungs
+  // over every card, and only the distinct list tells those two apart.
+  const rungSet = new Set();
   for (const r of rows) {
     if (isBaseParallel(r.parallel)) stats.base++;
-    else { stats.ladder++; if (r.printRun) stats.withPrintRun++; }
+    else { stats.ladder++; rungSet.add(String(r.parallel).trim()); if (r.printRun) stats.withPrintRun++; }
   }
+  stats.rungNames = Array.from(rungSet);
 
   // ZERO BASE CARDS. A checklist with a parallel ladder but no base cards is a
   // ladder that has nothing to attach to -- the shape a cross-join leaves when
@@ -450,9 +502,9 @@ function gateStagedCsv(csvPath) {
  * Stats are summed across the files, so `ladder`/`withPrintRun` -- which
  * decide `partial` vs `ingested` downstream -- describe the whole page.
  */
-function gateStagedEntry(csvPaths) {
+function gateStagedEntry(csvPaths, lane) {
   const paths = Array.isArray(csvPaths) ? csvPaths : [csvPaths];
-  const total = { rows: 0, base: 0, ladder: 0, withPrintRun: 0, categories: 0, playersAsParallel: 0, cardLineParallel: 0 };
+  const total = { rows: 0, base: 0, ladder: 0, withPrintRun: 0, categories: 0, playersAsParallel: 0, cardLineParallel: 0, rungNames: [] };
   if (!paths.length) return { ok: false, reason: "no staged CSV", stats: total, files: [] };
 
   const files = [];
@@ -460,7 +512,8 @@ function gateStagedEntry(csvPaths) {
   for (const p of paths) {
     const g = gateStagedCsv(p);
     files.push({ file: path.basename(p), ok: g.ok, code: g.code ?? null, reason: g.reason, stats: g.stats });
-    for (const k of Object.keys(total)) total[k] += g.stats?.[k] ?? 0;
+    for (const k of Object.keys(total)) { if (k === "rungNames") continue; total[k] += g.stats?.[k] ?? 0; }
+    for (const n of g.stats?.rungNames ?? []) if (!total.rungNames.includes(n)) total.rungNames.push(n);
     // A per-file defect other than zero-base condemns the entry immediately,
     // and it names the FILE -- "the gate refused" with no filename is
     // unactionable when a page stages five of them.
@@ -471,13 +524,27 @@ function gateStagedEntry(csvPaths) {
   }
 
   if (total.base === 0) {
-    return {
-      ok: false,
-      reason: `zero base cards across all ${f(paths.length)} staged file(s) (${f(total.rows)} rows, all carry a parallel)`,
-      stats: total, files,
-    };
+    // CF-A-PROMO-SET-HAS-NO-BASE-CARDS. On a lane whose products may be
+    // rung-only, a page whose every row carries the SAME SINGLE rung is a
+    // complete promo checklist, not a ladder with nothing to attach to. Two
+    // distinct rungs or more with no base card is still the cross-join shape
+    // the rule was written for, and stays refused on every lane.
+    const singleRung = total.rungNames.length === 1;
+    if (!(LANES_WITH_BASELESS_PRODUCTS.has(lane) && singleRung)) {
+      return {
+        ok: false,
+        reason: `zero base cards across all ${f(paths.length)} staged file(s) (${f(total.rows)} rows, all carry a parallel)`,
+        stats: total, files,
+      };
+    }
   }
-  return { ok: true, reason: null, stats: total, files, zeroBaseFiles: files.filter((x) => x.code === "zero-base").map((x) => x.file) };
+  return {
+    ok: true, reason: null, stats: total, files,
+    // A baseless single-rung product admitted by the lane exception, named so
+    // the log can say WHY a zero-base page was allowed through.
+    baselessSingleRung: total.base === 0 ? (total.rungNames[0] ?? null) : null,
+    zeroBaseFiles: files.filter((x) => x.code === "zero-base").map((x) => x.file),
+  };
 }
 
 // ── acquisition, per lane, through the EXISTING scripts ──────────────────────
@@ -544,6 +611,9 @@ const CHILD_STDERR_LINES = 15;
  * so a child that genuinely wants one can still be given it in `env`.
  */
 const RUNNER_SCOPE_VARS = ["LIMIT", "SLOT", "SLOTS", "SCAN_LIMIT", "MAX_ROWS"];
+
+
+
 
 function run(script, args, env, timeoutMs) {
   const childEnv = { ...process.env, ...env };
@@ -764,14 +834,60 @@ function acquireEntry(entry, dir) {
         // 6 on pages with nothing to give, called them failures, and they
         // became two thirds of the 3-streak that aborted the lane. A lane is
         // not broken because the wiki has nothing to add for a 1990 oddball.
-        if (/nothing new to add/.test(String(said || ""))) {
-          const e = new Error(`bcp page has a base set but no parallel ladder — the wiki carries no rungs for it`);
+        // CF-A-REFUSAL-PATH-IS-NOT-A-CRASH (2026-09-04, run 33852199385).
+        //
+        // #1718 mapped exactly ONE of the scraper's refusal messages to EMPTY.
+        // The 1990 boxed/retail sets exit by a DIFFERENT path and were still
+        // read as `failed`: entries 6, 11, 12, 15, 16 and 17 of that run, and
+        // 15/16/17 were three in a row, so the lane aborted with 2,621 entries
+        // left. Every path below is the scraper EXITING 0 having said why it
+        // staged nothing, so each is classified on its own message rather than
+        // on the absence of a CSV, which is the same for all of them.
+        //
+        // The probe (2026-09-04, pages fetched directly) settles which of these
+        // is a verdict and which is a defect:
+        //
+        //   "base ok (N) but 0 rungs — nothing new to add"  -> EMPTY. The page
+        //      has a Base_Set heading and no parallel ladder. 1990_Baseball_Wit
+        //      is exactly this. Nothing here, and never was.
+        //
+        //   "0 base cards — layout not understood, SKIPPED" -> NOT empty. The
+        //      probe found these pages carry a FULL checklist (1990_Bazooka 22
+        //      cards, 1990_Fleer_Award_Winners 44, 1990_Donruss_Learning_Series
+        //      and 1990_Fleer_Baseball_All-Stars likewise) under a plain
+        //      `Checklist` heading, with NO `Base_Set` heading -- which is the
+        //      only heading parseCards reads. The rows are there and we cannot
+        //      see them. That is OUR parser, so it stays a lane fault worth a
+        //      verdict that brings someone back to it, exactly as the scraper's
+        //      own wording says. It does NOT become EMPTY: calling a gap in our
+        //      parser "the source has nothing" is how a defect goes quiet.
+        //
+        //   "HTTP 404" / "HTTP 410"                          -> the page is gone;
+        //      the shared isGone test downstream already lifts these out of
+        //      `failed` and into `unreachable`, so they need nothing here.
+        const saidStr = String(said || "");
+        if (/nothing new to add/.test(saidStr)) {
           // #1717's flag, and deliberately the SAME one: "the source answered,
           // and its answer is that it has nothing here" is ONE concept, and it
           // earns one status and one exclusion from the streak whether the
           // source is tcgdex or the wiki.
+          const e = new Error(`bcp page has a base set but no parallel ladder — the wiki carries no rungs for it`);
           e.emptyAtSource = true;
           throw e;
+        }
+        if (/HTTP 40[34]/.test(saidStr)) {
+          // The wiki answered, and its answer is that the page is not there.
+          // get() prints this and returns null on a 4xx, so the scraper exits 0
+          // and the 404 never reaches the catch below -- a gone page read as a
+          // broken pipe. Rethrown in the shape the shared isGone test already
+          // recognises, so it lands in `unreachable` (terminal, not our defect)
+          // rather than in `failed`, where it would advance the streak.
+          throw new Error(`bcp page is gone at the source (${(saidStr.match(/HTTP 40[34]/) || ["HTTP 404"])[0]})`);
+        }
+        if (/0 base cards — layout not understood/.test(saidStr)) {
+          // Named distinctly so the control doc says WHICH defect, and so a
+          // future fix to the Checklist-heading layout can find its own rows.
+          throw new Error("bcp page carries a checklist our parser does not read (no Base_Set heading) — a parser gap, not an empty page");
         }
         throw new Error("bcp scrape produced no CSV");
       }
@@ -977,6 +1093,9 @@ async function writeControl(entry, verdict) {
     reason: verdict.reason || null,
     rowsCreated: verdict.rowsCreated ?? null,
     rowsInCatalog: verdict.rowsInCatalog ?? null,
+    // Staged-row count, so "did every row land?" is answerable from the
+    // control doc alone -- the question run 33847867665 needed a log to answer.
+    rowsStaged: verdict.rowsStaged ?? null,
     stagedStats: verdict.stats || null,
     lastAttempt: new Date().toISOString(),
     attempts: (verdict.priorAttempts || 0) + 1,
@@ -1178,16 +1297,19 @@ function isStaged(entry) {
  */
 function orderQueue(queue, titlesRaw) {
   const wanted = String(titlesRaw || "").split(",").map((t) => t.trim()).filter(Boolean);
-  if (!wanted.length) {
-    // Stable: equal rank keeps manifest order, so a re-dispatch takes the same
-    // twenty rather than a fresh shuffle of a tie. STAGED FIRST, then the value
-    // proxy within each group -- work already on disk cannot be lost to a
-    // source outage, so it never queues behind work that can.
-    const decorated = queue.map((q, i) => ({ q, i, s: isStaged(q.entry) ? 1 : 0, r: valueRank(q.entry) }));
+  // Stable: equal rank keeps manifest order, so a re-dispatch takes the same
+  // twenty rather than a fresh shuffle of a tie. STAGED FIRST, then the value
+  // proxy within each group -- work already on disk cannot be lost to a source
+  // outage, so it never queues behind work that can.
+  const byValue = (qs) => {
+    const decorated = qs.map((q, i) => ({ q, i, s: isStaged(q.entry) ? 1 : 0, r: valueRank(q.entry) }));
     decorated.sort((a, b) => (b.s - a.s) || (b.r - a.r) || (a.i - b.i));
-    const staged = decorated.filter((d) => d.s).length;
+    return { queue: decorated.map((d) => d.q), staged: decorated.filter((d) => d.s).length };
+  };
+  if (!wanted.length) {
+    const { queue: sorted, staged } = byValue(queue);
     return {
-      queue: decorated.map((d) => d.q),
+      queue: sorted,
       mode: staged
         ? `staged-first (${staged} with a checklist on disk), then value-proxy (product family + era)`
         : "value-proxy (product family + era)",
@@ -1208,7 +1330,29 @@ function orderQueue(queue, titlesRaw) {
     if (at < 0) { unmatched.push(w); continue; }
     lead.push(rest.splice(at, 1)[0]);
   }
-  return { queue: [...lead, ...rest], mode: "explicit list (titles / BCP_TITLES)", named: lead.length, unmatched, staged: 0 };
+  // CF-THE-REST-FOLLOW-BENEATH-IN-VALUE-ORDER (2026-09-04, run 33852199385).
+  //
+  // `rest` used to be the eligible queue in MANIFEST order, which for bcp is
+  // alphabetical. So the canary named four Chrome pages, ingested them, and
+  // then spent entries 5-20 on 1990 Baseball Wit, Bazooka, Bowman, Classic,
+  // Donruss ... -- the alphabetical head of 1990, the least valuable end of the
+  // lane, and precisely the order #1708's proxy exists to prevent. The docblock
+  // above already promised "the rest follow beneath"; it never said in what
+  // order, and the code answered "alphabetically".
+  //
+  // The two mechanisms are not alternatives. The explicit list ranks what the
+  // operator named; the proxy ranks EVERYTHING ELSE. A LIMIT larger than the
+  // list is the normal case -- 4 named, 20 taken -- so the remainder is most of
+  // what actually runs, and it gets the same staged-first + family + era order
+  // it would get with no titles at all.
+  const { queue: restSorted, staged } = byValue(rest);
+  return {
+    queue: [...lead, ...restSorted],
+    mode: `explicit list (titles / BCP_TITLES), then ${staged ? `staged-first (${staged} on disk), then ` : ""}value-proxy (product family + era) for the rest`,
+    named: lead.length,
+    unmatched,
+    staged,
+  };
 }
 
 
@@ -1230,7 +1374,7 @@ for (const lane of ACQUIRE_LANES) {
   }
 }
 
-module.exports = { gateStagedCsv, gateStagedEntry, ladderIsAttested, CARTESIAN_MIN_RUNGS, CARTESIAN_MIN_CARDS, stagedCsvs, sourceLabelFor, splitCsv, isPersonName, setKeyFor, planFor, tcgdexModern, acquireStaged, ACQUIRE_LANES, LANE_ALIASES, LANE_SOURCE, LANE_MINUTES, CANONICAL_HEADER, CHILD_STDERR_LINES, cosmosSafeId, controlId, orderQueue, SYSTEMIC_FAILURE_STREAK, EMPTY_STATUS, STREAK_STATUSES, isStaged, stagedSourceRefs };
+module.exports = { gateStagedCsv, gateStagedEntry, ladderIsAttested, CARTESIAN_MIN_RUNGS, CARTESIAN_MIN_CARDS, stagedCsvs, LANES_WITHOUT_PRINT_RUNS, LANES_WITH_BASELESS_PRODUCTS, sourceLabelFor, splitCsv, isPersonName, setKeyFor, planFor, tcgdexModern, acquireStaged, ACQUIRE_LANES, LANE_ALIASES, LANE_SOURCE, LANE_MINUTES, CANONICAL_HEADER, CHILD_STDERR_LINES, cosmosSafeId, controlId, orderQueue, SYSTEMIC_FAILURE_STREAK, EMPTY_STATUS, STREAK_STATUSES, isStaged, stagedSourceRefs };
 if (require.main !== module) return;
 
 (async () => {
@@ -1450,7 +1594,7 @@ if (require.main !== module) return;
 
       // GATE BEFORE INGEST. A staged file that violates doctrine is refused as
       // a whole entry -- never a dirty ingest, and never a silent skip.
-      const gate = gateStagedEntry(csvPaths);
+      const gate = gateStagedEntry(csvPaths, lane);
       if (csvPaths.length > 1) {
         console.log(`      ${f(csvPaths.length)} staged scope files: ${csvPaths.map((p) => path.basename(p)).join(", ")}`);
       }
@@ -1470,22 +1614,68 @@ if (require.main !== module) return;
         const after = await countCatalogRows(entry);
         const created = (after ?? 0) - (before ?? 0);
         rowsCreatedTotal += Math.max(0, created);
+
+        /**
+         * CF-EVERY-STAGED-ROW-OR-IT-IS-NOT-INGESTED (2026-09-04).
+         *
+         * Run 33847867665 landed EXACTLY 64 catalog rows for set after set --
+         * S10a, S12, S5I, S8, S9a, S6H, S9, S8b, S11 ... thirty-nine of the
+         * forty-eight -- while the staging held 92 rows for SV1V, 108 for SV9
+         * and 367 for SV4a. 64 is not a number this lane can produce: it is
+         * ceil(LIMIT/CONCURRENCY) * CONCURRENCY = ceil(52/16) * 16, the leaked
+         * runner LIMIT rounded up to the child's write-chunk boundary.
+         *
+         * #1718 deleted the leak. This is the ASSERTION that would have caught
+         * it without a human reading a log: the driver already knows how many
+         * rows the gate parsed out of the staged files, and a complete ingest
+         * of a product the catalog had none of must leave that many rows
+         * behind. A count short of staging is a TRUNCATED ingest -- a verdict
+         * of its own, never `ingested`, and never `partial` (which claims the
+         * SOURCE was thin when in fact our own pipe dropped rows).
+         *
+         * The comparison is made only when the product started EMPTY. With
+         * rows already present the arithmetic cannot separate "created 64 of
+         * 92 staged" from "58 of the 92 were already there", and asserting on
+         * a difference we cannot attribute would fire on every honest re-run.
+         */
+        const staged = gate.stats.rows;
+        const startedEmpty = (before ?? 0) === 0;
+        const truncated = startedEmpty && after !== null && staged > 0 && after < staged;
+
+        /**
+         * CF-A-PRODUCT-WITH-NO-PRINT-RUNS-IS-NOT-PARTIAL. On a lane whose
+         * products carry no numbered parallels, an empty print-run column is
+         * the source telling the truth, not a gap for a later pass to close.
+         */
+        const printRunsExpected = !LANES_WITHOUT_PRINT_RUNS.has(lane);
+        const incomplete = gate.stats.ladder === 0 || (printRunsExpected && gate.stats.withPrintRun === 0);
+
         if (after === null) {
           verdict = { status: "failed", reason: "cannot verify by read — setKey/year not derivable for this entry", rowsCreated: 0, stats: gate.stats };
           console.log(`      FAILED — unverifiable`);
         } else if (after === 0) {
           verdict = { status: "failed", reason: "ingest reported success but the catalog holds 0 rows for this product", rowsCreated: 0, rowsInCatalog: 0, stats: gate.stats };
           console.log(`      FAILED — green ingest, 0 rows landed`);
-        } else if (gate.stats.ladder === 0 || gate.stats.withPrintRun === 0) {
-          // Landed and clean, but incomplete: base-only, or a ladder with no
-          // print runs. That is `partial` -- the exact shape D37 counted 1,873
-          // + 172 of. Recording it `ingested` would close a gap still open.
+        } else if (truncated) {
+          verdict = {
+            status: "failed",
+            reason: `truncated ingest — ${f(staged)} rows staged, ${f(after)} in catalog`,
+            rowsCreated: created, rowsInCatalog: after, rowsStaged: staged, stats: gate.stats,
+          };
+          console.log(`      FAILED — truncated: ${f(staged)} staged, only ${f(after)} landed (${f(staged - after)} rows lost in our own pipe)`);
+        } else if (incomplete) {
+          // Landed and clean, but incomplete: base-only, or -- on a lane whose
+          // products ARE numbered -- a ladder with no print runs. Recording it
+          // `ingested` would close a gap still open.
           const why = gate.stats.ladder === 0 ? "base-only, no parallel ladder" : "ladder present but zero print runs";
-          verdict = { status: "partial", reason: why, rowsCreated: created, rowsInCatalog: after, stats: gate.stats };
+          verdict = { status: "partial", reason: why, rowsCreated: created, rowsInCatalog: after, rowsStaged: staged, stats: gate.stats };
           console.log(`      PARTIAL — ${why} (${f(created)} rows created, ${f(after)} in catalog)`);
         } else {
-          verdict = { status: "ingested", reason: null, rowsCreated: created, rowsInCatalog: after, stats: gate.stats };
-          console.log(`      INGESTED — ${f(created)} rows created, ${f(after)} in catalog, ${f(gate.stats.withPrintRun)} with print runs`);
+          const note = printRunsExpected
+            ? `${f(gate.stats.withPrintRun)} with print runs`
+            : "no print runs — this lane's products carry none";
+          verdict = { status: "ingested", reason: null, rowsCreated: created, rowsInCatalog: after, rowsStaged: staged, stats: gate.stats };
+          console.log(`      INGESTED — ${f(created)} rows created, ${f(after)} in catalog of ${f(staged)} staged, ${note}`);
         }
       }
     } catch (e) {
@@ -1644,8 +1834,37 @@ if (require.main !== module) return;
   // stops early on a budget stop that happened to change nothing.
   if (systemicAbort) {
     console.log(`  lane aborted — NOT printing the budget marker; a relaunch would meet the same wall. Fix the cause, then re-dispatch.`);
-  } else if (remaining > 0 && (stoppedOnBudget || written >= LIMIT)) {
+  } else if (remaining > 0 && stoppedOnBudget && notReached > 0) {
+    // CF-A-LIMIT-BOUND-RUN-IS-NOT-A-BUDGET-STOP (2026-09-04, run 33854416984).
+    //
+    // The condition used to be `stoppedOnBudget || written >= LIMIT`. That
+    // second clause made a run that CLEANLY FINISHED its slice look like one
+    // the clock cut short: sportscardchecklist with limit=3 took exactly its
+    // three entries, reported "intended 3 = written 3" and RECONCILED yes, and
+    // still printed the marker because 3 >= 3. The runner's relaunch step gates
+    // on this line, so it re-dispatched the SAME inputs, which took the same
+    // three entries, and the lane looped (33854423019, 33854625169) until it
+    // was cancelled by hand.
+    //
+    // `written >= LIMIT` cannot distinguish the two cases at all: LIMIT is
+    // either the operator's explicit slice or `budgetSized`, so on a full run
+    // it is TRUE by construction whether or not the clock was ever consulted.
+    //
+    // The marker means one thing -- "there is more work and I ran out of time
+    // before I could take it" -- so it now asserts exactly that, in the two
+    // facts that make it true and that nothing else sets:
+    //   stoppedOnBudget  the loop broke on `left() < perEntryMin * 1.5`
+    //   notReached > 0   entries of THIS run's slice were never attempted
+    // A run that exhausted an explicit LIMIT, or drained the eligible list,
+    // has notReached === 0 and never trips the clock, so it falls through to
+    // the branches below and the relaunch stops -- which is the whole point.
     console.log(`stopped at the ${RUN_MS / 60000}-minute budget — the relaunch continues from here`);
+  } else if (remaining > 0 && notReached === 0) {
+    // The slice this run was asked for is DONE and the lane still has more.
+    // That is a complete run, not an early exit, so it does not read as one --
+    // and it deliberately does not print the marker, because the operator (or
+    // the sizing) chose the slice and a relaunch is theirs to decide.
+    console.log(`  slice complete — ${f(remaining)} entries remain in the lane; re-dispatch to continue`);
   } else if (remaining > 0) {
     console.log(`  ${f(remaining)} entries remain but this run ended early — inspect the failures before re-dispatching`);
   } else {
