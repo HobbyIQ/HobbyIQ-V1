@@ -31,6 +31,20 @@ import { describe, expect, it } from "vitest";
 const require_ = createRequire(import.meta.url);
 const L = require_(path.resolve(__dirname, "../scripts/scrape-bcp-ladders.cjs"));
 
+const SCRIPT = path.resolve(__dirname, "../scripts/scrape-bcp-ladders.cjs");
+
+/** Compile a MUTATED copy of the shipped scraper, so a pin proves the guard in
+ *  the committed file is load-bearing rather than re-asserting the test's own
+ *  copy of it. Same helper shape as repairTiffanyPoolEnumeration.test.ts. */
+function evaluate(src: string) {
+  const Module = require_("node:module");
+  const m = new Module.Module(`${SCRIPT}.mutant`, undefined);
+  m.filename = `${SCRIPT}.mutant`;
+  m.paths = (Module.Module as unknown as { _nodeModulePaths(p: string): string[] })._nodeModulePaths(path.dirname(SCRIPT));
+  (m as unknown as { _compile(s: string, f: string): void })._compile(src, `${SCRIPT}.mutant`);
+  return m.exports as Record<string, (...a: unknown[]) => unknown>;
+}
+
 const fixture = (n: string) =>
   fs.readFileSync(path.resolve(__dirname, `fixtures/bcp/${n}.trimmed.html`), "utf8");
 
@@ -289,5 +303,68 @@ describe("blank means unknown — a print run is never guessed", () => {
 
   it("returns no subset ranges when the page does not state the split", () => {
     expect(L.subsetRanges("<p>A set with no stated subset split.</p>", 120)).toEqual({});
+  });
+});
+
+/**
+ * CF-A-YEAR-GUARD-IS-SCOPED-TO-THE-BARE-COLON-ARM.
+ *
+ * #1752 fixed a real defect the wrong way round. A navbox footer ("Topps
+ * (flagship) Classic Era: 1951 - 1952 - ...") was being absorbed by the last
+ * Parallels section, and RUN_NOTE's bare `:\s*(\d+)` arm read ": 1951" as a
+ * print run. The fix refused EVERY four-digit year -- and 1999 Black Diamond's
+ * Double Diamond exception rung is genuinely "serial-numbered to 1998", the
+ * three 1998 home-run-chase cards numbered to the year. The guard erased it.
+ *
+ * The discriminator is not the VALUE, it is WHICH ARM MATCHED. Page chrome can
+ * only reach us through the bare-colon arm; `numbered to N`, `#'d to N`, `#/N`
+ * and `(N copies)` are the page STATING a serial, and are taken at their word.
+ * Both directions are pinned here, and each is mutation-red.
+ */
+describe("a year-shaped figure is refused only when it came from page chrome", () => {
+  it("keeps the navbox year refused — 'Classic Era: 1951' is not a print run", () => {
+    expect(L.runFromNote("Classic Era: 1951 - 1952 - 1953")).toBeNull();
+    expect(L.runFromNote("Topps (flagship) Modern Era: 2002")).toBeNull();
+  });
+
+  it("keeps a STATED serial that happens to look like a year — /1998 on Sosa", () => {
+    expect(L.runFromNote("(serial-numbered to 1998)")).toBe(1998);
+    expect(L.runFromNote("#'d to 1998")).toBe(1998);
+    expect(L.runFromNote("(1998 copies)")).toBe(1998);
+  });
+
+  it("leaves every non-year figure alone on both arms", () => {
+    expect(L.runFromNote("serial-numbered to 100")).toBe(100);
+    expect(L.runFromNote("Sosa: 273 copies")).toBe(273);
+    // "short set, 3000" is a COMMA clause, not a colon one: no RUN_NOTE arm
+    // matches it at all. It is parsed by parseSubsetRuns, pinned above.
+    expect(L.runFromNote("(short set, 3000; Debuts, 2500)")).toBeNull();
+    expect(L.runFromNote("Class 1: 150")).toBe(150);
+    expect(L.runFromNote("a line stating no figure at all")).toBeNull();
+  });
+
+  it("classifies the arm, not the number", () => {
+    const armOf = (s: string) => L.isBareColonRun(s.match(/(?:#'?d?\s*(?:to|\/)\s*|numbered\s+to\s+|:\s*)([\d,]+)\s*(?:cop(?:y|ies))?\b|\(([\d,]+)\s*cop(?:y|ies)\)/i));
+    expect(armOf("Classic Era: 1951")).toBe(true);   // chrome
+    expect(armOf("serial-numbered to 1998")).toBe(false); // a statement
+    expect(armOf("(1998 copies)")).toBe(false);      // a statement
+  });
+
+  it("MUTATION RED — an unscoped year guard erases the /1998 exception rung", () => {
+    const src = fs.readFileSync(path.resolve(__dirname, "../scripts/scrape-bcp-ladders.cjs"), "utf8");
+    const LINE = `  if (isBareColonRun(m) && isYearShaped(n)) return null;`;
+    expect(src).toContain(LINE);
+    // THE #1752 DEFECT: drop the arm scoping and the guard eats a real serial.
+    const mutant = evaluate(src.replace(LINE, `  if (isYearShaped(n)) return null;`));
+    expect(mutant.runFromNote("(serial-numbered to 1998)")).toBeNull();
+    expect(L.runFromNote("(serial-numbered to 1998)")).toBe(1998);
+  });
+
+  it("MUTATION RED — dropping the guard entirely lets the navbox year back in", () => {
+    const src = fs.readFileSync(path.resolve(__dirname, "../scripts/scrape-bcp-ladders.cjs"), "utf8");
+    const LINE = `  if (isBareColonRun(m) && isYearShaped(n)) return null;`;
+    const mutant = evaluate(src.replace(LINE, ``));
+    expect(mutant.runFromNote("Classic Era: 1951 - 1952")).toBe(1951); // the pre-#1752 defect
+    expect(L.runFromNote("Classic Era: 1951 - 1952")).toBeNull();
   });
 });
