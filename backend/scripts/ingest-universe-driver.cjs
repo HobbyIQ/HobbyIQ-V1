@@ -338,9 +338,19 @@ function acquireEntry(entry, dir) {
     }
     case "tcgdexja": {
       const setId = entry.sourceRef.split("/").pop();
-      run("scrape-tcgdex-ja.cjs", [`--outDir=${dir}`, `--sets=${setId}`, "--delayMs=150"]);
+      // CF-JA-MODERN-PARALLEL-LADDER (gap doc 2026-09-03, recommendation 5).
+      // The vintage scraper stages BASE-ONLY -- every row `parallel=""` -- and a
+      // base-only checklist does not unblock the comps behind these cells, which
+      // are waiting on the parallel axis. For the modern codes (SV*, S*, M*, CS*)
+      // the JA rarity ladder IS that axis, so those sets route to the scraper
+      // that carries it. The vintage PMCG/neo titles keep the original lane:
+      // tcgdex serves them no rarity ladder, so pointing them at the modern
+      // scraper would change nothing but the provenance string.
+      const modern = /^(SV|S\d|CS|M[0-9]|M-P|SVK|SVLN|SVLS)/i.test(setId);
+      const script = modern ? "scrape-tcgdex-ja-modern.cjs" : "scrape-tcgdex-ja.cjs";
+      run(script, [`--outDir=${dir}`, `--sets=${setId}`, "--delayMs=150"]);
       const csvs = fs.readdirSync(dir).filter((n) => n.endsWith(".csv"));
-      if (!csvs.length) throw new Error("tcgdex produced no CSV");
+      if (!csvs.length) throw new Error(`tcgdex produced no CSV (${script}, set ${setId})`);
       return { csvPath: path.join(dir, csvs[0]) };
     }
     default:
