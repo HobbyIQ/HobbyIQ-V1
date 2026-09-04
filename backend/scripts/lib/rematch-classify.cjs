@@ -1749,12 +1749,65 @@ function normalizeCatalogSource(raw) {
   return s;
 }
 
+/**
+ * A PUBLISHER'S LANE IS STILL THAT PUBLISHER (Drew's ruling, 2026-09-04).
+ *
+ * `tcgdex-ja-2026-09-04` is the SAME publisher as `tcgdex` -- scrape-tcgdex-ja.cjs
+ * reads the identical free JSON API (MIT, the permitted one), and the `-ja`
+ * token names WHICH CORPUS of that API was walked, not a different source of
+ * evidence. It normalised to `tcgdex-ja`, which is not in the allowlist, so
+ * 12,851 rows scored STRICT 0 while the LOOSE `catalogAuthorityOf` called every
+ * one of them `checklist` -- the two predicates disagreeing about the same rows,
+ * which is precisely the split this allowlist exists to prevent.
+ *
+ * WHY A NAMED LIST AND NOT A GENERAL "STRIP THE LAST SEGMENT" RULE. Measured
+ * read-only over all 172 distinct card_catalog sources on 2026-09-04, exactly
+ * five normalized keys are a suffix of a strict publisher, and they are NOT the
+ * same case:
+ *
+ *   tcgdex-ja               12,851  the tcgdex JSON API, ja corpus     -> STRICT
+ *   tcdb-scrape              6,158  tcdb's own scrape lane; the sibling
+ *                                   `tcdb-scraped-*` ALREADY normalises to
+ *                                   `tcdb` and is strict, so refusing this
+ *                                   spelling is the same self-disagreement  -> STRICT
+ *   bccp-product-structure   3,075  a VENDOR product classification.
+ *                                   catalogAuthority.service.ts already sends
+ *                                   every `-product-structure` to VENDOR by
+ *                                   name; consume SALES not PRODUCT fields  -> refuse
+ *   checklist-batch-fill       265  a legacy FILL lane, not a transcription;
+ *                                   nukeCatalogFragmentation ranks it BELOW
+ *                                   cardsight                              -> refuse
+ *   baseballcardpedia-manual     3  a hand-edit lane of unproven provenance,
+ *                                   3 rows, never audited                  -> refuse
+ *
+ * So a generic rule would promote a vendor's product classification into the
+ * gate whose false yes moves a sale onto a card that may never have been
+ * printed. The lanes are named, and every lane invented later is refused until
+ * someone adds it deliberately -- the same default the publisher list itself
+ * has. Pinned BOTH directions in rematchStrictSourceAndPlayerName.test.ts: a
+ * lane suffix never flips a KNOWN publisher's strictness, and an unknown
+ * publisher stays non-strict no matter what lane it claims.
+ */
+const STRICT_PUBLISHER_LANES = Object.freeze([
+  "tcgdex-ja",
+  "tcdb-scrape",
+]);
+
 /** L3. Is this catalog row's source a REAL SCRAPED CHECKLIST -- one that can
  *  prove a specialization lists a card? Every source not named above is
  *  refused, including every source invented later. Absent beats wrong. */
 function isStrictChecklistSource(raw) {
   const s = normalizeCatalogSource(raw);
-  return s !== "" && STRICT_CHECKLIST_SOURCES.includes(s);
+  if (s === "") return false;
+  if (STRICT_CHECKLIST_SOURCES.includes(s)) return true;
+  // A named lane of a named publisher. The lane must resolve to a publisher
+  // that is ALREADY strict on its own -- so this can never admit a source the
+  // list does not already trust, only a corpus of one it does.
+  if (STRICT_PUBLISHER_LANES.includes(s)) {
+    const publisher = s.slice(0, s.lastIndexOf("-"));
+    return STRICT_CHECKLIST_SOURCES.includes(publisher);
+  }
+  return false;
 }
 
 // ── SPECIALIZATION-STATED: the IMPROVE subclass that repairs a stated ──────
@@ -3909,7 +3962,7 @@ module.exports = {
   autographWitnessIsSellerNameOnly, sellerNameAutoEvidence,
   SPECIALIZATION_STATED, SPECIALIZATION_PARENTS, LADDER_MIRRORED_KEYS,
   SAME_NUMBER_PARALLEL_SETS, isSameNumberParallelSet,
-  STRICT_CHECKLIST_SOURCES, normalizeCatalogSource, isStrictChecklistSource,
+  STRICT_CHECKLIST_SOURCES, STRICT_PUBLISHER_LANES, normalizeCatalogSource, isStrictChecklistSource,
   specializationAncestry, isSpecializationOf, distinguishingWords,
   titleStatesWord, specializationStatedEvidence,
   PROTECTED_SOURCES, PROTECTED_MARKER_FIELDS, AXES, GENERIC_PARALLELS,
