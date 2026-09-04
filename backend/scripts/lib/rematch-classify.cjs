@@ -394,6 +394,38 @@ function slugNamesParallel(slug) {
 }
 
 /**
+ * Does the title spell out, in full, the parallel phrase the STORED SLUG
+ * already claims? Returns the matched phrase or null.
+ *
+ * CF-A-SLUG-AND-ITS-TITLE-CAN-AGREE (2026-09-04). The base-eviction guard's
+ * finish test is a VOCABULARY test, and the corpus behind it is built from
+ * the checklists we happen to hold. When a product's parallel names are not
+ * in it -- Topps Cosmic Chrome's Planetary Pursuit (Mercury / Earth / Venus),
+ * 2025 Score's Signatures -- a genuine parallel sale reads as a base sale and
+ * is evicted onto the base pool, splitting the very pool the rematch exists
+ * to unify.
+ *
+ * No vocabulary is consulted here. The slug is treated as the claim and the
+ * title as the witness: when the witness repeats the claim word for word,
+ * the two AGREE and no eviction is available, whatever the corpus knows.
+ *
+ * Every significant word (3+ chars, and never the generic 'base') of the slug
+ * parallel must be present in the title. Requiring ALL of them keeps
+ * 'base-refractor' from disqualifying on 'base' alone, and keeps a lone
+ * shared colour word from vetoing a real eviction.
+ *
+ * Pure -- a test drives it with two strings.
+ */
+function titleEchoesSlugParallel(title, slugParallel) {
+  const seg = lower(str(slugParallel));
+  if (!seg || GENERIC_PARALLELS.has(seg)) return null;
+  const words = seg.split(/[^a-z0-9]+/).filter((w) => w.length >= 3 && w !== "base");
+  if (!words.length) return null;
+  const hay = new Set(lower(str(title)).split(/[^a-z0-9]+/).filter(Boolean));
+  return words.every((w) => hay.has(w)) ? seg : null;
+}
+
+/**
  * The three evidence fields, quoted, for ONE row. Returns
  * { qualifies, evidence } where evidence is what the census banner and the
  * rekeyedReason both print -- the row is never evicted on a verdict alone,
@@ -457,6 +489,35 @@ function baseEvictionEvidence({ row, stored, derived, storedSlug, baseDestSlug, 
       ev.titleNearMiss = near;
       fail.push(`title-near-misses-a-finish:${near.word}~${near.matched}`);
     }
+  }
+  // 3c. THE TITLE ECHOES THE SLUG'S OWN PARALLEL PHRASE (2026-09-04).
+  //
+  //      Guard 3 asks the finish VOCABULARY whether the title names a finish.
+  //      The vocabulary is the checklist corpus's, and a corpus is never
+  //      complete: measured on the 1,457 rows the halted base-eviction wave
+  //      wrote, 12 rows were evicted whose titles state the stored slug's
+  //      parallel IN FULL -- 'Planetary Pursuit Mercury' off
+  //      ...:ppm-ja:mercury:no-auto ($250), 'EARTH' off ...:ppea-cs:earth,
+  //      'Venus' off ...:ppv-jj:venus, and five 2025 Score 'Signatures' rows.
+  //      None of mercury/earth/venus/signatures is in CORE_FINISH_TOKENS, so
+  //      titleNamesFinish said false and the eviction qualified on every
+  //      other field.
+  //
+  //      This check needs no vocabulary. The stored slug already names the
+  //      parallel; if the title spells that same phrase out, the row and the
+  //      slug AGREE and there is nothing to evict. It is a self-evidence
+  //      test, so a parallel the corpus has never seen still defends itself.
+  //
+  //      DISQUALIFYING ONLY, exactly like the near-miss rule above: it can
+  //      only ever keep a row where it is, and it never mints a parallel.
+  //      Words of 3+ characters only, and EVERY significant word of the slug
+  //      parallel must appear, so a ...:base-refractor:... slug does not
+  //      disqualify on the bare word 'base' and one-word overlap is never
+  //      enough on its own.
+  const slugParallelEcho = titleEchoesSlugParallel(title, ev.storedSlugParallel);
+  if (slugParallelEcho) {
+    ev.titleEchoesSlugParallel = slugParallelEcho;
+    fail.push(`title-echoes-slug-parallel:${slugParallelEcho}`);
   }
   // 4. somewhere checklist-backed to go
   if (!baseDestBacked) fail.push("no-checklist-backed-base-destination");
@@ -1828,6 +1889,7 @@ module.exports = {
   },
   classifyIdentity: SPLIT.classifyIdentity,
   titleNamesFinish, titleStatesSerial, slugParallelSegment, slugNamesParallel, baseEvictionEvidence,
+  titleEchoesSlugParallel,
   // The derivation-defect guards (D1, D6, D7, D8, V3), exported so each pin
   // can drive one directly and the mutation check can revert them one at a
   // time -- a guard nothing can call alone is a guard nothing can prove.

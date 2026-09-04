@@ -32,7 +32,7 @@
  * that picks its own lane on an empty input runs a lane nobody dispatched.
  *
  * Env (all via the existing backfill-runner inputs -- no new inputs):
- *   SOURCES=hobbymonitor|insider|bcp|beckett|tcdb|clc|tcgdexja   REQUIRED
+ *   SOURCES=hobbymonitor|insider|bcp|beckett|tcdb|clc|tcgdexja|sportscardchecklist   REQUIRED
  *   BACKFILL_APPLY=true    actually acquire + ingest + write verdicts
  *   LIMIT=N                entries this run (0 = budget-sized)
  *   YEARS=1969,1972        optional year scope
@@ -54,6 +54,11 @@ const RECHECK = String(process.env.SCOPE || "").toLowerCase() === "recheck";
 const MANIFEST_PATH = process.env.MANIFEST_PATH || path.join(HERE, "..", "data", "ingest-universe.json");
 const WORKDIR = process.env.WORKDIR || path.join(os.tmpdir(), "hiq-universe");
 const CONTROL_CONTAINER = process.env.CONTROL_CONTAINER || "crawl_state";
+/** How many CONSECUTIVE failed/unreachable entries mean the lane is down rather
+ *  than the entries being bad. Consecutive, never cumulative -- see the
+ *  tripwire in the loop. Tunable so a probe can lower it; never 0 or 1, which
+ *  would restore the exact one-entry-kills-the-lane behaviour this replaced. */
+const SYSTEMIC_FAILURE_STREAK = Math.max(2, Number(process.env.SYSTEMIC_FAILURE_STREAK || 3));
 
 const f = (n) => Number(n).toLocaleString();
 const left = () => RUN_MS - (Date.now() - STARTED);
@@ -78,6 +83,10 @@ const LANE_ALIASES = {
   beckett: "beckett",
   clc: "clc",
   tcgdexja: "tcgdexja",
+  // The vintage lane (2026-09-04). Covers the seven football/basketball/hockey
+  // cells no other source reaches; `scc` is the short form an operator types.
+  sportscardchecklist: "sportscardchecklist",
+  scc: "sportscardchecklist",
   tcdb: "tcdb",
 };
 
@@ -91,6 +100,9 @@ const LANE_MINUTES = {
   beckett: 1.5,
   clc: 1.2,
   tcgdexja: 0.5,
+  // 0.5-2 MB per set page plus the >=2s politeness delay this source is
+  // crawled under. Measured on the three sampled sets, not assumed.
+  sportscardchecklist: 0.6,
 };
 
 // ── the canonical CSV ────────────────────────────────────────────────────────
@@ -299,6 +311,22 @@ function acquireEntry(entry, dir) {
       ]);
       return { csvPath };
     }
+    case "sportscardchecklist": {
+      // The direct-URL lane, same shape as hobbymonitor: the sourceRef IS the
+      // address. Discovery happened once, in the sitemap pass that minted these
+      // entries -- this never touches /search/, which robots.txt Disallows via
+      // `/?*` and which returns the wrong sets anyway (the survey measured
+      // "1972 topps football" returning 18 results, none of them set-11959).
+      run("fetchSportsCardChecklist.cjs", [
+        "--url", entry.sourceRef,
+        "--out", csvPath,
+        "--year", String(entry.year || ""),
+        "--set-key", setKeyFor(entry) || "",
+        "--set-name", String(entry.setName || ""),
+        "--sport", String(entry.sport || ""),
+      ]);
+      return { csvPath };
+    }
     case "checklistinsider": {
       // --slugsFile re-runs a NAMED subset without re-fetching all 599 pages.
       const slug = entry.sourceRef.replace(/^https?:\/\/[^/]+\//, "").replace(/\/$/, "");
@@ -398,7 +426,33 @@ function cosmos() {
   return db;
 }
 
-const controlId = (entryId) => `ingest_universe::${entryId}`;
+/**
+ * CF-A-URL-IS-NOT-A-COSMOS-ID (2026-09-04).
+ *
+ * The manifest's entry.id embeds the whole sourceRef -- "bcp::http://www.
+ * baseballcardpedia.com/index.php/1990_Baseball_Wit" -- so the control id it
+ * produced carried slashes, and the SDK rejects those CLIENT-SIDE:
+ * "Illegal characters ['/', '\', '#'] cannot be used in Resource ID".
+ *
+ * That throw came from writeControl, which sits AFTER the per-entry try/catch,
+ * so it escaped to the outer handler and killed the lane on entry 1 with exit
+ * 3. Measured on the manifest: ALL 7,755 entries across ALL SIX lanes produce
+ * an illegal id, so no generation of this driver has ever written a verdict in
+ * APPLY mode -- run 33837346045 is simply the first that reached the line.
+ *
+ * The id is an ADDRESS, not the record: the readable fields (entryId, lane,
+ * sourceRef) all stay on the doc verbatim. So the illegal characters are
+ * ESCAPED rather than stripped -- two entries differing only where a slash sat
+ * must not fold onto one doc. `~` is escaped first, so the mapping is
+ * injective by construction.
+ */
+const COSMOS_ID_ESCAPES = [[/~/g, "~t"], [/\//g, "~s"], [/\\/g, "~b"], [/#/g, "~h"], [/\?/g, "~q"]];
+function cosmosSafeId(raw) {
+  let v = String(raw ?? "");
+  for (const [re, to] of COSMOS_ID_ESCAPES) v = v.replace(re, to);
+  return v;
+}
+const controlId = (entryId) => cosmosSafeId(`ingest_universe::${entryId}`);
 
 async function readControl(entryId) {
   const id = controlId(entryId);
@@ -491,12 +545,117 @@ async function countCatalogRows(entry) {
   return resources[0] ?? 0;
 }
 
+/**
+ * CF-A-CANARY-SHOULD-HIT-THE-CARDS-THAT-SELL (2026-09-04).
+ *
+ * The queue was manifest order, which is year-then-name -- so a LIMIT=20 canary
+ * on YEARS=1990..2026 spent all twenty entries in 1990, starting at "Baseball
+ * Wit": an oddball with no parallel ladder and, per the 2026-09-03 probe, no
+ * autograph section either, because certified autos are a 1990s-ONWARD feature
+ * and 1990 is the boundary year itself. Twenty pages of the least valuable end
+ * of the lane prove nothing about a re-scrape whose whole purpose is autographs.
+ *
+ * ORDER BY VALUE. Two mechanisms, in priority order:
+ *
+ *   1. AN EXPLICIT LIST WINS. `titles` is an EXISTING runner input, exported as
+ *      BCP_TITLES, and naming the exact pages is both the cheapest ranking and
+ *      the most honest one -- the operator states the order and the banner
+ *      prints it back. Entries match on page title, set name, "<year> <name>"
+ *      or sourceRef, so the same list works whichever the operator has to hand.
+ *      Named entries lead, in the order given; the rest follow beneath, so a
+ *      LIMIT larger than the list still runs a full budget.
+ *
+ *   2. OTHERWISE, AN INTRINSIC PROXY, NOT A COSMOS READ. Ranking by real pool
+ *      rows would need a sold_comps aggregate per (year, setKey) across 2,637
+ *      entries -- a cross-partition GROUP BY over a 16M-row container, spent on
+ *      the driver's own budget before it acquires anything. That cost is the
+ *      whole reason mechanism 1 exists. What the manifest ALREADY holds is
+ *      enough to sort the HEAD of the list correctly: the flagship chrome and
+ *      prospect products carry the auto ladders and the liquid cards, and the
+ *      probe measured autograph yield rising by decade. So the proxy is
+ *      product family + era, computed from fields already in hand, at zero RU.
+ *
+ * This is a PROXY and says so. It decides which twenty a canary sees; it is not
+ * a claim about any card's price, and nothing downstream reads it. When the
+ * ranking matters more than its cost, pass the list.
+ */
+const VALUE_FAMILIES = [
+  [/\btopps chrome\b/i, 98],
+  [/\bbowman chrome\b/i, 96],
+  [/\bbowman'?s best\b/i, 88],
+  [/\bbowman\b/i, 84],
+  [/\bprizm\b/i, 80],
+  [/\bfinest\b/i, 78],
+  [/\boptic\b/i, 74],
+  [/\btopps\b/i, 72],
+  [/\bselect\b/i, 68],
+  [/\bsp authentic\b|\bupper deck\b/i, 60],
+  [/\bleaf\b|\bdonruss\b|\bfleer\b|\bscore\b|\bpanini\b/i, 50],
+];
+function valueRank(entry) {
+  const name = String(entry.setName || "");
+  let family = 10;
+  for (const [re, w] of VALUE_FAMILIES) if (re.test(name)) family = Math.max(family, w);
+  // The autograph-yield gradient the 2026-09-03 probe measured: 0% pre-1990,
+  // then rising by decade. Bounded so era NUDGES the family order rather than
+  // replacing it -- a 2024 oddball must not outrank 2011 Topps Chrome.
+  const y = Number(entry.year) || 0;
+  const era = y >= 2010 ? 20 : y >= 2000 ? 14 : y >= 1990 ? 6 : 0;
+  // A seeded partial is a page we already hold rows for, so a re-scrape gains
+  // the delta rather than a first fill -- which is exactly what a recheck is.
+  const seeded = entry.seededStatus === "partial" ? 4 : 0;
+  // THE FLAGSHIP OUTRANKS ITS SPECIALIZATIONS (memory: product-family ladder).
+  // Family alone put "2020 Topps Chrome Ben Baller Edition" and "Bowman Chrome
+  // Mini" above 2011 Topps Chrome itself -- they match the same family regex and
+  // sit in a later era. But the flagship is the product that carries the pool:
+  // the base rookie, the auto ladder, the sales. A specialization is a narrow
+  // side product with a fraction of the rows. The test is the page name itself:
+  // a name that IS the family, with nothing trailing, is the flagship.
+  const bare = name.replace(/^(?:19|20)\d{2}(?:-\d{2})?\s+/, "").trim();
+  const flagship = VALUE_FAMILIES.some(([re]) => { const m = bare.match(re); return m && m[0].length >= bare.length - 1; }) ? 30 : 0;
+  return family + era + seeded + flagship;
+}
+
+/**
+ * Order the eligible queue. `titlesRaw` is the operator's explicit list (the
+ * existing `titles` input / BCP_TITLES env); empty means use the proxy.
+ *
+ * Returns { queue, mode, named, unmatched }. `unmatched` is REPORTED, never
+ * silently dropped: a mistyped title that quietly ranked nothing would leave
+ * the canary back on alphabetical order while the banner claimed otherwise,
+ * which is the exact failure this ordering exists to prevent.
+ */
+function orderQueue(queue, titlesRaw) {
+  const wanted = String(titlesRaw || "").split(",").map((t) => t.trim()).filter(Boolean);
+  if (!wanted.length) {
+    // Stable: equal rank keeps manifest order, so a re-dispatch takes the same
+    // twenty rather than a fresh shuffle of a tie.
+    const decorated = queue.map((q, i) => ({ q, i, r: valueRank(q.entry) }));
+    decorated.sort((a, b) => (b.r - a.r) || (a.i - b.i));
+    return { queue: decorated.map((d) => d.q), mode: "value-proxy (product family + era)", named: 0, unmatched: [] };
+  }
+  const norm = (v) => String(v || "").toLowerCase().replace(/[_\s]+/g, " ").replace(/[^a-z0-9 ]+/g, "").trim();
+  const keysOf = (e) => {
+    const title = decodeURIComponent(String(e.sourceRef || "").split("/index.php/")[1] || "");
+    return new Set([norm(title), norm(e.setName), norm(`${e.year} ${e.setName}`), norm(e.sourceRef)].filter(Boolean));
+  };
+  const lead = [], rest = [...queue], unmatched = [];
+  for (const w of wanted) {
+    const nw = norm(w);
+    const at = rest.findIndex((q) => keysOf(q.entry).has(nw));
+    if (at < 0) { unmatched.push(w); continue; }
+    lead.push(rest.splice(at, 1)[0]);
+  }
+  return { queue: [...lead, ...rest], mode: "explicit list (titles / BCP_TITLES)", named: lead.length, unmatched };
+}
+
+
 // ── main ────────────────────────────────────────────────────────────────────
 
 // The gate is exported so its rules can be asserted directly against fixture
 // CSVs, rather than only through a full acquisition. `require`d as a module the
 // script does nothing; run as a CLI it drives.
-module.exports = { gateStagedCsv, splitCsv, isPersonName, setKeyFor, LANE_ALIASES, CANONICAL_HEADER };
+module.exports = { gateStagedCsv, splitCsv, isPersonName, setKeyFor, LANE_ALIASES, CANONICAL_HEADER, cosmosSafeId, controlId, orderQueue, SYSTEMIC_FAILURE_STREAK };
 if (require.main !== module) return;
 
 (async () => {
@@ -504,7 +663,7 @@ if (require.main !== module) return;
   const rawSource = String(process.env.SOURCES || "").trim().toLowerCase();
   if (!rawSource) {
     console.error("REFUSE: SOURCES is required and has no default — name exactly one lane:");
-    console.error("        hobbymonitor | insider | bcp | beckett | clc | tcgdexja  (tcdb is refused, see below)");
+    console.error("        hobbymonitor | insider | bcp | beckett | clc | tcgdexja | sportscardchecklist  (tcdb is refused, see below)");
     process.exit(2);
   }
   if (rawSource.includes(",")) {
@@ -572,7 +731,19 @@ if (require.main !== module) return;
     queue.push({ entry: e, prior });
   }
 
-  console.log(`  ${f(queue.length)} entries eligible; taking up to ${f(LIMIT)}\n`);
+  // ORDER BEFORE TAKING. The slice below is the run; ordering after it would
+  // only shuffle the twenty already chosen by alphabet.
+  const ordering = orderQueue(queue, process.env.BCP_TITLES || process.env.TITLES || "");
+  queue.length = 0; queue.push(...ordering.queue);
+  console.log(`  order         ${ordering.mode}${ordering.named ? `  —  ${f(ordering.named)} named entries lead` : ""}`);
+  if (ordering.unmatched.length) {
+    console.log(`  UNMATCHED     ${ordering.unmatched.length} title(s) in the list matched no entry of this lane and ranked NOTHING:`);
+    for (const u of ordering.unmatched.slice(0, 10)) console.log(`                  "${u}"`);
+    console.log(`                (check the page title against the manifest sourceRef; the run continues on the rest)`);
+  }
+  console.log(`  ${f(queue.length)} entries eligible; taking up to ${f(LIMIT)}`);
+  for (const q of queue.slice(0, Math.min(LIMIT, 5))) console.log(`                  → ${q.entry.year} ${q.entry.setName}`);
+  console.log("");
 
   // RECONCILIATION: intended is fixed BEFORE the loop and every entry lands in
   // exactly one bucket, counted directly. A remainder derived by subtraction
@@ -587,6 +758,9 @@ if (require.main !== module) return;
   let inspected = 0;
   const perEntry = [];
   let stoppedOnBudget = false;
+  // The systemic-failure tripwire's state. A refusal is a per-entry verdict; a
+  // STREAK of them is the lane. See CF-A-REFUSED-ENTRY-IS-NOT-A-BROKEN-LANE.
+  let consecutiveFailures = 0, controlWriteFailures = 0, systemicAbort = null;
 
   for (let i = 0; i < take.length; i++) {
     const { entry, prior } = take[i];
@@ -621,6 +795,7 @@ if (require.main !== module) return;
         tcgdexja: `${/^(SV|S\d|CS|M[0-9]|M-P|SVK|SVLN|SVLS)/i.test(String(entry.sourceRef || "").split("/").pop() || "")
           ? "scrape-tcgdex-ja-modern.cjs (rarity ladder → parallel)"
           : "scrape-tcgdex-ja.cjs (base-only; tcgdex serves no ladder for these)"} --sets=<id> → ingest-checklist-csv-to-catalog.cjs`,
+        sportscardchecklist: "fetchSportsCardChecklist.cjs --url <sourceRef> (direct-URL lane) → ingest-checklist-csv-to-catalog.cjs",
       }[entry.lane];
       const inCatalog = await countCatalogRows(entry).catch(() => null);
       console.log(`      would drive: ${plan}`);
@@ -685,8 +860,51 @@ if (require.main !== module) return;
 
     verdicts[verdict.status]++;
     perEntry.push({ id: entry.id, label, status: verdict.status, reason: verdict.reason, rowsCreated: verdict.rowsCreated });
-    await writeControl(entry, { ...verdict, priorAttempts: prior?.attempts });
+
+    // CF-A-REFUSED-ENTRY-IS-NOT-A-BROKEN-LANE (2026-09-04).
+    //
+    // writeControl sat OUTSIDE the per-entry try, so a throw here -- the
+    // illegal-id one above, a 429, a transient socket -- escaped to the outer
+    // handler and exited 3, losing the other 19 entries of the run AND the
+    // verdicts already earned. Recording a verdict is per-entry work and it
+    // fails per-entry: the write is guarded, the failure is COUNTED, and the
+    // lane keeps going. A run whose verdicts are not landing is still a real
+    // problem, so it trips the systemic tripwire below rather than being
+    // swallowed -- it is just no longer allowed to take the lane down at once.
+    try {
+      await writeControl(entry, { ...verdict, priorAttempts: prior?.attempts });
+    } catch (e) {
+      controlWriteFailures++;
+      const msg = String(e?.message || e).slice(0, 160);
+      console.log(`      CONTROL WRITE FAILED — ${msg}`);
+      console.log(`      (the entry's own verdict stands in this run's summary; the control doc did not land)`);
+    }
     try { fs.rmSync(dir, { recursive: true, force: true }); } catch {}
+
+    // THE SYSTEMIC TRIPWIRE. One entry the source does not serve is a VERDICT.
+    // N in a row is the lane itself being down -- the site blocking us, the
+    // network gone, credentials rejected -- and continuing then burns the
+    // budget writing `failed` onto entries that are fine, which a later
+    // `pending only` run would skip on their attempt count. Consecutive, never
+    // cumulative: a lane where every fourth page is genuinely unreachable is a
+    // working lane, not a broken one.
+    if (verdict.status === "failed" || verdict.status === "unreachable") consecutiveFailures++;
+    else consecutiveFailures = 0;
+    if (consecutiveFailures >= SYSTEMIC_FAILURE_STREAK) {
+      systemicAbort = `${consecutiveFailures} consecutive entries failed or were unreachable — the lane, not the entries`;
+      notReached = take.length - (i + 1);
+      console.log(`
+  ABORTING THE LANE — ${systemicAbort}`);
+      console.log(`  ${f(notReached)} entries of this run were not attempted; the verdicts already written stand.`);
+      break;
+    }
+    if (controlWriteFailures >= SYSTEMIC_FAILURE_STREAK) {
+      systemicAbort = `${controlWriteFailures} control-doc writes failed — the verdicts are not landing, so the run cannot resume from them`;
+      notReached = take.length - (i + 1);
+      console.log(`
+  ABORTING THE LANE — ${systemicAbort}`);
+      break;
+    }
   }
 
   // ── reconciliation ────────────────────────────────────────────────────────
@@ -710,6 +928,8 @@ if (require.main !== module) return;
   console.log(`  rows created        ${f(rowsCreatedTotal)}   (verified by catalog read, not claimed)`);
   const balanced = accounted + notReached === intended;
   console.log(`  RECONCILED          ${balanced ? "yes" : `NO — ${f(accounted)} + ${f(notReached)} != ${f(intended)}`}`);
+  if (controlWriteFailures) console.log(`  control writes lost  ${f(controlWriteFailures)}   (verdict earned, doc did not land)`);
+  if (systemicAbort) console.log(`  SYSTEMIC ABORT      ${systemicAbort}`);
   if (!APPLY) console.log(`  (REPORT ONLY — nothing acquired, nothing written)`);
 
   // CF-A-GREEN-RUN-IS-NOT-A-DATA-FLOW. The house reconciliation, which sets
@@ -732,13 +952,24 @@ if (require.main !== module) return;
 
   const remaining = queue.length - accounted;
   console.log(`  remaining in lane   ${f(Math.max(0, remaining))}`);
-  console.log(`  universe_entries_done=${written}`);
+  // CF-A-REPORT-THAT-WALKED-IS-NOT-A-REPORT-THAT-DID-NOTHING (2026-09-04).
+  //
+  // This marker is the number the runner greps and echoes, and it read
+  // `written` -- which counts control docs and is 0 in report mode BY DESIGN.
+  // So a report run that walked its whole queue and planned every entry
+  // published `entries=0`, indistinguishable from a run that matched nothing
+  // and exactly what run 33837346045 preceding report reported. Report mode
+  // reconciles against what it INSPECTED, so the marker says that. APPLY is
+  // unchanged: `written` is still the control docs upserted.
+  console.log(`  universe_entries_done=${APPLY ? written : inspected}`);
 
   // THE BUDGET MARKER. Printed only when entries remain AND this run stopped on
   // its own clock -- the relaunch gates on this line, never on a count, because
   // a count gate loops forever on a lane whose remainder cannot be changed and
   // stops early on a budget stop that happened to change nothing.
-  if (remaining > 0 && (stoppedOnBudget || written >= LIMIT)) {
+  if (systemicAbort) {
+    console.log(`  lane aborted — NOT printing the budget marker; a relaunch would meet the same wall. Fix the cause, then re-dispatch.`);
+  } else if (remaining > 0 && (stoppedOnBudget || written >= LIMIT)) {
     console.log(`stopped at the ${RUN_MS / 60000}-minute budget — the relaunch continues from here`);
   } else if (remaining > 0) {
     console.log(`  ${f(remaining)} entries remain but this run ended early — inspect the failures before re-dispatching`);
@@ -750,4 +981,10 @@ if (require.main !== module) return;
   // shortfall, and an exit() here would race its verdict and could mask a
   // reconciliation failure behind this one's success.
   if (!balanced) process.exitCode = 4;
+  // A LANE ABORT IS RED, A REFUSED ENTRY IS NOT. The whole point of the change
+  // above is that "this page has no ladder" is a verdict the run records and
+  // walks past. A systemic abort is the opposite: the lane is down, the
+  // remaining entries were never attempted, and a relaunch would repeat it --
+  // so it goes red and the marker below is deliberately NOT printed.
+  if (systemicAbort) process.exitCode = 5;
 })().catch((e) => { console.error("FATAL:", e?.stack || e?.message); process.exit(3); });

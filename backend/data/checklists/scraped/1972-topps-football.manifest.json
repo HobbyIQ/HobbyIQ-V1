@@ -1,0 +1,145 @@
+{
+ "scrapedAt": "2026-09-04T05:32:31.065Z",
+ "source": "sportscardchecklist",
+ "sourceUrl": "file:1972-topps-football.trimmed.html",
+ "sport": "football",
+ "year": 1972,
+ "season": "1972",
+ "setName": "1972 Topps Football",
+ "productKey": "1972-topps",
+ "setKey": "topps",
+ "rowCount": 351,
+ "parallelColumnAuthoritative": true,
+ "cardRows": 351,
+ "ladderRows": 0,
+ "subsetRows": 81,
+ "printRunsFound": 0,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > 1971 AFC Rushing Leaders",
+   "category": "insert-1971-afc-rushing-leaders",
+   "playerCount": 1,
+   "rungs": 0,
+   "rowCount": 1,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > 1971 NFC Rushing Leaders",
+   "category": "insert-1971-nfc-rushing-leaders",
+   "playerCount": 1,
+   "rungs": 0,
+   "rowCount": 1,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > 1971 AFC Passing Leaders",
+   "category": "insert-1971-afc-passing-leaders",
+   "playerCount": 1,
+   "rungs": 0,
+   "rowCount": 1,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > 1971 NFC Passing Leaders",
+   "category": "insert-1971-nfc-passing-leaders",
+   "playerCount": 1,
+   "rungs": 0,
+   "rowCount": 1,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > 1971 AFC Receiving Leaders",
+   "category": "insert-1971-afc-receiving-leaders",
+   "playerCount": 1,
+   "rungs": 0,
+   "rowCount": 1,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > 1971 NFC Receiving Leaders",
+   "category": "insert-1971-nfc-receiving-leaders",
+   "playerCount": 1,
+   "rungs": 0,
+   "rowCount": 1,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > 1971 AFC Scoring Leaders",
+   "category": "insert-1971-afc-scoring-leaders",
+   "playerCount": 1,
+   "rungs": 0,
+   "rowCount": 1,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > 1971 NFC Scoring Leaders",
+   "category": "insert-1971-nfc-scoring-leaders",
+   "playerCount": 1,
+   "rungs": 0,
+   "rowCount": 1,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Double Print",
+   "category": "insert-double-print",
+   "playerCount": 1,
+   "rungs": 0,
+   "rowCount": 1,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > In Action",
+   "category": "insert-in-action",
+   "playerCount": 42,
+   "rungs": 0,
+   "rowCount": 42,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Semi-Final",
+   "category": "insert-semi-final",
+   "playerCount": 4,
+   "rungs": 0,
+   "rowCount": 4,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > AFC Championship Game",
+   "category": "insert-afc-championship-game",
+   "playerCount": 1,
+   "rungs": 0,
+   "rowCount": 1,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > NFC Championship Game",
+   "category": "insert-nfc-championship-game",
+   "playerCount": 1,
+   "rungs": 0,
+   "rowCount": 1,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Pro Action",
+   "category": "insert-pro-action",
+   "playerCount": 24,
+   "rungs": 0,
+   "rowCount": 24,
+   "refused": false,
+   "printRun": null
+  }
+ ]
+}

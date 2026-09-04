@@ -784,13 +784,14 @@ jobs:
                          convertChecklistInsiderToChecklistCsv scrape-bcp-ladders \
                          convertBeckettChecklistXlsx scrape-checklistcenter-products \
                          convertChecklistCenterToChecklistCsv scrape-tcgdex-ja \
+                         fetchSportsCardChecklist \
                          ingest-checklist-csv-to-catalog; do
               if [ ! -f "backend/scripts/$CHILD.cjs" ]; then
                 echo "::error::$CHILD.cjs is missing — the driver would acquire and then have nowhere to land the rows"
                 exit 1
               fi
             done
-            echo "Manifest + lane children confirmed: 9"
+            echo "Manifest + lane children confirmed: 10"
           fi
 
       # A relaunch starts with an empty /tmp, so without this the job re-scrapes
@@ -834,6 +835,10 @@ jobs:
           MODE: before
           BASELINE: /tmp/rematch-canary-baseline.json
           SLOT: ${{ inputs.slot }}
+          # The gate must know WHICH CLASS is being applied: under
+          # scope=base-eviction a parallel-pool canary is SUPPOSED to lose
+          # base-titled rows, and the same value goes to the fleet script.
+          SCOPE: ${{ inputs.scope }}
           NODE_OPTIONS: "--max-old-space-size=8192"
         run: node backend/scripts/rematch-canary-check.cjs
 
@@ -1154,6 +1159,7 @@ jobs:
           MODE: after
           BASELINE: /tmp/rematch-canary-baseline.json
           SLOT: ${{ inputs.slot }}
+          SCOPE: ${{ inputs.scope }}
           NODE_OPTIONS: "--max-old-space-size=8192"
         run: |
           set -o pipefail

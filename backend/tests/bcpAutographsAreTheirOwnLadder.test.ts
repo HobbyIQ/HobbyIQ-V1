@@ -103,7 +103,12 @@ describe("the Autographs section is read", () => {
       "Red Refractor": 25,
       "Atomic Refractor": 10,              // "serial-numbered to ten"
       "Super-Fractor": 1,
-      "Printing Plates": null,             // "four-for-each" is not a run
+      // CF-A-PRINTING-PLATE-IS-A-ONE-OF-ONE (#1703, merged 2026-09-04). This
+      // read `null` when #1700 landed, because RUN_NOTE sees no serial in
+      // "four-for-each". #1703 rules that four plates of one card are four
+      // DIFFERENT cards at /1 -- the "four" counts colours, not copies -- so
+      // the page's strongest scarcity claim is stated, not left as unknown.
+      "Printing Plates": 1,
     });
   });
 
@@ -140,7 +145,7 @@ describe("the Autographs section is read", () => {
    * cross-joining a ladder over cards we never read.
    */
   it("emits nothing for an autograph section that only cross-references", () => {
-    const subsets = L.parseAutographs(
+    const subsets = L.parseTypedSections(
       fs.readFileSync(path.resolve(__dirname, "fixtures/bcp/2011-topps-chrome.trimmed.html"), "utf8"),
     );
     expect(subsets.map((s: { name: string }) => s.name)).toEqual(["Autographed Rookies"]);
@@ -159,7 +164,10 @@ describe("a page with no autograph section", () => {
     for (const name of ["1993-finest", "1999-black-diamond", "2020-bowman"]) {
       const html = fs.readFileSync(
         path.resolve(__dirname, `fixtures/bcp/${name}.trimmed.html`), "utf8");
-      expect(L.parseAutographs(html), `${name} states no autograph checklist`).toEqual([]);
+      expect(
+        L.parseTypedSections(html).filter((sub: { signed: boolean }) => sub.signed),
+        `${name} states no autograph checklist`,
+      ).toEqual([]);
     }
   });
 });
@@ -180,22 +188,39 @@ describe("a relic section is not an autograph section", () => {
 <div id="catlinks"></div>`;
 
   it("reads a signed scope as an auto", () => {
-    const [scope] = L.parseAutographs(page("Rookie Autographs"));
-    expect(scope.type).toBe("auto");
-    expect(scope.isAuto).toBe(true);
+    const [scope] = L.parseTypedSections(page("Rookie Autographs"));
+    expect(scope.prefix).toBe("auto");
+    expect(scope.signed).toBe(true);
     expect(scope.cards).toHaveLength(3);
   });
 
   it("reads a bare relic scope as a relic, never as an auto", () => {
-    const [scope] = L.parseAutographs(page("Game-Used Relics"));
-    expect(scope.type).toBe("relic");
-    expect(scope.isAuto).toBe(false);
+    // Under an Autographs h2, a subsection whose OWN heading names only
+    // memorabilia is UNSIGNED -- the h2 attests for the subsections that do
+    // not speak for themselves, and this one has. Calling it signed would tag
+    // unsigned cards as autos and split their pool on a fact that is not true.
+    //
+    // Having refused the signature it takes the unsigned lane, where the
+    // §Inserts collision guard applies: a card numbered by a bare integer
+    // inside a memorabilia subset would collide with the base set's own
+    // numbering, so these three (10, 11, 12) yield no rows at all. Whichever
+    // way it lands, what must NEVER happen is an isAuto=true row.
+    const scopes = L.parseTypedSections(page("Game-Used Relics"));
+    expect(scopes.every((sc: { signed: boolean }) => sc.signed === false)).toBe(true);
+    expect(scopes.some((sc: { prefix: string }) => sc.prefix === "auto")).toBe(false);
+    // The same heading with LETTERED card numbers is read, and still unsigned.
+    const lettered = L.parseTypedSections(
+      page("Game-Used Relics").replace(/<li>1(\d) /g, "<li>GU$1 "));
+    expect(lettered).toHaveLength(1);
+    expect(lettered[0].signed).toBe(false);
+    expect(lettered[0].prefix).toBe("insert");
+    expect(lettered[0].cards).toHaveLength(3);
   });
 
   it("reads a scope naming BOTH as an auto", () => {
     // "Autograph Relics" are signed; the auto word decides.
-    const [scope] = L.parseAutographs(page("Autograph Relics"));
-    expect(scope.isAuto).toBe(true);
+    const [scope] = L.parseTypedSections(page("Autograph Relics"));
+    expect(scope.signed).toBe(true);
   });
 });
 

@@ -209,19 +209,68 @@ function parseLadders(body, playerNames, rejected) {
   return ladders;
 }
 
-/** "BCP-12 Roman Anthony - Boston Red Sox" / "12 Juan Soto, Yankees" -> { num, player }. */
+/** CF-THE-SECTION-STATES-ITS-PRINT-RUN (D3e, 2026-09-04). A checklistcenter
+ *  section head is one line of the form "<N> Cards - Serial Numbered #/25",
+ *  "1 Card - Serial Numbered 1/1", "26 Cards - Serial Numbered #/15 or as
+ *  Noted", "18 Cards - Serial Numbered as Noted", "25 Cards - 1:16 Packs".
+ *  It is the print run of every card in the section, and the converter read
+ *  none of it: on 7 real high-end pages 43 of 53 Flawless sections state a
+ *  run and every plain row came out with printRun blank.
+ *
+ *  A print run is part of the canonical id (`hiq:...:num-25`), so a blank run
+ *  mints a DIFFERENT card than the numbered sale resolves to -- the orphaned
+ *  auto/relic pools the census measured.
+ *
+ *  The readings, and what each is NOT:
+ *   - "Serial Numbered #/25" / "1/1" -> 25 / 1, the section's run;
+ *   - "as Noted" / "or as Noted" / "or Less" -> the run VARIES per card. The
+ *     section states no run at all (`null`); each card line may carry its own
+ *     (parseCardLine). "#/15 or as Noted" keeps 15 as the DEFAULT for lines
+ *     that state nothing, because the page says so;
+ *   - "1:16 Packs" is pack odds, never a print run;
+ *   - a parenthetical ("(*No Olivares, Fulmer)") is an exclusion footnote and
+ *     is read for neither.
+ *  Returns { printRun, varies } -- printRun is the default for the section. */
+function sectionPrintRun(headText) {
+  const t = String(headText ?? "").replace(/\([^()]*\)/g, " ").replace(/\s+/g, " ").trim();
+  if (!t) return { printRun: null, varies: false };
+  const sn = t.match(/\bserial\s+numbered\b([\s\S]*)$/i);
+  if (!sn) return { printRun: null, varies: false };
+  const tail = sn[1].trim();
+  const varies = /\bas noted\b|\bor less\b/i.test(tail);
+  let printRun = null;
+  if (/^1\s*\/\s*1\b/.test(tail)) printRun = 1;
+  else { const m = tail.match(/^#?\s*\/\s*(\d[\d,]*)/); if (m) printRun = Number(m[1].replace(/,/g, "")) || null; }
+  return { printRun, varies };
+}
+
+/** The first text line of a subset body -- the "N Cards - ..." head. */
+function sectionHeadLine(body) {
+  const m = String(body ?? "").match(/<p[^>]*>([\s\S]*?)(?:<br\s*\/?>|<\/p>)/i);
+  return m ? detag(m[1]) : "";
+}
+
+/** "BCP-12 Roman Anthony - Boston Red Sox" / "12 Juan Soto, Yankees" -> { num, player }.
+ *  CF-THE-SECTION-STATES-ITS-PRINT-RUN (D3e): a line may state its OWN run
+ *  after the team ("2 Aaron Judge - New York Yankees #/25", "... 1/1") --
+ *  1,385 of 7,833 card lines on the probe pages do. It overrides the
+ *  section's default; the section's default is not invented where the line
+ *  is silent and the section states nothing. */
 function parseCardLine(text) {
   const t = detag(text);
   const m = t.match(/^#?([A-Z]{0,6}-?\d{1,4}[a-z]?|[A-Z0-9]{1,6}-[A-Z0-9]{1,6})\s+(.+)$/i);
   if (!m) return null;
   const num = m[1].replace(/^#/, "");
   let rest = m[2].trim();
+  let printRun = null;
+  const own = rest.match(/\s(?:#\s*\/\s*(\d[\d,]*)|(1)\s*\/\s*1)\s*$/);
+  if (own) { printRun = Number(String(own[1] ?? "1").replace(/,/g, "")) || 1; rest = rest.slice(0, own.index).trim(); }
   const dash = rest.lastIndexOf(" - ");
   if (dash > 0) rest = rest.slice(0, dash).trim();
   const comma = rest.indexOf(",");
   if (comma > 0) rest = rest.slice(0, comma).trim();
   if (!rest || !/[A-Za-z]{2}/.test(rest) || rest.length > 60) return null;
-  return { num, player: rest };
+  return { num, player: rest, printRun };
 }
 
 function parseHtml(html, product) {
@@ -233,16 +282,29 @@ function parseHtml(html, product) {
   while ((m = rx.exec(html))) all.push({ title: detag(m[1]), body: m[2] });
   for (const sub of all) {
     const cards = [];
+    const seen = new Set();
+    const take = (line) => { const c = parseCardLine(line); if (!c) return; const k = c.num + "\u0000" + c.player; if (seen.has(k)) return; seen.add(k); cards.push(c); };
     const colRx = /<div[^>]*class="[^"]*csColumn[^"]*"[^>]*>([\s\S]*?)<\/div>/gi;
     let cm;
     while ((cm = colRx.exec(sub.body))) {
       const pRx = /<p[^>]*>([\s\S]*?)<\/p>/gi; let pm;
-      while ((pm = pRx.exec(cm[1]))) for (const line of pm[1].split(/<br\s*\/?>/i)) { const c = parseCardLine(line); if (c) cards.push(c); }
+      while ((pm = pRx.exec(cm[1]))) for (const line of pm[1].split(/<br\s*\/?>/i)) take(line);
     }
+    // CF-A-CARD-LINE-IS-A-CARD-LINE (D3e, 2026-09-04). checklistcenter serves
+    // card lists in TWO markups: <p>…<br>… inside a csColumn, and one
+    // <div class="cm-line"> per card. The reader knew only the first, so a
+    // page written the second way lost its whole checklist SILENTLY -- the
+    // subset had no cards and was dropped without a word. 2023 Panini
+    // National Treasures loses 16 sections / 410 card lines that way, every
+    // one of them an auto or relic parallel set (Rookie Material Signatures
+    // Midnight #/25, Century Signatures Holo Gold #/15, ...). Both markups
+    // are read, and a line that appears in both is taken once.
+    for (const lm of sub.body.matchAll(/<div[^>]*class="[^"]*cm-line[^"]*"[^>]*>([\s\S]*?)<\/div>/gi)) take(lm[1]);
     if (!cards.length) continue;
     const playerNames = new Set(cards.map((c) => c.player).filter(isPersonName).map(foldName));
     const ladders = parseLadders(sub.body, playerNames, rejected);
-    subsets.push({ title: sub.title, cards, ladders });
+    const head = sectionPrintRun(sectionHeadLine(sub.body));
+    subsets.push({ title: sub.title, cards, ladders, printRun: head.printRun, printRunVaries: head.varies });
   }
   return { subsets, rejected };
 }
@@ -474,7 +536,14 @@ function convertHtml(html, product) {
       const anchor = variationFinish ? anchorFor(c.num) : null;
       const cat = anchor ? (anchor.category ?? categoryOf(plainTitle(anchor))) : category;
       const finish = anchor ? variationFinish : null;
-      rowsOut.push([cat, c.num, finish ?? (cat === "base" ? "Base" : ""), isAuto, "", c.player, ""]);
+      // CF-THE-SECTION-STATES-ITS-PRINT-RUN (D3e). The plain row's run is the
+      // card's own where the line states one, else the section's default.
+      // "as Noted" with no default states nothing, and nothing is invented.
+      // A ladder rung states its own run for the whole rung and keeps it; a
+      // rung silent about its run inherits nothing -- a "Gold" under a #/25
+      // section is not itself /25 unless the page says so.
+      const plainRun = c.printRun ?? sub.printRun ?? "";
+      rowsOut.push([cat, c.num, finish ?? (cat === "base" ? "Base" : ""), isAuto, plainRun, c.player, ""]);
       for (const r of rungs) { rowsOut.push([cat, c.num, finish ? `${finish} ${r.name}` : r.name, isAuto, r.printRun ?? "", c.player, r.note ?? ""]); ladderRows++; }
     }
     if (category === "base") baseEmitted = true;
@@ -633,6 +702,6 @@ function main() {
   console.log(`\n[clc-convert] ${REPORT ? "would write" : "written"}=${f(written)} (xlsx ${f(viaXlsx)}, html ${f(viaHtml)})  rows=${f(rows)}  ladderRows=${f(ladderRowsTotal)}  refused-or-empty=${f(refused)}  no page cached=${f(noPage)}  rung candidates rejected=${f(rejectedTotal)}`);
 }
 
-module.exports = { clean, splitRungs, ladderFamily, applyFamily, parseLadderText, parseLadders, parseHtml, convertHtml, parseXlsxRows, readXlsxRows, parseXlsx, convertXlsx, sectionsOf, sectionSplit, productMeta, categoryOf };
+module.exports = { clean, splitRungs, ladderFamily, applyFamily, sectionPrintRun, sectionHeadLine, parseCardLine, parseLadderText, parseLadders, parseHtml, convertHtml, parseXlsxRows, readXlsxRows, parseXlsx, convertXlsx, sectionsOf, sectionSplit, productMeta, categoryOf };
 
 if (require.main === module) main();

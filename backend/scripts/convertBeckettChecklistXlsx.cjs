@@ -142,6 +142,36 @@ const slug = (s) => String(s || "").toLowerCase()
 // in Mega Box), so match on shape rather than one literal.
 const SKIP_SHEETS = new Set(["Full Checklist", "Team Sets", "Teams", "Checklist", "Master"]);
 
+// CF-BECKETT-A-SUPERSET-SHEET-IS-NOT-A-SECTION (2026-09-04). The literal list
+// above only ever knew the five spellings the 2022/2023 Bowman workbooks used.
+// Measured across 48 live workbooks, publishers name the same roster sheet six
+// more ways, and NONE of them were skipped:
+//
+//     Master Card List              11 products    57,349 card lines
+//     Master Checklist               2 products    23,575
+//     Parallel Guide                 2 products    14,353
+//     Metal - Parallels              1 product      5,266
+//     Holo Prospect Sigs Parallels   1 product      2,918
+//     Aquatic - Parallels            1 product      2,022
+//
+// 105,483 lines re-listing cards that Base / Autographs / Inserts already
+// carry. Worse than a duplicate: a "Master Card List" is a WIDE MATRIX, one
+// column per parallel, so its first two columns hold the product name and the
+// subset -- not a card number and a player. 2026 Leaf Electrum emitted
+//
+//     insert-master-card-list,2026 Leaf Electrum Baseball,,false,,Achromatic
+//
+// thirteen times, with 938 further rows collapsing onto those same keys and
+// being dropped by the dedup. The sheet contributed no real card and hid its
+// own breakage behind a plausible row count.
+//
+// Matched on SHAPE rather than one more literal, because the next workbook will
+// invent a seventh spelling. A sheet is a superset when its name says master /
+// full checklist / roster, or when it is a parallel GUIDE -- a sheet whose only
+// job is to tabulate the ladder the card sheets already carry per section.
+const SUPERSET_SHEET = /^(master\b|full\s+checklist\b|team\s*sets?\b|teams\b|checklist$|.*\bparallel\s*guide\b|.*\bparallels?$)/i;
+const isSupersetSheet = (name) => SKIP_SHEETS.has(String(name).trim()) || SUPERSET_SHEET.test(String(name).trim());
+
 // CF-CHECKLIST-VARIATION-IS-A-PARALLEL (Drew, 2026-08-25). Sections that name
 // the plain card of their own numbering run rather than a variant of it. These
 // seed the ANCHOR set every other section is tested against. Kept identical to
@@ -164,13 +194,59 @@ function categoryFor(sheetName, section) {
   // "insert-" would only ever be compared against non-auto anchors, so it could
   // never fold onto the signed card it varies, and left unfolded it would claim
   // isAuto=false on a card that is signed.
-  if (/variation/i.test(section)) return (sheetName === "Autographs" ? "auto-" : "insert-") + s;
-  if (sheetName === "Base" || sheetName === "Prospects") return "base";
-  if (sheetName === "Autographs") return "auto-" + s;
-  return "insert-" + s;   // Inserts + Variations
+  if (/variation/i.test(section)) {
+    // Same widened sheet test as below: an "Autographed Relics" or "Multi-Signed
+    // Autographs" variation is signed just as much as an "Autographs" one.
+    const signed = /\bautograph|\bautographed\b|\bsign(ed|atures?)\b/i.test(String(sheetName || ""));
+    return (signed ? "auto-" : "insert-") + s;
+  }
+  const sheet = String(sheetName || "").trim();
+  // CF-BECKETT-THE-SHEET-NAMES-THE-CARD-TYPE (2026-09-04). This matched three
+  // sheet names as literals and swept every other sheet into "insert-". Measured
+  // across 48 live workbooks that is wrong for four whole classes of card:
+  //
+  //   Autographed Relics       391 cards  ->  insert-*, isAuto=FALSE
+  //   Multi-Signed Autographs   96 cards  ->  insert-*, isAuto=FALSE
+  //   Memorabilia            3,513 cards  ->  insert-*
+  //   Relics                   586 cards  ->  insert-*
+  //   Memorabilia Cards        705 cards  ->  insert-*
+  //
+  // The two autograph sheets are the harm that matters: 487 cards the publisher
+  // states are SIGNED were emitted isAuto=false, so their pool never joined the
+  // signed identity and every auto sale on them orphaned. A checklist is the
+  // authority for isAuto, and these sheets say signed in their own titles.
+  //
+  // "Base - Prospects" (300 cards) and " Base" (a leading space, 2026 Panini
+  // Immaculate) also missed the equality test and were filed as inserts rather
+  // than as the base run they are.
+  //
+  // Relic sheets keep riding as insert-<subset>: the catalog has no cardType
+  // field, and the subset name IS the memorabilia vocabulary -- exactly how
+  // fetchHobbyMonitorChecklist.cjs, the lane that reads its relics correctly,
+  // already emits them. What was missing was never a field; it was the section
+  // name, which the count-line and ladder defects below were deleting.
+  if (/^base\b|^prospects?\b/i.test(sheet)) return "base";
+  // Signed when the SHEET says signed. Autographed Relics is an autograph sheet
+  // that happens to carry a swatch; the signature is what sets isAuto.
+  if (/\bautograph|\bautographed\b|\bsign(ed|atures?)\b/i.test(sheet)) return "auto-" + s;
+  return "insert-" + s;   // Inserts, Variations, Memorabilia, Relics, Updates
 }
 
-const isCountLine = (r) => /^\d[\d,]*\s+cards?$/i.test(String(r[0] || ""));
+// CF-BECKETT-A-COUNT-LINE-IS-NOT-A-SECTION (2026-09-04). This pattern had no
+// trailing-period branch, and 2024 Bowman writes "100 cards." with one. A count
+// line that does not match falls through to the single-cell branch in main()
+// and BECOMES the section, so every real section name in that workbook was
+// replaced by its own card count:
+//
+//     anchor    100 | Base > 100 cards.        category=base
+//     own-cards  30 | Inserts > 15 cards.      category=insert-15-cards
+//     own-cards   3 | Autographs > 1 card.     category=auto-1-card
+//
+// All 18 sections, every name gone -- "55 Bowman Anime", "Bowman Ultimate
+// Autograph Book Card" and the rest. The row count stayed plausible (936) while
+// the subset each row belongs to became unrecoverable: the same shape of
+// failure the ladder fix found in 2023 Bowman Chrome.
+const isCountLine = (r) => /^\d[\d,]*\s+cards?\.?$/i.test(String(r[0] || "").trim());
 const nonEmpty = (r) => r.filter((c) => c !== "").length;
 
 // ---- parallel naming ------------------------------------------------------
@@ -348,7 +424,12 @@ function classifySections(sections) {
 // cross join -- exactly the template `no-synthetic-parallels` forbids.
 // Scoped per section it is not a template: Beckett is publishing which
 // parallels that specific run of cards has.
-const LADDER_HEAD = /^parallels?\s*:/i;
+// The colon is OPTIONAL. Measured across 48 live workbooks: 90 ladder headers
+// are written bare as "Parallels" (2026 Donruss Elite, Panini Immaculate, Topps
+// Chrome Team Samurai) and ZERO carried the colon this pattern required. Each of
+// those 90 fell through to the section-header branch, so the word "Parallels"
+// became the section name and every rung beneath it became a section too.
+const LADDER_HEAD = /^parallels?\s*:?\s*$/i;
 
 // Beckett publishes unannounced content as a placeholder rather than omitting
 // the heading:
@@ -366,18 +447,52 @@ const LADDER_HEAD = /^parallels?\s*:/i;
 const PLACEHOLDER = /^(tba|n\/?a|none|list tba\.?|checklist tba\.?|coming soon)\.?$/i;
 
 // "Gold Refractors - /50" -> /50. "Superfractors - 1/1" -> a one-of-one.
-// Distribution notes ("hobby only", "HTA only") are not different parallels
-// and are stripped from the name but kept as a note.
+// "Gold /10" -> /10: the dash is OPTIONAL, and most publishers omit it.
+// Distribution notes ("hobby only", "HTA only") and pack odds ("1:83") are not
+// different parallels; they are stripped from the name and kept as a note.
+//
+// CF-BECKETT-A-COLOUR-IS-A-FINISH (2026-09-04). This function used to demand a
+// word from a twelve-item finish vocabulary (refractor|prizm|foil|...) before it
+// would call a line a rung. Measured across 48 live workbooks, 1,594 ladder
+// lines state an explicit print run and STILL fail that whitelist:
+//
+//     "Gold /10" x143    "Platinum /1" x68     "Platinum 1/1" x64
+//     "Emerald /5" x47   "Holo Silver /25" x45  "Green /5" x40
+//
+// A colour with a serial number on it is the most common parallel in the hobby.
+// All 1,594 were rejected here, fell through to the section-header branch in
+// main(), and BECAME the section -- which is why sections in the corpus are
+// named "Superfractor /1" and "Rose Gold Mega Refractor /1". The checklist was
+// publishing print runs and the converter was deleting them, and printRun is
+// the one field a sale title can never reconstruct.
+//
+// The guard now keys on EVIDENCE rather than vocabulary: inside a ladder block
+// a line is a rung when it states a print run, states pack odds, or names a
+// finish. Prose with none of the three ("*Odds as provided by Topps",
+// "100 cards.") is still refused, so this widens what counts as a rung without
+// inventing one -- no-synthetic-parallels holds, because every rung emitted is
+// a line the publisher printed.
+const FINISH_WORD = /refractor|prizm|foil|shimmer|wave|atomic|mojo|superfractor|parallel|logo|variation|sparkle|speckle|holo|disco|laser|pulsar|velocity|mini\s*diamond/i;
+
 function parseRung(line) {
   const raw = String(line || "").trim();
   if (!raw || LADDER_HEAD.test(raw)) return null;
+  // A footnote is never a rung, however it is worded. A leading "*" is how every
+  // workbook in the corpus marks one ("*Odds as provided by Topps", "*Plates
+  // were made for this product").
+  if (/^[*]/.test(raw)) return null;
+  // The count line closes nothing and names nothing.
+  if (isCountLine([raw])) return null;
   const noteMatch = raw.match(/\(([^)]*)\)\s*$/);
   const note = noteMatch ? noteMatch[1] : null;
   let s = raw.replace(/\([^)]*\)\s*$/, "").trim();
 
   let printRun = null;
-  const oneOf = s.match(/[–—-]\s*1\s*\/\s*1\s*$/);
-  const numbered = s.match(/[–—-]\s*\/\s*(\d[\d,]*)\s*$/);
+  // The separator between the name and the run is optional: Beckett writes
+  // "Gold Refractors - /50" and Panini writes "Gold /10". Both are one rung
+  // with a stated print run.
+  const oneOf = s.match(/(?:[\u2013\u2014-]\s*)?\b1\s*\/\s*1\s*$/);
+  const numbered = s.match(/(?:[\u2013\u2014-]\s*)?\/\s*(\d[\d,]*)\s*$/);
   if (oneOf) {
     printRun = 1;
     s = s.slice(0, oneOf.index).trim();
@@ -385,14 +500,13 @@ function parseRung(line) {
     printRun = Number(numbered[1].replace(/,/g, ""));
     s = s.slice(0, numbered.index).trim();
   }
-  s = s.replace(/[–—-]\s*$/, "").trim();
+  s = s.replace(/[\u2013\u2014-]\s*$/, "").trim();
 
   if (!s || s.length < 3) return null;
-  // A rung names a finish. Without this, "100 cards." and stray prose would
-  // become parallels and every card would gain a parallel called "cards".
-  if (!/refractor|prizm|foil|shimmer|wave|atomic|mojo|superfractor|parallel|logo|variation|sparkle|speckle/i.test(s)) {
-    return null;
-  }
+  // Evidence, not vocabulary. A stated print run, stated pack odds, or a named
+  // finish each make this a rung; a line carrying none of the three is prose.
+  const statesOdds = note != null && /^\s*1\s*:\s*[\d,]+/.test(String(note).trim());
+  if (printRun == null && !statesOdds && !FINISH_WORD.test(s)) return null;
   return { name: s, printRun: printRun, note: note };
 }
 
@@ -404,7 +518,7 @@ function main() {
   const records = [];
   const sections = new Map();   // "sheet>section" -> section descriptor
   for (const [name, rows] of Object.entries(sheets)) {
-    if (SKIP_SHEETS.has(name)) continue;
+    if (isSupersetSheet(name)) continue;
     let section = name;
     // The ladder belongs to the section it sits under, and resets with it.
     let inLadder = false;
@@ -423,6 +537,25 @@ function main() {
         if (inLadder) {
           const rung = parseRung(cell);
           if (rung) { pendingLadder.push(rung); continue; }
+          // CF-BECKETT-PROSE-INSIDE-A-LADDER-IS-NOT-A-SECTION (2026-09-04).
+          // A line the rung parser refuses used to fall through and BECOME the
+          // section, which closed the ladder and threw away every rung after it.
+          // 2026 Donruss Elite lists its base ladder as 22 rungs and the 12th is
+          //
+          //     Aspirations /99 or fewer (See list below)
+          //
+          // -- an UNSTATED run, correctly refused as a rung because "/99 or
+          // fewer" is not a print run. Promoting it to a section discarded the
+          // ten rungs that follow it, Elite 1/1 and Printing Plates 1/1 among
+          // them, on both the Base and the Base - Prospects sheets.
+          //
+          // Only a CARD ROW closes a ladder. Beckett's own layout says so: the
+          // ladder runs from the "Parallels" marker to the first numbered card,
+          // and everything between is about those parallels. So a refused line
+          // here is skipped and the ladder stays open, which loses that one
+          // unnameable rung instead of the whole tail of the ladder. Refusing is
+          // recoverable; the section-name theft was not.
+          continue;
         }
         section = cell;
         inLadder = false;
@@ -567,4 +700,4 @@ function main() {
 
 if (require.main === module) main();
 
-module.exports = { classifySections, rungName, categoryFor, PLAIN_SECTION, parseRung, LADDER_HEAD };
+module.exports = { classifySections, rungName, categoryFor, PLAIN_SECTION, parseRung, LADDER_HEAD, isSupersetSheet, isCountLine };

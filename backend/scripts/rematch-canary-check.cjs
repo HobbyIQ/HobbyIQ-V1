@@ -66,6 +66,9 @@
  *      BASELINE=/tmp/rematch-canary-baseline.json
  *      CANARIES=backend/data/rematch-canaries.json
  *      ANCHOR_TOLERANCE_PCT=10
+ *      SCOPE=base-eviction | improve | both   (the apply class scope; under an
+ *            eviction scope a PARALLEL canary is expected to lose base rows,
+ *            and the loss must be accounted for by the eviction marker)
  * READ ONLY against Cosmos in every mode -- it never writes to the pool.
  */
 "use strict";
@@ -119,7 +122,38 @@ function poolInputs(rows) {
  */
 function compareCanary(canary, before, after, tolPct = TOL) {
   const regressions = [], notes = [];
-  if (after.rows < before.rows) regressions.push(`pool LOST ${before.rows - after.rows} row(s): ${before.rows} -> ${after.rows}`);
+  // A PARALLEL-POOL CANARY IS SUPPOSED TO LOSE BASE ROWS (2026-09-04).
+  //
+  // "rows went down" was written for the IMPROVE class, where a verified pool
+  // has no reason to shrink. Under scope=base-eviction the whole POINT is that
+  // base-titled sales mis-filed on a parallel slug leave for the base pool, so
+  // on a parallel canary a loss is the intended effect and the old rule fails
+  // the shard for doing its job. On a BASE canary (slug parallel is base) no
+  // eviction can ever remove a row, so there the rule still holds exactly.
+  //
+  // What must be asserted instead is that every row that left is ACCOUNTED
+  // FOR: it carries the eviction marker, it is base-titled, and it landed on
+  // the base identity. The checker cannot see the destination rows, so it
+  // asserts what it can -- that the departures are attributable to this
+  // apply -- and `unexplainedLoss` (rows that vanished with no eviction
+  // marker) stays a regression in every scope. An anchor move is a NOTE under
+  // eviction scope rather than a failure, because removing mis-filed sales is
+  // expected to move the leading edge.
+  // SCOPE is the variable the backfill runner already passes to the fleet
+  // script as its APPLY CLASS SCOPE, so the gate and the apply read the SAME
+  // value and cannot disagree about which class ran. APPLY_SCOPE is accepted
+  // as an alias for a hand-run check.
+  const evictionScope = String(process.env.SCOPE || process.env.APPLY_SCOPE || "").toLowerCase().includes("eviction");
+  const canaryIsParallel = !/:(base|no-parallel)?:(auto|no-auto)$/.test(String(canary.slug || "")) &&
+    !/:base:(auto|no-auto)$/.test(String(canary.slug || ""));
+  const lossIsExpected = evictionScope && canaryIsParallel;
+  const lost = before.rows - after.rows;
+  if (after.rows < before.rows) {
+    const explained = Number(after.evictedAway ?? 0);
+    if (lossIsExpected && explained >= lost) notes.push(`pool lost ${lost} row(s) to base eviction, all ${explained} accounted for by the eviction marker -- the intended effect`);
+    else if (lossIsExpected) regressions.push(`pool LOST ${lost} row(s): ${before.rows} -> ${after.rows}, but only ${explained} carry the eviction marker -- ${lost - explained} unexplained`);
+    else regressions.push(`pool LOST ${lost} row(s): ${before.rows} -> ${after.rows}`);
+  }
   else if (after.rows > before.rows) notes.push(`pool gained ${after.rows - before.rows} row(s) -- a mis-filed sale coming home`);
   if (after.rows === 0) regressions.push("pool is EMPTY");
   if (after.protectedRows < before.protectedRows) {
@@ -128,7 +162,8 @@ function compareCanary(canary, before, after, tolPct = TOL) {
   }
   if (before.anchor !== null && after.anchor !== null && before.anchor > 0) {
     const movePct = Math.abs((after.anchor - before.anchor) / before.anchor) * 100;
-    if (movePct > tolPct) regressions.push(`anchor moved ${movePct.toFixed(1)}% (tolerance ${tolPct}%): ${money(before.anchor)} -> ${money(after.anchor)}`);
+    if (movePct > tolPct && lossIsExpected) notes.push(`anchor moved ${movePct.toFixed(1)}%: ${money(before.anchor)} -> ${money(after.anchor)} -- expected under base eviction, the leading edge is recomputed once mis-filed sales leave`);
+    else if (movePct > tolPct) regressions.push(`anchor moved ${movePct.toFixed(1)}% (tolerance ${tolPct}%): ${money(before.anchor)} -> ${money(after.anchor)}`);
     else if (movePct > 0) notes.push(`anchor moved ${movePct.toFixed(1)}% within tolerance`);
   } else if (before.anchor !== null && after.anchor === null) {
     regressions.push(`anchor is gone: ${money(before.anchor)} -> none`);
@@ -144,7 +179,32 @@ async function measure(pool, slug) {
   const byPartition = await all("SELECT * FROM c WHERE c.cardId = @s", [{ name: "@s", value: slug }]);
   const byField = await all("SELECT * FROM c WHERE c.hobbyiqCardId = @s AND c.cardId != @s", [{ name: "@s", value: slug }]);
   for (const r of byPartition) r.__viaPartition = true;
-  return poolInputs([...byPartition, ...byField]);
+  // THE UNION IS DE-DUPLICATED BY id (2026-09-04 incident).
+  //
+  // A sale can appear twice in this union -- the same id under two cardIds
+  // (a cross-source CH/CS pair), or a row whose cardId and hobbiqCardId both
+  // point here. Counting the raw concatenation makes the pool look larger
+  // than it is, and then the NIGHTLY DEDUP job (04:45 UTC, cross_source=true)
+  // collapsing that pair reads as "the pool LOST a row" to a check whose
+  // baseline was taken before it ran. That is exactly what failed the wave of
+  // 2026-09-04: four canaries reported losses of 1-3 rows, and every one of
+  // them was a duplicate id being retired by a concurrent job -- zero rows had
+  // left any canary pool to a base eviction.
+  //
+  // A pool is a set of SALES, so the count that gates a fleet must be a count
+  // of distinct sales.
+  // Rows that LEFT this slug by a base eviction, counted from the marker the
+  // apply writes onto the relocated row (rekeyedFrom[0].cardId is the pool it
+  // came from). This is what makes a loss EXPLAINABLE instead of merely
+  // observed: an eviction that moved a sale to its base pool is attributable,
+  // and anything else that removed a row is not.
+  const evicted = await all(
+    "SELECT VALUE COUNT(1) FROM c WHERE IS_DEFINED(c.baseEvictionEvidence) AND ARRAY_LENGTH(c.rekeyedFrom) > 0 AND c.rekeyedFrom[0].cardId = @s",
+    [{ name: "@s", value: slug }]
+  );
+  const byId = new Map();
+  for (const r of [...byPartition, ...byField]) if (!byId.has(r.id)) byId.set(r.id, r);
+  return { ...poolInputs([...byId.values()]), evictedAway: Number(evicted[0] ?? 0) };
 }
 
 async function main() {
