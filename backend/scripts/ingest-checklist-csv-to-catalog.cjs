@@ -537,7 +537,30 @@ async function main() {
     // categories) is DECLARED, or the reconciliation calls the run vanished --
     // D3 APPLY shards 3/4 wrote 353,739 + 351,022 rows and exited non-zero
     // over 2,065 + 6,434 undeclared gate drops.
-    reportWrites({ job: "ingest-checklist-csv-to-catalog", intended: rows, written, skipped: skippedRow + notReached + unnamedParallel + cardLineParallel + playerNameParallel + explodedRows, failed });
+    //
+    // CF-A-REFUSED-SUBSET-COLLISION-IS-A-DECLARED-SKIP (2026-09-04, run
+    // 33882293958). `subsetCollision` was missing from this sum, and it is the
+    // ONE refusal path that returns without touching any counter the sum knows
+    // about. So a page holding a real collision wrote fewer rows than it
+    // intended, declared none of the difference, and exited 4 "WORK VANISHED"
+    // -- which the driver records as `failed`. It cost 8 of that run's 76
+    // failures, every one of them a page where the guard did EXACTLY its job:
+    //
+    //   2000-01 Topps Chrome Johnson Reprints Refractors   intended 7, written 0
+    //   2003-04 Topps Chrome Gametime Gear Relics Refractors  intended 24, written 20
+    //   2004-05 Topps Chrome Town Heroes Refractors        intended 29, written 24
+    //
+    // A refusal we chose, counted, printed a reason for and showed examples of
+    // is the definition of a DELIBERATE, DECLARED skip. Leaving it out of the
+    // declaration makes the reconciler report our own correct guard as a
+    // vanished write, which is the same class of defect as
+    // CF-A-CORRECT-REFUSAL-IS-NOT-A-LANE-FAILURE in the driver: a right answer
+    // must not be laundered into an error somewhere downstream.
+    //
+    // `subsetDisambiguated` is deliberately NOT added: those rows ARE written,
+    // just at a subset-bearing slug, so they are already inside `written`.
+    // Adding them would double-count and overshoot `intended` instead.
+    reportWrites({ job: "ingest-checklist-csv-to-catalog", intended: rows, written, skipped: skippedRow + notReached + unnamedParallel + cardLineParallel + playerNameParallel + explodedRows + subsetCollision, failed });
   }
 }
 
