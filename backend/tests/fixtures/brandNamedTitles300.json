@@ -1,0 +1,1206 @@
+{
+ "_source": "sold_comps, read-only sample 2026-09-03. Real sale titles that name EXACTLY ONE manufacturer, drawn from the population that contains one of the bare product words the V6 coverage ruling added (certified/prestige/origins/studio/hoops/finest/zenith/recon/flair/ultra/pacific/goudey/parkhurst/photogenic/diamond kings/court kings/rookies and stars). This is the population the brand-collision defect touches.",
+ "_rule": "For every row, the brand of inferSetKeyFromTitle(title) must equal namedBrand. A refusal (Unknown) is allowed; a CONFIDENTLY WRONG brand is not.",
+ "rows": [
+  {
+   "namedBrand": "leaf",
+   "title": "2002 Leaf Certified Baseball #37 Mirror Red"
+  },
+  {
+   "namedBrand": "donruss",
+   "title": "2026 Donruss Elite JESUS MADE KABOOM! 💥Ultra-Rare #1 Rated Prospect - Brewers"
+  },
+  {
+   "namedBrand": "fleer",
+   "title": "Fleer 1992-93 NBA Hoops Shaquille O\\'Neal Rookie #401 Orlando Magic NBA"
+  },
+  {
+   "namedBrand": "fleer",
+   "title": "1996 Fleer Ultra Baseball #2 Gold Medallion"
+  },
+  {
+   "namedBrand": "upper-deck",
+   "title": "2025-26 Upper Deck Flair J.T. Miller Artistic Flair SSP #AF-7 Case Hit 🔥Rangers"
+  },
+  {
+   "namedBrand": "upper-deck",
+   "title": "2001 Upper Deck Origins of the Game Cy Young Cleveland Indians #54"
+  },
+  {
+   "namedBrand": "leaf",
+   "title": "2001 Leaf Rookies and Stars Baseball #25 Base"
+  },
+  {
+   "namedBrand": "leaf",
+   "title": "2002 Leaf Rookies and Stars Baseball #271 Longevity"
+  },
+  {
+   "namedBrand": "leaf",
+   "title": "Hideo Nomo 1995 leaf limited rookie 64, pinnacle Zenith Japanese 48 - Raw 10"
+  },
+  {
+   "namedBrand": "topps",
+   "title": "2026 Topps Chrome Ronald Acuña Jr. Ultra Violet #UV-3"
+  },
+  {
+   "namedBrand": "leaf",
+   "title": "1996 Leaf Studio Gold Press Proof /500 John Smoltz #85 HOF - Raw"
+  },
+  {
+   "namedBrand": "fleer",
+   "title": "Kobe Bryant 2000-01 Fleer NBA Hoops Hot Prospects Insert #46 Holo Foil Gold Rare - Raw 10"
+  },
+  {
+   "namedBrand": "topps",
+   "title": "DERRICK WHITE 2025-26 TOPPS CHROME CERTIFIED AUTO ISSUE GOLD /50 #TAU-DW Q1518 - Raw"
+  },
+  {
+   "namedBrand": "upper-deck",
+   "title": "Will Smith 2025-26 Upper Deck Flair Hockey 🇺🇸 Sharks 🏒 #107"
+  },
+  {
+   "namedBrand": "donruss",
+   "title": "1985 Donruss #557 Mark Langston RC: (Ultra High Grade): Mariners (Rookie Card) - Raw 10"
+  },
+  {
+   "namedBrand": "fleer",
+   "title": "2002-03 Fleer Flair Kobe Bryant Court Kings #1 CK Lakers - Raw 10"
+  },
+  {
+   "namedBrand": "upper-deck",
+   "title": "2009 Upper Deck Goudey Baseball #260 Base"
+  },
+  {
+   "namedBrand": "donruss",
+   "title": "2024 Donruss Football Rated Rookie Ladd McConkey, Prestige and Donruss Retro - Raw 10"
+  },
+  {
+   "namedBrand": "leaf",
+   "title": "2023 Leaf Metal Continuum - Ric Flair #MC-3 215/328 (AU) Auto"
+  },
+  {
+   "namedBrand": "topps",
+   "title": "2001 Topps Finest Origins Refractor #FO1 Derek Jeter PSA 9 Yankees"
+  },
+  {
+   "namedBrand": "panini",
+   "title": "2023 Panini Recon Basketball #5 Base"
+  },
+  {
+   "namedBrand": "fleer",
+   "title": "deion sanders 1993 fleer #263 atlanta's finest - Raw"
+  },
+  {
+   "namedBrand": "upper-deck",
+   "title": "2005 Upper Deck Origins - Signatures B.J. Upton #BU1 (AU) Devil Rays"
+  },
+  {
+   "namedBrand": "topps",
+   "title": "2003 Topps Finest Baseball #FRB-MS Base"
+  },
+  {
+   "namedBrand": "leaf",
+   "title": "1998 Leaf Rookies and Stars Baseball #2 Base"
+  },
+  {
+   "namedBrand": "donruss",
+   "title": "1982 Donruss baseball Phillies Finest Mike Schmidt Pete Rose #585 NM or better"
+  },
+  {
+   "namedBrand": "panini",
+   "title": "2023 Panini Origins WNBA Basketball #88 Blue"
+  },
+  {
+   "namedBrand": "panini",
+   "title": "2025 Panini PhotoGenic Football #132 Orange"
+  },
+  {
+   "namedBrand": "panini",
+   "title": "2023 Panini Zenith Football #57 3rd Down"
+  },
+  {
+   "namedBrand": "topps",
+   "title": "2023-24 Topps Chrome Kris Murray Certified Auto RC #CRA-KM CGC 9 MINT Rookie"
+  },
+  {
+   "namedBrand": "upper-deck",
+   "title": "1989 NBA Hoops Michael Jordan All Star Houston Upper Deck Cards Bulls 21 - Raw 10"
+  },
+  {
+   "namedBrand": "donruss",
+   "title": "1986 Donruss Highlights - Bo Jackson #43 (RC)🔥🔥ultra Clean🔥🔥"
+  },
+  {
+   "namedBrand": "topps",
+   "title": "2019 Topps Finest Nolan Ryan Origins Auto Autograph #FOA-NR Mets ZZ7045"
+  },
+  {
+   "namedBrand": "upper-deck",
+   "title": "2023-24 Upper Deck DC Annual World\\'s Finest Sparkle /99 #WF-1 - Batman"
+  },
+  {
+   "namedBrand": "panini",
+   "title": "2018 Panini Diamond Kings Baseball #76 Base"
+  },
+  {
+   "namedBrand": "leaf",
+   "title": "Ric Flair 2024 Leaf Electrum Avenue Black Printing Plate #1/1 EA-RF1 WWF"
+  },
+  {
+   "namedBrand": "topps",
+   "title": "Shawn Kemp 2023-24 Topps Chrome Certified Autographs #CA-SK Seattle Supersonics"
+  },
+  {
+   "namedBrand": "upper-deck",
+   "title": "2014-15 Upper Deck SP Authentic Flair Update Jambalaya #JB-BR Bill Russell – PSA GEM MT 10 – Pop 5"
+  },
+  {
+   "namedBrand": "panini",
+   "title": "2026 Panini FIFA World Cup Kayou Lionel Messi #15 Argentina Ultra /299"
+  },
+  {
+   "namedBrand": "donruss",
+   "title": "2003 Donruss Diamond Kings Baseball #166 Base"
+  },
+  {
+   "namedBrand": "upper-deck",
+   "title": "Sammy Sosa Cubs JSA certified Autograph 2004 Upper Deck SPX Baseball card # 64"
+  },
+  {
+   "namedBrand": "panini",
+   "title": "2024 Panini Encore Ladd McConkey Pacific Rookie Aurora #16 🔥1/1🔥"
+  },
+  {
+   "namedBrand": "donruss",
+   "title": "2003 Donruss Studio Baseball #BLC-40 Base"
+  },
+  {
+   "namedBrand": "donruss",
+   "title": "2021 Donruss Cade Cunningham #211 Rookie Card RC - PSA 9 + NBA HOOPS 201"
+  },
+  {
+   "namedBrand": "panini",
+   "title": "2024 Panini Origins Football #19 Base"
+  },
+  {
+   "namedBrand": "fleer",
+   "title": "1995 Fleer Ultra Baseball #9 Gold Medallion"
+  },
+  {
+   "namedBrand": "leaf",
+   "title": "2026 Leaf Independence Day #1/1 Black Ric Flair Auto"
+  },
+  {
+   "namedBrand": "topps",
+   "title": "2025 Topps NBA Hoops Basketball #53 Pixel Burst Gold"
+  },
+  {
+   "namedBrand": "fleer",
+   "title": "Roger Clemens Mike Piazza 2002 Fleer Tradition New York's Finest Jersey New York - Raw 10"
+  },
+  {
+   "namedBrand": "upper-deck",
+   "title": "`2024 Upper Deck Goodwin Champions Goudey Jordan Burroughs #GA-JB Auto n5h`"
+  },
+  {
+   "namedBrand": "topps",
+   "title": "2025 Topps Chrome Marvel Studios #187 Red Guardian Orange Refractor 09/25"
+  },
+  {
+   "namedBrand": "panini",
+   "title": "2025 Panini Certified Football #98 Blue"
+  },
+  {
+   "namedBrand": "donruss",
+   "title": "2009 Donruss Rookies and Stars #65 Eli Manning New York Giants"
+  },
+  {
+   "namedBrand": "topps",
+   "title": "2024 Topps Certified Tier One Dual Relic Patch, Bobby Witt Jr., Royals #77/99"
+  },
+  {
+   "namedBrand": "upper-deck",
+   "title": "2007 Upper Deck Goudey Baseball #69 Base"
+  },
+  {
+   "namedBrand": "panini",
+   "title": "2023 Panini Rookies and Stars Jahmyr Gibbs RC #TH-11 Thrillers Prizm"
+  },
+  {
+   "namedBrand": "panini",
+   "title": "2016 Panini Studio Basketball #FD11 Base"
+  },
+  {
+   "namedBrand": "fleer",
+   "title": "2002 FLEER GREATS OF THE GAME HARMON KILLEBREW - SGC 9.5 CERTIFIED SGC 10 AUTO"
+  },
+  {
+   "namedBrand": "fleer",
+   "title": "1986-87 Fleer #57 Michael Jordan Rookie Card - PSA 10 - MBA Silver Diamond Certified"
+  },
+  {
+   "namedBrand": "upper-deck",
+   "title": "2025-26 Upper Deck Flair Logan Cooley Blue Ice Forecheck #/25 Utah Mammoth #126"
+  },
+  {
+   "namedBrand": "donruss",
+   "title": "2003 Donruss Studio Baseball #LL-11 Base"
+  },
+  {
+   "namedBrand": "panini",
+   "title": "2022 Panini Origins Football #BB-5 Base"
+  },
+  {
+   "namedBrand": "fleer",
+   "title": "1997 Fleer Goudey Greats Frank Thomas #14 HOF 0xy0 - Raw"
+  },
+  {
+   "namedBrand": "panini",
+   "title": "2024 PANINI PRIZM #347 JAYDEN DANIELS ROOKIE RC PSA 9 + CHROME 201 & FINEST"
+  },
+  {
+   "namedBrand": "topps",
+   "title": "Shohei Ohtani 2018 Topps Rookie Card Set 3-Diamond Kings 73,GS11,PP10."
+  },
+  {
+   "namedBrand": "topps",
+   "title": "2025 Topps NBA Hoops Basketball #PA-7 Pixel Burst Purple"
+  },
+  {
+   "namedBrand": "panini",
+   "title": "2024 Panini Zenith Football #9 Base"
+  },
+  {
+   "namedBrand": "panini",
+   "title": "2021 Panini Court Kings Basketball #17 Base"
+  },
+  {
+   "namedBrand": "topps",
+   "title": "2024 Topps Chrome - Ultraviolet All-Stars Ichiro Suzuki #UV-5 PSA 10"
+  },
+  {
+   "namedBrand": "donruss",
+   "title": "2000 Donruss Playoff Certified Gridiron Gear Rod Smith CGG RS80-H 288/300 Patch"
+  },
+  {
+   "namedBrand": "donruss",
+   "title": "Donovan Clingan 2024-25 Donruss 2024-25 Origins 09/10 Gold Unleashed RC #13 - Raw 10"
+  },
+  {
+   "namedBrand": "leaf",
+   "title": "2002 Leaf Certified Baseball #108 Base"
+  },
+  {
+   "namedBrand": "leaf",
+   "title": "1998 Leaf Rookies and Stars Baseball #120 Green"
+  },
+  {
+   "namedBrand": "leaf",
+   "title": "2001 Leaf Certified Materials Baseball #FG-101 Base"
+  },
+  {
+   "namedBrand": "donruss",
+   "title": "2005 DONRUSS ZENITH SILVER ARTIST\\'S PROOF #72 HIDEKI MATSUI"
+  },
+  {
+   "namedBrand": "panini",
+   "title": "2020 Panini Rookies and Stars Football #RR-5 Red"
+  },
+  {
+   "namedBrand": "donruss",
+   "title": "2003 Donruss Studio Baseball #SS-2 Base"
+  },
+  {
+   "namedBrand": "panini",
+   "title": "2024 Panini PhotoGenic Football #75 Base"
+  },
+  {
+   "namedBrand": "topps",
+   "title": "2025 Topps Chrome - Ultra Violet Jaxson Dart #UV-1 (RC)"
+  },
+  {
+   "namedBrand": "panini",
+   "title": "2023 Panini Court Kings Basketball #MS-DAL Base"
+  },
+  {
+   "namedBrand": "donruss",
+   "title": "1997 Donruss Signature Series Kevin Young Certified Autograph Auto Pirates - Raw"
+  },
+  {
+   "namedBrand": "fleer",
+   "title": "1961 FLEER WILT CHAMBERLAIN ROOKIE CARD #8 RC - CERTIFIED PSA 2.5 (GOOD+) - RARE"
+  },
+  {
+   "namedBrand": "donruss",
+   "title": "2003 Donruss Diamond Kings Baseball #162 Base"
+  },
+  {
+   "namedBrand": "panini",
+   "title": "2023 Panini Spectra - Ultraviolet CJ Stroud #UV-15 (RC) PSA 9"
+  },
+  {
+   "namedBrand": "panini",
+   "title": "2023 Panini Origins Football #BS-15 Base"
+  },
+  {
+   "namedBrand": "panini",
+   "title": "2020 Panini Rookies and Stars Football #40 Base"
+  },
+  {
+   "namedBrand": "topps",
+   "title": "2025 Topps Chrome Deadpool Cover Stars #CS-25 Wolverine Origins #25"
+  },
+  {
+   "namedBrand": "upper-deck",
+   "title": "1998 Upper Deck Eminent Prestige #607 Frank Thomas HOF FREE SHIPPING - Raw"
+  },
+  {
+   "namedBrand": "leaf",
+   "title": "Ric Flair 2026 Leaf Decadence Multi-Sport 1x Case Break #3"
+  },
+  {
+   "namedBrand": "donruss",
+   "title": "2003 Donruss Diamond Kings Baseball #HC-14 Base"
+  },
+  {
+   "namedBrand": "leaf",
+   "title": "1985 LEAF DIAMOND KINGS #7 DON MATTINGLY PSA 8"
+  },
+  {
+   "namedBrand": "topps",
+   "title": "2025 Topps Match Attax Bennedict Mathurin #29 Gold Ultra Rare SSP 1:168"
+  },
+  {
+   "namedBrand": "topps",
+   "title": "2001 Topps Finest Origins #F01 Derek Jeter PSA 10"
+  },
+  {
+   "namedBrand": "upper-deck",
+   "title": "2005 Upper Deck Origins Old Judge Yorman Bazardo #286 0c4"
+  },
+  {
+   "namedBrand": "leaf",
+   "title": "2002 Leaf Certified Baseball #CS-7 Blue"
+  },
+  {
+   "namedBrand": "donruss",
+   "title": "Terry Bradshaw #15 2017 Donruss Certified Cuts Heritage Collection Silver SN/99"
+  },
+  {
+   "namedBrand": "upper-deck",
+   "title": "2024 Upper Deck Marvel Studios Series 2 SP Authentic Yelena Belova #FW16 BGS 9.5"
+  },
+  {
+   "namedBrand": "fleer",
+   "title": "1994 Fleer Ultra Baseball #218 Base"
+  },
+  {
+   "namedBrand": "topps",
+   "title": "2025 TOPPS CHROME MARVEL STUDIOS SAPPHIRE #34 ELLEN BRANDT GREEN REFRACTOR /99"
+  },
+  {
+   "namedBrand": "panini",
+   "title": "2025 Panini Certified Football #83 Purple"
+  },
+  {
+   "namedBrand": "upper-deck",
+   "title": "2025-26 Upper Deck Flair Backcheck Dawson Mercer 171/199 #77"
+  },
+  {
+   "namedBrand": "donruss",
+   "title": "Isaac Bruce 2009 Donruss Certified #105 49ers NFL READ FREE SHIP AutographDen"
+  },
+  {
+   "namedBrand": "topps",
+   "title": "2003 Topps Finest Baseball #FRJ-LW Base"
+  },
+  {
+   "namedBrand": "fleer",
+   "title": "LARRY BIRD 1988 Fleer #9 (fair) & 1990 Hoops #39 Celtics Basketball Cards (q) - Raw 10"
+  },
+  {
+   "namedBrand": "panini",
+   "title": "2023 Panini Origins Football #BS-19 Base"
+  },
+  {
+   "namedBrand": "upper-deck",
+   "title": "2005-06 Upper Deck (Parkhurst) `Rookies` SSP # 640 Zach Parise `Autographed` RC!"
+  },
+  {
+   "namedBrand": "topps",
+   "title": "Topps 2023-24 Chrome Brandon Miller Certified Rookie Auto #CRA-BM PSA 10"
+  },
+  {
+   "namedBrand": "donruss",
+   "title": "2005 Donruss Zenith Prime Signature Cuts 75/99 Eric Shelton Rookie Patch Auto RC"
+  },
+  {
+   "namedBrand": "fleer",
+   "title": "1995-96 Fleer Flair Michael Jordan #4 Hardwood Leader Insert Chicago Bulls (HOF) - Raw"
+  },
+  {
+   "namedBrand": "leaf",
+   "title": "Leaf Studio 1996 Cal Ripken Jr #1 of 12 Stained Glass Stars Orioles - Raw"
+  },
+  {
+   "namedBrand": "leaf",
+   "title": "1987 LEAF DIAMOND KINGS #6 JOSE CANSECO ATHLETICS PSA 10"
+  },
+  {
+   "namedBrand": "topps",
+   "title": "2023 Topps Chrome Derek Jeter Ultraviolet All-Stars Insert #UV-3 Yankees!! NICE!"
+  },
+  {
+   "namedBrand": "fleer",
+   "title": "1996 Fleer Ultra Baseball #142 Gold Medallion"
+  },
+  {
+   "namedBrand": "panini",
+   "title": "2024 Panini Court Kings Basketball #13 Jade"
+  },
+  {
+   "namedBrand": "panini",
+   "title": "2023 Panini Hoops Basketball #30 Base"
+  },
+  {
+   "namedBrand": "fleer",
+   "title": "1985 Fleer Frank Viola #291 On Card Auto PSA/ DNA Certified Authentic Autograph"
+  },
+  {
+   "namedBrand": "donruss",
+   "title": "2005 Donruss Zenith Artist\\'s Proof Silver JT Snow #166 0b0"
+  },
+  {
+   "namedBrand": "panini",
+   "title": "2023 Panini Recon Basketball #SPA-DIV Base"
+  },
+  {
+   "namedBrand": "panini",
+   "title": "2018 Panini Court Kings Basketball #111 Base"
+  },
+  {
+   "namedBrand": "topps",
+   "title": "2025 Topps Chrome Marvel Studios O.B. Green Refractor /199 #155 Loki"
+  },
+  {
+   "namedBrand": "leaf",
+   "title": "1991 Leaf Studio Baseball #9 Base"
+  },
+  {
+   "namedBrand": "panini",
+   "title": "2024 Panini Zenith Football #1 Red"
+  },
+  {
+   "namedBrand": "topps",
+   "title": "Yang Hansen 2025 Topps Chrome #TAIR-YH Certified Auto Issue Rookies Blazers TF1 - Raw"
+  },
+  {
+   "namedBrand": "donruss",
+   "title": "1997 Donruss signature series Bartolo Colon autograph certified auto - Raw 10"
+  },
+  {
+   "namedBrand": "upper-deck",
+   "title": "2005 Upper Deck Origins - Materials #PB-IS Ichiro Suzuki (MEM) - Raw 10"
+  },
+  {
+   "namedBrand": "donruss",
+   "title": "2023 Donruss Cooper Kupp Dominators Rookies And Stars Standing Ovation Rams - Raw 10"
+  },
+  {
+   "namedBrand": "topps",
+   "title": "2025 Topps Cosmic Chrome Ultraviolet Beam Elly De La Cruz #UB-15 Reds"
+  },
+  {
+   "namedBrand": "fleer",
+   "title": "1997 Fleer Goudey Greats Tony Gwynn #3 HOF - Raw 10"
+  },
+  {
+   "namedBrand": "upper-deck",
+   "title": "1993 Upper Deck Pacific Sock Exchange Ken Griffey Jr Buhner Kevin Mitchell #55 - Raw 10"
+  },
+  {
+   "namedBrand": "donruss",
+   "title": "1991 Donruss Ken Griffey Jr All-star #49 Misprint And Error Card Ultra Rare - Raw 10"
+  },
+  {
+   "namedBrand": "fleer",
+   "title": "1997-98 Fleer Flair - Hardwood Leader Michael Jordan #4 Chicago Bulls"
+  },
+  {
+   "namedBrand": "upper-deck",
+   "title": "2005 Upper Deck Origins Nolan Ryan #148 Rangers"
+  },
+  {
+   "namedBrand": "topps",
+   "title": "1993-94 Topps Pacific's Finest Clyde Drexler Refractor #74 Trail Blazers SGC 7"
+  },
+  {
+   "namedBrand": "donruss",
+   "title": "Jeff Suppan 1997 Donruss Signature Series Certified Autograph Auto Card - Raw 10"
+  },
+  {
+   "namedBrand": "topps",
+   "title": "1970 Topps Baseball # 190 Joe Torre NM to NM-MT *PrestigeBCeStore* - Raw"
+  },
+  {
+   "namedBrand": "topps",
+   "title": "Lou Gehrig 2011 Topps 1934 Goudey Design #CMGR-24 New York Yankees - Raw 10"
+  },
+  {
+   "namedBrand": "upper-deck",
+   "title": "1996-97 Upper Deck NBA Hoops Rookie Kobe Bryant 281 Los Angeles Lakers - Raw 10"
+  },
+  {
+   "namedBrand": "upper-deck",
+   "title": "2001-02 Upper Deck #80 Kobe Bryant Signed Buy Back Card (#1/1) – PSA/DNA Certified"
+  },
+  {
+   "namedBrand": "fleer",
+   "title": "1997 Fleer Goudey II Tiki Barber Rookie #21"
+  },
+  {
+   "namedBrand": "topps",
+   "title": "2025 Topps Chrome Bijan Robinson Ultra Violet SSP #UV-18 Falcons"
+  },
+  {
+   "namedBrand": "panini",
+   "title": "2024 Panini Court Kings Basketball #221 Base"
+  },
+  {
+   "namedBrand": "panini",
+   "title": "2024 Panini Prizm Football Deca Jayden Daniels Rookie RC #295 + Finest & Chrome* - Raw 10"
+  },
+  {
+   "namedBrand": "donruss",
+   "title": "2003 Donruss Rookies and Stars # 139 Antonio Brown"
+  },
+  {
+   "namedBrand": "fleer",
+   "title": "SAMMY SOSA 2003 Fleer Tradition Black-White Goudey #21 SERIAL #1025/1936 CUBS"
+  },
+  {
+   "namedBrand": "fleer",
+   "title": "1993 Fleer #263 Deion Sanders \"Atlanta's Finest \" Baseball/Football - Raw 10"
+  },
+  {
+   "namedBrand": "fleer",
+   "title": "1998 Fleer Ultra Baseball #500 Gold Medallion"
+  },
+  {
+   "namedBrand": "topps",
+   "title": "Travis Kelce 2025 Topps Signature Class #80 & 2024 Zenith #48 Chiefs"
+  },
+  {
+   "namedBrand": "upper-deck",
+   "title": "2000-01 Upper Deck Legends Jerseys Autograph #MJ-AJ Michael Jordan Signed Game-Used Relic Card (#23/23) - Jersey Number - PSA Authentic, PSA/DNA Certified"
+  },
+  {
+   "namedBrand": "topps",
+   "title": "2025 Topps Chrome Marvel Studios Red Skull Sky Blue RayWave Refractor #22"
+  },
+  {
+   "namedBrand": "topps",
+   "title": "2003 Topps Finest Baseball #85 Refractor"
+  },
+  {
+   "namedBrand": "topps",
+   "title": "KOBE BRYANT 1997 TOPPS CHROME 2ND YEAR RC #171 + 97' FLAIR SHOWCASE ROW 3 NM"
+  },
+  {
+   "namedBrand": "panini",
+   "title": "2022 Panini Zenith - Pacific Revolution Tom Brady #PR-9"
+  },
+  {
+   "namedBrand": "topps",
+   "title": "2014 Topps WWE NXT Prospects Charlotte Flair #5 Hard Signed Auto PSA 77457449"
+  },
+  {
+   "namedBrand": "panini",
+   "title": "Charlotte Flair Panini 2023 Select WWE /10 Ringside Gold Wave SP #292"
+  },
+  {
+   "namedBrand": "donruss",
+   "title": "TOM BRADY 2005 DONRUSS CERTIFIED SKILLS /500 SP REFRACTOR CARD #CS-10 READ DES"
+  },
+  {
+   "namedBrand": "topps",
+   "title": "1993 Topps Stadium Club Ultra-Pro Baseball #1 Base"
+  },
+  {
+   "namedBrand": "fleer",
+   "title": "1997 Fleer - Goudey Greats Greg Maddux #7"
+  },
+  {
+   "namedBrand": "donruss",
+   "title": "2014-15 Donruss Court Kings Stat Line Career #15 Carmelo Anthony HOF /253 SGC 10"
+  },
+  {
+   "namedBrand": "fleer",
+   "title": "1986 Fleer #31 Julius Erving PSA 6 - Dr J - HOF - Hoops LEGEND!"
+  },
+  {
+   "namedBrand": "topps",
+   "title": "1966 Topps Baseball # 436 Julian Javier NM to NM-MT *PrestigeBCeStore* - Raw"
+  },
+  {
+   "namedBrand": "panini",
+   "title": "2022 Panini Recon Basketball #11 Base"
+  },
+  {
+   "namedBrand": "upper-deck",
+   "title": "1998 Upper Deck Eminent Prestige Kenny Lofton Cleveland Indians #621 - Raw 10"
+  },
+  {
+   "namedBrand": "upper-deck",
+   "title": "B41d Frank Thomas  #607 upper deck eminent prestige 1998 Chicago White Sox￼ - Raw 10"
+  },
+  {
+   "namedBrand": "upper-deck",
+   "title": "Derek Jeter Pacific Upper Deck SPx 2001 SPXcitement #X9 NM-MT New York Yankees - Raw 10"
+  },
+  {
+   "namedBrand": "panini",
+   "title": "2022 Panini Diamond Kings Baseball #171 Base"
+  },
+  {
+   "namedBrand": "fleer",
+   "title": "2002-03 Fleer Flair Baron Davis Court Kings Game Used #CK-BD"
+  },
+  {
+   "namedBrand": "panini",
+   "title": "2025 Panini PhotoGenic Football #180 Bronze"
+  },
+  {
+   "namedBrand": "panini",
+   "title": "2023 Panini Recon Basketball #209 Holo Blue"
+  },
+  {
+   "namedBrand": "upper-deck",
+   "title": "2019-20 Upper Deck Parkhurst - Rookies Cale Makar #275 (RC)"
+  },
+  {
+   "namedBrand": "topps",
+   "title": "1968 Topps Football # 85 Roy Jefferson  NM to NM-MT *PrestigeFC.eStore*"
+  },
+  {
+   "namedBrand": "panini",
+   "title": "2025 Panini PhotoGenic Football #77 Green"
+  },
+  {
+   "namedBrand": "upper-deck",
+   "title": "2025-26 Upper Deck Flair Ben Kindel Rookie #191 Pittsburgh Penguins"
+  },
+  {
+   "namedBrand": "panini",
+   "title": "2023 Panini Prestige Football #AGS-1 Base"
+  },
+  {
+   "namedBrand": "topps",
+   "title": "1960 Topps Baseball # 353 Don Larsen  NM to NM-MT *PrestigeBCeStore* - Raw 10"
+  },
+  {
+   "namedBrand": "donruss",
+   "title": "2003 Donruss Studio Baseball #16 Base"
+  },
+  {
+   "namedBrand": "upper-deck",
+   "title": "2025-26 Upper Deck Flair Center Spotlight Tim Stutzle #CS-2"
+  },
+  {
+   "namedBrand": "fleer",
+   "title": "1998 Fleer Flair Showcase Pedro Martinez #85 Red Sox"
+  },
+  {
+   "namedBrand": "upper-deck",
+   "title": "1998 Upper Deck Eminent Prestige #601 Randy Johnson, Seattle Mariners - Raw"
+  },
+  {
+   "namedBrand": "panini",
+   "title": "2020 Panini Court Kings Basketball #4 Base"
+  },
+  {
+   "namedBrand": "panini",
+   "title": "2023 Panini Zenith Football #125 2nd Down"
+  },
+  {
+   "namedBrand": "fleer",
+   "title": "1997 Frank H Fleer Goudey Derek Jeter - Raw 10"
+  },
+  {
+   "namedBrand": "panini",
+   "title": "2024 Panini PhotoGenic Basketball #172 Groovy"
+  },
+  {
+   "namedBrand": "topps",
+   "title": "2025 Topps Chrome Marvel Studios Colm Feore as Laufey #AA-CF Auto"
+  },
+  {
+   "namedBrand": "topps",
+   "title": "2019 Topps Finest Origins Autograph SuperFractor #FOA-AJ Aaron Judge Signed Card (#1/1) – PSA MINT 9, PSA/DNA 10"
+  },
+  {
+   "namedBrand": "topps",
+   "title": "2025 Topps Chrome Marvel Studios HUMAN TORCH RayWave Refractor #196 Johnny Storm"
+  },
+  {
+   "namedBrand": "upper-deck",
+   "title": "2023-24 Upper Deck Parkhurst Pink Foil 11/50 Marc-Andre Fleury #148 0i47"
+  },
+  {
+   "namedBrand": "panini",
+   "title": "2022 Panini Recon Basketball #45 Holo Orange FOTL"
+  },
+  {
+   "namedBrand": "panini",
+   "title": "2016-17 Panini Studio From Downtown #1 Stephen Curry - BGS GEM MINT 9.5"
+  },
+  {
+   "namedBrand": "panini",
+   "title": "2025 Panini PhotoGenic Football #15 Purple"
+  },
+  {
+   "namedBrand": "donruss",
+   "title": "TOM BRADY 2004 Donruss Playoff Prestige #85 New England Patriots Free Shipping - Raw 10"
+  },
+  {
+   "namedBrand": "upper-deck",
+   "title": "1998 Upper Deck - Eminent Prestige Barry Bonds #625 San Francisco Giants"
+  },
+  {
+   "namedBrand": "topps",
+   "title": "1973 Topps Mark Nordquist PSA 5 EX card #212 Philadelphia Eagles Pacific Tigers"
+  },
+  {
+   "namedBrand": "upper-deck",
+   "title": "2024 Upper Deck Marvel Studios Series 1 Elizabeth Olsen as Wanda Maximoff #9 i1f"
+  },
+  {
+   "namedBrand": "topps",
+   "title": "2025 Topps Marvel Studios Chrome Winter Soldier Bucky Barnes RayWave #38￼"
+  },
+  {
+   "namedBrand": "topps",
+   "title": "2025 Topps NBA Hoops Basketball #250 Pixel Burst Blue"
+  },
+  {
+   "namedBrand": "topps",
+   "title": "2026 Topps Cosmic Chrome WWE - Galaxy Greats Charlotte Flair #GG-21"
+  },
+  {
+   "namedBrand": "topps",
+   "title": "2 for 1 2024 Photogenic Rookie Pix & Topps Chrome Jayden Daniels RC Commanders - Raw 10"
+  },
+  {
+   "namedBrand": "panini",
+   "title": "2025 Panini Prospect James Wood KABOOM! (RC) #15 - Ultra Rare/SSP - Nationals"
+  },
+  {
+   "namedBrand": "donruss",
+   "title": "Puka Nacua Rookie 2023 Donruss Zenith Base RC Rams   L30 - Raw 10"
+  },
+  {
+   "namedBrand": "panini",
+   "title": "2024 Panini Court Kings Basketball #25 Base"
+  },
+  {
+   "namedBrand": "donruss",
+   "title": "2024-25 Donruss Optic Zaccharie Risacher #17 *** Downtown *** Ultra Rare *** - Raw 10"
+  },
+  {
+   "namedBrand": "leaf",
+   "title": "2001 Leaf Certified Materials Baseball #FG-94 Career"
+  },
+  {
+   "namedBrand": "topps",
+   "title": "2017 Topps Allen & Ginter Matt Olsen (RC) + Optic Diamond Kings Olsen - Braves"
+  },
+  {
+   "namedBrand": "upper-deck",
+   "title": "BGS 9.5 CHAMP BAILEY 1999 UPPER DECK HOLOGRFX, #67 & PSA 9 PACIFIC, #422 RC'S"
+  },
+  {
+   "namedBrand": "upper-deck",
+   "title": "1997-98 Upper Deck UD3 Jam Master Scottie Pippen Bulls Central Arkansas Hoops - Raw 10"
+  },
+  {
+   "namedBrand": "fleer",
+   "title": "1997-98 Fleer Ultra Tim Duncan Rookie #131 &Hoops Rookie #9 - Raw"
+  },
+  {
+   "namedBrand": "topps",
+   "title": "2012 Topps Archives Fan Favorites Certified Autograph Buddy Bell Auto #FFA-BBE"
+  },
+  {
+   "namedBrand": "panini",
+   "title": "2020 Panini Rookies and Stars Football #RR-17 Base"
+  },
+  {
+   "namedBrand": "fleer",
+   "title": "1982 Fleer Baseball Phillies\\' Finest Mike Schmidt Smith Steve Carlton Card #641"
+  },
+  {
+   "namedBrand": "panini",
+   "title": "Panini Diamond Kings 2015 Joc Pederson RC Auto Mem Studio Portraits #8 /99"
+  },
+  {
+   "namedBrand": "donruss",
+   "title": "2005 Donruss Zenith Z-Jerseys #32 Austin Kearns - Cincinnati Reds"
+  },
+  {
+   "namedBrand": "panini",
+   "title": "Panini Studio 2016-17 Devin Booker Memorabilia Patch #8 Phoenix Suns NBA"
+  },
+  {
+   "namedBrand": "leaf",
+   "title": "1993 Leaf Studio Barry Bonds #12 Giants"
+  },
+  {
+   "namedBrand": "fleer",
+   "title": "2003 Fleer Tradition Randy Johnson Black & White Goudey RED🔥MINT💎Rare⭐️/500"
+  },
+  {
+   "namedBrand": "upper-deck",
+   "title": "2005 Upper Deck Origins Materials Albert Pujols #PB-AP"
+  },
+  {
+   "namedBrand": "topps",
+   "title": "🏀 CLYDE DREXLER - TOPPS PACIFIC’S FINEST #129 1993-94 REFRACTOR - Raw 10"
+  },
+  {
+   "namedBrand": "panini",
+   "title": "2026 Panini X Kayou FIFA World Cup Ultra Kylian Mbappe Legend 177/199"
+  },
+  {
+   "namedBrand": "leaf",
+   "title": "1998 Leaf Rookies and Stars Baseball #26 Base"
+  },
+  {
+   "namedBrand": "fleer",
+   "title": "1997 Fleer Series 2 Baseball #5 of 15 Chipper Jones Goudey Greats - Raw 10"
+  },
+  {
+   "namedBrand": "donruss",
+   "title": "2003 Donruss Studio Baseball #56 Studio Proof"
+  },
+  {
+   "namedBrand": "upper-deck",
+   "title": "1998 Upper Deck - Eminent Prestige #603 Roger Clemens FREE SHIPPING - Raw"
+  },
+  {
+   "namedBrand": "fleer",
+   "title": "1961 Fleer Wilt Chamberlain Rookie Card #8 - Certified SGC Authentic - Rare!"
+  },
+  {
+   "namedBrand": "upper-deck",
+   "title": "Upper Deck Flair 2025-26 Sam Dickinson Rookie #197 San Jose Sharks"
+  },
+  {
+   "namedBrand": "fleer",
+   "title": "Michael Jordan 1997-98 Fleer #4 Flair Hardwood Leaders"
+  },
+  {
+   "namedBrand": "topps",
+   "title": "1977 Topps Football # 269 Archie Griffin (RC) NM to NM-MT *PrestigeFCeStore* - Raw"
+  },
+  {
+   "namedBrand": "topps",
+   "title": "2003 Topps Finest Baseball #40 Base"
+  },
+  {
+   "namedBrand": "upper-deck",
+   "title": "2025-26 Upper Deck Parkhurst - Rookies Oliver Moore #241 (RC)"
+  },
+  {
+   "namedBrand": "upper-deck",
+   "title": "1998 Upper Deck Eminent Prestige - #616 - Nomar Garciaparra - Boston - Raw"
+  },
+  {
+   "namedBrand": "fleer",
+   "title": "ADAM VINATIERI 2002 Fleer Tradition #82 BGS/BAS Certified Authentic Autograph"
+  },
+  {
+   "namedBrand": "fleer",
+   "title": "1997 Fleer #14 Frank Thomas Goudey Greats - Raw"
+  },
+  {
+   "namedBrand": "fleer",
+   "title": "1995 Fleer Flair Basketball #19 Base"
+  },
+  {
+   "namedBrand": "leaf",
+   "title": "2026 Leaf NSCC National Silver Foil RIC FLAIR 95/99 #129"
+  },
+  {
+   "namedBrand": "upper-deck",
+   "title": "Upper Deck 2024-25 Parkhurst Champions Elvis Merzlikins #158 Black CBJ"
+  },
+  {
+   "namedBrand": "leaf",
+   "title": "2002 Leaf Rookies and Stars Baseball #DS-14 Base"
+  },
+  {
+   "namedBrand": "bowman",
+   "title": "1996 Bowman's Best GREG MADDUX \"GOLD ATOMIC REFRACTOR\" SSP PREVIEW 🔥 ULTRA RARE - Raw"
+  },
+  {
+   "namedBrand": "fleer",
+   "title": "2002-03 Fleer Flair COURT KINGS #CK9 ALLEN IVERSON Philadelphia 76ers HOF - Raw"
+  },
+  {
+   "namedBrand": "donruss",
+   "title": "Mark Grudzielanek 1997 Donruss Signature Series Certified On Card Autograph Auto - Raw 10"
+  },
+  {
+   "namedBrand": "fleer",
+   "title": "1994 Fleer Flair Matt Williams Hot Gloves #10 Giants"
+  },
+  {
+   "namedBrand": "fleer",
+   "title": "2002 Fleer Tradition Update Bernie Williams New York's Finest Yankees 15 NYF - Raw 10"
+  },
+  {
+   "namedBrand": "leaf",
+   "title": "2001 Leaf Certified Materials Baseball #18 Base"
+  },
+  {
+   "namedBrand": "upper-deck",
+   "title": "Ivan Demidov 2025-26 Upper Deck Parkhurst Checklist #250 RC Montreal Canadiens"
+  },
+  {
+   "namedBrand": "fleer",
+   "title": "1997 Fleer #5 Chipper Jones Goudey Greats - Raw 10"
+  },
+  {
+   "namedBrand": "upper-deck",
+   "title": "BATMAN 2023-24 Upper Deck DC Annual #WF-1 World’s Finest"
+  },
+  {
+   "namedBrand": "donruss",
+   "title": "2024-25 DONRUSS OPTIC DONOVAN MITCHELL SSP CHECKERBOARD PRIZM #91 NM ULTRA RARE! - Raw 10"
+  },
+  {
+   "namedBrand": "bowman",
+   "title": "1998 Bowman's Best Adrian Beltre Certified Auto #120 Dodgers"
+  },
+  {
+   "namedBrand": "donruss",
+   "title": "1984 Donruss Nolan Ryan HOF Signed Baseball Card #60 PSA 9 PSA/DNA Certified 10"
+  },
+  {
+   "namedBrand": "donruss",
+   "title": "2024 Donruss ROME ODUNZE RATED ROOKIE RETRO BLUE SHOCK / ROOKIES AND STARS  - Raw 10"
+  },
+  {
+   "namedBrand": "donruss",
+   "title": "1982 Donruss Philles Finest Pete Rose & MIke Schmidt #585"
+  },
+  {
+   "namedBrand": "upper-deck",
+   "title": "1993 Upper Deck #55 Pacific Sock Exchange (Ken Griffey Jr...."
+  },
+  {
+   "namedBrand": "fleer",
+   "title": "1961 Fleer Oscar Robertson Rookie Card #36 - Certified SGC 4 VG-EX - Rare Card!"
+  },
+  {
+   "namedBrand": "donruss",
+   "title": "2005 Donruss Zenith WILLIE MAYS #245 Artist's Proof SILVER Encased HOF SP - RARE"
+  },
+  {
+   "namedBrand": "upper-deck",
+   "title": "2025-26 Upper Deck Flair FLASH + Flair Kirill Kaprizov Wild #Flash-5"
+  },
+  {
+   "namedBrand": "upper-deck",
+   "title": "2022-23 Upper Deck Parkhurst Champions - Tomorrow\\'s Riches William Eklund #TR-7"
+  },
+  {
+   "namedBrand": "upper-deck",
+   "title": "1998 Upper Deck Eminent Prestige Jeff Bagwell #611 - Raw 10"
+  },
+  {
+   "namedBrand": "leaf",
+   "title": "1993 Leaf Studio Baseball #141 Base"
+  },
+  {
+   "namedBrand": "fleer",
+   "title": "⚾1982 Fleer #641 Phillies Finest Mike Schmidt/Steve Carlton/Lonnie Smith⚾NM⚾"
+  },
+  {
+   "namedBrand": "leaf",
+   "title": "2022 Leaf Vibrance The Fire Within Red Proof Ric Flair Auto # 1/1 🔥📈"
+  },
+  {
+   "namedBrand": "leaf",
+   "title": "2002 Leaf Certified Baseball #CS-5 Base"
+  },
+  {
+   "namedBrand": "fleer",
+   "title": "1997 Fleer Ultra Baseball #11 Base"
+  },
+  {
+   "namedBrand": "upper-deck",
+   "title": "Lane Hutson 2025-26 Upper Deck Flair Scoring Power #SP-19 Montreal Canadiens"
+  },
+  {
+   "namedBrand": "upper-deck",
+   "title": "Cno 1998 Upper Deck Eminent Prestige #618 Derek Jeter New York Yankees - Raw 10"
+  },
+  {
+   "namedBrand": "upper-deck",
+   "title": "2024 Upper Deck Marvel Studios Series 2 - HoloGrFx #196 Ravager Thor"
+  },
+  {
+   "namedBrand": "fleer",
+   "title": "1995-96 Fleer Michael Jordan Flair Hardwood Leader #4 Bulls - Raw"
+  },
+  {
+   "namedBrand": "fleer",
+   "title": "1995 Fleer Pacific Prisms Ken Griffey Jr #126  - Raw 10"
+  },
+  {
+   "namedBrand": "donruss",
+   "title": "2024 Donruss - Bo Nix Downtown! #19  SSP Ultra-Rare Rookie Regular size card🔥  - Raw 10"
+  },
+  {
+   "namedBrand": "leaf",
+   "title": "2001 Leaf Certified Materials Baseball #14 Base"
+  },
+  {
+   "namedBrand": "donruss",
+   "title": "2024 Donruss Optic Jordan Love DOWNTOWN refractor Prizm Ultra Rare *MINT* - Raw 10"
+  },
+  {
+   "namedBrand": "leaf",
+   "title": "2002 Leaf Certified Baseball #86 Base"
+  },
+  {
+   "namedBrand": "fleer",
+   "title": "1994 Fleer Ultra - Flair Hot Numbers Barry Sanders #11"
+  },
+  {
+   "namedBrand": "donruss",
+   "title": "2003 Donruss Studio Baseball #180 Base"
+  },
+  {
+   "namedBrand": "donruss",
+   "title": "2024 Donruss Optic RC Ricky Pearsall #284 Blue Glitter Prizm Ultra Rare Case Hit - Raw 10"
+  },
+  {
+   "namedBrand": "donruss",
+   "title": "1982 Donruss #585 Phillies Finest Mike Schmidt Pete Rose 50%off 5or more under$5 - Raw 10"
+  },
+  {
+   "namedBrand": "fleer",
+   "title": "DAVE WINFIELD 2001 FLEER Greats of the Game certified auto card mint short print - Raw 10"
+  },
+  {
+   "namedBrand": "donruss",
+   "title": "2023-24 Donruss Hoops VICTOR WEMBANYAMA Rated Rookie #220 Spurs ROY RC - Raw 10"
+  },
+  {
+   "namedBrand": "fleer",
+   "title": "Kobe Bryant 2003-04 Fleer Hoops Hot Prospects #32 Los Angeles Lakers"
+  },
+  {
+   "namedBrand": "leaf",
+   "title": "1987 LEAF DIAMOND KINGS #22 ERIC DAVIS REDS PSA 10"
+  },
+  {
+   "namedBrand": "fleer",
+   "title": "2003-04 Fleer Hoops Hot Prospects \"Cream Of The Crop\" #1 LeBron James Rookie Card - PSA GEM MT 10"
+  },
+  {
+   "namedBrand": "donruss",
+   "title": "2003 Donruss Studio Baseball #117 Base"
+  },
+  {
+   "namedBrand": "leaf",
+   "title": "Ric Flair 2026 Leaf Metal Independence Day #BA-RF1 Crystal Bald Eagle Auto /4"
+  },
+  {
+   "namedBrand": "leaf",
+   "title": "2025 Leaf Optichrome Ric Flair Combat Auto Autograph Crystal Black #1/1"
+  },
+  {
+   "namedBrand": "fleer",
+   "title": "1997 Fleer - Goudey Greats Ken Griffey Jr #2"
+  },
+  {
+   "namedBrand": "leaf",
+   "title": "2024 Leaf Metal CLEARLY Landen Holley 1/1 Pre-Production PROOF ULTRA RARE"
+  },
+  {
+   "namedBrand": "leaf",
+   "title": "2001 Leaf Certified Materials Baseball #147 Mirror Red"
+  },
+  {
+   "namedBrand": "leaf",
+   "title": "Ric Flair 2026 Leaf Art of Sport Multi-Sport 1x Case Break #5"
+  },
+  {
+   "namedBrand": "leaf",
+   "title": "2001 Leaf Certified Materials Baseball #103 Mirror Red"
+  },
+  {
+   "namedBrand": "leaf",
+   "title": "Ryan Leaf 2001 Pacific Private Stock #133 - Game Worn Gear / Jersey Bucanneers"
+  },
+  {
+   "namedBrand": "leaf",
+   "title": "2002 Leaf Rookies and Stars Baseball #294 Base"
+  },
+  {
+   "namedBrand": "leaf",
+   "title": "1992 Leaf Studio Baseball #181 Base"
+  },
+  {
+   "namedBrand": "donruss",
+   "title": "Cal Ripken, Jr. 2005 Donruss Zenith #250 Baltimore Orioles"
+  },
+  {
+   "namedBrand": "leaf",
+   "title": "2002 Leaf Certified Baseball #23 Mirror Red"
+  },
+  {
+   "namedBrand": "leaf",
+   "title": "2026 Leaf National Wrapper Redemption Ric Flair #45/99 #129"
+  },
+  {
+   "namedBrand": "donruss",
+   "title": "2003 Donruss Diamond Kings Baseball #86 Framed Black"
+  },
+  {
+   "namedBrand": "leaf",
+   "title": "2002 Leaf Certified Baseball #CS-12 Base"
+  },
+  {
+   "namedBrand": "donruss",
+   "title": "2003 Donruss Diamond Kings Baseball #152 Base"
+  },
+  {
+   "namedBrand": "leaf",
+   "title": "1988 LEAF DIAMOND KINGS WILL CLARK #21"
+  },
+  {
+   "namedBrand": "leaf",
+   "title": "1996 Leaf Studio - Stained-Glass Stars Frank Thomas #3 - Raw"
+  },
+  {
+   "namedBrand": "leaf",
+   "title": "Leaf 1993 Studio Kevin Mitchell Autographed #162 Cincinnati Reds MLB Card"
+  },
+  {
+   "namedBrand": "leaf",
+   "title": "1998 Leaf Rookies and Stars Baseball #20 Base"
+  },
+  {
+   "namedBrand": "leaf",
+   "title": "1998 Leaf Rookies and Stars Baseball #251 Longevity"
+  },
+  {
+   "namedBrand": "leaf",
+   "title": "TE-HINA PAOPAO 2025 Leaf Metal Women of Sport Hoops Queens Blue Sparkle 1/1"
+  }
+ ]
+}

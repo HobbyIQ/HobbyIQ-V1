@@ -691,6 +691,21 @@ const RULED_COLLAPSE_PAIRS = Object.freeze([
   { from: "marvel-metal", to: "fleer", sampled: 24, est: 2900, ruled: false },
   { from: "skybox-thunder", to: "skybox", sampled: 20, est: 2400, ruled: false },
   { from: "flair", to: "fleer", sampled: 20, est: 2300, ruled: false },
+  // The Leaf family catch-all. `/(?:^|-)leaf/` in the regex vocabulary
+  // swallowed every specialized Leaf product inside matchKnownProductLine --
+  // this is the exemplar pair the ruling itself is written around
+  // ("2002 Leaf Certified Materials #62"  table: leaf-certified-materials,
+  // regexes: leaf). It was named in the ruling and measured by the coverage
+  // census, but never carried its own row here, so the refusal could name the
+  // SHAPE and not the PAIR. `est` is the coverage census`s measured row count
+  // for the KEY (14,717), the same figure the V6 table carries. `sampled` is
+  // null on purpose: the coverage census counted the key, not this
+  // stored -> derived direction, and a sample count nobody measured is a
+  // number this table must not carry. The remaining Leaf specializations
+  // (certified, limited, signature-series, rookies-and-stars, metal) are in
+  // SPECIALIZED_PRODUCT_KEYS and are refused STRUCTURALLY; they get named rows
+  // here when a census measures their directions.
+  { from: "leaf-certified-materials", to: "leaf", sampled: null, est: 14717, ruled: true },
 ]);
 
 /** The ruled pair for this stored -> derived direction, or null. */
