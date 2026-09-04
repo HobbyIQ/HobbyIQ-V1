@@ -59,6 +59,14 @@ const f = (n) => Number(n).toLocaleString("en-US");
 const SAYS_TIFFANY = /\btiffany\b/i;
 const SAYS_TRADED = /\btraded\b/i;
 
+/** The destination sets whose checklist is being STAGED -- an L3-only failure
+ *  against one of these is `pendingChecklist` (it closes with no code change
+ *  the day the checklist lands), and against anything else is a conflict. The
+ *  two Tiffany parallels joined the list with the same-number parallel-set
+ *  ruling: L5 no longer refuses them, so L3 is the only leg left holding the
+ *  years whose Tiffany catalog rows are synthetic rather than scraped. */
+const PENDING_CHECKLIST_SETS = new Set(["topps-traded-tiffany", "topps-tiffany", "bowman-tiffany"]);
+
 /** The ordinary IMPROVE gate's loose predicate, verbatim from the runner.
  *  L3 does NOT use it -- see `K.isStrictChecklistSource`, the allowlist of
  *  named scraped sources, and STRICT_CHECKLIST_SOURCES for the measurement
@@ -229,12 +237,23 @@ async function main() {
         ? (res.improveRefusals?.length ? res.improveRefusals : [`tier:${res.tier}`])
         : ev.failed;
       // PENDING CHECKLIST: the ONLY failing leg is L3, and the destination is
-      // a Topps Traded Tiffany row -- the set the parallel PR is staging.
-      // Every other L3 failure is a different missing checklist and is
-      // reported as a conflict, because a checklist nobody is staging closes
-      // nothing.
+      // a set whose checklist is actually being staged -- the 1984-1991 Topps
+      // Traded Tiffany set, and (since the same-number parallel-set ruling of
+      // 2026-09-04) the Tiffany parallels themselves. Every other L3 failure
+      // is a different missing checklist and is reported as a conflict,
+      // because a checklist nobody is staging closes nothing.
+      //
+      // THE TIFFANY ROWS ARE THE POINT OF THIS BUCKET NOW. The declaration
+      // turned L5 off for them, so what holds them back is exactly and only
+      // the CHILD'S OWN checklist: 1987 has 735 real rows from
+      // `drew-google-sheet-scraped-2026-09-01` and those go eligible; every
+      // other year's `topps-tiffany` / `bowman-tiffany` catalog rows are
+      // synthetic `derived-from-base-checklist-*`, which L3 refuses, so they
+      // land here rather than moving on a name. That split is the measurement
+      // this census exists to report.
       const onlyL3 = ev.failed.length === 1 && ev.failed[0] === "derived-not-checklist-backed";
-      if (onlyL3 && der.identity.setKey === "topps-traded-tiffany") {
+      const stagedSet = PENDING_CHECKLIST_SETS.has(der.identity.setKey);
+      if (onlyL3 && stagedSet) {
         b.pending++; pending++;
         if (samples.pending.length < 25) samples.pending.push(line);
         continue;

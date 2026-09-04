@@ -435,6 +435,76 @@ export function productRefinementsOf(setKey: string | null | undefined): string[
   return out;
 }
 
+/**
+ * SAME-NUMBER PARALLEL SETS (CF-A-TIFFANY-SALE-IS-A-TIFFANY-CARD, Drew
+ * 2026-09-04 -- the ruling read onto the rematch's L5).
+ *
+ * A specialization is normally told from its flagship by the CARD NUMBER: the
+ * 1987 Topps Traded set numbers its cards #70T and the flagship numbers its
+ * own #70, so "does the flagship's checklist list this number?" separates the
+ * two cards, and the rematch's L5 leg refuses any row where it does.
+ *
+ * A SAME-NUMBER PARALLEL SET breaks that test by design. Tiffany and Glossy
+ * style sets are the flagship's checklist REPRINTED on a better stock, card
+ * for card, ON THE SAME NUMBERS. 1988 Topps Tiffany #150 and 1988 Topps #150
+ * are the same George Brett at the same number and two genuinely different
+ * cards with two different markets. For these families the flagship checklist
+ * ALWAYS lists the number -- that is what "parallel set" means -- so L5 fires
+ * on every row by construction and refuses the whole family.
+ *
+ * Drew's ruling (commit eed10b9b, "a Tiffany sale is a Tiffany card", 2,760
+ * rows moved out of the base pools): a sale whose title says Tiffany belongs
+ * to the Tiffany product, full stop. Where the number cannot separate the two
+ * cards, THE TITLE IS THE EVIDENCE -- and it is sufficient, because the
+ * specialization's OWN checklist row still has to exist under a real scraped
+ * source (the rematch's L3) before anything moves.
+ *
+ * So the pairs below declare, per (child, parent), "this child reprints its
+ * parent's checklist on the parent's own numbers". The rematch's L5 reads THIS
+ * DECLARATION and nothing else: a declared pair skips the flagship-lists test
+ * (the answer is known to be yes and known to be uninformative); EVERY OTHER
+ * FAMILY KEEPS L5 STRICT. That is the whole widening -- L1 through L4 are
+ * untouched, and L3 in particular is what keeps a synthetic
+ * `derived-from-base-checklist-*` row from qualifying as the child's checklist.
+ *
+ * WHAT IS DELIBERATELY NOT HERE.
+ *   o-pee-chee     NOT a parallel set of topps. OPC is a separate Canadian
+ *                  product with its own checklist and its own numbering, which
+ *                  diverges from Topps in many years. The number DOES carry
+ *                  information there, so L5 must keep asking.
+ *   *-update, *-series-N, *-chrome, *-sapphire and every other refinement:
+ *                  different checklists, different numbers. L5 separates them
+ *                  correctly today and stays on.
+ *
+ * A family is added here only when someone has confirmed the child reprints the
+ * parent card-for-card at the parent's numbers. Absent beats wrong.
+ */
+export const SAME_NUMBER_PARALLEL_SETS: ReadonlyArray<{ readonly setKey: string; readonly parent: string }> = [
+  // Topps Tiffany, 1984-1991: the flagship checklist on white stock with a
+  // glossy front, same numbers card for card. The 1987 set (792 cards) is the
+  // one #1615 landed from Drew's hand-verified sheet.
+  { setKey: "topps-tiffany", parent: "topps" },
+  // Topps Traded Tiffany reprints the TRADED checklist (#1T-#132T), which is
+  // itself numbered apart from the flagship -- so L5 already passes for these
+  // rows against `topps`. Declared anyway for the `topps-traded` -> Tiffany
+  // move, where the parent's numbers ARE the child's.
+  { setKey: "topps-traded-tiffany", parent: "topps-traded" },
+  // Bowman Tiffany, 1989-1991: same shape, same numbers (1989 Bowman lists
+  // #220 and #27 and so does its Tiffany).
+  { setKey: "bowman-tiffany", parent: "bowman" },
+];
+
+/** True iff `setKey` reprints `parent`'s checklist on `parent`'s own card
+ *  numbers -- so the card number cannot tell the two cards apart and only the
+ *  title can. Consumed by the rematch's L5 leg; every undeclared pair keeps
+ *  the strict flagship-lists test. */
+export function isSameNumberParallelSet(setKey: string | null | undefined, parent: string | null | undefined): boolean {
+  const c = String(setKey ?? "").trim().toLowerCase();
+  const p = String(parent ?? "").trim().toLowerCase();
+  if (!c || !p) return false;
+  return SAME_NUMBER_PARALLEL_SETS.some((e) => e.setKey === c && e.parent === p);
+}
+
 /** Every key the table spells -- for the guard that checks the vocabulary's
  *  destinations all have a family entry. */
 export function productSetKeys(): string[] {
