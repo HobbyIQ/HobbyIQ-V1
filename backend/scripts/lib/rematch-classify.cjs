@@ -1707,6 +1707,16 @@ const STRICT_CHECKLIST_SOURCES = Object.freeze([
   "checklist", "checklistinsider", "checklistcenter", "checklistcenter-html",
   "beckett-checklist", "beckett-scraped", "beckett",
   "tcdb", "tcgdex", "cardboardchecklist",
+  // www.sportscardchecklist.com -- a real scraped publisher with its own lane
+  // (discoverSportsCardChecklistSets.cjs / fetchSportsCardChecklist.cjs), and
+  // as of 2026-09-04 the source of ~50k+ rows: Tiffany 1984-1991, Fleer
+  // Tiffany/Glossy, the 1990s baseball destinations (#1766), the vintage
+  // FB/BK/HK cells. It was missing from this list, so the STRICT gate scored
+  // its rows 0 while the LOOSE CHECKLIST_SOURCE_RE matched them -- the two
+  // predicates disagreed about the same rows, which is exactly the split this
+  // allowlist exists to prevent. That is half of why 1987 topps-traded-tiffany
+  // read "strict-checklist 0"; the other half was the cardYear filter.
+  "sportscardchecklist",
   // -- the encyclopaedias and card-by-card references ----------------------
   "baseballcardpedia", "baseballcardpedia-ladders", "bccp",
   "cardboardconnection", "cardboard-connection",

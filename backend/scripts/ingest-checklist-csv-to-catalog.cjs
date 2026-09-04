@@ -449,6 +449,18 @@ async function main() {
           const landed = await upsertCatalogEntry({
             id: slugForWrite, cardId: slugForWrite, hobbyiqCardId: slugForWrite,
             sport: product.sport, year: product.year,
+            // CF-YEAR-CARDYEAR-DUAL-WRITE (Drew, 2026-08-11), which this
+            // hand-rolled doc never honoured. deriveCatalogEntry writes both
+            // names; this lane bypasses it and wrote `year` alone, so every
+            // row it has ever minted -- Tiffany 1984-1991, Fleer
+            // Tiffany/Glossy, the 1990s baseball destinations (#1766), the
+            // vintage FB/BK/HK cells -- was invisible to any reader filtering
+            // `c.cardYear`. That is precisely how the strictest checklists we
+            // own read as "strict-checklist 0" to the GREAT REMATCH and left
+            // the 22 Tiffany-titled 1987 Maddux #70T rows in CONFLICT.
+            // cardYear is a MIRROR of year, never a second fact: same value,
+            // one expression, so the two can never drift.
+            cardYear: product.year,
             setKey: product.setKey, setName: product.setName,
             ...(product.subsetName ? { subsetName: product.subsetName } : {}),
             // PERSISTED, so the decision is the CATALOG'S and every later reader

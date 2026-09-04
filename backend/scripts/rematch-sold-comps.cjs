@@ -588,6 +588,25 @@ async function main() {
    *  as a refusal. ONE query per (year, setKey), cached: a per-row query over
    *  16.3M rows is not a census, it is an outage.
    *  CF-FLEET-SCRIPTS-MEASURE-THROUGHPUT-BEFORE-DISPATCH. */
+  /** CF-THE-SLUG'S-YEAR-IS-THE-IDENTITY-YEAR (Drew, 2026-09-04). Every
+   *  product-level catalog read below used to filter `c.cardYear = @y` alone.
+   *  `cardYear` is a MIRROR of `year`, not the identity: the identity year is
+   *  the one in the slug. deriveCatalogEntry dual-writes both
+   *  (CF-YEAR-CARDYEAR-DUAL-WRITE), but the 59 hand-rolled catalog writers do
+   *  not, and ingest-checklist-csv-to-catalog -- the lane behind EVERY
+   *  sportscardchecklist row -- wrote `year` only. So the strictest checklists
+   *  we own were invisible to the leg that asks "is this checklist-backed":
+   *
+   *    topps-traded-tiffany 1987   total 39 | strict-checklist 0 | has 70T: 0
+   *
+   *  while the catalog held 132 strictly-sourced rows for that product,
+   *  hiq:baseball:1987:topps-traded-tiffany:70t:base:no-auto among them. The
+   *  22 Tiffany-titled Maddux #70T rows stayed CONFLICT on a lookup miss, not
+   *  on a disagreement. Reading BOTH names is the fix at this end; the ingest
+   *  child now dual-writes so the field is never absent again.
+   *
+   *  An OR of two equality predicates is still index-served on both terms. */
+  const yearMatch = (alias) => `(${alias}.cardYear = @y OR ${alias}.year = @y)`;
   const flagshipNumbersCache = new Map();
   const flagshipNumbers = async (year, setKey) => {
     const key = `${year}|${setKey}`;
@@ -595,7 +614,7 @@ async function main() {
     let out = null;
     try {
       const { resources } = await retry(() => cat.items.query({
-        query: `SELECT c.cardNumber, c.source FROM c WHERE c.setKey = @sk AND c.cardYear = @y`,
+        query: `SELECT c.cardNumber, c.source FROM c WHERE c.setKey = @sk AND ${yearMatch("c")}`,
         parameters: [{ name: "@sk", value: setKey }, { name: "@y", value: Number(year) }],
       }, { maxItemCount: -1 }).fetchAll());
       // A flagship with NO real checklist rows cannot answer the question --
@@ -630,7 +649,7 @@ async function main() {
     let out = new Map();
     try {
       const { resources } = await retry(() => cat.items.query({
-        query: `SELECT c.cardNumber, c.playerName, c.source FROM c WHERE c.setKey = @sk AND c.cardYear = @y AND c.playerName > ''`,
+        query: `SELECT c.cardNumber, c.playerName, c.source FROM c WHERE c.setKey = @sk AND ${yearMatch("c")} AND c.playerName > ''`,
         parameters: [{ name: "@sk", value: setKey }, { name: "@y", value: Number(year) }],
       }, { maxItemCount: -1 }).fetchAll());
       for (const r of resources ?? []) {
@@ -667,7 +686,7 @@ async function main() {
     let out = new Map();
     try {
       const { resources } = await retry(() => cat.items.query({
-        query: `SELECT c.cardNumber, c.isAuto, c.source FROM c WHERE c.setKey = @sk AND c.cardYear = @y`,
+        query: `SELECT c.cardNumber, c.isAuto, c.source FROM c WHERE c.setKey = @sk AND ${yearMatch("c")}`,
         parameters: [{ name: "@sk", value: setKey }, { name: "@y", value: Number(year) }],
       }, { maxItemCount: -1 }).fetchAll());
       for (const r of resources ?? []) {
@@ -725,7 +744,7 @@ async function main() {
         // A range predicate on subsetName is index-served; IS_DEFINED is a
         // scan. Blank is unknown and can neither create nor join a clash, so
         // excluding it here is the rule, not an optimisation.
-        query: `SELECT c.cardNumber, c.parallelSlug, c.isAuto, c.printRun, c.subsetName FROM c WHERE c.setKey = @sk AND c.year = @y AND c.subsetName > ''`,
+        query: `SELECT c.cardNumber, c.parallelSlug, c.isAuto, c.printRun, c.subsetName FROM c WHERE c.setKey = @sk AND ${yearMatch("c")} AND c.subsetName > ''`,
         parameters: [{ name: "@sk", value: setKey }, { name: "@y", value: Number(year) }],
       }, { maxItemCount: -1 }).fetchAll());
       for (const r of resources ?? []) {
