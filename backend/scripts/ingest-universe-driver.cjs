@@ -385,6 +385,28 @@ function ladderlessByEra(lane, entry) {
  *
  * Returns { ok, reason, stats }.
  */
+/**
+ * The identity of a staged row, in the terms the catalog keys on:
+ * (cardNumber, parallel, isAuto, printRun). Year and setKey are the PRODUCT's
+ * and are the same for every row of an entry, so they are the query, not the
+ * tuple.
+ *
+ * A blank parallel and the literal "Base" are ONE identity here, for the same
+ * reason gateStagedCsv counts them as one kind of card: the child writes the
+ * blank through `computeHobbyIqCardId({ parallel: r.parallel || "Base" })`, so
+ * both spellings collapse to the same slug in the catalog. Comparing them as
+ * different identities would report every base card missing.
+ */
+function stagedIdentity(r) {
+  const num = String(r.cardNumber ?? "").trim().toUpperCase();
+  const par = (!r.parallel || /^base(?:\s+set)?$/i.test(String(r.parallel).trim()))
+    ? "base"
+    : String(r.parallel).trim().toLowerCase();
+  const auto = String(r.isAuto) === "true" ? "1" : "0";
+  const run = r.printRun && Number(r.printRun) > 0 ? String(Number(r.printRun)) : "";
+  return `${num}|${par}|${auto}|${run}`;
+}
+
 function gateStagedCsv(csvPath) {
   const stats = { rows: 0, base: 0, ladder: 0, withPrintRun: 0, categories: 0, playersAsParallel: 0, cardLineParallel: 0, rungNames: [] };
   let text;
@@ -443,6 +465,12 @@ function gateStagedCsv(csvPath) {
     else { stats.ladder++; rungSet.add(String(r.parallel).trim()); if (r.printRun) stats.withPrintRun++; }
   }
   stats.rungNames = Array.from(rungSet);
+  // CF-COMPARE-IDENTITIES-NOT-COUNTS: the identity tuple of every staged row,
+  // so the post-ingest check can ask "which of these is NOT in the catalog"
+  // rather than "are there as many rows as I staged". Two scope files that
+  // stage the same card under two spellings of the product are two ROWS and
+  // ONE identity, and only the tuple can tell that from a lost row.
+  stats.identities = rows.map((r) => stagedIdentity(r));
 
   // ZERO BASE CARDS. A checklist with a parallel ladder but no base cards is a
   // ladder that has nothing to attach to -- the shape a cross-join leaves when
@@ -595,16 +623,24 @@ function gateStagedCsv(csvPath) {
  */
 function gateStagedEntry(csvPaths, lane) {
   const paths = Array.isArray(csvPaths) ? csvPaths : [csvPaths];
-  const total = { rows: 0, base: 0, ladder: 0, withPrintRun: 0, categories: 0, playersAsParallel: 0, cardLineParallel: 0, rungNames: [] };
-  if (!paths.length) return { ok: false, reason: "no staged CSV", stats: total, files: [] };
+  const total = { rows: 0, base: 0, ladder: 0, withPrintRun: 0, categories: 0, playersAsParallel: 0, cardLineParallel: 0, rungNames: [], identities: new Set() };
+  // NOT a content refusal: acquisition delivered no file at all, which is the
+  // shape a real lane failure takes. It must keep tripping the tripwire.
+  if (!paths.length) return { ok: false, reason: "no staged CSV", stats: total, files: [], contentRefusal: false };
 
   const files = [];
   let zeroBase = null;
   for (const p of paths) {
     const g = gateStagedCsv(p);
     files.push({ file: path.basename(p), ok: g.ok, code: g.code ?? null, reason: g.reason, stats: g.stats });
-    for (const k of Object.keys(total)) { if (k === "rungNames") continue; total[k] += g.stats?.[k] ?? 0; }
+    for (const k of Object.keys(total)) { if (k === "rungNames" || k === "identities") continue; total[k] += g.stats?.[k] ?? 0; }
     for (const n of g.stats?.rungNames ?? []) if (!total.rungNames.includes(n)) total.rungNames.push(n);
+    // A SET, not a concatenation. The bcp scraper stages some pages twice --
+    // `2000-finest-baseball.csv` AND `2000-topps-finest-baseball.csv`, the same
+    // product under an un-normalized key and its alias -- so the same card
+    // appears in both files. Summing rows double-counts it; unioning identities
+    // does not, which is the whole reason the check is on tuples.
+    for (const id of g.stats?.identities ?? []) total.identities.add(id);
     // A per-file defect other than zero-base condemns the entry immediately,
     // and it names the FILE -- "the gate refused" with no filename is
     // unactionable when a page stages five of them.
@@ -632,6 +668,26 @@ function gateStagedEntry(csvPaths, lane) {
       return {
         ok: false,
         reason: `zero base cards across all ${f(paths.length)} staged file(s) (${f(total.rows)} rows, all carry a parallel)`,
+        // CF-A-ZERO-BASE-PAGE-PROVES-THE-LANE-IS-UP (2026-09-04, run
+        // 33870669723). #1735 exempted CONTENT refusals from the systemic
+        // streak, but it set `contentRefusal` on the per-file early return
+        // ONLY. This return -- the zero-base verdict asked of the whole entry
+        // -- left it undefined, so `laneProvenHealthy` was false and every
+        // refusal advanced the streak exactly as before.
+        //
+        // The sportscardchecklist lane paid for it: entries 10, 12, 14, 16, 18,
+        // 20 and 22 were all `REFUSED -- zero base cards` (the "...Refractors"
+        // half of each 2000-01 Topps Chrome subset pair, which genuinely has no
+        // base cards of its own), and 20-21-22 made a 3-streak that aborted the
+        // lane with 176 of 198 entries unattempted.
+        //
+        // Reaching this verdict required fetching the page, parsing it and
+        // staging a CSV whose every row we read. That is positive evidence the
+        // HOST IS UP -- the only thing the streak is allowed to conclude. It
+        // stays `failed` (a page whose ladder has nothing to attach to is a
+        // real defect someone must look at), it simply no longer votes on the
+        // lane's health.
+        contentRefusal: true,
         stats: total, files,
       };
     }
@@ -1017,7 +1073,17 @@ function acquireEntry(entry, dir) {
         if (/0 base cards — layout not understood/.test(saidStr)) {
           // Named distinctly so the control doc says WHICH defect, and so a
           // future fix to the Checklist-heading layout can find its own rows.
-          throw new Error("bcp page carries a checklist our parser does not read (no Base_Set heading) — a parser gap, not an empty page");
+          //
+          // A PARSER GAP IS A PER-ENTRY ANSWER (2026-09-04, run 33869931267).
+          // The wiki served the page and we read every byte of it -- what we
+          // could not do is understand a heading level. That is positive
+          // evidence the host is UP, so it must not advance the systemic
+          // streak. It did: 2009 Bowman Chrome and 2004 Bowman's Best both
+          // landed here, and with "green ingest, 0 rows landed" between them
+          // they were two thirds of the 3-streak that aborted the bcp lane.
+          const e = new Error("bcp page carries a checklist our parser does not read (no Base_Set heading) — a parser gap, not an empty page");
+          e.laneProvenHealthy = true;
+          throw e;
         }
         throw new Error("bcp scrape produced no CSV");
       }
@@ -1352,8 +1418,77 @@ function setKeyFor(entry) {
 /** Count catalog rows for this entry's product. The verification is a READ of
  *  what actually landed, never the ingest's own claim -- a green ingest that
  *  wrote nothing is the exact failure this reconciles against. */
+/**
+ * CF-THE-COUNT-MUST-READ-THE-KEY-THE-CHILD-WROTE (2026-09-04, run 33869931267).
+ *
+ * `setKeyFor` slugifies the entry's DISPLAY NAME. The child writes under the
+ * staged manifest's setKey, which is `normalizeSetKey`'d -- and the two diverge
+ * wherever the alias table has an opinion. `finest` -> `topps-finest` is such an
+ * alias (#1699), so on the whole bcp Finest family the driver counted a key the
+ * ingest never writes:
+ *
+ *   2026 finest 0        topps-finest 39,480   -> "FAILED -- green ingest, 0 rows landed"
+ *   2023 finest 628      topps-finest 20,367   -> "0 rows created, 628 in catalog of 4,526 staged"
+ *   2025 finest 2,467    topps-finest 91,015   -> "0 rows created, 2,467 in catalog of 4,933 staged"
+ *
+ * Every one of those is a MEASUREMENT error. `baseballcardpedia-ladders-
+ * 2026-09-04` in fact landed 18,876 rows on 2026, 968 on 2023 and 1,166 on
+ * 2025 -- under `topps-finest`, where the driver never looked. The residue
+ * sitting under the un-normalized `finest` key is what the count actually read.
+ *
+ * Resolve the key through the SAME function the child uses. Falls back to the
+ * raw slug when dist is not built, so a driver run never dies on this.
+ */
+let _normalizeSetKey;
+function canonicalSetKey(k) {
+  if (!k) return k;
+  if (_normalizeSetKey === undefined) {
+    try { ({ normalizeSetKey: _normalizeSetKey } = require(path.join(HERE, "..", "dist/services/portfolioiq/hobbyIqCardId.service.js"))); }
+    catch { _normalizeSetKey = null; }
+  }
+  if (!_normalizeSetKey) return k;
+  try { return _normalizeSetKey(k) || k; } catch { return k; }
+}
+
+/**
+ * The identities the catalog holds for this entry's product, as the same tuple
+ * `stagedIdentity` builds. One cross-partition read of four fields, bounded by
+ * (year, setKey) -- the product, never the container.
+ */
+async function catalogIdentities(entry) {
+  const setKey = canonicalSetKey(setKeyFor(entry));
+  if (!setKey) return null;
+  if (entry.lane !== "tcgdexja" && !entry.year) return null;
+  const byKeyOnly = entry.lane === "tcgdexja";
+  const q = byKeyOnly
+    ? { query: "SELECT c.cardNumber, c.parallel, c.isAuto, c.printRun FROM c WHERE c.setKey = @k", parameters: [{ name: "@k", value: setKey }] }
+    : {
+        query: "SELECT c.cardNumber, c.parallel, c.isAuto, c.printRun FROM c WHERE c.year = @y AND c.setKey = @k",
+        parameters: [{ name: "@y", value: Number(entry.year) }, { name: "@k", value: setKey }],
+      };
+  const { resources } = await cosmos().container("card_catalog").items.query(q).fetchAll();
+  // ONLY A PROJECTION ANSWERS THIS QUESTION. A driver whose Cosmos layer hands
+  // back something other than the {cardNumber,...} rows asked for cannot be
+  // read as "the catalog holds none of these" -- that would report every staged
+  // identity missing and fail a healthy entry. Refuse to answer instead, and
+  // the caller falls back to the count checks.
+  if (!Array.isArray(resources)) return null;
+  if (resources.length && !resources.some((r) => r && typeof r === "object" && "cardNumber" in r)) return null;
+  const out = new Set();
+  for (const r of resources) {
+    if (!r || typeof r !== "object") continue;
+    out.add(stagedIdentity({
+      cardNumber: r.cardNumber,
+      parallel: r.parallel,
+      isAuto: r.isAuto === true ? "true" : "false",
+      printRun: r.printRun,
+    }));
+  }
+  return out;
+}
+
 async function countCatalogRows(entry) {
-  const setKey = setKeyFor(entry);
+  const setKey = canonicalSetKey(setKeyFor(entry));
   if (!setKey) return null;
   // Pokemon identity is the setKey alone -- year is NOT part of it, and gating
   // on year here read as a false zero for every tcgdex set. Every other lane
@@ -1957,6 +2092,50 @@ if (require.main !== module) return;
         const truncated = startedEmpty && after !== null && staged > 0 && after < staged;
 
         /**
+         * CF-STAGED-IDENTITIES-MUST-BE-IN-THE-CATALOG (2026-09-04, run
+         * 33869931267).
+         *
+         * `truncated` above compares COUNTS and only when the product started
+         * EMPTY, and both halves of that let a real shortfall through. On the
+         * bcp Finest family the driver reported, green:
+         *
+         *   INGESTED -- 0 rows created, 628 in catalog of 4,526 staged
+         *   INGESTED -- 0 rows created, 1,113 in catalog of 4,364 staged
+         *   INGESTED -- 0 rows created, 2,467 in catalog of 4,933 staged
+         *
+         * A catalog holding an eighth of what was staged, and the verdict says
+         * INGESTED because `before` was non-zero so the count check never ran.
+         *
+         * Counts cannot answer it in either direction. They over-report a loss
+         * when the same card is staged twice under two spellings of the product
+         * (the 664/791/1,241 "rows lost" on 2000, 2003 and 2009 Finest are
+         * exactly this -- two scope files, one card), and they under-report one
+         * when the ingest wrote a different set of rows than it staged.
+         *
+         * So ASK THE QUESTION DIRECTLY: is every staged identity in the
+         * catalog? Set difference, no arithmetic, and no dependence on
+         * `before`. A non-empty difference is a `short-ingest` -- named apart
+         * from `truncated` because the cause is usually a MERGE REFUSAL rather
+         * than a severed pipe, and the operator needs to know which.
+         */
+        let shortIngest = null;
+        if (after !== null && gate.stats.identities && gate.stats.identities.size) {
+          const inCatalog = await catalogIdentities(entry).catch(() => null);
+          if (inCatalog) {
+            const missing = [];
+            for (const id of gate.stats.identities) if (!inCatalog.has(id)) missing.push(id);
+            if (missing.length) {
+              shortIngest = {
+                staged: gate.stats.identities.size,
+                present: gate.stats.identities.size - missing.length,
+                missing: missing.length,
+                sample: missing.slice(0, 5),
+              };
+            }
+          }
+        }
+
+        /**
          * CF-A-PRODUCT-WITH-NO-PRINT-RUNS-IS-NOT-PARTIAL. On a lane whose
          * products carry no numbered parallels, an empty print-run column is
          * the source telling the truth, not a gap for a later pass to close.
@@ -1972,18 +2151,48 @@ if (require.main !== module) return;
           || (printRunsExpected && gate.stats.withPrintRun === 0);
 
         if (after === null) {
-          verdict = { status: "failed", reason: "cannot verify by read — setKey/year not derivable for this entry", rowsCreated: 0, stats: gate.stats };
+          // Also per-entry: the ingest ran, and what we cannot do is DERIVE a
+          // key to verify it with. Nothing about the host.
+          verdict = { status: "failed", reason: "cannot verify by read — setKey/year not derivable for this entry", rowsCreated: 0, stats: gate.stats, laneProvenHealthy: true };
           console.log(`      FAILED — unverifiable`);
         } else if (after === 0) {
-          verdict = { status: "failed", reason: "ingest reported success but the catalog holds 0 rows for this product", rowsCreated: 0, rowsInCatalog: 0, stats: gate.stats };
+          // A per-entry answer. We fetched the page, staged it, ran the ingest
+          // and read the catalog back -- the host answered every time, so this
+          // is our defect, not a down lane. It stays `failed`; it does not vote.
+          verdict = { status: "failed", reason: "ingest reported success but the catalog holds 0 rows for this product", rowsCreated: 0, rowsInCatalog: 0, stats: gate.stats, laneProvenHealthy: true };
           console.log(`      FAILED — green ingest, 0 rows landed`);
-        } else if (truncated) {
+        } else if (shortIngest) {
+          // THE IDENTITY DIFF IS THE TRUTH, and it supersedes the count check:
+          // `truncated` fires on row totals and cannot see a page staged twice
+          // under two spellings, where "lost" rows are a double count. When
+          // identities are all present the ingest is complete however the
+          // counts read.
+          //
+          // A per-entry answer, NOT a lane fault. Reaching it means the page
+          // was fetched, parsed, staged and ingested, and the catalog was read
+          // back -- every one of which proves the host is up. The cause is
+          // ours (a merge refusal, a key mismatch, a severed child), so it
+          // stays `failed` and keeps bringing someone back; it just never votes
+          // that the LANE is down. See CF-A-CORRECT-REFUSAL-IS-NOT-A-LANE-FAILURE.
           verdict = {
             status: "failed",
-            reason: `truncated ingest — ${f(staged)} rows staged, ${f(after)} in catalog`,
+            reason: `short ingest — ${f(shortIngest.missing)} of ${f(shortIngest.staged)} staged identities are not in the catalog (e.g. ${shortIngest.sample.join(", ")})`,
+            rowsCreated: created, rowsInCatalog: after, rowsStaged: staged,
+            stagedIdentities: shortIngest.staged, missingIdentities: shortIngest.missing,
+            stats: gate.stats, laneProvenHealthy: true,
+          };
+          console.log(`      SHORT INGEST — ${f(shortIngest.missing)} of ${f(shortIngest.staged)} staged identities missing from the catalog (${f(shortIngest.present)} present)`);
+          console.log(`      missing e.g. ${shortIngest.sample.join(", ")}`);
+        } else if (truncated) {
+          // Reached only when every staged identity IS in the catalog and the
+          // row count is still short -- the same card staged more than once.
+          // That is a double count in the staging, not a loss in the pipe.
+          verdict = {
+            status: "ingested",
+            reason: `${f(staged)} rows staged over ${f(gate.stats.identities.size)} distinct identities — all present; the row surplus is the same card staged more than once`,
             rowsCreated: created, rowsInCatalog: after, rowsStaged: staged, stats: gate.stats,
           };
-          console.log(`      FAILED — truncated: ${f(staged)} staged, only ${f(after)} landed (${f(staged - after)} rows lost in our own pipe)`);
+          console.log(`      INGESTED — ${f(gate.stats.identities.size)} distinct identities all present (${f(staged)} staged rows include duplicates across scope files)`);
         } else if (incomplete) {
           // Landed and clean, but incomplete: base-only, or -- on a lane whose
           // products ARE numbered -- a ladder with no print runs. Recording it
@@ -2018,7 +2227,9 @@ if (require.main !== module) return;
       // The acquisition itself says when the SOURCE answered "nothing here".
       // That is a verdict about the set, never a symptom of a broken lane.
       const status = e?.emptyAtSource ? EMPTY_STATUS : isGone ? "unreachable" : "failed";
-      verdict = { status, reason: `acquisition: ${msg}`, rowsCreated: 0 };
+      // A thrower that KNOWS the host answered says so, and the streak listens.
+      // See the parser-gap throw in the bcp acquisition.
+      verdict = { status, reason: `acquisition: ${msg}`, rowsCreated: 0, ...(e?.laneProvenHealthy ? { laneProvenHealthy: true } : {}) };
       console.log(`      ${status.toUpperCase()} — ${msg}`);
     }
 
