@@ -119,6 +119,11 @@ function productOf(csvPath) {
           setKey: m.setKey || normalizeSetKey(m.setName),
           setName: m.setName || m.setKey,
           sourceUrl: m.sourceUrl ?? null,
+          // CF-A-PARALLEL-SET-BELONGS-TO-ITS-PARENT. A page that is one rung or
+          // one insert of a parent product states the subset it came from. It is
+          // DISPLAY ONLY -- the identity slug has no subset axis -- but it makes
+          // a cross-subset cardNumber collision visible instead of silent.
+          subsetName: m.subset || null,
         };
       }
     } catch { /* fall through */ }
@@ -237,6 +242,8 @@ async function main() {
   let notReached = 0;
   // Numbered rows whose parallel the source left blank. NOT base cards.
   let unnamedParallel = 0;
+  let subsetCollision = 0;
+  const collisionExamples = [];
   // Written, but the merge kept the row another source already held there.
   let keptExisting = 0;
   let stopReason = null;
@@ -342,10 +349,35 @@ async function main() {
           if (parallelBlank && numbered && categoryBlank) { unnamedParallel++; return; }
 
           const known = await lookup(slug);
+
+          // CF-A-SUBSET-IS-NOT-IN-THE-IDENTITY (2026-09-04, run 33875264485).
+          // The identity slug carries sport/year/setKey/cardNumber/parallel/
+          // isAuto/printRun -- and NO subset. So two subsets of one product that
+          // number their cards alike collide on the slug, and the second write
+          // silently replaces the first with a DIFFERENT card.
+          //
+          // Measured, not hypothetical: 2000-01 Topps Chrome publishes both
+          // "Cards That Never Were" (MJ1-MJ10) and "Johnson Reprints" (MJ1-MJ7),
+          // every row Magic Johnson, both Refractor. Reparenting both onto
+          // topps-chrome -- which is where they belong -- puts MJ1 twice.
+          //
+          // A checklist row NEVER overwrites a checklist row naming a DIFFERENT
+          // subset. It is refused and counted, so the collision is a reported
+          // number to rule on, not a merged pool found months later.
+          if (product.subsetName && known && known.subsetName && known.subsetName !== product.subsetName) {
+            subsetCollision++;
+            if (collisionExamples.length < 8) {
+              collisionExamples.push(String(r.cardNumber).toUpperCase() + "|" + (r.parallel || "base")
+                + ': "' + product.subsetName + '" vs stored "' + known.subsetName + '"');
+            }
+            return;
+          }
+
           const landed = await upsertCatalogEntry({
             id: slug, cardId: slug, hobbyiqCardId: slug,
             sport: product.sport, year: product.year,
             setKey: product.setKey, setName: product.setName,
+            ...(product.subsetName ? { subsetName: product.subsetName } : {}),
             cardNumber: String(r.cardNumber).toUpperCase(),
             // EXACTLY the checklist's words. Identity grammar (the :base:
             // segment) lives in the slug; injecting "Base" into the stored
@@ -435,6 +467,8 @@ async function main() {
     }
   }
   console.log(`  rows skipped           ${f(skippedRow)}   <- no card number, no player, or unslugable`);
+  console.log(`  subset collisions REFUSED ${f(subsetCollision)}   <- same (cardNumber, parallel) already held by a DIFFERENT subset of this product; the identity slug has no subset axis`);
+  if (collisionExamples.length) console.log(`    e.g. ${collisionExamples.join("; ")}`);
   console.log(`  numbered, parallel blank ${f(unnamedParallel)}   <- NOT written as Base; the name is unknown`);
   console.log(`  rows not reached       ${f(notReached)}   <- the budget stopped before these`);
   console.log(`  failed                 ${f(failed)}`);

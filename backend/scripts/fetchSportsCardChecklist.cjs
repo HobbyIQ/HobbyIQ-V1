@@ -199,10 +199,24 @@ function parseSetUrl(url) {
  * `1998-99-topps-golden-greats` is part of a product name, so the match is
  * anchored to the slug TAIL, which is where this site puts a rung.
  */
+// LONGEST TAIL FIRST. This list is scanned in order and the FIRST match wins,
+// so a compound rung has to be offered before either of its halves. Measured on
+// the 76 refused pages of run 33875264485: `-refractors-gold` and
+// `-refractors-black` (19 pages between them) matched the bare `-gold$` /
+// `-black$` entries below and emitted "Gold"/"Black" -- dropping the Refractor
+// from a Gold Refractor, which is a DIFFERENT rung and a different pool.
+//
+// This site spells the compound rung BOTH ways -- `-gold-refractors` and
+// `-refractors-gold` -- and both name the same card, so both map to the one
+// label the pool already uses.
 const SLUG_PARALLEL_TAIL = [
-  [/-refractors?$/, "Refractor"],
-  [/-gold-refractors?$/, "Gold Refractor"],
   [/-printing-plates-(black|cyan|magenta|yellow)$/, (m) => `Printing Plate ${m[1][0].toUpperCase()}${m[1].slice(1)}`],
+  [/-(?:framed-)?press-plates-(black|cyan|magenta|yellow)$/, (m) => `Printing Plate ${m[1][0].toUpperCase()}${m[1].slice(1)}`],
+  [/-gold-refractors?$/, "Gold Refractor"],
+  [/-refractors?-gold$/, "Gold Refractor"],
+  [/-black-refractors?$/, "Black Refractor"],
+  [/-refractors?-black$/, "Black Refractor"],
+  [/-refractors?$/, "Refractor"],
   [/-gold$/, "Gold"],
   [/-silver$/, "Silver"],
   [/-black$/, "Black"],
@@ -212,6 +226,71 @@ const SLUG_PARALLEL_TAIL = [
   [/-artist-proof$/, "Artist Proof"],
   [/-press-proof$/, "Press Proof"],
 ];
+
+/**
+ * CF-A-PARALLEL-SET-BELONGS-TO-ITS-PARENT (2026-09-04, run 33875264485).
+ *
+ * This site publishes a product's rungs and inserts as SEPARATE set pages:
+ *
+ *   /set-151054/2000-01-topps-chrome-aptitude-for-altitude-basketball-...
+ *   /set-151055/2000-01-topps-chrome-aptitude-for-altitude-refractors-basketball-...
+ *
+ * The second is not a product. It is the Refractor rung of the first, and the
+ * doctrine is settled: a named parallel is a distinct CARD that belongs to the
+ * PARENT product's setKey with `parallel` set -- never a product key of its own
+ * (project_normalizesetkey_collapses_products, feedback_one_card_one_row_one_pool).
+ *
+ * The driver passes `--set-key` derived from the page's DISPLAY NAME, so all 76
+ * refused pages carried a key like `topps-chrome-refractors-gold` or
+ * `topps-chrome-johnson-reprints-refractors` -- 57 distinct invented products.
+ * normalizeSetKey collapses every one of them to `topps-chrome`, which is the
+ * catalog agreeing with the doctrine; but the ingest child uses the manifest's
+ * setKey VERBATIM when one is given (productOf), so that collapse never runs and
+ * 57 phantom products sat one admitted gate away from being minted.
+ *
+ * So the fetcher states the parent itself, derived from the SAME slug the rung
+ * came from, so the two can never disagree.
+ */
+const PARENT_BRANDS = [
+  "topps-chrome", "bowman-chrome", "bowman-sterling", "topps-finest",
+  "topps-heritage", "topps-traded", "topps-stadium-club", "upper-deck",
+  "o-pee-chee", "topps", "bowman", "fleer", "donruss", "score", "leaf", "panini",
+];
+
+/** The rung tail this slug matched, or null. Returned separately from the LABEL
+ *  so the parent split can strip exactly what was recognised. */
+function parallelTailOf(rest) {
+  const r = String(rest || "");
+  for (const entry of SLUG_PARALLEL_TAIL) if (entry[0].test(r)) return entry[0];
+  return null;
+}
+
+/**
+ * The parent PRODUCT this page's cards belong to, and the SUBSET within it.
+ *
+ * `2000-01-topps-chrome-aptitude-for-altitude-refractors`
+ *   -> parentSetKey `topps-chrome`, subset "Aptitude For Altitude"
+ *
+ * The brand list is matched LONGEST FIRST (`topps-chrome` before `topps`), so a
+ * Chrome page never lands on flagship Topps -- they are different products with
+ * different pools, and collapsing them is the exact harm #1666 documented.
+ * A slug naming no known brand returns the slug unchanged and NO parent claim,
+ * so an unrecognised product is never silently reparented.
+ */
+function splitParentAndSubset(rest, tailRe) {
+  let r = String(rest || "");
+  if (tailRe) r = r.replace(tailRe, "");
+  for (const b of PARENT_BRANDS) {
+    if (r === b) return { parentSetKey: b, subset: "" };
+    if (r.startsWith(b + "-")) {
+      const tail = r.slice(b.length + 1);
+      const words = tail.split("-").filter(Boolean)
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1));
+      return { parentSetKey: b, subset: words.join(" ") };
+    }
+  }
+  return { parentSetKey: "", subset: "" };
+}
 
 function parallelFromSlug(rest) {
   const r = String(rest || "");
@@ -414,6 +493,13 @@ async function main() {
   const setKey = val("--set-key", "");
   const setName = val("--set-name", "");
   const parallel = parsedUrl ? parallelFromSlug(parsedUrl.rest) : "";
+  // CF-A-PARALLEL-SET-BELONGS-TO-ITS-PARENT. The rung and the parent product
+  // come from the SAME slug, so they cannot disagree. `--set-key` from the
+  // driver is the DISPLAY-NAME slug and is not trusted on a rung page: it is
+  // the invented `topps-chrome-refractors-gold` shape this fix exists to stop.
+  const parentSplit = parsedUrl
+    ? splitParentAndSubset(parsedUrl.rest, parallelTailOf(parsedUrl.rest))
+    : { parentSetKey: "", subset: "" };
   const isAuto = autoEvidence(html, setName || (parsedUrl ? parsedUrl.rest : ""));
 
   const { rows, stats } = buildRows(html, { parallel, isAuto });
@@ -421,6 +507,11 @@ async function main() {
   console.log(url || htmlFile);
   console.log(`  season=${parsedUrl ? parsedUrl.seasonLabel : "?"} year=${year} sport=${sport}` +
     `  parallel=${parallel || "(blank)"} isAuto=${isAuto}`);
+  // THE BANNER PROVES THE BINDING. A rung page landing on its own key is the
+  // defect this fix is about, and printing the key that will be written is the
+  // only way to see it before the ingest runs.
+  console.log(`  parentSetKey=${parentSplit.parentSetKey || "(none)"} subset=${parentSplit.subset || "(none)"}` +
+    `  parallelOfParent=${Boolean(parallel && parentSplit.parentSetKey)}`);
   console.log(`  card headers=${stats.headers} hidden ebay_search rows=${stats.hiddenRows}` +
     (stats.anchorMismatch ? "  !! ANCHOR MISMATCH — page shape changed" : "  (anchors agree)"));
   console.log(`  rows=${rows.length} parsed=${stats.parsed} skipped=${stats.skipped} withSubset=${stats.withSubset}`);
@@ -444,6 +535,19 @@ async function main() {
   if (!year || !setKey) {
     console.log("  NOTE: --year and --set-key required for a manifest; CSV written without one.");
   } else {
+    // THE PARENT IS THE PRODUCT FOR BOTH SHAPES. A rung page ("...Refractors")
+    // and an INSERT page ("...Cards That Never Were") are both pages of cards
+    // belonging to the flagship product; they differ only in whether the slug
+    // named a finish. So both land on the parent's setKey -- the rung with
+    // `parallel` set, the insert with `parallel` BLANK and the insert name
+    // carried as the subset. `topps-chrome-cards-that-never-were` as a product
+    // key is the same phantom `topps-chrome-refractors-gold` is, and
+    // normalizeSetKey collapses it to `topps-chrome` for the same reason.
+    //
+    // The parent claim only exists when the slug named a KNOWN brand, so an
+    // unrecognised product keeps the key the driver derived and is never
+    // silently reparented.
+    const effectiveSetKey = parentSplit.parentSetKey || setKey;
     const mPath = out.replace(/[.]csv$/, "") + ".manifest.json";
     fs.writeFileSync(mPath, JSON.stringify({
       scrapedAt: new Date().toISOString(),
@@ -455,8 +559,22 @@ async function main() {
       // year so a split season is auditable and never re-derived by guess.
       season: parsedUrl ? parsedUrl.seasonLabel : String(year),
       setName: setName || setKey,
-      productKey: `${year}-${setKey}`,
-      setKey,
+      // THE PARENT KEY WINS ON A RUNG PAGE. `setKey` here is what the ingest
+      // child writes VERBATIM (productOf), so a rung page must state the parent
+      // product or it mints a phantom one. A page that is not a rung keeps the
+      // key it was given, so this narrows nothing for base and insert pages.
+      productKey: `${year}-${effectiveSetKey}`,
+      setKey: effectiveSetKey,
+      // The key as the driver derived it, kept so a wrong parent split is
+      // auditable rather than silently overwritten.
+      setKeyRequested: setKey,
+      // Read by the driver gate: a file whose every row carries ONE rung is
+      // admissible ONLY because this says the page IS that rung of a parent,
+      // not a ladder with nothing to attach to. Drop the flag and the
+      // zero-base refusal stands -- which is what the mutation test pins.
+      parallelOfParent: Boolean(parallel && parentSplit.parentSetKey),
+      parallelName: parallel || null,
+      subset: parentSplit.subset || null,
       rowCount: rows.length,
       // The rung is in the parallel column already (from the slug) or blank.
       // Without this the ingest re-derives a label from the category slug and
@@ -499,7 +617,7 @@ if (require.main === module) {
 }
 
 module.exports = {
-  parseSetUrl, parallelFromSlug, splitCardHeader, buildRows, toCsv,
+  parseSetUrl, parallelFromSlug, parallelTailOf, splitParentAndSubset, splitCardHeader, buildRows, toCsv,
   extractCardHeaders, countHiddenRows, autoEvidence, unescapeCell,
   SUBSET_TAGS, NOISE_TAGS, HEADER, SET_URL_RE,
 };
