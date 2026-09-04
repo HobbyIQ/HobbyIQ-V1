@@ -31,8 +31,8 @@
 import { describe, it, expect } from "vitest";
 import { createRequire } from "node:module";
 import { readFileSync } from "node:fs";
-import { productAncestry, productEntry } from "../src/services/catalog/productSetKeys.js";
-import { normalizeSetKey } from "../src/services/portfolioiq/hobbyIqCardId.service.js";
+import { productAncestry, productEntry, SAME_NUMBER_PARALLEL_SETS, isSameNumberParallelSet } from "../src/services/catalog/productSetKeys.js";
+import { normalizeSetKey, computeHobbyIqCardId } from "../src/services/portfolioiq/hobbyIqCardId.service.js";
 import { inferSetKeyFromTitle } from "../src/services/portfolioiq/parseTitleIdentity.service.js";
 
 const require_ = createRequire(import.meta.url);
@@ -155,36 +155,19 @@ describe("the five legs, each refused by name", () => {
     expect(res.reasons.join(" ")).toContain("flagship-checklist-lists-this-card");
   });
 
-  it("L5 — a SAME-NUMBERED reprint is refused by construction, and that is correct", () => {
-    // Measured 2026-09-04 against card_catalog: 1987 topps lists #70 and #320
-    // but NOT #70T, which is why the Traded Tiffany rows pass L5. But
-    // `topps-tiffany` and `bowman-tiffany` reprint the flagship's card list ON
-    // THE SAME NUMBERS — 1989 bowman really does list #220 and #27 — so every
-    // one of their rows fails L5 by construction.
-    //
-    // That is the leg working, not failing. When the number is shared, the
-    // cardNumber cannot tell the two cards apart and ONLY the title says
-    // Tiffany; moving the row on that alone is a bigger claim than this
-    // subclass makes. The census counts them under
-    // `flagship-checklist-lists-this-card` so the population is a number Drew
-    // can rule on rather than a silence.
-    const res = K.classifyRow({
-      row: row("1988 Topps Tiffany George Brett #150", { cardId: "hiq:baseball:1988:topps:150:base:no-auto" }),
-      stored: { ...STORED_FLAGSHIP, cardYear: 1988, cardNumber: "150" },
-      derived: { ...STORED_FLAGSHIP, cardYear: 1988, cardNumber: "150", setKey: "topps-tiffany" },
-      checklistBacked: true, derivedBackedStrict: true,
-      storedFlagshipListsCardNumber: true,          // 1988 Topps #150 is a real card
-      storedSlug: "hiq:baseball:1988:topps:150:base:no-auto",
-    });
+  it("L5 — an UNDECLARED family whose flagship LISTS this card number is refused", () => {
+    // 1987 Topps #70 is a real card. A title mentioning a trade must never
+    // re-key a genuine flagship sale off its own pool. `topps -> topps-traded`
+    // is NOT a same-number parallel set — #70T is not #70 — so L5 stays on.
+    const res = classify(TRADED_TITLE, "topps-traded", { storedFlagshipListsCardNumber: true });
     expect(res.klass).toBe(K.CONFLICT);
     expect(res.writable).toBe(false);
     expect(res.reasons.join(" ")).toContain("flagship-checklist-lists-this-card");
-    // and it is counted, not swallowed: the reason is present for Drew to read.
     expect(res.reasons.join(" ")).toContain("not-specialization-stated");
   });
 
-  it("L5 — an UNANSWERED coverage question is a refusal: absent beats wrong", () => {
-    const res = classify(TIFFANY_TITLE, "topps-traded-tiffany", { storedFlagshipListsCardNumber: null });
+  it("L5 — an UNANSWERED coverage question is a refusal on an undeclared family", () => {
+    const res = classify(TRADED_TITLE, "topps-traded", { storedFlagshipListsCardNumber: null });
     expect(res.klass).toBe(K.CONFLICT);
     expect(res.writable).toBe(false);
     expect(res.reasons.join(" ")).toContain("flagship-coverage-unknown");
@@ -529,5 +512,282 @@ describe("MUTATION PINS", () => {
     // The classifier half: a row backed ONLY by a derived source is refused.
     expect(classify(TIFFANY_TITLE, "topps-traded-tiffany", { derivedBackedStrict: false }).writable).toBe(false);
     expect(classify(TIFFANY_TITLE, "topps-traded-tiffany", { derivedBackedStrict: true }).writable).toBe(true);
+  });
+});
+
+describe("SAME-NUMBER PARALLEL SETS — the ruling read onto L5 (Drew, 2026-09-04)", () => {
+  // CF-A-TIFFANY-SALE-IS-A-TIFFANY-CARD. Commit eed10b9b, "a Tiffany sale is a
+  // Tiffany card", moved 2,760 rows out of the base pools on this reasoning: a
+  // sale whose title says Tiffany belongs to the Tiffany product, full stop.
+  //
+  // #1725 shipped L5 as an unconditional test and it refused the whole Tiffany
+  // family by construction — 6,113 rows measured 2026-09-04, 7,076
+  // topps -> topps-tiffany and 794 bowman -> bowman-tiffany by key pair —
+  // because a Tiffany set REPRINTS the flagship's checklist on the flagship's
+  // own numbers. The flagship genuinely lists the number, so L5's answer is not
+  // merely yes, it is UNINFORMATIVE: the number is shared by design and cannot
+  // separate the two cards. Only the title can, and under the ruling it is
+  // sufficient — because L3 still demands the CHILD'S own checklist row from a
+  // real scraped source before anything moves.
+
+  /** A 1987 Topps Tiffany row: the flagship's number, reprinted. */
+  const tiffanyParallel = (o: Opts = {}) => K.classifyRow({
+    row: row("1987 Topps Tiffany Barry Bonds #320 PSA 10", { cardId: "hiq:baseball:1987:topps:320:base:no-auto" }),
+    stored: { ...STORED_FLAGSHIP, cardNumber: "320" },
+    derived: { ...STORED_FLAGSHIP, cardNumber: "320", setKey: "topps-tiffany" },
+    checklistBacked: true,
+    // 1987 Topps really does list #320 — that is the whole point of the family.
+    storedFlagshipListsCardNumber: true,
+    derivedBackedStrict: o.derivedBackedStrict !== false,
+    storedSlug: "hiq:baseball:1987:topps:320:base:no-auto",
+  });
+
+  it("THE RULING — a Tiffany title on a flagship-listed number is IMPROVE and writable", () => {
+    // The 1987 Tiffany checklist is real: 735 rows from
+    // drew-google-sheet-scraped-2026-09-01, landed by #1615. Title says which
+    // product; checklist says the card was printed. Both hold, so the row moves.
+    const res = tiffanyParallel();
+    expect(res.klass).toBe(K.IMPROVE);
+    expect(res.subclass).toBe(K.SPECIALIZATION_STATED);
+    expect(res.writable).toBe(true);
+    expect(res.reasons.join(" ")).toContain("specialization:topps->topps-tiffany");
+    expect(res.reasons.join(" ")).toContain("title-states:tiffany");
+    // and L5 did not fire, though the flagship DOES list the number
+    expect(res.reasons.join(" ")).not.toContain("flagship-checklist-lists-this-card");
+    expect(res.specializationEvidence.sameNumberParallelSet).toBe(true);
+  });
+
+  it("THE RULING, OTHER HALF — the same title with NO real Tiffany checklist stays CONFLICT", () => {
+    // Every year but 1987: the `topps-tiffany` catalog rows are synthetic
+    // `derived-from-base-checklist-*`, minted by COPYING the flagship's. L3
+    // refuses them, so the row is pending a checklist — NOT moved on a name.
+    // This is the leg that keeps the widening from being a tautology.
+    const res = tiffanyParallel({ derivedBackedStrict: false });
+    expect(res.klass).toBe(K.CONFLICT);
+    expect(res.writable).toBe(false);
+    expect(res.reasons.join(" ")).toContain("derived-not-checklist-backed");
+    // and it is the ONLY thing holding it back — the census counts exactly this
+    // shape as pendingChecklist.
+    const ev = K.specializationStatedEvidence({
+      row: row("1987 Topps Tiffany Barry Bonds #320 PSA 10"),
+      stored: { ...STORED_FLAGSHIP, cardNumber: "320" },
+      derived: { ...STORED_FLAGSHIP, cardNumber: "320", setKey: "topps-tiffany" },
+      axes: { same: [], filled: [], dropped: [], changed: ["setKey"] },
+      derivedBacked: false, storedFlagshipListsCardNumber: true,
+    });
+    expect(ev.failed).toEqual(["derived-not-checklist-backed"]);
+  });
+
+  it("bowman -> bowman-tiffany is declared, and moves on the same two facts", () => {
+    // 1989 Bowman lists #220 and its Tiffany reprints it at #220.
+    const res = K.classifyRow({
+      row: row("1989 Bowman Tiffany Ken Griffey Jr #220 RC", { cardId: "hiq:baseball:1989:bowman:220:base:no-auto" }),
+      stored: { ...STORED_FLAGSHIP, cardYear: 1989, setKey: "bowman", cardNumber: "220" },
+      derived: { ...STORED_FLAGSHIP, cardYear: 1989, setKey: "bowman-tiffany", cardNumber: "220" },
+      checklistBacked: true, derivedBackedStrict: true,
+      storedFlagshipListsCardNumber: true,
+      storedSlug: "hiq:baseball:1989:bowman:220:base:no-auto",
+    });
+    expect(res.klass).toBe(K.IMPROVE);
+    expect(res.writable).toBe(true);
+  });
+
+  it("AN UNDECLARED FAMILY KEEPS L5 STRICT — the widening is per-pair, not global", () => {
+    // `topps -> topps-traded` is a real ladder edge with a title that states
+    // its distinguishing word, so L1, L2 and L4 all hold. It is NOT a
+    // same-number parallel set — the Traded set numbers #1T–#132T — so if the
+    // flagship lists the number, that number IS informative and L5 refuses.
+    expect(isSameNumberParallelSet("topps-traded", "topps")).toBe(false);
+    const res = classify(TRADED_TITLE, "topps-traded", { storedFlagshipListsCardNumber: true });
+    expect(res.klass).toBe(K.CONFLICT);
+    expect(res.writable).toBe(false);
+    expect(res.reasons.join(" ")).toContain("flagship-checklist-lists-this-card");
+  });
+
+  it("o-pee-chee is deliberately NOT declared — a different product, not a parallel", () => {
+    // OPC is a separate Canadian product with its own checklist and its own
+    // numbering, which diverges from Topps in many years. The number carries
+    // information there, so L5 must keep asking — and L1 refuses it anyway,
+    // since productSetKeys.ts gives o-pee-chee no parent.
+    expect(isSameNumberParallelSet("o-pee-chee", "topps")).toBe(false);
+    expect(K.isSameNumberParallelSet("o-pee-chee", "topps")).toBe(false);
+    expect(productEntry("o-pee-chee")?.parent ?? null).toBeNull();
+    expect(K.isSpecializationOf("o-pee-chee", "topps")).toBe(false);
+  });
+
+  it("the declaration does NOT widen L1 — every declared pair is already a ladder edge", () => {
+    // Declaring a pair turns off ONE leg. It does not add a ladder edge, mint a
+    // product, or relax L2/L3/L4.
+    for (const e of SAME_NUMBER_PARALLEL_SETS) {
+      expect(K.isSpecializationOf(e.setKey, e.parent), `${e.parent}->${e.setKey}`).toBe(true);
+    }
+  });
+
+  it("the mirror is a cache, not a second source of truth", () => {
+    // Same contract as SPECIALIZATION_PARENTS: productSetKeys.ts is the
+    // authority and this asserts the .cjs mirror agrees pair for pair, in both
+    // directions, so neither can gain an entry the other lacks.
+    const key = (e: { setKey: string; parent: string }) => `${e.parent}->${e.setKey}`;
+    const authority = SAME_NUMBER_PARALLEL_SETS.map(key).slice().sort();
+    const mirror = (K.SAME_NUMBER_PARALLEL_SETS as { setKey: string; parent: string }[]).map(key).slice().sort();
+    expect(mirror).toEqual(authority);
+    for (const e of SAME_NUMBER_PARALLEL_SETS) {
+      expect(K.isSameNumberParallelSet(e.setKey, e.parent), key(e)).toBe(true);
+      expect(isSameNumberParallelSet(e.setKey, e.parent), key(e)).toBe(true);
+      // and the pair is DIRECTIONAL: the collapse direction is never declared.
+      expect(K.isSameNumberParallelSet(e.parent, e.setKey), key(e)).toBe(false);
+    }
+  });
+
+  it("every declared child is a ladder descendant of its declared parent", () => {
+    // A declaration for a pair the ladder does not carry would be dead code
+    // that looks like a permission.
+    for (const e of SAME_NUMBER_PARALLEL_SETS) {
+      expect(K.SPECIALIZATION_PARENTS[e.setKey], e.setKey).toBe(e.parent);
+    }
+  });
+
+  it("every declared key is a normalizeSetKey FIXED POINT", () => {
+    for (const e of SAME_NUMBER_PARALLEL_SETS) {
+      expect(normalizeSetKey(e.setKey), e.setKey).toBe(e.setKey);
+      expect(normalizeSetKey(e.parent), e.parent).toBe(e.parent);
+    }
+  });
+
+  it("PIN 3 — declaring a family that is NOT a same-number reprint moves real cards", () => {
+    // THE MUTATION: add `topps -> topps-traded` to the declaration. The pin is
+    // that this is not a harmless widening — it takes a genuine 1987 Topps #70
+    // sale, whose title happens to say "traded", off its own real pool.
+    const ev = K.specializationStatedEvidence({
+      row: row("1987 Topps #70 Greg Maddux traded to the Cubs PSA 10"),
+      stored: STORED_FLAGSHIP,
+      derived: { ...STORED_FLAGSHIP, setKey: "topps-traded" },
+      axes: { same: [], filled: [], dropped: [], changed: ["setKey"] },
+      derivedBacked: true,
+      storedFlagshipListsCardNumber: true,   // 1987 Topps #70 IS a real card
+    });
+    expect(ev.qualifies).toBe(false);                              // shipped code refuses
+    expect(ev.failed).toContain("flagship-checklist-lists-this-card");
+    // the mutant declares the pair, so L5 is skipped and nothing else refuses:
+    const mutant = ev.failed.filter((r: string) => r !== "flagship-checklist-lists-this-card");
+    expect(mutant.length === 0).toBe(true);                        // => the pin bites
+  });
+
+  it("PIN 4 — turning L5 off for EVERY family, not the declared ones, is the wrong widening", () => {
+    // The narrower mutation: make the skip unconditional. That is the version
+    // the ruling explicitly did not authorize — Drew ruled on same-numbered
+    // PARALLEL SETS, not on every ancestor edge.
+    const ev = K.specializationStatedEvidence({
+      row: row(TRADED_TITLE), stored: STORED_FLAGSHIP,
+      derived: { ...STORED_FLAGSHIP, setKey: "topps-traded" },
+      axes: { same: [], filled: [], dropped: [], changed: ["setKey"] },
+      derivedBacked: true, storedFlagshipListsCardNumber: true,
+    });
+    expect(ev.qualifies).toBe(false);
+    expect(ev.failed).toContain("flagship-checklist-lists-this-card");
+    // unconditional-skip mutant:
+    const mutant = ev.failed.filter((r: string) => r !== "flagship-checklist-lists-this-card" && r !== "flagship-coverage-unknown");
+    expect(mutant.length === 0).toBe(true);   // it would qualify => the pin bites
+  });
+});
+
+describe("SLUG CASE — the re-keyed row must land BYTE-EQUAL on the checklist row's slug", () => {
+  // WHY THIS PIN EXISTS. The SPECIALIZATION-STATED census prints derived
+  // identities in their DISPLAY form — `baseball:1986:topps-traded:91T:Base:no-auto`,
+  // uppercase number suffix, capitalized parallel — because `renderIdentity`
+  // renders the identity FIELDS, which keep the case the title had. The
+  // catalog's checklist rows are keyed by the canonical SLUG, which is
+  // lowercase: `hiq:baseball:1987:topps-traded:70t:base:no-auto`.
+  //
+  // Those two are different strings, and only one of them is a pool key. If the
+  // apply ever wrote the rendered form — or built the slug by concatenating the
+  // identity fields — the re-keyed row would land on `...:70T:Base:...` while
+  // the checklist row and every already-correct sale sit on `...:70t:base:...`.
+  // The row would leave the flagship pool and NOT join the Tiffany pool: it
+  // would mint a third, one-row pool. A repair that splits the pool it was
+  // meant to join is worse than the defect, and it would be invisible in the
+  // census, whose counts are computed from identities and not from slugs.
+  //
+  // The guarantee is structural: `deriveIdentity` builds `slug`/`baseSlug`
+  // through `computeHobbyIqCardId`, `deriveCatalogEntry` builds the catalog
+  // row's id through THE SAME function, and the apply writes `keep.cardId` and
+  // `keep.hobbyiqCardId` from that slug — never from `identity`. These pins
+  // assert each link, so a later edit that "helpfully" formats the id breaks a
+  // test rather than a pool.
+
+  const comps = (o: Record<string, unknown> = {}) => ({
+    sport: "baseball", year: 1987, setKey: "topps-traded-tiffany", cardNumber: "70T",
+    parallel: "Base", isAuto: false, printRun: null, playerName: "Greg Maddux",
+    gradeCompany: null, gradeValue: null, ...o,
+  });
+
+  it("the builder LOWERCASES the number suffix and the parallel", () => {
+    // The exact strings the census printed vs the exact strings the catalog holds.
+    const display = computeHobbyIqCardId(comps({ cardNumber: "70T", parallel: "Base" }) as never);
+    const canonical = computeHobbyIqCardId(comps({ cardNumber: "70t", parallel: "base" }) as never);
+    expect(display).toBe(canonical);                       // byte-equal
+    expect(display).toBe("hiq:baseball:1987:topps-traded-tiffany:70t:base:no-auto");
+    expect(display).not.toContain("70T");
+    expect(display).not.toContain("Base");
+  });
+
+  it("the 1986 #91T row the census printed lands on the lowercase slug", () => {
+    // "baseball:1986:topps-traded:91T:Base:no-auto" — verbatim from run 33855128210.
+    const slug = computeHobbyIqCardId(comps({ year: 1986, setKey: "topps-traded", cardNumber: "91T" }) as never);
+    expect(slug).toBe("hiq:baseball:1986:topps-traded:91t:base:no-auto");
+  });
+
+  it("the SALE's slug and the CHECKLIST row's slug are the same function, so they are byte-equal", () => {
+    // The load-bearing claim. `deriveCatalogEntry` (cardCatalog.service.ts)
+    // mints the catalog row's id/hobbyiqCardId through computeHobbyIqCardId,
+    // and `deriveIdentity` (rematch-sold-comps.cjs) mints the sale's
+    // destination slug through the same one. Same inputs, same string.
+    const fromSale = computeHobbyIqCardId(comps({ cardNumber: "70T", parallel: "Base" }) as never);
+    const fromChecklist = computeHobbyIqCardId(comps({ cardNumber: "70t", parallel: "base", playerName: "MADDUX, GREG" }) as never);
+    expect(fromSale).toBe(fromChecklist);
+    // and the same holds for the Tiffany parallels this PR moves
+    for (const [setKey, num] of [["topps-tiffany", "320"], ["bowman-tiffany", "220"]] as const) {
+      const a = computeHobbyIqCardId(comps({ setKey, cardNumber: num.toUpperCase(), parallel: "Base" }) as never);
+      const b = computeHobbyIqCardId(comps({ setKey, cardNumber: num.toLowerCase(), parallel: "base" }) as never);
+      expect(a, setKey).toBe(b);
+      expect(a, setKey).toBe(`hiq:baseball:1987:${setKey}:${num.toLowerCase()}:base:no-auto`);
+    }
+  });
+
+  it("the APPLY writes cardId and hobbyiqCardId from the SLUG, never from the rendered identity", () => {
+    // A source pin, in the same spirit as "each refusal push has exactly ONE
+    // site": the writer must assign both id fields from the one `target`
+    // binding, and `target` must come from `der.slug` / `der.baseSlug`.
+    const runner = readFileSync(
+      new URL("../scripts/rematch-sold-comps.cjs", import.meta.url), "utf8",
+    );
+    expect(runner).toContain("const target = cand.kind === K.BASE_EVICTION ? der.baseSlug : der.slug;");
+    expect(runner).toContain("keep.cardId = target;");
+    expect(runner).toContain("keep.hobbyiqCardId = target;");
+    // both fields from ONE binding — never two separately-built strings
+    expect(runner.split("keep.hobbyiqCardId = target;")).toHaveLength(2);
+    // and the slug itself is built by the canonical builder, not concatenated
+    expect(runner).toContain("const slug = deps.computeHobbyIqCardId({");
+    expect(runner).toContain("const baseSlug = deps.computeHobbyIqCardId({");
+    // the rendered identity is a REPORTING artifact and must never be a key
+    expect(runner).not.toContain("cardId = K.renderIdentity");
+    expect(runner).not.toContain("hobbyiqCardId = K.renderIdentity");
+  });
+
+  it("MUTATION — uppercasing the number in the writer splits the pool it means to join", () => {
+    // THE MUTATION: `keep.cardId = target.toUpperCase()`-style damage, modelled
+    // as a slug built from the DISPLAY-cased fields by concatenation instead of
+    // through the builder. The pin is that this is not cosmetic: the string
+    // stops matching the checklist row, so the sale lands in a pool of one.
+    const canonical = computeHobbyIqCardId(comps({ cardNumber: "70T", parallel: "Base" }) as never);
+    const mutant = ["hiq", "baseball", "1987", "topps-traded-tiffany", "70T", "Base", "no-auto"].join(":");
+    expect(mutant).not.toBe(canonical);                    // => the pin bites
+    expect(mutant.toLowerCase()).toBe(canonical);          // and ONLY case differs
+    // The checklist row this sale is meant to join is keyed by `canonical`.
+    // A row written at `mutant` is not in that pool and not in the flagship
+    // pool either — it is a new, one-row pool, and FMV would project a trend
+    // from a single sale.
+    expect(canonical.split(":")[4]).toBe("70t");
+    expect(canonical.split(":")[5]).toBe("base");
   });
 });

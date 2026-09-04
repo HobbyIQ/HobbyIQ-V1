@@ -1319,19 +1319,38 @@ function isStrictChecklistSource(raw) {
 //                   cannot answer supplies `null` and the row is REFUSED,
 //                   because absent beats wrong.
 //
-//                   L5 IS WHY THE PARALLEL-PRINT TIFFANYS STAY REFUSED, AND
-//                   THAT IS CORRECT. Measured 2026-09-04: 1987 topps lists
-//                   #70 and #320 but NOT #70T, so the Traded Tiffany rows
-//                   pass -- while `topps-tiffany` and `bowman-tiffany` reprint
-//                   the flagship's card list ON THE SAME NUMBERS, so every one
-//                   of their rows fails L5 by construction. That is not a bug
-//                   in the leg. A same-numbered reprint means the flagship
-//                   checklist genuinely lists the number, so the cardNumber
-//                   cannot tell the two cards apart and only the title says
-//                   Tiffany. Moving those rows is a bigger claim than this
-//                   subclass makes, and it stays Drew's -- the census counts
-//                   them under `flagship-checklist-lists-this-card` so the
-//                   population is a number he can rule on, not a silence.
+//                   THE SAME-NUMBER PARALLEL-SET EXCEPTION (Drew ruled it,
+//                   2026-09-04). Measured 2026-09-04: 1987 topps lists #70 and
+//                   #320 but NOT #70T, so the Traded Tiffany rows pass L5 on
+//                   the number alone -- while `topps-tiffany` and
+//                   `bowman-tiffany` reprint the flagship's card list ON THE
+//                   SAME NUMBERS, so every one of their rows failed L5 by
+//                   construction: 6,113 rows, 7,076 topps -> topps-tiffany and
+//                   794 bowman -> bowman-tiffany by key pair.
+//
+//                   #1725 shipped that as a refusal and counted the population
+//                   so Drew could rule on it. He had already ruled: eed10b9b,
+//                   "a Tiffany sale is a Tiffany card", moved 2,760 rows out
+//                   of the base pools on exactly this reasoning. Where a
+//                   specialization reprints its parent card-for-card at the
+//                   parent's numbers, the number is shared BY DESIGN -- L5's
+//                   answer is not merely yes, it is uninformative -- and the
+//                   title is the only thing that can separate the two cards.
+//                   So it is sufficient.
+//
+//                   `SAME_NUMBER_PARALLEL_SETS` (productSetKeys.ts, mirrored
+//                   below) declares those pairs, and L5 skips the
+//                   flagship-lists test for them ALONE. EVERY OTHER FAMILY
+//                   KEEPS L5 STRICT -- `topps -> topps-traded` is separated by
+//                   the number and stays separated, and `o-pee-chee` is a
+//                   different product with its own numbering, not a parallel
+//                   set. And nothing else is relaxed: L3 still demands the
+//                   CHILD'S OWN checklist row from a real scraped source, so
+//                   1987's 735 hand-verified `topps-tiffany` rows become
+//                   eligible while the years whose Tiffany catalog rows are
+//                   synthetic `derived-from-base-checklist-*` stay PENDING a
+//                   checklist. The title says which product; the checklist
+//                   says the card was printed. Both, or neither.
 //
 // G1-G6 STILL APPLY. The subclass rides the IMPROVE arm and is evaluated
 // ALONGSIDE `improveRefusals`, the family-collision refusal, the
@@ -1379,6 +1398,53 @@ const SPECIALIZATION_PARENTS = Object.freeze({
 const LADDER_MIRRORED_KEYS = Object.freeze(
   Object.keys(SPECIALIZATION_PARENTS).filter((k) => k !== "bowman-tiffany"),
 );
+
+/**
+ * SAME-NUMBER PARALLEL SETS, MIRRORED from productSetKeys.ts.
+ * (CF-A-TIFFANY-SALE-IS-A-TIFFANY-CARD read onto L5 -- Drew, 2026-09-04.)
+ *
+ * A Tiffany/Glossy-style set is the flagship's checklist REPRINTED card for
+ * card ON THE SAME NUMBERS. For those families L5's question -- "does the
+ * stored flagship's own checklist list this cardNumber?" -- is always YES and
+ * always uninformative: the number is shared BY DESIGN, so it cannot separate
+ * the two cards and only the title can. Refusing on that answer refused the
+ * whole family by construction: 6,113 rows measured 2026-09-04, 7,076
+ * topps -> topps-tiffany and 794 bowman -> bowman-tiffany by key pair.
+ *
+ * Drew ruled it already (eed10b9b, "a Tiffany sale is a Tiffany card", 2,760
+ * rows out of the base pools): a sale whose title says Tiffany belongs to the
+ * Tiffany product. Where the number is uninformative the title IS the
+ * evidence -- and it is sufficient only because L3 still demands the CHILD'S
+ * OWN checklist row from a real scraped source. That is what keeps the
+ * synthetic `derived-from-base-checklist-*` rows (all 453 `bowman-tiffany`
+ * catalog rows carry exactly that source) from qualifying, and it is why this
+ * widening moves 1987's 735 hand-verified Tiffany rows and leaves the rest
+ * PENDING a checklist rather than writing them on a name.
+ *
+ * ONLY THE DECLARED PAIRS SKIP L5. Every other family keeps the strict test:
+ * `topps -> topps-traded` is separated by the number (#70T is not #70) and
+ * must stay separated, and `o-pee-chee` is a different product with its own
+ * numbering, not a parallel set, so its number still carries information.
+ *
+ * The mirror is a cache, not a second source of truth --
+ * `rematchSpecializationStated.test.ts` pins every entry against
+ * `isSameNumberParallelSet` in productSetKeys.ts, pair by pair, and pins that
+ * neither table has an entry the other lacks.
+ */
+const SAME_NUMBER_PARALLEL_SETS = Object.freeze([
+  Object.freeze({ setKey: "topps-tiffany", parent: "topps" }),
+  Object.freeze({ setKey: "topps-traded-tiffany", parent: "topps-traded" }),
+  Object.freeze({ setKey: "bowman-tiffany", parent: "bowman" }),
+]);
+
+/** Does `derivedKey` reprint `storedKey`'s checklist on `storedKey`'s own card
+ *  numbers? Only then may L5 stop asking whether the flagship lists the
+ *  number -- because for these families the answer is yes by construction. */
+function isSameNumberParallelSet(derivedKey, storedKey) {
+  const d = lower(derivedKey), s = lower(storedKey);
+  if (!d || !s) return false;
+  return SAME_NUMBER_PARALLEL_SETS.some((e) => e.setKey === d && e.parent === s);
+}
 
 /** Every ancestor of `setKey` under the mirrored ladder, nearest first. */
 function specializationAncestry(setKey) {
@@ -1467,8 +1533,22 @@ function specializationStatedEvidence({
   // L5 -- the stored flagship's own checklist must NOT list this number.
   // `null` means the caller could not answer, and an unanswered gate is a
   // refusal: absent beats wrong.
-  if (storedFlagshipListsCardNumber === null) failed.push("flagship-coverage-unknown");
-  else if (storedFlagshipListsCardNumber === true) failed.push("flagship-checklist-lists-this-card");
+  //
+  // UNLESS the pair is a DECLARED SAME-NUMBER PARALLEL SET, in which case the
+  // question is not merely answered YES, it is MEANINGLESS: a Tiffany set
+  // reprints the flagship's checklist on the flagship's own numbers, so the
+  // number is shared by design and cannot separate the two cards. Asking it
+  // there refuses the family by construction -- which is the 6,113 rows Drew
+  // ruled on 2026-09-04. The declaration is the ONLY thing that turns L5 off,
+  // it lives in productSetKeys.ts, and every undeclared family keeps the
+  // strict test. What still has to hold for a declared pair is L3: the CHILD'S
+  // own checklist row, from a real scraped source. The title says which
+  // product; the checklist says the card was printed. Both, or neither.
+  const sameNumberParallel = ladder && isSameNumberParallelSet(derivedKey, storedKey);
+  if (!sameNumberParallel) {
+    if (storedFlagshipListsCardNumber === null) failed.push("flagship-coverage-unknown");
+    else if (storedFlagshipListsCardNumber === true) failed.push("flagship-checklist-lists-this-card");
+  }
 
   return {
     qualifies: failed.length === 0,
@@ -1477,6 +1557,7 @@ function specializationStatedEvidence({
       storedSetKey: storedKey, derivedSetKey: derivedKey,
       distinguishingWords: words, unstatedWords: unstated,
       derivedBacked, storedFlagshipListsCardNumber,
+      sameNumberParallelSet: sameNumberParallel,
     },
   };
 }
@@ -2697,6 +2778,7 @@ module.exports = {
   // one alone and the mutation check can revert one alone. A leg nothing can
   // call alone is a leg nothing can prove.
   SPECIALIZATION_STATED, SPECIALIZATION_PARENTS, LADDER_MIRRORED_KEYS,
+  SAME_NUMBER_PARALLEL_SETS, isSameNumberParallelSet,
   STRICT_CHECKLIST_SOURCES, normalizeCatalogSource, isStrictChecklistSource,
   specializationAncestry, isSpecializationOf, distinguishingWords,
   titleStatesWord, specializationStatedEvidence,
