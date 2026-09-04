@@ -51,6 +51,7 @@ import { YUGIOH_SET_ALIASES, MTG_SET_ALIASES } from "../catalog/tcgSetAliases.js
 import { JAPANESE_POKEMON_SET_ALIASES } from "../catalog/japanesePokemonAliases.js";
 import { productParentOf, productSetKeyForName, spellForEra } from "../catalog/productSetKeys.js";
 import { reconcileSetKey } from "../catalog/setKeyReconciliation.js";
+import { normalizePokemonCardNumber } from "../catalog/pokemonCardNumber.js";
 export interface HobbyIqCardIdComponents {
   sport: string;              // e.g. "baseball"
   year: number;               // e.g. 2026
@@ -82,6 +83,15 @@ export interface HobbyIqCardIdComponents {
    *  catalog and persisted on the catalog row; never inferred here, and never
    *  read off a sale title. See below. */
   subsetInId?: boolean;
+  /** CF-THE-CHECKLIST-SPELLS-THE-NUMBER (Drew, 2026-09-04). The width THIS
+   *  set's checklist spells bare card positions in, from
+   *  `checklistNumberWidth` over its checklist-backed catalog rows. Pokemon
+   *  only, and only the caller that has read the checklist may set it:
+   *  a positive width pads (`94` -> `094`), `0` means the checklist spells
+   *  positions verbatim (`004` -> `4`), and ABSENT/null means the set has no
+   *  checklist to ask -- the number is then left exactly as stated, because
+   *  padding on a guess mints an identity no checklist published. */
+  pokemonChecklistNumberWidth?: number | null;
 }
 
 /**
@@ -1809,9 +1819,20 @@ export function computeHobbyIqCardId(components: HobbyIqCardIdComponents): strin
   if (!unnumbered && isUnparsedCardNumber(components.cardNumber)) {
     throw new Error("hobbyiq-cardid: cardNumber is unparsed — identity is UNDERIVABLE (CF-UNPARSED-IS-NOT-UNNUMBERED)");
   }
+  // CF-THE-CHECKLIST-SPELLS-THE-NUMBER (Drew, 2026-09-04). A Pokemon title
+  // states POS/TOTAL ("094/159"); slugify strips the slash and the segment
+  // became `094159`, a number that names no card and matches no checklist row.
+  // Drop the total (it is the SET's size, already carried by the setKey) and
+  // spell the position the way this set's checklist spells it. See
+  // pokemonCardNumber.ts for the measurements and for why the width is read
+  // per set rather than assumed: tcgdex pads `sv*`/`swsh1x` to 3 and writes
+  // `sm*`/`xy*` verbatim. With no checklist the number is left as stated.
+  const statedCardNumber = sport === "pokemon"
+    ? normalizePokemonCardNumber(components.cardNumber, components.pokemonChecklistNumberWidth ?? null)
+    : components.cardNumber;
   const cardNumber = unnumbered
-    ? (unnumberedCardSegment(components.playerName) ?? normalizeCardNumber(components.cardNumber))
-    : normalizeCardNumber(components.cardNumber);
+    ? (unnumberedCardSegment(components.playerName) ?? normalizeCardNumber(statedCardNumber))
+    : normalizeCardNumber(statedCardNumber);
   // An unnumbered card with no player to name it has no identity either. The
   // old code let `normalizeCardNumber("nno")` through as the literal `nno`,
   // which is the shared-slug collapse CF-PLAYER-IS-THE-NUMBER was written to
