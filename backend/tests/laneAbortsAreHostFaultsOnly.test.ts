@@ -119,8 +119,24 @@ describe("the catalog is read with the key the ingest writes", () => {
     // the count and the identity diff on different products -- which is the
     // defect, restated. A `toMatch` passes on either one alone, so the pin is
     // the COUNT.
-    expect(src.match(/const setKey = canonicalSetKey\(setKeyFor\(entry\)\);/g) ?? []).toHaveLength(2);
-    // And no read site may go back to the raw slug.
+    //
+    // CF-THE-CHILD-MAY-WRITE-EITHER-KEY (2026-09-04) widened the resolution
+    // from one key to the CANDIDATE LIST, because the child honours a stated
+    // manifest setKey verbatim (`m.setKey || normalizeSetKey(m.setName)`) and
+    // only normalizes when the manifest omits one. The invariant this pin
+    // protects is unchanged and still counted: both read sites resolve the key
+    // THE SAME WAY, and neither goes back to the bare slug. Only the name of
+    // the resolver moved.
+    // THREE, not two. countCatalogRowsBySource is a third read of the same
+    // product and it was still on the BARE slug -- no alias resolution at all
+    // -- which this pin's own `not.toMatch` was catching all along. It now
+    // resolves like the other two, so the count is raised to three.
+    expect(src.match(/const keys = setKeyCandidates\(entry\);/g) ?? []).toHaveLength(3);
+    // setKeyCandidates is itself built on canonicalSetKey, so the alias table
+    // is still consulted -- a candidate list that skipped it would put the two
+    // sites back on different products for every aliased key.
+    expect(src).toMatch(/const canon = canonicalSetKey\(raw\);/);
+    // And no read site may go back to the raw slug alone.
     expect(src).not.toMatch(/const setKey = setKeyFor\(entry\);/);
     expect(src).toMatch(/normalizeSetKey: _normalizeSetKey/);
   });

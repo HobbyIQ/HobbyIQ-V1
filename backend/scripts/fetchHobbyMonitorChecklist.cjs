@@ -732,8 +732,34 @@ async function main() {
     const setKey = val("--set-key", "");
     const setName = val("--set-name", setKey);
     const sport = val("--sport", "baseball");
+    // CF-AN-UNATTESTED-CSV-IS-WORSE-THAN-NO-CSV (2026-09-04).
+    //
+    // A CSV written WITHOUT its manifest is not a partial success, it is a
+    // booby trap. Every ladder this fetcher emits is dense by construction --
+    // it joins each rung of a subset onto every card of THAT SUBSET, so
+    // `rows == cards x rungs` with no gaps is the CORRECT shape, not a smear.
+    // Density therefore carries no signal on this lane, and the ONLY thing
+    // standing between a correct ladder and the driver's cartesian rule is the
+    // sidecar's `parallelColumnAuthoritative`. Measured on the live pages:
+    // 2024 Panini Prizm Football stages 19 perfectly dense categories (base is
+    // 400 cards x 63 rungs = 25,200 ladder rows) and passes the gate WITH its
+    // manifest; strip the manifest and the identical bytes are refused. So does
+    // 2009/10 Topps Basketball (330 x 6), an entry that INGESTED cleanly in
+    // production -- proof that the 92 that passed and the 5 refused as
+    // "cartesian" differ only in whether the sidecar reached the gate.
+    //
+    // Writing the CSV anyway and printing a NOTE is what let that happen
+    // quietly: the file looks like a clean acquisition, the driver gates it as
+    // unattested, and the verdict blames the checklist for a flag we failed to
+    // write. A missing product identity is OUR defect, so it fails loudly here
+    // -- and leaves no half-staged file behind for a later pass to trip on.
     if (!yr || !setKey) {
-      console.log("  NOTE: --year and --set-key required for a manifest; CSV written without one.");
+      try { fs.unlinkSync(out); } catch { /* nothing to undo */ }
+      throw new Error(
+        `refusing to stage an unattested CSV: --year and --set-key are required for the manifest ` +
+        `(got year="${val("--year", "")}", set-key="${setKey}"). Without the sidecar the ladder is ` +
+        `unattested and the universe driver's cartesian rule refuses this file's dense (and correct) ladder.`,
+      );
     } else {
       const mPath = out.replace(/[.]csv$/, "") + ".manifest.json";
       fs.writeFileSync(mPath, JSON.stringify({

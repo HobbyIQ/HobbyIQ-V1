@@ -1,0 +1,292 @@
+{
+ "scrapedAt": "2026-09-04T15:36:51.938Z",
+ "sourceUrl": "https://www.hobbymonitor.com/release/2024-panini-prizm-football",
+ "sport": "football",
+ "year": 2024,
+ "setName": "2024 Panini Prizm Football",
+ "productKey": "2024-panini-prizm-football",
+ "setKey": "panini-prizm-football",
+ "rowCount": 30096,
+ "parallelColumnAuthoritative": true,
+ "cardRows": 1218,
+ "ladderRows": 28878,
+ "rungsReal": 195,
+ "rungsDroppedPlayerName": 0,
+ "rungsUnnumbered": 75,
+ "refusedSubsets": 0,
+ "foldedVariationSubsets": [],
+ "refusedVariationFolds": [],
+ "foldedRows": 0,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Portals",
+   "category": "portals",
+   "playerCount": 10,
+   "rungs": 10,
+   "rowCount": 110,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Emergent",
+   "category": "emergent",
+   "playerCount": 20,
+   "rungs": 10,
+   "rowCount": 220,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Manga Vertical",
+   "category": "manga-vertical",
+   "playerCount": 15,
+   "rungs": 0,
+   "rowCount": 15,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Fireworks",
+   "category": "fireworks",
+   "playerCount": 25,
+   "rungs": 10,
+   "rowCount": 275,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Autographs",
+   "category": "autographs",
+   "playerCount": 114,
+   "rungs": 6,
+   "rowCount": 798,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Sensational Signatures",
+   "category": "sensational-signatures",
+   "playerCount": 30,
+   "rungs": 5,
+   "rowCount": 180,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Significant Signatures",
+   "category": "significant-signatures",
+   "playerCount": 83,
+   "rungs": 0,
+   "rowCount": 83,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Base",
+   "category": "base",
+   "playerCount": 400,
+   "rungs": 63,
+   "rowCount": 25600,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Aurora",
+   "category": "aurora",
+   "playerCount": 20,
+   "rungs": 0,
+   "rowCount": 20,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Premier Jerseys",
+   "category": "premier-jerseys",
+   "playerCount": 29,
+   "rungs": 3,
+   "rowCount": 116,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Rookie Autographs",
+   "category": "rookie-autographs",
+   "playerCount": 59,
+   "rungs": 14,
+   "rowCount": 885,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Rookie Gear",
+   "category": "rookie-gear",
+   "playerCount": 29,
+   "rungs": 3,
+   "rowCount": 116,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Prizmania",
+   "category": "prizmania",
+   "playerCount": 30,
+   "rungs": 0,
+   "rowCount": 30,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Color Blast",
+   "category": "color-blast",
+   "playerCount": 35,
+   "rungs": 0,
+   "rowCount": 35,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Sensational SIgnatures Navy Camo Prizm",
+   "category": "sensational-signatures-navy-camo-prizm",
+   "playerCount": 32,
+   "rungs": 0,
+   "rowCount": 32,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Rookie Patch Autographs",
+   "category": "rookie-patch-autographs",
+   "playerCount": 35,
+   "rungs": 4,
+   "rowCount": 175,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Profiles",
+   "category": "profiles",
+   "playerCount": 20,
+   "rungs": 0,
+   "rowCount": 20,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Rookie Variations",
+   "category": "rookie-variations",
+   "playerCount": 42,
+   "rungs": 7,
+   "rowCount": 336,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Prizmatic",
+   "category": "prizmatic",
+   "playerCount": 20,
+   "rungs": 10,
+   "rowCount": 220,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Dual Color Blast",
+   "category": "dual-color-blast",
+   "playerCount": 30,
+   "rungs": 0,
+   "rowCount": 30,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Prizm Break",
+   "category": "prizm-break",
+   "playerCount": 10,
+   "rungs": 10,
+   "rowCount": 110,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Franchise Legends Signatures",
+   "category": "franchise-legends-signatures",
+   "playerCount": 13,
+   "rungs": 5,
+   "rowCount": 78,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Franchise Legends Signatures Navy Camo Prizm",
+   "category": "franchise-legends-signatures-navy-camo-prizm",
+   "playerCount": 15,
+   "rungs": 0,
+   "rowCount": 15,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Prizm",
+   "category": "prizm",
+   "playerCount": 10,
+   "rungs": 10,
+   "rowCount": 110,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > All Purpose",
+   "category": "all-purpose",
+   "playerCount": 20,
+   "rungs": 5,
+   "rowCount": 120,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Hype",
+   "category": "hype",
+   "playerCount": 15,
+   "rungs": 10,
+   "rowCount": 165,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Flashback Autographs Navy Camo",
+   "category": "flashback-autographs-navy-camo",
+   "playerCount": 13,
+   "rungs": 0,
+   "rowCount": 13,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Flashback Autographs",
+   "category": "flashback-autographs",
+   "playerCount": 12,
+   "rungs": 5,
+   "rowCount": 72,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Manga Horizontal",
+   "category": "manga-horizontal",
+   "playerCount": 15,
+   "rungs": 0,
+   "rowCount": 15,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Lockdown",
+   "category": "lockdown",
+   "playerCount": 17,
+   "rungs": 5,
+   "rowCount": 102,
+   "refused": false,
+   "printRun": null
+  }
+ ]
+}
