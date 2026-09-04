@@ -699,14 +699,60 @@ function acquireEntry(entry, dir) {
         // 6 on pages with nothing to give, called them failures, and they
         // became two thirds of the 3-streak that aborted the lane. A lane is
         // not broken because the wiki has nothing to add for a 1990 oddball.
-        if (/nothing new to add/.test(String(said || ""))) {
-          const e = new Error(`bcp page has a base set but no parallel ladder — the wiki carries no rungs for it`);
+        // CF-A-REFUSAL-PATH-IS-NOT-A-CRASH (2026-09-04, run 33852199385).
+        //
+        // #1718 mapped exactly ONE of the scraper's refusal messages to EMPTY.
+        // The 1990 boxed/retail sets exit by a DIFFERENT path and were still
+        // read as `failed`: entries 6, 11, 12, 15, 16 and 17 of that run, and
+        // 15/16/17 were three in a row, so the lane aborted with 2,621 entries
+        // left. Every path below is the scraper EXITING 0 having said why it
+        // staged nothing, so each is classified on its own message rather than
+        // on the absence of a CSV, which is the same for all of them.
+        //
+        // The probe (2026-09-04, pages fetched directly) settles which of these
+        // is a verdict and which is a defect:
+        //
+        //   "base ok (N) but 0 rungs — nothing new to add"  -> EMPTY. The page
+        //      has a Base_Set heading and no parallel ladder. 1990_Baseball_Wit
+        //      is exactly this. Nothing here, and never was.
+        //
+        //   "0 base cards — layout not understood, SKIPPED" -> NOT empty. The
+        //      probe found these pages carry a FULL checklist (1990_Bazooka 22
+        //      cards, 1990_Fleer_Award_Winners 44, 1990_Donruss_Learning_Series
+        //      and 1990_Fleer_Baseball_All-Stars likewise) under a plain
+        //      `Checklist` heading, with NO `Base_Set` heading -- which is the
+        //      only heading parseCards reads. The rows are there and we cannot
+        //      see them. That is OUR parser, so it stays a lane fault worth a
+        //      verdict that brings someone back to it, exactly as the scraper's
+        //      own wording says. It does NOT become EMPTY: calling a gap in our
+        //      parser "the source has nothing" is how a defect goes quiet.
+        //
+        //   "HTTP 404" / "HTTP 410"                          -> the page is gone;
+        //      the shared isGone test downstream already lifts these out of
+        //      `failed` and into `unreachable`, so they need nothing here.
+        const saidStr = String(said || "");
+        if (/nothing new to add/.test(saidStr)) {
           // #1717's flag, and deliberately the SAME one: "the source answered,
           // and its answer is that it has nothing here" is ONE concept, and it
           // earns one status and one exclusion from the streak whether the
           // source is tcgdex or the wiki.
+          const e = new Error(`bcp page has a base set but no parallel ladder — the wiki carries no rungs for it`);
           e.emptyAtSource = true;
           throw e;
+        }
+        if (/HTTP 40[34]/.test(saidStr)) {
+          // The wiki answered, and its answer is that the page is not there.
+          // get() prints this and returns null on a 4xx, so the scraper exits 0
+          // and the 404 never reaches the catch below -- a gone page read as a
+          // broken pipe. Rethrown in the shape the shared isGone test already
+          // recognises, so it lands in `unreachable` (terminal, not our defect)
+          // rather than in `failed`, where it would advance the streak.
+          throw new Error(`bcp page is gone at the source (${(saidStr.match(/HTTP 40[34]/) || ["HTTP 404"])[0]})`);
+        }
+        if (/0 base cards — layout not understood/.test(saidStr)) {
+          // Named distinctly so the control doc says WHICH defect, and so a
+          // future fix to the Checklist-heading layout can find its own rows.
+          throw new Error("bcp page carries a checklist our parser does not read (no Base_Set heading) — a parser gap, not an empty page");
         }
         throw new Error("bcp scrape produced no CSV");
       }
@@ -1113,16 +1159,19 @@ function isStaged(entry) {
  */
 function orderQueue(queue, titlesRaw) {
   const wanted = String(titlesRaw || "").split(",").map((t) => t.trim()).filter(Boolean);
-  if (!wanted.length) {
-    // Stable: equal rank keeps manifest order, so a re-dispatch takes the same
-    // twenty rather than a fresh shuffle of a tie. STAGED FIRST, then the value
-    // proxy within each group -- work already on disk cannot be lost to a
-    // source outage, so it never queues behind work that can.
-    const decorated = queue.map((q, i) => ({ q, i, s: isStaged(q.entry) ? 1 : 0, r: valueRank(q.entry) }));
+  // Stable: equal rank keeps manifest order, so a re-dispatch takes the same
+  // twenty rather than a fresh shuffle of a tie. STAGED FIRST, then the value
+  // proxy within each group -- work already on disk cannot be lost to a source
+  // outage, so it never queues behind work that can.
+  const byValue = (qs) => {
+    const decorated = qs.map((q, i) => ({ q, i, s: isStaged(q.entry) ? 1 : 0, r: valueRank(q.entry) }));
     decorated.sort((a, b) => (b.s - a.s) || (b.r - a.r) || (a.i - b.i));
-    const staged = decorated.filter((d) => d.s).length;
+    return { queue: decorated.map((d) => d.q), staged: decorated.filter((d) => d.s).length };
+  };
+  if (!wanted.length) {
+    const { queue: sorted, staged } = byValue(queue);
     return {
-      queue: decorated.map((d) => d.q),
+      queue: sorted,
       mode: staged
         ? `staged-first (${staged} with a checklist on disk), then value-proxy (product family + era)`
         : "value-proxy (product family + era)",
@@ -1143,7 +1192,29 @@ function orderQueue(queue, titlesRaw) {
     if (at < 0) { unmatched.push(w); continue; }
     lead.push(rest.splice(at, 1)[0]);
   }
-  return { queue: [...lead, ...rest], mode: "explicit list (titles / BCP_TITLES)", named: lead.length, unmatched, staged: 0 };
+  // CF-THE-REST-FOLLOW-BENEATH-IN-VALUE-ORDER (2026-09-04, run 33852199385).
+  //
+  // `rest` used to be the eligible queue in MANIFEST order, which for bcp is
+  // alphabetical. So the canary named four Chrome pages, ingested them, and
+  // then spent entries 5-20 on 1990 Baseball Wit, Bazooka, Bowman, Classic,
+  // Donruss ... -- the alphabetical head of 1990, the least valuable end of the
+  // lane, and precisely the order #1708's proxy exists to prevent. The docblock
+  // above already promised "the rest follow beneath"; it never said in what
+  // order, and the code answered "alphabetically".
+  //
+  // The two mechanisms are not alternatives. The explicit list ranks what the
+  // operator named; the proxy ranks EVERYTHING ELSE. A LIMIT larger than the
+  // list is the normal case -- 4 named, 20 taken -- so the remainder is most of
+  // what actually runs, and it gets the same staged-first + family + era order
+  // it would get with no titles at all.
+  const { queue: restSorted, staged } = byValue(rest);
+  return {
+    queue: [...lead, ...restSorted],
+    mode: `explicit list (titles / BCP_TITLES), then ${staged ? `staged-first (${staged} on disk), then ` : ""}value-proxy (product family + era) for the rest`,
+    named: lead.length,
+    unmatched,
+    staged,
+  };
 }
 
 
@@ -1579,8 +1650,37 @@ if (require.main !== module) return;
   // stops early on a budget stop that happened to change nothing.
   if (systemicAbort) {
     console.log(`  lane aborted — NOT printing the budget marker; a relaunch would meet the same wall. Fix the cause, then re-dispatch.`);
-  } else if (remaining > 0 && (stoppedOnBudget || written >= LIMIT)) {
+  } else if (remaining > 0 && stoppedOnBudget && notReached > 0) {
+    // CF-A-LIMIT-BOUND-RUN-IS-NOT-A-BUDGET-STOP (2026-09-04, run 33854416984).
+    //
+    // The condition used to be `stoppedOnBudget || written >= LIMIT`. That
+    // second clause made a run that CLEANLY FINISHED its slice look like one
+    // the clock cut short: sportscardchecklist with limit=3 took exactly its
+    // three entries, reported "intended 3 = written 3" and RECONCILED yes, and
+    // still printed the marker because 3 >= 3. The runner's relaunch step gates
+    // on this line, so it re-dispatched the SAME inputs, which took the same
+    // three entries, and the lane looped (33854423019, 33854625169) until it
+    // was cancelled by hand.
+    //
+    // `written >= LIMIT` cannot distinguish the two cases at all: LIMIT is
+    // either the operator's explicit slice or `budgetSized`, so on a full run
+    // it is TRUE by construction whether or not the clock was ever consulted.
+    //
+    // The marker means one thing -- "there is more work and I ran out of time
+    // before I could take it" -- so it now asserts exactly that, in the two
+    // facts that make it true and that nothing else sets:
+    //   stoppedOnBudget  the loop broke on `left() < perEntryMin * 1.5`
+    //   notReached > 0   entries of THIS run's slice were never attempted
+    // A run that exhausted an explicit LIMIT, or drained the eligible list,
+    // has notReached === 0 and never trips the clock, so it falls through to
+    // the branches below and the relaunch stops -- which is the whole point.
     console.log(`stopped at the ${RUN_MS / 60000}-minute budget — the relaunch continues from here`);
+  } else if (remaining > 0 && notReached === 0) {
+    // The slice this run was asked for is DONE and the lane still has more.
+    // That is a complete run, not an early exit, so it does not read as one --
+    // and it deliberately does not print the marker, because the operator (or
+    // the sizing) chose the slice and a relaunch is theirs to decide.
+    console.log(`  slice complete — ${f(remaining)} entries remain in the lane; re-dispatch to continue`);
   } else if (remaining > 0) {
     console.log(`  ${f(remaining)} entries remain but this run ended early — inspect the failures before re-dispatching`);
   } else {
