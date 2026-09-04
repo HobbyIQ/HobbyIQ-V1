@@ -318,7 +318,15 @@ export function mergeCatalogEntries(
     // better row's index is left alone and the merge stays idempotent.
     const ex = existing!;
     const backfill: Record<string, unknown> = {};
-    for (const f of ["searchText", "searchTokens", "displayName", "setName"] as const) {
+    // `cardYear` belongs in exactly this list and for exactly this reason. It
+    // ASSERTS nothing the row does not already say: it is a MIRROR of `year`
+    // (CF-YEAR-CARDYEAR-DUAL-WRITE), and a row that lacks it is not "winning",
+    // it is INVISIBLE to every reader that filters `c.cardYear` -- which is how
+    // 1987 topps-traded-tiffany read as "strict-checklist 0" to the GREAT
+    // REMATCH while the catalog held 132 strictly-sourced rows for it. Filling
+    // it only where the existing row has none keeps the merge idempotent and
+    // never overwrites a year that is actually stated.
+    for (const f of ["searchText", "searchTokens", "displayName", "setName", "cardYear"] as const) {
       const has = (ex as unknown as Record<string, unknown>)[f];
       const incoming = (entry as unknown as Record<string, unknown>)[f];
       if ((has === undefined || has === null || has === "") && incoming !== undefined) {
