@@ -72,6 +72,22 @@ const has = (f) => args.includes(f);
 
 const UA = "Mozilla/5.0 (compatible; HobbyIQ-checklist-fetch/1.0)";
 
+/**
+ * Politeness. One release page is one request, and the driver walks the lane
+ * back-to-back: 92 products in run 33839296630 went out as fast as the pipe
+ * allowed. HM_FETCH_DELAY_MS (default 1000) puts a floor between requests so a
+ * long lane paces itself; the runner can raise it without a code change if the
+ * host ever asks us to slow down.
+ */
+const FETCH_DELAY_MS = Math.max(0, Number(process.env.HM_FETCH_DELAY_MS || 1000));
+let lastFetchAt = 0;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+async function paced() {
+  const wait = lastFetchAt + FETCH_DELAY_MS - Date.now();
+  if (wait > 0) await sleep(wait);
+  lastFetchAt = Date.now();
+}
+
 function get(url) {
   return new Promise((resolve, reject) => {
     https.get(url, { headers: { "User-Agent": UA, Accept: "text/html" } }, (res) => {
@@ -561,8 +577,73 @@ function buildRows(cards, parallelGroups) {
     refusedSubsets, refusedNote, variationRoles, foldedSubsets, refusedFolds, foldedRows };
 }
 
+/**
+ * CF-ZERO-CARDS-ON-A-200-PAGE-MUST-NAME-WHY (2026-09-04, run 33857627732).
+ *
+ * The fetcher had ONE sentence for every way a release page can yield no
+ * cards -- "no cards found — the page shape may have changed" -- and the
+ * driver, having no better information, wrote `failed` on all of them. On
+ * that run entry 18 (2026 Panini Prizm WNBA) was a release dated 2026-09-25:
+ * an UNRELEASED product whose checklist hobbymonitor has not published yet.
+ * It became the third `failed` in a row and aborted the lane with 81 entries
+ * unattempted. Nothing was broken; the source simply has nothing yet.
+ *
+ * Probed directly (HTTP 200, 296,204 bytes, no redirect, no challenge):
+ *
+ *   WNBA  "status":"upcoming"  teamChecklists:[] cardVariations:[] cardParallels:[]
+ *   2026 Bowman Football (works)  teamChecklists:[{...664229...}]  2,138 cardNumbers
+ *
+ * So three DIFFERENT causes get three DIFFERENT sentences, and the driver
+ * classifies on them:
+ *
+ *   EMPTY AT SOURCE  the release payload parsed and carries no checklist of
+ *      any kind. A verdict about the product, not our pipe.
+ *   UNKNOWN LAYOUT   the payload is there and populated, but no cardNumber
+ *      came out of it -- OUR parser, and it stays a lane fault so someone
+ *      comes back to it.
+ *   NOT A RELEASE PAGE  no release payload at all: a challenge page, an
+ *      interstitial, or an error body served with a 200.
+ *
+ * Naming the cause is the whole point: "0 cards" is an observation, never a
+ * diagnosis, and calling a parser gap "the source has nothing" is how a
+ * defect goes quiet.
+ */
+function zeroCardReason(html) {
+  const h = String(html || "");
+
+  // A challenge/interstitial served with a 200 carries no release payload at
+  // all. Checked FIRST: everything below assumes the page is really ours.
+  if (!/"cardParallels"|"teamChecklists"|"queryKey"/.test(h)) {
+    const challenged = /cf-browser-verification|cf_chl|__cf_bm|Just a moment|Attention Required|Checking your browser|Access denied|Please enable (?:JS|JavaScript)/i.test(h);
+    return challenged
+      ? `no release payload — the host served a challenge/interstitial page with HTTP 200 (${h.length} bytes)`
+      : `no release payload on the page — not a hobbymonitor release page (${h.length} bytes)`;
+  }
+
+  // The payload IS there. Empty on every checklist-bearing array means the
+  // release exists and carries nothing yet -- an unreleased/announced product.
+  const emptyTeams = /"teamChecklists":\[\]/.test(h);
+  const emptyVariations = /"cardVariations":\[\]/.test(h);
+  const emptyParallels = /"cardParallels":\[\]/.test(h);
+  if (emptyTeams && emptyVariations && emptyParallels) {
+    // Read the status off THIS release's own object, not the first one in the
+    // page (the sidebar lists other releases and would lend us its status).
+    // The empty arrays are the tail of the release object, so the window that
+    // ends at them is the only one that describes the set we asked for.
+    const own = h.slice(Math.max(0, h.indexOf('"teamChecklists":[]') - 1200), h.indexOf('"teamChecklists":[]'));
+    const st = (own.match(/"status":"([a-z]+)"/g) || []).pop()?.replace(/.*:"|"$/g, "");
+    const eff = (own.match(/"effectiveDate":"([^"]+)"/) || [])[1];
+    return "the release carries no checklist at the source — nothing new to add"
+      + (st ? ` (status "${st}"` + (eff ? `, effective ${eff.slice(0, 10)})` : ")") : "");
+  }
+
+  // Payload present AND populated, yet nothing parsed: our reader.
+  return "0 cards — the release payload is populated but no cardNumber parsed; layout not understood";
+}
+
 async function main() {
   if (has("--list")) {
+    await paced();
     const html = await get("https://www.hobbymonitor.com/releases");
     const rel = extractObjects(html, '"manufacturer"').filter((o) => o.slug);
     const uniq = [...new Map(rel.map((o) => [o.slug, o])).values()];
@@ -577,12 +658,13 @@ async function main() {
   if (!url) { console.error("need --url <release page> (or --list)"); process.exit(1); }
   const out = val("--out", "");
 
+  await paced();
   const html = await get(url);
   const cards = extractObjects(html, '"cardNumber"');
   const parallelGroups = extractArray(html, "cardParallels");
 
   if (cards.length === 0) {
-    console.error("no cards found — the page shape may have changed");
+    console.error(zeroCardReason(html));
     process.exit(1);
   }
 
@@ -710,6 +792,6 @@ if (require.main === module) {
   main().catch((e) => { console.error("FATAL", e.message); process.exit(1); });
 }
 
-module.exports = { buildRows, classifyRung, foldName, runOf, noteOf, extractObjects, extractArray,
+module.exports = { zeroCardReason, buildRows, classifyRung, foldName, runOf, noteOf, extractObjects, extractArray,
   cardTypeOf, classifyVariations, variationRung, isAnchorSubset, isVariationSubset,
   PAR_MAX, NUM_MAX };
