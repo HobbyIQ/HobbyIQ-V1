@@ -568,6 +568,26 @@ const LOT_VOCAB_RE = new RegExp([
   String.raw`\blot\s+\d+`,
   String.raw`\b\d+\s+different\b`,
   String.raw`\bteam\s+set\b`,
+  // -- idioms the shard-31 IMPROVE audit found still writable (2026-09-04) --
+  // Each of these sold MANY cards and was about to be improved onto ONE
+  // card's pool. They are quoted verbatim from the census run log.
+  //
+  //   "1975 Topps Set w/ 9 Graded cards Bench, Jackson, Schmidt, Carl Yas."
+  //   "1975 Topps HIGH GRADE Lot (122 ) w/ 2 SGC MINT 9 - VENDING - VSCARDS"
+  //   "1995 Fleer Ultra Baseball - Golden Prospect Complete Insert Set #1-1"
+  //   "1989 Topps Teenage Mutant Ninja Turtles Cards # 1-88 + 11 Stickers"
+  //
+  // `set w/` and `lot (` are the count-carrying shapes the parser's own
+  // lexicon anchors on a NUMBER and therefore missed when the number sits
+  // after the token rather than before it. `vending` is a box of cards by
+  // definition. `complete <word> set` generalizes the existing
+  // `complete set` / `complete base set` pair to the insert and subset
+  // spellings without matching a bare "set".
+  String.raw`\bset\s+w\/`,
+  String.raw`\blot\s*\(`,
+  String.raw`\bvending\b`,
+  String.raw`\bcomplete\s+\w+\s+set\b(?!\s*break\b)`,
+  String.raw`\bcards?\s*#\s*\d{1,4}\s*[-–—]\s*\d{1,4}\b`,
 ].join("|"), "i");
 
 /** The "singles" lot sense -- only beside a range or a pick idiom. */

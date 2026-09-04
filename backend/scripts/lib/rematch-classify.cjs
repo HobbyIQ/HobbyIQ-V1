@@ -1061,6 +1061,36 @@ const DISTINCT_PRODUCT_SETKEYS = [
   // Drew, 2026-09-03: upper-deck-black-diamond is DISTINCT from upper-deck.
   "upper-deck-black-diamond", "upper-deck-mvp", "sp-authentic", "sp-game-used",
   "spx", "spx-finite", "collectors-choice",
+  // -- Pacific / Pinnacle / Score / Upper Deck: the products the shard-31
+  //    IMPROVE audit proved were being folded into their flagship
+  //    (2026-09-04). Each key below is a product a sampled sale NAMED in its
+  //    title while the derivation answered the flagship, so each is a pool
+  //    that was about to be merged with a different card's.
+  //
+  //    1995 Pacific is the exemplar and the worst of them: "Prism" alone
+  //    covers TWO products -- the STANDALONE 1995 Pacific Prism set and the
+  //    Crown Collection PRISMS insert -- and the Gold Crown Die-Cuts are a
+  //    third. All three collapsed onto `pacific:<n>:base`, and because the
+  //    inserts carry their own low numbering, #4 named the Prism Maddux, the
+  //    Gold Crown Die-Cut Ripken and the base card all at once.
+  "pacific-prism", "pacific-crown-collection", "pacific-crown-collection-prisms",
+  "pacific-gold-crown-die-cuts",
+  // 1995 Upper Deck SP is a separate product from 1995 Upper Deck, and SP
+  // Championship is separate again. Jeter SP #181 is a landmark rookie; base
+  // Upper Deck #181 is not the same card at any price.
+  "upper-deck-sp", "upper-deck-sp-championship", "upper-deck-minor-league",
+  // 1989 Score Traded uses its own #NNT numbering, exactly as Topps Traded
+  // does -- the number is what separates it and it must stay separated.
+  "score-traded", "score-masters",
+  // 1975 Topps Mini is a physically different card printed on the same
+  // checklist; the pools price differently and always have.
+  "topps-mini",
+  // 1995 Pinnacle UC3 is its own product, not a Pinnacle parallel.
+  "pinnacle-uc3",
+  // 1995-96 Fleer Metal is a distinct product from Fleer, and from Metal
+  // Universe -- the audit caught "Fleer Metal Nuts & Bolts" landing on
+  // the fleer flagship. Metal Universe is already declared; bare Metal was not.
+  "fleer-metal",
   // -- Leaf -----------------------------------------------------------------
   // Census-found: the /(?:^|-)leaf/ family catch-all in the regex vocabulary
   // was collapsing every one of these into `leaf` inside matchKnownProductLine.
@@ -1150,6 +1180,45 @@ const RULED_COLLAPSE_PAIRS = Object.freeze([
 function ruledCollapsePair(from, to) {
   const f = lower(from), t = lower(to);
   return RULED_COLLAPSE_PAIRS.find((p) => p.from === f && p.to === t) ?? null;
+}
+
+/**
+ * EVERY DECLARED CHILD OF A GIVEN PARENT KEY, from the tables this module
+ * already keeps -- no new vocabulary, so a product named in one place is named
+ * in all of them.
+ *
+ * Three sources, unioned:
+ *   RULED_COLLAPSE_PAIRS   every `from` whose `to` is this key. This is the
+ *                          measured table: each entry carries the row count
+ *                          the 32-shard census found for that direction, so a
+ *                          refusal built on it can cite a number.
+ *   SPECIALIZATION_PARENTS the ladder edges (topps-traded -> topps,
+ *                          topps-traded-tiffany -> topps-traded, ...).
+ *   DISTINCT_PRODUCT_SETKEYS
+ *                          the structural half: any declared distinct product
+ *                          whose key is `<parent>-<something>`. This is what
+ *                          catches a child nobody has measured a pair for yet
+ *                          -- `topps-mini` the day it is declared, without an
+ *                          edit here.
+ *
+ * Memoized per parent: `improveRefusals` runs on every IMPROVE-shaped row and
+ * the answer is a pure function of three frozen tables.
+ */
+const _childCache = new Map();
+function SPECIALIZATION_CHILDREN_OF(parentKey) {
+  const p = lower(parentKey);
+  if (!p) return [];
+  const hit = _childCache.get(p);
+  if (hit) return hit;
+  const out = new Set();
+  for (const pair of RULED_COLLAPSE_PAIRS) if (pair.to === p) out.add(pair.from);
+  for (const [child, parent] of Object.entries(SPECIALIZATION_PARENTS)) if (lower(parent) === p) out.add(lower(child));
+  for (const k of DISTINCT_PRODUCT_SETKEYS) if (lower(k).startsWith(`${p}-`)) out.add(lower(k));
+  // Longest first: `topps-traded-tiffany` must be TESTED before `topps-traded`,
+  // so a title naming the grandchild is refused citing the grandchild.
+  const list = [...out].sort((a, b) => b.length - a.length);
+  _childCache.set(p, list);
+  return list;
 }
 
 /**
@@ -1833,7 +1902,147 @@ function improveRefusals({ row, stored, derived, axes, parserSaysLot = false }) 
     const lot = VOCAB.isLotOrRangeListing(title, parserSaysLot === true);
     if (lot.lot) {
       const touchesNumber = axes.filled.includes("cardNumber") || axes.changed.includes("cardNumber");
-      if (touchesNumber) refusals.push(`improve-lot-or-range-listing:${lot.reasons.join(",")}`);
+      // A LOT WHOSE NUMBER WAS ALREADY WRONG IS STILL A LOT (shard-31 audit,
+      // 2026-09-04). The `touchesNumber` condition assumed the derivation is
+      // what puts a lot's price on a single card's number -- but when the
+      // stored row ALREADY carries the range's first number, the re-derivation
+      // fills only `setKey` and this guard stood down, so the row was writable
+      // and the improvement filed a whole set's price into one card's pool:
+      //
+      //   "1995-96 Flair Hardwood Leaders Complete Set #1-27 Michael Jordan"
+      //       stored unknown:1 -> flair:1   filled:setKey, number untouched
+      //
+      // Refusing only the number was the narrower reading of
+      // CF-A-LOT-IS-NOT-A-CARD than the rule states. A multi-card sale does
+      // not belong in ANY single card's pool, so no axis of it is improvable
+      // while the title is a lot -- the same conclusion GUARD 6 reaches for a
+      // row whose product cannot be read. The row stays reported (and still
+      // flagged as an excludedFromFmv candidate, which is Drew's call), it is
+      // simply never written.
+      if (touchesNumber || axes.filled.includes("setKey") || axes.changed.includes("setKey")) {
+        refusals.push(`improve-lot-or-range-listing:${lot.reasons.join(",")}`);
+      }
+    }
+  }
+
+  // GUARD 6: THE TITLE NAMES A PRODUCT THE DERIVED setKey DOES NOT CARRY.
+  //
+  // CF-A-BLANK-STORED-KEY-IS-NOT-A-LICENCE-TO-GUESS-THE-FLAGSHIP
+  // (shard-31 IMPROVE audit, 2026-09-04 -- 105 of 287 sampled evidence rows
+  // were WRONG, a 36.6% error rate on the one class that writes).
+  //
+  // WHY GUARD 3 COULD NOT SEE THESE. `derivationCollapsesProduct` compares the
+  // STORED key against the DERIVED one, and it opens with
+  // `if (!s || !d || s === d) return null`. Every row in the audit had a stored
+  // key of "", "unknown" or "base-set" -- the blank shapes -- so the guard
+  // returned null on its first line and the collapse it exists to refuse went
+  // through unexamined. GENERIC_SETKEYS is precisely the set of stored values
+  // that make Guard 3 blind, and it is also precisely the set that makes a row
+  // IMPROVE-shaped in the first place (`filled:setKey` was 5,184 of the 5,208
+  // IMPROVE rows on slot 31). The class that writes was therefore UNGUARDED ON
+  // ITS DOMINANT SHAPE: the guard covered the case that cannot arise and
+  // skipped the case that always does.
+  //
+  // THE EVIDENCE, by product family, from the committed shard-31 census log:
+  //
+  //   "1995 Pacific Prism Greg Maddux #4"        -> pacific:4:base
+  //   "1995 Pacific Crown Collection Prisms #102" -> pacific:102:base
+  //       1995 Pacific Prism is a STANDALONE 108-card set; Crown Collection
+  //       Prisms is an INSERT of a different product. Neither is the 1995
+  //       Pacific (Crown Collection) base set. 49 rows.
+  //   "1995 Upper Deck SP Derek Jeter #181"      -> upper-deck:181:base
+  //       1995 SP is its own product and #181 is a landmark rookie; the base
+  //       1995 Upper Deck #181 is a different, far cheaper card. Folding the
+  //       two pools together corrupts BOTH FMVs, in opposite directions.
+  //   "1975 Topps Mini #616"                     -> topps:616:base
+  //   "1989 Score Traded #100T"                  -> score:1:base
+  //   "1995-96 Fleer Metal Nuts & Bolts #212"    -> fleer:212:base
+  //   "1995 Pinnacle UC3 #73"                    -> pinnacle:73:base
+  //
+  // And on slot 19 (y=1987), the same shape reaches Drew's own holding:
+  //   "1987 Topps Traded - Greg Maddux #70T Tiffany (RC)"
+  //       -> topps-traded:70T:base -- the Tiffany DROPPED, against
+  //       CF-A-TIFFANY-SALE-IS-A-TIFFANY-CARD. 7 sampled rows of this shape.
+  //
+  // THE RULE. A specialization is a (parent, distinguishing words) pair, and
+  // both halves are already declared in this module -- RULED_COLLAPSE_PAIRS
+  // and SPECIALIZATION_PARENTS name the children, `distinguishingWords` says
+  // which words separate a child from its parent, and `titleStatesWord` asks
+  // whether the title states one. So the guard asks a question with no new
+  // vocabulary at all: IS THERE A DECLARED CHILD OF THE DERIVED KEY WHOSE
+  // DISTINGUISHING WORD THIS TITLE STATES? If yes, the derivation answered the
+  // PARENT to a title that names the CHILD, and the write is refused.
+  //
+  // IT REFUSES, IT DOES NOT REDIRECT. Naming the child it should have been is
+  // the census's job and the refusal carries that name, but this arm never
+  // moves the row there: the child's own checklist backing is what
+  // SPECIALIZATION-STATED demands before a row may land on a specialization,
+  // and that leg is not in evidence here. A row this guard refuses stays
+  // CONFLICT/UNDERIVABLE -- reported to Drew, never written -- which is the
+  // stated goal: the IMPROVE arm must never move a row onto a WRONG product,
+  // and a row it cannot place RIGHT stays where it is.
+  //
+  // IT IS DELIBERATELY ONE-DIRECTIONAL. Only a DERIVED key that is a declared
+  // PARENT is examined. A derivation that already answered the child
+  // (`topps-traded-tiffany`) states the words itself and is not this shape, so
+  // the Tiffany rows that SPECIALIZATION-STATED legitimately promotes are
+  // untouched -- verified read-only on slot 19: 281 SPECIALIZATION-STATED
+  // sample rows, and this guard refuses only the 7 that DROP the word.
+  {
+    const derivedKey = lower(derived?.setKey);
+    if (derivedKey && title) {
+      const children = SPECIALIZATION_CHILDREN_OF(derivedKey);
+      for (const child of children) {
+        const words = distinguishingWords(child, derivedKey);
+        // EVERY distinguishing word must be stated. A child whose name adds
+        // two words ("crown-collection") is not named by a title that states
+        // only one of them, and a one-word test would refuse half the pool on
+        // an accident of vocabulary.
+        if (!words.length) continue;
+        // A COLOUR IS NOT A PRODUCT NAME. `topps-chrome-black` is a real
+        // distinct product, but "black" is also a FINISH COLOUR, and
+        // "2025 Topps Chrome Black Refractor /10" names the Black Refractor
+        // PARALLEL of topps-chrome -- not the Topps Chrome Black product.
+        // Reading it as the product refused a control the audit gate pins as
+        // writable, which is the false positive this clause exists to stop.
+        //
+        // THE TEST IS COLOUR, NOT FINISH, AND THE DIFFERENCE IS MEASURED.
+        // The first draft skipped any child whose words were all FINISH_TOKENS
+        // or FINISH_COLOR_TOKENS, and that was too wide: `mini` and `tiffany`
+        // are both in the finish vocabulary (each names a parallel on some
+        // product), so the exclusion silently switched the guard off for
+        // `topps-mini` and `topps-traded-tiffany` -- two of the very products
+        // this audit was opened to protect. Its own pins caught it.
+        //
+        // A bare COLOUR is the only word that cannot name a product on its
+        // own: "Black Refractor" is the Black parallel of topps-chrome, never
+        // the Topps Chrome Black product. Words like `tiffany` and `mini` DO
+        // name products, so they stay in scope here. Where the word really is
+        // a colour, the question "did the derivation drop a finish the title
+        // names?" belongs to GUARD 4 and is asked there against the parallel
+        // axis -- so nothing goes unguarded by skipping it here.
+        if (words.every((w) => FAMILY_COLOURS.has(w))) continue;
+        // Singular/plural is spelling, not identity, AND IT CUTS BOTH WAYS.
+        // The sampled titles say "Gold Crown Die-Cut" against a key ending
+        // `-die-cuts`, and "Pacific Prisms" against the key `pacific-prism`.
+        // A one-directional test caught the first and missed the second: 14 of
+        // the audit's Pacific rows say "Prisms" and the key is singular.
+        //
+        // So the word matches if the title states it, its bare singular, or
+        // its simple plural. It is deliberately only the trailing -s in either
+        // direction: anything looser (stemming, edit distance) would start
+        // matching words that are not the product, and a FALSE refusal here
+        // costs a real improvement -- which is why the controls in
+        // rematchTitleNamesProduct.test.ts are pinned beside every fixture.
+        const statesWord = (w) =>
+          titleStatesWord(title, w)
+          || (w.endsWith("s") && titleStatesWord(title, w.slice(0, -1)))
+          || (!w.endsWith("s") && titleStatesWord(title, `${w}s`));
+        if (words.every(statesWord)) {
+          refusals.push(`improve-title-names-a-product-the-derivation-dropped:${words.join("+")}@${derivedKey}|title-names:${child}`);
+          break;
+        }
+      }
     }
   }
 
@@ -2886,7 +3095,7 @@ module.exports = {
   titleStatesWord, specializationStatedEvidence,
   PROTECTED_SOURCES, PROTECTED_MARKER_FIELDS, AXES, GENERIC_PARALLELS,
   GENERIC_SETKEYS, storedSetKeyIsBlank, RULED_COLLAPSE_PAIRS, ruledCollapsePair,
-  DISTINCT_PRODUCT_SETKEYS,
+  DISTINCT_PRODUCT_SETKEYS, SPECIALIZATION_CHILDREN_OF,
   FINISH_TOKENS, FINISH_PHRASES, FINISH_COLOR_TOKENS,
   provenanceTier, gradeToken, axisValue, axisIsBlank, diffAxes, classifyRow,
   defectAxes, renderIdentity,
