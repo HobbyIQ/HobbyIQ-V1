@@ -44,13 +44,45 @@ async function main() {
   if (!APPLY) { console.log(`\nREPORT ONLY -- nothing written\n  users ${users.length}  window ${DAYS} day(s)  (the import has no dry mode; APPLY runs it)`); return; }
   const { runWeeklyEbayPurchaseSync } = require(path.join(backend, "dist/jobs/ebayPurchaseSync.job.js"));
   const s = await runWeeklyEbayPurchaseSync();
-  const fetched = Number(s.purchasesImported ?? 0) + Number(s.purchasesReplayed ?? 0) + Number(s.purchasesSkipped ?? 0);
+  const imported = Number(s.purchasesImported ?? 0);
+  const replayed = Number(s.purchasesReplayed ?? 0);
+  const skipped  = Number(s.purchasesSkipped ?? 0);
+  const fetched  = imported + replayed + skipped;
+  const reconnect = Array.isArray(s.reconnectRequired) ? s.reconnectRequired : [];
+  const dataFailures = Array.isArray(s.dataFailures) ? s.dataFailures : [];
+
   console.log(`\nAPPLIED`);
   console.log(`  users attempted     ${f(s.usersAttempted)}   fetched ok ${f(s.usersFetched)}`);
-  console.log(`  purchases           ${f(fetched)}   IMPORTED ${f(s.purchasesImported)}   replayed ${f(s.purchasesReplayed)}   skipped ${f(s.purchasesSkipped)}`);
-  console.log(`  errors              ${f(s.errors)}   (${f(s.durationMs)} ms, window ${s.daysWindow} d)`);
-  reportWrites({ job: "run-ebay-purchase-sync", intended: fetched, written: Number(s.purchasesImported ?? 0), skipped: Number(s.purchasesReplayed ?? 0) + Number(s.purchasesSkipped ?? 0), failed: Number(s.errors ?? 0) });
-  if (Number(s.errors ?? 0) > 0) { console.error(`FATAL: ${s.errors} error(s)`); process.exit(1); }
+  console.log(`  purchases           ${f(fetched)}   IMPORTED ${f(imported)}   replayed ${f(replayed)}   skipped ${f(skipped)}`);
+  console.log(`  needs reconnect     ${f(reconnect.length)}   data failures ${f(dataFailures.length)}   (${f(s.durationMs)} ms, window ${s.daysWindow} d)`);
+
+  // A dead grant is a condition to REPORT, per user, by name. It is the
+  // difference between "two users must reconnect eBay" and a red X.
+  if (reconnect.length > 0) {
+    console.log(`\n  ${reconnect.length} user(s) must reconnect eBay -- marked reconnect-required, skipped:`);
+    for (const r of reconnect) console.log(`    ${r.userId}  ${r.error}`);
+  }
+  if (dataFailures.length > 0) {
+    console.error(`\n  ${dataFailures.length} DATA failure(s):`);
+    for (const r of dataFailures) console.error(`    ${r.userId}  ${r.error}`);
+  }
+
+  // Units: every number here is PURCHASES. `s.errors` counts USERS and must
+  // never appear in this equation -- that is what made the banner read OVER.
+  reportWrites({
+    job: "run-ebay-purchase-sync",
+    intended: fetched,
+    written: imported,
+    skipped: replayed + skipped,
+    failed: 0,
+  });
+
+  // DATA failures fail the job. Token failures do not: nothing was lost, and
+  // the affected users are named above and flagged on their connection doc.
+  if (dataFailures.length > 0) {
+    console.error(`FATAL: ${dataFailures.length} data failure(s)`);
+    process.exit(1);
+  }
 }
 
 main().catch((e) => { console.error("FATAL:", e?.stack || e?.message || e); process.exit(3); });

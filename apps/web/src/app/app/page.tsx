@@ -3,6 +3,7 @@ import { MarketTodayCard } from "@/components/MarketTodayCard";
 import { DailyIQCard } from "@/components/DailyIQCard";
 import { OnboardingBanner } from "@/components/OnboardingBanner";
 import { MarketIndexes } from "@/components/MarketIndexes";
+import { EbayReconnectBanner } from "@/components/EbayReconnectBanner";
 
 export default function DailyIQPage() {
   return (
@@ -13,6 +14,15 @@ export default function DailyIQPage() {
           Your portfolio, market, and action items at a glance.
         </p>
       </div>
+
+      {/* CF-EBAY-RECONNECT-SURFACE (found by #1721). A broken eBay
+          connection means purchases stop syncing silently — two real users
+          sat that way from 2026-08-31 with no prompt anywhere. Mounted
+          FIRST and outside every gate: the banner renders itself away in
+          the two healthy states, so it costs nothing when there is
+          nothing wrong, and it must not be able to hide behind an
+          onboarding/entitlement branch when there is. */}
+      <EbayReconnectBanner className="mb-6" />
 
       <OnboardingBanner />
 

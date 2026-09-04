@@ -126,6 +126,16 @@ const RUN_MINUTES = Number(process.env.RUN_MINUTES || 140);
 const LIMIT = Number(process.env.LIMIT || 0);
 const YEARS = String(process.env.YEARS || "").split(",").map((s) => s.trim()).filter(Boolean).map(Number).filter(Number.isFinite);
 const CENSUS_OUT = String(process.env.CENSUS_OUT || "/tmp/rematch-census").trim();
+// THE WRITE LEDGER (2026-09-04): where the apply records which POOLS it moved
+// rows in and out of, so the canary gate that runs after it can ATTRIBUTE a
+// verdict instead of blaming this shard for every writer's changes. Written
+// even when nothing was written -- an empty ledger is the positive claim
+// "this shard touched no pool", which is the claim the 2026-09-04 halt needed.
+const WRITE_LEDGER_OUT = String(process.env.WRITE_LEDGER_OUT || "/tmp/rematch-write-ledger.json").trim();
+// Ids are capped per pool so a shard that moves 40k rows does not write a
+// 40k-id file; the COUNTS are exact regardless, and the counts are what the
+// gate's attribution decision reads.
+const LEDGER_IDS_PER_POOL = Math.max(1, Number(process.env.LEDGER_IDS_PER_POOL || 50));
 /**
  * THE APPLY CLASS SCOPE (audit gate item 8, 2026-09-03).
  *
@@ -472,21 +482,103 @@ async function main() {
   // A match proves nothing unless checklist-backed. The catalog row's SOURCE
   // is the evidence: a checklist ingest, never a vendor row.
   const CHECKLIST_SOURCE_RE = /checklist|beckett|tcdb|insider|bcp|baseballcardpedia|tcgdex/i;
+  // SPECIALIZATION-STATED reads a DIFFERENT, STRICTER predicate -- an
+  // allowlist of named scraped sources, `K.isStrictChecklistSource`. See
+  // STRICT_CHECKLIST_SOURCES in the classifier for the measurement that
+  // retired the subtractive version. It is deliberately a second function and
+  // not a tightening of the first: tightening `checklistBacked` would silently
+  // change the ordinary IMPROVE population across the whole 16.3M-row pool,
+  // which is a different ruling nobody made.
   const backedCache = new Map();
+  const strictCache = new Map();
+  const catRowCache = new Map();
+  /** The catalog row for a slug, cached, or null. One read serves both
+   *  predicates -- the strict gate must not double the census's catalog RU. */
+  const catRow = async (slug) => {
+    if (!slug) return null;
+    if (catRowCache.has(slug)) return catRowCache.get(slug);
+    let out = null;
+    try { out = (await retry(() => cat.item(slug, slug).read())).resource ?? null; }
+    catch (e) { if (e?.code !== 404 && e?.statusCode !== 404) throw e; }
+    catRowCache.set(slug, out);
+    return out;
+  };
+  const sourceText = (r) => `${String(r?.source ?? r?.sourceSystem ?? "")},${Array.isArray(r?.sources) ? r.sources.join(",") : ""}`;
   const checklistBacked = async (slug) => {
     if (!slug) return false;
     if (backedCache.has(slug)) return backedCache.get(slug);
+    const resource = await catRow(slug);
     let backed = false;
-    try {
-      const { resource } = await retry(() => cat.item(slug, slug).read());
-      if (resource) {
-        const src = String(resource.source ?? resource.sourceSystem ?? "");
-        const sources = Array.isArray(resource.sources) ? resource.sources.join(",") : "";
-        backed = CHECKLIST_SOURCE_RE.test(src) || CHECKLIST_SOURCE_RE.test(sources) || resource.checklistBacked === true;
-      }
-    } catch (e) { if (e?.code !== 404 && e?.statusCode !== 404) throw e; }
+    if (resource) {
+      const src = sourceText(resource);
+      backed = CHECKLIST_SOURCE_RE.test(src) || resource.checklistBacked === true;
+    }
     backedCache.set(slug, backed);
     return backed;
+  };
+  /** L3. Backed by a REAL SCRAPED checklist source -- one NAMED in
+   *  STRICT_CHECKLIST_SOURCES. A row whose only evidence is
+   *  `checklistBacked: true` with no named source is NOT strict backing: that
+   *  flag says someone believed it, not who measured it. Any of the row's
+   *  sources may carry the proof, so `sources[]` is checked alongside
+   *  `source`. */
+  const checklistBackedStrict = async (slug) => {
+    if (!slug) return false;
+    if (strictCache.has(slug)) return strictCache.get(slug);
+    const resource = await catRow(slug);
+    let backed = false;
+    if (resource) {
+      const named = [resource.source, resource.sourceSystem, ...(Array.isArray(resource.sources) ? resource.sources : [])];
+      backed = named.some((s) => K.isStrictChecklistSource(s));
+    }
+    strictCache.set(slug, backed);
+    return backed;
+  };
+  /** L5. Does the STORED flagship's own checklist list this cardNumber?
+   *  `null` when the question cannot be answered, which the classifier treats
+   *  as a refusal. ONE query per (year, setKey), cached: a per-row query over
+   *  16.3M rows is not a census, it is an outage.
+   *  CF-FLEET-SCRIPTS-MEASURE-THROUGHPUT-BEFORE-DISPATCH. */
+  const flagshipNumbersCache = new Map();
+  const flagshipNumbers = async (year, setKey) => {
+    const key = `${year}|${setKey}`;
+    if (flagshipNumbersCache.has(key)) return flagshipNumbersCache.get(key);
+    let out = null;
+    try {
+      const { resources } = await retry(() => cat.items.query({
+        query: `SELECT c.cardNumber, c.source FROM c WHERE c.setKey = @sk AND c.cardYear = @y`,
+        parameters: [{ name: "@sk", value: setKey }, { name: "@y", value: Number(year) }],
+      }, { maxItemCount: -1 }).fetchAll());
+      // A flagship with NO real checklist rows cannot answer the question --
+      // "not listed" and "nothing to list from" are different facts and only
+      // the first is evidence. Null is the refusal.
+      const real = (resources ?? []).filter((r) => K.isStrictChecklistSource(r?.source));
+      out = real.length ? new Set(real.map((r) => String(r.cardNumber ?? "").toUpperCase())) : null;
+    } catch { out = null; }
+    flagshipNumbersCache.set(key, out);
+    return out;
+  };
+  const flagshipListsCardNumber = async (stored) => {
+    const year = stored?.cardYear, setKey = String(stored?.setKey ?? "").toLowerCase();
+    const num = String(stored?.cardNumber ?? "").toUpperCase();
+    if (!year || !setKey || !num) return null;
+    const nums = await flagshipNumbers(year, setKey);
+    return nums ? nums.has(num) : null;
+  };
+  /** SPECIALIZATION-STATED's two catalog facts, computed ONLY for a row whose
+   *  setKey actually moved along the ladder. Every other row -- the
+   *  overwhelming majority of 16.3M -- pays nothing: the ladder test is pure
+   *  string work on two keys already in hand, and a row that fails it can
+   *  never qualify however the catalog answers. Without this gate the census
+   *  would issue two extra catalog reads per row and stop being a census. */
+  const specInputs = async (stored, der) => {
+    const none = { derivedBackedStrict: false, storedFlagshipListsCardNumber: null };
+    if (!der?.ok) return none;
+    if (!K.isSpecializationOf(der.identity?.setKey, stored?.setKey)) return none;
+    return {
+      derivedBackedStrict: await checklistBackedStrict(der.slug),
+      storedFlagshipListsCardNumber: await flagshipListsCardNumber(stored),
+    };
   };
 
   // ── page the shard ────────────────────────────────────────────────────────
@@ -578,11 +670,13 @@ async function main() {
       // read for a question that was answered by its own slug.
       const beCandidate = der.ok && K.slugNamesParallel(row.cardId);
       const baseBacked = beCandidate ? await checklistBacked(der.baseSlug) : false;
+      const spec = await specInputs(stored, der);
       const res = K.classifyRow({
         row, stored, derived: der.ok ? der.identity : null, checklistBacked: backed, derivationReasons: der.reasons,
         storedSlug: row.cardId, baseDestSlug: der.baseSlug ?? null, baseDestBacked: baseBacked,
         parserSaysLot: safeIsLot(row.title),
         autoByCardNumber: der.autoByCardNumber === true,
+        ...spec,
       });
       counts[res.klass]++;
       // THE SPLIT-IDENTITY SIGNAL, tallied ACROSS classes (Drew 2026-09-02).
@@ -770,6 +864,31 @@ async function main() {
   const perClass = {};
   for (const kind of [K.IMPROVE, K.BASE_EVICTION]) perClass[kind] = { intended: 0, written: 0, skipped: 0, failed: 0, notReached: 0 };
   for (const c of improvable) perClass[c.kind].intended++;
+  /**
+   * THE WRITE LEDGER -- pool -> the ids this run actually moved (2026-09-04).
+   *
+   * The canary gate exits 5 on "this shard is damage", but it had no way to
+   * ask whether the shard touched the pool it was failing. Two shards that
+   * reconciled `intended 0 = written 0` were failed on anchor moves in pools
+   * belonging to OTHER slots: the CardHedge daily ingest had landed new sales
+   * between the before and the after, and the check read another writer's
+   * normal work as its own shard's damage.
+   *
+   * A verdict has to be ATTRIBUTED, and attribution needs evidence the gate
+   * can read. So the apply emits, per POOL, the ids it wrote -- both the pool
+   * a row LEFT (`from`) and the pool it LANDED IN (`to`), because a re-key
+   * changes two pools and either can hold a canary. An empty ledger is the
+   * positive statement "this shard moved nothing anywhere", which is exactly
+   * what these two runs needed to say and could not.
+   */
+  const ledger = new Map();
+  const ledgerNote = (slug, id, side) => {
+    if (!slug) return;
+    let e = ledger.get(slug);
+    if (!e) { e = { from: [], to: [] }; ledger.set(slug, e); }
+    if (e[side].length < LEDGER_IDS_PER_POOL) e[side].push(id);
+    e[`${side}Count`] = (e[`${side}Count`] ?? 0) + 1;
+  };
   let idx = 0;
   const worker = async () => {
     while (idx < improvable.length) {
@@ -792,11 +911,19 @@ async function main() {
       const backed = der.ok ? await checklistBacked(der.slug) : false;
       const beCand = der.ok && K.slugNamesParallel(fresh.cardId);
       const baseBacked = beCand ? await checklistBacked(der.baseSlug) : false;
+      // THE WRITE-TIME RE-CHECK GETS THE SAME INPUTS AS THE CENSUS.
+      // `classifyRow` refuses SPECIALIZATION-STATED without them, so omitting
+      // them here would not be a leak -- it would be the opposite, every
+      // qualifying row silently declining to write while the census reported
+      // it writable. A gate that disagrees with itself between the two passes
+      // is a gate nobody can audit.
+      const spec = await specInputs(stored, der);
       const res = K.classifyRow({
         row: fresh, stored, derived: der.ok ? der.identity : null, checklistBacked: backed, derivationReasons: der.reasons,
         storedSlug: fresh.cardId, baseDestSlug: der.baseSlug ?? null, baseDestBacked: baseBacked,
         parserSaysLot: safeIsLot(fresh.title),
         autoByCardNumber: der.autoByCardNumber === true,
+        ...spec,
       });
       // The class is decided again on what is there NOW, and it must come back
       // as the SAME kind the census queued. A row the census saw as an eviction
@@ -862,10 +989,14 @@ async function main() {
 
       const r = await relocateSoldComp(pool, { keep, drop: [{ id: fresh.id, cardId: fresh.cardId }], retry, verifyFields: ["cardId", "hobbyiqCardId", "rekeyedAt"], dryRun: !APPLY });
       const why = cand.kind === K.BASE_EVICTION ? `BASE-EVICTION (slug said "${res.evidence?.storedSlugParallel}", row and title say nothing)` : `IMPROVE filled ${res.axes.filled.join(",")}`;
-      if (!APPLY) { stats.written++; perClass[cand.kind].written++; bump(reasons, `apply  would-write:${cand.kind}`); if (applied.length < 20) applied.push(`  WOULD RE-KEY ${fresh.id}  ${fresh.cardId}  ->  ${target}   ${why}`); continue; }
+      if (!APPLY) { stats.written++; perClass[cand.kind].written++; ledgerNote(fresh.cardId, fresh.id, "from"); ledgerNote(target, fresh.id, "to"); bump(reasons, `apply  would-write:${cand.kind}`); if (applied.length < 20) applied.push(`  WOULD RE-KEY ${fresh.id}  ${fresh.cardId}  ->  ${target}   ${why}`); continue; }
       if (!r.ok && r.stage !== "done") { stats.failed++; perClass[cand.kind].failed++; console.log(`  FAILED at ${r.stage} ${fresh.id}: ${String(r.error).slice(0, 110)}`); continue; }
       if (r.duplicatesLeft.length) { stats.failed++; perClass[cand.kind].failed++; stats.duplicatesLeft += r.duplicatesLeft.length; for (const dd of r.duplicatesLeft) console.log(`  DUPLICATE LEFT ${dd.id}@${dd.cardId}: ${String(dd.error).slice(0, 80)}`); continue; }
       stats.written++; perClass[cand.kind].written++; stats.alreadyGone += r.alreadyGone.length;
+      // The ledger records BOTH pools a re-key changes: the one the row left
+      // and the one it landed in. Either may hold a canary.
+      ledgerNote(fresh.cardId, fresh.id, "from");
+      ledgerNote(target, fresh.id, "to");
       bump(reasons, `apply  wrote:${cand.kind}`);
       if (applied.length < 20) applied.push(`  RE-KEYED ${fresh.id}  ${fresh.cardId}  ->  ${target}   ${why}`);
     }
@@ -901,6 +1032,38 @@ async function main() {
   const recon = stats.written + stats.skipped + stats.failed + stats.notReached;
   if (recon !== stats.intended) { console.error(`!! reconciliation drift: ${recon} accounted vs ${stats.intended} intended (${recon - stats.intended}). Exit 4.`); process.exitCode = 4; }
   if (classDrift && !process.exitCode) process.exitCode = 4;
+  // ── THE WRITE LEDGER GOES TO DISK AND TO THE LOG ────────────────────────
+  //
+  // The canary gate runs in the SAME JOB on the same runner, so it reads this
+  // file directly; the workflow also uploads it as an artifact so a halt can
+  // be re-read without re-running anything. It is written on every apply-mode
+  // pass including a dry run, and an apply that wrote nothing still writes the
+  // file -- "touched 0 pools" is the whole point.
+  {
+    const pools = {};
+    for (const [slug, e] of ledger) pools[slug] = { fromCount: e.fromCount ?? 0, toCount: e.toCount ?? 0, from: e.from, to: e.to };
+    const doc = {
+      job: "rematch-sold-comps",
+      mode: MODE, apply: APPLY, scope: APPLY_SCOPE_RAW,
+      slot: SLOT, slots: SLOTS,
+      runId: process.env.GITHUB_RUN_ID ?? null,
+      finishedAt: new Date().toISOString(),
+      written: stats.written,
+      poolsTouched: ledger.size,
+      pools,
+    };
+    try {
+      fs.mkdirSync(path.dirname(WRITE_LEDGER_OUT), { recursive: true });
+      fs.writeFileSync(WRITE_LEDGER_OUT, JSON.stringify(doc, null, 1));
+      console.log(`\n  WRITE LEDGER  ${f(ledger.size)} pool(s) touched, ${f(stats.written)} row(s) ${APPLY ? "written" : "would be written"}  ->  ${WRITE_LEDGER_OUT}`);
+    } catch (e) {
+      console.error(`!! could not write the ledger to ${WRITE_LEDGER_OUT}: ${String(e?.message ?? e)}`);
+    }
+    if (!ledger.size) console.log(`    no pool was touched by this shard -- a canary anchor that moved did so under another writer.`);
+    for (const [slug, e] of [...ledger].sort((a, b) => (b[1].fromCount ?? 0) + (b[1].toCount ?? 0) - ((a[1].fromCount ?? 0) + (a[1].toCount ?? 0))).slice(0, 25)) {
+      console.log(`    ${slug}   out ${f(e.fromCount ?? 0)}  in ${f(e.toCount ?? 0)}`);
+    }
+  }
   if (APPLY) reportWrites({ job: "rematch-sold-comps", intended: stats.intended, written: stats.written, skipped: stats.skipped, failed: stats.failed });
   if (stopReason) console.log(`\n${stopReason}`);
 }

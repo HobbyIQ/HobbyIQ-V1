@@ -3175,6 +3175,18 @@ export interface EbayStatus {
   connectedAt?: string;
   accessTokenExpiresAt?: number;
   refreshTokenExpiresAt?: number;
+  // CF-EBAY-RECONNECT-SURFACE (found by #1721). The backend has returned
+  // these since D26 (backend ebayAuth.service.ts `getConnectionStatus`) and
+  // no client read them. `connected` stays TRUE when eBay has already
+  // refused the refresh token — a record still exists — so `connected`
+  // alone cannot tell a working connection from a dead one. Read `status`.
+  // See lib/ebayConnection.ts for the three-state collapse.
+  /** "ok" or "reconnect-required". Absent on an older response. */
+  status?: "ok" | "reconnect-required";
+  /** Why re-authorisation is needed. Null when the connection is healthy. */
+  reconnectReason?: string | null;
+  /** ISO timestamp the connection was marked dead. Null when healthy. */
+  reconnectRequiredAt?: string | null;
 }
 
 export interface EbayAuthUrlResponse {

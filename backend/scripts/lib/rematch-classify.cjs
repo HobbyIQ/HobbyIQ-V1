@@ -1068,6 +1068,349 @@ function derivationCollapsesProduct(stored, derived) {
 }
 
 /**
+ * L3 -- THE SOURCES THAT PROVE A SPECIALIZATION LISTS A CARD (2026-09-04).
+ *
+ * WHY THIS IS AN ALLOWLIST AND NOT A REGEX OF FORBIDDEN WORDS.
+ *
+ * The ordinary IMPROVE gate asks "does this card exist?" and answers it with
+ * `CHECKLIST_SOURCE_RE` -- /checklist|beckett|tcdb|insider|bcp|baseballcardpedia|tcgdex/.
+ * That is a reasonable question to answer loosely. SPECIALIZATION-STATED asks a
+ * different and much stronger one: does THIS SPECIALIZATION list THIS CARD? A
+ * wrong yes there does not merely fail to improve a row, it moves a sale onto a
+ * card that may never have been printed.
+ *
+ * The first draft of this gate was `CHECKLIST_SOURCE_RE && !DERIVED_SOURCE_RE`,
+ * and measuring it against the real container is what retired it. `SELECT
+ * c.source, COUNT(1) GROUP BY c.source` over card_catalog on 2026-09-04 returns
+ * 100+ distinct sources, and the subtractive predicate is wrong in BOTH
+ * directions on them:
+ *
+ *   FALSE NEGATIVES -- real scrapes the loose regex never matched at all, so
+ *   subtracting from it could not rescue them:
+ *     drew-google-sheet-scraped-2026-09-01   735 rows -- and it is the 1987
+ *         Topps Tiffany checklist itself, the one #1615 landed to take 2,760
+ *         sales out of the base pools. The census refused 1,576 1987
+ *         topps-tiffany rows for "no backing" while their backing sat right
+ *         there under a name the regex did not know.
+ *     bccp / bccp-graded                     1.6M rows (baseballcardpedia's
+ *         own short name; the long spelling matched, the short one did not)
+ *     hobbymonitor-*                         790k
+ *     cardboardconnection-* / cardboard-connection-*
+ *     baseball-almanac, bbm-japan-official-pdf, pokemon-tcg-data-scraped
+ *
+ *   FALSE POSITIVES -- names that would pass a loosened regex but are not
+ *   checklist evidence at all:
+ *     catalog-explode-actuals-*  1.9M rows built by EXPLODING actuals, the
+ *         exact shape CF-EXPLODED-SPINE retired
+ *     pool, sold-comps-stub-*    rows minted FROM SALES -- the circularity
+ *         this leg exists to refuse, under a different name than
+ *         `sales-attested`
+ *     subset-unfold-*            unfolded, not scraped
+ *     cardhedge*, cardsight*     VENDOR rows; the persist-vendor-lookups
+ *         doctrine is that vendors never mint catalog rows
+ *     ebay-browse, ebay-user-*   listings and a user's own record
+ *     undefined                  a source that says nothing
+ *
+ * So the leg names the sources it TRUSTS, and everything else -- including
+ * every source invented after this line was written -- is refused until someone
+ * adds it deliberately. That is the right default for a gate whose false yes
+ * moves a sale onto a card that may not exist. `rematchSpecializationStated.test.ts`
+ * pins each family and each exclusion by name.
+ *
+ * The suffixes the catalog appends (`-graded`, `-graded-graded`,
+ * `-graded-attested`) and the trailing ingest date are stripped before the
+ * comparison, so a new scrape of a trusted source needs no code change.
+ */
+const STRICT_CHECKLIST_SOURCES = Object.freeze([
+  // -- the checklist aggregators ------------------------------------------
+  "checklist", "checklistinsider", "checklistcenter", "checklistcenter-html",
+  "beckett-checklist", "beckett-scraped", "beckett",
+  "tcdb", "tcgdex", "cardboardchecklist",
+  // -- the encyclopaedias and card-by-card references ----------------------
+  "baseballcardpedia", "baseballcardpedia-ladders", "bccp",
+  "cardboardconnection", "cardboard-connection",
+  "baseball-almanac", "hobbymonitor",
+  "bbm-japan-official-pdf", "pokemon-tcg-data",
+  // -- Drew's own hand-verified checklist sheets --------------------------
+  // The 1987 Topps Tiffany 792 came from here (#1615). A human transcribing a
+  // printed checklist is a scrape with the best possible provenance, and the
+  // ruling rows are Drew deciding a card by name.
+  "drew-google-sheet", "cardpedia-drew-ruling",
+]);
+
+/** The catalog's per-ingest suffixes and date stamps, stripped so a trusted
+ *  source stays trusted across re-scrapes without a code change. */
+function normalizeCatalogSource(raw) {
+  let s = String(raw ?? "").trim().toLowerCase();
+  if (!s) return "";
+  // The per-ingest suffixes, stripped repeatedly (the catalog really does
+  // carry `-graded-graded` and `-graded-attested`). `scraped` is stripped as
+  // one of them because it names the INGEST VERB, not the source: the same
+  // publisher appears as both `tcdb-2026-08-12` and
+  // `tcgdex-scraped-2026-08-16`, and an allowlist that had to carry both
+  // spellings of every name would eventually miss one.
+  const strip = (x) => x.replace(/-(graded|attested|unnumbered|scraped)$/, "");
+  for (;;) { const next = strip(s); if (next === s) break; s = next; }
+  // a trailing ISO-ish date stamp: -2026-08-27, -2026-08-27T..., -20260827
+  s = s.replace(/-\d{4}-\d{2}-\d{2}(t[\d:.+-]*)?$/, "").replace(/-\d{8}$/, "");
+  // and the suffixes again, in case the date sat between them
+  for (;;) { const next = strip(s); if (next === s) break; s = next; }
+  return s;
+}
+
+/** L3. Is this catalog row's source a REAL SCRAPED CHECKLIST -- one that can
+ *  prove a specialization lists a card? Every source not named above is
+ *  refused, including every source invented later. Absent beats wrong. */
+function isStrictChecklistSource(raw) {
+  const s = normalizeCatalogSource(raw);
+  return s !== "" && STRICT_CHECKLIST_SOURCES.includes(s);
+}
+
+// ── SPECIALIZATION-STATED: the IMPROVE subclass that repairs a stated ──────
+//    product the old parser could not read.  (Drew's Maddux, 2026-09-04)
+//
+// CF-A-TIFFANY-SALE-IS-A-TIFFANY-CARD, applied to the rematch.
+//
+// THE DAMAGE. Drew's 1987 Topps Traded Tiffany Greg Maddux #70T (PSA 10)
+// published $148.32 against a $910-$1,560 market. Nothing was wrong with the
+// pricing: 23 Tiffany PSA 10 sales sat in the FLAGSHIP pool
+// `hiq:baseball:1987:topps:70t:base:no-auto` beside ~121 non-Tiffany Traded
+// PSA 10 sales at ~$150, and FMV projects the next sale of the pool it is
+// given. One pool cannot serve two cards.
+//
+// The cause was a parser defect, fixed in #1715: `inferSetKeyFromTitle` had no
+// rule for "traded" or "tiffany", so every such title fell past the ~30
+// `topps <product>` rules to the bare `/topps/` catch-all. `normalizeSetKey`
+// had ruled on all three keys since 2026-08-04 and productSetKeys.ts carries
+// them with their parent ladder -- only the TITLE parser disagreed.
+//
+// WHY THE REMATCH COULD NOT REPAIR THEM. #1715 changed DERIVATION ONLY, and
+// said so: "the census classifies these rows CONFLICT (changed:setKey), which
+// its auto-apply lane will not write. That gate needs a separate ruling."
+// Measured on the Maddux pool: 341 of 365 rows return CONFLICT
+// writable:false on `changed:setKey`. The rule that refuses them is the
+// only-improve doctrine stated as code -- a changed axis is a rival reading of
+// the card, and a fleet never settles a rival reading.
+//
+// WHY THIS ONE IS NOT A RIVAL READING. `changed:setKey` is the right default
+// because a setKey move is usually two parsers disagreeing about which product
+// a title names. This shape is different in a way that can be TESTED, not
+// asserted:
+//
+//   the stored key is an ANCESTOR of the derived key on the product-family
+//   ladder, and the title states, in full, every word that distinguishes the
+//   child from that ancestor.
+//
+// A title that says "Topps Traded Tiffany" and a row filed under `topps` are
+// not two readings of one card. They are one reading and one FAILURE to read.
+// The row's own title carries the evidence; nothing is inferred, guessed or
+// widened. This is the ladder pointing the OTHER WAY from
+// `derivationCollapsesProduct` -- that guard refuses `topps-tiffany` ->
+// `topps` because a specialization is never the flagship; this subclass admits
+// `topps` -> `topps-tiffany` when the title says Tiffany, because the flagship
+// was never the specialization either. The two are the same ruling read in
+// both directions, which is why they share the ladder and not a word list.
+//
+// THE FIVE LEGS. All five must hold; any one failing leaves the row CONFLICT
+// exactly as today, and the failing leg is NAMED so the census can count it.
+//
+//   L1  LADDER      the stored key is a strict ANCESTOR of the derived key in
+//                   productSetKeys.ts (`topps` -> `topps-traded` ->
+//                   `topps-traded-tiffany`; `topps` -> `topps-tiffany`).
+//                   Ancestry, not string prefix: a prefix test would admit
+//                   `topps-t` -> `topps-tiffany` and would be a different,
+//                   weaker claim than the one Drew ruled.
+//   L2  STATED      the title states EVERY word that distinguishes the derived
+//                   key from the stored one. Derived `topps-traded-tiffany`
+//                   minus stored `topps` = {traded, tiffany}, and the title
+//                   must contain BOTH as whole words. This is the leg that
+//                   makes the subclass EVIDENCE rather than inference, and it
+//                   is the leg the mutation pin drops.
+//   L3  BACKED      the DERIVED identity (year, setKey, cardNumber, parallel)
+//                   is checklist-backed in card_catalog by a REAL SCRAPED
+//                   SOURCE. `derived-from-base-checklist-*`, `auto-seed-*` and
+//                   sales-attested rows are NOT backing: the first mints a
+//                   specialization's rows by copying the flagship's, so citing
+//                   one as evidence would be citing a row that exists only
+//                   because someone already assumed the thing being proven.
+//                   See `checklistBackedStrict` in the runner.
+//   L4  IDENTITY    cardNumber, grade and isAuto are UNCHANGED -- and so is
+//                   every other axis except `setKey`. Those axes say WHICH
+//                   CARD and WHICH SLAB. A derivation moving one of them is
+//                   disagreeing about identity, not reading a product word the
+//                   old parser dropped, and a fleet never settles that.
+//   L5  NOT-FLAGSHIP the stored flagship's OWN checklist does not list this
+//                   cardNumber. A genuine flagship card that merely mentions
+//                   the word is not eligible -- 1987 Topps #70 exists, and a
+//                   title reading "1987 Topps #70 ... traded to the Cubs" must
+//                   never be re-keyed off a real card's pool. Supplied by the
+//                   runner as `storedFlagshipListsCardNumber`; a caller that
+//                   cannot answer supplies `null` and the row is REFUSED,
+//                   because absent beats wrong.
+//
+//                   L5 IS WHY THE PARALLEL-PRINT TIFFANYS STAY REFUSED, AND
+//                   THAT IS CORRECT. Measured 2026-09-04: 1987 topps lists
+//                   #70 and #320 but NOT #70T, so the Traded Tiffany rows
+//                   pass -- while `topps-tiffany` and `bowman-tiffany` reprint
+//                   the flagship's card list ON THE SAME NUMBERS, so every one
+//                   of their rows fails L5 by construction. That is not a bug
+//                   in the leg. A same-numbered reprint means the flagship
+//                   checklist genuinely lists the number, so the cardNumber
+//                   cannot tell the two cards apart and only the title says
+//                   Tiffany. Moving those rows is a bigger claim than this
+//                   subclass makes, and it stays Drew's -- the census counts
+//                   them under `flagship-checklist-lists-this-card` so the
+//                   population is a number he can rule on, not a silence.
+//
+// G1-G6 STILL APPLY. The subclass rides the IMPROVE arm and is evaluated
+// ALONGSIDE `improveRefusals`, the family-collision refusal, the
+// derivation-defect refusals and the provenance tier -- every one of which can
+// still refuse it. It widens WHICH ROWS REACH the IMPROVE gate; it does not
+// weaken the gate.
+//
+// APPLY PLUMBING: none. `applyKindOf` returns IMPROVE for these rows because
+// their `klass` IS IMPROVE, so `scope=improve` arms them and the existing
+// canary gate covers them. No new workflow input, no new apply class.
+const SPECIALIZATION_STATED = "SPECIALIZATION-STATED";
+
+/**
+ * THE PRODUCT-FAMILY LADDER, MIRRORED.
+ *
+ * `productSetKeys.ts` is the authority and stays that way. This module is pure
+ * .cjs by contract -- no dist/, no TypeScript, so a unit test can drive the
+ * classifier without a build -- so the parent edges this subclass needs are
+ * mirrored here, and `rematchSpecializationStated.test.ts` pins the mirror
+ * against `productAncestry()` edge by edge. A mirror nothing compares is a
+ * second source of truth; a mirror a test compares is a cache.
+ *
+ * Only the edges REACHABLE BY THIS SUBCLASS are mirrored -- a specialization
+ * whose distinguishing words a title can state. Adding an edge here does not
+ * make a row writable on its own: L2 through L5 still have to hold.
+ */
+const SPECIALIZATION_PARENTS = Object.freeze({
+  // -- Topps: the products #1715's parser learned to read ------------------
+  "topps-traded": "topps",
+  "topps-traded-tiffany": "topps-traded",
+  "topps-tiffany": "topps",
+  // -- Bowman: `bowman-tiffany` is a normalizeSetKey fixed point and a ruled
+  //    DISTINCT key (setkey-reconciliation.json: 453 catalog rows, 1989-1991,
+  //    "product-family collapse -- `bowman` is an ancestor of
+  //    `bowman-tiffany`") but productSetKeys.ts carries NO entry for it, so
+  //    `productAncestry` returns ["bowman-tiffany"] alone and L1 would fail.
+  //    The edge is mirrored here and the test asserts EXACTLY this exception,
+  //    so the day the table gains the entry the pin says so rather than
+  //    silently agreeing.
+  "bowman-tiffany": "bowman",
+});
+
+/** The keys whose ladder edge this module mirrors from productSetKeys.ts --
+ *  everything above except the documented `bowman-tiffany` exception. */
+const LADDER_MIRRORED_KEYS = Object.freeze(
+  Object.keys(SPECIALIZATION_PARENTS).filter((k) => k !== "bowman-tiffany"),
+);
+
+/** Every ancestor of `setKey` under the mirrored ladder, nearest first. */
+function specializationAncestry(setKey) {
+  const out = [];
+  let cur = lower(setKey);
+  const seen = new Set([cur]);
+  for (;;) {
+    const parent = SPECIALIZATION_PARENTS[cur];
+    if (!parent || seen.has(parent)) break;
+    out.push(parent);
+    seen.add(parent);
+    cur = parent;
+  }
+  return out;
+}
+
+/** L1. Is `derived` a strict descendant of `stored` on the ladder? */
+function isSpecializationOf(derivedKey, storedKey) {
+  const d = lower(derivedKey), s = lower(storedKey);
+  if (!d || !s || d === s) return false;
+  return specializationAncestry(d).includes(s);
+}
+
+/**
+ * L2. The words that distinguish the derived key from the stored one, each of
+ * which the title must state.
+ *
+ * Computed from the SEGMENTS, not from a hand list: `topps-traded-tiffany`
+ * minus `topps` is {traded, tiffany}, and `topps-traded-tiffany` minus
+ * `topps-traded` is {tiffany}. A hand list would need editing for every new
+ * edge and would silently under-demand on the one it forgot.
+ */
+function distinguishingWords(derivedKey, storedKey) {
+  const d = lower(derivedKey).split("-").filter(Boolean);
+  const s = new Set(lower(storedKey).split("-").filter(Boolean));
+  return d.filter((w) => !s.has(w));
+}
+
+/** Does the title state this word, whole, case-insensitively? */
+function titleStatesWord(title, word) {
+  if (!word) return false;
+  const w = String(word).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`\\b${w}\\b`, "i").test(String(title ?? ""));
+}
+
+/**
+ * The SPECIALIZATION-STATED evidence for one row. Returns
+ * `{ qualifies, failed, evidence }` in the same shape as the eviction
+ * evidence, so the census can count a near miss BY THE LEG IT FAILED.
+ *
+ * `failed` is the AUDIT PRODUCT. A subclass that only said yes or no would
+ * leave the census unable to answer "how many rows are one checklist away",
+ * which is exactly the question the 1984-1991 Topps Traded Tiffany checklist
+ * is being staged to answer.
+ */
+function specializationStatedEvidence({
+  row, stored, derived, axes,
+  derivedBacked = false,
+  storedFlagshipListsCardNumber = null,
+}) {
+  const failed = [];
+  const title = str(row?.title);
+  const storedKey = lower(stored?.setKey), derivedKey = lower(derived?.setKey);
+
+  // L1 -- the ladder, and only the ladder.
+  const ladder = isSpecializationOf(derivedKey, storedKey);
+  if (!ladder) failed.push("not-a-ladder-specialization");
+
+  // L2 -- every distinguishing word, stated in the title. Only meaningful
+  // once the ladder holds; on a non-ladder pair the segment difference is not
+  // a specialization's words and naming it would be a misleading count.
+  const words = ladder ? distinguishingWords(derivedKey, storedKey) : [];
+  const unstated = words.filter((w) => !titleStatesWord(title, w));
+  if (ladder && !words.length) failed.push("no-distinguishing-words");
+  else if (unstated.length) failed.push(`title-does-not-state:${unstated.join("+")}`);
+
+  // L3 -- the DERIVED identity is checklist-backed by a real scraped source.
+  if (!derivedBacked) failed.push("derived-not-checklist-backed");
+
+  // L4 -- the axes that say WHICH CARD are unchanged. `setKey` is the one axis
+  // this subclass exists to move; every other changed or dropped axis is the
+  // derivation disagreeing about identity.
+  const moved = [...(axes?.changed ?? []), ...(axes?.dropped ?? [])].filter((a) => a !== "setKey");
+  if (moved.length) failed.push(`identity-axis-moved:${moved.join(",")}`);
+
+  // L5 -- the stored flagship's own checklist must NOT list this number.
+  // `null` means the caller could not answer, and an unanswered gate is a
+  // refusal: absent beats wrong.
+  if (storedFlagshipListsCardNumber === null) failed.push("flagship-coverage-unknown");
+  else if (storedFlagshipListsCardNumber === true) failed.push("flagship-checklist-lists-this-card");
+
+  return {
+    qualifies: failed.length === 0,
+    failed,
+    evidence: {
+      storedSetKey: storedKey, derivedSetKey: derivedKey,
+      distinguishingWords: words, unstatedWords: unstated,
+      derivedBacked, storedFlagshipListsCardNumber,
+    },
+  };
+}
+
+/**
  * The three IMPROVE guards the audit demanded. Returns a list of refusals;
  * empty means the IMPROVE may proceed to the tier gate.
  *
@@ -1294,6 +1637,48 @@ function improveRefusals({ row, stored, derived, axes, parserSaysLot = false }) 
   const collapse = derivationCollapsesProduct(stored, derived);
   if (collapse) refusals.push(`improve-setkey-collapses-distinct-product:${collapse}`);
 
+  return refusals;
+}
+
+/**
+ * EVERY REFUSAL THAT CAN STOP AN IMPROVE, IN ONE ARRAY, FROM ONE PLACE.
+ *
+ * Two arms now reach the IMPROVE gate -- the ordinary filled-only path, and
+ * the SPECIALIZATION-STATED subclass -- and they must be gated IDENTICALLY. A
+ * subclass that widened which rows reach the gate AND quietly skipped one of
+ * the gate's refusals would not be a subclass, it would be a bypass.
+ *
+ * It is one function rather than two copies of three lines for a reason the
+ * test suite states directly: `rematchDerivationDefects.test.ts` reverts each
+ * push below by SOURCE STRING and asserts there is EXACTLY ONE site to revert.
+ * A second copy would pass that assertion's sibling and leave one arm
+ * unguarded -- which is precisely the mutation nobody would notice.
+ *
+ * The three sources, in the order a reader should think about them:
+ *
+ *   G1-G5  `improveRefusals` -- the audit-gate guards. IMPROVE was the class
+ *          treated as safe and shipped without a title check of its own.
+ *
+ *   FINISH-FAMILY COLLISION -- a row whose colour family is collided and
+ *          UNRULED. Filling a blank axis is only an improvement when the
+ *          destination is settled; inside a collided family it is picking a
+ *          side of the open question. It joins this array rather than sitting
+ *          beside it because the audit gate READS this array: a refusal that
+ *          is not in it is a refusal the census cannot report and the canary
+ *          cannot count.
+ *
+ *   DERIVATION DEFECTS -- IMPROVE is the class that writes, so a bad reading
+ *          arriving here is the one that costs something. The V3
+ *          genericization shape is the live danger: `Prism Refractor` ->
+ *          `Refractor` over a row whose printRun the derivation also filled
+ *          diffs as filled-only -- strictly more specific by the axis test --
+ *          and would have been written, pooling a distinct card into its
+ *          family.
+ */
+function allImproveRefusals({ row, stored, derived, axes, parserSaysLot, family, derivationRefused = [] }) {
+  const refusals = improveRefusals({ row, stored, derived, axes, parserSaysLot });
+  if (family.qualifies) refusals.push("finish-family-collision:not-writable-until-ruled");
+  refusals.push(...derivationRefused);
   return refusals;
 }
 
@@ -1686,6 +2071,25 @@ function classifyRow({
   // #1691's derivation-defect input, kept alongside this PR's. The two guards
   // are independent and both run.
   autoByCardNumber = false,
+  // SPECIALIZATION-STATED (2026-09-04). Two facts the classifier cannot read
+  // for itself, because both are catalog reads and this module is pure.
+  //
+  //   derivedBackedStrict  is the DERIVED slug backed by a REAL SCRAPED
+  //                        checklist source? Deliberately NOT `checklistBacked`
+  //                        above: that predicate accepts
+  //                        `derived-from-base-checklist-*`, which mints a
+  //                        specialization's catalog rows by copying the
+  //                        flagship's. Citing one of those as proof that the
+  //                        specialization lists this card would be citing a row
+  //                        that exists only because the thing being proven was
+  //                        already assumed. Defaults FALSE, so a caller that
+  //                        does not supply it gets no subclass at all.
+  //   storedFlagshipListsCardNumber
+  //                        does the STORED flagship's own checklist list this
+  //                        cardNumber? `null` means unanswered, and unanswered
+  //                        is a refusal -- absent beats wrong.
+  derivedBackedStrict = false,
+  storedFlagshipListsCardNumber = null,
 }) {
   const prov = provenanceTier(row);
   // THE SLUG-SHAPE DEFECTS ARE COMPUTED FOR EVERY ROW AND CHANGE NOTHING.
@@ -1862,6 +2266,62 @@ function classifyRow({
   if (axes.dropped.length) reasons.push(`dropped:${axes.dropped.join(",")}`);
   if (axes.changed.length) reasons.push(`changed:${axes.changed.join(",")}`);
   if (axes.dropped.length || axes.changed.length) {
+    // SPECIALIZATION-STATED: THE ONE `changed:setKey` THAT IS NOT A RIVAL
+    // READING (Drew's Maddux, 2026-09-04).
+    //
+    // This is the ONLY place a changed axis may leave the CONFLICT path, and
+    // it is deliberately the narrowest possible door: the stored key must be
+    // an ANCESTOR of the derived one on the product-family ladder, the title
+    // must STATE every word that distinguishes them, the derived identity must
+    // be backed by a real scraped checklist, no axis but `setKey` may have
+    // moved, and the stored flagship's own checklist must not list the card.
+    // See SPECIALIZATION_STATED above for why each leg is there.
+    //
+    // Evaluated BEFORE the collapse refusal below on purpose. The two read the
+    // same ladder in opposite directions and cannot both fire on one row --
+    // `derivationCollapsesProduct` is a strict-descendant-to-ancestor test and
+    // this is its inverse -- but ordering it first means the census output
+    // shows a qualifying row as IMPROVE rather than as a collapse that was
+    // then overturned, and a reader should not have to reconcile two verdicts.
+    //
+    // A row that FAILS a leg falls straight through to the CONFLICT return it
+    // reaches today, carrying its failed legs in `reasons` so the census can
+    // count exactly which one held it back. That count is the report the
+    // staged 1984-1991 Traded Tiffany checklist is judged by.
+    const spec = specializationStatedEvidence({
+      row, stored, derived, axes,
+      derivedBacked: derivedBackedStrict === true,
+      storedFlagshipListsCardNumber,
+    });
+    if (spec.qualifies) {
+      // The row now takes the ORDINARY IMPROVE gate, through THE SAME
+      // function the ordinary arm calls. Sharing `allImproveRefusals` rather
+      // than restating its three pushes is not tidiness: the mutation checks
+      // in rematchDerivationDefects.test.ts revert exactly those pushes and
+      // assert there is EXACTLY ONE site to revert. Two copies would leave
+      // this arm silently unguarded by the pin that guards the other.
+      const refusals = allImproveRefusals({ row, stored, derived, axes, parserSaysLot, family, derivationRefused });
+      const specReasons = [
+        `subclass:${SPECIALIZATION_STATED}`,
+        `specialization:${spec.evidence.storedSetKey}->${spec.evidence.derivedSetKey}`,
+        `title-states:${spec.evidence.distinguishingWords.join("+")}`,
+      ];
+      return {
+        ...base,
+        klass: IMPROVE, subclass: SPECIALIZATION_STATED, axes,
+        reasons: [...reasons, ...specReasons, ...refusals, ...splitReasons],
+        improveRefusals: refusals,
+        specializationEvidence: spec.evidence,
+        writable: prov.tier === AUTO && refusals.length === 0,
+      };
+    }
+    // A NEAR MISS IS NAMED, NOT SWALLOWED. Only for rows that were real
+    // candidates -- the ladder held -- or the other millions of `changed`
+    // rows would each carry a reason that says only "this was never a
+    // Tiffany row", which is a count of the corpus and not of the defect.
+    if (!spec.failed.includes("not-a-ladder-specialization")) {
+      reasons.push(`not-specialization-stated:${spec.failed.join(",")}`);
+    }
     // A PRODUCT-FAMILY COLLAPSE IS REFUSED BY NAME (Drew, 2026-09-03).
     //
     // `changed:setKey` already lands in CONFLICT, and CONFLICT is already
@@ -1916,7 +2376,7 @@ function classifyRow({
   // onto base rows. A refusal keeps the CLASS -- the census must still count
   // the shape, and Drew must be able to read what was refused and why -- and
   // takes `writable` to false, the same way the provenance tier does.
-  const refusals = improveRefusals({ row, stored, derived, axes, parserSaysLot });
+  const refusals = allImproveRefusals({ row, stored, derived, axes, parserSaysLot, family, derivationRefused });
 
   // A FLAGGED FAMILY COLLISION IS A REFUSAL LIKE THE OTHER THREE.
   //
@@ -1934,18 +2394,8 @@ function classifyRow({
   // census cannot report and the canary cannot count. The class stays IMPROVE
   // -- that is what the census measured, and hiding the shape would lose the
   // count -- and `writable` is what the apply pass reads.
-  if (family.qualifies) refusals.push("finish-family-collision:not-writable-until-ruled");
-
-  // A DERIVATION DEFECT IS A REFUSAL LIKE THE OTHERS, AND IT REACHES IMPROVE.
-  //
-  // IMPROVE is the class that writes, so a bad reading arriving here is the
-  // one that costs something. The V3 genericization shape is the live danger:
-  // `Prism Refractor` -> `Refractor` over a row whose printRun the derivation
-  // also filled diffs as filled-only -- strictly more specific by the axis
-  // test -- and would have been written, pooling a distinct card into its
-  // family. They join `improveRefusals` rather than sitting beside it because
-  // the audit gate and the canary both read that array.
-  refusals.push(...derivationRefused);
+  // (the family-collision and derivation-defect refusals are appended inside
+  //  `allImproveRefusals` -- see there for why each one belongs in this array)
 
   if (refusals.length) reasons.push(...refusals);
   reasons.push(...splitReasons);
@@ -2143,6 +2593,14 @@ function renderIdentity(id) {
 module.exports = {
   AGREE, IMPROVE, CONFLICT, UNDERIVABLE, PROTECTED, AUTO, BASE_EVICTION,
   FINISH_FAMILY_COLLISION, FAMILY_COLOURS, colourFamilyOf, finishFamilyCollision,
+  // SPECIALIZATION-STATED (2026-09-04) -- the IMPROVE subclass, its mirrored
+  // ladder and each of its legs, exported piece by piece so a pin can drive
+  // one alone and the mutation check can revert one alone. A leg nothing can
+  // call alone is a leg nothing can prove.
+  SPECIALIZATION_STATED, SPECIALIZATION_PARENTS, LADDER_MIRRORED_KEYS,
+  STRICT_CHECKLIST_SOURCES, normalizeCatalogSource, isStrictChecklistSource,
+  specializationAncestry, isSpecializationOf, distinguishingWords,
+  titleStatesWord, specializationStatedEvidence,
   PROTECTED_SOURCES, PROTECTED_MARKER_FIELDS, AXES, GENERIC_PARALLELS,
   GENERIC_SETKEYS, storedSetKeyIsBlank, RULED_COLLAPSE_PAIRS, ruledCollapsePair,
   DISTINCT_PRODUCT_SETKEYS,
@@ -2175,6 +2633,7 @@ module.exports = {
   // directly and the mutation check can revert them one at a time.
   EVICTION_MOVABLE_AXES, DISTINCT_PRODUCT_SETKEYS,
   storedPrintRunNamesALimitedParallel, derivationCollapsesProduct, improveRefusals,
+  allImproveRefusals,
   // The apply class scope (audit gate item 8) -- BASE-EVICTION is clean
   // corpus-wide while IMPROVE is not, so the apply is scopable to a class.
   APPLY_CLASSES, APPLY_SCOPE_ALIASES, parseApplyScope, applyKindOf, writableUnderScope,

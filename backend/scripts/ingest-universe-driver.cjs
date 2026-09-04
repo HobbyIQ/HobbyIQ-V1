@@ -616,7 +616,68 @@ function sourceLabelFor(lane, stamp) {
 }
 
 /**
- * Acquire ONE entry into its own directory. Returns { csvPath, log } or throws.
+ * CF-THE-PLAN-AND-THE-APPLY-ARE-ONE-FUNCTION (2026-09-04).
+ *
+ * The report mode used to print its plan from a hardcoded object literal that
+ * lived 500 lines away from the switch that actually runs. Nothing tied them
+ * together, so run 33847474466 printed
+ *
+ *     would drive: fetchSportsCardChecklist.cjs --url <sourceRef> ...
+ *
+ * for all three entries and was believed to be a clean rehearsal of the apply
+ * -- while the apply path for that same lane was broken and threw on every one
+ * of them. A report that cannot be wrong about the apply is worth nothing as a
+ * rehearsal, and that is exactly what a second copy of the truth buys.
+ *
+ * So the plan string is DERIVED, by this function, for both modes: report mode
+ * prints it, and every lane branch of acquireEntry opens by declaring it, which
+ * is what makes it the same sentence rather than two that happen to agree. The
+ * completeness assert below closes the other half: a lane that acquireEntry can
+ * dispatch but planFor cannot describe -- the shape a new lane arrives in --
+ * fails at load, not on the first dispatch.
+ *
+ * A wrong PLAN is now a wrong RUN. That is the point: they are the same string.
+ */
+function planFor(entry) {
+  const lane = entry.lane;
+  switch (lane) {
+    case "hobbymonitor":
+      return "fetchHobbyMonitorChecklist.cjs --url <sourceRef> (direct-URL lane) → ingest-checklist-csv-to-catalog.cjs";
+    case "sportscardchecklist":
+      return "fetchSportsCardChecklist.cjs --url <sourceRef> (direct-URL lane) → ingest-checklist-csv-to-catalog.cjs";
+    case "checklistinsider":
+      return "scrape-checklistinsider.cjs --slugsFile → convertChecklistInsiderToChecklistCsv.cjs → ingest-checklist-csv-to-catalog.cjs";
+    case "bcp":
+      return "scrape-bcp-ladders.cjs --titles=<page> --titlesOnly → ingest-checklist-csv-to-catalog.cjs";
+    case "beckett":
+      return "fetch <sourceRef>.xlsx → convertBeckettChecklistXlsx.cjs → ingest-checklist-csv-to-catalog.cjs";
+    case "clc":
+      return "scrape-checklistcenter-products.cjs --urls → convertChecklistCenterToChecklistCsv.cjs → ingest-checklist-csv-to-catalog.cjs";
+    // The lane is TWO scrapers and the plan must say WHICH, or the sentence it
+    // prints is not the sentence the apply runs: a modern code (SV*, S*, CS*,
+    // M*) routes to the ladder-carrying scraper, the vintage PMCG/neo titles to
+    // the original. tcgdexModern is the ONE predicate both sides read.
+    case "tcgdexja":
+      return `${tcgdexModern(entry)
+        ? "scrape-tcgdex-ja-modern.cjs (rarity ladder → parallel)"
+        : "scrape-tcgdex-ja.cjs (base-only; tcgdex serves no ladder for these)"} --sets=<id> → ingest-checklist-csv-to-catalog.cjs`;
+    default:
+      return null;
+  }
+}
+
+/** The one predicate that decides which tcgdexja scraper runs. Read by BOTH planFor and acquireEntry. */
+function tcgdexModern(entry) {
+  const setId = String(entry.sourceRef || "").split("/").pop() || "";
+  return /^(SV|S\d|CS|M[0-9]|M-P|SVK|SVLN|SVLS)/i.test(setId);
+}
+
+/** Every lane acquireEntry can dispatch. The load-time assert below pins planFor to it. */
+const ACQUIRE_LANES = ["hobbymonitor", "sportscardchecklist", "checklistinsider", "bcp", "beckett", "clc", "tcgdexja"];
+
+/**
+ * Acquire ONE entry into its own directory. Returns { csvPaths: [...] } or
+ * throws -- see acquireStaged, which is the checked way to call this.
  * Each lane is the same script the end-to-end wrapper calls, scoped down to the
  * single set by whichever argument that script already accepts for the purpose.
  */
@@ -653,7 +714,12 @@ function acquireEntry(entry, dir) {
         "--set-name", String(entry.setName || ""),
         "--sport", String(entry.sport || ""),
       ]);
-      return { csvPath };
+      // csvPathS. The fetcher writes `<stem>.csv` beside `<stem>.manifest.json`
+      // and, for a ladder rung, `<stem>.parallels.json`; the ingest child reads
+      // the DIRECTORY, so the sidecars need no naming here. Only the CSV is
+      // gated, and it is returned in the same one-element array shape
+      // hobbymonitor uses -- see acquireStaged, which now refuses any other.
+      return { csvPaths: [csvPath] };
     }
     case "checklistinsider": {
       // --slugsFile re-runs a NAMED subset without re-fetching all 599 pages.
@@ -763,7 +829,7 @@ function acquireEntry(entry, dir) {
       // that carries it. The vintage PMCG/neo titles keep the original lane:
       // tcgdex serves them no rarity ladder, so pointing them at the modern
       // scraper would change nothing but the provenance string.
-      const modern = /^(SV|S\d|CS|M[0-9]|M-P|SVK|SVLN|SVLS)/i.test(setId);
+      const modern = tcgdexModern(entry);
       const script = modern ? "scrape-tcgdex-ja-modern.cjs" : "scrape-tcgdex-ja.cjs";
       const said = run(script, [`--outDir=${dir}`, `--sets=${setId}`, "--delayMs=150"]);
       const csvs = fs.readdirSync(dir).filter((n) => n.endsWith(".csv"));
@@ -801,6 +867,55 @@ function acquireEntry(entry, dir) {
     default:
       throw new Error(`no acquisition machinery for lane ${entry.lane}`);
   }
+}
+
+/**
+ * CF-A-LANE-THAT-RETURNS-THE-WRONG-SHAPE-IS-A-REFUSAL (2026-09-04).
+ *
+ * Run 33848115955 (sportscardchecklist, apply=true, limit=3) failed all three
+ * entries with
+ *
+ *     FAILED — The "path" argument must be of type string. Received undefined
+ *
+ * and then tripped the 3-streak systemic abort. The report run for the very
+ * same three, 33847474466, was clean, because report mode never calls this
+ * function at all.
+ *
+ * The cause was one character. #1710 wrote the lane's return as
+ *
+ *     return { csvPath };          // singular
+ *
+ * while the caller -- and every one of the other six lanes -- speaks csvPathS:
+ *
+ *     const { csvPaths } = acquireEntry(entry, dir);
+ *
+ * So csvPaths was `undefined`, gateStagedEntry's `Array.isArray(x) ? x : [x]`
+ * faithfully wrapped it into `[undefined]`, and gateStagedCsv handed `undefined`
+ * to fs.readFileSync. The CSV was fetched and staged correctly; nothing was
+ * wrong with the acquisition. A one-character key mismatch cost a whole lane.
+ *
+ * The lesson is not "spell it right" -- it is that the contract between a lane
+ * branch and its caller was never stated anywhere, so a wrong shape read as a
+ * legitimately-empty one. It is stated here now, and it is CHECKED. A lane that
+ * returns anything but `{ csvPaths: [string, ...] }` is a defect in this file,
+ * so it says so by name rather than surfacing as an undefined path five frames
+ * down in an unrelated gate.
+ */
+function acquireStaged(entry, dir) {
+  const got = acquireEntry(entry, dir);
+  const paths = got && got.csvPaths;
+  if (!Array.isArray(paths)) {
+    const keys = got && typeof got === "object" ? Object.keys(got).join(", ") : String(got);
+    throw new Error(
+      `lane ${entry.lane} returned no csvPaths array (got keys: ${keys || "(none)"}) — ` +
+      `every lane must return { csvPaths: [<file>, ...] }`,
+    );
+  }
+  const bad = paths.findIndex((p) => typeof p !== "string" || !p);
+  if (bad !== -1) {
+    throw new Error(`lane ${entry.lane} returned a non-string staged path at index ${bad} — every lane must return { csvPaths: [<file>, ...] }`);
+  }
+  return paths;
 }
 
 // ── Cosmos: the control docs and the verify-by-read ──────────────────────────
@@ -1102,7 +1217,20 @@ function orderQueue(queue, titlesRaw) {
 // The gate is exported so its rules can be asserted directly against fixture
 // CSVs, rather than only through a full acquisition. `require`d as a module the
 // script does nothing; run as a CLI it drives.
-module.exports = { gateStagedCsv, gateStagedEntry, ladderIsAttested, CARTESIAN_MIN_RUNGS, CARTESIAN_MIN_CARDS, stagedCsvs, sourceLabelFor, splitCsv, isPersonName, setKeyFor, LANE_ALIASES, LANE_SOURCE, LANE_MINUTES, CANONICAL_HEADER, CHILD_STDERR_LINES, cosmosSafeId, controlId, orderQueue, SYSTEMIC_FAILURE_STREAK, EMPTY_STATUS, STREAK_STATUSES, isStaged, stagedSourceRefs };
+
+// EVERY LANE acquireEntry CAN DISPATCH MUST HAVE A PLAN, checked at load rather
+// than on the first dispatch of a new lane. This is the half that a shared
+// function alone does not buy: planFor and acquireEntry could still drift apart
+// by one of them gaining a lane the other never heard of, and the report would
+// print "would drive: undefined" -- which is precisely the silent shape that
+// let the sportscardchecklist apply path ship untested.
+for (const lane of ACQUIRE_LANES) {
+  if (!planFor({ lane, sourceRef: "" })) {
+    throw new Error(`lane ${lane} is dispatchable by acquireEntry but planFor cannot describe it — report mode would print "would drive: undefined"`);
+  }
+}
+
+module.exports = { gateStagedCsv, gateStagedEntry, ladderIsAttested, CARTESIAN_MIN_RUNGS, CARTESIAN_MIN_CARDS, stagedCsvs, sourceLabelFor, splitCsv, isPersonName, setKeyFor, planFor, tcgdexModern, acquireStaged, ACQUIRE_LANES, LANE_ALIASES, LANE_SOURCE, LANE_MINUTES, CANONICAL_HEADER, CHILD_STDERR_LINES, cosmosSafeId, controlId, orderQueue, SYSTEMIC_FAILURE_STREAK, EMPTY_STATUS, STREAK_STATUSES, isStaged, stagedSourceRefs };
 if (require.main !== module) return;
 
 (async () => {
@@ -1297,21 +1425,13 @@ if (require.main !== module) return;
     if (!APPLY) {
       // REPORT ONLY: name the exact machinery this entry would drive, and the
       // gates it would face, without a fetch or a write.
-      const plan = {
-        hobbymonitor: "fetchHobbyMonitorChecklist.cjs --url <sourceRef> (direct-URL lane) → ingest-checklist-csv-to-catalog.cjs",
-        checklistinsider: "scrape-checklistinsider.cjs --slugsFile → convertChecklistInsiderToChecklistCsv.cjs → ingest-checklist-csv-to-catalog.cjs",
-        bcp: "scrape-bcp-ladders.cjs --titles=<page> --titlesOnly → ingest-checklist-csv-to-catalog.cjs",
-        beckett: "fetch <sourceRef>.xlsx → convertBeckettChecklistXlsx.cjs → ingest-checklist-csv-to-catalog.cjs",
-        clc: "scrape-checklistcenter-products.cjs --urls → convertChecklistCenterToChecklistCsv.cjs → ingest-checklist-csv-to-catalog.cjs",
-        // The lane is TWO scrapers and the dry run must say WHICH, or the plan
-        // it prints is not the plan the apply runs: a modern code (SV*, S*,
-        // CS*, M*) routes to the ladder-carrying scraper, the vintage
-        // PMCG/neo titles to the original.
-        tcgdexja: `${/^(SV|S\d|CS|M[0-9]|M-P|SVK|SVLN|SVLS)/i.test(String(entry.sourceRef || "").split("/").pop() || "")
-          ? "scrape-tcgdex-ja-modern.cjs (rarity ladder → parallel)"
-          : "scrape-tcgdex-ja.cjs (base-only; tcgdex serves no ladder for these)"} --sets=<id> → ingest-checklist-csv-to-catalog.cjs`,
-        sportscardchecklist: "fetchSportsCardChecklist.cjs --url <sourceRef> (direct-URL lane) → ingest-checklist-csv-to-catalog.cjs",
-      }[entry.lane];
+      //
+      // planFor is the SAME function the apply path is pinned to (see
+      // CF-THE-PLAN-AND-THE-APPLY-ARE-ONE-FUNCTION). A report that describes a
+      // pipe the apply does not run is worse than no report at all: it was
+      // believed as a rehearsal on 2026-09-04 and the apply threw on every
+      // entry it had just called clean.
+      const plan = planFor(entry);
       const inCatalog = await countCatalogRows(entry).catch(() => null);
       console.log(`      would drive: ${plan}`);
       console.log(`      gates: canonical header · zero-base-cards (per ENTRY, across every staged scope file) · players-as-parallels · card-line-as-rung · cross-join arithmetic`);
@@ -1326,7 +1446,7 @@ if (require.main !== module) return;
     let verdict;
     try {
       const before = await countCatalogRows(entry);
-      const { csvPaths } = acquireEntry(entry, dir);
+      const csvPaths = acquireStaged(entry, dir);
 
       // GATE BEFORE INGEST. A staged file that violates doctrine is refused as
       // a whole entry -- never a dirty ingest, and never a silent skip.
