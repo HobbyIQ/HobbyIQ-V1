@@ -27,7 +27,7 @@ import { cardNumberInClause, computeHobbyIqCardId, slugify, normalizeSetKey as c
 import { canonicalizeParallelName, variationParallelsForCard } from "../catalog/catalogMatcher.service.js";
 import { canonicalVariationName, pickVariationForMarker, reduceVariationStockToCatalog, variationNameFromSlug } from "../catalog/variationVocabulary.js";
 import { qualifiedSetKeyFromTitle } from "../catalog/productQualifiers.js";
-import { parseGradeLabel } from "./gradeParser.js";
+import { parseGradeFromTitle } from "./gradeParser.js";
 import { judgeCardNumber, logCardNumberVerdict, isTcgVertical } from "./cardNumberIntegrity.js";
 
 // CF-CHECKLIST-NARROWER (Drew, 2026-08-02). When parseListingIdentity
@@ -402,7 +402,11 @@ export function ingestGradeFromTitle(title: string): {
   gradeQualifier: string | null;
   isAuthentic: true | null;
 } {
-  const g = parseGradeLabel(title);
+  // CF-A-GRADE-IS-A-GRADER-TOKEN-PLUS-A-NUMERAL (Drew, 2026-09-04). The
+  // input here is a TITLE, so the strict title reader is the one that
+  // applies: parseGradeLabel's PSA-descriptor vernacular is correct on a
+  // slab label and reads "Mickey Mantle #5 NM" as PSA 5 on a title.
+  const g = parseGradeFromTitle(title);
   return {
     gradeCompany: g?.gradeCompany ?? null,
     gradeValue: g?.gradeValue ?? null,

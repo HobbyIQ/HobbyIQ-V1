@@ -153,24 +153,46 @@ const foldName = (s) => String(s ?? "").split(" - ")[0]
   .toLowerCase().replace(/[^a-z]/g, "");
 
 /**
- * A parallel entry is a real RUNG only when the source priced its scarcity:
- * a printRun, a 1/1 flag, or pack odds. Everything else is a misfiled player
- * name -- 53 of 218 on 2026 Bowman -- and minting those would put "Ethan
- * Holliday" in the parallel column of a catalog row.
+ * A parallel entry is a real RUNG when the source names a PARALLEL rather than
+ * a PERSON. The roster check is the guard that does that work: `roster` holds
+ * every player name in THIS product, so "Ethan Holliday" filed into a hit
+ * subset's parallels[] is caught by name, not by proxy.
  *
- * `roster` is every player name in THIS product, so a refusal can name which
- * of the two reasons it fired on; an entry with no scarcity that is also a
- * known player of the set is unambiguous.
+ * IT USED TO REQUIRE SCARCITY (CF-HM-VINTAGE-LADDER-DROPPED, 2026-09-03).
+ * The original rule demanded a printRun, a 1/1 flag or pack odds, using
+ * scarcity as a proxy for "this is a real rung". That proxy holds on 2026
+ * Bowman, where every rung is numbered, and it is WRONG on everything older:
+ * hobbymonitor states unnumbered parallels with no printRun at all, so the
+ * proxy dropped the entire ladder. Measured over 34 pages of the lane: 3,644
+ * ladder entries, 2,685 scarce, 958 unnumbered-but-real, and exactly ONE
+ * misfiled player name ("Christy Mathewson - All 300 subjects") -- which the
+ * roster check catches on its own. 2012/13 Panini Prizm published "Prizms",
+ * "Prizms Green" and "Prizms Gold", all unnumbered, and ingested base-only;
+ * 2019/20 Prizm kept 3 rungs and dropped 49 real ones (Prizms Silver, Prizms
+ * Mojo, Prizms Green Ice). That is the "ladder present but ZERO print runs"
+ * partial the universe manifest counts 2,029 of.
+ *
+ * A DROPPED PRINT RUN IS NOT A DROPPED RUNG. An unnumbered rung is emitted
+ * with printRun BLANK -- blank means unknown, never a guess and never "Base"
+ * (CF-BLANK-MEANS-UNKNOWN-NEVER-BASE). The card exists and the pool has sales
+ * for it; what we do not know is its scarcity, and inventing one would be a
+ * synthetic parallel.
+ *
+ * The name still has to LOOK like a rung and not a stray sentence, so two
+ * cheap shape checks stay: an empty name, and a name past 60 characters (the
+ * "- All 300 subjects" shape), are still refused.
  */
 function classifyRung(p, roster) {
   const name = String(p && p.name != null ? p.name : "").trim();
   if (!name) return { ok: false, why: "empty" };
-  const hasScarcity = p.printRun != null || p.isOneOfOne === true ||
-    (p.odds != null && String(p.odds).trim() !== "");
-  if (hasScarcity) return { ok: true, why: null };
+  // The misfiled-name guard, which is the one that was ever load-bearing.
   if (roster.has(foldName(name))) return { ok: false, why: "player-name" };
   if (name.length > 60) return { ok: false, why: "over-60-chars" };
-  return { ok: false, why: "no-scarcity" };
+  const hasScarcity = p.printRun != null || p.isOneOfOne === true ||
+    (p.odds != null && String(p.odds).trim() !== "");
+  // Kept either way; `why` records which, so the run banner can still report
+  // how much of a ladder the source priced.
+  return { ok: true, why: hasScarcity ? null : "unnumbered" };
 }
 
 /** The print run a rung states. isOneOfOne is the source's way of writing /1. */
@@ -198,14 +220,14 @@ function buildRows(cards, parallelGroups) {
   // is {cardSet, cardType, parallels[]} and the cards carry the same two
   // fields, so the join is exact -- no name-similarity guessing.
   const ladderByKey = new Map();
-  const rungStats = { entries: 0, real: 0, playerName: 0, noScarcity: 0, other: 0 };
+  const rungStats = { entries: 0, real: 0, unnumbered: 0, playerName: 0, noScarcity: 0, other: 0 };
   const droppedNames = [];
   for (const g of parallelGroups) {
     const kept = [];
     for (const p of (g.parallels || [])) {
       rungStats.entries++;
       const v = classifyRung(p, roster);
-      if (v.ok) { rungStats.real++; kept.push(p); continue; }
+      if (v.ok) { rungStats.real++; if (v.why === "unnumbered") rungStats.unnumbered++; kept.push(p); continue; }
       if (v.why === "player-name") { rungStats.playerName++; droppedNames.push(`${g.cardSet} :: ${p.name}`); }
       else if (v.why === "no-scarcity") rungStats.noScarcity++;
       else rungStats.other++;
@@ -343,7 +365,8 @@ async function main() {
   console.log(`${url}`);
   console.log(`  cards=${cards.length} cardRows=${cardRows.length} (deduped ${cards.length - cardRows.length}) subsets=${bySubset.size}`);
   console.log(`  ladder groups=${parallelGroups.length} entries=${rungStats.entries} -> real rungs=${rungStats.real}` +
-    `  DROPPED player-names=${rungStats.playerName} no-scarcity=${rungStats.noScarcity} other=${rungStats.other}`);
+    ` (${rungStats.real - rungStats.unnumbered} priced, ${rungStats.unnumbered} unnumbered)` +
+    `  DROPPED player-names=${rungStats.playerName} over-60-chars=${rungStats.other}`);
   console.log(`  rows=${rows.length} (base ${cardRows.length} + ladder ${ladderRows})  with printRun=${withRun}`);
   if (refusedSubsets) for (const n of refusedNote) console.log(`  !! REFUSED subset ${n}`);
   if (droppedNames.length) {
@@ -384,7 +407,7 @@ async function main() {
         ladderRows: ladderRows,
         rungsReal: rungStats.real,
         rungsDroppedPlayerName: rungStats.playerName,
-        rungsDroppedNoScarcity: rungStats.noScarcity,
+        rungsUnnumbered: rungStats.unnumbered,
         refusedSubsets: refusedSubsets,
         sectionsReport: [...bySubset.entries()].map(function (e) {
           return {

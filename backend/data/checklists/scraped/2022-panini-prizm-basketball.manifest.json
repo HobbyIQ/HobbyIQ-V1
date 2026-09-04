@@ -1,0 +1,190 @@
+{
+ "scrapedAt": "2026-09-04T02:00:40.360Z",
+ "sourceUrl": "https://www.hobbymonitor.com/release/2022-23-panini-prizm-basketball",
+ "sport": "basketball",
+ "year": 2022,
+ "setName": "panini-prizm",
+ "productKey": "2022-panini-prizm",
+ "setKey": "panini-prizm",
+ "rowCount": 20034,
+ "parallelColumnAuthoritative": true,
+ "cardRows": 897,
+ "ladderRows": 19137,
+ "rungsReal": 124,
+ "rungsDroppedPlayerName": 0,
+ "rungsUnnumbered": 47,
+ "refusedSubsets": 0,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Dominance",
+   "category": "dominance",
+   "playerCount": 25,
+   "rungs": 2,
+   "rowCount": 75,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Sensational Signatures",
+   "category": "sensational-signatures",
+   "playerCount": 89,
+   "rungs": 6,
+   "rowCount": 623,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Base",
+   "category": "base",
+   "playerCount": 300,
+   "rungs": 56,
+   "rowCount": 17100,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Fast Break Rookie Autographs",
+   "category": "fast-break-rookie-autographs",
+   "playerCount": 40,
+   "rungs": 2,
+   "rowCount": 120,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Fearless",
+   "category": "fearless",
+   "playerCount": 21,
+   "rungs": 5,
+   "rowCount": 126,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Instant Impact",
+   "category": "instant-impact",
+   "playerCount": 25,
+   "rungs": 2,
+   "rowCount": 75,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Emergent",
+   "category": "emergent",
+   "playerCount": 30,
+   "rungs": 2,
+   "rowCount": 90,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Prizmatic",
+   "category": "prizmatic",
+   "playerCount": 30,
+   "rungs": 5,
+   "rowCount": 180,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Rookie Signatures",
+   "category": "rookie-signatures",
+   "playerCount": 50,
+   "rungs": 9,
+   "rowCount": 500,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Fast Break Autographs",
+   "category": "fast-break-autographs",
+   "playerCount": 60,
+   "rungs": 2,
+   "rowCount": 180,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Signatures",
+   "category": "signatures",
+   "playerCount": 49,
+   "rungs": 6,
+   "rowCount": 343,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Fireworks",
+   "category": "fireworks",
+   "playerCount": 25,
+   "rungs": 5,
+   "rowCount": 150,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Rookie Penmanship",
+   "category": "rookie-penmanship",
+   "playerCount": 49,
+   "rungs": 1,
+   "rowCount": 98,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Penmanship",
+   "category": "penmanship",
+   "playerCount": 50,
+   "rungs": 1,
+   "rowCount": 100,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Widescreen",
+   "category": "widescreen",
+   "playerCount": 10,
+   "rungs": 5,
+   "rowCount": 60,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Champion Signatures",
+   "category": "champion-signatures",
+   "playerCount": 10,
+   "rungs": 6,
+   "rowCount": 70,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Global Reach",
+   "category": "global-reach",
+   "playerCount": 10,
+   "rungs": 2,
+   "rowCount": 30,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Luck of the Lottery",
+   "category": "luck-of-the-lottery",
+   "playerCount": 14,
+   "rungs": 5,
+   "rowCount": 84,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > USA Basketball",
+   "category": "usa-basketball",
+   "playerCount": 10,
+   "rungs": 2,
+   "rowCount": 30,
+   "refused": false,
+   "printRun": null
+  }
+ ]
+}

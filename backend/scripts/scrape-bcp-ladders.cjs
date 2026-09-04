@@ -158,8 +158,21 @@ const INSERT_NUM = /[A-Z]/i;
  * ("Ronald Acuna, Jr., Braves"), so the tails are walked right to left.
  */
 const HONORIFIC = /^(Jr|Sr|I{2,3}|IV)\.?$/i;
+/**
+ * CF-EXCH-IS-A-FULFILMENT-STATE-NOT-A-NAME (2026-09-04). BCP marks autograph
+ * checklist lines whose card shipped as a REDEMPTION with a trailing "EXCH":
+ *
+ *   <li>173 Freddie Freeman EXCH</li>
+ *
+ * That is a statement about how the card was delivered, not about who signed
+ * it, and carrying it into playerName would mint "Freddie Freeman EXCH" as a
+ * player distinct from "Freddie Freeman" -- the same one-player-two-spellings
+ * defect the comma/Jr. rule above exists to prevent. Stripped as a trailing
+ * token only, so a real name is never touched.
+ */
+const REDEMPTION_TAIL = /\s+EXCH(?:ANGE)?\.?$/i;
 function cleanScrapedPlayer(raw) {
-  const parts = String(raw ?? "").split(",").map((t) => t.trim()).filter(Boolean);
+  const parts = String(raw ?? "").replace(REDEMPTION_TAIL, "").split(",").map((t) => t.trim()).filter(Boolean);
   if (!parts.length) return "";
   let out = parts[0];
   for (const tail of parts.slice(1)) {
@@ -716,6 +729,32 @@ function hasRangeClause(body) {
 
 /** "one-of-one" / "1/1" is a print run of 1 stated in words. */
 const ONE_OF_ONE = /\bone[-\s]of[-\s]one\b|\b1\s*\/\s*1\b/i;
+/**
+ * CF-A-SPELLED-RUN-IS-STILL-A-RUN (2026-09-04). BCP writes small print runs
+ * as WORDS as readily as digits -- 2011 Topps Chrome's auto ladder ends
+ * "Atomic Refractor (serial-numbered to ten)" and the USA autos' Red is
+ * "serial-numbered to five copies". RUN_NOTE reads digits only, so those
+ * rungs were emitted with a BLANK print run: the rung is real, the number
+ * the page states is right there, and we dropped it.
+ *
+ * ONE_OF_ONE already sets the precedent (it turns "one-of-one" into /1).
+ * This is the same rule over the small words a print run actually uses, and
+ * it is deliberately BOUNDED to one..twenty-five: past that BCP writes
+ * digits, and a loose word-number would start reading prose.
+ */
+const SPELLED_RUNS = new Map([
+  ["one", 1], ["two", 2], ["three", 3], ["four", 4], ["five", 5], ["six", 6],
+  ["seven", 7], ["eight", 8], ["nine", 9], ["ten", 10], ["eleven", 11],
+  ["twelve", 12], ["fifteen", 15], ["twenty", 20], ["twenty-five", 25],
+]);
+const SPELLED_RUN_RE = new RegExp(
+  String.raw`(?:serial-)?numbered to\s+(` + [...SPELLED_RUNS.keys()].join("|") + String.raw`)\b`, "i");
+/** The run a clause states in words, or null. Never guesses: the phrase must
+ *  be the page's own "numbered to <word>". */
+function spelledRun(text) {
+  const m = SPELLED_RUN_RE.exec(String(text ?? ""));
+  return m ? SPELLED_RUNS.get(m[1].toLowerCase()) ?? null : null;
+}
 
 /**
  * One ladder. Rungs carry the CARD NUMBERS they apply to (`cardRange`, null =
@@ -810,7 +849,22 @@ function parseLadder(parallelsBody, playerNames = new Set(), opts = {}) {
     const ranged = text.length <= 160 && parseCardRange(text) != null;
     const scopedRun = text.length <= 200 && /serial-numbered to|numbered to|\bcopies\b/i.test(text)
       && /\b(class|series|tier|level)\s*\d|;/i.test(text);
-    if (text.length > 60 && !ranged && !scopedRun) continue;
+    // CF-A-SERIAL-CLAUSE-IS-NOT-PROSE (2026-09-04, the shared-number auto
+    // lane). The 60-char guard rejects PROSE, but a line that states its own
+    // serial print run is the most structured thing on the page:
+    //
+    //   Black-Bordered Refractor (serial-numbered to 100 copies, Hobby only)
+    //
+    // is 68 chars, carries no card range and no "Class N" scope, so it fell
+    // through all three allowances and was DROPPED -- silently, on the base
+    // ladder as well as the auto one. It survives on the 2011 base ladder
+    // only because that page also gives it an <h3>; inside the Autographs
+    // section it is a bare <li> and vanished, taking the /100 rung out of a
+    // nine-rung ladder. A single stated run makes the line data, not prose
+    // (the multi-figure clause is still refused, below).
+    const singleRun = text.length <= 200
+      && /(?:serial-)?numbered to\s+[\d,]+|\bone-of-one\b|\(\s*[\d,]+\s*cop(?:y|ies)/i.test(text);
+    if (text.length > 60 && !ranged && !scopedRun && !singleRun) continue;
     const paren = text.indexOf("(");
     const name = (paren > 0 ? text.slice(0, paren) : text).trim().replace(/[-–—:]$/, "").trim();
     if (!name || name.length > 45 || !/[A-Za-z]{2}/.test(name)) continue;
@@ -825,6 +879,7 @@ function parseLadder(parallelsBody, playerNames = new Set(), opts = {}) {
     const run = note.match(RUN_NOTE);
     let n = run ? Number((run[1] || run[2] || "").replace(/,/g, "")) : null;
     if (n == null && ONE_OF_ONE.test(note)) n = 1;      // "one-of-one" is /1
+    if (n == null) n = spelledRun(note);                // "numbered to ten" is /10
     if (hasOdds(note)) n = null;                        // 1:12 is odds, not a run
     // Whatever the guards refuse is still a fact the page stated. Keep it in
     // the descriptive field rather than dropping it. CF-RARITY-IS-NOT-A-PRINT-RUN.
@@ -967,6 +1022,115 @@ function rungNameInScope(name, scopeTitle) {
  * insert's own ladder (its <li> rungs) expands over that insert's cards
  * alone.
  */
+/**
+ * ============================================================================
+ * CF-A-SHARED-CARD-NUMBER-IS-STILL-AN-AUTOGRAPH (2026-09-04, Drew's 2011
+ * Topps Chrome Freddie Freeman rookie auto).
+ *
+ * The Autographs section was never read. `main` anchored on Base_Set +
+ * Parallels alone, and derivePrefix actively SKIPPED any image path matching
+ * /autograph|relic|buyback/ -- correctly, because an autograph checklist is a
+ * different checklist, but nothing ever came back for it. The result on 2011
+ * Topps Chrome: 5,026 catalog rows, every one isAuto=false, and the signed
+ * #173 Freeman -- a real card with its own nine-rung ladder -- had NO ROW AT
+ * ALL. Sales for it are tagged auto by the title parser, so they land on
+ * `:auto` slugs with no catalog row behind them: orphan pools.
+ *
+ * The trap this section exists to avoid is the one that makes shared-number
+ * autos hard in the first place: THE AUTO LADDER IS NOT THE BASE LADDER. On
+ * this very page the base Blue Refractor is /99 and the autographed Blue
+ * Refractor is /199; Black-Bordered is /100 here and absent from the base
+ * ladder's serial list. Emitting auto rows against the base ladder's runs
+ * would write confidently wrong print runs onto a card that shares its
+ * NUMBER with the base -- the two would then be indistinguishable except by
+ * a figure that is wrong. So an autograph scope carries ITS OWN rungs, read
+ * from its own body, and never inherits the paper ladder.
+ *
+ * What it will NOT do:
+ *   - invent a checklist. "USA Baseball Refractor Autographs" says its
+ *     checklist "is identical to that of the unautographed insert (see
+ *     above)" and lists ZERO card lines; "60th Anniversary Autographs" is a
+ *     cross-reference to another page. Both parse to zero cards and emit
+ *     NOTHING, because a cross-reference is not a checklist (see
+ *     `no synthetic parallels -- actuals only`). Resolving those references
+ *     is a later, separate acquisition.
+ *   - claim relics or buybacks are autographs. A scope is only signed when
+ *     the page's own heading says so; a memorabilia scope found here is
+ *     returned with isAuto=false and its own honest type, never folded in.
+ */
+const AUTO_HEADING_RE = /\b(?:autograph|autographed|autographs|signature|signatures|signed)\b/i;
+/** A relic/memorabilia scope: real cards, but NOT signed. Kept separate so a
+ *  "Relic Autographs" heading still reads as an auto (it names both) while a
+ *  bare "Relics" heading never does. */
+const RELIC_HEADING_RE = /\b(?:relic|relics|memorabilia|patch|patches|jersey|bat\s+barrel|buyback|buybacks)\b/i;
+
+/**
+ * The page's autograph scopes, each with its OWN cards and its OWN ladder.
+ *
+ * Reads the Autographs h2 and every h3 beneath it, plus any h3 elsewhere on
+ * the page whose heading names an autograph (some layouts hang "Rookie
+ * Autographs" off Inserts rather than off an Autographs h2).
+ *
+ * A scope contributes rows only when it lists ACTUAL card lines. Zero cards
+ * means the page pointed somewhere else, and we emit nothing rather than
+ * cross-joining a ladder over a checklist we do not have.
+ */
+function parseAutographs(html) {
+  const out = [];
+  const seen = new Set();
+  const consider = (name, body) => {
+    if (!body || seen.has(name)) return;
+    const isAutoScope = AUTO_HEADING_RE.test(name);
+    const isRelicScope = RELIC_HEADING_RE.test(name);
+    // A buyback/relic scope that does not also name a signature is not an
+    // autograph. It is emitted honestly under its own type rather than
+    // being folded into the auto lane or silently dropped.
+    if (!isAutoScope && !isRelicScope) return;
+    const cards = parseCards(body);
+    if (!cards.length) return;   // a cross-reference is not a checklist
+    seen.add(name);
+    const players = new Set(cards.map((c) => c.player).filter(isPersonName).map(foldName));
+    // The scope's slice opens with its own heading, which parseLadder's
+    // heading pass would otherwise read as a rung named after the scope --
+    // "Autographed Rookies /499" as a PARALLEL of the Freeman auto. An
+    // autograph subset is not a parallel of itself. Same defence
+    // parseInserts already applies with its selfSlug filter.
+    const slug = (t) => String(t).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+    const self = slug(name);
+    const ladder = parseLadder(body, players).filter((r) => slug(r.name) !== self);
+    out.push({
+      name,
+      isAuto: isAutoScope,
+      type: isAutoScope ? "auto" : "relic",
+      cards,
+      ladder,
+    });
+  };
+
+  // The heading's TEXT is what names the scope. The id is a slug of it on
+  // baseballcardpedia, but it is an id -- it may be "X" or carry a
+  // disambiguating suffix -- so reading the id would decide "is this signed?"
+  // off a value that is not the page's own words.
+  const headingName = (id, text) => detag(text) || detag(String(id).replace(/_/g, " "));
+
+  const autoSection = section(html, "Autographs", 2);
+  if (autoSection) {
+    const subs = [...autoSection.matchAll(/<h3 id="([^"]+?)">([\s\S]*?)<\/h3>/g)];
+    for (const m of subs) {
+      consider(headingName(m[1], m[2]), section(autoSection, m[1], 3));
+    }
+    // An Autographs h2 with no h3 children states one flat checklist.
+    if (!subs.length) consider("Autographs", autoSection);
+  }
+  // Autograph subsets that hang off another section (commonly Inserts).
+  for (const m of html.matchAll(/<h3 id="([^"]+?)">([\s\S]*?)<\/h3>/g)) {
+    const name = headingName(m[1], m[2]);
+    if (!AUTO_HEADING_RE.test(name)) continue;
+    consider(name, section(html, m[1], 3));
+  }
+  return out;
+}
+
 function parseInserts(html) {
   const body = section(html, "Inserts", 2);
   if (!body) return [];
@@ -1112,6 +1276,31 @@ async function main(opts = {}) {
           lines.push(["base", csvEsc(c.num), csvEsc(nm), "false", r.printRun ?? "", csvEsc(c.player), csvEsc(r.note ?? ""), csvEsc(r.rarity ?? setRarity ?? "")].join(","));
         }
       }
+      // CF-A-SHARED-CARD-NUMBER-IS-STILL-AN-AUTOGRAPH. The autograph subsets
+      // belong to the page's own product, like inserts -- and like inserts
+      // they carry THEIR OWN cards and THEIR OWN ladder. The auto rows are
+      // emitted with isAuto=true and the AUTO ladder's print runs; the base
+      // ladder above never reaches them, which is the whole point (base Blue
+      // /99 vs autographed Blue /199 on this very page).
+      let autoRows = 0, autos = [];
+      if (sc.isPaper) {
+        autos = parseAutographs(html);
+        for (const a of autos) {
+          const cat = a.type === "auto" ? "auto" : "relic";
+          const flag = a.isAuto ? "true" : "false";
+          for (const c of a.cards) {
+            // The subset itself, unparalleled: "<player> #173, signed".
+            lines.push([csvEsc(cat), csvEsc(c.num), "", flag, "", csvEsc(c.player)].join(","));
+            autoRows++;
+            for (const r of a.ladder) {
+              if (!cardInRange(c.num, r.cardRange)) continue;
+              if (r.players && r.players.length && !matchesExceptionPlayer(c.player, r.players)) continue;
+              lines.push([csvEsc(cat), csvEsc(c.num), csvEsc(r.name), flag, r.printRun ?? "", csvEsc(c.player), csvEsc(r.note ?? ""), csvEsc(r.rarity ?? "")].join(","));
+              autoRows++;
+            }
+          }
+        }
+      }
       // Inserts belong to the page's own product, never to a qualified scope.
       let insertRows = 0, inserts = [];
       if (sc.isPaper) {
@@ -1160,10 +1349,17 @@ async function main(opts = {}) {
         cardNumberPrefix: sc.prefix, prefixDerivedFrom: sc.prefixVia,
         prefixUnresolved: (sc.isOwnProduct || sc.prefix != null) && sc.prefix == null,
         ladder: sc.rungs.map((r) => ({ name: sc.isOwnProduct ? rungNameInScope(r.name, sc.title) : r.name, printRun: r.printRun, rarity: r.rarity ?? null })),
+        // The autograph subsets this page states, with their OWN ladders --
+        // the record that a shared-number auto exists for these cards, and
+        // the print runs that belong to it rather than to the base.
+        autographs: autos.map((a) => ({
+          name: a.name, type: a.type, isAuto: a.isAuto, cards: a.cards.length,
+          ladder: a.ladder.map((r) => ({ name: r.name, printRun: r.printRun })),
+        })),
         setRarity,
       }, null, 1));
       pageRows += lines.length - 1;
-      perProduct.push(`${sc.setKey}${sc.prefix ? " " + sc.prefix : ""} ${scopeCards.length}x${sc.rungs.length + 1}=${f(lines.length - 1)}${insertRows ? " +" + f(insertRows) + " insert" : ""}`);
+      perProduct.push(`${sc.setKey}${sc.prefix ? " " + sc.prefix : ""} ${scopeCards.length}x${sc.rungs.length + 1}=${f(lines.length - 1)}${insertRows ? " +" + f(insertRows) + " insert" : ""}${autoRows ? " +" + f(autoRows) + " auto" : ""}`);
       staged++;
     }
     rows += pageRows;
@@ -1188,12 +1384,12 @@ module.exports = {
   main, normalizeSport,
   parseCards, parseLadder, parseScopedLadders, section,
   splitScopes, derivePrefix, prefixesFromImages, prefixFromProse,
-  isCardListScope, isCardLine, rungNameInScope, cleanScrapedPlayer,
+  isCardListScope, isCardLine, rungNameInScope, cleanScrapedPlayer, parseAutographs,
   leadingCardNumber, foldRoster, foldName,
   // #1571: the print-run scoping surface — range clauses, the EXCEPT
   // boundary, and the odds guard, each pinned directly by its own test.
   parseCardRange, cardInRange, splitAtException, exceptionPlayers, parseSubsetRuns, subsetRanges,
-  matchesExceptionPlayer, hasRangeClause, hasOdds, splitAnnotation, detag,
+  matchesExceptionPlayer, hasRangeClause, hasOdds, splitAnnotation, detag, spelledRun,
   // CF-RARITY-IS-NOT-A-PRINT-RUN: the descriptive companion to printRun.
   extractRarity,
 };

@@ -2,6 +2,7 @@ import { PortfolioTodayCard } from "@/components/PortfolioTodayCard";
 import { MarketTodayCard } from "@/components/MarketTodayCard";
 import { DailyIQCard } from "@/components/DailyIQCard";
 import { OnboardingBanner } from "@/components/OnboardingBanner";
+import { MarketIndexes } from "@/components/MarketIndexes";
 
 export default function DailyIQPage() {
   return (
@@ -14,6 +15,22 @@ export default function DailyIQPage() {
       </div>
 
       <OnboardingBanner />
+
+      {/* CF-MARKET-INDEXES (Drew, 2026-09-04). THIS is the page the nav
+          item labelled "DailyIQ" points at — APP_NAV[0].href is "/app"
+          (lib/navigation.ts). The strip shipped in #1644 was mounted on
+          /app/daily, which has no nav entry at all: the only route to it
+          is the small "Open full brief →" link inside DailyIQCard. So the
+          surface everyone calls DailyIQ never had the tiles, and the
+          strip looked missing on web while it was live on iOS.
+
+          Mounted above the card grid and OUTSIDE every gate, matching
+          MarketIndexesStrip's position on DailyIQView.swift (above the
+          segment control, outside the locked overlay). The component
+          fetches on its own, so it paints regardless of what the
+          portfolio/market/brief cards below it are doing — including
+          when the brief is 402-locked. */}
+      <MarketIndexes className="mb-8" />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <PortfolioTodayCard />

@@ -120,10 +120,10 @@ export async function runImageVerifyBatch(opts: { limit?: number } = {}): Promis
               // Re-parse the title so the triage UI sees PSA 7 / BGS 9.5
               // when it's in the title text.
               gradeCompany: row.clean?.gradeCompany
-                ?? (await import("./gradeParser.js")).parseGradeLabel(String(row.raw.vendorPayload.title ?? ""))?.gradeCompany
+                ?? (await import("./gradeParser.js")).parseGradeFromTitle(String(row.raw.vendorPayload.title ?? ""))?.gradeCompany
                 ?? null,
               gradeValue: row.clean?.gradeValue
-                ?? (await import("./gradeParser.js")).parseGradeLabel(String(row.raw.vendorPayload.title ?? ""))?.gradeValue
+                ?? (await import("./gradeParser.js")).parseGradeFromTitle(String(row.raw.vendorPayload.title ?? ""))?.gradeValue
                 ?? null,
               price: row.clean?.price ?? Number(row.raw.vendorPayload.price ?? 0),
               soldAt: row.clean?.soldAt ?? String(row.raw.vendorPayload.soldAt ?? new Date().toISOString()),

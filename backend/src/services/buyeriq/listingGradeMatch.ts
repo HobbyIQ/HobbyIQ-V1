@@ -50,7 +50,7 @@
 // repo. What this module adds on top is the one thing no existing
 // helper does: telling RAW apart from UNKNOWN.
 
-import { parseGradeLabel } from "../portfolioiq/gradeParser.js";
+import { parseGradeFromTitle } from "../portfolioiq/gradeParser.js";
 import { canonicalGradeCompany } from "../catalog/gradeLadder.service.js";
 
 /** What the title says the listing's grade tier is. */
@@ -123,7 +123,7 @@ export function readListingGrade(title: string | null | undefined): ListingGrade
   // A lot is never one card in one tier.
   if (isLotListing(t)) return { kind: "unknown" };
 
-  const parsed = parseGradeLabel(t);
+  const parsed = parseGradeFromTitle(t);
   if (parsed && parsed.gradeCompany) {
     const company = canonicalGradeCompany(parsed.gradeCompany) ?? parsed.gradeCompany.toUpperCase();
     return {

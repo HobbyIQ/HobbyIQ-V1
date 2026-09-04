@@ -1,0 +1,185 @@
+{
+ "sourceUrl": "https://www.hobbymonitor.com/release/2012-13-panini-prizm-basketball",
+ "groups": [
+  {
+   "cardSet": "Autographs",
+   "cardType": "Autograph",
+   "parallels": [
+    {
+     "name": "Prizms",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    }
+   ]
+  },
+  {
+   "cardSet": "Base",
+   "cardType": "Base",
+   "parallels": [
+    {
+     "name": "Prizms",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Prizms Green",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Prizms Gold",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    }
+   ]
+  },
+  {
+   "cardSet": "Downtown Bound",
+   "cardType": "Insert",
+   "parallels": [
+    {
+     "name": "Prizms",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Prizms Gold",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Prizms Green",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    }
+   ]
+  },
+  {
+   "cardSet": "Finalists",
+   "cardType": "Insert",
+   "parallels": [
+    {
+     "name": "Prizms Gold",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Prizms",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Prizms Green",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    }
+   ]
+  },
+  {
+   "cardSet": "Most Valuable Players",
+   "cardType": "Insert",
+   "parallels": [
+    {
+     "name": "Prizms",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Prizms Gold",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Prizms Green",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    }
+   ]
+  },
+  {
+   "cardSet": "USA Basketball",
+   "cardType": "Insert",
+   "parallels": [
+    {
+     "name": "Prizms",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Prizms Gold",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Prizms Green",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    }
+   ]
+  }
+ ]
+}

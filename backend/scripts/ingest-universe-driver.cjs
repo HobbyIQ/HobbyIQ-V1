@@ -211,18 +211,48 @@ function gateStagedCsv(csvPath) {
   const byCat = new Map();
   for (const r of rows) {
     const c = String(r.category || "base");
-    if (!byCat.has(c)) byCat.set(c, { pars: new Set(), nums: new Set(), rows: 0 });
+    if (!byCat.has(c)) byCat.set(c, { pars: new Set(), nums: new Set(), rows: 0, ladderRows: 0 });
     const g = byCat.get(c);
     g.pars.add(r.parallel); g.nums.add(r.cardNumber); g.rows++;
+    if (r.parallel) g.ladderRows++;
   }
   stats.categories = byCat.size;
   for (const [c, g] of byCat) {
     if (g.pars.size > EXPLODED_PAR_MAX) return { ok: false, reason: `category "${c}" carries ${f(g.pars.size)} distinct parallels (>${EXPLODED_PAR_MAX}) — cross-join`, stats };
     if (g.nums.size > EXPLODED_NUM_MAX) return { ok: false, reason: `category "${c}" carries ${f(g.nums.size)} distinct card numbers (>${EXPLODED_NUM_MAX}) — cross-join`, stats };
-    // The multiplicative signature: rows ≈ cards × rungs means every card was
-    // paired with every rung rather than the ladder being read per subset.
-    if (g.pars.size > 3 && g.nums.size > 20 && g.rows >= g.pars.size * g.nums.size * 0.92) {
-      return { ok: false, reason: `category "${c}" is ${f(g.rows)} rows ≈ ${f(g.nums.size)} cards × ${f(g.pars.size)} rungs — cross-join arithmetic`, stats };
+    // THE MULTIPLICATIVE SIGNATURE IS NOT ITSELF A DEFECT
+    // (CF-A-PER-SUBSET-LADDER-IS-SUPPOSED-TO-MULTIPLY, 2026-09-03).
+    //
+    // `rows ≈ cards × rungs` is what a CORRECTLY read ladder looks like. Since
+    // CF-HM-LADDER-INTO-ROWS the fetchers emit one row per (card, rung of that
+    // card's OWN subset) — 2012/13 Panini Prizm's base is 300 cards × {blank,
+    // Prizms, Prizms Green, Prizms Gold} = 1,200 rows, and that is the actual
+    // checklist. This rule read that as a smear and refused every modern Panini
+    // file the lane produced, which is why 2022 Donruss Optic Basketball has
+    // 7,603 pool rows against 0 catalog rows.
+    //
+    // The 11.49M-row graveyard was cards × PLAYERS, not cards × rungs, and the
+    // two are told apart by WHAT is in the parallel column — which the
+    // players-as-parallels and card-line-as-rung guards above already decide,
+    // per row, on this file's own roster. What is left for arithmetic to catch
+    // is a ladder too WIDE to be one subset's rung list: the ceilings above
+    // (EXPLODED_PAR_MAX / EXPLODED_NUM_MAX) do that.
+    //
+    // So the shape is refused only when the rung list is implausibly wide AND
+    // perfectly dense — a full cartesian product against a large rung set, with
+    // no card missing a single rung. A real ladder is ragged: short prints,
+    // rookie-only rungs and per-card variations leave holes. Measured on the
+    // lane, the widest legitimate per-subset ladder is 2023/24 Donruss Optic's
+    // base at 253 rungs; a file that beats EXPLODED_PAR_MAX is already refused
+    // above, so this only fires on a dense product inside that ceiling.
+    // Density is measured against the NON-BLANK rungs. A blank parallel is a
+    // base row, one per card, and counting it as a rung drags a true cartesian
+    // just under any threshold — a 300 x 80 product reads as 300 x 81 and
+    // slips through at 98.8% of the wrong denominator.
+    const rungCount = g.pars.size - (g.pars.has("") ? 1 : 0);
+    const cartesian = rungCount > 0 && g.ladderRows >= rungCount * g.nums.size * 0.995;
+    if (cartesian && rungCount > 60 && g.nums.size > 200) {
+      return { ok: false, reason: `category "${c}" pairs every one of ${f(g.nums.size)} cards with every one of ${f(rungCount)} rungs (${f(g.ladderRows)} ladder rows, no gaps) — a cartesian product, not a ladder`, stats };
     }
   }
 

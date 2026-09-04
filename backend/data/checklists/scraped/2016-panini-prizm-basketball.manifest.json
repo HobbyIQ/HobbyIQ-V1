@@ -1,0 +1,172 @@
+{
+ "scrapedAt": "2026-09-04T02:00:24.010Z",
+ "sourceUrl": "https://www.hobbymonitor.com/release/2016-17-panini-prizm-basketball",
+ "sport": "basketball",
+ "year": 2016,
+ "setName": "panini-prizm",
+ "productKey": "2016-panini-prizm",
+ "setKey": "panini-prizm",
+ "rowCount": 6831,
+ "parallelColumnAuthoritative": true,
+ "cardRows": 848,
+ "ladderRows": 5983,
+ "rungsReal": 74,
+ "rungsDroppedPlayerName": 0,
+ "rungsUnnumbered": 47,
+ "refusedSubsets": 0,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Autographs",
+   "category": "autographs",
+   "playerCount": 100,
+   "rungs": 3,
+   "rowCount": 400,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Rookie Jerseys",
+   "category": "rookie-jerseys",
+   "playerCount": 97,
+   "rungs": 3,
+   "rowCount": 388,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Rookie Signatures",
+   "category": "rookie-signatures",
+   "playerCount": 50,
+   "rungs": 2,
+   "rowCount": 150,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > All Day Ruby Wave",
+   "category": "all-day-ruby-wave",
+   "playerCount": 15,
+   "rungs": 0,
+   "rowCount": 15,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Base",
+   "category": "base",
+   "playerCount": 300,
+   "rungs": 14,
+   "rowCount": 4500,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > All Day",
+   "category": "all-day",
+   "playerCount": 15,
+   "rungs": 10,
+   "rowCount": 165,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > First Step Ruby Wave",
+   "category": "first-step-ruby-wave",
+   "playerCount": 10,
+   "rungs": 0,
+   "rowCount": 10,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Go Hard Or Go Home",
+   "category": "go-hard-or-go-home",
+   "playerCount": 30,
+   "rungs": 0,
+   "rowCount": 30,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Go Hard or Go Home Ruby Wave",
+   "category": "go-hard-or-go-home-ruby-wave",
+   "playerCount": 30,
+   "rungs": 0,
+   "rowCount": 30,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Go Hard or Go Home",
+   "category": "go-hard-or-go-home",
+   "playerCount": 30,
+   "rungs": 10,
+   "rowCount": 330,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Veteran Signatures",
+   "category": "veteran-signatures",
+   "playerCount": 46,
+   "rungs": 2,
+   "rowCount": 138,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > First Step",
+   "category": "first-step",
+   "playerCount": 10,
+   "rungs": 10,
+   "rowCount": 110,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Explosion",
+   "category": "explosion",
+   "playerCount": 20,
+   "rungs": 10,
+   "rowCount": 220,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Explosion Ruby Wave Prizm",
+   "category": "explosion-ruby-wave-prizm",
+   "playerCount": 20,
+   "rungs": 0,
+   "rowCount": 20,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Sky's the Limit Ruby Wave Prizm",
+   "category": "sky-s-the-limit-ruby-wave-prizm",
+   "playerCount": 25,
+   "rungs": 0,
+   "rowCount": 25,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Sky's the Limit",
+   "category": "sky-s-the-limit",
+   "playerCount": 25,
+   "rungs": 10,
+   "rowCount": 275,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Sky's The Limit",
+   "category": "sky-s-the-limit",
+   "playerCount": 25,
+   "rungs": 0,
+   "rowCount": 25,
+   "refused": false,
+   "printRun": null
+  }
+ ]
+}

@@ -1,0 +1,1199 @@
+{
+ "sourceUrl": "https://www.hobbymonitor.com/release/2020-21-panini-prizm-basketball",
+ "groups": [
+  {
+   "cardSet": "Fast Break Autographs",
+   "cardType": "Autograph",
+   "parallels": [
+    {
+     "name": "Gold",
+     "printRun": 10,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 70,
+     "imageUrl": null
+    },
+    {
+     "name": "Black",
+     "printRun": null,
+     "isOneOfOne": true,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 90,
+     "imageUrl": null
+    }
+   ]
+  },
+  {
+   "cardSet": "Fast Break Rookie Autographs",
+   "cardType": "Autograph",
+   "parallels": [
+    {
+     "name": "Gold",
+     "printRun": 10,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 70,
+     "imageUrl": null
+    },
+    {
+     "name": "Black",
+     "printRun": null,
+     "isOneOfOne": true,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 90,
+     "imageUrl": null
+    }
+   ]
+  },
+  {
+   "cardSet": "Base",
+   "cardType": "Base",
+   "parallels": [
+    {
+     "name": "Blue Prizms",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Blue Shimmer Prizms",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Blue Wave Prizms",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Choice Blue Prizms",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Choice Blue, Yellow and Green Prizms",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Choice Green Prizms",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Choice Nebula Prizms",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Choice Red Prizms",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Choice Tiger Stripe Prizms",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Fast Break Blue Prizms",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Fast Break Bronze Prizms",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Fast Break Neon Green Prizms",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Fast Break Prizms",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Fast Break Purple Prizms",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Fast Break Red Prizms",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Gold Prizms",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Gold Shimmer Prizms",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Gold Wave Prizms",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Green Ice Prizms",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Green Prizms",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Green Pulsar Prizms",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Green Shimmer Prizms",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Hyper Prizms",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Lucky Envelopes Prizms",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Mojo Prizms",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Orange Ice Prizms",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Orange Prizms",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Orange Wave Prizms",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Pink Ice Prizms",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Pink Pulsar Prizms",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Purple Ice Prizms",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Purple Prizms",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Purple Pulsar Prizms",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Purple Wave Prizms",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Red Ice Prizms",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Red Prizms",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Red, White and Blue Prizms",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Ruby Wave Prizms",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Silver Prizms",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "White Sparkle Prizm",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Fast Break Pink Prizms",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Black Prizms",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Black Shimmer Prizms",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Blue Ice Prizms",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Black Gold Prizms",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    }
+   ]
+  },
+  {
+   "cardSet": "Dominance",
+   "cardType": "Insert",
+   "parallels": [
+    {
+     "name": "Prizms Green",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Prizms Silver",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    }
+   ]
+  },
+  {
+   "cardSet": "Downtown Bound",
+   "cardType": "Insert",
+   "parallels": [
+    {
+     "name": "Fast Break",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Prizms Hyper",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Prizms Silver",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Prizms Mojo",
+     "printRun": 25,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 65,
+     "imageUrl": null
+    },
+    {
+     "name": "Prizms Gold",
+     "printRun": 10,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 70,
+     "imageUrl": null
+    },
+    {
+     "name": "Prizms Black",
+     "printRun": null,
+     "isOneOfOne": true,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 90,
+     "imageUrl": null
+    }
+   ]
+  },
+  {
+   "cardSet": "Emergent",
+   "cardType": "Insert",
+   "parallels": [
+    {
+     "name": "Prizms Green",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Prizms Silver",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    }
+   ]
+  },
+  {
+   "cardSet": "Fearless",
+   "cardType": "Insert",
+   "parallels": [
+    {
+     "name": "Fast Break",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Prizms Hyper",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Prizms Silver",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Prizms Mojo",
+     "printRun": 25,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 65,
+     "imageUrl": null
+    },
+    {
+     "name": "Prizms Gold",
+     "printRun": 10,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 70,
+     "imageUrl": null
+    },
+    {
+     "name": "Prizms Black",
+     "printRun": null,
+     "isOneOfOne": true,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 90,
+     "imageUrl": null
+    }
+   ]
+  },
+  {
+   "cardSet": "Fireworks",
+   "cardType": "Insert",
+   "parallels": [
+    {
+     "name": "Prizms Silver",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Fast Break",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Prizms Hyper",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Prizms Mojo",
+     "printRun": 25,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 65,
+     "imageUrl": null
+    },
+    {
+     "name": "Prizms Gold",
+     "printRun": 10,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 70,
+     "imageUrl": null
+    },
+    {
+     "name": "Prizms Black",
+     "printRun": null,
+     "isOneOfOne": true,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 90,
+     "imageUrl": null
+    }
+   ]
+  },
+  {
+   "cardSet": "Instant Impact",
+   "cardType": "Insert",
+   "parallels": [
+    {
+     "name": "Prizms Green",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Prizms Silver",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    }
+   ]
+  },
+  {
+   "cardSet": "Penmanship",
+   "cardType": "Insert",
+   "parallels": [
+    {
+     "name": "Prizms Orange Ice",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Prizms Silver",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Prizms Green Ice",
+     "printRun": 16,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 68,
+     "imageUrl": null
+    }
+   ]
+  },
+  {
+   "cardSet": "Prizm",
+   "cardType": "Insert",
+   "parallels": [
+    {
+     "name": "Flashback Fast Break",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Flashback",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Flashback Prizms Hyper",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Flashback Prizms Silver",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Flashback Prizms Mojo",
+     "printRun": 25,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 65,
+     "imageUrl": null
+    },
+    {
+     "name": "Flashback Prizms Gold",
+     "printRun": 10,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 70,
+     "imageUrl": null
+    },
+    {
+     "name": "Flashback Prizms Black",
+     "printRun": null,
+     "isOneOfOne": true,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 90,
+     "imageUrl": null
+    }
+   ]
+  },
+  {
+   "cardSet": "Rookie Penmanship",
+   "cardType": "Insert",
+   "parallels": [
+    {
+     "name": "Prizms Orange Ice",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Prizms Blue Wave",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Prizms Silver",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Prizms Gold Wave",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Prizms Green Ice",
+     "printRun": 16,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 68,
+     "imageUrl": null
+    }
+   ]
+  },
+  {
+   "cardSet": "Rookie Signatures",
+   "cardType": "Insert",
+   "parallels": [
+    {
+     "name": "Prizms Silver",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Prizms Choice",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Prizms Mojo",
+     "printRun": 25,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 65,
+     "imageUrl": null
+    },
+    {
+     "name": "Prizms Gold",
+     "printRun": 10,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 70,
+     "imageUrl": null
+    },
+    {
+     "name": "Prizms Choice Green",
+     "printRun": 8,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 80,
+     "imageUrl": null
+    },
+    {
+     "name": "Prizms Black",
+     "printRun": null,
+     "isOneOfOne": true,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 90,
+     "imageUrl": null
+    },
+    {
+     "name": "Prizms White Sparkle",
+     "printRun": null,
+     "isOneOfOne": true,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 90,
+     "imageUrl": null
+    }
+   ]
+  },
+  {
+   "cardSet": "Sensational Signatures",
+   "cardType": "Insert",
+   "parallels": [
+    {
+     "name": "Prizms Silver",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Prizms Choice",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Prizms Mojo",
+     "printRun": 25,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 65,
+     "imageUrl": null
+    },
+    {
+     "name": "Prizms Gold",
+     "printRun": 10,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 70,
+     "imageUrl": null
+    },
+    {
+     "name": "Prizms Choice Green",
+     "printRun": 8,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 80,
+     "imageUrl": null
+    },
+    {
+     "name": "Prizms Black",
+     "printRun": null,
+     "isOneOfOne": true,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 90,
+     "imageUrl": null
+    }
+   ]
+  },
+  {
+   "cardSet": "Sensational Swatches",
+   "cardType": "Insert",
+   "parallels": [
+    {
+     "name": "Prizms Orange Ice",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Prizms Green Ice",
+     "printRun": 56,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 60,
+     "imageUrl": null
+    },
+    {
+     "name": "Prime",
+     "printRun": 10,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 70,
+     "imageUrl": null
+    }
+   ]
+  },
+  {
+   "cardSet": "Signatures",
+   "cardType": "Insert",
+   "parallels": [
+    {
+     "name": "Prizms Choice",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Prizms Silver",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Prizms Mojo",
+     "printRun": 25,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 65,
+     "imageUrl": null
+    },
+    {
+     "name": "Prizms Gold",
+     "printRun": 10,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 70,
+     "imageUrl": null
+    },
+    {
+     "name": "Prizms Choice Green",
+     "printRun": 8,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 80,
+     "imageUrl": null
+    },
+    {
+     "name": "Prizms Black",
+     "printRun": null,
+     "isOneOfOne": true,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 90,
+     "imageUrl": null
+    }
+   ]
+  },
+  {
+   "cardSet": "Sophomore Stars",
+   "cardType": "Insert",
+   "parallels": [
+    {
+     "name": "Prizms Silver",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Prizms Green",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    }
+   ]
+  },
+  {
+   "cardSet": "USA Basketball",
+   "cardType": "Insert",
+   "parallels": [
+    {
+     "name": "Prizms Green",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Prizms Silver",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    }
+   ]
+  },
+  {
+   "cardSet": "Widescreen",
+   "cardType": "Insert",
+   "parallels": [
+    {
+     "name": "Prizms Silver",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Fast Break",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Prizms Hyper",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Prizms Mojo",
+     "printRun": 25,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 65,
+     "imageUrl": null
+    },
+    {
+     "name": "Prizms Gold",
+     "printRun": 10,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 70,
+     "imageUrl": null
+    },
+    {
+     "name": "Prizms Black",
+     "printRun": null,
+     "isOneOfOne": true,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 90,
+     "imageUrl": null
+    }
+   ]
+  }
+ ]
+}

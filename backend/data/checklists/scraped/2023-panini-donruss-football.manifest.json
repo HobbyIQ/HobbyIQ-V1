@@ -1,0 +1,928 @@
+{
+ "scrapedAt": "2026-09-04T02:00:54.059Z",
+ "sourceUrl": "https://www.hobbymonitor.com/release/2023-donruss-football",
+ "sport": "football",
+ "year": 2023,
+ "setName": "panini-donruss",
+ "productKey": "2023-panini-donruss",
+ "setKey": "panini-donruss",
+ "rowCount": 14771,
+ "parallelColumnAuthoritative": true,
+ "cardRows": 2295,
+ "ladderRows": 12476,
+ "rungsReal": 75,
+ "rungsDroppedPlayerName": 0,
+ "rungsUnnumbered": 22,
+ "refusedSubsets": 0,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > 1999 Passing the Torch Dual Autographs",
+   "category": "1999-passing-the-torch-dual-autographs",
+   "playerCount": 8,
+   "rungs": 0,
+   "rowCount": 8,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Super Bowl LVIII Kid Reporter Sweepstakes",
+   "category": "super-bowl-lviii-kid-reporter-sweepstakes",
+   "playerCount": 1,
+   "rungs": 0,
+   "rowCount": 1,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Bomb Squad",
+   "category": "bomb-squad",
+   "playerCount": 30,
+   "rungs": 1,
+   "rowCount": 60,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > The Rookies Autographs",
+   "category": "the-rookies-autographs",
+   "playerCount": 33,
+   "rungs": 0,
+   "rowCount": 33,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Base",
+   "category": "base",
+   "playerCount": 450,
+   "rungs": 25,
+   "rowCount": 11700,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Rookie Holiday Sweater Dual Relics",
+   "category": "rookie-holiday-sweater-dual-relics",
+   "playerCount": 16,
+   "rungs": 0,
+   "rowCount": 16,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Rookie Holiday Sweater Relics Shield",
+   "category": "rookie-holiday-sweater-relics-shield",
+   "playerCount": 42,
+   "rungs": 0,
+   "rowCount": 42,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Rated Rookie Autographs",
+   "category": "rated-rookie-autographs",
+   "playerCount": 51,
+   "rungs": 5,
+   "rowCount": 306,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Rated Rookie Portrait",
+   "category": "rated-rookie-portrait",
+   "playerCount": 50,
+   "rungs": 0,
+   "rowCount": 50,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Optic Rated Rookies Preview Autographs",
+   "category": "optic-rated-rookies-preview-autographs",
+   "playerCount": 71,
+   "rungs": 0,
+   "rowCount": 71,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Rated Rookie Portrait Autographs",
+   "category": "rated-rookie-portrait-autographs",
+   "playerCount": 42,
+   "rungs": 0,
+   "rowCount": 42,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Highlights",
+   "category": "highlights",
+   "playerCount": 24,
+   "rungs": 1,
+   "rowCount": 48,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Rookie Phenom Jerseys NFLPF Logo",
+   "category": "rookie-phenom-jerseys-nflpf-logo",
+   "playerCount": 40,
+   "rungs": 0,
+   "rowCount": 40,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Elite Series Rookies",
+   "category": "elite-series-rookies",
+   "playerCount": 30,
+   "rungs": 0,
+   "rowCount": 30,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Bomb Squad Autographs",
+   "category": "bomb-squad-autographs",
+   "playerCount": 28,
+   "rungs": 0,
+   "rowCount": 28,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Rookie Revolution",
+   "category": "rookie-revolution",
+   "playerCount": 40,
+   "rungs": 4,
+   "rowCount": 200,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Elite Series Rookies Autographs",
+   "category": "elite-series-rookies-autographs",
+   "playerCount": 26,
+   "rungs": 0,
+   "rowCount": 26,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Rookie Holiday Sweater Relics",
+   "category": "rookie-holiday-sweater-relics",
+   "playerCount": 42,
+   "rungs": 0,
+   "rowCount": 42,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Rookie Phenom Jerseys",
+   "category": "rookie-phenom-jerseys",
+   "playerCount": 40,
+   "rungs": 3,
+   "rowCount": 160,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > The Rookies",
+   "category": "the-rookies",
+   "playerCount": 40,
+   "rungs": 0,
+   "rowCount": 40,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Rated Rookie Portrait Studio Series",
+   "category": "rated-rookie-portrait-studio-series",
+   "playerCount": 50,
+   "rungs": 0,
+   "rowCount": 50,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Rookie Holiday Sweater Dual Relics Shield",
+   "category": "rookie-holiday-sweater-dual-relics-shield",
+   "playerCount": 16,
+   "rungs": 0,
+   "rowCount": 16,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Power Plus",
+   "category": "power-plus",
+   "playerCount": 20,
+   "rungs": 0,
+   "rowCount": 20,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Rookie Gridiron Kings",
+   "category": "rookie-gridiron-kings",
+   "playerCount": 20,
+   "rungs": 0,
+   "rowCount": 20,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Leather Kings Studio Series",
+   "category": "leather-kings-studio-series",
+   "playerCount": 10,
+   "rungs": 0,
+   "rowCount": 10,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Rookie Phenom Jersey Autographs",
+   "category": "rookie-phenom-jersey-autographs",
+   "playerCount": 16,
+   "rungs": 4,
+   "rowCount": 80,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Power Plus Autographs",
+   "category": "power-plus-autographs",
+   "playerCount": 16,
+   "rungs": 0,
+   "rowCount": 16,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Downtown!",
+   "category": "downtown",
+   "playerCount": 20,
+   "rungs": 0,
+   "rowCount": 20,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Signature Marks",
+   "category": "signature-marks",
+   "playerCount": 18,
+   "rungs": 5,
+   "rowCount": 108,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Leather Kings Autographs",
+   "category": "leather-kings-autographs",
+   "playerCount": 8,
+   "rungs": 0,
+   "rowCount": 8,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Rated Rookies Premium",
+   "category": "rated-rookies-premium",
+   "playerCount": 15,
+   "rungs": 0,
+   "rowCount": 15,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Elite Series",
+   "category": "elite-series",
+   "playerCount": 30,
+   "rungs": 0,
+   "rowCount": 30,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Rookie Gridiron Kings Studio Series",
+   "category": "rookie-gridiron-kings-studio-series",
+   "playerCount": 20,
+   "rungs": 0,
+   "rowCount": 20,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Vortex",
+   "category": "vortex",
+   "playerCount": 25,
+   "rungs": 4,
+   "rowCount": 125,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Rookie Gridiron Kings Autographs",
+   "category": "rookie-gridiron-kings-autographs",
+   "playerCount": 16,
+   "rungs": 0,
+   "rowCount": 16,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Leather Kings",
+   "category": "leather-kings",
+   "playerCount": 10,
+   "rungs": 0,
+   "rowCount": 10,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > White-Hot Rookies",
+   "category": "white-hot-rookies",
+   "playerCount": 10,
+   "rungs": 0,
+   "rowCount": 10,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > White-Hot Rookies Autographs",
+   "category": "white-hot-rookies-autographs",
+   "playerCount": 8,
+   "rungs": 0,
+   "rowCount": 8,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Gridiron Marvels",
+   "category": "gridiron-marvels",
+   "playerCount": 20,
+   "rungs": 0,
+   "rowCount": 20,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Dominators",
+   "category": "dominators",
+   "playerCount": 40,
+   "rungs": 0,
+   "rowCount": 40,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Donruss Threads",
+   "category": "donruss-threads",
+   "playerCount": 40,
+   "rungs": 4,
+   "rowCount": 200,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Red-Hot Rookies",
+   "category": "red-hot-rookies",
+   "playerCount": 10,
+   "rungs": 0,
+   "rowCount": 10,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Red-Hot Rookies Autographs",
+   "category": "red-hot-rookies-autographs",
+   "playerCount": 8,
+   "rungs": 0,
+   "rowCount": 8,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Retro 1993",
+   "category": "retro-1993",
+   "playerCount": 40,
+   "rungs": 0,
+   "rowCount": 40,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Passing the Torch Jersey Relics",
+   "category": "passing-the-torch-jersey-relics",
+   "playerCount": 40,
+   "rungs": 1,
+   "rowCount": 80,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > All Pro Kings Studio Series Relics",
+   "category": "all-pro-kings-studio-series-relics",
+   "playerCount": 20,
+   "rungs": 0,
+   "rowCount": 20,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > All Pro Kings Relics",
+   "category": "all-pro-kings-relics",
+   "playerCount": 20,
+   "rungs": 0,
+   "rowCount": 20,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > All Pro Kings Autographs",
+   "category": "all-pro-kings-autographs",
+   "playerCount": 14,
+   "rungs": 0,
+   "rowCount": 14,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Action All-Pros",
+   "category": "action-all-pros",
+   "playerCount": 20,
+   "rungs": 0,
+   "rowCount": 20,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Retro 2003",
+   "category": "retro-2003",
+   "playerCount": 40,
+   "rungs": 0,
+   "rowCount": 40,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Canton Kings Autographs",
+   "category": "canton-kings-autographs",
+   "playerCount": 20,
+   "rungs": 0,
+   "rowCount": 20,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Unleashed",
+   "category": "unleashed",
+   "playerCount": 25,
+   "rungs": 0,
+   "rowCount": 25,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Jersey Kings",
+   "category": "jersey-kings",
+   "playerCount": 30,
+   "rungs": 0,
+   "rowCount": 30,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Retro 2003 Autographs",
+   "category": "retro-2003-autographs",
+   "playerCount": 38,
+   "rungs": 0,
+   "rowCount": 38,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Canton Kings Relics",
+   "category": "canton-kings-relics",
+   "playerCount": 20,
+   "rungs": 0,
+   "rowCount": 20,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Crunch Time",
+   "category": "crunch-time",
+   "playerCount": 15,
+   "rungs": 4,
+   "rowCount": 75,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Canton Kings Studio Series Relics",
+   "category": "canton-kings-studio-series-relics",
+   "playerCount": 20,
+   "rungs": 0,
+   "rowCount": 20,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Gridiron Kings Studio Series",
+   "category": "gridiron-kings-studio-series",
+   "playerCount": 15,
+   "rungs": 0,
+   "rowCount": 15,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Production Line",
+   "category": "production-line",
+   "playerCount": 20,
+   "rungs": 4,
+   "rowCount": 100,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Retro 1993 Autographs",
+   "category": "retro-1993-autographs",
+   "playerCount": 21,
+   "rungs": 0,
+   "rowCount": 21,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Jersey Kings Autographs",
+   "category": "jersey-kings-autographs",
+   "playerCount": 22,
+   "rungs": 0,
+   "rowCount": 22,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Jersey Kings Studio Series",
+   "category": "jersey-kings-studio-series",
+   "playerCount": 30,
+   "rungs": 0,
+   "rowCount": 30,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Game Breakers Autographs",
+   "category": "game-breakers-autographs",
+   "playerCount": 4,
+   "rungs": 0,
+   "rowCount": 4,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Legends Series Autographs",
+   "category": "legends-series-autographs",
+   "playerCount": 20,
+   "rungs": 0,
+   "rowCount": 20,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Gridiron Kings",
+   "category": "gridiron-kings",
+   "playerCount": 15,
+   "rungs": 0,
+   "rowCount": 15,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Dominators Autographs",
+   "category": "dominators-autographs",
+   "playerCount": 21,
+   "rungs": 0,
+   "rowCount": 21,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Road to the Super Bowl Wild Card",
+   "category": "road-to-the-super-bowl-wild-card",
+   "playerCount": 6,
+   "rungs": 1,
+   "rowCount": 12,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Legends Series",
+   "category": "legends-series",
+   "playerCount": 20,
+   "rungs": 0,
+   "rowCount": 20,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Gridiron Greats Autographs",
+   "category": "gridiron-greats-autographs",
+   "playerCount": 1,
+   "rungs": 0,
+   "rowCount": 1,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > International Downtown!",
+   "category": "international-downtown",
+   "playerCount": 10,
+   "rungs": 0,
+   "rowCount": 10,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > All-Time Gridiron Kings Studio Series",
+   "category": "all-time-gridiron-kings-studio-series",
+   "playerCount": 15,
+   "rungs": 0,
+   "rowCount": 15,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > All-Time Gridiron Kings",
+   "category": "all-time-gridiron-kings",
+   "playerCount": 15,
+   "rungs": 0,
+   "rowCount": 15,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > All-Time Gridiron Kings Autographs",
+   "category": "all-time-gridiron-kings-autographs",
+   "playerCount": 14,
+   "rungs": 0,
+   "rowCount": 14,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Road to the Super Bowl Divisional Round",
+   "category": "road-to-the-super-bowl-divisional-round",
+   "playerCount": 4,
+   "rungs": 1,
+   "rowCount": 8,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Elite Series Autographs",
+   "category": "elite-series-autographs",
+   "playerCount": 10,
+   "rungs": 0,
+   "rowCount": 10,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Spectra HOF Signatures Prizm",
+   "category": "spectra-hof-signatures-prizm",
+   "playerCount": 1,
+   "rungs": 0,
+   "rowCount": 1,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Action All-Pros Autographs",
+   "category": "action-all-pros-autographs",
+   "playerCount": 12,
+   "rungs": 0,
+   "rowCount": 12,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Inducted",
+   "category": "inducted",
+   "playerCount": 3,
+   "rungs": 1,
+   "rowCount": 6,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Gridiron Kings Autographs",
+   "category": "gridiron-kings-autographs",
+   "playerCount": 10,
+   "rungs": 0,
+   "rowCount": 10,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Inducted Autographs",
+   "category": "inducted-autographs",
+   "playerCount": 3,
+   "rungs": 0,
+   "rowCount": 3,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Super Bowl MVP Signatures",
+   "category": "super-bowl-mvp-signatures",
+   "playerCount": 1,
+   "rungs": 0,
+   "rowCount": 1,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Award Winners Autographs",
+   "category": "award-winners-autographs",
+   "playerCount": 3,
+   "rungs": 0,
+   "rowCount": 3,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Highlights Autographs",
+   "category": "highlights-autographs",
+   "playerCount": 9,
+   "rungs": 0,
+   "rowCount": 9,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Season Pass",
+   "category": "season-pass",
+   "playerCount": 5,
+   "rungs": 0,
+   "rowCount": 5,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Super Bowl Downtown!",
+   "category": "super-bowl-downtown",
+   "playerCount": 9,
+   "rungs": 0,
+   "rowCount": 9,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Super Bowl Signatures",
+   "category": "super-bowl-signatures",
+   "playerCount": 4,
+   "rungs": 1,
+   "rowCount": 8,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > 1999 Passing the Torch Autographs",
+   "category": "1999-passing-the-torch-autographs",
+   "playerCount": 2,
+   "rungs": 0,
+   "rowCount": 2,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Team Tandems Autos",
+   "category": "team-tandems-autos",
+   "playerCount": 6,
+   "rungs": 0,
+   "rowCount": 6,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > 2020 NFL 100 Signatures",
+   "category": "2020-nfl-100-signatures",
+   "playerCount": 2,
+   "rungs": 0,
+   "rowCount": 2,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Champ is Here",
+   "category": "champ-is-here",
+   "playerCount": 20,
+   "rungs": 1,
+   "rowCount": 40,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Road to the Super Bowl Championship",
+   "category": "road-to-the-super-bowl-championship",
+   "playerCount": 1,
+   "rungs": 1,
+   "rowCount": 2,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Road to the Super Bowl Conference Championship",
+   "category": "road-to-the-super-bowl-conference-championship",
+   "playerCount": 2,
+   "rungs": 1,
+   "rowCount": 4,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Numbers Game",
+   "category": "numbers-game",
+   "playerCount": 9,
+   "rungs": 0,
+   "rowCount": 9,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Super Bowl MVP",
+   "category": "super-bowl-mvp",
+   "playerCount": 1,
+   "rungs": 1,
+   "rowCount": 2,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Champions",
+   "category": "champions",
+   "playerCount": 1,
+   "rungs": 1,
+   "rowCount": 2,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Champ is Here Autographs",
+   "category": "champ-is-here-autographs",
+   "playerCount": 10,
+   "rungs": 0,
+   "rowCount": 10,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Vaunted Greats Autographs",
+   "category": "vaunted-greats-autographs",
+   "playerCount": 1,
+   "rungs": 0,
+   "rowCount": 1,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Franchise Numbers Autographs",
+   "category": "franchise-numbers-autographs",
+   "playerCount": 2,
+   "rungs": 0,
+   "rowCount": 2,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Fans of the Game Autographs",
+   "category": "fans-of-the-game-autographs",
+   "playerCount": 1,
+   "rungs": 0,
+   "rowCount": 1,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Fans of the Game",
+   "category": "fans-of-the-game",
+   "playerCount": 1,
+   "rungs": 1,
+   "rowCount": 2,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Signature Highlights",
+   "category": "signature-highlights",
+   "playerCount": 1,
+   "rungs": 0,
+   "rowCount": 1,
+   "refused": false,
+   "printRun": null
+  }
+ ]
+}

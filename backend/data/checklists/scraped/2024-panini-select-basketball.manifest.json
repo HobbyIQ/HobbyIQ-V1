@@ -1,0 +1,370 @@
+{
+ "scrapedAt": "2026-09-04T02:00:46.862Z",
+ "sourceUrl": "https://www.hobbymonitor.com/release/2024-25-panini-select-basketball",
+ "sport": "basketball",
+ "year": 2024,
+ "setName": "panini-select",
+ "productKey": "2024-panini-select",
+ "setKey": "panini-select",
+ "rowCount": 25999,
+ "parallelColumnAuthoritative": true,
+ "cardRows": 1189,
+ "ladderRows": 24810,
+ "rungsReal": 540,
+ "rungsDroppedPlayerName": 0,
+ "rungsUnnumbered": 131,
+ "refusedSubsets": 0,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Solar Eclipse",
+   "category": "solar-eclipse",
+   "playerCount": 15,
+   "rungs": 0,
+   "rowCount": 15,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Select Stars Jersey Autographs",
+   "category": "select-stars-jersey-autographs",
+   "playerCount": 20,
+   "rungs": 0,
+   "rowCount": 20,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Sky High",
+   "category": "sky-high",
+   "playerCount": 20,
+   "rungs": 7,
+   "rowCount": 160,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Select Future",
+   "category": "select-future",
+   "playerCount": 25,
+   "rungs": 7,
+   "rowCount": 200,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Select Certified",
+   "category": "select-certified",
+   "playerCount": 20,
+   "rungs": 9,
+   "rowCount": 200,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Score Select Throwback",
+   "category": "score-select-throwback",
+   "playerCount": 15,
+   "rungs": 7,
+   "rowCount": 120,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Rookie Revolution",
+   "category": "rookie-revolution",
+   "playerCount": 25,
+   "rungs": 9,
+   "rowCount": 250,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Neon Icon",
+   "category": "neon-icon",
+   "playerCount": 25,
+   "rungs": 9,
+   "rowCount": 250,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Lodestars",
+   "category": "lodestars",
+   "playerCount": 15,
+   "rungs": 9,
+   "rowCount": 150,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Hot Stars",
+   "category": "hot-stars",
+   "playerCount": 15,
+   "rungs": 9,
+   "rowCount": 150,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > En Fuego",
+   "category": "en-fuego",
+   "playerCount": 15,
+   "rungs": 7,
+   "rowCount": 120,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Crown Jewels",
+   "category": "crown-jewels",
+   "playerCount": 10,
+   "rungs": 0,
+   "rowCount": 10,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Color Wheel",
+   "category": "color-wheel",
+   "playerCount": 25,
+   "rungs": 0,
+   "rowCount": 25,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Clutch",
+   "category": "clutch",
+   "playerCount": 25,
+   "rungs": 7,
+   "rowCount": 200,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Artistic Selections",
+   "category": "artistic-selections",
+   "playerCount": 10,
+   "rungs": 0,
+   "rowCount": 10,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Throwback Memorabilia",
+   "category": "throwback-memorabilia",
+   "playerCount": 25,
+   "rungs": 7,
+   "rowCount": 200,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > 2024 Origins Update Autographs",
+   "category": "2024-origins-update-autographs",
+   "playerCount": 16,
+   "rungs": 0,
+   "rowCount": 16,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Sparks Relics",
+   "category": "sparks-relics",
+   "playerCount": 25,
+   "rungs": 0,
+   "rowCount": 25,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Jumbo Rookie Swatches",
+   "category": "jumbo-rookie-swatches",
+   "playerCount": 29,
+   "rungs": 7,
+   "rowCount": 232,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Draft Selections Memorabilia",
+   "category": "draft-selections-memorabilia",
+   "playerCount": 20,
+   "rungs": 7,
+   "rowCount": 160,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > X-Factor Memorabilia Signatures",
+   "category": "x-factor-memorabilia-signatures",
+   "playerCount": 29,
+   "rungs": 0,
+   "rowCount": 29,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Signatures",
+   "category": "signatures",
+   "playerCount": 30,
+   "rungs": 10,
+   "rowCount": 330,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Signature Selections",
+   "category": "signature-selections",
+   "playerCount": 38,
+   "rungs": 7,
+   "rowCount": 304,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Rookie Signatures",
+   "category": "rookie-signatures",
+   "playerCount": 40,
+   "rungs": 14,
+   "rowCount": 600,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Rookie Jersey Autographs",
+   "category": "rookie-jersey-autographs",
+   "playerCount": 40,
+   "rungs": 15,
+   "rowCount": 640,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > In Flight Signatures",
+   "category": "in-flight-signatures",
+   "playerCount": 29,
+   "rungs": 9,
+   "rowCount": 290,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Autographed Memorabilia",
+   "category": "autographed-memorabilia",
+   "playerCount": 29,
+   "rungs": 6,
+   "rowCount": 203,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Base Mezzanine Level",
+   "category": "base-mezzanine-level",
+   "playerCount": 100,
+   "rungs": 32,
+   "rowCount": 3300,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Base Courtside",
+   "category": "base-courtside",
+   "playerCount": 100,
+   "rungs": 53,
+   "rowCount": 5400,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Base Premier Level",
+   "category": "base-premier-level",
+   "playerCount": 100,
+   "rungs": 43,
+   "rowCount": 4400,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Base Concourse",
+   "category": "base-concourse",
+   "playerCount": 100,
+   "rungs": 67,
+   "rowCount": 6800,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Youth Explosion Signatures",
+   "category": "youth-explosion-signatures",
+   "playerCount": 33,
+   "rungs": 7,
+   "rowCount": 264,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Selection Committee Signatures",
+   "category": "selection-committee-signatures",
+   "playerCount": 20,
+   "rungs": 7,
+   "rowCount": 160,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Prime Selections Signatures",
+   "category": "prime-selections-signatures",
+   "playerCount": 30,
+   "rungs": 8,
+   "rowCount": 270,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Jumbo Rookie Signature Swatches",
+   "category": "jumbo-rookie-signature-swatches",
+   "playerCount": 30,
+   "rungs": 8,
+   "rowCount": 270,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Select Pairings Signatures",
+   "category": "select-pairings-signatures",
+   "playerCount": 20,
+   "rungs": 4,
+   "rowCount": 100,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > 2024 Hoops Update Autographs",
+   "category": "2024-hoops-update-autographs",
+   "playerCount": 1,
+   "rungs": 0,
+   "rowCount": 1,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Top Shelf Signatures",
+   "category": "top-shelf-signatures",
+   "playerCount": 15,
+   "rungs": 4,
+   "rowCount": 75,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Select Few Signatures",
+   "category": "select-few-signatures",
+   "playerCount": 10,
+   "rungs": 4,
+   "rowCount": 50,
+   "refused": false,
+   "printRun": null
+  }
+ ]
+}

@@ -3144,32 +3144,122 @@ function unifiedHoldingWrite(
   });
 }
 
-/** Nothing new is written; a stale persisted estimate is cleared. */
+/**
+ * The withhold: no NEW number is published, and the reason SAYS WHAT
+ * HAPPENED.
+ *
+ * CF-A-REFUSAL-STATES-WHAT-ACTUALLY-HAPPENED (Drew, 2026-09-04).
+ *
+ * This function used to persist, in two places, the sentence
+ *
+ *     "N exact sales under <id> that the engine could not price"
+ *
+ * unconditionally — and it was frequently FALSE. The engine had not been
+ * asked. On holding 0a9afe09 the one valuation path priced the card at
+ * $215.17 (rung player-index-projection) in the same request; what could not
+ * price it was the persist WHITELIST upstream, which discarded the valuation
+ * before this gate ever ran. The holding then carried prose blaming the
+ * engine for a refusal the engine never made, which is the worst kind of
+ * wrong: it sends the next reader to debug the pricing engine instead of the
+ * layer that actually dropped the number.
+ *
+ * So the reason is now an argument. The caller states the outcome it
+ * actually observed — the entry declined (`entry-unpriced`, carrying the
+ * engine's own `reason`), the entry never resolved an identity
+ * (`identity-unresolved`), the legacy re-price found nothing
+ * (`legacy-unpriced`), or the number failed the cost-basis floor — and the
+ * sentence is built from that. No branch of it may claim the engine could
+ * not price when the engine was not asked, or priced.
+ *
+ * Two further changes, same doctrine:
+ *
+ *   EVIDENCE IS NOT DESTROYED. The old write nulled `estimatedValue` along
+ *   with `fairMarketValue`, erasing the number the ladder had produced. A
+ *   withhold is a decision not to PUBLISH a value as the card's market
+ *   price; it is not a licence to delete what the engine computed. The
+ *   proposed estimate is retained in `estimatedValue` (with `isEstimate`
+ *   false and `valuationStatus` "pending", so no reader shows it as a
+ *   price), and `fairMarketValue` is null exactly as before. A reader — or
+ *   the invariant auditor — can now see both what was withheld and why.
+ *
+ *   THE AUDITOR CAN SEE IT. The old write passed `writeMeta: true` with NO
+ *   `meta`, so `pricingSourceMeta` was written as `undefined` — absent.
+ *   #1674's whole finding was that a row with no meta is INVISIBLE to every
+ *   rung gate and to the invariant auditor. A withhold is precisely the
+ *   event an auditor most needs to see, so it now writes a meta naming the
+ *   method (`withheld`) and the machine-readable reason.
+ */
+type WithholdReason =
+  /** The one valuation path resolved the identity and declined to price it;
+   *  `engineReason` carries the engine's own ValuationReason. */
+  | { kind: "entry-unpriced"; engineReason: string | null }
+  /** The one valuation path could not name an identity for this holding. */
+  | { kind: "identity-unresolved" }
+  /** The entry declined AND the legacy exact-pool re-price found nothing. */
+  | { kind: "legacy-unpriced" }
+  /** A number was produced but failed CF-COST-BASIS-SANITY-FLOOR. */
+  | { kind: "cost-basis-floor" };
+
+/** The prose for a withhold: what actually happened, in words that survive
+ *  being read six weeks later by someone debugging the wrong layer. */
+function withholdReasonProse(reason: WithholdReason, verdict: ExactPoolSupremacyVerdict): string {
+  const n = verdict.blockingCount;
+  const pool = `${n} exact sale${n === 1 ? "" : "s"} under ${verdict.blockingId} in ${EXACT_POOL_WINDOW_DAYS}d`;
+  switch (reason.kind) {
+    case "entry-unpriced":
+      return `estimate withheld: ${pool} outrank a cross-identity estimate, and the valuation path declined to price this tier${reason.engineReason ? ` (${reason.engineReason})` : ""}`;
+    case "identity-unresolved":
+      return `estimate withheld: ${pool} outrank a cross-identity estimate, and the catalog holds no identity for this holding to price`;
+    case "legacy-unpriced":
+      return `estimate withheld: ${pool} outrank a cross-identity estimate, and neither the valuation path nor the legacy exact-pool read produced a number for this tier`;
+    case "cost-basis-floor":
+      return `estimate withheld: ${pool} outrank a cross-identity estimate, and the exact-pool price that would have replaced it failed the cost-basis sanity floor`;
+  }
+}
+
+/** A machine-readable form of the same statement, for the auditor. */
+function withholdReasonCode(reason: WithholdReason): string {
+  return reason.kind;
+}
+
+/** No new number is published; the proposed estimate is KEPT as evidence. */
 function withholdEstimate(
   holding: PortfolioHolding,
   verdict: ExactPoolSupremacyVerdict,
   nowIso: string,
+  reason: WithholdReason,
+  /** The estimate this gate refused to publish, preserved rather than erased. */
+  proposed: number | null,
 ): { holding: PortfolioHolding; cleared: boolean } {
-  if (holding.isEstimate !== true) return { holding, cleared: false };
-  const n = verdict.blockingCount;
+  if (holding.isEstimate !== true && proposed === null) return { holding, cleared: false };
+  const prose = withholdReasonProse(reason, verdict);
   return {
     cleared: true,
     // CF-ONE-PERSIST-HELPER (C-7): a WITHHOLD is a valuation decision too. It
-    // writes no number, so it names no rung — but it says WHY, and it clears
-    // the meta rather than letting a previous pass's labels outlive the price
-    // they described.
+    // publishes no number, so it names no rung — but it says WHY, and it now
+    // writes a meta so the decision is visible to the auditor instead of
+    // being an absence nothing can detect.
     holding: writeHoldingValuation(holding, {
       fairMarketValue: null,
-      rung: { noRung: `estimate withheld: ${n} exact sale${n === 1 ? "" : "s"} under ${verdict.blockingId} the engine could not price` },
+      rung: { noRung: prose },
       valueSource: "estimated",
       nowIso,
-      writeMeta: true,
+      meta: {
+        // Not a rung — a rung names a price, and this write publishes none.
+        // The auditor reads `method` to learn what kind of decision this was.
+        compsUsed: verdict.blockingCount,
+        confidence: null,
+        withheld: { reason: withholdReasonCode(reason), blockingId: verdict.blockingId, blockingCount: verdict.blockingCount, proposed },
+      },
       fields: {
-        estimatedValue: null,
+        // CF-A-WITHHOLD-DOES-NOT-DESTROY-EVIDENCE (2026-09-04): the number the
+        // ladder produced is retained, NOT published. isEstimate:false and
+        // valuationStatus "pending" keep every reader off it as a price.
+        estimatedValue: proposed,
         estimateLow: null,
         estimateHigh: null,
         estimateConfidence: null,
-        estimateBasis: `estimate withheld: ${n} exact sale${n === 1 ? "" : "s"} under ${verdict.blockingId} in ${EXACT_POOL_WINDOW_DAYS}d that the engine could not price; no fallback rung may stand in for them`,
+        estimateBasis: prose,
         isEstimate: false,
         valuationStatus: "pending",
         pricingSource: "legacy-engine",
@@ -3259,7 +3349,12 @@ async function gateEstimateAgainstExactPool(input: {
   // exact-grade pool to cross-grade-fallback. holdingGrade already filters it.
   const gVal = holdingGradeOf(holding as PortfolioHolding)?.value ?? null;
   let exact: ExactPoolPrice | null = null;
+  // Whether the LEGACY exact-pool read was actually attempted — the withhold
+  // prose distinguishes "the legacy read found nothing" from "there was no
+  // identity to read", and only this flag knows which.
+  let exactAttempted = false;
   if (!entryDecided) {
+    exactAttempted = true;
     try {
       exact = await priceHoldingFromExactPool(holding as HoldingIdentityFields, {
         grade: gCo ? { company: gCo, value: gVal } : null,
@@ -3317,7 +3412,18 @@ async function gateEstimateAgainstExactPool(input: {
       canonical: exact.canonical,
     };
   }
-  const w = withholdEstimate(holding, verdict, nowIso);
+  // CF-A-REFUSAL-STATES-WHAT-ACTUALLY-HAPPENED (Drew, 2026-09-04): the
+  // reason is the outcome this function actually observed, never a blanket
+  // assertion about an engine it may not have consulted. `entry` above IS
+  // the one valuation path's answer for this holding, so its outcome is the
+  // truth about whether the engine could price it.
+  const withholdReason: WithholdReason =
+    entry.outcome === "cost-basis-floor" ? { kind: "cost-basis-floor" }
+    : entry.outcome === "unpriced" ? { kind: "entry-unpriced", engineReason: entry.valuation.reason }
+    : entryDecided ? { kind: "entry-unpriced", engineReason: null }
+    : exactAttempted ? { kind: "legacy-unpriced" }
+    : { kind: "identity-unresolved" };
+  const w = withholdEstimate(holding, verdict, nowIso, withholdReason, input.proposed ?? null);
   console.warn(JSON.stringify({
     event: "estimate_withheld_exact_pool_unpriced",
     source: "portfolioStore.gateEstimateAgainstExactPool",
@@ -3325,6 +3431,9 @@ async function gateEstimateAgainstExactPool(input: {
     holdingId: holding.id,
     blockingId: verdict.blockingId,
     blockingCount: verdict.blockingCount,
+    withholdReason: withholdReason.kind,
+    entryOutcome: entry.outcome,
+    proposedEstimateRetained: input.proposed ?? null,
     staleEstimateCleared: w.cleared,
   }));
   return { outcome: "withheld", holding: w.holding, blockingId: verdict.blockingId as string, cleared: w.cleared };
