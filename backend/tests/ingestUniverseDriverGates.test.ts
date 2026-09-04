@@ -9,16 +9,28 @@ import { afterAll, describe, expect, it } from "vitest";
 const backend = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const script = path.join(backend, "scripts", "ingest-universe-driver.cjs");
 const require_ = createRequire(import.meta.url);
-const { gateStagedCsv, splitCsv, isPersonName, LANE_ALIASES } = require_(script);
+const { gateStagedCsv, ladderIsAttested, splitCsv, isPersonName, LANE_ALIASES } = require_(script);
 
 const HEADER = "category,cardNumber,parallel,isAuto,printRun,player";
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "uni-gate-"));
 afterAll(() => { try { fs.rmSync(tmp, { recursive: true, force: true }); } catch { /* best effort */ } });
 
 let n = 0;
-function stage(lines: string[]): string {
+/**
+ * Stage a CSV. `attested` writes the sidecar manifest every real converter
+ * writes beside its file -- `parallelColumnAuthoritative: true`, the flag that
+ * says "this parallel column is the checklist's own ladder". 101 of the 102
+ * staged CSVs in this repo carry it (the one that does not is a single-rung
+ * TCDB file), so ATTESTED is the ordinary case and a bare CSV is the unusual
+ * one: a file nothing vouches for.
+ */
+function stage(lines: string[], attested = true): string {
   const p = path.join(tmp, `f${n++}.csv`);
   fs.writeFileSync(p, lines.join("\n") + "\n");
+  if (attested) {
+    fs.writeFileSync(p.replace(/\.csv$/, ".manifest.json"),
+      JSON.stringify({ sourceUrl: `https://example.invalid/${path.basename(p)}`, parallelColumnAuthoritative: true }));
+  }
   return p;
 }
 
@@ -75,15 +87,138 @@ describe("ingest-universe-driver — the per-entry cleanliness gate", () => {
     expect(r.reason).toMatch(/card line/i);
   });
 
-  it("REFUSES cross-join arithmetic — rows ≈ cards × rungs in one category", () => {
-    // The 11.49M-row exploded spine's signature: every card paired with every rung.
+  /** The 11.49M-row exploded spine's signature at 60x6: every card paired with
+   *  every rung, no card missing one. Size is NOT what makes it a cross-join. */
+  function crossJoinCsv(): string[] {
     const rows = [HEADER];
     for (let i = 1; i <= 60; i++) rows.push(`base,${i},,false,,Player ${i} Name`);
     const rungs = ["Gold", "Silver", "Bronze", "Ruby", "Emerald", "Sapphire Finish"];
     for (let i = 1; i <= 60; i++) for (const g of rungs) rows.push(`base,${i},${g} Refractor,false,/99,Player ${i} Name`);
-    const r = gateStagedCsv(stage(rows));
+    return rows;
+  }
+
+  it("REFUSES cross-join arithmetic — rows ≈ cards × rungs in one category", () => {
+    // Unattested: nothing vouches for this parallel column, so a perfectly
+    // dense product is the graveyard shape and is refused ON ITS SHAPE ALONE.
+    // #1694 bolted `rungCount > 60 && nums > 200` onto this rule to admit real
+    // Panini ladders, which left the guard unpinned at exactly this size — 60x6
+    // sailed straight through. The floor is provenance now, not magnitude.
+    const r = gateStagedCsv(stage(crossJoinCsv(), false));
     expect(r.ok).toBe(false);
-    expect(r.reason).toMatch(/cross-join/i);
+    expect(r.reason).toMatch(/cartesian product, not a ladder/i);
+  });
+
+  it("REFUSES a SMALL dense cross-join — the guard is not gated on size", () => {
+    // The mutation #1694 introduced, isolated: any rule still carrying
+    // `rungCount > 60` or `nums > 200` passes this file, because it is 20x3.
+    const rows = [HEADER];
+    for (let i = 1; i <= 20; i++) rows.push(`base,${i},,false,,Player ${i} Name`);
+    for (let i = 1; i <= 20; i++) for (const g of ["Gold", "Silver", "Bronze"]) {
+      rows.push(`base,${i},${g} Refractor,false,/99,Player ${i} Name`);
+    }
+    const r = gateStagedCsv(stage(rows, false));
+    expect(r.ok).toBe(false);
+    expect(r.reason).toMatch(/cartesian product, not a ladder/i);
+  });
+
+  it("ACCEPTS a checklist-backed FULL ladder — density is what a real ladder does", () => {
+    // A 132-card set x Tiffany, and a wide multi-rung base ladder: both are
+    // perfectly dense BY DEFINITION, because a complete ladder has no holes.
+    // parallelColumnAuthoritative says the column was read off a published
+    // checklist, and that — not size — is what separates these from the file
+    // above. 342 of the 343 perfectly dense category groups among this repo's
+    // 102 staged CSVs carry that flag.
+    const tiffany = [HEADER];
+    for (let i = 1; i <= 132; i++) tiffany.push(`base,${i},,false,,Player ${i} Name`);
+    for (let i = 1; i <= 132; i++) tiffany.push(`base,${i},Tiffany,false,,Player ${i} Name`);
+    expect(gateStagedCsv(stage(tiffany)).ok).toBe(true);
+
+    // The shape #1694 was right to admit: 2012/13 Prizm's 300 cards x 4 rungs.
+    const prizm = [HEADER];
+    for (let i = 1; i <= 300; i++) prizm.push(`base,${i},,false,,Player ${i} Name`);
+    for (let i = 1; i <= 300; i++) for (const g of ["Prizms", "Prizms Green", "Prizms Gold", "Prizms Blue"]) {
+      prizm.push(`base,${i},${g},false,,Player ${i} Name`);
+    }
+    const r = gateStagedCsv(stage(prizm));
+    expect(r.ok).toBe(true);
+    expect(r.reason).toBeNull();
+  });
+
+  it("the SAME dense ladder flips on attestation alone", () => {
+    // The rule's whole content, isolated: identical bytes, opposite verdicts,
+    // decided only by whether a manifest vouches for the parallel column.
+    const rows = crossJoinCsv();
+    expect(gateStagedCsv(stage(rows, false)).ok).toBe(false);
+    expect(gateStagedCsv(stage(rows, true)).ok).toBe(true);
+  });
+
+  it("attestation buys DENSITY, never unlimited width", () => {
+    // An attested file is still bound by EXPLODED_PAR_MAX: the flag says the
+    // column is a real ladder, not that any number of rungs is plausible.
+    const rows = [HEADER];
+    for (let i = 1; i <= 30; i++) rows.push(`base,${i},,false,,Player ${i} Name`);
+    const shades = ["Gold", "Silver", "Bronze", "Ruby", "Emerald", "Onyx", "Ivory", "Cobalt", "Amber", "Jade"];
+    const greek = ["Alpha","Beta","Gamma","Delta","Epsilon","Zeta","Eta","Theta","Iota","Kappa","Lambda","Mu","Nu","Xi","Omicron","Pi","Rho","Sigma","Tau","Upsilon"];
+    for (let q = 0; q < 200; q++) rows.push(`base,1,${shades[q % 10]} ${greek[Math.floor(q / 10)]} Refractor,false,,Player 1 Name`);
+    const r = gateStagedCsv(stage(rows, true));
+    expect(r.ok).toBe(false);
+    expect(r.reason).toMatch(/distinct parallels/i);
+  });
+
+  it("a handful of cards against a handful of rungs is noise, not a spine", () => {
+    // 3 cards x 2 rungs is dense, but density over six rows means nothing —
+    // the 11.49M-row signature needs enough cards to BE a signature. Pinned so
+    // the floor cannot be quietly lowered into refusing tiny legitimate files.
+    const rows = [HEADER];
+    for (let i = 1; i <= 3; i++) rows.push(`base,${i},,false,,Player ${i} Name`);
+    for (let i = 1; i <= 3; i++) for (const g of ["Gold", "Silver"]) {
+      rows.push(`base,${i},${g} Refractor,false,,Player ${i} Name`);
+    }
+    expect(gateStagedCsv(stage(rows, false)).ok).toBe(true);
+  });
+
+  it("ladderIsAttested reads the sidecar and defaults to UNATTESTED", () => {
+    // Pinned directly, because a helper stuck at `true` disables the whole
+    // cross-join rule while every shape test still passes on the attested path.
+    const withManifest = stage(cleanCsv(), true);
+    const without = stage(cleanCsv(), false);
+    expect(ladderIsAttested(withManifest)).toBe(true);
+    expect(ladderIsAttested(without)).toBe(false);
+    // A malformed sidecar is not an attestation, and must not throw.
+    const bad = stage(cleanCsv(), false);
+    fs.writeFileSync(bad.replace(/\.csv$/, ".manifest.json"), "{not json");
+    expect(ladderIsAttested(bad)).toBe(false);
+    // Present but not claiming the flag is also unattested.
+    const noFlag = stage(cleanCsv(), false);
+    fs.writeFileSync(noFlag.replace(/\.csv$/, ".manifest.json"), JSON.stringify({ sourceUrl: "x" }));
+    expect(ladderIsAttested(noFlag)).toBe(false);
+  });
+
+  it("a RAGGED unattested ladder passes — only a gapless product is refused", () => {
+    // The other side of the density test: real scraped ladders have holes
+    // (short prints, rookie-only rungs), and holes are what say "not a
+    // cross-join". Loosening the 0.995 density floor would refuse this file.
+    const rows = [HEADER];
+    for (let i = 1; i <= 60; i++) rows.push(`base,${i},,false,,Player ${i} Name`);
+    const rungs = ["Gold", "Silver", "Bronze", "Ruby", "Emerald", "Sapphire Finish"];
+    for (let i = 1; i <= 60; i++) {
+      // Every third card is missing two of its six rungs — ~89% dense.
+      for (const g of (i % 3 === 0 ? rungs.slice(0, 4) : rungs)) {
+        rows.push(`base,${i},${g} Refractor,false,/99,Player ${i} Name`);
+      }
+    }
+    const r = gateStagedCsv(stage(rows, false));
+    expect(r.ok).toBe(true);
+    expect(r.reason).toBeNull();
+  });
+
+  it("a single-rung set is dense by definition and never a cross-join", () => {
+    // The one unattested dense group among this repo's staged CSVs is a
+    // 50-card x 1-rung TCDB file. One rung carries no cross-join information.
+    const rows = [HEADER];
+    for (let i = 1; i <= 50; i++) rows.push(`base,${i},,false,,Player ${i} Name`);
+    for (let i = 1; i <= 50; i++) rows.push(`base,${i},Refractor,false,,Player ${i} Name`);
+    expect(gateStagedCsv(stage(rows, false)).ok).toBe(true);
   });
 
   it("REFUSES a category carrying more rungs than any real checklist has", () => {
