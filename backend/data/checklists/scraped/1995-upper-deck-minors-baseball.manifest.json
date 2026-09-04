@@ -1,0 +1,22 @@
+{
+ "scrapedAt": "2026-09-04T19:31:44.350Z",
+ "source": "sportscardchecklist",
+ "sourceUrl": "https://www.sportscardchecklist.com/set-101093/1995-upper-deck-minors-baseball-trading-card-checklist",
+ "sport": "baseball",
+ "year": 1995,
+ "season": "1995",
+ "setName": "1995 Upper Deck Minors",
+ "productKey": "1995-upper-deck-minors",
+ "setKey": "upper-deck-minors",
+ "setKeyRequested": "upper-deck-minors",
+ "parallelOfParent": false,
+ "parallelName": null,
+ "subset": null,
+ "rowCount": 225,
+ "parallelColumnAuthoritative": true,
+ "cardRows": 225,
+ "ladderRows": 0,
+ "subsetRows": 0,
+ "printRunsFound": 0,
+ "sectionsReport": []
+}

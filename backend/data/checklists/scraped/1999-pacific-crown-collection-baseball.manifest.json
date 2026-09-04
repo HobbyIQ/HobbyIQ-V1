@@ -1,0 +1,22 @@
+{
+ "scrapedAt": "2026-09-04T19:09:41.094Z",
+ "source": "sportscardchecklist",
+ "sourceUrl": "https://www.sportscardchecklist.com/set-141776/1999-pacific-crown-collection-baseball-trading-card-checklist",
+ "sport": "baseball",
+ "year": 1999,
+ "season": "1999",
+ "setName": "1999 Pacific Crown Collection",
+ "productKey": "1999-pacific-crown-collection",
+ "setKey": "pacific-crown-collection",
+ "setKeyRequested": "pacific-crown-collection",
+ "parallelOfParent": false,
+ "parallelName": null,
+ "subset": null,
+ "rowCount": 301,
+ "parallelColumnAuthoritative": true,
+ "cardRows": 301,
+ "ladderRows": 0,
+ "subsetRows": 0,
+ "printRunsFound": 0,
+ "sectionsReport": []
+}

@@ -1825,6 +1825,25 @@ const SPECIALIZATION_PARENTS = Object.freeze({
   "fleer-update-tiffany": "fleer-update",
   "fleer-update-glossy": "fleer-update",
   "fleer-tradition-tiffany": "fleer-tradition",
+  // -- The 1990s baseball products the IMPROVE gate audit of #1758 found the
+  //    rematch could not place. All are productSetKeys.ts entries whose
+  //    immediate `parent` is named here, so they are mirrored, not excepted.
+  //
+  //    DELIBERATELY ABSENT FROM SAME_NUMBER_PARALLEL_SETS BELOW, unlike every
+  //    Tiffany above: a coated reprint carries the paper card's number, and
+  //    these do not. Score Rookie & Traded numbers `1T-110T` where flagship
+  //    Score numbers `1-893`; SP, SP Championship, Upper Deck Minors, Pacific
+  //    Prism and Crown Collection each run their own 1-N. The number still
+  //    carries information here, so L5's strict test must keep asking -- which
+  //    is exactly the `topps -> topps-traded` reasoning the note above states.
+  "sp": "upper-deck",
+  "sp-championship": "upper-deck",
+  "upper-deck-minors": "upper-deck",
+  "score-rookie-and-traded": "score",
+  "pacific-prism": "pacific",
+  "pacific-crown-collection": "pacific",
+  "pacific-gold-crown-die-cuts": "pacific",
+  "uc3": "pinnacle",
 });
 
 /** The keys whose ladder edge this module mirrors from productSetKeys.ts --

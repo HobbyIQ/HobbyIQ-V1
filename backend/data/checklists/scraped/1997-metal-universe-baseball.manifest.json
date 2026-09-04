@@ -1,0 +1,22 @@
+{
+ "scrapedAt": "2026-09-04T19:11:11.261Z",
+ "source": "sportscardchecklist",
+ "sourceUrl": "https://www.sportscardchecklist.com/set-13815/1997-metal-universe-baseball-trading-card-checklist",
+ "sport": "baseball",
+ "year": 1997,
+ "season": "1997",
+ "setName": "1997 Metal Universe",
+ "productKey": "1997-metal-universe",
+ "setKey": "metal-universe",
+ "setKeyRequested": "metal-universe",
+ "parallelOfParent": false,
+ "parallelName": null,
+ "subset": null,
+ "rowCount": 250,
+ "parallelColumnAuthoritative": true,
+ "cardRows": 250,
+ "ladderRows": 0,
+ "subsetRows": 0,
+ "printRunsFound": 0,
+ "sectionsReport": []
+}

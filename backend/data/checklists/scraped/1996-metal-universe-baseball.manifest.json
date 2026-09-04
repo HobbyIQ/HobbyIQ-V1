@@ -1,0 +1,22 @@
+{
+ "scrapedAt": "2026-09-04T19:11:07.904Z",
+ "source": "sportscardchecklist",
+ "sourceUrl": "https://www.sportscardchecklist.com/set-13415/1996-metal-universe-baseball-trading-card-checklist",
+ "sport": "baseball",
+ "year": 1996,
+ "season": "1996",
+ "setName": "1996 Metal Universe",
+ "productKey": "1996-metal-universe",
+ "setKey": "metal-universe",
+ "setKeyRequested": "metal-universe",
+ "parallelOfParent": false,
+ "parallelName": null,
+ "subset": null,
+ "rowCount": 250,
+ "parallelColumnAuthoritative": true,
+ "cardRows": 250,
+ "ladderRows": 0,
+ "subsetRows": 0,
+ "printRunsFound": 0,
+ "sectionsReport": []
+}

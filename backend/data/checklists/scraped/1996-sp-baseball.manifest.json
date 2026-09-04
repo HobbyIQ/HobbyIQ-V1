@@ -1,0 +1,32 @@
+{
+ "scrapedAt": "2026-09-04T19:31:29.556Z",
+ "source": "sportscardchecklist",
+ "sourceUrl": "https://www.sportscardchecklist.com/set-13493/1996-sp-baseball-trading-card-checklist",
+ "sport": "baseball",
+ "year": 1996,
+ "season": "1996",
+ "setName": "1996 SP",
+ "productKey": "1996-sp",
+ "setKey": "sp",
+ "setKeyRequested": "sp",
+ "parallelOfParent": false,
+ "parallelName": null,
+ "subset": null,
+ "rowCount": 188,
+ "parallelColumnAuthoritative": true,
+ "cardRows": 188,
+ "ladderRows": 0,
+ "subsetRows": 3,
+ "printRunsFound": 0,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Checklist",
+   "category": "insert-checklist",
+   "playerCount": 3,
+   "rungs": 0,
+   "rowCount": 3,
+   "refused": false,
+   "printRun": null
+  }
+ ]
+}

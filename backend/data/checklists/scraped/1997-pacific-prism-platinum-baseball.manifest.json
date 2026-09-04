@@ -1,0 +1,22 @@
+{
+ "scrapedAt": "2026-09-04T19:32:00.233Z",
+ "source": "sportscardchecklist",
+ "sourceUrl": "https://www.sportscardchecklist.com/set-13847/1997-pacific-prisms-platinum-baseball-trading-card-checklist",
+ "sport": "baseball",
+ "year": 1997,
+ "season": "1997",
+ "setName": "1997 Pacific Prism Platinum",
+ "productKey": "1997-pacific-prism",
+ "setKey": "pacific-prism",
+ "setKeyRequested": "pacific-prism",
+ "parallelOfParent": false,
+ "parallelName": null,
+ "subset": null,
+ "rowCount": 150,
+ "parallelColumnAuthoritative": true,
+ "cardRows": 150,
+ "ladderRows": 0,
+ "subsetRows": 0,
+ "printRunsFound": 0,
+ "sectionsReport": []
+}

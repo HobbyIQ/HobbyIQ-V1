@@ -353,6 +353,71 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
   P("pinnacle-aficionado", { parent: "pinnacle" }),
   P("score"),
   P("score-select", { parent: "score" }),
+  /**
+   * THE 1990s BASEBALL PRODUCTS THE REMATCH COULD NOT PLACE (2026-09-04, IMPROVE
+   * gate audit of #1758). ~61k 1990s baseball sales name products that hold ZERO
+   * card_catalog rows, so every one of them refuses on L1 with nothing to match
+   * against. The checklists ship in this PR; these are the keys they land on.
+   *
+   * THE CATALOG'S OWN SPELLING WINS, AND IT WAS MEASURED BEFORE IT WAS RULED.
+   * The audit named six of these keys in the shape a slug would mint them
+   * (`upper-deck-sp`, `upper-deck-sp-championship`, `upper-deck-minor-league`,
+   * `pacific-prisms`). Every one of those is the WRONG spelling: the catalog
+   * already holds baseballcardpedia-backed rows at exactly these years under
+   * different keys, sampled 2026-09-04 --
+   *
+   *     sp                 300/300 rows baseballcardpedia   1993-1997  <- SP lives here
+   *     upper-deck-minors  300/300 rows baseballcardpedia   1992,94,95
+   *     pacific-prism      285/300 rows bcp + 14 sales      1995,96,99
+   *     sp-championship      1 row  sales-attested          1995
+   *
+   * while the rival spellings hold ONE stray sales-attested row each
+   * (`pacific-prisms` 1999 FOOTBALL, `upper-deck-sp` zero, `score-rookie-and-
+   * traded` zero). Minting the slug's spelling would have created a SECOND
+   * product beside a populated one and split every pool this PR exists to fill
+   * -- "count by source, not row count", and the checklist-backed side is the
+   * side with the source. The staged checklists are keyed to the catalog's
+   * spelling.
+   *
+   * THE `names` ENTRIES HERE ARE THE SLUG SPELLINGS, AND THEY ARE A CLAIM
+   * REGISTRY, NOT A RESOLVER. Verified by running the function: only `spelled`
+   * products answer productSetKeyForName, so on the `P` rows below these
+   * aliases do NOT make `upper-deck-sp` resolve to `sp` -- it still normalizes
+   * to `upper-deck`. What they DO is make the collision loud: BY_NAME throws
+   * if any other product ever claims the same alias, so a later ruling cannot
+   * quietly mint `upper-deck-sp` as a second product beside this one. Turning
+   * them into live aliases means promoting these rows to `S`, which is a
+   * vocabulary decision with a blast radius (it changes what every title
+   * containing "SP" resolves to) and is deliberately NOT made here.
+   *
+   * `pacific-prism` IS SINGULAR, and three independent authorities agree: the
+   * catalog rows above, the sales (`1995 Pacific Prism Baseball #4 Base`), and
+   * BaseballCardPedia, which redirects "1995 Pacific Prisms" to "1995 Pacific
+   * Prism". Only the source's slug is plural.
+   *
+   * SPELLED (`S`) WHEREVER THE KEY IS NOT ALREADY A FIXED POINT, measured by
+   * RUNNING normalizeSetKey rather than reading the table -- the #1748 lesson,
+   * whose `P` declarations still collapsed because only a SPELLED product
+   * answers productSetKeyForName, the leg that runs before the unanchored brand
+   * patterns. On main today `score-rookie-and-traded` collapses to `score`; the
+   * rest are already fixed points and take `P`. The test asserts the FUNCTION'S
+   * OUTPUT for all of them.
+   *
+   * `sp` KEEPS ITS BARE KEY and gets no `refines`: 1993 SP is the Jeter-rookie
+   * super-premium set, and a matcher widening from it into flagship Upper Deck
+   * base comps would price a four-figure rookie off base cards -- the same
+   * reason Exquisite above has none. `parent` is the Upper Deck root for
+   * provenance only, matching `sp-authentic` and `sp-prospects` directly above.
+   */
+  P("pacific"),
+  P("pacific-prism", { names: ["pacific-prisms"], family: "pacific", parent: "pacific" }),
+  P("pacific-crown-collection", { family: "pacific", parent: "pacific" }),
+  P("pacific-gold-crown-die-cuts", { family: "pacific", parent: "pacific" }),
+  P("sp", { names: ["upper-deck-sp"], family: "sp", parent: "upper-deck" }),
+  P("sp-championship", { names: ["upper-deck-sp-championship"], family: "sp", parent: "upper-deck" }),
+  P("upper-deck-minors", { names: ["upper-deck-minor-league"], family: "upper-deck", parent: "upper-deck" }),
+  S("score-rookie-and-traded", { names: ["score-rookie-traded", "score-traded"], family: "score", parent: "score" }),
+  P("uc3", { names: ["pinnacle-uc3", "sportflix-uc3"], parent: "pinnacle" }),
   ...["goudey", "circa-thunder", "cracker-jack", "all-time-diamond-kings", "diamond-kings", "t206", "play-ball", "kelloggs",
     "post-cereal", "golden-press"].map((k) => P(k)),
 ];

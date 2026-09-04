@@ -1,0 +1,41 @@
+{
+ "scrapedAt": "2026-09-04T19:31:37.823Z",
+ "source": "sportscardchecklist",
+ "sourceUrl": "https://www.sportscardchecklist.com/set-19948/1992-upper-deck-minors-baseball-trading-card-checklist",
+ "sport": "baseball",
+ "year": 1992,
+ "season": "1992",
+ "setName": "1992 Upper Deck Minors",
+ "productKey": "1992-upper-deck-minors",
+ "setKey": "upper-deck-minors",
+ "setKeyRequested": "upper-deck-minors",
+ "parallelOfParent": false,
+ "parallelName": null,
+ "subset": null,
+ "rowCount": 330,
+ "parallelColumnAuthoritative": true,
+ "cardRows": 330,
+ "ladderRows": 0,
+ "subsetRows": 28,
+ "printRunsFound": 0,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Checklist",
+   "category": "insert-checklist",
+   "playerCount": 2,
+   "rungs": 0,
+   "rowCount": 2,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Team Checklist",
+   "category": "insert-team-checklist",
+   "playerCount": 26,
+   "rungs": 0,
+   "rowCount": 26,
+   "refused": false,
+   "printRun": null
+  }
+ ]
+}

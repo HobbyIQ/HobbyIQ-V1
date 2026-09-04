@@ -1,0 +1,22 @@
+{
+ "scrapedAt": "2026-09-04T19:09:34.720Z",
+ "source": "sportscardchecklist",
+ "sourceUrl": "https://www.sportscardchecklist.com/set-13423/1996-pacific-crown-collection-baseball-trading-card-checklist",
+ "sport": "baseball",
+ "year": 1996,
+ "season": "1996",
+ "setName": "1996 Pacific Crown Collection",
+ "productKey": "1996-pacific-crown-collection",
+ "setKey": "pacific-crown-collection",
+ "setKeyRequested": "pacific-crown-collection",
+ "parallelOfParent": false,
+ "parallelName": null,
+ "subset": null,
+ "rowCount": 450,
+ "parallelColumnAuthoritative": true,
+ "cardRows": 450,
+ "ladderRows": 0,
+ "subsetRows": 0,
+ "printRunsFound": 0,
+ "sectionsReport": []
+}

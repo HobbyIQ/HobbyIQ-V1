@@ -1,0 +1,32 @@
+{
+ "scrapedAt": "2026-09-04T19:31:27.011Z",
+ "source": "sportscardchecklist",
+ "sourceUrl": "https://www.sportscardchecklist.com/set-13178/1995-sp-baseball-trading-card-checklist",
+ "sport": "baseball",
+ "year": 1995,
+ "season": "1995",
+ "setName": "1995 SP",
+ "productKey": "1995-sp",
+ "setKey": "sp",
+ "setKeyRequested": "sp",
+ "parallelOfParent": false,
+ "parallelName": null,
+ "subset": null,
+ "rowCount": 210,
+ "parallelColumnAuthoritative": true,
+ "cardRows": 210,
+ "ladderRows": 0,
+ "subsetRows": 3,
+ "printRunsFound": 0,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Checklist",
+   "category": "insert-checklist",
+   "playerCount": 3,
+   "rungs": 0,
+   "rowCount": 3,
+   "refused": false,
+   "printRun": null
+  }
+ ]
+}

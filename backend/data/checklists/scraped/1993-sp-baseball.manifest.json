@@ -1,0 +1,32 @@
+{
+ "scrapedAt": "2026-09-04T19:31:20.161Z",
+ "source": "sportscardchecklist",
+ "sourceUrl": "https://www.sportscardchecklist.com/set-12758/1993-sp-baseball-trading-card-checklist",
+ "sport": "baseball",
+ "year": 1993,
+ "season": "1993",
+ "setName": "1993 SP",
+ "productKey": "1993-sp",
+ "setKey": "sp",
+ "setKeyRequested": "sp",
+ "parallelOfParent": false,
+ "parallelName": null,
+ "subset": null,
+ "rowCount": 290,
+ "parallelColumnAuthoritative": true,
+ "cardRows": 290,
+ "ladderRows": 0,
+ "subsetRows": 18,
+ "printRunsFound": 0,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > All-Star",
+   "category": "insert-all-star",
+   "playerCount": 18,
+   "rungs": 0,
+   "rowCount": 18,
+   "refused": false,
+   "printRun": null
+  }
+ ]
+}

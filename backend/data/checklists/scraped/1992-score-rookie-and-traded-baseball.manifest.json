@@ -1,0 +1,22 @@
+{
+ "scrapedAt": "2026-09-04T19:12:45.684Z",
+ "source": "sportscardchecklist",
+ "sourceUrl": "https://www.sportscardchecklist.com/set-12638/1992-score-rookie-and-traded-baseball-trading-card-checklist",
+ "sport": "baseball",
+ "year": 1992,
+ "season": "1992",
+ "setName": "1992 Score Rookie and Traded",
+ "productKey": "1992-score-rookie-and-traded",
+ "setKey": "score-rookie-and-traded",
+ "setKeyRequested": "score-rookie-and-traded",
+ "parallelOfParent": false,
+ "parallelName": null,
+ "subset": null,
+ "rowCount": 110,
+ "parallelColumnAuthoritative": true,
+ "cardRows": 110,
+ "ladderRows": 0,
+ "subsetRows": 0,
+ "printRunsFound": 0,
+ "sectionsReport": []
+}

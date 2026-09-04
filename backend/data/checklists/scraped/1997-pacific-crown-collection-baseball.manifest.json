@@ -1,0 +1,22 @@
+{
+ "scrapedAt": "2026-09-04T19:09:37.846Z",
+ "source": "sportscardchecklist",
+ "sourceUrl": "https://www.sportscardchecklist.com/set-13833/1997-pacific-crown-collection-baseball-trading-card-checklist",
+ "sport": "baseball",
+ "year": 1997,
+ "season": "1997",
+ "setName": "1997 Pacific Crown Collection",
+ "productKey": "1997-pacific-crown-collection",
+ "setKey": "pacific-crown-collection",
+ "setKeyRequested": "pacific-crown-collection",
+ "parallelOfParent": false,
+ "parallelName": null,
+ "subset": null,
+ "rowCount": 450,
+ "parallelColumnAuthoritative": true,
+ "cardRows": 450,
+ "ladderRows": 0,
+ "subsetRows": 0,
+ "printRunsFound": 0,
+ "sectionsReport": []
+}

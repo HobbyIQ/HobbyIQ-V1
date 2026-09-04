@@ -1,0 +1,22 @@
+{
+ "scrapedAt": "2026-09-04T19:12:43.097Z",
+ "source": "sportscardchecklist",
+ "sourceUrl": "https://www.sportscardchecklist.com/set-12553/1991-score-rookie-and-traded-baseball-trading-card-checklist",
+ "sport": "baseball",
+ "year": 1991,
+ "season": "1991",
+ "setName": "1991 Score Rookie and Traded",
+ "productKey": "1991-score-rookie-and-traded",
+ "setKey": "score-rookie-and-traded",
+ "setKeyRequested": "score-rookie-and-traded",
+ "parallelOfParent": false,
+ "parallelName": null,
+ "subset": null,
+ "rowCount": 110,
+ "parallelColumnAuthoritative": true,
+ "cardRows": 110,
+ "ladderRows": 0,
+ "subsetRows": 0,
+ "printRunsFound": 0,
+ "sectionsReport": []
+}
