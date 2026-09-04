@@ -948,9 +948,17 @@ function titleWithoutPlayerName(title, playerName) {
   const words = [...playerNameWords(playerName)];
   const t = lower(str(title));
   if (!words.length) return t;
-  // The name's own words, in the order the name states them, as one phrase
-  // whose parts may be separated by any run of non-alphanumerics.
-  const phrase = new RegExp(`\\b${words.map(escapeRe).join("[^a-z0-9]+")}\\b`, "g");
+  // The name's own words, in the order the name states them, as one phrase.
+  //
+  // THE JOIN ADMITS THE PARTICLES BACK AS SEPARATORS. `playerNameWords` drops
+  // "de", "la", "jr" -- they are not distinguishing words and must never be
+  // suppressed on their own. But they DO sit between the words that are, so a
+  // separator of "any run of non-alphanumerics" alone would fail to match
+  // "Elly De La Cruz" in its own title and suppress nothing. Silent
+  // under-delivery, not damage -- but it would quietly cost every player with a
+  // particle in their name, which is a large and specific population.
+  const gap = `(?:[^a-z0-9]+(?:${[...NAME_PARTICLES].map(escapeRe).join("|")})?)+`;
+  const phrase = new RegExp(`\\b${words.map(escapeRe).join(gap)}\\b`, "g");
   const stripped = t.replace(phrase, " ");
   // A run was found and removed -- that is the whole suppression.
   if (stripped !== t) return stripped;

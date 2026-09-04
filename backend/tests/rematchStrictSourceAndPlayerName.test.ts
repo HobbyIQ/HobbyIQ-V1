@@ -313,6 +313,18 @@ describe("a player's name is not the seller naming a finish", () => {
       .not.toMatch(/ichiro/);
   });
 
+  it("a particle inside the name does not break the run", () => {
+    // `playerNameWords` drops "de"/"la"/"jr" -- they are not distinguishing
+    // words -- but they sit BETWEEN the words that are. Without admitting them
+    // back as separators, every player with a particle in their name is
+    // silently never suppressed: fail-safe, but a large and specific
+    // population quietly getting nothing.
+    expect(K.titleWithoutPlayerName("2024 topps chrome elly de la cruz #100 reds", "Elly De La Cruz"))
+      .not.toMatch(/elly|cruz/);
+    expect(K.titleWithoutPlayerName("2024 topps ronald acuna jr #1 braves", "Ronald Acuna Jr"))
+      .not.toMatch(/ronald|acuna/);
+  });
+
   it("particles and initials are never suppressed", () => {
     // "de", "jr" and two-letter tokens are not distinguishing words, and a
     // two-letter suppression would silently delete half the vocabulary.
