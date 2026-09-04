@@ -9,8 +9,10 @@ import {
   reconciledFixedPoints,
   reconciliationEntry,
   setKeyAliases,
-  spellSetKeyForEra,
+  ruledAliases,
+  ruledDistinct,
 } from "../src/services/catalog/setKeyReconciliation.js";
+import { spellForEra } from "../src/services/catalog/productSetKeys.js";
 
 /**
  * CF-A-RULED-KEY-IS-A-FIXED-POINT. The pins for the setKey reconciliation.
@@ -236,12 +238,12 @@ describe("a decision beats a derivation", () => {
   it("leaves the era keys to the year-aware path", () => {
     // `donruss` is stale BECAUSE normalizeSetKey rewrites it — but that
     // function has no year, and with no year the modern spelling is the right
-    // default. The split is resolved by spellSetKeyForEra at the call sites
-    // that know the year; pinning the bare key here would break the year-less
+    // default. The split is resolved by productSetKeys' spellForEra at the
+    // three call sites that know the year; pinning the bare key here would break the year-less
     // default without fixing anything the year-aware path gets wrong.
     expect(normalizeSetKey("Donruss")).toBe("panini-donruss");
     expect(normalizeSetKey("2024 Donruss Baseball")).toBe("panini-donruss");
-    expect(spellSetKeyForEra(normalizeSetKey("Donruss"), 1987)).toBe("donruss");
+    expect(spellForEra(normalizeSetKey("Donruss"), 1987)).toBe("donruss");
     expect(reconciledFixedPoints()).not.toContain("donruss");
   });
 });
@@ -275,19 +277,19 @@ describe("Drew's ruled Pokemon codes stay the key", () => {
 
 describe("the era table (ASSUMPTION — Drew has not ruled the dates)", () => {
   it("spells Donruss by its era in both directions", () => {
-    expect(spellSetKeyForEra("donruss", 1987)).toBe("donruss");
-    expect(spellSetKeyForEra("donruss", 2008)).toBe("donruss");
-    expect(spellSetKeyForEra("donruss", 2009)).toBe("panini-donruss");
-    expect(spellSetKeyForEra("donruss", 2024)).toBe("panini-donruss");
+    expect(spellForEra("donruss", 1987)).toBe("donruss");
+    expect(spellForEra("donruss", 2008)).toBe("donruss");
+    expect(spellForEra("donruss", 2009)).toBe("panini-donruss");
+    expect(spellForEra("donruss", 2024)).toBe("panini-donruss");
     // and back the other way: a maker key on a pre-acquisition card
-    expect(spellSetKeyForEra("panini-donruss", 1987)).toBe("donruss");
-    expect(spellSetKeyForEra("panini-donruss", 2024)).toBe("panini-donruss");
+    expect(spellForEra("panini-donruss", 1987)).toBe("donruss");
+    expect(spellForEra("panini-donruss", 2024)).toBe("panini-donruss");
   });
 
   it("never prefixes Fleer or Skybox — Panini never owned them", () => {
     for (const year of [1991, 2005, 2024]) {
-      expect(spellSetKeyForEra("fleer", year)).toBe("fleer");
-      expect(spellSetKeyForEra("skybox", year)).toBe("skybox");
+      expect(spellForEra("fleer", year)).toBe("fleer");
+      expect(spellForEra("skybox", year)).toBe("skybox");
     }
   });
 
@@ -296,8 +298,8 @@ describe("the era table (ASSUMPTION — Drew has not ruled the dates)", () => {
     // kind, so an era boundary there would invent a destination no checklist
     // has ever written. No synthetic products.
     for (const year of [1990, 2009, 2024]) {
-      expect(spellSetKeyForEra("score", year)).toBe("score");
-      expect(spellSetKeyForEra("leaf", year)).toBe("leaf");
+      expect(spellForEra("score", year)).toBe("score");
+      expect(spellForEra("leaf", year)).toBe("leaf");
     }
     for (const rule of ERA_SPLIT_TABLE) {
       if (rule.makerKey === null) continue;
@@ -307,13 +309,13 @@ describe("the era table (ASSUMPTION — Drew has not ruled the dates)", () => {
 
   it("refuses to guess when the year is unknown", () => {
     // An era rule needs a year; inventing one would mint identities.
-    expect(spellSetKeyForEra("donruss", null)).toBe("donruss");
-    expect(spellSetKeyForEra("donruss", undefined)).toBe("donruss");
-    expect(spellSetKeyForEra("panini-donruss", null)).toBe("panini-donruss");
+    expect(spellForEra("donruss", null)).toBe("donruss");
+    expect(spellForEra("donruss", undefined)).toBe("donruss");
+    expect(spellForEra("panini-donruss", null)).toBe("panini-donruss");
   });
 
   it("passes through a key no era rule names", () => {
-    expect(spellSetKeyForEra("topps-chrome", 1995)).toBe("topps-chrome");
+    expect(spellForEra("topps-chrome", 1995)).toBe("topps-chrome");
   });
 
   it("labels every era rule an ASSUMPTION", () => {
@@ -367,5 +369,78 @@ describe("the evidence is real", () => {
     const e = reconciliationEntry("topps-triple-threads");
     expect(e?.verdict).toBe("distinct");
     expect(e?.evidence.checklistRows).toBeGreaterThan(80_000);
+  });
+});
+
+/**
+ * THE OPEN QUESTIONS, ANSWERED FROM EVIDENCE (2026-09-04).
+ *
+ * The first cut sent all 20 `needs-ruling` keys to Drew. Reading the evidence
+ * already in this repo answered most of them, and a question whose answer is
+ * written down is not an open question. These pins hold the verdicts AND —
+ * more importantly — hold the line that separates the two kinds of answer,
+ * because getting that wrong in the alias direction fuses two pools and
+ * prices both cards wrong.
+ */
+describe("the rulings taken from evidence", () => {
+  it("folds every ruled alias onto its canonical, and the canonical is stable", () => {
+    for (const { setKey, canonical } of ruledAliases()) {
+      expect(normalizeSetKey(setKey), `${setKey} did not fold onto ${canonical}`).toBe(canonical);
+      // No chains: the destination must itself be a fixed point, or the fold
+      // lands somewhere a second rewrite moves again.
+      expect(normalizeSetKey(canonical), `${canonical} is not a fixed point`).toBe(canonical);
+    }
+  });
+
+  it("makes every ruled-distinct key a fixed point", () => {
+    for (const { setKey } of ruledDistinct()) {
+      expect(normalizeSetKey(setKey), `${setKey} is still collapsing`).toBe(setKey);
+    }
+  });
+
+  it("never rules a key both ways", () => {
+    const a = new Set(ruledAliases().map((x) => x.setKey));
+    for (const { setKey } of ruledDistinct()) {
+      expect(a.has(setKey), `${setKey} is both an alias and distinct`).toBe(false);
+    }
+  });
+
+  it("carries the evidence with every verdict", () => {
+    // A ruling without its reason is a guess somebody will have to re-derive.
+    for (const r of [...ruledAliases(), ...ruledDistinct()]) {
+      expect(r.why.length, `${r.setKey} has no stated evidence`).toBeGreaterThan(80);
+    }
+  });
+
+  it("keeps the standing rulings the pins already state", () => {
+    // A decision beats a derivation. Each of these is pinned elsewhere in the
+    // suite with its reasoning; the reconciliation must agree with them.
+    expect(normalizeSetKey("Bowman NSCC")).toBe("bowman-chrome-nscc");
+    expect(normalizeSetKey("bowman-mega-box")).toBe("bowman-chrome-mega-box");
+    expect(normalizeSetKey("bowman-mega-box-chrome")).toBe("bowman-chrome-mega-box");
+    expect(normalizeSetKey("bowman-sapphire")).toBe("bowman-chrome-sapphire");
+  });
+
+  it("does NOT fold the products whose cards do not coincide", () => {
+    // The expensive direction. eTopps is the sharpest case: parseTitleIdentity
+    // already rules it distinct, and `topps` is a 3.49M-row pool.
+    expect(normalizeSetKey("etopps")).not.toBe("topps");
+    expect(normalizeSetKey("scoremasters")).not.toBe("score");
+    expect(normalizeSetKey("scoreboard-mantle")).not.toBe("score");
+    expect(normalizeSetKey("panini-prizm-perennial-draft-picks")).not.toBe("panini-prizm-draft-picks");
+    expect(normalizeSetKey("topps-update-japan")).not.toBe("topps-update-series");
+  });
+
+  it("leaves the genuinely split cases open, and only those", () => {
+    // Report-only: these keep today's behaviour and travel to Drew. The list
+    // is asserted so answering one is a deliberate edit, not a silent drift.
+    const open = needsRulingQuestions().filter((q) => q.checklistRows > 0).map((q) => q.setKey);
+    expect(new Set(open)).toEqual(new Set([
+      "bowman-mega-box",
+      "bowman-sapphire",
+      "bowman-mega-box-chrome",
+      "topps-nscc-bowman-national-convention",
+      "black-diamond-rookie-edition",
+    ]));
   });
 });

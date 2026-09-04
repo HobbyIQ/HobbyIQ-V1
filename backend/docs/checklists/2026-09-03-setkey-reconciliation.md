@@ -134,45 +134,70 @@ ruling.
 
 ---
 
-## 4. Questions for Drew — 20 keys, 74,038 checklist rows
+## 4. The open questions, answered from evidence — 15 ruled, 5 left for Drew
 
-`needs-ruling` is **report-only**: these keys keep today's behaviour until they
-are answered. Refusing to merge sounds like the safe direction, but
-`bowman-sapphire` shows why it is not — the vocabulary already carries an
-explicit ruling on it ("vendors write Bowman Sapphire as shorthand for Bowman
-Chrome Sapphire, so the collapse is intended, not a bug"), and a verdict that
-says "I could not decide this mechanically" has no authority to overturn a
-decision someone made deliberately.
+The first cut sent all 20 `needs-ruling` keys to Drew. Reading the evidence
+already in this repo answered **15 of them**, and a question whose answer is
+written down is not an open question. Each verdict cites what settled it: a
+`productSetKeys.ts` entry, a standing CF ruling in the vocabulary, a sibling
+service that already disagrees, or checklist counts and sample titles that only
+fit one reading.
 
-**3 of the 20 (47,218 rows) already have a ruling and keep collapsing.** They
-are listed because the catalog disagrees with the rule loudly enough to be worth
-re-asking, not because anything changes today:
+Two kinds of answer, and Drew's standing rule decides which applies. **ALIAS** —
+one product, two spellings; the key folds onto the canonical. **DISTINCT** — a
+real separate product; it becomes a fixed point and the deriver stops collapsing
+it. Distinct products are **never** collapsed, because a fused pool prices both
+cards wrong. The tie-break, where the census is ambiguous, is the one Drew has
+used every time: *does the collapse put different cards in one pool?*
 
-| Key | Checklist rows | Collapses to | The question |
+### Ruled ALIAS — 7 keys, one product spelled more than one way
+
+| Key | Folds onto | What settled it |
+|---|---|---|
+| `bowman-sapphire-edition` (11,079) | `bowman-chrome-sapphire` | CF-SAPPHIRE-ONE-NAME: "there is no standalone Bowman Sapphire product". "Edition" is a marketing suffix. |
+| `bowman-sapphire-chrome` (3,681) | `bowman-chrome-sapphire` | Word order only — `sapphireOneName.test.ts:34` already pins the title form. |
+| `bowman-nscc` (854) | `bowman-chrome-nscc` | `bowmanNsccIsItsOwnProduct.test.ts` already pins "Bowman NSCC" here, with Drew's 2026-08-31 reasoning. #1612 rules **the product** distinct — and `bowman-chrome-nscc` **is** that product. This is its shorthand, not a second one. |
+| `topps-sapphire-chrome` (673) | `topps-chrome-sapphire` | The vocabulary already carries both spellings as ONE rule. |
+| `topps-sapphire-chrome-factory-set` (1,044) | `topps-chrome-sapphire` | 2016 Chrome Sapphire was *sold* as a factory set. A box configuration is not an identity. |
+| `black-diamond` (2,676) | `upper-deck-black-diamond` | CF-UD-INSERT-LINES anchors the bare spelling **on purpose**; every sample title is "Upper Deck Black Diamond". |
+| `topps-allen-and-ginter-chrome` (1,690) | `topps-allen-ginter-chrome` | Spelling only ("and" vs the elided form). The Chrome subset itself was **already** distinct (21,442 checklist rows) — this stops its pool splitting across two spellings. |
+
+### Ruled DISTINCT — 8 keys the deriver must stop collapsing
+
+| Key | Was collapsing to | What settled it |
+|---|---|---|
+| `etopps` (187) | `topps` | **`parseTitleIdentity.service.ts` already rules it distinct** — `if (/\betopps\b/i.test(t)) return "eTopps"`, with a comment saying it must precede `/topps/`. Two services disagreeing is a defect; the one that ruled deliberately wins. Collapsing into the 3.49M-row `topps` pool is the largest fuse in the table. |
+| `etopps-cards-that-never-were` (17) | `topps` | Same line, a named 2007 subset. |
+| `panini-prizm-perennial-draft-picks` (3,748) | `panini-prizm-draft-picks` | 2013-14 **baseball**; the destination is a 2019-2025 football/basketball line. Different sport, different decade. |
+| `scoreboard-mantle` (153) | `score` | 1997 Scoreboard Mickey Mantle — a Classic/Scoreboard tribute set. Reaches `score` only because "score" is a **prefix of "scoreboard"**. |
+| `scoremasters` (44) | `score` | 1989 Scoremasters, same prefix accident. A prefix match is not an identity — which is the whole point of this file. |
+| `topps-allen-and-ginters-national-die-cuts` (146) | `topps-allen-ginter` | A National-convention die-cut release. Convention exclusives price on their own scarcity (CF-BOWMAN-NSCC-DISTINCT reasoning). |
+| `bowman-mega` (412) | `bowman-chrome-mega-box` | CF-BOWMAN-MEGA-BOX-DISTINCT: "Mega box is different from 2026 bowman." The 2026 short spelling of that distinct line. |
+| `topps-update-japan` (1) | `topps-update-series` | A Japan-market release. Small — but a small number is never dismissed as noise, and the market's own key wins. |
+
+### Still open — 5 keys Drew decides
+
+**3 already carry a ruling and keep collapsing** (47,218 rows). They stay
+consistent with the standing rulings; the catalog's disagreement is the reason
+they are worth re-asking, not a reason anything changes today:
+
+| Key | Rows | Ruled destination | The disagreement |
 |---|---:|---|---|
-| `bowman-mega-box` | 33,137 | `bowman-chrome-mega-box` | Own product, or shorthand? |
-| `bowman-sapphire` | 7,722 | `bowman-chrome-sapphire` | The rule says no standalone product — but 7,722 checklist rows are filed here. |
-| `bowman-mega-box-chrome` | 6,359 | `bowman-chrome-mega-box` | Same question, third spelling. |
+| `bowman-mega-box` | 33,137 | `bowman-chrome-mega-box` | CF-BOWMAN-MEGA-BOX-DISTINCT names `bowman-chrome-mega-box` the one product; 33,137 checklist rows are filed under the short key. |
+| `bowman-sapphire` | 7,722 | `bowman-chrome-sapphire` | The rule says "no standalone product", but 7,722 rows from **four independent Beckett scrapes** are filed here, and "2025 Bowman Sapphire Baseball" (8,962) outnumbers "2025 Bowman Chrome Sapphire Baseball" (2,805) better than 3:1. |
+| `bowman-mega-box-chrome` | 6,359 | `bowman-chrome-mega-box` | Third spelling, same question. |
 
-**The other 17 (26,820 rows) are genuinely open:**
+**2 are genuinely split** — the evidence points both ways:
 
-| Family | Keys | Rows | The question |
-|---|---|---:|---|
-| **Sapphire spellings** | `bowman-sapphire-edition`, `bowman-sapphire-chrome`, `topps-sapphire-chrome`, `topps-sapphire-chrome-factory-set` | 16,477 | Are "Edition", "Sapphire Chrome" and the factory set the same product as the ruled key, or their own? |
-| **Prizm draft** | `panini-prizm-perennial-draft-picks` | 3,748 | Is 2013-14 "Perennial Draft Picks" the same as `panini-prizm-draft-picks`? |
-| **Black Diamond** | `black-diamond`, `black-diamond-rookie-edition` | 2,870 | Same as `upper-deck-black-diamond`? Is Rookie Edition separate? |
-| **Allen & Ginter subsets** | `topps-allen-and-ginter-chrome`, `topps-allen-and-ginters-national-die-cuts` | 1,836 | Chrome / National die-cuts — subsets, or own products? |
-| **NSCC** | `bowman-nscc`, `topps-nscc-bowman-national-convention` | 1,075 | Do both spellings mean `bowman-chrome-nscc`? (#1612 ruled NSCC its own product) |
-| **Bowman Mega** | `bowman-mega` | 412 | The 2026 spelling — same product as Mega Box? |
-| **eTopps** | `etopps`, `etopps-cards-that-never-were` | 204 | A separate digital-delivery line — own key, or `topps`? |
-| **Score family** | `scoreboard-mantle`, `scoremasters` | 197 | 1997 Scoreboard Mantle / 1989 Scoremasters — own keys, or `score`? |
-| **Topps Update Japan** | `topps-update-japan` | 1 | A Japanese release of Update, or its own set? |
+| Key | Rows | Option A | Option B |
+|---|---:|---|---|
+| `topps-nscc-bowman-national-convention` | 221 | **alias** onto `bowman-chrome-nscc` — a 2021 Bowman National release whose key picked up a stray "topps" | **distinct** — the vocabulary's NSCC rule is deliberately Bowman-scoped "so it cannot capture a Topps National promo", and it is capturing this key on the `bowman-national-convention` substring, which is exactly the leak the comment warns about |
+| `black-diamond-rookie-edition` | 194 | **alias** onto `upper-deck-black-diamond` — "Rookie Edition" is a subset name, and CF-UD-INSERT-LINES already folds the bare key | **distinct** — Black Diamond Rookie Edition is a separately-released product (the census's own titles show a 1998 football Rookie Edition alongside the 1999 base sets), and folding it fuses a rookie-only pool into the base one |
 
 The other 9 `needs-ruling` keys carry **zero** checklist rows and are listed in
 the data file for completeness.
 
 ---
-
 ## 5. The mis-sported class is a sport-field defect, not a setKey one
 
 #1689 named 90,462 rows of 2023 `panini-obsidian` / `zenith` / `origins` tagged
