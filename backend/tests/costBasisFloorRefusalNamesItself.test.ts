@@ -366,10 +366,16 @@ describe("the our-pool reprice lane refuses through the SAME write", () => {
     // `keepingPrior: true`. It must now persist through the shared write.
     expect(src).toMatch(/our_pool_reprice_rejected_cost_basis_floor/);
     // The lane body: from the floor's own `if` to the end of its log call.
-    const laneStart = src.indexOf(
-      'if (costBasis > 50 && (proposedTotal / costBasis) < 0.15) {',
-    );
+    //
+    // CF-THE-FLOOR-IS-A-RATIO-NOT-A-DOLLAR-AMOUNT (Drew, 2026-09-04): the lane
+    // used to inline its own predicate (`costBasis > 50 && ratio < 0.15`),
+    // which is both the dollar gate that let the $29.45 Chipper Jones through
+    // and a second implementation of the doctrine. It now calls the SAME
+    // `costBasisFloor` both one-entry lanes call, so the anchor is that call.
+    const laneStart = src.indexOf("const floor = costBasisFloor(holding, fmv);");
     expect(laneStart).toBeGreaterThan(0);
+    // The dollar gate must not come back, in this lane or anywhere.
+    expect(src).not.toMatch(/costBasis > 50/);
     const lane = src.slice(laneStart, src.indexOf("} else {", laneStart));
     expect(lane).toMatch(/our_pool_reprice_rejected_cost_basis_floor/);
     // It must WRITE, through the shared helper, not merely log.

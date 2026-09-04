@@ -51,6 +51,7 @@
  * tier is never rewritten); multipliers are empirical only.
  */
 import { type FmvRungLabel } from "./fmvRung.js";
+import { assessPoolMigration, readSettleMarker } from "./poolMigrationGate.js";
 import type { UnifiedGradeEntry, UnifiedPriceResult } from "./unifiedPricing.service.js";
 import {
   applyUnifiedTierToEntry,
@@ -135,6 +136,14 @@ export type ValuationReason =
   /** This identity has sales at other grades, but none at the requested
    *  tier, no empirical ratio to project it, and the ladder found nothing. */
   | "no-exact-pool-at-tier"
+  /** CF-A-MIGRATING-POOL-IS-NOT-A-THIN-POOL (Drew, 2026-09-04). The identity's
+   *  catalog row is newer than the settle window and no rematch marker says
+   *  its pool is done, so what the pool currently holds is a partial view. No
+   *  number is published — not even a fallback — and the caller retains the
+   *  prior value. This is the ONE reason that is not a statement about
+   *  evidence being absent; it is a statement about evidence being INCOMPLETE,
+   *  which is why it withholds instead of falling through the ladder. */
+  | "pool-migrating"
   | null;
 
 export interface ValuationIdentity {
@@ -159,6 +168,16 @@ export interface ValuationIdentity {
   printRun: number | null;
   playerName: string | null;
   imageUrl: string | null;
+  /**
+   * CF-A-MIGRATING-POOL-IS-NOT-A-THIN-POOL (Drew, 2026-09-04). The catalog
+   * row's immutable mint instant (`observedAt`). Carried on the identity
+   * because the question "is this pool still migrating onto a freshly minted
+   * row?" is asked at PRICING time, after the catalog read is long done —
+   * and the read used to project every timestamp away, which is why the
+   * engine could not tell a settled empty tier from a half-migrated one.
+   * Null for a row minted before the field existed, or an unresolved read.
+   */
+  observedAt: string | null;
 }
 
 export interface Valuation {
@@ -232,7 +251,7 @@ export function normalizeGrade(grade: ValuationGrade | null | undefined): Valuat
 function blankIdentity(requestedId: string): ValuationIdentity {
   return {
     slug: null, requestedId, pooledAs: null, pooledVia: null,
-    sport: null, year: null, setKey: null, setName: null, cardNumber: null,
+    sport: null, year: null, setKey: null, setName: null, cardNumber: null, observedAt: null,
     parallel: "Base", parallelSlug: null, isAuto: false, printRun: null,
     playerName: null, imageUrl: null,
   };
@@ -305,6 +324,7 @@ export async function resolveValuationIdentity(
   identity.printRun = printRunHint ?? parsed?.printRun ?? row?.printRun ?? null;
   identity.playerName = row?.playerName ?? null;
   identity.imageUrl = row?.imageUrl ?? null;
+  identity.observedAt = row?.observedAt ?? null;
   return { identity, reason: null, resolution };
 }
 
@@ -447,6 +467,61 @@ export async function valueIdentity(req: ValuationRequest): Promise<Valuation> {
     return entry;
   };
   let tier = findTier();
+
+  // ── 1a. CF-A-MIGRATING-POOL-IS-NOT-A-THIN-POOL (Drew, 2026-09-04) ──────
+  //
+  // Before ANY rung reads the shape of this pool, ask whether the pool is
+  // finished arriving. A newly minted identity is repriceable the moment its
+  // catalog row exists, but its sales are re-keyed onto it by the GREAT
+  // REMATCH over the following hours — so between mint and settle, "this tier
+  // has no sales" and "this tier's sales are still in flight" look identical
+  // to every rung below.
+  //
+  // The 1987 Topps Traded Tiffany Maddux row was minted at 14:37Z. At 18:56Z,
+  // with 17 of 350 sales migrated, a reprice found the PSA 10 tier empty and
+  // published a grade-curve estimate off the PSA 8/9 rows that had arrived:
+  // $240 for a ~$1,500 card. Every step was correct given what the engine
+  // could see, which is exactly why the gate has to be here — above the
+  // branches, not inside one.
+  //
+  // This is deliberately the ONE choke point, for the reason `asOfMs` is a
+  // request field rather than a convention: section 1 and section 2 have five
+  // returns between them, and a gate repeated at each is a gate that will be
+  // forgotten at the sixth. Placed here it covers the exact rung, the player
+  // rung's exact-pool anchor, and the graded-to-raw curve alike.
+  //
+  // It refuses rather than substituting. No fallback number is reached for a
+  // migrating identity — a fallback is precisely what produced the $240 — so
+  // the valuation returns `no-basis` with reason `pool-migrating`, and the
+  // persist layer retains the prior value and labels it.
+  const migration = assessPoolMigration({
+    observedAt: identity.observedAt,
+    marker: await readSettleMarker(slug, identity.year, identity.setKey).catch(() => null),
+    nowMs,
+  });
+  if (migration.migrating) {
+    v.reason = "pool-migrating";
+    v.rungLabel = "no-basis";
+    v.valueSource = "unavailable";
+    v.fairMarketValue = null;
+    v.compsUsed = tier.sampleCount;
+    v.confidence = 0;
+    v.basis = `This card's identity was created ${migration.ageHours?.toFixed(1) ?? "?"}h ago and its sales are still being re-keyed onto it`
+      + ` (${tier.sampleCount} ${requestedTier} sale${tier.sampleCount === 1 ? "" : "s"} arrived so far). No price is published from a pool that is still migrating`
+      + ` — a partially migrated pool prices a card off whichever sales happened to arrive first.`;
+    console.warn(JSON.stringify({
+      event: "valuation_withheld_pool_migrating",
+      source: "oneValuationPath.valueIdentity",
+      slug,
+      tier: requestedTier,
+      observedAt: identity.observedAt,
+      ageHours: migration.ageHours,
+      because: migration.because,
+      tierSampleCount: tier.sampleCount,
+      totalSampleCount: v.totalSampleCount,
+    }));
+    return v;
+  }
 
   // The requested tier has its own pool: the exact-pool rung, the engine's
   // number, the engine's label. Nothing else touches it.

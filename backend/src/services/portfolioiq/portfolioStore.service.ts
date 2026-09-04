@@ -32,7 +32,7 @@ import {
 } from "./holdingSaveDeferredWork.js";
 // CF-ONE-VALUATION-PATH (D17, 2026-08-30): the persist site prices the exact
 // pool through the ONE valuation entry (holdingValuation → valueIdentity).
-import { valueHoldingThroughOneEntry, holdingGrade as holdingGradeOf, costBasisFloorRefusalWrite } from "./holdingValuation.js";
+import { valueHoldingThroughOneEntry, holdingGrade as holdingGradeOf, costBasisFloorRefusalWrite, costBasisFloor, noBasisRefusalWrite } from "./holdingValuation.js";
 // CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (Drew, 2026-09-03). The legacy
 // exact-pool writers below persist prices too — only for identities the
 // catalog cannot name, but persist they do. They stamp the same label set
@@ -3508,6 +3508,24 @@ async function autoPriceHolding(
     }));
     return cbf.holding;
   }
+  // CF-A-STALE-VALUE-IS-NOT-A-PRICE (Drew, 2026-09-04): the engine declined
+  // for a reason no other lane may paper over — the catalog holds no identity
+  // (the $1,850 Bellingham Griffey standing beside an engine that returns
+  // identity-not-in-catalog), or the pool is mid-migration (the $240 Maddux).
+  // The prior value is kept and LABELLED, and the legacy chain below does NOT
+  // run: it could only substitute a number the engine deliberately withheld.
+  if (oneEntry.outcome === "no-basis-refusal") {
+    const nb = noBasisRefusalWrite(holding, oneEntry.reason, oneEntry.valuation, new Date().toISOString());
+    doc.holdings[holding.id] = nb.holding;
+    console.warn(JSON.stringify({
+      event: "no_basis_refusal_persisted",
+      source: "portfolioStore.autoPriceHolding",
+      holdingId: holding.id,
+      reason: oneEntry.reason,
+      summary: nb.summary,
+    }));
+    return nb.holding;
+  }
   const entryDecidedExactPool = oneEntry.outcome !== "unresolved";
 
   // CF-UNIFIED-PRICING-EARLY-EXIT (Drew, 2026-08-04). ONE function,
@@ -4296,18 +4314,24 @@ async function autoPriceHolding(
       // Bobby Witt Jr. BGS 9.5 auto ($1,260 paid) was getting matched
       // to non-auto base card slugs and priced at $6.92 — a 99.5% loss
       // that's obviously a slug/parallel mismatch, not real market
-      // signal. Guard: for holdings costing > $50, if the proposed
-      // FMV is less than 15% of cost basis, KEEP the existing FMV /
-      // estimatedValue instead. High-value cards need higher-confidence
-      // signal to move off a prior estimate.
+      // signal. Guard: if the proposed FMV is less than 15% of cost
+      // basis, KEEP the existing FMV / estimatedValue instead.
+      //
+      // CF-THE-FLOOR-IS-A-RATIO-NOT-A-DOLLAR-AMOUNT (Drew, 2026-09-04): this
+      // was a fourth inline copy of the predicate, dollar gate included. It
+      // now calls the SAME `costBasisFloor` every other lane calls, so the
+      // doctrine has one implementation and the $29.45 Chipper Jones is
+      // refused here too.
       const qty = Math.max(1, toNumber(holding.quantity, 1));
-      const costBasis = toNumber(holding.totalCostBasis, toNumber(holding.purchasePrice, 0) * qty);
-      const proposed = typeof ourPool.fairMarketValue === "number" && ourPool.fairMarketValue > 0
-        ? ourPool.fairMarketValue * qty
+      const proposedUnit = typeof ourPool.fairMarketValue === "number" && ourPool.fairMarketValue > 0
+        ? ourPool.fairMarketValue
         : typeof ourPool.estimatedValue === "number" && ourPool.estimatedValue > 0
-          ? ourPool.estimatedValue * qty
+          ? ourPool.estimatedValue
           : 0;
-      const suspiciouslyLow = costBasis > 50 && proposed > 0 && (proposed / costBasis) < 0.15;
+      const opFloor = costBasisFloor(holding, proposedUnit);
+      const costBasis = opFloor.costBasis;
+      const proposed = opFloor.proposedTotal;
+      const suspiciouslyLow = opFloor.rejects;
       if (suspiciouslyLow) {
         console.warn(JSON.stringify({
           event: "our_pool_override_rejected_cost_basis_floor",
@@ -4761,14 +4785,17 @@ async function autoPriceHolding(
       // of the same guard at ~line 2765. Devin Taylor CPA-DT Black auto
       // ($650 cost basis) got fmv=$3.69 written via THIS path because
       // this second write site had no cost-basis check. Any fallback
-      // FMV that lands <15% of cost basis on a >$50 holding is
-      // suspiciously low; keep the prior value instead. valuationStatus
-      // stays as-is so UI still shows a value (per Drew: "we can't show
-      // null, we have the calculation to get to its current value").
-      const qty = Math.max(1, toNumber(holding.quantity, 1));
-      const costBasis = toNumber(holding.totalCostBasis, toNumber(holding.purchasePrice, 0) * qty);
-      const proposed = fallback.fairMarketValue * qty;
-      const suspiciouslyLow = costBasis > 50 && proposed > 0 && (proposed / costBasis) < 0.15;
+      // FMV that lands <15% of cost basis is suspiciously low; keep the
+      // prior value instead. valuationStatus stays as-is so UI still shows
+      // a value (per Drew: "we can't show null, we have the calculation to
+      // get to its current value").
+      //
+      // CF-THE-FLOOR-IS-A-RATIO-NOT-A-DOLLAR-AMOUNT (Drew, 2026-09-04): the
+      // fifth and last inline copy, routed to the one shared predicate.
+      const cfFloor = costBasisFloor(holding, fallback.fairMarketValue);
+      const costBasis = cfFloor.costBasis;
+      const proposed = cfFloor.proposedTotal;
+      const suspiciouslyLow = cfFloor.rejects;
       if (suspiciouslyLow) {
         console.warn(JSON.stringify({
           event: "catalog_fallback_rejected_cost_basis_floor",
@@ -10164,6 +10191,30 @@ export async function repriceHoldingsForUser(
         });
         continue;
       }
+      // CF-A-STALE-VALUE-IS-NOT-A-PRICE (Drew, 2026-09-04). Same shared write
+      // as the on-demand lane, so the two cannot drift: the prior value is
+      // kept and labelled, and the legacy chain does NOT run — it could only
+      // substitute a number the engine deliberately withheld.
+      if (bOneEntry.outcome === "no-basis-refusal") {
+        const nb = noBasisRefusalWrite(holding, bOneEntry.reason, bOneEntry.valuation, new Date().toISOString());
+        doc.holdings[holding.id] = nb.holding;
+        console.warn(JSON.stringify({
+          event: "no_basis_refusal_persisted",
+          source: "portfolioStore.repriceHoldingsForUser",
+          holdingId: holding.id,
+          reason: bOneEntry.reason,
+          summary: nb.summary,
+        }));
+        updates.push({
+          id: holding.id,
+          status: "skipped",
+          reason: `${bOneEntry.reason}: ${nb.summary}`,
+          cardId: typeof (holding as any).cardId === "string" && ((holding as any).cardId as string).trim() !== ""
+            ? ((holding as any).cardId as string).trim()
+            : null,
+        });
+        continue;
+      }
       const bEntryDecided = bOneEntry.outcome !== "unresolved";
 
       // CF-UNIFIED-PRICING-BATCH-EARLY-EXIT (Drew, 2026-08-04). Same
@@ -10742,11 +10793,19 @@ export async function repriceHoldingsForUser(
               // slug-mismatch price. Bobby Witt Jr. BGS 9.5 auto ($1,260
               // paid) got matched to non-auto base cards at $6.92 by the
               // ladder's family-baseline rung. If proposed < 15% of cost
-              // basis on a > $50 holding, keep the prior estimate.
-              const qty = Math.max(1, toNumber(holding.quantity, 1));
-              const costBasis = toNumber(holding.totalCostBasis, toNumber(holding.purchasePrice, 0) * qty);
-              const proposedTotal = fmv * qty;
-              if (costBasis > 50 && (proposedTotal / costBasis) < 0.15) {
+              // basis, keep the prior estimate.
+              //
+              // CF-THE-FLOOR-IS-A-RATIO-NOT-A-DOLLAR-AMOUNT (Drew,
+              // 2026-09-04). This lane held its own copy of the predicate,
+              // dollar gate and all, so the $29.45 Chipper Jones passed here
+              // for the same reason it passed the one-entry lane. The
+              // predicate now comes from `costBasisFloor` — the SAME function
+              // both one-entry lanes call — so the doctrine has one
+              // implementation and this lane cannot drift from it again.
+              const floor = costBasisFloor(holding, fmv);
+              const costBasis = floor.costBasis;
+              const proposedTotal = floor.proposedTotal;
+              if (floor.rejects) {
                 // CF-ONE-FLOOR-ONE-WRITE (2026-09-04). This lane was the THIRD
                 // cost-basis floor and the one #1754 did not reach: it logged
                 // that it was retaining the prior value and then wrote NOTHING,
@@ -11101,8 +11160,17 @@ export async function repriceHoldingsForUser(
         const priorConfidence = typeof priorMeta?.confidence === "number" && Number.isFinite(priorMeta.confidence)
           ? (priorMeta.confidence as number)
           : null;
+        // The ENGINE's own reason for declining, when it named one, so the
+        // withhold says `identity-not-in-catalog` rather than a generic
+        // "confidence-gate" that describes the lane instead of the cause.
+        // CF-A-REFUSAL-STATES-WHAT-ACTUALLY-HAPPENED (Drew, 2026-09-04).
+        const engineReason = bOneEntry.outcome !== "unresolved" || bOneEntry.valuation
+          ? bOneEntry.valuation?.reason ?? null
+          : null;
+        const retentionWithholdReason = engineReason ?? "confidence-gate";
         const retentionReason =
-          `value retained unchanged by the confidence-gated reprice (${failed.join(", ")}; source=${estSource || "ok"})`;
+          `value retained unchanged by the confidence-gated reprice (${failed.join(", ")}; source=${estSource || "ok"}`
+          + `${engineReason ? `; engine: ${engineReason}` : ""})`;
         doc.holdings[holding.id] = writeHoldingValuation(holding, {
           fairMarketValue: keptFmv,
           // The rung the number was priced under still describes it — the
@@ -11122,19 +11190,40 @@ export async function repriceHoldingsForUser(
           nowIso: now,
           // Re-state the meta so the retention carries the same shape a fresh
           // write would, with the prior confidence or an explicit null.
-          ...(priorMeta
-            ? {
-                meta: {
-                  slug: typeof priorMeta.slug === "string" ? priorMeta.slug : null,
-                  compsUsed: typeof priorMeta.compsUsed === "number" ? priorMeta.compsUsed : null,
-                  confidence: priorConfidence,
-                  ...(Array.isArray(priorMeta.labels) ? { labels: priorMeta.labels as never } : {}),
-                  ...(priorMeta.selfAnchored !== undefined
-                    ? { selfAnchored: priorMeta.selfAnchored as never }
-                    : {}),
-                },
-              }
-            : { writeMeta: false }),
+          // CF-A-STALE-VALUE-IS-NOT-A-PRICE (Drew, 2026-09-04). The retention
+          // above records WHY on the row, but its meta was an ORDINARY meta —
+          // no `withheld` — so `writeHoldingValuation` stamped `method` as the
+          // carried rung (or `unlabelled-carry`), and the row read to every
+          // rung gate and to the invariant auditor as a current price.
+          //
+          // Measured in the 2026-09-04 audit: the Bellingham Griffey shows
+          // $1,850 while the engine, asked for that identity, returns
+          // `identity-not-in-catalog`. Nothing on the row said the number was
+          // a previous pass's. This is the END of the chain — every lane above
+          // has declined, including the legacy exact-pool read that
+          // legitimately prices catalog-unnameable identities WITH sales — so
+          // it is the first point at which "no price could be published" is
+          // actually known, and therefore the right place to say it.
+          //
+          // The number is still KEPT (nothing here faults it) and the prior
+          // rung still describes it; what changes is that the refusal is now
+          // VISIBLE, carrying the engine's own reason when it named one.
+          meta: {
+            slug: typeof priorMeta?.slug === "string" ? priorMeta.slug : null,
+            compsUsed: typeof priorMeta?.compsUsed === "number" ? priorMeta.compsUsed : null,
+            confidence: priorConfidence,
+            ...(Array.isArray(priorMeta?.labels) ? { labels: priorMeta.labels as never } : {}),
+            ...(priorMeta?.selfAnchored !== undefined
+              ? { selfAnchored: priorMeta.selfAnchored as never }
+              : {}),
+            withheld: {
+              reason: retentionWithholdReason,
+              blockingId: typeof priorMeta?.slug === "string" ? priorMeta.slug : null,
+              blockingCount: typeof priorMeta?.compsUsed === "number" ? priorMeta.compsUsed : 0,
+              // Nothing was computed to publish, so no number is borrowed.
+              proposed: null,
+            },
+          },
           fields: {
             ...repriceIdentityPatch,
             verdict: reasonLabel,

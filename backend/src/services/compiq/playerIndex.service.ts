@@ -104,6 +104,7 @@ import {
 } from "../insights/marketIndex.service.js";
 import { readPlayerPoolRows, type PlayerPoolRow } from "./playerIndexRead.js";
 import { asOfCutoffString } from "./asOfCutoff.js";
+import { UNKNOWN_GRADER_TIER } from "./unifiedPricing.service.js";
 
 /** A player needs this many cards with fresh sales before they have a
  *  "market" the rung is willing to speak for. */
@@ -201,11 +202,28 @@ interface MemberSeries {
   freshSales: number;
 }
 
-/** The grade tier a row trades in, in the engine's vocabulary ("Raw", "PSA 10"). */
+/** The grade tier a row trades in, in the engine's vocabulary ("Raw", "PSA 10").
+ *
+ *  CF-A-GRADED-SALE-NEVER-ENTERS-THE-RAW-TIER (Drew, 2026-09-04): the same
+ *  defect `unifiedPricing.gradeLabel` carried, in the index's own copy of the
+ *  predicate. A missing `gradeCompany` is an ABSENCE, not a claim of rawness;
+ *  a row that carries a grade VALUE is a graded sale whose grader was never
+ *  recorded, and it must not join a raw basket — the index's liquid-Raw
+ *  baskets are exactly where a stray graded sale distorts the ratio. It gets
+ *  the unmatchable tier instead, so it is excluded rather than deleted. */
 export function rowTierLabel(row: { gradeCompany: string | null; gradeValue: number | null }): string {
   const company = String(row.gradeCompany ?? "").trim();
-  if (!company) return "Raw";
-  return `${company.toUpperCase()} ${row.gradeValue ?? "?"}`;
+  // `Number(null)` is 0 and `Number("")` is 0 — both finite — so an ABSENT
+  // grade must be rejected before the numeric parse, or a genuinely raw row
+  // reads as "graded 0" and is evicted from its own tier. Absence first,
+  // parse second.
+  const raw = row.gradeValue as unknown;
+  const value = raw === null || raw === undefined || raw === ""
+    ? NaN
+    : (typeof raw === "number" ? raw : Number(raw));
+  const hasValue = Number.isFinite(value);
+  if (!company) return hasValue ? UNKNOWN_GRADER_TIER : "Raw";
+  return `${company.toUpperCase()} ${hasValue ? String(value) : "?"}`;
 }
 
 /**
