@@ -1,0 +1,22 @@
+{
+  "scrapedAt": "2026-09-04T19:05:00.000Z",
+  "source": "sportscardchecklist",
+  "sourceUrl": "https://www.sportscardchecklist.com/set-13819/1997-metal-universe-magnetic-field-baseball-trading-card-checklist",
+  "corroboratingUrl": "https://baseballcardpedia.com/index.php/1997_Metal_Universe",
+  "sport": "baseball",
+  "year": 1997,
+  "season": "1997",
+  "setName": "1997 Metal Universe Magnetic Field",
+  "productKey": "1997-metal-universe-magnetic-field",
+  "setKey": "metal-universe",
+  "rowCount": 10,
+  "parallelColumnAuthoritative": true,
+  "cardRows": 10,
+  "ladderRows": 0,
+  "subsetRows": 0,
+  "printRunsFound": 0,
+  "note": "MAGNETIC FIELD IS AN INSERT, NOT THE BASE SET, AND THAT IS THE WHOLE POINT OF THIS FILE. Holding 277b05a3 ('1997 Metal Universe Cal Ripken Jr. #8 PSA 8') resolved to hiq:baseball:1997:metal-universe:8:base:no-auto. The task that opened this work believed that slug was Mark McGwire's Blast Furnace #8; it is not. The 1997 Metal Universe BASE #8 is genuinely Cal Ripken Jr. (sportscardchecklist set-13815, verified 250/250 rows). Blast Furnace #8 IS Mark McGwire (set-13816, 12 rows) but Blast Furnace is a different insert and never keyed to :base:. So the base slug is not a WRONG PLAYER — it is the wrong PRODUCT for this particular card, which the eBay listing names explicitly: 'Metal Universe - Magnetic Field - PSA 8'. Magnetic Field #8 is also Cal Ripken Jr., so card number and player agree across both sets and only the set separates them. That is exactly the collision that makes the base pool look plausible while pricing the wrong card.",
+  "setKeyNote": "setKey is the PARENT product `metal-universe`, deliberately. normalizeSetKey('1997 Metal Universe Magnetic Field') === 'metal-universe', so an insert-specific key would not be a fixed point and would strand the pool. The insert identity rides in `category` (insert-magnetic-field), which is the convention already used by 300+ scraped files.",
+  "parallelsNote": "BCP states verbatim: 'Curiously, there were no parallels in this year's set.' Every parallel cell is therefore deliberately blank — blank means unknown/plain, never the string Base.",
+  "sectionsReport": []
+}

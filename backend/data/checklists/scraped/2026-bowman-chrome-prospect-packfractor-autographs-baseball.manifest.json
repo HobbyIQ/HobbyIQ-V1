@@ -1,0 +1,21 @@
+{
+  "scrapedAt": "2026-09-04T19:10:00.000Z",
+  "source": "hobbymonitor",
+  "sourceUrl": "https://www.hobbymonitor.com/release/2026-bowman-baseball",
+  "sport": "baseball",
+  "year": 2026,
+  "season": "2026",
+  "setName": "2026 Bowman Chrome Prospect PackFractor Autographs",
+  "productKey": "2026-bowman-chrome-prospect-packfractor-autographs",
+  "setKey": "bowman-chrome",
+  "rowCount": 39,
+  "parallelColumnAuthoritative": false,
+  "cardRows": 39,
+  "ladderRows": 0,
+  "subsetRows": 0,
+  "printRunsFound": 0,
+  "note": "THE PRODUCT IS 2026 BOWMAN, NOT 2026 BOWMAN CHROME, AND THAT IS THE FINDING. Holding ca7a150b is titled '2026 Bowman Chrome Marconi German CPA-MG Gold Refractor /50'. CPA-MG does not appear anywhere in hobbymonitor's 2026-bowman-chrome-baseball release (0 occurrences of both 'CPA-MG' and 'Marconi'); it appears in 2026-bowman-baseball, in a 39-card set whose cardSet string is 'Chrome Prospect PackFractor Autographs'. The eBay title's word 'Chrome' is the PackFractor set's own name, not the Bowman Chrome product. That is why the CPA-MG sales sit on a bowman-chrome slug and why no Gold Refractor row was ever minted: the ladder ingest ran against the wrong release.",
+  "ladderGapNote": "THE GOLD REFRACTOR /50 ROW CANNOT BE MINTED FROM THIS SOURCE, AND IS DELIBERATELY ABSENT. hobbymonitor publishes a `variations` ladder for 25 of the release's cardSets — 'Chrome Prospect Autograph' carries a full 30-rung ladder including 'Gold Refractor /50' — but 'Chrome Prospect PackFractor Autographs' is NOT one of the 25. It has no published ladder at all. Minting a Gold Refractor /50 row for CPA-MG would therefore be a SYNTHETIC parallel borrowed from a neighbouring set, which `feedback_no_synthetic_parallels_only_actuals` forbids: every row must trace to a scraped source. The card the user owns is real and its sale is real ($182.50, 2026-08-18); what is missing is a checklist that states the PackFractor ladder. This file mints the 39 card identities that the source DOES state, and stops there. The Gold Refractor rung needs a second source before it can be minted.",
+  "setKeyNote": "setKey `bowman-chrome` is a normalizeSetKey fixed point and matches where every CPA-MG sale already sits (hiq:baseball:2026:bowman-chrome:cpa-mg:base:auto, 11 rows). It is retained so this checklist backs the pool that exists rather than starting a third spelling. Note normalizeSetKey('Chrome Prospect PackFractor Autographs') === 'bowman-chrome' independently.",
+  "sectionsReport": []
+}
