@@ -34,7 +34,7 @@
 import path from "node:path";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 const backend = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const require_ = createRequire(import.meta.url);
@@ -212,6 +212,122 @@ describe("1 -- a derived parallel that drops a finish family the title names is 
       const allProductWords = tokens.length > 0 && tokens.every((t: string) => V.isProductWord(t, c.setKey));
       expect(allProductWords, c.what).toBe(false);
     }
+  });
+
+  // ── THE BLANK ANSWER IS THE WORSE COLLAPSE (verifier residual, 2026-09-03) ─
+  //
+  // GUARD 4 shipped gated on `!axisIsBlank("parallel", derivedParallel)`, which
+  // excludes exactly "", "Base", "[Base]", "none" and "unknown" -- so a
+  // derivation that read a finish family and answered BASE escaped the guard,
+  // while the same derivation answering the WRONG SIBLING was caught. The
+  // guard's own comment claimed it ran on any derived parallel; it did not.
+  //
+  // The blank answer drops the family AND the colour, and the row it leaves is
+  // a numbered base. It is also the shape that lets a cardNumber fill through:
+  // GUARD 2 refuses only the printRun, so the same row's NUMBER still moved.
+  describe("...and a derivation that answers Base/blank is the SAME collapse", () => {
+    const BLANK_ANSWERS: Array<{ what: string; derived: string }> = [
+      { what: "Base", derived: "Base" },
+      { what: "blank", derived: "" },
+      { what: "[Base]", derived: "[Base]" },
+      { what: "unknown", derived: "unknown" },
+    ];
+
+    // The row is IMPROVE-shaped on the axis it FILLS (the cardNumber), while
+    // the parallel axis AGREES at blank -- stored Base, derived Base. That is
+    // the shipped shape: a stored blank against a derived "Base" reads as
+    // `changed:parallel` and classifies CONFLICT, which never reaches
+    // `improveRefusals` at all. The leak lives where the parallel agrees and
+    // the NUMBER moves.
+    for (const b of BLANK_ANSWERS) {
+      it(`refuses "Purple Laser" answered as ${b.what}`, () => {
+        const res = improveRow({
+          title: "2023 Topps Chrome Purple Laser Refractor Julio Rodriguez #150",
+          year: 2023, setKey: "topps-chrome", sport: "baseball",
+          cardNumber: "150", storedParallel: b.derived, derivedParallel: b.derived,
+        });
+        expect(res.klass, b.what).toBe("IMPROVE");
+        expect(res.writable, b.what).toBe(false);
+        expect(refusalText(res)).toMatch(/improve-title-names-a-finish-family-the-derivation-dropped:laser/);
+      });
+    }
+
+    it('THE PIN: title "Purple Laser" + derived Base -> REFUSED', () => {
+      const res = improveRow({
+        title: "2023 Topps Chrome Purple Laser Refractor Julio Rodriguez #150",
+        year: 2023, setKey: "topps-chrome", sport: "baseball",
+        cardNumber: "150", storedParallel: "Base", derivedParallel: "Base",
+      });
+      expect(res.klass).toBe("IMPROVE");
+      expect(res.writable).toBe(false);
+      expect(refusalText(res)).toMatch(/the-derivation-dropped:laser@Base/);
+    });
+
+    it('"Electric Etch" answered as Base is refused on the etch family', () => {
+      const res = improveRow({
+        title: "2022 Panini Prizm Electric Etch Green #300 Ja Morant",
+        year: 2022, setKey: "panini-prizm", sport: "basketball",
+        cardNumber: "300", storedParallel: "Base", derivedParallel: "Base",
+      });
+      expect(res.writable).toBe(false);
+      expect(refusalText(res)).toMatch(/the-derivation-dropped:etch/);
+    });
+
+    it("AND THE cardNumber CANNOT FILL THROUGH IT -- the whole IMPROVE is refused", () => {
+      // The leak this closes: GUARD 2 refuses the printRun fill only, so a
+      // title naming a finish the derivation could not read still moved the
+      // row's NUMBER onto the base slug. A derivation that could not read the
+      // parallel has not earned a write on any axis of this row.
+      const res = improveRow({
+        title: "2023 Topps Chrome Purple Laser Refractor Julio Rodriguez #150",
+        year: 2023, setKey: "topps-chrome", sport: "baseball",
+        cardNumber: "150", storedNumber: null,
+        storedParallel: "Base", derivedParallel: "Base",
+      });
+      expect(res.klass).toBe("IMPROVE");
+      expect(res.axes.filled).toContain("cardNumber");
+      expect(res.writable).toBe(false);
+    });
+
+    it("CONTROL: a Base answer over a title naming NO family still writes", () => {
+      // The guard must not become "refuse every blank parallel". A plain base
+      // card's title names no finish family, nothing is dropped, and the row
+      // is as writable as it ever was.
+      const res = improveRow({
+        title: "2023 Topps Chrome Julio Rodriguez #150",
+        year: 2023, setKey: "topps-chrome", sport: "baseball",
+        cardNumber: "150", storedParallel: "Base", derivedParallel: "Base",
+      });
+      expect(res.writable).toBe(true);
+      expect(refusalText(res)).not.toMatch(/the-derivation-dropped/);
+    });
+
+    it("CONTROL: the product's OWN setKey word is still not a dropped family", () => {
+      // "2023 Topps Chrome Sapphire" on a topps-chrome-sapphire card names the
+      // SET. Widening the guard to blank parallels must not start demanding
+      // that every base row on that product carry "sapphire".
+      const res = improveRow({
+        title: "2023 Topps Chrome Sapphire Julio Rodriguez #150",
+        year: 2023, setKey: "topps-chrome-sapphire", sport: "baseball",
+        cardNumber: "150", storedParallel: "Base", derivedParallel: "Base",
+      });
+      expect(refusalText(res)).not.toMatch(/the-derivation-dropped/);
+    });
+
+    it("MUTATION: the OLD blank gate let every one of these through", () => {
+      // The shipped guard's own condition, evaluated directly. Each of these
+      // derived values is `axisIsBlank`, so the old `!axisIsBlank(...)` gate
+      // was false and GUARD 4 never ran -- while the family WAS dropped.
+      const dropped = V.familyTokensDroppedByDerivation(
+        "2023 Topps Chrome Purple Laser Refractor Julio Rodriguez #150", "", "topps-chrome",
+      ) as string[];
+      expect(dropped).toContain("laser");
+      for (const b of BLANK_ANSWERS) {
+        // `axisValue` lowercases the parallel before the blank test, exactly as
+        // the classifier does, so this is the shipped gate's own condition.
+        expect(K.axisIsBlank("parallel", b.derived.toLowerCase()), b.what).toBe(true);
+      }
+    });
   });
 });
 
@@ -446,6 +562,102 @@ describe("4 -- a stopword the product's checklist names as a parallel is NOT sto
     expect(V.titleNamesFinish("2025 Topps Chrome Football Colston Loveland Rookie Auto PSA 10 GEM MINT", { year: 2025, setKey: "topps-chrome" })).toBe(false);
   });
 
+  // -- THE PRODUCT THE CORPUS-DRIVEN EXCEPTION COULD NOT REACH ---------------
+  //
+  // "2023 Donruss America #240" is the title leak 4 was WRITTEN FROM, and
+  // after leak 4 shipped it STILL evicted. The exception is corpus-driven, and
+  // the corpus's donruss slices carry no parallel NAMES at all -- measured on
+  // the committed corpus, `baseball|2023|donruss` holds 11 rows and every one
+  // is pack-size or odds noise from a scrape that never captured the parallel
+  // table ("30 cards.", "10 cards.", "80", "77", "Black 1/1"). So
+  // `stopwordExceptions` for that product is empty, `america` keeps its global
+  // stop, and a genuine America /50 evicts onto the base slug.
+  //
+  // HAND_STOPWORD_EXCEPTIONS is the same mechanism's hand list, and it carries
+  // the entry. Sources quoted at the table: BaseballCardPedia "2023 Donruss"
+  // -- "America (serial-numbered to 50 copies)"; Cardboard Connection "2023
+  // Donruss Baseball" -- "America - #/50"; TCDB carries it as its own
+  // checklist, "2023 Donruss - America" (sid 367832); and the same ladder in
+  // 2022 at #/50.
+  describe("...and a product whose CORPUS SLICE is empty gets the entry by hand", () => {
+    it("THE LEAK: the corpus cannot rebut the stop, because it lists no donruss parallels", () => {
+      const raw = require_(path.join(backend, "data", "checklist-parallel-names.json")) as {
+        products: Record<string, { parallels: Array<{ name: string }> }>;
+      };
+      const names = raw.products["baseball|2023|donruss"].parallels.map((x) => x.name);
+      // Noise, not a parallel table. If this ever stops being true the hand
+      // entry is redundant and should be deleted -- see the note on the table.
+      expect(names.some((n) => /america/i.test(n))).toBe(false);
+    });
+
+    it("2023 Donruss America names a finish, and its card no longer evicts", () => {
+      expect(V.titleNamesFinish("2023 Donruss America #240 Corbin Carroll", { year: 2023, setKey: "donruss" })).toBe(true);
+      expect(V.vocabularyFor(2023, "donruss").isFinishToken("america")).toBe(true);
+    });
+
+    it("2022 Donruss carries the same parallel at the same run", () => {
+      expect(V.titleNamesFinish("2022 Donruss America #150 Julio Rodriguez", { year: 2022, setKey: "donruss" })).toBe(true);
+    });
+
+    it("CONTROL: the entry is SCOPED -- a donruss year the sources do not cover keeps the stop", () => {
+      // 2024 and 2021 Donruss are not in the hand list, and neither is a
+      // donruss FOOTBALL product: the 2022/2023 Donruss football ladders were
+      // checked in the same pass (Beckett, Cardboard Connection) and neither
+      // lists an America parallel. A hand entry that guessed football would
+      // un-stop a word on a product whose checklist does not name it.
+      expect(V.titleNamesFinish("2024 Donruss America #150 X", { year: 2024, setKey: "donruss" })).toBe(false);
+      expect(V.titleNamesFinish("2021 Donruss America #150 X", { year: 2021, setKey: "donruss" })).toBe(false);
+      expect(V.vocabularyFor(2024, "donruss").isFinishToken("america")).toBe(false);
+    });
+
+    it("CONTROL: `america` stays stopped on every OTHER product", () => {
+      expect(V.titleNamesFinish("2023 Topps America #150 X", { year: 2023, setKey: "topps" })).toBe(false);
+      expect(V.vocabularyFor(2024, "topps-chrome").isFinishToken("america")).toBe(false);
+    });
+
+    it("a hand entry cannot reach a word the eligibility gate protects", () => {
+      // The gate applies to a hand entry exactly as it does to a corpus one.
+      // An entry naming `signature`, `gem` or `patch` is DROPPED at build
+      // time, so this list can never become a way around the stopword rules.
+      for (const [, words] of V.HAND_STOPWORD_EXCEPTIONS as Map<string, string[]>) {
+        for (const w of words) {
+          expect(V.CORPUS_STOPWORDS.has(w), w).toBe(true);
+          expect(V.STOPWORD_EXCEPTION_ELIGIBLE.has(w), w).toBe(true);
+        }
+      }
+    });
+
+    it("the hand table is a patch, not a second corpus -- it stays under its ceiling", () => {
+      let n = 0;
+      for (const [, words] of V.HAND_STOPWORD_EXCEPTIONS as Map<string, string[]>) n += words.length;
+      expect(n).toBeLessThanOrEqual(V.HAND_STOPWORD_EXCEPTION_CEILING);
+    });
+
+    it("MUTATION: without the hand entry the Donruss America card evicts again", () => {
+      // Revert the entry by asking what the CORPUS alone proves for this
+      // product -- which is what the shipped leak-4 fix had, and all it had.
+      // No donruss parallel row names `america`, so the corpus-driven
+      // exception is empty and the stop stands: `titleNamesFinish` answers
+      // false and a genuine America /50 evicts onto the base slug.
+      const raw = require_(path.join(backend, "data", "checklist-parallel-names.json")) as {
+        products: Record<string, { parallels: Array<{ name: string }> }>;
+      };
+      const corpusProves = (pk: string) =>
+        (raw.products[pk]?.parallels ?? []).some(
+          (x) => String(x.name ?? "").trim().toLowerCase() === "america",
+        );
+      expect(corpusProves("baseball|2023|donruss")).toBe(false);
+      expect(corpusProves("baseball|2022|donruss")).toBe(false);
+      // ...while the products the corpus DOES prove need no hand entry at all,
+      // which is why the table has two rows and not four.
+      expect(corpusProves("baseball|2024|panini-stars-stripes-usa")).toBe(true);
+      expect([...(V.HAND_STOPWORD_EXCEPTIONS as Map<string, string[]>).keys()])
+        .not.toContain("2024|panini-stars-stripes-usa");
+      // And the merged view -- corpus plus hand -- is what the guard reads.
+      expect(V.vocabularyFor(2023, "donruss").stopwordExceptions.has("america")).toBe(true);
+    });
+  });
+
   it("MUTATION: an unconditional stop reads the real parallel as silence", () => {
     // The pre-fix behaviour, driven directly: the global stopword set alone
     // says 'america' is never a finish, on any product.
@@ -522,13 +734,21 @@ describe("7 -- a numbered base is checklist-defined AT ITS PRINT RUN", () => {
     expect(V.buildVocabulary().baseRunsByProduct.size).toBe(0);
   });
 
-  it("MUTATION: the OLD test could not answer the question at all", () => {
+  it("the OLD test could not answer the question at all -- it was VACUOUS, not inverted", () => {
+    // THE PR BODY GOT THIS BACKWARDS, AND THE CORRECTION MATTERS.
+    //
     // `checklistListsParallel("Base", ...)` is a TOKEN-membership test, and
-    // `base` is a CORPUS STOPWORD -- `nameTokens("base")` is the empty list,
-    // so the function returns false for every product in the corpus. The old
-    // branch was therefore vacuous in BOTH directions: it could never say yes
-    // (which is what it needed for a genuine numbered base) and its `!` was
-    // never evaluated anyway, because the branch was unreachable (below).
+    // `base` is a CORPUS STOPWORD -- so `nameTokens("base")` is the EMPTY
+    // list, the function's own `if (!toks.length) return false` fires, and it
+    // returns FALSE for every product. Not true for every product, as the
+    // first write-up claimed. Measured on the committed corpus: false on all
+    // 576 of them.
+    //
+    // That is why the swap to `checklistDefinesNumberedBase` is a HARDENING
+    // and not the fix. `!false` is true, so the OLD predicate also refused
+    // every numbered base -- it just refused for the wrong reason (an empty
+    // token list) instead of the ruled one (no checklist defines one). What
+    // actually made leak 7 writable was the UNREACHABLE BRANCH pinned below.
     expect(V.nameTokens("base")).toEqual([]);
     for (const [y, sk] of [[2021, "bowman-chrome"], [2024, "topps-chrome"], [2023, "panini-prizm"]] as const) {
       expect(V.checklistListsParallel("Base", y, sk), `${y} ${sk}`).toBe(false);
@@ -536,6 +756,100 @@ describe("7 -- a numbered base is checklist-defined AT ITS PRINT RUN", () => {
     // The replacement asks about a CARD and can answer either way -- it reads
     // the corpus's own printRun field rather than a token.
     expect(typeof V.checklistDefinesNumberedBase(2019, "topps", 75)).toBe("boolean");
+  });
+
+  // -- THE PIN ONLY checklistDefinesNumberedBase CAN SATISFY -----------------
+  //
+  // On the committed corpus the two predicates are INDISTINGUISHABLE: both
+  // answer false on all 576 products, so reverting the guard to the old one
+  // changes no verdict and the mutation survives. They differ only where a
+  // checklist DOES list a numbered base -- which is exactly the case the
+  // ruling exists to admit ("a future checklist that lists one is admitted
+  // with no code change"), and the case the guard had never been tested on.
+  //
+  // So the pin supplies that checklist. A product whose Base row carries a
+  // print run of 25 must let an IMPROVE fill /25 through, and must still
+  // refuse /26. Under the OLD predicate the /25 fill is refused -- `base` has
+  // no tokens whatever the checklist says -- and this block goes red.
+  describe("a checklist that DOES define a numbered base admits it -- and only at that run", () => {
+    const FIXTURE = {
+      builtAt: "2026-09-03T00:00:00Z",
+      sources: ["pin: rematchAuditGateLeaks -- leak 7"],
+      productCount: 1,
+      parallelNameCount: 3,
+      products: {
+        "baseball|2031|pin-numbered-base": {
+          sport: "baseball", year: 2031, setKey: "pin-numbered-base",
+          parallels: [
+            // THE NUMBERED BASE: a row whose NAME is bare "Base", with a run.
+            { name: "Base", printRun: 25, odds: null, seen: 100, spellings: ["Base"] },
+            // A NAMED PARALLEL of the base card, which is NOT a numbered base
+            // -- the discrimination BASE_ROW_NAMES exists to make.
+            { name: "Base Refractor", printRun: 499, odds: null, seen: 100, spellings: ["Base Refractor"] },
+            { name: "Gold Refractor", printRun: 50, odds: null, seen: 100, spellings: ["Gold Refractor"] },
+          ],
+        },
+      },
+    };
+
+    let corpusFile = "";
+    beforeAll(() => {
+      const fs = require_("node:fs") as typeof import("node:fs");
+      const os = require_("node:os") as typeof import("node:os");
+      corpusFile = path.join(
+        fs.mkdtempSync(path.join(os.tmpdir(), "hiq-numbered-base-")),
+        "checklist-parallel-names.json",
+      );
+      fs.writeFileSync(corpusFile, JSON.stringify(FIXTURE), "utf8");
+      V._reset(corpusFile);
+    });
+    afterAll(() => { V._reset(); });
+
+    it("the fixture corpus really does define one -- the committed corpus defines none", () => {
+      expect(V.buildVocabulary(corpusFile).baseRunsByProduct.get("2031|pin-numbered-base")).toEqual(new Set([25]));
+      expect(V.checklistDefinesNumberedBase(2031, "pin-numbered-base", 25)).toBe(true);
+    });
+
+    it("IMPROVE fills the numbered base AT the run the checklist lists", () => {
+      const res = improveRow({
+        title: "2031 Pin Numbered Base Aaron Judge #150 /25",
+        year: 2031, setKey: "pin-numbered-base", sport: "baseball",
+        cardNumber: "150", storedNumber: "150", printRun: 25,
+      });
+      expect(refusalText(res)).not.toMatch(/improve-numbered-base-not-checklist-defined/);
+    });
+
+    it("...and REFUSES it at a run the checklist does not list", () => {
+      const res = improveRow({
+        title: "2031 Pin Numbered Base Aaron Judge #150 /26",
+        year: 2031, setKey: "pin-numbered-base", sport: "baseball",
+        cardNumber: "150", storedNumber: "150", printRun: 26,
+      });
+      expect(res.writable).toBe(false);
+      expect(refusalText(res)).toMatch(/improve-numbered-base-not-checklist-defined:\/26/);
+    });
+
+    it('"Base Refractor /499" is a NAMED PARALLEL, never a numbered base', () => {
+      // The five corpus rows that BEGIN with the word "Base" are parallels OF
+      // the base card. Counting them would admit a numbered base on every
+      // product that lists one, which is the opposite of the ruling.
+      expect(V.checklistDefinesNumberedBase(2031, "pin-numbered-base", 499)).toBe(false);
+      expect(V.checklistDefinesNumberedBase(2031, "pin-numbered-base", 50)).toBe(false);
+    });
+
+    it("MUTATION: the OLD predicate refuses the checklist-defined base -- this pin goes RED", () => {
+      // THE WHOLE POINT OF THIS BLOCK. `checklistListsParallel("Base", ...)`
+      // cannot answer yes for ANY product, this fixture included, because
+      // `base` tokenises to nothing. Swap it back into the guard and the /25
+      // fill above -- the one the ruling says to ADMIT -- is refused.
+      expect(V.checklistListsParallel("Base", 2031, "pin-numbered-base")).toBe(false);
+      expect(V.checklistDefinesNumberedBase(2031, "pin-numbered-base", 25)).toBe(true);
+      // The two predicates DISAGREE here and NOWHERE in the committed corpus.
+      // That disagreement is the mutation the committed corpus cannot detect,
+      // which is why this fixture exists at all.
+      expect(V.checklistListsParallel("Base", 2031, "pin-numbered-base"))
+        .not.toBe(V.checklistDefinesNumberedBase(2031, "pin-numbered-base", 25));
+    });
   });
 
   it("MUTATION: the branch was also UNREACHABLE -- a serial makes titleNamesFinish true by definition", () => {
@@ -633,7 +947,13 @@ describe("8 -- the apply is scopable to a class, on the EXISTING scope input", (
     expect(`${r.stderr}`).toMatch(/needs a class scope/);
     // ...and it never got as far as the Cosmos client
     expect(`${r.stdout}${r.stderr}`).not.toMatch(/rematch-sold-comps\s+MODE=/);
-  });
+    // THE ASSERTION IS THE EXIT CODE, NOT THE CLOCK. This spawns a cold `node`
+    // that builds the 16,187-phrase corpus before it reaches the scope gate:
+    // ~3s on an idle box, but measured at 70s when the rematch suites run
+    // alongside each other and contend for CPU. The suite-wide 30s default
+    // then fails a test whose subject passed. Given its own budget instead of
+    // loosening the default for every test in the file.
+  }, 180_000);
 
   it("MODE=census ignores the scope entirely -- a census counts every class", () => {
     const { spawnSync } = require_("node:child_process") as typeof import("node:child_process");
@@ -645,5 +965,6 @@ describe("8 -- the apply is scopable to a class, on the EXISTING scope input", (
     // It gets PAST the scope gate and stops at the connection check.
     expect(`${r.stderr}`).toMatch(/COSMOS_CONNECTION_STRING not set/);
     expect(`${r.stderr}`).not.toMatch(/needs a class scope/);
-  });
+    // Same cold-corpus subprocess cost as the pin above.
+  }, 180_000);
 });

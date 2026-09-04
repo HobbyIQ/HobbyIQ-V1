@@ -175,6 +175,65 @@ const STOPWORD_EXCEPTION_ELIGIBLE = new Set([
   "baseball", "basketball", "football", "hockey", "soccer",
 ]);
 
+/**
+ * HAND-LISTED STOPWORD EXCEPTIONS -- the products whose checklist names an
+ * eligible stopword as a parallel, but whose CORPUS SLICE cannot say so.
+ *
+ * The corpus-driven exception above is the mechanism; this is the same
+ * mechanism's HAND_SPELLINGS, and it exists for the same reason that list
+ * does: a product the corpus covers badly is not a product without parallels.
+ *
+ * THE CASE THAT PROVES IT. "2023 Donruss America #240" was the title leak 4
+ * was written from, and after leak 4 shipped it STILL evicts -- because the
+ * exception is corpus-driven and the corpus's donruss slices carry no parallel
+ * NAMES at all. Measured on the committed corpus 2026-09-03:
+ *
+ *   baseball|2023|donruss   11 rows: "Black 1/1", "80", "77", "76",
+ *                           "30 cards.", "10 cards.", "15 cards.",
+ *                           "Printing Plates 1/1 ...", "5 cards.",
+ *                           "3 cards.", "1 card."
+ *   baseball|2022|donruss    7 rows, the same shape
+ *
+ * Those are pack-size and odds noise from a scrape that never captured the
+ * parallel table. `stopwordExceptions` for those products is empty, `america`
+ * keeps its global stop, `titleNamesFinish` answers FALSE, and a genuine
+ * America /50 evicts onto the base slug -- one card, two rows, a split pool.
+ * (Verified in this tree: the predicate returns false for the donruss title
+ * and true for the Stars & Stripes one, which the corpus DOES carry.)
+ *
+ * THE SOURCE, quoted. America is a numbered parallel of the Donruss BASEBALL
+ * base set in 2022 and 2023, at a print run of 50:
+ *
+ *   BaseballCardPedia, "2023 Donruss": "America (serial-numbered to 50
+ *     copies)" -- listed with One Hundred /100, On Fire /75, Presidential
+ *     Collection /46, Voltage /25, Artist Proof /10, Press Proof /5.
+ *   Cardboard Connection, "2023 Donruss Baseball": "America - #/50".
+ *   Trading Card Database carries it as its own checklist,
+ *     "2023 Donruss - America" (sid 367832).
+ *   Cardboard Connection, "2022 Donruss Baseball": the same parallel ladder,
+ *     "America #/50".
+ *
+ * SCOPE IS BASEBALL, 2022-2023, AND NOTHING WIDER. The 2022 and 2023 Donruss
+ * FOOTBALL parallel ladders were checked in the same pass (Beckett and
+ * Cardboard Connection both) and neither lists an America parallel -- Canvas,
+ * Press Proof, Season Stat Line, Jersey Number and the colour Holos, no
+ * America. A hand entry that guessed football would un-stop a word on a
+ * product whose checklist does not name it, which is the leak this closes,
+ * pointed the other way. When the corpus's donruss slice is re-scraped with
+ * its parallel table, this entry becomes redundant and should be deleted --
+ * the corpus is what needs fixing, not this list.
+ *
+ * Every key here must be a stopword AND eligible; the tests assert both, so an
+ * entry can never reach a word the eligibility gate exists to protect.
+ */
+const HAND_STOPWORD_EXCEPTIONS = new Map([
+  ["2022|donruss", ["america"]],
+  ["2023|donruss", ["america"]],
+]);
+
+/** The hand exception table is a patch, never a second corpus. Capped by tests. */
+const HAND_STOPWORD_EXCEPTION_CEILING = 8;
+
 /** The names a checklist heads its BASE section with. Anything longer names a
  *  PARALLEL of the base card ("Base Refractor"), never the base card. */
 const BASE_ROW_NAMES = new Set(["base", "base set", "base card", "base cards"]);
@@ -676,6 +735,8 @@ const escapeRe = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const _vocabCache = new Map();
 
 let _corpus = null;
+/** Set only by `_reset(path)` -- see the note there. null = the committed corpus. */
+let _corpusPathOverride = null;
 
 const productKey = (year, setKey) =>
   `${year === null || year === undefined || year === "" ? "" : Number(year)}|${lower(setKey)}`;
@@ -862,6 +923,24 @@ function buildVocabulary(corpusPath = CORPUS_PATH) {
   for (const c of FINISH_COLOR_TOKENS) { global.add(lower(c)); adjudicated.add(lower(c)); }
   for (const c of CORE_FINISH_TOKENS) { global.add(lower(c)); adjudicated.add(lower(c)); }
 
+  // THE HAND-LISTED STOPWORD EXCEPTIONS join the corpus-driven ones, in the
+  // SAME map and the same shape -- so every reader downstream (`vocabularyFor`,
+  // `isFinishToken`) is unchanged, and a hand entry can do nothing a corpus
+  // entry could not. See HAND_STOPWORD_EXCEPTIONS for why the donruss slice
+  // needs one. Merged, never overwritten: a product the corpus DOES cover
+  // keeps everything the corpus proved.
+  for (const [pk, words] of HAND_STOPWORD_EXCEPTIONS) {
+    let ex = stopwordExceptions.get(pk);
+    if (!ex) { ex = new Set(); stopwordExceptions.set(pk, ex); }
+    for (const w of words) {
+      const t = lower(w);
+      // The eligibility gate applies to a hand entry exactly as it does to a
+      // corpus one. A hand list that could reach `signature` or `gem` would be
+      // a way around the gate, not an exception to it.
+      if (CORPUS_STOPWORDS.has(t) && STOPWORD_EXCEPTION_ELIGIBLE.has(t)) ex.add(t);
+    }
+  }
+
   return {
     global, byProduct, namesByProduct, stopwordExceptions, baseRunsByProduct,
     phrases, support, adjudicated, productCount, nameCount,
@@ -954,12 +1033,29 @@ function phraseIndexMatches(index, lowerTitle, words) {
 }
 
 function corpus() {
-  if (!_corpus) _corpus = buildVocabulary();
+  if (!_corpus) _corpus = buildVocabulary(_corpusPathOverride ?? CORPUS_PATH);
   return _corpus;
 }
 
-/** Reset the memoised corpus AND the per-product vocabulary cache. Tests only. */
-function _reset() { _corpus = null; _vocabCache.clear(); _nearMissWords = null; }
+/**
+ * Reset the memoised corpus AND the per-product vocabulary cache. Tests only.
+ *
+ * `corpusPath` swaps in an alternate corpus file for the reads that follow.
+ * This exists so a guard whose behaviour depends on WHAT THE CHECKLIST SAYS
+ * can be pinned against a checklist that says it. `checklistDefinesNumberedBase`
+ * is that guard: the committed corpus defines no numbered base on any of its
+ * 576 products, so on that corpus the new predicate and the old
+ * `checklistListsParallel("Base", ...)` both answer false everywhere and a
+ * mutation that reverts one to the other changes nothing observable. The two
+ * are only distinguishable on a product whose checklist DOES list one -- so
+ * the pin supplies that product, and the mutation goes red.
+ *
+ * Pass no argument to go back to the committed corpus.
+ */
+function _reset(corpusPath) {
+  _corpus = null; _vocabCache.clear(); _nearMissWords = null;
+  _corpusPathOverride = corpusPath ? String(corpusPath) : null;
+}
 
 /**
  * Is this token the PRODUCT's own name on this card rather than a finish?
@@ -1218,6 +1314,7 @@ module.exports = {
   CORPUS_PATH, HAND_SPELLINGS, HAND_PHRASES, HAND_LIST_CEILING,
   FINISH_COLOR_TOKENS, CORE_FINISH_TOKENS, CORPUS_STOPWORDS,
   STOPWORD_EXCEPTION_ELIGIBLE,
+  HAND_STOPWORD_EXCEPTIONS, HAND_STOPWORD_EXCEPTION_CEILING,
   buildVocabulary, vocabularyFor, vocabularyStats, isProductWord, setKeyTokens,
   buildPhraseIndex, phraseIndexMatches,
   titleNamesFinish, titleStatesSerial, serialFromTitle, checklistListsParallel,

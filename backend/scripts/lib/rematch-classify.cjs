@@ -644,10 +644,27 @@ function improveRefusals({ row, stored, derived, axes, parserSaysLot = false }) 
   //    `serial !== null`, `namesAFinish` was also true, the first branch always
   //    won, and the numbered-base refusal never fired at all.
   //
-  // 2. ITS TEST COULD NOT HAVE REFUSED ANYWAY. It asked
-  //    `checklistListsParallel("Base", year, setKey)`, a TOKEN-membership test
-  //    -- and `base` is a token of every product's checklist. It answered true
-  //    for every product in the corpus.
+  // 2. ITS TEST COULD NOT HAVE ANSWERED THE QUESTION EITHER WAY. It asked
+  //    `checklistListsParallel("Base", year, setKey)`, a TOKEN-membership
+  //    test -- and `base` is a CORPUS STOPWORD, so `nameTokens("base")` is the
+  //    EMPTY list and that function's own `if (!toks.length) return false`
+  //    fires. It answered FALSE for every product in the corpus (measured: all
+  //    576), not true, as the first write-up of this leak claimed.
+  //
+  //    THAT CORRECTION CHANGES WHAT THIS SWAP IS. `!false` is true, so the old
+  //    predicate ALSO refused every numbered base -- it simply refused for the
+  //    wrong reason (an empty token list) rather than the ruled one (no
+  //    checklist defines one). So replacing it is a HARDENING, not the fix:
+  //    the defect that actually made these 13 lines writable was defect 1, the
+  //    unreachable branch. What the swap buys is that the guard now asks the
+  //    question the ruling states, and can therefore ADMIT a numbered base the
+  //    day a checklist lists one -- which the old predicate could never do.
+  //
+  //    Because both predicates answer false everywhere on the committed
+  //    corpus, a mutation reverting this one is invisible to it. The pin that
+  //    catches it supplies a fixture corpus whose Base row carries a print run
+  //    (tests/rematchAuditGateLeaks.test.ts, "a checklist that DOES define a
+  //    numbered base"), where the two disagree and the revert goes red.
   //
   // The ruling is a claim about a CARD, and a card is a (name, print run)
   // pair, so the question is asked that way: does this product's checklist
@@ -712,18 +729,41 @@ function improveRefusals({ row, stored, derived, axes, parserSaysLot = false }) 
   // and a refusal that says "and here is the right answer" is what a repair
   // list is built from.
   //
-  // Runs on ANY derived parallel, filled or not: the collapse is just as wrong
-  // when the row already carried a sibling's name, and the fix at the source
-  // (parseTitleIdentity's colour alternations) is a fix, not a guarantee.
+  // Runs on ANY derived parallel, INCLUDING Base and blank. This is the
+  // audit-gate residual: the guard shipped gated on
+  // `!axisIsBlank("parallel", ...)`, which excludes exactly the answers "",
+  // "base", "[base]", "none" and "unknown" -- so a derivation that read
+  // "Purple Laser Refractor" or "Electric Etch" and answered BASE escaped the
+  // guard entirely, while the same derivation answering the WRONG SIBLING was
+  // caught. The comment claimed it ran on any derived parallel; it did not.
+  //
+  // THE BLANK ANSWER IS THE WORSE COLLAPSE. It drops the family AND the
+  // colour, and the row it leaves behind is a numbered base -- the shape leak
+  // 7 is about. It is also the answer that lets a cardNumber fill through:
+  // GUARD 2 refuses only the printRun, so the same row's NUMBER still moved
+  // onto the base slug. Running here refuses the whole IMPROVE, which is the
+  // right scope -- a derivation that could not read the parallel has not
+  // earned a write on any axis of this row.
+  //
+  // `familyTokensDroppedByDerivation` needs no change to carry it:
+  // `parallelFinishFamilyTokens("")` is empty, so every family the title names
+  // is dropped, which is the true answer. The blank is passed as "" rather
+  // than the literal "Base" so a checklist parallel legitimately NAMED "Base
+  // <family>" cannot be read as carrying that family.
   {
     const parallel = str(derived?.parallel);
-    if (title && parallel && !axisIsBlank("parallel", axisValue(derived, "parallel"))) {
-      const dropped = VOCAB.familyTokensDroppedByDerivation(title, parallel, setKey);
+    const derivedIsBlank = axisIsBlank("parallel", axisValue(derived, "parallel"));
+    // The derivation must have PRODUCED an identity for this guard to have an
+    // opinion: no identity at all is UNDERIVABLE, a different class. A blank
+    // parallel VALUE on a real identity is the shape this now covers.
+    if (title && derived) {
+      const dropped = VOCAB.familyTokensDroppedByDerivation(title, derivedIsBlank ? "" : parallel, setKey);
       if (dropped.length) {
         const listed = VOCAB.checklistParallelForFamily(title, year, setKey);
+        const shown = derivedIsBlank ? (parallel || "(blank)") : parallel;
         refusals.push(
           `improve-title-names-a-finish-family-the-derivation-dropped:${dropped.join("+")}` +
-          `@${parallel}${listed ? `|checklist-lists:${listed}` : ""}`,
+          `@${shown}${listed ? `|checklist-lists:${listed}` : ""}`,
         );
       }
     }
