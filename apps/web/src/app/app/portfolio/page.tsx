@@ -17,6 +17,7 @@ import { ProvenanceChip } from "@/components/ProvenanceChip";
 import { PricingLabelChips } from "@/components/PricingLabelChips";
 import { SellSignalChip } from "@/components/SellSignalChip";
 import { RowStretchedLink, RowEscapeHatch } from "@/components/HoldingRowLink";
+import { VerifiedCheck } from "@/components/VerifiedCheck";
 import { holdingProvenance } from "@/lib/rung";
 import { formatAsOf } from "@/lib/asOf";
 
@@ -946,19 +947,19 @@ function HoldingRow({ h, href }: { h: PortfolioHolding; href?: string }) {
           BACKED (Drew, 2026-08-30): VERIFIED means this holding's identity
           is a checklist-backed catalog card — confirmed by you in Edit, by
           an import, by the catalog sweep, or by a ruling. UNVERIFIED means
-          the identity is fuzzy or parked: open Edit and pick the card. */}
-      {h.identityVerified ? (
-        <span
-          className="px-1.5 py-0.5 rounded text-[10px] font-medium"
-          style={{
-            background: "color-mix(in oklab, var(--hiq-hobby-green) 15%, transparent)",
-            color: "var(--hiq-hobby-green)",
-          }}
-          title="Identity is a checklist-backed catalog card — pricing reads that card's exact pool."
-        >
-          ✓ VERIFIED
-        </span>
-      ) : (
+          the identity is fuzzy or parked: open Edit and pick the card.
+
+          CF-VERIFIED-IS-A-CHECK (Drew, 2026-09-04): the VERIFIED half of that
+          ternary is no longer a chip and no longer lives here. It is a green
+          check on the TITLE line — see <VerifiedCheck> at both layouts below,
+          and the reasoning in components/VerifiedCheck.tsx.
+
+          UNVERIFIED stays put, unchanged, in its own words. It is not the
+          absence of a mark: it is a call to action ("open Edit and pick the
+          card"), and a row that simply lacked a check would say nothing about
+          what to do. Note this is now an `if`, not the else of a ternary —
+          the two states are rendered in two different places. */}
+      {h.identityVerified !== true && (
         <span
           className="px-1.5 py-0.5 rounded text-[10px] font-medium text-[color:var(--color-muted)]"
           style={{ background: "var(--color-bg)" }}
@@ -1069,6 +1070,12 @@ function HoldingRow({ h, href }: { h: PortfolioHolding; href?: string }) {
             breaks differ. Falls back to the composed title whenever the
             holding has no player name, which is the shape `formatCardTitle`
             itself falls back on. */}
+        {/* CF-VERIFIED-IS-A-CHECK (Drew, 2026-09-04): the check rides the
+            player+number line — the part that NAMES the card — in BOTH
+            branches, so a holding with no player name still gets its mark.
+            It is inside the text flow rather than a flex sibling, so it wraps
+            with the last word instead of being pushed onto a line of its
+            own. */}
         {h.playerName ? (
           <div>
             <div className="font-semibold leading-snug break-words">
@@ -1076,13 +1083,17 @@ function HoldingRow({ h, href }: { h: PortfolioHolding; href?: string }) {
               {h.cardNumber && (
                 <span className="text-[color:var(--color-muted)] font-medium"> #{h.cardNumber}</span>
               )}
+              <VerifiedCheck verified={h.identityVerified} />
             </div>
             <div className="text-xs text-[color:var(--color-muted)] leading-snug line-clamp-2 break-words mt-0.5">
               {cardContext}
             </div>
           </div>
         ) : (
-          <div className="font-medium leading-snug line-clamp-2 break-words">{title}</div>
+          <div className="font-medium leading-snug line-clamp-2 break-words">
+            {title}
+            <VerifiedCheck verified={h.identityVerified} />
+          </div>
         )}
 
         <div className="flex items-center gap-3">
@@ -1116,7 +1127,16 @@ function HoldingRow({ h, href }: { h: PortfolioHolding; href?: string }) {
 
         {/* Title + grade */}
         <div className="flex-1 min-w-0">
-          <div className="font-medium truncate">{title}</div>
+          {/* CF-VERIFIED-IS-A-CHECK (Drew, 2026-09-04): the desktop title
+              `truncate`s, and `text-overflow: ellipsis` clips the END of the
+              line — so a check left inside the truncating element disappears
+              on exactly the long titles most likely to be verified. The title
+              keeps `truncate` in a min-w-0 flex child; the check is a
+              non-shrinking sibling beside it, so it survives the ellipsis. */}
+          <div className="flex items-center min-w-0">
+            <span className="font-medium truncate">{title}</span>
+            <VerifiedCheck verified={h.identityVerified} />
+          </div>
           <div className="text-xs text-[color:var(--color-muted)] mt-0.5 flex flex-wrap items-center gap-2">
             <span>{grade}</span>
             {qty}

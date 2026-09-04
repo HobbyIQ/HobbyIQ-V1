@@ -134,12 +134,24 @@ struct PortfolioHoldingHeroCard: View {
                         .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
 
+                    // CF-VERIFIED-IS-A-CHECK (Drew, 2026-09-04): the check sits
+                    // with the card DETAILS line rather than the player name.
+                    // The name above is 24pt and wraps freely when centred, so
+                    // a glyph pinned to it would land under a wrapped word;
+                    // the details line is the one that names the CARD, which
+                    // is what "verified" is a claim about.
+                    //
+                    // Same component as the list row and grid tile, so the
+                    // three surfaces cannot drift.
                     if let details = flatIdentityLine {
-                        Text(details)
-                            .font(.system(size: 14))
-                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                            .multilineTextAlignment(.center)
-                            .fixedSize(horizontal: false, vertical: true)
+                        HStack(spacing: 5) {
+                            Text(details)
+                                .font(.system(size: 14))
+                                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                                .multilineTextAlignment(.center)
+                                .fixedSize(horizontal: false, vertical: true)
+                            IdentityVerifiedCheck(verified: card.identityVerified)
+                        }
                     }
                 }
                 .padding(.horizontal, 36) // clear the Edit pill overlay

@@ -8,6 +8,32 @@ server, dark theme, `deviceScaleFactor: 2`.
 | `portfolio-mobile-390-before.png` | 390×844, iPhone | The reported defect |
 | `portfolio-mobile-390-after.png` | 390×844, iPhone | The rebuilt card |
 | `portfolio-desktop-1280-after.png` | 1280×900 | Desktop, unchanged |
+| `portfolio-mobile-390-verified-check.png` | 390×844, iPhone | CF-VERIFIED-IS-A-CHECK (below) |
+| `portfolio-desktop-1280-verified-check.png` | 1280×900 | CF-VERIFIED-IS-A-CHECK (below) |
+
+## The verified marker — CF-VERIFIED-IS-A-CHECK (2026-09-04)
+
+Drew: *"Rather than say Verified — let's just do a green check for it next to
+the card details."*
+
+The `-verified-check` pair shows the result at both viewports. Two holdings
+are stubbed so the change and its boundary are visible in one frame:
+
+- **Bobby Witt Jr. #CPA-BWJ** — `identityVerified: true`. A green check sits
+  immediately after the card number on the title line. No word, no pill.
+- **Ken Griffey Jr. #1** — `identityVerified: false`. No check, and the
+  **UNVERIFIED** chip is exactly where it was. An unverified identity is
+  actionable ("open Edit and pick the card"), so it keeps words; a row that
+  merely lacked a mark would say nothing about what to do.
+
+Every other chip is untouched — the provenance chip ("unknown · rung not
+reported") renders on both rows, as before.
+
+Measured by `docs/harness/verified-check-check.mjs`, 9 assertions × 2
+viewports, all passing: one visible check, no "VERIFIED" text, UNVERIFIED
+present, the check on the title line rather than the chips band, not clipped
+by the card edge, `aria-label` present, no horizontal overflow, no
+overlapping text inside any card.
 
 ## What was wrong
 

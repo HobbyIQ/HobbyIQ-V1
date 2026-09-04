@@ -29,6 +29,31 @@ CF-WEB-NO-NESTED-ANCHOR. Exits non-zero unless, at 390px and 1280px: no `<a>
 of "Fix identity →" resolves to the fixer, the fixer is ≥44px tall, and it is
 keyboard-focusable.
 
+## verified-check-check.mjs
+
+CF-VERIFIED-IS-A-CHECK. Stubs TWO holdings — one `identityVerified: true`,
+one `false` — because the assertions are about the difference between them.
+Exits non-zero unless, at 390px and 1280px: exactly ONE check is visible (the
+verified row's), the word "VERIFIED" appears nowhere on the page, the
+UNVERIFIED chip is still rendered, the check's box is ≥10px and sits in the
+upper half of its card (the title line, not the chips band), it is not clipped
+by the card edge, its `aria-label` is "Verified identity", there is no
+horizontal overflow, and no two text nodes inside a holding card overlap.
+
+The clipping assertion is the one worth keeping: the desktop title
+`truncate`s, and `text-overflow: ellipsis` eats the END of the line — a check
+left inside the truncating element vanishes on exactly the long titles most
+likely to be verified. The verified fixture carries a deliberately long title
+for that reason.
+
+```sh
+BASE=http://127.0.0.1:3111 \
+SHOTS=<repo>/apps/web/docs/screenshots \
+node verified-check-check.mjs
+```
+
+`SHOTS` is optional; with it the run also writes the two screenshots.
+
 ## before-check.mjs
 
 The control. Same measurements, selecting the fixer by its visible text so it
