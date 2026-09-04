@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { fetchPortfolio, holdingDisplayValue, refreshAllHoldings, getRepriceStatus, exportPortfolio, openValuationReport, valuationStatusOf, fmvPerUnitOf, syncEbaySold, type PortfolioResponse, type PortfolioHolding, type BatchRepriceResult } from "@/lib/api";
 import { PortfolioDashboard } from "@/components/PortfolioDashboard";
-import { formatUSD, formatUSDCompact, formatPct, formatCardTitle, formatGrade } from "@/lib/format";
+import { formatUSD, formatUSDCompact, formatPct, formatCardTitle, formatCardContext, formatGrade } from "@/lib/format";
 import { PortfolioValueChart } from "@/components/PortfolioValueChart";
 import { BulkEbayListModal } from "@/components/BulkEbayListModal";
 import { BulkCostBasisModal } from "@/components/BulkCostBasisModal";
@@ -875,163 +875,264 @@ function HoldingRow({ h }: { h: PortfolioHolding }) {
   // no value already carries the MISSING pill.
   const provenance = holdingProvenance(h);
 
-  return (
-    <div className="hiq-card p-4 md:p-5 flex items-center gap-4">
-      {/* Photo thumbnail — slab-ratio (~3:4) with object-contain so
-          full slab visible (label + cert + corners). */}
-      <div
-        className="w-14 h-20 md:w-16 md:h-24 rounded-lg flex-shrink-0 overflow-hidden flex items-center justify-center"
-        style={{ background: "var(--color-bg)" }}
-      >
-        {h.photos && h.photos[0] ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={h.photos[0]}
-            alt=""
-            className="w-full h-full object-contain"
-            onError={(e) => {
-              (e.target as HTMLImageElement).style.display = "none";
+  // CF-MOBILE-HOLDING-CARD (Drew, 2026-09-04: the mobile list is "horrible
+  // looking"). At ~390px the single flex row put the title, the grade, the
+  // method chip, the status badges and the P&L in ONE line box. Nothing had
+  // room: the title truncated mid-word to "1987 Bellingham …" so the card
+  // could not be identified, the method chip wrapped into a 1–2-word column
+  // that grew taller than everything else, and the P&L — the only absolutely
+  // positioned-feeling element, being last with a fixed min-width — drew on
+  // top of the VERIFIED badge.
+  //
+  // The fix is a breakpoint, not a redesign. Below `md` the card becomes
+  // three stacked bands (title / figures / chips); at `md` and above the
+  // ORIGINAL horizontal row renders unchanged. The two layouts are siblings
+  // — `md:hidden` and `hidden md:flex` — because the desktop row's ordering
+  // (thumb, title+chips, Value, Cost, P&L) cannot be reached from the mobile
+  // stack by flex-reordering alone without moving the chips away from the
+  // title they qualify.
+  //
+  // The chips themselves are NOT re-authored here: `statusChips` is one
+  // fragment rendered by both layouts, so a badge added to the vocabulary
+  // shows up on phone and desktop at once, and the two can never disagree.
+  const statusChips = (
+    <>
+      {vs === "estimated" && (
+        <span
+          className="px-1.5 py-0.5 rounded text-[10px] font-medium"
+          style={{
+            background: "color-mix(in oklab, var(--color-accent) 12%, transparent)",
+            color: "var(--color-accent)",
+          }}
+        >
+          EST
+        </span>
+      )}
+      {vs === "pending" && (
+        <span className="px-1.5 py-0.5 rounded text-[10px] font-medium text-[color:var(--color-muted)]" style={{ background: "var(--color-bg)" }}>
+          PENDING
+        </span>
+      )}
+      {value != null && <ProvenanceChip rung={provenance} source={provenance.source} />}
+      {/* CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (Drew, 2026-09-03):
+          PUBLISH + LABEL. A self-anchored price — the only sale behind it
+          being the owner's own purchase — still shows, and now says so on
+          the row rather than only to a reader who opens the card page. */}
+      {value != null && (
+        <PricingLabelChips
+          labels={h.pricingLabels}
+          selfAnchored={h.selfAnchored}
+        />
+      )}
+      {/* CF-SELLER-INTELLIGENCE-SELL-WINDOW (Drew, 2026-09-02): the
+          timing call, beside the provenance of the number it is timing.
+          Renders nothing unless there is an actual call to make. */}
+      <SellSignalChip sellSignal={h.sellSignal} />
+      {/* CF-IDENTITY-VERIFIED (Drew, 2026-07-27) + CF-VERIFIED-IS-CHECKLIST-
+          BACKED (Drew, 2026-08-30): VERIFIED means this holding's identity
+          is a checklist-backed catalog card — confirmed by you in Edit, by
+          an import, by the catalog sweep, or by a ruling. UNVERIFIED means
+          the identity is fuzzy or parked: open Edit and pick the card. */}
+      {h.identityVerified ? (
+        <span
+          className="px-1.5 py-0.5 rounded text-[10px] font-medium"
+          style={{
+            background: "color-mix(in oklab, var(--hiq-hobby-green) 15%, transparent)",
+            color: "var(--hiq-hobby-green)",
+          }}
+          title="Identity is a checklist-backed catalog card — pricing reads that card's exact pool."
+        >
+          ✓ VERIFIED
+        </span>
+      ) : (
+        <span
+          className="px-1.5 py-0.5 rounded text-[10px] font-medium text-[color:var(--color-muted)]"
+          style={{ background: "var(--color-bg)" }}
+          title="Identity is fuzzy or parked — open Edit and pick the catalog card."
+        >
+          UNVERIFIED
+        </span>
+      )}
+      {/* CF-NEVER-AGAIN (Drew, 2026-09-02): the nightly pricing invariant
+          auditor could not reconcile this holding's value with an
+          independent re-derivation. PUBLISH + LABEL — the value above still
+          shows; this says only that a human should look. The reason and the
+          run time ride in the tooltip. */}
+      {h.auditFlag && (
+        <span
+          className="px-1.5 py-0.5 rounded text-[10px] font-medium"
+          style={{
+            background: "color-mix(in oklab, var(--hiq-warning) 15%, transparent)",
+            color: "var(--hiq-warning)",
+          }}
+          title={`Under review — ${h.auditFlag.reason} (audited ${h.auditFlag.at}). The value shown is unchanged; the nightly pricing audit flagged it for a human to check.`}
+          data-audit-invariant={h.auditFlag.invariant}
+        >
+          UNDER REVIEW
+        </span>
+      )}
+      {/* CF-DATA-HEALTH-DRILLDOWN: MISSING pill for cards the engine
+          couldn't price at all (no observed FMV, no estimate). Fix link
+          jumps to the detail page where Edit + Refresh price live. */}
+      {value == null && vs !== "estimated" && vs !== "pending" && (
+        <>
+          <span
+            className="px-1.5 py-0.5 rounded text-[10px] font-medium"
+            style={{
+              background: "color-mix(in oklab, var(--hiq-danger) 15%, transparent)",
+              color: "var(--hiq-danger)",
             }}
-          />
-        ) : (
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" className="text-[color:var(--color-muted)]">
-            <path d="M4 6h16v12H4V6zm2 2v8h12V8H6zm2 2h4v4H8v-4z" />
-          </svg>
-        )}
-      </div>
+          >
+            MISSING
+          </span>
+          <Link
+            href={`/app/portfolio/${encodeURIComponent(h.id)}`}
+            className="text-[10px] font-semibold underline"
+            style={{ color: "var(--color-accent)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {h.proposedIdentity ? "Confirm identity →" : "Fix identity →"}
+          </Link>
+        </>
+      )}
+    </>
+  );
 
-      {/* Title + grade */}
-      <div className="flex-1 min-w-0">
-        <div className="font-medium truncate">{title}</div>
-        <div className="text-xs text-[color:var(--color-muted)] mt-0.5 flex items-center gap-2">
-          <span>{grade}</span>
-          {h.quantity > 1 && <span>· qty {h.quantity}</span>}
-          {vs === "estimated" && (
-            <span
-              className="px-1.5 py-0.5 rounded text-[10px] font-medium"
-              style={{
-                background: "color-mix(in oklab, var(--color-accent) 12%, transparent)",
-                color: "var(--color-accent)",
-              }}
-            >
-              EST
-            </span>
-          )}
-          {vs === "pending" && (
-            <span className="px-1.5 py-0.5 rounded text-[10px] font-medium text-[color:var(--color-muted)]" style={{ background: "var(--color-bg)" }}>
-              PENDING
-            </span>
-          )}
-          {value != null && <ProvenanceChip rung={provenance} source={provenance.source} />}
-          {/* CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (Drew, 2026-09-03):
-              PUBLISH + LABEL. A self-anchored price — the only sale behind it
-              being the owner's own purchase — still shows, and now says so on
-              the row rather than only to a reader who opens the card page. */}
-          {value != null && (
-            <PricingLabelChips
-              labels={h.pricingLabels}
-              selfAnchored={h.selfAnchored}
-            />
-          )}
-          {/* CF-SELLER-INTELLIGENCE-SELL-WINDOW (Drew, 2026-09-02): the
-              timing call, beside the provenance of the number it is timing.
-              Renders nothing unless there is an actual call to make. */}
-          <SellSignalChip sellSignal={h.sellSignal} />
-          {/* CF-IDENTITY-VERIFIED (Drew, 2026-07-27) + CF-VERIFIED-IS-CHECKLIST-
-              BACKED (Drew, 2026-08-30): VERIFIED means this holding's identity
-              is a checklist-backed catalog card — confirmed by you in Edit, by
-              an import, by the catalog sweep, or by a ruling. UNVERIFIED means
-              the identity is fuzzy or parked: open Edit and pick the card. */}
-          {h.identityVerified ? (
-            <span
-              className="px-1.5 py-0.5 rounded text-[10px] font-medium"
-              style={{
-                background: "color-mix(in oklab, var(--hiq-hobby-green) 15%, transparent)",
-                color: "var(--hiq-hobby-green)",
-              }}
-              title="Identity is a checklist-backed catalog card — pricing reads that card's exact pool."
-            >
-              ✓ VERIFIED
-            </span>
-          ) : (
-            <span
-              className="px-1.5 py-0.5 rounded text-[10px] font-medium text-[color:var(--color-muted)]"
-              style={{ background: "var(--color-bg)" }}
-              title="Identity is fuzzy or parked — open Edit and pick the catalog card."
-            >
-              UNVERIFIED
-            </span>
-          )}
-          {/* CF-NEVER-AGAIN (Drew, 2026-09-02): the nightly pricing invariant
-              auditor could not reconcile this holding's value with an
-              independent re-derivation. PUBLISH + LABEL — the value above still
-              shows; this says only that a human should look. The reason and the
-              run time ride in the tooltip. */}
-          {h.auditFlag && (
-            <span
-              className="px-1.5 py-0.5 rounded text-[10px] font-medium"
-              style={{
-                background: "color-mix(in oklab, var(--hiq-warning) 15%, transparent)",
-                color: "var(--hiq-warning)",
-              }}
-              title={`Under review — ${h.auditFlag.reason} (audited ${h.auditFlag.at}). The value shown is unchanged; the nightly pricing audit flagged it for a human to check.`}
-              data-audit-invariant={h.auditFlag.invariant}
-            >
-              UNDER REVIEW
-            </span>
-          )}
-          {/* CF-DATA-HEALTH-DRILLDOWN: MISSING pill for cards the engine
-              couldn't price at all (no observed FMV, no estimate). Fix link
-              jumps to the detail page where Edit + Refresh price live. */}
-          {value == null && vs !== "estimated" && vs !== "pending" && (
-            <>
-              <span
-                className="px-1.5 py-0.5 rounded text-[10px] font-medium"
-                style={{
-                  background: "color-mix(in oklab, var(--hiq-danger) 15%, transparent)",
-                  color: "var(--hiq-danger)",
-                }}
-              >
-                MISSING
-              </span>
-              <Link
-                href={`/app/portfolio/${encodeURIComponent(h.id)}`}
-                className="text-[10px] font-semibold underline"
-                style={{ color: "var(--color-accent)" }}
-                onClick={(e) => e.stopPropagation()}
-              >
-                {h.proposedIdentity ? "Confirm identity →" : "Fix identity →"}
-              </Link>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Value */}
-      <div className="text-right hidden md:block">
-        <div className="text-xs uppercase tracking-wide text-[color:var(--color-muted)]">Value</div>
-        <div className="text-sm font-medium tabular-nums">{formatUSD(value, { hideCents: true })}</div>
-      </div>
-
-      {/* Cost */}
-      <div className="text-right hidden md:block">
-        <div className="text-xs uppercase tracking-wide text-[color:var(--color-muted)]">Cost</div>
-        <div className="text-sm font-medium tabular-nums">{formatUSD(cost, { hideCents: true })}</div>
-      </div>
-
-      {/* Gain */}
-      <div className="text-right min-w-20">
-        <div className="text-xs uppercase tracking-wide text-[color:var(--color-muted)]">P&amp;L</div>
-        <div className="text-sm font-medium tabular-nums" style={gainColor ? { color: gainColor } : undefined}>
-          {formatUSDCompact(gain)}
-        </div>
-        {gainPct != null && (
-          <div className="text-xs tabular-nums" style={gainColor ? { color: gainColor } : undefined}>
-            {formatPct(gainPct)}
-          </div>
-        )}
-      </div>
+  // The thumbnail, shared by both layouts. Slab-ratio (~3:4) with
+  // object-contain so the full slab stays visible (label + cert + corners).
+  const thumb = (
+    <div
+      className="w-14 h-20 md:w-16 md:h-24 rounded-lg flex-shrink-0 overflow-hidden flex items-center justify-center"
+      style={{ background: "var(--color-bg)" }}
+    >
+      {h.photos && h.photos[0] ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={h.photos[0]}
+          alt=""
+          className="w-full h-full object-contain"
+          onError={(e) => {
+            (e.target as HTMLImageElement).style.display = "none";
+          }}
+        />
+      ) : (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" className="text-[color:var(--color-muted)]">
+          <path d="M4 6h16v12H4V6zm2 2v8h12V8H6zm2 2h4v4H8v-4z" />
+        </svg>
+      )}
     </div>
+  );
+
+  const qty = h.quantity > 1 ? <span>· qty {h.quantity}</span> : null;
+
+  // Year + product + parallel — the title minus the player and the card
+  // number, which the mobile layout promotes to their own line. This is the
+  // SAME helper `formatCardTitle` composes from, so the phone's two lines and
+  // the desktop's one line can never disagree about what this card is.
+  const cardContext = formatCardContext(h);
+
+  return (
+    <>
+      {/* ── Mobile (< md): three stacked bands ─────────────────────────────
+          1. Title, full width, up to two lines — a card you cannot name is
+             a card you cannot act on, so this gets the room first.
+          2. Thumb + grade on the left, value + P&L right-aligned. The
+             figures are the reason to scan the list, so they sit on the
+             widest axis available, with tabular numerals so the column of
+             them stays aligned down the page.
+          3. The chips, wrapping freely in their own band where nothing can
+             draw over them. */}
+      <div className="hiq-card p-4 flex flex-col gap-3 md:hidden">
+        {/* The identity line. `formatCardTitle` composes year + product +
+            parallel + player + number in that order, which is right for a
+            wide row but puts the two parts that NAME the card — the player
+            and the card number — last, where a phone-width clamp eats them
+            ("… Spencer Torkelson…"). So the phone leads with those two and
+            gives the product its own clamped line underneath. Same facts,
+            same helper for the desktop row; only the order and the line
+            breaks differ. Falls back to the composed title whenever the
+            holding has no player name, which is the shape `formatCardTitle`
+            itself falls back on. */}
+        {h.playerName ? (
+          <div>
+            <div className="font-semibold leading-snug break-words">
+              {h.playerName}
+              {h.cardNumber && (
+                <span className="text-[color:var(--color-muted)] font-medium"> #{h.cardNumber}</span>
+              )}
+            </div>
+            <div className="text-xs text-[color:var(--color-muted)] leading-snug line-clamp-2 break-words mt-0.5">
+              {cardContext}
+            </div>
+          </div>
+        ) : (
+          <div className="font-medium leading-snug line-clamp-2 break-words">{title}</div>
+        )}
+
+        <div className="flex items-center gap-3">
+          {thumb}
+          <div className="flex-1 min-w-0 flex items-center gap-2 text-xs text-[color:var(--color-muted)]">
+            <span className="whitespace-nowrap">{grade}</span>
+            {qty}
+          </div>
+          <div className="text-right flex-shrink-0">
+            <div className="text-xs uppercase tracking-wide text-[color:var(--color-muted)]">Value</div>
+            <div className="text-base font-semibold tabular-nums">
+              {formatUSD(value, { hideCents: true })}
+            </div>
+            <div
+              className="text-xs font-medium tabular-nums mt-0.5"
+              style={gainColor ? { color: gainColor } : undefined}
+            >
+              {formatUSDCompact(gain)}
+              {gainPct != null && <span> · {formatPct(gainPct)}</span>}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-1.5">{statusChips}</div>
+      </div>
+
+      {/* ── Desktop (md+): the original single-row layout, unchanged ─────── */}
+      <div className="hiq-card p-4 md:p-5 hidden md:flex items-center gap-4">
+        {thumb}
+
+        {/* Title + grade */}
+        <div className="flex-1 min-w-0">
+          <div className="font-medium truncate">{title}</div>
+          <div className="text-xs text-[color:var(--color-muted)] mt-0.5 flex flex-wrap items-center gap-2">
+            <span>{grade}</span>
+            {qty}
+            {statusChips}
+          </div>
+        </div>
+
+        {/* Value */}
+        <div className="text-right">
+          <div className="text-xs uppercase tracking-wide text-[color:var(--color-muted)]">Value</div>
+          <div className="text-sm font-medium tabular-nums">{formatUSD(value, { hideCents: true })}</div>
+        </div>
+
+        {/* Cost */}
+        <div className="text-right">
+          <div className="text-xs uppercase tracking-wide text-[color:var(--color-muted)]">Cost</div>
+          <div className="text-sm font-medium tabular-nums">{formatUSD(cost, { hideCents: true })}</div>
+        </div>
+
+        {/* Gain */}
+        <div className="text-right min-w-20 flex-shrink-0">
+          <div className="text-xs uppercase tracking-wide text-[color:var(--color-muted)]">P&amp;L</div>
+          <div className="text-sm font-medium tabular-nums" style={gainColor ? { color: gainColor } : undefined}>
+            {formatUSDCompact(gain)}
+          </div>
+          {gainPct != null && (
+            <div className="text-xs tabular-nums" style={gainColor ? { color: gainColor } : undefined}>
+              {formatPct(gainPct)}
+            </div>
+          )}
+        </div>
+      </div>
+    </>
   );
 }
 
