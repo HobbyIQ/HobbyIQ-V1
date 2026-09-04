@@ -309,7 +309,52 @@ const LANES_WITHOUT_PRINT_RUNS = new Set(["tcgdexja"]);
  * one-rung file being the honest shape of "these are all promos", while a
  * multi-rung file with no base cards is still the cross-join the rule catches.
  */
-const LANES_WITH_BASELESS_PRODUCTS = new Set(["tcgdexja"]);
+const LANES_WITH_BASELESS_PRODUCTS = new Set(["tcgdexja", "sportscardchecklist"]);
+
+/**
+ * CF-A-PARALLEL-SET-BELONGS-TO-ITS-PARENT (2026-09-04, run 33875264485).
+ *
+ * sportscardchecklist joins the baseless-product lanes, but for a DIFFERENT
+ * shape than tcgdexja's, and the difference is what the manifest flag carries.
+ *
+ * A tcgdexja promo product is baseless because the PRODUCT has one rung and no
+ * base print underneath it. An SCC "...Refractors" page is baseless because the
+ * page is ONE RUNG OF A PARENT that lives at its own URL:
+ *
+ *   /set-151054/...-aptitude-for-altitude-basketball-...            <- the base
+ *   /set-151055/...-aptitude-for-altitude-refractors-basketball-... <- this rung
+ *
+ * The base cards exist; they are the sibling page's. That is the same claim
+ * gateStagedEntry already accepts inside one entry when a page stages several
+ * scope files -- "the ladder attaches to base cards in a sibling" -- except the
+ * sibling here is a separate ENTRY, so no file of this entry can carry it.
+ *
+ * ADMISSION IS NOT BY LANE NAME ALONE. `parallelOfParent` is written by the
+ * fetcher only when the slug named a rung AND a known parent brand was found in
+ * that same slug, and the row that lands carries the parent's setKey. So the
+ * flag is the fetcher's attestation "these rows belong to <parent>, as <rung>",
+ * and admitting on it admits exactly the pages that have somewhere to land.
+ * Without the flag the zero-base refusal stands -- a multi-rung baseless file is
+ * still the cross-join the rule was written for, on every lane.
+ */
+function manifestOf(csvPath) {
+  try {
+    const p = String(csvPath).replace(/\.csv$/, "") + ".manifest.json";
+    return fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, "utf8")) : null;
+  } catch { return null; }
+}
+
+/** True when EVERY staged file of the entry attests it is one rung of a parent
+ *  product. Read from the manifests the fetcher wrote, never inferred from a
+ *  file that merely happens to have no base rows -- inferring it would excuse
+ *  the cross-join this gate exists to catch. */
+function allFilesAreParallelOfParent(paths) {
+  if (!paths.length) return false;
+  return paths.every((p) => {
+    const m = manifestOf(p);
+    return Boolean(m && m.parallelOfParent === true && m.setKey && m.parallelName);
+  });
+}
 
 /**
  * CF-A-VINTAGE-BASE-SET-IS-NOT-PARTIAL (2026-09-04).
@@ -664,7 +709,13 @@ function gateStagedEntry(csvPaths, lane) {
     // distinct rungs or more with no base card is still the cross-join shape
     // the rule was written for, and stays refused on every lane.
     const singleRung = total.rungNames.length === 1;
-    if (!(LANES_WITH_BASELESS_PRODUCTS.has(lane) && singleRung)) {
+    // CF-A-PARALLEL-SET-BELONGS-TO-ITS-PARENT. The second admissible shape: not
+    // "this product has one rung and no base" (tcgdexja's promos) but "this
+    // PAGE is one rung of a parent that has its own page", attested per file by
+    // the fetcher's `parallelOfParent` and landed on the parent's setKey.
+    // Still single-rung: a baseless file with two rungs is the cross-join.
+    const parallelOfParent = singleRung && allFilesAreParallelOfParent(paths);
+    if (!(LANES_WITH_BASELESS_PRODUCTS.has(lane) && singleRung && (lane !== "sportscardchecklist" || parallelOfParent))) {
       return {
         ok: false,
         reason: `zero base cards across all ${f(paths.length)} staged file(s) (${f(total.rows)} rows, all carry a parallel)`,
@@ -697,6 +748,8 @@ function gateStagedEntry(csvPaths, lane) {
     // A baseless single-rung product admitted by the lane exception, named so
     // the log can say WHY a zero-base page was allowed through.
     baselessSingleRung: total.base === 0 ? (total.rungNames[0] ?? null) : null,
+    // Which of the two baseless shapes admitted it, so the log says WHY.
+    parallelOfParent: total.base === 0 ? allFilesAreParallelOfParent(paths) : false,
     zeroBaseFiles: files.filter((x) => x.code === "zero-base").map((x) => x.file),
   };
 }
@@ -2026,6 +2079,12 @@ if (require.main !== module) return;
       const gate = gateStagedEntry(csvPaths, lane);
       if (csvPaths.length > 1) {
         console.log(`      ${f(csvPaths.length)} staged scope files: ${csvPaths.map((p) => path.basename(p)).join(", ")}`);
+      }
+      // WHY A ZERO-BASE PAGE WAS ALLOWED THROUGH. Silence here is how a wrongly
+      // admitted cross-join would look exactly like a correctly admitted rung.
+      if (gate.ok && gate.baselessSingleRung) {
+        console.log(`      BASELESS SINGLE RUNG — every row is "${gate.baselessSingleRung}"` +
+          (gate.parallelOfParent ? "; the page is that rung of a parent product, landing on the parent's setKey" : "; the product itself has no base print"));
       }
       if (!gate.ok) {
         // CF-A-GATE-REFUSAL-IS-NOT-EVIDENCE-THE-LANE-IS-DOWN (2026-09-04, run

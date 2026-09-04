@@ -241,11 +241,36 @@ describe("a promo set has no base cards, and that is the set", () => {
     expect(g.reason).toMatch(/zero base cards/);
   });
 
-  it("tcgdexja is the only lane declared as having baseless products", () => {
+  /**
+   * TWO lanes are declared baseless now, for two DIFFERENT shapes, and the
+   * declaration is still a closed list -- see CF-A-PARALLEL-SET-BELONGS-TO-ITS-
+   * PARENT (2026-09-04) and tests/sccParallelOfParent.test.ts.
+   *
+   *   tcgdexja            the PRODUCT is rung-only (a promo set has no base print)
+   *   sportscardchecklist the PAGE is one rung of a parent that has its own page
+   *
+   * They are not interchangeable: sportscardchecklist additionally requires the
+   * fetcher's per-file `parallelOfParent` attestation, so declaring the lane is
+   * necessary but NOT sufficient. Every other lane keeps the flat refusal.
+   */
+  it("only the two declared lanes may have baseless products", () => {
     expect(LANES_WITH_BASELESS_PRODUCTS.has("tcgdexja")).toBe(true);
-    for (const lane of ["bcp", "beckett", "clc", "checklistinsider", "hobbymonitor", "sportscardchecklist"]) {
+    expect(LANES_WITH_BASELESS_PRODUCTS.has("sportscardchecklist")).toBe(true);
+    for (const lane of ["bcp", "beckett", "clc", "checklistinsider", "hobbymonitor"]) {
       expect(LANES_WITH_BASELESS_PRODUCTS.has(lane)).toBe(false);
     }
+  });
+
+  /**
+   * AND THE DECLARATION ALONE DOES NOT ADMIT. A tcgdexja-shaped promo file
+   * staged on sportscardchecklist carries no manifest attestation, so it is
+   * still refused -- which is what keeps the lane exception from becoming
+   * "sportscardchecklist may stage anything baseless".
+   */
+  it("sportscardchecklist still refuses a baseless file with no parent attestation", () => {
+    const g = gateStagedEntry([promo()], "sportscardchecklist");
+    expect(g.ok).toBe(false);
+    expect(g.reason).toMatch(/zero base cards/);
   });
 
   it("the entry gate takes the lane, and the driver passes it", () => {
@@ -298,8 +323,12 @@ describe("the pins fail against a mutated driver", () => {
     // Load a mutated copy and prove the promo/print-run behaviour actually
     // changes -- not merely that the source text differs.
     const src = fs.readFileSync(script, "utf8");
+    // Matches the declaration whatever lanes it names, so adding a lane (as
+    // CF-A-PARALLEL-SET-BELONGS-TO-ITS-PARENT did) cannot silently retire this
+    // mutation guard: an anchor pinned to one literal lane list would go green
+    // by failing to match, which is the quietest way to lose a pin.
     const mutated = src.replace(
-      /const LANES_WITH_BASELESS_PRODUCTS = new Set\(\["tcgdexja"\]\);/,
+      /const LANES_WITH_BASELESS_PRODUCTS = new Set\(\[[^\]]*\]\);/,
       "const LANES_WITH_BASELESS_PRODUCTS = new Set([]);",
     );
     expect(mutated).not.toBe(src);
