@@ -108,7 +108,16 @@ async function get(url, attempt = 0) {
  * card, so the page would have staged 199 phantom "Topps" parallel rows.
  * End the slice at the page chrome as well as at the next heading.
  */
-const PAGE_CHROME = `<div id="catlinks|<div class="printfooter|<div id="mw-navigation|<footer`;
+// CF-A-NAVBOX-IS-PAGE-CHROME (2026-09-04). The MediaWiki NAVBOX -- a
+// `toccolours` table linking every year of a product family -- sits ABOVE
+// catlinks/printfooter, so a slice that only stops at those swallows it. On
+// 1991 Topps Traded the navbox starts at byte 38,160 and `printfooter` at
+// 57,511, so the LAST heading in Parallels (`Topps_Traded_Tiffany`) absorbed
+// 19,000 bytes of chrome opening `Topps (flagship) Classic Era: 1951 - 1952
+// - ...`. RUN_NOTE's bare colon-then-digits arm then read ": 1951" as a
+// print run and stamped `num-1951` onto 132 catalog rows. The navbox is
+// chrome; end the slice at it.
+const PAGE_CHROME = `<div id="catlinks|<div class="printfooter|<div id="mw-navigation|<footer|<table class="toccolours`;
 function section(html, id, level) {
   const re = new RegExp(`<h${level} id="${id}"[\\s\\S]*?(?=<h[2-${level}] id=|${PAGE_CHROME}|$)`);
   const m = html.match(re);
@@ -331,6 +340,12 @@ function parseCards(body) {
 }
 
 const RUN_NOTE = /(?:#'?d?\s*(?:to|\/)\s*|numbered\s+to\s+|:\s*)([\d,]+)\s*(?:cop(?:y|ies))?\b|\(([\d,]+)\s*cop(?:y|ies)\)/i;
+/** A plausible CARD YEAR wearing a print run's clothes. The bcp navbox bleed
+ *  captured 1951 on the 1991 Topps Traded page, but the number is whatever
+ *  leads THAT page's navbox, so the test is the SHAPE, never the value. */
+function isYearShaped(n) {
+  return Number.isInteger(n) && n >= 1900 && n <= 2100;
+}
 // CF-A-SCOPE-HEADING-IS-NOT-A-RUNG (D33). "Chrome", "1st Edition",
 // "Sapphire Edition" and "Chrome Gimmicks" name a SCOPE (a product or a
 // sub-family), never a finish -- yet prod carries all four as literal
@@ -945,7 +960,14 @@ function parseLadder(parallelsBody, playerNames = new Set(), opts = {}) {
     if (hasRangeClause(body)) continue;
     const run = text.match(RUN_NOTE);
     const n = run ? Number((run[1] || run[2] || "").replace(/,/g, "")) : null;
-    const ok = n && n >= 1 && n <= 100000 && !hasOdds(text);
+    // CF-A-YEAR-IS-NOT-A-PRINT-RUN (2026-09-04). The gate `1..100000` admits
+    // every four-digit year, which is how a navbox link ("Classic Era: 1951")
+    // became a print run of 1951. `extractRarity` already carries the
+    // mirror-image plausibility floor (n >= 1000) so a small number is not
+    // read as set production; this is the missing counterpart. Belt and
+    // braces with the PAGE_CHROME fix: the slice should no longer contain a
+    // navbox at all, but a year-shaped run is never right on this source.
+    const ok = n && n >= 1 && n <= 100000 && !isYearShaped(n) && !hasOdds(text);
     // The heading's own text may state pack odds or a set-production figure.
     // Those are refused as a print run and RECORDED as rarity.
     //
@@ -1013,6 +1035,8 @@ function parseLadder(parallelsBody, playerNames = new Set(), opts = {}) {
     if (n == null && ONE_OF_ONE.test(note)) n = 1;      // "one-of-one" is /1
     if (n == null) n = spelledRun(note);                // "numbered to ten" is /10
     if (hasOdds(note)) n = null;                        // 1:12 is odds, not a run
+    if (isYearShaped(n)) n = null;                      // "Classic Era: 1951" is a year
+
     // Whatever the guards refuse is still a fact the page stated. Keep it in
     // the descriptive field rather than dropping it. CF-RARITY-IS-NOT-A-PRINT-RUN.
     const rungRarity = extractRarity(note) || extractRarity(text);
@@ -1814,6 +1838,8 @@ async function main(opts = {}) {
 module.exports = {
   main, normalizeSport,
   parseCards, parseLadder, parseScopedLadders, section,
+  // CF-A-YEAR-IS-NOT-A-PRINT-RUN: exported so the guard is pinnable directly.
+  isYearShaped, PAGE_CHROME,
   // CF-THE-CHECKLIST-HEADING-IS-A-BASE-SET: the h1 fallback slice and the
   // precedence that uses it, pinned against the four live 1990 pages that used
   // to be refused. `baseCards` is what the page loop calls, so deleting the

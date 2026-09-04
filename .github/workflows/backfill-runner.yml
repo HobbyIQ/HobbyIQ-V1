@@ -388,6 +388,31 @@ on:
           # itself. No new dispatch input -- mode/years/scope/sports/limit and
           # slot/slots are the shared ones above.
           - repair-tiffany-rung-to-product
+          # CF-TIFFANY-IS-A-PRODUCT, the two gaps #1745 left. MODE is REQUIRED:
+          #   MODE=pool     enumerate THE POOL directly (slug `:tiffany:` OR
+          #                 parallel ~ tiffany) rather than from the catalog's
+          #                 rung groups -- #1745 walked the catalog, so the
+          #                 2,127 comps with no rung row to hang off survived
+          #                 it. The sibling is resolved from the STAGED
+          #                 checklists, never by appending "-tiffany": #1748
+          #                 minted 1987-1989 Fleer as `fleer-glossy` (the
+          #                 Glossy Tin) and 1996/1997/2002 as `fleer-tiffany`,
+          #                 so a naming rule would route a third of the
+          #                 population to a product that will never exist. Two
+          #                 gates, reported separately: is a checklist STAGED,
+          #                 and has it been INGESTED (a staged CSV cannot
+          #                 receive a comp). The title guard is unchanged.
+          #   MODE=num1951  retire the 132 rows whose id carries a navbox YEAR
+          #                 as a print run (`num-1951`, read from "Topps
+          #                 (flagship) Classic Era: 1951") and/or whose
+          #                 parallel NAMES the sibling product. Found BY SHAPE
+          #                 (a year-shaped run, 1900-2100), never by the
+          #                 literal 1951 -- the captured number is whatever
+          #                 leads that page's navbox. RETIRE, not convert: the
+          #                 staged 1991 checklist already carries the 132
+          #                 correct rows with a BLANK print run.
+          # No new dispatch input; mode/years/scope/sports/limit/slot/slots.
+          - repair-tiffany-pool-enumeration
       apply:
         description: "Actually write (true) or dry-run only (false)"
         required: true
