@@ -30,6 +30,7 @@ import {
 } from "@/lib/api";
 import { formatUSD, formatCardTitle } from "@/lib/format";
 import { EbayListModal } from "@/components/EbayListModal";
+import { describeEbayConnection } from "@/lib/ebayConnection";
 
 export default function EbayPage() {
   const [status, setStatus] = useState<EbayStatus | null>(null);
@@ -180,52 +181,88 @@ export default function EbayPage() {
         </div>
       )}
 
+      {/* CF-EBAY-RECONNECT-SURFACE (found by #1721). `status.connected` is
+          TRUE even when eBay has already refused the refresh token — a token
+          record still exists — so this branch used to paint a green dot and
+          the word "Connected" over a connection that had been dead since
+          2026-08-31 for two real users, with purchases silently not syncing.
+          The state now comes from describeEbayConnection(), which reads the
+          `status` field the backend has returned since D26. */}
       {!loading && status && status.connected && (
         <>
-          <div className="hiq-card p-6 mb-6">
-            <div className="flex items-start justify-between gap-4 flex-wrap">
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <span
-                    className="w-2 h-2 rounded-full"
-                    style={{ background: "var(--color-success)" }}
-                  />
-                  <span className="text-sm font-medium">Connected</span>
-                </div>
-                <div className="text-lg font-bold mb-1">
-                  {status.connectedUser ?? status.ebayUserId ?? "eBay account"}
-                </div>
-                <div className="text-xs text-[color:var(--color-muted)] space-y-0.5">
-                  {status.connectedAt && (
-                    <div>Since {status.connectedAt.slice(0, 10)}</div>
-                  )}
-                  {status.refreshTokenExpiresAt && (
-                    <div>
-                      Refresh token expires{" "}
-                      {new Date(status.refreshTokenExpiresAt).toISOString().slice(0, 10)}
+          {(() => {
+            const conn = describeEbayConnection(status);
+            const broken = conn.needsReconnect;
+            const accent = broken ? "var(--color-warning)" : "var(--color-success)";
+            return (
+              <div
+                className="hiq-card p-6 mb-6"
+                style={
+                  broken
+                    ? {
+                        borderColor: "color-mix(in oklab, var(--color-warning) 45%, transparent)",
+                        background: "color-mix(in oklab, var(--color-warning) 8%, var(--hiq-card-navy))",
+                      }
+                    : undefined
+                }
+              >
+                <div className="flex items-start justify-between gap-4 flex-wrap">
+                  <div className="min-w-[200px] flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="w-2 h-2 rounded-full shrink-0" style={{ background: accent }} />
+                      <span
+                        className="text-sm font-medium"
+                        style={broken ? { color: "var(--color-warning)" } : undefined}
+                      >
+                        {conn.label}
+                      </span>
                     </div>
-                  )}
+                    <div className="text-lg font-bold mb-1">
+                      {status.connectedUser ?? status.ebayUserId ?? "eBay account"}
+                    </div>
+                    {broken && (
+                      <p className="text-sm leading-relaxed mt-2 mb-1 text-[color:var(--color-muted)]">
+                        {conn.detail}
+                      </p>
+                    )}
+                    {broken && conn.reason && (
+                      <p className="text-xs mb-2 text-[color:var(--color-muted)] opacity-80">
+                        eBay said: {conn.reason}
+                      </p>
+                    )}
+                    <div className="text-xs text-[color:var(--color-muted)] space-y-0.5">
+                      {status.connectedAt && (
+                        <div>Since {status.connectedAt.slice(0, 10)}</div>
+                      )}
+                      {!broken && status.refreshTokenExpiresAt && (
+                        <div>
+                          Refresh token expires{" "}
+                          {new Date(status.refreshTokenExpiresAt).toISOString().slice(0, 10)}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button
+                      onClick={onReconnect}
+                      disabled={connecting}
+                      className={`${broken ? "hiq-btn-primary" : "hiq-btn-secondary"} text-sm disabled:opacity-60`}
+                    >
+                      {connecting ? "…" : broken ? "Reconnect eBay" : "Reconnect"}
+                    </button>
+                    <button
+                      onClick={onDisconnect}
+                      disabled={disconnecting}
+                      className="hiq-btn-secondary text-sm disabled:opacity-60"
+                      style={{ color: "var(--color-danger)" }}
+                    >
+                      {disconnecting ? "…" : "Disconnect"}
+                    </button>
+                  </div>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={onReconnect}
-                  disabled={connecting}
-                  className="hiq-btn-secondary text-sm disabled:opacity-60"
-                >
-                  {connecting ? "…" : "Reconnect"}
-                </button>
-                <button
-                  onClick={onDisconnect}
-                  disabled={disconnecting}
-                  className="hiq-btn-secondary text-sm disabled:opacity-60"
-                  style={{ color: "var(--color-danger)" }}
-                >
-                  {disconnecting ? "…" : "Disconnect"}
-                </button>
-              </div>
-            </div>
-          </div>
+            );
+          })()}
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <PolicyCard
