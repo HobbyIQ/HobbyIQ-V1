@@ -1,0 +1,22 @@
+{
+ "scrapedAt": "2026-09-04T21:40:40.128Z",
+ "source": "sportscardchecklist",
+ "sourceUrl": "https://www.sportscardchecklist.com/set-137559/1996-pacific-prisms-gold-baseball-trading-card-checklist",
+ "sport": "baseball",
+ "year": 1996,
+ "season": "1996",
+ "setName": "1996 Pacific Prisms Gold Baseball",
+ "productKey": "1996-pacific-prism",
+ "setKey": "pacific-prism",
+ "setKeyRequested": "pacific-prisms-gold",
+ "parallelOfParent": true,
+ "parallelName": "Gold",
+ "subset": null,
+ "rowCount": 1,
+ "parallelColumnAuthoritative": true,
+ "cardRows": 1,
+ "ladderRows": 0,
+ "subsetRows": 0,
+ "printRunsFound": 0,
+ "sectionsReport": []
+}

@@ -1,0 +1,58 @@
+{
+ "year": 2003,
+ "sport": "baseball",
+ "setKey": "bowman",
+ "parallelColumnAuthoritative": true,
+ "setName": "2003 Bowman's Best",
+ "sourceUrl": "http://www.baseballcardpedia.com/index.php/2003_Bowman's_Best",
+ "scope": null,
+ "scopeOfPage": "Bowman's Best",
+ "cardNumberPrefix": null,
+ "prefixDerivedFrom": "paper",
+ "prefixUnresolved": false,
+ "ladder": [
+  {
+   "name": "Blue",
+   "printRun": null,
+   "rarity": null
+  },
+  {
+   "name": "Red",
+   "printRun": null,
+   "rarity": null
+  }
+ ],
+ "autographs": [
+  {
+   "name": "Double Play Autographs",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 10,
+   "ladder": []
+  },
+  {
+   "name": "First Year Autographs",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 66,
+   "ladder": []
+  }
+ ],
+ "setRarity": null,
+ "sections": [
+  {
+   "name": "Double Play Autographs",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 10,
+   "rungs": 0
+  },
+  {
+   "name": "First Year Autographs",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 66,
+   "rungs": 0
+  }
+ ]
+}

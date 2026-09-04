@@ -1,0 +1,22 @@
+{
+ "scrapedAt": "2026-09-04T21:31:45.609Z",
+ "source": "sportscardchecklist",
+ "sourceUrl": "https://www.sportscardchecklist.com/set-151067/2004-05-topps-chrome-town-heroes-basketball-trading-card-checklist",
+ "sport": "basketball",
+ "year": 2004,
+ "season": "2004-05",
+ "setName": "2004-05 Topps Chrome Town Heroes Basketball",
+ "productKey": "2004-topps-chrome",
+ "setKey": "topps-chrome",
+ "setKeyRequested": "topps-chrome-town-heroes",
+ "parallelOfParent": false,
+ "parallelName": null,
+ "subset": "Town Heroes",
+ "rowCount": 7,
+ "parallelColumnAuthoritative": true,
+ "cardRows": 7,
+ "ladderRows": 0,
+ "subsetRows": 0,
+ "printRunsFound": 0,
+ "sectionsReport": []
+}

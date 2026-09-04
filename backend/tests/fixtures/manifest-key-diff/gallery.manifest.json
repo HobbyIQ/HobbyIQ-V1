@@ -1,0 +1,22 @@
+{
+ "scrapedAt": "2026-09-04T21:33:03.980Z",
+ "source": "sportscardchecklist",
+ "sourceUrl": "https://www.sportscardchecklist.com/set-151075/2000-01-topps-gallery-basketball-trading-card-checklist",
+ "sport": "basketball",
+ "year": 2000,
+ "season": "2000-01",
+ "setName": "2000-01 Topps Gallery Basketball",
+ "productKey": "2000-topps",
+ "setKey": "topps",
+ "setKeyRequested": "topps-gallery",
+ "parallelOfParent": false,
+ "parallelName": null,
+ "subset": "Gallery",
+ "rowCount": 150,
+ "parallelColumnAuthoritative": true,
+ "cardRows": 150,
+ "ladderRows": 0,
+ "subsetRows": 0,
+ "printRunsFound": 0,
+ "sectionsReport": []
+}

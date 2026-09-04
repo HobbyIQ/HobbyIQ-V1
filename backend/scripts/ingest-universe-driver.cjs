@@ -1755,11 +1755,59 @@ function canonicalSetKey(k) {
  * manifest happens to sit on -- including when `dist/` is absent and
  * canonicalSetKey falls back to the raw key.
  */
-function setKeyCandidates(entry) {
+/**
+ * CF-THE-DIFF-MUST-READ-THE-KEY-THE-MANIFEST-STATES (2026-09-04).
+ *
+ * The two rules above -- normalize the key, then ask under both spellings --
+ * both RECONSTRUCT the product key from the entry's DISPLAY NAME. The child
+ * does no such thing. `productOf` reads the manifest the fetcher wrote and
+ * takes `m.setKey` VERBATIM, and since #1741 that key is frequently NOT the
+ * display-name slug: a rung or insert page states its PARENT product.
+ *
+ * Measured today, re-fetching the three pages the failed control docs name:
+ *
+ *   2004-05 Topps Chrome Town Heroes Basketball
+ *     manifest setKey `topps-chrome`   driver setKeyFor `topps-chrome-town-heroes`
+ *   2000-01 Topps Gallery Basketball
+ *     manifest setKey `topps`          driver setKeyFor `topps-gallery`
+ *   2003 Bowman's Best (bcp)
+ *     manifest setKey `bowman`         driver setKeyFor `bowman-s-best`
+ *
+ * Every one is a MEASUREMENT error of the same shape as #1738's, one level
+ * further out: normalizing cannot reach it, because `topps-gallery` and
+ * `bowmans-best` are RULED products that normalizeSetKey returns unchanged
+ * (CF-A-RULED-KEY-IS-A-FIXED-POINT), so no amount of alias resolution turns
+ * them into the parent the manifest actually named. Gallery is the proof: it
+ * staged 150 clean base rows, the child wrote all 150 under `topps`, and the
+ * driver read `topps-gallery`, found 0 and recorded "ingest reported success
+ * but the catalog holds 0 rows for this product".
+ *
+ * THE MANIFEST IS THE WRITER'S OWN STATEMENT of where the rows went, so it
+ * leads. The reconstructed keys stay as fallbacks -- an entry staged before
+ * the fetcher wrote manifests, or one whose sidecar is missing, must still be
+ * verifiable -- and every candidate is unioned, exactly as #1738 established.
+ */
+function manifestSetKeys(entry, csvPaths) {
+  const out = [];
+  // THE FILES THIS RUN ACQUIRED, when the caller has them -- the staging index
+  // is a disk scan and can miss a directory this run just created.
+  const paths = (Array.isArray(csvPaths) && csvPaths.length) ? csvPaths : (stagedFilesFor(entry) || []);
+  for (const p of paths) {
+    const m = manifestOf(p);
+    const k = m && typeof m.setKey === "string" ? m.setKey.trim() : "";
+    if (k && !out.includes(k)) out.push(k);
+  }
+  return out;
+}
+
+function setKeyCandidates(entry, csvPaths) {
+  const out = [];
+  const add = (k) => { if (k && !out.includes(k)) out.push(k); };
+  // THE KEY THE CHILD WRITES UNDER, first and unconditionally.
+  for (const k of manifestSetKeys(entry, csvPaths)) { add(k); add(canonicalSetKey(k)); }
   const raw = setKeyFor(entry);
-  if (!raw) return [];
-  const canon = canonicalSetKey(raw);
-  return canon && canon !== raw ? [raw, canon] : [raw];
+  if (raw) { add(raw); add(canonicalSetKey(raw)); }
+  return out;
 }
 
 /**
@@ -1767,8 +1815,8 @@ function setKeyCandidates(entry) {
  * `stagedIdentity` builds. One cross-partition read of four fields, bounded by
  * (year, setKey) -- the product, never the container.
  */
-async function catalogIdentities(entry) {
-  const keys = setKeyCandidates(entry);
+async function catalogIdentities(entry, csvPaths) {
+  const keys = setKeyCandidates(entry, csvPaths);
   if (!keys.length) return null;
   if (entry.lane !== "tcgdexja" && !entry.year) return null;
   const byKeyOnly = entry.lane === "tcgdexja";
@@ -1805,8 +1853,8 @@ async function catalogIdentities(entry) {
   return answered ? out : null;
 }
 
-async function countCatalogRows(entry) {
-  const keys = setKeyCandidates(entry);
+async function countCatalogRows(entry, csvPaths) {
+  const keys = setKeyCandidates(entry, csvPaths);
   if (!keys.length) return null;
   // Pokemon identity is the setKey alone -- year is NOT part of it, and gating
   // on year here read as a false zero for every tcgdex set. Every other lane
@@ -1852,13 +1900,13 @@ async function countCatalogRows(entry) {
  * whole-product count is unchanged, because the truncation and partial rules
  * are written against it.
  */
-async function countCatalogRowsBySource(entry, source) {
+async function countCatalogRowsBySource(entry, source, csvPaths) {
   // THE THIRD READ SITE, and it had the original defect in its rawest form:
   // the bare slug, with no alias resolution at all. It reads the same product
   // as the two above and must resolve the key the same way, or the banner's
   // by-source number lands on a different product than the verdict it sits
   // beside (CF-THE-CHILD-MAY-WRITE-EITHER-KEY).
-  const keys = setKeyCandidates(entry);
+  const keys = setKeyCandidates(entry, csvPaths);
   if (!keys.length || !source) return null;
   const byKeyOnly = entry.lane === "tcgdexja";
   if (!byKeyOnly && !entry.year) return null;
@@ -2451,14 +2499,14 @@ if (require.main !== module) return;
         }, 20 * 60000);
 
         // VERIFY BY READ. Not the ingest's claim -- a count from Cosmos.
-        const after = await countCatalogRows(entry);
+        const after = await countCatalogRows(entry, csvPaths);
         const created = (after ?? 0) - (before ?? 0);
         rowsCreatedTotal += Math.max(0, created);
 
         // AND VERIFY BY SOURCE. `after` counts every row of the product,
         // synthetic ones included; this counts only what this run's source
         // wrote. See CF-THE-VERIFICATION-MUST-COUNT-THE-ROWS-THIS-RUN-WROTE.
-        rowsUnderSource = await countCatalogRowsBySource(entry, sourceLabelFor(lane)).catch(() => null);
+        rowsUnderSource = await countCatalogRowsBySource(entry, sourceLabelFor(lane), csvPaths).catch(() => null);
         if (rowsUnderSource !== null) {
           console.log(`      under source ${sourceLabelFor(lane)}: ${f(rowsUnderSource)} rows (of ${f(after ?? 0)} for the product)`);
         }
@@ -2519,7 +2567,7 @@ if (require.main !== module) return;
          */
         let shortIngest = null;
         if (after !== null && gate.stats.identities && gate.stats.identities.size) {
-          const inCatalog = await catalogIdentities(entry).catch(() => null);
+          const inCatalog = await catalogIdentities(entry, csvPaths).catch(() => null);
           if (inCatalog) {
             const missing = [];
             for (const id of gate.stats.identities) if (!inCatalog.has(id)) missing.push(id);
@@ -2529,6 +2577,7 @@ if (require.main !== module) return;
                 present: gate.stats.identities.size - missing.length,
                 missing: missing.length,
                 sample: missing.slice(0, 5),
+                countedKeys: setKeyCandidates(entry, csvPaths),
               };
             }
           }
@@ -2575,7 +2624,19 @@ if (require.main !== module) return;
           // A per-entry answer. We fetched the page, staged it, ran the ingest
           // and read the catalog back -- the host answered every time, so this
           // is our defect, not a down lane. It stays `failed`; it does not vote.
-          verdict = { status: "failed", reason: "ingest reported success but the catalog holds 0 rows for this product", rowsCreated: 0, rowsInCatalog: 0, stats: gate.stats, laneProvenHealthy: true };
+          // NAME THE KEY IT COUNTED. "the catalog holds 0 rows" is unactionable
+          // without the address that was read: every one of the 96 entries with
+          // this verdict was a key mismatch, and the operator could not see it
+          // because the sentence never said which key answered 0. See
+          // CF-THE-DIFF-MUST-READ-THE-KEY-THE-MANIFEST-STATES.
+          const countedKeys = setKeyCandidates(entry, csvPaths);
+          verdict = {
+            status: "failed",
+            reason: `ingest reported success but the catalog holds 0 rows for this product `
+              + `(counted under ${countedKeys.length ? countedKeys.map((k) => `${entry.year}/${k}`).join(" + ") : "no derivable key"})`,
+            rowsCreated: 0, rowsInCatalog: 0, countedSetKeys: countedKeys,
+            stats: gate.stats, laneProvenHealthy: true,
+          };
           console.log(`      FAILED — green ingest, 0 rows landed`);
         } else if (shortIngest) {
           // THE IDENTITY DIFF IS THE TRUTH, and it supersedes the count check:
@@ -2592,9 +2653,13 @@ if (require.main !== module) return;
           // that the LANE is down. See CF-A-CORRECT-REFUSAL-IS-NOT-A-LANE-FAILURE.
           verdict = {
             status: "failed",
-            reason: `short ingest — ${f(shortIngest.missing)} of ${f(shortIngest.staged)} staged identities are not in the catalog (e.g. ${shortIngest.sample.join(", ")})`,
+            // THE ADDRESS THAT WAS READ, for the same reason the 0-row verdict
+            // now names it: a shortfall is a key mismatch until proven otherwise.
+            reason: `short ingest — ${f(shortIngest.missing)} of ${f(shortIngest.staged)} staged identities are not in the catalog `
+              + `under ${shortIngest.countedKeys.map((k) => `${entry.year}/${k}`).join(" + ")} (e.g. ${shortIngest.sample.join(", ")})`,
             rowsCreated: created, rowsInCatalog: after, rowsStaged: staged,
             stagedIdentities: shortIngest.staged, missingIdentities: shortIngest.missing,
+            countedSetKeys: shortIngest.countedKeys,
             stats: gate.stats, laneProvenHealthy: true,
           };
           console.log(`      SHORT INGEST — ${f(shortIngest.missing)} of ${f(shortIngest.staged)} staged identities missing from the catalog (${f(shortIngest.present)} present)`);
