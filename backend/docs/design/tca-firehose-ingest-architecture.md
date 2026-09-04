@@ -105,7 +105,43 @@ Partition key `/id`. Single document. Trivial container, ~1KB storage.
 
 ## Ingest cadence
 
-**Cron frequency:** every 15 min via GitHub Actions (matches existing `Daily 5AM ET Refresh & Deploy` pattern; new workflow `TCA Firehose Ingest`).
+**Cron frequency (as designed):** every 15 min via GitHub Actions (matches existing `Daily 5AM ET Refresh & Deploy` pattern; new workflow `TCA Firehose Ingest`).
+
+**Cron frequency (as shipped, current 2026-09-04).** The every-15-min cadence
+was retuned twice and no longer holds; `.github/workflows/tca-firehose-ingest.yml`
+is authoritative. Four scheduled runs per day, all `APPLY=true`:
+
+| Cron (UTC) | Role | `MAX_MINUTES` | Job `timeout-minutes` |
+| --- | --- | --- | --- |
+| `5 0 * * *` | Reset-window run — opens the fresh 200K/day cap and walks the backlog | 40 | 50 |
+| `5 6 * * *` | Platform-lag pass (CF-TCA-PLATFORM-LAG) | 12 | 50 |
+| `5 12 * * *` | Platform-lag pass | 12 | 50 |
+| `5 18 * * *` | Platform-lag pass | 12 | 50 |
+
+Manual `workflow_dispatch` defaults to 15 minutes.
+
+Why the 00:05 run is budgeted differently (CF-TCA-RESET-WINDOW-BUDGET, Drew
+2026-09-04): `max_minutes` is only ever populated by `workflow_dispatch`, so
+every cron fell through to the same 12-minute fallback. The reset-window run
+was therefore stopping on *our* wall clock while the cursor was preserved and
+the quota was nowhere near exhausted — a budget binding on the abundant
+resource instead of the scarce one. The workflow now tells the crons apart via
+`github.event.schedule` (the same mechanism `promote-staging-pending.yml`
+uses), so only the 00:05 run gets the larger window; the platform-lag passes
+re-pull yesterday as each platform publishes and do not need it. The
+match-enricher job tracks the same budget, or a 40-minute pull leaves its extra
+rows `__pendingMatch` for a full day.
+
+**The 200K/day cap is shared.** Three workflows hold `TCA_API_KEY`:
+`tca-firehose-ingest.yml`, `portfolio-priority-pull.yml` and
+`promote-staging-pending.yml`. The priority pull ran at 00:00 UTC with a
+15-minute budget and so was still draining the cap when the firehose's 00:05
+run started — the exact condition the firehose's own CF-TCA-QUOTA-VISIBILITY
+guard reports as "something else is draining the 200K/day cap before this cron
+runs". It moved to **21:00 UTC** (CF-TCA-QUOTA-WINDOW, Drew 2026-09-04), which
+leaves ~2h45m of slack before the 00:00 reset and gives the firehose the fresh
+day's cap to itself. `backend/tests/tcaQuotaWindowAndBudget.test.ts` pins the
+non-overlap and the per-schedule budget.
 
 **Per-run behavior:**
 

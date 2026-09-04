@@ -37,10 +37,20 @@ on:
     # burn the 200K cap. Re-pulling yesterday costs nothing and contentHash
     # dedup makes the overlap a no-op, so spreading the runs picks each platform
     # up on the first pass after TCA publishes it.
-    - cron: '5 0 * * *'
-    - cron: '5 6 * * *'
-    - cron: '5 12 * * *'
-    - cron: '5 18 * * *'
+    #
+    # CF-TCA-RESET-WINDOW-BUDGET (Drew, 2026-09-04). The 00:05 run opens a
+    # fresh 200K/day cap and is the only run all day that can walk the
+    # backlog at full speed — but it was stopping on OUR wall clock, not
+    # TCA's: max_minutes resolved to 12 for cron runs, so it halted with the
+    # cursor preserved and the quota nowhere near exhausted. A budget is
+    # supposed to bind on the scarce resource; ours bound on the abundant
+    # one. The 00:05 run now gets 40 minutes (job ceiling 50); the
+    # 06:05/12:05/18:05 platform-lag passes keep 12, because their job is to
+    # re-pull yesterday once each platform publishes, not to drain the cap.
+    - cron: '5 0 * * *'    # reset-window run — 40 min budget
+    - cron: '5 6 * * *'    # platform-lag pass — 12 min
+    - cron: '5 12 * * *'   # platform-lag pass — 12 min
+    - cron: '5 18 * * *'   # platform-lag pass — 12 min
   workflow_dispatch:
     inputs:
       daily_feed:
@@ -72,7 +82,7 @@ on:
         options: ['false', 'true']
         default: 'true'
       max_minutes:
-        description: 'Wall-clock cap per run (default 15 — burns 200K quota fast)'
+        description: 'Wall-clock cap per run (default 15 — burns 200K quota fast). Blank on a schedule: the 00:05 reset-window run takes 40, the other three take 12.'
         required: false
         type: string
         default: '15'
@@ -96,7 +106,11 @@ jobs:
   ingest:
     name: TCA firehose → sold_comps
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # 50 = the 40-min reset-window budget plus checkout/npm ci/build and the
+    # script's own drain. Must stay strictly above the largest MAX_MINUTES
+    # below, or the runner kills the job mid-page and the cursor advance is
+    # the one thing we lose.
+    timeout-minutes: 50
     permissions:
       id-token: write
       contents: read
@@ -174,7 +188,14 @@ jobs:
           echo "Ingesting from platforms: $PLATFORMS"
           IFS=',' read -ra PLATFORM_ARR <<< "$PLATFORMS"
           PLATFORMS_OK=0
-          TOTAL_MIN="${{ inputs.max_minutes || '12' }}"
+          # CF-TCA-RESET-WINDOW-BUDGET (Drew, 2026-09-04). Per-schedule budget.
+          # `inputs.max_minutes` is empty on every scheduled run (it is only
+          # populated by workflow_dispatch), which is why all four crons ran
+          # to the same 12-minute fallback. github.event.schedule carries the
+          # cron expression that fired, so the reset-window run can be told
+          # apart from the platform-lag passes without a matrix — the same
+          # mechanism promote-staging-pending.yml already uses.
+          TOTAL_MIN="${{ inputs.max_minutes || (github.event.schedule == '5 0 * * *' && '40' || '12') }}"
           PER_PLATFORM_MIN=$(( TOTAL_MIN / ${#PLATFORM_ARR[@]} ))
           if [ $PER_PLATFORM_MIN -lt 2 ]; then PER_PLATFORM_MIN=2; fi
           for P in "${PLATFORM_ARR[@]}"; do
@@ -236,7 +257,10 @@ jobs:
     runs-on: ubuntu-latest
     needs: ingest
     if: ${{ github.event.inputs.skip_matcher != 'true' }}
-    timeout-minutes: 20
+    # Tracks the ingest budget: a 40-minute reset-window pull lands far more
+    # unmatched rows than a 12-minute one, and an enricher that stops at 12
+    # leaves them __pendingMatch for a full day.
+    timeout-minutes: 50
     permissions:
       id-token: write
       contents: read
@@ -282,6 +306,6 @@ jobs:
           COSMOS_CONNECTION_STRING="$COSMOS_CONNECTION_STRING" \
           COSMOS_DATABASE=hobbyiq \
           APPLY="${{ inputs.apply || (github.event_name == 'schedule' && 'true' || 'false') }}" \
-          MAX_MINUTES="${{ inputs.max_minutes || '12' }}" \
+          MAX_MINUTES="${{ inputs.max_minutes || (github.event.schedule == '5 0 * * *' && '40' || '12') }}" \
           BATCH=2000 \
           node scripts/tca-match-enricher.cjs

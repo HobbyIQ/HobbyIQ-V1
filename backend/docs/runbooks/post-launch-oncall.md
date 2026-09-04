@@ -171,6 +171,59 @@ suddenly (10x baseline), something is generating duplicate ingestion.
 
 ---
 
+## TCA firehose went red: "wrote nothing on every platform"
+
+The firehose's CF-TCA-QUOTA-VISIBILITY gate fails the run when every platform
+returned nothing, and prints `x-ratelimit-remaining`. That number is the
+diagnosis.
+
+**`x-ratelimit-remaining=0`** — the 200K/day `/sales` cap was already spent
+when the cron arrived. The cap is **shared by three workflows**, so find the
+one that drained it before blaming TCA:
+
+| Workflow | Cron (UTC) | Draws on the cap |
+| --- | --- | --- |
+| `tca-firehose-ingest.yml` | `5 0`, `5 6`, `5 12`, `5 18` | Yes — intended consumer |
+| `portfolio-priority-pull.yml` | `0 21` | Yes |
+| `promote-staging-pending.yml` | `25 * * * *`, `10 11`, `40 12 * * 0` | Yes |
+
+```bash
+# Which TCA consumer ran in the hours before the failing run?
+gh run list --workflow tca-firehose-ingest.yml --limit 5
+gh run list --workflow portfolio-priority-pull.yml --limit 5
+gh run list --workflow promote-staging-pending.yml --limit 5
+```
+
+The schedule is deliberately non-overlapping and moving one job is how this
+breaks. The priority pull ran at 00:00 UTC until 2026-09-04 with a 15-minute
+budget, which meant it was still pulling when the 00:05 firehose run started
+and the firehose kept arriving to a drained budget. It now runs at 21:00 UTC.
+**If you reschedule any of the three, re-check the windows do not overlap** —
+`backend/tests/tcaQuotaWindowAndBudget.test.ts` pins this and will go red.
+
+Do **not** assume the daily-feed lane is free. "Unlimited" is narrower than the
+add-on's name suggests: measured against prod 2026-09-02, the un-cursored first
+page of a date-scoped query is free, but every cursor-paged continuation bills
+~1 unit per row *regardless of the date*. A full day of eBay (~90K rows) costs
+~90K of the 200K cap, so two heavy daily-feed platforms plus any backfill can
+exhaust it legitimately. See the QUOTA note in
+`backend/scripts/tca-firehose-ingest.cjs`.
+
+**`x-ratelimit-remaining` non-zero or unknown** — quota is not the problem.
+Check the run log for `429 throttled` (rate limit, not daily cap: the job
+auto-halts after 3 retries) or a `0 rows` return for the requested day, which
+is the normal CF-TCA-PLATFORM-LAG shape when TCA has not published that
+platform's day yet. That is what the 06:05/12:05/18:05 passes exist to pick up;
+one platform lagging is not an outage.
+
+**Budgets.** The 00:05 run carries `MAX_MINUTES=40` (job ceiling 50) because it
+opens the fresh cap; the other three carry 12. They are told apart by
+`github.event.schedule`. A run that stops with the cursor preserved and quota
+remaining is budget-bound, not quota-bound — raise `max_minutes`, do not
+assume the cap was hit.
+
+---
+
 ## eBay Taxonomy Drift check fires
 
 Nightly workflow `.github/workflows/ebay-taxonomy-drift-nightly.yml` compares
