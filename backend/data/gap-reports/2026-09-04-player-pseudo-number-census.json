@@ -1,0 +1,66 @@
+{
+  "_doc": "CF-UNPARSED-IS-NOT-UNNUMBERED census. READ-ONLY measurement of the sold_comps rows whose cardNumber segment is the `player-<name>` pseudo-number. Produced by scripts/census-player-pseudo-number.cjs against prod on 2026-09-04, post-#1715. Nothing was written.",
+  "_verdicts": {
+    "reparse": "the row's own title states a real card number -- the row was never unnumbered, it was UNPARSED. A re-derivation gives it a numbered identity, and the rematch classifier treats that as IMPROVE when the numbered identity is checklist-backed.",
+    "unnumbered": "the card genuinely carries no number: the row's fields assert it (`nno`/`unnumbered`) or the product is one of the families that never had numbers (T206, Magic Alpha/Beta, Signature Series, Stand-Ups, Rub-Offs). The pseudo-number is the right answer and the row stays where it is.",
+    "underivable": "no number to read and nothing asserting there is none. Absent beats wrong: reported, never keyed."
+  },
+  "_headline": "Only 1.6% of the 89,197-row population is the one CF-PLAYER-IS-THE-NUMBER was written for. 26.4% have a card number stated in their own title that the deriver threw away, and 72.0% have no identity to derive at all.",
+  "asOf": "2026-09-04",
+  "container": "sold_comps",
+  "scanned": 89197,
+  "requestCharge": 107969,
+  "counts": {
+    "reparse": 23574,
+    "unnumbered": 1445,
+    "underivable": 64178
+  },
+  "top": [
+    { "year": "2023", "setKey": "unknown", "total": 4793, "reparse": 86, "unnumbered": 0, "underivable": 4707 },
+    { "year": "2024", "setKey": "unknown", "total": 4697, "reparse": 127, "unnumbered": 0, "underivable": 4570 },
+    { "year": "2025", "setKey": "unknown", "total": 4563, "reparse": 419, "unnumbered": 0, "underivable": 4144 },
+    { "year": "2026", "setKey": "unknown", "total": 2960, "reparse": 186, "unnumbered": 0, "underivable": 2774 },
+    { "year": "2022", "setKey": "unknown", "total": 2900, "reparse": 80, "unnumbered": 0, "underivable": 2820 },
+    { "year": "2021", "setKey": "unknown", "total": 1713, "reparse": 41, "unnumbered": 0, "underivable": 1672 },
+    { "year": "2000", "setKey": "unknown", "total": 1630, "reparse": 8, "unnumbered": 0, "underivable": 1622 },
+    { "year": "2019", "setKey": "unknown", "total": 1628, "reparse": 57, "unnumbered": 0, "underivable": 1571 },
+    { "year": "2026", "setKey": "topps", "total": 1327, "reparse": 977, "unnumbered": 0, "underivable": 350 },
+    { "year": "2025", "setKey": "topps-chrome", "total": 1233, "reparse": 199, "unnumbered": 0, "underivable": 1034 },
+    { "year": "2025", "setKey": "topps", "total": 1211, "reparse": 589, "unnumbered": 1, "underivable": 621 },
+    { "year": "2025", "setKey": "bowman", "total": 1128, "reparse": 79, "unnumbered": 0, "underivable": 1049 },
+    { "year": "1997", "setKey": "japanese-rocket-gang", "total": 1037, "reparse": 445, "unnumbered": 237, "underivable": 355 },
+    { "year": "1999", "setKey": "unknown", "total": 948, "reparse": 3, "unnumbered": 0, "underivable": 945 },
+    { "year": "2020", "setKey": "unknown", "total": 878, "reparse": 61, "unnumbered": 0, "underivable": 817 },
+    { "year": "2016", "setKey": "unknown", "total": 876, "reparse": 17, "unnumbered": 0, "underivable": 859 },
+    { "year": "2024", "setKey": "bowman", "total": 719, "reparse": 36, "unnumbered": 0, "underivable": 683 },
+    { "year": "2002", "setKey": "unknown", "total": 712, "reparse": 6, "unnumbered": 0, "underivable": 706 },
+    { "year": "2025", "setKey": "mp", "total": 685, "reparse": 394, "unnumbered": 0, "underivable": 291 },
+    { "year": "2003", "setKey": "unknown", "total": 671, "reparse": 16, "unnumbered": 0, "underivable": 655 }
+  ],
+  "_readingTheTop20": [
+    "`setKey: unknown` dominates the head and is almost entirely UNDERIVABLE. Those rows are missing a PRODUCT as well as a number, so the pseudo-number was never the only thing wrong with them -- they need the setKey acquisition lane, not this one.",
+    "The genuinely productive lane is the NAMED products: 2026 topps (977 of 1,327 reparse), 2025 topps (589 of 1,211), 2025 mp (394 of 685). A modern flagship card always has a number, so a `player-` row on one is the defect by definition.",
+    "1997 japanese-rocket-gang is the only row in the top 20 with a real `unnumbered` count (237). Japanese Pokemon promos genuinely ship without collector numbers, which is the population the pseudo-number exists for -- and 445 of the same product's rows DO state a number, so the product needs both answers, not one."
+  ],
+  "_samples": {
+    "reparse": [
+      "hiq:basketball:1980:topps:player-larry-bird:base:no-auto  ||  1980-81 Topps Larry Bird Rookie Card #31 Ron Brewer Fred Brown - Raw",
+      "hiq:baseball:2001:fleer:player-albert-pujols:leather:auto  ||  2001 Fleer Showcase Sweet Sigs Leather #20 Albert Pujols RC BGS 8.5 10 Auto",
+      "hiq:basketball:1971:topps:player-dave-debusschere:base:no-auto  ||  1971 Topps Trio Stickers Dave DeBusschere #10 Bob Lanier #11 Tom Van Arsdale #12 - Raw"
+    ],
+    "unnumbered": [
+      "hiq:baseball:1969:topps:player-johnny-bench:base:no-auto  ||  1969 Topps Johnny Bench Stamp - Raw",
+      "hiq:pokemon:2007:japanese-10th-movie-commemoration-promo:player-mewtwo:base:no-auto  ||  Pokemon Japanese Striking Back Mewtwo - 10th Movie Commemoration Set - MP to HP - Raw"
+    ],
+    "underivable": [
+      "hiq:basketball:2018:panini-select:player-kawhi-leonard-tie-dye:base:no-auto  ||  2018-19 Panini Select Kawhi Leonard Tie Dye Prizm Die-Cut #/25 PSA 10 GEM MINT",
+      "hiq:baseball:2022:bowman-chrome:player-mega-box-elly-de:base:auto  ||  2022 Bowman Chrome Mega Box Elly de La Cruz Auto PSA 10 RC Gem Mint (Reds RC)",
+      "hiq:pokemon:2021:bowman:player-pokemon-swsh-fa-mew:base:no-auto  ||  2021 Pokemon SWSH FA/Mew Vmax Fusion Strike 114/264 PSA 10 Gem Mint"
+    ]
+  },
+  "_whatTheSamplesShow": [
+    "The UNDERIVABLE samples show a SECOND defect riding along: the player field itself is corrupted. `player-kawhi-leonard-tie-dye` swallowed the parallel, `player-mega-box-elly-de` swallowed the product and truncated the name, `player-pokemon-swsh-fa-mew` is not a person at all. A pseudo-number built out of a bad player parse is a slug that names nothing -- another reason the shape must not be reachable from a parse failure.",
+    "The REPARSE samples name the hazard the classifier must survive: a multi-card lot title ('#31 Ron Brewer Fred Brown', 'DeBusschere #10 Bob Lanier #11') states a number that may belong to a DIFFERENT card. The existing lot guard (parserSaysLot + the card-number-range vocabulary) and the checklist-backed gate both stand between that title and a write; this census sizes the lane, it does not authorize it."
+  ],
+  "_scope": "REPORT ONLY. No row was re-keyed by this census, and the classifier change it accompanies makes `player-` -> numbered eligible for IMPROVE only when the title states the number AND the numbered identity is checklist-backed AND the provenance tier is AUTO. Every other row stays exactly where it is."
+}

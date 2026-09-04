@@ -67,13 +67,21 @@ describe("CF-PLAYER-IS-THE-NUMBER", () => {
     expect(t206("Honus Wagner")).toContain(":player-");
   });
 
+  // AMENDED by CF-UNPARSED-IS-NOT-UNNUMBERED (Drew, 2026-09-04). The empty
+  // string moved OUT of this list and into its own predicate. It was never a
+  // spelling of "no number" — it is the absence of any spelling at all, and
+  // reading it as an assertion is what let a parse failure reach for the
+  // player pseudo-number. See unparsedIsNotUnnumbered.test.ts for the pin.
   it("recognises every spelling of 'no number'", () => {
-    for (const n of ["NNO", "nno", " nno ", "no-number", "none", "unnumbered", ""]) {
+    for (const n of ["NNO", "nno", " nno ", "no-number", "none", "unnumbered"]) {
       expect(isUnnumberedCardNumber(n), JSON.stringify(n)).toBe(true);
     }
     for (const n of ["30", "70T", "BDC-46", "US80", "0573"]) {
       expect(isUnnumberedCardNumber(n), JSON.stringify(n)).toBe(false);
     }
+    // A blank is UNPARSED, not unnumbered — the amendment, stated here so the
+    // two files cannot drift apart.
+    expect(isUnnumberedCardNumber("")).toBe(false);
   });
 
   it("has no identity when there is neither a number nor a player", () => {

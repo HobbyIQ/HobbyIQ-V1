@@ -44,6 +44,7 @@ import { Container, CosmosClient } from "@azure/cosmos";
 import { DefaultAzureCredential } from "@azure/identity";
 import { computeHobbyIqCardId, resolveSetKeyForSlug, sameCardNumber } from "./hobbyIqCardId.service.js";
 import { guardSlugInputs, normalizeSportStrict, type SlugGuardResult } from "./slugGuard.service.js";
+import { playerTheTitleAllows } from "./playerTheTitleAllows.js";
 import { canonicalizeParallel } from "./parallelCanonicalizer.service.js";
 import { parseParallelComposite } from "./parseParallelComposite.service.js";
 import { enrichCompositeV3 } from "./enrichCompositeV3.service.js";
@@ -832,6 +833,12 @@ export interface DerivedSlug {
   printRunFinal: number | null;
   /** setKey the guard actually judged — what segment 3 of the slug carries. */
   resolvedSetKey: string;
+  /** The player the slug was allowed to use, after the title/vendor
+   *  reconciliation. Null when they named two different people. */
+  playerForSlug?: string | null;
+  /** The vendor's attributed player and the title's named a different person.
+   *  The row's identity is UNDERIVABLE and `slug` is null. */
+  playerIrreconcilable?: boolean;
 }
 
 /**
@@ -860,6 +867,23 @@ export interface DerivedSlug {
  * incomplete and can be re-derived later; a wrong slug silently corrupts a
  * comp pool and looks healthy.
  */
+/** The title's own reading of who is on the card. Lazily required so this
+ *  module keeps its import graph — the query parser reaches into compiq/.
+ *  A parse failure returns null, which makes the reconciliation a no-op and
+ *  leaves the vendor's player exactly as it was. */
+function playerFromTitleForSlug(title: string | null | undefined): string | null {
+  const t = String(title ?? "").trim();
+  if (!t) return null;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { parseCardQuery } = require("../compiq/cardQueryParser.js");
+    const p = parseCardQuery(t)?.playerName;
+    return typeof p === "string" && p.trim().length > 0 ? p.trim() : null;
+  } catch {
+    return null;
+  }
+}
+
 export function deriveHobbyIqSlug(input: Pick<RecordSoldCompInput,
   "sport" | "setName" | "title" | "cardYear" | "cardNumber" | "parallel" | "isAuto"
   // CF-PLAYER-IS-THE-NUMBER: genuinely unnumbered cards (T206, Magic Alpha,
@@ -867,7 +891,11 @@ export function deriveHobbyIqSlug(input: Pick<RecordSoldCompInput,
   // reach BOTH the guard and the computation — a guard that judged one
   // identity while the computation emitted another is the parity bug this
   // file was already fixed for once.
-  | "playerName" | "printRun">): DerivedSlug {
+  | "playerName" | "printRun"> & {
+    /** CF-UNPARSED-IS-NOT-UNNUMBERED: a checklist ingest asserting this card
+     *  genuinely carries no number, so a blank cardNumber is an answer. */
+    unnumberedByChecklist?: boolean;
+  }): DerivedSlug {
   const sportForSlug = input.sport ?? inferSportFromContext(input.setName, input.title, input.cardYear);
   const cardNumberFinal = (input.cardNumber && input.cardNumber.trim())
     ? input.cardNumber.trim()
@@ -887,16 +915,38 @@ export function deriveHobbyIqSlug(input: Pick<RecordSoldCompInput,
     input.setName ?? "",
     typeof input.cardYear === "number" ? input.cardYear : 0,
   );
+  // CF-THE-TITLE-OUTRANKS-THE-VENDOR-PLAYER (Drew, 2026-09-04). The player is
+  // load-bearing on exactly one path -- the unnumbered card, where it BECOMES
+  // the cardNumber segment -- so a wrong player there is a wrong card. The
+  // stored playerName is a vendor's attribution; the title is the seller's own
+  // words. When they name two different people the row has no player we can
+  // stand behind, and the guard below refuses on that basis rather than
+  // minting `player-<the-wrong-one>`.
+  const playerDecision = playerTheTitleAllows(
+    input.playerName ?? null,
+    playerFromTitleForSlug(input.title),
+  );
+  const playerForSlug = playerDecision.player;
+
   const guard = guardSlugInputs({
     sport: sportForSlug,
     year: input.cardYear,
     normalizedSetKey: resolvedSetKey,
     cardNumber: cardNumberFinal ?? "",
-    playerName: input.playerName ?? null,
+    playerName: playerForSlug,
+    unnumberedByChecklist: input.unnumberedByChecklist === true,
   });
 
-  const slug = guard.ok
-    ? computeHobbyIqCardId({
+  // CF-UNPARSED-IS-NOT-UNNUMBERED. computeHobbyIqCardId now THROWS on an
+  // unparsed cardNumber rather than reaching for the player pseudo-number, and
+  // on an unnumbered card with no player it stands behind. The guard should
+  // have caught both already — this catch is the belt to that braces, and it
+  // returns the same "no slug" the guard's own refusal returns rather than
+  // taking down an ingest batch.
+  let slug: string | null = null;
+  if (guard.ok) {
+    try {
+      slug = computeHobbyIqCardId({
         // guard.sport is the canonicalized form ("ice hockey" → "hockey"),
         // so the slug namespace stays in the controlled vocabulary.
         sport: guard.sport as string,
@@ -906,11 +956,18 @@ export function deriveHobbyIqSlug(input: Pick<RecordSoldCompInput,
         parallel: input.parallel ?? "Base",
         isAuto: input.isAuto ?? false,
         printRun: printRunFinal,
-        playerName: input.playerName ?? null,
-      })
-    : null;
+        playerName: playerForSlug,
+        unnumberedByChecklist: input.unnumberedByChecklist === true,
+      });
+    } catch {
+      slug = null;
+    }
+  }
 
-  return { slug, guard, sportForSlug, cardNumberFinal, printRunFinal, resolvedSetKey };
+  return {
+    slug, guard, sportForSlug, cardNumberFinal, printRunFinal, resolvedSetKey,
+    playerForSlug, playerIrreconcilable: playerDecision.outcome === "irreconcilable",
+  };
 }
 
 export async function recordSoldComp(input: RecordSoldCompInput): Promise<RecordSoldCompResult> {

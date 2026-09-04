@@ -277,6 +277,77 @@ const BOWMAN_DEFAULT_MARKER = /setkey-bowman-default-unsupported/i;
 const BOWMAN_DEFAULT_SETKEY = "bowman";
 
 /**
+ * THE PSEUDO-NUMBER IS A CARD NUMBER SHAPE THAT NAMES NO NUMBER
+ * (CF-UNPARSED-IS-NOT-UNNUMBERED, Drew 2026-09-04).
+ *
+ * `player-<name>` occupies the cardNumber segment of 89,138 pool rows. It was
+ * minted for genuinely unnumbered cards -- T206, Magic Alpha, Signature Series
+ * -- where the player IS the identifier, and for those it is a real answer.
+ *
+ * But the deriver treated an UNPARSED cardNumber as an unnumbered one, so it
+ * also minted the shape for rows whose number was simply not read. A 1987
+ * Topps Traded Tiffany Maddux sale whose own title states `#70T` sits at
+ * `...:player-todd-worrell:...` -- a number the title spells out, discarded,
+ * and replaced with a player the vendor mis-attributed.
+ *
+ * For the specificity test the shape is therefore blank ON THE STORED SIDE AND
+ * CONDITIONALLY: a re-derivation that reads a real number out of the title
+ * FILLS an axis the stored key never named, which is IMPROVE. That is the
+ * whole point of this PR.
+ *
+ * THE CONDITION IS NOT OPTIONAL AND IT IS THE SAFETY ARGUMENT.
+ *
+ * Blanking `player-` unconditionally would hand the fleet a licence to re-key
+ * every genuinely unnumbered card onto whatever number a noisy title happened
+ * to carry -- a cert (#3538117020), a print run (#788/1000), a lot range. Those
+ * rows are correct today and there is no number to recover. So the stored side
+ * counts as blank only when the caller says the TITLE ITSELF STATES THE NUMBER
+ * (`opts.titleStatesNumber`), which is a fact about the row and not about the
+ * derivation's confidence. Without it the diff stays `changed:cardNumber`, and
+ * `changed` is CONFLICT, report-only, exactly as today.
+ *
+ * The DERIVED side is never blanked this way. A derivation that produces
+ * `player-…` produced the pseudo-number deliberately, and a numbered stored key
+ * re-deriving to it is a DEMOTION -- the demotion rule already refuses that,
+ * and blanking the derived side would have converted it into a fill.
+ */
+const PSEUDO_NUMBER_RE = /^player-/;
+function isPseudoCardNumber(v) {
+  return PSEUDO_NUMBER_RE.test(lower(v).replace(/\s+/g, ""));
+}
+
+/**
+ * Does the TITLE state a card number? The same `#N` / `No. N` reading the
+ * deriver uses (extractCardNumberFromTitle in soldCompsStore), narrowed to the
+ * PREFIXED form only.
+ *
+ * The coded form (`BCP-102` with no `#`) is DELIBERATELY excluded. This
+ * predicate exists to unblock a re-key off a pseudo-number, and the coded
+ * pattern matches grader labels, cert prefixes and set abbreviations that are
+ * not card numbers at all -- on a genuinely unnumbered card that false positive
+ * is the whole damage. A `#` is a boundary a seller typed on purpose.
+ *
+ * Certs and print runs are excluded by shape: a number of 5+ digits is a cert,
+ * and `#788/1000` is a serial. Both appear in the unnumbered population's
+ * titles and neither is a card number.
+ */
+const TITLE_NUMBER_RE = /(?:#|\bno\.\s*)([a-z]{0,4}-?\d{1,4}[a-z]?-?[a-z0-9]{0,6})/i;
+function titleStatesCardNumber(title) {
+  const t = str(title);
+  if (!t) return false;
+  const m = t.match(TITLE_NUMBER_RE);
+  if (!m) return false;
+  const tok = m[1];
+  // A serial (`#788/1000`) is a print run, not a card number.
+  const at = t.indexOf(m[0]);
+  if (at >= 0 && /^\s*\//.test(t.slice(at + m[0].length))) return false;
+  // A long run of digits is a cert number.
+  const digits = tok.replace(/\D/g, "");
+  if (digits.length >= 5) return false;
+  return digits.length > 0;
+}
+
+/**
  * Is the STORED setKey the "unknown" one, for the specificity test?
  *
  * `derivationReasons` is the census`s own signal, not a guess about the row.
@@ -2007,6 +2078,16 @@ function derivationRefusals({ row, stored, derived, autoByCardNumber = false }) 
   const gradeArtifact = derivedGradeIsAdjectiveArtifact({ row, stored, derived });
   if (gradeArtifact) out.push(gradeArtifact);
 
+  // CF-UNPARSED-IS-NOT-UNNUMBERED (Drew, 2026-09-04). A derivation that
+  // produces the PSEUDO-number is never an improvement over a stored real
+  // number: `70t` -> `player-greg-maddux` is the defect running backwards, and
+  // it would arrive here as `changed:cardNumber` (already CONFLICT) or, on a
+  // row whose stored number is blank, as a FILL that reaches IMPROVE. Refused
+  // by name on both paths so the census can count it.
+  if (isPseudoCardNumber(derived?.cardNumber) && !isPseudoCardNumber(stored?.cardNumber)) {
+    out.push(`derived-cardnumber-is-pseudo-number:${lower(derived?.cardNumber)}`);
+  }
+
   // D6: a derived cardNumber that is a strict prefix of the stored one.
   const trunc = cardNumberIsTruncation(stored, derived);
   if (trunc) out.push(`cardnumber-truncation:${trunc}`);
@@ -2029,9 +2110,19 @@ function diffAxes(stored, derived, opts = {}) {
   // changing it. The DERIVED side is never blanked this way -- a derivation
   // that produces `bowman` produced an answer.
   const storedBlankSetKey = opts.storedSetKeyBlank === true;
+  // CF-UNPARSED-IS-NOT-UNNUMBERED. Same shape as the defaulted setKey above,
+  // and for the same reason: a stored `player-<name>` cardNumber on a row whose
+  // TITLE states a number never read a number off the card, so a derivation
+  // that reads one FILLS the axis rather than changing it. Gated on the
+  // caller's title fact -- never on the derivation -- and applied to the STORED
+  // side only.
+  const storedBlankCardNumber = opts.titleStatesNumber === true
+    && isPseudoCardNumber(stored?.cardNumber);
   for (const axis of AXES) {
     const a = axisValue(stored, axis), b = axisValue(derived, axis);
-    const aBlank = (axis === "setKey" && storedBlankSetKey) || axisIsBlank(axis, a);
+    const aBlank = (axis === "setKey" && storedBlankSetKey)
+      || (axis === "cardNumber" && storedBlankCardNumber)
+      || axisIsBlank(axis, a);
     const bBlank = axisIsBlank(axis, b);
     if (a === b) { same.push(axis); continue; }
     if (aBlank && !bBlank) { filled.push(axis); continue; }
@@ -2090,6 +2181,14 @@ function classifyRow({
   //                        is a refusal -- absent beats wrong.
   derivedBackedStrict = false,
   storedFlagshipListsCardNumber = null,
+  // CF-UNPARSED-IS-NOT-UNNUMBERED (Drew, 2026-09-04). Does the row's OWN TITLE
+  // state a card number? A fact about the row, supplied by the caller (the
+  // census reads it with the same `#N` rule the deriver uses), never a verdict
+  // about the derivation. It is the ONE thing that lets a stored
+  // `player-<name>` pseudo-number count as blank, so a re-derivation onto a
+  // real number classifies IMPROVE instead of `changed:cardNumber`. Absent it,
+  // a genuinely unnumbered T206 row is compared as the real answer it is.
+  titleStatesNumber = false,
 }) {
   const prov = provenanceTier(row);
   // THE SLUG-SHAPE DEFECTS ARE COMPUTED FOR EVERY ROW AND CHANGE NOTHING.
@@ -2177,7 +2276,7 @@ function classifyRow({
   }
 
   const storedSetKeyBlank = storedSetKeyIsBlank(stored, derivationReasons);
-  const axes = diffAxes(stored, derived, { storedSetKeyBlank });
+  const axes = diffAxes(stored, derived, { storedSetKeyBlank, titleStatesNumber });
   const reasons = [];
 
   // THE SLUG IS A NINTH AXIS, AND IT IS NOT IN `AXES`.
@@ -2628,6 +2727,10 @@ module.exports = {
   derivationRefusals, titleNamesStoredFinish, isAutoFlipIsTitleOnly,
   gradeFromTitleStrict, derivedGradeIsAdjectiveArtifact,
   cardNumberIsTruncation, cardNumberDiffersOnlyByCase, parallelIsGenericization,
+  // CF-UNPARSED-IS-NOT-UNNUMBERED (2026-09-04). The pseudo-number predicate and
+  // the title-states-a-number fact, exported so the census can supply the fact
+  // and a mutation check can revert each half alone.
+  isPseudoCardNumber, titleStatesCardNumber,
   GRADER_RE, RAW_CONDITION_RE,
   // The trust ladder's new gates, exported so the tests can drive each one
   // directly and the mutation check can revert them one at a time.

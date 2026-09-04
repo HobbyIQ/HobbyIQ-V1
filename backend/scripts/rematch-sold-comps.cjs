@@ -677,6 +677,13 @@ async function main() {
         parserSaysLot: safeIsLot(row.title),
         autoByCardNumber: der.autoByCardNumber === true,
         ...spec,
+        // CF-UNPARSED-IS-NOT-UNNUMBERED (Drew, 2026-09-04). A fact about the
+        // ROW, not a verdict about the derivation: does its own title state a
+        // card number? It is the one thing that lets a stored player-<name>
+        // pseudo-number count as blank, so a re-derivation onto a real number
+        // classifies IMPROVE instead of changed:cardNumber. Without it a
+        // genuinely unnumbered card is compared as the real answer it is.
+        titleStatesNumber: K.titleStatesCardNumber(row.title),
       });
       counts[res.klass]++;
       // THE SPLIT-IDENTITY SIGNAL, tallied ACROSS classes (Drew 2026-09-02).
@@ -924,6 +931,8 @@ async function main() {
         parserSaysLot: safeIsLot(fresh.title),
         autoByCardNumber: der.autoByCardNumber === true,
         ...spec,
+        // Re-read from the FRESH row at write time, exactly as the class is.
+        titleStatesNumber: K.titleStatesCardNumber(fresh.title),
       });
       // The class is decided again on what is there NOW, and it must come back
       // as the SAME kind the census queued. A row the census saw as an eviction
