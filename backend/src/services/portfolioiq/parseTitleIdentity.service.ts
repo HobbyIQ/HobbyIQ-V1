@@ -121,8 +121,38 @@ export function extractGradeFromTitle(title: string): { gradeCompany: "PSA" | "B
 // or `NN` standalone in a card-number-shaped position. Add `\s*` after
 // the `#` and preserve the strict letter-prefix formats for high-signal
 // SKUs like BCP-102 / CPA-EH / US175.
+// CF-A-TRAILING-LETTER-IS-PART-OF-THE-NUMBER (2026-09-04). The alternation
+// below reads letter-LED codes (`US88`, `CPA-EW`, `BCP-102`) and bare
+// integers, but had no alternative for the digits-THEN-letter shape. On
+// "#70T" the bare `\d{1,4}` branch matched "70" and the trailing `\b` then
+// failed against the "T", so the whole regex returned NO MATCH and the card
+// number came back null -- while "#T70" (letters first) parsed correctly.
+//
+// That shape is not an edge case: it is how every Topps Traded, Score
+// Traded and Fleer Update card is numbered (#70T Greg Maddux, #41T Griffey,
+// #20T Canseco, #24T Coleman). Measured read-only on 2026-09-04: of 3,000
+// sampled sold_comps titles containing "traded" and a "#", 2,358 carry the
+// `#<digits><letter>` shape.
+//
+// A null cardNumber is not a harmless gap -- it is what feeds the
+// `player-<name>` pseudo-cardNumber shape (hobbyIqCardId.service.ts:114-125,
+// where `isUnnumberedCardNumber` treats a PARSE FAILURE as the vendor
+// asserting "this card has no number"). 89,138 sold_comps rows carry that
+// shape today, 87,671 of them with a null cardNumber, and the resulting
+// buckets pool unrelated cards: `hiq:baseball:1987:topps:player-todd-worrell
+// :base:no-auto` holds Wade Boggs, Greg Maddux and David Cone sales.
+//
+// The new alternative is placed BEFORE the bare `\d{1,4}` so it wins on the
+// titles it is for, and it cannot change any title that has no trailing
+// letter -- pinned in tradedTiffanySetKey.test.ts.
+// The optional `-[A-Z0-9]{1,6}` tail keeps the retro-insert shape whole:
+// "#83T-6" (2018 Topps Chrome 1983 Topps refractor) is ONE card number, and
+// matching only its "83T" prefix would split a real SKU. Pinned by
+// cardNumberIntegrityParity.test.ts, which caught exactly that on the first
+// version of this alternative.
+
 const DEFAULT_CARD_NUMBER_RE =
-  /#\s*([A-Z]{2,5}-[A-Z0-9]{1,6}|[A-Z]{1,3}\d{1,4}|BCP-\d+|CPA-\w+|BSPA-\w+|BCPA-\w+|BDCA-\w+|BPA-\w+|BDA-\w+|BCRA-\w+|TCRA-\w+|CPALD|CPATWH|BDC-\d+|HL\d+|US\d+|\d{1,4})\b/i;
+  /#\s*([A-Z]{2,5}-[A-Z0-9]{1,6}|[A-Z]{1,3}\d{1,4}|BCP-\d+|CPA-\w+|BSPA-\w+|BCPA-\w+|BDCA-\w+|BPA-\w+|BDA-\w+|BCRA-\w+|TCRA-\w+|CPALD|CPATWH|BDC-\d+|HL\d+|US\d+|\d{1,4}[A-Z](?:-[A-Z0-9]{1,6})?|\d{1,4})\b/i;
 
 // CF-CARDNUM-STANDALONE (Drew, 2026-08-02). Second-chance regex for when
 // the title has no `#` at all but a plausible card-number-shaped token
@@ -1742,6 +1772,38 @@ export function inferSetKeyFromTitle(title: string, cardNumber?: string | null):
     if (noRivalBrand(t, /bowman/i)) return "Bowman Chrome Sapphire";
   }
   if (/topps\s+update/.test(t)) return "Topps Update";
+  // CF-TRADED-TIFFANY-IS-A-PRODUCT (2026-09-04). Topps Traded (1974-2005),
+  // Topps Tiffany (the glossy factory set, 1984-1991) and Topps Traded
+  // Tiffany (both at once) are three DISTINCT products. `normalizeSetKey`
+  // has ruled on all three since 2026-08-04 -- they are fixed points there,
+  // and productSetKeys.ts carries them with their parent ladder -- but this
+  // parser had no rule for either word, so every such title fell past the
+  // ~30 `topps <product>` rules below to the bare `/topps/` catch-all and
+  // came back as flagship "Topps". Both words were lost at that one line:
+  // it returns a constant and never reads the rest of the title.
+  //
+  // Two services disagreeing about a product is the defect setKeyReconcil-
+  // iation.ts:340 already names for eTopps, in the mirror direction, and
+  // the one that ruled deliberately wins. Measured cost of the silence:
+  // 6,299 sold_comps rows whose title says Tiffany carry a slug that does
+  // not, and 27,538 rows whose title says Traded sit under flagship
+  // `:topps:`. The 1987 #70T Greg Maddux pool is the worked example --
+  // 2,418 sales of several different cards in one pool, where PSA 10
+  // Tiffany sales ($910-$1,560) are outnumbered ~5:1 by PSA 10 non-Tiffany
+  // Traded sales (~$150), so the Tiffany card prices as the common one.
+  //
+  // Order is most-specific-first, mirroring the same ordering doctrine in
+  // hobbyIqCardId.service.ts:454 ("Order: 3-word variants first"). All
+  // three destinations already exist in productSetKeys.ts:140-142, so no
+  // new vocabulary is invented here -- the parser is only being taught to
+  // reach the keys the vocabulary already ruled on.
+  if (/topps\s+traded\s+tiffany/.test(t)) return "Topps Traded Tiffany";
+  if (/topps\s+traded/.test(t)) return "Topps Traded";
+  if (/topps\s+tiffany/.test(t)) return "Topps Tiffany";
+  // Bowman Tiffany (1989-1991) is the same factory-glossy idea on Bowman
+  // stock and is likewise a ruled key (setkey-reconciliation.json marks it
+  // `distinct`, 453 checklist rows) with no parser rule.
+  if (/bowman\s+tiffany/.test(t)) return "Bowman Tiffany";
   if (/topps\s+heritage/.test(t)) return "Topps Heritage";
   if (/topps\s+heavy\s+lumber|heavy\s+lumber/.test(t)) return "Topps Heavy Lumber";
   // CF-TOPPS-PRODUCT-LINES (Drew, 2026-07-29). Complete Topps taxonomy so
