@@ -43,6 +43,8 @@
 import { classifyTcg } from "./tcgVertical.service.js";
 import { canonicalVariationName, readVariationFromTitle, type VariationMarker } from "../catalog/variationVocabulary.js";
 import { checklistSaysAuto, type ChecklistAutoResolver } from "../catalog/checklistAutoLookup.js";
+import { POKEMON_SET_ALIASES } from "../catalog/pokemonSetAliases.js";
+import { slugify } from "./hobbyIqCardId.service.js";
 
 /** TCG `POS/TOTAL` card number, e.g. "008/132". Position CAN exceed the total
  *  (secret/hyper rares are numbered above set size), so only the <=400 bound
@@ -1700,6 +1702,51 @@ function noRivalBrand(t: string, own: RegExp | null = null): boolean {
  *  Auto tokens. The card-number-driven form (BPA-XX with a bare
  *  "2026 Bowman" title that omits "Paper") is handled by the
  *  cardNumber-aware overload below. */
+/** CF-THE-POKEMON-VOCABULARY-WAS-NEVER-REACHABLE-FROM-THE-TITLE (2026-09-04).
+ *
+ *  Find the English Pokemon set a TITLE names, using the alias table
+ *  card_catalog is already keyed by. Returns the tcgdex set id (`sv08-5`,
+ *  `me01`) -- which `normalizeSetKey` holds as a fixed point -- or null.
+ *
+ *  Japanese titles are refused outright: their codes are a separate ruled
+ *  vocabulary (JAPANESE_POKEMON_SET_ALIASES) and the two collide on real set
+ *  names such as `151`.
+ *
+ *  Matching runs over a slugified title with the year and the word "pokemon"
+ *  removed, so "2025 Pokemon Prismatic Evolutions Umbreon ex 161/131" and
+ *  "Prismatic Evolutions Umbreon ex" both find `prismatic-evolutions`. An
+ *  alias must land on SEGMENT boundaries -- a bare substring match would let
+ *  a card number claim a set -- and the LONGEST alias wins, so a specialized
+ *  product is never collapsed into its flagship (CF-PRODUCT-FAMILY-COLLAPSE-
+ *  IS-FORBIDDEN, the same rule `normalizeSetKey` states).
+ *
+ *  Aliases shorter than 4 characters are dropped: keys like `151` are real
+ *  set names but far likelier to be a card number inside a sales title, and a
+ *  wrong key that passes the slug guard is worse than no key at all.
+ */
+const POKEMON_ALIASES_LONGEST_FIRST: ReadonlyArray<readonly [string, string]> = Object.freeze(
+  Object.entries(POKEMON_SET_ALIASES)
+    .filter(([alias]) => alias.length >= 4)
+    .sort((a, b) => b[0].length - a[0].length)
+    .map(([alias, key]) => Object.freeze([alias, key]) as readonly [string, string]),
+);
+
+export function resolveEnglishPokemonSetFromTitle(title: string): string | null {
+  const t = String(title ?? "");
+  if (!/\b(pokemon|pok[eé]?mon|pok\s?mon)\b/i.test(t)) return null;
+  // The Japanese vocabulary owns these titles -- see the caller's note.
+  if (/\b(japanese|jpn)\b/i.test(t)) return null;
+  const cleaned = t
+    .replace(/\b(19|20)\d{2}\b/g, " ")
+    .replace(/pok[eé]?mon/gi, " ");
+  const hay = "-" + slugify(cleaned) + "-";
+  if (hay === "--") return null;
+  for (const [alias, key] of POKEMON_ALIASES_LONGEST_FIRST) {
+    if (hay.includes("-" + alias + "-")) return key;
+  }
+  return null;
+}
+
 export function inferSetKeyFromTitle(title: string, cardNumber?: string | null): string {
   // CF-THE-YEAR-DOES-NOT-SPLIT-THE-PRODUCT (Drew, 2026-08-31). Every product
   // rule below is written as adjacent words (/topps\s+chrome/), but sellers —
@@ -1957,6 +2004,45 @@ export function inferSetKeyFromTitle(title: string, cardNumber?: string | null):
   // so the LLM-provided setName wins downstream (persistVendorSalesToPool
   // uses `?? inferSetKeyFromTitle` for the fallback).
   if (/\b(pokemon|pok[eé]?mon|pok\s?mon|yugioh|yu-?gi-?oh|magic\s+the\s+gathering|\bmtg\b|dragon\s*ball|one\s+piece|weiss\s+schwarz|digimon|star\s+wars|halo|final\s+fantasy|ultraman|kaiju|godzilla|marvel|dc\s+comics|funko|topps\s+wacky|garbage\s+pail|hearthstone|lorcana|flesh\s+and\s+blood)\b/.test(t)) {
+    // CF-THE-POKEMON-VOCABULARY-WAS-NEVER-REACHABLE-FROM-THE-TITLE
+    // (2026-09-04, follow-on to V6 / #1624).
+    //
+    // The `return "Unknown"` below is truthful ONLY when nothing in the title
+    // names a set we already know. For English Pokemon it was not: the whole
+    // vocabulary -- 1,497 aliases over 214 sets, generated from tcgdex and
+    // already the spelling card_catalog uses -- lives in POKEMON_SET_ALIASES,
+    // and this function never consulted it. The table was reachable only from
+    // `resolveSetKeyForSlug`, which is called with a setName the CALLER
+    // already holds; a re-derivation carrying nothing but the TITLE could
+    // never get there.
+    //
+    // Measured on the live pool (read-only, 2026-09-04), sport=pokemon /
+    // cardYear=2025: 60,767 of 60,911 rows (99.8%) UNDERIVABLE, every one of
+    // them on `setkey-unknown-unsupported` -- NOT the bowman default, because
+    // this guard intercepts first. The seven largest are sets whose aliases
+    // and whose tcgdex-scraped checklists BOTH already exist:
+    //
+    //     Prismatic Evolutions  14,631 -> sv08-5   (600 catalog rows)
+    //     Journey Together       9,162 -> sv09     (484)
+    //     Destined Rivals        7,751 -> sv10   (1,074)
+    //     Black Bolt             7,550 -> sv10-5b  (479)
+    //     White Flare            6,664 -> sv10-5w  (449)
+    //     Mega Evolution         4,128 -> me01     (505)
+    //     Phantasmal Flames      2,674 -> me02     (314)
+    //
+    // So this is not a vocabulary to author -- CF-NO-SYNTHETIC-PARALLELS is
+    // not in play and no set name is invented here. It is one table made
+    // reachable from the one input a re-derivation actually has.
+    //
+    // JAPANESE IS EXCLUDED, deliberately and for the reason
+    // `resolveSetKeyForSlug` already states: "2023 Pokemon Japanese Scarlet &
+    // Violet 151" must reach the Japanese code (sv2a), and the English alias
+    // for `151` (sv03-5) would pool a Japanese print into the English card --
+    // a different print with a different market. A Japanese title keeps
+    // returning "Unknown" here and is resolved by the Japanese branch, which
+    // owns that vocabulary.
+    const en = resolveEnglishPokemonSetFromTitle(raw);
+    if (en) return en;
     return "Unknown";
   }
   // CF-BRANDS-BEFORE-THE-FALLBACK (Drew, 2026-08-16: "do it").
