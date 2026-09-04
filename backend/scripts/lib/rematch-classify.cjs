@@ -805,12 +805,198 @@ function titleWithoutTeamNames(title) {
   return t;
 }
 
-function storedParallelStatedInTitle({ title, storedSlug, stored, setKey }) {
+/**
+ * A PLAYER'S NAME IS NOT A FINISH -- CF-A-TEAM-NAME-IS-NOT-A-FINISH, read on
+ * the OTHER half of the title (2026-09-04).
+ *
+ * THE DAMAGE. The finish vocabulary is harvested from the checklist corpus,
+ * and real parallels really are called Max, King, Royal, Rose, Ruby and Jade.
+ * They are also the words people are named with. Measured on the live pool:
+ *
+ *   "2025 Topps Chrome Max Fried #142 Atlanta Braves"      -> names a finish
+ *   "1986 Topps Pete Rose #1 Cincinnati Reds"              -> names a finish
+ *   "2013 Topps King Felix Hernandez #100 Mariners"        -> names a finish
+ *
+ * In each the title's ONLY occurrence of the finish word is the player's own
+ * name, the seller named no parallel at all, and the row is exactly the
+ * base-in-refractor sale the eviction exists to move. Guard 3 refuses all of
+ * them, and the base sale stays in the refractor pool -- one card, two pools.
+ *
+ * THE SHAPE IS THE TEAM-NAME FIX, TURNED ON THE OTHER NOUN, AND DELIBERATELY
+ * SO. A team is suppressed by PHRASE because `TEAM_NAME_PHRASES` can enumerate
+ * the thirty phrases teams are called. Players cannot be enumerated -- there
+ * are hundreds of thousands of them -- so the suppression is driven by THIS
+ * ROW'S OWN IDENTITY: only the words of the name attached to THIS card are
+ * suppressed, and only in THIS row's witness.
+ *
+ * ONLY THE WORDS OF THAT NAME. "2025 Topps Chrome Max Fried #142 Gold" still
+ * names Gold: `gold` is not a word of "Max Fried", so it survives into the
+ * witness and the guard refuses exactly as it does today. That is the whole
+ * safety argument, and it is the property the pins hold in both directions.
+ *
+ * WHICH NAME, AND WHY THE POOL'S OWN FIELD IS NOT ENOUGH ON ITS OWN
+ *
+ * The CHECKLIST's `playerName` for (year, setKey, cardNumber) is the name,
+ * supplied by the caller as `checklistPlayerName` because only a catalog read
+ * can see it and this module is pure. The row's own stored `playerName` is the
+ * fallback -- and it is a fallback that has to be CHECKED, because 25.7% of
+ * the player fields in the pool are corrupted (CF-A-PLAYER-SEGMENT-IS-A-PERSON,
+ * #1734: 29,654 of 115,535 rows carry a parallel, a product or a set code
+ * inside the name). Measured on this population, the corruption is exactly the
+ * dangerous kind:
+ *
+ *   playerName "Pandora Alanna Smith Lynx"  -- Pandora IS the parallel
+ *   playerName "Fire Ernie Banks Bb"        -- Fire is the product
+ *   playerName "Zenith Caleb Williams Retail"
+ *
+ * Suppressing from those fields would delete a REAL finish word from the
+ * witness and evict a genuine Prizm Pandora sale onto the base pool -- the
+ * defect this lane exists to end, arriving through its own repair. So a stored
+ * name is read only when `isCorruptedPlayerName` says it is a person, and a
+ * word is suppressed only when the checklist agrees or the stored name is
+ * clean. Absent beats wrong: no readable name means no suppression and the
+ * guard answers exactly as it does today.
+ *
+ * DIRECTION. This costs REFUSALS and admits EVICTIONS, so it is the direction
+ * that can do damage -- which is why it is confined to the words of ONE name,
+ * gated on that name being a person, and pinned both ways.
+ */
+const NAME_PARTICLES = new Set([
+  "jr", "sr", "ii", "iii", "iv", "de", "la", "del", "van", "von", "da", "das",
+  "dos", "di", "mc", "mac", "the",
+]);
+
+/** The suppressible words of a player name: 3+ characters, no particles.
+ *  Short tokens are excluded for the reason the near-miss floor exists -- at
+ *  two letters the word is an initial and matches half the vocabulary. */
+function playerNameWords(playerName) {
+  const out = new Set();
+  for (const w of lower(str(playerName)).split(/[^a-z0-9]+/)) {
+    if (w.length >= 3 && !NAME_PARTICLES.has(w)) out.add(w);
+  }
+  return out;
+}
+
+/**
+ * The name this row's identity attaches to the card, or null when none can be
+ * trusted. The checklist's name wins; a stored name is accepted only when it
+ * reads as a person.
+ *
+ * TWO GATES ON THE STORED FIELD, AND THE SECOND IS THE ONE THAT MATTERS HERE.
+ *
+ * `isCorruptedPlayerName` (#1734) catches a name cut mid-particle ("Elly De")
+ * and a franchise/layout token ("pokemon swsh fa mew"). It does NOT catch the
+ * shape this suppression is most endangered by, because it was written for a
+ * different question -- a stored name that has swallowed a PARALLEL:
+ *
+ *     "Pandora Alanna Smith Lynx"     Pandora IS the parallel
+ *     "Fire Ernie Banks Bb"           Fire is the product
+ *     "Zenith Caleb Williams Retail"
+ *
+ * Believing one of those would delete the parallel's own word from the witness
+ * and evict a genuine Prizm Pandora sale onto the base pool -- the split this
+ * lane exists to end, arriving through its own repair. So a stored name whose
+ * words include a FINISH TOKEN is refused outright: we know the field is wrong,
+ * and knowing that is not the same as knowing which half is the person. Absent
+ * beats wrong, and the row simply keeps today's verdict.
+ *
+ * The gate is on the STORED field only. A checklist name is a checklist name --
+ * the corpus that would flag it is built from the same checklists -- and a real
+ * player genuinely called Rose or Max must still be readable, which is the
+ * entire point of the fix.
+ */
+function storedNameCarriesAFinishWord(name) {
+  for (const w of playerNameWords(name)) {
+    if (titleNamesFinish(w, {})) return true;
+  }
+  return false;
+}
+
+function trustedPlayerName({ checklistPlayerName, storedPlayerName }) {
+  const cl = str(checklistPlayerName).trim();
+  if (cl) return cl;
+  const sp = str(storedPlayerName).trim();
+  if (sp && !isCorruptedPlayerName(sp) && !storedNameCarriesAFinishWord(sp)) return sp;
+  return null;
+}
+
+/**
+ * The title with THIS card's player name removed -- as a PHRASE, exactly the
+ * way `titleWithoutTeamNames` removes a team.
+ *
+ * WHY THE PHRASE AND NOT THE WORDS (found by this PR's own pin, 2026-09-04).
+ *
+ * The first version of this dropped every WORD of the name wherever it
+ * occurred, and the pin that caught it is the one that matters:
+ *
+ *     "1986 Topps Pete Rose #1 Rose Gold Parallel"   slug ...:rose-gold:...
+ *
+ * Word-wise suppression deletes BOTH roses -- the man AND the parallel he is
+ * printed in -- and G6 then finds nothing to echo, so a genuine Rose Gold sale
+ * is evicted onto the base pool. That is the over-broad direction, and it is
+ * the direction that does damage.
+ *
+ * Removing the CONTIGUOUS RUN instead is what makes the suppression evidence
+ * rather than a blocklist: "pete rose" is struck because those two words
+ * appear together in that order, and the second, separate "rose" is left
+ * standing for the vocabulary and G6 to read. A single-word name -- the whole
+ * of `playerName` being one token -- still removes that one word, because
+ * there is no run to anchor against and the alternative is to suppress nothing
+ * at all for players like Ichiro.
+ */
+function titleWithoutPlayerName(title, playerName) {
+  const words = [...playerNameWords(playerName)];
+  const t = lower(str(title));
+  if (!words.length) return t;
+  // The name's own words, in the order the name states them, as one phrase.
+  //
+  // THE JOIN ADMITS THE PARTICLES BACK AS SEPARATORS. `playerNameWords` drops
+  // "de", "la", "jr" -- they are not distinguishing words and must never be
+  // suppressed on their own. But they DO sit between the words that are, so a
+  // separator of "any run of non-alphanumerics" alone would fail to match
+  // "Elly De La Cruz" in its own title and suppress nothing. Silent
+  // under-delivery, not damage -- but it would quietly cost every player with a
+  // particle in their name, which is a large and specific population.
+  const gap = `(?:[^a-z0-9]+(?:${[...NAME_PARTICLES].map(escapeRe).join("|")})?)+`;
+  const phrase = new RegExp(`\\b${words.map(escapeRe).join(gap)}\\b`, "g");
+  const stripped = t.replace(phrase, " ");
+  // A run was found and removed -- that is the whole suppression.
+  if (stripped !== t) return stripped;
+  // No contiguous run. A one-word name is still a name, so it is removed on its
+  // own; a multi-word name that never appears as a run is NOT removed at all,
+  // because scattered single words are not evidence that this title names this
+  // person, and striking them is the word-wise behaviour this comment rejects.
+  if (words.length !== 1) return t;
+  return t.split(/([^a-z0-9]+)/).map((tok) => (tok === words[0] ? " " : tok)).join("");
+}
+
+/** A literal, for building the name phrase. */
+function escapeRe(s) { return String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
+
+function storedParallelStatedInTitle({ title, storedSlug, stored, setKey, playerName = null }) {
   // The witness is read with team PHRASES removed, so a colour that appears
   // only inside a team name is not evidence that the seller named a finish.
   // A title naming the colour anywhere else still echoes, and a multi-word
   // parallel is unaffected by construction.
-  const hay = new Set(titleWithoutTeamNames(title).split(/[^a-z0-9]+/).filter(Boolean));
+  //
+  // AND WITH THE PLAYER'S OWN NAME REMOVED, for the identical reason. G6 reads
+  // the title as a BAG OF WORDS, so a one-word parallel slug matches the
+  // player as readily as it matched the team:
+  //
+  //   ...:rose:...     "1986 Topps Pete Rose #1 Cincinnati Reds"
+  //   ...:max:...      "2025 Topps Chrome Max Fried #142 Braves"
+  //
+  // Found by this PR's own pins: guard 3 released those rows and G6 held them
+  // anyway, which is the same two-guards-one-bug shape #1750 measured -- there
+  // the vocabulary fired first, here G6 does. Fixing one without the other
+  // releases nothing.
+  //
+  // `playerName` is the CALLER'S trusted name (see `trustedPlayerName`), never
+  // the raw stored field: a corrupted player field carries the parallel itself,
+  // and suppressing from it would delete the very word G6 exists to find.
+  const hay = new Set(
+    titleWithoutPlayerName(titleWithoutTeamNames(title), playerName)
+      .split(/[^a-z0-9]+/).filter(Boolean));
   if (!hay.size) return null;
   for (const c of parallelTokensOfStoredIdentity({ storedSlug, stored, setKey })) {
     if (c.words.every((w) => hay.has(w))) return { phrase: c.phrase, from: c.from };
@@ -827,8 +1013,14 @@ function storedParallelStatedInTitle({ title, storedSlug, stored, setKey }) {
  * `baseDestBacked` is the caller's verdict that a CHECKLIST-BACKED base
  * destination row exists for this card. Without it there is nowhere to evict
  * TO, and a row is never moved to a slug the checklist does not list.
+ *
+ * `checklistPlayerName` is the CHECKLIST's name for this (year, setKey,
+ * cardNumber), supplied by the caller because only a catalog read can see it.
+ * It is the trusted half of the player-name suppression at guard 3; the row's
+ * own stored name is the checked fallback. A caller that supplies neither gets
+ * today's behaviour exactly.
  */
-function baseEvictionEvidence({ row, stored, derived, storedSlug, baseDestSlug, baseDestBacked }) {
+function baseEvictionEvidence({ row, stored, derived, storedSlug, baseDestSlug, baseDestBacked, checklistPlayerName = null }) {
   const title = str(row?.title);
   const slug = str(storedSlug ?? row?.cardId);
   const ev = {
@@ -886,7 +1078,20 @@ function baseEvictionEvidence({ row, stored, derived, storedSlug, baseDestSlug, 
   // Jays" still names a finish once the team is gone, so an honest parallel
   // keeps defending its row. Verified on the six colour-plus-team shapes --
   // none drops to false.
-  const beTitleWitness = titleWithoutTeamNames(title);
+  // AND A PLAYER'S NAME IS NOT ONE EITHER. The same ruling, read on the other
+  // noun in the title: max, king, royal, rose, ruby and jade are real parallel
+  // names AND real people's names, and a title whose only occurrence of one is
+  // the player is a title that names no finish. Only the words of THIS card's
+  // own name are removed, and only from a name that reads as a person -- see
+  // `trustedPlayerName` for why a stored field cannot be believed unchecked.
+  // Composed with the team strip rather than replacing it: a title can carry
+  // both a team and a player whose names are finish words.
+  const bePlayerName = trustedPlayerName({
+    checklistPlayerName,
+    storedPlayerName: stored?.playerName ?? row?.playerName ?? null,
+  });
+  ev.playerNameSuppressed = bePlayerName;
+  const beTitleWitness = titleWithoutPlayerName(titleWithoutTeamNames(title), bePlayerName);
   if (!title) fail.push("no-title");
   else if (titleNamesFinish(beTitleWitness, { year: beYear, setKey: beSetKey })) fail.push("title-names-a-finish");
   else {
@@ -946,7 +1151,7 @@ function baseEvictionEvidence({ row, stored, derived, storedSlug, baseDestSlug, 
   //      carry a match; and a MALFORMED slug -- `hiq:ant::hiq:...`, 62 of the
   //      1,456 rows -- yields no parallel at all rather than echoing the year
   //      its shifted segments left where the parallel belongs.
-  const g6 = storedParallelStatedInTitle({ title, storedSlug: slug, stored, setKey: beSetKey });
+  const g6 = storedParallelStatedInTitle({ title, storedSlug: slug, stored, setKey: beSetKey, playerName: bePlayerName });
   if (g6) {
     ev.storedParallelStatedInTitle = g6;
     // The historical field name is kept alongside it, so a row written under
@@ -2420,6 +2625,13 @@ function diffAxes(stored, derived, opts = {}) {
 function classifyRow({
   row, stored, derived, checklistBacked = false, derivationReasons = [],
   storedSlug = null, baseDestSlug = null, baseDestBacked = false,
+  // CF-A-PLAYER-NAME-IS-NOT-A-FINISH (2026-09-04). The CHECKLIST's name for
+  // this (year, setKey, cardNumber) -- a catalog read, so the caller supplies
+  // it and this module stays pure. Read ONLY by base-eviction's guard 3, to
+  // suppress the words of this card's own player name from the finish witness.
+  // Defaults null, so a caller that cannot answer gets today's behaviour and
+  // the row's own stored name is used only when it reads as a person.
+  checklistPlayerName = null,
   clashSubsets = [],
   // The PARSER'S own multi-card-lot verdict (`isMultiCardLot` from
   // parseTitleIdentity). Passed IN rather than imported: this module is pure
@@ -2588,7 +2800,7 @@ function classifyRow({
   // sibling form -- the same row that also copied the slug's /499 into its
   // printRun field -- would reach CONFLICT via dropped:printRun, and both must
   // land in the same subclass or the census reports one defect as two.
-  const be = baseEvictionEvidence({ row, stored, derived, storedSlug, baseDestSlug, baseDestBacked });
+  const be = baseEvictionEvidence({ row, stored, derived, storedSlug, baseDestSlug, baseDestBacked, checklistPlayerName });
   if (be.qualifies) {
     reasons.push("subclass:BASE-EVICTION");
     if (axes.dropped.length) reasons.push(`dropped:${axes.dropped.join(",")}`);
@@ -3022,6 +3234,12 @@ module.exports = {
   // The team-name suppression G6 reads its witness through, exported so the
   // pin can drive it alone and the mutation check can revert it alone.
   TEAM_NAME_PHRASES, titleWithoutTeamNames,
+  // CF-A-PLAYER-NAME-IS-NOT-A-FINISH (2026-09-04) -- the same suppression read
+  // on the other noun, exported piece by piece for the same reason: a pin must
+  // be able to drive the word split, the trust gate and the strip separately,
+  // and the mutation check must be able to revert exactly one of them.
+  NAME_PARTICLES, playerNameWords, trustedPlayerName, titleWithoutPlayerName,
+  storedNameCarriesAFinishWord,
   // The two report-only slug-shape census subclasses (2026-09-04).
   SLUG_SHAPE_DEFECTS, slugShapeDefects,
   // The derivation-defect guards (D1, D6, D7, D8, V3), exported so each pin

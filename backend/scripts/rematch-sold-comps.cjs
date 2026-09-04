@@ -482,14 +482,46 @@ async function main() {
   // ── checklist backing, cached per slug ────────────────────────────────────
   // A match proves nothing unless checklist-backed. The catalog row's SOURCE
   // is the evidence: a checklist ingest, never a vendor row.
+  //
+  // A CURATED CHECKLIST SOURCE IS CHECKLIST-BACKED, AND `bcp` IS NOT A
+  // SUBSTRING OF `bccp` (2026-09-04).
+  //
+  // THE DAMAGE. This regex was the driver's own second opinion about what
+  // "checklist-backed" means, written before #1725 gave the allowlist a name.
+  // Nine of the twenty-one sources the allowlist names do not match it:
+  //
+  //   bccp  cardboardconnection  cardboard-connection  baseball-almanac
+  //   hobbymonitor  bbm-japan-official-pdf  pokemon-tcg-data
+  //   drew-google-sheet  cardpedia-drew-ruling
+  //
+  // Each is a real scraped checklist -- `bccp` alone carries 19,620 catalog
+  // rows in 2025 bowman, `hobbymonitor` 59,982 in 2025 topps-chrome -- and the
+  // near miss is the worst kind: `bcp` IS in the pattern, and `bcp` is not a
+  // substring of `bccp`, so the source that looks covered is the one that is
+  // not. The visible cost is at base-eviction, where the destination gate
+  // reports `no-checklist-backed-base-destination` for a base slug whose
+  // checklist we hold and scraped: base sales stay stranded in a refractor
+  // pool for want of a source name, which is one card and two pools.
+  //
+  // THE FIX IS A UNION, NOT A REPLACEMENT, AND THE DIRECTION IS WHY.
+  //
+  // `K.isStrictChecklistSource` is the ONE definition of a named checklist
+  // source and every source it names is now accepted here. It is added to the
+  // regex rather than substituted for it, because the two disagree in BOTH
+  // directions and only one of those disagreements is this PR's ruling:
+  //
+  //   strict accepts, regex rejects   the nine stems above -- the defect.
+  //   regex accepts, strict rejects   `derived-from-base-checklist-*` and
+  //                                   `auto-seed-*`. Dropping those would
+  //                                   TIGHTEN the ordinary IMPROVE gate across
+  //                                   the whole 16.3M-row pool -- a different
+  //                                   ruling, on a different population,
+  //                                   that nobody has made.
+  //
+  // So this predicate only ever widens, and it widens by exactly the set of
+  // sources the tree already calls checklists. `checklistBackedStrict` below
+  // is untouched and stays the STRICTER gate SPECIALIZATION-STATED reads.
   const CHECKLIST_SOURCE_RE = /checklist|beckett|tcdb|insider|bcp|baseballcardpedia|tcgdex/i;
-  // SPECIALIZATION-STATED reads a DIFFERENT, STRICTER predicate -- an
-  // allowlist of named scraped sources, `K.isStrictChecklistSource`. See
-  // STRICT_CHECKLIST_SOURCES in the classifier for the measurement that
-  // retired the subtractive version. It is deliberately a second function and
-  // not a tightening of the first: tightening `checklistBacked` would silently
-  // change the ordinary IMPROVE population across the whole 16.3M-row pool,
-  // which is a different ruling nobody made.
   const backedCache = new Map();
   const strictCache = new Map();
   const catRowCache = new Map();
@@ -505,14 +537,23 @@ async function main() {
     return out;
   };
   const sourceText = (r) => `${String(r?.source ?? r?.sourceSystem ?? "")},${Array.isArray(r?.sources) ? r.sources.join(",") : ""}`;
+  /** Every source name the row carries, in one list. Any ONE of them may hold
+   *  the proof, so `sources[]` is read beside `source` and `sourceSystem` --
+   *  the same shape `checklistBackedStrict` reads, so the two predicates
+   *  cannot disagree about WHICH strings they were shown. */
+  const namedSources = (r) => [r?.source, r?.sourceSystem, ...(Array.isArray(r?.sources) ? r.sources : [])];
   const checklistBacked = async (slug) => {
     if (!slug) return false;
     if (backedCache.has(slug)) return backedCache.get(slug);
     const resource = await catRow(slug);
     let backed = false;
     if (resource) {
-      const src = sourceText(resource);
-      backed = CHECKLIST_SOURCE_RE.test(src) || resource.checklistBacked === true;
+      // The allowlist first -- it is the tree's ONE definition of a named
+      // checklist source, and it is what carries the nine stems the pattern
+      // below cannot see.
+      backed = namedSources(resource).some((s) => K.isStrictChecklistSource(s))
+        || CHECKLIST_SOURCE_RE.test(sourceText(resource))
+        || resource.checklistBacked === true;
     }
     backedCache.set(slug, backed);
     return backed;
@@ -558,6 +599,51 @@ async function main() {
     } catch { out = null; }
     flagshipNumbersCache.set(key, out);
     return out;
+  };
+  /** CF-A-PLAYER-NAME-IS-NOT-A-FINISH (2026-09-04). The CHECKLIST's playerName
+   *  per cardNumber for ONE (year, setKey), cached -- the trusted half of the
+   *  base-eviction guard-3 suppression.
+   *
+   *  ONE QUERY PER PRODUCT, for the reason `flagshipNumbers` above states: a
+   *  per-row catalog query over 16.3M rows is not a census, it is an outage
+   *  (CF-FLEET-SCRIPTS-MEASURE-THROUGHPUT-BEFORE-DISPATCH). Every row of the
+   *  product then reads its own name out of the map for free.
+   *
+   *  ONLY A STRICT CHECKLIST SOURCE MAY ANSWER. A vendor row's player field is
+   *  the same field, from the same kind of parse, that the pool's own 25.7%
+   *  corruption comes from (#1734) -- citing one as the trusted name would be
+   *  citing the defect as its own cure. A product with no strictly-sourced rows
+   *  yields an empty map, every lookup returns null, and the guard falls back
+   *  to the row's own name only if that reads as a person. Absent beats wrong.
+   */
+  const checklistNamesCache = new Map();
+  const checklistNames = async (year, setKey) => {
+    const key = `${year}|${setKey}`;
+    if (checklistNamesCache.has(key)) return checklistNamesCache.get(key);
+    let out = new Map();
+    try {
+      const { resources } = await retry(() => cat.items.query({
+        query: `SELECT c.cardNumber, c.playerName, c.source FROM c WHERE c.setKey = @sk AND c.cardYear = @y AND c.playerName > ''`,
+        parameters: [{ name: "@sk", value: setKey }, { name: "@y", value: Number(year) }],
+      }, { maxItemCount: -1 }).fetchAll());
+      for (const r of resources ?? []) {
+        if (!K.isStrictChecklistSource(r?.source)) continue;
+        const num = String(r?.cardNumber ?? "").toUpperCase();
+        const name = String(r?.playerName ?? "").trim();
+        if (!num || !name || out.has(num)) continue;
+        out.set(num, name);
+      }
+    } catch { out = new Map(); }
+    checklistNamesCache.set(key, out);
+    return out;
+  };
+  /** This row's checklist name, or null. Read off the DERIVED identity, which
+   *  is the reading the eviction destination is computed from. */
+  const checklistPlayerNameFor = async (identity) => {
+    const y = identity?.cardYear, sk = identity?.setKey, num = identity?.cardNumber;
+    if (y === null || y === undefined || !sk || !num) return null;
+    const m = await checklistNames(y, sk);
+    return m.get(String(num).toUpperCase()) ?? null;
   };
   /** CF-A-SUBSET-IS-PART-OF-THE-IDENTITY-WHEN-IT-HAS-TO-BE (Drew, 2026-09-04).
    *  Every subsetName the catalog holds at ONE rung -- the whole identity
@@ -724,10 +810,16 @@ async function main() {
       // read for a question that was answered by its own slug.
       const beCandidate = der.ok && K.slugNamesParallel(row.cardId);
       const baseBacked = beCandidate ? await checklistBacked(der.baseSlug) : false;
+      // The checklist name is looked up on the SAME condition as the base
+      // destination: only a row whose own slug names a parallel can be an
+      // eviction, and only an eviction reads this. A row that is not a
+      // candidate costs no catalog read for a question it never asks.
+      const beName = beCandidate ? await checklistPlayerNameFor(der.identity) : null;
       const spec = await specInputs(stored, der);
       const res = K.classifyRow({
         row, stored, derived: der.ok ? der.identity : null, checklistBacked: backed, derivationReasons: der.reasons,
         storedSlug: row.cardId, baseDestSlug: der.baseSlug ?? null, baseDestBacked: baseBacked,
+        checklistPlayerName: beName,
         parserSaysLot: safeIsLot(row.title),
         autoByCardNumber: der.autoByCardNumber === true,
         ...spec,
@@ -975,6 +1067,11 @@ async function main() {
       const backed = der.ok ? await checklistBacked(der.slug) : false;
       const beCand = der.ok && K.slugNamesParallel(fresh.cardId);
       const baseBacked = beCand ? await checklistBacked(der.baseSlug) : false;
+      // Supplied at write time for the reason `spec` below is: a gate that
+      // disagrees with itself between the census and the apply is a gate
+      // nobody can audit. Omitting it here would make every name-released row
+      // silently decline to write while the census reported it writable.
+      const beName = beCand ? await checklistPlayerNameFor(der.identity) : null;
       // THE WRITE-TIME RE-CHECK GETS THE SAME INPUTS AS THE CENSUS.
       // `classifyRow` refuses SPECIALIZATION-STATED without them, so omitting
       // them here would not be a leak -- it would be the opposite, every
@@ -984,7 +1081,7 @@ async function main() {
       const spec = await specInputs(stored, der);
       const res = K.classifyRow({
         row: fresh, stored, derived: der.ok ? der.identity : null, checklistBacked: backed, derivationReasons: der.reasons,
-        storedSlug: fresh.cardId, baseDestSlug: der.baseSlug ?? null, baseDestBacked: baseBacked,
+        storedSlug: fresh.cardId, baseDestSlug: der.baseSlug ?? null, baseDestBacked: baseBacked, checklistPlayerName: beName,
         parserSaysLot: safeIsLot(fresh.title),
         autoByCardNumber: der.autoByCardNumber === true,
         ...spec,
