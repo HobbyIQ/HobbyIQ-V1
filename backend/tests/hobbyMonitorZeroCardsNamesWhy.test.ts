@@ -99,4 +99,35 @@ describe("only a down host may abort the lane", () => {
   it("an ingested entry resets the streak", () => {
     expect(driver.streakAfter(2, { status: "ingested" })).toBe(0);
   });
+
+  /**
+   * The line inside the gate. A refusal is only evidence the lane is UP when we
+   * reached it by READING a staged file. "staged file unreadable" means
+   * acquisition handed back nothing -- a broken pipe, and exactly the shape a
+   * real lane failure takes -- so it must still trip the tripwire. Caught by
+   * ingestUniverseDriverSccLaneAppliesEndToEnd, which drives three ENOENT
+   * refusals and requires the SYSTEMIC ABORT.
+   */
+  it("an unreadable staged file is a broken pipe, not proof the lane is up", () => {
+    const gate = driver.gateStagedEntry([path.join(FIX, "no-such-file-here.csv")], "hobbymonitor");
+    expect(gate.ok).toBe(false);
+    expect(gate.reason).toMatch(/unreadable/);
+    expect(gate.contentRefusal).toBe(false);
+
+    // Three of them in a row still take the lane down.
+    let s = 0;
+    for (let i = 0; i < driver.SYSTEMIC_FAILURE_STREAK; i++) {
+      s = driver.streakAfter(s, { status: "failed", laneProvenHealthy: gate.contentRefusal === true });
+    }
+    expect(s).toBeGreaterThanOrEqual(driver.SYSTEMIC_FAILURE_STREAK);
+  });
+
+  it("a content refusal on a file we DID read marks the lane healthy", () => {
+    const csv = path.join(FIX, "gate-cartesian-sample.csv");
+    const gate = driver.gateStagedEntry([csv], "hobbymonitor");
+    expect(gate.ok).toBe(false);
+    // We read the file and judged it: proof the source served us.
+    expect(gate.contentRefusal).toBe(true);
+    expect(driver.streakAfter(2, { status: "failed", laneProvenHealthy: gate.contentRefusal })).toBe(0);
+  });
 });

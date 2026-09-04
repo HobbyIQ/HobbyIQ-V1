@@ -87,10 +87,13 @@ const STREAK_STATUSES = new Set(["failed", "unreachable"]);
  * The streak may conclude exactly one thing: THE HOST IS DOWN. So:
  *
  *   laneProvenHealthy  resets. A verdict we could only reach by fetching and
- *      parsing the page successfully -- a cleanliness-gate refusal. It stays
- *      `failed` because a cartesian staging is a real defect, but it is
+ *      parsing the page successfully -- a cleanliness-gate CONTENT refusal. It
+ *      stays `failed` because a cartesian staging is a real defect, but it is
  *      positive evidence the lane is UP. Run 33857627732 aborted a healthy
  *      lane because two of these counted as a down host.
+ *      NOT every gate refusal: "staged file unreadable" means acquisition
+ *      delivered no file at all, which is a broken pipe and must still trip
+ *      the tripwire. gateStagedEntry draws that line with contentRefusal.
  *   empty              neither advances nor resets. The source answering "I
  *      have nothing for this set" is no evidence either way, so a genuine
  *      outage interrupted by an empty set still trips on its own run.
@@ -606,7 +609,14 @@ function gateStagedEntry(csvPaths, lane) {
     // and it names the FILE -- "the gate refused" with no filename is
     // unactionable when a page stages five of them.
     if (!g.ok && g.code !== "zero-base") {
-      return { ok: false, reason: `${path.basename(p)}: ${g.reason}`, stats: total, files };
+      // CONTENT REFUSAL vs BROKEN PIPE. Everything the gate judges past the
+      // read is a verdict about a file the source actually served, and
+      // reaching it proves the lane works. "staged file unreadable" is the one
+      // refusal that means the opposite: acquisition delivered nothing, which
+      // is exactly the shape a real lane failure takes. Only the former may
+      // reset the systemic streak -- see streakAfter.
+      const contentRefusal = !/staged file unreadable/.test(String(g.reason || ""));
+      return { ok: false, reason: `${path.basename(p)}: ${g.reason}`, stats: total, files, contentRefusal };
     }
     if (!g.ok) zeroBase = zeroBase ?? g;
   }
@@ -1731,7 +1741,7 @@ if (require.main !== module) return;
         // converter and must keep bringing someone back to it. What changes is
         // that it no longer counts as evidence the HOST is down, which is the
         // only thing the streak is allowed to conclude.
-        verdict = { status: "failed", reason: `cleanliness gate: ${gate.reason}`, rowsCreated: 0, stats: gate.stats, laneProvenHealthy: true };
+        verdict = { status: "failed", reason: `cleanliness gate: ${gate.reason}`, rowsCreated: 0, stats: gate.stats, laneProvenHealthy: gate.contentRefusal === true };
         console.log(`      REFUSED — ${gate.reason}`);
       } else {
         run("ingest-checklist-csv-to-catalog.cjs", [], {
