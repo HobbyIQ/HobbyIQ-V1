@@ -1929,19 +1929,77 @@ if (require.main !== module) return;
   const ordering = orderQueue(queue, process.env.BCP_TITLES || process.env.TITLES || "");
   queue.length = 0; queue.push(...ordering.queue);
   console.log(`  order         ${ordering.mode}${ordering.named ? `  —  ${f(ordering.named)} named entries lead` : ""}`);
+
+  /**
+   * CF-AN-UNMATCHED-TITLE-REFUSES (2026-09-04, run 33872976786).
+   *
+   * The operator dispatched titles="1991 Topps Traded Tiffany" limit=1 apply=true.
+   * The title ranked NOTHING -- the entry was already `ingested`, so the TERMINAL
+   * filter above had dropped it from `queue` before orderQueue ever saw it -- and
+   * the driver printed "the run continues on the rest", took the next entry by
+   * value-proxy (1991 Bowman), got EMPTY, and reported RECONCILED yes. A green
+   * run, zero rows, and the ONE set the operator named never fetched.
+   *
+   * An explicit list is not a ranking hint, it is the SCOPE of the run. Naming a
+   * title the lane cannot serve is an operator error, and the only safe answer is
+   * to refuse: exit non-zero with intended 0, so nothing is acquired and the run
+   * goes RED rather than laundering a typo into a green no-op on a set nobody
+   * asked for. The banner names each unmatched title and its nearest manifest
+   * neighbours, because "check the page title against the manifest sourceRef"
+   * without the manifest in front of you is not actionable.
+   *
+   * The sibling half is CF-LIMIT-MUST-NOT-PAD-AN-EXPLICIT-LIST below: when SOME
+   * titles match, only the matched entries may run.
+   */
   if (ordering.unmatched.length) {
-    console.log(`  UNMATCHED     ${ordering.unmatched.length} title(s) in the list matched no entry of this lane and ranked NOTHING:`);
-    for (const u of ordering.unmatched.slice(0, 10)) console.log(`                  "${u}"`);
-    console.log(`                (check the page title against the manifest sourceRef; the run continues on the rest)`);
+    const nrm = (v) => String(v || "").toLowerCase().replace(/[_\s]+/g, " ").replace(/[^a-z0-9 ]+/g, "").trim();
+    // Nearest neighbours by shared-word count against every title this lane can
+    // serve -- INCLUDING entries already verdicted, since "no such page" and
+    // "that page is already ingested" are different operator errors and the
+    // banner has to let them be told apart.
+    const universe = candidates.map((e) => ({ label: `${e.year} ${e.setName}`, key: nrm(`${e.year} ${e.setName}`) }));
+    console.error(`\n  REFUSE        ${ordering.unmatched.length} title(s) in the explicit list matched no entry of this lane and ranked NOTHING.`);
+    console.error(`                An explicit \`titles\` list is the SCOPE of the run, not a ranking hint —`);
+    console.error(`                falling through to unrequested entries is how a typo ships as a green no-op.`);
+    for (const u of ordering.unmatched) {
+      const nu = new Set(nrm(u).split(" ").filter(Boolean));
+      const near = universe
+        .map((c) => ({ label: c.label, score: c.key.split(" ").filter((w) => nu.has(w)).length }))
+        .filter((c) => c.score > 0)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 3);
+      console.error(`                  "${u}"`);
+      if (near.length) console.error(`                     nearest in manifest: ${near.map((n) => `"${n.label}"`).join(", ")}`);
+      else console.error(`                     nearest in manifest: (no entry of this lane shares a word with it)`);
+    }
+    console.error(`\n  intended            0   (refused before any acquisition)`);
+    console.error(`  RECONCILED          yes  —  intended 0 = written 0 + skipped 0`);
+    console.error(`[ingest-universe-driver] reconciled: intended 0 = written 0 + skipped 0`);
+    console.error(`  universe_entries_done=0`);
+    process.exit(6);
   }
-  console.log(`  ${f(queue.length)} entries eligible; taking up to ${f(LIMIT)}`);
-  for (const q of queue.slice(0, Math.min(LIMIT, 5))) console.log(`                  → ${q.entry.year} ${q.entry.setName}`);
+
+  /**
+   * CF-LIMIT-MUST-NOT-PAD-AN-EXPLICIT-LIST (2026-09-04).
+   *
+   * `limit` sizes a budget when the driver is choosing its own work. It must not
+   * choose work when the operator already did: titles=<one page> limit=20 means
+   * "that page", not "that page and nineteen others you picked for me". The
+   * value proxy still orders the remainder; it just never gets taken here.
+   */
+  const namedScoped = ordering.named > 0;
+  const effectiveLimit = namedScoped ? Math.min(LIMIT, ordering.named) : LIMIT;
+  if (namedScoped && effectiveLimit < LIMIT) {
+    console.log(`  scoped        explicit list of ${f(ordering.named)} — limit ${f(LIMIT)} will NOT pad with unrequested entries`);
+  }
+  console.log(`  ${f(queue.length)} entries eligible; taking up to ${f(effectiveLimit)}`);
+  for (const q of queue.slice(0, Math.min(effectiveLimit, 5))) console.log(`                  → ${q.entry.year} ${q.entry.setName}`);
   console.log("");
 
   // RECONCILIATION: intended is fixed BEFORE the loop and every entry lands in
   // exactly one bucket, counted directly. A remainder derived by subtraction
   // balances by construction and can never disagree with itself.
-  const take = queue.slice(0, LIMIT);
+  const take = queue.slice(0, effectiveLimit);
   const intended = take.length;
   const verdicts = { ingested: 0, partial: 0, failed: 0, unreachable: 0, [EMPTY_STATUS]: 0 };
   let notReached = 0, rowsCreatedTotal = 0;
