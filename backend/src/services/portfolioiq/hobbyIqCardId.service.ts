@@ -404,11 +404,28 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     // regular Topps Chrome pool.
     [/topps-chrome-platinum/, "topps-chrome-platinum"],
     [/topps-chrome-black/, "topps-chrome-black"],
-    // CF-CHROME-SUBSET-COLLAPSE (Drew, 2026-07-31). Topps Chrome Update
-    // is one market with Topps Chrome — subset distinction doesn't matter
-    // for pricing. Sapphire (matched above) + Platinum + Black are the
-    // distinct product lines we preserve; Update collapses to parent.
-    [/topps-chrome-update/, "topps-chrome"],
+    // CF-PRODUCT-FAMILY-COLLAPSE-IS-FORBIDDEN (Drew, 2026-09-03). This rule
+    // used to read `[/topps-chrome-update/, "topps-chrome"]` under
+    // CF-CHROME-SUBSET-COLLAPSE (Drew, 2026-07-31: "one market with Topps
+    // Chrome"). That ruling is REVERSED. The Great Rematch census measured the
+    // cost across all 32 shards: `topps-chrome-update-series -> topps-chrome`
+    // is the single largest setKey CONFLICT in the pool at ~287,655 rows —
+    // more than Platinum (~229,345) and more than Allen & Ginter (~214,366).
+    //
+    // A collapse is not a cheaper pool, it is a WRONG one. Update Series is a
+    // separate release with its own checklist (192,014 checklist-backed
+    // catalog rows under `topps-chrome-update-series`, against 199,838 total),
+    // its own US-prefixed card numbers, and its own price curve. Pooling it
+    // into flagship Chrome splits neither pool — it MERGES two different
+    // cards onto one slug, which is the exact defect the rematch exists to
+    // end, arriving from the direction the derivation itself created.
+    //
+    // Ordered before the generic /topps-chrome/ rule, symmetric with Platinum
+    // and Black above. `productSetKeyForName` already answered this correctly
+    // (the D23 product table names the product); this line is what made
+    // `matchKnownProductLine` — which does NOT consult the table — disagree
+    // with `normalizeSetKey` on the same title.
+    [/topps-chrome-update-series|topps-chrome-update/, "topps-chrome-update-series"],
     [/topps-chrome/, "topps-chrome"],
     [/topps-heritage/, "topps-heritage"],
     // CF-TOPPS-GOLD-LABEL-DISTINCT (Drew, 2026-08-13). Topps Gold Label is its
@@ -971,9 +988,45 @@ export function vocabularyDestinations(): string[] {
  *  Two-pass: strict brand-qualified patterns (e.g. "panini-select") win
  *  over bare aliases (e.g. "prizm"). This prevents "Panini Playoff Blue
  *  Prizm 3/10" from being mis-classified as panini-prizm because "prizm"
- *  appears in the parallel language of every Panini product. */
+ *  appears in the parallel language of every Panini product.
+ *
+ *  CF-PRODUCT-FAMILY-COLLAPSE-IS-FORBIDDEN (Drew, 2026-09-03). THE PRODUCT
+ *  TABLE ANSWERS FIRST, exactly as it does in `normalizeSetKey`.
+ *
+ *  It did not, and that asymmetry was a collapse engine. `normalizeSetKey`
+ *  consults `productSetKeyForName` before the regex vocabulary (D23,
+ *  CF-THE-ID-CARRIES-THE-PRODUCT); this function went straight to the regexes,
+ *  where a FAMILY catch-all like `/(?:^|-)leaf/` swallows every specialized
+ *  product whose name begins with the flagship's. Measured on real titles, the
+ *  two functions disagreed on the same string:
+ *
+ *    "2002 Leaf Certified Materials #62"  table: leaf-certified-materials
+ *                                       regexes: leaf              <- collapse
+ *    "1996 Leaf Signature Series #88"     table: leaf-signature-series
+ *                                       regexes: leaf              <- collapse
+ *    "2006 Leaf Rookies & Stars #10"      table: leaf-rookies-and-stars
+ *                                       regexes: leaf              <- collapse
+ *    "2023 Leaf Metal #10"                table: leaf-metal
+ *                                       regexes: leaf              <- collapse
+ *    "2003 Topps Finest Flashbacks #10"   table: topps-finest-flashbacks
+ *                                       regexes: topps-finest      <- collapse
+ *
+ *  Every one of those is a DIFFERENT card with its own checklist and its own
+ *  price curve. The backfill scripts that read this function were therefore
+ *  filing specialized product sales into the flagship pool while the id minter
+ *  filed them correctly — one card, two rows, a split pool, a wrong FMV.
+ *
+ *  Consulting the table here makes the two functions agree BY CONSTRUCTION
+ *  rather than by keeping two vocabularies in sync by hand, and it cannot
+ *  loosen the strictness this function exists for: the table is a closed list
+ *  of named products, so a text that names none of them still falls through to
+ *  the regexes and still returns null when they miss. */
 export function matchKnownProductLine(text: string): string | null {
   const s = slugify(text);
+  // The D23 product table decides a product it NAMES, ahead of the regex
+  // vocabulary's family catch-alls. Same order as normalizeSetKey.
+  const named = productSetKeyForName(s);
+  if (named) return named;
   for (const [re, canonical] of knownSetKeyPatterns()) {
     if (re.test(s)) return canonical;
   }
