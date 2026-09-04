@@ -729,6 +729,35 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     // BARE key (not upper-deck-prefixed), so the rule matches the catalog.
     [/collector-?s?-choice/, "collectors-choice"],
     [/upper-deck-mvp|(?:^|-)ud-mvp/, "upper-deck-mvp"],
+    // CF-EXQUISITE-IS-ITS-OWN-PRODUCT (Drew 2026-09-04). Upper Deck Exquisite
+    // Collection is a distinct product with its own pool and must NEVER fold
+    // into `upper-deck`. The stakes are the highest of any collapse in this
+    // file: Exquisite is the 2003-04 rookie-patch-auto product (LeBron, Wade,
+    // Carmelo, Kobe), and pooling a four-figure RPA with UD base-set comps
+    // prices both wrong in both directions.
+    //
+    // It had THREE fates before this rule, measured read-only on 2026-09-04
+    // over the 3,670 Exquisite-product pool rows:
+    //   "2003 Upper Deck Exquisite ..." -> `upper-deck`   (270 rows) — the
+    //      bare catch-all below swallowed it on the maker word;
+    //   "2003-04 UD Exquisite ..."      -> `bowman` (707) / `unknown` (2,669)
+    //      — no rule named Exquisite at all, so the key came from elsewhere.
+    //      NONE of those 707 titles contains the word "Bowman".
+    //   "2006 Exquisite Basketball"     -> `exquisite-collection` — the only
+    //      form that landed on a key of its own.
+    // One product, four pools, and the largest share on `unknown`.
+    //
+    // Anchored on segment boundaries and placed ABOVE the bare /upper-deck/
+    // catch-all, exactly as Black Diamond and MVP are — a longer product name
+    // always precedes the family pattern that contains it. The maker word is
+    // OPTIONAL because vendors elide it ("2006 Exquisite Basketball") and
+    // abbreviate it ("UD Exquisite"); `exquisite` alone is specific enough to
+    // be safe, since it is not a word any other product name contains.
+    //
+    // Deliberately NOT disturbed: the CF-UD-INSERT-LINES rules above still own
+    // Black Diamond, SPx, Collector's Choice and MVP, and a plain UD insert
+    // line with no Exquisite in its name still folds to `upper-deck` below.
+    [/(?:^|-)exquisite(?:-|$)|exquisite-collection/, "upper-deck-exquisite"],
     [/upper-deck/, "upper-deck"],
     // CF-FLEER-STICKERS (Drew, 2026-07-29). Distinct from base Fleer;
     // basketball's iconic debut product line (1986 Michael Jordan

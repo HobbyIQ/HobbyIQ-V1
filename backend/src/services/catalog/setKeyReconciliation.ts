@@ -295,6 +295,55 @@ const RULED_ALIASES: Readonly<Record<string, { to: string; why: string }>> = Obj
   "black-diamond": { to: "upper-deck-black-diamond",
     why: "CF-UD-INSERT-LINES (Drew 2026-08-10) anchors the bare spelling on purpose; productSetKeys.ts spells `upper-deck-black-diamond` as the product. Every sample title in the census is '<year> Upper Deck Black Diamond' — the maker is simply absent from the key, not from the product." },
 
+  // ULTRA (Drew 2026-09-04). Ultra is a DISTINCT PRODUCT with its own pool and
+  // never folds into `fleer` — CF-ULTRA-IS-NOT-FLEER already guarantees that,
+  // and it stays. The only open question was which of the two spellings names
+  // it, and the standing rule answers it: count by source, not by row count.
+  //
+  // Measured read-only against prod on 2026-09-04:
+  //   `ultra`        19,002 catalog rows, 1991-2007, across TWELVE sources
+  //                  (baseballcardpedia 9,031 + -graded 5,125, sales-attested
+  //                  2,160, ingest-auto-seed, tcdb, bccp...) and 66,071 pool
+  //                  rows over six sports.
+  //   `fleer-ultra`   3,672 catalog rows from ONE ingest window
+  //                  (checklistinsider 2026-08-27/28, 3,639 of them 2025
+  //                  hockey) and FOUR pool rows — all four Marvel/Spider-Man
+  //                  trading cards, not the sports product at all.
+  //
+  // The checklist weight, the era spread and the pool are all on the bare key,
+  // so `ultra` is the fixed point and the maker-prefixed form is the alias.
+  // This is the same shape as `nba-hoops` over `panini-hoops` in the header:
+  // house style loses to the spelling a checklist actually stands behind.
+  "fleer-ultra": { to: "ultra",
+    why: "Drew 2026-09-04 ruled Ultra its own product with its own pool; CF-ULTRA-IS-NOT-FLEER keeps it out of `fleer` and is unchanged. The SPELLING is decided by source: `ultra` holds 19,002 catalog rows across twelve sources spanning 1991-2007 plus 66,071 pool rows, while `fleer-ultra` holds 3,672 rows from a single checklistinsider window (3,639 of them 2025 hockey) and four pool rows that are Marvel/Spider-Man non-sport cards. Counting by source, the bare key is canonical and the maker-prefixed form folds onto it rather than splitting the pool." },
+
+  // EXQUISITE (Drew 2026-09-04). Upper Deck Exquisite Collection is a DISTINCT
+  // PRODUCT and must never fold into `upper-deck` — a 2003-04 Exquisite RPA
+  // LeBron is not a 2003-04 Upper Deck base card, and fusing those pools
+  // prices a four-figure rookie patch auto off a base-card comp.
+  //
+  // The canonical is `upper-deck-exquisite`: 705 checklist rows (hobbymonitor
+  // 2026-09-04, all 2003) against 439 under `exquisite-collection`
+  // (baseballcardpedia, all 2006) — and the maker-prefixed form is house style
+  // where a checklist backs it, which here it does, by weight and as the newer
+  // deliberate ingest. The other four spellings fold onto it so the product
+  // keeps ONE pool.
+  //
+  // `exquisite-collection` is the one that costs something: it holds 439 real
+  // checklist rows, so folding it is a MOVE of a backed key, not a cleanup of
+  // an empty one. It is declared here rather than left a fixed point precisely
+  // so the product does not keep two checklists under two names.
+  "upper-deck-exquisite-collection": { to: "upper-deck-exquisite",
+    why: "Drew 2026-09-04: the full product name, same product. One cardhedge row (2020), zero checklist rows, zero pool rows — it exists only as a spelling." },
+  "exquisite-collection": { to: "upper-deck-exquisite",
+    why: "Drew 2026-09-04: 'Exquisite Collection' with the maker elided. 439 checklist rows (baseballcardpedia, all 2006) vs 705 under `upper-deck-exquisite` (hobbymonitor 2026-09-04, all 2003) — one product, two checklists, two eras. Folded so the pool is not split by which source wrote the row; the 439 rows are rekey work, reported in the PR body." },
+  "exquisite": { to: "upper-deck-exquisite",
+    why: "Drew 2026-09-04: bare shorthand — '2006 Exquisite Basketball' is the Upper Deck product. Two sales-attested catalog rows and two pool rows, both John Stockton Exquisite patch autos." },
+  "ud-exquisite-collection": { to: "upper-deck-exquisite",
+    why: "Drew 2026-09-04: 'UD' is the maker abbreviation vendors write in titles ('2005 Ud Exquisite Collection Football'). Two sales-attested catalog rows." },
+  "exquisite-collection-rookie-signatures": { to: "upper-deck-exquisite",
+    why: "Drew 2026-09-04: a SUBSET name, not a product — Rookie Signatures is an insert line inside Exquisite Collection, and the parallel/subset axis carries it, not the setKey. One bccp-product-structure row, zero checklist rows." },
+
   // ALLEN & GINTER SPELLING. `and` vs `&` is orthography, not product.
   "topps-allen-and-ginter-chrome": { to: "topps-allen-ginter-chrome",
     why: "SPELLING ONLY ('and' vs the vocabulary's elided form). The CHROME SUBSET ITSELF IS DISTINCT and is declared a fixed point below — this entry exists so the two spellings of that one subset do not split its pool." },
@@ -506,10 +555,14 @@ const ALREADY_RULED_COLLAPSES: Readonly<Record<string, string>> = Object.freeze(
   "bowman-draft-sapphire-chrome": "bowman-draft-sapphire",
   "topps-chrome-sapphire-edition": "topps-chrome-sapphire",
   "flair-showcase": "flair",
-  // CF-ULTRA-IS-NOT-FLEER, explicit and pinned. The catalog's split is real
-  // (`ultra` 14,586 checklist rows 1991-2007, `fleer-ultra` 3,639 in 2025
-  // alone) but which spelling wins is exactly what that ruling decided.
-  "fleer-ultra": "ultra",
+  // NOTE (Drew 2026-09-04): `fleer-ultra` USED TO LIVE HERE. Drew ruled Ultra
+  // a DISTINCT PRODUCT with its own pool — which it already was, since
+  // CF-ULTRA-IS-NOT-FLEER keeps it out of `fleer` entirely. What that ruling
+  // settled is the SPELLING, and a spelling with a declared canonical is an
+  // alias, not an undeclared collapse. It moved to RULED_ALIASES, where the
+  // canonical is stated and the evidence travels with it. Not repeated here:
+  // a key in both lists is one truth in two places, and this list means "a
+  // decision nobody has re-affirmed", which this no longer is.
   // The sapphire ruling in the vocabulary, applied to its "Edition" spelling.
   "bowman-chrome-sapphire-edition": "bowman-chrome-sapphire",
   "bowman-draft-sapphire-edition": "bowman-draft-sapphire",
@@ -550,6 +603,25 @@ function buildTables(): void {
 
   for (const e of entries()) {
   const key = e.setKey;
+  // (0) A DECLARED RULING OUTRANKS EVERY MECHANICAL VERDICT.
+  //
+  //     RULED_ALIASES used to be consulted only under `needs-ruling`, on the
+  //     reasoning that a ruling answers an OPEN question. Drew's 2026-09-04
+  //     Ultra ruling is the case that breaks it: the census had already
+  //     decided `fleer-ultra` mechanically (`distinct`, because `ultra` is an
+  //     ancestor and family collapse is forbidden), so the entry never reached
+  //     the ruling and the key became a fixed point — splitting the pool the
+  //     ruling exists to keep whole. A verdict DERIVED from the key's shape
+  //     must never outrank a decision a human stated with evidence; that is
+  //     the same principle guard (3) already applies to ALREADY_RULED_
+  //     COLLAPSES, just applied to the list that also names the destination.
+  //
+  //     Both directions are honoured here, so `distinct` and `needs-ruling`
+  //     alike defer to a ruling. The `needs-ruling` branch below is now
+  //     unreachable for ruled keys and kept only for its reasoning.
+  const declaredAlias = RULED_ALIASES[key];
+  if (declaredAlias && declaredAlias.to !== key) { ALIASES.set(key, declaredAlias.to); continue; }
+  if (RULED_DISTINCT[key]) { FIXED_POINTS.add(key); continue; }
   if (e.verdict === "alias" && e.canonical && e.canonical !== key) {
     ALIASES.set(key, e.canonical);
     continue;
@@ -616,6 +688,33 @@ function buildTables(): void {
   // evidence at all -- the same error as letting a derived catalog row
   // adjudicate. 514 of the 686 distinct keys are checklist-backed.
   if (e.evidence.checklistRows > 0) FIXED_POINTS.add(key);
+  }
+
+  // A RULING ON A KEY THE CENSUS NEVER LISTED STILL COUNTS.
+  //
+  // The loop above can only see keys in the data file, and the data file holds
+  // the STALE keys — the ones normalizeSetKey did not already leave alone. A
+  // key that WAS a fixed point when the census ran is therefore absent, and
+  // Drew's 2026-09-04 Exquisite ruling turns exactly such keys into aliases:
+  // `exquisite-collection` (439 baseballcardpedia checklist rows) and
+  // `exquisite` both derived to themselves on 2026-09-03, so neither appears
+  // in the 2,646. Without this pass they would be ruled in the source and
+  // missing from the table the tests and the rematch actually read.
+  //
+  // Declared last so a key the census DID list keeps the evidence-carrying
+  // path above; this only fills in what that loop could not see.
+  for (const [key, v] of Object.entries(RULED_ALIASES)) {
+    if (v.to !== key && !ALIASES.has(key)) ALIASES.set(key, v.to);
+  }
+  for (const key of Object.keys(RULED_DISTINCT)) {
+    if (!ALIASES.has(key)) FIXED_POINTS.add(key);
+  }
+  // An alias target is a fixed point by definition — it is the spelling that
+  // WON. Declaring it explicitly keeps the no-chains invariant true for a
+  // canonical the census never listed either (`upper-deck-exquisite` is one:
+  // its 705 rows landed the day after the census ran).
+  for (const to of ALIASES.values()) {
+    if (!ALIASES.has(to)) FIXED_POINTS.add(to);
   }
 
   _aliases = ALIASES;

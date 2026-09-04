@@ -210,6 +210,16 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
   // Its OWN family for the same reason: rookie-only and veteran checklists do
   // not share a price curve.
   P("black-diamond-rookie-edition", { parent: "upper-deck" }),
+  // CF-EXQUISITE-IS-ITS-OWN-PRODUCT (Drew 2026-09-04). Upper Deck Exquisite
+  // Collection is its OWN product with its own pool, never folded into
+  // `upper-deck`. Same shape as Black Diamond Rookie Edition directly above,
+  // and for a sharper version of the same reason: Exquisite is the 2003-04
+  // rookie-patch-auto product, so `refines` is deliberately ABSENT — a matcher
+  // that widened from an Exquisite RPA into the UD base pool would price a
+  // four-figure LeBron rookie off base-card comps. Its OWN family: a
+  // 99-copy patch auto and a base set do not share a price curve.
+  // `parent` is the Upper Deck root for provenance only.
+  P("upper-deck-exquisite", { parent: "upper-deck" }),
   P("sp-authentic", { parent: "upper-deck" }),
   P("sp-prospects", { parent: "upper-deck" }),
   P("spx"),
