@@ -1543,6 +1543,14 @@ const SPECIALIZATION_PARENTS = Object.freeze({
   //    so the day the table gains the entry the pin says so rather than
   //    silently agreeing.
   "bowman-tiffany": "bowman",
+  // -- Fleer: the coated reprints #1748 minted checklists for (5,357 cards).
+  //    Unlike `bowman-tiffany` these ARE productSetKeys.ts entries with the
+  //    immediate parents named here, so they are mirrored, not excepted.
+  "fleer-tiffany": "fleer",
+  "fleer-glossy": "fleer",
+  "fleer-update-tiffany": "fleer-update",
+  "fleer-update-glossy": "fleer-update",
+  "fleer-tradition-tiffany": "fleer-tradition",
 });
 
 /** The keys whose ladder edge this module mirrors from productSetKeys.ts --
@@ -1587,6 +1595,14 @@ const SAME_NUMBER_PARALLEL_SETS = Object.freeze([
   Object.freeze({ setKey: "topps-tiffany", parent: "topps" }),
   Object.freeze({ setKey: "topps-traded-tiffany", parent: "topps-traded" }),
   Object.freeze({ setKey: "bowman-tiffany", parent: "bowman" }),
+  // The Fleer coated reprints (#1748): the Tiffany/Glossy card carries the
+  // paper card's number, so the number cannot tell them apart and only the
+  // title can. 1996 Fleer Tiffany lists #1-600 and so does 1996 Fleer.
+  Object.freeze({ setKey: "fleer-tiffany", parent: "fleer" }),
+  Object.freeze({ setKey: "fleer-glossy", parent: "fleer" }),
+  Object.freeze({ setKey: "fleer-update-tiffany", parent: "fleer-update" }),
+  Object.freeze({ setKey: "fleer-update-glossy", parent: "fleer-update" }),
+  Object.freeze({ setKey: "fleer-tradition-tiffany", parent: "fleer-tradition" }),
 ]);
 
 /** Does `derivedKey` reprint `storedKey`'s checklist on `storedKey`'s own card
