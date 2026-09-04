@@ -173,7 +173,15 @@ export type WithheldReason =
    * on 2026-09-03 that was a pre-C-1 doc with no usedWeight, published,
    * fabricated. A recompute must OWN every id in its span.
    */
-  | "series_start";
+  | "series_start"
+  /**
+   * This day's own epoch has too few eligible cards to form a basket at
+   * all, so there is nothing to value the day against. Written levelless
+   * (2026-09-04) for the same reason as `series_start`: the walk used to
+   * `continue` past these days, leaving 181 pre-C-1 hockey and pokemon
+   * docs standing through rebuild run 33819336946 and failing its verify.
+   */
+  | "no_basket";
 
 /** Reserved synthetic partition key for a sport's index docs. */
 export function indexPartitionKey(sport: string): string {
