@@ -32,13 +32,23 @@ export function formatPct(n: number | null | undefined, opts: { signed?: boolean
   return `${sign}${rounded.toFixed(1)}%`;
 }
 
-export function formatCardTitle(h: {
+/** CF-MOBILE-HOLDING-CARD (Drew, 2026-09-04). The "what product is this"
+ *  half of a card title — year + product + parallel — with the two cleanups
+ *  `formatCardTitle` has always done applied: a product whose leading four
+ *  digits repeat `cardYear` loses them, and a product whose trailing words
+ *  repeat the parallel loses those.
+ *
+ *  Exported because the mobile holding card shows this half on its own line,
+ *  under the player + card number. It must not re-implement the cleanups —
+ *  a second copy would drift, and the phone would show "Bowman Chrome
+ *  Refractor Refractor" on the exact rows Drew already had fixed once
+ *  (CF-TITLE-DEDUP-PARALLEL, 2026-08-10). `formatCardTitle` calls this too,
+ *  so the two are one computation.
+ */
+export function formatCardContext(h: {
   cardYear?: number | null;
   product?: string | null;
-  playerName?: string | null;
-  cardNumber?: string | null;
   parallel?: string | null;
-  cardTitle?: string | null;
 }): string {
   // Strip a leading year from product when we're already going to prepend
   // cardYear — otherwise "2026" + "2026 Bowman Baseball" collapses to
@@ -76,9 +86,24 @@ export function formatCardTitle(h: {
   // the title reads like "2026 Bowman Baseball Orange Shimmer Eric
   // Hartman #CPA-EHA" — the parallel is what distinguishes similarly-
   // numbered cards and needs to be visible without a second glance.
-  if (parallelToAppend) {
-    parts.push(parallelToAppend);
-  }
+  if (parallelToAppend) parts.push(parallelToAppend);
+  return parts.join(" ");
+}
+
+export function formatCardTitle(h: {
+  cardYear?: number | null;
+  product?: string | null;
+  playerName?: string | null;
+  cardNumber?: string | null;
+  parallel?: string | null;
+  cardTitle?: string | null;
+}): string {
+  // Year + product + parallel, with the leading-year and trailing-parallel
+  // cleanups applied. Shared with the mobile holding card, which renders
+  // this half on its own line — see formatCardContext.
+  const context = formatCardContext(h);
+  const parts: string[] = [];
+  if (context) parts.push(context);
   if (h.playerName) parts.push(h.playerName);
   if (h.cardNumber) parts.push(`#${h.cardNumber}`);
   const base = parts.join(" ");
