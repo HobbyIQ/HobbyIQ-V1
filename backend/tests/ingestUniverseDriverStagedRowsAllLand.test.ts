@@ -150,11 +150,27 @@ describe("run 33847867665 — exactly 64 rows per set was the leaked LIMIT, not 
   });
 
   it("a short ingest is a per-entry answer — it never votes the lane down", () => {
-    const src = fs.readFileSync(script, "utf8");
-    // Reaching it means the page was fetched, parsed, staged, ingested AND the
-    // catalog read back. Every one of those proves the host is up, which is the
-    // only thing the systemic streak may conclude.
-    expect(src).toMatch(/stats: gate\.stats, laneProvenHealthy: true,\s*\n\s*\};/);
+    // WAS a grep for the two-line source shape `stats: gate.stats,
+    // laneProvenHealthy: true,` followed by the object's closing brace, which a
+    // reordering of the verdict object reddens without any behaviour changing.
+    //
+    // Reaching a short ingest means the page was fetched, parsed, staged,
+    // ingested AND the catalog read back. Every one of those proves the host is
+    // up, which is the only thing the systemic streak may conclude -- so the
+    // consequence is asked of the arithmetic that owns it, and the other half
+    // (that the verdict really carries the flag) is DRIVEN out of the committed
+    // loop by laneAbortsAreHostFaultsOnly.test.ts, "post-ingest failures are
+    // per-entry".
+    const { streakAfter, SYSTEMIC_FAILURE_STREAK } = require_(script) as {
+      streakAfter: (n: number, v: unknown) => number; SYSTEMIC_FAILURE_STREAK: number;
+    };
+    const shortIngest = { status: "failed", laneProvenHealthy: true };
+    let streak = 0;
+    for (let i = 0; i < SYSTEMIC_FAILURE_STREAK + 2; i++) streak = streakAfter(streak, shortIngest);
+    expect(streak).toBe(0);
+    expect(streakAfter(SYSTEMIC_FAILURE_STREAK - 1, shortIngest)).toBe(0);
+    // The tripwire is not disarmed: the same status without the flag advances.
+    expect(streakAfter(0, { status: "failed" })).toBe(1);
   });
 
   it("the staged-row count reaches the control doc, so the audit needs no log", () => {
