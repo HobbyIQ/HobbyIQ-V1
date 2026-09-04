@@ -251,11 +251,58 @@ const SLUG_PARALLEL_TAIL = [
  * So the fetcher states the parent itself, derived from the SAME slug the rung
  * came from, so the two can never disagree.
  */
+/**
+ * CF-A-RUNG-PAGE-OF-AN-UNLISTED-BRAND-IS-STILL-A-RUNG-PAGE (2026-09-04).
+ *
+ * The list below is what `parallelOfParent` is derived from, and a page whose
+ * brand is absent from it gets NO parent claim -- so the driver's zero-base
+ * gate refuses it, because a baseless single-rung page is admissible only on
+ * the fetcher's attestation. Measured against the 35 `zero base cards` control
+ * docs on main today, every one is a brand this list never named:
+ *
+ *   Bowman's Best  29 + 4   1999 Bowmans Best Refractors / Atomic Refractors /
+ *                            Mirror Image Refractors, 1997-2005
+ *   Select          3       Score Select rung pages
+ *   Pacific         2       1996 Pacific Prisms Gold, 1997 Pacific Crown
+ *                            Collection Silver -- parallel-only pages of the
+ *                            products #1766 had just added
+ *
+ * Re-fetched today, `1996-pacific-prisms-gold` reads `parallel=Gold` and
+ * `parentSetKey=(none)`, so `parallelOfParent=false` and the rung has nowhere
+ * to land. Not one of these is a cross-join; each is exactly the shape #1741
+ * wrote the admission for, on a brand nobody had added yet.
+ *
+ * THE ENTRIES ARE PRODUCTS THE CATALOG ALREADY SPELLS, so this invents no
+ * vocabulary: `bowmans-best`, `pacific-prism`, `pacific-crown-collection` and
+ * `score-select` are all declared in productSetKeys.ts with the parents named
+ * here, and the pin below asserts every entry against that table so the local
+ * list and the product vocabulary cannot drift.
+ *
+ * LONGEST FIRST is load-bearing and now doubly so: `bowmans-best` must be
+ * matched before `bowman`, or a Bowman's Best rung page lands on flagship
+ * Bowman -- the same two-products-one-pool collapse #1666 documented.
+ */
 const PARENT_BRANDS = [
-  "topps-chrome", "bowman-chrome", "bowman-sterling", "topps-finest",
-  "topps-heritage", "topps-traded", "topps-stadium-club", "upper-deck",
-  "o-pee-chee", "topps", "bowman", "fleer", "donruss", "score", "leaf", "panini",
+  // Multi-word products first, longest to shortest, so a specific product is
+  // never shadowed by the brand its name opens with.
+  "pacific-crown-collection", "topps-stadium-club", "bowman-sterling",
+  // `pacific-prisms` is the SLUG THE SITE SERVES; `pacific-prism` (singular) is
+  // the key productSetKeys rules (see its own note: three authorities agree the
+  // singular is correct). Both spellings must MATCH here, and both resolve to
+  // the ruled singular below, or a Prisms rung page splits from its own product.
+  "pacific-prisms", "pacific-prism", "bowman-chrome", "topps-chrome", "topps-heritage",
+  "topps-finest", "topps-traded", "bowmans-best", "score-select",
+  "upper-deck", "o-pee-chee",
+  "topps", "bowman", "fleer", "donruss", "score", "leaf", "panini", "pacific",
 ];
+
+/**
+ * A brand slug the SITE serves mapped to the key the CATALOG rules, where the
+ * two spellings differ. Only productSetKeys may decide this; the entry exists
+ * because `pacific-prism` carries `names: ["pacific-prisms"]` there, and the
+ * pin asserts the mapping against that table.
+ */
+const BRAND_CANONICAL = { "pacific-prisms": "pacific-prism" };
 
 /**
  * CF-A-TIFFANY-IS-NOT-A-SUBSET (2026-09-04, follow-on to #1741 and #1719).
@@ -363,12 +410,12 @@ function splitParentAndSubset(rest, tailRe) {
   // no numbering.
   if (RULED_PRODUCT_SLUGS.some((re) => re.test(r))) return { parentSetKey: "", subset: "" };
   for (const b of PARENT_BRANDS) {
-    if (r === b) return { parentSetKey: b, subset: "" };
+    if (r === b) return { parentSetKey: BRAND_CANONICAL[b] || b, subset: "" };
     if (r.startsWith(b + "-")) {
       const tail = r.slice(b.length + 1);
       const words = tail.split("-").filter(Boolean)
         .map((w) => w.charAt(0).toUpperCase() + w.slice(1));
-      return { parentSetKey: b, subset: words.join(" ") };
+      return { parentSetKey: BRAND_CANONICAL[b] || b, subset: words.join(" ") };
     }
   }
   return { parentSetKey: "", subset: "" };

@@ -130,7 +130,9 @@ describe("run 33847867665 — exactly 64 rows per set was the leaked LIMIT, not 
     // The verdict names the shortfall and is `failed`, so the next pass
     // re-attempts rather than recording a closed gap.
     expect(src).toMatch(/short ingest — \$\{f\(shortIngest\.missing\)\} of \$\{f\(shortIngest\.staged\)\} staged identities are not in the catalog/);
-    expect(src).toMatch(/status: "failed",\s*\n\s*reason: `short ingest/);
+    // The comment lines between the two fields are allowed: what is pinned is
+    // that the SHORT-INGEST verdict is the `failed` one, not its formatting.
+    expect(src).toMatch(/status: "failed",\s*(?:\n\s*\/\/[^\n]*)*\n\s*reason: `short ingest/);
     // Decided BEFORE the partial branch: a short ingest is never a thin source.
     expect(src.indexOf("} else if (shortIngest) {")).toBeLessThan(src.indexOf("} else if (incomplete) {"));
     // ...and before the count check, which it supersedes.

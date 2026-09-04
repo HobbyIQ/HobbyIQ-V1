@@ -1,0 +1,476 @@
+category,cardNumber,parallel,isAuto,printRun,player,parallelNote,rarity
+base,BB-AK,Base,false,,Austin Kearns
+base,BB-AK,Blue,false,,Austin Kearns,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-AK,Red,false,,Austin Kearns,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-AP,Base,false,,Albert Pujols
+base,BB-AP,Blue,false,,Albert Pujols,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-AP,Red,false,,Albert Pujols,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-AR,Base,false,,Alex Rodriguez
+base,BB-AR,Blue,false,,Alex Rodriguez,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-AR,Red,false,,Alex Rodriguez,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-AS,Base,false,,Alfonso Soriano
+base,BB-AS,Blue,false,,Alfonso Soriano,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-AS,Red,false,,Alfonso Soriano,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-BC,Base,false,,Bernie Castro RC
+base,BB-BC,Blue,false,,Bernie Castro RC,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-BC,Red,false,,Bernie Castro RC,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-BJF,Base,false,,Ben Fritz RC*
+base,BB-BJF,Blue,false,,Ben Fritz RC*,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-BJF,Red,false,,Ben Fritz RC*,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-BJH,Base,false,,Bo Hart RC
+base,BB-BJH,Blue,false,,Bo Hart RC,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-BJH,Red,false,,Bo Hart RC,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-BLB,Base,false,,Barry Bonds
+base,BB-BLB,Blue,false,,Barry Bonds,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-BLB,Red,false,,Barry Bonds,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-BSG,Base,false,,Brian Giles
+base,BB-BSG,Blue,false,,Brian Giles,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-BSG,Red,false,,Brian Giles,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-BZ,Base,false,,Barry Zito
+base,BB-BZ,Blue,false,,Barry Zito,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-BZ,Red,false,,Barry Zito,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-CJ,Base,false,,Chipper Jones
+base,BB-CJ,Blue,false,,Chipper Jones,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-CJ,Red,false,,Chipper Jones,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-CMS,Base,false,,Curt Schilling
+base,BB-CMS,Blue,false,,Curt Schilling,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-CMS,Red,false,,Curt Schilling,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-CW,Base,false,,Chien-Ming Wang RC
+base,BB-CW,Blue,false,,Chien-Ming Wang RC,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-CW,Red,false,,Chien-Ming Wang RC,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-DJ,Base,false,,Derek Jeter
+base,BB-DJ,Blue,false,,Derek Jeter,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-DJ,Red,false,,Derek Jeter,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-DY,Base,false,,Dustin Yount RC*
+base,BB-DY,Blue,false,,Dustin Yount RC*,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-DY,Red,false,,Dustin Yount RC*,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-GJA,Base,false,,Garret Anderson
+base,BB-GJA,Blue,false,,Garret Anderson,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-GJA,Red,false,,Garret Anderson,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-GM,Base,false,,Greg Maddux
+base,BB-GM,Blue,false,,Greg Maddux,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-GM,Red,false,,Greg Maddux,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-HT,Base,false,,Haj Turay RC*
+base,BB-HT,Blue,false,,Haj Turay RC*,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-HT,Red,false,,Haj Turay RC*,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-IC,Base,false,,Ismael Castro RC*
+base,BB-IC,Blue,false,,Ismael Castro RC*,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-IC,Red,false,,Ismael Castro RC*,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-IS,Base,false,,Ichiro
+base,BB-IS,Blue,false,,Ichiro,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-IS,Red,false,,Ichiro,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-JB,Base,false,,Jeremy Bonderman RC
+base,BB-JB,Blue,false,,Jeremy Bonderman RC,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-JB,Red,false,,Jeremy Bonderman RC,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-JC,Base,false,,Jose Contreras RC
+base,BB-JC,Blue,false,,Jose Contreras RC,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-JC,Red,false,,Jose Contreras RC,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-JFK,Base,false,,Jeff Kent
+base,BB-JFK,Blue,false,,Jeff Kent,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-JFK,Red,false,,Jeff Kent,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-JGG,Base,false,,Jason Giambi
+base,BB-JGG,Blue,false,,Jason Giambi,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-JGG,Red,false,,Jason Giambi,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-JMS,Base,false,,Jon-Mark Sprowl RC
+base,BB-JMS,Blue,false,,Jon-Mark Sprowl RC,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-JMS,Red,false,,Jon-Mark Sprowl RC,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-JT,Base,false,,Jim Thome
+base,BB-JT,Blue,false,,Jim Thome,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-JT,Red,false,,Jim Thome,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-KG,Base,false,,Ken Griffey Jr.
+base,BB-KG,Blue,false,,Ken Griffey Jr.,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-KG,Red,false,,Ken Griffey Jr.,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-LB,Base,false,,Lance Berkman
+base,BB-LB,Blue,false,,Lance Berkman,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-LB,Red,false,,Lance Berkman,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-LW,Base,false,,Larry Walker
+base,BB-LW,Blue,false,,Larry Walker,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-LW,Red,false,,Larry Walker,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-MB,Base,false,,Matt Bruback RC*
+base,BB-MB,Blue,false,,Matt Bruback RC*,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-MB,Red,false,,Matt Bruback RC*,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-MD,Base,false,,Matt Diaz RC
+base,BB-MD,Blue,false,,Matt Diaz RC,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-MD,Red,false,,Matt Diaz RC,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-MJP,Base,false,,Mike Piazza
+base,BB-MJP,Blue,false,,Mike Piazza,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-MJP,Red,false,,Mike Piazza,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-MO,Base,false,,Mike O'Keefe RC*
+base,BB-MO,Blue,false,,Mike O'Keefe RC*,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-MO,Red,false,,Mike O'Keefe RC*,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-MOR,Base,false,,Magglio Ordonez
+base,BB-MOR,Blue,false,,Magglio Ordonez,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-MOR,Red,false,,Magglio Ordonez,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-MP,Base,false,,Mark Prior
+base,BB-MP,Blue,false,,Mark Prior,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-MP,Red,false,,Mark Prior,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-MR,Base,false,,Manny Ramirez
+base,BB-MR,Blue,false,,Manny Ramirez,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-MR,Red,false,,Manny Ramirez,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-MS,Base,false,,Mike Sweeney
+base,BB-MS,Blue,false,,Mike Sweeney,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-MS,Red,false,,Mike Sweeney,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-MT,Base,false,,Miguel Tejada
+base,BB-MT,Blue,false,,Miguel Tejada,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-MT,Red,false,,Miguel Tejada,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-NG,Base,false,,Nomar Garciaparra
+base,BB-NG,Blue,false,,Nomar Garciaparra,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-NG,Red,false,,Nomar Garciaparra,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-OV,Base,false,,Oscar Villarreal RC
+base,BB-OV,Blue,false,,Oscar Villarreal RC,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-OV,Red,false,,Oscar Villarreal RC,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-PB,Base,false,,Pat Burrell
+base,BB-PB,Blue,false,,Pat Burrell,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-PB,Red,false,,Pat Burrell,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-PM,Base,false,,Pedro Martinez
+base,BB-PM,Blue,false,,Pedro Martinez,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-PM,Red,false,,Pedro Martinez,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-RJ,Base,false,,Randy Johnson
+base,BB-RJ,Blue,false,,Randy Johnson,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-RJ,Red,false,,Randy Johnson,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-RM,Base,false,,Ramon Nivar RC
+base,BB-RM,Blue,false,,Ramon Nivar RC,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-RM,Red,false,,Ramon Nivar RC,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-SG,Base,false,,Shawn Green
+base,BB-SG,Blue,false,,Shawn Green,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-SG,Red,false,,Shawn Green,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-SS,Base,false,,Sammy Sosa
+base,BB-SS,Blue,false,,Sammy Sosa,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-SS,Red,false,,Sammy Sosa,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-SV,Base,false,,Shane Victorino RC
+base,BB-SV,Blue,false,,Shane Victorino RC,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-SV,Red,false,,Shane Victorino RC,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-TH,Base,false,,Todd Helton
+base,BB-TH,Blue,false,,Todd Helton,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-TH,Red,false,,Todd Helton,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-TJB,Base,false,,T.J. Bohn RC
+base,BB-TJB,Blue,false,,T.J. Bohn RC,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-TJB,Red,false,,T.J. Bohn RC,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-TKH,Base,false,,Torii Hunter
+base,BB-TKH,Blue,false,,Torii Hunter,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-TKH,Red,false,,Torii Hunter,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-TT,Base,false,,Terry Tiffee RC
+base,BB-TT,Blue,false,,Terry Tiffee RC,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-TT,Red,false,,Terry Tiffee RC,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-VG,Base,false,,Vladimir Guerrero
+base,BB-VG,Blue,false,,Vladimir Guerrero,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-VG,Red,false,,Vladimir Guerrero,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-WRC,Base,false,,Roger Clemens
+base,BB-WRC,Blue,false,,Roger Clemens,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-WRC,Red,false,,Roger Clemens,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-HRB,Base,false,,Hanley Ramirez
+base,BB-HRB,Blue,false,,Hanley Ramirez,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-HRB,Red,false,,Hanley Ramirez,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-JGB,Base,false,,Joey Gomes
+base,BB-JGB,Blue,false,,Joey Gomes,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-JGB,Red,false,,Joey Gomes,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-JKB,Base,false,,Jason Kubel
+base,BB-JKB,Blue,false,,Jason Kubel,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-JKB,Red,false,,Jason Kubel,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-KBS,Base,false,,Kelly Shoppach
+base,BB-KBS,Blue,false,,Kelly Shoppach,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-KBS,Red,false,,Kelly Shoppach,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-KYE,Base,false,,Kevin Youkilis
+base,BB-KYE,Blue,false,,Kevin Youkilis,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-KYE,Red,false,,Kevin Youkilis,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-LFJ,Base,false,,Lew Ford
+base,BB-LFJ,Blue,false,,Lew Ford,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-LFJ,Red,false,,Lew Ford,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-RHJ,Base,false,,Ryan Howard
+base,BB-RHJ,Blue,false,,Ryan Howard,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-RHJ,Red,false,,Ryan Howard,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-RLD,Base,false,,Rajai Davis
+base,BB-RLD,Blue,false,,Rajai Davis,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-RLD,Red,false,,Rajai Davis,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-RSB,Base,false,,Ryan Shealy
+base,BB-RSB,Blue,false,,Ryan Shealy,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-RSB,Red,false,,Ryan Shealy,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-TSB,Base,false,,Thomari Story-Harden
+base,BB-TSB,Blue,false,,Thomari Story-Harden,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-TSB,Red,false,,Thomari Story-Harden,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-AB,Base,false,,Andrew Brown FY AU RC
+base,BB-AB,Blue,false,,Andrew Brown FY AU RC,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-AB,Red,false,,Andrew Brown FY AU RC,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-AM,Base,false,,Willy Corporan FY AU RC* RC* (Aneudis Mateo)
+base,BB-AM,Blue,false,,Willy Corporan FY AU RC* RC* (Aneudis Mateo),"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-AM,Red,false,,Willy Corporan FY AU RC* RC* (Aneudis Mateo),"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-AW,Base,false,,Aron Weston FY AU RC*
+base,BB-AW,Blue,false,,Aron Weston FY AU RC*,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-AW,Red,false,,Aron Weston FY AU RC*,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-BB,Base,false,,Bryan Bullington FY AU RC
+base,BB-BB,Blue,false,,Bryan Bullington FY AU RC,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-BB,Red,false,,Bryan Bullington FY AU RC,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-BFL,Base,false,,Branden Florence FY AU RC*
+base,BB-BFL,Blue,false,,Branden Florence FY AU RC*,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-BFL,Red,false,,Branden Florence FY AU RC*,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-BFR,Base,false,,Ben Francisco FY AU RC
+base,BB-BFR,Blue,false,,Ben Francisco FY AU RC,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-BFR,Red,false,,Ben Francisco FY AU RC,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-BH,Base,false,,Brendan Harris FY AU RC
+base,BB-BH,Blue,false,,Brendan Harris FY AU RC,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-BH,Red,false,,Brendan Harris FY AU RC,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-BK,Base,false,,Beau Kemp FY AU RC*
+base,BB-BK,Blue,false,,Beau Kemp FY AU RC*,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-BK,Red,false,,Beau Kemp FY AU RC*,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-BM,Base,false,,Brian McCann FY AU RC
+base,BB-BM,Blue,false,,Brian McCann FY AU RC,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-BM,Red,false,,Brian McCann FY AU RC,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-BWB,Base,false,,Bobby Basham FY AU RC*
+base,BB-BWB,Blue,false,,Bobby Basham FY AU RC*,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-BWB,Red,false,,Bobby Basham FY AU RC*,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-CAD,Base,false,,Carlos Duran FY AU RC*
+base,BB-CAD,Blue,false,,Carlos Duran FY AU RC*,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-CAD,Red,false,,Carlos Duran FY AU RC*,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-CDC,Base,false,,Chris De La Cruz FY AU RC*
+base,BB-CDC,Blue,false,,Chris De La Cruz FY AU RC*,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-CDC,Red,false,,Chris De La Cruz FY AU RC*,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-CJW,Base,false,,C.J. Wilson FY AU
+base,BB-CJW,Blue,false,,C.J. Wilson FY AU,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-CJW,Red,false,,C.J. Wilson FY AU,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-CM,Base,false,,Charlie Manning FY AU RC
+base,BB-CM,Blue,false,,Charlie Manning FY AU RC,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-CM,Red,false,,Charlie Manning FY AU RC,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-CS,Base,false,,Cory Stewart FY AU RC*
+base,BB-CS,Blue,false,,Cory Stewart FY AU RC*,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-CS,Red,false,,Cory Stewart FY AU RC*,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-CSS,Base,false,,Corey Shafer FY AU RC*
+base,BB-CSS,Blue,false,,Corey Shafer FY AU RC*,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-CSS,Red,false,,Corey Shafer FY AU RC*,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-CWA,Base,false,,Chien-Ming Wang AU
+base,BB-CWA,Blue,false,,Chien-Ming Wang AU,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-CWA,Red,false,,Chien-Ming Wang AU,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-DAM,Base,false,,Dustin Moseley FY AU RC
+base,BB-DAM,Blue,false,,Dustin Moseley FY AU RC,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-DAM,Red,false,,Dustin Moseley FY AU RC,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-DC,Base,false,,David Cash FY AU RC*
+base,BB-DC,Blue,false,,David Cash FY AU RC*,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-DC,Red,false,,David Cash FY AU RC*,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-DH,Base,false,,Dan Haren FY AU RC
+base,BB-DH,Blue,false,,Dan Haren FY AU RC,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-DH,Red,false,,Dan Haren FY AU RC,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-DM,Base,false,,David Martinez FY AU RC*
+base,BB-DM,Blue,false,,David Martinez FY AU RC*,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-DM,Red,false,,David Martinez FY AU RC*,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-DMM,Base,false,,Dustin McGowan FY AU RC
+base,BB-DMM,Blue,false,,Dustin McGowan FY AU RC,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-DMM,Red,false,,Dustin McGowan FY AU RC,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-DR,Base,false,,Darrell Rasner FY AU RC
+base,BB-DR,Blue,false,,Darrell Rasner FY AU RC,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-DR,Red,false,,Darrell Rasner FY AU RC,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-DW,Base,false,,Doug Waechter FY AU RC
+base,BB-DW,Blue,false,,Doug Waechter FY AU RC,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-DW,Red,false,,Doug Waechter FY AU RC,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-ERA,Base,false,,Elizardo Ramirez FY AU RC
+base,BB-ERA,Blue,false,,Elizardo Ramirez FY AU RC,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-ERA,Red,false,,Elizardo Ramirez FY AU RC,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-ERI,Base,false,,Eric Riggs FY AU RC*
+base,BB-ERI,Blue,false,,Eric Riggs FY AU RC*,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-ERI,Red,false,,Eric Riggs FY AU RC*,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-ET,Base,false,,Eider Torres FY AU RC
+base,BB-ET,Blue,false,,Eider Torres FY AU RC,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-ET,Red,false,,Eider Torres FY AU RC,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-FP,Base,false,,Felix Pie FY AU RC
+base,BB-FP,Blue,false,,Felix Pie FY AU RC,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-FP,Red,false,,Felix Pie FY AU RC,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-FS,Base,false,,Felix Sanchez FY AU RC
+base,BB-FS,Blue,false,,Felix Sanchez FY AU RC,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-FS,Red,false,,Felix Sanchez FY AU RC,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-FT,Base,false,,Ferdin Tejeda FY AU RC*
+base,BB-FT,Blue,false,,Ferdin Tejeda FY AU RC*,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-FT,Red,false,,Ferdin Tejeda FY AU RC*,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-GA,Base,false,,Greg Aquino FY AU RC
+base,BB-GA,Blue,false,,Greg Aquino FY AU RC,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-GA,Red,false,,Greg Aquino FY AU RC,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-GB,Base,false,,Gregor Blanco FY AU RC
+base,BB-GB,Blue,false,,Gregor Blanco FY AU RC,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-GB,Red,false,,Gregor Blanco FY AU RC,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-GS,Base,false,,Gary Schneidmiller FY AU RC*
+base,BB-GS,Blue,false,,Gary Schneidmiller FY AU RC*,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-GS,Red,false,,Gary Schneidmiller FY AU RC*,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-HR,Base,false,,Hanley Ramirez FY AU RC
+base,BB-HR,Blue,false,,Hanley Ramirez FY AU RC,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-HR,Red,false,,Hanley Ramirez FY AU RC,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-JDD,Base,false,,J.D. Durbin FY AU RC
+base,BB-JDD,Blue,false,,J.D. Durbin FY AU RC,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-JDD,Red,false,,J.D. Durbin FY AU RC,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-JG,Base,false,,Joey Gomes FY AU RC*
+base,BB-JG,Blue,false,,Joey Gomes FY AU RC*,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-JG,Red,false,,Joey Gomes FY AU RC*,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-JK,Base,false,,Jason Kubel FY AU RC
+base,BB-JK,Blue,false,,Jason Kubel FY AU RC,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-JK,Red,false,,Jason Kubel FY AU RC,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-JLB,Base,false,,Jaime Bubela FY AU RC
+base,BB-JLB,Blue,false,,Jaime Bubela FY AU RC,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-JLB,Red,false,,Jaime Bubela FY AU RC,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-JM,Base,false,,Jose Morales FY AU RC
+base,BB-JM,Blue,false,,Jose Morales FY AU RC,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-JM,Red,false,,Jose Morales FY AU RC,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-JRG,Base,false,,Jeremy Griffiths FY AU RC
+base,BB-JRG,Blue,false,,Jeremy Griffiths FY AU RC,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-JRG,Red,false,,Jeremy Griffiths FY AU RC,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-JV,Base,false,,Joe Valentine FY AU RC
+base,BB-JV,Blue,false,,Joe Valentine FY AU RC,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-JV,Red,false,,Joe Valentine FY AU RC,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-JW,Base,false,,Josh Willingham FY AU RC
+base,BB-JW,Blue,false,,Josh Willingham FY AU RC,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-JW,Red,false,,Josh Willingham FY AU RC,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-KJ,Base,false,,Kade Johnson FY AU RC*
+base,BB-KJ,Blue,false,,Kade Johnson FY AU RC*,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-KJ,Red,false,,Kade Johnson FY AU RC*,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-KS,Base,false,,Kelly Shoppach FY AU RC
+base,BB-KS,Blue,false,,Kelly Shoppach FY AU RC,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-KS,Red,false,,Kelly Shoppach FY AU RC,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-KY,Base,false,,Kevin Youkilis FY AU RC
+base,BB-KY,Blue,false,,Kevin Youkilis FY AU RC,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-KY,Red,false,,Kevin Youkilis FY AU RC,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-LF,Base,false,,Lew Ford FY AU RC
+base,BB-LF,Blue,false,,Lew Ford FY AU RC,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-LF,Red,false,,Lew Ford FY AU RC,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-MDA,Base,false,,Matt Diaz FY AU
+base,BB-MDA,Blue,false,,Matt Diaz FY AU,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-MDA,Red,false,,Matt Diaz FY AU,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-MDH,Base,false,,Matt Hensley FY AU RC
+base,BB-MDH,Blue,false,,Matt Hensley FY AU RC,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-MDH,Red,false,,Matt Hensley FY AU RC,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-MDM,Base,false,,Mark Malaska FY AU RC
+base,BB-MDM,Blue,false,,Mark Malaska FY AU RC,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-MDM,Red,false,,Mark Malaska FY AU RC,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-MH,Base,false,,Michel Hernandez FY AU RC
+base,BB-MH,Blue,false,,Michel Hernandez FY AU RC,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-MH,Red,false,,Michel Hernandez FY AU RC,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-MHI,Base,false,,Michael Hinckley FY AU RC
+base,BB-MHI,Blue,false,,Michael Hinckley FY AU RC,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-MHI,Red,false,,Michael Hinckley FY AU RC,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-MK,Base,false,,Matt Kata FY AU RC
+base,BB-MK,Blue,false,,Matt Kata FY AU RC,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-MK,Red,false,,Matt Kata FY AU RC,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-MNH,Base,false,,Matt Hagen FY AU RC
+base,BB-MNH,Blue,false,,Matt Hagen FY AU RC,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-MNH,Red,false,,Matt Hagen FY AU RC,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-NL,Base,false,,Nook Logan FY AU RC
+base,BB-NL,Blue,false,,Nook Logan FY AU RC,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-NL,Red,false,,Nook Logan FY AU RC,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-OC,Base,false,,Ozzie Chavez FY AU RC*
+base,BB-OC,Blue,false,,Ozzie Chavez FY AU RC*,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-OC,Red,false,,Ozzie Chavez FY AU RC*,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-PL,Base,false,,Pete LaForest FY AU RC
+base,BB-PL,Blue,false,,Pete LaForest FY AU RC,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-PL,Red,false,,Pete LaForest FY AU RC,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-PR,Base,false,,Prentice Redman FY AU RC
+base,BB-PR,Blue,false,,Prentice Redman FY AU RC,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-PR,Red,false,,Prentice Redman FY AU RC,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-RC,Base,false,,Ryan Cameron FY AU RC*
+base,BB-RC,Blue,false,,Ryan Cameron FY AU RC*,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-RC,Red,false,,Ryan Cameron FY AU RC*,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-RD,Base,false,,Rajai Davis FY AU RC
+base,BB-RD,Blue,false,,Rajai Davis FY AU RC,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-RD,Red,false,,Rajai Davis FY AU RC,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-RH,Base,false,,Ryan Howard FY AU RC
+base,BB-RH,Blue,false,,Ryan Howard FY AU RC,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-RH,Red,false,,Ryan Howard FY AU RC,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-RS,Base,false,,Ryan Shealy FY AU RC
+base,BB-RS,Blue,false,,Ryan Shealy FY AU RC,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-RS,Red,false,,Ryan Shealy FY AU RC,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-RWH,Base,false,,Robbie Hammock FY AU RC
+base,BB-RWH,Blue,false,,Robbie Hammock FY AU RC,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-RWH,Red,false,,Robbie Hammock FY AU RC,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-ST,Base,false,,Scott Tyler FY AU RC*
+base,BB-ST,Blue,false,,Scott Tyler FY AU RC*,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-ST,Red,false,,Scott Tyler FY AU RC*,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-TA,Base,false,,Tyler Adamczyk FY AU RC*
+base,BB-TA,Blue,false,,Tyler Adamczyk FY AU RC*,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-TA,Red,false,,Tyler Adamczyk FY AU RC*,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-TI,Base,false,,Travis Ishikawa FY AU RC
+base,BB-TI,Blue,false,,Travis Ishikawa FY AU RC,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-TI,Red,false,,Travis Ishikawa FY AU RC,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-TJ,Base,false,,Tyler Johnson FY AU RC
+base,BB-TJ,Blue,false,,Tyler Johnson FY AU RC,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-TJ,Red,false,,Tyler Johnson FY AU RC,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-TO,Base,false,,Tim Olson FY AU RC
+base,BB-TO,Blue,false,,Tim Olson FY AU RC,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-TO,Red,false,,Tim Olson FY AU RC,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-TS,Base,false,,Thomari Story-Harden FY AU RC*
+base,BB-TS,Blue,false,,Thomari Story-Harden FY AU RC*,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-TS,Red,false,,Thomari Story-Harden FY AU RC*,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-WE,Base,false,,Willie Eyre FY AU RC
+base,BB-WE,Blue,false,,Willie Eyre FY AU RC,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-WE,Red,false,,Willie Eyre FY AU RC,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+base,BB-WL,Base,false,,Wil Ledezma FY AU RC
+base,BB-WL,Blue,false,,Wil Ledezma FY AU RC,"short set, serial-numbered to 100; First Year Autographs, serial-numbered to 50; First Year Relics, not numbered",
+base,BB-WL,Red,false,,Wil Ledezma FY AU RC,"short set, serial-numbered to 50; First Year Autographs, serial-numbered to 25; First Year Relics, not numbered",
+auto-double-play-autographs,DP-EB,,true,,Elizardo Ramirez / Bryan Bullington
+auto-double-play-autographs,DP-GK,,true,,Joey Gomes / Jason Kubel
+auto-double-play-autographs,DP-GM,,true,,Jeremy Griffiths / David Martinez
+auto-double-play-autographs,DP-HM,,true,,Mike Hinckley / Brian McCann
+auto-double-play-autographs,DP-HV,,true,,Dan Haren / Joe Valentine
+auto-double-play-autographs,DP-LL,,true,,Nook Logan / Wil Ledezma
+auto-double-play-autographs,DP-RS,,true,,Prentice Redman / Gary Schneidmiller
+auto-double-play-autographs,DP-SB,,true,,Corey Shafer / Gregor Blanco
+auto-double-play-autographs,DP-SR,,true,,Freddy Sanchez / Darrell Rasner
+auto-double-play-autographs,DP-YS,,true,,Kevin Youkilis / Kelly Shoppach
+auto-first-year-autographs,BB-AB,,true,,Andrew Brown FY AU RC
+auto-first-year-autographs,BB-AW,,true,,Aron Weston FY AU RC*
+auto-first-year-autographs,BB-BB,,true,,Bryan Bullington FY AU RC
+auto-first-year-autographs,BB-BFL,,true,,Branden Florence FY AU RC*
+auto-first-year-autographs,BB-BFR,,true,,Ben Francisco FY AU RC
+auto-first-year-autographs,BB-BH,,true,,Brendan Harris FY AU RC
+auto-first-year-autographs,BB-BK,,true,,Beau Kemp FY AU RC*
+auto-first-year-autographs,BB-BM,,true,,Brian McCann FY AU RC
+auto-first-year-autographs,BB-BWB,,true,,Bobby Basham FY AU RC*
+auto-first-year-autographs,BB-CAD,,true,,Carlos Duran FY AU RC*
+auto-first-year-autographs,BB-CJW,,true,,C.J. Wilson FY AU
+auto-first-year-autographs,BB-CM,,true,,Charlie Manning FY AU RC
+auto-first-year-autographs,BB-CS,,true,,Cory Stewart FY AU RC*
+auto-first-year-autographs,BB-CSS,,true,,Corey Shafer FY AU RC*
+auto-first-year-autographs,BB-CWA,,true,,Chien-Ming Wang AU
+auto-first-year-autographs,BB-DAM,,true,,Dustin Moseley FY AU RC
+auto-first-year-autographs,BB-DC,,true,,David Cash FY AU RC*
+auto-first-year-autographs,BB-DH,,true,,Dan Haren FY AU RC
+auto-first-year-autographs,BB-DM,,true,,David Martinez FY AU RC*
+auto-first-year-autographs,BB-DMM,,true,,Dustin McGowan FY AU RC
+auto-first-year-autographs,BB-DR,,true,,Darrell Rasner FY AU RC
+auto-first-year-autographs,BB-DW,,true,,Doug Waechter FY AU RC
+auto-first-year-autographs,BB-ERA,,true,,Elizardo Ramirez FY AU RC
+auto-first-year-autographs,BB-ERI,,true,,Eric Riggs FY AU RC*
+auto-first-year-autographs,BB-ET,,true,,Eider Torres FY AU RC
+auto-first-year-autographs,BB-FP,,true,,Felix Pie FY AU RC
+auto-first-year-autographs,BB-FS,,true,,Felix Sanchez FY AU RC
+auto-first-year-autographs,BB-FT,,true,,Ferdin Tejeda FY AU RC*
+auto-first-year-autographs,BB-GA,,true,,Greg Aquino FY AU RC
+auto-first-year-autographs,BB-GB,,true,,Gregor Blanco FY AU RC
+auto-first-year-autographs,BB-GS,,true,,Gary Schneidmiller FY AU RC*
+auto-first-year-autographs,BB-HR,,true,,Hanley Ramirez FY AU RC
+auto-first-year-autographs,BB-JG,,true,,Joey Gomes FY AU RC*
+auto-first-year-autographs,BB-JK,,true,,Jason Kubel FY AU RC
+auto-first-year-autographs,BB-JLB,,true,,Jaime Bubela FY AU RC
+auto-first-year-autographs,BB-JM,,true,,Jose Morales FY AU RC
+auto-first-year-autographs,BB-JRG,,true,,Jeremy Griffiths FY AU RC
+auto-first-year-autographs,BB-JV,,true,,Joe Valentine FY AU RC
+auto-first-year-autographs,BB-JW,,true,,Josh Willingham FY AU RC
+auto-first-year-autographs,BB-KJ,,true,,Kade Johnson FY AU RC*
+auto-first-year-autographs,BB-KS,,true,,Kelly Shoppach FY AU RC
+auto-first-year-autographs,BB-KY,,true,,Kevin Youkilis FY AU RC
+auto-first-year-autographs,BB-LF,,true,,Lew Ford FY AU RC
+auto-first-year-autographs,BB-MDA,,true,,Matt Diaz FY AU
+auto-first-year-autographs,BB-MDH,,true,,Matt Hensley FY AU RC
+auto-first-year-autographs,BB-MDM,,true,,Mark Malaska FY AU RC
+auto-first-year-autographs,BB-MH,,true,,Michel Hernandez FY AU RC
+auto-first-year-autographs,BB-MHI,,true,,Michael Hinckley FY AU RC
+auto-first-year-autographs,BB-MK,,true,,Matt Kata FY AU RC
+auto-first-year-autographs,BB-MNH,,true,,Matt Hagen FY AU RC
+auto-first-year-autographs,BB-NL,,true,,Nook Logan FY AU RC
+auto-first-year-autographs,BB-OC,,true,,Ozzie Chavez FY AU RC*
+auto-first-year-autographs,BB-PL,,true,,Pete LaForest FY AU RC
+auto-first-year-autographs,BB-PR,,true,,Prentice Redman FY AU RC
+auto-first-year-autographs,BB-RC,,true,,Ryan Cameron FY AU RC*
+auto-first-year-autographs,BB-RD,,true,,Rajai Davis FY AU RC
+auto-first-year-autographs,BB-RH,,true,,Ryan Howard FY AU RC
+auto-first-year-autographs,BB-RS,,true,,Ryan Shealy FY AU RC
+auto-first-year-autographs,BB-RWH,,true,,Robbie Hammock FY AU RC
+auto-first-year-autographs,BB-ST,,true,,Scott Tyler FY AU RC*
+auto-first-year-autographs,BB-TA,,true,,Tyler Adamczyk FY AU RC*
+auto-first-year-autographs,BB-TI,,true,,Travis Ishikawa FY AU RC
+auto-first-year-autographs,BB-TJ,,true,,Tyler Johnson FY AU RC
+auto-first-year-autographs,BB-TO,,true,,Tim Olson FY AU RC
+auto-first-year-autographs,BB-WE,,true,,Willie Eyre FY AU RC
+auto-first-year-autographs,BB-WL,,true,,Wil Ledezma FY AU RC
