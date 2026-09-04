@@ -269,6 +269,15 @@ function deriveIdentity(row, deps) {
   if (!guard.ok) return { ok: false, reasons: guard.reasons.map((r) => `guard:${r}`) };
 
   const isAuto = parsed.isAuto || row.isAuto === true;
+  // THE ONE THING THAT LEGITIMATELY MAKES A ROW AN AUTO.
+  //
+  // parseListingIdentity ORs a title-word reader with the cardNumber reader
+  // and returns one flag, so by the time it lands here the evidence is gone.
+  // The census reported 33,283 rows flipped no-auto -> auto, 100% of them on
+  // the title word alone -- a cut signature mounted with a base card reads
+  // "PSA AUTHENTIC AUTO" and is still a base card. Carry the cardNumber
+  // verdict out separately so the classifier can tell the two apart.
+  const autoByCardNumber = deps.isCardNumberAutoSubset ? !!deps.isCardNumberAutoSubset(cardNumber) : false;
   const parallel = parsed.parallel || row.parallel || "Base";
   const printRun = parsed.printRun ?? row.printRun ?? null;
   const identity = { sport: guard.sport, cardYear, setKey, setNameRaw: setKeyRaw, cardNumber, parallel, isAuto, printRun, gradeCompany, gradeValue };
@@ -288,7 +297,7 @@ function deriveIdentity(row, deps) {
     printRun: null, playerName: row.playerName ?? null, gradeCompany, gradeValue,
   });
   const baseIdentity = { ...identity, parallel: "Base", printRun: null };
-  return { ok: true, identity, slug, baseSlug, baseIdentity, reasons: [] };
+  return { ok: true, identity, slug, baseSlug, baseIdentity, autoByCardNumber, reasons: [] };
 }
 
 // ── main ───────────────────────────────────────────────────────────────────
@@ -321,6 +330,11 @@ async function main() {
   const { reportWrites } = d(["ops", "writeReconciliation.js"]);
   const deps = {
     parseListingIdentity: pti.parseListingIdentity,
+    // isAuto's boundary is the CARD NUMBER, never title text
+    // (CF-ISAUTO-BOUNDARY-IS-CARDNUMBER). The classifier needs this verdict
+    // separately from parseListingIdentity's OR'd `isAuto`, because that OR
+    // is exactly what the D7 guard has to be able to see through.
+    isCardNumberAutoSubset: pti.isCardNumberAutoSubset,
     inferSetKeyFromTitle: pti.inferSetKeyFromTitle,
     inferSportFromTitle: pti.inferSportFromTitle,
     ingestGradeFromTitle: pvs.ingestGradeFromTitle,
@@ -441,6 +455,7 @@ async function main() {
       const res = K.classifyRow({
         row, stored, derived: der.ok ? der.identity : null, checklistBacked: backed, derivationReasons: der.reasons,
         storedSlug: row.cardId, baseDestSlug: der.baseSlug ?? null, baseDestBacked: baseBacked,
+        autoByCardNumber: der.autoByCardNumber === true,
       });
       counts[res.klass]++;
       // THE SPLIT-IDENTITY SIGNAL, tallied ACROSS classes (Drew 2026-09-02).
@@ -597,6 +612,7 @@ async function main() {
       const res = K.classifyRow({
         row: fresh, stored, derived: der.ok ? der.identity : null, checklistBacked: backed, derivationReasons: der.reasons,
         storedSlug: fresh.cardId, baseDestSlug: der.baseSlug ?? null, baseDestBacked: baseBacked,
+        autoByCardNumber: der.autoByCardNumber === true,
       });
       // The class is decided again on what is there NOW, and it must come back
       // as the SAME kind the census queued. A row the census saw as an eviction
