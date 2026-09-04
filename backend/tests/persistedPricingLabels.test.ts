@@ -51,7 +51,7 @@ import { computeUnifiedPrice } from "../src/services/compiq/unifiedPricing.servi
 import { toCanonicalFmvResponse } from "../src/services/compiq/oneValuationPathAdapters.js";
 import { labelsForResult } from "../src/services/ebay/ebaySellDraft.service.js";
 import { persistedLabelsForValuation } from "../src/services/compiq/valuationLabels.js";
-import { observedHoldingWrite, gradeCurveEstimateHoldingWrite } from "../src/services/portfolioiq/holdingValuation.js";
+import { observedHoldingWrite, fallbackRungHoldingWrite } from "../src/services/portfolioiq/holdingValuation.js";
 import { composeHoldingWireShape } from "../src/services/portfolioiq/responseAssembly.js";
 import { buildPricingEnvelope, resolvePricingConfidence } from "../src/services/portfolioiq/pricingEnvelope.builder.js";
 import type { Valuation } from "../src/services/compiq/oneValuationPath.service.js";
@@ -361,12 +361,12 @@ describe("the writer persists the engine's pricing confidence", () => {
     expect(Object.keys(meta as object)).toContain("confidence");
   });
 
-  it("gradeCurveEstimateHoldingWrite stamps it too — an estimate carries its confidence", async () => {
+  it("fallbackRungHoldingWrite stamps it too — an estimate carries its confidence", async () => {
     const v = await valuationFor({
       rows: VERLANDER, grade: { company: "PSA", value: 10 }, owner: OWNER,
       confidence: 0.41,
     });
-    const written = gradeCurveEstimateHoldingWrite(HOLDING, v, new Date().toISOString());
+    const written = fallbackRungHoldingWrite(HOLDING, v, new Date().toISOString());
     const meta = written.pricingSourceMeta as unknown as { confidence?: unknown };
     expect(meta.confidence).toBe(0.41);
     expect(Object.keys(meta as object)).toContain("confidence");

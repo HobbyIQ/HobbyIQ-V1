@@ -30,7 +30,7 @@
 import { CosmosClient, type Container } from "@azure/cosmos";
 import { parseListingIdentity, inferSetKeyFromTitle, inferSportFromTitle } from "./parseTitleIdentity.service.js";
 import { parseHobbyIqCardId, slugify } from "./hobbyIqCardId.service.js";
-import { parseGradeLabel } from "./gradeParser.js";
+import { parseGradeFromTitle } from "./gradeParser.js";
 import { normalizeHoldingFields } from "./holdingFieldNormalizer.service.js";
 import type { StagingClean, StagingDoc } from "./compsStaging.service.js";
 import { classifyTcg } from "./tcgVertical.service.js";
@@ -589,7 +589,7 @@ async function classifyRow(row: StagingDoc, soldComps: Container | null, medianC
       // Parse the grade here rather than reusing `gradeParsed`, which is
       // declared further down this function (line ~529) — the price check runs
       // before it exists. parseGradeLabel is pure and cheap.
-      const rowGrade = title ? parseGradeLabel(title) : null;
+      const rowGrade = title ? parseGradeFromTitle(title) : null;
       const rowGradeKey = gradeTierKey(rowGrade?.gradeCompany, rowGrade?.gradeValue);
       let band: PriceBand | null = medianCache?.get(`${row.hobbyiqCardId}||${rowGradeKey}`) ?? null;
       if (band === null && !medianCache) {
@@ -656,7 +656,7 @@ async function classifyRow(row: StagingDoc, soldComps: Container | null, medianC
   // now so the triage UI + promotion carry the right grade — the
   // legacy migration copied sold_comps.gradeCompany/Value verbatim
   // but many Cardsight rows never captured them.
-  const gradeParsed = title ? parseGradeLabel(title) : null;
+  const gradeParsed = title ? parseGradeFromTitle(title) : null;
 
   // CF-STERLING-CARDNUMBER-REPARSE (Drew, 2026-07-29). The slug's
   // cardNumber slot is frozen at ingest time — and for legacy CH rows

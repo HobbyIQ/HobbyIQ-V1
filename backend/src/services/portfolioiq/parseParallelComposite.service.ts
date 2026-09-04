@@ -28,6 +28,7 @@ import {
   matchFinishModifierAlias,
 } from "./parallelVocabulary.service.js";
 import { detectInsertSet, inferIsAuto, parseListingIdentity } from "./parseTitleIdentity.service.js";
+import type { ChecklistAutoResolver } from "../catalog/checklistAutoLookup.js";
 
 export interface ParallelComposite {
   edition: string | null;         // "SAPPHIRE" | "MEGA_BOX" | "FIRST_EDITION" | "SONIC" | "COSMIC" | "LITE" | null
@@ -56,7 +57,19 @@ export interface ParallelComposite {
 export function parseParallelComposite(
   title: string,
   cardNumber?: string | null,
-  opts?: { sport?: string | null; setName?: string | null }
+  opts?: {
+    sport?: string | null;
+    setName?: string | null;
+    // CF-A-CARDNUMBER-PREFIX-IS-SUFFICIENT-NEVER-NECESSARY (2026-09-04). The
+    // product coordinates + an injected checklist index, so a shared-number
+    // autograph (2011 Topps Chrome #173 Freddie Freeman AUTO, which carries
+    // the BASE card's number) can be read as the auto it is. Optional
+    // throughout: with no resolver the composite behaves exactly as before.
+    year?: number | null;
+    setKey?: string | null;
+    checklistAuto?: ChecklistAutoResolver | null;
+    autoCorroboration?: boolean;
+  }
 ): ParallelComposite {
   const t = String(title ?? "").toLowerCase();
 
@@ -92,6 +105,13 @@ export function parseParallelComposite(
     cardNumber: cardNumber ?? null,
     setName: opts?.setName ?? null,
     titleHasAutoText: legacyParsed.isAuto,
+    year: opts?.year ?? null,
+    setKey: opts?.setKey ?? null,
+    checklistAuto: opts?.checklistAuto ?? null,
+    // The title's own auto words are the usual corroboration. They cannot
+    // arrive via titleHasAutoText (which short-circuits inferIsAuto), so the
+    // same reading is passed explicitly for the checklist rule to gate on.
+    autoCorroboration: opts?.autoCorroboration ?? legacyParsed.isAuto === true,
   });
   const autoStyle = legacyParsed.autoStyle;
 

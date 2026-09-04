@@ -158,8 +158,21 @@ const INSERT_NUM = /[A-Z]/i;
  * ("Ronald Acuna, Jr., Braves"), so the tails are walked right to left.
  */
 const HONORIFIC = /^(Jr|Sr|I{2,3}|IV)\.?$/i;
+/**
+ * CF-EXCH-IS-A-FULFILMENT-STATE-NOT-A-NAME (2026-09-04). BCP marks autograph
+ * checklist lines whose card shipped as a REDEMPTION with a trailing "EXCH":
+ *
+ *   <li>173 Freddie Freeman EXCH</li>
+ *
+ * That is a statement about how the card was delivered, not about who signed
+ * it, and carrying it into playerName would mint "Freddie Freeman EXCH" as a
+ * player distinct from "Freddie Freeman" -- the same one-player-two-spellings
+ * defect the comma/Jr. rule above exists to prevent. Stripped as a trailing
+ * token only, so a real name is never touched.
+ */
+const REDEMPTION_TAIL = /\s+EXCH(?:ANGE)?\.?$/i;
 function cleanScrapedPlayer(raw) {
-  const parts = String(raw ?? "").split(",").map((t) => t.trim()).filter(Boolean);
+  const parts = String(raw ?? "").replace(REDEMPTION_TAIL, "").split(",").map((t) => t.trim()).filter(Boolean);
   if (!parts.length) return "";
   let out = parts[0];
   for (const tail of parts.slice(1)) {
@@ -716,6 +729,32 @@ function hasRangeClause(body) {
 
 /** "one-of-one" / "1/1" is a print run of 1 stated in words. */
 const ONE_OF_ONE = /\bone[-\s]of[-\s]one\b|\b1\s*\/\s*1\b/i;
+/**
+ * CF-A-SPELLED-RUN-IS-STILL-A-RUN (2026-09-04). BCP writes small print runs
+ * as WORDS as readily as digits -- 2011 Topps Chrome's auto ladder ends
+ * "Atomic Refractor (serial-numbered to ten)" and the USA autos' Red is
+ * "serial-numbered to five copies". RUN_NOTE reads digits only, so those
+ * rungs were emitted with a BLANK print run: the rung is real, the number
+ * the page states is right there, and we dropped it.
+ *
+ * ONE_OF_ONE already sets the precedent (it turns "one-of-one" into /1).
+ * This is the same rule over the small words a print run actually uses, and
+ * it is deliberately BOUNDED to one..twenty-five: past that BCP writes
+ * digits, and a loose word-number would start reading prose.
+ */
+const SPELLED_RUNS = new Map([
+  ["one", 1], ["two", 2], ["three", 3], ["four", 4], ["five", 5], ["six", 6],
+  ["seven", 7], ["eight", 8], ["nine", 9], ["ten", 10], ["eleven", 11],
+  ["twelve", 12], ["fifteen", 15], ["twenty", 20], ["twenty-five", 25],
+]);
+const SPELLED_RUN_RE = new RegExp(
+  String.raw`(?:serial-)?numbered to\s+(` + [...SPELLED_RUNS.keys()].join("|") + String.raw`)\b`, "i");
+/** The run a clause states in words, or null. Never guesses: the phrase must
+ *  be the page's own "numbered to <word>". */
+function spelledRun(text) {
+  const m = SPELLED_RUN_RE.exec(String(text ?? ""));
+  return m ? SPELLED_RUNS.get(m[1].toLowerCase()) ?? null : null;
+}
 
 /**
  * One ladder. Rungs carry the CARD NUMBERS they apply to (`cardRange`, null =
@@ -810,7 +849,22 @@ function parseLadder(parallelsBody, playerNames = new Set(), opts = {}) {
     const ranged = text.length <= 160 && parseCardRange(text) != null;
     const scopedRun = text.length <= 200 && /serial-numbered to|numbered to|\bcopies\b/i.test(text)
       && /\b(class|series|tier|level)\s*\d|;/i.test(text);
-    if (text.length > 60 && !ranged && !scopedRun) continue;
+    // CF-A-SERIAL-CLAUSE-IS-NOT-PROSE (2026-09-04, the shared-number auto
+    // lane). The 60-char guard rejects PROSE, but a line that states its own
+    // serial print run is the most structured thing on the page:
+    //
+    //   Black-Bordered Refractor (serial-numbered to 100 copies, Hobby only)
+    //
+    // is 68 chars, carries no card range and no "Class N" scope, so it fell
+    // through all three allowances and was DROPPED -- silently, on the base
+    // ladder as well as the auto one. It survives on the 2011 base ladder
+    // only because that page also gives it an <h3>; inside the Autographs
+    // section it is a bare <li> and vanished, taking the /100 rung out of a
+    // nine-rung ladder. A single stated run makes the line data, not prose
+    // (the multi-figure clause is still refused, below).
+    const singleRun = text.length <= 200
+      && /(?:serial-)?numbered to\s+[\d,]+|\bone-of-one\b|\(\s*[\d,]+\s*cop(?:y|ies)/i.test(text);
+    if (text.length > 60 && !ranged && !scopedRun && !singleRun) continue;
     const paren = text.indexOf("(");
     const name = (paren > 0 ? text.slice(0, paren) : text).trim().replace(/[-–—:]$/, "").trim();
     if (!name || name.length > 45 || !/[A-Za-z]{2}/.test(name)) continue;
@@ -825,6 +879,7 @@ function parseLadder(parallelsBody, playerNames = new Set(), opts = {}) {
     const run = note.match(RUN_NOTE);
     let n = run ? Number((run[1] || run[2] || "").replace(/,/g, "")) : null;
     if (n == null && ONE_OF_ONE.test(note)) n = 1;      // "one-of-one" is /1
+    if (n == null) n = spelledRun(note);                // "numbered to ten" is /10
     if (hasOdds(note)) n = null;                        // 1:12 is odds, not a run
     // Whatever the guards refuse is still a fact the page stated. Keep it in
     // the descriptive field rather than dropping it. CF-RARITY-IS-NOT-A-PRINT-RUN.
@@ -1128,13 +1183,22 @@ function platePrintRun(rung) {
  * from the page or they do not exist. `no synthetic parallels -- actuals only`.
  */
 function parseTypedSection(html, cls) {
-  const body = section(html, cls.id, 2);
+  // Sections are named by their h2 id by default; an autograph subset found
+  // hanging off another section is sliced at its own h3 level instead.
+  const level = cls.level ?? 2;
+  const body = section(html, cls.id, level);
   if (!body) return [];
   const out = [];
-  const heads = [...body.matchAll(/<h3 id="([^"]+?)(?:_\d+)?">/g)];
+  // CF-THE-HEADING-TEXT-NAMES-THE-SCOPE (#1700, kept through the merge). An
+  // id is a SLUG of the heading and may carry a disambiguating "_2" suffix or
+  // be anything at all, so naming a subset from it -- and then asking
+  // SIGNED_HEADING whether that name says "autograph" -- decides "is this
+  // signed?" off a value that is not the page's own words. The text is.
+  const heads = level >= 3 ? []
+    : [...body.matchAll(/<h3 id="([^"]+?)(?:_\d+)?">([\s\S]*?)<\/h3>/g)];
   // The h2's own name, for a section whose cards sit directly under it with no
   // h3 at all. Its slug is the subset name in that case.
-  const h2Name = detag(cls.id.replace(/_/g, " "));
+  const h2Name = detag(String(cls.id).replace(/_/g, " "));
   // CF-AN-H4-IS-ITS-OWN-CARD-LIST (2026-09-04). 2005 Topps Chrome nests a
   // fourth level: §The Game Relics holds 11 cards AND an <h4>Patch</h4> holding
   // 24 DIFFERENT cards, limited to 70 copies. Read as one unit the two lists
@@ -1157,7 +1221,7 @@ function parseTypedSection(html, cls) {
     return out;
   };
   const units = heads.length
-    ? heads.flatMap((m) => unitsFor(detag(m[1].replace(/_/g, " ")), section(body, m[1], 3)))
+    ? heads.flatMap((m) => unitsFor(detag(m[2]) || detag(m[1].replace(/_/g, " ")), section(body, m[1], 3)))
     : unitsFor(h2Name, body);
   for (const u of units) {
     if (!u.body) continue;
@@ -1169,7 +1233,17 @@ function parseTypedSection(html, cls) {
     // because the row carries isAuto=true under an auto- category, which is a
     // different card in the catalog's own terms. That is exactly the card the
     // Freeman finding was missing, so requiring a letter here would re-open it.
-    const signedGuess = cls.signed != null ? cls.signed : SIGNED_HEADING.test(u.name);
+    // CF-A-RELIC-SUBSECTION-UNDER-AN-AUTOGRAPHS-H2-IS-STILL-A-RELIC. The h2
+    // attests for the subsections that do not speak for themselves, but a
+    // subsection whose OWN heading names memorabilia and says nothing about a
+    // signature has spoken: "Game-Used Relics" under an Autographs h2 is 42
+    // unsigned cards, and attesting them from the h2 is the same pool-splitting
+    // false isAuto the mixed-heading rule below exists to prevent. The h3 can
+    // only ever REFUSE the h2's attestation, never manufacture one.
+    const subsectionRefusesSignature = (n) => RELIC_HEADING.test(n) && !SIGNED_HEADING.test(n);
+    const signedGuess = cls.signed != null
+      ? (cls.signed && !subsectionRefusesSignature(u.name))
+      : SIGNED_HEADING.test(u.name);
     const cards = parseTypedCards(u.body).filter((c) => signedGuess ? true : INSERT_NUM.test(c.num));
     if (!cards.length) continue;
     // A subset is not a parallel of itself: the slice starts with its own <h3>,
@@ -1200,11 +1274,17 @@ function parseTypedSection(html, cls) {
       .map((r) => ({ ...r, printRun: platePrintRun(r) }));
     // A mixed heading defers to the subsection: "Dem Bums Autographs" is
     // signed, "The Game Relics" beside it is not.
-    const signed = cls.signed != null ? cls.signed
+    const signed = cls.signed != null
+      ? (cls.signed && !subsectionRefusesSignature(u.name))
       : SIGNED_HEADING.test(u.name) ? true
       : RELIC_HEADING.test(u.name) ? false
       : false;
-    out.push({ name: u.name, cards, ladder, signed, prefix: cls.prefix ?? (signed ? "auto" : "insert") });
+    // A section class only keeps its declared prefix while its attestation
+    // holds; a subsection that refused the signature takes the unsigned lane.
+    const prefix = (cls.prefix != null && signed === (cls.signed === true))
+      ? cls.prefix
+      : (signed ? "auto" : "insert");
+    out.push({ name: u.name, cards, ladder, signed, prefix });
   }
   return out;
 }
@@ -1222,13 +1302,36 @@ function parseTypedSection(html, cls) {
 function parseTypedSections(html) {
   const out = [];
   const seen = new Set();
-  for (const cls of SECTION_CLASSES) {
-    for (const u of parseTypedSection(html, cls)) {
-      const key = u.prefix + ":" + u.name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+  // Dedup on the CARDS a scope occupies, not on its display name. The page's
+  // headings nest by design (2011 Topps Chrome's §Autographs contains
+  // §Autographed Rookies) and the h3 fallback pass below deliberately re-walks
+  // ground the h2 pass already covered -- keyed on the name, the same 29 cards
+  // would land twice under two spellings of one heading, which is exactly the
+  // split pool `one card, one row, one pool` forbids.
+  const cardKey = (u) => u.prefix + ":" + u.cards.map((c) => c.num + "|" + c.player).join(",");
+  const take = (units) => {
+    for (const u of units) {
+      const key = cardKey(u);
       if (seen.has(key)) continue;
       seen.add(key);
       out.push(u);
     }
+  };
+  for (const cls of SECTION_CLASSES) take(parseTypedSection(html, cls));
+  // CF-AN-AUTOGRAPH-SUBSET-NEED-NOT-LIVE-UNDER-AN-AUTOGRAPHS-H2 (#1700, kept
+  // through the #1703 merge). SECTION_CLASSES anchors on the page's h2
+  // vocabulary, but some layouts hang "Rookie Autographs" off §Inserts with no
+  // Autographs h2 above it at all. Read from the page's whole h3 set, so a
+  // signed subset is found wherever the page happens to put it -- the dedup
+  // above means one already read under its h2 is not read twice.
+  //
+  // The heading TEXT names the scope, never the id: an id is a slug and may
+  // carry a disambiguating suffix, so reading it would decide "is this
+  // signed?" off a value that is not the page's own words.
+  for (const m of html.matchAll(/<h3 id="([^"]+?)">([\s\S]*?)<\/h3>/g)) {
+    const name = detag(m[2]) || detag(String(m[1]).replace(/_/g, " "));
+    if (!SIGNED_HEADING.test(name)) continue;
+    take(parseTypedSection(html, { id: m[1], prefix: "auto", signed: true, level: 3 }));
   }
   return out;
 }
@@ -1326,6 +1429,30 @@ async function main(opts = {}) {
         console.log(`   scope "${sc.title}": card list (${sc.cards.length} cards), 0 rungs — not a ladder`);
         continue;
       }
+      // CF-THE-BARE-STEM-ALWAYS-LANDS (2026-09-04, found closing #1703).
+      // Decided up front because it settles TWO things that must agree: which
+      // FILE this scope writes, and whether it carries the page's own inserts
+      // and typed sections. See the filename note further down.
+      const stemOf = (o) => productKey(o.setKey);
+      const stem = stemOf(sc);
+      // Only scopes that actually EMIT can hold a filename. The loop's own two
+      // guards above skip a rung-less scope and a card-list scope before they
+      // ever write, and on 2022 Topps Chrome the paper scope is exactly that:
+      // it exists, it is `isPaper`, and it has ZERO rungs, so it was elected
+      // holder of the bare stem and then never reached the write. Electing a
+      // scope that cannot write is how the file came to be written by nobody.
+      const emits = (o) => (o.rungs && o.rungs.length) && !o.cardList;
+      const onStem = scopes.filter((o) => stemOf(o) === stem && emits(o));
+      const sharesStem = onStem.length > 1;
+      // Exactly one emitting scope per stem holds it: the paper scope where the
+      // page has one, otherwise the first on that stem in page order (so a
+      // re-scrape writes the same filename as the run before it).
+      const holdsBareStem = sc === (onStem.find((o) => o.isPaper) ?? onStem[0]);
+      // The page's inserts and typed sections belong to the page's own
+      // product. `sc.isPaper` was the proxy for that, and it fails on a page
+      // whose only paper scope never emits -- so ask the question directly,
+      // of the scopes that can actually carry them.
+      const carriesPageSections = sc.isPaper || (holdsBareStem && !onStem.some((o) => o.isPaper));
       // The scope's cards. Its own numbering when the page states a prefix;
       // otherwise the paper numbers, loudly flagged rather than guessed.
       let scopeCards = cards;
@@ -1371,7 +1498,12 @@ async function main(opts = {}) {
       // this file's alone. Fixing it is what makes the sections below reach the
       // catalog at all.
       let insertRows = 0, autoRows = 0, subsets = [];
-      if (sc.isPaper) {
+      // The page's own inserts and typed sections belong to the scope that
+      // holds the bare stem -- the paper scope where the page has one, and
+      // otherwise the single scope that claims the page's own product name.
+      // Gating on `sc.isPaper` alone dropped them entirely on a page with no
+      // paper scope at all (CF-THE-BARE-STEM-ALWAYS-LANDS, below).
+      if (carriesPageSections) {
         subsets = [
           ...parseInserts(html).map((i) => ({ ...i, signed: false, prefix: "insert" })),
           ...parseTypedSections(html),
@@ -1414,10 +1546,31 @@ async function main(opts = {}) {
       //
       // The suffix is about FILENAME COLLISION, so decide it that way: a scope
       // may go bare only if no other scope of this page shares its stem.
-      const stemOf = (s) => productKey(s.setKey);
-      const stem = stemOf(sc);
-      const sharesStem = scopes.filter((o) => stemOf(o) === stem).length > 1;
-      const key = stem + (!sc.isPaper && (!sc.isOwnProduct || sharesStem)
+      //
+      // CF-THE-BARE-STEM-ALWAYS-LANDS (2026-09-04, found closing #1703). The
+      // suffix rule above is gated on `!sc.isPaper`, which quietly assumed
+      // that a page always HAS a paper scope to take the bare stem. 2022 Topps
+      // Chrome has none: its two scopes are "Standard Chrome" and "Sonic",
+      // both non-paper and both sharing the stem `topps-chrome`, so both took
+      // a suffix and `2022-topps-chrome-baseball.csv` was never written at all.
+      //
+      // That is not a cosmetic filename gap. The page's inserts and its typed
+      // sections are emitted under `sc.isPaper` alone -- they belong to the
+      // page's own product, never to a qualified scope -- so with no paper
+      // scope on the page they had nowhere to go: 260 base cards, 273
+      // typed-section cards (238 of them SIGNED, including three whole
+      // autograph subsets) and 145 insert cards, read from the page, counted
+      // in the run summary, and written to no file. The lane reported
+      // "12,480 rows across 2 product(s)" while the entire autograph and
+      // insert yield of the page evaporated.
+      //
+      // The fix keeps the collision rule exactly as it is and adds the
+      // guarantee it was missing: exactly one scope of every page takes the
+      // bare stem. Where no paper scope exists to claim it, the FIRST scope on
+      // the stem does -- deterministic in page order, so a re-scrape writes
+      // the same filename as the run before it -- and it also becomes the
+      // scope that carries the page's inserts and typed sections.
+      const key = stem + (!holdsBareStem && (!sc.isOwnProduct || sharesStem)
         ? "--" + sc.title.toLowerCase().replace(/[^a-z0-9]+/g, "-") : "");
       if (sc.refused) for (const r of sc.refused) console.log(`   scope "${sc.title}": product move REFUSED by the vocabulary (${r.qualifier}) — ${r.reason}
      rows stay under ${sc.setKey} with prefix ${sc.prefix ?? "(paper)"}; this is a ruling for Drew, not a scraper decision`);
@@ -1441,6 +1594,21 @@ async function main(opts = {}) {
         cardNumberPrefix: sc.prefix, prefixDerivedFrom: sc.prefixVia,
         prefixUnresolved: (sc.isOwnProduct || sc.prefix != null) && sc.prefix == null,
         ladder: sc.rungs.map((r) => ({ name: sc.isOwnProduct ? rungNameInScope(r.name, sc.title) : r.name, printRun: r.printRun, rarity: r.rarity ?? null })),
+        // The autograph and memorabilia subsets this page states, with THEIR
+        // OWN ladders -- the record that a shared-number auto exists for these
+        // cards, and the print runs that belong to it rather than to the base
+        // (#1700's manifest contract). It is a VIEW over `sections` below
+        // rather than a second parse: after the #1700/#1703 merge there is one
+        // typed-section reader, and two readers over the same headings would
+        // be two answers to "is this signed?" -- the split-pool shape both
+        // PRs exist to close.
+        autographs: subsets
+          .filter((sub) => sub.prefix === "auto" || RELIC_HEADING.test(sub.name))
+          .map((sub) => ({
+            name: sub.name, type: sub.signed ? "auto" : "relic", isAuto: sub.signed,
+            cards: sub.cards.length,
+            ladder: sub.ladder.map((r) => ({ name: r.name, printRun: r.printRun })),
+          })),
         setRarity,
         // Which card-type sections this page actually carried, and how each was
         // classified. A re-acquire plan reads this to know which entries gained
@@ -1482,7 +1650,7 @@ module.exports = {
   // #1571: the print-run scoping surface — range clauses, the EXCEPT
   // boundary, and the odds guard, each pinned directly by its own test.
   parseCardRange, cardInRange, splitAtException, exceptionPlayers, parseSubsetRuns, subsetRanges,
-  matchesExceptionPlayer, hasRangeClause, hasOdds, splitAnnotation, detag,
+  matchesExceptionPlayer, hasRangeClause, hasOdds, splitAnnotation, detag, spelledRun,
   // CF-RARITY-IS-NOT-A-PRINT-RUN: the descriptive companion to printRun.
   extractRarity,
 };

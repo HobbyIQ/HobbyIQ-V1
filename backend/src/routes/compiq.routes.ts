@@ -2831,6 +2831,21 @@ router.post("/search", requireSession, requireRateLimited("priceChecksPerDay"), 
       // 60s keeps the original freshness intent nearly intact — a checklist row
       // ingested now is visible within a minute instead of instantly, which is
       // still 15x tighter than the pricing TTL this was written to beat.
+      // CF-SEARCH-HONORS-AUTO-INTENT (2026-09-04, the Freeman auto). The PRICE
+      // path has always honoured a typed "auto" -- narrowToRequestedVariants
+      // filters the pool by it -- while this options lookup dropped it on the
+      // floor: `isAuto` is a first-class CatalogSearchInput (it becomes a hard
+      // `c.isAuto = @isAuto` scope) and the route simply never passed it. So
+      // "2011 Topps Chrome Freddie Freeman auto" scored every row identically
+      // (all 5,026 rows of that product are isAuto=false), returned the BASE
+      // card, and cached it. Search and price disagreed about the same words.
+      //
+      // `auto` is an ANCHOR_STOPWORD, so it can never reach the row text as a
+      // token -- passing the parsed intent is the only way the word survives.
+      const wantsAuto = parsedForAnchor?.isAuto === true;
+      // The cache key carries the intent: an auto-intent answer and a base
+      // answer are different answers to different questions, and the old key
+      // (query text alone) is shared by both.
       const catalogCacheKey = normalizeCacheKey("compiq:catalogopts:v1", query);
       const catalog = await cacheWrap(
         catalogCacheKey,
@@ -2838,6 +2853,7 @@ router.post("/search", requireSession, requireRateLimited("priceChecksPerDay"), 
           query: query.trim(),
           limit: 25,
           playerName: parsedForAnchor?.playerName ?? null,
+          isAuto: wantsAuto ? true : null,
         }),
         {
           freshTtlSeconds: CATALOG_OPTIONS_TTL_SECONDS,
@@ -2852,13 +2868,69 @@ router.post("/search", requireSession, requireRateLimited("priceChecksPerDay"), 
           // would pin one slow moment's short result over the complete one
           // for the whole TTL. This is the reason searchCatalog reports
           // `timedOut` rather than just returning what it has.
+          //
+          // CF-NEVER-CACHE-AN-UNSATISFIED-AUTO-INTENT (2026-09-04). When the
+          // user typed "auto" and every hit is isAuto=false, the answer is
+          // WRONG, not merely thin -- the catalog has no row for the signed
+          // card yet (that is the gap the seed signal below reports). Caching
+          // it pins the base card as the answer to an auto question for the
+          // whole TTL, and the very next request is the one that would have
+          // repaired it once the checklist lands.
           skipCacheWhen: (r) =>
-            !r || !Array.isArray(r.hits) || r.hits.length === 0 || r.timedOut === true,
+            !r || !Array.isArray(r.hits) || r.hits.length === 0 || r.timedOut === true
+            || (wantsAuto && !r.hits.some((h) => (h as { isAuto?: boolean }).isAuto === true)),
         },
       );
       catalogMs = Date.now() - catalogStartedAt;
       catalogOptions = catalog.hits;
       catalogProvisional = catalog.provisional === true;
+
+      // CF-AN-UNSATISFIABLE-AUTO-INTENT-IS-A-GAP (2026-09-04). The user asked
+      // for a signed card and the catalog has no signed row for that product.
+      // That is a CHECKLIST gap -- exactly what the seed queue exists to
+      // record -- and it was the one thing this path never said out loud, so
+      // the Freeman auto could be missing for as long as nobody complained.
+      //
+      // Best-effort and non-blocking: a queue failure must never affect the
+      // answer. The queue suppresses duplicates in-process, so a user
+      // retrying a search cannot spam it.
+      if (wantsAuto && !catalog.hits.some((h) => (h as { isAuto?: boolean }).isAuto === true)) {
+        // The seed row is keyed (sport, year, setKey), so a gap is only
+        // RECORDED when the query actually stated a product and a year.
+        // Anything less would file the gap under a guessed key, which is
+        // worse than not filing it: `a "missing" checklist is usually a wrong
+        // key`. The telemetry line below still fires either way.
+        const gapYear = parsedForAnchor?.year ?? null;
+        const gapSetName = parsedForAnchor?.set ?? null;
+        const gapSetKey = gapSetName ? normalizeSetKey(gapSetName) : null;
+        if (gapYear && gapSetKey) {
+          void Promise.all([
+            import("../services/catalog/checklistSeedQueue.service.js"),
+            import("../services/portfolioiq/soldCompsStore.service.js"),
+          ])
+            .then(([{ requestChecklistSeed }, { inferSportFromContext }]) => requestChecklistSeed({
+              // The query parser states no sport, and `sport` is part of the
+              // seed's identity -- so it is READ from the query's own words by
+              // the same helper the ingest path uses, never hardcoded.
+              sport: String(inferSportFromContext(gapSetName, query, Number(gapYear)) ?? "baseball"),
+              year: Number(gapYear),
+              setName: String(gapSetName),
+              setKey: String(gapSetKey),
+              reason: "search-auto-intent-unsatisfiable",
+              missingPlayer: parsedForAnchor?.playerName ?? undefined,
+              missingCardNumber: parsedForAnchor?.cardNumber ?? undefined,
+            }))
+            .catch(() => { /* a gap we could not record is not a failed search */ });
+        }
+        console.log(JSON.stringify({
+          event: "compiq_search_auto_intent_unsatisfied",
+          source: "compiq.routes.search",
+          query,
+          year: gapYear,
+          setKey: gapSetKey,
+          hits: catalog.hits.length,
+        }));
+      }
     } catch (err) {
       console.warn(JSON.stringify({
         event: "compiq_search_catalog_options_failed",

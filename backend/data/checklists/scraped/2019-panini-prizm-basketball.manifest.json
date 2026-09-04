@@ -1,0 +1,199 @@
+{
+ "scrapedAt": "2026-09-04T02:00:33.070Z",
+ "sourceUrl": "https://www.hobbymonitor.com/release/2019-20-panini-prizm-basketball",
+ "sport": "basketball",
+ "year": 2019,
+ "setName": "panini-prizm",
+ "productKey": "2019-panini-prizm",
+ "setKey": "panini-prizm",
+ "rowCount": 17338,
+ "parallelColumnAuthoritative": true,
+ "cardRows": 1193,
+ "ladderRows": 16145,
+ "rungsReal": 125,
+ "rungsDroppedPlayerName": 0,
+ "rungsUnnumbered": 120,
+ "refusedSubsets": 0,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Luck of the Lottery",
+   "category": "luck-of-the-lottery",
+   "playerCount": 15,
+   "rungs": 6,
+   "rowCount": 105,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Instant Impact",
+   "category": "instant-impact",
+   "playerCount": 25,
+   "rungs": 2,
+   "rowCount": 75,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Fast Break Rookie Autographs",
+   "category": "fast-break-rookie-autographs",
+   "playerCount": 40,
+   "rungs": 2,
+   "rowCount": 120,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Sensational Signatures",
+   "category": "sensational-signatures",
+   "playerCount": 98,
+   "rungs": 10,
+   "rowCount": 1078,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Base Signatures",
+   "category": "base-signatures",
+   "playerCount": 192,
+   "rungs": 0,
+   "rowCount": 192,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Sensational Swatches",
+   "category": "sensational-swatches",
+   "playerCount": 100,
+   "rungs": 3,
+   "rowCount": 400,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Rookie Signatures",
+   "category": "rookie-signatures",
+   "playerCount": 40,
+   "rungs": 11,
+   "rowCount": 480,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Fireworks",
+   "category": "fireworks",
+   "playerCount": 30,
+   "rungs": 6,
+   "rowCount": 210,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Rookie Penmanship",
+   "category": "rookie-penmanship",
+   "playerCount": 40,
+   "rungs": 4,
+   "rowCount": 200,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Fearless",
+   "category": "fearless",
+   "playerCount": 20,
+   "rungs": 6,
+   "rowCount": 140,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Emergent",
+   "category": "emergent",
+   "playerCount": 30,
+   "rungs": 2,
+   "rowCount": 90,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Base",
+   "category": "base",
+   "playerCount": 314,
+   "rungs": 40,
+   "rowCount": 12874,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Fast Break Autographs",
+   "category": "fast-break-autographs",
+   "playerCount": 60,
+   "rungs": 2,
+   "rowCount": 180,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Signatures",
+   "category": "signatures",
+   "playerCount": 54,
+   "rungs": 10,
+   "rowCount": 594,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Dominance",
+   "category": "dominance",
+   "playerCount": 25,
+   "rungs": 2,
+   "rowCount": 75,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Penmanship",
+   "category": "penmanship",
+   "playerCount": 55,
+   "rungs": 3,
+   "rowCount": 220,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Far Out!",
+   "category": "far-out",
+   "playerCount": 25,
+   "rungs": 6,
+   "rowCount": 175,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > NBA Finalists",
+   "category": "nba-finalists",
+   "playerCount": 10,
+   "rungs": 2,
+   "rowCount": 30,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Widescreen",
+   "category": "widescreen",
+   "playerCount": 10,
+   "rungs": 6,
+   "rowCount": 70,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Get Hyped!",
+   "category": "get-hyped",
+   "playerCount": 10,
+   "rungs": 2,
+   "rowCount": 30,
+   "refused": false,
+   "printRun": null
+  }
+ ]
+}

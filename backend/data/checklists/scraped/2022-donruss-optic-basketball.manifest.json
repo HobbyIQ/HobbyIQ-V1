@@ -1,0 +1,217 @@
+{
+ "scrapedAt": "2026-09-04T02:00:50.245Z",
+ "sourceUrl": "https://www.hobbymonitor.com/release/2022-23-donruss-optic-basketball",
+ "sport": "basketball",
+ "year": 2022,
+ "setName": "donruss-optic",
+ "productKey": "2022-donruss-optic",
+ "setKey": "donruss-optic",
+ "rowCount": 16423,
+ "parallelColumnAuthoritative": true,
+ "cardRows": 854,
+ "ladderRows": 15569,
+ "rungsReal": 194,
+ "rungsDroppedPlayerName": 0,
+ "rungsUnnumbered": 65,
+ "refusedSubsets": 0,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > All-Stars",
+   "category": "all-stars",
+   "playerCount": 40,
+   "rungs": 10,
+   "rowCount": 440,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Lights Out",
+   "category": "lights-out",
+   "playerCount": 15,
+   "rungs": 10,
+   "rowCount": 165,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Dominators Signatures",
+   "category": "dominators-signatures",
+   "playerCount": 36,
+   "rungs": 2,
+   "rowCount": 108,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Splash!",
+   "category": "splash",
+   "playerCount": 15,
+   "rungs": 7,
+   "rowCount": 120,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Base",
+   "category": "base",
+   "playerCount": 250,
+   "rungs": 46,
+   "rowCount": 11750,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Express Lane",
+   "category": "express-lane",
+   "playerCount": 25,
+   "rungs": 7,
+   "rowCount": 200,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Signature Series",
+   "category": "signature-series",
+   "playerCount": 98,
+   "rungs": 7,
+   "rowCount": 784,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Rated Rookies Signatures",
+   "category": "rated-rookies-signatures",
+   "playerCount": 50,
+   "rungs": 16,
+   "rowCount": 850,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Fast Break Signatures",
+   "category": "fast-break-signatures",
+   "playerCount": 82,
+   "rungs": 2,
+   "rowCount": 246,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > T-Minus 3...2...1...",
+   "category": "t-minus-3-2-1",
+   "playerCount": 15,
+   "rungs": 7,
+   "rowCount": 120,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > My House",
+   "category": "my-house",
+   "playerCount": 20,
+   "rungs": 7,
+   "rowCount": 160,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Elite Dominators",
+   "category": "elite-dominators",
+   "playerCount": 25,
+   "rungs": 10,
+   "rowCount": 275,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Raining 3s",
+   "category": "raining-3s",
+   "playerCount": 20,
+   "rungs": 10,
+   "rowCount": 220,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Star Gazing",
+   "category": "star-gazing",
+   "playerCount": 15,
+   "rungs": 10,
+   "rowCount": 165,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Winner Stays",
+   "category": "winner-stays",
+   "playerCount": 20,
+   "rungs": 7,
+   "rowCount": 160,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > The Elite Series Signatures",
+   "category": "the-elite-series-signatures",
+   "playerCount": 15,
+   "rungs": 2,
+   "rowCount": 45,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Opti-Graphs",
+   "category": "opti-graphs",
+   "playerCount": 26,
+   "rungs": 5,
+   "rowCount": 156,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Optical Illusions",
+   "category": "optical-illusions",
+   "playerCount": 10,
+   "rungs": 7,
+   "rowCount": 80,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Rookie Optics Autographs",
+   "category": "rookie-optics-autographs",
+   "playerCount": 28,
+   "rungs": 5,
+   "rowCount": 168,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Rookie Dominators Signatures",
+   "category": "rookie-dominators-signatures",
+   "playerCount": 36,
+   "rungs": 2,
+   "rowCount": 108,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > The Rookies",
+   "category": "the-rookies",
+   "playerCount": 5,
+   "rungs": 10,
+   "rowCount": 55,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Retro Series Signatures",
+   "category": "retro-series-signatures",
+   "playerCount": 8,
+   "rungs": 5,
+   "rowCount": 48,
+   "refused": false,
+   "printRun": null
+  }
+ ]
+}

@@ -138,9 +138,161 @@ const csvCell = (v) => {
 
 // A subset is an autograph set when the source says so, either on cardType or
 // in the subset name. Relic/Insert stay false — isAuto is about signatures.
+//
+// "Autograph Relic" is a cardType hobbymonitor uses in its own right (188 cards
+// on 2026 Topps Series 1: City Connect Autograph Relic, Heavy Lumber Autograph
+// Relic, Topps Flagship Autograph Patch). It matches /autograph/ and IS signed,
+// which is right — the relic half of that name is carried by cardTypeOf()
+// below, not by this flag.
 const isAutoOf = (c) =>
   /autograph/i.test(String(c.cardType ?? "")) ||
   /\b(auto|autograph|signature)/i.test(String(c.cardSet ?? ""));
+
+// CF-HM-CARD-TYPE-IS-THE-SOURCE-SPEAKING (2026-09-04).
+//
+// hobbymonitor types every card object. Across the four richest releases the
+// vocabulary is exactly six values:
+//
+//     Insert 2199 | Base 1792 | Autograph 1280 | Variation 1083
+//     Relic 478   | Autograph Relic 188
+//
+// The emitter read only isAutoOf, so Relic and Variation — 1,749 of those 7,020
+// cards — were flattened into `insert-<slug>` with nothing left saying what
+// they are. A Gold Logoman Relic and a Diamond Moments insert came out of this
+// file as the same kind of thing.
+//
+// The type is normalised here and carried in the CSV's 9th column. The
+// checklist CSV contract reads its header BY NAME and ignores a column it does
+// not know, so this is additive: today's ingester sees the same eight columns
+// it always did, and the memorabilia signal is in the file for the day
+// ingest-scraped-checklist passes subsetName through. Nothing is invented —
+// every value is the source's own cardType, folded to a slug.
+const cardTypeOf = (c) => {
+  const t = String(c.cardType ?? "").trim().toLowerCase();
+  if (!t) return "";
+  if (/autograph/.test(t) && /relic|patch|memorabilia/.test(t)) return "autograph-relic";
+  if (/relic|patch|memorabilia/.test(t)) return "relic";
+  if (/variation/.test(t)) return "variation";
+  if (/autograph/.test(t)) return "autograph";
+  if (/insert/.test(t)) return "insert";
+  if (/^base$/.test(t)) return "base";
+  return slug(t);
+};
+
+// CF-HM-A-VARIATION-IS-A-RUNG (2026-09-04) — the same ruling
+// CF-CHECKLIST-VARIATION-IS-A-PARALLEL made for the Beckett converter, now for
+// this lane. A variation is a FINISH ON A CARD THAT ALREADY EXISTS, not a card
+// standing beside it. 2026 Topps Series 1 lists Jacob Misiorowski at #10 nine
+// times — Base, plus Golden Mirror Image, Vintage Stock, Clear, Holiday, Team
+// Color Border, True Photo, Player Number and 1952 Rookie. Emitting those as
+// eight `insert-*` subsets mints eight cards where the hobby trades ONE card in
+// eight finishes: a split pool, and a wrong FMV on every one of them.
+//
+// THE DISCRIMINATOR IS THE SOURCE, NEVER THE NUMBERS ALONE. Card-number overlap
+// on its own is not sufficient here and would be actively wrong: "Real One
+// Relic" (76 cards) and "Flagship Real One Autograph" (44) also sit entirely
+// inside the base numbering run on that same page, and both are their own
+// cards. So a subset may fold only when hobbymonitor ITSELF says it is a
+// variation, in either of the two shapes the source uses —
+//
+//   * cardType === "Variation"        2026 Topps Series 1
+//   * cardType "Base" + a cardSet naming a variation or short print
+//                                     2026 Topps Chrome "Base - Image
+//                                     Variations", 2026 Bowman "Base Rookie
+//                                     Red RC Logo Variation"
+//
+// — and only then, having said so, must its numbers ALSO all land inside one
+// anchor. Both tests, never either.
+const VARIATION_NAME = /\b(variations?|short\s*prints?|ssps?)\b/i;
+
+/** An anchor is a plain base run — the card a variation is a variation OF. A
+ *  release can have several: 2026 Topps Series 1 numbers Team Card, League
+ *  Leaders, Combo Card and Future Stars on their own runs, and each has its own
+ *  Golden Mirror Image that must fold onto ITS run and no other. */
+const isAnchorSubset = (type, set) =>
+  cardTypeOf({ cardType: type }) === "base" && !VARIATION_NAME.test(String(set ?? ""));
+
+/** A subset the source has declared a variation, by type or by name. */
+const isVariationSubset = (type, set) => {
+  const t = cardTypeOf({ cardType: type });
+  if (t === "variation") return true;
+  return t === "base" && VARIATION_NAME.test(String(set ?? ""));
+};
+
+/**
+ * The rung a variation subset names, relative to its anchor: the words it ADDS.
+ * "Base - Image Variations" against "Base Cards" is "Image Variation"; a bare
+ * "Vintage Stock" against "Base" shares no word and is already the rung.
+ *
+ * Returns "" when the subset adds nothing — an unnameable fold, which
+ * classifyVariations() refuses rather than collapsing onto the anchor's slug.
+ */
+function variationRung(set, anchorSet) {
+  const tok = (x) => String(x ?? "").split(/[\s–—-]+/)
+    .map((t) => t.trim()).filter(Boolean);
+  const drop = new Set(tok(anchorSet).map((t) => t.toLowerCase()));
+  // "Cards" in "Base Cards" names the anchor, not the finish.
+  drop.add("cards");
+  const out = tok(set).filter((t) => !drop.has(t.toLowerCase()));
+  if (!out.length) return "";
+  // The subset is titled in the plural ("Image Variations"); a rung is singular.
+  const last = out[out.length - 1];
+  if (/s$/i.test(last) && !/ss$/i.test(last)) out[out.length - 1] = last.replace(/s$/i, "");
+  return out.join(" ");
+}
+
+/**
+ * Decide, for every subset in the release, whether it is a run of cards in its
+ * own right or a rung on an anchor.
+ *
+ * `subsets` is a Map of "cardSet||cardType" -> {set, type, nums:Set}.
+ * Returns a Map of the same keys -> {role, ...} carrying the folds.
+ *
+ * Refusal is the safe direction and is taken twice:
+ *   * PARTIAL overlap is ambiguous — 2026 Topps Series 1's "Golden Mirror
+ *     Legend" hits 96% of the base run and "Funko" 80%. Guessing either way
+ *     files a whole subset wrong and keeps it wrong, so both stay own-cards.
+ *   * An UNNAMEABLE fold (the subset adds no word to its anchor) would collapse
+ *     silently onto the anchor's own slug and overwrite it.
+ */
+function classifyVariations(subsets) {
+  const all = [...subsets.entries()].map((e) => Object.assign({ key: e[0] }, e[1]));
+  const anchors = all.filter((s) => isAnchorSubset(s.type, s.set));
+  const out = new Map();
+  if (!anchors.length) return out;
+
+  for (const s of all) {
+    if (anchors.indexOf(s) !== -1) continue;
+    if (!isVariationSubset(s.type, s.set)) continue;
+
+    let best = null;
+    for (const a of anchors) {
+      const hit = [...s.nums].filter((n) => a.nums.has(n)).length;
+      const pct = s.nums.size ? hit / s.nums.size : 0;
+      // On a tie prefer the TIGHTEST anchor: the smallest run that still holds
+      // every one of these numbers is the run they actually belong to. Without
+      // it, "Golden Mirror Image (Team Card)" folds onto the 303-card base run
+      // instead of the 15-card Team Card run it is named after.
+      if (!best || pct > best.pct || (pct === best.pct && a.nums.size < best.anchor.nums.size)) {
+        best = { anchor: a, pct: pct };
+      }
+    }
+    if (!best || best.pct < 1) {
+      out.set(s.key, { role: "own-cards", reason: best && best.pct > 0
+        ? `partial overlap ${(best.pct * 100).toFixed(0)}% with ${best.anchor.set}`
+        : "no anchor holds these numbers" });
+      continue;
+    }
+    const rung = variationRung(s.set, best.anchor.set);
+    if (!rung) {
+      out.set(s.key, { role: "own-cards", reason: "fold would be unnameable" });
+      continue;
+    }
+    out.set(s.key, { role: "parallel", anchorKey: best.anchor.key,
+      anchorSet: best.anchor.set, anchorType: best.anchor.type, rung: rung });
+  }
+  return out;
+}
 
 // Same ceilings as convertChecklistCenterToChecklistCsv: past these a "ladder"
 // is a roster and the subset is refused rather than multiplied.
@@ -153,24 +305,46 @@ const foldName = (s) => String(s ?? "").split(" - ")[0]
   .toLowerCase().replace(/[^a-z]/g, "");
 
 /**
- * A parallel entry is a real RUNG only when the source priced its scarcity:
- * a printRun, a 1/1 flag, or pack odds. Everything else is a misfiled player
- * name -- 53 of 218 on 2026 Bowman -- and minting those would put "Ethan
- * Holliday" in the parallel column of a catalog row.
+ * A parallel entry is a real RUNG when the source names a PARALLEL rather than
+ * a PERSON. The roster check is the guard that does that work: `roster` holds
+ * every player name in THIS product, so "Ethan Holliday" filed into a hit
+ * subset's parallels[] is caught by name, not by proxy.
  *
- * `roster` is every player name in THIS product, so a refusal can name which
- * of the two reasons it fired on; an entry with no scarcity that is also a
- * known player of the set is unambiguous.
+ * IT USED TO REQUIRE SCARCITY (CF-HM-VINTAGE-LADDER-DROPPED, 2026-09-03).
+ * The original rule demanded a printRun, a 1/1 flag or pack odds, using
+ * scarcity as a proxy for "this is a real rung". That proxy holds on 2026
+ * Bowman, where every rung is numbered, and it is WRONG on everything older:
+ * hobbymonitor states unnumbered parallels with no printRun at all, so the
+ * proxy dropped the entire ladder. Measured over 34 pages of the lane: 3,644
+ * ladder entries, 2,685 scarce, 958 unnumbered-but-real, and exactly ONE
+ * misfiled player name ("Christy Mathewson - All 300 subjects") -- which the
+ * roster check catches on its own. 2012/13 Panini Prizm published "Prizms",
+ * "Prizms Green" and "Prizms Gold", all unnumbered, and ingested base-only;
+ * 2019/20 Prizm kept 3 rungs and dropped 49 real ones (Prizms Silver, Prizms
+ * Mojo, Prizms Green Ice). That is the "ladder present but ZERO print runs"
+ * partial the universe manifest counts 2,029 of.
+ *
+ * A DROPPED PRINT RUN IS NOT A DROPPED RUNG. An unnumbered rung is emitted
+ * with printRun BLANK -- blank means unknown, never a guess and never "Base"
+ * (CF-BLANK-MEANS-UNKNOWN-NEVER-BASE). The card exists and the pool has sales
+ * for it; what we do not know is its scarcity, and inventing one would be a
+ * synthetic parallel.
+ *
+ * The name still has to LOOK like a rung and not a stray sentence, so two
+ * cheap shape checks stay: an empty name, and a name past 60 characters (the
+ * "- All 300 subjects" shape), are still refused.
  */
 function classifyRung(p, roster) {
   const name = String(p && p.name != null ? p.name : "").trim();
   if (!name) return { ok: false, why: "empty" };
-  const hasScarcity = p.printRun != null || p.isOneOfOne === true ||
-    (p.odds != null && String(p.odds).trim() !== "");
-  if (hasScarcity) return { ok: true, why: null };
+  // The misfiled-name guard, which is the one that was ever load-bearing.
   if (roster.has(foldName(name))) return { ok: false, why: "player-name" };
   if (name.length > 60) return { ok: false, why: "over-60-chars" };
-  return { ok: false, why: "no-scarcity" };
+  const hasScarcity = p.printRun != null || p.isOneOfOne === true ||
+    (p.odds != null && String(p.odds).trim() !== "");
+  // Kept either way; `why` records which, so the run banner can still report
+  // how much of a ladder the source priced.
+  return { ok: true, why: hasScarcity ? null : "unnumbered" };
 }
 
 /** The print run a rung states. isOneOfOne is the source's way of writing /1. */
@@ -198,14 +372,14 @@ function buildRows(cards, parallelGroups) {
   // is {cardSet, cardType, parallels[]} and the cards carry the same two
   // fields, so the join is exact -- no name-similarity guessing.
   const ladderByKey = new Map();
-  const rungStats = { entries: 0, real: 0, playerName: 0, noScarcity: 0, other: 0 };
+  const rungStats = { entries: 0, real: 0, unnumbered: 0, playerName: 0, noScarcity: 0, other: 0 };
   const droppedNames = [];
   for (const g of parallelGroups) {
     const kept = [];
     for (const p of (g.parallels || [])) {
       rungStats.entries++;
       const v = classifyRung(p, roster);
-      if (v.ok) { rungStats.real++; kept.push(p); continue; }
+      if (v.ok) { rungStats.real++; if (v.why === "unnumbered") rungStats.unnumbered++; kept.push(p); continue; }
       if (v.why === "player-name") { rungStats.playerName++; droppedNames.push(`${g.cardSet} :: ${p.name}`); }
       else if (v.why === "no-scarcity") rungStats.noScarcity++;
       else rungStats.other++;
@@ -224,14 +398,55 @@ function buildRows(cards, parallelGroups) {
     const key = `${set}|${num}|${player}`;
     if (seen.has(key)) continue;
     seen.add(key);
-    cardRows.push({ num, set, type: String(c.cardType ?? "").trim(), player, auto: isAutoOf(c) });
+    cardRows.push({ num, set, type: String(c.cardType ?? "").trim(), player,
+      auto: isAutoOf(c), kind: cardTypeOf(c) });
+  }
+
+  // CF-HM-A-VARIATION-IS-A-RUNG. Build the (cardSet, cardType) subset index the
+  // classifier reads, then decide which subsets are variations OF an anchor.
+  // This runs on the deduped card rows so a card listed once per team counts
+  // once toward its subset's numbering run.
+  const subsets = new Map();
+  for (const c of cardRows) {
+    const k = `${c.set}||${c.type}`;
+    if (!subsets.has(k)) subsets.set(k, { set: c.set, type: c.type, nums: new Set() });
+    subsets.get(k).nums.add(c.num);
+  }
+  const variationRoles = classifyVariations(subsets);
+  const foldedSubsets = [];
+  const refusedFolds = [];
+  for (const [k, v] of variationRoles) {
+    if (v.role === "parallel") foldedSubsets.push(`${k} -> ${v.anchorSet} as "${v.rung}"`);
+    else refusedFolds.push(`${k}: ${v.reason}`);
   }
 
   // ingest-scraped-checklist accepts only "base", "insert-*" and "auto-*", so
   // the subset name has to ride in the category or the row is skipped and its
   // identity is lost.
-  const categoryOf = (set, auto) =>
-    auto ? `auto-${slug(set)}` : (slug(set) === "base" ? "base" : `insert-${slug(set)}`);
+  //
+  // CF-HM-BASE-CARDS-IS-STILL-BASE (2026-09-04). This tested `slug(set) === "base"`
+  // and nothing else, so a release whose base run hobbymonitor titles anything
+  // but the bare word "Base" emitted NO base-category row at all. Both 2026
+  // Topps Chrome and 2026 Bowman title theirs "Base Cards", which slugs to
+  // `base-cards` and came out as `insert-base-cards` — 300 and 2,300 rows
+  // respectively, the whole base set of each release filed as an insert named
+  // after itself. That is the same shape the parallelColumnAuthoritative note
+  // at the top of this file was written to prevent, arriving through the
+  // category instead of the parallel; and a release with no base row is what
+  // the universe driver's zero-base gate refuses outright.
+  //
+  // The base run is whatever the source types `Base` while naming no variation
+  // — exactly isAnchorSubset(), the same test the variation classifier uses, so
+  // the two can never disagree about which subset is the plain card. A release
+  // with several base runs (Series 1 numbers Team Card, League Leaders, Combo
+  // Card and Future Stars separately) keeps them distinct: only the run whose
+  // name adds nothing to "Base" is the bare `base` category, and the others
+  // stay `insert-base-<run>` on their own numbering, which is what they are.
+  const BASE_RUN_NAME = /^base(\s+cards?)?$/i;
+  const categoryOf = (set, auto) => {
+    if (auto) return `auto-${slug(set)}`;
+    return BASE_RUN_NAME.test(String(set ?? "").trim()) ? "base" : `insert-${slug(set)}`;
+  };
 
   // Emit: the card's own row for every card, then that card's own subset
   // ladder. EVERY card row's parallel is blank -- "blank means unknown, never
@@ -239,8 +454,15 @@ function buildRows(cards, parallelGroups) {
   // the base tier through normalizeParallel.
   const rows = [];
   const bySubset = new Map();
-  let ladderRows = 0, refusedSubsets = 0;
+  let ladderRows = 0, refusedSubsets = 0, foldedRows = 0;
   const refusedNote = [];
+  // One representative row per subset, so a fold can read its ANCHOR's
+  // auto-ness rather than assuming its own.
+  const anchorRowsByKey = new Map();
+  for (const c of cardRows) {
+    const k = `${c.set}||${c.type}`;
+    if (!anchorRowsByKey.has(k)) anchorRowsByKey.set(k, c);
+  }
   for (const c of cardRows) {
     const cat = categoryOf(c.set, c.auto);
     const rungs = ladderByKey.get(`${c.set}||${c.type}`) || [];
@@ -270,8 +492,24 @@ function buildRows(cards, parallelGroups) {
     // -- the source stated no finish, and we store no finish. Insert and auto
     // rows are unchanged: they emitted "" before and emit "" here, and their
     // real rung names are written by the ladder loop below.
+    // A variation subset does not get its own category. It emits ON its anchor,
+    // carrying the words it adds as the rung — "Golden Mirror Image" on the base
+    // card, not a card called "Golden Mirror Image". The anchor's own auto-ness
+    // decides isAuto: a variation of an unsigned base card is unsigned.
+    const fold = variationRoles.get(`${c.set}||${c.type}`);
+    if (fold && fold.role === "parallel") {
+      const anchor = anchorRowsByKey.get(fold.anchorKey);
+      const anchorAuto = anchor ? anchor.auto : c.auto;
+      rows.push({ category: categoryOf(fold.anchorSet, anchorAuto), cardNumber: c.num,
+        parallel: fold.rung, isAuto: anchorAuto, printRun: "", player: c.player,
+        parallelNote: "", cardType: c.kind });
+      st.rows++;
+      foldedRows++;
+      continue;
+    }
     rows.push({ category: cat, cardNumber: c.num, parallel: "",
-      isAuto: c.auto, printRun: "", player: c.player, parallelNote: "" });
+      isAuto: c.auto, printRun: "", player: c.player, parallelNote: "",
+      cardType: c.kind });
     st.rows++;
   }
   // Per-subset ceilings, decided on the subset as a whole before any rung row
@@ -282,6 +520,13 @@ function buildRows(cards, parallelGroups) {
     numsBySubset.get(c.set).add(c.num);
   }
   for (const c of cardRows) {
+    // A folded variation is already a rung on the anchor. Stacking the anchor's
+    // OWN ladder on top of it would mint "Golden Mirror Image" x "Gold
+    // Refractor" pairs the page never lists — the cartesian smear this lane's
+    // guards exist to refuse. hobbymonitor states a variation's own ladder under
+    // the variation's own (cardSet, cardType) when it has one, and that is the
+    // only ladder a folded row may carry.
+    const fold = variationRoles.get(`${c.set}||${c.type}`);
     const rungs = ladderByKey.get(`${c.set}||${c.type}`) || [];
     if (!rungs.length) continue;
     const nRungs = new Set(rungs.map((r) => r.name)).size;
@@ -294,17 +539,26 @@ function buildRows(cards, parallelGroups) {
       }
       continue;
     }
-    const cat = categoryOf(c.set, c.auto);
+    // A folded subset's rungs land on the ANCHOR's category, and each rung name
+    // is qualified by the variation it is a finish of, because "Gold Refractor"
+    // of the Image Variation is not "Gold Refractor" of the plain card.
+    const anchorRow = fold && fold.role === "parallel" ? anchorRowsByKey.get(fold.anchorKey) : null;
+    const rowAuto = anchorRow ? anchorRow.auto : c.auto;
+    const cat = categoryOf(fold && fold.role === "parallel" ? fold.anchorSet : c.set, rowAuto);
     for (const r of rungs) {
-      rows.push({ category: cat, cardNumber: c.num, parallel: String(r.name).trim(),
-        isAuto: c.auto, printRun: runOf(r), player: c.player, parallelNote: noteOf(r) });
+      const name = String(r.name).trim();
+      const parallel = fold && fold.role === "parallel" ? `${fold.rung} ${name}` : name;
+      rows.push({ category: cat, cardNumber: c.num, parallel: parallel,
+        isAuto: rowAuto, printRun: runOf(r), player: c.player, parallelNote: noteOf(r),
+        cardType: c.kind });
       ladderRows++;
       const st = bySubset.get(c.set); if (st) st.rows++;
     }
   }
 
 
-  return { rows, cardRows, bySubset, rungStats, droppedNames, ladderRows, refusedSubsets, refusedNote };
+  return { rows, cardRows, bySubset, rungStats, droppedNames, ladderRows,
+    refusedSubsets, refusedNote, variationRoles, foldedSubsets, refusedFolds, foldedRows };
 }
 
 async function main() {
@@ -332,19 +586,51 @@ async function main() {
     process.exit(1);
   }
 
-  const { rows, cardRows, bySubset, rungStats, droppedNames, ladderRows, refusedSubsets, refusedNote } =
-    buildRows(cards, parallelGroups);
+  const { rows, cardRows, bySubset, rungStats, droppedNames, ladderRows, refusedSubsets,
+    refusedNote, foldedSubsets, refusedFolds, foldedRows } = buildRows(cards, parallelGroups);
 
-  const header = "category,cardNumber,parallel,isAuto,printRun,player,parallelNote";
-  const body = rows.map((r) => [r.category, r.cardNumber, r.parallel, r.isAuto, r.printRun, r.player, r.parallelNote]
+  // Columns 1-8 are the fixed contract (docs/reference/checklist-csv-contract.md);
+  // `rarity` stays blank because hobbymonitor states no set-level production
+  // figure. `cardType` is the 9th, additive: the contract's consumer reads its
+  // header BY NAME and ignores a column it does not know, so this file stays
+  // byte-compatible for every existing reader while carrying the source's own
+  // card type for the one that learns to read it.
+  const header = "category,cardNumber,parallel,isAuto,printRun,player,parallelNote,rarity,cardType";
+  const body = rows.map((r) => [r.category, r.cardNumber, r.parallel, r.isAuto, r.printRun,
+    r.player, r.parallelNote, "", r.cardType || ""]
     .map(csvCell).join(",")).join("\n");
 
   const withRun = rows.filter((r) => String(r.printRun) !== "").length;
   console.log(`${url}`);
   console.log(`  cards=${cards.length} cardRows=${cardRows.length} (deduped ${cards.length - cardRows.length}) subsets=${bySubset.size}`);
   console.log(`  ladder groups=${parallelGroups.length} entries=${rungStats.entries} -> real rungs=${rungStats.real}` +
-    `  DROPPED player-names=${rungStats.playerName} no-scarcity=${rungStats.noScarcity} other=${rungStats.other}`);
+    ` (${rungStats.real - rungStats.unnumbered} priced, ${rungStats.unnumbered} unnumbered)` +
+    `  DROPPED player-names=${rungStats.playerName} over-60-chars=${rungStats.other}`);
   console.log(`  rows=${rows.length} (base ${cardRows.length} + ladder ${ladderRows})  with printRun=${withRun}`);
+  const byKind = {};
+  for (const r of rows) { const k = r.cardType || "(untyped)"; byKind[k] = (byKind[k] || 0) + 1; }
+  console.log(`  card types: ${Object.entries(byKind).map((e) => `${e[0]}=${e[1]}`).join(" ")}`);
+  if (foldedSubsets.length) {
+    console.log(`  folded ${foldedSubsets.length} variation subsets onto their anchors (${foldedRows} card rows):`);
+    for (const f of foldedSubsets) console.log(`     ${f}`);
+  }
+  if (refusedFolds.length) {
+    console.log(`  REFUSED to fold ${refusedFolds.length} (kept as their own cards):`);
+    for (const f of refusedFolds) console.log(`     ${f}`);
+  }
+  // A release that emits no base row at all is one the universe driver's
+  // zero-base gate will refuse, so say so here rather than letting the driver
+  // report it as a mystery. The usual cause is a base run this file's
+  // BASE_RUN_NAME does not recognise — 2024 Bowman titles its "Base Paper",
+  // 2025 Topps Stadium Club UFC splits its into "BASE CARDS I" and "BASE CARDS
+  // II". Naming those is a vocabulary ruling, not a regex to widen quietly:
+  // guessing which of two runs is "the" base set decides card identity.
+  if (!rows.some((r) => r.category === "base")) {
+    const baseish = [...new Set(cardRows.filter((c) => cardTypeOf({ cardType: c.type }) === "base")
+      .map((c) => c.set))];
+    console.log(`  !! NO BASE CATEGORY — the zero-base gate will refuse this release.`);
+    console.log(`     base-typed subsets present: ${baseish.length ? baseish.join(" | ") : "(none)"}`);
+  }
   if (refusedSubsets) for (const n of refusedNote) console.log(`  !! REFUSED subset ${n}`);
   if (droppedNames.length) {
     console.log(`  dropped names (first 5 of ${droppedNames.length}):`);
@@ -384,8 +670,14 @@ async function main() {
         ladderRows: ladderRows,
         rungsReal: rungStats.real,
         rungsDroppedPlayerName: rungStats.playerName,
-        rungsDroppedNoScarcity: rungStats.noScarcity,
+        rungsUnnumbered: rungStats.unnumbered,
         refusedSubsets: refusedSubsets,
+        // CF-HM-A-VARIATION-IS-A-RUNG: which subsets became rungs on which
+        // anchor, and which the classifier REFUSED to fold and why. A fold is a
+        // claim about card identity, so it has to be auditable from the file.
+        foldedVariationSubsets: foldedSubsets,
+        refusedVariationFolds: refusedFolds,
+        foldedRows: foldedRows,
         sectionsReport: [...bySubset.entries()].map(function (e) {
           return {
             breadcrumb: "Checklist > " + e[0],
@@ -418,4 +710,6 @@ if (require.main === module) {
   main().catch((e) => { console.error("FATAL", e.message); process.exit(1); });
 }
 
-module.exports = { buildRows, classifyRung, foldName, runOf, noteOf, extractObjects, extractArray, PAR_MAX, NUM_MAX };
+module.exports = { buildRows, classifyRung, foldName, runOf, noteOf, extractObjects, extractArray,
+  cardTypeOf, classifyVariations, variationRung, isAnchorSubset, isVariationSubset,
+  PAR_MAX, NUM_MAX };

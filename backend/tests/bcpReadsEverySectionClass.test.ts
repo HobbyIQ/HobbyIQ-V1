@@ -24,6 +24,10 @@
  *                       Autographs" must be
  *   2005 Topps Chrome   §"Autographs & Game-Used" — ONE heading over two card
  *                       types, plus an <h4> holding its own separate card list
+ *   2022 Topps Chrome   NO PAPER SCOPE that emits — its two scopes are
+ *                       "Standard Chrome" and "Sonic", both sharing the stem,
+ *                       so nobody took the bare filename and the page's whole
+ *                       autograph and insert yield was written to no file
  */
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -58,6 +62,7 @@ const OUT = path.resolve(
     "2011_Topps_Chrome=2011-topps-chrome",
     "2021_Topps_Chrome=2021-topps-chrome",
     "2005_Topps_Chrome=2005-topps-chrome",
+    "2022_Topps_Chrome=2022-topps-chrome",
   ], { stdio: "pipe" });
 }
 
@@ -104,6 +109,9 @@ function rowsOf(year: number, scope: string | null = null): Row[] {
 const r2011 = rowsOf(2011);
 const r2021 = rowsOf(2021);
 const r2005 = rowsOf(2005);
+// 2022 Topps Chrome has no emitting PAPER scope, so the bare-stem file is
+// held by "Standard Chrome" — which is the whole point of the pin below.
+const r2022 = rowsOf(2022, "Standard Chrome");
 
 describe("the section the finding was about — 2011 Topps Chrome #173", () => {
   const freeman = r2011.filter((r) => r.category.startsWith("auto-") && r.num === "173");
@@ -275,5 +283,159 @@ describe("CF-THE-CATEGORY-PREFIX-IS-A-HYPHEN", () => {
       fs.readFileSync(path.join(OUT, csvForScope(2011, null).replace(/\.csv$/, ".manifest.json")), "utf8"),
     ) as { parallelColumnAuthoritative?: boolean };
     expect(m.parallelColumnAuthoritative).toBe(true);
+  });
+});
+
+/**
+ * CF-THE-BARE-STEM-ALWAYS-LANDS (2026-09-04, found closing this PR).
+ *
+ * The filename suffix rule was gated on `!sc.isPaper`, which assumed every page
+ * has a paper scope to take the bare stem. 2022 Topps Chrome does not: its
+ * paper scope carries ZERO rungs, so the loop's own guard skips it before it
+ * ever writes, and its two emitting scopes ("Standard Chrome" and "Sonic")
+ * both share the stem `topps-chrome` and both took a suffix. The bare
+ * `2022-topps-chrome-baseball.csv` was never written at all.
+ *
+ * That is not cosmetic. Inserts and typed sections are emitted by the scope
+ * that owns the page's own product, so with nobody holding the bare stem they
+ * had nowhere to go: 260 base cards, 273 typed-section cards (238 SIGNED) and
+ * 145 insert cards read from the page, counted in the run summary, written to
+ * no file. The lane reported "12,480 rows across 2 product(s)" while the whole
+ * autograph yield of the page evaporated.
+ */
+describe("CF-THE-BARE-STEM-ALWAYS-LANDS", () => {
+  it("writes the bare-stem file even when no paper scope emits", () => {
+    // MUTATION: elect the holder among ALL scopes rather than the EMITTING
+    // ones (the pre-fix behaviour) and this throws — no manifest, no file.
+    expect(r2022.length).toBeGreaterThan(0);
+    const emitted = fs.readdirSync(OUT).filter((f) => f.endsWith(".csv"));
+    expect(emitted).toContain("2022-topps-chrome-baseball.csv");
+    // The qualified scope still gets its own file: the collision rule that
+    // stopped Sonic overwriting Standard Chrome is untouched.
+    expect(emitted).toContain("2022-topps-chrome-baseball--sonic.csv");
+  });
+
+  it("the page's autographs and inserts land, instead of being written nowhere", () => {
+    const signed = r2022.filter((r) => r.isAuto === "true");
+    const inserts = r2022.filter((r) => r.category.startsWith("insert-"));
+    // Three whole autograph subsets the page states (Rookie, Veteran, and the
+    // named ones) plus their ladders. Before the fix this was exactly zero.
+    expect(signed.length).toBeGreaterThan(2_000);
+    expect(inserts.length).toBeGreaterThan(400);
+    // The signed cards the page actually lists, not a cross-join artefact.
+    const signedCards = new Set(signed.map((r) => `${r.num} ${r.player}`));
+    expect(signedCards.size).toBe(238);
+    // And the base rows still land in the same file.
+    expect(r2022.some((r) => r.category === "base")).toBe(true);
+  });
+
+  it("exactly one scope of a page holds the bare stem", () => {
+    // The guarantee the fix adds. Two scopes taking it would mean one silently
+    // overwriting the other — the CF-ONE-FILE-PER-SCOPE failure, inverted.
+    const stems = fs.readdirSync(OUT)
+      .filter((f) => f.endsWith(".csv") && !f.includes("--"))
+      .map((f) => f.replace(/\.csv$/, ""));
+    expect(new Set(stems).size).toBe(stems.length);
+  });
+});
+
+/**
+ * CF-AN-INSERT-SECTION-IS-NOT-A-SIGNATURE — the mutation this suite could not
+ * see (found by the #1703 verifier).
+ *
+ * Flipping the §Inserts branch to signed relabels 50 "Vintage Chrome" insert
+ * rows as auto-* with isAuto=true, and every assertion in this file stayed
+ * green: the isAuto pins all name autograph sections, so nothing was watching
+ * the unsigned lane from the other side. A false isAuto splits a pool on a
+ * fact that is not true and no only-improve sweep can ever see it.
+ */
+describe("an insert section never yields a signed row", () => {
+  it("no insert-category row is ever isAuto=true", () => {
+    // MUTATION: `parseInserts(html).map((i) => ({ ...i, signed: true, ... }))`
+    // in main() goes red here, on every fixture.
+    for (const rows of [r2011, r2021, r2005, r2022]) {
+      const insertRows = rows.filter((r) => r.category.startsWith("insert-"));
+      expect(insertRows.length).toBeGreaterThan(0);
+      expect(insertRows.every((r) => r.isAuto === "false")).toBe(true);
+    }
+  });
+
+  it("a signed row is always in an auto- category, and vice versa", () => {
+    // The two columns are one decision. They cannot disagree.
+    for (const rows of [r2011, r2021, r2005, r2022]) {
+      for (const r of rows) {
+        expect(r.isAuto === "true").toBe(r.category.startsWith("auto-"));
+      }
+    }
+  });
+
+  it("the §Inserts subsets keep their own names and stay unsigned", () => {
+    // Named directly, so the pin above cannot pass vacuously on a run that
+    // emitted no inserts at all. These are 2021 Topps Chrome's own §Inserts
+    // subsets, and the retro one ("1986 Topps") is a throwback DESIGN, not a
+    // signature — exactly the kind of set the flipped branch relabelled auto-.
+    for (const name of ["1986-topps", "future-stars", "prismic-power", "beisbol"]) {
+      const sub = r2021.filter((r) => r.category === `insert-${name}`);
+      expect(sub.length, `2021 §Inserts subset ${name}`).toBeGreaterThan(0);
+      expect(sub.every((r) => r.isAuto === "false")).toBe(true);
+    }
+    // "Captain's Cloth Relics" is the discrimination case: it sits beside
+    // "Captain's Cloth Relic Autographs" and only the latter is signed.
+    const relics = r2021.filter((r) => r.category === "insert-captain-s-cloth-relics");
+    expect(relics.length).toBeGreaterThan(0);
+    expect(relics.every((r) => r.isAuto === "false")).toBe(true);
+  });
+});
+
+/**
+ * CF-A-SPELLED-RUN-IS-STILL-A-RUN, over the section lane (2026-09-04).
+ *
+ * #1700 fixed `splitAnnotation`'s digit-only alternations on main while this
+ * branch was open. The alternations require \d, so "Atomic Refractor
+ * (serial-numbered to ten copies)" yielded run=null: the rung is real, the
+ * number is stated on the page in words, and the lane dropped it.
+ *
+ * Both PRs edit the same reader, so the fix reaches THIS lane's emission path
+ * too — but "the shared function was fixed" is not the same claim as "every
+ * row this lane emits now carries the run", and the second is what matters:
+ * 355 of these rows are AUTO rows that only exist because of this PR, and they
+ * did not exist when #1700's own pins were written. A blank print run on a
+ * signed rung is the well-formed-wrong row `only-improve` can never see.
+ *
+ * So the count is pinned from the emitted CSV, not from the parser.
+ */
+describe("a print run stated in words is emitted as a number", () => {
+  const spelled = /numbered to (?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|fifteen|twenty|twenty-five)\b/i;
+  const rowsStatingASpelledRun = [...r2011, ...r2021, ...r2005]
+    .filter((r) => spelled.test(r.note));
+
+  it("leaves no row that states a spelled run with a blank one", () => {
+    // MUTATION: drop `if (n == null) n = spelledRun(note);` from parseLadder
+    // and all 882 of these go blank.
+    expect(rowsStatingASpelledRun).toHaveLength(882);
+    expect(rowsStatingASpelledRun.every((r) => r.run !== "")).toBe(true);
+  });
+
+  it("emits the number the page actually states, never a guess", () => {
+    const byRun: Record<string, number> = {};
+    for (const r of rowsStatingASpelledRun) byRun[r.run] = (byRun[r.run] ?? 0) + 1;
+    expect(byRun).toEqual({ "5": 853, "10": 29 });
+    // Each row's run agrees with its OWN note — a blanket fill would pass the
+    // count above while writing /5 onto every "to ten" rung.
+    for (const r of rowsStatingASpelledRun) {
+      if (/numbered to ten\b/i.test(r.note)) expect(r.run).toBe("10");
+      if (/numbered to five\b/i.test(r.note)) expect(r.run).toBe("5");
+    }
+  });
+
+  it("covers the signed rows this PR is what creates", () => {
+    // The reason this pin lives here and not only in #1700's suite. Freeman's
+    // Atomic Refractor auto is "serial-numbered to ten" — a rung that did not
+    // exist on main before this PR read the Autographs section.
+    const auto = rowsStatingASpelledRun.filter((r) => r.isAuto === "true");
+    expect(auto).toHaveLength(355);
+    const freemanAtomic = r2011.find(
+      (r) => r.isAuto === "true" && r.num === "173" && r.parallel === "Atomic Refractor");
+    expect(freemanAtomic?.run).toBe("10");
   });
 });

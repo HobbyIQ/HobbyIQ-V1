@@ -1,0 +1,100 @@
+{
+ "scrapedAt": "2026-09-04T02:00:14.990Z",
+ "sourceUrl": "https://www.hobbymonitor.com/release/2013-14-panini-prizm-basketball",
+ "sport": "basketball",
+ "year": 2013,
+ "setName": "panini-prizm",
+ "productKey": "2013-panini-prizm",
+ "setKey": "panini-prizm",
+ "rowCount": 11843,
+ "parallelColumnAuthoritative": true,
+ "cardRows": 1021,
+ "ladderRows": 10822,
+ "rungsReal": 40,
+ "rungsDroppedPlayerName": 0,
+ "rungsUnnumbered": 40,
+ "refusedSubsets": 0,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Autographs",
+   "category": "autographs",
+   "playerCount": 125,
+   "rungs": 1,
+   "rowCount": 250,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Base",
+   "category": "base",
+   "playerCount": 597,
+   "rungs": 17,
+   "rowCount": 10746,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Initial Impressions",
+   "category": "initial-impressions",
+   "playerCount": 15,
+   "rungs": 4,
+   "rowCount": 75,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Rookie Autographs",
+   "category": "rookie-autographs",
+   "playerCount": 74,
+   "rungs": 2,
+   "rowCount": 222,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Autographs Finite Prizm",
+   "category": "autographs-finite-prizm",
+   "playerCount": 125,
+   "rungs": 0,
+   "rowCount": 125,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Immortalized",
+   "category": "immortalized",
+   "playerCount": 20,
+   "rungs": 4,
+   "rowCount": 100,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Net Defenders",
+   "category": "net-defenders",
+   "playerCount": 20,
+   "rungs": 4,
+   "rowCount": 100,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Pivotal Players",
+   "category": "pivotal-players",
+   "playerCount": 30,
+   "rungs": 4,
+   "rowCount": 150,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Endless Impressions",
+   "category": "endless-impressions",
+   "playerCount": 15,
+   "rungs": 4,
+   "rowCount": 75,
+   "refused": false,
+   "printRun": null
+  }
+ ]
+}

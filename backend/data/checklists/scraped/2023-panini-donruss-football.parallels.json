@@ -1,0 +1,818 @@
+{
+ "sourceUrl": "https://www.hobbymonitor.com/release/2023-donruss-football",
+ "groups": [
+  {
+   "cardSet": "Rated Rookie Autographs",
+   "cardType": "Autograph",
+   "parallels": [
+    {
+     "name": "Orange",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Blue",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Green",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Gold",
+     "printRun": 25,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 65,
+     "imageUrl": null
+    },
+    {
+     "name": "Black",
+     "printRun": 10,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 70,
+     "imageUrl": null
+    }
+   ]
+  },
+  {
+   "cardSet": "Rookie Phenom Jersey Autographs",
+   "cardType": "Autograph",
+   "parallels": [
+    {
+     "name": "Prime",
+     "printRun": 49,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 63,
+     "imageUrl": null
+    },
+    {
+     "name": "NFLPA Logo",
+     "printRun": null,
+     "isOneOfOne": true,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 90,
+     "imageUrl": null
+    },
+    {
+     "name": "NFL Shield",
+     "printRun": null,
+     "isOneOfOne": true,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 90,
+     "imageUrl": null
+    },
+    {
+     "name": "Brand Logo",
+     "printRun": null,
+     "isOneOfOne": true,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 90,
+     "imageUrl": null
+    }
+   ]
+  },
+  {
+   "cardSet": "Base",
+   "cardType": "Base",
+   "parallels": [
+    {
+     "name": "No Name",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Canvas",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Aqueous Test",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Press Proof Yellow",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Press Proof Red",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Press Proof Green",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Press Proof Blue",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Optic Rated Rookie Preview Red Wave Prizm",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Optic Rated Rookie Preview Red & Green Prizm",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Optic Rated Rookie Preview Pink Prizm",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Optic Rated Rookie Preview Holo Prizm",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Optic Rated Rookie Preview Green Velocity Prizm",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Optic Rated Rookie Preview Football Emoji Prizm",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Optic Rated Rookie Preview Blue Scope Prizm",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Season Stat Line",
+     "printRun": 500,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 20,
+     "imageUrl": null
+    },
+    {
+     "name": "Press Proof Silver",
+     "printRun": 100,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 48,
+     "imageUrl": null
+    },
+    {
+     "name": "Press Proof Silver Die Cut",
+     "printRun": 75,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 55,
+     "imageUrl": null
+    },
+    {
+     "name": "Optic Rated Rookie Preview Purple Prizm",
+     "printRun": 50,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 60,
+     "imageUrl": null
+    },
+    {
+     "name": "Press Proof Gold",
+     "printRun": 50,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 60,
+     "imageUrl": null
+    },
+    {
+     "name": "Press Proof Gold Die Cut",
+     "printRun": 25,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 65,
+     "imageUrl": null
+    },
+    {
+     "name": "Optic Rated Rookie Preview Black Pandora Prizm",
+     "printRun": 25,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 65,
+     "imageUrl": null
+    },
+    {
+     "name": "Jersey Number",
+     "printRun": 13,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 70,
+     "imageUrl": null
+    },
+    {
+     "name": "Optic Rated Rookie Preview Gold Ice Prizm",
+     "printRun": 10,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 70,
+     "imageUrl": null
+    },
+    {
+     "name": "Press Proof Black",
+     "printRun": 10,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 70,
+     "imageUrl": null
+    },
+    {
+     "name": "Press Proof Black Die Cut",
+     "printRun": null,
+     "isOneOfOne": true,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 90,
+     "imageUrl": null
+    }
+   ]
+  },
+  {
+   "cardSet": "Bomb Squad",
+   "cardType": "Insert",
+   "parallels": [
+    {
+     "name": "Holo",
+     "printRun": 100,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 48,
+     "imageUrl": null
+    }
+   ]
+  },
+  {
+   "cardSet": "Champ is Here",
+   "cardType": "Insert",
+   "parallels": [
+    {
+     "name": "Holo",
+     "printRun": 100,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 48,
+     "imageUrl": null
+    }
+   ]
+  },
+  {
+   "cardSet": "Champions",
+   "cardType": "Insert",
+   "parallels": [
+    {
+     "name": "Holo",
+     "printRun": 100,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 48,
+     "imageUrl": null
+    }
+   ]
+  },
+  {
+   "cardSet": "Crunch Time",
+   "cardType": "Insert",
+   "parallels": [
+    {
+     "name": "Galactic",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Cosmic",
+     "printRun": 100,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 48,
+     "imageUrl": null
+    },
+    {
+     "name": "Cubic",
+     "printRun": 50,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 60,
+     "imageUrl": null
+    },
+    {
+     "name": "Lava",
+     "printRun": 10,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 70,
+     "imageUrl": null
+    }
+   ]
+  },
+  {
+   "cardSet": "Donruss Threads",
+   "cardType": "Insert",
+   "parallels": [
+    {
+     "name": "Prime",
+     "printRun": 25,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 65,
+     "imageUrl": null
+    },
+    {
+     "name": "NFLPA Logo",
+     "printRun": null,
+     "isOneOfOne": true,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 90,
+     "imageUrl": null
+    },
+    {
+     "name": "Brand Logo",
+     "printRun": null,
+     "isOneOfOne": true,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 90,
+     "imageUrl": null
+    },
+    {
+     "name": "NFL Shield",
+     "printRun": null,
+     "isOneOfOne": true,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 90,
+     "imageUrl": null
+    }
+   ]
+  },
+  {
+   "cardSet": "Fans of the Game",
+   "cardType": "Insert",
+   "parallels": [
+    {
+     "name": "Holo",
+     "printRun": 100,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 48,
+     "imageUrl": null
+    }
+   ]
+  },
+  {
+   "cardSet": "Highlights",
+   "cardType": "Insert",
+   "parallels": [
+    {
+     "name": "Holo",
+     "printRun": 100,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 48,
+     "imageUrl": null
+    }
+   ]
+  },
+  {
+   "cardSet": "Inducted",
+   "cardType": "Insert",
+   "parallels": [
+    {
+     "name": "Holo",
+     "printRun": 100,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 48,
+     "imageUrl": null
+    }
+   ]
+  },
+  {
+   "cardSet": "Production Line",
+   "cardType": "Insert",
+   "parallels": [
+    {
+     "name": "Galactic",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Cosmic",
+     "printRun": 100,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 48,
+     "imageUrl": null
+    },
+    {
+     "name": "Cubic",
+     "printRun": 50,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 60,
+     "imageUrl": null
+    },
+    {
+     "name": "Lava",
+     "printRun": 10,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 70,
+     "imageUrl": null
+    }
+   ]
+  },
+  {
+   "cardSet": "Road to the Super Bowl Championship",
+   "cardType": "Insert",
+   "parallels": [
+    {
+     "name": "Holo",
+     "printRun": 100,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 48,
+     "imageUrl": null
+    }
+   ]
+  },
+  {
+   "cardSet": "Road to the Super Bowl Conference Championship",
+   "cardType": "Insert",
+   "parallels": [
+    {
+     "name": "Holo",
+     "printRun": 100,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 48,
+     "imageUrl": null
+    }
+   ]
+  },
+  {
+   "cardSet": "Road to the Super Bowl Divisional Round",
+   "cardType": "Insert",
+   "parallels": [
+    {
+     "name": "Holo",
+     "printRun": 100,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 48,
+     "imageUrl": null
+    }
+   ]
+  },
+  {
+   "cardSet": "Road to the Super Bowl Wild Card",
+   "cardType": "Insert",
+   "parallels": [
+    {
+     "name": "Holo",
+     "printRun": 100,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 48,
+     "imageUrl": null
+    }
+   ]
+  },
+  {
+   "cardSet": "Rookie Revolution",
+   "cardType": "Insert",
+   "parallels": [
+    {
+     "name": "Galactic",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Cosmic",
+     "printRun": 100,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 48,
+     "imageUrl": null
+    },
+    {
+     "name": "Cubic",
+     "printRun": 50,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 60,
+     "imageUrl": null
+    },
+    {
+     "name": "Lava",
+     "printRun": 10,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 70,
+     "imageUrl": null
+    }
+   ]
+  },
+  {
+   "cardSet": "Signature Marks",
+   "cardType": "Insert",
+   "parallels": [
+    {
+     "name": "Blue",
+     "printRun": 50,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 60,
+     "imageUrl": null
+    },
+    {
+     "name": "Green",
+     "printRun": 25,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 65,
+     "imageUrl": null
+    },
+    {
+     "name": "Purple",
+     "printRun": 10,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 70,
+     "imageUrl": null
+    },
+    {
+     "name": "Red",
+     "printRun": 5,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 80,
+     "imageUrl": null
+    },
+    {
+     "name": "Black",
+     "printRun": null,
+     "isOneOfOne": true,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 90,
+     "imageUrl": null
+    }
+   ]
+  },
+  {
+   "cardSet": "Super Bowl MVP",
+   "cardType": "Insert",
+   "parallels": [
+    {
+     "name": "Holo",
+     "printRun": 100,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 48,
+     "imageUrl": null
+    }
+   ]
+  },
+  {
+   "cardSet": "Super Bowl Signatures",
+   "cardType": "Insert",
+   "parallels": [
+    {
+     "name": "Prizm",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    }
+   ]
+  },
+  {
+   "cardSet": "Vortex",
+   "cardType": "Insert",
+   "parallels": [
+    {
+     "name": "Galactic",
+     "printRun": null,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 15,
+     "imageUrl": null
+    },
+    {
+     "name": "Cosmic",
+     "printRun": 100,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 48,
+     "imageUrl": null
+    },
+    {
+     "name": "Cubic",
+     "printRun": 50,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 60,
+     "imageUrl": null
+    },
+    {
+     "name": "Lava",
+     "printRun": 10,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 70,
+     "imageUrl": null
+    }
+   ]
+  },
+  {
+   "cardSet": "Passing the Torch Jersey Relics",
+   "cardType": "Relic",
+   "parallels": [
+    {
+     "name": "Prime",
+     "printRun": 49,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 63,
+     "imageUrl": null
+    }
+   ]
+  },
+  {
+   "cardSet": "Rookie Phenom Jerseys",
+   "cardType": "Relic",
+   "parallels": [
+    {
+     "name": "Prime",
+     "printRun": 25,
+     "isOneOfOne": false,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 65,
+     "imageUrl": null
+    },
+    {
+     "name": "Brand Logo",
+     "printRun": null,
+     "isOneOfOne": true,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 90,
+     "imageUrl": null
+    },
+    {
+     "name": "NFL Shield",
+     "printRun": null,
+     "isOneOfOne": true,
+     "odds": null,
+     "exclusivity": null,
+     "sortOrder": 90,
+     "imageUrl": null
+    }
+   ]
+  }
+ ]
+}

@@ -116,6 +116,23 @@ export interface HoldingValuationWrite {
      */
     confidence: number | null;
     unionRefused?: string | null;
+    /**
+     * CF-A-WITHHOLD-IS-VISIBLE-TO-THE-AUDITOR (2026-09-04). A withhold
+     * publishes no number and so names no rung, which meant it wrote
+     * `pricingSourceMeta: undefined` — absent — and #1674's own finding was
+     * that a row with no meta is INVISIBLE to every rung gate and to the
+     * invariant auditor. A refusal is exactly the event an auditor needs to
+     * see. When this is set the meta names `method: "withheld"` and carries
+     * the machine-readable reason, the blocking pool, and the number that
+     * was refused.
+     */
+    withheld?: {
+      reason: string;
+      blockingId: string | null;
+      blockingCount: number;
+      /** The estimate that was NOT published — kept, never erased. */
+      proposed: number | null;
+    };
   } & Partial<PersistedPricingLabels>;
   /** When false, no pricingSourceMeta is written (the lanes that deliberately
    *  clear it — the withhold path). Defaults to true when `meta` is given. */
@@ -158,7 +175,12 @@ export function writeHoldingValuation(
         // `fmvRung`, and rung.ts only knows the closed FmvRungLabel set —
         // writing a HobbyIqFmvMethod here rendered `unknown rung "direct-slug"`
         // on genuine exact-pool prices. One vocabulary in both fields.
-        method: rung ?? undefined,
+        // CF-A-WITHHOLD-IS-VISIBLE-TO-THE-AUDITOR: a refusal has no rung, so
+        // it names its KIND instead of leaving `method` undefined — an
+        // auditor filtering on `method` sees the withhold rather than
+        // skipping a row that looks like it was never written.
+        method: rung ?? (w.meta.withheld ? "withheld" : undefined),
+        ...(w.meta.withheld ? { withheld: w.meta.withheld } : {}),
         ...(w.meta.compsUsed != null ? { compsUsed: w.meta.compsUsed } : {}),
         ...(w.meta.confidence != null ? { confidence: w.meta.confidence } : {}),
         ...(w.meta.unionRefused ? { unionRefused: w.meta.unionRefused } : {}),

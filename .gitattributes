@@ -39,3 +39,7 @@
 # The saved HTML fixtures are compared the same way through the emitted CSV.
 *.tsv text eol=lf
 backend/tests/fixtures/bcp/*.html text eol=lf
+# Checklist fixtures are hashed by the golden test — the digest is over the
+# file content, so a CRLF conversion on checkout would break it everywhere but
+# the machine that generated it.
+backend/tests/fixtures/hobbymonitor/*.json text eol=lf

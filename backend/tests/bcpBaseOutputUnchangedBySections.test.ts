@@ -13,6 +13,24 @@
  * untouched), and the section change is only admissible if it reproduces the
  * file byte for byte.
  *
+ * REGENERATED ONCE, deliberately, at the #1700 merge (2026-09-04) -- 14,460
+ * rows -> 14,680. #1700 landed on main while this branch was open and fixed
+ * three defects in the SHARED ladder reader, so every one of them moves base
+ * rows, and freezing the pre-#1700 output would have meant asserting the bugs.
+ * Every row of the diff was categorised before regenerating, and it is
+ * exactly, with nothing else in it:
+ *
+ *   464  blank print run -> 5   ("serial-numbered to five" now reads as /5;
+ *                                2021 Topps Chrome Red + Red Wave Refractors)
+ *   220  rows ADDED           (2011 Purple Refractors /499 -- a 68-char line
+ *                                the 60-char prose guard silently dropped)
+ *    13  "B.J. Szymanski AU EXCH" -> "B.J. Szymanski AU" (the redemption
+ *                                marker is a fulfilment state, not a name)
+ *
+ * The section work itself still moves ZERO base rows, which is what this pin
+ * is for: `bcpSpelledRunsAreRuns` holds the run values above independently, so
+ * regenerating here cannot quietly bless a run that later goes blank again.
+ *
  * To regenerate deliberately (after a ruling that base output SHOULD change):
  *   node backend/tests/helpers/runBcpLaddersOverFixtures.cjs <dir> \
  *     2011_Topps_Chrome=2011-topps-chrome 2021_Topps_Chrome=2021-topps-chrome \

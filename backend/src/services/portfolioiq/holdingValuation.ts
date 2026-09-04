@@ -45,7 +45,7 @@
  */
 import type { PortfolioHolding } from "../../types/portfolioiq.types.js";
 import { valueIdentity, type Valuation } from "../compiq/oneValuationPath.service.js";
-import { isExactPoolRung } from "../compiq/fmvRung.js";
+import { isExactPoolRung, isPricingRung } from "../compiq/fmvRung.js";
 import { persistedLabelsForValuation } from "../compiq/valuationLabels.js";
 import { writeHoldingValuation } from "./writeHoldingValuation.js";
 
@@ -153,34 +153,53 @@ export function observedHoldingWrite(holding: PortfolioHolding, v: Valuation, no
   });
 }
 
-/** The estimate write: this identity's other tiers × the empirical ratio,
- *  persisted as an estimate with its rung named — never as observed. */
-export function gradeCurveEstimateHoldingWrite(holding: PortfolioHolding, v: Valuation, nowIso: string): PortfolioHolding {
+/**
+ * The estimate write: any rung that is not the exact pool of this identity
+ * at this tier, persisted as an ESTIMATE under ITS OWN rung name.
+ *
+ * CF-THE-LADDER-IS-THE-VOCABULARY (Drew, 2026-09-04). This used to hardcode
+ * `grade-curve-estimate` in both the acceptance test and the written literal,
+ * so it could only ever persist the one rung it was named after. The rung is
+ * now `v.rungLabel` — whatever the ladder actually returned — because the
+ * persist layer decides what a valuation BECOMES on a holding, never whether
+ * the ladder was allowed to reach the rung it reached. A `player-index-
+ * projection`, a `sibling-parallel`, a `family-baseline` all persist here,
+ * each saying which one it is.
+ *
+ * `predictedPriceMechanism` carries the rung for the same reason: it was the
+ * literal "grade-curve-estimate" on every write, which would mislabel every
+ * other rung's prediction as a grade-curve fill.
+ */
+export function fallbackRungHoldingWrite(holding: PortfolioHolding, v: Valuation, nowIso: string): PortfolioHolding {
   const fmv = round2(v.fairMarketValue as number);
   return writeHoldingValuation(holding, {
     fairMarketValue: fmv,
-    rung: { rung: "grade-curve-estimate" },
-    // C-7: derived from this identity's OTHER tiers via the empirical ratio —
-    // never comps of this tier, so it can never claim "observed".
+    rung: { rung: v.rungLabel },
+    // C-7: derived from something other than comps of THIS identity at THIS
+    // tier — another tier, another identity, a player index, a family
+    // baseline — so it can never claim "observed", whichever rung it is.
     valueSource: "estimated",
     nowIso,
     meta: {
       slug: v.identity.pooledAs ?? v.identity.slug ?? v.identity.requestedId,
       compsUsed: v.compsUsed,
       // CF-CONFIDENCE-IS-NOT-OPTIONAL (2026-09-03): an estimate carries its
-      // confidence too — a grade-curve fill is exactly the population whose
+      // confidence too — a fallback rung is exactly the population whose
       // confidence a reader most needs, and withholding the number is what
       // left the sell window dark. Same 0..1 engine scale, passed through.
       confidence: v.confidence,
       // CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS: an estimate carries its
-      // labels too — a grade-curve fill IS a fallback rung, and it says so.
+      // labels too — a fallback rung says which one it is, and a self-
+      // anchored one says whose sale it stands on (Drew's ruling: a
+      // self-comp PUBLISHES and is LABELED). #1674's stamps ride here,
+      // derived by the same function the wire response uses.
       ...persistedLabelsForValuation(v),
     },
     fields: {
     predictedPrice: v.predictedPrice ?? fmv,
     predictedPriceLow: null,
     predictedPriceHigh: null,
-    predictedPriceMechanism: "grade-curve-estimate",
+    predictedPriceMechanism: v.rungLabel,
     predictedPriceUpdatedAt: nowIso,
     movementDirection: null,
     movementUpdatedAt: nowIso,
@@ -237,10 +256,59 @@ export async function valueHoldingThroughOneEntry(
   }
   if (!v.identity.slug) return { outcome: "unresolved", valuation: v };
 
-  const priced = v.fairMarketValue !== null && v.fairMarketValue > 0;
-  const observed = priced && v.valueSource === "observed" && isExactPoolRung(v.rungLabel);
-  const estimated = priced && v.valueSource === "estimated" && v.rungLabel === "grade-curve-estimate";
-  if (!observed && !estimated) return { outcome: "unpriced", valuation: v };
+  // CF-THE-LADDER-IS-THE-VOCABULARY (Drew, 2026-09-04). The persist layer
+  // accepts WHATEVER RUNG THE LADDER RETURNS. It is not a second opinion on
+  // the ladder's decision; the ladder is the one valuation path, and this
+  // module's only job is to say what a valuation BECOMES on a holding.
+  //
+  // What it used to say, and the outage that followed:
+  //
+  //     const observed  = priced && valueSource === "observed" && isExactPoolRung(rungLabel);
+  //     const estimated = priced && valueSource === "estimated" && rungLabel === "grade-curve-estimate";
+  //     if (!observed && !estimated) return { outcome: "unpriced", valuation: v };
+  //
+  // Two rungs by name. `player-index-projection` shipped in #1647 on
+  // 2026-09-02; the ladder started returning it and this `if` started
+  // throwing those valuations away. Holding 0a9afe09 (Cam Caminiti 2024
+  // Bowman Draft CPA-CC Blue Refractor /150 auto, Raw) valued LIVE at
+  // $215.17 — rung player-index-projection, confidence 0.39, basis
+  // "Projected from Cam Caminiti's market trend — last direct sale 12 weeks
+  // ago at $200.00, carried forward by the player index ratio 1.076x over a
+  // basket of 46 liquid Raw cards" — and showed the owner NO PRICE, because
+  // the persist gate had never heard of the rung. Every fallback rung the
+  // ladder can reach (sibling-parallel, family-baseline, rare-card-anchor,
+  // graded-pool-inverse, cross-setkey, product-tier …) failed identically
+  // and silently, and every rung added after this one would have too.
+  //
+  // So there is no list here any more. A REFUSAL is only what the ENGINE
+  // itself refuses: no value, or `no-basis` — its own name for "I could not
+  // price this". Anything the engine priced under a rung its vocabulary
+  // names, persists under that rung.
+  const priced = v.fairMarketValue !== null && Number.isFinite(v.fairMarketValue) && v.fairMarketValue > 0;
+  const pricingRung = isPricingRung(v.rungLabel);
+  if (!priced || !pricingRung) {
+    if (priced && !pricingRung) {
+      // A finite price under a rung the vocabulary does NOT name. This should
+      // be unreachable (the type union forbids it) and is therefore worth
+      // saying out loud rather than silently dropping: it means an engine
+      // invented a rung name at runtime, and the fix is in the vocabulary,
+      // not here.
+      console.warn(JSON.stringify({
+        event: "one_valuation_path_rung_not_in_vocabulary",
+        source: "holdingValuation.valueHoldingThroughOneEntry",
+        site: opts.caller,
+        holdingId: holding.id,
+        rung: v.rungLabel,
+        fair_market_value: v.fairMarketValue,
+      }));
+    }
+    return { outcome: "unpriced", valuation: v };
+  }
+  // "Observed" keeps its EXISTING meaning, unchanged: comps of this exact
+  // identity at this exact tier. Everything else the ladder priced is an
+  // estimate — which is a statement about the evidence, not a reason to
+  // withhold the number.
+  const observed = v.valueSource === "observed" && isExactPoolRung(v.rungLabel);
 
   const floor = costBasisFloor(holding, v.fairMarketValue as number);
   if (floor.rejects) {
@@ -276,5 +344,5 @@ export async function valueHoldingThroughOneEntry(
   }));
   return observed
     ? { outcome: "observed", holding: observedHoldingWrite(holding, v, nowIso), valuation: v }
-    : { outcome: "estimated", holding: gradeCurveEstimateHoldingWrite(holding, v, nowIso), valuation: v };
+    : { outcome: "estimated", holding: fallbackRungHoldingWrite(holding, v, nowIso), valuation: v };
 }
