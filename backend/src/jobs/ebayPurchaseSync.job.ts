@@ -25,7 +25,8 @@
  */
 
 import { importEbayPurchaseHistory } from "../services/ebay/ebayBuyerHistory.service.js";
-import { listConnectedUserIds } from "../services/ebay/ebayTokenStore.service.js";
+import { isTerminalTokenError } from "../services/ebay/ebayAuth.service.js";
+import { listConnectedUserIds, markReconnectRequired } from "../services/ebay/ebayTokenStore.service.js";
 import { runSingleFlight } from "./_singleFlight.js";
 
 const TICK_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
@@ -59,6 +60,22 @@ export interface WeeklyPurchaseSyncSummary {
   purchasesImported: number;
   purchasesReplayed: number;
   purchasesSkipped: number;
+  /** Users whose eBay grant is dead (invalid_grant / invalid_scope / expired
+   *  refresh). A per-user CONDITION, not a data failure: nothing was written
+   *  for them, nothing was lost, and the user has to reconnect. Counted in
+   *  USERS, never in purchases. */
+  usersNeedingReconnect: number;
+  /** Who they are and why, so the run reports the condition per user instead
+   *  of leaving it in a stack trace. */
+  reconnectRequired: Array<{ userId: string; error: string }>;
+  /** Users whose import failed for a reason that is NOT a dead grant -- an
+   *  eBay 5xx, a parse failure, a Cosmos write. These are DATA failures and
+   *  are the only thing that may fail the job. Counted in USERS. */
+  usersFailed: number;
+  dataFailures: Array<{ userId: string; error: string }>;
+  /** Back-compat: total errored users (reconnect + data). Kept so existing
+   *  readers of the summary event do not break. NOT a purchase count -- the
+   *  reconciliation must never charge this against purchases (see below). */
   errors: number;
 }
 
@@ -76,6 +93,10 @@ export async function runWeeklyEbayPurchaseSync(): Promise<WeeklyPurchaseSyncSum
       purchasesImported: 0,
       purchasesReplayed: 0,
       purchasesSkipped: 0,
+      usersNeedingReconnect: 0,
+      reconnectRequired: [],
+      usersFailed: 0,
+      dataFailures: [],
       errors: 0,
     };
   }
@@ -88,6 +109,8 @@ export async function runWeeklyEbayPurchaseSync(): Promise<WeeklyPurchaseSyncSum
   let purchasesReplayed = 0;
   let purchasesSkipped = 0;
   let errors = 0;
+  const reconnectRequired: Array<{ userId: string; error: string }> = [];
+  const dataFailures: Array<{ userId: string; error: string }> = [];
 
   try {
     const userIds = await listConnectedUserIds();
@@ -111,14 +134,43 @@ export async function runWeeklyEbayPurchaseSync(): Promise<WeeklyPurchaseSyncSum
           skipped: summary.skipped,
         }));
       } catch (err) {
+        // A dead eBay grant is a PER-USER CONDITION, not a job failure. The
+        // run that found this (33848620910) went red on two users whose
+        // refresh tokens eBay had already refused -- one `invalid_scope`
+        // (the grant predates the scope set the client now asks for), one
+        // `invalid_grant` (revoked/expired). Neither lost a single purchase:
+        // nothing was fetched, so nothing could go missing. Reporting them
+        // as errors and failing the job hides the seven users who synced
+        // fine, and tells nobody the two need to reconnect.
+        const msg = String((err as Error)?.message ?? err);
         errors++;
-        console.error(`[ebay.weekly.purchase.sync] user=${userId} threw:`, (err as Error)?.message ?? err);
+        if (isTerminalTokenError(msg)) {
+          reconnectRequired.push({ userId, error: msg.slice(0, 300) });
+          // Belt: `getAccessToken` already marks on this path, and the mark
+          // is idempotent, so a second call is free. This is the ONLY thing
+          // that makes the condition visible to the user -- GET /api/ebay/
+          // status reads it back as `status: "reconnect-required"`.
+          await markReconnectRequired(userId, msg.slice(0, 200)).catch(() => false);
+          console.warn(JSON.stringify({
+            event: "weekly_ebay_purchase_sync_reconnect_required",
+            source: "ebayPurchaseSync.job",
+            userId,
+            error: msg.slice(0, 300),
+          }));
+        } else {
+          dataFailures.push({ userId, error: msg.slice(0, 300) });
+          console.error(`[ebay.weekly.purchase.sync] user=${userId} DATA failure:`, msg);
+        }
       }
       if (PER_USER_DELAY_MS > 0) await sleep(PER_USER_DELAY_MS);
     }
   } catch (err) {
+    // The whole run died (listConnectedUserIds threw, etc.). That IS a data
+    // failure: work that was intended never happened.
+    const msg = String((err as Error)?.message ?? err);
     errors++;
-    console.error("[ebay.weekly.purchase.sync] fatal:", (err as Error)?.message ?? err);
+    dataFailures.push({ userId: "(job)", error: msg.slice(0, 300) });
+    console.error("[ebay.weekly.purchase.sync] fatal:", msg);
   } finally {
     _running = false;
   }
@@ -134,6 +186,10 @@ export async function runWeeklyEbayPurchaseSync(): Promise<WeeklyPurchaseSyncSum
     purchasesImported,
     purchasesReplayed,
     purchasesSkipped,
+    usersNeedingReconnect: reconnectRequired.length,
+    reconnectRequired,
+    usersFailed: dataFailures.length,
+    dataFailures,
     errors,
   };
   console.log(JSON.stringify({
