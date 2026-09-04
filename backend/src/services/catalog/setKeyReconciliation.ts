@@ -284,53 +284,48 @@ for (const e of ENTRIES) {
   // Making these fixed points would bless a malformed key and let a year
   // prefix into the identity. They belong to the catalog rename fleet.
   if (e.verdict === "malformed" || e.verdict === "catalog-key-malformed") continue;
-  // A FIXED POINT NEEDS CHECKLIST EVIDENCE TO EARN ITS PROMOTION.
+  // WHAT IS LEFT -- `distinct` and `mis-sported` -- means "do not rewrite this
+  // key". Three guards stand in front of that, and each exists because a
+  // verdict derived from the key's SHAPE must not overrule a decision made
+  // from something the census cannot see.
   //
-  // distinct | era-split | mis-sported | needs-ruling all mean the same thing
-  // to the deriver — do not rewrite this key — but only where a checklist
-  // actually stands behind the key. Without that, the verdict rests on nothing
-  // but the key's SHAPE, and shape is exactly what the existing vocabulary has
-  // already ruled on deliberately: "Bowman Chrome Prospects" folds to
-  // `bowman-chrome` (the file header rules it), "Bowman Draft Chrome" to
-  // `bowman-draft`, "Upper Deck SPx Finite" to `spx-finite`. Every one of
-  // those keys holds ZERO checklist rows, so promoting them here would
-  // overturn a ruling on no evidence at all — which is the same error as
-  // trusting a derived catalog row to adjudicate.
-  //
-  // Count by source, not by row count: the checklist is what confers the
-  // authority to be a fixed point, and 514 of the 686 distinct keys have it.
-  // `needs-ruling` IS REPORT-ONLY AND CHANGES NOTHING.
-  //
-  // The instinct is that refusing to merge is the safe direction, so an
-  // unruled key should become a fixed point until Drew decides. That is wrong
-  // here, and `bowman-sapphire` is why: the vocabulary already carries an
-  // explicit ruling on it -- "vendors write Bowman Sapphire as shorthand for
-  // Bowman Chrome Sapphire, so the collapse is intended, not a bug. There is
-  // no standalone Bowman Sapphire product." A verdict that says "I could not
-  // decide this mechanically" has no authority to overturn a decision someone
-  // already made deliberately.
-  //
-  // So an unruled key keeps TODAY'S behaviour and travels to Drew as a
-  // question. Changing it would be acting on the absence of a rule, which is
-  // the opposite of what an open question means.
+  // (1) AN OPEN QUESTION CHANGES NOTHING. The instinct is that refusing to
+  //     merge is the safe direction, so an unruled key should be pinned until
+  //     Drew decides. `bowman-sapphire` shows why that is wrong: the
+  //     vocabulary already rules on it outright -- "vendors write Bowman
+  //     Sapphire as shorthand for Bowman Chrome Sapphire, so the collapse is
+  //     intended, not a bug. There is no standalone Bowman Sapphire product."
+  //     A verdict meaning "I could not decide this mechanically" has no
+  //     authority to overturn a deliberate decision. An unruled key keeps
+  //     today's behaviour and travels to Drew as a question; changing it would
+  //     be acting on the ABSENCE of a rule.
   if (e.verdict === "needs-ruling") continue;
-  // AN ERA KEY IS NOT A FIXED POINT — IT IS A KEY THAT NEEDS A YEAR.
   //
-  // `donruss` is stale precisely BECAUSE normalizeSetKey rewrites it, and the
-  // instinct is to stop that. But normalizeSetKey has no year, and with no
-  // year the modern spelling is the right default -- the vocabulary has said
-  // so since CF-PANINI-IS-ANACHRONISTIC-BEFORE-2009, and
-  // `resolveSetKeyForSlug("baseball", "Donruss", 1987)` already answers
-  // `donruss` correctly because IT has the year.
-  //
-  // So the era split is not resolved here at all. It is resolved by
-  // spellSetKeyForEra / spellForEra at the call sites that know the year, and
-  // pinning the bare key here would break the year-less default without
-  // fixing anything the year-aware path gets wrong.
+  // (2) AN ERA KEY IS NOT A FIXED POINT -- IT IS A KEY THAT NEEDS A YEAR.
+  //     `donruss` is stale precisely BECAUSE normalizeSetKey rewrites it. But
+  //     normalizeSetKey has no year, and with no year the modern spelling is
+  //     the right default (CF-PANINI-IS-ANACHRONISTIC-BEFORE-2009);
+  //     `resolveSetKeyForSlug("baseball", "Donruss", 1987)` already answers
+  //     `donruss` because IT has the year. The split is resolved by
+  //     spellSetKeyForEra at the call sites that know the year, and pinning
+  //     the bare key here would break the year-less default while fixing
+  //     nothing the year-aware path gets wrong.
   if (e.verdict === "era-split") continue;
-  // A DECISION BEATS A DERIVATION. Where somebody already ruled this collapse
-  // and pinned it, the ruling stands and the verdict is report-only.
+  //
+  // (3) A DECISION BEATS A DERIVATION. Where somebody already ruled this
+  //     collapse and pinned it with a test that states the reasoning, the
+  //     ruling stands and the verdict is report-only.
   if (ALREADY_RULED_COLLAPSES[key]) continue;
+
+  // AND A FIXED POINT STILL HAS TO EARN IT. Count by source, not by row count:
+  // the checklist is what confers the authority to be a fixed point. Without
+  // one the verdict rests on the key's shape alone -- and shape is exactly
+  // what the vocabulary has already ruled on deliberately, in the file header:
+  // "Bowman Chrome Prospects" folds to `bowman-chrome`, "Bowman Draft Chrome"
+  // to `bowman-draft`, "Upper Deck SPx Finite" to `spx-finite`. All three hold
+  // ZERO checklist rows, so promoting them would overturn a ruling on no
+  // evidence at all -- the same error as letting a derived catalog row
+  // adjudicate. 514 of the 686 distinct keys are checklist-backed.
   if (e.evidence.checklistRows > 0) FIXED_POINTS.add(key);
 }
 
