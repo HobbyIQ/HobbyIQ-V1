@@ -56,8 +56,41 @@
 /** What a catalog row is allowed to decide. */
 export type CatalogAuthority = "checklist" | "vendor" | "derived" | "unknown";
 
-/** Generated from our own observations or inference. Never adjudicates. */
-const DERIVED = /^(ingest-auto-seed|sold-comps-stub|catalog-explode|tree-builder|sales-derived|pool)/;
+/**
+ * Generated from our own observations or inference. Never adjudicates.
+ *
+ * CF-A-DERIVED-SOURCE-MAY-NOT-SPELL-CHECKLIST (2026-09-04). The class comment
+ * below says DERIVED is tested first "because several derived sources embed a
+ * checklist-ish word". Two families we actually write were embedding one and
+ * escaping this regex anyway, because the regex is ANCHORED and their names do
+ * not start with a listed stem:
+ *
+ *   derived-from-base-checklist-2026-08-23          -> was CHECKLIST, rank 3
+ *   derived-from-base-checklist-tiffany-2026-08-23  -> was CHECKLIST, rank 3
+ *   sales-attested                                  -> was UNKNOWN,   rank 0
+ *   sales-attested-2026-08                          -> was UNKNOWN,   rank 0
+ *
+ * The first pair is the worse of the two and is the exact failure this class
+ * exists to prevent: a row SYNTHESISED from a base card (create-tiffany-cards-
+ * from-base, create-product-line-cards-from-base) was ranking EQUAL to a real
+ * transcription. Equal rank does not merely fail to lose -- mergeCatalogEntries
+ * breaks a rank tie on confidence with `>`, so on a tie the INCUMBENT keeps the
+ * row. A synthetic row therefore could not be corrected by the checklist that
+ * should own the card; the ingest wrote and the merge discarded.
+ *
+ * `sales-attested` is the same shape one rung lower: rows attested by our own
+ * sales, landing at rank 0, BELOW the ingest-auto-seed rows they are siblings
+ * of. materialize-ungraded-parents.cjs already documents this exact hazard for
+ * its own `ingest-auto-seed-graded-attested` and named that one to inherit the
+ * prefix deliberately. These two never got the same treatment.
+ *
+ * The fix is to keep the anchor (an unanchored `derived` would sweep any source
+ * with the word anywhere) and add the two stems by name. `sales-` is NOT
+ * widened to a bare prefix: a future `sales-checklist-…` transcription must not
+ * be demoted by a word in its name any more than a derived one is promoted by
+ * one.
+ */
+const DERIVED = /^(ingest-auto-seed|sold-comps-stub|catalog-explode|tree-builder|sales-derived|sales-attested|derived-from|pool)/;
 
 /** A marketplace or pricing vendor. Records how the VENDOR types, not what was
  *  printed — so it is evidence of a listing, never of a card's identity. */

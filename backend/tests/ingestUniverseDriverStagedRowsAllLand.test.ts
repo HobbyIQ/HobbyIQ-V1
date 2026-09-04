@@ -155,7 +155,11 @@ describe("a product with no print runs is not PARTIAL", () => {
   it("the verdict consults the lane before calling a print-run-less ladder incomplete", () => {
     const src = fs.readFileSync(script, "utf8");
     expect(src).toMatch(/const printRunsExpected = !LANES_WITHOUT_PRINT_RUNS\.has\(lane\);/);
-    expect(src).toMatch(/const incomplete = gate\.stats\.ladder === 0 \|\| \(printRunsExpected && gate\.stats\.withPrintRun === 0\);/);
+    // CF-A-VINTAGE-BASE-SET-IS-NOT-PARTIAL (2026-09-04) gated the LADDER half
+    // of this expression the same way the print-run half already was. Both
+    // halves are pinned so neither can quietly lose its guard.
+    expect(src).toMatch(/const ladderExpected = !ladderlessByEra\(lane, entry\);/);
+    expect(src).toMatch(/const incomplete = \(ladderExpected && gate\.stats\.ladder === 0\)\s*\|\| \(printRunsExpected && gate\.stats\.withPrintRun === 0\);/);
   });
 
   it("the scraper this lane runs still writes no print run — the premise of the exception", () => {

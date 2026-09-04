@@ -1,0 +1,176 @@
+{
+  "_doc": "CF-A-PLAYER-SEGMENT-IS-A-PERSON unlock measurement. READ-ONLY; nothing was written.",
+  "asOf": "2026-09-04",
+  "requestCharge": 142145,
+  "counts": {
+    "scanned": 115539,
+    "storedCorrupted": 6476,
+    "derivesCleanName": 76,
+    "checklistBacked": 0,
+    "unlockedImprove": 0,
+    "reportOnlyNoCleanName": 6400,
+    "reportOnlyNotBacked": 76
+  },
+  "samples": [
+    {
+      "why": "not-checklist-backed",
+      "title": "1971 TOPPS TRIOS DAVE DEBUSSCHERE-BOB LANIER-VAN ARSDALE CGC 5.5",
+      "storedName": "trios dave debusschere bob lanier van",
+      "derivedName": "Dave Debusschere-bob Lanier-van Arsdale",
+      "setKey": null,
+      "year": 1971
+    },
+    {
+      "why": "not-checklist-backed",
+      "title": "2022 Bowman Chrome Mega Box Elly de La Cruz Auto PSA 10 RC Gem Mint (Reds RC)",
+      "storedName": "mega box elly de",
+      "derivedName": "Elly De La Cruz",
+      "setKey": null,
+      "year": 2022
+    },
+    {
+      "why": "not-checklist-backed",
+      "title": "2024 Bowman Mega Box Chrome Elly De La Cruz Rookie (RC) PSA 10 Gem Mint Reds!!!!",
+      "storedName": "mega box elly de",
+      "derivedName": "Elly De La Cruz",
+      "setKey": null,
+      "year": 2024
+    },
+    {
+      "why": "not-checklist-backed",
+      "title": "2017 Panini Prizm Luck Of The Lottery De’Aaron Fox Hyper Prizm #DFO PSA 10 Gem",
+      "storedName": "luck the lottery de",
+      "derivedName": "De Aaron Fox",
+      "setKey": null,
+      "year": 2017
+    },
+    {
+      "why": "not-checklist-backed",
+      "title": "2022 Zerocool Jackass Steve-O Signatures Gold Auto #/10 PSA 10 GEM MINT POP 1",
+      "storedName": "lapras vstar universe japanese",
+      "derivedName": "Zerocool Jackass Steve-o Pop",
+      "setKey": null,
+      "year": 2022
+    },
+    {
+      "why": "not-checklist-backed",
+      "title": "2024 BOWMAN MEGA BOX CHROME PROSPECTS BLUE REFRACTOR LEO DE VRIES 144/150 PSA 9",
+      "storedName": "mega box leo de",
+      "derivedName": "Leo De Vries",
+      "setKey": null,
+      "year": 2024
+    },
+    {
+      "why": "not-checklist-backed",
+      "title": "2024 TOPPS CHROME \\'89 Design Elly De La Cruz ROOKIE #2T89C-50 SGC 10 MINT REDS",
+      "storedName": "design elly de la",
+      "derivedName": "Elly De La Cruz",
+      "setKey": null,
+      "year": 2024
+    },
+    {
+      "why": "not-checklist-backed",
+      "title": "2000 TYPHLOSION Japanese Neo Genesis 157 Holo Graded PSA 10 GEM MINT",
+      "storedName": "meowth gb gameboy pokemon",
+      "derivedName": "Typhlosion Japanese Neo Graded",
+      "setKey": null,
+      "year": 2000
+    },
+    {
+      "why": "not-checklist-backed",
+      "title": "Pokmon Charmander 069130 Base Set 2 Regular PSA 10 Gem Mint 2000 G2U",
+      "storedName": "meowth gb gameboy pokemon",
+      "derivedName": "Pokmon Charmander Regular",
+      "setKey": null,
+      "year": 2000
+    },
+    {
+      "why": "not-checklist-backed",
+      "title": "Zekrom Full Art Ultra Rare TG05/TG30 PSA 9 MINT - 2022 Pokémon Brilliant Stars",
+      "storedName": "zekrom full art ultra",
+      "derivedName": "Zekrom Ultra/Tg Pok Mon Brilliant",
+      "setKey": null,
+      "year": 2022
+    },
+    {
+      "why": "not-checklist-backed",
+      "title": "PSA 10 Gem Mint Greninja 339/S-P Illustration Contest 2022 Japanese Card Graded",
+      "storedName": "pokemon idn world championships",
+      "derivedName": "Greninja/Illustration Contest Japanese Graded",
+      "setKey": null,
+      "year": 2022
+    },
+    {
+      "why": "not-checklist-backed",
+      "title": "2022 ONE PIECE JAPANESE ROMANCE DAWN SECRET RARE SHANKS CGC 10 GEM MINT",
+      "storedName": "pokemon idn world championships",
+      "derivedName": "Japanese Romance Secret Shanks",
+      "setKey": null,
+      "year": 2022
+    },
+    {
+      "why": "not-checklist-backed",
+      "title": "Espeon V SWSH201 Sword & Shield Promo Holo 2022 English Ace 10 Graded",
+      "storedName": "pokemon idn world championships",
+      "derivedName": "Espeon Sword/English Ace Graded",
+      "setKey": null,
+      "year": 2022
+    },
+    {
+      "why": "not-checklist-backed",
+      "title": "2022 ONE PIECE 010 FRANKY SUPER PRE-RELEASE PSA 10 GEM MINT",
+      "storedName": "pokemon idn world championships",
+      "derivedName": "Franky",
+      "setKey": null,
+      "year": 2022
+    },
+    {
+      "why": "not-checklist-backed",
+      "title": "2022 ONE PIECE 010 FRANKY SUPER PRE-RELEASE PSA 10 GEM MINT",
+      "storedName": "pokemon idn world championships",
+      "derivedName": "Franky",
+      "setKey": null,
+      "year": 2022
+    },
+    {
+      "why": "not-checklist-backed",
+      "title": "2022 ONE PIECE SUPER PRE RELEASE ST01-016 DIABLE JAMBE PSA 10 GEM MINT",
+      "storedName": "pokemon idn world championships",
+      "derivedName": "Pre Release Diable Jambe",
+      "setKey": null,
+      "year": 2022
+    },
+    {
+      "why": "not-checklist-backed",
+      "title": "2022 ONE PIECE 002 USOPP SUPER PRE-RELEASE PSA 10 GEM MINT",
+      "storedName": "pokemon idn world championships",
+      "derivedName": "Usopp",
+      "setKey": null,
+      "year": 2022
+    },
+    {
+      "why": "not-checklist-backed",
+      "title": "2023 Chronicles Crown Royal Elly De La Cruz Future Kings Auto /99 SGC 8.5 Auto10",
+      "storedName": "crown royal elly de",
+      "derivedName": "Elly De La Cruz",
+      "setKey": null,
+      "year": 2023
+    },
+    {
+      "why": "not-checklist-backed",
+      "title": "Hisuian Lilligant V (Full Art) - SWSH10: Astral Radiance - Holofoil",
+      "storedName": "hisuian lilligant full art",
+      "derivedName": "Hisuian Lilligant",
+      "setKey": null,
+      "year": 2022
+    },
+    {
+      "why": "not-checklist-backed",
+      "title": "Hisuian Lilligant V (Full Art) - SWSH10: Astral Radiance - Holofoil",
+      "storedName": "hisuian lilligant full art",
+      "derivedName": "Hisuian Lilligant",
+      "setKey": null,
+      "year": 2022
+    }
+  ]
+}

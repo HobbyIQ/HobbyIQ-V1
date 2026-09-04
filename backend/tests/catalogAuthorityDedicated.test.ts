@@ -97,7 +97,10 @@ describe("the new predicate perturbs NOTHING that already existed", () => {
       "ingest-auto-seed": "derived",
       "sold-comps-stub-2026-08-12": "derived",
       "catalog-explode-actuals-2026-08-12": "derived",
-      "sales-attested": "unknown",
+      // CF-A-DERIVED-SOURCE-MAY-NOT-SPELL-CHECKLIST (2026-09-04): this pinned
+      // "unknown", which is rank 0 -- BELOW the ingest-auto-seed rows it is a
+      // sibling of. It is a row attested by our own sales, so it is derived.
+      "sales-attested": "derived",
       "subset-unfold": "unknown",
       cardhedge: "vendor",
       cardsight: "vendor",

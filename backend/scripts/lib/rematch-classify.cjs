@@ -317,6 +317,52 @@ function isPseudoCardNumber(v) {
 }
 
 /**
+ * A CORRUPTED PLAYER NAME IS NOT A LESS-GOOD NAME, IT IS NOT A NAME
+ * (CF-A-PLAYER-SEGMENT-IS-A-PERSON, Drew 2026-09-04).
+ *
+ * hobbyIqCardId.service.ts argues the pseudo-number is "SAFE BECAUSE THE NAMES
+ * ARE CLEAN", and it checked that claim the only way it could at the time: it
+ * looked for names that COLLIDE under slugify, found 20 case/punctuation groups
+ * out of 3,997, and folded them. What it never asked was whether each name was
+ * A PERSON. The census in data/gap-reports/2026-09-04-player-field-corruption-
+ * census.json asks that question and answers it: 29,654 of 115,535 rows (25.7%)
+ * carry a player field with a parallel, a product, a truncation or a set code
+ * inside it --
+ *
+ *     player-kawhi-leonard-tie-dye     a finish inside the name
+ *     player-mega-box-elly-de          a product inside it, and cut mid-name
+ *     player-pokemon-swsh-fa-mew       a set code, and not a person at all
+ *
+ * So the premise the shape rests on is false for a quarter of the population,
+ * and those rows are keyed to people who do not exist. That splits the real
+ * player's pool and prices a card against sales of nothing.
+ *
+ * THE SAME CONDITIONAL SHAPE AS THE PSEUDO-NUMBER ABOVE, FOR THE SAME REASON.
+ *
+ * A corrupted stored player counts as BLANK on the STORED SIDE ONLY, and only
+ * when the caller supplies the fact `storedPlayerCorrupted` -- computed by the
+ * census from the checklist corpus, never from the derivation's confidence. A
+ * re-derivation that produces a clean name then FILLS an axis the stored key
+ * never really named, which is IMPROVE rather than `changed`.
+ *
+ * AND THE CHECKLIST GATE IS NOT OPTIONAL. Even blanked, the IMPROVE only
+ * proceeds when the derived identity is CHECKLIST-BACKED for the same
+ * (year, setKey, cardNumber) -- the ordinary `checklistBacked` gate every
+ * IMPROVE passes. A corrupted name whose replacement is not checklist-backed is
+ * REPORT-ONLY: we know the stored name is wrong, and knowing that is not the
+ * same as knowing the right one. Absent beats wrong on both sides of the swap.
+ */
+function isCorruptedPlayerName(v) {
+  const s = lower(v).trim();
+  if (!s) return false;
+  // Ends on a name particle -> the name was cut ("Elly De").
+  if (/\s(de|la|del|van|von|mc|mac|dos|das|di|da)$/.test(s)) return true;
+  // Carries a franchise/layout token that is never part of a person's name.
+  if (/\b(pokemon|swsh|vmax|vstar|full art|reverse holo)\b/.test(s)) return true;
+  return false;
+}
+
+/**
  * Does the TITLE state a card number? The same `#N` / `No. N` reading the
  * deriver uses (extractCardNumberFromTitle in soldCompsStore), narrowed to the
  * PREFIXED form only.
@@ -1319,19 +1365,38 @@ function isStrictChecklistSource(raw) {
 //                   cannot answer supplies `null` and the row is REFUSED,
 //                   because absent beats wrong.
 //
-//                   L5 IS WHY THE PARALLEL-PRINT TIFFANYS STAY REFUSED, AND
-//                   THAT IS CORRECT. Measured 2026-09-04: 1987 topps lists
-//                   #70 and #320 but NOT #70T, so the Traded Tiffany rows
-//                   pass -- while `topps-tiffany` and `bowman-tiffany` reprint
-//                   the flagship's card list ON THE SAME NUMBERS, so every one
-//                   of their rows fails L5 by construction. That is not a bug
-//                   in the leg. A same-numbered reprint means the flagship
-//                   checklist genuinely lists the number, so the cardNumber
-//                   cannot tell the two cards apart and only the title says
-//                   Tiffany. Moving those rows is a bigger claim than this
-//                   subclass makes, and it stays Drew's -- the census counts
-//                   them under `flagship-checklist-lists-this-card` so the
-//                   population is a number he can rule on, not a silence.
+//                   THE SAME-NUMBER PARALLEL-SET EXCEPTION (Drew ruled it,
+//                   2026-09-04). Measured 2026-09-04: 1987 topps lists #70 and
+//                   #320 but NOT #70T, so the Traded Tiffany rows pass L5 on
+//                   the number alone -- while `topps-tiffany` and
+//                   `bowman-tiffany` reprint the flagship's card list ON THE
+//                   SAME NUMBERS, so every one of their rows failed L5 by
+//                   construction: 6,113 rows, 7,076 topps -> topps-tiffany and
+//                   794 bowman -> bowman-tiffany by key pair.
+//
+//                   #1725 shipped that as a refusal and counted the population
+//                   so Drew could rule on it. He had already ruled: eed10b9b,
+//                   "a Tiffany sale is a Tiffany card", moved 2,760 rows out
+//                   of the base pools on exactly this reasoning. Where a
+//                   specialization reprints its parent card-for-card at the
+//                   parent's numbers, the number is shared BY DESIGN -- L5's
+//                   answer is not merely yes, it is uninformative -- and the
+//                   title is the only thing that can separate the two cards.
+//                   So it is sufficient.
+//
+//                   `SAME_NUMBER_PARALLEL_SETS` (productSetKeys.ts, mirrored
+//                   below) declares those pairs, and L5 skips the
+//                   flagship-lists test for them ALONE. EVERY OTHER FAMILY
+//                   KEEPS L5 STRICT -- `topps -> topps-traded` is separated by
+//                   the number and stays separated, and `o-pee-chee` is a
+//                   different product with its own numbering, not a parallel
+//                   set. And nothing else is relaxed: L3 still demands the
+//                   CHILD'S OWN checklist row from a real scraped source, so
+//                   1987's 735 hand-verified `topps-tiffany` rows become
+//                   eligible while the years whose Tiffany catalog rows are
+//                   synthetic `derived-from-base-checklist-*` stay PENDING a
+//                   checklist. The title says which product; the checklist
+//                   says the card was printed. Both, or neither.
 //
 // G1-G6 STILL APPLY. The subclass rides the IMPROVE arm and is evaluated
 // ALONGSIDE `improveRefusals`, the family-collision refusal, the
@@ -1379,6 +1444,53 @@ const SPECIALIZATION_PARENTS = Object.freeze({
 const LADDER_MIRRORED_KEYS = Object.freeze(
   Object.keys(SPECIALIZATION_PARENTS).filter((k) => k !== "bowman-tiffany"),
 );
+
+/**
+ * SAME-NUMBER PARALLEL SETS, MIRRORED from productSetKeys.ts.
+ * (CF-A-TIFFANY-SALE-IS-A-TIFFANY-CARD read onto L5 -- Drew, 2026-09-04.)
+ *
+ * A Tiffany/Glossy-style set is the flagship's checklist REPRINTED card for
+ * card ON THE SAME NUMBERS. For those families L5's question -- "does the
+ * stored flagship's own checklist list this cardNumber?" -- is always YES and
+ * always uninformative: the number is shared BY DESIGN, so it cannot separate
+ * the two cards and only the title can. Refusing on that answer refused the
+ * whole family by construction: 6,113 rows measured 2026-09-04, 7,076
+ * topps -> topps-tiffany and 794 bowman -> bowman-tiffany by key pair.
+ *
+ * Drew ruled it already (eed10b9b, "a Tiffany sale is a Tiffany card", 2,760
+ * rows out of the base pools): a sale whose title says Tiffany belongs to the
+ * Tiffany product. Where the number is uninformative the title IS the
+ * evidence -- and it is sufficient only because L3 still demands the CHILD'S
+ * OWN checklist row from a real scraped source. That is what keeps the
+ * synthetic `derived-from-base-checklist-*` rows (all 453 `bowman-tiffany`
+ * catalog rows carry exactly that source) from qualifying, and it is why this
+ * widening moves 1987's 735 hand-verified Tiffany rows and leaves the rest
+ * PENDING a checklist rather than writing them on a name.
+ *
+ * ONLY THE DECLARED PAIRS SKIP L5. Every other family keeps the strict test:
+ * `topps -> topps-traded` is separated by the number (#70T is not #70) and
+ * must stay separated, and `o-pee-chee` is a different product with its own
+ * numbering, not a parallel set, so its number still carries information.
+ *
+ * The mirror is a cache, not a second source of truth --
+ * `rematchSpecializationStated.test.ts` pins every entry against
+ * `isSameNumberParallelSet` in productSetKeys.ts, pair by pair, and pins that
+ * neither table has an entry the other lacks.
+ */
+const SAME_NUMBER_PARALLEL_SETS = Object.freeze([
+  Object.freeze({ setKey: "topps-tiffany", parent: "topps" }),
+  Object.freeze({ setKey: "topps-traded-tiffany", parent: "topps-traded" }),
+  Object.freeze({ setKey: "bowman-tiffany", parent: "bowman" }),
+]);
+
+/** Does `derivedKey` reprint `storedKey`'s checklist on `storedKey`'s own card
+ *  numbers? Only then may L5 stop asking whether the flagship lists the
+ *  number -- because for these families the answer is yes by construction. */
+function isSameNumberParallelSet(derivedKey, storedKey) {
+  const d = lower(derivedKey), s = lower(storedKey);
+  if (!d || !s) return false;
+  return SAME_NUMBER_PARALLEL_SETS.some((e) => e.setKey === d && e.parent === s);
+}
 
 /** Every ancestor of `setKey` under the mirrored ladder, nearest first. */
 function specializationAncestry(setKey) {
@@ -1467,8 +1579,22 @@ function specializationStatedEvidence({
   // L5 -- the stored flagship's own checklist must NOT list this number.
   // `null` means the caller could not answer, and an unanswered gate is a
   // refusal: absent beats wrong.
-  if (storedFlagshipListsCardNumber === null) failed.push("flagship-coverage-unknown");
-  else if (storedFlagshipListsCardNumber === true) failed.push("flagship-checklist-lists-this-card");
+  //
+  // UNLESS the pair is a DECLARED SAME-NUMBER PARALLEL SET, in which case the
+  // question is not merely answered YES, it is MEANINGLESS: a Tiffany set
+  // reprints the flagship's checklist on the flagship's own numbers, so the
+  // number is shared by design and cannot separate the two cards. Asking it
+  // there refuses the family by construction -- which is the 6,113 rows Drew
+  // ruled on 2026-09-04. The declaration is the ONLY thing that turns L5 off,
+  // it lives in productSetKeys.ts, and every undeclared family keeps the
+  // strict test. What still has to hold for a declared pair is L3: the CHILD'S
+  // own checklist row, from a real scraped source. The title says which
+  // product; the checklist says the card was printed. Both, or neither.
+  const sameNumberParallel = ladder && isSameNumberParallelSet(derivedKey, storedKey);
+  if (!sameNumberParallel) {
+    if (storedFlagshipListsCardNumber === null) failed.push("flagship-coverage-unknown");
+    else if (storedFlagshipListsCardNumber === true) failed.push("flagship-checklist-lists-this-card");
+  }
 
   return {
     qualifies: failed.length === 0,
@@ -1477,6 +1603,7 @@ function specializationStatedEvidence({
       storedSetKey: storedKey, derivedSetKey: derivedKey,
       distinguishingWords: words, unstatedWords: unstated,
       derivedBacked, storedFlagshipListsCardNumber,
+      sameNumberParallelSet: sameNumberParallel,
     },
   };
 }
@@ -2116,8 +2243,22 @@ function diffAxes(stored, derived, opts = {}) {
   // that reads one FILLS the axis rather than changing it. Gated on the
   // caller's title fact -- never on the derivation -- and applied to the STORED
   // side only.
-  const storedBlankCardNumber = opts.titleStatesNumber === true
-    && isPseudoCardNumber(stored?.cardNumber);
+  // CF-A-PLAYER-SEGMENT-IS-A-PERSON. The player reaches identity ONLY through
+  // the cardNumber segment, as `player-<name>` -- so a corrupted NAME is a
+  // corrupted cardNumber VALUE on exactly these rows, and it blanks the same
+  // axis for the same reason. Two independent facts, either of which makes the
+  // stored pseudo-number not-an-answer:
+  //
+  //   titleStatesNumber        the row was never unnumbered (#1728)
+  //   storedPlayerCorrupted    the name in the pseudo-number is not a person
+  //
+  // Both are facts about the ROW supplied by the caller, never verdicts about
+  // the derivation, and both are STORED-side only. The derived side is never
+  // blanked: a derivation that produces `player-…` produced it deliberately.
+  const storedBlankCardNumber = isPseudoCardNumber(stored?.cardNumber)
+    && (opts.titleStatesNumber === true
+      || opts.storedPlayerCorrupted === true
+      || isCorruptedPlayerName(String(stored?.cardNumber ?? "").replace(/^player-/i, "").replace(/-/g, " ")));
   for (const axis of AXES) {
     const a = axisValue(stored, axis), b = axisValue(derived, axis);
     const aBlank = (axis === "setKey" && storedBlankSetKey)
@@ -2697,6 +2838,7 @@ module.exports = {
   // one alone and the mutation check can revert one alone. A leg nothing can
   // call alone is a leg nothing can prove.
   SPECIALIZATION_STATED, SPECIALIZATION_PARENTS, LADDER_MIRRORED_KEYS,
+  SAME_NUMBER_PARALLEL_SETS, isSameNumberParallelSet,
   STRICT_CHECKLIST_SOURCES, normalizeCatalogSource, isStrictChecklistSource,
   specializationAncestry, isSpecializationOf, distinguishingWords,
   titleStatesWord, specializationStatedEvidence,
@@ -2730,7 +2872,7 @@ module.exports = {
   // CF-UNPARSED-IS-NOT-UNNUMBERED (2026-09-04). The pseudo-number predicate and
   // the title-states-a-number fact, exported so the census can supply the fact
   // and a mutation check can revert each half alone.
-  isPseudoCardNumber, titleStatesCardNumber,
+  isPseudoCardNumber, titleStatesCardNumber, isCorruptedPlayerName,
   GRADER_RE, RAW_CONDITION_RE,
   // The trust ladder's new gates, exported so the tests can drive each one
   // directly and the mutation check can revert them one at a time.
