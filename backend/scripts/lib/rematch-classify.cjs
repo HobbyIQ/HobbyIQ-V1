@@ -125,6 +125,22 @@ const AGREE = "AGREE", IMPROVE = "IMPROVE", CONFLICT = "CONFLICT", UNDERIVABLE =
 const PROTECTED = "PROTECTED", AUTO = "AUTO";
 /** The one CONFLICT subclass authorized for audited auto-apply (Drew 2026-09-02). */
 const BASE_EVICTION = "BASE-EVICTION";
+/**
+ * NOT A CLASSIFICATION -- AN APPLY SCOPE (2026-09-04).
+ *
+ * REVERT-EVICTION never comes back from `classifyRow`; no row is ever "of" it.
+ * It is the name of a PASS the apply can be scoped to, and it lives beside the
+ * two real classes because the `scope` input is the one place a dispatcher
+ * says what a run is allowed to do, and a run that undoes writes has to be
+ * asked for by name exactly as a run that makes them does.
+ *
+ * Kept OUT of APPLY_CLASSES on purpose: `applyKindOf` and `writableUnderScope`
+ * decide whether a CLASSIFIED row may be written, and a revert has no
+ * classified row -- it has a marker and a recorded origin slug. Mixing it into
+ * that machinery would let a scope=revert-eviction dispatch arm the ordinary
+ * write path, which is the one thing this name must never do.
+ */
+const REVERT_EVICTION = "REVERT-EVICTION";
 /** REPORT-ONLY subclass (Drew 2026-09-03). A pool holding rows whose titles
  *  name DIFFERENT members of one colour family -- Green vs Green Refractor vs
  *  Green Wave. Never writable; see FINISH_FAMILY_COLLISION below. */
@@ -426,6 +442,193 @@ function titleEchoesSlugParallel(title, slugParallel) {
 }
 
 /**
+ * G6 -- THE STORED IDENTITY'S OWN PARALLEL, STATED IN THE TITLE, IS A REFUSAL.
+ *
+ * CF-A-SLUG-AND-ITS-TITLE-CAN-AGREE, generalised past the slug (2026-09-04).
+ *
+ * #1711 shipped the slug half of this: read the parallel out of the stored
+ * slug's 6th segment and refuse the eviction when the title spells it out.
+ * That caught all 12 DAMAGED rows the halted wave wrote. It has two gaps, and
+ * this guard closes both without moving what those 12 measure.
+ *
+ * GAP 1 -- THE SLUG IS NOT THE ONLY PLACE THE STORED IDENTITY KEEPS ITS
+ * PARALLEL. `stored.parallel` is a field of its own, and the two disagree in
+ * both directions in the live pool: a row can carry `parallel: "Red Wave"`
+ * under a slug whose segment says `base`, and a malformed slug can carry a
+ * segment that is not a parallel at all. Reading BOTH and taking the union of
+ * the claims means the guard defends a row whichever half of its identity
+ * still remembers the parallel. Inside BASE-EVICTION the stored field is
+ * usually blank -- guard 2 requires it -- so this half is a belt for the
+ * subclass and load-bearing for any other caller.
+ *
+ * GAP 2 -- A MALFORMED SLUG PUTS THE WRONG WORD IN THE PARALLEL SEGMENT.
+ * 62 of the 1,456 rows the wave wrote came off `hiq:ant::hiq:football:2025:...`
+ * -- a double-prefixed slug. Every segment shifts by two, so the parallel
+ * position reads the YEAR ("2025", "2024", "2008") and a title that of course
+ * contains its own year echoes it perfectly. Left alone that is 62 spurious
+ * refusals standing in front of 62 rows whose real inner parallel is `base` --
+ * measured, all 62 -- so they are genuine base-to-base re-keys and the slug,
+ * not the identity, is what is wrong with them. `slugIsWellFormed` refuses to
+ * read a parallel by POSITION out of a slug whose positions do not mean what
+ * the shape says, and the malformed shape is reported as its own census
+ * subclass instead of being silently absorbed here.
+ *
+ * WHY THE RULE STAYS "EVERY SIGNIFICANT WORD", NOT "ANY TOKEN"
+ *
+ * Measured over all 1,456 marker-carrying rows in the live pool, 2026-09-04:
+ *
+ *   every-word (this guard)   12 refusals -- exactly the 12 DAMAGED rows,
+ *                             mercury x5, signatures x5, earth, venus
+ *   any-token                 23 refusals -- those 12, plus 11 rows whose slug
+ *                             says `rookie-autographs-black` or `rookies-
+ *                             autographs` and whose title says "Rookie"
+ *
+ * "Rookie" in a title is a player descriptor and `rookie-autographs` is an
+ * autograph SUBSET, not a finish; those 11 are genuine base sales an any-token
+ * rule would strand on parallel slugs forever. A disqualifying-only guard is
+ * cheap to make broad, and that is exactly why breadth has to be earned here:
+ * the direction that costs us evictions is the direction nothing complains
+ * about. Every word it is, and the 12 are the proof that it is enough.
+ *
+ * THE PRODUCT-NAME EXCLUSION IS KEPT. A token that is one of the product's own
+ * setKey words names the SET on this card, never a finish -- `chrome` on
+ * `topps-cosmic-chrome`, `prizm` on `panini-prizm`. Those are dropped before
+ * the every-word test, so a slug parallel made only of product words matches
+ * nothing at all, which is the right answer: it never named a finish.
+ *
+ * Hyphen-insensitive and case-insensitive on both sides. The slug spells a
+ * parallel `pink-refractor`, the title spells it "Pink Refractor", and both
+ * reduce to the same two words.
+ *
+ * DISQUALIFYING ONLY. It can keep a row exactly where it sits and it can never
+ * mint a parallel: a false positive costs one eviction, a false negative
+ * splits a pool. Pure -- a test drives it with strings.
+ */
+
+/** Is this slug well-formed enough to read a parallel out of BY POSITION?
+ *  Exactly one `hiq:` prefix, and at least the seven segments the shape
+ *  defines. A double-prefixed slug is malformed and yields nothing. */
+function slugIsWellFormed(slug) {
+  const s = str(slug);
+  if (!s.startsWith("hiq:")) return false;
+  // `hiq:ant::hiq:football:2025:...` -- two prefixes, every segment shifted.
+  if ((s.match(/hiq:/g) || []).length !== 1) return false;
+  return s.split(":").length >= 7;
+}
+
+/**
+ * The significant finish words the STORED IDENTITY claims, from both places it
+ * keeps them: the slug's parallel segment and the `parallel` field. Generic
+ * parallels contribute nothing, the product's own words are dropped, and words
+ * under 3 characters are noise.
+ *
+ * Returns a list of { from, phrase, words } -- `from` names which half of the
+ * identity the claim came out of, so a refusal can say so.
+ */
+function parallelTokensOfStoredIdentity({ storedSlug, stored, setKey }) {
+  const claims = [];
+  const slug = str(storedSlug);
+  if (slugIsWellFormed(slug)) {
+    const seg = slugParallelSegment(slug);
+    if (seg && !GENERIC_PARALLELS.has(lower(seg))) claims.push({ from: "slug", phrase: lower(seg) });
+  }
+  const field = lower(str(stored?.parallel));
+  if (field && !GENERIC_PARALLELS.has(field)) claims.push({ from: "field", phrase: field });
+  const out = [];
+  for (const c of claims) {
+    const words = c.phrase
+      .split(/[^a-z0-9]+/)
+      .filter((w) => w.length >= 3 && w !== "base" && !VOCAB.isProductWord(w, setKey));
+    if (words.length) out.push({ ...c, words });
+  }
+  return out;
+}
+
+/**
+ * SLUG-SHAPE DEFECTS -- TWO REPORT-ONLY CENSUS SUBCLASSES (2026-09-04).
+ *
+ * Both were found while auditing the 1,456 rows the halted base-eviction wave
+ * wrote. Neither is a reason to write anything, and that is the finding: each
+ * is a shape the census could not previously NAME, so it had no count and no
+ * way to be argued about. They are counted and reported, never acted on.
+ *
+ * 1. MALFORMED-DOUBLE-PREFIX-SLUG -- 62 of the 1,456.
+ *
+ *    `hiq:ant::hiq:baseball:2023:bowman-chrome:39:base:no-auto`. Some writer
+ *    prefixed an already-complete hiq slug with `hiq:ant:` and an empty
+ *    segment. Every position after that shifts by two, so anything reading the
+ *    slug BY POSITION -- which is how the parallel, the setKey and the sport
+ *    are all read -- gets the wrong field: position 5 is the parallel by the
+ *    shape's definition, and on these it holds the YEAR.
+ *
+ *    Measured: all 62 have `base` in their REAL (inner) parallel position, so
+ *    the evictions those rows received were base-to-base and did not damage an
+ *    identity. What is wrong with them is the KEY, not the reading -- which is
+ *    exactly why this is reported rather than repaired here. Rewriting a
+ *    row's cardId is a relocation with a destination, and the destination
+ *    question ("is the inner slug right, or is the whole key a mis-mint?")
+ *    is not one a classifier answers.
+ *
+ * 2. NUM-SLUG-WITHOUT-STORED-PRINTRUN -- 244 of the 1,456.
+ *
+ *    The slug carries `:num-###` -- the shape's optional print-run segment --
+ *    while the row's own `printRun` field is null. The two halves of the
+ *    identity disagree about whether the card is serial-numbered at all.
+ *
+ *    Deliberately NOT a refusal. `storedPrintRunNamesALimitedParallel` already
+ *    vetoes an eviction when the row STORES a print run, and that guard is
+ *    about the field precisely because a field is the row's own hand while a
+ *    slug segment is whichever writer keyed it. Promoting this to a veto would
+ *    re-block the 244, and nothing has been measured that says the slug is
+ *    the truthful half. So: a count, a name, and a sample for Drew.
+ *
+ * Pure, and independent of every class. A row can carry either shape in any
+ * class, so these are tallied ALONGSIDE the class counts, never inside them.
+ */
+const SLUG_SHAPE_DEFECTS = {
+  DOUBLE_PREFIX: "malformed-double-prefix-slug",
+  NUM_WITHOUT_PRINTRUN: "num-slug-without-stored-printrun",
+};
+
+/**
+ * The slug-shape defects ONE row carries, as a list of names. Empty for a
+ * well-formed row, which is the overwhelming majority.
+ *
+ * `slug` is the row's stored cardId; `stored` supplies the printRun FIELD the
+ * second defect compares the segment against.
+ */
+function slugShapeDefects({ slug, stored }) {
+  const out = [];
+  const s = str(slug);
+  if (!s) return out;
+  if (s.startsWith("hiq:") && (s.match(/hiq:/g) || []).length > 1) out.push(SLUG_SHAPE_DEFECTS.DOUBLE_PREFIX);
+  if (/:num-\d+/.test(s)) {
+    const pr = stored?.printRun;
+    if (pr === null || pr === undefined || pr === "") out.push(SLUG_SHAPE_DEFECTS.NUM_WITHOUT_PRINTRUN);
+  }
+  return out;
+}
+
+/**
+ * G6. Does the title state, in full, a parallel the stored identity claims?
+ * Returns { phrase, from } or null.
+ *
+ * Independent of the finish vocabulary by construction: the stored identity is
+ * the claim and the title is the witness, and when the witness repeats the
+ * claim the two agree. A parallel the checklist corpus has never heard of --
+ * Topps Cosmic Chrome's Planetary Pursuit Mercury, 2025 Score's Signatures --
+ * still defends itself.
+ */
+function storedParallelStatedInTitle({ title, storedSlug, stored, setKey }) {
+  const hay = new Set(lower(str(title)).split(/[^a-z0-9]+/).filter(Boolean));
+  if (!hay.size) return null;
+  for (const c of parallelTokensOfStoredIdentity({ storedSlug, stored, setKey })) {
+    if (c.words.every((w) => hay.has(w))) return { phrase: c.phrase, from: c.from };
+  }
+  return null;
+}
+
+/**
  * The three evidence fields, quoted, for ONE row. Returns
  * { qualifies, evidence } where evidence is what the census banner and the
  * rekeyedReason both print -- the row is never evicted on a verdict alone,
@@ -514,10 +717,32 @@ function baseEvictionEvidence({ row, stored, derived, storedSlug, baseDestSlug, 
   //      parallel must appear, so a ...:base-refractor:... slug does not
   //      disqualify on the bare word 'base' and one-word overlap is never
   //      enough on its own.
-  const slugParallelEcho = titleEchoesSlugParallel(title, ev.storedSlugParallel);
-  if (slugParallelEcho) {
-    ev.titleEchoesSlugParallel = slugParallelEcho;
-    fail.push(`title-echoes-slug-parallel:${slugParallelEcho}`);
+  //      G6 (2026-09-04) generalises this past the slug. The stored `parallel`
+  //      FIELD is read as a second source of the same claim; the product's own
+  //      setKey words are dropped, so `chrome` on topps-cosmic-chrome can never
+  //      carry a match; and a MALFORMED slug -- `hiq:ant::hiq:...`, 62 of the
+  //      1,456 rows -- yields no parallel at all rather than echoing the year
+  //      its shifted segments left where the parallel belongs.
+  const g6 = storedParallelStatedInTitle({ title, storedSlug: slug, stored, setKey: beSetKey });
+  if (g6) {
+    ev.storedParallelStatedInTitle = g6;
+    // The historical field name is kept alongside it, so a row written under
+    // #1711's guard and a row written under this one read the same to every
+    // caller that already looks for it.
+    ev.titleEchoesSlugParallel = g6.phrase;
+    // ONE REASON STRING PER REFUSAL, NAMED BY WHICH HALF OF THE IDENTITY SPOKE.
+    //
+    // The failure list is COMMA-JOINED into a single `not-base-eviction:...`
+    // reason, so pushing two names for one finding does not give a reader two
+    // matchable reasons -- it gives them one unreadable one and breaks every
+    // consumer keyed to either. So the slug half keeps #1711's exact string,
+    // which the audit gate, the census banner and every row already written
+    // under that guard use; the FIELD half -- the case #1711 could not see at
+    // all -- gets G6's own name, because a new population deserves a name a
+    // census can count separately.
+    fail.push(g6.from === "slug"
+      ? `title-echoes-slug-parallel:${g6.phrase}`
+      : `stored-parallel-stated-in-title:${g6.phrase}`);
   }
   // 4. somewhere checklist-backed to go
   if (!baseDestBacked) fail.push("no-checklist-backed-base-destination");
@@ -1463,6 +1688,10 @@ function classifyRow({
   autoByCardNumber = false,
 }) {
   const prov = provenanceTier(row);
+  // THE SLUG-SHAPE DEFECTS ARE COMPUTED FOR EVERY ROW AND CHANGE NOTHING.
+  // Report-only census subclasses: a count and a name, never a refusal and
+  // never a write. See SLUG_SHAPE_DEFECTS above for why each one stops there.
+  const slugShape = slugShapeDefects({ slug: storedSlug ?? row?.cardId, stored });
 
   // THE DERIVATION-DEFECT REFUSALS ARE COMPUTED ONCE, BEFORE ANY CLASS.
   //
@@ -1528,6 +1757,10 @@ function classifyRow({
     finishFamilyCollision: family.qualifies,
     finishFamily: family.qualifies ? family.evidence.family : null,
     finishFamilyEvidence: family.qualifies ? family.evidence : null,
+    // Report-only, on EVERY return path: a row carries its slug's shape
+    // defects whatever class it lands in, and a count that only appeared for
+    // some classes would be a count of the classes, not of the defect.
+    slugShapeDefects: slugShape,
   };
   const splitReasons = split.split ? [`split-identity:${split.klass}:${split.reason}`] : [];
   // Carried alongside the split reasons for the same reason: every return
@@ -1771,6 +2004,12 @@ const APPLY_CLASSES = { IMPROVE, BASE_EVICTION };
  *  punctuation (base-eviction / base_eviction / baseeviction) and deliberately
  *  NOT generous on meaning: nothing here means "both" except the words that
  *  say both. */
+/** The spellings that mean "undo", so `parseApplyScope` can tell an empty
+ *  alias list that MEANS revert from one that means nothing. */
+const REVERT_SCOPE_WORDS = new Set([
+  "revert-eviction", "revert-evictions", "revert", "revert-base-eviction", "unevict",
+]);
+
 const APPLY_SCOPE_ALIASES = new Map([
   ["improve", [IMPROVE]],
   ["improves", [IMPROVE]],
@@ -1781,6 +2020,14 @@ const APPLY_SCOPE_ALIASES = new Map([
   ["eviction", [BASE_EVICTION]],
   ["evictions", [BASE_EVICTION]],
   ["base-eviction-only", [BASE_EVICTION]],
+  // The undo. It arms NO write class -- `parseApplyScope` reports it through
+  // `revert` instead, and the runner branches to the revert pass. So a scope
+  // that says revert can never also write an eviction or an improve.
+  ["revert-eviction", []],
+  ["revert-evictions", []],
+  ["revert", []],
+  ["revert-base-eviction", []],
+  ["unevict", []],
   ["both", [IMPROVE, BASE_EVICTION]],
   ["all", [IMPROVE, BASE_EVICTION]],
   ["all-classes", [IMPROVE, BASE_EVICTION]],
@@ -1799,25 +2046,46 @@ const APPLY_SCOPE_ALIASES = new Map([
  */
 function parseApplyScope(raw) {
   const v = lower(raw).replace(/[_\s]+/g, "-");
-  const out = { classes: new Set(), ok: false, reason: "", raw: str(raw) };
+  const out = { classes: new Set(), ok: false, reason: "", raw: str(raw), revert: false };
   if (!v) { out.reason = "scope is empty -- an apply must name the class it writes"; return out; }
   const parts = v.split(",").map((x) => x.trim()).filter(Boolean);
   const unknown = [];
   for (const part of parts) {
     const hit = APPLY_SCOPE_ALIASES.get(part);
-    if (hit) for (const k of hit) out.classes.add(k);
+    if (hit) { out.revert = out.revert || REVERT_SCOPE_WORDS.has(part); for (const k of hit) out.classes.add(k); }
     else unknown.push(part);
+  }
+  // THE UNDO IS EXCLUSIVE. A dispatch that says "revert-eviction,improve" is a
+  // dispatch that means two opposite things about the same pool in one run,
+  // and there is no reading of it that is safe to guess. Refused by name.
+  if (out.revert && out.classes.size) {
+    out.classes.clear(); out.revert = false;
+    out.reason = `scope ${JSON.stringify(str(raw))} asks to REVERT and to WRITE in one run -- name one`;
+    return out;
+  }
+  // A SCOPE THAT IS PART UNDERSTOOD IS NOT UNDERSTOOD, and that is checked
+  // BEFORE the revert is armed as well as before a class is -- otherwise
+  // `revert-eviction,bogus` would leave `revert` true on a refused parse and
+  // a caller reading the flag without the verdict would run the undo anyway.
+  if (unknown.length) {
+    out.classes.clear();
+    out.revert = false;
+    // The message NAMES the options, because this is the branch the runner's
+    // inherited default "refractor" lands in and a dispatcher reading it needs
+    // to learn what the accepted scopes actually are -- including the revert,
+    // which is otherwise undiscoverable.
+    out.reason = `scope ${JSON.stringify(str(raw))} carries unrecognised token(s) ${unknown.join(",")} `
+      + `(expected one of: improve, base-eviction, both, revert-eviction)`;
+    return out;
+  }
+  if (out.revert) {
+    out.ok = true;
+    out.reason = "armed: REVERT-EVICTION (no write class -- damaged evictions are moved back)";
+    return out;
   }
   if (!out.classes.size) {
     out.reason = `scope ${JSON.stringify(str(raw))} names no apply class ` +
-      `(expected one of: improve, base-eviction, both)`;
-    return out;
-  }
-  if (unknown.length) {
-    // A scope that is PART understood is not understood. Half a scope is how a
-    // typo arms a class the dispatcher did not mean to arm.
-    out.classes.clear();
-    out.reason = `scope ${JSON.stringify(str(raw))} carries unrecognised token(s) ${unknown.join(",")}`;
+      `(expected one of: improve, base-eviction, both, revert-eviction)`;
     return out;
   }
   out.ok = true;
@@ -1890,6 +2158,12 @@ module.exports = {
   classifyIdentity: SPLIT.classifyIdentity,
   titleNamesFinish, titleStatesSerial, slugParallelSegment, slugNamesParallel, baseEvictionEvidence,
   titleEchoesSlugParallel,
+  // G6 -- the stored identity's own parallel, stated in the title, refuses the
+  // eviction whatever the vocabulary knows. Exported piece by piece so each
+  // half can be driven alone and reverted alone by the mutation check.
+  slugIsWellFormed, parallelTokensOfStoredIdentity, storedParallelStatedInTitle,
+  // The two report-only slug-shape census subclasses (2026-09-04).
+  SLUG_SHAPE_DEFECTS, slugShapeDefects,
   // The derivation-defect guards (D1, D6, D7, D8, V3), exported so each pin
   // can drive one directly and the mutation check can revert them one at a
   // time -- a guard nothing can call alone is a guard nothing can prove.
@@ -1904,5 +2178,7 @@ module.exports = {
   // The apply class scope (audit gate item 8) -- BASE-EVICTION is clean
   // corpus-wide while IMPROVE is not, so the apply is scopable to a class.
   APPLY_CLASSES, APPLY_SCOPE_ALIASES, parseApplyScope, applyKindOf, writableUnderScope,
+  // The undo scope. A NAME, not a class -- see REVERT_EVICTION above.
+  REVERT_EVICTION, REVERT_SCOPE_WORDS,
   VOCAB,
 };
