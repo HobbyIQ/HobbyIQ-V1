@@ -299,6 +299,36 @@ export function shouldRunFirstRun(
   return true;
 }
 
+/** CF-DAILYIQ-BANNER-ONLY-WHEN-EMPTY (Drew, 2026-09-04: the "Value your first
+ *  card — Get started" banner was rendering on a 43-holding portfolio).
+ *
+ *  The BANNER's gate, which is deliberately stricter than `shouldRunFirstRun`.
+ *  The two answer different questions and must not be collapsed into one:
+ *
+ *    shouldRunFirstRun — "may the /app/start funnel run?" A user who added
+ *      cards outside the funnel has still never seen the value moment, and
+ *      that render IS the product, so the funnel stays available to them.
+ *      The test above ("still shows the value moment to someone who added a
+ *      card outside the funnel") pins that on purpose, and this change does
+ *      not touch it — /app/start behaves exactly as before.
+ *
+ *    shouldShowFirstRunBanner — "should the Today page NAG about it?" No. A
+ *      portfolio with holdings in it is not empty, and an owner looking at 43
+ *      cards being told to value their first one is the app failing to read
+ *      the screen it is on. The funnel is still reachable (the route, and
+ *      settings); it just stops interrupting.
+ *
+ *  So: the banner requires the funnel to be runnable AND the portfolio to be
+ *  genuinely empty. `holdingCount` is the fact on the ground and it is what
+ *  decides — not a progress record that may simply never have been written. */
+export function shouldShowFirstRunBanner(
+  progress: FirstRunProgress,
+  ctx: Pick<FirstRunContext, "holdingCount">,
+): boolean {
+  if (ctx.holdingCount > 0) return false;
+  return shouldRunFirstRun(progress, ctx);
+}
+
 /** The step to render now: the first one not yet complete. Returns null
  *  when every step is done, which is the caller's cue to complete. */
 export function currentStep(progress: FirstRunProgress): FirstRunStepId | null {
