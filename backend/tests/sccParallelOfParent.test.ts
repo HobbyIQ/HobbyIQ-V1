@@ -297,17 +297,27 @@ describe("a subset is not in the identity, so a shared number is a collision", (
     expect(b.rows[0].player).toBe("Magic Johnson");
   });
 
-  it("and the identity slug cannot tell them apart", () => {
-    const slugOf = (subset: string) =>
+  it("and the identity slug cannot tell them apart until the clash is STATED", () => {
+    // CF-A-SUBSET-IS-PART-OF-THE-IDENTITY-WHEN-IT-HAS-TO-BE (Drew ruling,
+    // 2026-09-04) answers the question this test posed. Carrying the subset is
+    // still not enough — it is display data on ~1.48M catalog rows and only 17
+    // rungs actually clash — so the slug is unchanged unless the caller states
+    // the clash it can SEE. That is `subsetInId`, decided at ingest from the
+    // catalog and persisted on the row. Pinned in full in
+    // tests/subsetIsPartOfTheIdentity.test.ts.
+    const slugOf = (subset: string, extra: Record<string, unknown> = {}) =>
       computeHobbyIqCardId({
         sport: "basketball", year: 2000, setKey: "topps-chrome",
         cardNumber: "MJ1", parallel: "Refractor", isAuto: false, printRun: null,
-        // subset is not part of the identity — passing it changes nothing,
-        // which is precisely the hazard.
-        ...({ subsetName: subset } as Record<string, unknown>),
+        subsetName: subset, ...extra,
       });
+    // Naming the subset alone still changes nothing — the hazard this test was
+    // written to record, and the reason the flag is a separate decision.
     expect(slugOf("Cards That Never Were")).toBe(slugOf("Johnson Reprints"));
     expect(slugOf("Cards That Never Were")).toBe("hiq:basketball:2000:topps-chrome:mj1:refractor:no-auto");
+    // With the clash stated, they are two cards with two pools.
+    expect(slugOf("Cards That Never Were", { subsetInId: true }))
+      .not.toBe(slugOf("Johnson Reprints", { subsetInId: true }));
   });
 });
 

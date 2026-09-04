@@ -242,8 +242,13 @@ async function main() {
   let notReached = 0;
   // Numbered rows whose parallel the source left blank. NOT base cards.
   let unnamedParallel = 0;
+  // A clash the subset RESOLVES: both cards get their own subset-bearing id.
+  let subsetDisambiguated = 0, subsetIncumbentMoved = 0;
+  // A clash where the subset is UNKNOWN on one side. Still refused, still
+  // counted -- blank is unknown and this pass never invents one.
   let subsetCollision = 0;
   const collisionExamples = [];
+  const disambiguatedExamples = [];
   // Written, but the merge kept the row another source already held there.
   let keptExisting = 0;
   let stopReason = null;
@@ -348,36 +353,88 @@ async function main() {
           const categoryBlank = !r.category || !String(r.category).trim();
           if (parallelBlank && numbered && categoryBlank) { unnamedParallel++; return; }
 
-          const known = await lookup(slug);
+          let known = await lookup(slug);
+          let slugForWrite = slug;
+          let subsetInId = false;
 
-          // CF-A-SUBSET-IS-NOT-IN-THE-IDENTITY (2026-09-04, run 33875264485).
-          // The identity slug carries sport/year/setKey/cardNumber/parallel/
-          // isAuto/printRun -- and NO subset. So two subsets of one product that
-          // number their cards alike collide on the slug, and the second write
-          // silently replaces the first with a DIFFERENT card.
+          // CF-A-SUBSET-IS-PART-OF-THE-IDENTITY-WHEN-IT-HAS-TO-BE (Drew ruling,
+          // 2026-09-04). SUPERSEDES CF-A-SUBSET-IS-NOT-IN-THE-IDENTITY (#1741),
+          // which refused the second write and counted it.
           //
-          // Measured, not hypothetical: 2000-01 Topps Chrome publishes both
-          // "Cards That Never Were" (MJ1-MJ10) and "Johnson Reprints" (MJ1-MJ7),
-          // every row Magic Johnson, both Refractor. Reparenting both onto
-          // topps-chrome -- which is where they belong -- puts MJ1 twice.
+          // Two subsets of one product that number their cards alike collide on
+          // the plain slug: 2000-01 Topps Chrome publishes both "Cards That
+          // Never Were" (MJ1-MJ10) and "Johnson Reprints" (MJ1-MJ7), every row
+          // Magic Johnson, both Refractor. #1741 stopped the merge by refusing
+          // the second row -- right about the harm, and it left those cards
+          // uningestable.
           //
-          // A checklist row NEVER overwrites a checklist row naming a DIFFERENT
-          // subset. It is refused and counted, so the collision is a reported
-          // number to rule on, not a merged pool found months later.
-          if (product.subsetName && known && known.subsetName && known.subsetName !== product.subsetName) {
-            subsetCollision++;
-            if (collisionExamples.length < 8) {
-              collisionExamples.push(String(r.cardNumber).toUpperCase() + "|" + (r.parallel || "base")
-                + ': "' + product.subsetName + '" vs stored "' + known.subsetName + '"');
+          // Drew's ruling: for THOSE cards, and only those, the subset becomes
+          // part of the identity and each gets its own pool. So the clash is
+          // RESOLVED rather than refused. Both sides are re-minted with a
+          // `:sub-` segment -- the incoming row and the row already stored --
+          // and the plain id is vacated, so nothing keeps landing on the
+          // address that answers for two different cards.
+          //
+          // THE CLASH IS WHAT THE CATALOG SAYS. It is visible here because the
+          // stored row at this exact rung names a DIFFERENT subset. No text is
+          // read, nothing is inferred from a title, and a product whose numbers
+          // are unique never reaches this branch at all.
+          //
+          // WHAT STILL REFUSES: a clash where one side's subset is UNKNOWN.
+          // Blank means unknown and is never invented, and minting the unknown
+          // side without a segment would put it straight back on the ambiguous
+          // plain id. #1741's counter stays for exactly that case.
+          if (known && known.subsetName && known.subsetName !== (product.subsetName || null)) {
+            if (!product.subsetName) {
+              subsetCollision++;
+              if (collisionExamples.length < 8) {
+                collisionExamples.push(String(r.cardNumber).toUpperCase() + "|" + (r.parallel || "base")
+                  + ': subset UNKNOWN vs stored "' + known.subsetName + '"');
+              }
+              return;
             }
-            return;
+            subsetInId = true;
+            slugForWrite = computeHobbyIqCardId({
+              sport: product.sport, year: product.year, setKey: product.setKey,
+              cardNumber: String(r.cardNumber),
+              parallel: r.parallel || "Base",
+              isAuto: r.isAuto === "true",
+              printRun: r.printRun ? Number(r.printRun) : null,
+              subsetName: product.subsetName, subsetInId: true,
+            });
+            // MOVE THE INCUMBENT TOO. Leaving it on the plain id leaves one of
+            // the two cards at an address the other one also answers to.
+            const incumbentSlug = computeHobbyIqCardId({
+              sport: product.sport, year: product.year, setKey: product.setKey,
+              cardNumber: String(known.cardNumber ?? r.cardNumber),
+              parallel: known.parallel || "Base",
+              isAuto: known.isAuto === true,
+              printRun: typeof known.printRun === "number" ? known.printRun : null,
+              subsetName: known.subsetName, subsetInId: true,
+            });
+            if (incumbentSlug !== slugForWrite) {
+              await upsertCatalogEntry({
+                ...known, id: incumbentSlug, cardId: incumbentSlug, hobbyiqCardId: incumbentSlug,
+                subsetName: known.subsetName, subsetInId: true,
+              }, { known: await lookup(incumbentSlug) });
+              subsetIncumbentMoved++;
+            }
+            subsetDisambiguated++;
+            if (disambiguatedExamples.length < 8) {
+              disambiguatedExamples.push(String(r.cardNumber).toUpperCase() + "|" + (r.parallel || "base")
+                + ': "' + product.subsetName + '" + "' + known.subsetName + '" -> ' + slugForWrite);
+            }
+            known = await lookup(slugForWrite);
           }
 
           const landed = await upsertCatalogEntry({
-            id: slug, cardId: slug, hobbyiqCardId: slug,
+            id: slugForWrite, cardId: slugForWrite, hobbyiqCardId: slugForWrite,
             sport: product.sport, year: product.year,
             setKey: product.setKey, setName: product.setName,
             ...(product.subsetName ? { subsetName: product.subsetName } : {}),
+            // PERSISTED, so the decision is the CATALOG'S and every later reader
+            // reaches the same slug without re-deriving the clash for itself.
+            ...(subsetInId ? { subsetInId: true } : {}),
             cardNumber: String(r.cardNumber).toUpperCase(),
             // EXACTLY the checklist's words. Identity grammar (the :base:
             // segment) lives in the slug; injecting "Base" into the stored
@@ -467,7 +524,9 @@ async function main() {
     }
   }
   console.log(`  rows skipped           ${f(skippedRow)}   <- no card number, no player, or unslugable`);
-  console.log(`  subset collisions REFUSED ${f(subsetCollision)}   <- same (cardNumber, parallel) already held by a DIFFERENT subset of this product; the identity slug has no subset axis`);
+  console.log(`  subset clashes RESOLVED   ${f(subsetDisambiguated)}   <- same (cardNumber, rung) under a DIFFERENT subset; both cards re-minted with a :sub- segment (${f(subsetIncumbentMoved)} incumbents moved off the plain id)`);
+  if (disambiguatedExamples.length) console.log(`    e.g. ${disambiguatedExamples.join("; ")}`);
+  console.log(`  subset collisions REFUSED ${f(subsetCollision)}   <- the clash is real but ONE SIDE OF IT HAS NO SUBSET NAME; blank is unknown and is never invented`);
   if (collisionExamples.length) console.log(`    e.g. ${collisionExamples.join("; ")}`);
   console.log(`  numbered, parallel blank ${f(unnamedParallel)}   <- NOT written as Base; the name is unknown`);
   console.log(`  rows not reached       ${f(notReached)}   <- the budget stopped before these`);

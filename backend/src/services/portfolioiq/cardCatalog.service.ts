@@ -28,7 +28,7 @@
 // upserts are deterministic + no dup risk.
 
 import { CosmosClient, type Container } from "@azure/cosmos";
-import { computeHobbyIqCardId } from "./hobbyIqCardId.service.js";
+import { computeHobbyIqCardId, parseHobbyIqCardId } from "./hobbyIqCardId.service.js";
 import { authorityRank, catalogAuthorityOf } from "../catalog/catalogAuthority.service.js";
 import { buildSearchText, buildSearchTokens } from "./searchIndexing.service.js";
 import { canonicalCardName } from "../catalog/canonicalCardName.js";
@@ -137,6 +137,13 @@ export interface CardCatalogEntry {
   searchTokens?: string[];
   searchText?: string;
   subsetName?: string | null;
+  /** CF-A-SUBSET-IS-PART-OF-THE-IDENTITY-WHEN-IT-HAS-TO-BE (Drew, 2026-09-04).
+   *  True on the rows whose cardNumber is shared by more than one subset of
+   *  this product at this rung -- those, and only those, carry a `:sub-`
+   *  segment in their id. PERSISTED so the decision is the catalog's: a later
+   *  reader reaches the same slug without re-deriving the clash, and no path
+   *  ever infers one from a sale title. */
+  subsetInId?: boolean;
   team?: string | null;
   imageUrl?: string | null;
   brand?: string;
@@ -449,8 +456,15 @@ export function deriveCatalogEntry(input: {
    *  still built, from the setKey — a row with no setName is still findable,
    *  which is the whole point of CF-DERIVE-BUILDS-ITS-OWN-SEARCH-FIELDS. */
   setName?: string | null;
-  /** Named subset, when the source states one. Display only. */
+  /** Named subset, when the source states one. Display on most rows; part of
+   *  the IDENTITY on the ones `subsetInId` flags. */
   subsetName?: string | null;
+  /** CF-A-SUBSET-IS-PART-OF-THE-IDENTITY-WHEN-IT-HAS-TO-BE. Set by the caller
+   *  that can SEE the clash -- the checklist ingest, comparing this rung
+   *  against what the catalog already holds. Never derived here and never read
+   *  off a title: one row cannot see a clash, and a seller's words are not the
+   *  checklist. Left unset, the slug keeps the shape it has always had. */
+  subsetInId?: boolean;
   /** Set when the caller knows the product for certain — a published
    *  checklist. Suppresses the cardNumber-prefix repair meant for untrusted
    *  vendor text, which would otherwise collapse 2026 Bowman CPA-AG
@@ -473,13 +487,24 @@ export function deriveCatalogEntry(input: {
     isAuto: input.isAuto,
     printRun: input.printRun ?? null,
     authoritativeSetKey: input.authoritativeSetKey === true,
+    // CF-A-SUBSET-IS-PART-OF-THE-IDENTITY-WHEN-IT-HAS-TO-BE: a no-op unless
+    // the caller states the clash, which only the checklist ingest can see.
+    subsetName: input.subsetName ?? null,
+    subsetInId: input.subsetInId === true,
   });
   if (!slug || !slug.startsWith("hiq:")) return null;
 
-  // Slug layout: hiq:sport:year:setKey:cardNumber:parallelSlug:autoFlag[:printRunPart]
-  //              0   1     2    3      4          5             6         7
-  const parsedSlug = slug.split(":");
-  const parallelSlug = parsedSlug[5] ?? "base";
+  // READ THE SLUG STRUCTURALLY, NOT BY POSITION. This used to index
+  // `slug.split(":")` at 3 and 5 for setKey and parallelSlug. Both indices are
+  // wrong the moment a slug carries an OPTIONAL segment before them, and
+  // CF-A-SUBSET-IS-PART-OF-THE-IDENTITY-WHEN-IT-HAS-TO-BE introduces exactly
+  // that: `hiq:basketball:2000:topps-chrome:sub-johnson-reprints:mj1:...`
+  // would have read its setKey correctly and its PARALLEL as `mj1`, writing a
+  // parallelSlug that names a card number. parseHobbyIqCardId knows where the
+  // optional segments are; positional indexing cannot.
+  const parsedIdentity = parseHobbyIqCardId(slug);
+  const slugSetKey = parsedIdentity?.setKey ?? setKey;
+  const parallelSlug = parsedIdentity?.parallel ?? "base";
 
   // CF-YEAR-CARDYEAR-DUAL-WRITE (Drew, 2026-08-11). Schema drift: some
   // legacy code paths wrote catalog rows with field name `cardYear`
@@ -542,7 +567,7 @@ export function deriveCatalogEntry(input: {
     displayName: canonicalCardName({
       year,
       setName,
-      setKey: parsedSlug[3] ?? setKey,
+      setKey: slugSetKey,
       sport: input.sport,
       cardNumber,
       playerName,
@@ -565,7 +590,7 @@ export function deriveCatalogEntry(input: {
     // source's name) and "bowman" + BCP- (the vendor repair) all used to
     // leave a field that disagreed with the id, and every mover then refused
     // the row. setName keeps the source's own words.
-    setKey: parsedSlug[3] ?? setKey,
+    setKey: slugSetKey,
     cardNumber: cardNumber.toUpperCase(),
     parallel: String(input.parallel ?? "Base"),
     parallelSlug,
@@ -582,6 +607,13 @@ export function deriveCatalogEntry(input: {
     source: input.source,
     confidence: input.confidence,
     ...(setName ? { setName } : {}),
+    // Omitted when unknown, for the same reason rarity is: blank is unknown,
+    // and writing null would erase a subset another source did state.
+    ...(input.subsetName ? { subsetName: input.subsetName } : {}),
+    // The flag rides WITH the slug it produced -- a row whose id carries a
+    // :sub- segment and whose field does not would be a row nothing could
+    // re-derive.
+    ...(input.subsetInId === true ? { subsetInId: true } : {}),
     ...searchFields,
   } as Omit<CardCatalogEntry, "observedAt" | "lastSeenAt"> & { cardYear: number };
 }
