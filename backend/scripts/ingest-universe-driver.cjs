@@ -346,8 +346,13 @@ function gateStagedCsv(csvPath) {
     const c = String(r.category || "base");
     if (!byCat.has(c)) byCat.set(c, { pars: new Set(), nums: new Set(), rows: 0, ladderRows: 0 });
     const g = byCat.get(c);
-    g.pars.add(r.parallel); g.nums.add(r.cardNumber); g.rows++;
-    if (r.parallel) g.ladderRows++;
+    // A literal "Base" is a base card, not a rung -- the same reading
+    // isBaseParallel applies above. Counting it as a rung turns 1990 Bowman's
+    // 529 x {Base, Tiffany} into a 2-rung product and reads a correct
+    // two-spelling checklist as a cartesian (CF-THE-LITERAL-BASE-IS-A-BASE-CARD).
+    const isBase = isBaseParallel(r.parallel);
+    g.pars.add(isBase ? "" : r.parallel); g.nums.add(r.cardNumber); g.rows++;
+    if (!isBase) g.ladderRows++;
   }
   stats.categories = byCat.size;
   for (const [c, g] of byCat) {

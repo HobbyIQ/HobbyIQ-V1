@@ -28,9 +28,25 @@ const require_ = createRequire(import.meta.url);
 const { gateStagedCsv } = require_("../scripts/ingest-universe-driver.cjs");
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "hiq-gate-"));
-const stage = (name: string, rows: string[]) => {
+/**
+ * Stage a CSV as a FETCHER would: with the sidecar manifest every converter
+ * writes beside its output. `parallelColumnAuthoritative: true` is the flag
+ * ingest-scraped-checklist.cjs already reads to take the rung from the column
+ * instead of re-deriving one from the category slug -- the converter attesting
+ * that this column is the checklist's own ladder.
+ *
+ * That attestation is what lets a COMPLETE ladder be perfectly dense without
+ * reading as a cartesian product (CF-DENSITY-IS-THE-SIGNAL-NOT-SIZE): a full
+ * ladder has no holes by definition. Pass `attested: false` for a file nothing
+ * vouches for, which gets the strict rule.
+ */
+const stage = (name: string, rows: string[], attested = true) => {
   const p = path.join(dir, name);
   fs.writeFileSync(p, "category,cardNumber,parallel,isAuto,printRun,player\n" + rows.join("\n"));
+  if (attested) {
+    fs.writeFileSync(p.replace(/\.csv$/, ".manifest.json"),
+      JSON.stringify({ sourceUrl: `https://example.invalid/${name}`, parallelColumnAuthoritative: true }));
+  }
   return p;
 };
 
@@ -76,7 +92,9 @@ describe("a per-subset ladder is not a cross-join", () => {
     for (let n = 1; n <= 300; n++)
       for (let i = 0; i < 80; i++) rows.push(`base,${n},Refractor Variant ${i},false,,Player ${n}`);
     rows.push("base,1,,false,,Player 1");
-    const r = gateStagedCsv(stage("cartesian.csv", rows));
+    // Unattested: no converter vouches for this parallel column, so a gapless
+    // product is the graveyard shape and is refused on that shape alone.
+    const r = gateStagedCsv(stage("cartesian.csv", rows, false));
     expect(r.ok).toBe(false);
     expect(r.reason).toMatch(/cartesian product, not a ladder/);
   });
@@ -90,6 +108,6 @@ describe("a per-subset ladder is not a cross-join", () => {
       rows.push(`base,${n},,false,,Player ${n}`);
       for (let i = 0; i < 80; i++) rows.push(`base,${n},Rung ${i},false,,Player ${n}`);
     }
-    expect(gateStagedCsv(stage("blankcount.csv", rows)).ok).toBe(false);
+    expect(gateStagedCsv(stage("blankcount.csv", rows, false)).ok).toBe(false);
   });
 });

@@ -165,6 +165,25 @@ describe("ingest-universe-driver — the per-entry cleanliness gate", () => {
     expect(r.reason).toMatch(/distinct parallels/i);
   });
 
+  it("a literal 'Base' is a base card, not a rung — 1990 Bowman x Tiffany", () => {
+    // The committed scraper stages 1990 Bowman as 529 x {Base, Tiffany}: a
+    // complete, correct two-spelling checklist, dense by definition, and
+    // UNATTESTED. Reading the literal "Base" as a rung makes it a 2-rung
+    // gapless product and refuses the whole page (CF-THE-LITERAL-BASE-IS-A-
+    // BASE-CARD). Only Tiffany is a rung, so this is the Tiffany shape: one
+    // rung, exempt.
+    const rows = [HEADER];
+    for (let i = 1; i <= 529; i++) {
+      rows.push(`base,${i},Base,false,,Player ${i} Name`);
+      rows.push(`base,${i},Tiffany,false,,Player ${i} Name`);
+    }
+    const r = gateStagedCsv(stage(rows, false));
+    expect(r.ok).toBe(true);
+    expect(r.reason).toBeNull();
+    expect(r.stats.base).toBe(529);
+    expect(r.stats.ladder).toBe(529);
+  });
+
   it("a handful of cards against a handful of rungs is noise, not a spine", () => {
     // 3 cards x 2 rungs is dense, but density over six rows means nothing —
     // the 11.49M-row signature needs enough cards to BE a signature. Pinned so
