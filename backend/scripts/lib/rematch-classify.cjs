@@ -811,6 +811,338 @@ function improveRefusals({ row, stored, derived, axes }) {
   return refusals;
 }
 
+// ── DERIVATION DEFECTS: five guards that refuse a bad reading by name ──────
+//
+// CF-A-DERIVATION-DEFECT-IS-NOT-A-RULING (Drew, 2026-09-03). The 32-shard
+// census returned 4,453,642 CONFLICT rows, and an aggregation over them found
+// that the largest populations are not two rival readings of a card at all --
+// they are the DERIVATION failing to read what is plainly written, and the
+// census dutifully reporting that failure as a disagreement Drew has to
+// settle. A conflict that exists only because our own parser dropped a word is
+// noise in the one report that is supposed to be signal.
+//
+// Each guard below is DISQUALIFYING in the same direction as the eviction
+// evidence: it takes a derived reading OUT of contention and names why. The
+// class stays CONFLICT (the census must keep counting the shape), `writable`
+// goes false, and the reason string is what lets the population be filtered
+// out of Drew's queue and counted as a parser bug instead of a ruling.
+//
+// A guard never invents an identity. It refuses one. Absent beats wrong.
+
+/** A parallel name reduced to comparable words. `-`, `&`, `/` and case all
+ *  vary freely between a checklist spelling and a seller's title, and none of
+ *  them changes which card is meant. */
+const nameKey = (s) => lower(s).replace(/[^a-z0-9]+/g, " ").trim();
+
+/** The singular form of a checklist plural. A checklist heads its section in
+ *  the plural ("Gold Refractors") while the card carries the singular, so the
+ *  two spellings are ONE name -- see checklistListsParallel, same rule. */
+const singularWord = (w) => (w.length > 3 && w.endsWith("s") ? w.slice(0, -1) : w);
+const nameKeyLoose = (s) => nameKey(s).split(/\s+/).filter(Boolean).map(singularWord).join(" ");
+
+/**
+ * D1 -- THE TITLE STILL CONTAINS THE STORED COLOUR WORD.
+ *
+ * 1,374,029 rows: the stored row names a real finish (Gold, Blue, Red Wave,
+ * Coral Foil, Gray Back, Purple Scope, Team Color, Pristine Purple), the
+ * derivation says Base, and in 98.5% of the sampled cases THE TITLE STILL
+ * CONTAINS THE STORED COLOUR WORD. 94.5% are terse CardHedge titles of the
+ * shape "2025 Panini Prizm Football #99 Red Wave", where the finish is the
+ * only thing after the card number.
+ *
+ * The cause is in extractParallel: a closed hand-rolled ladder of enumerated
+ * colour+pattern pairs (Blue Wave, Gold Shimmer, Orange Lava...). A bare
+ * colour, or a colour paired with a pattern word nobody enumerated, matches no
+ * rule and falls all the way through to `return "Base"`. The finish reader is
+ * failing to read a finish the OLD writer read off the same string -- and the
+ * checklist corpus, 36,729 spellings over 576 products, knows every one of
+ * these names already.
+ *
+ * So this is never a demotion for Drew to rule on. A derived `Base` that would
+ * displace a stored named finish WHOSE OWN WORDS THE TITLE CONTAINS is refused
+ * outright: the title agrees with the stored row, and only our reader dissents.
+ *
+ * THE TEST IS ON THE STORED NAME'S WORDS, NOT ON THE VOCABULARY. Asking "does
+ * the title name a finish?" would fire on any title with a colour anywhere in
+ * it. The question here is narrower, and that is the whole point: does the
+ * title contain THE STORED PARALLEL -- as a phrase, or as every one of its
+ * distinguishing words? "Red Wave" against "...#99 Red Wave" yes; "Red Wave"
+ * against "...#99 Blue Refractor" no, and that one IS a real conflict which
+ * still reaches Drew.
+ */
+function titleNamesStoredFinish(title, storedParallel) {
+  const p = nameKeyLoose(storedParallel);
+  if (!p) return false;
+  if (GENERIC_PARALLELS.has(nameKey(storedParallel))) return false;
+  const t = ` ${nameKeyLoose(title)} `;
+  // the whole phrase, in order -- "Red Wave", "Gray Back", "Pristine Purple"
+  if (t.includes(` ${p} `)) return true;
+  // ...or every distinguishing word of it, in any order. Sellers reorder
+  // ("Bowman Blue ... True" for "True Blue"), and a stored name may carry a
+  // word the title spells elsewhere. Stopwords and 1-2 letter fragments are
+  // dropped so a match on "of" or "the" can never carry a name by itself.
+  const words = p.split(/\s+/).filter((w) => w.length >= 3 && !VOCAB.CORPUS_STOPWORDS.has(w));
+  if (!words.length) return false;
+  return words.every((w) => t.includes(` ${w} `));
+}
+
+/**
+ * D7 -- isAuto's BOUNDARY IS cardNumber, NEVER TITLE TEXT.
+ *
+ * 33,283 rows, 100% of them no-auto -> auto, every one driven by a title word
+ * (Auto / Autograph / Signatures). This runs against a PINNED ruling
+ * (CF-ISAUTO-BOUNDARY-IS-CARDNUMBER: text on the card_set is HARMFUL), and the
+ * population above is exactly why the ruling exists:
+ *
+ *   "1953 Bowman ... PSA AUTHENTIC AUTO"
+ *
+ * is a CUT SIGNATURE mounted with a base card. The card is the base card; the
+ * autograph is not part of its identity, and no 1953 Bowman autograph subset
+ * exists to file it against. Flipping the flag on the word moves a real base
+ * sale into an auto pool that has no cards in it.
+ *
+ * A card is an auto because its CARD NUMBER says so -- the checklist's
+ * autograph subset carries a fixed prefix (CPA-, BCPA-, BDA-, ...). That is
+ * the boundary, and parseListingIdentity already reads it
+ * (isCardNumberAutoSubset). What must never happen is the other half of that
+ * same line -- extractIsAuto(t), a title-word reader -- flipping a stored
+ * no-auto row on the strength of the word alone.
+ *
+ * So a derived isAuto=true over a stored isAuto=false is refused UNLESS the
+ * derived cardNumber is itself an auto-subset number.
+ */
+function isAutoFlipIsTitleOnly({ stored, derived, autoByCardNumber }) {
+  if (stored?.isAuto === true) return false;      // not a flip
+  if (derived?.isAuto !== true) return false;     // not a flip
+  return !autoByCardNumber;                       // the cardNumber does not back it
+}
+
+/**
+ * D8 -- A GRADE IS A GRADER TOKEN PLUS A NUMERAL. NOTHING ELSE.
+ *
+ * 58,241 rows where a RAW CONDITION ADJECTIVE was read as a numeric grade:
+ *
+ *   "VG-VGEX"            -> PSA 10   (no grader, no numeral at all)
+ *   "VG-EX"              -> PSA 8    (same)
+ *   "PSA GRADED EX-MT 6" -> PSA 9    (grader present, but the WRONG numeral)
+ *
+ * The first two are ungraded vintage cards described in the raw-condition
+ * vocabulary every vintage seller uses. Reading "VG" as a grade files a raw
+ * card into a PSA 10 pool -- the most expensive pool in the product -- and the
+ * sale it contributes is a raw sale. The third is genuinely graded, and even
+ * there the reader took the first digit it could find rather than the one
+ * ADJACENT TO THE GRADE PHRASE: "EX-MT 6" is PSA 6, not PSA 9.
+ *
+ * The rule is the one the doctrine already states: a grade derives ONLY from
+ * an explicit grader token (PSA/BGS/SGC/CGC/...) followed by a numeral, and
+ * the numeral is the one that follows the grade PHRASE. An adjective on its
+ * own -- VG, EX, NM, EX-MT, VG-EX, GEM MINT with no grader -- never produces a
+ * grade. Absent beats wrong: an unread grade leaves the stored one alone, and
+ * a raw card stays raw.
+ */
+const GRADER_RE = /\b(PSA|BGS|BVG|SGC|CGC|CSG|HGA|TAG|ISA|GMA|KSA)\b/i;
+/** Raw-condition adjectives. Present WITHOUT a grader token these are a seller
+ *  describing an ungraded card, and they are not grades. */
+const RAW_CONDITION_RE = /\b(?:VG-?VGEX|VG-?EX|EX-?MT|NM-?MT|GD-?VG|P-?FR|VG|EX|NM|GD|FR|PR|GEM\s*MINT|MINT|NEAR\s*MINT|EXCELLENT|VERY\s*GOOD|GOOD|POOR|FAIR)\b/i;
+
+/**
+ * Read a grade the way the doctrine says: a grader token, then the numeral
+ * that follows IT -- skipping over any condition adjective sitting between,
+ * which is what "PSA GRADED EX-MT 6" is. Returns null when the title states no
+ * grade, which is a real answer meaning "leave the stored one alone".
+ */
+function gradeFromTitleStrict(title) {
+  const t = String(title ?? "");
+  const g = t.match(GRADER_RE);
+  if (!g) return null;
+  // The numeral belongs to the grade phrase, so read FORWARD from the grader
+  // token only -- a digit earlier in the title is a year, a card number or a
+  // print run, never this card's grade.
+  const after = t.slice(g.index + g[0].length);
+  // Allow the words a slab label actually carries between the grader and the
+  // number ("GRADED", "AUTHENTIC", "MINT", "EX-MT"), then the numeral. This is
+  // what turns "PSA GRADED EX-MT 6" into 6 rather than into the first digit
+  // anywhere in the string.
+  const m = after.match(/^[\s.:-]*(?:(?:GRADED|GRADE|AUTH(?:ENTIC)?|CARD|GEM|MINT|NEAR|MT|PRISTINE|BLACK|LABEL|[A-Z]{2}(?:-[A-Z]{2})?)[\s.:-]*){0,4}(10(?:\.0)?|[1-9](?:\.5|\.0)?)(?!\d)/i);
+  if (!m) return null;
+  return { gradeCompany: g[1].toUpperCase(), gradeValue: Number(m[1]) };
+}
+
+/** A grade rendered for a REASON STRING. `gradeToken` joins on `|`, which is
+ *  also the separator the verdict fixtures join on -- a reason carrying a raw
+ *  token would shift every field after it and read as an axis that moved.
+ *  Same information, one space instead. */
+const gradeLabel = (id) => gradeToken(id).replace("|", " ");
+
+/**
+ * The derived grade is a CONDITION-ADJECTIVE ARTIFACT when the derivation
+ * claims a grade the strict reader cannot find, on a title carrying a raw
+ * condition adjective or no grader token at all. That is D8 exactly.
+ */
+function derivedGradeIsAdjectiveArtifact({ row, stored, derived }) {
+  const title = str(row?.title);
+  if (!title) return null;
+  if (gradeToken(derived) === "RAW") return null;      // nothing claimed
+  // THE DERIVATION CARRIES THE STORED GRADE FORWARD, AND THAT IS NOT A READING.
+  //
+  // deriveIdentity takes the stored grade whenever the title is silent -- "a
+  // title that states no grade does not make a stored PSA 9 row raw". So a
+  // derived grade EQUAL to the stored one was never read off the title at all
+  // and there is nothing here to refuse: the row agrees with itself. Without
+  // this line the guard fires on AGREE rows whose titles simply do not repeat
+  // the slab ("1953 Topps Baseball #54 Base", stored PSA 5), which is a
+  // refusal attached to a row where nothing disagrees.
+  //
+  // What remains after it is the real D8 population: a grade the DERIVATION
+  // introduced or changed, on a title that cannot support it.
+  if (gradeToken(derived) === gradeToken(stored)) return null;
+  const strict = gradeFromTitleStrict(title);
+  // The strict reader agrees with the derivation -- not an artifact.
+  if (strict && `${strict.gradeCompany}|${strict.gradeValue}` === gradeToken(derived)) return null;
+  if (!strict) {
+    // No readable grade at all. A title with no grader token, or one whose
+    // only grade-ish content is a condition adjective, produced this grade out
+    // of the adjective.
+    if (!GRADER_RE.test(title)) return `grade-from-title-without-grader:${gradeLabel(derived)}`;
+    if (RAW_CONDITION_RE.test(title)) return `grade-from-condition-adjective:${gradeLabel(derived)}`;
+    return `grade-not-readable-from-title:${gradeLabel(derived)}`;
+  }
+  // A grade IS readable and the derivation read a different one -- the wrong
+  // numeral ("PSA GRADED EX-MT 6" -> PSA 9). Name both sides.
+  return `grade-numeral-not-adjacent-to-grader:derived=${gradeLabel(derived)},title=${strict.gradeCompany} ${strict.gradeValue}`;
+}
+
+/**
+ * D6 -- CARD NUMBER: CASE IS NOT A DIFFERENCE, A PREFIX IS A DIFFERENT CARD.
+ *
+ * 171,125 rows on `changed:cardNumber`, and they are two populations with
+ * opposite meanings:
+ *
+ *   43% CASE-ONLY         `bb-ve` vs `BB-VE`. The SAME card, and reporting it
+ *                         as a conflict splits one pool in two over letter
+ *                         case. `axisValue` already lowercases, so these do
+ *                         not reach the diff at all -- but the CANONICAL
+ *                         casing still has to be decided, and the checklist's
+ *                         is the one that wins. That is a normalization lane
+ *                         under IMPROVE, not a conflict.
+ *   18% PREFIX TRUNCATION `1975-6` -> `1975`, `T91-74` -> `T91`, `92-36` ->
+ *                         `92`. These are DIFFERENT CARDS being merged: the
+ *                         derivation read the year (or the set prefix) as the
+ *                         whole number and dropped the rest. Filing #1975-6
+ *                         onto #1975 pools two cards into one.
+ *
+ * The truncation is a parser defect with a recognisable shape -- the derived
+ * value is a strict PREFIX of the stored one on a separator boundary -- so it
+ * is refused by name rather than handed to Drew as a rival reading.
+ */
+function cardNumberIsTruncation(stored, derived) {
+  const s = lower(stored?.cardNumber).replace(/\s+/g, "");
+  const d = lower(derived?.cardNumber).replace(/\s+/g, "");
+  if (!s || !d || s === d) return null;
+  if (!s.startsWith(d)) return null;
+  // A strict prefix, and what follows it in the stored value begins with a
+  // separator -- `1975-6` after `1975`, `t91-74` after `t91`. Without the
+  // boundary test `12` would "truncate" `123`, which is a different shape (a
+  // differently-read number, not a dropped suffix) and stays a conflict.
+  const rest = s.slice(d.length);
+  if (!/^[-_/. ]/.test(rest)) return null;
+  return `${s}<-${d}`;
+}
+
+/** Is the cardNumber difference CASE-ONLY? The same card; the checklist's
+ *  casing is canonical and a normalization lane may adopt it under IMPROVE. */
+function cardNumberDiffersOnlyByCase(stored, derived) {
+  const s = str(stored?.cardNumber).replace(/\s+/g, "");
+  const d = str(derived?.cardNumber).replace(/\s+/g, "");
+  if (!s || !d) return false;
+  return s !== d && s.toLowerCase() === d.toLowerCase();
+}
+
+/**
+ * V3 -- GENERICIZATION IS A LOSS, NOT A NORMALIZATION.
+ *
+ * ~285k rows where the derived parallel is a strict SUBSTRING of the stored
+ * named one:
+ *
+ *   Prism Refractor -> Refractor        Atomic Refractor -> Refractor
+ *   X-Fractor       -> Refractor        Silver Sparkle   -> Refractor
+ *   Mini-Diamond    -> Refractor        Logofractor      -> Refractor
+ *   Encased         -> Refractor
+ *
+ * Every one of those is a distinct card with its own checklist row and its own
+ * price curve (the Red Ink ruling: a named parallel is a distinct card). The
+ * derivation is not normalizing a spelling, it is throwing the specific half
+ * of the name away and landing on the family. Pooling an Atomic Refractor with
+ * a plain Refractor is one card, two rows, a split pool, a wrong FMV.
+ *
+ * The EXEMPTION is the case that genuinely IS a spelling: casing and plural.
+ * `Superfractor`/`SuperFractor` and `Refractors`/`Refractor` are one name in
+ * two hands, and normalizing those is right. The test is therefore on the
+ * LOOSE key (case-folded, punctuation-folded, de-pluralised): equal loose keys
+ * are a normalization and pass; a strict word-subset under the loose key is a
+ * genericization and is refused.
+ */
+function parallelIsGenericization(stored, derived) {
+  const s = nameKeyLoose(stored?.parallel);
+  const d = nameKeyLoose(derived?.parallel);
+  if (!s || !d) return null;
+  if (GENERIC_PARALLELS.has(nameKey(stored?.parallel))) return null;  // D1's shape, not this one
+  if (GENERIC_PARALLELS.has(nameKey(derived?.parallel))) return null; // ditto
+  if (s === d) return null;                       // case/plural alias -- NORMALIZES
+  // The derived name's words are a strict SUBSET of the stored name's, i.e.
+  // the derivation dropped a word and kept the family. Word-wise rather than
+  // character-wise, so "fractor" inside "Superfractor" is not a substring hit.
+  const sw = s.split(/\s+/).filter(Boolean), dw = d.split(/\s+/).filter(Boolean);
+  if (dw.length >= sw.length) return null;
+  const sset = new Set(sw);
+  if (!dw.every((w) => sset.has(w))) return null;
+  return `${str(derived?.parallel)}<-${str(stored?.parallel)}`;
+}
+
+/**
+ * Every derivation-defect refusal for one row, in one place.
+ *
+ * Returns a list of reason strings. A non-empty list means the derivation is
+ * not trustworthy ON THE AXIS NAMED, so the row must never be written from it,
+ * and the census can subtract this population from the conflicts Drew reads.
+ *
+ * `autoByCardNumber` is the caller's verdict that the derived cardNumber is
+ * itself an autograph-subset number -- the one thing that legitimately makes a
+ * row an auto (see D7).
+ */
+function derivationRefusals({ row, stored, derived, autoByCardNumber = false }) {
+  const out = [];
+  if (!derived) return out;
+  const title = str(row?.title);
+
+  // D1: a derived Base must NEVER displace a stored named finish whose own
+  // words the title contains.
+  const sp = axisValue(stored, "parallel"), dp = axisValue(derived, "parallel");
+  if (!axisIsBlank("parallel", sp) && axisIsBlank("parallel", dp)
+      && titleNamesStoredFinish(title, stored?.parallel)) {
+    out.push(`title-names-stored-finish:${str(stored?.parallel)}`);
+  }
+
+  // V3: a derived parallel that is a strict word-subset of the stored one.
+  const generic = parallelIsGenericization(stored, derived);
+  if (generic) out.push(`parallel-genericization:${generic}`);
+
+  // D7: a title-only auto flip.
+  if (isAutoFlipIsTitleOnly({ stored, derived, autoByCardNumber })) {
+    out.push("isauto-flip-from-title-only");
+  }
+
+  // D8: a grade read off a condition adjective, or off the wrong numeral.
+  const gradeArtifact = derivedGradeIsAdjectiveArtifact({ row, stored, derived });
+  if (gradeArtifact) out.push(gradeArtifact);
+
+  // D6: a derived cardNumber that is a strict prefix of the stored one.
+  const trunc = cardNumberIsTruncation(stored, derived);
+  if (trunc) out.push(`cardnumber-truncation:${trunc}`);
+
+  return out;
+}
+
 /**
  * Compare stored vs derived identity axis by axis.
  *   same     both name the same value (or both blank)
@@ -857,8 +1189,23 @@ function diffAxes(stored, derived, opts = {}) {
 function classifyRow({
   row, stored, derived, checklistBacked = false, derivationReasons = [],
   storedSlug = null, baseDestSlug = null, baseDestBacked = false,
+  autoByCardNumber = false,
 }) {
   const prov = provenanceTier(row);
+
+  // THE DERIVATION-DEFECT REFUSALS ARE COMPUTED ONCE, BEFORE ANY CLASS.
+  //
+  // CF-A-DERIVATION-DEFECT-IS-NOT-A-RULING. These five guards say the
+  // DERIVATION is untrustworthy on a named axis -- so they must be visible
+  // to every return path that could act on it, exactly like the provenance
+  // tier. Computing them inside one branch would let another branch write
+  // from the same bad reading.
+  //
+  // They never change the CLASS. A refused row is still the shape the census
+  // measured, and hiding it would lose the count the fix is judged by; what
+  // they change is `writable`, and the reason string is what lets this
+  // population be subtracted from the conflicts Drew reads.
+  const derivationRefused = derivationRefusals({ row, stored, derived, autoByCardNumber });
 
   // THE SPLIT-IDENTITY SIGNAL IS ORTHOGONAL TO THE DERIVATION CLASS.
   //
@@ -903,6 +1250,7 @@ function classifyRow({
   const base = {
     tier: prov.tier,
     provenanceReasons: prov.reasons,
+    derivationRefusals: derivationRefused,
     splitIdentity: split.split,
     splitClass: split.klass,
     splitSegments: split.segments,
@@ -911,6 +1259,9 @@ function classifyRow({
     finishFamilyEvidence: family.qualifies ? family.evidence : null,
   };
   const splitReasons = split.split ? [`split-identity:${split.klass}:${split.reason}`] : [];
+  // Carried alongside the split reasons for the same reason: every return
+  // path prints them, so a refusal is never silent.
+  splitReasons.push(...derivationRefused.map((r) => `derivation-refused:${r}`));
   if (family.qualifies) splitReasons.push(`subclass:${FINISH_FAMILY_COLLISION}:${family.evidence.family}`);
 
   if (!derived) {
@@ -971,7 +1322,12 @@ function classifyRow({
       // check; so is a row whose identity axes contradict the derivation.
       // ...and never while the row's colour family is collided and unruled
       // (see the IMPROVE path below for the case that surfaced this).
-      writable: prov.tier === AUTO && contradicting.length === 0 && !family.qualifies,
+      // A derivation refused on any axis cannot authorize a write, and an
+      // eviction is a write. D1 is the shape that matters here: a title that
+      // names the stored finish is a title that names A finish, so the
+      // eviction evidence should already have failed -- this is the belt to
+      // that braces, and it is what a mutation check reverts.
+      writable: prov.tier === AUTO && contradicting.length === 0 && !family.qualifies && derivationRefused.length === 0,
     };
   }
 
@@ -1076,6 +1432,17 @@ function classifyRow({
   // count -- and `writable` is what the apply pass reads.
   if (family.qualifies) refusals.push("finish-family-collision:not-writable-until-ruled");
 
+  // A DERIVATION DEFECT IS A REFUSAL LIKE THE OTHERS, AND IT REACHES IMPROVE.
+  //
+  // IMPROVE is the class that writes, so a bad reading arriving here is the
+  // one that costs something. The V3 genericization shape is the live danger:
+  // `Prism Refractor` -> `Refractor` over a row whose printRun the derivation
+  // also filled diffs as filled-only -- strictly more specific by the axis
+  // test -- and would have been written, pooling a distinct card into its
+  // family. They join `improveRefusals` rather than sitting beside it because
+  // the audit gate and the canary both read that array.
+  refusals.push(...derivationRefused);
+
   if (refusals.length) reasons.push(...refusals);
   reasons.push(...splitReasons);
 
@@ -1140,6 +1507,13 @@ module.exports = {
   },
   classifyIdentity: SPLIT.classifyIdentity,
   titleNamesFinish, titleStatesSerial, slugParallelSegment, slugNamesParallel, baseEvictionEvidence,
+  // The derivation-defect guards (D1, D6, D7, D8, V3), exported so each pin
+  // can drive one directly and the mutation check can revert them one at a
+  // time -- a guard nothing can call alone is a guard nothing can prove.
+  derivationRefusals, titleNamesStoredFinish, isAutoFlipIsTitleOnly,
+  gradeFromTitleStrict, derivedGradeIsAdjectiveArtifact,
+  cardNumberIsTruncation, cardNumberDiffersOnlyByCase, parallelIsGenericization,
+  GRADER_RE, RAW_CONDITION_RE,
   // The trust ladder's new gates, exported so the tests can drive each one
   // directly and the mutation check can revert them one at a time.
   EVICTION_MOVABLE_AXES, DISTINCT_PRODUCT_SETKEYS,
