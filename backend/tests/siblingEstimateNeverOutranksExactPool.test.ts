@@ -556,8 +556,39 @@ describe("repriceHoldingsForUser — the fixture, end to end", () => {
     expect(hld.isEstimate).toBe(false);
     expect(hld.valuationStatus).toBe("pending");
     expect(hld.estimateBasis).toMatch(/^estimate withheld: 3 exact sales under hiq:baseball:2026:bowman-chrome:cpa-mg:gold-refractor:auto/);
-    expect(hld.pricingSourceMeta).toBeUndefined();
     expect(hld.fmvRung).toBeNull();
+
+    // CF-A-REFUSAL-STATES-WHAT-ACTUALLY-HAPPENED (Drew, 2026-09-04). The
+    // prose used to end "...that the engine could not price" on EVERY
+    // withhold, including the ones where the engine had priced the card
+    // moments earlier and a whitelist upstream threw the answer away. It may
+    // never make that claim again.
+    expect(hld.estimateBasis).not.toMatch(/engine could not price/);
+    // In THIS fixture the engine genuinely was asked and found nothing
+    // (h.unified = null on every identity), so the reason names the legacy
+    // read — the specific thing that happened, not a blanket accusation.
+    expect(hld.estimateBasis).toMatch(/neither the valuation path nor the legacy exact-pool read produced a number/);
+
+    // CF-A-WITHHOLD-IS-VISIBLE-TO-THE-AUDITOR: the meta used to be ABSENT
+    // here (writeMeta:true with no meta), which is precisely the shape #1674
+    // found invisible to the invariant auditor. A refusal is the event an
+    // auditor most needs to see, so it is written.
+    const meta = hld.pricingSourceMeta as unknown as {
+      method?: string;
+      withheld?: { reason?: string; blockingId?: string; blockingCount?: number; proposed?: number | null };
+    };
+    expect(meta).toBeDefined();
+    expect(meta.method).toBe("withheld");
+    expect(meta.withheld?.reason).toBe("legacy-unpriced");
+    expect(meta.withheld?.blockingId).toBe(GOLD);
+    expect(meta.withheld?.blockingCount).toBe(3);
+
+    // CF-A-WITHHOLD-DOES-NOT-DESTROY-EVIDENCE: the number the ladder produced
+    // is RETAINED, not erased. It is not published (isEstimate false,
+    // valuationStatus pending, fairMarketValue null) — but a reader can see
+    // what was withheld, which is what makes the refusal auditable at all.
+    expect(hld.estimatedValue).toBe(437.5);
+    expect(meta.withheld?.proposed).toBe(437.5);
     const update = body.updates.find((u: any) => u.id === id);
     expect(update.status).toBe("skipped");
     expect(update.reason).toMatch(/^estimate-withheld:reprice\.sibling-estimate \(hiq:.*stale estimate cleared\)$/);
