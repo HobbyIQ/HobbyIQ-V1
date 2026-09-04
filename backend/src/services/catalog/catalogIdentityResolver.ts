@@ -306,6 +306,14 @@ export function _setContainerForTests(container: Container | null): void {
   _container = container;
 }
 
+/** The catalog container, for the Pokemon checklist-width reader. Shares this
+ *  module's lazily-built client so a width lookup never opens a second one
+ *  (and so `_setContainerForTests` steers it too). Null when unconfigured,
+ *  which the caller must treat as "no width", never as a default. */
+export function _catalogContainerForPokemonWidth(): Container | null {
+  return getContainer();
+}
+
 /**
  * The stem query: the `<id>:num-N` twins under an un-numbered id, with their
  * source (authority). DISTINCT is not for de-duplication — ids are unique —

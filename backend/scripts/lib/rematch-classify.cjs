@@ -2240,6 +2240,79 @@ function cardNumberIsTruncation(stored, derived) {
   return `${s}<-${d}`;
 }
 
+/**
+ * CF-THE-CHECKLIST-SPELLS-THE-NUMBER (Drew, 2026-09-04) -- the CJS mirror of
+ * `normalizePokemonCardNumber` (src/services/catalog/pokemonCardNumber.ts).
+ *
+ * THE STORED SHAPE THIS RECOGNISES. Every English Pokemon row written before
+ * the fix carries a card number minted by concatenating POS and TOTAL, because
+ * the title said "094/159" and `slugify` stripped the slash:
+ *
+ *     stored `094159`   derived `094`     one card, one pool
+ *     stored `94159`    derived `094`     the SAME card, spelled short
+ *
+ * Without this rule the fix makes things WORSE, not better: `diffAxes` reads
+ * `094159` vs `094` as `changed:cardNumber`, the row classifies CONFLICT, and
+ * the rematch leaves the pool split exactly where it is. The classifier has to
+ * know that the stored number is the derived one with the SET TOTAL glued on.
+ *
+ * THE TEST IS RECONSTRUCTION, NOT PREFIXING. `094159` starts with `094`, but so
+ * does `0941` -- and a bare prefix test would fold a genuinely different card
+ * onto this one. The stored value must be EXACTLY position-then-total, where
+ * the position reduces to the derived number and the total is a plausible set
+ * size. Both halves must be accounted for; a leftover digit refuses.
+ *
+ * Returns the witness string for the census, or null when the shape does not
+ * hold. Pokemon only -- no other vertical writes POS/TOTAL, and applying this
+ * to a Bowman `bd152` would be the truncation defect D6 already refuses.
+ */
+function pokemonNumberIsPositionOverTotal(stored, derived, sport) {
+  if (lower(sport) !== "pokemon") return null;
+  const sN = lower(stored?.cardNumber).replace(/[^0-9]/g, "");
+  const dRaw = lower(derived?.cardNumber);
+  const dN = dRaw.replace(/[^0-9]/g, "");
+  // Only bare positions. A suffixed number (tg01, gg69, sv107) is never a
+  // position over a total and must keep its spelling verbatim.
+  if (!sN || !dN || !/^[0-9]+$/.test(dRaw)) return null;
+  if (sN === dN) return null;
+  if (sN.length <= dN.length) return null;
+  const dVal = Number(dN);
+  if (!Number.isFinite(dVal) || dVal <= 0) return null;
+  // Try every split of the stored digits: the head must be the derived
+  // position (by VALUE, so `94` and `094` both reconstruct), and the tail must
+  // be a credible set total.
+  for (let cut = 1; cut < sN.length; cut++) {
+    const head = sN.slice(0, cut), tail = sN.slice(cut);
+    if (Number(head) !== dVal) continue;
+    const total = Number(tail);
+    // A set total is a REAL PUBLISHED SIZE, and the floor matters as much as
+    // the ceiling. Without it `0941` reconstructs as `094/1` -- a one-card set
+    // -- and a genuinely different card folds onto this one. (Caught by the
+    // prefix-test mutation pin, which is why that pin is there.) The smallest
+    // real Pokemon set is in the dozens; 10 is a floor no published set is
+    // under. 400 is the same ceiling the TCG number reader uses, and a
+    // leading-zero total (`0159`) never occurs.
+    if (!Number.isFinite(total) || total < 10 || total > 400) continue;
+    if (tail.startsWith("0")) continue;
+    return `${sN}=${head}/${tail}`;
+  }
+  return null;
+}
+
+/**
+ * Is the difference ONLY the checklist's zero-padding? `94` vs `094` is one
+ * card in two hands, and the checklist's spelling is the canonical one
+ * (CF-CARDNUMBER-VERBATIM-FROM-THE-CHECKLIST). Bare positions only, so a
+ * suffixed number is never folded.
+ */
+function pokemonNumberDiffersOnlyByPadding(stored, derived, sport) {
+  if (lower(sport) !== "pokemon") return false;
+  const s = lower(stored?.cardNumber).trim(), d = lower(derived?.cardNumber).trim();
+  if (!s || !d || s === d) return false;
+  if (!/^[0-9]+$/.test(s) || !/^[0-9]+$/.test(d)) return false;
+  return Number(s) === Number(d);
+}
+
 /** Is the cardNumber difference CASE-ONLY? The same card; the checklist's
  *  casing is canonical and a normalization lane may adopt it under IMPROVE. */
 function cardNumberDiffersOnlyByCase(stored, derived) {
@@ -2381,6 +2454,29 @@ function diffAxes(stored, derived, opts = {}) {
     && (opts.titleStatesNumber === true
       || opts.storedPlayerCorrupted === true
       || isCorruptedPlayerName(String(stored?.cardNumber ?? "").replace(/^player-/i, "").replace(/-/g, " ")));
+  // CF-THE-CHECKLIST-SPELLS-THE-NUMBER (Drew, 2026-09-04). The stored Pokemon
+  // card number is not a RIVAL READING of the number -- it is the same number
+  // misspelled by a derivation we have since fixed. `094159` is `094` with the
+  // SET TOTAL glued on; `94` is `094` with the checklist's padding dropped.
+  // Neither is an answer about WHICH CARD this is that could contradict the
+  // derivation, so the stored side is BLANK on this axis and the derivation
+  // FILLS it -- which is the ordinary IMPROVE path, subject to every refusal
+  // that path already applies.
+  //
+  // NOT `same`. Marking it same would classify the row AGREE, and AGREE means
+  // "nothing to do": the row would keep its `:094159:` address and the split
+  // pool this fix exists to close would never be rewritten. The whole unlock
+  // is that these rows become WRITABLE.
+  //
+  // Gated on the row's own sport, and on BARE positions only -- a suffixed
+  // number (tg01, gg69) never folds, and no other vertical writes POS/TOTAL.
+  // Falling back to either identity's own `sport` keeps the pure function
+  // callable from a pin without a separate option.
+  const sportForNumber = str(opts.sport ?? derived?.sport ?? stored?.sport);
+  const pokemonNumberFold = pokemonNumberIsPositionOverTotal(stored, derived, sportForNumber)
+    || (pokemonNumberDiffersOnlyByPadding(stored, derived, sportForNumber)
+      ? `padding:${lower(stored?.cardNumber)}->${lower(derived?.cardNumber)}`
+      : null);
   for (const axis of AXES) {
     const a = axisValue(stored, axis), b = axisValue(derived, axis);
     const aBlank = (axis === "setKey" && storedBlankSetKey)
@@ -2388,6 +2484,7 @@ function diffAxes(stored, derived, opts = {}) {
       || axisIsBlank(axis, a);
     const bBlank = axisIsBlank(axis, b);
     if (a === b) { same.push(axis); continue; }
+    if (axis === "cardNumber" && pokemonNumberFold) { filled.push(axis); continue; }
     if (aBlank && !bBlank) { filled.push(axis); continue; }
     if (!aBlank && bBlank) { dropped.push(axis); continue; }
     changed.push(axis);
@@ -2572,7 +2669,12 @@ function classifyRow({
   }
 
   const storedSetKeyBlank = storedSetKeyIsBlank(stored, derivationReasons);
-  const axes = diffAxes(stored, derived, { storedSetKeyBlank, titleStatesNumber });
+  const axes = diffAxes(stored, derived, {
+    storedSetKeyBlank, titleStatesNumber,
+    // CF-THE-CHECKLIST-SPELLS-THE-NUMBER: the vertical gates the Pokemon
+    // card-number fold. The ROW's sport, never the derivation's guess.
+    sport: str(row?.sport ?? derived?.sport ?? stored?.sport),
+  });
   const reasons = [];
 
   // THE SLUG IS A NINTH AXIS, AND IT IS NOT IN `AXES`.
@@ -3030,6 +3132,10 @@ module.exports = {
   derivationRefusals, titleNamesStoredFinish, isAutoFlipIsTitleOnly,
   gradeFromTitleStrict, derivedGradeIsAdjectiveArtifact,
   cardNumberIsTruncation, cardNumberDiffersOnlyByCase, parallelIsGenericization,
+  // CF-THE-CHECKLIST-SPELLS-THE-NUMBER (2026-09-04). The two Pokemon
+  // card-number folds, exported so a pin can drive each alone and the mutation
+  // check can revert each alone.
+  pokemonNumberIsPositionOverTotal, pokemonNumberDiffersOnlyByPadding,
   // CF-UNPARSED-IS-NOT-UNNUMBERED (2026-09-04). The pseudo-number predicate and
   // the title-states-a-number fact, exported so the census can supply the fact
   // and a mutation check can revert each half alone.

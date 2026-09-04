@@ -895,6 +895,13 @@ export function deriveHobbyIqSlug(input: Pick<RecordSoldCompInput,
     /** CF-UNPARSED-IS-NOT-UNNUMBERED: a checklist ingest asserting this card
      *  genuinely carries no number, so a blank cardNumber is an answer. */
     unnumberedByChecklist?: boolean;
+    /** CF-THE-CHECKLIST-SPELLS-THE-NUMBER: the width this Pokemon set's
+     *  checklist spells positions in, from `pokemonChecklistNumberWidth`.
+     *  This function stays SYNCHRONOUS -- the width is a per-SET fact its
+     *  async callers look up once and hand down, never a per-row read from
+     *  inside a derivation. Absent means "no checklist to ask", and the card
+     *  number is then left exactly as stated. */
+    pokemonChecklistNumberWidth?: number | null;
   }): DerivedSlug {
   const sportForSlug = input.sport ?? inferSportFromContext(input.setName, input.title, input.cardYear);
   const cardNumberFinal = (input.cardNumber && input.cardNumber.trim())
@@ -958,6 +965,7 @@ export function deriveHobbyIqSlug(input: Pick<RecordSoldCompInput,
         printRun: printRunFinal,
         playerName: playerForSlug,
         unnumberedByChecklist: input.unnumberedByChecklist === true,
+        pokemonChecklistNumberWidth: input.pokemonChecklistNumberWidth ?? null,
       });
     } catch {
       slug = null;
@@ -1106,7 +1114,29 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
   // input.cardNumber is empty, sniff the title for a known auto-code
   // pattern and use it. Safe fallback: the same code appears in
   // BCCP checklists, so the recovered slug lines up cleanly.
-  const derived = deriveHobbyIqSlug(input);
+  // CF-THE-CHECKLIST-SPELLS-THE-NUMBER (Drew, 2026-09-04). A Pokemon sale
+  // states POS/TOTAL and the checklist stores the position alone, in its own
+  // spelling. The width is a per-SET fact, so it is read here (async, cached
+  // per set for the process) and handed to the synchronous derivation rather
+  // than looked up per row. A non-pokemon row never issues the query, and a
+  // set with no checklist yields null -- the number is then left as stated and
+  // the guard reports it, because padding on a guess mints an identity no
+  // checklist published.
+  let pokemonWidth: number | null = null;
+  {
+    const preSport = input.sport ?? inferSportFromContext(input.setName, input.title, input.cardYear);
+    if (String(preSport ?? "").toLowerCase() === "pokemon") {
+      const preSetKey = resolveSetKeyForSlug(
+        "pokemon", input.setName ?? "",
+        typeof input.cardYear === "number" ? input.cardYear : 0,
+      );
+      if (preSetKey && preSetKey !== "unknown") {
+        const { pokemonChecklistNumberWidth } = await import("../catalog/pokemonCardNumber.js");
+        pokemonWidth = await pokemonChecklistNumberWidth(input.cardYear ?? null, preSetKey);
+      }
+    }
+  }
+  const derived = deriveHobbyIqSlug({ ...input, pokemonChecklistNumberWidth: pokemonWidth });
   const { sportForSlug, cardNumberFinal, printRunFinal, guard } = derived;
   if (!guard.ok) {
     // Sampled — this fires on a meaningful slice of vendor rows and must
