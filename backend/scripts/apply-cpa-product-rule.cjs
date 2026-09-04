@@ -84,9 +84,9 @@ const FAMILY = envOr("FAMILY", "bowman").trim().toLowerCase();
 // of a real fan-out. Everything else -- including the inherited slot=0 slots=16
 // -- sweeps EVERY row. SLOTS binds to 1 when unsharded, so `% SLOTS` and
 // `SLOTS === 1` guards below keep working unchanged.
-const { runnerShardScope } = require("./lib/runner-shard-scope.cjs");
-const SHARD_SCOPE = runnerShardScope({ label: "apply-cpa-product-rule" });
-const { SHARDED, SLOT, SLOTS } = SHARD_SCOPE;
+// The require itself is DELIBERATELY below the scope refusals (see the banner
+// further down): every require that can throw must come after them, or a stale
+// dist turns a MODULE_NOT_FOUND into an exit 1 that reads like a refusal.
 const CONCURRENCY = Math.max(1, Number(process.env.CONCURRENCY || process.env.BACKFILL_CONCURRENCY || 8));
 const RUN_MS = Number(process.env.RUN_MINUTES || 140) * 60000;
 const LIMIT = Number(process.env.LIMIT || 0);
@@ -124,6 +124,10 @@ if (!SPORTS.length) { console.error("FATAL: SPORTS is empty; this rule was measu
 if (!PREFIXES.length) { console.error("FATAL: PREFIXES is empty; R2 was ruled on CPA/BCPA auto numbers."); process.exit(1); }
 if (!FAMILY && SCOPE !== "all") { console.error("FATAL: FAMILY is empty -- that is every product in the catalog. Confirm it with SCOPE=all."); process.exit(1); }
 if (!process.env.COSMOS_CONNECTION_STRING) { console.error("FATAL: COSMOS_CONNECTION_STRING not set"); process.exit(1); }
+
+const { runnerShardScope } = require("./lib/runner-shard-scope.cjs");
+const SHARD_SCOPE = runnerShardScope({ label: "apply-cpa-product-rule" });
+const { SHARDED, SLOT, SLOTS } = SHARD_SCOPE;
 
 const { CosmosClient } = require("@azure/cosmos");
 const backend = path.resolve(__dirname, "..");
