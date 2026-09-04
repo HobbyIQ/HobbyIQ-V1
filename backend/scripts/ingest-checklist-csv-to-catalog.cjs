@@ -215,12 +215,19 @@ async function main() {
   // reconciliation, a full phases-done line and a green check. The totals were
   // all internally consistent; they were just consistent about a sixteenth of
   // the job. Say the denominator out loud so that can never read as complete.
-  if (SLOTS > 1) {
+  //
+  // The denominator is stated on EVERY path, not only the sharded one. An
+  // unsharded run that says nothing about coverage is exactly how `slot 0/16`
+  // came to read as configuration rather than as "this covers a sixteenth" --
+  // silence is what made the loss invisible.
+  if (SHARDED) {
     console.log(`SHARD ${SLOT}/${SLOTS} — this run owns ${f(files.length)} of ${f(allFiles.length)} files.`);
     console.log(`  The other ${f(allFiles.length - files.length)} belong to sibling slots and are NOT ingested here.`);
-    console.log(`  Dispatch every slot 0..${SLOTS - 1}, or pass slots=1 for the whole set.\n`);
-    console.log(`  ${SHARD_SCOPE.banner()}`);
+    console.log(`  Dispatch every slot 0..${SLOTS - 1}, or pass slots=1 for the whole set.`);
+  } else {
+    console.log(`ALL ${f(allFiles.length)} staged files — this run ingests every one of them.`);
   }
+  console.log(`  ${SHARD_SCOPE.banner()}\n`);
 
   // A file that finished completely leaves a marker beside its CSV, and the
   // marker rides the same cache the CSVs do. Without this, a budget stop sends
