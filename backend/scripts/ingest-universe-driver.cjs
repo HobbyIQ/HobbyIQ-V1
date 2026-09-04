@@ -38,6 +38,7 @@
  *   YEARS=1969,1972        optional year scope
  *   SPORTS=football        optional sport scope
  *   SCOPE=recheck          re-attempt entries already verdicted (default: pending only)
+ *   MODE=refetch           force a LIVE re-fetch, ignoring any staged CSV (default: staged wins)
  *   RUN_MINUTES=140        budget; prints the marker when entries remain
  *   COSMOS_CONNECTION_STRING   required
  */
@@ -51,6 +52,41 @@ const RUN_MS = Number(process.env.RUN_MINUTES || 140) * 60000;
 const STARTED = Date.now();
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
 const RECHECK = String(process.env.SCOPE || "").toLowerCase() === "recheck";
+/**
+ * CF-RECHECK-IS-NOT-REFETCH (2026-09-04).
+ *
+ * #1737 gave SCOPE=recheck two jobs at once, and they pull opposite ways:
+ *
+ *   1. re-attempt an entry that already carries a TERMINAL verdict (the queue
+ *      filter below skips ingested/unreachable/empty unless RECHECK), and
+ *   2. force a live re-fetch, bypassing a gate-clean staged CSV.
+ *
+ * The 1991 Topps Traded Tiffany entry is where the collision bites. A pre-#1737
+ * run verdicted it `ingested` after re-fetching bcp and minting a 396-row
+ * cross-join under `topps-traded`. Re-attempting it now needs meaning (1) --
+ * and meaning (1) is only reachable through the switch that also arms meaning
+ * (2), so the only way to re-run the entry is to re-run the exact mistake. The
+ * staged CSV that a human resolved is thrown away by the very dispatch meant to
+ * land it.
+ *
+ * So the two meanings are SEPARATE SIGNALS:
+ *
+ *   SCOPE=recheck   re-attempt verdicted entries. The staged file STILL WINS.
+ *   MODE=refetch    force the live fetch. This is the ONLY thing that bypasses
+ *                   a staged file.
+ *
+ * They compose: recheck+refetch is "go and look again at an entry we already
+ * verdicted", which is what a stale staged file needs and is exactly what the
+ * old single switch did. Recheck alone is now the safe half.
+ *
+ * WHY `MODE` AND NOT A NEW INPUT. backfill-runner.yml already exports
+ * `MODE: ${{ inputs.mode }}` unconditionally in the "Run backfill" step's env
+ * block, so `mode=refetch` reaches this driver with NO workflow change. The
+ * existing values of that input are per-script tokens (census, apply-improve,
+ * product, ...) and none of them belong to this script, so `refetch` cannot
+ * collide: any OTHER value of MODE here is simply not a refetch.
+ */
+const REFETCH = String(process.env.MODE || "").toLowerCase() === "refetch";
 const MANIFEST_PATH = process.env.MANIFEST_PATH || path.join(HERE, "..", "data", "ingest-universe.json");
 const WORKDIR = process.env.WORKDIR || path.join(os.tmpdir(), "hiq-universe");
 const CONTROL_CONTAINER = process.env.CONTROL_CONTAINER || "crawl_state";
@@ -1304,10 +1340,14 @@ function acquireEntry(entry, dir) {
  * says which files landed and a later reader can tell a staged ingest from a
  * fetched one.
  *
- * SCOPE=recheck is the way back. A recheck is the operator saying "go and look
- * again", and re-fetching is exactly what that means -- so recheck bypasses
- * this and drives the lane's own machinery, which is how a staged file that
- * has gone stale is ever replaced.
+ * MODE=refetch is the way back, and it is the ONLY way back (CF-RECHECK-IS-
+ * NOT-REFETCH, 2026-09-04). It was SCOPE=recheck, which also happens to be the
+ * only way to re-attempt an entry that already carries a terminal verdict --
+ * so "run 1991 Tiffany again" and "throw away the human's ruling and re-scrape
+ * bcp" were the same dispatch, and the entry could not be re-run without
+ * re-running the cross-join. The operator saying "go and look again at the
+ * SOURCE" now says MODE=refetch; SCOPE=recheck says "look at this entry
+ * again", and takes the staged file when there is one.
  *
  * The staged files are COPIED into the run's workdir rather than ingested in
  * place: the child is handed a DIR and the caller deletes that DIR when the
@@ -1950,6 +1990,9 @@ if (require.main !== module) return;
   console.log(`  lane          ${lane}${rawSource !== lane ? ` (dispatched as "${rawSource}")` : ""}`);
   console.log(`  manifest      ${path.relative(process.cwd(), MANIFEST_PATH)}  (${f(manifest.entries.length)} entries, ${f(laneTotal)} in this lane)`);
   console.log(`  scope         years=${years.join(",") || "(all)"}  sports=${sports.join(",") || "(all)"}  ${RECHECK ? "RECHECK (re-attempt verdicted entries)" : "pending only"}`);
+  // The two signals are separate and the banner says which is armed, because
+  // "why did it re-scrape" must be answerable from the log alone.
+  console.log(`  staged        ${REFETCH ? "REFETCH (MODE=refetch) — live fetch forced, any staged CSV is IGNORED" : "a gate-clean staged CSV WINS (no fetch); MODE=refetch forces the live fetch"}`);
   console.log(`  budget        ${RUN_MS / 60000}m  →  N=${f(LIMIT)} entries @ ~${perEntryMin}m each`);
   console.log(`  mode          ${APPLY ? "APPLY" : "REPORT ONLY (no acquisition, no writes)"}\n`);
 
@@ -2094,7 +2137,7 @@ if (require.main !== module) return;
       // A STAGED ENTRY DRIVES A DIFFERENT PIPE, so the report must say so --
       // the plan and the apply are one decision (CF-THE-PLAN-AND-THE-APPLY-
       // ARE-ONE-FUNCTION), and the staged short-circuit is part of it.
-      const stagedNow = RECHECK ? [] : stagedFilesFor(entry);
+      const stagedNow = REFETCH ? [] : stagedFilesFor(entry);
       const plan = stagedNow.length
         ? `STAGED (${stagedNow.length} committed file(s)) → ingest-checklist-csv-to-catalog.cjs — no fetch; ${planFor(entry)} is bypassed`
         : planFor(entry);
@@ -2123,9 +2166,10 @@ if (require.main !== module) return;
     try {
       const before = await countCatalogRows(entry);
       // A STAGED FILE WINS. See CF-A-STAGED-FILE-WINS: an entry whose checklist
-      // is committed with its manifest is ingested as-is, and only a
-      // SCOPE=recheck re-fetches it.
-      const fromStaging = RECHECK ? null : acquireFromStaging(entry, dir);
+      // is committed with its manifest is ingested as-is, and only an explicit
+      // MODE=refetch re-fetches it (CF-RECHECK-IS-NOT-REFETCH: a recheck
+      // re-attempts a verdicted entry and still takes the staged file).
+      const fromStaging = REFETCH ? null : acquireFromStaging(entry, dir);
       const csvPaths = fromStaging || acquireStaged(entry, dir);
       acquired = fromStaging ? "staged" : "fetched";
       if (fromStaging) {

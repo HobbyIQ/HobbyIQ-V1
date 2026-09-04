@@ -97,7 +97,7 @@ function manifestOf(entries: object[]): string {
  * from a staged ingest by what landed, not by a log line. The ingest child is
  * stubbed to a no-op that records the DIR it was handed.
  */
-function shim(refetchLog: string, ingestLog: string): string {
+function shim(refetchLog: string, ingestLog: string, priorStatus?: string): string {
   const p = path.join(tmp, `shim-${Math.random().toString(36).slice(2)}.cjs`);
   fs.writeFileSync(p, `
 const Module = require("node:module");
@@ -112,7 +112,22 @@ const stub = {
         return {
           item() { return { read: async () => ({ resource: null }) }; },
           items: {
-            query() { return { fetchAll: async () => ({ resources: name === "card_catalog" ? [132] : [] }) }; },
+            // Two queries run here: the card_catalog COUNT, and the
+            // prior-verdict read over crawl_state. priorStatus puts the
+            // entry in the TERMINAL state the real control doc is in, so a
+            // test can drive the recheck filter rather than describe it.
+            query(spec) {
+              const q = String((spec && spec.query) || spec || "");
+              if (name === "card_catalog") return { fetchAll: async () => ({ resources: [132] }) };
+              if (q.includes("ingest_universe_status") && ${JSON.stringify(priorStatus || "")}) {
+                return { fetchAll: async () => ({ resources: [{
+                  entryId: ${JSON.stringify("bcp::https://baseballcardpedia.com/index.php/1991_Topps_Traded")},
+                  status: ${JSON.stringify(priorStatus || "")},
+                  attempts: 1,
+                }] }) };
+              }
+              return { fetchAll: async () => ({ resources: [] }) };
+            },
             upsert: async (doc) => {
               fs.appendFileSync(${JSON.stringify(ingestLog)}, "CONTROL " + JSON.stringify(doc) + "\\n");
               return { resource: doc };
@@ -174,7 +189,7 @@ cp.execFileSync = function (file, args, opts) {
 
 type Run = { code: number; out: string; refetched: boolean; ingested: Array<{ dir: string; files: string[]; csv: Record<string, string> }>; controls: any[] };
 
-function drive(entries: object[], env: Record<string, string> = {}, staging?: string): Run {
+function drive(entries: object[], env: Record<string, string> = {}, staging?: string, priorStatus?: string): Run {
   const refetchLog = path.join(tmp, `refetch-${Math.random().toString(36).slice(2)}.log`);
   const ingestLog = path.join(tmp, `ingest-${Math.random().toString(36).slice(2)}.log`);
   fs.writeFileSync(refetchLog, "");
@@ -186,7 +201,7 @@ function drive(entries: object[], env: Record<string, string> = {}, staging?: st
       env: {
         PATH: process.env.PATH ?? "",
         SystemRoot: process.env.SystemRoot ?? "",
-        NODE_OPTIONS: `--require ${JSON.stringify(shim(refetchLog, ingestLog))}`,
+        NODE_OPTIONS: `--require ${JSON.stringify(shim(refetchLog, ingestLog, priorStatus))}`,
         COSMOS_CONNECTION_STRING: "AccountEndpoint=https://stub/;AccountKey=c3R1Yg==;",
         MANIFEST_PATH: manifestOf(entries),
         SOURCES: "bcp",
@@ -285,8 +300,8 @@ describe("ingest-universe-driver — a staged file wins", () => {
 
   // ── the way back ──────────────────────────────────────────────────────────
 
-  it("SCOPE=recheck forces the re-fetch — a staged file is not a permanent veto", () => {
-    const r = drive([BCP_1991], { BACKFILL_APPLY: "true", SCOPE: "recheck" });
+  it("MODE=refetch forces the re-fetch — a staged file is not a permanent veto", () => {
+    const r = drive([BCP_1991], { BACKFILL_APPLY: "true", MODE: "refetch" });
     expect(r.refetched).toBe(true);
     const doc = r.controls.find((d) => d.docType === "ingest_universe_status");
     expect(doc.acquired).toBe("fetched");
@@ -322,18 +337,109 @@ describe("ingest-universe-driver — a staged file wins", () => {
   });
 });
 
+/**
+ * CF-RECHECK-IS-NOT-REFETCH (2026-09-04).
+ *
+ * #1737 armed the staged short-circuit off SCOPE=recheck, which is ALSO the
+ * only way past the TERMINAL-verdict filter. So the one dispatch that could
+ * re-attempt the 1991 Topps Traded Tiffany entry -- verdicted `ingested` by the
+ * pre-#1737 run that minted its 396-row cross-join under `topps-traded` -- was
+ * the same dispatch that threw the staged CSV away and re-scraped bcp. The
+ * entry could not be re-run without re-running the exact mistake, and the only
+ * other exit was hand-editing the control doc, which is a Cosmos write we do
+ * not do.
+ *
+ * The two meanings are now separate signals, and this pins both:
+ *
+ *   scope=recheck  re-attempt a verdicted entry; the staged file STILL WINS.
+ *   mode=refetch   force the live fetch; the ONLY thing that bypasses staged.
+ *
+ * The verdicted-entry cases drive the SAME committed script through a Cosmos
+ * stub that answers the prior-verdict query with `ingested`, which is the
+ * state the real control doc is in.
+ */
+describe("ingest-universe-driver — recheck re-attempts, refetch re-fetches", () => {
+  it("recheck + staged present → acquired: staged, no fetch", () => {
+    const r = drive([BCP_1991], { BACKFILL_APPLY: "true", SCOPE: "recheck" });
+
+    // THE BUG. Before the split this fetched, because recheck armed both jobs.
+    expect(r.refetched).toBe(false);
+    const doc = r.controls.find((d) => d.docType === "ingest_universe_status");
+    expect(doc.acquired).toBe("staged");
+
+    // And what landed is the human's ruling, not the cross-join.
+    const m = JSON.parse(Object.entries(r.ingested[0].csv).find(([n]) => n.endsWith(".manifest.json"))![1]);
+    expect(m.setKey).toBe("topps-traded-tiffany");
+    const handed = Object.entries(r.ingested[0].csv).find(([n]) => n.endsWith(".csv"))![1];
+    expect(handed.trim().split("\n").length - 1).toBe(132);
+  });
+
+  it("refetch → acquired: fetched, even with no recheck", () => {
+    const r = drive([BCP_1991], { BACKFILL_APPLY: "true", MODE: "refetch" });
+    expect(r.refetched).toBe(true);
+    expect(r.controls.find((d) => d.docType === "ingest_universe_status").acquired).toBe("fetched");
+  });
+
+  it("they compose: recheck + refetch is the old single-switch behaviour", () => {
+    const r = drive([BCP_1991], { BACKFILL_APPLY: "true", SCOPE: "recheck", MODE: "refetch" });
+    expect(r.refetched).toBe(true);
+    expect(r.controls.find((d) => d.docType === "ingest_universe_status").acquired).toBe("fetched");
+  });
+
+  it("another script's mode token is not a refetch", () => {
+    // `mode` is shared across every script the runner drives (census,
+    // apply-improve, product, ...). Only the literal `refetch` arms this.
+    for (const mode of ["census", "apply-improve", "product", ""]) {
+      const r = drive([BCP_1991], { BACKFILL_APPLY: "true", MODE: mode });
+      expect(r.refetched, `MODE=${mode || "(empty)"} re-fetched`).toBe(false);
+    }
+  });
+
+  // ── the terminal verdict: the case that could not be re-run at all ────────
+
+  it("a verdicted entry needs recheck to be re-attempted, and then takes the staged file", () => {
+    // Without recheck the TERMINAL filter drops it: nothing is acquired.
+    const pending = drive([BCP_1991], { BACKFILL_APPLY: "true" }, undefined, "ingested");
+    expect(pending.ingested).toHaveLength(0);
+    expect(pending.refetched).toBe(false);
+
+    // With recheck it is re-attempted -- from the STAGED file, which is the
+    // whole point: re-running the entry no longer means re-running the fetch.
+    const re = drive([BCP_1991], { BACKFILL_APPLY: "true", SCOPE: "recheck" }, undefined, "ingested");
+    expect(re.ingested).toHaveLength(1);
+    expect(re.refetched).toBe(false);
+    expect(re.controls.find((d) => d.docType === "ingest_universe_status").acquired).toBe("staged");
+  });
+
+  it("report mode on a verdicted entry prints STAGED for it", () => {
+    // The proof the goal asks for: scope=recheck limit=1 titles=<the entry>,
+    // report mode, and the plan says STAGED rather than the bcp scrape.
+    const r = drive([BCP_1991], { SCOPE: "recheck", TITLES: "1991 Topps Traded Tiffany" }, undefined, "ingested");
+    expect(r.out).toMatch(/would drive: STAGED/);
+    expect(r.out).toMatch(/no fetch/);
+    expect(r.out).toMatch(/1991-topps-traded-tiffany-baseball\.csv/);
+    // The scraper is NAMED on that line, but named as BYPASSED -- the plan
+    // line reads "... scrape-bcp-ladders.cjs ... is bypassed". What must not
+    // appear is a plan that leads with the scrape.
+    expect(r.out).toMatch(/scrape-bcp-ladders\.cjs.*is bypassed/);
+    expect(r.out).not.toMatch(/would drive: scrape-bcp-ladders/);
+    // prior verdict is the terminal one, so recheck is what let it in at all.
+    expect(r.out).toMatch(/prior=ingested/);
+  });
+});
+
 // ── the mutation ────────────────────────────────────────────────────────────
 
 /**
  * THE MUTATION THIS PINS. Re-fetching despite a staged file is the behaviour
  * that shipped, so the test proves it would now go RED: the driver is run with
  * the short-circuit disabled through the SAME switch the operator has
- * (SCOPE=recheck), and the assertions above are re-run against it. If they
+ * (MODE=refetch), and the assertions above are re-run against it. If they
  * passed either way, the pin would be pinning nothing.
  */
 describe("ingest-universe-driver — re-fetch despite staged goes red", () => {
   it("the fetched file carries all three defects, so the staged assertions fail on it", () => {
-    const r = drive([BCP_1991], { BACKFILL_APPLY: "true", SCOPE: "recheck" });
+    const r = drive([BCP_1991], { BACKFILL_APPLY: "true", MODE: "refetch" });
     expect(r.refetched).toBe(true);
     const handed = Object.entries(r.ingested[0].csv).find(([n]) => n.endsWith(".csv"))![1];
     const m = JSON.parse(Object.entries(r.ingested[0].csv).find(([n]) => n.endsWith(".manifest.json"))![1]);

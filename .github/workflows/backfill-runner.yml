@@ -235,6 +235,18 @@ on:
           # and its own reconciliation); `scope=recheck` re-attempts entries
           # that already carry a verdict. Per-entry status lives in a
           # crawl_state control doc, because a runner job cannot push.
+          #
+          # CF-RECHECK-IS-NOT-REFETCH (2026-09-04): `scope=recheck` and
+          # `mode=refetch` are SEPARATE signals and compose.
+          #   scope=recheck  re-attempt entries already verdicted. A gate-clean
+          #                  staged CSV+manifest STILL WINS -- no fetch.
+          #   mode=refetch   force the LIVE fetch, ignoring any staged CSV. The
+          #                  only thing that bypasses staged work.
+          # They were one switch, so re-running the 1991 Topps Traded Tiffany
+          # entry (verdicted `ingested` by the run that minted its 396-row
+          # cross-join) meant re-running that cross-join. `mode` needs no new
+          # input: MODE is already exported below for every script, and no
+          # other script's mode token is `refetch`.
           - ingest-universe-driver
           # CF-CHECKLIST-ROWS-MUST-BE-FINDABLE (2026-09-01): heal the derived
           # search fields (searchText / searchTokens / displayName / setName)
