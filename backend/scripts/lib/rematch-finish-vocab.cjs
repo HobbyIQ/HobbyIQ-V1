@@ -539,9 +539,33 @@ function checklistParallelForFamily(title, year, setKey) {
  *  `1-1` can never satisfy that, and a genuine span always does. */
 const CARD_NUMBER_RANGE_RE = /#\s*([a-z]{0,4})\s*(\d{1,4})\s*[-–—]\s*(?:[a-z]{0,4})\s*(\d{1,4})\b/i;
 
+/** A GRADER token is not the far half of a range (GUARD 7, 2026-09-04).
+ *
+ *  `[a-z]{0,4}` after the dash exists to read `#US1-US50`, where the prefix
+ *  repeats. It also matches `PSA`, and the audit found the cost:
+ *
+ *    "1989 Upper Deck Ken Griffey Jr #1-PSA 9 (RC)"   -> range 1..9
+ *    "1989 Upper Deck #1-Ken Griffey JR NM-MT+ BGS 8.5"
+ *
+ *  Both are ONE card -- the landmark #1 Griffey rookie -- with the grade
+ *  written up against the number. Reading them as a 1..9 span made GUARD 5
+ *  refuse a genuine, checklist-backed improvement on the most-traded card of
+ *  its era. A FALSE lot verdict costs a real repair, so the range must not
+ *  fire when the token after the dash is a grading company.
+ *
+ *  It is a refusal to READ A RANGE, never a licence: the row falls through to
+ *  every other lot idiom unchanged, so "Complete Set #1-PSA 9" is still a lot
+ *  on `complete set`. */
+const RANGE_FAR_HALF_IS_GRADER_RE = /^\s*[-–—]\s*(?:PSA|BGS|BVG|SGC|CGC|CSG|HGA|TAG|ISA|GMA|KSA)\b/i;
+
 function cardNumberRangeFromTitle(title) {
-  const m = String(title ?? "").match(CARD_NUMBER_RANGE_RE);
+  const t = String(title ?? "");
+  const m = t.match(CARD_NUMBER_RANGE_RE);
   if (!m) return null;
+  // Re-read the text from the FIRST number's end: if what follows the dash is
+  // a grader token, this is "#1-PSA 9", a card number with a grade after it.
+  const firstEnd = (m.index ?? 0) + m[0].indexOf(m[2]) + m[2].length;
+  if (RANGE_FAR_HALF_IS_GRADER_RE.test(t.slice(firstEnd))) return null;
   const a = Number(m[2]), b = Number(m[3]);
   if (!Number.isFinite(a) || !Number.isFinite(b) || b <= a) return null;
   return { from: `${m[1] ?? ""}${a}`, to: b, quoted: m[0].trim() };
@@ -588,6 +612,44 @@ const LOT_VOCAB_RE = new RegExp([
   String.raw`\bvending\b`,
   String.raw`\bcomplete\s+\w+\s+set\b(?!\s*break\b)`,
   String.raw`\bcards?\s*#\s*\d{1,4}\s*[-–—]\s*\d{1,4}\b`,
+  // -- GUARD 7 (slot-19 / slot-31 IMPROVE audit, 2026-09-04) ---------------
+  //
+  // CF-A-LOT-IS-NOT-A-CARD, read onto the two shapes the audit found STILL
+  // WRITABLE after every idiom above. Both are quoted verbatim from the
+  // committed census evidence.
+  //
+  //   "Ja'Marr Chase 2022 Panini Prizm Prizm Break #2 Raw 10"
+  //       A BREAK is a sealed box opened live and sold by slot. The "#2" is
+  //       the slot, the team or the spot in the break -- never this card's
+  //       number. Measured on slot 19 this was the ONE lot-shaped row that
+  //       reached the IMPROVE gate ARMED, because no idiom here named a
+  //       break: filed on card #2, a whole break's price would land in one
+  //       card's pool.
+  //
+  //       THE BREAK WORD IS NAMED BY ITS PRODUCT, NEVER ON ITS OWN, and the
+  //       measurement is why. A bare `\bbreak\b` also matches the "Set-Break"
+  //       idiom, and a SET BREAK IS THE OPPOSITE SHAPE: a seller breaking a
+  //       set to sell its cards ONE AT A TIME, so "1987 Topps Tiffany
+  //       Set-Break #749 Ozzie Smith" states exactly one card and its real
+  //       number. Measured read-only over the slot-19 evidence, a bare word
+  //       disarmed ~50 GMCARDS set-break singles that classify correctly
+  //       today -- trading one leak for fifty regressions.
+  //
+  //       So the idiom is the BOX-BREAK one: a break named by the product
+  //       whose box is being opened ("Prizm Break", "Case Break", "Razz
+  //       Break", "Live Break", "Box Break"), where the "#2" is a slot and
+  //       not a card. `set break` keeps its own entry above, with its own
+  //       `(?!\s*single\b)` escape, and is deliberately excluded here.
+  //
+  //   "2022 Topps Heritage Minor League - #1-220 - You Choose"
+  //       `you pick`, `u pick`, `pick your`, `pick a card` and `your choice`
+  //       were each already here; `you choose` is the same idiom in the one
+  //       spelling the list missed. Naming it means a title offering a menu
+  //       of 220 cards is a lot ON ITS VOCABULARY, not merely on the range
+  //       that happens to sit beside it -- so the same listing without the
+  //       "#1-220" is caught too.
+  String.raw`\byou\s+choose\b`,
+  String.raw`\b(?:box|case|live|razz|personal|group|prizm|mojo)\s*[-–—]?\s*break\b(?!\s*single\b)`,
 ].join("|"), "i");
 
 /** The "singles" lot sense -- only beside a range or a pick idiom. */

@@ -1172,6 +1172,74 @@ function baseEvictionEvidence({ row, stored, derived, storedSlug, baseDestSlug, 
       ? `title-echoes-slug-parallel:${g6.phrase}`
       : `stored-parallel-stated-in-title:${g6.phrase}`);
   }
+  // 3d. THE SLUG'S "PARALLEL" IS A PRODUCT NAME THE TITLE STATES (GUARD 7,
+  //     2026-09-04 -- the slot-19 routing defect).
+  //
+  //     CF-A-TIFFANY-SALE-IS-A-TIFFANY-CARD, read onto the ROUTING rather
+  //     than onto the write. The census put ~24 correct
+  //     `topps -> topps-tiffany` derivations in CONFLICT/BASE-EVICTION
+  //     instead of IMPROVE/SPECIALIZATION-STATED -- Clutterbuck #562,
+  //     Larkin #648, Mattingly #500, Bonds #320 PSA 8 and PSA 9,
+  //     Henderson #735 -- and the cause is ORDER, not any of the legs.
+  //
+  //     Every one of those rows is stored on a slug whose PARALLEL segment
+  //     carries the product name, read live from the pool 2026-09-04:
+  //
+  //       hiq:baseball:1987:topps:320:tiffany:no-auto   parallel field "Base"
+  //       hiq:baseball:1987:topps:562:tiffany:no-auto   parallel field "Base"
+  //
+  //     `classifyRow` evaluates this subclass BEFORE the axis diff decides,
+  //     deliberately, so the commonest eviction shape is seen at all. But
+  //     that puts it ahead of the SPECIALIZATION-STATED door, and these rows
+  //     qualified on every leg: the slug names a "parallel" (tiffany), the
+  //     stored parallel field says Base, and guard 3 reads the title's
+  //     "Tiffany" as the DERIVED product's own setKey word and so suppresses
+  //     it -- `titleNamesFinish` is asked against setKey `topps-tiffany`.
+  //     So base-eviction claimed the row and returned CONFLICT before the
+  //     specialization could be considered, and the census reported a
+  //     title-stated, checklist-backed improvement as a conflict.
+  //
+  //     The row was never writable (`base-eviction-contradicted:setKey`
+  //     held), so nothing was written to the wrong card -- but a correct
+  //     improvement counted as a conflict is a repair nobody can find, and
+  //     6,339 rows were measured eligible lane-wide.
+  //
+  //     THE TEST IS THE LADDER'S, SO IT NEEDS NO NEW VOCABULARY. If the
+  //     slug's parallel segment spells a DECLARED CHILD of the stored key
+  //     whose distinguishing words this title states, then that segment is a
+  //     PRODUCT NAME misfiled into the parallel slot -- not a finish claim
+  //     the row fails to support. There is nothing to evict: the right
+  //     answer is to move the row onto the child product, which is exactly
+  //     what SPECIALIZATION-STATED decides, under its own five legs.
+  //
+  //     DISQUALIFYING ONLY, like every guard above it. It refuses the
+  //     eviction and lets the row fall through to the ordinary path; it
+  //     never mints a specialization and it never writes. A row whose
+  //     specialization legs then FAIL (no child checklist, say) lands in
+  //     CONFLICT carrying its failed legs -- reported, never written.
+  {
+    const beStoredKey = lower(stored?.setKey);
+    const slugParallel = slugParallelSegment(slug);
+    if (beStoredKey && slugParallel && title) {
+      const segWords = lower(slugParallel).split(/[^a-z0-9]+/).filter(Boolean);
+      for (const child of SPECIALIZATION_CHILDREN_OF(beStoredKey)) {
+        const words = distinguishingWords(child, beStoredKey);
+        if (!words.length) continue;
+        // The slug segment must BE the child's distinguishing words -- every
+        // one of them, and nothing else. `:tiffany:` names topps-tiffany;
+        // `:gold-refractor:` names no product and is left to the finish
+        // guards above, which is where a real parallel belongs.
+        if (words.length !== segWords.length) continue;
+        if (!words.every((w) => segWords.includes(w))) continue;
+        // ...and the TITLE must say so too, on the same evidence GUARD 6
+        // uses. A slug alone is an address, not a claim about the sale.
+        if (!words.every((w) => titleStatesWord(title, w))) continue;
+        ev.slugParallelNamesProduct = { segment: slugParallel, child, words };
+        fail.push(`slug-parallel-names-a-product-the-title-states:${words.join("+")}|names:${child}`);
+        break;
+      }
+    }
+  }
   // 4. somewhere checklist-backed to go
   if (!baseDestBacked) fail.push("no-checklist-backed-base-destination");
   // 4b. THE STORED PRINT RUN IS A FOURTH FIELD, AND IT VETOES. A base card is
@@ -1386,7 +1454,23 @@ const DISTINCT_PRODUCT_SETKEYS = [
   "upper-deck-sp", "upper-deck-sp-championship", "upper-deck-minor-league",
   // 1989 Score Traded uses its own #NNT numbering, exactly as Topps Traded
   // does -- the number is what separates it and it must stay separated.
-  "score-traded", "score-masters",
+  //
+  // THE CATALOG'S OWN SPELLING, NOT THE SELLER'S (GUARD 7, 2026-09-04).
+  // This list carried `score-traded`, which is an ALIAS: productSetKeys.ts
+  // declares `S("score-rookie-and-traded", { names: [..., "score-traded"] })`,
+  // so `score-rookie-and-traded` is the canonical key and a normalizeSetKey
+  // FIXED POINT. Measured on the live catalog 2026-09-04:
+  // `score-rookie-and-traded` holds 766 rows and `score-traded` holds ZERO.
+  //
+  // The drift was invisible because the alias still LOOKED like a declared
+  // distinct product, so `derivationCollapsesProduct` and GUARD 6 both
+  // matched on a key nothing is ever stored under, while the key rows
+  // actually carry reached this list only through SPECIALIZATION_PARENTS
+  // below. Both spellings are named now -- the canonical one so the guards
+  // fire on the rows that exist, the alias so a row written under the old
+  // spelling before the rename is still recognised rather than silently
+  // becoming collapsible.
+  "score-rookie-and-traded", "score-traded", "score-masters",
   // 1975 Topps Mini is a physically different card printed on the same
   // checklist; the pools price differently and always have.
   "topps-mini",
@@ -2113,11 +2197,45 @@ function distinguishingWords(derivedKey, storedKey) {
   return d.filter((w) => !s.has(w));
 }
 
-/** Does the title state this word, whole, case-insensitively? */
+/** Does the title state this word, whole, case-insensitively?
+ *
+ *  AN APOSTROPHE IS SPELLING, NOT IDENTITY (GUARD 7, 2026-09-04).
+ *
+ *  A setKey segment cannot carry punctuation, so `bowmans-best` is how the
+ *  catalog spells a product every seller writes "Bowman's Best". The word
+ *  this function is asked about is therefore `bowmans`, and `\bbowmans\b`
+ *  never matches "Bowman's" -- the apostrophe IS a word boundary, so the
+ *  regex sees "bowman" then "s" and stops.
+ *
+ *  The cost was measured on the slot-19 census. GUARD 6 refuses an IMPROVE
+ *  when a declared CHILD of the derived key has EVERY distinguishing word
+ *  stated in the title; for `bowmans-best` those words are ["bowmans",
+ *  "best"], "best" matched, "bowmans" did not, so the guard stood down and
+ *  a whole product family collapsed into its flagship unexamined:
+ *
+ *    "2022 Bowman's Best Baseball #20 Base"        -> bowman:20:base
+ *    "2022 Bowman's Best #B22-SK Blue Refractor"   -> bowman-chrome:B22:...
+ *
+ *  Bowman's Best is a DISTINCT_PRODUCT_SETKEYS entry and a ruled distinct
+ *  key (est. 200,863 rows); folding its sales into `bowman` splits no pool,
+ *  it merges two products' pools, which corrupts both FMVs.
+ *
+ *  So a title's apostrophes and the U+2019 curly form are treated as absent
+ *  when they sit INSIDE a word. Deliberately a normalization of the TITLE
+ *  and not a looser word regex: stripping the mark makes "Bowman's" read as
+ *  "Bowmans" and match, while every other boundary the `\b` anchors still
+ *  holds, so "Bowmans Best" and "Bowman Best" keep answering exactly as they
+ *  do today and no new word can start matching mid-token. */
 function titleStatesWord(title, word) {
   if (!word) return false;
   const w = String(word).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return new RegExp(`\\b${w}\\b`, "i").test(String(title ?? ""));
+  const re = new RegExp(`\\b${w}\\b`, "i");
+  const t = String(title ?? "");
+  if (re.test(t)) return true;
+  // Only an apostrophe BETWEEN two letters is spelling; a leading or trailing
+  // quote mark is punctuation around the word and its boundary must stand.
+  const unapostrophed = t.replace(/(?<=\p{L})['’](?=\p{L})/gu, "");
+  return unapostrophed !== t && re.test(unapostrophed);
 }
 
 /**
