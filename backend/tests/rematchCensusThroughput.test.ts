@@ -209,6 +209,7 @@ describe("A. verdict equality -- the fix bought speed and nothing else", () => {
 
     const moved: Array<{ i: number; field: string; was: string; now: string }> = [];
     const gainedCollapseReason: number[] = [];
+    const gainedEchoRefusal: number[] = [];
     const setKeyNoLongerConflicts: number[] = [];
     got.forEach((v, i) => {
       const now = parts(v), was = parts(recorded.verdicts[i]);
@@ -263,6 +264,28 @@ describe("A. verdict equality -- the fix bought speed and nothing else", () => {
           setKeyNoLongerConflicts.push(i);
           return;
         }
+        // THE THIRD LICENSED DIFFERENCE: the slug-parallel ECHO refusal
+        // (2026-09-04, from the halted base-eviction wave).
+        //
+        // baseEvictionEvidence gained a guard that refuses an eviction when the
+        // title spells out the stored slug's own parallel phrase -- the defect
+        // that moved genuine "Planetary Pursuit Mercury" and 2025 Score
+        // "Signatures" sales onto base pools, because those words are absent
+        // from the checklist-derived finish vocabulary.
+        //
+        // DISQUALIFYING ONLY, so on this fixture it can only ADD a refusal to
+        // rows already being refused. Evaluated LAST and without touching nowR
+        // for the rules above, so it cannot pull a row into another licence's
+        // branch: fixture row 32 gained the collapse reason AND this one, so
+        // both are stripped here and the remainder must match byte for byte.
+        const echoStripped = nowR.split(",").filter((r) => !/^title-echoes-slug-parallel:/.test(r)).join(",");
+        if (echoStripped !== nowR) {
+          const alsoCollapse = echoStripped.split(",").filter((r) => !COLLAPSE_REASON.test(r)).join(",");
+          if (echoStripped === wasR || alsoCollapse === wasR) {
+            gainedEchoRefusal.push(i);
+            return;
+          }
+        }
         moved.push({ i, field, was: wasR, now: nowR });
       });
     });
@@ -278,6 +301,14 @@ describe("A. verdict equality -- the fix bought speed and nothing else", () => {
       const r = K.classifyRow(inputFor(rows[i]));
       expect(r.klass).toBe("CONFLICT");
       expect(r.writable).toBe(false);
+    }
+    // Every row that gained the echo refusal is still unwritable and still not
+    // a BASE-EVICTION -- the guard may only ever keep a row where it is.
+    expect(gainedEchoRefusal.length).toBeGreaterThan(0);
+    for (const i of gainedEchoRefusal) {
+      const r = K.classifyRow(inputFor(rows[i]));
+      expect(r.writable).toBe(false);
+      expect(r.subclass).not.toBe("BASE-EVICTION");
     }
     // A row whose setKey stopped conflicting did NOT thereby become writable:
     // it kept its other conflicting axes, and the class equality above already

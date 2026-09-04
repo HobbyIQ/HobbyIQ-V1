@@ -835,6 +835,10 @@ jobs:
           MODE: before
           BASELINE: /tmp/rematch-canary-baseline.json
           SLOT: ${{ inputs.slot }}
+          # The gate must know WHICH CLASS is being applied: under
+          # scope=base-eviction a parallel-pool canary is SUPPOSED to lose
+          # base-titled rows, and the same value goes to the fleet script.
+          SCOPE: ${{ inputs.scope }}
           NODE_OPTIONS: "--max-old-space-size=8192"
         run: node backend/scripts/rematch-canary-check.cjs
 
@@ -1155,6 +1159,7 @@ jobs:
           MODE: after
           BASELINE: /tmp/rematch-canary-baseline.json
           SLOT: ${{ inputs.slot }}
+          SCOPE: ${{ inputs.scope }}
           NODE_OPTIONS: "--max-old-space-size=8192"
         run: |
           set -o pipefail
