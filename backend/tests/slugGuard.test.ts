@@ -156,15 +156,30 @@ describe("guardSlugInputs", () => {
       normalizedSetKey: "2018-panini-majestic-football", cardNumber: "",
     });
     expect(r.ok).toBe(false);
+    // CF-UNPARSED-IS-NOT-UNNUMBERED (Drew, 2026-09-04). The cardNumber reason
+    // is now `cardnumber-unparsed` rather than `cardnumber-missing`: a BLANK
+    // cardNumber is a parse failure, and that is a different fact from "no
+    // number and no player either". Both still REFUSE — the refusal is what
+    // this case has always been about — and the name is what changed.
     expect(r.reasons).toEqual(expect.arrayContaining([
       "sport-uncanonical", "year-invalid",
-      "setkey-raw-vendor-string", "cardnumber-missing",
+      "setkey-raw-vendor-string", "cardnumber-unparsed",
     ]));
   });
 
   it("refuses a literal 'null' cardNumber", () => {
     // Live slug: hiq:baseball:2020:bowman-chrome:null:base:auto
+    // A stringified null is a feed writing nothing, not a source saying the
+    // card has no number — so it is UNPARSED (CF-UNPARSED-IS-NOT-UNNUMBERED).
     const r = guardSlugInputs({ ...good, cardNumber: "null" });
+    expect(r.ok).toBe(false);
+    expect(r.reasons).toContain("cardnumber-unparsed");
+  });
+
+  it("an ASSERTED unnumbered card with no player is still `cardnumber-missing`", () => {
+    // The other half of the split: `nno` IS an answer, and the refusal here is
+    // that nothing identifies the row — not that the number was unreadable.
+    const r = guardSlugInputs({ ...good, cardNumber: "nno" });
     expect(r.ok).toBe(false);
     expect(r.reasons).toContain("cardnumber-missing");
   });

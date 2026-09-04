@@ -24,6 +24,7 @@ import {
 } from "./parseTitleIdentity.service.js";
 import { resolveVertical } from "./resolveVertical.service.js";
 import { cardNumberInClause, computeHobbyIqCardId, slugify, normalizeSetKey as canonicalNormalizeSetKey } from "./hobbyIqCardId.service.js";
+import { playerTheTitleAllows } from "./playerTheTitleAllows.js";
 import { canonicalizeParallelName, variationParallelsForCard } from "../catalog/catalogMatcher.service.js";
 import { canonicalVariationName, pickVariationForMarker, reduceVariationStockToCatalog, variationNameFromSlug } from "../catalog/variationVocabulary.js";
 import { qualifiedSetKeyFromTitle } from "../catalog/productQualifiers.js";
@@ -466,6 +467,13 @@ export interface VendorPersistResult {
   productQualifierApplied?: number;
   /** D22: a qualifier whose move is a ruling (bowman ↔ bowman-chrome, Topps Chrome Update) — counted, not made. */
   productQualifierRefused?: number;
+  /** CF-THE-TITLE-OUTRANKS-THE-VENDOR-PLAYER: the vendor attributed the sale to
+   *  a DIFFERENT person than the title names. Neither is adopted; the row is
+   *  skipped as UNDERIVABLE rather than keyed to a card it may not be. */
+  playerVendorIrreconcilable?: number;
+  /** The vendor's player was not adopted because the title's reading is fuller
+   *  or the vendor's was an abbreviation of it. Same person either way. */
+  playerVendorOverruled?: number;
   /** D28: the title stated an explicit `#X` and the vendor field / LLM said
    *  something else. The title won; this is how often it mattered. */
   cardNumberVendorDisagreed?: number;
@@ -645,7 +653,29 @@ export async function persistVendorSalesToPool(
     const parsed = parseListingIdentity(title, identity.cardNumberRe);
     let cardNumber = identity.cardNumber ?? parsed.cardNumber;
     let cardYear = identity.cardYear ?? guessCardYearFromTitle(title);
-    let playerName = identity.playerName ?? guessPlayerFromTitle(title);
+    // CF-THE-TITLE-OUTRANKS-THE-VENDOR-PLAYER (Drew, 2026-09-04). This line was
+    // a nullish-coalesce of the vendor's field over the title's guess, which
+    // means the vendor's attribution won whenever it was present and the title
+    // was never consulted at all -- that is how a Greg Maddux sale came to be
+    // filed under Todd Worrell. The two readings are now COMPARED; when they
+    // name two different people NEITHER is adopted and the row falls out below
+    // (`if (!playerName) skip`), because absent beats wrong. The old expression
+    // is pinned by ABSENCE in unparsedIsNotUnnumbered.mutation.test.ts, so it
+    // is deliberately not quoted here. See playerTheTitleAllows.ts.
+    const titlePlayer = guessPlayerFromTitle(title);
+    const playerDecision = playerTheTitleAllows(identity.playerName, titlePlayer);
+    if (playerDecision.outcome === "irreconcilable") {
+      result.playerVendorIrreconcilable = (result.playerVendorIrreconcilable ?? 0) + 1;
+      console.log(JSON.stringify({
+        event: "player_vendor_title_irreconcilable",
+        source, title,
+        vendorPlayer: playerDecision.vendorPlayer,
+        titlePlayer: playerDecision.titlePlayer,
+      }));
+    } else if (playerDecision.vendorOverruled) {
+      result.playerVendorOverruled = (result.playerVendorOverruled ?? 0) + 1;
+    }
+    let playerName = playerDecision.player;
     let setKey = identity.setName ?? inferSetKeyFromTitle(title);
     // CF-A-PRODUCT-QUALIFIER-IS-IDENTITY (D22). "1st Edition", "Sapphire",
     // "Chrome" (paper vs chrome), "Update" in the TITLE name a different

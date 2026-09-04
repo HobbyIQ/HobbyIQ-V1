@@ -144,6 +144,18 @@ const NOT_A_CARD_NUMBER: ReadonlySet<string> = new Set([
 ]);
 
 /**
+ * CF-UNPARSED-IS-NOT-UNNUMBERED (Drew, 2026-09-04). The subset of the above
+ * that is a SOURCE ASSERTING the card carries no number. Everything else in
+ * NOT_A_CARD_NUMBER — a blank, a stringified null, a bare "-" or "#" — is a
+ * parser or feed producing nothing, which is a different fact and gets a
+ * different refusal. Must stay in step with UNNUMBERED_CARD_NUMBER in
+ * hobbyIqCardId.service.ts; the parity test pins that.
+ */
+const ASSERTED_UNNUMBERED: ReadonlySet<string> = new Set([
+  "nno", "no number", "no-number", "nonumber", "n/a", "na", "none", "unnumbered",
+]);
+
+/**
  * Detect a setKey that is really an unnormalized vendor product string.
  *
  * normalizeSetKey() falls back to slugify() when no controlled-vocabulary
@@ -173,7 +185,14 @@ export type SlugRejectReason =
   | "year-invalid"
   | "setkey-raw-vendor-string"
   | "setkey-missing"
-  | "cardnumber-missing";
+  | "cardnumber-missing"
+  /** CF-UNPARSED-IS-NOT-UNNUMBERED (Drew, 2026-09-04). Nothing readable was
+   *  supplied and no source SAID the card is unnumbered. Distinct from
+   *  `cardnumber-missing` on purpose: that one means "no number AND no player,
+   *  so nothing identifies this row", while this one means "a player is
+   *  present and it is NOT enough" -- the number exists, we just failed to read
+   *  it, and a row keyed on the player would be keyed to a card it is not. */
+  | "cardnumber-unparsed";
 
 export interface SlugGuardResult {
   ok: boolean;
@@ -203,6 +222,10 @@ export function guardSlugInputs(input: {
    *  stricter behaviour — callers that cannot supply a player still get a
    *  refusal rather than a slug shared with every other unnumbered card. */
   playerName?: string | null;
+  /** CF-UNPARSED-IS-NOT-UNNUMBERED. A published checklist lists this card with
+   *  no number, so a blank cardNumber is an ANSWER rather than a parse
+   *  failure. Vendor paths never set this. */
+  unnumberedByChecklist?: boolean;
 }): SlugGuardResult {
   const reasons: SlugRejectReason[] = [];
 
@@ -215,14 +238,31 @@ export function guardSlugInputs(input: {
   if (!setKey) reasons.push("setkey-missing");
   else if (isRawVendorSetKey(setKey)) reasons.push("setkey-raw-vendor-string");
 
-  // CF-PLAYER-IS-THE-NUMBER. `nno` is an ABSENCE, so it can never be the
-  // identity itself — but an unnumbered card with a known player IS
-  // identifiable ("T206 Wagner"), and computeHobbyIqCardId encodes that as
-  // `p-<player>`. Refuse only when neither a number nor a player exists.
+  // CF-PLAYER-IS-THE-NUMBER. `nno` is an ABSENCE of a number that the source
+  // ASSERTED — an unnumbered card with a known player IS identifiable ("T206
+  // Wagner"), and computeHobbyIqCardId encodes that as `player-<name>`.
+  //
+  // CF-UNPARSED-IS-NOT-UNNUMBERED (Drew, 2026-09-04). That licence extends to
+  // an ASSERTED absence only. A cardNumber that is simply blank is a PARSE
+  // FAILURE, and the player is not a substitute for a number nobody read: the
+  // 1987 Topps Traded Tiffany Maddux whose title states `#70T` was filed under
+  // `player-todd-worrell` by exactly this path — the number was there to be
+  // read, and the player standing in for it came from the vendor and was
+  // wrong. So the two absences are now judged separately:
+  //
+  //   asserted-unnumbered + player  -> allowed (the historical population)
+  //   asserted-unnumbered, no player-> cardnumber-missing (nothing identifies it)
+  //   blank/unparsed, any player    -> cardnumber-unparsed (UNDERIVABLE)
+  //
+  // `unnumberedByChecklist` is how a CHECKLIST ingest says a blank number is an
+  // answer for this card. Vendor callers never set it.
   const cardNumber = String(input.cardNumber ?? "").trim().toLowerCase();
   const hasPlayer = String(input.playerName ?? "").trim().length > 0;
+  const assertedUnnumbered = ASSERTED_UNNUMBERED.has(cardNumber)
+    || input.unnumberedByChecklist === true;
   if (!cardNumber || NOT_A_CARD_NUMBER.has(cardNumber)) {
-    if (!hasPlayer) reasons.push("cardnumber-missing");
+    if (!assertedUnnumbered) reasons.push("cardnumber-unparsed");
+    else if (!hasPlayer) reasons.push("cardnumber-missing");
   }
 
   return { ok: reasons.length === 0, sport: reasons.length === 0 ? sport : null, reasons };
