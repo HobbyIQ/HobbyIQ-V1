@@ -83,7 +83,7 @@
   }
  ],
  "totals": {
-  "entries": 13605,
+  "entries": 13613,
   "refused": 0,
   "byLane": {
    "hobbymonitor": {
@@ -102,14 +102,7 @@
      "partial": 43
     }
    },
-   "bcp": {
-    "total": 3156,
-    "seeded": {
-     "missing": 156,
-     "partial": 2045,
-     "ingested": 955
-    }
-   },
+   "bcp": "[object Object]1",
    "beckett": {
     "total": 455,
     "seeded": {
@@ -133,12 +126,7 @@
      "partial": 15
     }
    },
-   "sportscardchecklist": {
-    "total": 5850,
-    "seeded": {
-     "missing": 5850
-    }
-   }
+   "sportscardchecklist": "[object Object]1111111"
   }
  },
  "entries": [
@@ -161265,6 +161253,117 @@
    "estimatedCards": null,
    "seededStatus": "missing",
    "seededNote": "sitemap-discovered 2026-09-04; cell hockey/topps/pre-1990 (bonus cell, PR #1689 NOT QUEUED); season=1989-90; set-142830; not yet fetched"
+  },
+  {
+   "id": "sportscardchecklist::https://www.sportscardchecklist.com/set-137096/1984-topps-tiffany-traded-baseball-trading-card-checklist",
+   "lane": "sportscardchecklist",
+   "sourceRef": "https://www.sportscardchecklist.com/set-137096/1984-topps-tiffany-traded-baseball-trading-card-checklist",
+   "sport": "baseball",
+   "year": 1984,
+   "setName": "1984 Topps Traded Tiffany",
+   "setKey": "topps-traded-tiffany",
+   "derivedSetKey": "topps-tiffany-traded",
+   "estimatedCards": 132,
+   "seededStatus": "pending",
+   "stagedCsv": "backend/data/checklists/scraped/1984-topps-traded-tiffany-baseball.csv",
+   "seededNote": "1984-1991 Topps Traded Tiffany acquisition 2026-09-04. Set page names the product \"Topps Tiffany Traded\"; setKey is the normalizeSetKey fixed point topps-traded-tiffany (CF-CATALOG-TRADED-TIFFANY). 132 cards 1T-132T, staged and verified; both page anchors agree."
+  },
+  {
+   "id": "sportscardchecklist::https://www.sportscardchecklist.com/set-137119/1985-topps-tiffany-traded-baseball-trading-card-checklist",
+   "lane": "sportscardchecklist",
+   "sourceRef": "https://www.sportscardchecklist.com/set-137119/1985-topps-tiffany-traded-baseball-trading-card-checklist",
+   "sport": "baseball",
+   "year": 1985,
+   "setName": "1985 Topps Traded Tiffany",
+   "setKey": "topps-traded-tiffany",
+   "derivedSetKey": "topps-tiffany-traded",
+   "estimatedCards": 132,
+   "seededStatus": "pending",
+   "stagedCsv": "backend/data/checklists/scraped/1985-topps-traded-tiffany-baseball.csv",
+   "seededNote": "1984-1991 Topps Traded Tiffany acquisition 2026-09-04. Set page names the product \"Topps Tiffany Traded\"; setKey is the normalizeSetKey fixed point topps-traded-tiffany (CF-CATALOG-TRADED-TIFFANY). 132 cards 1T-132T, staged and verified; both page anchors agree."
+  },
+  {
+   "id": "sportscardchecklist::https://www.sportscardchecklist.com/set-133291/1986-topps-tiffany-traded-baseball-trading-card-checklist",
+   "lane": "sportscardchecklist",
+   "sourceRef": "https://www.sportscardchecklist.com/set-133291/1986-topps-tiffany-traded-baseball-trading-card-checklist",
+   "sport": "baseball",
+   "year": 1986,
+   "setName": "1986 Topps Traded Tiffany",
+   "setKey": "topps-traded-tiffany",
+   "derivedSetKey": "topps-tiffany-traded",
+   "estimatedCards": 132,
+   "seededStatus": "pending",
+   "stagedCsv": "backend/data/checklists/scraped/1986-topps-traded-tiffany-baseball.csv",
+   "seededNote": "1984-1991 Topps Traded Tiffany acquisition 2026-09-04. Set page names the product \"Topps Tiffany Traded\"; setKey is the normalizeSetKey fixed point topps-traded-tiffany (CF-CATALOG-TRADED-TIFFANY). 132 cards 1T-132T, staged and verified; both page anchors agree."
+  },
+  {
+   "id": "sportscardchecklist::https://www.sportscardchecklist.com/set-137204/1987-topps-tiffany-traded-baseball-trading-card-checklist",
+   "lane": "sportscardchecklist",
+   "sourceRef": "https://www.sportscardchecklist.com/set-137204/1987-topps-tiffany-traded-baseball-trading-card-checklist",
+   "sport": "baseball",
+   "year": 1987,
+   "setName": "1987 Topps Traded Tiffany",
+   "setKey": "topps-traded-tiffany",
+   "derivedSetKey": "topps-tiffany-traded",
+   "estimatedCards": 132,
+   "seededStatus": "pending",
+   "stagedCsv": "backend/data/checklists/scraped/1987-topps-traded-tiffany-baseball.csv",
+   "seededNote": "1984-1991 Topps Traded Tiffany acquisition 2026-09-04. Set page names the product \"Topps Tiffany Traded\"; setKey is the normalizeSetKey fixed point topps-traded-tiffany (CF-CATALOG-TRADED-TIFFANY). 132 cards 1T-132T, staged and verified; both page anchors agree."
+  },
+  {
+   "id": "sportscardchecklist::https://www.sportscardchecklist.com/set-137296/1988-topps-tiffany-traded-baseball-trading-card-checklist",
+   "lane": "sportscardchecklist",
+   "sourceRef": "https://www.sportscardchecklist.com/set-137296/1988-topps-tiffany-traded-baseball-trading-card-checklist",
+   "sport": "baseball",
+   "year": 1988,
+   "setName": "1988 Topps Traded Tiffany",
+   "setKey": "topps-traded-tiffany",
+   "derivedSetKey": "topps-tiffany-traded",
+   "estimatedCards": 132,
+   "seededStatus": "pending",
+   "stagedCsv": "backend/data/checklists/scraped/1988-topps-traded-tiffany-baseball.csv",
+   "seededNote": "1984-1991 Topps Traded Tiffany acquisition 2026-09-04. Set page names the product \"Topps Tiffany Traded\"; setKey is the normalizeSetKey fixed point topps-traded-tiffany (CF-CATALOG-TRADED-TIFFANY). 132 cards 1T-132T, staged and verified; both page anchors agree."
+  },
+  {
+   "id": "sportscardchecklist::https://www.sportscardchecklist.com/set-137401/1989-topps-tiffany-traded-baseball-trading-card-checklist",
+   "lane": "sportscardchecklist",
+   "sourceRef": "https://www.sportscardchecklist.com/set-137401/1989-topps-tiffany-traded-baseball-trading-card-checklist",
+   "sport": "baseball",
+   "year": 1989,
+   "setName": "1989 Topps Traded Tiffany",
+   "setKey": "topps-traded-tiffany",
+   "derivedSetKey": "topps-tiffany-traded",
+   "estimatedCards": 132,
+   "seededStatus": "pending",
+   "stagedCsv": "backend/data/checklists/scraped/1989-topps-traded-tiffany-baseball.csv",
+   "seededNote": "1984-1991 Topps Traded Tiffany acquisition 2026-09-04. Set page names the product \"Topps Tiffany Traded\"; setKey is the normalizeSetKey fixed point topps-traded-tiffany (CF-CATALOG-TRADED-TIFFANY). 132 cards 1T-132T, staged and verified; both page anchors agree."
+  },
+  {
+   "id": "sportscardchecklist::https://www.sportscardchecklist.com/set-138544/1990-topps-tiffany-traded-baseball-trading-card-checklist",
+   "lane": "sportscardchecklist",
+   "sourceRef": "https://www.sportscardchecklist.com/set-138544/1990-topps-tiffany-traded-baseball-trading-card-checklist",
+   "sport": "baseball",
+   "year": 1990,
+   "setName": "1990 Topps Traded Tiffany",
+   "setKey": "topps-traded-tiffany",
+   "derivedSetKey": "topps-tiffany-traded",
+   "estimatedCards": 132,
+   "seededStatus": "pending",
+   "stagedCsv": "backend/data/checklists/scraped/1990-topps-traded-tiffany-baseball.csv",
+   "seededNote": "1984-1991 Topps Traded Tiffany acquisition 2026-09-04. Set page names the product \"Topps Tiffany Traded\"; setKey is the normalizeSetKey fixed point topps-traded-tiffany (CF-CATALOG-TRADED-TIFFANY). 132 cards 1T-132T, staged and verified; both page anchors agree."
+  },
+  {
+   "id": "bcp::https://baseballcardpedia.com/index.php/1991_Topps_Traded",
+   "lane": "bcp",
+   "sourceRef": "https://baseballcardpedia.com/index.php/1991_Topps_Traded",
+   "sport": "baseball",
+   "year": 1991,
+   "setName": "1991 Topps Traded Tiffany",
+   "setKey": "topps-traded-tiffany",
+   "estimatedCards": 132,
+   "seededStatus": "pending",
+   "stagedCsv": "backend/data/checklists/scraped/1991-topps-traded-tiffany-baseball.csv",
+   "seededNote": "1991 is the ONLY Traded Tiffany year sportscardchecklist serves no set page for. baseballcardpedia's 1991 Topps Traded page documents the Tiffany parallel (\"the eighth, and final, year\") and carries the 132-card list; Tiffany is a factory-set-exclusive parallel of that same list. Staged and verified."
   }
  ]
 }
