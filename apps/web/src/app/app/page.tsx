@@ -1,11 +1,47 @@
-import { PortfolioTodayCard } from "@/components/PortfolioTodayCard";
-import { MarketTodayCard } from "@/components/MarketTodayCard";
-import { DailyIQCard } from "@/components/DailyIQCard";
+"use client";
+
+import { useCallback, useState } from "react";
 import { OnboardingBanner } from "@/components/OnboardingBanner";
 import { MarketIndexes } from "@/components/MarketIndexes";
 import { EbayReconnectBanner } from "@/components/EbayReconnectBanner";
+import { PortfolioBar } from "@/components/PortfolioBar";
+import { TodaysActions, ACTIONS_SECTION_ID } from "@/components/TodaysActions";
+import type { PortfolioResponse } from "@/lib/api";
+
+// CF-DAILYIQ-LAYOUT (Drew, 2026-09-04: "I love the market indexes. Portfolio
+// Today should be a wide bar at the top with relevant data, then market
+// indexes, and maybe something around actions below it").
+//
+// THE ORDER IS THE FEATURE, and it is pinned by a test
+// (src/lib/dailyIqLayout.test.ts) rather than left to whoever edits this file
+// next:
+//
+//   1. PORTFOLIO BAR   — the owner's own number, full width, first.
+//   2. MARKET INDEXES  — unchanged in content (#1697); it just moved under
+//                        the bar. Drew's one explicit "I love" on this page,
+//                        so nothing about the strip itself is touched.
+//   3. TODAY'S ACTIONS — what to do about the two above.
+//
+// The three-card grid that used to hold PortfolioTodayCard / MarketTodayCard /
+// DailyIQCard is gone: the portfolio card became the bar, and the market and
+// brief cards merged into the actions section's third column. Those two
+// components remain in the tree — /app/daily and other surfaces still mount
+// them — this page simply no longer does.
+//
+// ONE FETCH, TWO READERS. The bar fetches /api/portfolio and hands the
+// response up; the actions section reads the same object for its attention
+// and sell-signal columns. Two components each calling fetchPortfolio would
+// double a request that returns every holding.
 
 export default function DailyIQPage() {
+  const [portfolio, setPortfolio] = useState<PortfolioResponse | null>(null);
+  const [portfolioFailed, setPortfolioFailed] = useState(false);
+
+  const handleData = useCallback((data: PortfolioResponse | null, failed: boolean) => {
+    setPortfolio(data);
+    setPortfolioFailed(failed);
+  }, []);
+
   return (
     <div className="max-w-7xl mx-auto px-6 py-8">
       <div className="mb-8">
@@ -24,9 +60,15 @@ export default function DailyIQPage() {
           onboarding/entitlement branch when there is. */}
       <EbayReconnectBanner className="mb-6" />
 
+      {/* CF-DAILYIQ-BANNER-ONLY-WHEN-EMPTY (Drew, 2026-09-04). Renders only
+          for an actually-empty portfolio now — see OnboardingBanner and
+          lib/firstRun.ts `shouldShowFirstRunBanner`. */}
       <OnboardingBanner />
 
-      {/* CF-MARKET-INDEXES (Drew, 2026-09-04). THIS is the page the nav
+      {/* 1. The bar. */}
+      <PortfolioBar attentionHref={`#${ACTIONS_SECTION_ID}`} onData={handleData} />
+
+      {/* 2. CF-MARKET-INDEXES (Drew, 2026-09-04). THIS is the page the nav
           item labelled "DailyIQ" points at — APP_NAV[0].href is "/app"
           (lib/navigation.ts). The strip shipped in #1644 was mounted on
           /app/daily, which has no nav entry at all: the only route to it
@@ -34,19 +76,16 @@ export default function DailyIQPage() {
           surface everyone calls DailyIQ never had the tiles, and the
           strip looked missing on web while it was live on iOS.
 
-          Mounted above the card grid and OUTSIDE every gate, matching
-          MarketIndexesStrip's position on DailyIQView.swift (above the
-          segment control, outside the locked overlay). The component
-          fetches on its own, so it paints regardless of what the
-          portfolio/market/brief cards below it are doing — including
-          when the brief is 402-locked. */}
+          Mounted OUTSIDE every gate, matching MarketIndexesStrip's
+          position on DailyIQView.swift (above the segment control,
+          outside the locked overlay). The component fetches on its own,
+          so it paints regardless of what the bar above or the actions
+          below it are doing — including when the brief is 402-locked.
+          Content unchanged by CF-DAILYIQ-LAYOUT; only its neighbours moved. */}
       <MarketIndexes className="mb-8" />
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <PortfolioTodayCard />
-        <MarketTodayCard />
-        <DailyIQCard />
-      </div>
+      {/* 3. The actions. */}
+      <TodaysActions portfolio={portfolio} portfolioFailed={portfolioFailed} />
     </div>
   );
 }

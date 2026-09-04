@@ -107,7 +107,10 @@ export function MarketIndexes({
   const errored = status === "error";
 
   return (
-    <section className={className}>
+    // `data-market-indexes` is a test hook only — the harness measures this
+    // strip's position against the bar above and the actions below it
+    // (CF-DAILYIQ-LAYOUT). No content, styling or structure changes with it.
+    <section className={className} data-market-indexes="true">
       {(showHeading || showExploreLink) && (
         <div className="flex items-baseline justify-between mb-3 gap-4">
           {showHeading ? (

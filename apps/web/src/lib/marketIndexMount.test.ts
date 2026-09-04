@@ -75,8 +75,19 @@ describe("PIN: the mount is outside the gated region on both pages", () => {
     expect(line).not.toMatch(/phase|locked|entitle|gate|granted|\?/i);
   });
 
+  // CF-DAILYIQ-LAYOUT (Drew, 2026-09-04) reordered this page: the portfolio
+  // card became a full-width BAR above the strip, and the three-card grid
+  // below it became the actions section. The original assertion named
+  // <PortfolioTodayCard, which this page no longer mounts.
+  //
+  // What that assertion was protecting still holds and is still pinned: the
+  // strip must sit ABOVE the page's card grid, not buried under it. The grid
+  // below it is now <TodaysActions. The bar that moved above the strip is
+  // Drew's explicit instruction ("a wide bar at the top ... then market
+  // indexes"), and the full bar -> indexes -> actions order has its own pin
+  // in dailyIqLayout.test.ts.
   it("the home page renders the strip above the card grid", () => {
     const s = code(src(HOME));
-    expect(s.indexOf("<MarketIndexes")).toBeLessThan(s.indexOf("<PortfolioTodayCard"));
+    expect(s.indexOf("<MarketIndexes")).toBeLessThan(s.indexOf("<TodaysActions"));
   });
 });

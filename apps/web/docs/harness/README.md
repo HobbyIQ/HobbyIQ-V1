@@ -54,6 +54,36 @@ node verified-check-check.mjs
 
 `SHOTS` is optional; with it the run also writes the two screenshots.
 
+## dailyiq-layout-check.mjs
+
+CF-DAILYIQ-LAYOUT / CF-DAILYIQ-ACTIONS / CF-DAILYIQ-BANNER-ONLY-WHEN-EMPTY.
+Runs against `/app` — the page the nav calls DailyIQ. Stubs a 43-holding
+portfolio (38 verified) carrying one of each real meta shape the actions
+columns read: `needsReview` + `reviewReason`, an envelope with
+`valueSource: "cost-proxy"`, a `pricingLabels` low-confidence entry, and a
+`sellSignal` sell-window. `first-run` returns an empty progress record with
+`holdingCount: 43` — the exact state that used to render "Value your first
+card".
+
+Exits non-zero unless, at 390px and 1280px: no onboarding banner appears, the
+bar/indexes/actions sit in that order **by measured geometry**, the bar spans
+the content width, the bar is ONE row at 1280 and TWO stacked rows at 390, the
+verified share reads "N of 43 verified" beside the reused `VerifiedCheck`
+glyph with the word VERIFIED nowhere on the page, the attention chip links to
+`#todays-actions`, all three attention kinds render, no engine vocabulary
+(`cost-proxy`, `BASIS-IDENTITY`, `valueSource`) leaks to the glass, the sell
+basis sentence appears verbatim, there is no horizontal overflow, and no two
+text nodes inside the bar or the actions section overlap.
+
+The one-row/two-row assertion is the one worth keeping: it measures the two
+bands' actual boxes rather than trusting a `md:` class to have applied, so a
+breakpoint that silently stops matching is caught instead of shipping a bar
+whose halves sit on top of each other.
+
+```sh
+BASE=http://127.0.0.1:3111 SHOTS=<repo>/apps/web/docs/screenshots node dailyiq-layout-check.mjs
+```
+
 ## before-check.mjs
 
 The control. Same measurements, selecting the fixer by its visible text so it

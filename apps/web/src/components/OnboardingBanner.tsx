@@ -11,7 +11,7 @@ import { fetchFirstRun, fetchOnboarding, type OnboardingResponse } from "@/lib/a
 import {
   FIRST_RUN_STEP_IDS,
   normalizeProgress,
-  shouldRunFirstRun,
+  shouldShowFirstRunBanner,
   type FirstRunProgress,
 } from "@/lib/firstRun";
 
@@ -52,18 +52,31 @@ export function OnboardingBanner() {
 
   if (loading) return null;
 
-  // An unfinished funnel gets a resume banner instead of the checklist.
-  // `shouldRunFirstRun` is the same gate /app/start uses, so the banner
-  // and the page cannot disagree about whether there is anything to
-  // resume — and a skipped funnel shows nothing here, because skip means
-  // skip until the user asks for it again.
-  if (firstRun && shouldRunFirstRun(firstRun.progress, { holdingCount: firstRun.holdingCount })) {
+  // CF-DAILYIQ-BANNER-ONLY-WHEN-EMPTY (Drew, 2026-09-04). An unfinished
+  // funnel gets a resume banner instead of the checklist — but ONLY on an
+  // empty portfolio. `shouldShowFirstRunBanner` is the banner's gate, which
+  // adds "and the portfolio is empty" on top of the funnel's own
+  // `shouldRunFirstRun`; see the comment on it for why the two differ.
+  //
+  // The bug this fixes: a user with 43 holdings who never ran the funnel has
+  // an empty `completedSteps`, so the funnel gate answered true and the
+  // Today page told them to "Value your first card". The funnel is still
+  // reachable at /app/start; it just no longer interrupts a portfolio that
+  // plainly is not empty.
+  if (
+    firstRun
+    && shouldShowFirstRunBanner(firstRun.progress, { holdingCount: firstRun.holdingCount })
+  ) {
     return <ResumeFirstRunBanner progress={firstRun.progress} />;
   }
 
   if (!data) return null;
   if (data.dismissed) return null;
   if (data.percentComplete >= 100) return null;
+  // Same rule for the long-tail checklist. It is a setup nag too, and an
+  // established portfolio has moved past setup — whatever the checklist
+  // record still says is unticked.
+  if (firstRun && firstRun.holdingCount > 0) return null;
 
   const nextStep = data.steps.find((s) => !s.done);
 
