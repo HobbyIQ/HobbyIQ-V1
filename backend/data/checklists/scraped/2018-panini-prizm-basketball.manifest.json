@@ -1,0 +1,172 @@
+{
+ "scrapedAt": "2026-09-04T02:00:29.684Z",
+ "sourceUrl": "https://www.hobbymonitor.com/release/2018-19-panini-prizm-basketball",
+ "sport": "basketball",
+ "year": 2018,
+ "setName": "panini-prizm",
+ "productKey": "2018-panini-prizm",
+ "setKey": "panini-prizm",
+ "rowCount": 14151,
+ "parallelColumnAuthoritative": true,
+ "cardRows": 887,
+ "ladderRows": 13264,
+ "rungsReal": 100,
+ "rungsDroppedPlayerName": 0,
+ "rungsUnnumbered": 67,
+ "refusedSubsets": 0,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Luck of the Lottery",
+   "category": "luck-of-the-lottery",
+   "playerCount": 15,
+   "rungs": 6,
+   "rowCount": 105,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Sensational Signatures",
+   "category": "sensational-signatures",
+   "playerCount": 95,
+   "rungs": 5,
+   "rowCount": 570,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Rookie Signatures",
+   "category": "rookie-signatures",
+   "playerCount": 37,
+   "rungs": 7,
+   "rowCount": 296,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Base",
+   "category": "base",
+   "playerCount": 300,
+   "rungs": 37,
+   "rowCount": 11400,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Signatures",
+   "category": "signatures",
+   "playerCount": 55,
+   "rungs": 6,
+   "rowCount": 385,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Sensational Swatches",
+   "category": "sensational-swatches",
+   "playerCount": 100,
+   "rungs": 1,
+   "rowCount": 200,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Emergent",
+   "category": "emergent",
+   "playerCount": 25,
+   "rungs": 2,
+   "rowCount": 75,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Fastbreak Autographs",
+   "category": "fastbreak-autographs",
+   "playerCount": 60,
+   "rungs": 2,
+   "rowCount": 180,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Fastbreak Autographs Rookies",
+   "category": "fastbreak-autographs-rookies",
+   "playerCount": 40,
+   "rungs": 2,
+   "rowCount": 120,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Freshman Phenoms",
+   "category": "freshman-phenoms",
+   "playerCount": 25,
+   "rungs": 2,
+   "rowCount": 75,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Fireworks",
+   "category": "fireworks",
+   "playerCount": 30,
+   "rungs": 6,
+   "rowCount": 210,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > All Day",
+   "category": "all-day",
+   "playerCount": 25,
+   "rungs": 6,
+   "rowCount": 175,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Hall Monitors",
+   "category": "hall-monitors",
+   "playerCount": 10,
+   "rungs": 2,
+   "rowCount": 30,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Get Hyped!",
+   "category": "get-hyped",
+   "playerCount": 10,
+   "rungs": 2,
+   "rowCount": 30,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Go Hard or Go Home",
+   "category": "go-hard-or-go-home",
+   "playerCount": 20,
+   "rungs": 6,
+   "rowCount": 140,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Dominance",
+   "category": "dominance",
+   "playerCount": 30,
+   "rungs": 2,
+   "rowCount": 90,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > That's Savage!",
+   "category": "that-s-savage",
+   "playerCount": 10,
+   "rungs": 6,
+   "rowCount": 70,
+   "refused": false,
+   "printRun": null
+  }
+ ]
+}

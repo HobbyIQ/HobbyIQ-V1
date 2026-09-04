@@ -20,7 +20,7 @@ const { classifyRung, foldName, runOf, noteOf } = require_("../scripts/fetchHobb
 
 const roster = new Set(["ethanholliday", "freddiefreeman", "juliorodriguez", "jaccaglianone"]);
 
-describe("a rung is a rung only when the source priced its scarcity", () => {
+describe("a rung is a rung when the source names a parallel, not a person", () => {
   it("accepts rungs carrying a printRun, a 1/1 flag, or odds", () => {
     expect(classifyRung({ name: "Refractor", printRun: 499 }, roster).ok).toBe(true);
     expect(classifyRung({ name: "SuperFractor", printRun: null, isOneOfOne: true }, roster).ok).toBe(true);
@@ -41,17 +41,42 @@ describe("a rung is a rung only when the source priced its scarcity", () => {
     expect(classifyRung({ name: "Julio Rodríguez - Seattle Mariners", printRun: null }, roster).why).toBe("player-name");
   });
 
-  it("refuses any scarcity-less entry even when it is not on the roster", () => {
-    // Blank is never a rung, and an unpriced unknown is not one either: the
-    // source prices every real parallel it publishes.
-    expect(classifyRung({ name: "", printRun: null }, roster).ok).toBe(false);
-    expect(classifyRung({ name: "Some Unpriced Thing", printRun: null }, roster).why).toBe("no-scarcity");
+  it("KEEPS an unnumbered rung that is not a player (CF-HM-VINTAGE-LADDER-DROPPED)", () => {
+    // The rule used to demand scarcity, which is true of 2026 Bowman and false
+    // of everything older. 2012/13 Panini Prizm publishes "Prizms", "Prizms
+    // Green" and "Prizms Gold" with no print run anywhere on the page, and the
+    // old rule ingested that release BASE-ONLY — 500 rows, no ladder.
+    const r = classifyRung({ name: "Prizms Green", printRun: null, isOneOfOne: false, odds: null }, roster);
+    expect(r.ok).toBe(true);
+    expect(r.why).toBe("unnumbered");
+    // ...and its print run stays BLANK. Unknown is never a guess.
+    expect(runOf({ printRun: null, isOneOfOne: false })).toBe("");
   });
 
-  it("a scarcity-bearing entry is kept even if it collides with a name", () => {
-    // The scarcity signal is checked FIRST — a real rung is never dropped for
-    // resembling a player.
-    expect(classifyRung({ name: "Ethan Holliday", printRun: 25 }, roster).ok).toBe(true);
+  it("still refuses an empty name, and a sentence past 60 chars", () => {
+    expect(classifyRung({ name: "", printRun: null }, roster).ok).toBe(false);
+    const long = classifyRung({ name: "x".repeat(61), printRun: null }, roster);
+    expect(long.ok).toBe(false);
+    expect(long.why).toBe("over-60-chars");
+  });
+
+  it("catches the ONE misfiled name measured across 34 pages of the lane", () => {
+    // "Christy Mathewson - All 300 subjects" (2025 Topps T205) is 36 chars, so
+    // the length check never sees it — foldName drops the " - ..." suffix and
+    // the ROSTER check is what refuses it. This is the whole reason the roster
+    // guard, and not the scarcity proxy, is the load-bearing one.
+    const t205 = new Set([foldName("Christy Mathewson")]);
+    const r = classifyRung({ name: "Christy Mathewson - All 300 subjects", printRun: null }, t205);
+    expect(r.ok).toBe(false);
+    expect(r.why).toBe("player-name");
+  });
+
+  it("a player name is refused even when the source priced it", () => {
+    // ORDER CHANGED DELIBERATELY. Scarcity used to be checked first, so a
+    // numbered entry was kept even if it was a person. The roster check is now
+    // the load-bearing guard and runs first: a misfiled player carrying a print
+    // run is exactly the exploded-spine row we must never mint.
+    expect(classifyRung({ name: "Ethan Holliday", printRun: 25 }, roster).why).toBe("player-name");
   });
 });
 
