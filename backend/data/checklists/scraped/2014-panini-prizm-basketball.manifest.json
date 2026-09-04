@@ -1,0 +1,100 @@
+{
+ "scrapedAt": "2026-09-04T02:00:17.966Z",
+ "sourceUrl": "https://www.hobbymonitor.com/release/2014-15-panini-prizm-basketball",
+ "sport": "basketball",
+ "year": 2014,
+ "setName": "panini-prizm",
+ "productKey": "2014-panini-prizm",
+ "setKey": "panini-prizm",
+ "rowCount": 7510,
+ "parallelColumnAuthoritative": true,
+ "cardRows": 640,
+ "ladderRows": 6870,
+ "rungsReal": 53,
+ "rungsDroppedPlayerName": 0,
+ "rungsUnnumbered": 41,
+ "refusedSubsets": 0,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Base",
+   "category": "base",
+   "playerCount": 300,
+   "rungs": 18,
+   "rowCount": 5700,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Jerseys",
+   "category": "jerseys",
+   "playerCount": 100,
+   "rungs": 2,
+   "rowCount": 300,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Autographs",
+   "category": "autographs",
+   "playerCount": 100,
+   "rungs": 6,
+   "rowCount": 700,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > SP's",
+   "category": "sp-s",
+   "playerCount": 50,
+   "rungs": 5,
+   "rowCount": 300,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Rookie Autographs",
+   "category": "rookie-autographs",
+   "playerCount": 40,
+   "rungs": 5,
+   "rowCount": 240,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Freshman Phenoms",
+   "category": "freshman-phenoms",
+   "playerCount": 10,
+   "rungs": 4,
+   "rowCount": 50,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Representatives",
+   "category": "representatives",
+   "playerCount": 20,
+   "rungs": 5,
+   "rowCount": 120,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Fireworks",
+   "category": "fireworks",
+   "playerCount": 15,
+   "rungs": 4,
+   "rowCount": 75,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Superstars",
+   "category": "superstars",
+   "playerCount": 5,
+   "rungs": 4,
+   "rowCount": 25,
+   "refused": false,
+   "printRun": null
+  }
+ ]
+}

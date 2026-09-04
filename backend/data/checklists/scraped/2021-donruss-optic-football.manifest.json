@@ -1,0 +1,442 @@
+{
+ "scrapedAt": "2026-09-04T02:00:57.427Z",
+ "sourceUrl": "https://www.hobbymonitor.com/release/2021-donruss-optic-football",
+ "sport": "football",
+ "year": 2021,
+ "setName": "donruss-optic",
+ "productKey": "2021-donruss-optic",
+ "setKey": "donruss-optic",
+ "rowCount": 15274,
+ "parallelColumnAuthoritative": true,
+ "cardRows": 1306,
+ "ladderRows": 13968,
+ "rungsReal": 149,
+ "rungsDroppedPlayerName": 0,
+ "rungsUnnumbered": 149,
+ "refusedSubsets": 0,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Rookie Triple Autographs",
+   "category": "rookie-triple-autographs",
+   "playerCount": 9,
+   "rungs": 1,
+   "rowCount": 18,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Dominators Ice",
+   "category": "dominators-ice",
+   "playerCount": 10,
+   "rungs": 0,
+   "rowCount": 10,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Legendary Patch Autographs",
+   "category": "legendary-patch-autographs",
+   "playerCount": 13,
+   "rungs": 1,
+   "rowCount": 26,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Rookie Phenoms Horizontal",
+   "category": "rookie-phenoms-horizontal",
+   "playerCount": 42,
+   "rungs": 4,
+   "rowCount": 210,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Base",
+   "category": "base",
+   "playerCount": 300,
+   "rungs": 37,
+   "rowCount": 11400,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > My House! Ice",
+   "category": "my-house-ice",
+   "playerCount": 20,
+   "rungs": 0,
+   "rowCount": 20,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Downtown",
+   "category": "downtown",
+   "playerCount": 40,
+   "rungs": 4,
+   "rowCount": 200,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Gifted Rookies",
+   "category": "gifted-rookies",
+   "playerCount": 20,
+   "rungs": 4,
+   "rowCount": 100,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Rated Rookies RPS Autographs Ice",
+   "category": "rated-rookies-rps-autographs-ice",
+   "playerCount": 42,
+   "rungs": 0,
+   "rowCount": 42,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Gifted Rookies Ice",
+   "category": "gifted-rookies-ice",
+   "playerCount": 20,
+   "rungs": 0,
+   "rowCount": 20,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Rookie Phenoms",
+   "category": "rookie-phenoms",
+   "playerCount": 42,
+   "rungs": 4,
+   "rowCount": 210,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Rookie Kings",
+   "category": "rookie-kings",
+   "playerCount": 20,
+   "rungs": 4,
+   "rowCount": 100,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > My House!",
+   "category": "my-house",
+   "playerCount": 20,
+   "rungs": 4,
+   "rowCount": 100,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Rated Rookies RPS Autographs",
+   "category": "rated-rookies-rps-autographs",
+   "playerCount": 41,
+   "rungs": 12,
+   "rowCount": 533,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Legendary Logos",
+   "category": "legendary-logos",
+   "playerCount": 20,
+   "rungs": 4,
+   "rowCount": 100,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Legendary Logos Ice",
+   "category": "legendary-logos-ice",
+   "playerCount": 20,
+   "rungs": 0,
+   "rowCount": 20,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Mythical",
+   "category": "mythical",
+   "playerCount": 25,
+   "rungs": 4,
+   "rowCount": 125,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Rookie Patch Autographs",
+   "category": "rookie-patch-autographs",
+   "playerCount": 42,
+   "rungs": 1,
+   "rowCount": 84,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Dominators",
+   "category": "dominators",
+   "playerCount": 10,
+   "rungs": 4,
+   "rowCount": 50,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Rated Rookies Autographs Ice",
+   "category": "rated-rookies-autographs-ice",
+   "playerCount": 49,
+   "rungs": 0,
+   "rowCount": 49,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > GloBall Ice",
+   "category": "globall-ice",
+   "playerCount": 15,
+   "rungs": 0,
+   "rowCount": 15,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > The Rookies",
+   "category": "the-rookies",
+   "playerCount": 20,
+   "rungs": 4,
+   "rowCount": 100,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > The Elite Series Rookies Ice",
+   "category": "the-elite-series-rookies-ice",
+   "playerCount": 20,
+   "rungs": 0,
+   "rowCount": 20,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > GloBall",
+   "category": "globall",
+   "playerCount": 15,
+   "rungs": 4,
+   "rowCount": 75,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > The Elite Series Rookies",
+   "category": "the-elite-series-rookies",
+   "playerCount": 20,
+   "rungs": 4,
+   "rowCount": 100,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > The Rookies Ice",
+   "category": "the-rookies-ice",
+   "playerCount": 20,
+   "rungs": 0,
+   "rowCount": 20,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Rated Rookies Autographs",
+   "category": "rated-rookies-autographs",
+   "playerCount": 46,
+   "rungs": 12,
+   "rowCount": 598,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Red Hot Rookies",
+   "category": "red-hot-rookies",
+   "playerCount": 10,
+   "rungs": 4,
+   "rowCount": 50,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Elite Series Rookies",
+   "category": "elite-series-rookies",
+   "playerCount": 20,
+   "rungs": 0,
+   "rowCount": 20,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > The Elite Series Rookies Autographs",
+   "category": "the-elite-series-rookies-autographs",
+   "playerCount": 20,
+   "rungs": 2,
+   "rowCount": 60,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Red Hot Rookies Ice",
+   "category": "red-hot-rookies-ice",
+   "playerCount": 10,
+   "rungs": 0,
+   "rowCount": 10,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > The Rookies Autographs",
+   "category": "the-rookies-autographs",
+   "playerCount": 20,
+   "rungs": 2,
+   "rowCount": 60,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Retro Series",
+   "category": "retro-series",
+   "playerCount": 25,
+   "rungs": 4,
+   "rowCount": 125,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Dynamic Patch Autographs",
+   "category": "dynamic-patch-autographs",
+   "playerCount": 22,
+   "rungs": 1,
+   "rowCount": 44,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Retro Series Ice",
+   "category": "retro-series-ice",
+   "playerCount": 25,
+   "rungs": 0,
+   "rowCount": 25,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Signature Series Holo",
+   "category": "signature-series-holo",
+   "playerCount": 41,
+   "rungs": 0,
+   "rowCount": 41,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Rookie Gridiron Kings",
+   "category": "rookie-gridiron-kings",
+   "playerCount": 20,
+   "rungs": 4,
+   "rowCount": 100,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Rookie Gridiron Kings Autographs",
+   "category": "rookie-gridiron-kings-autographs",
+   "playerCount": 20,
+   "rungs": 2,
+   "rowCount": 60,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Rookie Gridiron Kings Ice",
+   "category": "rookie-gridiron-kings-ice",
+   "playerCount": 20,
+   "rungs": 0,
+   "rowCount": 20,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Donruss Threads",
+   "category": "donruss-threads",
+   "playerCount": 15,
+   "rungs": 4,
+   "rowCount": 75,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > White Hot Rookies",
+   "category": "white-hot-rookies",
+   "playerCount": 10,
+   "rungs": 4,
+   "rowCount": 50,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > White Hot Rookies Ice",
+   "category": "white-hot-rookies-ice",
+   "playerCount": 10,
+   "rungs": 0,
+   "rowCount": 10,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Rookie Dual Autographs",
+   "category": "rookie-dual-autographs",
+   "playerCount": 20,
+   "rungs": 1,
+   "rowCount": 40,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Rising Suns",
+   "category": "rising-suns",
+   "playerCount": 10,
+   "rungs": 4,
+   "rowCount": 50,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Rising Suns Ice",
+   "category": "rising-suns-ice",
+   "playerCount": 10,
+   "rungs": 0,
+   "rowCount": 10,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Dominators Autographs",
+   "category": "dominators-autographs",
+   "playerCount": 2,
+   "rungs": 1,
+   "rowCount": 4,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > The Champ is Here",
+   "category": "the-champ-is-here",
+   "playerCount": 15,
+   "rungs": 4,
+   "rowCount": 75,
+   "refused": false,
+   "printRun": null
+  }
+ ]
+}
