@@ -23,11 +23,21 @@
 //   shortens instead of pushing the $ change out of the bar. The harness
 //   asserts no two text nodes inside the bar overlap at 390 and 1280.
 //
-//   THE DAY LINE IS ABSENT, NOT ZERO. /api/portfolio carries no previous
-//   close — see `barStats`. Printing "$0.00 today" would be inventing a
-//   measurement, so the bar shows the unrealised P&L it can actually source
-//   and says nothing about the day. This is the same rule the rest of the app
-//   keeps: never render a number we did not compute.
+//   THE DAY LINE IS A MEASUREMENT OR AN EM DASH, NEVER A ZERO STAND-IN.
+//   CF-PORTFOLIO-DAY-CHANGE (Drew, 2026-09-04): /api/portfolio now computes a
+//   previous close from each holding's persisted price trail at the most
+//   recent UTC midnight, so the day change is real and shown in $ and % with
+//   colour. When the server found no prior point for any holding the value is
+//   null and the bar prints "—", because "$0.00 today" for "we have no
+//   yesterday" would be inventing a measurement. A measured flat day DOES
+//   print $0 — that is a fact, and suppressing it would be the same lie in
+//   the other direction.
+//
+//   COVERAGE TRAVELS WITH THE NUMBER. Holdings with no prior point contribute
+//   zero change, which drags the move toward flat. When fewer than all
+//   holdings have a prior, the bar says "n of 43 with prior" in muted text
+//   beside the day change rather than presenting a partial measurement as a
+//   whole-portfolio one.
 //
 // The verified share is a COUNT WITH THE GLYPH, never the word — CF-VERIFIED-
 // IS-A-CHECK (#1761). "38 of 43" beside the check, because on this bar the
@@ -146,6 +156,7 @@ export function PortfolioBar({
           >
             {formatUSD(stats.totalValue, { hideCents: true })}
           </span>
+          <DayChange stats={stats} />
           <PnL stats={stats} />
         </div>
         <div className="text-xs text-[color:var(--color-muted)] mt-2 tabular-nums">
@@ -217,9 +228,71 @@ export function PortfolioBar({
   );
 }
 
-/** Unrealised P&L, $ and %, coloured. The day change would live beside this
- *  the moment the wire carries a previous close; until then it is absent
- *  rather than zero. */
+/** Today's move, $ and %, coloured — the first number after the total,
+ *  because "what did it do today" is the question the bar is opened for.
+ *
+ *  CF-PORTFOLIO-DAY-CHANGE (2026-09-04). Three states, and they are three
+ *  different facts:
+ *
+ *    null           -> "—" and the word "today", muted. No previous close was
+ *                      found: no holding has a stored point before the
+ *                      boundary. NOT a zero.
+ *    0              -> "$0 · 0.0% today" in muted grey. A measured flat day is
+ *                      a real answer and gets printed.
+ *    anything else  -> green up / red down, the same success/danger tokens the
+ *                      unrealised P&L beside it uses.
+ *
+ *  When coverage is partial the count rides along in muted text. The reader
+ *  has to be able to tell "+$40 across the whole portfolio" from "+$40 across
+ *  the 3 holdings we have a yesterday for".
+ */
+export function DayChange({ stats }: { stats: BarStats }) {
+  const v = stats.dayChange;
+  if (v === null) {
+    return (
+      <span
+        className="text-sm md:text-base font-semibold tabular-nums whitespace-nowrap text-[color:var(--color-muted)]"
+        data-testid="portfolio-bar-day"
+        title="No previous close on record yet — today's move needs at least one stored price from before midnight UTC."
+      >
+        —<span className="font-normal"> today</span>
+      </span>
+    );
+  }
+  const color =
+    v > 0 ? "var(--color-success)" : v < 0 ? "var(--color-danger)" : "var(--color-muted)";
+  const cov = stats.dayChangeCoverage;
+  const partial = cov !== null && cov.holdingsWithPrior < cov.holdingsTotal;
+  return (
+    <span className="inline-flex items-baseline gap-1.5 flex-wrap min-w-0">
+      <span
+        className="text-sm md:text-base font-semibold tabular-nums whitespace-nowrap"
+        style={{ color }}
+        data-testid="portfolio-bar-day"
+      >
+        {formatUSDCompact(v)} · {formatPct(stats.dayChangePct)}
+        <span className="text-[color:var(--color-muted)] font-normal"> today</span>
+      </span>
+      {partial && (
+        <span
+          className="text-[11px] text-[color:var(--color-muted)] tabular-nums whitespace-nowrap"
+          data-testid="portfolio-bar-day-coverage"
+          title="Holdings with no stored price from before midnight UTC contribute no change, so today's move covers only part of the portfolio."
+        >
+          {cov.holdingsWithPrior} of {cov.holdingsTotal} with prior
+        </span>
+      )}
+    </span>
+  );
+}
+
+/** Exported under a qualified name so a test can render the day-change
+ *  fragment on its own: `PortfolioBar` itself fetches on mount, and the three
+ *  states this feature turns on (measured move / measured flat / no previous
+ *  close) are worth pinning without a network fixture. */
+export { DayChange as PortfolioBarDayChange };
+
+/** Unrealised P&L, $ and %, coloured — the lifetime number, beside the day. */
 function PnL({ stats }: { stats: BarStats }) {
   const v = stats.unrealisedPL;
   const color =
