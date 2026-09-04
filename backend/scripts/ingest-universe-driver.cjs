@@ -687,8 +687,29 @@ function gateStagedCsv(csvPath) {
   const CARD_LINE_PARALLEL = /^[A-Za-z]{0,5}[-\s]?\d{1,4}[a-z]?\s+\p{L}/u;
   const NOT_A_NAME_AFTER_NUMBER = /^(?:in|of|to|and|the|for|per|on|at|by)\b/i;
   const FINISH_AFTER_NUMBER = /^(?:colou?r|tone|tool|of|piece|pc|patch|star|swatch|box|case|player|team|logo|letter|strand)\b/i;
+  // CF-A-TICKET-IS-A-RUNG-NOT-A-CARD-LINE (2026-09-04).
+  //
+  // "<number> <word>" is the shape of a card line, but the number is only a
+  // CARD number when the words before it are a set prefix. Panini Contenders
+  // names its ladder after the game it commemorates -- "Week 18 Ticket",
+  // "Round 1 Ticket", "Game 5 Ticket" -- and the leading token there is a
+  // PERIOD word, not a prefix: the number counts weeks, not cards.
+  //
+  // The rule read all three as card lines and refused two whole products:
+  // 2024 Panini Contenders Football (152 rows, every one "Week 18 Ticket") and
+  // 2025/26 Contenders EuroLeague (300 rows across Round 1 / Round 2 / Game 5).
+  // Both are real published rungs and the source prices them -- EuroLeague's
+  // carry printRun 199, 149 and 5 in the page's own cardParallels[] -- so the
+  // refusal was throwing away a correctly-read ladder, not catching a smear.
+  //
+  // Anchored on the PERIOD WORD, which is the part that distinguishes them: a
+  // card line's number leads ("27 Caleb Williams"), while these are led by the
+  // unit the number counts. That keeps the guard's teeth -- "27 Caleb Williams"
+  // still has no period word and is still refused.
+  const PERIOD_RUNG = /^(?:week|round|game|day|match(?:day)?|quarter|period|session|stage|leg)\s+\d{1,4}[a-z]?\b/i;
   for (const r of rows) {
     if (!r.parallel || !CARD_LINE_PARALLEL.test(r.parallel)) continue;
+    if (PERIOD_RUNG.test(String(r.parallel).trim())) continue;
     const tail = r.parallel.replace(/^[A-Za-z]{0,5}[-\s]?\d{1,4}[a-z]?\s+/, "");
     if (NOT_A_NAME_AFTER_NUMBER.test(tail) || FINISH_AFTER_NUMBER.test(tail)) continue;
     stats.cardLineParallel++;
@@ -1656,58 +1677,106 @@ function canonicalSetKey(k) {
 }
 
 /**
+ * CF-THE-CHILD-MAY-WRITE-EITHER-KEY (2026-09-04).
+ *
+ * #1738's rule -- "count the key the child WROTE" -- is right, and normalizing
+ * is only half of it. `ingest-checklist-csv-to-catalog.cjs` resolves the
+ * product as `setKey: m.setKey || normalizeSetKey(m.setName)`, so a manifest
+ * that STATES a setKey is honoured VERBATIM and never normalized. Every
+ * hobbymonitor manifest states one. The driver, meanwhile, normalized before
+ * querying -- so wherever the alias table has an opinion the two diverged and
+ * the verification read a key the rows were never written under.
+ *
+ * That is the whole of the `short ingest` class, and it is a MEASUREMENT
+ * error, not lost data. Verified against prod card_catalog:
+ *
+ *   Sapphire      raw 2,105 rows   vs  topps-chrome-update-series (131,937)
+ *                 -- and 2,105 is EXACTLY the count reported missing
+ *   Score-A-Treat raw   900 rows   vs  panini-score           (3,343)
+ *                 -- and 900 is EXACTLY the count reported missing
+ *   Exquisite     raw   705 rows   vs  upper-deck            (44,840)
+ *   Topps Three   raw 3,035 rows   vs  topps                (327,392)
+ *
+ * The named "missing" identities were then read back under the raw key and are
+ * present -- SS-8, SS-11 and SS-18 all sit there carrying Gold / Black /
+ * Padparadscha Sapphire. Nothing needs re-fetching.
+ *
+ * So the product is asked for under BOTH spellings and the answers are unioned.
+ * A row can only be written under one of them, so the union is the honest
+ * count either way, and it is immune to which side of the alias table the
+ * manifest happens to sit on -- including when `dist/` is absent and
+ * canonicalSetKey falls back to the raw key.
+ */
+function setKeyCandidates(entry) {
+  const raw = setKeyFor(entry);
+  if (!raw) return [];
+  const canon = canonicalSetKey(raw);
+  return canon && canon !== raw ? [raw, canon] : [raw];
+}
+
+/**
  * The identities the catalog holds for this entry's product, as the same tuple
  * `stagedIdentity` builds. One cross-partition read of four fields, bounded by
  * (year, setKey) -- the product, never the container.
  */
 async function catalogIdentities(entry) {
-  const setKey = canonicalSetKey(setKeyFor(entry));
-  if (!setKey) return null;
+  const keys = setKeyCandidates(entry);
+  if (!keys.length) return null;
   if (entry.lane !== "tcgdexja" && !entry.year) return null;
   const byKeyOnly = entry.lane === "tcgdexja";
-  const q = byKeyOnly
-    ? { query: "SELECT c.cardNumber, c.parallel, c.isAuto, c.printRun FROM c WHERE c.setKey = @k", parameters: [{ name: "@k", value: setKey }] }
-    : {
-        query: "SELECT c.cardNumber, c.parallel, c.isAuto, c.printRun FROM c WHERE c.year = @y AND c.setKey = @k",
-        parameters: [{ name: "@y", value: Number(entry.year) }, { name: "@k", value: setKey }],
-      };
-  const { resources } = await cosmos().container("card_catalog").items.query(q).fetchAll();
-  // ONLY A PROJECTION ANSWERS THIS QUESTION. A driver whose Cosmos layer hands
-  // back something other than the {cardNumber,...} rows asked for cannot be
-  // read as "the catalog holds none of these" -- that would report every staged
-  // identity missing and fail a healthy entry. Refuse to answer instead, and
-  // the caller falls back to the count checks.
-  if (!Array.isArray(resources)) return null;
-  if (resources.length && !resources.some((r) => r && typeof r === "object" && "cardNumber" in r)) return null;
   const out = new Set();
-  for (const r of resources) {
-    if (!r || typeof r !== "object") continue;
-    out.add(stagedIdentity({
-      cardNumber: r.cardNumber,
-      parallel: r.parallel,
-      isAuto: r.isAuto === true ? "true" : "false",
-      printRun: r.printRun,
-    }));
+  let answered = false;
+  for (const setKey of keys) {
+    const q = byKeyOnly
+      ? { query: "SELECT c.cardNumber, c.parallel, c.isAuto, c.printRun FROM c WHERE c.setKey = @k", parameters: [{ name: "@k", value: setKey }] }
+      : {
+          query: "SELECT c.cardNumber, c.parallel, c.isAuto, c.printRun FROM c WHERE c.year = @y AND c.setKey = @k",
+          parameters: [{ name: "@y", value: Number(entry.year) }, { name: "@k", value: setKey }],
+        };
+    const { resources } = await cosmos().container("card_catalog").items.query(q).fetchAll();
+    // ONLY A PROJECTION ANSWERS THIS QUESTION. A driver whose Cosmos layer hands
+    // back something other than the {cardNumber,...} rows asked for cannot be
+    // read as "the catalog holds none of these" -- that would report every staged
+    // identity missing and fail a healthy entry. Refuse to answer instead, and
+    // the caller falls back to the count checks.
+    if (!Array.isArray(resources)) continue;
+    if (resources.length && !resources.some((r) => r && typeof r === "object" && "cardNumber" in r)) continue;
+    answered = true;
+    for (const r of resources) {
+      if (!r || typeof r !== "object") continue;
+      out.add(stagedIdentity({
+        cardNumber: r.cardNumber,
+        parallel: r.parallel,
+        isAuto: r.isAuto === true ? "true" : "false",
+        printRun: r.printRun,
+      }));
+    }
   }
-  return out;
+  // Not one candidate gave a readable projection: the same "cannot answer"
+  // the single-key form returned null for.
+  return answered ? out : null;
 }
 
 async function countCatalogRows(entry) {
-  const setKey = canonicalSetKey(setKeyFor(entry));
-  if (!setKey) return null;
+  const keys = setKeyCandidates(entry);
+  if (!keys.length) return null;
   // Pokemon identity is the setKey alone -- year is NOT part of it, and gating
   // on year here read as a false zero for every tcgdex set. Every other lane
   // needs the year, because `topps` without one spans eighty products.
   const byKeyOnly = entry.lane === "tcgdexja";
   if (!byKeyOnly && !entry.year) return null;
-  const q = byKeyOnly
-    ? { query: "SELECT VALUE COUNT(1) FROM c WHERE c.setKey = @k", parameters: [{ name: "@k", value: setKey }] }
-    : {
-        query: "SELECT VALUE COUNT(1) FROM c WHERE c.year = @y AND c.setKey = @k",
-        parameters: [{ name: "@y", value: Number(entry.year) }, { name: "@k", value: setKey }],
-      };
-  const { resources } = await cosmos().container("card_catalog").items.query(q, { maxItemCount: 1 }).fetchAll();
-  return resources[0] ?? 0;
+  let total = 0;
+  for (const setKey of keys) {
+    const q = byKeyOnly
+      ? { query: "SELECT VALUE COUNT(1) FROM c WHERE c.setKey = @k", parameters: [{ name: "@k", value: setKey }] }
+      : {
+          query: "SELECT VALUE COUNT(1) FROM c WHERE c.year = @y AND c.setKey = @k",
+          parameters: [{ name: "@y", value: Number(entry.year) }, { name: "@k", value: setKey }],
+        };
+    const { resources } = await cosmos().container("card_catalog").items.query(q, { maxItemCount: 1 }).fetchAll();
+    total += Number(resources[0] ?? 0) || 0;
+  }
+  return total;
 }
 
 /**
@@ -1736,21 +1805,30 @@ async function countCatalogRows(entry) {
  * are written against it.
  */
 async function countCatalogRowsBySource(entry, source) {
-  const setKey = setKeyFor(entry);
-  if (!setKey || !source) return null;
+  // THE THIRD READ SITE, and it had the original defect in its rawest form:
+  // the bare slug, with no alias resolution at all. It reads the same product
+  // as the two above and must resolve the key the same way, or the banner's
+  // by-source number lands on a different product than the verdict it sits
+  // beside (CF-THE-CHILD-MAY-WRITE-EITHER-KEY).
+  const keys = setKeyCandidates(entry);
+  if (!keys.length || !source) return null;
   const byKeyOnly = entry.lane === "tcgdexja";
   if (!byKeyOnly && !entry.year) return null;
-  const q = byKeyOnly
-    ? {
-        query: "SELECT VALUE COUNT(1) FROM c WHERE c.setKey = @k AND c.source = @s",
-        parameters: [{ name: "@k", value: setKey }, { name: "@s", value: source }],
-      }
-    : {
-        query: "SELECT VALUE COUNT(1) FROM c WHERE c.year = @y AND c.setKey = @k AND c.source = @s",
-        parameters: [{ name: "@y", value: Number(entry.year) }, { name: "@k", value: setKey }, { name: "@s", value: source }],
-      };
-  const { resources } = await cosmos().container("card_catalog").items.query(q, { maxItemCount: 1 }).fetchAll();
-  return resources[0] ?? 0;
+  let total = 0;
+  for (const setKey of keys) {
+    const q = byKeyOnly
+      ? {
+          query: "SELECT VALUE COUNT(1) FROM c WHERE c.setKey = @k AND c.source = @s",
+          parameters: [{ name: "@k", value: setKey }, { name: "@s", value: source }],
+        }
+      : {
+          query: "SELECT VALUE COUNT(1) FROM c WHERE c.year = @y AND c.setKey = @k AND c.source = @s",
+          parameters: [{ name: "@y", value: Number(entry.year) }, { name: "@k", value: setKey }, { name: "@s", value: source }],
+        };
+    const { resources } = await cosmos().container("card_catalog").items.query(q, { maxItemCount: 1 }).fetchAll();
+    total += Number(resources[0] ?? 0) || 0;
+  }
+  return total;
 }
 
 /**
@@ -1984,7 +2062,7 @@ for (const lane of ACQUIRE_LANES) {
   }
 }
 
-module.exports = { streakAfter, gateStagedCsv, gateStagedEntry, ladderIsAttested, TERMINAL_STATUSES, LANES_WITH_SIBLING_PARALLEL_PAGES, ladderOnSiblingPages, allFilesAreParallelOfParent, CARTESIAN_MIN_RUNGS, CARTESIAN_MIN_CARDS, stagedCsvs, LANES_WITHOUT_PRINT_RUNS, LANES_WITH_BASELESS_PRODUCTS, LANES_WITH_VINTAGE_ERA_PRODUCTS, PARALLEL_ERA_FIRST_YEAR, ladderlessByEra, sourceLabelFor, splitCsv, isPersonName, setKeyFor, planFor, tcgdexModern, acquireStaged, ACQUIRE_LANES, LANE_ALIASES, LANE_SOURCE, LANE_MINUTES, CANONICAL_HEADER, CHILD_STDERR_LINES, cosmosSafeId, controlId, orderQueue, SYSTEMIC_FAILURE_STREAK, EMPTY_STATUS, STREAK_STATUSES, isStaged, stagedSourceRefs, stagedIndex, stagedFilesFor, acquireFromStaging };
+module.exports = { streakAfter, gateStagedCsv, gateStagedEntry, ladderIsAttested, setKeyCandidates, canonicalSetKey, TERMINAL_STATUSES, LANES_WITH_SIBLING_PARALLEL_PAGES, ladderOnSiblingPages, allFilesAreParallelOfParent, CARTESIAN_MIN_RUNGS, CARTESIAN_MIN_CARDS, stagedCsvs, LANES_WITHOUT_PRINT_RUNS, LANES_WITH_BASELESS_PRODUCTS, LANES_WITH_VINTAGE_ERA_PRODUCTS, PARALLEL_ERA_FIRST_YEAR, ladderlessByEra, sourceLabelFor, splitCsv, isPersonName, setKeyFor, planFor, tcgdexModern, acquireStaged, ACQUIRE_LANES, LANE_ALIASES, LANE_SOURCE, LANE_MINUTES, CANONICAL_HEADER, CHILD_STDERR_LINES, cosmosSafeId, controlId, orderQueue, SYSTEMIC_FAILURE_STREAK, EMPTY_STATUS, STREAK_STATUSES, isStaged, stagedSourceRefs, stagedIndex, stagedFilesFor, acquireFromStaging };
 if (require.main !== module) return;
 
 (async () => {

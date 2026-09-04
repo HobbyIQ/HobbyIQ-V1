@@ -1,0 +1,41 @@
+category,cardNumber,parallel,isAuto,printRun,player,parallelNote,rarity,cardType
+insert-team-quads,9,,false,,Alpha Diallo,,,insert
+insert-iconic-contenders,30,,false,,Mike James,,,insert
+insert-superstar-die-cuts,8,,false,,Mike James,,,insert
+insert-team-quads,9,,false,,Nikola Mirotic,,,insert
+insert-passport-stamped,3,,false,,Mike James,,,insert
+insert-team-quads,9,,false,,Daniel Theis,,,insert
+auto-x-factor-contenders-autographs,6,,true,,Elie Okobo,,,autograph
+insert-game-night-ticket,3,,false,,Nikola Mirotic,,,insert
+insert-license-to-dominate,4,,false,,Mike James,,,insert
+insert-veteran-ticket-premium-edition,1,,false,,Alpha Diallo,,,insert
+insert-base-season-ticket,34,Round 1 Ticket,false,199,Mike James,,,base
+insert-base-season-ticket,34,Round 2 Ticket,false,149,Mike James,,,base
+insert-base-season-ticket,34,Game 5 Ticket,false,5,Mike James,,,base
+insert-base-season-ticket,37,Round 1 Ticket,false,199,Nikola Mirotic,,,base
+insert-base-season-ticket,37,Round 2 Ticket,false,149,Nikola Mirotic,,,base
+insert-base-season-ticket,37,Game 5 Ticket,false,5,Nikola Mirotic,,,base
+insert-base-season-ticket,65,Round 1 Ticket,false,199,Daniel Theis,,,base
+insert-base-season-ticket,65,Round 2 Ticket,false,149,Daniel Theis,,,base
+insert-base-season-ticket,65,Game 5 Ticket,false,5,Daniel Theis,,,base
+insert-base-season-ticket,1,Round 1 Ticket,false,199,Shane Larkin,,,base
+insert-base-season-ticket,1,Round 2 Ticket,false,149,Shane Larkin,,,base
+insert-base-season-ticket,1,Game 5 Ticket,false,5,Shane Larkin,,,base
+insert-base-season-ticket,13,Round 1 Ticket,false,199,Jordan Loyd,,,base
+insert-base-season-ticket,13,Round 2 Ticket,false,149,Jordan Loyd,,,base
+insert-base-season-ticket,13,Game 5 Ticket,false,5,Jordan Loyd,,,base
+insert-base-season-ticket,41,Round 1 Ticket,false,199,Isaia Cordinier,,,base
+insert-base-season-ticket,41,Round 2 Ticket,false,149,Isaia Cordinier,,,base
+insert-base-season-ticket,41,Game 5 Ticket,false,5,Isaia Cordinier,,,base
+insert-base-season-ticket,16,Round 1 Ticket,false,199,Georgios Papagiannis,,,base
+insert-base-season-ticket,16,Round 2 Ticket,false,149,Georgios Papagiannis,,,base
+insert-base-season-ticket,16,Game 5 Ticket,false,5,Georgios Papagiannis,,,base
+insert-base-season-ticket,82,Round 1 Ticket,false,199,Ramunas Siskauskas,,,base
+insert-base-season-ticket,82,Round 2 Ticket,false,149,Ramunas Siskauskas,,,base
+insert-base-season-ticket,82,Game 5 Ticket,false,5,Ramunas Siskauskas,,,base
+insert-base-season-ticket,46,Round 1 Ticket,false,199,Andrei Kirilenko,,,base
+insert-base-season-ticket,46,Round 2 Ticket,false,149,Andrei Kirilenko,,,base
+insert-base-season-ticket,46,Game 5 Ticket,false,5,Andrei Kirilenko,,,base
+insert-base-season-ticket,58,Round 1 Ticket,false,199,Theodoros Papaloukas,,,base
+insert-base-season-ticket,58,Round 2 Ticket,false,149,Theodoros Papaloukas,,,base
+insert-base-season-ticket,58,Game 5 Ticket,false,5,Theodoros Papaloukas,,,base

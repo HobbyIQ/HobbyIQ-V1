@@ -1,0 +1,769 @@
+category,cardNumber,parallel,isAuto,printRun,player,parallelNote,rarity,cardType
+base,392,,false,,Trey Benson,,,base
+base,391,,false,,Tip Reiman,,,base
+base,8,,false,,Kurt Warner,,,base
+base,376,,false,,Max Melton,,,base
+base,375,,false,,Marvin Harrison Jr.,,,base
+base,7,,false,,Aeneas Williams,,,base
+base,6,,false,,Dennis Gardeck,,,base
+base,5,,false,,Budda Baker,,,base
+base,4,,false,,Trey McBride,,,base
+base,325,,false,,Darius Robinson,,,base
+base,3,,false,,Michael Wilson,,,base
+base,2,,false,,James Conner,,,base
+base,392,Black and Red Checker,false,,Trey Benson,,,base
+base,392,Black and White Checker,false,,Trey Benson,,,base
+base,392,Blue,false,,Trey Benson,,,base
+base,392,Choice Blue Yellow and Green,false,,Trey Benson,,,base
+base,392,Choice Tiger Stripe,false,,Trey Benson,,,base
+base,392,Disco,false,,Trey Benson,,,base
+base,392,Green,false,,Trey Benson,,,base
+base,392,Green Ice,false,,Trey Benson,,,base
+base,392,Green Wave,false,,Trey Benson,,,base
+base,392,Lazer,false,,Trey Benson,,,base
+base,392,Neon Green Pulsar,false,,Trey Benson,,,base
+base,392,No Huddle,false,,Trey Benson,,,base
+base,392,Orange Ice,false,,Trey Benson,,,base
+base,392,Pink,false,,Trey Benson,,,base
+base,392,Pink Wave,false,,Trey Benson,,,base
+base,392,Press Proof,false,,Trey Benson,,,base
+base,392,Purple Pulsar,false,,Trey Benson,,,base
+base,392,Red,false,,Trey Benson,,,base
+base,392,Red Sparkle,false,,Trey Benson,,,base
+base,392,Red White and Blue,false,,Trey Benson,,,base
+base,392,Silver,false,,Trey Benson,,,base
+base,392,Snakeskin,false,,Trey Benson,,,base
+base,392,White Sparkle,false,,Trey Benson,,,base
+base,392,Pandora,false,400,Trey Benson,,,base
+base,392,Blue Wave,false,230,Trey Benson,,,base
+base,392,Orange,false,249,Trey Benson,,,base
+base,392,Purple Ice,false,225,Trey Benson,,,base
+base,392,Hyper,false,180,Trey Benson,,,base
+base,392,Purple,false,125,Trey Benson,,,base
+base,392,Red Wave,false,149,Trey Benson,,,base
+base,392,No Huddle Blue,false,99,Trey Benson,,,base
+base,392,Blue Sparkle,false,96,Trey Benson,,,base
+base,392,Blue Ice,false,99,Trey Benson,,,base
+base,392,Purple Wave,false,99,Trey Benson,,,base
+base,392,No Huddle Red,false,75,Trey Benson,,,base
+base,392,Green Scope,false,75,Trey Benson,,,base
+base,392,Orange Wave,false,60,Trey Benson,,,base
+base,392,Red Shimmer,false,35,Trey Benson,,,base
+base,392,Red and Yellow,false,44,Trey Benson,,,base
+base,392,No Huddle Purple,false,49,Trey Benson,,,base
+base,392,Purple Power,false,49,Trey Benson,,,base
+base,392,White,false,35,Trey Benson,,,base
+base,392,Blue Shimmer,false,25,Trey Benson,,,base
+base,392,No Huddle Pink,false,25,Trey Benson,,,base
+base,392,Navy Camo,false,25,Trey Benson,,,base
+base,392,Choice Red,false,20,Trey Benson,,,base
+base,392,Gold Sparkle,false,24,Trey Benson,,,base
+base,392,Choice Cherry Blossom,false,15,Trey Benson,,,base
+base,392,Forest Camo,false,15,Trey Benson,,,base
+base,392,No Huddle Neon Green,false,10,Trey Benson,,,base
+base,392,Gold Wave,false,10,Trey Benson,,,base
+base,392,Gold,false,10,Trey Benson,,,base
+base,392,Choice Gold,false,10,Trey Benson,,,base
+base,392,Choice Blue,false,14,Trey Benson,,,base
+base,392,Gold Shimmer,false,10,Trey Benson,,,base
+base,392,Gold Vinyl,false,5,Trey Benson,,,base
+base,392,Green Shimmer,false,5,Trey Benson,,,base
+base,392,Green Sparkle,false,8,Trey Benson,,,base
+base,392,White Knight,false,3,Trey Benson,,,base
+base,392,Choice Nebula,false,1,Trey Benson,,,base
+base,392,Black Finite,false,1,Trey Benson,,,base
+base,392,Black Stars,false,1,Trey Benson,,,base
+base,392,Black Shimmer,false,1,Trey Benson,,,base
+base,391,Black and Red Checker,false,,Tip Reiman,,,base
+base,391,Black and White Checker,false,,Tip Reiman,,,base
+base,391,Blue,false,,Tip Reiman,,,base
+base,391,Choice Blue Yellow and Green,false,,Tip Reiman,,,base
+base,391,Choice Tiger Stripe,false,,Tip Reiman,,,base
+base,391,Disco,false,,Tip Reiman,,,base
+base,391,Green,false,,Tip Reiman,,,base
+base,391,Green Ice,false,,Tip Reiman,,,base
+base,391,Green Wave,false,,Tip Reiman,,,base
+base,391,Lazer,false,,Tip Reiman,,,base
+base,391,Neon Green Pulsar,false,,Tip Reiman,,,base
+base,391,No Huddle,false,,Tip Reiman,,,base
+base,391,Orange Ice,false,,Tip Reiman,,,base
+base,391,Pink,false,,Tip Reiman,,,base
+base,391,Pink Wave,false,,Tip Reiman,,,base
+base,391,Press Proof,false,,Tip Reiman,,,base
+base,391,Purple Pulsar,false,,Tip Reiman,,,base
+base,391,Red,false,,Tip Reiman,,,base
+base,391,Red Sparkle,false,,Tip Reiman,,,base
+base,391,Red White and Blue,false,,Tip Reiman,,,base
+base,391,Silver,false,,Tip Reiman,,,base
+base,391,Snakeskin,false,,Tip Reiman,,,base
+base,391,White Sparkle,false,,Tip Reiman,,,base
+base,391,Pandora,false,400,Tip Reiman,,,base
+base,391,Blue Wave,false,230,Tip Reiman,,,base
+base,391,Orange,false,249,Tip Reiman,,,base
+base,391,Purple Ice,false,225,Tip Reiman,,,base
+base,391,Hyper,false,180,Tip Reiman,,,base
+base,391,Purple,false,125,Tip Reiman,,,base
+base,391,Red Wave,false,149,Tip Reiman,,,base
+base,391,No Huddle Blue,false,99,Tip Reiman,,,base
+base,391,Blue Sparkle,false,96,Tip Reiman,,,base
+base,391,Blue Ice,false,99,Tip Reiman,,,base
+base,391,Purple Wave,false,99,Tip Reiman,,,base
+base,391,No Huddle Red,false,75,Tip Reiman,,,base
+base,391,Green Scope,false,75,Tip Reiman,,,base
+base,391,Orange Wave,false,60,Tip Reiman,,,base
+base,391,Red Shimmer,false,35,Tip Reiman,,,base
+base,391,Red and Yellow,false,44,Tip Reiman,,,base
+base,391,No Huddle Purple,false,49,Tip Reiman,,,base
+base,391,Purple Power,false,49,Tip Reiman,,,base
+base,391,White,false,35,Tip Reiman,,,base
+base,391,Blue Shimmer,false,25,Tip Reiman,,,base
+base,391,No Huddle Pink,false,25,Tip Reiman,,,base
+base,391,Navy Camo,false,25,Tip Reiman,,,base
+base,391,Choice Red,false,20,Tip Reiman,,,base
+base,391,Gold Sparkle,false,24,Tip Reiman,,,base
+base,391,Choice Cherry Blossom,false,15,Tip Reiman,,,base
+base,391,Forest Camo,false,15,Tip Reiman,,,base
+base,391,No Huddle Neon Green,false,10,Tip Reiman,,,base
+base,391,Gold Wave,false,10,Tip Reiman,,,base
+base,391,Gold,false,10,Tip Reiman,,,base
+base,391,Choice Gold,false,10,Tip Reiman,,,base
+base,391,Choice Blue,false,14,Tip Reiman,,,base
+base,391,Gold Shimmer,false,10,Tip Reiman,,,base
+base,391,Gold Vinyl,false,5,Tip Reiman,,,base
+base,391,Green Shimmer,false,5,Tip Reiman,,,base
+base,391,Green Sparkle,false,8,Tip Reiman,,,base
+base,391,White Knight,false,3,Tip Reiman,,,base
+base,391,Choice Nebula,false,1,Tip Reiman,,,base
+base,391,Black Finite,false,1,Tip Reiman,,,base
+base,391,Black Stars,false,1,Tip Reiman,,,base
+base,391,Black Shimmer,false,1,Tip Reiman,,,base
+base,8,Black and Red Checker,false,,Kurt Warner,,,base
+base,8,Black and White Checker,false,,Kurt Warner,,,base
+base,8,Blue,false,,Kurt Warner,,,base
+base,8,Choice Blue Yellow and Green,false,,Kurt Warner,,,base
+base,8,Choice Tiger Stripe,false,,Kurt Warner,,,base
+base,8,Disco,false,,Kurt Warner,,,base
+base,8,Green,false,,Kurt Warner,,,base
+base,8,Green Ice,false,,Kurt Warner,,,base
+base,8,Green Wave,false,,Kurt Warner,,,base
+base,8,Lazer,false,,Kurt Warner,,,base
+base,8,Neon Green Pulsar,false,,Kurt Warner,,,base
+base,8,No Huddle,false,,Kurt Warner,,,base
+base,8,Orange Ice,false,,Kurt Warner,,,base
+base,8,Pink,false,,Kurt Warner,,,base
+base,8,Pink Wave,false,,Kurt Warner,,,base
+base,8,Press Proof,false,,Kurt Warner,,,base
+base,8,Purple Pulsar,false,,Kurt Warner,,,base
+base,8,Red,false,,Kurt Warner,,,base
+base,8,Red Sparkle,false,,Kurt Warner,,,base
+base,8,Red White and Blue,false,,Kurt Warner,,,base
+base,8,Silver,false,,Kurt Warner,,,base
+base,8,Snakeskin,false,,Kurt Warner,,,base
+base,8,White Sparkle,false,,Kurt Warner,,,base
+base,8,Pandora,false,400,Kurt Warner,,,base
+base,8,Blue Wave,false,230,Kurt Warner,,,base
+base,8,Orange,false,249,Kurt Warner,,,base
+base,8,Purple Ice,false,225,Kurt Warner,,,base
+base,8,Hyper,false,180,Kurt Warner,,,base
+base,8,Purple,false,125,Kurt Warner,,,base
+base,8,Red Wave,false,149,Kurt Warner,,,base
+base,8,No Huddle Blue,false,99,Kurt Warner,,,base
+base,8,Blue Sparkle,false,96,Kurt Warner,,,base
+base,8,Blue Ice,false,99,Kurt Warner,,,base
+base,8,Purple Wave,false,99,Kurt Warner,,,base
+base,8,No Huddle Red,false,75,Kurt Warner,,,base
+base,8,Green Scope,false,75,Kurt Warner,,,base
+base,8,Orange Wave,false,60,Kurt Warner,,,base
+base,8,Red Shimmer,false,35,Kurt Warner,,,base
+base,8,Red and Yellow,false,44,Kurt Warner,,,base
+base,8,No Huddle Purple,false,49,Kurt Warner,,,base
+base,8,Purple Power,false,49,Kurt Warner,,,base
+base,8,White,false,35,Kurt Warner,,,base
+base,8,Blue Shimmer,false,25,Kurt Warner,,,base
+base,8,No Huddle Pink,false,25,Kurt Warner,,,base
+base,8,Navy Camo,false,25,Kurt Warner,,,base
+base,8,Choice Red,false,20,Kurt Warner,,,base
+base,8,Gold Sparkle,false,24,Kurt Warner,,,base
+base,8,Choice Cherry Blossom,false,15,Kurt Warner,,,base
+base,8,Forest Camo,false,15,Kurt Warner,,,base
+base,8,No Huddle Neon Green,false,10,Kurt Warner,,,base
+base,8,Gold Wave,false,10,Kurt Warner,,,base
+base,8,Gold,false,10,Kurt Warner,,,base
+base,8,Choice Gold,false,10,Kurt Warner,,,base
+base,8,Choice Blue,false,14,Kurt Warner,,,base
+base,8,Gold Shimmer,false,10,Kurt Warner,,,base
+base,8,Gold Vinyl,false,5,Kurt Warner,,,base
+base,8,Green Shimmer,false,5,Kurt Warner,,,base
+base,8,Green Sparkle,false,8,Kurt Warner,,,base
+base,8,White Knight,false,3,Kurt Warner,,,base
+base,8,Choice Nebula,false,1,Kurt Warner,,,base
+base,8,Black Finite,false,1,Kurt Warner,,,base
+base,8,Black Stars,false,1,Kurt Warner,,,base
+base,8,Black Shimmer,false,1,Kurt Warner,,,base
+base,376,Black and Red Checker,false,,Max Melton,,,base
+base,376,Black and White Checker,false,,Max Melton,,,base
+base,376,Blue,false,,Max Melton,,,base
+base,376,Choice Blue Yellow and Green,false,,Max Melton,,,base
+base,376,Choice Tiger Stripe,false,,Max Melton,,,base
+base,376,Disco,false,,Max Melton,,,base
+base,376,Green,false,,Max Melton,,,base
+base,376,Green Ice,false,,Max Melton,,,base
+base,376,Green Wave,false,,Max Melton,,,base
+base,376,Lazer,false,,Max Melton,,,base
+base,376,Neon Green Pulsar,false,,Max Melton,,,base
+base,376,No Huddle,false,,Max Melton,,,base
+base,376,Orange Ice,false,,Max Melton,,,base
+base,376,Pink,false,,Max Melton,,,base
+base,376,Pink Wave,false,,Max Melton,,,base
+base,376,Press Proof,false,,Max Melton,,,base
+base,376,Purple Pulsar,false,,Max Melton,,,base
+base,376,Red,false,,Max Melton,,,base
+base,376,Red Sparkle,false,,Max Melton,,,base
+base,376,Red White and Blue,false,,Max Melton,,,base
+base,376,Silver,false,,Max Melton,,,base
+base,376,Snakeskin,false,,Max Melton,,,base
+base,376,White Sparkle,false,,Max Melton,,,base
+base,376,Pandora,false,400,Max Melton,,,base
+base,376,Blue Wave,false,230,Max Melton,,,base
+base,376,Orange,false,249,Max Melton,,,base
+base,376,Purple Ice,false,225,Max Melton,,,base
+base,376,Hyper,false,180,Max Melton,,,base
+base,376,Purple,false,125,Max Melton,,,base
+base,376,Red Wave,false,149,Max Melton,,,base
+base,376,No Huddle Blue,false,99,Max Melton,,,base
+base,376,Blue Sparkle,false,96,Max Melton,,,base
+base,376,Blue Ice,false,99,Max Melton,,,base
+base,376,Purple Wave,false,99,Max Melton,,,base
+base,376,No Huddle Red,false,75,Max Melton,,,base
+base,376,Green Scope,false,75,Max Melton,,,base
+base,376,Orange Wave,false,60,Max Melton,,,base
+base,376,Red Shimmer,false,35,Max Melton,,,base
+base,376,Red and Yellow,false,44,Max Melton,,,base
+base,376,No Huddle Purple,false,49,Max Melton,,,base
+base,376,Purple Power,false,49,Max Melton,,,base
+base,376,White,false,35,Max Melton,,,base
+base,376,Blue Shimmer,false,25,Max Melton,,,base
+base,376,No Huddle Pink,false,25,Max Melton,,,base
+base,376,Navy Camo,false,25,Max Melton,,,base
+base,376,Choice Red,false,20,Max Melton,,,base
+base,376,Gold Sparkle,false,24,Max Melton,,,base
+base,376,Choice Cherry Blossom,false,15,Max Melton,,,base
+base,376,Forest Camo,false,15,Max Melton,,,base
+base,376,No Huddle Neon Green,false,10,Max Melton,,,base
+base,376,Gold Wave,false,10,Max Melton,,,base
+base,376,Gold,false,10,Max Melton,,,base
+base,376,Choice Gold,false,10,Max Melton,,,base
+base,376,Choice Blue,false,14,Max Melton,,,base
+base,376,Gold Shimmer,false,10,Max Melton,,,base
+base,376,Gold Vinyl,false,5,Max Melton,,,base
+base,376,Green Shimmer,false,5,Max Melton,,,base
+base,376,Green Sparkle,false,8,Max Melton,,,base
+base,376,White Knight,false,3,Max Melton,,,base
+base,376,Choice Nebula,false,1,Max Melton,,,base
+base,376,Black Finite,false,1,Max Melton,,,base
+base,376,Black Stars,false,1,Max Melton,,,base
+base,376,Black Shimmer,false,1,Max Melton,,,base
+base,375,Black and Red Checker,false,,Marvin Harrison Jr.,,,base
+base,375,Black and White Checker,false,,Marvin Harrison Jr.,,,base
+base,375,Blue,false,,Marvin Harrison Jr.,,,base
+base,375,Choice Blue Yellow and Green,false,,Marvin Harrison Jr.,,,base
+base,375,Choice Tiger Stripe,false,,Marvin Harrison Jr.,,,base
+base,375,Disco,false,,Marvin Harrison Jr.,,,base
+base,375,Green,false,,Marvin Harrison Jr.,,,base
+base,375,Green Ice,false,,Marvin Harrison Jr.,,,base
+base,375,Green Wave,false,,Marvin Harrison Jr.,,,base
+base,375,Lazer,false,,Marvin Harrison Jr.,,,base
+base,375,Neon Green Pulsar,false,,Marvin Harrison Jr.,,,base
+base,375,No Huddle,false,,Marvin Harrison Jr.,,,base
+base,375,Orange Ice,false,,Marvin Harrison Jr.,,,base
+base,375,Pink,false,,Marvin Harrison Jr.,,,base
+base,375,Pink Wave,false,,Marvin Harrison Jr.,,,base
+base,375,Press Proof,false,,Marvin Harrison Jr.,,,base
+base,375,Purple Pulsar,false,,Marvin Harrison Jr.,,,base
+base,375,Red,false,,Marvin Harrison Jr.,,,base
+base,375,Red Sparkle,false,,Marvin Harrison Jr.,,,base
+base,375,Red White and Blue,false,,Marvin Harrison Jr.,,,base
+base,375,Silver,false,,Marvin Harrison Jr.,,,base
+base,375,Snakeskin,false,,Marvin Harrison Jr.,,,base
+base,375,White Sparkle,false,,Marvin Harrison Jr.,,,base
+base,375,Pandora,false,400,Marvin Harrison Jr.,,,base
+base,375,Blue Wave,false,230,Marvin Harrison Jr.,,,base
+base,375,Orange,false,249,Marvin Harrison Jr.,,,base
+base,375,Purple Ice,false,225,Marvin Harrison Jr.,,,base
+base,375,Hyper,false,180,Marvin Harrison Jr.,,,base
+base,375,Purple,false,125,Marvin Harrison Jr.,,,base
+base,375,Red Wave,false,149,Marvin Harrison Jr.,,,base
+base,375,No Huddle Blue,false,99,Marvin Harrison Jr.,,,base
+base,375,Blue Sparkle,false,96,Marvin Harrison Jr.,,,base
+base,375,Blue Ice,false,99,Marvin Harrison Jr.,,,base
+base,375,Purple Wave,false,99,Marvin Harrison Jr.,,,base
+base,375,No Huddle Red,false,75,Marvin Harrison Jr.,,,base
+base,375,Green Scope,false,75,Marvin Harrison Jr.,,,base
+base,375,Orange Wave,false,60,Marvin Harrison Jr.,,,base
+base,375,Red Shimmer,false,35,Marvin Harrison Jr.,,,base
+base,375,Red and Yellow,false,44,Marvin Harrison Jr.,,,base
+base,375,No Huddle Purple,false,49,Marvin Harrison Jr.,,,base
+base,375,Purple Power,false,49,Marvin Harrison Jr.,,,base
+base,375,White,false,35,Marvin Harrison Jr.,,,base
+base,375,Blue Shimmer,false,25,Marvin Harrison Jr.,,,base
+base,375,No Huddle Pink,false,25,Marvin Harrison Jr.,,,base
+base,375,Navy Camo,false,25,Marvin Harrison Jr.,,,base
+base,375,Choice Red,false,20,Marvin Harrison Jr.,,,base
+base,375,Gold Sparkle,false,24,Marvin Harrison Jr.,,,base
+base,375,Choice Cherry Blossom,false,15,Marvin Harrison Jr.,,,base
+base,375,Forest Camo,false,15,Marvin Harrison Jr.,,,base
+base,375,No Huddle Neon Green,false,10,Marvin Harrison Jr.,,,base
+base,375,Gold Wave,false,10,Marvin Harrison Jr.,,,base
+base,375,Gold,false,10,Marvin Harrison Jr.,,,base
+base,375,Choice Gold,false,10,Marvin Harrison Jr.,,,base
+base,375,Choice Blue,false,14,Marvin Harrison Jr.,,,base
+base,375,Gold Shimmer,false,10,Marvin Harrison Jr.,,,base
+base,375,Gold Vinyl,false,5,Marvin Harrison Jr.,,,base
+base,375,Green Shimmer,false,5,Marvin Harrison Jr.,,,base
+base,375,Green Sparkle,false,8,Marvin Harrison Jr.,,,base
+base,375,White Knight,false,3,Marvin Harrison Jr.,,,base
+base,375,Choice Nebula,false,1,Marvin Harrison Jr.,,,base
+base,375,Black Finite,false,1,Marvin Harrison Jr.,,,base
+base,375,Black Stars,false,1,Marvin Harrison Jr.,,,base
+base,375,Black Shimmer,false,1,Marvin Harrison Jr.,,,base
+base,7,Black and Red Checker,false,,Aeneas Williams,,,base
+base,7,Black and White Checker,false,,Aeneas Williams,,,base
+base,7,Blue,false,,Aeneas Williams,,,base
+base,7,Choice Blue Yellow and Green,false,,Aeneas Williams,,,base
+base,7,Choice Tiger Stripe,false,,Aeneas Williams,,,base
+base,7,Disco,false,,Aeneas Williams,,,base
+base,7,Green,false,,Aeneas Williams,,,base
+base,7,Green Ice,false,,Aeneas Williams,,,base
+base,7,Green Wave,false,,Aeneas Williams,,,base
+base,7,Lazer,false,,Aeneas Williams,,,base
+base,7,Neon Green Pulsar,false,,Aeneas Williams,,,base
+base,7,No Huddle,false,,Aeneas Williams,,,base
+base,7,Orange Ice,false,,Aeneas Williams,,,base
+base,7,Pink,false,,Aeneas Williams,,,base
+base,7,Pink Wave,false,,Aeneas Williams,,,base
+base,7,Press Proof,false,,Aeneas Williams,,,base
+base,7,Purple Pulsar,false,,Aeneas Williams,,,base
+base,7,Red,false,,Aeneas Williams,,,base
+base,7,Red Sparkle,false,,Aeneas Williams,,,base
+base,7,Red White and Blue,false,,Aeneas Williams,,,base
+base,7,Silver,false,,Aeneas Williams,,,base
+base,7,Snakeskin,false,,Aeneas Williams,,,base
+base,7,White Sparkle,false,,Aeneas Williams,,,base
+base,7,Pandora,false,400,Aeneas Williams,,,base
+base,7,Blue Wave,false,230,Aeneas Williams,,,base
+base,7,Orange,false,249,Aeneas Williams,,,base
+base,7,Purple Ice,false,225,Aeneas Williams,,,base
+base,7,Hyper,false,180,Aeneas Williams,,,base
+base,7,Purple,false,125,Aeneas Williams,,,base
+base,7,Red Wave,false,149,Aeneas Williams,,,base
+base,7,No Huddle Blue,false,99,Aeneas Williams,,,base
+base,7,Blue Sparkle,false,96,Aeneas Williams,,,base
+base,7,Blue Ice,false,99,Aeneas Williams,,,base
+base,7,Purple Wave,false,99,Aeneas Williams,,,base
+base,7,No Huddle Red,false,75,Aeneas Williams,,,base
+base,7,Green Scope,false,75,Aeneas Williams,,,base
+base,7,Orange Wave,false,60,Aeneas Williams,,,base
+base,7,Red Shimmer,false,35,Aeneas Williams,,,base
+base,7,Red and Yellow,false,44,Aeneas Williams,,,base
+base,7,No Huddle Purple,false,49,Aeneas Williams,,,base
+base,7,Purple Power,false,49,Aeneas Williams,,,base
+base,7,White,false,35,Aeneas Williams,,,base
+base,7,Blue Shimmer,false,25,Aeneas Williams,,,base
+base,7,No Huddle Pink,false,25,Aeneas Williams,,,base
+base,7,Navy Camo,false,25,Aeneas Williams,,,base
+base,7,Choice Red,false,20,Aeneas Williams,,,base
+base,7,Gold Sparkle,false,24,Aeneas Williams,,,base
+base,7,Choice Cherry Blossom,false,15,Aeneas Williams,,,base
+base,7,Forest Camo,false,15,Aeneas Williams,,,base
+base,7,No Huddle Neon Green,false,10,Aeneas Williams,,,base
+base,7,Gold Wave,false,10,Aeneas Williams,,,base
+base,7,Gold,false,10,Aeneas Williams,,,base
+base,7,Choice Gold,false,10,Aeneas Williams,,,base
+base,7,Choice Blue,false,14,Aeneas Williams,,,base
+base,7,Gold Shimmer,false,10,Aeneas Williams,,,base
+base,7,Gold Vinyl,false,5,Aeneas Williams,,,base
+base,7,Green Shimmer,false,5,Aeneas Williams,,,base
+base,7,Green Sparkle,false,8,Aeneas Williams,,,base
+base,7,White Knight,false,3,Aeneas Williams,,,base
+base,7,Choice Nebula,false,1,Aeneas Williams,,,base
+base,7,Black Finite,false,1,Aeneas Williams,,,base
+base,7,Black Stars,false,1,Aeneas Williams,,,base
+base,7,Black Shimmer,false,1,Aeneas Williams,,,base
+base,6,Black and Red Checker,false,,Dennis Gardeck,,,base
+base,6,Black and White Checker,false,,Dennis Gardeck,,,base
+base,6,Blue,false,,Dennis Gardeck,,,base
+base,6,Choice Blue Yellow and Green,false,,Dennis Gardeck,,,base
+base,6,Choice Tiger Stripe,false,,Dennis Gardeck,,,base
+base,6,Disco,false,,Dennis Gardeck,,,base
+base,6,Green,false,,Dennis Gardeck,,,base
+base,6,Green Ice,false,,Dennis Gardeck,,,base
+base,6,Green Wave,false,,Dennis Gardeck,,,base
+base,6,Lazer,false,,Dennis Gardeck,,,base
+base,6,Neon Green Pulsar,false,,Dennis Gardeck,,,base
+base,6,No Huddle,false,,Dennis Gardeck,,,base
+base,6,Orange Ice,false,,Dennis Gardeck,,,base
+base,6,Pink,false,,Dennis Gardeck,,,base
+base,6,Pink Wave,false,,Dennis Gardeck,,,base
+base,6,Press Proof,false,,Dennis Gardeck,,,base
+base,6,Purple Pulsar,false,,Dennis Gardeck,,,base
+base,6,Red,false,,Dennis Gardeck,,,base
+base,6,Red Sparkle,false,,Dennis Gardeck,,,base
+base,6,Red White and Blue,false,,Dennis Gardeck,,,base
+base,6,Silver,false,,Dennis Gardeck,,,base
+base,6,Snakeskin,false,,Dennis Gardeck,,,base
+base,6,White Sparkle,false,,Dennis Gardeck,,,base
+base,6,Pandora,false,400,Dennis Gardeck,,,base
+base,6,Blue Wave,false,230,Dennis Gardeck,,,base
+base,6,Orange,false,249,Dennis Gardeck,,,base
+base,6,Purple Ice,false,225,Dennis Gardeck,,,base
+base,6,Hyper,false,180,Dennis Gardeck,,,base
+base,6,Purple,false,125,Dennis Gardeck,,,base
+base,6,Red Wave,false,149,Dennis Gardeck,,,base
+base,6,No Huddle Blue,false,99,Dennis Gardeck,,,base
+base,6,Blue Sparkle,false,96,Dennis Gardeck,,,base
+base,6,Blue Ice,false,99,Dennis Gardeck,,,base
+base,6,Purple Wave,false,99,Dennis Gardeck,,,base
+base,6,No Huddle Red,false,75,Dennis Gardeck,,,base
+base,6,Green Scope,false,75,Dennis Gardeck,,,base
+base,6,Orange Wave,false,60,Dennis Gardeck,,,base
+base,6,Red Shimmer,false,35,Dennis Gardeck,,,base
+base,6,Red and Yellow,false,44,Dennis Gardeck,,,base
+base,6,No Huddle Purple,false,49,Dennis Gardeck,,,base
+base,6,Purple Power,false,49,Dennis Gardeck,,,base
+base,6,White,false,35,Dennis Gardeck,,,base
+base,6,Blue Shimmer,false,25,Dennis Gardeck,,,base
+base,6,No Huddle Pink,false,25,Dennis Gardeck,,,base
+base,6,Navy Camo,false,25,Dennis Gardeck,,,base
+base,6,Choice Red,false,20,Dennis Gardeck,,,base
+base,6,Gold Sparkle,false,24,Dennis Gardeck,,,base
+base,6,Choice Cherry Blossom,false,15,Dennis Gardeck,,,base
+base,6,Forest Camo,false,15,Dennis Gardeck,,,base
+base,6,No Huddle Neon Green,false,10,Dennis Gardeck,,,base
+base,6,Gold Wave,false,10,Dennis Gardeck,,,base
+base,6,Gold,false,10,Dennis Gardeck,,,base
+base,6,Choice Gold,false,10,Dennis Gardeck,,,base
+base,6,Choice Blue,false,14,Dennis Gardeck,,,base
+base,6,Gold Shimmer,false,10,Dennis Gardeck,,,base
+base,6,Gold Vinyl,false,5,Dennis Gardeck,,,base
+base,6,Green Shimmer,false,5,Dennis Gardeck,,,base
+base,6,Green Sparkle,false,8,Dennis Gardeck,,,base
+base,6,White Knight,false,3,Dennis Gardeck,,,base
+base,6,Choice Nebula,false,1,Dennis Gardeck,,,base
+base,6,Black Finite,false,1,Dennis Gardeck,,,base
+base,6,Black Stars,false,1,Dennis Gardeck,,,base
+base,6,Black Shimmer,false,1,Dennis Gardeck,,,base
+base,5,Black and Red Checker,false,,Budda Baker,,,base
+base,5,Black and White Checker,false,,Budda Baker,,,base
+base,5,Blue,false,,Budda Baker,,,base
+base,5,Choice Blue Yellow and Green,false,,Budda Baker,,,base
+base,5,Choice Tiger Stripe,false,,Budda Baker,,,base
+base,5,Disco,false,,Budda Baker,,,base
+base,5,Green,false,,Budda Baker,,,base
+base,5,Green Ice,false,,Budda Baker,,,base
+base,5,Green Wave,false,,Budda Baker,,,base
+base,5,Lazer,false,,Budda Baker,,,base
+base,5,Neon Green Pulsar,false,,Budda Baker,,,base
+base,5,No Huddle,false,,Budda Baker,,,base
+base,5,Orange Ice,false,,Budda Baker,,,base
+base,5,Pink,false,,Budda Baker,,,base
+base,5,Pink Wave,false,,Budda Baker,,,base
+base,5,Press Proof,false,,Budda Baker,,,base
+base,5,Purple Pulsar,false,,Budda Baker,,,base
+base,5,Red,false,,Budda Baker,,,base
+base,5,Red Sparkle,false,,Budda Baker,,,base
+base,5,Red White and Blue,false,,Budda Baker,,,base
+base,5,Silver,false,,Budda Baker,,,base
+base,5,Snakeskin,false,,Budda Baker,,,base
+base,5,White Sparkle,false,,Budda Baker,,,base
+base,5,Pandora,false,400,Budda Baker,,,base
+base,5,Blue Wave,false,230,Budda Baker,,,base
+base,5,Orange,false,249,Budda Baker,,,base
+base,5,Purple Ice,false,225,Budda Baker,,,base
+base,5,Hyper,false,180,Budda Baker,,,base
+base,5,Purple,false,125,Budda Baker,,,base
+base,5,Red Wave,false,149,Budda Baker,,,base
+base,5,No Huddle Blue,false,99,Budda Baker,,,base
+base,5,Blue Sparkle,false,96,Budda Baker,,,base
+base,5,Blue Ice,false,99,Budda Baker,,,base
+base,5,Purple Wave,false,99,Budda Baker,,,base
+base,5,No Huddle Red,false,75,Budda Baker,,,base
+base,5,Green Scope,false,75,Budda Baker,,,base
+base,5,Orange Wave,false,60,Budda Baker,,,base
+base,5,Red Shimmer,false,35,Budda Baker,,,base
+base,5,Red and Yellow,false,44,Budda Baker,,,base
+base,5,No Huddle Purple,false,49,Budda Baker,,,base
+base,5,Purple Power,false,49,Budda Baker,,,base
+base,5,White,false,35,Budda Baker,,,base
+base,5,Blue Shimmer,false,25,Budda Baker,,,base
+base,5,No Huddle Pink,false,25,Budda Baker,,,base
+base,5,Navy Camo,false,25,Budda Baker,,,base
+base,5,Choice Red,false,20,Budda Baker,,,base
+base,5,Gold Sparkle,false,24,Budda Baker,,,base
+base,5,Choice Cherry Blossom,false,15,Budda Baker,,,base
+base,5,Forest Camo,false,15,Budda Baker,,,base
+base,5,No Huddle Neon Green,false,10,Budda Baker,,,base
+base,5,Gold Wave,false,10,Budda Baker,,,base
+base,5,Gold,false,10,Budda Baker,,,base
+base,5,Choice Gold,false,10,Budda Baker,,,base
+base,5,Choice Blue,false,14,Budda Baker,,,base
+base,5,Gold Shimmer,false,10,Budda Baker,,,base
+base,5,Gold Vinyl,false,5,Budda Baker,,,base
+base,5,Green Shimmer,false,5,Budda Baker,,,base
+base,5,Green Sparkle,false,8,Budda Baker,,,base
+base,5,White Knight,false,3,Budda Baker,,,base
+base,5,Choice Nebula,false,1,Budda Baker,,,base
+base,5,Black Finite,false,1,Budda Baker,,,base
+base,5,Black Stars,false,1,Budda Baker,,,base
+base,5,Black Shimmer,false,1,Budda Baker,,,base
+base,4,Black and Red Checker,false,,Trey McBride,,,base
+base,4,Black and White Checker,false,,Trey McBride,,,base
+base,4,Blue,false,,Trey McBride,,,base
+base,4,Choice Blue Yellow and Green,false,,Trey McBride,,,base
+base,4,Choice Tiger Stripe,false,,Trey McBride,,,base
+base,4,Disco,false,,Trey McBride,,,base
+base,4,Green,false,,Trey McBride,,,base
+base,4,Green Ice,false,,Trey McBride,,,base
+base,4,Green Wave,false,,Trey McBride,,,base
+base,4,Lazer,false,,Trey McBride,,,base
+base,4,Neon Green Pulsar,false,,Trey McBride,,,base
+base,4,No Huddle,false,,Trey McBride,,,base
+base,4,Orange Ice,false,,Trey McBride,,,base
+base,4,Pink,false,,Trey McBride,,,base
+base,4,Pink Wave,false,,Trey McBride,,,base
+base,4,Press Proof,false,,Trey McBride,,,base
+base,4,Purple Pulsar,false,,Trey McBride,,,base
+base,4,Red,false,,Trey McBride,,,base
+base,4,Red Sparkle,false,,Trey McBride,,,base
+base,4,Red White and Blue,false,,Trey McBride,,,base
+base,4,Silver,false,,Trey McBride,,,base
+base,4,Snakeskin,false,,Trey McBride,,,base
+base,4,White Sparkle,false,,Trey McBride,,,base
+base,4,Pandora,false,400,Trey McBride,,,base
+base,4,Blue Wave,false,230,Trey McBride,,,base
+base,4,Orange,false,249,Trey McBride,,,base
+base,4,Purple Ice,false,225,Trey McBride,,,base
+base,4,Hyper,false,180,Trey McBride,,,base
+base,4,Purple,false,125,Trey McBride,,,base
+base,4,Red Wave,false,149,Trey McBride,,,base
+base,4,No Huddle Blue,false,99,Trey McBride,,,base
+base,4,Blue Sparkle,false,96,Trey McBride,,,base
+base,4,Blue Ice,false,99,Trey McBride,,,base
+base,4,Purple Wave,false,99,Trey McBride,,,base
+base,4,No Huddle Red,false,75,Trey McBride,,,base
+base,4,Green Scope,false,75,Trey McBride,,,base
+base,4,Orange Wave,false,60,Trey McBride,,,base
+base,4,Red Shimmer,false,35,Trey McBride,,,base
+base,4,Red and Yellow,false,44,Trey McBride,,,base
+base,4,No Huddle Purple,false,49,Trey McBride,,,base
+base,4,Purple Power,false,49,Trey McBride,,,base
+base,4,White,false,35,Trey McBride,,,base
+base,4,Blue Shimmer,false,25,Trey McBride,,,base
+base,4,No Huddle Pink,false,25,Trey McBride,,,base
+base,4,Navy Camo,false,25,Trey McBride,,,base
+base,4,Choice Red,false,20,Trey McBride,,,base
+base,4,Gold Sparkle,false,24,Trey McBride,,,base
+base,4,Choice Cherry Blossom,false,15,Trey McBride,,,base
+base,4,Forest Camo,false,15,Trey McBride,,,base
+base,4,No Huddle Neon Green,false,10,Trey McBride,,,base
+base,4,Gold Wave,false,10,Trey McBride,,,base
+base,4,Gold,false,10,Trey McBride,,,base
+base,4,Choice Gold,false,10,Trey McBride,,,base
+base,4,Choice Blue,false,14,Trey McBride,,,base
+base,4,Gold Shimmer,false,10,Trey McBride,,,base
+base,4,Gold Vinyl,false,5,Trey McBride,,,base
+base,4,Green Shimmer,false,5,Trey McBride,,,base
+base,4,Green Sparkle,false,8,Trey McBride,,,base
+base,4,White Knight,false,3,Trey McBride,,,base
+base,4,Choice Nebula,false,1,Trey McBride,,,base
+base,4,Black Finite,false,1,Trey McBride,,,base
+base,4,Black Stars,false,1,Trey McBride,,,base
+base,4,Black Shimmer,false,1,Trey McBride,,,base
+base,325,Black and Red Checker,false,,Darius Robinson,,,base
+base,325,Black and White Checker,false,,Darius Robinson,,,base
+base,325,Blue,false,,Darius Robinson,,,base
+base,325,Choice Blue Yellow and Green,false,,Darius Robinson,,,base
+base,325,Choice Tiger Stripe,false,,Darius Robinson,,,base
+base,325,Disco,false,,Darius Robinson,,,base
+base,325,Green,false,,Darius Robinson,,,base
+base,325,Green Ice,false,,Darius Robinson,,,base
+base,325,Green Wave,false,,Darius Robinson,,,base
+base,325,Lazer,false,,Darius Robinson,,,base
+base,325,Neon Green Pulsar,false,,Darius Robinson,,,base
+base,325,No Huddle,false,,Darius Robinson,,,base
+base,325,Orange Ice,false,,Darius Robinson,,,base
+base,325,Pink,false,,Darius Robinson,,,base
+base,325,Pink Wave,false,,Darius Robinson,,,base
+base,325,Press Proof,false,,Darius Robinson,,,base
+base,325,Purple Pulsar,false,,Darius Robinson,,,base
+base,325,Red,false,,Darius Robinson,,,base
+base,325,Red Sparkle,false,,Darius Robinson,,,base
+base,325,Red White and Blue,false,,Darius Robinson,,,base
+base,325,Silver,false,,Darius Robinson,,,base
+base,325,Snakeskin,false,,Darius Robinson,,,base
+base,325,White Sparkle,false,,Darius Robinson,,,base
+base,325,Pandora,false,400,Darius Robinson,,,base
+base,325,Blue Wave,false,230,Darius Robinson,,,base
+base,325,Orange,false,249,Darius Robinson,,,base
+base,325,Purple Ice,false,225,Darius Robinson,,,base
+base,325,Hyper,false,180,Darius Robinson,,,base
+base,325,Purple,false,125,Darius Robinson,,,base
+base,325,Red Wave,false,149,Darius Robinson,,,base
+base,325,No Huddle Blue,false,99,Darius Robinson,,,base
+base,325,Blue Sparkle,false,96,Darius Robinson,,,base
+base,325,Blue Ice,false,99,Darius Robinson,,,base
+base,325,Purple Wave,false,99,Darius Robinson,,,base
+base,325,No Huddle Red,false,75,Darius Robinson,,,base
+base,325,Green Scope,false,75,Darius Robinson,,,base
+base,325,Orange Wave,false,60,Darius Robinson,,,base
+base,325,Red Shimmer,false,35,Darius Robinson,,,base
+base,325,Red and Yellow,false,44,Darius Robinson,,,base
+base,325,No Huddle Purple,false,49,Darius Robinson,,,base
+base,325,Purple Power,false,49,Darius Robinson,,,base
+base,325,White,false,35,Darius Robinson,,,base
+base,325,Blue Shimmer,false,25,Darius Robinson,,,base
+base,325,No Huddle Pink,false,25,Darius Robinson,,,base
+base,325,Navy Camo,false,25,Darius Robinson,,,base
+base,325,Choice Red,false,20,Darius Robinson,,,base
+base,325,Gold Sparkle,false,24,Darius Robinson,,,base
+base,325,Choice Cherry Blossom,false,15,Darius Robinson,,,base
+base,325,Forest Camo,false,15,Darius Robinson,,,base
+base,325,No Huddle Neon Green,false,10,Darius Robinson,,,base
+base,325,Gold Wave,false,10,Darius Robinson,,,base
+base,325,Gold,false,10,Darius Robinson,,,base
+base,325,Choice Gold,false,10,Darius Robinson,,,base
+base,325,Choice Blue,false,14,Darius Robinson,,,base
+base,325,Gold Shimmer,false,10,Darius Robinson,,,base
+base,325,Gold Vinyl,false,5,Darius Robinson,,,base
+base,325,Green Shimmer,false,5,Darius Robinson,,,base
+base,325,Green Sparkle,false,8,Darius Robinson,,,base
+base,325,White Knight,false,3,Darius Robinson,,,base
+base,325,Choice Nebula,false,1,Darius Robinson,,,base
+base,325,Black Finite,false,1,Darius Robinson,,,base
+base,325,Black Stars,false,1,Darius Robinson,,,base
+base,325,Black Shimmer,false,1,Darius Robinson,,,base
+base,3,Black and Red Checker,false,,Michael Wilson,,,base
+base,3,Black and White Checker,false,,Michael Wilson,,,base
+base,3,Blue,false,,Michael Wilson,,,base
+base,3,Choice Blue Yellow and Green,false,,Michael Wilson,,,base
+base,3,Choice Tiger Stripe,false,,Michael Wilson,,,base
+base,3,Disco,false,,Michael Wilson,,,base
+base,3,Green,false,,Michael Wilson,,,base
+base,3,Green Ice,false,,Michael Wilson,,,base
+base,3,Green Wave,false,,Michael Wilson,,,base
+base,3,Lazer,false,,Michael Wilson,,,base
+base,3,Neon Green Pulsar,false,,Michael Wilson,,,base
+base,3,No Huddle,false,,Michael Wilson,,,base
+base,3,Orange Ice,false,,Michael Wilson,,,base
+base,3,Pink,false,,Michael Wilson,,,base
+base,3,Pink Wave,false,,Michael Wilson,,,base
+base,3,Press Proof,false,,Michael Wilson,,,base
+base,3,Purple Pulsar,false,,Michael Wilson,,,base
+base,3,Red,false,,Michael Wilson,,,base
+base,3,Red Sparkle,false,,Michael Wilson,,,base
+base,3,Red White and Blue,false,,Michael Wilson,,,base
+base,3,Silver,false,,Michael Wilson,,,base
+base,3,Snakeskin,false,,Michael Wilson,,,base
+base,3,White Sparkle,false,,Michael Wilson,,,base
+base,3,Pandora,false,400,Michael Wilson,,,base
+base,3,Blue Wave,false,230,Michael Wilson,,,base
+base,3,Orange,false,249,Michael Wilson,,,base
+base,3,Purple Ice,false,225,Michael Wilson,,,base
+base,3,Hyper,false,180,Michael Wilson,,,base
+base,3,Purple,false,125,Michael Wilson,,,base
+base,3,Red Wave,false,149,Michael Wilson,,,base
+base,3,No Huddle Blue,false,99,Michael Wilson,,,base
+base,3,Blue Sparkle,false,96,Michael Wilson,,,base
+base,3,Blue Ice,false,99,Michael Wilson,,,base
+base,3,Purple Wave,false,99,Michael Wilson,,,base
+base,3,No Huddle Red,false,75,Michael Wilson,,,base
+base,3,Green Scope,false,75,Michael Wilson,,,base
+base,3,Orange Wave,false,60,Michael Wilson,,,base
+base,3,Red Shimmer,false,35,Michael Wilson,,,base
+base,3,Red and Yellow,false,44,Michael Wilson,,,base
+base,3,No Huddle Purple,false,49,Michael Wilson,,,base
+base,3,Purple Power,false,49,Michael Wilson,,,base
+base,3,White,false,35,Michael Wilson,,,base
+base,3,Blue Shimmer,false,25,Michael Wilson,,,base
+base,3,No Huddle Pink,false,25,Michael Wilson,,,base
+base,3,Navy Camo,false,25,Michael Wilson,,,base
+base,3,Choice Red,false,20,Michael Wilson,,,base
+base,3,Gold Sparkle,false,24,Michael Wilson,,,base
+base,3,Choice Cherry Blossom,false,15,Michael Wilson,,,base
+base,3,Forest Camo,false,15,Michael Wilson,,,base
+base,3,No Huddle Neon Green,false,10,Michael Wilson,,,base
+base,3,Gold Wave,false,10,Michael Wilson,,,base
+base,3,Gold,false,10,Michael Wilson,,,base
+base,3,Choice Gold,false,10,Michael Wilson,,,base
+base,3,Choice Blue,false,14,Michael Wilson,,,base
+base,3,Gold Shimmer,false,10,Michael Wilson,,,base
+base,3,Gold Vinyl,false,5,Michael Wilson,,,base
+base,3,Green Shimmer,false,5,Michael Wilson,,,base
+base,3,Green Sparkle,false,8,Michael Wilson,,,base
+base,3,White Knight,false,3,Michael Wilson,,,base
+base,3,Choice Nebula,false,1,Michael Wilson,,,base
+base,3,Black Finite,false,1,Michael Wilson,,,base
+base,3,Black Stars,false,1,Michael Wilson,,,base
+base,3,Black Shimmer,false,1,Michael Wilson,,,base
+base,2,Black and Red Checker,false,,James Conner,,,base
+base,2,Black and White Checker,false,,James Conner,,,base
+base,2,Blue,false,,James Conner,,,base
+base,2,Choice Blue Yellow and Green,false,,James Conner,,,base
+base,2,Choice Tiger Stripe,false,,James Conner,,,base
+base,2,Disco,false,,James Conner,,,base
+base,2,Green,false,,James Conner,,,base
+base,2,Green Ice,false,,James Conner,,,base
+base,2,Green Wave,false,,James Conner,,,base
+base,2,Lazer,false,,James Conner,,,base
+base,2,Neon Green Pulsar,false,,James Conner,,,base
+base,2,No Huddle,false,,James Conner,,,base
+base,2,Orange Ice,false,,James Conner,,,base
+base,2,Pink,false,,James Conner,,,base
+base,2,Pink Wave,false,,James Conner,,,base
+base,2,Press Proof,false,,James Conner,,,base
+base,2,Purple Pulsar,false,,James Conner,,,base
+base,2,Red,false,,James Conner,,,base
+base,2,Red Sparkle,false,,James Conner,,,base
+base,2,Red White and Blue,false,,James Conner,,,base
+base,2,Silver,false,,James Conner,,,base
+base,2,Snakeskin,false,,James Conner,,,base
+base,2,White Sparkle,false,,James Conner,,,base
+base,2,Pandora,false,400,James Conner,,,base
+base,2,Blue Wave,false,230,James Conner,,,base
+base,2,Orange,false,249,James Conner,,,base
+base,2,Purple Ice,false,225,James Conner,,,base
+base,2,Hyper,false,180,James Conner,,,base
+base,2,Purple,false,125,James Conner,,,base
+base,2,Red Wave,false,149,James Conner,,,base
+base,2,No Huddle Blue,false,99,James Conner,,,base
+base,2,Blue Sparkle,false,96,James Conner,,,base
+base,2,Blue Ice,false,99,James Conner,,,base
+base,2,Purple Wave,false,99,James Conner,,,base
+base,2,No Huddle Red,false,75,James Conner,,,base
+base,2,Green Scope,false,75,James Conner,,,base
+base,2,Orange Wave,false,60,James Conner,,,base
+base,2,Red Shimmer,false,35,James Conner,,,base
+base,2,Red and Yellow,false,44,James Conner,,,base
+base,2,No Huddle Purple,false,49,James Conner,,,base
+base,2,Purple Power,false,49,James Conner,,,base
+base,2,White,false,35,James Conner,,,base
+base,2,Blue Shimmer,false,25,James Conner,,,base
+base,2,No Huddle Pink,false,25,James Conner,,,base
+base,2,Navy Camo,false,25,James Conner,,,base
+base,2,Choice Red,false,20,James Conner,,,base
+base,2,Gold Sparkle,false,24,James Conner,,,base
+base,2,Choice Cherry Blossom,false,15,James Conner,,,base
+base,2,Forest Camo,false,15,James Conner,,,base
+base,2,No Huddle Neon Green,false,10,James Conner,,,base
+base,2,Gold Wave,false,10,James Conner,,,base
+base,2,Gold,false,10,James Conner,,,base
+base,2,Choice Gold,false,10,James Conner,,,base
+base,2,Choice Blue,false,14,James Conner,,,base
+base,2,Gold Shimmer,false,10,James Conner,,,base
+base,2,Gold Vinyl,false,5,James Conner,,,base
+base,2,Green Shimmer,false,5,James Conner,,,base
+base,2,Green Sparkle,false,8,James Conner,,,base
+base,2,White Knight,false,3,James Conner,,,base
+base,2,Choice Nebula,false,1,James Conner,,,base
+base,2,Black Finite,false,1,James Conner,,,base
+base,2,Black Stars,false,1,James Conner,,,base
+base,2,Black Shimmer,false,1,James Conner,,,base
