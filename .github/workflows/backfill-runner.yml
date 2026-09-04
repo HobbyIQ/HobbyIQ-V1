@@ -413,6 +413,32 @@ on:
           #                 correct rows with a BLANK print run.
           # No new dispatch input; mode/years/scope/sports/limit/slot/slots.
           - repair-tiffany-pool-enumeration
+          # CF-CARDYEAR-IS-A-MIRROR, the stored half (2026-09-04). #1769 fixed
+          # the READER (`(c.cardYear = @y OR c.year = @y)`) and the WRITER
+          # (deriveCatalogEntry + the checklist ingest dual-write); neither
+          # reaches a row already stored. Measured read-only against prod
+          # 2026-09-04: 2,100,230 card_catalog rows carry `year` and NO
+          # `cardYear`, and every consumer still filtering on cardYear alone
+          # misses all of them -- 1,521,172 baseballcardpedia-ladders,
+          # 373,603 hobbymonitor, 205,013 sportscardchecklist, 423 tcgdex-ja,
+          # 19 seed/user rows.
+          #
+          # The ruling: stamp cardYear on EVERY row whose SLUG carries a year,
+          # regardless of source. cardYear is a MIRROR of the identity year in
+          # the slug, never a second fact and never an assertion about the card,
+          # so no source is excluded -- a mirror present on a checklist row and
+          # absent on a vendor row is exactly the inconsistency being repaired.
+          # Authority is still decided by `source`, everywhere, unchanged.
+          #
+          # `sources` carries the per-lane source scope (comma-separated; empty
+          # sweeps every source) -- an EXISTING input, because the dispatch form
+          # is at 24 of GitHub's 25. `apply` drives BACKFILL_APPLY as usual, and
+          # sharding is OPT-IN through the #1765 helper: the inherited
+          # slot=0/slots=16 prints "sweeps EVERY row" rather than covering a
+          # sixteenth. Reconciliation is intended = written + skipped + failed,
+          # and the run COUNTs rows-missing-cardYear per source before AND after
+          # itself -- the banner cannot certify the write.
+          - backfillCatalogCardYearFromSlug
       apply:
         description: "Actually write (true) or dry-run only (false)"
         required: true
@@ -463,7 +489,7 @@ on:
         default: ""
         type: string
       sources:
-        description: "Comma-separated catalog sources (SOURCES env) -- REQUIRED for retire-exploded-checklist-rows mode=source, for audit-source-coverage (the OLD sources; `scope` is the replacement source), and for rename-setkey-to-product mode=hyphen (the sources whose hyphen-free card numbers fold onto the checklist's spelling, e.g. bccp)"
+        description: "Comma-separated catalog sources (SOURCES env) -- REQUIRED for retire-exploded-checklist-rows mode=source, for audit-source-coverage (the OLD sources; `scope` is the replacement source), and for rename-setkey-to-product mode=hyphen (the sources whose hyphen-free card numbers fold onto the checklist's spelling, e.g. bccp). For backfillCatalogCardYearFromSlug it is the per-lane source scope and is OPTIONAL: empty sweeps EVERY source, which is the ruling (cardYear is a mirror, so it is source-agnostic); name one source to run a lane at a time."
         required: false
         type: string
         default: ""

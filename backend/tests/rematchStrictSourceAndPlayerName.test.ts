@@ -429,3 +429,93 @@ describe("MUTATION PIN -- the released row is a BASE-EVICTION, the honest one is
     expect(r.writable).toBe(false);
   });
 });
+
+/**
+ * A PUBLISHER'S LANE IS STILL THAT PUBLISHER (Drew's ruling, 2026-09-04).
+ *
+ * `tcgdex-ja-2026-09-04` is the SAME publisher as `tcgdex` -- scrape-tcgdex-ja.cjs
+ * reads the identical free JSON API (MIT, the permitted one), and `-ja` names
+ * WHICH CORPUS of that API was walked, not a different source of evidence. It
+ * normalised to `tcgdex-ja`, which the allowlist did not carry, so 12,851 rows
+ * scored STRICT 0 while the LOOSE `catalogAuthorityOf` called every one of them
+ * `checklist` -- the two predicates disagreeing about the same rows, which is
+ * exactly the split the allowlist exists to prevent.
+ *
+ * Measured read-only over all 172 distinct card_catalog sources (2026-09-04),
+ * exactly FIVE normalized keys are a suffix of a strict publisher, and they are
+ * NOT the same case. The two lanes are admitted BY NAME; the three refusals are
+ * pinned just as hard, because a generic "strip the last segment" rule would
+ * promote a VENDOR product classification into the gate whose false yes moves a
+ * sale onto a card that may never have been printed.
+ */
+describe("a lane suffix never flips a known publisher's strictness", () => {
+  it("tcgdex-ja is tcgdex — the ruling", () => {
+    expect(K.isStrictChecklistSource("tcgdex-ja-2026-09-04")).toBe(true);
+    expect(K.isStrictChecklistSource("tcgdex-ja-2026-09-02")).toBe(true);
+    expect(K.isStrictChecklistSource("tcgdex-ja-2026-08-28")).toBe(true);
+    expect(K.isStrictChecklistSource("tcgdex-ja")).toBe(true);
+    // the un-laned publisher is unchanged, in both its spellings
+    expect(K.isStrictChecklistSource("tcgdex-scraped-2026-08-16")).toBe(true);
+    expect(K.isStrictChecklistSource("tcgdex")).toBe(true);
+  });
+
+  it("tcdb-scrape is tcdb — the same self-disagreement, one letter apart", () => {
+    // `tcdb-scraped-*` already normalises to `tcdb` (the `-scraped` suffix is
+    // stripped as an ingest verb) and was strict; `tcdb-scrape` was not. Same
+    // publisher, same lane, two verdicts.
+    expect(K.isStrictChecklistSource("tcdb-scrape")).toBe(true);
+    expect(K.isStrictChecklistSource("tcdb-scrape-graded")).toBe(true);
+    expect(K.isStrictChecklistSource("tcdb-scraped-2026-08-17")).toBe(true);
+    expect(K.isStrictChecklistSource("tcdb-2026-08-12")).toBe(true);
+  });
+
+  it("the lane list is EXPLICIT — a vendor lane is refused however it is spelled", () => {
+    // catalogAuthority.service.ts sends every `-product-structure` to VENDOR by
+    // name, and the doctrine is consume SALES not PRODUCT fields. A generic
+    // suffix rule would have made `bccp-product-structure` strict off `bccp`.
+    expect(K.isStrictChecklistSource("bccp-product-structure")).toBe(false);
+    expect(K.isStrictChecklistSource("clc-product-structure")).toBe(false);
+    // a legacy FILL lane, ranked BELOW cardsight by nukeCatalogFragmentation
+    expect(K.isStrictChecklistSource("checklist-batch-fill")).toBe(false);
+    expect(K.isStrictChecklistSource("checklist-batch-fill-graded")).toBe(false);
+    // a hand-edit lane of unproven provenance: 3 rows, never audited
+    expect(K.isStrictChecklistSource("baseballcardpedia-manual-2026-08-10")).toBe(false);
+  });
+
+  it("an UNKNOWN publisher stays non-strict however it is laned", () => {
+    // The lane must resolve to a publisher the list ALREADY trusts, so this can
+    // never admit a new source -- only a corpus of an existing one.
+    expect(K.isStrictChecklistSource("nonesuch-ja")).toBe(false);
+    expect(K.isStrictChecklistSource("nonesuch-ja-2026-09-04")).toBe(false);
+    expect(K.isStrictChecklistSource("ebay-ja")).toBe(false);
+    expect(K.isStrictChecklistSource("cardhedge-ja-2026-09-04")).toBe(false);
+    expect(K.isStrictChecklistSource("pool-scrape")).toBe(false);
+    expect(K.isStrictChecklistSource("sold-comps-stub-scrape")).toBe(false);
+  });
+
+  it("MUTATION PIN: every named lane resolves to an ALREADY-strict publisher", () => {
+    // The guard that makes the rule safe. If a lane were ever added whose
+    // publisher is not itself strict, this widens the gate silently.
+    for (const lane of K.STRICT_PUBLISHER_LANES) {
+      const publisher = lane.slice(0, lane.lastIndexOf("-"));
+      expect(K.STRICT_CHECKLIST_SOURCES, `${lane} -> ${publisher}`).toContain(publisher);
+      expect(K.isStrictChecklistSource(lane)).toBe(true);
+    }
+  });
+
+  it("MUTATION PIN: emptying the lane list restores the defect", () => {
+    // A pin that passes with the fix reverted proves nothing. Rebuild the
+    // predicate with no lanes and the tcgdex-ja rows go dark again.
+    const withoutLanes = (raw: string) => {
+      const s = K.normalizeCatalogSource(raw);
+      return s !== "" && K.STRICT_CHECKLIST_SOURCES.includes(s);
+    };
+    expect(withoutLanes("tcgdex-ja-2026-09-04"), "the defect").toBe(false);
+    expect(K.isStrictChecklistSource("tcgdex-ja-2026-09-04"), "the fix").toBe(true);
+    // and the refusals are refusals under BOTH, so the fix widened nothing else
+    for (const s of ["bccp-product-structure", "checklist-batch-fill", "nonesuch-ja"]) {
+      expect(withoutLanes(s)).toBe(false);
+      expect(K.isStrictChecklistSource(s)).toBe(false);
+    }
+  });
+});
