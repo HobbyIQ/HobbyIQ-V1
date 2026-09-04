@@ -245,9 +245,31 @@ function gateStagedCsv(csvPath) {
   }
   if (!stats.rows) return { ok: false, reason: "0 data rows parsed", stats };
 
+  // CF-THE-LITERAL-BASE-IS-A-BASE-CARD (2026-09-04).
+  //
+  // "base" was read as "the parallel column is EMPTY", but the BCP scraper
+  // states the base set explicitly -- its own header says so: "Base rows are
+  // emitted with the literal 'Base' -- these ARE the checklist's base set,
+  // which is the one place 'Base' is a statement of fact rather than a default
+  // for a blank (see #1324)". So every row of a page whose base set is spelled
+  // out counted as ladder, stats.base fell to 0, and the zero-base rule
+  // refused the file.
+  //
+  // Measured on 1990_Bowman, run 33845791358 entry [7/20]: 1,058 staged rows,
+  // 529 of them `parallel=Base` and 529 `parallel=Tiffany`, REFUSED as "zero
+  // base cards (1,058 rows, all carry a parallel)". A complete, correct
+  // two-rung checklist thrown away -- and, being the third verdict in a row,
+  // it was the entry that tripped the systemic abort and took the lane down.
+  //
+  // This does NOT weaken #1324. A BLANK parallel still means unknown and still
+  // counts as a base card, exactly as before; what changes is that the literal
+  // word, which is an ATTESTATION that the row is the base card, is no longer
+  // mistaken for a rung. The two spellings now agree, and a page that says
+  // "Base" out loud is no longer punished for saying it.
+  const isBaseParallel = (p) => !p || /^base(?:\s+set)?$/i.test(String(p).trim());
   for (const r of rows) {
-    if (r.parallel) { stats.ladder++; if (r.printRun) stats.withPrintRun++; }
-    else stats.base++;
+    if (isBaseParallel(r.parallel)) stats.base++;
+    else { stats.ladder++; if (r.printRun) stats.withPrintRun++; }
   }
 
   // ZERO BASE CARDS. A checklist with a parallel ladder but no base cards is a
@@ -422,12 +444,52 @@ const CHILD_STDERR_LINES = 15;
  * words come first in the message so the verdict's own truncation cuts the
  * argv, never the reason.
  */
+
+/**
+ * CF-THE-RUNNER-FANOUT-IS-NOT-THE-CHILD'S (2026-09-04).
+ *
+ * The workflow exports its OWN fan-out and bound as plain environment
+ * variables -- LIMIT (entries this DRIVER run takes), SLOT/SLOTS (which shard
+ * of a FLEET this dispatch is) -- and `run()` handed the child
+ * `{...process.env}`. Those names mean something completely different one
+ * level down: in ingest-checklist-csv-to-catalog they are the bound on ROWS
+ * WRITTEN and the shard of STAGED FILES.
+ *
+ * Measured on backfill run 33845791358 (LIMIT=20, SLOT=0, SLOTS=16):
+ *
+ *   SLOTS=16  ->  the child kept files.filter((_, i) => i % 16 === 0), so
+ *                 2015 Bowman Chrome's THREE staged scope files became one --
+ *                 and the one kept was `--prospects-light-blue-refractors`,
+ *                 a parallel scope with no base cards in it at all.
+ *   LIMIT=20  ->  the child stopped after 20 rows written, so a 2,980-row
+ *                 2011 Topps Chrome staging (290 of them autographs) landed
+ *                 ELEVEN rows across the whole run, every one of them
+ *                 isAuto=false, and every one of them card #1, #2 or #3.
+ *
+ * The driver had already read the catalog before and after, so it reported
+ * "INGESTED — 3 rows created" and a green reconciliation. The numbers were
+ * internally consistent; they were consistent about 0.4% of the job. This is
+ * the same defect the ingest child's own SHARD banner was written for, one
+ * wrapper up -- and this driver never got that lesson.
+ *
+ * A DRIVER'S OWN SCOPE IS NOT ITS CHILD'S SCOPE. The child is handed exactly
+ * one product's staged directory and must ingest ALL of it; any narrowing here
+ * is silent data loss wearing a green check. So these names are DELETED from
+ * the child's environment rather than passed through -- explicitly, by name,
+ * so a child that genuinely wants one can still be given it in `env`.
+ */
+const RUNNER_SCOPE_VARS = ["LIMIT", "SLOT", "SLOTS", "SCAN_LIMIT", "MAX_ROWS"];
+
 function run(script, args, env, timeoutMs) {
+  const childEnv = { ...process.env, ...env };
+  // Deleted AFTER the merge so an explicit `env` value still wins: the caller
+  // stating a bound is a decision, inheriting one is an accident.
+  for (const k of RUNNER_SCOPE_VARS) if (!(env && k in env)) delete childEnv[k];
   try {
     return execFileSync(process.execPath, [path.join(HERE, script), ...args], {
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"],
-      env: { ...process.env, ...env },
+      env: childEnv,
       maxBuffer: 64 * 1024 * 1024,
       timeout: timeoutMs || 10 * 60000,
     });
@@ -545,12 +607,43 @@ function acquireEntry(entry, dir) {
       // title IS the address.
       const title = decodeURIComponent(entry.sourceRef.split("/index.php/")[1] || "");
       if (!title) throw new Error("cannot derive a bcp page title from sourceRef");
-      run("scrape-bcp-ladders.cjs", [
+      const said = run("scrape-bcp-ladders.cjs", [
         `--titles=${title}`, "--titlesOnly=1", `--outDir=${dir}`, "--delayMs=800",
         `--sport=${entry.sport || "baseball"}`,
       ]);
       const csvs = fs.readdirSync(dir).filter((n) => n.endsWith(".csv"));
-      if (!csvs.length) throw new Error("bcp scrape produced no CSV");
+      if (!csvs.length) {
+        // CF-A-SET-THE-SOURCE-DOES-NOT-CARD-IS-NOT-A-BROKEN-LANE, the bcp side
+        // (#1717 ruled this for tcgdex on the same day; the wiki has the same
+        // shape, so it gets the same status rather than a parallel one).
+        //
+        // The scraper stages nothing for two completely different reasons, and
+        // it SAYS which on stdout while exiting 0 either way:
+        //
+        //   "base ok (109) but 0 rungs — nothing new to add"   <- the page is
+        //      fine and we already have everything it offers. 1990_Baseball_Wit
+        //      and 1990_Bazooka are oddballs with no parallel ladder at all;
+        //      certified autos are a 1990s-ONWARD feature and 1990 is the
+        //      boundary year. There is nothing here and never was.
+        //
+        //   "0 base cards — layout not understood, SKIPPED"    <- a real gap in
+        //      our parser, worth a verdict that brings someone back to it.
+        //
+        // Both read as `failed` before, so run 33845791358 spent entries 5 and
+        // 6 on pages with nothing to give, called them failures, and they
+        // became two thirds of the 3-streak that aborted the lane. A lane is
+        // not broken because the wiki has nothing to add for a 1990 oddball.
+        if (/nothing new to add/.test(String(said || ""))) {
+          const e = new Error(`bcp page has a base set but no parallel ladder — the wiki carries no rungs for it`);
+          // #1717's flag, and deliberately the SAME one: "the source answered,
+          // and its answer is that it has nothing here" is ONE concept, and it
+          // earns one status and one exclusion from the streak whether the
+          // source is tcgdex or the wiki.
+          e.emptyAtSource = true;
+          throw e;
+        }
+        throw new Error("bcp scrape produced no CSV");
+      }
       return { csvPaths: stagedCsvs(dir) };
     }
     case "beckett": {
