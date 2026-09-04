@@ -60,6 +60,24 @@ const CONTROL_CONTAINER = process.env.CONTROL_CONTAINER || "crawl_state";
  *  would restore the exact one-entry-kills-the-lane behaviour this replaced. */
 const SYSTEMIC_FAILURE_STREAK = Math.max(2, Number(process.env.SYSTEMIC_FAILURE_STREAK || 3));
 
+/**
+ * CF-A-CORRECT-REFUSAL-IS-NOT-A-LANE-FAILURE (2026-09-04).
+ *
+ * The statuses that mean "we asked, and the source answered that it has nothing
+ * here". They are TERMINAL verdicts about the entry and they are deliberately
+ * NOT evidence about the lane's health, so the systemic tripwire skips them --
+ * a lane whose next thirty sets the source genuinely does not card is a WORKING
+ * lane, and aborting it strands the entries behind them (run 33845979897: XY2,
+ * XY3, XY4 empty at tcgdex, 49 entries never attempted).
+ *
+ * `failed` still means OUR pipe broke and `unreachable` still means the host
+ * would not answer; both still count toward the streak.
+ */
+const EMPTY_STATUS = "empty";
+/** Statuses that advance the systemic-failure streak. `empty` is excluded by
+ *  construction: it is the source answering, not the lane refusing. */
+const STREAK_STATUSES = new Set(["failed", "unreachable"]);
+
 const f = (n) => Number(n).toLocaleString();
 const left = () => RUN_MS - (Date.now() - STARTED);
 
@@ -589,9 +607,37 @@ function acquireEntry(entry, dir) {
       // scraper would change nothing but the provenance string.
       const modern = /^(SV|S\d|CS|M[0-9]|M-P|SVK|SVLN|SVLS)/i.test(setId);
       const script = modern ? "scrape-tcgdex-ja-modern.cjs" : "scrape-tcgdex-ja.cjs";
-      run(script, [`--outDir=${dir}`, `--sets=${setId}`, "--delayMs=150"]);
+      const said = run(script, [`--outDir=${dir}`, `--sets=${setId}`, "--delayMs=150"]);
       const csvs = fs.readdirSync(dir).filter((n) => n.endsWith(".csv"));
-      if (!csvs.length) throw new Error(`tcgdex produced no CSV (${script}, set ${setId})`);
+      if (!csvs.length) {
+        /**
+         * CF-A-SET-THE-SOURCE-DOES-NOT-CARD-IS-NOT-A-BROKEN-LANE (2026-09-04).
+         *
+         * Run 33845979897 took XY2, XY3, XY4 and reported all three "FAILED --
+         * tcgdex produced no CSV", tripping the 3-streak and leaving 49 entries
+         * -- including all 52 staged modern sets -- unattempted.
+         *
+         * None of the three is a defect. Probed live: every one answers HTTP 200
+         * with its right name and a populated `cardCount.total`, and `cards: []`.
+         * tcgdex simply holds no per-card rows for the XY-era Japanese sets. The
+         * scraper reads that correctly -- `!d.cards.length` -> skippedSets++,
+         * continue -- writes nothing, and exits 0. The DRIVER then read "no CSV"
+         * as a failure.
+         *
+         * Measured over the whole lane: 32 of the 97 vintage entries answer with
+         * an empty `cards` array. A refusal the source itself states is a VERDICT
+         * about that set, not evidence the lane is down, so it gets its own
+         * status and is excluded from the systemic streak (see EMPTY_STATUS).
+         */
+        const setsSkipped = /sets skipped\s+([1-9])/.test(String(said ?? ""));
+        const stagedNone = /sets staged\s+0(?!\d)/.test(String(said ?? ""));
+        if (setsSkipped && stagedNone) {
+          const err = new Error(`tcgdex serves no cards for this set (${script}, set ${setId}) — the source's own answer, not a lane failure`);
+          err.emptyAtSource = true;
+          throw err;
+        }
+        throw new Error(`tcgdex produced no CSV (${script}, set ${setId})`);
+      }
       return { csvPaths: stagedCsvs(dir) };
     }
     default:
@@ -800,6 +846,55 @@ function valueRank(entry) {
 }
 
 /**
+ * CF-A-STAGED-CSV-LEADS-ITS-LANE (2026-09-04).
+ *
+ * Run 33845979897's queue put 2014 XY2/XY3/XY4 first and the 52 modern JA sets
+ * that #1702 had ALREADY STAGED -- CSVs and manifests committed to the repo --
+ * behind them. The proxy is not wrong about value; it simply cannot see the
+ * work already done. Both groups score family 10 + era 20; the vintage XY rows
+ * carry `seededStatus: "partial"` for its +4 and the staged modern sets are
+ * seeded `missing`, so the entries with a checklist in hand sorted LAST.
+ *
+ * That cost the whole run: the three vintage sets ahead of them are empty at
+ * tcgdex, the lane aborted on the streak, and none of the 52 was attempted.
+ *
+ * An entry whose checklist is already on disk is the cheapest and surest work
+ * in the lane -- no fetch, no source outage, no rate limit between us and the
+ * rows. So it leads, ahead of the value proxy, and the ordering says so in the
+ * banner. Keyed by the staged manifest's own `sourceUrl`, which is the address
+ * the universe entry was built from, so no name normalization can drift.
+ */
+const CHECKLIST_DIR = path.join(HERE, "..", "data", "checklists");
+let _stagedIndex = null;
+function stagedSourceRefs() {
+  if (_stagedIndex) return _stagedIndex;
+  const refs = new Set();
+  const walk = (dir) => {
+    let names;
+    try { names = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
+    for (const d of names) {
+      const full = path.join(dir, d.name);
+      if (d.isDirectory()) { walk(full); continue; }
+      if (!d.name.endsWith(".manifest.json")) continue;
+      // A manifest with no CSV beside it is not staged work.
+      if (!fs.existsSync(full.replace(/\.manifest\.json$/, ".csv"))) continue;
+      try {
+        const m = JSON.parse(fs.readFileSync(full, "utf8"));
+        if (m && m.sourceUrl) refs.add(String(m.sourceUrl));
+      } catch { /* an unreadable manifest simply stages nothing */ }
+    }
+  };
+  walk(CHECKLIST_DIR);
+  _stagedIndex = refs;
+  return refs;
+}
+
+/** True when this entry's checklist is already staged on disk. */
+function isStaged(entry) {
+  return stagedSourceRefs().has(String(entry?.sourceRef || ""));
+}
+
+/**
  * Order the eligible queue. `titlesRaw` is the operator's explicit list (the
  * existing `titles` input / BCP_TITLES env); empty means use the proxy.
  *
@@ -812,10 +907,21 @@ function orderQueue(queue, titlesRaw) {
   const wanted = String(titlesRaw || "").split(",").map((t) => t.trim()).filter(Boolean);
   if (!wanted.length) {
     // Stable: equal rank keeps manifest order, so a re-dispatch takes the same
-    // twenty rather than a fresh shuffle of a tie.
-    const decorated = queue.map((q, i) => ({ q, i, r: valueRank(q.entry) }));
-    decorated.sort((a, b) => (b.r - a.r) || (a.i - b.i));
-    return { queue: decorated.map((d) => d.q), mode: "value-proxy (product family + era)", named: 0, unmatched: [] };
+    // twenty rather than a fresh shuffle of a tie. STAGED FIRST, then the value
+    // proxy within each group -- work already on disk cannot be lost to a
+    // source outage, so it never queues behind work that can.
+    const decorated = queue.map((q, i) => ({ q, i, s: isStaged(q.entry) ? 1 : 0, r: valueRank(q.entry) }));
+    decorated.sort((a, b) => (b.s - a.s) || (b.r - a.r) || (a.i - b.i));
+    const staged = decorated.filter((d) => d.s).length;
+    return {
+      queue: decorated.map((d) => d.q),
+      mode: staged
+        ? `staged-first (${staged} with a checklist on disk), then value-proxy (product family + era)`
+        : "value-proxy (product family + era)",
+      named: 0,
+      unmatched: [],
+      staged,
+    };
   }
   const norm = (v) => String(v || "").toLowerCase().replace(/[_\s]+/g, " ").replace(/[^a-z0-9 ]+/g, "").trim();
   const keysOf = (e) => {
@@ -829,7 +935,7 @@ function orderQueue(queue, titlesRaw) {
     if (at < 0) { unmatched.push(w); continue; }
     lead.push(rest.splice(at, 1)[0]);
   }
-  return { queue: [...lead, ...rest], mode: "explicit list (titles / BCP_TITLES)", named: lead.length, unmatched };
+  return { queue: [...lead, ...rest], mode: "explicit list (titles / BCP_TITLES)", named: lead.length, unmatched, staged: 0 };
 }
 
 
@@ -838,7 +944,7 @@ function orderQueue(queue, titlesRaw) {
 // The gate is exported so its rules can be asserted directly against fixture
 // CSVs, rather than only through a full acquisition. `require`d as a module the
 // script does nothing; run as a CLI it drives.
-module.exports = { gateStagedCsv, gateStagedEntry, stagedCsvs, sourceLabelFor, splitCsv, isPersonName, setKeyFor, LANE_ALIASES, LANE_SOURCE, LANE_MINUTES, CANONICAL_HEADER, CHILD_STDERR_LINES, cosmosSafeId, controlId, orderQueue, SYSTEMIC_FAILURE_STREAK };
+module.exports = { gateStagedCsv, gateStagedEntry, stagedCsvs, sourceLabelFor, splitCsv, isPersonName, setKeyFor, LANE_ALIASES, LANE_SOURCE, LANE_MINUTES, CANONICAL_HEADER, CHILD_STDERR_LINES, cosmosSafeId, controlId, orderQueue, SYSTEMIC_FAILURE_STREAK, EMPTY_STATUS, STREAK_STATUSES, isStaged, stagedSourceRefs };
 if (require.main !== module) return;
 
 (async () => {
@@ -971,7 +1077,10 @@ if (require.main !== module) return;
   }
   console.log(`  control docs  ${f(priorById.size)} already carry a verdict for this lane\n`);
 
-  const TERMINAL = new Set(["ingested", "unreachable"]);
+  // `empty` is terminal too: re-fetching a set the source does not card burns
+  // a request and a verdict per run to learn the same thing. SCOPE=recheck is
+  // the way back once tcgdex grows the cards.
+  const TERMINAL = new Set(["ingested", "unreachable", EMPTY_STATUS]);
   const queue = [];
   for (const e of candidates) {
     const prior = priorById.get(e.id);
@@ -999,7 +1108,7 @@ if (require.main !== module) return;
   // balances by construction and can never disagree with itself.
   const take = queue.slice(0, LIMIT);
   const intended = take.length;
-  const verdicts = { ingested: 0, partial: 0, failed: 0, unreachable: 0 };
+  const verdicts = { ingested: 0, partial: 0, failed: 0, unreachable: 0, [EMPTY_STATUS]: 0 };
   let notReached = 0, rowsCreatedTotal = 0;
   // Report mode reconciles against what it INSPECTED. Counting a dry run's
   // deliberate zero writes as a shortfall reports a false imbalance and, worse,
@@ -1109,8 +1218,11 @@ if (require.main !== module) return;
       // A 404/403 from the source is the source not serving this set -- not a
       // defect in our pipe, and a different verdict from a broken acquisition.
       const isGone = /HTTP 40[34]|ENOTFOUND|exit(ed)? .*code 9|workbook empty or unreachable/i.test(msg);
-      verdict = { status: isGone ? "unreachable" : "failed", reason: `acquisition: ${msg}`, rowsCreated: 0 };
-      console.log(`      ${isGone ? "UNREACHABLE" : "FAILED"} — ${msg}`);
+      // The acquisition itself says when the SOURCE answered "nothing here".
+      // That is a verdict about the set, never a symptom of a broken lane.
+      const status = e?.emptyAtSource ? EMPTY_STATUS : isGone ? "unreachable" : "failed";
+      verdict = { status, reason: `acquisition: ${msg}`, rowsCreated: 0 };
+      console.log(`      ${status.toUpperCase()} — ${msg}`);
     }
 
     verdicts[verdict.status]++;
@@ -1143,8 +1255,11 @@ if (require.main !== module) return;
     // `pending only` run would skip on their attempt count. Consecutive, never
     // cumulative: a lane where every fourth page is genuinely unreachable is a
     // working lane, not a broken one.
-    if (verdict.status === "failed" || verdict.status === "unreachable") consecutiveFailures++;
-    else consecutiveFailures = 0;
+    // `empty` neither advances the streak NOR resets it: the source having no
+    // cards for this set is no evidence either way about the lane's health, so
+    // a genuine outage interrupted by an empty set still trips on its own run.
+    if (STREAK_STATUSES.has(verdict.status)) consecutiveFailures++;
+    else if (verdict.status !== EMPTY_STATUS) consecutiveFailures = 0;
     if (consecutiveFailures >= SYSTEMIC_FAILURE_STREAK) {
       systemicAbort = `${consecutiveFailures} consecutive entries failed or were unreachable — the lane, not the entries`;
       notReached = take.length - (i + 1);
@@ -1163,7 +1278,10 @@ if (require.main !== module) return;
   }
 
   // ── reconciliation ────────────────────────────────────────────────────────
-  const written = verdicts.ingested + verdicts.partial + verdicts.failed + verdicts.unreachable;
+  // `empty` is a verdict like any other and lands a control doc, so it counts
+  // toward `written` -- leaving it out would put a lane of correctly-refused
+  // sets straight into RECONCILED NO.
+  const written = verdicts.ingested + verdicts.partial + verdicts.failed + verdicts.unreachable + verdicts[EMPTY_STATUS];
   // CF-AN-UNREACHABLE-ENTRY-IS-ACCOUNTED-FOR (2026-09-04).
   //
   // Run 33841276495 (sportscardchecklist, report mode, limit=20) printed
@@ -1181,7 +1299,7 @@ if (require.main !== module) return;
   // APPLY's `written` already sums all four verdict buckets, unreachable
   // included, which is why only report mode ever went red on this. Report mode
   // now says the same thing: every entry the loop DECIDED, by whichever route.
-  const accounted = APPLY ? written : inspected + verdicts.unreachable;
+  const accounted = APPLY ? written : inspected + verdicts.unreachable + verdicts[EMPTY_STATUS];
   const spent = Math.round((Date.now() - STARTED) / 60000);
   console.log(`\n── driver complete in ${spent}m ──`);
   console.log(`  lane                ${lane}`);
@@ -1191,6 +1309,7 @@ if (require.main !== module) return;
     console.log(`    partial           ${f(verdicts.partial)}`);
     console.log(`    failed            ${f(verdicts.failed)}`);
     console.log(`    unreachable       ${f(verdicts.unreachable)}`);
+    console.log(`    empty at source   ${f(verdicts[EMPTY_STATUS])}   (the source served no cards; a verdict, not a lane fault)`);
   } else {
     console.log(`    inspected         ${f(inspected)}   (report mode: planned, never fetched)`);
     console.log(`    unreachable       ${f(verdicts.unreachable)}   (settled from the manifest, no fetch needed)`);
@@ -1217,7 +1336,9 @@ if (require.main !== module) return;
       job: "ingest-universe-driver",
       intended,
       written: verdicts.ingested + verdicts.partial,
-      skipped: verdicts.unreachable + notReached,
+      // An entry the source does not card is deliberately not written; it is
+      // skipped, exactly like an unreachable one -- never counted as loss.
+      skipped: verdicts.unreachable + verdicts[EMPTY_STATUS] + notReached,
       failed: verdicts.failed,
     });
   }
