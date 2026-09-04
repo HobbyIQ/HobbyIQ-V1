@@ -32,7 +32,7 @@
  * that picks its own lane on an empty input runs a lane nobody dispatched.
  *
  * Env (all via the existing backfill-runner inputs -- no new inputs):
- *   SOURCES=hobbymonitor|insider|bcp|beckett|tcdb|clc|tcgdexja   REQUIRED
+ *   SOURCES=hobbymonitor|insider|bcp|beckett|tcdb|clc|tcgdexja|sportscardchecklist   REQUIRED
  *   BACKFILL_APPLY=true    actually acquire + ingest + write verdicts
  *   LIMIT=N                entries this run (0 = budget-sized)
  *   YEARS=1969,1972        optional year scope
@@ -83,6 +83,10 @@ const LANE_ALIASES = {
   beckett: "beckett",
   clc: "clc",
   tcgdexja: "tcgdexja",
+  // The vintage lane (2026-09-04). Covers the seven football/basketball/hockey
+  // cells no other source reaches; `scc` is the short form an operator types.
+  sportscardchecklist: "sportscardchecklist",
+  scc: "sportscardchecklist",
   tcdb: "tcdb",
 };
 
@@ -96,6 +100,9 @@ const LANE_MINUTES = {
   beckett: 1.5,
   clc: 1.2,
   tcgdexja: 0.5,
+  // 0.5-2 MB per set page plus the >=2s politeness delay this source is
+  // crawled under. Measured on the three sampled sets, not assumed.
+  sportscardchecklist: 0.6,
 };
 
 // ── the canonical CSV ────────────────────────────────────────────────────────
@@ -301,6 +308,22 @@ function acquireEntry(entry, dir) {
         "--set-key", setKeyFor(entry) || "",
         "--set-name", String(entry.setName || ""),
         "--sport", String(entry.sport || "baseball"),
+      ]);
+      return { csvPath };
+    }
+    case "sportscardchecklist": {
+      // The direct-URL lane, same shape as hobbymonitor: the sourceRef IS the
+      // address. Discovery happened once, in the sitemap pass that minted these
+      // entries -- this never touches /search/, which robots.txt Disallows via
+      // `/?*` and which returns the wrong sets anyway (the survey measured
+      // "1972 topps football" returning 18 results, none of them set-11959).
+      run("fetchSportsCardChecklist.cjs", [
+        "--url", entry.sourceRef,
+        "--out", csvPath,
+        "--year", String(entry.year || ""),
+        "--set-key", setKeyFor(entry) || "",
+        "--set-name", String(entry.setName || ""),
+        "--sport", String(entry.sport || ""),
       ]);
       return { csvPath };
     }
@@ -630,7 +653,7 @@ if (require.main !== module) return;
   const rawSource = String(process.env.SOURCES || "").trim().toLowerCase();
   if (!rawSource) {
     console.error("REFUSE: SOURCES is required and has no default — name exactly one lane:");
-    console.error("        hobbymonitor | insider | bcp | beckett | clc | tcgdexja  (tcdb is refused, see below)");
+    console.error("        hobbymonitor | insider | bcp | beckett | clc | tcgdexja | sportscardchecklist  (tcdb is refused, see below)");
     process.exit(2);
   }
   if (rawSource.includes(",")) {
@@ -756,6 +779,7 @@ if (require.main !== module) return;
         beckett: "fetch <sourceRef>.xlsx → convertBeckettChecklistXlsx.cjs → ingest-checklist-csv-to-catalog.cjs",
         clc: "scrape-checklistcenter-products.cjs --urls → convertChecklistCenterToChecklistCsv.cjs → ingest-checklist-csv-to-catalog.cjs",
         tcgdexja: "scrape-tcgdex-ja.cjs --sets=<id> → ingest-checklist-csv-to-catalog.cjs",
+        sportscardchecklist: "fetchSportsCardChecklist.cjs --url <sourceRef> (direct-URL lane) → ingest-checklist-csv-to-catalog.cjs",
       }[entry.lane];
       const inCatalog = await countCatalogRows(entry).catch(() => null);
       console.log(`      would drive: ${plan}`);

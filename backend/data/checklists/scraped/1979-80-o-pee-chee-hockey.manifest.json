@@ -1,0 +1,64 @@
+{
+ "scrapedAt": "2026-09-04T05:32:31.270Z",
+ "source": "sportscardchecklist",
+ "sourceUrl": "file:1979-80-o-pee-chee-hockey.trimmed.html",
+ "sport": "hockey",
+ "year": 1979,
+ "season": "1979",
+ "setName": "1979-80 O-Pee-Chee Hockey",
+ "productKey": "1979-o-pee-chee",
+ "setKey": "o-pee-chee",
+ "rowCount": 396,
+ "parallelColumnAuthoritative": true,
+ "cardRows": 396,
+ "ladderRows": 0,
+ "subsetRows": 45,
+ "printRunsFound": 0,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > League Leaders",
+   "category": "insert-league-leaders",
+   "playerCount": 8,
+   "rungs": 0,
+   "rowCount": 8,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > All-Star",
+   "category": "insert-all-star",
+   "playerCount": 12,
+   "rungs": 0,
+   "rowCount": 12,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Team Checklist",
+   "category": "insert-team-checklist",
+   "playerCount": 3,
+   "rungs": 0,
+   "rowCount": 3,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Record Breaker",
+   "category": "insert-record-breaker",
+   "playerCount": 4,
+   "rungs": 0,
+   "rowCount": 4,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Checklist",
+   "category": "insert-checklist",
+   "playerCount": 18,
+   "rungs": 0,
+   "rowCount": 18,
+   "refused": false,
+   "printRun": null
+  }
+ ]
+}

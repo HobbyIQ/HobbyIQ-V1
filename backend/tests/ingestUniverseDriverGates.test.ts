@@ -225,7 +225,14 @@ describe("ingest-universe-driver — the manifest is the durable universe", () =
   const manifest = JSON.parse(fs.readFileSync(path.join(backend, "data", "ingest-universe.json"), "utf8"));
 
   it("carries every enumerated entry with a unique id and a resolvable sourceRef", () => {
-    expect(manifest.entries.length).toBe(7755);
+    // D37 enumerated 7,755 across six lanes; the 2026-09-04 sitemap survey added
+    // 5,850 sportscardchecklist entries for the seven vintage football/basketball/
+    // hockey cells (plus the hockey/topps bonus cell). Both halves are pinned, so
+    // a lane that silently loses its entries is still caught.
+    const scc = manifest.entries.filter((e: any) => e.lane === "sportscardchecklist");
+    expect(scc.length).toBe(5850);
+    expect(manifest.entries.length - scc.length).toBe(7755);
+    expect(manifest.entries.length).toBe(13605);
     const ids = new Set(manifest.entries.map((e: any) => e.id));
     expect(ids.size).toBe(manifest.entries.length);
     expect(manifest.entries.every((e: any) => typeof e.sourceRef === "string" && /^https?:\/\//.test(e.sourceRef))).toBe(true);
