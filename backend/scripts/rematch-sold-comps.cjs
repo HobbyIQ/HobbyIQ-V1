@@ -21,6 +21,17 @@
  *                      step (falls back to a parseable CENSUS_JSON line).
  *                      Touches nothing, ever -- there is no write path in this
  *                      mode at all, not even behind APPLY.
+ *   MODE=apply-improve  SCOPE=revert-eviction
+ *                      THE ONE WAY BACK. Reads the rows this script's own
+ *                      base-eviction wave WROTE -- the ones carrying
+ *                      `baseEvictionEvidence` and `rekeyedFrom` -- re-reads
+ *                      each one's title against G6, and moves the ones G6 now
+ *                      refuses back to `rekeyedFrom[0].cardId`. No shard axis,
+ *                      no derivation, no catalog: the destination is the slug
+ *                      the row itself recorded that it came from. Report-first
+ *                      like every other apply, and it rides the SAME runner
+ *                      inputs -- there is no revert lane, no revert script and
+ *                      no new dispatch input.
  *   MODE=apply-improve Re-reads the shard and applies ONLY IMPROVE-class,
  *                      AUTO-tier rows AND the BASE-EVICTION subclass of
  *                      CONFLICT, through scripts/lib/relocate-sold-comp
@@ -95,6 +106,7 @@
  *      LIMIT                                 cap rows read (0 = the whole slot)
  *      YEARS                                 narrow to these years inside the slot
  *      CENSUS_OUT                            where the shard census JSON lands
+ *      SCOPE=revert-eviction                 undo damaged evictions (see above)
  * Requires dist/ (parseTitleIdentity, hobbyIqCardId, slugGuard,
  * persistVendorSalesToPool, writeReconciliation).
  */
@@ -133,6 +145,24 @@ const CENSUS_OUT = String(process.env.CENSUS_OUT || "/tmp/rematch-census").trim(
  *   SCOPE=base-eviction   apply evictions only   <- the clean class
  *   SCOPE=improve         apply IMPROVE only
  *   SCOPE=both            apply both (the pre-2026-09-03 behaviour)
+ *   SCOPE=revert-eviction UNDO evictions G6 now refuses  <- the way back
+ *
+ * REVERT IS A SCOPE, NOT A LANE (2026-09-04). The base-eviction wave wrote
+ * 1,456 rows before it was halted, and 12 of them are DAMAGED: G6 now says the
+ * title states the stored slug's own parallel, so those evictions should never
+ * have run. The obvious shape for the undo is a one-off repair script, and the
+ * one-off-per-defect era is precisely what the GREAT REMATCH replaced -- a
+ * separate script would carry its own copy of the marker read, its own
+ * reconciliation and its own idea of what a revert is, and would then drift
+ * from the guard whose verdict it exists to honour.
+ *
+ * So the undo lives HERE, behind the same MODE, the same `scope` input, the
+ * same BACKFILL_APPLY, the same reconciliation and the same verify-by-read. It
+ * consults G6 through the SAME classifier function the eviction path consults,
+ * so the two can never disagree about which rows are damaged. And it never
+ * derives a destination: `rekeyedFrom[0].cardId` is the slug the row recorded
+ * for itself on the way out, which makes the revert exact rather than a second
+ * guess at an identity.
  *
  * THE INHERITED DEFAULT IS NOT A SCOPE. That input's runner-wide default is
  * "refractor" and its description says the value is INHERITED rather than
@@ -347,11 +377,36 @@ async function main() {
     process.exit(2);
   }
   const ARMED = applyScope.classes;
+  const REVERTING = MODE === "apply-improve" && applyScope.revert === true;
 
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) { console.error("FATAL: COSMOS_CONNECTION_STRING not set"); process.exit(1); }
   if (!Number.isFinite(SLOT) || !Number.isFinite(SLOTS) || SLOT < 0 || SLOT >= SLOTS) {
     console.error(`FATAL: SLOT must be 0..${SLOTS - 1}; got SLOT=${SLOT} SLOTS=${SLOTS}`); process.exit(2);
+  }
+  // THE REVERT PASS BRANCHES BEFORE THE SHARD TABLE, and deliberately.
+  //
+  // That table is a measured packing of 16.3M pool rows into 32 slots by year
+  // and sport. The revert's population is the ~1,456 rows carrying the
+  // eviction marker, which do not respect it at all -- an eviction moved each
+  // one to a BASE slug carrying the row's own year, so slotting them by that
+  // table would hand one slot nearly everything and the rest nothing. The
+  // revert shards on sha1(id) % SLOTS instead, which is uniform over whatever
+  // the marked set turns out to be, and SLOTS=1 (the default for an unsharded
+  // dispatch) puts the whole of it in slot 0.
+  //
+  // So `SLOTS !== 32` is not an error for a revert, and the reachability
+  // checks below -- which ask what the SHARD TABLE says slot N owns -- are not
+  // questions a revert can answer or needs to.
+  if (REVERTING) {
+    const backendDir = requireDist();
+    const poolDb = cosmos(conn);
+    await revertEvictions({
+      pool: poolDb.container("sold_comps"),
+      retry: retry,
+      reportWrites: require(path.join(backendDir, "dist", "services", "ops", "writeReconciliation.js")).reportWrites,
+    });
+    return;
   }
   if (SLOTS !== SHARD_TABLE.slots.length) {
     console.error(`FATAL: SLOTS=${SLOTS} but the measured shard table has ${SHARD_TABLE.slots.length} slots. The table IS the axis -- re-measure before changing it.`);
@@ -440,6 +495,12 @@ async function main() {
   // SPLIT-IDENTITY tallies, kept beside the class counts rather than inside
   // them: a row is split OR NOT independently of which class it landed in.
   const splitByClass = new Map(), splitSegments = new Map(), splitSamples = [];
+  // SLUG-SHAPE DEFECTS: two report-only subclasses (2026-09-04), tallied the
+  // same way as the split signal -- a row carries them independently of the
+  // class it lands in, so they are counted ALONGSIDE the class totals and must
+  // never be summed with them. See SLUG_SHAPE_DEFECTS in the classifier for
+  // why each one stops at a count.
+  const slugShapeCounts = new Map(), slugShapeByClass = new Map(), slugShapeSamples = new Map();
   let splitTotal = 0;
   const stats = { seen: 0, otherSlot: 0, intended: 0, written: 0, skipped: 0, failed: 0, duplicatesLeft: 0, alreadyGone: 0, notReached: 0 };
   const bump = (m, k, n = 1) => m.set(k, (m.get(k) ?? 0) + n);
@@ -538,6 +599,13 @@ async function main() {
           splitSamples.push(`${row.id}  [${res.klass}/${res.tier}]  ${row.cardId}  ||  ${row.hobbyiqCardId}${res.splitSegments?.length ? `  [${res.splitSegments.join(",")}]` : ""}`);
         }
       }
+      for (const d of res.slugShapeDefects ?? []) {
+        bump(slugShapeCounts, d);
+        bump(slugShapeByClass, `${d}/${res.klass}`);
+        if (!slugShapeSamples.has(d)) slugShapeSamples.set(d, []);
+        const arr = slugShapeSamples.get(d);
+        if (arr.length < 20) arr.push(`${row.id}  ${row.cardId}  [${res.klass}/${res.tier}]  printRun=${JSON.stringify(row.printRun ?? null)}  "${String(row.title ?? "").slice(0, 60)}"`);
+      }
       if (res.subclass) bump(subclasses, `${res.klass}/${res.subclass}/${res.tier}`);
       bump(byTier, `${res.klass}/${res.tier}`);
       for (const a of K.defectAxes(res)) bump(defects, `${res.klass}  ${a}`);
@@ -599,6 +667,19 @@ async function main() {
     for (const line of splitSamples) console.log(`      ${line}`);
     console.log(`                  The apply path lands BOTH fields, so an audited apply repairs the split with the re-key.`);
   }
+  // SLUG-SHAPE DEFECTS: reported, never acted on. Each row here has ALREADY
+  // been counted in its derivation class -- this says how many of them carry a
+  // key whose SHAPE is wrong, which is a different question from whether the
+  // identity that key encodes is.
+  if (slugShapeCounts.size) {
+    console.log(`\n  SLUG-SHAPE DEFECTS  (REPORT ONLY -- counted, never a refusal and never a write)`);
+    for (const [d, n] of [...slugShapeCounts].sort((a, b) => b[1] - a[1])) {
+      console.log(`    ${d}  ${f(n)} rows (${pct(n)})`);
+      const byC = [...slugShapeByClass].filter(([k]) => k.startsWith(`${d}/`)).sort((a, b) => b[1] - a[1]);
+      if (byC.length) console.log(`      by class: ${byC.map(([k, c]) => `${k.split("/").slice(1).join("/")} ${f(c)}`).join(" | ")}`);
+      for (const line of slugShapeSamples.get(d) ?? []) console.log(`        ${line}`);
+    }
+  }
   console.log(`\n  top defect axes per class:`);
   for (const klass of [K.IMPROVE, K.CONFLICT]) {
     const rows = [...defects].filter(([k]) => k.startsWith(`${klass}  `)).sort((a, b) => b[1] - a[1]).slice(0, 10);
@@ -646,6 +727,14 @@ async function main() {
       byClass: Object.fromEntries(splitByClass),
       segments: Object.fromEntries(splitSegments),
       samples: splitSamples,
+    },
+    // Orthogonal to `counts` in exactly the way splitIdentity is -- a row with
+    // a malformed slug is ALSO counted in its derivation class. Report only.
+    slugShapeDefects: {
+      total: [...slugShapeCounts.values()].reduce((a, b) => a + b, 0),
+      byDefect: Object.fromEntries(slugShapeCounts),
+      byDefectAndClass: Object.fromEntries(slugShapeByClass),
+      samples: Object.fromEntries([...slugShapeSamples]),
     },
     stoppedAtBudget: !!stopReason, generatedAt: new Date().toISOString(),
   };
@@ -816,6 +905,248 @@ async function main() {
   if (stopReason) console.log(`\n${stopReason}`);
 }
 
-module.exports = { unitsForSlot, unitPredicate, slotQuery, rowInSlot, storedIdentity, deriveIdentity, hashPartOf, SPORT_CLASSES, SHARD_TABLE, APPLY_SCOPE_RAW };
+/** The backend root, so the revert branch can reach dist/ for the one service
+ *  it needs (writeReconciliation) without building the full `deps` bundle the
+ *  census path assembles -- a revert parses no titles and derives no slugs. */
+function requireDist() { return path.resolve(__dirname, ".."); }
+
+/** One Cosmos database handle, with the retry policy every pass here uses. */
+function cosmos(conn) {
+  return new CosmosClient({
+    connectionString: conn,
+    connectionPolicy: { retryOptions: { maxRetryAttemptsOnThrottledRequests: 30, maxWaitTimeInSeconds: 120 } },
+  }).database("hobbyiq");
+}
+
+/**
+ * THE REVERT PASS -- MODE=apply-improve SCOPE=revert-eviction.
+ *
+ * Reads the rows this script's own base-eviction wave WROTE, re-reads each
+ * one's title against G6, and moves the ones G6 now refuses back to the slug
+ * the row itself recorded on the way out.
+ *
+ * WHAT IT SELECTS. `IS_DEFINED(c.baseEvictionEvidence)` -- the marker only the
+ * eviction branch of the apply loop ever writes. A row without it was not
+ * moved by an eviction and is untouchable here whatever its shape, so the
+ * revert can never reach a row this script did not itself write.
+ *
+ * WHAT IT MOVES IT TO. `rekeyedFrom[0].cardId`, and nothing else. No parser,
+ * no catalog, no derivation: the origin slug is recorded ON the row, so the
+ * revert is exact rather than a second guess at an identity. A row whose
+ * marker is malformed -- no rekeyedFrom, no cardId in it, or an origin equal
+ * to where the row already sits -- is SKIPPED and named, never repaired by
+ * inference.
+ *
+ * WHICH ONES. The ones whose CURRENT title fails G6, through the same
+ * `storedParallelStatedInTitle` the eviction path consults, evaluated against
+ * the ORIGIN slug -- that is the identity the eviction took away, so that is
+ * the identity the title has to be tested against. A row G6 is happy with was
+ * a correct eviction and stays where the wave put it. Measured on the live
+ * pool 2026-09-04: 12 of 1,456.
+ *
+ * WHAT IT LEAVES BEHIND. The marker is never deleted. `baseEvictionEvidence`
+ * is renamed to `revertedEvictionEvidence` and an audit trail is added --
+ * `evictionRevertedAt`, `evictionRevertedReason` and `revertedFrom` (the base
+ * slug the row is being taken off) -- so a row that has been out and back
+ * carries the whole round trip in its own document. Erasing the evidence would
+ * make a reverted row indistinguishable from one the wave never touched, and
+ * the next census would have no way to know it had already been ruled on.
+ *
+ * PROTECTED ROWS ARE PROTECTED IN BOTH DIRECTIONS. A row that has acquired a
+ * user source or a ruling marker since the eviction is reported, never moved:
+ * "put it back" is still a write, and a write onto a user's own row is exactly
+ * what the PROTECTED tier exists to refuse.
+ *
+ * Report-first: without BACKFILL_APPLY it prints every row it would move, with
+ * the exact from/to slugs, and touches nothing. The reconciliation is the same
+ * identity every other pass here balances on -- intended = written + skipped +
+ * failed -- and the write goes through the same relocateSoldComp, so the sale
+ * arrives at the origin slug and is verified by read before the base row is
+ * deleted.
+ */
+async function revertEvictions({ pool, retry: retry_, reportWrites }) {
+  const q = {
+    query: "SELECT * FROM c WHERE IS_DEFINED(c.baseEvictionEvidence)"
+      + (LIMIT ? " OFFSET 0 LIMIT @lim" : ""),
+    parameters: LIMIT ? [{ name: "@lim", value: LIMIT }] : [],
+  };
+  console.log(`\nREVERT-EVICTION  ${APPLY ? "APPLYING" : "REPORT ONLY -- nothing written"}  concurrency ${CONCURRENCY}`);
+  console.log(`  selects rows carrying baseEvictionEvidence -- the marker only this script's eviction branch writes.`);
+  console.log(`  moves the ones G6 refuses back to rekeyedFrom[0].cardId (both cardId AND hobbyiqCardId).`);
+  console.log(`  the marker is never deleted: it is renamed revertedEvictionEvidence and an audit trail is added.`);
+  if (LIMIT) console.log(`  LIMIT=${f(LIMIT)} -- reading at most that many marked rows.`);
+  // THE BANNER SAYS WHICH SLICE THIS RUN OWNS, BEFORE A ROW IS READ.
+  //
+  // SLOTS defaults to 32 for the census, and a revert dispatched without
+  // `slots` would then silently read 1/32 of the marked rows and report a
+  // clean reconciliation over a thirty-second of the population -- a green run
+  // that did a thirty-second of the job. So the slice is stated, and stated as
+  // a warning when it is a slice at all: the marked population is ~1,456 rows,
+  // which one run handles whole.
+  if (SLOTS > 1) {
+    console.log(`  !! SLOT ${SLOT}/${SLOTS} -- this run owns only sha1(id) %% ${SLOTS} == ${SLOT} of the marked rows.`);
+    console.log(`     The marked population is small enough for ONE run: dispatch with slots=1 to take all of it.`);
+  } else {
+    console.log(`  slots=1 -- this run owns every marked row.`);
+  }
+
+  // THE SLOT IS A SHARD OF THE MARKED POPULATION, NOT OF THE POOL. The measured
+  // shard table is a packing of 16.3M rows by year and sport, and the marked
+  // population is 1,456 rows that do not respect it -- an eviction moved them
+  // to a base slug whose year is the row's own, so slotting them by that table
+  // would give one slot everything. sha1(id) % SLOTS is uniform by
+  // construction over whatever the marked set turns out to be, and SLOTS=1
+  // (the default for a run that does not shard) puts all of it in slot 0.
+  const mine = (row) => SLOTS <= 1 || hashPartOf(row.id, SLOTS) === SLOT;
+
+  const seen = { read: 0, otherSlot: 0 };
+  const candidates = [];
+  const skips = new Map();
+  const bumpSkip = (k) => skips.set(k, (skips.get(k) ?? 0) + 1);
+  const it = pool.items.query(q, { maxItemCount: 200 });
+  while (it.hasMoreResults()) {
+    if (budgetLeft() < 90000) { console.log(`  stopped reading at the ${RUN_MINUTES}-minute budget`); break; }
+    const { resources } = await retry_(() => it.fetchNext());
+    for (const row of resources ?? []) {
+      if (!mine(row)) { seen.otherSlot++; continue; }
+      seen.read++;
+      const v = revertVerdict(row);
+      if (!v.revert) { bumpSkip(v.reason); continue; }
+      candidates.push({ row, origin: v.origin, g6: v.g6 });
+    }
+  }
+  console.log(`\n  marked rows read   ${f(seen.read)}${seen.otherSlot ? `   (${f(seen.otherSlot)} in other slots)` : ""}`);
+  console.log(`  G6 refuses         ${f(candidates.length)}   <- these are the damaged evictions`);
+  if (skips.size) {
+    console.log(`  left alone:`);
+    for (const [k, n] of [...skips].sort((a, b) => b[1] - a[1])) console.log(`    ${f(n).padStart(8)}  ${k}`);
+  }
+  if (candidates.length) {
+    console.log(`\n  every row this pass would move, in full:`);
+    for (const c of candidates) {
+      console.log(`    ${c.row.id}`);
+      console.log(`      from  ${c.row.cardId}`);
+      console.log(`      to    ${c.origin}`);
+      console.log(`      G6    ${c.g6.phrase} (from the ${c.g6.from}) stated in "${String(c.row.title ?? "").slice(0, 90)}"`);
+    }
+  }
+
+  const stats = { intended: candidates.length, written: 0, skipped: 0, failed: 0, notReached: 0, duplicatesLeft: 0 };
+  const outcomes = new Map();
+  let idx = 0;
+  const worker = async () => {
+    while (idx < candidates.length) {
+      const my = idx++;
+      if (budgetLeft() < 90000) { stats.notReached += candidates.length - my; return; }
+      const c = candidates[my];
+      // RE-READ. The pool moves; the verdict is taken again on what is there
+      // NOW, exactly as the eviction path re-checks its own class at write
+      // time. A row somebody has since moved, ruled on or deleted is skipped.
+      let fresh = null;
+      try { fresh = (await retry_(() => pool.item(c.row.id, c.row.cardId).read())).resource ?? null; }
+      catch (e) { if (e?.code !== 404 && e?.statusCode !== 404) { stats.failed++; outcomes.set("read-failed", (outcomes.get("read-failed") ?? 0) + 1); continue; } }
+      if (!fresh) { stats.skipped++; outcomes.set("row-gone-since-read", (outcomes.get("row-gone-since-read") ?? 0) + 1); continue; }
+      const v = revertVerdict(fresh);
+      if (!v.revert) { stats.skipped++; outcomes.set(`no-longer-revertable:${v.reason}`, (outcomes.get(`no-longer-revertable:${v.reason}`) ?? 0) + 1); continue; }
+
+      const keep = stripSystem(fresh);
+      const from = fresh.cardId;
+      keep.cardId = v.origin;
+      keep.hobbyiqCardId = v.origin;
+      // THE PARALLEL FIELD IS NOT REPAIRED HERE. The eviction did not change
+      // it -- guard 2 required it blank to begin with -- so writing one now
+      // would be this pass inventing an identity, which is the one thing a
+      // revert must not do. The row goes back to the slug it came from and the
+      // next census reads it fresh.
+      keep.contentHash = contentHashOf(keep);
+      // THE AUDIT TRAIL. The marker is renamed rather than deleted, so a row
+      // that has been out and back says so in its own document and no later
+      // census can mistake it for one the wave never touched.
+      keep.revertedEvictionEvidence = fresh.baseEvictionEvidence ?? null;
+      delete keep.baseEvictionEvidence;
+      keep.revertedFrom = [{ id: fresh.id, cardId: from, hobbyiqCardId: fresh.hobbyiqCardId ?? null, title: fresh.title ?? null }];
+      keep.evictionRevertedAt = new Date().toISOString();
+      keep.evictionRevertedReason =
+        `GREAT REMATCH (2026-09-04): BASE-EVICTION REVERTED -- G6 refuses it. `
+        + `The title states the stored identity's own parallel "${v.g6.phrase}" (from the ${v.g6.from}) in full, `
+        + `so the row and its slug AGREE and there was nothing to evict. `
+        + `Moved back to the recorded origin ${v.origin} from ${from}.`;
+
+      const r = await relocateSoldComp(pool, {
+        keep, drop: [{ id: fresh.id, cardId: from }], retry: retry_,
+        verifyFields: ["cardId", "hobbyiqCardId", "evictionRevertedAt"], dryRun: !APPLY,
+      });
+      if (!APPLY) { stats.written++; outcomes.set("would-revert", (outcomes.get("would-revert") ?? 0) + 1); continue; }
+      if (!r.ok && r.stage !== "done") { stats.failed++; console.log(`  FAILED at ${r.stage} ${fresh.id}: ${String(r.error).slice(0, 110)}`); continue; }
+      if (r.duplicatesLeft.length) { stats.failed++; stats.duplicatesLeft += r.duplicatesLeft.length; for (const dd of r.duplicatesLeft) console.log(`  DUPLICATE LEFT ${dd.id}@${dd.cardId}: ${String(dd.error).slice(0, 80)}`); continue; }
+      stats.written++; outcomes.set("reverted", (outcomes.get("reverted") ?? 0) + 1);
+      console.log(`  REVERTED ${fresh.id}  ${from}  ->  ${v.origin}   (G6: ${v.g6.phrase})`);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(CONCURRENCY, Math.max(candidates.length, 1)) }, worker));
+
+  console.log(`\n  ${APPLY ? "reverted" : "would revert"}   ${f(stats.written)}`);
+  console.log(`  skipped        ${f(stats.skipped)}   <- re-checked at write time and no longer revertable`);
+  console.log(`  failed         ${f(stats.failed)}${stats.duplicatesLeft ? `   (${f(stats.duplicatesLeft)} duplicates left in the pool -- reported, never a lost sale)` : ""}`);
+  console.log(`  not reached    ${f(stats.notReached)}`);
+  for (const [k, n] of [...outcomes].sort((a, b) => b[1] - a[1])) console.log(`    ${f(n).padStart(8)}  ${k}`);
+  console.log(`\n  intended ${f(stats.intended)} = written ${f(stats.written)} + skipped ${f(stats.skipped)} + failed ${f(stats.failed)} + not reached ${f(stats.notReached)}`);
+  const recon = stats.written + stats.skipped + stats.failed + stats.notReached;
+  if (recon !== stats.intended) {
+    console.error(`!! reconciliation drift: ${recon} accounted vs ${stats.intended} intended (${recon - stats.intended}). Exit 4.`);
+    process.exitCode = 4;
+  }
+  if (APPLY) reportWrites({ job: "rematch-sold-comps:revert-eviction", intended: stats.intended, written: stats.written, skipped: stats.skipped, failed: stats.failed });
+  return stats;
+}
+
+/**
+ * Should THIS marked row be moved back, and where to?
+ *
+ * Returns { revert, reason, origin, g6 }. Pure over one document, so a test
+ * drives it with a plain object and no Cosmos at all -- which is what lets the
+ * selection rule be pinned separately from the write.
+ *
+ * The G6 test is run against the ORIGIN slug, not the row's current one: the
+ * current slug is the BASE slug the eviction produced, and asking whether the
+ * title states THAT parallel would always be no. The question is whether the
+ * title states the parallel the eviction took away.
+ */
+function revertVerdict(row) {
+  const no = (reason) => ({ revert: false, reason, origin: null, g6: null });
+  if (!row || !row.baseEvictionEvidence) return no("no-eviction-marker");
+  // PROTECTED IS PROTECTED IN BOTH DIRECTIONS. Putting a row back is still a
+  // write, and a row that has since become a user's own is not this pass's to
+  // move -- it is reported and left exactly where it sits.
+  // `provenanceTier` returns { tier, reasons } -- comparing the OBJECT to the
+  // constant is always false, and a guard that is always false is no guard.
+  if (K.provenanceTier(row).tier === K.PROTECTED) return no("protected-since-the-eviction");
+  const from = Array.isArray(row.rekeyedFrom) ? row.rekeyedFrom[0] : null;
+  const origin = from && from.cardId ? String(from.cardId) : "";
+  if (!origin) return no("marker-carries-no-origin-slug");
+  if (origin === String(row.cardId)) return no("already-at-the-origin-slug");
+  const setKey = String(row.cardId ?? "").split(":")[3] ?? "";
+  const g6 = K.storedParallelStatedInTitle({
+    title: row.title, storedSlug: origin,
+    // The eviction required the stored parallel FIELD to be blank, and it did
+    // not change it -- so the slug is the only half of the origin identity
+    // that still names the parallel, and it is read from the origin slug.
+    stored: { parallel: row.baseEvictionEvidence?.storedParallelField ?? row.parallel ?? null },
+    setKey,
+  });
+  if (!g6) return no("G6-agrees-with-the-eviction");
+  return { revert: true, reason: "G6-refuses-the-eviction", origin, g6 };
+}
+
+module.exports = {
+  unitsForSlot, unitPredicate, slotQuery, rowInSlot, storedIdentity, deriveIdentity,
+  hashPartOf, SPORT_CLASSES, SHARD_TABLE, APPLY_SCOPE_RAW,
+  // The revert pass. `revertVerdict` is pure over one document, so the
+  // SELECTION rule can be pinned with plain objects and no Cosmos at all;
+  // `revertEvictions` is driven against the stubbed container the other apply
+  // tests use, so the WRITE is pinned on the committed script rather than on a
+  // test's re-implementation of it.
+  revertVerdict, revertEvictions,
+};
 
 if (require.main === module) main().catch((e) => { console.error("FATAL:", e?.stack || e?.message); process.exit(3); });
