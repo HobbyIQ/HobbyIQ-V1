@@ -1,0 +1,32 @@
+{
+ "scrapedAt": "2026-09-04T19:31:32.147Z",
+ "source": "sportscardchecklist",
+ "sourceUrl": "https://www.sportscardchecklist.com/set-13943/1997-sp-baseball-trading-card-checklist",
+ "sport": "baseball",
+ "year": 1997,
+ "season": "1997",
+ "setName": "1997 SP",
+ "productKey": "1997-sp",
+ "setKey": "sp",
+ "setKeyRequested": "sp",
+ "parallelOfParent": false,
+ "parallelName": null,
+ "subset": null,
+ "rowCount": 184,
+ "parallelColumnAuthoritative": true,
+ "cardRows": 184,
+ "ladderRows": 0,
+ "subsetRows": 1,
+ "printRunsFound": 0,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Checklist",
+   "category": "insert-checklist",
+   "playerCount": 1,
+   "rungs": 0,
+   "rowCount": 1,
+   "refused": false,
+   "printRun": null
+  }
+ ]
+}

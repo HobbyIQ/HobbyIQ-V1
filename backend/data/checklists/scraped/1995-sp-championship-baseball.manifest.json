@@ -1,0 +1,32 @@
+{
+ "scrapedAt": "2026-09-04T19:31:35.042Z",
+ "source": "sportscardchecklist",
+ "sourceUrl": "https://www.sportscardchecklist.com/set-13186/1995-sp-championship-baseball-trading-card-checklist",
+ "sport": "baseball",
+ "year": 1995,
+ "season": "1995",
+ "setName": "1995 SP Championship",
+ "productKey": "1995-sp-championship",
+ "setKey": "sp-championship",
+ "setKeyRequested": "sp-championship",
+ "parallelOfParent": false,
+ "parallelName": null,
+ "subset": null,
+ "rowCount": 202,
+ "parallelColumnAuthoritative": true,
+ "cardRows": 202,
+ "ladderRows": 0,
+ "subsetRows": 2,
+ "printRunsFound": 0,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Checklist",
+   "category": "insert-checklist",
+   "playerCount": 2,
+   "rungs": 0,
+   "rowCount": 2,
+   "refused": false,
+   "printRun": null
+  }
+ ]
+}

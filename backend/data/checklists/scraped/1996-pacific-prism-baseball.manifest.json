@@ -1,0 +1,22 @@
+{
+ "scrapedAt": "2026-09-04T19:31:49.497Z",
+ "source": "sportscardchecklist",
+ "sourceUrl": "https://www.sportscardchecklist.com/set-13431/1996-pacific-prisms-baseball-trading-card-checklist",
+ "sport": "baseball",
+ "year": 1996,
+ "season": "1996",
+ "setName": "1996 Pacific Prism",
+ "productKey": "1996-pacific-prism",
+ "setKey": "pacific-prism",
+ "setKeyRequested": "pacific-prism",
+ "parallelOfParent": false,
+ "parallelName": null,
+ "subset": null,
+ "rowCount": 144,
+ "parallelColumnAuthoritative": true,
+ "cardRows": 144,
+ "ladderRows": 0,
+ "subsetRows": 0,
+ "printRunsFound": 0,
+ "sectionsReport": []
+}

@@ -1,0 +1,22 @@
+{
+ "scrapedAt": "2026-09-04T19:12:51.091Z",
+ "source": "sportscardchecklist",
+ "sourceUrl": "https://www.sportscardchecklist.com/set-14530/1998-score-rookie-and-traded-baseball-trading-card-checklist",
+ "sport": "baseball",
+ "year": 1998,
+ "season": "1998",
+ "setName": "1998 Score Rookie and Traded",
+ "productKey": "1998-score-rookie-and-traded",
+ "setKey": "score-rookie-and-traded",
+ "setKeyRequested": "score-rookie-and-traded",
+ "parallelOfParent": false,
+ "parallelName": null,
+ "subset": null,
+ "rowCount": 271,
+ "parallelColumnAuthoritative": true,
+ "cardRows": 271,
+ "ladderRows": 0,
+ "subsetRows": 0,
+ "printRunsFound": 0,
+ "sectionsReport": []
+}

@@ -289,6 +289,45 @@ const PARENT_BRANDS = [
  */
 const PRODUCT_TAIL_RE = /(?:^|-)(tiffany|glossy)(?:-|$)/;
 
+/**
+ * CF-A-JUNK-WAX-PRODUCT-IS-NOT-A-SUBSET-OF-ITS-BRAND (2026-09-04, IMPROVE gate
+ * audit of #1758).
+ *
+ * The same collapse #1748 fixed for the coated reprints, one era later. Measured
+ * on the shipped fetcher, staging the products the ~61k stranded 1990s baseball
+ * sales name:
+ *
+ *   set-12553/1991-score-rookie-and-traded-baseball...
+ *     --set-key score-rookie-and-traded  ->  setKey "score", subset "Rookie And Traded"
+ *   set-19948/1992-upper-deck-minors-baseball...
+ *     --set-key upper-deck-minor-league  ->  setKey "upper-deck", subset "Minors"
+ *
+ * Both are WRONG in the way that costs a pool. Score Rookie & Traded is a
+ * separate 110-card boxed set with its OWN numbering (`58T`, `100T` -- the `T`
+ * suffix is the giveaway) that no flagship Score card carries; Upper Deck Minors
+ * is a different licence, different players, its own run. Folding either onto
+ * the flagship puts two products in one pool at colliding numbers, which is the
+ * split pool in reverse -- and BOTH the pool and the catalog already spell them
+ * apart: `1991 Score Rookie & Traded Baseball #58T` is how the sales read, and
+ * `upper-deck-minors` holds 300/300 baseballcardpedia-backed catalog rows at
+ * 1992/1994/1995 (sampled 2026-09-04) while `upper-deck` is the flagship.
+ *
+ * The `-refractors` / `-cards-that-never-were` rule #1741 wrote is still right
+ * for what it was written about: a rung or an insert INSIDE a product, with no
+ * pool of its own. It is wrong for a separately-issued product whose slug merely
+ * begins with its brand's name, and the brand-prefix test cannot tell the two
+ * apart from the slug alone. Only a ruling can, so the ruled ones are named.
+ *
+ * KEPT AS A LOCAL LIST for the same reason PRODUCT_TAIL_RE is (this file must
+ * run offline against cached HTML with no dist/), and pinned against
+ * productSetKeys.ts by the same test, so the two cannot drift.
+ */
+const RULED_PRODUCT_SLUGS = [
+  /^score-rookie-(?:and-|&-)?traded(?:-|$)/,
+  /^upper-deck-minors?(?:-|$)/,
+  /^upper-deck-minor-league(?:-|$)/,
+];
+
 
 /** The rung tail this slug matched, or null. Returned separately from the LABEL
  *  so the parent split can strip exactly what was recognised. */
@@ -318,6 +357,11 @@ function splitParentAndSubset(rest, tailRe) {
   // its OWN product; splitting it would reparent it onto the paper set whose
   // numbers it shares, which is the one collapse this lane must never make.
   if (PRODUCT_TAIL_RE.test(r)) return { parentSetKey: "", subset: "" };
+  // A separately-issued product whose slug opens with its brand's name keeps its
+  // own key, for the same reason a coated reprint does: the brand-prefix test
+  // below would make it a subset of the flagship and merge two pools that share
+  // no numbering.
+  if (RULED_PRODUCT_SLUGS.some((re) => re.test(r))) return { parentSetKey: "", subset: "" };
   for (const b of PARENT_BRANDS) {
     if (r === b) return { parentSetKey: b, subset: "" };
     if (r.startsWith(b + "-")) {

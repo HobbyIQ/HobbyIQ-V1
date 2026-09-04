@@ -1,0 +1,22 @@
+{
+ "scrapedAt": "2026-09-04T19:14:55.493Z",
+ "source": "sportscardchecklist",
+ "sourceUrl": "https://www.sportscardchecklist.com/set-13835/1997-pacific-crown-collection-silver-baseball-trading-card-checklist",
+ "sport": "baseball",
+ "year": 1997,
+ "season": "1997",
+ "setName": "1997 Pacific Crown Collection Silver",
+ "productKey": "1997-pacific-crown-collection",
+ "setKey": "pacific-crown-collection",
+ "setKeyRequested": "pacific-crown-collection",
+ "parallelOfParent": false,
+ "parallelName": "Silver",
+ "subset": null,
+ "rowCount": 450,
+ "parallelColumnAuthoritative": true,
+ "cardRows": 450,
+ "ladderRows": 0,
+ "subsetRows": 0,
+ "printRunsFound": 0,
+ "sectionsReport": []
+}

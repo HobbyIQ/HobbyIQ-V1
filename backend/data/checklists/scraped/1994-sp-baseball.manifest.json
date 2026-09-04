@@ -1,0 +1,22 @@
+{
+ "scrapedAt": "2026-09-04T19:31:24.455Z",
+ "source": "sportscardchecklist",
+ "sourceUrl": "https://www.sportscardchecklist.com/set-12932/1994-sp-baseball-trading-card-checklist",
+ "sport": "baseball",
+ "year": 1994,
+ "season": "1994",
+ "setName": "1994 SP",
+ "productKey": "1994-sp",
+ "setKey": "sp",
+ "setKeyRequested": "sp",
+ "parallelOfParent": false,
+ "parallelName": null,
+ "subset": null,
+ "rowCount": 201,
+ "parallelColumnAuthoritative": true,
+ "cardRows": 201,
+ "ladderRows": 0,
+ "subsetRows": 0,
+ "printRunsFound": 0,
+ "sectionsReport": []
+}

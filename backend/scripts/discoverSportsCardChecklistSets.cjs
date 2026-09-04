@@ -182,6 +182,52 @@ const CELLS = [
    * remainder, so `1996-97-skybox-e-x2000-fleer-...` stays out.
    */
   { sport: "baseball",   setKey: "fleer",      from: 1985, to: 2003, label: "baseball/fleer/1985-2003" },
+  /**
+   * CF-THE-1990S-BRANDS-THE-REMATCH-CANNOT-PLACE (2026-09-04, IMPROVE gate audit
+   * of #1758).
+   *
+   * The two notes above each say the same thing twice: the remaining baseball
+   * cells are "a later, deliberate widening -- and this file is now the place
+   * that widening happens". This is that widening, and the #1758 audit is what
+   * forced it. ~61k 1990s baseball sales cannot be placed because the products
+   * they name hold ZERO card_catalog rows, and NOT ONE of those products was
+   * reachable from here: baseball was scoped to Topps, Bowman and Fleer, and the
+   * junk-wax era is Pacific, Pinnacle, Score, Donruss, Leaf, Studio, Select,
+   * Stadium Club, SP and Bowman's Best.
+   *
+   * Every blocking product had to be found by grepping a cached sitemap by
+   * hand -- for the THIRD time in this file's short history. The cells below are
+   * the standing fix: the brands are named once, at the year range the pool
+   * actually holds, so the next gap is a discovery run and not another hand-grep.
+   *
+   * 1990-1999 ON EVERY CELL, deliberately. These brands are a decade-shaped
+   * phenomenon -- Pacific's licence runs 1994-2000, SP starts 1993, Studio and
+   * Select are Pinnacle-era, Metal Universe is 1996-1998 -- and a per-brand
+   * hand-tuned range would encode guesses about start years the sitemap can
+   * settle for free. A cell that matches nothing costs one line and reports 0.
+   *
+   * `sp` IS ITS OWN CELL AND ITS OWN BRAND. The source slugs Upper Deck's SP as
+   * `1993-sp`, `1995-sp-championship`, `1998-sp-authentic` -- never
+   * `upper-deck-sp` -- so the upper-deck cell cannot reach it (the brand rule is
+   * anchored at the slug HEAD, correctly). Measured: 59 sets in the window.
+   *
+   * `metal-universe` LIKEWISE. Fleer's Metal is slugged `1996-metal-universe`,
+   * with no `fleer-` prefix, so the fleer cell above never saw its 23 sets.
+   *
+   * ENTRIES ONLY, as ever.
+   */
+  { sport: "baseball",   setKey: "pacific",        from: 1990, to: 1999, label: "baseball/pacific/1990-1999" },
+  { sport: "baseball",   setKey: "upper-deck",     from: 1990, to: 1999, label: "baseball/upper-deck/1990-1999" },
+  { sport: "baseball",   setKey: "sp",             from: 1990, to: 1999, label: "baseball/sp/1990-1999" },
+  { sport: "baseball",   setKey: "score",          from: 1990, to: 1999, label: "baseball/score/1990-1999" },
+  { sport: "baseball",   setKey: "pinnacle",       from: 1990, to: 1999, label: "baseball/pinnacle/1990-1999" },
+  { sport: "baseball",   setKey: "donruss",        from: 1990, to: 1999, label: "baseball/donruss/1990-1999" },
+  { sport: "baseball",   setKey: "leaf",           from: 1990, to: 1999, label: "baseball/leaf/1990-1999" },
+  { sport: "baseball",   setKey: "studio",         from: 1990, to: 1999, label: "baseball/studio/1990-1999" },
+  { sport: "baseball",   setKey: "select",         from: 1990, to: 1999, label: "baseball/select/1990-1999" },
+  { sport: "baseball",   setKey: "stadium-club",   from: 1990, to: 1999, label: "baseball/stadium-club/1990-1999" },
+  { sport: "baseball",   setKey: "bowmans-best",   from: 1990, to: 1999, label: "baseball/bowmans-best/1990-1999" },
+  { sport: "baseball",   setKey: "metal-universe", from: 1990, to: 1999, label: "baseball/metal-universe/1990-1999" },
 ];
 
 /**
@@ -196,6 +242,36 @@ const BRAND_RE = {
   "upper-deck": /^upper-deck(?:-|$)/,
   "skybox": /^skybox(?:-|$)/,
   "bowman": /^bowman(?:-|$)/,
+  "pacific": /^pacific(?:-|$)/,
+  "score": /^score(?:-|$)/,
+  "pinnacle": /^pinnacle(?:-|$)/,
+  "donruss": /^donruss(?:-|$)/,
+  "leaf": /^leaf(?:-|$)/,
+  "studio": /^studio(?:-|$)/,
+  "select": /^select(?:-|$)/,
+  "stadium-club": /^stadium-club(?:-|$)/,
+  "metal-universe": /^metal-universe(?:-|$)/,
+  /**
+   * SP, AND WHY IT IS NOT `sp-?`. Anchored with a boundary so `1993-sp` and
+   * `1995-sp-championship` match while `1998-spx` and `1997-sp-spx-force` do
+   * not get swallowed by a prefix test -- SPx is a DIFFERENT Upper Deck product
+   * with its own pool, and `/^sp/` would file it under SP.
+   */
+  "sp": /^sp(?:-|$)/,
+  /**
+   * BOWMAN'S BEST CARRIES A LITERAL BACKSLASH. The source slugs it
+   * `1994-bowman\s-best` -- a PHP addslashes pass leaking into the URL itself,
+   * verified byte-for-byte in the sitemap:
+   *
+   *     https://www.sportscardchecklist.com/set-12825/1994-bowman\s-best-baseball-...
+   *
+   * A pattern spelling the apostrophe the obvious way (`bowman-s-best`, or an
+   * unescaped `'`) matches ZERO of the 63 sets in the window and reports the
+   * product absent -- this file's own founding false negative, in a new costume.
+   * Both forms are accepted so a source that later fixes its escaping keeps
+   * working.
+   */
+  "bowmans-best": /^bowman(?:\\s|'s|s)?-best(?:-|$)/,
 };
 
 /**

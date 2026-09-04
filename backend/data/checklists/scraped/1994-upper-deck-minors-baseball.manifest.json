@@ -1,0 +1,32 @@
+{
+ "scrapedAt": "2026-09-04T19:31:40.537Z",
+ "source": "sportscardchecklist",
+ "sourceUrl": "https://www.sportscardchecklist.com/set-101082/1994-upper-deck-minors-baseball-trading-card-checklist",
+ "sport": "baseball",
+ "year": 1994,
+ "season": "1994",
+ "setName": "1994 Upper Deck Minors",
+ "productKey": "1994-upper-deck-minors",
+ "setKey": "upper-deck-minors",
+ "setKeyRequested": "upper-deck-minors",
+ "parallelOfParent": false,
+ "parallelName": null,
+ "subset": null,
+ "rowCount": 270,
+ "parallelColumnAuthoritative": true,
+ "cardRows": 270,
+ "ladderRows": 0,
+ "subsetRows": 9,
+ "printRunsFound": 0,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > All-Star",
+   "category": "insert-all-star",
+   "playerCount": 9,
+   "rungs": 0,
+   "rowCount": 9,
+   "refused": false,
+   "printRun": null
+  }
+ ]
+}
