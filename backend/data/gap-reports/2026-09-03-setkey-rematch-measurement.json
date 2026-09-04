@@ -1,0 +1,424 @@
+{
+ "$comment": "READ-ONLY re-match measurement. nowBacked is a CEILING on matched comps: a checklist unblocks a comp only if that comp's cardNumber and parallel appear on it.",
+ "generatedAt": "2026-09-03",
+ "poolRowsWithNoChecklistBackedDestination": 6386802,
+ "cellsThatGainABackedDestination": 86,
+ "poolRowsThatGainABackedDestination": 140319,
+ "whereTheRestOfTheGapIs": {
+  "$comment": "Not reachable by a normalizeSetKey change. Measured so this PR cannot overstate its own effect.",
+  "sameKeyChecklistBackedForSportButNotThatYear": 1823853,
+  "keyHasNoChecklistRowForThatSportAtAll": 4562949,
+  "note": "The largest single class inside the second number is Pokemon (2.03M): the catalog files zero-padded official codes (sv08, sv02, me02-5) and the pool asks the long marketing name. Both spellings are ALREADY fixed points, so this needs a code<->name map, not a deriver rewrite."
+ },
+ "top30": [
+  {
+   "cell": "baseball|1987|panini-donruss",
+   "poolRows": 21826,
+   "nowBacked": 16306,
+   "landsOn": [
+    "donruss",
+    "donruss-opening-day"
+   ],
+   "sampleTitles": [
+    "1987 Donruss Baseball",
+    "1987 Donruss Opening Day Baseball",
+    "panini-donruss"
+   ]
+  },
+  {
+   "cell": "baseball|1983|panini-donruss",
+   "poolRows": 14750,
+   "nowBacked": 12058,
+   "landsOn": [
+    "donruss",
+    "donruss-hof-heroes",
+    "donruss-action-all-stars"
+   ],
+   "sampleTitles": [
+    "1983 Donruss Baseball",
+    "panini-donruss",
+    "Donruss"
+   ]
+  },
+  {
+   "cell": "basketball|2025|panini-select",
+   "poolRows": 15749,
+   "nowBacked": 10465,
+   "landsOn": [
+    "panini-select-wnba",
+    "panini-select-euroleague"
+   ],
+   "sampleTitles": [
+    "panini-select",
+    "2025 Panini Select WNBA Basketball",
+    "2025 Panini Select EuroLeague Basketball"
+   ]
+  },
+  {
+   "cell": "baseball|1984|panini-donruss",
+   "poolRows": 13087,
+   "nowBacked": 10296,
+   "landsOn": [
+    "donruss",
+    "donruss-action-all-stars",
+    "donruss-champions"
+   ],
+   "sampleTitles": [
+    "1984 Donruss Baseball",
+    "panini-donruss",
+    "Donruss"
+   ]
+  },
+  {
+   "cell": "baseball|1985|panini-donruss",
+   "poolRows": 9737,
+   "nowBacked": 8618,
+   "landsOn": [
+    "donruss"
+   ],
+   "sampleTitles": [
+    "1985 Donruss Baseball",
+    "panini-donruss",
+    "Donruss"
+   ]
+  },
+  {
+   "cell": "baseball|1981|panini-donruss",
+   "poolRows": 9772,
+   "nowBacked": 8036,
+   "landsOn": [
+    "donruss"
+   ],
+   "sampleTitles": [
+    "1981 Donruss Baseball",
+    "panini-donruss",
+    "Donruss"
+   ]
+  },
+  {
+   "cell": "baseball|1986|panini-donruss",
+   "poolRows": 15419,
+   "nowBacked": 7976,
+   "landsOn": [
+    "donruss"
+   ],
+   "sampleTitles": [
+    "1986 Donruss Baseball",
+    "1986 Donruss The Rookies Baseball",
+    "panini-donruss"
+   ]
+  },
+  {
+   "cell": "baseball|1982|panini-donruss",
+   "poolRows": 9283,
+   "nowBacked": 7858,
+   "landsOn": [
+    "donruss"
+   ],
+   "sampleTitles": [
+    "1982 Donruss Baseball",
+    "panini-donruss",
+    "Donruss"
+   ]
+  },
+  {
+   "cell": "baseball|1991|panini-donruss",
+   "poolRows": 6799,
+   "nowBacked": 6279,
+   "landsOn": [
+    "donruss",
+    "donruss-the-rookies"
+   ],
+   "sampleTitles": [
+    "1991 Donruss Baseball",
+    "panini-donruss",
+    "Donruss"
+   ]
+  },
+  {
+   "cell": "baseball|1960|fleer",
+   "poolRows": 6574,
+   "nowBacked": 5347,
+   "landsOn": [
+    "fleer-baseball-greats"
+   ],
+   "sampleTitles": [
+    "1960 Fleer Baseball Greats Baseball",
+    "fleer",
+    "1960-fleer-baseball-greats-baseball"
+   ]
+  },
+  {
+   "cell": "baseball|1997|panini-donruss",
+   "poolRows": 5347,
+   "nowBacked": 4731,
+   "landsOn": [
+    "donruss-signature-series",
+    "donruss",
+    "donruss-preferred"
+   ],
+   "sampleTitles": [
+    "1997 Donruss Signature Series Baseball",
+    "1997 Donruss Baseball",
+    "1997 Donruss Preferred Baseball"
+   ]
+  },
+  {
+   "cell": "baseball|1998|panini-donruss",
+   "poolRows": 5756,
+   "nowBacked": 4121,
+   "landsOn": [
+    "donruss",
+    "donruss-collections",
+    "donruss-preferred"
+   ],
+   "sampleTitles": [
+    "1998 Donruss Baseball",
+    "1998 Donruss Collections Baseball",
+    "1998 Donruss Signature Baseball"
+   ]
+  },
+  {
+   "cell": "baseball|1992|panini-donruss",
+   "poolRows": 4689,
+   "nowBacked": 4012,
+   "landsOn": [
+    "donruss",
+    "donruss-mcdonalds",
+    "donruss-the-rookies"
+   ],
+   "sampleTitles": [
+    "1992 Donruss Coca-Cola Nolan Ryan Baseball",
+    "1992 Donruss Baseball",
+    "panini-donruss"
+   ]
+  },
+  {
+   "cell": "baseball|1993|panini-donruss",
+   "poolRows": 3375,
+   "nowBacked": 2743,
+   "landsOn": [
+    "donruss"
+   ],
+   "sampleTitles": [
+    "1993 Donruss Baseball",
+    "panini-donruss",
+    "Donruss"
+   ]
+  },
+  {
+   "cell": "baseball|1996|panini-donruss",
+   "poolRows": 2862,
+   "nowBacked": 2514,
+   "landsOn": [
+    "donruss"
+   ],
+   "sampleTitles": [
+    "1996 Donruss Baseball",
+    "panini-donruss",
+    "Donruss"
+   ]
+  },
+  {
+   "cell": "baseball|1994|panini-donruss",
+   "poolRows": 2748,
+   "nowBacked": 2471,
+   "landsOn": [
+    "donruss"
+   ],
+   "sampleTitles": [
+    "1994 Donruss Baseball",
+    "panini-donruss",
+    "Donruss"
+   ]
+  },
+  {
+   "cell": "baseball|1997|pinnacle",
+   "poolRows": 5490,
+   "nowBacked": 2366,
+   "landsOn": [
+    "pinnacle-inside",
+    "pinnacle-certified",
+    "pinnacle-x-press"
+   ],
+   "sampleTitles": [
+    "1997 Pinnacle Inside Baseball",
+    "1997 Pinnacle Certified Baseball",
+    "1997 Pinnacle Baseball"
+   ]
+  },
+  {
+   "cell": "baseball|1989|panini-donruss",
+   "poolRows": 17327,
+   "nowBacked": 2182,
+   "landsOn": [
+    "donruss-baseballs-best",
+    "donruss-the-rookies",
+    "donruss-traded"
+   ],
+   "sampleTitles": [
+    "1989 Donruss Baseball",
+    "panini-donruss",
+    "Donruss"
+   ]
+  },
+  {
+   "cell": "baseball|1995|donruss-studio",
+   "poolRows": 2294,
+   "nowBacked": 2176,
+   "landsOn": [
+    "studio"
+   ],
+   "sampleTitles": [
+    "1995 Studio Baseball",
+    "Studio",
+    "1995-studio-baseball"
+   ]
+  },
+  {
+   "cell": "baseball|1997|flair",
+   "poolRows": 2305,
+   "nowBacked": 2030,
+   "landsOn": [
+    "flair-showcase"
+   ],
+   "sampleTitles": [
+    "1997 Flair Showcase Baseball",
+    "1997-flair-showcase-baseball",
+    "Flair Showcase"
+   ]
+  },
+  {
+   "cell": "baseball|1998|flair",
+   "poolRows": 1843,
+   "nowBacked": 1680,
+   "landsOn": [
+    "flair-showcase"
+   ],
+   "sampleTitles": [
+    "1998 Flair Showcase Baseball",
+    "1998-flair-showcase-baseball",
+    "Flair Showcase"
+   ]
+  },
+  {
+   "cell": "baseball|1996|score-select",
+   "poolRows": 1455,
+   "nowBacked": 1451,
+   "landsOn": [
+    "select-certified"
+   ],
+   "sampleTitles": [
+    "1996 Select Certified Baseball",
+    "score-select",
+    "1996 SELECT CERTIFIED"
+   ]
+  },
+  {
+   "cell": "baseball|1992|donruss-studio",
+   "poolRows": 1547,
+   "nowBacked": 1434,
+   "landsOn": [
+    "studio"
+   ],
+   "sampleTitles": [
+    "1992 Studio Baseball",
+    "1992 Leaf Studio Baseball",
+    "Studio"
+   ]
+  },
+  {
+   "cell": "baseball|1995|panini-donruss",
+   "poolRows": 1572,
+   "nowBacked": 1432,
+   "landsOn": [
+    "donruss",
+    "donruss-top-of-the-order"
+   ],
+   "sampleTitles": [
+    "1995 Donruss Baseball",
+    "panini-donruss",
+    "Donruss"
+   ]
+  },
+  {
+   "cell": "basketball|2024|panini-hoops",
+   "poolRows": 24245,
+   "nowBacked": 1338,
+   "landsOn": [
+    "panini-haunted-hoops"
+   ],
+   "sampleTitles": [
+    "2024-panini-hoops-basketball",
+    "2024 Panini Hoops Basketball",
+    "2024 Panini Haunted Hoops Basketball"
+   ]
+  },
+  {
+   "cell": "baseball|1999|fleer",
+   "poolRows": 2114,
+   "nowBacked": 1251,
+   "landsOn": [
+    "fleer-brilliants",
+    "fleer-mystique"
+   ],
+   "sampleTitles": [
+    "1999 Fleer Brilliants Baseball",
+    "1999 Fleer Mystique Baseball",
+    "fleer"
+   ]
+  },
+  {
+   "cell": "baseball|1995|score-select",
+   "poolRows": 1249,
+   "nowBacked": 1246,
+   "landsOn": [
+    "select-certified"
+   ],
+   "sampleTitles": [
+    "1995 Select Certified Baseball",
+    "score-select"
+   ]
+  },
+  {
+   "cell": "baseball|1996|donruss-studio",
+   "poolRows": 968,
+   "nowBacked": 909,
+   "landsOn": [
+    "studio"
+   ],
+   "sampleTitles": [
+    "1996 Studio Baseball",
+    "Studio",
+    "1996-studio-baseball"
+   ]
+  },
+  {
+   "cell": "baseball|2021|topps-chrome-platinum",
+   "poolRows": 899,
+   "nowBacked": 882,
+   "landsOn": [
+    "topps-chrome-platinum-anniversary",
+    "22-topps-chrome-platinum-anniversary"
+   ],
+   "sampleTitles": [
+    "2021 Topps Chrome Platinum Anniversary Baseball",
+    "Topps Chrome Platinum Anniversary",
+    "topps-chrome-platinum-anniversary"
+   ]
+  },
+  {
+   "cell": "baseball|1994|donruss-studio",
+   "poolRows": 831,
+   "nowBacked": 811,
+   "landsOn": [
+    "studio"
+   ],
+   "sampleTitles": [
+    "1994 Studio Baseball",
+    "1994-studio-baseball",
+    "Studio"
+   ]
+  }
+ ]
+}

@@ -515,12 +515,27 @@ describe("computeHobbyIqCardId — cardNumber-prefix override (bare→chrome)", 
   });
 
   // Totally Certified is its own product and must win over the certified rule.
-  // "Select Certified" is pinned too: it resolves to score-select, and a
-  // careless bare-"certified" rule would have stolen it.
+  // "Select Certified" is pinned too, and a careless bare-"certified" rule
+  // would still steal it — but it lands on ITSELF, not on score-select.
+  //
+  // CF-A-RULED-KEY-IS-A-FIXED-POINT (2026-09-03). This assertion used to read
+  // `.toBe("score-select")`, and that was a pool fusion the census caught.
+  // Measured read-only against prod: `select-certified` holds 1,376 checklist
+  // rows (baseballcardpedia, 1995-1996) and `score-select` holds ZERO. The
+  // pool says the same thing louder — the two names never share a year:
+  //
+  //   1995/1996 Select Certified  baseball 1,246 + 1,447, football 962 + 37
+  //   1993/1994/2007 Score Select baseball   956 +    51, football   6 +  5
+  //
+  // Two products, disjoint eras, one destination: that is a fused pool, and a
+  // fused pool prices both cards wrong. Count by source, not row count — the
+  // checklist-backed spelling is the key.
   it("certified variants do not collide", () => {
     expect(normalizeSetKey("Panini Totally Certified")).toBe("panini-totally-certified");
     expect(normalizeSetKey("2025 Panini Certified Football")).toBe("panini-certified");
-    expect(normalizeSetKey("Select Certified")).toBe("score-select");
+    expect(normalizeSetKey("Select Certified")).toBe("select-certified");
+    // and the neighbour it must not be confused with keeps its own key
+    expect(normalizeSetKey("1993 Score Select Baseball")).toBe("score-select");
   });
 
   // CF-PANINI-IS-ANACHRONISTIC-BEFORE-2009 (Drew, 2026-08-16: "see if we have
