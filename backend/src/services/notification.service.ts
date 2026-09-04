@@ -8,12 +8,144 @@
 //  - Device tokens are NEVER kept in process memory beyond a single send.
 
 import apn from "apn";
+import { createPrivateKey } from "node:crypto";
 import {
   getTokensForUser,
   getTokensForUsers,
   removeToken,
   DeviceTokenRecord,
 } from "../repositories/deviceToken.repository.js";
+
+/**
+ * D-APNS (2026-09-04) — the key is a PEM, whatever shape the setting is in.
+ *
+ * App Service held APNS_KEY_P8 as the BASE64 of the whole .p8 file. The
+ * provider got those 344 characters as UTF-8 bytes, OpenSSL refused them
+ * ("error:1E08010C:DECODER routines::unsupported"), getProvider() returned
+ * null and every push silently no-op'd from ~2026-08-20. Only the Personal
+ * Prospect Breakout nightly asserts delivery, so it alone went red.
+ *
+ * A setting round-trips through consoles, shell exports and JSON blobs, and
+ * comes out in one of three shapes. All three are the same key, so all three
+ * are accepted and normalised to a PEM:
+ *
+ *   1. raw PEM       — real newlines, what a .p8 file holds
+ *   2. escaped PEM   — literal "\\n" two-character sequences, what a JSON or
+ *                      shell round-trip leaves behind
+ *   3. base64 of PEM — no "-----BEGIN" marker at all; decode, then it is a PEM
+ *
+ * Detection is by content, never by length or config: a value carrying
+ * "-----BEGIN" is already PEM-shaped, anything else is tried as base64 and
+ * MUST decode to a PEM. Nothing is guessed — the result is parsed with
+ * createPrivateKey before it is handed to the provider, so a value that only
+ * looks like a key is refused here rather than inside `apn`.
+ *
+ * A flattened PEM (newlines stripped, no escapes) is NOT recoverable and is
+ * refused: re-wrapping it would be inventing structure we cannot verify.
+ *
+ * Refusal logs the shape tried and the length ONLY. The key is a credential —
+ * its content never reaches a log line.
+ */
+export type ApnsKeyShape = "pem" | "escaped-pem" | "base64-pem";
+
+export interface ApnsKeyLoadResult {
+  key: string | null;
+  shape: ApnsKeyShape | null;
+  /** Human-readable reason, safe to log — never contains key content. */
+  reason: string | null;
+}
+
+/** True when the text parses as a private key OpenSSL will actually use. */
+function parsesAsPrivateKey(pem: string): boolean {
+  try {
+    createPrivateKey(pem);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Turn literal "\n" / "\r\n" escapes into real newlines. */
+function unescapeNewlines(text: string): string {
+  return text.replace(/\\r\\n/g, "\n").replace(/\\n/g, "\n");
+}
+
+/**
+ * One key, one PEM. `.trim()` above strips the trailing newline a .p8 file
+ * carries, while a base64 payload decodes with it intact — so without this
+ * the same key normalises to two different strings depending on the shape it
+ * arrived in. Both parse, but only one of them is canonical.
+ */
+function canonicalPem(pem: string): string {
+  return `${pem.replace(/\r\n/g, "\n").trimEnd()}\n`;
+}
+
+/**
+ * Normalise APNS_KEY_P8 to a PEM string, accepting every shape the setting
+ * has legitimately been stored in. Returns `key: null` with a `reason` when
+ * nothing parses — the caller logs it and no-ops rather than throwing.
+ */
+export function loadApnsKey(raw: string | undefined | null): ApnsKeyLoadResult {
+  if (raw == null || raw.trim() === "") {
+    return { key: null, shape: null, reason: "APNS_KEY_P8 is unset or empty" };
+  }
+  const value = raw.trim();
+  const len = value.length;
+
+  if (value.includes("-----BEGIN")) {
+    // Shape 1: already a PEM with real newlines.
+    if (parsesAsPrivateKey(value)) {
+      return { key: canonicalPem(value), shape: "pem", reason: null };
+    }
+    // Shape 2: a PEM whose newlines survived as literal "\n" escapes.
+    const unescaped = unescapeNewlines(value);
+    if (unescaped !== value && parsesAsPrivateKey(unescaped)) {
+      return { key: canonicalPem(unescaped), shape: "escaped-pem", reason: null };
+    }
+    return {
+      key: null,
+      shape: null,
+      reason:
+        `APNS_KEY_P8 carries a PEM header but does not parse as a private key ` +
+        `(length=${len}); neither as-is nor after unescaping "\\n". A PEM ` +
+        `flattened onto one line cannot be recovered — re-store the .p8 file contents.`,
+    };
+  }
+
+  // Shape 3: no PEM marker at all — the only supported alternative is the
+  // base64 of the whole .p8 file, which MUST decode to a PEM.
+  let decoded: string;
+  try {
+    decoded = Buffer.from(value, "base64").toString("utf8");
+  } catch {
+    decoded = "";
+  }
+  if (decoded.includes("-----BEGIN")) {
+    if (parsesAsPrivateKey(decoded)) {
+      return { key: canonicalPem(decoded), shape: "base64-pem", reason: null };
+    }
+    const unescaped = unescapeNewlines(decoded);
+    if (unescaped !== decoded && parsesAsPrivateKey(unescaped)) {
+      return { key: canonicalPem(unescaped), shape: "base64-pem", reason: null };
+    }
+    return {
+      key: null,
+      shape: null,
+      reason:
+        `APNS_KEY_P8 base64-decodes to a PEM that does not parse as a private ` +
+        `key (length=${len}). Re-store the .p8 file contents.`,
+    };
+  }
+
+  return {
+    key: null,
+    shape: null,
+    reason:
+      `APNS_KEY_P8 is neither a PEM (no "-----BEGIN" marker) nor the base64 of ` +
+      `one (decoded bytes carry no PEM header) (length=${len}). Store the .p8 ` +
+      `file contents, or the base64 of that file.`,
+  };
+}
 
 let _provider: apn.Provider | null = null;
 let _bundleId: string | null = null;
@@ -30,23 +162,42 @@ function getProvider(): apn.Provider | null {
   const production = String(process.env.APNS_PRODUCTION ?? "false").toLowerCase() === "true";
 
   if (!keyId || !teamId || !bundleId || !keyP8) {
+    // Keep the no-op, but name what is actually missing rather than the
+    // whole list — "not configured" read the same whether one var or four
+    // were absent.
+    const missing = [
+      ["APNS_KEY_ID", keyId],
+      ["APNS_TEAM_ID", teamId],
+      ["APNS_BUNDLE_ID", bundleId],
+      ["APNS_KEY_P8", keyP8],
+    ].filter(([, v]) => !v).map(([n]) => n).join(", ");
     console.warn(
-      "[notification.service] APNs not configured (need APNS_KEY_ID, APNS_TEAM_ID, APNS_BUNDLE_ID, APNS_KEY_P8). Push sends will no-op.",
+      `[notification.service] APNs not configured — missing: ${missing}. Push sends will no-op.`,
     );
+    return null;
+  }
+
+  const loaded = loadApnsKey(keyP8);
+  if (!loaded.key) {
+    // Refuse loudly and by name — one line, the shape that failed and the
+    // length, never the content. A silent no-op is what hid this for weeks.
+    console.error(`[notification.service] APNs key rejected: ${loaded.reason} Push sends will no-op.`);
     return null;
   }
 
   try {
     _provider = new apn.Provider({
       token: {
-        key: Buffer.from(keyP8, "utf8"),
+        key: Buffer.from(loaded.key, "utf8"),
         keyId,
         teamId,
       },
       production,
     });
     _bundleId = bundleId;
-    console.log(`[notification.service] APNs provider ready (production=${production}, bundle=${bundleId})`);
+    console.log(
+      `[notification.service] APNs provider ready (production=${production}, bundle=${bundleId}, keyShape=${loaded.shape})`,
+    );
     return _provider;
   } catch (err: any) {
     console.error("[notification.service] APNs provider init failed:", err?.message ?? err);
