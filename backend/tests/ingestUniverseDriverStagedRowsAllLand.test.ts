@@ -115,19 +115,46 @@ describe("run 33847867665 — exactly 64 rows per set was the leaked LIMIT, not 
     expect(src).toMatch(/for \(const k of RUNNER_SCOPE_VARS\).*delete childEnv\[k\]/s);
   });
 
-  it("a short catalog count against the staged rows is a TRUNCATED ingest — failed, not ingested", () => {
+  it("a short ingest is decided on IDENTITIES, not counts, and regardless of `before`", () => {
     const src = fs.readFileSync(script, "utf8");
-    // Started-empty is part of the condition: with rows already present the
-    // arithmetic cannot separate "created 64 of 92" from "58 already there".
+    // THE COUNT CHECK IS NOT THE AUTHORITY (2026-09-04, run 33869931267). It
+    // fires only when the product started EMPTY, so the bcp Finest family --
+    // "0 rows created, 628 in catalog of 4,526 staged" -- reported INGESTED
+    // with an eighth of its staging present. And it over-reports when one card
+    // is staged twice under two spellings of the product.
+    //
+    // The question is asked directly: is every staged identity in the catalog?
+    expect(src).toMatch(/for \(const id of gate\.stats\.identities\) if \(!inCatalog\.has\(id\)\) missing\.push\(id\);/);
+    // No dependence on `before`: the diff runs whenever the read succeeds.
+    expect(src).toMatch(/if \(after !== null && gate\.stats\.identities && gate\.stats\.identities\.size\) \{/);
+    // The verdict names the shortfall and is `failed`, so the next pass
+    // re-attempts rather than recording a closed gap.
+    expect(src).toMatch(/short ingest — \$\{f\(shortIngest\.missing\)\} of \$\{f\(shortIngest\.staged\)\} staged identities are not in the catalog/);
+    expect(src).toMatch(/status: "failed",\s*\n\s*reason: `short ingest/);
+    // Decided BEFORE the partial branch: a short ingest is never a thin source.
+    expect(src.indexOf("} else if (shortIngest) {")).toBeLessThan(src.indexOf("} else if (incomplete) {"));
+    // ...and before the count check, which it supersedes.
+    expect(src.indexOf("} else if (shortIngest) {")).toBeLessThan(src.indexOf("} else if (truncated) {"));
+  });
+
+  it("a row surplus with every identity present is INGESTED, not a lost-rows failure", () => {
+    const src = fs.readFileSync(script, "utf8");
+    // 2000/2003/2009 Finest each staged TWO scope files for one product --
+    // `2000-finest-baseball.csv` and `2000-topps-finest-baseball.csv` -- and the
+    // count check called the duplicate half "664 rows lost in our own pipe".
+    // Reaching the count branch now means the identities were all present, so
+    // the surplus is a double count in the staging and the entry is complete.
     expect(src).toMatch(/const startedEmpty = \(before \?\? 0\) === 0;/);
     expect(src).toMatch(/const truncated = startedEmpty && after !== null && staged > 0 && after < staged;/);
-    // And the verdict it produces is `failed` with the two counts named, so the
-    // next pass re-attempts rather than recording a closed gap.
-    expect(src).toMatch(/truncated ingest — \$\{f\(staged\)\} rows staged, \$\{f\(after\)\} in catalog/);
-    expect(src).toMatch(/status: "failed",\s*\n\s*reason: `truncated ingest/);
-    // The truncation branch is decided BEFORE the partial branch: a short
-    // ingest must never be reported as a thin source.
-    expect(src.indexOf("} else if (truncated) {")).toBeLessThan(src.indexOf("} else if (incomplete) {"));
+    expect(src).toMatch(/status: "ingested",\s*\n\s*reason: `\$\{f\(staged\)\} rows staged over \$\{f\(gate\.stats\.identities\.size\)\} distinct identities/);
+  });
+
+  it("a short ingest is a per-entry answer — it never votes the lane down", () => {
+    const src = fs.readFileSync(script, "utf8");
+    // Reaching it means the page was fetched, parsed, staged, ingested AND the
+    // catalog read back. Every one of those proves the host is up, which is the
+    // only thing the systemic streak may conclude.
+    expect(src).toMatch(/stats: gate\.stats, laneProvenHealthy: true,\s*\n\s*\};/);
   });
 
   it("the staged-row count reaches the control doc, so the audit needs no log", () => {

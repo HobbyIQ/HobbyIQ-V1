@@ -159,6 +159,28 @@ function checklistSection(html) {
 function baseCards(html) {
   const cards = parseCards(section(html, "Base_Set", 2));
   if (cards.length) return { cards, viaChecklistHeading: false };
+  /**
+   * CF-BASE_SET-IS-NOT-ALWAYS-AN-H2 (2026-09-04, run 33869931267).
+   *
+   * #1732 taught this the pages whose cards sit directly under `<h1
+   * Checklist>`. A THIRD layout exists, and 2009_Bowman_Chrome is it: the wiki
+   * demotes the whole page by one level, so Checklist is an `<h2>` and Base_Set
+   * an `<h3>`.
+   *
+   *   2004_Bowman's_Best   <h1 Checklist> <h2 Base_Set>   <- section(...,2)
+   *   1990_Bazooka         <h1 Checklist> (cards direct)  <- checklistSection
+   *   2009_Bowman_Chrome   <h2 Checklist> <h3 Base_Set>   <- neither, until now
+   *
+   * Measured on the live page: `section(html, "Base_Set", 2)` returns 0 chars
+   * and `section(html, "Base_Set", 3)` returns 14,578. The page was verdicted
+   * "a parser gap, not an empty page" and became a third of a systemic abort.
+   *
+   * Tried in the SAME precedence as the h1 fallback and for the same safety
+   * reason: h2 is read first and still wins wherever it exists, so every page
+   * that parsed before parses identically.
+   */
+  const viaH3 = parseCards(section(html, "Base_Set", 3));
+  if (viaH3.length) return { cards: viaH3, viaChecklistHeading: false, viaDemotedHeading: true };
   const viaChecklist = parseCards(checklistSection(html));
   return viaChecklist.length
     ? { cards: viaChecklist, viaChecklistHeading: true }
@@ -232,6 +254,65 @@ function cleanScrapedPlayer(raw) {
   return out.trim();
 }
 
+/**
+ * CF-AN-INITIALS-CARD-NUMBER-IS-A-CARD-NUMBER (2026-09-04, run 33869931267).
+ *
+ * CARD_NUM requires a digit or an internal hyphen, so a set numbered by the
+ * PLAYER'S INITIALS parses to nothing at all:
+ *
+ *   2004_Bowman's_Best  <li>AER Alex Rodriguez</li>  <li>AL Anthony Lerew RC</li>
+ *
+ * The Base_Set heading is found and sliced (5,748 chars), every line is read,
+ * and every line is rejected -- so the page verdicted "a parser gap" and became
+ * a third of the bcp systemic abort.
+ *
+ * This is genuinely ambiguous per line: "AL Anthony Lerew" could be card AL, or
+ * a name whose first token happens to be capitals. It is NOT ambiguous per
+ * SECTION, which is why the rule is asked of the body and not of the line. A
+ * base set numbered by initials has EVERY line in that shape and each token is
+ * DISTINCT (it is the card number); a body of ordinary names does not.
+ *
+ * So this is strictly a last-resort pass, run only when the normal parse found
+ * nothing, and it demands all of:
+ *   - at least 8 candidate lines, so a short list cannot trip it;
+ *   - every candidate's leading token is 2-4 ALL-CAPS letters;
+ *   - the tokens are distinct (a card number identifies a card);
+ *   - the remainder is a plausible person name.
+ * Any page that parsed before is untouched, because it never reaches here.
+ */
+const BASE_INITIALS_NUM = /^[A-Z]{2,4}$/;
+function parseInitialsCards(body) {
+  const cand = [];
+  let lines = 0, named = 0;
+  for (const m of body.matchAll(/<li>([\s\S]*?)<\/li>/g)) {
+    const text = detag(m[1]);
+    const sp = text.indexOf(" ");
+    if (sp < 1) return [];
+    const num = text.slice(0, sp).trim();
+    // EVERY line must be numbered this way. One that is not means the body is
+    // something other than an initials-numbered base set, and the shape rule
+    // is the only thing standing between this pass and a list of names.
+    if (!BASE_INITIALS_NUM.test(num)) return [];
+    lines++;
+    const player = cleanScrapedPlayer(text.slice(sp + 1).replace(/\s+(?:RC|SP)\*?$/i, ""));
+    if (!player || player.length > 60) return [];
+    // A MONONYM IS A PLAYER. "IS Ichiro" is one line of 2004 Bowman's Best and
+    // isPersonName wants two tokens, so demanding it of every line threw away
+    // the other 105 cards. The two-token test stays as the EVIDENCE that this
+    // body is a roster -- asked of the majority, not of each line -- and a
+    // single-name player rides along instead of vetoing the page.
+    if (isPersonName(player)) named++;
+    cand.push({ num, player });
+  }
+  if (cand.length < 8) return [];
+  // The tokens are card numbers, so they are distinct; a body of ordinary
+  // names would repeat its leading token long before this.
+  if (new Set(cand.map((c) => c.num)).size !== cand.length) return [];
+  // Overwhelmingly a roster, not a scattering of capitalised lines.
+  if (named < Math.ceil(lines * 0.9)) return [];
+  return cand;
+}
+
 /** Base-set card lines: <li>NUM NAME[, Team]</li> */
 function parseCards(body) {
   const cards = [];
@@ -245,7 +326,8 @@ function parseCards(body) {
     if (!player || !/[A-Za-z]{2}/.test(player) || player.length > 60) continue;
     cards.push({ num, player });
   }
-  return cards;
+  if (cards.length) return cards;
+  return parseInitialsCards(body);
 }
 
 const RUN_NOTE = /(?:#'?d?\s*(?:to|\/)\s*|numbered\s+to\s+|:\s*)([\d,]+)\s*(?:cop(?:y|ies))?\b|\(([\d,]+)\s*cop(?:y|ies)\)/i;
@@ -1410,9 +1492,40 @@ function loadQualifier() {
 /** The page title's product, as a setKey. Mirrors normalizeSetKey's shape for
  *  the flagship families this scraper fetches; the qualifier table does the
  *  rest. */
+/**
+ * CF-ONE-CANONICAL-KEY-PER-PRODUCT (2026-09-04, run 33869931267).
+ *
+ * The slugification above "mirrors normalizeSetKey's shape" -- but only its
+ * SLUGIFICATION, never its alias table, and the aliases are exactly where a
+ * product gets two names. `finest -> topps-finest` is such an alias (#1699), so
+ * the Finest pages staged the same product under BOTH spellings:
+ *
+ *   2000-finest-baseball.csv  +  2000-topps-finest-baseball.csv
+ *
+ * The driver then counted one key while the child wrote the other, and the run
+ * reported "1,902 staged, only 1,238 landed (664 rows lost in our own pipe)".
+ * Nothing was lost: the same cards were staged twice and counted twice.
+ *
+ * Normalize BEFORE writing, through the one function that owns the vocabulary,
+ * so a product has exactly one key on disk. Falls back to the bare slug when
+ * dist is not built -- a scrape must not die on a missing build -- and that
+ * fallback is the previous behaviour exactly.
+ */
+let _normalizeSetKey;
+function canonicalSetKeyOf(slug) {
+  if (!slug) return slug;
+  if (_normalizeSetKey === undefined) {
+    try { ({ normalizeSetKey: _normalizeSetKey } = require(path.join(__dirname, "..", "dist/services/portfolioiq/hobbyIqCardId.service.js"))); }
+    catch { _normalizeSetKey = null; }
+  }
+  if (!_normalizeSetKey) return slug;
+  try { return _normalizeSetKey(slug) || slug; } catch { return slug; }
+}
+
 function normalizeSetKeyLocal(setName) {
-  return String(setName ?? "").toLowerCase().replace(/\bbaseball\b/g, "")
+  const slug = String(setName ?? "").toLowerCase().replace(/\bbaseball\b/g, "")
     .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  return canonicalSetKeyOf(slug);
 }
 
 async function main(opts = {}) {
