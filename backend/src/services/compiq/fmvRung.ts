@@ -152,3 +152,103 @@ export function hobbyIqRungLabel(
   }
   return method;
 }
+
+/**
+ * CF-THE-LADDER-IS-THE-VOCABULARY (Drew, 2026-09-04).
+ *
+ * The vocabulary as a RUNTIME value, not only as a type.
+ *
+ * The type union above is a compile-time contract: it stops an engine from
+ * inventing a rung name. It cannot stop a CONSUMER from admitting only some
+ * of the rungs the engine may legitimately return, because a hardcoded
+ * subset type-checks perfectly — every member of a subset is a member of the
+ * union.
+ *
+ * That is exactly what happened. `holdingValuation.ts` — the portfolio
+ * persist site — admitted two rungs by name:
+ *
+ *     const observed  = priced && valueSource === "observed" && isExactPoolRung(rungLabel);
+ *     const estimated = priced && valueSource === "estimated" && rungLabel === "grade-curve-estimate";
+ *     if (!observed && !estimated) return { outcome: "unpriced", valuation: v };
+ *
+ * `player-index-projection` shipped in #1647 on 2026-09-02, the ladder began
+ * returning it, and every holding it priced fell through that `if` as
+ * "unpriced" — a priced valuation discarded by the layer whose only job is
+ * to persist it. Holding 0a9afe09 (Cam Caminiti CPA-CC Blue Refractor /150)
+ * valued at $215.17 live and showed no price at all, because the persist
+ * gate had never heard of the rung the ladder had learned.
+ *
+ * The lesson is not "add player-index-projection to the list". Every rung
+ * added after this one would fail the same way, silently, and the failure
+ * mode is a card with no price — the worst thing this product can show. So
+ * the persist layer no longer keeps a list: it asks the vocabulary. A rung
+ * the vocabulary names is a rung the persist layer accepts, by construction.
+ *
+ * Adding a rung means adding it in TWO places in this file — the type and
+ * this array — and the exhaustiveness assertion below fails the BUILD if the
+ * two ever disagree, so the array cannot silently fall behind the type.
+ */
+export const FMV_RUNG_LABELS = [
+  // Exact-pool rungs (the digest's notify set).
+  "exact-pool-projection",
+  "exact-pool-last-sale",
+  "exact-pool-leading-edge",
+  "exact-pool-weighted-median",
+  "exact-pool-median",
+  "exact-pool-trajectory",
+  // Fallback rungs named in this file.
+  "cross-grade-fallback",
+  "grade-curve-estimate",
+  "graded-pool-inverse",
+  "player-index-projection",
+  "sibling-estimate",
+  // CanonicalFmvMethod, minus `direct-comp` (which IS the exact pool and is
+  // named by its aggregation above).
+  "cross-parallel",
+  "neighbor-parallel",
+  "sibling-parallel",
+  "hot-raw-same-card-anchor",
+  "family-baseline",
+  "product-tier",
+  "tiered-momentum-card",
+  "tiered-momentum-player",
+  // HobbyIqFmvMethod, minus `direct-slug` (likewise the exact pool).
+  "cross-setkey",
+  "cross-printrun",
+  "same-printrun-cross-parallel",
+  "printrun-discovery",
+  "grade-cross-raw",
+  "composite-neighbor",
+  "rare-card-anchor",
+  // The engine's own refusal. It is IN the vocabulary — a rung label is
+  // required on every Valuation — but it names NO price, so a persist gate
+  // must exclude it explicitly rather than by forgetting it.
+  "no-basis",
+] as const satisfies ReadonlyArray<FmvRungLabel>;
+
+/** Compile-time exhaustiveness: every member of the type appears in the
+ *  array. If a rung is added to `FmvRungLabel` and not to `FMV_RUNG_LABELS`,
+ *  this assignment fails to compile — the array cannot fall behind. */
+type _EveryRungIsListed = FmvRungLabel extends (typeof FMV_RUNG_LABELS)[number] ? true : never;
+const _everyRungIsListed: _EveryRungIsListed = true;
+void _everyRungIsListed;
+
+const RUNG_SET: ReadonlySet<string> = new Set<string>(FMV_RUNG_LABELS);
+
+/** True iff the label is a rung the ladder's vocabulary names. */
+export function isFmvRungLabel(label: unknown): label is FmvRungLabel {
+  return typeof label === "string" && RUNG_SET.has(label);
+}
+
+/**
+ * True iff the label names a rung that produced a PRICE — the vocabulary
+ * minus the engine's own refusal.
+ *
+ * This is the predicate a persist layer wants: "did the ladder price this?"
+ * `no-basis` is a real member of the vocabulary and must not be persisted as
+ * a value, so it is excluded here once, by name, rather than at every
+ * consumer that would otherwise have to remember.
+ */
+export function isPricingRung(label: unknown): label is Exclude<FmvRungLabel, "no-basis"> {
+  return isFmvRungLabel(label) && label !== "no-basis";
+}

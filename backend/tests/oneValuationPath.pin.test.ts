@@ -226,12 +226,25 @@ describe("D17 pins — card-detail, card-panel, the bulk curves and the persist 
     for (const call of D17_ENGINE_CALLS) expect(src.includes(call), call).toBe(false);
     expect(src.includes("getGraderPremium(")).toBe(false);
     expect(src.includes('"cross-grade-fallback"')).toBe(false);
-    // The estimate write is an estimate, and the observed write an exact-pool rung.
-    expect(src).toMatch(/fmvRung: "grade-curve-estimate",[\s\S]*?isEstimate: true,[\s\S]*?valuationStatus: "estimated"/);
-    expect(src).toMatch(/const observed = priced && v\.valueSource === "observed" && isExactPoolRung\(v\.rungLabel\);/);
-    // Every literal that sets fairMarketValue sets fmvRung (the rung-writers rule).
+    // CF-THE-LADDER-IS-THE-VOCABULARY (2026-09-04): the estimate write no
+    // longer hardcodes a rung — it persists WHATEVER the ladder returned, as
+    // an estimate. The pin's subject is unchanged (an estimate is an
+    // estimate, an observed write is an exact-pool rung); what changed is
+    // that the rung is now `v.rungLabel` rather than one literal, which is
+    // the whole point: a two-rung whitelist here left every other rung the
+    // ladder can reach persisting NOTHING.
+    expect(src).toMatch(/rung: \{ rung: v\.rungLabel \},[\s\S]*?valueSource: "estimated",[\s\S]*?isEstimate: true,[\s\S]*?valuationStatus: "estimated"/);
+    // "Observed" keeps its exact meaning: this identity, this tier, real comps.
+    expect(src).toMatch(/const observed = v\.valueSource === "observed" && isExactPoolRung\(v\.rungLabel\);/);
+    // The acceptance test asks the VOCABULARY, never a list of rung names.
+    expect(src).toMatch(/const pricingRung = isPricingRung\(v\.rungLabel\);/);
+    // MUTATION GUARD: the old two-rung whitelist must not come back. Any
+    // literal rung name in an acceptance comparison is the defect returning.
+    expect(src).not.toMatch(/v\.rungLabel === "grade-curve-estimate"/);
+    // Every write that sets fairMarketValue names a rung (the rung-writers
+    // rule) — through the C-7 helper's required `rung:` argument.
     const literals = src.split("fairMarketValue: ").length - 1;
-    const rungs = src.split("fmvRung: ").length - 1;
+    const rungs = src.split("rung: { rung:").length - 1;
     expect(literals).toBe(2);
     expect(rungs).toBe(2);
     // The entry takes the holding's second identity and asks in #1462's order.
