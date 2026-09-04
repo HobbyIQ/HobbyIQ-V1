@@ -115,6 +115,39 @@ const EMPTY_STATUS = "empty";
 const STREAK_STATUSES = new Set(["failed", "unreachable"]);
 
 /**
+ * CF-PARTIAL-IS-TERMINAL-BUT-RECHECKABLE (2026-09-04).
+ *
+ * MEASURED, run 33884656387 (sportscardchecklist, pending only, APPLY): the
+ * lane holds 136 `partial` control docs, and because `partial` was not terminal
+ * every pending-only pass re-walked all 136 before reaching a single entry that
+ * has never been attempted. That slice created 24 rows out of a 140-minute
+ * budget. The budget did not run out of work -- it spent itself re-ingesting
+ * products the catalog already holds.
+ *
+ * `partial` is a VERDICT, not a queue position. It says "we fetched this page,
+ * parsed it, staged it, ingested it and read the catalog back, and what landed
+ * is less than a whole product". That is a finished attempt with a recorded
+ * answer, exactly like `ingested` and `empty`, and re-attempting it is only
+ * worth a request when something has CHANGED -- a parser fix, a new rule, the
+ * source growing the missing rung. Deciding that is the operator's job, and
+ * SCOPE=recheck is how the operator says it.
+ *
+ * So `partial` joins the terminal set and keeps its recheck door, on the same
+ * terms `empty` already had: pending-only passes skip it, SCOPE=recheck
+ * re-attempts it. Nothing is closed and nothing is forgotten -- the control doc
+ * still names the gap, and `remaining in lane` still counts it as open work.
+ * What changes is that a pending-only slice now spends its budget on entries
+ * with NO verdict at all, which on this lane is 5,644 of 5,857.
+ *
+ * WHY NOT JUST FIX THE ORDERING. Ordering decides which of the eligible entries
+ * run first; it cannot make a re-attempt free. A partial entry costs the same
+ * fetch, parse, stage, ingest and read-back as a new one, and on a lane whose
+ * partials are mostly CORRECT (see the base-only rule below) that cost buys
+ * nothing at all. The queue filter is where the decision belongs.
+ */
+const TERMINAL_STATUSES = new Set(["ingested", "unreachable", EMPTY_STATUS, "partial"]);
+
+/**
  * The systemic tripwire's whole arithmetic, in one exported place so a test can
  * reach it. It was inline in the run loop, which meant the only way to pin it
  * was to restate it in the test -- and a restated rule pins nothing, because
@@ -439,6 +472,13 @@ const LANES_WITH_VINTAGE_ERA_PRODUCTS = new Set(["sportscardchecklist"]);
  *  declared lane, `ladder === 0` is the product's shape, not a gap. */
 const PARALLEL_ERA_FIRST_YEAR = 1990;
 
+/** Lanes whose SOURCE publishes each parallel rung and each insert as its own
+ *  set page. On these, a parent page's ladder arrives on sibling ENTRIES, so
+ *  `ladder === 0` on the parent is the page's shape rather than a gap -- but
+ *  only when the manifest actually declares those siblings. See
+ *  ladderOnSiblingPages. A lane absent here keeps the flat expectation. */
+const LANES_WITH_SIBLING_PARALLEL_PAGES = new Set(["sportscardchecklist"]);
+
 /**
  * Is a missing parallel ladder the honest shape of THIS entry's product?
  *
@@ -452,6 +492,72 @@ function ladderlessByEra(lane, entry) {
   const y = Number(entry && entry.year);
   if (!Number.isFinite(y) || y <= 0) return false;
   return y < PARALLEL_ERA_FIRST_YEAR;
+}
+
+/**
+ * CF-A-LADDER-ON-SIBLING-PAGES-IS-NOT-A-GAP (2026-09-04).
+ *
+ * The era rule above closed the VINTAGE half of the false `partial`. This is
+ * the modern half, and it is a different claim about a different source shape.
+ *
+ * MEASURED, control docs for this lane: 56 entries sit at `partial` for
+ * "base-only, no parallel ladder", and only 3 of them are vintage. The rest are
+ * 1996-2009 basketball parent pages -- 2000-01 Topps Chrome Basketball,
+ * 2006-07 Topps Chrome Basketball, and so on. Every one of them landed a clean,
+ * complete base set and reported a gap.
+ *
+ * They are not gaps, because SPORTSCARDCHECKLIST DOES NOT PUT THE LADDER ON THE
+ * PARENT PAGE. It gives each rung its own set page at its own URL, and the
+ * manifest says so in its own rows -- 2006-07 Topps Chrome Basketball has 24
+ * siblings sharing its (sport, year, setKey), among them:
+ *
+ *   2006-07 Topps Chrome Refractors Basketball
+ *   2006-07 Topps Chrome Autographs Refractors Gold Basketball
+ *   2006-07 Topps Chrome 1996 97 Variations Superfractors Basketball
+ *
+ * So a parent page that stages base cards and no ladder is that page scraped
+ * CORRECTLY and completely. The ladder is real, it is expected, and it arrives
+ * on the sibling ENTRIES -- which is the same claim `allFilesAreParallelOfParent`
+ * already makes one level down, where a rung page has no base cards because the
+ * base cards are the PARENT's. The two rules are the same fact read from the two
+ * ends: neither page is the whole product, and neither page is defective for it.
+ *
+ * THE SIBLINGS MUST BE DECLARED, NEVER ASSUMED. The exemption is granted only
+ * when the manifest actually carries at least one other entry at this
+ * (sport, year, setKey) whose `derivedSetKey` names a rung or insert of it. A
+ * product whose ladder genuinely lives on its own page keeps the flat
+ * expectation and still reports PARTIAL -- which is the defect the base-only
+ * rule was written for and must keep catching. This is the same discipline
+ * `ladderIsAttested` and `parallelOfParent` use: read the attestation, never
+ * infer it from a file that merely happens to be empty in that column.
+ *
+ * IT NARROWS ONLY THE LADDER EXPECTATION. An entry that lands zero rows is
+ * still FAILED, and one that lands short of what it staged is still FAILED. The
+ * siblings say a product's ladder is published elsewhere; they never say our
+ * pipe may lose rows.
+ */
+function ladderOnSiblingPages(lane, entry, manifestEntries) {
+  if (!LANES_WITH_SIBLING_PARALLEL_PAGES.has(lane)) return false;
+  if (!entry || !Array.isArray(manifestEntries)) return false;
+  // A page that is ITSELF a rung or insert names one in `derivedSetKey`. Only a
+  // PARENT page can claim its ladder is on siblings; a rung page reporting
+  // base-only is a different shape and keeps the flat expectation.
+  if (entry.derivedSetKey) return false;
+  const sport = String(entry.sport || "");
+  const year = Number(entry.year);
+  const setKey = String(entry.setKey || "");
+  if (!sport || !setKey || !Number.isFinite(year)) return false;
+  return manifestEntries.some((o) =>
+    o && o.id !== entry.id
+    && (o.lane || o.source) === lane
+    && String(o.sport || "") === sport
+    && Number(o.year) === year
+    && String(o.setKey || "") === setKey
+    // The sibling must NAME a rung or insert of this product. An entry sharing
+    // the key with no derived name of its own is another parent page, not a
+    // ladder page, and cannot attest that this product's ladder exists.
+    && Boolean(o.derivedSetKey)
+    && String(o.derivedSetKey) !== setKey);
 }
 
 /**
@@ -786,6 +892,12 @@ function gateStagedEntry(csvPaths, lane) {
     baselessSingleRung: total.base === 0 ? (total.rungNames[0] ?? null) : null,
     // Which of the two baseless shapes admitted it, so the log says WHY.
     parallelOfParent: total.base === 0 ? allFilesAreParallelOfParent(paths) : false,
+    // THE SAME ATTESTATION, ASKED WITHOUT THE BASELESS PRECONDITION. Above it
+    // answers "may this baseless page be admitted at all"; the print-run rule
+    // needs "is this page a rung of a parent", which is true of a rung page
+    // whether or not the source also listed a base card on it. Reading the
+    // manifests once and exposing both keeps the two questions from drifting.
+    everyFileIsParallelOfParent: allFilesAreParallelOfParent(paths),
     zeroBaseFiles: files.filter((x) => x.code === "zero-base").map((x) => x.file),
   };
 }
@@ -1872,7 +1984,7 @@ for (const lane of ACQUIRE_LANES) {
   }
 }
 
-module.exports = { streakAfter, gateStagedCsv, gateStagedEntry, ladderIsAttested, CARTESIAN_MIN_RUNGS, CARTESIAN_MIN_CARDS, stagedCsvs, LANES_WITHOUT_PRINT_RUNS, LANES_WITH_BASELESS_PRODUCTS, LANES_WITH_VINTAGE_ERA_PRODUCTS, PARALLEL_ERA_FIRST_YEAR, ladderlessByEra, sourceLabelFor, splitCsv, isPersonName, setKeyFor, planFor, tcgdexModern, acquireStaged, ACQUIRE_LANES, LANE_ALIASES, LANE_SOURCE, LANE_MINUTES, CANONICAL_HEADER, CHILD_STDERR_LINES, cosmosSafeId, controlId, orderQueue, SYSTEMIC_FAILURE_STREAK, EMPTY_STATUS, STREAK_STATUSES, isStaged, stagedSourceRefs, stagedIndex, stagedFilesFor, acquireFromStaging };
+module.exports = { streakAfter, gateStagedCsv, gateStagedEntry, ladderIsAttested, TERMINAL_STATUSES, LANES_WITH_SIBLING_PARALLEL_PAGES, ladderOnSiblingPages, allFilesAreParallelOfParent, CARTESIAN_MIN_RUNGS, CARTESIAN_MIN_CARDS, stagedCsvs, LANES_WITHOUT_PRINT_RUNS, LANES_WITH_BASELESS_PRODUCTS, LANES_WITH_VINTAGE_ERA_PRODUCTS, PARALLEL_ERA_FIRST_YEAR, ladderlessByEra, sourceLabelFor, splitCsv, isPersonName, setKeyFor, planFor, tcgdexModern, acquireStaged, ACQUIRE_LANES, LANE_ALIASES, LANE_SOURCE, LANE_MINUTES, CANONICAL_HEADER, CHILD_STDERR_LINES, cosmosSafeId, controlId, orderQueue, SYSTEMIC_FAILURE_STREAK, EMPTY_STATUS, STREAK_STATUSES, isStaged, stagedSourceRefs, stagedIndex, stagedFilesFor, acquireFromStaging };
 if (require.main !== module) return;
 
 (async () => {
@@ -2011,7 +2123,7 @@ if (require.main !== module) return;
   // `empty` is terminal too: re-fetching a set the source does not card burns
   // a request and a verdict per run to learn the same thing. SCOPE=recheck is
   // the way back once tcgdex grows the cards.
-  const TERMINAL = new Set(["ingested", "unreachable", EMPTY_STATUS]);
+  const TERMINAL = TERMINAL_STATUSES;
   const queue = [];
   for (const e of candidates) {
     const prior = priorById.get(e.id);
@@ -2301,13 +2413,30 @@ if (require.main !== module) return;
          * products carry no numbered parallels, an empty print-run column is
          * the source telling the truth, not a gap for a later pass to close.
          */
-        const printRunsExpected = !LANES_WITHOUT_PRINT_RUNS.has(lane);
+        /**
+         * CF-A-RUNG-PAGE-CARRIES-NO-PRINT-RUN (2026-09-04). The other half of
+         * the false modern `partial`: 80 entries sit at "ladder present but
+         * zero print runs", and almost every one is a "...Refractors" page --
+         * a page that IS one rung, attested by the fetcher's `parallelOfParent`
+         * and landed on the parent's setKey. The rung is the axis such a page
+         * publishes; the numbering, where it exists, is the parent's. Demanding
+         * a print-run column from it asks the source for a column it never had.
+         * The attestation is the fetcher's, never inferred from an empty column.
+         */
+        const printRunsExpected = !LANES_WITHOUT_PRINT_RUNS.has(lane)
+          && !(LANES_WITH_SIBLING_PARALLEL_PAGES.has(lane) && gate.everyFileIsParallelOfParent);
         /**
          * CF-A-VINTAGE-BASE-SET-IS-NOT-PARTIAL. On a declared lane, a pre-1990
          * product has no parallel ladder to lose, so `ladder === 0` is the
          * checklist telling the truth rather than a gap for a later pass.
+         *
+         * CF-A-LADDER-ON-SIBLING-PAGES-IS-NOT-A-GAP. Its modern counterpart: on
+         * a source that gives every rung its own page, a PARENT page's ladder
+         * arrives on sibling entries the manifest declares, so base-only is the
+         * page's shape rather than the product's gap.
          */
-        const ladderExpected = !ladderlessByEra(lane, entry);
+        const ladderExpected = !ladderlessByEra(lane, entry)
+          && !ladderOnSiblingPages(lane, entry, manifest.entries);
         const incomplete = (ladderExpected && gate.stats.ladder === 0)
           || (printRunsExpected && gate.stats.withPrintRun === 0);
 
@@ -2366,13 +2495,19 @@ if (require.main !== module) return;
         } else {
           const note = printRunsExpected
             ? `${f(gate.stats.withPrintRun)} with print runs`
-            : "no print runs — this lane's products carry none";
-          // Say the era exemption out loud. A vintage base set reporting
+            : LANES_WITH_SIBLING_PARALLEL_PAGES.has(lane) && gate.everyFileIsParallelOfParent
+              ? "no print runs — this page IS one rung; the numbering is the parent's"
+              : "no print runs — this lane's products carry none";
+          // Say the exemption out loud, and say WHICH one. A base set reporting
           // INGESTED with no ladder must not read like a ladder that was
-          // scraped and silently dropped.
-          const era = !ladderExpected && gate.stats.ladder === 0
-            ? `; base-only is the shape of a pre-${PARALLEL_ERA_FIRST_YEAR} product, not a gap`
-            : "";
+          // scraped and silently dropped, and "the source puts it on another
+          // page" is a different claim from "the product never had one".
+          const era = !(gate.stats.ladder === 0) ? ""
+            : ladderlessByEra(lane, entry)
+              ? `; base-only is the shape of a pre-${PARALLEL_ERA_FIRST_YEAR} product, not a gap`
+              : ladderOnSiblingPages(lane, entry, manifest.entries)
+                ? "; base-only is the shape of a PARENT page — this source publishes each rung as its own set page, and the manifest declares the siblings"
+                : "";
           verdict = { status: "ingested", reason: null, rowsCreated: created, rowsInCatalog: after, rowsStaged: staged, stats: gate.stats };
           console.log(`      INGESTED — ${f(created)} rows created, ${f(after)} in catalog of ${f(staged)} staged, ${note}${era}`);
         }
