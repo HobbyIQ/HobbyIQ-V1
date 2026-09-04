@@ -132,6 +132,35 @@ const CELLS = [
   { sport: "basketball", setKey: "skybox",     from: 1991, to: 2008, label: "basketball/skybox/1991-2008" },
   { sport: "hockey",     setKey: "o-pee-chee", from: 1933, to: 1989, label: "hockey/o-pee-chee/1933-1989" },
   { sport: "hockey",     setKey: "topps",      from: 1900, to: 1989, label: "hockey/topps/pre-1990", bonus: true },
+  /**
+   * CF-THE-DISCOVERY-NEVER-KNEW-ABOUT-BASEBALL (2026-09-04).
+   *
+   * The seven target cells were chosen because no other lane reached them, and
+   * all seven are football/basketball/hockey. So the sitemap pass classified
+   * every baseball set URL as `null` and minted nothing for the sport this
+   * catalog is most of. Measured on the same 141,482-URL sitemap the survey
+   * cached: 40,699 of them are baseball, and NOT ONE was ever offered.
+   *
+   * The eight #1719 Topps Traded Tiffany entries are what exposed it. They had
+   * to be hand-written into the manifest, one at a time, because the discovery
+   * that mints entries for exactly this source could not see them -- and the
+   * source serves the whole family: 1984-1990 `topps-tiffany-traded`, plus
+   * `topps-tiffany` for 1984-1991 and `bowman-tiffany` for 1989-1990, none of
+   * which the manifest holds.
+   *
+   * SCOPED TO TOPPS AND BOWMAN, 1980-1999, deliberately. This is the Tiffany /
+   * Traded / flagship window the goal names, and it is where the checklist gap
+   * behind the vintage comps sits. Opening baseball to every brand and every
+   * year would mint tens of thousands of entries in one commit, which is a
+   * queue nobody has budgeted and a review nobody can read. The remaining
+   * baseball cells are a later, deliberate widening -- and this file is now the
+   * place that widening happens, which it was not before.
+   *
+   * ENTRIES ONLY, as ever: this mints addresses, and the driver's per-entry
+   * verdict is what settles any of them.
+   */
+  { sport: "baseball",   setKey: "topps",      from: 1980, to: 1999, label: "baseball/topps/1980-1999" },
+  { sport: "baseball",   setKey: "bowman",     from: 1980, to: 1999, label: "baseball/bowman/1980-1999" },
 ];
 
 /**
@@ -145,7 +174,22 @@ const BRAND_RE = {
   "fleer": /^fleer(?:-|$)/,
   "upper-deck": /^upper-deck(?:-|$)/,
   "skybox": /^skybox(?:-|$)/,
+  "bowman": /^bowman(?:-|$)/,
 };
+
+/**
+ * A CELL WHOSE BRAND HAS NO PATTERN MATCHES NOTHING, SILENTLY. classify()
+ * skips a cell when BRAND_RE has no entry for its setKey -- which reads
+ * exactly like "the source serves no such sets", the false negative this
+ * file's own split-year note was written about. Adding a cell and forgetting
+ * its pattern is a one-line mistake that costs a whole survey, so it fails at
+ * load instead.
+ */
+for (const cell of CELLS) {
+  if (!BRAND_RE[cell.setKey]) {
+    throw new Error(`discoverSportsCardChecklistSets: cell ${cell.label} names brand "${cell.setKey}" with no BRAND_RE pattern — it would match nothing and report zero sets`);
+  }
+}
 
 // Both year forms. `year2` present = split season; the FIRST year is the cell year.
 const SET_URL_RE =
