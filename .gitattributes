@@ -30,3 +30,12 @@
 *.cjs text eol=lf
 *.mjs text eol=lf
 *.js text eol=lf
+
+# CF-CHRONIC-REDS-CRLF, same shape one level down (2026-09-04). The bcp golden
+# pin compares the scraper's OWN output -- built in memory with "\n" joins --
+# against a checked-in file, byte for byte. Checked out CRLF that comparison
+# fails on every line on a Windows clone and passes in CI, which is the exact
+# green-for-the-author/red-on-a-clean-clone shape the note above describes.
+# The saved HTML fixtures are compared the same way through the emitted CSV.
+*.tsv text eol=lf
+backend/tests/fixtures/bcp/*.html text eol=lf

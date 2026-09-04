@@ -988,6 +988,252 @@ function parseInserts(html) {
 }
 
 /**
+ * CF-AN-INITIALS-CARD-NUMBER-IS-A-CARD-NUMBER (2026-09-04).
+ *
+ * `CARD_NUM` requires a digit or a hyphen, so a card numbered by bare initials
+ * is not a card to it:
+ *
+ *   <li>CE Carl Erskine</li>          2005 Topps Chrome, Dem Bums Autographs
+ *   <li>AR Alex Rodriguez BAT A</li>  2005 Topps Chrome, The Game Relics
+ *   <li>SS Sammy Sosa</li>            1999 Black Diamond
+ *
+ * That numbering is the NORM for autograph and relic subsets -- the card number
+ * IS the player's initials -- so the whole of 2005 Topps Chrome's autograph
+ * subset read as zero cards, and its relic subset kept only the two players
+ * whose numbers happened to carry a digit (AD1, AD2). Across the seven
+ * committed fixtures 43 real card lines are rejected this way.
+ *
+ * The widening is deliberately NOT applied to CARD_NUM itself. Inside
+ * §Base_Set and §Parallels a bare two-letter token is far more likely to be
+ * prose or a rung fragment than a card number, and widening there would change
+ * the base ladder this lane has already staged -- the exact well-formed-wrong
+ * class that no only-improve sweep can later see. It applies only inside a
+ * typed card-type section, where the page has already told us these lines are
+ * a checklist and the initials convention holds.
+ *
+ * `feedback_beckett_initials_card_numbers_collide` is why this is not enough on
+ * its own to identify a card: initials collide across products. It is enough to
+ * READ the line; the setKey and the category carry the rest of the identity.
+ */
+const INITIALS_NUM = /^[A-Z]{2,6}\d{0,2}$/;
+/** A relic subset states the swatch type after the name: "Alex Rodriguez BAT A". */
+const SWATCH_TAIL = /\s+(?:BAT|UNI|JSY|JER|PATCH|GU|CAP|BASE|GLOVE|SHOE)(?:\s+[A-Z])?$/i;
+function parseTypedCards(body) {
+  const cards = [];
+  for (const m of body.matchAll(/<li>([\s\S]*?)<\/li>/g)) {
+    const text = detag(m[1]);
+    const sp = text.indexOf(" ");
+    if (sp < 1) continue;
+    const num = text.slice(0, sp).trim();
+    if (!CARD_NUM.test(num) && !INITIALS_NUM.test(num)) continue;
+    // "A: 1:15/boxes" is an odds legend, not a card: it has no player.
+    let player = cleanScrapedPlayer(text.slice(sp + 1)).replace(SWATCH_TAIL, "").trim();
+    // The page annotates a card the collector still has to redeem. That is a
+    // fact about the COPY, never part of the player's name -- left in, every
+    // Freeman auto row would carry a player of "Freddie Freeman EXCH" and no
+    // parsed sale title would ever match it.
+    // RC / SP are NOT stripped: the base lane keeps them, and one player must
+    // be spelled one way across both lanes of the same page.
+    player = player.replace(/\s+(?:EXCH|EXCHANGE|REDEMPTION)\b/gi, "").trim();
+    if (!player || !/[A-Za-z]{2}/.test(player) || player.length > 60) continue;
+    if (!isPersonName(player)) continue;
+    cards.push({ num, player });
+  }
+  return cards;
+}
+
+/**
+ * CF-A-SECTION-CLASS-IS-A-CARD-TYPE (Drew, 2026-09-04: "find other checklists
+ * that we have this issue with").
+ *
+ * 2011 Topps Chrome Freddie Freeman #173 is an AUTOGRAPH. The page says so, in
+ * its own §Autographs > §Autographed Rookies, with its own nine-rung ladder
+ * (Refractor /499 down to Super-Fractor 1/1). The catalog had no row for it,
+ * so every sale of that card orphaned onto a :auto pool with no ladder to
+ * price against -- and the reason is structural rather than a parsing miss:
+ * `main` sliced only Base_Set, Parallels and Inserts, and hardcoded the string
+ * "false" into the isAuto column of every row it emitted. The lane could not
+ * mint a signed card even in principle.
+ *
+ * The page's own <h2> vocabulary is the card-type vocabulary. Across the
+ * fixtures it is exactly:
+ *
+ *   Autographs | Autographed_Rookies      -> a signed card
+ *   Autographed_Relics | Autograph_Relics -> a signed card that also carries memorabilia
+ *   Autographs_&_Game-Used                -> a MIXED section: see below
+ *   Relics | Game-Used | Memorabilia      -> memorabilia, NOT signed
+ *   Inserts                               -> today's behaviour, unchanged
+ *
+ * Each is read the way §Inserts already is -- h3 subsections, each holding its
+ * own <li> ladder and its own <li> card list -- because that is the page's one
+ * layout, not three. The class decides two things and nothing else: the
+ * category prefix (`auto-` vs `insert-`) and the isAuto column.
+ *
+ * CF-THE-SECTION-SAYS-SIGNED-OR-IT-IS-NOT (`autos only when the source says
+ * signed`). isAuto is true ONLY where the section heading attests a signature.
+ * A §Relics row is emitted with isAuto=false even though it sits beside an
+ * autograph section, and "Autographs & Game-Used" -- one heading over two
+ * different card types -- attests signature at the SUBSECTION level instead,
+ * because on 2005 Topps Chrome that h2 covers both "The Game Relics" (unsigned)
+ * and "Dem Bums Autographs" (signed). Reading the h2 alone would attest 42
+ * relic cards as autographed; reading the h3 gets both right. Where neither
+ * heading says, the honest answer is the unsigned one: a false isAuto splits a
+ * pool in half and no only-improve sweep can see it.
+ */
+const SECTION_CLASSES = [
+  // id on the page                     category prefix   the heading attests a signature
+  { id: "Autographs",                   prefix: "auto",   signed: true  },
+  { id: "Autographed_Rookies",          prefix: "auto",   signed: true  },
+  { id: "Autographed_Relics",           prefix: "auto",   signed: true  },
+  { id: "Autograph_Relics",             prefix: "auto",   signed: true  },
+  { id: "Autographed_Game-Used",        prefix: "auto",   signed: true  },
+  // One heading, two card types. Signature is decided per SUBSECTION.
+  { id: "Autographs_&amp;_Game-Used",   prefix: null,     signed: null  },
+  { id: "Autographs_&amp;_Relics",      prefix: null,     signed: null  },
+  { id: "Relics",                       prefix: "insert", signed: false },
+  { id: "Game-Used",                    prefix: "insert", signed: false },
+  { id: "Memorabilia",                  prefix: "insert", signed: false },
+];
+
+/** A subsection heading that names a signature in its own words. */
+const SIGNED_HEADING = /\bauto(?:graph(?:ed|s)?)?\b|\bsigned\b|\bsignatures?\b|\bink\b/i;
+/** A subsection heading that names memorabilia. */
+const RELIC_HEADING = /\brelics?\b|\bgame[-\s]?used\b|\bmemorabilia\b|\bpatch(?:es)?\b|\bjersey\b|\bbat\b|\bcloth\b|\bthreads?\b/i;
+
+/**
+ * CF-A-PRINTING-PLATE-IS-A-ONE-OF-ONE (Drew, 2026-09-04). The page writes
+ * plates as "Printing Plates (four-for-each, Hobby only)" -- four plates,
+ * cyan/magenta/yellow/black, each unique. RUN_NOTE sees no serial in
+ * "four-for-each", so the rung landed with a BLANK print run, which reads as
+ * unknown when the page in fact states the strongest scarcity claim it can
+ * make. Four plates of one card is four DIFFERENT cards at /1, never one card
+ * at /4: the "four" counts colours, not copies.
+ *
+ * Only the plate rung is touched, and only when the page's own words say
+ * one-per-colour. A plate line stating an actual serial keeps it.
+ */
+const PLATE_RUNG = /printing\s+plates?/i;
+const PLATE_ONE_EACH = /one[-\s]?of[-\s]?one|four[-\s]?for[-\s]?each|one\s+of\s+each|four\s+per|1\/1/i;
+function platePrintRun(rung) {
+  if (rung.printRun != null) return rung.printRun;
+  if (!PLATE_RUNG.test(rung.name)) return null;
+  return PLATE_ONE_EACH.test(String(rung.note ?? "")) ? 1 : null;
+}
+
+/**
+ * Read one card-type section the way parseInserts reads §Inserts.
+ *
+ * Returns [] when the section is absent -- a page without an Autographs
+ * heading yields no autograph rows, which is the whole point: the rows come
+ * from the page or they do not exist. `no synthetic parallels -- actuals only`.
+ */
+function parseTypedSection(html, cls) {
+  const body = section(html, cls.id, 2);
+  if (!body) return [];
+  const out = [];
+  const heads = [...body.matchAll(/<h3 id="([^"]+?)(?:_\d+)?">/g)];
+  // The h2's own name, for a section whose cards sit directly under it with no
+  // h3 at all. Its slug is the subset name in that case.
+  const h2Name = detag(cls.id.replace(/_/g, " "));
+  // CF-AN-H4-IS-ITS-OWN-CARD-LIST (2026-09-04). 2005 Topps Chrome nests a
+  // fourth level: §The Game Relics holds 11 cards AND an <h4>Patch</h4> holding
+  // 24 DIFFERENT cards, limited to 70 copies. Read as one unit the two lists
+  // concatenate -- 35 cards with AR, JB, SS, TH and MPI appearing twice, which
+  // is `one card, one row, one pool` broken inside a single subset, and the
+  // Patch cards silently inherit the parent's odds instead of their own /70.
+  //
+  // An h4 is a subset of its h3 exactly the way an h3 is a subset of its h2, so
+  // it is read the same way and named for both: "The Game Relics Patch".
+  const unitsFor = (name, slice) => {
+    const subs = [...slice.matchAll(/<h4 id="([^"]+?)(?:_\d+)?">/g)];
+    if (!subs.length) return [{ name, leaf: name, body: slice }];
+    // The parent keeps whatever sits ABOVE its first h4 -- its own card list.
+    const cut = slice.search(/<div class="mw-heading mw-heading4"|<h4 id=/);
+    const out = [{ name, leaf: name, body: cut > 0 ? slice.slice(0, cut) : "" }];
+    for (const s of subs) {
+      const leaf = detag(s[1].replace(/_/g, " "));
+      out.push({ name: `${name} ${leaf}`.trim(), leaf, body: section(slice, s[1], 4) });
+    }
+    return out;
+  };
+  const units = heads.length
+    ? heads.flatMap((m) => unitsFor(detag(m[1].replace(/_/g, " ")), section(body, m[1], 3)))
+    : unitsFor(h2Name, body);
+  for (const u of units) {
+    if (!u.body) continue;
+    // Same guard §Inserts uses for an UNSIGNED subset: a pure number inside a
+    // relic subset would collide with the base set's numbering. The autograph
+    // sections are the exception the page itself makes -- 2011 Topps Chrome's
+    // Autographed Rookies ARE the base numbers (#173 Freddie Freeman signed
+    // carries the same number as #173 unsigned) -- and they do not collide,
+    // because the row carries isAuto=true under an auto- category, which is a
+    // different card in the catalog's own terms. That is exactly the card the
+    // Freeman finding was missing, so requiring a letter here would re-open it.
+    const signedGuess = cls.signed != null ? cls.signed : SIGNED_HEADING.test(u.name);
+    const cards = parseTypedCards(u.body).filter((c) => signedGuess ? true : INSERT_NUM.test(c.num));
+    if (!cards.length) continue;
+    // A subset is not a parallel of itself: the slice starts with its own <h3>,
+    // which the ladder's heading pass would otherwise read as a rung.
+    const slugOf = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+    const selfSlug = slugOf(u.leaf ?? u.name);
+    // CF-AN-INITIALS-CARD-LINE-IS-NOT-A-RUNG. parseLadder's card-line defences
+    // are all NUMBER-based -- CARD_NUM and leadingCardNumber both require a
+    // digit -- so the very lines parseTypedCards was widened to READ come back
+    // through the ladder pass as RUNGS: "CE Carl Erskine" became a parallel of
+    // CE, and 5 cards x 5 "rungs" is the cross-join this file has fixed three
+    // times already under three different names.
+    //
+    // The roster defence is the right one, applied by card number rather than
+    // by name: this subsection's own card lines are known exactly, because
+    // parseTypedCards just parsed them. Any rung candidate that IS one of them
+    // is a card line. Nothing outside this section is affected.
+    const cardLineKeys = new Set(cards.map((c) => foldName(c.num + " " + c.player)));
+    const ladder = parseLadder(u.body, new Set(cards.map((c) => c.player).filter(isPersonName).map(foldName)))
+      .filter((r) => slugOf(r.name) !== selfSlug)
+      .filter((r) => !cardLineKeys.has(foldName(r.name)))
+      // An odds legend ("A: 1:15/boxes", "B: 1:2/boxes") states which swatch
+      // group a card belongs to. It is a rarity statement about the SECTION,
+      // never a finish, and as a rung it lands on every card in the subset as
+      // a parallel named "A". parseLadder already routed its figure to
+      // `rarity`; the row itself is the part that must not exist.
+      .filter((r) => !/^[A-Z]\s*:/.test(r.name.trim()) && !/^[A-Z]$/.test(r.name.trim()))
+      .map((r) => ({ ...r, printRun: platePrintRun(r) }));
+    // A mixed heading defers to the subsection: "Dem Bums Autographs" is
+    // signed, "The Game Relics" beside it is not.
+    const signed = cls.signed != null ? cls.signed
+      : SIGNED_HEADING.test(u.name) ? true
+      : RELIC_HEADING.test(u.name) ? false
+      : false;
+    out.push({ name: u.name, cards, ladder, signed, prefix: cls.prefix ?? (signed ? "auto" : "insert") });
+  }
+  return out;
+}
+
+/**
+ * Every card-type section the page carries, in one list, deduped by the
+ * (category, subset) the rows will occupy.
+ *
+ * Dedup matters because the page's headings NEST by design: 2011 Topps Chrome's
+ * §Autographs contains §Autographed Rookies, and `section()` resolves both ids,
+ * so the same 29 cards would be emitted twice under two categories. The outer
+ * heading is read first and the inner one is then a re-read of ground already
+ * covered -- `one card, one row, one pool`.
+ */
+function parseTypedSections(html) {
+  const out = [];
+  const seen = new Set();
+  for (const cls of SECTION_CLASSES) {
+    for (const u of parseTypedSection(html, cls)) {
+      const key = u.prefix + ":" + u.name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(u);
+    }
+  }
+  return out;
+}
+
+/**
  * Scope -> product routing reuses the EXISTING D22/D23 vocabulary rather
  * than inventing a second table: productQualifiers already maps
  * bowman-draft + "1st Edition" -> bowman-draft-1st-edition and
@@ -1112,18 +1358,41 @@ async function main(opts = {}) {
           lines.push(["base", csvEsc(c.num), csvEsc(nm), "false", r.printRun ?? "", csvEsc(c.player), csvEsc(r.note ?? ""), csvEsc(r.rarity ?? setRarity ?? "")].join(","));
         }
       }
-      // Inserts belong to the page's own product, never to a qualified scope.
-      let insertRows = 0, inserts = [];
+      // The page's other card-type sections belong to the page's own product,
+      // never to a qualified scope -- same rule §Inserts already follows.
+      //
+      // CF-THE-CATEGORY-PREFIX-IS-A-HYPHEN (2026-09-04). This emitted
+      // "insert:<slug>" with a COLON, and ingest-scraped-checklist.cjs accepts
+      // only "base", "insert-*" and "auto-*" -- so every insert row this lane
+      // has ever staged hit the `else { skipped++; continue; }` arm and was
+      // dropped at the door. The section was read, the CSV was written, and the
+      // catalog never saw one of them. Both branches of the ingester agree on
+      // the hyphen (convertBeckettChecklistXlsx.cjs:167, :234), so the colon was
+      // this file's alone. Fixing it is what makes the sections below reach the
+      // catalog at all.
+      let insertRows = 0, autoRows = 0, subsets = [];
       if (sc.isPaper) {
-        inserts = parseInserts(html);
-        for (const ins of inserts) {
-          const cat = "insert:" + ins.name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-          for (const c of ins.cards) {
-            lines.push([csvEsc(cat), csvEsc(c.num), "", "false", "", csvEsc(c.player)].join(","));
-            insertRows++;
-            for (const r of ins.ladder) {
-              lines.push([csvEsc(cat), csvEsc(c.num), csvEsc(r.name), "false", r.printRun ?? "", csvEsc(c.player), csvEsc(r.note ?? ""), csvEsc(r.rarity ?? "")].join(","));
-              insertRows++;
+        subsets = [
+          ...parseInserts(html).map((i) => ({ ...i, signed: false, prefix: "insert" })),
+          ...parseTypedSections(html),
+        ];
+        for (const sub of subsets) {
+          const cat = sub.prefix + "-" + sub.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+          // The section attests the signature, so it sets isAuto for the plain
+          // card AND for every rung of that card's ladder: a Gold Refractor OF
+          // an autograph is still an autograph. It is never inferred from the
+          // rung name -- `isAuto boundary is cardNumber, not text`.
+          const auto = sub.signed ? "true" : "false";
+          for (const c of sub.cards) {
+            lines.push([csvEsc(cat), csvEsc(c.num), "", auto, "", csvEsc(c.player)].join(","));
+            sub.signed ? autoRows++ : insertRows++;
+            for (const r of sub.ladder) {
+              // The same range/player scoping the base ladder obeys. A rung
+              // reaches a card only where the page says it does (#1571 §3.1/§3.2).
+              if (!cardInRange(c.num, r.cardRange)) continue;
+              if (r.players && r.players.length && !matchesExceptionPlayer(c.player, r.players)) continue;
+              lines.push([csvEsc(cat), csvEsc(c.num), csvEsc(r.name), auto, r.printRun ?? "", csvEsc(c.player), csvEsc(r.note ?? ""), csvEsc(r.rarity ?? "")].join(","));
+              sub.signed ? autoRows++ : insertRows++;
             }
           }
         }
@@ -1155,15 +1424,32 @@ async function main(opts = {}) {
       fs.writeFileSync(path.join(outDir, `${key}.csv`), lines.join("\n") + "\n");
       fs.writeFileSync(path.join(outDir, `${key}.manifest.json`), JSON.stringify({
         year, sport, setKey: sc.setKey,
+        // CF-THE-PARALLEL-COLUMN-IS-THE-RUNG (2026-09-04). The CSV contract
+        // says a BCP manifest names this flag, and the scraper never wrote it,
+        // so the ingester took its OTHER branch: derive the parallel from the
+        // category slug. For a base row that is harmless (the slug is "base"),
+        // which is why it went unnoticed while §Inserts was being dropped at
+        // the door anyway. It stops being harmless the moment auto- and
+        // insert- rows arrive, because the derivation bakes the SUBSET NAME
+        // into the rung -- "Autographed Rookies" instead of "Refractor" -- and
+        // then the /499 Refractor auto and the /50 Gold Refractor auto collapse
+        // onto one slug that no parsed sale title can match. This lane fills
+        // the parallel column from the page's own ladder; say so.
+        parallelColumnAuthoritative: true,
         setName: `${year} ${setName}${sc.isOwnProduct ? " " + sc.title : ""}`,
         sourceUrl: url, scope: sc.title, scopeOfPage: setName,
         cardNumberPrefix: sc.prefix, prefixDerivedFrom: sc.prefixVia,
         prefixUnresolved: (sc.isOwnProduct || sc.prefix != null) && sc.prefix == null,
         ladder: sc.rungs.map((r) => ({ name: sc.isOwnProduct ? rungNameInScope(r.name, sc.title) : r.name, printRun: r.printRun, rarity: r.rarity ?? null })),
         setRarity,
+        // Which card-type sections this page actually carried, and how each was
+        // classified. A re-acquire plan reads this to know which entries gained
+        // rows without re-fetching, and an auditor reads it to check that a
+        // signed row traces to a heading that said so.
+        sections: subsets.map((sub) => ({ name: sub.name, category: sub.prefix, isAuto: sub.signed, cards: sub.cards.length, rungs: sub.ladder.length })),
       }, null, 1));
       pageRows += lines.length - 1;
-      perProduct.push(`${sc.setKey}${sc.prefix ? " " + sc.prefix : ""} ${scopeCards.length}x${sc.rungs.length + 1}=${f(lines.length - 1)}${insertRows ? " +" + f(insertRows) + " insert" : ""}`);
+      perProduct.push(`${sc.setKey}${sc.prefix ? " " + sc.prefix : ""} ${scopeCards.length}x${sc.rungs.length + 1}=${f(lines.length - 1)}${insertRows ? " +" + f(insertRows) + " insert" : ""}${autoRows ? " +" + f(autoRows) + " auto" : ""}`);
       staged++;
     }
     rows += pageRows;
@@ -1187,6 +1473,9 @@ async function main(opts = {}) {
 module.exports = {
   main, normalizeSport,
   parseCards, parseLadder, parseScopedLadders, section,
+  // CF-A-SECTION-CLASS-IS-A-CARD-TYPE: the typed-section reader and the
+  // classification table the pins drive directly.
+  parseInserts, parseTypedSection, parseTypedSections, parseTypedCards, SECTION_CLASSES, platePrintRun,
   splitScopes, derivePrefix, prefixesFromImages, prefixFromProse,
   isCardListScope, isCardLine, rungNameInScope, cleanScrapedPlayer,
   leadingCardNumber, foldRoster, foldName,
