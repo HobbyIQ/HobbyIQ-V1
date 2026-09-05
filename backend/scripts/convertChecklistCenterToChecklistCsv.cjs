@@ -128,6 +128,26 @@ function clean(raw) {
 
 const { variationFinishOfSection, isVariationSection } = require("./lib/variationSections.cjs");
 
+/** CF-THE-WHOLE-SECTION-NAME-REACHES-THE-AUTO-DECISION (2026-09-05). THE one
+ *  vocabulary that says a checklist named a signed card, shared by every path
+ *  that decides isAuto -- the html subset title, the xlsx section, the xlsx
+ *  qualifier and the xlsx finish. It used to be written out four times with
+ *  three different word lists, and the finish's list was the short one: it
+ *  knew "auto" and "autograph" and not "signature", which is how 823 rows
+ *  reading "Signature Swatches Gold Prizm" staged unsigned.
+ *
+ *  A whole word, always: "Signature"/"Signatures" (Panini's usual spelling),
+ *  "Penmanship" (Prizm BK's), "Ink"/"Inscriptions" (Panini high end),
+ *  "Signing(s)", "Autograph(s)"/"Auto(s)"/"Autographed". Whole-word only, so
+ *  "Autumn" and "Inkjet" are not autographs and a substring can never mint one.
+ *
+ *  NOT in this list, deliberately: "Relic", "Patch", "Swatch", "Material",
+ *  "Jersey", "Memorabilia". A memorabilia card is not a signed card, and a
+ *  section that pairs the two ("Signature Swatches") is caught by the
+ *  signature word it already carries -- never by the swatch. */
+const AUTO_WORDS = /\b(auto|autos|autograph|autographs|autographed|signature|signatures|signing|signings|signed|penmanship|inscription|inscriptions|ink)\b/i;
+const namesAnAuto = (text) => AUTO_WORDS.test(String(text ?? ""));
+
 const UMBRELLA = /(parallels?|factory set|retail|club set|variations?|short prints?|\bsps?\b|photo variations?|checklist)$/i;
 const CARD_LINE = /^\d+[a-z]?\s+[A-Za-z]/;
 const EXCLUSION = /^\(?\*?\s*no\b/i;
@@ -521,7 +541,7 @@ function convertHtml(html, product) {
     const plainSubsets = subsets.filter((o) => o !== sub && !isVariationSection(plainTitle(o)));
     const anchorFor = (num) => plainSubsets.find((o) => /^base(\s|$)/i.test(plainTitle(o)) && numsOf(o).has(num))
       ?? plainSubsets.filter((o) => numsOf(o).has(num)).sort((a, b) => numsOf(a).size - numsOf(b).size)[0] ?? null;
-    const isAuto = /\b(auto|autograph|signature)/i.test(sub.title) ? "true" : "false";
+    const isAuto = namesAnAuto(sub.title) ? "true" : "false";
     const rungs = sub.ladders.flatMap((l) => l.rungs);
     const subPars = new Set(rungs.map((r) => r.name)), subNums = new Set(sub.cards.map((c) => c.num));
     if (subPars.size > PAR_MAX || subNums.size > NUM_MAX) {
@@ -614,7 +634,7 @@ function convertXlsx(rows2d, product) {
     for (const c of cards) {
       const { section, finish } = sectionSplit(sv, sections, c.num);
       const category = categoryOf(section);
-      const sectionAuto = /\b(auto|autograph|signature)/i.test(section);
+      const sectionAuto = namesAnAuto(section);
       const key = section + "\u0000" + c.num;
       const card = byCard.get(key) ?? { section, category, sectionAuto, num: c.num, player: c.player, finishes: [] };
       if (finish) { const { name, note, printRun } = clean(finish); card.finishes.push({ name, note, printRun: printRun ?? c.printRun ?? null }); }
@@ -653,7 +673,36 @@ function convertXlsx(rows2d, product) {
       // "Set - Concourse - Gold Prizms" minus its qualifier "Set - Concourse" is
       // "Gold Prizms", not "- Gold Prizms": the separator goes with it.
       if (qualifier && !isVariationSection(name)) name = name === qualifier ? "" : name.startsWith(qualifier + " ") ? name.slice(qualifier.length + 1).replace(/^[-\u2013\u2014:]\s*/, "") : name;
-      let isAuto = card.sectionAuto || (qualifier ? /\b(auto|autograph|signature)/i.test(qualifier) : false);
+      // CF-THE-WHOLE-SECTION-NAME-REACHES-THE-AUTO-DECISION (2026-09-05, the
+      // defect #1823 pinned). The flag was read off the SECTION and the
+      // qualifier only, and the word that says the card is signed does not
+      // always survive into either. 2022 Panini Select publishes "Jumbo Rookie
+      // Signature Swatches Gold Prizm": sectionsOf splits it CORRECTLY -- "Jumbo
+      // Rookie" is the section, "Signature Swatches Gold Prizm" is the finish --
+      // so no word was truncated off the page; the auto word simply ended up on
+      // the side of the split nobody asked. 823 rows whose parallel literally
+      // reads "Signature Swatches Gold Prizm" staged isAuto=false: autographs
+      // minted as unsigned twins of themselves, on the one axis no only-improve
+      // pass can ever see, because every other column is well-formed.
+      //
+      // The finish path did have two rules of its own, but its vocabulary was a
+      // strict SUBSET of the section's -- it never knew the word "signature".
+      // So this is not a new heuristic; it is the SAME vocabulary applied to the
+      // same sentence the checklist wrote. The flag is raised from the whole Set
+      // value -- section AND finish -- however sectionsOf happened to cut it.
+      //
+      // FLAGGING IS NOT STRIPPING. AUTO_RX below still removes only a bare
+      // leading/trailing auto word; "Signature Swatches" is the name of a
+      // memorabilia family and stays in the parallel verbatim. Widening the flag
+      // while leaving the name alone is deliberate: the CHECKLIST decides the
+      // flag (feedback_isauto_boundary_is_cardnumber_not_text), and the
+      // checklist's own words stay the checklist's own words.
+      // Read `r.name` -- the finish AS PUBLISHED -- not the `name` the qualifier
+      // strip has already shortened. Both are checked anyway, but reading the
+      // unstripped text means the flag can never depend on where a LATER
+      // cosmetic rule happened to cut, which is the whole shape of this bug.
+      let isAuto = card.sectionAuto || namesAnAuto(r.name) || namesAnAuto(name)
+        || (qualifier ? namesAnAuto(qualifier) : false);
       if (AUTO_RX.test(name)) { isAuto = true; name = name.replace(AUTO_RX, "").trim(); }
       // a finish that is only the auto word ("2023 Greatest Hits Autographs"
       // under "2023 Greatest Hits") marks the row auto and names no parallel
@@ -662,7 +711,9 @@ function convertXlsx(rows2d, product) {
       // beside "Auto Laser Black"): "Base" leading a finish is that marker,
       // never a parallel word, and the parallel is what follows it.
       if (/^base\s+\S/i.test(name)) name = name.replace(/^base\s+/i, "").trim();
-      if (/autograph/i.test(name) && !isAuto) isAuto = true;
+      // (the old trailing `/autograph/i.test(name)` catch-all is gone: it was a
+      // second, narrower spelling of the flag rule, and namesAnAuto above now
+      // reads the same text with the whole vocabulary. One rule, one place.)
       if (!name) name = card.category === "base" ? "Base" : "";
       if (name) pars.add(name);
       rowsOut.push([card.category, card.num, name, isAuto ? "true" : "false", r.printRun ?? "", card.player, r.note ?? ""]);
@@ -702,6 +753,6 @@ function main() {
   console.log(`\n[clc-convert] ${REPORT ? "would write" : "written"}=${f(written)} (xlsx ${f(viaXlsx)}, html ${f(viaHtml)})  rows=${f(rows)}  ladderRows=${f(ladderRowsTotal)}  refused-or-empty=${f(refused)}  no page cached=${f(noPage)}  rung candidates rejected=${f(rejectedTotal)}`);
 }
 
-module.exports = { clean, splitRungs, ladderFamily, applyFamily, sectionPrintRun, sectionHeadLine, parseCardLine, parseLadderText, parseLadders, parseHtml, convertHtml, parseXlsxRows, readXlsxRows, parseXlsx, convertXlsx, sectionsOf, sectionSplit, productMeta, categoryOf };
+module.exports = { namesAnAuto, AUTO_WORDS, clean, splitRungs, ladderFamily, applyFamily, sectionPrintRun, sectionHeadLine, parseCardLine, parseLadderText, parseLadders, parseHtml, convertHtml, parseXlsxRows, readXlsxRows, parseXlsx, convertXlsx, sectionsOf, sectionSplit, productMeta, categoryOf };
 
 if (require.main === module) main();
