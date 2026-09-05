@@ -1,0 +1,47 @@
+{
+ "generatedAt": "2026-09-05",
+ "forLane": "relocate-pool-rows-by-list SCOPE=data/pool-relocations/2026-09-05-ruled-pools-d24-magnetic-field.json",
+ "rulings": [
+  "Both canaries are DESTINATION pools that are currently EMPTY -- that emptiness is the whole defect (the holdings withheld no-exact-pool). Each can only GAIN rows; a loss here means the repair moved a sale out of the card it belongs to.",
+  "No shardSlot: this lane is not sharded (the list is the scope), so SLOT must be left unset and the per-shard gate does not apply.",
+  "poolRows is the count MEASURED on 2026-09-05 read-only. Other writers (the dedup cron, the rematch fleet) move pools independently, so MODE=check can differ for reasons unrelated to this lane. The GATE is the MODE=before / MODE=after pair captured around this lane own apply."
+ ],
+ "canaries": [
+  {
+   "name": "baseball 1999 upper-deck-black-diamond D24 Diamond Dominance /1500 -- 10 Griffey sales arrive",
+   "slug": "hiq:baseball:1999:upper-deck-black-diamond:d24:diamond-dominance:no-auto:num-1500",
+   "poolRows": 0,
+   "rowsMovingIn": 10,
+   "valueMovingIn": 1122.39,
+   "shapes": [
+    "relocate"
+   ],
+   "verifiedMarketDirection": "gains-rows",
+   "note": "Ruled destination for holding 6f4f079b. Pool is EMPTY today, which is why the holding withheld no-exact-pool. Includes the $818.88 PSA 10 -- the highest-value sale moving in this list."
+  },
+  {
+   "name": "baseball 1997 metal-universe #8 Magnetic Field -- 55 Ripken insert sales arrive",
+   "slug": "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto",
+   "poolRows": 0,
+   "rowsMovingIn": 55,
+   "valueMovingIn": 356.68,
+   "shapes": [
+    "relocate"
+   ],
+   "verifiedMarketDirection": "gains-rows",
+   "note": "Ruled destination for holding 277b05a3. Pool is EMPTY today. The insert shares card numbers with the base set, so these sales were filed as base #8."
+  },
+  {
+   "name": "baseball 1997 metal-universe #8 Base -- the pool the Magnetic Field sales LEAVE",
+   "slug": "hiq:baseball:1997:metal-universe:8:base:no-auto",
+   "poolRows": 7,
+   "rowsMovingOut": 3,
+   "valueMovingOut": 15.4,
+   "shapes": [
+    "relocate"
+   ],
+   "verifiedMarketDirection": "loses-rows",
+   "note": "SOURCE pool, listed so the loss is EXPECTED and attributed rather than read as damage. Only the 3 rows whose titles state Magnetic Field leave; the 4 that remain include a Rod Strickland basketball set-break and a Grant Hill Planet Metal that share card number 8 and are NOT this card."
+  }
+ ]
+}
