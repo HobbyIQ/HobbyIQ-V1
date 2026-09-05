@@ -537,6 +537,35 @@ on:
           # OPT-IN via the #1765 helper. Catalog rows on an alias slug are
           # REPORTED (count + sources) and NEVER written.
           - reslug-ruled-alias
+          # CF-FINISH-FAMILY-COLLISION (Drew, 2026-09-05) -- the WRITE half of
+          # #1790. A row whose TITLE names a finish the stored slug lacks
+          # ("Gold Shimmer /50" stored as gold-refractor) is a sale of the card
+          # the TITLE names, when the title-stated identity is CHECKLIST-BACKED
+          # and the stored row is not user-verified / ruled. #1790 made that
+          # population VISIBLE (finishFamilyCollision now reads the hiq:
+          # address from either identity field) and it stays REPORT-ONLY inside
+          # the rematch: the subclass sets a tag, never `writable`, and
+          # SPECIALIZATION-STATED's L4 leg refuses any parallel-axis move. This
+          # lane is the targeted refile, over a NAMED scope.
+          #
+          # `scope` is REQUIRED and carries a comma-separated PRODUCT LIST as
+          # sport:year:setKey -- the axis chosen because only a product list
+          # lets a whole-scope write NAME its ruling: a finish family is a WORD
+          # and a word spans every product that ever printed it. There is no
+          # 'all' in EITHER mode, and the inherited `scope=refractor` is
+          # REFUSED (exit 2) -- a report over an unnamed scope is how an apply
+          # over an unnamed scope gets authorised.
+          #
+          # Five assertions must ALL hold per row, and they live in
+          # lib/finish-collision-refile.cjs so the tests pin the code that
+          # runs: (1) the CLASSIFIER's own finishFamilyCollision flags it --
+          # not a second title reader; (2) the destination differs from the
+          # stored slug on the parallel/printRun segments ALONE; (3) the
+          # destination is checklist-backed, corpus AND catalog, read
+          # cardYear-aware; (4) the row is AUTO tier -- ruled and user rows are
+          # report-only forever; (5) the title's finish word does not name two
+          # card families at the number, and unanswerable counts as ambiguous.
+          - repair-finish-collision-refile
       apply:
         description: "Actually write (true) or dry-run only (false)"
         required: true
@@ -767,6 +796,56 @@ jobs:
             fi
           done
           echo "Predicate libs confirmed: ch-product-label, rematch-classify, relocate-sold-comp"
+
+      # CF-FINISH-FAMILY-COLLISION (Drew, 2026-09-05). THE SCOPE IS THE WHOLE
+      # SAFETY ARGUMENT for the refile lane, so it is checked HERE as well as
+      # inside the script. `scope` carries a comma-separated PRODUCT LIST as
+      # sport:year:setKey (e.g. baseball:2026:bowman-chrome); there is no 'all'.
+      #
+      # The product axis was chosen over the finish-family axis for exactly the
+      # reason this gate can exist: a product list is ENUMERABLE before the run,
+      # so a dispatcher can read what they are authorising and the pool counts
+      # are index-served. A finish family is a WORD, and a word spans every
+      # product that ever printed it.
+      #
+      # The runner-wide default `refractor` is INHERITED rather than chosen and
+      # is refused, and the refusal covers REPORT mode too: a report over an
+      # unnamed scope is how an apply over an unnamed scope gets authorised.
+      - name: The finish-collision refile names its scope
+        if: ${{ inputs.script == 'repair-finish-collision-refile' }}
+        shell: bash
+        run: |
+          SCOPE='${{ inputs.scope }}'
+          if [ -z "$SCOPE" ] || [ "$SCOPE" = "refractor" ] || [ "$SCOPE" = "all" ]; then
+            echo "::error::repair-finish-collision-refile requires scope = a comma-separated list of products as sport:year:setKey. Got '$SCOPE' (the runner default 'refractor' and 'all' are refused — this lane has no whole-corpus mode)."
+            exit 1
+          fi
+          IFS=',' read -ra PRODUCTS <<< "$SCOPE"
+          for P in "${PRODUCTS[@]}"; do
+            P="$(echo "$P" | tr -d '[:space:]')"
+            if ! echo "$P" | grep -Eq '^[a-z0-9-]+:[0-9]{4}:[a-z0-9-]+$'; then
+              echo "::error::'$P' is not a product (expected sport:year:setKey, e.g. baseball:2026:bowman-chrome)."
+              exit 1
+            fi
+          done
+          echo "Scope confirmed: ${#PRODUCTS[@]} product(s)."
+
+      # Same lesson as every other lane one layer down: the FIVE-ASSERTION
+      # predicate lives in a lib so the tests pin the code that runs. A dispatch
+      # that reached Cosmos and then died on a missing require would have read
+      # the pool for nothing -- or, in an apply, could have moved rows before
+      # failing.
+      - name: The finish-collision predicate lib is present
+        if: ${{ inputs.script == 'repair-finish-collision-refile' }}
+        shell: bash
+        run: |
+          for LIB in finish-collision-refile rematch-classify relocate-sold-comp; do
+            if [ ! -f "backend/scripts/lib/$LIB.cjs" ]; then
+              echo "::error::backend/scripts/lib/$LIB.cjs is missing — the lane would read the pool and have no rule to classify it with"
+              exit 1
+            fi
+          done
+          echo "Predicate libs confirmed: finish-collision-refile, rematch-classify, relocate-sold-comp"
 
       - name: Fetch COSMOS_CONNECTION_STRING from HobbyIQ3 App Service
         shell: bash
@@ -1572,6 +1651,20 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ch-product-label-repair-${{ inputs.apply == true && 'apply' || 'report' }}-${{ github.run_id }}
+          path: /tmp/backfill.log
+          if-no-files-found: warn
+          retention-days: 90
+
+      # The finish-collision refile's log carries the per-BUCKET report -- in
+      # scope, would-write, and the skips grouped by which assertion refused --
+      # plus the canary anchors before and after. That report is what an apply
+      # dispatch is authorised from, and a report that only ever lived in a log
+      # is a report nobody can quote.
+      - name: Upload the finish-collision refile log
+        if: ${{ always() && inputs.script == 'repair-finish-collision-refile' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: finish-collision-refile-${{ inputs.apply == true && 'apply' || 'report' }}-slot-${{ inputs.slot }}-${{ github.run_id }}
           path: /tmp/backfill.log
           if-no-files-found: warn
           retention-days: 90
@@ -3027,6 +3120,37 @@ jobs:
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=reslug-ruled-alias -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f limit="${{ inputs.limit }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (reslugged=${N:-0}) — done, no re-dispatch."
+          fi
+
+      - name: Self-relaunch the finish-collision refile until the slot is clean
+        # CF-FINISH-FAMILY-COLLISION (#1790, the write half). `scope` is the
+        # WHOLE safety argument for this lane -- a comma-separated product list
+        # as sport:year:setKey, with no 'all' -- so the continuation carries the
+        # SAME list. Forwarding it verbatim also means the "The finish-collision
+        # refile names its scope" gate RE-VALIDATES the relaunch: a continuation
+        # that somehow lost its scope refuses rather than widening.
+        #
+        # `apply` is forwarded verbatim too (#1578): a report that relaunches as
+        # a write is the defect that rule exists to stop, and hardcoding EITHER
+        # value is how it happens.
+        #
+        # The refile is convergent: a moved row's stored slug now AGREES with
+        # its title, so `finishFamilyCollision` no longer flags it and the
+        # relaunch resumes rather than repeating.
+        if: ${{ !cancelled() && inputs.script == 'repair-finish-collision-refile' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        working-directory: backend
+        run: |
+          set +e
+          N=$(grep -aoE "^  REFILED onto the title's card +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
+          echo "refiled=${N:-0}"
+          if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
+            echo "::notice::budget hit (refiled=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-finish-collision-refile -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f limit="${{ inputs.limit }}"
+          else
+            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (refiled=${N:-0}) — done, no re-dispatch."
           fi
 
       - name: Self-relaunch until composite backfill fully drains
