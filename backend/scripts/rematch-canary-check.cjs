@@ -33,10 +33,14 @@
  *
  * WHAT COUNTS AS A REGRESSION -- and exits nonzero
  *
- *   1. the pool LOST rows. A rematch moves sales between pools; a verified
- *      pool losing sales is the split-pool defect the rematch exists to end,
+ *   1. the pool LOST rows AND the departures are UNACCOUNTED FOR. A rematch
+ *      moves sales between pools; a verified pool losing sales with nothing
+ *      to show for it is the split-pool defect the rematch exists to end,
  *      arriving from the other direction. (Rows GAINED are fine and expected:
- *      that is a mis-filed sale coming home.)
+ *      that is a mis-filed sale coming home.) A departure that carries the
+ *      apply's own `rekeyedFrom` marker is ACCOUNTED FOR and is a note, not a
+ *      regression -- see "AN IMPROVE RE-KEY IS ALSO AN ACCOUNTED-FOR
+ *      DEPARTURE" in compareCanary. An unmarked disappearance still fails.
  *   2. the pool went EMPTY. Three canaries have 1-row pools; there is no
  *      "small regression" available to them.
  *   3. a PROTECTED row left the pool. Report-only forever means exactly this.
@@ -206,7 +210,65 @@ function compareCanary(canary, before, after, tolPct = TOL, touch) {
   const canaryIsParallel = !/:(base|no-parallel)?:(auto|no-auto)$/.test(String(canary.slug || "")) &&
     !/:base:(auto|no-auto)$/.test(String(canary.slug || ""));
   const lossIsExpected = evictionScope && canaryIsParallel;
+  // AN IMPROVE RE-KEY IS ALSO AN ACCOUNTED-FOR DEPARTURE (2026-09-05, wave 2).
+  //
+  // Slots 5 and 6 both exited 5 on the Gonzalez CPA-JG /499 canary, and the
+  // three rows they were blamed for are the lane working exactly as specified.
+  // Read from the rows themselves:
+  //
+  //   tca-ebay::407113176192  $100.00   "2026 Bowman Redemption Justin Gonzalez Refractor Auto /499"
+  //   tca-ebay::198573811927  $148.00   "REDEMPTION : Justin Gonzales [Refractor /499] #CPA-JG 2026 Bowman Chrome Auto"
+  //   tca-ebay::287538862055  $224.99   "2026 Bowman Chrome Justin Gonzales 1st Auto Refractor /499 #CPA-JG"
+  //
+  // Every one carries `setName: "Bowman Chrome"` in its OWN fields, so
+  // `storedIdentity` (which reads setName, not the slug) already derived
+  // setKey `bowman-chrome`. The setKey axis was SAME, not changed; the only
+  // axis that moved was printRun, absent on the row and 499 on the checklist.
+  // The class was IMPROVE/filled:printRun onto a checklist-backed destination
+  // (`checklistcenter-2026-08-29`, verified, printRun 499) and the write made
+  // the row's ADDRESS agree with the identity the row already stated.
+  //
+  // The pool did not lose three sales; three sales that were never Bowman
+  // paper stopped being counted as Bowman paper. Drew's own protected row
+  // (`ebay-user-purchase::147349440137-...`, setName "2026 Bowman") did NOT
+  // move and is still on the holding's slug -- the boundary held precisely.
+  //
+  // WHY THIS IS A SEPARATE CLAUSE AND NOT A RELAXED `lost` RULE. The eviction
+  // scope already had a way to say "this departure was mine and it was
+  // intended"; IMPROVE had none, so ANY attributed departure read as damage
+  // and the lane could never move a row out of a canary pool without halting
+  // the fleet. What is asserted is the same thing the eviction clause asserts
+  // -- that every row that left is ACCOUNTED FOR by the marker the apply wrote
+  // -- so an unmarked disappearance is still a regression in every scope.
   const lost = before.rows - after.rows;
+  const improveExplained = Number(after.improveRekeyedAway ?? 0);
+  // THE MARKER IS THE BOUND, NOT THE LEDGER'S `fromCount`.
+  //
+  // The obvious extra guard -- "a shard may not excuse more rows than its own
+  // ledger says it moved" -- is WRONG here, and slot 6 is the proof. It
+  // measured 3 departures (13 -> 10) while its ledger named 2, because slot 5
+  // had already moved the third before slot 6's baseline was taken. Bounding
+  // by `fromCount` failed that shard while simultaneously reporting
+  // "0 unexplained", which is a self-contradicting verdict.
+  //
+  // The honest control is the one the eviction clause already uses: every row
+  // that LEFT must carry the apply's `rekeyedFrom` marker, counted from the
+  // rows themselves rather than from any one shard's bookkeeping. The marker
+  // is written per row by the apply, and `measure()` only counts a marked row
+  // when it is genuinely no longer in the pool -- so an unmarked
+  // disappearance, which is the damage this gate exists to catch, can never be
+  // laundered through it. `touched` still requires this shard to have written
+  // here at all, and `lost > 0` keeps it from excusing an anchor move with no
+  // departure behind it.
+  //
+  // AND IT REQUIRES A LEDGER. `touched` is true on the degrade-closed path too
+  // (no ledger at all), and there the gate cannot tell WHOSE re-key that marker
+  // records -- the marker is written by every apply, not just this one. A
+  // checker that cannot attribute must not hand out passes it did not earn, so
+  // `attributed` is required exactly as the module header promises.
+  const improveLossFullyAccounted = attributed && touched && lost > 0
+    && !lossIsExpected
+    && improveExplained >= lost;
   if (after.rows < before.rows) {
     const explained = Number(after.evictedAway ?? 0);
     // A pool this shard never wrote in cannot have been drained by it. The
@@ -214,6 +276,15 @@ function compareCanary(canary, before, after, tolPct = TOL, touch) {
     if (!touched) notes.push(`pool changed by other writers: ${lost} fewer row(s) (${before.rows} -> ${after.rows}) -- this shard wrote nothing here`);
     else if (lossIsExpected && explained >= lost) notes.push(`pool lost ${lost} row(s) to base eviction, all ${explained} accounted for by the eviction marker -- the intended effect`);
     else if (lossIsExpected) regressions.push(`pool LOST ${lost} row(s): ${before.rows} -> ${after.rows}, but only ${explained} carry the eviction marker -- ${lost - explained} unexplained`);
+    // The IMPROVE re-key clause. A departure is discounted only when the
+    // apply's own `rekeyedFrom` marker accounts for it, and only in a pool
+    // this shard actually wrote in. See the note on the flag above for why
+    // the ledger's `fromCount` is deliberately NOT an additional bound.
+    else if (improveLossFullyAccounted) {
+      notes.push(`pool lost ${lost} row(s) to an IMPROVE re-key, all ${improveExplained} accounted for by the rekeyedFrom marker -- a sale moving to the identity its own fields already state`);
+      if ((after.improveRekeyedIds ?? []).length) notes.push(`  re-keyed away: ${after.improveRekeyedIds.join(", ")}`);
+    }
+    else if (improveExplained > 0) regressions.push(`pool LOST ${lost} row(s): ${before.rows} -> ${after.rows}, but only ${improveExplained} carry the re-key marker -- ${lost - improveExplained} unexplained`);
     else regressions.push(`pool LOST ${lost} row(s): ${before.rows} -> ${after.rows}`);
   }
   else if (after.rows > before.rows) {
@@ -235,6 +306,13 @@ function compareCanary(canary, before, after, tolPct = TOL, touch) {
     // damage by the shard.
     if (movePct > tolPct && !touched) notes.push(`pool changed by other writers: anchor moved ${movePct.toFixed(1)}%: ${money(before.anchor)} -> ${money(after.anchor)} -- this shard wrote nothing here, the leading edge moved under new sales`);
     else if (movePct > tolPct && lossIsExpected) notes.push(`anchor moved ${movePct.toFixed(1)}%: ${money(before.anchor)} -> ${money(after.anchor)} -- expected under base eviction, the leading edge is recomputed once mis-filed sales leave`);
+    // Same reasoning as the loss clause above: once a departure is ACCOUNTED
+    // FOR by the re-key marker, the leading edge is SUPPOSED to be recomputed
+    // without those sales -- that is the point of moving them. The Gonzalez
+    // canary lost its $100 and $148 rows, so an anchor that did not move would
+    // be the surprising outcome. Gated on the same accounting as the loss, so
+    // an unexplained departure still fails on both counts.
+    else if (movePct > tolPct && improveLossFullyAccounted) notes.push(`anchor moved ${movePct.toFixed(1)}%: ${money(before.anchor)} -> ${money(after.anchor)} -- expected: every departure carries the IMPROVE re-key marker, so the leading edge is recomputed without them`);
     else if (movePct > tolPct) regressions.push(`anchor moved ${movePct.toFixed(1)}% (tolerance ${tolPct}%): ${money(before.anchor)} -> ${money(after.anchor)}`);
     else if (movePct > 0) notes.push(`anchor moved ${movePct.toFixed(1)}% within tolerance`);
   } else if (before.anchor !== null && after.anchor === null) {
@@ -277,9 +355,31 @@ async function measure(pool, slug) {
     "SELECT VALUE COUNT(1) FROM c WHERE IS_DEFINED(c.baseEvictionEvidence) AND ARRAY_LENGTH(c.rekeyedFrom) > 0 AND c.rekeyedFrom[0].cardId = @s",
     [{ name: "@s", value: slug }]
   );
+  // Rows that LEFT this slug by an IMPROVE re-key, counted from the SAME
+  // marker (2026-09-05, the wave-2 halt). See "AN IMPROVE RE-KEY IS ALSO AN
+  // ACCOUNTED-FOR DEPARTURE" in compareCanary: the eviction path had a way to
+  // say "this loss was mine and it was intended" and the IMPROVE path did not,
+  // so a lane doing exactly its job read as damage.
+  //
+  // The `baseEvictionEvidence` field is what separates the two populations --
+  // the eviction branch writes it, the IMPROVE branch does not -- so the two
+  // counts partition the departures rather than double-counting them.
+  const improveRekeyed = await all(
+    "SELECT c.id, c.cardId, c.rekeyedReason FROM c WHERE NOT IS_DEFINED(c.baseEvictionEvidence) AND ARRAY_LENGTH(c.rekeyedFrom) > 0 AND c.rekeyedFrom[0].cardId = @s",
+    [{ name: "@s", value: slug }]
+  );
   const byId = new Map();
   for (const r of [...byPartition, ...byField]) if (!byId.has(r.id)) byId.set(r.id, r);
-  return { ...poolInputs([...byId.values()]), evictedAway: Number(evicted[0] ?? 0) };
+  // A departure only counts as accounted-for if the row is no longer IN the
+  // pool: a re-key whose destination still carries this slug never left, and
+  // counting it would license a real loss elsewhere.
+  const improveAway = improveRekeyed.filter((r) => !byId.has(r.id));
+  return {
+    ...poolInputs([...byId.values()]),
+    evictedAway: Number(evicted[0] ?? 0),
+    improveRekeyedAway: improveAway.length,
+    improveRekeyedIds: improveAway.map((r) => `${r.id}@${r.cardId}`).sort(),
+  };
 }
 
 /**
