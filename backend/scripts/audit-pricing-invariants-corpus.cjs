@@ -150,12 +150,31 @@ function makeResult(id) {
   };
 }
 
+/**
+ * THE ADDRESSING FIELDS A FINDING CARRIES ARE PART OF THE FINDING.
+ *
+ * `record` used to keep only `kind` and `detail` off the finding, so the
+ * addresses the predicates had already computed — I5's `partitions` list above
+ * all — were thrown away before reaching the artifact, and a repair lane had to
+ * re-derive them by re-querying. These are copied through explicitly (rather
+ * than spreading the whole finding) so an unrelated field a predicate adds
+ * later does not silently enlarge every artifact row.
+ */
+const FINDING_ADDRESS_FIELDS = ["partitions", "rekeyedAt", "unstatedFinish", "backing", "shown", "retained", "source"];
+
 function record(res, findings, rowRef) {
   for (const fi of findings) {
     res.breaches++;
     res.byKind[fi.kind] = (res.byKind[fi.kind] ?? 0) + 1;
     if (res.rows.length < MAX_ROWS_PER_FINDING) {
-      res.rows.push({ ...rowRef, kind: fi.kind, detail: fi.detail });
+      const row = { ...rowRef, kind: fi.kind, detail: fi.detail };
+      for (const k of FINDING_ADDRESS_FIELDS) {
+        if (fi[k] !== undefined && fi[k] !== null) row[k] = fi[k];
+      }
+      // A finding that names its own id (I5 groups by sale id) wins over the
+      // caller's ref, which may be the loop variable rather than the document.
+      if (fi.id) row.id = fi.id;
+      res.rows.push(row);
     }
   }
 }
@@ -547,6 +566,7 @@ async function auditRederivation(db, res, bud, nowMs) {
   }
 
   const verdicts = [];
+  const needsChecklistRows = [];
   for (const row of resources) {
     if (bud.outOfClock()) { res.notes.push(`stopped at ${verdicts.length}/${resources.length} — ${bud.stoppedAtBudget()}`); break; }
     res.sample++;
@@ -560,12 +580,32 @@ async function auditRederivation(db, res, bud, nowMs) {
       // A CONFLICT is the row-level finding. IMPROVE and UNDERIVABLE are
       // counted in the class table but are not breaches: IMPROVE is a queue,
       // UNDERIVABLE is absence, and PROTECTED is report-only forever.
+      // ONLY A TRUE DISAGREEMENT IS RECORDED AS A BREACH. A CONFLICT the
+      // checklist gate produced (a pure fill onto an unbacked destination) is
+      // an ACQUISITION signal, listed separately below with its axes.
       if (INV.BREACHING_CLASSES.has(String(v?.klass))) {
-        record(res, [{
-          kind: `rederivation-${String(v.klass).toLowerCase()}`,
-          detail: `stored slug "${row.hobbyiqCardId}" re-derives as a DIFFERENT card `
-            + `(${(v.reasons ?? []).slice(0, 3).join("; ") || "no reason given"})`,
-        }], { id: row.id, slug: row.hobbyiqCardId, title: String(row.title ?? "").slice(0, 120) });
+        const kind = INV.conflictKind(v);
+        const ref = {
+          id: row.id, slug: row.hobbyiqCardId, cardId: row.cardId ?? null,
+          title: String(row.title ?? "").slice(0, 120),
+          axes: INV.axisSignature(v), conflictKind: kind,
+        };
+        if (kind === "TRUE-DISAGREEMENT") {
+          record(res, [{
+            kind: "rederivation-true-disagreement",
+            detail: `stored slug "${row.hobbyiqCardId}" re-derives as a DIFFERENT card — `
+              + `${INV.axisSignature(v)} (${(v.reasons ?? []).slice(0, 3).join("; ") || "no reason given"})`,
+          }], ref);
+        } else if (kind === "NEEDS-CHECKLIST" && needsChecklistRows.length < MAX_ROWS_PER_FINDING) {
+          // Not a breach — a queue. Carried in the artifact so the acquisition
+          // lane can take it without re-querying.
+          needsChecklistRows.push({
+            ...ref,
+            filled: (v.axes?.filled ?? []).slice().sort(),
+            detail: `derivation agrees but is more specific (${INV.axisSignature(v)}); no checklist `
+              + "backs the destination — an acquisition, not a disagreement",
+          });
+        }
       }
     } catch (e) {
       res.notes.push(`classifier threw on ${row.id}: ${String(e?.message ?? e).slice(0, 90)}`);
@@ -573,8 +613,31 @@ async function auditRederivation(db, res, bud, nowMs) {
   }
   const rates = INV.rederivationRates(verdicts);
   res.byClass = rates.byClass;
-  res.notes.push(`CONFLICT rate ${pct(rates.breaching, rates.total)} of ${f(rates.total)} classified — `
-    + "the DELTA night over night is the signal; a stable high number is the known Great Rematch backlog");
+  res.byConflictKind = rates.byConflictKind;
+  res.byAxis = rates.byAxis;
+  res.byReason = rates.byReason;
+  res.needsChecklistAxes = rates.needsChecklistAxes;
+  res.needsChecklistRows = needsChecklistRows;
+  // THE THRESHOLD MEASURES TRUE DISAGREEMENTS. Both numbers are printed, and
+  // the note says which one the threshold reads — a threshold that quietly
+  // starts measuring something else is indistinguishable from a corpus that
+  // improved overnight.
+  res.notes.push(
+    `TRUE-DISAGREEMENT rate ${pct(rates.breaching, rates.total)} of ${f(rates.total)} classified `
+    + `(${f(rates.breaching)} rows) — this is what the threshold reads`,
+  );
+  res.notes.push(
+    `NEEDS-CHECKLIST ${f(rates.needsChecklist)} (${pct(rates.needsChecklist, rates.total)}) — the `
+    + "derivation AGREES and is more specific; no checklist backs the destination. An ACQUISITION "
+    + "signal, deliberately outside the threshold (#1796: the checklist gate returns these as CONFLICT)",
+  );
+  if (rates.parserArtifact) {
+    res.notes.push(`PARSER-ARTIFACT ${f(rates.parserArtifact)} — known classifier noise, contained from writes`);
+  }
+  res.notes.push(
+    `all-CONFLICT rate would be ${pct(rates.conflicts, rates.total)} — reported so the change in what `
+    + "the threshold measures is visible, never silent",
+  );
 }
 
 // ── main ────────────────────────────────────────────────────────────────────
@@ -671,6 +734,32 @@ async function main() {
     }
     if (r.byCell) { console.log("  worst (sport,year) cells:"); for (const [c, v] of Object.entries(r.byCell)) console.log(`    ${c.padEnd(28)} ${v.breaches}/${v.sampled}`); }
     if (r.byClass) { console.log("  by class:"); for (const [c, n] of Object.entries(r.byClass)) console.log(`    ${c.padEnd(28)} ${f(n)}`); }
+    if (r.byConflictKind) {
+      console.log("  CONFLICT split (only TRUE-DISAGREEMENT is a breach):");
+      for (const [c, n] of Object.entries(r.byConflictKind)) console.log(`    ${c.padEnd(28)} ${f(n)}`);
+    }
+    if (r.byAxis) {
+      console.log("  by axis signature:");
+      for (const [c, n] of Object.entries(r.byAxis).slice(0, 12)) console.log(`    ${String(c).slice(0, 56).padEnd(56)} ${f(n)}`);
+    }
+    if (r.byReason) {
+      console.log("  by reason code:");
+      for (const [c, n] of Object.entries(r.byReason).slice(0, 15)) console.log(`    ${String(c).slice(0, 56).padEnd(56)} ${f(n)}`);
+    }
+    if (r.needsChecklistAxes && Object.keys(r.needsChecklistAxes).length) {
+      // THE ACQUISITION SIGNAL. Which axes a checklist would settle, and how
+      // many rows each would unblock — this feeds the checklist queue, not the
+      // alarm.
+      console.log("  NEEDS-CHECKLIST by filled axes (acquisition signal, not a breach):");
+      for (const [c, n] of Object.entries(r.needsChecklistAxes).slice(0, 10)) console.log(`    ${String(c).padEnd(40)} ${f(n)}`);
+    }
+    if (r.needsChecklistRows?.length) {
+      console.log(`  NEEDS-CHECKLIST rows (${r.needsChecklistRows.length}):`);
+      for (const row of r.needsChecklistRows) {
+        console.log(`    id ${row.id}`);
+        console.log(`      slug ${row.slug}  filled ${row.filled?.join(",") || "?"}`);
+      }
+    }
     if (r.byUser) { console.log("  by user (top):"); for (const [u, n] of Object.entries(r.byUser)) console.log(`    ${String(u).slice(0, 28).padEnd(28)} ${f(n)}`); }
     if (r.topPools?.length) {
       console.log("  worst pools by rate:");
@@ -682,10 +771,28 @@ async function main() {
     }
     // ROW-LEVEL, always. A count with no ids is a number nobody can act on.
     if (r.rows.length) {
+      // THE REPAIR LANE MUST BE ABLE TO TAKE THESE WITHOUT RE-QUERYING
+      // (2026-09-05). The first version printed `holding a560c983` — an
+      // 8-character prefix and no userId — so anyone acting on a finding had to
+      // go back to Cosmos to find the document, and `portfolio` is partitioned
+      // on /userId, which the digest did not carry. A row-level finding whose
+      // ids are abbreviated is not a row-level finding.
+      //
+      // Full ids now, plus the partition key each container needs:
+      //   holdings   userId + holding id  (portfolio is /userId)
+      //   sales      sale id + EVERY partition it was found under (/cardId)
       console.log(`  rows (${r.rows.length} of ${f(r.breaches)}):`);
       for (const row of r.rows) {
-        const ref = row.holdingId ? `holding ${String(row.holdingId).slice(0, 8)}` : `id ${String(row.id ?? row.runId ?? "?").slice(0, 40)}`;
+        const ref = row.holdingId
+          ? `holding ${row.holdingId}  user ${row.userId ?? "(none)"}`
+          : `id ${row.id ?? row.runId ?? "?"}`;
         console.log(`    ${ref}  [${row.kind}]`);
+        if (row.slug) console.log(`      slug ${row.slug}`);
+        if (row.partitions?.length) {
+          for (const p of row.partitions) console.log(`      partition ${p}`);
+        } else if (row.cardId && row.cardId !== row.slug) {
+          console.log(`      partition ${row.cardId}`);
+        }
         console.log(`      ${row.detail}`);
       }
     }
@@ -717,6 +824,11 @@ async function main() {
       byKind: r.byKind, notes: r.notes,
       ...(r.byCell ? { byCell: r.byCell } : {}),
       ...(r.byClass ? { byClass: r.byClass } : {}),
+      ...(r.byConflictKind ? { byConflictKind: r.byConflictKind } : {}),
+      ...(r.byAxis ? { byAxis: r.byAxis } : {}),
+      ...(r.byReason ? { byReason: r.byReason } : {}),
+      ...(r.needsChecklistAxes ? { needsChecklistAxes: r.needsChecklistAxes } : {}),
+      ...(r.needsChecklistRows ? { needsChecklistRows: r.needsChecklistRows } : {}),
       ...(r.byUser ? { byUser: r.byUser } : {}),
       ...(r.topPools ? { topPools: r.topPools } : {}),
       ...(r.sources ? { sources: r.sources } : {}),
