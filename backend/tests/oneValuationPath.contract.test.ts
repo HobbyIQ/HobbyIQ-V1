@@ -155,6 +155,14 @@ const VENDOR = "1778477531904x850967262057528600";
 const identityRow = (over: Record<string, unknown>) => ({
   playerName: "Test Player", year: 2018, setKey: "bowman-chrome", setName: "2018 Bowman Chrome",
   cardNumber: "49", parallel: "Gold Refractor", isAuto: false, sport: "baseball", printRun: 50, imageUrl: null,
+  // CF-WE-DONT-WANT-SELF-DERIVED (Drew, 2026-09-04). Every fixture here stands
+  // for a card the catalog really holds, so it carries the provenance a real
+  // catalog row carries. Without it these rows read as untagged, the identity
+  // gate declines to publish a price for them, and this file would be testing
+  // the identity gate rather than the four routes it is about. A fixture that
+  // omits the source is testing "what happens with no provenance", which is
+  // identityBacking.test.ts's job.
+  source: "checklistcenter-2026-08-29",
   ...over,
 });
 const sale = (slug: string, price: number, d: number, grade: { c: string; v: number } | null = null) => ({
