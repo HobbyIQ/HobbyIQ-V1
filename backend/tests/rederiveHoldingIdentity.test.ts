@@ -47,10 +47,23 @@ describe("GATE 2 — a re-derivation may never silently drop a claimed axis", ()
     // Measured on the holding itself 2026-09-04: the eBay aspects state
     // "Insert Set: Diamond Dominance", "Print Run: 1500" and "Features:
     // Serial Numbered, Insert", and the sale title is "...Diamond Dominance
-    // #D24 Ken Griffey Jr /1500". No 1999 D24 catalog row carries a printRun
-    // at all -- the /1500 in the checklist belongs to the Triple Diamond tier.
-    // So the base row is NOT this card, and the move is refused rather than
-    // fusing a serial-numbered insert into the base pool.
+    // #D24 Ken Griffey Jr /1500". The base row is NOT this card, and the move
+    // is refused rather than fusing a serial-numbered insert into the base
+    // pool. The GATE is unchanged and still right.
+    //
+    // ITS ORIGINAL RATIONALE IS CORRECTED HERE (2026-09-05), because the
+    // wrong reason was load-bearing. This comment used to read "No 1999 D24
+    // catalog row carries a printRun at all -- the /1500 in the checklist
+    // belongs to the Triple Diamond tier." That was true when written and is
+    // not true now: #1787 ingested
+    // `hiq:baseball:1999:upper-deck-black-diamond:d24:diamond-dominance:no-auto:num-1500`
+    // (source baseballcardpedia, printRun 1500, Ken Griffey Jr.), verified
+    // present in card_catalog 2026-09-05. The holding's real destination
+    // EXISTS; what kept it unreachable was that this pass asked the matcher
+    // for `parallel: "Base"` at /1500, a card that does not exist. Field
+    // recovery reads the insert off the holding's own aspects and the same
+    // question then returns that row at exact/0.98 -- see
+    // holdingFieldRecovery.test.ts.
     expect(droppedSpecificityAxes(
       { printRun: 1500, parallel: "Base" },
       "hiq:baseball:1999:upper-deck-black-diamond:d24:base:no-auto",
@@ -181,9 +194,15 @@ describe("the rederive pass asks with the holding's set name and print run", () 
   });
 
   it("passes printRun on every canonicalize call it makes", () => {
+    // The pin is on the INTENT — every call states a print run — not on one
+    // spelling of it. Field recovery added a third call that states the
+    // RECOVERED run (`rec.fields.printRun`), which is the same claim read from
+    // a wider source; counting only the `h.printRun` spelling would fail on a
+    // call that is more correct, not less.
     const calls = src.split("await canonicalize(").length - 1;
     expect(calls).toBeGreaterThanOrEqual(2);
-    const withRun = src.split("printRun: typeof h.printRun").length - 1;
-    expect(withRun).toBe(calls);
+    const withStoredRun = src.split("printRun: typeof h.printRun").length - 1;
+    const withRecoveredRun = src.split("printRun: typeof rec.fields.printRun").length - 1;
+    expect(withStoredRun + withRecoveredRun).toBe(calls);
   });
 });
