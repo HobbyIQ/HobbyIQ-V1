@@ -208,6 +208,22 @@ describe("A2 -- ONLY the parallel/printRun segments move", () => {
     expect(["parallel", "printRun"].every((n) => F.MOVABLE_SEGMENTS.has(n))).toBe(true);
   });
 
+  it("MUTATION: a VENDOR-KEYED row is compared against its hobbyiqCardId, not the bubble id", () => {
+    // The German row's `cardId` is a CardHedge bubble id, which parses as no
+    // slug at all. If A2 compared THAT instead of the classifier's
+    // `addressSlug`, every vendor-keyed row -- 59% of a 5,000-row sample per
+    // #1790 -- would refuse as `stored-slug-malformed` and the lane would
+    // silently cover only the hiq-keyed third of its own scope.
+    expect(germanRow().cardId).not.toMatch(/^hiq:/);
+    expect(F.slugParts(germanRow().cardId)).toBeNull();
+    // Asked the wrong way it is malformed...
+    expect(F.segmentsThatDiffer(germanRow().cardId, GERMAN_DEST).reason).toBe("stored-slug-malformed");
+    // ...and asked the way the lane asks it, the row moves.
+    const p = plan();
+    expect(p.move).toBe(true);
+    expect(p.evidence.addressSlug).toBe(GERMAN_STORED);
+  });
+
   it("a destination identical to the stored slug is not a move", () => {
     const p = plan({ destSlug: GERMAN_STORED });
     expect(p.move).toBe(false);

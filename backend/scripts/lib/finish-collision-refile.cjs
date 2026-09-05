@@ -361,12 +361,17 @@ function planFinishCollisionRefile({
   }
 
   // A2 -- ONLY THE FINISH AXES MOVE.
-  const seg = segmentsThatDiffer(storedSlug ?? row?.cardId ?? ev.addressSlug, destSlug);
-  // The address the collision was quoted against is the one compared, because
-  // that is the address the pool reader finds this sale under. `addressSlug`
-  // is the classifier's answer to "which field carries the hiq: slug".
-  const segFromAddress = segmentsThatDiffer(ev.addressSlug, destSlug);
-  const use = segFromAddress.ok || !seg.ok ? segFromAddress : seg;
+  //
+  // Compared against `ev.addressSlug` and against nothing else. That is the
+  // classifier's own answer to "which field carries this row's `hiq:` slug"
+  // (#1790: `cardId` when it is one, else `hobbyiqCardId`), and it is the
+  // address the pool reader actually finds this sale under. Comparing the raw
+  // `cardId` instead would ask the question of a CardHedge bubble id on the
+  // whole vendor-keyed population -- 59% of a 5,000-row sample -- which parses
+  // as no slug at all, so every one of those rows would refuse as
+  // `stored-slug-malformed` and the lane would silently cover only the
+  // hiq-keyed third of its own scope.
+  const use = segmentsThatDiffer(ev.addressSlug, destSlug);
   if (!use.ok) {
     return { move: false, reason: `axis-refusal:${use.reason}`, dest: null, evidence: { ...ev, differingSegments: use.differing } };
   }
