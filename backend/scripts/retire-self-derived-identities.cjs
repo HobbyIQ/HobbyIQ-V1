@@ -61,10 +61,62 @@
  *   --card-rule               also retire card-level twins (off by default)
  *   SPORT=baseball            one sport per run (products fit in memory)
  *   PRODUCTS=n                cap products scanned, for a bounded probe
+ *   RUN_MINUTES=110           loop budget; must stop under the step ceiling
  *
  * Sharding goes through the ONE helper (runner-shard-scope.cjs): an inherited
  * `slot=0 slots=16` from the workflow defaults is NOT a chosen shard and
  * sweeps everything (CF-AN-INHERITED-SLOTS-IS-NOT-A-CHOSEN-SHARD, #1765).
+ *
+ * ── FAN OUT: ONE SPORT DOES NOT FIT IN ONE SLOT ─────────────────────────────
+ *
+ * Measured on run 33960686247: 51.5 self-derived rows/s, and baseball's
+ * self-derived population is 1,998,165 rows across 6,804 (year, setKey)
+ * products. One slot is therefore ~10.8 hours of loop, or five serial
+ * budget-stop relaunches. Sharding is not optional at this size:
+ *
+ *   slots=8    mean slot 81m, worst 81m   headroom 1.3x   thin
+ *   slots=16   mean slot 40m, worst 45m   headroom 2.4x   RECOMMENDED
+ *
+ * Both fit inside one 110-minute budget, so the choice is headroom, not wall
+ * clock: a slot is a set of PRODUCTS, and products differ by three orders of
+ * magnitude (2024 topps 290,871 rows; 1997 fleer 2,937). The worst-slot
+ * figures above use the measured hash skew over the real 6,804-product axis
+ * (max/mean 1.01x at 8 slots, 1.11x at 16), and 16 slots keeps 2.4x of room
+ * for a slot that draws several giants. 8 slots at 1.3x does not.
+ *
+ * SHARD=true is REQUIRED for slot 0 -- without it slot 0 sweeps the whole
+ * sport and the other fifteen slots re-do work it already did.
+ *
+ * The axis is PROVEN, not assumed: tests/retireSelfDerivedBudgetMargin.test.ts
+ * partitions a synthetic product list at 8, 16 and 32 slots and asserts every
+ * product is owned by exactly one slot -- complete and disjoint
+ * (feedback_shard_axis_must_be_guaranteed_and_measured).
+ *
+ * ── THE BANNER SEQUENCE OF A MULTI-BUDGET APPLY ─────────────────────────────
+ *
+ * A relaunch is the lane WORKING, not the lane failing. Run 33960686247 was
+ * read as a failure because the relaunch notice sat next to a red step. The
+ * expected sequence for a slice that stops on budget is, in order:
+ *
+ *   1.  APPLIED / elapsed ... / retired / identityUnverified      the counts
+ *   2.  RECONCILE  seen N = ... => N BALANCES                     the arithmetic
+ *   3.  [retire-self-derived-identities] reconciled: intended ... the shared check
+ *   4.  VERIFY BY READ  <sport>: ...                              or UNCONFIRMED
+ *   5.  stopped at the clock budget with products left            the MARKER
+ *   6.  ::notice::budget hit (...) — re-dispatching slot n/m      the relaunch
+ *   7.  the step ends GREEN, and the next slice starts from product 0
+ *
+ * GATE ON (2) AND (3) PLUS A GREEN JOB. Do NOT gate on the absence of (5) or
+ * (6): a budget stop with a relaunch is the designed steady state of a
+ * multi-slice apply, and this lane is idempotent, so the next slice re-reads
+ * the products the last one finished and skips them as `already marked`.
+ * The FINAL slice of a slot prints, instead of (5) and (6):
+ *
+ *   ::notice::slot n/m finished within budget (...) — done, no re-dispatch.
+ *
+ * The one thing that IS a failure is (2) saying DOES NOT BALANCE, or the step
+ * being killed by the runner -- which, before this fix, is exactly what
+ * happened AFTER (3) printed clean (see the RUN_MINUTES block below).
  *
  * Every write goes through patchCatalogRowFields, never a raw patch — a raw
  * patch is how #1614 left rows unfindable by rewriting derived search fields
@@ -90,7 +142,68 @@ const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === 
 const CARD_RULE = process.argv.includes("--card-rule") || String(process.env.CARD_RULE || "") === "true";
 const SPORT = String(process.env.SPORT || process.env.SPORTS || "baseball").trim().toLowerCase();
 const PRODUCTS = Number(process.env.PRODUCTS || 0);
-const BUDGET_MS = Number(process.env.BUDGET_MS || 130 * 60 * 1000);
+
+/** ── THE BUDGET MUST STOP UNDER THE ACTION CEILING ────────────────────────
+ *
+ * CF-A-KILLED-JOB-CANNOT-REPORT-PROGRESS (#1361 restated, 2026-09-05).
+ *
+ * Run 33960686247 (sport=baseball, APPLY, sharding OFF) did everything right
+ * and still went red. Measured from its log:
+ *
+ *   10:27:57  step starts
+ *   10:28:16  loop t0                          (+19s startup + the DISTINCT)
+ *   12:43:23  loop ends, banner + RECONCILE ... BALANCES   (elapsed 8,107s)
+ *   12:58:10  ##[error] 'Run backfill (APPLY)' timed out after 150 minutes
+ *
+ * TWO defects, both of them clock defects, neither of them a data defect:
+ *
+ *  (1) THE BUDGET OVERSHOT. The check sat at the TOP of the product loop, so
+ *      the run always paid for one more whole product after the budget
+ *      expired. A big product is minutes (2024 topps: 290,871 rows / 27s of
+ *      query plus the per-row writes), and 130 min of budget became 135.1 min
+ *      of loop. A ceiling you cross by construction is not a budget.
+ *
+ *  (2) THE VERIFY NEVER RETURNED. VERIFY BY READ fires two unbounded
+ *      `SELECT VALUE COUNT(1) ... WHERE c.sport=@s AND ...` scans. That is
+ *      precisely the whole-container aggregate shape this file's own
+ *      enumeration comment (below) records as NOT RETURNING on card_catalog
+ *      at 19.63M rows. It ran 887s — 14.8 minutes — and had still not
+ *      answered when the runner killed the step. The reconciliation had
+ *      already printed and BALANCED; the writes were all durable; the job was
+ *      red anyway, and the operator was handed a red run whose every data
+ *      signal said success.
+ *
+ * THE RULE. The script's own clock must stop, print, verify AND reconcile
+ * with margin under the step's `timeout-minutes`, because a killed step
+ * cannot report anything — not its counts, not its verify, not its exit code.
+ * The margin is not decoration: it is the only thing that makes a budget stop
+ * distinguishable from a crash.
+ *
+ * THE SIZING, against a 150-minute step ceiling (backfill-runner.yml):
+ *
+ *   RUN_MINUTES        110    the product loop
+ *   + one product      ~10    the worst single product still in flight, since
+ *                             the reserve pre-check below cannot know the size
+ *                             of the product it is about to start
+ *   + VERIFY_MS         10    the post-loop verify, now HARD-CAPPED (it either
+ *                             answers or says it could not, and never hangs)
+ *   + startup            1    connection + the DISTINCT (measured: 19s)
+ *   ------------------------
+ *   worst case         131    -> 19 minutes of margin under 150. >= 15. Green.
+ *
+ * The sibling lanes (rematch-sold-comps, repair-tiffany-pool-enumeration)
+ * spell this env var RUN_MINUTES; so does this one now, so an operator sizing
+ * a fleet does not have to remember which lane wants milliseconds.
+ * tests/retireSelfDerivedBudgetMargin.test.ts pins the arithmetic against the
+ * workflow's real timeout-minutes, so shrinking the ceiling fails CI. */
+const RUN_MINUTES = Number(process.env.RUN_MINUTES || 110);
+const BUDGET_MS = Number(process.env.BUDGET_MS || RUN_MINUTES * 60 * 1000);
+/** Wall-clock a single product may still be granted after the budget expires.
+ *  A product costing more than this is stopped BEFORE it starts, not after. */
+const PRODUCT_RESERVE_MS = Number(process.env.PRODUCT_RESERVE_MS || 10 * 60 * 1000);
+/** Hard cap on the post-loop VERIFY BY READ. It reports "could not confirm"
+ *  rather than holding the step open until the runner kills it. */
+const VERIFY_MS = Number(process.env.VERIFY_MS || 10 * 60 * 1000);
 
 /** Markers. Imported nowhere else so they are stated once, here and in the TS
  *  module they mirror (checklistBackedIdentity.ts) — a CJS script cannot
@@ -167,6 +280,8 @@ async function main() {
   console.log(`retire-self-derived-identities  sport=${SPORT}  ${APPLY ? "APPLY" : "REPORT ONLY"}`);
   console.log(`  ${SHARD.banner()}`);
   console.log(`  card-level rule: ${CARD_RULE ? "ON (retires card-level twins too)" : "off (card-level twins REPORTED only)"}`);
+  console.log(`  budget: ${RUN_MINUTES}m loop + ${Math.round(PRODUCT_RESERVE_MS / 60000)}m product reserve`
+    + ` + ${Math.round(VERIFY_MS / 60000)}m verify cap — stops under the runner's 150m step ceiling`);
 
   // ── ENUMERATING THE WORK, AND WHY NOT WITH A GROUP BY ────────────────────
   //
@@ -234,7 +349,12 @@ async function main() {
   let stopReason = null;
 
   for (const p of mine) {
-    if (Date.now() - t0 > BUDGET_MS) { stopReason = "clock"; break; }
+    // STOP BEFORE THE PRODUCT, NOT AFTER IT. The old check was `elapsed >
+    // BUDGET_MS`, which admits one more whole product every time -- and one
+    // product can be 290k rows. Reserving the worst product's wall-clock is
+    // what keeps the loop's own overshoot bounded and the total under the
+    // step ceiling (see the RUN_MINUTES block at the top).
+    if (Date.now() - t0 > BUDGET_MS - PRODUCT_RESERVE_MS) { stopReason = "clock"; break; }
     const { resources: rows } = await retry(() => cat.items.query({
       query: `SELECT c.id, c.cardId, c.source, c.year, c.setKey, c.cardNumber, c.playerName,
                      c.parallel, c.isAuto, c.retiredReason, c.identityUnverified
@@ -375,17 +495,50 @@ async function main() {
     });
 
     // VERIFY BY READ. A green run is not a data flow
-    // (feedback_green_workflow_is_not_data_flow).
-    const { resources: v } = await retry(() => cat.items.query({
+    // (feedback_green_workflow_is_not_data_flow) -- but a verify that never
+    // returns is not a verify either, it is a timeout with a comment on it.
+    //
+    // These two whole-sport `COUNT(1)` scans are the shape this file's own
+    // enumeration comment records as not returning on card_catalog: an
+    // unbounded cross-partition aggregate. In run 33960686247 they ran 887s
+    // and were still running when the step was killed at its 150-minute
+    // ceiling -- AFTER the reconciliation had printed and balanced. So the
+    // verify now runs under a hard cap and REPORTS ITS OWN FAILURE instead of
+    // holding the step open. An unconfirmed verify is a fact worth printing;
+    // a killed step prints nothing at all.
+    const vt0 = Date.now();
+    const capped = async (label, spec) => {
+      const left = VERIFY_MS - (Date.now() - vt0);
+      if (left <= 0) return null;
+      try {
+        const { resources } = await Promise.race([
+          retry(() => cat.items.query(spec, { maxItemCount: -1 }).fetchAll(), 2),
+          new Promise((_, rej) => setTimeout(() => rej(new Error("verify-cap")), left).unref?.()),
+        ]);
+        return Number(resources[0] || 0);
+      } catch (e) {
+        console.log(`  VERIFY BY READ  ${label}: could not confirm within the cap (${String(e && e.message)})`);
+        return null;
+      }
+    };
+    const v = await capped("retiredReason", {
       query: `SELECT VALUE COUNT(1) FROM c WHERE c.sport=@s AND c.retiredReason=@r`,
       parameters: [{ name: "@s", value: SPORT }, { name: "@r", value: RETIRED }],
-    }, { maxItemCount: -1 }).fetchAll());
-    const { resources: u } = await retry(() => cat.items.query({
+    });
+    const u = await capped(UNVERIFIED, {
       query: `SELECT VALUE COUNT(1) FROM c WHERE c.sport=@s AND c.${UNVERIFIED}=true`,
       parameters: [{ name: "@s", value: SPORT }],
-    }, { maxItemCount: -1 }).fetchAll());
-    console.log(`\n  VERIFY BY READ  ${SPORT}: retiredReason='${RETIRED}' now ${f(v[0] || 0)} rows;`
-      + ` ${UNVERIFIED}=true now ${f(u[0] || 0)} rows`);
+    });
+    const shown = (n) => (n === null ? "UNCONFIRMED (verify cap)" : `${f(n)} rows`);
+    console.log(`\n  VERIFY BY READ  ${SPORT}: retiredReason='${RETIRED}' now ${shown(v)};`
+      + ` ${UNVERIFIED}=true now ${shown(u)}`
+      + `   [${Math.round((Date.now() - vt0) / 1000)}s of a ${Math.round(VERIFY_MS / 60000)}m cap]`);
+    if (v === null || u === null) {
+      // NOT a failure of the run: every write already reconciled above. The
+      // operator is told the count is unread so nobody reads its absence as a
+      // zero (feedback_never_dismiss_small_numbers_as_noise).
+      console.log(`  the verify count is UNREAD, not zero — the writes above reconciled and are durable.`);
+    }
   }
 }
 
