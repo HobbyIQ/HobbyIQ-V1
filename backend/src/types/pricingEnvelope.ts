@@ -23,6 +23,37 @@
 //     null, the whole tile is hidden; when the outer sub-object exists
 //     but a leaf field is null, the leaf is hidden.
 
+/**
+ * CF-A-LABEL-VOCABULARY-SPELLED-FOUR-TIMES-DRIFTS (#1811).
+ *
+ * The caveat codes a price surface can carry. The engine's own union is
+ * `SellDraftLabel["code"]` in ebaySellDraft.service.ts; this is the WIRE form
+ * of the same vocabulary, spelled once so the persisted shape, the envelope,
+ * the response assembly and the builder cannot disagree.
+ *
+ * They already had. `independence-unverified` shipped in #1775 and reached
+ * `labelsForResult`, but all four wire spellings still named only the original
+ * four codes — so the type said a label that was being emitted could not
+ * exist, and a `code as ...` cast at the builder quietly made that true on
+ * paper. Widening one spelling and not the others is how that happens, which
+ * is why there is now only one to widen.
+ *
+ * This file is import-free by design (it is the shape both clients bind to),
+ * so the union is spelled here as literals rather than imported from the
+ * service that emits them. `SellDraftLabel["code"]` must remain assignable to
+ * this; a pin in tests asserts it.
+ */
+export type PricingLabelCode =
+  | "speculative"
+  | "self-anchored"
+  | "fallback-rung"
+  | "low-confidence"
+  | "independence-unverified"
+  /** The identity's catalog row is inside the settle window: its own sales are
+   *  still being matched onto it, so this number came from related cards and a
+   *  better one may follow within hours. */
+  | "pool-migrating";
+
 /** The one canonical pricing shape iOS + web both bind to. */
 export interface PricingEnvelope {
   /** The one number to display for this holding. Always populated —
@@ -214,7 +245,7 @@ export interface PricingProvenance {
    *  holding DETAIL surface reads them here; the list row reads the flat
    *  `pricingLabels` on the wire. One source, two shapes. */
   pricingLabels: Array<{
-    code: "speculative" | "self-anchored" | "fallback-rung" | "low-confidence";
+    code: PricingLabelCode;
     text: string;
   }>;
   /** The self-anchored ratio: `own` of the pool's `total` sales behind this

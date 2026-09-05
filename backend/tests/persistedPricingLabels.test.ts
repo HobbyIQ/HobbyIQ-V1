@@ -49,11 +49,13 @@ process.env.COSMOS_CONNECTION_STRING = "AccountEndpoint=https://unit.test/;Accou
 
 import { computeUnifiedPrice } from "../src/services/compiq/unifiedPricing.service.js";
 import { toCanonicalFmvResponse } from "../src/services/compiq/oneValuationPathAdapters.js";
-import { labelsForResult } from "../src/services/ebay/ebaySellDraft.service.js";
+import { labelsForResult, type SellDraftLabel } from "../src/services/ebay/ebaySellDraft.service.js";
+import { POOL_MIGRATING_LABEL_CODE } from "../src/services/compiq/poolMigrationGate.js";
+import type { PricingLabelCode } from "../src/types/pricingEnvelope.js";
 import { persistedLabelsForValuation } from "../src/services/compiq/valuationLabels.js";
 import { observedHoldingWrite, fallbackRungHoldingWrite } from "../src/services/portfolioiq/holdingValuation.js";
 import { composeHoldingWireShape } from "../src/services/portfolioiq/responseAssembly.js";
-import { buildPricingEnvelope, resolvePricingConfidence } from "../src/services/portfolioiq/pricingEnvelope.builder.js";
+import { buildPricingEnvelope, resolvePricingConfidence, pricingLabelsOf } from "../src/services/portfolioiq/pricingEnvelope.builder.js";
 import type { Valuation } from "../src/services/compiq/oneValuationPath.service.js";
 import type { PortfolioHolding } from "../src/types/portfolioiq.types.js";
 
@@ -392,5 +394,103 @@ describe("the writer persists the engine's pricing confidence", () => {
       quantity: 1,
       freshness: "Live",
     }).confidence.pricing).toBe(0.23);
+  });
+});
+
+// CF-A-LABEL-VOCABULARY-SPELLED-FOUR-TIMES-DRIFTS (#1811).
+//
+// The label vocabulary is spelled in three places that cannot import each
+// other: the engine union that EMITS the codes (SellDraftLabel["code"]), the
+// wire alias both clients bind to (PricingLabelCode), and the stored-document
+// shape (PortfolioHolding.pricingSourceMeta.labels[].code). They had already
+// drifted — `independence-unverified` shipped in #1775 and reached
+// labelsForResult, while all four wire spellings still named only the original
+// four codes, and a `code as ...` cast at the builder made the lie type-check.
+//
+// This pin is a VALUE-level assertion because the type-level one cannot fire:
+// every subset of a union type-checks against it, which is exactly how the
+// drift survived review. It is the same lesson FMV_RUNG_LABELS learned when a
+// persist gate admitted two rungs by name and blanked player-index-projection.
+describe("the label vocabulary is one vocabulary (#1811)", () => {
+  // Every code the engine can emit, from the emitting module's own union.
+  const EMITTED: SellDraftLabel["code"][] = [
+    "speculative",
+    "self-anchored",
+    "fallback-rung",
+    "low-confidence",
+    "independence-unverified",
+    "pool-migrating",
+  ];
+
+  it("every code the engine emits is assignable to the wire alias", () => {
+    // Compile-time: the assignment fails to build if PricingLabelCode is
+    // narrower than the emitting union.
+    const asWire: PricingLabelCode[] = EMITTED;
+    expect(asWire.length).toBe(EMITTED.length);
+  });
+
+  it("every code the engine emits is assignable to the STORED holding shape", () => {
+    type StoredCode = NonNullable<
+      NonNullable<PortfolioHolding["pricingSourceMeta"]>["labels"]
+    >[number]["code"];
+    const asStored: StoredCode[] = EMITTED;
+    expect(asStored.length).toBe(EMITTED.length);
+  });
+
+  it("the gate's constant IS the code the vocabularies name", () => {
+    // A constant that drifted from the union would stamp a label no consumer
+    // could style, and the cast at the builder would hide it.
+    const code: PricingLabelCode = POOL_MIGRATING_LABEL_CODE;
+    expect(code).toBe("pool-migrating");
+    expect(EMITTED).toContain(POOL_MIGRATING_LABEL_CODE);
+  });
+
+  // `valuationLabels.ts` spells the code as a LITERAL rather than importing
+  // POOL_MIGRATING_LABEL_CODE, because that constant's module pulls in
+  // @azure/cosmos for the settle-marker read and this derivation is meant to
+  // stay pure. That is a deliberate trade, and this is the pin that pays for
+  // it: the stamped label must equal the named constant, so the two spellings
+  // cannot drift into a code the gate names and no writer emits.
+  it("the label the writer actually STAMPS equals the gate's constant", () => {
+    const v = {
+      fairMarketValue: 42,
+      rungLabel: "family-baseline",
+      valueSource: "estimated",
+      reason: null,
+      compsUsed: 31,
+      confidence: 0.5,
+      basis: "",
+      identity: { parallel: null, setKey: null },
+      requestedTier: "Raw",
+      windowDays: null,
+      trend: { direction: "flat", pctPerWeek: null },
+      predictedPrice: null,
+      weightedMedian: null,
+      sales: [],
+      ownerUserId: null,
+      gradeCurve: [],
+      totalSampleCount: 0,
+      unified: null,
+      fallback: null,
+      poolMigrating: { ageHours: 2.0, because: "within-settle-window" },
+      computedAt: "",
+    } as unknown as Valuation;
+    const stamped = persistedLabelsForValuation(v).labels
+      .find((l) => l.code === POOL_MIGRATING_LABEL_CODE);
+    expect(stamped, "the stamped code must equal POOL_MIGRATING_LABEL_CODE").toBeDefined();
+  });
+
+  it("a stored label the wire does not know still crosses, text intact", () => {
+    // The builder must never DROP a caveat it does not recognise: a holding
+    // stamped by a newer writer is read by an older build during a rollout,
+    // and a silently dropped caveat is worse than an unstyled one.
+    const holding = {
+      pricingSourceMeta: {
+        labels: [{ code: "some-future-code", text: "a caveat this build predates" }],
+      },
+    } as unknown as PortfolioHolding;
+    const out = pricingLabelsOf(holding);
+    expect(out).toHaveLength(1);
+    expect(out[0].text).toBe("a caveat this build predates");
   });
 });

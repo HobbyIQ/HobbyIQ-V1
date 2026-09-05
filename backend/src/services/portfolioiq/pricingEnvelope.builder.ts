@@ -25,6 +25,7 @@ import type {
   PricingQuality,
   PricingComposite,
   PricingPopulation,
+  PricingLabelCode,
 } from "../../types/pricingEnvelope.js";
 import {
   QUICK_SALE_MULTIPLIER,
@@ -385,8 +386,13 @@ export function pricingLabelsOf(
   return raw.flatMap((l) => {
     const code = (l as { code?: unknown })?.code;
     const text = (l as { text?: unknown })?.text;
+    // #1811: the cast names the ONE vocabulary alias rather than re-spelling
+    // four of its six members. A stored code outside it is a stamp from a
+    // future writer this build does not know; it still crosses the wire with
+    // its text, exactly as before — dropping a caveat is the one thing this
+    // function must never do.
     return typeof code === "string" && typeof text === "string"
-      ? [{ code: code as "speculative" | "self-anchored" | "fallback-rung" | "low-confidence", text }]
+      ? [{ code: code as PricingLabelCode, text }]
       : [];
   });
 }

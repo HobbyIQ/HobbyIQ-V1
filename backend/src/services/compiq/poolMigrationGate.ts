@@ -87,9 +87,74 @@
  *
  * NOT gated: a rung that reads OTHER identities entirely (a player index, a
  * family baseline). Those do not read this pool, so a partial migration does
- * not corrupt them. But they are not a substitute either — the doctrine is
- * that a migrating identity publishes NO new number, prior retained. This
- * module decides admissibility; it never picks a replacement.
+ * not corrupt them.
+ *
+ * ── CF-A-GATE-THAT-FIRES-ABOVE-EVERY-RUNG-IS-NOT-A-RUNG-GATE (#1811) ───────
+ *
+ * `shouldGateRung` shipped in #1776 documented, exported and TESTED — and
+ * never called. The gate fired unconditionally ABOVE the whole ladder, so a
+ * freshly minted identity withheld even when the only rung that could answer
+ * was one that never reads its pool at all: a family baseline over sibling
+ * cards, a cross-setkey read of the same card in another product, a player
+ * index over forty OTHER cards. Those answers are evidence a rematch on THIS
+ * identity's pool cannot possibly have disturbed, and withholding them is not
+ * caution — it is blanking a good price for a reason that does not apply to
+ * it. The Maddux defect was a HALF-ARRIVED POOL being read as a whole one;
+ * a rung that reads no part of that pool cannot commit it.
+ *
+ * So the withhold now follows the rung that actually answered:
+ *
+ *   own-pool rung      withhold. `fairMarketValue` null, reason
+ *                      `pool-migrating`, prior retained and labelled. No
+ *                      fallback is substituted — a substitute is exactly what
+ *                      produced the $240.
+ *   other-identity rung publish, LABELLED `pool-migrating`. The number is
+ *                      admissible; the reader is still told this identity's
+ *                      pool was mid-migration when it was priced, because a
+ *                      better number may follow within hours.
+ *
+ * The doctrine that a migrating identity publishes no number from its OWN
+ * pool is unchanged. What changed is that "its own pool" is now measured
+ * against the rung that answered, not asserted over all of them.
+ *
+ * THE CLASSIFICATION, and why each rung lands where it does:
+ *
+ *   OWN-POOL (gated)
+ *     exact-pool-*              reads the requested tier's own sales. The
+ *                               migrating half IS the answer.
+ *     grade-curve-estimate      this identity's OTHER tiers × a ratio. Which
+ *                               tiers are observed is the input, and
+ *                               mid-migration that shape is a partial view.
+ *     graded-pool-inverse       this identity's own graded children ÷ the
+ *                               multiplier. The $240 rung, literally.
+ *     cross-grade-fallback      this identity's largest OTHER tier, rescaled.
+ *                               Same pool, different tier.
+ *     player-index-projection   NOT an other-identity rung, despite reading
+ *                               other cards for the RATIO. It is reached only
+ *                               inside the `tier.valueSource === "observed"`
+ *                               branch, and its ANCHOR is `lastRealComp` —
+ *                               this identity's own newest sale at this tier.
+ *                               A half-migrated pool changes which sale is
+ *                               newest, so it changes the anchor, so the rung
+ *                               is a function of what has arrived. #1776's
+ *                               classifier called it not-gated; that was
+ *                               harmless only while the gate fired above
+ *                               every rung and nothing consulted the answer.
+ *
+ *   OTHER-IDENTITIES (labelled, not withheld)
+ *     Every rung the gated ladder (`computeHobbyIqFmv`, `skipExactPool: true`)
+ *     can return, reached ONLY at section 3 — after this identity's pool has
+ *     been found empty at EVERY grade, which is why it reads no part of it:
+ *       sibling-estimate, sibling-parallel, cross-parallel, neighbor-parallel,
+ *       same-printrun-cross-parallel, cross-setkey, cross-printrun,
+ *       printrun-discovery, family-baseline, product-tier, composite-neighbor,
+ *       rare-card-anchor, hot-raw-same-card-anchor, grade-cross-raw,
+ *       tiered-momentum-card, tiered-momentum-player.
+ *     `no-basis` is not a rung that priced anything, so it is not gated
+ *     either — there is no number to withhold.
+ *
+ * This module decides ADMISSIBILITY per rung; it never picks a replacement,
+ * and it never promotes a rung the ladder did not itself reach.
  */
 import { CosmosClient, type Container } from "@azure/cosmos";
 
@@ -133,18 +198,44 @@ export function scopeMarkerId(year: number | null, setKey: string | null): strin
   return `scope::${year ?? "?"}::${String(setKey ?? "?").trim()}`;
 }
 
-/** The rungs whose answer depends on WHICH sales are in the pool, and which
- *  therefore must not price a migrating identity. The exact rungs read the
- *  tier's own pool; the two graded-to-raw curve rungs read the SHAPE of the
- *  tier ladder — an absent tier is their whole input, and mid-migration an
- *  absent tier means nothing. */
+/**
+ * The label code a PUBLISHED price carries when this identity's pool was
+ * still migrating but the rung that answered reads other identities.
+ *
+ * It is a caveat, not a refusal: the number is admissible, and the reader is
+ * told that a better one — from this card's own sales — may follow within
+ * hours. Named as a constant, following `INDEPENDENCE_UNVERIFIED_CODE`, so
+ * the label union has one source of truth.
+ */
+export const POOL_MIGRATING_LABEL_CODE = "pool-migrating" as const;
+
+/**
+ * Does this rung read the MIGRATING identity's own pool?
+ *
+ * True → the rung's answer is a function of which of this identity's sales
+ * have arrived, so a migrating pool must not price it: the caller withholds.
+ * False → the rung reads OTHER identities entirely, so a partial migration of
+ * this pool cannot have disturbed it: the caller publishes and LABELS.
+ *
+ * The classification is enumerated in this module's header. Note that
+ * `player-index-projection` is OWN-POOL despite reading other cards for its
+ * ratio — its anchor is this identity's own newest sale at this tier, and a
+ * half-migrated pool changes which sale that is.
+ *
+ * Unknown and absent labels are NOT gated, matching `isExactPoolRung`: a rung
+ * this vocabulary does not name is a rung reached through the gated ladder,
+ * which runs only after this identity's pool was found empty at every grade.
+ * `no-basis` names no price, so there is nothing to withhold.
+ */
 export function shouldGateRung(rungLabel: string | null | undefined): boolean {
   const r = String(rungLabel ?? "");
   if (!r) return false;
   return r.startsWith("exact-pool-")
     || r === "grade-curve-estimate"
     || r === "graded-pool-inverse"
-    || r === "cross-grade-fallback";
+    || r === "cross-grade-fallback"
+    // Anchored on THIS identity's newest sale at THIS tier. See the header.
+    || r === "player-index-projection";
 }
 
 export interface PoolMigrationInput {

@@ -252,8 +252,19 @@ export interface PortfolioHolding {
      *
      *  Absent / empty → this price surface carries no caveats, or predates
      *  the field. Never infer a caveat from prose. */
+    // #1811: kept in sync with `PricingLabelCode` (types/pricingEnvelope.ts)
+    // and with `SellDraftLabel["code"]`, which is what actually gets stamped.
+    // Spelled here rather than imported because this file is the STORED
+    // document shape and takes no dependency on a wire type; a pin asserts the
+    // three never drift.
     labels?: Array<{
-      code: "speculative" | "self-anchored" | "fallback-rung" | "low-confidence";
+      code:
+        | "speculative"
+        | "self-anchored"
+        | "fallback-rung"
+        | "low-confidence"
+        | "independence-unverified"
+        | "pool-migrating";
       text: string;
     }>;
     /** The self-anchored ratio in machine-readable form: how many of the

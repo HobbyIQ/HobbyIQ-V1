@@ -69,6 +69,8 @@ delete process.env.COSMOS_CONNECTION_STRING;
 import { valueIdentity, tierLabelFor, normalizeGrade } from "../src/services/compiq/oneValuationPath.service.js";
 import { isExactPoolRung } from "../src/services/compiq/fmvRung.js";
 import { gradeCurveEntryLabel } from "../src/services/compiq/gradeCurveEntry.js";
+import { shouldGateRung, POOL_MIGRATING_LABEL_CODE } from "../src/services/compiq/poolMigrationGate.js";
+import { persistedLabelsForValuation } from "../src/services/compiq/valuationLabels.js";
 
 const NOW = Date.now();
 const daysAgo = (d: number) => new Date(NOW - d * 86_400_000).toISOString();
@@ -281,5 +283,157 @@ describe("valueIdentity — identity", () => {
     expect(tierLabelFor({ company: "psa", value: 10 })).toBe("PSA 10");
     expect(normalizeGrade({ company: " bgs ", value: 9.5 })).toEqual({ company: "BGS", value: 9.5 });
     expect(normalizeGrade({ company: null, value: 10 })).toBeNull();
+  });
+});
+
+// ───────────────────────────────────────────────────────────────────────────
+// CF-A-GATE-THAT-FIRES-ABOVE-EVERY-RUNG-IS-NOT-A-RUNG-GATE (#1811).
+//
+// #1776 shipped `shouldGateRung`, documented it as naming the rungs the gate
+// applies to, TESTED it — and never called it. The withhold fired
+// unconditionally above the whole ladder, so a freshly minted identity blanked
+// even when the only rung that could answer was one that reads OTHER cards
+// entirely: a family baseline, a cross-setkey read, a sibling pool. A rematch
+// on THIS identity's pool cannot disturb those, so blanking them is not
+// caution — it is a second defect on top of the one #1776 fixed.
+//
+// These pins drive the REAL entry (`valueIdentity`) with a catalog row minted
+// inside the settle window, which is the only way to prove which behaviour the
+// choke point actually has. The pure-function classification lives in
+// pricingRefusalGates.test.ts; this file proves it is WIRED.
+describe("a migrating pool withholds only the rungs that read it (#1811)", () => {
+  // Inside POOL_SETTLE_HOURS=6, with no settle marker: MIGRATING. (No Cosmos
+  // is configured in this suite, so `readSettleMarker` returns null — the
+  // fail-closed path, which is exactly the production state today.)
+  const migratingRow = (over: Record<string, unknown> = {}) =>
+    identityRow({ observedAt: new Date(NOW - 2 * 3_600_000).toISOString(), ...over });
+  // Outside the window: settled by default, whatever the marker says.
+  const settledRow = (over: Record<string, unknown> = {}) =>
+    identityRow({ observedAt: new Date(NOW - 48 * 3_600_000).toISOString(), ...over });
+
+  it("the exact rung on a migrating identity is WITHHELD — the Maddux rule stands", async () => {
+    h.catalog.set(GOLD, migratingRow());
+    h.rows = [...RAW_10(GOLD)];
+    const v = await valueIdentity({ id: GOLD });
+    expect(v.fairMarketValue).toBeNull();
+    expect(v.reason).toBe("pool-migrating");
+    expect(v.rungLabel).toBe("no-basis");
+    expect(v.valueSource).toBe("unavailable");
+    expect(v.confidence).toBe(0);
+    // The state rides along in BOTH outcomes, so a reader never has to parse
+    // the basis prose to learn the pool was mid-migration.
+    expect(v.poolMigrating).not.toBeNull();
+    expect(v.poolMigrating?.because).toBe("within-settle-window");
+    // It REFUSES rather than substituting: no fallback number is fetched for a
+    // gated own-pool rung. A substitute is precisely what produced the $240.
+    expect(h.ladderCalls).toEqual([]);
+    // ...and the CURVE goes with the headline. #1776 returned before the
+    // ladder ran, so a blank curve came for free; this gate returns AFTER
+    // every tier is priced off the same half-arrived pool, and leaving those
+    // in would withhold the headline while publishing the identical number one
+    // field over — the card page and the accuracy panel both read the curve.
+    expect(v.gradeCurve.every((e) => (e.value ?? null) === null)).toBe(true);
+    expect(v.sales).toEqual([]);
+  });
+
+  it("...and the SAME pool prices normally once the row is outside the window", async () => {
+    h.catalog.set(GOLD, settledRow());
+    h.rows = [...RAW_10(GOLD)];
+    const v = await valueIdentity({ id: GOLD });
+    expect(v.reason).toBeNull();
+    expect(v.fairMarketValue).toBeGreaterThan(0);
+    expect(isExactPoolRung(v.rungLabel)).toBe(true);
+    expect(v.poolMigrating).toBeNull();
+  });
+
+  // THE FIX. The identity's own pool is empty at every grade, so section 3's
+  // gated ladder answers off OTHER identities. Nothing it read can have been
+  // moved by this identity's migration — and #1776 blanked it anyway.
+  it("an OTHER-IDENTITY rung on a migrating identity PRICES, carrying the label", async () => {
+    h.catalog.set(EMPTY, migratingRow({ setKey: "topps-chrome", printRun: null }));
+    h.rows = [];   // this identity has no sales of its own at any grade
+    h.ladder = () => ({
+      fmv: 42, method: "family-baseline", rungLabel: "family-baseline",
+      compCount: 31, confidence: 0.5, basisNote: "family baseline over 31 sibling sales",
+      trend: { direction: "flat", slopePerMonthPct: 0 }, recentComps: [],
+    });
+    const v = await valueIdentity({ id: EMPTY });
+    // The number STANDS.
+    expect(v.fairMarketValue).toBe(42);
+    expect(v.rungLabel).toBe("family-baseline");
+    expect(v.valueSource).toBe("estimated");
+    // ...and it is not a refusal: a caller that retains priors on
+    // `pool-migrating` must NOT treat this as one, or the fix blanks the
+    // holding it was meant to price.
+    expect(v.reason).toBeNull();
+    // But the reader is told, because a price from this card's OWN sales may
+    // replace it within hours.
+    expect(v.poolMigrating).not.toBeNull();
+    expect(v.poolMigrating?.because).toBe("within-settle-window");
+
+    // MUTATION CHECK. Removing the `shouldGateRung` call at the choke point
+    // restores #1776's unconditional withhold, which is this assertion's
+    // exact negation: fairMarketValue null, reason "pool-migrating".
+  });
+
+  it("the label reaches the persisted holding — a published caveat, not a withheld one", async () => {
+    h.catalog.set(EMPTY, migratingRow({ setKey: "topps-chrome", printRun: null }));
+    h.rows = [];
+    h.ladder = () => ({
+      fmv: 42, method: "family-baseline", rungLabel: "family-baseline",
+      compCount: 31, confidence: 0.5, basisNote: "family baseline",
+      trend: { direction: "flat", slopePerMonthPct: 0 }, recentComps: [],
+    });
+    const v = await valueIdentity({ id: EMPTY });
+    const { labels } = persistedLabelsForValuation(v);
+    const migrating = labels.find((l) => l.code === POOL_MIGRATING_LABEL_CODE);
+    expect(migrating, "a published migrating price must carry its caveat").toBeDefined();
+    expect(migrating!.text).toMatch(/still being matched onto it/i);
+
+    // The label is for PUBLISHED prices only. A withheld one says so through
+    // `reason`; stacking a caveat on a number that does not exist would be a
+    // caveat about nothing.
+    h.catalog.set(GOLD, migratingRow());
+    h.rows = [...RAW_10(GOLD)];
+    const withheld = await valueIdentity({ id: GOLD });
+    expect(withheld.fairMarketValue).toBeNull();
+    expect(persistedLabelsForValuation(withheld).labels.some((l) => l.code === POOL_MIGRATING_LABEL_CODE)).toBe(false);
+  });
+
+  // MUTATION CHECK, the other direction. If `player-index-projection` were
+  // classified as an other-identity rung, a migrating identity would publish a
+  // number anchored on `lastRealComp` — this pool's newest sale — while the
+  // pool was still deciding which sale that is. It is OWN-POOL, and the
+  // section-1 branch it lives in withholds with everything else there.
+  it("the graded-to-raw curve — the $240 rung itself — is withheld on a migrating identity", async () => {
+    // Raw tier empty, PSA 10 tier populated: exactly the Maddux shape, where
+    // the curve read an absent tier as evidence of absence.
+    h.catalog.set(GOLD, migratingRow());
+    h.rows = [...PSA10_6(GOLD)];
+    const v = await valueIdentity({ id: GOLD });
+    expect(v.requestedTier).toBe("Raw");
+    expect(v.fairMarketValue).toBeNull();
+    expect(v.reason).toBe("pool-migrating");
+    // Settled, the very same fixture DOES price through that rung — so the
+    // withhold above is the gate's doing, not an empty-pool coincidence.
+    h.catalog.set(GOLD, settledRow());
+    const settled = await valueIdentity({ id: GOLD });
+    expect(settled.fairMarketValue).toBeGreaterThan(0);
+    expect(shouldGateRung(settled.rungLabel), "the settled rung must be one the gate WOULD have withheld").toBe(true);
+  });
+
+  it("a migrating identity with nothing anywhere reports the pool state, not a false absence", async () => {
+    h.catalog.set(EMPTY, migratingRow({ setKey: "topps-chrome", printRun: null }));
+    h.rows = [];
+    h.ladder = () => ({
+      fmv: null, method: "no-basis", rungLabel: "no-basis", compCount: 0, confidence: 0,
+      basisNote: "", trend: { direction: "flat", slopePerMonthPct: 0 }, recentComps: [],
+    });
+    const v = await valueIdentity({ id: EMPTY });
+    // NOT "no-exact-pool": the pool is not empty, it is INCOMPLETE — and the
+    // two reasons are handled differently downstream (pool-migrating retains
+    // the prior value; no-exact-pool does not).
+    expect(v.reason).toBe("pool-migrating");
+    expect(v.basis).toMatch(/still in flight|still being re-keyed/i);
   });
 });
