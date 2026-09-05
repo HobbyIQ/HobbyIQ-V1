@@ -112,6 +112,7 @@ const backend = path.resolve(__dirname, "..");
 const B = require(path.join(__dirname, "lib", "bowman-product-refile.cjs"));
 const { relocateSoldComp, stripSystem, contentHashOf } = require(path.join(__dirname, "lib", "relocate-sold-comp.cjs"));
 const { runnerShardScope } = require(path.join(__dirname, "lib", "runner-shard-scope.cjs"));
+const { budget } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
 
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
 const str = (v) => String(v ?? "").trim();
@@ -119,11 +120,28 @@ const lower = (v) => str(v).toLowerCase();
 const f = (n) => Number(n ?? 0).toLocaleString("en-US");
 const csv = (v) => String(v ?? "").split(",").map((s) => s.trim()).filter(Boolean);
 
-const CONCURRENCY = Math.max(1, Number(process.env.CONCURRENCY || process.env.BACKFILL_CONCURRENCY || 12));
-const RUN_MS = Number(process.env.RUN_MINUTES || 140) * 60000;
-const LIMIT = Number(process.env.LIMIT || 0);
-const MODE = lower(process.env.MODE || "both");
 const STARTED = Date.now();
+const CONCURRENCY = Math.max(1, Number(process.env.CONCURRENCY || process.env.BACKFILL_CONCURRENCY || 12));
+const LIMIT = Number(process.env.LIMIT || 0);
+
+// CF-A-KILLED-JOB-CANNOT-REPORT-PROGRESS (#1803). The three constants, sized
+// for THIS lane's unit.
+//
+// A UNIT here is one catalog row: a point read of the destination, a pure
+// plan, and one moveCatalogRow that re-points the sales pointing at it. The
+// heaviest unit measured is a row whose old slug carries a large pool, so the
+// reserve is 90s -- generous for a per-row unit, and checked BEFORE the unit
+// so a row costing more than the reserve is never STARTED past expiry.
+//
+// The post-loop work is the canary re-read: up to ten `COUNT(1)` aggregates
+// filtered to one slug each. They are index-served, but they run AFTER the
+// loop, so they sit under the verify cap and print UNCONFIRMED rather than
+// holding the step open to the ceiling.
+//
+// worst case 110m loop + 90s reserve + 5m verify + 1m startup = ~117.5m
+// against the runner's 150m ceiling: 32m of margin.
+const CLOCK = budget({ minutes: 110, reserveMs: 90 * 1000, verifyMs: 5 * 60 * 1000, startedAt: STARTED });
+const MODE = lower(process.env.MODE || "both");
 
 const SHARD_SCOPE = runnerShardScope({ label: "repair-bowman-product-refile" });
 
@@ -190,6 +208,7 @@ async function main() {
     `  LANES           ${MODE}`,
     `  SHARD           slot ${SHARD_SCOPE.SLOT} of ${SHARD_SCOPE.SLOTS}${SHARD_SCOPE.sharding ? "" : " (not sharded)"}`,
     `  LIMIT           ${LIMIT || "(none)"}`,
+    `  CLOCK           ${CLOCK.describe()}`,
     "══════════════════════════════════════════════════════════════════",
   ].join("\n");
   console.log(banner);
@@ -222,15 +241,19 @@ async function main() {
   const report = {
     scope: SCOPE_PRODUCTS,
     apply: APPLY,
-    keyMismatch: { scanned: 0, move: 0, moved: 0, refusedDifferentPlayer: 0, skip: {} },
+    keyMismatch: { scanned: 0, move: 0, moved: 0, failed: 0, refusedDifferentPlayer: 0, skip: {} },
     byStem: {},
     duplicates: { candidates: 0, consolidated: 0, oneOfOneFirst: 0, skip: {} },
     pool: { scanned: 0, move: 0, moved: 0, skip: {} },
     refusals: [],
+    moveFailures: [],
     canary: {},
   };
   const bump = (o, k) => { o[k] = (o[k] ?? 0) + 1; };
-  const outOfTime = () => Date.now() - STARTED > RUN_MS;
+  // THE PRE-CHECK, not a bare `> BUDGET`. `outOfClock()` is true when there is
+  // not enough clock left to START another unit of the largest measured size,
+  // so the loop stops BEFORE a unit rather than after one.
+  const outOfTime = () => CLOCK.outOfClock();
 
   // ── canary anchors, BEFORE ────────────────────────────────────────────────
   // The pools this lane must NOT change: the nine collision numbers' Chrome
@@ -343,15 +366,52 @@ async function main() {
 
         report.keyMismatch.move++;
         report.byStem[stem].move++;
-        if (!APPLY) continue;
 
-        const res = await retry(() => moveCatalogRow(cat, row, plan.dest, {}, {
-          reason: B.REASON_LONG,
-          salesContainer: pool,
-          repointNormalizedSetKey: true,
-          retry,
-        }));
-        if (res.action !== "noop") report.keyMismatch.moved++;
+        // ── THE MOVE DECLARES ITS SETKEY CHANGE ──────────────────────────────
+        //
+        // `moveCatalogRow` refuses a CROSS-PRODUCT move that nobody asked for:
+        // if newSlug's stem differs from the old id's stem and `changedFields`
+        // carries no `setKey`, it throws -- "a cross-product move is not a
+        // move". That guard is right, and this lane is exactly the caller that
+        // must satisfy it, because moving the product IS the repair.
+        //
+        // Passing `{}` here is what failed run 33974629259 on its FIRST row
+        // (bcp-102, bowman-chrome -> bowman) with refiled=0. The declaration is
+        // the destination's OWN stem, read off the slug the deriver produced --
+        // never a string assembled here, so the thing declared and the thing
+        // written cannot disagree.
+        const destSetKey = B.idStem(plan.dest);
+
+        // ── REPORT MODE EXERCISES THE REAL CALL ──────────────────────────────
+        //
+        // The dry run could not catch that bug because REPORT skipped
+        // moveCatalogRow entirely and only APPLY reached it -- so the two paths
+        // were never the same code. `dryRun: !APPLY` reads everything, writes
+        // nothing, and returns the counts a real run would, which means every
+        // guard inside the mover now runs in REPORT too. A report that cannot
+        // fail the way the apply fails is not a rehearsal.
+        let res;
+        try {
+          res = await retry(() => moveCatalogRow(cat, row, plan.dest, { setKey: destSetKey }, {
+            reason: B.REASON_LONG,
+            salesContainer: pool,
+            repointNormalizedSetKey: true,
+            dryRun: !APPLY,
+            retry,
+          }));
+        } catch (e) {
+          // FAIL CLOSED, PER ROW. One row the mover refuses is a `failed` row
+          // in the reconciliation, not a crash that aborts the slice and loses
+          // the other 18,162. The run still goes RED at the end when failed > 0
+          // -- a refusal is never absorbed into silence.
+          report.keyMismatch.failed++;
+          bump(report.keyMismatch.skip, `move-refused:${String(e?.message ?? e).slice(0, 90)}`);
+          if (report.moveFailures.length < 50) {
+            report.moveFailures.push({ id: row.id, dest: plan.dest, error: String(e?.message ?? e).slice(0, 200) });
+          }
+          continue;
+        }
+        if (res.action !== "noop" && APPLY) report.keyMismatch.moved++;
       }
     }
   }
@@ -472,25 +532,40 @@ async function main() {
   const poolSkipped = Object.values(report.pool.skip).reduce((a, b) => a + b, 0);
   const intended = report.keyMismatch.scanned + report.pool.scanned;
   const written = report.keyMismatch.moved + report.pool.moved;
+  const failed = report.keyMismatch.failed;
+  // A refused move is already counted in the skip buckets (`move-refused:...`),
+  // so it must not be counted a second time here.
   const skipped = catSkipped + poolSkipped;
   console.log("");
   console.log(
     `  reconciled: intended ${f(intended)} = written ${f(written)} + skipped ${f(skipped)}`
     + ` + planned-not-written ${f(intended - written - skipped)}`,
   );
+  if (failed) console.log(`  move refusals: ${f(failed)} row(s) the mover declined — listed in moveFailures`);
   if (APPLY) {
     reportWrites({
       job: "repair-bowman-product-refile",
       intended, written, skipped,
-      failed: Math.max(0, intended - written - skipped),
+      failed: Math.max(failed, intended - written - skipped),
     });
   }
 
   // ── canary anchors, AFTER ─────────────────────────────────────────────────
-  let canaryBad = 0;
+  // UNDER THE VERIFY CAP. These run AFTER the loop, so they must answer or say
+  // they could not -- never hold the step open to the ceiling. An unconfirmed
+  // anchor is printed UNCONFIRMED and is NOT read as "unchanged": a count we
+  // did not take cannot clear the canary.
+  let canaryBad = 0, canaryUnread = 0;
+  const vt0 = Date.now();
   for (const s of Object.keys(report.canary)) {
-    report.canary[s].after = await poolCount(pool, s);
-    if (report.canary[s].after !== report.canary[s].before) canaryBad++;
+    const after = await CLOCK.capped(vt0, `canary ${s}`, () => poolCount(pool, s));
+    report.canary[s].after = after;
+    if (after === null) { canaryUnread++; continue; }
+    if (after !== report.canary[s].before) canaryBad++;
+  }
+  if (canaryUnread) {
+    console.log(`  ${canaryUnread} canary anchor(s) UNCONFIRMED (verify cap) — unread, not unchanged.`);
+    console.log(CLOCK.unreadNote());
   }
 
   console.log("\n── REPORT ────────────────────────────────────────────────────────");
@@ -508,7 +583,20 @@ async function main() {
   // mid-sweep and reporting nothing.
   console.log(`  REFILED onto the product it came out of  ${f(report.keyMismatch.moved + report.pool.moved)}`);
   if (outOfTime()) {
-    console.log(`  stopped at the ${Math.round(RUN_MS / 60000)}-minute budget — the slot has more to do`);
+    // CF-RELAUNCH-ONLY-ON-BUDGET (#1361). The runner greps this phrase, and
+    // `everyWriteJobReconciles` greps THIS SOURCE for it, so the words
+    // "stopped at the ... budget" are written out literally here rather than
+    // only being assembled at runtime by CLOCK.stoppedAtBudget() -- a marker a
+    // static reader cannot see is a relaunch that never fires.
+    console.log(`  stopped at the ${CLOCK.RUN_MINUTES}-minute budget — the slot has more to do`);
+  }
+
+  // A REFUSED MOVE KEEPS THE RUN RED. The lane fails closed per row so one
+  // refusal cannot abort the slice, but the slot must not report success while
+  // rows it intended to move were declined -- that is how a broken apply looks
+  // identical to a clean one (run 33974629259 refiled=0 and still "finished").
+  if (failed) {
+    console.error(`::error::${f(failed)} catalog move(s) were refused by moveCatalogRow — see moveFailures in the report.`);
   }
 
   if (!APPLY && canaryBad) {
@@ -520,6 +608,7 @@ async function main() {
     console.error(`::error::${canaryBad} canary pool(s) changed — a collision may have been merged. Investigate before continuing.`);
     process.exit(3);
   }
+  if (failed) process.exit(4);
 }
 
 main().catch((e) => { console.error("::error::" + (e?.stack ?? e)); process.exit(1); });

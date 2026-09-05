@@ -11,7 +11,7 @@
  *   - repair the LEGITIMATE direction (field extends stem) -> red
  *   - let a dry run write                                  -> red (recording fake)
  */
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { createRequire } from "node:module";
 
 const require_ = createRequire(import.meta.url);
@@ -319,5 +319,115 @@ describe("a dry run writes nothing (recording fake)", () => {
     // The delete is LAST, and an upsert+verify precede it.
     expect(order.indexOf("upsert")).toBeLessThan(order.indexOf("delete"));
     expect(order.lastIndexOf("read")).toBeLessThan(order.indexOf("delete"));
+  });
+});
+
+/**
+ * CF-A-REPORT-THAT-CANNOT-FAIL-LIKE-THE-APPLY-IS-NOT-A-REHEARSAL.
+ *
+ * Run 33974629259 (APPLY) died on its FIRST row with refiled=0:
+ *
+ *   moveCatalogRow: newSlug says setKey "bowman" but the row's id says
+ *   "bowman-chrome" (hiq:baseball:2026:bowman-chrome:bcp-102:base:no-auto ->
+ *   hiq:baseball:2026:bowman:bcp-102:base:no-auto) and no setKey change was
+ *   asked for -- a cross-product move is not a move
+ *
+ * The report run before it was clean, because REPORT skipped `moveCatalogRow`
+ * entirely and only APPLY reached it. Two paths, never the same code.
+ *
+ * These pins drive the REAL `moveCatalogRow` -- never a stub -- against a
+ * recording fake container, on that exact row shape.
+ */
+describe("the catalog move declares its setKey change (real moveCatalogRow)", () => {
+  // The sibling suite in this file's neighbourhood mocks `@azure/cosmos` and
+  // calls vi.resetModules(); these pins import the REAL catalogRowOps and pass
+  // their own fake container, so they must not inherit that module registry.
+  // Without this the suite passes alone and fails when run beside it -- an
+  // order-dependent pin is a pin nobody can trust.
+  beforeEach(() => { vi.resetModules(); vi.doUnmock("@azure/cosmos"); });
+  afterEach(() => { vi.resetModules(); });
+
+  const OLD_ID = "hiq:baseball:2026:bowman-chrome:bcp-102:base:no-auto";
+  const NEW_ID = "hiq:baseball:2026:bowman:bcp-102:base:no-auto";
+
+  const row = () => ({
+    id: OLD_ID, cardId: OLD_ID, hobbyiqCardId: OLD_ID,
+    sport: "baseball", year: 2026, cardYear: 2026,
+    setKey: "bowman", setName: "2026 Bowman Baseball",
+    cardNumber: "BCP-102", parallel: "Base", parallelSlug: "base",
+    isAuto: false, printRun: null,
+    playerName: "Eric Hartman", playerSlug: "eric-hartman",
+    source: "checklistcenter-2026-08-29", confidence: 0.95, vendorIds: {},
+  });
+
+  const fakeContainer = () => {
+    const writes: string[] = [];
+    return {
+      writes,
+      items: {
+        upsert: async (d: unknown) => { writes.push("upsert"); return { resource: d }; },
+        query: () => ({
+          fetchNext: async () => ({ resources: [], continuationToken: undefined }),
+          fetchAll: async () => ({ resources: [] }),
+        }),
+      },
+      item: () => ({
+        read: async () => ({ resource: null }),
+        patch: async () => { writes.push("patch"); return {}; },
+        delete: async () => { writes.push("delete"); return {}; },
+      }),
+    };
+  };
+
+  it("REFUSES the move when the setKey change is NOT declared — the exact prod error", async () => {
+    const { moveCatalogRow } = await import("../src/services/catalog/catalogRowOps.service.js");
+    const cat = fakeContainer();
+    await expect(
+      moveCatalogRow(cat as never, row() as never, NEW_ID, {}, { reason: "test" }),
+    ).rejects.toThrow(/cross-product move is not a move/);
+    expect(cat.writes).toEqual([]);
+  });
+
+  // THE FIX. Declaring the destination's own stem satisfies the guard.
+  it("ACCEPTS the move when the destination's stem is declared", async () => {
+    const { moveCatalogRow } = await import("../src/services/catalog/catalogRowOps.service.js");
+    const cat = fakeContainer();
+    const destSetKey = B.idStem(NEW_ID);
+    expect(destSetKey).toBe("bowman");
+    const res = await moveCatalogRow(
+      cat as never, row() as never, NEW_ID, { setKey: destSetKey },
+      { reason: "test", repointNormalizedSetKey: true },
+    );
+    expect(res.action).toBe("move");
+    expect(res.newSlug).toBe(NEW_ID);
+    expect(cat.writes).toContain("upsert");
+  });
+
+  // REPORT/APPLY PARITY: dryRun runs every guard and writes nothing. This is
+  // what makes the report a real rehearsal of the apply.
+  it("dryRun exercises the SAME guard and writes nothing", async () => {
+    const { moveCatalogRow } = await import("../src/services/catalog/catalogRowOps.service.js");
+
+    const bad = fakeContainer();
+    await expect(
+      moveCatalogRow(bad as never, row() as never, NEW_ID, {}, { reason: "test", dryRun: true }),
+    ).rejects.toThrow(/cross-product move is not a move/);
+    expect(bad.writes).toEqual([]);
+
+    const good = fakeContainer();
+    const res = await moveCatalogRow(
+      good as never, row() as never, NEW_ID, { setKey: B.idStem(NEW_ID) },
+      { reason: "test", dryRun: true },
+    );
+    expect(res.action).toBe("move");
+    expect(good.writes).toEqual([]);
+  });
+
+  // The declaration is read off the SLUG, so the thing declared and the thing
+  // written cannot disagree.
+  it("the declared setKey is the destination's own stem, for every bucket", () => {
+    expect(B.idStem("hiq:baseball:2026:bowman:bcp-102:base:no-auto")).toBe("bowman");
+    expect(B.idStem("hiq:baseball:2007:bowman:bp-4:blue:no-auto:num-500")).toBe("bowman");
+    expect(B.idStem(NEW_ID)).toBe("bowman");
   });
 });
