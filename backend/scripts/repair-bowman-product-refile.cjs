@@ -210,6 +210,7 @@ async function main() {
   const { deriveCatalogEntry } = require(path.join(backend, "dist/services/portfolioiq/cardCatalog.service.js"));
   const { moveCatalogRow } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
   const { computeHobbyIqCardId } = require(path.join(backend, "dist/services/portfolioiq/hobbyIqCardId.service.js"));
+  const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
 
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) { console.error("::error::COSMOS_CONNECTION_STRING is required"); process.exit(2); }
@@ -460,6 +461,29 @@ async function main() {
         }
       }
     }
+  }
+
+  // ── RECONCILE ─────────────────────────────────────────────────────────────
+  // CF-EVERY-WRITE-JOB-RECONCILES. Intended = written + skipped, per lane and
+  // in total, so a run that scanned rows and moved none has to SAY so rather
+  // than finishing green on silence. The skip buckets are the named reasons
+  // above; nothing falls out of the arithmetic unaccounted for.
+  const catSkipped = Object.values(report.keyMismatch.skip).reduce((a, b) => a + b, 0);
+  const poolSkipped = Object.values(report.pool.skip).reduce((a, b) => a + b, 0);
+  const intended = report.keyMismatch.scanned + report.pool.scanned;
+  const written = report.keyMismatch.moved + report.pool.moved;
+  const skipped = catSkipped + poolSkipped;
+  console.log("");
+  console.log(
+    `  reconciled: intended ${f(intended)} = written ${f(written)} + skipped ${f(skipped)}`
+    + ` + planned-not-written ${f(intended - written - skipped)}`,
+  );
+  if (APPLY) {
+    reportWrites({
+      job: "repair-bowman-product-refile",
+      intended, written, skipped,
+      failed: Math.max(0, intended - written - skipped),
+    });
   }
 
   // ── canary anchors, AFTER ─────────────────────────────────────────────────
