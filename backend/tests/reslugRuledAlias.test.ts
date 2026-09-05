@@ -29,6 +29,9 @@ import { spawnSync } from "node:child_process";
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const lane = require("../scripts/reslug-ruled-alias.cjs");
 const { slugParts, setKeyOfSlug, withSetKeySegment, ruledKeyForSlug, planAliasReslug } = lane;
+const { admitAlias, isStrictCatalogSource, RULING_CONFLICT_DENY, discoverPoolAliases } = lane;
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { normalizeSetKey } = require("../dist/services/portfolioiq/hobbyIqCardId.service.js");
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { relocateSoldComp, stripSystem, contentHashOf } = require("../scripts/lib/relocate-sold-comp.cjs");
 
@@ -232,22 +235,48 @@ describe("4. an empty or inherited scope REFUSES", () => {
         env: { ...process.env, SCOPE: bad, COSMOS_CONNECTION_STRING: "", BACKFILL_APPLY: "true" },
         encoding: "utf8",
       });
-      expect(r.status, `SCOPE=${bad}`).toBe(1);
-      expect(String(r.stderr)).toContain("SCOPE is required and names the RULED KEY");
+        expect(r.status, `SCOPE=${bad}`).toBe(1);
+      expect(String(r.stderr)).toContain("SCOPE is required");
       // It refused for the RIGHT reason -- not because Cosmos was missing.
       expect(String(r.stderr)).not.toContain("COSMOS_CONNECTION_STRING");
     }
   });
 
-  it("a scope that is not a ruled destination refuses too, and names the valid ones", () => {
+  it("a scope key that is not a normalizeSetKey FIXED POINT refuses, exit 2", () => {
+    // `donruss` is the census's #2 by volume and can never be a destination:
+    // normalizeSetKey("donruss") === "panini-donruss", an ERA SPLIT that
+    // spellForEra resolves per year. Moving rows onto it queues the next move.
+    const r = spawnSync(process.execPath, [scriptPath], {
+      env: { ...process.env, SCOPE: "donruss", COSMOS_CONNECTION_STRING: "", BACKFILL_APPLY: "true" },
+      encoding: "utf8",
+    });
+    expect(r.status).toBe(2);
+    expect(String(r.stderr)).toContain("is not a normalizeSetKey fixed point");
+    expect(String(r.stderr)).toContain("panini-donruss");
+    // It refused for the RIGHT reason -- not because Cosmos was missing.
+    expect(String(r.stderr)).not.toContain("COSMOS_CONNECTION_STRING");
+  });
+
+  it("a scope on the RULING CONFLICT deny-list refuses, exit 2", () => {
+    const r = spawnSync(process.execPath, [scriptPath], {
+      env: { ...process.env, SCOPE: "ud-choice", COSMOS_CONNECTION_STRING: "", BACKFILL_APPLY: "true" },
+      encoding: "utf8",
+    });
+    expect(r.status).toBe(2);
+    expect(String(r.stderr)).toContain("RULING CONFLICT deny-list");
+  });
+
+  it("a scope nothing resolves to refuses at the Cosmos gate, never sweeps nothing", () => {
+    // `not-a-ruled-key` IS a fixed point (the vocabulary leaves it alone), so
+    // it passes gate 1 and is refused later -- for want of a connection here,
+    // and by "no alias resolves to it" once connected. What must never happen
+    // is a green run that swept nothing.
     const r = spawnSync(process.execPath, [scriptPath], {
       env: { ...process.env, SCOPE: "not-a-ruled-key", COSMOS_CONNECTION_STRING: "", BACKFILL_APPLY: "true" },
       encoding: "utf8",
     });
-    expect(r.status).toBe(1);
-    expect(String(r.stderr)).toContain("is not a ruled alias destination");
-    // A scope that matches nothing must refuse, never sweep nothing and report green.
-    expect(String(r.stderr)).toContain("Ruled destinations");
+    expect(r.status).toBe(2);
+    expect(String(r.stderr)).toContain("COSMOS_CONNECTION_STRING not set");
   });
 
   it("the RULED scope passes the guards and stops only for want of a connection", () => {
@@ -256,7 +285,314 @@ describe("4. an empty or inherited scope REFUSES", () => {
       encoding: "utf8",
     });
     expect(String(r.stderr)).toContain("COSMOS_CONNECTION_STRING not set");
+    expect(String(r.stderr)).not.toContain("is not a normalizeSetKey fixed point");
+  });
+
+  it("a DERIVER-resolved scope reaches the Cosmos gate too -- #1792's blind spot", () => {
+    // `donruss-optic` is a fixed point with no RULED alias naming it. Before
+    // Drew's 2026-09-05 ruling this exited at the scope gate with "is not a
+    // ruled alias destination"; now it must get as far as needing a connection.
+    const r = spawnSync(process.execPath, [scriptPath], {
+      env: { ...process.env, SCOPE: "donruss-optic", COSMOS_CONNECTION_STRING: "", BACKFILL_APPLY: "" },
+      encoding: "utf8",
+    });
+    expect(String(r.stderr)).toContain("COSMOS_CONNECTION_STRING not set");
     expect(String(r.stderr)).not.toContain("is not a ruled alias destination");
+  });
+});
+
+/**
+ * 5. THE ADMISSION RULE (#1793) -- RULED union DERIVER-RESOLVED.
+ *
+ * Drew's 2026-09-05 ruling widened this lane's scope gate: a DERIVER-RESOLVED
+ * alias (one the live vocabulary already folds onto the scope key) qualifies
+ * alongside a RULED one. #1792 measured 306,807 pool rows sitting in that blind
+ * spot -- classified AGREE by the census, which never writes them, and refused
+ * by this lane, which accepted only RULED scopes.
+ *
+ * The admission is DATA-DRIVEN: it asks the LIVE normalizeSetKey about each
+ * candidate rather than consulting a typed list, so it cannot drift from the
+ * vocabulary. These cases therefore also serve as a canary on the vocabulary
+ * itself -- if `normalizeSetKey("panini-optic")` ever stops returning
+ * `donruss-optic`, this file goes red and says so.
+ */
+describe("5. the admission rule: RULED union DERIVER-RESOLVED", () => {
+  const noRuled = new Set<string>();
+
+  it("a DERIVER-resolved alias is admitted, and says which rule admitted it", () => {
+    // Every pair here is a live normalizeSetKey fact, not a fixture.
+    const pairs: Array<[string, string]> = [
+      ["panini-optic", "donruss-optic"],
+      ["finest", "topps-finest"],
+      ["stadium-club", "topps-stadium-club"],
+      ["chrome", "topps-chrome"],
+      ["ud", "upper-deck"],
+      ["panini-leather-lumber", "leather-lumber"],
+    ];
+    for (const [alias, scope] of pairs) {
+      // The premise, asserted rather than assumed.
+      expect(normalizeSetKey(alias), `${alias} must derive to ${scope}`).toBe(scope);
+      const v = admitAlias({ alias, scope, ruledSet: noRuled, normalizeSetKey });
+      expect(v.admit, `${alias} -> ${scope}`).toBe(true);
+      expect(v.rule).toBe("DERIVER");
+    }
+  });
+
+  it("a RULED alias is admitted as RULED even where no derivation would reach it", () => {
+    const v = admitAlias({
+      alias: "some-hand-ruled-spelling", scope: "bellingham-mariners",
+      ruledSet: new Set(["some-hand-ruled-spelling"]), normalizeSetKey,
+    });
+    expect(v.admit).toBe(true);
+    expect(v.rule).toBe("RULED");
+  });
+
+  it("the two rules agree where they overlap -- RULED wins the label", () => {
+    // panini-hoops IS declared, and also derives. It reports RULED, because a
+    // human decision carries the authority a derivation does not.
+    expect(normalizeSetKey("panini-hoops")).toBe("nba-hoops");
+    const v = admitAlias({
+      alias: "panini-hoops", scope: "nba-hoops",
+      ruledSet: new Set(["panini-hoops"]), normalizeSetKey,
+    });
+    expect(v.admit).toBe(true);
+    expect(v.rule).toBe("RULED");
+  });
+
+  it("REFUSAL: an alias that is a FIXED POINT of its own is a product, not a spelling", () => {
+    // #1792's 58-pair SPLIT bucket, refused by mechanism rather than by a list.
+    for (const alias of ["select", "score", "studio", "diamond-kings"]) {
+      expect(normalizeSetKey(alias), `${alias} must be a fixed point`).toBe(alias);
+      const v = admitAlias({ alias, scope: alias, ruledSet: noRuled, normalizeSetKey });
+      expect(v.admit, alias).toBe(false);
+    }
+    // And with a DIFFERENT scope, so the self-alias check is not what refused it.
+    expect(normalizeSetKey("donruss-studio")).toBe("donruss-studio");
+    const v = admitAlias({ alias: "donruss-studio", scope: "studio", ruledSet: noRuled, normalizeSetKey });
+    expect(v.admit).toBe(false);
+    expect(v.why).toContain("fixed point");
+  });
+
+  it("REFUSAL: an alias that derives SOMEWHERE ELSE is not this scope's business", () => {
+    expect(normalizeSetKey("panini-optic")).toBe("donruss-optic");
+    const v = admitAlias({ alias: "panini-optic", scope: "topps-chrome", ruledSet: noRuled, normalizeSetKey });
+    expect(v.admit).toBe(false);
+    expect(v.why).toContain("donruss-optic");
+  });
+
+  it("REFUSAL: an alias may not be its own destination", () => {
+    const v = admitAlias({ alias: "donruss-optic", scope: "donruss-optic", ruledSet: noRuled, normalizeSetKey });
+    expect(v.admit).toBe(false);
+    expect(v.why).toContain("own destination");
+  });
+
+  it("REFUSAL: the RULING CONFLICT deny-list outranks both rules", () => {
+    // upper-deck-choice was DECLARED an alias on 2026-09-05 and WITHDRAWN the
+    // same day, because exquisiteIsItsOwnProduct.test.ts pins it a fixed point.
+    // A standing ruling outranks a source count -- and outranks a RULED_ALIASES
+    // row too, so a table edited into conflict refuses rather than sweeps.
+    const v = admitAlias({
+      alias: "upper-deck-choice", scope: "ud-choice",
+      ruledSet: new Set(["upper-deck-choice"]), normalizeSetKey,
+    });
+    expect(v.admit).toBe(false);
+    expect(v.why).toContain("RULING CONFLICT");
+    // Every deny-list entry carries its reason -- a list without one is a list
+    // nobody dares to change.
+    for (const [k, why] of Object.entries(RULING_CONFLICT_DENY)) {
+      expect(String(why).length, k).toBeGreaterThan(30);
+    }
+  });
+});
+
+/**
+ * 6. GATE 3 -- a competing checklist must prove it names the SAME CARDS.
+ *
+ * The gate that the first REPORT run against prod corrected. Refusing on
+ * "strict rows exist" refused `panini-optic`, the 235,186-row headline case of
+ * the ruling itself. The measurement that tells the two shapes apart:
+ *
+ *   panini-optic vs donruss-optic         football/2024   74.7% card overlap
+ *                                         basketball/2023 97.6%
+ *   panini-diamond-kings vs diamond-kings 2020, 2022       0.0%
+ *
+ * Same row counts in shape, same strict sources; only the CARDS differ.
+ */
+describe("6. gate 3: strict rows are admitted only on proven card overlap", () => {
+  const noRuled = new Set<string>();
+  const base = { alias: "panini-optic", scope: "donruss-optic", ruledSet: noRuled, normalizeSetKey };
+
+  it("no strict rows -> no overlap evidence is needed", () => {
+    const v = admitAlias({ ...base, strictRows: 0, overlap: null });
+    expect(v.admit).toBe(true);
+    expect(v.rule).toBe("DERIVER");
+  });
+
+  it("strict rows + HIGH overlap -> admitted (the measured panini-optic case)", () => {
+    for (const overlap of [0.747, 0.822, 0.976]) {
+      const v = admitAlias({ ...base, strictRows: 15995, overlap });
+      expect(v.admit, `overlap ${overlap}`).toBe(true);
+      expect(v.rule).toBe("DERIVER");
+      expect(v.overlap).toBe(overlap);
+    }
+  });
+
+  it("strict rows + ZERO overlap -> refused (the measured diamond-kings SHAPE)", () => {
+    // Gate 3 can only be reached by a pair the deriver actually resolves, so
+    // the case is stated on a resolving pair carrying the diamond-kings
+    // MEASUREMENT (0.0% shared cards). The real panini-diamond-kings pair never
+    // gets this far -- gate 2 refuses it as a fixed point first, which is the
+    // stronger refusal and is pinned in its own case below.
+    const v = admitAlias({ ...base, strictRows: 14429, overlap: 0 });
+    expect(v.admit).toBe(false);
+    expect(v.why).toContain("DIFFERENT CARDS");
+    expect(v.why).toContain("0.0%");
+
+    // And the real pair, refused earlier and for a different reason.
+    const real = admitAlias({
+      alias: "panini-diamond-kings", scope: "diamond-kings", ruledSet: noRuled,
+      normalizeSetKey, strictRows: 14429, overlap: 0,
+    });
+    expect(real.admit).toBe(false);
+    expect(real.why).toContain("fixed point");
+  });
+
+  it("strict rows + NO SHARED CELL -> refused; silence is not proof of sameness", () => {
+    const v = admitAlias({ ...base, strictRows: 100, overlap: null });
+    expect(v.admit).toBe(false);
+    expect(v.why).toContain("NO SHARED");
+  });
+
+  it("the floor sits in the two-order-of-magnitude gap between the two shapes", () => {
+    // Every measured SPLIT pair scored 0.0%; every measured same-product pair
+    // scored 74.7% or better. The exact floor is not load-bearing, and this
+    // pins that it separates the observations rather than splitting them.
+    const SPLIT = [0, 0];
+    const SAME = [0.747, 0.822, 0.976];
+    for (const o of SPLIT) expect(admitAlias({ ...base, strictRows: 1, overlap: o }).admit).toBe(false);
+    for (const o of SAME) expect(admitAlias({ ...base, strictRows: 1, overlap: o }).admit).toBe(true);
+  });
+
+  it("STRICT vs self-derived is decided by SOURCE, never by row count", () => {
+    // CF-COUNT-BY-SOURCE-NOT-ROW-COUNT. The self-derived families are exactly
+    // the stale spellings this lane exists to move; they must never be read as
+    // a competing checklist claim.
+    for (const s of ["checklistinsider", "checklistinsider-2026-08-27", "beckett-xlsx",
+      "bccp-product-structure", "hobbymonitor-2026-09-04", "baseballcardpedia",
+      "drew-ruling-checklist-2026-08-30"]) {
+      expect(isStrictCatalogSource(s), s).toBe(true);
+    }
+    for (const s of ["ingest-auto-seed", "ingest-auto-seed-graded", "sales-attested",
+      "sales-attested-unnumbered", "ebay-browse", "ebay-user-purchase", "user-verified",
+      "tree-builder-v1", "", "(no source)"]) {
+      expect(isStrictCatalogSource(s), s).toBe(false);
+    }
+  });
+
+  it("MUTATION: dropping the strict-row refusal admits a genuine SPLIT pair", () => {
+    // The mutation is "trust the derivation alone" -- no gate 3 at all.
+    const buggy = ({ alias, scope }: { alias: string; scope: string }) =>
+      normalizeSetKey(alias) === scope && alias !== scope;
+    // A DERIVING pair carrying a genuine SPLIT's measurement: zero shared cards.
+    // The lane refuses it on gate 3; the mutation, which trusts the derivation
+    // alone, would fold two products into one pool.
+    const pair = { alias: "panini-optic", scope: "donruss-optic" };
+    const real = admitAlias({ ...pair, ruledSet: noRuled, normalizeSetKey, strictRows: 14429, overlap: 0 });
+    expect(real.admit).toBe(false);                        // <- the lane
+    expect(real.why).toContain("DIFFERENT CARDS");
+    expect(buggy(pair)).toBe(true);                        // <- the bug
+  });
+
+  it("MUTATION: dropping the fixed-point refusal admits the whole SPLIT bucket", () => {
+    // Without gate 2, `donruss-studio` -> `studio` (11,296 rows, a key carrying
+    // bccp-product-structure rows of its own) becomes admissible on nothing but
+    // a name resemblance.
+    const buggy = (alias: string, scope: string) => alias !== scope && alias.endsWith(scope);
+    expect(buggy("donruss-studio", "studio")).toBe(true);   // <- the bug
+    expect(admitAlias({ alias: "donruss-studio", scope: "studio", ruledSet: noRuled, normalizeSetKey }).admit)
+      .toBe(false);                                          // <- the lane
+    expect(buggy("panini-diamond-kings", "diamond-kings")).toBe(true);
+    expect(admitAlias({ alias: "panini-diamond-kings", scope: "diamond-kings", ruledSet: noRuled, normalizeSetKey }).admit)
+      .toBe(false);
+  });
+});
+
+/**
+ * 7. THE ALIAS SET IS DISCOVERED FROM THE POOL, NEVER TYPED.
+ *
+ * A hand-written list of spellings is a second copy of the vocabulary. It
+ * drifts when normalizeSetKey changes, it can name a spelling that does not
+ * exist (sweeping nothing and reporting success), and it can miss one that
+ * does. The discovery reads segment 3 of the ids the pool actually stores and
+ * asks the live deriver about each.
+ */
+describe("7. alias discovery reads the pool, and only the setKey segment", () => {
+  /** A page-serving fake: one query, whatever ids the test supplies. */
+  const fakePool = (ids: string[], pageSize = 3) => ({
+    queries: [] as string[],
+    items: {
+      query(spec: { query: string; parameters: Array<{ name: string; value: string }> }, opts: { continuationToken?: string }) {
+        const prefix = spec.parameters[0].value;
+        const matching = ids.filter((i) => i.startsWith(prefix));
+        const from = Number(opts.continuationToken ?? 0);
+        const slice = matching.slice(from, from + pageSize);
+        const next = from + pageSize < matching.length ? String(from + pageSize) : undefined;
+        return {
+          fetchNext: async () => ({
+            resources: slice.map((hobbyiqCardId) => ({ hobbyiqCardId })),
+            continuationToken: next,
+          }),
+        };
+      },
+    },
+  });
+  const retry = async (fn: () => unknown) => fn();
+
+  it("finds the spellings the pool stores that derive onto the scope", async () => {
+    const pool = fakePool([
+      "hiq:football:2024:panini-optic:56:holo:no-auto",
+      "hiq:football:2024:panini-optic:288:green-velocity:no-auto",
+      "hiq:football:2024:donruss-optic:12:base:no-auto",     // already home
+      "hiq:football:2024:topps-chrome:1:base:no-auto",        // another product
+      "hiq:football:2024:prizm:9:base:no-auto",               // another product
+    ]);
+    const { found } = await discoverPoolAliases({
+      pool, scope: "donruss-optic", sports: ["football"], years: [2024],
+      normalizeSetKey, retry, maxPages: 10,
+    });
+    expect([...found.keys()]).toEqual(["panini-optic"]);
+    expect(found.get("panini-optic").sampled).toBe(2);
+    // The destination itself is never reported as an alias of itself.
+    expect(found.has("donruss-optic")).toBe(false);
+  });
+
+  it("reports TRUNCATION rather than passing a bounded sample off as a census", async () => {
+    const many = Array.from({ length: 30 }, (_, i) => `hiq:football:2024:panini-optic:${i}:base:no-auto`);
+    const { truncated } = await discoverPoolAliases({
+      pool: fakePool(many, 3), scope: "donruss-optic", sports: ["football"], years: [2024],
+      normalizeSetKey, retry, maxPages: 2,
+    });
+    expect(truncated).toContain("football/2024");
+  });
+
+  it("an empty pool discovers nothing -- and the lane refuses rather than sweeping", async () => {
+    const { found } = await discoverPoolAliases({
+      pool: fakePool([]), scope: "donruss-optic", sports: ["football"], years: [2024],
+      normalizeSetKey, retry, maxPages: 4,
+    });
+    expect(found.size).toBe(0);
+  });
+
+  it("the discovery is READ-ONLY -- the fake exposes no write method at all", async () => {
+    const pool = fakePool(["hiq:football:2024:panini-optic:56:holo:no-auto"]);
+    // If discovery ever tried to upsert/patch/delete, this would throw rather
+    // than silently succeed against a permissive stub.
+    expect((pool as Record<string, unknown>).item).toBeUndefined();
+    expect((pool.items as Record<string, unknown>).upsert).toBeUndefined();
+    await discoverPoolAliases({
+      pool, scope: "donruss-optic", sports: ["football"], years: [2024],
+      normalizeSetKey, retry, maxPages: 4,
+    });
   });
 });
 
