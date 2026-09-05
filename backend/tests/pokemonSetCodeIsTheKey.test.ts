@@ -90,6 +90,18 @@ describe("CF-THE-SET-CODE-IS-THE-KEY — the boundaries it must not cross", () =
     expect(resolveJapanesePokemonSetCodeFromTitle("2024 Topps Chrome SP Update #USC1")).toBeNull();
   });
 
+  it("a sports title that ALSO says promo / black star is still sports", () => {
+    // The promo branch is the loosest rule in the change -- it reads an ERA
+    // prefix (`swsh`, `sm`, `bw`, `np`) once the title says "promo" or "black
+    // star". Those era tokens are live in sports titles too, so this is the
+    // combination most likely to misfire, and it is pinned rather than argued.
+    // Every one is verified against the built parser.
+    expect(key("2024 Topps Chrome Promo SP Aaron Judge #99")).toBe("topps-chrome");
+    expect(key("2023 Panini Prizm Black Star Promo Wembanyama")).toBe("panini-prizm");
+    expect(key("2021 Bowman Chrome BW Promo Julio Rodriguez")).toBe("bowman-chrome");
+    expect(key("2019 Topps NP Promo Mike Trout")).toBe("topps");
+  });
+
   it("an AMBIGUOUS market code is refused from a bare code", () => {
     // 24 ids name DIFFERENT products in the two markets -- EN sm1 is "Sun &
     // Moon", JA sm1 is "Collection Sun". A bare code cannot say which, so the
