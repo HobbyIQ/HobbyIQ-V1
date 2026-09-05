@@ -121,6 +121,8 @@ const EXPECT = arg("expect", "");
 // SLOTS binds to 1 when unsharded, so `% SLOTS` and `SLOTS > 1` guards below
 // keep working unchanged.
 const { runnerShardScope } = require("./lib/runner-shard-scope.cjs");
+// CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809): the one exit path.
+const { finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
 const SHARD_SCOPE = runnerShardScope({
   slotArg: arg("slot", ""), slotsArg: arg("slots", ""),
   label: "repair-missing-search-fields",
@@ -370,4 +372,11 @@ async function main() {
   }
 }
 
-main().catch((e) => { console.error(e); process.exit(1); });
+// CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809). Success exits too: a lane
+// that lets the loop drain is betting every library released every handle.
+// Runs 33975816175/25863/34391/40824 lost that bet AFTER reconciling clean.
+main()
+  .then((ctx) => finishLane(0, ctx || {}))
+  .catch(async (e) => { console.error(e); 
+    await finishLane(1);
+  });

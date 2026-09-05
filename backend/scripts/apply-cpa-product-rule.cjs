@@ -143,6 +143,8 @@ const { moveCatalogRow } = require(path.join(backend, "dist/services/catalog/cat
 const { decideCpaProduct, groupKey } = require(path.join(backend, "dist/services/catalog/cpaProductRule.js"));
 const { catalogAuthorityOf } = require(path.join(backend, "dist/services/catalog/catalogAuthority.service.js"));
 const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
+// CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809): the one exit path.
+const { finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
 
 const f = (n) => Number(n ?? 0).toLocaleString("en-US");
 const str = (v) => String(v ?? "").trim();
@@ -417,4 +419,11 @@ async function main() {
   }
 }
 
-main().catch((e) => { console.error("FATAL:", e?.stack || e?.message); process.exit(3); });
+// CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809). Success exits too: a lane
+// that lets the loop drain is betting every library released every handle.
+// Runs 33975816175/25863/34391/40824 lost that bet AFTER reconciling clean.
+main()
+  .then((ctx) => finishLane(0, ctx || {}))
+  .catch(async (e) => { console.error("FATAL:", e?.stack || e?.message); 
+    await finishLane(3);
+  });

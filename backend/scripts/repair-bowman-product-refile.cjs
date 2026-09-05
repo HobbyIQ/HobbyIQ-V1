@@ -112,7 +112,7 @@ const backend = path.resolve(__dirname, "..");
 const B = require(path.join(__dirname, "lib", "bowman-product-refile.cjs"));
 const { relocateSoldComp, stripSystem, contentHashOf } = require(path.join(__dirname, "lib", "relocate-sold-comp.cjs"));
 const { runnerShardScope } = require(path.join(__dirname, "lib", "runner-shard-scope.cjs"));
-const { budget } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
+const { budget, finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
 
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
 const str = (v) => String(v ?? "").trim();
@@ -611,4 +611,11 @@ async function main() {
   if (failed) process.exit(4);
 }
 
-main().catch((e) => { console.error("::error::" + (e?.stack ?? e)); process.exit(1); });
+// CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809). Success exits too: a lane
+// that lets the loop drain is betting every library released every handle.
+// Runs 33975816175/25863/34391/40824 lost that bet AFTER reconciling clean.
+main()
+  .then((ctx) => finishLane(0, ctx || {}))
+  .catch(async (e) => { console.error("::error::" + (e?.stack ?? e)); 
+    await finishLane(1);
+  });

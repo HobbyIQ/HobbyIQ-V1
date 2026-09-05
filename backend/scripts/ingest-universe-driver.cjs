@@ -46,6 +46,8 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const { execFileSync } = require("node:child_process");
+// CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809): the one exit path.
+const { finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
 
 const HERE = __dirname;
 const RUN_MINUTES = Number(process.env.RUN_MINUTES || 120);
@@ -2997,4 +2999,12 @@ if (require.main !== module) return;
   // remaining entries were never attempted, and a relaunch would repeat it --
   // so it goes red and the marker below is deliberately NOT printed.
   if (systemicAbort) process.exitCode = 5;
-})().catch((e) => { console.error("FATAL:", e?.stack || e?.message); process.exit(3); });
+})()
+// CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809). Success exits too: a lane
+// that lets the loop drain is betting every library released every handle.
+// Runs 33975816175/25863/34391/40824 lost that bet AFTER reconciling clean.
+// process.exitCode set by the body above is HONOURED, never overwritten.
+  .then(() => finishLane(process.exitCode || 0))
+  .catch(async (e) => { console.error("FATAL:", e?.stack || e?.message); 
+    await finishLane(3);
+  });

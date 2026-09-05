@@ -79,6 +79,8 @@ const STARTED_AT = Date.now();
 const distPath = path.resolve(__dirname, "..", "dist", "services", "portfolioiq", "hobbyIqCardId.service.js");
 if (!fs.existsSync(distPath)) { console.error(`missing dist at ${distPath} — run \`npx tsc\``); process.exit(2); }
 const { computeHobbyIqCardId, normalizeSetKey } = require(distPath);
+// CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809): the one exit path.
+const { finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
 // CF-ASK-THE-CATALOG-NOT-A-PREFIX (Drew, 2026-08-27: "let's fix this
 // immediately"). resolveSetKeyFromCatalog has existed, index-friendly and
 // authority-aware, and nothing called it.
@@ -364,4 +366,11 @@ async function main() {
   const top = [...rewriteCounts.entries()].sort((a,b)=>b[1]-a[1]).slice(0, 30);
   for (const [k, v] of top) console.log(`  ${k}: ${v}`);
 }
-main().catch(e => { console.error(e); process.exit(1); });
+// CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809). Success exits too: a lane
+// that lets the loop drain is betting every library released every handle.
+// Runs 33975816175/25863/34391/40824 lost that bet AFTER reconciling clean.
+main()
+  .then((ctx) => finishLane(0, ctx || {}))
+  .catch(async (e) => { console.error(e); 
+    await finishLane(1);
+  });

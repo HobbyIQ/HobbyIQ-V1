@@ -79,6 +79,8 @@ const MODE = String(process.env.MODE || "product").trim().toLowerCase() || "prod
 // -- sweeps EVERY row. SLOTS binds to 1 when unsharded, so `% SLOTS` and
 // `SLOTS === 1` guards below keep working unchanged.
 const { runnerShardScope } = require("./lib/runner-shard-scope.cjs");
+// CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809): the one exit path.
+const { finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
 const SHARD_SCOPE = runnerShardScope({ label: "rename-setkey-to-product" });
 const { SHARDED, SLOT, SLOTS } = SHARD_SCOPE;
 const RUN_MINUTES = Number(process.env.RUN_MINUTES || 120);
@@ -556,5 +558,12 @@ async function repointHoldings(cat, portfolio, deps, lib) {
 module.exports = { ruledProducts, identityParts, decideProductRow, decideHyphenRow, hyphenatedTwin, holdingTargetCandidates, productPopulation };
 
 if (require.main === module) {
-  main().catch((e) => { console.error("FATAL:", e?.stack || e?.message); process.exit(3); });
+  // CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809). Success exits too: a lane
+// that lets the loop drain is betting every library released every handle.
+// Runs 33975816175/25863/34391/40824 lost that bet AFTER reconciling clean.
+main()
+  .then((ctx) => finishLane(0, ctx || {}))
+  .catch(async (e) => { console.error("FATAL:", e?.stack || e?.message); 
+    await finishLane(3);
+  });
 }
