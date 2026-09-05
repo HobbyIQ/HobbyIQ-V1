@@ -260,7 +260,15 @@ describe("the lane writes nothing and the workflow gates every dispatch", () => 
 
   it("the lane declares the three budget constants through the shared helper", () => {
     expect(SCRIPT).toMatch(/require\(path\.join\(__dirname, "lib\/runner-budget\.cjs"\)\)/);
-    expect(SCRIPT).toMatch(/budget\(\{\s*minutes:\s*\d+,\s*reserveMs:[^}]*verifyMs:/s);
+    expect(SCRIPT).toMatch(/budget\(\{\s*minutes:[^}]*reserveMs:[^}]*verifyMs:/s);
+    // NAMED, not inline. runnerBudgetMargin.test.ts enumerates the whitelist and
+    // keeps only lanes whose source names RUN_MINUTES — a lane that passes
+    // literals is silently SKIPPED by that census and its margin against the
+    // 150-minute ceiling is never computed. Naming them is what puts this lane
+    // under the pin, so the naming is itself pinned here.
+    expect(SCRIPT).toMatch(/const RUN_MINUTES = Number\(process\.env\.RUN_MINUTES \|\| \d+\)/);
+    expect(SCRIPT).toMatch(/const RESERVE_MS = Number\(process\.env\.RESERVE_MS \|\|/);
+    expect(SCRIPT).toMatch(/const VERIFY_MS = Number\(process\.env\.VERIFY_MS \|\|/);
   });
 
   it("GATE 1: the driver APPLY is gated on a reconciled report with rows > 0", () => {
@@ -421,5 +429,68 @@ describe("the workflow is well-formed where it silently would not be", () => {
     expect(WF).toMatch(/gh issue create[\s\S]{0,200}--body-file/);
     expect(WF, "an inline multi-line --body is the shape that broke the parse")
       .not.toMatch(/gh issue create[^\n]*--body \\n/);
+  });
+});
+
+// ── 8. NORMALIZATION MAY NOT PROMOTE A SUBSET ─────────────────────────────
+//
+// Found by running the matcher against prod on 2026-09-05, not by reading it.
+// `normalizeSetKey` maps BOTH "finest" and "finest-jackie-robinson-u-s-mint"
+// onto "topps-finest": the first is #1738's alias (the reason the union
+// exists), the second is project_normalizesetkey_collapses_products (a distinct
+// subset product folding into its flagship). Unguarded, the union offered the
+// Jackie Robinson U.S. Mint page as a candidate for a plain 1997 Finest card.
+describe("an alias may widen a key, but it may not promote a subset", () => {
+  const cell = (sport: string, year: number, setKey: string) => ({
+    cell: `${sport}|${year}|${setKey}`, sport, year, setKey,
+    holdings: 1, salesVolume: 0, subsets: [], holdingIds: [], users: [], slugs: [], reasons: {},
+  });
+  // The real collapse, as measured.
+  const norm = (k: string) => (/^finest/.test(k) ? "topps-finest" : k);
+
+  it("the flagship alias still matches — #1738 is not undone by the guard", () => {
+    const entries = [{ id: "f", lane: "bcp", sport: "baseball", year: 1997, setName: "Finest" }];
+    const { matches } = matchCellToManifest(cell("baseball", 1997, "topps-finest"), entries, {
+      canonicalSetKey: norm,
+    });
+    expect(matches).toHaveLength(1);
+    expect(matches[0].setName).toBe("Finest");
+  });
+
+  it("the SUBSET page is refused for the flagship cell", () => {
+    const entries = [{
+      id: "j", lane: "bcp", sport: "baseball", year: 1997,
+      setName: "Finest Jackie Robinson U.S. Mint",
+    }];
+    const { matches } = matchCellToManifest(cell("baseball", 1997, "topps-finest"), entries, {
+      canonicalSetKey: norm,
+    });
+    expect(matches, "a subset product must not be acquired for its flagship's cell").toEqual([]);
+  });
+
+  it("a cell that ASKS for the subset still gets it — the guard is directional", () => {
+    // The guard refuses promotion, not the subset itself. A holding whose own
+    // key is the subset must still be able to acquire its page.
+    const entries = [{
+      id: "j", lane: "bcp", sport: "baseball", year: 1997,
+      setName: "Finest Jackie Robinson U.S. Mint",
+    }];
+    const { matches } = matchCellToManifest(
+      cell("baseball", 1997, "finest-jackie-robinson-u-s-mint"), entries,
+    );
+    expect(matches).toHaveLength(1);
+  });
+
+  it("prod's own 1997 topps-finest cell now resolves to exactly the flagship page", () => {
+    // The end-to-end check against the REAL manifest, which is where this was
+    // found. Whatever else matches, no candidate may be a narrower product.
+    const { matches } = matchCellToManifest(
+      cell("baseball", 1997, "topps-finest"), MANIFEST.entries as never[],
+      { canonicalSetKey: norm },
+    );
+    for (const m of matches as Array<{ setName: string }>) {
+      expect(m.setName, `${m.setName} is narrower than the cell asked for`)
+        .not.toMatch(/Jackie Robinson/i);
+    }
   });
 });

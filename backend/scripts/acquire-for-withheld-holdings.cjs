@@ -81,11 +81,27 @@ if (/^(1|true|yes)$/i.test(String(process.env.BACKFILL_APPLY || ""))) {
   process.exit(3);
 }
 
-// Budget: the loop unit is ONE CELL's sales count -- a partitioned aggregate
-// over one (sport, year, setKey), measured in seconds, not minutes. So the
-// reserve is small and the verify cap is short; this lane reads a few hundred
-// documents, it does not sweep a corpus.
-const B = budget({ minutes: 45, reserveMs: 60 * 1000, verifyMs: 5 * 60 * 1000 });
+// ── THE THREE CONSTANTS (CF-A-KILLED-JOB-CANNOT-REPORT-PROGRESS) ──────────
+//
+// The loop unit here is ONE CELL's sales count -- a single partitioned
+// aggregate over one (sport, year, setKey) -- so this lane's sizing sits at the
+// small end of the whitelist: it reads a few hundred documents, it does not
+// sweep a corpus. The reserve is one minute (a page-sized unit reserves seconds
+// to minutes, not the tens of minutes a whole-product lane needs) and the
+// verify cap is five.
+//
+// They are declared as NAMED CONSTANTS rather than passed inline because
+// tests/runnerBudgetMargin.test.ts enumerates the runner's whitelist and keeps
+// only lanes whose source names `RUN_MINUTES`. A lane that calls `budget()`
+// with literals is SKIPPED by that census -- it passes vacuously, and its
+// worst case against the 150-minute step ceiling is never computed. Naming them
+// is what puts this lane under the pin.
+//
+//   worst case = 45 + 1 + 5 + 1 startup = 52 minutes, 98 under the ceiling.
+const RUN_MINUTES = Number(process.env.RUN_MINUTES || 45);
+const RESERVE_MS = Number(process.env.RESERVE_MS || 60 * 1000);
+const VERIFY_MS = Number(process.env.VERIFY_MS || 5 * 60 * 1000);
+const B = budget({ minutes: RUN_MINUTES, reserveMs: RESERVE_MS, verifyMs: VERIFY_MS });
 
 const f = (n) => Number(n ?? 0).toLocaleString("en-US");
 const say = (...a) => { if (!JSON_MODE) console.log(...a); };
@@ -253,8 +269,28 @@ async function main() {
   note(`  ${f(cells.length)} acquisition cells, ${f(unaddressable.length)} unaddressable holdings`);
 
   // ── sales volume per cell, BOUNDED, under the verify cap ────────────────
+  //
+  // THE TIE-BREAK IS NOT WORTH A STALL. Measured on prod 2026-09-05: the READ
+  // above resolves in seconds (12 docs, 131 holdings, 16 cells), and then each
+  // per-cell `COUNT(1)` over sold_comps is a cross-partition aggregate on a
+  // 16.3M-row container. Sixteen of them do not finish inside a sensible
+  // window, and this number is ONLY the second sort key -- the ranking is
+  // decided by holdings count, which is already in hand.
+  //
+  // So the counts are OPTIONAL and OFF by default. `SALES_VOLUME=1` asks for
+  // them, the shared verify cap still bounds the whole phase, and an unread
+  // count is recorded as UNREAD rather than as a zero
+  // (feedback_never_dismiss_small_numbers_as_noise: a missing number is not a
+  // small one). A cell whose volume is unread simply falls back to the cell-name
+  // tie-break, which keeps the ordering total either way.
+  const WANT_SALES = /^(1|true|yes)$/i.test(String(process.env.SALES_VOLUME || ""));
+  if (!WANT_SALES) {
+    note("  sales volume: NOT MEASURED (SALES_VOLUME=1 to measure) — "
+      + "the ranking is by holdings count, which does not need it");
+    for (const c of cells) c.salesVolumeRead = false;
+  }
   const vt0 = Date.now();
-  for (const c of cells) {
+  for (const c of WANT_SALES ? cells : []) {
     if (B.outOfClock()) {
       note(`  ${B.stoppedAtBudget()} — sales volume unread for the remaining cells`);
       break;
