@@ -45,6 +45,32 @@ const { splitParentAndSubset } = require("../scripts/fetchSportsCardChecklist.cj
 
 const SCRAPED = join(__dirname, "..", "data", "checklists", "scraped");
 
+/**
+ * CF-CHRONIC-REDS-CRLF, the staged-CSV case (2026-09-05).
+ *
+ * LINE ENDINGS ARE NOT PART OF THE CONTRACT. This pin read a staged CSV and
+ * sliced it on a bare `"\n"`, so on a Windows checkout every line kept a
+ * trailing `\r`: `lines[0]` came back
+ * `"category,…,rarity\r"` and the header assertion failed on the invisible
+ * byte. Green for a WSL/CI author, red on a fresh Windows clone -- the exact
+ * shape .gitattributes documents twice already.
+ *
+ * The stored blobs are clean: `git show HEAD:…1996-metal-universe-baseball.csv`
+ * is LF-only with the header and all 250 rows intact, so nothing about the
+ * DATA was ever wrong. Only the reader was platform-dependent.
+ *
+ * `.gitattributes` pins `eol=lf` for .ts/.cjs/.tsv and the bcp/hobbymonitor
+ * fixtures for this reason and `*.csv` was simply never added; this PR adds it
+ * so a fresh checkout is LF. Splitting on /\r?\n/ here as well is the belt to
+ * that braces -- the sibling pins (toppsTradedTiffanyChecklists,
+ * fleerCoatedReprintsAreProducts) already read these same files that way, so
+ * this is the file adopting the house idiom rather than a new one. It moves NO
+ * assertion: the header, the card count and every column are compared exactly
+ * as before.
+ */
+const csvLines = (file: string): string[] =>
+  readFileSync(join(SCRAPED, `${file}.csv`), "utf8").trim().split(/\r?\n/);
+
 /** The products this acquisition stages, and the parent each nests under. */
 const PRODUCTS: ReadonlyArray<{ key: string; parent: string }> = [
   { key: "pacific-prism", parent: "pacific" },
@@ -145,7 +171,7 @@ describe("the 1990s baseball products the rematch could not place", () => {
       expect(existsSync(csv), `${file}.csv must be staged`).toBe(true);
       expect(existsSync(manifest), `${file}.manifest.json must be staged`).toBe(true);
 
-      const lines = readFileSync(csv, "utf8").trim().split("\n");
+      const lines = csvLines(file);
       expect(lines[0]).toBe("category,cardNumber,parallel,isAuto,printRun,player,parallelNote,rarity");
       expect(lines.length - 1, `${file} card count`).toBe(cards);
 
@@ -164,7 +190,7 @@ describe("the 1990s baseball products the rematch could not place", () => {
    */
   it("no staged row carries a guessed print run", () => {
     for (const { file } of STAGED) {
-      const lines = readFileSync(join(SCRAPED, `${file}.csv`), "utf8").trim().split("\n").slice(1);
+      const lines = csvLines(file).slice(1);
       for (const line of lines) {
         const printRun = line.split(",")[4];
         expect(printRun, `${file} must not invent a print run`).toBe("");
@@ -180,8 +206,7 @@ describe("the 1990s baseball products the rematch could not place", () => {
    */
   it("a parallel is the slug's own word, never synthesised", () => {
     const parallelsOf = (file: string) =>
-      new Set(readFileSync(join(SCRAPED, `${file}.csv`), "utf8").trim().split("\n").slice(1)
-        .map((l) => l.split(",")[2]));
+      new Set(csvLines(file).slice(1).map((l) => l.split(",")[2]));
     expect(parallelsOf("1996-pacific-prism-gold-baseball")).toEqual(new Set(["Gold"]));
     expect(parallelsOf("1997-pacific-crown-collection-silver-baseball")).toEqual(new Set(["Silver"]));
     // Unrecognised rungs stay blank rather than becoming a minted finish.

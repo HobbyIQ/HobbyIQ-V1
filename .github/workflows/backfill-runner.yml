@@ -2847,6 +2847,104 @@ jobs:
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (scanned=${N:-0}) — done, no re-dispatch."
           fi
 
+      # ── the #1782 / #1786 lanes ───────────────────────────────────────────
+      #
+      # CF-RELAUNCH-ONLY-ON-BUDGET (#1361). All three ship the marker and the
+      # sentence "the relaunch continues from here", and none of them shipped
+      # the step that makes the sentence true: each ran one 140-minute cycle
+      # and stopped, green, with work left. The pin
+      # (everyWriteJobReconciles: "every whitelisted marker-printer has a
+      # relaunch step") was RED on main for exactly that.
+      #
+      # Every one is the same contract as the Tiffany lanes above: gate on the
+      # marker alone (never a count -- a count loops forever on a slot down to
+      # rows it cannot change, and stops early on a budget stop that changed
+      # nothing), never on cancel, and forward every input the lane reads
+      # VERBATIM -- `apply` included, so a report relaunches as a report and can
+      # never come back as a write (#1578).
+
+      - name: Self-relaunch the CH-product-label census until the shard is finished
+        # READ ONLY, and `apply` is still forwarded verbatim rather than
+        # hardcoded -- the same reasoning census-split-identity carries above.
+        # The "Refuse an APPLY dispatch of the read-only CH-product-label
+        # lanes" gate runs before Cosmos, so a relaunch carrying apply=true
+        # fails there exactly as its parent did, loudly, instead of quietly
+        # running as something it was not asked to be. Hardcoding EITHER value
+        # is how #1578 happened.
+        #
+        # The census re-reads its scope from the top each run (read-only: there
+        # is no predicate that shrinks as it works), so a shard that cannot fit
+        # one budget relaunches without finishing. That is a real limit and the
+        # fix is more slots, not a cursor -- the banner prints rows scanned, so
+        # a shard that never completes is visible rather than silent.
+        #
+        # SETKEY/SETKEYS ride `setkey_like` and MIN_ROWS/SUSPECT_PCT are not
+        # dispatch inputs, so the scope forwarded here is the whole scope the
+        # parent ran with.
+        if: ${{ !cancelled() && inputs.script == 'census-ch-product-label-parallel' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        working-directory: backend
+        run: |
+          set +e
+          N=$(grep -aoE "^  rows scanned \(this slot\) +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
+          echo "scanned=${N:-0}"
+          if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
+            echo "::notice::budget hit (scanned=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=census-ch-product-label-parallel -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f setkey_like="${{ inputs.setkey_like }}" -f limit="${{ inputs.limit }}"
+          else
+            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (scanned=${N:-0}) — done, no re-dispatch."
+          fi
+
+      - name: Self-relaunch the CH-product-label repair until the slot is clean
+        # `scope` is the WHOLE safety argument for this lane -- a comma-
+        # separated list of CardHedge product ids, with no 'all' -- so the
+        # continuation carries the SAME list. Forwarding it verbatim also means
+        # the "The CH-product-label repair names its scope" gate re-validates
+        # the relaunch: a continuation that somehow lost its scope refuses
+        # rather than widening.
+        if: ${{ !cancelled() && inputs.script == 'repair-ch-product-label-parallel' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        working-directory: backend
+        run: |
+          set +e
+          N=$(grep -aoE "^  REKEYED onto the base pool +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
+          echo "rekeyed=${N:-0}"
+          if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
+            echo "::notice::budget hit (rekeyed=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-ch-product-label-parallel -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f limit="${{ inputs.limit }}"
+          else
+            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (rekeyed=${N:-0}) — done, no re-dispatch."
+          fi
+
+      - name: Self-relaunch the ruled-alias re-key until the slot is clean
+        # CF-AN-ALIAS-IS-NOT-A-SECOND-POOL (#1783/#1786). `scope` names the
+        # RULED KEY and the script refuses the inherited "refractor" and any
+        # unruled key before it builds a Cosmos client -- so forwarding it
+        # verbatim is what keeps the continuation the same dispatch, and a
+        # continuation that lost it refuses rather than sweeping.
+        #
+        # The re-key is convergent: a row already on the ruled key derives
+        # AGREE and is skipped, so a relaunch resumes rather than repeating.
+        if: ${{ !cancelled() && inputs.script == 'reslug-ruled-alias' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        working-directory: backend
+        run: |
+          set +e
+          N=$(grep -aoE "^  RESLUGGED onto the ruled key +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
+          echo "reslugged=${N:-0}"
+          if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
+            echo "::notice::budget hit (reslugged=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=reslug-ruled-alias -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f limit="${{ inputs.limit }}"
+          else
+            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (reslugged=${N:-0}) — done, no re-dispatch."
+          fi
+
       - name: Self-relaunch until composite backfill fully drains
         # CF-COMPOSITE-BACKFILL-SELF-RELAUNCH (Drew, 2026-07-30). Composite
         # backfill covers ~3.4M sold_comps rows and one 150-min iteration
