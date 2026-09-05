@@ -242,6 +242,12 @@ function compareCanary(canary, before, after, tolPct = TOL, touch) {
   // -- so an unmarked disappearance is still a regression in every scope.
   const lost = before.rows - after.rows;
   const improveExplained = Number(after.improveRekeyedAway ?? 0);
+  // Departures a NON-FLEET writer made: the row is still resident in the
+  // container at a different address, and carries no rematch marker. See the
+  // wave-4 note in measure(). Counted separately from the fleet's own marker
+  // so a verdict can say WHICH writer each departure belongs to.
+  const foreignExplained = Number(after.foreignRekeyedAway ?? 0);
+  const accountedFor = improveExplained + foreignExplained;
   // THE MARKER IS THE BOUND, NOT THE LEDGER'S `fromCount`.
   //
   // The obvious extra guard -- "a shard may not excuse more rows than its own
@@ -268,7 +274,7 @@ function compareCanary(canary, before, after, tolPct = TOL, touch) {
   // `attributed` is required exactly as the module header promises.
   const improveLossFullyAccounted = attributed && touched && lost > 0
     && !lossIsExpected
-    && improveExplained >= lost;
+    && accountedFor >= lost;
   if (after.rows < before.rows) {
     const explained = Number(after.evictedAway ?? 0);
     // A pool this shard never wrote in cannot have been drained by it. The
@@ -281,10 +287,14 @@ function compareCanary(canary, before, after, tolPct = TOL, touch) {
     // this shard actually wrote in. See the note on the flag above for why
     // the ledger's `fromCount` is deliberately NOT an additional bound.
     else if (improveLossFullyAccounted) {
-      notes.push(`pool lost ${lost} row(s) to an IMPROVE re-key, all ${improveExplained} accounted for by the rekeyedFrom marker -- a sale moving to the identity its own fields already state`);
+      const parts = [];
+      if (improveExplained > 0) parts.push(`${improveExplained} accounted for by the rekeyedFrom marker (an IMPROVE re-key) -- a sale moving to the identity its own fields already state`);
+      if (foreignExplained > 0) parts.push(`${foreignExplained} to another writer, still resident in the container at a new address -- not this fleet's write`);
+      notes.push(`pool lost ${lost} row(s), all ${accountedFor} accounted for: ${parts.join("; ")}`);
       if ((after.improveRekeyedIds ?? []).length) notes.push(`  re-keyed away: ${after.improveRekeyedIds.join(", ")}`);
+      for (const r of after.foreignRekeyedRows ?? []) notes.push(`  moved by another writer: ${r}`);
     }
-    else if (improveExplained > 0) regressions.push(`pool LOST ${lost} row(s): ${before.rows} -> ${after.rows}, but only ${improveExplained} carry the re-key marker -- ${lost - improveExplained} unexplained`);
+    else if (accountedFor > 0) regressions.push(`pool LOST ${lost} row(s): ${before.rows} -> ${after.rows}, but only ${accountedFor} are accounted for (${improveExplained} by the re-key marker, ${foreignExplained} by another writer) -- ${lost - accountedFor} unexplained`);
     else regressions.push(`pool LOST ${lost} row(s): ${before.rows} -> ${after.rows}`);
   }
   else if (after.rows > before.rows) {
@@ -312,7 +322,7 @@ function compareCanary(canary, before, after, tolPct = TOL, touch) {
     // canary lost its $100 and $148 rows, so an anchor that did not move would
     // be the surprising outcome. Gated on the same accounting as the loss, so
     // an unexplained departure still fails on both counts.
-    else if (movePct > tolPct && improveLossFullyAccounted) notes.push(`anchor moved ${movePct.toFixed(1)}%: ${money(before.anchor)} -> ${money(after.anchor)} -- expected: every departure carries the IMPROVE re-key marker, so the leading edge is recomputed without them`);
+    else if (movePct > tolPct && improveLossFullyAccounted) notes.push(`anchor moved ${movePct.toFixed(1)}%: ${money(before.anchor)} -> ${money(after.anchor)} -- expected: every departure is accounted for, so the leading edge is recomputed without them`);
     else if (movePct > tolPct) regressions.push(`anchor moved ${movePct.toFixed(1)}% (tolerance ${tolPct}%): ${money(before.anchor)} -> ${money(after.anchor)}`);
     else if (movePct > 0) notes.push(`anchor moved ${movePct.toFixed(1)}% within tolerance`);
   } else if (before.anchor !== null && after.anchor === null) {
@@ -324,7 +334,7 @@ function compareCanary(canary, before, after, tolPct = TOL, touch) {
   return { name: canary.name, slug: canary.slug, ok: regressions.length === 0, touched, attributed, moved, regressions, notes };
 }
 
-async function measure(pool, slug) {
+async function measure(pool, slug, priorIds) {
   const all = async (q, p) => { const it = pool.items.query({ query: q, parameters: p }, { maxItemCount: 1000 }); const o = []; while (it.hasMoreResults()) { const { resources } = await retry(() => it.fetchNext()); o.push(...(resources ?? [])); } return o; };
   // The union, deliberately: a pool split across the partition and the field is
   // exactly the state the rematch is fixing, and a check that read one field
@@ -374,11 +384,61 @@ async function measure(pool, slug) {
   // pool: a re-key whose destination still carries this slug never left, and
   // counting it would license a real loss elsewhere.
   const improveAway = improveRekeyed.filter((r) => !byId.has(r.id));
+  // A DEPARTURE CAN BELONG TO A WRITER THAT LEAVES NO FLEET MARKER
+  // (2026-09-05, the wave-4 halt).
+  //
+  // Slots 12 and 13 each measured exactly one departure more than the
+  // `rekeyedFrom` marker could explain, and it was the SAME row in both:
+  //
+  //   cardhedge::ch-daily::1787885457712x483187805134631000   $23.39
+  //   "Eli Willits 2025 Bowman Chrome Draft Sapphire #BDC-1 1st RC - Raw"
+  //   setName "2025 Bowman Draft Sapphire Baseball", parallel "Base"
+  //
+  // It was rewritten at 13:18:13Z -- AFTER both baselines (12:47Z) and BEFORE
+  // both after-reads -- by the CardHedge daily ingest, which recomputed its
+  // `hobbyiqCardId` from the paper base slug to
+  // `hiq:baseball:2025:bowman-draft-sapphire:bdc-1:base:no-auto`. A Sapphire
+  // sale stopped being counted as Bowman Draft paper, which is correct; the
+  // ingest simply does not write `rekeyedFrom`, because it is not the rematch.
+  //
+  // The old code had exactly two categories -- "carries a fleet marker" and
+  // "damage" -- so any concurrent NON-FLEET re-address in a TOUCHED pool read
+  // as damage. That is the #1711/#1794 false-halt shape arriving through a
+  // third door: #1711 covered pools the shard never wrote in, #1794 covered
+  // the shard's own IMPROVE moves, and neither covers a pool the shard DID
+  // write in that a FOREIGN writer also changed.
+  //
+  // WHY THIS IS SAFE. The damage this gate exists to catch is a sale that
+  // VANISHES -- deleted, or left at an address that resolves nowhere. This
+  // clause never excuses that: a row counts as a foreign departure ONLY when
+  // it is still RESIDENT in the container under a different address, so the
+  // sale is provably still in the data and merely lives in another pool. A row
+  // that is genuinely gone matches nothing here and still fails.
+  const baselineIds = Array.isArray(priorIds) ? priorIds.filter((x) => typeof x === "string") : [];
+  const markedAway = new Set(improveRekeyed.map((r) => r.id));
+  const unresolved = baselineIds.filter((id) => !byId.has(id) && !markedAway.has(id));
+  const foreignRows = [];
+  for (let i = 0; i < unresolved.length; i += 100) {
+    const batch = unresolved.slice(i, i + 100);
+    const params = batch.map((v, j) => ({ name: `@i${j}`, value: v }));
+    const found = await all(
+      `SELECT c.id, c.cardId, c.hobbyiqCardId, c.title, c.price, c.source FROM c WHERE c.id IN (${params.map((x) => x.name).join(", ")})`,
+      params
+    );
+    for (const r of found) {
+      // Still addressed here after all (a stale read) -- not a departure.
+      if (r.cardId === slug || r.hobbyiqCardId === slug) continue;
+      foreignRows.push(`${r.id} -> ${r.cardId} [${r.source ?? "?"}] ${Number(r.price ?? 0).toFixed(2)} ${JSON.stringify(String(r.title ?? "").slice(0, 70))}`);
+    }
+  }
   return {
     ...poolInputs([...byId.values()]),
+    ids: [...byId.keys()].sort(),
     evictedAway: Number(evicted[0] ?? 0),
     improveRekeyedAway: improveAway.length,
     improveRekeyedIds: improveAway.map((r) => `${r.id}@${r.cardId}`).sort(),
+    foreignRekeyedAway: foreignRows.length,
+    foreignRekeyedRows: foreignRows.sort(),
   };
 }
 
@@ -436,9 +496,18 @@ async function main() {
   console.log(`rematch-canary-check  MODE=${MODE}  ${canaries.length} canaries  anchor tolerance ${TOL}%  READ ONLY`);
   console.log(`  the anchor is the leading edge (median of the newest 3), never the pool's FMV -- FMV is the projected next sale.`);
 
+  // In MODE=after the baseline is read BEFORE measuring, because measure()
+  // resolves each id that LEFT the pool against the container to tell a
+  // foreign writer's re-address apart from a sale that actually vanished.
+  // Reading it here (rather than after the loop) is what makes that possible;
+  // the missing-baseline FATAL below is unchanged and still gates the compare.
+  let priorBase = null;
+  if (MODE === "after" && fs.existsSync(BASELINE)) {
+    try { priorBase = JSON.parse(fs.readFileSync(BASELINE, "utf8")); } catch { priorBase = null; }
+  }
   const now = {};
   for (const c of canaries) {
-    now[c.slug] = await measure(pool, c.slug);
+    now[c.slug] = await measure(pool, c.slug, priorBase?.inputs?.[c.slug]?.ids);
     const m = now[c.slug];
     console.log(`\n  ${c.name}`);
     console.log(`    ${c.slug}`);
@@ -457,7 +526,7 @@ async function main() {
   if (MODE === "check") { console.log(`\ncheck only -- no baseline compared. Run MODE=before, apply the shard, then MODE=after.`); return; }
 
   if (!fs.existsSync(BASELINE)) { console.error(`FATAL: MODE=after but no baseline at ${BASELINE}. The gate cannot pass a shard it has no before for.`); process.exit(2); }
-  const base = JSON.parse(fs.readFileSync(BASELINE, "utf8"));
+  const base = priorBase ?? JSON.parse(fs.readFileSync(BASELINE, "utf8"));
 
   // -- THE SHARD'S OWN WRITE LEDGER --------------------------------------
   // Printed before the verdict so a halt NAMES THE ROWS: the reader sees what
@@ -513,6 +582,9 @@ async function main() {
   if (otherWriters.length) console.log(`  ${otherWriters.length} pool(s) moved under OTHER writers during this apply -- noted above, not this shard's doing.`);
 }
 
-module.exports = { median, poolInputs, compareCanary, loadLedger };
+// `measure` is exported so the residency rule that separates a foreign
+// writer's re-address from a VANISHED sale can be pinned directly -- it is the
+// safety property of DEFECT 5 and it lives here, not in compareCanary.
+module.exports = { median, poolInputs, compareCanary, loadLedger, measure };
 
 if (require.main === module) main().catch((e) => { console.error("FATAL:", e?.stack || e?.message); process.exit(3); });
