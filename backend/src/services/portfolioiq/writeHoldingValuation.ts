@@ -244,6 +244,47 @@ export function writeHoldingValuation(
       }
     : undefined;
 
+  // CF-A-HOLDING-CARRIES-ONE-STAMP (Drew, 2026-09-05). A row carries EXACTLY
+  // ONE of {published stamp, withheld stamp} — never both.
+  //
+  // The withheld stamp had no way to come OFF. `writeHoldingValuation` builds
+  // its meta fresh, so a publish that writes a meta already drops a prior
+  // `withheld` by construction; but the SIX sites that pass `writeMeta: false`
+  // publish a value and never touch `pricingSourceMeta` at all, so the prior
+  // meta — `withheld` block and all — rides through on the `...holding`
+  // spread. The resolver-fallback rescue (portfolioStore ~10918) and the
+  // legacy confidence-gated persist (~11487) both set a real
+  // `fairMarketValue` that way.
+  //
+  // That is the Bellingham Griffey (c8949bb0), measured in the 2026-09-04
+  // audit: `fairMarketValue` 1850, `method` "exact-pool-last-sale",
+  // `valueSource` "observed", confidence 1 — a legitimate PUBLISH, because
+  // CF-LEGACY-SURVIVES-FOR-UNNAMEABLE-IDENTITIES says a slug the catalog
+  // cannot name but which HAS sales is priced by the legacy exact-pool read —
+  // standing beside `withheld { reason: "identity-not-in-catalog",
+  // blockingCount: 39, proposed: null }` left over from an earlier pass that
+  // DID refuse. Nothing in the publish path cleared it. Every reader that
+  // prefers `method` sees a current observed price; the auditor reading
+  // `withheld` sees a refusal; both are reading the same row.
+  //
+  // So the clear happens HERE, at the one choke point every write already
+  // passes through, rather than as a new obligation at fourteen call sites
+  // (which is the shape C-7 abolished, and which the writer-count pins
+  // forbid). A write that does not DECLARE a withhold is a publish, and a
+  // publish leaves no withheld stamp behind it.
+  const carriedMeta = (holding as { pricingSourceMeta?: Record<string, unknown> }).pricingSourceMeta;
+  const clearsStaleWithhold = !w.meta?.withheld
+    && !!carriedMeta
+    && typeof carriedMeta === "object"
+    && "withheld" in carriedMeta;
+  // Only the `withheld` key is dropped. The rest of the carried meta (slug,
+  // compsUsed, confidence, labels) is the prior pass's and is NOT this
+  // write's to erase — a `writeMeta: false` site is saying precisely that it
+  // has no meta of its own to state.
+  const carriedWithoutWithhold = clearsStaleWithhold
+    ? (() => { const { withheld: _dropped, ...rest } = carriedMeta as Record<string, unknown>; return rest; })()
+    : null;
+
   return {
     ...holding,
     ...(w.fields ?? {}),
@@ -254,7 +295,11 @@ export function writeHoldingValuation(
     // An explicit refusal persists its REASON, so "no rung" is a readable
     // statement rather than a null anyone has to guess the meaning of.
     ...(noRungReason ? { fmvRungAbsentReason: noRungReason } : { fmvRungAbsentReason: null }),
-    ...(shouldWriteMeta ? { pricingSourceMeta: meta } : {}),
+    ...(shouldWriteMeta
+      ? { pricingSourceMeta: meta }
+      : clearsStaleWithhold
+        ? { pricingSourceMeta: carriedWithoutWithhold as PortfolioHolding["pricingSourceMeta"] }
+        : {}),
     lastUpdated: w.nowIso,
   } as PortfolioHolding;
 }
