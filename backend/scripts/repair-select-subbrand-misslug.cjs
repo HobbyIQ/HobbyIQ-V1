@@ -72,7 +72,15 @@ const SPORT = String(process.env.SPORT || "").trim().toLowerCase();
 const YEAR = Number(process.env.YEAR || 0);
 const SETKEY = String(process.env.SETKEY || "").trim().toLowerCase();
 const LIMIT = Number(process.env.LIMIT || 0);
-const RUN_MS = Number(process.env.RUN_MINUTES || 140) * 60000;
+const RUN_MINUTES = Number(process.env.RUN_MINUTES || 120);
+const RUN_MS = RUN_MINUTES * 60000;
+/** Wall clock a single unit may still be granted after the budget expires.
+ *  CHECKED BEFORE EACH UNIT, never at the loop top: a unit costing more than
+ *  this is stopped BEFORE it starts. See lib/runner-budget.cjs. */
+const RESERVE_MS = Number(process.env.RESERVE_MS || 2 * 60 * 1000);
+/** Hard cap on the post-loop verify-by-read: it answers, or it says it could
+ *  not. It never holds the step open until the runner kills it. */
+const VERIFY_MS = Number(process.env.VERIFY_MS || 10 * 60 * 1000);
 const CONCURRENCY = Math.max(1, Number(process.env.CONCURRENCY || process.env.BACKFILL_CONCURRENCY || 8));
 // CF-AN-INHERITED-SLOTS-IS-NOT-A-CHOSEN-SHARD (#1756, generalised 2026-09-04).
 // The runner exports `slots` for EVERY script with a workflow-wide DEFAULT of

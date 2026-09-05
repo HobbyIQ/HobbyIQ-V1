@@ -132,7 +132,13 @@ const { runnerShardScope } = require("./lib/runner-shard-scope.cjs");
 const SHARD_SCOPE = runnerShardScope({ alwaysShard: true, defaultSlots: 32, label: "rematch-sold-comps" });
 const { SHARDED, SLOT, SLOTS } = SHARD_SCOPE;
 const CONCURRENCY = Math.max(1, Number(process.env.BACKFILL_CONCURRENCY || 8));
-const RUN_MINUTES = Number(process.env.RUN_MINUTES || 140);
+const RUN_MINUTES = Number(process.env.RUN_MINUTES || 120);
+/** Wall clock a single unit may still be granted after the budget expires.
+ *  CHECKED BEFORE EACH UNIT, never at the loop top. See lib/runner-budget.cjs. */
+const RESERVE_MS = Number(process.env.RESERVE_MS || 90 * 1000);
+/** Hard cap on the post-loop verify-by-read: it answers, or it says it could
+ *  not. It never holds the step open until the runner kills it. */
+const VERIFY_MS = Number(process.env.VERIFY_MS || 10 * 60 * 1000);
 const LIMIT = Number(process.env.LIMIT || 0);
 const YEARS = String(process.env.YEARS || "").split(",").map((s) => s.trim()).filter(Boolean).map(Number).filter(Number.isFinite);
 const CENSUS_OUT = String(process.env.CENSUS_OUT || "/tmp/rematch-census").trim();

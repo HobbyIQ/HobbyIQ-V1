@@ -191,7 +191,15 @@ const SHARD_OPT_IN = /^(1|true|yes)$/i.test(String(process.env.SHARD ?? "").trim
 const SHARDED = SLOTS_REQUESTED > 1 && Number.isFinite(SLOT) && (SLOT > 0 || SHARD_OPT_IN);
 const SLOTS = SHARDED ? SLOTS_REQUESTED : 1;
 const CONCURRENCY = Math.max(1, Number(process.env.CONCURRENCY || process.env.BACKFILL_CONCURRENCY || 16));
-const RUN_MS = Number(process.env.RUN_MINUTES || 140) * 60000;
+const RUN_MINUTES = Number(process.env.RUN_MINUTES || 120);
+const RUN_MS = RUN_MINUTES * 60000;
+/** Wall clock a single unit may still be granted after the budget expires.
+ *  CHECKED BEFORE EACH UNIT, never at the loop top: a unit costing more than
+ *  this is stopped BEFORE it starts. See lib/runner-budget.cjs. */
+const RESERVE_MS = Number(process.env.RESERVE_MS || 2 * 60 * 1000);
+/** Hard cap on the post-loop verify-by-read: it answers, or it says it could
+ *  not. It never holds the step open until the runner kills it. */
+const VERIFY_MS = Number(process.env.VERIFY_MS || 10 * 60 * 1000);
 const LIMIT = Number(process.env.LIMIT || 0);
 const STARTED = Date.now();
 
@@ -332,6 +340,41 @@ async function forEachPage(container, spec, onPage, pageSize = 200) {
 // ── main ────────────────────────────────────────────────────────────────────
 
 async function main() {
+
+  /** The post-loop AFTER count, under a hard cap.
+   *
+   *  CF-A-KILLED-JOB-CANNOT-REPORT-PROGRESS. This is an unbounded
+   *  cross-partition aggregate: on run 33960686247 the same shape ran 887
+   *  seconds and was still running when the runner killed the step at its
+   *  150-minute ceiling -- AFTER the reconciliation had printed and balanced.
+   *  The data was fine; the job was red. So it now either answers within
+   *  VERIFY_MS or says it could not, and an unread count is printed as
+   *  UNCONFIRMED rather than as a zero (a missing number must never read as
+   *  an empty result).
+   *
+   *  The BEFORE count is deliberately NOT capped: it runs before any work, so
+   *  a slow one costs the loop budget the reserve already accounts for, and
+   *  it can never strand a reconciliation that has already printed. */
+  async function cappedCount(spec) {
+    let timer = null;
+    try {
+      const { resources } = await Promise.race([
+        retry(() => pool.items.query(spec).fetchAll()),
+        new Promise((_, rej) => {
+          timer = setTimeout(() => rej(new Error("verify-cap")), VERIFY_MS);
+          if (timer.unref) timer.unref();
+        }),
+      ]);
+      return Number(resources[0] ?? 0);
+    } catch (e) {
+      console.log(`  VERIFY BY READ: could not confirm within the cap (${String(e && e.message)})`);
+      return null;
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+  }
+  /** An unread count prints as UNCONFIRMED (verify cap), never as 0. */
+  const shownCount = (n) => (n === null ? "UNCONFIRMED (verify cap)" : `${f(n)} rows`);
   // Refusals BEFORE any require of dist/ or any Cosmos client, so a missing
   // build cannot masquerade as a refusal.
   if (!MODES.includes(MODE)) {
@@ -549,7 +592,7 @@ async function main() {
         }));
         const done = Math.min(i + CONCURRENCY, mine.length);
         if (LIMIT && (s.retired + s.converted + s.folded + s.gradedRetired) >= LIMIT) { stopReason = "limit"; s.notReached += mine.length - done; break; }
-        if (Date.now() - STARTED > RUN_MS) { stopReason = "budget"; s.notReached += mine.length - done; break; }
+        if (Date.now() - STARTED > RUN_MS - RESERVE_MS) { stopReason = "budget"; s.notReached += mine.length - done; break; }
       }
       return !stopReason;
     });
@@ -701,7 +744,7 @@ async function main() {
         })));
         const done = Math.min(i + CONCURRENCY, mine.length);
         if (LIMIT && s.rekeyed >= LIMIT) { stopReason = "limit"; s.notReached += mine.length - done; break; }
-        if (Date.now() - STARTED > RUN_MS) { stopReason = "budget"; s.notReached += mine.length - done; break; }
+        if (Date.now() - STARTED > RUN_MS - RESERVE_MS) { stopReason = "budget"; s.notReached += mine.length - done; break; }
       }
       return !stopReason;
     }, 400);
@@ -721,14 +764,18 @@ async function main() {
     console.log(`  failed                       ${f(s.failed)}`);
 
     // AFTER + the arithmetic. A report predicts; an apply proves.
-    const after = (await retry(() => pool.items.query({
+    const after = await cappedCount({
       query: "SELECT VALUE COUNT(1) FROM c WHERE CONTAINS(LOWER(c.parallel), 'tiffany') OR CONTAINS(c.hobbyiqCardId, ':tiffany:')",
       parameters: [],
-    }).fetchAll())).resources[0] ?? 0;
+    });
     const expect = APPLY ? before - s.deleted : before;
     console.log("");
-    console.log(`  AFTER   ${f(after)} rows (before ${f(before)}${APPLY ? `, expected ${f(expect)}` : ", report-only: unchanged expected"})`);
-    if (after !== expect) console.log(`    NOTE differs from the expectation by ${f(after - expect)} -- other slots, the CONFLICT rows that stay, or a concurrent writer.`);
+    console.log(`  AFTER   ${shownCount(after)} (before ${f(before)}${APPLY ? `, expected ${f(expect)}` : ", report-only: unchanged expected"})`);
+    if (after === null) {
+      console.log(`    the verify count is UNREAD, not zero -- the writes above reconciled and are durable.`);
+    } else if (after !== expect) {
+      console.log(`    NOTE differs from the expectation by ${f(after - expect)} -- other slots, the CONFLICT rows that stay, or a concurrent writer.`);
+    }
 
     reconcile("repair-tiffany-rung-to-product:pool", s.scanned, s.rekeyed,
       s.conflict + s.noSibling + s.outOfScope + s.notRung + s.malformed + s.notReached, s.failed);

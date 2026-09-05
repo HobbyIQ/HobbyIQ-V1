@@ -130,7 +130,11 @@ const LIMIT = Number(arg("limit", env("LIMIT", "0"))) || 0;
 const CONCURRENCY = Math.max(1, Number(arg("concurrency", env("BACKFILL_CONCURRENCY", "16"))) || 16);
 const PAGE_SIZE = Math.max(1, Number(arg("page-size", env("PAGE_SIZE", "1000"))) || 1000);
 // 140 minutes leaves the marker inside the runner's 150-minute step ceiling.
-const RUN_MINUTES = Number(arg("run-minutes", env("RUN_MINUTES", "140"))) || 140;
+const RUN_MINUTES = Number(arg("run-minutes", env("RUN_MINUTES", "120"))) || 120;
+/** Wall clock a single unit (one page of rows to heal) may still be granted after the
+ *  budget expires. CHECKED BEFORE EACH UNIT, never at the loop top.
+ *  See lib/runner-budget.cjs for the rule and its arithmetic. */
+const RESERVE_MS = Number(process.env.RESERVE_MS || 90 * 1000);
 
 const blank = (v) => v === undefined || v === null || v === "" || (Array.isArray(v) && !v.length);
 const shardOf = (id) => parseInt(crypto.createHash("sha1").update(String(id)).digest("hex").slice(0, 8), 16) % SLOTS;
@@ -246,7 +250,7 @@ async function main() {
   );
 
   while (iterator.hasMoreResults()) {
-    if (Date.now() - startedAt > budgetMs) { stopped = "budget"; break; }
+    if (Date.now() - startedAt > budgetMs - RESERVE_MS) { stopped = "budget"; break; }
     if (LIMIT && c.intended >= LIMIT) { stopped = "limit"; break; }
 
     const { resources: page } = await iterator.fetchNext();

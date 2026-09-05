@@ -90,6 +90,9 @@ async function ingestOne(manifest) {
       isAuto: row.isAuto, printRun: row.printRun,
       playerName: row.player,
       source, confidence: 0.95, vendorIds: {},
+      // CF-AUTHORITATIVE-SETKEY. A hand-fetched checklist names its own
+      // product; the vendor cardNumber-prefix repair must not re-home it.
+      authoritativeSetKey: true,
     });
     if (!entry) { stats.skipped++; continue; }
     if (APPLY) {

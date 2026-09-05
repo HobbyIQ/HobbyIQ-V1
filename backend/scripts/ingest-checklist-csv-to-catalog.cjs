@@ -95,7 +95,15 @@ const { runnerShardScope } = require("./lib/runner-shard-scope.cjs");
 const SHARD_SCOPE = runnerShardScope({ label: "ingest-checklist-csv-to-catalog" });
 const { SHARDED, SLOT, SLOTS } = SHARD_SCOPE;
 
-const RUN_MS = Number(process.env.RUN_MINUTES || 140) * 60000;
+const RUN_MINUTES = Number(process.env.RUN_MINUTES || 120);
+const RUN_MS = RUN_MINUTES * 60000;
+/** Wall clock a single unit may still be granted after the budget expires.
+ *  CHECKED BEFORE EACH UNIT, never at the loop top: a unit costing more than
+ *  this is stopped BEFORE it starts. See lib/runner-budget.cjs. */
+const RESERVE_MS = Number(process.env.RESERVE_MS || 2 * 60 * 1000);
+/** Hard cap on the post-loop verify-by-read: it answers, or it says it could
+ *  not. It never holds the step open until the runner kills it. */
+const VERIFY_MS = Number(process.env.VERIFY_MS || 10 * 60 * 1000);
 const STARTED = Date.now();
 
 const f = (n) => Number(n).toLocaleString();
@@ -348,6 +356,18 @@ async function main() {
             parallel: r.parallel || "Base",
             isAuto: r.isAuto === "true",
             printRun: r.printRun ? Number(r.printRun) : null,
+            // CF-AUTHORITATIVE-SETKEY. A published checklist IS the ground
+            // truth for which product a card belongs to, so the cardNumber-
+            // prefix repair meant for untrusted VENDOR text must not fire on
+            // it. Without this flag the slug took the override (`bowman` +
+            // CPA- -> `bowman-chrome`) while the doc below kept writing
+            // `setKey: product.setKey` -- and the row landed filed at one
+            // product and labelled with another. Census 2026-09-05: 19,867
+            // rows on bowman-chrome, 16,822 on bowman-paper, 208 on sapphire,
+            // still minting ~4,700/week. It also collapses 2026 Bowman CPA-AG
+            // (Adrian Gil) onto 2026 Bowman Chrome CPA-AG (Angeibel Gomez),
+            // which is the merge the flag exists to prevent.
+            authoritativeSetKey: true,
           });
           if (!slug || !slug.startsWith("hiq:")) { skippedRow++; return; }
           if (!APPLY) { written++; if (r.isAuto === "true") signed++; return; }
@@ -420,6 +440,11 @@ async function main() {
               isAuto: r.isAuto === "true",
               printRun: r.printRun ? Number(r.printRun) : null,
               subsetName: product.subsetName, subsetInId: true,
+              // CF-AUTHORITATIVE-SETKEY, as above -- the subset re-slug must
+              // land on the same product the plain slug did, or disambiguating
+              // a subset would move the card to another product as a side
+              // effect.
+              authoritativeSetKey: true,
             });
             // MOVE THE INCUMBENT TOO. Leaving it on the plain id leaves one of
             // the two cards at an address the other one also answers to.
@@ -430,6 +455,10 @@ async function main() {
               isAuto: known.isAuto === true,
               printRun: typeof known.printRun === "number" ? known.printRun : null,
               subsetName: known.subsetName, subsetInId: true,
+              // CF-AUTHORITATIVE-SETKEY. The incumbent is a catalog row this
+              // same checklist lane minted; recomputing its address under a
+              // different rule would move it to a third product.
+              authoritativeSetKey: true,
             });
             if (incumbentSlug !== slugForWrite) {
               await upsertCatalogEntry({
@@ -511,7 +540,7 @@ async function main() {
       }));
       const processed = Math.min(i + CONCURRENCY, batch.length);
       if (LIMIT && written >= LIMIT) { stopReason = "limit"; notReached += batch.length - processed; break; }
-      if (Date.now() - STARTED > RUN_MS) { stopReason = "budget"; notReached += batch.length - processed; break; }
+      if (Date.now() - STARTED > RUN_MS - RESERVE_MS) { stopReason = "budget"; notReached += batch.length - processed; break; }
     }
     // Marked only when the whole file was processed: a budget stop mid-file
     // must NOT claim the file is done, or its tail is silently lost.

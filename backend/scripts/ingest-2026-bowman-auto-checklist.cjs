@@ -146,6 +146,14 @@ async function main() {
         source: "seed",
         confidence: 0.95,   // Drew-verified checklist
         vendorIds: {},
+        // CF-AUTHORITATIVE-SETKEY. This is a published checklist, which is
+        // the ground truth for which product a card belongs to, so the
+        // cardNumber-prefix repair meant for untrusted VENDOR text must not
+        // fire on it. Without the flag every CPA-/CRA- row this Bowman lane
+        // mints is re-homed to `bowman-chrome` -- collapsing 2026 Bowman
+        // CPA-AG (Adrian Gil) onto 2026 Bowman Chrome CPA-AG (Angeibel
+        // Gomez), which is the merge the flag exists to prevent.
+        authoritativeSetKey: true,
       });
       if (!entry) {
         stats.failed++;

@@ -58,7 +58,15 @@ const { runnerShardScope } = require("./lib/runner-shard-scope.cjs");
 const SHARD_SCOPE = runnerShardScope({ label: "measure-card-number-integrity" });
 const { SHARDED, SLOT, SLOTS } = SHARD_SCOPE;
 const LIMIT = Number(process.env.LIMIT || 0);
-const RUN_MS = Number(process.env.RUN_MINUTES || 140) * 60000;
+const RUN_MINUTES = Number(process.env.RUN_MINUTES || 120);
+const RUN_MS = RUN_MINUTES * 60000;
+/** Wall clock a single unit may still be granted after the budget expires.
+ *  CHECKED BEFORE EACH UNIT, never at the loop top: a unit costing more than
+ *  this is stopped BEFORE it starts. See lib/runner-budget.cjs. */
+const RESERVE_MS = Number(process.env.RESERVE_MS || 2 * 60 * 1000);
+/** Hard cap on the post-loop verify-by-read: it answers, or it says it could
+ *  not. It never holds the step open until the runner kills it. */
+const VERIFY_MS = Number(process.env.VERIFY_MS || 10 * 60 * 1000);
 const STARTED = Date.now();
 const f = (n) => Number(n).toLocaleString("en-US");
 const shardOf = (key) => parseInt(crypto.createHash("sha1").update(String(key)).digest("hex").slice(0, 8), 16) % SLOTS;
@@ -115,7 +123,7 @@ function classify(r) {
 async function walk(pool, query, params, label, out) {
   let token, scanned = 0, otherSlot = 0;
   do {
-    if (Date.now() - STARTED > RUN_MS) { out.stopped = "budget"; break; }
+    if (Date.now() - STARTED > RUN_MS - RESERVE_MS) { out.stopped = "budget"; break; }
     const page = await retry(() => pool.items
       .query({ query, parameters: params }, { maxItemCount: 2000, continuationToken: token, maxDegreeOfParallelism: 8 })
       .fetchNext());
@@ -179,7 +187,7 @@ async function main() {
     const months = monthsBack();
     console.log(`\nslices: ${months.length} _ts months, newest first (SINCE=${SINCE}${MONTHS ? `, MONTHS=${MONTHS}` : ""})`);
     for (const [y, m] of months) {
-      if (Date.now() - STARTED > RUN_MS) { out.stopped = "budget"; break; }
+      if (Date.now() - STARTED > RUN_MS - RESERVE_MS) { out.stopped = "budget"; break; }
       const lo = tsOf(y, m), hi = tsOf(m === 12 ? y + 1 : y, m === 12 ? 1 : m + 1);
       const n = await walk(pool,
         `${SELECT} WHERE c._ts >= @lo AND c._ts < @hi AND IS_DEFINED(c.title) AND IS_DEFINED(c.cardNumber)`,
@@ -199,7 +207,7 @@ async function main() {
       ["4-digit cardNumber", `${SELECT} WHERE LENGTH(c.cardNumber) = 4 AND IS_DEFINED(c.title)`],
     ];
     for (const [label, q] of slices) {
-      if (Date.now() - STARTED > RUN_MS) { out.stopped = "budget"; break; }
+      if (Date.now() - STARTED > RUN_MS - RESERVE_MS) { out.stopped = "budget"; break; }
       const n = await walk(pool, q, [], label, out);
       console.log(`  ${label.padEnd(38)} scanned ${f(n)}`);
     }
@@ -214,7 +222,7 @@ async function main() {
     let scanned = 0, hits = 0, token;
     console.log(`\nslice: card_catalog rows with a 4-character cardNumber, kept when it equals the row's year`);
     do {
-      if (Date.now() - STARTED > RUN_MS) { out.stopped = "budget"; break; }
+      if (Date.now() - STARTED > RUN_MS - RESERVE_MS) { out.stopped = "budget"; break; }
       const page = await retry(() => cat.items
         .query("SELECT c.id, c.source, c.cardNumber, c.year, c.gradeTier, c.checklistBacking FROM c WHERE LENGTH(c.cardNumber) = 4", { maxItemCount: 1000, continuationToken: token, maxDegreeOfParallelism: 8 })
         .fetchNext());
