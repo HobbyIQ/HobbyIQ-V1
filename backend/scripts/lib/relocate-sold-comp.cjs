@@ -9,11 +9,17 @@
  * verification between:
  *
  *   1. upsert the row we intend to keep          -> throws: nothing deleted
- *   2. read it back at (id, cardId) and compare   -> mismatch: nothing deleted
+ *   2. read it back and compare                   -> mismatch: nothing deleted
  *   3. delete every old row, one at a time        -> a delete that fails is
  *                                                    reported as a DUPLICATE
  *                                                    left in the pool, never
  *                                                    retried into a missing row
+ *
+ * Step 2 is `readBackKeptRow`, and it is deliberately more than one read: the
+ * account is at Eventual consistency, so a single point-read at (id, cardId)
+ * can 404 on a document that was written -- see that function for the run that
+ * proved it. It retries, then falls back to a query on BOTH keys, and only a
+ * row that no read can find is a failure.
  *
  * The same helper serves a re-key (one old row -> one new row) and a collapse
  * (several old rows -> the one kept). The caller decides WHAT to keep; this
@@ -126,6 +132,69 @@ function foldMissing(winner, donors, fields) {
 const sameRef = (a, b) => a && b && a.id === b.id && a.cardId === b.cardId;
 const is404 = (e) => e?.code === 404 || e?.statusCode === 404;
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/** How many times a null point-read is retried before the query fallback. */
+const READ_BACK_ATTEMPTS = 4;
+/** Backoff between those attempts, in ms. */
+const READ_BACK_BACKOFF_MS = [120, 300, 700];
+
+/**
+ * Read back the row we just wrote -- and believe "it is not there" only when
+ * BOTH addresses agree.
+ *
+ * CF-A-VENDOR-KEYED-SALE-REKEYS-WHERE-IT-LIVES (2026-09-05). The hobbyiq-comps
+ * account runs at **Eventual** consistency (measured: defaultConsistencyLevel
+ * "Eventual", single region, no multi-write). A point-read issued microseconds
+ * after an upsert can land on a replica that has not yet received the write and
+ * answer 404 -- so this helper declared "read-back found nothing" for a
+ * document that had in fact been written. rekey-product-setkey MODE=pool run
+ * 33973364948 hit it on 12 of 35,173 rows; every one of the 12 was later found
+ * ALIVE at its new address carrying that run's own `rekeyedAt`, with the old
+ * row still in place because the (correct) safety order never deletes after a
+ * failed verify. The result is not a lost sale -- it is the opposite, a
+ * DUPLICATE, and the run counted it `failed`.
+ *
+ * Why the 12 were all vendor-keyed is the same fact seen from the other side: a
+ * vendor-keyed row CHANGES PARTITION (its `cardId` moves off a CardHedge bubble
+ * id onto the hiq: slug), so its read-back addresses a partition that did not
+ * hold the document a moment earlier -- exactly where replica lag is visible. A
+ * row already on its slug re-reads a partition it was already in.
+ *
+ * The lag is transient, so the point-read is retried with backoff; the last
+ * resort is a query on the identity that does not depend on guessing a
+ * partition -- the document id together with `hobbyiqCardId` OR `cardId`. A
+ * query is served across partitions from an up-to-date replica set, so it sees
+ * the write the stale point-read missed.
+ *
+ * Returns the document (tagged `__via` when it took more than the first read),
+ * or null when every read agrees it is absent -- a REAL failure, after which
+ * the caller still deletes nothing.
+ */
+async function readBackKeptRow(pool, keep, retry = (fn) => fn(), wait = sleep) {
+  for (let attempt = 0; attempt < READ_BACK_ATTEMPTS; attempt++) {
+    let doc = null;
+    try { doc = (await retry(() => pool.item(keep.id, keep.cardId).read())).resource ?? null; }
+    catch (e) { if (!is404(e)) throw e; }
+    if (doc) return attempt === 0 ? doc : { ...doc, __via: "point-read-retry-" + attempt };
+    if (attempt < READ_BACK_ATTEMPTS - 1) await wait(READ_BACK_BACKOFF_MS[attempt] ?? 700);
+  }
+  // Both keys, one query: the row is addressed by the id it kept and by the
+  // identity it moved to, so neither a stale replica nor a changed partition
+  // can hide it.
+  const res = await retry(() => pool.items.query({
+    query: "SELECT * FROM c WHERE c.id = @id AND (c.cardId = @pk OR c.hobbyiqCardId = @slug)",
+    parameters: [
+      { name: "@id", value: keep.id },
+      { name: "@pk", value: keep.cardId },
+      { name: "@slug", value: keep.hobbyiqCardId ?? keep.cardId },
+    ],
+  }, { enableCrossPartitionQuery: true }).fetchAll());
+  const found = res?.resources ?? [];
+  const hit = found.find((d) => d?.id === keep.id && d?.cardId === keep.cardId) ?? null;
+  return hit ? { ...hit, __via: "query-both-keys" } : null;
+}
+
 /**
  * Keep `keep` (a full document), then delete every `drop` ({ id, cardId })
  * that is not `keep` itself. `retry` wraps each Cosmos call (429s); pass the
@@ -141,8 +210,10 @@ const is404 = (e) => e?.code === 404 || e?.statusCode === 404;
  *   alreadyGone   old rows the delete found missing (404) -- not ours to count
  *   duplicatesLeft old rows whose delete failed: the sale is now in the pool
  *                 TWICE, reported here, never retried past `retry`
+ *   readBackVia   how the write was confirmed: "point-read", a retry, or the
+ *                 both-keys query that defeats Eventual-consistency lag
  */
-async function relocateSoldComp(pool, { keep, drop, retry = (fn) => fn(), verifyFields = [], dryRun = false }) {
+async function relocateSoldComp(pool, { keep, drop, retry = (fn) => fn(), verifyFields = [], dryRun = false, wait = sleep }) {
   const drops = (drop ?? []).filter((d) => d && d.id && d.cardId && !sameRef(d, keep));
   if (!keep || !keep.id || !keep.cardId) throw new Error("relocateSoldComp: keep needs id and cardId");
   if (dryRun) return { ok: true, stage: "dry-run", existedBefore: null, deleted: [], alreadyGone: [], duplicatesLeft: [], wouldDelete: drops.length };
@@ -159,19 +230,23 @@ async function relocateSoldComp(pool, { keep, drop, retry = (fn) => fn(), verify
     return { ok: false, stage: "upsert", error: String(e?.message ?? e), existedBefore, deleted: [], alreadyGone: [], duplicatesLeft: [] };
   }
 
-  let back = null;
-  try { back = (await retry(() => pool.item(keep.id, keep.cardId).read())).resource ?? null; }
-  catch (e) { if (!is404(e)) return { ok: false, stage: "verify", error: String(e?.message ?? e), existedBefore, deleted: [], alreadyGone: [], duplicatesLeft: [] }; }
+  let back = null, readBackVia = "point-read";
+  try {
+    back = await readBackKeptRow(pool, keep, retry, wait);
+    if (back && back.__via) { readBackVia = back.__via; delete back.__via; }
+  } catch (e) {
+    return { ok: false, stage: "verify", error: String(e?.message ?? e), existedBefore, deleted: [], alreadyGone: [], duplicatesLeft: [], readBackVia };
+  }
   const mismatch = !back || back.id !== keep.id || back.cardId !== keep.cardId
     || verifyFields.some((f) => JSON.stringify(back[f] ?? null) !== JSON.stringify(keep[f] ?? null));
-  if (mismatch) return { ok: false, stage: "verify", error: back ? "read-back differs from the written row" : "read-back found nothing", existedBefore, deleted: [], alreadyGone: [], duplicatesLeft: [] };
+  if (mismatch) return { ok: false, stage: "verify", error: back ? "read-back differs from the written row" : "read-back found nothing", existedBefore, deleted: [], alreadyGone: [], duplicatesLeft: [], readBackVia };
 
   const deleted = [], alreadyGone = [], duplicatesLeft = [];
   for (const d of drops) {
     try { await retry(() => pool.item(d.id, d.cardId).delete()); deleted.push(d); }
     catch (e) { if (is404(e)) alreadyGone.push(d); else duplicatesLeft.push({ ...d, error: String(e?.message ?? e) }); }
   }
-  return { ok: duplicatesLeft.length === 0, stage: "done", existedBefore, deleted, alreadyGone, duplicatesLeft };
+  return { ok: duplicatesLeft.length === 0, stage: "done", existedBefore, deleted, alreadyGone, duplicatesLeft, readBackVia };
 }
 
-module.exports = { relocateSoldComp, stripSystem, isMissing, cents, day, normParallel, legacyNormParallel, gradeKey, contentHashOf, legacyContentHashOf, contentHashesForLookup, varianceOf, foldMissing, sameRef };
+module.exports = { relocateSoldComp, readBackKeptRow, stripSystem, isMissing, cents, day, normParallel, legacyNormParallel, gradeKey, contentHashOf, legacyContentHashOf, contentHashesForLookup, varianceOf, foldMissing, sameRef };
