@@ -264,36 +264,53 @@ describe("the lane writes nothing and the workflow gates every dispatch", () => 
   });
 
   it("GATE 1: the driver APPLY is gated on a reconciled report with rows > 0", () => {
-    const step = WF.split(/^      - name: /m).find((s) => /^Gate: the ingest report/.test(s));
+    const step = WF.split(/^      - name: "?/m).find((s) => /^Gate: the ingest report/.test(s));
     expect(step, "the ingest report gate step must exist").toBeTruthy();
     expect(step).toMatch(/RECONCILED/);
     expect(step).toMatch(/ingested|partial/);
   });
 
   it("GATE 2: the rederive only runs after an INGESTED verdict", () => {
-    const step = WF.split(/^      - name: /m).find((s) => /^Gate: the ingest apply landed rows/.test(s));
+    const step = WF.split(/^      - name: "?/m).find((s) => /^Gate: the ingest apply landed rows/.test(s));
     expect(step, "the ingest apply gate step must exist").toBeTruthy();
     expect(step).toMatch(/ingested|partial/);
   });
 
   it("GATE 3: the rederive APPLY is gated on its own report's verdicts", () => {
-    const step = WF.split(/^      - name: /m).find((s) => /^Gate: the rederive report/.test(s));
+    const step = WF.split(/^      - name: "?/m).find((s) => /^Gate: the rederive report/.test(s));
     expect(step, "the rederive report gate step must exist").toBeTruthy();
     expect(step).toMatch(/UNVERIFIED|would re-point|REDERIVE/);
   });
 
   it("every dispatch is captured by created-after + the script marker, never `latest`", () => {
     // feedback_a_merged_fix_does_not_reach_running_fleets / the run-capture
-    // discipline: `gh run list --limit 1` picks up somebody else's run.
-    expect(WF).toMatch(/Script confirmed:/);
-    expect(WF).toMatch(/--created/);
-    const capture = WF.split(/^      - name: /m).filter((s) => /gh run list/.test(s));
-    expect(capture.length).toBeGreaterThan(0);
-    for (const s of capture) {
-      expect(s, "a run capture must not take the newest run blindly").not.toMatch(
-        /gh run list[^\n]*--limit 1[^\n]*\n[^\n]*databaseId'\)\s*$/,
-      );
-    }
+    // discipline: `gh run list --limit 1` picks up somebody else's fleet run,
+    // and this repo runs enough of them that it routinely would.
+    //
+    // THE PIN READS THE HELPER, NOT THE FILE. Asserting the strings appear
+    // ANYWHERE in the workflow is satisfied by the header comment that
+    // describes the discipline — so deleting the actual grep left this green.
+    // The helper's body is the only thing that captures a run, so it is what
+    // gets asserted.
+    const helper = WF.slice(WF.indexOf("cat > /tmp/bin/dispatch"), WF.indexOf("HELPER\n          chmod"));
+    expect(helper.length, "the dispatch helper must exist").toBeGreaterThan(200);
+
+    // (a) the window: only runs created after we dispatched are candidates.
+    expect(helper, "the capture must bound candidates by creation time").toMatch(
+      /gh run list[\s\S]{0,300}?--created ">=\$SINCE"/,
+    );
+    // (b) the lane: the run must name the script we asked for...
+    expect(helper, "the capture must confirm the script by its runner banner").toMatch(
+      /grep -aq "Script confirmed: backend\/scripts\/\$\{SCRIPT\}\.cjs"/,
+    );
+    // (c) ...and the scope: the marker we passed. Either proof alone is
+    // satisfied by a stranger's run of the same lane.
+    expect(helper, "the capture must confirm the scope marker").toMatch(
+      /grep -aqF "\$MARKER"/,
+    );
+    // (d) and it must REFUSE rather than fall back to whatever it found.
+    expect(helper).toMatch(/could not identify our \$SCRIPT run by marker/);
+    expect(helper).toMatch(/exit 1/);
   });
 
   it("the nightly cap is bounded, stated, and is what the plan is given", () => {
@@ -316,7 +333,7 @@ describe("the lane writes nothing and the workflow gates every dispatch", () => 
   });
 
   it("the plan step runs the lane with apply OFF", () => {
-    const step = WF.split(/^      - name: /m).find((s) => /^Plan: read/.test(s));
+    const step = WF.split(/^      - name: "?/m).find((s) => /^Plan: read/.test(s));
     expect(step).toBeTruthy();
     expect(step).not.toMatch(/BACKFILL_APPLY:\s*(?:"?true"?|1)/);
   });
@@ -356,5 +373,53 @@ describe("reprice can be scoped to a named user without a new input", () => {
 
   it("the acquisition lane is whitelisted so it can be dispatched at all", () => {
     expect(RUNNER).toMatch(/^\s+- acquire-for-withheld-holdings$/m);
+  });
+});
+
+// ── 7. THE WORKFLOW MUST PARSE ────────────────────────────────────────────
+//
+// Not a formality. The first draft of this workflow was INVALID YAML in two
+// ways that no amount of reading catches: a step name containing ": " is a
+// nested mapping, and a `--body` whose continuation lines sit flush-left ends
+// the block scalar early. GitHub does not run an unparseable workflow and does
+// not tell you why in a place you would look, so a scheduled chain would simply
+// never have fired. There is no yaml parser in backend/, so this pin proves the
+// two SHAPES that broke it rather than the parse itself.
+describe("the workflow is well-formed where it silently would not be", () => {
+  const WF = read(".github", "workflows", "acquire-for-withheld-holdings.yml");
+
+  it("every step name containing a colon-space is quoted", () => {
+    for (const m of WF.matchAll(/^      - name: (.*)$/gm)) {
+      const name = m[1];
+      if (!name.includes(": ")) continue;
+      expect(
+        name.startsWith('"') && name.endsWith('"'),
+        `step name must be quoted, it contains ": " -> ${name}`,
+      ).toBe(true);
+    }
+  });
+
+  it("no line inside a run: block scalar is flush-left", () => {
+    // A zero-indented line ends the scalar and takes the rest of the file with
+    // it. The `gh issue create --body` heredoc did exactly that.
+    const lines = WF.split("\n");
+    let inRun = false;
+    for (let i = 0; i < lines.length; i++) {
+      const l = lines[i];
+      if (/^\s+run: \|/.test(l)) { inRun = true; continue; }
+      if (!inRun) continue;
+      if (l.trim() === "") continue;
+      if (/^ /.test(l)) continue;
+      // A non-indented, non-empty line: the scalar has ended. That is only
+      // legal at a new top-level key, which this file has none of mid-job.
+      expect(/^[a-z]+:/.test(l), `flush-left line ${i + 1} ends a run: block -> ${l}`).toBe(true);
+      inRun = false;
+    }
+  });
+
+  it("the issue body is passed as a file, never as a multi-line argument", () => {
+    expect(WF).toMatch(/gh issue create[\s\S]{0,200}--body-file/);
+    expect(WF, "an inline multi-line --body is the shape that broke the parse")
+      .not.toMatch(/gh issue create[^\n]*--body \\n/);
   });
 });

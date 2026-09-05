@@ -155,7 +155,7 @@ jobs:
       # READ ONLY. The lane refuses an apply dispatch outright (exit 3), so this
       # step cannot write however it is configured; BACKFILL_APPLY is left unset
       # rather than set false, so there is nothing here to flip by accident.
-      - name: Plan: read the withheld holdings and match each cell to a source
+      - name: "Plan: read the withheld holdings and match each cell to a source"
         id: plan
         working-directory: backend
         env:
@@ -204,17 +204,25 @@ jobs:
                 --search "$TITLE in:title" --json number,title \
                 --jq "[.[] | select(.title == \"$TITLE\")] | .[0].number // empty")
           if [ -z "$N" ]; then
-            N=$(gh issue create --repo "$GITHUB_REPOSITORY" --title "$TITLE" --body \
-"Standing tracker for **CF-IF-KNOWN-WE-SHOULD-BE-ABLE-TO-FIGURE-IT-OUT** (Drew, 2026-09-05).
+            # The body goes through a FILE, not an inline argument: a multi-line
+            # --body inside a YAML block scalar needs every continuation line
+            # indented under the block, and a body written flush-left silently
+            # ends the scalar and makes the whole workflow unparseable.
+            cat > /tmp/issue-body.md <<'BODY'
+          Standing tracker for **CF-IF-KNOWN-WE-SHOULD-BE-ABLE-TO-FIGURE-IT-OUT** (Drew, 2026-09-05).
 
-A holding withheld for \`no-checklist-match\` whose card IS identifiable must resolve without a human.
-The nightly \`Acquire For Withheld Holdings\` chain comments here every night with:
+          A holding withheld for `no-checklist-match` whose card IS identifiable must resolve
+          without a human. The nightly `Acquire For Withheld Holdings` chain comments here
+          every night with:
 
-- the cells it acquired (queue -> ingest -> rederive -> reprice), and
-- the cells that **need a source** — the sets we own cards in and have no way to acquire.
+          - the cells it acquired (queue -> ingest -> rederive -> reprice), and
+          - the cells that **need a source** — the sets we own cards in and have no way to acquire.
 
-The second list is the input to the discovery program. Nothing here is auto-closed." \
-              | grep -oE '[0-9]+$')
+          The second list is the input to the discovery program. Nothing here is auto-closed.
+          BODY
+            sed -i 's/^          //' /tmp/issue-body.md
+            N=$(gh issue create --repo "$GITHUB_REPOSITORY" --title "$TITLE" \
+              --body-file /tmp/issue-body.md | grep -oE '[0-9]+$')
           fi
           echo "number=$N" >> "$GITHUB_OUTPUT"
           echo "tracking issue #$N"
@@ -284,11 +292,12 @@ The second list is the input to the discovery program. Nothing here is auto-clos
           for _ in $(seq 1 30); do
             sleep 10
             for ID in $(gh run list --repo "$GITHUB_REPOSITORY" \
-                          --workflow=backfill-runner.yml                           --limit 30 --json databaseId --jq '.[].databaseId'); do
+                          --workflow=backfill-runner.yml --created ">=$SINCE" \
+                          --limit 30 --json databaseId --jq '.[].databaseId'); do
               gh run view "$ID" --repo "$GITHUB_REPOSITORY" --log > "/tmp/probe-$ID.log" 2>/dev/null || true
               # The two proofs: the lane is the one we asked for, and the scope
               # is the one we passed. Either alone is satisfied by a stranger.
-              if true "/tmp/probe-$ID.log" \
+              if grep -aq "Script confirmed: backend/scripts/${SCRIPT}.cjs" "/tmp/probe-$ID.log" \
                  && grep -aqF "$MARKER" "/tmp/probe-$ID.log"; then
                 RUN_ID="$ID"; break
               fi
@@ -335,7 +344,7 @@ The second list is the input to the discovery program. Nothing here is auto-clos
       #     this set — acquiring nothing is the correct outcome, not an error.
       #   - rows == 0 means there is nothing to land, so an apply is a no-op
       #     that would still burn a publisher fetch.
-      - name: Gate: the ingest report reconciled with rows to land
+      - name: "Gate: the ingest report reconciled with rows to land"
         id: gate_ingest
         shell: bash
         run: |
@@ -377,7 +386,7 @@ The second list is the input to the discovery program. Nothing here is auto-clos
       # report proved the source serves the set; only the apply proves rows
       # LANDED, and re-pointing a holding onto a row that does not exist is how
       # a withheld holding becomes a wrong one.
-      - name: Gate: the ingest apply landed rows
+      - name: "Gate: the ingest apply landed rows"
         id: gate_apply
         if: ${{ steps.gate_ingest.outputs.proceed == 'yes' }}
         shell: bash
@@ -418,7 +427,7 @@ The second list is the input to the discovery program. Nothing here is auto-clos
       # 2 = refused scope, 4 = write conflict, 5 = read-back disagreed. A report
       # that names an UNVERIFIED destination is a slug no checklist backs --
       # exactly the thing this whole chain exists to avoid creating.
-      - name: Gate: the rederive report proposes only verified destinations
+      - name: "Gate: the rederive report proposes only verified destinations"
         id: gate_rederive
         if: ${{ steps.gate_apply.outputs.proceed == 'yes' }}
         shell: bash
