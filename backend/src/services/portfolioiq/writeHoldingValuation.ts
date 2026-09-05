@@ -132,6 +132,24 @@ export interface HoldingValuationWrite {
       blockingCount: number;
       /** The estimate that was NOT published — kept, never erased. */
       proposed: number | null;
+      /**
+       * CF-A-WITHHELD-PRICE-NEVER-RETAINS-THE-NUMBER-IT-REFUSED (2026-09-04).
+       * What the row actually carries after the withhold, and why. A refusal
+       * that keeps a prior number and one that keeps nothing are DIFFERENT
+       * decisions, and a reader (the UI's "market shows $2, withheld: below
+       * 15% of your $29.45 basis", the invariant auditor) must be able to tell
+       * them apart without re-deriving the rule. Absent on refusals that make
+       * no retention decision at all.
+       */
+      retained?: number | null;
+      /** The rule that refused the retention, or null when one stood. */
+      retentionRefused?: string | null;
+      /**
+       * The rung a RETAINED number was originally priced under, as evidence.
+       * Deliberately not `fmvRung`: it describes the number's history, never
+       * the claim the withheld write is making, which names no rung at all.
+       */
+      retainedRung?: string | null;
     };
   } & Partial<PersistedPricingLabels>;
   /** When false, no pricingSourceMeta is written (the lanes that deliberately

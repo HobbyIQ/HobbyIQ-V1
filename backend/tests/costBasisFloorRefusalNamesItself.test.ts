@@ -51,6 +51,7 @@ import { readFileSync } from "node:fs";
 
 import {
   costBasisFloorRefusalWrite,
+  retentionThroughFloor,
   type CostBasisFloorRefusalFacts,
   type HoldingValuationOutcome,
 } from "../src/services/portfolioiq/holdingValuation.js";
@@ -136,17 +137,35 @@ const RIPKEN_FLOOR = floorOutcome(
 );
 
 describe("a cost-basis-floor refusal is persisted, never a silent fall-through", () => {
-  it("9f082213 (Figueroa Red Ink) keeps its number and names method 'withheld'", () => {
+  /**
+   * REVISED by CF-A-WITHHELD-PRICE-NEVER-RETAINS-THE-NUMBER-IT-REFUSED
+   * (2026-09-04). This pin used to assert `fairMarketValue === 11` — that the
+   * refusal KEPT the prior $11. That assertion encoded the defect: $11 on a
+   * $278.60 basis is 3.9%, itself below the floor, and it was published by an
+   * earlier pass of the SAME contaminated 56-row pool the floor just refused
+   * at 3.1%. The refusal was keeping the number it refused.
+   *
+   * What survives unchanged is the part #1755 got right: the refusal NAMES
+   * itself, and the refused number survives as evidence.
+   */
+  it("9f082213 (Figueroa Red Ink) drops the floor-failing prior and names method 'withheld'", () => {
     const { holding } = costBasisFloorRefusalWrite(FIGUEROA, FIGUEROA_FLOOR, NOW);
     const meta = holding.pricingSourceMeta as Record<string, unknown>;
-    // The number the floor said nothing against is KEPT.
-    expect(holding.fairMarketValue).toBe(11);
-    // THE defect: this was `undefined` on the live row.
+    // MUTATION CHECK: restore "retain prior unconditionally" — `const kept =
+    // holding.fairMarketValue ?? null` in place of `retentionThroughFloor` —
+    // and this goes red. The $11 is 3.9% of a $278.60 basis, refused by the
+    // very floor that produced this write.
+    expect(holding.fairMarketValue).toBeNull();
     expect(meta.method).toBe("withheld");
     expect(meta).toHaveProperty("withheld");
-    expect((meta.withheld as Record<string, unknown>).reason).toBe("cost-basis-floor");
+    const withheld = meta.withheld as Record<string, unknown>;
+    expect(withheld.reason).toBe("cost-basis-floor");
     // The refused number survives as evidence, never discarded.
-    expect((meta.withheld as Record<string, unknown>).proposed).toBe(8.7);
+    expect(withheld.proposed).toBe(8.7);
+    // And so does the reason the retention was refused, so a reader can tell a
+    // dropped retention from a row that never had a value.
+    expect(withheld.retained).toBeNull();
+    expect(withheld.retentionRefused).toBe("prior-fails-floor");
   });
 
   it("277b05a3 (Ripken PSA 8) gets the identical treatment", () => {
@@ -179,19 +198,54 @@ describe("a cost-basis-floor refusal is persisted, never a silent fall-through",
     );
   });
 
-  it("a prior rung IS carried forward, because it still describes the kept number", () => {
+  /**
+   * REVERSED by CF-A-WITHHELD-PRICE-NEVER-RETAINS-THE-NUMBER-IT-REFUSED
+   * (2026-09-04). This pin asserted the opposite of what it now asserts, and
+   * the reversal is the fix.
+   *
+   * The old reasoning — "the prior rung still describes the kept number" — is
+   * true of the NUMBER and false of the ROW. Holding 69eab153 (Chipper Jones,
+   * $29.45 basis) is the proof: the floor refused $2.00, the row retained
+   * $2.00, and because the prior stamps were carried forward the persisted
+   * document read `valueSource: "observed"`, `fmvRung:
+   * "exact-pool-weighted-median"`, `method: "exact-pool-weighted-median"`. The
+   * report's `classifyProvenance` reads an exact-pool rung in the observed
+   * slot as the `observed` class; the web's `holdingProvenance` prefers
+   * `method` over the flat rung. Both therefore rendered a WITHHELD row as a
+   * current observed market price — which is precisely the defect #1776 fixed
+   * on the confidence-gated branch, reappearing on the floor branch.
+   *
+   * So the stamps are rewritten on EVERY withheld write. A retained number's
+   * own history is not lost: it moves to `withheld.retainedRung`, which is
+   * evidence rather than a live claim.
+   */
+  it("the prior rung is NEVER carried into fmvRung — a withhold names no rung", () => {
     const withRung = {
       ...FIGUEROA,
+      // A prior value that legitimately survives the rule: 40% of the $278.60
+      // basis, and from a DIFFERENT pool than the one refused.
+      fairMarketValue: 112,
       fmvRung: "exact-pool-last-sale",
       valueSource: "observed",
+      pricingSourceMeta: { slug: "hiq:baseball:2026:bowman-chrome:cpa-vf:other-pool:auto", compsUsed: 6 },
     } as unknown as PortfolioHolding;
     const { holding } = costBasisFloorRefusalWrite(withRung, FIGUEROA_FLOOR, NOW);
-    expect(holding.fmvRung).toBe("exact-pool-last-sale");
-    expect(holding.valueSource).toBe("observed");
-    // Still a stated refusal.
+    // The number stands — it passes the floor and is not the refused pool's.
+    expect(holding.fairMarketValue).toBe(112);
+    // MUTATION CHECK: restore `rung: priorRung ? { rung: priorRung } : {...}`
+    // and `valueSource: priorValueSource === "observed" ? ...` and all three of
+    // these go red — that carry is what made a withheld row read as observed.
+    expect(holding.fmvRung).toBeNull();
+    expect(holding.valueSource).toBe("estimated");
     const meta = holding.pricingSourceMeta as Record<string, unknown>;
-    expect(meta.method).toBe("exact-pool-last-sale");
+    expect(meta.method).toBe("withheld");
+    expect(meta.method).not.toBe("exact-pool-last-sale");
     expect(meta.withheld).toBeDefined();
+    // The rung survives as HISTORY, on the withheld block.
+    const withheld = meta.withheld as Record<string, unknown>;
+    expect(withheld.retained).toBe(112);
+    expect(withheld.retainedRung).toBe("exact-pool-last-sale");
+    expect(withheld.retentionRefused).toBeNull();
   });
 
   it("a prior confidence is carried, never fabricated", () => {
@@ -304,14 +358,22 @@ describe("the our-pool reprice lane refuses through the SAME write", () => {
     compsUsed: 57,
   };
 
-  it("keeps the prior number and names method 'withheld' with the reason", () => {
+  /**
+   * REVISED alongside the one-entry pin above: the $11 on FIGUEROA's $278.60
+   * basis is 3.9%, below the floor, so it may not be retained here either. The
+   * lane-level contract this block exists to pin — the refusal is WRITTEN, not
+   * merely logged, and it names itself — is unchanged.
+   */
+  it("drops a floor-failing prior and names method 'withheld' with the reason", () => {
     const { holding } = costBasisFloorRefusalWrite(FIGUEROA, ourPoolFacts, NOW);
     const meta = holding.pricingSourceMeta as Record<string, unknown>;
-    // The floor faults the NEW number; the old one is untouched.
-    expect(holding.fairMarketValue).toBe(11);
+    // The floor faults the new number AND refuses to stand behind a prior that
+    // fails the same test.
+    expect(holding.fairMarketValue).toBeNull();
     // THE defect this lane had: no method at all, because nothing was written.
     expect(meta.method).toBe("withheld");
     expect((meta.withheld as Record<string, unknown>).reason).toBe("cost-basis-floor");
+    expect((meta.withheld as Record<string, unknown>).retentionRefused).toBe("prior-fails-floor");
   });
 
   it("preserves the refused number and the pool that produced it as evidence", () => {
@@ -333,15 +395,22 @@ describe("the our-pool reprice lane refuses through the SAME write", () => {
     expect((holding as Record<string, unknown>).fmvRetainedAt).toBe(NOW);
   });
 
-  it("carries a prior rung when there is one, still stating the withhold", () => {
+  it("rewrites the stamps here too — the two lanes cannot differ on the contract", () => {
     const withRung = {
       ...FIGUEROA,
+      fairMarketValue: 112,
       fmvRung: "exact-pool-last-sale",
       valueSource: "observed",
+      pricingSourceMeta: { slug: "hiq:baseball:2026:bowman-chrome:cpa-vf:other-pool:auto", compsUsed: 6 },
     } as unknown as PortfolioHolding;
     const { holding } = costBasisFloorRefusalWrite(withRung, ourPoolFacts, NOW);
-    expect(holding.fmvRung).toBe("exact-pool-last-sale");
-    expect((holding.pricingSourceMeta as Record<string, unknown>).withheld).toBeDefined();
+    expect(holding.fairMarketValue).toBe(112);
+    expect(holding.fmvRung).toBeNull();
+    expect(holding.valueSource).toBe("estimated");
+    const meta = holding.pricingSourceMeta as Record<string, unknown>;
+    expect(meta.method).toBe("withheld");
+    expect(meta.withheld).toBeDefined();
+    expect((meta.withheld as Record<string, unknown>).retainedRung).toBe("exact-pool-last-sale");
   });
 
   it("the two input shapes agree — one write, not two behaviours", () => {
@@ -385,4 +454,309 @@ describe("the our-pool reprice lane refuses through the SAME write", () => {
     // and write nothing.
     expect(lane).not.toMatch(/keepingPrior:\s*true/);
   });
+});
+
+/**
+ * CF-A-WITHHELD-PRICE-NEVER-RETAINS-THE-NUMBER-IT-REFUSED (Drew, 2026-09-04).
+ *
+ * #1776 made the floor a ratio and gave the refusal a persisted shape. Read
+ * read-only afterwards, the RETENTION side of that shape was incoherent on two
+ * of the three rows the floor touched — because "keep the prior value" was
+ * unconditional, and a prior value is not automatically a different claim from
+ * the one being refused.
+ *
+ * Holding 69eab153 is the clearest case and the one pinned here in full.
+ * Chipper Jones 1997 Metal Universe #31, raw, $29.45 basis. The floor refused
+ * $2.00 out of `exact-pool-weighted-median` on a contaminated n=3 pool — and
+ * the value retained was $2.00, out of the SAME pool, from the pre-#1776 pass.
+ * The refusal kept the number it refused, and carried the prior stamps forward
+ * so the persisted row read:
+ *
+ *     fairMarketValue      2
+ *     valueSource          "observed"
+ *     fmvRung              "exact-pool-weighted-median"
+ *     pricingSourceMeta    {method: "exact-pool-weighted-median",
+ *                           labels: ["self-anchored"],
+ *                           withheld: {reason: "cost-basis-floor",
+ *                                      blockingCount: 3, proposed: 2}}
+ *
+ * A withheld row that reads as a current observed market price. Every reader
+ * that matters agrees it does: `classifyProvenance` sees an exact-pool rung in
+ * the observed slot and returns the `observed` class; the web's
+ * `holdingProvenance` prefers `pricingSourceMeta.method` over the flat rung.
+ * The `withheld` block sitting beside them says the opposite, and loses.
+ *
+ * TWO RULES, both required for a retention to stand:
+ *   1. the kept value must itself PASS the floor, against the same basis;
+ *   2. it must not be the refused pool's own prior publish.
+ * Otherwise nothing is retained as a price and the row falls to the cost-basis
+ * display path (`computeDisplayValue` → `computeCostBasisTotal`, rendered
+ * `own-purchase` by the report).
+ *
+ * And the stamps are rewritten on EVERY withheld write.
+ */
+describe("a withheld price never retains the number it refused", () => {
+  /** Holding 69eab153 exactly as prod held it after the #1776 reprice. */
+  const CHIPPER_SLUG = "hiq:baseball:1997:skybox-metal-universe:31:base:no-auto";
+  const CHIPPER = {
+    id: "69eab153-4a17-4a95-9e2f-1f7c5b0a2d31",
+    playerName: "Chipper Jones",
+    hobbyiqCardId: CHIPPER_SLUG,
+    cardYear: 1997,
+    cardNumber: "31",
+    // The published number, and the number the floor refuses: the same $2.
+    fairMarketValue: 2,
+    fmvRung: "exact-pool-weighted-median",
+    valueSource: "observed",
+    pricingSourceMeta: {
+      slug: CHIPPER_SLUG,
+      method: "exact-pool-weighted-median",
+      compsUsed: 3,
+      labels: ["self-anchored"],
+    },
+    purchasePrice: 29.45,
+    totalCostBasis: 29.45,
+    quantity: 1,
+  } as unknown as PortfolioHolding;
+
+  /** The refusal: the same pool, the same rung, the same $2. */
+  const CHIPPER_FLOOR: CostBasisFloorRefusalFacts = {
+    rungLabel: "exact-pool-weighted-median",
+    proposedUnit: 2,
+    proposedTotal: 2,
+    costBasis: 29.45,
+    pooledAs: CHIPPER_SLUG,
+    compsUsed: 3,
+  };
+
+  it("69eab153: the persisted row is a withhold, not an observed $2", () => {
+    const { holding } = costBasisFloorRefusalWrite(CHIPPER, CHIPPER_FLOOR, NOW);
+    const meta = holding.pricingSourceMeta as Record<string, unknown>;
+
+    // MUTATION CHECK — the whole of this test. Restore "retain prior
+    // unconditionally" in costBasisFloorRefusalWrite:
+    //
+    //     const kept = typeof holding.fairMarketValue === "number"
+    //       && Number.isFinite(holding.fairMarketValue)
+    //       ? holding.fairMarketValue : null;
+    //     ...
+    //     rung: priorRung ? { rung: priorRung } : { noRung: prose },
+    //     valueSource: priorValueSource === "observed" ? priorValueSource : "estimated",
+    //
+    // and every assertion below goes red — that is exactly the prod shape.
+
+    // 1. The number the floor refused is NOT what the row now carries.
+    expect(holding.fairMarketValue).not.toBe(2);
+    expect(holding.fairMarketValue).toBeNull();
+    // 2. The row does not claim to have observed anything.
+    expect(holding.valueSource).not.toBe("observed");
+    expect(holding.valueSource).toBe("estimated");
+    // 3. No rung: a withhold priced nothing, so it names nothing.
+    expect(holding.fmvRung).toBeNull();
+    expect(meta.method).toBe("withheld");
+    expect(meta.method).not.toBe("exact-pool-weighted-median");
+    // 4. The refusal still says everything the UI needs: "market shows $2,
+    //    withheld: below 15% of your $29.45 basis".
+    const withheld = meta.withheld as Record<string, unknown>;
+    expect(withheld.reason).toBe("cost-basis-floor");
+    expect(withheld.proposed).toBe(2);
+    expect(withheld.blockingCount).toBe(3);
+    expect(withheld.blockingId).toBe(CHIPPER_SLUG);
+    expect(withheld.retained).toBeNull();
+    // 5. And the row states WHY it carries no value.
+    expect((holding as Record<string, unknown>).fmvRungAbsentReason).toMatch(/cost-basis sanity floor/);
+    expect((holding as Record<string, unknown>).fmvRetainedReason).toMatch(/NOT retained/);
+    expect((holding as Record<string, unknown>).fmvRetainedAt).toBe(NOW);
+  });
+
+  it("a stale estimate is cleared with the value — the lie does not move one field over", () => {
+    // `computeDisplayValue` reads `estimatedValue` BEFORE falling through to
+    // cost basis. Leaving $2 in the estimate slot would publish the refused
+    // number under a different name.
+    const withEstimate = {
+      ...CHIPPER,
+      estimatedValue: 2,
+      isEstimate: true,
+      valuationStatus: "estimated",
+    } as unknown as PortfolioHolding;
+    const { holding } = costBasisFloorRefusalWrite(withEstimate, CHIPPER_FLOOR, NOW);
+    expect(holding.fairMarketValue).toBeNull();
+    expect((holding as Record<string, unknown>).estimatedValue).toBeNull();
+    expect((holding as Record<string, unknown>).isEstimate).toBe(false);
+    expect((holding as Record<string, unknown>).valuationStatus).toBe("pending");
+  });
+
+  it("a retention that STANDS is untouched — the rule is not a blanket erase", () => {
+    // Holding 277b05a3 (Ripken): $49.99 kept against a $52.98 basis is 94.4%,
+    // and it came from a different pool than the one refused. It is the one of
+    // the three rows whose retention was always legitimate, and it must remain
+    // so — otherwise this fix trades one wrong number for a blank row.
+    const ripken = {
+      id: "277b05a3-935f-451a-b5b7-97eb926a3542",
+      playerName: "Cal Ripken, Jr.",
+      fairMarketValue: 49.99,
+      fmvRung: "exact-pool-weighted-median",
+      valueSource: "observed",
+      pricingSourceMeta: {
+        slug: "hiq:baseball:1997:skybox-metal-universe:8:base:no-auto",
+        method: "exact-pool-weighted-median",
+        compsUsed: 41,
+      },
+      purchasePrice: 52.98,
+      totalCostBasis: 52.98,
+      quantity: 1,
+    } as unknown as PortfolioHolding;
+    const floor: CostBasisFloorRefusalFacts = {
+      rungLabel: "exact-pool-weighted-median",
+      proposedUnit: 5.4,
+      proposedTotal: 5.4,
+      costBasis: 52.98,
+      // A DIFFERENT pool from the one the $49.99 was read out of.
+      pooledAs: "hiq:baseball:1997:skybox-metal-universe:8:psa-8",
+      compsUsed: 50,
+    };
+    const { holding } = costBasisFloorRefusalWrite(ripken, floor, NOW);
+    expect(holding.fairMarketValue).toBe(49.99);
+    const withheld = (holding.pricingSourceMeta as Record<string, unknown>).withheld as Record<string, unknown>;
+    expect(withheld.retained).toBe(49.99);
+    expect(withheld.retentionRefused).toBeNull();
+    // Even here the stamps are rewritten — a standing retention is still a
+    // withheld write, and it may not claim to be a fresh observation.
+    expect(holding.fmvRung).toBeNull();
+    expect(holding.valueSource).toBe("estimated");
+    expect((holding.pricingSourceMeta as Record<string, unknown>).method).toBe("withheld");
+    expect(withheld.retainedRung).toBe("exact-pool-weighted-median");
+  });
+});
+
+describe("the retention rule, exercised directly", () => {
+  const BASIS = 100;
+  const POOL = "hiq:baseball:2001:topps:1:base:no-auto";
+  const row = (fmv: number | null, slug: string | null, rung: string | null): PortfolioHolding => ({
+    id: "r",
+    fairMarketValue: fmv,
+    fmvRung: rung,
+    purchasePrice: BASIS,
+    totalCostBasis: BASIS,
+    quantity: 1,
+    pricingSourceMeta: slug ? { slug, method: rung, compsUsed: 3 } : undefined,
+  } as unknown as PortfolioHolding);
+  const facts = (pooledAs: string | null): CostBasisFloorRefusalFacts => ({
+    rungLabel: "exact-pool-weighted-median",
+    proposedUnit: 5,
+    proposedTotal: 5,
+    costBasis: BASIS,
+    pooledAs,
+    compsUsed: 4,
+  });
+
+  it("rule 1: a prior below the floor is refused, at any distance below it", () => {
+    // 14.9% — one hair under. The rule is the floor, not a softer cousin.
+    expect(retentionThroughFloor(row(14.9, "other", "family-baseline"), facts(POOL)))
+      .toEqual({ retained: false, because: "prior-fails-floor" });
+    // 15% exactly is not below it.
+    expect(retentionThroughFloor(row(15, "other", "family-baseline"), facts(POOL)))
+      .toEqual({ retained: true, value: 15 });
+  });
+
+  it("rule 2: the refused pool's own exact-pool publish is refused, however healthy the ratio", () => {
+    // $80 on a $100 basis passes rule 1 comfortably — and is still the same
+    // contaminated pool's answer, one pass older.
+    expect(retentionThroughFloor(row(80, POOL, "exact-pool-weighted-median"), facts(POOL)))
+      .toEqual({ retained: false, because: "prior-is-the-refused-pool" });
+  });
+
+  it("rule 2 is about the POOL, not the slug: a cross-identity rung on the same slug stands", () => {
+    // A family baseline read OTHER identities. The floor's verdict on this
+    // pool says nothing about it, even though the row is filed under the slug.
+    expect(retentionThroughFloor(row(80, POOL, "family-baseline"), facts(POOL)))
+      .toEqual({ retained: true, value: 80 });
+    // Same pool, same exact-pool rung, but the refusal names no pool at all —
+    // there is nothing to match against, so the number is not condemned.
+    expect(retentionThroughFloor(row(80, POOL, "exact-pool-projection"), facts(null)))
+      .toEqual({ retained: true, value: 80 });
+  });
+
+  it("a different pool's exact-pool read stands — this is the Ripken shape", () => {
+    expect(retentionThroughFloor(row(80, "some:other:pool", "exact-pool-weighted-median"), facts(POOL)))
+      .toEqual({ retained: true, value: 80 });
+  });
+
+  it("no prior value is its own verdict, not a floor failure", () => {
+    expect(retentionThroughFloor(row(null, POOL, null), facts(POOL)))
+      .toEqual({ retained: false, because: "no-prior-value" });
+    expect(retentionThroughFloor(row(0, POOL, null), facts(POOL)))
+      .toEqual({ retained: false, because: "no-prior-value" });
+  });
+
+  it("a holding with no basis retains: rule 1 needs a basis to judge against", () => {
+    // `costBasisFloor` already declines to judge a zero basis, and the rule
+    // reuses it rather than inventing a second answer. A holding that makes no
+    // basis claim is not one this rule has anything to say about.
+    const noBasis = { ...row(2, "other", "family-baseline"), purchasePrice: 0, totalCostBasis: 0 } as PortfolioHolding;
+    expect(retentionThroughFloor(noBasis, facts(POOL))).toEqual({ retained: true, value: 2 });
+  });
+
+  it("quantity is applied to the prior too — a lot is judged as a lot", () => {
+    // 3 × $10 = $30 against a $300 basis is 10%: refused. The same $10 unit
+    // price against a $100 basis at qty 1 would be 10% as well; what this pins
+    // is that the prior goes through the SAME `costBasisFloor`, so the
+    // quantity handling cannot diverge between the proposal and the retention.
+    const lot = {
+      ...row(10, "other", "family-baseline"),
+      quantity: 3,
+      totalCostBasis: 300,
+    } as unknown as PortfolioHolding;
+    expect(retentionThroughFloor(lot, facts(POOL)))
+      .toEqual({ retained: false, because: "prior-fails-floor" });
+  });
+});
+
+describe("every withheld write rewrites its stamps — no prior method may stand", () => {
+  /**
+   * The write side is ONE function, and this is the pin that keeps it that
+   * way for the stamp contract specifically: whatever a holding arrived
+   * carrying, a floor refusal leaves it with `method: "withheld"`, a null
+   * `fmvRung`, and `valueSource: "estimated"`.
+   *
+   * MUTATION CHECK: reintroduce ANY conditional carry of `priorRung` or
+   * `priorValueSource` into the `rung` / `valueSource` arguments of
+   * `writeHoldingValuation` and this goes red for the shapes that carry one.
+   */
+  const shapes: Array<[string, Partial<Record<string, unknown>>]> = [
+    ["an observed exact-pool row", { fmvRung: "exact-pool-weighted-median", valueSource: "observed" }],
+    ["an estimated fallback row", { fmvRung: "family-baseline", valueSource: "estimated" }],
+    ["a speculative row", { fmvRung: "player-index-projection", valueSource: "estimated" }],
+    ["a row with no rung at all", { fmvRung: null, valueSource: undefined }],
+    ["a row with an unlabelled carry", { fmvRung: null, valueSource: "observed" }],
+  ];
+
+  for (const [name, patch] of shapes) {
+    it(`${name} comes out withheld / estimated / no rung`, () => {
+      const h = {
+        id: "x",
+        fairMarketValue: 500,
+        purchasePrice: 1000,
+        totalCostBasis: 1000,
+        quantity: 1,
+        pricingSourceMeta: { slug: "some:other:pool", compsUsed: 7, confidence: 0.4 },
+        ...patch,
+      } as unknown as PortfolioHolding;
+      const { holding } = costBasisFloorRefusalWrite(h, {
+        rungLabel: "exact-pool-projection",
+        proposedUnit: 20,
+        proposedTotal: 20,
+        costBasis: 1000,
+        pooledAs: "the:refused:pool",
+        compsUsed: 12,
+      }, NOW);
+      expect(holding.fmvRung).toBeNull();
+      expect(holding.valueSource).toBe("estimated");
+      expect((holding.pricingSourceMeta as Record<string, unknown>).method).toBe("withheld");
+      // 50% of basis, a different pool: the number itself legitimately stands.
+      expect(holding.fairMarketValue).toBe(500);
+      // The prior confidence is still not fabricated, and still not dropped.
+      expect((holding.pricingSourceMeta as Record<string, unknown>).confidence).toBe(0.4);
+    });
+  }
 });

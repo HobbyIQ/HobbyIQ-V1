@@ -232,43 +232,187 @@ function refusalFacts(
   };
 }
 
+/**
+ * CF-A-WITHHELD-PRICE-NEVER-RETAINS-THE-NUMBER-IT-REFUSED (Drew, 2026-09-04).
+ *
+ * The refusal write above was built on one sentence — "the floor's claim is
+ * that the NEW number is wrong, never that the old one is" — and that sentence
+ * is true only when the old number is a DIFFERENT claim. Measured read-only on
+ * Drew's portfolio after the #1776 reprice, it was not, on two of the three
+ * rows the floor touched:
+ *
+ *   69eab153  Chipper Jones 1997 Metal Universe #31, raw, $29.45 basis. The
+ *             floor refused $2.00 out of `exact-pool-weighted-median` on the
+ *             contaminated n=3 pool — and the value RETAINED was $2.00, the
+ *             number the PRE-#1776 engine had published from that same pool on
+ *             an earlier pass. The refusal kept the number it refused. Worse,
+ *             the retention carried the prior stamps forward verbatim:
+ *             `valueSource: "observed"`, `fmvRung:
+ *             "exact-pool-weighted-median"`, `pricingSourceMeta.method:
+ *             "exact-pool-weighted-median"`, labels `["self-anchored"]`. To
+ *             every reader — the web's `holdingProvenance()`, the report's
+ *             `classifyProvenance()` (an exact-pool rung in the observed slot
+ *             IS the `observed` class), the invariant auditor — that row reads
+ *             as a CURRENT OBSERVED MARKET PRICE of $2.00. The `withheld` block
+ *             sat beside it saying the opposite.
+ *
+ *   9f082213  Victor Figueroa CPA-VF Black & White Red Ink auto, $278.60 basis.
+ *             The floor refused $8.68 off a 56-row pool; the retained $11 is
+ *             3.9% of basis — itself a floor-failing publish from an earlier
+ *             pass of the same contaminated pool. Refusing 3.1% and publishing
+ *             3.9% is not a decision, it is the same number twice.
+ *
+ * Only 277b05a3 (Ripken, $49.99 kept against a $52.98 basis — 94.4%, from a
+ * genuine 41-comp `exact-pool-weighted-median` read of a DIFFERENT, uncontested
+ * pool on 2026-09-03) was a legitimate retention, and it is legitimate for
+ * exactly the two reasons this function now checks.
+ *
+ * THE RULE. A refusal may retain a prior value only when that value is a claim
+ * the refusal does not itself contradict. Two conditions, both required:
+ *
+ *   1. THE KEPT VALUE MUST ITSELF PASS THE FLOOR. Judged by the same
+ *      `costBasisFloor` predicate against the same basis. A retained number
+ *      below 15% of basis is the very shape the floor exists to refuse; keeping
+ *      it because it arrived earlier is a statement that the floor applies to
+ *      new numbers only, which is not the doctrine.
+ *   2. THE KEPT VALUE MUST NOT BE THE REFUSED POOL'S OWN PRIOR PUBLISH. When
+ *      the prior pass read the SAME pool (its meta's slug is the pool the floor
+ *      just blocked) under an exact-pool rung, its number is the same evidence
+ *      that just failed, one pass older. The floor's fault is with the POOL;
+ *      a number drawn from that pool does not become sound by being stale.
+ *
+ * When either fails, NOTHING is retained as a price. `fairMarketValue` is
+ * null, `estimatedValue` is cleared with it — leaving a stale estimate behind
+ * would just move the same lie one field over, and `computeDisplayValue`
+ * reads it before falling through — and the row falls to the cost-basis path
+ * the engine already has for a holding with no publishable value:
+ * `computeDisplayValue` returns `computeCostBasisTotal`, and the report's
+ * `classifyProvenance` renders it `own-purchase` ("OWN PURCHASE — NOT A MARKET
+ * VALUE"). No number is invented here; the display layer's existing cost proxy
+ * is what a row with no defensible market value has always fallen to.
+ *
+ * AND THE STAMPS ARE ALWAYS REWRITTEN. `method`, `valueSource` and `fmvRung`
+ * are rewritten on EVERY withheld write, retention or not — never carried from
+ * the prior pass. That carry is the same defect #1776 fixed on the
+ * confidence-gated branch, resurfacing here: a stamp that describes a
+ * computation this pass did not perform. `method` is `"withheld"` (the
+ * `withheld` block guarantees it in `writeHoldingValuation`), `fmvRung` is null
+ * with the refusal prose as its stated reason, and `valueSource` is
+ * `"estimated"` — never `"observed"`, because a withhold observed nothing.
+ * A retained number's own history is not lost: `withheld.retainedRung` records
+ * the rung it was priced under, as evidence rather than as a live claim.
+ */
+
+/** Why a prior value could not be retained, or the value that stood. */
+export type RetentionVerdict =
+  | { retained: true; value: number }
+  | { retained: false; because: "no-prior-value" | "prior-fails-floor" | "prior-is-the-refused-pool" };
+
+/**
+ * Whether the prior value on a holding may stand through a floor refusal.
+ * Exported so the pins can exercise the rule directly rather than only
+ * through the persisted row.
+ */
+export function retentionThroughFloor(
+  holding: PortfolioHolding,
+  entry: CostBasisFloorRefusalFacts,
+): RetentionVerdict {
+  const prior = typeof holding.fairMarketValue === "number" && Number.isFinite(holding.fairMarketValue)
+    && holding.fairMarketValue > 0
+    ? holding.fairMarketValue
+    : null;
+  if (prior === null) return { retained: false, because: "no-prior-value" };
+
+  // 1. The kept number faces the SAME floor, against the SAME basis. Not a
+  //    second predicate — `costBasisFloor` itself, so the two cannot drift.
+  if (costBasisFloor(holding, prior).rejects) {
+    return { retained: false, because: "prior-fails-floor" };
+  }
+
+  // 2. The kept number must not be the refused pool's own earlier answer.
+  const priorMeta = (holding as { pricingSourceMeta?: Record<string, unknown> }).pricingSourceMeta;
+  const priorSlug = typeof priorMeta?.slug === "string" ? (priorMeta.slug as string).trim() : "";
+  const priorRung = typeof (holding as { fmvRung?: unknown }).fmvRung === "string"
+    ? ((holding as { fmvRung: string }).fmvRung)
+    : null;
+  const priorMethod = typeof priorMeta?.method === "string" ? (priorMeta.method as string) : null;
+  const refusedPool = (entry.pooledAs ?? "").trim();
+  const samePool = refusedPool !== "" && priorSlug !== "" && priorSlug === refusedPool;
+  // An exact-pool rung is a read OF the pool. A cross-identity rung (a sibling,
+  // a family baseline, a vendor) reached a different body of evidence even when
+  // the row is filed under this slug, so the floor's verdict on this pool says
+  // nothing about it.
+  const readTheSamePool = isExactPoolRung(priorRung) || isExactPoolRung(priorMethod);
+  if (samePool && readTheSamePool) {
+    return { retained: false, because: "prior-is-the-refused-pool" };
+  }
+  return { retained: true, value: prior };
+}
+
 export function costBasisFloorRefusalWrite(
   holding: PortfolioHolding,
   input: Extract<HoldingValuationOutcome, { outcome: "cost-basis-floor" }> | CostBasisFloorRefusalFacts,
   nowIso: string,
 ): { holding: PortfolioHolding; prose: string; summary: string } {
   const entry = refusalFacts(input);
-  const kept = typeof holding.fairMarketValue === "number" && Number.isFinite(holding.fairMarketValue)
-    ? holding.fairMarketValue
-    : null;
+  const verdict = retentionThroughFloor(holding, entry);
+  const kept = verdict.retained ? verdict.value : null;
   const priorMeta = (holding as { pricingSourceMeta?: Record<string, unknown> }).pricingSourceMeta;
   const priorRung = typeof (holding as { fmvRung?: unknown }).fmvRung === "string"
     && (holding as { fmvRung?: string }).fmvRung
     ? ((holding as { fmvRung: string }).fmvRung)
     : null;
-  const priorValueSource = (holding as { valueSource?: unknown }).valueSource;
+  const priorFmv = typeof holding.fairMarketValue === "number" && Number.isFinite(holding.fairMarketValue)
+    ? holding.fairMarketValue
+    : null;
+  const qty = Math.max(1, num(holding.quantity, 1));
   const pct = entry.costBasis > 0 ? round2((entry.proposedTotal / entry.costBasis) * 100) : null;
+  const keptPct = kept !== null && entry.costBasis > 0
+    ? round2(((kept * qty) / entry.costBasis) * 100)
+    : null;
   const summary =
     `proposed $${round2(entry.proposedTotal)} is ${pct}% of a $${round2(entry.costBasis)} basis `
-    + `(rung=${entry.rungLabel})`;
-  const prose =
+    + `(rung=${entry.rungLabel}); ${verdict.retained
+      ? `prior $${round2(kept as number)} retained (${keptPct}% of basis)`
+      : `nothing retained (${verdict.because})`}`;
+  const refusal =
     `price refused by the cost-basis sanity floor: the valuation path returned `
     + `$${round2(entry.proposedTotal)} under rung ${entry.rungLabel}, ${pct}% of a `
-    + `$${round2(entry.costBasis)} cost basis (floor: 15%). The prior value is kept unchanged; `
-    + `a price this far under basis is a pool or identity mismatch, not a market.`;
+    + `$${round2(entry.costBasis)} cost basis (floor: `
+    + `${round2(COST_BASIS_FLOOR_RATIO * 100)}%). A price this far under basis is a pool or `
+    + `identity mismatch, not a market.`;
+  // The retention clause states which of the two rules decided, in the row's
+  // own prose, so "why is there no value here" is answerable off the document.
+  const retention = verdict.retained
+    ? ` The prior value of $${round2(kept as number)} (${keptPct}% of basis) is kept: it passes the`
+      + ` same floor and was not drawn from the pool that was refused.`
+    : verdict.because === "no-prior-value"
+      ? ` No prior value was on the row, so none is retained; the holding falls to its cost basis.`
+      : verdict.because === "prior-fails-floor"
+        ? ` The prior value of $${round2(priorFmv ?? 0)} is NOT retained: it is itself below the`
+          + ` floor against this basis, so retaining it would publish the very shape the floor`
+          + ` refuses. The holding falls to its cost basis until a defensible price exists.`
+        : ` The prior value of $${round2(priorFmv ?? 0)} is NOT retained: it was published from`
+          + ` ${entry.pooledAs ?? "this same pool"} — the pool this refusal faults — so it is the`
+          + ` same evidence one pass older, not an independent claim. The holding falls to its`
+          + ` cost basis until a defensible price exists.`;
+  const prose = refusal + retention;
   return {
     prose,
     summary,
     holding: writeHoldingValuation(holding, {
       fairMarketValue: kept,
-      // The kept number's OWN rung still describes it. When the pass that
-      // produced it named none, say so — never borrow the rung the floor just
-      // refused, which priced a number this row does not carry.
-      rung: priorRung ? { rung: priorRung } : { noRung: prose },
-      // A refusal verifies nothing, so it cannot upgrade the claim.
-      valueSource: priorValueSource === "observed" || priorValueSource === "estimated"
-        ? priorValueSource
-        : "estimated",
+      // ALWAYS rewritten, never carried. A withhold priced nothing, so it names
+      // no rung — carrying the prior pass's rung is a claim that this row's
+      // number was produced by a computation this pass did not perform, which
+      // is the defect #1776 fixed on the confidence-gated branch and this one
+      // reproduced. The rung a retained number WAS priced under survives as
+      // evidence under `withheld.retainedRung`.
+      rung: { noRung: prose },
+      // ALWAYS rewritten. A withhold observed nothing, so it cannot stand
+      // behind an "observed" claim — least of all one it inherited from the
+      // very pool it just refused.
+      valueSource: "estimated",
       nowIso,
       meta: {
         slug: typeof priorMeta?.slug === "string"
@@ -284,6 +428,15 @@ export function costBasisFloorRefusalWrite(
           blockingId: entry.pooledAs,
           blockingCount: entry.compsUsed,
           proposed: entry.proposedUnit,
+          // What the row now carries, and why — so the UI can say "market
+          // shows $2, withheld: below 15% of your $29.45 basis" and a reader
+          // can tell a legitimate retention from a dropped one.
+          retained: kept,
+          retentionRefused: verdict.retained ? null : verdict.because,
+          // The rung the retained number was priced under, kept as EVIDENCE.
+          // It is deliberately not `fmvRung`: it describes history, not the
+          // claim this write is making.
+          retainedRung: verdict.retained ? priorRung : null,
         },
       },
       fields: {
@@ -291,6 +444,13 @@ export function costBasisFloorRefusalWrite(
         // answerable without reading a log that has rolled.
         fmvRetainedReason: prose,
         fmvRetainedAt: nowIso,
+        // When nothing is retained, the estimate slot is cleared with it.
+        // `computeDisplayValue` reads `estimatedValue` BEFORE falling through
+        // to cost basis, so leaving a stale estimate standing would move the
+        // same undefended number one field over and defeat the withhold.
+        ...(kept === null
+          ? { estimatedValue: null, isEstimate: false, valuationStatus: "pending" as const }
+          : {}),
       },
     }),
   };
