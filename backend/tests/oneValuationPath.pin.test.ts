@@ -258,11 +258,23 @@ describe("D17 pins — card-detail, card-panel, the bulk curves and the persist 
     // that no site in this file sets fairMarketValue WITHOUT going through the
     // helper, whose `rung:` argument is required and therefore unskippable.
     // CF-A-STALE-VALUE-IS-NOT-A-PRICE (2026-09-04) added the FOURTH writer,
-    // `noBasisRefusalWrite`: the `pool-migrating` refusal, which keeps the
-    // prior number and names the withhold rather than letting another lane
-    // substitute a number for a pool that is still arriving. Its rung is
-    // conditional for the same reason the floor's is — a refusal never borrows
-    // a rung — so `rungs` stays at 2 while the other counts move together.
+    // `noBasisRefusalWrite`: the `pool-migrating` refusal, which names the
+    // withhold rather than letting another lane substitute a number for a pool
+    // that is still arriving.
+    //
+    // CF-A-HOLDING-CARRIES-ONE-STAMP (2026-09-05) REVISES the last assertion
+    // of this pin. It used to require
+    //
+    //     rung: priorRung ? { rung: priorRung } : { noRung: prose },
+    //
+    // of the refusal writers — the CARRY, which is now the defect rather than
+    // the contract: a withhold priced nothing, so it names no rung on any
+    // shape, and carrying the prior pass's rung is what let the Bellingham
+    // Griffey read as an observed exact-pool price and a refusal at once.
+    // Both refusal writers now pass `{ noRung: prose }` unconditionally, so
+    // `rungs` (an UNCONDITIONAL `rung: { rung:` literal) still stands at 2 —
+    // the two PUBLISH writers, `observedHoldingWrite` and the estimate — while
+    // the other counts are unchanged.
     const literals = src.split("fairMarketValue: ").length - 1;
     const rungs = src.split("rung: { rung:").length - 1;
     expect(literals).toBe(4);
@@ -272,9 +284,16 @@ describe("D17 pins — card-detail, card-panel, the bulk curves and the persist 
     // a holding object. Four writers, four helper calls.
     const helperCalls = src.split("writeHoldingValuation(holding, {").length - 1;
     expect(helperCalls).toBe(4);
-    // And the refusal writer names a rung the same required way — either the
-    // prior pass's, or an explicit refusal carrying its reason.
-    expect(src).toMatch(/rung: priorRung \? \{ rung: priorRung \} : \{ noRung: prose \},/);
+    // And BOTH refusal writers refuse a rung, in the required form. Two
+    // writers, two `{ noRung: prose }` arguments — the mutation check for the
+    // carry coming back is that this count drops.
+    expect(src.split("rung: { noRung: prose },").length - 1).toBe(2);
+    expect(src).not.toMatch(/rung: priorRung \? \{ rung: priorRung \}/);
+    // Both refusal writers ask the ONE retention rule rather than copying it.
+    expect(src.split("retentionThroughFloor(").length - 1).toBe(3); // 1 def + 2 calls
+    // And both rewrite `valueSource` unconditionally — never carrying the
+    // prior pass's, which is the other half of the same stamp carry.
+    expect(src).not.toMatch(/valueSource: priorValueSource/);
     // The entry takes the holding's second identity and asks in #1462's order.
     const entry = stripComments(read("src/services/compiq/oneValuationPath.service.ts"));
     expect(entry).toMatch(/cardId: secondId && secondId !== slug \? secondId : null, printRun: identity\.printRun/);
