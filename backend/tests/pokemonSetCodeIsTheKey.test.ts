@@ -124,6 +124,21 @@ describe("CF-THE-SET-CODE-IS-THE-KEY — the boundaries it must not cross", () =
     expect(resolveEnglishPokemonSetFromTitle("Pokemon Nintendo Black Star Promo np 12")).toBe("np");
   });
 
+  it("a degenerate title refuses rather than guesses, and never throws", () => {
+    // CF-UNKNOWN-IS-ALSO-A-GUESS. A title with the word "Pokemon" and nothing
+    // else must NOT be handed the first short code that happens to match.
+    // "Pokemon 151" is the sharpest case: `151` is a real English set name
+    // (sv03-5) AND the commonest kind of card number in a Pokemon title, and
+    // the >=4-char alias floor is what keeps it refused.
+    for (const t of ["", "   ", "Pokemon", "pokemon japanese", "POKEMON---",
+      "2025 Pokemon", "Pokemon 151", "pokemon sv"]) {
+      expect(inferSetKeyFromTitle(t)).toBe("Unknown");
+    }
+    // Null and undefined reach this function from rows with no title at all.
+    expect(inferSetKeyFromTitle(null as unknown as string)).toBe("Unknown");
+    expect(inferSetKeyFromTitle(undefined as unknown as string)).toBe("Unknown");
+  });
+
   it("a NON-Pokemon TCG title is still untouched", () => {
     // One Piece / Yu-Gi-Oh / MTG / Lorcana gained NO vocabulary in this change
     // -- CF-POKEMON-TCG-EXPANSION-PARKED still parks that vertical.
