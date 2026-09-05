@@ -43,3 +43,13 @@ backend/tests/fixtures/bcp/*.html text eol=lf
 # file content, so a CRLF conversion on checkout would break it everywhere but
 # the machine that generated it.
 backend/tests/fixtures/hobbymonitor/*.json text eol=lf
+
+# CF-CHRONIC-REDS-CRLF, the staged-CSV case (2026-09-05). The junk-wax staging
+# pin reads backend/data/checklists/scraped/*.csv off disk and compares the
+# header line and the row count. Checked out CRLF, every line keeps a trailing
+# \r: the header assertion fails on an invisible byte, green in CI and red on a
+# fresh Windows clone -- the same shape as the two notes above. The stored
+# blobs are already LF (`* text=auto`); this pins the CHECKOUT so the reader
+# and the file agree everywhere. The pin also splits on /\r?\n/ now, so a CSV
+# that arrives CRLF by some other route still reads correctly.
+*.csv text eol=lf
