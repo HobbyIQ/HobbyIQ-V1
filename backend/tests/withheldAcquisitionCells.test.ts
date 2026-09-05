@@ -271,18 +271,7 @@ describe("the lane writes nothing and the workflow gates every dispatch", () => 
     expect(SCRIPT).toMatch(/const VERIFY_MS = Number\(process\.env\.VERIFY_MS \|\|/);
   });
 
-  it("GATE 1: the driver APPLY is gated on a reconciled report with rows > 0", () => {
-    const step = WF.split(/^      - name: "?/m).find((s) => /^Gate: the ingest report/.test(s));
-    expect(step, "the ingest report gate step must exist").toBeTruthy();
-    expect(step).toMatch(/RECONCILED/);
-    expect(step).toMatch(/ingested|partial/);
-  });
 
-  it("GATE 2: the rederive only runs after an INGESTED verdict", () => {
-    const step = WF.split(/^      - name: "?/m).find((s) => /^Gate: the ingest apply landed rows/.test(s));
-    expect(step, "the ingest apply gate step must exist").toBeTruthy();
-    expect(step).toMatch(/ingested|partial/);
-  });
 
   it("GATE 3: the rederive APPLY is gated on its own report's verdicts", () => {
     const step = WF.split(/^      - name: "?/m).find((s) => /^Gate: the rederive report/.test(s));
@@ -606,5 +595,145 @@ describe("a #1715 catch-all key parks its holdings, it does not queue them", () 
     const src = SCRIPT.slice(at, at + 400);
     expect(src.indexOf("p.unreadable")).toBeGreaterThan(-1);
     expect(src.indexOf("p.unreadable")).toBeLessThan(src.indexOf("p.source.lane"));
+  });
+});
+
+// ── 11. GATE 1 IS THREE-WAY, AND "0 ROWS" IS NOT "NOTHING TO DO" ──────────
+//
+// Run 33993803531 went green end to end and acquired NOTHING: all ten cells
+// stopped at "0 rows — nothing to land". The gate required `rows > 0` from a
+// dispatch run with apply=false, and `rows created` counts only what an APPLY
+// wrote — so the condition was UNSATISFIABLE and the chain could never reach a
+// rederive for any cell, ingested or not. The Bowman's Best report said:
+//
+//   catalog now: 3,810 rows   seeded=missing   prior=partial
+//   rows created        0   (verified by catalog read, not claimed)
+//   RECONCILED          yes
+//
+// 3,810 rows ARE the checklist. The gate read the dry run's zero as an empty
+// catalog and conflated two OPPOSITE states.
+describe("gate 1 tells an empty catalog from an already-ingested one", () => {
+  const WF = read(".github", "workflows", "acquire-for-withheld-holdings.yml");
+  const gate = WF.split(/^      - name: "?/m).find((s) => /^Gate: acquire, already-ingested/.test(s)) ?? "";
+
+  it("the gate exists and names all three outcomes", () => {
+    expect(gate.length, "the three-way gate 1 step must exist").toBeGreaterThan(200);
+    for (const mode of ["already-ingested", "acquire", "needs-a-source"]) {
+      expect(gate, `gate 1 must be able to conclude ${mode}`).toContain(mode);
+    }
+  });
+
+  it("it reads `catalog now:`, which a REPORT prints, not `rows created`", () => {
+    // The whole defect: `rows created` is an APPLY's number. A gate on it can
+    // never pass from a report.
+    expect(gate).toMatch(/catalog now/);
+    expect(gate, "gate 1 must not gate on a count only an apply can produce")
+      .not.toMatch(/rows created/);
+  });
+
+  it("a non-empty catalog proceeds as already-ingested", () => {
+    expect(gate).toMatch(/IN_CATALOG.*-gt 0/s);
+    expect(gate).toMatch(/MODE=already-ingested; PROCEED=yes/);
+  });
+
+  it("an unreadable count is NOT treated as an empty catalog", () => {
+    // "(setKey/year not derivable — verify would refuse)" yields no digits.
+    // Calling that zero would send the chain to acquire a product it cannot
+    // even verify (feedback_never_dismiss_small_numbers_as_noise).
+    expect(gate).toMatch(/-z "\$IN_CATALOG"/);
+    expect(gate).toMatch(/not derivable/);
+  });
+
+  it("a failed reconciliation still refuses, ahead of every other branch", () => {
+    const rec = gate.indexOf('RECONCILED" = "no"');
+    const cat = gate.indexOf("-gt 0");
+    expect(rec).toBeGreaterThan(-1);
+    expect(rec, "the reconcile check must precede the catalog branch").toBeLessThan(cat);
+  });
+
+  it("needs-a-source survives unchanged: empty catalog AND no source", () => {
+    expect(gate).toMatch(/catalog is empty and no source serves this set/);
+  });
+});
+
+// ── 12. THE APPLY RUNS ONLY IN ACQUIRE MODE ───────────────────────────────
+describe("an already-ingested cell skips the ingest apply and still proceeds", () => {
+  const WF = read(".github", "workflows", "acquire-for-withheld-holdings.yml");
+  const step = (re: RegExp) => WF.split(/^      - name: "?/m).find((s) => re.test(s)) ?? "";
+
+  it("the apply is conditioned on mode == acquire, not on proceed", () => {
+    const apply = step(/^Ingest apply/);
+    expect(apply).toMatch(/if: \$\{\{ steps\.gate_ingest\.outputs\.mode == 'acquire' \}\}/);
+    // Gating it on `proceed` would re-fetch a publisher page to mint nothing
+    // for every already-ingested cell (CF-RECHECK-IS-NOT-REFETCH).
+    expect(apply).not.toMatch(/if: \$\{\{ steps\.gate_ingest\.outputs\.proceed == 'yes' \}\}/);
+  });
+
+  it("gate 2 passes an already-ingested cell through on gate 1's catalog read", () => {
+    const g2 = step(/^Gate: the ingest apply landed rows/);
+    expect(g2).toMatch(/already-ingested/);
+    expect(g2).toMatch(/proceed=yes/);
+    // ...and still judges a real apply the old way when there was one.
+    expect(g2).toMatch(/RECONCILED \+NO/);
+    expect(g2).toMatch(/ingested\|partial/);
+  });
+
+  it("gate 3 is UNCHANGED — the rederive still refuses UNVERIFIED destinations", () => {
+    const g3 = step(/^Gate: the rederive report proposes/);
+    expect(g3).toMatch(/UNVERIFIED/);
+    expect(g3).toMatch(/PROCEED=no/);
+  });
+
+  it("the rederive still runs for an already-ingested cell", () => {
+    // It hangs off gate 2, which now says yes for both modes — that is the
+    // whole point of the fix.
+    const rr = step(/^Rederive report/);
+    expect(rr).toMatch(/if: \$\{\{ steps\.gate_apply\.outputs\.proceed == 'yes' \}\}/);
+  });
+});
+
+// ── 13. A STUCK HOLDING SAYS WHAT WOULD UNSTICK IT ────────────────────────
+describe("holdings that do not re-point are classified by what unlocks them", () => {
+  const WF = read(".github", "workflows", "acquire-for-withheld-holdings.yml");
+  const step = WF.split(/^      - name: "?/m).find((s) => /^Classify the holdings/.test(s)) ?? "";
+
+  it("the classify step exists and is report-only", () => {
+    expect(step.length).toBeGreaterThan(200);
+    // It must not produce a `proceed` that anything gates on: naming why one
+    // holding is stuck must not decide whether others continue.
+    expect(step).not.toMatch(/echo "proceed=/);
+  });
+
+  it("each distinct rederive verdict maps to the lane that fixes it", () => {
+    // The vocabulary is read from the script's own prose rather than restated.
+    for (const [phrase, unlock] of [
+      ["no catalog row backs it", "retire-self-derived-identities"],
+      ["player mismatch", "parked"],
+      ["destination does not carry it", "parked"],
+    ] as Array<[string, string]>) {
+      expect(step, `${phrase} must be classified`).toContain(phrase);
+      expect(step, `${phrase} must name its unlock`).toContain(unlock);
+    }
+    expect(step, "a blank-field no-match is the #1811 field-recovery lane")
+      .toMatch(/#1811/);
+  });
+
+  it("a blank-field no-match is counted apart from a populated one", () => {
+    // They need different work: one is field recovery, the other is matcher
+    // work. Collapsing them would send both to the wrong lane.
+    expect(step).toMatch(/NM_BLANK/);
+    expect(step).toMatch(/NM_FIELDS/);
+  });
+
+  it("the reasons reach the ledger and the outcome table", () => {
+    expect(WF).toMatch(/"stuckReasons": "\$\{\{ steps\.classify\.outputs\.reasons \}\}"/);
+    expect(WF).toMatch(/what is still stuck/);
+    expect(WF).toMatch(/\.stuckReasons/);
+  });
+
+  it("the outcome table reports the MODE and the catalog count, not a dead `rows`", () => {
+    expect(WF).toMatch(/\.gate1\.mode/);
+    expect(WF).toMatch(/\.gate1\.inCatalog/);
+    expect(WF, "gate1.rows no longer exists").not.toMatch(/\.gate1\.rows/);
   });
 });
