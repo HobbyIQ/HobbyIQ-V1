@@ -335,10 +335,7 @@ jobs:
     # `!cancelled()` rather than `always()`: a run somebody cancelled, or one
     # the workflow-level timeout killed, must not go on to reprice every
     # user's holdings in the background.
-    if: >-
-      !cancelled()
-      && needs.deploy-and-refresh.outputs.should_run == 'true'
-      && needs.deploy-and-refresh.outputs.engine_ok == 'true'
+    if: ${{ !cancelled() && needs.deploy-and-refresh.outputs.should_run == 'true' && needs.deploy-and-refresh.outputs.engine_ok == 'true' }}
     runs-on: ubuntu-latest
     # The measured full pass is minutes, not hours (see the RU budget below).
     # 60 is generous headroom for pool growth, and well under the point where
