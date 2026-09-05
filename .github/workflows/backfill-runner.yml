@@ -492,6 +492,24 @@ on:
           # and the run COUNTs rows-missing-cardYear per source before AND after
           # itself -- the banner cannot certify the write.
           - backfillCatalogCardYearFromSlug
+          # CF-AN-ALIAS-IS-NOT-A-SECOND-POOL (2026-09-04) -- the WRITE half of
+          # #1783. Declaring a RULED_ALIAS fixes the deriver and moves no stored
+          # row: post-alias the census sees stored identity == derived key and
+          # calls those rows AGREE, and AGREE is never written -- so the pool
+          # stays split on the OLD segment while the holding re-derives onto
+          # the ruled key. This lane re-keys segment 3 of cardId AND
+          # hobbyiqCardId (the exact pool reader ORs them) to the ruled key,
+          # through relocateSoldComp: upsert, read back, then delete -- a sale
+          # is never lost. Every other segment is carried byte for byte (D28:
+          # surgery, never a recompute). The alias list is READ from
+          # ruledAliases(), never retyped, so it cannot drift from the ruling.
+          # `scope` is REQUIRED and names the RULED KEY (the destination); the
+          # inherited "refractor" and an unruled key both REFUSE with exit 1
+          # before a Cosmos client is built. `years`/`sports` narrow the sweep
+          # and make the BEFORE/AFTER pool counts index-served. Sharding is
+          # OPT-IN via the #1765 helper. Catalog rows on an alias slug are
+          # REPORTED (count + sources) and NEVER written.
+          - reslug-ruled-alias
       apply:
         description: "Actually write (true) or dry-run only (false)"
         required: true
