@@ -117,16 +117,19 @@ describe("draft price comes from the engine, labelled", () => {
     // The POOL that priced it (6), not the 2-row display sample.
     expect(pricing.compCount).toBe(6);
     expect(pricing.range).toEqual({ n: 6, min: 640, median: 715, max: 810 });
-    // CF-INDEPENDENCE-MUST-NAME-ITS-BASIS (2026-09-04). This assertion used
-    // to read "a clean exact-pool answer needs no disclosure" and expect no
-    // labels at all. That is the assumption the independence work overturns:
-    // these 6 fixture comps carry no seller, exactly like the 6.87M real
-    // sold_comps rows that carry none, so the engine CANNOT see whether
-    // three independent sellers stand behind the number. The honest answer
-    // is to say so — not to stay silent and let a row count pass for a
-    // seller count. The price, rung, pool and range are all unchanged.
-    expect(pricing.labels.map((l) => l.code)).toEqual(["independence-unverified"]);
-    expect(pricing.labels[0]!.text).toMatch(/do not tell us who sold them/i);
+    // CF-A-CAVEAT-THAT-FIRES-EVERYWHERE-SAYS-NOTHING (Drew, 2026-09-04).
+    // This assertion has now been written three ways, and the history is
+    // the ruling. Originally: "a clean exact-pool answer needs no
+    // disclosure", no labels. #1775 overturned that — these 6 comps carry
+    // no seller, like 6.87M real sold_comps rows, so independence could not
+    // be verified and the label said so. Drew then ruled the caveat back
+    // off HEALTHY pools: a sentence that fires on every card informs
+    // nobody, and 6 sales is past the point where one seller behind all of
+    // them is a live worry. Six is at or above the measured floor of 5, so
+    // this pool is healthy and carries no label — while the basis stays
+    // readable on the API for any caller that asks. Price, rung, pool and
+    // range are unchanged by any of the three versions.
+    expect(pricing.labels).toEqual([]);
   });
 
   it("asks the engine with the holding's identity, not a re-derived one", async () => {

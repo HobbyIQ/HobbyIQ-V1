@@ -143,6 +143,72 @@ export function assessSellerIndependence(
   return { basis: "seller-identity", count, meets: count >= MIN_INDEPENDENT_SELLERS, rowsMissingSeller: 0, rowsConsidered };
 }
 
+/**
+ * CF-A-CAVEAT-THAT-FIRES-EVERYWHERE-SAYS-NOTHING (Drew, 2026-09-04).
+ *
+ * #1775 made `independence-unverified` truthful. It did not make it
+ * INFORMATIVE. Because `sellerHandle` is absent on all but 24 of 6.87M
+ * sold_comps rows, `basis` is `row-count` on essentially every exact-pool
+ * result in production, and the label fired on all of them — a sentence
+ * that appears on every card tells a reader nothing about any card.
+ *
+ * Drew's ruling: show it ONLY where it changes the read. On a THIN pool one
+ * seller could plausibly be behind every sale, so "we cannot see who sold
+ * these" is a live risk the reader should weigh. On a healthy pool — many
+ * sales, many dates, spread prices — the same sentence is noise: a single
+ * consignor behind forty sales is not a scenario the number is exposed to,
+ * and saying so on every healthy card trains the reader to ignore the
+ * caveat on the thin ones where it matters.
+ *
+ * Thin is measured as POOL SIZE, not distinct sale dates. Both were on the
+ * table; pool size is the one that can be measured honestly at the label
+ * site. `labelsForResult` reads `provenance.comps`, which
+ * canonicalFmv.service.ts truncates to the first 8-10 rows for display —
+ * counting distinct dates over that sample is counting a rendering
+ * artifact, and a healthy 40-sale pool whose 8-row sample happened to land
+ * on two dates would be labeled thin. `provenance.compCount` is the pool
+ * total and is never truncated (CF-COMP-COUNT-IS-THE-POOL, 2026-09-02), so
+ * it is the number the gate reads.
+ *
+ * The FLOOR is measured, not chosen. Drew's 43 holdings, read-only
+ * 2026-09-04 off the last sanctioned reprice: 40 sit on an exact-pool rung,
+ * 27 of which #1775 labeled. Their pool sizes cluster at 2 and 3 (eight
+ * holdings) and then jump straight to 5, 7, 8, 9, 10, 13, 14, 18, 39, 51,
+ * 112, 119, 151, 647 — there is a real gap between "a pool one seller could
+ * be behind" and the rest, and 5 sits in it. The choice is also not
+ * balanced on a knife edge: a floor of 4 and a floor of 5 label the SAME
+ * eight holdings, and only at 6 does the count move (to 12). 27 labels
+ * become 8; the 19 silenced are pools of 5 to 647 sales.
+ *
+ * This gates the UNVERIFIABLE case only. Where sellers ARE visible and too
+ * few, the count is a fact about this pool at any size and still publishes
+ * ("only 2 independent sellers") — that branch is not a caveat about our
+ * sources, it is an observation about the market.
+ *
+ * Nothing here touches a price or a confidence. `assessSellerIndependence`,
+ * `meets`, `MIN_INDEPENDENT_SELLERS` and the self-comp reprieve in
+ * unifiedPricing are untouched.
+ *
+ * And the basis stays READABLE whether or not the label renders. #1775
+ * threads each row's `sellerHandle` from the pool reader through the
+ * adapter onto `provenance.comps`, so any API caller can run this same
+ * function over the wire's comps and recover the verdict for itself — the
+ * evidence is published, only the SENTENCE is gated. (There is no named
+ * `independenceBasis` field on `pricingSourceMeta` today; the handles are
+ * where the basis lives, and that is what a caller reads.)
+ */
+export const INDEPENDENCE_THIN_POOL_MAX_SALES = 5;
+
+/**
+ * Is this pool thin enough that one seller could plausibly be behind all of
+ * it? `poolTotal` must be the pool count (`provenance.compCount`), never
+ * the length of a truncated display sample.
+ */
+export function isThinPoolForIndependence(poolTotal: number): boolean {
+  if (!Number.isFinite(poolTotal)) return true;
+  return poolTotal < INDEPENDENCE_THIN_POOL_MAX_SALES;
+}
+
 /** The label code a result carries when its evidence could not be checked
  *  for seller independence. Distinct from `low-confidence`: the number may
  *  be well-supported, we simply cannot see WHO sold. */

@@ -70,6 +70,7 @@ import { sellWindowPlayerIndex } from "../signals/sellWindowPlayerIndex.js";
 
 import {
   assessSellerIndependence,
+  isThinPoolForIndependence,
   INDEPENDENCE_UNVERIFIED_CODE,
   MIN_INDEPENDENT_SELLERS,
 } from "../compiq/sellerIndependence.js";
@@ -308,17 +309,34 @@ export function labelsForResult(
   // that never claimed to come from this card's own sales adds noise, not
   // information. A fully self-anchored result is likewise already told the
   // strongest possible version of this ("no independent sale supports it").
+  //
+  // CF-A-CAVEAT-THAT-FIRES-EVERYWHERE-SAYS-NOTHING (Drew, 2026-09-04).
+  // #1775 shipped the sentence on EVERY exact-pool result, because
+  // `row-count` is the basis on essentially every one of them. A caveat
+  // that appears on every card carries no information about any card, and
+  // it crowds out the readings that do. Drew's ruling: show it only where
+  // it changes the read — on a THIN pool, where one seller could plausibly
+  // be behind every sale. On a healthy pool the unverifiable case is noise.
+  // Nothing is hidden by the gate: #1775 puts each row's `sellerHandle` on
+  // `provenance.comps`, so a caller can run `assessSellerIndependence` over
+  // the wire itself and recover the basis. Only the SENTENCE is gated.
+  //
+  // The gate reads `poolTotal` (`provenance.compCount`), NOT `comps.length`
+  // — `comps` is truncated to 8-10 rows for display, so its length would
+  // call a 40-sale pool thin whenever the sample was short.
   const independence = assessSellerIndependence(comps);
   const alreadySelfAnchoredWhole = selfComps.length > 0 && selfComps.length === poolTotal;
-  if (rung && isExactPoolRung(rung) && !alreadySelfAnchoredWhole && independence.basis !== "seller-identity") {
+  const onExactPool = Boolean(rung) && isExactPoolRung(rung!) && !alreadySelfAnchoredWhole;
+  if (onExactPool && independence.basis !== "seller-identity" && isThinPoolForIndependence(poolTotal)) {
     labels.push({
       code: INDEPENDENCE_UNVERIFIED_CODE,
       text:
-        `Independence unverified: ${poolTotal} sale${poolTotal === 1 ? "" : "s"} back this ` +
-        "estimate, but our sources do not tell us who sold them, so we cannot " +
-        `confirm ${MIN_INDEPENDENT_SELLERS} independent sellers stand behind it.`,
+        `Independence unverified: only ${poolTotal} sale${poolTotal === 1 ? "" : "s"} back this ` +
+        "estimate, and our sources do not tell us who sold them — one seller could " +
+        `be behind all of them, so we cannot confirm ${MIN_INDEPENDENT_SELLERS} independent ` +
+        "sellers stand behind it.",
     });
-  } else if (rung && isExactPoolRung(rung) && !alreadySelfAnchoredWhole && !independence.meets) {
+  } else if (onExactPool && independence.basis === "seller-identity" && !independence.meets) {
     // Sellers ARE visible and there are too few of them. This is the only
     // branch entitled to speak about seller counts as fact.
     labels.push({
