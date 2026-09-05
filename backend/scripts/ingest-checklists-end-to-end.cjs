@@ -38,7 +38,15 @@ const path = require("node:path");
 const { execFileSync } = require("node:child_process");
 
 const HERE = __dirname;
-const RUN_MS = Number(process.env.RUN_MINUTES || 140) * 60000;
+const RUN_MINUTES = Number(process.env.RUN_MINUTES || 120);
+const RUN_MS = RUN_MINUTES * 60000;
+/** Wall clock a single unit may still be granted after the budget expires.
+ *  CHECKED BEFORE EACH UNIT, never at the loop top: a unit costing more than
+ *  this is stopped BEFORE it starts. See lib/runner-budget.cjs. */
+const RESERVE_MS = Number(process.env.RESERVE_MS || 2 * 60 * 1000);
+/** Hard cap on the post-loop verify-by-read: it answers, or it says it could
+ *  not. It never holds the step open until the runner kills it. */
+const VERIFY_MS = Number(process.env.VERIFY_MS || 10 * 60 * 1000);
 const STARTED = Date.now();
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
 // bcp included in the DEFAULT, in the code, not the comment: an earlier patch

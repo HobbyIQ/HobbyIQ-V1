@@ -76,7 +76,15 @@ const PAGE = Number(process.env.PAGE_SIZE || 2000);
 // hit the ceiling and the fleet would stop with millions of rows left -- eight
 // green runs whose last log line says "done". Stop on our own clock instead,
 // print the summary, and let the relaunch carry on.
-const RUN_MS = Number(process.env.RUN_MINUTES || 140) * 60000;
+const RUN_MINUTES = Number(process.env.RUN_MINUTES || 120);
+const RUN_MS = RUN_MINUTES * 60000;
+/** Wall clock a single unit may still be granted after the budget expires.
+ *  CHECKED BEFORE EACH UNIT, never at the loop top: a unit costing more than
+ *  this is stopped BEFORE it starts. See lib/runner-budget.cjs. */
+const RESERVE_MS = Number(process.env.RESERVE_MS || 2 * 60 * 1000);
+/** Hard cap on the post-loop verify-by-read: it answers, or it says it could
+ *  not. It never holds the step open until the runner kills it. */
+const VERIFY_MS = Number(process.env.VERIFY_MS || 10 * 60 * 1000);
 const STARTED = Date.now();
 
 // CF-AN-INHERITED-SLOTS-IS-NOT-A-CHOSEN-SHARD (#1756, generalised 2026-09-04).
@@ -225,7 +233,7 @@ const TARGET =
       if (LIMIT && deleted >= LIMIT) { token = undefined; break; }
     }
     if (++pages % 20 === 0) process.stderr.write(`\r  scanned ${f(scanned)}  deleted ${f(deleted)}  kept ${f(kept)}   `);
-    if (Date.now() - STARTED > RUN_MS) { hitBudget = true; token = undefined; }
+    if (Date.now() - STARTED > RUN_MS - RESERVE_MS) { hitBudget = true; token = undefined; }
   } while (token);
   process.stderr.write("\n");
   if (out) out.end();

@@ -144,7 +144,11 @@ const CONCURRENCY = Math.max(1, Number(arg("concurrency", env("BACKFILL_CONCURRE
 const PAGE_SIZE = Math.max(1, Number(arg("page-size", env("PAGE_SIZE", "1000"))) || 1000);
 const SPORT = arg("sport", env("SPORT") || env("SPORTS"));
 // 140 minutes leaves the marker inside the runner's 150-minute step ceiling.
-const RUN_MINUTES = Number(arg("run-minutes", env("RUN_MINUTES", "140"))) || 140;
+const RUN_MINUTES = Number(arg("run-minutes", env("RUN_MINUTES", "120"))) || 120;
+/** Wall clock a single unit (one scored sample point) may still be granted after the
+ *  budget expires. CHECKED BEFORE EACH UNIT, never at the loop top.
+ *  See lib/runner-budget.cjs for the rule and its arithmetic. */
+const RESERVE_MS = Number(process.env.RESERVE_MS || 90 * 1000);
 const MIN_SALE_PRICE = Number(arg("min-price", env("MIN_PRICE", "5"))) || 5;
 
 const num = (n) => Number(n).toLocaleString("en-US");
@@ -373,12 +377,12 @@ async function runSample() {
       }
 
       await pool(batch, CONCURRENCY, async (row) => {
-        if (Date.now() - startedAt > budgetMs) return;
+        if (Date.now() - startedAt > budgetMs - RESERVE_MS) return;
         await scoreRow(row);
       });
 
       if (points.length - before >= stratum.quota) break;
-      if (Date.now() - startedAt > budgetMs) { stopped = "budget"; break; }
+      if (Date.now() - startedAt > budgetMs - RESERVE_MS) { stopped = "budget"; break; }
     }
     perSport[stratum.sport] = points.length - before;
     console.log(`  [${stratum.sport}] scored ${num(points.length - before)} of ${num(stratum.quota)}   (${Math.round((Date.now() - startedAt) / 60_000)}m, scanned ${num(scanned)})`);

@@ -45,7 +45,15 @@ const { runnerShardScope } = require("./lib/runner-shard-scope.cjs");
 const SHARD_SCOPE = runnerShardScope({ label: "parse-player-from-checklist" });
 const { SHARDED, SLOT, SLOTS } = SHARD_SCOPE;
 const CONCURRENCY = Math.max(1, Number(process.env.CONCURRENCY || 16));
-const RUN_MS = Number(process.env.RUN_MINUTES || 140) * 60000;
+const RUN_MINUTES = Number(process.env.RUN_MINUTES || 120);
+const RUN_MS = RUN_MINUTES * 60000;
+/** Wall clock a single unit may still be granted after the budget expires.
+ *  CHECKED BEFORE EACH UNIT, never at the loop top: a unit costing more than
+ *  this is stopped BEFORE it starts. See lib/runner-budget.cjs. */
+const RESERVE_MS = Number(process.env.RESERVE_MS || 2 * 60 * 1000);
+/** Hard cap on the post-loop verify-by-read: it answers, or it says it could
+ *  not. It never holds the step open until the runner kills it. */
+const VERIFY_MS = Number(process.env.VERIFY_MS || 10 * 60 * 1000);
 const LIMIT = Number(process.env.LIMIT || 0);
 const MAX_CANDIDATES = Number(process.env.MAX_CANDIDATES || 40);
 const PRINT_EXAMPLES = Number(process.env.PRINT_EXAMPLES || 12);
@@ -159,7 +167,7 @@ async function main() {
       }));
       const processed = Math.min(i + CONCURRENCY, mine.length);
       if (LIMIT && parsed >= LIMIT) { stopReason = "limit"; notReached += mine.length - processed; break; }
-      if (Date.now() - STARTED > RUN_MS) { stopReason = "budget"; notReached += mine.length - processed; break; }
+      if (Date.now() - STARTED > RUN_MS - RESERVE_MS) { stopReason = "budget"; notReached += mine.length - processed; break; }
     }
     if (stopReason) break;
     if (scanned && scanned % 3000 < CONCURRENCY) process.stderr.write(`\r  scanned=${f(scanned)} parsed=${f(parsed)} no-checklist=${f(noChecklist)} no-match=${f(noMatch)} ambiguous=${f(ambiguous)}   `);

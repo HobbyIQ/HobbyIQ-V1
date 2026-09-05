@@ -138,7 +138,11 @@ const started = Date.now();
 const budgetLeft = () => RUN_MINUTES * 60000 - (Date.now() - started);
 /** Time held back to write the report. A tenth of the budget, capped at a
  *  minute -- see the page loop for why this is not a flat 60s. */
-const RESERVE_MS = Math.min(60000, Math.max(3000, RUN_MINUTES * 6000));
+/** A FRACTION of the budget, not a fixed minute (see the note at the sample
+ *  loop). The floor is stated as a readable literal so the margin pin can
+ *  compute this lane's worst case without evaluating the expression. */
+const RESERVE_FLOOR_MS = Number(process.env.RESERVE_MS || 60 * 1000);
+const RESERVE_MS = Math.min(RESERVE_FLOOR_MS, Math.max(3000, RUN_MINUTES * 6000));
 
 /** sha1(id) % SLOTS -- uniform by construction over whatever the marked set
  *  turns out to be. The 32-slot year table the Great Rematch uses is a packing
