@@ -76,6 +76,7 @@
  */
 import { pathToFileURL } from "node:url";
 import path from "node:path";
+import { recoverHoldingFields } from "../../src/services/portfolioiq/holdingFieldRecovery.service.js";
 
 // BACKFILL_APPLY is what the runner exports; APPLY is what a hand run types.
 // Reading BOTH is deliberate (feedback_runner_exports_backfill_apply): a
@@ -423,6 +424,52 @@ export function droppedSpecificityAxes(
   });
 }
 
+/**
+ * Fold a player name to the form GATE 1b compares on: lowercase, no
+ * punctuation, no generational suffix. "Cal Ripken, Jr." and "Cal Ripken Jr"
+ * are one player; "Cal Ripken" and "Billy Ripken" are not.
+ *
+ * Deliberately NOT a fuzzy score. This gate exists to catch a destination that
+ * is a DIFFERENT CARD, and a similarity threshold is exactly how two brothers
+ * or two players sharing an initials card number get fused
+ * (project_beckett_initials_card_numbers_collide). Equal after folding, or
+ * refuse.
+ *
+ * Exported so a mutation check can revert it alone.
+ */
+export function normalizePlayerForCompare(raw: unknown): string {
+  return String(raw ?? "")
+    .normalize("NFKD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/\b(?:jr|sr|ii|iii|iv)\b\.?/g, " ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+/**
+ * GATE 1b's decision, alone.
+ *
+ * Returns true when the destination row CORROBORATES a recovered set name —
+ * i.e. both sides name a player and they are the same person. Everything else
+ * is a refusal, including a destination with no player name at all: 16,831
+ * bccp rows carry `playerName: null`, and a null is not agreement (memory:
+ * "count by source, not row count").
+ *
+ * Exported so a mutation check can revert the DECISION rather than only its
+ * helper — a gate whose refusal nothing can call alone is a gate nothing can
+ * prove.
+ */
+export function recoveredSetNameIsCorroborated(
+  holdingPlayer: unknown,
+  catalogRowPlayer: unknown,
+): boolean {
+  const a = normalizePlayerForCompare(holdingPlayer);
+  const b = normalizePlayerForCompare(catalogRowPlayer);
+  if (!a || !b) return false;
+  return a === b;
+}
+
 interface RederiveVerdict {
   hid: string;
   userId: string;
@@ -434,6 +481,12 @@ interface RederiveVerdict {
   reason: string;
   matchedBy?: string;
   confidence?: number;
+  /** FIELD RECOVERY: which blank axes were filled from the holding's own
+   *  evidence, and out of which property. Empty when the holding was already
+   *  complete. Written into `identityRederivedBy` evidence on apply. */
+  recoveredFields?: Array<{ field: string; value: string | number; source: string; via: string }>;
+  /** True when a human ruled on this identity — REPORT ONLY, never written. */
+  userAuthored?: boolean;
 }
 
 async function rederive(
@@ -483,15 +536,15 @@ async function rederive(
   /** Is this slug a real catalog row, and what source backs it? `null` when
    *  absent — and absent is a REFUSAL, never a shrug. Read by id, which is how
    *  the catalog is keyed, so this cannot match a near neighbour. */
-  const backingOf = async (slug: string): Promise<{ id: string; source: string; setName: string | null } | null> => {
+  const backingOf = async (slug: string): Promise<{ id: string; source: string; setName: string | null; playerName: string | null } | null> => {
     const { resources } = await catalog.items
       .query({
-        query: "SELECT c.id, c.source, c.setName FROM c WHERE c.id = @id",
+        query: "SELECT c.id, c.source, c.setName, c.playerName FROM c WHERE c.id = @id",
         parameters: [{ name: "@id", value: slug }],
       })
       .fetchAll();
     const r = resources?.[0];
-    return r ? { id: r.id, source: String(r.source ?? "unknown"), setName: r.setName ?? null } : null;
+    return r ? { id: r.id, source: String(r.source ?? "unknown"), setName: r.setName ?? null, playerName: r.playerName ?? null } : null;
   };
 
   const verdicts: RederiveVerdict[] = [];
@@ -504,26 +557,65 @@ async function rederive(
       verdicts.push({ hid: t.hid, userId: t.userId, docId: t.docId, from, ...v });
 
     let r: any;
+    let recovery: any = null;
     try {
+      // CF-A-HOLDING-CARRIES-ITS-OWN-EVIDENCE (Drew, 2026-09-05) — FIELD
+      // RECOVERY. The question below is built from five stored fields, and a
+      // blank one makes it unanswerable about a card whose checklist row
+      // exists. recoverHoldingFields fills ONLY blanks, from this holding's
+      // own aspects and listing text, through the one normalizer and the one
+      // title parser. See holdingFieldRecovery.service.ts for what it refuses.
+      const rec = recoverHoldingFields({ holding: h });
+      recovery = rec;
+      if (rec.recovered.length) {
+        console.log(`  recovered  ${label}  ${rec.recovered.map((f) => `${f.field}=${JSON.stringify(f.value)} <- ${f.source}`).join("; ")}`);
+      }
+      // ASK BOTH WAYS. The recovered question is asked first; if it does not
+      // land on a real row the ORIGINAL question stands, so a recovery can
+      // only ever add a match, never take one away (absent beats wrong).
       r = await canonicalize({
         sport: String(h.sport ?? "Baseball").toLowerCase(),
         year: Number(h.cardYear) || 0,
-        setName: String(h.setName ?? h.product ?? ""),
-        cardNumber: String(h.cardNumber ?? ""),
-        parallel: h.parallel ?? null,
+        setName: rec.fields.setName,
+        cardNumber: rec.fields.cardNumber,
+        parallel: rec.fields.parallel,
         isAuto: h.isAuto === true,
         // CF-REDERIVE-MUST-STATE-THE-PRINT-RUN (2026-09-05). Omitted here, the
         // matcher could not reach a :num-N ladder row and GATE 2 then refused
         // the move as a dropped-specificity claim. Production has always passed
         // it (ebayReviewQueue.service.ts:766); this pass had not.
-        printRun: typeof h.printRun === "number" ? h.printRun : null,
+        printRun: typeof rec.fields.printRun === "number" ? rec.fields.printRun : null,
         player: h.playerName ?? null,
         // NEVER SEED, braces. Same untrusted source the sweep uses.
         source: "unknown",
       });
+      if (rec.recovered.length && !r?.found) {
+        // The recovery did not reach a catalog row. Fall back to the question
+        // this pass asked before recovery existed, so the report is never
+        // WORSE than it was — and say so, because a discarded recovery is a
+        // fact about the evidence worth reading.
+        console.log(`  recovery discarded — no catalog row; re-asking as stored`);
+        recovery = { ...rec, recovered: [], discarded: rec.recovered } as any;
+        r = await canonicalize({
+          sport: String(h.sport ?? "Baseball").toLowerCase(),
+          year: Number(h.cardYear) || 0,
+          setName: String(h.setName ?? h.product ?? ""),
+          cardNumber: String(h.cardNumber ?? ""),
+          parallel: h.parallel ?? null,
+          isAuto: h.isAuto === true,
+          printRun: typeof h.printRun === "number" ? h.printRun : null,
+          player: h.playerName ?? null,
+          source: "unknown",
+        });
+      }
     } catch (e: any) {
-      push({ to: null, backedBy: null, verdict: "NO-MATCH", reason: `matcher threw: ${e?.message}` });
-      console.log(`  THREW      ${label}  ${e?.message}`);
+      // A holding too blank to build an identity from names the field it is
+      // missing, rather than reporting an opaque throw.
+      const missing = recovery?.stillMissing?.length
+        ? ` — missing ${recovery.stillMissing.join(", ")} and no evidence on the holding names ${recovery.stillMissing.length > 1 ? "them" : "it"}`
+        : "";
+      push({ to: null, backedBy: null, verdict: "NO-MATCH", reason: `matcher threw: ${e?.message}${missing}` });
+      console.log(`  THREW      ${label}  ${e?.message}${missing}`);
       continue;
     }
 
@@ -555,6 +647,41 @@ async function rederive(
       continue;
     }
 
+    // GATE 1b — A RECOVERED SET NAME MUST LAND ON THIS PLAYER'S CARD.
+    //
+    // CF-A-ROW-THAT-EXISTS-IS-NOT-THE-RIGHT-ROW (2026-09-05). GATE 1 proves the
+    // destination is a real checklist row; it does not prove it is THIS card.
+    // When the SET NAME itself was recovered — inferred from free text rather
+    // than stored — that distinction becomes load-bearing, and 277b05a3 is the
+    // case that proved it:
+    //
+    //   inferSetKeyFromTitle read its description as "Fleer Metal", which
+    //   normalizes to setKey `fleer`. `hiq:baseball:1997:fleer:8:base:no-auto`
+    //   IS a real baseballcardpedia row at exact/0.98 — and 1997 Fleer #8 is
+    //   a completely different card from 1997 Metal Universe #8. Every gate
+    //   passed and the verdict was REDERIVE onto the wrong product.
+    //
+    // So a recovered set name must be corroborated by the one field that can
+    // contradict it: the player on the destination row. A disagreement is a
+    // refusal, and a destination with NO player name is not agreement either
+    // (memory: "count by source, not row count" — a null is not a witness).
+    //
+    // Scoped to RECOVERED set names on purpose. A STORED set name is the
+    // holding's own claim about its product, and this pass has never been in
+    // the business of second-guessing it.
+    const setNameWasRecovered = (recovery?.recovered ?? []).some((f: any) => f.field === "setName");
+    if (setNameWasRecovered) {
+      if (!recoveredSetNameIsCorroborated(h.playerName, backing.playerName)) {
+        push({ to, backedBy: backing.source, verdict: "UNVERIFIED",
+          reason: `set name was recovered from listing text and the destination does not corroborate it: holding player ${JSON.stringify(h.playerName ?? null)} vs catalog row ${JSON.stringify(backing.playerName ?? null)}`,
+          matchedBy: r.matchedBy, confidence: r.confidence,
+          recoveredFields: (recovery?.recovered ?? []).map((f: any) => ({ field: f.field, value: f.value, source: f.source, via: f.via })),
+          userAuthored: !!recovery?.userAuthored });
+        console.log(`  UNVERIFIED ${label}\n             ${from}\n          -> ${to}   NOT WRITTEN: recovered setName, player mismatch (holding ${JSON.stringify(h.playerName ?? null)} vs row ${JSON.stringify(backing.playerName ?? null)})`);
+        continue;
+      }
+    }
+
     // GATE 2 — NO SILENT COLLAPSE. A holding that claims a print run, a serial
     // or a parallel the destination does not carry is a DIFFERENT card from
     // the destination, and moving it there would fuse two pools.
@@ -576,7 +703,13 @@ async function rederive(
     //      dropped claim.
     //
     // The gate itself is right and is left exactly as it was.
-    const claimed = droppedSpecificityAxes(h, to);
+    // The gate is asked about the RECOVERED claim, because that is the claim
+    // the match was made on. Asked about the stored fields it would read a
+    // recovered "Diamond Dominance" as a dropped axis on a destination that
+    // spells it — refusing the very move recovery exists to enable. The gate
+    // itself is unchanged; only the claim it is handed is now complete.
+    const claimed = droppedSpecificityAxes(
+      recovery ? { ...h, ...recovery.fields } : h, to);
     if (claimed.length) {
       push({ to, backedBy: backing.source, verdict: "UNVERIFIED",
         reason: `no ladder source — the holding claims ${claimed.map((a) => `${a}=${h[a]}`).join(", ")} and the destination does not carry it`,
@@ -596,8 +729,25 @@ async function rederive(
       continue;
     }
 
+    // GATE 4 — A HUMAN'S RULING OUTRANKS EVERY INFERENCE IN THIS PASS.
+    // Ruled and user-edited rows are report-only forever (the GREAT REMATCH
+    // program's standing rule). Field recovery makes this gate matter more,
+    // not less: recovery is exactly the kind of new evidence that would
+    // justify revisiting a ruling, so the finding is REPORTED in full — with
+    // its provenance — and the decision is left to the person who made it.
+    const recoveredFields = (recovery?.recovered ?? []).map((f: any) =>
+      ({ field: f.field, value: f.value, source: f.source, via: f.via }));
+    if (recovery?.userAuthored) {
+      push({ to, backedBy: backing.source, verdict: "UNVERIFIED",
+        reason: `a human ruled this identity (${recovery.userAuthoredBy}) — report only; field recovery proposes ${to}`,
+        matchedBy: r.matchedBy, confidence: r.confidence, recoveredFields, userAuthored: true });
+      console.log(`  UNVERIFIED ${label}\n             ${from}\n          -> ${to}   NOT WRITTEN: ruled by ${recovery.userAuthoredBy} — a human's identity is never overwritten by this pass`);
+      continue;
+    }
+
     push({ to, backedBy: backing.source, verdict: "REDERIVE",
-      reason: `checklist-backed by ${backing.source}`, matchedBy: r.matchedBy, confidence: r.confidence });
+      reason: `checklist-backed by ${backing.source}`, matchedBy: r.matchedBy, confidence: r.confidence,
+      recoveredFields, userAuthored: false });
     console.log(`  REDERIVE   ${label}\n             ${from}\n          -> ${to}   (${r.matchedBy}, conf ${r.confidence})  backed by ${backing.source}${backing.setName ? ` — "${backing.setName}"` : ""}`);
   }
 
@@ -655,6 +805,13 @@ async function rederive(
       h.identityRederivedAt = now;
       h.identityRederivedBy = "recheck-holding-identity MODE=rederive";
       h.identityRederivedBackedBy = v.backedBy;
+      // FIELD RECOVERY provenance. A later pass must be able to tell an
+      // identity derived from the holding's own listing evidence from one
+      // derived off its stored fields, and see WHICH fact came from WHERE.
+      // Absent when nothing was recovered — the field says something happened.
+      if (v.recoveredFields?.length) {
+        h.identityRecoveredFields = v.recoveredFields;
+      }
       // The stored price was computed for the OLD identity and is not ours.
       h.predictedPrice = null;
       h.predictedPriceUpdatedAt = null;
