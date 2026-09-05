@@ -70,6 +70,49 @@ export const DONRUSS_SPELLING_POLICY: DonrussSpellingPolicy = "panini-era";
 /** Panini acquired Donruss in 2009 (CF-PANINI-IS-ANACHRONISTIC-BEFORE-2009). */
 export const PANINI_DONRUSS_FROM_YEAR = 2009;
 
+/**
+ * CF-THERE-IS-NO-FLEER-TIFFANY (Drew, 2026-09-05).
+ *
+ * "Tiffany" is a TOPPS line. Fleer's factory/coated products of the 1980s are
+ * FLEER GLOSSY -- the 1987-1989 Glossy Tin ("Custom Coated Collector's
+ * Edition"), plus Fleer Update Glossy 1987-1988. There is no 1980s Fleer
+ * Tiffany product, and there never was; #1748 already staged those five years
+ * under `fleer-glossy` / `fleer-update-glossy` and pinned that 1990/1991 have
+ * no Glossy page at all.
+ *
+ * The market does not know that. Measured on the pool 2026-09-04, nine 1987
+ * sales carry BOTH words -- "1987 Fleer **GLOSSY** #369 Bo Jackson ROOKIE
+ * TIFFANY", "1987 Fleer Update Glossy (Tiffany) Greg Maddux RC #U-68". Those
+ * titles already resolve correctly, because `glossy` wins the vocabulary when
+ * both words appear. The gap is the title that says Tiffany and NOTHING else:
+ *
+ *     normalizeSetKey("1987 Fleer Tiffany") -> "fleer-tiffany"
+ *
+ * -- a product that does not exist in 1987, so the sale lands in a pool with
+ * no checklist behind it and no other sale to price against. This maps it to
+ * the product the seller is actually describing.
+ *
+ * WHY AN ERA RULE AND NOT A REWRITE. `fleer-tiffany` IS a real product from
+ * 1996 -- 1996/1997 Fleer Tiffany (the pack-inserted coated parallel),
+ * 1997-98 Fleer Tiffany basketball, 2002 Fleer Tiffany (/200), and the source
+ * serves every one of them at its own set page under that name. 848 pool rows
+ * sit on the key today and ALL 848 have titles that say "Tiffany"; not one is
+ * from the 1980s. A blanket rewrite would destroy a real product's pool to fix
+ * a nine-row misnomer. The year is what separates them, so the year is what
+ * decides -- exactly as it does for Donruss above.
+ *
+ * The boundary is the last year Fleer made a coated set under the Glossy name.
+ * Below it a Tiffany key is a misnomer for Glossy; from it, the key is the
+ * product the source names.
+ */
+export const FLEER_TIFFANY_IS_GLOSSY_BEFORE_YEAR = 1996;
+
+/** The 1980s Glossy products a "Fleer Tiffany" text is a misnomer for. */
+const FLEER_TIFFANY_ERA_MISNOMERS: Readonly<Record<string, string>> = Object.freeze({
+  "fleer-tiffany": "fleer-glossy",
+  "fleer-update-tiffany": "fleer-update-glossy",
+});
+
 export interface ProductSetKey {
   /** The one spelling. */
   readonly setKey: string;
@@ -558,6 +601,15 @@ export function productSetKeyForName(slug: string | null | undefined): string | 
 /** Ruling (b) as code: which spelling Donruss takes in `year` under the
  *  policy. Every other key passes through untouched. */
 export function spellForEra(setKey: string, year: number | null | undefined, policy: DonrussSpellingPolicy = DONRUSS_SPELLING_POLICY): string {
+  // CF-THERE-IS-NO-FLEER-TIFFANY: before 1996 a Fleer "Tiffany" text names the
+  // GLOSSY product (see FLEER_TIFFANY_IS_GLOSSY_BEFORE_YEAR). From 1996 the key
+  // is a real product the source names, and passes through untouched. A year we
+  // do not have cannot decide, so an absent year leaves the key alone.
+  const misnomer = FLEER_TIFFANY_ERA_MISNOMERS[setKey];
+  if (misnomer !== undefined) {
+    if (typeof year !== "number" || !Number.isFinite(year) || year <= 0) return setKey;
+    return year < FLEER_TIFFANY_IS_GLOSSY_BEFORE_YEAR ? misnomer : setKey;
+  }
   if (setKey !== "donruss" && setKey !== "panini-donruss") return setKey;
   if (policy === "as-named") return setKey;
   if (typeof year !== "number" || !Number.isFinite(year) || year <= 0) return setKey;
