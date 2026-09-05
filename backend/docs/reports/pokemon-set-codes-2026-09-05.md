@@ -152,8 +152,36 @@ source scan so the acquisition question is answered before it is asked.
 **None of these is used in this PR.** Each is reachable and each would need the same licence check
 tcgdex passed and pokemontcg.io failed. That check is a ruling, not a scrape.
 
-*(The volume census for these verticals is reported in the PR body — it is a live read and is quoted
-there with its own measurement date.)*
+### The volume census, and why this report does not quote a number
+
+A read-only per-vertical census (rows, dollars, 90-day velocity, unknown-key share) was written and
+run against prod on 2026-09-05: `COUNT` and `SUM` per `c.sport` over `sold_comps`, plus the
+`CONTAINS(c.cardId, ":unknown:")` share of each.
+
+**It did not return within the session's budget**, and that is itself the finding worth recording:
+a per-vertical aggregate over a 20M-row container is a cross-partition scan measured at **>50 minutes
+without completing**, which is the same shape #1796 hit when its product-level query
+(`WHERE c.setKey=@sk AND c.cardYear=@y`) failed to return in four minutes. The first
+`GROUP BY c.sport` formulation was worse still and had to be abandoned; the per-vertical rewrite is
+the one that ran.
+
+So **no volume number is quoted here rather than an estimated one**, per the census's own rule that a
+number presented as measured had better be measured. What the vertical-refactor decision needs is a
+count of rows and dollars per TCG vertical, and getting it wants either a cheaper access path
+(the pre-aggregated container, or `sport` as a partition-aligned filter) or a job with a longer budget
+than an interactive session. That is a small, well-defined follow-on, and the script is committed
+ready to run:
+
+```bash
+COSMOS_CONNECTION_STRING="$(az webapp config appsettings list --name HobbyIQ3 \
+  --resource-group rg-hobbyiq-dev \
+  --query "[?name=='COSMOS_CONNECTION_STRING'].value" -o tsv)" \
+node backend/scripts/census-tcg-verticals.cjs --json=/tmp/tcg-verticals.json
+```
+
+What IS established without it: **tcgdex cannot serve these four games** (all 21 of its series are
+Pokémon), and each candidate source above needs a licence ruling first. Those two facts are the
+gating questions for the vertical refactor, and neither depends on the row count.
 
 ## What this PR does NOT do
 
