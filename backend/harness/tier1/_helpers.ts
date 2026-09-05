@@ -14,6 +14,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect } from "vitest";
+import { FMV_RUNG_LABELS } from "../../src/services/compiq/fmvRung.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const TIER1_ROOT = __dirname;
@@ -574,6 +575,22 @@ const ALLOWED_SOURCES = new Set([
   "scarcity-prior-floor",         // Tier 5 — product-year cross-player anchor × parallel floor
   "reference-catalog-baseline",   // Tier 6 — era baseline × ladder tier
   "setdoc-baseline",              // Tier 7 — era × set-type baseline (last resort)
+
+  // CF-ONE-VALUATION-PATH (D16, #1483, 2026-08-30). When the ladder PRICES a
+  // card, `source` on the /price-by-id wire is no longer a source name at
+  // all — `toPriceByIdResponse` sets `source: v.rungLabel`, "the same name
+  // every other wire carries". The no-price branch still answers
+  // "no-recent-comps", which is why only the cases that ACQUIRED a pool went
+  // red: as their Bowman Draft Chrome comps landed they crossed from the
+  // refusal branch into the priced one and started naming a rung.
+  //
+  // This list is not extended by hand with the rung names, because that is
+  // the very mistake `FMV_RUNG_LABELS` exists to prevent (see fmvRung.ts:
+  // the persist gate that had never heard of `player-index-projection` and
+  // showed a $215.17 card as unpriced). The harness asks the vocabulary, so
+  // a rung added to the engine is admitted here by construction and the
+  // build-time exhaustiveness assertion keeps the vocabulary honest.
+  ...FMV_RUNG_LABELS,
 ]);
 
 export function expectWellFormed(
