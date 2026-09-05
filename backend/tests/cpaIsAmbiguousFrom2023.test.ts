@@ -38,6 +38,8 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { computeHobbyIqCardId } from "../src/services/portfolioiq/hobbyIqCardId.service";
+import { decideCollisionPark } from "../src/services/catalog/initialsCollisionPark";
+import { checkSetKeyFieldMatchesIdStem } from "../src/services/catalog/setKeyFieldInvariant";
 
 const base = { sport: "baseball", isAuto: true, playerName: "Gage Wood" } as const;
 const setKeyOf = (id: string) => id.split(":")[3];
@@ -131,5 +133,57 @@ describe("the year scope is load-bearing", () => {
     expect(SRC).toMatch(
       /if \(typeof rule\.maxYear === "number" && !\(year > 0 && year <= rule\.maxYear\)\) continue;/,
     );
+  });
+});
+
+/**
+ * Composition. This ruling sits between two others landed the same day, and a
+ * fix that quietly disabled either of them would be a worse bug than the one
+ * it closed.
+ */
+describe("composes with the rulings either side of it", () => {
+  it("#1802 initialsCollisionPark still parks CPA-AG with no readable player", () => {
+    // The park rule keys on (sport, year, cardNumber, playerName) and never
+    // reads the setKey, so moving the setKey cannot silence it. A sale that
+    // names a NUMBER two checklists give to two players still prices nothing.
+    const parked = decideCollisionPark({
+      sport: "baseball", year: 2026, cardNumber: "CPA-AG", playerName: null,
+    });
+    expect(parked.kind).toBe("park");
+    if (parked.kind === "park") expect(parked.reason).toBe("collision-number-no-player");
+
+    // ...and a readable player still decides the card by itself.
+    expect(decideCollisionPark({
+      sport: "baseball", year: 2026, cardNumber: "CPA-AG", playerName: "Adrian Gil",
+    }).kind).toBe("ok");
+  });
+
+  it("#1800 setKeyFieldInvariant: a mint whose field says bowman now HAS a bowman stem", () => {
+    // This is the defect #1800 refuses -- `stem-more-specific-than-field` --
+    // and the census (2026-09-05) counted 19,867 stored rows in exactly that
+    // shape, minted by this very override. After the year scope the vendor
+    // path stops producing them: the two fixes agree instead of fighting.
+    const minted = computeHobbyIqCardId({
+      sport: "baseball", year: 2026, setKey: "Bowman", cardNumber: "CPA-AG",
+      parallel: "Refractor", isAuto: true, printRun: 499,
+    });
+    expect(minted).toContain(":bowman:");
+    expect(checkSetKeyFieldMatchesIdStem({ id: minted, setKey: "bowman" })).toBeNull();
+
+    // The pre-fix shape is precisely the violation the invariant names.
+    const old = checkSetKeyFieldMatchesIdStem({
+      id: "hiq:baseball:2026:bowman-chrome:cpa-ag:refractor:auto:num-499",
+      setKey: "bowman",
+    });
+    expect(old?.reason).toBe("stem-more-specific-than-field");
+  });
+
+  it("a title that SAYS Bowman Chrome still mints a coherent bowman-chrome row", () => {
+    const chrome = computeHobbyIqCardId({
+      sport: "baseball", year: 2026, setKey: "Bowman Chrome", cardNumber: "CPA-AG",
+      parallel: "Refractor", isAuto: true, printRun: 499,
+    });
+    expect(chrome).toContain(":bowman-chrome:");
+    expect(checkSetKeyFieldMatchesIdStem({ id: chrome, setKey: "bowman-chrome" })).toBeNull();
   });
 });
