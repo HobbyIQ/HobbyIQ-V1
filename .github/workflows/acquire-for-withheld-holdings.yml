@@ -1,0 +1,558 @@
+name: Acquire For Withheld Holdings (queue -> ingest -> rederive -> reprice)
+
+# CF-IF-KNOWN-WE-SHOULD-BE-ABLE-TO-FIGURE-IT-OUT (Drew, 2026-09-05).
+#
+#   "if known, we should be able to figure it out"
+#
+# A holding withheld for `no-checklist-match` whose card IS identifiable must
+# resolve WITHOUT A HUMAN. Every piece already existed and nothing joined them:
+#
+#   #1784  prints an acquisition queue per (sport, year, setKey) -- and nobody
+#          reads it. Top of it tonight: 2026 bowman-chrome, 4,084.
+#   D38    `ingest-universe-driver` ingests a product when handed exact
+#          manifest setNames in `titles`.
+#   R2     `rederive-holding-identity` (MODE=rederive, ids in `titles`)
+#          re-points the holdings onto the rows that ingest just landed.
+#   -      `reprice-user-holdings` republishes the number.
+#
+# This workflow is the connection: one nightly pass that READS the withheld
+# population, MATCHES each cell to a source, and then drives the four dispatches
+# in order, gating each on the banner of the one before it.
+#
+# ── WHY A SEPARATE WORKFLOW AND NOT A LANE INSIDE backfill-runner.yml ───────
+#
+# The plan script IS a whitelisted runner lane (`acquire-for-withheld-holdings`)
+# and can be dispatched there like any other. But the CHAIN cannot live there:
+# backfill-runner.yml is `workflow_dispatch` only -- it has no `schedule:` block
+# at all -- and the task's constraint is a scheduled lane with NO NEW
+# workflow_dispatch input. A chain step also has to `gh workflow run` the runner
+# and then `gh run watch` it, which a job cannot do to the workflow it is
+# itself running under without deadlocking on its own concurrency.
+#
+# So: the LANE is whitelisted in the runner (report-only, budgeted, pinned by
+# runnerBudgetMargin), and the SCHEDULE + the chain live here, the same shape as
+# checklist-acquisition.yml (its own cron, its own dispatches).
+#
+# ── WHAT MAKES THIS SAFE TO RUN UNATTENDED ──────────────────────────────────
+#
+# REPORT-FIRST AND SELF-GATING. Every APPLY in the chain is preceded by the same
+# dispatch in report mode, and the apply runs only if the report's OWN BANNER
+# says the work is real:
+#
+#   GATE 1  no driver APPLY unless the driver REPORT verdicted `ingested` or
+#           `partial` with rows > 0 AND printed its reconciliation line.
+#           (CF-GREEN-WORKFLOW-IS-NOT-DATA-FLOW: a green run is not a write.)
+#   GATE 2  no rederive at all unless the driver APPLY itself landed rows.
+#   GATE 3  no rederive APPLY unless the rederive REPORT proposed re-points and
+#           reported no UNVERIFIED destination.
+#   GATE 4  no reprice unless the rederive APPLY reconciled.
+#
+# RUN CAPTURE IS BY MARKER, NEVER BY `latest`. `gh run list --limit 1` returns
+# whatever run happens to be newest, which on this repo is routinely somebody
+# else's fleet. Every dispatch here is captured by (a) created-after the moment
+# we dispatched, (b) the workflow name, and then CONFIRMED by grepping the run's
+# own log for "Script confirmed: backend/scripts/<the script>.cjs" AND the scope
+# marker (the titles we passed). A run that does not confirm is not ours and the
+# chain refuses rather than gating on a stranger's banner.
+#
+# BOUNDED AND IDEMPOTENT. NIGHTLY_CAP cells per night, ranked holdings-first. A
+# cell whose ingest lands 0 new rows verdicts `ingested` with nothing to do and
+# its holdings do not re-point, so tomorrow's ranking -- recomputed from the
+# withheld population, which no longer contains them -- simply does not include
+# it. The queue is self-limiting for the same reason checklist-acquisition's is.
+#
+# THE LEDGER. There is no audit/report container that fits a per-cell
+# acquisition outcome (portfolio, sold_comps, card_catalog and crawl_state all
+# hold something else, and inventing a container is a live prod config change
+# this session may not make). So the ledger is: a JSON artifact, the step
+# summary, and a comment on a standing tracking issue -- created once, by title.
+
+on:
+  schedule:
+    # 03:20 ET nightly, chosen to sit AFTER the nightly ingest/rematch traffic
+    # and BEFORE the 5AM ET refresh + deploy, so a cell acquired tonight is
+    # priced by the morning. GitHub cron is UTC with no DST, pinned to EDT
+    # (UTC-4) like every other scheduled job in this repo.
+    - cron: "20 7 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  id-token: write   # Azure OIDC for the App Service secret fetch
+  actions: write    # dispatch the runner lanes
+  issues: write     # the standing tracking issue + its per-night comment
+
+concurrency:
+  # One chain at a time. Two nights overlapping would dispatch the same cell
+  # twice and gate each other's banners.
+  group: acquire-for-withheld-holdings
+  cancel-in-progress: false
+
+env:
+  # THE NIGHTLY CAP. Each cell is a real publisher fetch plus an ingest plus a
+  # rederive plus a reprice; checklist-acquisition measured that pulling harder
+  # than ~12 products/run raises the failure rate rather than the throughput,
+  # and this chain does strictly more work per cell than that one does.
+  NIGHTLY_CAP: "10"
+  # How long to wait on any one dispatched run before calling it stuck. The
+  # runner's own step ceiling is 150 minutes; a self-relaunching lane can exceed
+  # that, and this chain deliberately does NOT follow a relaunch -- it gates on
+  # the generation it dispatched and leaves the rest to tomorrow.
+  WATCH_MINUTES: "170"
+
+jobs:
+  plan:
+    name: Plan tonight's cells
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    outputs:
+      cells: ${{ steps.plan.outputs.cells }}
+      count: ${{ steps.plan.outputs.count }}
+      issue: ${{ steps.issue.outputs.number }}
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v5
+        with:
+          ref: main
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v5
+        with:
+          node-version: "20"
+
+      - name: Install backend deps
+        working-directory: backend
+        run: npm ci
+
+      # dist/ is what gives the matcher `normalizeSetKey`. Without it the lane
+      # falls back to raw-key matching and says so in its own banner -- it does
+      # not crash -- but a night that matched on raw keys only would quietly
+      # under-match, so the build is part of the plan step, not optional.
+      - name: Build backend dist
+        working-directory: backend
+        run: npm run build
+
+      - name: Login to Azure
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Fetch COSMOS_CONNECTION_STRING from HobbyIQ3 App Service
+        shell: bash
+        run: |
+          # Piped straight into the step env, never echoed and never on disk
+          # (feedback_secrets_never_to_stdout: the transcript IS the leak).
+          CONN=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='COSMOS_CONNECTION_STRING'].value" -o tsv)
+          if [ -z "$CONN" ]; then echo "::error::could not fetch COSMOS_CONNECTION_STRING"; exit 1; fi
+          echo "::add-mask::$CONN"
+          echo "COSMOS_CONNECTION_STRING=$CONN" >> "$GITHUB_ENV"
+
+      # ── (1) READ + (2) MATCH ────────────────────────────────────────────
+      # READ ONLY. The lane refuses an apply dispatch outright (exit 3), so this
+      # step cannot write however it is configured; BACKFILL_APPLY is left unset
+      # rather than set false, so there is nothing here to flip by accident.
+      - name: "Plan: read the withheld holdings and match each cell to a source"
+        id: plan
+        working-directory: backend
+        env:
+          MODE: json
+          TOP: ${{ env.NIGHTLY_CAP }}
+          OUT: /tmp/acquisition-plan.json
+        shell: bash
+        run: |
+          set -o pipefail
+          node scripts/acquire-for-withheld-holdings.cjs > /tmp/plan.json
+          # The lane prints the human banner to stderr in json mode, so stdout
+          # is a single parseable document.
+          COUNT=$(jq '.tonight | length' /tmp/plan.json)
+          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
+          echo "cells=$(jq -c '.tonight' /tmp/plan.json)" >> "$GITHUB_OUTPUT"
+          {
+            echo "## Acquisition plan"
+            echo
+            echo "| holdings | sales | cell | source |"
+            echo "|---:|---:|---|---|"
+            jq -r '.tonight[] | "| \(.holdings) | \(.salesVolume) | \(.cell) | \(.source.lane): \(.source.setName) |"' /tmp/plan.json
+            echo
+            echo "**needs a source:** $(jq '.counts.needsSource' /tmp/plan.json) cells — "
+            echo "these are the sets we own cards in and have no way to acquire."
+            echo
+            jq -r '.needsSourceCells[:20][] | "- `\(.cell)` — \(.holdings) holdings"' /tmp/plan.json
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the plan
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: acquisition-plan-${{ github.run_id }}
+          path: /tmp/plan.json
+          if-no-files-found: warn
+
+      # ── (4) LEDGER: the standing tracking issue, created once ────────────
+      - name: Ensure the tracking issue exists
+        id: issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          TITLE="Acquisition queue: withheld holdings"
+          N=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --limit 100 \
+                --search "$TITLE in:title" --json number,title \
+                --jq "[.[] | select(.title == \"$TITLE\")] | .[0].number // empty")
+          if [ -z "$N" ]; then
+            # The body goes through a FILE, not an inline argument: a multi-line
+            # --body inside a YAML block scalar needs every continuation line
+            # indented under the block, and a body written flush-left silently
+            # ends the scalar and makes the whole workflow unparseable.
+            cat > /tmp/issue-body.md <<'BODY'
+          Standing tracker for **CF-IF-KNOWN-WE-SHOULD-BE-ABLE-TO-FIGURE-IT-OUT** (Drew, 2026-09-05).
+
+          A holding withheld for `no-checklist-match` whose card IS identifiable must resolve
+          without a human. The nightly `Acquire For Withheld Holdings` chain comments here
+          every night with:
+
+          - the cells it acquired (queue -> ingest -> rederive -> reprice), and
+          - the cells that **need a source** — the sets we own cards in and have no way to acquire.
+
+          The second list is the input to the discovery program. Nothing here is auto-closed.
+          BODY
+            sed -i 's/^          //' /tmp/issue-body.md
+            N=$(gh issue create --repo "$GITHUB_REPOSITORY" --title "$TITLE" \
+              --body-file /tmp/issue-body.md | grep -oE '[0-9]+$')
+          fi
+          echo "number=$N" >> "$GITHUB_OUTPUT"
+          echo "tracking issue #$N"
+
+      - name: Comment the night's plan on the tracking issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          {
+            echo "### Plan — run [\`${GITHUB_RUN_ID}\`](https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)"
+            echo
+            jq -r '"- **\(.counts.withheld)** withheld holdings in **\(.counts.cells)** cells; **\(.counts.matched)** matched, **\(.counts.needsSource)** need a source, **\(.counts.unaddressable)** unaddressable."' /tmp/plan.json
+            echo
+            echo "Tonight (cap ${NIGHTLY_CAP}):"
+            jq -r '.tonight[] | "- `\(.cell)` — \(.holdings) holdings — \(.source.lane): \(.source.setName)"' /tmp/plan.json
+          } > /tmp/comment.md
+          gh issue comment "${{ steps.issue.outputs.number }}" --repo "$GITHUB_REPOSITORY" --body-file /tmp/comment.md
+
+  # ── (3) DISPATCH ────────────────────────────────────────────────────────
+  # One matrix leg per cell, run SERIALLY (max-parallel 1): each leg dispatches
+  # the shared backfill runner, and two legs racing would contend for the same
+  # runner concurrency and gate on each other's banners.
+  acquire:
+    name: ${{ matrix.cell.cell }}
+    needs: plan
+    if: ${{ needs.plan.outputs.count != '0' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    strategy:
+      max-parallel: 1
+      fail-fast: false
+      matrix:
+        cell: ${{ fromJson(needs.plan.outputs.cells) }}
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v5
+        with:
+          ref: main
+
+      # THE RUN-CAPTURE HELPER. Every dispatch in this job goes through it.
+      #
+      #   dispatch <marker> <script> <args...>
+      #
+      # It records the UTC instant BEFORE dispatching, dispatches, then polls
+      # `gh run list --workflow=backfill-runner.yml --created ">=<that instant>"`
+      # and, for each candidate, downloads the log and requires BOTH
+      #   "Script confirmed: backend/scripts/<script>.cjs"
+      # and the scope marker (the exact titles string we passed) to appear in it.
+      # A run missing either is somebody else's and is skipped. Nothing here
+      # ever takes `--limit 1` blind, and displayTitle is never consulted: it is
+      # the same string for every dispatch of a given lane.
+      - name: Install the run-capture helper
+        shell: bash
+        run: |
+          mkdir -p /tmp/bin
+          cat > /tmp/bin/dispatch <<'HELPER'
+          #!/usr/bin/env bash
+          # dispatch <marker> <script> [-f k=v ...]   -> prints RUN_ID, log at /tmp/run-<RUN_ID>.log
+          set -uo pipefail
+          MARKER="$1"; shift
+          SCRIPT="$1"; shift
+          SINCE=$(date -u -d '-1 minute' +%Y-%m-%dT%H:%M:%SZ)
+          gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main \
+            -f script="$SCRIPT" "$@" >&2 || { echo "::error::dispatch failed for $SCRIPT" >&2; exit 1; }
+          RUN_ID=""
+          for _ in $(seq 1 30); do
+            sleep 10
+            for ID in $(gh run list --repo "$GITHUB_REPOSITORY" \
+                          --workflow=backfill-runner.yml --created ">=$SINCE" \
+                          --limit 30 --json databaseId --jq '.[].databaseId'); do
+              gh run view "$ID" --repo "$GITHUB_REPOSITORY" --log > "/tmp/probe-$ID.log" 2>/dev/null || true
+              # The two proofs: the lane is the one we asked for, and the scope
+              # is the one we passed. Either alone is satisfied by a stranger.
+              if grep -aq "Script confirmed: backend/scripts/${SCRIPT}.cjs" "/tmp/probe-$ID.log" \
+                 && grep -aqF "$MARKER" "/tmp/probe-$ID.log"; then
+                RUN_ID="$ID"; break
+              fi
+            done
+            [ -n "$RUN_ID" ] && break
+          done
+          if [ -z "$RUN_ID" ]; then
+            echo "::error::could not identify our $SCRIPT run by marker — refusing to gate on a run we cannot name" >&2
+            exit 1
+          fi
+          echo "watching run $RUN_ID for $SCRIPT ($MARKER)" >&2
+          timeout "${WATCH_MINUTES:-170}m" gh run watch "$RUN_ID" --repo "$GITHUB_REPOSITORY" --exit-status >&2
+          gh run view "$RUN_ID" --repo "$GITHUB_REPOSITORY" --log > "/tmp/run-$RUN_ID.log" 2>/dev/null || true
+          echo "$RUN_ID"
+          HELPER
+          chmod +x /tmp/bin/dispatch
+          echo "/tmp/bin" >> "$GITHUB_PATH"
+
+      # ── STEP A: the ingest REPORT (apply=false) ─────────────────────────
+      - name: Ingest report (apply=false) for this cell's titles
+        id: ingest_report
+        env:
+          GH_TOKEN: ${{ github.token }}
+          WATCH_MINUTES: ${{ env.WATCH_MINUTES }}
+        shell: bash
+        run: |
+          set -uo pipefail
+          SET_NAME='${{ matrix.cell.source.setName }}'
+          LANE='${{ matrix.cell.source.lane }}'
+          RUN_ID=$(dispatch "$SET_NAME" ingest-universe-driver \
+            -f apply=false -f sources="$LANE" -f titles="$SET_NAME" \
+            -f sports='${{ matrix.cell.sport }}' -f years='${{ matrix.cell.year }}' \
+            -f scope=recheck) || exit 1
+          echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+          cp "/tmp/run-$RUN_ID.log" /tmp/ingest-report.log
+
+      # ── GATE 1 ──────────────────────────────────────────────────────────
+      # No APPLY without a RECONCILED report that verdicted ingested/partial
+      # with rows > 0. Three independent conditions, each of which has been the
+      # thing that was wrong on some past run:
+      #   - "RECONCILED NO" means the driver could not verify its own claim
+      #     (#1738: it counted a key the child never wrote).
+      #   - a verdict of `unreachable`/`failed` means the source does not serve
+      #     this set — acquiring nothing is the correct outcome, not an error.
+      #   - rows == 0 means there is nothing to land, so an apply is a no-op
+      #     that would still burn a publisher fetch.
+      - name: "Gate: the ingest report reconciled with rows to land"
+        id: gate_ingest
+        shell: bash
+        run: |
+          set -uo pipefail
+          LOG=/tmp/ingest-report.log
+          PROCEED=yes; WHY=""
+          if grep -aqE "RECONCILED +NO" "$LOG"; then PROCEED=no; WHY="the report did not reconcile"; fi
+          if ! grep -aqE "\b(ingested|partial)\b" "$LOG"; then
+            PROCEED=no; WHY="${WHY:-no ingested/partial verdict — the source does not serve this set}"
+          fi
+          ROWS=$(grep -aoE "rows[= ]+[0-9]+" "$LOG" | grep -oE "[0-9]+" | sort -rn | head -1 || true)
+          ROWS=${ROWS:-0}
+          if [ "$ROWS" -le 0 ]; then PROCEED=no; WHY="${WHY:-0 rows — nothing to land}"; fi
+          echo "proceed=$PROCEED" >> "$GITHUB_OUTPUT"
+          echo "rows=$ROWS" >> "$GITHUB_OUTPUT"
+          echo "why=$WHY" >> "$GITHUB_OUTPUT"
+          echo "GATE 1 proceed=$PROCEED rows=$ROWS ${WHY:+(}${WHY}${WHY:+)}"
+
+      # ── STEP B: the ingest APPLY ────────────────────────────────────────
+      - name: Ingest apply (gated)
+        id: ingest_apply
+        if: ${{ steps.gate_ingest.outputs.proceed == 'yes' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          WATCH_MINUTES: ${{ env.WATCH_MINUTES }}
+        shell: bash
+        run: |
+          set -uo pipefail
+          SET_NAME='${{ matrix.cell.source.setName }}'
+          RUN_ID=$(dispatch "$SET_NAME" ingest-universe-driver \
+            -f apply=true -f sources='${{ matrix.cell.source.lane }}' -f titles="$SET_NAME" \
+            -f sports='${{ matrix.cell.sport }}' -f years='${{ matrix.cell.year }}' \
+            -f scope=recheck) || exit 1
+          echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+          cp "/tmp/run-$RUN_ID.log" /tmp/ingest-apply.log
+
+      # ── GATE 2 ──────────────────────────────────────────────────────────
+      # No rederive without an INGESTED verdict from the apply itself. The
+      # report proved the source serves the set; only the apply proves rows
+      # LANDED, and re-pointing a holding onto a row that does not exist is how
+      # a withheld holding becomes a wrong one.
+      - name: "Gate: the ingest apply landed rows"
+        id: gate_apply
+        if: ${{ steps.gate_ingest.outputs.proceed == 'yes' }}
+        shell: bash
+        run: |
+          set -uo pipefail
+          LOG=/tmp/ingest-apply.log
+          PROCEED=yes; WHY=""
+          if grep -aqE "RECONCILED +NO" "$LOG"; then PROCEED=no; WHY="the apply did not reconcile"; fi
+          if ! grep -aqE "\b(ingested|partial)\b" "$LOG"; then
+            PROCEED=no; WHY="${WHY:-the apply recorded no ingested/partial verdict}"
+          fi
+          echo "proceed=$PROCEED" >> "$GITHUB_OUTPUT"
+          echo "why=$WHY" >> "$GITHUB_OUTPUT"
+          echo "GATE 2 proceed=$PROCEED ${WHY:+(}${WHY}${WHY:+)}"
+
+      # ── STEP C: the rederive REPORT ─────────────────────────────────────
+      # The holding ids travel in `titles` (the shim reads them as HOLDING_IDS);
+      # the runner has no holding-ids input and is at its dispatch cap.
+      - name: Rederive report (apply=false) for this cell's holdings
+        id: rederive_report
+        if: ${{ steps.gate_apply.outputs.proceed == 'yes' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          WATCH_MINUTES: ${{ env.WATCH_MINUTES }}
+        shell: bash
+        run: |
+          set -uo pipefail
+          IDS='${{ join(matrix.cell.holdingIds, ',') }}'
+          if [ -z "$IDS" ]; then echo "::error::no holding ids for this cell — refusing an unscoped rederive"; exit 1; fi
+          RUN_ID=$(dispatch "$IDS" rederive-holding-identity \
+            -f apply=false -f titles="$IDS" -f mode=rederive) || exit 1
+          echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+          cp "/tmp/run-$RUN_ID.log" /tmp/rederive-report.log
+
+      # ── GATE 3 ──────────────────────────────────────────────────────────
+      # No rederive APPLY unless its own report proposed re-points AND reported
+      # no UNVERIFIED destination. The shim's exit codes are the vocabulary:
+      # 2 = refused scope, 4 = write conflict, 5 = read-back disagreed. A report
+      # that names an UNVERIFIED destination is a slug no checklist backs --
+      # exactly the thing this whole chain exists to avoid creating.
+      - name: "Gate: the rederive report proposes only verified destinations"
+        id: gate_rederive
+        if: ${{ steps.gate_apply.outputs.proceed == 'yes' }}
+        shell: bash
+        run: |
+          set -uo pipefail
+          LOG=/tmp/rederive-report.log
+          PROCEED=yes; WHY=""
+          if grep -aq "UNVERIFIED" "$LOG"; then
+            PROCEED=no; WHY="the report named an UNVERIFIED destination — a slug no checklist backs"
+          fi
+          if ! grep -aqiE "would re-point|re-point|REDERIVE" "$LOG"; then
+            PROCEED=no; WHY="${WHY:-the report proposed no re-points}"
+          fi
+          echo "proceed=$PROCEED" >> "$GITHUB_OUTPUT"
+          echo "why=$WHY" >> "$GITHUB_OUTPUT"
+          echo "GATE 3 proceed=$PROCEED ${WHY:+(}${WHY}${WHY:+)}"
+
+      # ── STEP D: the rederive APPLY ──────────────────────────────────────
+      - name: Rederive apply (gated)
+        id: rederive_apply
+        if: ${{ steps.gate_rederive.outputs.proceed == 'yes' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          WATCH_MINUTES: ${{ env.WATCH_MINUTES }}
+        shell: bash
+        run: |
+          set -uo pipefail
+          IDS='${{ join(matrix.cell.holdingIds, ',') }}'
+          RUN_ID=$(dispatch "$IDS" rederive-holding-identity \
+            -f apply=true -f titles="$IDS" -f mode=rederive) || exit 1
+          echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+          cp "/tmp/run-$RUN_ID.log" /tmp/rederive-apply.log
+
+      # ── GATE 4 + STEP E: reprice the affected users ─────────────────────
+      # One dispatch per user in the cell. `reprice-user-holdings` is the
+      # sanctioned reprice path (reference_reprice_user_holdings) -- never
+      # price-and-persist locally.
+      - name: Reprice the users whose holdings moved (gated)
+        id: reprice
+        if: ${{ steps.gate_rederive.outputs.proceed == 'yes' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          WATCH_MINUTES: ${{ env.WATCH_MINUTES }}
+        shell: bash
+        run: |
+          set -uo pipefail
+          if grep -aqE "RECONCILED +NO" /tmp/rederive-apply.log; then
+            echo "::warning::the rederive apply did not reconcile — not repricing"
+            echo "repriced=0" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          N=0
+          for U in $(echo '${{ join(matrix.cell.users, ' ') }}'); do
+            [ -z "$U" ] && continue
+            dispatch "$U" reprice-user-holdings -f apply=true -f titles="$U" >/dev/null \
+              && N=$((N+1)) || echo "::warning::reprice dispatch failed for $U"
+          done
+          echo "repriced=$N" >> "$GITHUB_OUTPUT"
+
+      # ── LEDGER: the per-cell outcome ────────────────────────────────────
+      - name: Write the cell's outcome to the ledger
+        if: ${{ !cancelled() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -uo pipefail
+          OUTCOME=$(cat <<JSON
+          {
+            "cell": "${{ matrix.cell.cell }}",
+            "holdings": ${{ matrix.cell.holdings }},
+            "source": { "lane": "${{ matrix.cell.source.lane }}", "setName": "${{ matrix.cell.source.setName }}" },
+            "ingestReportRun": "${{ steps.ingest_report.outputs.run_id }}",
+            "gate1": { "proceed": "${{ steps.gate_ingest.outputs.proceed }}", "rows": "${{ steps.gate_ingest.outputs.rows }}", "why": "${{ steps.gate_ingest.outputs.why }}" },
+            "ingestApplyRun": "${{ steps.ingest_apply.outputs.run_id }}",
+            "gate2": { "proceed": "${{ steps.gate_apply.outputs.proceed }}", "why": "${{ steps.gate_apply.outputs.why }}" },
+            "rederiveReportRun": "${{ steps.rederive_report.outputs.run_id }}",
+            "gate3": { "proceed": "${{ steps.gate_rederive.outputs.proceed }}", "why": "${{ steps.gate_rederive.outputs.why }}" },
+            "rederiveApplyRun": "${{ steps.rederive_apply.outputs.run_id }}",
+            "repricedUsers": "${{ steps.reprice.outputs.repriced }}"
+          }
+          JSON
+          )
+          echo "$OUTCOME" > "/tmp/outcome.json"
+          { echo "### \`${{ matrix.cell.cell }}\`"; echo '```json'; echo "$OUTCOME"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the cell outcome
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: outcome-${{ github.run_id }}-${{ strategy.job-index }}
+          path: /tmp/outcome.json
+          if-no-files-found: warn
+
+  report:
+    name: Comment the night's outcomes
+    needs: [plan, acquire]
+    if: ${{ !cancelled() && needs.plan.outputs.count != '0' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Download the outcomes
+        uses: actions/download-artifact@v4
+        with:
+          pattern: outcome-${{ github.run_id }}-*
+          path: /tmp/outcomes
+          merge-multiple: false
+
+      - name: Comment on the tracking issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          {
+            echo "### Outcomes — run [\`${GITHUB_RUN_ID}\`](https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)"
+            echo
+            echo '| cell | gate 1 | gate 2 | gate 3 | repriced |'
+            echo '|---|---|---|---|---|'
+            find /tmp/outcomes -name outcome.json -print0 2>/dev/null | while IFS= read -r -d '' F; do
+              jq -r '"| `\(.cell)` | \(.gate1.proceed) \(if .gate1.why != "" then "(\(.gate1.why))" else "" end) | \(.gate2.proceed // "-") | \(.gate3.proceed // "-") | \(.repricedUsers // "-") |"' "$F"
+            done
+          } > /tmp/outcomes.md
+          N=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --limit 100 \
+                --search "Acquisition queue: withheld holdings in:title" --json number,title \
+                --jq '[.[] | select(.title == "Acquisition queue: withheld holdings")] | .[0].number // empty')
+          if [ -n "$N" ]; then
+            gh issue comment "$N" --repo "$GITHUB_REPOSITORY" --body-file /tmp/outcomes.md
+          fi
+          cat /tmp/outcomes.md >> "$GITHUB_STEP_SUMMARY"
