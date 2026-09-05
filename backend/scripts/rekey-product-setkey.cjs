@@ -117,7 +117,6 @@
  */
 "use strict";
 const path = require("path");
-const crypto = require("crypto");
 
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
 const SPORT = String(process.env.SPORT || "").trim().toLowerCase();
@@ -138,6 +137,7 @@ const MODE = String(process.env.MODE || "").trim().toLowerCase();
 // -- sweeps EVERY row. SLOTS binds to 1 when unsharded, so `% SLOTS` and
 // `SLOTS === 1` guards below keep working unchanged.
 const { runnerShardScope } = require("./lib/runner-shard-scope.cjs");
+const { cardShardIndex } = require("./lib/card-shard-axis.cjs");
 const SHARD_SCOPE = runnerShardScope({ label: "rekey-product-setkey" });
 const { SHARDED, SLOT, SLOTS } = SHARD_SCOPE;
 const CONCURRENCY = Math.max(1, Number(process.env.CONCURRENCY || process.env.BACKFILL_CONCURRENCY || 16));
@@ -155,7 +155,14 @@ const STARTED = Date.now();
 
 const f = (n) => Number(n ?? 0).toLocaleString("en-US");
 const str = (v) => String(v ?? "").trim();
-const shardOf = (key) => parseInt(crypto.createHash("sha1").update(String(key)).digest("hex").slice(0, 8), 16) % SLOTS;
+// CF-A-MOVE-LANE-SHARDS-BY-CARD-NOT-BY-ROW (2026-09-05). MODE=catalog calls
+// moveCatalogRow, which retires the moved row's GRADED CHILDREN -- and those
+// children are in this lane's own scanned population (a child's id is the
+// parent's plus a tier segment, so the id-stem pass reads it as a scan row).
+// Hashing the ROW put a parent and its children in different slots, so one slot
+// retired a child while another was independently planning for that same child.
+// The unit is the CARD: a graded child folds onto its parent, same slot.
+const shardOf = (key) => cardShardIndex(String(key), SLOTS);
 const mineByShard = (key) => SLOTS === 1 || shardOf(str(key)) === SLOT;
 const MODES = ["catalog", "pool", "holdings"];
 

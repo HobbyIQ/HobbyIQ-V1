@@ -111,9 +111,42 @@ describe("the runner's SHARD opt-in names real, shardable lanes", () => {
       "repair-tiffany-pool-enumeration",
       "repair-tiffany-rung-to-product",
       "retire-self-derived-identities",
+      // The product-list repair lanes (2026-09-05). Each shards through
+      // runnerShardScope on an axis proven complete + disjoint by
+      // shardAxisIsByCard.test.ts; the two that call moveCatalogRow do it at
+      // CARD level so a parent, its graded children and its sales cannot be
+      // split across slots mid-move.
+      "repair-bowman-product-refile",
+      "rekey-product-setkey",
+      "repair-finish-collision-refile",
+      "reslug-ruled-alias",
     ]) {
       expect(OPTED_IN, `${script} must be able to opt slot 0 into its fan-out`).toContain(script);
     }
+  });
+
+  it("a lane with NO shard axis is not on the line — an opt-in it cannot honour", () => {
+    // relocate-pool-rows-by-list reads neither SLOT nor SLOTS and calls
+    // runnerShardScope not at all: it has no axis to opt into. Listing it would
+    // advertise a fan-out that does not exist, and sixteen dispatches of it
+    // would each sweep the WHOLE list — sixteen writers on one population.
+    // (Assertion (2) below would also catch it; this names it, so the reason is
+    // in the failure rather than in a reviewer's memory.)
+    const src = sourceOf("relocate-pool-rows-by-list");
+    expect(src, "the lane must exist for this pin to mean anything").toBeTruthy();
+    expect(/runnerShardScope\(/.test(src as string), "if this lane GAINS an axis, prove it "
+      + "in shardAxisIsByCard.test.ts and then add it here").toBe(false);
+    expect(OPTED_IN).not.toContain("relocate-pool-rows-by-list");
+  });
+
+  it("a lane with its OWN inlined shard rule is not on the line either", () => {
+    // repair-ch-product-label-parallel re-implements the opt-in decision inline
+    // rather than calling the ONE helper (#1765). The SHARD line is the helper's
+    // signal; wiring a second, hand-rolled reader of it is how the rule drifts.
+    // It must adopt runnerShardScope before it can be opted in.
+    const src = sourceOf("repair-ch-product-label-parallel") ?? "";
+    expect(/runnerShardScope\(/.test(src)).toBe(false);
+    expect(OPTED_IN).not.toContain("repair-ch-product-label-parallel");
   });
 
   it("every opted-in script is in the dropdown whitelist — no dead or typo'd names", () => {
