@@ -630,3 +630,141 @@ describe("CF-BELLINGHAM-MARINERS-IS-THE-KEY (Drew 2026-08-30, R1)", () => {
     expect(reconciledFixedPoints()).not.toContain("bellingham");
   });
 });
+
+/**
+ * CF-A-SALES-SPELLING-IS-NOT-A-PRODUCT (Drew 2026-09-05).
+ *
+ * The checklist-gap census offered 172 "safe rekey" pairs. Five survived
+ * verification against prod card_catalog BY SOURCE; the rest are recorded as
+ * refusals in docs/runbooks/alias-reslug-2026-09-05.md.
+ *
+ * These tests are data-driven over the declared table rather than one case per
+ * pair, so a sixth ruling is covered the moment it is declared and cannot be
+ * added without the invariant holding for it too.
+ */
+describe("the 2026-09-05 sales-side spellings", () => {
+  // The five ruled pairs, as DATA. Every assertion below walks this list.
+  const RULED_2026_09_05: ReadonlyArray<readonly [alias: string, key: string]> = [
+    ["panini-hoops", "nba-hoops"],
+    ["panini-leather-lumber", "leather-lumber"],
+    ["ud", "upper-deck"],
+    ["chrome", "topps-chrome"],
+  ];
+
+  it("declares each one an alias of its checklist-backed key", () => {
+    const declared = new Map(ruledAliases().map((r) => [r.setKey, r.canonical]));
+    const missing: string[] = [];
+    for (const [alias, key] of RULED_2026_09_05) {
+      if (declared.get(alias) !== key) missing.push(`${alias} -> ${declared.get(alias) ?? "(undeclared)"}, ruled ${key}`);
+    }
+    expect(missing, `rulings not declared:\n${missing.join("\n")}`).toEqual([]);
+  });
+
+  it("carries the measured evidence on every entry", () => {
+    // A ruling without its evidence is an opinion. Each `why` must name real
+    // numbers, so a future reader can re-measure rather than re-argue.
+    const thin: string[] = [];
+    for (const [alias] of RULED_2026_09_05) {
+      const why = ruledAliases().find((r) => r.setKey === alias)?.why ?? "";
+      if (why.length < 120 || !/\d/.test(why)) thin.push(alias);
+    }
+    expect(thin, `these rulings carry no measured evidence: ${thin.join(", ")}`).toEqual([]);
+  });
+
+  it("THE INVARIANT: the ruled key is a fixed point, the alias is not", () => {
+    // CF-A-RULED-KEY-IS-A-FIXED-POINT, stated per pair. This is the assertion
+    // the mutation test below removes.
+    for (const [alias, key] of RULED_2026_09_05) {
+      expect(normalizeSetKey(key), `ruled key ${key} is not a fixed point`).toBe(key);
+      expect(normalizeSetKey(alias), `alias ${alias} does not resolve to ${key}`).toBe(key);
+      expect(normalizeSetKey(alias), `${alias} is still a fixed point`).not.toBe(alias);
+      expect(reconciledFixedPoints(), `${alias} is declared both alias and fixed point`).not.toContain(alias);
+    }
+  });
+
+  it("lands both spellings of NBA Hoops in ONE pool", () => {
+    // The split this ruling exists to close, stated as titles rather than
+    // keys: before it, a seller who typed the maker and one who did not wrote
+    // into two different pools of the same product.
+    for (const title of [
+      "2024 Panini NBA Hoops Basketball", "2024 NBA Hoops", "NBA Hoops", "hoops", "panini-hoops", "nba-hoops",
+    ]) {
+      expect(normalizeSetKey(title), `${title} does not reach the ruled key`).toBe("nba-hoops");
+    }
+  });
+
+  it("keeps NBA Hoops a Panini product under its ruled key", () => {
+    // The ruled key must carry the PRODUCT ENTRY, not just win the spelling.
+    // productSetKeys had `panini-hoops` as a child of `panini`; moving the key
+    // without moving the entry would leave `nba-hoops` with no parent, and the
+    // family link is what lets the matcher widen out of a thin pool.
+    const e = productEntry("nba-hoops");
+    expect(e?.setKey, "the ruled key has no product entry").toBe("nba-hoops");
+    expect(e?.parent, "NBA Hoops stopped being a Panini product").toBe("panini");
+    // ...and the prefixed spelling still names it rather than resolving nowhere.
+    expect(productEntry("panini-hoops")?.setKey).toBe("nba-hoops");
+  });
+
+  it("REFUSES every contested Bowman/Topps pair the census offered", () => {
+    // The 31 contested pairs (12,109 rows). Bowman taxonomy rules bowman-vs-
+    // chrome and sapphire DIFFERENT cards, so none of these may ever become an
+    // alias in either direction -- a fold here would fuse two pools and price
+    // both wrong. Asserted against the live table, so adding one goes red.
+    const CONTESTED: ReadonlyArray<readonly [string, string]> = [
+      ["bowman-chrome-sapphire", "topps-chrome-sapphire"],
+      ["bowman-chrome", "topps-chrome"],
+      ["topps-chrome", "bowman-chrome"],
+      ["topps-holiday", "bowman-holiday"],
+      ["topps-inception", "bowman-inception"],
+      ["draft", "bowman-draft"],
+      ["leaf-draft", "bowman-draft"],
+      ["sapphire", "bowman-sapphire"],
+      ["chrome", "bowman-chrome"],
+      ["1st-edition", "bowman-1st-edition"],
+    ];
+    const aliases = new Map(setKeyAliases());
+    const folded: string[] = [];
+    for (const [from, to] of CONTESTED) {
+      if (aliases.get(from) === to) folded.push(`${from} -> ${to} DECLARED`);
+      if (normalizeSetKey(from) === to) folded.push(`${from} normalizes to ${to}`);
+    }
+    expect(folded, `Bowman/Topps folds that must never exist:\n${folded.join("\n")}`).toEqual([]);
+  });
+
+  it("keeps Bowman products intact through the bare `chrome` alias", () => {
+    // `chrome -> topps-chrome` is an EXACT-TOKEN alias. If it ever became a
+    // prefix or substring rule it would swallow every Bowman Chrome product,
+    // which is the single most expensive fold available in this file.
+    expect(normalizeSetKey("2016 Bowman Chrome Baseball")).toBe("bowman-chrome");
+    expect(normalizeSetKey("2022 Bowman Chrome Sapphire")).toBe("bowman-chrome-sapphire");
+    expect(normalizeSetKey("2020 Bowman Chrome Prospects")).toBe("bowman-chrome");
+    expect(normalizeSetKey("Bowman Draft Chrome")).toBe("bowman-draft");
+    // ...and does not disturb a non-Bowman product that merely ends in Chrome.
+    expect(normalizeSetKey("topps-stadium-club-chrome")).toBe("topps-stadium-club-chrome");
+  });
+
+  it("refuses the pairs the census called safe but the evidence did not", () => {
+    // A regression pin on the REFUSALS, which are the larger half of this
+    // work. Each of these was offered as a "safe rekey" and each is wrong for
+    // a stated reason (see the runbook): the alias side holds strict checklist
+    // rows of its own, the two keys name different manufacturers, or both are
+    // already ruled DISTINCT. None may become an alias.
+    const REFUSED: ReadonlyArray<readonly [string, string, string]> = [
+      ["panini-score", "score", "hobbymonitor wrote 3,300 strict rows on panini-score"],
+      ["panini-select", "select", "panini-select holds 367,220 rows, far more strict backing than select"],
+      ["panini-diamond-kings", "diamond-kings", "checklistcenter + beckett wrote strict rows on panini-diamond-kings"],
+      ["upper-deck-choice", "ud-choice", "exquisiteIsItsOwnProduct.test.ts pins upper-deck-choice as its own key"],
+      ["donruss-studio", "studio", "bccp-product-structure rows on donruss-studio"],
+      ["panini", "upper-deck", "different manufacturers"],
+      ["fleer-stickers", "topps-stickers", "different manufacturers"],
+      ["topps-triple-threads", "triple-threads", "both ruled DISTINCT on 2026-09-03"],
+      ["donruss-elite", "panini-elite", "both are declared fixed points"],
+    ];
+    const aliases = new Map(setKeyAliases());
+    const wrong: string[] = [];
+    for (const [from, to, why] of REFUSED) {
+      if (aliases.get(from) === to) wrong.push(`${from} -> ${to} was declared, but: ${why}`);
+    }
+    expect(wrong, `refused pairs that got declared anyway:\n${wrong.join("\n")}`).toEqual([]);
+  });
+});

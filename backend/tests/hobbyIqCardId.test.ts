@@ -495,7 +495,10 @@ describe("computeHobbyIqCardId — cardNumber-prefix override (bare→chrome)", 
     const cases: Array<[string, string]> = [
       ["2025 Panini Certified Football", "panini-certified"],
       ["2024 Panini Crusade Baseball", "panini-crusade"],
-      ["2016 Panini Hoops Basketball", "panini-hoops"],
+      // NBA Hoops is spelled by its checklist (Drew 2026-09-05) — the point of
+      // this case is that the key is STABLE and not year-prefixed, which the
+      // ruled key satisfies; the maker-carrying title must reach it too.
+      ["2016 Panini Hoops Basketball", "nba-hoops"],
       ["2025 Panini Prestige Football", "panini-prestige"],
       ["2025 Panini Elite Extra Edition", "panini-elite-extra-edition"],
     ];

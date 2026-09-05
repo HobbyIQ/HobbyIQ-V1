@@ -395,8 +395,15 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
     "panini-obsidian", "panini-spectra", "panini-revolution", "panini-crown-royale", "panini-one-one", "panini-playoff",
     "panini-score", "panini-classics", "panini-legacy", "panini-threads", "panini-rookies-and-stars", "panini-zenith",
     "panini-court-kings", "panini-origins", "panini-encased", "panini-eminence", "panini-totally-certified",
-    "panini-certified", "panini-crusade", "panini-hoops", "panini-prestige", "panini-elite-extra-edition",
+    "panini-certified", "panini-crusade", "panini-prestige", "panini-elite-extra-edition",
     "panini-diamond-kings"].map((k) => P(k, { parent: "panini" })),
+  // NBA HOOPS is a Panini product spelled by its CHECKLIST (Drew 2026-09-05).
+  // It stays a child of `panini` — the family link is what lets the matcher
+  // widen — but the KEY is the bare one, because `nba-hoops` holds 26,355
+  // checklistinsider rows and `panini-hoops` zero strict rows. The prefixed
+  // spelling is carried as a NAME so a title reading "Panini NBA Hoops" still
+  // resolves to this product rather than to no entry at all.
+  P("nba-hoops", { parent: "panini", names: ["panini-hoops", "hoops"] }),
 
   // -- Fleer / Skybox / Pinnacle / Score / vintage ----------------------------
   P("fleer"),

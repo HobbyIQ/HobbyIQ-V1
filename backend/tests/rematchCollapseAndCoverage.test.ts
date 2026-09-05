@@ -345,7 +345,7 @@ const SUPPORTED_KEYS: ReadonlyArray<{
   key: string; title: string; est: number; catalogRows: number; checklistBacked: number;
 }> = [
   { key: "topps-finest", title: "2025 Finest #168 Xavier Worthy Purple Refractor #/200", est: 192725, catalogRows: 223575, checklistBacked: 197799 },
-  { key: "panini-hoops", title: "2014 Panini Hoops Basketball #157 Base", est: 127431, catalogRows: 2680, checklistBacked: 0 },
+  { key: "nba-hoops", title: "2014 Panini Hoops Basketball #157 Base", est: 127431, catalogRows: 2680, checklistBacked: 0 },
   { key: "leaf", title: "2023 Leaf Perfect Game Karson Grout Auto MA-KG2 Marble 1/1", est: 102007, catalogRows: 15787, checklistBacked: 11442 },
   { key: "panini-origins", title: "2025 Panini Origins Football #31 Red", est: 100501, catalogRows: 25114, checklistBacked: 23958 },
   { key: "flair", title: "1994 Flair USA #38 Larry Johnson", est: 90966, catalogRows: 8280, checklistBacked: 5475 },

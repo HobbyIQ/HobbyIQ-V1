@@ -689,7 +689,15 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     [/panini-totally-certified|totally-certified/, "panini-totally-certified"],
     [/panini-certified/, "panini-certified"],
     [/panini-crusade/, "panini-crusade"],
-    [/panini-hoops/, "panini-hoops"],
+    // NBA HOOPS is spelled by its CHECKLIST, not by the maker prefix
+    // (Drew 2026-09-05). `nba-hoops` holds 26,355 checklistinsider rows and
+    // `panini-hoops` ZERO strict rows, so the ruled key is the bare one and
+    // RULED_ALIASES folds the prefixed spelling onto it. This rule emits the
+    // ruled key DIRECTLY: a title carrying the maker ("2024 Panini NBA Hoops")
+    // and one that omits it ("2024 NBA Hoops") must reach the same pool, and
+    // before this they did not — the vocabulary answered `panini-hoops` and
+    // returned before the reconciliation was ever consulted.
+    [/panini-hoops/, "nba-hoops"],
     [/panini-prestige/, "panini-prestige"],
     [/panini-elite-extra-edition/, "panini-elite-extra-edition"],
     // CF-PRODUCT-LINES-V3-EXPANSION (Drew, 2026-07-30). New product-line
@@ -919,7 +927,7 @@ function bareAliasPatterns(): Array<[RegExp, string]> {
     // — see the only-improve doctrine.
     [/(^|-)rookies-(?:and-)?stars(-|$)/, "panini-rookies-and-stars"],
     [/(^|-)crusade(-|$)/, "panini-crusade"],
-    [/(^|-)hoops(-|$)/, "panini-hoops"],
+    [/(^|-)hoops(-|$)/, "nba-hoops"],
     [/(^|-)prestige(-|$)/, "panini-prestige"],
     [/(^|-)elite-extra-edition(-|$)/, "panini-elite-extra-edition"],
     // NOTE: "select" and "score" are excluded from bare tier — they

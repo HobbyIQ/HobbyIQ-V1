@@ -1463,7 +1463,13 @@ const DISTINCT_PRODUCT_SETKEYS = [
   "panini-prizm", "panini-prizm-wnba", "panini-prizm-draft-picks",
   "panini-prizm-monopoly-wnba", "panini-mosaic", "panini-optic",
   "panini-select", "score-select", "panini-score",
-  "panini-origins", "panini-prestige", "panini-hoops", "panini-certified",
+  "panini-origins", "panini-prestige", "panini-certified",
+  // NBA Hoops is spelled by its checklist (Drew 2026-09-05): `nba-hoops`
+  // holds 26,355 checklistinsider rows, `panini-hoops` zero strict ones.
+  // A supported key must be a normalizeSetKey fixed point, and since
+  // RULED_ALIASES now folds the prefixed spelling, the ruled key is the
+  // one that belongs on this list.
+  "nba-hoops",
   "panini-zenith", "panini-photogenic", "panini-court-kings", "panini-recon",
   "panini-rookies-and-stars", "panini-impeccable", "panini-chronicles",
   "panini-luminance", "panini-crusade", "panini-signature-series",

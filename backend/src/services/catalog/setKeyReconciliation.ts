@@ -444,6 +444,57 @@ const RULED_ALIASES: Readonly<Record<string, { to: string; why: string }>> = Obj
     why: "The same ruling, named in its unstripped catalog spelling. This entry does not fire on its own — stripYearAndSport reduces the key to `bellingham` before the reconciliation is consulted — and it is declared so the ruling is discoverable under the spelling the CATALOG actually stores (4 rows), and so a change to the strip surfaces as a failing pin instead of a silently vanished fold. 41 pool rows." },
   "bellingham-mariners-team-issue": { to: "bellingham-mariners",
     why: "Drew 2026-08-30 (R1): 'Team Issue' is what the set IS, not a second product — the phrase names the distribution (a club-issued team set) and is how sellers spell it in the pool's own titles. A normalizeSetKey non-fixed-point that resolves to the ruled key, so a title reading '1987 Bellingham Mariners Team Issue' lands on the same row as one reading '1987 Bellingham Mariners'." },
+
+  // ── SALES-SIDE SPELLINGS (Drew 2026-09-05, from the checklist-gap census) ──
+  //
+  // The census offered 172 "safe rekey" pairs. Verified one by one against
+  // prod card_catalog BY SOURCE (read-only, 2026-09-05), only these five are
+  // aliases. What disqualified the rest is recorded in
+  // docs/runbooks/alias-reslug-2026-09-05.md; the short version is that 86% of
+  // the rows were ALREADY resolved by the deriver (the census compared STORED
+  // slugs, never running them through normalizeSetKey), and most of the
+  // remainder are splits, cross-manufacturer word collisions, or pairs that
+  // contradict a standing ruling.
+  //
+  // Each entry below passes the same five gates: the destination has strict
+  // checklist rows for the same sport-years; the alias key has ZERO strict
+  // checklist rows of its own; no ruled collapse/distinct entry is
+  // contradicted; neither side is a bowman-*<->topps-* fold; and the
+  // destination is a normalizeSetKey fixed point.
+
+  // NBA HOOPS. This file's own header already ruled it — "`nba-hoops` holds
+  // 26,355 checklistinsider rows and `panini-hoops` holds ZERO, so `nba-hoops`
+  // is the key and the prefixed form is the alias" — but the alias was never
+  // DECLARED, so the vocabulary went on deriving the prefixed spelling and the
+  // pool stayed split. Re-measured 2026-09-05 and the header is exactly right:
+  //   `nba-hoops`     26,355 rows, ALL checklistinsider-2026-08-27/28/29.
+  //   `panini-hoops`   2,680 rows, ZERO strict — 2,086 ingest-auto-seed-graded,
+  //                    396 sales-attested, 194 sales-attested-graded. Minted
+  //                    from the very sales that need the checklist.
+  // The split is provable end to end: normalizeSetKey('2024 Panini NBA Hoops
+  // Basketball') -> `panini-hoops` while normalizeSetKey('2024 NBA Hoops') ->
+  // `nba-hoops`. One product, two pools, decided by whether the seller typed
+  // the maker — which is CF-ONE-CARD-ONE-ROW-ONE-POOL stated as damage.
+  "panini-hoops": { to: "nba-hoops",
+    why: "Counted by source 2026-09-05: `nba-hoops` holds 26,355 rows, every one checklistinsider; `panini-hoops` holds 2,680 rows and ZERO strict checklist rows (ingest-auto-seed + sales-attested only, i.e. seeded from the sales themselves). House style loses to the spelling a checklist stands behind — the same doctrine as `ultra` over `fleer-ultra`. Declared because this file's header already ruled it while the vocabulary (hobbyIqCardId.service.ts) still derives `panini-hoops` from a title carrying the maker, splitting one product across two pools." },
+
+  // LEATHER & LUMBER. The cleanest case in the batch: the prefixed spelling
+  // has ZERO catalog rows of ANY kind, so it is a pure sales-side spelling
+  // with nothing behind it at all.
+  "panini-leather-lumber": { to: "leather-lumber",
+    why: "Measured 2026-09-05: `panini-leather-lumber` holds ZERO card_catalog rows of any kind, against 5,931 on `leather-lumber` (3,827 baseballcardpedia-ladders-2026-09-04 + 2,101 -09-05, all strict). A key no checklist has ever written is a spelling, not a product — the same reasoning ERA_SPLIT_TABLE gives for refusing to invent `panini-score`/`panini-leaf` destinations. 98 pool rows, baseball 2019." },
+
+  // BARE ABBREVIATIONS. Two keys that are an abbreviation of their destination
+  // rather than a product: `ud` is how sellers write Upper Deck, and a bare
+  // `chrome` is Topps Chrome. Both hold ZERO strict rows. `chrome` is declared
+  // to `topps-chrome` and NOT to `bowman-chrome`: the census offered both
+  // (143 rows vs 2), and a bare-key fold into a Bowman product is exactly the
+  // Bowman/Topps merge that stays refused — see the contested list in the
+  // runbook. Topps Chrome takes it on weight of evidence alone.
+  ud: { to: "upper-deck",
+    why: "`ud` is the seller's abbreviation of Upper Deck, not a product. It carries 13 pool rows across five baseball sport-years (1992-2002) and no strict checklist rows; `upper-deck` is the spelled-out key the catalog uses. Declared so the abbreviation lands in the same pool as the spelled form rather than minting a parallel one." },
+  chrome: { to: "topps-chrome",
+    why: "A bare `chrome` is Topps Chrome. Measured 2026-09-05: the key holds EIGHT card_catalog rows in total (2 ingest-auto-seed-graded, 2 ebay-user-purchase, 2 ebay-browse, 1 user-verified, 1 -graded) — zero strict, nothing checklist-backed, and the sales are spread 2008-2025. The destination is the 159,897-strict-row `topps-chrome`. The census also offered `chrome -> bowman-chrome` on 2 rows; that direction is REFUSED (a bare key may not fold into a Bowman product — CF-BOWMAN-TAXONOMY), and the Topps destination carries 143 of the 145 rows besides." },
 });
 
 /**
