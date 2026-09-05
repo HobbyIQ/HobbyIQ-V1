@@ -582,6 +582,59 @@ const CARD_NUMBER_RANGE_RE = /#\s*([a-z]{0,4})\s*(\d{1,4})\s*[-–—]\s*(?:[a-z
  *  on `complete set`. */
 const RANGE_FAR_HALF_IS_GRADER_RE = /^\s*[-–—]\s*(?:PSA|BGS|BVG|SGC|CGC|CSG|HGA|TAG|ISA|GMA|KSA)\b/i;
 
+/** A CONDITION word is not the far half of a range either (GATE 4 slot-31,
+ *  2026-09-04).
+ *
+ *  `RANGE_FAR_HALF_IS_GRADER_RE` above named the GRADING COMPANIES and stopped
+ *  there, so "#1-PSA 9" was already safe. But the corpus's commonest grade
+ *  token names no company at all -- it says the card is UNGRADED, and the
+ *  number after it is the seller's own condition call:
+ *
+ *    "2021 Topps Chrome Update #AS1 - Raw 10 Shohei Ohtani"   -> read 1..10
+ *    "1989 Upper Deck Ken Griffey Jr #6 - Raw 10"             -> read 6..10
+ *
+ *  Both are ONE card. The gate measured this as the secondary finding on slot
+ *  31: a conservative refusal costing good rows, on the single most common
+ *  suffix our own evidence titles carry -- "- Raw" and "- Raw 10" appear on
+ *  the fixtures of four existing suites.
+ *
+ *  `raw` is the word; `mint`, `nm`, `ex` and the rest are the same idiom in
+ *  the vocabulary a raw seller uses when grading the card themselves. As with
+ *  the grader rule this is a refusal to READ A RANGE and never a licence: the
+ *  title still falls through to every lot idiom, so "Complete Set #1-Raw 10"
+ *  is still a lot on `complete set`. */
+const RANGE_FAR_HALF_IS_CONDITION_RE =
+  /^\s*[-–—]\s*(?:RAW|MINT|NRMT|NM|GEM|EX|VG|GD|POOR|FAIR|GOOD)\b/i;
+
+/** A HYPHENATED CARD NUMBER is not a range (GATE 4 slot-31, 2026-09-04).
+ *
+ *  `CARD_NUMBER_RANGE_RE` allows an alphabetic prefix on EITHER half so it can
+ *  read "#US1-US50", where the prefix repeats on both. That same latitude let
+ *  a hyphenated card number through whenever its two halves happened to
+ *  ascend:
+ *
+ *    "2022 Panini Prizm #F15-35 Justin Jefferson"   -> read 15..35
+ *
+ *  `#F15-35` is ONE card's number, in the `<letters><digits>-<digits>` shape
+ *  Panini, Bowman and Topps insert sets all use. The `b > a` test cannot
+ *  separate it from a span, because 35 really is greater than 15 -- the tell
+ *  is PREFIX ASYMMETRY. A real range either repeats its prefix ("US1-US50")
+ *  or omits it on both halves ("1-660"); a hyphenated card number carries a
+ *  prefix on the NEAR half only.
+ *
+ *  So a prefix on the near half with none on the far half is a card number,
+ *  not a range. Deliberately narrow: it says nothing about "#1-660", and it
+ *  leaves the existing far-half-numeric-and-greater rule exactly as it was. */
+function rangePrefixIsAsymmetric(m) {
+  const nearPrefix = String(m[1] ?? "").trim();
+  if (!nearPrefix) return false;
+  // The far half's prefix, as the matched text spells it: everything after the
+  // dash, and its leading letters if any.
+  const afterDash = String(m[0]).split(/[-–—]/).slice(1).join("-");
+  const farPrefix = (afterDash.match(/[a-z]+/i) || [""])[0];
+  return farPrefix.length === 0;
+}
+
 function cardNumberRangeFromTitle(title) {
   const t = String(title ?? "");
   const m = t.match(CARD_NUMBER_RANGE_RE);
@@ -589,7 +642,12 @@ function cardNumberRangeFromTitle(title) {
   // Re-read the text from the FIRST number's end: if what follows the dash is
   // a grader token, this is "#1-PSA 9", a card number with a grade after it.
   const firstEnd = (m.index ?? 0) + m[0].indexOf(m[2]) + m[2].length;
-  if (RANGE_FAR_HALF_IS_GRADER_RE.test(t.slice(firstEnd))) return null;
+  const tail = t.slice(firstEnd);
+  if (RANGE_FAR_HALF_IS_GRADER_RE.test(tail)) return null;
+  // ...and the same reading for a bare CONDITION word: "#AS1 - Raw 10".
+  if (RANGE_FAR_HALF_IS_CONDITION_RE.test(tail)) return null;
+  // A prefix on the near half only is a hyphenated card number: "#F15-35".
+  if (rangePrefixIsAsymmetric(m)) return null;
   const a = Number(m[2]), b = Number(m[3]);
   if (!Number.isFinite(a) || !Number.isFinite(b) || b <= a) return null;
   return { from: `${m[1] ?? ""}${a}`, to: b, quoted: m[0].trim() };
@@ -1533,6 +1591,11 @@ module.exports = {
   checklistParallelForFamily,
   // leaks 2 + 6: a lot or a range never mints a cardNumber
   isLotOrRangeListing, cardNumberRangeFromTitle,
+  // GATE 4 slot-31 (2026-09-04): the two far-half readings that are NOT a
+  // range, exported piece by piece so a pin can drive each alone and the
+  // mutation check can revert exactly one of them.
+  RANGE_FAR_HALF_IS_GRADER_RE, RANGE_FAR_HALF_IS_CONDITION_RE,
+  rangePrefixIsAsymmetric, CARD_NUMBER_RANGE_RE,
   // leak 7: a numbered base is checklist-defined AT ITS PRINT RUN
   BASE_ROW_NAMES, checklistDefinesNumberedBase,
   // leak 3: a misspelled long finish word still DISQUALIFIES an eviction

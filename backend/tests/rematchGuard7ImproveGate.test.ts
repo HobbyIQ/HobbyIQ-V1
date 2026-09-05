@@ -161,6 +161,89 @@ describe("GUARD 7 -- a lot / break / range listing never mints a cardNumber", ()
       year: 2022, setKey: "topps-chrome", cardNumber: "150",
     }).writable).toBe(true);
   });
+
+  // ── GATE 4 slot-31 (2026-09-04): the range parse's two remaining false
+  //    positives. Both cost GOOD rows a conservative refusal -- the gate's
+  //    secondary finding, report-only and no write risk, but a real loss.
+  //
+  //    A CONDITION WORD IS NOT THE FAR HALF OF A RANGE. The grader rule
+  //    already covered "#1-PSA 9", but the corpus's commonest grade suffix
+  //    names no company: "Raw 10" says UNGRADED, and the number after it is
+  //    the seller's own condition call. "- Raw" and "- Raw 10" appear on the
+  //    fixtures of four existing suites, so this was the single most common
+  //    suffix our own evidence carries.
+  it.each([
+    "2021 Topps Chrome Update #AS1 - Raw 10 Shohei Ohtani",
+    "1989 Upper Deck Ken Griffey Jr #6 - Raw 10",
+    "1995 Pinnacle UC3 - Ken Griffey Jr - #73 - Raw 10",
+    "2020 Topps Mike Trout #1 - Mint 9",
+  ])("CONTROL: a trailing condition grade is not a range -- %s", (title) => {
+    expect(V.cardNumberRangeFromTitle(title)).toBeNull();
+    expect(V.isLotOrRangeListing(title, false).lot).toBe(false);
+  });
+
+  //    A HYPHENATED CARD NUMBER IS NOT A RANGE. `#F15-35` is ONE card's
+  //    number in the `<letters><digits>-<digits>` shape Panini, Bowman and
+  //    Topps insert sets all use. The `b > a` test cannot separate it from a
+  //    span -- 35 really is greater than 15 -- so the tell is PREFIX
+  //    ASYMMETRY: a real range repeats its prefix ("US1-US50") or omits it on
+  //    both halves ("1-660"); a card number carries one on the NEAR half only.
+  it.each([
+    "2022 Panini Prizm #F15-35 Justin Jefferson Bengals",
+    "2021 Bowman Chrome #BCP-102 Prospect Auto",
+    "2023 Topps Update #ASG-12 All Star Game",
+  ])("CONTROL: a hyphenated card number is not a range -- %s", (title) => {
+    expect(V.cardNumberRangeFromTitle(title)).toBeNull();
+  });
+
+  //    ...and the genuine spans it must NOT disarm. A repeated prefix is a
+  //    real range, and so is a bare numeric one.
+  it.each([
+    ["1975 Topps Complete Set #1-660 VG to EXMT", "1", 660],
+    ["2022 Topps Update Complete Set #US1-US50", "US1", 50],
+    ["1989 Topps Teenage Mutant Ninja Turtles Cards # 1-88 + 11 Stickers", "1", 88],
+  ])("still reads the genuine span in %s", (title, from, to) => {
+    const r = V.cardNumberRangeFromTitle(title as string);
+    expect(r).not.toBeNull();
+    expect(r.from).toBe(from);
+    expect(r.to).toBe(to);
+  });
+
+  /**
+   * MUTATION CHECK -- RESTORING THE OLD RANGE PARSE MUST GO RED.
+   *
+   * The fix is two refusals to READ a range, and each is reverted here on its
+   * own by driving the shipped predicates the way the code behaved before:
+   * the grader rule alone (no condition word), and no prefix-asymmetry test at
+   * all. Delete either clause from `cardNumberRangeFromTitle` and the matching
+   * assertion below fails.
+   */
+  it("MUTATION: the pre-fix parse reads a trailing 'Raw 10' as a 1..10 span", () => {
+    const title = "2021 Topps Chrome Update #AS1 - Raw 10 Shohei Ohtani";
+    const m = title.match(V.CARD_NUMBER_RANGE_RE);
+    expect(m, "the range regex must still match the raw text").not.toBeNull();
+    const tail = title.slice((m!.index ?? 0) + m![0].indexOf(m![2]) + m![2].length);
+    // The pre-fix reading: only a GRADER token stopped the range.
+    expect(V.RANGE_FAR_HALF_IS_GRADER_RE.test(tail)).toBe(false);
+    // The shipped reading: a condition word stops it too.
+    expect(V.RANGE_FAR_HALF_IS_CONDITION_RE.test(tail)).toBe(true);
+    // And end to end, the row is no longer a lot.
+    expect(V.cardNumberRangeFromTitle(title)).toBeNull();
+  });
+
+  it("MUTATION: without the prefix-asymmetry test, #F15-35 is read as 15..35", () => {
+    const title = "2022 Panini Prizm #F15-35 Justin Jefferson Bengals";
+    const m = title.match(V.CARD_NUMBER_RANGE_RE);
+    expect(m).not.toBeNull();
+    // The pre-fix parse got as far as two ascending numbers and stopped there.
+    expect(Number(m![3]) > Number(m![2])).toBe(true);
+    // The shipped test reads the asymmetry and refuses.
+    expect(V.rangePrefixIsAsymmetric(m)).toBe(true);
+    expect(V.cardNumberRangeFromTitle(title)).toBeNull();
+    // ...and it stays FALSE for a genuine repeated-prefix span.
+    const span = "2022 Topps Update Complete Set #US1-US50".match(V.CARD_NUMBER_RANGE_RE);
+    expect(V.rangePrefixIsAsymmetric(span)).toBe(false);
+  });
 });
 
 // ── (2) An apostrophe is spelling, not identity ────────────────────────────
