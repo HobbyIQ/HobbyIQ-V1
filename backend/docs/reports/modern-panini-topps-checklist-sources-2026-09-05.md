@@ -79,6 +79,33 @@ rungs, `AJ Griffin` on others), which is internally inconsistent regardless of w
 Under CF-A-SECOND-SOURCE-THAT-DISAGREES-IS-THE-ONLY-DISQUALIFIER this is precisely the class of
 finding the corroboration program exists to surface.
 
+## A defect found on the way — an autograph set staged unsigned
+
+Staging the three cells surfaced a real converter bug, in exactly the shape the auto mutation check
+was written to catch.
+
+`convertChecklistCenterToChecklistCsv.cjs` truncates two section names in 2022 Panini Select, and
+both truncations cut the word that decides the autograph flag:
+
+| the page's section | staged category | rows staged `isAuto=false` |
+|---|---|---:|
+| Jumbo Rookie **Signature** Swatches | `insert:jumbo-rookie` | 449 |
+| Prime Selections Prizm **Signatures** | `insert:prime-selections` | 374 |
+
+**823 rows** carry a parallel that reads `Signature Swatches Gold Prizm` and are staged as not-auto.
+Those are autographed cards that would mint as unsigned twins of themselves — a split pool on the
+one axis no later `only-improve` pass can see, because every other column is well-formed.
+
+It is confined to those two sections: 2023 Mosaic FB and 2022-23 Prizm BK stage **zero** such rows.
+So this is a per-section parsing bug, not a lane-wide one.
+
+**Consequence for the dispatch below: hold 2022 Panini Select FB out of the apply run** until the
+converter's section-name handling is fixed. The other two sampled cells are clean and can go.
+
+The fix belongs in the converter and changes the category vocabulary for every clc product, so it
+is a decision to take against the whole corpus rather than from three cells — it is pinned as a
+failing-when-fixed test (`tests/clcModernPaniniLadder.test.ts`) rather than patched here.
+
 ## Permission
 
 `https://www.checklistcenter.com/robots.txt`, refetched 2026-09-05. It is a **curated blocklist of
@@ -135,7 +162,8 @@ It is still a **STOP**, for two independent reasons:
 No new lane, no new parser, no new manifest. The existing `clc` lane, pointed at cells it has never
 been dispatched to.
 
-Report-first, the three sampled cells:
+Report-first, the three sampled cells (report mode is safe for all three — it fetches nothing and
+writes nothing):
 
 ```
 gh workflow run "Backfill Runner" \
@@ -147,8 +175,20 @@ gh workflow run "Backfill Runner" \
   -f apply=false
 ```
 
-Then the same with `apply=true` once the report is read. For the full sweep, widen the scope and
-drop `titles`:
+The apply run **drops 2022 Panini Select** until the unsigned-autograph defect above is fixed:
+
+```
+gh workflow run "Backfill Runner" \
+  -f script=ingest-universe-driver \
+  -f sources=clc \
+  -f years=2022,2023 \
+  -f sports=football,basketball \
+  -f titles="2023 Panini Mosaic Football,2022-23 Panini Prizm NBA Basketball" \
+  -f apply=true
+```
+
+For the full sweep, widen the scope and drop `titles` — but fix the converter first, since the
+truncation is a per-section bug and other products will carry it:
 
 ```
 gh workflow run "Backfill Runner" \
