@@ -88,7 +88,7 @@ describe("the ruling list is parsed strictly, and a bad entry refuses", () => {
   });
 });
 
-describe("a ruled row dictates the CARD, and only fills blanks", () => {
+describe("a ruled row dictates the CARD's identity fields, and records what it displaced", () => {
   /** The live row for Drew's D24 ruling, read from card_catalog 2026-09-05. */
   const D24_ROW = {
     setName: "Black Diamond", cardNumber: "D24",
@@ -109,31 +109,62 @@ describe("a ruled row dictates the CARD, and only fills blanks", () => {
     expect(fills.map((f) => f.field).sort()).toEqual(["cardNumber", "parallel", "setName"]);
     expect(fills.find((f) => f.field === "cardNumber")?.value).toBe("8");
     expect(fills.find((f) => f.field === "parallel")?.value).toBe("Magnetic Field");
+    // These were BLANK, so nothing was displaced — `previous` is null, and the
+    // report can tell a set-from-blank apart from an overwrite.
+    for (const f of fills) expect(f.previous, f.field).toBeNull();
     // No printRun on this row, so none is invented.
     expect(fills.some((f) => f.field === "printRun")).toBe(false);
   });
 
-  it("NEVER overwrites a field the user set — D24 keeps its own strings", () => {
-    // THE GUARD THAT MATTERS. 6f4f079b already states setName, cardNumber and
-    // printRun; the ruling settles WHICH CARD, and the owner's own typing is
-    // still the better witness for the rest. Only its blank `parallel` is
-    // filled — and the holding stores "Base" there, which is NOT blank, so
-    // even that is left alone. The ruling moves the identity, not the text.
+  it("OVERWRITES a stated field — D24's \"Base\" becomes Diamond Dominance", () => {
+    // THE DECISION THAT DEFINES THIS MODE (Drew, 2026-09-05): "the ruling IS
+    // the user's word", so the ruled row's identity fields win over whatever
+    // the holding stores — including a value a prior ruling set.
+    //
+    // 6f4f079b is the case that forced it. It stores `parallel: "Base"`, set
+    // before #1787 ingested the row that proves the card is a Diamond
+    // Dominance insert. Under a blank-only rule the identity would move to
+    // ...:diamond-dominance:no-auto:num-1500 while the visible field still
+    // read "Base" — a card whose own record contradicts its identity.
     const holding = {
       setName: "1999 Upper Deck Black Diamond", product: "Black Diamond",
       cardNumber: "D24", parallel: "Base", printRun: 1500,
     };
-    expect(fieldsFromRuledRow(holding, D24_ROW)).toEqual([]);
+    const fills = fieldsFromRuledRow(holding, D24_ROW);
+    const parallel = fills.find((f) => f.field === "parallel");
+    expect(parallel?.value).toBe("Diamond Dominance");
+    // AND NOTHING IS LOST. The displaced value rides along and the apply
+    // writes it into identityRuling.previousFields.
+    expect(parallel?.previous).toBe("Base");
+    // setName differs in spelling too, and is recorded the same way.
+    const setName = fills.find((f) => f.field === "setName");
+    expect(setName?.value).toBe("Black Diamond");
+    expect(setName?.previous).toBe("1999 Upper Deck Black Diamond");
+    // cardNumber and printRun already AGREE with the row, so they are not
+    // listed at all — an overwrite that changes nothing is not an overwrite.
+    expect(fills.some((f) => f.field === "cardNumber")).toBe(false);
+    expect(fills.some((f) => f.field === "printRun")).toBe(false);
   });
 
-  it("fills a blank parallel but not a stated one", () => {
-    expect(fieldsFromRuledRow({ setName: "x", cardNumber: "D24", parallel: null, printRun: 1500 }, D24_ROW)
-      .map((f) => f.field)).toEqual(["parallel"]);
-    expect(fieldsFromRuledRow({ setName: "x", cardNumber: "D24", parallel: "Base", printRun: 1500 }, D24_ROW))
-      .toEqual([]);
-    // Whitespace is blank; a value is not.
-    expect(fieldsFromRuledRow({ setName: "x", cardNumber: "D24", parallel: "   ", printRun: 1500 }, D24_ROW)
-      .map((f) => f.field)).toEqual(["parallel"]);
+  it("never touches a field the ROW does not state — unknown is not a value", () => {
+    // A null printRun on a checklist row means UNKNOWN, and unknown must never
+    // overwrite a value the holding carries. This is the one thing that
+    // survives from the blank-only rule, and it survives for a different
+    // reason: the row is silent, not the holding.
+    const fills = fieldsFromRuledRow(
+      { setName: "x", cardNumber: "8", parallel: "Magnetic Field", printRun: 250 },
+      RIPKEN_ROW);   // RIPKEN_ROW.printRun is null
+    expect(fills.some((f) => f.field === "printRun")).toBe(false);
+    // ...and an empty-string row value is silence too, not an instruction to blank.
+    expect(fieldsFromRuledRow({ parallel: "Refractor" }, { parallel: "" } as any)).toEqual([]);
+    expect(fieldsFromRuledRow({ parallel: "Refractor" }, { parallel: null } as any)).toEqual([]);
+  });
+
+  it("records nothing when the holding and the row already agree", () => {
+    // Idempotent: ruling the same card twice is not two overwrites.
+    expect(fieldsFromRuledRow(
+      { setName: "Black Diamond", cardNumber: "D24", parallel: "Diamond Dominance", printRun: 1500 },
+      D24_ROW)).toEqual([]);
   });
 
   it("never touches playerName or any grade field", () => {
@@ -148,15 +179,25 @@ describe("a ruled row dictates the CARD, and only fills blanks", () => {
     }
   });
 
-  it("MUTATION: a fill that ignored blankness would rewrite the user's fields", () => {
-    // With the blank check gone, D24's own "1999 Upper Deck Black Diamond"
-    // becomes the row's "Black Diamond" and its "Base" becomes "Diamond
-    // Dominance" — the pass would be editing text the owner typed.
+  it("MUTATION: an overwrite that dropped `previous` would destroy the old value", () => {
+    // The overwrite is only acceptable BECAUSE it is recorded. If `previous`
+    // stops being captured, MODE=rule silently discards what the user typed
+    // and the change is no longer reversible from the document.
     const holding = {
       setName: "1999 Upper Deck Black Diamond", cardNumber: "D24",
       parallel: "Base", printRun: 1500,
     };
-    expect(fieldsFromRuledRow(holding, D24_ROW).length).toBe(0);
+    const fills = fieldsFromRuledRow(holding, D24_ROW);
+    expect(fills.length).toBeGreaterThan(0);
+    for (const f of fills) expect(f, f.field).toHaveProperty("previous");
+    expect(fills.map((f) => f.previous)).toContain("Base");
+  });
+
+  it("MUTATION: a row-silent field that overwrote would blank real data", () => {
+    // RIPKEN_ROW states no printRun. If silence were read as an instruction,
+    // a holding's real /250 would be destroyed by a checklist that simply
+    // does not record print runs.
+    expect(fieldsFromRuledRow({ printRun: 250 }, RIPKEN_ROW).some((f) => f.field === "printRun")).toBe(false);
   });
 });
 
@@ -201,13 +242,32 @@ describe("MODE=rule refuses a destination it may not name", () => {
     expect(SRC).toMatch(/got === v\.to && h\?\.identityResolvedBy === RULING_ID && !badFill/);
   });
 
-  it("stamps the ruling and what it superseded", () => {
+  it("stamps the ruling, what it superseded, and what it displaced", () => {
     for (const field of [
       "identityResolvedBy", "identityResolvedAt",
       "identityRederivedFrom", "identityRederivedAt", "identityRederivedBy",
       "identityRulingSupersedes", "identityRuledFields",
+      "identityRuling", "previousFields",
     ]) expect(SRC, field).toContain(field);
     expect(SRC).toMatch(/RULING_ID = String\(process\.env\.RULING_ID \?\? "ruling:Drew:2026-09-05"\)/);
+  });
+
+  it("captures previousFields BEFORE the overwrite, or it captures nothing", () => {
+    // Ordering is the whole correctness of the audit trail: read the old
+    // values after assigning the new ones and previousFields is a copy of the
+    // new ones, which looks like a record and is not one.
+    const capture = SRC.indexOf("for (const f of v.fills ?? []) previousFields[f.field]");
+    const assign = SRC.indexOf("for (const f of v.fills ?? []) (h as any)[f.field] = f.value;");
+    expect(capture).toBeGreaterThan(-1);
+    expect(assign).toBeGreaterThan(-1);
+    expect(capture).toBeLessThan(assign);
+  });
+
+  it("prints an overwrite as an overwrite, not as a fill", () => {
+    // An operator approving an apply must see the line that DISCARDS
+    // something. It never hides inside a list of fills.
+    expect(SRC).toMatch(/OVERWRITES \$\{f\.field\}/);
+    expect(SRC).toMatch(/previous kept in identityRuling\.previousFields/);
   });
 });
 
@@ -231,6 +291,23 @@ describe("the asymmetry: only MODE=rule may override a human", () => {
     expect(SRC).toMatch(/await rule\(\{ docs: resources as any\[\], container: c, catalog: catalogReadOnly \}\)/);
     const ruleFn = SRC.slice(SRC.indexOf("async function rule("));
     expect(ruleFn).not.toContain("canonicalize");
+  });
+
+  it("MODE=rederive's recovery still fills BLANKS ONLY — the asymmetry", () => {
+    // THE TWO RULES ARE OPPOSITE ON PURPOSE (Drew, 2026-09-05). MODE=rule may
+    // overwrite because the ruling IS the user's word. Automatic recovery may
+    // not, because it is a machine guessing next to a human's typing. If
+    // holdingFieldRecovery ever gained the overwrite, every eBay-imported
+    // holding would have its fields rewritten by inference — which is what
+    // #1811 measured as 25 correct parallels destroyed.
+    const REC = readFileSync(
+      join(__dirname, "..", "src", "services", "portfolioiq", "holdingFieldRecovery.service.ts"), "utf8");
+    expect(REC).toMatch(/ONLY BLANKS ARE FILLED/);
+    // Its parallel branch fires only on a blank, or on a Base its own evidence
+    // contradicts — never unconditionally.
+    expect(REC).toMatch(/if \(parallel === null \|\| \(parallelIsBase && evidenceContradictsBase\(holding\)\)\) \{/);
+    // And it never learned about the ruled row.
+    expect(REC).not.toContain("fieldsFromRuledRow");
   });
 
   it("MUTATION: rederive's gate and rule's override are independent", () => {

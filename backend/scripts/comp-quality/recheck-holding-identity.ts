@@ -257,42 +257,70 @@ export function parseRulingPairs(entries: string[]): RulingPair[] {
 }
 
 /**
- * Which identity fields does a ruled catalog row dictate, and which does it
- * leave to the holding?
+ * Which identity fields does a ruled catalog row dictate?
  *
- * THE RULING NAMES THE CARD. Everything that follows from WHICH CARD IT IS —
- * the set, the number, the parallel, the print run — comes from the row, and
- * only into fields the holding leaves BLANK. A field the user already stated
- * is left exactly as it is and reported: the ruling settles the identity, and
- * on everything else the person who typed it is still the better witness.
+ * IN MODE=rule, ALL OF THEM (Drew, 2026-09-05): "the ruling IS the user's
+ * word." The set, the number, the parallel and the print run all follow from
+ * WHICH CARD IT IS, so the ruled row's values win over whatever the holding
+ * stores — including a value a prior ruling set, and including one typed by
+ * hand earlier.
  *
- * `playerName` and every grade field are deliberately absent from this map.
- * Drew's ruling says so explicitly ("playerName unchanged, grade fields
- * unchanged"), and the reason outlives the instruction: the row's player is a
- * transcription and the holding's is what the owner calls their own card, and
- * the grade belongs to the slab in hand, not to the checklist.
+ * THIS IS THE OPPOSITE OF MODE=rederive'S RULE, AND THE ASYMMETRY IS THE
+ * WHOLE DESIGN. Automatic recovery may only fill blanks, because it is a
+ * machine guessing next to a human's typing (holdingFieldRecovery.service.ts).
+ * A ruling is the human, stating the card explicitly, by name, one at a time.
+ * "Never overwrite a user-set field" protects the user from the machine; it
+ * would be nonsense to apply it against the user themself.
+ *
+ * 6f4f079b IS THE CASE THAT FORCED THE DECISION. It stores `parallel: "Base"`
+ * — a real stated value, set before #1787 ingested the row that proves the
+ * card is a Diamond Dominance insert. Under a blank-only rule the identity
+ * would move to `...:diamond-dominance:no-auto:num-1500` while the visible
+ * field still read "Base": a card whose own record contradicts its identity.
+ * The ruling settles that, so the ruling's spelling wins.
+ *
+ * NOTHING IS LOST. Every overwrite carries `previous`, and the apply writes
+ * them into `identityRuling.previousFields`, so the displaced values are
+ * recoverable from the document itself and the overwrite is reversible.
+ *
+ * TWO THINGS THE ROW STILL NEVER DICTATES:
+ *   A field the ROW does not state. A null printRun on a checklist row means
+ *     unknown, and unknown never overwrites a value.
+ *   `playerName` and every grade field. Drew's ruling says so explicitly, and
+ *     the reason outlives the instruction: the row's player is a
+ *     transcription and the holding's is what the owner calls their own card,
+ *     and the grade belongs to the slab in hand, not to the checklist.
  *
  * Exported so a pin can drive it alone.
  */
 export function fieldsFromRuledRow(
   holding: Record<string, unknown>,
   row: { setName?: string | null; cardNumber?: string | null; parallel?: string | null; printRun?: number | string | null },
-): Array<{ field: string; value: string | number; from: "ruled-row" }> {
+): Array<{ field: string; value: string | number; from: "ruled-row"; previous: unknown }> {
   const blank = (v: unknown) => v === null || v === undefined || String(v).trim() === "";
-  const fills: Array<{ field: string; value: string | number; from: "ruled-row" }> = [];
-  if (blank(holding.setName) && !blank(row.setName)) {
-    fills.push({ field: "setName", value: String(row.setName).trim(), from: "ruled-row" });
-  }
-  if (blank(holding.cardNumber) && !blank(row.cardNumber)) {
-    fills.push({ field: "cardNumber", value: String(row.cardNumber).trim(), from: "ruled-row" });
-  }
-  if (blank(holding.parallel) && !blank(row.parallel)) {
-    fills.push({ field: "parallel", value: String(row.parallel).trim(), from: "ruled-row" });
-  }
+  const fills: Array<{ field: string; value: string | number; from: "ruled-row"; previous: unknown }> = [];
+
+  /** Take the row's value whenever the row states one, and record what it
+   *  displaced. `previous` is the audit trail: nothing is lost, so the
+   *  overwrite is reversible from the document itself. A field the row does
+   *  NOT state is still never touched — a null in the checklist is unknown,
+   *  and unknown never overwrites a value. */
+  const take = (field: string, rowValue: string | number | null | undefined) => {
+    if (rowValue === null || rowValue === undefined || String(rowValue).trim() === "") return;
+    const value = typeof rowValue === "number" ? rowValue : String(rowValue).trim();
+    const previous = holding[field] ?? null;
+    // Nothing to record and nothing to change when they already agree.
+    if (!blank(previous) && String(previous) === String(value)) return;
+    if (blank(previous) && (value === "" as unknown)) return;
+    fills.push({ field, value, from: "ruled-row", previous });
+  };
+
+  take("setName", row.setName);
+  take("cardNumber", row.cardNumber);
+  take("parallel", row.parallel);
   const pr = Number(row.printRun);
-  if (typeof holding.printRun !== "number" && Number.isFinite(pr) && pr > 0) {
-    fills.push({ field: "printRun", value: pr, from: "ruled-row" });
-  }
+  if (Number.isFinite(pr) && pr > 0) take("printRun", pr);
+
   return fills;
 }
 
@@ -1033,10 +1061,12 @@ interface RuleVerdict {
   verdict: "RULE" | "AGREE" | "REFUSED";
   reason: string;
   backedBy?: string | null;
-  /** Blank identity fields the ruled row dictates. */
-  fills?: Array<{ field: string; value: string | number; from: string }>;
-  /** Fields the holding already states, left alone and reported. */
-  leftAlone?: Array<{ field: string; value: unknown }>;
+  /** Identity fields the ruled row dictates, each carrying the value it
+   *  displaces. In MODE=rule the row WINS, so this includes overwrites. */
+  fills?: Array<{ field: string; value: string | number; from: string; previous?: unknown }>;
+  /** Fields the holding states that the ROW does not, so they stand. A null
+   *  on a checklist row means unknown, and unknown never overwrites. */
+  rowSilentOn?: Array<{ field: string; value: unknown }>;
   /** The ruling this supersedes, when there was one. */
   supersedes?: string | null;
 }
@@ -1140,31 +1170,39 @@ async function rule(
 
     const priorRuling = String(h.identityResolvedBy ?? "").trim() || null;
     const fills = fieldsFromRuledRow(h, row);
-    const leftAlone = (["setName", "cardNumber", "parallel", "printRun"] as const)
+    const rowSilentOn = (["setName", "cardNumber", "parallel", "printRun"] as const)
       .filter((f) => !fills.some((x) => x.field === f))
       .filter((f) => h[f] !== null && h[f] !== undefined && String(h[f]).trim() !== "")
       .map((f) => ({ field: f, value: h[f] }));
 
     if (from === t.slug) {
-      push({ verdict: "AGREE", backedBy: source, fills, leftAlone,
+      push({ verdict: "AGREE", backedBy: source, fills, rowSilentOn,
         supersedes: priorRuling,
         reason: "the holding already carries the ruled identity" });
       console.log(`  AGREE      ${label}  ${t.slug}`);
       continue;
     }
 
-    push({ verdict: "RULE", backedBy: source, fills, leftAlone,
+    push({ verdict: "RULE", backedBy: source, fills, rowSilentOn,
       supersedes: priorRuling && priorRuling !== RULING_ID ? priorRuling : null,
       reason: `ruled onto a ${source} row` });
     console.log(`  RULE       ${label}\n             ${from}\n          -> ${t.slug}   backed by ${source}${row.setName ? ` — "${row.setName}"` : ""}`);
     if (priorRuling && priorRuling !== RULING_ID) {
       console.log(`             supersedes ${priorRuling}`);
     }
-    if (fills.length) {
-      console.log(`             fills blanks: ${fills.map((f) => `${f.field}=${JSON.stringify(f.value)}`).join(", ")}`);
+    // Print SETS and OVERWRITES apart. An overwrite is the line an operator
+    // must actually read before approving an apply — it is the one that
+    // discards something — so it never hides inside a list of fills.
+    const sets = fills.filter((f) => f.previous === null || f.previous === undefined || String(f.previous).trim() === "");
+    const overwrites = fills.filter((f) => !sets.includes(f));
+    if (sets.length) {
+      console.log(`             sets blank: ${sets.map((f) => `${f.field}=${JSON.stringify(f.value)}`).join(", ")}`);
     }
-    if (leftAlone.length) {
-      console.log(`             leaves user-set: ${leftAlone.map((f) => `${f.field}=${JSON.stringify(f.value)}`).join(", ")}`);
+    for (const f of overwrites) {
+      console.log(`             OVERWRITES ${f.field}: ${JSON.stringify(f.previous)} -> ${JSON.stringify(f.value)}   (previous kept in identityRuling.previousFields)`);
+    }
+    if (rowSilentOn.length) {
+      console.log(`             row silent on, holding stands: ${rowSilentOn.map((f) => `${f.field}=${JSON.stringify(f.value)}`).join(", ")}`);
     }
   }
 
@@ -1224,12 +1262,18 @@ async function rule(
 
       // Fill ONLY the blanks the ruled row dictates. A field the user stated
       // is left exactly as it is — the ruling names the card, not the typing.
+      // CAPTURE BEFORE WRITING. `previousFields` is what makes an overwrite
+      // acceptable at all: the ruling wins, and every value it displaced is
+      // recorded on the document, so nothing the user typed is destroyed and
+      // the overwrite is reversible from the holding itself.
+      const previousFields: Record<string, unknown> = {};
+      for (const f of v.fills ?? []) previousFields[f.field] = (h as any)[f.field] ?? null;
       for (const f of v.fills ?? []) (h as any)[f.field] = f.value;
 
-      // THE AUDIT TRAIL. A ruled identity says it was ruled, by whom, and what
-      // it superseded — a later pass must be able to tell this from a derived
-      // identity, and MODE=rederive's GATE 4 reads exactly this field to know
-      // it must stand down.
+      // THE AUDIT TRAIL. A ruled identity says it was ruled, by whom, what it
+      // superseded, and WHAT IT DISPLACED — a later pass must be able to tell
+      // this from a derived identity, and MODE=rederive's GATE 4 reads exactly
+      // this field to know it must stand down.
       h.identityResolvedBy = RULING_ID;
       h.identityResolvedAt = now;
       h.identityVerified = true;
@@ -1239,6 +1283,18 @@ async function rule(
       h.identityRederivedAt = now;
       h.identityRederivedBy = `recheck-holding-identity MODE=rule ${RULING_ID}`;
       h.identityRederivedBackedBy = v.backedBy ?? null;
+      h.identityRuling = {
+        ruling: RULING_ID,
+        at: now,
+        from: v.from,
+        to: v.to,
+        backedBy: v.backedBy ?? null,
+        supersedes: v.supersedes ?? null,
+        fields: (v.fills ?? []).map((f) => ({ field: f.field, value: f.value })),
+        // Drew, 2026-09-05: "with the previous values recorded in the ruling
+        // stamp so nothing is lost".
+        previousFields,
+      };
       if (v.fills?.length) h.identityRuledFields = v.fills;
       if (v.supersedes) h.identityRulingSupersedes = v.supersedes;
 
