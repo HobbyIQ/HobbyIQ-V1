@@ -161,6 +161,9 @@ const path = require("path");
 const backend = path.join(__dirname, "..");
 const { CosmosClient } = require(path.join(backend, "node_modules/@azure/cosmos"));
 const { runnerShardScope } = require(path.join(__dirname, "lib", "runner-shard-scope.cjs"));
+// CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809). A lane does not end by
+// letting the loop drain -- it exits, after flushing, with the code it means.
+const { finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
 // The row-op, not a hand-rolled patch: CF-GUARD-THE-CATALOG-WRITE-CONTRACT.
 // It keeps a `<field>Before` shadow so every marker this lane writes is
 // reversible, and it no-ops when the value already matches, so a re-run is
@@ -290,18 +293,32 @@ const kCard = (r) => [norm(r.year), norm(r.setKey), norm(r.cardNumber), norm(r.p
 async function main() {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) { console.error("FATAL: COSMOS_CONNECTION_STRING not set"); process.exit(1); }
-  const cat = new CosmosClient({
+  // Set when a verify cap fires: the exit must then be explicit, because an
+  // abandoned request may still hold a handle (#1809).
+  let capFired = false;
+  // The CLIENT is kept, not just the container: finishLane() disposes it so a
+  // keep-alive socket is not one more reason the process lingers (#1809).
+  const client = new CosmosClient({
     connectionString: conn,
     connectionPolicy: { retryOptions: { maxRetryAttemptsOnThrottledRequests: 60, maxWaitTimeInSeconds: 300 } },
-  }).database(process.env.COSMOS_DATABASE || "hobbyiq").container("card_catalog");
+  });
+  const cat = client.database(process.env.COSMOS_DATABASE || "hobbyiq").container("card_catalog");
 
-  const retry = async (fn, tries = 12) => {
+  // `signal` is what stops an ABANDONED retry from outliving the step (#1809).
+  // A capped verify's loser used to keep looping here on REF'd sleeps long
+  // after the race resolved -- which is precisely what held the process open
+  // for 55 minutes after slot 1 had reconciled clean.
+  const retry = async (fn, tries = 12, signal = null) => {
     let wait = 1000;
     for (let a = 0; ; a++) {
+      if (signal && signal.aborted) throw new Error("verify-cap");
       try { return await fn(); }
       catch (e) {
+        if (signal && signal.aborted) throw new Error("verify-cap");
         if (!/request rate is too large|429/i.test(String(e && e.message)) || a >= tries) throw e;
-        await new Promise((r) => setTimeout(r, wait));
+        // The sleep is unref'd: a retry nobody is waiting for must never be
+        // the reason node stays alive.
+        await new Promise((r) => { const t = setTimeout(r, wait); if (t.unref) t.unref(); });
         wait = Math.min(wait * 2, 30000);
       }
     }
@@ -542,16 +559,34 @@ async function main() {
     const vt0 = Date.now();
     const capped = async (label, spec) => {
       const left = VERIFY_MS - (Date.now() - vt0);
-      if (left <= 0) return null;
+      if (left <= 0) {
+        capFired = true;
+        console.log(`  VERIFY BY READ  ${label}: could not confirm within the cap (verify-cap)`);
+        return null;
+      }
+      // ABORT, don't merely abandon (#1809). Promise.race picks a winner and
+      // walks away from the loser; the loser here is a cross-partition
+      // aggregate whose retry loop kept node alive past the 150m ceiling in
+      // runs 33975816175/25863/34391/40824. The signal reaches both the SDK
+      // and retry(), so the loser actually stops.
+      const ac = new AbortController();
+      let timer = null;
       try {
         const { resources } = await Promise.race([
-          retry(() => cat.items.query(spec, { maxItemCount: -1 }).fetchAll(), 2),
-          new Promise((_, rej) => setTimeout(() => rej(new Error("verify-cap")), left).unref?.()),
+          retry(() => cat.items.query(spec, { maxItemCount: -1, abortSignal: ac.signal }).fetchAll(), 2, ac.signal),
+          new Promise((_, rej) => {
+            timer = setTimeout(() => rej(new Error("verify-cap")), left);
+            if (timer.unref) timer.unref();
+          }),
         ]);
         return Number(resources[0] || 0);
       } catch (e) {
+        capFired = true;
         console.log(`  VERIFY BY READ  ${label}: could not confirm within the cap (${String(e && e.message)})`);
         return null;
+      } finally {
+        if (timer) clearTimeout(timer);
+        ac.abort();
       }
     };
     const v = await capped("retiredReason", {
@@ -573,6 +608,21 @@ async function main() {
       console.log(`  the verify count is UNREAD, not zero — the writes above reconciled and are durable.`);
     }
   }
+
+  // Hand the exit path what it needs to close cleanly: the client to dispose,
+  // and whether a cap fired (which is why the exit must be explicit at all).
+  return { client, budget: { capFired: () => capFired } };
 }
 
-main().catch((e) => { console.error("FATAL", e && e.message); process.exit(1); });
+// CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809). The old tail exited only on
+// FAILURE and let success fall off the end, trusting the event loop to drain.
+// It did not: runs 33975816175/25863/34391/40824 reconciled clean and then sat
+// silent until the runner killed the step at 150 minutes. Success exits too,
+// after flushing -- the reconcile lines the relaunch gate greps for are
+// written to a PIPE (`| tee`), so they must drain before the exit.
+main()
+  .then((ctx) => finishLane(0, ctx || {}))
+  .catch(async (e) => {
+    console.error("FATAL", e && e.message);
+    await finishLane(1);
+  });

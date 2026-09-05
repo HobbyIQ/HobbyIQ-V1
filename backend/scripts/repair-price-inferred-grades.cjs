@@ -66,6 +66,8 @@
  */
 
 const path = require("path");
+// CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809): the one exit path.
+const { finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
 const backend = path.join(__dirname, "..");
 // REFUSALS BEFORE REQUIRES. @azure/cosmos, writeReconciliation and
 // gradeParser are all loaded inside main() AFTER the scope refusal, so an
@@ -285,4 +287,12 @@ async function main() {
   return 0;
 }
 
-main().then((c) => process.exit(c)).catch((e) => { console.error(e); process.exit(1); });
+// CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809). Success exits too, and it
+// exits through the ONE helper so the flush and the client dispose are not
+// re-invented per lane. The numeric code main() returns is preserved.
+main()
+  .then((c) => finishLane(typeof c === "number" ? c : 0))
+  .catch(async (e) => {
+    console.error(e);
+    await finishLane(1);
+  });

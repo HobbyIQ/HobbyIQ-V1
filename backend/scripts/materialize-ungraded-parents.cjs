@@ -67,6 +67,8 @@
  * too, not only to apply.
  */
 const path = require("node:path");
+// CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809): the one exit path.
+const { finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
 const backend = path.resolve(__dirname, "..");
 
 // CF-REFUSALS-BEFORE-REQUIRES (#1565). Nothing heavyweight may be required at
@@ -457,5 +459,12 @@ module.exports = {
 };
 
 if (require.main === module) {
-  main().catch((e) => { console.error("FATAL:", e?.stack || e?.message || String(e)); process.exit(3); });
+  // CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809). Success exits too: a lane
+// that lets the loop drain is betting every library released every handle.
+// Runs 33975816175/25863/34391/40824 lost that bet AFTER reconciling clean.
+main()
+  .then((ctx) => finishLane(0, ctx || {}))
+  .catch(async (e) => { console.error("FATAL:", e?.stack || e?.message || String(e)); 
+    await finishLane(3);
+  });
 }

@@ -89,6 +89,8 @@ const crypto = require("crypto");
 const backend = path.resolve(__dirname, "..");
 const L = require(path.join(__dirname, "lib", "ch-product-label.cjs"));
 const K = require(path.join(__dirname, "lib", "rematch-classify.cjs"));
+// CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809): the one exit path.
+const { finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
 
 const str = (v) => String(v ?? "").trim();
 const f = (n) => Number(n ?? 0).toLocaleString("en-US");
@@ -447,4 +449,11 @@ async function main() {
   console.log("");
 }
 
-main().catch((e) => { console.error("FATAL", e?.stack ?? e); process.exit(1); });
+// CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809). Success exits too: a lane
+// that lets the loop drain is betting every library released every handle.
+// Runs 33975816175/25863/34391/40824 lost that bet AFTER reconciling clean.
+main()
+  .then((ctx) => finishLane(0, ctx || {}))
+  .catch(async (e) => { console.error("FATAL", e?.stack ?? e); 
+    await finishLane(1);
+  });
