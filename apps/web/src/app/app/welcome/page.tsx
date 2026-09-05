@@ -170,6 +170,31 @@ function WelcomeBody() {
         </div>
       </section>
 
+      {/* CF-WEB-GUIDE (2026-08-22). The checklist below is five account
+          CHORES. Finishing all of them teaches a user nothing about what the
+          app does — what BuyerIQ is for, what the confidence number means, or
+          why our FMV is a projected next sale rather than a median. That last
+          one is the whole differentiator and it lived only on the public
+          marketing site. Put the way in ABOVE the chores, because a user who
+          understands the product finishes setup for a reason. */}
+      <section
+        className="hiq-card p-5 flex items-center justify-between gap-4 flex-wrap"
+        style={{
+          borderColor: "color-mix(in oklab, var(--color-accent) 40%, transparent)",
+        }}
+      >
+        <div className="min-w-0 flex-1">
+          <div className="font-semibold">New to HobbyIQ? Start here.</div>
+          <p className="text-sm mt-1" style={{ color: "var(--hiq-muted-text)" }}>
+            Five minutes on what the numbers mean and what each page is for — including
+            why our FMV is the projected next sale, not a median.
+          </p>
+        </div>
+        <Link href="/app/guide" className="hiq-btn-primary text-sm px-4 flex-shrink-0">
+          How HobbyIQ works
+        </Link>
+      </section>
+
       {data && (
         <section className="hiq-card p-0 divide-y divide-[color:var(--color-border)]">
           {data.steps.map((step) => (
@@ -215,9 +240,14 @@ function WelcomeBody() {
       )}
 
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <Link href="/app" className="hiq-btn-primary text-sm">
-          Go to your dashboard
-        </Link>
+        <div className="flex items-center gap-3 flex-wrap">
+          <Link href="/app" className="hiq-btn-primary text-sm">
+            Go to your dashboard
+          </Link>
+          <Link href="/app/guide" className="hiq-btn-secondary text-sm">
+            How HobbyIQ works
+          </Link>
+        </div>
         <button
           onClick={onDismiss}
           className="text-sm hover:underline"
