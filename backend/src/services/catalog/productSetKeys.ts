@@ -471,6 +471,21 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
   P("uc3", { names: ["pinnacle-uc3", "sportflix-uc3"], parent: "pinnacle" }),
   ...["goudey", "circa-thunder", "cracker-jack", "all-time-diamond-kings", "diamond-kings", "t206", "play-ball", "kelloggs",
     "post-cereal", "golden-press"].map((k) => P(k)),
+  // CF-BELLINGHAM-MARINERS-IS-THE-KEY (Drew 2026-08-30, R1). The 1987
+  // Bellingham Mariners team issue — Ken Griffey Jr.'s first card. A minor
+  // league club-issued set, so it has no flagship to be a release of: no
+  // `parent`, and its own family, exactly like the food issues above it.
+  //
+  // `spelled`, and the two `names` are the point of the entry. This is the
+  // mirror of the setKeyReconciliation aliases (see RULED_ALIASES there for
+  // the 228-row three-way pool split that motivated the ruling): `bellingham`
+  // is the town that stripYearAndSport left behind when it reduced the
+  // malformed catalog key `1987-bellingham-baseball`, and
+  // `bellingham-mariners-team-issue` is how the pool's own sale titles spell
+  // it. Both name THIS product. Declaring them here means productSetKeyForName
+  // answers before the regex vocabulary, so the fold does not depend on the
+  // reconciliation alone.
+  S("bellingham-mariners", { names: ["bellingham", "bellingham-mariners-team-issue"] }),
 ];
 
 // -- lookups -----------------------------------------------------------------

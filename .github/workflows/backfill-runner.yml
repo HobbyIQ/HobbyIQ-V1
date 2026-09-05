@@ -161,6 +161,29 @@ on:
           # 2000/base4 is the English Base Set 2, so a pool sweep with no year
           # axis would take both. No new input: the TO key travels in `titles`.
           - rekey-product-setkey
+          # CF-A-WRONG-IDENTITY-IS-NOT-A-MISSING-ONE (Drew, 2026-09-04, R2).
+          # Re-derives the identity of holdings that HAVE one and have the
+          # WRONG one -- the population `recheck-holding-identity`'s own sweep
+          # skips by construction (it re-derives only holdings with NO
+          # identity, and nothing else in the product re-derives at all).
+          # A shim over scripts/comp-quality/recheck-holding-identity.ts
+          # MODE=rederive; the logic lives beside the sweep it inverts because
+          # both call the live catalogMatcher out of src/.
+          #
+          # SCOPED BY NAME OR REFUSED (exit 2). Pass the holding ids in
+          # `titles` (comma-separated ids or id prefixes) or set a single user
+          # via USER_ID. There is deliberately no whole-portfolio sweep: this
+          # mode can overwrite an identity that is already correct.
+          #
+          # Checklist-matched only, never mints: CATALOG_MATCH_ONLY_ENABLED
+          # plus an untrusted source, and then the destination slug is read
+          # back from card_catalog by id -- a slug no checklist row backs is
+          # reported UNVERIFIED and never written. A holding claiming a print
+          # run, serial or parallel the destination does not carry is refused
+          # the same way rather than collapsed onto a less specific row.
+          # `apply` drives BACKFILL_APPLY as usual, and every write is
+          # verified by re-reading the document (exit 5 on a mismatch).
+          - rederive-holding-identity
           - repair-truncated-card-year
           - repair-select-subbrand-misslug
           - fold-checklist-numbered-twins
@@ -1141,6 +1164,15 @@ jobs:
           # half and `titles` is the TO half. Documented here because the name
           # does not say so on its own.
           BCP_TITLES: ${{ inputs.titles }}
+          # rederive-holding-identity (R2, 2026-09-04) reads BCP_TITLES as its
+          # HOLDING-ID list -- comma-separated holding ids or id prefixes --
+          # for the same reason rekey-product-setkey reads it as a setKey:
+          # workflow_dispatch is at its input cap and a new one is not
+          # available. USER_ID is the other half of its scope (re-derive one
+          # user instead of a named list); it reuses the pinned userId the
+          # reprice lane already carries, and the script REFUSES to run with
+          # both halves empty rather than sweeping every holding.
+          USER_ID: ${{ inputs.script == 'rederive-holding-identity' && inputs.scope == 'user' && 'user-199fcbc9-58ba-4643-a0c9-f75bcbc90bd4' || '' }}
           SOURCES: ${{ inputs.sources }}
           # retire mode=source / audit-source-coverage: the per-product key
           # coverage floor under which an old product is kept, not retired.

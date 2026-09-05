@@ -802,3 +802,75 @@ describe("SLUG CASE — the re-keyed row must land BYTE-EQUAL on the checklist r
     expect(canonical.split(":")[5]).toBe("base");
   });
 });
+
+describe("BLACK DIAMOND joins the ladder (R3, 2026-09-04)", () => {
+  // THE ONE UPPER DECK CHILD THE LADDER COULD NOT SEE. Every other table
+  // already agreed `upper-deck-black-diamond` is a distinct product that is a
+  // release of `upper-deck` -- DISTINCT_PRODUCT_SETKEYS names it,
+  // RULED_COLLAPSE_PAIRS carries the measured pair, productSetKeys.ts gives it
+  // `parent: "upper-deck"` -- but `specializationAncestry` reads ONLY the
+  // mirror, so L1 failed and the rows landed in CONFLICT.
+  //
+  // Measured read-only on prod 2026-09-04: 12 sold_comps rows for 1999 #D24
+  // (Ken Griffey Jr.), every one stored at
+  // `hiq:baseball:1999:upper-deck:d24:base:no-auto` while their own titles say
+  // "1999 Upper Deck Black Diamond" / "1999 UD Black Diamond Dominance".
+  const STORED = {
+    sport: "baseball", cardYear: 1999, setKey: "upper-deck", cardNumber: "D24",
+    parallel: "Base", isAuto: false, printRun: null, gradeCompany: null, gradeValue: null,
+  };
+  const DERIVED = { ...STORED, setKey: "upper-deck-black-diamond" };
+  const TITLE = "1999 Upper Deck Black Diamond Baseball #D24 Base";
+
+  it("mirrors the edge productSetKeys.ts already declares", () => {
+    expect(K.SPECIALIZATION_PARENTS["upper-deck-black-diamond"]).toBe("upper-deck");
+    expect(productEntry("upper-deck-black-diamond")?.parent).toBe("upper-deck");
+    expect(productAncestry("upper-deck-black-diamond")).toContain("upper-deck");
+    expect(K.isSpecializationOf("upper-deck-black-diamond", "upper-deck")).toBe(true);
+  });
+
+  it("classifies the D24 rows IMPROVE/SPECIALIZATION-STATED, and writable", () => {
+    const r = K.classifyRow({
+      row: { title: TITLE }, stored: STORED, derived: DERIVED,
+      checklistBacked: true, derivedBackedStrict: true,
+      storedSlug: "hiq:baseball:1999:upper-deck:d24:base:no-auto",
+      storedFlagshipListsCardNumber: false,
+    });
+    expect(r.klass).toBe(K.IMPROVE);
+    expect(r.subclass).toBe(K.SPECIALIZATION_STATED);
+    expect(r.writable).toBe(true);
+    expect(r.reasons.join(" ")).toContain("specialization:upper-deck->upper-deck-black-diamond");
+    expect(r.reasons.join(" ")).toContain("title-states:black+diamond");
+  });
+
+  it("is NOT a same-number parallel set — the D-prefix still carries information", () => {
+    // Black Diamond runs its own D-prefixed numbering (#D24) against the
+    // flagship's plain 1-N, so L5 must keep asking whether the flagship lists
+    // the number. Declaring it a same-number family would switch that gate off
+    // for a family where the number genuinely separates two cards.
+    expect(K.isSameNumberParallelSet("upper-deck-black-diamond", "upper-deck")).toBe(false);
+    expect(K.SAME_NUMBER_PARALLEL_SETS.map((e: { setKey: string }) => e.setKey))
+      .not.toContain("upper-deck-black-diamond");
+  });
+
+  it("still refuses when the title does not state the distinguishing words", () => {
+    // L2 is what keeps the edge from moving every `upper-deck` row: a title
+    // that never says "Black Diamond" is not evidence for Black Diamond.
+    const r = K.classifyRow({
+      row: { title: "1999 Upper Deck Baseball #D24 Ken Griffey Jr" },
+      stored: STORED, derived: DERIVED, checklistBacked: true, derivedBackedStrict: true,
+      storedSlug: "hiq:baseball:1999:upper-deck:d24:base:no-auto",
+      storedFlagshipListsCardNumber: false,
+    });
+    expect(r.klass).toBe(K.CONFLICT);
+    expect(r.writable).toBe(false);
+  });
+
+  it("MUTATION: dropping the mirrored edge sends the D24 rows back to CONFLICT", () => {
+    // The revert this pin exists to catch. Reverting the one-line mirror entry
+    // is what re-strands the 12 rows, and nothing else in the classifier says
+    // so -- every other table still names the product.
+    expect(K.LADDER_MIRRORED_KEYS).toContain("upper-deck-black-diamond");
+    expect(K.specializationAncestry("upper-deck-black-diamond")).not.toEqual([]);
+  });
+});

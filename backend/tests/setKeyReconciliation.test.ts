@@ -556,3 +556,77 @@ describe("Drew's rulings, 2026-09-04", () => {
     expect(normalizeSetKey("1999 Upper Deck Black Diamond Baseball")).toBe("upper-deck-black-diamond");
   });
 });
+
+describe("CF-BELLINGHAM-MARINERS-IS-THE-KEY (Drew 2026-08-30, R1)", () => {
+  // ONE CARD, ONE ROW, ONE POOL. Measured read-only against prod sold_comps on
+  // 2026-09-04: 228 rows of 1987 Bellingham Mariners #15 -- Ken Griffey Jr.'s
+  // team-issue rookie, ONE card -- split across three stored slugs (163
+  // `:bellingham:`, 41 `:1987-bellingham-baseball:`, 24 `:unknown:`). Three
+  // trend lines for one card is three different FMVs depending which pool a
+  // surface reads.
+  const RULED = "bellingham-mariners";
+
+  it("resolves every spelling of the team issue onto the ruled key", () => {
+    for (const spelling of [
+      "bellingham",                        // the town, left behind by stripYearAndSport
+      "1987-bellingham-baseball",          // the malformed CATALOG key
+      "bellingham-mariners-team-issue",    // how the pool's own sale titles spell it
+      "1987 Bellingham Baseball",          // the holding's stored setName
+      "1987 Bellingham Mariners",          // the checklist's name
+      "1987 Bellingham Mariners Team Issue",
+    ]) {
+      expect(normalizeSetKey(spelling), `${spelling} does not resolve to ${RULED}`).toBe(RULED);
+    }
+  });
+
+  it("makes the ruled key a fixed point — a ruling that normalizes away is not a ruling", () => {
+    expect(normalizeSetKey(RULED)).toBe(RULED);
+    expect(reconciledFixedPoints()).toContain(RULED);
+  });
+
+  it("declares the three spellings as ALIASES, each with its evidence", () => {
+    const aliases = new Map(setKeyAliases());
+    for (const from of ["bellingham", "1987-bellingham-baseball", "bellingham-mariners-team-issue"]) {
+      expect(aliases.get(from), `${from} is not a DECLARED alias`).toBe(RULED);
+    }
+    const ruled = new Map(ruledAliases().map((r) => [r.setKey, r]));
+    for (const from of ["bellingham", "1987-bellingham-baseball", "bellingham-mariners-team-issue"]) {
+      expect(String(ruled.get(from)?.why ?? "").length, `${from} carries no evidence`).toBeGreaterThan(40);
+    }
+  });
+
+  it("overrides the census, which named `bellingham` canonical on the key's SHAPE alone", () => {
+    // The 2026-09-03 census called `1987-bellingham-baseball` a
+    // `catalog-key-malformed` whose canonical is `bellingham` -- mechanically
+    // right about the shape (a year prefix and a trailing sport word) and
+    // wrong about the destination: `bellingham` is the town, not the product.
+    // This is guard (0) in buildTables doing its job: a verdict DERIVED from a
+    // key's shape must not outrank a decision a human stated with evidence.
+    const e = reconciliationEntry("1987-bellingham-baseball");
+    expect(e?.verdict).toBe("catalog-key-malformed");
+    expect(e?.canonical, "the census still records what it derived").toBe("bellingham");
+    expect(normalizeSetKey("1987-bellingham-baseball"), "the RULING must win").toBe(RULED);
+  });
+
+  it("spells the product in the table, with both alternate spellings as names", () => {
+    const e = productEntry(RULED);
+    expect(e, `${RULED} has no product entry`).toBeTruthy();
+    expect(e?.setKey).toBe(RULED);
+    // A club-issued minor league team set is no release OF a flagship, so it
+    // has no parent and no refines -- the matcher must never widen out of it.
+    expect(e?.parent ?? null, "a team issue is a release of nothing").toBeNull();
+    expect(e?.refines, "a team issue refines nothing").toBeUndefined();
+    for (const name of ["bellingham", "bellingham-mariners-team-issue"]) {
+      expect(productEntry(name)?.setKey, `${name} does not name the ruled product`).toBe(RULED);
+    }
+  });
+
+  it("THE MUTATION: `bellingham` must not stay a key of its own", () => {
+    // The failure this ruling exists to prevent, stated as the assertion that
+    // catches its revert. If `bellingham` ever resolves to itself again the
+    // pool re-splits and the 163 rows stop reaching the checklist row Drew
+    // ruled -- which is the defect, not a cosmetic spelling difference.
+    expect(normalizeSetKey("bellingham")).not.toBe("bellingham");
+    expect(reconciledFixedPoints()).not.toContain("bellingham");
+  });
+});

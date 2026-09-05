@@ -2184,6 +2184,27 @@ const SPECIALIZATION_PARENTS = Object.freeze({
   "sp": "upper-deck",
   "sp-championship": "upper-deck",
   "upper-deck-minors": "upper-deck",
+  // -- Black Diamond (R3, 2026-09-04). The same shape as `sp` directly above,
+  //    and it was the one Upper Deck child the ladder could not see: the key
+  //    is ALREADY a declared DISTINCT product (DISTINCT_PRODUCT_SETKEYS), a
+  //    ruled collapse pair (`upper-deck-black-diamond -> upper-deck`, 8,546
+  //    est rows) and a productSetKeys.ts entry whose `parent` is `upper-deck`
+  //    — every table but this one. `specializationAncestry` reads ONLY the
+  //    mirror, so the ladder returned [] and L1 failed on rows every other
+  //    table agrees about.
+  //
+  //    Measured read-only on prod 2026-09-04: 12 sold_comps rows for 1999
+  //    #D24 (Ken Griffey Jr.), every one stored at
+  //    `hiq:baseball:1999:upper-deck:d24:base:no-auto` while their own titles
+  //    say "1999 Upper Deck Black Diamond" / "1999 UD Black Diamond
+  //    Dominance". normalizeSetKey already reads all of those spellings as
+  //    `upper-deck-black-diamond`; only the stored slug is stale.
+  //
+  //    NOT in SAME_NUMBER_PARALLEL_SETS, deliberately, for the reason the note
+  //    above gives for `sp`: Black Diamond runs its own D-prefixed numbering
+  //    (#D24) against the flagship's plain 1-N, so the number still carries
+  //    information and L5 must keep asking whether the flagship lists it.
+  "upper-deck-black-diamond": "upper-deck",
   "score-rookie-and-traded": "score",
   "pacific-prism": "pacific",
   "pacific-crown-collection": "pacific",
