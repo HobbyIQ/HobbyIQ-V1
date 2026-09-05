@@ -1,0 +1,43 @@
+{
+  "scrapedAt": "2026-08-11T02:50:38.793Z",
+  "sourceUrl": "https://baseballcardpedia.com/index.php/1999_Black_Diamond",
+  "sport": "baseball",
+  "year": 1999,
+  "setName": "Black Diamond",
+  "productKey": "1999-black-diamond",
+  "setKey": "upper-deck-black-diamond",
+  "rowCount": 180,
+  "sectionsReport": [
+    {
+      "breadcrumb": "Checklist > Base Set",
+      "category": "base",
+      "playerCount": 90,
+      "printRun": null
+    },
+    {
+      "breadcrumb": "Checklist > Base Set > Diamond Debut",
+      "category": "base",
+      "playerCount": 30,
+      "printRun": null
+    },
+    {
+      "breadcrumb": "Checklist > Inserts > Diamond Dominance",
+      "category": "insert-diamond-dominance",
+      "playerCount": 30,
+      "printRun": null
+    },
+    {
+      "breadcrumb": "Checklist > Inserts > Mystery Numbers",
+      "category": "insert-mystery-numbers",
+      "playerCount": 30,
+      "printRun": null
+    }
+  ],
+  "parallelColumnAuthoritative": true,
+  "migratedAt": "2026-08-25T15:28:26.590Z",
+  "migratedBy": "CF-ONE-CHECKLIST-FORMAT — parallel materialised from the category slug; slug-identical",
+  "printRunsFound": 30,
+  "corroboratingUrl": "https://www.sportscardchecklist.com/set-190800/1999-upper-deck-black-diamond-dominance-baseball-trading-card-checklist",
+  "printRunNote": "CF-DIAMOND-DOMINANCE-IS-SERIAL-NUMBERED (2026-09-05). Diamond Dominance D1-D30 carry printRun 1500. Two independent permissive sources agree and neither is hedged: baseballcardpedia (/index.php/1999_Black_Diamond) says each Dominance card is 'serial-numbered to 1500 copies, with a one-of-one Emerald parallel also available'; sportscardchecklist set-190800 states 'Serial/1500' and lists the same 30 players in the same D1-D30 order this file already held, D24 = Ken Griffey Jr. on both. The staged file left the column blank, so D24 derived with no :num- tail and the /1500 insert was indistinguishable from an unnumbered card. This is a FLAT set-wide serial: the page states one figure for the whole 30-card insert, with no card-range clause and no EXCEPT block, so neither checklist-gap-source-map.md SS3.1 (range-scoped runs) nor SS3.2 (the three-player exception) applies. Those two bugs are about the BASE Double/Triple/Quadruple ladder, which this file still does not carry and which is deliberately left to the fixed ladder scraper. Mystery Numbers M1-M30 are deliberately STILL BLANK: BCP states their serial is the card's sequential number x100 (M1=/100 ... M30=/3000), a per-card function, not a set figure. A flat number there would be exactly the well-formed wrong print run that no later sweep can see.",
+  "parallelsNote": "The insert rows name their insert in the `parallel` column, which is what keeps D24 Diamond Dominance off the base card's slug. The base ladder (Double /3000 short set /2500 Debuts, Triple /1500 //1000, Quadruple /150 //100, and the Sosa/Griffey/McGwire home-run-total exception) is NOT in this file and must come from the fixed scrape-bcp-ladders run."
+}
