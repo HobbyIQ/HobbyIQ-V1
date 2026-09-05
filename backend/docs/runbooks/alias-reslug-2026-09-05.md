@@ -294,3 +294,266 @@ scratch/buckets.ts       the six-bucket classification -> C:/tmp/buckets.json
 scratch/srccount2.cjs    card_catalog rows BY SOURCE for a key list
 scratch/verify5.ts       the five gates, per ruled pair
 ```
+---
+
+# Update, 2026-09-05 (later the same day): the lane now reaches them — #1793
+
+**Drew's ruling on open question 1: DERIVER-RESOLVED aliases qualify as scope.** Not by widening the
+gate quietly, but by naming a second admission rule alongside the ruled one and making every refusal
+say which rule refused it. `reslug-ruled-alias.cjs` implements it; everything below was measured
+READ-ONLY against prod on 2026-09-05, with the lane itself in REPORT mode.
+
+## The admission rule
+
+The alias set for a scope key `K` is the union of two rules:
+
+| Rule | Admits | Authority |
+|---|---|---|
+| **RULED** | a `RULED_ALIASES` entry whose `canonical` is `K` | a human decision, with its evidence |
+| **DERIVER** | a spelling the live vocabulary already folds onto `K` (`normalizeSetKey(alias) === K`) **and that the pool actually stores** | a derivation the deriver already performs on every write |
+
+The deriver-resolved spellings are **discovered, never typed** — the lane reads segment 3 of the ids
+under `hiq:sport:year:` and asks the live `normalizeSetKey` about each distinct value. A typed list
+would be a second copy of the vocabulary: it drifts when the vocabulary changes, it can name a
+spelling that does not exist (sweeping nothing and reporting success), and it can miss one that does.
+The banner prints the admitted set as `deriver-resolved: a, b, c` and labels every entry `[RULED]` or
+`[DERIVER]`.
+
+### Four gates, and every refusal exits 2
+
+1. **The scope key must be a `normalizeSetKey` fixed point.** This is what permanently refuses
+   `donruss` — the census's #2 by volume — because `normalizeSetKey("donruss") === "panini-donruss"`,
+   an era split `spellForEra` resolves per year.
+2. **A candidate alias must not be a fixed point of its own.** A key the deriver leaves alone is a key
+   the vocabulary calls a product. This refuses #1792's whole 58-pair SPLIT bucket by mechanism
+   rather than by a list anyone maintains — `select`, `score`, `studio`, `diamond-kings` are all
+   fixed points.
+3. **A candidate holding strict checklist rows of its own must prove it names the same cards.**
+   See below — this gate was rewritten by its own first REPORT run.
+4. **A ruling-conflict deny-list**, from this runbook's own refusals, checked ahead of *both* rules so
+   a table edited into conflict with a standing test refuses rather than sweeps.
+
+## Gate 3 was wrong on its first run, and prod said so
+
+The gate began as "an alias holding any strict checklist-backed catalog row is a product, refuse" —
+the standing count-by-source rule, applied directly. Run in REPORT mode against prod it refused
+**`panini-optic`**, the 235,186-row headline case of the very ruling that asked for this lane, on
+15,995 strict `checklistinsider` rows in football/2024 alone.
+
+That refusal was measured, not guessed, and it was wrong:
+
+```
+MEASURED READ-ONLY 2026-09-05, basketball/2023
+  panini-optic   20,651 catalog rows  (20,221 distinct cardNumber|parallel)
+  donruss-optic  20,132 catalog rows  (19,970 distinct)
+  shared         19,490 of 19,970  =  97.6%
+  panini-optic's own setName field:  "2023 donruss optic"
+football/2023: 82.2%.   football/2024: 74.7%.
+```
+
+Both keys are strict. They are **also the same product**: `checklistinsider` was ingested twice under
+two spellings of one release, and the alias's own `setName` spells the destination. A gate that stops
+at "strict rows exist" cannot see that, and refuses a fold that is exactly
+`CF-ONE-CARD-ONE-ROW-ONE-POOL`.
+
+The contrast is what makes the measurement a discriminator rather than an excuse — a genuine SPLIT
+pair from this runbook's own bucket:
+
+```
+MEASURED READ-ONLY 2026-09-05, baseball
+  panini-diamond-kings vs diamond-kings, in their two SHARED years
+    2020:  54 vs 47 distinct cards,  shared 0  ->  0.0%
+    2022:   2 vs  8 distinct cards,  shared 0  ->  0.0%
+```
+
+Zero. Row counts and strict-source presence are identical in *shape* across both pairs; only the
+CARDS tell them apart. So gate 3 is now: **an alias holding strict rows of its own is admitted only
+when its checklist names ≥60% of the destination's distinct `cardNumber|parallel` in the shared
+sport/year cells.** Below that it is a product and it refuses; with **no shared cell at all** it also
+refuses, because silence is not proof of sameness. The floor sits in a gap two orders of magnitude
+wide (0.0% vs 74.7%+), so its exact value is not load-bearing.
+
+An incidental defect found and fixed while measuring this: the overlap scan first read the *cell*
+prefix `hiq:football:2024:` and filtered by segment, exhausting its page bound on unrelated products
+before reaching the two being compared — it scored `panini-optic` at 12.1% off 1,977 of 17,003 rows
+it had actually seen. It now scans each key's own narrow prefix. A bound that silently truncates the
+evidence turns a discriminator into a coin flip.
+
+## Corrections to the measurements above
+
+Three numbers in the earlier half of this runbook do not survive re-measurement. They are corrected
+here rather than edited away, because the correction is the useful part.
+
+| Earlier claim | Measured 2026-09-05 | Consequence |
+|---|---|---|
+| `finest` → `topps-finest`, 306,807 already-resolved rows include it | **`finest` holds 0 pool rows** across baseball 2020-25, basketball 2021-23, football 2021-23 (`topps-finest` holds 61,720) | nothing to dispatch; the discovery finds no alias and the lane refuses rather than sweeping nothing |
+| `stadium-club` → `topps-stadium-club`, likewise | **`stadium-club` holds 0 pool rows** (`topps-stadium-club` holds 59,337) | same — already consolidated |
+| `panini-hoops` catalog: "2,680 rows, every one self-derived, none is a checklist row" | **43,822 rows, 43,332 STRICT** (`checklistinsider-2026-08-27` = 43,014) | the catalog move carries real checklist coverage, not just a point-read fix |
+| `nba-hoops` catalog: "26,355 checklistinsider rows" | **0 rows in every dispatched cell** (basketball 2021-25) | the catalog move is a clean relocation — no destination twin, so `chooseSurvivor` never has to arbitrate |
+
+The `finest`/`stadium-club` correction is the discovery rule earning its place: a typed alias list
+would have dispatched two sweeps that could only have reported success over an empty population.
+
+## The population, measured
+
+```
+### panini-optic -> donruss-optic          POOL rows        CATALOG rows (strict)
+  football/2022      alias   8,669   dest     189       187        (0)
+  football/2023      alias  54,370   dest     768    18,324   (17,496)
+  football/2024      alias 100,471   dest   2,057    17,003   (15,995)
+  football/2025      alias  25,072   dest   3,382    19,706   (19,472)
+  basketball/2021    alias   6,030   dest     112       164        (0)
+  basketball/2022    alias   7,380   dest      82       175        (0)
+  basketball/2023    alias  11,120   dest     242    20,651   (20,503)
+  basketball/2024    alias  21,785   dest     950    31,271   (31,023)
+  basketball/2025    alias     289   dest       8         1        (0)
+  TOTAL              alias 235,186   dest   7,790   107,482   (104,489)
+
+### panini-hoops -> nba-hoops   [RULED]
+  basketball/2021    alias   2,759   dest       0        40        (0)
+  basketball/2022    alias   3,107   dest       0        72        (0)
+  basketball/2023    alias  17,372   dest       0    15,382   (15,134)
+  basketball/2024    alias  20,192   dest       0    28,328   (28,198)
+  basketball/2025    alias      22   dest       0         0        (0)
+  TOTAL              alias  43,452   dest       0    43,822   (43,332)
+```
+
+`nba-hoops` is the starkest split in the set: **20,192 sales on the alias and zero at the
+destination** in 2024 alone. One product, and every sale of it in the wrong pool.
+
+## Throughput, and why NO sharding is dispatched
+
+Measured in REPORT mode against prod, `donruss-optic` / football / 2024:
+
+```
+25,010 rows scanned in 35s wall  (~18s of that fixed: discovery + gate + BEFORE counts)
+=> ~1,470 rows/s sustained scan
+   reconciled: intended 25,010 = written 25,010 + skipped 0
+```
+
+APPLY is slower than a scan — upsert, verify-read, delete per row. Sizing the largest cell against a
+deliberately pessimistic APPLY floor:
+
+| APPLY rate | football/2024 (100,471) | whole panini-optic (235,186) |
+|---|---|---|
+| 90 rows/s | 19 min | 44 min |
+| 60 rows/s | 28 min | 65 min |
+| 40 rows/s | 42 min | 98 min |
+
+**Every cell fits one slot inside the 140-minute budget, and so does the whole population.** The
+task that commissioned this work assumed 220k rows would not fit; the measurement says otherwise, so
+**no sharding opt-in is dispatched** — `runner-shard-scope.cjs` remains wired (`SHARD=true` with
+`slot`/`slots`) and the #1791 relaunch step still resumes a run that hits the budget marker, but
+dispatching a fan-out nobody needs is an un-evidenced complication. Dispatch **per cell**, largest
+first, so a stall is bounded by one sport-year rather than by the whole product.
+
+## Dispatch plan — catalog FIRST, pool SECOND, per cell, largest first
+
+The ordering argument from the first half of this runbook is unchanged and is the reason for it:
+`ensureCatalogRow` point-reads the sale's slug and mints a self-derived `ingest-auto-seed` row on a
+miss, so a pool-first move manufactures exactly the rows `project_self_comp_publish_labeled` warns
+about. Catalog-first never mints.
+
+`rekey-product-setkey` MODE=catalog resolves by **exact id-stem segment** (`parts[3] !== FROM` →
+left, counted), not by a LIKE — verified by reading the lane. That retires the earlier caution about
+a two-letter FROM such as `ud`: it cannot over-match. It takes `SPORT`, `SETKEY`(FROM),
+`TO_SETKEY`(carried in `titles`); `YEARS` is optional for catalog and enforced on the slug when given.
+
+### Step 0 — bellingham-mariners, the catalog half of #1786 (still open)
+
+4 rows, and **not on the key you would guess**: `bellingham` and `bellingham-mariners-team-issue`
+hold **0** catalog rows; all 4 live on `1987-bellingham-baseball` (3 `ingest-auto-seed-graded` + 1
+`sales-attested-unnumbered`). The pool reslug already applied (167 rows, verified), so this one runs
+in the wrong order by necessity — verify the survivor is the CHECKLIST row
+(`drew-ruling-checklist-2026-08-30`), not an auto-seed.
+
+```bash
+gh workflow run backfill-runner.yml -f script=rekey-product-setkey -f apply=false \
+  -f mode=catalog -f sports=baseball -f years=1987 \
+  -f setkey_like=1987-bellingham-baseball -f titles=bellingham-mariners
+```
+
+### Step 1 — nba-hoops ← panini-hoops  [RULED]
+
+Catalog first (43,822 rows, 43,332 strict; destination empty, so no survivor arbitration), then the
+pool (43,452 rows). Largest cells first.
+
+```bash
+# 1a. catalog
+gh workflow run backfill-runner.yml -f script=rekey-product-setkey -f apply=false \
+  -f mode=catalog -f sports=basketball -f years=2024 \
+  -f setkey_like=panini-hoops -f titles=nba-hoops
+gh workflow run backfill-runner.yml -f script=rekey-product-setkey -f apply=false \
+  -f mode=catalog -f sports=basketball -f years=2023 \
+  -f setkey_like=panini-hoops -f titles=nba-hoops
+gh workflow run backfill-runner.yml -f script=rekey-product-setkey -f apply=false \
+  -f mode=catalog -f sports=basketball -f years=2021,2022,2025 \
+  -f setkey_like=panini-hoops -f titles=nba-hoops
+
+# 1b. pool — only after 1a has APPLIED and been verified by read
+gh workflow run backfill-runner.yml -f script=reslug-ruled-alias -f apply=false \
+  -f scope=nba-hoops -f sports=basketball -f years=2024
+gh workflow run backfill-runner.yml -f script=reslug-ruled-alias -f apply=false \
+  -f scope=nba-hoops -f sports=basketball -f years=2023
+gh workflow run backfill-runner.yml -f script=reslug-ruled-alias -f apply=false \
+  -f scope=nba-hoops -f sports=basketball -f years=2021,2022,2025
+```
+
+### Step 2 — donruss-optic ← panini-optic  [DERIVER]
+
+The largest move in the set: 107,482 catalog rows and 235,186 pool rows. Catalog first, per cell,
+largest first. Unlike `nba-hoops`, the destination is populated in every strict cell, so
+`moveCatalogRow`'s `chooseSurvivor` **will** arbitrate — checklist beats vendor beats derived, so a
+derived stub can never overwrite a checklist row, but the survivor should be spot-checked on the
+first cell before the rest are applied.
+
+```bash
+# 2a. catalog, largest first
+for Y in 2024 2023 2025 2022; do
+  gh workflow run backfill-runner.yml -f script=rekey-product-setkey -f apply=false \
+    -f mode=catalog -f sports=football -f years=$Y \
+    -f setkey_like=panini-optic -f titles=donruss-optic
+done
+for Y in 2024 2023 2022 2021 2025; do
+  gh workflow run backfill-runner.yml -f script=rekey-product-setkey -f apply=false \
+    -f mode=catalog -f sports=basketball -f years=$Y \
+    -f setkey_like=panini-optic -f titles=donruss-optic
+done
+
+# 2b. pool — only after 2a has APPLIED and been verified by read
+for Y in 2024 2023 2025 2022; do
+  gh workflow run backfill-runner.yml -f script=reslug-ruled-alias -f apply=false \
+    -f scope=donruss-optic -f sports=football -f years=$Y
+done
+for Y in 2024 2023 2022 2021 2025; do
+  gh workflow run backfill-runner.yml -f script=reslug-ruled-alias -f apply=false \
+    -f scope=donruss-optic -f sports=basketball -f years=$Y
+done
+```
+
+### Not dispatched, and why
+
+| Key | Reason |
+|---|---|
+| `topps-finest` ← `finest` | **0 pool rows on the alias.** Already consolidated; the lane refuses rather than sweeping nothing |
+| `topps-stadium-club` ← `stadium-club` | **0 pool rows on the alias.** Same |
+| `select`, `score`, `studio`, `diamond-kings`, … (58 SPLIT pairs) | refused by gate 2 — each alias is a `normalizeSetKey` fixed point, i.e. a product |
+| `ud-choice`, `triple-threads`, `panini-elite`, `panini-select`, `panini-score` | on the ruling-conflict deny-list; a standing ruling outranks a derivation |
+| `donruss` | refused by gate 1 — not a fixed point (→ `panini-donruss`, an era split) |
+| 31 Bowman/Topps CONTESTED pairs | ruled DISTINCT; refused by gate 2 and pinned by a standing test |
+
+**All dispatches above are `apply=false`.** Read each banner — the admitted alias set, the rule that
+admitted each, the BEFORE/AFTER counts and the reconciliation — before any of them is repeated with
+`apply=true`. Backend `src` did not change in #1793 (the lane is a script and its dist/ dependencies
+are unchanged), but the **catalog** lane's behaviour depends on the deployed vocabulary, so confirm
+`/api/health` `build.shaShort` matches main before applying.
+
+## Open question 1 — answered
+
+Drew chose the recommended option's *spirit* (a ruled key stays a human decision) while widening the
+gate mechanically: a deriver-resolved alias is admitted **as such**, labelled `[DERIVER]` in the
+banner, and made to pass three gates a ruled alias is not asked to pass. Nothing was promoted into
+`RULED_ALIASES` to unlock a sweep, so "a ruled key is a human decision with evidence" is intact — and
+the 306,807 rows are reachable. Questions 2 (`panini-select` direction) and 3 (`panini-score`
+hobbymonitor ingest) remain open and are now enforced as deny-list entries so neither can be swept by
+accident in the meantime.

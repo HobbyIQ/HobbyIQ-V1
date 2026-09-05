@@ -55,24 +55,44 @@
  * already correct. A key that is not a declared alias of SCOPE is untouched,
  * whatever it looks like.
  *
- * SCOPE IS THE RULED KEY, AND IT IS REQUIRED
+ * SCOPE IS THE DESTINATION KEY, AND IT IS REQUIRED
  * (CF-A-WHOLE-SCOPE-WRITE-REFUSES-WITHOUT-ITS-SCOPE). SCOPE names the
- * DESTINATION -- `bellingham-mariners` -- and the lane sweeps every alias that
- * resolves to it. There is no default: an empty SCOPE, or the runner's
- * inherited `refractor`, is FATAL before a Cosmos client is built. A SCOPE that
- * is not a ruled destination is FATAL too, with the valid destinations printed,
- * so a typo cannot quietly sweep nothing and report success.
+ * DESTINATION -- `bellingham-mariners`, `donruss-optic` -- and the lane sweeps
+ * every ADMITTED alias that resolves to it. There is no default: an empty
+ * SCOPE, or the runner's inherited `refractor`, is FATAL before a Cosmos client
+ * is built, and a scope that admits no alias at all is FATAL too, so a typo
+ * cannot quietly sweep nothing and report success.
+ *
+ * TWO RULES ADMIT AN ALIAS (widened 2026-09-05 by Drew's ruling; #1792 measured
+ * the gap). See the long note above the admission rule below:
+ *
+ *   RULED    a RULED_ALIASES entry whose canonical is SCOPE. A human decision,
+ *            with its evidence -- what #1786 built this lane for.
+ *   DERIVER  a spelling the LIVE deriver already folds onto SCOPE
+ *            (normalizeSetKey(alias) === SCOPE) and that the pool ACTUALLY
+ *            STORES, discovered by a bounded read rather than typed. 306,807
+ *            rows sit here -- `panini-optic` -> `donruss-optic` alone is
+ *            220,362 -- in the blind spot between the census (which calls them
+ *            AGREE and never writes) and this lane's old ruled-only gate.
  *
  * SANITY, NOT TRUST. A declared alias is a ruling and this lane does not
- * relitigate it. But two mechanical guards hold, because both are cheap and
- * both catch a table that was edited wrongly rather than a card that was ruled
- * wrongly:
+ * relitigate it. But four mechanical gates hold, because each is cheap and each
+ * catches a table or a derivation that would move rows that are NOT the same
+ * cards:
  *
- *   - the destination must be a normalizeSetKey FIXED POINT. If the ruled key
- *     itself normalises to something else, moving rows onto it just queues the
- *     next move. Reported and refused.
+ *   - the DESTINATION must be a normalizeSetKey FIXED POINT. If it normalises
+ *     onward, moving rows onto it just queues the next move. This is what
+ *     refuses `donruss` (-> `panini-donruss`, an era split).
  *   - an alias must not be its own destination. A self-alias is a no-op that
  *     would otherwise count as a move.
+ *   - a candidate alias must NOT be a fixed point of its own: a key the deriver
+ *     leaves alone is a key the vocabulary calls a PRODUCT. This mechanically
+ *     refuses #1792's whole 58-pair SPLIT bucket.
+ *   - a candidate alias must hold ZERO STRICT checklist-backed catalog rows,
+ *     counted BY SOURCE at run start, read-only
+ *     (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT). Row count never decides.
+ *
+ * Every refusal exits 2 and names the alias and the rule that refused it.
  *
  * WHAT THIS LANE DOES NOT FIX, OBSERVED IN THE FIRST REPORT RUN. One of the
  * 205 Bellingham rows carries card number `1` rather than `15`:
@@ -105,7 +125,8 @@
  *
  * Env:
  *   COSMOS_CONNECTION_STRING  required
- *   SCOPE                     required, the RULED KEY            (runner: scope)
+ *   SCOPE                     required, the DESTINATION KEY      (runner: scope)
+ *   DISCOVERY_PAGES=12        pages per cell for the alias discovery read
  *   YEARS / SPORTS            optional filters       (runner: years / sports)
  *   BACKFILL_APPLY=true       actually write (the runner exports BACKFILL_APPLY,
  *                             not APPLY). Default: REPORT ONLY.
@@ -140,6 +161,16 @@ const { SHARDED, SLOT, SLOTS } = SHARD_SCOPE;
 const CONCURRENCY = Math.max(1, Number(process.env.CONCURRENCY || process.env.BACKFILL_CONCURRENCY || 16));
 const RUN_MS = Number(process.env.RUN_MINUTES || 140) * 60000;
 const LIMIT = Number(process.env.LIMIT || 0);
+// How many pages the alias DISCOVERY read may take per (sport, year) cell. It
+// decides the SET of spellings, not the sweep, so a bound is honest rather than
+// lossy -- and a truncated cell says so in the banner.
+const DISCOVERY_PAGES = Math.max(1, Number(process.env.DISCOVERY_PAGES || 12));
+// Gate 3's floor: how much of the DESTINATION's checklist an alias holding
+// strict rows of its own must also name before it counts as the same product.
+// 0.6 sits far above every measured SPLIT pair (0.0%) and far below every
+// measured same-product pair (82.2%, 97.6%) -- the gap is two orders of
+// magnitude wide, so the exact value is not load-bearing.
+const OVERLAP_MIN = Math.min(1, Math.max(0, Number(process.env.OVERLAP_MIN || 0.6)));
 const STARTED = Date.now();
 
 const REASON = "a-ruled-alias-resolves-to-its-ruled-key";
@@ -149,6 +180,220 @@ const REASON_LONG =
 
 const f = (n) => Number(n ?? 0).toLocaleString("en-US");
 const str = (v) => String(v ?? "").trim();
+
+
+// ── the admission rule: which aliases may this scope sweep? ─────────────────
+//
+// CF-A-DERIVER-RESOLVED-ALIAS-IS-STILL-AN-ALIAS (Drew, 2026-09-05).
+//
+// #1786 built this lane for a RULED alias -- a row in RULED_ALIASES, where a
+// human named the destination and the evidence travels with the declaration.
+// #1792 then measured what that scope gate can and cannot reach, and found
+// 306,807 sold_comps rows in the gap between the two halves of the machinery:
+//
+//   normalizeSetKey("panini-optic")   === "donruss-optic"      (already)
+//   normalizeSetKey("finest")         === "topps-finest"       (already)
+//   normalizeSetKey("stadium-club")   === "topps-stadium-club" (already)
+//
+// The DERIVER already folds these spellings onto one key, so there is no
+// vocabulary edit left to make and nothing to declare -- yet the stored slugs
+// still carry the alias segment. The Great Rematch census classifies such a row
+// AGREE (stored identity and re-derived identity both reduce to the same key
+// once the fold applies) and AGREE is never written; this lane refused the
+// scope because no *ruled* alias resolves to it. Split pools, unreachable by
+// both tools. Drew's ruling: DERIVER-RESOLVED aliases qualify as scope.
+//
+// So the alias set for a scope key K is the UNION of two rules, and the banner
+// says which rule admitted each alias, because they carry different authority:
+//
+//   RULED    K is the `canonical` of a RULED_ALIASES entry. A human decision.
+//   DERIVER  normalizeSetKey(alias) === K, for an alias spelling ACTUALLY
+//            PRESENT in the pool for this scope's sport/years -- discovered by
+//            a bounded read, never a typed list. A derivation the vocabulary
+//            already performs on every future write.
+//
+// DISCOVERED, NOT TYPED, and that is the load-bearing choice. A hand-written
+// list of alias spellings is a second copy of the vocabulary that drifts the
+// moment normalizeSetKey changes, and it can name a spelling that does not
+// exist (sweeping nothing, reporting success) or miss one that does. Reading
+// the segments the pool actually stores and asking the LIVE deriver about each
+// one cannot drift: the admitted set is a function of the vocabulary and the
+// data, computed at run time.
+//
+// THE REFUSALS ARE THE POINT. normalizeSetKey(alias) === K is necessary and
+// nowhere near sufficient -- #1792's own census over-counted by exactly this
+// mistake in reverse. Four gates, each refusing a shape that would move rows
+// that are not the same cards:
+//
+//   1. K MUST BE A FIXED POINT. If the destination itself normalises onward,
+//      moving rows onto it only queues the next move. (Already enforced for
+//      RULED; it now covers DERIVER too, and it is why `donruss` can never be a
+//      scope here -- normalizeSetKey("donruss") === "panini-donruss".)
+//   2. AN ALIAS MUST NOT BE A FIXED POINT OF ITS OWN. A key the deriver leaves
+//      alone is a key the deriver considers a product. `select`, `score`,
+//      `studio` and `diamond-kings` are all fixed points, so the census's
+//      proposed folds onto them cannot be admitted here however they were
+//      spelled -- and that is #1792's 58-pair SPLIT bucket, refused by
+//      mechanism rather than by a list anyone has to maintain.
+//   3. AN ALIAS WITH STRICT CHECKLIST ROWS OF ITS OWN MUST PROVE IT NAMES THE
+//      SAME CARDS. Measured against card_catalog at run start, read-only.
+//
+//      The first draft of this gate refused any alias holding a strict
+//      checklist-backed row, on the standing rule that a key a strict source
+//      writes checklists for is a product that source believes in. Run in
+//      REPORT mode against prod it refused `panini-optic` -- the 220,362-row
+//      headline case of the very ruling that asked for this lane -- on 15,995
+//      strict `checklistinsider` rows in football/2024 alone. That refusal was
+//      measured, not guessed, and it was WRONG, for a reason worth stating
+//      because it is the whole shape of this gate:
+//
+//        MEASURED READ-ONLY 2026-09-05, basketball/2023
+//          panini-optic   20,651 rows  (20,221 distinct cardNumber|parallel)
+//          donruss-optic  20,132 rows  (19,970 distinct)
+//          overlap 19,490 of 19,970 = 97.6%
+//          panini-optic setName field: "2023 donruss optic"   <- its own rows
+//                                                                say so
+//        football/2023: 82.2% overlap, same story.
+//
+//      Both keys are strict. They are ALSO the same product: checklistinsider
+//      was ingested twice under two spellings of one release, and the alias's
+//      own `setName` field spells the destination. A gate that stops at
+//      "strict rows exist" cannot see that, and refuses a fold that is exactly
+//      CF-ONE-CARD-ONE-ROW-ONE-POOL.
+//
+//      The contrast is what makes the measurement a discriminator rather than
+//      an excuse, and it is a genuine SPLIT pair from #1792's own bucket:
+//
+//        MEASURED READ-ONLY 2026-09-05, baseball
+//          panini-diamond-kings vs diamond-kings, in their two SHARED years
+//            2020: 54 vs 47 distinct cards, overlap 0 -> 0.0%
+//            2022:  2 vs  8 distinct cards, overlap 0 -> 0.0%
+//
+//      Zero. Two products that share a product word and share nothing else.
+//      Row counts and strict-source presence are identical in shape across
+//      both pairs; only the CARDS tell them apart.
+//
+//      So the gate is: an alias holding strict rows of its own is admitted
+//      only when its checklist demonstrably names the destination's cards --
+//      OVERLAP_MIN (default 60%) of the destination's distinct
+//      cardNumber|parallel in the shared sport/year cells. Below that it is a
+//      product and it refuses. An alias with NO strict rows needs no overlap
+//      evidence: it holds no competing checklist claim to begin with.
+//
+//      Two honest limits, both printed rather than hidden. A pair with NO
+//      shared cell has no evidence either way and REFUSES (silence is not
+//      proof); and the overlap is measured on the catalog, which is the store
+//      that carries the checklist claim -- not on the pool, which is the store
+//      this lane moves.
+//   4. A DENY-LIST FOR RULING CONFLICTS, from #1792's runbook. Where a standing
+//      ruling or a standing TEST pins a key as its own, a source count must not
+//      be allowed to outvote it -- `upper-deck-choice` was declared an alias
+//      and then WITHDRAWN for exactly this reason
+//      (exquisiteIsItsOwnProduct.test.ts:87 pins it a fixed point). Gate 2
+//      already refuses every entry here today; the list is belt-and-braces so
+//      that a future vocabulary change cannot quietly make one admissible
+//      without a human revisiting the ruling that named it.
+//
+// Gates 1, 2 and 4 are pure and are pinned by the tests below. Gate 3 needs
+// Cosmos and runs at the top of main(), before any row is planned.
+
+/**
+ * Sources that mint a CHECKLIST row -- a row asserting "this card exists in
+ * this product", as opposed to one derived from a sale we saw.
+ *
+ * The distinction is the standing rule (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT):
+ * self-derived rows (ingest-auto-seed*, sales-attested*, ebay-*, user-*) prove
+ * only that somebody once sold something whose title parsed to this key --
+ * which is precisely the stale spelling this lane exists to move. A strict row
+ * is a different claim, and it refuses the fold.
+ */
+const STRICT_CATALOG_SOURCES = [
+  "checklistinsider", "checklistcenter", "beckett", "baseballcardpedia", "bccp",
+  "sportscardchecklist", "tcdb", "hobbymonitor", "cardboardconnection",
+];
+
+/** Is this catalog `source` a strict, checklist-minting source? */
+function isStrictCatalogSource(source) {
+  const s = String(source ?? "").trim().toLowerCase();
+  if (!s) return false;
+  // Prefix match, deliberately: strict sources carry qualified spellings
+  // (beckett-xlsx, bccp-product-structure, checklistinsider-2024). The
+  // self-derived families never do -- ingest-auto-seed-graded,
+  // sales-attested-unnumbered.
+  if (STRICT_CATALOG_SOURCES.some((k) => s === k || s.startsWith(k + "-") || s.startsWith(k + "_"))) return true;
+  // A ruling Drew wrote by hand IS a checklist row (drew-ruling-checklist-2026-08-30).
+  if (s.startsWith("drew-ruling-checklist")) return true;
+  return false;
+}
+
+/**
+ * Keys #1792 measured into the RULING CONFLICT / CROSS-MANUFACTURER buckets:
+ * a standing ruling or a standing test pins them, so no derivation admits them
+ * as an alias here. Small and explicit, with the reason, because a deny-list
+ * without its reason is a list nobody dares to change.
+ */
+const RULING_CONFLICT_DENY = Object.freeze({
+  "upper-deck-choice": "declared an alias of ud-choice on 2026-09-05 and WITHDRAWN the same day: exquisiteIsItsOwnProduct.test.ts:87 pins normalizeSetKey('upper-deck-choice') as a fixed point under CF-UD-INSERT-LINES. A standing ruling outranks a source count (#1792).",
+  "ud-choice": "the other half of the withdrawn pair -- both keys stay their own (#1792).",
+  "topps-triple-threads": "both keys are declared fixed points with checklist rows of their own (81,967 and 23,053); folding would contradict the 2026-09-03 distinct rulings (#1792).",
+  "triple-threads": "the other half of the same refused pair (#1792).",
+  "donruss-elite": "RULING CONFLICT with panini-elite -- both declared (#1792).",
+  "panini-elite": "the other half of the same refused pair (#1792).",
+  "panini-select": "the census proposed folding the LARGER, better-backed key (367,220 catalog rows, 291k+ strict) into the smaller `select` (45,850). Unruled -- it needs a decision, not a derivation (#1792 open question 2).",
+  "panini-score": "hobbymonitor wrote 3,300 STRICT rows under this key while ERA_SPLIT_TABLE calls it invented. An open ingest defect, not an alias (#1792 open question 3).",
+  "panini-donruss": "an ERA SPLIT, not an alias -- ERA_SPLIT_TABLE + spellForEra resolve it per year (spellForEra('panini-donruss', 1987) === 'donruss'). A flat alias would break whichever era it did not name (#1792).",
+  "donruss": "the other half of the era split (#1792).",
+  "panini": "CROSS-MANUFACTURER: a maker word, matched against upper-deck on a shared generic word. Never one product (#1792).",
+  "fleer-stickers": "CROSS-MANUFACTURER with topps-stickers -- a shared product word across two makers (#1792).",
+  "ud-series-1": "CROSS-MANUFACTURER with topps-series-1 (#1792).",
+});
+
+/**
+ * The pure half of the admission decision for ONE candidate alias.
+ *
+ * `strictRows` is the count of strict checklist-backed catalog rows measured on
+ * the alias key, and `overlap` is the fraction of the DESTINATION's distinct
+ * cards its checklist also names (null when no shared cell existed to measure).
+ * Both are 0/null on the pure path and the measured numbers at run time.
+ * Returns {admit:true, rule} or {admit:false, why}.
+ */
+function admitAlias({ alias, scope, ruledSet, normalizeSetKey, strictRows = 0, overlap = null, overlapMin = 0.6 }) {
+  const a = String(alias ?? "").trim().toLowerCase();
+  const k = String(scope ?? "").trim().toLowerCase();
+  if (!a) return { admit: false, why: "empty alias" };
+  if (a === k) return { admit: false, why: "an alias may not be its own destination -- a no-op that would count as a move" };
+
+  // The deny-list is checked FIRST, ahead of RULED, so a table edited into
+  // conflict with a standing test refuses rather than sweeps.
+  if (RULING_CONFLICT_DENY[a]) return { admit: false, why: "RULING CONFLICT: " + RULING_CONFLICT_DENY[a] };
+
+  // RULED wins outright: a human named this destination and the evidence
+  // travels with the declaration. It is not subject to the derivation gates,
+  // because a ruling is allowed to disagree with a derivation -- that is what
+  // ruling means.
+  if (ruledSet.has(a)) return { admit: true, rule: "RULED" };
+
+  // DERIVER. Everything below is a mechanical check on the live vocabulary.
+  const n = normalizeSetKey(a);
+  if (n === a) {
+    return { admit: false, why: 'the deriver leaves "' + a + '" alone -- a fixed point is a key the vocabulary considers a PRODUCT, not a spelling (this is #1792\'s SPLIT bucket)' };
+  }
+  if (n !== k) return { admit: false, why: 'derives to "' + n + '", not to this scope' };
+  if (strictRows > 0) {
+    // A competing checklist claim. It is admitted only if the two checklists
+    // demonstrably name the SAME CARDS -- see gate 3 above, where panini-optic
+    // (97.6% overlap, one product ingested twice) and panini-diamond-kings
+    // (0.0% overlap, two products) are told apart by nothing else.
+    if (overlap === null) {
+      return { admit: false, why: "holds " + strictRows + " STRICT checklist row(s) of its own and there is NO SHARED sport/year cell in which to compare its cards against the destination's -- silence is not proof of sameness" };
+    }
+    if (overlap < overlapMin) {
+      return { admit: false, why: "holds " + strictRows + " STRICT checklist row(s) of its own and names DIFFERENT CARDS -- only " + (overlap * 100).toFixed(1) + "% of the destination's distinct cardNumber|parallel appear on it (floor " + (overlapMin * 100).toFixed(0) + "%). A competing checklist that lists other cards is a PRODUCT, not a spelling" };
+    }
+    return { admit: true, rule: "DERIVER", overlap, strictRows };
+  }
+  return { admit: true, rule: "DERIVER", overlap };
+}
 
 // ── slug vocabulary ─────────────────────────────────────────────────────────
 
@@ -277,6 +522,184 @@ async function forEachPage(container, spec, onPage, pageSize = 200) {
   } while (token);
 }
 
+
+/**
+ * Discover the alias SPELLINGS actually stored in the pool for this scope.
+ *
+ * Reads segment 3 of `hobbyiqCardId` under `hiq:SPORT:YEAR:` and keeps every
+ * distinct value the LIVE deriver folds onto `scope`. Bounded: `maxPages`
+ * pages of `pageSize` per (sport, year) cell, projecting one field. This is a
+ * DISCOVERY read, not the sweep -- it decides the alias set, and the sweep that
+ * follows walks each admitted alias by its own index-served prefix.
+ *
+ * Why segment 3 and not the `setKey` FIELD: measured read-only 2026-09-05, the
+ * field is sparsely populated (8 distinct values across all of baseball), while
+ * the slug segment is present on every row and is what this lane rewrites.
+ * CF-CANDIDATE-ID-IS-WHAT-WE-ADOPT -- the field drifts, the id is the product.
+ *
+ * A cell that pages out before exhausting is reported as TRUNCATED. That is
+ * honest rather than fatal: a spelling common enough to matter appears in the
+ * first pages, and the sweep is per-alias-prefix regardless of how many rows
+ * the discovery sampled. It is printed so a reader never mistakes a bounded
+ * sample for a census.
+ */
+async function discoverPoolAliases({ pool, scope, sports, years, normalizeSetKey, retry, maxPages = 12, pageSize = 2000 }) {
+  const found = new Map();   // alias -> { sampled, cells:Set }
+  const truncated = [];
+  const cells = [];
+  for (const sp of (sports.length ? sports : [null])) {
+    for (const y of (years.length ? years : [null])) {
+      if (sp && y) cells.push({ prefix: "hiq:" + sp + ":" + y + ":", label: sp + "/" + y });
+      else if (sp) cells.push({ prefix: "hiq:" + sp + ":", label: sp + "/(all years)" });
+      else cells.push({ prefix: "hiq:", label: "(all sports)" });
+    }
+  }
+  for (const cell of [...new Map(cells.map((c) => [c.prefix, c])).values()]) {
+    let token, pages = 0;
+    do {
+      const page = await retry(() => pool.items.query({
+        query: "SELECT c.hobbyiqCardId FROM c WHERE STARTSWITH(c.hobbyiqCardId, @p)",
+        parameters: [{ name: "@p", value: cell.prefix }],
+      }, { maxItemCount: pageSize, continuationToken: token }).fetchNext());
+      token = page.continuationToken;
+      for (const row of page.resources ?? []) {
+        const parts = String(row.hobbyiqCardId ?? "").split(":");
+        if (parts.length < 5) continue;
+        const k = parts[3];
+        if (!k || k === scope) continue;
+        if (normalizeSetKey(k) !== scope) continue;
+        if (!found.has(k)) found.set(k, { sampled: 0, cells: new Set() });
+        const e = found.get(k);
+        e.sampled++;
+        e.cells.add(parts[1] + "/" + parts[2]);
+      }
+      pages++;
+    } while (token && pages < maxPages);
+    if (token) truncated.push(cell.label);
+  }
+  return { found, truncated };
+}
+
+/**
+ * Do two catalog keys name the SAME CARDS? Gate 3's discriminator. Read-only.
+ *
+ * Returns the fraction of the DESTINATION's distinct `cardNumber|parallel` that
+ * also appear under the alias, measured only in cells where BOTH keys hold
+ * rows -- and null when there is no such cell, because a pair that never
+ * co-occurs offers no evidence either way and must refuse rather than pass.
+ *
+ * The destination is the denominator on purpose. The question this gate asks is
+ * "would folding the alias in bring the destination's own cards home, or import
+ * a different product's checklist?", and that is asked of the destination's
+ * card list. An alias that is a strict SUPERSET (a bigger ingest of the same
+ * release) still scores 1.0, which is correct -- panini-optic is exactly that.
+ *
+ * Compared on cardNumber|parallel rather than on the full identity slug because
+ * the slug's setKey segment is the very thing that differs; number and parallel
+ * are what a checklist actually asserts.
+ */
+async function measureCardOverlap({ cat, alias, scope, sports, years, retry, pageSize = 2000, maxPages = 40 }) {
+  // cell -> { alias:Set, dest:Set }
+  //
+  // Scanned per (cell, KEY) on the narrow prefix `hiq:sport:year:key:`, never on
+  // the cell prefix alone. The first draft scanned `hiq:football:2024:` and
+  // filtered by segment, which reads EVERY product in the cell: the page bound
+  // was exhausted on unrelated keys long before it reached the two being
+  // compared, and the gate scored panini-optic at 12.1% off 1,977-of-17,003
+  // rows it had actually seen. A bound that silently truncates the evidence
+  // turns a discriminator into a coin flip, and it refused the right answer.
+  const cells = new Map();
+  const cellKeys = [];
+  for (const sp of (sports.length ? sports : [])) {
+    for (const y of (years.length ? years : [])) cellKeys.push({ cell: sp + "/" + y, sp, y });
+  }
+  // Both a sport AND a year are needed to name a key's prefix; without them the
+  // comparison cannot be index-served and the gate reports no evidence rather
+  // than paying for a container scan.
+  if (!cellKeys.length) return { overlap: null, destTotal: 0, shared: 0, perCell: [], unscoped: true };
+
+  for (const { cell, sp, y } of cellKeys) {
+    for (const [which, key] of [["alias", alias], ["dest", scope]]) {
+      let token, pages = 0;
+      do {
+        const page = await retry(() => cat.items.query({
+          query: "SELECT c.id, c.cardNumber, c.parallel FROM c WHERE STARTSWITH(c.id, @p)",
+          parameters: [{ name: "@p", value: "hiq:" + sp + ":" + y + ":" + key + ":" }],
+        }, { maxItemCount: pageSize, continuationToken: token }).fetchNext());
+        token = page.continuationToken;
+        for (const d of page.resources ?? []) {
+          const parts = String(d.id ?? "").split(":");
+          if (parts.length < 5 || parts[3] !== key) continue;
+          if (!cells.has(cell)) cells.set(cell, { alias: new Set(), dest: new Set() });
+          cells.get(cell)[which].add(
+            String(d.cardNumber ?? "").trim().toLowerCase() + "|" + String(d.parallel ?? "").trim().toLowerCase());
+        }
+        pages++;
+      } while (token && pages < maxPages);
+      // A key that pages out has an INCOMPLETE set, and an incomplete alias set
+      // can only understate the overlap -- which would refuse a real fold. Said
+      // out loud rather than absorbed.
+      if (token) {
+        if (!cells.has(cell)) cells.set(cell, { alias: new Set(), dest: new Set() });
+        cells.get(cell).truncated = (cells.get(cell).truncated ?? []).concat(which + ":" + key);
+      }
+    }
+  }
+  let destTotal = 0, shared = 0;
+  const perCell = [];
+  for (const [cell, v] of cells) {
+    if (!v.alias.size || !v.dest.size) continue;   // not a SHARED cell
+    let i = 0;
+    for (const k of v.dest) if (v.alias.has(k)) i++;
+    destTotal += v.dest.size;
+    shared += i;
+    perCell.push({ cell, alias: v.alias.size, dest: v.dest.size, shared: i, pct: i / v.dest.size, truncated: v.truncated ?? null });
+  }
+  perCell.sort((a, b) => b.dest - a.dest);
+  return { overlap: destTotal ? shared / destTotal : null, destTotal, shared, perCell };
+}
+
+/**
+ * Count STRICT checklist-backed catalog rows on a key, by source. Read-only.
+ *
+ * Gate 3 of the admission rule. Scoped by the same sport/year cells as the
+ * sweep, by id stem, so the count is index-served and names the same population
+ * the move would touch.
+ */
+async function countStrictCatalogRows({ cat, key, sports, years, retry, pageSize = 1000 }) {
+  const bySource = new Map();
+  let total = 0, strict = 0;
+  const prefixes = [];
+  for (const sp of (sports.length ? sports : [null])) {
+    for (const y of (years.length ? years : [null])) {
+      if (sp && y) prefixes.push("hiq:" + sp + ":" + y + ":" + key + ":");
+      else if (sp) prefixes.push("hiq:" + sp + ":");
+      else prefixes.push("hiq:");
+    }
+  }
+  for (const p of [...new Set(prefixes)]) {
+    let token;
+    do {
+      const page = await retry(() => cat.items.query({
+        query: "SELECT c.id, c.source FROM c WHERE STARTSWITH(c.id, @p)",
+        parameters: [{ name: "@p", value: p }],
+      }, { maxItemCount: pageSize, continuationToken: token }).fetchNext());
+      token = page.continuationToken;
+      for (const r of page.resources ?? []) {
+        // When the prefix could not name the key (no sport/year filter), the
+        // SEGMENT decides -- the same rule the sweep uses.
+        const parts = String(r.id ?? "").split(":");
+        if (parts.length < 5 || parts[3] !== key) continue;
+        total++;
+        const src = String(r.source ?? "").trim() || "(no source)";
+        bySource.set(src, (bySource.get(src) ?? 0) + 1);
+        if (isStrictCatalogSource(src)) strict++;
+      }
+    } while (token);
+  }
+  return { total, strict, bySource };
+}
+
 // ── main ────────────────────────────────────────────────────────────────────
 
 async function main() {
@@ -294,31 +717,37 @@ async function main() {
   const { normalizeSetKey } = require(path.join(backend, "dist/services/portfolioiq/hobbyIqCardId.service.js"));
   const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
 
-  // THE TABLE IS READ, NEVER RETYPED -- narrowed to the ONE destination named.
-  const declared = ruledAliases();
-  const forScope = declared.filter((a) => a.canonical === RAW_SCOPE);
-  if (!forScope.length) {
-    const destinations = [...new Set(declared.map((a) => a.canonical))].sort();
-    console.error(
-      `FATAL: "${RAW_SCOPE}" is not a ruled alias destination -- no declared alias resolves to it.\n`
-      + `  A scope that matches nothing must refuse, never sweep nothing and report success.\n`
-      + `  Ruled destinations (${destinations.length}):\n`
-      + destinations.map((d) => `    ${d}`).join("\n"));
-    process.exit(1);
-  }
-
-  // SANITY, NOT TRUST. The ruling stands; a table edited wrongly does not.
-  const selfAliases = forScope.filter((a) => a.setKey === a.canonical);
-  if (selfAliases.length) {
-    console.error(`FATAL: ${selfAliases.map((a) => a.setKey).join(", ")} is declared an alias of itself -- a no-op that would count as a move.`);
-    process.exit(1);
-  }
+  // ── GATE 1: the scope key must be a normalizeSetKey FIXED POINT ───────────
+  //
+  // Checked FIRST and for every scope, RULED or DERIVER alike. If the
+  // destination itself normalises onward, moving rows onto it only queues the
+  // next move. This is what refuses `donruss` as a scope -- the census's #2 by
+  // volume -- because normalizeSetKey("donruss") === "panini-donruss": an ERA
+  // SPLIT resolved per-year by spellForEra, never a flat destination.
   const normalised = normalizeSetKey(RAW_SCOPE);
   if (normalised !== RAW_SCOPE) {
     console.error(
-      `FATAL: the ruled key "${RAW_SCOPE}" is not a normalizeSetKey fixed point -- it normalises to "${normalised}".\n`
+      `FATAL: the scope key "${RAW_SCOPE}" is not a normalizeSetKey fixed point -- it normalises to "${normalised}".\n`
       + `  Moving rows onto it would only queue the next move. Rule the destination first.`);
-    process.exit(1);
+    process.exit(2);
+  }
+  if (RULING_CONFLICT_DENY[RAW_SCOPE]) {
+    console.error(
+      `FATAL: "${RAW_SCOPE}" is on the RULING CONFLICT deny-list and may not be a scope.\n`
+      + `  ${RULING_CONFLICT_DENY[RAW_SCOPE]}`);
+    process.exit(2);
+  }
+
+  // THE TABLE IS READ, NEVER RETYPED -- narrowed to the ONE destination named.
+  const declared = ruledAliases();
+  const ruledForScope = declared.filter((a) => a.canonical === RAW_SCOPE);
+  const ruledSet = new Set(ruledForScope.map((a) => a.setKey));
+
+  // SANITY, NOT TRUST. The ruling stands; a table edited wrongly does not.
+  const selfAliases = ruledForScope.filter((a) => a.setKey === a.canonical);
+  if (selfAliases.length) {
+    console.error(`FATAL: ${selfAliases.map((a) => a.setKey).join(", ")} is declared an alias of itself -- a no-op that would count as a move.`);
+    process.exit(2);
   }
 
   const conn = process.env.COSMOS_CONNECTION_STRING;
@@ -326,8 +755,6 @@ async function main() {
 
   const { CosmosClient } = require("@azure/cosmos");
   const { relocateSoldComp, stripSystem, contentHashOf } = require(path.join(__dirname, "lib", "relocate-sold-comp.cjs"));
-
-  const aliasMap = new Map(forScope.map((a) => [a.setKey, a.canonical]));
 
   const db = new CosmosClient({
     connectionString: conn,
@@ -338,10 +765,98 @@ async function main() {
 
   console.log(`reslug-ruled-alias   ${APPLY ? "APPLY" : "REPORT ONLY -- nothing written"}`);
   console.log(`  ruling      ${REASON_LONG}`);
-  console.log(`  SCOPE       ${RAW_SCOPE}   <- the RULED KEY; every declared alias of it is swept`);
-  console.log(`  aliases     ${forScope.length} declared, read from ruledAliases() -- never retyped here`);
-  for (const a of forScope) console.log(`      ${a.setKey}  ->  ${a.canonical}`);
+  console.log(`  SCOPE       ${RAW_SCOPE}   <- the destination key; every ADMITTED alias of it is swept`);
   console.log(`  filters     years=${YEARS.length ? YEARS.join(",") : "(all)"}  sports=${SPORTS.length ? SPORTS.join(",") : "(all)"}`);
+  console.log("");
+
+  // ── the alias set: RULED union DERIVER-RESOLVED, discovered then gated ────
+  console.log(`  discovering alias spellings stored in the pool for this scope (bounded read)...`);
+  const discovery = await discoverPoolAliases({
+    pool, scope: RAW_SCOPE, sports: SPORTS, years: YEARS, normalizeSetKey, retry,
+    maxPages: DISCOVERY_PAGES,
+  });
+  if (discovery.truncated.length) {
+    console.log(`  discovery TRUNCATED at ${DISCOVERY_PAGES} pages in: ${discovery.truncated.join(", ")}`);
+    console.log(`    (a bounded sample decides the SET of spellings; the sweep below is per-alias prefix and is not bounded by it)`);
+  }
+
+  // Every candidate: the ruled declarations, plus every spelling the pool
+  // actually stores that the live deriver folds onto this scope.
+  const candidates = [...new Set([...ruledSet, ...discovery.found.keys()])].sort();
+  if (!candidates.length) {
+    const destinations = [...new Set(declared.map((a) => a.canonical))].sort();
+    console.error(
+      `FATAL: no alias resolves to "${RAW_SCOPE}" -- neither a RULED declaration nor a spelling stored in the pool.\n`
+      + `  A scope that matches nothing must refuse, never sweep nothing and report success.\n`
+      + `  Ruled destinations (${destinations.length}): ${destinations.join(", ")}`);
+    process.exit(2);
+  }
+
+  // GATE 3 needs Cosmos, so the strict-row count is measured HERE, once per
+  // candidate, before any row is planned. Read-only.
+  const admitted = [];
+  const refused = [];
+  for (const alias of candidates) {
+    // A RULED alias is a human decision and is not made to justify itself with
+    // a source count; the count is skipped for it (and for a deny-listed key,
+    // which is refused regardless).
+    const needsStrictCount = !ruledSet.has(alias) && !RULING_CONFLICT_DENY[alias]
+      && normalizeSetKey(alias) !== alias && normalizeSetKey(alias) === RAW_SCOPE;
+    let strict = 0;
+    let bySource = new Map();
+    if (needsStrictCount) {
+      const c = await countStrictCatalogRows({ cat, key: alias, sports: SPORTS, years: YEARS, retry });
+      strict = c.strict;
+      bySource = c.bySource;
+    }
+    // Gate 3's discriminator, paid for ONLY when there is a competing
+    // checklist claim to adjudicate.
+    let overlap = null, perCell = [];
+    if (strict > 0) {
+      const o = await measureCardOverlap({ cat, alias, scope: RAW_SCOPE, sports: SPORTS, years: YEARS, retry });
+      overlap = o.overlap; perCell = o.perCell;
+    }
+    const verdict = admitAlias({ alias, scope: RAW_SCOPE, ruledSet, normalizeSetKey, strictRows: strict, overlap, overlapMin: OVERLAP_MIN });
+    const sampled = discovery.found.get(alias)?.sampled ?? 0;
+    if (verdict.admit) admitted.push({ alias, rule: verdict.rule, sampled, strict, bySource, overlap, perCell });
+    else refused.push({ alias, why: verdict.why, sampled, strict, bySource, overlap, perCell });
+  }
+
+  console.log(`\n  ALIAS SET for ${RAW_SCOPE} -- ${admitted.length} admitted, ${refused.length} refused`);
+  const ruledNames = admitted.filter((a) => a.rule === "RULED").map((a) => a.alias);
+  const derivNames = admitted.filter((a) => a.rule === "DERIVER").map((a) => a.alias);
+  console.log(`      ruled:            ${ruledNames.length ? ruledNames.join(", ") : "(none)"}`);
+  console.log(`      deriver-resolved: ${derivNames.length ? derivNames.join(", ") : "(none)"}`);
+  for (const a of admitted) {
+    console.log(`      ADMIT  ${a.alias}  ->  ${RAW_SCOPE}   [${a.rule}]`
+      + (a.rule === "DERIVER"
+        ? `  normalizeSetKey("${a.alias}") === "${RAW_SCOPE}"; ${a.strict ? `${f(a.strict)} strict rows, ${(a.overlap * 100).toFixed(1)}% card overlap with the destination` : "0 strict catalog rows"}`
+        : "  declared in RULED_ALIASES")
+      + (a.sampled ? `  (seen ${f(a.sampled)}x in the discovery sample)` : ""));
+    for (const c of (a.perCell ?? []).slice(0, 6)) {
+      console.log(`               ${c.cell.padEnd(18)} alias ${String(f(c.alias)).padStart(7)}  dest ${String(f(c.dest)).padStart(7)}  shared ${String(f(c.shared)).padStart(7)}  ${(c.pct * 100).toFixed(1)}%${c.truncated ? `   TRUNCATED (${c.truncated.join(", ")})` : ""}`);
+    }
+  }
+  for (const r of refused) {
+    console.log(`      REFUSE ${r.alias}: ${r.why}`);
+    if (r.strict > 0) {
+      for (const [src, n] of [...r.bySource].sort((x, y) => y[1] - x[1]).slice(0, 6)) {
+        console.log(`               ${String(f(n)).padStart(8)}  source=${src}${isStrictCatalogSource(src) ? "   <- STRICT" : ""}`);
+      }
+      for (const c of (r.perCell ?? []).slice(0, 6)) {
+        console.log(`               ${c.cell.padEnd(18)} alias ${String(f(c.alias)).padStart(7)}  dest ${String(f(c.dest)).padStart(7)}  shared ${String(f(c.shared)).padStart(7)}  ${(c.pct * 100).toFixed(1)}%${c.truncated ? `   TRUNCATED (${c.truncated.join(", ")})` : ""}`);
+      }
+    }
+  }
+  if (!admitted.length) {
+    console.error(`\nFATAL: every candidate alias was refused -- there is nothing in scope to move.`);
+    process.exit(2);
+  }
+
+  const forScope = admitted.map((a) => ({ setKey: a.alias, canonical: RAW_SCOPE, rule: a.rule }));
+  const aliasMap = new Map(forScope.map((a) => [a.setKey, a.canonical]));
+
+  console.log("");
   console.log(`  ${SHARD_SCOPE.banner()}`);
   console.log(`  concurrency ${CONCURRENCY}  budget ${RUN_MS / 60000}m${LIMIT ? `  LIMIT=${f(LIMIT)}` : ""}`);
   console.log("");
@@ -628,6 +1143,9 @@ function shardIndex(id) {
 module.exports = {
   slugParts, setKeyOfSlug, withSetKeySegment, ruledKeyForSlug, planAliasReslug,
   REASON, INHERITED_SCOPES,
+  // the admission rule (#1793): RULED union DERIVER-RESOLVED, and its refusals
+  admitAlias, isStrictCatalogSource, STRICT_CATALOG_SOURCES, RULING_CONFLICT_DENY,
+  discoverPoolAliases, countStrictCatalogRows, measureCardOverlap,
 };
 
 if (require.main === module) {
