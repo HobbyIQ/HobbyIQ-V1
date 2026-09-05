@@ -15,6 +15,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect } from "vitest";
 import { FMV_RUNG_LABELS } from "../../src/services/compiq/fmvRung.js";
+import { LEGACY_ESTIMATE_SOURCES } from "../../src/services/compiq/legacyEstimateSources.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const TIER1_ROOT = __dirname;
@@ -591,6 +592,21 @@ const ALLOWED_SOURCES = new Set([
   // a rung added to the engine is admitted here by construction and the
   // build-time exhaustiveness assertion keeps the vocabulary honest.
   ...FMV_RUNG_LABELS,
+
+  // CF-THE-LEGACY-WIRE-HAS-A-VOCABULARY-TOO (2026-09-05). Asking
+  // FMV_RUNG_LABELS fixed the /price-by-id half and the harness STAYED RED,
+  // because `/search` never moved to the one valuation path: it still answers
+  // from the legacy CardHedge estimate pipeline, whose `est.source` the route
+  // reads as `(est.source as string | undefined) ?? "live"`. That pipeline
+  // answered "projected" -- `applyAutoProjectionFallbacks` relabels a
+  // comp-less autograph estimate it rescued from a sibling -- and no list
+  // held it.
+  //
+  // Two vocabularies are live at once, so the harness asks BOTH rather than
+  // keeping a private copy of either. When the free-text routes finish moving
+  // behind computeCanonicalValuation this spread becomes redundant and can go;
+  // until then, omitting it is what makes the harness reject good responses.
+  ...LEGACY_ESTIMATE_SOURCES,
 ]);
 
 export function expectWellFormed(
