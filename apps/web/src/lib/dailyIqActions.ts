@@ -38,6 +38,7 @@
 import type { PortfolioHolding, PortfolioResponse } from "./api";
 import { holdingDisplayValue, valuationStatusOf } from "./api";
 import { formatCardTitle } from "./format";
+import { withheldOf, withheldShort } from "./withheld";
 
 // ─── Pricing attention ──────────────────────────────────────────────────
 
@@ -84,7 +85,14 @@ const ATTENTION_RANK: Record<AttentionKind, number> = {
  */
 export const ATTENTION_REASON: Record<AttentionKind, string> = {
   "identity-unmatched": "identity needs a checklist match",
-  "value-withheld": "value withheld: cost-basis check",
+  // CF-WITHHELD-SAYS-WHY (Drew, 2026-09-05). The GENERIC, used only when the
+  // wire sent no reason (an old worker, or a row unpriced for an ordinary
+  // reason). This used to read "value withheld: cost-basis check" for EVERY
+  // withheld holding, which was not vague but wrong: a no-checklist-match row
+  // was told its cost basis blocked the price. The real reason now comes from
+  // `withheldShort()` in attentionRowFor; this is the honest fallback that
+  // claims no cause it was not given.
+  "value-withheld": "value withheld",
   "under-review": "value under review",
   "low-confidence": "no independent sales yet",
 };
@@ -156,6 +164,12 @@ export function attentionRowFor(h: PortfolioHolding): AttentionRow | null {
     reason = h.reviewReason;
   } else if (kind === "low-confidence" && label?.text) {
     reason = label.text;
+  } else if (kind === "value-withheld") {
+    // CF-WITHHELD-SAYS-WHY (Drew, 2026-09-05). The engine's own reason, in the
+    // owner's words. Absent (an old worker) keeps the generic above — Rule 4:
+    // absent is not a reason, and we do not invent one.
+    const w = withheldOf(h);
+    if (w) reason = `value withheld: ${withheldShort(w.reason)}`;
   }
 
   return {
@@ -270,6 +284,15 @@ export interface BarStats {
   cardCount: number;
   verifiedCount: number;
   attentionCount: number;
+  /** CF-WITHHELD-SAYS-WHY (Drew, 2026-09-05). How many holdings carry a
+   *  published value, and how many the engine refused to price.
+   *
+   *  These do NOT necessarily sum to `cardCount`: a row can be unpriced
+   *  without a refusal (an old worker sent no reason). Three states, counted
+   *  as three, because "priced + withheld = all" is a claim the data does not
+   *  support and the bar must not imply. */
+  pricedCount: number;
+  withheldCount: number;
 }
 
 /**
@@ -311,6 +334,10 @@ export function barStats(data: PortfolioResponse): BarStats {
     cardCount: s.cardCount,
     verifiedCount: items.filter((h) => h.identityVerified === true).length,
     attentionCount: attentionCount(items),
+    // Priced is measured with the SAME ladder the rows render from, so the
+    // bar's count and the list cannot disagree about which cards have a value.
+    pricedCount: items.filter((h) => holdingDisplayValue(h) != null).length,
+    withheldCount: items.filter((h) => withheldOf(h) != null).length,
   };
 }
 

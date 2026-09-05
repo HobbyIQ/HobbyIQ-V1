@@ -1023,6 +1023,10 @@ export async function persistVendorSalesToPool(
             resolvedSlug: adoption.slug,
             matchedBy: resolved.matchedBy,
             confidence: resolved.confidence,
+            // CF-A-GRADE-IS-A-FIELD-NEVER-A-SLUG-SEGMENT: names the grade tier
+            // the catalog offered, so the strip is visible in telemetry rather
+            // than silent. The grade itself lives in gradeCompany/gradeValue.
+            ...(adoption.gradeStripped ? { gradeStripped: adoption.gradeStripped } : {}),
           }));
           slug = adoption.slug;
         } else if (adoption.refusedReason) {

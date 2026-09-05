@@ -58,9 +58,47 @@ describe("pricing attention is built from the real holding meta", () => {
     expect(isValueWithheld(h)).toBe(true);
     const row = attentionRowFor(h);
     expect(row?.kind).toBe("value-withheld");
-    expect(row?.reason).toBe("value withheld: cost-basis check");
+    // CF-WITHHELD-SAYS-WHY (Drew, 2026-09-05). This used to assert
+    // "value withheld: cost-basis check" — the ONE sentence every withheld
+    // holding got, including holdings whose cost basis had nothing to do
+    // with it. This fixture carries no `withheld` block (the envelope simply
+    // declined), so it gets the honest generic: a reason we were not given
+    // is not invented.
+    expect(row?.reason).toBe("value withheld");
     // Copy is the user's side, never the engine's.
     expect(row?.reason).not.toMatch(/cost-proxy|proxy|floor/i);
+  });
+
+  it("says the REAL reason when the wire sent one", () => {
+    // The defect, as a test: a no-checklist-match holding must not be told
+    // its cost basis blocked the price.
+    const h = healthy({
+      id: "h-nochecklist",
+      pricing: {
+        headline: { value: null, valueSource: "unpriced", perUnit: null, quantity: 1 },
+        provenance: { withheld: { reason: "no-checklist-match", proposed: null } },
+      } as unknown as PortfolioHolding["pricing"],
+    });
+    const row = attentionRowFor(h);
+    expect(row?.kind).toBe("value-withheld");
+    expect(row?.reason).toBe("value withheld: checklist being acquired");
+    expect(row?.reason).not.toMatch(/cost|basis/i);
+  });
+
+  it("distinguishes all four causes in the column", () => {
+    const reasons = ["cost-basis-floor", "no-checklist-match", "identity-not-in-catalog", "pool-migrating"];
+    const said = reasons.map((reason) =>
+      attentionRowFor(
+        healthy({
+          id: `h-${reason}`,
+          pricing: {
+            headline: { value: null, valueSource: "unpriced", perUnit: null, quantity: 1 },
+            provenance: { withheld: { reason, proposed: null } },
+          } as unknown as PortfolioHolding["pricing"],
+        }),
+      )?.reason,
+    );
+    expect(new Set(said).size).toBe(4);
   });
 
   it("an unpriced holding — envelope says unpriced — is withheld too", () => {
@@ -373,5 +411,59 @@ describe("the bar's numbers come off the summary, and it never invents a day cha
     expect(attentionCount([])).toBe(0);
     expect(topMovers(null)).toEqual([]);
     expect(sellSignalsState([])).toBe("not-live");
+  });
+});
+
+// ─── CF-WITHHELD-SAYS-WHY (Drew, 2026-09-05) ───────────────────────────
+describe("barStats: how much of the total the total actually covers", () => {
+  function row(id: string, over: Partial<PortfolioHolding> = {}): PortfolioHolding {
+    return { id, quantity: 1, fairMarketValue: 100, ...over } as PortfolioHolding;
+  }
+  function withheldRow(id: string, reason: string): PortfolioHolding {
+    return {
+      id,
+      quantity: 1,
+      pricing: {
+        headline: { value: null, valueSource: "unpriced", perUnit: null, quantity: 1 },
+        provenance: { withheld: { reason, proposed: null } },
+      },
+    } as unknown as PortfolioHolding;
+  }
+  const summary = {
+    totalValue: 100, totalCost: 100, totalGainLoss: 0, totalGainLossPct: 0,
+    cardCount: 3, observedValue: 100, estimatedValue: 0, estimatedCount: 0,
+    pendingCount: 0, observedPct: 100,
+  };
+
+  it("counts priced and withheld separately", () => {
+    const s = barStats({
+      summary,
+      items: [row("a"), withheldRow("b", "cost-basis-floor"), withheldRow("c", "pool-migrating")],
+    } as unknown as PortfolioResponse);
+    expect(s.pricedCount).toBe(1);
+    expect(s.withheldCount).toBe(2);
+  });
+
+  it("does NOT assume priced + withheld = every card", () => {
+    // A row can be unpriced with no refusal on the wire (an old worker).
+    // Reporting it as withheld would claim a reason we were never given.
+    const unpricedNoReason = {
+      id: "d", quantity: 1,
+      pricing: { headline: { value: null, valueSource: "unpriced", perUnit: null, quantity: 1 } },
+    } as unknown as PortfolioHolding;
+    const s = barStats({
+      summary: { ...summary, cardCount: 2 },
+      items: [row("a"), unpricedNoReason],
+    } as unknown as PortfolioResponse);
+    expect(s.pricedCount).toBe(1);
+    expect(s.withheldCount).toBe(0);
+    expect(s.pricedCount + s.withheldCount).toBeLessThan(s.cardCount);
+  });
+
+  it("reports zero withheld on a fully priced portfolio", () => {
+    const s = barStats({
+      summary, items: [row("a"), row("b")],
+    } as unknown as PortfolioResponse);
+    expect(s.withheldCount).toBe(0);
   });
 });

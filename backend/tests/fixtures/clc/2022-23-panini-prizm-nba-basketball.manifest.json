@@ -1,0 +1,16 @@
+{
+ "scrapedAt": "2026-09-05T17:38:15.472Z",
+ "sourceUrl": "https://www.checklistcenter.com/2022-23-panini-prizm-nba-basketball-card-checklist/",
+ "sport": "basketball",
+ "year": 2022,
+ "setName": "2022-23 Panini Prizm NBA Basketball",
+ "productKey": "2022-panini-prizm-nba-basketball",
+ "setKey": "panini-prizm-nba",
+ "rowCount": 18835,
+ "parallelColumnAuthoritative": true,
+ "source": "xlsx",
+ "sections": 19,
+ "laddersFound": 0,
+ "ladderRows": 0,
+ "rejected": []
+}

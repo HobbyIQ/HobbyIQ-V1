@@ -38,6 +38,7 @@
 import type { Valuation } from "./oneValuationPath.service.js";
 import { toCanonicalFmvResponse } from "./oneValuationPathAdapters.js";
 import { labelsForResult, type SellDraftLabel } from "../ebay/ebaySellDraft.service.js";
+import { isSingleSourceBacking } from "../catalog/identityBacking.js";
 
 /** The label set persisted on a holding, in the shape the wire carries. */
 export interface PersistedPricingLabel {
@@ -72,9 +73,24 @@ export interface PersistedPricingLabels {
 export function persistedLabelsForValuation(v: Valuation): PersistedPricingLabels {
   const result = toCanonicalFmvResponse(v);
   const owner = v.ownerUserId ?? null;
-  const labels = labelsForResult(result, owner).map((l) => ({ code: l.code, text: l.text }));
+  // CF-A-SECOND-SOURCE-THAT-DISAGREES-IS-THE-ONLY-DISQUALIFIER (Drew,
+  // 2026-09-05). The identity's backing travels with the valuation
+  // (`identity.sourceOfRow` is the catalog row the ladder actually priced), so
+  // the label is derived HERE from what the valuation already knows rather than
+  // by a second catalog read on a write path.
+  //
+  // `identityBackingOf` is asked the same question two lines earlier in
+  // holdingValuation's refusal gate, with the same one-row list — so the badge
+  // and the price cannot disagree about a holding, which is the invariant
+  // checklistBackedIdentity's header states for the VERIFIED check and this
+  // extends to the caveat.
+  const singleSource = isSingleSourceBacking(
+    v.identity?.slug ?? null,
+    v.identity?.sourceOfRow == null ? [] : [{ source: v.identity.sourceOfRow }],
+  );
+  const labels = labelsForResult(result, owner, singleSource).map((l) => ({ code: l.code, text: l.text }));
 
-  // CF-A-GATE-THAT-FIRES-ABOVE-EVERY-RUNG-IS-NOT-A-RUNG-GATE (#1811). A price
+  // CF-A-GATE-THAT-FIRES-ABOVE-EVERY-RUNG-IS-NOT-A-RUNG-GATE (#1816). A price
   // published while this identity's pool was still migrating carries the fact
   // as a caveat. It can only be a PUBLISHED price that reaches here — the gate
   // withholds every own-pool rung — so the sentence says the true thing: the
@@ -84,7 +100,9 @@ export function persistedLabelsForValuation(v: Valuation): PersistedPricingLabel
   // It is stamped here rather than in `labelsForResult` because `poolMigrating`
   // is a property of the IDENTITY's freshness, which the CanonicalFmvResult
   // wire shape does not carry; routing it through there would mean widening
-  // that shape for a field no client reads.
+  // that shape for a field no client reads. (`singleSource` above IS routed
+  // through, because corroboration is a property of the ROW the ladder priced
+  // and the draft's own rules need it; freshness is not.)
   //
   // The code is spelled as a literal rather than imported from
   // `poolMigrationGate`, whose module graph pulls in `@azure/cosmos` for the

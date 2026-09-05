@@ -1,0 +1,16 @@
+{
+ "scrapedAt": "2026-09-05T17:38:11.506Z",
+ "sourceUrl": "https://www.checklistcenter.com/2023-panini-mosaic-football-card-checklist/",
+ "sport": "football",
+ "year": 2023,
+ "setName": "2023 Panini Mosaic Football",
+ "productKey": "2023-panini-mosaic-football",
+ "setKey": "panini-mosaic",
+ "rowCount": 21524,
+ "parallelColumnAuthoritative": true,
+ "source": "xlsx",
+ "sections": 29,
+ "laddersFound": 0,
+ "ladderRows": 0,
+ "rejected": []
+}

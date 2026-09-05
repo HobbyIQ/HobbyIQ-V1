@@ -74,6 +74,12 @@ import {
   INDEPENDENCE_UNVERIFIED_CODE,
   MIN_INDEPENDENT_SELLERS,
 } from "../compiq/sellerIndependence.js";
+// CF-A-SECOND-SOURCE-THAT-DISAGREES-IS-THE-ONLY-DISQUALIFIER (Drew,
+// 2026-09-05, narrowed). A row nobody has contradicted but nobody has
+// corroborated either PRICES — refusing 1.09M real cards over a gap in what we
+// have bought would be the cure being worse than the disease — and the reader
+// is told that one transcription is all that stands behind the identity.
+import { SINGLE_SOURCE_LABEL } from "../catalog/sourceCorroboration.js";
 // ---------------------------------------------------------------------------
 // Inputs / outputs
 // ---------------------------------------------------------------------------
@@ -138,7 +144,8 @@ export interface SellDraftLabel {
     | "fallback-rung"
     | "low-confidence"
     | typeof INDEPENDENCE_UNVERIFIED_CODE
-    /** CF-A-GATE-THAT-FIRES-ABOVE-EVERY-RUNG-IS-NOT-A-RUNG-GATE (#1811). The
+    | typeof SINGLE_SOURCE_LABEL
+    /** CF-A-GATE-THAT-FIRES-ABOVE-EVERY-RUNG-IS-NOT-A-RUNG-GATE (#1816). The
      *  identity's catalog row is inside the settle window, so its own sales
      *  may still be arriving and this number came from related cards. Stamped
      *  by `persistedLabelsForValuation`, not by `labelsForResult` — the
@@ -271,6 +278,23 @@ export function labelsForResult(
   /** The reader's own user id, when the caller named one. Null on any path
    *  that prices for no particular user — nothing there can be "yours". */
   sellerUserId: string | null = null,
+  /** CF-A-SECOND-SOURCE-THAT-DISAGREES-IS-THE-ONLY-DISQUALIFIER (Drew,
+   *  2026-09-05). True when the identity this number rests on is backed by a
+   *  SINGLE transcription — nobody contradicts it, but nobody corroborates it
+   *  either, because no second source has transcribed that product.
+   *
+   *  A THIRD PARAMETER RATHER THAN A FIELD ON `CanonicalFmvResult`, and
+   *  deliberately: the result is the ENGINE's answer about a POOL, and this is
+   *  a fact about the CATALOG ROW the pool hangs off. The engine never reads a
+   *  catalog row's source, and giving it a field it cannot populate would put
+   *  an always-undefined property on every cached result in the system. The
+   *  caller that HAS the identity — the holding valuation, which already asks
+   *  `identityBackingOf` two lines earlier — passes what it already knows.
+   *
+   *  Defaulted false so every existing call site keeps its exact behaviour and
+   *  the label can only appear where someone deliberately answered the
+   *  question. Absence of an answer is not a caveat. */
+  singleSourceIdentity: boolean = false,
 ): SellDraftLabel[] {
   const labels: SellDraftLabel[] = [];
   const rung = result.rungLabel ?? null;
@@ -368,6 +392,37 @@ export function labelsForResult(
       text:
         "Estimated: no sales of this exact card at this grade, so the price " +
         `comes from a related pool (${rung}).`,
+    });
+  }
+
+  // CF-A-SECOND-SOURCE-THAT-DISAGREES-IS-THE-ONLY-DISQUALIFIER (Drew,
+  // 2026-09-05, the narrowed ruling).
+  //
+  // This label is about the CARD, not the pool — every other label here speaks
+  // about the sales behind the number, and this one speaks about whether we
+  // are sure the card is the card. That is why it says "checklist" and not
+  // "sales", and why it fires independently of the rung.
+  //
+  // It is NOT a refusal. #1795 measured hobbymonitor naming a different player
+  // at the number on 2,571 of 2,811 checkable panini-score rows, and the first
+  // draft of that ruling withheld every uncorroborated row — 1.13M of them.
+  // Drew narrowed it after seeing the blast radius: 1,093,457 of those had no
+  // second source at ALL, which is a fact about our acquisition backlog and not
+  // about the card. So the number publishes and the reader is told what stands
+  // behind it — the same doctrine `self-anchored` and `independence-unverified`
+  // embody.
+  //
+  // CF-A-CAVEAT-THAT-FIRES-EVERYWHERE-SAYS-NOTHING is respected by the CALLER,
+  // not here: only a demoted source can set this flag, so it cannot appear on
+  // the checklistinsider and beckett rows that make up most of the catalog.
+  if (singleSourceIdentity) {
+    labels.push({
+      code: SINGLE_SOURCE_LABEL,
+      text:
+        "Single-source checklist: one transcription is all that lists this card, " +
+        "and we have not been able to confirm its number against a second " +
+        "checklist. The price is real; the card's identity is the part we are " +
+        "still verifying.",
     });
   }
 

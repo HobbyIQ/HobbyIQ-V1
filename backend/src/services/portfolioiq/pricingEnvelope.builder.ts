@@ -386,8 +386,8 @@ export function pricingLabelsOf(
   return raw.flatMap((l) => {
     const code = (l as { code?: unknown })?.code;
     const text = (l as { text?: unknown })?.text;
-    // #1811: the cast names the ONE vocabulary alias rather than re-spelling
-    // four of its six members. A stored code outside it is a stamp from a
+    // #1816: the cast names the ONE vocabulary alias rather than re-spelling
+    // a hand-copied subset of its members. A stored code outside it is a stamp from a
     // future writer this build does not know; it still crosses the wire with
     // its text, exactly as before — dropping a caveat is the one thing this
     // function must never do.
@@ -395,6 +395,54 @@ export function pricingLabelsOf(
       ? [{ code: code as PricingLabelCode, text }]
       : [];
   });
+}
+
+/** CF-WITHHELD-REACHES-THE-GLASS (Drew, 2026-09-05). The refusal block the
+ *  one-valuation-path writer stamped when it declined to publish a price,
+ *  validated on the way out.
+ *
+ *  The `reason` is the load-bearing field and the ONLY required one: without
+ *  a recognised reason there is no sentence the UI could honestly show, so a
+ *  malformed stamp yields `null` (no refusal claimed) rather than a partial
+ *  object that would render as an empty explanation. An unrecognised reason
+ *  string is treated the same way — this wire never invents a cause, and a
+ *  vocabulary the client does not know is worse than silence.
+ *
+ *  Every OTHER field is independently optional, because they genuinely vary
+ *  by branch: a cost-basis-floor refusal has a `proposed` number (the market
+ *  read it refused) while an identity-not-in-catalog refusal computed nothing
+ *  and has none. Null there means "no number existed", never "hidden". */
+export function withheldOf(
+  holding: PortfolioHolding,
+): PricingProvenance["withheld"] {
+  const raw = (holding as {
+    pricingSourceMeta?: { withheld?: unknown } | null;
+  }).pricingSourceMeta?.withheld;
+  if (!raw || typeof raw !== "object") return null;
+
+  const reason = (raw as { reason?: unknown }).reason;
+  if (
+    reason !== "cost-basis-floor"
+    && reason !== "no-checklist-match"
+    && reason !== "identity-not-in-catalog"
+    && reason !== "pool-migrating"
+  ) {
+    return null;
+  }
+
+  const str = (v: unknown): string | null => (typeof v === "string" && v !== "" ? v : null);
+  const num = (v: unknown): number | null =>
+    typeof v === "number" && Number.isFinite(v) ? v : null;
+
+  return {
+    reason,
+    blockingId: str((raw as { blockingId?: unknown }).blockingId),
+    blockingCount: num((raw as { blockingCount?: unknown }).blockingCount),
+    proposed: num((raw as { proposed?: unknown }).proposed),
+    retained: num((raw as { retained?: unknown }).retained),
+    retentionRefused: str((raw as { retentionRefused?: unknown }).retentionRefused),
+    retainedRung: str((raw as { retainedRung?: unknown }).retainedRung),
+  };
 }
 
 /** The self-anchored ratio the writer stamped: how many of the pool's
@@ -446,6 +494,12 @@ function buildProvenance(holding: PortfolioHolding): PricingProvenance {
     // cannot disagree about whether a price is self-anchored.
     pricingLabels: pricingLabelsOf(holding),
     selfAnchored: selfAnchoredOf(holding),
+    // CF-WITHHELD-REACHES-THE-GLASS (Drew, 2026-09-05). Read INDEPENDENTLY of
+    // `pricingSourceMeta` above: that projection is gated on slug+method+
+    // compsUsed all being present, and a refusal with no pool at all
+    // (identity-not-in-catalog) carries none of them. Gating the refusal on
+    // the published-price shape is precisely how it stayed invisible.
+    withheld: withheldOf(holding),
     nearestGradedAnchor: holding.nearestGradedAnchor ?? null,
     lastSaleSurface: holding.lastSaleSurface ?? null,
     modelExpectation: (holding as { modelExpectation?: unknown }).modelExpectation ?? null,

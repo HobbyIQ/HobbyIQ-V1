@@ -413,19 +413,33 @@ describe("the writer persists the engine's pricing confidence", () => {
 // persist gate admitted two rungs by name and blanked player-index-projection.
 describe("the label vocabulary is one vocabulary (#1811)", () => {
   // Every code the engine can emit, from the emitting module's own union.
-  const EMITTED: SellDraftLabel["code"][] = [
+  const EMITTED = [
     "speculative",
     "self-anchored",
     "fallback-rung",
     "low-confidence",
     "independence-unverified",
+    "single-source:hobbymonitor",
     "pool-migrating",
-  ];
+  ] as const satisfies ReadonlyArray<SellDraftLabel["code"]>;
+
+  // EXHAUSTIVENESS, the direction that actually bites. `satisfies` above only
+  // proves every listed code is REAL; this proves no real code is MISSING —
+  // the assignment fails to compile the moment a member is added to
+  // SellDraftLabel["code"] and not to this list. Without it the list is a
+  // hand-maintained subset, and a subset type-checks against its union, which
+  // is the exact hole that let `independence-unverified` (#1775) and then
+  // `single-source:hobbymonitor` (#1804) drift out of the wire spellings
+  // unnoticed. This test file is where that stops being possible.
+  type _EveryEmittedCodeIsListed =
+    SellDraftLabel["code"] extends (typeof EMITTED)[number] ? true : never;
+  const _everyEmittedCodeIsListed: _EveryEmittedCodeIsListed = true;
+  void _everyEmittedCodeIsListed;
 
   it("every code the engine emits is assignable to the wire alias", () => {
     // Compile-time: the assignment fails to build if PricingLabelCode is
     // narrower than the emitting union.
-    const asWire: PricingLabelCode[] = EMITTED;
+    const asWire: readonly PricingLabelCode[] = EMITTED;
     expect(asWire.length).toBe(EMITTED.length);
   });
 
@@ -433,7 +447,7 @@ describe("the label vocabulary is one vocabulary (#1811)", () => {
     type StoredCode = NonNullable<
       NonNullable<PortfolioHolding["pricingSourceMeta"]>["labels"]
     >[number]["code"];
-    const asStored: StoredCode[] = EMITTED;
+    const asStored: readonly StoredCode[] = EMITTED;
     expect(asStored.length).toBe(EMITTED.length);
   });
 
