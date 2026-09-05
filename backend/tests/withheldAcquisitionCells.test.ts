@@ -719,10 +719,21 @@ describe("holdings that do not re-point are classified by what unlocks them", ()
   });
 
   it("a blank-field no-match is counted apart from a populated one", () => {
-    // They need different work: one is field recovery, the other is matcher
-    // work. Collapsing them would send both to the wrong lane.
-    expect(step).toMatch(/NM_BLANK/);
-    expect(step).toMatch(/NM_FIELDS/);
+    // They need different work: one is field recovery (#1811), the other is
+    // matcher work. Collapsing them sends both to the wrong lane.
+    //
+    // THE PIN READS THE ARITHMETIC, NOT THE NAMES. Asserting that NM_BLANK and
+    // NM_FIELDS merely appear is satisfied by `NM_BLANK=0; NM_FIELDS=0` — the
+    // counters still exist and always report zero, so every no-match silently
+    // vanishes from the table. What makes the split real is that one is
+    // MEASURED from the log and the other is the REMAINDER.
+    expect(step, "NM_BLANK must be measured from the log, not assigned a constant")
+      .toMatch(/NM_BLANK=\$\(grep[^\n]*NO MATCH/);
+    expect(step, "NM_FIELDS must be the remainder, so the two always sum to the total")
+      .toMatch(/NM_FIELDS=\$\(\(\s*NM_ALL\s*-\s*NM_BLANK\s*\)\)/);
+    expect(step, "the total must itself be measured").toMatch(/NM_ALL=\$\(count "NO MATCH"\)/);
+    // ...and a negative remainder is clamped rather than printed.
+    expect(step).toMatch(/NM_FIELDS.*-lt 0.*NM_FIELDS=0/);
   });
 
   it("the reasons reach the ledger and the outcome table", () => {
