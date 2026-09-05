@@ -239,7 +239,33 @@ async function relocateSoldComp(pool, { keep, drop, retry = (fn) => fn(), verify
   }
   const mismatch = !back || back.id !== keep.id || back.cardId !== keep.cardId
     || verifyFields.some((f) => JSON.stringify(back[f] ?? null) !== JSON.stringify(keep[f] ?? null));
-  if (mismatch) return { ok: false, stage: "verify", error: back ? "read-back differs from the written row" : "read-back found nothing", existedBefore, deleted: [], alreadyGone: [], duplicatesLeft: [], readBackVia };
+  // CF-A-VERIFY-MISMATCH-IS-A-DUPLICATE-NOT-A-FAILURE (2026-09-05).
+  //
+  // The upsert above ALREADY SUCCEEDED. Reaching here means the keeper is
+  // written at its new address and the drops are still at their old ones --
+  // the row now exists TWICE. This branch used to return `duplicatesLeft: []`,
+  // so callers counted it as `failed` and their "duplicates left in pool must
+  // be 0" summary line stayed at 0 while a duplicate stood in the pool. This
+  // file's own header records the shape: rekey-product-setkey MODE=pool run
+  // 33973364948 hit it on 12 of 35,173 rows, and every one of the 12 was
+  // later found ALIVE at its new address with the old row still in place.
+  //
+  // The drops are NOT deleted here -- deleting against a read-back we could
+  // not verify is how a sale gets lost, and a sale is never lost. They are
+  // REPORTED, which is the whole change: the number the operator reads now
+  // counts what is actually in the container.
+  if (mismatch) {
+    return {
+      ok: false, stage: "verify",
+      error: back ? "read-back differs from the written row" : "read-back found nothing",
+      existedBefore, deleted: [], alreadyGone: [],
+      duplicatesLeft: drops.map((d) => ({
+        ...d,
+        error: "keeper upserted but read-back failed verification; old row NOT deleted — this id is now resident at two addresses",
+      })),
+      readBackVia,
+    };
+  }
 
   const deleted = [], alreadyGone = [], duplicatesLeft = [];
   for (const d of drops) {
