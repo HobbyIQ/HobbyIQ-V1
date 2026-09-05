@@ -20,6 +20,9 @@ import { RowStretchedLink, RowEscapeHatch } from "@/components/HoldingRowLink";
 import { VerifiedCheck } from "@/components/VerifiedCheck";
 import { holdingProvenance } from "@/lib/rung";
 import { formatAsOf } from "@/lib/asOf";
+// CF-WITHHELD-SAYS-WHY (Drew, 2026-09-05): the refusal vocabulary, in one
+// place, so the row / the detail panel / the DailyIQ column cannot drift.
+import { withheldOf, withheldShort, withheldSentence } from "@/lib/withheld";
 
 type SortKey = "value" | "cost" | "gainPct" | "gain" | "title";
 type SortDir = "asc" | "desc";
@@ -889,6 +892,9 @@ function HoldingRow({ h, href }: { h: PortfolioHolding; href?: string }) {
   // visibly not an observed one. Rendered only beside a number; a row with
   // no value already carries the MISSING pill.
   const provenance = holdingProvenance(h);
+  // CF-WITHHELD-SAYS-WHY (Drew, 2026-09-05). Why the engine refused to publish
+  // a price for this row, when it did. Null on a published row.
+  const withheld = withheldOf(h);
 
   // CF-MOBILE-HOLDING-CARD (Drew, 2026-09-04: the mobile list is "horrible
   // looking"). At ~390px the single flex row put the title, the grade, the
@@ -933,11 +939,29 @@ function HoldingRow({ h, href }: { h: PortfolioHolding; href?: string }) {
           PUBLISH + LABEL. A self-anchored price — the only sale behind it
           being the owner's own purchase — still shows, and now says so on
           the row rather than only to a reader who opens the card page. */}
-      {value != null && (
-        <PricingLabelChips
-          labels={h.pricingLabels}
-          selfAnchored={h.selfAnchored}
-        />
+      {/* CF-WITHHELD-SAYS-WHY (Drew, 2026-09-05): the `value != null` gate is
+          gone. It hid the caveats on exactly the rows where they matter most
+          — a withheld row showed no labels at all, so the reader could not
+          tell a self-anchored refusal from any other. The labels describe the
+          POOL, which exists whether or not we published a number from it. */}
+      <PricingLabelChips
+        labels={h.pricingLabels}
+        selfAnchored={h.selfAnchored}
+      />
+      {/* CF-WITHHELD-SAYS-WHY: the reason, in the owner's words, beside the
+          dash that would otherwise be the only thing said. */}
+      {withheld && (
+        <span
+          className="px-1.5 py-0.5 rounded text-[10px] font-medium"
+          style={{
+            background: "color-mix(in oklab, var(--hiq-warning) 15%, transparent)",
+            color: "var(--hiq-warning)",
+          }}
+          title={withheldSentence(withheld, { costBasis: cost })}
+          data-withheld-reason={withheld.reason}
+        >
+          {withheldShort(withheld.reason).toUpperCase()}
+        </span>
       )}
       {/* CF-SELLER-INTELLIGENCE-SELL-WINDOW (Drew, 2026-09-02): the
           timing call, beside the provenance of the number it is timing.
@@ -959,13 +983,18 @@ function HoldingRow({ h, href }: { h: PortfolioHolding; href?: string }) {
           card"), and a row that simply lacked a check would say nothing about
           what to do. Note this is now an `if`, not the else of a ternary —
           the two states are rendered in two different places. */}
+      {/* CF-WITHHELD-SAYS-WHY (Drew, 2026-09-05): the chip said what was wrong
+          and left the reader to work out where to go. It now names the fix in
+          its own words. Still not a link — the row is already one, and a
+          second anchor inside it is the nested-<a> defect CF-WEB-NO-NESTED-
+          ANCHOR fixed; the whole row opens the page where Edit lives. */}
       {h.identityVerified !== true && (
         <span
           className="px-1.5 py-0.5 rounded text-[10px] font-medium text-[color:var(--color-muted)]"
           style={{ background: "var(--color-bg)" }}
-          title="Identity is fuzzy or parked — open Edit and pick the catalog card."
+          title="Identity is fuzzy or parked — open this card and pick the catalog card in Edit."
         >
-          UNVERIFIED
+          UNVERIFIED · CONFIRM
         </span>
       )}
       {/* CF-NEVER-AGAIN (Drew, 2026-09-02): the nightly pricing invariant
@@ -989,7 +1018,13 @@ function HoldingRow({ h, href }: { h: PortfolioHolding; href?: string }) {
       {/* CF-DATA-HEALTH-DRILLDOWN: MISSING pill for cards the engine
           couldn't price at all (no observed FMV, no estimate). Fix link
           jumps to the detail page where Edit + Refresh price live. */}
-      {value == null && vs !== "estimated" && vs !== "pending" && (
+      {/* CF-WITHHELD-SAYS-WHY (Drew, 2026-09-05): `withheld == null` joins the
+          condition. MISSING means the engine could not price the card; a
+          refusal is the opposite — for a cost-basis floor it COMPUTED a number
+          and declined to publish it. Calling that "missing" told the owner
+          their data was broken when the guard was working as designed. A
+          refused row carries its reason chip above instead. */}
+      {value == null && withheld == null && vs !== "estimated" && vs !== "pending" && (
         <>
           <span
             className="px-1.5 py-0.5 rounded text-[10px] font-medium"
@@ -1104,7 +1139,19 @@ function HoldingRow({ h, href }: { h: PortfolioHolding; href?: string }) {
           </div>
           <div className="text-right flex-shrink-0">
             <div className="text-xs uppercase tracking-wide text-[color:var(--color-muted)]">Value</div>
-            <div className="text-base font-semibold tabular-nums">
+            {/* CF-WITHHELD-SAYS-WHY (Drew, 2026-09-05): a bare "—" is
+                indistinguishable from "still loading" and from "$0". When we
+                refused, the dash carries the reason as its accessible name,
+                so a screen reader hears why instead of a punctuation mark. */}
+            <div
+              className="text-base font-semibold tabular-nums"
+              {...(withheld
+                ? {
+                    title: withheldSentence(withheld, { costBasis: cost }),
+                    "aria-label": `Value withheld — ${withheldShort(withheld.reason)}`,
+                  }
+                : {})}
+            >
               {formatUSD(value, { hideCents: true })}
             </div>
             <div
@@ -1147,7 +1194,17 @@ function HoldingRow({ h, href }: { h: PortfolioHolding; href?: string }) {
         {/* Value */}
         <div className="text-right">
           <div className="text-xs uppercase tracking-wide text-[color:var(--color-muted)]">Value</div>
-          <div className="text-sm font-medium tabular-nums">{formatUSD(value, { hideCents: true })}</div>
+          <div
+            className="text-sm font-medium tabular-nums"
+            {...(withheld
+              ? {
+                  title: withheldSentence(withheld, { costBasis: cost }),
+                  "aria-label": `Value withheld — ${withheldShort(withheld.reason)}`,
+                }
+              : {})}
+          >
+            {formatUSD(value, { hideCents: true })}
+          </div>
         </div>
 
         {/* Cost */}

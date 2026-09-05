@@ -181,6 +181,25 @@ export function PortfolioBar({
               {stats.verifiedCount} of {stats.cardCount} verified
             </span>
           </span>
+          {/* CF-WITHHELD-SAYS-WHY (Drew, 2026-09-05). The total above is a
+              sum over the cards we could price; with withheld rows now the
+              majority platform-wide (60 priced / 71 withheld), a bar that
+              says only "N cards" invites reading that total as the whole
+              portfolio. This says how much of it the total actually covers.
+              Rendered only when something IS withheld — a fully priced
+              portfolio should not carry a zero. */}
+          {stats.withheldCount > 0 && (
+            <span
+              className="tabular-nums"
+              data-testid="portfolio-bar-priced"
+              title={
+                `${stats.pricedCount} of ${stats.cardCount} cards have a published value. `
+                + `${stats.withheldCount} are withheld — open one to see why.`
+              }
+            >
+              {stats.pricedCount} priced · {stats.withheldCount} withheld
+            </span>
+          )}
           {stats.attentionCount > 0 && (
             <Link
               href={attentionHref}
