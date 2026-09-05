@@ -62,7 +62,7 @@
 // semantics (cost-basis proxy vs $0) before the C/D deploy.
 
 import { PortfolioHolding } from "../../types/portfolioiq.types.js";
-import type { PricingEnvelope } from "../../types/pricingEnvelope.js";
+import type { PricingEnvelope, PricingLabelCode } from "../../types/pricingEnvelope.js";
 import { buildPricingEnvelope } from "./pricingEnvelope.builder.js";
 import { deriveHoldingSlug } from "./holdingSlug.service.js";
 import { deriveSellWindowSignal } from "../signals/sellWindow.service.js";
@@ -347,7 +347,7 @@ export interface PortfolioHoldingWire {
   // Empty array / null → this price carries no caveats, or predates the
   // field. Never inferred from prose.
   pricingLabels?: Array<{
-    code: "speculative" | "self-anchored" | "fallback-rung" | "low-confidence";
+    code: PricingLabelCode;
     text: string;
   }>;
   selfAnchored?: { own: number; total: number } | null;

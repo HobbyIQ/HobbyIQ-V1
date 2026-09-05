@@ -73,6 +73,7 @@ import {
   shouldGateRung,
   POOL_SETTLE_HOURS,
 } from "../src/services/compiq/poolMigrationGate.js";
+import { FMV_RUNG_LABELS } from "../src/services/compiq/fmvRung.js";
 import { writeHoldingValuation } from "../src/services/portfolioiq/writeHoldingValuation.js";
 import type { PortfolioHolding } from "../src/types/portfolioiq.types.js";
 
@@ -301,11 +302,45 @@ describe("B. a migrating pool is withheld, never priced off what arrived first",
     expect(shouldGateRung("graded-pool-inverse")).toBe(true);
     expect(shouldGateRung("cross-grade-fallback")).toBe(true);
     // A rung that reads OTHER identities is not corrupted by this pool's
-    // migration — though the doctrine still publishes no number for a
-    // migrating identity.
-    expect(shouldGateRung("player-index-projection")).toBe(false);
+    // migration: it PUBLISHES, carrying the label (#1811).
     expect(shouldGateRung("family-baseline")).toBe(false);
     expect(shouldGateRung(null)).toBe(false);
+  });
+
+  // #1811. While the gate fired above every rung, this classification was
+  // inert — everything withheld regardless, so naming the player rung
+  // "not gated" cost nothing. The moment `shouldGateRung` became the thing
+  // that DECIDES, that entry would have let a migrating identity publish a
+  // number anchored on a half-arrived pool: the $240 defect, one rung over.
+  it("the player rung is OWN-POOL: its anchor is this card's own newest sale", () => {
+    expect(shouldGateRung("player-index-projection")).toBe(true);
+  });
+
+  // The full ladder vocabulary, classified. A rung added to FMV_RUNG_LABELS
+  // and not thought about here lands in OTHER-IDENTITIES by default, which is
+  // the PUBLISHING side — so this pin is the place that forces the question.
+  it("every rung the ladder can return is classified, and only own-pool rungs gate", () => {
+    const OWN_POOL = [
+      "exact-pool-projection", "exact-pool-last-sale", "exact-pool-leading-edge",
+      "exact-pool-weighted-median", "exact-pool-median", "exact-pool-trajectory",
+      "cross-grade-fallback", "grade-curve-estimate", "graded-pool-inverse",
+      "player-index-projection",
+    ];
+    // Reached only at section 3, AFTER this identity's pool was found empty at
+    // every grade — so none of them read a row the migration could move.
+    const OTHER_IDENTITIES = [
+      "sibling-estimate", "sibling-parallel", "cross-parallel", "neighbor-parallel",
+      "same-printrun-cross-parallel", "cross-setkey", "cross-printrun",
+      "printrun-discovery", "family-baseline", "product-tier", "composite-neighbor",
+      "rare-card-anchor", "hot-raw-same-card-anchor", "grade-cross-raw",
+      "tiered-momentum-card", "tiered-momentum-player",
+      // Names no price: there is nothing to withhold.
+      "no-basis",
+    ];
+    for (const r of OWN_POOL) expect(shouldGateRung(r), `${r} must be gated`).toBe(true);
+    for (const r of OTHER_IDENTITIES) expect(shouldGateRung(r), `${r} must NOT be gated`).toBe(false);
+    // The two lists together ARE the vocabulary — no rung is unclassified.
+    expect([...OWN_POOL, ...OTHER_IDENTITIES].sort()).toEqual([...FMV_RUNG_LABELS].sort());
   });
 
   it("the settle signal is keyed both ways the rematch can report", () => {

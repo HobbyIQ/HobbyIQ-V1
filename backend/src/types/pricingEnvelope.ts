@@ -23,6 +23,49 @@
 //     null, the whole tile is hidden; when the outer sub-object exists
 //     but a leaf field is null, the leaf is hidden.
 
+/**
+ * CF-A-LABEL-VOCABULARY-SPELLED-FOUR-TIMES-DRIFTS (#1816).
+ *
+ * The caveat codes a price surface can carry. The engine's own union is
+ * `SellDraftLabel["code"]` in ebaySellDraft.service.ts; this is the WIRE form
+ * of the same vocabulary, spelled once so the persisted shape, the envelope,
+ * the response assembly and the builder cannot disagree.
+ *
+ * They already had. `independence-unverified` shipped in #1775 and reached
+ * `labelsForResult`, but all four wire spellings still named only the original
+ * four codes — so the type said a label that was being emitted could not
+ * exist, and a `code as ...` cast at the builder quietly made that true on
+ * paper. Widening one spelling and not the others is how that happens, which
+ * is why there is now only one to widen.
+ *
+ * It happened AGAIN during this PR's own merge, which is the argument for the
+ * value-level pin in one sentence: #1804 added `single-source:hobbymonitor` to
+ * the emitting union on main while this branch was open, and nothing in the
+ * type system objected — a narrower wire alias type-checks perfectly against a
+ * wider emitting union, because every subset of a union is assignable to it.
+ * The pin in persistedPricingLabels.test.ts is what actually caught it.
+ *
+ * This file is import-free by design (it is the shape both clients bind to),
+ * so the union is spelled here as literals rather than imported from the
+ * service that emits them. `SellDraftLabel["code"]` must remain assignable to
+ * this; the pin asserts it at VALUE level, since the type level cannot.
+ */
+export type PricingLabelCode =
+  | "speculative"
+  | "self-anchored"
+  | "fallback-rung"
+  | "low-confidence"
+  | "independence-unverified"
+  /** #1804: the identity's catalog row rests on hobbymonitor alone, with no
+   *  corroborating source. Mirrors `SINGLE_SOURCE_LABEL` in
+   *  services/catalog/sourceCorroboration.ts — that constant is the authority;
+   *  this is its wire spelling. */
+  | "single-source:hobbymonitor"
+  /** The identity's catalog row is inside the settle window: its own sales are
+   *  still being matched onto it, so this number came from related cards and a
+   *  better one may follow within hours. */
+  | "pool-migrating";
+
 /** The one canonical pricing shape iOS + web both bind to. */
 export interface PricingEnvelope {
   /** The one number to display for this holding. Always populated —
@@ -256,7 +299,7 @@ export interface PricingProvenance {
    *  holding DETAIL surface reads them here; the list row reads the flat
    *  `pricingLabels` on the wire. One source, two shapes. */
   pricingLabels: Array<{
-    code: "speculative" | "self-anchored" | "fallback-rung" | "low-confidence";
+    code: PricingLabelCode;
     text: string;
   }>;
   /** The self-anchored ratio: `own` of the pool's `total` sales behind this
