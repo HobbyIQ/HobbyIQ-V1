@@ -114,3 +114,140 @@ describe("FINISH-FAMILY-COLLISION is measured, tagged, and never writable", () =
     expect(res.finishFamilyCollision).toBe(false);
   });
 });
+
+/**
+ * CF-A-GOLD-SHIMMER-IS-NOT-A-GOLD (Drew, 2026-09-05).
+ *
+ * The predicate reads the row's `hiq:` ADDRESS. Every caller passes
+ * `storedSlug: row.cardId`, and on a CardHedge row that is the vendor's bubble
+ * id -- so the whole vendor-keyed population (59% of a 5,000-row 2015+ sample,
+ * measured read-only on the live pool 2026-09-05) was invisible to this
+ * census. The fixtures below are the LIVE row that prompted the ruling, field
+ * for field, plus the mutation checks that pin the widening's edges.
+ */
+describe("a vendor-keyed row is still addressed -- by hobbyiqCardId", () => {
+  // The live row: sold_comps id
+  // cardhedge::ch-comp::1778541264103x262828165280045280::2026-06-17T21:06:00.000Z::10250
+  const german = {
+    source: "cardhedge",
+    title: "2026 Bowman Marconi German 1st Auto CPA-MG Gold Shimmer /50 - Raw",
+    cardId: "1778541264103x262828165280045280",
+    hobbyiqCardId: "hiq:baseball:2026:bowman-chrome:cpa-mg:gold-refractor:auto:num-50",
+  };
+  const germanId = (over: Record<string, unknown> = {}) => idOf({
+    cardYear: 2026, setKey: "bowman-chrome", cardNumber: "CPA-MG",
+    parallel: "Gold", isAuto: true, printRun: 50, ...over,
+  });
+
+  it("the Gold Shimmer sale on the Gold Refractor pool is FLAGGED", () => {
+    const res = K.classifyRow({
+      row: german, stored: germanId(),
+      derived: germanId({ parallel: "Gold Shimmer Refractor" }),
+      storedSlug: german.cardId, checklistBacked: true,
+    });
+    expect(res.finishFamilyCollision).toBe(true);
+    expect(res.finishFamily).toBe("gold");
+    expect(res.finishFamilyEvidence.titleFamilyWords).toContain("shimmer");
+    expect(res.finishFamilyEvidence.storedSlugParallel).toBe("gold-refractor");
+    // The report says WHICH field carried the address.
+    expect(res.finishFamilyEvidence.addressField).toBe("hobbyiqCardId");
+    expect(res.finishFamilyEvidence.addressSlug).toBe(german.hobbyiqCardId);
+  });
+
+  it("MUTATION: without the hobbyiqCardId fallback the row is invisible", () => {
+    // Exactly the same row with its `hiq:` address removed -- the state the
+    // predicate saw before this fix, and the reason the census reported zero.
+    const res = K.classifyRow({
+      row: { ...german, hobbyiqCardId: undefined }, stored: germanId(),
+      derived: germanId({ parallel: "Gold Shimmer Refractor" }),
+      storedSlug: german.cardId, checklistBacked: true,
+    });
+    expect(res.finishFamilyCollision).toBe(false);
+    expect(res.finishFamily).toBeNull();
+  });
+
+  it("and it is STILL never writable -- the widening is report-only", () => {
+    for (const source of ["cardhedge", "tca-ebay", "cardsight", "ebay-user-purchase"]) {
+      const res = K.classifyRow({
+        row: { ...german, source }, stored: germanId(),
+        derived: germanId({ parallel: "Gold Shimmer Refractor" }),
+        storedSlug: german.cardId, checklistBacked: true,
+      });
+      expect(res.finishFamilyCollision).toBe(true);
+      expect(res.writable).toBe(false);
+    }
+  });
+
+  it("an hiq-keyed cardId still wins -- the fallback never overrides it", () => {
+    // cardId IS a slug and names green-geometric-refractor; hobbyiqCardId says
+    // something else entirely. The explicit key must be the one reported, or a
+    // row whose two addresses disagree would be quoted against the wrong pool.
+    const res = K.classifyRow({
+      row: {
+        source: "cardhedge", title: "2025 Bowman Chrome Jesus Made Green Wave #7",
+        cardId: "hiq:baseball:2025:bowman-chrome:7:green-geometric-refractor:no-auto",
+        hobbyiqCardId: "hiq:baseball:2025:bowman-chrome:7:blue-refractor:no-auto",
+      },
+      stored: idOf(), derived: idOf(),
+      storedSlug: "hiq:baseball:2025:bowman-chrome:7:green-geometric-refractor:no-auto",
+      checklistBacked: true,
+    });
+    expect(res.finishFamilyCollision).toBe(true);
+    expect(res.finishFamilyEvidence.addressField).toBe("cardId");
+    expect(res.finishFamilyEvidence.storedSlugParallel).toBe("green-geometric-refractor");
+  });
+
+  it("a vendor-keyed row with NO hiq address anywhere stays silent", () => {
+    const res = K.classifyRow({
+      row: {
+        source: "cardhedge", title: "2026 Bowman Marconi German Gold Shimmer /50 - Raw",
+        cardId: "1778541264103x262828165280045280", hobbyiqCardId: "1778541264103x262828165280045280",
+      },
+      stored: germanId(), derived: germanId({ parallel: "Gold Shimmer Refractor" }),
+      storedSlug: "1778541264103x262828165280045280", checklistBacked: true,
+    });
+    expect(res.finishFamilyCollision).toBe(false);
+  });
+
+  it("agreement is still not a collision, on the vendor-keyed path too", () => {
+    // The German row's OTHER twin (id cardhedge::ch-daily::...::10250): its
+    // title and its address both say Gold Shimmer Refractor, word for word.
+    // Nothing is added and nothing is dropped, so there is nothing to report --
+    // the widening must not turn agreement into a finding.
+    const res = K.classifyRow({
+      row: {
+        source: "cardhedge",
+        title: "2026 Bowman Baseball #CPA-MG Gold Shimmer Refractor",
+        cardId: "1778541264103x262828165280045280",
+        hobbyiqCardId: "hiq:baseball:2026:bowman-chrome:cpa-mg:gold-shimmer-refractor:auto:num-50",
+      },
+      stored: germanId({ parallel: "Gold Shimmer Refractor" }),
+      derived: germanId({ parallel: "Gold Shimmer Refractor" }),
+      storedSlug: "1778541264103x262828165280045280", checklistBacked: true,
+    });
+    expect(res.finishFamilyCollision).toBe(false);
+  });
+
+  it("the collision test stays BIDIRECTIONAL on the vendor-keyed path", () => {
+    // The $76 sibling. Its address says `gold-shimmer-refractor` and its title
+    // -- "Topps Bowman Chrome Gold Shimmer ..." -- never says "refractor". The
+    // slug DROPS a word the title lacks, which is the documented second leg of
+    // `titleAddsOrDrops`, and it is reported for the same reason the adding
+    // direction is. Pinned so the widening is known to carry BOTH legs onto
+    // the newly-visible population rather than only the one that motivated it.
+    const res = K.classifyRow({
+      row: {
+        source: "cardhedge",
+        title: "2026 Topps Bowman Chrome Gold Shimmer #CPA-MG Marconi German 1st Auto 30/50 DN43 - Raw",
+        cardId: "1778541264103x262828165280045280",
+        hobbyiqCardId: "hiq:baseball:2026:bowman-chrome:cpa-mg:gold-shimmer-refractor:auto:num-50",
+      },
+      stored: germanId({ parallel: "Gold Shimmer Refractor" }),
+      derived: germanId({ parallel: "Gold Shimmer Refractor" }),
+      storedSlug: "1778541264103x262828165280045280", checklistBacked: true,
+    });
+    expect(res.finishFamilyCollision).toBe(true);
+    expect(res.finishFamilyEvidence.addressField).toBe("hobbyiqCardId");
+    expect(res.writable).toBe(false);
+  });
+});

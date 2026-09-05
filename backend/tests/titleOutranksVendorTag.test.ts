@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { parallelTheTitleAllows } from "../src/services/portfolioiq/titleOutranksVendorTag.js";
+import { parseListingTitle } from "../src/services/portfolioiq/ebayTitleParser.service.js";
 
 // CF-THE-TITLE-OUTRANKS-THE-VENDOR-TAG (Drew, 2026-08-29). The Marconi German
 // case: a CardHedge base auto ("2026 Bowman Marconi German Chrome Auto 1st
@@ -56,5 +57,54 @@ describe("a fuller vendor spelling of the SAME finish is adopted", () => {
   it("it does not let a bare colour inherit an unrelated numbered parallel", () => {
     // "Gold" is not a subset of "Blue Refractor" → still overruled.
     expect(parallelTheTitleAllows("Gold", "Blue Refractor").parallel).toBe("Gold");
+  });
+});
+
+/**
+ * CF-A-GOLD-SHIMMER-IS-NOT-A-GOLD (Drew, 2026-09-05). The stored damage that
+ * prompted the ruling was written by the retired `ch-comp::` path, and these
+ * pins prove the SURVIVING writers refuse to mint it again -- end to end, from
+ * the real listing title through the parser to the vendor-tag decision, rather
+ * than from a hand-written parallel string.
+ *
+ * The live row: sold_comps id
+ * cardhedge::ch-comp::1778541264103x262828165280045280::2026-06-17T21:06:00.000Z::10250
+ * title "2026 Bowman Marconi German 1st Auto CPA-MG Gold Shimmer /50 - Raw",
+ * stored parallel "Gold" -- the shimmer dropped, the sale filed on the Gold
+ * Refractor /50 pool beside a genuine $182.50 Gold Refractor.
+ */
+describe("a Gold Shimmer title is never written as a Gold", () => {
+  const decide = (title: string, tag: string | null) => {
+    const parsed = parseListingTitle(title);
+    return parallelTheTitleAllows(parsed.parallel, tag, {
+      variationMarker: parsed.variationMarker ?? null,
+    });
+  };
+
+  it("the live German title reads Gold Shimmer and overrules the Gold tag", () => {
+    const d = decide("2026 Bowman Marconi German 1st Auto CPA-MG Gold Shimmer /50 - Raw", "Gold");
+    expect(d.parallel).toBe("Gold Shimmer");
+    expect(d.vendorTagOverruled).toBe("Gold");
+  });
+
+  it("its two live siblings keep their shimmer too", () => {
+    expect(decide("2026 Topps Bowman Chrome Gold Shimmer #CPA-MG Marconi German 1st Auto 30/50 DN43 - Raw", "Gold Refractor").parallel)
+      .toBe("Gold Shimmer");
+    expect(decide("2026 Bowman Baseball #CPA-MG Gold Shimmer Refractor", "Gold").parallel)
+      .toBe("Gold Shimmer Refractor");
+  });
+
+  it("MUTATION: a Gold Refractor title is still a Gold Refractor", () => {
+    // The genuine $182.50 sale sharing the pool. If the parser ever widened
+    // "Gold" to swallow the shimmer sales, it would equally have to flatten
+    // this one -- so pinning it is what makes the pair separable.
+    const d = decide("2026 Bowman Marconi German Chrome Auto Gold Refractor 1st #/50 Nationals", "Gold");
+    expect(d.parallel).toBe("Gold Refractor");
+  });
+
+  it("MUTATION: the colour alone is not the shimmer card", () => {
+    // Two DIFFERENT cards, two price curves; neither name may read as the other.
+    expect(parallelTheTitleAllows("Gold Shimmer", "Gold").parallel).toBe("Gold Shimmer");
+    expect(parallelTheTitleAllows("Gold", "Gold Shimmer").parallel).toBe("Gold");
   });
 });

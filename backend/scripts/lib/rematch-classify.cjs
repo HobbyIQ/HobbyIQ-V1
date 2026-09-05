@@ -1317,10 +1317,48 @@ function colourFamilyOf(parallelName) {
  * Returns { qualifies, evidence }. The evidence quotes both sides, because a
  * subclass that only reported a verdict would be unactionable -- Drew rules on
  * the family by reading the titles.
+ *
+ * A VENDOR-KEYED ROW STILL HAS AN ADDRESS -- IT IS JUST THE OTHER FIELD.
+ *
+ * CF-A-GOLD-SHIMMER-IS-NOT-A-GOLD (Drew, 2026-09-05). Every caller passes
+ * `storedSlug: row.cardId`, and on a CardHedge row `cardId` is the vendor's
+ * bubble id (`1778541264103x262828165280045280`), not an `hiq:` slug. So
+ * `slugParallelSegment` returned null, the predicate returned `qualifies:
+ * false` at its first branch, and the ENTIRE vendor-keyed population was
+ * invisible to this census -- 59% of a 5,000-row 2015+ sample, measured
+ * read-only on the live pool 2026-09-05.
+ *
+ * That is precisely where the damage hides. The row that prompted this ruling
+ * is Drew's Marconi German: title "2026 Bowman Marconi German 1st Auto CPA-MG
+ * Gold Shimmer /50 - Raw", stored `parallel` "Gold", and
+ * `hobbyiqCardId` ...:cpa-mg:gold-refractor:auto:num-50 -- a Gold Shimmer sale
+ * addressed to the Gold Refractor pool. Asked with `cardId` the predicate says
+ * nothing; asked with `hobbyiqCardId` it says `family: "gold"`,
+ * `titleFamilyWords: ["shimmer"]`. Same row, same detector, one field apart.
+ *
+ * So the ADDRESS this predicate reads is the row's `hiq:` slug wherever the
+ * row has one: `cardId` when that is a slug, else `hobbyiqCardId`. The pool
+ * reader ORs the two fields, so both are addresses the sale actually prices
+ * under, and reading the one that carries a parallel segment is reading the
+ * claim this predicate exists to compare against the title.
+ *
+ * THIS CANNOT MAKE A ROW WRITABLE. `finishFamilyCollision` is report-only and
+ * permanently so (see the block comment above): it sets a tag and a count,
+ * never `writable`. Widening what it can SEE widens the census, not the fleet.
+ * Measured on the same sample: flagged rows 394 -> 922, all report-only.
  */
 function finishFamilyCollision({ row, storedSlug, stored, derived }) {
   const title = str(row?.title);
-  const slug = str(storedSlug ?? row?.cardId);
+  // The row's own `hiq:` address, whichever field carries it. `storedSlug`
+  // (always `row.cardId` at every call site) wins when it IS a slug, so an
+  // hiq-keyed row is read exactly as it was before this widening.
+  // `slugParallelSegment` itself is the `hiq:`-shape test, so the fallback is
+  // taken only when the explicit key yields no parallel segment AND the
+  // hobbyiqCardId does -- never on a malformed value of either.
+  const explicit = str(storedSlug ?? row?.cardId);
+  const fallback = str(row?.hobbyiqCardId);
+  const slug = slugParallelSegment(explicit) ? explicit
+    : (slugParallelSegment(fallback) ? fallback : explicit);
   const slugParallel = slugParallelSegment(slug);
   const ev = {
     storedSlugParallel: slugParallel,
@@ -1328,6 +1366,12 @@ function finishFamilyCollision({ row, storedSlug, stored, derived }) {
     storedParallelField: stored?.parallel ?? null,
     family: null,
     titleFamilyWords: [],
+    // WHICH address was read. A vendor-keyed row is reported against its
+    // `hobbyiqCardId`, and the report has to say so -- a collision quoted
+    // against an address the reader cannot find on `cardId` would look like a
+    // defect in the census rather than the shape of the row.
+    addressField: slug === explicit ? "cardId" : "hobbyiqCardId",
+    addressSlug: slug || null,
   };
   if (!slugParallel || !slugNamesParallel(slug)) return { qualifies: false, evidence: ev };
   const family = colourFamilyOf(slugParallel.replace(/-/g, " "));
