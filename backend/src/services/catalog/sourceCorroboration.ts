@@ -1,9 +1,56 @@
 /**
- * CF-HOBBYMONITOR-IS-STRICT-ONLY-WHERE-A-SECOND-SOURCE-AGREES
- * (Drew, 2026-09-05, ruling B).
+ * CF-A-SECOND-SOURCE-THAT-DISAGREES-IS-THE-ONLY-DISQUALIFIER
+ * (Drew, 2026-09-05 — the NARROWED ruling. See the history below.)
  *
  * A source can transcribe a real printed checklist and still get the cards
  * wrong. hobbymonitor does, measurably, and #1795 is where we found out.
+ *
+ * ── WHAT THE FIRST DRAFT OF THIS FILE GOT WRONG ─────────────────────────────
+ *
+ * The first version of this ruling demoted hobbymonitor WHOLESALE: a row was
+ * checklist-backed only where a second strict source corroborated it. Then the
+ * blast radius was measured, and Drew narrowed the ruling on the strength of
+ * the number:
+ *
+ *   1,192,925 hobbymonitor rows
+ *      77,441   6.5%  corroborated
+ *      22,027   1.8%  a second source names a DIFFERENT PLAYER at the cell
+ *   1,093,457  91.7%  NO second source names the cell at all
+ *
+ * The wholesale demotion would have taken 1.13M rows out of pricing, and
+ * 1.09M of those for a reason that is not evidence of anything: nobody else
+ * has transcribed that product. hobbymonitor is the ONLY source most modern
+ * Panini releases have — 2022 panini-select alone is 28,497 rows with no
+ * rival — so "no second source" is a statement about OUR ACQUISITION BACKLOG,
+ * not about the row.
+ *
+ * CF-ABSENT-IS-NOT-EVIDENCE, and CF-A-CAVEAT-THAT-FIRES-EVERYWHERE-SAYS-NOTHING
+ * cuts the same way: a refusal that fires on 92% of a source's rows is not a
+ * finding about those rows.
+ *
+ * ── THE NARROWED RULE ───────────────────────────────────────────────────────
+ *
+ * Only a CONTRADICTION disqualifies. Three verdicts, three different answers:
+ *
+ *   corroborated        a second strict source names this cell and agrees on
+ *                       the player            -> BACKED, no label
+ *   player-disagrees    a second strict source names this cell and names
+ *                       SOMEONE ELSE. Exactly the #1795 defect: 2,571 of
+ *                       2,811 panini-score twins. Two transcriptions of one
+ *                       printed line cannot both be right, and the one that
+ *                       contradicts itself on 32 other cells of the same
+ *                       product is not the one to believe.
+ *                                             -> NOT BACKED, identityUnverified
+ *   no-second-source    nobody else has transcribed this product
+ *                                             -> BACKED and PRICEABLE, but
+ *                                                LABELLED `single-source:*`
+ *
+ * The label is the point of the narrowing. The row prices, because refusing to
+ * price 1.09M real cards over an acquisition gap would be the cure being worse
+ * than the disease — and the reader is TOLD, in the same labels array that
+ * already carries `self-anchored` and `independence-unverified`, that one
+ * transcription is all that stands behind the identity. That is the same
+ * doctrine those two labels embody: publish, and say what it rests on.
  *
  * ── WHAT #1795 MEASURED ─────────────────────────────────────────────────────
  *
@@ -251,29 +298,53 @@ export function isCorroboratingSource(row: CorroborationRow | null | undefined):
 }
 
 /** Why a corroboration read answered the way it did. The vocabulary is CLOSED
- *  and it is what the census and the retire lane report, so a reader is never
- *  left inferring the reason from a boolean. */
+ *  and it is what the census, the label and the retire lane report, so a reader
+ *  is never left inferring the reason from a boolean. */
 export type CorroborationVerdict =
   /** The source's word stands on its own; no second source was needed. */
   | "not-required"
   /** A second strict source names this identity cell, and the players agree
-   *  (or at least one side carries no name). */
+   *  (or at least one side carries no name). BACKED, unlabelled. */
   | "corroborated"
-  /** No other strict source names this identity cell at all. Overwhelmingly
-   *  "we have not acquired that checklist yet" -- an acquisition work item. */
+  /** No other strict source names this identity cell at all -- 1,093,457 rows,
+   *  91.7% of the source. "We have not acquired that checklist yet" is an
+   *  acquisition work item, NOT evidence against the row, so it stays BACKED
+   *  and priceable and carries the `single-source:*` label instead. */
   | "no-second-source"
   /** A second strict source names this cell and names a DIFFERENT PLAYER.
-   *  The #1795 shape: 2,571 of 2,811 panini-score twins. */
+   *  The #1795 shape: 2,571 of 2,811 panini-score twins. The ONLY verdict
+   *  that loses checklist backing -- 22,027 rows, 1.8%. */
   | "player-disagrees";
+
+/** The retire reason stamped on a row a second source CONTRADICTS. Distinct
+ *  from the panini-score orphan reason, which is a product-scoped ruling about
+ *  a MOVE that would mint an identity; this one is about a specific cell where
+ *  two transcriptions of one printed line disagree. */
+export const SOURCE_DISAGREES_REASON = "source-disagrees:hobbymonitor" as const;
+
+/** The label a BACKED-but-uncorroborated row carries onto the valuation. Same
+ *  shape and the same doctrine as `self-anchored` and `independence-unverified`:
+ *  publish the number, and say what it rests on. */
+export const SINGLE_SOURCE_LABEL = "single-source:hobbymonitor" as const;
 
 export interface CorroborationResult {
   verdict: CorroborationVerdict;
-  /** True iff a price may rest on this row's identity. */
+  /** True iff a price may rest on this row's identity. False ONLY on
+   *  `player-disagrees` -- a contradiction is the sole disqualifier. */
   checklistBacked: boolean;
+  /** True when the identity is backed but ONE transcription is all that stands
+   *  behind it. Drives `SINGLE_SOURCE_LABEL` on the valuation and the
+   *  acquisition queue in the census. Never true alongside
+   *  `checklistBacked === false`: a refused row is not "thinly supported", it
+   *  is contradicted, and the two must not read as one caveat. */
+  singleSource: boolean;
   /** The cell that was read, for the log line. */
   cell: string | null;
   /** The normalized source of the rival that corroborated, when one did. */
   corroboratedBy?: string;
+  /** The normalized source of the rival that CONTRADICTED, when one did --
+   *  the row a reader must look at to settle the disagreement. */
+  contradictedBy?: string;
 }
 
 /**
@@ -296,21 +367,45 @@ export function corroborationOf(
 ): CorroborationResult {
   const cell = identityCellOf(row);
   if (!requiresCorroboration(row?.source)) {
-    return { verdict: "not-required", checklistBacked: catalogAuthorityOf(row?.source) === "checklist", cell };
+    return {
+      verdict: "not-required",
+      checklistBacked: catalogAuthorityOf(row?.source) === "checklist",
+      singleSource: false,
+      cell,
+    };
   }
   const list = (rivals ?? []).filter(isCorroboratingSource);
   const sameCell = cell === null ? [] : list.filter((r) => identityCellOf(r) === cell);
-  if (sameCell.length === 0) return { verdict: "no-second-source", checklistBacked: false, cell };
+  if (sameCell.length === 0) {
+    // THE NARROWED RULING. Nobody else has transcribed this product, which is a
+    // fact about our acquisition backlog and not about this row. It prices, and
+    // it says so. Refusing here would take 1.09M real cards out of pricing over
+    // a gap in what we have bought.
+    return { verdict: "no-second-source", checklistBacked: true, singleSource: true, cell };
+  }
   const mine = playerKey(row);
   // Both sides must carry a name for a name to decide anything.
   const agreeing = sameCell.find((r) => {
     const theirs = playerKey(r);
     return !mine || !theirs || theirs === mine;
   });
-  if (!agreeing) return { verdict: "player-disagrees", checklistBacked: false, cell };
+  if (!agreeing) {
+    // A CONTRADICTION, and the only disqualifier. Two transcriptions of one
+    // printed line name two different players; they cannot both be right, and
+    // the one that contradicts itself on 32 other cells of the same product is
+    // not the one to believe.
+    return {
+      verdict: "player-disagrees",
+      checklistBacked: false,
+      singleSource: false,
+      cell,
+      contradictedBy: normalizeCatalogSource(sameCell[0]?.source),
+    };
+  }
   return {
     verdict: "corroborated",
     checklistBacked: true,
+    singleSource: false,
     cell,
     corroboratedBy: normalizeCatalogSource(agreeing.source),
   };
@@ -319,15 +414,29 @@ export function corroborationOf(
 /**
  * The consumers' shared shorthand: may a price rest on this row's identity?
  *
- * This is `isChecklistBackedIdentity` with the corroboration requirement
- * applied, and it is what identityBacking, the rematch, the driver and the
- * catalog-verify boost all call. Passing no rivals is the conservative read for
- * a caller that could not look -- an uncorroborated hobbymonitor row is not
- * backed, and a caller who did not check is not entitled to assume it is.
+ * TRUE for everything except a CONTRADICTION. `no-second-source` is backed --
+ * see the header. Passing no rivals therefore reads as "nothing contradicts
+ * this", which is the honest answer for a caller that could not look: absence
+ * of a check is not a contradiction, and treating it as one would refuse every
+ * row on every path that does not hold a product scan.
  */
 export function isChecklistBackedWithCorroboration(
   row: CorroborationRow | null | undefined,
   rivals: readonly CorroborationRow[] | null | undefined,
 ): boolean {
   return corroborationOf(row, rivals).checklistBacked;
+}
+
+/**
+ * Is this row backed but supported by a SINGLE transcription?
+ *
+ * The label question, kept separate from the backing one so a caller cannot
+ * accidentally treat "thinly supported" as "refused" -- they are opposite
+ * instructions to a reader (show the number with a caveat vs. show no number).
+ */
+export function isSingleSourceIdentity(
+  row: CorroborationRow | null | undefined,
+  rivals: readonly CorroborationRow[] | null | undefined,
+): boolean {
+  return corroborationOf(row, rivals).singleSource;
 }

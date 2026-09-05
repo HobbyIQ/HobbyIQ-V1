@@ -1972,6 +1972,12 @@ function isStrictChecklistSource(raw) {
 // player, and 32 keys carry two different players at one cell -- internally
 // inconsistent regardless of any second source.
 //
+// NARROWED (Drew, same day, after the blast radius was measured): only a
+// CONTRADICTION disqualifies. 1,093,457 of the 1,192,925 hobbymonitor rows have
+// NO second source at all -- a fact about our acquisition backlog, not about
+// the row -- so they stay strict and carry a `single-source:*` label instead.
+// Only the 22,027 rows a second strict source CONTRADICTS lose the gate.
+//
 // The rematch's STRICT gate is precisely the one whose false yes "moves a sale
 // onto a card that may never have been printed" (the allowlist's own words), so
 // it is the gate that must carry the demotion. It is NOT reimplemented here:

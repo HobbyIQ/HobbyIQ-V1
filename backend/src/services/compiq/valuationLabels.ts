@@ -38,6 +38,7 @@
 import type { Valuation } from "./oneValuationPath.service.js";
 import { toCanonicalFmvResponse } from "./oneValuationPathAdapters.js";
 import { labelsForResult, type SellDraftLabel } from "../ebay/ebaySellDraft.service.js";
+import { isSingleSourceBacking } from "../catalog/identityBacking.js";
 
 /** The label set persisted on a holding, in the shape the wire carries. */
 export interface PersistedPricingLabel {
@@ -72,7 +73,22 @@ export interface PersistedPricingLabels {
 export function persistedLabelsForValuation(v: Valuation): PersistedPricingLabels {
   const result = toCanonicalFmvResponse(v);
   const owner = v.ownerUserId ?? null;
-  const labels = labelsForResult(result, owner).map((l) => ({ code: l.code, text: l.text }));
+  // CF-A-SECOND-SOURCE-THAT-DISAGREES-IS-THE-ONLY-DISQUALIFIER (Drew,
+  // 2026-09-05). The identity's backing travels with the valuation
+  // (`identity.sourceOfRow` is the catalog row the ladder actually priced), so
+  // the label is derived HERE from what the valuation already knows rather than
+  // by a second catalog read on a write path.
+  //
+  // `identityBackingOf` is asked the same question two lines earlier in
+  // holdingValuation's refusal gate, with the same one-row list — so the badge
+  // and the price cannot disagree about a holding, which is the invariant
+  // checklistBackedIdentity's header states for the VERIFIED check and this
+  // extends to the caveat.
+  const singleSource = isSingleSourceBacking(
+    v.identity?.slug ?? null,
+    v.identity?.sourceOfRow == null ? [] : [{ source: v.identity.sourceOfRow }],
+  );
+  const labels = labelsForResult(result, owner, singleSource).map((l) => ({ code: l.code, text: l.text }));
   const comps = result.provenance?.comps ?? [];
   const own = comps.filter((c) => c.verifiedByUser === true).length;
   // The denominator is the engine's pool total, exactly as the sentence

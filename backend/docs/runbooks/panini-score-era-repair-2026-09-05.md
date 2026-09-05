@@ -179,6 +179,16 @@ Read `MOVED / FOLDED / REPLACED` in the log and confirm they match the simulatio
   `retiredReason: 'source-unreliable:hobbymonitor-2025-score'`, and its graded children
   follow. `score` is left to the checklistinsider rows.
 
+  **This stays a PRODUCT-SCOPED ruling** even though the general hobbymonitor rule was
+  narrowed later the same day (see
+  `docs/reports/hobbymonitor-corroboration-2026-09-05.md`). The general rule now demotes
+  only rows a second source **contradicts**; these 891 have no twin at all, so the general
+  rule would leave them backed-and-labelled. What makes them different is not the evidence
+  about the row, it is what the MOVE would do: land an unadjudicated identity on a fresh
+  `score` slug, where 310 of 500 sampled name a player `score` already holds at another
+  number. The retire is about the move, not the source — which is exactly why the lane is
+  armed per-dispatch by name rather than by the demotion list.
+
   The lane is `rekey-product-setkey MODE=catalog` with `RETIRE_UNTWINNED=true`, added in
   the PR that carries this ruling. It diverts **only** the MOVE branch, **only** for a row
   whose source the dispatch named — so a checklistinsider row scanned by the same run

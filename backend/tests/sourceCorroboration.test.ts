@@ -1,6 +1,6 @@
 /**
- * CF-HOBBYMONITOR-IS-STRICT-ONLY-WHERE-A-SECOND-SOURCE-AGREES (Drew,
- * 2026-09-05, ruling B) -- the pins.
+ * CF-A-SECOND-SOURCE-THAT-DISAGREES-IS-THE-ONLY-DISQUALIFIER (Drew,
+ * 2026-09-05, the NARROWED ruling) -- the pins.
  *
  * THE MEASUREMENT THESE PINS STAND ON (#1795, and this PR's own census):
  *
@@ -8,14 +8,23 @@
  *       slug name a DIFFERENT PLAYER at that number
  *   343 disagreements against 376 agreements where the player DOES match
  *   32 keys carry two different players at one (number, parallel, isAuto)
- *   1,192,925 hobbymonitor catalog rows, 6.5% corroborated, 111 of 175
- *       (sport, year, setKey) cells with ZERO corroboration
+ *
+ *   1,192,925 hobbymonitor catalog rows
+ *      77,441   6.5%  corroborated
+ *      22,027   1.8%  CONTRADICTED -- the only rows that lose the gate
+ *   1,093,457  91.7%  no second source at all -- BACKED, and labelled
+ *
+ * THE NARROWING IS ITSELF PINNED. The first draft of this ruling refused every
+ * uncorroborated row, which would have withheld 1,133,530. Drew narrowed it
+ * after seeing that number, because 1.09M of them are uncorroborated for a
+ * reason that is not evidence about the row: nobody else has transcribed that
+ * product. So there is a mutation check asserting that a REVERT to the
+ * wholesale rule turns a test red, alongside the ones asserting that dropping
+ * the contradiction check does.
  *
  * Each `it` below names the behaviour it pins. The MUTATION CHECKS at the
- * bottom are the ones that matter most: they state, as executable tests, that
- * dropping the corroboration requirement or routing the question back through
- * the old unconditional allowlist turns a test RED. A guard nobody can break
- * on purpose is a guard nobody knows is load-bearing.
+ * bottom are the ones that matter most: a guard nobody can break on purpose is
+ * a guard nobody knows is load-bearing.
  */
 import { describe, it, expect } from "vitest";
 import {
@@ -24,12 +33,13 @@ import {
   identityCellOf,
   isChecklistBackedWithCorroboration,
   isCorroboratingSource,
+  isSingleSourceIdentity,
   normalizeCatalogSource,
   requiresCorroboration,
   type CorroborationRow,
 } from "../src/services/catalog/sourceCorroboration.js";
 import { catalogAuthorityOf } from "../src/services/catalog/catalogAuthority.service.js";
-import { identityBackingOf, isChecklistBackedIdentity } from "../src/services/catalog/identityBacking.js";
+import { identityBackingOf, isChecklistBackedIdentity, isSingleSourceBacking } from "../src/services/catalog/identityBacking.js";
 
 /** The real shape, from a live read of card_catalog on 2026-09-05. */
 const HM_LONDON: CorroborationRow = {
@@ -42,6 +52,14 @@ const HM_LONDON: CorroborationRow = {
  *  checklist (checklistcenter.com/2025-score-nfl-football-card-checklist). */
 const CI_COLEMAN: CorroborationRow = {
   id: "hiq:football:2025:score:4:base:no-auto",
+  source: "checklistinsider-2026-08-27",
+  playerName: "Keon Coleman",
+};
+/** The same disagreement stated AT hobbymonitor's own cell, which is what a
+ *  corroboration read compares against: same (sport, year, setKey, number,
+ *  parallel, auto), a different player. */
+const CONTRADICTS_AT_CELL: CorroborationRow = {
+  id: HM_LONDON.id,
   source: "checklistinsider-2026-08-27",
   playerName: "Keon Coleman",
 };
@@ -142,10 +160,30 @@ describe("isCorroboratingSource -- who may be the SECOND source", () => {
 });
 
 describe("corroborationOf -- THE ONE READ", () => {
-  it("an UNCORROBORATED hobbymonitor row is NOT backed, and says why", () => {
+  it("THE NARROWING: an UNCORROBORATED row is BACKED and LABELLED, not refused", () => {
+    // Drew narrowed the ruling on 2026-09-05 after the blast radius was
+    // measured: 1,093,457 of 1,192,925 hobbymonitor rows have NO second source,
+    // which is a fact about our acquisition backlog and not about the row.
+    // Refusing them would take 1.09M real cards out of pricing.
     const r = corroborationOf(HM_LONDON, []);
     expect(r.verdict).toBe("no-second-source");
-    expect(r.checklistBacked).toBe(false);
+    expect(r.checklistBacked).toBe(true);
+    expect(r.singleSource).toBe(true);
+  });
+
+  it("`singleSource` and `checklistBacked:false` are NEVER both set", () => {
+    // They are opposite instructions to a reader — show the number with a
+    // caveat, vs. show no number. A result carrying both would be incoherent.
+    const contradicted: CorroborationRow = {
+      id: HM_LONDON.id, source: "checklistinsider-2026-08-27", playerName: "Keon Coleman",
+    };
+    for (const rivals of [[], [contradicted], [{ ...HM_LONDON, source: "beckett-checklist" }]]) {
+      const r = corroborationOf(HM_LONDON, rivals);
+      if (!r.checklistBacked) expect(r.singleSource, JSON.stringify(r)).toBe(false);
+    }
+    // ...and the contradicted case really is the one that is not backed, so
+    // the loop above is not passing vacuously.
+    expect(corroborationOf(HM_LONDON, [contradicted]).checklistBacked).toBe(false);
   });
 
   it("a CORROBORATED hobbymonitor row IS backed, and names who corroborated it", () => {
@@ -199,22 +237,62 @@ describe("corroborationOf -- THE ONE READ", () => {
     expect(r.checklistBacked).toBe(true);
   });
 
-  it("no rivals passed at all is the CONSERVATIVE read, not an assumption of backing", () => {
-    expect(isChecklistBackedWithCorroboration(HM_LONDON, null)).toBe(false);
-    expect(isChecklistBackedWithCorroboration(HM_LONDON, undefined)).toBe(false);
+  it("no rivals passed reads as `nothing contradicts this` -- backed, and labelled", () => {
+    // Under the narrowed rule the absence of a check is not a contradiction.
+    // Treating it as one would refuse every row on every path that does not
+    // hold a product scan -- which is most of them.
+    for (const rivals of [null, undefined]) {
+      expect(isChecklistBackedWithCorroboration(HM_LONDON, rivals)).toBe(true);
+      expect(isSingleSourceIdentity(HM_LONDON, rivals)).toBe(true);
+    }
   });
 });
 
 describe("identityBackingOf -- the consumer, sharing the one predicate", () => {
-  it("an uncorroborated hobbymonitor row alone at a slug is UNBACKED, not backed", () => {
-    expect(identityBackingOf(HM_LONDON.id, [HM_LONDON])).toBe("unbacked");
+  it("an uncorroborated hobbymonitor row alone at a slug is BACKED and single-source", () => {
+    // The narrowed ruling, at the consumer that gates pricing.
+    expect(identityBackingOf(HM_LONDON.id, [HM_LONDON])).toBe("checklist-backed");
+    expect(isSingleSourceBacking(HM_LONDON.id, [HM_LONDON])).toBe(true);
   });
 
-  it("...and `unbacked`, not `self-derived-only` -- it names DIFFERENT work", () => {
-    // self-derived-only means fix a matcher. unbacked means acquire a checklist.
-    // An uncorroborated hobbymonitor row is the second kind, and the verdicts
-    // are kept distinct precisely so a reader is sent to the right queue.
-    expect(identityBackingOf(HM_LONDON.id, [HM_LONDON])).not.toBe("self-derived-only");
+  it("A CONTRADICTION DISQUALIFIES THE ROW, NOT THE CARD", () => {
+    // This distinction is the whole reason the two questions have two names,
+    // and getting it backwards is a real hazard: when checklistinsider is
+    // sitting right there naming Keon Coleman at #4, the CARD is
+    // checklist-backed — by checklistinsider — and it prices normally. What
+    // the contradiction disqualifies is the hobbymonitor ROW's word about it.
+    //
+    // So `identityBackingOf` (a question about the identity, over all its
+    // rows) says BACKED, while `corroborationOf` (a question about one row)
+    // refuses the hobbymonitor row. Both are right, and a reader who conflated
+    // them would either withhold a well-evidenced card or trust a contradicted
+    // transcription.
+    const rows = [HM_LONDON, CONTRADICTS_AT_CELL];
+    expect(identityBackingOf(HM_LONDON.id, rows)).toBe("checklist-backed");
+    expect(corroborationOf(HM_LONDON, rows).checklistBacked).toBe(false);
+    // ...and no caveat, because a real second transcription is present.
+    expect(isSingleSourceBacking(HM_LONDON.id, rows)).toBe(false);
+  });
+
+  it("...and it is `unbacked`, never `self-derived-only` -- DIFFERENT work", () => {
+    // self-derived-only means fix a matcher. A contradicted transcription means
+    // settle which of two sources is right. The verdicts are kept distinct so a
+    // reader is sent to the right queue; neither is the other.
+    expect(identityBackingOf(HM_LONDON.id, [HM_LONDON, CONTRADICTS_AT_CELL]))
+      .not.toBe("self-derived-only");
+  });
+
+  it("a CORROBORATED row is backed and NOT labelled -- the caveat would be untrue", () => {
+    const agreeing: CorroborationRow = { ...HM_LONDON, source: "beckett-checklist" };
+    expect(identityBackingOf(HM_LONDON.id, [HM_LONDON, agreeing])).toBe("checklist-backed");
+    expect(isSingleSourceBacking(HM_LONDON.id, [HM_LONDON, agreeing])).toBe(false);
+  });
+
+  it("an ordinary checklist row anywhere at the slug clears the label", () => {
+    // One real second transcription is enough; saying "single-source" beside it
+    // would be saying something false.
+    expect(isSingleSourceBacking(CI_COLEMAN.id, [CI_COLEMAN])).toBe(false);
+    expect(isSingleSourceBacking(HM_LONDON.id, [HM_LONDON, { source: "checklistcenter" }])).toBe(false);
   });
 
   it("a corroborated one is checklist-backed", () => {
@@ -241,51 +319,77 @@ describe("identityBackingOf -- the consumer, sharing the one predicate", () => {
 // into a no-op -- which is the failure mode a boolean predicate has: it keeps
 // returning `true` and nothing looks broken.
 
-describe("MUTATION: dropping the corroboration requirement turns a test red", () => {
-  it("the old unconditional rule would have called the London row BACKED", () => {
-    // THE MUTANT: `catalogAuthorityOf(source) === "checklist"`, which is exactly
-    // what isChecklistBackedIdentity still answers for the STRING question --
-    // and it says yes, because a hobbymonitor row IS a transcription. If the
-    // corroborated read ever agreed with it on an uncorroborated row, the
-    // demotion would be gone and this assertion is what would catch it.
-    expect(isChecklistBackedIdentity(HM_LONDON.source)).toBe(true);
-    expect(isChecklistBackedWithCorroboration(HM_LONDON, [])).toBe(false);
-    expect(isChecklistBackedWithCorroboration(HM_LONDON, []))
-      .not.toBe(isChecklistBackedIdentity(HM_LONDON.source));
+describe("MUTATION: the contradiction rule", () => {
+  /** The #1795 row: checklistinsider names Keon Coleman at panini-score #4. */
+  const CONTRADICTS: CorroborationRow = {
+    id: HM_LONDON.id, source: "checklistinsider-2026-08-27", playerName: "Keon Coleman",
+  };
+
+  it("a mutant that dropped the player check would accept the Coleman-at-4 row", () => {
+    // The single most important assertion in the file: this IS the #1795
+    // defect, and accepting it is what published a wrong card's price.
+    expect(corroborationOf(HM_LONDON, [CONTRADICTS]).checklistBacked).toBe(false);
+    expect(corroborationOf(HM_LONDON, [CONTRADICTS]).verdict).toBe("player-disagrees");
   });
 
   it("a mutant that ignored `rivals` could not tell the two panini-score cases apart", () => {
-    // The whole demotion is that the SAME ROW answers differently depending on
-    // what is beside it. A predicate that ignored its second argument would
-    // return one answer for both, and these two must differ.
-    const agreeing: CorroborationRow = { ...HM_LONDON, source: "checklistinsider" };
-    expect(isChecklistBackedWithCorroboration(HM_LONDON, [agreeing])).toBe(true);
-    expect(isChecklistBackedWithCorroboration(HM_LONDON, [])).toBe(false);
+    // The whole rule is that the SAME ROW answers differently depending on what
+    // is beside it. A predicate ignoring its second argument returns one answer
+    // for both, and these two must differ.
+    expect(isChecklistBackedWithCorroboration(HM_LONDON, [CONTRADICTS])).toBe(false);
+    expect(isChecklistBackedWithCorroboration(HM_LONDON, [])).toBe(true);
   });
 
-  it("a mutant that accepted ANY rival would accept hobbymonitor corroborating itself", () => {
-    const itself: CorroborationRow = { ...HM_LONDON, id: HM_LONDON.id, source: "hobbymonitor-2026-09-04" };
-    expect(isChecklistBackedWithCorroboration(HM_LONDON, [itself])).toBe(false);
+  it("a mutant that let hobbymonitor corroborate ITSELF would clear the label", () => {
+    // A second hobbymonitor row at the cell is one source twice. It must
+    // neither corroborate (clearing the caveat) nor contradict.
+    const itself: CorroborationRow = { ...HM_LONDON, source: "hobbymonitor-2026-09-04" };
+    const r = corroborationOf(HM_LONDON, [itself]);
+    expect(r.verdict).toBe("no-second-source");
+    expect(r.singleSource).toBe(true);
   });
 
-  it("a mutant that dropped the player check would accept the Coleman-at-4 row", () => {
-    const rivalAtCell: CorroborationRow = {
-      id: HM_LONDON.id, source: "checklistinsider-2026-08-27", playerName: "Keon Coleman",
-    };
-    expect(corroborationOf(HM_LONDON, [rivalAtCell]).checklistBacked).toBe(false);
+  it("REVERTING TO THE WHOLESALE RULE turns this red -- no-second-source is BACKED", () => {
+    // THE MUTANT: the first draft of this ruling, which refused every
+    // uncorroborated row. It would have withheld 1,133,530 rows, 1,093,457 of
+    // them for having no rival at all. Drew narrowed it after seeing that
+    // number, so the narrowing itself is pinned rather than left as prose.
+    expect(corroborationOf(HM_LONDON, []).checklistBacked).toBe(true);
+    expect(identityBackingOf(HM_LONDON.id, [HM_LONDON])).toBe("checklist-backed");
+  });
+
+  it("...and a mutant that dropped the LABEL would price it with no caveat", () => {
+    // The other half of the narrowing: it prices *and it says so*. Losing the
+    // label silently is the failure that looks like success.
+    expect(corroborationOf(HM_LONDON, []).singleSource).toBe(true);
+    expect(isSingleSourceBacking(HM_LONDON.id, [HM_LONDON])).toBe(true);
   });
 });
 
 describe("MUTATION: routing identityBacking through the old allowlist turns it red", () => {
-  it("identityBackingOf must NOT be reachable by the source string alone", () => {
-    // THE MUTANT: `identityBackingOf` reverting to
-    // `rows.some(r => isChecklistBackedIdentity(r.source))`. That expression is
-    // computed here explicitly and asserted to DISAGREE with the real function
-    // on the demoted row, so a revert cannot pass silently.
-    const rows = [HM_LONDON];
-    const mutantSaysBacked = rows.some((r) => isChecklistBackedIdentity(r.source));
-    expect(mutantSaysBacked).toBe(true);
-    expect(identityBackingOf(HM_LONDON.id, rows)).toBe("unbacked");
+  it("the string predicate must still DIVERGE from the row-aware one", () => {
+    // THE MUTANT: reverting the corroboration read to
+    // `catalogAuthorityOf(source) === "checklist"` -- the string question,
+    // which is what `isChecklistBackedIdentity` still answers and which says
+    // YES for hobbymonitor, because a hobbymonitor row IS a transcription.
+    //
+    // Under the NARROWED rule the two agree on an uncontradicted row (both
+    // back it), so the pin has to be stated where they must still differ: the
+    // contradicted row. If this ever passes trivially the demotion is gone.
+    expect(isChecklistBackedIdentity(HM_LONDON.source)).toBe(true);
+    expect(corroborationOf(HM_LONDON, [CONTRADICTS_AT_CELL]).checklistBacked).toBe(false);
+  });
+
+  it("identityBackingOf must not lose the CONTRADICTED row's refusal", () => {
+    // A demoted row that a rival contradicts cannot be the thing that carries
+    // an identity. Here the ONLY rows are the hobbymonitor one and its
+    // contradiction-at-cell, and the contradiction lives at the same slug, so
+    // `identityBackingOf` reaches "checklist-backed" via checklistinsider and
+    // NOT via hobbymonitor. The pin is that the hobbymonitor row itself is
+    // refused -- the identity survives on the OTHER source's evidence.
+    const rows = [HM_LONDON, CONTRADICTS_AT_CELL];
+    expect(rows.some((r) => requiresCorroboration(r.source) && corroborationOf(r, rows).checklistBacked)).toBe(false);
+    expect(identityBackingOf(HM_LONDON.id, rows)).toBe("checklist-backed");
   });
 
   it("catalogAuthorityOf KEEPS hobbymonitor as `checklist` -- the demotion is not a reclassification", () => {

@@ -117,18 +117,23 @@ export function isSelfDerivedIdentity(source: string | null | undefined): boolea
  *
  * ── THIS IS NO LONGER THE WHOLE ANSWER ──────────────────────────────────────
  *
- * CF-HOBBYMONITOR-IS-STRICT-ONLY-WHERE-A-SECOND-SOURCE-AGREES (Drew,
+ * CF-A-SECOND-SOURCE-THAT-DISAGREES-IS-THE-ONLY-DISQUALIFIER (Drew,
  * 2026-09-05). Some sources transcribe a real checklist and still get the cards
  * wrong — hobbymonitor's 2025 Panini Score names a different player at the
- * number on 2,571 of 2,811 checkable rows (#1795). Those rows are backed only
- * where a second strict source agrees on the identity cell, and THAT question
- * needs the row and its neighbours, not a string.
+ * number on 2,571 of 2,811 checkable rows (#1795). A row a second strict source
+ * CONTRADICTS is not backed, and THAT question needs the row and its
+ * neighbours, not a string.
+ *
+ * Only 22,027 rows (1.85%) are contradicted. The 1,093,457 that simply have no
+ * second source stay backed and priceable — that is a fact about our
+ * acquisition backlog, not about the row — and carry `single-source:*` instead;
+ * `isSingleSourceBacking` below is that question.
  *
  * So this function keeps answering the string question and `identityBackingOf`
- * — which HAS the rows — asks the corroborated one through
+ * — which HAS the rows — asks the contradicted one through
  * `sourceCorroboration.corroborationOf`. A caller holding only a source string
- * and no rows cannot answer the demotion, and this function's name says
- * `Identity`, not `Corroborated`, so it is left honest rather than made to
+ * and no rows cannot see a contradiction, and this function's name says
+ * `Identity`, not `Uncontradicted`, so it is left honest rather than made to
  * guess. Every caller that has rows should call `identityBackingOf`.
  */
 export function isChecklistBackedIdentity(source: string | null | undefined): boolean {
@@ -166,19 +171,24 @@ export type SourcedCatalogRow = CorroborationRow;
  * is what makes the retire lane and the pricing gate agree by construction:
  * retiring a self-derived twin can never change a holding's verdict.
  *
- * ── THE CORROBORATION PASS (Drew, 2026-09-05) ───────────────────────────────
+ * ── THE CORROBORATION PASS (Drew, 2026-09-05, NARROWED) ─────────────────────
  *
- * A row from a source that requires corroboration counts as checklist-backed
- * only when ANOTHER strict source in `rows` names the same identity cell and
- * agrees on the player. The rivals come from the same list the caller already
- * passed — no second read — so a caller that hands over one slug's rows gets
- * exactly the answer that slug's rows support.
+ * Only a CONTRADICTION disqualifies. A row from a demoted source is
+ * checklist-backed unless a second strict source names the same identity cell
+ * and names a DIFFERENT PLAYER. Having no second source at all is a fact about
+ * our acquisition backlog — 1,093,457 rows, 91.7% of the source — and not
+ * evidence against the row, so it stays backed and carries the
+ * `single-source:*` label instead. The full reasoning is in
+ * `sourceCorroboration.ts`'s header.
  *
- * A demoted row that nothing corroborates falls to `unbacked` rather than
- * `self-derived-only`: it was NOT minted from our own sales, and the two
- * verdicts are kept distinct precisely because they send a reader to different
- * work — `self-derived-only` means fix a matcher, `unbacked` means acquire a
- * checklist. An uncorroborated hobbymonitor row is the second kind.
+ * The rivals come from the same list the caller already passed — no second
+ * read — so a caller that hands over one slug's rows gets exactly the answer
+ * that slug's rows support.
+ *
+ * A CONTRADICTED row falls to `unbacked` rather than `self-derived-only`: it
+ * was NOT minted from our own sales, and the two verdicts are kept distinct
+ * precisely because they send a reader to different work — `self-derived-only`
+ * means fix a matcher, `unbacked` means settle which transcription is right.
  */
 export function identityBackingOf(
   slug: string | null | undefined,
@@ -191,12 +201,38 @@ export function identityBackingOf(
   if (list.some((r) => !requiresCorroboration(r.source) && isChecklistBackedIdentity(r.source))) {
     return "checklist-backed";
   }
-  // Otherwise a demoted row must find its second source among the same rows.
+  // A demoted row backs the identity unless a second source CONTRADICTS it.
   if (list.some((r) => requiresCorroboration(r.source) && corroborationOf(r, list).checklistBacked)) {
     return "checklist-backed";
   }
   if (list.some((r) => isSelfDerivedIdentity(r.source))) return "self-derived-only";
   return "unbacked";
+}
+
+/**
+ * Is this identity backed by a SINGLE transcription — priceable, but with only
+ * one source behind it?
+ *
+ * The LABEL question, deliberately separate from `identityBackingOf`. A
+ * `checklist-backed` verdict is now reached two ways (corroborated, or
+ * uncontradicted-but-alone) and the reader must be able to tell them apart:
+ * one shows a plain number, the other shows the number with a caveat. Folding
+ * that into `IdentityBacking` would have meant a sixth verdict every existing
+ * consumer had to learn, for a distinction only the label path cares about.
+ *
+ * False when ANY row backs the identity on its own authority — one real second
+ * transcription anywhere at the slug is enough, and the caveat would then be
+ * saying something untrue.
+ */
+export function isSingleSourceBacking(
+  slug: string | null | undefined,
+  rows: readonly SourcedCatalogRow[] | null | undefined,
+): boolean {
+  if (identityBackingOf(slug, rows) !== "checklist-backed") return false;
+  const list = rows ?? [];
+  // Any undemoted checklist row is a second transcription in its own right.
+  if (list.some((r) => !requiresCorroboration(r.source) && isChecklistBackedIdentity(r.source))) return false;
+  return list.some((r) => requiresCorroboration(r.source) && corroborationOf(r, list).singleSource);
 }
 
 /**
