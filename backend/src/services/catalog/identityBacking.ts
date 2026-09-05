@@ -66,6 +66,11 @@
  * ACQUISITION QUEUE, not a defect list.
  */
 import { catalogAuthorityOf, isDerived } from "./catalogAuthority.service.js";
+import {
+  corroborationOf,
+  requiresCorroboration,
+  type CorroborationRow,
+} from "./sourceCorroboration.js";
 
 /**
  * Identities minted from a USER's own typing or import.
@@ -100,7 +105,7 @@ export function isSelfDerivedIdentity(source: string | null | undefined): boolea
 }
 
 /**
- * True iff a price MAY rest on this row: a real checklist transcription.
+ * True iff a price MAY rest on this row's SOURCE STRING alone.
  *
  * Deliberately the `checklist` class and nothing else — not "anything not
  * self-derived". A vendor row (cardhedge's product fields) and an untagged
@@ -109,6 +114,22 @@ export function isSelfDerivedIdentity(source: string | null | undefined): boolea
  * same reason absence is not evidence: 133,568 rows carry no source at all,
  * and reading a missing field as a checklist would let the largest untagged
  * block in the catalog price cards on nothing.
+ *
+ * ── THIS IS NO LONGER THE WHOLE ANSWER ──────────────────────────────────────
+ *
+ * CF-HOBBYMONITOR-IS-STRICT-ONLY-WHERE-A-SECOND-SOURCE-AGREES (Drew,
+ * 2026-09-05). Some sources transcribe a real checklist and still get the cards
+ * wrong — hobbymonitor's 2025 Panini Score names a different player at the
+ * number on 2,571 of 2,811 checkable rows (#1795). Those rows are backed only
+ * where a second strict source agrees on the identity cell, and THAT question
+ * needs the row and its neighbours, not a string.
+ *
+ * So this function keeps answering the string question and `identityBackingOf`
+ * — which HAS the rows — asks the corroborated one through
+ * `sourceCorroboration.corroborationOf`. A caller holding only a source string
+ * and no rows cannot answer the demotion, and this function's name says
+ * `Identity`, not `Corroborated`, so it is left honest rather than made to
+ * guess. Every caller that has rows should call `identityBackingOf`.
  */
 export function isChecklistBackedIdentity(source: string | null | undefined): boolean {
   return catalogAuthorityOf(source) === "checklist";
@@ -127,10 +148,14 @@ export type IdentityBacking =
   /** The holding names no canonical slug. */
   | "no-slug";
 
-/** The minimum a row must expose for `identityBackingOf` to judge it. */
-export interface SourcedCatalogRow {
-  source?: string | null;
-}
+/** The minimum a row must expose for `identityBackingOf` to judge it.
+ *
+ *  Widened to `CorroborationRow` for the demotion: judging a hobbymonitor row
+ *  needs its identity cell (from the id, or the fields when there is no id) and
+ *  its player name, not only its source. Every field is optional, so a caller
+ *  passing `{ source }` as before still type-checks — it simply cannot
+ *  corroborate anything, which is the conservative answer and the honest one. */
+export type SourcedCatalogRow = CorroborationRow;
 
 /**
  * Classify an identity from the catalog rows found at its slug.
@@ -140,6 +165,20 @@ export interface SourcedCatalogRow {
  * is the thing being retired, and lane (a) is what removes it. This ordering
  * is what makes the retire lane and the pricing gate agree by construction:
  * retiring a self-derived twin can never change a holding's verdict.
+ *
+ * ── THE CORROBORATION PASS (Drew, 2026-09-05) ───────────────────────────────
+ *
+ * A row from a source that requires corroboration counts as checklist-backed
+ * only when ANOTHER strict source in `rows` names the same identity cell and
+ * agrees on the player. The rivals come from the same list the caller already
+ * passed — no second read — so a caller that hands over one slug's rows gets
+ * exactly the answer that slug's rows support.
+ *
+ * A demoted row that nothing corroborates falls to `unbacked` rather than
+ * `self-derived-only`: it was NOT minted from our own sales, and the two
+ * verdicts are kept distinct precisely because they send a reader to different
+ * work — `self-derived-only` means fix a matcher, `unbacked` means acquire a
+ * checklist. An uncorroborated hobbymonitor row is the second kind.
  */
 export function identityBackingOf(
   slug: string | null | undefined,
@@ -148,7 +187,14 @@ export function identityBackingOf(
   if (!String(slug ?? "").trim()) return "no-slug";
   const list = rows ?? [];
   if (list.length === 0) return "no-catalog-row";
-  if (list.some((r) => isChecklistBackedIdentity(r.source))) return "checklist-backed";
+  // A row whose source needs no second opinion backs the identity on its own.
+  if (list.some((r) => !requiresCorroboration(r.source) && isChecklistBackedIdentity(r.source))) {
+    return "checklist-backed";
+  }
+  // Otherwise a demoted row must find its second source among the same rows.
+  if (list.some((r) => requiresCorroboration(r.source) && corroborationOf(r, list).checklistBacked)) {
+    return "checklist-backed";
+  }
   if (list.some((r) => isSelfDerivedIdentity(r.source))) return "self-derived-only";
   return "unbacked";
 }

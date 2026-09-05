@@ -1309,6 +1309,24 @@ jobs:
           # both halves empty rather than sweeping every holding.
           USER_ID: ${{ inputs.script == 'rederive-holding-identity' && inputs.scope == 'user' && 'user-199fcbc9-58ba-4643-a0c9-f75bcbc90bd4' || '' }}
           SOURCES: ${{ inputs.sources }}
+          # CF-A-SOURCE-THAT-CONTRADICTS-ITSELF-MINTS-NO-IDENTITIES (Drew,
+          # 2026-09-05). rekey-product-setkey MODE=catalog: a row with NO twin
+          # at the destination is LABELLED IN PLACE instead of MOVED, because a
+          # move on one unreliable source's word MINTS an identity nothing
+          # adjudicated. Folds and replaces proceed untouched -- they were each
+          # decided against a rival.
+          #
+          # ARMED BY THE SOURCE LIST, NOT BY A NEW INPUT. workflow_dispatch is
+          # at 24 of GitHub's 25 inputs, so there is no boolean to spare -- and
+          # the arming condition is better this way regardless: the flag is on
+          # exactly when the operator has NAMED what to distrust (`sources`),
+          # which is the CF-A-WHOLE-SOURCE-RETIRE-NEEDS-ITS-NAME shape. The
+          # script re-checks both halves and refuses without either, so a
+          # half-typed dispatch dies on its arguments rather than mid-sweep.
+          #
+          # It is scoped to the ONE script by name so the token cannot leak into
+          # another lane: every other script sees the empty string.
+          RETIRE_UNTWINNED: ${{ (inputs.script == 'rekey-product-setkey' && inputs.mode == 'catalog' && inputs.sources != '') && 'true' || '' }}
           # retire mode=source / audit-source-coverage: the per-product key
           # coverage floor under which an old product is kept, not retired.
           MIN_COVERAGE_PCT: ${{ inputs.min_coverage_pct }}

@@ -117,6 +117,9 @@ const crypto = require("crypto");
 const { CosmosClient } = require("@azure/cosmos");
 const { relocateSoldComp, stripSystem, contentHashOf } = require(path.join(__dirname, "lib", "relocate-sold-comp.cjs"));
 const K = require(path.join(__dirname, "lib", "rematch-classify.cjs"));
+// CF-HOBBYMONITOR-IS-STRICT-ONLY-WHERE-A-SECOND-SOURCE-AGREES (Drew, 2026-09-05).
+// The ONE corroboration predicate, reached through the CJS bridge; never a copy.
+const CORROBORATION = require(path.join(__dirname, "lib", "source-corroboration.cjs"));
 const SUBSET = require(path.join(__dirname, "lib", "subset-identity.cjs"));
 
 const MODE = String(process.env.MODE || "").trim();
@@ -590,6 +593,20 @@ async function main() {
    *  flag says someone believed it, not who measured it. Any of the row's
    *  sources may carry the proof, so `sources[]` is checked alongside
    *  `source`. */
+  /** CF-HOBBYMONITOR-IS-STRICT-ONLY-WHERE-A-SECOND-SOURCE-AGREES (Drew,
+   *  2026-09-05). A row from a DEMOTED source is strict only where a second
+   *  strict source names the same identity cell and agrees on the player.
+   *
+   *  A point read of the slug cannot answer that: the catalog holds ONE row per
+   *  id (measured 2026-09-05 -- id === cardId, no twins share an address), so
+   *  a demoted row's rivals live at other addresses in the same PRODUCT. The
+   *  product scan `checklistCells` below is the read, and it is the same
+   *  one-query-per-(year, setKey) shape `flagshipNumbers`, `checklistNames` and
+   *  `checklistAutos` already use for exactly this reason: a per-row catalog
+   *  query over 16.3M rows is not a census, it is an outage
+   *  (CF-FLEET-SCRIPTS-MEASURE-THROUGHPUT-BEFORE-DISPATCH). Every demoted row
+   *  of the product then reads its own rivals out of the map for free, and a
+   *  product with no demoted rows never triggers the query at all. */
   const checklistBackedStrict = async (slug) => {
     if (!slug) return false;
     if (strictCache.has(slug)) return strictCache.get(slug);
@@ -598,9 +615,36 @@ async function main() {
     if (resource) {
       const named = [resource.source, resource.sourceSystem, ...(Array.isArray(resource.sources) ? resource.sources : [])];
       backed = named.some((s) => K.isStrictChecklistSource(s));
+      // The demotion, applied only where a named source actually demands it --
+      // so the 45-odd other sources cost nothing and no existing verdict moves.
+      if (backed && named.some((s) => CORROBORATION.requiresCorroboration(s))) {
+        const parts = String(slug).split(":");
+        const rivals = parts.length >= 7 ? await checklistCells(parts[2], parts[3]) : null;
+        backed = K.isStrictChecklistRow(resource, rivals ?? []);
+      }
     }
     strictCache.set(slug, backed);
     return backed;
+  };
+  /** Every UNGRADED catalog row of ONE (year, setKey) that may serve as a
+   *  SECOND source -- the rival set a demoted row is corroborated against.
+   *  One query per product, cached, and never issued for a product that holds
+   *  no demoted rows. Graded children are excluded by the predicate itself: a
+   *  row minted from its parent cannot confirm that parent one tier up. */
+  const checklistCellsCache = new Map();
+  const checklistCells = async (year, setKey) => {
+    const key = `${year}|${setKey}`;
+    if (checklistCellsCache.has(key)) return checklistCellsCache.get(key);
+    let out = [];
+    try {
+      const { resources } = await retry(() => cat.items.query({
+        query: `SELECT c.id, c.source, c.playerName, c.gradeTier FROM c WHERE c.setKey = @sk AND ${yearMatch("c")}`,
+        parameters: [{ name: "@sk", value: setKey }, { name: "@y", value: Number(year) }],
+      }, { maxItemCount: -1 }).fetchAll());
+      out = (resources ?? []).filter((r) => CORROBORATION.isCorroboratingSource(r));
+    } catch { out = []; }
+    checklistCellsCache.set(key, out);
+    return out;
   };
   /** L5. Does the STORED flagship's own checklist list this cardNumber?
    *  `null` when the question cannot be answered, which the classifier treats

@@ -174,14 +174,38 @@ Read `MOVED / FOLDED / REPLACED` in the log and confirm they match the simulatio
 - **the 2,807 folds** — safe to apply as-is. The correct checklistinsider row keeps its
   address and the hobbymonitor row is discarded.
 - **the 4 replaces** — same player on both sides; harmless.
-- **the 891 movers** — **HALT for Drew.** These need a decision, not a derivation. The
-  question is whether the hobbymonitor 2025 Score transcription is trustworthy enough to
-  mint identities `score` does not already hold, given it is ~50% wrong on the numbers it
-  can be checked against and internally inconsistent on 32 keys. The evidence says no —
-  the recommendation is to **retire** them rather than move them, via
-  `retire-self-derived-identities`-shaped write (`catalogVisibility.ts` is the honoured
-  surface; `supersededBy` alone is inert), leaving `score` to the checklistinsider rows.
-  That retire is **not written in this PR** and should not be until Drew rules.
+- **the 891 movers** — **DREW RULED 2026-09-05: RETIRE.** They are never moved onto
+  `score`. Each is labelled in place with `identityUnverified` plus
+  `retiredReason: 'source-unreliable:hobbymonitor-2025-score'`, and its graded children
+  follow. `score` is left to the checklistinsider rows.
+
+  The lane is `rekey-product-setkey MODE=catalog` with `RETIRE_UNTWINNED=true`, added in
+  the PR that carries this ruling. It diverts **only** the MOVE branch, **only** for a row
+  whose source the dispatch named — so a checklistinsider row scanned by the same run
+  moves normally. A label, never a delete: `sold_comps` rows reference these ids and a
+  delete would orphan real sales with no way back (`retire-self-derived-identities`'s
+  reasoning verbatim), and the write goes through `patchCatalogRowFields` rather than a
+  raw patch (#1614 left rows unfindable that way).
+
+  ```bash
+  # REPORT (dispatch first, read MOVED / FOLDED / REPLACED / RETIRED in the log)
+  gh workflow run backfill-runner.yml --ref main \
+    -f script=rekey-product-setkey \
+    -f apply=false \
+    -f mode=catalog \
+    -f sports=football \
+    -f setkey_like=panini-score \
+    -f titles=score \
+    -f sources=hobbymonitor \
+    -f scope=source-unreliable:hobbymonitor-2025-score
+  ```
+
+  `RETIRE_UNTWINNED=true` is exported by the runner for this script; `sources` carries the
+  distrusted source list and `scope` the reason. Both are existing inputs (24 of GitHub's
+  25 are used) — no workflow change. Expect `MOVED 0`, `FOLDED ≈2,807`, `REPLACED ≈4`,
+  `RETIRED ≈891`. **APPLY is the identical command with `-f apply=true`, after the report
+  is read**; a `MOVED` that is not 0 means the diversion did not bind and the run must not
+  be applied.
 
 ### Lane C — the 399 `ingest-auto-seed-graded` rows
 

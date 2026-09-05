@@ -101,6 +101,18 @@
  *                             not APPLY). Default: REPORT ONLY.
  *   SLOT / SLOTS              sha1 shards   CONCURRENCY=16
  *   RUN_MINUTES=140           budget marker  LIMIT=0
+ *
+ *   RETIRE_UNTWINNED=true     MODE=catalog only. A row with NO twin at TO is
+ *                             LABELLED IN PLACE (identityUnverified +
+ *                             retiredReason) instead of being MOVED. Folds and
+ *                             replaces proceed untouched. Off by default.
+ *   RETIRE_UNTWINNED_SOURCES  the source(s) whose untwinned rows retire, comma
+ *     (runner: sources)       separated and prefix-matched. REQUIRED with the
+ *                             flag: a row from any other source moves normally
+ *                             on the same dispatch.
+ *   RETIRE_REASON             the reason stamped on every retired row. REQUIRED
+ *     (runner: scope)         with the flag.
+ *
  * Requires dist/ (catalogRowOps, hobbyIqCardId, writeReconciliation).
  */
 "use strict";
@@ -138,6 +150,82 @@ const str = (v) => String(v ?? "").trim();
 const shardOf = (key) => parseInt(crypto.createHash("sha1").update(String(key)).digest("hex").slice(0, 8), 16) % SLOTS;
 const mineByShard = (key) => SLOTS === 1 || shardOf(str(key)) === SLOT;
 const MODES = ["catalog", "pool", "holdings"];
+
+// ── CF-A-SOURCE-THAT-CONTRADICTS-ITSELF-MINTS-NO-IDENTITIES ─────────────────
+//    (Drew, 2026-09-05, ruling A — the panini-score orphans.)
+//
+// THE DEFAULT MOVE IS WRONG FOR ONE SHAPE, AND ONLY ONE. `MODE=catalog` moves a
+// row from FROM to TO and lets `chooseSurvivor` settle a collision. Three
+// outcomes, and #1795 measured all three against the live rows:
+//
+//   FOLD    2,807  a TO row is already there and outranks/ties -> it keeps the
+//                  address, the FROM row is absorbed.            SAFE
+//   REPLACE     4  the FROM row wins the collision. All four are the SAME
+//                  PLAYER on both sides, checked individually.   SAFE
+//   MOVE      891  NOTHING is at the destination, so the FROM row lands on a
+//                  fresh TO slug and MINTS AN IDENTITY.          NOT SAFE
+//
+// A fold and a replace are adjudicated against a rival: something else at that
+// address had a say. A MOVE is not adjudicated at all — it is the source's word
+// creating a card, alone. That is fine when the source is reliable and it is
+// exactly wrong when it is not: 310 of the 500 sampled movers name a player
+// `score` already holds at a DIFFERENT number, so the move mints a duplicate
+// identity for a card that already exists under its correct number
+// (CF-ONE-CARD-ONE-ROW-ONE-POOL — a duplicate row is a split pool is a wrong
+// FMV).
+//
+// And this source is not reliable HERE. #1795, against the published checklist:
+// 2,571 of 2,811 twins name a different player at the number; 343 disagreements
+// against 376 agreements where the player matches; 32 keys carrying two
+// different players at one cell. checklistinsider was right every time checked.
+//
+// SO: `RETIRE_UNTWINNED=true` turns the MOVE branch into a RETIREMENT. The row
+// stays where it is — it is NEVER moved onto TO — and is labelled
+// `identityUnverified` with a `retiredReason` naming the source and the ruling.
+// Folds and replaces proceed untouched, because they were never the hazard.
+//
+// A LABEL, NOT A DELETE, and for retire-self-derived-identities' reason
+// verbatim: sold_comps rows reference these ids and a delete would orphan real
+// sales with no way back. The write shape is that lane's, through
+// `patchCatalogRowFields` and never a raw patch (#1614 left rows unfindable
+// that way). Graded children follow their parent, exactly as a move's do.
+//
+// OPT-IN, AND NAMED BY THE SOURCE IT DISTRUSTS. Off by default, so no other
+// product's re-key changes behaviour: this is a ruling about ONE transcription
+// of ONE product, and a flag that silently retired every untwinned row of every
+// future re-key would be the "right guard, wrong scope" bug the tree already
+// records twice.
+//
+// CF-A-WHOLE-SOURCE-RETIRE-NEEDS-ITS-NAME, and this lane obeys it in the
+// strongest available form: the operator does not set a bare boolean, they NAME
+// THE SOURCE whose word is not to be trusted alone. `RETIRE_UNTWINNED_SOURCES`
+// (the runner's existing `sources` input -> SOURCES) is that name, and a row
+// from ANY OTHER source moves normally even on the same dispatch. So a run that
+// names hobbymonitor cannot retire a checklistinsider row it happened to scan,
+// and the banner prints the list before the first write.
+//
+// The runner has no spare input (24 of GitHub's 25 are used, and `sources` is
+// already exported as SOURCES for the retire/audit lanes), so no workflow
+// change is needed. SOURCES is read only when the flag is on: leaving it set
+// from a previous dispatch cannot arm this lane by itself.
+const RETIRE_UNTWINNED = String(process.env.RETIRE_UNTWINNED || "") === "true";
+const RETIRE_UNTWINNED_SOURCES = String(process.env.RETIRE_UNTWINNED_SOURCES || process.env.SOURCES || "")
+  .split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+// The reason string is REQUIRED alongside the flag, and it is what a later
+// reader greps for. Carried in `scope` -> SCOPE, which this script does not
+// otherwise use.
+const RETIRE_REASON = String(process.env.RETIRE_REASON || process.env.SCOPE || "").trim();
+
+/** Does this row come from a source this run was told not to trust alone?
+ *  Prefix-matched against the row's source so a dated re-scrape
+ *  (`hobbymonitor-2026-09-04`) and a graded twin (`hobbymonitor-graded`) are
+ *  covered by the name the operator typed -- the same decay that discarded
+ *  baseballcardpedia's 918,828 rows from an exact-match allowlist once. */
+function isUntrustedSource(source) {
+  const s = String(source ?? "").trim().toLowerCase();
+  if (!s) return false;
+  return RETIRE_UNTWINNED_SOURCES.some((n) => s === n || s.startsWith(`${n}-`));
+}
 
 /** hiq:sport:year:setKey:number:parallel:auto[:num-N] -> parts, else null.
  *  A graded child carries a tier segment and is not an identity row. */
@@ -202,13 +290,37 @@ async function main() {
     console.error("       (R1: pokemon/1997/base4 moves; pokemon/2000/base4 is the ENGLISH Base Set 2 and must not be touched.)");
     process.exit(1);
   }
+  // The retire lane is a CATALOG ruling and cannot be asked of the other two.
+  // MODE=pool moves SALES by segment surgery and mints no identity, so it has
+  // no MOVE branch to divert; MODE=holdings re-points a user's own row.
+  if (RETIRE_UNTWINNED && MODE !== "catalog") {
+    console.error(`FATAL: RETIRE_UNTWINNED applies to MODE=catalog only (asked for MODE=${MODE}).`);
+    console.error("       It diverts the MOVE branch, which is where a catalog row MINTS an identity.");
+    console.error("       MODE=pool carries sales across by segment surgery and mints nothing.");
+    process.exit(1);
+  }
+  // CF-A-WHOLE-SOURCE-RETIRE-NEEDS-ITS-NAME, applied to the retirement itself.
+  if (RETIRE_UNTWINNED && !RETIRE_UNTWINNED_SOURCES.length) {
+    console.error("FATAL: RETIRE_UNTWINNED=true requires the SOURCE(S) it distrusts, in `sources` (-> SOURCES).");
+    console.error("       A retire lane that trusts nothing retires everything; this one names what it doubts,");
+    console.error("       and a row from any other source moves normally on the same dispatch. e.g.");
+    console.error("       -f sources=hobbymonitor");
+    process.exit(1);
+  }
+  if (RETIRE_UNTWINNED && !RETIRE_REASON) {
+    console.error("FATAL: RETIRE_UNTWINNED=true requires RETIRE_REASON (the runner carries it in `scope`) -- a");
+    console.error("       retirement nobody can audit is not a ruling, it is a disappearance. Name the source");
+    console.error("       and the ruling, e.g.");
+    console.error("       -f scope=source-unreliable:hobbymonitor-2025-score");
+    process.exit(1);
+  }
 
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) { console.error("FATAL: COSMOS_CONNECTION_STRING not set"); process.exit(1); }
 
   const { CosmosClient } = require("@azure/cosmos");
   const backend = path.resolve(__dirname, "..");
-  const { moveCatalogRow, retireCatalogRow } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
+  const { moveCatalogRow, retireCatalogRow, patchCatalogRowFields } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
   const { computeHobbyIqCardId } = require(path.join(backend, "dist/services/portfolioiq/hobbyIqCardId.service.js"));
   const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
   const { relocateSoldComp, stripSystem, contentHashOf } = require(path.join(__dirname, "lib", "relocate-sold-comp.cjs"));
@@ -224,6 +336,13 @@ async function main() {
   const REASON = `ruled setKey re-key ${FROM} -> ${TO} (CF-THE-JAPANESE-CODE-IS-THE-KEY, Drew 2026-09-01)`;
   console.log(`rekey-product-setkey  MODE=${MODE}  ${APPLY ? "APPLY" : "REPORT ONLY -- nothing written"}`);
   console.log(`  ruling   ${FROM} -> ${TO}`);
+  if (RETIRE_UNTWINNED) {
+    console.log(`  RETIRE_UNTWINNED=true   a row with NO twin at ${TO} is LABELLED IN PLACE, never moved.`);
+    console.log(`                          distrusted sources: ${RETIRE_UNTWINNED_SOURCES.join(", ")}  (prefix match)`);
+    console.log(`                          reason: ${RETIRE_REASON}`);
+    console.log(`                          folds and replaces proceed; they were adjudicated against a rival.`);
+    console.log(`                          a row from any OTHER source moves normally on this same run.`);
+  }
   console.log(`  scope    sport=${SPORT}${YEARS.length ? `  years=${YEARS.join(",")}` : "  years=(all)"}`);
   console.log(`  slot ${SLOT}/${SLOTS}  concurrency ${CONCURRENCY}  budget ${RUN_MS / 60000}m${LIMIT ? `  LIMIT=${f(LIMIT)}` : ""}`);
   console.log(`  ${SHARD_SCOPE.banner()}`);
@@ -255,9 +374,36 @@ async function main() {
       // would claim more writes than were intended and reportWrites would flag
       // the arithmetic (CF-A-GREEN-RUN-IS-NOT-A-DATA-FLOW).
       gradedRetiredDirect: 0, gradedRetiredCascade: 0, failed: 0, notReached: 0,
+      // CF-A-SOURCE-THAT-CONTRADICTS-ITSELF-MINTS-NO-IDENTITIES. Rows that
+      // WOULD have been a MOVE and were labelled in place instead, and the
+      // graded children that followed them. Counted separately from the
+      // gradedRetired* pair above because those are DELETES and these are
+      // LABELS -- a reader who conflates them would think rows left the
+      // catalog.
+      retiredUntwinned: 0, retiredUntwinnedChildren: 0,
     };
     const examples = [];
     let stopReason = null;
+
+    /**
+     * A row's graded children, LISTED rather than deleted.
+     *
+     * `catalogRowOps.retireGradedChildren` is the sibling of this read and it
+     * DELETES, which is right for a move (the children are regenerable from the
+     * parent at its new address) and wrong for a label (there is no new address
+     * -- the parent stays put, and its children must carry the same doubt it
+     * does). Same predicate as that function's, verbatim, so the two lanes can
+     * never disagree about which rows are a parent's children:
+     * `STARTSWITH(c.id, parent + ":") AND IS_DEFINED(c.gradeTier)`.
+     */
+    async function gradedChildrenOf(parentId) {
+      const out = [];
+      await forEachPage(cat, {
+        query: "SELECT c.id, c.cardId FROM c WHERE STARTSWITH(c.id, @p) AND IS_DEFINED(c.gradeTier)",
+        parameters: [{ name: "@p", value: `${parentId}:` }],
+      }, async (rows) => { for (const r of rows) out.push(r); return true; });
+      return out;
+    }
 
     // Both spellings of "this row belongs to FROM": the field says so, or the
     // id stem says so. A row can have either without the other (D30 drift).
@@ -319,9 +465,76 @@ async function main() {
 
               parts[3] = TO;
               const newSlug = parts.join(":");
+
+              // CF-A-SOURCE-THAT-CONTRADICTS-ITSELF-MINTS-NO-IDENTITIES.
+              //
+              // LOOK BEFORE MOVING, ONCE. The destination decides which of the
+              // three branches this row is in, and under RETIRE_UNTWINNED the
+              // MOVE branch goes somewhere else entirely — so the incumbent is
+              // read HERE and handed to moveCatalogRow as `known`, which is
+              // that function's own contract for "I already looked"
+              // (CF-DO-NOT-LOOK-TWICE). Without `known` this would be two
+              // point reads of the same address per row, which over 3,702 rows
+              // is 3,702 avoidable RUs and a slower fleet.
+              //
+              // `null` is a real answer here and means "I checked, nothing is
+              // there" — not "I did not check". moveCatalogRow distinguishes
+              // the two by `known` being present at all.
+              // ...and only for a row from a source this run was told to
+              // doubt. A checklistinsider row scanned by the same dispatch
+              // moves normally: the ruling is about ONE transcription, not
+              // about the shape "untwinned".
+              const distrusted = RETIRE_UNTWINNED && isUntrustedSource(d.source);
+              let incumbent = null;
+              if (distrusted) {
+                try {
+                  const { resource } = await retry(() => cat.item(newSlug, newSlug).read());
+                  incumbent = resource ?? null;
+                } catch (e) {
+                  if (e?.code !== 404) throw e;
+                  incumbent = null;
+                }
+                if (!incumbent) {
+                  // NO TWIN. This row would MINT an identity on the strength of
+                  // one unreliable transcription. It is retired IN PLACE: it
+                  // keeps its own id under FROM, is never written to TO, and
+                  // carries the label and the reason. The pool rows that name
+                  // it are untouched — the sales are real and MODE=pool is what
+                  // carries them, on their own evidence, to their own key.
+                  const kids = await gradedChildrenOf(id);
+                  if (APPLY) {
+                    const at = new Date().toISOString();
+                    const mark = {
+                      identityUnverified: true,
+                      identityUnverifiedAt: at,
+                      identityUnverifiedBy: "rekey-product-setkey:retire-untwinned",
+                      retiredReason: RETIRE_REASON,
+                      retiredAt: at,
+                    };
+                    // patchCatalogRowFields, never a raw container.patch: #1614
+                    // left rows unfindable by rewriting derived search fields.
+                    await patchCatalogRowFields(cat, id, d.cardId, mark, { retry });
+                    // A GRADED CHILD FOLLOWS ITS PARENT. It is the same
+                    // identity one tier up, minted from this row by
+                    // materialize-graded-identities, so a parent whose identity
+                    // is unverified cannot leave verified children behind.
+                    for (const kid of kids) {
+                      await patchCatalogRowFields(cat, String(kid.id), kid.cardId, mark, { retry });
+                    }
+                  }
+                  s.retiredUntwinned++;
+                  s.retiredUntwinnedChildren += kids.length;
+                  if (examples.length < 8) {
+                    examples.push(`  RETIRE   ${id.slice(0, 66)}\n        -> NOT moved to ${newSlug.slice(0, 52)}\n           no twin at the destination; ${RETIRE_REASON} (+${kids.length} graded children)`);
+                  }
+                  return;
+                }
+              }
+
               const r = await moveCatalogRow(cat, d, newSlug, { setKey: TO }, {
                 reason: REASON, repointNormalizedSetKey: true, dryRun: !APPLY,
                 salesContainer: pool, retry,
+                ...(distrusted ? { known: incumbent } : {}),
               });
               s.salesRepointed += r.salesRepointed;
               s.gradedRetiredCascade += r.gradedChildrenRetired;
@@ -345,9 +558,14 @@ async function main() {
     for (const l of examples) console.log(l);
     banner(stopReason);
     console.log(`  rows scanned (this slot)   ${f(s.scanned)}   (+${f(s.otherSlot)} other slots)`);
-    console.log(`  MOVED to ${TO.padEnd(26)} ${f(s.moved)}`);
+    console.log(`  MOVED to ${TO.padEnd(26)} ${f(s.moved)}${RETIRE_UNTWINNED ? "   <- 0 expected: RETIRE_UNTWINNED diverts every move" : ""}`);
     console.log(`  FOLDED (twin already there)${f(s.folded).padStart(8)}   <- the incumbent won on authority`);
     console.log(`  REPLACED a lower twin      ${f(s.replaced)}`);
+    if (RETIRE_UNTWINNED) {
+      console.log(`  RETIRED (no twin, labelled)${f(s.retiredUntwinned).padStart(8)}   <- NOT moved to ${TO}; identityUnverified + retiredReason`);
+      console.log(`    reason                   ${RETIRE_REASON}`);
+      console.log(`    graded children labelled ${f(s.retiredUntwinnedChildren)}   <- followed their parent; a LABEL, never a delete`);
+    }
     console.log(`  sales re-pointed           ${f(s.salesRepointed)}`);
     console.log(`  graded rows retired        ${f(s.gradedRetiredDirect)}   <- adopted by this scan; regenerable, never moved`);
     console.log(`  graded children cascaded   ${f(s.gradedRetiredCascade)}   <- swept up by a parent's move, not scanned as candidates`);
@@ -355,8 +573,12 @@ async function main() {
     console.log(`  LEFT: year out of scope    ${f(s.yearMismatch)}`);
     console.log(`  malformed id (left)        ${f(s.malformed)}`);
     console.log(`  failed                     ${f(s.failed)}`);
-    // A retired graded row is a WRITE: the ruling removed it deliberately.
-    const written = s.moved + s.folded + s.replaced + s.gradedRetiredDirect;
+    // A retired graded row is a WRITE: the ruling removed it deliberately. So
+    // is a labelled untwinned row -- the ruling marked it deliberately. Its
+    // graded children are NOT added: they were never scanned as candidates, so
+    // counting them would claim more writes than were intended and reportWrites
+    // would flag the arithmetic, exactly as gradedRetiredCascade documents.
+    const written = s.moved + s.folded + s.replaced + s.gradedRetiredDirect + s.retiredUntwinned;
     const skipped = s.stemMismatch + s.yearMismatch + s.malformed + s.noop + s.notReached;
     reconcile("rekey-product-setkey:catalog", s.scanned, written, skipped, s.failed);
   }
