@@ -349,3 +349,21 @@ under those two conditions would be writing rules onto a function that mis-files
 - `.github/workflows/backfill-runner.yml` — whitelist entry, a gate that **refuses `apply=true`**, its
   own `CENSUS_OUT` directory and its own artifact upload.
 - this report.
+
+## Reproducing this
+
+```bash
+COSMOS_CONNECTION_STRING="$(az webapp config appsettings list --name HobbyIQ3 \
+  --resource-group rg-hobbyiq-dev \
+  --query "[?name=='COSMOS_CONNECTION_STRING'].value" -o tsv)" \
+node backend/scripts/census-unknown-setkey.cjs --limit=60000 --minutes=25 --top=50 \
+  --json=/tmp/unknown-setkey-census/census.json
+```
+
+Or through the runner: `script=census-unknown-setkey`, **`apply=false`** (any other value is refused
+by a gate). Sharding is opt-in — pass `SHARD=true` with `slot=0` to fan out, or the run sweeps
+everything.
+
+The script stops on `--limit` or its time box, whichever comes first, and says which in its banner. It
+deliberately does **not** print the fleet relaunch marker: a sampling census that stops early has not
+left work undone, and re-dispatching it would draw a second sample rather than finish a first.
