@@ -156,7 +156,7 @@ async function main() {
   };
 
   let relocated = 0, repointed = 0, alreadyRight = 0, notFound = 0, failed = 0, duplicatesLeft = 0;
-  let thirdSlug = 0;
+  let thirdSlug = 0, retired = 0, parked = 0;
   const intended = entries.length;
 
   for (const e of entries) {
@@ -164,7 +164,15 @@ async function main() {
     const from = String(e.fromCardId ?? "").trim();
     const to = String(e.toCardId ?? "").trim();
     const repoint = String(e.repointHobbyiqCardId ?? "").trim();
+    // CF-A-RETIRE-IS-A-MARKER-NEVER-A-DELETE (2026-09-05). Two more shapes,
+    // both patches in place: no partition moves and no document is removed.
+    const retire = String(e.retireSupersededBy ?? "").trim();
+    const park = e.parkIdentityUnverified === true;
     if (!id || !from) { failed++; console.error(`  malformed entry: ${JSON.stringify(e).slice(0, 90)}`); continue; }
+    // An entry names ONE shape. Two shapes on one row is a list defect, and a
+    // silent precedence order is how the wrong one gets applied.
+    const shapes = [to && to !== from ? "relocate" : null, repoint ? "repoint" : null, retire ? "retire" : null, park ? "park" : null].filter(Boolean);
+    if (shapes.length > 1) { failed++; console.error(`  entry names ${shapes.length} shapes (${shapes.join(" + ")}): ${id.slice(0, 44)}`); continue; }
 
     let doc0 = null;
     try { doc0 = (await retry(() => pool.item(id, from).read())).resource ?? null; }
@@ -172,6 +180,61 @@ async function main() {
     if (!doc0) {
       notFound++;
       console.log(`  NOT FOUND at ${from.slice(0, 54)}  id=${id.slice(0, 44)}`);
+      continue;
+    }
+
+    // ── RETIRE: the copy the title does NOT name ──────────────────────────
+    //
+    // CF-THE-TITLE-DECIDES (Drew, 2026-09-05). One eBay sale filed under two
+    // PRODUCTS is not two sales. The title states which product it is; the
+    // copy under the other product is superseded, and it is MARKED, never
+    // deleted -- `flaggedWrong` is what every FMV read already excludes, and a
+    // marker is reversible where a delete is not.
+    //
+    // ONLY-IMPROVE: a row already flagged is never re-stamped, so a re-run
+    // cannot overwrite an earlier (possibly human) reason.
+    if (retire) {
+      if (doc0.flaggedWrong === true) { alreadyRight++; continue; }
+      console.log(`  RETIRE  ${id.slice(0, 40)}  $${e.price ?? doc0.price}`);
+      console.log(`      at  ${from.slice(0, 62)}`);
+      console.log(`      superseded by ${retire.slice(0, 58)}`);
+      console.log(`      why: ${String(e.evidence ?? "").slice(0, 150)}`);
+      if (APPLY) {
+        try {
+          await retry(() => pool.item(id, from).patch([
+            { op: "set", path: "/flaggedWrong", value: true },
+            { op: "set", path: "/flaggedReason", value: "dedup-superseded" },
+            { op: "set", path: "/dedupSupersededBy", value: retire },
+            { op: "set", path: "/dedupReason", value: String(e.evidence ?? "title states the other product") },
+            { op: "set", path: "/dedupAt", value: new Date().toISOString() },
+          ]));
+          retired++;
+        } catch (err) { failed++; console.error(`      FAILED: ${String(err?.message ?? err).slice(0, 70)}`); }
+      } else { retired++; }
+      continue;
+    }
+
+    // ── PARK: the title names NEITHER product ─────────────────────────────
+    //
+    // Drew, 2026-09-05: park BOTH copies rather than guess. `identityUnverified`
+    // is the same label retire-self-derived-identities uses, and it keeps the
+    // row out of every pool without asserting which card it belongs to.
+    if (park) {
+      if (doc0.identityUnverified === true) { alreadyRight++; continue; }
+      console.log(`  PARK    ${id.slice(0, 40)}  $${e.price ?? doc0.price}`);
+      console.log(`      at  ${from.slice(0, 62)}`);
+      console.log(`      why: ${String(e.evidence ?? "").slice(0, 150)}`);
+      if (APPLY) {
+        try {
+          await retry(() => pool.item(id, from).patch([
+            { op: "set", path: "/identityUnverified", value: true },
+            { op: "set", path: "/identityUnverifiedAt", value: new Date().toISOString() },
+            { op: "set", path: "/identityUnverifiedBy", value: "relocate-pool-rows-by-list" },
+            { op: "set", path: "/identityUnverifiedReason", value: String(e.evidence ?? "title names neither product") },
+          ]));
+          parked++;
+        } catch (err) { failed++; console.error(`      FAILED: ${String(err?.message ?? err).slice(0, 70)}`); }
+      } else { parked++; }
       continue;
     }
 
@@ -242,6 +305,8 @@ async function main() {
   console.log(`  entries in scope        ${f(intended)}`);
   console.log(`  RELOCATED (partition)   ${f(relocated)}`);
   console.log(`  REPOINTED (hiqCardId)   ${f(repointed)}`);
+  console.log(`  RETIRED (flaggedWrong)  ${f(retired)}   <- marked, never deleted`);
+  console.log(`  PARKED (identityUnver.) ${f(parked)}   <- no pool, no guess`);
   console.log(`  already at the target   ${f(alreadyRight)}`);
   console.log(`  not found at fromCardId ${f(notFound)}`);
   console.log(`  failed                  ${f(failed)}`);
@@ -250,7 +315,7 @@ async function main() {
   if (APPLY) {
     reportWrites({
       job: "relocate-pool-rows-by-list", intended,
-      written: relocated + repointed, skipped: alreadyRight + notFound, failed,
+      written: relocated + repointed + retired + parked, skipped: alreadyRight + notFound, failed,
     });
   }
 }
