@@ -114,6 +114,9 @@ async function ingestProduct(checklist) {
       source: checklist.source,
       confidence: checklist.confidence,
       vendorIds: {},
+      // CF-AUTHORITATIVE-SETKEY. A product checklist names its own product;
+      // the vendor cardNumber-prefix repair must not re-home it.
+      authoritativeSetKey: true,
     });
     if (!entry) { stats.skipped_missing_field++; return; }
     if (preview.length < 12) preview.push(`${entry.id.padEnd(60)} ${params.playerName}`);

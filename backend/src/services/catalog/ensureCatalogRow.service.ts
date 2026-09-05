@@ -128,7 +128,18 @@ export async function ensureCatalogRow(input: EnsureCatalogRowInput): Promise<vo
 
   // Build a minimal-but-searchable doc mirroring bulk-build-catalog.ts
   // shape so downstream jobs (search, salesSummary, match) work as-is.
-  const setKey = normalizeSetKey(input.setName ?? "");
+  // CF-A-ROWS-SETKEY-FIELD-IS-ITS-ID-STEM (Drew, 2026-09-05). The field is the
+  // id's own setKey segment, never the caller's spelling of the set NAME.
+  //
+  // This read `normalizeSetKey(input.setName)`, and `input.slug` is minted
+  // elsewhere -- by the sale-matching path, which applies the cardNumber-prefix
+  // repair. So a "2026 Bowman Sapphire Baseball" auto-seed wrote
+  // `setKey: bowman` onto an id whose stem is `bowman-chrome-sapphire`: 208
+  // such rows, all `ingest-auto-seed`, found by the 2026-09-05 census. The slug
+  // is the address the pool actually uses, so it is the authority here; the
+  // source's own words are kept, verbatim and unnormalized, in `setName`.
+  const slugSetKey = String(input.slug ?? "").split(":")[3] ?? "";
+  const setKey = slugSetKey || normalizeSetKey(input.setName ?? "");
   const brand = deriveBrand(setKey);
   const parentSetKey = deriveParentSetKey(setKey);
   const parallel = input.parallel ?? "Base";
