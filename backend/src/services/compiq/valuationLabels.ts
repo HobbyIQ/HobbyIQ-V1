@@ -89,6 +89,39 @@ export function persistedLabelsForValuation(v: Valuation): PersistedPricingLabel
     v.identity?.sourceOfRow == null ? [] : [{ source: v.identity.sourceOfRow }],
   );
   const labels = labelsForResult(result, owner, singleSource).map((l) => ({ code: l.code, text: l.text }));
+
+  // CF-A-GATE-THAT-FIRES-ABOVE-EVERY-RUNG-IS-NOT-A-RUNG-GATE (#1816). A price
+  // published while this identity's pool was still migrating carries the fact
+  // as a caveat. It can only be a PUBLISHED price that reaches here — the gate
+  // withholds every own-pool rung — so the sentence says the true thing: the
+  // number comes from other cards, and one from this card's own sales may
+  // replace it shortly.
+  //
+  // It is stamped here rather than in `labelsForResult` because `poolMigrating`
+  // is a property of the IDENTITY's freshness, which the CanonicalFmvResult
+  // wire shape does not carry; routing it through there would mean widening
+  // that shape for a field no client reads. (`singleSource` above IS routed
+  // through, because corroboration is a property of the ROW the ladder priced
+  // and the draft's own rules need it; freshness is not.)
+  //
+  // The code is spelled as a literal rather than imported from
+  // `poolMigrationGate`, whose module graph pulls in `@azure/cosmos` for the
+  // settle-marker read — a runtime dependency this pure, Cosmos-free
+  // derivation should not acquire for one string. `POOL_MIGRATING_LABEL_CODE`
+  // remains the named authority and a pin in persistedPricingLabels.test.ts
+  // asserts the two never drift.
+  if (v.poolMigrating && v.fairMarketValue !== null) {
+    const age = typeof v.poolMigrating.ageHours === "number"
+      ? `${v.poolMigrating.ageHours.toFixed(1)}h ago`
+      : "recently";
+    labels.push({
+      code: "pool-migrating",
+      text:
+        `Pool still filling: this card's identity was created ${age} and its own sales ` +
+        "are still being matched onto it, so this estimate comes from related cards. " +
+        "A price from this card's own sales may follow shortly.",
+    });
+  }
   const comps = result.provenance?.comps ?? [];
   const own = comps.filter((c) => c.verifiedByUser === true).length;
   // The denominator is the engine's pool total, exactly as the sentence

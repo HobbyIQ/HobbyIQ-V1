@@ -1,0 +1,16 @@
+{
+ "scrapedAt": "2026-09-05T17:38:04.916Z",
+ "sourceUrl": "https://www.checklistcenter.com/2022-panini-select-football-card-checklist/",
+ "sport": "football",
+ "year": 2022,
+ "setName": "2022 Panini Select Football",
+ "productKey": "2022-panini-select-football",
+ "setKey": "panini-select",
+ "rowCount": 22784,
+ "parallelColumnAuthoritative": true,
+ "source": "xlsx",
+ "sections": 38,
+ "laddersFound": 0,
+ "ladderRows": 0,
+ "rejected": []
+}

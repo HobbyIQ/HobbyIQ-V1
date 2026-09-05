@@ -23,6 +23,49 @@
 //     null, the whole tile is hidden; when the outer sub-object exists
 //     but a leaf field is null, the leaf is hidden.
 
+/**
+ * CF-A-LABEL-VOCABULARY-SPELLED-FOUR-TIMES-DRIFTS (#1816).
+ *
+ * The caveat codes a price surface can carry. The engine's own union is
+ * `SellDraftLabel["code"]` in ebaySellDraft.service.ts; this is the WIRE form
+ * of the same vocabulary, spelled once so the persisted shape, the envelope,
+ * the response assembly and the builder cannot disagree.
+ *
+ * They already had. `independence-unverified` shipped in #1775 and reached
+ * `labelsForResult`, but all four wire spellings still named only the original
+ * four codes — so the type said a label that was being emitted could not
+ * exist, and a `code as ...` cast at the builder quietly made that true on
+ * paper. Widening one spelling and not the others is how that happens, which
+ * is why there is now only one to widen.
+ *
+ * It happened AGAIN during this PR's own merge, which is the argument for the
+ * value-level pin in one sentence: #1804 added `single-source:hobbymonitor` to
+ * the emitting union on main while this branch was open, and nothing in the
+ * type system objected — a narrower wire alias type-checks perfectly against a
+ * wider emitting union, because every subset of a union is assignable to it.
+ * The pin in persistedPricingLabels.test.ts is what actually caught it.
+ *
+ * This file is import-free by design (it is the shape both clients bind to),
+ * so the union is spelled here as literals rather than imported from the
+ * service that emits them. `SellDraftLabel["code"]` must remain assignable to
+ * this; the pin asserts it at VALUE level, since the type level cannot.
+ */
+export type PricingLabelCode =
+  | "speculative"
+  | "self-anchored"
+  | "fallback-rung"
+  | "low-confidence"
+  | "independence-unverified"
+  /** #1804: the identity's catalog row rests on hobbymonitor alone, with no
+   *  corroborating source. Mirrors `SINGLE_SOURCE_LABEL` in
+   *  services/catalog/sourceCorroboration.ts — that constant is the authority;
+   *  this is its wire spelling. */
+  | "single-source:hobbymonitor"
+  /** The identity's catalog row is inside the settle window: its own sales are
+   *  still being matched onto it, so this number came from related cards and a
+   *  better one may follow within hours. */
+  | "pool-migrating";
+
 /** The one canonical pricing shape iOS + web both bind to. */
 export interface PricingEnvelope {
   /** The one number to display for this holding. Always populated —
@@ -208,13 +251,55 @@ export interface PricingProvenance {
   pricingSourceMeta:
     | { slug: string; method: string; compsUsed: number; confidence: number | null }
     | null;
+  /** CF-WITHHELD-REACHES-THE-GLASS (Drew, 2026-09-05).
+   *
+   *  A REFUSAL, carried to the client. The one-valuation-path writer already
+   *  records why it declined to publish a price (holdingValuation.ts), but
+   *  until now that block died at this boundary: `buildProvenance` read only
+   *  {slug, method, compsUsed} off `pricingSourceMeta`, so every withheld
+   *  holding reached the UI as an indistinguishable null and the glass could
+   *  say nothing truer than "—". Drew's audit finding, 2026-09-05.
+   *
+   *  Present ONLY on a row the engine refused to price. Absent means the row
+   *  was published normally — it does NOT mean "withheld for an unknown
+   *  reason", and a reader must not invent one.
+   *
+   *  OPTIONAL on the wire: a worker that has not redeployed will not send it,
+   *  and every consumer must render correctly without it. That is the same
+   *  additive contract `sellSignal` and the day-change fields keep. */
+  withheld?: {
+    /** The machine-readable cause, closed vocabulary. The UI maps each to
+     *  its own sentence AND its own "what would unlock this" — they are four
+     *  different problems with four different fixes, and collapsing them to
+     *  one sentence is what the audit found on the DailyIQ column. */
+    reason:
+      | "cost-basis-floor"
+      | "no-checklist-match"
+      | "identity-not-in-catalog"
+      | "pool-migrating";
+    /** The pool that blocked it, and that pool's size. */
+    blockingId: string | null;
+    blockingCount: number | null;
+    /** The market number the engine COMPUTED and then refused to publish.
+     *  Null when nothing was computed (no pool at all) — null therefore
+     *  means "there was no number", never "we are hiding one". This is the
+     *  evidence that makes a cost-basis-floor refusal legible: "market shows
+     *  $X, held below 15% of your $Y basis". */
+    proposed: number | null;
+    /** What the row carries now, and why a retention was refused. */
+    retained: number | null;
+    retentionRefused: string | null;
+    /** The rung the retained number WAS priced under — history, not a claim
+     *  about this pass. Deliberately not `fmvRung`. */
+    retainedRung?: string | null;
+  } | null;
   /** CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (Drew, 2026-09-03). The caveats
    *  this price must be read with, exactly as the writer stamped them — the
    *  same set the live canonical-fmv response carries for this holding. The
    *  holding DETAIL surface reads them here; the list row reads the flat
    *  `pricingLabels` on the wire. One source, two shapes. */
   pricingLabels: Array<{
-    code: "speculative" | "self-anchored" | "fallback-rung" | "low-confidence";
+    code: PricingLabelCode;
     text: string;
   }>;
   /** The self-anchored ratio: `own` of the pool's `total` sales behind this

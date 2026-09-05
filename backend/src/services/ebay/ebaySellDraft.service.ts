@@ -144,7 +144,18 @@ export interface SellDraftLabel {
     | "fallback-rung"
     | "low-confidence"
     | typeof INDEPENDENCE_UNVERIFIED_CODE
-    | typeof SINGLE_SOURCE_LABEL;
+    | typeof SINGLE_SOURCE_LABEL
+    /** CF-A-GATE-THAT-FIRES-ABOVE-EVERY-RUNG-IS-NOT-A-RUNG-GATE (#1816). The
+     *  identity's catalog row is inside the settle window, so its own sales
+     *  may still be arriving and this number came from related cards. Stamped
+     *  by `persistedLabelsForValuation`, not by `labelsForResult` — the
+     *  freshness of an IDENTITY is not carried on the CanonicalFmvResult wire
+     *  shape, and widening that shape for a field no client reads would be the
+     *  wrong trade. Spelled as a literal here rather than imported from
+     *  `poolMigrationGate` so this module does not take a transitive
+     *  `@azure/cosmos` dependency for one string. `POOL_MIGRATING_LABEL_CODE`
+     *  is the constant; a pin asserts the two never drift. */
+    | "pool-migrating";
   /** The sentence shown to the seller and written into the draft text. */
   text: string;
 }

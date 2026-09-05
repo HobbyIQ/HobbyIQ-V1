@@ -144,6 +144,8 @@
 "use strict";
 const path = require("path");
 const crypto = require("crypto");
+// CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809): the one exit path.
+const { finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
 
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
 const MODE = String(process.env.MODE || "").trim().toLowerCase();
@@ -833,5 +835,12 @@ module.exports = {
 };
 
 if (require.main === module) {
-  main().catch((e) => { console.error("FATAL:", e?.stack || e?.message); process.exit(3); });
+  // CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809). Success exits too: a lane
+// that lets the loop drain is betting every library released every handle.
+// Runs 33975816175/25863/34391/40824 lost that bet AFTER reconciling clean.
+main()
+  .then((ctx) => finishLane(0, ctx || {}))
+  .catch(async (e) => { console.error("FATAL:", e?.stack || e?.message); 
+    await finishLane(3);
+  });
 }

@@ -105,6 +105,8 @@ const { runnerShardScope } = require(path.join(__dirname, "lib", "runner-shard-s
 // THE FLEET'S OWN DERIVATION, imported rather than re-implemented. A census
 // that models the classifier measures the model, not the pool.
 const { storedIdentity, deriveIdentity } = require(path.join(__dirname, "rematch-sold-comps.cjs"));
+// CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809): the one exit path.
+const { finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
 
 const arg = (n, d) => {
   const hit = process.argv.find((a) => a.startsWith(`--${n}=`));
@@ -862,4 +864,14 @@ async function main() {
 
 module.exports = { slugSetKeySegment, isUnknownKeyRow, productSpelling, saysLot, saysNonCard, hashSlot };
 
-if (require.main === module) main().catch((e) => { console.error("FATAL:", e?.stack || e?.message); process.exit(3); });
+// CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809). Success exits too: a lane
+// that lets the loop drain is betting every library released every handle.
+// Runs 33975816175/25863/34391/40824 lost that bet AFTER reconciling clean.
+if (require.main === module) {
+  main()
+    .then((ctx) => finishLane(0, ctx || {}))
+    .catch(async (e) => {
+      console.error("FATAL:", e?.stack || e?.message);
+      await finishLane(3);
+    });
+}

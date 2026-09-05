@@ -55,6 +55,8 @@ const SINCE = String(process.env.SINCE || "2018-01");
 // -- sweeps EVERY row. SLOTS binds to 1 when unsharded, so `% SLOTS` and
 // `SLOTS === 1` guards below keep working unchanged.
 const { runnerShardScope } = require("./lib/runner-shard-scope.cjs");
+// CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809): the one exit path.
+const { finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
 const SHARD_SCOPE = runnerShardScope({ label: "measure-card-number-integrity" });
 const { SHARDED, SLOT, SLOTS } = SHARD_SCOPE;
 const LIMIT = Number(process.env.LIMIT || 0);
@@ -272,4 +274,11 @@ async function main() {
   console.log(`\nREAD ONLY — nothing written.`);
 }
 
-main().catch((e) => { console.error("FATAL:", e?.stack || e?.message); process.exit(3); });
+// CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809). Success exits too: a lane
+// that lets the loop drain is betting every library released every handle.
+// Runs 33975816175/25863/34391/40824 lost that bet AFTER reconciling clean.
+main()
+  .then((ctx) => finishLane(0, ctx || {}))
+  .catch(async (e) => { console.error("FATAL:", e?.stack || e?.message); 
+    await finishLane(3);
+  });

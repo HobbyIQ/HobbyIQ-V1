@@ -42,6 +42,10 @@ function stats(over: Partial<BarStats> = {}): BarStats {
     cardCount: 43,
     verifiedCount: 38,
     attentionCount: 0,
+    // CF-WITHHELD-SAYS-WHY (Drew, 2026-09-05). Drew's real split at the time
+    // of writing: 33 of 43 priced, 10 withheld.
+    pricedCount: 33,
+    withheldCount: 10,
     ...over,
   };
 }

@@ -70,6 +70,10 @@ function budget({ minutes, reserveMs, verifyMs = 10 * 60 * 1000, startedAt = Dat
   const RESERVE_MS = Number(process.env.RESERVE_MS || reserveMs);
   const VERIFY_MS = Number(process.env.VERIFY_MS || verifyMs);
 
+  /** Set when a verify cap fired, i.e. when an abandoned query may still be
+   *  in flight holding a handle. `finishLane()` reports it. */
+  let capFired = false;
+
   /** Milliseconds left before the budget expires. Negative once it has. */
   const left = () => BUDGET_MS - (Date.now() - startedAt);
 
@@ -99,26 +103,72 @@ function budget({ minutes, reserveMs, verifyMs = 10 * 60 * 1000, startedAt = Dat
    * @param {number} vt0 the verify phase's own t0, shared across calls so a
    *                     lane's several counts share ONE cap between them.
    */
+  /**
+   * Run a post-loop verify-by-read under the cap. Returns the query's value,
+   * or null when the cap ran out — and null is printed as UNCONFIRMED, never
+   * as a zero (feedback_never_dismiss_small_numbers_as_noise).
+   *
+   * WHY THIS CANNOT SIMPLY `Promise.race` AND RETURN (#1809).
+   *
+   * Runs 33975816175/25863/34391/40824 each reconciled clean and were then
+   * killed at the 150-minute ceiling with 55-123 minutes of TOTAL SILENCE
+   * after their last printed line. The cap was not the problem; abandonment
+   * was. `Promise.race` settles on the winner and ABANDONS the loser — it
+   * does not cancel it. The loser here is a Cosmos query wrapped in the
+   * lane's own `retry()`, and that retry loop keeps looping on its own
+   * REF'd `setTimeout` sleeps long after the race has resolved. A ref'd
+   * handle is exactly what keeps node alive, so `main()` returned, the
+   * report finished, and the process still sat there until the runner
+   * killed the step and took the exit code with it.
+   *
+   * So the cap does two things a bare race does not:
+   *
+   *   1. It hands the caller an ABORT SIGNAL. A caller that passes it to the
+   *      SDK (`{ abortSignal }`) lets the request actually be cancelled
+   *      rather than merely ignored, and a `retry()` that checks it stops
+   *      looping instead of sleeping its way past the ceiling.
+   *   2. It records that the cap fired, so `finishLane()` knows the process
+   *      may be holding an abandoned handle and must exit explicitly rather
+   *      than wait for a drain that will never come.
+   *
+   * Neither makes the exit optional: `finishLane()` is what guarantees it.
+   * This only keeps the abandoned work from doing damage in the meantime.
+   */
   const capped = async (vt0, label, run) => {
     const remaining = VERIFY_MS - (Date.now() - vt0);
     if (remaining <= 0) {
+      capFired = true;
       console.log(`  VERIFY BY READ  ${label}: could not confirm within the cap (verify-cap)`);
       return null;
     }
+    const ac = new AbortController();
     let timer = null;
     try {
       return await Promise.race([
-        run(),
+        // The caller receives the signal; passing it to the SDK is what makes
+        // the abandoned request cancellable instead of merely ignored.
+        run(ac.signal),
         new Promise((_, rej) => {
+          // The cap timer is deliberately REF'd, and the `finally` below is
+          // what makes that safe. An unref'd cap is worse than no cap: if the
+          // query happens to hold no ref'd handle of its own, node exits the
+          // instant main() awaits -- BEFORE the cap fires -- and the operator
+          // loses the VERIFY BY READ line entirely rather than reading
+          // UNCONFIRMED. Silence is the one thing this whole change exists to
+          // prevent, so the cap holds the loop just long enough to report,
+          // and clearTimeout in the `finally` releases it either way.
           timer = setTimeout(() => rej(new Error("verify-cap")), remaining);
-          if (timer.unref) timer.unref();
         }),
       ]);
     } catch (e) {
+      capFired = true;
       console.log(`  VERIFY BY READ  ${label}: could not confirm within the cap (${String(e && e.message)})`);
       return null;
     } finally {
       if (timer) clearTimeout(timer);
+      // Cancel the loser. Without this the query keeps retrying past the
+      // ceiling; with it the SDK rejects and the retry loop unwinds.
+      ac.abort();
     }
   };
 
@@ -134,10 +184,99 @@ function budget({ minutes, reserveMs, verifyMs = 10 * 60 * 1000, startedAt = Dat
     RUN_MINUTES, BUDGET_MS, RESERVE_MS, VERIFY_MS,
     startedAt, left, outOfClock, stoppedAtBudget, describe,
     capped, shown, unreadNote,
+    /** True once a verify cap fired — an abandoned request may still hold a
+     *  handle, so the lane MUST exit explicitly rather than wait for a drain. */
+    capFired: () => capFired,
   };
+}
+
+
+/** ── THE LANE MUST EXIT WHEN ITS WORK IS DONE ──────────────────────────────
+ *
+ * CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809).
+ *
+ * Four APPLY shards of retire-self-derived-identities — runs 33975816175,
+ * 33975825863, 33975834391, 33975840824 — each printed their banner, their
+ * `RECONCILE ... BALANCES` and their `reconciled: intended ... = written ...
+ * + skipped ...`, and were then killed by
+ *
+ *   ##[error] The action 'Run backfill (APPLY)' has timed out after 150 minutes
+ *
+ * with NOTHING printed in between. Slot 1's last line was 17:22:23; the kill
+ * landed 18:17:31 — 55 minutes of silence. Slot 2 was silent for 123 minutes.
+ * Not one of the four ever printed a `VERIFY BY READ` line at all.
+ *
+ * That is not a slow verify. A slow verify still prints when its cap fires.
+ * This was the process REFUSING TO EXIT: `main()` had resolved, and node sat
+ * on a live handle until the runner killed it. The handle came from the
+ * verify's abandoned Cosmos query — `Promise.race` picks a winner and walks
+ * away from the loser, and the loser was a query inside the lane's `retry()`,
+ * which keeps sleeping on REF'd timers and re-issuing the request. The
+ * connection policy compounded it (`maxWaitTimeInSeconds: 300`), so the SDK
+ * was itself still retrying throttles.
+ *
+ * The lesson generalises past this one lane, and past Cosmos: a lane that
+ * ends by letting the event loop drain is betting that every library it
+ * touched released every handle. That bet is worth 150 minutes of a runner
+ * and the exit code of a run whose data was already correct and durable.
+ *
+ * So a lane does not END. It EXITS — explicitly, after its last line is
+ * flushed, with the code it means. All 62 budgeted lanes ended with only a
+ * `main().catch(... process.exit(non-zero))`: a failure path that exits and a
+ * SUCCESS path that hopes. That asymmetry is the bug, and this closes it.
+ *
+ * Flushing is not optional either. `process.exit()` truncates a pipe that has
+ * not drained, and the runner reads this lane through `| tee /tmp/backfill.log`
+ * — a pipe, not a TTY, so stdout is ASYNCHRONOUS. Exiting without waiting
+ * would drop the very reconcile lines the relaunch gate greps for
+ * (CF-RELAUNCH-ONLY-ON-BUDGET). So: flush, then exit.
+ */
+async function flushStdio() {
+  // Wait for each stream's buffer to drain, but never forever — a wedged pipe
+  // must not become a new way to hold the process open.
+  await Promise.all(["stdout", "stderr"].map((name) => {
+    const s = process[name];
+    if (!s || typeof s.write !== "function" || s.writableLength === 0) return Promise.resolve();
+    return new Promise((resolve) => {
+      let done = false;
+      const finish = () => { if (!done) { done = true; resolve(); } };
+      s.write("", finish);
+      const t = setTimeout(finish, 2000);
+      if (t.unref) t.unref();
+    });
+  }));
+}
+
+/**
+ * End a lane: flush what it printed, then exit with `code`.
+ *
+ * @param {number}  [code]        exit code (0 = the work is done)
+ * @param {object}  [opts]
+ * @param {object}  [opts.client] a CosmosClient to dispose before exiting
+ * @param {Function}[opts.budget] the lane's budget(), so a fired verify cap
+ *                                is named in the log as the reason the exit
+ *                                had to be explicit
+ */
+async function finishLane(code = 0, opts = {}) {
+  const { client, budget: b } = opts;
+  // Best-effort: disposing closes the SDK's keep-alive sockets. It is not
+  // what GUARANTEES the exit — process.exit() is — but it lets a clean lane
+  // exit tidily rather than being severed.
+  try {
+    if (client && typeof client.dispose === "function") client.dispose();
+  } catch { /* never let cleanup fail a run whose writes already reconciled */ }
+
+  if (b && typeof b.capFired === "function" && b.capFired()) {
+    // Name it, so the operator reading the log knows the exit was forced and
+    // that the UNCONFIRMED count above is the reason — not a crash.
+    console.log("  the verify cap fired — exiting explicitly so an abandoned"
+      + " query cannot hold the step to the ceiling.");
+  }
+  await flushStdio();
+  process.exit(code);
 }
 
 const fmt = (n) => Number(n ?? 0).toLocaleString("en-US");
 const fmtMs = (ms) => (ms >= 60000 ? `${Math.round(ms / 60000)}m` : `${Math.round(ms / 1000)}s`);
 
-module.exports = { budget, runMinutes };
+module.exports = { budget, runMinutes, finishLane, flushStdio };

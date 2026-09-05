@@ -51,7 +51,7 @@
  * tier is never rewritten); multipliers are empirical only.
  */
 import { type FmvRungLabel } from "./fmvRung.js";
-import { assessPoolMigration, readSettleMarker } from "./poolMigrationGate.js";
+import { assessPoolMigration, readSettleMarker, shouldGateRung } from "./poolMigrationGate.js";
 import type { UnifiedGradeEntry, UnifiedPriceResult } from "./unifiedPricing.service.js";
 import {
   applyUnifiedTierToEntry,
@@ -239,6 +239,22 @@ export interface Valuation {
   unified: UnifiedPriceResult | null;
   /** The gated ladder's answer, when it was asked. */
   fallback: HobbyIqFmvResult | null;
+  /**
+   * CF-A-GATE-THAT-FIRES-ABOVE-EVERY-RUNG-IS-NOT-A-RUNG-GATE (#1811).
+   *
+   * Set whenever this identity's catalog row was inside the settle window when
+   * it was priced — i.e. its sales may still have been arriving. It is a
+   * statement about the IDENTITY, not about the outcome, and it is present in
+   * BOTH outcomes the gate can produce:
+   *
+   *   with `reason: "pool-migrating"`   an own-pool rung was WITHHELD.
+   *   with a `fairMarketValue`          an other-identity rung PUBLISHED, and
+   *                                     this is the caveat riding with it.
+   *
+   * A reader distinguishes the two by whether there is a number, exactly as it
+   * does for every other refusal. Null on the settled majority.
+   */
+  poolMigrating: { ageHours: number | null; because: string } | null;
   computedAt: string;
 }
 
@@ -430,6 +446,7 @@ export async function valueIdentity(req: ValuationRequest): Promise<Valuation> {
     totalSampleCount: 0,
     unified: null,
     fallback: null,
+    poolMigrating: null,
     computedAt: new Date(nowMs).toISOString(),
   });
 
@@ -507,41 +524,105 @@ export async function valueIdentity(req: ValuationRequest): Promise<Valuation> {
   // This is deliberately the ONE choke point, for the reason `asOfMs` is a
   // request field rather than a convention: section 1 and section 2 have five
   // returns between them, and a gate repeated at each is a gate that will be
-  // forgotten at the sixth. Placed here it covers the exact rung, the player
-  // rung's exact-pool anchor, and the graded-to-raw curve alike.
+  // forgotten at the sixth. The migration verdict is therefore ASKED once,
+  // here, and APPLIED through the one `settled()` wrapper every return below
+  // passes through — so a new return added to the ladder cannot skip it
+  // without visibly returning a bare `v`.
   //
-  // It refuses rather than substituting. No fallback number is reached for a
-  // migrating identity — a fallback is precisely what produced the $240 — so
-  // the valuation returns `no-basis` with reason `pool-migrating`, and the
-  // persist layer retains the prior value and labels it.
+  // CF-A-GATE-THAT-FIRES-ABOVE-EVERY-RUNG-IS-NOT-A-RUNG-GATE (#1811). What it
+  // does with that verdict now depends on WHICH RUNG ANSWERED, which is a
+  // question that cannot be asked before the ladder has run:
+  //
+  //   own-pool rung (shouldGateRung)   withhold — no number, prior retained.
+  //   other-identity rung              publish, labelled `pool-migrating`.
+  //
+  // #1776 shipped `shouldGateRung` and never called it: the withhold fired
+  // above ALL rungs, so a migrating identity blanked even when the answer came
+  // from a family baseline or a cross-setkey read of OTHER cards — evidence a
+  // rematch on THIS pool cannot have disturbed. The Maddux defect was a
+  // half-arrived pool read as a whole one; a rung that reads none of that pool
+  // cannot commit it, and blanking it is a second defect, not caution.
+  //
+  // The withhold still refuses rather than substituting: an own-pool rung that
+  // is gated does NOT fall through to the ladder for a replacement number — a
+  // fallback is precisely what produced the $240.
   const migration = assessPoolMigration({
     observedAt: identity.observedAt,
     marker: await readSettleMarker(slug, identity.year, identity.setKey).catch(() => null),
     nowMs,
   });
-  if (migration.migrating) {
-    v.reason = "pool-migrating";
-    v.rungLabel = "no-basis";
-    v.valueSource = "unavailable";
-    v.fairMarketValue = null;
-    v.compsUsed = tier.sampleCount;
-    v.confidence = 0;
-    v.basis = `This card's identity was created ${migration.ageHours?.toFixed(1) ?? "?"}h ago and its sales are still being re-keyed onto it`
-      + ` (${tier.sampleCount} ${requestedTier} sale${tier.sampleCount === 1 ? "" : "s"} arrived so far). No price is published from a pool that is still migrating`
+
+  /**
+   * The migration gate, applied to a FINISHED valuation.
+   *
+   * Every return in sections 1-3 passes through here. When the pool is
+   * settled — the overwhelming majority — it is the identity function.
+   */
+  const settled = (out: Valuation): Valuation => {
+    if (!migration.migrating) return out;
+    const tierSampleCount = findTier().sampleCount;
+    if (!shouldGateRung(out.rungLabel)) {
+      // The rung read OTHER identities. The number stands; the reader is told
+      // this card's own pool was mid-migration when it was priced, because a
+      // number from its own sales may replace it within hours.
+      out.poolMigrating = { ageHours: migration.ageHours, because: migration.because };
+      console.log(JSON.stringify({
+        event: "valuation_labelled_pool_migrating",
+        source: "oneValuationPath.valueIdentity",
+        slug,
+        tier: requestedTier,
+        rungLabel: out.rungLabel,
+        observedAt: identity.observedAt,
+        ageHours: migration.ageHours,
+        because: migration.because,
+        detail: "the rung reads other identities, so the migration cannot have disturbed it: published with a label, not withheld",
+      }));
+      return out;
+    }
+    out.reason = "pool-migrating";
+    out.poolMigrating = { ageHours: migration.ageHours, because: migration.because };
+    const gatedRung = out.rungLabel;
+    out.rungLabel = "no-basis";
+    out.valueSource = "unavailable";
+    out.fairMarketValue = null;
+    out.compsUsed = tierSampleCount;
+    out.confidence = 0;
+    out.predictedPrice = null;
+    out.weightedMedian = null;
+    out.trend = { direction: "flat", pctPerWeek: null };
+    // The GRADE CURVE has to go with the headline.
+    //
+    // #1776 returned BEFORE the ladder ran, so a withheld valuation carried a
+    // blank curve for free. This gate returns AFTER, with every tier priced —
+    // and those tier numbers are the very ones the headline just refused,
+    // computed off the same half-arrived pool. Leaving them would withhold the
+    // headline and publish the identical number one field over: the card page
+    // and the accuracy panel both read the curve, and #1811's whole claim is
+    // that a migrating pool publishes no number FROM ITSELF.
+    //
+    // The curve is emptied to its blank shape rather than deleted, so a
+    // consumer that iterates tiers still finds them, each saying "no value".
+    out.gradeCurve = blankCurve();
+    out.sales = [];
+    out.basis = `This card's identity was created ${migration.ageHours?.toFixed(1) ?? "?"}h ago and its sales are still being re-keyed onto it`
+      + ` (${tierSampleCount} ${requestedTier} sale${tierSampleCount === 1 ? "" : "s"} arrived so far). No price is published from a pool that is still migrating`
       + ` — a partially migrated pool prices a card off whichever sales happened to arrive first.`;
     console.warn(JSON.stringify({
       event: "valuation_withheld_pool_migrating",
       source: "oneValuationPath.valueIdentity",
       slug,
       tier: requestedTier,
+      // WHICH own-pool rung was withheld — the field that says what this
+      // identity WOULD have published, so the settle can be audited later.
+      gatedRung,
       observedAt: identity.observedAt,
       ageHours: migration.ageHours,
       because: migration.because,
-      tierSampleCount: tier.sampleCount,
-      totalSampleCount: v.totalSampleCount,
+      tierSampleCount,
+      totalSampleCount: out.totalSampleCount,
     }));
-    return v;
-  }
+    return out;
+  };
 
   // The requested tier has its own pool: the exact-pool rung, the engine's
   // number, the engine's label. Nothing else touches it.
@@ -609,7 +690,8 @@ export async function valueIdentity(req: ValuationRequest): Promise<Valuation> {
       });
       capProjectedTiers(v.gradeCurve);
       labelEstimates(v.gradeCurve);
-      return v;
+      // Own-pool: the anchor is THIS identity's newest sale at this tier.
+      return settled(v);
     }
 
     v.fairMarketValue = tier.trendAdjustedValue;
@@ -635,7 +717,8 @@ export async function valueIdentity(req: ValuationRequest): Promise<Valuation> {
     });
     capProjectedTiers(v.gradeCurve);
     labelEstimates(v.gradeCurve);
-    return v;
+    // Own-pool: the exact rung, read straight off this tier's own sales.
+    return settled(v);
   }
 
   // ── 2. No pool at this tier, but this identity has sales at others ──────
@@ -682,7 +765,10 @@ export async function valueIdentity(req: ValuationRequest): Promise<Valuation> {
         v.rungLabel = "grade-curve-estimate";
         v.basis = `Estimated from this card's own ${anchor ? gradeCurveEntryLabel(anchor) : "observed"} sales × the empirical ${requestedTier} ratio${tier.estimatedMultiplier != null ? ` (${tier.estimatedMultiplier.toFixed(2)}×)` : ""}; no ${requestedTier} sale of this card in ${u.windowDays}d`;
       }
-      return v;
+      // Own-pool: both branches read THIS identity's other tiers — the
+      // graded-to-raw inverse and the empirical fill alike. A half-arrived
+      // tier ladder is exactly what published the $240.
+      return settled(v);
     }
   }
 
@@ -734,10 +820,31 @@ export async function valueIdentity(req: ValuationRequest): Promise<Valuation> {
       capProjectedTiers(v.gradeCurve);
       labelEstimates(v.gradeCurve);
     }
-    return v;
+    // OTHER-IDENTITIES. Reached only after this identity's pool was found
+    // empty at EVERY grade, so the number rests entirely on sibling / family /
+    // cross-setkey pools that this identity's migration cannot have touched.
+    // It PUBLISHES, carrying the `pool-migrating` label — the caveat a reader
+    // needs, which a blank price does not give them.
+    return settled(v);
   }
 
   // ── 4. Nothing — and every route says so the same way ──────────────────
+  //
+  // A MIGRATING identity that reaches here is the one case where "no sale"
+  // must not be reported as such: the pool is not empty, it is INCOMPLETE, and
+  // `no-exact-pool` would tell the caller the opposite of the truth — an
+  // absence of evidence where the honest statement is evidence not yet
+  // arrived. The two reasons are also handled differently downstream
+  // (`pool-migrating` retains the prior; `no-exact-pool` does not), so getting
+  // this wrong would blank a holding that should have carried its last value.
+  if (migration.migrating) {
+    v.reason = "pool-migrating";
+    v.poolMigrating = { ageHours: migration.ageHours, because: migration.because };
+    v.basis = `This card's identity was created ${migration.ageHours?.toFixed(1) ?? "?"}h ago and its sales are still being re-keyed onto it`
+      + ` — no ${requestedTier} sale has arrived yet, and no rung that reads other cards could price it either.`
+      + ` This is evidence still in flight, not evidence of absence.`;
+    return v;
+  }
   if (u) {
     v.reason = "no-exact-pool-at-tier";
     v.basis = `${slug} has sales at other grades but none at ${requestedTier} in 180d, no empirical ratio projects it, and no gated fallback rung could price it`;

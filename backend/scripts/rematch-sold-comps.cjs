@@ -251,6 +251,8 @@ const hashPartOf = (id, parts) => parseInt(crypto.createHash("sha1").update(Stri
 // means the whole year, hashPart null means the whole unit.
 const SPORT_CLASSES = ["baseball", "football", "basketball", "pokemon"];
 const SHARD_TABLE = require(path.join(__dirname, "..", "data", "rematch-shard-table.json"));
+// CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809): the one exit path.
+const { finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
 
 /** The units this slot owns. */
 function unitsForSlot(slot, table = SHARD_TABLE) {
@@ -1718,4 +1720,11 @@ module.exports = {
   revertVerdict, revertEvictions,
 };
 
-if (require.main === module) main().catch((e) => { console.error("FATAL:", e?.stack || e?.message); process.exit(3); });
+if (require.main === module) // CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809). Success exits too: a lane
+// that lets the loop drain is betting every library released every handle.
+// Runs 33975816175/25863/34391/40824 lost that bet AFTER reconciling clean.
+main()
+  .then((ctx) => finishLane(0, ctx || {}))
+  .catch(async (e) => { console.error("FATAL:", e?.stack || e?.message); 
+    await finishLane(3);
+  });

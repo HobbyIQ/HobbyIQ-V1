@@ -95,6 +95,8 @@ const SETKEYS = list(process.env.SETKEYS);
 // -- sweeps EVERY row. SLOTS binds to 1 when unsharded, so `% SLOTS` and
 // `SLOTS === 1` guards below keep working unchanged.
 const { runnerShardScope } = require("./lib/runner-shard-scope.cjs");
+// CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809): the one exit path.
+const { finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
 const SHARD_SCOPE = runnerShardScope({ label: "repair-base-to-title-finish" });
 const { SHARDED, SLOT, SLOTS } = SHARD_SCOPE;
 
@@ -363,8 +365,15 @@ function retarget(slug, parallelSlug, printRun) {
   // dry-run bound and does NOT ask for a relaunch.
   const budgetStopped = budgetLeft() < 90000;
   console.log(`RELAUNCH_NEEDED=${budgetStopped ? "true" : "false"}`);
-})().catch((e) => {
+})()
+// CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809). Success exits too: a lane
+// that lets the loop drain is betting every library released every handle.
+// Runs 33975816175/25863/34391/40824 lost that bet AFTER reconciling clean.
+// process.exitCode set by the body above is HONOURED, never overwritten.
+  .then(() => finishLane(process.exitCode || 0))
+  .catch(async (e) => {
   console.error("FATAL:", e?.stack || e?.message || String(e));
   console.log("RELAUNCH_NEEDED=true");
-  process.exit(3);
-});
+
+    await finishLane(3);
+  });

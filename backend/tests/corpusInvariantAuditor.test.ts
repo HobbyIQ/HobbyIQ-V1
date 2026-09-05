@@ -661,3 +661,195 @@ describe("mutation checks — the lane cannot write, and each pin fails for its 
     expect(src).toMatch(/\(\)\s*=>\s*process\.exit\(0\)/);
   });
 });
+
+// ── FOLLOW-UP (2026-09-05, after runner run 33988189431) ────────────────────
+//
+// The first live runner run reported I9 at 940/2,000 = 47% CONFLICT against a
+// 35% threshold. The number was real and the conclusion it invited was wrong:
+// most of those rows are not disagreements at all.
+
+describe("I9 CONFLICT is split — only a TRUE DISAGREEMENT breaches", () => {
+  /** The shape the checklist gate produces: strictly more specific, nothing
+   *  changed, refused only because no checklist backs the destination. */
+  const needsChecklist = {
+    klass: "CONFLICT",
+    axes: { same: ["cardNumber"], filled: ["sport", "setKey"], dropped: [], changed: [] },
+    reasons: ["filled:sport,setKey", "not-checklist-backed"],
+  };
+  /** A genuine disagreement: an axis CHANGED. */
+  const trueDisagreement = {
+    klass: "CONFLICT",
+    axes: { same: [], filled: [], dropped: [], changed: ["parallel"] },
+    reasons: ["changed:parallel", "not-base-eviction:stored-parallel-names-a-finish"],
+  };
+  const parserArtifact = {
+    klass: "CONFLICT",
+    axes: { same: [], filled: [], dropped: [], changed: ["grade"] },
+    reasons: ["changed:grade/phantom-set-word"],
+  };
+
+  it("a pure fill the checklist gate refused is NEEDS-CHECKLIST, not a disagreement", () => {
+    expect(INV.conflictKind(needsChecklist)).toBe("NEEDS-CHECKLIST");
+  });
+
+  it("a CHANGED axis is a TRUE-DISAGREEMENT even when other reasons ride along", () => {
+    expect(INV.conflictKind(trueDisagreement)).toBe("TRUE-DISAGREEMENT");
+  });
+
+  it("the known phantom-grade artifact is counted, never breaching", () => {
+    expect(INV.conflictKind(parserArtifact)).toBe("PARSER-ARTIFACT");
+  });
+
+  it("an UNRECOGNISED shape is loud — it counts as a disagreement, never silently exempt", () => {
+    // Exempting the unknown is how a real class of defect goes unwatched.
+    expect(INV.conflictKind({ klass: "CONFLICT", axes: {}, reasons: ["something-new"] }))
+      .toBe("TRUE-DISAGREEMENT");
+  });
+
+  it("THE MEASURED RATIO: the threshold reads TRUE disagreements, not all CONFLICTs", () => {
+    // 21 of 25 sampled CONFLICTs were `filled:…; not-checklist-backed`
+    // (read-only prod sample, 2026-09-05). Here: 21 needs-checklist + 4 true.
+    const verdicts = [
+      ...Array.from({ length: 21 }, () => needsChecklist),
+      ...Array.from({ length: 4 }, () => trueDisagreement),
+      ...Array.from({ length: 75 }, () => ({ klass: "AGREE", axes: {}, reasons: [] })),
+    ];
+    const r = INV.rederivationRates(verdicts);
+    expect(r.conflicts).toBe(25);
+    expect(r.breaching).toBe(4);
+    expect(r.needsChecklist).toBe(21);
+    // The threshold reads 4%, not 25% — and both are reported, so the change in
+    // what is measured is visible rather than looking like an overnight fix.
+    expect(r.rate).toBeCloseTo(0.04, 5);
+    expect(r.allConflictRate).toBeCloseTo(0.25, 5);
+    // At the shipped 35% threshold the real number does not breach.
+    expect(INV.evaluateThreshold("I9", { breaches: r.breaching, sample: r.total })).toBeNull();
+  });
+
+  it("the acquisition signal names the AXES a checklist would settle", () => {
+    const r = INV.rederivationRates([needsChecklist, needsChecklist, trueDisagreement]);
+    expect(r.needsChecklistAxes).toEqual({ "setKey,sport": 2 });
+  });
+
+  it("UNDERIVABLE reason codes are broken out too — absence has causes", () => {
+    const r = INV.rederivationRates([
+      { klass: "UNDERIVABLE", axes: {}, reasons: ["no-title"] },
+      { klass: "UNDERIVABLE", axes: {}, reasons: ["no-derived-identity"] },
+    ]);
+    expect(r.byReason["UNDERIVABLE/no-title"]).toBe(1);
+    expect(r.byReason["UNDERIVABLE/no-derived-identity"]).toBe(1);
+  });
+
+  it("the axis signature is stable and sorted, so the table counts shapes not orderings", () => {
+    expect(INV.axisSignature({ axes: { changed: ["parallel", "auto"], filled: [], dropped: [] } }))
+      .toBe("changed:auto,parallel");
+  });
+
+  it("reason codes strip their values, so the table counts shapes not cards", () => {
+    expect(INV.reasonCodes({ reasons: ["specialization:topps->topps-chrome", "filled:sport"] }))
+      .toEqual(["specialization", "filled"]);
+  });
+
+  it("MUTATION: folding NEEDS-CHECKLIST back into the breach reproduces the 47% alarm", () => {
+    const verdicts = [
+      ...Array.from({ length: 940 }, () => needsChecklist),
+      ...Array.from({ length: 1060 }, () => ({ klass: "AGREE", axes: {}, reasons: [] })),
+    ];
+    const r = INV.rederivationRates(verdicts);
+    expect(r.breaching).toBe(0);
+    expect(r.allConflictRate).toBeCloseTo(0.47, 2);
+    // The whole point: what the runner reported as a 47% breach is 0% of the
+    // thing the threshold is supposed to measure.
+    expect(INV.evaluateThreshold("I9", { breaches: r.breaching, sample: r.total })).toBeNull();
+  });
+});
+
+describe("I8 exempts sources the freshness canary does not watch", () => {
+  const now = Date.parse("2026-09-05T12:00:00Z");
+
+  it("THE MEASURED SHAPE: cardsight is retired, has 523,792 rows, and must not breach", () => {
+    // The row-count exemption cannot reach it — half a million rows is three
+    // orders of magnitude above MIN_BASELINE_ROWS — so it reported stale at
+    // 520.2h on the first live run, permanently and unclearably.
+    expect(INV.checkSourceFreshness(
+      [{ source: "cardsight", rows: 523792, newestSoldAt: "2026-08-15T02:32:00+00:00" }], now,
+    )).toEqual([]);
+  });
+
+  it("a source the canary DOES watch still breaches when stale", () => {
+    const v = INV.checkSourceFreshness(
+      [{ source: "tca-ebay", rows: 2403168, newestSoldAt: "2026-09-02T06:00:00Z" }], now,
+    );
+    expect(v).toHaveLength(1);
+    expect(v[0].kind).toBe("source-stale");
+  });
+
+  it("the exemption list IS the canary's MONITOR_SOURCES — not a second list here", () => {
+    // Mirrored, not imported (that script builds a Cosmos client at module
+    // scope). This pin is what keeps the mirror honest: a change to the
+    // canary's default turns CI red instead of drifting silently.
+    const canarySrc = fs.readFileSync(
+      path.join(backend, "scripts", "checkSoldCompsFreshness.cjs"), "utf8",
+    );
+    const m = canarySrc.match(/MONITOR_SOURCES\s*\|\|\s*"([^"]+)"/);
+    expect(m, "the canary's MONITOR_SOURCES default moved — update CANARY_MONITOR_SOURCES").toBeTruthy();
+    expect((m as RegExpMatchArray)[1].split(",").map((s) => s.trim()).sort())
+      .toEqual([...INV.CANARY_MONITOR_SOURCES].sort());
+  });
+
+  it("MUTATION: dropping the monitored-source filter puts the unclearable cardsight breach back", () => {
+    const v = INV.checkSourceFreshness(
+      [{ source: "cardsight", rows: 523792, newestSoldAt: "2026-08-15T02:32:00+00:00" }], now,
+      { monitorSources: [] },
+    );
+    expect(v).toHaveLength(1);
+  });
+});
+
+describe("findings carry the ids a repair lane needs, without re-querying", () => {
+  const lane = require_(path.join(backend, "scripts", "audit-pricing-invariants-corpus.cjs"));
+
+  it("I5 carries EVERY partition the sale was found under — sold_comps is partitioned on /cardId", () => {
+    const res = lane.makeResult("I5");
+    lane.record(res, INV.checkOneSaleOneAddress("tca-ebay::257337974150", [
+      { id: "tca-ebay::257337974150", cardId: "hiq:baseball:2025:bowman-chrome:bdc-8:green-geometric:no-auto:num-99" },
+      { id: "tca-ebay::257337974150", cardId: "hiq:baseball:2025:bowman-draft:bdc-8:green-geometric-refractor:no-auto:num-99" },
+    ]), { id: "tca-ebay::257337974150" });
+    expect(res.rows).toHaveLength(1);
+    expect(res.rows[0].id).toBe("tca-ebay::257337974150");
+    // Both addresses, so the repair knows where the row lives AND where its
+    // duplicate is, without a query.
+    expect(res.rows[0].partitions).toHaveLength(2);
+  });
+
+  it("a holding finding carries userId — `portfolio` is partitioned on /userId", () => {
+    const res = lane.makeResult("I1");
+    lane.record(res, INV.checkOneStampPerHolding({
+      id: "a560c983-full-id", fairMarketValue: 881.25, fmvRung: "exact-pool-last-sale",
+      pricingSourceMeta: { method: "exact-pool-last-sale", withheld: { reason: "identity-not-in-catalog" } },
+    }), { userId: "user-abc", holdingId: "a560c983-full-id", slug: "hiq:x" });
+    expect(res.rows[0].userId).toBe("user-abc");
+    expect(res.rows[0].holdingId).toBe("a560c983-full-id");
+  });
+
+  it("I10 carries the backing class and the number shown", () => {
+    const res = lane.makeResult("I10");
+    lane.record(res, INV.checkPricedOnUnbackedIdentity(
+      { id: "h", hobbyiqCardId: "hiq:baseball:2026:bowman:cpa-bg:black-x-fractor:auto:num-10", fairMarketValue: 425 },
+      [], backing,
+    ), { userId: "u1", holdingId: "h" });
+    expect(res.rows[0].backing).toBe("no-catalog-row");
+    expect(res.rows[0].shown).toBe(425);
+  });
+
+  it("the digest prints FULL ids and the partition key, never an 8-char prefix", () => {
+    const src = fs.readFileSync(
+      path.join(backend, "scripts", "audit-pricing-invariants-corpus.cjs"), "utf8",
+    ).replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+    const digest = src.slice(src.indexOf("rows (${r.rows.length}"));
+    const block = digest.slice(0, 900);
+    expect(block, "the digest truncates a holding id").not.toMatch(/holdingId\)\.slice\(0,\s*8\)/);
+    expect(block).toContain("row.userId");
+    expect(block).toContain("row.partitions");
+  });
+});

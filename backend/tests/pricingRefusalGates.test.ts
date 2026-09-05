@@ -64,6 +64,7 @@ import { describe, expect, it } from "vitest";
 import {
   costBasisFloor,
   noBasisRefusalWrite,
+  noBasisReasonFromEngine,
   COST_BASIS_FLOOR_RATIO,
 } from "../src/services/portfolioiq/holdingValuation.js";
 import {
@@ -73,6 +74,7 @@ import {
   shouldGateRung,
   POOL_SETTLE_HOURS,
 } from "../src/services/compiq/poolMigrationGate.js";
+import { FMV_RUNG_LABELS } from "../src/services/compiq/fmvRung.js";
 import { writeHoldingValuation } from "../src/services/portfolioiq/writeHoldingValuation.js";
 import type { PortfolioHolding } from "../src/types/portfolioiq.types.js";
 
@@ -301,11 +303,45 @@ describe("B. a migrating pool is withheld, never priced off what arrived first",
     expect(shouldGateRung("graded-pool-inverse")).toBe(true);
     expect(shouldGateRung("cross-grade-fallback")).toBe(true);
     // A rung that reads OTHER identities is not corrupted by this pool's
-    // migration — though the doctrine still publishes no number for a
-    // migrating identity.
-    expect(shouldGateRung("player-index-projection")).toBe(false);
+    // migration: it PUBLISHES, carrying the label (#1811).
     expect(shouldGateRung("family-baseline")).toBe(false);
     expect(shouldGateRung(null)).toBe(false);
+  });
+
+  // #1811. While the gate fired above every rung, this classification was
+  // inert — everything withheld regardless, so naming the player rung
+  // "not gated" cost nothing. The moment `shouldGateRung` became the thing
+  // that DECIDES, that entry would have let a migrating identity publish a
+  // number anchored on a half-arrived pool: the $240 defect, one rung over.
+  it("the player rung is OWN-POOL: its anchor is this card's own newest sale", () => {
+    expect(shouldGateRung("player-index-projection")).toBe(true);
+  });
+
+  // The full ladder vocabulary, classified. A rung added to FMV_RUNG_LABELS
+  // and not thought about here lands in OTHER-IDENTITIES by default, which is
+  // the PUBLISHING side — so this pin is the place that forces the question.
+  it("every rung the ladder can return is classified, and only own-pool rungs gate", () => {
+    const OWN_POOL = [
+      "exact-pool-projection", "exact-pool-last-sale", "exact-pool-leading-edge",
+      "exact-pool-weighted-median", "exact-pool-median", "exact-pool-trajectory",
+      "cross-grade-fallback", "grade-curve-estimate", "graded-pool-inverse",
+      "player-index-projection",
+    ];
+    // Reached only at section 3, AFTER this identity's pool was found empty at
+    // every grade — so none of them read a row the migration could move.
+    const OTHER_IDENTITIES = [
+      "sibling-estimate", "sibling-parallel", "cross-parallel", "neighbor-parallel",
+      "same-printrun-cross-parallel", "cross-setkey", "cross-printrun",
+      "printrun-discovery", "family-baseline", "product-tier", "composite-neighbor",
+      "rare-card-anchor", "hot-raw-same-card-anchor", "grade-cross-raw",
+      "tiered-momentum-card", "tiered-momentum-player",
+      // Names no price: there is nothing to withhold.
+      "no-basis",
+    ];
+    for (const r of OWN_POOL) expect(shouldGateRung(r), `${r} must be gated`).toBe(true);
+    for (const r of OTHER_IDENTITIES) expect(shouldGateRung(r), `${r} must NOT be gated`).toBe(false);
+    // The two lists together ARE the vocabulary — no rung is unclassified.
+    expect([...OWN_POOL, ...OTHER_IDENTITIES].sort()).toEqual([...FMV_RUNG_LABELS].sort());
   });
 
   it("the settle signal is keyed both ways the rematch can report", () => {
@@ -656,5 +692,126 @@ describe("C'. a publish clears the withheld stamp it inherited", () => {
     for (const h of rows) {
       expect(carriesWithhold(h) && claimsAPrice(h), JSON.stringify(h.pricingSourceMeta)).toBe(false);
     }
+  });
+});
+
+/**
+ * ── D. `no-exact-pool` IS ONE STAMP (Drew, 2026-09-05) ─────────────────────
+ *
+ * The three refusals above all reach `noBasisRefusalWrite`. `no-exact-pool`
+ * did NOT: `valueHoldingThroughOneEntry` returns it as `outcome: "unpriced"`,
+ * and the confidence-gated reprice in `portfolioStore` then hand-built its own
+ * withheld meta — passing the PRIOR pass's rung beside a `withheld` block, and
+ * using the engine's raw `ValuationReason` as the reason string.
+ *
+ * The live shape, holding 6f4f079b (Ken Griffey Jr. 1999 UD Black Diamond #D24
+ * Diamond Dominance /1500, user-199fcbc9), read read-only from prod on
+ * 2026-09-05 at 20:37Z — AFTER the #1785 deploy (sha db7b308, deployed
+ * 20:31Z), so this is a live code defect and not a stale row:
+ *
+ *     fairMarketValue    null
+ *     fmvRung            "exact-pool-last-sale"     <- a PUBLISHED stamp
+ *     valueSource        "observed"                 <- on a row with NO value
+ *     valuationStatus    "observed"
+ *     pricingSourceMeta  { method: "exact-pool-last-sale", confidence: 0,
+ *                          withheld: { reason: "no-exact-pool",
+ *                                      blockingCount: 1, proposed: null } }
+ *
+ * Both stamps at once — exactly the shape #1785 abolished, reintroduced one
+ * lane over. Its sibling 277b05a3 (Cal Ripken 1997 Metal Universe #8 Magnetic
+ * Field), refused through the SAME choke point on the same pass, reads
+ * correctly: `fmvRung` null, `method` "withheld", `valueSource` "estimated".
+ * One lane obeying the contract and one not is what a pin exists to stop.
+ */
+describe("D. no-exact-pool goes through the one-stamp choke point", () => {
+  /** Holding 6f4f079b's prior shape: a real exact-pool publish. */
+  const D24_PRIOR = {
+    id: "6f4f079b-0d76-4ae8-88e0-ca27b4c0e6c1",
+    fairMarketValue: 42,
+    costBasis: 60,
+    quantity: 1,
+    fmvRung: "exact-pool-last-sale",
+    valueSource: "observed",
+    hobbyiqCardId: "hiq:baseball:1999:upper-deck-black-diamond:d24:diamond-dominance:no-auto:num-1500",
+    pricingSourceMeta: {
+      method: "exact-pool-last-sale",
+      slug: "hiq:baseball:1999:black-diamond:d24:base:no-auto",
+      compsUsed: 1,
+      confidence: 0,
+    },
+  } as unknown as PortfolioHolding;
+
+  const ENGINE_REASONS = ["no-exact-pool", "no-exact-pool-at-tier"] as const;
+
+  it("maps the engine's unpriced reasons onto the refusal union, totally", () => {
+    // The declared ones map to themselves...
+    for (const r of ["identity-not-in-catalog", "pool-migrating", "no-checklist-match",
+                     "no-exact-pool", "no-exact-pool-at-tier"] as const) {
+      expect(noBasisReasonFromEngine(r)).toBe(r);
+    }
+    // ...and ANYTHING else becomes the lane's own honest name, never a new
+    // undeclared withheld vocabulary. This is the mutation that mattered: a
+    // cast would have let a future engine reason through untouched.
+    for (const r of [null, undefined, "", "some-future-engine-reason", "confidence-gate"]) {
+      expect(noBasisReasonFromEngine(r as string | null)).toBe("confidence-gate");
+    }
+  });
+
+  it.each(ENGINE_REASONS)("%s writes ONE stamp — the withheld one, never the prior rung", (reason) => {
+    const { holding } = noBasisRefusalWrite(D24_PRIOR, reason, null, NOW);
+    const meta = holding.pricingSourceMeta as Record<string, unknown>;
+
+    // The published stamp is GONE. This is the assertion the live row failed:
+    // it kept fmvRung "exact-pool-last-sale" and method "exact-pool-last-sale".
+    expect(holding.fmvRung).toBeNull();
+    expect(meta.method).toBe("withheld");
+    // A refusal observed nothing, so it cannot stand behind "observed" —
+    // the live row said "observed" on a row whose value was null.
+    expect(holding.valueSource).toBe("estimated");
+
+    // The withheld stamp is present and names the ENGINE's reason.
+    const withheld = meta.withheld as Record<string, unknown>;
+    expect(withheld).toBeTruthy();
+    expect(withheld.reason).toBe(reason);
+  });
+
+  it("the D24 shape can never carry both stamps again", () => {
+    for (const reason of ENGINE_REASONS) {
+      const { holding } = noBasisRefusalWrite(D24_PRIOR, reason, null, NOW);
+      const meta = holding.pricingSourceMeta as Record<string, unknown> | undefined;
+      const carriesWithhold = !!meta?.withheld;
+      const claimsAPrice =
+        holding.fmvRung !== null
+        || (typeof meta?.method === "string" && meta.method !== "withheld" && meta.method !== "unlabelled-carry");
+      expect(carriesWithhold && claimsAPrice, JSON.stringify(meta)).toBe(false);
+    }
+  });
+
+  it("asks the ONE retention rule: a prior exact-pool number from the refused pool does not stand", () => {
+    // The prior $42 was published from the pool the refusal faults, read under
+    // an exact-pool rung — #1781 says it is the same evidence one pass older.
+    const samePool = {
+      ...D24_PRIOR,
+      pricingSourceMeta: { ...(D24_PRIOR as never as Record<string, unknown>).pricingSourceMeta as object,
+        slug: "hiq:baseball:1999:black-diamond:d24:base:no-auto" },
+      hobbyiqCardId: "hiq:baseball:1999:black-diamond:d24:base:no-auto",
+    } as unknown as PortfolioHolding;
+    const { holding } = noBasisRefusalWrite(samePool, "no-exact-pool", null, NOW);
+    expect(holding.fairMarketValue).toBeNull();
+    const withheld = (holding.pricingSourceMeta as Record<string, unknown>).withheld as Record<string, unknown>;
+    expect(withheld.retained).toBeNull();
+    expect(withheld.retentionRefused).toBe("prior-is-the-refused-pool");
+  });
+
+  it("names the POOL as the remedy, not the catalog — the identity is known", () => {
+    const { prose } = noBasisRefusalWrite(D24_PRIOR, "no-exact-pool", null, NOW);
+    // A reader told only "no price" goes looking at the catalog, which is not
+    // where the D24 problem was: the checklist row existed and the SALES were
+    // filed under other slugs.
+    expect(prose).toMatch(/no sale of this card was found/i);
+    expect(prose).toMatch(/matched onto it/i);
+    // It must NOT claim the catalog holds no identity — that is a different
+    // refusal with a different remedy.
+    expect(prose).not.toMatch(/catalog holds no identity/i);
   });
 });

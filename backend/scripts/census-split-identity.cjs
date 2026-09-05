@@ -74,6 +74,8 @@ const CONTAINER = process.env.COSMOS_SOLD_COMPS_CONTAINER || "sold_comps";
 // states its coverage in the same words as every other lane, and so the rule
 // lives in one place rather than in 56 copies.
 const { runnerShardScope } = require("./lib/runner-shard-scope.cjs");
+// CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809): the one exit path.
+const { finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
 const SHARD_SCOPE = runnerShardScope({ alwaysShard: true, label: "census-split-identity" });
 const { SHARDED, SLOT, SLOTS } = SHARD_SCOPE;
 const ROWS_PER_CHUNK = Number(process.env.ROWS_PER_CHUNK || 200000);
@@ -308,4 +310,11 @@ async function main() {
   return 0;
 }
 
-main().then((c) => process.exit(c)).catch((e) => { console.error("FATAL:", e?.stack || e?.message); process.exit(3); });
+// CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809). Success exits too: a lane
+// that lets the loop drain is betting every library released every handle.
+// Runs 33975816175/25863/34391/40824 lost that bet AFTER reconciling clean.
+main()
+  .then((c) => finishLane(typeof c === "number" ? c : 0, (c && typeof c === "object") ? c : {}))
+  .catch(async (e) => { console.error("FATAL:", e?.stack || e?.message); 
+    await finishLane(3);
+  });

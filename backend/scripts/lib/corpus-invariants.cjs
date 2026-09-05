@@ -691,14 +691,46 @@ function checkDeployHealth(run, jobs, opts = {}) {
 const DEFAULT_STALENESS_HOURS = 25;
 const DEFAULT_EXEMPT_BELOW_ROWS = 1000;
 
+/**
+ * The sources the FRESHNESS CANARY watches for staleness — its own
+ * `MONITOR_SOURCES` default (scripts/checkSoldCompsFreshness.cjs). Anything
+ * else is either retired (`cardsight`, off since 2026-08-16) or demand-driven,
+ * and the canary deliberately does not alert on its age.
+ *
+ * Mirrored here rather than imported because that script reads env and builds a
+ * Cosmos client at module scope; this module is pure. The pin asserts the two
+ * lists agree, so a change there turns CI red rather than drifting silently.
+ */
+const CANARY_MONITOR_SOURCES = ["tca-ebay", "cardhedge"];
+
 function checkSourceFreshness(sources, nowMs, opts = {}) {
   const maxHours = Number(opts.maxStalenessHours ?? DEFAULT_STALENESS_HOURS);
   const exemptBelow = Number(opts.exemptBelowRows ?? DEFAULT_EXEMPT_BELOW_ROWS);
+  const monitored = opts.monitorSources ?? CANARY_MONITOR_SOURCES;
   const out = [];
   for (const s of sources ?? []) {
     const name = str(s?.source) || "(unnamed)";
     const rows = Number(s?.rows ?? 0);
     if (rows < exemptBelow) continue; // retired / tiny — the canary's own rule
+    // RETIRED SOURCES ARE EXEMPT, AND THE CANARY DECIDES WHICH (2026-09-05).
+    //
+    // The row-count rule alone is not enough. `cardsight` was RETIRED from
+    // matching on 2026-08-16 and its ingest stopped; it nonetheless carries
+    // 523,792 historical rows, which is three orders of magnitude above
+    // MIN_BASELINE_ROWS. So the volume exemption never reached it and the
+    // first live run reported it stale at 520.2h — permanently, every night,
+    // for a source that is not supposed to be receiving anything. A breach
+    // that can never be cleared is a breach nobody reads, and it would have
+    // masked a real one arriving beside it.
+    //
+    // The authority is the CANARY'S OWN staleness set (MONITOR_SOURCES in
+    // checkSoldCompsFreshness.cjs, default `tca-ebay,cardhedge`), not a second
+    // list maintained here. The canary is the job that owns this alert; a
+    // source it does not watch for staleness is a source this digest line must
+    // not claim is stale. When the canary starts watching a source, this
+    // follows for free — and when a source is retired there, it goes quiet in
+    // both places at once, which is the only way two jobs stay agreed.
+    if (monitored.length && !monitored.includes(name)) continue;
     const newest = Date.parse(str(s?.newestSoldAt));
     if (!Number.isFinite(newest)) {
       out.push({
@@ -785,21 +817,132 @@ function classifyStoredRow(row, classify, deps = {}) {
   });
 }
 
+/**
+ * NOT EVERY CONFLICT IS A DISAGREEMENT (2026-09-05, after runner run
+ * 33988189431 reported 940/2,000 = 47%).
+ *
+ * `classifyRow` has a SECOND gate after the axis diff: "a match proves nothing
+ * unless checklist-backed". A row that is strictly MORE SPECIFIC — nothing
+ * dropped, nothing changed, something filled — is an IMPROVE in every respect
+ * except that no checklist backs the destination, and that gate returns it as
+ * CONFLICT with `filled:<axes>` + `not-checklist-backed`. #1796 is the same
+ * finding from the other direction.
+ *
+ * Measured on the first sample: 21 of 25 CONFLICTs were exactly that shape.
+ * They are not the auditor's business — the corpus and the deriver AGREE about
+ * the card; what is missing is a checklist. Counting them toward a "the
+ * derivation disagrees" threshold makes the number say something it does not
+ * mean, and buries the four rows that do.
+ *
+ * So a CONFLICT is split three ways and only the first is a breach:
+ *
+ *   TRUE-DISAGREEMENT   an axis CHANGED or was DROPPED — the derivation names
+ *                       a different card. This is what I9 exists to find.
+ *   NEEDS-CHECKLIST     a pure fill the checklist gate refused. Reported as an
+ *                       ACQUISITION SIGNAL, with the filled axes named, so it
+ *                       feeds the checklist queue instead of the alarm.
+ *   PARSER-ARTIFACT     reasons the classifier itself tags as known noise (the
+ *                       phantom Pristine grade word). Contained from writes
+ *                       already; counted, never breaching.
+ */
+const NEEDS_CHECKLIST_REASON = "not-checklist-backed";
+const PARSER_ARTIFACT_RE = /phantom|artifact/i;
+
+/** Which of the three a CONFLICT verdict is. Pure over one verdict. */
+function conflictKind(verdict) {
+  const reasons = (verdict?.reasons ?? []).map((r) => str(r));
+  const axes = verdict?.axes ?? {};
+  const changed = (axes.changed ?? []).length;
+  const dropped = (axes.dropped ?? []).length;
+
+  // A changed or dropped axis is a genuine disagreement whatever else the row
+  // carries — the checklist gate never produces one.
+  if (changed > 0 || dropped > 0) {
+    if (reasons.some((r) => PARSER_ARTIFACT_RE.test(r))) return "PARSER-ARTIFACT";
+    return "TRUE-DISAGREEMENT";
+  }
+  if (reasons.includes(NEEDS_CHECKLIST_REASON)) return "NEEDS-CHECKLIST";
+  if (reasons.some((r) => PARSER_ARTIFACT_RE.test(r))) return "PARSER-ARTIFACT";
+  // No changed axis, no checklist refusal named: classify as a disagreement
+  // rather than silently exempting it. An unrecognised shape must be LOUD —
+  // exempting the unknown is how a real class of defect goes unwatched.
+  return "TRUE-DISAGREEMENT";
+}
+
+/** The axis signature of a verdict, for the per-axis table. */
+function axisSignature(verdict) {
+  const a = verdict?.axes ?? {};
+  const parts = [];
+  if ((a.changed ?? []).length) parts.push(`changed:${[...a.changed].sort().join(",")}`);
+  if ((a.dropped ?? []).length) parts.push(`dropped:${[...a.dropped].sort().join(",")}`);
+  if ((a.filled ?? []).length) parts.push(`filled:${[...a.filled].sort().join(",")}`);
+  return parts.join(" ") || "(no axis diff)";
+}
+
+/**
+ * The reason codes of a verdict, normalised for counting. Values are stripped
+ * off (`specialization:a->b` becomes `specialization`) so the table counts
+ * SHAPES rather than one row per card.
+ */
+function reasonCodes(verdict) {
+  return [...new Set((verdict?.reasons ?? []).map((r) => str(r).split(":")[0]).filter(Boolean))];
+}
+
 /** Fold a run of classifier verdicts into the by-class rate the digest reports. */
 function rederivationRates(verdicts) {
   const byClass = new Map();
+  const byConflictKind = new Map();
+  const byAxis = new Map();
+  const byReason = new Map();
+  const needsChecklistAxes = new Map();
+  const bump = (m, k) => m.set(k, (m.get(k) ?? 0) + 1);
+
   for (const v of verdicts) {
     const k = str(v?.klass ?? v?.class ?? v?.verdict) || "UNCLASSIFIED";
-    byClass.set(k, (byClass.get(k) ?? 0) + 1);
+    bump(byClass, k);
+
+    if (k === "CONFLICT") {
+      const kind = conflictKind(v);
+      bump(byConflictKind, kind);
+      bump(byAxis, axisSignature(v));
+      for (const r of reasonCodes(v)) bump(byReason, r);
+      if (kind === "NEEDS-CHECKLIST") {
+        // The acquisition signal: WHICH axes a checklist would settle.
+        bump(needsChecklistAxes, (v?.axes?.filled ?? []).slice().sort().join(",") || "(none)");
+      }
+    } else if (k === "UNDERIVABLE") {
+      // UNDERIVABLE reason codes too — "the title does not support a
+      // derivation" has causes, and they are actionable in different places.
+      for (const r of reasonCodes(v)) bump(byReason, `UNDERIVABLE/${r}`);
+    }
   }
+
   const total = verdicts.length;
-  const breaching = [...byClass].filter(([k]) => BREACHING_CLASSES.has(k))
-    .reduce((a, [, n]) => a + n, 0);
+  const conflicts = byClass.get("CONFLICT") ?? 0;
+  // THE BREACH IS TRUE DISAGREEMENTS ONLY. `needsChecklist` is reported beside
+  // it as an acquisition number, never added to it.
+  const breaching = byConflictKind.get("TRUE-DISAGREEMENT") ?? 0;
+  const needsChecklist = byConflictKind.get("NEEDS-CHECKLIST") ?? 0;
+  const parserArtifact = byConflictKind.get("PARSER-ARTIFACT") ?? 0;
+  const sorted = (m) => Object.fromEntries([...m].sort((a, b) => b[1] - a[1]));
+
   return {
     total,
-    byClass: Object.fromEntries([...byClass].sort((a, b) => b[1] - a[1])),
+    byClass: sorted(byClass),
+    conflicts,
+    byConflictKind: sorted(byConflictKind),
+    byAxis: sorted(byAxis),
+    byReason: sorted(byReason),
+    needsChecklistAxes: sorted(needsChecklistAxes),
     breaching,
+    needsChecklist,
+    parserArtifact,
     rate: total > 0 ? breaching / total : 0,
+    // Kept distinct so the digest can show what the old number WAS and why it
+    // moved — a threshold that silently starts measuring something else is
+    // indistinguishable from a corpus that improved overnight.
+    allConflictRate: total > 0 ? conflicts / total : 0,
+    needsChecklistRate: total > 0 ? needsChecklist / total : 0,
   };
 }
 
@@ -897,8 +1040,10 @@ module.exports = {
   checkDeployHealth, REPRICE_JOB_NAME,
   // I8
   checkSourceFreshness, DEFAULT_STALENESS_HOURS, DEFAULT_EXEMPT_BELOW_ROWS,
+  CANARY_MONITOR_SOURCES,
   // I9
   classifyStoredRow, rederivationRates, BREACHING_CLASSES,
+  conflictKind, axisSignature, reasonCodes, NEEDS_CHECKLIST_REASON,
   // I10
   checkPricedOnUnbackedIdentity,
   // thresholds
