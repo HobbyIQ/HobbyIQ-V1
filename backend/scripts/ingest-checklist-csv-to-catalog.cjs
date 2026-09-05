@@ -348,6 +348,18 @@ async function main() {
             parallel: r.parallel || "Base",
             isAuto: r.isAuto === "true",
             printRun: r.printRun ? Number(r.printRun) : null,
+            // CF-AUTHORITATIVE-SETKEY. A published checklist IS the ground
+            // truth for which product a card belongs to, so the cardNumber-
+            // prefix repair meant for untrusted VENDOR text must not fire on
+            // it. Without this flag the slug took the override (`bowman` +
+            // CPA- -> `bowman-chrome`) while the doc below kept writing
+            // `setKey: product.setKey` -- and the row landed filed at one
+            // product and labelled with another. Census 2026-09-05: 19,867
+            // rows on bowman-chrome, 16,822 on bowman-paper, 208 on sapphire,
+            // still minting ~4,700/week. It also collapses 2026 Bowman CPA-AG
+            // (Adrian Gil) onto 2026 Bowman Chrome CPA-AG (Angeibel Gomez),
+            // which is the merge the flag exists to prevent.
+            authoritativeSetKey: true,
           });
           if (!slug || !slug.startsWith("hiq:")) { skippedRow++; return; }
           if (!APPLY) { written++; if (r.isAuto === "true") signed++; return; }
@@ -420,6 +432,11 @@ async function main() {
               isAuto: r.isAuto === "true",
               printRun: r.printRun ? Number(r.printRun) : null,
               subsetName: product.subsetName, subsetInId: true,
+              // CF-AUTHORITATIVE-SETKEY, as above -- the subset re-slug must
+              // land on the same product the plain slug did, or disambiguating
+              // a subset would move the card to another product as a side
+              // effect.
+              authoritativeSetKey: true,
             });
             // MOVE THE INCUMBENT TOO. Leaving it on the plain id leaves one of
             // the two cards at an address the other one also answers to.
@@ -430,6 +447,10 @@ async function main() {
               isAuto: known.isAuto === true,
               printRun: typeof known.printRun === "number" ? known.printRun : null,
               subsetName: known.subsetName, subsetInId: true,
+              // CF-AUTHORITATIVE-SETKEY. The incumbent is a catalog row this
+              // same checklist lane minted; recomputing its address under a
+              // different rule would move it to a third product.
+              authoritativeSetKey: true,
             });
             if (incumbentSlug !== slugForWrite) {
               await upsertCatalogEntry({

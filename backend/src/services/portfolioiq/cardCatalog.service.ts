@@ -32,6 +32,7 @@ import { computeHobbyIqCardId, parseHobbyIqCardId } from "./hobbyIqCardId.servic
 import { authorityRank, catalogAuthorityOf } from "../catalog/catalogAuthority.service.js";
 import { buildSearchText, buildSearchTokens } from "./searchIndexing.service.js";
 import { canonicalCardName } from "../catalog/canonicalCardName.js";
+import { checkSetKeyFieldMatchesIdStem } from "../catalog/setKeyFieldInvariant.js";
 
 export interface CardCatalogEntry {
   id: string;                        // hobbyiqCardId slug (also the doc id)
@@ -393,6 +394,28 @@ export async function upsertCatalogEntry(
 ): Promise<CardCatalogEntry | null> {
   const c = await getContainer();
   if (!c) return null;
+  // CF-A-ROWS-SETKEY-FIELD-IS-ITS-ID-STEM (Drew, 2026-09-05). THE write choke
+  // point: every card_catalog row -- minted by deriveCatalogEntry, hand-rolled
+  // by a checklist ingest, or seeded by ensureCatalogRow -- arrives here, so
+  // this is the one place the two halves of a key can be held together.
+  //
+  // The row is REFUSED, never silently repaired: whether the id or the field
+  // is the wrong half depends on whether the caller holds a checklist, and
+  // only the caller knows that. See setKeyFieldInvariant for why the test is
+  // directional rather than an equality.
+  const violation = checkSetKeyFieldMatchesIdStem(entry as { id?: unknown; setKey?: unknown });
+  if (violation) {
+    console.warn(JSON.stringify({
+      event: "card_catalog_write_refused_setkey_field_drift",
+      source: "cardCatalog.service",
+      reason: violation.reason,
+      slug: violation.id,
+      field: violation.field,
+      stem: violation.stem,
+      rowSource: (entry as { source?: unknown }).source ?? null,
+    }));
+    return null;
+  }
   const now = new Date().toISOString();
   // CF-DO-NOT-LOOK-TWICE (Drew, 2026-08-26). getCatalogEntry point-reads and,
   // on a miss, falls back to a CROSS-PARTITION "SELECT TOP 1 * WHERE c.id".
