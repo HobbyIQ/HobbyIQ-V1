@@ -44,6 +44,12 @@ import { classifyTcg } from "./tcgVertical.service.js";
 import { canonicalVariationName, readVariationFromTitle, type VariationMarker } from "../catalog/variationVocabulary.js";
 import { checklistSaysAuto, type ChecklistAutoResolver } from "../catalog/checklistAutoLookup.js";
 import { POKEMON_SET_ALIASES } from "../catalog/pokemonSetAliases.js";
+import {
+  POKEMON_EN_SET_CODES,
+  POKEMON_PROMO_SET_CODES,
+  POKEMON_JA_SET_CODES,
+  AMBIGUOUS_MARKET_CODES,
+} from "../catalog/pokemonSetCodes.js";
 import { slugify } from "./hobbyIqCardId.service.js";
 
 /** TCG `POS/TOTAL` card number, e.g. "008/132". Position CAN exceed the total
@@ -2034,6 +2040,122 @@ const POKEMON_ALIASES_LONGEST_FIRST: ReadonlyArray<readonly [string, string]> = 
     .map(([alias, key]) => Object.freeze([alias, key]) as readonly [string, string]),
 );
 
+/** CF-THE-SET-CODE-IS-THE-KEY (2026-09-05).
+ *
+ *  Sellers write the set CODE at least as often as the set NAME, and the name
+ *  table cannot see a code. The unknown-setKey census (#1796) measured the
+ *  Pokemon half of the ~500k "needs vocabulary" bucket and it is overwhelmingly
+ *  promo and code spellings -- `mep en-me black star` (2,877 rows),
+ *  `sv black star promos` (1,884), `swsh black star promo` (1,631),
+ *  `sm black star promo` (1,483), `svp en-sv black star` (1,216). Every one of
+ *  those is a real tcgdex set id that no alias in POKEMON_SET_ALIASES spells.
+ *
+ *  THE CODE IS ONLY READ WHERE IT CANNOT BE A CARD NUMBER. That is the whole
+ *  risk, and three rules contain it:
+ *
+ *  1. A code is matched on SEGMENT boundaries of the slugified title, never as
+ *     a substring, so `sv08-5` inside a serial cannot claim a set.
+ *  2. A code of three characters or fewer is refused unless the title also
+ *     carries the word "promo" (which is what `svp`/`smp`/`mep` mean). 146 of
+ *     the 378 codes are <=3 chars and several are ordinary English words in a
+ *     card title -- `sp` is "Sample", `rc` is "Radiant Collection", `lc` is
+ *     "Legendary Collection". A bare `RC` in "Charizard RC 25" is a card
+ *     number far more often than it is a set, and a wrong key that passes the
+ *     slug guard is worse than no key (CF-UNKNOWN-IS-ALSO-A-GUESS).
+ *  3. The 24 AMBIGUOUS_MARKET_CODES are refused outright from a bare code.
+ *     `sm1` is "Sun & Moon" in English and "Collection Sun" in Japanese --
+ *     different products, different prints, different prices -- so the code
+ *     alone cannot say which card the sale is, and the resolver declines
+ *     rather than pool one market into the other. This is
+ *     CF-THE-JAPANESE-CODE-IS-THE-KEY applied to codes.
+ *
+ *  Promo codes are matched FIRST because they are the census's population and
+ *  because their spelling (`svp`, `mep`) is unambiguous once "promo" or "black
+ *  star" is present in the title.
+ */
+function resolvePokemonSetCodeFromTitle(hay: string, rawTitle: string): string | null {
+  const saysPromo = /\b(promo|black\s*star)\b/i.test(rawTitle);
+  const seg = (code: string): boolean => hay.includes("-" + code + "-");
+
+  // Promo codes first: they ARE the census population, and "promo"/"black
+  // star" in the title is the context that makes a 3-letter code readable.
+  if (saysPromo) {
+    for (const code of Object.keys(POKEMON_PROMO_SET_CODES)) {
+      if (seg(code)) return code;
+    }
+    // THE SPELLING SELLERS ACTUALLY USE, and it is not the promo code.
+    // tcgdex names the set `swshp`, but the census's rows say
+    // `swsh black star promo` (1,631) and `sm black star promo` (1,483) --
+    // the ERA prefix plus the words, never the code. The era prefix alone is
+    // not a set (it is a whole series), so it is only read as the promo set
+    // when "black star"/"promo" is present, which is exactly this branch.
+    //
+    // The mapping is derived from the promo table, not authored: for each
+    // promo code ending in `p`, the era is the code minus that `p`.
+    for (const code of Object.keys(POKEMON_PROMO_SET_CODES)) {
+      if (!code.endsWith("p") || code.length < 3) continue;
+      const era = code.slice(0, -1);
+      // `-swsh-` in "2022 Pokemon SWSH Black Star Promo". Segment-matched, so
+      // a card number "SWSH270" (one token, no hyphen) cannot claim it.
+      if (era.length >= 2 && seg(era)) return code;
+    }
+  }
+  // Then the full English vocabulary, longest code first so `sv08-5` is not
+  // shadowed by `sv08` -- the same product-family rule the alias table follows.
+  for (const code of EN_CODES_LONGEST_FIRST) {
+    if (AMBIGUOUS_MARKET_CODES.has(code)) continue;
+    if (code.length <= 3 && !saysPromo) continue;
+    if (seg(code)) return code;
+  }
+  return null;
+}
+
+/** The English codes, longest first, so a specialized set is never shadowed by
+ *  the flagship whose code is its prefix (`sv08-5` vs `sv08`). */
+const EN_CODES_LONGEST_FIRST: readonly string[] = Object.freeze(
+  [...Object.keys(POKEMON_EN_SET_CODES), ...Object.keys(POKEMON_PROMO_SET_CODES)]
+    .sort((a, b) => b.length - a.length),
+);
+
+/** The Japanese codes, longest first, for the same reason. */
+const JA_CODES_LONGEST_FIRST: readonly string[] = Object.freeze(
+  Object.keys(POKEMON_JA_SET_CODES).sort((a, b) => b.length - a.length),
+);
+
+/** CF-THE-SET-CODE-IS-THE-KEY, the Japanese half (2026-09-05).
+ *
+ *  The census's Japanese rows spell the code inside a hyphenated phrase --
+ *  `japanese m5-abyss eye special` (1,661 rows), `japanese m3-nullifying zero
+ *  art` (1,780), `japanese m2a-mega dream ex` (1,142). The code is the first
+ *  token and the romanized set name follows it, so a segment match on the
+ *  slugified title finds it.
+ *
+ *  ONLY REACHED FROM A TITLE THAT SAYS IT IS JAPANESE, and only over the
+ *  Japanese-only code table -- the 24 shared ids are absent from that table by
+ *  construction (see pokemonSetCodes.ts), so this can never answer with a code
+ *  an English set owns. That is the negative CF-THE-JAPANESE-CODE-IS-THE-KEY
+ *  pins for `swsh12`: a Japanese reading must never drag an English product
+ *  onto a Japanese key, nor the reverse.
+ */
+export function resolveJapanesePokemonSetCodeFromTitle(title: string): string | null {
+  const t = String(title ?? "");
+  if (!/\b(pokemon|pok[eé]?mon|pok\s?mon)\b/i.test(t)) return null;
+  if (!/\b(japanese|jpn)\b/i.test(t)) return null;
+  const hay = "-" + slugify(t.replace(/\b(19|20)\d{2}\b/g, " ")) + "-";
+  if (hay === "--") return null;
+  for (const code of JA_CODES_LONGEST_FIRST) {
+    // Three-character Japanese codes (`s8b`, `sm1`) are as collidable as the
+    // English ones and there is no "promo" context to license them here, so
+    // the floor is 4 characters with one exception: a code that is followed by
+    // a hyphen in the ORIGINAL title (`m5-abyss`) was written as a set code by
+    // the seller, which is exactly the census's shape.
+    const writtenAsCode = new RegExp(`\\b${code}-[a-z]`, "i").test(t);
+    if (code.length <= 3 && !writtenAsCode) continue;
+    if (hay.includes("-" + code + "-")) return code;
+  }
+  return null;
+}
+
 export function resolveEnglishPokemonSetFromTitle(title: string): string | null {
   const t = String(title ?? "");
   if (!/\b(pokemon|pok[eé]?mon|pok\s?mon)\b/i.test(t)) return null;
@@ -2044,10 +2166,13 @@ export function resolveEnglishPokemonSetFromTitle(title: string): string | null 
     .replace(/pok[eé]?mon/gi, " ");
   const hay = "-" + slugify(cleaned) + "-";
   if (hay === "--") return null;
+  // The NAME answers first: it is the more specific signal, and every name
+  // alias was already ruled. The code is the fallback for the titles the name
+  // table cannot see, which is the census population.
   for (const [alias, key] of POKEMON_ALIASES_LONGEST_FIRST) {
     if (hay.includes("-" + alias + "-")) return key;
   }
-  return null;
+  return resolvePokemonSetCodeFromTitle(hay, t);
 }
 
 export function inferSetKeyFromTitle(title: string, cardNumber?: string | null): string {
@@ -2346,6 +2471,16 @@ export function inferSetKeyFromTitle(title: string, cardNumber?: string | null):
     // owns that vocabulary.
     const en = resolveEnglishPokemonSetFromTitle(raw);
     if (en) return en;
+    // CF-THE-SET-CODE-IS-THE-KEY, the Japanese half (2026-09-05). The note
+    // above is still right that the English NAME vocabulary must never read a
+    // Japanese title -- `151` is sv03-5 in English and sv2a in Japanese. But
+    // "Unknown" was not the only alternative: a Japanese title that spells its
+    // own set CODE (`Japanese M5-Abyss Eye`, `Japanese M2a-Mega Dream ex` --
+    // 1,661 and 1,142 census rows) names its product unambiguously, and the
+    // Japanese-only code table cannot answer with a code an English set owns
+    // because the 24 shared ids are absent from it by construction.
+    const ja = resolveJapanesePokemonSetCodeFromTitle(raw);
+    if (ja) return ja;
     return "Unknown";
   }
   // CF-BRANDS-BEFORE-THE-FALLBACK (Drew, 2026-08-16: "do it").
