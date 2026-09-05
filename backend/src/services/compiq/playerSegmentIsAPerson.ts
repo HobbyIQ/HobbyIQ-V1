@@ -387,6 +387,66 @@ export interface PlayerSegmentContext {
   /** The checklist's player for this (year, setKey, cardNumber), when one
    *  exists. The checklist is the authority and this wins outright. */
   checklistPlayer?: string | null;
+  /** CF-A-CATALOG-TITLE-NAMES-NO-PLAYER: the title this residue came from is a
+   *  vendor's PRODUCT-catalog title, which names a card by product and never by
+   *  person. The residue is therefore product text and must not be bounded into
+   *  a name. Set by titleNamesNoPlayer(); see that function for the measurement. */
+  titleNamesNoPlayer?: boolean;
+}
+
+/**
+ * CF-A-CATALOG-TITLE-NAMES-NO-PLAYER (measured 2026-09-05).
+ *
+ * CardHedge publishes a PRODUCT-CATALOG title, not a seller's listing:
+ *
+ *     "1966 Topps Rub-Offs Baseball #NNO Base"
+ *     "1947 Tip-Top Bread Baseball #NNO Base"
+ *     "1923 V100 Willard's Chocolate Baseball #NNO Base"
+ *      ^^^^ ^^^^^^^^^^^^^^^^^^^^^^^ ^^^^^^^^ ^^^^ ^^^^
+ *      year   product               sport    num  variant
+ *
+ * There is NO PERSON IN IT. The row's player arrives in the vendor's own
+ * `playerName` field, and it is good data -- Honus Wagner, Roberto Clemente,
+ * Willie Mays. But parseCardQuery derives the player SUBTRACTIVELY, so on a
+ * title with no person the residue is a fragment of the PRODUCT NAME, and that
+ * fragment is then promoted into a human name: "Rub-offs", "Tip-top Bread",
+ * "Willard's Chocolate", "Connie Mack's".
+ *
+ * That promotion does real damage twice over, and both were measured read-only
+ * against prod on 2026-09-05 over a 30,000-row sample of the `player-` pool:
+ *
+ *   1. IT REFUSES GOOD ROWS. playerTheTitleAllows compares the vendor's player
+ *      against the title's. A product fragment never matches a person, so the
+ *      pair is `irreconcilable` and deriveHobbyIqSlug returns NO SLUG -- 478 of
+ *      829 catalog-shaped rows in the sample. These are exactly the genuinely
+ *      unnumbered cards (`#NNO`) that CF-PLAYER-IS-THE-NUMBER exists to key,
+ *      and they are the population it locks out.
+ *   2. WHERE IT DID NOT REFUSE, IT COLLAPSED POOLS. The stored rows show the
+ *      shape before the guard existed: 31 different players -- Roseboro,
+ *      Monbouquette, Robinson, Talbot -- share the single slug
+ *      `hiq:baseball:1966:topps:player-rub-offs:base:no-auto`, and 24 share
+ *      `player-stand-up`. One pool, many cards: the 395-players-one-pool
+ *      collapse CF-PLAYER-IS-THE-NUMBER was written to END, rebuilt out of the
+ *      product name instead of the literal `nno`.
+ *
+ * THE DISCRIMINATOR IS THE BARE SPORT WORD BEFORE THE NUMBER. A person selling
+ * a card writes the player's name; they do not write "... Baseball #NNO Base".
+ * The vendor's template does, every time, and the sport token sitting alone
+ * immediately before the card number is what marks the end of the product name.
+ * That is a fact about the TITLE'S SHAPE, not a guess about its content -- the
+ * same kind of fact `titleStatesCardNumber` is.
+ *
+ * NARROW ON PURPOSE. This returns true only for the full template. A seller
+ * title that merely contains a sport word ("2024 Topps Baseball Paul Skenes
+ * #USC88") does not match, because the sport is not immediately before the
+ * number. Pinned by the corpus in playerSegmentCatalogTitle.test.ts, whose
+ * control half is real seller titles that MUST keep their players.
+ */
+const CATALOG_TITLE_RE =
+  /\b(?:baseball|basketball|football|hockey|soccer|wrestling|racing|golf|tennis|boxing|mma|multi-?sport|non-?sport)\s+#/i;
+
+export function titleNamesNoPlayer(title: string | null | undefined): boolean {
+  return CATALOG_TITLE_RE.test(String(title ?? ""));
 }
 
 /**
@@ -409,6 +469,18 @@ export function playerSegmentIsAPerson(
   // amount of title parsing improves on it.
   const fromChecklist = String(ctx.checklistPlayer ?? "").trim();
   if (fromChecklist) return { player: fromChecklist, reason: "checklist", stripped: [] };
+
+  // CF-A-CATALOG-TITLE-NAMES-NO-PLAYER. The title is a product-catalog entry,
+  // so the residue is product text however name-shaped it reads. Refuse it --
+  // the vendor's own playerName field is where this row's person lives, and
+  // playerTheTitleAllows takes `vendor-only` from here instead of calling a
+  // good player irreconcilable with a fragment of the product's name.
+  //
+  // This runs AFTER the checklist branch on purpose: a checklist player is the
+  // authority and is not a guess about the title at all.
+  if (ctx.titleNamesNoPlayer === true) {
+    return { player: null, reason: "refused-not-a-person", stripped: [] };
+  }
 
   // (4) MULTI-PLAYER CARDS survive intact. Each side is bounded on its own and
   // the separator is preserved, so a three-player card stays one card.
