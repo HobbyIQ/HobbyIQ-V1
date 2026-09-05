@@ -91,6 +91,16 @@ struct APIService {
         }
     }
 
+    /// CF-PORTFOLIO-BREAKDOWN (2026-08-17). Allocation, PortfolioIQ Score, risk,
+    /// concentration, quality tiers and recommendations for the signed-in user.
+    ///
+    /// The whole analysis is computed SERVER-SIDE. iOS deliberately holds no
+    /// copy of the scoring logic — the web dashboard decodes this same payload,
+    /// and two implementations of one rule drift.
+    func fetchPortfolioBreakdown() async throws -> PortfolioBreakdownResponse {
+        try await get(path: "/api/portfolioiq/breakdown", responseType: PortfolioBreakdownResponse.self)
+    }
+
     func fetchPlayerStats(playerName: String) async throws -> PlayerStatsResponse {
         let encoded = playerName.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? playerName
         return try await get(path: "/api/playeriq/\(encoded)/stats", responseType: PlayerStatsResponse.self)
