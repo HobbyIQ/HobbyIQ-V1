@@ -77,6 +77,10 @@
 import { pathToFileURL } from "node:url";
 import path from "node:path";
 import { recoverHoldingFields } from "../../src/services/portfolioiq/holdingFieldRecovery.service.js";
+// GATE R2's authority test — the SAME one the catalog uses to decide which row
+// may adjudicate a card. A ruling is not licence to pin a user's holding to a
+// row we derived from our own sales.
+import { canAdjudicate, catalogAuthorityOf } from "../../src/services/catalog/catalogAuthority.service.js";
 
 // BACKFILL_APPLY is what the runner exports; APPLY is what a hand run types.
 // Reading BOTH is deliberate (feedback_runner_exports_backfill_apply): a
@@ -134,16 +138,163 @@ const INCLUDE_PARKED = process.env.INCLUDE_PARKED === "true";
  * via BACKFILL_APPLY (or APPLY), and every write is verified by reading the
  * document back.
  */
+/**
+ * MODE=rule — THE HUMAN SAYS WHICH CARD IT IS (Drew, 2026-09-05).
+ *
+ * MODE=rederive DERIVES an identity and, since #1811, refuses to write one a
+ * human already ruled on. That is the right default and it leaves a gap with
+ * no exit: when the derivation is RIGHT and the standing ruling is stale,
+ * nothing in the product can say so. Both of #1811's canaries are exactly
+ * that shape —
+ *
+ *   6f4f079b  Drew ruled it `...:d24:base:no-auto` on 2026-08-30, before
+ *             #1787 ingested the row that made the real answer reachable.
+ *             Field recovery then proved the destination at exact/0.98 and
+ *             correctly declined to overwrite him.
+ *   277b05a3  stores no cardNumber at all, so no derivation can reach its
+ *             row: `inferSetKeyFromTitle` reads its description as "Fleer
+ *             Metal", and the only witness naming `metal-universe` is the
+ *             vendor suggestion that mispriced it. A machine cannot get here.
+ *             A person who owns the card can.
+ *
+ * SO THIS MODE IS NOT A BETTER DERIVATION — IT IS A DIFFERENT KIND OF CLAIM.
+ * The slug is not computed, it is DICTATED, one holding at a time, by name:
+ *
+ *     MODE=rule titles=6f4f079b=hiq:baseball:1999:...:num-1500,277b05a3=hiq:...
+ *
+ * WHAT IT STILL REFUSES, because a ruling is not a licence to invent a card:
+ *
+ *   THE ROW MUST EXIST. Read back by id, exactly as GATE 1 does. A ruling
+ *     onto a slug no catalog row carries is refused BY NAME — it would mint
+ *     an identity from a typo and price a real card off an empty pool.
+ *   THE ROW MUST BE CHECKLIST-BACKED. `canAdjudicate` — the same authority
+ *     test the catalog uses to decide which row may adjudicate a card. A
+ *     ruling onto a `holding-seeded-*`, `sales-attested` or vendor row would
+ *     pin a user's card to a row derived from our own sales, which is the
+ *     self-comp loop the pricing doctrine exists to break.
+ *   IT NEVER TOUCHES A FIELD THE USER SET. Blank fields are filled FROM the
+ *     ruled row (that is the ruling's whole content); a field the holding
+ *     already states is left alone and reported, because the ruling names the
+ *     CARD and the user's own typing is still the better witness for the rest.
+ *
+ * AND THE ASYMMETRY THAT MAKES IT SAFE: a ruling may override a PRIOR RULING,
+ * and only here. MODE=rederive stays report-only on ruled rows forever. A
+ * human overriding a human is a decision; a script overriding a human is the
+ * failure #1811 built the gate against, and that gate is untouched.
+ */
 const MODE = String(process.env.MODE ?? "").trim().toLowerCase();
 const REDERIVE = MODE === "rederive";
+const RULE = MODE === "rule";
+
+/** The ruling this mode stamps. Dated, because a ruling is an event: the
+ *  2026-08-30 ruling on 6f4f079b was correct for the catalog that existed
+ *  then, and is superseded rather than erased. */
+const RULING_ID = String(process.env.RULING_ID ?? "ruling:Drew:2026-09-05").trim();
+
 /** The runner's `titles` input, reused as the holding-id list (workflow_dispatch
- *  is at its input cap; see the backfill-runner comment for this script). */
+ *  is at its input cap; see the backfill-runner comment for this script).
+ *  In MODE=rule each entry is `id8=slug` instead of a bare id. */
 const HOLDING_IDS = String(process.env.HOLDING_IDS ?? process.env.BCP_TITLES ?? process.env.TITLES ?? "")
   .split(",").map((s) => s.trim()).filter(Boolean);
 const USER_ID = String(process.env.USER_ID ?? "").trim();
 
 /** #1179's exact reviewReason. We clear only the flag this prefix identifies. */
 const UNIDENTIFIED_REVIEW_PREFIX = "We could not identify this card";
+
+/** One `id8=slug` pair from the `titles` input. */
+export interface RulingPair { hid: string; slug: string; }
+
+/**
+ * Parse MODE=rule's `titles` input: `id8=slug` pairs, comma-separated.
+ *
+ * EVERY MALFORMED ENTRY IS A REFUSAL, NOT A SKIP. A ruling list is typed by
+ * hand into a dispatch box, and the failure that matters is the one that looks
+ * like it worked: an entry that silently drops leaves the operator believing a
+ * card was ruled when it was not, and the card keeps its wrong price.
+ * `feedback_scope_formats_are_per_script` is this exact shape — `years=2018-2019`
+ * became ALL in a comma-list script. So this throws on the first bad entry and
+ * names it.
+ *
+ * A bare id with no `=` is rejected too: in MODE=rederive that spelling means
+ * "derive this holding", and accepting it here would read a rederive scope as
+ * a ruling with an empty destination.
+ *
+ * Exported so a pin can drive it alone.
+ */
+export function parseRulingPairs(entries: string[]): RulingPair[] {
+  const out: RulingPair[] = [];
+  const seen = new Set<string>();
+  for (const raw of entries) {
+    const entry = String(raw ?? "").trim();
+    if (!entry) continue;
+    const eq = entry.indexOf("=");
+    if (eq < 0) {
+      throw new Error(
+        `MODE=rule needs \`id8=slug\` pairs; got a bare id ${JSON.stringify(entry)}. `
+        + "A bare id is MODE=rederive's spelling — refusing rather than ruling a holding onto nothing.");
+    }
+    const hid = entry.slice(0, eq).trim();
+    const slug = entry.slice(eq + 1).trim();
+    if (!hid) throw new Error(`MODE=rule entry ${JSON.stringify(entry)} has no holding id before the '='.`);
+    if (!slug) throw new Error(`MODE=rule entry ${JSON.stringify(entry)} names no destination slug after the '='.`);
+    // The slug must LOOK like one of ours. A ruling is a write, and a
+    // destination that is not a hiq: id cannot be a catalog row by id.
+    if (!slug.startsWith("hiq:")) {
+      throw new Error(
+        `MODE=rule destination ${JSON.stringify(slug)} for ${hid} is not a hiq: slug. `
+        + "Rulings name a canonical catalog id, never a vendor id or a title.");
+    }
+    if (seen.has(hid)) {
+      throw new Error(`MODE=rule names holding ${hid} twice. One card, one ruling — refusing an ambiguous list.`);
+    }
+    seen.add(hid);
+    out.push({ hid, slug });
+  }
+  if (!out.length) {
+    throw new Error("MODE=rule was given no rulings. Pass `titles=id8=slug,...` — an empty ruling list is a typo, not a no-op.");
+  }
+  return out;
+}
+
+/**
+ * Which identity fields does a ruled catalog row dictate, and which does it
+ * leave to the holding?
+ *
+ * THE RULING NAMES THE CARD. Everything that follows from WHICH CARD IT IS —
+ * the set, the number, the parallel, the print run — comes from the row, and
+ * only into fields the holding leaves BLANK. A field the user already stated
+ * is left exactly as it is and reported: the ruling settles the identity, and
+ * on everything else the person who typed it is still the better witness.
+ *
+ * `playerName` and every grade field are deliberately absent from this map.
+ * Drew's ruling says so explicitly ("playerName unchanged, grade fields
+ * unchanged"), and the reason outlives the instruction: the row's player is a
+ * transcription and the holding's is what the owner calls their own card, and
+ * the grade belongs to the slab in hand, not to the checklist.
+ *
+ * Exported so a pin can drive it alone.
+ */
+export function fieldsFromRuledRow(
+  holding: Record<string, unknown>,
+  row: { setName?: string | null; cardNumber?: string | null; parallel?: string | null; printRun?: number | string | null },
+): Array<{ field: string; value: string | number; from: "ruled-row" }> {
+  const blank = (v: unknown) => v === null || v === undefined || String(v).trim() === "";
+  const fills: Array<{ field: string; value: string | number; from: "ruled-row" }> = [];
+  if (blank(holding.setName) && !blank(row.setName)) {
+    fills.push({ field: "setName", value: String(row.setName).trim(), from: "ruled-row" });
+  }
+  if (blank(holding.cardNumber) && !blank(row.cardNumber)) {
+    fills.push({ field: "cardNumber", value: String(row.cardNumber).trim(), from: "ruled-row" });
+  }
+  if (blank(holding.parallel) && !blank(row.parallel)) {
+    fills.push({ field: "parallel", value: String(row.parallel).trim(), from: "ruled-row" });
+  }
+  const pr = Number(row.printRun);
+  if (typeof holding.printRun !== "number" && Number.isFinite(pr) && pr > 0) {
+    fills.push({ field: "printRun", value: pr, from: "ruled-row" });
+  }
+  return fills;
+}
 
 interface Pin {
   hid: string;
@@ -183,6 +334,16 @@ async function main(): Promise<void> {
   // of the sweep below: its precondition is the opposite one (identity
   // PRESENT, not absent), so it branches here rather than threading a flag
   // through a loop whose every guard would need inverting.
+  // MODE=rule is a THIRD pass, and the only one that does not ask the matcher
+  // a question at all: the slug is dictated, so there is nothing to derive.
+  // It shares the catalog read-back and the etag-guarded verified write with
+  // `rederive` and nothing else.
+  if (RULE) {
+    const catalogReadOnly = db.container("card_catalog");
+    await rule({ docs: resources as any[], container: c, catalog: catalogReadOnly });
+    return;
+  }
+
   if (REDERIVE) {
     // Bound to a name, and READ-ONLY. This script never writes card_catalog —
     // it queries it to prove a destination slug exists (see GATE 1 in
@@ -859,6 +1020,284 @@ async function rederive(
     if (wrong) process.exit(5);
   }
   if (conflicts || failed) process.exit(4);
+}
+
+// ── MODE=rule ───────────────────────────────────────────────────────────────
+
+interface RuleVerdict {
+  hid: string;
+  userId: string;
+  docId: string;
+  from: string | null;
+  to: string;
+  verdict: "RULE" | "AGREE" | "REFUSED";
+  reason: string;
+  backedBy?: string | null;
+  /** Blank identity fields the ruled row dictates. */
+  fills?: Array<{ field: string; value: string | number; from: string }>;
+  /** Fields the holding already states, left alone and reported. */
+  leftAlone?: Array<{ field: string; value: unknown }>;
+  /** The ruling this supersedes, when there was one. */
+  supersedes?: string | null;
+}
+
+/**
+ * Apply named rulings. The slug comes from the operator, not the matcher; the
+ * catalog is consulted only to prove the destination is real and adjudicable.
+ */
+async function rule(
+  { docs, container, catalog }: { docs: any[]; container: any; catalog: any },
+): Promise<void> {
+  let pairs: RulingPair[];
+  try {
+    pairs = parseRulingPairs(HOLDING_IDS);
+  } catch (e: any) {
+    console.error(`FATAL: ${e?.message}`);
+    process.exit(2);
+  }
+
+  console.log(`[scope]  ${pairs.length} ruling(s): ${pairs.map((p) => `${p.hid} -> ${p.slug}`).join("; ")}`);
+  console.log(`[ruling] ${RULING_ID}`);
+  console.log(`[mode]   rule — ${APPLY ? "APPLY, WILL WRITE" : "report only"}\n`);
+
+  if (!docs.length) {
+    console.error("FATAL: zero portfolio docs returned. The pass proved nothing.");
+    process.exit(2);
+  }
+
+  // Locate every ruled holding FIRST, and refuse the whole run if one is
+  // missing. A ruling list is a set of decisions about specific cards; running
+  // three of four silently would leave the operator believing all four moved.
+  const located = new Map<string, { docId: string; userId: string; hid: string; h: any; slug: string }>();
+  let scanned = 0;
+  for (const doc of docs) {
+    for (const [hid, h] of Object.entries<any>(doc.holdings || {})) {
+      if (!h) continue;
+      scanned++;
+      for (const p of pairs) {
+        if (hid !== p.hid && !hid.startsWith(p.hid)) continue;
+        if (located.has(p.hid)) {
+          console.error(`FATAL: ruling id ${p.hid} matches more than one holding (${located.get(p.hid)!.hid}, ${hid}).\n`
+            + "An id prefix that names two cards cannot rule either — pass the full holding id.");
+          process.exit(2);
+        }
+        located.set(p.hid, { docId: doc.id, userId: doc.userId, hid, h, slug: p.slug });
+      }
+    }
+  }
+  if (!scanned) {
+    console.error("FATAL: portfolio docs exist but contain zero holdings. The pass proved nothing.");
+    process.exit(2);
+  }
+  const missing = pairs.filter((p) => !located.has(p.hid));
+  if (missing.length) {
+    console.error(`FATAL: ${missing.length} ruled holding(s) matched NOTHING out of ${scanned} scanned: `
+      + `${missing.map((m) => m.hid).join(", ")}.\n`
+      + "A ruling that names no card is a typo, not an empty result — refusing the whole list so a\n"
+      + "partial run cannot read as a complete one.");
+    process.exit(2);
+  }
+  console.log(`holdings scanned: ${scanned}   ruled: ${located.size}\n`);
+
+  const verdicts: RuleVerdict[] = [];
+
+  for (const p of pairs) {
+    const t = located.get(p.hid)!;
+    const h = t.h;
+    const from = h.hobbyiqCardId ?? h.cardId ?? null;
+    const label = `${String(h.playerName ?? "?").slice(0, 22).padEnd(22)} ${String(h.cardYear ?? "?")} #${String(h.cardNumber ?? "?").padEnd(8)}`;
+    const push = (v: Omit<RuleVerdict, "hid" | "userId" | "docId" | "from" | "to">) =>
+      verdicts.push({ hid: t.hid, userId: t.userId, docId: t.docId, from, to: t.slug, ...v });
+
+    // GATE R1 — THE ROW MUST EXIST. Read by id, the way the catalog is keyed,
+    // so a near neighbour cannot satisfy it. A ruling onto a slug no row
+    // carries would mint an identity from a typo.
+    const { resources: rows } = await catalog.items
+      .query({
+        query: "SELECT c.id, c.source, c.setName, c.cardNumber, c.parallel, c.printRun, c.playerName FROM c WHERE c.id = @id",
+        parameters: [{ name: "@id", value: t.slug }],
+      })
+      .fetchAll();
+    const row = rows?.[0];
+    if (!row) {
+      push({ verdict: "REFUSED", backedBy: null,
+        reason: `no catalog row carries ${t.slug} — a ruling never mints a card` });
+      console.log(`  REFUSED    ${label}  -> ${t.slug}\n             no catalog row carries that id`);
+      continue;
+    }
+
+    // GATE R2 — THE ROW MUST BE CHECKLIST-BACKED. The same authority test the
+    // catalog uses to decide which row may adjudicate a card. Ruling onto a
+    // self-seeded or sales-derived row would pin a user's card to a row built
+    // from our own sales — the self-comp loop the pricing doctrine breaks.
+    const source = String(row.source ?? "unknown");
+    if (!canAdjudicate(source)) {
+      push({ verdict: "REFUSED", backedBy: source,
+        reason: `${t.slug} is backed by \`${source}\` (${catalogAuthorityOf(source)}), not a checklist — a ruling may only name a checklist-backed card` });
+      console.log(`  REFUSED    ${label}  -> ${t.slug}\n             backed by \`${source}\` (${catalogAuthorityOf(source)}), not a checklist`);
+      continue;
+    }
+
+    const priorRuling = String(h.identityResolvedBy ?? "").trim() || null;
+    const fills = fieldsFromRuledRow(h, row);
+    const leftAlone = (["setName", "cardNumber", "parallel", "printRun"] as const)
+      .filter((f) => !fills.some((x) => x.field === f))
+      .filter((f) => h[f] !== null && h[f] !== undefined && String(h[f]).trim() !== "")
+      .map((f) => ({ field: f, value: h[f] }));
+
+    if (from === t.slug) {
+      push({ verdict: "AGREE", backedBy: source, fills, leftAlone,
+        supersedes: priorRuling,
+        reason: "the holding already carries the ruled identity" });
+      console.log(`  AGREE      ${label}  ${t.slug}`);
+      continue;
+    }
+
+    push({ verdict: "RULE", backedBy: source, fills, leftAlone,
+      supersedes: priorRuling && priorRuling !== RULING_ID ? priorRuling : null,
+      reason: `ruled onto a ${source} row` });
+    console.log(`  RULE       ${label}\n             ${from}\n          -> ${t.slug}   backed by ${source}${row.setName ? ` — "${row.setName}"` : ""}`);
+    if (priorRuling && priorRuling !== RULING_ID) {
+      console.log(`             supersedes ${priorRuling}`);
+    }
+    if (fills.length) {
+      console.log(`             fills blanks: ${fills.map((f) => `${f.field}=${JSON.stringify(f.value)}`).join(", ")}`);
+    }
+    if (leftAlone.length) {
+      console.log(`             leaves user-set: ${leftAlone.map((f) => `${f.field}=${JSON.stringify(f.value)}`).join(", ")}`);
+    }
+  }
+
+  const counts = verdicts.reduce<Record<string, number>>((a, v) => { a[v.verdict] = (a[v.verdict] ?? 0) + 1; return a; }, {});
+  console.log(`\nSUMMARY  ${JSON.stringify(counts)}`);
+  console.log(JSON.stringify({ event: "holding_ruling_report", mode: "rule", ruling: RULING_ID, apply: APPLY, verdicts }, null, 1));
+
+  const writable = verdicts.filter((v) => v.verdict === "RULE");
+  if (!APPLY) {
+    console.log(`\nReport only — nothing written.${writable.length ? ` Re-run with BACKFILL_APPLY=true to apply the ${writable.length} above.` : ""}`);
+    // A REFUSED ruling is an operator error, and a report that ends 0 would
+    // let a dispatch of four rulings where one was a typo read as success.
+    if (verdicts.some((v) => v.verdict === "REFUSED")) process.exit(6);
+    return;
+  }
+  if (!writable.length) {
+    console.log("\nAPPLY requested, but nothing qualified. Nothing written.");
+    if (verdicts.some((v) => v.verdict === "REFUSED")) process.exit(6);
+    return;
+  }
+
+  // ---- APPLY ---------------------------------------------------------------
+  console.log(`\n=== APPLY: ${writable.length} ruling(s) ===`);
+  let wrote = 0, skipped = 0, conflicts = 0, failed = 0;
+  const byDoc = new Map<string, RuleVerdict[]>();
+  for (const v of writable) byDoc.set(v.docId, [...(byDoc.get(v.docId) ?? []), v]);
+
+  for (const [docId, list] of byDoc) {
+    const userId = list[0].userId;
+    let doc: any, etag: string | undefined;
+    try {
+      const read = await container.item(docId, userId).read();
+      doc = read.resource; etag = (read.resource as any)?._etag;
+    } catch (e: any) {
+      failed += list.length; console.log(`  READ FAIL  ${docId}  ${e?.message}`); continue;
+    }
+    if (!doc?.holdings) { failed += list.length; console.log(`  READ FAIL  ${docId}  doc has no holdings`); continue; }
+
+    const now = new Date().toISOString();
+    let mutated = 0;
+    for (const v of list) {
+      const h = doc.holdings[v.hid];
+      if (!h) { skipped++; console.log(`  SKIP       ${v.hid}  holding vanished between passes`); continue; }
+      // Re-assert against the FRESH doc: the identity we are replacing must
+      // still be the one the report described. A ruling is a decision about a
+      // specific state, and if something moved the card in between, the person
+      // should see the new state before ruling on it.
+      const cur = h.hobbyiqCardId ?? h.cardId ?? null;
+      if (cur !== v.from) { skipped++; console.log(`  SKIP       ${v.hid}  identity changed under us (${cur})`); continue; }
+
+      h.hobbyiqCardId = v.to;
+      h.cardId = v.to;
+      h.catalogMatchSlug = v.to;
+      h.catalogMatchedBy = "ruling";
+      h.catalogMatchConfidence = 1;
+      h.lastUpdated = now;
+
+      // Fill ONLY the blanks the ruled row dictates. A field the user stated
+      // is left exactly as it is — the ruling names the card, not the typing.
+      for (const f of v.fills ?? []) (h as any)[f.field] = f.value;
+
+      // THE AUDIT TRAIL. A ruled identity says it was ruled, by whom, and what
+      // it superseded — a later pass must be able to tell this from a derived
+      // identity, and MODE=rederive's GATE 4 reads exactly this field to know
+      // it must stand down.
+      h.identityResolvedBy = RULING_ID;
+      h.identityResolvedAt = now;
+      h.identityVerified = true;
+      h.identityVerifiedAt = now;
+      h.identityVerifiedBy = { source: "checklist-backed-identity", candidateId: v.to, via: RULING_ID, verifiedAt: now };
+      h.identityRederivedFrom = v.from;
+      h.identityRederivedAt = now;
+      h.identityRederivedBy = `recheck-holding-identity MODE=rule ${RULING_ID}`;
+      h.identityRederivedBackedBy = v.backedBy ?? null;
+      if (v.fills?.length) h.identityRuledFields = v.fills;
+      if (v.supersedes) h.identityRulingSupersedes = v.supersedes;
+
+      // The stored price was computed for the OLD identity and is not ours.
+      h.predictedPrice = null;
+      h.predictedPriceUpdatedAt = null;
+      h.fairMarketValue = null;
+      if (h.needsReview === true && String(h.reviewReason ?? "").startsWith(UNIDENTIFIED_REVIEW_PREFIX)) {
+        h.needsReview = false; h.reviewReason = null;
+      }
+
+      mutated++;
+      console.log(JSON.stringify({
+        event: "holding_identity_ruled", source: "recheck-holding-identity/rule",
+        ruling: RULING_ID, userId, holdingId: v.hid, from: v.from, to: v.to,
+        backedBy: v.backedBy, fills: v.fills ?? [], supersedes: v.supersedes ?? null,
+      }));
+    }
+    if (!mutated) continue;
+
+    try {
+      await container.item(docId, userId).replace(doc, { accessCondition: { type: "IfMatch", condition: etag! } });
+      wrote += mutated;
+      console.log(`  WROTE      ${docId}  ${mutated} holding(s)`);
+    } catch (e: any) {
+      if (e?.code === 412) { conflicts += mutated; console.log(`  CONFLICT   ${docId}  doc changed under us — nothing written, re-run`); }
+      else { failed += mutated; console.log(`  WRITE FAIL ${docId}  ${e?.message}`); }
+    }
+  }
+
+  console.log(`\nAPPLY DONE  written=${wrote}  skipped=${skipped}  conflicts=${conflicts}  failed=${failed}`);
+
+  // VERIFY BY READ. feedback_green_workflow_is_not_data_flow — a green run is
+  // not a written row. Re-read every document and assert both the identity AND
+  // the filled fields landed.
+  if (wrote > 0) {
+    console.log(`\n=== RECONCILIATION: re-reading ${byDoc.size} document(s) ===`);
+    let confirmed = 0, wrong = 0;
+    for (const [docId, list] of byDoc) {
+      const read = await container.item(docId, list[0].userId).read();
+      for (const v of list) {
+        const h = (read.resource as any)?.holdings?.[v.hid];
+        const got = h?.hobbyiqCardId ?? h?.cardId ?? null;
+        const badFill = (v.fills ?? []).find((f) => String(h?.[f.field] ?? "") !== String(f.value));
+        if (got === v.to && h?.identityResolvedBy === RULING_ID && !badFill) {
+          confirmed++; console.log(`  OK         ${v.hid}  ${got}  (${RULING_ID})`);
+        } else {
+          wrong++;
+          console.log(`  MISMATCH   ${v.hid}  expected ${v.to} ruled ${RULING_ID}`
+            + `, stored ${got} ruled ${h?.identityResolvedBy ?? null}`
+            + (badFill ? `, field ${badFill.field} expected ${JSON.stringify(badFill.value)} stored ${JSON.stringify(h?.[badFill.field] ?? null)}` : ""));
+        }
+      }
+    }
+    console.log(`\nVERIFIED   confirmed=${confirmed}  mismatched=${wrong}`);
+    if (wrong) process.exit(5);
+  }
+  if (conflicts || failed) process.exit(4);
+  if (verdicts.some((v) => v.verdict === "REFUSED")) process.exit(6);
 }
 
 // Run only when EXECUTED, never when imported. `droppedSpecificityAxes` above
