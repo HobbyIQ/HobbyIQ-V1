@@ -589,6 +589,24 @@ on:
           # Chrome address. Once real Chrome sales arrive they land on top and
           # two players price as one card with no way back.
           - repair-bowman-product-refile
+          # repair-cpa-draft-refile -- #1824 stopped the MINT (the CPA- rule in
+          # CHROME_PREFIX_OVERRIDES now carries maxYear: 2022, because Bowman
+          # DRAFT began numbering its chrome prospect autos CPA- in 2023). It
+          # moved nothing already stored.
+          #
+          # Measured read-only 2026-09-05: the CATALOG is clean -- 43,273 CPA
+          # rows in 2023-2025 and only TEN are wrong, all ingest-auto-seed --
+          # because the checklist ingests pass authoritativeSetKey and never
+          # consulted the override. The SALES are not: 20,083 chrome-stem CPA
+          # sales name a player a bowman-draft checklist claims and no
+          # bowman-chrome one does.
+          #
+          # Its scope is a (year, from-key, to-key) TRIPLE, not the pair the
+          # Bowman refile takes: these rows' setKey FIELD and id STEM AGREE and
+          # are both wrong, so there is no drift to read a destination from and
+          # the destination must be NAMED. Scopes are 2023-2025; it does not
+          # overlap the Bowman refile's baseball:2026:bowman-chrome.
+          - repair-cpa-draft-refile
       apply:
         description: "Actually write (true) or dry-run only (false)"
         required: true
@@ -906,6 +924,50 @@ jobs:
             fi
           done
           echo "Predicate libs confirmed: bowman-product-refile, relocate-sold-comp, runner-shard-scope"
+
+      # CF-A-WHOLE-SOURCE-RETIRE-NEEDS-ITS-NAME, and one turn tighter than the
+      # Bowman refile's: a scope must name BOTH ends of the move. The pair
+      # grammar `sport:year:setKey` names only where to READ and lets the
+      # re-mint choose where rows land -- right when the destination comes from
+      # the row's own words, wrong here, where the row's words are exactly what
+      # the broken override overwrote. So the triple is required and the pair
+      # is refused, along with the runner's inherited `refractor` and `all`.
+      - name: The CPA draft refile names both ends of its move
+        if: ${{ inputs.script == 'repair-cpa-draft-refile' }}
+        shell: bash
+        run: |
+          SCOPE='${{ inputs.scope }}'
+          if [ -z "$SCOPE" ] || [ "$SCOPE" = "refractor" ] || [ "$SCOPE" = "all" ]; then
+            echo "::error::repair-cpa-draft-refile requires scope = a comma-separated list of moves as sport:year:fromKey>toKey. Got '$SCOPE' (the runner default 'refractor' and 'all' are refused — this lane has no whole-corpus mode)."
+            exit 1
+          fi
+          IFS=',' read -ra MOVES <<< "$SCOPE"
+          for M in "${MOVES[@]}"; do
+            M="$(echo "$M" | tr -d '[:space:]')"
+            if ! echo "$M" | grep -Eq '^[a-z0-9-]+:[0-9]{4}:[a-z0-9-]+>[a-z0-9-]+$'; then
+              echo "::error::'$M' is not a move (expected sport:year:fromKey>toKey, e.g. baseball:2025:bowman-chrome>bowman-draft; the old sport:year:setKey pair names no destination and is refused)."
+              exit 1
+            fi
+            FROM="$(echo "$M" | cut -d: -f3 | cut -d'>' -f1)"
+            TO="$(echo "$M" | cut -d'>' -f2)"
+            if [ "$FROM" = "$TO" ]; then
+              echo "::error::'$M' moves a key onto itself — a typo must not report a clean run over a scope nothing can match."
+              exit 1
+            fi
+          done
+          echo "Scope confirmed: ${#MOVES[@]} move(s)."
+
+      - name: The CPA draft refile predicate lib is present
+        if: ${{ inputs.script == 'repair-cpa-draft-refile' }}
+        shell: bash
+        run: |
+          for LIB in cross-product-refile bowman-product-refile relocate-sold-comp runner-shard-scope runner-budget; do
+            if [ ! -f "backend/scripts/lib/$LIB.cjs" ]; then
+              echo "::error::backend/scripts/lib/$LIB.cjs is missing — the lane would read the pool and have no rule to classify it with"
+              exit 1
+            fi
+          done
+          echo "Predicate libs confirmed: cross-product-refile, bowman-product-refile, relocate-sold-comp, runner-shard-scope, runner-budget"
 
       - name: Fetch COSMOS_CONNECTION_STRING from HobbyIQ3 App Service
         shell: bash
@@ -3315,6 +3377,34 @@ jobs:
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (refiled=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-bowman-product-refile -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f mode="${{ inputs.mode }}" -f limit="${{ inputs.limit }}"
+          else
+            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (refiled=${N:-0}) — done, no re-dispatch."
+          fi
+
+      - name: Self-relaunch the CPA draft refile until its slot drains
+        # CF-RELAUNCH-GATES-ON-THE-BUDGET-MARKER (#1361). The lane's own clock
+        # stops it under the runner's ceiling and prints the marker ONLY when
+        # the budget actually stopped the loop -- the string is assembled at
+        # runtime by CLOCK.stoppedAtBudget(), so it never appears in the source
+        # and a finished slot cannot manufacture one and re-dispatch forever.
+        #
+        # The refile is CONVERGENT: a moved sale now sits on the to-key, so the
+        # next run's STARTSWITH(hobbyiqCardId, from-key) no longer returns it
+        # and the relaunch resumes rather than repeating. `mode` and `scope`
+        # ride along so a sales-only or single-year dispatch continues as the
+        # lane it started as.
+        if: ${{ !cancelled() && inputs.script == 'repair-cpa-draft-refile' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        working-directory: backend
+        run: |
+          set +e
+          N=$(grep -aoE "^  REFILED to the product the checklist names +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
+          echo "refiled=${N:-0}"
+          if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
+            echo "::notice::budget hit (refiled=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-cpa-draft-refile -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f mode="${{ inputs.mode }}" -f limit="${{ inputs.limit }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (refiled=${N:-0}) — done, no re-dispatch."
           fi
