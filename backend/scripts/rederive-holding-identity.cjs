@@ -21,10 +21,26 @@
  * so cwd is forced here rather than inherited.
  *
  * Env passes straight through. The ones that matter:
- *   MODE=rederive     required -- this shim sets it if the dispatch did not,
- *                     because a dispatch of THIS script name can mean nothing
- *                     else, and the default (the unidentified sweep) is a
- *                     different pass over a different population.
+ *   MODE=rederive     the default -- this shim sets it if the dispatch did not,
+ *                     because a dispatch of THIS script name usually means the
+ *                     re-derivation pass, and the script's own default (the
+ *                     unidentified sweep) is a different pass over a different
+ *                     population. An EXPLICIT MODE is never overwritten.
+ *   MODE=rule         apply named rulings (Drew, 2026-09-05). The slug is
+ *                     DICTATED, not derived, so `titles` carries `id8=slug`
+ *                     pairs instead of bare ids:
+ *
+ *                       titles=6f4f079b=hiq:baseball:1999:upper-deck-black-diamond:d24:diamond-dominance:no-auto:num-1500,277b05a3=hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto
+ *
+ *                     A bare id in this mode is REFUSED, not skipped: that
+ *                     spelling means "derive this holding" in MODE=rederive,
+ *                     and reading a rederive scope as a ruling with an empty
+ *                     destination is the silent-partial-run failure
+ *                     (feedback_scope_formats_are_per_script). This mode is
+ *                     the ONLY one that may overwrite a prior human ruling;
+ *                     MODE=rederive stays report-only on ruled rows forever.
+ *   RULING_ID         the ruling stamped into identityResolvedBy. Defaults to
+ *                     `ruling:Drew:2026-09-05`.
  *   HOLDING_IDS       comma-separated holding ids or id prefixes. The runner
  *                     has no such input and is at its dispatch cap, so it
  *                     carries them in `titles` (exported as BCP_TITLES), which
@@ -33,7 +49,9 @@
  *   BACKFILL_APPLY    the runner's apply flag. Report-only without it.
  *
  * Scope is NOT optional: with neither HOLDING_IDS nor USER_ID the script
- * refuses (exit 2) rather than sweeping every holding in the database.
+ * refuses (exit 2) rather than sweeping every holding in the database. In
+ * MODE=rule an empty or malformed ruling list refuses the same way, and a
+ * ruling onto a missing or non-checklist row exits 6.
  */
 const { spawnSync } = require("node:child_process");
 const path = require("node:path");
