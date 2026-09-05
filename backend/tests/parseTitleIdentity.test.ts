@@ -1417,8 +1417,26 @@ describe("card number extraction rejects grades, years and relic phrases", () =>
     expect(parseListingIdentity("1972 NFLPA IRON ONS TERRY BRADSHAW PSA 9 MINT PITTSBURGH STEELERS LOW POP RARE").cardNumber).toBeNull();
   });
 
-  it("does not read the set year as the card number", () => {
-    expect(parseListingIdentity("CGC 10 GEM MINT Entei 2001 Black Star Movie Promo 34 Reverse Holo Pokemon Card").cardNumber).toBeNull();
+  it("does not read the set year or the grade as the card number", () => {
+    // CF-A-GRADE-IS-NOT-A-CARD-NUMBER's original witness. What this test exists
+    // to prevent is reading the GRADE ("CGC 10" -> card #10), which split one
+    // Entei into a card per grade. It asserted null because null was the best
+    // answer the parser could give in 2026-08 -- not because this card has no
+    // number.
+    //
+    // CF-A-POKEMON-CARD-STATES-ITS-NUMBER-BARE (2026-09-05) reads it: "34" is
+    // the promo number, stated plainly in "Black Star Movie Promo 34". The
+    // catalog agrees -- card_catalog holds Entei rows at cardNumber "34" for
+    // 2001 (`hiq:pokemon:2001:2001-pokemon-game-movie:34:reverse-foil:...`,
+    // source ingest-auto-seed-graded), read 2026-09-05.
+    //
+    // So the assertion moves to what was always the real invariant: NOT the
+    // grade and NOT the year. Weakening the parser back to null to keep a green
+    // test would be preserving a parse failure as if it were a ruling.
+    const got = parseListingIdentity("CGC 10 GEM MINT Entei 2001 Black Star Movie Promo 34 Reverse Holo Pokemon Card");
+    expect(got.cardNumber).not.toBe("10");     // the grade
+    expect(got.cardNumber).not.toBe("2001");   // the year
+    expect(got.cardNumber).toBe("34");         // the promo number the title states
   });
 
   it("does not read a relic phrase as a prefixed card number", () => {

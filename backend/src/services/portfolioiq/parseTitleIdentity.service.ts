@@ -59,6 +59,195 @@ const TCG_NUMBER_RE = /(?:^|[\s#])(\d{1,3})\/(\d{1,3})(?:\s|$)/;
  *  extraction so a set size is never mistaken for a print run. */
 const TCG_NUMBER_RE_G = /(?:^|[\s#])(\d{1,3})\/(\d{1,3})(?=\s|$)/g;
 
+// CF-A-POKEMON-CARD-STATES-ITS-NUMBER-BARE (Drew, 2026-09-05, from the #1796
+// unknown-setKey census).
+//
+// THE DEFECT. The census measured ~22,780 sold_comps rows (extrapolated from a
+// 60k sample of 889,860 setKey=unknown rows) refused as
+// `guard:cardnumber-unparsed` whose titles DO state a card number. Every one of
+// them is a Pokemon title, and every one fails for the same reason: this parser
+// only reads a number written as `#N`, plus the ONE `N/M` shape above, which is
+// delimited by whitespace or `#` and bounded at 3 digits on both halves. Pokemon
+// sellers write the number six other ways, none of which that regex sees.
+// Measured against 3,117 real pokemon rows sampled from the unknown population:
+//
+//   559  plain N/M that the bound or the delimiter rejects
+//          "759/742 MC Japanese"         total > 400, and 3+ digits
+//          "017/000 SWSH Shining Fates"  total 000 fails `total > 0`
+//   263  a promo code glued to its era     "Pokemon SWSH180", "SM211"
+//   127  a subset code over its subset total  "TG09/TG30", "GG10/GG70"
+//    68  "SV107" secret-rare codes
+//    15  the e-Card holo run                "H03/H32", "H25/H32"
+//     9  the Japanese vintage spelling      "No. 141", "No.094"
+//     8  a lettered position                "77a/73"
+//     3  the number in brackets             "[077/067]", "(23/83)"
+//
+// WORSE THAN NULL: `extractPrintRun` then reads the TOTAL as a print run, so
+// "[077/067]" yields cardNumber null AND printRun 67 -- a set size sold as a
+// serial number. The N/M removal that prevents that is keyed to the same
+// too-narrow regex, so it never fires on any of these shapes either.
+//
+// WHY THIS IS SAFE FOR SPORTS, WHICH IS THE WHOLE RISK. In sports `N/M` is a
+// SERIAL and a bare integer is a listing index -- CF-SERIAL-IS-NOT-A-CARDNUMBER
+// documents the 99%-wrong outcome when that was got wrong, ~6,500 slugs and
+// ~32,000 stuck sales. So NONE of these forms is enabled by `isTcg`, which is
+// true for Yu-Gi-Oh and One Piece too. They are enabled only when the vertical
+// is POKEMON specifically, decided by `isPokemonVertical` below from the
+// caller's own `vertical` field or an unmistakable title/slug signal. A sports
+// title cannot reach this code, and the mutation test proves it: delete the
+// pokemon gate and a sports-title-reads-a-bare-number test goes red.
+//
+// AMBIGUOUS MEANS NULL. Where two candidate numbers survive, the parser returns
+// null rather than picking one -- absent beats wrong, because a wrong number
+// files a real sale onto a card that does not exist and the slug agrees with
+// the parse, so nothing downstream catches it.
+//
+// NOTHING HERE TOUCHES isAuto. `isAuto` is decided by the cardNumber PREFIX
+// (isCardNumberAutoSubset, keyed to baseball subsets CPA-/BCPA-/BSPA-/...), and
+// no form added here can produce one of those prefixes: they are digits,
+// digits/digits, or the TG/GG/SV/SWSH/SM/XY/BW/H era codes. Pinned by a test.
+
+/** `N/M` in a Pokemon title, where the TOTAL is the set size and never part of
+ *  the identity. Wider than TCG_NUMBER_RE on every axis that measured a miss:
+ *  brackets and parens as delimiters, up to 4 digits a side, a lettered
+ *  position ("77a/73"), and a total of `000` -- all real spellings, none of
+ *  which can occur in a sports title reachable from here. */
+const POKEMON_NUMBER_OVER_TOTAL_RE =
+  /(?:^|[\s#[(])(\d{1,4}[a-z]?)\s*\/\s*(\d{1,4})(?=[\s\])]|$)/i;
+
+/** The same, global, to REMOVE the token before print-run extraction so a set
+ *  size is never sold as a serial. */
+const POKEMON_NUMBER_OVER_TOTAL_RE_G =
+  /(?:^|[\s#[(])(\d{1,4}[a-z]?)\s*\/\s*(\d{1,4})(?=[\s\])]|$)/gi;
+
+/** A subset/promo code over its own subset total: "TG09/TG30", "GG10/GG70",
+ *  "H03/H32". The POSITION is the whole left half ("TG09") and keeps its
+ *  spelling verbatim -- normalizePokemonCardNumber rule 3 never pads it. */
+const POKEMON_SUBSET_OVER_TOTAL_RE =
+  /(?:^|[\s#[(])((?:TG|GG|GH|SV|H)\d{1,3})\s*\/\s*(?:TG|GG|GH|SV|H)?\d{1,3}(?=[\s\])]|$)/i;
+
+/** A bare era/subset code with no total: "SWSH180", "SM211", "TG03", "SV107",
+ *  "XY42", "BW34". These are the Black Star promo and subset numbering schemes
+ *  and are card numbers wherever they appear in a Pokemon title.
+ *
+ *  `SV` is on this list ONLY because the pokemon gate keeps sports out. A bare
+ *  `SV\d+` in a SPORTS title is a Topps Chrome Sapphire card number and a
+ *  different card entirely -- the exact collision CF-TCG-ERA-PREFIX-COLLISION
+ *  had to repair once already. */
+const POKEMON_PROMO_CODE_RE =
+  /(?:^|[\s#[(])((?:SWSH|SM|XY|BW|TG|GG|GH|SV)\d{1,3})(?=[\s\])]|$)/i;
+
+/** The Japanese vintage spelling: "No. 141", "No.094", "No 197". The word `No`
+ *  is the seller stating this IS the card number, so it outranks the bare-token
+ *  walk and is not subject to its ambiguity refusal. */
+const POKEMON_NO_PREFIX_RE = /\bNo\.?\s*(\d{1,4})\b/i;
+
+/** Tokens that precede a number that is NOT this card's number. Used by the
+ *  bare-standalone walk, which is the only form here with no syntactic marker
+ *  of its own and therefore the only one that must prove a negative. */
+const POKEMON_NOT_A_NUMBER_BEFORE: ReadonlySet<string> = new Set([
+  "PSA", "BGS", "SGC", "CGC", "BVG", "HGA", "TAG", "ACE", "GMA", "KSA",
+  "GEM", "MINT", "PRISTINE", "GRADE", "GRADED", "POP", "LOT", "OF", "X",
+  "QTY", "ED", "EDITION", "SERIES", "GEN", "GENERATION", "VOL", "SET",
+  "PACK", "BOX", "PSADNA", "CERT",
+]);
+
+/**
+ * A bare standalone number in a Pokemon title -- the LAST resort, and the only
+ * form that can be genuinely ambiguous.
+ *
+ * THE RULE IS EXACTLY ONE CANDIDATE. Every numeric token in the title is
+ * examined and disqualified if anything else claims it: a year (1996-2035, the
+ * Pokemon TCG's whole life), a price ("$127"), a grade or a pop count (the
+ * token before it is a grader or a condition word), a lot count ("Lot of 76"),
+ * or a print run (a leading `/`). If exactly ONE token survives, it is the card
+ * number. If two survive, the answer is NULL -- the title states two things
+ * that could be the number and this parser does not guess which. Removing that
+ * refusal turns a corpus pin red.
+ */
+function pokemonBareCardNumber(title: string): string | null {
+  const toks = String(title).split(/\s+/).filter(Boolean);
+  const found: string[] = [];
+  for (let i = 0; i < toks.length; i++) {
+    const raw = toks[i];
+    // A token carrying a `/` was already offered to the N/M rules; whatever
+    // they made of it, it is not a BARE number.
+    if (raw.includes("/")) continue;
+    // A price is not a card number.
+    if (/[$\u20ac\u00a3\u00a5]/.test(raw)) continue;
+    const tok = raw.replace(/^[[(#]+/, "").replace(/[\]),.!;:]+$/, "");
+    if (!/^\d{1,4}$/.test(tok)) continue;
+    const n = Number(tok);
+    if (!(n > 0)) continue;
+    // A 4-digit token in the TCG's lifetime is the SET YEAR. Pokemon numbers a
+    // handful of cards above 999 only in Japanese "MC"-style promo runs, and
+    // conceding those is the cheap side of this trade.
+    if (tok.length === 4 && n >= 1996 && n <= 2035) continue;
+    const prevRaw = i > 0 ? toks[i - 1] : "";
+    const prev = prevRaw.toUpperCase().replace(/[^A-Z]/g, "");
+    if (POKEMON_NOT_A_NUMBER_BEFORE.has(prev)) continue;
+    if (CONDITION_WORDS.has(prev)) continue;
+    // "Lot of 76" / "lot 76" -- the count of cards in a lot, not a card number.
+    if (/\blot\b/i.test(prevRaw) || (prev === "OF" && /\blot\b/i.test(toks[i - 2] ?? ""))) continue;
+    // A print run states the DENOMINATOR alone: "/99". The token walk splits on
+    // whitespace so "/99" arrives whole and is caught by the `/` test above,
+    // but "Card /99" can leave the slash on the previous token.
+    if (prevRaw.endsWith("/")) continue;
+    found.push(tok);
+    if (found.length > 1) return null;   // ambiguous -- absent beats wrong
+  }
+  return found.length === 1 ? found[0] : null;
+}
+
+/** Read a Pokemon card number from the title, most-specific form first.
+ *  Returns null when the title states nothing this function can stand behind. */
+function pokemonCardNumber(title: string): string | null {
+  // A subset code over its subset total is the most specific shape: the left
+  // half carries a prefix, so nothing else in a title is written this way.
+  const subset = title.match(POKEMON_SUBSET_OVER_TOTAL_RE);
+  if (subset) return subset[1].toUpperCase();
+
+  // POS/TOTAL. The total is the set size and is dropped downstream by
+  // normalizePokemonCardNumber; it is kept in the parse because the number the
+  // seller PRINTED is the evidence and the padding rule needs to see it.
+  const overTotal = title.match(POKEMON_NUMBER_OVER_TOTAL_RE);
+  if (overTotal) return `${overTotal[1]}/${overTotal[2]}`.toUpperCase();
+
+  // A bare era/subset code -- "SWSH180", "TG03", "SV107".
+  const promo = title.match(POKEMON_PROMO_CODE_RE);
+  if (promo) return promo[1].toUpperCase();
+
+  // "No. 141" -- the seller has SAID this is the number.
+  const no = title.match(POKEMON_NO_PREFIX_RE);
+  if (no) return no[1];
+
+  // A bare standalone integer, only when nothing else in the title could be it.
+  return pokemonBareCardNumber(title);
+}
+
+/** TCG verticals that are NOT pokemon. A row filed under one of these is never
+ *  read by the pokemon rules even if its title happens to say "Pokemon". */
+const TCG_NON_POKEMON_VERTICALS: ReadonlySet<string> = new Set([
+  "yugioh", "mtg", "lorcana", "anime-tcg", "tcg-other",
+]);
+
+/** True when the row is POKEMON specifically, not merely TCG.
+ *
+ *  Every rule above is gated on this and not on `isTcg`, because `isTcg` is
+ *  also true for Yu-Gi-Oh, One Piece, Magic and Lorcana, whose numbering
+ *  conventions are different ("OP07-038", "MRL-047") and whose bare integers
+ *  have not been measured. Widening to them is a separate change with its own
+ *  corpus. */
+function isPokemonVertical(title: string, vertical?: string | null, slug?: string | null): boolean {
+  const v = String(vertical ?? "").trim().toLowerCase();
+  if (v === "pokemon") return true;
+  if (v && TCG_NON_POKEMON_VERTICALS.has(v)) return false;
+  const slugStr = String(slug ?? "");
+  // A slug already in the pokemon namespace is the pipeline's own verdict.
+  if (/^hiq:pokemon:/i.test(slugStr)) return true;
+  return /\bpok[e\u00e9]mon\b/i.test(`${title} ${slugStr}`);
+}
+
 export interface ParseListingIdentityOptions {
   /** Vertical when the caller already knows it (vendor feed field, resolved
    *  slug, etc). Authoritative — checked before title detection. */
@@ -568,7 +757,11 @@ export function parseListingIdentity(
     title: t,
     hobbyiqCardId: opts?.hobbyiqCardId ?? null,
   }).isTcg;
-  const cardNumber = extractCardNumber(t, cardNumberRe, isTcg);
+  // CF-A-POKEMON-CARD-STATES-ITS-NUMBER-BARE. Narrower than isTcg on purpose --
+  // only Pokemon's numbering conventions have been measured, so only Pokemon
+  // rows get the wider reader.
+  const isPokemon = isTcg && isPokemonVertical(t, opts?.vertical ?? null, opts?.hobbyiqCardId ?? null);
+  const cardNumber = extractCardNumber(t, cardNumberRe, isTcg, isPokemon);
   // CF-CARDNUMBER-IMPLIES-AUTO (Drew, 2026-07-30). Auto-subset card
   // numbers carry a fixed prefix on ALL products — CPA-, BCPA-, BSPA-,
   // BDA-, BPA-, BCRA-, TCRA-, CA-, SPA-, CPALD-, etc. If the title
@@ -597,7 +790,7 @@ export function parseListingIdentity(
     parallel,
     variationMarker: variation.finish ? null : variation.marker,
     isAuto,
-    printRun: extractPrintRun(t, isTcg),
+    printRun: extractPrintRun(t, isTcg, isPokemon),
     autoStyle: isAuto ? extractAutoStyle(t) : null,
     gradeCompany: grade.gradeCompany,
     gradeValue: grade.gradeValue,
@@ -934,7 +1127,25 @@ function preferPrefixedCardNumber(title: string): string | null {
   return null;
 }
 
-function extractCardNumber(title: string, cardNumberRe?: RegExp, isTcg = false): string | null {
+function extractCardNumber(
+  title: string,
+  cardNumberRe?: RegExp,
+  isTcg = false,
+  isPokemon = false,
+): string | null {
+  // CF-A-POKEMON-CARD-STATES-ITS-NUMBER-BARE. The pokemon forms run FIRST and
+  // for the same reason the TCG rule below does: a Pokemon title that writes
+  // "#SWSH136" would otherwise be read by the generic `#`-prefix regex, whose
+  // `[A-Z]{1,3}\d{1,4}` alternative matches only the first three letters and
+  // returns "SWS" -- a card number that names nothing. The pokemon reader knows
+  // the whole token is the number.
+  //
+  // A caller-supplied cardNumberRe means the caller is targeting one known card
+  // and every rule here is bypassed, exactly as the TCG branch does.
+  if (isPokemon && !cardNumberRe) {
+    const pk = pokemonCardNumber(title);
+    if (pk) return pk;
+  }
   // CF-TCG-NUMBER-BEFORE-HASH (Drew, 2026-08-14). In TCG the POS/TOTAL rule
   // must run FIRST. Sellers write the number both ways — "40/147" and
   // "#044/193" — and on the second form the generic #-prefix rule below
@@ -1056,7 +1267,7 @@ function extractAutoStyle(title: string): "on-card" | "sticker" | null {
  *  - "77/199"
  *  - "/199" (unnumbered format when only the denominator appears)
  *  - "#/50 Braves" (numerator absent) */
-function extractPrintRun(title: string, isTcg = false): number | null {
+function extractPrintRun(title: string, isTcg = false, isPokemon = false): number | null {
   let t = title;
   // CF-SERIAL-IS-NOT-A-CARDNUMBER (Drew, 2026-08-14). In TCG, "40/147" is
   // card-40-of-a-147-card-set. 147 is the SET SIZE, not a print run — Burning
@@ -1066,6 +1277,13 @@ function extractPrintRun(title: string, isTcg = false): number | null {
   // leaves a genuinely numbered TCG parallel — "... 40/147 ... /25" — still
   // able to report /25 correctly.
   if (isTcg) t = t.replace(TCG_NUMBER_RE_G, " ");
+  // CF-A-POKEMON-CARD-STATES-ITS-NUMBER-BARE. The removal above is keyed to the
+  // NARROW `N/M` regex, so every wider Pokemon spelling survived it and was
+  // then read as a serial: "[077/067]" reported printRun 67 and "(23/83)"
+  // reported 83 -- set sizes sold as print runs, on rows whose cardNumber was
+  // simultaneously null. Remove the same token this parser now reads as the
+  // card number, so one token is never spent twice.
+  if (isPokemon) t = t.replace(POKEMON_NUMBER_OVER_TOTAL_RE_G, " ");
 
   // CF-GRADE-FRACTION-IS-NOT-A-SERIAL (Drew, 2026-08-20: "we need to fix the
   // parser store"). A GRADE written as a fraction is not a print run:
