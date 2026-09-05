@@ -523,7 +523,9 @@ describe("repriceHoldingsForUser — the fixture, end to end", () => {
     expect(hld.valuationStatus).toBe("estimated");
     expect(hld.pricingSource).toBe("sibling-estimate");
     expect(hld.fmvRung).toBe("sibling-estimate");
-    expect(hld.pricingSourceMeta).toEqual({ slug: GOLD, method: "sibling-estimate", compsUsed: 4 });
+    // confidence: null — the sibling lane measures none and now says so
+    // explicitly (CF-CONFIDENCE-IS-NOT-OPTIONAL, persisted half, 2026-09-04).
+    expect(hld.pricingSourceMeta).toEqual({ slug: GOLD, method: "sibling-estimate", compsUsed: 4, confidence: null });
     expect(hld.estimateBasis).toBe(`sibling: ${SIBLING_CH_ID} × 2.50× parallel (empirical n=12, Bowman Chrome)`);
     expect(hld.estimateBasis).not.toMatch(/floor/i);
     expect(body.updates.find((u: any) => u.id === id)).toMatchObject({ status: "repriced", reason: "sibling-fallback" });
@@ -639,7 +641,14 @@ describe("repriceHoldingsForUser — the fixture, end to end", () => {
     // number, so there is nothing truthful to stamp here yet. These rows
     // render "—" in the report's confidence column, which is the honest
     // answer; carrying the numeric through this path is its own change.
-    expect(hld.pricingSourceMeta).toEqual({ slug: GOLD, method: "exact-pool-leading-edge", compsUsed: 3 });
+    //
+    // CF-CONFIDENCE-IS-NOT-OPTIONAL, persisted half (2026-09-04): that "no
+    // confidence to give" is now STATED as an explicit null rather than left
+    // absent. writeHoldingValuation used to drop a null on the floor, so a
+    // lane that says "I measured nothing" persisted identically to one that
+    // forgot — the exact distinction the required-nullable type exists to
+    // preserve. The rendered answer is unchanged ("—"); it is now recorded.
+    expect(hld.pricingSourceMeta).toEqual({ slug: GOLD, method: "exact-pool-leading-edge", compsUsed: 3, confidence: null });
     expect(hld.estimateBasis).not.toMatch(/floor/i);
     expect(hld.lastUpdated).not.toBe("2026-08-01T00:00:00.000Z");
     expect(body.updates.find((u: any) => u.id === id)).toMatchObject({ status: "repriced", reason: "our-pool:unified-market-value" });

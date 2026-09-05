@@ -127,6 +127,13 @@ function caminitiValuation(): Valuation {
       printRun: 150,
       isAuto: true,
       playerName: "Cam Caminiti",
+      // CF-WE-DONT-WANT-SELF-DERIVED (Drew, 2026-09-04). The identity gate now
+      // asks who transcribed this row before any rung question is reached, and
+      // this file's subject is the RUNG vocabulary — so the fixture states the
+      // provenance the live holding actually has (0a9afe09 resolves to
+      // checklistcenter-2026-08-29) rather than leaving it null and testing
+      // the identity gate by accident.
+      sourceOfRow: "checklistcenter-2026-08-29",
     },
     requestedTier: "Raw",
     windowDays: 180,

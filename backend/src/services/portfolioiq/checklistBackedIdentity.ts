@@ -11,7 +11,7 @@
  * is read through an injected reader so the decision is testable without
  * Cosmos; the default reader point-reads card_catalog (id === partition key).
  */
-import { catalogAuthorityOf } from "../catalog/catalogAuthority.service.js";
+import { isChecklistBackedIdentity } from "../catalog/identityBacking.js";
 
 export const CHECKLIST_STAMP_SOURCE = "checklist-backed-identity";
 
@@ -38,7 +38,19 @@ export async function stampChecklistBackedIdentity(
   if (!slug.startsWith("hiq:")) return "no-identity";
   const row = await readRow(slug);
   if (!row) return "row-missing";
-  if (catalogAuthorityOf(row.source) !== "checklist") return "not-checklist-backed";
+  // CF-ONE-DEFINITION-OF-CHECKLIST-BACKED (2026-09-04). This asked
+  // `catalogAuthorityOf(...) !== "checklist"` directly, which is the same
+  // question the PRICING gate now asks — and asking it twice, in two files,
+  // with two spellings, is how the four predicates in catalogAuthority's
+  // header drifted apart in the first place.
+  //
+  // Both roads now go through the one predicate, so the badge and the price
+  // can never disagree about a holding: a card that shows VERIFIED is exactly
+  // a card the valuation path will publish a number for. (They agreed already
+  // -- this module already refused `user-verified` while `catalogAuthorityOf`
+  // calls it "vendor" -- only because this call site happened to test for
+  // equality with "checklist" rather than for absence of "derived".)
+  if (!isChecklistBackedIdentity(row.source)) return "not-checklist-backed";
   const at = new Date().toISOString();
   h.identityVerified = true;
   h.identityVerifiedAt = at;

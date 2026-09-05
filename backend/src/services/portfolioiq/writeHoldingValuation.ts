@@ -72,9 +72,20 @@ export type RungDeclaration =
   | { rung: string }
   | { noRung: string };
 
-/** "observed" = comps of this identity AND this tier. Everything else is
- *  "estimated". No default: the writer states which kind of number it has. */
-export type ValueSourceDeclaration = "observed" | "estimated";
+/**
+ * "observed" = comps of this identity AND this tier. Everything else is
+ * "estimated". No default: the writer states which kind of number it has.
+ *
+ * CF-WE-DONT-WANT-SELF-DERIVED (Drew, 2026-09-04) adds "unavailable" — and it
+ * is not a third kind of number, it is the ABSENCE of one. A lane that
+ * publishes `fairMarketValue: null` because the identity is not checklist-
+ * backed has no evidence of either kind to declare, and forcing it to claim
+ * "estimated" would mark an empty row as though a model had priced it. The
+ * union already exists in exactly this spelling on `Valuation.valueSource`
+ * (oneValuationPath), so this aligns the persist contract with the engine's
+ * rather than inventing a fourth vocabulary.
+ */
+export type ValueSourceDeclaration = "observed" | "estimated" | "unavailable";
 
 export interface HoldingValuationWrite {
   /** The per-unit fair market value. `null` erases the field (an explicit
@@ -129,9 +140,23 @@ export interface HoldingValuationWrite {
     withheld?: {
       reason: string;
       blockingId: string | null;
-      blockingCount: number;
+      /** The blocking pool's size. Null when the refusal is not about a pool
+       *  at all — an identity refused for having no checklist behind it
+       *  blocks on provenance, and inventing a 0 there would read as "the
+       *  pool was empty", which is a different and false claim. */
+      blockingCount: number | null;
       /** The estimate that was NOT published — kept, never erased. */
       proposed: number | null;
+      /**
+       * CF-WE-DONT-WANT-SELF-DERIVED (Drew, 2026-09-04). The value that WAS
+       * published before this refusal cleared it. Only the identity refusal
+       * clears a prior number (the cost-basis floor keeps it), and the number
+       * it clears is evidence: it is what a reader saw yesterday, and it is
+       * restored verbatim when the checklist arrives.
+       */
+      priorValue?: number | null;
+      /** How the identity stood, in checklistBackedIdentity's vocabulary. */
+      backing?: string;
     };
   } & Partial<PersistedPricingLabels>;
   /** When false, no pricingSourceMeta is written (the lanes that deliberately
@@ -217,7 +242,20 @@ export function writeHoldingValuation(
         method: rung ?? (w.meta.withheld ? "withheld" : "unlabelled-carry"),
         ...(w.meta.withheld ? { withheld: w.meta.withheld } : {}),
         ...(w.meta.compsUsed != null ? { compsUsed: w.meta.compsUsed } : {}),
-        ...(w.meta.confidence != null ? { confidence: w.meta.confidence } : {}),
+        // CF-CONFIDENCE-IS-NOT-OPTIONAL, the persisted half (2026-09-04).
+        //
+        // The TYPE made `confidence` required-and-nullable so a lane could not
+        // silently omit it — and this line then dropped the very `null` the
+        // type forces a lane to write. `!= null` spreads nothing for an
+        // explicit null, so "I measured nothing and say so" persisted as
+        // IDENTICALLY ABSENT to "I forgot", which is the exact distinction
+        // that required-nullable exists to preserve. A refusal lane
+        // (identityUnverifiedRefusalWrite, and the floor lane when it has no
+        // prior confidence) has no confidence to give; its `null` is a
+        // statement and must survive to the row.
+        //
+        // Only `undefined` — which the type no longer permits — is omitted.
+        ...(w.meta.confidence !== undefined ? { confidence: w.meta.confidence } : {}),
         ...(w.meta.unionRefused ? { unionRefused: w.meta.unionRefused } : {}),
         // CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (#1674) — preserved by
         // construction on EVERY path that reaches this helper.

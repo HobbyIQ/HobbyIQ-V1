@@ -163,6 +163,22 @@ export interface CatalogRowResolution {
    *  under the stem: "authority" — the stem held several and exactly one is
    *  checklist-authority; "print-run" — the caller's print run named it. */
   chosenBy?: "authority" | "print-run";
+  /**
+   * The `source` of the row `id` names — the provenance of THE identity this
+   * resolution adopted, not of the stem it was found under.
+   *
+   * CF-WE-DONT-WANT-SELF-DERIVED (Drew, 2026-09-04). The valuation gate has to
+   * ask "was this identity transcribed from a checklist, or did we mint it
+   * from our own sales?", and the stem query ALREADY selects `c.source` to
+   * settle `chosenBy`. Carrying it out costs no read and no RU; asking the
+   * catalog again from the pricing path would cost one per holding priced.
+   *
+   * Null when no row was adopted ("none", "ambiguous", "unresolved"), and when
+   * the caller passed bare ids (the conform script's fixture table) — absence
+   * is "unknown provenance", never "checklist", which is why the gate treats
+   * it as unbacked rather than as permission.
+   */
+  sourceOfRow?: string | null;
   /** "unresolved" only: what the catalog read failed with. */
   error?: string;
 }
@@ -218,6 +234,9 @@ export function pickCatalogRow(slug: string, rowsUnderStem: readonly (string | C
   if (!isHiqSlug(id)) return none(id);
   const rows = rowsUnderStem.map(toRow).filter((r) => r.id);
   const ids = rows.map((r) => r.id);
+  /** The provenance of the row an id names, for `sourceOfRow`. Null when the
+   *  caller passed bare ids — unknown, which the gate reads as unbacked. */
+  const srcOf = (rowId: string): string | null => rows.find((r) => r.id === rowId)?.source ?? null;
   if (isNumberedSlug(id)) {
     // A NUMBERED id. Its stem is the same card whenever the stem is NOT a
     // catalog row of its own — that is exactly when the fold moved this
@@ -227,19 +246,18 @@ export function pickCatalogRow(slug: string, rowsUnderStem: readonly (string | C
     const unnumbered = id.replace(NUMBERED_SUFFIX, "");
     const stemIsRow = ids.includes(unnumbered);
     const poolTwin = stemIsRow ? null : unnumbered;
-    if (ids.includes(id)) return { requested: id, id, kind: "exact", twins: [], poolTwin };
+    if (ids.includes(id)) return { requested: id, id, kind: "exact", twins: [], poolTwin, sourceOfRow: srcOf(id) };
     return stemIsRow
-      ? { requested: id, id: unnumbered, kind: "unnumbered-twin", twins: [], poolTwin: null }
+      ? { requested: id, id: unnumbered, kind: "unnumbered-twin", twins: [], poolTwin: null, sourceOfRow: srcOf(unnumbered) }
       : { ...none(id), poolTwin };
   }
-  if (ids.includes(id)) return { requested: id, id, kind: "exact", twins: [], poolTwin: null };
+  if (ids.includes(id)) return { requested: id, id, kind: "exact", twins: [], poolTwin: null, sourceOfRow: srcOf(id) };
   const twins = numberedTwinsOf(id, ids);
-  if (twins.length === 1) return { requested: id, id: twins[0], kind: "numbered-twin", twins, poolTwin: twins[0] };
+  if (twins.length === 1) return { requested: id, id: twins[0], kind: "numbered-twin", twins, poolTwin: twins[0], sourceOfRow: srcOf(twins[0]) };
   if (twins.length > 1) {
     const sorted = [...twins].sort();
-    const sourceOf = (t: string) => rows.find((r) => r.id === t)?.source ?? null;
-    const authority = sorted.filter((t) => canAdjudicate(sourceOf(t)));
-    if (authority.length === 1) return { requested: id, id: authority[0], kind: "numbered-twin", twins: sorted, chosenBy: "authority", poolTwin: authority[0] };
+    const authority = sorted.filter((t) => canAdjudicate(srcOf(t)));
+    if (authority.length === 1) return { requested: id, id: authority[0], kind: "numbered-twin", twins: sorted, chosenBy: "authority", poolTwin: authority[0], sourceOfRow: srcOf(authority[0]) };
     return { requested: id, id: null, kind: "ambiguous", twins: sorted, poolTwin: null };
   }
   return { ...none(id), poolTwin: null };

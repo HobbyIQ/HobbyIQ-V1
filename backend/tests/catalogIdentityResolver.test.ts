@@ -19,10 +19,10 @@ describe("pickCatalogRow -- an un-numbered id", () => {
   it("resolves to its ONE numbered twin when it has no row of its own (the Max Williams case)", () => {
     const r = pickCatalogRow(MWI, [MWI_499, GOLD_50]);
     // Mutation check: the pre-fix catalogSlugIfExists answered null here.
-    expect(r).toEqual({ requested: MWI, id: MWI_499, kind: "numbered-twin", twins: [MWI_499], poolTwin: MWI_499 });
+    expect(r).toEqual({ requested: MWI, id: MWI_499, kind: "numbered-twin", twins: [MWI_499], poolTwin: MWI_499, sourceOfRow: null });
   });
   it("keeps its OWN row when it has one, even when a numbered twin also exists (conform's rowFor agrees)", () => {
-    expect(pickCatalogRow(MWI, [MWI, MWI_499])).toEqual({ requested: MWI, id: MWI, kind: "exact", twins: [], poolTwin: null });
+    expect(pickCatalogRow(MWI, [MWI, MWI_499])).toEqual({ requested: MWI, id: MWI, kind: "exact", twins: [], poolTwin: null, sourceOfRow: null });
   });
   it("two numbered twins are two cards: ambiguous, id null, both listed — a ruling, never a guess", () => {
     const r = pickCatalogRow(MWI, [MWI_499, MWI_250, GOLD_50]);
@@ -48,7 +48,7 @@ describe("pickCatalogRow -- a numbered id (the #1509 direction, preserved)", () 
     expect(pickCatalogRow(MWI_499, [MWI_499, MWI])).toMatchObject({ id: MWI_499, kind: "exact" });
   });
   it("with no row but an un-numbered row resolves to the un-numbered twin", () => {
-    expect(pickCatalogRow(MWI_499, [MWI])).toEqual({ requested: MWI_499, id: MWI, kind: "unnumbered-twin", twins: [], poolTwin: null });
+    expect(pickCatalogRow(MWI_499, [MWI])).toEqual({ requested: MWI_499, id: MWI, kind: "unnumbered-twin", twins: [], poolTwin: null, sourceOfRow: null });
   });
   it("with neither is nothing; another print run is not its twin", () => {
     expect(pickCatalogRow(MWI_499, []).kind).toBe("none");
@@ -63,6 +63,10 @@ describe("pickCatalogRow -- several twins: the checklist authority names the car
   it("one checklist twin beside a vendor twin: the checklist row, chosenBy authority, both twins listed", () => {
     expect(pickCatalogRow(MWI, [CHECKLIST, VENDOR_500])).toEqual({
       requested: MWI, id: MWI_499, kind: "numbered-twin", twins: [MWI_499, `${MWI}:num-500`], chosenBy: "authority", poolTwin: MWI_499,
+      // CF-WE-DONT-WANT-SELF-DERIVED (2026-09-04): the provenance of the row
+      // ADOPTED, carried out of the stem query the resolution already ran, so
+      // the pricing gate needs no second catalog read.
+      sourceOfRow: "checklistcenter-2026-08-29",
     });
     expect(pickCatalogRow(MWI, [VENDOR_500, DERIVED_250, CHECKLIST]).id).toBe(MWI_499);
   });
@@ -73,7 +77,9 @@ describe("pickCatalogRow -- several twins: the checklist authority names the car
     expect(pickCatalogRow(MWI, [VENDOR_500, DERIVED_250])).toMatchObject({ id: null, kind: "ambiguous" });
   });
   it("a single twin is the card whatever its source (unchanged); bare ids are read as source-less", () => {
-    expect(pickCatalogRow(MWI, [VENDOR_500])).toEqual({ requested: MWI, id: `${MWI}:num-500`, kind: "numbered-twin", twins: [`${MWI}:num-500`], poolTwin: `${MWI}:num-500` });
+    // A single twin is still the card -- and its source is reported as what it
+    // IS, so the gate can decline to price a vendor identity downstream.
+    expect(pickCatalogRow(MWI, [VENDOR_500])).toEqual({ requested: MWI, id: `${MWI}:num-500`, kind: "numbered-twin", twins: [`${MWI}:num-500`], poolTwin: `${MWI}:num-500`, sourceOfRow: "cardhedge" });
     expect(pickCatalogRow(MWI, [MWI_499, MWI_250])).toMatchObject({ kind: "ambiguous" });
   });
 });

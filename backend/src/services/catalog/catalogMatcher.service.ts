@@ -639,6 +639,11 @@ export async function readCatalogIdentityBySlug(slug: string): Promise<{
   /** CF-ONE-VALUATION-PATH (D16): the row's image, so a pricing route's
    *  identity block needs no second catalog read. */
   imageUrl: string | null;
+  /** CF-WE-DONT-WANT-SELF-DERIVED (Drew, 2026-09-04): the row's provenance, so
+   *  the valuation gate can ask whether a checklist transcribed this identity
+   *  or we minted it from our own sales — on the read it already makes, not a
+   *  second one per holding priced. */
+  source: string | null;
 } | null> {
   const id = String(slug ?? "").trim();
   if (!id.startsWith("hiq:")) return null;
@@ -647,7 +652,7 @@ export async function readCatalogIdentityBySlug(slug: string): Promise<{
     if (!container) return null;
     const { resources } = await container.items.query<Record<string, unknown>>({
       query: `SELECT c.playerName, c.cardYear, c.year, c.setKey, c.setName, c.cardNumber,
-                     c.parallel, c.isAuto, c.sport, c.printRun, c.imageUrl
+                     c.parallel, c.isAuto, c.sport, c.printRun, c.imageUrl, c.source
               FROM c WHERE c.id = @id`,
       parameters: [{ name: "@id", value: id }],
     }).fetchAll();
@@ -669,6 +674,7 @@ export async function readCatalogIdentityBySlug(slug: string): Promise<{
       sport: str(r.sport),
       printRun: num(r.printRun),
       imageUrl: str(r.imageUrl),
+      source: str(r.source),
     };
   } catch {
     return null;

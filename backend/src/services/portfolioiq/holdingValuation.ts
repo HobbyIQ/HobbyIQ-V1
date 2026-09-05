@@ -52,6 +52,12 @@
 import type { PortfolioHolding } from "../../types/portfolioiq.types.js";
 import { valueIdentity, type Valuation } from "../compiq/oneValuationPath.service.js";
 import { isExactPoolRung, isPricingRung } from "../compiq/fmvRung.js";
+import {
+  identityBackingOf,
+  mayPublishPrice,
+  NO_CHECKLIST_MATCH,
+  type IdentityBacking,
+} from "../catalog/identityBacking.js";
 import { persistedLabelsForValuation } from "../compiq/valuationLabels.js";
 import { writeHoldingValuation } from "./writeHoldingValuation.js";
 
@@ -60,7 +66,19 @@ export type HoldingValuationOutcome =
   | { outcome: "estimated"; holding: PortfolioHolding; valuation: Valuation }
   | { outcome: "cost-basis-floor"; valuation: Valuation; costBasis: number; proposedTotal: number }
   | { outcome: "unresolved"; valuation: Valuation | null }
-  | { outcome: "unpriced"; valuation: Valuation };
+  | { outcome: "unpriced"; valuation: Valuation }
+  /**
+   * CF-WE-DONT-WANT-SELF-DERIVED-WE-WANT-IT-MATCHED-TO-CHECKLISTS
+   * (Drew, 2026-09-04). The ladder priced a number, and the IDENTITY it
+   * priced is not one a checklist transcribed — so the number is refused on
+   * identity grounds, before the cost-basis floor is even consulted.
+   *
+   * A separate outcome from `unpriced`, because the two mean opposite things
+   * to a reader and to the work queue: `unpriced` says the pool had nothing
+   * to say about a card we know; this says we do not know the card. One is
+   * fixed by sales arriving, the other by acquiring a checklist.
+   */
+  | { outcome: "identity-unverified"; valuation: Valuation; backing: IdentityBacking };
 
 function num(v: unknown, fallback = 0): number {
   if (typeof v === "number") return Number.isFinite(v) ? v : fallback;
@@ -256,6 +274,94 @@ export function costBasisFloorRefusalWrite(
   };
 }
 
+
+/**
+ * CF-WE-DONT-WANT-SELF-DERIVED-WE-WANT-IT-MATCHED-TO-CHECKLISTS
+ * (Drew, 2026-09-04) — the persisted form of the refusal.
+ *
+ * Deliberately the SAME SHAPE as `costBasisFloorRefusalWrite`, because it is
+ * the same kind of event: the ladder produced a number and the persist layer
+ * declined to publish it. Two refusal shapes would mean two things for the
+ * invariant auditor to learn, and a row that reads as "never written" is the
+ * exact defect CF-A-REFUSED-PRICE-IS-STILL-A-DECISION was written to abolish.
+ *
+ * What differs from the floor's refusal is what happens to the KEPT number,
+ * and the difference is the ruling:
+ *
+ *   the floor       says THIS number is wrong; the prior number is untouched
+ *                   because the floor made no claim about it.
+ *   this            says the IDENTITY is not one we can price. That claim
+ *                   applies to every number ever published for this holding,
+ *                   including the one already on the row — which was itself
+ *                   computed from the same self-derived identity. So the
+ *                   value is CLEARED, not kept.
+ *
+ * Clearing is the harder call and it is the doctrinal one: absent beats wrong
+ * (`feedback_no_medians`, `one card one row one pool`), and a stale number
+ * from an identity we have just declared unverified is precisely a wrong
+ * number that looks authoritative. The refused number survives as evidence
+ * under `withheld.proposed`, and the prior published value under
+ * `withheld.priorValue`, so nothing is destroyed and the row can be restored
+ * verbatim by the acquisition of a checklist.
+ */
+export function identityUnverifiedRefusalWrite(
+  holding: PortfolioHolding,
+  v: Valuation,
+  backing: IdentityBacking,
+  nowIso: string,
+): { holding: PortfolioHolding; prose: string; summary: string } {
+  const priorMeta = (holding as { pricingSourceMeta?: Record<string, unknown> }).pricingSourceMeta;
+  const priorValue = typeof holding.fairMarketValue === "number" && Number.isFinite(holding.fairMarketValue)
+    ? holding.fairMarketValue
+    : null;
+  const why = backing === "no-slug"
+    ? "the holding carries no canonical identity"
+    : backing === "no-catalog-row"
+      ? "the catalog holds no row for this identity"
+      : backing === "self-derived-only"
+        ? `the only catalog row for this identity was minted from our own data (source ${v.identity.sourceOfRow ?? "unknown"})`
+        : `the catalog row for this identity is not a checklist transcription (source ${v.identity.sourceOfRow ?? "unknown"})`;
+  const summary = `identity not checklist-backed (${backing})`;
+  const prose =
+    `price withheld: ${why}. HobbyIQ prices a card only from an identity a real `
+    + `checklist confirms, so no value is published for this holding until its `
+    + `checklist is acquired and the card is matched to it. The valuation path `
+    + `did reach $${round2(v.fairMarketValue ?? 0)} under rung ${v.rungLabel}; that `
+    + `number is recorded as evidence and deliberately not shown.`;
+  return {
+    prose,
+    summary,
+    holding: writeHoldingValuation(holding, {
+      // Absent beats wrong: the prior number rested on the same unverified
+      // identity, so it is cleared rather than carried.
+      fairMarketValue: null,
+      rung: { noRung: prose },
+      valueSource: "unavailable",
+      nowIso,
+      meta: {
+        slug: v.identity.slug ?? null,
+        compsUsed: v.compsUsed ?? null,
+        // A refusal measures nothing, so it asserts no confidence.
+        confidence: null,
+        withheld: {
+          reason: NO_CHECKLIST_MATCH,
+          blockingId: v.identity.sourceOfRow ?? null,
+          blockingCount: null,
+          proposed: v.fairMarketValue ?? null,
+          priorValue,
+          backing,
+        },
+      },
+      fields: {
+        identityUnverified: true,
+        identityUnverifiedReason: summary,
+        identityUnverifiedAt: nowIso,
+        fmvRetainedReason: prose,
+        fmvRetainedAt: nowIso,
+      },
+    }),
+  };
+}
 
 /** The observed write: the exact-pool rung on the holding, in the shape the
  *  unified early exits and the supremacy gate always wrote. */
@@ -466,6 +572,48 @@ export async function valueHoldingThroughOneEntry(
     }
     return { outcome: "unpriced", valuation: v };
   }
+  // CF-WE-DONT-WANT-SELF-DERIVED-WE-WANT-IT-MATCHED-TO-CHECKLISTS
+  // (Drew, 2026-09-04), and it is the FIRST question asked of a priced
+  // valuation, ahead of the cost-basis floor.
+  //
+  // Order matters, and this order is the ruling rather than a preference. The
+  // floor asks "is this number plausible for what the owner paid"; this asks
+  // "is there a card here at all". A number refused for BOTH reasons must be
+  // refused for this one, because `cost-basis-floor` tells a reader to go
+  // look at the pool while `no-checklist-match` tells them to go acquire a
+  // checklist — and the second is what actually unblocks the row. Holding
+  // 9f082213 (Victor Figueroa CPA-VF Black & White Red Ink) is exactly that
+  // row: its identity is `user-verified`, its pool is contaminated, and the
+  // cost-basis floor has been catching the symptom.
+  //
+  // The gate reads the identity the ladder ACTUALLY PRICED (`sourceOfRow`),
+  // not the holding's stored slug. A holding whose slug is self-derived but
+  // which the resolver moved onto a checklist twin prices normally, which is
+  // the whole point of preferring a checklist row over minting.
+  const backing = identityBackingOf(
+    v.identity.slug,
+    v.identity.sourceOfRow === null ? [] : [{ source: v.identity.sourceOfRow }],
+  );
+  if (!mayPublishPrice(backing)) {
+    console.warn(JSON.stringify({
+      event: "one_valuation_path_withheld_no_checklist_match",
+      source: "holdingValuation.valueHoldingThroughOneEntry",
+      site: opts.caller,
+      userId: opts.userId ?? null,
+      holdingId: holding.id,
+      slug: v.identity.slug,
+      pricedId: v.identity.pooledAs,
+      identitySource: v.identity.sourceOfRow,
+      backing,
+      rung: v.rungLabel,
+      // The refused number is REPORTED, never published — a withhold does not
+      // destroy evidence (CF-A-WITHHOLD-DOES-NOT-DESTROY-EVIDENCE).
+      proposed: v.fairMarketValue,
+      compsUsed: v.compsUsed,
+    }));
+    return { outcome: "identity-unverified", valuation: v, backing };
+  }
+
   // "Observed" keeps its EXISTING meaning, unchanged: comps of this exact
   // identity at this exact tier. Everything else the ladder priced is an
   // estimate — which is a statement about the evidence, not a reason to
