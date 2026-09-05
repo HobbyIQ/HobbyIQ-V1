@@ -633,8 +633,25 @@ export function expectWellFormed(
   expect(testStartMs - ts).toBeLessThan(30 * 60_000); // not older than 30 min
 
   // Source must be one of the engine's known enum values.
+  //
+  // The failure NAMES the value. `expected false to be true` is what this
+  // assertion said for two days across two fixes, and neither the run log nor
+  // App Insights carried the offending string -- so each round cost a deploy
+  // to learn one word. A contract check that cannot say what broke it is a
+  // check that has to be debugged instead of read.
   if (resp.source !== undefined && resp.source !== null) {
-    expect(ALLOWED_SOURCES.has(resp.source as string)).toBe(true);
+    const got = resp.source as string;
+    expect(
+      ALLOWED_SOURCES.has(got),
+      `response source is "${got}", which no vocabulary declares. `
+        + `  rungLabel: ${JSON.stringify(resp.rungLabel ?? null)}  `
+        + `valueSource: ${JSON.stringify(resp.valueSource ?? null)}  `
+        + `fmvReason: ${JSON.stringify(resp.fmvReason ?? null)}. `
+        + "  If the engine emits it on purpose, declare it: a RUNG in "
+        + "fmvRung.ts (FMV_RUNG_LABELS), or a legacy free-text source in "
+        + "legacyEstimateSources.ts (LEGACY_ESTIMATE_SOURCES). Never paste it "
+        + "into this list -- the harness asks the vocabulary.",
+    ).toBe(true);
   }
 }
 
