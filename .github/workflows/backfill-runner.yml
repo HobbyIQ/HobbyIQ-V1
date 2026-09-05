@@ -396,6 +396,25 @@ on:
           # row-balanced chunk list. Vendor-partition rows are exempt and
           # counted, never flagged (#1650). Never writes, in any mode.
           - census-split-identity
+          # CF-UNKNOWN-IS-A-PARSER-PROBLEM (Drew's GO, 2026-09-05). The
+          # 889,860 sold_comps rows whose slug carries `setKey=unknown` -- the
+          # largest single identity defect in the pool, and the one NO
+          # CHECKLIST CAN REACH: a checklist is keyed by (sport, year, setKey),
+          # and these rows name no product to look one up by.
+          #
+          # READ ONLY, with no write path in the script at all; the gate below
+          # refuses an apply=true dispatch outright. It re-derives each row
+          # through the GREAT REMATCH'S OWN deriveIdentity + classifyRow --
+          # imported, not re-implemented -- and reports which rows the running
+          # IMPROVE fleet already fixes, which read a product but have no
+          # checklist at the destination (the acquisition list), which need a
+          # VOCABULARY entry (top products by row count, folded by proposed
+          # key), and which are underivable and why.
+          #
+          # Sharding is OPT-IN via lib/runner-shard-scope.cjs: an inherited
+          # `slot=0 slots=16` sweeps EVERY row rather than silently censusing a
+          # sixteenth of the population (#1756).
+          - census-unknown-setkey
           # CF-MARKET-INDEXES purge + rebuild (Drew's ruling, 2026-09-03).
           # Deletes the nine basket docs minted into prod on 2026-09-03
           # between 14:12Z and 14:36Z by rebuild runs whose "report-only"
@@ -671,6 +690,17 @@ jobs:
         shell: bash
         run: |
           echo "::error::census-split-identity is READ ONLY — it has no write path. Re-dispatch with apply=false; the repair is a separate audited lane."
+          exit 1
+
+      # The same gate, same reasoning, for the unknown-setKey census. It has no
+      # write path in any mode: the repair for the rows it finds is either the
+      # Great Rematch's own IMPROVE arm (already running) or a vocabulary
+      # change, and neither is this script's to make.
+      - name: Refuse an APPLY dispatch of the read-only unknown-setKey census
+        if: ${{ inputs.script == 'census-unknown-setkey' && inputs.apply == true }}
+        shell: bash
+        run: |
+          echo "::error::census-unknown-setkey is READ ONLY — it has no write path. Re-dispatch with apply=false; the repair is the Great Rematch's IMPROVE arm or a vocabulary change."
           exit 1
 
       # The same gate, same reasoning, for the two READ-ONLY lanes of
@@ -1318,7 +1348,7 @@ jobs:
           # so the two lanes' artifacts can never overwrite each other. Guarded
           # on script for the same reason MODE tokens are: one name, one
           # meaning, and no chance of a path leaking into another lane.
-          CENSUS_OUT: ${{ inputs.script == 'census-split-identity' && '/tmp/split-identity-census' || (inputs.script == 'census-ch-product-label-parallel' && '/tmp/ch-product-label-census' || '/tmp/rematch-census') }}
+          CENSUS_OUT: ${{ inputs.script == 'census-split-identity' && '/tmp/split-identity-census' || (inputs.script == 'census-ch-product-label-parallel' && '/tmp/ch-product-label-census' || (inputs.script == 'census-unknown-setkey' && '/tmp/unknown-setkey-census' || '/tmp/rematch-census')) }}
           # CENSUS_FROM_TS is deliberately NOT wired to a dispatch input. A
           # relaunch re-reads its shard from the top, exactly as the rematch
           # census does and for the same reason: the walk is READ ONLY, so
@@ -1506,6 +1536,22 @@ jobs:
           name: ch-product-label-census-slot-${{ inputs.slot }}-${{ github.run_id }}
           path: |
             /tmp/ch-product-label-census/
+            /tmp/backfill.log
+          if-no-files-found: warn
+          retention-days: 90
+
+      # The unknown-setKey census's own artifact. Its JSON carries the buckets,
+      # the per-(sport,year) sample sizes, the acquisition list and the top
+      # products needing a vocabulary rule -- which is exactly the input the
+      # alias/vocab ruling reads. A report that only ever lived in a log is a
+      # report nobody can quote when authorising the change.
+      - name: Upload the unknown-setKey census
+        if: ${{ always() && inputs.script == 'census-unknown-setkey' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: unknown-setkey-census-slot-${{ inputs.slot }}-${{ github.run_id }}
+          path: |
+            /tmp/unknown-setkey-census/
             /tmp/backfill.log
           if-no-files-found: warn
           retention-days: 90
