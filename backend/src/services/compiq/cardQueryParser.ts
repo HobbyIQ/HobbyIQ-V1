@@ -28,7 +28,7 @@ export interface ParsedCardQuery {
   rawQuery: string;              // original input preserved
 }
 
-import { playerSegmentIsAPerson } from "./playerSegmentIsAPerson.js";
+import { playerSegmentIsAPerson, titleNamesNoPlayer } from "./playerSegmentIsAPerson.js";
 
 function escapeRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -496,7 +496,16 @@ export function parseCardQuery(input: string): ParsedCardQuery {
   // null. It never truncates: a residue it cannot bound is unknown, and blank
   // means unknown. The `.slice(0, 4)` is pinned by ABSENCE in
   // playerSegmentIsAPerson.mutation.test.ts.
-  const playerName = playerSegmentIsAPerson(cleaned, { year, setKey: setSlug(set ?? brand) }).player;
+  // CF-A-CATALOG-TITLE-NAMES-NO-PLAYER (2026-09-05). The vendor's catalog title
+  // ("1966 Topps Rub-Offs Baseball #NNO Base") names a card by PRODUCT and
+  // never by person, so its residue is product text. The flag is read off the
+  // RAW title -- `cleaned` has already had the sport word stripped, so the
+  // shape is no longer visible by the time the residue is built.
+  const playerName = playerSegmentIsAPerson(cleaned, {
+    year,
+    setKey: setSlug(set ?? brand),
+    titleNamesNoPlayer: titleNamesNoPlayer(text),
+  }).player;
 
   // --- CONFIDENCE ---
   let confidence = 0;

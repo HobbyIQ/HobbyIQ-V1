@@ -358,13 +358,77 @@ function isPseudoCardNumber(v) {
  * REPORT-ONLY: we know the stored name is wrong, and knowing that is not the
  * same as knowing the right one. Absent beats wrong on both sides of the swap.
  */
-function isCorruptedPlayerName(v) {
+/**
+ * CF-A-CATALOG-TITLE-NAMES-NO-PLAYER (2026-09-05).
+ *
+ * The vendor's PRODUCT-catalog title names a card by product and never by
+ * person: "<year> <product...> <Sport> #<number> <variant>". The bare sport
+ * token immediately before the card number is the tell -- a person selling a
+ * card writes the player's name there, and the vendor's template never does.
+ *
+ * Mirrors titleNamesNoPlayer() in src/services/compiq/playerSegmentIsAPerson.ts,
+ * which is the deriver's copy of this same fact. Duplicated rather than
+ * imported for the reason the finish-vocabulary mirror gives: nothing under
+ * src/ may depend on scripts/, and this module is a .cjs under scripts/.
+ * playerSegmentCatalogTitle.test.ts pins the deriver's side against a 60-title
+ * prod corpus; this side is pinned by rematchClassifyCatalogTitle.test.ts.
+ */
+const CATALOG_TITLE_RE =
+  /\b(?:baseball|basketball|football|hockey|soccer|wrestling|racing|golf|tennis|boxing|mma|multi-?sport|non-?sport)\s+#/i;
+function titleNamesNoPlayer(title) {
+  return CATALOG_TITLE_RE.test(str(title));
+}
+
+function isCorruptedPlayerName(v, setKey = null, title = null) {
   const s = lower(v).trim();
   if (!s) return false;
+  // CF-A-CATALOG-TITLE-NAMES-NO-PLAYER. The title this pseudo-number was
+  // derived from names NO person, so whatever sits in the name slot came out of
+  // the product name. This is the fact that covers the population the setKey
+  // test cannot see: these rows' stored setKey is the FLAGSHIP (`topps`), not
+  // the specialized product (`topps-rub-offs`), so the name's words are not in
+  // it -- but the TITLE still says plainly that no person was ever named.
+  //
+  // Measured read-only on prod 2026-09-05 over a 30,000-row sample: of 829
+  // catalog-shaped rows, the setKey test reaches 115 and `titleStatesNumber`
+  // reaches 228; this reaches all 829, and 31 players stop sharing
+  // `player-rub-offs`.
+  if (titleNamesNoPlayer(title)) return true;
   // Ends on a name particle -> the name was cut ("Elly De").
   if (/\s(de|la|del|van|von|mc|mac|dos|das|di|da)$/.test(s)) return true;
   // Carries a franchise/layout token that is never part of a person's name.
   if (/\b(pokemon|swsh|vmax|vstar|full art|reverse holo)\b/.test(s)) return true;
+  // CF-A-CATALOG-TITLE-NAMES-NO-PLAYER (2026-09-05). The name IS the product.
+  //
+  // parseCardQuery derived the player subtractively from a vendor CATALOG title
+  // ("1966 Topps Rub-Offs Baseball #NNO Base") that names no person at all, so
+  // the residue was a fragment of the PRODUCT NAME and got promoted into one.
+  // Neither existing test sees it: "Rub Offs" ends on no particle and carries no
+  // franchise token, so these rows classified `changed:cardNumber` = CONFLICT =
+  // report-only, and the collapse stood.
+  //
+  // Measured read-only against prod on 2026-09-05: 31 distinct players share
+  // `hiq:baseball:1966:topps:player-rub-offs:base:no-auto` and 24 share
+  // `player-stand-up` -- one pool pricing many different cards.
+  //
+  // THE EVIDENCE IS THE setKey, NOT A WORD LIST. A person's name does not
+  // reproduce the words of the product they are printed on. When every token of
+  // the "name" also appears in this row's own setKey, the name is the product
+  // and this is the defect. That is a comparison between two fields of the SAME
+  // row -- it needs no vocabulary, and it cannot grow stale as the hobby does.
+  //
+  // Requires the caller to supply the setKey; without it this test is skipped
+  // and the two older tests decide, exactly as before.
+  const key = lower(setKey).trim();
+  if (key) {
+    const keyWords = new Set(key.split(/[-\s]+/).filter((w) => w.length >= 3));
+    const nameWords = s.split(/[-\s]+/).filter((w) => w.length >= 3);
+    // Every substantial word of the name is a word of the product's own key.
+    // A one-word overlap is a coincidence ("Chase Utley" on topps-chase); the
+    // test is that NOTHING in the name is from outside the product.
+    if (nameWords.length > 0 && keyWords.size > 0
+      && nameWords.every((w) => keyWords.has(w))) return true;
+  }
   return false;
 }
 
@@ -3569,10 +3633,16 @@ function diffAxes(stored, derived, opts = {}) {
   // Both are facts about the ROW supplied by the caller, never verdicts about
   // the derivation, and both are STORED-side only. The derived side is never
   // blanked: a derivation that produces `player-…` produced it deliberately.
+  // CF-A-CATALOG-TITLE-NAMES-NO-PLAYER passes two more evidences alongside the
+  // decoded name: the STORED setKey, which is the one minted alongside this
+  // pseudo-number, and the row's own TITLE, which is what the name was derived
+  // FROM. The title is what reaches the rows whose stored key is the flagship
+  // (`topps`) rather than the specialized product (`topps-rub-offs`); the
+  // setKey alone cannot see those, and they are 489 of the 829 measured.
   const storedBlankCardNumber = isPseudoCardNumber(stored?.cardNumber)
     && (opts.titleStatesNumber === true
       || opts.storedPlayerCorrupted === true
-      || isCorruptedPlayerName(String(stored?.cardNumber ?? "").replace(/^player-/i, "").replace(/-/g, " ")));
+      || isCorruptedPlayerName(String(stored?.cardNumber ?? "").replace(/^player-/i, "").replace(/-/g, " "), stored?.setKey ?? null, opts.title ?? null));
   // CF-THE-CHECKLIST-SPELLS-THE-NUMBER (Drew, 2026-09-04). The stored Pokemon
   // card number is not a RIVAL READING of the number -- it is the same number
   // misspelled by a derivation we have since fixed. `094159` is `094` with the
@@ -3812,6 +3882,10 @@ function classifyRow({
     // CF-THE-CHECKLIST-SPELLS-THE-NUMBER: the vertical gates the Pokemon
     // card-number fold. The ROW's sport, never the derivation's guess.
     sport: str(row?.sport ?? derived?.sport ?? stored?.sport),
+    // CF-A-CATALOG-TITLE-NAMES-NO-PLAYER: the row's OWN title is the evidence
+    // that its `player-<name>` segment was built out of the product name. A
+    // fact about the row, like titleStatesNumber beside it.
+    title: str(row?.title),
   });
   const reasons = [];
 
