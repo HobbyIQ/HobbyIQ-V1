@@ -1346,7 +1346,42 @@ jobs:
           # the repair-tiffany-* lanes' own `mode`. Ticking it on a
           # repair-tiffany-* dispatch means "slot 0 really is one shard of a
           # fan-out I am running in full".
-          SHARD: ${{ (inputs.script == 'repair-tiffany-pool-enumeration' || inputs.script == 'repair-tiffany-rung-to-product') && inputs.parents_only == true && 'true' || '' }}
+          #
+          # retire-self-derived-identities JOINED THE LIST (#1799 proved its
+          # axis, 2026-09-05). Its fan-out is not a nicety: baseball is
+          # 1,998,165 self-derived rows over 6,804 (year, setKey) products at a
+          # measured 51.5 rows/s, so ONE slot is ~10.8 hours of loop -- five
+          # serial budget-stop relaunches -- while sixteen slots run ~40m each
+          # with 2.4x of headroom under the 150m step ceiling. Slots 1..15 are
+          # self-evidently chosen and shard on the non-zero slot alone; only
+          # slot 0 is ambiguous, so only slot 0 needs this. Without it a
+          # `slot=0 slots=16` dispatch sweeps the WHOLE sport and the other
+          # fifteen slots redo the work it already did.
+          #
+          # WHY AN EXISTING INPUT AND NOT A GENERIC RULE. A cleaner-looking
+          # rule -- "slots != 16 is the choice" -- reads the ambiguity
+          # backwards: 16 is exactly the fan-out width this lane's own budget
+          # arithmetic recommends, so the generic rule would refuse to shard
+          # the one width anybody would pick and would shard a typo'd `slots=15`
+          # by accident. The tie genuinely cannot be broken from `slot`/`slots`
+          # (CF-AN-INHERITED-SLOTS-IS-NOT-A-CHOSEN-SHARD), so the signal has to
+          # come from a DIFFERENT input the dispatcher had to tick on purpose.
+          # `parents_only` is that input for the same three reasons it was for
+          # repair-tiffany-*: it is a BOOLEAN (so `== true` is unambiguous, and
+          # its `false` default can never opt anyone in by accident), it is
+          # already in the dispatch form (workflow_dispatch is at 24 of
+          # GitHub's 25 inputs and a new one is not available), and it is read
+          # by exactly ONE script -- rehome-catalog-rows-to-own-partition --
+          # which is not on this list, so the signal cannot collide with a
+          # meaning any lane here already has. Ticking it on any script named
+          # below means "slot 0 really is one shard of a fan-out I am running
+          # in full"; it means nothing at all to any other script.
+          #
+          # Pinned by backend/tests/shardOptInWhitelist.test.ts, which parses
+          # this very expression and asserts every script it names is in the
+          # dropdown whitelist AND calls runnerShardScope without alwaysShard.
+          # Drop a script from the line and that suite turns red.
+          SHARD: ${{ (inputs.script == 'repair-tiffany-pool-enumeration' || inputs.script == 'repair-tiffany-rung-to-product' || inputs.script == 'retire-self-derived-identities') && inputs.parents_only == true && 'true' || '' }}
           # Optional year scoping (ingest-checklists-end-to-end, rehome-catalog-
           # rows-to-own-partition, dedupe-catalog-partition-shadows, merge-bare-
           # colour-parallels, repair-refractor-mislabel).
@@ -2866,6 +2901,14 @@ jobs:
         # anything" would loop forever once a slot is down to rows already
         # marked -- the pass is idempotent, so a finished slot legitimately
         # writes zero.
+        #
+        # `parents_only` is forwarded because it carries this lane's
+        # CF-AN-INHERITED-SLOTS-IS-NOT-A-CHOSEN-SHARD opt-in (see the SHARD
+        # export above). A slot-0 continuation that dropped it would rebind as
+        # an inherited default and silently widen from one sixteenth to the
+        # WHOLE sport mid-fleet -- the same trap the repair-tiffany-* relaunch
+        # steps forward it to avoid. Slots 1..15 do not need it (a non-zero
+        # slot is self-evidently chosen) but forwarding it is harmless there.
         if: ${{ !cancelled() && inputs.script == 'retire-self-derived-identities' }}
         env:
           GH_TOKEN: ${{ github.token }}
@@ -2884,7 +2927,7 @@ jobs:
           fi
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (retired=${R:-0} unverified=${U:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=retire-self-derived-identities -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=retire-self-derived-identities -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f parents_only="${{ inputs.parents_only }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (retired=${R:-0} unverified=${U:-0}) — done, no re-dispatch."
           fi

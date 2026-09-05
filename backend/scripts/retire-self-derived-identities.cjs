@@ -87,6 +87,39 @@
  * SHARD=true is REQUIRED for slot 0 -- without it slot 0 sweeps the whole
  * sport and the other fifteen slots re-do work it already did.
  *
+ * ── HOW SLOT 0 SAYS IT IS A CHOSEN SHARD (2026-09-05) ───────────────────────
+ *
+ * The runner cannot read your intent off `slot`/`slots`: both carry
+ * workflow-wide defaults ("0" and "16"), so `slot=0 slots=16` is byte-identical
+ * whether it was chosen or inherited. The signal therefore rides a DIFFERENT
+ * input the dispatcher had to tick on purpose -- `parents_only`, exactly as it
+ * does for the repair-tiffany-* lanes (#1756). backfill-runner.yml exports
+ *
+ *   SHARD=true  <=>  script is on the opt-in list AND parents_only == true
+ *
+ * `parents_only` is a BOOLEAN already in the dispatch form (workflow_dispatch
+ * is at 24 of GitHub's 25 inputs, so a new one is not available) and is read by
+ * exactly ONE script -- rehome-catalog-rows-to-own-partition -- which is not on
+ * that list. It means NOTHING to this lane other than "slot 0 really is one
+ * shard of a fan-out I am running in full"; this script never reads
+ * PARENTS_ONLY itself.
+ *
+ * THE SIXTEEN DISPATCHES. Slot 0 needs the flag; slots 1..15 are self-evidently
+ * chosen and shard on the non-zero slot alone.
+ *
+ *   gh workflow run backfill-runner.yml -f script=retire-self-derived-identities \
+ *     -f apply=true -f sports=baseball -f slot=0 -f slots=16 -f parents_only=true
+ *   gh workflow run backfill-runner.yml -f script=retire-self-derived-identities \
+ *     -f apply=true -f sports=baseball -f slot=1 -f slots=16
+ *   ... through slot=15.
+ *
+ * READ THE BANNER BEFORE TRUSTING THE RUN (feedback_runner_exports_backfill_apply).
+ * A dispatched slot 0 that forgot the flag prints "sharding OFF -- this run
+ * sweeps EVERY row (slots=16 is the runner's inherited default, not a chosen
+ * shard...)" and is covering sixteen times what you asked for. The relaunch
+ * step forwards `parents_only`, so a budget continuation of slot 0 keeps its
+ * shard rather than widening to the whole sport mid-fleet.
+ *
  * The axis is PROVEN, not assumed: tests/retireSelfDerivedBudgetMargin.test.ts
  * partitions a synthetic product list at 8, 16 and 32 slots and asserts every
  * product is owned by exactly one slot -- complete and disjoint
