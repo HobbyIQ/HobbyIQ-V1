@@ -29,6 +29,9 @@ import {
 } from "../portfolioiq/hobbyIqCardId.service.js";
 import { productFamilyOf, productRefinementsOf } from "./productSetKeys.js";
 import { resolveIdentityToCatalogRow } from "./catalogIdentityResolver.js";
+// The ONE grade-tier vocabulary. Shared with cardIdentityKey so the reader that
+// strips a grade and the writer that refuses to mint one cannot drift apart.
+import { GRADE_TIER_RE } from "../portfolioiq/cardIdentityKey.service.js";
 
 const COSMOS_DATABASE = process.env.COSMOS_DATABASE ?? "hobbyiq";
 const CATALOG_CONTAINER = process.env.COSMOS_CARD_CATALOG_CONTAINER ?? "card_catalog";
@@ -310,6 +313,53 @@ export interface SlugAdoption {
   rebound: boolean;
   /** Set when a match existed but was refused, so callers can log it. */
   refusedReason?: string;
+  /** Set when the resolved slug carried a grade segment that was stripped
+   *  before adoption, so callers can log the shape they were offered. */
+  gradeStripped?: string;
+}
+
+/**
+ * CF-A-GRADE-IS-A-FIELD-NEVER-A-SLUG-SEGMENT (2026-09-05).
+ *
+ * card_catalog is deliberately grade-EXPLODED: one row per (card, grade), with
+ * the card identity in `parentSlug` and the grade in `gradeTier` — see
+ * cardIdentityKey.service.ts. sold_comps is NOT. A sale's slug carries the RAW
+ * card and its grade lives in the gradeCompany/gradeValue FIELDS, because one
+ * card is one pool and its grades are a pricing dimension OF that pool.
+ *
+ * The matcher returns `best.id` — the catalog ROW's id. When the only catalog
+ * rows for a card are exploded graded ones, that id ends in a grade tier, and
+ * adopting it verbatim wrote a grade into a sold_comps slug. Measured
+ * 2026-09-05 over the whole pool: 4,681 rows across 2,633 distinct cards, all
+ * exactly 8 segments, 4,672 of them tca-ebay, still minting (66 in the last
+ * 24h). Every one is a catalog grade-explode row id — sampled 25, 24 matched a
+ * card_catalog row carrying `parentSlug` and `gradeTier`.
+ *
+ * The damage is worse than a split pool. The grade in the slug is the CATALOG
+ * ROW's grade, not the SALE's: of the 1,779 such rows that carry grade fields,
+ * only 218 agree with their own slug. A PSA 10 sale landed on a `cgc-9` slug
+ * because that was the catalog row the fuzzy matcher happened to rank first.
+ *
+ * And these rows are unreachable by every repair lane: `identityParts` (the
+ * rekey lanes) and `parseHobbyIqCardId` both return null for an 8th segment
+ * that is not `num-`, so every reslug/rekey sweep skips them by construction.
+ *
+ * The strip is POSITIONAL, never a substring sniff. A card NUMBER of `psa-th2`
+ * lives in segment 4 and a blanket `/:(psa|bgs)/` regex would eat it — that
+ * exact false positive is recorded in cardIdentityKey.service.ts, which is why
+ * this reuses that module's `GRADE_TIER_RE` against segment 8 ALONE.
+ *
+ * Strip rather than refuse: the parent IS the right answer, the matcher found
+ * the right card, and refusing would drop a real sale over a catalog shape the
+ * sale had no say in.
+ */
+const IDENTITY_SEGMENTS = 7;
+
+export function stripGradeSegment(slug: string): { slug: string; stripped: string | null } {
+  const parts = String(slug ?? "").split(":");
+  if (parts.length !== IDENTITY_SEGMENTS + 1) return { slug, stripped: null };
+  if (!GRADE_TIER_RE.test(parts[IDENTITY_SEGMENTS])) return { slug, stripped: null };
+  return { slug: parts.slice(0, IDENTITY_SEGMENTS).join(":"), stripped: parts[IDENTITY_SEGMENTS] };
 }
 
 /**
@@ -321,15 +371,23 @@ export interface SlugAdoption {
  */
 export function adoptResolvedSlug(computedSlug: string, resolved: CatalogMatchResult): SlugAdoption {
   if (!resolved.found || !resolved.slug) return { slug: computedSlug, rebound: false };
-  if (resolved.slug === computedSlug) return { slug: computedSlug, rebound: false };
+  // CF-A-GRADE-IS-A-FIELD-NEVER-A-SLUG-SEGMENT: an exploded graded catalog row
+  // names the right CARD at the wrong GRANULARITY. Strip to the parent BEFORE
+  // any comparison, so a resolved `…:psa-10` against an identical computed slug
+  // is correctly "no rebind" rather than a rebind onto a graded key.
+  const { slug: candidate, stripped } = stripGradeSegment(resolved.slug);
+  if (candidate === computedSlug) {
+    return { slug: computedSlug, rebound: false, ...(stripped ? { gradeStripped: stripped } : {}) };
+  }
   if (resolved.confidence < MIN_REBIND_CONFIDENCE) {
     return {
       slug: computedSlug,
       rebound: false,
       refusedReason: `confidence ${resolved.confidence} < ${MIN_REBIND_CONFIDENCE} (${resolved.matchedBy})`,
+      ...(stripped ? { gradeStripped: stripped } : {}),
     };
   }
-  return { slug: resolved.slug, rebound: true };
+  return { slug: candidate, rebound: true, ...(stripped ? { gradeStripped: stripped } : {}) };
 }
 
 /**
