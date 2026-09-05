@@ -92,7 +92,10 @@ describe("resolveIdentityToCatalogRow -- an un-numbered id", () => {
   it("point-reads the id, then runs ONE DISTINCT twins-only stem query and resolves to the single twin", async () => {
     const { container, calls } = stub([MWI_499, `${MWI_499}:psa-9`, "hiq:baseball:2025:bowman-draft:cpa-mwi:gold-refractor:auto:num-50"]);
     const r = await resolveIdentityToCatalogRow(MWI, { container });
-    expect(r).toEqual({ requested: MWI, id: MWI_499, kind: "numbered-twin", twins: [MWI_499], poolTwin: MWI_499 });
+    // sourceOfRow rides out of the stem query this test already counts
+    // (CF-WE-DONT-WANT-SELF-DERIVED, 2026-09-04) — the pricing gate reads the
+    // adopted row's provenance without a second catalog read.
+    expect(r).toEqual({ requested: MWI, id: MWI_499, kind: "numbered-twin", twins: [MWI_499], poolTwin: MWI_499, sourceOfRow: "checklistcenter" });
     expect(calls.reads).toEqual([`${MWI}|${MWI}`]);
     expect(calls.queries).toHaveLength(1);
     expect(calls.queries[0].query).toBe(STEM_QUERY);
@@ -122,7 +125,7 @@ describe("resolveIdentityToCatalogRow -- an un-numbered id", () => {
     const { container } = stub([{ id: MWI_499, source: "checklistcenter-2026-08-29" }, { id: `${MWI}:num-500`, source: "cardhedge" }]);
     const r = await resolveIdentityToCatalogRow(MWI, { container });
     // Mutation check: without the authority rule this is "ambiguous", id null.
-    expect(r).toEqual({ requested: MWI, id: MWI_499, kind: "numbered-twin", twins: [MWI_499, `${MWI}:num-500`], chosenBy: "authority", poolTwin: MWI_499 });
+    expect(r).toEqual({ requested: MWI, id: MWI_499, kind: "numbered-twin", twins: [MWI_499, `${MWI}:num-500`], chosenBy: "authority", poolTwin: MWI_499, sourceOfRow: "checklistcenter-2026-08-29" });
     expect(events(logSpy, "catalog_identity_resolved_to_twin")).toMatchObject([{ slug: MWI, resolvedTo: MWI_499, chosenBy: "authority" }]);
   });
   it("two vendor twins and no authority is still a refusal", async () => {
@@ -197,7 +200,7 @@ describe("resolveIdentityToCatalogRow -- the memo: one stem query per stem per T
     const first = await resolveIdentityToCatalogRow(MWI, { container });
     first.twins.push("junk");
     (first as { id: string | null }).id = null;
-    expect(await resolveIdentityToCatalogRow(MWI, { container })).toEqual({ requested: MWI, id: MWI_499, kind: "numbered-twin", twins: [MWI_499], poolTwin: MWI_499 });
+    expect(await resolveIdentityToCatalogRow(MWI, { container })).toEqual({ requested: MWI, id: MWI_499, kind: "numbered-twin", twins: [MWI_499], poolTwin: MWI_499, sourceOfRow: "checklistcenter" });
   });
   it("expires after the TTL (~10 min) and is bounded", async () => {
     vi.useFakeTimers();
@@ -245,7 +248,11 @@ describe("resolveIdentityToCatalogRow -- a numbered id", () => {
     // Mutation check: round 2 returned after the first read and never set
     // poolTwin, so the reader read …:num-499 alone while the sales sat under
     // the stem — the mirror of the bug this branch fixes.
-    expect(r).toEqual({ requested: MWI_499, id: MWI_499, kind: "exact", twins: [], poolTwin: MWI });
+    // sourceOfRow is NULL on this path and that is correct: the row was
+    // settled by two POINT READS, which return the id alone — no stem query
+    // ran, so no source was fetched. Absence is unknown provenance, and the
+    // pricing gate treats unknown as unbacked rather than as permission.
+    expect(r).toEqual({ requested: MWI_499, id: MWI_499, kind: "exact", twins: [], poolTwin: MWI, sourceOfRow: null });
     expect(poolReadIdsFor(MWI_499, r)).toEqual([MWI_499, MWI]);
     // The stem read is what settles poolTwin: two point reads (2 RU), no query.
     expect(calls.reads).toEqual([`${MWI_499}|${MWI_499}`, `${MWI}|${MWI}`]);

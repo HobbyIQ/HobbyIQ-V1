@@ -138,6 +138,14 @@ on:
           - ingest-checklists-end-to-end
           - reslugAllSoldComps
           - annotate-checklist-backing
+          # CF-WE-DONT-WANT-SELF-DERIVED (Drew, 2026-09-04). Lanes (a)+(b):
+          # retire a self-derived row a checklist twin supersedes; label the
+          # rest identityUnverified. Report-only unless apply=true; deletes
+          # nothing. Its companion preview
+          # (report-identity-backing-for-holdings) is READ-ONLY BY DESIGN and
+          # is deliberately NOT whitelisted here -- it has no apply mode and
+          # belongs on a workstation, not in a runner that can write.
+          - retire-self-derived-identities
           - retire-prose-parallel-rows
           - retire-numbered-base-rows
           - conform-card-profile
@@ -2637,6 +2645,36 @@ jobs:
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-select-subbrand-misslug -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f setkey_like="${{ inputs.setkey_like }}" -f limit="${{ inputs.limit }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (moved=${N:-0}) — done, no re-dispatch."
+          fi
+
+      - name: Self-relaunch the self-derived retire/label lane until the slot is clean
+        # CF-RELAUNCH-ONLY-ON-BUDGET (#1361). The gate is the MARKER and
+        # nothing else: the lane stops at its clock budget with products still
+        # unscanned and says so in those words. Gating on "did it mark
+        # anything" would loop forever once a slot is down to rows already
+        # marked -- the pass is idempotent, so a finished slot legitimately
+        # writes zero.
+        if: ${{ !cancelled() && inputs.script == 'retire-self-derived-identities' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        working-directory: backend
+        run: |
+          set +e
+          R=$(grep -aoE "^  retired \(twin\) +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
+          U=$(grep -aoE "^  identityUnverified +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
+          echo "self_derived_retired=${R:-0} identity_unverified=${U:-0}"
+          # The reconciliation line must balance, or the run measured something
+          # other than what it reported (feedback_gate_merges_on_exit_codes).
+          if grep -aq "DOES NOT BALANCE" /tmp/backfill.log; then
+            echo "::error::reconciliation did not balance — not re-dispatching"
+            exit 1
+          fi
+          if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
+            echo "::notice::budget hit (retired=${R:-0} unverified=${U:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=retire-self-derived-identities -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}"
+          else
+            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (retired=${R:-0} unverified=${U:-0}) — done, no re-dispatch."
           fi
 
       - name: Self-relaunch the checklist-backing annotation until the slot is clean

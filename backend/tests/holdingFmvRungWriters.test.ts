@@ -181,7 +181,13 @@ describe("CF-ONE-PERSIST-HELPER — every persisted value goes through writeHold
           // ternary form: `rung: x ? { rung: … } : { noRung: … }`
           || (/\brung:\s/.test(call.body) && /\{\s*rung:/.test(call.body) && /\{\s*noRung:/.test(call.body));
         if (!namesRung) offenders.push(`${where} — no RungDeclaration`);
-        if (!/\bvalueSource:\s*("observed"|"estimated"|\w)/.test(call.body)) {
+        // The three members of ValueSourceDeclaration, or an identifier a
+        // site computed. "unavailable" joined the union on 2026-09-04
+        // (CF-WE-DONT-WANT-SELF-DERIVED): a lane that publishes NO number —
+        // the identity refusal — has no evidence of either kind to declare,
+        // and forcing it to say "estimated" would mark an empty row as though
+        // a model had priced it.
+        if (!/\bvalueSource:\s*("observed"|"estimated"|"unavailable"|\w)/.test(call.body)) {
           offenders.push(`${where} — no valueSource`);
         }
       }

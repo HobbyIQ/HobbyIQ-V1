@@ -467,7 +467,16 @@ describe("C. a withheld price carries a withheld stamp — and only that", () =>
     const noConf = { ...GRIFFEY, pricingSourceMeta: { slug: "x" } } as unknown as PortfolioHolding;
     const meta = noBasisRefusalWrite(noConf, "pool-migrating", null, NOW).holding
       .pricingSourceMeta as Record<string, unknown>;
-    expect(meta.confidence).toBeUndefined();
+    // CF-CONFIDENCE-IS-NOT-OPTIONAL, persisted half (2026-09-04). This case is
+    // the "or an explicit null" the title already names, and it used to assert
+    // `undefined` for a reason that was a defect rather than a decision:
+    // `writeHoldingValuation` spread `confidence` only when `!= null`, so a
+    // lane that says "I measured nothing" persisted IDENTICALLY to one that
+    // forgot to say anything — the exact distinction the required-and-nullable
+    // type was introduced to preserve. The refusal branch has no confidence to
+    // give and now records that; absence is no longer expressible.
+    expect(meta.confidence).toBeNull();
+    expect("confidence" in meta).toBe(true);
     expect(meta.withheld).toBeDefined();
   });
 

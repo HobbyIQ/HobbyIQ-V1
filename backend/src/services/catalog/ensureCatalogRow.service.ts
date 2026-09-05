@@ -80,6 +80,52 @@ export async function ensureCatalogRow(input: EnsureCatalogRowInput): Promise<vo
     if (resource) { markKnown(input.slug); return; }
   } catch { /* 404 falls through to create */ }
 
+  // CF-PREFER-THE-CHECKLIST-ROW-OVER-MINTING (Drew, 2026-09-04: "we don't want
+  // self derived, we want it matched to checklists").
+  //
+  // A point read that 404s means "no row AT THIS SLUG" — it does NOT mean the
+  // card is unknown. The card's checklist row can sit a suffix away: the
+  // cross-source fold re-keyed catalog rows to their numbered form
+  // (`…:refractor:auto:num-499`) and did not re-key the holdings or the sales
+  // that point at the un-numbered id. So the miss that used to mint a fresh
+  // `ingest-auto-seed` row is frequently a miss against a checklist row that
+  // already exists — and minting there creates the duplicate identity that
+  // splits the pool and, under the ruling, cannot carry a price at all.
+  //
+  // Measured on prod 2026-09-04: every self-derived identity under any of the
+  // 131 live holdings was minted through this function's USER_SEED_SOURCES
+  // caller. Drew's own 43 carry seven of them.
+  //
+  // So the resolver is asked BEFORE minting, through the one module that owns
+  // the rule (catalogIdentityResolver — the same answer every reader and
+  // writer gets). When it resolves the identity to a real row, that row IS the
+  // card: nothing is minted, and the slug is marked known so the process does
+  // not ask again. This is strictly a REFUSAL TO MINT; it re-points nothing
+  // and rewrites nothing, because moving a holding onto the twin is
+  // conform-holdings-to-catalog's job and doing it here by side effect is how
+  // half-moved twins happen (CF-GUARD-THE-CATALOG-WRITE-CONTRACT).
+  //
+  // It fails OPEN, deliberately: a throttle or a query error must not silently
+  // stop the catalog auto-growing, which is this function's whole purpose. An
+  // unresolved read leaves the mint path exactly as it was.
+  try {
+    const { resolveIdentityToCatalogRow } = await import("./catalogIdentityResolver.js");
+    const resolved = await resolveIdentityToCatalogRow(input.slug, { printRun: input.printRun ?? null });
+    if (resolved?.id && resolved.kind !== "unresolved") {
+      console.log(JSON.stringify({
+        event: "ensure_catalog_row_declined_identity_exists",
+        source: "ensureCatalogRow",
+        requested: input.slug,
+        resolvedTo: resolved.id,
+        kind: resolved.kind,
+        rowSource: resolved.sourceOfRow ?? null,
+        detail: "the catalog already holds this identity — not minting a second row for it",
+      }));
+      markKnown(input.slug);
+      return;
+    }
+  } catch { /* fail open: the resolver is an optimisation, not a gate */ }
+
   // Build a minimal-but-searchable doc mirroring bulk-build-catalog.ts
   // shape so downstream jobs (search, salesSummary, match) work as-is.
   const setKey = normalizeSetKey(input.setName ?? "");

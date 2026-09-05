@@ -73,7 +73,13 @@ export type RungDeclaration =
   | { noRung: string };
 
 /** "observed" = comps of this identity AND this tier. Everything else is
- *  "estimated". No default: the writer states which kind of number it has. */
+ *  "estimated". No default: the writer states which kind of number it has.
+ *
+ *  There is deliberately NO third member for a refusal. #1781/#1785 rule that
+ *  a withhold writes `valueSource: "estimated"` — a refusal observed nothing,
+ *  so it cannot stand behind an "observed" claim, and inventing an
+ *  "unavailable" member would give the refusal branches a second vocabulary
+ *  for the fact `withheld.retained` already states precisely. */
 export type ValueSourceDeclaration = "observed" | "estimated";
 
 export interface HoldingValuationWrite {
@@ -129,7 +135,11 @@ export interface HoldingValuationWrite {
     withheld?: {
       reason: string;
       blockingId: string | null;
-      blockingCount: number;
+      /** The blocking pool's size. Null when the refusal is not about a pool
+       *  at all — an identity refused for having no checklist behind it
+       *  blocks on provenance, and inventing a 0 there would read as "the
+       *  pool was empty", which is a different and false claim. */
+      blockingCount: number | null;
       /** The estimate that was NOT published — kept, never erased. */
       proposed: number | null;
       /**
@@ -235,7 +245,20 @@ export function writeHoldingValuation(
         method: rung ?? (w.meta.withheld ? "withheld" : "unlabelled-carry"),
         ...(w.meta.withheld ? { withheld: w.meta.withheld } : {}),
         ...(w.meta.compsUsed != null ? { compsUsed: w.meta.compsUsed } : {}),
-        ...(w.meta.confidence != null ? { confidence: w.meta.confidence } : {}),
+        // CF-CONFIDENCE-IS-NOT-OPTIONAL, the persisted half (2026-09-04).
+        //
+        // The TYPE made `confidence` required-and-nullable so a lane could not
+        // silently omit it — and this line then dropped the very `null` the
+        // type forces a lane to write. `!= null` spreads nothing for an
+        // explicit null, so "I measured nothing and say so" persisted as
+        // IDENTICALLY ABSENT to "I forgot", which is the exact distinction
+        // that required-nullable exists to preserve. A refusal lane
+        // (identityUnverifiedRefusalWrite, and the floor lane when it has no
+        // prior confidence) has no confidence to give; its `null` is a
+        // statement and must survive to the row.
+        //
+        // Only `undefined` — which the type no longer permits — is omitted.
+        ...(w.meta.confidence !== undefined ? { confidence: w.meta.confidence } : {}),
         ...(w.meta.unionRefused ? { unionRefused: w.meta.unionRefused } : {}),
         // CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (#1674) — preserved by
         // construction on EVERY path that reaches this helper.

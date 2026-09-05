@@ -52,6 +52,7 @@
 import type { PortfolioHolding } from "../../types/portfolioiq.types.js";
 import { valueIdentity, type Valuation } from "../compiq/oneValuationPath.service.js";
 import { isExactPoolRung, isPricingRung } from "../compiq/fmvRung.js";
+import { identityBackingOf, mayPublishPrice, NO_CHECKLIST_MATCH } from "../catalog/identityBacking.js";
 import { persistedLabelsForValuation } from "../compiq/valuationLabels.js";
 import { writeHoldingValuation } from "./writeHoldingValuation.js";
 
@@ -63,7 +64,8 @@ export type HoldingValuationOutcome =
    * CF-A-STALE-VALUE-IS-NOT-A-PRICE (Drew, 2026-09-04). The engine declined
    * for a reason that must be PERSISTED as a refusal rather than fallen
    * through: the catalog holds no identity for this holding, or the
-   * identity's pool is still migrating. Distinguished from `unresolved` —
+   * identity's pool is still migrating, or the only catalog row for it is one
+   * we minted from our own data. Distinguished from `unresolved` —
    * which lets the caller's legacy chain run — precisely because these two
    * must NOT be replaced by another lane's number. The caller writes the
    * refusal via `noBasisRefusalWrite` and stops.
@@ -570,7 +572,24 @@ export function costBasisFloorRefusalWrite(
  * stale estimate left standing just moves the same undefended number one field
  * over. No number is invented here.
  */
-export type NoBasisRefusalReason = "identity-not-in-catalog" | "pool-migrating";
+/**
+ * CF-WE-DONT-WANT-SELF-DERIVED-WE-WANT-IT-MATCHED-TO-CHECKLISTS
+ * (Drew, 2026-09-04, in those words) joins this union rather than opening a
+ * refusal branch of its own.
+ *
+ * It is the SAME event these two already name: the engine will not publish a
+ * number, the reason is about the IDENTITY rather than the market, and a
+ * caller must persist the refusal instead of letting another lane substitute a
+ * number. `identity-not-in-catalog` says the catalog holds no row; this says
+ * it holds one we MINTED — from our own sales, or from one user's own import —
+ * which is not a card, and a price may not rest on it.
+ *
+ * Sharing the branch is what makes it compose with #1781 and #1785 by
+ * construction rather than by a second implementation remembering to: one
+ * stamp, `retentionThroughFloor` asked once, method / valueSource / fmvRung
+ * rewritten on every withheld write.
+ */
+export type NoBasisRefusalReason = "identity-not-in-catalog" | "pool-migrating" | "no-checklist-match";
 
 export function noBasisRefusalWrite(
   holding: PortfolioHolding,
@@ -599,14 +618,28 @@ export function noBasisRefusalWrite(
       : null);
   const verdict = retentionThroughFloor(holding, { pooledAs: refusedPool });
   const kept = verdict.retained ? verdict.value : null;
+  const retentionClause = verdict.retained
+    ? `prior $${round2(kept as number)} retained`
+    : `nothing retained (${verdict.because})`;
   const summary = reason === "identity-not-in-catalog"
-    ? `the catalog holds no identity for ${slug ?? "this holding"} — nothing to price`
-      + `; ${verdict.retained ? `prior $${round2(kept as number)} retained` : `nothing retained (${verdict.because})`}`
-    : `${slug ?? "this identity"} is still having its sales re-keyed — the pool is incomplete`
-      + `; ${verdict.retained ? `prior $${round2(kept as number)} retained` : `nothing retained (${verdict.because})`}`;
+    ? `the catalog holds no identity for ${slug ?? "this holding"} — nothing to price; ${retentionClause}`
+    : reason === "no-checklist-match"
+      ? `${slug ?? "this identity"} is not checklist-backed — the only catalog row for it was minted`
+        + ` from our own data; ${retentionClause}`
+      : `${slug ?? "this identity"} is still having its sales re-keyed — the pool is incomplete`
+        + `; ${retentionClause}`;
   const refusal = reason === "identity-not-in-catalog"
     ? `no price was published: the catalog holds no identity for this holding`
       + `${slug ? ` (${slug})` : ""}, so there is no pool to price it from.`
+    : reason === "no-checklist-match"
+    // CF-WE-DONT-WANT-SELF-DERIVED. The prose names the ACQUISITION as the
+    // remedy, because that is the work that unblocks this row — a reader who
+    // is told only "no price" goes looking at the pool, which is not where
+    // the problem is.
+    ? `no price was published: this card's identity is not one a real checklist confirms.`
+      + ` The catalog's only row for it was minted from our own sales data or from an import,`
+      + ` and HobbyIQ prices a card only from a checklist-backed identity. Pricing resumes once`
+      + ` this product's checklist is acquired and the card is matched to it.`
     : `no price was published: this card's identity was created recently and its sales are still`
       + ` being re-keyed onto it, so the pool is a partial view. Pricing resumes once the re-key for`
       + ` this identity has settled. No fallback number is published in the meantime — a partial pool`
@@ -919,6 +952,51 @@ export async function valueHoldingThroughOneEntry(
     }
     return { outcome: "unpriced", valuation: v };
   }
+  // CF-WE-DONT-WANT-SELF-DERIVED-WE-WANT-IT-MATCHED-TO-CHECKLISTS
+  // (Drew, 2026-09-04), and it is the FIRST question asked of a priced
+  // valuation, ahead of the cost-basis floor.
+  //
+  // Order matters, and this order is the ruling rather than a preference. The
+  // floor asks "is this number plausible for what the owner paid"; this asks
+  // "is there a card here at all". A number refused for BOTH reasons must be
+  // refused for this one, because `cost-basis-floor` tells a reader to go
+  // look at the pool while `no-checklist-match` tells them to go acquire a
+  // checklist — and the second is what actually unblocks the row. Holding
+  // 9f082213 (Victor Figueroa CPA-VF Black & White Red Ink) is exactly that
+  // row: its identity is `user-verified`, its pool is contaminated, and the
+  // cost-basis floor has been catching the symptom.
+  //
+  // The gate reads the identity the ladder ACTUALLY PRICED (`sourceOfRow`),
+  // not the holding's stored slug. A holding whose slug is self-derived but
+  // which the resolver moved onto a checklist twin prices normally, which is
+  // the whole point of preferring a checklist row over minting.
+  const backing = identityBackingOf(
+    v.identity.slug,
+    v.identity.sourceOfRow === null ? [] : [{ source: v.identity.sourceOfRow }],
+  );
+  if (!mayPublishPrice(backing)) {
+    console.warn(JSON.stringify({
+      event: "one_valuation_path_withheld_no_checklist_match",
+      source: "holdingValuation.valueHoldingThroughOneEntry",
+      site: opts.caller,
+      userId: opts.userId ?? null,
+      holdingId: holding.id,
+      slug: v.identity.slug,
+      pricedId: v.identity.pooledAs,
+      identitySource: v.identity.sourceOfRow,
+      backing,
+      rung: v.rungLabel,
+      // The refused number is REPORTED, never published — a withhold does not
+      // destroy evidence (CF-A-WITHHOLD-DOES-NOT-DESTROY-EVIDENCE).
+      proposed: v.fairMarketValue,
+      compsUsed: v.compsUsed,
+    }));
+    // The SAME refusal outcome the other two identity refusals use, so this
+    // rides #1785's one-stamp write and #1781's retention rule by
+    // construction rather than by a parallel implementation remembering to.
+    return { outcome: "no-basis-refusal", reason: NO_CHECKLIST_MATCH, valuation: v };
+  }
+
   // "Observed" keeps its EXISTING meaning, unchanged: comps of this exact
   // identity at this exact tier. Everything else the ladder priced is an
   // estimate — which is a statement about the evidence, not a reason to

@@ -169,6 +169,21 @@ export interface ValuationIdentity {
   playerName: string | null;
   imageUrl: string | null;
   /**
+   * CF-WE-DONT-WANT-SELF-DERIVED-WE-WANT-IT-MATCHED-TO-CHECKLISTS
+   * (Drew, 2026-09-04).
+   *
+   * The `source` of the catalog row this identity resolved to — the provenance
+   * of the IDENTITY, not of the sales. A price may rest only on a row a real
+   * checklist transcribed; a row we minted from our own sales, or from one
+   * user's own import, is an observation wearing an identity.
+   *
+   * Read from the row `resolveValuationIdentity` already fetches, so the gate
+   * costs no extra RU. Null when the identity did not resolve to a row, and
+   * when the row carries no source — absence is UNKNOWN provenance, never
+   * permission (133,568 catalog rows carry no source at all).
+   */
+  sourceOfRow: string | null;
+  /**
    * CF-A-MIGRATING-POOL-IS-NOT-A-THIN-POOL (Drew, 2026-09-04). The catalog
    * row's immutable mint instant (`observedAt`). Carried on the identity
    * because the question "is this pool still migrating onto a freshly minted
@@ -253,7 +268,7 @@ function blankIdentity(requestedId: string): ValuationIdentity {
     slug: null, requestedId, pooledAs: null, pooledVia: null,
     sport: null, year: null, setKey: null, setName: null, cardNumber: null, observedAt: null,
     parallel: "Base", parallelSlug: null, isAuto: false, printRun: null,
-    playerName: null, imageUrl: null,
+    playerName: null, imageUrl: null, sourceOfRow: null,
   };
 }
 
@@ -324,6 +339,11 @@ export async function resolveValuationIdentity(
   identity.printRun = printRunHint ?? parsed?.printRun ?? row?.printRun ?? null;
   identity.playerName = row?.playerName ?? null;
   identity.imageUrl = row?.imageUrl ?? null;
+  // The row read above is the identity's own row. When the point read missed
+  // (a twin resolution, or a read error priced as given) the resolver's
+  // `sourceOfRow` carries the provenance of the row it ADOPTED, which is the
+  // identity actually being priced.
+  identity.sourceOfRow = row?.source ?? resolution?.sourceOfRow ?? null;
   identity.observedAt = row?.observedAt ?? null;
   return { identity, reason: null, resolution };
 }
