@@ -41,6 +41,11 @@ type Inputs = {
   /** Rows that left this slug by an IMPROVE re-key, counted from the same
    *  `rekeyedFrom` marker `evictedAway` uses (2026-09-05, the wave-2 halt). */
   improveRekeyedAway?: number; improveRekeyedIds?: string[];
+  /** Departures made by a writer that leaves no rematch marker -- the row is
+   *  still resident in the container at a different address (2026-09-05,
+   *  the wave-4 halt). */
+  foreignRekeyedAway?: number; foreignRekeyedRows?: string[];
+  ids?: string[];
 };
 type Cmp = { ok: boolean; regressions: string[]; notes: string[]; touched?: boolean; attributed?: boolean; moved?: number };
 /** One pool's row in the apply's write ledger: what THIS shard moved here. */
@@ -53,6 +58,11 @@ type Checker = {
    *  not name this pool (untouched); an object = this shard wrote here. */
   compareCanary: (c: Record<string, unknown>, b: Inputs, a: Inputs, tol?: number, touch?: Touch | null) => Cmp;
   loadLedger: (file: string) => Ledger | null;
+  /** Exported so the residency rule -- the safety property of DEFECT 5 --
+   *  can be pinned against a fake container. */
+  measure: (pool: unknown, slug: string, priorIds?: string[]) => Promise<Inputs & {
+    foreignRekeyedAway?: number; foreignRekeyedRows?: string[]; ids?: string[];
+  }>;
 };
 const C = require_(path.join(backend, "scripts", "rematch-canary-check.cjs")) as Checker;
 
@@ -61,7 +71,8 @@ const PARALLEL_CANARY = { name: "2017 topps-chrome 169 pink", slug: "hiq:basebal
 
 const inputs = (over: Partial<Inputs> = {}): Inputs => ({
   rows: 100, anchor: 10, protectedRows: 1, protectedIds: ["p1@slug"], evictedAway: 0,
-  improveRekeyedAway: 0, improveRekeyedIds: [], ...over,
+  improveRekeyedAway: 0, improveRekeyedIds: [],
+  foreignRekeyedAway: 0, foreignRekeyedRows: [], ...over,
 });
 
 afterEach(() => { delete process.env.SCOPE; });
@@ -512,5 +523,277 @@ describe("loadLedger -- the gate's evidence, and what it does without any", () =
     } finally {
       fs.unlinkSync(empty);
     }
+  });
+});
+
+/**
+ * DEFECT 5 -- A DEPARTURE CAN BELONG TO A WRITER THAT LEAVES NO FLEET MARKER.
+ *
+ * Wave 4 halted on slots 12 (run 33966963322) and 13 (run 33966972191). Both
+ * failed the SAME canary with the SAME shortfall of exactly one row:
+ *
+ *   [derived] slot 14 2025 bowman-draft bdc-1 base
+ *   hiq:baseball:2025:bowman-draft:bdc-1:base:no-auto   floor 580, protected 6
+ *
+ *   slot 12  591 -> 587   "only 3 carry the re-key marker -- 1 unexplained"
+ *   slot 13  591 -> 584   "only 6 carry the re-key marker -- 1 unexplained"
+ *
+ * READ OFF PROD. Six rows left that pool carrying
+ * `rekeyedFrom[0].cardId = <the canary slug>` and no `baseEvictionEvidence`,
+ * every one an IMPROVE re-key onto a parallel its own title states:
+ *
+ *   cardsight::08a6d97be0ea5344dd0c2ebd  $15.50  14:35:38Z  -> :x-fractor:
+ *     "2025 Bowman Draft Eli Willits Chrome X-Fractor 1st Prospect #BDC-1"
+ *   cardsight::7e17184d9df707eb68fd4954  $12.29  14:35:44Z  -> :refractor:
+ *   cardsight::0a1d82d1be78104a4a445fe3  $4.25   14:35:44Z  -> :refractor:
+ *   cardsight::2a2095d9e320ebb1683271d6  $22.50  14:43:20Z  -> :refractor:
+ *   cardsight::6f9f63d4120c9c202c3ce1b6  $3.75   14:43:20Z  -> :refractor:
+ *   tca-ebay::377268783190               $29.99  14:43:40Z  -> :x-fractor:
+ *     "2025 BOWMAN DRAFT CHRONE ELI WILLITS 1ST X-FRACTOR #BDC-1"
+ *
+ * Three had landed by slot 12's after-read (14:37:29Z) and all six by slot
+ * 13's (14:45:09Z) -- exactly the 3 and 6 the two logs reported. The marker
+ * query is already run-agnostic, so the SIBLING-SHARD hypothesis is REFUTED:
+ * slot 13 counted slot 12's moves without complaint.
+ *
+ * THE SEVENTH ROW WAS NEVER THE FLEET'S:
+ *
+ *   cardhedge::ch-daily::1787885457712x483187805134631000   $23.39
+ *   "Eli Willits 2025 Bowman Chrome Draft Sapphire #BDC-1 1st RC - Raw"
+ *   setName "2025 Bowman Draft Sapphire Baseball", parallel "Base"
+ *   _ts 2026-09-05T13:18:13Z, rekeyedFrom UNDEFINED, rekeyedAt UNDEFINED
+ *
+ * The CardHedge daily ingest rewrote it at 13:18:13Z -- after both baselines
+ * (12:47Z), before both after-reads -- recomputing its `hobbyiqCardId` to
+ * `hiq:baseball:2025:bowman-draft-sapphire:bdc-1:base:no-auto`. A Sapphire
+ * sale correctly stopped counting as Bowman Draft paper. The row never
+ * vanished; it is still resident, at a new address, with no rematch marker
+ * because the ingest is not the rematch.
+ *
+ * The old code had two categories -- "carries a fleet marker" or "damage" --
+ * so a foreign re-address inside a TOUCHED pool could only read as damage.
+ * The anchor never moved ($2.85 -> $2.85) and protected held (6 -> 6) in both
+ * runs: nothing was harmed.
+ */
+describe("DEFECT 5 -- a foreign writer's departure is accounted for, not damage", () => {
+  const BDC1 = { name: "[derived] slot 14 2025 bowman-draft bdc-1 base", slug: "hiq:baseball:2025:bowman-draft:bdc-1:base:no-auto" };
+  const PROT = "cardsight::1768677198934x586733556995573000::2026-07-16T01:10:00+00:00::8900@hiq:baseball:2025:bowman-draft:bdc-1:base:no-auto";
+  const CH_ROW = 'cardhedge::ch-daily::1787885457712x483187805134631000 -> hiq:baseball:2025:bowman-draft-sapphire:bdc-1:base:no-auto [cardhedge] $23.39 "Eli Willits 2025 Bowman Chrome Draft Sapphire #BDC-1 1st RC - Raw"';
+  const before = () => inputs({ rows: 591, anchor: 2.85, protectedRows: 6, protectedIds: [PROT] });
+  const touch = { fromCount: 3, toCount: 0, from: [], to: [] };
+
+  it("the slot-12 shape: 591 -> 587, 3 marked + 1 foreign, PASS naming both writers", () => {
+    const r = C.compareCanary(BDC1, before(), inputs({
+      rows: 587, anchor: 2.85, protectedRows: 6, protectedIds: [PROT],
+      improveRekeyedAway: 3, foreignRekeyedAway: 1, foreignRekeyedRows: [CH_ROW],
+    }), 10, touch);
+    expect(r.ok).toBe(true);
+    expect(r.regressions).toEqual([]);
+    expect(r.notes.join(" ")).toContain("all 4 accounted for");
+    expect(r.notes.join(" ")).toContain("3 accounted for by the rekeyedFrom marker (an IMPROVE re-key)");
+    expect(r.notes.join(" ")).toContain("1 to another writer");
+    expect(r.regressions.join(" ")).not.toContain("1 unexplained");
+  });
+
+  it("the slot-13 shape: 591 -> 584, 6 marked + 1 foreign, PASS -- the sibling's moves count too", () => {
+    const r = C.compareCanary(BDC1, before(), inputs({
+      rows: 584, anchor: 2.85, protectedRows: 6, protectedIds: [PROT],
+      improveRekeyedAway: 6, foreignRekeyedAway: 1, foreignRekeyedRows: [CH_ROW],
+    }), 10, touch);
+    expect(r.ok).toBe(true);
+    expect(r.regressions).toEqual([]);
+    expect(r.notes.join(" ")).toContain("all 7 accounted for");
+  });
+
+  it("the foreign row is NAMED in the verdict, so the reader can judge the move", () => {
+    const r = C.compareCanary(BDC1, before(), inputs({
+      rows: 587, anchor: 2.85, protectedRows: 6, protectedIds: [PROT],
+      improveRekeyedAway: 3, foreignRekeyedAway: 1, foreignRekeyedRows: [CH_ROW],
+    }), 10, touch);
+    const notes = r.notes.join("\n");
+    expect(notes).toContain("moved by another writer:");
+    expect(notes).toContain("cardhedge::ch-daily::1787885457712x483187805134631000");
+    expect(notes).toContain("bowman-draft-sapphire");
+  });
+
+  it("MUTATION PIN -- requiring the shard's OWN marker only (foreign ignored) goes RED", () => {
+    // The mutation: drop foreignRekeyedAway from the accounting and the
+    // wave-4 shape fails again with the exact sentence that halted it.
+    const r = C.compareCanary(BDC1, before(), inputs({
+      rows: 587, anchor: 2.85, protectedRows: 6, protectedIds: [PROT],
+      improveRekeyedAway: 3, foreignRekeyedAway: 0, foreignRekeyedRows: [],
+    }), 10, touch);
+    expect(r.ok).toBe(false);
+    expect(r.regressions.join(" ")).toContain("1 unexplained");
+  });
+
+  it("MUTATION PIN -- a departure that is neither marked NOR resident still exits 5", () => {
+    // A vanished sale matches no marker and resolves to no resident row, so
+    // it lands here. This is the damage the gate exists to catch.
+    const r = C.compareCanary(BDC1, before(), inputs({
+      rows: 588, anchor: 2.85, protectedRows: 6, protectedIds: [PROT],
+      improveRekeyedAway: 0, foreignRekeyedAway: 0, foreignRekeyedRows: [],
+    }), 10, touch);
+    expect(r.ok).toBe(false);
+    expect(r.regressions.join(" ")).toContain("pool LOST 3 row(s)");
+  });
+
+  it("MUTATION PIN -- a PARTIAL accounting still fails and counts BOTH writers", () => {
+    const r = C.compareCanary(BDC1, before(), inputs({
+      rows: 584, anchor: 2.85, protectedRows: 6, protectedIds: [PROT],
+      improveRekeyedAway: 3, foreignRekeyedAway: 1, foreignRekeyedRows: [CH_ROW],
+    }), 10, touch);
+    expect(r.ok).toBe(false);
+    expect(r.regressions.join(" ")).toContain("3 unexplained");
+    expect(r.regressions.join(" ")).toContain("3 by the re-key marker, 1 by another writer");
+  });
+
+  it("MUTATION PIN -- a PROTECTED row leaving is not excusable by a foreign departure", () => {
+    const r = C.compareCanary(BDC1, before(), inputs({
+      rows: 590, anchor: 2.85, protectedRows: 5, protectedIds: [],
+      improveRekeyedAway: 0, foreignRekeyedAway: 1, foreignRekeyedRows: [CH_ROW],
+    }), 10, touch);
+    expect(r.ok).toBe(false);
+    expect(r.regressions.join(" ")).toContain("PROTECTED row left the pool");
+  });
+
+  it("MUTATION PIN -- an EMPTY pool fails even when every departure is foreign", () => {
+    const r = C.compareCanary(BDC1, before(), inputs({
+      rows: 0, anchor: null, protectedRows: 0, protectedIds: [],
+      improveRekeyedAway: 0, foreignRekeyedAway: 591, foreignRekeyedRows: [],
+    }), 10, touch);
+    expect(r.ok).toBe(false);
+    expect(r.regressions.join(" ")).toContain("pool is EMPTY");
+  });
+
+  it("MUTATION PIN -- with NO ledger the gate stays strict and a foreign departure still fails", () => {
+    // Degrade-closed: without attribution the checker cannot tell whose write
+    // moved the row, so it must not hand out the pass.
+    const r = C.compareCanary(BDC1, before(), inputs({
+      rows: 590, anchor: 2.85, protectedRows: 6, protectedIds: [PROT],
+      improveRekeyedAway: 0, foreignRekeyedAway: 1, foreignRekeyedRows: [CH_ROW],
+    }), 10, null);
+    expect(r.ok).toBe(false);
+  });
+
+  it("an UNTOUCHED pool still reads as other writers' work, not as an accounted departure", () => {
+    const r = C.compareCanary(BDC1, before(), inputs({
+      rows: 587, anchor: 2.85, protectedRows: 6, protectedIds: [PROT],
+      improveRekeyedAway: 3, foreignRekeyedAway: 1, foreignRekeyedRows: [CH_ROW],
+    }), 10, undefined);
+    expect(r.ok).toBe(true);
+    expect(r.notes.join(" ")).toContain("pool changed by other writers");
+  });
+
+  it("the anchor held at $2.85 in both runs -- no price damage to report", () => {
+    const r = C.compareCanary(BDC1, before(), inputs({
+      rows: 584, anchor: 2.85, protectedRows: 6, protectedIds: [PROT],
+      improveRekeyedAway: 6, foreignRekeyedAway: 1, foreignRekeyedRows: [CH_ROW],
+    }), 10, touch);
+    expect(r.ok).toBe(true);
+    expect(r.notes.join(" ")).not.toContain("anchor moved");
+  });
+});
+
+/**
+ * THE RESIDENCY RULE IS THE SAFETY PROPERTY OF DEFECT 5, so it is pinned
+ * against a fake container rather than through injected inputs.
+ *
+ * compareCanary only ever sees a COUNT of foreign departures, so a unit test
+ * that hands it `foreignRekeyedAway: 1` cannot tell whether measure() earned
+ * that number honestly. The whole reason the clause is safe is that measure()
+ * counts a departed row as foreign ONLY when the row is still RESIDENT in the
+ * container at a different address. Delete that check and a VANISHED sale --
+ * the exact damage this gate exists to catch -- would be excused silently.
+ * These pins fail if the residency check is removed.
+ */
+describe("DEFECT 5 -- measure() only excuses a departure that is still resident", () => {
+  const SLUG = "hiq:baseball:2025:bowman-draft:bdc-1:base:no-auto";
+  const SAPPHIRE = "hiq:baseball:2025:bowman-draft-sapphire:bdc-1:base:no-auto";
+  const CH_ID = "cardhedge::ch-daily::1787885457712x483187805134631000";
+
+  /** A container stub: `docs` is every row that still exists. */
+  const fakePool = (docs: Record<string, unknown>[]) => ({
+    items: {
+      query: (spec: { query: string; parameters?: { name: string; value: unknown }[] }) => {
+        const q = spec.query;
+        const param = (n: string) => spec.parameters?.find((x) => x.name === n)?.value;
+        let out: unknown[] = [];
+        if (q.includes("c.cardId = @s") && !q.includes("hobbyiqCardId")) {
+          out = docs.filter((d) => d.cardId === param("@s"));
+        } else if (q.includes("c.hobbyiqCardId = @s")) {
+          out = docs.filter((d) => d.hobbyiqCardId === param("@s") && d.cardId !== param("@s"));
+        } else if (q.includes("baseEvictionEvidence") && q.includes("COUNT")) {
+          out = [0];
+        } else if (q.includes("rekeyedFrom[0].cardId = @s")) {
+          out = docs.filter((d) => Array.isArray(d.rekeyedFrom) &&
+            (d.rekeyedFrom as { cardId?: string }[])[0]?.cardId === param("@s"));
+        } else if (q.includes("c.id IN (")) {
+          const wanted = new Set((spec.parameters ?? []).map((x) => x.value));
+          out = docs.filter((d) => wanted.has(d.id));
+        }
+        let done = false;
+        return { hasMoreResults: () => !done, fetchNext: async () => { done = true; return { resources: out }; } };
+      },
+    },
+  });
+
+  const inPool = (id: string) => ({ id, cardId: SLUG, hobbyiqCardId: SLUG, price: 5, soldAt: "2026-09-01T00:00:00Z", title: "t" });
+
+  it("a departed row STILL RESIDENT at a new address counts as a foreign departure", async () => {
+    // The wave-4 row: gone from the pool, alive in the container on the
+    // Sapphire slug, carrying no rematch marker.
+    const docs = [inPool("keep-1"), inPool("keep-2"),
+      { id: CH_ID, cardId: SAPPHIRE, hobbyiqCardId: SAPPHIRE, price: 23.39, source: "cardhedge",
+        title: "Eli Willits 2025 Bowman Chrome Draft Sapphire #BDC-1 1st RC - Raw" }];
+    const m = await C.measure(fakePool(docs), SLUG, ["keep-1", "keep-2", CH_ID]);
+    expect(m.rows).toBe(2);
+    expect(m.foreignRekeyedAway).toBe(1);
+    expect((m.foreignRekeyedRows ?? []).join(" ")).toContain(CH_ID);
+    expect((m.foreignRekeyedRows ?? []).join(" ")).toContain("bowman-draft-sapphire");
+  });
+
+  it("MUTATION PIN -- a VANISHED row is NOT a foreign departure and stays damage", async () => {
+    // Same baseline, but the third row no longer exists anywhere. It must
+    // not be excused: nothing resolves it, so foreignRekeyedAway stays 0 and
+    // compareCanary reports the loss.
+    const docs = [inPool("keep-1"), inPool("keep-2")];
+    const m = await C.measure(fakePool(docs), SLUG, ["keep-1", "keep-2", "deleted-row"]);
+    expect(m.rows).toBe(2);
+    expect(m.foreignRekeyedAway).toBe(0);
+    const r = C.compareCanary({ name: "c", slug: SLUG },
+      inputs({ rows: 3, protectedRows: 0, protectedIds: [] }),
+      inputs({ rows: m.rows, protectedRows: 0, protectedIds: [], foreignRekeyedAway: 0 }),
+      10, { fromCount: 1, toCount: 0, from: [], to: [] });
+    expect(r.ok).toBe(false);
+  });
+
+  it("MUTATION PIN -- a row still addressed HERE is not a departure at all", async () => {
+    // A stale read that still resolves to this slug must never be counted;
+    // counting it would license a real loss elsewhere.
+    const docs = [inPool("keep-1"), inPool("keep-2"), inPool("keep-3")];
+    const m = await C.measure(fakePool(docs), SLUG, ["keep-1", "keep-2", "keep-3"]);
+    expect(m.rows).toBe(3);
+    expect(m.foreignRekeyedAway).toBe(0);
+  });
+
+  it("a row that left WITH the rematch marker is the fleet's, never counted as foreign", async () => {
+    // The two populations must partition, not double-count: 1 marked + 0
+    // foreign, so the same departure can never be excused twice.
+    const docs = [inPool("keep-1"),
+      { id: "moved-1", cardId: "hiq:baseball:2025:bowman-draft:bdc-1:refractor:no-auto",
+        hobbyiqCardId: "hiq:baseball:2025:bowman-draft:bdc-1:refractor:no-auto", price: 12.29,
+        rekeyedFrom: [{ cardId: SLUG }], title: "... Chrome Refractor ... #BDC-1" }];
+    const m = await C.measure(fakePool(docs), SLUG, ["keep-1", "moved-1"]);
+    expect(m.improveRekeyedAway).toBe(1);
+    expect(m.foreignRekeyedAway).toBe(0);
+  });
+
+  it("the baseline records the pool's ids, which is what makes the resolve possible", async () => {
+    const docs = [inPool("a"), inPool("b")];
+    const m = await C.measure(fakePool(docs), SLUG);
+    expect(m.ids).toEqual(["a", "b"]);
+    // With no priorIds (the MODE=before path) nothing is resolved.
+    expect(m.foreignRekeyedAway).toBe(0);
   });
 });
