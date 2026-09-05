@@ -32,7 +32,7 @@ import {
 } from "./holdingSaveDeferredWork.js";
 // CF-ONE-VALUATION-PATH (D17, 2026-08-30): the persist site prices the exact
 // pool through the ONE valuation entry (holdingValuation → valueIdentity).
-import { valueHoldingThroughOneEntry, holdingGrade as holdingGradeOf, costBasisFloorRefusalWrite, costBasisFloor, noBasisRefusalWrite } from "./holdingValuation.js";
+import { valueHoldingThroughOneEntry, holdingGrade as holdingGradeOf, costBasisFloorRefusalWrite, costBasisFloor, noBasisRefusalWrite, noBasisReasonFromEngine } from "./holdingValuation.js";
 // CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (Drew, 2026-09-03). The legacy
 // exact-pool writers below persist prices too — only for identities the
 // catalog cannot name, but persist they do. They stamp the same label set
@@ -11332,18 +11332,12 @@ export async function repriceHoldingsForUser(
         // No confidence is invented: this branch computed no pricing, so the
         // meta it re-states carries the prior pass's confidence when there was
         // one and an explicit `null` when there was not.
-        const keptFmv = typeof holding.fairMarketValue === "number" && Number.isFinite(holding.fairMarketValue)
-          ? holding.fairMarketValue
-          : null;
-        const priorRung = typeof (holding as { fmvRung?: unknown }).fmvRung === "string"
-          && (holding as { fmvRung?: string }).fmvRung
-          ? ((holding as { fmvRung: string }).fmvRung)
-          : null;
-        const priorValueSource = (holding as { valueSource?: unknown }).valueSource;
-        const priorMeta = (holding as { pricingSourceMeta?: Record<string, unknown> }).pricingSourceMeta;
-        const priorConfidence = typeof priorMeta?.confidence === "number" && Number.isFinite(priorMeta.confidence)
-          ? (priorMeta.confidence as number)
-          : null;
+        // The prior value, rung, valueSource, meta and confidence are no
+        // longer read here: `noBasisRefusalWrite` below reads them off the
+        // holding itself and rules on the retention through
+        // `retentionThroughFloor`. Recomputing them at this call site is how
+        // the branch came to make its own, different decision.
+        //
         // The ENGINE's own reason for declining, when it named one, so the
         // withhold says `identity-not-in-catalog` rather than a generic
         // "confidence-gate" that describes the lane instead of the cause.
@@ -11351,70 +11345,57 @@ export async function repriceHoldingsForUser(
         const engineReason = bOneEntry.outcome !== "unresolved" || bOneEntry.valuation
           ? bOneEntry.valuation?.reason ?? null
           : null;
-        const retentionWithholdReason = engineReason ?? "confidence-gate";
         const retentionReason =
           `value retained unchanged by the confidence-gated reprice (${failed.join(", ")}; source=${estSource || "ok"}`
           + `${engineReason ? `; engine: ${engineReason}` : ""})`;
-        doc.holdings[holding.id] = writeHoldingValuation(holding, {
-          fairMarketValue: keptFmv,
-          // The rung the number was priced under still describes it — the
-          // number did not move. When the prior pass named none, say so.
-          rung: priorRung
-            ? { rung: priorRung }
-            : { noRung: `${retentionReason}; the prior pass named no rung` },
-          // "retained" is not a KIND of evidence, so it is not a valueSource.
-          // The kind of evidence behind the number is whatever produced it; a
-          // value whose prior pass declared none cannot be upgraded to
-          // "observed" by being kept, so it is stated as an estimate — the
-          // weaker of the two claims, which is the honest one to make about a
-          // number this branch did not verify.
-          valueSource: priorValueSource === "observed" || priorValueSource === "estimated"
-            ? priorValueSource
-            : "estimated",
+        // CF-A-HOLDING-CARRIES-ONE-STAMP (Drew, 2026-09-05). This branch used
+        // to hand-build its own withheld write, and that is how a row came to
+        // carry BOTH stamps at once.
+        //
+        // It passed `rung: priorRung ? { rung: priorRung } : ...` — the PRIOR
+        // pass's rung — beside a `withheld` block, so `writeHoldingValuation`
+        // stamped `method: "exact-pool-last-sale"` on a row whose meta also
+        // said `withheld { reason: "no-exact-pool" }`. And the reason itself
+        // was the engine's raw `ValuationReason`, a second vocabulary no
+        // reader could look up. Holding 6f4f079b (the ruled D24 Diamond
+        // Dominance) read exactly that way on 2026-09-05: method
+        // "exact-pool-last-sale", confidence 0, withheld "no-exact-pool".
+        // Every reader preferring `method` saw a current observed price; the
+        // auditor reading `withheld` saw a refusal. Same row.
+        //
+        // So the branch no longer writes its own stamp. It asks the ONE
+        // refusal writer — the same function `pool-migrating` and
+        // `no-checklist-match` already use — which sets `fmvRung` null,
+        // `method` "withheld", `valueSource` "estimated", and asks
+        // `retentionThroughFloor` (#1781) ONCE whether the prior number may
+        // stand, instead of re-implementing that rule here. The engine reason
+        // is mapped through `noBasisReasonFromEngine`, a TOTAL mapping, so an
+        // engine reason the union does not name can never again reach a row
+        // as an undeclared withheld string.
+        const nbRetention = noBasisRefusalWrite(
+          holding,
+          noBasisReasonFromEngine(engineReason),
+          bOneEntry.valuation ?? null,
+          now,
+        );
+        // The refusal writer has already decided the number (retained or not)
+        // and stamped the whole contract. This second pass carries only THIS
+        // lane's identity patch and verdict fields onto the row, with
+        // `writeMeta: false` so the meta the refusal just wrote — the single
+        // withheld stamp — is left exactly as it stands.
+        doc.holdings[holding.id] = writeHoldingValuation(nbRetention.holding, {
+          fairMarketValue: nbRetention.holding.fairMarketValue ?? null,
+          rung: { noRung: nbRetention.prose },
+          valueSource: "estimated",
           nowIso: now,
-          // Re-state the meta so the retention carries the same shape a fresh
-          // write would, with the prior confidence or an explicit null.
-          // CF-A-STALE-VALUE-IS-NOT-A-PRICE (Drew, 2026-09-04). The retention
-          // above records WHY on the row, but its meta was an ORDINARY meta —
-          // no `withheld` — so `writeHoldingValuation` stamped `method` as the
-          // carried rung (or `unlabelled-carry`), and the row read to every
-          // rung gate and to the invariant auditor as a current price.
-          //
-          // Measured in the 2026-09-04 audit: the Bellingham Griffey shows
-          // $1,850 while the engine, asked for that identity, returns
-          // `identity-not-in-catalog`. Nothing on the row said the number was
-          // a previous pass's. This is the END of the chain — every lane above
-          // has declined, including the legacy exact-pool read that
-          // legitimately prices catalog-unnameable identities WITH sales — so
-          // it is the first point at which "no price could be published" is
-          // actually known, and therefore the right place to say it.
-          //
-          // The number is still KEPT (nothing here faults it) and the prior
-          // rung still describes it; what changes is that the refusal is now
-          // VISIBLE, carrying the engine's own reason when it named one.
-          meta: {
-            slug: typeof priorMeta?.slug === "string" ? priorMeta.slug : null,
-            compsUsed: typeof priorMeta?.compsUsed === "number" ? priorMeta.compsUsed : null,
-            confidence: priorConfidence,
-            ...(Array.isArray(priorMeta?.labels) ? { labels: priorMeta.labels as never } : {}),
-            ...(priorMeta?.selfAnchored !== undefined
-              ? { selfAnchored: priorMeta.selfAnchored as never }
-              : {}),
-            withheld: {
-              reason: retentionWithholdReason,
-              blockingId: typeof priorMeta?.slug === "string" ? priorMeta.slug : null,
-              blockingCount: typeof priorMeta?.compsUsed === "number" ? priorMeta.compsUsed : 0,
-              // Nothing was computed to publish, so no number is borrowed.
-              proposed: null,
-            },
-          },
+          writeMeta: false,
           fields: {
             ...repriceIdentityPatch,
             verdict: reasonLabel,
             recommendation: "Hold",
             // The retention is recorded ON THE ROW, so "why does this say
             // 21:20Z" is answerable without reading a log that has rolled.
-            fmvRetainedReason: retentionReason,
+            fmvRetainedReason: `${retentionReason}. ${nbRetention.prose}`,
             fmvRetainedAt: now,
           },
         });

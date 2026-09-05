@@ -589,7 +589,74 @@ export function costBasisFloorRefusalWrite(
  * stamp, `retentionThroughFloor` asked once, method / valueSource / fmvRung
  * rewritten on every withheld write.
  */
-export type NoBasisRefusalReason = "identity-not-in-catalog" | "pool-migrating" | "no-checklist-match";
+/**
+ * CF-A-HOLDING-CARRIES-ONE-STAMP, the `no-exact-pool` half (Drew, 2026-09-05).
+ *
+ * `no-exact-pool` and `no-exact-pool-at-tier` are the ENGINE's own names for
+ * "I could not price this", and they reached a holding by a route that never
+ * passed this choke point at all. `valueHoldingThroughOneEntry` returns them
+ * as `outcome: "unpriced"`, and the confidence-gated reprice in
+ * `portfolioStore` then hand-built its own withheld meta:
+ *
+ *     const retentionWithholdReason = engineReason ?? "confidence-gate";
+ *     rung: priorRung ? { rung: priorRung } : { noRung: ... }
+ *
+ * Two defects in three lines. The reason string was the raw `ValuationReason`
+ * — a SECOND vocabulary, never declared anywhere a reader could find it — and
+ * the rung was the PRIOR PASS's, so `writeHoldingValuation` stamped
+ * `method: "exact-pool-last-sale"` on a row that also carried
+ * `withheld { reason: "no-exact-pool" }`. That is precisely the two-stamps
+ * shape #1785 abolished, reintroduced one lane over.
+ *
+ * Live proof, holding 6f4f079b (Ken Griffey Jr. 1999 UD Black Diamond #D24
+ * Diamond Dominance /1500), read read-only after the ruled rederive and
+ * reprice on 2026-09-05:
+ *
+ *     fmvRung                "exact-pool-last-sale"
+ *     pricingSourceMeta      { method: "exact-pool-last-sale", confidence: 0,
+ *                              withheld: { reason: "no-exact-pool", ... } }
+ *
+ * Every reader that prefers `method` sees a current exact-pool price; the
+ * auditor reading `withheld` sees a refusal. Both are reading the same row.
+ *
+ * So the engine's unpriced reasons JOIN this union rather than being
+ * translated at a call site. They are the same event the other three name —
+ * the engine will not publish a number and the caller must persist that
+ * refusal — and sharing the branch is what makes them compose with #1781's
+ * retention rule and #1785's one stamp BY CONSTRUCTION: `fmvRung` null,
+ * `method: "withheld"`, `valueSource: "estimated"`, `retentionThroughFloor`
+ * asked exactly once.
+ */
+export type NoBasisRefusalReason =
+  | "identity-not-in-catalog"
+  | "pool-migrating"
+  | "no-checklist-match"
+  | "no-exact-pool"
+  | "no-exact-pool-at-tier"
+  /** The confidence gate declined and the engine named no reason of its own. */
+  | "confidence-gate";
+
+/**
+ * The engine's `ValuationReason` (or a confidence-gate decline) as a refusal
+ * this module can persist. The mapping is EXPLICIT and total rather than a
+ * cast: an engine reason this union does not name must not reach a holding as
+ * a withheld string nobody declared, which is exactly how `no-exact-pool` got
+ * onto a row in the first place. Anything unrecognised becomes
+ * `confidence-gate` — the lane's own honest name for "this branch declined" —
+ * so a new engine reason cannot silently mint a new withheld vocabulary.
+ */
+export function noBasisReasonFromEngine(engineReason: string | null | undefined): NoBasisRefusalReason {
+  switch (engineReason) {
+    case "identity-not-in-catalog":
+    case "pool-migrating":
+    case "no-checklist-match":
+    case "no-exact-pool":
+    case "no-exact-pool-at-tier":
+      return engineReason;
+    default:
+      return "confidence-gate";
+  }
+}
 
 export function noBasisRefusalWrite(
   holding: PortfolioHolding,
@@ -626,8 +693,17 @@ export function noBasisRefusalWrite(
     : reason === "no-checklist-match"
       ? `${slug ?? "this identity"} is not checklist-backed — the only catalog row for it was minted`
         + ` from our own data; ${retentionClause}`
-      : `${slug ?? "this identity"} is still having its sales re-keyed — the pool is incomplete`
-        + `; ${retentionClause}`;
+      : reason === "no-exact-pool"
+        ? `no sale of ${slug ?? "this identity"} in 180d at any grade, and no gated fallback rung`
+          + ` could price it; ${retentionClause}`
+        : reason === "no-exact-pool-at-tier"
+          ? `${slug ?? "this identity"} has sales at other grades but none at this tier, and no`
+            + ` empirical ratio or fallback rung could project it; ${retentionClause}`
+          : reason === "confidence-gate"
+            ? `the confidence gate declined to publish a new number for ${slug ?? "this holding"}`
+              + `; ${retentionClause}`
+            : `${slug ?? "this identity"} is still having its sales re-keyed — the pool is incomplete`
+              + `; ${retentionClause}`;
   const refusal = reason === "identity-not-in-catalog"
     ? `no price was published: the catalog holds no identity for this holding`
       + `${slug ? ` (${slug})` : ""}, so there is no pool to price it from.`
@@ -640,6 +716,24 @@ export function noBasisRefusalWrite(
       + ` The catalog's only row for it was minted from our own sales data or from an import,`
       + ` and HobbyIQ prices a card only from a checklist-backed identity. Pricing resumes once`
       + ` this product's checklist is acquired and the card is matched to it.`
+    : reason === "no-exact-pool"
+    // The remedy is the POOL, not the identity: the card is named and its
+    // checklist row exists, and no sale of it was found. A reader told only
+    // "no price" goes looking at the catalog, which is not where the problem
+    // is — the sales may well exist under another slug (that is exactly the
+    // D24 Diamond Dominance and Magnetic Field case).
+    ? `no price was published: no sale of this card was found in the last 180 days at any grade,`
+      + ` and no gated fallback rung could price it either. The identity is known; what is missing`
+      + ` is evidence. Pricing resumes when a sale of this card is recorded — or when sales already`
+      + ` recorded under a different slug are matched onto it.`
+    : reason === "no-exact-pool-at-tier"
+    ? `no price was published: this card has sales at other grades but none at this one, no`
+      + ` empirical ratio projects this tier from the ones that do, and no gated fallback rung`
+      + ` could price it. Pricing resumes when a sale at this tier is recorded, or when the`
+      + ` calibration for this family can project it.`
+    : reason === "confidence-gate"
+    ? `no price was published: the confidence gate declined to publish a new number for this`
+      + ` holding on this pass, and no lane below it produced one either.`
     : `no price was published: this card's identity was created recently and its sales are still`
       + ` being re-keyed onto it, so the pool is a partial view. Pricing resumes once the re-key for`
       + ` this identity has settled. No fallback number is published in the meantime — a partial pool`
