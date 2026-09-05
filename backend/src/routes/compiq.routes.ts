@@ -3775,6 +3775,14 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
       let effectivePremium = premium;
       let effectiveNoUsable = noUsableLiveFmv;
       let canonicalFmvFallbackUsed: { fmv: number; method: string; confidence: number } | null = null;
+      // CF-A-WITHHELD-PRICE-IS-NOT-A-MISSING-ONE (2026-09-05). When the one
+      // path REFUSES (fmv null with a reason) the old code recorded nothing,
+      // and the response nulled out indistinguishably from "the engine was
+      // never asked". A null with a named reason is a product decision; a
+      // null with no reason is an outage. The wire has to be able to tell
+      // them apart, because the deploy smoke gates the nightly reprice on
+      // exactly that distinction.
+      let canonicalFmvWithheld: { reason: string | null; method: string; basis: string | null } | null = null;
       const resolvedCardIdForCanonical =
         typeof (est as { cardIdentity?: { card_id?: string } }).cardIdentity?.card_id === "string"
           ? (est as { cardIdentity: { card_id: string } }).cardIdentity.card_id
@@ -3817,6 +3825,26 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
               cardId: resolvedCardIdForCanonical,
               canonicalFmv: canon.fmv,
               canonicalMethod: canon.method,
+              estSource: source,
+            }));
+          } else if (canon) {
+            // The engine answered and REFUSED. Carry the refusal onto the
+            // wire under its own key so a reader never has to infer "why
+            // null" from prose or from the absence of a field.
+            canonicalFmvWithheld = {
+              reason: (canon as { fmvReason?: string | null }).fmvReason ?? null,
+              method: canon.method,
+              basis:
+                typeof (canon.provenance as { summary?: unknown } | null)?.summary === "string"
+                  ? ((canon.provenance as { summary: string }).summary)
+                  : null,
+            };
+            console.log(JSON.stringify({
+              event: "price_canonical_fmv_withheld",
+              source: "compiq.routes.price",
+              cardId: resolvedCardIdForCanonical,
+              canonicalMethod: canon.method,
+              fmvReason: canonicalFmvWithheld.reason,
               estSource: source,
             }));
           }
@@ -3919,6 +3947,10 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
         fairMarketValueLive: effectiveNoUsable ? null : effectiveFmv,
         marketValue: effectiveNoUsable ? null : effectiveFmv,
         canonicalFmvFallback: canonicalFmvFallbackUsed,
+        // CF-A-WITHHELD-PRICE-IS-NOT-A-MISSING-ONE (2026-09-05). Present ONLY
+        // when the one path was asked and refused; carries the closed-vocabulary
+        // reason so a null FMV is readable as a decision rather than a gap.
+        canonicalFmvWithheld,
         // CF-PREDICTION-LAYER-CONSISTENCY-COMPLETION — propagate prediction-
         // layer fields for /search-equivalent shape parity.
         predictedPrice: (est as any).predictedPrice ?? null,

@@ -21,6 +21,13 @@ jobs:
       # The reprice job below gates on this: a UTC trigger the ET gate closed
       # deployed nothing and must reprice nothing.
       should_run: ${{ steps.gate-out.outputs.should_run }}
+      # CF-A-WITHHELD-PRICE-IS-NOT-A-MISSING-ONE (2026-09-05). The smoke test's
+      # OUTAGE signal, separate from its pass/fail. False only when a case
+      # returned a null FMV with no reason, or failed to answer at all — the
+      # shapes that mean the engine is broken rather than declining to price.
+      # A stale fixture expectation must not switch off the nightly reprice,
+      # which is exactly what happened for seven runs on 2026-09-05.
+      engine_ok: ${{ steps.smoke.outputs.engine_ok }}
 
     steps:
       - name: Checkout repo
@@ -220,12 +227,40 @@ jobs:
       # day. Uses TIER1_HARNESS_TOKEN for auth. Non-blocking on the
       # deploy itself (deploy + warms + era-baselines already ran); this
       # is the post-deploy validation.
+      # CF-A-WITHHELD-PRICE-IS-NOT-A-MISSING-ONE (2026-09-05). The step still
+      # FAILS the job on any violation — the red is how a stale expectation
+      # gets noticed — but it publishes `engine_ok` FIRST, so the reprice job
+      # can tell "a fixture disagrees with the engine" from "the engine is
+      # down". `continue-on-error` lets the outputs survive the non-zero exit;
+      # the "Smoke test verdict" step below re-raises it so the job is still
+      # red, and it runs AFTER the outputs are readable.
       - name: Smoke test pricing tiers
+        id: smoke
         if: steps.et-gate.outputs.should_run == 'true'
+        continue-on-error: true
         working-directory: backend
         run: |
           TIER1_HARNESS_TOKEN="${{ steps.harness-token.outputs.token }}" \
           node scripts/smoke-test-pricing-tiers.cjs
+
+      - name: Smoke test verdict
+        if: steps.et-gate.outputs.should_run == 'true'
+        shell: bash
+        run: |
+          if [ "${{ steps.smoke.outcome }}" = "success" ]; then
+            echo "smoke test green"
+            exit 0
+          fi
+          echo "smoke test FAILED (engine_ok=${{ steps.smoke.outputs.engine_ok }})"
+          if [ "${{ steps.smoke.outputs.engine_ok }}" = "true" ]; then
+            echo "Every null the smoke saw carried a reason, so the pricing engine is"
+            echo "answering and the nightly reprice will still run. What failed is the"
+            echo "agreement between a fixture and the engine — re-rule the case."
+          else
+            echo "The engine returned a null with no reason, or failed to answer."
+            echo "The nightly reprice is held back."
+          fi
+          exit 1
 
       # Tell the reprice job below whether the ET gate actually opened. A
       # skipped UTC trigger must not reprice: the whole point of the gate is
@@ -275,7 +310,32 @@ jobs:
   reprice-holdings:
     name: Reprice All Holdings (post-refresh)
     needs: deploy-and-refresh
-    if: needs.deploy-and-refresh.outputs.should_run == 'true'
+    # CF-A-WITHHELD-PRICE-IS-NOT-A-MISSING-ONE (2026-09-05). This was
+    # `if: needs.deploy-and-refresh.outputs.should_run == 'true'`, which reads
+    # as a gate on the ET window but silently carried a SECOND condition: a
+    # `needs:` dependency skips when the upstream job fails, so ANY red in the
+    # deploy job — including a smoke expectation that had merely gone stale —
+    # cancelled the nightly all-users reprice. On 2026-09-05 that took the
+    # reprice out for seven consecutive runs while the deploy itself landed
+    # cleanly every time, and nothing announced it: a skipped job is quiet.
+    #
+    # The dependency is now explicit about which upstream failures matter.
+    # `always()` re-enables the job after an upstream red, and the three
+    # conditions state the real requirements:
+    #
+    #   should_run    the ET gate opened — a closed UTC trigger deployed
+    #                 nothing and must reprice nothing (unchanged)
+    #   engine_ok     the smoke found no unreasoned null and no HTTP failure,
+    #                 i.e. the engine is answering. A withheld price with a
+    #                 named reason is the product working, not an outage.
+    #   deploy landed the upstream job did not fail BEFORE the smoke ran — a
+    #                 build or deploy failure leaves engine_ok empty, which
+    #                 fails this condition and correctly holds the reprice.
+    #
+    # `!cancelled()` rather than `always()`: a run somebody cancelled, or one
+    # the workflow-level timeout killed, must not go on to reprice every
+    # user's holdings in the background.
+    if: ${{ !cancelled() && needs.deploy-and-refresh.outputs.should_run == 'true' && needs.deploy-and-refresh.outputs.engine_ok == 'true' }}
     runs-on: ubuntu-latest
     # The measured full pass is minutes, not hours (see the RU budget below).
     # 60 is generous headroom for pool growth, and well under the point where
