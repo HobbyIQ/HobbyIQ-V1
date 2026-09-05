@@ -38,6 +38,9 @@ const require_ = createRequire(import.meta.url);
 type Inputs = {
   rows: number; anchor: number | null; protectedRows: number; protectedIds: string[];
   newestAt?: string | null; newestPrice?: number | null; evictedAway?: number;
+  /** Rows that left this slug by an IMPROVE re-key, counted from the same
+   *  `rekeyedFrom` marker `evictedAway` uses (2026-09-05, the wave-2 halt). */
+  improveRekeyedAway?: number; improveRekeyedIds?: string[];
 };
 type Cmp = { ok: boolean; regressions: string[]; notes: string[]; touched?: boolean; attributed?: boolean; moved?: number };
 /** One pool's row in the apply's write ledger: what THIS shard moved here. */
@@ -57,10 +60,185 @@ const BASE_CANARY = { name: "1979 topps 390 base", slug: "hiq:baseball:1979:topp
 const PARALLEL_CANARY = { name: "2017 topps-chrome 169 pink", slug: "hiq:baseball:2017:topps-chrome:169:pink-refractor:no-auto" };
 
 const inputs = (over: Partial<Inputs> = {}): Inputs => ({
-  rows: 100, anchor: 10, protectedRows: 1, protectedIds: ["p1@slug"], evictedAway: 0, ...over,
+  rows: 100, anchor: 10, protectedRows: 1, protectedIds: ["p1@slug"], evictedAway: 0,
+  improveRekeyedAway: 0, improveRekeyedIds: [], ...over,
 });
 
 afterEach(() => { delete process.env.SCOPE; });
+
+/**
+ * DEFECT 4 -- AN IMPROVE RE-KEY IS AN ACCOUNTED-FOR DEPARTURE, NOT DAMAGE.
+ *
+ * Wave 2 of the GREAT REMATCH apply fleet halted on this canary twice, and
+ * both halts were false. The pool and the three rows, read off prod
+ * 2026-09-05 after the two applies:
+ *
+ *   canary  hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499
+ *           13 rows (partition 7 + field 6) -> 10 (partition 4 + field 6)
+ *
+ *   tca-ebay::407113176192  $100.00  slot 5
+ *     "2026 Bowman Redemption Justin Gonzalez Refractor  Auto /499 Red Sox Redeemed B"
+ *   tca-ebay::198573811927  $148.00  slot 6
+ *     "REDEMPTION : Justin Gonzales [Refractor /499] #CPA-JG 2026 Bowman Chrome Auto"
+ *   tca-ebay::287538862055  $224.99  slot 6
+ *     "2026 Bowman Chrome Justin Gonzales 1st Auto Refractor /499 #CPA-JG Red Sox"
+ *
+ * All three moved bowman -> bowman-chrome on the SAME cardNumber, parallel,
+ * print run and auto flag, and all three carry
+ * `rekeyedReason: "GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed,
+ * filled printRun"`.
+ *
+ * THE MOVE IS RIGHT, AND THE REASON IS THE ROW'S OWN FIELDS. Every one stores
+ * `setName: "Bowman Chrome"`, and `storedIdentity` in rematch-sold-comps.cjs
+ * reads setName -- not the slug -- so the stored setKey was ALREADY
+ * `bowman-chrome`. The setKey axis was SAME; the only axis that moved was
+ * printRun (absent on the row, 499 on the checklist). The destination
+ * `hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499` is
+ * checklist-backed (`checklistcenter-2026-08-29`, verificationStatus
+ * "verified", printRun 499). The write made the row's ADDRESS agree with the
+ * identity the row already stated -- one card, one row, one pool.
+ *
+ * Drew's holding row `ebay-user-purchase::147349440137-10083282594225`
+ * (setName "2026 Bowman", PROTECTED) did NOT move and is still on the
+ * holding's slug. The boundary held exactly where it should.
+ */
+describe("DEFECT 4 -- an attributed IMPROVE re-key is not a regression", () => {
+  const GONZ = { name: "Gonzalez 2026 Bowman CPA-JG Refractor auto /499", slug: "hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499" };
+  const DEST = "hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499";
+  const PROTECTED_ID = "ebay-user-purchase::147349440137-10083282594225@hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499";
+  const before = () => inputs({ rows: 13, anchor: 249.99, protectedRows: 1, protectedIds: [PROTECTED_ID] });
+
+  it("the slot-5 shape: 13 -> 12, one row re-keyed away, PASS with a note that names it", () => {
+    const r = C.compareCanary(GONZ, before(), inputs({
+      rows: 12, anchor: 249.99, protectedRows: 1, protectedIds: [PROTECTED_ID],
+      improveRekeyedAway: 1, improveRekeyedIds: [`tca-ebay::407113176192@${DEST}`],
+    }), 10, { fromCount: 1, toCount: 0, from: ["tca-ebay::407113176192"], to: [] });
+    expect(r.ok).toBe(true);
+    expect(r.regressions).toEqual([]);
+    expect(r.notes.join(" ")).toContain("accounted for by the rekeyedFrom marker");
+    // The verdict must NAME the row that left, not merely count it.
+    expect(r.notes.join(" ")).toContain("tca-ebay::407113176192");
+  });
+
+  it("the slot-6 shape: the cumulative 13 -> 10, every departure named in the note", () => {
+    const r = C.compareCanary(GONZ, before(), inputs({
+      rows: 10, anchor: 249.99, protectedRows: 1, protectedIds: [PROTECTED_ID],
+      improveRekeyedAway: 3,
+      improveRekeyedIds: [`tca-ebay::198573811927@${DEST}`, `tca-ebay::287538862055@${DEST}`, `tca-ebay::407113176192@${DEST}`],
+    }), 10, { fromCount: 2, toCount: 0, from: ["tca-ebay::198573811927", "tca-ebay::287538862055"], to: [] });
+    expect(r.ok).toBe(true);
+    expect(r.regressions).toEqual([]);
+    // All three rows the fleet moved are named in the verdict.
+    for (const id of ["tca-ebay::198573811927", "tca-ebay::287538862055", "tca-ebay::407113176192"]) {
+      expect(r.notes.join(" ")).toContain(id);
+    }
+  });
+
+  it("the anchor recomputed without the $100 and $148 departures is a note, not a failure", () => {
+    // Removing the two cheapest sales moves the leading edge well past the 10%
+    // tolerance. That is the intended effect of moving them.
+    const r = C.compareCanary(GONZ, before(), inputs({
+      rows: 10, anchor: 224.99 * 1.4, protectedRows: 1, protectedIds: [PROTECTED_ID],
+      improveRekeyedAway: 3, improveRekeyedIds: [`tca-ebay::407113176192@${DEST}`],
+    }), 10, { fromCount: 3, toCount: 0, from: [], to: [] });
+    expect(r.ok).toBe(true);
+    expect(r.notes.join(" ")).toContain("the leading edge is recomputed without them");
+  });
+
+  it("MUTATION PIN -- a departure with NO re-key marker still exits 5", () => {
+    // The whole safety argument: only a MARKED departure is excused. Drop the
+    // marker and the same shape must fail.
+    const r = C.compareCanary(GONZ, before(), inputs({
+      rows: 12, protectedRows: 1, protectedIds: [PROTECTED_ID], improveRekeyedAway: 0,
+    }), 10, { fromCount: 1, toCount: 0, from: ["tca-ebay::407113176192"], to: [] });
+    expect(r.ok).toBe(false);
+    expect(r.regressions.join(" ")).toContain("pool LOST 1 row");
+  });
+
+  it("MUTATION PIN -- a PARTIALLY accounted loss fails and names the unexplained remainder", () => {
+    // 3 left, only 1 carries the marker. The other 2 are unexplained and the
+    // gate must not launder them through the accounted-for clause.
+    const r = C.compareCanary(GONZ, before(), inputs({
+      rows: 10, protectedRows: 1, protectedIds: [PROTECTED_ID], improveRekeyedAway: 1,
+    }), 10, { fromCount: 3, toCount: 0, from: [], to: [] });
+    expect(r.ok).toBe(false);
+    expect(r.regressions.join(" ")).toContain("2 unexplained");
+  });
+
+  it("the cross-shard case: more departures measured than THIS ledger names still passes", () => {
+    // THE REGRESSION THIS PIN EXISTS FOR. Slot 6 measured 3 departures while
+    // its own ledger named 2, because slot 5 moved the third before slot 6's
+    // baseline was taken. An earlier draft bounded the discount by the
+    // ledger's `fromCount` and failed this shard while printing
+    // "0 unexplained" -- a verdict that contradicted itself.
+    //
+    // The marker, not one shard's bookkeeping, is the evidence: all 3 rows
+    // carry `rekeyedFrom`, so all 3 are accounted for.
+    const r = C.compareCanary(GONZ, before(), inputs({
+      rows: 10, anchor: 249.99, protectedRows: 1, protectedIds: [PROTECTED_ID],
+      improveRekeyedAway: 3,
+    }), 10, { fromCount: 2, toCount: 0, from: ["tca-ebay::198573811927", "tca-ebay::287538862055"], to: [] });
+    expect(r.ok).toBe(true);
+    expect(r.regressions).toEqual([]);
+    // And it must never print the self-contradicting sentence again.
+    expect(r.regressions.join(" ")).not.toContain("0 unexplained");
+  });
+
+  it("MUTATION PIN -- a PROTECTED row leaving is STILL a regression, marker or not", () => {
+    // Drew's holding row must never be excusable by any accounting.
+    const r = C.compareCanary(GONZ, before(), inputs({
+      rows: 12, protectedRows: 0, protectedIds: [],
+      improveRekeyedAway: 1, improveRekeyedIds: [`${PROTECTED_ID}`],
+    }), 10, { fromCount: 1, toCount: 0, from: [], to: [] });
+    expect(r.ok).toBe(false);
+    expect(r.regressions.join(" ")).toContain("PROTECTED row left the pool");
+  });
+
+  it("an UNTOUCHED pool is reported as other writers' work, never as an IMPROVE re-key", () => {
+    // A pool this shard never wrote in is attributed to the other writers, and
+    // the re-key marker of some other lane must not relabel that as this
+    // shard's intended effect. (The untouched branch answers first, so this
+    // pins the SENTENCE the reader gets, which is the thing that decides
+    // whether a human goes looking at the right lane.)
+    const r = C.compareCanary(GONZ, before(), inputs({
+      rows: 12, protectedRows: 1, protectedIds: [PROTECTED_ID], improveRekeyedAway: 1,
+    }), 10, undefined);
+    expect(r.ok).toBe(true);
+    expect(r.notes.join(" ")).toContain("other writers");
+    expect(r.notes.join(" ")).not.toContain("rekeyedFrom marker");
+  });
+
+  it("MUTATION PIN -- with NO ledger the gate stays strict and an accounted loss still fails", () => {
+    // `touched` is true when there is no ledger (the degrade-closed path), but
+    // an unattributable apply must not get the benefit of the new clause: the
+    // gate cannot tell whose re-key that marker records. Passing `null`
+    // (no ledger) must still exit 5 on the very shape that passes with one.
+    const r = C.compareCanary(GONZ, before(), inputs({
+      rows: 12, anchor: 249.99, protectedRows: 1, protectedIds: [PROTECTED_ID],
+      improveRekeyedAway: 1, improveRekeyedIds: [`tca-ebay::407113176192@${DEST}`],
+    }), 10, null);
+    expect(r.ok).toBe(false);
+    expect(r.regressions.join(" ")).toContain("pool LOST 1 row");
+  });
+
+  it("MUTATION PIN -- a pool that lost NOTHING cannot use the clause to excuse an anchor move", () => {
+    // `lost > 0` guards it: an anchor that jumps in a pool with every row
+    // still in it is unexplained by any departure and must still fail.
+    const r = C.compareCanary(GONZ, before(), inputs({
+      rows: 13, anchor: 2.0, protectedRows: 1, protectedIds: [PROTECTED_ID], improveRekeyedAway: 3,
+    }), 10, { fromCount: 3, toCount: 0, from: [], to: [] });
+    expect(r.ok).toBe(false);
+    expect(r.regressions.join(" ")).toContain("anchor moved");
+  });
+
+  it("an EMPTY pool is still a regression even when every departure is marked", () => {
+    const r = C.compareCanary(GONZ, before(), inputs({
+      rows: 0, anchor: null, protectedRows: 0, protectedIds: [], improveRekeyedAway: 13,
+    }), 10, { fromCount: 13, toCount: 0, from: [], to: [] });
+    expect(r.ok).toBe(false);
+    expect(r.regressions.join(" ")).toContain("EMPTY");
+  });
+});
 
 describe("DEFECT 2 -- a parallel canary is SUPPOSED to lose base rows", () => {
   it("an accounted-for loss on a PARALLEL canary under eviction scope is a note, not a regression", () => {
