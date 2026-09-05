@@ -285,9 +285,71 @@ describe("the bar's numbers come off the summary, and it never invents a day cha
     expect(s.cardCount).toBe(43);
   });
 
-  it("NEVER reports a day change of zero — the wire has no previous close", () => {
-    // Absent, not zero. A $0.00 day would be a number we did not compute.
+  // ── CF-PORTFOLIO-DAY-CHANGE (Drew, 2026-09-04) ───────────────────────
+  // The wire now CAN carry a previous close. Three states have to stay
+  // distinguishable, and the one that is easy to get wrong is the middle one:
+  // a measured flat day is a real answer and must print, while an absent
+  // measurement must not print as zero.
+
+  it("a payload with no previous close reports NULL, never zero", () => {
+    // A worker that predates the field sends nothing. Absent is not $0.00 —
+    // that would be a number we did not compute.
     const s = barStats(data);
+    expect(s.dayChange).toBeNull();
+    expect(s.dayChangePct).toBeNull();
+    expect(s.dayChangeCoverage).toBeNull();
+  });
+
+  it("reads the day change off the summary and converts the pct to points", () => {
+    const s = barStats({
+      ...data,
+      summary: {
+        ...data.summary,
+        previousCloseValue: 12000,
+        previousCloseAt: "2026-09-04T00:00:00.000Z",
+        dayChangeValue: 500,
+        dayChangePct: 0.0417, // a FRACTION on the wire
+        dayChangeCoverage: { holdingsWithPrior: 40, holdingsTotal: 43 },
+      },
+    });
+    expect(s.dayChange).toBe(500);
+    // Percent POINTS for formatPct — 0.0417 -> 4.17, not 0.0417.
+    expect(s.dayChangePct).toBeCloseTo(4.17, 6);
+    expect(s.dayChangeCoverage).toEqual({ holdingsWithPrior: 40, holdingsTotal: 43 });
+  });
+
+  it("a measured FLAT day is zero, and zero is not null", () => {
+    // The distinction the whole feature rests on. $0 measured must survive
+    // every falsy-check in the chain and reach the bar as a number.
+    const s = barStats({
+      ...data,
+      summary: {
+        ...data.summary,
+        previousCloseValue: 12500,
+        dayChangeValue: 0,
+        dayChangePct: 0,
+        dayChangeCoverage: { holdingsWithPrior: 43, holdingsTotal: 43 },
+      },
+    });
+    expect(s.dayChange).toBe(0);
+    expect(s.dayChange).not.toBeNull();
+    expect(s.dayChangePct).toBe(0);
+  });
+
+  it("a negative day is preserved, sign and all", () => {
+    const s = barStats({
+      ...data,
+      summary: { ...data.summary, dayChangeValue: -320.5, dayChangePct: -0.025 },
+    });
+    expect(s.dayChange).toBe(-320.5);
+    expect(s.dayChangePct).toBeCloseTo(-2.5, 6);
+  });
+
+  it("a percentage without a dollar move is half a measurement — both or neither", () => {
+    const s = barStats({
+      ...data,
+      summary: { ...data.summary, dayChangePct: 0.05 },
+    });
     expect(s.dayChange).toBeNull();
     expect(s.dayChangePct).toBeNull();
   });

@@ -254,8 +254,16 @@ export function sellSignalRows(
 
 export interface BarStats {
   totalValue: number;
+  /** Today's move in dollars, or NULL when the wire carries no previous close.
+   *  Null and zero are different facts — see `barStats`. */
   dayChange: number | null;
+  /** The same move in PERCENT POINTS (1.23 = +1.23%), converted from the
+   *  fraction the wire carries so it can go straight into `formatPct`, which
+   *  every other percentage on this page already uses. */
   dayChangePct: number | null;
+  /** Non-null whenever `dayChange` is: how many holdings actually had a prior
+   *  point, out of how many are in the portfolio. */
+  dayChangeCoverage: { holdingsWithPrior: number; holdingsTotal: number } | null;
   costBasis: number;
   unrealisedPL: number;
   unrealisedPLPct: number;
@@ -267,21 +275,36 @@ export interface BarStats {
 /**
  * Everything the bar shows, from one response.
  *
- * `dayChange` is NULL, not zero, because /api/portfolio carries no
- * previous-close: the summary is a point-in-time total and there is no
- * yesterday on this wire. Reporting a day change of $0 would be inventing a
- * measurement — the invariant this repo keeps everywhere else — so the bar
- * renders the unrealised P&L it CAN source and omits the day line rather than
- * printing a zero that means "we do not know". A follow-up that adds a
- * previous-close to the summary can fill this in without touching the layout.
+ * CF-PORTFOLIO-DAY-CHANGE (Drew, 2026-09-04). The day change is now on the
+ * wire: /api/portfolio computes a previous close from each holding's persisted
+ * price trail at the most recent UTC midnight. It is READ, not derived here —
+ * a second copy of the arithmetic in the browser is exactly how the bar and
+ * the API drift into disagreeing about the same day.
+ *
+ * `dayChange` stays NULL — never zero — in two cases, and they are the same
+ * case as far as the reader is concerned: the server found no prior point for
+ * any holding, or the worker predates this field and sent nothing. Zero is a
+ * measured flat day and prints as "$0"; null means we have no yesterday and
+ * prints as an em dash. Printing $0 for "we do not know" would be inventing a
+ * measurement, which is the invariant this repo keeps everywhere else.
+ *
+ * THE PERCENT IS CONVERTED HERE. The wire carries a fraction (0.0123); every
+ * percentage on this page goes through `formatPct`, which wants percent
+ * points. One conversion, at the boundary, rather than a `* 100` sprinkled
+ * through the JSX.
  */
 export function barStats(data: PortfolioResponse): BarStats {
   const s = data.summary;
   const items = data.items ?? [];
+  const dayChange = typeof s.dayChangeValue === "number" ? s.dayChangeValue : null;
   return {
     totalValue: s.totalValue,
-    dayChange: null,
-    dayChangePct: null,
+    dayChange,
+    // Guarded on `dayChange` too: a percentage without a dollar move is half a
+    // measurement, and the bar shows the pair or neither.
+    dayChangePct:
+      dayChange !== null && typeof s.dayChangePct === "number" ? s.dayChangePct * 100 : null,
+    dayChangeCoverage: dayChange !== null ? (s.dayChangeCoverage ?? null) : null,
     costBasis: s.totalCost,
     unrealisedPL: s.totalGainLoss,
     unrealisedPLPct: s.totalGainLossPct,
