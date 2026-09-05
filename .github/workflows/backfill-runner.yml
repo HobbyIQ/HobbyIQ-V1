@@ -566,6 +566,29 @@ on:
           # report-only forever; (5) the title's finish word does not name two
           # card families at the number, and unanswerable counts as ambiguous.
           - repair-finish-collision-refile
+          # repair-bowman-product-refile -- a Bowman CPA/BCP card, and its
+          # sales, go back to the product they came out of.
+          # CF-IT-CAME-OUT-OF-BOWMAN (Drew 2026-08-13, re-affirmed 2026-09-05:
+          # "chrome stock is a property of the card, not the name of the
+          # product"). #1800 stopped the MINT; this moves what is stored.
+          #
+          # scope is REQUIRED and is a comma-separated list of products as
+          # sport:year:setKey. There is no 'all' in EITHER mode and the
+          # inherited `scope=refractor` is REFUSED (exit 2). `mode` selects the
+          # lane: catalog | sales | both (default both).
+          #
+          # THE ABSOLUTE GUARD: no move may land one player's row on another
+          # player's address. Nine 2026 CPA/BCP numbers name two DIFFERENT
+          # players (CPA-AG = Adrian Gil in Bowman AND Angeibel Gomez in Bowman
+          # Chrome); every refusal is reported with BOTH names. A SALE on a
+          # collision number whose player cannot be read PARKS rather than
+          # pooling -- Drew: "never default to either side".
+          #
+          # The sales half is time-critical: zero 2026 Bowman Chrome sales
+          # exist yet, so the 10,532 rows on that stem are Bowman sales at a
+          # Chrome address. Once real Chrome sales arrive they land on top and
+          # two players price as one card with no way back.
+          - repair-bowman-product-refile
       apply:
         description: "Actually write (true) or dry-run only (false)"
         required: true
@@ -846,6 +869,43 @@ jobs:
             fi
           done
           echo "Predicate libs confirmed: finish-collision-refile, rematch-classify, relocate-sold-comp"
+
+      # CF-A-WHOLE-SOURCE-RETIRE-NEEDS-ITS-NAME. Same lesson, same shape: the
+      # inherited `refractor` is not a chosen scope, and the refusal covers
+      # REPORT mode too.
+      - name: The Bowman product refile names its scope
+        if: ${{ inputs.script == 'repair-bowman-product-refile' }}
+        shell: bash
+        run: |
+          SCOPE='${{ inputs.scope }}'
+          if [ -z "$SCOPE" ] || [ "$SCOPE" = "refractor" ] || [ "$SCOPE" = "all" ]; then
+            echo "::error::repair-bowman-product-refile requires scope = a comma-separated list of products as sport:year:setKey. Got '$SCOPE' (the runner default 'refractor' and 'all' are refused — this lane has no whole-corpus mode)."
+            exit 1
+          fi
+          IFS=',' read -ra PRODUCTS <<< "$SCOPE"
+          for P in "${PRODUCTS[@]}"; do
+            P="$(echo "$P" | tr -d '[:space:]')"
+            if ! echo "$P" | grep -Eq '^[a-z0-9-]+:[0-9]{4}:[a-z0-9-]+$'; then
+              echo "::error::'$P' is not a product (expected sport:year:setKey, e.g. baseball:2026:bowman-chrome)."
+              exit 1
+            fi
+          done
+          echo "Scope confirmed: ${#PRODUCTS[@]} product(s)."
+
+      # The per-row decisions live in a lib so the tests pin the code that runs,
+      # and relocate-sold-comp is what makes the sale-side write survivable
+      # (upsert, verify, THEN delete -- CF-A-SALE-IS-NEVER-LOST).
+      - name: The Bowman refile predicate lib is present
+        if: ${{ inputs.script == 'repair-bowman-product-refile' }}
+        shell: bash
+        run: |
+          for LIB in bowman-product-refile relocate-sold-comp runner-shard-scope; do
+            if [ ! -f "backend/scripts/lib/$LIB.cjs" ]; then
+              echo "::error::backend/scripts/lib/$LIB.cjs is missing — the lane would read the pool and have no rule to classify it with"
+              exit 1
+            fi
+          done
+          echo "Predicate libs confirmed: bowman-product-refile, relocate-sold-comp, runner-shard-scope"
 
       - name: Fetch COSMOS_CONNECTION_STRING from HobbyIQ3 App Service
         shell: bash
@@ -1665,6 +1725,19 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: finish-collision-refile-${{ inputs.apply == true && 'apply' || 'report' }}-slot-${{ inputs.slot }}-${{ github.run_id }}
+          path: /tmp/backfill.log
+          if-no-files-found: warn
+          retention-days: 90
+
+      # The Bowman refile's log carries the per-BUCKET report and, crucially,
+      # the REFUSED-BY-NAME list: every row whose destination held a different
+      # player. That list is the evidence the nine collisions stayed apart, so
+      # it is kept as long as the apply it justifies.
+      - name: Upload the Bowman product refile log
+        if: ${{ always() && inputs.script == 'repair-bowman-product-refile' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: bowman-product-refile-${{ inputs.apply == true && 'apply' || 'report' }}-slot-${{ inputs.slot }}-${{ github.run_id }}
           path: /tmp/backfill.log
           if-no-files-found: warn
           retention-days: 90
@@ -3149,6 +3222,38 @@ jobs:
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (refiled=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-finish-collision-refile -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f limit="${{ inputs.limit }}"
+          else
+            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (refiled=${N:-0}) — done, no re-dispatch."
+          fi
+
+      - name: Self-relaunch the Bowman product refile until the slot is clean
+        # CF-IT-CAME-OUT-OF-BOWMAN. `scope` is the WHOLE safety argument for
+        # this lane -- a comma-separated product list as sport:year:setKey, with
+        # no 'all' -- so the continuation carries the SAME list, and forwarding
+        # it verbatim means the "names its scope" gate RE-VALIDATES the
+        # relaunch: a continuation that somehow lost its scope refuses rather
+        # than widening.
+        #
+        # `apply` is forwarded verbatim too (#1578): a report that relaunches as
+        # a write is the defect that rule exists to stop, and hardcoding EITHER
+        # value is how it happens. `mode` rides along so a sales-only or
+        # catalog-only dispatch continues as the lane it started as.
+        #
+        # The refile is convergent: a moved row's field now AGREES with its
+        # stem, so `isStaleGenericField` no longer flags it and the relaunch
+        # resumes rather than repeating.
+        if: ${{ !cancelled() && inputs.script == 'repair-bowman-product-refile' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        working-directory: backend
+        run: |
+          set +e
+          N=$(grep -aoE "^  REFILED onto the product it came out of +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
+          echo "refiled=${N:-0}"
+          if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
+            echo "::notice::budget hit (refiled=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-bowman-product-refile -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f mode="${{ inputs.mode }}" -f limit="${{ inputs.limit }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (refiled=${N:-0}) — done, no re-dispatch."
           fi
