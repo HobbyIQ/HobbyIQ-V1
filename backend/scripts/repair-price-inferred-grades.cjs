@@ -89,6 +89,9 @@ const RUN_MS = RUN_MINUTES * 60_000;
 const SINCE = arg("since", "");
 const started = Date.now();
 const budgetLeft = () => RUN_MS - (Date.now() - started);
+/** Wall clock one batch may still be granted after the budget expires.
+ *  CHECKED BEFORE EACH BATCH, never at the loop top. */
+const RESERVE_MS = Number(process.env.RESERVE_MS || 120 * 1000);
 
 // SCOPE REFUSAL. A whole-container sweep must name its scope explicitly.
 const SOURCES = String(arg("sources", ""))
@@ -176,10 +179,10 @@ async function main() {
 
   outer:
   while (iter.hasMoreResults()) {
-    if (budgetLeft() < 120_000) { stopReason = "budget"; markNotReached(); break; }
+    if (budgetLeft() < RESERVE_MS) { stopReason = "budget"; markNotReached(); break; }
     const { resources } = await iter.fetchNext();
     for (const row of resources || []) {
-      if (budgetLeft() < 120_000) { stopReason = "budget"; markNotReached(); break outer; }
+      if (budgetLeft() < RESERVE_MS) { stopReason = "budget"; markNotReached(); break outer; }
       if (LIMIT && tot.demotable >= LIMIT) { stopReason = "limit"; markNotReached(); break outer; }
       tot.scanned++;
 

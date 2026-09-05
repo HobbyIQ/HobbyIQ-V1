@@ -48,7 +48,15 @@ const { runnerShardScope } = require("./lib/runner-shard-scope.cjs");
 const SHARD_SCOPE = runnerShardScope({ label: "purge-unaddressable-catalog-rows" });
 const { SHARDED, SLOT, SLOTS } = SHARD_SCOPE;
 const CONCURRENCY = Math.max(1, Number(process.env.CONCURRENCY || process.env.BACKFILL_CONCURRENCY || 8));
-const RUN_MS = Number(process.env.RUN_MINUTES || 140) * 60000;
+const RUN_MINUTES = Number(process.env.RUN_MINUTES || 120);
+const RUN_MS = RUN_MINUTES * 60000;
+/** Wall clock a single unit may still be granted after the budget expires.
+ *  CHECKED BEFORE EACH UNIT, never at the loop top: a unit costing more than
+ *  this is stopped BEFORE it starts. See lib/runner-budget.cjs. */
+const RESERVE_MS = Number(process.env.RESERVE_MS || 2 * 60 * 1000);
+/** Hard cap on the post-loop verify-by-read: it answers, or it says it could
+ *  not. It never holds the step open until the runner kills it. */
+const VERIFY_MS = Number(process.env.VERIFY_MS || 10 * 60 * 1000);
 const LIMIT = Number(process.env.LIMIT || 0);
 const STARTED = Date.now();
 const f = (n) => Number(n).toLocaleString("en-US");
@@ -164,7 +172,7 @@ async function main() {
       while (cursor < queue.length) {
         if (stopReason) return;
         if (LIMIT && purged >= LIMIT) { stopReason = "limit"; return; }
-        if (Date.now() - STARTED > RUN_MS) { stopReason = "budget"; return; }
+        if (Date.now() - STARTED > RUN_MS - RESERVE_MS) { stopReason = "budget"; return; }
         const [pk, rows] = queue[cursor++];
         let links = rows.map((r) => r._self);
         try {

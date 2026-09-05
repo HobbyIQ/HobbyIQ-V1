@@ -49,7 +49,15 @@ const RESOLVE = String(process.env.RESOLVE ?? "true") !== "false";
 // ~2M rows into 3.6h apiece against a 2.5h ceiling. The dispatch that found
 // this had to be split 16 ways by hand to stay under it -- exactly the sum
 // nobody should have to do before pressing go.
-const RUN_MS = Number(process.env.RUN_MINUTES || 140) * 60000;
+const RUN_MINUTES = Number(process.env.RUN_MINUTES || 120);
+const RUN_MS = RUN_MINUTES * 60000;
+/** Wall clock a single unit may still be granted after the budget expires.
+ *  CHECKED BEFORE EACH UNIT, never at the loop top: a unit costing more than
+ *  this is stopped BEFORE it starts. See lib/runner-budget.cjs. */
+const RESERVE_MS = Number(process.env.RESERVE_MS || 2 * 60 * 1000);
+/** Hard cap on the post-loop verify-by-read: it answers, or it says it could
+ *  not. It never holds the step open until the runner kills it. */
+const VERIFY_MS = Number(process.env.VERIFY_MS || 10 * 60 * 1000);
 // CF-SHARD-THE-REMATCH (2026-08-28): 15.9M sales on one worker is a day.
 // Page-modulo split, same pattern as every other fleet.
 // CF-AN-INHERITED-SLOTS-IS-NOT-A-CHOSEN-SHARD (#1756, generalised 2026-09-04).
@@ -163,7 +171,7 @@ async function main() {
   let hitBudget = false;
   while (it.hasMoreResults()) {
     if (MAX_ROWS && scanned >= MAX_ROWS) break;
-    if (Date.now() - STARTED_AT > RUN_MS) { hitBudget = true; break; }
+    if (Date.now() - STARTED_AT > RUN_MS - RESERVE_MS) { hitBudget = true; break; }
     const { resources } = await fetchNextWithRetry();
     for (const r of resources) {
       if (SLOTS > 1 && (_seen++ % SLOTS) !== SLOT) continue;

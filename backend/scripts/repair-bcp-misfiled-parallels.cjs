@@ -112,7 +112,13 @@ const MODE = String(process.env.MODE || "").trim().toLowerCase();
 const { runnerShardScope } = require("./lib/runner-shard-scope.cjs");
 const SHARD_SCOPE = runnerShardScope({ label: "repair-bcp-misfiled-parallels" });
 const { SHARDED, SLOT, SLOTS } = SHARD_SCOPE;
-const RUN_MINUTES = Number(process.env.RUN_MINUTES || 140);
+const RUN_MINUTES = Number(process.env.RUN_MINUTES || 120);
+/** Wall clock a single unit may still be granted after the budget expires.
+ *  CHECKED BEFORE EACH UNIT, never at the loop top. See lib/runner-budget.cjs. */
+const RESERVE_MS = Number(process.env.RESERVE_MS || 90 * 1000);
+/** Hard cap on the post-loop verify-by-read: it answers, or it says it could
+ *  not. It never holds the step open until the runner kills it. */
+const VERIFY_MS = Number(process.env.VERIFY_MS || 10 * 60 * 1000);
 const RUN_MS = RUN_MINUTES * 60000;
 const CONCURRENCY = Math.max(1, Number(process.env.CONCURRENCY || process.env.BACKFILL_CONCURRENCY || 8));
 const LIMIT = Number(process.env.LIMIT || 0);

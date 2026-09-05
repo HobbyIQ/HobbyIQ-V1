@@ -79,7 +79,15 @@ const { runnerShardScope } = require("./lib/runner-shard-scope.cjs");
 const SHARD_SCOPE = runnerShardScope({ label: "repair-card-number-from-title" });
 const { SHARDED, SLOT, SLOTS } = SHARD_SCOPE;
 const CONCURRENCY = Math.max(1, Number(process.env.CONCURRENCY || process.env.BACKFILL_CONCURRENCY || 8));
-const RUN_MS = Number(process.env.RUN_MINUTES || 140) * 60000;
+const RUN_MINUTES = Number(process.env.RUN_MINUTES || 120);
+const RUN_MS = RUN_MINUTES * 60000;
+/** Wall clock a single unit may still be granted after the budget expires.
+ *  CHECKED BEFORE EACH UNIT, never at the loop top: a unit costing more than
+ *  this is stopped BEFORE it starts. See lib/runner-budget.cjs. */
+const RESERVE_MS = Number(process.env.RESERVE_MS || 2 * 60 * 1000);
+/** Hard cap on the post-loop verify-by-read: it answers, or it says it could
+ *  not. It never holds the step open until the runner kills it. */
+const VERIFY_MS = Number(process.env.VERIFY_MS || 10 * 60 * 1000);
 const LIMIT = Number(process.env.LIMIT || 0);
 const STARTED = Date.now();
 const REASON = "card number re-derived from the title (D28, CF-A-CARD-NUMBER-IS-NOT-A-GRADE)";
@@ -326,7 +334,7 @@ async function main() {
           catch (e) { s.failed++; if (s.failed <= 8) console.log(`  FAILED ${row.id}: ${String(e?.message ?? e).slice(0, 120)}`); }
         }));
         if (LIMIT && written() >= LIMIT) { stopReason = "limit"; s.notReached += mine.length - Math.min(i + CONCURRENCY, mine.length); break; }
-        if (Date.now() - STARTED > RUN_MS) { stopReason = "budget"; s.notReached += mine.length - Math.min(i + CONCURRENCY, mine.length); break; }
+        if (Date.now() - STARTED > RUN_MS - RESERVE_MS) { stopReason = "budget"; s.notReached += mine.length - Math.min(i + CONCURRENCY, mine.length); break; }
       }
       if (!stopReason && seenThisMode && seenThisMode % 5000 < CONCURRENCY) process.stderr.write(`\r  ${m}: scanned=${f(s.scanned)} moved=${f(s.movedChecklist + s.movedTwin + s.movedOther)} parked=${f(s.parked + s.parkedUnplaced)}   `);
     } while (token && !stopReason);

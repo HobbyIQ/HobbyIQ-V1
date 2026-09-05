@@ -109,7 +109,15 @@ const f = (n) => Number(n ?? 0).toLocaleString("en-US");
 const csv = (v) => String(v ?? "").split(",").map((s) => s.trim()).filter(Boolean);
 
 const CONCURRENCY = Math.max(1, Number(process.env.CONCURRENCY || process.env.BACKFILL_CONCURRENCY || 16));
-const RUN_MS = Number(process.env.RUN_MINUTES || 140) * 60000;
+const RUN_MINUTES = Number(process.env.RUN_MINUTES || 120);
+const RUN_MS = RUN_MINUTES * 60000;
+/** Wall clock a single unit may still be granted after the budget expires.
+ *  CHECKED BEFORE EACH UNIT, never at the loop top: a unit costing more than
+ *  this is stopped BEFORE it starts. See lib/runner-budget.cjs. */
+const RESERVE_MS = Number(process.env.RESERVE_MS || 2 * 60 * 1000);
+/** Hard cap on the post-loop verify-by-read: it answers, or it says it could
+ *  not. It never holds the step open until the runner kills it. */
+const VERIFY_MS = Number(process.env.VERIFY_MS || 10 * 60 * 1000);
 const LIMIT = Number(process.env.LIMIT || 0);
 const STARTED = Date.now();
 
@@ -523,7 +531,7 @@ async function main() {
         // The budget is checked on EVERY page, not only inside a batch: a page
         // whose rows all filter out never reaches the batch loop, and a scan
         // that is mostly filtered would run past its budget without asking.
-        if (Date.now() - STARTED > RUN_MS) { stopReason = "budget"; return false; }
+        if (Date.now() - STARTED > RUN_MS - RESERVE_MS) { stopReason = "budget"; return false; }
         const mine = rows.filter((r) => {
           const k = `${r.id} ${r.cardId}`;
           if (seen.has(k)) return false;
@@ -542,7 +550,7 @@ async function main() {
             if (s.failed <= 5) console.log(`  FAILED ${str(r.id).slice(0, 64)}: ${String(e?.message ?? e).slice(0, 110)}`);
           })));
           if (LIMIT && s.moved >= LIMIT) { stopReason = "limit"; break; }
-          if (Date.now() - STARTED > RUN_MS) { stopReason = "budget"; break; }
+          if (Date.now() - STARTED > RUN_MS - RESERVE_MS) { stopReason = "budget"; break; }
         }
         return !stopReason;
       });

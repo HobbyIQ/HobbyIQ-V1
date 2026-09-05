@@ -102,7 +102,15 @@ const SETKEYS = csv(process.env.SETKEYS || process.env.SETKEY || process.env.SCO
 const MIN_ROWS = Math.max(1, Number(process.env.MIN_ROWS || 5));
 const SUSPECT_PCT = Math.max(1, Number(process.env.SUSPECT_PCT || 80));
 const LIMIT = Number(process.env.LIMIT || 0);
-const RUN_MS = Number(process.env.RUN_MINUTES || 140) * 60000;
+const RUN_MINUTES = Number(process.env.RUN_MINUTES || 120);
+const RUN_MS = RUN_MINUTES * 60000;
+/** Wall clock a single unit may still be granted after the budget expires.
+ *  CHECKED BEFORE EACH UNIT, never at the loop top: a unit costing more than
+ *  this is stopped BEFORE it starts. See lib/runner-budget.cjs. */
+const RESERVE_MS = Number(process.env.RESERVE_MS || 2 * 60 * 1000);
+/** Hard cap on the post-loop verify-by-read: it answers, or it says it could
+ *  not. It never holds the step open until the runner kills it. */
+const VERIFY_MS = Number(process.env.VERIFY_MS || 10 * 60 * 1000);
 const OUT_DIR = process.env.CENSUS_OUT || "/tmp/ch-product-label-census";
 const STARTED = Date.now();
 
@@ -295,7 +303,7 @@ async function main() {
     }
 
     if (LIMIT && s.scanned >= LIMIT) { stopReason = "limit"; return false; }
-    if (Date.now() - STARTED > RUN_MS) { stopReason = "budget"; return false; }
+    if (Date.now() - STARTED > RUN_MS - RESERVE_MS) { stopReason = "budget"; return false; }
     return true;
   });
 
