@@ -1938,7 +1938,17 @@ const STRICT_PUBLISHER_LANES = Object.freeze([
 
 /** L3. Is this catalog row's source a REAL SCRAPED CHECKLIST -- one that can
  *  prove a specialization lists a card? Every source not named above is
- *  refused, including every source invented later. Absent beats wrong. */
+ *  refused, including every source invented later. Absent beats wrong.
+ *
+ *  A SOURCE STRING IS NO LONGER THE WHOLE ANSWER for one publisher on the list.
+ *  CF-HOBBYMONITOR-IS-STRICT-ONLY-WHERE-A-SECOND-SOURCE-AGREES (Drew,
+ *  2026-09-05): hobbymonitor stays named here, because its rows ARE
+ *  transcriptions and the question "is this publisher a checklist at all" still
+ *  answers yes. What it may no longer do ALONE is prove a card, and that is a
+ *  question about a ROW and its neighbours rather than about a name. Callers
+ *  that hold the rows ask `isStrictChecklistRow` below; this function is what
+ *  they fall back to when all they have is a string, and it stays honest about
+ *  which question it answered rather than guessing at the other one. */
 function isStrictChecklistSource(raw) {
   const s = normalizeCatalogSource(raw);
   if (s === "") return false;
@@ -1951,6 +1961,51 @@ function isStrictChecklistSource(raw) {
     return STRICT_CHECKLIST_SOURCES.includes(publisher);
   }
   return false;
+}
+
+// CF-HOBBYMONITOR-IS-STRICT-ONLY-WHERE-A-SECOND-SOURCE-AGREES, in the rematch.
+//
+// #1795 measured hobbymonitor's 2025 Panini Score transcription against
+// `score`'s checklistinsider rows at the identical identity slug: 2,571 of the
+// 2,811 twins name a DIFFERENT PLAYER at that number, the two sources disagree
+// on the number 343 times against 376 agreements where they name the same
+// player, and 32 keys carry two different players at one cell -- internally
+// inconsistent regardless of any second source.
+//
+// NARROWED (Drew, same day, after the blast radius was measured): only a
+// CONTRADICTION disqualifies. 1,093,457 of the 1,192,925 hobbymonitor rows have
+// NO second source at all -- a fact about our acquisition backlog, not about
+// the row -- so they stay strict and carry a `single-source:*` label instead.
+// Only the 22,027 rows a second strict source CONTRADICTS lose the gate.
+//
+// The rematch's STRICT gate is precisely the one whose false yes "moves a sale
+// onto a card that may never have been printed" (the allowlist's own words), so
+// it is the gate that must carry the demotion. It is NOT reimplemented here:
+// the rule and its whole reasoning live in
+// `src/services/catalog/sourceCorroboration.ts` and reach CJS through
+// `scripts/lib/source-corroboration.cjs`. A second copy of one predicate is the
+// exact failure catalogAuthority's header records.
+const CORROBORATION = require("./source-corroboration.cjs");
+
+/**
+ * L3, ROW-AWARE. May THIS ROW prove a specialization lists a card?
+ *
+ * `row`     the catalog row being judged (its id carries the identity cell).
+ * `rivals`  the other catalog rows the caller already holds for the same card
+ *           -- from the product scan or slug probe it has already done. The
+ *           caller does the I/O; CF-DO-NOT-LOOK-TWICE.
+ *
+ * For every source but the demoted one this is exactly
+ * `isStrictChecklistSource(row.source)` and no rival is consulted, so no
+ * existing verdict moves. For a demoted source it additionally requires a
+ * second strict row at the same (sport, year, setKey, cardNumber, parallel,
+ * isAuto) that agrees on the player when both carry one.
+ */
+function isStrictChecklistRow(row, rivals) {
+  if (!row) return false;
+  if (!isStrictChecklistSource(row.source)) return false;
+  if (!CORROBORATION.requiresCorroboration(row.source)) return true;
+  return CORROBORATION.corroborationOf(row, rivals ?? []).checklistBacked;
 }
 
 // ── SPECIALIZATION-STATED: the IMPROVE subclass that repairs a stated ──────
@@ -4423,6 +4478,7 @@ module.exports = {
   SPECIALIZATION_STATED, SPECIALIZATION_PARENTS, LADDER_MIRRORED_KEYS,
   SAME_NUMBER_PARALLEL_SETS, isSameNumberParallelSet,
   STRICT_CHECKLIST_SOURCES, STRICT_PUBLISHER_LANES, normalizeCatalogSource, isStrictChecklistSource,
+  isStrictChecklistRow,
   specializationAncestry, isSpecializationOf, distinguishingWords,
   titleStatesWord, specializationStatedEvidence,
   PROTECTED_SOURCES, PROTECTED_MARKER_FIELDS, AXES, GENERIC_PARALLELS,

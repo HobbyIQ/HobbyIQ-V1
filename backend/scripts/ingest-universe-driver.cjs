@@ -2247,6 +2247,45 @@ if (require.main !== module) return;
       console.error(`        Fix LANE_SOURCE here, or declare the name in catalogAuthority.service.ts.`);
       process.exit(2);
     }
+    // CF-HOBBYMONITOR-IS-STRICT-ONLY-WHERE-A-SECOND-SOURCE-AGREES (Drew,
+    // 2026-09-05). A demoted lane still INGESTS -- the gate above is about
+    // whether the stamped name is a checklist at all, and hobbymonitor's is.
+    // The demotion is a question about a ROW ("does a second strict source
+    // agree on this cell?"), and at this point in the run no row exists yet:
+    // the fetch has not happened, the CSV is not written, and the cell the
+    // corroboration read needs is not knowable. Asking it here would be asking
+    // it of nothing.
+    //
+    // So the driver SAYS SO instead of guessing, and the demotion is applied
+    // where the rows are: identityBackingOf at pricing time, and
+    // K.isStrictChecklistRow in the rematch. hobbymonitor's 1,192,925 rows are
+    // the ONLY transcription most modern Panini releases have (2022
+    // panini-select alone is 28,497 rows with no second source), so refusing
+    // the lane would take coverage away rather than add accuracy -- absent
+    // beats wrong only when the alternative is a better row, and here it is no
+    // row (see sourceCorroboration.ts's header).
+    //
+    // THE NAME IS CHECKED, NOT THE MODULE LOADED. Requiring the corroboration
+    // bridge here costs a `dist/` load on EVERY driver spawn -- measured at
+    // +43s across this file's own suite (87s -> 130s), which is enough to blow
+    // a 30s per-test budget under a parallel run. This banner is cosmetic and
+    // the demotion is enforced elsewhere, at pricing and rematch time, where
+    // the ONE predicate genuinely runs. So the lane names are compared against
+    // the exported list, which is a string comparison and free.
+    //
+    // The list is duplicated NOWHERE: `sourceCorroboration.ts` is the single
+    // definition and this is a banner, not a decision. If the two ever drift
+    // the only consequence is a missing NOTE line -- no row is classified here.
+    // `ingestUniverseDriverDemotedLaneBanner.test.ts` pins them equal anyway.
+    const DEMOTED_LANE_NAMES = ["hobbymonitor"];
+    const laneStem = String(label).toLowerCase().replace(/-\d{4}-\d{2}-\d{2}.*$/, "");
+    if (DEMOTED_LANE_NAMES.some((n) => laneStem === n || laneStem.startsWith(`${n}-`))) {
+      console.log(`NOTE: lane "${lane}" stamps source="${label}", a DEMOTED source (Drew 2026-09-05).`);
+      console.log(`      Its rows ingest normally and are re-keyable and outrank derived stubs, but they count`);
+      console.log(`      as checklist-BACKED only where a second strict source agrees on (year, setKey,`);
+      console.log(`      cardNumber, parallel, isAuto) and on the player. That is judged per row, after the`);
+      console.log(`      write, by identityBackingOf and the rematch -- not here, where no row exists yet.`);
+    }
   }
   if (!process.env.COSMOS_CONNECTION_STRING) { console.error("REFUSE: COSMOS_CONNECTION_STRING not set"); process.exit(2); }
   if (!fs.existsSync(MANIFEST_PATH)) { console.error(`REFUSE: manifest not found at ${MANIFEST_PATH}`); process.exit(2); }
