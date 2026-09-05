@@ -228,6 +228,98 @@ const CELLS = [
   { sport: "baseball",   setKey: "stadium-club",   from: 1990, to: 1999, label: "baseball/stadium-club/1990-1999" },
   { sport: "baseball",   setKey: "bowmans-best",   from: 1990, to: 1999, label: "baseball/bowmans-best/1990-1999" },
   { sport: "baseball",   setKey: "metal-universe", from: 1990, to: 1999, label: "baseball/metal-universe/1990-1999" },
+  /**
+   * CF-THE-VINTAGE-CELLS-THE-CENSUS-CALLED-SOURCELESS (2026-09-05, checklist-gap
+   * census top-50 pass).
+   *
+   * FOURTH widening, and the notes above have now predicted it three times:
+   * "the remaining baseball cells are a later, deliberate widening -- and this
+   * file is now the place that widening happens". This is that widening for the
+   * PRE-1980 cells, and the gap census is what forced it.
+   *
+   * WHAT THE CENSUS SAID, AND WHY IT WAS WRONG. The 2026-09-05 census ranked
+   * four pre-1980 baseball products in its top 50 and marked every one
+   * "not-enumerated / source gap -- check the sportscardchecklist sitemap":
+   *
+   *     baseball 1933 goudey    11,256 rows   $3,733,108
+   *     baseball 1948 leaf        3,156 rows   $4,432,015
+   *     baseball 1909 t206        6,578 rows   $1,389,491
+   *     baseball 1948 bowman      4,516 rows   $1,129,357
+   *
+   * The source serves ALL FOUR, and has all along. They were invisible from
+   * here because baseball was scoped 1980-2003: the cells above open at 1980
+   * (Topps/Bowman), 1985 (Fleer) and 1990 (the junk-wax brands), so a 1933 set
+   * URL classified as `null` and no entry was ever minted. "No permissive
+   * source" was a statement about THIS FILE'S CELL LIST, not about the web.
+   *
+   * MEASURED ON THE 2026-09-05 SITEMAP (141,583 URLs, 30 child sitemaps, all
+   * lastmod 2026-09-05), pre-1980 baseball by brand:
+   *
+   *     topps 122 (1948-1979)   fleer 21 (1959-1979)   o-pee-chee 20 (1960-1979)
+   *     bowman 11 (1948-1955)   goudey 8 (1933-1941)   leaf 3 (1948-1960)
+   *     t206 1 (1909)
+   *
+   * All four gap sets were fetched and parsed offline through this lane's own
+   * fetcher before this cell list was touched -- both parse anchors agree on
+   * every one, 0 rows skipped:
+   *
+   *     1909-11 T206      524 rows   (the canonical T206 count)
+   *     1933 Goudey       241 rows
+   *     1948-49 Leaf      101 rows   (skip-numbered: #2 absent, correctly)
+   *     1948 Bowman        50 rows
+   *
+   * THE SPLIT-YEAR TRAP, AGAIN, AND IT BIT THE BRANDS. Two of the four carry a
+   * split-year slug -- `1948-49-leaf-baseball-` and `1909-11-t206-baseball-`.
+   * This file's SET_URL_RE has accepted both year forms since 2026-09-04, so
+   * discovery is safe; but the cell year is the FIRST year (1948, 1909), which
+   * is how the pool spells them, and a cell range that opened at 1949 or 1910
+   * would miss both. The ranges below are anchored on the first year.
+   *
+   * `goudey`, `leaf` AND `t206` ARE THEIR OWN BRANDS. Goudey and Leaf are not
+   * Topps products and no existing cell reaches them; T206 is a tobacco issue
+   * whose "brand" is the ACC designation itself, which is exactly how both the
+   * source and our own pool key it (`hiq:baseball:1909:t206:`). Each needs its
+   * own BRAND_RE entry or the cell matches nothing -- the load-time guard below
+   * catches that, and it is why these three appear there.
+   *
+   * SCOPED 1900-1979 AND TO SIX BRANDS, deliberately. The source serves 523
+   * pre-1980 baseball sets across a long oddball tail (Kahn's Wieners, Bazooka,
+   * Kellogg's, Hostess, Milton Bradley, ...). Opening all of them mints a queue
+   * nobody budgeted, which is the objection the 1980-1999 note above already
+   * records. These six are the brands that back the census's own gap rows.
+   */
+  { sport: "baseball",   setKey: "topps",      from: 1948, to: 1979, label: "baseball/topps/1948-1979" },
+  { sport: "baseball",   setKey: "bowman",     from: 1948, to: 1979, label: "baseball/bowman/1948-1979" },
+  { sport: "baseball",   setKey: "fleer",      from: 1959, to: 1979, label: "baseball/fleer/1959-1979" },
+  { sport: "baseball",   setKey: "o-pee-chee", from: 1960, to: 1979, label: "baseball/o-pee-chee/1960-1979" },
+  { sport: "baseball",   setKey: "goudey",     from: 1933, to: 1941, label: "baseball/goudey/1933-1941" },
+  { sport: "baseball",   setKey: "leaf",       from: 1948, to: 1960, label: "baseball/leaf/1948-1960" },
+  { sport: "baseball",   setKey: "t206",       from: 1909, to: 1911, label: "baseball/t206/1909-1911" },
+  /**
+   * CF-THE-HOCKEY-CELLS-THE-CENSUS-CALLED-SOURCELESS (2026-09-05, same pass).
+   *
+   * The census marked hockey 2005 and 2015 Upper Deck "no permissive source;
+   * hobbymonitor /release/* is the only modern candidate". The source serves
+   * 308 Upper Deck sets for 2005-06 and 875 for 2015-16 -- measured on the same
+   * sitemap -- and neither was reachable because hockey was scoped to
+   * o-pee-chee/topps pre-1990.
+   *
+   * TWO YEARS, NOT THE WHOLE RUN. The source carries 7,082 hockey Upper Deck
+   * sets across 1990-2018. Minting all of them is the un-budgeted queue this
+   * file keeps refusing; these are the two years the census ranks, and the rest
+   * is a later widening on the same evidence standard.
+   *
+   * These two cells are NOT the fix for the 2020-2025 hockey Upper Deck gaps in
+   * the same census (13,907 + 9,633 + 9,127 + 8,723 + 5,874 rows). The source
+   * stops at 2018 for this brand, and those rows are a DIFFERENT defect anyway:
+   * their sales titles state `Series 1` / `Series 2` / `Young Guns` and the pool
+   * flattened all of them to a bare `upper-deck` key, while checklistinsider has
+   * already ingested `upper-deck-series-1` / `upper-deck-series-2` for exactly
+   * those years. That is a rekey, not an acquisition, and it is reported in
+   * docs/reports/checklist-gaps-my-domain-2026-09-05.md rather than fixed here.
+   */
+  { sport: "hockey",     setKey: "upper-deck", from: 2005, to: 2005, label: "hockey/upper-deck/2005" },
+  { sport: "hockey",     setKey: "upper-deck", from: 2015, to: 2015, label: "hockey/upper-deck/2015" },
 ];
 
 /**
@@ -251,6 +343,17 @@ const BRAND_RE = {
   "select": /^select(?:-|$)/,
   "stadium-club": /^stadium-club(?:-|$)/,
   "metal-universe": /^metal-universe(?:-|$)/,
+  /**
+   * THE THREE PRE-1980 BRANDS THAT ARE NOT A MODERN MAKER. Goudey (1933-1941)
+   * and Leaf (1948-1960) are their own issuers, and `t206` is an ACC
+   * designation rather than a maker name -- the source slugs it `1909-11-t206-`
+   * and our own pool keys it `hiq:baseball:1909:t206:`, so the designation IS
+   * the brand word here. Anchored like every other entry: `leaf` must not match
+   * `1990-leaf-donruss-previews` into the wrong cell, and the year ranges above
+   * keep the vintage Leaf cell clear of the 1990-1999 Leaf cell.
+   */
+  "goudey": /^goudey(?:-|$)/,
+  "t206": /^t206(?:-|$)/,
   /**
    * SP, AND WHY IT IS NOT `sp-?`. Anchored with a boundary so `1993-sp` and
    * `1995-sp-championship` match while `1998-spx` and `1997-sp-spx-force` do
