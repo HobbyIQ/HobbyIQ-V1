@@ -498,3 +498,107 @@ describe("resolvePricingConfidence: pricing confidence, never a match score", ()
     expect(resolvePricingConfidence(fixture({ confidence: 62, pricingSource: "legacy-engine" }) as any)).toBeNull();
   });
 });
+
+// ─── CF-WITHHELD-REACHES-THE-GLASS (Drew, 2026-09-05) ──────────────────
+//
+// The refusal block must survive the envelope boundary. Before this, the
+// builder read only {slug, method, compsUsed} off `pricingSourceMeta`, so a
+// withheld holding reached every client as an indistinguishable null and the
+// UI could say nothing truer than "—". These pin the block through.
+describe("provenance.withheld: a refusal reaches the client", () => {
+  const floor = {
+    reason: "cost-basis-floor" as const,
+    blockingId: "hiq:1989-opc-griffey-1",
+    blockingCount: 4,
+    proposed: 2,
+    retained: 29.45,
+    retentionRefused: null,
+    retainedRung: "exact-pool-last-sale",
+  };
+
+  it("carries every field of a cost-basis-floor refusal", () => {
+    const env = buildPricingEnvelope(
+      fixture({ pricingSourceMeta: { slug: "hiq:x", method: "withheld", compsUsed: 4, withheld: floor } }),
+      { fmvPerUnit: null, displayable: { value: null, source: "unpriced" }, quantity: 1, freshness: "Live" },
+    );
+    // The refused market number is the evidence that makes the refusal
+    // legible: "market shows $2, held below 15% of your $29.45 basis".
+    expect(env.provenance.withheld).toEqual(floor);
+  });
+
+  it("survives when the published-price projection is absent (no pool at all)", () => {
+    // identity-not-in-catalog computes nothing, so slug/method/compsUsed are
+    // missing and `pricingSourceMeta` projects to null. The refusal must NOT
+    // be gated on the published shape — that gating is what hid it.
+    const env = buildPricingEnvelope(
+      fixture({ pricingSourceMeta: { withheld: { reason: "identity-not-in-catalog" } } }),
+      { fmvPerUnit: null, displayable: { value: null, source: "unpriced" }, quantity: 1, freshness: "Live" },
+    );
+    expect(env.provenance.pricingSourceMeta).toBeNull();
+    expect(env.provenance.withheld?.reason).toBe("identity-not-in-catalog");
+    // Nothing was computed, so there is no refused number. Null SAYS that.
+    expect(env.provenance.withheld?.proposed).toBeNull();
+  });
+
+  it("carries all four reasons distinctly — they are four different fixes", () => {
+    for (const reason of ["cost-basis-floor", "no-checklist-match", "identity-not-in-catalog", "pool-migrating"] as const) {
+      const env = buildPricingEnvelope(
+        fixture({ pricingSourceMeta: { withheld: { reason } } }),
+        { fmvPerUnit: null, displayable: { value: null, source: "unpriced" }, quantity: 1, freshness: "Live" },
+      );
+      expect(env.provenance.withheld?.reason).toBe(reason);
+    }
+  });
+
+  it("a published row claims no refusal", () => {
+    const env = buildPricingEnvelope(fixture({ fairMarketValue: 500 }), {
+      fmvPerUnit: 500,
+      displayable: { value: 500, source: "observed" },
+      quantity: 1,
+      freshness: "Live",
+    });
+    expect(env.provenance.withheld).toBeNull();
+  });
+
+  it("refuses an unrecognised reason rather than inventing a cause", () => {
+    // A vocabulary the client cannot render is worse than silence: it would
+    // paint an explanation panel with no explanation in it.
+    const env = buildPricingEnvelope(
+      fixture({ pricingSourceMeta: { withheld: { reason: "some-future-reason", proposed: 10 } } }),
+      { fmvPerUnit: null, displayable: { value: null, source: "unpriced" }, quantity: 1, freshness: "Live" },
+    );
+    expect(env.provenance.withheld).toBeNull();
+  });
+
+  it("drops malformed numerics without dropping the refusal", () => {
+    const env = buildPricingEnvelope(
+      fixture({ pricingSourceMeta: { withheld: { reason: "pool-migrating", proposed: "12", blockingCount: NaN, blockingId: "" } } }),
+      { fmvPerUnit: null, displayable: { value: null, source: "unpriced" }, quantity: 1, freshness: "Live" },
+    );
+    expect(env.provenance.withheld?.reason).toBe("pool-migrating");
+    expect(env.provenance.withheld?.proposed).toBeNull();
+    expect(env.provenance.withheld?.blockingCount).toBeNull();
+    expect(env.provenance.withheld?.blockingId).toBeNull();
+  });
+
+  // ADDITIVE CONTRACT PIN. An old client destructures the fields it knows and
+  // must be unaffected by the new one. This is the guarantee that lets the
+  // wire change ship ahead of every consumer.
+  it("is additive: the pre-existing provenance shape is untouched", () => {
+    const env = buildPricingEnvelope(
+      fixture({
+        pricingSource: "our-pool",
+        pricingSourceMeta: { slug: "hiq:x", method: "direct-slug", compsUsed: 7, confidence: 0.8, withheld: floor },
+      }),
+      { fmvPerUnit: 100, displayable: { value: 100, source: "observed" }, quantity: 1, freshness: "Live" },
+    );
+    expect(env.provenance.pricingSourceMeta).toEqual({
+      slug: "hiq:x",
+      method: "direct-slug",
+      compsUsed: 7,
+      confidence: 0.8,
+    });
+    expect(env.provenance.pricingLabels).toEqual([]);
+    expect(env.provenance.selfAnchored).toBeNull();
+  });
+});

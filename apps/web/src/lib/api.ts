@@ -345,8 +345,32 @@ export interface PricingEnvelope {
      *  rides in `pricingSourceMeta.method`. */
     pricingSource: "our-pool" | "legacy-engine" | "unified-pricing" | "sibling-estimate" | null;
     pricingSourceMeta:
-      | { slug: string; method: string; compsUsed: number }
+      | { slug: string; method: string; compsUsed: number; confidence?: number | null }
       | null;
+    /** CF-WITHHELD-REACHES-THE-GLASS (Drew, 2026-09-05). Why the engine
+     *  REFUSED to publish a price for this holding, mirrored from
+     *  backend/src/types/pricingEnvelope.ts.
+     *
+     *  Present only on a refused row. Absent means the row was published
+     *  normally — it does NOT mean "withheld for an unknown reason".
+     *
+     *  Optional on the wire: a worker that has not redeployed does not send
+     *  it, so every consumer must render correctly without it. */
+    withheld?: {
+      reason:
+        | "cost-basis-floor"
+        | "no-checklist-match"
+        | "identity-not-in-catalog"
+        | "pool-migrating";
+      blockingId: string | null;
+      blockingCount: number | null;
+      /** The market number the engine computed and then refused to publish.
+       *  Null means no number existed, never "a number is being hidden". */
+      proposed: number | null;
+      retained: number | null;
+      retentionRefused: string | null;
+      retainedRung?: string | null;
+    } | null;
     /** CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (Drew, 2026-09-03). The
      *  caveats this price must be read with, as the writer stamped them. */
     pricingLabels?: PricingLabel[];

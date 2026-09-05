@@ -208,6 +208,48 @@ export interface PricingProvenance {
   pricingSourceMeta:
     | { slug: string; method: string; compsUsed: number; confidence: number | null }
     | null;
+  /** CF-WITHHELD-REACHES-THE-GLASS (Drew, 2026-09-05).
+   *
+   *  A REFUSAL, carried to the client. The one-valuation-path writer already
+   *  records why it declined to publish a price (holdingValuation.ts), but
+   *  until now that block died at this boundary: `buildProvenance` read only
+   *  {slug, method, compsUsed} off `pricingSourceMeta`, so every withheld
+   *  holding reached the UI as an indistinguishable null and the glass could
+   *  say nothing truer than "—". Drew's audit finding, 2026-09-05.
+   *
+   *  Present ONLY on a row the engine refused to price. Absent means the row
+   *  was published normally — it does NOT mean "withheld for an unknown
+   *  reason", and a reader must not invent one.
+   *
+   *  OPTIONAL on the wire: a worker that has not redeployed will not send it,
+   *  and every consumer must render correctly without it. That is the same
+   *  additive contract `sellSignal` and the day-change fields keep. */
+  withheld?: {
+    /** The machine-readable cause, closed vocabulary. The UI maps each to
+     *  its own sentence AND its own "what would unlock this" — they are four
+     *  different problems with four different fixes, and collapsing them to
+     *  one sentence is what the audit found on the DailyIQ column. */
+    reason:
+      | "cost-basis-floor"
+      | "no-checklist-match"
+      | "identity-not-in-catalog"
+      | "pool-migrating";
+    /** The pool that blocked it, and that pool's size. */
+    blockingId: string | null;
+    blockingCount: number | null;
+    /** The market number the engine COMPUTED and then refused to publish.
+     *  Null when nothing was computed (no pool at all) — null therefore
+     *  means "there was no number", never "we are hiding one". This is the
+     *  evidence that makes a cost-basis-floor refusal legible: "market shows
+     *  $X, held below 15% of your $Y basis". */
+    proposed: number | null;
+    /** What the row carries now, and why a retention was refused. */
+    retained: number | null;
+    retentionRefused: string | null;
+    /** The rung the retained number WAS priced under — history, not a claim
+     *  about this pass. Deliberately not `fmvRung`. */
+    retainedRung?: string | null;
+  } | null;
   /** CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (Drew, 2026-09-03). The caveats
    *  this price must be read with, exactly as the writer stamped them — the
    *  same set the live canonical-fmv response carries for this holding. The
