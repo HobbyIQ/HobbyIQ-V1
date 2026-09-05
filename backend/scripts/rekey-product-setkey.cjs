@@ -218,6 +218,36 @@ const MODES = ["catalog", "pool", "holdings"];
 // already exported as SOURCES for the retire/audit lanes), so no workflow
 // change is needed. SOURCES is read only when the flag is on: leaving it set
 // from a previous dispatch cannot arm this lane by itself.
+// ── CF-A-FOLD-NEVER-CHANGES-THE-PLAYER ──────────────────────────────────────
+//    (Drew, 2026-09-05, the donruss-optic arbitration.)
+//
+// RETIRE_UNTWINNED above guards the MOVE branch. NOTHING guarded FOLD, and the
+// donruss-optic audit found the hazard sitting there in the opposite polarity:
+// two transcriptions of one printed checklist naming DIFFERENT PLAYERS at the
+// same (number, parallel), tying on every rung of chooseSurvivor's ladder --
+// authority, vendorIds, sales, confidence -- and falling through to "the
+// incumbent keeps its address". The loser's row was absorbed silently.
+//
+// THE GUARD IS NOT HERE. It is in `chooseSurvivor` (catalogRowOps.service.ts),
+// because this script is one of many callers of moveCatalogRow and a guard in
+// one caller is a guard in one caller -- the exact lesson that produced that
+// module (fifteen copies of one operation, four defects spread between them).
+//
+// WHAT THIS SCRIPT DOES ABOUT IT: reports. A different-player collision that
+// nothing corroborates comes back as `action: "refused"` with BOTH NAMES, and
+// moveCatalogRow wrote nothing at all -- no upsert, no sale re-pointed, no
+// graded child retired, no delete. Every refusal is printed in full (never
+// truncated to the first eight, unlike the ordinary examples) because the whole
+// point of a refusal is that a human settles the pair, and a pair truncated out
+// of the log is a pair nobody can settle. It counts as SKIPPED in the write
+// reconciliation, for the reason gradedRetiredCascade documents in reverse: a
+// run must never claim a write it did not make.
+//
+// Measured on football/2024 panini-optic -> donruss-optic, read-only
+// 2026-09-05: 147 refusals across 30 card numbers, 0.98% of 14,984 candidates,
+// against 60 different-player collisions that the evidence DID settle (30 each
+// way -- the polarity flips inside one product, which is why the rule is about
+// evidence and not about a source's name).
 const RETIRE_UNTWINNED = String(process.env.RETIRE_UNTWINNED || "") === "true";
 const RETIRE_UNTWINNED_SOURCES = String(process.env.RETIRE_UNTWINNED_SOURCES || process.env.SOURCES || "")
   .split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
@@ -384,6 +414,14 @@ async function main() {
       // would claim more writes than were intended and reportWrites would flag
       // the arithmetic (CF-A-GREEN-RUN-IS-NOT-A-DATA-FLOW).
       gradedRetiredDirect: 0, gradedRetiredCascade: 0, failed: 0, notReached: 0,
+      // CF-A-FOLD-NEVER-CHANGES-THE-PLAYER. Two copies named DIFFERENT PLAYERS
+      // at one address and nothing corroborated either, so moveCatalogRow wrote
+      // NOTHING and handed back both names. A SKIP, never a write: the rows are
+      // both still where they were, and the pair needs a human or a checklist.
+      // `playerArbitrated` is the opposite case -- a different-player collision
+      // that evidence DID settle; it is already counted in moved/folded/replaced
+      // and is reported only so a reader can see how many folds changed a name.
+      refusedDifferentPlayer: 0, playerArbitrated: 0,
       // CF-A-SOURCE-THAT-CONTRADICTS-ITSELF-MINTS-NO-IDENTITIES. Rows that
       // WOULD have been a MOVE and were labelled in place instead, and the
       // graded children that followed them. Counted separately from the
@@ -393,6 +431,8 @@ async function main() {
       retiredUntwinned: 0, retiredUntwinnedChildren: 0,
     };
     const examples = [];
+    /** CF-A-FOLD-NEVER-CHANGES-THE-PLAYER: every refused pair, in full. */
+    const refusals = [];
     let stopReason = null;
 
     /**
@@ -551,8 +591,19 @@ async function main() {
               if (r.action === "move") s.moved++;
               else if (r.action === "fold") s.folded++;
               else if (r.action === "replace") s.replaced++;
+              else if (r.action === "refused") s.refusedDifferentPlayer++;
               else s.noop++;
-              if (examples.length < 8) examples.push(`  ${r.action.toUpperCase().padEnd(8)} ${id.slice(0, 66)}\n        -> ${newSlug.slice(0, 66)}\n           ${r.decision}`);
+              if (r.playerArbitration) s.playerArbitrated++;
+              // EVERY refusal is named, not just the first eight: the whole
+              // point of refusing is that a human settles the pair, and a pair
+              // truncated out of the log is a pair nobody can settle. They are
+              // rare by construction (0.98% of the measured cell); if a run
+              // ever floods this, that IS the finding.
+              if (r.action === "refused") {
+                refusals.push(`  REFUSED  #${str(d.cardNumber)} ${str(d.parallelSlug) || parts[5]}: "${str(r.refusal?.incomingPlayer)}" (this row) vs "${str(r.refusal?.incumbentPlayer)}" (at ${TO}) -- neither corroborated; NOTHING written`);
+              } else if (examples.length < 8) {
+                examples.push(`  ${r.action.toUpperCase().padEnd(8)} ${id.slice(0, 66)}\n        -> ${newSlug.slice(0, 66)}\n           ${r.decision}`);
+              }
             } catch (e) {
               s.failed++;
               if (s.failed <= 5) console.log(`  FAILED ${id.slice(0, 70)}: ${String(e?.message ?? e).slice(0, 110)}`);
@@ -566,11 +617,18 @@ async function main() {
     }
 
     for (const l of examples) console.log(l);
+    if (refusals.length) {
+      console.log("");
+      console.log(`-- REFUSED: different players at one address, neither corroborated (${refusals.length})`);
+      for (const l of refusals) console.log(l);
+    }
     banner(stopReason);
     console.log(`  rows scanned (this slot)   ${f(s.scanned)}   (+${f(s.otherSlot)} other slots)`);
     console.log(`  MOVED to ${TO.padEnd(26)} ${f(s.moved)}${RETIRE_UNTWINNED ? "   <- 0 expected: RETIRE_UNTWINNED diverts every move" : ""}`);
     console.log(`  FOLDED (twin already there)${f(s.folded).padStart(8)}   <- the incumbent won on authority`);
     console.log(`  REPLACED a lower twin      ${f(s.replaced)}`);
+    console.log(`  REFUSED (different player) ${f(s.refusedDifferentPlayer)}   <- NOTHING written for these; both rows stay put`);
+    console.log(`    of the folds/replaces, decided by player evidence  ${f(s.playerArbitrated)}`);
     if (RETIRE_UNTWINNED) {
       console.log(`  RETIRED (no twin, labelled)${f(s.retiredUntwinned).padStart(8)}   <- NOT moved to ${TO}; identityUnverified + retiredReason`);
       console.log(`    reason                   ${RETIRE_REASON}`);
@@ -588,8 +646,12 @@ async function main() {
     // graded children are NOT added: they were never scanned as candidates, so
     // counting them would claim more writes than were intended and reportWrites
     // would flag the arithmetic, exactly as gradedRetiredCascade documents.
+    // A REFUSAL IS A SKIP. moveCatalogRow returned before its first write, so
+    // counting it as written would claim a write that did not happen and
+    // reportWrites would flag the arithmetic -- the same reasoning
+    // gradedRetiredCascade documents, in the other direction.
     const written = s.moved + s.folded + s.replaced + s.gradedRetiredDirect + s.retiredUntwinned;
-    const skipped = s.stemMismatch + s.yearMismatch + s.malformed + s.noop + s.notReached;
+    const skipped = s.stemMismatch + s.yearMismatch + s.malformed + s.noop + s.notReached + s.refusedDifferentPlayer;
     reconcile("rekey-product-setkey:catalog", s.scanned, written, skipped, s.failed);
   }
 
