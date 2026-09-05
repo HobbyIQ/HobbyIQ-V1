@@ -146,6 +146,23 @@ on:
           # is deliberately NOT whitelisted here -- it has no apply mode and
           # belongs on a workstation, not in a runner that can write.
           - retire-self-derived-identities
+          # CF-IF-KNOWN-WE-SHOULD-BE-ABLE-TO-FIGURE-IT-OUT (Drew, 2026-09-05).
+          # The PLAN half of the acquisition chain: reads every user's holdings
+          # withheld on identity grounds (no-checklist-match /
+          # identity-not-in-catalog) plus the identityUnverified rows holdings
+          # reference, groups them into (sport, year, setKey) acquisition cells,
+          # ranks them holdings-first, and matches each to the universe manifest
+          # entry that can serve it -- reusing the driver's OWN setName->setKey
+          # resolution, with the alias/era spellings unioned (#1738/#1741) and a
+          # ruled-distinct Bowman/Topps pair refused rather than collapsed.
+          #
+          # IT HAS NO APPLY MODE. BACKFILL_APPLY=true is REFUSED (exit 3), not
+          # ignored. The dispatch chain it plans -- driver report -> gate ->
+          # driver apply -> rederive report -> gate -> rederive apply -> reprice
+          # -- lives in .github/workflows/acquire-for-withheld-holdings.yml,
+          # because only the workflow holds the runner's GH token and only
+          # gh run watch can gate one dispatch on the banner of the last.
+          - acquire-for-withheld-holdings
           - retire-prose-parallel-rows
           - retire-numbered-base-rows
           - conform-card-profile
@@ -1506,7 +1523,23 @@ jobs:
           # was. reap-orphan-price-trails reads the same var as its optional
           # one-user scope and gets the same treatment, for the same reason --
           # the corpus repair must not be quietly narrowed to one doc.
-          REPRICE_USER_ID: ${{ inputs.mode == '' && 'user-199fcbc9-58ba-4643-a0c9-f75bcbc90bd4' || '' }}
+          #
+          # CF-IF-KNOWN-WE-SHOULD-BE-ABLE-TO-FIGURE-IT-OUT (2026-09-05). The
+          # acquisition chain reprices the users whose holdings it just
+          # re-pointed, and those are whoever owned the withheld cards -- not
+          # necessarily Drew. There was no way to say so: the pin was the only
+          # source of a userId, and mode=all (the sole escape) is a CORPUS
+          # sweep, which is far too wide for "reprice the two people whose four
+          # holdings moved tonight".
+          #
+          # NO NEW INPUT. `titles` is already the runner's scope-by-name
+          # channel for exactly this shape of thing (rederive-holding-identity
+          # carries its holding ids there; rekey-product-setkey its TO key). A
+          # reprice dispatch that names a user in `titles` reprices THAT user;
+          # one that names none keeps the pin it always had, so every existing
+          # dispatch of this lane is unchanged. mode=all still wins over both,
+          # because the script tests ALL_USERS first and returns from it.
+          REPRICE_USER_ID: ${{ (inputs.script == 'reprice-user-holdings' && inputs.titles != '') && inputs.titles || (inputs.mode == '' && 'user-199fcbc9-58ba-4643-a0c9-f75bcbc90bd4' || '') }}
           HOBBYIQFMV_COMPOSITE_ENABLED: "true"
           # CF-NODE-HEAP-8G (Drew, 2026-08-02). dedupe-catalog-by-hobbyiq
           # crashed at ~2M rows scanned with "JavaScript heap out of memory"
