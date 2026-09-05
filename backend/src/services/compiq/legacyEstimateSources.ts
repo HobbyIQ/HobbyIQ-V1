@@ -48,6 +48,17 @@ export const LEGACY_ESTIMATE_SOURCES = [
   "projected",
 
   // Refusals — the engine has an identity but declines to price it.
+  //
+  // CF-A-POISONED-CACHE-REFUSES (compiq.routes.ts,
+  // `buildUnresolvedRouteResponse`). /price-by-id detects a MISMATCH between
+  // the id it was asked for and the id the cached payload carries — Frazier's
+  // card_id under Trout's key — recomputes once bypassing the cache, and when
+  // the fresh result is STILL mismatched answers this shape rather than
+  // pricing the wrong card and re-poisoning the cache. It is a route-level
+  // refusal, so it carries no rungLabel, valueSource or fmvReason at all,
+  // which is how it reads on the wire and why it belongs here rather than in
+  // the rung vocabulary.
+  "unresolved",
   "no-recent-comps",   // catalog HIT, no sales
   "catalog-miss",      // catalog MISS — zero candidates
   "variant-mismatch",  // the comps found are a different variant

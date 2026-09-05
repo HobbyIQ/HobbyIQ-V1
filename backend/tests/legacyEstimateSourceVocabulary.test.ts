@@ -39,6 +39,16 @@ describe("the legacy estimate vocabulary names what the pipeline emits", () => {
     expect(ROUTES).toMatch(/est\.source = "projected"/);
   });
 
+  it("`unresolved` is in it — the route-level poisoned-cache refusal", () => {
+    // /price-by-id answers this shape when the cached payload carries a
+    // DIFFERENT card_id than the one requested and a cache-bypassing recompute
+    // is still mismatched. It is a refusal with no rungLabel / valueSource /
+    // fmvReason at all, which is why it is a legacy source and not a rung.
+    expect(isLegacyEstimateSource("unresolved")).toBe(true);
+    expect(ROUTES).toMatch(/source: "unresolved"/);
+    expect(ROUTES).toMatch(/buildUnresolvedRouteResponse/);
+  });
+
   it("every `est.source = \"...\"` the route assigns is a declared source", () => {
     const assigned = [...ROUTES.matchAll(/est\.source\s*=\s*"([a-z0-9_-]+)"/g)].map((m) => m[1]);
     expect(assigned.length).toBeGreaterThan(0);
