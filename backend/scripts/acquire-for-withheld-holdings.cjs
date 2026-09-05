@@ -61,6 +61,7 @@ const { budget } = require(path.join(__dirname, "lib/runner-budget.cjs"));
 const {
   ACTIONABLE_REASONS,
   groupIntoCells,
+  isCatchAllSetKey,
   rankCells,
   matchCellToManifest,
 } = require(path.join(__dirname, "lib/withheld-acquisition-cells.cjs"));
@@ -332,8 +333,40 @@ async function main() {
   const ranked = rankCells(cells);
   const planned = [];
   for (const c of ranked) {
+    // CF-A-CATCH-ALL-KEY-IS-NOT-A-PRODUCT (Drew, 2026-09-05). A cell whose
+    // setKey is a #1715 catch-all (`draft`, `flagship`) is UNREADABLE, and the
+    // manifest is never even asked. Those keys must never be minted, no
+    // publisher has a page for them, and calling this "needs a source" would
+    // send a human hunting a 2025 "Draft" checklist that does not exist. The
+    // holdings PARK here until a maker is read.
+    if (isCatchAllSetKey(c.setKey)) {
+      planned.push({
+        cell: c.cell,
+        sport: c.sport,
+        year: c.year,
+        setKey: c.setKey,
+        subsets: c.subsets,
+        holdings: c.holdings,
+        holdingIds: c.holdingIds,
+        users: c.users,
+        slugs: c.slugs,
+        reasons: c.reasons,
+        salesVolume: c.salesVolume,
+        salesVolumeRead: c.salesVolumeRead !== false,
+        unreadable: true,
+        // NOT "needs a source": the two are different findings and merging
+        // them hides both.
+        needsSource: false,
+        why: `${c.setKey} is a catch-all key, not a product — the maker was never read`,
+        source: null,
+        alternates: [],
+        corroborated: false,
+      });
+      continue;
+    }
     const { matches, corroborated } = matchCellToManifest(c, entries, { canonicalSetKey });
     planned.push({
+      unreadable: false,
       cell: c.cell,
       sport: c.sport,
       year: c.year,
@@ -356,8 +389,10 @@ async function main() {
     });
   }
 
-  const actionable = planned.filter((p) => !p.needsSource).slice(0, TOP);
+  // An UNREADABLE cell is never dispatched and never counted as acquirable.
+  const actionable = planned.filter((p) => !p.needsSource && !p.unreadable).slice(0, TOP);
   const needsSource = planned.filter((p) => p.needsSource);
+  const unreadable = planned.filter((p) => p.unreadable);
 
   const plan = {
     generatedAt: new Date().toISOString(),
@@ -368,14 +403,16 @@ async function main() {
       holdings: holdings.length,
       withheld: withheld.length,
       cells: cells.length,
-      matched: planned.length - needsSource.length,
+      matched: planned.length - needsSource.length - unreadable.length,
       needsSource: needsSource.length,
+      unreadable: unreadable.length,
       unaddressable: unaddressable.length,
     },
     // THE NIGHTLY CAP, applied here rather than in the workflow: the plan is
     // what the workflow executes, so the cap is auditable in the artifact.
     tonight: actionable,
     needsSourceCells: needsSource.slice(0, 50),
+    unreadableCells: unreadable.slice(0, 50),
     unaddressable: unaddressable.slice(0, 50),
   };
 
@@ -385,9 +422,14 @@ async function main() {
     say("\n  RANKED CELLS — holdings first, sales volume second:");
     say(`    ${"holdings".padStart(8)} ${"sales".padStart(9)}  cell`);
     for (const p of planned.slice(0, Math.max(TOP, 20))) {
-      const src = p.needsSource
-        ? "NEEDS A SOURCE"
-        : `${p.source.lane}: ${p.source.setName}${p.corroborated ? "  (corroborated)" : ""}`;
+      // UNREADABLE is tested FIRST and on its own flag. An unreadable cell has
+      // needsSource=false and source=null, so a two-branch ternary would fall
+      // through to `p.source.lane` and throw on the null.
+      const src = p.unreadable
+        ? `UNREADABLE — ${p.why}`
+        : p.needsSource
+          ? "NEEDS A SOURCE"
+          : `${p.source.lane}: ${p.source.setName}${p.corroborated ? "  (corroborated)" : ""}`;
       say(`    ${String(f(p.holdings)).padStart(8)} ${String(f(p.salesVolume)).padStart(9)}  `
         + `${p.cell.padEnd(46)}  ${src}`);
     }
@@ -400,6 +442,17 @@ async function main() {
       say(`\n  NEEDS A SOURCE (${f(needsSource.length)}) — no manifest entry serves these:`);
       for (const p of needsSource.slice(0, 20)) {
         say(`    ${String(f(p.holdings)).padStart(6)}  ${p.cell}`);
+      }
+    }
+    if (unreadable.length) {
+      // Its OWN heading, never folded into "needs a source": these holdings
+      // park until a maker is read, and nobody should go hunting a checklist
+      // for a key that must never be minted.
+      say(`\n  UNREADABLE (${f(unreadable.length)}) — a catch-all key is not a product;`
+        + " these park until a maker is read:");
+      for (const p of unreadable.slice(0, 20)) {
+        say(`    ${String(f(p.holdings)).padStart(6)}  ${p.cell}  (${p.why})`);
+        for (const s of p.slugs.slice(0, 3)) say(`            ${s}`);
       }
     }
     if (unaddressable.length) {
@@ -418,7 +471,8 @@ async function main() {
 
   // The banner. It is REPORT-ONLY and says so in the words the workflow greps.
   note(`\n  RECONCILED  YES  cells=${f(cells.length)} matched=${f(plan.counts.matched)} `
-    + `needs-source=${f(plan.counts.needsSource)} tonight=${f(actionable.length)}`);
+    + `needs-source=${f(plan.counts.needsSource)} unreadable=${f(plan.counts.unreadable)} `
+    + `tonight=${f(actionable.length)}`);
   note("  (read-only: nothing was written, nothing was dispatched, nothing was repriced)");
 }
 

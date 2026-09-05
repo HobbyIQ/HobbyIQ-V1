@@ -494,3 +494,117 @@ describe("an alias may widen a key, but it may not promote a subset", () => {
     }
   });
 });
+
+// ── 9. THE AZURE LOGIN USES THIS REPO'S SECRET NAMES ──────────────────────
+//
+// Run 33991711284 failed at "Login to Azure" with
+//
+//   Login failed with Error: Using auth-type: SERVICE_PRINCIPAL.
+//   Not all values are present. Ensure 'client-id' and 'tenant-id' are supplied.
+//
+// which reads like an OIDC-trust or permissions fault and was neither:
+// `permissions: id-token: write` was already correct. The block named
+// AZURE_CLIENT_ID / AZURE_TENANT_ID / AZURE_SUBSCRIPTION_ID -- the names the
+// azure/login README uses, and names this repo does not have. An UNDEFINED
+// SECRET IS NOT AN ERROR in Actions: it renders as the empty string, so the
+// step ran with no client-id at all. 67 other workflow logins here use the
+// AZUREAPPSERVICE_*_<GUID> spellings; this was the only file that invented its
+// own, which is why no other scheduled job caught it.
+describe("the workflow authenticates the way the rest of the repo does", () => {
+  const WF = read(".github", "workflows", "acquire-for-withheld-holdings.yml");
+  const RUNNER = read(".github", "workflows", "backfill-runner.yml");
+
+  const loginBlock = (src: string) => {
+    const at = src.indexOf("uses: azure/login@v3");
+    expect(at, "an azure/login step must exist").toBeGreaterThan(-1);
+    return src.slice(at, at + 500);
+  };
+
+  it("it uses the SAME three secret names backfill-runner does", () => {
+    const mine = loginBlock(WF);
+    for (const re of [
+      /client-id: \$\{\{ secrets\.(AZUREAPPSERVICE_CLIENTID_[A-Z0-9]+) \}\}/,
+      /tenant-id: \$\{\{ secrets\.(AZUREAPPSERVICE_TENANTID_[A-Z0-9]+) \}\}/,
+      /subscription-id: \$\{\{ secrets\.(AZUREAPPSERVICE_SUBSCRIPTIONID_[A-Z0-9]+) \}\}/,
+    ]) {
+      const m = re.exec(mine);
+      expect(m, `the login block must supply ${re.source.split(":")[0]}`).toBeTruthy();
+      // The name must be the one the runner actually uses, not merely
+      // well-shaped: a plausible-looking GUID that does not exist resolves
+      // empty and fails exactly the way run 33991711284 did.
+      expect(RUNNER, `${m![1]} is not a secret any other workflow uses`)
+        .toContain(`secrets.${m![1]}`);
+    }
+  });
+
+  it("the README's generic names appear nowhere — they resolve to empty here", () => {
+    for (const bad of ["AZURE_CLIENT_ID", "AZURE_TENANT_ID", "AZURE_SUBSCRIPTION_ID"]) {
+      expect(WF.includes(`secrets.${bad}`), `secrets.${bad} does not exist in this repo`).toBe(false);
+    }
+  });
+
+  it("id-token: write is present — OIDC needs it even with the right names", () => {
+    const perms = WF.slice(WF.indexOf("\npermissions:"), WF.indexOf("\nconcurrency:"));
+    expect(perms).toMatch(/id-token: write/);
+  });
+});
+
+// ── 10. A CATCH-ALL KEY IS NOT A PRODUCT ──────────────────────────────────
+//
+// Drew, 2026-09-05. `draft` and `flagship` are the #1715 catch-all buckets a
+// mis-parse lands in when no MAKER could be read. They must never be minted,
+// and no publisher has a page for them. The first prod run reported three
+// holdings under them as "needs a source" -- an acquisition work item that
+// would send someone hunting a 2025 "Draft" checklist that does not exist.
+describe("a #1715 catch-all key parks its holdings, it does not queue them", () => {
+  const SCRIPT = read("backend", "scripts", "acquire-for-withheld-holdings.cjs");
+
+  it("draft and flagship are catch-all keys", () => {
+    expect(lib.isCatchAllSetKey("draft")).toBe(true);
+    expect(lib.isCatchAllSetKey("flagship")).toBe(true);
+    expect(lib.isCatchAllSetKey("DRAFT")).toBe(true);
+    expect(lib.isCatchAllSetKey(" flagship ")).toBe(true);
+  });
+
+  it("a real product is NOT one — the bucket must stay narrow", () => {
+    for (const k of ["bowman-draft", "topps", "bowman-chrome", "draft-picks", ""]) {
+      expect(lib.isCatchAllSetKey(k), `${k} is a product, not a catch-all`).toBe(false);
+    }
+  });
+
+  it("the lane reports them UNREADABLE and never as needing a source", () => {
+    expect(SCRIPT).toMatch(/isCatchAllSetKey\(c\.setKey\)/);
+    // The two flags are set explicitly and oppositely: the whole ruling is that
+    // these are a DIFFERENT finding from "needs a source", so collapsing them
+    // would defeat it.
+    const branch = SCRIPT.slice(SCRIPT.indexOf("if (isCatchAllSetKey(c.setKey))"), SCRIPT.indexOf("const { matches, corroborated }"));
+    expect(branch).toMatch(/unreadable: true/);
+    expect(branch).toMatch(/needsSource: false/);
+    expect(branch).toMatch(/source: null/);
+  });
+
+  it("an unreadable cell is never dispatched", () => {
+    // `actionable` is what the workflow's matrix executes.
+    expect(SCRIPT).toMatch(/planned\.filter\(\(p\) => !p\.needsSource && !p\.unreadable\)/);
+  });
+
+  it("the manifest is not even asked — there is no product to look for", () => {
+    const branch = SCRIPT.slice(SCRIPT.indexOf("if (isCatchAllSetKey(c.setKey))"), SCRIPT.indexOf("const { matches, corroborated }"));
+    expect(branch).not.toMatch(/matchCellToManifest/);
+  });
+
+  it("it has its own count and its own heading", () => {
+    expect(SCRIPT).toMatch(/unreadable: unreadable\.length/);
+    expect(SCRIPT).toMatch(/UNREADABLE \(\$\{f\(unreadable\.length\)\}\)/);
+    expect(SCRIPT).toMatch(/unreadableCells:/);
+  });
+
+  it("the ranked print tests `unreadable` FIRST, or it dereferences a null source", () => {
+    // An unreadable cell has needsSource=false and source=null. A two-branch
+    // ternary falls through to p.source.lane and throws.
+    const at = SCRIPT.indexOf("const src = ");
+    const src = SCRIPT.slice(at, at + 400);
+    expect(src.indexOf("p.unreadable")).toBeGreaterThan(-1);
+    expect(src.indexOf("p.unreadable")).toBeLessThan(src.indexOf("p.source.lane"));
+  });
+});

@@ -24,6 +24,36 @@
 const ACTIONABLE_REASONS = new Set(["no-checklist-match", "identity-not-in-catalog"]);
 
 /**
+ * CF-A-CATCH-ALL-KEY-IS-NOT-A-PRODUCT (Drew, 2026-09-05).
+ *
+ * `draft` and `flagship` are the #1715 catch-all keys: the bare buckets a
+ * mis-parse lands in when the parser could not read a MAKER. They are not
+ * products, no publisher has a page for them, and Drew's ruling is that they
+ * MUST NEVER BE MINTED.
+ *
+ * The first prod run of this lane reported three holdings under them as "needs
+ * a source", which is the wrong verdict and a harmful one. "Needs a source"
+ * means *we know the product and no source serves it* -- it is an acquisition
+ * work item that feeds the discovery program, and a human reading that list
+ * would go looking for a 2025 "Draft" checklist that does not exist, because
+ * there is no such product. The real state is that the card's MAKER was never
+ * read, so there is no product to look for yet.
+ *
+ * So they are their own bucket: UNREADABLE. The holdings PARK there until a
+ * maker is read. This is deliberately NOT the `unaddressable` bucket either --
+ * that one means no (sport, year, setKey) could be read at all, whereas these
+ * rows have all three and the setKey is simply not a product. Keeping them
+ * apart is the whole point: one is a parser gap, the other is a catch-all
+ * ruling, and merging them would hide both.
+ */
+const CATCH_ALL_SETKEYS = new Set(["draft", "flagship"]);
+
+/** True when a setKey is a #1715 catch-all bucket rather than a product. */
+function isCatchAllSetKey(setKey) {
+  return CATCH_ALL_SETKEYS.has(String(setKey || "").trim().toLowerCase());
+}
+
+/**
  * THE SPORT SUFFIX AND THE SEASON SPAN, verbatim from the driver.
  *
  * CF-COUNT-THE-KEY-THE-CHILD-WROTE (#1738) established that a set NAME is
@@ -397,6 +427,8 @@ function matchCellToManifest(cell, entries, { canonicalSetKey } = {}) {
 
 module.exports = {
   ACTIONABLE_REASONS,
+  CATCH_ALL_SETKEYS,
+  isCatchAllSetKey,
   CONTESTED,
   LANE_RANK,
   SPORT_SUFFIX,

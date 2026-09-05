@@ -132,12 +132,32 @@ jobs:
         working-directory: backend
         run: npm run build
 
+      # CF-A-SECRET-NAME-IS-NOT-A-CONVENTION (run 33991711284, 2026-09-05).
+      #
+      # This block named AZURE_CLIENT_ID / AZURE_TENANT_ID /
+      # AZURE_SUBSCRIPTION_ID -- the names the azure/login README uses. This
+      # repo does not have secrets by those names. An undefined secret is not
+      # an error in Actions: it renders as the EMPTY STRING, so the step ran
+      # with a `with:` block carrying no client-id and no tenant-id at all,
+      # and azure/login reported
+      #
+      #   Login failed with Error: Using auth-type: SERVICE_PRINCIPAL.
+      #   Not all values are present. Ensure 'client-id' and 'tenant-id'
+      #   are supplied.
+      #
+      # which reads like a permissions or OIDC-trust problem and is not one:
+      # `permissions: id-token: write` was already correct. The names are the
+      # whole defect. Every one of the 67 other workflow logins in this repo
+      # uses the AZUREAPPSERVICE_*_<GUID> spellings below; this file was the
+      # only one that invented its own, which is exactly why no other
+      # scheduled job noticed. Copied verbatim from backfill-runner.yml so
+      # the two cannot drift.
       - name: Login to Azure
         uses: azure/login@v3
         with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
 
       - name: Fetch COSMOS_CONNECTION_STRING from HobbyIQ3 App Service
         shell: bash
@@ -182,6 +202,12 @@ jobs:
             echo "these are the sets we own cards in and have no way to acquire."
             echo
             jq -r '.needsSourceCells[:20][] | "- `\(.cell)` — \(.holdings) holdings"' /tmp/plan.json
+            echo
+            echo "**unreadable:** $(jq '.counts.unreadable' /tmp/plan.json) cells — a catch-all"
+            echo "key is not a product. These park until a maker is read; they are NOT an"
+            echo "acquisition target and must never be minted."
+            echo
+            jq -r '.unreadableCells[:20][] | "- `\(.cell)` — \(.holdings) holdings — \(.why)"' /tmp/plan.json
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload the plan
@@ -235,7 +261,7 @@ jobs:
           {
             echo "### Plan — run [\`${GITHUB_RUN_ID}\`](https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)"
             echo
-            jq -r '"- **\(.counts.withheld)** withheld holdings in **\(.counts.cells)** cells; **\(.counts.matched)** matched, **\(.counts.needsSource)** need a source, **\(.counts.unaddressable)** unaddressable."' /tmp/plan.json
+            jq -r '"- **\(.counts.withheld)** withheld holdings in **\(.counts.cells)** cells; **\(.counts.matched)** matched, **\(.counts.needsSource)** need a source, **\(.counts.unreadable)** unreadable (catch-all key), **\(.counts.unaddressable)** unaddressable."' /tmp/plan.json
             echo
             echo "Tonight (cap ${NIGHTLY_CAP}):"
             jq -r '.tonight[] | "- `\(.cell)` — \(.holdings) holdings — \(.source.lane): \(.source.setName)"' /tmp/plan.json
