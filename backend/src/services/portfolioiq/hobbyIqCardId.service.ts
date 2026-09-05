@@ -49,7 +49,7 @@ import { chromeRefractorSuffixForVariation, normalizeVariationSlug } from "../ca
 import { POKEMON_SET_ALIASES } from "../catalog/pokemonSetAliases.js";
 import { YUGIOH_SET_ALIASES, MTG_SET_ALIASES } from "../catalog/tcgSetAliases.js";
 import { JAPANESE_POKEMON_SET_ALIASES } from "../catalog/japanesePokemonAliases.js";
-import { productParentOf, productSetKeyForName, spellForEra } from "../catalog/productSetKeys.js";
+import { productParentOf, productSetKeyForName, spellForEra, spellForSport } from "../catalog/productSetKeys.js";
 import { reconcileSetKey } from "../catalog/setKeyReconciliation.js";
 import { normalizePokemonCardNumber } from "../catalog/pokemonCardNumber.js";
 export interface HobbyIqCardIdComponents {
@@ -1736,7 +1736,15 @@ export function resolveSetKeyForSlug(sport: string, setName: string, year: numbe
   // its switch live in productSetKeys (DONRUSS_SPELLING_POLICY). Applied
   // after normalization so it corrects the canonical key rather than racing
   // the vocabulary that produces it.
-  return spellForEra(rawSetKey, year);
+  // CF-SOCCER-PRIZM-IS-PRIZM-FIFA (Drew, 2026-09-05). A SPORT-scoped spelling,
+  // applied last so it corrects the canonical key the era rule produced rather
+  // than racing it. `panini-prizm` in soccer/2025 IS `panini-prizm-fifa`; in
+  // football and basketball — where `panini-prizm` is the flagship's own fixed
+  // point — this is the identity function, and the mutation test that removes
+  // the sport gate turns FB/BK red. This is the ONE deriver with the sport in
+  // hand, which is why the rule lives at this call site and not in spellForEra
+  // (whose other two call sites have no sport to pass).
+  return spellForSport(spellForEra(rawSetKey, year), sport, year);
 }
 
 /** Compute the canonical hobbyiqCardId slug for a card. Same inputs
