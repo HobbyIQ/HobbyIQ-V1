@@ -401,6 +401,49 @@ const RULED_ALIASES: Readonly<Record<string, { to: string; why: string }>> = Obj
   // incidental; this entry is what makes THIS key's fold independent of it.
   "topps-nscc-bowman-national-convention": { to: "bowman-chrome-nscc",
     why: "Drew 2026-09-04: the Bowman National release, with 'topps' present as the parent company rather than a second maker — an ALIAS onto the #1612 product key. 221 checklist rows, all 2021, and every census sample title for the key is '<year> Bowman Chrome National Convention Baseball'. Declared here so the fold is BY DECLARATION and no longer rides on the `bowman-national-convention` substring leak the NSCC rule's own comment warns about." },
+
+  // BELLINGHAM MARINERS — `bellingham-mariners` IS THE KEY (Drew, 2026-08-30,
+  // re-affirmed as R1 on 2026-09-04).
+  //
+  // ONE CARD. THREE POOLS. Measured read-only against prod sold_comps on
+  // 2026-09-04: 228 rows of the SAME card — 1987 Bellingham Mariners #15, Ken
+  // Griffey Jr.'s team-issue rookie — split across three stored slugs:
+  //
+  //   hiq:baseball:1987:bellingham:15:base:no-auto                163 rows
+  //   hiq:baseball:1987:1987-bellingham-baseball:15:base:no-auto   41 rows
+  //   hiq:baseball:1987:unknown:15:base:no-auto                    24 rows
+  //
+  // That is `feedback_one_card_one_row_one_pool` stated as damage: three trend
+  // lines for one card, so whichever pool a surface reads, the FMV is computed
+  // from a third of the evidence. The titles say which product it is and they
+  // are not ambiguous — "1987 Bellingham Mariners Team Issue #15 Ken Griffey Jr
+  // RC", "1987 International Sportcard Bellingham Mariners - Ken Griffey Jr
+  // #15" — and the checklist Drew ruled on 2026-08-30 already exists in the
+  // catalog: `hiq:baseball:1987:bellingham-mariners:15:base:no-auto`, source
+  // `drew-ruling-checklist-2026-08-30`.
+  //
+  // WHY THE CENSUS DISAGREES, AND WHY THE RULING WINS. The 2026-09-03 census
+  // called `1987-bellingham-baseball` a `catalog-key-malformed` whose canonical
+  // is `bellingham` — mechanically correct (the key does carry a year prefix
+  // and a trailing sport word) and the WRONG DESTINATION. `bellingham` is the
+  // town, not the product; stripYearAndSport produced it from a malformed
+  // catalog key and nothing ever ruled it. Guard (0) in buildTables exists for
+  // exactly this: a verdict DERIVED from a key's shape must never outrank a
+  // decision a human stated with evidence.
+  //
+  // THE ALIAS IS DECLARED ON THE STRIPPED FORM, AND THAT IS DELIBERATE.
+  // `stripYearAndSport` runs BEFORE the reconciliation inside normalizeSetKey,
+  // so `1987-bellingham-baseball` has already become `bellingham` by the time
+  // this map is consulted — declaring the long spelling alone would never fire.
+  // Both spellings are named anyway: the stripped one is what actually folds,
+  // and the long one is named so the day the strip changes the pin says so
+  // rather than the fold silently disappearing.
+  bellingham: { to: "bellingham-mariners",
+    why: "Drew 2026-08-30 (R1): `bellingham-mariners` is THE key for the 1987 Bellingham Mariners team issue. `bellingham` is the town, not the product — it exists only because stripYearAndSport reduced the malformed catalog key `1987-bellingham-baseball`, and the 2026-09-03 census named it canonical on that shape alone. 163 pool rows of ONE card (#15 Griffey Jr. RC) sit under it against a checklist-backed `bellingham-mariners` row (source drew-ruling-checklist-2026-08-30); the census's own sample titles are '1987 Bellingham Mariners Team Issue'." },
+  "1987-bellingham-baseball": { to: "bellingham-mariners",
+    why: "The same ruling, named in its unstripped catalog spelling. This entry does not fire on its own — stripYearAndSport reduces the key to `bellingham` before the reconciliation is consulted — and it is declared so the ruling is discoverable under the spelling the CATALOG actually stores (4 rows), and so a change to the strip surfaces as a failing pin instead of a silently vanished fold. 41 pool rows." },
+  "bellingham-mariners-team-issue": { to: "bellingham-mariners",
+    why: "Drew 2026-08-30 (R1): 'Team Issue' is what the set IS, not a second product — the phrase names the distribution (a club-issued team set) and is how sellers spell it in the pool's own titles. A normalizeSetKey non-fixed-point that resolves to the ruled key, so a title reading '1987 Bellingham Mariners Team Issue' lands on the same row as one reading '1987 Bellingham Mariners'." },
 });
 
 /**
