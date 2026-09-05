@@ -175,58 +175,105 @@ describe("clc modern Panini/Topps — the staged shape", () => {
   });
 
   /**
-   * A MEASURED CONVERTER DEFECT — AN AUTOGRAPH SET MINTED UNSIGNED (2026-09-05).
+   * FIXED — CF-THE-WHOLE-SECTION-NAME-REACHES-THE-AUTO-DECISION (2026-09-05).
    *
-   * This is the exact failure the auto mutation check exists to catch, found in
-   * real staged output rather than in a mutation.
+   * #1823 pinned this as a KNOWN DEFECT and held the 2022 Select cell out of the
+   * walker. What it recorded as a section-name TRUNCATION turned out to be
+   * something slightly different, and the difference is the fix:
    *
-   * 2022 Panini Select has two sections whose names the converter TRUNCATED, and
-   * both truncations cut the word that says the card is signed:
+   *   "Jumbo Rookie Signature Swatches Gold Prizm"
+   *      -> section "Jumbo Rookie"  +  finish "Signature Swatches Gold Prizm"
+   *   "Prime Selections Prizm Signatures"
+   *      -> section "Prime Selections"  +  finish "Prizm Signatures"
    *
-   *   "Jumbo Rookie Signature Swatches"     -> insert:jumbo-rookie
-   *   "Prime Selections Prizm Signatures"   -> insert:prime-selections
+   * sectionsOf cut those CORRECTLY — "Jumbo Rookie" really is the section and
+   * the swatch ladder really is the finish. No word was lost off the page. What
+   * happened is that the auto word ended up on the finish side, and the auto
+   * decision only ever read the section and the qualifier. The finish had two
+   * rules of its own, but their vocabulary was a strict subset of the section's:
+   * it knew "auto" and "autograph" and did not know "signature".
    *
-   * The section name is where isAuto is decided, so losing the word lost the
-   * flag: 823 rows across those two sections carry a parallel that SAYS
-   * "Signature Swatches Gold Prizm" and are staged `isAuto=false`. Those are
-   * autographed cards that would mint as unsigned twins of themselves — a
-   * split pool on the one axis a later only-improve pass cannot see, because
-   * every other column is well-formed.
+   * So the flag is now raised from the WHOLE Set value — section and finish
+   * both, through one shared vocabulary (namesAnAuto) that every path uses.
    *
-   * Measured across the three sampled cells: 823 rows, ALL of them in 2022
-   * Panini Select FB. 2023 Mosaic FB and 2022-23 Prizm BK are clean, so this is
-   * a per-section parsing bug, not a lane-wide one.
-   *
-   * PINNED, NOT FIXED, DELIBERATELY. The fix belongs in
-   * convertChecklistCenterToChecklistCsv.cjs's section-name handling and changes
-   * the category vocabulary for every clc product, which is a decision to take
-   * against the whole corpus rather than from three cells. This test fails the
-   * moment the converter is corrected — that is the intended direction, and the
-   * assertion below says so.
-   *
-   * UNTIL IT IS FIXED: 2022 Panini Select FB must not be ingested from clc, or
-   * it will mint 823 unsigned autographs.
+   * MEASURED over all nine staged clc workbooks, 105,791 rows:
+   *   1,023 rows -> isAuto=true       (824 Select FB, 199 Prizm BK)
+   *       0 rows -> isAuto=false      (nothing is ever un-signed by this)
+   *       0 category or parallel changes, 0 row-count change
+   * The flag is the only column that moves. FLAGGING IS NOT STRIPPING:
+   * "Signature Swatches Gold Prizm" keeps its name verbatim, because the
+   * checklist's own words stay the checklist's own words.
    */
-  it("KNOWN DEFECT: 823 signature rows in 2022 Select are staged unsigned — do not ingest that cell until fixed", () => {
-    const namesASignature = /\b(signature|signatures|autograph|autographs|auto|penmanship)\b/i;
+  it("a section that names a signature stages isAuto=true — wherever the word sits in the name", () => {
+    const namesASignature = /\b(signature|signatures|autograph|autographs|auto|penmanship|inscriptions?)\b/i;
 
-    // The defect, in the cell that has it.
-    const select = readFixture("2022-panini-select-football");
-    const unsigned = select.filter((r) => namesASignature.test(r.parallel) && r.isAuto !== "true");
-    expect(unsigned.length).toBeGreaterThan(0);
-    // It is confined to the two truncated sections, and to no others.
-    expect(new Set(unsigned.map((r) => r.category))).toEqual(
-      new Set(["insert:jumbo-rookie", "insert:prime-selections"]),
-    );
-    // Both section names lost the word that decides the flag.
-    expect(namesASignature.test("insert:jumbo-rookie")).toBe(false);
-    expect(namesASignature.test("insert:prime-selections")).toBe(false);
-
-    // The other two cells are CLEAN — this is per-section, not lane-wide.
-    for (const f of ["2023-panini-mosaic-football", "2022-23-panini-prizm-nba-basketball"]) {
-      const rows = readFixture(f);
-      expect(rows.filter((r) => namesASignature.test(r.parallel) && r.isAuto !== "true")).toEqual([]);
+    // THE PIN THAT #1823 LEFT RED, NOW GREEN. Not one row in any of the three
+    // cells names a signature and stages unsigned.
+    for (const c of CELLS) {
+      const rows = readFixture(c.fixture);
+      const unsigned = rows.filter((r) => namesASignature.test(r.parallel) && r.isAuto !== "true");
+      expect(unsigned.map((r) => `${c.fixture} ${r.category}|${r.parallel}`)).toEqual([]);
     }
+
+    // The cell #1823 held out of the walker: its Signature Swatches rows are the
+    // autographs they say they are, and they KEPT their names.
+    const select = readFixture("2022-panini-select-football");
+    const swatches = select.filter((r) => /^Signature Swatch(es)? /.test(r.parallel));
+    expect(swatches.length).toBeGreaterThan(0);
+    expect(swatches.every((r) => r.isAuto === "true")).toBe(true);
+    expect(swatches.some((r) => r.parallel === "Signature Swatches Gold Prizm")).toBe(true);
+    // The category is unchanged — this fix moved the flag, not the vocabulary.
+    expect(new Set(swatches.map((r) => r.category))).toEqual(new Set(["insert:jumbo-rookie"]));
+
+    // The other truncation #1823 named: Prime Selections, where the signature
+    // word is at the END of the finish rather than the start.
+    const prime = select.filter((r) => r.category === "insert:prime-selections" && /Signatures$/.test(r.parallel));
+    expect(prime.length).toBeGreaterThan(0);
+    expect(prime.every((r) => r.isAuto === "true")).toBe(true);
+
+    // And Panini's other spelling, which the old finish vocabulary also missed.
+    const pen = readFixture("2022-23-panini-prizm-nba-basketball").filter((r) => /penmanship/i.test(r.category));
+    expect(pen.length).toBeGreaterThan(0);
+    expect(pen.every((r) => r.isAuto === "true")).toBe(true);
+  });
+
+  /**
+   * THE OTHER HALF OF THE RULE. A flag that only ever goes true is not a flag.
+   * Sections that name no signature must stay unsigned, or the fix would have
+   * bought the autographs by minting every base card signed.
+   */
+  it("a section that names no signature stays isAuto=false", () => {
+    for (const c of CELLS) {
+      const rows = readFixture(c.fixture);
+      const unsigned = rows.filter((r) => r.isAuto === "false");
+      expect(unsigned.length).toBeGreaterThan(0);
+      // Base cards are never signed by this lane.
+      expect(rows.filter((r) => r.category === "base" && isBaseParallel(r.parallel)).every((r) => r.isAuto === "false")).toBe(true);
+      // A plain colour rung is not an autograph.
+      const plainRungs = rows.filter((r) => /^(Gold|Silver|Green|Blue|Red|Orange|Purple|Pink)( Prizm| Refractor)?$/.test(r.parallel.trim()));
+      expect(plainRungs.every((r) => r.isAuto === "false" || /auto|signature|penmanship/i.test(r.category))).toBe(true);
+    }
+  });
+
+  /**
+   * THE VOCABULARY ITSELF, including the words it must NOT read as a signature.
+   * A substring match here would mint "Autumn" and "Inkjet" as autographs, and a
+   * missing word is how the 823 rows happened in the first place.
+   */
+  it("namesAnAuto reads whole words, and reads memorabilia as memorabilia", () => {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { namesAnAuto } = require("../scripts/convertChecklistCenterToChecklistCsv.cjs");
+    for (const yes of [
+      "Signature Swatches Gold Prizm", "Prizm Signatures", "Penmanship Prizms Silver",
+      "Autographs SuperFractor", "Rookie Signatures", "Pinnacle Inscriptions",
+      "Auto Laser Black", "Signed Memorabilia", "Ink",
+    ]) expect([yes, namesAnAuto(yes)]).toEqual([yes, true]);
+
+    for (const no of [
+      "Jumbo Rookie", "Prime Selections", "Gold Refractor", "Base",
+      "Swatch Gold Prizm", "Materials Patch", "Jersey Prime",
+      "Autumn Leaves", "Inkjet", "Designation",   // substrings that are NOT autographs
+    ]) expect([no, namesAnAuto(no)]).toEqual([no, false]);
   });
 });
 
@@ -265,6 +312,60 @@ describe("clc lane — mutation checks", () => {
     expect(mutated.length).toBe(rows.length);
     expect(mutated.filter((r) => r.isAuto === "true").length).toBe(0);
     expect(mutated.filter((r) => r.isAuto === "true").length).not.toBe(autos.length);
+  });
+
+  /**
+   * MUTATION: THE DEFECT ITSELF, PUT BACK.
+   *
+   * The bug was that the auto decision read the SECTION and not the whole name.
+   * The mutation restores exactly that: decide the flag from the category alone
+   * (which is the section, slugified) and see the signature rows go unsigned
+   * again. If a later edit narrows the vocabulary back to "auto|autograph", or
+   * moves the decision back onto the section, this goes red.
+   */
+  it("MUTATION: deciding the flag from the section alone loses the Signature Swatches autographs", () => {
+    const rows = readFixture("2022-panini-select-football");
+    const namesASignature = /\b(signature|signatures|autograph|autographs|auto|penmanship)\b/i;
+
+    // Shipped: nothing that names a signature is staged unsigned.
+    expect(rows.filter((r) => namesASignature.test(r.parallel) && r.isAuto !== "true")).toEqual([]);
+
+    // The mutation: the flag comes from the section (== the category) only --
+    // the pre-fix rule, spelled out.
+    const mutated = rows.map((r) => ({ ...r, isAuto: namesASignature.test(r.category) ? "true" : "false" }));
+    const lost = mutated.filter((r) => namesASignature.test(r.parallel) && r.isAuto !== "true");
+
+    // Row count and every other column survive untouched -- which is precisely
+    // why only an assertion on the flag can see this.
+    expect(mutated.length).toBe(rows.length);
+    expect(lost.length).toBeGreaterThan(0);
+    // And the rows it loses are the two sections #1823 named.
+    expect(new Set(lost.map((r) => r.category))).toEqual(
+      new Set(["insert:jumbo-rookie", "insert:prime-selections"]),
+    );
+  });
+
+  /**
+   * MUTATION: THE VOCABULARY, NARROWED BACK. The finish path's word list used to
+   * be a subset of the section's -- it did not know "signature". Narrowing it
+   * again must go red, on the real converter and not on a re-implementation.
+   */
+  it("MUTATION: a finish vocabulary without the word signature goes red", () => {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { namesAnAuto } = require("../scripts/convertChecklistCenterToChecklistCsv.cjs");
+    const narrowed = (t: string) => /\b(auto|autos|autograph|autographs)\b/i.test(t);
+
+    // The shipped vocabulary reads these; the narrowed one does not. That gap IS
+    // the 823 rows.
+    for (const t of ["Signature Swatches Gold Prizm", "Prizm Signatures", "Penmanship Prizms Silver"]) {
+      expect([t, namesAnAuto(t)]).toEqual([t, true]);
+      expect([t, narrowed(t)]).toEqual([t, false]);
+    }
+    // Where they agree, they agree -- the fix widened the list, it did not
+    // replace it.
+    for (const t of ["Autographs SuperFractor", "Auto Laser Black", "Gold Refractor", "Jumbo Rookie"]) {
+      expect([t, namesAnAuto(t)]).toEqual([t, narrowed(t)]);
+    }
   });
 
   it("MUTATION: dropping the category from the corroboration key collides inserts onto base", () => {
