@@ -113,6 +113,56 @@ const FLEER_TIFFANY_ERA_MISNOMERS: Readonly<Record<string, string>> = Object.fre
   "fleer-update-tiffany": "fleer-update-glossy",
 });
 
+/**
+ * CF-A-CHECKLIST-ROW-SPELLS-ITS-ERA-LIKE-A-SALE-DOES (Drew, 2026-09-05).
+ *
+ * THE DEFECT. `ERA_SPLIT_TABLE` (setKeyReconciliation.ts) rules that Score,
+ * Leaf, Fleer and Skybox take the BARE key in every year — `makerKey: null`,
+ * "no synthetic products": a maker prefix no checklist has ever written is not
+ * a destination we may invent. That table had NO code consumer. It was
+ * evidence for a boundary, read only by `build-reconciliation.cjs`, while the
+ * actual spelling decision lived in `spellForEra` — which knew about Donruss
+ * and Fleer-Tiffany and nothing else. A ruling with no call site is a comment.
+ *
+ * So the vocabulary's strict Panini tier kept minting the key the table
+ * forbids. `normalizeSetKey` matches `/panini-score/` BEFORE `/(?:^|-)score/`,
+ * so "2025 Panini Score Football" — the product's own published title, and
+ * exactly what a checklist page is called — resolved to `panini-score`, and
+ * `spellForEra` passed it straight through. Measured on prod 2026-09-05:
+ *
+ *     card_catalog panini-score   3,702 rows (3,300 STRICT, hobbymonitor-2026-09-04)
+ *     card_catalog score         58,985 rows (19,395 of 2025 football alone,
+ *                                             all checklistinsider — STRICT)
+ *     sold_comps   :panini-score: 35,174 pool rows
+ *
+ * One product, two spellings, two pools, and the FMV of a 2025 Score card
+ * depends on which spelling its sale happened to parse into. That is the
+ * split-pool failure `one card, one row, one pool` exists to prevent.
+ *
+ * THE RULE. The era table's never-acquired brands are enforced HERE, in the
+ * one deriver every seam already calls, so a checklist row and a sale spell
+ * the year identically. `makerKey: null` means the prefix is stripped in every
+ * year, which is why this needs no year to fire — unlike the Donruss split
+ * below, which has a real boundary to sit on.
+ *
+ * NOT A NEW VOCABULARY. This is the era table's own ruling, given the call
+ * site it never had. Donruss is deliberately absent: it is the one brand with
+ * a REAL two-owner split (`makerKey: "panini-donruss"`, 292,792 rows against
+ * 116,723), and the year-boundary rule below already spells it.
+ *
+ * Measured the same day, the other three are already clean — `panini-leaf`,
+ * `panini-fleer` and `panini-skybox` hold ZERO card_catalog rows of any kind,
+ * against 41,365 / 118,756 / 6,564 on the bare keys. They are pinned here so
+ * the next source that writes one is corrected at mint rather than discovered
+ * in a census months later, which is how `panini-score` was found.
+ */
+const NEVER_ACQUIRED_MAKER_PREFIXES: Readonly<Record<string, string>> = Object.freeze({
+  "panini-score": "score",
+  "panini-leaf": "leaf",
+  "panini-fleer": "fleer",
+  "panini-skybox": "skybox",
+});
+
 export interface ProductSetKey {
   /** The one spelling. */
   readonly setKey: string;
@@ -617,6 +667,11 @@ export function spellForEra(setKey: string, year: number | null | undefined, pol
     if (typeof year !== "number" || !Number.isFinite(year) || year <= 0) return setKey;
     return year < FLEER_TIFFANY_IS_GLOSSY_BEFORE_YEAR ? misnomer : setKey;
   }
+  // CF-A-CHECKLIST-ROW-SPELLS-ITS-ERA-LIKE-A-SALE-DOES: the era table's
+  // never-acquired brands take the bare key in EVERY year, so this fires
+  // without a year — there is no boundary to sit on, only a prefix to stop.
+  const bare = NEVER_ACQUIRED_MAKER_PREFIXES[setKey];
+  if (bare !== undefined) return bare;
   if (setKey !== "donruss" && setKey !== "panini-donruss") return setKey;
   if (policy === "as-named") return setKey;
   if (typeof year !== "number" || !Number.isFinite(year) || year <= 0) return setKey;
