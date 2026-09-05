@@ -334,7 +334,21 @@ async function main() {
   let stopReason = null;
 
   async function handle(row, product) {
-    const [sport, year, setKey] = product.split(":");
+    // THE SCOPE'S (year, setKey) IS THE ROW'S OWN, not an assumption about it.
+    // The scan reaches a row by its SLUG PREFIX, so a row handled under
+    // `baseball:2025:topps-chrome` is one whose `hiq:` address carries exactly
+    // that sport, year and setKey -- which is the address the pool prices it
+    // under and the one A2 compares the destination against. Selecting the
+    // finish vocabulary and the checklist with it is therefore reading the
+    // product the row is FILED under, never a guess at the product it might
+    // belong to. A row whose STORED setName disagrees is not re-homed here:
+    // that is a setKey dispute and this lane refuses those at A2.
+    //
+    // The sport is deliberately NOT taken from here: the destination is built
+    // from `addr.sport`, the slug's own segment, so the identity axes of the
+    // destination come from ONE place -- the address -- and A2 can prove the
+    // move mechanically instead of trusting two sources to agree.
+    const [, year, setKey] = product.split(":");
     const stored = storedIdentity(row, normalizeSetKey);
     const storedSlug = row.cardId;
 
