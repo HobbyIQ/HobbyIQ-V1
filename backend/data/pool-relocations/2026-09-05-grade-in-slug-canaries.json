@@ -1,0 +1,158 @@
+{
+ "generatedAt": "2026-09-05",
+ "forLane": "relocate-pool-rows-by-list SCOPE=data/pool-relocations/2026-09-05-grade-in-slug.json",
+ "rulings": [
+  "Every canary here is a DESTINATION pool: the repair only ever moves a row ONTO its own parent slug, so each of these can gain rows and must never lose one.",
+  "No shardSlot: this lane is not sharded (the list is the scope), so SLOT must be left unset and the per-shard gate does not apply.",
+  "poolRows is the count MEASURED on 2026-09-05, not a hand-verified floor: other writers (the dedup cron, the rematch fleet) move these pools independently, so MODE=check can show a pool below it for reasons that have nothing to do with this lane. The GATE is the MODE=before / MODE=after pair captured around this lane's own apply -- that is the only comparison that attributes a change to this repair."
+ ],
+ "canaries": [
+  {
+   "name": "football 2000 bowman-chrome 236 — 1 grade-suffixed row(s) return",
+   "slug": "hiq:football:2000:bowman-chrome:236:base:no-auto",
+   "poolRows": 191,
+   "rowsMovingIn": 1,
+   "valueMovingIn": 22000,
+   "shapes": [
+    "repoint"
+   ],
+   "verifiedMarketDirection": "gains-rows",
+   "note": "Destination pool for 1 row(s) whose slug carried a grade in segment 8. This pool can only GAIN rows; a loss here means the repair moved a sale out of the card it belongs to."
+  },
+  {
+   "name": "basketball 2009 topps 321 — 10 grade-suffixed row(s) return",
+   "slug": "hiq:basketball:2009:topps:321:base:no-auto",
+   "poolRows": 804,
+   "rowsMovingIn": 10,
+   "valueMovingIn": 19289.99,
+   "shapes": [
+    "relocate",
+    "repoint"
+   ],
+   "verifiedMarketDirection": "gains-rows",
+   "note": "Destination pool for 10 row(s) whose slug carried a grade in segment 8. This pool can only GAIN rows; a loss here means the repair moved a sale out of the card it belongs to."
+  },
+  {
+   "name": "pokemon 2010 unknown 8690 — 3 grade-suffixed row(s) return",
+   "slug": "hiq:pokemon:2010:unknown:8690:base:no-auto",
+   "poolRows": 27,
+   "rowsMovingIn": 3,
+   "valueMovingIn": 19250,
+   "shapes": [
+    "relocate",
+    "repoint"
+   ],
+   "verifiedMarketDirection": "gains-rows",
+   "note": "Destination pool for 3 row(s) whose slug carried a grade in segment 8. This pool can only GAIN rows; a loss here means the repair moved a sale out of the card it belongs to."
+  },
+  {
+   "name": "pokemon 2005 unknown 12 — 1 grade-suffixed row(s) return",
+   "slug": "hiq:pokemon:2005:unknown:12:base:no-auto",
+   "poolRows": 137,
+   "rowsMovingIn": 1,
+   "valueMovingIn": 18999.98,
+   "shapes": [
+    "repoint"
+   ],
+   "verifiedMarketDirection": "gains-rows",
+   "note": "Destination pool for 1 row(s) whose slug carried a grade in segment 8. This pool can only GAIN rows; a loss here means the repair moved a sale out of the card it belongs to."
+  },
+  {
+   "name": "pokemon 2000 topps-chrome 6 — 3 grade-suffixed row(s) return",
+   "slug": "hiq:pokemon:2000:topps-chrome:6:base:no-auto",
+   "poolRows": 25,
+   "rowsMovingIn": 3,
+   "valueMovingIn": 17644,
+   "shapes": [
+    "repoint"
+   ],
+   "verifiedMarketDirection": "gains-rows",
+   "note": "Destination pool for 3 row(s) whose slug carried a grade in segment 8. This pool can only GAIN rows; a loss here means the repair moved a sale out of the card it belongs to."
+  },
+  {
+   "name": "pokemon 2023 unknown 199 — 10 grade-suffixed row(s) return",
+   "slug": "hiq:pokemon:2023:unknown:199:base:no-auto",
+   "poolRows": 697,
+   "rowsMovingIn": 10,
+   "valueMovingIn": 12956.98,
+   "shapes": [
+    "repoint"
+   ],
+   "verifiedMarketDirection": "gains-rows",
+   "note": "Destination pool for 10 row(s) whose slug carried a grade in segment 8. This pool can only GAIN rows; a loss here means the repair moved a sale out of the card it belongs to."
+  },
+  {
+   "name": "baseball 2018 bowman-chrome-sapphire 700 — 1 grade-suffixed row(s) return",
+   "slug": "hiq:baseball:2018:bowman-chrome-sapphire:700:base:no-auto",
+   "poolRows": 9,
+   "rowsMovingIn": 1,
+   "valueMovingIn": 11999.99,
+   "shapes": [
+    "repoint"
+   ],
+   "verifiedMarketDirection": "gains-rows",
+   "note": "Destination pool for 1 row(s) whose slug carried a grade in segment 8. This pool can only GAIN rows; a loss here means the repair moved a sale out of the card it belongs to."
+  },
+  {
+   "name": "pokemon 2025 unknown 020 — 9 grade-suffixed row(s) return",
+   "slug": "hiq:pokemon:2025:unknown:020:base:no-auto",
+   "poolRows": 850,
+   "rowsMovingIn": 9,
+   "valueMovingIn": 11692.95,
+   "shapes": [
+    "repoint"
+   ],
+   "verifiedMarketDirection": "gains-rows",
+   "note": "Destination pool for 9 row(s) whose slug carried a grade in segment 8. This pool can only GAIN rows; a loss here means the repair moved a sale out of the card it belongs to."
+  },
+  {
+   "name": "basketball 2023 bowman 298 — 53 grade-suffixed row(s) return",
+   "slug": "hiq:basketball:2023:bowman:298:base:no-auto",
+   "poolRows": 189,
+   "rowsMovingIn": 53,
+   "valueMovingIn": 4331.7,
+   "shapes": [
+    "repoint"
+   ],
+   "verifiedMarketDirection": "gains-rows",
+   "note": "Destination pool for 53 row(s) whose slug carried a grade in segment 8. This pool can only GAIN rows; a loss here means the repair moved a sale out of the card it belongs to."
+  },
+  {
+   "name": "baseball 2025 panini-mosaic 362 — 23 grade-suffixed row(s) return",
+   "slug": "hiq:baseball:2025:panini-mosaic:362:base:no-auto",
+   "poolRows": 200,
+   "rowsMovingIn": 23,
+   "valueMovingIn": 1882.16,
+   "shapes": [
+    "repoint"
+   ],
+   "verifiedMarketDirection": "gains-rows",
+   "note": "Destination pool for 23 row(s) whose slug carried a grade in segment 8. This pool can only GAIN rows; a loss here means the repair moved a sale out of the card it belongs to."
+  },
+  {
+   "name": "basketball 2007 topps 2 — 15 grade-suffixed row(s) return",
+   "slug": "hiq:basketball:2007:topps:2:base:no-auto",
+   "poolRows": 901,
+   "rowsMovingIn": 15,
+   "valueMovingIn": 757.15,
+   "shapes": [
+    "repoint",
+    "relocate"
+   ],
+   "verifiedMarketDirection": "gains-rows",
+   "note": "Destination pool for 15 row(s) whose slug carried a grade in segment 8. This pool can only GAIN rows; a loss here means the repair moved a sale out of the card it belongs to."
+  },
+  {
+   "name": "basketball 2009 topps 321 — 2 grade-suffixed row(s) return",
+   "slug": "hiq:basketball:2009:topps:321:base:auto",
+   "poolRows": 5,
+   "rowsMovingIn": 2,
+   "valueMovingIn": 10622.95,
+   "shapes": [
+    "relocate"
+   ],
+   "verifiedMarketDirection": "gains-rows",
+   "note": "Destination pool for 2 row(s) whose slug carried a grade in segment 8. This pool can only GAIN rows; a loss here means the repair moved a sale out of the card it belongs to."
+  }
+ ]
+}
