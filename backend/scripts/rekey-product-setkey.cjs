@@ -374,7 +374,7 @@ async function main() {
     const s = {
       scanned: 0, otherSlot: 0, moved: 0, created: 0, deleted: 0,
       collapsedOntoExisting: 0, notIdentityRow: 0, slugDrift: 0,
-      duplicatesLeft: 0, failed: 0, notReached: 0,
+      duplicatesLeft: 0, failed: 0, notReached: 0, readBackRetried: 0,
     };
     const examples = [];
     let stopReason = null;
@@ -466,6 +466,10 @@ async function main() {
         console.log(`  FAILED at ${res.stage}: ${row.id} @ ${row.cardId} -> ${target}: ${String(res.error).slice(0, 120)}`);
         return;
       }
+      // A row confirmed by anything but the first point-read met replica lag.
+      // Counted, not warned: it is a normal outcome at Eventual consistency,
+      // and its absence in a future run is how we know the fix stopped mattering.
+      if (res.readBackVia && res.readBackVia !== "point-read") s.readBackRetried++;
       if (res.duplicatesLeft.length) {
         s.failed++; s.duplicatesLeft += res.duplicatesLeft.length;
         for (const d of res.duplicatesLeft) console.log(`  DUPLICATE LEFT ${d.id}@${d.cardId}: ${String(d.error).slice(0, 90)}`);
@@ -515,6 +519,7 @@ async function main() {
     console.log(`  not an identity row / out of scope ${f(s.notIdentityRow)}`);
     console.log(`  slug recompute would differ ${f(s.slugDrift)}   <- reported, never applied (D28)`);
     console.log(`  duplicates LEFT in the pool ${f(s.duplicatesLeft)}   <- a delete that failed; never a lost sale`);
+    console.log(`  read-back needed a retry   ${f(s.readBackRetried)}   <- Eventual-consistency lag, confirmed not failed`);
     console.log(`  failed                     ${f(s.failed)}`);
 
     // AFTER counts + the arithmetic. A report-only run predicts; an apply proves.

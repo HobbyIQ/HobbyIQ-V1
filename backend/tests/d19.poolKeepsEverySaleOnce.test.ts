@@ -272,22 +272,66 @@ describe("D19 collapse: the same CardHedge sale under two ids", () => {
 
 // ── the one helper ─────────────────────────────────────────────────────────
 type Fake = { store: Map<string, Record<string, unknown>>; calls: Record<string, number>; container: unknown };
-function fakePool(opts: { failUpsert?: boolean; failDelete?: "throw" | 404; staleRead?: boolean } = {}): Fake {
+/**
+ * `lagReads` models the Eventual-consistency replica that answers 404 for the
+ * first N point-reads of a document it has not caught up with. `blindQuery`
+ * models the counterfactual: a fallback that cannot see the row either.
+ */
+function fakePool(opts: {
+  failUpsert?: boolean; failDelete?: "throw" | 404; staleRead?: boolean;
+  lagReads?: number; blindQuery?: boolean;
+} = {}): Fake {
   const store = new Map<string, Record<string, unknown>>();
-  const calls = { upsert: 0, delete: 0, read: 0 };
+  const calls = { upsert: 0, delete: 0, read: 0, query: 0 };
   const key = (id: string, pk: string) => `${pk}::${id}`;
   const nf = () => Object.assign(new Error("not found"), { code: 404 });
+  // Only reads of a row written during this run lag; a pre-existing row is
+  // already replicated everywhere.
+  const lagging = new Set<string>();
+  let lagLeft = opts.lagReads ?? 0;
   const container = {
-    items: { async upsert(doc: Record<string, unknown>) { calls.upsert++; if (opts.failUpsert) throw new Error("upsert boom"); store.set(key(String(doc.id), String(doc.cardId)), structuredClone(doc)); return { resource: doc }; } },
+    items: {
+      async upsert(doc: Record<string, unknown>) {
+        calls.upsert++;
+        if (opts.failUpsert) throw new Error("upsert boom");
+        const k = key(String(doc.id), String(doc.cardId));
+        store.set(k, structuredClone(doc));
+        if (lagLeft > 0) lagging.add(k);
+        return { resource: doc };
+      },
+      // The primary. A query is served from an up-to-date replica set, so it
+      // sees writes a lagging point-read replica has not caught up with.
+      query(spec: { parameters?: { name: string; value: unknown }[] }) {
+        return {
+          async fetchAll() {
+            calls.query++;
+            if (opts.blindQuery) return { resources: [] };
+            const p = Object.fromEntries((spec.parameters ?? []).map((x) => [x.name, x.value]));
+            const resources = [...store.values()].filter((d) =>
+              d.id === p["@id"] && (d.cardId === p["@pk"] || d.hobbyiqCardId === p["@slug"]));
+            return { resources };
+          },
+        };
+      },
+    },
     item(id: string, pk: string) {
       return {
-        async read() { calls.read++; const d = store.get(key(id, pk)); if (!d) throw nf(); return { resource: opts.staleRead ? { ...d, rekeyedAt: "stale" } : d }; },
+        async read() {
+          calls.read++;
+          const k = key(id, pk);
+          if (lagging.has(k) && lagLeft > 0) { lagLeft--; if (lagLeft === 0) lagging.delete(k); throw nf(); }
+          const d = store.get(k);
+          if (!d) throw nf();
+          return { resource: opts.staleRead ? { ...d, rekeyedAt: "stale" } : d };
+        },
         async delete() { calls.delete++; if (opts.failDelete === "throw") throw new Error("delete boom"); if (opts.failDelete === 404 || !store.has(key(id, pk))) throw nf(); store.delete(key(id, pk)); return {}; },
       };
     },
   };
   return { store, calls, container };
 }
+/** Drives the helper's backoff without spending real time. */
+const noWait = async () => {};
 const KEEP = { id: "ebay-user-purchase::o", cardId: NUM, rekeyedAt: "t", price: 64 };
 const OLD = { id: "ebay-user-purchase::holding::h1", cardId: VENDOR, price: 74.86 };
 
@@ -346,7 +390,117 @@ describe("D19: the create -> verify -> delete helper never leaves the pool witho
     fake.store.set(`${OLD.cardId}::${OLD.id}`, OLD);
     const res = await lib.relocateSoldComp(fake.container, { keep: KEEP, drop: [OLD], dryRun: true });
     expect(res).toMatchObject({ ok: true, stage: "dry-run", wouldDelete: 1 });
-    expect(fake.calls).toEqual({ upsert: 0, delete: 0, read: 0 });
+    expect(fake.calls).toEqual({ upsert: 0, delete: 0, read: 0, query: 0 });
+  });
+});
+
+describe("CF-A-VENDOR-KEYED-SALE-REKEYS-WHERE-IT-LIVES: read back where the row lives", () => {
+  // The failure shape from rekey-product-setkey run 33973364948: a row whose
+  // partition key was a CardHedge vendor id moves onto its hiq: slug, and the
+  // point-read at the NEW partition answers 404 for a document that was
+  // written. All 12 of that run's failures were later found alive at the new
+  // address; the old row was (correctly) never deleted, so the sale was in the
+  // pool TWICE.
+  const VENDOR_PK = "1759162133350x316407940720022640";
+  const SLUG = "hiq:football:2025:score:15:base:no-auto";
+  const VENDOR_KEYED = { id: "cardhedge::ch-daily::1752927656211x698620124795439600", cardId: VENDOR_PK, hobbyiqCardId: "hiq:football:2025:panini-score:15:base:no-auto", price: 1.99 };
+  const REKEYED = { ...VENDOR_KEYED, cardId: SLUG, hobbyiqCardId: SLUG, setKey: "score", rekeyedAt: "2026-09-05T15:04:15.342Z", vendorCardIdWas: VENDOR_PK };
+
+  it("a vendor-keyed row rekeys and verifies even when the first read lags", async () => {
+    const fake = fakePool({ lagReads: 2 });
+    fake.store.set(`${VENDOR_PK}::${VENDOR_KEYED.id}`, VENDOR_KEYED);
+    const res = await lib.relocateSoldComp(fake.container, {
+      keep: REKEYED, drop: [{ id: VENDOR_KEYED.id, cardId: VENDOR_PK }],
+      verifyFields: ["hobbyiqCardId", "setKey", "rekeyedAt"], wait: noWait,
+    });
+    expect(res.ok).toBe(true);
+    expect(res.stage).toBe("done");
+    // the sale is at its new address exactly once, and the old row is gone --
+    // no duplicate left behind
+    expect(fake.store.has(`${SLUG}::${REKEYED.id}`)).toBe(true);
+    expect(fake.store.has(`${VENDOR_PK}::${VENDOR_KEYED.id}`)).toBe(false);
+  });
+
+  it("the run's own failure shape -- a lag longer than every retry -- is saved by the both-keys query", async () => {
+    const fake = fakePool({ lagReads: 99 });
+    fake.store.set(`${VENDOR_PK}::${VENDOR_KEYED.id}`, VENDOR_KEYED);
+    const res = await lib.relocateSoldComp(fake.container, {
+      keep: REKEYED, drop: [{ id: VENDOR_KEYED.id, cardId: VENDOR_PK }],
+      verifyFields: ["hobbyiqCardId", "setKey", "rekeyedAt"], wait: noWait,
+    });
+    expect(res.ok).toBe(true);
+    expect(res.readBackVia).toBe("query-both-keys");
+    expect(fake.calls.query).toBeGreaterThan(0);
+    expect(fake.store.has(`${VENDOR_PK}::${VENDOR_KEYED.id}`)).toBe(false);
+  });
+
+  it("MUTATION: reading back by the new slug ALONE -- no retry, no query -- reproduces the red run", async () => {
+    // This is the pre-fix behaviour: one point-read at (id, new cardId). With
+    // the replica lagging it finds nothing, the verify fails, the old row
+    // survives, and the pool now holds the sale twice.
+    const fake = fakePool({ lagReads: 99, blindQuery: true });
+    fake.store.set(`${VENDOR_PK}::${VENDOR_KEYED.id}`, VENDOR_KEYED);
+    const res = await lib.relocateSoldComp(fake.container, {
+      keep: REKEYED, drop: [{ id: VENDOR_KEYED.id, cardId: VENDOR_PK }],
+      verifyFields: ["hobbyiqCardId", "setKey", "rekeyedAt"], wait: noWait,
+    });
+    expect(res.ok).toBe(false);
+    expect(res.stage).toBe("verify");
+    expect(res.error).toBe("read-back found nothing");
+    // the exact damage the real run did: written AND still there
+    expect(fake.store.has(`${SLUG}::${REKEYED.id}`)).toBe(true);
+    expect(fake.store.has(`${VENDOR_PK}::${VENDOR_KEYED.id}`)).toBe(true);
+  });
+
+  it("an hiq-keyed row still relocates as before, on the first read", async () => {
+    const FROM_SLUG = "hiq:football:2025:panini-score:15:base:no-auto";
+    const before = { id: "tca-ebay::1", cardId: FROM_SLUG, hobbyiqCardId: FROM_SLUG, price: 2 };
+    const after = { ...before, cardId: SLUG, hobbyiqCardId: SLUG, setKey: "score", rekeyedAt: "t" };
+    const fake = fakePool();
+    fake.store.set(`${FROM_SLUG}::${before.id}`, before);
+    const res = await lib.relocateSoldComp(fake.container, {
+      keep: after, drop: [{ id: before.id, cardId: FROM_SLUG }],
+      verifyFields: ["hobbyiqCardId", "setKey", "rekeyedAt"], wait: noWait,
+    });
+    expect(res).toMatchObject({ ok: true, stage: "done", readBackVia: "point-read" });
+    expect(fake.calls.query).toBe(0);   // no fallback needed
+    expect(fake.calls.read).toBe(2);    // existedBefore + the one read-back
+    expect(fake.store.has(`${SLUG}::${after.id}`)).toBe(true);
+    expect(fake.store.has(`${FROM_SLUG}::${before.id}`)).toBe(false);
+  });
+
+  it("the fallback finds a row whose cardId and hobbyiqCardId differ", async () => {
+    // Not every stored row has cardId === hobbyiqCardId: the pool holds rows
+    // like tca-ebay::128012214430, whose cardId is the ungraded slug while its
+    // hobbyiqCardId carries a :psa-8 grade suffix. Both are passed to the
+    // query, so a row is found by whichever of its two keys is stored.
+    const PK = "hiq:football:2025:score:14:base:no-auto";
+    const GRADED = PK + ":psa-8";
+    const keep = { id: "tca-ebay::128012214430", cardId: PK, hobbyiqCardId: GRADED, setKey: "score", rekeyedAt: "t" };
+    const fake = fakePool({ lagReads: 99 });
+    const res = await lib.relocateSoldComp(fake.container, {
+      keep, drop: [{ id: keep.id, cardId: "1668294538085x926692677514323000" }],
+      verifyFields: ["setKey", "rekeyedAt"], wait: noWait,
+    });
+    expect(res.ok).toBe(true);
+    expect(res.readBackVia).toBe("query-both-keys");
+    expect(fake.store.has(`${PK}::${keep.id}`)).toBe(true);
+  });
+
+  it("a row that truly was never written stays a failure, and nothing is deleted", async () => {
+    // The guarantee the retry must NOT weaken: when no read can find the row,
+    // the old one survives. A sale is never lost.
+    const fake = fakePool({ blindQuery: true });
+    fake.store.set(`${VENDOR_PK}::${VENDOR_KEYED.id}`, VENDOR_KEYED);
+    // upsert lands nowhere the reads can see it
+    (fake.container as { items: { upsert: unknown } }).items.upsert = async () => ({ resource: REKEYED });
+    const res = await lib.relocateSoldComp(fake.container, {
+      keep: REKEYED, drop: [{ id: VENDOR_KEYED.id, cardId: VENDOR_PK }],
+      verifyFields: ["hobbyiqCardId"], wait: noWait,
+    });
+    expect(res.ok).toBe(false);
+    expect(res.stage).toBe("verify");
+    expect(fake.store.has(`${VENDOR_PK}::${VENDOR_KEYED.id}`)).toBe(true);
   });
 });
 
