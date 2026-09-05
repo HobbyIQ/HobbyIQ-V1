@@ -253,6 +253,13 @@ export function toCanonicalFmvResponse(
         // published self-comp. See isOwnComp above.
         verifiedByUser: isOwnComp(s, v.ownerUserId),
         contributorUserId: s.contributorUserId,
+        // CF-INDEPENDENCE-MUST-NAME-ITS-BASIS (2026-09-04). The seller
+        // rides to the wire so `labelsForResult` can evaluate the
+        // 3-independent-seller threshold on identity rather than on a row
+        // count. Absent on nearly every row today — which is the point:
+        // the label then says independence is UNVERIFIED instead of
+        // letting a count of rows read as a count of people.
+        sellerHandle: s.sellerHandle ?? null,
       })),
       trendPctPerMonth: v.trend.pctPerWeek != null ? round2(v.trend.pctPerWeek * (30 / 7)) : null,
       multipliers: {},

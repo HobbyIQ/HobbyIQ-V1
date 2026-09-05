@@ -644,6 +644,17 @@ export async function readCatalogIdentityBySlug(slug: string): Promise<{
    *  or we minted it from our own sales — on the read it already makes, not a
    *  second one per holding priced. */
   source: string | null;
+  /**
+   * CF-A-MIGRATING-POOL-IS-NOT-A-THIN-POOL (Drew, 2026-09-04). The row's MINT
+   * instant — `observedAt`, which `upsertCatalogEntry` writes as
+   * `existing?.observedAt ?? now` and therefore never moves once set. It is
+   * the only immutable clock on a catalog row (`lastSeenAt` is bumped on every
+   * touch, including touches that change nothing), and the pricing path needs
+   * it to tell a genuinely empty tier from one whose sales have not finished
+   * migrating onto a freshly minted identity. Null when the row predates the
+   * field or the read could not be made.
+   */
+  observedAt: string | null;
 } | null> {
   const id = String(slug ?? "").trim();
   if (!id.startsWith("hiq:")) return null;
@@ -652,7 +663,8 @@ export async function readCatalogIdentityBySlug(slug: string): Promise<{
     if (!container) return null;
     const { resources } = await container.items.query<Record<string, unknown>>({
       query: `SELECT c.playerName, c.cardYear, c.year, c.setKey, c.setName, c.cardNumber,
-                     c.parallel, c.isAuto, c.sport, c.printRun, c.imageUrl, c.source
+                     c.parallel, c.isAuto, c.sport, c.printRun, c.imageUrl, c.source,
+                     c.observedAt
               FROM c WHERE c.id = @id`,
       parameters: [{ name: "@id", value: id }],
     }).fetchAll();
@@ -675,6 +687,7 @@ export async function readCatalogIdentityBySlug(slug: string): Promise<{
       printRun: num(r.printRun),
       imageUrl: str(r.imageUrl),
       source: str(r.source),
+      observedAt: str(r.observedAt),
     };
   } catch {
     return null;

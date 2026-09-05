@@ -143,6 +143,25 @@ const WRITE_LEDGER_OUT = String(process.env.WRITE_LEDGER_OUT || "/tmp/rematch-wr
 // 40k-id file; the COUNTS are exact regardless, and the counts are what the
 // gate's attribution decision reads.
 const LEDGER_IDS_PER_POOL = Math.max(1, Number(process.env.LEDGER_IDS_PER_POOL || 50));
+// THE SETTLE MARKERS (CF-A-MIGRATING-POOL-IS-NOT-A-THIN-POOL, Drew
+// 2026-09-04). The write ledger above is the right RECORD in the wrong MEDIUM
+// for the pricing engine: it is a file on this runner's disk, and the engine
+// runs in App Service. So when a slice that touched a pool COMPLETES, the same
+// facts are also written to Cosmos as per-identity markers the engine can read
+// at pricing time.
+//
+// Why this matters: a freshly minted identity is repriceable the moment its
+// catalog row exists, but its sales arrive here over the following hours. The
+// 1987 Topps Traded Tiffany Maddux row was minted 14:37Z; a reprice at 18:56Z
+// with 17 of 350 sales migrated found an empty PSA 10 tier and published $240
+// for a ~$1,500 card. The engine's gate presumes a recently minted identity is
+// still migrating; THIS marker is what releases it early, so a completed slice
+// does not leave its pools gated for the rest of the settle window.
+//
+// Off by default: the gate is safe without markers (it falls back to the age
+// window), so this is an optimization that must never become a dependency.
+const SETTLE_MARKERS = String(process.env.SETTLE_MARKERS || "").trim() === "true";
+const REMATCH_CONTROL_CONTAINER = String(process.env.COSMOS_REMATCH_CONTROL_CONTAINER || "rematch_control").trim();
 /**
  * THE APPLY CLASS SCOPE (audit gate item 8, 2026-09-03).
  *
@@ -1343,9 +1362,66 @@ async function main() {
     for (const [slug, e] of [...ledger].sort((a, b) => (b[1].fromCount ?? 0) + (b[1].toCount ?? 0) - ((a[1].fromCount ?? 0) + (a[1].toCount ?? 0))).slice(0, 25)) {
       console.log(`    ${slug}   out ${f(e.fromCount ?? 0)}  in ${f(e.toCount ?? 0)}`);
     }
+    await writeSettleMarkers(ledger, doc, conn);
   }
   if (APPLY) reportWrites({ job: "rematch-sold-comps", intended: stats.intended, written: stats.written, skipped: stats.skipped, failed: stats.failed });
   if (stopReason) console.log(`\n${stopReason}`);
+}
+
+/**
+ * CF-A-MIGRATING-POOL-IS-NOT-A-THIN-POOL (Drew, 2026-09-04). Publish the
+ * settle signal the pricing engine reads.
+ *
+ * Called once, when a slice COMPLETES, from the same block that writes the
+ * ledger to disk -- so the two records cannot disagree about which pools this
+ * slice touched. One marker per pool the slice moved rows into or out of,
+ * keyed `identity::<slug>` to match `poolMigrationGate.identityMarkerId`.
+ *
+ * DRY RUN WRITES NOTHING. A dry run's ledger records what WOULD have been
+ * written; publishing "settled" for a migration that never happened would
+ * release a price the gate is holding for good reason.
+ *
+ * FAILURE IS NON-FATAL and deliberately so. The gate falls back to its age
+ * window when a marker is absent, so a failed marker write costs at most a few
+ * hours of extra caution on the affected identities. It must never fail the
+ * rematch itself -- the re-key is the job; this is telemetry for a consumer.
+ */
+async function writeSettleMarkers(ledger, ledgerDoc, conn) {
+  if (!SETTLE_MARKERS) return;
+  if (!APPLY) {
+    console.log(`    SETTLE MARKERS  skipped -- dry run moved no rows, so no pool has settled.`);
+    return;
+  }
+  if (!ledger.size) return;
+  const settledAt = new Date().toISOString();
+  let written = 0, failed = 0;
+  try {
+    const control = cosmos(conn).container(REMATCH_CONTROL_CONTAINER);
+    for (const [slug, e] of ledger) {
+      const id = `identity::${slug}`;
+      try {
+        await control.items.upsert({
+          id,
+          kind: "identity",
+          key: slug,
+          settledAt,
+          runId: ledgerDoc.runId ?? null,
+          rowsWritten: (e.fromCount ?? 0) + (e.toCount ?? 0),
+          slot: SLOT,
+          slots: SLOTS,
+        });
+        written++;
+      } catch (err) {
+        failed++;
+        if (failed <= 3) console.error(`    !! settle marker ${id}: ${String(err?.message ?? err).slice(0, 110)}`);
+      }
+    }
+    console.log(`    SETTLE MARKERS  ${f(written)} written, ${f(failed)} failed  ->  ${REMATCH_CONTROL_CONTAINER}`);
+  } catch (err) {
+    // A missing container is the expected first-run case, not an error worth
+    // failing a re-key over.
+    console.error(`    !! settle markers could not be written (${String(err?.message ?? err).slice(0, 140)}) -- the engine's age window still gates these pools.`);
+  }
 }
 
 /** The backend root, so the revert branch can reach dist/ for the one service

@@ -70,6 +70,49 @@ export const DONRUSS_SPELLING_POLICY: DonrussSpellingPolicy = "panini-era";
 /** Panini acquired Donruss in 2009 (CF-PANINI-IS-ANACHRONISTIC-BEFORE-2009). */
 export const PANINI_DONRUSS_FROM_YEAR = 2009;
 
+/**
+ * CF-THERE-IS-NO-FLEER-TIFFANY (Drew, 2026-09-05).
+ *
+ * "Tiffany" is a TOPPS line. Fleer's factory/coated products of the 1980s are
+ * FLEER GLOSSY -- the 1987-1989 Glossy Tin ("Custom Coated Collector's
+ * Edition"), plus Fleer Update Glossy 1987-1988. There is no 1980s Fleer
+ * Tiffany product, and there never was; #1748 already staged those five years
+ * under `fleer-glossy` / `fleer-update-glossy` and pinned that 1990/1991 have
+ * no Glossy page at all.
+ *
+ * The market does not know that. Measured on the pool 2026-09-04, nine 1987
+ * sales carry BOTH words -- "1987 Fleer **GLOSSY** #369 Bo Jackson ROOKIE
+ * TIFFANY", "1987 Fleer Update Glossy (Tiffany) Greg Maddux RC #U-68". Those
+ * titles already resolve correctly, because `glossy` wins the vocabulary when
+ * both words appear. The gap is the title that says Tiffany and NOTHING else:
+ *
+ *     normalizeSetKey("1987 Fleer Tiffany") -> "fleer-tiffany"
+ *
+ * -- a product that does not exist in 1987, so the sale lands in a pool with
+ * no checklist behind it and no other sale to price against. This maps it to
+ * the product the seller is actually describing.
+ *
+ * WHY AN ERA RULE AND NOT A REWRITE. `fleer-tiffany` IS a real product from
+ * 1996 -- 1996/1997 Fleer Tiffany (the pack-inserted coated parallel),
+ * 1997-98 Fleer Tiffany basketball, 2002 Fleer Tiffany (/200), and the source
+ * serves every one of them at its own set page under that name. 848 pool rows
+ * sit on the key today and ALL 848 have titles that say "Tiffany"; not one is
+ * from the 1980s. A blanket rewrite would destroy a real product's pool to fix
+ * a nine-row misnomer. The year is what separates them, so the year is what
+ * decides -- exactly as it does for Donruss above.
+ *
+ * The boundary is the last year Fleer made a coated set under the Glossy name.
+ * Below it a Tiffany key is a misnomer for Glossy; from it, the key is the
+ * product the source names.
+ */
+export const FLEER_TIFFANY_IS_GLOSSY_BEFORE_YEAR = 1996;
+
+/** The 1980s Glossy products a "Fleer Tiffany" text is a misnomer for. */
+const FLEER_TIFFANY_ERA_MISNOMERS: Readonly<Record<string, string>> = Object.freeze({
+  "fleer-tiffany": "fleer-glossy",
+  "fleer-update-tiffany": "fleer-update-glossy",
+});
+
 export interface ProductSetKey {
   /** The one spelling. */
   readonly setKey: string;
@@ -225,6 +268,57 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
   P("spx"),
   P("spx-finite", { parent: "spx" }),
   P("collectors-choice"),
+  /**
+   * THE 1990s NAMED INSERTS AND FOOD ISSUES THE IMPROVE GATE FOLDED INTO THEIR
+   * FLAGSHIP (GATE 3 slot-31 audit, 2026-09-04 -- 12 of 209 writable IMPROVE
+   * rows wrong, and every one of them a collapse of one of these).
+   *
+   * Each of these is a SEPARATE PRODUCT that shares its flagship's brand word
+   * and NOT its checklist. The derivation reads the brand, answers the
+   * flagship, and a named insert's sale lands in the base card's pool:
+   *
+   *   "1995-96 Upper Deck Special Edition #31 Hakeem Olajuwon"  -> upper-deck:31
+   *   "Upper Deck 1995 Jordan Collection ... #JC7"              -> upper-deck:JC7
+   *   "1978 Topps Holsum #32 Ken Houston"                       -> topps:32
+   *   "1995 UD Upper Deck Michael Jordan #1 Milk Cap"           -> upper-deck:1
+   *
+   * Upper Deck Special Edition #31 is Olajuwon; base 1995-96 Upper Deck #31 is
+   * a different player entirely. Holsum is a 33-card FOOD ISSUE whose #32 has
+   * nothing to do with the 528-card 1978 Topps set. Neither pool may be merged
+   * with the flagship's, in either direction.
+   *
+   * WHAT THIS DECLARATION IS FOR, AND WHAT IT IS NOT. These are `P` rows, so
+   * they are a FAMILY/PARENT registry and NOT a spelling: they do not make
+   * "Upper Deck Special Edition" resolve to `upper-deck-special-edition`, and
+   * it still normalizes to `upper-deck` exactly as it does on main today
+   * (verified by running the function, the #1748 lesson). Promoting them to
+   * `S` is a vocabulary decision with its own blast radius and is deliberately
+   * NOT made here -- what these rows buy is that the rematch classifier's
+   * GUARD 6 can name them as DECLARED CHILDREN of their flagship and REFUSE an
+   * IMPROVE whose title states the child's words. Absent beats wrong: a row
+   * GUARD 6 refuses stays exactly where it is and is reported to Drew.
+   *
+   * MEASURED BEFORE DECLARED, on the live catalog and pool 2026-09-04. Each
+   * key holds ZERO card_catalog rows under EVERY spelling probed
+   * (`upper-deck-special-edition`, `special-edition`, `upper-deck-se`,
+   * `upper-deck-jordan-collection`, `jordan-collection`, `topps-holsum`,
+   * `holsum`, `upper-deck-milk-caps`, `milk-caps`, `upper-deck-pogs`, `pogs`),
+   * so unlike #1758's products there is no catalog spelling to defer to and no
+   * populated rival to split. The SALES are real and sized:
+   * 1,603 "Upper Deck ... Special Edition", 1,017 "Jordan Collection",
+   * 18 "Holsum", 109 "milk cap". `collectors-choice-special-edition` is the
+   * counter-example that proves the measurement: it holds 313
+   * baseballcardpedia rows and is ALREADY a reconciliation fixed point, so it
+   * is not re-declared here.
+   *
+   * The checklists are a separate acquisition. Declaring the key without one
+   * is exactly the state that makes GUARD 6 refuse rather than redirect -- a
+   * specialization needs its OWN checklist row before anything may land on it.
+   */
+  P("upper-deck-special-edition", { family: "upper-deck", parent: "upper-deck" }),
+  P("upper-deck-jordan-collection", { names: ["ud-jordan-collection"], family: "upper-deck", parent: "upper-deck" }),
+  P("upper-deck-milk-caps", { names: ["upper-deck-pogs"], family: "upper-deck", parent: "upper-deck" }),
+  P("topps-holsum", { family: "topps", parent: "topps" }),
 
   // -- Leaf: every product the catalog's own field spellings name (measured
   //    2026-08-30; the bare `leaf` rule collapsed all of them). Own family
@@ -420,6 +514,21 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
   P("uc3", { names: ["pinnacle-uc3", "sportflix-uc3"], parent: "pinnacle" }),
   ...["goudey", "circa-thunder", "cracker-jack", "all-time-diamond-kings", "diamond-kings", "t206", "play-ball", "kelloggs",
     "post-cereal", "golden-press"].map((k) => P(k)),
+  // CF-BELLINGHAM-MARINERS-IS-THE-KEY (Drew 2026-08-30, R1). The 1987
+  // Bellingham Mariners team issue — Ken Griffey Jr.'s first card. A minor
+  // league club-issued set, so it has no flagship to be a release of: no
+  // `parent`, and its own family, exactly like the food issues above it.
+  //
+  // `spelled`, and the two `names` are the point of the entry. This is the
+  // mirror of the setKeyReconciliation aliases (see RULED_ALIASES there for
+  // the 228-row three-way pool split that motivated the ruling): `bellingham`
+  // is the town that stripYearAndSport left behind when it reduced the
+  // malformed catalog key `1987-bellingham-baseball`, and
+  // `bellingham-mariners-team-issue` is how the pool's own sale titles spell
+  // it. Both name THIS product. Declaring them here means productSetKeyForName
+  // answers before the regex vocabulary, so the fold does not depend on the
+  // reconciliation alone.
+  S("bellingham-mariners", { names: ["bellingham", "bellingham-mariners-team-issue"] }),
 ];
 
 // -- lookups -----------------------------------------------------------------
@@ -492,6 +601,15 @@ export function productSetKeyForName(slug: string | null | undefined): string | 
 /** Ruling (b) as code: which spelling Donruss takes in `year` under the
  *  policy. Every other key passes through untouched. */
 export function spellForEra(setKey: string, year: number | null | undefined, policy: DonrussSpellingPolicy = DONRUSS_SPELLING_POLICY): string {
+  // CF-THERE-IS-NO-FLEER-TIFFANY: before 1996 a Fleer "Tiffany" text names the
+  // GLOSSY product (see FLEER_TIFFANY_IS_GLOSSY_BEFORE_YEAR). From 1996 the key
+  // is a real product the source names, and passes through untouched. A year we
+  // do not have cannot decide, so an absent year leaves the key alone.
+  const misnomer = FLEER_TIFFANY_ERA_MISNOMERS[setKey];
+  if (misnomer !== undefined) {
+    if (typeof year !== "number" || !Number.isFinite(year) || year <= 0) return setKey;
+    return year < FLEER_TIFFANY_IS_GLOSSY_BEFORE_YEAR ? misnomer : setKey;
+  }
   if (setKey !== "donruss" && setKey !== "panini-donruss") return setKey;
   if (policy === "as-named") return setKey;
   if (typeof year !== "number" || !Number.isFinite(year) || year <= 0) return setKey;

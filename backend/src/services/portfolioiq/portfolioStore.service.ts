@@ -32,7 +32,7 @@ import {
 } from "./holdingSaveDeferredWork.js";
 // CF-ONE-VALUATION-PATH (D17, 2026-08-30): the persist site prices the exact
 // pool through the ONE valuation entry (holdingValuation → valueIdentity).
-import { valueHoldingThroughOneEntry, holdingGrade as holdingGradeOf, costBasisFloorRefusalWrite } from "./holdingValuation.js";
+import { valueHoldingThroughOneEntry, holdingGrade as holdingGradeOf, costBasisFloorRefusalWrite, costBasisFloor, noBasisRefusalWrite } from "./holdingValuation.js";
 // CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (Drew, 2026-09-03). The legacy
 // exact-pool writers below persist prices too — only for identities the
 // catalog cannot name, but persist they do. They stamp the same label set
@@ -3508,6 +3508,24 @@ async function autoPriceHolding(
     }));
     return cbf.holding;
   }
+  // CF-A-STALE-VALUE-IS-NOT-A-PRICE (Drew, 2026-09-04): the engine declined
+  // for a reason no other lane may paper over — the catalog holds no identity
+  // (the $1,850 Bellingham Griffey standing beside an engine that returns
+  // identity-not-in-catalog), or the pool is mid-migration (the $240 Maddux).
+  // The prior value is kept and LABELLED, and the legacy chain below does NOT
+  // run: it could only substitute a number the engine deliberately withheld.
+  if (oneEntry.outcome === "no-basis-refusal") {
+    const nb = noBasisRefusalWrite(holding, oneEntry.reason, oneEntry.valuation, new Date().toISOString());
+    doc.holdings[holding.id] = nb.holding;
+    console.warn(JSON.stringify({
+      event: "no_basis_refusal_persisted",
+      source: "portfolioStore.autoPriceHolding",
+      holdingId: holding.id,
+      reason: oneEntry.reason,
+      summary: nb.summary,
+    }));
+    return nb.holding;
+  }
   const entryDecidedExactPool = oneEntry.outcome !== "unresolved";
 
   // CF-UNIFIED-PRICING-EARLY-EXIT (Drew, 2026-08-04). ONE function,
@@ -4296,18 +4314,24 @@ async function autoPriceHolding(
       // Bobby Witt Jr. BGS 9.5 auto ($1,260 paid) was getting matched
       // to non-auto base card slugs and priced at $6.92 — a 99.5% loss
       // that's obviously a slug/parallel mismatch, not real market
-      // signal. Guard: for holdings costing > $50, if the proposed
-      // FMV is less than 15% of cost basis, KEEP the existing FMV /
-      // estimatedValue instead. High-value cards need higher-confidence
-      // signal to move off a prior estimate.
+      // signal. Guard: if the proposed FMV is less than 15% of cost
+      // basis, KEEP the existing FMV / estimatedValue instead.
+      //
+      // CF-THE-FLOOR-IS-A-RATIO-NOT-A-DOLLAR-AMOUNT (Drew, 2026-09-04): this
+      // was a fourth inline copy of the predicate, dollar gate included. It
+      // now calls the SAME `costBasisFloor` every other lane calls, so the
+      // doctrine has one implementation and the $29.45 Chipper Jones is
+      // refused here too.
       const qty = Math.max(1, toNumber(holding.quantity, 1));
-      const costBasis = toNumber(holding.totalCostBasis, toNumber(holding.purchasePrice, 0) * qty);
-      const proposed = typeof ourPool.fairMarketValue === "number" && ourPool.fairMarketValue > 0
-        ? ourPool.fairMarketValue * qty
+      const proposedUnit = typeof ourPool.fairMarketValue === "number" && ourPool.fairMarketValue > 0
+        ? ourPool.fairMarketValue
         : typeof ourPool.estimatedValue === "number" && ourPool.estimatedValue > 0
-          ? ourPool.estimatedValue * qty
+          ? ourPool.estimatedValue
           : 0;
-      const suspiciouslyLow = costBasis > 50 && proposed > 0 && (proposed / costBasis) < 0.15;
+      const opFloor = costBasisFloor(holding, proposedUnit);
+      const costBasis = opFloor.costBasis;
+      const proposed = opFloor.proposedTotal;
+      const suspiciouslyLow = opFloor.rejects;
       if (suspiciouslyLow) {
         console.warn(JSON.stringify({
           event: "our_pool_override_rejected_cost_basis_floor",
@@ -4761,14 +4785,17 @@ async function autoPriceHolding(
       // of the same guard at ~line 2765. Devin Taylor CPA-DT Black auto
       // ($650 cost basis) got fmv=$3.69 written via THIS path because
       // this second write site had no cost-basis check. Any fallback
-      // FMV that lands <15% of cost basis on a >$50 holding is
-      // suspiciously low; keep the prior value instead. valuationStatus
-      // stays as-is so UI still shows a value (per Drew: "we can't show
-      // null, we have the calculation to get to its current value").
-      const qty = Math.max(1, toNumber(holding.quantity, 1));
-      const costBasis = toNumber(holding.totalCostBasis, toNumber(holding.purchasePrice, 0) * qty);
-      const proposed = fallback.fairMarketValue * qty;
-      const suspiciouslyLow = costBasis > 50 && proposed > 0 && (proposed / costBasis) < 0.15;
+      // FMV that lands <15% of cost basis is suspiciously low; keep the
+      // prior value instead. valuationStatus stays as-is so UI still shows
+      // a value (per Drew: "we can't show null, we have the calculation to
+      // get to its current value").
+      //
+      // CF-THE-FLOOR-IS-A-RATIO-NOT-A-DOLLAR-AMOUNT (Drew, 2026-09-04): the
+      // fifth and last inline copy, routed to the one shared predicate.
+      const cfFloor = costBasisFloor(holding, fallback.fairMarketValue);
+      const costBasis = cfFloor.costBasis;
+      const proposed = cfFloor.proposedTotal;
+      const suspiciouslyLow = cfFloor.rejects;
       if (suspiciouslyLow) {
         console.warn(JSON.stringify({
           event: "catalog_fallback_rejected_cost_basis_floor",
@@ -5662,6 +5689,170 @@ export interface PortfolioSummary {
   observedCostBasis: number;
   observedGainLoss: number;
   observedGainLossPct: number | null;
+  // CF-PORTFOLIO-DAY-CHANGE (Drew, 2026-09-04): "the portfolio bar should show
+  // the day change in $ and % with colour". The day change is a DIFFERENCE
+  // BETWEEN TWO TOTALS, and the second one has to come from somewhere honest.
+  //
+  // It comes from `priceHistoryByHolding` -- the trail every reprice already
+  // appends to and the reaper already bounds. Nothing here computes a price:
+  // the previous close is the sum of each holding's LAST STORED POINT BEFORE
+  // the most recent UTC midnight, which is a fact already on disk.
+  //
+  // WHY THESE FIELDS AND NOT JUST A NUMBER. A day change with no coverage is
+  // unreadable: a portfolio where 3 of 43 holdings have a prior point produces
+  // a "day change" dominated by the 40 that contributed no change at all, and
+  // a bare "+$12.40" would present that as a measurement of the whole
+  // portfolio. So the coverage travels WITH the number, and the UI is expected
+  // to say so when it is not 100%.
+  //
+  // NULL vs ZERO, the invariant this repo keeps everywhere: when NO holding
+  // has a prior point, `dayChangeValue` is null -- not 0. Zero is a measured
+  // flat day; null is "we have no yesterday". The bar renders an em dash.
+  /** Sum of each holding's last stored value strictly before
+   *  `previousCloseAt`, plus the current display value of holdings with no
+   *  prior point. Null when no holding has a prior point at all. */
+  previousCloseValue: number | null;
+  /** The boundary the previous close was taken at: the most recent UTC
+   *  midnight at or before `now`, ISO-8601. Null when there is no prior point.
+   *  UTC because every other day key in this backend is
+   *  `toISOString().slice(0,10)` -- there is no ET day helper to be consistent
+   *  with, and inventing one here would put the bar on a different calendar
+   *  from the rest of the app. */
+  previousCloseAt: string | null;
+  /** displayableTotalValue minus previousCloseValue. Null when no prior. */
+  dayChangeValue: number | null;
+  /** The same move as a fraction of the previous close (0.0123 = +1.23%).
+   *  Null when there is no prior point or the previous close is not positive --
+   *  a percentage of zero is not a number we get to print. */
+  dayChangePct: number | null;
+  /** How much of the portfolio the day change actually measures. A holding
+   *  with no point before the boundary contributes its CURRENT value to the
+   *  previous close, i.e. zero change, so it drags the move toward flat -- the
+   *  UI must be able to say "12 of 43 with prior". */
+  dayChangeCoverage: { holdingsWithPrior: number; holdingsTotal: number };
+}
+
+/** The trail shape the day-change math needs: holding id to stored points.
+ *  Structurally identical to `UserDoc["priceHistoryByHolding"]`, declared
+ *  loosely so callers (and tests) can pass a plain literal. */
+export type PriceTrailsByHolding = Record<
+  string,
+  readonly { at: string; value: number; valuationStatus?: string }[]
+>;
+
+/**
+ * The most recent UTC midnight at or before `now`, as an ISO-8601 instant.
+ * Exported for the test -- the boundary IS the contract, and a test that
+ * recomputes it locally would pass against a wrong one.
+ */
+export function previousCloseBoundary(now: Date | number = Date.now()): string {
+  const d = new Date(now);
+  return `${d.toISOString().slice(0, 10)}T00:00:00.000Z`;
+}
+
+/**
+ * CF-PORTFOLIO-DAY-CHANGE (2026-09-04). The previous close, from persisted
+ * history only.
+ *
+ * For each holding that counts toward the headline, take the LAST stored price
+ * point whose `at` is strictly before the boundary and use its value; a
+ * holding with no such point contributes its CURRENT display value, so it
+ * lands as zero change rather than as a phantom gain or loss of its whole
+ * worth. The count of holdings that did have a prior point rides along.
+ *
+ * WHY OBSERVED-ONLY POINTS. `observedPricePoints` is the same filter every
+ * other trail reader uses. An estimated point drifts as the engine re-anchors
+ * (CF-AN-ESTIMATE-DRIFTS-IN-THE-DARK), so differencing against one measures
+ * the engine's re-anchoring, not the market. A holding whose only prior points
+ * are estimated therefore counts as HAVING NO PRIOR -- it is excluded from
+ * coverage and contributes no change.
+ *
+ * PER-UNIT vs TOTAL. Trail points are written per-holding at the value the
+ * reprice produced for that holding; the current side of the comparison is
+ * `computeDisplayValue`, which is a TOTAL (per-unit times quantity). So the
+ * stored point is scaled by the same quantity before differencing -- otherwise
+ * a quantity-3 holding would show a two-thirds "drop" every day it was priced.
+ *
+ * THIS COMPUTES NO PRICE. It reads `computeDisplayValue` (already-persisted
+ * fields) and the stored trail. No engine call, no reprice, no network.
+ */
+export function computeDayChange(
+  items: PortfolioHolding[],
+  trails: PriceTrailsByHolding | undefined,
+  displayableTotalValue: number,
+  now: Date | number = Date.now(),
+): {
+  previousCloseValue: number | null;
+  previousCloseAt: string | null;
+  dayChangeValue: number | null;
+  dayChangePct: number | null;
+  dayChangeCoverage: { holdingsWithPrior: number; holdingsTotal: number };
+} {
+  const boundary = previousCloseBoundary(now);
+  let previousClose = 0;
+  let holdingsWithPrior = 0;
+  let holdingsTotal = 0;
+
+  for (const h of items) {
+    const status = String((h as any).cardStatus ?? (h as any).statusCategory ?? "")
+      .trim()
+      .toLowerCase();
+    // The same exclusion the totals use -- a sold card is not in the portfolio,
+    // so it must not be in either side of the day change.
+    if (EXCLUDED_STATUS.has(status)) continue;
+    holdingsTotal += 1;
+
+    const current = computeDisplayValue(h);
+    const points = observedPricePoints(trails?.[h.id] ?? []);
+    // The trail is appended in order, but a repair or an out-of-order write
+    // must not be able to pick the wrong "last" -- take the max `at` under the
+    // boundary rather than trusting array position.
+    let priorValue: number | null = null;
+    let priorAt = "";
+    for (const p of points) {
+      if (typeof p?.at !== "string" || p.at >= boundary) continue;
+      if (typeof p.value !== "number" || !Number.isFinite(p.value)) continue;
+      if (priorValue === null || p.at > priorAt) {
+        priorValue = p.value;
+        priorAt = p.at;
+      }
+    }
+
+    if (priorValue === null) {
+      // No yesterday for this holding: it contributes its current value, i.e.
+      // no change. Never its cost, never zero -- either would manufacture a
+      // move out of a holding we know nothing new about.
+      previousClose += current;
+      continue;
+    }
+    holdingsWithPrior += 1;
+    const qty = Math.max(1, toNumber(h.quantity, 1));
+    previousClose += priorValue * qty;
+  }
+
+  if (holdingsWithPrior === 0) {
+    // Nothing to difference against. Null, not zero -- see the field docs.
+    return {
+      previousCloseValue: null,
+      previousCloseAt: null,
+      dayChangeValue: null,
+      dayChangePct: null,
+      dayChangeCoverage: { holdingsWithPrior: 0, holdingsTotal },
+    };
+  }
+
+  const previousCloseValue = round2(previousClose);
+  const dayChangeValue = round2(displayableTotalValue - previousCloseValue);
+  return {
+    previousCloseValue,
+    previousCloseAt: boundary,
+    dayChangeValue,
+    dayChangePct:
+      previousCloseValue > 0
+        ? Math.round((dayChangeValue / previousCloseValue) * 10000) / 10000
+        : null,
+    dayChangeCoverage: { holdingsWithPrior, holdingsTotal },
+  };
 }
 
 // CF-EBAY-REVIEW-QUEUE (2026-07-12): "pending-review" is the eBay-auto
@@ -5682,7 +5873,19 @@ function round2(v: number): number {
   return Math.round(v * 100) / 100;
 }
 
-export function summarizeHoldings(items: PortfolioHolding[]): PortfolioSummary {
+export function summarizeHoldings(
+  items: PortfolioHolding[],
+  /** CF-PORTFOLIO-DAY-CHANGE (2026-09-04): the user doc's stored price trails.
+   *  OPTIONAL, and its absence is not an error -- every existing caller
+   *  (health, ERP, tests) summarises holdings it holds in hand with no doc
+   *  around them, and they keep working: with no trails there is no prior
+   *  point, so the day-change fields come back null and nothing else moves.
+   *  The day change lives HERE rather than in the route because this is the
+   *  canonical aggregator (see the note below) -- a second site summing
+   *  portfolio totals is exactly the drift this function exists to prevent. */
+  trails?: PriceTrailsByHolding,
+  now: Date | number = Date.now(),
+): PortfolioSummary {
   // CF-VALUATION-TOTALS-SPLIT (2026-06-12): canonical aggregator —
   // single site that produces dashboard totals so observed vs estimated
   // contributions can never drift across duplicate aggregation sites.
@@ -5774,6 +5977,10 @@ export function summarizeHoldings(items: PortfolioHolding[]): PortfolioSummary {
       observedGainLossPct === null
         ? null
         : Math.round(observedGainLossPct * 10000) / 10000,
+    // CF-PORTFOLIO-DAY-CHANGE -- differenced against the SAME headline total
+    // the rest of this object reports, so the bar can never show a day change
+    // that does not reconcile with the value printed beside it.
+    ...computeDayChange(items, trails, round2(headlineTotal), now),
   };
 }
 
@@ -5783,7 +5990,11 @@ export async function getPortfolioWithSummary(req: Request, res: Response) {
   if (!auth) return;
   const doc = await readUserDoc(auth.userId);
   const rawItems = Object.values(doc.holdings);
-  const summary = summarizeHoldings(rawItems);
+  // CF-PORTFOLIO-DAY-CHANGE (2026-09-04): the stored trails come off the doc
+  // ALREADY IN HAND -- no extra Cosmos read, and emphatically no reprice. This
+  // endpoint has never computed a price and still does not; the previous close
+  // is read out of history that the reprice job wrote earlier.
+  const summary = summarizeHoldings(rawItems, doc.priceHistoryByHolding);
   // CF-INVENTORY-CATALOG-IMAGE (2026-07-05): pre-resolve catalog card
   // images for every holding that has a resolved cardId. Bounded
   // concurrency 8 — meta cache is warm for common cards, so the fanout
@@ -10164,6 +10375,30 @@ export async function repriceHoldingsForUser(
         });
         continue;
       }
+      // CF-A-STALE-VALUE-IS-NOT-A-PRICE (Drew, 2026-09-04). Same shared write
+      // as the on-demand lane, so the two cannot drift: the prior value is
+      // kept and labelled, and the legacy chain does NOT run — it could only
+      // substitute a number the engine deliberately withheld.
+      if (bOneEntry.outcome === "no-basis-refusal") {
+        const nb = noBasisRefusalWrite(holding, bOneEntry.reason, bOneEntry.valuation, new Date().toISOString());
+        doc.holdings[holding.id] = nb.holding;
+        console.warn(JSON.stringify({
+          event: "no_basis_refusal_persisted",
+          source: "portfolioStore.repriceHoldingsForUser",
+          holdingId: holding.id,
+          reason: bOneEntry.reason,
+          summary: nb.summary,
+        }));
+        updates.push({
+          id: holding.id,
+          status: "skipped",
+          reason: `${bOneEntry.reason}: ${nb.summary}`,
+          cardId: typeof (holding as any).cardId === "string" && ((holding as any).cardId as string).trim() !== ""
+            ? ((holding as any).cardId as string).trim()
+            : null,
+        });
+        continue;
+      }
       const bEntryDecided = bOneEntry.outcome !== "unresolved";
 
       // CF-UNIFIED-PRICING-BATCH-EARLY-EXIT (Drew, 2026-08-04). Same
@@ -10742,11 +10977,19 @@ export async function repriceHoldingsForUser(
               // slug-mismatch price. Bobby Witt Jr. BGS 9.5 auto ($1,260
               // paid) got matched to non-auto base cards at $6.92 by the
               // ladder's family-baseline rung. If proposed < 15% of cost
-              // basis on a > $50 holding, keep the prior estimate.
-              const qty = Math.max(1, toNumber(holding.quantity, 1));
-              const costBasis = toNumber(holding.totalCostBasis, toNumber(holding.purchasePrice, 0) * qty);
-              const proposedTotal = fmv * qty;
-              if (costBasis > 50 && (proposedTotal / costBasis) < 0.15) {
+              // basis, keep the prior estimate.
+              //
+              // CF-THE-FLOOR-IS-A-RATIO-NOT-A-DOLLAR-AMOUNT (Drew,
+              // 2026-09-04). This lane held its own copy of the predicate,
+              // dollar gate and all, so the $29.45 Chipper Jones passed here
+              // for the same reason it passed the one-entry lane. The
+              // predicate now comes from `costBasisFloor` — the SAME function
+              // both one-entry lanes call — so the doctrine has one
+              // implementation and this lane cannot drift from it again.
+              const floor = costBasisFloor(holding, fmv);
+              const costBasis = floor.costBasis;
+              const proposedTotal = floor.proposedTotal;
+              if (floor.rejects) {
                 // CF-ONE-FLOOR-ONE-WRITE (2026-09-04). This lane was the THIRD
                 // cost-basis floor and the one #1754 did not reach: it logged
                 // that it was retaining the prior value and then wrote NOTHING,
@@ -11101,8 +11344,17 @@ export async function repriceHoldingsForUser(
         const priorConfidence = typeof priorMeta?.confidence === "number" && Number.isFinite(priorMeta.confidence)
           ? (priorMeta.confidence as number)
           : null;
+        // The ENGINE's own reason for declining, when it named one, so the
+        // withhold says `identity-not-in-catalog` rather than a generic
+        // "confidence-gate" that describes the lane instead of the cause.
+        // CF-A-REFUSAL-STATES-WHAT-ACTUALLY-HAPPENED (Drew, 2026-09-04).
+        const engineReason = bOneEntry.outcome !== "unresolved" || bOneEntry.valuation
+          ? bOneEntry.valuation?.reason ?? null
+          : null;
+        const retentionWithholdReason = engineReason ?? "confidence-gate";
         const retentionReason =
-          `value retained unchanged by the confidence-gated reprice (${failed.join(", ")}; source=${estSource || "ok"})`;
+          `value retained unchanged by the confidence-gated reprice (${failed.join(", ")}; source=${estSource || "ok"}`
+          + `${engineReason ? `; engine: ${engineReason}` : ""})`;
         doc.holdings[holding.id] = writeHoldingValuation(holding, {
           fairMarketValue: keptFmv,
           // The rung the number was priced under still describes it — the
@@ -11122,19 +11374,40 @@ export async function repriceHoldingsForUser(
           nowIso: now,
           // Re-state the meta so the retention carries the same shape a fresh
           // write would, with the prior confidence or an explicit null.
-          ...(priorMeta
-            ? {
-                meta: {
-                  slug: typeof priorMeta.slug === "string" ? priorMeta.slug : null,
-                  compsUsed: typeof priorMeta.compsUsed === "number" ? priorMeta.compsUsed : null,
-                  confidence: priorConfidence,
-                  ...(Array.isArray(priorMeta.labels) ? { labels: priorMeta.labels as never } : {}),
-                  ...(priorMeta.selfAnchored !== undefined
-                    ? { selfAnchored: priorMeta.selfAnchored as never }
-                    : {}),
-                },
-              }
-            : { writeMeta: false }),
+          // CF-A-STALE-VALUE-IS-NOT-A-PRICE (Drew, 2026-09-04). The retention
+          // above records WHY on the row, but its meta was an ORDINARY meta —
+          // no `withheld` — so `writeHoldingValuation` stamped `method` as the
+          // carried rung (or `unlabelled-carry`), and the row read to every
+          // rung gate and to the invariant auditor as a current price.
+          //
+          // Measured in the 2026-09-04 audit: the Bellingham Griffey shows
+          // $1,850 while the engine, asked for that identity, returns
+          // `identity-not-in-catalog`. Nothing on the row said the number was
+          // a previous pass's. This is the END of the chain — every lane above
+          // has declined, including the legacy exact-pool read that
+          // legitimately prices catalog-unnameable identities WITH sales — so
+          // it is the first point at which "no price could be published" is
+          // actually known, and therefore the right place to say it.
+          //
+          // The number is still KEPT (nothing here faults it) and the prior
+          // rung still describes it; what changes is that the refusal is now
+          // VISIBLE, carrying the engine's own reason when it named one.
+          meta: {
+            slug: typeof priorMeta?.slug === "string" ? priorMeta.slug : null,
+            compsUsed: typeof priorMeta?.compsUsed === "number" ? priorMeta.compsUsed : null,
+            confidence: priorConfidence,
+            ...(Array.isArray(priorMeta?.labels) ? { labels: priorMeta.labels as never } : {}),
+            ...(priorMeta?.selfAnchored !== undefined
+              ? { selfAnchored: priorMeta.selfAnchored as never }
+              : {}),
+            withheld: {
+              reason: retentionWithholdReason,
+              blockingId: typeof priorMeta?.slug === "string" ? priorMeta.slug : null,
+              blockingCount: typeof priorMeta?.compsUsed === "number" ? priorMeta.compsUsed : 0,
+              // Nothing was computed to publish, so no number is borrowed.
+              proposed: null,
+            },
+          },
           fields: {
             ...repriceIdentityPatch,
             verdict: reasonLabel,

@@ -153,6 +153,12 @@ export interface CanonicalFmvProvenance {
      *  test it against the caller's own id. Null on vendor rows and on any
      *  rung that prices off a family pool rather than the card's own. */
     contributorUserId?: string | null;
+    /** CF-INDEPENDENCE-MUST-NAME-ITS-BASIS (2026-09-04). The seller behind
+     *  the sale, when the ingest path could see one. The 3-independent-
+     *  seller threshold (Drew, 2026-09-01) is evaluated on this field;
+     *  absent on all but 24 of 6.87M sold_comps rows, which is precisely
+     *  why the independence basis must be reported rather than assumed. */
+    sellerHandle?: string | null;
     // Whether this comp was ratio-normalized from a sibling parallel.
     normalizedFromParallel?: string | null;
     /** The ratio applied when normalized; null for direct comps. */

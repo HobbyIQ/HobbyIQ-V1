@@ -68,6 +68,12 @@ import { resolvePricingConfidence } from "../portfolioiq/pricingEnvelope.builder
 import type { TrendIQResult } from "../compiq/trendIQ.types.js";
 import { sellWindowPlayerIndex } from "../signals/sellWindowPlayerIndex.js";
 
+import {
+  assessSellerIndependence,
+  isThinPoolForIndependence,
+  INDEPENDENCE_UNVERIFIED_CODE,
+  MIN_INDEPENDENT_SELLERS,
+} from "../compiq/sellerIndependence.js";
 // ---------------------------------------------------------------------------
 // Inputs / outputs
 // ---------------------------------------------------------------------------
@@ -126,7 +132,12 @@ export type SellDraftPriceStatus =
 /** A label the seller must see, and that travels into the description. */
 export interface SellDraftLabel {
   /** Machine-readable, for clients that want to style it. */
-  code: "speculative" | "self-anchored" | "fallback-rung" | "low-confidence";
+  code:
+    | "speculative"
+    | "self-anchored"
+    | "fallback-rung"
+    | "low-confidence"
+    | typeof INDEPENDENCE_UNVERIFIED_CODE;
   /** The sentence shown to the seller and written into the draft text. */
   text: string;
 }
@@ -282,6 +293,58 @@ export function labelsForResult(
           "of this card. No independent sale supports it yet."
         : `Partly self-anchored: ${selfComps.length} of ${poolTotal} sales behind ` +
           "this estimate are your own.",
+    });
+  }
+
+  // CF-INDEPENDENCE-MUST-NAME-ITS-BASIS (2026-09-04). Drew's ruling is that
+  // a published FMV needs three INDEPENDENT sellers behind it. The engine
+  // cannot see sellers on essentially any row — sold_comps carries a
+  // `sellerHandle` on 24 of 6.87M rows, every vendor ingest passing a
+  // literal null — so on almost every result the honest statement is that
+  // independence is UNVERIFIED, not that it is satisfied. Saying nothing
+  // here is what let a row count masquerade as a seller count.
+  //
+  // Only the exact-pool rungs are covered: a family/sibling rung is already
+  // labeled `fallback-rung`, and stacking an independence caveat on a number
+  // that never claimed to come from this card's own sales adds noise, not
+  // information. A fully self-anchored result is likewise already told the
+  // strongest possible version of this ("no independent sale supports it").
+  //
+  // CF-A-CAVEAT-THAT-FIRES-EVERYWHERE-SAYS-NOTHING (Drew, 2026-09-04).
+  // #1775 shipped the sentence on EVERY exact-pool result, because
+  // `row-count` is the basis on essentially every one of them. A caveat
+  // that appears on every card carries no information about any card, and
+  // it crowds out the readings that do. Drew's ruling: show it only where
+  // it changes the read — on a THIN pool, where one seller could plausibly
+  // be behind every sale. On a healthy pool the unverifiable case is noise.
+  // Nothing is hidden by the gate: #1775 puts each row's `sellerHandle` on
+  // `provenance.comps`, so a caller can run `assessSellerIndependence` over
+  // the wire itself and recover the basis. Only the SENTENCE is gated.
+  //
+  // The gate reads `poolTotal` (`provenance.compCount`), NOT `comps.length`
+  // — `comps` is truncated to 8-10 rows for display, so its length would
+  // call a 40-sale pool thin whenever the sample was short.
+  const independence = assessSellerIndependence(comps);
+  const alreadySelfAnchoredWhole = selfComps.length > 0 && selfComps.length === poolTotal;
+  const onExactPool = Boolean(rung) && isExactPoolRung(rung!) && !alreadySelfAnchoredWhole;
+  if (onExactPool && independence.basis !== "seller-identity" && isThinPoolForIndependence(poolTotal)) {
+    labels.push({
+      code: INDEPENDENCE_UNVERIFIED_CODE,
+      text:
+        `Independence unverified: only ${poolTotal} sale${poolTotal === 1 ? "" : "s"} back this ` +
+        "estimate, and our sources do not tell us who sold them — one seller could " +
+        `be behind all of them, so we cannot confirm ${MIN_INDEPENDENT_SELLERS} independent ` +
+        "sellers stand behind it.",
+    });
+  } else if (onExactPool && independence.basis === "seller-identity" && !independence.meets) {
+    // Sellers ARE visible and there are too few of them. This is the only
+    // branch entitled to speak about seller counts as fact.
+    labels.push({
+      code: INDEPENDENCE_UNVERIFIED_CODE,
+      text:
+        `Thin seller base: only ${independence.count} independent seller` +
+        `${independence.count === 1 ? "" : "s"} stand behind this estimate ` +
+        `(${MIN_INDEPENDENT_SELLERS} is our threshold).`,
     });
   }
 

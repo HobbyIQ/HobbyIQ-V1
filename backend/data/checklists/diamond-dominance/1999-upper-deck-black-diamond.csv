@@ -119,36 +119,36 @@ base,117,,false,,J.D. Drew
 base,118,,false,,Shane Monahan
 base,119,,false,,Rolando Arrojo
 base,120,,false,,George Lombard
-insert-diamond-dominance,D1,Diamond Dominance,false,,Kerry Wood
-insert-diamond-dominance,D2,Diamond Dominance,false,,Derek Jeter
-insert-diamond-dominance,D3,Diamond Dominance,false,,Alex Rodriguez
-insert-diamond-dominance,D4,Diamond Dominance,false,,Frank Thomas
-insert-diamond-dominance,D5,Diamond Dominance,false,,Jeff Bagwell
-insert-diamond-dominance,D6,Diamond Dominance,false,,Mo Vaughn
-insert-diamond-dominance,D7,Diamond Dominance,false,,Ivan Rodriguez
-insert-diamond-dominance,D8,Diamond Dominance,false,,Cal Ripken Jr.
-insert-diamond-dominance,D9,Diamond Dominance,false,,Rolando Arrojo
-insert-diamond-dominance,D10,Diamond Dominance,false,,Chipper Jones
-insert-diamond-dominance,D11,Diamond Dominance,false,,Kenny Lofton
-insert-diamond-dominance,D12,Diamond Dominance,false,,Paul Konerko
-insert-diamond-dominance,D13,Diamond Dominance,false,,Mike Piazza
-insert-diamond-dominance,D14,Diamond Dominance,false,,Ben Grieve
-insert-diamond-dominance,D15,Diamond Dominance,false,,Nomar Garciaparra
-insert-diamond-dominance,D16,Diamond Dominance,false,,Travis Lee
-insert-diamond-dominance,D17,Diamond Dominance,false,,Scott Rolen
-insert-diamond-dominance,D18,Diamond Dominance,false,,Juan Gonzalez
-insert-diamond-dominance,D19,Diamond Dominance,false,,Tony Gwynn
-insert-diamond-dominance,D20,Diamond Dominance,false,,Tony Clark
-insert-diamond-dominance,D21,Diamond Dominance,false,,Roger Clemens
-insert-diamond-dominance,D22,Diamond Dominance,false,,Sammy Sosa
-insert-diamond-dominance,D23,Diamond Dominance,false,,Larry Walker
-insert-diamond-dominance,D24,Diamond Dominance,false,,Ken Griffey Jr.
-insert-diamond-dominance,D25,Diamond Dominance,false,,Mark McGwire
-insert-diamond-dominance,D26,Diamond Dominance,false,,Barry Bonds
-insert-diamond-dominance,D27,Diamond Dominance,false,,Vladimir Guerrero
-insert-diamond-dominance,D28,Diamond Dominance,false,,Tino Martinez
-insert-diamond-dominance,D29,Diamond Dominance,false,,Greg Maddux
-insert-diamond-dominance,D30,Diamond Dominance,false,,Babe Ruth
+insert-diamond-dominance,D1,Diamond Dominance,false,1500,Kerry Wood
+insert-diamond-dominance,D2,Diamond Dominance,false,1500,Derek Jeter
+insert-diamond-dominance,D3,Diamond Dominance,false,1500,Alex Rodriguez
+insert-diamond-dominance,D4,Diamond Dominance,false,1500,Frank Thomas
+insert-diamond-dominance,D5,Diamond Dominance,false,1500,Jeff Bagwell
+insert-diamond-dominance,D6,Diamond Dominance,false,1500,Mo Vaughn
+insert-diamond-dominance,D7,Diamond Dominance,false,1500,Ivan Rodriguez
+insert-diamond-dominance,D8,Diamond Dominance,false,1500,Cal Ripken Jr.
+insert-diamond-dominance,D9,Diamond Dominance,false,1500,Rolando Arrojo
+insert-diamond-dominance,D10,Diamond Dominance,false,1500,Chipper Jones
+insert-diamond-dominance,D11,Diamond Dominance,false,1500,Kenny Lofton
+insert-diamond-dominance,D12,Diamond Dominance,false,1500,Paul Konerko
+insert-diamond-dominance,D13,Diamond Dominance,false,1500,Mike Piazza
+insert-diamond-dominance,D14,Diamond Dominance,false,1500,Ben Grieve
+insert-diamond-dominance,D15,Diamond Dominance,false,1500,Nomar Garciaparra
+insert-diamond-dominance,D16,Diamond Dominance,false,1500,Travis Lee
+insert-diamond-dominance,D17,Diamond Dominance,false,1500,Scott Rolen
+insert-diamond-dominance,D18,Diamond Dominance,false,1500,Juan Gonzalez
+insert-diamond-dominance,D19,Diamond Dominance,false,1500,Tony Gwynn
+insert-diamond-dominance,D20,Diamond Dominance,false,1500,Tony Clark
+insert-diamond-dominance,D21,Diamond Dominance,false,1500,Roger Clemens
+insert-diamond-dominance,D22,Diamond Dominance,false,1500,Sammy Sosa
+insert-diamond-dominance,D23,Diamond Dominance,false,1500,Larry Walker
+insert-diamond-dominance,D24,Diamond Dominance,false,1500,Ken Griffey Jr.
+insert-diamond-dominance,D25,Diamond Dominance,false,1500,Mark McGwire
+insert-diamond-dominance,D26,Diamond Dominance,false,1500,Barry Bonds
+insert-diamond-dominance,D27,Diamond Dominance,false,1500,Vladimir Guerrero
+insert-diamond-dominance,D28,Diamond Dominance,false,1500,Tino Martinez
+insert-diamond-dominance,D29,Diamond Dominance,false,1500,Greg Maddux
+insert-diamond-dominance,D30,Diamond Dominance,false,1500,Babe Ruth
 insert-mystery-numbers,M1,Mystery Numbers,false,,Babe Ruth 100
 insert-mystery-numbers,M2,Mystery Numbers,false,,Ken Griffey Jr. 200
 insert-mystery-numbers,M3,Mystery Numbers,false,,Kerry Wood 300

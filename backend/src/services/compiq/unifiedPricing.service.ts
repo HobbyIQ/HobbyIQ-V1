@@ -21,6 +21,7 @@
 // Both derive the same numbers from the same rows.
 
 import { CosmosClient, type Container } from "@azure/cosmos";
+import { assessSellerIndependence, MIN_INDEPENDENT_SELLERS } from "./sellerIndependence.js";
 import { dedupeSoldComps } from "../portfolioiq/dedupeSoldComps.js";
 import { projectFromLeadingEdge } from "./nextSaleProjection.service.js";
 import { readExactPoolRows, type ExactPoolRow } from "./exactPoolReader.js";
@@ -173,7 +174,7 @@ export interface UnifiedGradeEntry {
   // makes a published result self-anchored, and the reprieve above can KEEP
   // such a row in the priced pool; without this field every consumer
   // downstream sees somebody else's sale and the label never fires.
-  sales?: Array<{ price: number; soldAt: string; source: string | null; contributorUserId: string | null }>;
+  sales?: Array<{ price: number; soldAt: string; source: string | null; contributorUserId: string | null; sellerHandle?: string | null }>;
   // CF-THE-PROJECTION-IS-THE-LEADING-EDGE (D22). What the rung did, in
   // prose for the basis: the anchor and how far back it sits, the trend
   // applied from there, the newest-sale band, or the one-sale policy's
@@ -226,7 +227,7 @@ type RawCompRow = ExactPoolRow;
 // market signal for a rare parallel (Victor Figueroa Red Ink SSP: 1
 // self-comp @ $278.60, 0 other comps). Filtering it out leaves nothing
 // and legacy engine's fuzzy fallback produces $1.89.
-const SELF_COMP_MIN_OTHER_SAMPLES = 3;
+const SELF_COMP_MIN_OTHER_SAMPLES = MIN_INDEPENDENT_SELLERS;
 
 /** The identity's deduped pool in the window. `null` when Cosmos is not
  *  configured. CF-ONE-VALUATION-PATH (D16): the query lives in
@@ -303,9 +304,16 @@ function applySelfCompRule(rows: RawCompRow[], excludeContributorUserId?: string
   }
   for (const tierRowsForLabel of byTier.values()) {
     const others = tierRowsForLabel.filter((r) => r.contributorUserId !== excludeContributorUserId);
-    // The tier can price itself without the owner: drop the self-comps.
-    // Otherwise keep them — they carry the only market signal this tier has.
-    kept.push(...(others.length >= SELF_COMP_MIN_OTHER_SAMPLES ? others : tierRowsForLabel));
+    // CF-INDEPENDENCE-MUST-NAME-ITS-BASIS (2026-09-04). "Can this tier
+    // price itself without the owner?" is the 3-INDEPENDENT-SELLER question
+    // (Drew, 2026-09-01), and it is asked here on seller identity whenever
+    // the surviving rows carry one. When they do not — which is nearly
+    // always, sold_comps having a seller handle on 24 of 6.87M rows — the
+    // verdict falls back to the row count it has always used and SAYS so on
+    // `basis`, so the caveat downstream is the honest one. The decision
+    // itself is unchanged for unverifiable pools: same floor, same rows.
+    const verdict = assessSellerIndependence(others);
+    kept.push(...(verdict.meets ? others : tierRowsForLabel));
   }
   return kept;
 }
@@ -323,8 +331,42 @@ async function queryComps(
   return rows === null ? null : applySelfCompRule(rows, excludeContributorUserId);
 }
 
+/**
+ * CF-A-GRADED-SALE-NEVER-ENTERS-THE-RAW-TIER (Drew, 2026-09-04).
+ *
+ * This function used to read `if (!company) return "Raw"` — a falsy
+ * `gradeCompany` was taken as a POSITIVE ASSERTION that the sale was raw.
+ * It is not. It is an ABSENCE, and the pool is full of rows where the absence
+ * means "never populated at ingest", not "ungraded": `gradeParser.ts` records
+ * ~7,900 AUTH slabs in the wrong bucket, and `backfill-grade-from-title.cjs`
+ * exists solely to fill this field from titles — its query targets exactly the
+ * three shapes this branch called Raw (`NOT IS_DEFINED`, `null`, `""`). That
+ * script defaults to dry mode, so those rows are still in the pool.
+ *
+ * Measured in the 2026-09-04 audit: a raw 1997 Metal Universe Chipper Jones
+ * #31 priced $2.00 off a weighted median on n=3 whose largest member was a
+ * PSA 9 sale at $40 that had landed in the RAW tier by this branch. The
+ * engine cannot contradict it downstream: `exactPoolReader`'s projection does
+ * not select `c.title`, so the one field that proves the row is graded never
+ * reaches the engine at all.
+ *
+ * The fix is to stop asserting. A row is Raw only when it is raw the way
+ * `gradeLadder.isRaw` already defines it — no company AND no grade value.
+ * A row carrying a grade VALUE with no company is a graded sale of an
+ * unrecorded grader, and it gets the same treatment `gradeValueToken` already
+ * gives an unreadable value: a deliberately unmatchable token. It matches no
+ * requested tier, so it prices nothing and contaminates nothing — it is
+ * excluded from the raw pool without being silently deleted from the curve,
+ * which is what makes the population visible instead of invisible.
+ */
+export const UNKNOWN_GRADER_TIER = "GRADED ?";
+
 function gradeLabel(company: string | null, value: number | null): string {
-  if (!company) return "Raw";
+  if (!company) {
+    // Not "no company therefore raw" — "no company AND no grade therefore raw".
+    const token = gradeValueToken(value);
+    return token === "?" ? "Raw" : UNKNOWN_GRADER_TIER;
+  }
   return `${String(company).toUpperCase()} ${gradeValueToken(value)}`;
 }
 
@@ -350,6 +392,14 @@ function gradeLabel(company: string | null, value: number | null): string {
  * unreadable grade refuses rather than borrowing another tier's number.
  */
 function gradeValueToken(value: number | null | undefined): string {
+  // CF-A-GRADED-SALE-NEVER-ENTERS-THE-RAW-TIER (2026-09-04): absence is
+  // rejected BEFORE the numeric parse. `Number(null)` and `Number("")` are
+  // both 0 — finite — so a row with no grade value used to render the token
+  // "0". That was harmless while a falsy company short-circuited to "Raw"
+  // above; now that the company branch consults this token to tell a raw row
+  // from a graded-but-companyless one, a null rendering as "0" would evict
+  // every genuinely raw sale from the raw tier. Absence first, parse second.
+  if (value === null || value === undefined || (value as unknown) === "") return "?";
   const n = typeof value === "number" ? value : Number(value);
   return Number.isFinite(n) ? String(n) : "?";
 }
@@ -945,10 +995,10 @@ export async function computeUnifiedPrice(
       projectionNote: trend.projectionNote,
       windowNote: tierWindowNotes.get(label) ?? null,
       sales: rows
-        .map((r) => ({ price: Number(r.price), soldAt: String(r.soldAt), source: r.source ?? null, contributorUserId: r.contributorUserId ?? null, t: Date.parse(r.soldAt) }))
+        .map((r) => ({ price: Number(r.price), soldAt: String(r.soldAt), source: r.source ?? null, contributorUserId: r.contributorUserId ?? null, sellerHandle: r.sellerHandle ?? null, t: Date.parse(r.soldAt) }))
         .sort((a, b) => (Number.isFinite(b.t) ? b.t : 0) - (Number.isFinite(a.t) ? a.t : 0))
         .slice(0, TIER_SALES_ON_WIRE)
-        .map(({ price, soldAt, source, contributorUserId }) => ({ price, soldAt, source, contributorUserId })),
+        .map(({ price, soldAt, source, contributorUserId, sellerHandle }) => ({ price, soldAt, source, contributorUserId, sellerHandle })),
     });
   }
   gradeCurve.sort((a, b) => (b.sampleCount - a.sampleCount));

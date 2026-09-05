@@ -639,6 +639,27 @@ export interface PortfolioSummary {
   observedCostBasis?: number;
   observedGainLoss?: number;
   observedGainLossPct?: number;
+  // CF-PORTFOLIO-DAY-CHANGE (Drew, 2026-09-04). The previous close, computed
+  // server-side from the persisted price trail (`priceHistoryByHolding`) at
+  // the most recent UTC midnight. NEVER a live reprice.
+  //
+  // OPTIONAL on the wire because a worker that has not been redeployed yet
+  // will not send them, and the bar must render on the old payload rather
+  // than crash — `barStats` treats absent exactly like null.
+  //
+  // NULL IS NOT ZERO. Null means "no holding has a prior point": there is no
+  // yesterday to difference against. Zero means a measured flat day. The bar
+  // renders an em dash for the first and "$0" for the second.
+  previousCloseValue?: number | null;
+  /** ISO-8601 instant the previous close was taken at (UTC midnight). */
+  previousCloseAt?: string | null;
+  dayChangeValue?: number | null;
+  /** A FRACTION, not percent points: 0.0123 = +1.23%. */
+  dayChangePct?: number | null;
+  /** How much of the portfolio the day change measures. Holdings with no prior
+   *  point contribute zero change, so a low `holdingsWithPrior` means the move
+   *  understates reality — the bar says so rather than hiding it. */
+  dayChangeCoverage?: { holdingsWithPrior: number; holdingsTotal: number };
 }
 
 export interface PortfolioResponse {

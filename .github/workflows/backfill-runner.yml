@@ -169,6 +169,29 @@ on:
           # 2000/base4 is the English Base Set 2, so a pool sweep with no year
           # axis would take both. No new input: the TO key travels in `titles`.
           - rekey-product-setkey
+          # CF-A-WRONG-IDENTITY-IS-NOT-A-MISSING-ONE (Drew, 2026-09-04, R2).
+          # Re-derives the identity of holdings that HAVE one and have the
+          # WRONG one -- the population `recheck-holding-identity`'s own sweep
+          # skips by construction (it re-derives only holdings with NO
+          # identity, and nothing else in the product re-derives at all).
+          # A shim over scripts/comp-quality/recheck-holding-identity.ts
+          # MODE=rederive; the logic lives beside the sweep it inverts because
+          # both call the live catalogMatcher out of src/.
+          #
+          # SCOPED BY NAME OR REFUSED (exit 2). Pass the holding ids in
+          # `titles` (comma-separated ids or id prefixes) or set a single user
+          # via USER_ID. There is deliberately no whole-portfolio sweep: this
+          # mode can overwrite an identity that is already correct.
+          #
+          # Checklist-matched only, never mints: CATALOG_MATCH_ONLY_ENABLED
+          # plus an untrusted source, and then the destination slug is read
+          # back from card_catalog by id -- a slug no checklist row backs is
+          # reported UNVERIFIED and never written. A holding claiming a print
+          # run, serial or parallel the destination does not carry is refused
+          # the same way rather than collapsed onto a less specific row.
+          # `apply` drives BACKFILL_APPLY as usual, and every write is
+          # verified by re-reading the document (exit 5 on a mismatch).
+          - rederive-holding-identity
           - repair-truncated-card-year
           - repair-select-subbrand-misslug
           - fold-checklist-numbered-twins
@@ -327,6 +350,36 @@ on:
           # and a non-Tiffany sale in ONE grade tier, which is the pricing
           # damage as it stands today.
           - census-specialization-stated
+          # CF-THE-ENGINE-CONSUMES-CH-SALES-NOT-CH-PRODUCT-FIELDS, at the
+          # keying step (2026-09-04). CardHedge labels a PRODUCT ("Black &
+          # White Red Ink"); historicalBackfill stamped that label onto every
+          # SALE of it and slugged from the stamp, so 56 base autos at a $10
+          # median were keyed to the Red Ink slug and priced the same card as
+          # Drew's genuine $270 Red Ink purchase.
+          #
+          # The census is READ ONLY and has no write path in any mode; `apply`
+          # is irrelevant to it and the gate below refuses an apply outright.
+          # It groups CardHedge rows by the PRODUCT ID -- which is not a field,
+          # it is the first segment of the composite key the backfill mints --
+          # and reports the products whose sales' titles never witness the
+          # label they wear.
+          - census-ch-product-label-parallel
+          # The repair. SCOPE is REQUIRED and carries a comma-separated list of
+          # CardHedge PRODUCT IDS; there is no 'all', and the runner's
+          # inherited default `scope=refractor` is REFUSED (exit 2) in BOTH
+          # modes -- a report over an unnamed scope is how an apply over an
+          # unnamed scope gets authorised. Five assertions must all hold per
+          # row (source / scope / label-is-the-slug / no title witness /
+          # checklist-backed destination), and the classifier's base-eviction
+          # guard 2 is NOT loosened: this lane is a strictly narrower
+          # predicate, not a relaxation of that one.
+          - repair-ch-product-label-parallel
+          # The CATALOG half, REPORT ONLY and with no --apply at all: the three
+          # CPA-VF rows Drew ruled are one card (Red Ink IS the B&W Shimmer
+          # SSP, 2026-08-30). It prints the alias plan and the two blockers --
+          # `supersededBy` is read by nothing in backend/src, and one stray is
+          # `user-verified` and so report-only forever.
+          - report-ch-product-label-catalog-aliases
           # CF-THE-LIST-IS-THE-SCOPE (2026-09-01, four-values R2): move only the
           # sold_comps rows named in a committed list file. `scope` carries the
           # list path (default data/pool-relocations/2026-09-01-four-values.json);
@@ -447,6 +500,24 @@ on:
           # and the run COUNTs rows-missing-cardYear per source before AND after
           # itself -- the banner cannot certify the write.
           - backfillCatalogCardYearFromSlug
+          # CF-AN-ALIAS-IS-NOT-A-SECOND-POOL (2026-09-04) -- the WRITE half of
+          # #1783. Declaring a RULED_ALIAS fixes the deriver and moves no stored
+          # row: post-alias the census sees stored identity == derived key and
+          # calls those rows AGREE, and AGREE is never written -- so the pool
+          # stays split on the OLD segment while the holding re-derives onto
+          # the ruled key. This lane re-keys segment 3 of cardId AND
+          # hobbyiqCardId (the exact pool reader ORs them) to the ruled key,
+          # through relocateSoldComp: upsert, read back, then delete -- a sale
+          # is never lost. Every other segment is carried byte for byte (D28:
+          # surgery, never a recompute). The alias list is READ from
+          # ruledAliases(), never retyped, so it cannot drift from the ruling.
+          # `scope` is REQUIRED and names the RULED KEY (the destination); the
+          # inherited "refractor" and an unruled key both REFUSE with exit 1
+          # before a Cosmos client is built. `years`/`sports` narrow the sweep
+          # and make the BEFORE/AFTER pool counts index-served. Sharding is
+          # OPT-IN via the #1765 helper. Catalog rows on an alias slug are
+          # REPORTED (count + sources) and NEVER written.
+          - reslug-ruled-alias
       apply:
         description: "Actually write (true) or dry-run only (false)"
         required: true
@@ -609,6 +680,63 @@ jobs:
         run: |
           echo "::error::census-split-identity is READ ONLY — it has no write path. Re-dispatch with apply=false; the repair is a separate audited lane."
           exit 1
+
+      # The same gate, same reasoning, for the two READ-ONLY lanes of
+      # CF-THE-ENGINE-CONSUMES-CH-SALES-NOT-CH-PRODUCT-FIELDS. Neither script
+      # has a write path in any mode, so an apply=true dispatch is a dispatch
+      # whose author expected a repair and would have got a report.
+      - name: Refuse an APPLY dispatch of the read-only CH-product-label lanes
+        if: ${{ (inputs.script == 'census-ch-product-label-parallel' || inputs.script == 'report-ch-product-label-catalog-aliases') && inputs.apply == true }}
+        shell: bash
+        run: |
+          echo "::error::${{ inputs.script }} is READ ONLY — it has no write path. Re-dispatch with apply=false; repair-ch-product-label-parallel is the lane that writes."
+          exit 1
+
+      # THE SCOPE IS THE WHOLE SAFETY ARGUMENT for the repair lane, so it is
+      # checked HERE as well as inside the script. `scope` carries a
+      # comma-separated list of CardHedge PRODUCT IDS
+      # (e.g. 1778540428361x447194681698603460); there is no 'all'.
+      #
+      # The runner-wide default is `refractor`, INHERITED rather than chosen,
+      # and it is refused rather than treated as "everything" -- the same
+      # doctrine rematch-sold-comps applies to its own apply-class scope. The
+      # refusal covers REPORT mode too: a report over an unnamed scope is how
+      # an apply over an unnamed scope gets authorised.
+      - name: The CH-product-label repair names its scope
+        if: ${{ inputs.script == 'repair-ch-product-label-parallel' }}
+        shell: bash
+        run: |
+          SCOPE='${{ inputs.scope }}'
+          if [ -z "$SCOPE" ] || [ "$SCOPE" = "refractor" ] || [ "$SCOPE" = "all" ]; then
+            echo "::error::repair-ch-product-label-parallel requires scope = a comma-separated list of CardHedge product ids. Got '$SCOPE' (the runner default 'refractor' and 'all' are refused — this lane has no whole-corpus mode)."
+            exit 1
+          fi
+          IFS=',' read -ra IDS <<< "$SCOPE"
+          for ID in "${IDS[@]}"; do
+            ID="$(echo "$ID" | tr -d '[:space:]')"
+            if ! echo "$ID" | grep -Eq '^[0-9]+x[0-9]+$'; then
+              echo "::error::'$ID' is not a CardHedge product id (expected <digits>x<digits>, e.g. 1778540428361x447194681698603460)."
+              exit 1
+            fi
+          done
+          echo "Scope confirmed: ${#IDS[@]} CardHedge product id(s)."
+
+      # Same lesson as the triage and the census libs one layer down: the
+      # five-assertion PREDICATE lives in a lib so the tests pin the code that
+      # runs. Both lanes require it, and a dispatch that reached Cosmos and
+      # then died on a missing require would have read the pool for nothing --
+      # or, in an apply, could have moved rows before failing.
+      - name: The CH-product-label predicate lib is present
+        if: ${{ inputs.script == 'census-ch-product-label-parallel' || inputs.script == 'repair-ch-product-label-parallel' }}
+        shell: bash
+        run: |
+          for LIB in ch-product-label rematch-classify relocate-sold-comp; do
+            if [ ! -f "backend/scripts/lib/$LIB.cjs" ]; then
+              echo "::error::backend/scripts/lib/$LIB.cjs is missing — the lane would read the pool and have no rule to classify it with"
+              exit 1
+            fi
+          done
+          echo "Predicate libs confirmed: ch-product-label, rematch-classify, relocate-sold-comp"
 
       - name: Fetch COSMOS_CONNECTION_STRING from HobbyIQ3 App Service
         shell: bash
@@ -1062,6 +1190,15 @@ jobs:
           # half and `titles` is the TO half. Documented here because the name
           # does not say so on its own.
           BCP_TITLES: ${{ inputs.titles }}
+          # rederive-holding-identity (R2, 2026-09-04) reads BCP_TITLES as its
+          # HOLDING-ID list -- comma-separated holding ids or id prefixes --
+          # for the same reason rekey-product-setkey reads it as a setKey:
+          # workflow_dispatch is at its input cap and a new one is not
+          # available. USER_ID is the other half of its scope (re-derive one
+          # user instead of a named list); it reuses the pinned userId the
+          # reprice lane already carries, and the script REFUSES to run with
+          # both halves empty rather than sweeping every holding.
+          USER_ID: ${{ inputs.script == 'rederive-holding-identity' && inputs.scope == 'user' && 'user-199fcbc9-58ba-4643-a0c9-f75bcbc90bd4' || '' }}
           SOURCES: ${{ inputs.sources }}
           # retire mode=source / audit-source-coverage: the per-product key
           # coverage floor under which an old product is kept, not retired.
@@ -1189,7 +1326,7 @@ jobs:
           # so the two lanes' artifacts can never overwrite each other. Guarded
           # on script for the same reason MODE tokens are: one name, one
           # meaning, and no chance of a path leaking into another lane.
-          CENSUS_OUT: ${{ inputs.script == 'census-split-identity' && '/tmp/split-identity-census' || '/tmp/rematch-census' }}
+          CENSUS_OUT: ${{ inputs.script == 'census-split-identity' && '/tmp/split-identity-census' || (inputs.script == 'census-ch-product-label-parallel' && '/tmp/ch-product-label-census' || '/tmp/rematch-census') }}
           # CENSUS_FROM_TS is deliberately NOT wired to a dispatch input. A
           # relaunch re-reads its shard from the top, exactly as the rematch
           # census does and for the same reason: the walk is READ ONLY, so
@@ -1363,6 +1500,33 @@ jobs:
         with:
           name: split-identity-census-slot-${{ inputs.slot }}-${{ github.run_id }}
           path: /tmp/split-identity-census/
+          if-no-files-found: warn
+          retention-days: 90
+
+      # The CH-product-label census names the SUSPECT products, their witness
+      # rates and their destination pools -- the list a repair dispatch's
+      # `scope` is built from. A report that only ever lived in a log is a
+      # report nobody can quote when authorising the apply.
+      - name: Upload the CH-product-label census
+        if: ${{ always() && inputs.script == 'census-ch-product-label-parallel' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ch-product-label-census-slot-${{ inputs.slot }}-${{ github.run_id }}
+          path: |
+            /tmp/ch-product-label-census/
+            /tmp/backfill.log
+          if-no-files-found: warn
+          retention-days: 90
+
+      # The repair's own log is the record of what moved and what was skipped
+      # by which leg, with the canary anchors before and after. Kept for the
+      # same reason: an apply has to be quotable afterwards.
+      - name: Upload the CH-product-label repair log
+        if: ${{ always() && inputs.script == 'repair-ch-product-label-parallel' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ch-product-label-repair-${{ inputs.apply == true && 'apply' || 'report' }}-${{ github.run_id }}
+          path: /tmp/backfill.log
           if-no-files-found: warn
           retention-days: 90
 

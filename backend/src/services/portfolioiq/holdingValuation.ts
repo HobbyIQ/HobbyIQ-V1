@@ -52,12 +52,7 @@
 import type { PortfolioHolding } from "../../types/portfolioiq.types.js";
 import { valueIdentity, type Valuation } from "../compiq/oneValuationPath.service.js";
 import { isExactPoolRung, isPricingRung } from "../compiq/fmvRung.js";
-import {
-  identityBackingOf,
-  mayPublishPrice,
-  NO_CHECKLIST_MATCH,
-  type IdentityBacking,
-} from "../catalog/identityBacking.js";
+import { identityBackingOf, mayPublishPrice, NO_CHECKLIST_MATCH } from "../catalog/identityBacking.js";
 import { persistedLabelsForValuation } from "../compiq/valuationLabels.js";
 import { writeHoldingValuation } from "./writeHoldingValuation.js";
 
@@ -65,20 +60,19 @@ export type HoldingValuationOutcome =
   | { outcome: "observed"; holding: PortfolioHolding; valuation: Valuation }
   | { outcome: "estimated"; holding: PortfolioHolding; valuation: Valuation }
   | { outcome: "cost-basis-floor"; valuation: Valuation; costBasis: number; proposedTotal: number }
-  | { outcome: "unresolved"; valuation: Valuation | null }
-  | { outcome: "unpriced"; valuation: Valuation }
   /**
-   * CF-WE-DONT-WANT-SELF-DERIVED-WE-WANT-IT-MATCHED-TO-CHECKLISTS
-   * (Drew, 2026-09-04). The ladder priced a number, and the IDENTITY it
-   * priced is not one a checklist transcribed — so the number is refused on
-   * identity grounds, before the cost-basis floor is even consulted.
-   *
-   * A separate outcome from `unpriced`, because the two mean opposite things
-   * to a reader and to the work queue: `unpriced` says the pool had nothing
-   * to say about a card we know; this says we do not know the card. One is
-   * fixed by sales arriving, the other by acquiring a checklist.
+   * CF-A-STALE-VALUE-IS-NOT-A-PRICE (Drew, 2026-09-04). The engine declined
+   * for a reason that must be PERSISTED as a refusal rather than fallen
+   * through: the catalog holds no identity for this holding, or the
+   * identity's pool is still migrating, or the only catalog row for it is one
+   * we minted from our own data. Distinguished from `unresolved` —
+   * which lets the caller's legacy chain run — precisely because these two
+   * must NOT be replaced by another lane's number. The caller writes the
+   * refusal via `noBasisRefusalWrite` and stops.
    */
-  | { outcome: "identity-unverified"; valuation: Valuation; backing: IdentityBacking };
+  | { outcome: "no-basis-refusal"; reason: NoBasisRefusalReason; valuation: Valuation | null }
+  | { outcome: "unresolved"; valuation: Valuation | null }
+  | { outcome: "unpriced"; valuation: Valuation };
 
 function num(v: unknown, fallback = 0): number {
   if (typeof v === "number") return Number.isFinite(v) ? v : fallback;
@@ -108,13 +102,43 @@ export function holdingValuationIds(holding: PortfolioHolding): { id: string; ca
   return null;
 }
 
-/** CF-COST-BASIS-SANITY-FLOOR, as at every unified write: a price under 15%
- *  of a > $50 cost basis is a slug mismatch, not a market. */
+/**
+ * CF-COST-BASIS-SANITY-FLOOR: a price under 15% of the cost basis is a slug
+ * mismatch, not a market.
+ *
+ * CF-THE-FLOOR-IS-A-RATIO-NOT-A-DOLLAR-AMOUNT (Drew, 2026-09-04). The floor
+ * used to read `costBasis > 50 && proposedTotal / costBasis < 0.15` — two
+ * gates, of which only the second is the doctrine. The dollar gate was never
+ * a statement about evidence; it was a guess that a small basis is not worth
+ * defending, and it let the exact defect the floor exists to catch through
+ * whenever the basis happened to be under fifty dollars.
+ *
+ * Measured in the 2026-09-04 audit of Drew's holdings: a raw 1997 Metal
+ * Universe Chipper Jones #31 on a $29.45 basis published $2.00 — a 93%
+ * haircut — UNREFUSED, because $29.45 is not > $50. The number came from a
+ * weighted median on n=3 that mixed a PSA 9 at $40 (see the tier leak below),
+ * the owner's own $20 raw sale, and three $2-$5 commons. A 93% haircut is the
+ * same evidence failure at $29.45 as at $2,945; the basis size does not make
+ * the pool any less contaminated, and a $29.45 holding is exactly the row a
+ * user is least likely to notice going wrong.
+ *
+ * So the gate is the RATIO alone, at any basis. `costBasis > 0` remains — not
+ * as a threshold but because a ratio against a zero or absent basis is not a
+ * number, and a holding with no basis recorded makes no claim for the floor to
+ * check. `proposedTotal > 0` likewise: a zero proposal is refused by the
+ * unpriced path, never by the floor.
+ */
+export const COST_BASIS_FLOOR_RATIO = 0.15;
+
 export function costBasisFloor(holding: PortfolioHolding, proposedUnit: number): { rejects: boolean; costBasis: number; proposedTotal: number } {
   const qty = Math.max(1, num(holding.quantity, 1));
   const costBasis = num(holding.totalCostBasis, num(holding.purchasePrice, 0) * qty);
   const proposedTotal = proposedUnit * qty;
-  return { rejects: costBasis > 50 && proposedTotal > 0 && proposedTotal / costBasis < 0.15, costBasis, proposedTotal };
+  return {
+    rejects: costBasis > 0 && proposedTotal > 0 && proposedTotal / costBasis < COST_BASIS_FLOOR_RATIO,
+    costBasis,
+    proposedTotal,
+  };
 }
 
 const round2 = (n: number): number => Math.round(n * 100) / 100;
@@ -210,43 +234,204 @@ function refusalFacts(
   };
 }
 
+/**
+ * CF-A-WITHHELD-PRICE-NEVER-RETAINS-THE-NUMBER-IT-REFUSED (Drew, 2026-09-04).
+ *
+ * The refusal write above was built on one sentence — "the floor's claim is
+ * that the NEW number is wrong, never that the old one is" — and that sentence
+ * is true only when the old number is a DIFFERENT claim. Measured read-only on
+ * Drew's portfolio after the #1776 reprice, it was not, on two of the three
+ * rows the floor touched:
+ *
+ *   69eab153  Chipper Jones 1997 Metal Universe #31, raw, $29.45 basis. The
+ *             floor refused $2.00 out of `exact-pool-weighted-median` on the
+ *             contaminated n=3 pool — and the value RETAINED was $2.00, the
+ *             number the PRE-#1776 engine had published from that same pool on
+ *             an earlier pass. The refusal kept the number it refused. Worse,
+ *             the retention carried the prior stamps forward verbatim:
+ *             `valueSource: "observed"`, `fmvRung:
+ *             "exact-pool-weighted-median"`, `pricingSourceMeta.method:
+ *             "exact-pool-weighted-median"`, labels `["self-anchored"]`. To
+ *             every reader — the web's `holdingProvenance()`, the report's
+ *             `classifyProvenance()` (an exact-pool rung in the observed slot
+ *             IS the `observed` class), the invariant auditor — that row reads
+ *             as a CURRENT OBSERVED MARKET PRICE of $2.00. The `withheld` block
+ *             sat beside it saying the opposite.
+ *
+ *   9f082213  Victor Figueroa CPA-VF Black & White Red Ink auto, $278.60 basis.
+ *             The floor refused $8.68 off a 56-row pool; the retained $11 is
+ *             3.9% of basis — itself a floor-failing publish from an earlier
+ *             pass of the same contaminated pool. Refusing 3.1% and publishing
+ *             3.9% is not a decision, it is the same number twice.
+ *
+ * Only 277b05a3 (Ripken, $49.99 kept against a $52.98 basis — 94.4%, from a
+ * genuine 41-comp `exact-pool-weighted-median` read of a DIFFERENT, uncontested
+ * pool on 2026-09-03) was a legitimate retention, and it is legitimate for
+ * exactly the two reasons this function now checks.
+ *
+ * THE RULE. A refusal may retain a prior value only when that value is a claim
+ * the refusal does not itself contradict. Two conditions, both required:
+ *
+ *   1. THE KEPT VALUE MUST ITSELF PASS THE FLOOR. Judged by the same
+ *      `costBasisFloor` predicate against the same basis. A retained number
+ *      below 15% of basis is the very shape the floor exists to refuse; keeping
+ *      it because it arrived earlier is a statement that the floor applies to
+ *      new numbers only, which is not the doctrine.
+ *   2. THE KEPT VALUE MUST NOT BE THE REFUSED POOL'S OWN PRIOR PUBLISH. When
+ *      the prior pass read the SAME pool (its meta's slug is the pool the floor
+ *      just blocked) under an exact-pool rung, its number is the same evidence
+ *      that just failed, one pass older. The floor's fault is with the POOL;
+ *      a number drawn from that pool does not become sound by being stale.
+ *
+ * When either fails, NOTHING is retained as a price. `fairMarketValue` is
+ * null, `estimatedValue` is cleared with it — leaving a stale estimate behind
+ * would just move the same lie one field over, and `computeDisplayValue`
+ * reads it before falling through — and the row falls to the cost-basis path
+ * the engine already has for a holding with no publishable value:
+ * `computeDisplayValue` returns `computeCostBasisTotal`, and the report's
+ * `classifyProvenance` renders it `own-purchase` ("OWN PURCHASE — NOT A MARKET
+ * VALUE"). No number is invented here; the display layer's existing cost proxy
+ * is what a row with no defensible market value has always fallen to.
+ *
+ * AND THE STAMPS ARE ALWAYS REWRITTEN. `method`, `valueSource` and `fmvRung`
+ * are rewritten on EVERY withheld write, retention or not — never carried from
+ * the prior pass. That carry is the same defect #1776 fixed on the
+ * confidence-gated branch, resurfacing here: a stamp that describes a
+ * computation this pass did not perform. `method` is `"withheld"` (the
+ * `withheld` block guarantees it in `writeHoldingValuation`), `fmvRung` is null
+ * with the refusal prose as its stated reason, and `valueSource` is
+ * `"estimated"` — never `"observed"`, because a withhold observed nothing.
+ * A retained number's own history is not lost: `withheld.retainedRung` records
+ * the rung it was priced under, as evidence rather than as a live claim.
+ */
+
+/** Why a prior value could not be retained, or the value that stood. */
+export type RetentionVerdict =
+  | { retained: true; value: number }
+  | { retained: false; because: "no-prior-value" | "prior-fails-floor" | "prior-is-the-refused-pool" };
+
+/**
+ * Whether the prior value on a holding may stand through a refusal.
+ *
+ * CF-ONE-RETENTION-RULE (2026-09-05). The rule is stated once and every
+ * refusal branch asks it — the floor, and now the no-basis refusals. It needs
+ * exactly two things from the caller: the holding (for its prior value, its
+ * basis and its prior stamps) and THE POOL THE REFUSAL FAULTS. It takes
+ * `{ pooledAs }` rather than the floor's full `CostBasisFloorRefusalFacts`
+ * precisely so the no-basis lane can ask it without inventing a proposed
+ * number and a basis it never computed. `CostBasisFloorRefusalFacts` is
+ * structurally assignable to it, so the floor's call is unchanged.
+ *
+ * Both conditions are meaningful on BOTH branches, though the second does the
+ * work on the no-basis side. A `pool-migrating` refusal faults a pool that is
+ * still arriving; a prior number this identity's own exact-pool read produced
+ * from that same partial pool is the same partial evidence one pass older, and
+ * that is the $240 Maddux exactly. Condition 1 still applies because a prior
+ * number below 15% of basis is a shape the engine refuses whatever the branch.
+ *
+ * Exported so the pins can exercise the rule directly rather than only
+ * through the persisted row.
+ */
+export function retentionThroughFloor(
+  holding: PortfolioHolding,
+  entry: { pooledAs: string | null },
+): RetentionVerdict {
+  const prior = typeof holding.fairMarketValue === "number" && Number.isFinite(holding.fairMarketValue)
+    && holding.fairMarketValue > 0
+    ? holding.fairMarketValue
+    : null;
+  if (prior === null) return { retained: false, because: "no-prior-value" };
+
+  // 1. The kept number faces the SAME floor, against the SAME basis. Not a
+  //    second predicate — `costBasisFloor` itself, so the two cannot drift.
+  if (costBasisFloor(holding, prior).rejects) {
+    return { retained: false, because: "prior-fails-floor" };
+  }
+
+  // 2. The kept number must not be the refused pool's own earlier answer.
+  const priorMeta = (holding as { pricingSourceMeta?: Record<string, unknown> }).pricingSourceMeta;
+  const priorSlug = typeof priorMeta?.slug === "string" ? (priorMeta.slug as string).trim() : "";
+  const priorRung = typeof (holding as { fmvRung?: unknown }).fmvRung === "string"
+    ? ((holding as { fmvRung: string }).fmvRung)
+    : null;
+  const priorMethod = typeof priorMeta?.method === "string" ? (priorMeta.method as string) : null;
+  const refusedPool = (entry.pooledAs ?? "").trim();
+  const samePool = refusedPool !== "" && priorSlug !== "" && priorSlug === refusedPool;
+  // An exact-pool rung is a read OF the pool. A cross-identity rung (a sibling,
+  // a family baseline, a vendor) reached a different body of evidence even when
+  // the row is filed under this slug, so the floor's verdict on this pool says
+  // nothing about it.
+  const readTheSamePool = isExactPoolRung(priorRung) || isExactPoolRung(priorMethod);
+  if (samePool && readTheSamePool) {
+    return { retained: false, because: "prior-is-the-refused-pool" };
+  }
+  return { retained: true, value: prior };
+}
+
 export function costBasisFloorRefusalWrite(
   holding: PortfolioHolding,
   input: Extract<HoldingValuationOutcome, { outcome: "cost-basis-floor" }> | CostBasisFloorRefusalFacts,
   nowIso: string,
 ): { holding: PortfolioHolding; prose: string; summary: string } {
   const entry = refusalFacts(input);
-  const kept = typeof holding.fairMarketValue === "number" && Number.isFinite(holding.fairMarketValue)
-    ? holding.fairMarketValue
-    : null;
+  const verdict = retentionThroughFloor(holding, entry);
+  const kept = verdict.retained ? verdict.value : null;
   const priorMeta = (holding as { pricingSourceMeta?: Record<string, unknown> }).pricingSourceMeta;
   const priorRung = typeof (holding as { fmvRung?: unknown }).fmvRung === "string"
     && (holding as { fmvRung?: string }).fmvRung
     ? ((holding as { fmvRung: string }).fmvRung)
     : null;
-  const priorValueSource = (holding as { valueSource?: unknown }).valueSource;
+  const priorFmv = typeof holding.fairMarketValue === "number" && Number.isFinite(holding.fairMarketValue)
+    ? holding.fairMarketValue
+    : null;
+  const qty = Math.max(1, num(holding.quantity, 1));
   const pct = entry.costBasis > 0 ? round2((entry.proposedTotal / entry.costBasis) * 100) : null;
+  const keptPct = kept !== null && entry.costBasis > 0
+    ? round2(((kept * qty) / entry.costBasis) * 100)
+    : null;
   const summary =
     `proposed $${round2(entry.proposedTotal)} is ${pct}% of a $${round2(entry.costBasis)} basis `
-    + `(rung=${entry.rungLabel})`;
-  const prose =
+    + `(rung=${entry.rungLabel}); ${verdict.retained
+      ? `prior $${round2(kept as number)} retained (${keptPct}% of basis)`
+      : `nothing retained (${verdict.because})`}`;
+  const refusal =
     `price refused by the cost-basis sanity floor: the valuation path returned `
     + `$${round2(entry.proposedTotal)} under rung ${entry.rungLabel}, ${pct}% of a `
-    + `$${round2(entry.costBasis)} cost basis (floor: 15%). The prior value is kept unchanged; `
-    + `a price this far under basis is a pool or identity mismatch, not a market.`;
+    + `$${round2(entry.costBasis)} cost basis (floor: `
+    + `${round2(COST_BASIS_FLOOR_RATIO * 100)}%). A price this far under basis is a pool or `
+    + `identity mismatch, not a market.`;
+  // The retention clause states which of the two rules decided, in the row's
+  // own prose, so "why is there no value here" is answerable off the document.
+  const retention = verdict.retained
+    ? ` The prior value of $${round2(kept as number)} (${keptPct}% of basis) is kept: it passes the`
+      + ` same floor and was not drawn from the pool that was refused.`
+    : verdict.because === "no-prior-value"
+      ? ` No prior value was on the row, so none is retained; the holding falls to its cost basis.`
+      : verdict.because === "prior-fails-floor"
+        ? ` The prior value of $${round2(priorFmv ?? 0)} is NOT retained: it is itself below the`
+          + ` floor against this basis, so retaining it would publish the very shape the floor`
+          + ` refuses. The holding falls to its cost basis until a defensible price exists.`
+        : ` The prior value of $${round2(priorFmv ?? 0)} is NOT retained: it was published from`
+          + ` ${entry.pooledAs ?? "this same pool"} — the pool this refusal faults — so it is the`
+          + ` same evidence one pass older, not an independent claim. The holding falls to its`
+          + ` cost basis until a defensible price exists.`;
+  const prose = refusal + retention;
   return {
     prose,
     summary,
     holding: writeHoldingValuation(holding, {
       fairMarketValue: kept,
-      // The kept number's OWN rung still describes it. When the pass that
-      // produced it named none, say so — never borrow the rung the floor just
-      // refused, which priced a number this row does not carry.
-      rung: priorRung ? { rung: priorRung } : { noRung: prose },
-      // A refusal verifies nothing, so it cannot upgrade the claim.
-      valueSource: priorValueSource === "observed" || priorValueSource === "estimated"
-        ? priorValueSource
-        : "estimated",
+      // ALWAYS rewritten, never carried. A withhold priced nothing, so it names
+      // no rung — carrying the prior pass's rung is a claim that this row's
+      // number was produced by a computation this pass did not perform, which
+      // is the defect #1776 fixed on the confidence-gated branch and this one
+      // reproduced. The rung a retained number WAS priced under survives as
+      // evidence under `withheld.retainedRung`.
+      rung: { noRung: prose },
+      // ALWAYS rewritten. A withhold observed nothing, so it cannot stand
+      // behind an "observed" claim — least of all one it inherited from the
+      // very pool it just refused.
+      valueSource: "estimated",
       nowIso,
       meta: {
         slug: typeof priorMeta?.slug === "string"
@@ -262,6 +447,15 @@ export function costBasisFloorRefusalWrite(
           blockingId: entry.pooledAs,
           blockingCount: entry.compsUsed,
           proposed: entry.proposedUnit,
+          // What the row now carries, and why — so the UI can say "market
+          // shows $2, withheld: below 15% of your $29.45 basis" and a reader
+          // can tell a legitimate retention from a dropped one.
+          retained: kept,
+          retentionRefused: verdict.retained ? null : verdict.because,
+          // The rung the retained number was priced under, kept as EVIDENCE.
+          // It is deliberately not `fmvRung`: it describes history, not the
+          // claim this write is making.
+          retainedRung: verdict.retained ? priorRung : null,
         },
       },
       fields: {
@@ -269,6 +463,13 @@ export function costBasisFloorRefusalWrite(
         // answerable without reading a log that has rolled.
         fmvRetainedReason: prose,
         fmvRetainedAt: nowIso,
+        // When nothing is retained, the estimate slot is cleared with it.
+        // `computeDisplayValue` reads `estimatedValue` BEFORE falling through
+        // to cost basis, so leaving a stale estimate standing would move the
+        // same undefended number one field over and defeat the withhold.
+        ...(kept === null
+          ? { estimatedValue: null, isEstimate: false, valuationStatus: "pending" as const }
+          : {}),
       },
     }),
   };
@@ -276,92 +477,243 @@ export function costBasisFloorRefusalWrite(
 
 
 /**
- * CF-WE-DONT-WANT-SELF-DERIVED-WE-WANT-IT-MATCHED-TO-CHECKLISTS
- * (Drew, 2026-09-04) — the persisted form of the refusal.
+ * CF-A-STALE-VALUE-IS-NOT-A-PRICE (Drew, 2026-09-04).
  *
- * Deliberately the SAME SHAPE as `costBasisFloorRefusalWrite`, because it is
- * the same kind of event: the ladder produced a number and the persist layer
- * declined to publish it. Two refusal shapes would mean two things for the
- * invariant auditor to learn, and a row that reads as "never written" is the
- * exact defect CF-A-REFUSED-PRICE-IS-STILL-A-DECISION was written to abolish.
+ * The cost-basis floor was not the only refusal that wrote nothing. Two more
+ * reach a holding and leave it carrying a bare number with a stale method:
  *
- * What differs from the floor's refusal is what happens to the KEPT number,
- * and the difference is the ruling:
+ *   identity-not-in-catalog   No slug, no pool, nothing to price. NOTE that
+ *                             `valueHoldingThroughOneEntry` does NOT return
+ *                             this outcome for that reason — it falls through
+ *                             as `unresolved`, per
+ *                             CF-LEGACY-SURVIVES-FOR-UNNAMEABLE-IDENTITIES,
+ *                             because a slug the catalog cannot name but which
+ *                             HAS sales is legitimately priced by the legacy
+ *                             exact-pool read. So this branch is reached only
+ *                             by a caller that has already exhausted that
+ *                             chain. (The Bellingham Griffey cited here in the
+ *                             2026-09-04 audit was, on inspection, NOT this
+ *                             writer's row: its $1,850 is a legitimate legacy
+ *                             publish carrying a withheld block a previous
+ *                             pass left behind — see
+ *                             CF-A-HOLDING-CARRIES-ONE-STAMP in
+ *                             writeHoldingValuation.ts, which clears it.)
+ *   pool-migrating            The identity resolved, but its sales are still
+ *                             being re-keyed onto it. The number the engine
+ *                             would produce is a partial-pool number, so it
+ *                             produces none.
  *
- *   the floor       says THIS number is wrong; the prior number is untouched
- *                   because the floor made no claim about it.
- *   this            says the IDENTITY is not one we can price. That claim
- *                   applies to every number ever published for this holding,
- *                   including the one already on the row — which was itself
- *                   computed from the same self-derived identity. So the
- *                   value is CLEARED, not kept.
+ * Both are the SAME shape as the floor: the engine declined, the prior number
+ * is not thereby wrong, and the row must SAY that no new price was published.
+ * So they share the floor's contract rather than inventing a second one —
  *
- * Clearing is the harder call and it is the doctrinal one: absent beats wrong
- * (`feedback_no_medians`, `one card one row one pool`), and a stale number
- * from an identity we have just declared unverified is precisely a wrong
- * number that looks authoritative. The refused number survives as evidence
- * under `withheld.proposed`, and the prior published value under
- * `withheld.priorValue`, so nothing is destroyed and the row can be restored
- * verbatim by the acquisition of a checklist.
+ *   - the prior number may be kept — RULED by `retentionThroughFloor`, the
+ *     shared rule, not kept unconditionally: see
+ *     CF-A-HOLDING-CARRIES-ONE-STAMP below, which corrects the sentence this
+ *     bullet used to make ("the prior number is KEPT; a refusal faults the new
+ *     number, never the old") on the same grounds #1781 corrected it on the
+ *     floor branch — an old number drawn from the very evidence being refused
+ *     is not a different claim;
+ *   - `pricingSourceMeta.method` is `"withheld"` with the machine-readable
+ *     reason, so the invariant auditor sees a stated refusal instead of a row
+ *     that reads as never written;
+ *   - no confidence is invented: the prior pass's, or an explicit null;
+ *   - the kept value is LABELLED — `fmvRetainedReason` / `fmvRetainedAt` on
+ *     the row, so "why is this stamped now and unchanged" is answerable
+ *     without a log that has rolled.
+ *
+ * It differs from the floor in one respect only: there is no refused number to
+ * preserve, because nothing was computed. `withheld.proposed` is null and says
+ * so, rather than borrowing a number from somewhere else.
+ *
+ * CF-A-HOLDING-CARRIES-ONE-STAMP (Drew, 2026-09-05).
+ *
+ * "Shares the floor's contract" was true of the withheld BLOCK and false of
+ * everything around it. Two clauses above — "the prior number is KEPT"
+ * unconditionally, and a rung carried forward from the prior pass — are the
+ * two clauses #1781 removed from the floor branch, still standing here on a
+ * different branch of the same function file. The result is a row that makes
+ * two incompatible claims at once:
+ *
+ *     fairMarketValue   1850
+ *     fmvRung           "exact-pool-last-sale"      <- a PUBLISHED stamp
+ *     valueSource       "observed"                  <-
+ *     pricingSourceMeta.method "exact-pool-last-sale"
+ *     pricingSourceMeta.withheld { reason: "identity-not-in-catalog" }
+ *                                                   <- a WITHHELD stamp
+ *
+ * Every reader that prefers `method` (the web's `holdingProvenance`, the
+ * report's `classifyProvenance`) reads that as a current observed exact-pool
+ * price; the auditor reading `withheld` reads a refusal. A row must carry
+ * EXACTLY ONE of {published stamp, withheld stamp}. So this write now does
+ * what the floor write does, through the same two functions rather than a
+ * second copy of them:
+ *
+ *   THE STAMPS ARE ALWAYS REWRITTEN. `rung` is `{ noRung: prose }` — a
+ *   withhold priced nothing and so names no rung, and `writeHoldingValuation`
+ *   turns that into `fmvRung: null` with the refusal prose as
+ *   `fmvRungAbsentReason` and `method: "withheld"`. `valueSource` is
+ *   `"estimated"`, never carried: a refusal observed nothing, least of all
+ *   through a pool it just declined to read. The retained number's own history
+ *   survives as EVIDENCE under `withheld.retainedRung`.
+ *
+ *   THE RETENTION IS RULED, NOT AUTOMATIC. `retentionThroughFloor` — #1781's
+ *   rule, called, not copied. A prior value stands only when it passes the
+ *   cost-basis floor and was not the refused identity's own exact-pool
+ *   publish. On `pool-migrating` that second condition is the doctrine's whole
+ *   point: a number this identity's exact pool produced while the pool was
+ *   partial is the partial pool's own answer, and keeping it publishes exactly
+ *   the number the gate exists to withhold. A cross-identity rung (a sibling,
+ *   a family baseline, a vendor) reached different evidence and survives.
+ *
+ * When nothing is retained the row falls to the cost-basis path the engine
+ * already has — `estimatedValue` is cleared with `fairMarketValue`, because
+ * `computeDisplayValue` reads the estimate slot BEFORE falling through and a
+ * stale estimate left standing just moves the same undefended number one field
+ * over. No number is invented here.
  */
-export function identityUnverifiedRefusalWrite(
+/**
+ * CF-WE-DONT-WANT-SELF-DERIVED-WE-WANT-IT-MATCHED-TO-CHECKLISTS
+ * (Drew, 2026-09-04, in those words) joins this union rather than opening a
+ * refusal branch of its own.
+ *
+ * It is the SAME event these two already name: the engine will not publish a
+ * number, the reason is about the IDENTITY rather than the market, and a
+ * caller must persist the refusal instead of letting another lane substitute a
+ * number. `identity-not-in-catalog` says the catalog holds no row; this says
+ * it holds one we MINTED — from our own sales, or from one user's own import —
+ * which is not a card, and a price may not rest on it.
+ *
+ * Sharing the branch is what makes it compose with #1781 and #1785 by
+ * construction rather than by a second implementation remembering to: one
+ * stamp, `retentionThroughFloor` asked once, method / valueSource / fmvRung
+ * rewritten on every withheld write.
+ */
+export type NoBasisRefusalReason = "identity-not-in-catalog" | "pool-migrating" | "no-checklist-match";
+
+export function noBasisRefusalWrite(
   holding: PortfolioHolding,
-  v: Valuation,
-  backing: IdentityBacking,
+  reason: NoBasisRefusalReason,
+  v: Valuation | null,
   nowIso: string,
 ): { holding: PortfolioHolding; prose: string; summary: string } {
   const priorMeta = (holding as { pricingSourceMeta?: Record<string, unknown> }).pricingSourceMeta;
-  const priorValue = typeof holding.fairMarketValue === "number" && Number.isFinite(holding.fairMarketValue)
+  const priorRung = typeof (holding as { fmvRung?: unknown }).fmvRung === "string"
+    && (holding as { fmvRung?: string }).fmvRung
+    ? ((holding as { fmvRung: string }).fmvRung)
+    : null;
+  const priorFmv = typeof holding.fairMarketValue === "number" && Number.isFinite(holding.fairMarketValue)
     ? holding.fairMarketValue
     : null;
-  const why = backing === "no-slug"
-    ? "the holding carries no canonical identity"
-    : backing === "no-catalog-row"
-      ? "the catalog holds no row for this identity"
-      : backing === "self-derived-only"
-        ? `the only catalog row for this identity was minted from our own data (source ${v.identity.sourceOfRow ?? "unknown"})`
-        : `the catalog row for this identity is not a checklist transcription (source ${v.identity.sourceOfRow ?? "unknown"})`;
-  const summary = `identity not checklist-backed (${backing})`;
-  const prose =
-    `price withheld: ${why}. HobbyIQ prices a card only from an identity a real `
-    + `checklist confirms, so no value is published for this holding until its `
-    + `checklist is acquired and the card is matched to it. The valuation path `
-    + `did reach $${round2(v.fairMarketValue ?? 0)} under rung ${v.rungLabel}; that `
-    + `number is recorded as evidence and deliberately not shown.`;
+  const slug = v?.identity.pooledAs ?? v?.identity.slug ?? v?.identity.requestedId ?? null;
+  // CF-ONE-RETENTION-RULE: #1781's rule, ASKED — not a second copy of it. The
+  // pool this refusal faults is the identity it was asked about; when the
+  // engine named none (identity-not-in-catalog with no slug at all), the
+  // holding's own slug is the identity that could not be named, and a prior
+  // exact-pool publish filed under it is that same unnameable identity's own
+  // answer.
+  const refusedPool = slug
+    ?? (typeof (holding as { hobbyiqCardId?: unknown }).hobbyiqCardId === "string"
+      ? ((holding as { hobbyiqCardId: string }).hobbyiqCardId).trim() || null
+      : null);
+  const verdict = retentionThroughFloor(holding, { pooledAs: refusedPool });
+  const kept = verdict.retained ? verdict.value : null;
+  const retentionClause = verdict.retained
+    ? `prior $${round2(kept as number)} retained`
+    : `nothing retained (${verdict.because})`;
+  const summary = reason === "identity-not-in-catalog"
+    ? `the catalog holds no identity for ${slug ?? "this holding"} — nothing to price; ${retentionClause}`
+    : reason === "no-checklist-match"
+      ? `${slug ?? "this identity"} is not checklist-backed — the only catalog row for it was minted`
+        + ` from our own data; ${retentionClause}`
+      : `${slug ?? "this identity"} is still having its sales re-keyed — the pool is incomplete`
+        + `; ${retentionClause}`;
+  const refusal = reason === "identity-not-in-catalog"
+    ? `no price was published: the catalog holds no identity for this holding`
+      + `${slug ? ` (${slug})` : ""}, so there is no pool to price it from.`
+    : reason === "no-checklist-match"
+    // CF-WE-DONT-WANT-SELF-DERIVED. The prose names the ACQUISITION as the
+    // remedy, because that is the work that unblocks this row — a reader who
+    // is told only "no price" goes looking at the pool, which is not where
+    // the problem is.
+    ? `no price was published: this card's identity is not one a real checklist confirms.`
+      + ` The catalog's only row for it was minted from our own sales data or from an import,`
+      + ` and HobbyIQ prices a card only from a checklist-backed identity. Pricing resumes once`
+      + ` this product's checklist is acquired and the card is matched to it.`
+    : `no price was published: this card's identity was created recently and its sales are still`
+      + ` being re-keyed onto it, so the pool is a partial view. Pricing resumes once the re-key for`
+      + ` this identity has settled. No fallback number is published in the meantime — a partial pool`
+      + ` prices a card off whichever sales arrived first.`;
+  // The retention clause states which of the two rules decided, in the row's
+  // own prose, so "why is there no value here" is answerable off the document.
+  const retention = verdict.retained
+    ? ` The prior value of $${round2(kept as number)} is kept and labelled — it is a previous pass's`
+      + ` number, not a current one, and it stands only because it passes the cost-basis floor and was`
+      + ` not drawn from the identity this refusal faults.`
+    : verdict.because === "no-prior-value"
+      ? ` No prior value was on the row, so none is retained; the holding falls to its cost basis.`
+      : verdict.because === "prior-fails-floor"
+        ? ` The prior value of $${round2(priorFmv ?? 0)} is NOT retained: it is itself below the`
+          + ` cost-basis floor, so retaining it would publish the very shape the floor refuses. The`
+          + ` holding falls to its cost basis until a defensible price exists.`
+        : ` The prior value of $${round2(priorFmv ?? 0)} is NOT retained: it was published from`
+          + ` ${refusedPool ?? "this same identity"}'s own exact pool — the identity this refusal`
+          + ` faults — so it is the same evidence one pass older, not an independent claim. The`
+          + ` holding falls to its cost basis until a defensible price exists.`;
+  const prose = refusal + retention;
   return {
     prose,
     summary,
     holding: writeHoldingValuation(holding, {
-      // Absent beats wrong: the prior number rested on the same unverified
-      // identity, so it is cleared rather than carried.
-      fairMarketValue: null,
+      fairMarketValue: kept,
+      // ALWAYS rewritten, never carried. CF-A-HOLDING-CARRIES-ONE-STAMP: a
+      // withhold priced nothing, so it names no rung. Carrying the prior
+      // pass's rung is what let the Griffey row read as an observed
+      // exact-pool price and a refusal simultaneously. The rung a retained
+      // number WAS priced under survives as evidence under
+      // `withheld.retainedRung`.
       rung: { noRung: prose },
-      valueSource: "unavailable",
+      // ALWAYS rewritten. A refusal observed nothing, so it cannot stand
+      // behind an "observed" claim inherited from a pass it did not repeat.
+      valueSource: "estimated",
       nowIso,
       meta: {
-        slug: v.identity.slug ?? null,
-        compsUsed: v.compsUsed ?? null,
-        // A refusal measures nothing, so it asserts no confidence.
-        confidence: null,
+        slug: typeof priorMeta?.slug === "string" ? (priorMeta.slug as string) : slug,
+        compsUsed: typeof priorMeta?.compsUsed === "number" ? (priorMeta.compsUsed as number) : null,
+        confidence: typeof priorMeta?.confidence === "number" && Number.isFinite(priorMeta.confidence as number)
+          ? (priorMeta.confidence as number)
+          : null,
+        ...(Array.isArray(priorMeta?.labels) ? { labels: priorMeta.labels as never } : {}),
         withheld: {
-          reason: NO_CHECKLIST_MATCH,
-          blockingId: v.identity.sourceOfRow ?? null,
-          blockingCount: null,
-          proposed: v.fairMarketValue ?? null,
-          priorValue,
-          backing,
+          reason,
+          blockingId: slug,
+          blockingCount: v?.compsUsed ?? 0,
+          // Nothing was computed, so there is no refused number. Null SAYS
+          // that, rather than borrowing one from another pass.
+          proposed: null,
+          // What the row now carries, and why — the same three evidence
+          // fields the floor branch writes, so a reader tells a legitimate
+          // retention from a dropped one without re-deriving the rule.
+          retained: kept,
+          retentionRefused: verdict.retained ? null : verdict.because,
+          retainedRung: verdict.retained ? priorRung : null,
         },
       },
       fields: {
-        identityUnverified: true,
-        identityUnverifiedReason: summary,
-        identityUnverifiedAt: nowIso,
         fmvRetainedReason: prose,
         fmvRetainedAt: nowIso,
+        // When nothing is retained the estimate slot is cleared with it:
+        // `computeDisplayValue` reads `estimatedValue` BEFORE falling through
+        // to cost basis, so leaving a stale estimate standing would move the
+        // same undefended number one field over and defeat the withhold.
+        ...(kept === null
+          ? { estimatedValue: null, isEstimate: false, valuationStatus: "pending" as const }
+          : {}),
       },
     }),
   };
 }
+
 
 /** The observed write: the exact-pool rung on the holding, in the shape the
  *  unified early exits and the supremacy gate always wrote. */
@@ -522,6 +874,34 @@ export async function valueHoldingThroughOneEntry(
     }));
     return { outcome: "unresolved", valuation: null };
   }
+  // CF-A-MIGRATING-POOL-IS-NOT-A-THIN-POOL (Drew, 2026-09-04). `pool-migrating`
+  // must NOT fall through, and this is the one refusal of which that is true
+  // unconditionally: the whole point of the gate is that no other lane may
+  // substitute a number while the pool is partial. A substitute is exactly
+  // the $240 Maddux — the grade curve reading a half-arrived tier ladder.
+  //
+  // (`identity-not-in-catalog` is deliberately NOT handled here. It reaches
+  // the caller as `unresolved`, because CF-LEGACY-SURVIVES-FOR-UNNAMEABLE-
+  // IDENTITIES — pinned in oneValuationPath.contract.test.ts — says a slug the
+  // catalog cannot name but which HAS sales under it is still legitimately
+  // priced by the legacy exact-pool read. Withholding there would blank real
+  // prices computed from real sales. The stale-value defect it causes is
+  // therefore fixed at the END of the caller's chain, where "the legacy read
+  // found nothing either" is finally known: see the `legacy-unpriced` withhold
+  // in portfolioStore.)
+  if (v.reason === "pool-migrating") {
+    console.warn(JSON.stringify({
+      event: "one_valuation_path_no_basis_refusal",
+      source: "holdingValuation.valueHoldingThroughOneEntry",
+      site: opts.caller,
+      holdingId: holding.id,
+      reason: v.reason,
+      slug: v.identity.slug,
+      requestedId: v.identity.requestedId,
+      keptValue: holding.fairMarketValue ?? null,
+    }));
+    return { outcome: "no-basis-refusal", reason: v.reason, valuation: v };
+  }
   if (!v.identity.slug) return { outcome: "unresolved", valuation: v };
 
   // CF-THE-LADDER-IS-THE-VOCABULARY (Drew, 2026-09-04). The persist layer
@@ -611,7 +991,10 @@ export async function valueHoldingThroughOneEntry(
       proposed: v.fairMarketValue,
       compsUsed: v.compsUsed,
     }));
-    return { outcome: "identity-unverified", valuation: v, backing };
+    // The SAME refusal outcome the other two identity refusals use, so this
+    // rides #1785's one-stamp write and #1781's retention rule by
+    // construction rather than by a parallel implementation remembering to.
+    return { outcome: "no-basis-refusal", reason: NO_CHECKLIST_MATCH, valuation: v };
   }
 
   // "Observed" keeps its EXISTING meaning, unchanged: comps of this exact

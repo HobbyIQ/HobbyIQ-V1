@@ -72,20 +72,15 @@ export type RungDeclaration =
   | { rung: string }
   | { noRung: string };
 
-/**
- * "observed" = comps of this identity AND this tier. Everything else is
- * "estimated". No default: the writer states which kind of number it has.
+/** "observed" = comps of this identity AND this tier. Everything else is
+ *  "estimated". No default: the writer states which kind of number it has.
  *
- * CF-WE-DONT-WANT-SELF-DERIVED (Drew, 2026-09-04) adds "unavailable" — and it
- * is not a third kind of number, it is the ABSENCE of one. A lane that
- * publishes `fairMarketValue: null` because the identity is not checklist-
- * backed has no evidence of either kind to declare, and forcing it to claim
- * "estimated" would mark an empty row as though a model had priced it. The
- * union already exists in exactly this spelling on `Valuation.valueSource`
- * (oneValuationPath), so this aligns the persist contract with the engine's
- * rather than inventing a fourth vocabulary.
- */
-export type ValueSourceDeclaration = "observed" | "estimated" | "unavailable";
+ *  There is deliberately NO third member for a refusal. #1781/#1785 rule that
+ *  a withhold writes `valueSource: "estimated"` — a refusal observed nothing,
+ *  so it cannot stand behind an "observed" claim, and inventing an
+ *  "unavailable" member would give the refusal branches a second vocabulary
+ *  for the fact `withheld.retained` already states precisely. */
+export type ValueSourceDeclaration = "observed" | "estimated";
 
 export interface HoldingValuationWrite {
   /** The per-unit fair market value. `null` erases the field (an explicit
@@ -148,15 +143,23 @@ export interface HoldingValuationWrite {
       /** The estimate that was NOT published — kept, never erased. */
       proposed: number | null;
       /**
-       * CF-WE-DONT-WANT-SELF-DERIVED (Drew, 2026-09-04). The value that WAS
-       * published before this refusal cleared it. Only the identity refusal
-       * clears a prior number (the cost-basis floor keeps it), and the number
-       * it clears is evidence: it is what a reader saw yesterday, and it is
-       * restored verbatim when the checklist arrives.
+       * CF-A-WITHHELD-PRICE-NEVER-RETAINS-THE-NUMBER-IT-REFUSED (2026-09-04).
+       * What the row actually carries after the withhold, and why. A refusal
+       * that keeps a prior number and one that keeps nothing are DIFFERENT
+       * decisions, and a reader (the UI's "market shows $2, withheld: below
+       * 15% of your $29.45 basis", the invariant auditor) must be able to tell
+       * them apart without re-deriving the rule. Absent on refusals that make
+       * no retention decision at all.
        */
-      priorValue?: number | null;
-      /** How the identity stood, in checklistBackedIdentity's vocabulary. */
-      backing?: string;
+      retained?: number | null;
+      /** The rule that refused the retention, or null when one stood. */
+      retentionRefused?: string | null;
+      /**
+       * The rung a RETAINED number was originally priced under, as evidence.
+       * Deliberately not `fmvRung`: it describes the number's history, never
+       * the claim the withheld write is making, which names no rung at all.
+       */
+      retainedRung?: string | null;
     };
   } & Partial<PersistedPricingLabels>;
   /** When false, no pricingSourceMeta is written (the lanes that deliberately
@@ -264,6 +267,47 @@ export function writeHoldingValuation(
       }
     : undefined;
 
+  // CF-A-HOLDING-CARRIES-ONE-STAMP (Drew, 2026-09-05). A row carries EXACTLY
+  // ONE of {published stamp, withheld stamp} — never both.
+  //
+  // The withheld stamp had no way to come OFF. `writeHoldingValuation` builds
+  // its meta fresh, so a publish that writes a meta already drops a prior
+  // `withheld` by construction; but the SIX sites that pass `writeMeta: false`
+  // publish a value and never touch `pricingSourceMeta` at all, so the prior
+  // meta — `withheld` block and all — rides through on the `...holding`
+  // spread. The resolver-fallback rescue (portfolioStore ~10918) and the
+  // legacy confidence-gated persist (~11487) both set a real
+  // `fairMarketValue` that way.
+  //
+  // That is the Bellingham Griffey (c8949bb0), measured in the 2026-09-04
+  // audit: `fairMarketValue` 1850, `method` "exact-pool-last-sale",
+  // `valueSource` "observed", confidence 1 — a legitimate PUBLISH, because
+  // CF-LEGACY-SURVIVES-FOR-UNNAMEABLE-IDENTITIES says a slug the catalog
+  // cannot name but which HAS sales is priced by the legacy exact-pool read —
+  // standing beside `withheld { reason: "identity-not-in-catalog",
+  // blockingCount: 39, proposed: null }` left over from an earlier pass that
+  // DID refuse. Nothing in the publish path cleared it. Every reader that
+  // prefers `method` sees a current observed price; the auditor reading
+  // `withheld` sees a refusal; both are reading the same row.
+  //
+  // So the clear happens HERE, at the one choke point every write already
+  // passes through, rather than as a new obligation at fourteen call sites
+  // (which is the shape C-7 abolished, and which the writer-count pins
+  // forbid). A write that does not DECLARE a withhold is a publish, and a
+  // publish leaves no withheld stamp behind it.
+  const carriedMeta = (holding as { pricingSourceMeta?: Record<string, unknown> }).pricingSourceMeta;
+  const clearsStaleWithhold = !w.meta?.withheld
+    && !!carriedMeta
+    && typeof carriedMeta === "object"
+    && "withheld" in carriedMeta;
+  // Only the `withheld` key is dropped. The rest of the carried meta (slug,
+  // compsUsed, confidence, labels) is the prior pass's and is NOT this
+  // write's to erase — a `writeMeta: false` site is saying precisely that it
+  // has no meta of its own to state.
+  const carriedWithoutWithhold = clearsStaleWithhold
+    ? (() => { const { withheld: _dropped, ...rest } = carriedMeta as Record<string, unknown>; return rest; })()
+    : null;
+
   return {
     ...holding,
     ...(w.fields ?? {}),
@@ -274,7 +318,11 @@ export function writeHoldingValuation(
     // An explicit refusal persists its REASON, so "no rung" is a readable
     // statement rather than a null anyone has to guess the meaning of.
     ...(noRungReason ? { fmvRungAbsentReason: noRungReason } : { fmvRungAbsentReason: null }),
-    ...(shouldWriteMeta ? { pricingSourceMeta: meta } : {}),
+    ...(shouldWriteMeta
+      ? { pricingSourceMeta: meta }
+      : clearsStaleWithhold
+        ? { pricingSourceMeta: carriedWithoutWithhold as PortfolioHolding["pricingSourceMeta"] }
+        : {}),
     lastUpdated: w.nowIso,
   } as PortfolioHolding;
 }
