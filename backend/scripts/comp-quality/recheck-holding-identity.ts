@@ -240,10 +240,15 @@ async function main(): Promise<void> {
       const r: any = await canonicalize({
         sport: String(h.sport ?? "Baseball").toLowerCase(),
         year: Number(h.cardYear) || 0,
-        setName: String(h.product ?? h.setName ?? ""),
+        setName: String(h.setName ?? h.product ?? ""),
         cardNumber: String(h.cardNumber ?? ""),
         parallel: h.parallel ?? null,
         isAuto: h.isAuto === true,
+        // CF-REDERIVE-MUST-STATE-THE-PRINT-RUN (2026-09-05). Omitted here, the
+        // matcher could not reach a :num-N ladder row and GATE 2 then refused
+        // the move as a dropped-specificity claim. Production has always passed
+        // it (ebayReviewQueue.service.ts:766); this pass had not.
+        printRun: typeof h.printRun === "number" ? h.printRun : null,
         player: h.playerName ?? null,
         // Rule 2, braces: "unknown" is documented NEVER-SEEDS in the source union.
         source: "unknown",
@@ -503,10 +508,15 @@ async function rederive(
       r = await canonicalize({
         sport: String(h.sport ?? "Baseball").toLowerCase(),
         year: Number(h.cardYear) || 0,
-        setName: String(h.product ?? h.setName ?? ""),
+        setName: String(h.setName ?? h.product ?? ""),
         cardNumber: String(h.cardNumber ?? ""),
         parallel: h.parallel ?? null,
         isAuto: h.isAuto === true,
+        // CF-REDERIVE-MUST-STATE-THE-PRINT-RUN (2026-09-05). Omitted here, the
+        // matcher could not reach a :num-N ladder row and GATE 2 then refused
+        // the move as a dropped-specificity claim. Production has always passed
+        // it (ebayReviewQueue.service.ts:766); this pass had not.
+        printRun: typeof h.printRun === "number" ? h.printRun : null,
         player: h.playerName ?? null,
         // NEVER SEED, braces. Same untrusted source the sweep uses.
         source: "unknown",
@@ -547,10 +557,25 @@ async function rederive(
 
     // GATE 2 — NO SILENT COLLAPSE. A holding that claims a print run, a serial
     // or a parallel the destination does not carry is a DIFFERENT card from
-    // the destination, and moving it there would fuse two pools. Drew's
-    // ca7a150b is the canary: a Gold Refractor /50 whose product has no
-    // published ladder at all, which must stay unverified rather than land on
-    // the base auto row.
+    // the destination, and moving it there would fuse two pools.
+    //
+    // ca7a150b IS STILL THE CANARY, but it proves the OPPOSITE of what the
+    // first cut of this comment claimed (Drew, 2026-09-05). It is a standard
+    // Gold Refractor Autograph /50 and its ladder is fully published: the row
+    // `hiq:baseball:2026:bowman-chrome:cpa-mg:gold-refractor:auto:num-50`
+    // exists, source `checklist`, printRun 50. It was never a PackFractor and
+    // was never unpriceable. Two things hid that, and BOTH lived in this
+    // script rather than in the catalog:
+    //
+    //   1. this pass sent `product` ("Bowman") as the set name where every
+    //      production caller sends `setName` ("Bowman Chrome"), so the setKey
+    //      invariant saw asked=bowman vs returned=bowman-chrome and rejected
+    //      its own correct 0.98 exact match; and
+    //   2. it never passed printRun, so the matcher could not reach the
+    //      :num-50 rung and GATE 2 then read the holding's own /50 as a
+    //      dropped claim.
+    //
+    // The gate itself is right and is left exactly as it was.
     const claimed = droppedSpecificityAxes(h, to);
     if (claimed.length) {
       push({ to, backedBy: backing.source, verdict: "UNVERIFIED",

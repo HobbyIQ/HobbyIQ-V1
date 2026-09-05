@@ -17,18 +17,30 @@ import { droppedSpecificityAxes } from "../scripts/comp-quality/recheck-holding-
  */
 describe("GATE 2 — a re-derivation may never silently drop a claimed axis", () => {
   it("refuses a /50 Gold Refractor onto the base auto (Drew's ca7a150b)", () => {
-    // The holding says printRun 50 AND parallel "Gold Refractor". The 2026
-    // Bowman "Chrome Prospect PackFractor Autographs" checklist staged by
-    // #1774 states 39 identities and NO ladder at all -- hobbymonitor
-    // publishes a `variations` ladder for 25 of the release's cardSets and
-    // PackFractor is not one of them. Borrowing the neighbouring Chrome
-    // Prospect Autograph's Gold /50 rung would be a synthetic parallel
-    // (feedback_no_synthetic_parallels_only_actuals), so the holding stays
-    // identityUnverified rather than collapsing a /50 onto base.
+    // The holding says printRun 50 AND parallel "Gold Refractor", and the base
+    // auto row states neither, so the move is refused. The GATE is right.
+    //
+    // ITS ORIGINAL RATIONALE WAS NOT, and it is corrected here rather than
+    // deleted, because the wrong reason was load-bearing for two agents.
+    // ca7a150b is NOT a PackFractor (Drew, 2026-09-05). It is a standard Gold
+    // Refractor Autograph /50, its ladder IS published, and the destination it
+    // should reach is the :num-50 rung pinned in the next describe block --
+    // never this base row. "No ladder source, unpriceable" was a defect in the
+    // rederive script's own matcher call, not a fact about the card.
     expect(droppedSpecificityAxes(
       { printRun: 50, parallel: "Gold Refractor" },
       "hiq:baseball:2026:bowman-chrome:cpa-mg:base:auto",
     )).toEqual(["printRun", "parallel"]);
+  });
+
+  it("ALLOWS ca7a150b onto its real destination: the Gold Refractor /50 rung", () => {
+    // The rung that actually exists in card_catalog, source `checklist`,
+    // printRun 50, player Marconi German. Nothing is dropped, so GATE 2 lets
+    // the re-derivation through and the holding gains its :num-50 segment.
+    expect(droppedSpecificityAxes(
+      { printRun: 50, parallel: "Gold Refractor" },
+      "hiq:baseball:2026:bowman-chrome:cpa-mg:gold-refractor:auto:num-50",
+    )).toEqual([]);
   });
 
   it("refuses a /1500 Diamond Dominance insert onto the base D24 (Drew's 6f4f079b)", () => {
@@ -132,5 +144,46 @@ describe("the mode refuses to run unscoped", () => {
       "identityRederivedFrom", "identityRederivedAt",
       "identityRederivedBy", "identityRederivedBackedBy",
     ]) expect(SRC, field).toContain(field);
+  });
+});
+
+/**
+ * CF-THE-REDERIVE-PASS-MUST-ASK-THE-WAY-PRODUCTION-ASKS (Drew, 2026-09-05).
+ *
+ * ca7a150b priced at $182.50 on an exact-pool-last-sale at confidence 0.23,
+ * flagged "we could not identify this card", while the catalog held its exact
+ * checklist-backed row the whole time. Two agents concluded the card had no
+ * ladder. Both were wrong, and the defect was in how THIS SCRIPT asked:
+ *
+ *   1. it sent `product` where production sends `setName`. The holding stores
+ *      product="Bowman" and setName="Bowman Chrome"; normalizeSetKey maps
+ *      those to `bowman` and `bowman-chrome`. Asking as `bowman` made the
+ *      matcher find the right row and then reject it through its own setKey
+ *      invariant -- askedSetKey=bowman vs returnedSlug=...bowman-chrome...
+ *      That is the #1180 shape exactly: a right guard fed a wrong question.
+ *
+ *   2. it never sent printRun, so the matcher could not reach a :num-N rung.
+ *
+ * These pins are on the ARGUMENT SHAPE, because that is what was wrong. The
+ * matcher and the gate are both left untouched.
+ */
+describe("the rederive pass asks with the holding's set name and print run", () => {
+  const src = readFileSync(
+    join(__dirname, "..", "scripts", "comp-quality", "recheck-holding-identity.ts"),
+    "utf8",
+  );
+
+  it("prefers setName over product, exactly as production does", () => {
+    // ebayReviewQueue.service.ts:523 is the production spelling.
+    expect(src).toContain('setName: String(h.setName ?? h.product ?? "")');
+    // The inverted precedence is what sent `bowman` and must never come back.
+    expect(src).not.toContain('setName: String(h.product ?? h.setName ?? "")');
+  });
+
+  it("passes printRun on every canonicalize call it makes", () => {
+    const calls = src.split("await canonicalize(").length - 1;
+    expect(calls).toBeGreaterThanOrEqual(2);
+    const withRun = src.split("printRun: typeof h.printRun").length - 1;
+    expect(withRun).toBe(calls);
   });
 });
