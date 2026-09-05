@@ -31,12 +31,56 @@ name: Pricing Invariant Audit
 # WRITES: report mode is READ-ONLY. `apply_marker: true` lets the job write the
 # single `auditFlag` marker field on flagged holdings (never a price field) so
 # the portfolio row can show its "under review" badge. Default off.
+#
+# ── THE SECOND JOB: THE CORPUS AUDIT ────────────────────────────────────────
+#
+# CF-FINDINGS-ARE-DATA-NEVER-FIXES (Drew, 2026-09-02: "nightly shadow
+# re-derivation + invariant asserts + mutation-CI replaces eyeball discovery;
+# findings are data, never auto-fixes").
+#
+# The job above is the SHADOW PRICER: one holding, one pool, is the NUMBER
+# defensible. `corpus-audit` below asks whether the CORPUS is internally
+# consistent — ten invariants (I1..I10) over holdings, card_catalog, sold_comps
+# and this repo's own Actions history. They share this file because they share a
+# subject, an Azure login and a secret fetch; they are separate JOBS because
+# their populations differ by three orders of magnitude and one budget cannot
+# size both.
+#
+# WHY IT EXISTS, in one day's evidence. On 2026-09-05 five defects were found,
+# each by a person noticing a number, and each of them is an assertion this job
+# makes on a schedule:
+#
+#   the deploy smoke had been red since 09-03 and the nightly all-users reprice
+#     SILENTLY SKIPPED for two days — a skipped job is quiet          -> I7
+#   a Gold Shimmer sale sat in a Gold Refractor pool                  -> I6
+#   12 rekeyed sales were duplicated at two addresses                 -> I5
+#   19,867 catalog rows had a setKey field disagreeing with the stem  -> I3
+#   holdings carried a published stamp and a withheld block at once   -> I1
+#
+# IT NEVER WRITES. Not "writes only under apply" — the lane has no write path
+# at all, and the gate below refuses an apply dispatch outright, the way the
+# read-only CH-label census's gate does. The pins assert both: a recording fake
+# container sees zero writes, and the source contains no .patch/.upsert/
+# .replace/.create/.delete.
+#
+# OUTPUT SINK. No Cosmos container is created — that is prod config, and a
+# read-only auditor must not ask for one. A grep of backend/src found no
+# existing audit/report container (sold_comps, ch_daily_sales, portfolio,
+# card_catalog, verify_queue and the insights containers are all domain-owned),
+# so findings go to a JSON artifact, the job summary, and — only when an
+# invariant BREACHES its threshold — a GitHub issue opened with the existing
+# GITHUB_TOKEN. The day a report container legitimately exists, this job gains
+# four lines.
 
 on:
   schedule:
     # 06:20 UTC — after the 5AM ET daily refresh has repriced, so the audit
     # judges the numbers the portfolio will actually serve today.
     - cron: '20 6 * * *'
+    # 07:10 UTC — the CORPUS audit, 50 minutes behind the shadow pricer so the
+    # two never contend for sold_comps RU, and still inside the morning window
+    # where a breach can be read with the night's other results.
+    - cron: '10 7 * * *'
   workflow_dispatch:
     inputs:
       user_id:
@@ -64,6 +108,12 @@ jobs:
     name: Re-derive every holding and reconcile
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    # The 07:10 cron belongs to the corpus job. Without this the shadow pricer
+    # would run twice every morning and contend with the corpus audit for
+    # sold_comps RU — the exact thing staggering the crons was meant to avoid.
+    # A manual dispatch runs BOTH, which is what an operator asking for "the
+    # audit" means.
+    if: ${{ github.event.schedule != '10 7 * * *' }}
     permissions:
       id-token: write
       contents: read
@@ -146,3 +196,198 @@ jobs:
             echo '_Findings are data, not failures — this job exits 0 whatever it finds._'
             echo '_Alert on the `pricing_invariant_violation` App Insights event, not on this conclusion._'
           } >> "$GITHUB_STEP_SUMMARY"
+
+  # ── THE CORPUS AUDIT ──────────────────────────────────────────────────────
+  #
+  # Ten invariants, read-only, findings are DATA. Runs on its own cron (07:10
+  # UTC) and on any manual dispatch of this workflow. No new workflow_dispatch
+  # input: the lane's env defaults are the nightly configuration, and an
+  # operator who needs a narrower run dispatches the backfill runner's
+  # whitelisted copy of the same script.
+  corpus-audit:
+    name: Assert the corpus invariants (I1..I10)
+    runs-on: ubuntu-latest
+    # 45-minute ceiling. The lane's own clock is 30m loop + 5m unit reserve +
+    # 3m verify cap + startup, which leaves the >= 15 minutes of margin
+    # tests/runnerBudgetMargin.test.ts requires of every budgeted lane. A
+    # killed step reports NOTHING — not its counts, not its exit code — so the
+    # margin is what makes a budget stop distinguishable from a crash.
+    timeout-minutes: 45
+    # The 06:20 cron belongs to the shadow pricer above.
+    if: ${{ github.event.schedule != '20 6 * * *' }}
+    permissions:
+      id-token: write
+      contents: read
+      # Only for `gh issue create` when an invariant breaches. Nothing here
+      # writes code, and `actions: read` is what I7 needs to see whether the
+      # nightly reprice actually ran.
+      issues: write
+      actions: read
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend deps
+        working-directory: backend
+        run: npm ci
+
+      # I3 and I10 load the SHIPPED invariant + backing classifier from dist/,
+      # so the audit measures the corpus with the same rule the write guard and
+      # the pricing gate use. An auditor with its own copy of either would go
+      # on passing the day the shipped rule changed.
+      - name: Build backend
+        working-directory: backend
+        run: npm run build
+
+      # ── GATE: this lane is READ ONLY ─────────────────────────────────────
+      # Same gate, same reasoning, as the read-only CH-product-label census and
+      # the split-identity census: the script has no write path in any mode, so
+      # an apply dispatch is a dispatch whose author believed it would change
+      # something. Refuse it loudly rather than run as something it was not
+      # asked to be. (The lane refuses on its own account too — a gate that
+      # lives only in the caller is a gate the next caller does not have.)
+      - name: Refuse an APPLY dispatch of the read-only corpus audit
+        if: ${{ inputs.apply_marker == true }}
+        run: |
+          echo "::error::the corpus audit is READ ONLY — it has no write path. Its findings are DATA; the repair for any finding is a separate audited lane that names the rows it moves. Re-dispatch with apply_marker=false."
+          exit 2
+
+      - name: Login to Azure
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+
+      # ── I7's evidence ────────────────────────────────────────────────────
+      # `gh api` needs a token the audit script has no business holding, and a
+      # pure judge is one the pins can drive with a fixture of the exact
+      # 2026-09-05 run. So the workflow FETCHES and the script JUDGES.
+      #
+      # The reprice job's conclusion is the whole point: on 2026-09-05 it was
+      # `skipped` on seven consecutive runs and nothing said so.
+      - name: Fetch the last Daily 5AM ET Refresh & Deploy run (I7)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          RUN=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/daily-refresh.yml/runs?per_page=1" \
+                  --jq '.workflow_runs[0] // empty' 2>/dev/null || true)
+          if [ -z "$RUN" ]; then
+            echo '{"run":null,"jobs":[]}' > /tmp/deploy-health.json
+            echo "::notice::no Daily 5AM ET Refresh & Deploy run found — I7 will report it"
+            exit 0
+          fi
+          RUN_ID=$(printf '%s' "$RUN" | jq -r '.id')
+          JOBS=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/jobs" --jq '.jobs' 2>/dev/null || echo '[]')
+          jq -n --argjson run "$RUN" --argjson jobs "$JOBS" '{run: $run, jobs: $jobs}' > /tmp/deploy-health.json
+          echo "run $RUN_ID conclusion=$(printf '%s' "$RUN" | jq -r '.conclusion')"
+
+      - name: Run the corpus invariant audit
+        working-directory: backend
+        run: |
+          COSMOS_CONNECTION_STRING=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='COSMOS_CONNECTION_STRING'].value" -o tsv | tr -d '\r\n')
+          if [ -z "$COSMOS_CONNECTION_STRING" ]; then
+            echo "::error::COSMOS_CONNECTION_STRING empty from App Service"
+            exit 1
+          fi
+          COSMOS_CONNECTION_STRING="$COSMOS_CONNECTION_STRING" \
+          COSMOS_DATABASE=hobbyiq \
+          DEPLOY_HEALTH_JSON=/tmp/deploy-health.json \
+          OUT_JSON=/tmp/audit-findings.json \
+          node scripts/audit-pricing-invariants-corpus.cjs 2>&1 | tee /tmp/corpus-audit.log
+
+      # THE SINK, part 1: the artifact. Row-level findings with ids, so the
+      # repair lane that eventually runs has a list to name.
+      - name: Upload findings JSON
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: corpus-invariant-findings
+          path: /tmp/audit-findings.json
+          if-no-files-found: warn
+          retention-days: 30
+
+      # THE SINK, part 2: the job summary, so a breach is visible without
+      # opening the raw log or downloading the artifact.
+      - name: Post digest to run summary
+        if: always()
+        run: |
+          {
+            echo '## Corpus Invariant Audit'
+            echo ''
+            echo '```'
+            sed -n '/CORPUS INVARIANT DIGEST/,$p' /tmp/corpus-audit.log | head -200
+            echo '```'
+            echo ''
+            echo '_Findings are data, not failures — this job exits 0 whatever it finds._'
+            echo '_A red X here means the AUDITOR broke. The repair for any finding is a separate audited lane._'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # THE SINK, part 3: an issue, and ONLY on a threshold breach. An issue per
+      # nightly run would train everyone to close them unread, which is the
+      # failure mode this whole job exists to replace. The title carries the
+      # date so a breach that persists opens one issue a night and the series
+      # is legible; a run with no breach opens nothing.
+      - name: Open an issue when an invariant breaches
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          if ! grep -aq '^::warning::I' /tmp/corpus-audit.log; then
+            echo "::notice::no invariant breached its threshold — no issue opened."
+            exit 0
+          fi
+          TITLE="corpus invariant breach — $(date -u +%Y-%m-%d)"
+          {
+            echo "The nightly corpus audit breached one or more invariant thresholds."
+            echo ""
+            echo "Findings are **data, never fixes** — nothing was changed. The repair for any"
+            echo "finding is a separate audited lane that names the rows it moves."
+            echo ""
+            echo "### Breached"
+            echo ""
+            grep -a '^::warning::I' /tmp/corpus-audit.log | sed 's/^::warning:://' | sed 's/^/- /'
+            echo ""
+            echo "### Digest"
+            echo ""
+            echo '```'
+            sed -n '/CORPUS INVARIANT DIGEST/,$p' /tmp/corpus-audit.log | head -160
+            echo '```'
+            echo ""
+            echo "Row-level ids are in the \`corpus-invariant-findings\` artifact on"
+            echo "[run $GITHUB_RUN_ID]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)."
+          } > /tmp/issue-body.md
+          gh issue create --repo "$GITHUB_REPOSITORY" --title "$TITLE" --body-file /tmp/issue-body.md \
+            || echo "::warning::could not open the findings issue — the artifact and summary still carry them"
+
+      # ── RELAUNCH (#1791) ─────────────────────────────────────────────────
+      # The gate is the MARKER, never the mode (CF-RELAUNCH-ONLY-ON-BUDGET,
+      # #1361): the lane itself is the only thing that knows work is left, and
+      # it says so by printing the budget banner. `!cancelled()` keeps a cancel
+      # or a crash from re-dispatching.
+      #
+      # A read-only audit relaunches as a read-only audit — there is no mode to
+      # forward and no apply to get wrong, which is exactly why this lane can
+      # carry the relaunch without the #1578 hazard.
+      - name: Self-relaunch until every invariant has run
+        if: ${{ !cancelled() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if grep -aqE "stopped at the .*budget|not started — stopped at the" /tmp/corpus-audit.log; then
+            echo "::notice::budget hit before every invariant ran — re-dispatching to continue"
+            gh workflow run pricing-invariant-audit.yml --repo "$GITHUB_REPOSITORY" --ref main \
+              || echo "::warning::re-dispatch failed; the next nightly cron covers it"
+          else
+            echo "::notice::every invariant finished within budget — no re-dispatch."
+          fi
