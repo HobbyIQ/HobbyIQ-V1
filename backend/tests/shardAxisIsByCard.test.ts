@@ -240,7 +240,10 @@ describe("(6) the two moveCatalogRow lanes are WIRED to the card axis", () => {
   const read = (s: string) =>
     fs.readFileSync(path.join(ROOT, "backend", "scripts", `${s}.cjs`), "utf8").replace(/\r\n/g, "\n");
 
-  for (const script of ["repair-bowman-product-refile", "rekey-product-setkey"]) {
+  // All THREE moveCatalogRow lanes. #1834 landed repair-cpa-draft-refile while
+  // this branch was open — a copy of the Bowman lane that inherited both of its
+  // defects, already dispatchable and already self-relaunching.
+  for (const script of ["repair-bowman-product-refile", "rekey-product-setkey", "repair-cpa-draft-refile"]) {
     it(`${script} hashes the CARD, not the row`, () => {
       const src = read(script);
       expect(src, "must import the one axis helper").toContain("card-shard-axis.cjs");
@@ -252,14 +255,18 @@ describe("(6) the two moveCatalogRow lanes are WIRED to the card axis", () => {
     });
   }
 
-  it("the Bowman lane reads SHARDED — `sharding` is undefined and the guard was DEAD", () => {
-    const src = read("repair-bowman-product-refile");
+  // Both refile lanes: repair-cpa-draft-refile was copied from the Bowman lane
+  // and inherited the identical dead guard.
+  for (const script of ["repair-bowman-product-refile", "repair-cpa-draft-refile"]) {
+  it(`${script} reads SHARDED — a \`sharding\` read is undefined and the guard is DEAD`, () => {
+    const src = read(script);
     // runnerShardScope returns SHARDED. `SHARD_SCOPE.sharding` is undefined, so
     // `undefined && …` short-circuits FALSE and every slot swept every row —
     // an under-sweep's evil twin: a full sweep from sixteen writers at once.
     expect(src).not.toMatch(/SHARD_SCOPE\.sharding\b/);
     expect(src).toMatch(/SHARD_SCOPE\.SHARDED\b/);
   });
+  }
 
   it("the helper really has no `sharding` key — the pin above is not folklore", () => {
     // eslint-disable-next-line @typescript-eslint/no-var-requires

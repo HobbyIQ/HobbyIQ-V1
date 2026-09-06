@@ -120,6 +120,12 @@ describe("the runner's SHARD opt-in names real, shardable lanes", () => {
       "rekey-product-setkey",
       "repair-finish-collision-refile",
       "reslug-ruled-alias",
+      // #1834 landed repair-cpa-draft-refile while this branch was open. It is a
+      // COPY of the Bowman lane and arrived carrying both of its defects — the
+      // dead `SHARD_SCOPE.sharding` guard and the per-row axis under
+      // moveCatalogRow — already dispatchable and already self-relaunching.
+      // Fixed and opted in here rather than left to be found by a fan-out.
+      "repair-cpa-draft-refile",
     ]) {
       expect(OPTED_IN, `${script} must be able to opt slot 0 into its fan-out`).toContain(script);
     }

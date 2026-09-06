@@ -467,6 +467,12 @@ export interface VendorPersistResult {
   productQualifierApplied?: number;
   /** D22: a qualifier whose move is a ruling (bowman ↔ bowman-chrome, Topps Chrome Update) — counted, not made. */
   productQualifierRefused?: number;
+  /** CF-ONE-SALE-ONE-ADDRESS: this sale id is already resident under a
+   *  DIFFERENT cardId partition, so writing here would mint a second copy of
+   *  one sale — a split pool and a double count. The write is refused and the
+   *  existing address left alone; which address is right is the dedup lane's
+   *  ruling to make, never the ingest writer's. */
+  twinAddressRefused?: number;
   /** CF-THE-TITLE-OUTRANKS-THE-VENDOR-PLAYER: the vendor attributed the sale to
    *  a DIFFERENT person than the title names. Neither is adopted; the row is
    *  skipped as UNDERIVABLE rather than keyed to a card it may not be. */
@@ -702,6 +708,26 @@ export async function persistVendorSalesToPool(
       fallback: "baseball",
     });
     let sport = verticalRes.vertical;
+    // CF-A-DEFAULTED-SPORT-IS-NOT-EVIDENCE (2026-09-05). `resolveVertical`
+    // has always reported whether it PROVED the vertical or merely fell back
+    // to `fallback: "baseball"`, and this caller has always thrown that half
+    // of the answer away. It matters because `sport` is the FIRST segment of
+    // the slug, the slug is `cardId`, and `cardId` is the sold_comps
+    // PARTITION KEY -- so a guessed sport is a guessed address. When the
+    // guess later changes (a sport keyword rule lands, the LLM answers
+    // differently on a cold cache), the same `${source}::${externalId}` id is
+    // written under a second partition and the first copy is never removed:
+    // the pre-write dedup matches on `hobbyiqCardId` + `contentHash`, and
+    // both move with the slug.
+    //
+    // Deliberately NOT a refusal here. Unlike the Sapphire maker default,
+    // baseball-as-fallback is load-bearing for a large legitimate population
+    // and dropping it would park millions of rows; the ruling this lane
+    // carries is report-first. So the row is STAMPED instead: the verdict
+    // travels with the sale, the census can count the class by reading rows
+    // rather than re-deriving them, and a later ruling can act on a measured
+    // number. Absent beats wrong; a marked guess beats an unmarked one.
+    const sportDefaulted = verticalRes.confident !== true;
 
     // CF-LLM-FALLBACK (Drew, 2026-08-03). When regex + guess helpers
     // couldn't extract cardYear OR playerName from the title, but the
@@ -1625,6 +1651,10 @@ export async function persistVendorSalesToPool(
         imageUrl: row.imageUrl ?? null,
         observedAt: new Date().toISOString(),
         sport,
+        // CF-A-DEFAULTED-SPORT-IS-NOT-EVIDENCE (2026-09-05). Only stamped when
+        // the vertical was NOT proven, so the field's presence IS the signal
+        // and the overwhelming majority of rows are unchanged on disk.
+        ...(sportDefaulted ? { sportDefaulted: true, sportReason: verticalRes.reason } : {}),
         identityMethod,
         ...priceAnomaly,
       };
@@ -1650,6 +1680,59 @@ export async function persistVendorSalesToPool(
         // Skip the direct sold_comps write. Staging shim already
         // fired above the dedup check, so the record is captured.
         result.skipped++;
+        continue;
+      }
+
+      // ── CF-ONE-SALE-ONE-ADDRESS (2026-09-05) ────────────────────────────
+      //
+      // THE DEFECT. `doc.id` is `${source}::${sourceExternalId}` -- stable for
+      // the life of the eBay item. `doc.cardId` is the PARTITION KEY and is a
+      // pure function of the title parse. Cosmos scopes uniqueness PER
+      // PARTITION, so `items.upsert` can only ever replace a row at the same
+      // (id, cardId); the same sale re-ingested after ANY slug drift --
+      // a setKey rule landing, a sport flip, a cardNumber parse, an LLM
+      // enrichment on a cold cache, a catalog narrowing -- is written as a
+      // SECOND DOCUMENT under a second partition, and the first is never
+      // removed.
+      //
+      // WHY THE EXISTING DEDUP CANNOT SEE IT. The pre-write check queries
+      // `hobbyiqCardId = @hiq AND contentHash = @ch`. `contentHash` is
+      // sha256 over `${slug}|price|date|source|url`, and `hobbyiqCardId` IS
+      // the slug -- so when the parse drifts, BOTH clauses move together and
+      // the query is structurally blind to the copy already in the pool.
+      // Measured (PR #1827, per-id cross-partition probe over 500 sampled
+      // tca-ebay ids): 31.4% of sampled ids were resident under >=2 partition
+      // keys, 9 under >=3. A sale at two addresses is a split pool AND a
+      // double count.
+      //
+      // THE CHECK. Ask the one question the dedup never asks -- does this
+      // bare `id` already exist ANYWHERE -- and ask it cross-partition, which
+      // is the pattern emit-staging-to-pool already uses. This is a point
+      // read on the id index, not a scan.
+      //
+      // WHAT IT DOES, AND DELIBERATELY DOES NOT, DO. A twin found here is
+      // REPORTED and the new address is NOT written: absent beats wrong, and
+      // writing a second copy is the defect itself. It is never a DELETE --
+      // a sale is never lost, and adjudicating WHICH address is right is the
+      // dedup lane's job (title-decides, RETIRE/PARK markers), not the
+      // ingest writer's. A row already at this exact address still upserts
+      // normally, so genuine re-ingests and price corrections are unaffected.
+      const { resources: elsewhere } = await container.items.query({
+        query: "SELECT c.id, c.cardId FROM c WHERE c.id = @id",
+        parameters: [{ name: "@id", value: doc.id }],
+      }).fetchAll();
+      const twin = elsewhere.find((r: { cardId?: string }) => String(r?.cardId ?? "") !== doc.cardId);
+      if (twin) {
+        result.twinAddressRefused = (result.twinAddressRefused ?? 0) + 1;
+        console.warn(JSON.stringify({
+          event: "twin_address_refused",
+          source: "persistVendorSalesToPool",
+          id: doc.id,
+          wouldWriteAt: doc.cardId,
+          alreadyAt: twin.cardId,
+          sportDefaulted,
+          title,
+        }));
         continue;
       }
 
