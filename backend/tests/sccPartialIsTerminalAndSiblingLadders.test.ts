@@ -306,7 +306,12 @@ describe("the ingest child declares the refusals it chose", () => {
     // The accounting fix must not soften the guard. #1741's counter stays, and
     // an unknown subset on one side of a real clash is still refused.
     expect(src).toContain("subsetCollision++;");
-    expect(src).toContain("if (!product.subsetName) {");
+    // CF-BASE-SET-IS-NOT-A-SUBSET (2026-09-06) renamed the operand: the guard
+    // tests the subset the page CLAIMS, so a structural "Base Set" section
+    // heading no longer reads as a rival subset. The REFUSAL it protects is
+    // unchanged -- a page that names no subset still cannot land on an address
+    // a real named subset holds.
+    expect(src).toContain("if (!productClaim) {");
     expect(src).toContain("subset collisions REFUSED");
   });
 

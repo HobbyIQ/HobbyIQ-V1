@@ -458,7 +458,12 @@ describe("the pins fail against a mutated rule", () => {
     // make an unknown-subset row land on the ambiguous plain id.
     const src = readFileSync(ingest, "utf8");
     expect(src).toContain("subsetCollision++");
-    expect(src).toMatch(/if \(!product\.subsetName\) \{/);
+    // CF-BASE-SET-IS-NOT-A-SUBSET (2026-09-06) renamed the operand: the guard
+    // now tests the subset the page CLAIMS, so a structural "Base Set" section
+    // heading no longer reads as a rival subset. The REFUSAL it protects is
+    // unchanged -- a page that names no subset still cannot land on an address
+    // a real named subset holds.
+    expect(src).toMatch(/if \(!productClaim\) \{/);
     // and the resolve path exists beside it, not instead of it
     expect(src).toContain("subsetDisambiguated++");
     expect(src).toContain("subsetInId: true");

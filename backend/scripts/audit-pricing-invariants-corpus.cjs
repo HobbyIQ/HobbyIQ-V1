@@ -178,6 +178,31 @@ function record(res, findings, rowRef) {
       // A finding that names its own id (I5 groups by sale id) wins over the
       // caller's ref, which may be the loop variable rather than the document.
       if (fi.id) row.id = fi.id;
+      // ONE SALE, ONE ARTIFACT ROW.
+      //
+      // The sampling queries do not deduplicate, and they must not: I5 exists
+      // precisely BECAUSE a sale can be resident under two partition keys, so a
+      // query that collapsed them would blind the audit to its own finding.
+      // But a sale filed twice is still ONE thing to decide, and emitting it
+      // twice makes a reader count two defects and a triager write two list
+      // entries for one card. Measured on run 34018932244: I6 reported 24 rows
+      // that were 23 distinct sales -- tca-ebay::237048906564 appeared twice,
+      // byte-identical.
+      //
+      // Deduped on (kind, id, pool) rather than id alone: the same sale
+      // genuinely CAN breach two different invariants, and under I5 the same id
+      // legitimately names two addresses. `breaches` and `byKind` above are
+      // deliberately incremented BEFORE this gate -- they count breaches, and
+      // this only bounds what the artifact carries.
+      // The key set is NON-ENUMERABLE: the whole result object is JSON.stringify'd
+      // into the artifact, so a plain assignment would serialise as a mystery
+      // `"rowKeys": {}` on every invariant.
+      const dedupeKey = `${fi.kind} ${row.id ?? ""} ${row.slug ?? row.pool ?? ""}`;
+      if (!res.rowKeys) {
+        Object.defineProperty(res, "rowKeys", { value: new Set(), enumerable: false, writable: true });
+      }
+      if (res.rowKeys.has(dedupeKey)) continue;
+      res.rowKeys.add(dedupeKey);
       res.rows.push(row);
     }
   }

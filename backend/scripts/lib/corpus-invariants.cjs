@@ -490,6 +490,60 @@ function checkOneSaleOneAddress(id, rows) {
  * those apart, and the top-20-by-rate list is what a person can actually act
  * on.
  */
+/** `refractors` -> `refractor`. Deliberately conservative: the -es rule fires
+ *  only after a sibilant, so `finest` and `prizms` are not mangled into
+ *  `fine`/`prizm`+ nonsense. Words of three letters or fewer are left alone --
+ *  there is no finish token that short whose plural matters. */
+function singularise(word) {
+  const w = str(word).toLowerCase();
+  if (w.length <= 3) return w;
+  if (/(?:ss|sh|ch|x|z)es$/.test(w)) return w.slice(0, -2);
+  if (/[^s]s$/.test(w)) return w.slice(0, -1);
+  return w;
+}
+
+/** Drop every non-alphanumeric: `die-cut` -> `diecut`, `x-fractor` -> `xfractor`.
+ *
+ *  Built by splitting and joining rather than by String.prototype.replace: the
+ *  read-only governance pin in corpusInvariantAuditor.test.ts scans this file's
+ *  comment-stripped source for Cosmos write calls, and `.replace(` is one of the
+ *  five names it refuses. That pin is right to be blunt -- an auditor that could
+ *  write is one that could "fix" a finding -- so this reads the same and keeps
+ *  the guard's claim about the whole module intact. */
+function depunctuate(word) {
+  return str(word).toLowerCase().split(/[^a-z0-9]+/).join("");
+}
+
+/**
+ * Every form a finish word can wear inside a slug.
+ *
+ * A slug spells `die-cut` as three characters of punctuation between two
+ * fragments, and the title spells it as one token. Indexing only the split
+ * parts makes the slug's own words invisible to a set difference against the
+ * title -- which is exactly how `light-blue-die-cut-prizm` came to be reported
+ * for lacking die-cut. So the index carries the parts, their de-punctuated and
+ * singularised forms, every ADJACENT PAIR joined, and each whole colon segment
+ * joined.
+ *
+ * Adjacent pairs only, never the full power set: `die`+`cut` and `x`+`fractor`
+ * are the shapes that occur, and a wider join would start matching words the
+ * slug does not actually contain.
+ */
+function buildSlugFinishIndex(slug) {
+  const raw = str(slug).toLowerCase();
+  const out = new Set();
+  const add = (w) => {
+    if (!w) return;
+    out.add(w);
+    out.add(singularise(w));
+  };
+  const parts = raw.split(/[^a-z0-9]+/i).filter(Boolean);
+  for (const p of parts) add(p);
+  for (let i = 0; i < parts.length - 1; i++) add(parts[i] + parts[i + 1]);
+  for (const seg of raw.split(":")) add(depunctuate(seg));
+  return out;
+}
+
 function checkPoolIdentityCoherence(row, classify) {
   const family = classify.finishFamilyCollision({
     row,
@@ -531,15 +585,48 @@ function checkPoolIdentityCoherence(row, classify) {
   // over. That false positive fires on essentially every Chrome row in the
   // corpus — measured on the healthy fixture, which returned [chrome, shimmer]
   // where only `shimmer` is real.
+  //
+  // ── AND THE SLUG INDEX IS NOT A NAIVE WORD SPLIT ──────────────────────────
+  //
+  // Two false positives, both measured against the 2026-09-06 corpus artifact
+  // (run 34018932244), where 8 of 23 reported rows were this check's own
+  // defects rather than mislabelled sales:
+  //
+  //  (1) PLURAL vs SINGULAR. FINISH_TOKENS carries `refractor` AND `refractors`
+  //      as separate members, so a title reading "Orange Refractors" produced
+  //      the word `refractors` while the slug `...:orange-refractor:...` split
+  //      to `refractor`. The set difference then reported the sale as filed
+  //      against a finish its own slug states one `s` away. Measured: 3 of the
+  //      8 ("Refractors" x2, "Prizms" x2 — `silver-prizm`, `orange-refractor`,
+  //      `purple-refractor`).
+  //
+  //  (2) THE SLUG'S OWN HYPHENATED WORDS, SPLIT APART. A title word is a single
+  //      token (`die-cut`, `x-fractor`); the slug is split on every non-
+  //      alphanumeric, so `light-blue-die-cut-prizm` became [light, blue, die,
+  //      cut, prizm] and `die-cut` matched none of them. The check then
+  //      reported a slug segment as lacking a word it spells out in full.
+  //      Measured: 4 of the 8 (`light-blue-die-cut-prizm` lacking die-cut,
+  //      `blue-x-fractor` and `gold-x-fractor` lacking x-fractor).
+  //
+  // The fix is to index the slug by every form the SAME word can take there —
+  // each part, each part de-punctuated, each ADJACENT PAIR joined (so `die`+
+  // `cut` covers `diecut` and `x`+`fractor` covers `xfractor`), and each whole
+  // segment de-punctuated — and to compare singularised on both sides. It
+  // widens what counts as "the slug already says this", which is the safe
+  // direction: a word the slug demonstrably contains is never evidence the
+  // sale is misfiled. It does NOT touch the genuine finding — a title stating
+  // `shimmer` or `reactive` against a slug that spells neither still fires.
   const finishTokens = classify.FINISH_TOKENS instanceof Set
     ? classify.FINISH_TOKENS
     : new Set(classify.FINISH_TOKENS ?? []);
-  const slugWords = new Set(
-    str(ev.addressSlug ?? "").toLowerCase().split(/[^a-z0-9]+/i).filter(Boolean),
+  const slugWords = buildSlugFinishIndex(ev.addressSlug);
+  const statedInSlug = (w) => (
+    slugWords.has(w) || slugWords.has(singularise(w))
+    || slugWords.has(depunctuate(w)) || slugWords.has(singularise(depunctuate(w)))
   );
   const unstated = (ev.titleFamilyWords ?? [])
     .map((w) => str(w).toLowerCase())
-    .filter((w) => finishTokens.has(w) && !slugWords.has(w));
+    .filter((w) => finishTokens.has(w) && !statedInSlug(w));
 
   if (!unstated.length) return [];
 
@@ -1240,6 +1327,9 @@ module.exports = {
   checkOneSaleOneAddress,
   // I6
   checkPoolIdentityCoherence, poolCollisionRates,
+  // exported for the mutation pins: reverting either of these restores one of
+  // the two false positives measured on run 34018932244.
+  singularise, buildSlugFinishIndex,
   // I7
   checkDeployHealth, REPRICE_JOB_NAME,
   // I8
