@@ -303,7 +303,10 @@ export default function HoldingDetailPage() {
         </div>
 
         {/* Value / cost / P&L — centered symmetric 4-col KPI row */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8 pt-6 border-t border-[color:var(--color-border)]">
+        {/* CF-MOBILE-390-DETAIL (Drew, 2026-09-05): `gap-6` spent 24px of a
+            390px viewport on the gutter between two columns that needed the
+            width for their numbers. Tighter below `sm`, unchanged above. */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 md:gap-8 pt-6 border-t border-[color:var(--color-border)]">
           <Stat
             label="Market value"
             value={formatUSD(value, { hideCents: true })}
@@ -688,7 +691,16 @@ function Stat({ label, value, color, badge, sub }: { label: string; value: strin
           </span>
         )}
       </div>
-      <div className="text-2xl font-bold tabular-nums tracking-tight" style={color ? { color } : undefined}>
+      {/* CF-MOBILE-390-DETAIL (Drew, 2026-09-05), audit item 10. At 390px this
+          grid is two columns ~163px wide, and `text-2xl` tabular digits put a
+          six-figure value (or "-$12,345 · -38.9%") past the column edge —
+          the detail page was never measured at this width. The type steps
+          down below `sm` and `break-words` gives a long value somewhere to
+          break instead of forcing the page to scroll sideways. */}
+      <div
+        className="text-xl sm:text-2xl font-bold tabular-nums tracking-tight break-words"
+        style={color ? { color } : undefined}
+      >
         {value}
       </div>
       {/* D20: the provenance chip sits under the number it describes. */}
