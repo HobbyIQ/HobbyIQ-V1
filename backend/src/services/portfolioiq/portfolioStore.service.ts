@@ -11385,7 +11385,20 @@ export async function repriceHoldingsForUser(
         // withheld stamp — is left exactly as it stands.
         doc.holdings[holding.id] = writeHoldingValuation(nbRetention.holding, {
           fairMarketValue: nbRetention.holding.fairMarketValue ?? null,
-          rung: { noRung: nbRetention.prose },
+          // CF-A-REFUSAL-NAMES-THE-LANE-THAT-MADE-IT. `noRung` becomes
+          // `fmvRungAbsentReason`, the field a reader consults to answer "why
+          // is there no rung on this row". The refusal writer's prose says
+          // what was missing (no pool, no checklist, gate declined); it cannot
+          // say WHERE the refusal happened, because it is shared by every
+          // caller. Before #1833 this branch's prose named the lane — this is
+          // the end of the reprice chain, and "which pass refused" is the
+          // first thing an operator reading a silent holding needs. Routing
+          // through the one refusal writer (#1833) is about the STAMP, not the
+          // prose: `writeMeta:false` keeps the single withheld meta exactly as
+          // `noBasisRefusalWrite` wrote it, so naming the lane here cannot
+          // reintroduce a second stamp. Both halves are stated, in the same
+          // order `fmvRetainedReason` states them.
+          rung: { noRung: `${retentionReason}. ${nbRetention.prose}` },
           valueSource: "estimated",
           nowIso: now,
           writeMeta: false,

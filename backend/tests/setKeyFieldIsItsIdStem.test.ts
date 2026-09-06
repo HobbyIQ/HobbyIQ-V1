@@ -129,12 +129,18 @@ describe("every mint path lands a 2026 Bowman CPA row with field == stem", () =>
     expect(checkSetKeyFieldMatchesIdStem(e)).toBeNull();
   });
 
-  // The vendor path still repairs untrusted text -- and still moves BOTH
-  // halves, which is what idCarriesTheProduct.test.ts:217 has always asserted.
+  // CF-CPA-IS-AMBIGUOUS-FROM-2023 (2026-09-05). The vendor path no longer
+  // repairs a 2026 CPA- number at all: Bowman Draft has used CPA- since 2023,
+  // so a bare "Bowman" text is no longer evidence of Chrome and the override
+  // stands down. Both halves still move TOGETHER -- which is the property this
+  // test exists for -- they now move to `bowman`, which is also where the
+  // authoritative path lands. The two mint paths CONVERGE instead of filing
+  // one card at two addresses, and that convergence is the whole point: this
+  // very drift is the 19,867-row population the census measured.
   it("deriveCatalogEntry WITHOUT the flag moves both halves together", () => {
     const e = deriveCatalogEntry({ ...CPA, authoritativeSetKey: false })!;
-    expect(e.id).toContain(":bowman-chrome:");
-    expect(e.setKey).toBe("bowman-chrome");
+    expect(e.id).toContain(":bowman:");
+    expect(e.setKey).toBe("bowman");
     expect(checkSetKeyFieldMatchesIdStem(e)).toBeNull();
   });
 
@@ -146,13 +152,23 @@ describe("every mint path lands a 2026 Bowman CPA row with field == stem", () =>
     }
   });
 
-  // THE MUTATION CHECK for the checklist ingests: a checklist that mints its
-  // slug without the flag lands on a DIFFERENT product from the one it names.
-  it("a checklist that forgets the flag re-homes Adrian Gil onto the Chrome address", () => {
+  // CF-CPA-IS-AMBIGUOUS-FROM-2023 turns this from a hazard into a guarantee.
+  // A checklist that FORGETS the flag used to re-home Adrian Gil onto Angeibel
+  // Gomez's Chrome address -- the exact split the 2026-09-05 census measured at
+  // 19,867 rows. With the override scoped to <=2022 the two paths now agree,
+  // so forgetting the flag can no longer move a 2026 CPA card off its product.
+  //
+  // The collision itself is still protected, and by the rule built for it:
+  // #1802's initialsCollisionPark parks a CPA-AG SALE that reads no player
+  // rather than pooling it on either claimant. Identity safety for the nine
+  // collisions comes from the player gate, never from this override -- which
+  // could not tell Adrian Gil from Angeibel Gomez in the first place.
+  it("a checklist that forgets the flag no longer re-homes Adrian Gil", () => {
     const withFlag = deriveCatalogEntry({ ...CPA, authoritativeSetKey: true })!;
     const without = deriveCatalogEntry({ ...CPA, authoritativeSetKey: false })!;
-    expect(withFlag.id).not.toBe(without.id);
-    expect(without.id).toContain(":bowman-chrome:");
+    expect(without.id).toBe(withFlag.id);
+    expect(without.id).toContain(":bowman:");
+    expect(without.id).not.toContain(":bowman-chrome:");
   });
 });
 
