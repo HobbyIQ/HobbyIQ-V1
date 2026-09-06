@@ -151,12 +151,44 @@ const POKEMON_NO_PREFIX_RE = /\bNo\.?\s*(\d{1,4})\b/i;
 /** Tokens that precede a number that is NOT this card's number. Used by the
  *  bare-standalone walk, which is the only form here with no syntactic marker
  *  of its own and therefore the only one that must prove a negative. */
+// CF-RAW-IS-A-GRADE-WORD (I9 run 34029662735). Every GRADER token is here --
+// PSA, BGS, CGC -- because "PSA 10" states a grade and not a card number. But
+// the pool's largest Pokemon source spells an UNGRADED sale " - Raw 10", and
+// "RAW" was missing from this list, so that trailing 10 survived the walk as a
+// candidate number.
+//
+// On its own that is harmless: two surviving candidates are AMBIGUOUS and the
+// walk returns null. The damage needs the second half -- "EX" sits in
+// CONDITION_WORDS as the sports condition "EX(cellent)", and in Pokemon "Ex" is
+// the card's RARITY SUFFIX ("Jolteon Ex 030"), so the real number was skipped
+// as a graded-condition follower. One candidate was left standing, and it was
+// the grade.
+//
+// Measured over five Prismatic Evolutions pools (8,301 re-derived rows): 2,839
+// rows derived a cardNumber that is the GRADE, against 913 whose only
+// difference is the checklist's zero-padding. The grade defect is 3x the
+// padding class it was mistaken for, and it is the one that files a real sale
+// onto a card that does not exist.
 const POKEMON_NOT_A_NUMBER_BEFORE: ReadonlySet<string> = new Set([
   "PSA", "BGS", "SGC", "CGC", "BVG", "HGA", "TAG", "ACE", "GMA", "KSA",
   "GEM", "MINT", "PRISTINE", "GRADE", "GRADED", "POP", "LOT", "OF", "X",
   "QTY", "ED", "EDITION", "SERIES", "GEN", "GENERATION", "VOL", "SET",
-  "PACK", "BOX", "PSADNA", "CERT",
+  "PACK", "BOX", "PSADNA", "CERT", "RAW",
 ]);
+
+/**
+ * The condition words that are NOT condition words in a Pokemon title.
+ *
+ * "EX" is the one that matters: it is `EX(cellent)` on a 1975 Topps listing and
+ * the rarity suffix on "Jolteon Ex 030". CONDITION_WORDS is shared with the
+ * SPORTS reader (the bare-number walk below), where dropping "EX" would let a
+ * grade become a card number -- so the exemption is applied HERE, in the
+ * pokemon walk only, and the sports list is left exactly as it is.
+ *
+ * "GX" and "V" follow for the same reason; they are Pokemon rarity suffixes
+ * that no sports grade uses.
+ */
+const POKEMON_NOT_A_CONDITION_WORD: ReadonlySet<string> = new Set(["EX", "GX", "V"]);
 
 /**
  * A bare standalone number in a Pokemon title -- the LAST resort, and the only
@@ -192,7 +224,10 @@ function pokemonBareCardNumber(title: string): string | null {
     const prevRaw = i > 0 ? toks[i - 1] : "";
     const prev = prevRaw.toUpperCase().replace(/[^A-Z]/g, "");
     if (POKEMON_NOT_A_NUMBER_BEFORE.has(prev)) continue;
-    if (CONDITION_WORDS.has(prev)) continue;
+    // CF-RAW-IS-A-GRADE-WORD: "Ex"/"GX"/"V" before a number is a Pokemon
+    // RARITY suffix, never a condition. Skipping it here discarded the card's
+    // real number and left the grade standing alone as the only candidate.
+    if (CONDITION_WORDS.has(prev) && !POKEMON_NOT_A_CONDITION_WORD.has(prev)) continue;
     // "Lot of 76" / "lot 76" -- the count of cards in a lot, not a card number.
     if (/\blot\b/i.test(prevRaw) || (prev === "OF" && /\blot\b/i.test(toks[i - 2] ?? ""))) continue;
     // A print run states the DENOMINATOR alone: "/99". The token walk splits on

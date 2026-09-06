@@ -461,3 +461,74 @@ describe("mutation checks", () => {
       .toBeNull();
   });
 });
+
+/**
+ * CF-RAW-IS-A-GRADE-WORD (I9 run 34029662735, 2026-09-06).
+ *
+ * The I9 shadow re-derivation reported 44 `changed:cardNumber` rows and the
+ * sample read as a zero-padding difference (`030` vs `30`). It was not. Every
+ * one of these titles derived the GRADE as the card number, and it took TWO
+ * defects at once:
+ *
+ *   1. "RAW" was missing from POKEMON_NOT_A_NUMBER_BEFORE, so the 10 in the
+ *      CardHedge suffix " - Raw 10" survived the bare-number walk. Alone this
+ *      is harmless: two candidates are ambiguous and the walk returns null.
+ *   2. "EX" is in CONDITION_WORDS as the sports condition EX(cellent), and in
+ *      Pokemon "Ex" is the RARITY SUFFIX -- so the card's real number was
+ *      skipped as a graded-condition follower, leaving the grade standing
+ *      alone as the only candidate.
+ *
+ * Measured over five Prismatic Evolutions pools (8,301 re-derived rows):
+ * cardNumber disagreements that are a REAL difference fell 2,839 -> 47 (98.3%),
+ * and what remains is the zero-padding class, which diffAxes already folds to
+ * `filled` rather than `changed`.
+ */
+describe("a Pokemon rarity suffix is not a condition, and Raw is a grade word", () => {
+  // Verbatim sold_comps titles from the run-34029662735 I9 sample.
+  const RAW_SUFFIX_CORPUS: Array<[string, string]> = [
+    ["Jolteon Ex 030 - Prismatic Evolutions - Pokemon - Raw 10", "030"],
+    ["Espeon Ex 034 - Prismatic Evolutions - Pokemon - Raw 10", "034"],
+    ["Umbreon Ex 060 - Prismatic Evolutions - Pokemon - Raw 10", "060"],
+    ["Glaceon EX 026 - Prismatic Evolutions - Pokemon - Raw 10", "026"],
+    ["Pokémon Card Espeon ex #34 Prismatic Evolutions - Raw 10", "34"],
+    ["Pokemon Prismatic Evolutions Glaceon ex 026 (Fresh Pull) - Raw 10", "026"],
+  ];
+
+  for (const [title, want] of RAW_SUFFIX_CORPUS) {
+    it(`reads the card number, never the grade -- ${title.slice(0, 46)}`, () => {
+      expect(read(title, "pokemon").cardNumber).toBe(want);
+    });
+  }
+
+  it("the same card graded reads the same number", () => {
+    // The grader token was always excluded, so PSA was never the defect -- but
+    // it must keep reading the number the EX exemption now lets through.
+    expect(read("Jolteon Ex 030 - Prismatic Evolutions - Pokemon - PSA 10", "pokemon").cardNumber)
+      .toBe("030");
+  });
+
+  it("MUTATION -- dropping RAW from the follower list re-reads the grade", () => {
+    // With RAW absent, this title has TWO surviving candidates (161 and 9), so
+    // a mutant returns null instead of the number. Pinning 161 fails it.
+    expect(read("Umbreon ex 161 Prismatic Evolutions - Raw 9", "pokemon").cardNumber).toBe("161");
+  });
+
+  it("MUTATION -- the EX exemption is POKEMON-ONLY; sports EX still guards", () => {
+    // The exemption lives in the pokemon walk. If it were applied to the shared
+    // CONDITION_WORDS list, this sports grade would become a card number.
+    expect(read("1948 Bowman #7 Pete Reiser PSA EX 5", "baseball").cardNumber).toBe("7");
+    expect(read("1955 Topps #123 Sandy Koufax Rookie PSA VG-EX 4", "baseball").cardNumber).toBe("123");
+    expect(read("1952 Topps #34 Elmer Valo Black Back PSA EX-MT 6", "baseball").cardNumber).toBe("34");
+  });
+
+  it("MUTATION -- a bare EX-suffixed number with no grade is still read", () => {
+    // The fix must not depend on a trailing grade being present.
+    expect(read("Jolteon Ex 030 - Prismatic Evolutions - Pokemon", "pokemon").cardNumber).toBe("030");
+  });
+
+  it("MUTATION -- ambiguity still refuses, EX or not", () => {
+    // Two real candidates around an Ex token must STILL return null: the
+    // exemption widens which token can be a number, never the refusal itself.
+    expect(read("Pokemon Charizard Ex 25 Promo 88 Rare Card", "pokemon").cardNumber).toBeNull();
+  });
+});
