@@ -547,4 +547,26 @@ describe("the canary attributes this lane's own writes", () => {
     const v = B.attributeCanary(P("cpa-ag"), 16, 5, null);
     expect(v.ok).toBe(false);
   });
+
+  // A ROW COUNTED IN TWO POOLS MUST BE RECORDED IN TWO POOLS.
+  //
+  // `poolCount` ORs cardId and hobbyiqCardId, so a row whose two identity
+  // fields disagree is counted in BOTH pools -- 5 of the 8 rows left in the
+  // cpa-em anchor are exactly that (cardId on the Chrome slug, hobbyiqCardId
+  // already on Bowman). The lane records the departure under both addresses;
+  // if it recorded only `reslugedFrom` the OTHER anchor would show an
+  // unattributed drop and the lane would be failed for a move it fully
+  // accounted for -- the same false halt, one level down.
+  it("a split-identity row drains both anchors, and both are attributed", () => {
+    // The chrome anchor loses the row even though reslugedFrom named Bowman.
+    const chrome = B.attributeCanary(P("cpa-em"), 17, 16, { fromCount: 1, toCount: 0 });
+    expect(chrome.verdict).toBe("ATTRIBUTED");
+    expect(chrome.ok).toBe(true);
+
+    // Recording only one side is the regression this guards: the anchor drops
+    // but the ledger says the lane took nothing out of it.
+    const unrecorded = B.attributeCanary(P("cpa-em"), 17, 16, { fromCount: 0, toCount: 0 });
+    expect(unrecorded.verdict).toBe("UNEXPLAINED");
+    expect(unrecorded.ok).toBe(false);
+  });
 });

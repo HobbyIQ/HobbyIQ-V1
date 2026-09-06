@@ -575,7 +575,18 @@ async function main() {
           report.pool.moved++;
           // Both sides, and only on a write that LANDED. A ledger that counted
           // intent would explain away a delta the lane never actually caused.
-          ledgerNote(keeper.reslugedFrom, row.id, "from");
+          //
+          // AND BOTH IDENTITY FIELDS, because `poolCount` ORs them. A row can
+          // carry `cardId` on one slug and `hobbyiqCardId` on another -- 5 of
+          // the 8 rows left in the cpa-em anchor are exactly that, cardId on
+          // the Chrome slug and hobbyiqCardId already on Bowman -- and such a
+          // row is counted in BOTH pools. Recording only `reslugedFrom` would
+          // leave the other anchor's drop unattributed and fail the lane for a
+          // move it fully accounted for. The Set collapses the common case
+          // where the two fields agree, so a normal row is still counted once.
+          for (const src of new Set([str(row.hobbyiqCardId), str(row.cardId)].filter(Boolean))) {
+            ledgerNote(src, row.id, "from");
+          }
           ledgerNote(plan.dest, row.id, "to");
         } else bump(report.pool.skip, `relocate-failed:${out?.stage ?? "unknown"}`);
         if (out?.duplicatesLeft?.length) {
