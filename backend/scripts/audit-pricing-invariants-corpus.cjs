@@ -164,11 +164,20 @@ function makeResult(id) {
  * than spreading the whole finding) so an unrelated field a predicate adds
  * later does not silently enlarge every artifact row.
  */
-const FINDING_ADDRESS_FIELDS = ["partitions", "rekeyedAt", "unstatedFinish", "backing", "shown", "retained", "source"];
+const FINDING_ADDRESS_FIELDS = [
+  "partitions", "rekeyedAt", "unstatedFinish", "backing", "shown", "retained", "source",
+  "status", "informational",
+];
 
 function record(res, findings, rowRef) {
   for (const fi of findings) {
-    res.breaches++;
+    // AN INFORMATIONAL FINDING IS REPORTED, NEVER PAGED. It still lands in
+    // `byKind` and in the artifact rows — a reader must see it — but it does
+    // not increment `breaches`, so it cannot trip a threshold. Used where the
+    // auditor can see a condition but cannot yet form a verdict on it (I7's
+    // still-in-flight deploy run), which is a different statement from "the
+    // corpus is wrong" and must not alert as one.
+    if (!fi.informational) res.breaches++;
     res.byKind[fi.kind] = (res.byKind[fi.kind] ?? 0) + 1;
     if (res.rows.length < MAX_ROWS_PER_FINDING) {
       const row = { ...rowRef, kind: fi.kind, detail: fi.detail };
@@ -236,7 +245,13 @@ async function auditHoldings(db, results, shard) {
       rows.push({ userId: d.userId, holding: { ...h, id: h?.id ?? hid } });
     }
   }
-  console.log(`  walked ${f(docs.length)} portfolio docs -> ${f(rows.length)} holdings`);
+  // The snapshot instant is part of the finding: a reader comparing this
+  // against the deploy run's reprice window can see an overlap for themselves.
+  const snapshotAt = new Date().toISOString();
+  console.log(`  walked ${f(docs.length)} portfolio docs -> ${f(rows.length)} holdings (snapshot ${snapshotAt})`);
+  for (const r of [results.get("I1"), results.get("I2"), results.get("I10")]) {
+    if (r) r.notes.push(`holdings snapshot read at ${snapshotAt}`);
+  }
   if (rows.length === 0) {
     console.error("FATAL: zero holdings walked — the holdings map iterated nothing; refusing to report a clean audit");
     process.exit(2);
@@ -270,17 +285,98 @@ async function auditHoldings(db, results, shard) {
     i10.notes.push(`catalog read for ${f(read)} distinct priced identities`);
   }
 
+  // A FINDING IS CONFIRMED AGAINST THE LIVE ROW BEFORE IT IS REPORTED.
+  //
+  // The holdings snapshot above is read once, and the walk that judges it takes
+  // minutes. The reprice writes to the same documents. On 2026-09-06 the two
+  // overlapped: the portfolio was read at 13:13:23Z, "Reprice All Holdings"
+  // started at 13:14:16Z, and the engine withheld holdings ca7a150b and
+  // b2ea5dac at 13:16:07Z and 13:16:24Z — nulling `fairMarketValue` and writing
+  // a `withheld` block. I10 reported both as PRICED-ON-UNBACKED-IDENTITY at
+  // 13:16:00Z off the pre-reprice snapshot, and its own detail line said "no
+  // withheld block on this row records a refusal" about rows that acquired one
+  // seconds later. The gate had refused correctly; the auditor was reading a
+  // photograph of the past and calling it the present.
+  //
+  // Re-reading EVERY holding would double the RU for a race that touches a
+  // handful of rows, so only CANDIDATES are re-read — a row the snapshot
+  // already indicts. A confirmed finding costs one extra point read; a clean
+  // corpus costs nothing. This cannot mask a real defect: a row that is
+  // genuinely priced on an unbacked identity re-reads identically.
+  const confirmed = { raced: 0, vanished: 0, readErrors: 0 };
+  const confirmCache = new Map();
+  async function liveHolding(userId, holdingId) {
+    const key = `${userId} ${holdingId}`;
+    if (confirmCache.has(key)) return confirmCache.get(key);
+    let live = null;
+    try {
+      const { resources } = await retry(() => portfolio.items.query({
+        query: "SELECT c.holdings FROM c WHERE c.userId = @u",
+        parameters: [{ name: "@u", value: userId }],
+      }).fetchAll());
+      for (const d of resources) {
+        const h = (d?.holdings ?? {})[holdingId];
+        if (h) { live = { ...h, id: h?.id ?? holdingId }; break; }
+      }
+    } catch (e) {
+      // A failed re-read must not erase a finding. Fall back to the snapshot
+      // and say so, rather than silently reporting the corpus clean.
+      confirmed.readErrors++;
+      return undefined;
+    }
+    confirmCache.set(key, live);
+    return live;
+  }
+
+  /**
+   * Re-run `predicate` against the live row. Returns the findings to report:
+   * the live ones when the row still breaches, and an empty list when the
+   * write that landed mid-walk resolved it. `undefined` from the re-read (a
+   * transient query failure) keeps the snapshot's findings.
+   */
+  async function confirmFindings(found, userId, holding, predicate) {
+    if (!found.length) return found;
+    const live = await liveHolding(userId, holding.id);
+    if (live === undefined) return found;               // re-read failed; trust the snapshot
+    if (live === null) { confirmed.vanished++; return []; }  // holding deleted mid-walk
+    const still = predicate(live);
+    if (!still.length) { confirmed.raced++; return []; }
+    return still;
+  }
+
   const byUser = new Map();
   for (const { userId, holding } of mine) {
-    if (i1) { i1.sample++; record(i1, INV.checkOneStampPerHolding(holding), { userId, holdingId: holding.id, slug: holding.hobbyiqCardId ?? holding.cardId ?? null }); }
-    if (i2) { i2.sample++; record(i2, INV.checkWithheldValueExplained(holding), { userId, holdingId: holding.id, slug: holding.hobbyiqCardId ?? holding.cardId ?? null }); }
+    const ref = { userId, holdingId: holding.id, slug: holding.hobbyiqCardId ?? holding.cardId ?? null };
+    if (i1) {
+      i1.sample++;
+      const p = (h) => INV.checkOneStampPerHolding(h);
+      record(i1, await confirmFindings(p(holding), userId, holding, p), ref);
+    }
+    if (i2) {
+      i2.sample++;
+      const p = (h) => INV.checkWithheldValueExplained(h);
+      record(i2, await confirmFindings(p(holding), userId, holding, p), ref);
+    }
     if (i10) {
       i10.sample++;
       const slug = String(holding?.hobbyiqCardId ?? holding?.cardId ?? "").trim();
-      const found = INV.checkPricedOnUnbackedIdentity(holding, backingBySlug.get(slug) ?? [], backing);
-      record(i10, found, { userId, holdingId: holding.id, slug: slug || null });
+      // The live row may have MOVED to a different identity, so the backing is
+      // re-read for whatever slug the live row now names — judging a new slug
+      // against the old slug's catalog rows would be a third way to be wrong.
+      const p = (h) => {
+        const s = String(h?.hobbyiqCardId ?? h?.cardId ?? "").trim();
+        return INV.checkPricedOnUnbackedIdentity(h, backingBySlug.get(s) ?? [], backing);
+      };
+      const found = await confirmFindings(p(holding), userId, holding, p);
+      record(i10, found, { ...ref, slug: slug || null });
       if (found.length) byUser.set(userId, (byUser.get(userId) ?? 0) + found.length);
     }
+  }
+  for (const r of [i1, i2, i10]) {
+    if (!r) continue;
+    if (confirmed.raced) r.notes.push(`${f(confirmed.raced)} snapshot finding(s) cleared on re-read — a write landed mid-walk`);
+    if (confirmed.vanished) r.notes.push(`${f(confirmed.vanished)} holding(s) deleted mid-walk`);
+    if (confirmed.readErrors) r.notes.push(`${f(confirmed.readErrors)} confirm re-read(s) failed — those findings stand on the snapshot`);
   }
   if (i10) {
     // COUNT BY USER — the blast radius. One user with 300 is a bad import;

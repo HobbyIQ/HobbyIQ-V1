@@ -703,7 +703,28 @@ function checkDeployHealth(run, jobs, opts = {}) {
     }];
   }
 
-  const conclusion = str(run.conclusion) || "(in progress)";
+  // A RUN STILL IN FLIGHT IS NOT A VERDICT. Observed 2026-09-06: the audit was
+  // dispatched by hand four minutes behind the deploy, read run 34035108751
+  // while "Reprice All Holdings (post-refresh)" was still queued, and reported
+  // `reprice-did-not-run` for a job that started 16 seconds later and went
+  // green. Judging an unfinished run asks "is this job absent" of a job list
+  // that is still being written, and absent-because-pending is indistinguishable
+  // from absent-because-skipped in the payload. The schedule (06:20/07:10 UTC)
+  // assumes the 5AM refresh is long done; nothing ENFORCES that, and a manual
+  // dispatch breaks the assumption silently. Report the overlap as a note, not
+  // a breach — the next scheduled audit judges the finished run.
+  if (!str(run.conclusion)) {
+    return [{
+      kind: "deploy-run-in-flight",
+      detail: `run ${run.id ?? "?"} of "Daily 5AM ET Refresh & Deploy" is still `
+        + `"${str(run.status) || "in progress"}" — no verdict is possible until it finishes, and a `
+        + "job absent from a running run may simply not have started yet",
+      runId: run.id ?? null, conclusion: null, status: str(run.status) || null,
+      url: run.html_url ?? null, informational: true,
+    }];
+  }
+
+  const conclusion = str(run.conclusion);
   if (conclusion !== "success") {
     out.push({
       kind: "deploy-run-failed",

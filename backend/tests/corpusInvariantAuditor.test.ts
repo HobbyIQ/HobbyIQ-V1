@@ -663,6 +663,113 @@ describe("thresholds decide PAGING, never whether a row is listed", () => {
   });
 });
 
+// ── THE 2026-09-06 SNAPSHOT RACE ────────────────────────────────────────────
+
+/**
+ * Run 34035390382 reported I10 PRICED-ON-UNBACKED-IDENTITY on two of Drew's
+ * holdings. Both were WRONG, and the engine was right.
+ *
+ * The timeline, off the two runs' own logs:
+ *
+ *   13:13:23Z  the audit reads the portfolio  (snapshot taken)
+ *   13:14:16Z  "Reprice All Holdings (post-refresh)" starts
+ *   13:16:00Z  I10 reports ca7a150b and b2ea5dac as priced-on-no-catalog-row
+ *   13:16:07Z  the engine withholds ca7a150b — identity-not-in-catalog
+ *   13:16:24Z  the engine withholds b2ea5dac — identity-not-in-catalog
+ *
+ * The auditor judged a photograph of the past. Its own detail line read "no
+ * withheld block on this row records a refusal" about rows that acquired one
+ * seconds later, and `fairMarketValue` on both is now null. The SAME RUN
+ * reported the same race a second time: I7 said the reprice job "is not present
+ * in run 34035108751" while that job was queued and about to go green.
+ *
+ * Two fixes, pinned here: findings are confirmed against the live row before
+ * they are reported, and an unfinished deploy run yields no verdict at all.
+ */
+describe("the 2026-09-06 snapshot race", () => {
+  const SLUG = "hiq:baseball:2026:bowman-chrome:cpa-mg:gold-refractor:auto:num-50";
+
+  // The row as the 13:13:23Z snapshot saw it: a live number, no withheld block.
+  const preReprice = {
+    id: "ca7a150b-f126-49e0-bd5b-f899ff964a1f",
+    hobbyiqCardId: SLUG,
+    fairMarketValue: 182.5,
+    pricingSourceMeta: { slug: SLUG, method: "exact-pool-last-sale", compsUsed: 1 },
+  };
+
+  // The same row after 13:16:07Z: the engine refused and nulled the number.
+  const postReprice = {
+    id: "ca7a150b-f126-49e0-bd5b-f899ff964a1f",
+    hobbyiqCardId: SLUG,
+    fairMarketValue: null,
+    pricingSourceMeta: {
+      slug: SLUG, method: "withheld", compsUsed: 1,
+      withheld: { reason: "identity-not-in-catalog", blockingId: SLUG, blockingCount: 0, retentionRefused: "identity-not-priceable" },
+    },
+  };
+
+  it("the snapshot row DOES breach — the auditor was not hallucinating", () => {
+    const v = INV.checkPricedOnUnbackedIdentity(preReprice, [], { identityBackingOf, mayPublishPrice });
+    expect(v.map((x: { kind: string }) => x.kind)).toEqual(["priced-on-no-catalog-row"]);
+  });
+
+  it("the LIVE row does not breach — so re-reading before reporting clears it", () => {
+    // This is the whole fix in one assertion: the same predicate, the same
+    // holding, the row as it actually stands. Zero findings.
+    expect(
+      INV.checkPricedOnUnbackedIdentity(postReprice, [], { identityBackingOf, mayPublishPrice }),
+    ).toEqual([]);
+  });
+
+  it("a row that is GENUINELY priced on an unbacked identity survives the re-read", () => {
+    // The confirm step must not become a way to lose real findings. A row with
+    // a self-derived catalog row and a live price re-reads identically and is
+    // still reported.
+    const genuine = {
+      id: "real-defect",
+      hobbyiqCardId: "hiq:baseball:2023:bowman-chrome:cpafc:refractor:auto:num-499",
+      fairMarketValue: 300,
+      pricingSourceMeta: { method: "exact-pool-last-sale", compsUsed: 1 },
+    };
+    const rows = [{ id: genuine.hobbyiqCardId, source: "ebay-user-purchase" }];
+    const v = INV.checkPricedOnUnbackedIdentity(genuine, rows, { identityBackingOf, mayPublishPrice });
+    expect(v.map((x: { kind: string }) => x.kind)).toEqual(["priced-on-self-derived-only"]);
+  });
+
+  it("I7: a run STILL IN FLIGHT yields no verdict, and does not page", () => {
+    // Run 34035108751 as the audit saw it at 13:16:00Z: in progress, and the
+    // reprice job not yet in the list.
+    const v = INV.checkDeployHealth(
+      { id: 34035108751, conclusion: null, status: "in_progress", created_at: "2026-09-06T13:06:59Z", html_url: "u" },
+      [{ name: "Build, Deploy & Warm DailyIQ Cache", conclusion: "success", steps: [{ name: "Smoke test pricing tiers", conclusion: "success" }] }],
+    );
+    expect(v.map((x: { kind: string }) => x.kind)).toEqual(["deploy-run-in-flight"]);
+    // It must NOT claim the reprice did not run — that was the false alarm.
+    expect(v.map((x: { kind: string }) => x.kind)).not.toContain("reprice-did-not-run");
+    // And it must not count toward a threshold.
+    expect(v[0].informational).toBe(true);
+  });
+
+  it("I7: once that same run FINISHES with its reprice green, it is silent", () => {
+    expect(INV.checkDeployHealth(
+      { id: 34035108751, conclusion: "success", status: "completed", created_at: "2026-09-06T13:06:59Z", html_url: "u" },
+      [
+        { name: "Build, Deploy & Warm DailyIQ Cache", conclusion: "success", steps: [{ name: "Smoke test pricing tiers", conclusion: "success" }] },
+        { name: "Reprice All Holdings (post-refresh)", conclusion: "success" },
+      ],
+    )).toEqual([]);
+  });
+
+  it("I7: a FINISHED run with a genuinely absent reprice job still fires", () => {
+    // The in-flight exemption must not swallow the finding I7 exists for.
+    const v = INV.checkDeployHealth(
+      { id: 1, conclusion: "success", status: "completed", created_at: "2026-09-06T13:06:59Z", html_url: "u" },
+      [{ name: "Build, Deploy & Warm DailyIQ Cache", conclusion: "success", steps: [{ name: "Smoke test pricing tiers", conclusion: "success" }] }],
+    );
+    expect(v.map((x: { kind: string }) => x.kind)).toContain("reprice-did-not-run");
+  });
+});
+
 // ── MUTATION CHECKS ─────────────────────────────────────────────────────────
 
 describe("mutation checks — the lane cannot write, and each pin fails for its own reason", () => {
@@ -770,6 +877,47 @@ describe("mutation checks — the lane cannot write, and each pin fails for its 
   it("the lane exits 0 on findings — a red X means the AUDITOR broke", () => {
     const src = stripComments(laneSrc);
     expect(src).toMatch(/\(\)\s*=>\s*process\.exit\(0\)/);
+  });
+
+  it("MUTATION: without the in-flight arm, I7 calls a queued reprice job 'did not run'", () => {
+    // Drive the OLD behaviour directly: treat an absent conclusion as a
+    // judgeable run. That is precisely what produced the 13:16:00Z false alarm.
+    const inFlight = { id: 34035108751, conclusion: null, status: "in_progress", created_at: "2026-09-06T13:06:59Z", html_url: "u" };
+    const jobs = [{ name: "Build, Deploy & Warm DailyIQ Cache", conclusion: "success", steps: [{ name: "Smoke test pricing tiers", conclusion: "success" }] }];
+    // With the arm, the only finding is informational and names the real cause.
+    const withArm = INV.checkDeployHealth(inFlight, jobs);
+    expect(withArm.map((x: { kind: string }) => x.kind)).toEqual(["deploy-run-in-flight"]);
+    // The guard is the absent conclusion, so the SOURCE must test it before it
+    // reads the job list. A revert of that line is what this catches.
+    expect(stripComments(libSrc)).toMatch(/if\s*\(!str\(run\.conclusion\)\)/);
+  });
+
+  it("MUTATION: the holdings walk re-reads a candidate before reporting it", () => {
+    // The confirm step is the whole 2026-09-06 fix. If it is reverted, I10
+    // reports whatever the minutes-old snapshot said. Assert the lane still
+    // (a) re-reads and (b) only re-reads rows the snapshot already indicts —
+    // an unconditional re-read would double the RU for a clean corpus.
+    const src = stripComments(laneSrc);
+    expect(src).toMatch(/if\s*\(!found\.length\)\s*return found;/);
+    // A failed re-read must not erase a finding.
+    expect(src).toMatch(/if\s*\(live === undefined\)\s*return found;/);
+    // EVERY holdings invariant goes through the confirm step, not just the one
+    // that caught the race. Asserting the helper merely EXISTS would let a
+    // revert at a single call site pass — I10's was the one that misfired, so
+    // each of the three is pinned by name.
+    const calls = src.match(/await confirmFindings\(/g) ?? [];
+    expect(calls, "each of I1, I2 and I10 must confirm before reporting").toHaveLength(3);
+    expect(src).toMatch(/record\(i1, await confirmFindings\(/);
+    expect(src).toMatch(/record\(i2, await confirmFindings\(/);
+    expect(src).toMatch(/const found = await confirmFindings\(/);
+  });
+
+  it("MUTATION: an informational finding must not increment `breaches`", () => {
+    // If `record` stops honouring the flag, an in-flight deploy run pages
+    // again. The threshold for I7 is 0, so one counted finding is one alert.
+    expect(stripComments(laneSrc)).toMatch(/if\s*\(!fi\.informational\)\s*res\.breaches\+\+;/);
+    expect(INV.evaluateThreshold("I7", { breaches: 0, sample: 1 })).toBeNull();
+    expect(INV.evaluateThreshold("I7", { breaches: 1, sample: 1 })).not.toBeNull();
   });
 });
 
