@@ -33,7 +33,7 @@ const LANES = new Set(["hobbymonitor", "checklistinsider", "bcp", "beckett", "cl
 // CF-A-PUBLICATION-YEAR-IS-NOT-THE-PRODUCT-YEAR (2026-09-06). A hobbymonitor
 // release URL can end in the PUBLICATION year, and the enumeration read it as
 // the product year -- queueing "2024 Topps Finest Football" as 2025 and minting
-// 69,325 catalog rows whose setName contradicts their own year (#1904, #1912).
+// 142,849 catalog rows whose setName contradicts their own year (#1904, #1912).
 // The setName is the authority; a split season ("2024/25" -> 2025) is NOT this
 // defect and is left alone. The rule lives in its own module so a test can
 // import it without this file's top-level mint running.

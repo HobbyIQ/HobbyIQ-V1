@@ -9,8 +9,9 @@ const { productYearsOf, correctedYear } = require("../scripts/lib/product-year-f
  *
  * A hobbymonitor release URL can end in the year the PAGE was published rather
  * than the year the PRODUCT was issued, and the universe enumeration read that
- * trailing number as the product year. The result was 69,325 card_catalog rows
- * whose own setName contradicts their own year field (#1904 census, #1912).
+ * trailing number as the product year. The result was 142,849 card_catalog rows
+ * whose own setName contradicts their own year field -- measured by full sweep
+ * 2026-09-06; #1904/#1912 counted 69,325 of them under a narrower filter.
  *
  * The table below is the pin. It carries BOTH directions deliberately:
  *

@@ -12,8 +12,9 @@
  * trailing number as the product `year`, so 20 hobbymonitor entries were queued
  * a year later than the product they name. fetchHobbyMonitorChecklist.cjs
  * writes that `--year` and that `--set-name` into ONE manifest, so every
- * card_catalog row those entries minted inherited the disagreement -- 69,325
- * rows whose own setName contradicts their own year field (#1904 census, #1912).
+ * card_catalog row those entries minted inherited the disagreement -- 142,849
+ * rows whose own setName contradicts their own year field (measured by full
+ * sweep 2026-09-06; #1904/#1912 counted 69,325 under a narrower filter).
  *
  * THE SET NAME IS THE AUTHORITY, AND THAT IS MEASURED. For topps-finest/
  * football the checklist corpus holds 40,092 rows at 2024 against 13,655
