@@ -32,9 +32,26 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# CF-CI-NEVER-CANCELS-A-MAIN-PUSH (2026-09-07).
+#
+# THE BUG. The group was `backend-tests-${{ github.ref }}` with
+# `cancel-in-progress: true`. On a push to main `github.ref` is
+# `refs/heads/main` for EVERY commit, so all main pushes shared ONE group and
+# each merge cancelled the run still verifying the commit before it. Three
+# merged trees went unverified inside four minutes on 2026-09-06 --
+# c374b030, 84f71477, 916e7c7f -- each run killed seconds after the next
+# merge landed. Nothing goes red when this happens: the tree is simply never
+# tested, and a later push happens to cover it.
+#
+# THE FIX. Cancellation is a PULL REQUEST optimisation only. A PR's superseded
+# runs are worth killing -- only the head commit is being merged. A main push
+# run is the ONLY record that a merged tree passed, so it must always finish.
+# Keying push runs by `github.sha` gives every main commit its own group, and
+# the `cancel-in-progress` expression is false for anything that is not a
+# pull_request. Pinned by ciNeverCancelsMainPushRuns.test.ts.
 concurrency:
-  group: backend-tests-${{ github.ref }}
-  cancel-in-progress: true
+  group: backend-tests-${{ github.event_name == 'pull_request' && github.head_ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   backend-tests:
