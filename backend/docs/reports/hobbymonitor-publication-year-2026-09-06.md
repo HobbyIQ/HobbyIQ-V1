@@ -207,6 +207,28 @@ rate at the naive destination.
 Fixing the 38 queue entries stops the next ingest minting more. It moves no
 stored row, and this PR claims nothing else.
 
+### One more split the deferred repair will need
+
+The stored rows are not one population either. Splitting the 28 hobbymonitor
+products by how far the row year sits from the setName year:
+
+| | products | rows |
+| --- | ---: | ---: |
+| row year == setName year + 1 | 24 | 128,242 |
+| row year two or more years off | 4 | 14,607 |
+
+The four that are two years off are unambiguous — `basketball/topps-royalty`
+(2023 vs 2025, 7,491 rows), `basketball/panini-immaculate` (3,053),
+`basketball/topps-three` (2,479) and `basketball/panini-flawless` (1,584). No
+reading of a split season reaches 2025 from a 2023 label.
+
+The 24 that are one year off need the label read before anything is written: a
+basketball `2024/25` product at 2025 is sitting on the second season year, which
+is the corpus convention and NOT a defect, while a football or baseball `2024`
+product at 2025 has no second season to appeal to. Which is why the queue fix
+above corrects 21 entries and not 38 — and why the stored-row repair cannot be
+a single sweep over `source = hobbymonitor-2026-09-04` either.
+
 ---
 
 ## 4. Lane report run
