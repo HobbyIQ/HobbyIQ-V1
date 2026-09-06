@@ -147,7 +147,9 @@ describe("the host's Checklist Not Found page is not an empty set", () => {
   it("a challenge page is still a challenge page", () => {
     const page = `<html><body>Just a moment...${"x".repeat(50000)}</body></html>`;
     const { stats } = buildRows(page, { parallel: "", isAuto: false });
-    expect(zeroCardReason(page, stats)).toContain("challenge/interstitial");
+    // Renamed in 2026-09-06's soft-block work: the sentence now says
+    // "challenge/rate-limit page" and carries the marker that matched.
+    expect(zeroCardReason(page, stats)).toContain("challenge/rate-limit page");
   });
 });
 
