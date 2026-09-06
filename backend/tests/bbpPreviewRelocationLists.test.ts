@@ -135,7 +135,11 @@ describe("the catalog lists move every stored Preview row onto the ruled key", (
 describe("the pool lists put the sales on the same addresses the catalog lists create", () => {
   it("both name the pool lane, and neither moves a partition", () => {
     for (const doc of [POOL_BASEBALL, POOL_BASKETBALL]) {
-      expect(doc.forLane).toBe("relocate-pool-rows-by-list");
+      // The committed lists spell this both ways (`...-by-list` and
+      // `...-by-list.cjs`); the lane reads neither, and #1851's own pin
+      // asserts the `.cjs` spelling on the list it shipped. Accept both
+      // rather than churn a field nothing consumes.
+      expect(String(doc.forLane)).toMatch(/^relocate-pool-rows-by-list(\.cjs)?$/);
       for (const e of doc.entries as Array<Record<string, string>>) {
         // A repoint or a retire-marker. Never `toCardId`, which is the shape
         // that moves a document between partitions.

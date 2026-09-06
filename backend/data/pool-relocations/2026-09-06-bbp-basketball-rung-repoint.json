@@ -1,6 +1,6 @@
 {
  "generatedAt": "2026-09-06",
- "forLane": "relocate-pool-rows-by-list",
+ "forLane": "relocate-pool-rows-by-list.cjs",
  "subject": "1997-98 Topps Stadium Club Bowman's Best Preview (basketball), BBP1-BBP20",
  "rulings": [
   "CF-BOWMANS-BEST-PREVIEW-IS-ITS-OWN-PRODUCT (Drew, 2026-09-06): the 20-card BBP1-BBP20 insert is its own product key `bowmans-best-preview`, in BOTH sports it was packed out in. The Stadium Club host is provenance, not identity, so every target's product segment moves.",
@@ -41,33 +41,14 @@
   "requiredOrder": "SCC re-mint -> catalog list -> pool list"
  },
  "catalogPlan": {
-  "note": "CATALOG ROWS ARE NOT MOVED BY THIS LANE and no existing lane fits -- see the PR body. This block is the REPORT of what the 80 rows should become, for the follow-up that owns the catalog write.",
-  "keep": {
-   "count": 20,
-   "shape": "hiq:basketball:1997:topps-stadium-club:bbp<n>:base:no-auto",
-   "action": "KEEP as-is; clear the misleading subsetName 'Bowmans Best Preview' only if the follow-up decides to, which patchCatalogRowFields may do (subsetName is not an addressing field)"
-  },
-  "reslug": [
-   {
-    "count": 20,
-    "from": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview:bbp<n>:refractor:no-auto",
-    "to": "hiq:basketball:1997:topps-stadium-club:bbp<n>:refractor:no-auto",
-    "why": "plain Refractor rung; the `sub-` segment is a defect because no BBP number clashes across subsets. NOTE: the target slug is currently OCCUPIED by the Atomic alias row below, so the retire MUST land before this move."
-   },
-   {
-    "count": 20,
-    "from": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview-atomic:bbp<n>:refractor:no-auto",
-    "to": "hiq:basketball:1997:topps-stadium-club:bbp<n>:atomic-refractor:no-auto",
-    "why": "Atomic Refractor is its own rung per #1846; 'Atomic' belongs in the parallel, not the subset"
-   }
+  "note": "SUPERSEDED, TWICE. When this list was written no catalog lane read a list, so the catalog half was REPORTED here as a plan for a follow-up. Both halves of that plan are now obsolete: relocate-catalog-rows-by-list exists (#1858) and owns the write, and Drew's 2026-09-06 ruling moved the destination off `topps-stadium-club` entirely. The plan is kept as a pointer rather than deleted, so a reader who arrives at this file is sent to the list that is actually run instead of following a stale shape.",
+  "supersededBy": "data/catalog-relocations/2026-09-06-bbp-preview-basketball.json",
+  "supersededWhy": [
+   "THE SHAPE CHANGED. The plan's 20 retires existed to vacate bare `:refractor:` addresses its own 20 reslugs then landed on. Measured read-only 2026-09-06, the 40 `sub-`-segment rows it names are GONE (the fold and dedup lanes consolidated them) and the product holds exactly 60 clean BBP rows, three rungs per card, no `sub-` anywhere. There is nothing left to retire.",
+   "THE DESTINATION CHANGED. Every row now moves to `hiq:basketball:1997:bowmans-best-preview:bbp<n>:<rung>:no-auto` — including the 20 BASE rows the plan said to KEEP, which were correct only while the Preview lived on the host's key. Leaving them would ship two rungs of a card on one product and the third on another.",
+   "THE HELPER NOTE STANDS. moveCatalogRow, never patchCatalogRowFields, because changing where a row lives is a move — and the committed lane uses exactly that."
   ],
-  "retireAsAlias": {
-   "count": 20,
-   "shape": "hiq:basketball:1997:topps-stadium-club:bbp<n>:refractor:no-auto (setName '...Atomic Refractors Basketball')",
-   "why": "one card on two rows: this is the SECOND row the Atomic page minted, and it squats the plain-Refractor slug space. Retire as an alias of the atomic row -- a MARKER (retired/flaggedWrong), never a delete."
-  },
-  "endState": "60 rows: 20 base + 20 refractor + 20 atomic-refractor, no `sub-` segment anywhere in this product.",
-  "writeHelper": "moveCatalogRow, NOT patchCatalogRowFields -- patchCatalogRowFields hard-refuses id/cardId/hobbyiqCardId (UNPATCHABLE) because changing where a row lives is a move. patchCatalogRowFields is correct only for the non-addressing fields (parallel, subsetName, setName)."
+  "endState": "60 rows on hiq:basketball:1997:bowmans-best-preview:*, three rungs per card; ZERO BBP rows left on topps-stadium-club."
  },
  "excluded": [
   {
