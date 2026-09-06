@@ -284,105 +284,140 @@ describe("report first, and every entry is accounted for", () => {
 
 // ── the two committed lists ──────────────────────────────────────────────────
 
-describe("the baseball list retires exactly the 60 preview rows", () => {
+describe("the baseball list moves the 19 rows that are actually stored", () => {
   const doc = readList(baseballList);
 
-  it("names this lane and holds 60 entries, every one a retire", () => {
+  /**
+   * REBUILT FOR DREW'S 2026-09-06 RULING, and rebuilt against prod rather than
+   * against this list's own history. Two things changed at once:
+   *
+   *   THE SHAPE. The prior revision RETIRED 60 rows because "the correct
+   *   destination key is the pending ruling, and a reslug onto a key nobody
+   *   has ruled would mint a phantom product". Drew ruled the key, so the
+   *   destination exists and the rows can MOVE instead of being deleted.
+   *
+   *   THE IDS. Re-measured read-only for this PR, NOT ONE of those 60 ids
+   *   still exists -- the fold and dedup lanes that merged since (#1838,
+   *   #1876) consolidated them. 19 Preview-signalled rows remain. A list is a
+   *   list of IDS, so a stale list is not a conservative list: it is a no-op
+   *   that reconciles cleanly and reports success.
+   */
+  it("names this lane and holds the 19 rows the census measured", () => {
     expect(doc.forLane).toBe("relocate-catalog-rows-by-list");
-    expect(doc.entries).toHaveLength(60);
-    expect(doc.entries.every((e) => e.action === "retire")).toBe(true);
-    expect(doc.entries.every((e) => e.to === undefined)).toBe(true);
+    expect(doc.entries).toHaveLength(19);
+    expect(doc.entries.every((e) => e.action === "reslug")).toBe(true);
+    expect(doc.entries.every((e) => Boolean(e.to))).toBe(true);
   });
 
   it("every entry passes the lane's own validation", () => {
     for (const e of doc.entries) expect(L.classifyEntry(e).ok).toBe(true);
   });
 
-  it("every id is in baseball/1997/bowmans-best, and none is a proper Bowman's Best row", () => {
+  it("SAYS THE PRIOR REVISION'S IDS ARE GONE, in the file a reader opens", () => {
+    // The dangerous silent failure is a list that still looks plausible. The
+    // file has to carry the reason its ids changed, or the next reader
+    // reconciles a no-op and calls it a clean run.
+    expect(String(doc.supersedes)).toMatch(/2026-09-06T05:45:00Z/);
+    expect(String(doc.supersedes)).toMatch(/NONE of those 60 ids still exists/i);
+    expect((doc as unknown as { census: Record<string, number> }).census.priorRevisionIdsStillPresent).toBe(0);
+  });
+
+  it("every id is in baseball/1997/bowmans-best, and every one is a Preview row", () => {
     for (const e of doc.entries) {
       expect(e.id.startsWith("hiq:baseball:1997:bowmans-best:")).toBe(true);
-    }
-    // The measured split: 42 bare addresses, 18 carrying a :sub-preview segment.
-    const sub = doc.entries.filter((e) => e.id.includes(":sub-preview:"));
-    expect(sub).toHaveLength(18);
-    expect(doc.entries.length - sub.length).toBe(42);
-  });
-
-  it("NOT the 232 legitimate rows — the separating field is the subset, never the source", () => {
-    // Every entry's evidence names the Preview set. A row of the proper
-    // checklist ("1997 Bowman\\s Best ... Baseball") must never appear.
-    for (const e of doc.entries) {
+      // The separating field is the SUBSET, never the source: the same dated
+      // ingest wrote these and hundreds of correct rows into one product.
       expect(String(e.evidence)).toMatch(/Bowmans Best Preview/i);
     }
-    const properShaped = doc.entries.filter((e) => /Bowman\\s Best (Atomic )?Refractors/.test(String(e.evidence)));
-    expect(properShaped).toHaveLength(0);
   });
 
-  it("no duplicate ids", () => {
-    expect(new Set(doc.entries.map((e) => e.id)).size).toBe(60);
+  it("every destination is the ruled key at the card's OWN BBP number", () => {
+    for (const e of doc.entries) {
+      expect(e.to).toMatch(/^hiq:baseball:1997:bowmans-best-preview:bbp\d+:(base|refractor|atomic-refractor):no-auto$/);
+      expect(e.to).not.toContain(":sub-");
+      // The bare 1-20 it was minted at is Bowman's Best's own number space --
+      // that is the collision the ruling exists to close.
+      expect(e.to).not.toMatch(/:bowmans-best-preview:\d+:/);
+    }
   });
 
-  it("records the ruling that it is report-only until the setKey is decided", () => {
-    expect(JSON.stringify(doc.rulings)).toMatch(/bowmans-best-preview|pending|ruled key/i);
+  it("no duplicate ids and no two rows onto one address", () => {
+    expect(new Set(doc.entries.map((e) => e.id)).size).toBe(doc.entries.length);
+    const tos = doc.entries.map((e) => e.to);
+    expect(new Set(tos).size).toBe(tos.length);
+  });
+
+  it("SAYS PLAINLY that it does not mint the rows the checklist has and prod does not", () => {
+    // Only 19 of 20 cards x 3 rungs survive, unevenly. This list moves what is
+    // stored; the SCC re-mint creates the rest, which is why it runs first.
+    expect(JSON.stringify(doc.rulings)).toMatch(/never mints/i);
+    expect(JSON.stringify(doc.rulings)).toMatch(/re-mint runs FIRST/i);
   });
 });
 
-describe("the basketball list retires 20 aliases and reslugs 40, in that order", () => {
+describe("the basketball list moves all 60 rows onto the ruled key", () => {
   const doc = readList(basketballList);
 
-  it("holds 60 entries: 20 retire, 40 reslug (the 20 base rows are omitted)", () => {
+  /**
+   * REBUILT TWICE OVER. The prior revision's retire half existed to vacate
+   * bare addresses for its reslug half -- and measured today, the 40
+   * `sub-`-segment ids it named are GONE and the product holds exactly 60
+   * clean BBP rows, three rungs per card, no `sub-` anywhere. So there is
+   * nothing left to retire, and naming ids that do not exist would be a list
+   * that reports success while doing nothing.
+   *
+   * Drew's ruling then moves the destination off the host key entirely, which
+   * is why the 20 BASE rows -- deliberately omitted before, because they were
+   * correct while the Preview lived on `topps-stadium-club` -- now move too.
+   */
+  it("holds 60 entries, every one a reslug, and no retire is left to do", () => {
     expect(doc.entries).toHaveLength(60);
     const byAction: Record<string, number> = {};
     for (const e of doc.entries) byAction[e.action] = (byAction[e.action] ?? 0) + 1;
-    expect(byAction).toEqual({ retire: 20, reslug: 40 });
+    expect(byAction).toEqual({ reslug: 60 });
   });
 
   it("every entry passes the lane's own validation", () => {
     for (const e of doc.entries) expect(L.classifyEntry(e).ok).toBe(true);
   });
 
-  it("ORDER IS LOAD-BEARING: every alias is retired BEFORE the row that reslugs onto it", () => {
-    const order = doc.entries.map((e) => e.id);
-    const ids = new Set(order);
+  it("ORDER IS NO LONGER LOAD-BEARING, because no target is held by this list", () => {
+    // The prior revision's ordering pin existed because 20 reslugs landed on
+    // 20 addresses the same list retired first. Every target now lives on the
+    // ruled key, which holds ZERO rows, so no entry contends with another.
+    const ids = new Set(doc.entries.map((e) => e.id));
     const contended = doc.entries.filter((e) => e.to && ids.has(e.to));
-    // 20 Preview refractor rows land on the 20 vacated bare addresses.
-    expect(contended).toHaveLength(20);
-    for (const e of contended) {
-      expect(order.indexOf(e.to as string)).toBeLessThan(order.indexOf(e.id));
-    }
+    expect(contended).toHaveLength(0);
   });
 
-  it("the 20 Atomic rows go to :atomic-refractor, never the plain rung", () => {
-    const atomic = doc.entries.filter((e) => e.id.includes("sub-bowmans-best-preview-atomic"));
-    expect(atomic).toHaveLength(20);
-    for (const e of atomic) {
-      expect(e.to).toMatch(/:bbp\d+:atomic-refractor:no-auto$/);
-      expect(e.to).not.toMatch(/:refractor:no-auto$/);
-    }
-  });
-
-  it("the 20 Preview refractor rows go to the bare :refractor address", () => {
-    const plain = doc.entries.filter(
-      (e) => e.action === "reslug" && !e.id.includes("preview-atomic"),
-    );
-    expect(plain).toHaveLength(20);
-    for (const e of plain) expect(e.to).toMatch(/:bbp\d+:refractor:no-auto$/);
-  });
-
-  it("NO destination carries a sub- segment — the work-around is being removed, not moved", () => {
+  it("ALL THREE RUNGS MOVE, 20 each -- leaving base behind is the split pool", () => {
+    const rungs: Record<string, number> = {};
     for (const e of doc.entries) {
-      if (e.to) expect(e.to).not.toContain(":sub-");
+      const k = /:(base|refractor|atomic-refractor):/.exec(String(e.to))?.[1] ?? "?";
+      rungs[k] = (rungs[k] ?? 0) + 1;
     }
+    expect(rungs).toEqual({ base: 20, refractor: 20, "atomic-refractor": 20 });
   });
 
-  it("THE EXPECTED END STATE: 60 rows, 3 per card, no sub- segment", () => {
-    // 20 base (omitted, already correct) + 20 refractor + 20 atomic-refractor.
-    const targets = doc.entries.filter((e) => e.to).map((e) => e.to as string);
-    expect(new Set(targets).size).toBe(40);
+  it("an Atomic row goes to :atomic-refractor, never the plain rung", () => {
+    const atomic = doc.entries.filter((e) => /Atomic Refractor/i.test(String(e.evidence)));
+    expect(atomic).toHaveLength(20);
+    for (const e of atomic) expect(e.to).toMatch(/:bbp\d+:atomic-refractor:no-auto$/);
+  });
+
+  it("NO destination carries a sub- segment -- the work-around is removed, not moved", () => {
+    for (const e of doc.entries) expect(String(e.to)).not.toContain(":sub-");
+  });
+
+  it("THE EXPECTED END STATE: 60 rows on the ruled key, 3 per card", () => {
+    const targets = doc.entries.map((e) => String(e.to));
+    expect(new Set(targets).size).toBe(60);
     const cards = new Set(targets.map((t) => /:(bbp\d+):/.exec(t)?.[1]));
     expect(cards.size).toBe(20);
-    // Each card gets exactly two reslugged rungs; its base row is left alone.
-    expect(targets.length / cards.size).toBe(2);
+    expect(targets.length / cards.size).toBe(3);
+    for (const t of targets) {
+      expect(t).toMatch(/^hiq:basketball:1997:bowmans-best-preview:bbp\d+:(base|refractor|atomic-refractor):no-auto$/);
+    }
   });
 
   it("every id is in basketball/1997/topps-stadium-club and none is a base-set row", () => {
@@ -396,21 +431,16 @@ describe("the basketball list retires 20 aliases and reslugs 40, in that order",
 
   it("no duplicate ids and no duplicate destinations", () => {
     expect(new Set(doc.entries.map((e) => e.id)).size).toBe(60);
-    const tos = doc.entries.filter((e) => e.to).map((e) => e.to);
+    const tos = doc.entries.map((e) => e.to);
     expect(new Set(tos).size).toBe(tos.length);
   });
 
-  it("SEQUENCING: the pool lane's list repoints onto addresses this list retires first", () => {
-    // data/pool-relocations/2026-09-06-bbp-basketball-rung-repoint.json landed
-    // on main the same day and repoints 30 sold_comps rows onto 12 targets in
-    // this product. The two lists agree on the END STATE and disagree on the
-    // ORDER: six of those targets are bare refractor addresses this list
-    // retires before reslugging the Preview row onto them. Repointing sales
-    // onto an address that is then deleted and recreated leaves them on a row
-    // that existed under a different document, so the CATALOG list runs first.
-    //
-    // This pin exists so that a later edit to either list cannot quietly widen
-    // the overlap without someone reading the ordering note.
+  it("SEQUENCING: the pool list repoints onto the SAME ruled addresses, and after this one", () => {
+    // data/pool-relocations/2026-09-06-bbp-basketball-rung-repoint.json had its
+    // 30 targets moved onto the ruled key in the same PR, so the two lists
+    // agree on the end state. The order still matters for a different reason
+    // than before: a sale repointed at an address the catalog has not created
+    // yet is a sale pointing at nothing.
     const poolList = join(
       __dirname, "..", "data", "pool-relocations",
       "2026-09-06-bbp-basketball-rung-repoint.json",
@@ -423,20 +453,15 @@ describe("the basketball list retires 20 aliases and reslugs 40, in that order",
     const targets = new Set(
       pool.entries.map((e) => e.repointHobbyiqCardId).filter(Boolean) as string[],
     );
-    const retires = new Set(doc.entries.filter((e) => e.action === "retire").map((e) => e.id));
-    const reslugTo = new Set(doc.entries.filter((e) => e.action === "reslug").map((e) => e.to));
+    const reslugTo = new Set(doc.entries.map((e) => String(e.to)));
 
-    const retiredFirst = [...targets].filter((t) => retires.has(t));
-    const landedOn = [...targets].filter((t) => reslugTo.has(t));
+    // EVERY pool target is an address this list creates. Nothing is left
+    // pointing at the host product, and nothing points at an address that
+    // neither this list nor the re-mint produces.
+    expect(targets.size).toBe(12);
+    for (const t of targets) expect(reslugTo.has(t), `${t} is not created by the catalog list`).toBe(true);
 
-    // The measured overlap on 2026-09-06.
-    expect(retiredFirst).toHaveLength(6);
-    expect(landedOn).toHaveLength(8);
-    // Every contended target ends up as a live address of this product, so the
-    // end states genuinely agree — the only question is order.
-    for (const t of retiredFirst) expect(reslugTo.has(t)).toBe(true);
-
-    // And the list says so in its own rulings, for whoever runs it.
-    expect(JSON.stringify(doc.rulings)).toMatch(/catalog list BEFORE pool list|SEQUENCING WITH THE POOL LANE/i);
+    // And both lists say so, for whoever runs them.
+    expect(JSON.stringify(doc.rulings)).toMatch(/re-mint|catalog list/i);
   });
 });

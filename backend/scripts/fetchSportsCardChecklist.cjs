@@ -604,9 +604,90 @@ const RULED_PRODUCT_SLUGS = [
  * brand-prefix split and keeps `topps-stadium-club`, which is correct, and the
  * pin below asserts both directions.
  */
+/**
+ * CF-BOWMANS-BEST-PREVIEW-IS-ITS-OWN-PRODUCT (Drew, 2026-09-06).
+ *
+ * The ruling that supersedes the destination above, keeping its ANCHOR and
+ * changing only its TARGET. #1846 reparented the Preview off flagship Bowman
+ * and onto `bowmans-best`, which was the right direction and the wrong
+ * address: the Preview is not a rung of Bowman's Best, it is a TWENTY-CARD
+ * INSERT that previews it, and the 2026-09-06 incident is what that costs.
+ *
+ * WHAT THE WRONG ADDRESS DID, measured read-only on 2026-09-06. Minting the
+ * insert onto the parent's key put its cards INSIDE the parent's number space:
+ * 60 catalog rows landed at `hiq:baseball:1997:bowmans-best:<1..20>:*`, the
+ * page's own 1-20 numbering, colliding head-on with Bowman's Best #1-#20 --
+ * twenty DIFFERENT cards. That is one address, two cards, which is the same
+ * damage as one card, two addresses and is harder to see, because nothing
+ * refuses: the rows write cleanly and price each other.
+ *
+ * THE INSERT HAS ITS OWN NUMBERING AND THE MARKET USES IT. Every Preview sale
+ * in sold_comps carries `BBP<n>` -- 16 baseball sales across 14 identity slugs
+ * on 2026-09-06, and 30 basketball ones -- and no Bowman's Best card carries a
+ * BBP number. A product whose cards the market addresses by their own prefix
+ * is a product, not a parallel of the set it previews.
+ *
+ * ONE KEY FOR BOTH SPORTS, because it is ONE INSERT. The same twenty-card
+ * Preview was packed out in 1997 Bowman (baseball) and in 1997-98 Topps
+ * Stadium Club (basketball, BBP1 Allen Iverson ... BBP20 Tariq Abdul-Wahad).
+ * The rosters differ, the sport segment already separates them, and the
+ * PRODUCT is the same one:
+ *
+ *   hiq:baseball:1997:bowmans-best-preview:bbp4:atomic-refractor:no-auto
+ *   hiq:basketball:1997:bowmans-best-preview:bbp1:refractor:no-auto
+ *
+ * THE ANCHOR STAYS. `^bowman-` is still part of the match and the basketball
+ * page still reaches the same key -- through its OWN rule below, keyed on the
+ * host brand it is actually packed out in. Scoping each rule to its host brand
+ * is what #1846 pinned and it is why an unrelated `bowmans-best` slug behind
+ * some third brand still falls through to the brand walk untouched.
+ *
+ * Rungs: base (parallel blank), Refractor, Atomic Refractor -- three rows per
+ * card, 60 per sport, and no `sub-` segment: the subset is EMPTY here because
+ * the Preview is the product now, not a subset of one.
+ */
 const NESTED_PRODUCT_SLUGS = [
+  // MOST SPECIFIC FIRST. The Preview rule must be consulted before the bare
+  // `bowman-bowmans-best` rule, or the shorter pattern claims the slug and the
+  // Preview lands back on the parent whose number space it collides with.
+  [/^bowman-(bowmans-best-preview)(?:-|$)/, "bowmans-best-preview"],
+  [/^topps-stadium-club-(bowmans-best-preview)(?:-|$)/, "bowmans-best-preview"],
   [/^bowman-(bowmans-best)(?:-|$)/, "bowmans-best"],
 ];
+
+/**
+ * THE CARD-NUMBER PREFIX A SET'S OWN CONVENTION REQUIRES, never the parent's.
+ *
+ * The baseball Preview pages print their cards as bare `1`..`20`; the
+ * basketball pages of the SAME insert print `BBP1`..`BBP20`. Both are the same
+ * twenty-card product and the market addresses all of them as `BBP<n>` -- so
+ * the baseball page's bare numbers are the SOURCE's shorthand for a number the
+ * card itself carries, and reading them verbatim is what put the insert inside
+ * `bowmans-best`'s 1-20 space in the first place.
+ *
+ * NARROW BY CONSTRUCTION, and stated as a property of the PRODUCT KEY rather
+ * than of a page. Only a ruled key may declare a prefix, the prefix is applied
+ * ONLY to a bare-numeric cardNumber, and a number that ALREADY carries the
+ * prefix is left exactly as it is -- so the basketball pages are untouched and
+ * a re-parse is idempotent. Any other number shape (`12a`, `BNR-1`) is left
+ * verbatim, because CARD NUMBER IS VERBATIM is the rule this narrows, not one
+ * it replaces.
+ */
+const SET_CARD_NUMBER_PREFIX = { "bowmans-best-preview": "BBP" };
+
+/** The cardNumber as the SET numbers it: the source's spelling, with the set's
+ *  own prefix applied when the source printed the bare number. */
+function applyCardNumberPrefix(cardNumber, setKey) {
+  const n = String(cardNumber || "");
+  const prefix = SET_CARD_NUMBER_PREFIX[String(setKey || "")];
+  if (!prefix) return n;
+  // Already prefixed (the basketball pages): the source spelled it in full.
+  if (new RegExp(`^${prefix}`, "i").test(n)) return n;
+  // Bare numeric only. Anything else is a number shape we do not understand,
+  // and a guess about identity is worse than the source's own spelling.
+  if (!/^\d+$/.test(n)) return n;
+  return prefix + n;
+}
 
 /** The ruled product named INSIDE this slug, and what remains as the subset. */
 function nestedProduct(rest) {
@@ -871,8 +952,13 @@ function splitCardHeader(raw) {
  *    closed as `unreachable` reaches a different verdict on a re-walk. The URL
  *    reader also admits the `non-sport` vertical. Both change what a re-attempt
  *    PRODUCES, which is the test this version answers.
+ * 6  2026-09-06: Bowman's Best Preview is its own product key and its cards
+ *    carry the set's own BBP prefix (#1901, Drew's ruling). The six Preview
+ *    pages produce DIFFERENT rows than they did at v5 -- a different setKey and
+ *    a different cardNumber on every row -- so any verdict recorded against the
+ *    old output has to be re-attempted rather than trusted.
  */
-const CONVERTER_VERSION = 5;
+const CONVERTER_VERSION = 6;
 
 const NOT_FOUND_RE = /Checklist Not Found|NOT FOUND\s*-\s*https?:\/\//i;
 
@@ -989,6 +1075,10 @@ function buildRows(html, opts) {
   const o = opts || {};
   const parallel = o.parallel || "";
   const isAuto = o.isAuto === true;
+  // The PRODUCT this page's cards belong to, so a set whose own numbering
+  // convention carries a prefix can state it. Absent (every caller that does
+  // not know the key) leaves every cardNumber exactly as the source printed it.
+  const setKey = o.setKey || "";
   const headers = extractCardHeaders(html);
   const hiddenCount = countHiddenRows(html);
 
@@ -1014,7 +1104,7 @@ function buildRows(html, opts) {
     }
     rows.push({
       category,
-      cardNumber: c.cardNumber,
+      cardNumber: applyCardNumberPrefix(c.cardNumber, setKey),
       parallel,                 // blank unless the slug named one
       isAuto: isAuto ? "true" : "false",
       printRun: "",             // the page states none; blank means unknown
@@ -1113,7 +1203,13 @@ async function main() {
     : { parentSetKey: "", subset: "" };
   const isAuto = autoEvidence(html, setName || (parsedUrl ? parsedUrl.rest : ""));
 
-  const { rows, stats } = buildRows(html, { parallel, isAuto });
+  // THE SET KEY IS DECIDED BEFORE THE ROWS ARE BUILT, because a ruled product
+  // may number its cards with its own prefix and the rows must carry it.
+  const { rows, stats } = buildRows(html, {
+    parallel,
+    isAuto,
+    setKey: parentSplit.parentSetKey || setKey,
+  });
 
   console.log(url || htmlFile);
   console.log(`  season=${parsedUrl ? parsedUrl.seasonLabel : "?"} year=${year} sport=${sport}` +
@@ -1239,4 +1335,5 @@ module.exports = {
   SUBSET_TAGS, NOISE_TAGS, HEADER, SET_URL_RE, NOT_FOUND_RE, CONVERTER_VERSION,
   unescapeAddslashes, canonicalSlug, canonicalSetUrl,
   QUALIFIED_REFRACTOR, NESTED_PRODUCT_SLUGS, nestedProduct, SLUG_PARALLEL_TAIL, PARENT_BRANDS,
+  SET_CARD_NUMBER_PREFIX, applyCardNumberPrefix,
 };

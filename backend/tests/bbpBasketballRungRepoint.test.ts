@@ -55,8 +55,22 @@ const catalogIds = new Set(fixture.rows.map((r) => r.id));
 /** The address an entry sends its row to, whichever shape it uses. */
 const targetOf = (e: Entry): string => String(e.toCardId ?? e.repointHobbyiqCardId ?? "");
 
-const PRODUCT = "hiq:basketball:1997:topps-stadium-club:";
-const SLUG_RE = /^hiq:basketball:1997:topps-stadium-club:bbp(\d{1,2}):(base|refractor|atomic-refractor):no-auto$/;
+/**
+ * TWO PRODUCTS NOW, and the split is the point.
+ *
+ * `STORED_PRODUCT` is where the CATALOG rows this fixture captured actually
+ * sit -- the host they were minted into. `TARGET_PRODUCT` is where the sales
+ * are sent, and since Drew's 2026-09-06 ruling that is the insert's OWN key:
+ * Bowman's Best Preview is its own product, in both sports it was packed out
+ * in, so the Stadium Club host is provenance and not identity.
+ *
+ * The two were the same string when this list was written, which is exactly
+ * why they have to be named apart now: a single constant would have silently
+ * moved the fixture assertions along with the target ones.
+ */
+const STORED_PRODUCT = "hiq:basketball:1997:topps-stadium-club:";
+const TARGET_PRODUCT = "hiq:basketball:1997:bowmans-best-preview:";
+const SLUG_RE = /^hiq:basketball:1997:bowmans-best-preview:bbp(\d{1,2}):(base|refractor|atomic-refractor):no-auto$/;
 
 describe("the fixture is the catalog this list claims to repair", () => {
   it("captures exactly the 80 rows the 2026-09-04 ingest wrote", () => {
@@ -160,7 +174,7 @@ describe("every to-address is a legal rung of THIS product", () => {
   it("is a well-formed 1997 basketball Stadium Club BBP slug", () => {
     for (const e of list.entries) {
       const to = targetOf(e);
-      expect(to.startsWith(PRODUCT)).toBe(true);
+      expect(to.startsWith(TARGET_PRODUCT)).toBe(true);
       expect(to).toMatch(SLUG_RE);
     }
   });
@@ -196,63 +210,55 @@ describe("every to-address is a legal rung of THIS product", () => {
   });
 });
 
-describe("the catalog plan the list reports", () => {
-  it("ends at exactly 3 rows per card -- 60 for 20 cards", () => {
+describe("the catalog plan is SUPERSEDED, and says so rather than going quiet", () => {
+  /**
+   * When this list was written no catalog lane read a list, so the catalog
+   * half was REPORTED here as a plan for a follow-up to execute. Both halves
+   * of that plan are obsolete now, for two independent reasons, and the block
+   * is kept as a POINTER rather than deleted -- a reader who lands on this
+   * file has to be sent to the list that is actually run, not left following
+   * a shape that no longer matches prod.
+   */
+  it("points at the committed catalog list that owns the write", () => {
     const plan = list.catalogPlan as Record<string, any>;
+    expect(String(plan.supersededBy)).toBe(
+      "data/catalog-relocations/2026-09-06-bbp-preview-basketball.json",
+    );
+    // The lane exists now (#1858), which is the first reason the plan is dead.
+    expect(String(plan.note)).toMatch(/relocate-catalog-rows-by-list/);
+  });
+
+  it("states BOTH reasons it is dead -- the shape and the destination", () => {
+    const plan = list.catalogPlan as Record<string, any>;
+    const why = JSON.stringify(plan.supersededWhy);
+    // (1) THE SHAPE. The 40 `sub-` rows the plan named are gone, so its
+    //     retire half -- which existed only to vacate addresses for its own
+    //     reslug half -- has nothing left to do.
+    expect(why).toMatch(/sub-.{0,40}rows it names are GONE|are GONE/i);
+    // (2) THE DESTINATION. Drew's ruling moved every row off the host key,
+    //     including the 20 base rows the plan said to KEEP.
+    expect(why).toMatch(/bowmans-best-preview/);
+    expect(why).toMatch(/KEEP/);
+  });
+
+  it("keeps the one claim that is still true: moveCatalogRow, never a patch", () => {
+    // patchCatalogRowFields hard-refuses id/cardId/hobbyiqCardId (UNPATCHABLE)
+    // because changing where a row lives is a move -- and the committed lane
+    // uses moveCatalogRow for exactly that reason.
+    const why = JSON.stringify((list.catalogPlan as Record<string, any>).supersededWhy);
+    expect(why).toContain("moveCatalogRow");
+    expect(why).toMatch(/patchCatalogRowFields/);
+  });
+
+  it("THE END STATE IS THE RULED KEY, and the fixture still shows where it started", () => {
+    const plan = list.catalogPlan as Record<string, any>;
+    expect(String(plan.endState)).toMatch(/bowmans-best-preview/);
+    expect(String(plan.endState)).toMatch(/ZERO BBP rows left on topps-stadium-club/i);
+    // The FIXTURE is a photograph of the 2026-09-04 ingest and is unchanged:
+    // it is what the rows looked like when they were minted, which is still
+    // the evidence for why they move. 20 cards, 80 rows.
     expect(list.census.checklistCards).toBe(20);
-    expect(plan.keep.count).toBe(20);
-    expect(plan.retireAsAlias.count).toBe(20);
-    const reslugged = plan.reslug.reduce((a: number, r: any) => a + r.count, 0);
-    expect(reslugged).toBe(40);
-    // 20 kept + 40 re-slugged = 60 live rows; the other 20 are retired aliases.
-    expect(plan.keep.count + reslugged).toBe(60);
-    expect(plan.keep.count + reslugged + plan.retireAsAlias.count).toBe(fixture.rows.length);
-  });
-
-  it("every from-slug the plan re-slugs EXISTS in the catalog fixture", () => {
-    const plan = list.catalogPlan as Record<string, any>;
-    for (const r of plan.reslug) {
-      for (let n = 1; n <= 20; n++) {
-        const from = String(r.from).replace("<n>", String(n));
-        expect(catalogIds.has(from)).toBe(true);
-      }
-    }
-    for (let n = 1; n <= 20; n++) {
-      expect(catalogIds.has(`${PRODUCT}bbp${n}:base:no-auto`)).toBe(true);
-      // the alias row the plan retires
-      expect(catalogIds.has(`${PRODUCT}bbp${n}:refractor:no-auto`)).toBe(true);
-    }
-  });
-
-  it("every to-slug the plan re-slugs is a legal rung and is NOT already taken", () => {
-    const plan = list.catalogPlan as Record<string, any>;
-    for (const r of plan.reslug) {
-      for (let n = 1; n <= 20; n++) {
-        const to = String(r.to).replace("<n>", String(n));
-        expect(to).toMatch(SLUG_RE);
-        expect(to).not.toContain(":sub-");
-      }
-    }
-    // The Atomic rung is genuinely vacant today, so those 20 moves land clean.
-    for (let n = 1; n <= 20; n++) {
-      expect(catalogIds.has(`${PRODUCT}bbp${n}:atomic-refractor:no-auto`)).toBe(false);
-    }
-  });
-
-  it("ORDERING IS LOAD-BEARING: the Refractor target is occupied until the retire lands", () => {
-    // The plain-Refractor rows move to `:bbp<n>:refractor:`, which the Atomic
-    // ALIAS row currently squats. Moving first would collide with a live row,
-    // so the plan says so in as many words rather than leaving it to the runner.
-    const plan = list.catalogPlan as Record<string, any>;
-    const refractorMove = plan.reslug.find((r: any) => String(r.to).includes(":refractor:no-auto"));
-    expect(refractorMove).toBeDefined();
-    expect(String(refractorMove.why)).toMatch(/OCCUPIED|retire MUST land before/i);
-  });
-
-  it("names moveCatalogRow, because patchCatalogRowFields refuses an id change", () => {
-    const plan = list.catalogPlan as Record<string, any>;
-    expect(String(plan.writeHelper)).toContain("moveCatalogRow");
-    expect(String(plan.writeHelper)).toMatch(/patchCatalogRowFields/);
+    expect(fixture.rows).toHaveLength(80);
   });
 });
 

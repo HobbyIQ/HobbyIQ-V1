@@ -487,7 +487,16 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     // 111,878 catalog rows; 12,748 sales sat on bare bowman.
     [/bowman-platinum/, "bowman-platinum"],
     [/bowmans?-best-university/, "bowman-best-university"],
-    [/bowmans?-best/, "bowmans-best"],
+    // CF-BOWMANS-BEST-PREVIEW-IS-ITS-OWN-PRODUCT (Drew, 2026-09-06). The
+    // 20-card BBP1-BBP20 insert that PREVIEWS Bowman's Best is its own
+    // product, in baseball and basketball alike. It must be reached BEFORE
+    // the general rule below, which matches it on its own prefix — the same
+    // prefix accident `bowman-best-university` is ordered first for.
+    [/bowmans?-best-previews?/, "bowmans-best-preview"],
+    // ...and the general rule states its scope rather than relying on line
+    // order alone, because setKeyReconciliation's loader degrades to an EMPTY
+    // doc by design, so "the fixed-point table is absent" really occurs.
+    [/bowmans?-best(?!-previews?)/, "bowmans-best"],
     [/bowman-(?:1st|first)-edition/, "bowman-1st-edition"],
     [/^bowman/, "bowman"],
     [/bowman/, "bowman"],
