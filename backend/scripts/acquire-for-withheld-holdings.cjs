@@ -57,7 +57,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const backend = path.join(__dirname, "..");
 const { CosmosClient } = require(path.join(backend, "node_modules/@azure/cosmos"));
-const { budget } = require(path.join(__dirname, "lib/runner-budget.cjs"));
+const { budget, finishLane } = require(path.join(__dirname, "lib/runner-budget.cjs"));
 const {
   ACTIONABLE_REASONS,
   groupIntoCells,
@@ -476,4 +476,12 @@ async function main() {
   note("  (read-only: nothing was written, nothing was dispatched, nothing was repriced)");
 }
 
-main().catch((e) => { console.error("FATAL", e && e.message); process.exit(1); });
+// CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809). Success exits too: a lane
+// that lets the loop drain is betting every library released every handle.
+// This lane landed alongside #1828's rewrite of the other 63 tails and so
+// shipped with the old bare `main().catch(...)`.
+main()
+  .then((ctx) => finishLane(0, ctx || {}))
+  .catch(async (e) => { console.error("FATAL", e && e.message);
+    await finishLane(1);
+  });

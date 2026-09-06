@@ -116,7 +116,8 @@ const backend = path.resolve(__dirname, "..");
 const X = require(path.join(__dirname, "lib", "cross-product-refile.cjs"));
 const { relocateSoldComp, stripSystem, contentHashOf } = require(path.join(__dirname, "lib", "relocate-sold-comp.cjs"));
 const { runnerShardScope } = require(path.join(__dirname, "lib", "runner-shard-scope.cjs"));
-const { budget } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
+const { cardShardIndex } = require(path.join(__dirname, "lib", "card-shard-axis.cjs"));
+const { budget, finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
 
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
 const str = (v) => String(v ?? "").trim();
@@ -139,7 +140,12 @@ const MODE = lower(process.env.MODE || "both");
 //
 // 110m loop + 90s reserve + 5m verify + 1m startup = ~117.5m against the
 // runner's 150m ceiling: 32m of margin.
-const CLOCK = budget({ minutes: Number(process.env.RUN_MINUTES || 110), reserveMs: 90 * 1000, verifyMs: 5 * 60 * 1000, startedAt: STARTED });
+// The budget stated so the margin is COMPUTABLE from the source. #1803's pin
+// reads a literal default; burying it in `budget({ minutes: Number(...) })`
+// made this lane's worst case unreadable and the margin unprovable. Same value,
+// same override, a spelling the pin can parse.
+const RUN_MINUTES = Number(process.env.RUN_MINUTES || 110);
+const CLOCK = budget({ minutes: RUN_MINUTES, reserveMs: 90 * 1000, verifyMs: 5 * 60 * 1000, startedAt: STARTED });
 
 const SHARD_SCOPE = runnerShardScope({ label: "repair-cpa-draft-refile" });
 
@@ -172,10 +178,12 @@ async function forEachPage(container, spec, onPage, pageSize = 500) {
   } while (token);
 }
 
-const crypto = require("crypto");
-const shardIndex = (id) =>
-  parseInt(crypto.createHash("sha1").update(String(id)).digest("hex").slice(0, 8), 16)
-  % Math.max(1, SHARD_SCOPE.SLOTS);
+// CF-A-MOVE-LANE-SHARDS-BY-CARD-NOT-BY-ROW (2026-09-05). The unit is the CARD,
+// not the row: a graded child `${parent}:${tier}` starts with the same id stem
+// this lane scans, so hashing the ROW scattered one card's parent, its children
+// and its destination across up to five slots while moveCatalogRow was
+// re-pointing that card's sales and retiring those same children.
+const shardIndex = (id) => cardShardIndex(id, SHARD_SCOPE.SLOTS);
 
 /** User-verified and ruled rows are report-only forever. */
 const isProtectedRow = (r) =>
@@ -188,7 +196,7 @@ function banner() {
     `  MODE            ${MODE}`,
     `  SCOPE           ${SCOPE_TRIPLES.map((t) => t.raw).join(", ") || "(none)"}`,
     `  WRITE           ${APPLY ? "APPLY — moves sold_comps rows and catalog rows" : "REPORT ONLY — nothing is written"}`,
-    `  SHARD           slot ${SHARD_SCOPE.SLOT} of ${SHARD_SCOPE.SLOTS}${SHARD_SCOPE.sharding ? "" : " (not sharded)"}`,
+    `  SHARD           slot ${SHARD_SCOPE.SLOT} of ${SHARD_SCOPE.SLOTS}${SHARD_SCOPE.SHARDED ? "" : " (not sharded)"}`,
     `  CLOCK           ${CLOCK.describe()}`,
   ].join("\n");
 }
@@ -217,6 +225,7 @@ async function main() {
   const { CosmosClient } = require("@azure/cosmos");
   const { computeHobbyIqCardId } = require(path.join(backend, "dist/services/portfolioiq/hobbyIqCardId.service.js"));
   const { moveCatalogRow } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
+  const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
 
   const db = new CosmosClient({
     connectionString: process.env.COSMOS_CONNECTION_STRING,
@@ -301,7 +310,7 @@ async function main() {
       }, async (rows) => {
         for (const r of rows) {
           if (outOfTime()) return false;
-          if (SHARD_SCOPE.sharding && shardIndex(r.id) !== SHARD_SCOPE.SLOT) continue;
+          if (SHARD_SCOPE.SHARDED && shardIndex(r.id) !== SHARD_SCOPE.SLOT) continue;
           report.pool.scanned++;
           sales.push(r);
           if (LIMIT && report.pool.scanned >= LIMIT) return false;
@@ -396,7 +405,7 @@ async function main() {
       }, async (page) => {
         for (const r of page) {
           if (outOfTime()) return false;
-          if (SHARD_SCOPE.sharding && shardIndex(r.id) !== SHARD_SCOPE.SLOT) continue;
+          if (SHARD_SCOPE.SHARDED && shardIndex(r.id) !== SHARD_SCOPE.SLOT) continue;
           report.catalog.scanned++;
           rows.push(r);
         }
@@ -511,11 +520,45 @@ async function main() {
   // run's `STARTSWITH(hobbyiqCardId, fromKey)` no longer returns it and the
   // relaunch resumes rather than repeating.
   console.log(`  REFILED to the product the checklist names   ${f(report.pool.moved + report.catalog.moved)}`);
-  // `stoppedAtBudget()` ASSEMBLES the marker at runtime rather than returning
-  // a boolean, so the literal never appears in this source and a grep of the
-  // repo cannot manufacture one.
-  if (outOfTime()) console.log(`\n${CLOCK.stoppedAtBudget()} — the slot has more to do`);
+  // THE MARKER IS A LITERAL, and must be. The runner's relaunch step for this
+  // lane is keyed on "stopped at the … budget", and everyWriteJobReconciles
+  // checks BOTH directions: a printer with no relaunch (the fleet stops
+  // silently, green) and a relaunch whose script never prints the marker (it
+  // waits for a line that never comes). Assembling the string at runtime
+  // satisfied neither — the relaunch was keyed on a marker this source never
+  // contained, so a budget stop would have ended the fleet mid-scope. Same
+  // shape as the Bowman lane it was copied from.
+  if (outOfTime()) {
+    console.log(`\n  stopped at the ${CLOCK.RUN_MINUTES}-minute budget — the slot has more to do`);
+  }
   console.log(`\n${APPLY ? "APPLIED" : "REPORT ONLY — nothing was written"}`);
+
+  // CF-EVERY-WRITE-JOB-RECONCILES. A lane that writes to Cosmos and reports no
+  // ledger can finish green having written nothing, and nobody can tell.
+  if (APPLY) {
+    // DISJOINT counters: intended = written + skipped + failed, with no
+    // sub-total counted twice. Anything planned that neither landed nor was
+    // refused is `skipped` — the budget stopped the loop before it ran.
+    const intended = report.pool.move + report.catalog.move;
+    const written = report.pool.moved + report.catalog.moved;
+    const failed = report.catalog.failed;
+    reportWrites({
+      job: "repair-cpa-draft-refile",
+      intended,
+      written,
+      skipped: Math.max(0, intended - written - failed),
+      failed,
+    });
+  }
 }
 
-main().catch((e) => { console.error("FATAL:", e?.stack || e?.message || e); process.exit(3); });
+// CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809). Success exits too: a lane
+// that lets the loop drain is betting every library released every handle.
+// This lane landed after #1828 rewrote the other 63 tails, so it shipped with
+// the old bare `main().catch(...)` and was red in laneExitsWhenWorkIsDone from
+// the moment it merged.
+main()
+  .then((ctx) => finishLane(0, ctx || {}))
+  .catch(async (e) => { console.error("FATAL:", e?.stack || e?.message || e);
+    await finishLane(3);
+  });
