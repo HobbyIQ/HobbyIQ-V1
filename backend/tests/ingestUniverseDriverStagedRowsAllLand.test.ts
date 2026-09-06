@@ -127,12 +127,20 @@ describe("run 33847867665 — exactly 64 rows per set was the leaked LIMIT, not 
     expect(src).toMatch(/for \(const id of gate\.stats\.identities\) if \(!inCatalog\.has\(id\)\) missing\.push\(id\);/);
     // No dependence on `before`: the diff runs whenever the read succeeds.
     expect(src).toMatch(/if \(after !== null && gate\.stats\.identities && gate\.stats\.identities\.size\) \{/);
-    // The verdict names the shortfall and is `failed`, so the next pass
-    // re-attempts rather than recording a closed gap.
-    expect(src).toMatch(/short ingest — \$\{f\(shortIngest\.missing\)\} of \$\{f\(shortIngest\.staged\)\} staged identities are not in the catalog/);
-    // The comment lines between the two fields are allowed: what is pinned is
-    // that the SHORT-INGEST verdict is the `failed` one, not its formatting.
-    expect(src).toMatch(/status: "failed",\s*(?:\n\s*\/\/[^\n]*)*\n\s*reason: `short ingest/);
+    // The verdict NAMES what it compared -- both sides and the address --
+    // because the defect it reports is a comparison, and run 33997480307's
+    // twelve of these were all the comparison reading a collapsed key.
+    expect(src).toMatch(/compared the \$\{f\(shortIngest\.staged\)\} distinct identities staged/);
+    expect(src).toMatch(/cardNumber\|parallel\|isAuto\|printRun/);
+    // CF-AN-ENTRY-THAT-LANDED-ROWS-IS-NOT-A-FAILURE (2026-09-06). It is its own
+    // TERMINAL status, never `failed`: run 33997480307 counted twelve entries
+    // failed while their own lines named thousands of landed rows, and as a
+    // non-terminal `failed` each would be re-attempted forever over rows
+    // already in the catalog. The comment lines between the fields are allowed;
+    // what is pinned is which status the SHORT-INGEST verdict carries.
+    expect(src).toMatch(/status: SHORT_STATUS,\s*(?:\n\s*\/\/[^\n]*)*\n\s*reason: `short ingest/);
+    expect(src).toMatch(/const SHORT_STATUS = "short-ingest";/);
+    expect(src).toMatch(/TERMINAL_STATUSES = new Set\(\[[^\]]*SHORT_STATUS\]\)/);
     // Decided BEFORE the partial branch: a short ingest is never a thin source.
     expect(src.indexOf("} else if (shortIngest) {")).toBeLessThan(src.indexOf("} else if (incomplete) {"));
     // ...and before the count check, which it supersedes.

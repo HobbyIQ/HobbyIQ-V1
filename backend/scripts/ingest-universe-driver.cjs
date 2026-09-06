@@ -178,7 +178,24 @@ const STREAK_STATUSES = new Set(["failed", "unreachable"]);
  * partials are mostly CORRECT (see the base-only rule below) that cost buys
  * nothing at all. The queue filter is where the decision belongs.
  */
-const TERMINAL_STATUSES = new Set(["ingested", "unreachable", EMPTY_STATUS, "partial"]);
+/**
+ * CF-AN-ENTRY-THAT-LANDED-ROWS-IS-NOT-A-FAILURE (2026-09-06, run 33997480307).
+ *
+ * Twelve entries of that run each landed thousands of rows -- their own lines
+ * say so, "under source checklistcenter-2026-09-05: 5,636 rows" -- and every
+ * one was counted `failed`, because a shortfall in the staged-identity diff was
+ * filed under the same word as a severed pipe. `failed` is the bucket for an
+ * entry that tried to land and could not; an entry that landed 5,636 rows and
+ * is missing 176 rungs is a DIFFERENT finding and needs its own word, or the
+ * banner cannot tell an operator which of the two happened.
+ *
+ * `short-ingest` is that word. It is TERMINAL -- the rows are in the catalog
+ * and re-running the entry re-ingests what is already there -- it reconciles in
+ * its own named bucket, and it never advances the systemic streak, which may
+ * conclude only that the host is down. Reaching it proves the opposite.
+ */
+const SHORT_STATUS = "short-ingest";
+const TERMINAL_STATUSES = new Set(["ingested", "unreachable", EMPTY_STATUS, "partial", SHORT_STATUS]);
 
 /**
  * The systemic tripwire's whole arithmetic, in one exported place so a test can
@@ -1894,13 +1911,96 @@ function manifestSetKeys(entry, csvPaths) {
   return out;
 }
 
+/**
+ * CF-A-COLLAPSED-KEY-IS-A-DIFFERENT-PRODUCT (2026-09-06, run 33997480307).
+ *
+ * The candidate list grew once per defect -- the manifest key (#1739), the
+ * reconstructed slug, and the NORMALIZED form of each (#1738, so `finest` can
+ * reach `topps-finest`). #1738's widening was right about the key it added and
+ * silent about what else that key can name.
+ *
+ * `normalizeSetKey` is a PRODUCT-FAMILY resolver. Where the vocabulary has no
+ * row for a specialization it answers with the FLAGSHIP, and on this run's
+ * entries that is most of them:
+ *
+ *   topps-juventus-team-set            -> topps
+ *   topps-chrome-bundesliga            -> topps-chrome
+ *   topps-chrome-uefa-champions-league -> topps-chrome
+ *   topps-stadium-club-chrome-uefa     -> topps-stadium-club
+ *
+ * So verifying a 65-row Juventus team set also read `2021/topps`, which holds
+ * 147,149 rows of eighty other products. Counted from Cosmos on 2026-09-06:
+ *
+ *   2021 topps-juventus-team-set        65 rows, ALL source checklistcenter-2026-09-05
+ *   2021 topps                     147,149 rows, ZERO from this run
+ *   2021 topps-chrome-bundesliga     2,213 rows, ALL source checklistcenter-2026-09-05
+ *   2021 topps-chrome               31,898 rows, ZERO from this run
+ *
+ * Three readings went wrong on that one union, and all twelve "SHORT INGEST"
+ * entries of the run are this shape:
+ *
+ *   `after`   became 147,214 instead of 65, so `created = after - before` was a
+ *             difference of two six-figure numbers that other writers move
+ *             between the reads. It came out <= 0, and `Math.max(0, ...)`
+ *             recorded ZERO ROWS CREATED for an entry that landed 65;
+ *   identity  `catalogIdentities` unioned the flagship's identities in, so 914
+ *             of 1,017 staged identities read "present" because a card of the
+ *             same number and parallel exists somewhere in the flagship pool --
+ *             `1|green refractor|0|99` IS in 2021/topps-chrome (baseballcard-
+ *             pedia) and is NOT in 2021/topps-chrome-bundesliga -- while the
+ *             ~100 genuinely new rungs read "missing";
+ *   `before`  was read without csvPaths, so it resolved a different candidate
+ *             list than `after` did (fixed at its call site).
+ *
+ * THE DISTINCTION THAT MATTERS, and why this is not a revert of #1738. A key
+ * that is STATED -- by the manifest, or reconstructed from the entry -- is an
+ * address someone asserted rows are at, and #1741's rung pages prove both can
+ * hold some (25 rows under `topps-chrome-town-heroes` on 2026-09-04). Those
+ * stay. What must not be added is a key NOTHING stated, invented by collapsing
+ * a stated one onto its parent product: that is not this product under another
+ * spelling, it is a DIFFERENT product, and reading it answers a question
+ * nobody asked.
+ *
+ * So a normalization is admitted only when it RESOLVES A SPELLING -- `finest`
+ * -> `topps-finest`, the alias #1738 exists for -- and never when it COLLAPSES
+ * a specialization, which is recognised by the answer being a strict prefix of
+ * the key it came from. `topps-chrome-bundesliga` -> `topps-chrome` is a
+ * collapse and is dropped; `finest` -> `topps-finest` is not and is kept.
+ */
+function collapsesToParent(key, normalized) {
+  if (!key || !normalized || key === normalized) return false;
+  // The flagship of a specialization is a leading segment of it. `finest` ->
+  // `topps-finest` grows and is an alias; `topps-chrome-bundesliga` ->
+  // `topps-chrome` shrinks onto its own prefix and is a family collapse.
+  return key.startsWith(normalized + "-");
+}
+
 function setKeyCandidates(entry, csvPaths) {
   const out = [];
   const add = (k) => { if (k && !out.includes(k)) out.push(k); };
-  // THE KEY THE CHILD WRITES UNDER, first and unconditionally.
-  for (const k of manifestSetKeys(entry, csvPaths)) { add(k); add(canonicalSetKey(k)); }
+  // THE MANIFEST IS THE WRITER'S OWN STATEMENT of where the rows went, and the
+  // child honours it VERBATIM (`setKey: m.setKey || normalizeSetKey(m.setName)`).
+  // So when there IS one, normalizing it can only name a product the child did
+  // not write to, and a family collapse is dropped.
+  const stated = manifestSetKeys(entry, csvPaths);
+  for (const k of stated) {
+    add(k);
+    const norm = canonicalSetKey(k);
+    if (!collapsesToParent(k, norm)) add(norm);
+  }
   const raw = setKeyFor(entry);
-  if (raw) { add(raw); add(canonicalSetKey(raw)); }
+  if (!raw) return out;
+  add(raw);
+  const rawNorm = canonicalSetKey(raw);
+  // WITHOUT a manifest the collapsed key stays. Nothing has stated where the
+  // rows went, the child may itself have resolved the name through
+  // normalizeSetKey, and a product whose manifest omitted a setKey must still
+  // be counted rather than reported wholly missing (#1739's hobbymonitor
+  // cases: `topps-three` -> `topps`, `panini-score-a-treat` -> `panini-score`).
+  // A wrong guess here costs a false `failed`; dropping it costs a real ingest
+  // reported as zero rows. WITH a manifest the guess is not needed, so the
+  // collapse is dropped and the shrunken list is the whole point (#1747).
+  if (stated.length ? !collapsesToParent(raw, rawNorm) : true) add(rawNorm);
   return out;
 }
 
@@ -2252,7 +2352,7 @@ for (const lane of ACQUIRE_LANES) {
   }
 }
 
-module.exports = { streakAfter, RUNNER_SCOPE_VARS, gateStagedCsv, gateStagedEntry, ladderIsAttested, setKeyCandidates, canonicalSetKey, TERMINAL_STATUSES, LANES_WITH_SIBLING_PARALLEL_PAGES, ladderOnSiblingPages, allFilesAreParallelOfParent, CARTESIAN_MIN_RUNGS, CARTESIAN_MIN_CARDS, stagedCsvs, LANES_WITHOUT_PRINT_RUNS, LANES_WITH_BASELESS_PRODUCTS, LANES_WITH_VINTAGE_ERA_PRODUCTS, PARALLEL_ERA_FIRST_YEAR, ladderlessByEra, sourceLabelFor, splitCsv, isPersonName, setKeyFor, planFor, tcgdexModern, acquireStaged, ACQUIRE_LANES, LANE_ALIASES, LANE_SOURCE, LANE_MINUTES, CANONICAL_HEADER, CHILD_STDERR_LINES, cosmosSafeId, controlId, orderQueue, SYSTEMIC_FAILURE_STREAK, EMPTY_STATUS, STREAK_STATUSES, isStaged, stagedSourceRefs, stagedIndex, stagedFilesFor, acquireFromStaging };
+module.exports = { collapsesToParent, streakAfter, RUNNER_SCOPE_VARS, gateStagedCsv, gateStagedEntry, ladderIsAttested, setKeyCandidates, canonicalSetKey, TERMINAL_STATUSES, LANES_WITH_SIBLING_PARALLEL_PAGES, ladderOnSiblingPages, allFilesAreParallelOfParent, CARTESIAN_MIN_RUNGS, CARTESIAN_MIN_CARDS, stagedCsvs, LANES_WITHOUT_PRINT_RUNS, LANES_WITH_BASELESS_PRODUCTS, LANES_WITH_VINTAGE_ERA_PRODUCTS, PARALLEL_ERA_FIRST_YEAR, ladderlessByEra, sourceLabelFor, splitCsv, isPersonName, setKeyFor, planFor, tcgdexModern, acquireStaged, ACQUIRE_LANES, LANE_ALIASES, LANE_SOURCE, LANE_MINUTES, CANONICAL_HEADER, CHILD_STDERR_LINES, cosmosSafeId, controlId, orderQueue, SYSTEMIC_FAILURE_STREAK, EMPTY_STATUS, SHORT_STATUS, STREAK_STATUSES, isStaged, stagedSourceRefs, stagedIndex, stagedFilesFor, acquireFromStaging };
 if (require.main !== module) return;
 
 (async () => {
@@ -2516,7 +2616,7 @@ if (require.main !== module) return;
   // balances by construction and can never disagree with itself.
   const take = queue.slice(0, effectiveLimit);
   const intended = take.length;
-  const verdicts = { ingested: 0, partial: 0, failed: 0, unreachable: 0, [EMPTY_STATUS]: 0 };
+  const verdicts = { ingested: 0, partial: 0, failed: 0, unreachable: 0, [EMPTY_STATUS]: 0, [SHORT_STATUS]: 0 };
   let notReached = 0, rowsCreatedTotal = 0;
   // Report mode reconciles against what it INSPECTED. Counting a dry run's
   // deliberate zero writes as a shortfall reports a false imbalance and, worse,
@@ -2583,7 +2683,6 @@ if (require.main !== module) return;
     // belongs on the control doc whichever verdict the entry ends with.
     let rowsUnderSource = null;
     try {
-      const before = await countCatalogRows(entry);
       // A STAGED FILE WINS. See CF-A-STAGED-FILE-WINS: an entry whose checklist
       // is committed with its manifest is ingested as-is, and only an explicit
       // MODE=refetch re-fetches it (CF-RECHECK-IS-NOT-REFETCH: a recheck
@@ -2597,6 +2696,18 @@ if (require.main !== module) return;
 
       // GATE BEFORE INGEST. A staged file that violates doctrine is refused as
       // a whole entry -- never a dirty ingest, and never a silent skip.
+      /**
+       * CF-BOTH-ENDS-OF-A-DELTA-READ-ONE-KEY (2026-09-06, run 33997480307).
+       *
+       * `before` was read at the top of the try, BEFORE acquisition -- and the
+       * key it counts comes from the staged manifest, which does not exist
+       * until the files are on disk. So it fell back to the reconstructed slug
+       * while `after` read the manifest's key, and their difference was a
+       * subtraction of two different products' counts rather than a
+       * measurement of this run. It is read here, from the same csvPaths
+       * `after` will use, so the two ends of the delta name one product.
+       */
+      const before = await countCatalogRows(entry, csvPaths);
       const gate = gateStagedEntry(csvPaths, lane);
       if (csvPaths.length > 1) {
         console.log(`      ${f(csvPaths.length)} staged scope files: ${csvPaths.map((p) => path.basename(p)).join(", ")}`);
@@ -2634,7 +2745,6 @@ if (require.main !== module) return;
         // VERIFY BY READ. Not the ingest's claim -- a count from Cosmos.
         const after = await countCatalogRows(entry, csvPaths);
         const created = (after ?? 0) - (before ?? 0);
-        rowsCreatedTotal += Math.max(0, created);
 
         // AND VERIFY BY SOURCE. `after` counts every row of the product,
         // synthetic ones included; this counts only what this run's source
@@ -2643,6 +2753,31 @@ if (require.main !== module) return;
         if (rowsUnderSource !== null) {
           console.log(`      under source ${sourceLabelFor(lane)}: ${f(rowsUnderSource)} rows (of ${f(after ?? 0)} for the product)`);
         }
+        /**
+         * CF-ROWS-CREATED-IS-THE-NUMBER-THE-ENTRIES-PRINTED (2026-09-06).
+         *
+         * The banner's "rows created ... (verified by catalog read, not
+         * claimed)" summed `after - before`, and run 33997480307 printed ZERO
+         * under twelve per-entry lines that each named thousands. Two reasons,
+         * and the by-source count is the answer to both:
+         *
+         *   a difference of two whole-product counts is only this run's work
+         *   when nothing else writes between the reads, and on a collapsed key
+         *   the two numbers were six figures of other products' rows;
+         *
+         *   an entry re-ingesting rows a previous pass already landed creates
+         *   nothing and yet HAS its rows under this source, which is the thing
+         *   the operator is asking about.
+         *
+         * `countCatalogRowsBySource` counts exactly the rows stamped with THIS
+         * run's source label under the key the child wrote. That is the
+         * verified catalog delta of this run, and it is the same number the
+         * per-entry lines print -- so the summary now sums to what the entries
+         * say, instead of contradicting them. The whole-product delta is kept
+         * on the control doc as `rowsCreated`, where the truncation rules still
+         * read it.
+         */
+        rowsCreatedTotal += rowsUnderSource ?? Math.max(0, created);
 
         /**
          * CF-EVERY-STAGED-ROW-OR-IT-IS-NOT-INGESTED (2026-09-04).
@@ -2784,18 +2919,28 @@ if (require.main !== module) return;
           // ours (a merge refusal, a key mismatch, a severed child), so it
           // stays `failed` and keeps bringing someone back; it just never votes
           // that the LANE is down. See CF-A-CORRECT-REFUSAL-IS-NOT-A-LANE-FAILURE.
+          // ITS OWN TERMINAL STATE, never `failed`. See
+          // CF-AN-ENTRY-THAT-LANDED-ROWS-IS-NOT-A-FAILURE: this entry's rows
+          // ARE in the catalog, and calling that a failure both misreports the
+          // run and feeds a systemic streak that may only conclude the host is
+          // down -- which reaching this line disproves.
           verdict = {
-            status: "failed",
-            // THE ADDRESS THAT WAS READ, for the same reason the 0-row verdict
-            // now names it: a shortfall is a key mismatch until proven otherwise.
-            reason: `short ingest — ${f(shortIngest.missing)} of ${f(shortIngest.staged)} staged identities are not in the catalog `
-              + `under ${shortIngest.countedKeys.map((k) => `${entry.year}/${k}`).join(" + ")} (e.g. ${shortIngest.sample.join(", ")})`,
+            status: SHORT_STATUS,
+            // NAME WHAT WAS COMPARED. "short ingest" alone does not say which
+            // two things disagreed, and the whole defect this replaces was a
+            // comparison against the wrong address.
+            reason: `short ingest — compared the ${f(shortIngest.staged)} distinct identities staged for this entry `
+              + `(cardNumber|parallel|isAuto|printRun) against the catalog under `
+              + `${shortIngest.countedKeys.map((k) => `${entry.year}/${k}`).join(" + ")}: `
+              + `${f(shortIngest.present)} present, ${f(shortIngest.missing)} missing (e.g. ${shortIngest.sample.join(", ")}); `
+              + `${f(rowsUnderSource ?? 0)} rows landed under ${sourceLabelFor(lane)}`,
             rowsCreated: created, rowsInCatalog: after, rowsStaged: staged,
             stagedIdentities: shortIngest.staged, missingIdentities: shortIngest.missing,
+            presentIdentities: shortIngest.present,
             countedSetKeys: shortIngest.countedKeys,
             stats: gate.stats, laneProvenHealthy: true,
           };
-          console.log(`      SHORT INGEST — ${f(shortIngest.missing)} of ${f(shortIngest.staged)} staged identities missing from the catalog (${f(shortIngest.present)} present)`);
+          console.log(`      SHORT INGEST — compared ${f(shortIngest.staged)} staged identities against ${shortIngest.countedKeys.map((k) => `${entry.year}/${k}`).join(" + ")}: ${f(shortIngest.present)} present, ${f(shortIngest.missing)} missing`);
           console.log(`      missing e.g. ${shortIngest.sample.join(", ")}`);
         } else if (truncated) {
           // Reached only when every staged identity IS in the catalog and the
@@ -2919,7 +3064,7 @@ if (require.main !== module) return;
   // `empty` is a verdict like any other and lands a control doc, so it counts
   // toward `written` -- leaving it out would put a lane of correctly-refused
   // sets straight into RECONCILED NO.
-  const written = verdicts.ingested + verdicts.partial + verdicts.failed + verdicts.unreachable + verdicts[EMPTY_STATUS];
+  const written = verdicts.ingested + verdicts.partial + verdicts.failed + verdicts.unreachable + verdicts[EMPTY_STATUS] + verdicts[SHORT_STATUS];
   // CF-AN-UNREACHABLE-ENTRY-IS-ACCOUNTED-FOR (2026-09-04).
   //
   // Run 33841276495 (sportscardchecklist, report mode, limit=20) printed
@@ -2945,6 +3090,7 @@ if (require.main !== module) return;
   if (APPLY) {
     console.log(`    ingested          ${f(verdicts.ingested)}`);
     console.log(`    partial           ${f(verdicts.partial)}`);
+    console.log(`    short ingest      ${f(verdicts[SHORT_STATUS])}   (rows landed; some staged identities are not in the catalog)`);
     console.log(`    failed            ${f(verdicts.failed)}`);
     console.log(`    unreachable       ${f(verdicts.unreachable)}`);
     console.log(`    empty at source   ${f(verdicts[EMPTY_STATUS])}   (the source served no cards; a verdict, not a lane fault)`);
@@ -2973,7 +3119,11 @@ if (require.main !== module) return;
     reportWrites({
       job: "ingest-universe-driver",
       intended,
-      written: verdicts.ingested + verdicts.partial,
+      // A short ingest LANDED its rows -- see
+      // CF-AN-ENTRY-THAT-LANDED-ROWS-IS-NOT-A-FAILURE. It belongs with the
+      // written, never with the failed; counting it as loss is what made run
+      // 33997480307 report 18 failures over twelve entries that wrote.
+      written: verdicts.ingested + verdicts.partial + verdicts[SHORT_STATUS],
       // An entry the source does not card is deliberately not written; it is
       // skipped, exactly like an unreachable one -- never counted as loss.
       skipped: verdicts.unreachable + verdicts[EMPTY_STATUS] + notReached,
