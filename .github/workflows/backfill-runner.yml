@@ -402,6 +402,14 @@ on:
           # list path (default data/pool-relocations/2026-09-01-four-values.json);
           # a missing or empty list is a refusal, never a silent no-op.
           - relocate-pool-rows-by-list
+          # CF-THE-LIST-IS-THE-SCOPE, for card_catalog (2026-09-06). The catalog
+          # twin of the lane above: retire (DELETE) or reslug (moveCatalogRow)
+          # only the card_catalog rows named in a committed list. `scope`
+          # carries the list path and is REQUIRED -- this lane deletes, so it
+          # has no default list and an empty scope is fatal. Retire is a delete
+          # because no catalog field excludes a row from the MATCH paths; see
+          # the script's header for the measurement behind that.
+          - relocate-catalog-rows-by-list
           # CF-ENGINE-BACKTEST (#1651, 2026-09-02). The published accuracy
           # number: the engine's projection AS OF just before each held-out
           # sale, using only prior data, scored against what the card actually
