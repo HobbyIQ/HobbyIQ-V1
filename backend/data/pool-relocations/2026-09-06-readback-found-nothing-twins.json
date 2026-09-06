@@ -1,0 +1,393 @@
+{
+ "generatedAt": "2026-09-06T06:52:03.080Z",
+ "forLane": "relocate-pool-rows-by-list.cjs",
+ "rulings": [
+  "CF-ONE-SALE-ONE-ADDRESS (2026-09-05): one sale resident under two cardId partitions is a split pool AND a double count. Never a delete -- RETIRE marks flaggedWrong, and it is reversible.",
+  "CF-A-VERIFY-MISMATCH-IS-A-DUPLICATE-NOT-A-FAILURE (#1850): relocateSoldComp upserts the keeper BEFORE it reads back, and deletes nothing when the read-back fails. A \"FAILED at verify\" line therefore can never mean the write was lost -- it can only mean a duplicate was left. All 49 rows here are that duplicate, not a missing sale.",
+  "The keeper is identified by the run's OWN stamp, never by address alone: rekeyedAt within 227ms of the log line, rekeyedReason \"GREAT REMATCH (2026-09-01): IMPROVE, ...\", and a rekeyedFrom naming the retired address. A row carrying no rekeyedAt is not this fleet's and is not in this list.",
+  "tca-ebay::117210597158 is resident at THREE addresses. Only the stale-read-back twin (hiq:hockey:2025:unknown:60:base:no-auto) is retired here. The third copy, hiq:hockey:2025:bowman:60:base:no-auto, is LEFT IN PLACE; maker-default split, own census -- it predates the rematch (_ts 1786405617, no rekeyedAt, absent from the keeper's rekeyedFrom) and is not a read-back artifact."
+ ],
+ "provenance": {
+  "finding": "the 60 \"read-back found nothing\" lines from the GREAT REMATCH IMPROVE fleet (backfill-runner, rematch-sold-comps, APPLY_SCOPE=improve, 32 slots)",
+  "classified": {
+   "a_duplicateLeft": 49,
+   "b_writeLandedTwinAlreadyGone": 11,
+   "c_writeDidNotLand": 0,
+   "note": "class (c) is empty and cannot be non-empty: the upsert is checked for success before the read-back runs. The 11 class-(b) ids were re-relocated by a LATER pass (rekeyedAt 2.3-7.6h after their log line), which collapsed the duplicate on its own; they need no action."
+  },
+  "allPre1850": "Every one of the 49 came from the PRE-#1850 passes -- slots 0-15, 2026-09-05T05:22Z-14:44Z -- running the helper that believed the first null point-read. The post-fix passes (slots 16-31, 23:01Z onward) logged ZERO \"read-back found nothing\"; their failures are all the other, \"read-back differs\" class. This list is therefore closed: the cause is fixed and no new members can appear.",
+  "notAThrottle": "Not a slot, hot-partition or 429 effect. ALL 60 changed partition (41 off a vendor bubble id onto an hiq: slug, 19 slug->slug), which is exactly the Eventual-consistency surface #1850 documents; the failures spread across each apply pass rather than bunching, and the failing runs show no more 429 retry traffic than the clean ones.",
+  "APPLY_ORDER": "NO IMPROVE FLEET PASS MAY RUN BETWEEN MERGE AND APPLY. The 49 retired addresses still match the IMPROVE predicate (32 sit on a vendor bubble partition, 5 more on an hiq: slug containing `unknown`), so a fleet pass would re-relocate them and race this list. Apply first, then resume the fleet."
+ },
+ "census": {
+  "failedAtVerifyLines": 82,
+  "readBackFoundNothing": 60,
+  "readBackDiffers": 22,
+  "entriesHere": 49,
+  "byClass": {
+   "a_duplicateLeft": 49,
+   "b_alreadyClean": 11,
+   "c_writeLost": 0,
+   "d_thirdAddress": 1
+  },
+  "bySource": {
+   "cardhedge": 32,
+   "cardsight": 10,
+   "tca-ebay": 7
+  },
+  "excludedFromThisList": 1
+ },
+ "entries": [
+  {
+   "id": "cardhedge::ch-daily::1756834708461x104226419332249520::2026-07-24T16:06:00+00:00::825",
+   "fromCardId": "1756834708461x104226419332249520",
+   "price": 8.25,
+   "retireSupersededBy": "hiq:pokemon:2025:sv10-5w:126:base:no-auto",
+   "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:pokemon:2025:sv10-5w:126:base:no-auto carrying this run's own rekeyedAt 2026-09-05T05:31:47.620Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 33947033673 logged \"FAILED at verify cardhedge::ch-daily::1756834708461x104226419332249520::2026-07-24T16:06:00+00:00::825: read-back found nothing\" at 2026-09-05T05:31:47.6423064Z, so the old row was correctly never deleted and the sale is now resident twice. Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled setKey"
+  },
+  {
+   "id": "cardhedge::ch-daily::1785189272185x512438506014770940",
+   "fromCardId": "1742598681851x432175071683746900",
+   "price": 284.99,
+   "retireSupersededBy": "hiq:pokemon:2025:sv09:161:base:no-auto",
+   "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:pokemon:2025:sv09:161:base:no-auto carrying this run's own rekeyedAt 2026-09-05T05:31:50.444Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 33947033673 logged \"FAILED at verify cardhedge::ch-daily::1785189272185x512438506014770940: read-back found nothing\" at 2026-09-05T05:31:50.4865104Z, so the old row was correctly never deleted and the sale is now resident twice. Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled setKey"
+  },
+  {
+   "id": "cardhedge::ch-daily::1762727193676x695697327296429300::2026-07-29T01:00:00+00:00::17250",
+   "fromCardId": "1762727193676x695697327296429300",
+   "price": 172.5,
+   "retireSupersededBy": "hiq:pokemon:2025:me02:106:base:no-auto",
+   "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:pokemon:2025:me02:106:base:no-auto carrying this run's own rekeyedAt 2026-09-05T05:31:51.072Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 33947033673 logged \"FAILED at verify cardhedge::ch-daily::1762727193676x695697327296429300::2026-07-29T01:00:00+00:00::17250: read-back found nothing\" at 2026-09-05T05:31:51.1238681Z, so the old row was correctly never deleted and the sale is now resident twice. Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled setKey"
+  },
+  {
+   "id": "cardhedge::ch-daily::1752334844615x312309900206919000::2026-07-29T01:03:00+00:00::2750",
+   "fromCardId": "1752334844615x312309900206919000",
+   "price": 27.5,
+   "retireSupersededBy": "hiq:pokemon:2025:sv10:190:base:no-auto",
+   "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:pokemon:2025:sv10:190:base:no-auto carrying this run's own rekeyedAt 2026-09-05T05:31:51.101Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 33947033673 logged \"FAILED at verify cardhedge::ch-daily::1752334844615x312309900206919000::2026-07-29T01:03:00+00:00::2750: read-back found nothing\" at 2026-09-05T05:31:51.1242745Z, so the old row was correctly never deleted and the sale is now resident twice. Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled setKey"
+  },
+  {
+   "id": "cardhedge::ch-daily::1762727193676x695697327296429300::2026-07-29T01:56:00+00:00::17750",
+   "fromCardId": "1762727193676x695697327296429300",
+   "price": 177.5,
+   "retireSupersededBy": "hiq:pokemon:2025:me02:106:base:no-auto",
+   "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:pokemon:2025:me02:106:base:no-auto carrying this run's own rekeyedAt 2026-09-05T05:31:51.065Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 33947033673 logged \"FAILED at verify cardhedge::ch-daily::1762727193676x695697327296429300::2026-07-29T01:56:00+00:00::17750: read-back found nothing\" at 2026-09-05T05:31:51.2158530Z, so the old row was correctly never deleted and the sale is now resident twice. Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled setKey"
+  },
+  {
+   "id": "cardhedge::ch-daily::1752334986088x982509503095038000::2026-07-29T17:45:00+00:00::5779",
+   "fromCardId": "1752334986088x982509503095038000",
+   "price": 57.79,
+   "retireSupersededBy": "hiq:pokemon:2025:sv10:209:base:no-auto",
+   "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:pokemon:2025:sv10:209:base:no-auto carrying this run's own rekeyedAt 2026-09-05T05:32:00.604Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 33947033673 logged \"FAILED at verify cardhedge::ch-daily::1752334986088x982509503095038000::2026-07-29T17:45:00+00:00::5779: read-back found nothing\" at 2026-09-05T05:32:00.6274635Z, so the old row was correctly never deleted and the sale is now resident twice. Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled setKey"
+  },
+  {
+   "id": "cardhedge::ch-daily::1752334927423x722248618957978000::2026-07-24T00:59:00+00:00::27800",
+   "fromCardId": "1752334927423x722248618957978000",
+   "price": 278,
+   "retireSupersededBy": "hiq:pokemon:2025:sv10:233:base:no-auto",
+   "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:pokemon:2025:sv10:233:base:no-auto carrying this run's own rekeyedAt 2026-09-05T05:32:02.907Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 33947033673 logged \"FAILED at verify cardhedge::ch-daily::1752334927423x722248618957978000::2026-07-24T00:59:00+00:00::27800: read-back found nothing\" at 2026-09-05T05:32:02.9222897Z, so the old row was correctly never deleted and the sale is now resident twice. Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled setKey"
+  },
+  {
+   "id": "tca-ebay::EBAY-v1|298606057822|0",
+   "fromCardId": "hiq:pokemon:2025:unknown:158:base:no-auto",
+   "price": 105.84,
+   "retireSupersededBy": "hiq:pokemon:2025:sv10-5b:158:base:no-auto",
+   "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:pokemon:2025:sv10-5b:158:base:no-auto carrying this run's own rekeyedAt 2026-09-05T05:32:09.022Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 33947033673 logged \"FAILED at verify tca-ebay::EBAY-v1|298606057822|0: read-back found nothing\" at 2026-09-05T05:32:09.0355683Z, so the old row was correctly never deleted and the sale is now resident twice. Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled setKey"
+  },
+  {
+   "id": "cardhedge::ch-daily::1756820137938x467580113557324540::2026-07-22T06:12:00+00:00::10450",
+   "fromCardId": "1756820137938x467580113557324540",
+   "price": 104.5,
+   "retireSupersededBy": "hiq:pokemon:2025:sv10-5b:167:base:no-auto",
+   "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:pokemon:2025:sv10-5b:167:base:no-auto carrying this run's own rekeyedAt 2026-09-05T05:32:17.355Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 33947033673 logged \"FAILED at verify cardhedge::ch-daily::1756820137938x467580113557324540::2026-07-22T06:12:00+00:00::10450: read-back found nothing\" at 2026-09-05T05:32:17.3707525Z, so the old row was correctly never deleted and the sale is now resident twice. Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled setKey"
+  },
+  {
+   "id": "cardhedge::ch-daily::1752334859525x483440019992446000::2026-07-29T17:11:00+00:00::2621",
+   "fromCardId": "1752334859525x483440019992446000",
+   "price": 26.21,
+   "retireSupersededBy": "hiq:pokemon:2025:sv10:203:base:no-auto",
+   "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:pokemon:2025:sv10:203:base:no-auto carrying this run's own rekeyedAt 2026-09-05T05:32:20.103Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 33947033673 logged \"FAILED at verify cardhedge::ch-daily::1752334859525x483440019992446000::2026-07-29T17:11:00+00:00::2621: read-back found nothing\" at 2026-09-05T05:32:20.1631474Z, so the old row was correctly never deleted and the sale is now resident twice. Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled setKey"
+  },
+  {
+   "id": "cardhedge::ch-daily::1752334846635x562099345820929150::2026-07-31T21:52:00+00:00::3999",
+   "fromCardId": "1752334846635x562099345820929150",
+   "price": 39.99,
+   "retireSupersededBy": "hiq:pokemon:2025:sv10:227:base:no-auto",
+   "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:pokemon:2025:sv10:227:base:no-auto carrying this run's own rekeyedAt 2026-09-05T05:32:21.068Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 33947033673 logged \"FAILED at verify cardhedge::ch-daily::1752334846635x562099345820929150::2026-07-31T21:52:00+00:00::3999: read-back found nothing\" at 2026-09-05T05:32:21.2474017Z, so the old row was correctly never deleted and the sale is now resident twice. Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled setKey"
+  },
+  {
+   "id": "cardhedge::ch-daily::1752335043106x347282652387380400::2026-07-31T17:21:00+00:00::850",
+   "fromCardId": "1752335043106x347282652387380400",
+   "price": 8.5,
+   "retireSupersededBy": "hiq:pokemon:2025:sv10:199:base:no-auto",
+   "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:pokemon:2025:sv10:199:base:no-auto carrying this run's own rekeyedAt 2026-09-05T05:32:21.189Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 33947033673 logged \"FAILED at verify cardhedge::ch-daily::1752335043106x347282652387380400::2026-07-31T17:21:00+00:00::850: read-back found nothing\" at 2026-09-05T05:32:21.2485765Z, so the old row was correctly never deleted and the sale is now resident twice. Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled setKey"
+  },
+  {
+   "id": "cardhedge::ch-daily::1752334852961x411263834830842800::2026-07-24T21:23:00+00:00::573",
+   "fromCardId": "1752334852961x411263834830842800",
+   "price": 5.73,
+   "retireSupersededBy": "hiq:pokemon:2025:sv10:202:base:no-auto",
+   "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:pokemon:2025:sv10:202:base:no-auto carrying this run's own rekeyedAt 2026-09-05T05:32:36.128Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 33947033673 logged \"FAILED at verify cardhedge::ch-daily::1752334852961x411263834830842800::2026-07-24T21:23:00+00:00::573: read-back found nothing\" at 2026-09-05T05:32:36.1420266Z, so the old row was correctly never deleted and the sale is now resident twice. Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled setKey"
+  },
+  {
+   "id": "tca-ebay::377415477856",
+   "fromCardId": "hiq:pokemon:2025:unknown:023:base:no-auto",
+   "price": 187.5,
+   "retireSupersededBy": "hiq:pokemon:2025:mep:023:base:no-auto",
+   "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:pokemon:2025:mep:023:base:no-auto carrying this run's own rekeyedAt 2026-09-05T05:32:40.790Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 33947033673 logged \"FAILED at verify tca-ebay::377415477856: read-back found nothing\" at 2026-09-05T05:32:40.8061984Z, so the old row was correctly never deleted and the sale is now resident twice. Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled setKey"
+  },
+  {
+   "id": "cardhedge::ch-daily::1785628612462x773421059643108400",
+   "fromCardId": "1778729918122x625754771581383800",
+   "price": 33.01,
+   "retireSupersededBy": "hiq:football:2025:topps-finest:55:gold-refractor:no-auto:num-50",
+   "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:football:2025:topps-finest:55:gold-refractor:no-auto:num-50 carrying this run's own rekeyedAt 2026-09-05T06:41:30.530Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 33947039875 logged \"FAILED at verify cardhedge::ch-daily::1785628612462x773421059643108400: read-back found nothing\" at 2026-09-05T06:41:30.6674048Z, so the old row was correctly never deleted and the sale is now resident twice. Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled printRun"
+  },
+  {
+   "id": "tca-ebay::EBAY-v1|178271096203|0",
+   "fromCardId": "hiq:football:2025:topps-chrome:29:base:no-auto",
+   "price": 2.71,
+   "retireSupersededBy": "hiq:football:2025:topps-chrome:29:x-fractor:no-auto",
+   "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:football:2025:topps-chrome:29:x-fractor:no-auto carrying this run's own rekeyedAt 2026-09-05T06:44:50.569Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 33947039875 logged \"FAILED at verify tca-ebay::EBAY-v1|178271096203|0: read-back found nothing\" at 2026-09-05T06:44:50.7038349Z, so the old row was correctly never deleted and the sale is now resident twice. Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel"
+  },
+  {
+   "id": "cardhedge::ch-daily::1744812403411x629956622894695600",
+   "fromCardId": "1702862692750x581905801414323500",
+   "price": 90.01,
+   "retireSupersededBy": "hiq:baseball:2023:bowman-draft:cda-rv:refractor:auto:num-499",
+   "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:baseball:2023:bowman-draft:cda-rv:refractor:auto:num-499 carrying this run's own rekeyedAt 2026-09-05T07:02:06.123Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 33947046563 logged \"FAILED at verify cardhedge::ch-daily::1744812403411x629956622894695600: read-back found nothing\" at 2026-09-05T07:02:06.2928122Z, so the old row was correctly never deleted and the sale is now resident twice. Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled printRun"
+  },
+  {
+   "id": "tca-ebay::117210597158",
+   "fromCardId": "hiq:hockey:2025:unknown:60:base:no-auto",
+   "price": 1.25,
+   "retireSupersededBy": "hiq:hockey:2025:spx:60:base:no-auto",
+   "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:hockey:2025:spx:60:base:no-auto carrying this run's own rekeyedAt 2026-09-05T06:02:08.495Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 33947053469 logged \"FAILED at verify tca-ebay::117210597158: read-back found nothing\" at 2026-09-05T06:02:08.5544224Z, so the old row was correctly never deleted and the sale is now resident twice. Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled setKey"
+  },
+  {
+   "id": "cardhedge::ch-daily::1740059610434x891708025123806700",
+   "fromCardId": "1732663372733x146804183707645700",
+   "price": 5,
+   "retireSupersededBy": "hiq:pokemon:2024:sv06:180:base:no-auto",
+   "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:pokemon:2024:sv06:180:base:no-auto carrying this run's own rekeyedAt 2026-09-05T07:36:20.709Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 33951795542 logged \"FAILED at verify cardhedge::ch-daily::1740059610434x891708025123806700: read-back found nothing\" at 2026-09-05T07:36:20.8288443Z, so the old row was correctly never deleted and the sale is now resident twice. Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled setKey"
+  },
+  {
+   "id": "cardhedge::ch-daily::1736029740376x413708967757920000",
+   "fromCardId": "1732663438777x520336161357855200",
+   "price": 3.5,
+   "retireSupersededBy": "hiq:pokemon:2024:sv06:184:base:no-auto",
+   "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:pokemon:2024:sv06:184:base:no-auto carrying this run's own rekeyedAt 2026-09-05T07:39:06.236Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 33951795542 logged \"FAILED at verify cardhedge::ch-daily::1736029740376x413708967757920000: read-back found nothing\" at 2026-09-05T07:39:06.3567163Z, so the old row was correctly never deleted and the sale is now resident twice. Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled setKey"
+  },
+  {
+   "id": "cardhedge::ch-daily::1740259847383x587059969485120600",
+   "fromCardId": "1732596151523x374377487792890700",
+   "price": 25,
+   "retireSupersededBy": "hiq:pokemon:2024:sv07:167:base:no-auto",
+   "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:pokemon:2024:sv07:167:base:no-auto carrying this run's own rekeyedAt 2026-09-05T07:42:21.147Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 33951795542 logged \"FAILED at verify cardhedge::ch-daily::1740259847383x587059969485120600: read-back found nothing\" at 2026-09-05T07:42:21.3548691Z, so the old row was correctly never deleted and the sale is now resident twice. Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled setKey"
+  },
+  {
+   "id": "cardhedge::ch-daily::1735880803632x916386174833695200",
+   "fromCardId": "1732750684420x211810590823886750",
+   "price": 2.99,
+   "retireSupersededBy": "hiq:pokemon:2024:sv04-5:224:base:no-auto",
+   "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:pokemon:2024:sv04-5:224:base:no-auto carrying this run's own rekeyedAt 2026-09-05T07:45:06.167Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 33951795542 logged \"FAILED at verify cardhedge::ch-daily::1735880803632x916386174833695200: read-back found nothing\" at 2026-09-05T07:45:06.3295069Z, so the old row was correctly never deleted and the sale is now resident twice. Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled setKey"
+  },
+  {
+   "id": "cardhedge::ch-daily::1735884886471x853377852639493900",
+   "fromCardId": "1732674677337x843992452413364600",
+   "price": 2,
+   "retireSupersededBy": "hiq:pokemon:2024:sv05:104:base:no-auto",
+   "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:pokemon:2024:sv05:104:base:no-auto carrying this run's own rekeyedAt 2026-09-05T07:45:06.186Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 33951795542 logged \"FAILED at verify cardhedge::ch-daily::1735884886471x853377852639493900: read-back found nothing\" at 2026-09-05T07:45:06.3801575Z, so the old row was correctly never deleted and the sale is now resident twice. Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled setKey"
+  },
+  {
+   "id": "cardhedge::ch-daily::1740670258531x516958985669072400",
+   "fromCardId": "1732750684420x211810590823886750",
+   "price": 1.75,
+   "retireSupersededBy": "hiq:pokemon:2024:sv04-5:224:base:no-auto",
+   "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:pokemon:2024:sv04-5:224:base:no-auto carrying this run's own rekeyedAt 2026-09-05T07:47:06.190Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 33951795542 logged \"FAILED at verify cardhedge::ch-daily::1740670258531x516958985669072400: read-back found nothing\" at 2026-09-05T07:47:06.3238542Z, so the old row was correctly never deleted and the sale is now resident twice. Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled setKey"
+  },
+  {
+   "id": "cardhedge::ch-daily::1732674702614x484342017151374800::2026-07-30T12:54:00+00:00::1440",
+   "fromCardId": "1732674702614x484342017151374800",
+   "price": 14.4,
+   "retireSupersededBy": "hiq:pokemon:2024:sv05:119:base:no-auto",
+   "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:pokemon:2024:sv05:119:base:no-auto carrying this run's own rekeyedAt 2026-09-05T07:49:54.857Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 33951795542 logged \"FAILED at verify cardhedge::ch-daily::1732674702614x484342017151374800::2026-07-30T12:54:00+00:00::1440: read-back found nothing\" at 2026-09-05T07:49:54.9889266Z, so the old row was correctly never deleted and the sale is now resident twice. Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled setKey"
+  },
+  {
+   "id": "cardhedge::ch-daily::1740278287779x746945031679031500",
+   "fromCardId": "1732663433006x181300489514771170",
+   "price": 26,
+   "retireSupersededBy": "hiq:pokemon:2024:sv06:186:base:no-auto",
+   "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:pokemon:2024:sv06:186:base:no-auto carrying this run's own rekeyedAt 2026-09-05T07:52:15.281Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 33951795542 logged \"FAILED at verify cardhedge::ch-daily::1740278287779x746945031679031500: read-back found nothing\" at 2026-09-05T07:52:15.4217671Z, so the old row was correctly never deleted and the sale is now resident twice. Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled setKey"
+  },
+  {
+   "id": "cardhedge::ch-daily::1737684094797x864009031927291800",
+   "fromCardId": "1732663431569x484170762190911900",
+   "price": 3.99,
+   "retireSupersededBy": "hiq:pokemon:2024:sv06:175:base:no-auto",
+   "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:pokemon:2024:sv06:175:base:no-auto carrying this run's own rekeyedAt 2026-09-05T07:56:54.787Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 33951795542 logged \"FAILED at verify cardhedge::ch-daily::1737684094797x864009031927291800: read-back found nothing\" at 2026-09-05T07:56:54.9075370Z, so the old row was correctly never deleted and the sale is now resident twice. Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled setKey"
+  },
+  {
+   "id": "tca-ebay::117353525417",
+   "fromCardId": "hiq:pokemon:2023:unknown:201:base:no-auto",
+   "price": 27,
+   "retireSupersededBy": "hiq:pokemon:2023:sv04:201:base:no-auto",
+   "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:pokemon:2023:sv04:201:base:no-auto carrying this run's own rekeyedAt 2026-09-05T11:13:06.366Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 33961895810 logged \"FAILED at verify tca-ebay::117353525417: read-back found nothing\" at 2026-09-05T11:13:06.5177912Z, so the old row was correctly never deleted and the sale is now resident twice. Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled setKey"
+  },
+  {
+   "id": "cardhedge::ch-daily::1737665716120x858270917620861600",
+   "fromCardId": "1721784425454x163317756728093900",
+   "price": 19.95,
+   "retireSupersededBy": "hiq:pokemon:2023:sv04:137:base:no-auto",
+   "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:pokemon:2023:sv04:137:base:no-auto carrying this run's own rekeyedAt 2026-09-05T11:16:21.486Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 33961895810 logged \"FAILED at verify cardhedge::ch-daily::1737665716120x858270917620861600: read-back found nothing\" at 2026-09-05T11:16:21.6242232Z, so the old row was correctly never deleted and the sale is now resident twice. Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled setKey"
+  },
+  {
+   "id": "cardhedge::ch-daily::1691965584164x591411354991489400::2026-07-30T12:25:00+00:00::3000",
+   "fromCardId": "1691965584164x591411354991489400",
+   "price": 30,
+   "retireSupersededBy": "hiq:pokemon:2023:sv02:194:base:no-auto",
+   "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:pokemon:2023:sv02:194:base:no-auto carrying this run's own rekeyedAt 2026-09-05T11:19:36.364Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 33961895810 logged \"FAILED at verify cardhedge::ch-daily::1691965584164x591411354991489400::2026-07-30T12:25:00+00:00::3000: read-back found nothing\" at 2026-09-05T11:19:36.5537423Z, so the old row was correctly never deleted and the sale is now resident twice. Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled setKey"
+  },
+  {
+   "id": "cardsight::d9e04a774e43dd8752fd305b",
+   "fromCardId": "hiq:baseball:2024:panini-prizm:89:base:no-auto",
+   "price": 0.06,
+   "retireSupersededBy": "hiq:baseball:2024:panini-prizm:89:base:auto",
+   "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:baseball:2024:panini-prizm:89:base:auto carrying this run's own rekeyedAt 2026-09-05T11:09:38.693Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 33961902857 logged \"FAILED at verify cardsight::d9e04a774e43dd8752fd305b: read-back found nothing\" at 2026-09-05T11:09:38.7223537Z, so the old row was correctly never deleted and the sale is now resident twice. Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled "
+  },
+  {
+   "id": "cardsight::d30d1b2c2ea84565ba387173",
+   "fromCardId": "hiq:baseball:2024:topps-stadium-club:263:base:no-auto",
+   "price": 0.45,
+   "retireSupersededBy": "hiq:baseball:2024:topps-stadium-club:263:base:auto",
+   "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:baseball:2024:topps-stadium-club:263:base:auto carrying this run's own rekeyedAt 2026-09-05T11:09:40.163Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 33961902857 logged \"FAILED at verify cardsight::d30d1b2c2ea84565ba387173: read-back found nothing\" at 2026-09-05T11:09:40.2237457Z, so the old row was correctly never deleted and the sale is now resident twice. Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled "
+  },
+  {
+   "id": "cardsight::3165ad98d95701c0406e9450",
+   "fromCardId": "hiq:baseball:2024:bowman:bp-123:base:no-auto",
+   "price": 0.28,
+   "retireSupersededBy": "hiq:baseball:2024:bowman-paper:bp-123:base:auto",
+   "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:baseball:2024:bowman-paper:bp-123:base:auto carrying this run's own rekeyedAt 2026-09-05T11:09:47.167Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 33961902857 logged \"FAILED at verify cardsight::3165ad98d95701c0406e9450: read-back found nothing\" at 2026-09-05T11:09:47.1898677Z, so the old row was correctly never deleted and the sale is now resident twice. Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled "
+  },
+  {
+   "id": "cardhedge::ch-daily::1787457527201x224840364847399330",
+   "fromCardId": "1715731904363x915238818166481700",
+   "price": 305,
+   "retireSupersededBy": "hiq:baseball:2024:bowman-chrome:cpa-wj:refractor:auto:num-499",
+   "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:baseball:2024:bowman-chrome:cpa-wj:refractor:auto:num-499 carrying this run's own rekeyedAt 2026-09-05T11:09:51.210Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 33961902857 logged \"FAILED at verify cardhedge::ch-daily::1787457527201x224840364847399330: read-back found nothing\" at 2026-09-05T11:09:51.2645780Z, so the old row was correctly never deleted and the sale is now resident twice. Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled printRun"
+  },
+  {
+   "id": "cardsight::abd43ed498acb33e6e29b345",
+   "fromCardId": "hiq:baseball:2024:panini-donruss:17:base:no-auto",
+   "price": 0.01,
+   "retireSupersededBy": "hiq:baseball:2024:panini-donruss:17:base:auto",
+   "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:baseball:2024:panini-donruss:17:base:auto carrying this run's own rekeyedAt 2026-09-05T11:09:51.421Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 33961902857 logged \"FAILED at verify cardsight::abd43ed498acb33e6e29b345: read-back found nothing\" at 2026-09-05T11:09:51.5746678Z, so the old row was correctly never deleted and the sale is now resident twice. Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled "
+  },
+  {
+   "id": "cardsight::c98e6766a65a5bfb42a74dd6",
+   "fromCardId": "hiq:baseball:2024:panini-donruss:17:base:no-auto",
+   "price": 0.01,
+   "retireSupersededBy": "hiq:baseball:2024:panini-donruss:17:base:auto",
+   "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:baseball:2024:panini-donruss:17:base:auto carrying this run's own rekeyedAt 2026-09-05T11:09:51.397Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 33961902857 logged \"FAILED at verify cardsight::c98e6766a65a5bfb42a74dd6: read-back found nothing\" at 2026-09-05T11:09:51.5808070Z, so the old row was correctly never deleted and the sale is now resident twice. Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled "
+  },
+  {
+   "id": "cardsight::8bf956819db09a9155893fd2",
+   "fromCardId": "hiq:baseball:2024:bowman-chrome:62:base:no-auto",
+   "price": 0.2,
+   "retireSupersededBy": "hiq:baseball:2024:bowman-chrome:62:base:auto",
+   "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:baseball:2024:bowman-chrome:62:base:auto carrying this run's own rekeyedAt 2026-09-05T11:09:51.388Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 33961902857 logged \"FAILED at verify cardsight::8bf956819db09a9155893fd2: read-back found nothing\" at 2026-09-05T11:09:51.6041672Z, so the old row was correctly never deleted and the sale is now resident twice. Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled "
+  },
+  {
+   "id": "cardsight::5e76bbcb0252ddb6f09d79e1",
+   "fromCardId": "hiq:baseball:2024:panini-donruss:17:base:no-auto",
+   "price": 0.01,
+   "retireSupersededBy": "hiq:baseball:2024:panini-donruss:17:base:auto",
+   "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:baseball:2024:panini-donruss:17:base:auto carrying this run's own rekeyedAt 2026-09-05T11:09:51.517Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 33961902857 logged \"FAILED at verify cardsight::5e76bbcb0252ddb6f09d79e1: read-back found nothing\" at 2026-09-05T11:09:51.6203498Z, so the old row was correctly never deleted and the sale is now resident twice. Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled "
+  },
+  {
+   "id": "cardsight::fcd6d51c54d11c8bbf1034db",
+   "fromCardId": "hiq:baseball:2024:panini-donruss:17:base:no-auto",
+   "price": 0.16,
+   "retireSupersededBy": "hiq:baseball:2024:panini-donruss:17:base:auto",
+   "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:baseball:2024:panini-donruss:17:base:auto carrying this run's own rekeyedAt 2026-09-05T11:09:51.577Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 33961902857 logged \"FAILED at verify cardsight::fcd6d51c54d11c8bbf1034db: read-back found nothing\" at 2026-09-05T11:09:51.6207346Z, so the old row was correctly never deleted and the sale is now resident twice. Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled "
+  },
+  {
+   "id": "cardsight::2c41876d55306cb81acfe13d",
+   "fromCardId": "hiq:baseball:2024:bowman:82:base:no-auto",
+   "price": 0.28,
+   "retireSupersededBy": "hiq:baseball:2024:bowman:82:base:auto",
+   "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:baseball:2024:bowman:82:base:auto carrying this run's own rekeyedAt 2026-09-05T11:09:51.394Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 33961902857 logged \"FAILED at verify cardsight::2c41876d55306cb81acfe13d: read-back found nothing\" at 2026-09-05T11:09:51.6211501Z, so the old row was correctly never deleted and the sale is now resident twice. Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled "
+  },
+  {
+   "id": "cardhedge::ch-daily::1743368575346x928961269592501800",
+   "fromCardId": "1728237716422x987301566847488900",
+   "price": 2.99,
+   "retireSupersededBy": "hiq:baseball:2024:bowman-chrome:bcp-243:refractor:no-auto:num-499",
+   "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:baseball:2024:bowman-chrome:bcp-243:refractor:no-auto:num-499 carrying this run's own rekeyedAt 2026-09-05T11:09:53.279Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 33961902857 logged \"FAILED at verify cardhedge::ch-daily::1743368575346x928961269592501800: read-back found nothing\" at 2026-09-05T11:09:53.3210847Z, so the old row was correctly never deleted and the sale is now resident twice. Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled printRun"
+  },
+  {
+   "id": "cardhedge::ch-daily::1785607350607x312692180293598300",
+   "fromCardId": "1715731919754x866133363364088800",
+   "price": 325,
+   "retireSupersededBy": "hiq:baseball:2024:bowman-chrome:cpa-cpr:refractor:auto:num-499",
+   "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:baseball:2024:bowman-chrome:cpa-cpr:refractor:auto:num-499 carrying this run's own rekeyedAt 2026-09-05T11:09:56.064Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 33961902857 logged \"FAILED at verify cardhedge::ch-daily::1785607350607x312692180293598300: read-back found nothing\" at 2026-09-05T11:09:56.1110794Z, so the old row was correctly never deleted and the sale is now resident twice. Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled printRun"
+  },
+  {
+   "id": "cardhedge::ch-daily::1740267285920x649504664896452900",
+   "fromCardId": "1730343303013x470056664256430140",
+   "price": 2,
+   "retireSupersededBy": "hiq:baseball:2024:topps-cosmic-chrome:188:aqua-equinox-refractor:no-auto:num-199",
+   "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:baseball:2024:topps-cosmic-chrome:188:aqua-equinox-refractor:no-auto:num-199 carrying this run's own rekeyedAt 2026-09-05T11:09:57.234Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 33961902857 logged \"FAILED at verify cardhedge::ch-daily::1740267285920x649504664896452900: read-back found nothing\" at 2026-09-05T11:09:57.2614593Z, so the old row was correctly never deleted and the sale is now resident twice. Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled printRun"
+  },
+  {
+   "id": "tca-ebay::227359930596",
+   "fromCardId": "hiq:baseball:2024:bowman:bp-10:neon-green-border:no-auto:num-399",
+   "price": 2,
+   "retireSupersededBy": "hiq:baseball:2024:bowman-paper:bp-10:neon-green-border:no-auto:num-399",
+   "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:baseball:2024:bowman-paper:bp-10:neon-green-border:no-auto:num-399 carrying this run's own rekeyedAt 2026-09-05T11:10:06.197Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 33961902857 logged \"FAILED at verify tca-ebay::227359930596: read-back found nothing\" at 2026-09-05T11:10:06.2586011Z, so the old row was correctly never deleted and the sale is now resident twice. Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled printRun"
+  },
+  {
+   "id": "cardhedge::ch-daily::1736898065611x439260591348902500",
+   "fromCardId": "1730343801555x443552561027496200",
+   "price": 3.99,
+   "retireSupersededBy": "hiq:baseball:2024:topps-cosmic-chrome:41:aqua-equinox-refractor:no-auto:num-199",
+   "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:baseball:2024:topps-cosmic-chrome:41:aqua-equinox-refractor:no-auto:num-199 carrying this run's own rekeyedAt 2026-09-05T11:10:06.606Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 33961902857 logged \"FAILED at verify cardhedge::ch-daily::1736898065611x439260591348902500: read-back found nothing\" at 2026-09-05T11:10:06.6226502Z, so the old row was correctly never deleted and the sale is now resident twice. Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled printRun"
+  },
+  {
+   "id": "cardhedge::ch-daily::1751238137063x323996570575137540",
+   "fromCardId": "1728178321365x575137401537280960",
+   "price": 7,
+   "retireSupersededBy": "hiq:baseball:2024:bowman-chrome:cpa-tm:refractor:auto:num-499",
+   "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:baseball:2024:bowman-chrome:cpa-tm:refractor:auto:num-499 carrying this run's own rekeyedAt 2026-09-05T12:38:51.346Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 33961909053 logged \"FAILED at verify cardhedge::ch-daily::1751238137063x323996570575137540: read-back found nothing\" at 2026-09-05T12:38:51.5123593Z, so the old row was correctly never deleted and the sale is now resident twice. Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled printRun"
+  },
+  {
+   "id": "tca-ebay::126025040207",
+   "fromCardId": "hiq:baseball:2006:unknown:103:base:no-auto",
+   "price": 1.28,
+   "retireSupersededBy": "hiq:baseball:2006:topps-finest:103:base:no-auto",
+   "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:baseball:2006:topps-finest:103:base:no-auto carrying this run's own rekeyedAt 2026-09-05T11:23:36.533Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 33961915021 logged \"FAILED at verify tca-ebay::126025040207: read-back found nothing\" at 2026-09-05T11:23:36.6070522Z, so the old row was correctly never deleted and the sale is now resident twice. Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled setKey"
+  },
+  {
+   "id": "cardhedge::ch-daily::1735994974306x992644827133771800",
+   "fromCardId": "1677698843111x979509310745646700",
+   "price": 3.71,
+   "retireSupersededBy": "hiq:pokemon:2006:ex14:27:base:no-auto",
+   "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:pokemon:2006:ex14:27:base:no-auto carrying this run's own rekeyedAt 2026-09-05T11:23:51.395Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 33961915021 logged \"FAILED at verify cardhedge::ch-daily::1735994974306x992644827133771800: read-back found nothing\" at 2026-09-05T11:23:51.5936255Z, so the old row was correctly never deleted and the sale is now resident twice. Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled setKey"
+  },
+  {
+   "id": "cardsight::727ab63d94bf7b470cfe8498",
+   "fromCardId": "hiq:baseball:2021:panini-donruss:253:base:no-auto",
+   "price": 0.3,
+   "retireSupersededBy": "hiq:baseball:2021:panini-donruss:253:base:auto",
+   "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:baseball:2021:panini-donruss:253:base:auto carrying this run's own rekeyedAt 2026-09-05T13:40:51.499Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 33966990494 logged \"FAILED at verify cardsight::727ab63d94bf7b470cfe8498: read-back found nothing\" at 2026-09-05T13:40:51.6131069Z, so the old row was correctly never deleted and the sale is now resident twice. Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled "
+  }
+ ],
+ "deferred": [
+  {
+   "id": "tca-ebay::117210597158",
+   "cls": "thirdAddress-makerDefault",
+   "reason": "left in place; maker-default split, own census -- the bowman copy at hiq:hockey:2025:bowman:60:base:no-auto predates the rematch and is not a read-back artifact, so it is not this ruling's to settle. The title carries no \"bowman\" token (CF-BOWMAN-DEFAULT-NOT-EVIDENCE).",
+   "title": "2025 hockey #60 -- see pool; keeper retained at hiq:hockey:2025:spx:60:base:no-auto"
+  }
+ ]
+}

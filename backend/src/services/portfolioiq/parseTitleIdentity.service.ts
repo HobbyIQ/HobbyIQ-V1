@@ -51,6 +51,7 @@ import {
   AMBIGUOUS_MARKET_CODES,
 } from "../catalog/pokemonSetCodes.js";
 import { slugify } from "./hobbyIqCardId.service.js";
+import { statedFinishFromChecklist } from "./statedFinishFromChecklist.js";
 
 /** TCG `POS/TOTAL` card number, e.g. "008/132". Position CAN exceed the total
  *  (secret/hyper rares are numbered above set size), so only the <=400 bound
@@ -151,12 +152,44 @@ const POKEMON_NO_PREFIX_RE = /\bNo\.?\s*(\d{1,4})\b/i;
 /** Tokens that precede a number that is NOT this card's number. Used by the
  *  bare-standalone walk, which is the only form here with no syntactic marker
  *  of its own and therefore the only one that must prove a negative. */
+// CF-RAW-IS-A-GRADE-WORD (I9 run 34029662735). Every GRADER token is here --
+// PSA, BGS, CGC -- because "PSA 10" states a grade and not a card number. But
+// the pool's largest Pokemon source spells an UNGRADED sale " - Raw 10", and
+// "RAW" was missing from this list, so that trailing 10 survived the walk as a
+// candidate number.
+//
+// On its own that is harmless: two surviving candidates are AMBIGUOUS and the
+// walk returns null. The damage needs the second half -- "EX" sits in
+// CONDITION_WORDS as the sports condition "EX(cellent)", and in Pokemon "Ex" is
+// the card's RARITY SUFFIX ("Jolteon Ex 030"), so the real number was skipped
+// as a graded-condition follower. One candidate was left standing, and it was
+// the grade.
+//
+// Measured over five Prismatic Evolutions pools (8,301 re-derived rows): 2,839
+// rows derived a cardNumber that is the GRADE, against 913 whose only
+// difference is the checklist's zero-padding. The grade defect is 3x the
+// padding class it was mistaken for, and it is the one that files a real sale
+// onto a card that does not exist.
 const POKEMON_NOT_A_NUMBER_BEFORE: ReadonlySet<string> = new Set([
   "PSA", "BGS", "SGC", "CGC", "BVG", "HGA", "TAG", "ACE", "GMA", "KSA",
   "GEM", "MINT", "PRISTINE", "GRADE", "GRADED", "POP", "LOT", "OF", "X",
   "QTY", "ED", "EDITION", "SERIES", "GEN", "GENERATION", "VOL", "SET",
-  "PACK", "BOX", "PSADNA", "CERT",
+  "PACK", "BOX", "PSADNA", "CERT", "RAW",
 ]);
+
+/**
+ * The condition words that are NOT condition words in a Pokemon title.
+ *
+ * "EX" is the one that matters: it is `EX(cellent)` on a 1975 Topps listing and
+ * the rarity suffix on "Jolteon Ex 030". CONDITION_WORDS is shared with the
+ * SPORTS reader (the bare-number walk below), where dropping "EX" would let a
+ * grade become a card number -- so the exemption is applied HERE, in the
+ * pokemon walk only, and the sports list is left exactly as it is.
+ *
+ * "GX" and "V" follow for the same reason; they are Pokemon rarity suffixes
+ * that no sports grade uses.
+ */
+const POKEMON_NOT_A_CONDITION_WORD: ReadonlySet<string> = new Set(["EX", "GX", "V"]);
 
 /**
  * A bare standalone number in a Pokemon title -- the LAST resort, and the only
@@ -192,7 +225,10 @@ function pokemonBareCardNumber(title: string): string | null {
     const prevRaw = i > 0 ? toks[i - 1] : "";
     const prev = prevRaw.toUpperCase().replace(/[^A-Z]/g, "");
     if (POKEMON_NOT_A_NUMBER_BEFORE.has(prev)) continue;
-    if (CONDITION_WORDS.has(prev)) continue;
+    // CF-RAW-IS-A-GRADE-WORD: "Ex"/"GX"/"V" before a number is a Pokemon
+    // RARITY suffix, never a condition. Skipping it here discarded the card's
+    // real number and left the grade standing alone as the only candidate.
+    if (CONDITION_WORDS.has(prev) && !POKEMON_NOT_A_CONDITION_WORD.has(prev)) continue;
     // "Lot of 76" / "lot 76" -- the count of cards in a lot, not a card number.
     if (/\blot\b/i.test(prevRaw) || (prev === "OF" && /\blot\b/i.test(toks[i - 2] ?? ""))) continue;
     // A print run states the DENOMINATOR alone: "/99". The token walk splits on
@@ -261,6 +297,18 @@ export interface ParseListingIdentityOptions {
   /** Canonical slug when available. Carries the setKey, which survives in
    *  cases where the title is too terse to classify. */
   hobbyiqCardId?: string | null;
+  /** CF-A-TITLE-THAT-NAMES-A-FINISH-IS-NOT-A-BASE-CARD (I9 triage, 2026-09-06).
+   *  The product's year + setKey, so the CHECKLIST can say which parallels this
+   *  card HAS when the title states one no rule enumerates. Same shape and same
+   *  reasoning as `InferIsAutoInput.year/setKey`.
+   *
+   *  Optional, and the reader degrades rather than guessing: with a product it
+   *  reads that product's checklist; without one it falls back to the global
+   *  name index under stricter floors. Callers that derive the setKey AFTER the
+   *  parse (slugRederivation) pass nothing and lose only the product-scoped
+   *  half. */
+  year?: number | null;
+  setKey?: string | null;
 }
 
 export interface ParsedListingIdentity {
@@ -783,7 +831,17 @@ export function parseListingIdentity(
   // ahead of any colour / refractor the title also names ("Image Variation
   // Gold Speckle Refractor"); a weak marker rides along for the seam.
   const variation = readVariationFromTitle(t.toLowerCase());
-  const finish = extractParallel(t);
+  // The product context the checklist reader needs. An explicit option wins;
+  // otherwise the canonical slug carries both -- `hiq:sport:year:setKey:...` --
+  // and a caller that already resolved the card has nothing else to pass.
+  const slugParts = String(opts?.hobbyiqCardId ?? "").split(":");
+  const fromSlug = slugParts[0] === "hiq" && slugParts.length >= 7
+    ? { year: Number(slugParts[2]) || null, setKey: slugParts[3] || null }
+    : { year: null as number | null, setKey: null as string | null };
+  const finish = extractParallel(t, {
+    year: opts?.year ?? fromSlug.year,
+    setKey: opts?.setKey ?? fromSlug.setKey,
+  });
   // The whitelist below already names some variations verbatim ("Chrome-Image
   // Variation"); that spelling is more specific than the family read and is
   // kept — the slug layer speaks the vocabulary either way.
@@ -1328,7 +1386,7 @@ function extractPrintRun(title: string, isTcg = false, isPokemon = false): numbe
  *  (Shimmer/Lava/Wave/RayWave/Grass/X-Fractor) > Sapphire variants when
  *  Sapphire is the product context + a color appears > color refractors
  *  > misc named parallels. Unrecognized → "Base". */
-function extractParallel(title: string): string {
+function extractParallel(title: string, ctx?: { year?: number | null; setKey?: string | null }): string {
   // CF-REF-IS-REFRACTOR (Drew, 2026-08-24). Sellers abbreviate it, and the
   // abbreviation was invisible to every rule below.
   //
@@ -1619,7 +1677,23 @@ function extractParallel(title: string): string {
 
   if (/sepia\s+refractor/i.test(T)) return "Sepia Refractor";
   if (/\bsepia\b/i.test(T) && /\brefractor\b/i.test(T)) return "Sepia Refractor";
-  m = T.match(/(blue|red|green|orange|purple|gold|yellow|aqua|pink|sky\s+blue)\s+foil/i);
+  // CF-FOILBOARD-IS-NOT-FOIL (I9 triage, 2026-09-06). The rule had no trailing
+  // \b, so `foil` matched the FRONT of a longer finish word and answered the
+  // shorter card:
+  //
+  //   "2025 Topps Archives Baseball #82 Pink Foilboard"   -> Pink Foil
+  //   "2025 Topps A&G #47 Orange Foil Filagree"           -> Orange Foil
+  //
+  // Foilboard and Foil Filagree are their own checklist rows with their own
+  // print runs -- the same sibling collapse CF-A-NAMED-PARALLEL-IS-A-DISTINCT-CARD
+  // records for Black Wave / Black Refractor. The \b sends these past this rule
+  // to the checklist reader at the fallback, which answers with the whole name
+  // ("Orange Foil Filagree") or refuses when it cannot confirm the sibling.
+  //
+  // The colour list stays as it is deliberately: widening it here would re-run
+  // the enumeration that produced the gap. The checklist reader covers the
+  // colours this list omits (black, silver, bronze) from the corpus instead.
+  m = T.match(/(blue|red|green|orange|purple|gold|yellow|aqua|pink|sky\s+blue)\s+foil\b/i);
   if (m) return capFirst(m[1].replace(/\s+/, " ")) + " Foil";
   if (/sky\s+blue/i.test(T)) return "Sky Blue Refractor";
   if (/aqua\s+lava/i.test(T)) return "Aqua Lava Refractor";
@@ -1946,6 +2020,37 @@ function extractParallel(title: string): string {
   if (/\bcase\s+hit\b/i.test(T)) return "Case Hit";
   if (/\bshort\s+print\b/i.test(T) && !isSpBrand) return "Short Print";
   if (/\bphoto\s+variation\b/i.test(T)) return "Photo Variation";
+
+  // CF-A-TITLE-THAT-NAMES-A-FINISH-IS-NOT-A-BASE-CARD (I9 triage, 2026-09-06).
+  //
+  // LAST, AND ONLY HERE. Every named colour, pattern, product and scarcity rule
+  // above has already had its turn and returned, so this cannot override one of
+  // them -- it reads ONLY the titles that were about to be called "Base".
+  //
+  // The I9 triage found 190 of 887 TRUE-DISAGREEMENT rows on a `dropped:parallel`
+  // axis: the row stores a real parallel, the title states it in words, and this
+  // function answered Base. Measured on a live 400-row draw, 260 of 386 non-Base
+  // rows re-derived as Base -- "Rainbow Foil", "Black Foil", "Purple Holo Foil",
+  // "Holographic", "Crackle Foil", "Canvas Parallel". The classifier's
+  // base-eviction guard refuses every one of them, so nothing was mis-filed;
+  // they simply sit as permanent disagreements the rematch can never act on.
+  //
+  // The answer comes from the CHECKLIST, not from a longer list here. Adding
+  // rules one finish at a time is what produced the gap: the foil rule enumerated
+  // nine colours and omitted black, and `holo` had no rule at all while being
+  // attested 6,120 times in our own checklist corpus. `statedFinishFromChecklist`
+  // asks `data/checklist-parallel-names.json` which parallels THIS product has
+  // and answers with the checklist's own spelling, so the reader cannot mint a
+  // rung the product lacks -- and where the destination is genuinely unbacked the
+  // classifier's checklistBacked gate holds the row as NEEDS-CHECKLIST, which is
+  // the honest state (#1796).
+  //
+  // A LOT STATES NO ONE CARD'S FINISH. `isMultiCardLot` is the same refusal the
+  // bare-Refractor fallback above carries, for the same reason.
+  if (!isMultiCardLot(T)) {
+    const stated = statedFinishFromChecklist(T, { year: ctx?.year ?? null, setKey: ctx?.setKey ?? null });
+    if (stated) return stated;
+  }
 
   return "Base";
 }

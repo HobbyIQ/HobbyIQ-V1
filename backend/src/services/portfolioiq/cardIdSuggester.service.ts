@@ -979,6 +979,20 @@ export interface SuggestBatchSummary {
 }
 
 /**
+ * Whether the import already resolved and PINNED this holding's identity.
+ *
+ * The one bar, read from what `resolveImportIdentity` actually stamps when
+ * `clearsIdentityBar` passes: the catalog verified the slug, and the slug is
+ * there. A holding in that state has one identity and does not need a rival.
+ */
+function identityAlreadyPinned(h: unknown): boolean {
+  const r = h as Record<string, unknown>;
+  return r.catalogVerified === true
+    && typeof r.catalogVerifiedSlug === "string"
+    && (r.catalogVerifiedSlug as string).startsWith("hiq:");
+}
+
+/**
  * Iterate every pending-review holding under `userId` and apply a
  * suggestCardIdForHolding call to each. Skips holdings that already carry
  * a suggestedCardId (idempotent). Serializes the CH calls (concurrency
@@ -1003,6 +1017,33 @@ export async function generateCardIdSuggestions(
   const targets = holdings.filter(
     (h) =>
       (h as any).cardStatus === "pending-review" &&
+      // CF-ONE-IMPORT-ONE-IDENTITY-STAYS-ONE (Drew, 2026-09-06, #1869). A
+      // holding whose identity the import already RESOLVED and PINNED is not
+      // a holding in want of a suggestion. Suggesting for it is what produced
+      // the second identity #1869 was asked to remove.
+      //
+      // Measured read-only 2026-09-06, 5 of the 53 pending-review rows carry a
+      // `suggestedCardId` that DISAGREES with their own `catalogVerifiedSlug`,
+      // and every one disagrees the same way — the suggestion drops the
+      // parallel and the print run:
+      //
+      //   verified  …:cpa-jwh:refractor:auto:num-499   suggested  …:cpa-jwh:base:auto
+      //   verified  …:cpa-dt:blue-refractor:auto:num-150  suggested  …:cpa-dt:base:auto
+      //   verified  …:cpa-tg:refractor:auto:num-499   suggested  …:cpa-tg:base:auto
+      //
+      // That is not a harmless second opinion. `confirmHoldingInDoc` auto-applies
+      // a suggestion at confidence >= 0.55 when `cardId` is absent, and these
+      // land at 1.0 — so a user pressing Confirm could move a /499 Refractor onto
+      // the un-numbered Base identity, which is a DIFFERENT CARD with a different
+      // pool. One import writes one identity (CF-ONE-IMPORT-ONE-IDENTITY, D9);
+      // the suggester exists for the rows where that derivation could NOT reach
+      // an answer, and those are exactly the rows it now runs on.
+      //
+      // The bar is the import's own pin gate, not a new one: `catalogVerified`
+      // with a `catalogVerifiedSlug` is what `resolveImportIdentity` stamps when
+      // `clearsIdentityBar` passes. `force` still overrides, so the repair lane
+      // and an explicit re-suggest are unaffected.
+      !identityAlreadyPinned(h) &&
       (opts.force || !(h as any).suggestedCardId),
   );
   summary.processed = targets.length;

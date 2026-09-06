@@ -59,6 +59,7 @@
  */
 import type { PortfolioHolding } from "../../types/portfolioiq.types.js";
 import type { PersistedPricingLabels } from "../compiq/valuationLabels.js";
+import { PRICING_CONTRACT_VERSION } from "./pricingContract.js";
 
 /**
  * The rung a write names, or its explicit refusal to name one.
@@ -167,6 +168,18 @@ export interface HoldingValuationWrite {
   writeMeta?: boolean;
 }
 
+/**
+ * The one method string that means "this row is a refusal, not a price".
+ *
+ * Named here rather than spelled inline because THREE places now depend on the
+ * same literal agreeing: the meta builder that stamps it, the stale-withhold
+ * clear that must not mistake it for a publish, and the corpus auditor's I1
+ * (`corpus-invariants.cjs` exports its own `WITHHELD_METHOD` and reads
+ * `pricingSourceMeta.method` off the stored row). A drift between the writer's
+ * string and the auditor's is a defect that reports itself as clean.
+ */
+export const WITHHELD_METHOD = "withheld";
+
 /** The rung string a declaration carries, or null for an explicit refusal. */
 export function rungLabelOf(d: RungDeclaration): string | null {
   return "rung" in d ? d.rung : null;
@@ -242,6 +255,10 @@ export function writeHoldingValuation(
         // deliberately NOT a rung name (fmvRung.ts does not know it), so no
         // reader mistakes it for a pricing decision; it is the auditor's
         // handle on a row that would otherwise have none.
+        // The literal, deliberately, not `WITHHELD_METHOD`: the pin in
+        // persistGateAcceptsEveryRung.test.ts matches this expression as
+        // SOURCE TEXT to prove no branch of it can yield `undefined`. A
+        // constant here would read identically at runtime and blind that pin.
         method: rung ?? (w.meta.withheld ? "withheld" : "unlabelled-carry"),
         ...(w.meta.withheld ? { withheld: w.meta.withheld } : {}),
         ...(w.meta.compsUsed != null ? { compsUsed: w.meta.compsUsed } : {}),
@@ -264,6 +281,14 @@ export function writeHoldingValuation(
         // construction on EVERY path that reaches this helper.
         ...(w.meta.labels ? { labels: w.meta.labels } : {}),
         ...(w.meta.selfAnchored !== undefined ? { selfAnchored: w.meta.selfAnchored } : {}),
+        // CF-A-FRESHNESS-SKIP-MUST-NOT-HIDE-A-ROW-THE-RULES-NO-LONGER-COVER
+        // (Drew, 2026-09-06). Stamped HERE, unconditionally, for the same
+        // reason the withheld-clear happens here: this is the one choke point
+        // every write already passes through, so the contract a number was
+        // produced under can never be a thing a call site remembered. Not a
+        // caller-supplied field — a lane cannot claim a contract it did not
+        // run under.
+        contractVersion: PRICING_CONTRACT_VERSION,
       }
     : undefined;
 
@@ -296,7 +321,50 @@ export function writeHoldingValuation(
   // forbid). A write that does not DECLARE a withhold is a publish, and a
   // publish leaves no withheld stamp behind it.
   const carriedMeta = (holding as { pricingSourceMeta?: Record<string, unknown> }).pricingSourceMeta;
+  // CF-A-CLEAR-IS-FOR-PUBLISHES-ONLY (2026-09-06). The clause above reads "a
+  // write that does not DECLARE a withhold is a publish" — and that is true of
+  // the six `writeMeta: false` sites it was written for, every one of which
+  // sets a real `fairMarketValue` from a lane that priced something. It is
+  // FALSE of the site #1833 added at portfolioStore ~11404, which is the
+  // second half of a refusal: `noBasisRefusalWrite` stamps the withheld meta,
+  // and this call then carries the lane's identity patch and verdict onto that
+  // same row with `writeMeta: false` to leave the stamp alone. The clear read
+  // that continuation as a publish and stripped the very block the line above
+  // it had just written — leaving `method: "withheld"` (which lives in the
+  // carried meta, not in the dropped key) standing with no reason beside it.
+  //
+  // That is the exact I1 `withheld-method-without-block` shape, and it is not
+  // theoretical: the 2026-09-06 07:21Z corpus audit found TEN of them across
+  // five users, every one stamped in that morning's 04:22-06:40Z reprice —
+  //
+  //   8b38c810 / c8dfad0d   method "withheld", compsUsed 6, confidence 0.598,
+  //                         NO withheld block. fmvRungAbsentReason carries the
+  //                         prose ("the catalog holds no identity for this
+  //                         holding ... the prior value of $1.99 is NOT
+  //                         retained"), so the REASON was computed and written
+  //                         to a prose field and then dropped from the one
+  //                         machine-readable place a client can read it.
+  //   user-199fcbc9 / ca7a150b, user-5e1a90ea / 60a7cfcc, and seven more.
+  //
+  // The refusal survived as a sentence and died as a fact, which is precisely
+  // what #1815 ("a refusal is a fact the client is entitled to") forbids: the
+  // pricing envelope builds `withheldReason` off `pricingSourceMeta.withheld`,
+  // so every one of those rows went out to the client as a null price with no
+  // machine-readable reason attached.
+  //
+  // So the clear now asks whether the row it is clearing is a PUBLISH. A
+  // carried meta whose own `method` is "withheld" is not stale residue behind
+  // a new price — it IS the withheld stamp, intact and current, and a write
+  // that states no meta of its own has said nothing that contradicts it. The
+  // Griffey case the clear exists for is untouched: its carried method is
+  // "exact-pool-last-sale", a published stamp, and the block beside it really
+  // is the leftover this branch was built to drop.
+  const carriedMethod = carriedMeta && typeof carriedMeta === "object"
+    ? (carriedMeta as { method?: unknown }).method
+    : undefined;
+  const carriedIsWithheldStamp = carriedMethod === WITHHELD_METHOD;
   const clearsStaleWithhold = !w.meta?.withheld
+    && !carriedIsWithheldStamp
     && !!carriedMeta
     && typeof carriedMeta === "object"
     && "withheld" in carriedMeta;

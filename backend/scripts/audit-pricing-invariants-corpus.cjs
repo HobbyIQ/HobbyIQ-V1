@@ -92,6 +92,10 @@ const INV = require(path.join(__dirname, "lib", "corpus-invariants.cjs"));
 const { budget } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
 const { runnerShardScope } = require(path.join(__dirname, "lib", "runner-shard-scope.cjs"));
 const CLASSIFY = require(path.join(__dirname, "lib", "rematch-classify.cjs"));
+// The MEASURED packing of sold_comps (16,336,296 rows in 32 slots by
+// (cardYear, sportClass), 1.07x spread). I9's sampling frame draws from every
+// slot so the nightly rate is about the corpus and not about one page of it.
+const SHARD_TABLE = require(path.join(__dirname, "..", "data", "rematch-shard-table.json"));
 
 const DB_NAME = process.env.COSMOS_DATABASE || "hobbyiq";
 const SAMPLE_SCALE = Math.max(0, Number(process.env.SAMPLE_SCALE ?? 1) || 1);
@@ -160,11 +164,20 @@ function makeResult(id) {
  * than spreading the whole finding) so an unrelated field a predicate adds
  * later does not silently enlarge every artifact row.
  */
-const FINDING_ADDRESS_FIELDS = ["partitions", "rekeyedAt", "unstatedFinish", "backing", "shown", "retained", "source"];
+const FINDING_ADDRESS_FIELDS = [
+  "partitions", "rekeyedAt", "unstatedFinish", "backing", "shown", "retained", "source",
+  "status", "informational",
+];
 
 function record(res, findings, rowRef) {
   for (const fi of findings) {
-    res.breaches++;
+    // AN INFORMATIONAL FINDING IS REPORTED, NEVER PAGED. It still lands in
+    // `byKind` and in the artifact rows — a reader must see it — but it does
+    // not increment `breaches`, so it cannot trip a threshold. Used where the
+    // auditor can see a condition but cannot yet form a verdict on it (I7's
+    // still-in-flight deploy run), which is a different statement from "the
+    // corpus is wrong" and must not alert as one.
+    if (!fi.informational) res.breaches++;
     res.byKind[fi.kind] = (res.byKind[fi.kind] ?? 0) + 1;
     if (res.rows.length < MAX_ROWS_PER_FINDING) {
       const row = { ...rowRef, kind: fi.kind, detail: fi.detail };
@@ -174,6 +187,31 @@ function record(res, findings, rowRef) {
       // A finding that names its own id (I5 groups by sale id) wins over the
       // caller's ref, which may be the loop variable rather than the document.
       if (fi.id) row.id = fi.id;
+      // ONE SALE, ONE ARTIFACT ROW.
+      //
+      // The sampling queries do not deduplicate, and they must not: I5 exists
+      // precisely BECAUSE a sale can be resident under two partition keys, so a
+      // query that collapsed them would blind the audit to its own finding.
+      // But a sale filed twice is still ONE thing to decide, and emitting it
+      // twice makes a reader count two defects and a triager write two list
+      // entries for one card. Measured on run 34018932244: I6 reported 24 rows
+      // that were 23 distinct sales -- tca-ebay::237048906564 appeared twice,
+      // byte-identical.
+      //
+      // Deduped on (kind, id, pool) rather than id alone: the same sale
+      // genuinely CAN breach two different invariants, and under I5 the same id
+      // legitimately names two addresses. `breaches` and `byKind` above are
+      // deliberately incremented BEFORE this gate -- they count breaches, and
+      // this only bounds what the artifact carries.
+      // The key set is NON-ENUMERABLE: the whole result object is JSON.stringify'd
+      // into the artifact, so a plain assignment would serialise as a mystery
+      // `"rowKeys": {}` on every invariant.
+      const dedupeKey = `${fi.kind} ${row.id ?? ""} ${row.slug ?? row.pool ?? ""}`;
+      if (!res.rowKeys) {
+        Object.defineProperty(res, "rowKeys", { value: new Set(), enumerable: false, writable: true });
+      }
+      if (res.rowKeys.has(dedupeKey)) continue;
+      res.rowKeys.add(dedupeKey);
       res.rows.push(row);
     }
   }
@@ -207,7 +245,13 @@ async function auditHoldings(db, results, shard) {
       rows.push({ userId: d.userId, holding: { ...h, id: h?.id ?? hid } });
     }
   }
-  console.log(`  walked ${f(docs.length)} portfolio docs -> ${f(rows.length)} holdings`);
+  // The snapshot instant is part of the finding: a reader comparing this
+  // against the deploy run's reprice window can see an overlap for themselves.
+  const snapshotAt = new Date().toISOString();
+  console.log(`  walked ${f(docs.length)} portfolio docs -> ${f(rows.length)} holdings (snapshot ${snapshotAt})`);
+  for (const r of [results.get("I1"), results.get("I2"), results.get("I10")]) {
+    if (r) r.notes.push(`holdings snapshot read at ${snapshotAt}`);
+  }
   if (rows.length === 0) {
     console.error("FATAL: zero holdings walked — the holdings map iterated nothing; refusing to report a clean audit");
     process.exit(2);
@@ -241,17 +285,98 @@ async function auditHoldings(db, results, shard) {
     i10.notes.push(`catalog read for ${f(read)} distinct priced identities`);
   }
 
+  // A FINDING IS CONFIRMED AGAINST THE LIVE ROW BEFORE IT IS REPORTED.
+  //
+  // The holdings snapshot above is read once, and the walk that judges it takes
+  // minutes. The reprice writes to the same documents. On 2026-09-06 the two
+  // overlapped: the portfolio was read at 13:13:23Z, "Reprice All Holdings"
+  // started at 13:14:16Z, and the engine withheld holdings ca7a150b and
+  // b2ea5dac at 13:16:07Z and 13:16:24Z — nulling `fairMarketValue` and writing
+  // a `withheld` block. I10 reported both as PRICED-ON-UNBACKED-IDENTITY at
+  // 13:16:00Z off the pre-reprice snapshot, and its own detail line said "no
+  // withheld block on this row records a refusal" about rows that acquired one
+  // seconds later. The gate had refused correctly; the auditor was reading a
+  // photograph of the past and calling it the present.
+  //
+  // Re-reading EVERY holding would double the RU for a race that touches a
+  // handful of rows, so only CANDIDATES are re-read — a row the snapshot
+  // already indicts. A confirmed finding costs one extra point read; a clean
+  // corpus costs nothing. This cannot mask a real defect: a row that is
+  // genuinely priced on an unbacked identity re-reads identically.
+  const confirmed = { raced: 0, vanished: 0, readErrors: 0 };
+  const confirmCache = new Map();
+  async function liveHolding(userId, holdingId) {
+    const key = `${userId} ${holdingId}`;
+    if (confirmCache.has(key)) return confirmCache.get(key);
+    let live = null;
+    try {
+      const { resources } = await retry(() => portfolio.items.query({
+        query: "SELECT c.holdings FROM c WHERE c.userId = @u",
+        parameters: [{ name: "@u", value: userId }],
+      }).fetchAll());
+      for (const d of resources) {
+        const h = (d?.holdings ?? {})[holdingId];
+        if (h) { live = { ...h, id: h?.id ?? holdingId }; break; }
+      }
+    } catch (e) {
+      // A failed re-read must not erase a finding. Fall back to the snapshot
+      // and say so, rather than silently reporting the corpus clean.
+      confirmed.readErrors++;
+      return undefined;
+    }
+    confirmCache.set(key, live);
+    return live;
+  }
+
+  /**
+   * Re-run `predicate` against the live row. Returns the findings to report:
+   * the live ones when the row still breaches, and an empty list when the
+   * write that landed mid-walk resolved it. `undefined` from the re-read (a
+   * transient query failure) keeps the snapshot's findings.
+   */
+  async function confirmFindings(found, userId, holding, predicate) {
+    if (!found.length) return found;
+    const live = await liveHolding(userId, holding.id);
+    if (live === undefined) return found;               // re-read failed; trust the snapshot
+    if (live === null) { confirmed.vanished++; return []; }  // holding deleted mid-walk
+    const still = predicate(live);
+    if (!still.length) { confirmed.raced++; return []; }
+    return still;
+  }
+
   const byUser = new Map();
   for (const { userId, holding } of mine) {
-    if (i1) { i1.sample++; record(i1, INV.checkOneStampPerHolding(holding), { userId, holdingId: holding.id, slug: holding.hobbyiqCardId ?? holding.cardId ?? null }); }
-    if (i2) { i2.sample++; record(i2, INV.checkWithheldValueExplained(holding), { userId, holdingId: holding.id, slug: holding.hobbyiqCardId ?? holding.cardId ?? null }); }
+    const ref = { userId, holdingId: holding.id, slug: holding.hobbyiqCardId ?? holding.cardId ?? null };
+    if (i1) {
+      i1.sample++;
+      const p = (h) => INV.checkOneStampPerHolding(h);
+      record(i1, await confirmFindings(p(holding), userId, holding, p), ref);
+    }
+    if (i2) {
+      i2.sample++;
+      const p = (h) => INV.checkWithheldValueExplained(h);
+      record(i2, await confirmFindings(p(holding), userId, holding, p), ref);
+    }
     if (i10) {
       i10.sample++;
       const slug = String(holding?.hobbyiqCardId ?? holding?.cardId ?? "").trim();
-      const found = INV.checkPricedOnUnbackedIdentity(holding, backingBySlug.get(slug) ?? [], backing);
-      record(i10, found, { userId, holdingId: holding.id, slug: slug || null });
+      // The live row may have MOVED to a different identity, so the backing is
+      // re-read for whatever slug the live row now names — judging a new slug
+      // against the old slug's catalog rows would be a third way to be wrong.
+      const p = (h) => {
+        const s = String(h?.hobbyiqCardId ?? h?.cardId ?? "").trim();
+        return INV.checkPricedOnUnbackedIdentity(h, backingBySlug.get(s) ?? [], backing);
+      };
+      const found = await confirmFindings(p(holding), userId, holding, p);
+      record(i10, found, { ...ref, slug: slug || null });
       if (found.length) byUser.set(userId, (byUser.get(userId) ?? 0) + found.length);
     }
+  }
+  for (const r of [i1, i2, i10]) {
+    if (!r) continue;
+    if (confirmed.raced) r.notes.push(`${f(confirmed.raced)} snapshot finding(s) cleared on re-read — a write landed mid-walk`);
+    if (confirmed.vanished) r.notes.push(`${f(confirmed.vanished)} holding(s) deleted mid-walk`);
+    if (confirmed.readErrors) r.notes.push(`${f(confirmed.readErrors)} confirm re-read(s) failed — those findings stand on the snapshot`);
   }
   if (i10) {
     // COUNT BY USER — the blast radius. One user with 300 is a bad import;
@@ -525,31 +650,93 @@ function buildDeriver() {
   };
 }
 /**
- * A RANDOM sample, not a recent one: recency correlates with whichever ingest
- * ran last, and a class rate measured on one source's output is that source's
- * rate, not the corpus's. Cosmos has no RANDOM(), so the sample is drawn across
- * an offset the run's own clock chooses — good enough for a nightly delta,
- * which is what this invariant is for.
+ * THE FRAME IS PART OF THE FINDING (#1872, 2026-09-06).
+ *
+ * This was `OFFSET floor((nowMs/86400000) % 50) * 500 LIMIT 2000`, described in
+ * this very comment as "A RANDOM sample". It was not random and it was not a
+ * corpus sample: 50 offsets x 500 meant it could never reach a row past index
+ * 26,500 of ~16.7M (0.16%), and with no ORDER BY, OFFSET walks PAGE order,
+ * which is partition order, which is cardId order. The 2026-09-06 artifact
+ * proved the consequence -- 2,000 rows with ZERO AGREE and ZERO IMPROVE,
+ * against 47.1%/2.2% on slot 31's real full-slot census.
+ *
+ * The frame now draws from every one of the 32 measured shard-table slots, at a
+ * per-slot soldAt SEEK point seeded by the UTC day (reproducible within a day,
+ * sweeping across days), through a per-cardId reservoir so one hot pool cannot
+ * fill the sample. See lib/corpus-invariants.cjs `buildSampleFrame`.
+ *
+ * RU: 32 partition-bounded TOP queries (`c.cardYear = @y [AND c.sport = @s]`
+ * plus a `c.soldAt >= @from` seek), ~63 rows each -- ~6,100 RU/run measured
+ * against ~2.2M RU had the draw used a large OFFSET, which Cosmos charges for
+ * every skipped document. No cross-partition COUNT, no OFFSET, no unbounded
+ * scan.
  */
 async function auditRederivation(db, res, bud, nowMs) {
   const pool = db.container("sold_comps");
   const target = sizeOf("I9");
   if (target === 0) { res.notes.push("sample size 0 — skipped"); return; }
 
-  const offset = Math.floor((nowMs / 86400000) % 50) * 500;
-  const { resources } = await retry(() => pool.items.query({
-    query: "SELECT c.id, c.cardId, c.hobbyiqCardId, c.title, c.source, c.parallel, c.setKey, "
-      + "c.cardYear, c.cardNumber, c.printRun FROM c WHERE IS_DEFINED(c.title) "
-      + "AND STARTSWITH(c.hobbyiqCardId, 'hiq:') OFFSET @off LIMIT @n",
-    parameters: [{ name: "@off", value: offset }, { name: "@n", value: target }],
-  }).fetchAll()).catch(async (e) => {
-    res.notes.push(`offset sample unavailable (${String(e?.message ?? e).slice(0, 90)}) — head sample`);
-    return retry(() => pool.items.query({
-      query: "SELECT TOP @n c.id, c.cardId, c.hobbyiqCardId, c.title, c.source, c.parallel, c.setKey, "
-        + "c.cardYear, c.cardNumber, c.printRun FROM c WHERE IS_DEFINED(c.title) AND STARTSWITH(c.hobbyiqCardId, 'hiq:')",
-      parameters: [{ name: "@n", value: target }],
-    }).fetchAll());
-  });
+  const PER_CARD_CAP = Math.max(1, Number(process.env.I9_PER_CARD_CAP ?? 4));
+  const frame = INV.buildSampleFrame({ shardTable: SHARD_TABLE, nowMs, target, perCardCap: PER_CARD_CAP });
+  const reservoir = INV.makeCardReservoir(PER_CARD_CAP);
+  // THE WHOLE DOCUMENT, BECAUSE THE CLASSIFIER READS THE WHOLE DOCUMENT (#1878).
+  //
+  // This was a 10-field projection, and it starved the classifier of eight of
+  // the fields it reads. `storedIdentity` reads row.setName (NOT row.setKey --
+  // the projection fetched the wrong field), row.sport, row.isAuto,
+  // row.gradeCompany and row.gradeValue; `provenanceTier` reads
+  // row.verifiedByUser, row.rekeyedReason and row.relocatedReason. Every one
+  // arrived undefined, so EVERY row looked like it had a blank setKey and a
+  // blank sport -- which is why 100% of the 1,178 CONFLICT rows in run
+  // 34027575655 carried `filled:setKey,sport`, and why the class table held
+  // zero AGREE on a corpus the census measures at 47.1% AGREE.
+  //
+  // The fleet reads `SELECT * FROM c` (rematch-sold-comps.cjs slotQuery). One
+  // classification path means one read shape: a projection is a second, silent
+  // definition of what a row is.
+  const SELECT = "*";
+
+  if (!frame.plan.length) {
+    res.notes.push("NOT RUN — the shard table carries no slots, so there is no frame to draw from");
+    return;
+  }
+
+  let slotsRead = 0;
+  for (const entry of frame.plan) {
+    if (bud.outOfClock()) { res.notes.push(`frame stopped at slot ${slotsRead}/${frame.plan.length} — ${bud.stoppedAtBudget()}`); break; }
+    const u = entry.unit;
+    // Partition-bounded by construction: a year, optionally a sport class.
+    // SEEK, NEVER SKIP. A large OFFSET is charged for every document it passes
+    // over (~2.2M RU/night on this table); a soldAt lower bound with ORDER BY
+    // rides the index and is charged for what it RETURNS.
+    const where = ["IS_DEFINED(c.title)", "STARTSWITH(c.hobbyiqCardId, 'hiq:')", "c.soldAt >= @from"];
+    const params = [{ name: "@n", value: entry.take }, { name: "@from", value: entry.seekFrom }];
+    if (u.yearKind === "value") { where.push("c.cardYear = @y"); params.push({ name: "@y", value: Number(u.year) }); }
+    else if (u.yearKind === "null") where.push("IS_NULL(c.cardYear)");
+    else where.push("NOT IS_DEFINED(c.cardYear)");
+    if (u.sportClass && u.sportClass !== "other") { where.push("c.sport = @s"); params.push({ name: "@s", value: u.sportClass }); }
+    const { resources } = await retry(() => pool.items.query({
+      query: `SELECT TOP @n ${SELECT} FROM c WHERE ${where.join(" AND ")} ORDER BY c.soldAt`,
+      parameters: params,
+    }).fetchAll()).catch((e) => {
+      res.notes.push(`slot ${entry.slot} draw failed (${String(e?.message ?? e).slice(0, 80)})`);
+      return { resources: [] };
+    });
+    slotsRead++;
+    // THE SLOT THE ROW CAME FROM TRAVELS WITH THE ROW. The reservoir pools
+    // every slot's draw into one list, and without this tag the per-slot
+    // comparison below has nothing to compare -- a sample drawn from 32
+    // different populations would again be scored against one number.
+    for (const row of resources) { row.__frameSlot = entry.slot; reservoir.offer(row); }
+  }
+
+  const resources = reservoir.rows();
+  res.notes.push(
+    `FRAME: ${slotsRead}/${frame.plan.length} shard-table slots x ${frame.perSlot} rows, per-slot soldAt seek `
+    + `seeded by UTC day ${frame.day} (reproducible within the day, seek not skip); per-card cap ${PER_CARD_CAP} `
+    + `dropped ${f(reservoir.droppedToCap())} row(s); ${f(resources.length)} rows from `
+    + `${f(reservoir.distinctCards())} distinct cards; ~${f(resources.length * 3)} RU`,
+  );
 
   // THE REAL DERIVER, or the invariant does not run. The first prod run passed
   // `derived: null` and got 160/160 UNDERIVABLE with a 0.00% CONFLICT rate — a
@@ -565,17 +752,74 @@ async function auditRederivation(db, res, bud, nowMs) {
     return;
   }
 
+  // THE CHECKLIST GATE, AS THE FLEET ASKS IT (#1878).
+  //
+  // rematch-sold-comps.cjs point-reads the DERIVED slug in card_catalog and
+  // calls it backed when a named checklist source appears among
+  // source/sourceSystem/sources[], or the row carries `checklistBacked: true`.
+  // The auditor passed a hardcoded `false`, which made the second gate --
+  // "a match proves nothing unless checklist-backed" -- reject every
+  // strictly-more-specific row, so IMPROVE was unreachable by construction.
+  //
+  // Cached per slug: a sample of ~1,800 rows resolves to far fewer distinct
+  // destinations, and a point read is ~1 RU.
+  const cat = db.container("card_catalog");
+  const CHECKLIST_SOURCE_RE = /checklist|beckett|tcdb|insider|bcp|baseballcardpedia|tcgdex/i;
+  const backedCache = new Map();
+  const checklistBackedOf = async (slug) => {
+    if (!slug) return false;
+    if (backedCache.has(slug)) return backedCache.get(slug);
+    let resource = null;
+    try { resource = (await retry(() => cat.item(slug, slug).read())).resource ?? null; }
+    catch (e) { if (e?.code !== 404 && e?.statusCode !== 404) throw e; }
+    let backed = false;
+    if (resource) {
+      const named = [resource.source, resource.sourceSystem, ...(Array.isArray(resource.sources) ? resource.sources : [])];
+      const sourceText = `${String(resource.source ?? resource.sourceSystem ?? "")},`
+        + `${Array.isArray(resource.sources) ? resource.sources.join(",") : ""}`;
+      backed = named.some((x) => CLASSIFY.isStrictChecklistSource(x))
+        || CHECKLIST_SOURCE_RE.test(sourceText)
+        || resource.checklistBacked === true;
+    }
+    backedCache.set(slug, backed);
+    return backed;
+  };
+
   const verdicts = [];
   const needsChecklistRows = [];
+  let protectedSkipped = 0;
   for (const row of resources) {
     if (bud.outOfClock()) { res.notes.push(`stopped at ${verdicts.length}/${resources.length} — ${bud.stoppedAtBudget()}`); break; }
+    // THE THRESHOLD READS ONLY ROWS THE FLEET WOULD CLASSIFY (#1878).
+    //
+    // PROTECTED rows -- ebay-user-purchase/-sale, ebay-account,
+    // manual-user-entry, anything verifiedByUser, any Drew ruling or hand/D31
+    // relocation marker -- are report-only FOREVER for the rematch
+    // (project_great_rematch_program). A disagreement on a row no lane may ever
+    // move is not a corpus defect; counting it toward a rate that gates the
+    // fleet makes the number mean something it does not. They are COUNTED and
+    // NAMED, never silently dropped.
+    if (CLASSIFY.provenanceTier(row).tier !== CLASSIFY.AUTO) { protectedSkipped++; continue; }
     res.sample++;
     try {
+      // Derive FIRST so the checklist gate can be asked about the DERIVED
+      // slug -- the destination, which is what the fleet asks about -- and
+      // hand the same derivation to the classifier rather than repeating it.
+      const der = deriver.deriveIdentity(row, deriver.deps);
       const v = INV.classifyStoredRow(row, CLASSIFY, {
-        deriveIdentity: deriver.deriveIdentity,
         storedIdentity: deriver.storedIdentity,
         deriveDeps: deriver.deps,
+        derived: der && der.ok ? der.identity : null,
+        derivationReasons: der && der.ok ? [] : (der?.reasons ?? ["derivation-refused"]),
+        // THE SAME CHECKLIST GATE THE FLEET ASKS. Without it every
+        // strictly-more-specific row returns CONFLICT/not-checklist-backed and
+        // the class table cannot hold one IMPROVE.
+        checklistBacked: der && der.ok ? await checklistBackedOf(der.slug) : false,
       });
+      // The slot rides along on the verdict so `frameHealth` can compare each
+      // slot's draw to THAT SLOT's own census, not to a corpus average that no
+      // single slot resembles.
+      if (v && typeof v === "object") v.__frameSlot = row.__frameSlot;
       verdicts.push(v);
       // A CONFLICT is the row-level finding. IMPROVE and UNDERIVABLE are
       // counted in the class table but are not breaches: IMPROVE is a queue,
@@ -618,6 +862,60 @@ async function auditRederivation(db, res, bud, nowMs) {
   res.byReason = rates.byReason;
   res.needsChecklistAxes = rates.needsChecklistAxes;
   res.needsChecklistRows = needsChecklistRows;
+  // FRAME HEALTH -- is this sample about the corpus, or about itself? Compared
+  // against the last real full-slot census shares. This is a NOTE, never a
+  // breach: the corpus legitimately moves, and the point is that the movement
+  // is VISIBLE. A zero-AGREE or single-pool sample is the frame failing, and
+  // the rate it produced must not be read as a corpus rate.
+  if (protectedSkipped) {
+    // NAMED, NEVER SILENTLY DROPPED. The fleet may never move these rows, so
+    // they are outside the rate the threshold reads -- and saying how many were
+    // set aside is what keeps that exclusion honest.
+    res.notes.push(
+      `${f(protectedSkipped)} PROTECTED row(s) excluded from the rate — user-sourced, verified or `
+      + "ruled rows are report-only forever for the rematch, so a disagreement on one is not a "
+      + "corpus defect the fleet could act on",
+    );
+  }
+  res.frameHealth = INV.frameHealth({
+    byClass: rates.byClass,
+    distinctCards: reservoir.distinctCards(),
+    sampled: verdicts.length,
+    // The verdicts carry their slot, so each slot's draw is scored against its
+    // OWN census and the frame's sportClass mix is reported alongside.
+    verdicts,
+  });
+  for (const flag of res.frameHealth.flags) {
+    res.notes.push(`FRAME UNHEALTHY -- ${flag}. The rate below is about the SAMPLE, not the corpus.`);
+  }
+  // FRAME HEALTH PER SPORTCLASS -- the line that stops a modern- or
+  // pokemon-heavy draw reading as a corpus-wide regression. The classes have
+  // very different CONFLICT rates (pokemon 0.60, modern 0.42, vintage 0.32), so
+  // a mix statement is the difference between "the corpus moved" and "we drew
+  // from a harder part of it".
+  const classLine = (res.frameHealth.bySportClass ?? [])
+    .map((c) => `${c.sportClass} ${(100 * (c.shareOfFrame ?? 0)).toFixed(0)}% of frame, `
+      + `CONFLICT ${(100 * c.conflict.sampled).toFixed(1)}% vs census `
+      + `${c.conflict.census === null ? "n/a" : `${(100 * c.conflict.census).toFixed(1)}%`}`)
+    .join("; ");
+  if (classLine) res.notes.push(`FRAME BY CLASS: ${classLine}`);
+  const exp = res.frameHealth.expectedForThisMix;
+  if (exp) {
+    res.notes.push(
+      `FRAME MIX EXPECTS AGREE ${(100 * exp.AGREE).toFixed(1)}% / CONFLICT ${(100 * exp.CONFLICT).toFixed(1)}% `
+      + `-- what THIS frame's class mix predicts, against the 32-slot corpus average of `
+      + `AGREE ${(100 * INV.CENSUS_REFERENCE_SHARES.AGREE).toFixed(1)}% / `
+      + `CONFLICT ${(100 * INV.CENSUS_REFERENCE_SHARES.CONFLICT).toFixed(1)}%. `
+      + "A gap here is the frame's shape, never corpus movement",
+    );
+  }
+  const movedSlots = (res.frameHealth.bySlot ?? [])
+    .filter((sl) => sl.drift && Math.abs(sl.drift.CONFLICT.delta ?? 0) > 0.25 && sl.sampled >= 20)
+    .map((sl) => `slot ${sl.slot} CONFLICT ${(100 * sl.drift.CONFLICT.sampled).toFixed(0)}% vs `
+      + `${(100 * sl.drift.CONFLICT.census).toFixed(0)}% (n=${sl.sampled})`);
+  if (movedSlots.length) {
+    res.notes.push(`SLOTS ADRIFT vs their OWN census: ${movedSlots.slice(0, 8).join("; ")}`);
+  }
   // THE THRESHOLD MEASURES TRUE DISAGREEMENTS. Both numbers are printed, and
   // the note says which one the threshold reads — a threshold that quietly
   // starts measuring something else is indistinguishable from a corpus that
@@ -734,6 +1032,44 @@ async function main() {
     }
     if (r.byCell) { console.log("  worst (sport,year) cells:"); for (const [c, v] of Object.entries(r.byCell)) console.log(`    ${c.padEnd(28)} ${v.breaches}/${v.sampled}`); }
     if (r.byClass) { console.log("  by class:"); for (const [c, n] of Object.entries(r.byClass)) console.log(`    ${c.padEnd(28)} ${f(n)}`); }
+    if (r.frameHealth) {
+      // FRAME HEALTH, beside the classes it qualifies. A rate whose frame is
+      // unhealthy is a rate about the sample, and saying so is the whole point.
+      const fh = r.frameHealth;
+      console.log(`  frame health: ${fh.healthy ? "OK" : "UNHEALTHY"}  `
+        + `${f(fh.sampled)} rows / ${f(fh.distinctCards)} distinct cards`);
+      if (fh.referenceSlots) {
+        console.log(`    reference: row-weighted over ${fh.referenceSlots} census slots `
+          + "(a single-slot reference measures that slot, not the corpus)");
+      }
+      for (const [k, d] of Object.entries(fh.drift)) {
+        const got = (d.sampled * 100).toFixed(1), cen = d.census === null ? "?" : (d.census * 100).toFixed(1);
+        const delta = d.delta === null || d.delta === undefined ? null : d.delta * 100;
+        const exp = fh.expectedForThisMix?.[k];
+        console.log(`    ${k.padEnd(14)} sample ${String(got).padStart(5)}%   census ${String(cen).padStart(5)}%   `
+          + `${delta === null ? "   n/a" : `${delta >= 0 ? "+" : ""}${delta.toFixed(1)}pp`}`
+          + `${exp === undefined ? "" : `   this mix expects ${(exp * 100).toFixed(1)}%`}`);
+      }
+      // PER-CLASS, so a frame that drew a harder part of the corpus says so
+      // rather than reporting the corpus as regressed.
+      for (const c of fh.bySportClass ?? []) {
+        const cen = c.conflict.census === null ? "  n/a" : `${(100 * c.conflict.census).toFixed(1)}%`;
+        console.log(`    class ${String(c.sportClass).padEnd(8)} ${(100 * (c.shareOfFrame ?? 0)).toFixed(0).padStart(3)}% of frame   `
+          + `CONFLICT ${(100 * c.conflict.sampled).toFixed(1)}%  vs census ${cen}`);
+      }
+      // PER-SLOT, worst first: a slot compared to ITSELF.
+      const adrift = (fh.bySlot ?? [])
+        .filter((sl) => sl.drift && sl.sampled >= 20)
+        .sort((a, b) => Math.abs(b.drift.CONFLICT.delta ?? 0) - Math.abs(a.drift.CONFLICT.delta ?? 0))
+        .slice(0, 6);
+      for (const sl of adrift) {
+        const d = sl.drift.CONFLICT;
+        console.log(`    slot ${String(sl.slot).padStart(2)}  n=${String(sl.sampled).padStart(3)}   `
+          + `CONFLICT ${(100 * d.sampled).toFixed(0)}%  vs its own census ${(100 * d.census).toFixed(0)}%   `
+          + `${(d.delta ?? 0) >= 0 ? "+" : ""}${(100 * (d.delta ?? 0)).toFixed(0)}pp`);
+      }
+      for (const flag of fh.flags) console.log(`    FLAG  ${flag}`);
+    }
     if (r.byConflictKind) {
       console.log("  CONFLICT split (only TRUE-DISAGREEMENT is a breach):");
       for (const [c, n] of Object.entries(r.byConflictKind)) console.log(`    ${c.padEnd(28)} ${f(n)}`);
@@ -824,6 +1160,11 @@ async function main() {
       byKind: r.byKind, notes: r.notes,
       ...(r.byCell ? { byCell: r.byCell } : {}),
       ...(r.byClass ? { byClass: r.byClass } : {}),
+      // The frame-health verdict travels WITH the rate it qualifies (#1878).
+      // It reached the banner but not the artifact, so anything reading the
+      // JSON -- which is how these findings are actually consumed -- saw the
+      // rate with no way to know the frame that produced it was broken.
+      ...(r.frameHealth ? { frameHealth: r.frameHealth } : {}),
       ...(r.byConflictKind ? { byConflictKind: r.byConflictKind } : {}),
       ...(r.byAxis ? { byAxis: r.byAxis } : {}),
       ...(r.byReason ? { byReason: r.byReason } : {}),

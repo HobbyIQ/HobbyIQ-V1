@@ -373,7 +373,12 @@ describe("C. a withheld price carries a withheld stamp — and only that", () =>
     // GRIFFEY's prior $1,850 came from `exact-pool-projection` on the very
     // slug the refusal names — the refused identity's OWN pool read, one pass
     // older. Rule 2 refuses it, exactly as it refuses the Chipper $2.
-    const { holding, prose } = noBasisRefusalWrite(GRIFFEY, "identity-not-in-catalog", null, NOW);
+    //
+    // The reason is `no-exact-pool` — an EVIDENCE refusal — so that rule 2 is
+    // what is on trial here. Under an identity refusal rule 3 (2026-09-06)
+    // answers first and this row would read `identity-not-priceable`, which
+    // is a different rule proving itself; the test below covers that.
+    const { holding, prose } = noBasisRefusalWrite(GRIFFEY, "no-exact-pool", null, NOW);
     const meta = holding.pricingSourceMeta as Record<string, unknown>;
     const withheld = meta.withheld as Record<string, unknown>;
 
@@ -388,13 +393,40 @@ describe("C. a withheld price carries a withheld stamp — and only that", () =>
 
     // MUTATION CHECK: drop the `withheld` block and this goes red.
     expect(meta.withheld).toBeDefined();
-    expect(withheld.reason).toBe("identity-not-in-catalog");
+    expect(withheld.reason).toBe("no-exact-pool");
     // Nothing was computed, so no number is borrowed as "proposed".
     expect(withheld.proposed).toBeNull();
     // The decision is LABELLED on the row, not only in a log that rolls.
     expect((holding as unknown as Record<string, unknown>).fmvRetainedReason).toBe(prose);
     expect((holding as unknown as Record<string, unknown>).fmvRetainedAt).toBe(NOW);
     expect(prose).toContain("no price was published");
+  });
+
+  it("RULE 3: an identity refusal retains nothing, even where rules 1 and 2 would have kept it", () => {
+    // CF-ABSENT-BEATS-WRONG (Drew, 2026-09-06). The cross-identity Griffey
+    // below is the shape rules 1 and 2 BOTH wave through — a healthy $1,850
+    // reached by a family baseline, not by the refused pool. Under an
+    // identity refusal it is still refused, because the question is no longer
+    // whether the number is sound: there is no card for it to be the price of.
+    //
+    // This is the corpus defect measured 2026-09-06: 10 of 131 holdings
+    // carrying a live fairMarketValue beside a `no-checklist-match` /
+    // `identity-not-in-catalog` withhold.
+    //
+    // MUTATION: delete rule 3 from `retentionThroughFloor` and this goes red.
+    const crossIdentity = {
+      ...GRIFFEY,
+      fmvRung: "family-baseline",
+      pricingSourceMeta: { ...(GRIFFEY.pricingSourceMeta as object), method: "family-baseline" },
+    } as unknown as PortfolioHolding;
+    for (const reason of ["identity-not-in-catalog", "no-checklist-match"] as const) {
+      const { holding } = noBasisRefusalWrite(crossIdentity, reason, null, NOW);
+      const withheld = (holding.pricingSourceMeta as Record<string, unknown>).withheld as Record<string, unknown>;
+      expect(holding.fairMarketValue).toBeNull();
+      expect(withheld.retained).toBeNull();
+      expect(withheld.retentionRefused).toBe("identity-not-priceable");
+      expect(withheld.reason).toBe(reason);
+    }
   });
 
   it("a cross-identity prior survives the refusal — the rule is not a blanket erase", () => {
@@ -406,7 +438,10 @@ describe("C. a withheld price carries a withheld stamp — and only that", () =>
       fmvRung: "family-baseline",
       pricingSourceMeta: { ...(GRIFFEY.pricingSourceMeta as object), method: "family-baseline" },
     } as unknown as PortfolioHolding;
-    const { holding } = noBasisRefusalWrite(crossIdentity, "identity-not-in-catalog", null, NOW);
+    // An EVIDENCE refusal: the card is real and named, only its pool is thin.
+    // That is where "not a blanket erase" is the doctrine — an identity
+    // refusal is a different claim and rule 3 answers it (test above).
+    const { holding } = noBasisRefusalWrite(crossIdentity, "no-exact-pool", null, NOW);
     const withheld = (holding.pricingSourceMeta as Record<string, unknown>).withheld as Record<string, unknown>;
     expect(holding.fairMarketValue).toBe(1850);
     expect(withheld.retained).toBe(1850);
@@ -448,7 +483,10 @@ describe("C. a withheld price carries a withheld stamp — and only that", () =>
       fmvRung: "family-baseline",
       pricingSourceMeta: { slug: "some:other:pool", method: "family-baseline", compsUsed: 2, confidence: 0.1 },
     } as unknown as PortfolioHolding;
-    const { holding, prose } = noBasisRefusalWrite(belowFloor, "identity-not-in-catalog", null, NOW);
+    // Again an EVIDENCE refusal, so rule 1 is what is on trial: under an
+    // identity refusal rule 3 answers first and the reason would be
+    // `identity-not-priceable`.
+    const { holding, prose } = noBasisRefusalWrite(belowFloor, "no-exact-pool", null, NOW);
     const withheld = (holding.pricingSourceMeta as Record<string, unknown>).withheld as Record<string, unknown>;
     expect(holding.fairMarketValue).toBeNull();
     expect(withheld.retentionRefused).toBe("prior-fails-floor");
@@ -692,6 +730,164 @@ describe("C'. a publish clears the withheld stamp it inherited", () => {
     for (const h of rows) {
       expect(carriesWithhold(h) && claimsAPrice(h), JSON.stringify(h.pricingSourceMeta)).toBe(false);
     }
+  });
+
+  /**
+   * -- C''. THE MIRROR: A REFUSAL'S SECOND WRITE IS NOT A PUBLISH ----------
+   * (2026-09-06, from the 07:21Z corpus audit -- I1, ten rows, five users.)
+   *
+   * C' pinned one direction of the biconditional -- a published stamp must not
+   * inherit a stale withheld block -- and the clear it installed then created
+   * the OTHER direction, which nothing pinned: `method: "withheld"` standing
+   * with no block to explain it.
+   *
+   * The mechanism is two writes on one row. `noBasisRefusalWrite` stamps the
+   * withheld meta; portfolioStore's confidence-gated retention lane (~11404,
+   * added by #1833) then calls the writer a SECOND time on that same row with
+   * `writeMeta: false`, to carry the identity patch and the verdict without
+   * disturbing the stamp. `method` lives in the carried meta and survived;
+   * `withheld` was a top-level key of that meta and the clear dropped it. The
+   * row went to prod saying "withheld" with nothing saying why.
+   *
+   * WHY IT MATTERS rather than being cosmetic: `pricingEnvelope.builder`
+   * derives the client's `withheldReason` from `pricingSourceMeta.withheld`
+   * and from nothing else. Ten holdings therefore reached users as a null
+   * price with no reason -- #1815's exact failure -- while the reason itself
+   * sat one field away in `fmvRungAbsentReason` as English prose no client
+   * parses.
+   */
+  describe("C''. a refusal continuation write keeps the block it just wrote", () => {
+    /** 8b38c810 / c8dfad0d as prod held it at 2026-09-06T04:22:37Z, and as
+     *  `noBasisRefusalWrite` leaves it one line before the second write. */
+    const REFUSED_ROW = {
+      id: "c8dfad0d",
+      cardId: "hiq:baseball:2026:bowman-chrome:bcp-16:base:no-auto",
+      fairMarketValue: null,
+      fmvRung: null,
+      valueSource: "estimated",
+      purchasePrice: 95.09,
+      totalCostBasis: 95.09,
+      quantity: 1,
+      pricingSourceMeta: {
+        slug: "hiq:baseball:2026:bowman-chrome:bcp-16:base:no-auto",
+        method: "withheld",
+        compsUsed: 6,
+        confidence: 0.5981040045018438,
+        labels: [],
+        withheld: {
+          reason: "identity-not-in-catalog",
+          blockingId: "hiq:baseball:2026:bowman-chrome:bcp-16:base:no-auto",
+          blockingCount: 6,
+          proposed: null,
+          retained: null,
+          retentionRefused: "prior-fails-floor",
+          retainedRung: null,
+        },
+      },
+    } as unknown as PortfolioHolding;
+
+    it("the reprice lane second write leaves the block standing", () => {
+      // The literal shape of portfolioStore ~11404: `writeMeta: false`, the
+      // lane's own prose in `noRung`, the verdict in `fields`.
+      //
+      // MUTATION CHECK: drop `&& !carriedIsWithheldStamp` from
+      // `clearsStaleWithhold` in writeHoldingValuation and this goes red with
+      // `withheld` undefined -- which is byte-for-byte the row the 09-06 audit
+      // read out of prod.
+      const continued = writeHoldingValuation(REFUSED_ROW, {
+        fairMarketValue: null,
+        rung: { noRung: "value retained unchanged by the confidence-gated reprice (...)" },
+        valueSource: "estimated",
+        nowIso: NOW,
+        writeMeta: false,
+        fields: { verdict: "Insufficient comps", recommendation: "Hold" },
+      });
+      const meta = continued.pricingSourceMeta as Record<string, unknown>;
+      expect(meta.method).toBe("withheld");
+      const block = meta.withheld as Record<string, unknown> | undefined;
+      expect(block).toBeDefined();
+      expect(block?.reason).toBe("identity-not-in-catalog");
+      // The retention decision survives too -- it is the half a reader needs
+      // to tell "kept and labelled" from "fell to cost basis".
+      expect(block?.retentionRefused).toBe("prior-fails-floor");
+      // And the price is still refused. Keeping the block is not keeping a
+      // number.
+      expect(continued.fairMarketValue).toBeNull();
+    });
+
+    it("I1 holds both ways on the row: method withheld iff a block explains it", () => {
+      // The auditor's own biconditional, run against the writer's output. This
+      // is the assertion `checkOneStampPerHolding` makes in
+      // corpus-invariants.cjs, restated on the shape the writer produces so
+      // the two cannot drift.
+      const continued = writeHoldingValuation(REFUSED_ROW, {
+        fairMarketValue: null,
+        rung: { noRung: "retained" },
+        valueSource: "estimated",
+        nowIso: NOW,
+        writeMeta: false,
+      });
+      const meta = continued.pricingSourceMeta as Record<string, unknown>;
+      const methodIsWithheld = meta.method === "withheld";
+      const hasBlock = !!meta.withheld && typeof meta.withheld === "object";
+      expect(methodIsWithheld).toBe(hasBlock);
+    });
+
+    it("the Griffey publish is UNCHANGED -- its stale block still clears", () => {
+      // The regression guard on the fix. C' exists because a genuine publish
+      // inherited a refusal; the new condition must not weaken it. Griffey's
+      // carried method is "exact-pool-last-sale" -- a published stamp -- so
+      // the block beside it is exactly the leftover C' drops.
+      const published = writeHoldingValuation(GRIFFEY_LIVE, {
+        fairMarketValue: 1850,
+        rung: { noRung: "legacy confidence-gated reprice; the legacy engine names no rung" },
+        valueSource: "estimated",
+        nowIso: NOW,
+        writeMeta: false,
+      });
+      const meta = published.pricingSourceMeta as Record<string, unknown>;
+      expect(meta.withheld).toBeUndefined();
+      expect(meta.method).toBe("exact-pool-last-sale");
+      expect(published.fairMarketValue).toBe(1850);
+    });
+
+    it("an unlabelled-carry row still clears -- only a WITHHELD stamp is protected", () => {
+      // `unlabelled-carry` names a number this write did not derive; it is not
+      // a refusal, so a block riding beside it is still residue.
+      const carry = {
+        ...GRIFFEY_LIVE,
+        pricingSourceMeta: {
+          slug: "s", method: "unlabelled-carry", compsUsed: 3, confidence: null,
+          withheld: { reason: "identity-not-in-catalog", blockingId: "s", blockingCount: 3, proposed: null },
+        },
+      } as unknown as PortfolioHolding;
+      const published = writeHoldingValuation(carry, {
+        fairMarketValue: 42,
+        rung: { noRung: "legacy" },
+        valueSource: "estimated",
+        nowIso: NOW,
+        writeMeta: false,
+      });
+      expect((published.pricingSourceMeta as Record<string, unknown>).withheld).toBeUndefined();
+    });
+
+    it("a DECLARED withhold still replaces a carried one -- the newer reason wins", () => {
+      // A second refusal for a different reason must not be shadowed by the
+      // first. The declared block is built fresh, so it overwrites.
+      const again = writeHoldingValuation(REFUSED_ROW, {
+        fairMarketValue: null,
+        rung: { noRung: "refused again" },
+        valueSource: "estimated",
+        nowIso: NOW,
+        meta: {
+          slug: "s", compsUsed: 6, confidence: null,
+          withheld: { reason: "pool-migrating", blockingId: "s", blockingCount: 6, proposed: null },
+        },
+      });
+      const meta = again.pricingSourceMeta as Record<string, unknown>;
+      expect((meta.withheld as Record<string, unknown>).reason).toBe("pool-migrating");
+      expect(meta.method).toBe("withheld");
+    });
   });
 });
 

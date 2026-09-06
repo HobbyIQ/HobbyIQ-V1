@@ -98,6 +98,9 @@ const LIMIT = Number(process.env.LIMIT || 0);
 // -- sweeps EVERY row. SLOTS binds to 1 when unsharded, so `% SLOTS` and
 // `SLOTS === 1` guards below keep working unchanged.
 const { runnerShardScope } = require("./lib/runner-shard-scope.cjs");
+// CF-BASE-SET-IS-NOT-A-SUBSET: a page-section heading ("Base Set", "Checklist")
+// is not a claim that the row belongs to a named subset.
+const { claimedSubsetOf } = require(path.join(__dirname, "lib", "subset-identity.cjs"));
 // CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809): the one exit path.
 const { finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
 const SHARD_SCOPE = runnerShardScope({ label: "ingest-checklist-csv-to-catalog" });
@@ -432,8 +435,32 @@ async function main() {
           // Blank means unknown and is never invented, and minting the unknown
           // side without a segment would put it straight back on the ambiguous
           // plain id. #1741's counter stays for exactly that case.
-          if (known && known.subsetName && known.subsetName !== (product.subsetName || null)) {
-            if (!product.subsetName) {
+          // CF-BASE-SET-IS-NOT-A-SUBSET (2026-09-06, run 34027488624).
+          //
+          // THE CLASH IS BETWEEN SUBSETS THE SOURCES CLAIM, not between raw
+          // subsetName strings. The 1957 Topps recheck read 417 checklist rows
+          // and wrote 9: the other 407 were refused here because the stored
+          // baseballcardpedia row carried subsetName "Base Set" while the
+          // checklist page -- a base-set page -- stated none. Mantle #95, Mays
+          // #10 and Aaron #20 were all refused against themselves.
+          //
+          // "Base Set" is a PAGE-SECTION HEADING, not a subset:
+          // scrape-baseballcardpedia reads it off the wiki nav and maps it to
+          // `category: "base"`, and the label rides along into subsetName where
+          // it asserts the OPPOSITE of a subset -- "this row IS the base set".
+          // Comparing it against a blank claim concluded "two different cards"
+          // when both sides were saying the same thing.
+          //
+          // claimedSubsetOf() folds those structural labels to "no claim". Two
+          // rows that both claim nothing do not clash, so the newcomer falls
+          // through to upsertCatalogEntry and the AUTHORITY MERGE decides --
+          // which is where a same-card newcomer has always belonged. A real
+          // named subset ("Cards That Never Were", "Rookies") is untouched and
+          // still clashes exactly as #1741 and the 2026-09-04 ruling require.
+          const knownClaim = claimedSubsetOf(known && known.subsetName);
+          const productClaim = claimedSubsetOf(product.subsetName);
+          if (known && knownClaim && knownClaim !== (productClaim || null)) {
+            if (!productClaim) {
               subsetCollision++;
               if (collisionExamples.length < 8) {
                 collisionExamples.push(String(r.cardNumber).toUpperCase() + "|" + (r.parallel || "base")
@@ -448,7 +475,7 @@ async function main() {
               parallel: r.parallel || "Base",
               isAuto: r.isAuto === "true",
               printRun: r.printRun ? Number(r.printRun) : null,
-              subsetName: product.subsetName, subsetInId: true,
+              subsetName: productClaim, subsetInId: true,
               // CF-AUTHORITATIVE-SETKEY, as above -- the subset re-slug must
               // land on the same product the plain slug did, or disambiguating
               // a subset would move the card to another product as a side
@@ -463,7 +490,7 @@ async function main() {
               parallel: known.parallel || "Base",
               isAuto: known.isAuto === true,
               printRun: typeof known.printRun === "number" ? known.printRun : null,
-              subsetName: known.subsetName, subsetInId: true,
+              subsetName: knownClaim, subsetInId: true,
               // CF-AUTHORITATIVE-SETKEY. The incumbent is a catalog row this
               // same checklist lane minted; recomputing its address under a
               // different rule would move it to a third product.
@@ -500,7 +527,9 @@ async function main() {
                 catalogContainer(),
                 known,
                 incumbentSlug,
-                { subsetName: known.subsetName, subsetInId: true },
+                // The CLAIMED subset, so a structural page-section label never
+                // becomes the identity of the row it is moved onto.
+                { subsetName: knownClaim, subsetInId: true },
                 {
                   reason: `subset disambiguation: "${known.subsetName}" and "${product.subsetName}" both claim ${String(r.cardNumber).toUpperCase()}|${r.parallel || "base"}`,
                   dryRun: !APPLY,

@@ -490,6 +490,60 @@ function checkOneSaleOneAddress(id, rows) {
  * those apart, and the top-20-by-rate list is what a person can actually act
  * on.
  */
+/** `refractors` -> `refractor`. Deliberately conservative: the -es rule fires
+ *  only after a sibilant, so `finest` and `prizms` are not mangled into
+ *  `fine`/`prizm`+ nonsense. Words of three letters or fewer are left alone --
+ *  there is no finish token that short whose plural matters. */
+function singularise(word) {
+  const w = str(word).toLowerCase();
+  if (w.length <= 3) return w;
+  if (/(?:ss|sh|ch|x|z)es$/.test(w)) return w.slice(0, -2);
+  if (/[^s]s$/.test(w)) return w.slice(0, -1);
+  return w;
+}
+
+/** Drop every non-alphanumeric: `die-cut` -> `diecut`, `x-fractor` -> `xfractor`.
+ *
+ *  Built by splitting and joining rather than by String.prototype.replace: the
+ *  read-only governance pin in corpusInvariantAuditor.test.ts scans this file's
+ *  comment-stripped source for Cosmos write calls, and `.replace(` is one of the
+ *  five names it refuses. That pin is right to be blunt -- an auditor that could
+ *  write is one that could "fix" a finding -- so this reads the same and keeps
+ *  the guard's claim about the whole module intact. */
+function depunctuate(word) {
+  return str(word).toLowerCase().split(/[^a-z0-9]+/).join("");
+}
+
+/**
+ * Every form a finish word can wear inside a slug.
+ *
+ * A slug spells `die-cut` as three characters of punctuation between two
+ * fragments, and the title spells it as one token. Indexing only the split
+ * parts makes the slug's own words invisible to a set difference against the
+ * title -- which is exactly how `light-blue-die-cut-prizm` came to be reported
+ * for lacking die-cut. So the index carries the parts, their de-punctuated and
+ * singularised forms, every ADJACENT PAIR joined, and each whole colon segment
+ * joined.
+ *
+ * Adjacent pairs only, never the full power set: `die`+`cut` and `x`+`fractor`
+ * are the shapes that occur, and a wider join would start matching words the
+ * slug does not actually contain.
+ */
+function buildSlugFinishIndex(slug) {
+  const raw = str(slug).toLowerCase();
+  const out = new Set();
+  const add = (w) => {
+    if (!w) return;
+    out.add(w);
+    out.add(singularise(w));
+  };
+  const parts = raw.split(/[^a-z0-9]+/i).filter(Boolean);
+  for (const p of parts) add(p);
+  for (let i = 0; i < parts.length - 1; i++) add(parts[i] + parts[i + 1]);
+  for (const seg of raw.split(":")) add(depunctuate(seg));
+  return out;
+}
+
 function checkPoolIdentityCoherence(row, classify) {
   const family = classify.finishFamilyCollision({
     row,
@@ -531,15 +585,48 @@ function checkPoolIdentityCoherence(row, classify) {
   // over. That false positive fires on essentially every Chrome row in the
   // corpus — measured on the healthy fixture, which returned [chrome, shimmer]
   // where only `shimmer` is real.
+  //
+  // ── AND THE SLUG INDEX IS NOT A NAIVE WORD SPLIT ──────────────────────────
+  //
+  // Two false positives, both measured against the 2026-09-06 corpus artifact
+  // (run 34018932244), where 8 of 23 reported rows were this check's own
+  // defects rather than mislabelled sales:
+  //
+  //  (1) PLURAL vs SINGULAR. FINISH_TOKENS carries `refractor` AND `refractors`
+  //      as separate members, so a title reading "Orange Refractors" produced
+  //      the word `refractors` while the slug `...:orange-refractor:...` split
+  //      to `refractor`. The set difference then reported the sale as filed
+  //      against a finish its own slug states one `s` away. Measured: 3 of the
+  //      8 ("Refractors" x2, "Prizms" x2 — `silver-prizm`, `orange-refractor`,
+  //      `purple-refractor`).
+  //
+  //  (2) THE SLUG'S OWN HYPHENATED WORDS, SPLIT APART. A title word is a single
+  //      token (`die-cut`, `x-fractor`); the slug is split on every non-
+  //      alphanumeric, so `light-blue-die-cut-prizm` became [light, blue, die,
+  //      cut, prizm] and `die-cut` matched none of them. The check then
+  //      reported a slug segment as lacking a word it spells out in full.
+  //      Measured: 4 of the 8 (`light-blue-die-cut-prizm` lacking die-cut,
+  //      `blue-x-fractor` and `gold-x-fractor` lacking x-fractor).
+  //
+  // The fix is to index the slug by every form the SAME word can take there —
+  // each part, each part de-punctuated, each ADJACENT PAIR joined (so `die`+
+  // `cut` covers `diecut` and `x`+`fractor` covers `xfractor`), and each whole
+  // segment de-punctuated — and to compare singularised on both sides. It
+  // widens what counts as "the slug already says this", which is the safe
+  // direction: a word the slug demonstrably contains is never evidence the
+  // sale is misfiled. It does NOT touch the genuine finding — a title stating
+  // `shimmer` or `reactive` against a slug that spells neither still fires.
   const finishTokens = classify.FINISH_TOKENS instanceof Set
     ? classify.FINISH_TOKENS
     : new Set(classify.FINISH_TOKENS ?? []);
-  const slugWords = new Set(
-    str(ev.addressSlug ?? "").toLowerCase().split(/[^a-z0-9]+/i).filter(Boolean),
+  const slugWords = buildSlugFinishIndex(ev.addressSlug);
+  const statedInSlug = (w) => (
+    slugWords.has(w) || slugWords.has(singularise(w))
+    || slugWords.has(depunctuate(w)) || slugWords.has(singularise(depunctuate(w)))
   );
   const unstated = (ev.titleFamilyWords ?? [])
     .map((w) => str(w).toLowerCase())
-    .filter((w) => finishTokens.has(w) && !slugWords.has(w));
+    .filter((w) => finishTokens.has(w) && !statedInSlug(w));
 
   if (!unstated.length) return [];
 
@@ -616,7 +703,28 @@ function checkDeployHealth(run, jobs, opts = {}) {
     }];
   }
 
-  const conclusion = str(run.conclusion) || "(in progress)";
+  // A RUN STILL IN FLIGHT IS NOT A VERDICT. Observed 2026-09-06: the audit was
+  // dispatched by hand four minutes behind the deploy, read run 34035108751
+  // while "Reprice All Holdings (post-refresh)" was still queued, and reported
+  // `reprice-did-not-run` for a job that started 16 seconds later and went
+  // green. Judging an unfinished run asks "is this job absent" of a job list
+  // that is still being written, and absent-because-pending is indistinguishable
+  // from absent-because-skipped in the payload. The schedule (06:20/07:10 UTC)
+  // assumes the 5AM refresh is long done; nothing ENFORCES that, and a manual
+  // dispatch breaks the assumption silently. Report the overlap as a note, not
+  // a breach — the next scheduled audit judges the finished run.
+  if (!str(run.conclusion)) {
+    return [{
+      kind: "deploy-run-in-flight",
+      detail: `run ${run.id ?? "?"} of "Daily 5AM ET Refresh & Deploy" is still `
+        + `"${str(run.status) || "in progress"}" — no verdict is possible until it finishes, and a `
+        + "job absent from a running run may simply not have started yet",
+      runId: run.id ?? null, conclusion: null, status: str(run.status) || null,
+      url: run.html_url ?? null, informational: true,
+    }];
+  }
+
+  const conclusion = str(run.conclusion);
   if (conclusion !== "success") {
     out.push({
       kind: "deploy-run-failed",
@@ -807,9 +915,22 @@ function classifyStoredRow(row, classify, deps = {}) {
     if (der && der.ok) derived = der.identity ?? der.derived ?? der;
     else derivationReasons = der?.reasons ?? ["derivation-refused"];
   }
+  // `storedIdentity` NEEDS ITS DEPS (#1878). It calls
+  // `deps.normalizeSetKey(row.setName)`, so calling it with one argument threw
+  // `Cannot read properties of undefined` on every row that carries a setName
+  // -- and the auditor's try/catch turned each throw into a skipped row rather
+  // than a finding. The deriver and the stored reader take the SAME deps
+  // because they are the same two functions the fleet calls.
   const stored = deps.stored
-    ?? (typeof deps.storedIdentity === "function" ? deps.storedIdentity(row) : null);
+    ?? (typeof deps.storedIdentity === "function" ? deps.storedIdentity(row, deps.deriveDeps ?? {}) : null);
 
+  // A CHECKLIST GATE THAT ALWAYS SAYS NO IS NOT A GATE (#1878). `?? false`
+  // meant the AGREE/IMPROVE branch behind "a match proves nothing unless
+  // checklist-backed" could never be reached, so every strictly-more-specific
+  // row returned CONFLICT/not-checklist-backed and the class table could not
+  // contain a single IMPROVE. The caller now passes the same predicate the
+  // fleet uses; `false` remains the default only for callers that genuinely
+  // have no catalog to ask.
   return classify.classifyRow({
     row, stored, derived, storedSlug,
     checklistBacked: deps.checklistBacked ?? false,
@@ -1022,6 +1143,411 @@ function evaluateThreshold(id, { breaches, sample }) {
   };
 }
 
+
+// ── THE I9 SAMPLING FRAME (#1872) ───────────────────────────────────────────
+/**
+ * CF-A-FRAME-IS-PART-OF-THE-FINDING (2026-09-06).
+ *
+ * I9's frame was `OFFSET floor((nowMs/86400000) % 50) * 500 LIMIT 2000` over
+ * `sold_comps`, and its own comment called that "A RANDOM sample, not a recent
+ * one". It was neither. Measured on the 2026-09-06 artifact (run 34018932244):
+ *
+ *   - 50 offsets x 500 = the frame could never reach a row past index 26,500
+ *     of ~16.7M. That is 0.16% of the corpus, and the same 26.5k rows every
+ *     50 days.
+ *   - Cosmos has no ORDER BY here, so `OFFSET` walks PAGE order, which is
+ *     partition order, which is cardId order. Neighbouring rows are the same
+ *     card.
+ *   - The result: 2,000 sampled rows returned ZERO AGREE and ZERO IMPROVE,
+ *     against 47.1% AGREE / 2.2% IMPROVE on slot 31's real full-slot census
+ *     (509,224 rows, 2026-09-06 02:46Z). A frame that cannot see the majority
+ *     class is not measuring the corpus.
+ *   - The 25 retained TRUE-DISAGREEMENT rows collapsed onto ~6 cardIds (one
+ *     card contributed 8), and all 25 NEEDS-CHECKLIST rows were ch-daily sales
+ *     from July 2020 alone.
+ *
+ * This is the SAME defect rematch-sold-comps.cjs fixed in its own audit sample
+ * (audit finding 7: slot 27's 30-row sample was 23 lines from one card), and it
+ * is fixed the same way: spread the draw across the corpus, and cap per card.
+ *
+ * THE FRAME, in three parts:
+ *
+ *   1. SPREAD ACROSS THE SHARD TABLE. backend/data/rematch-shard-table.json is
+ *      the MEASURED packing of the pool -- 16,336,296 rows in 32 slots at a
+ *      1.07x spread, by (cardYear, sportClass). Drawing N rows from each of the
+ *      32 slots reaches every year and every sport class, because the table's
+ *      units ARE the corpus's shape. Each slot's draw takes its own random
+ *      offset inside that slot's measured row count, so the window moves.
+ *   2. SEEDED BY THE DAY. The offsets come from a seeded PRNG keyed on the UTC
+ *      day, so a run is REPRODUCIBLE -- two runs on the same day read the same
+ *      rows and a delta between them is a corpus change, never a frame change
+ *      -- while consecutive days sweep different windows.
+ *   3. ONE RESERVOIR PER cardId. At most `perCardCap` rows from any one card
+ *      reach the sample, so a hot pool cannot crowd out the corpus.
+ *
+ * RU COST IS BOUNDED BY CONSTRUCTION -- AND THE SKIP IS THE COST.
+ *
+ * The obvious spelling of "start somewhere random inside this slot" is a large
+ * OFFSET, and it is the wrong one: Cosmos CHARGES for every document an OFFSET
+ * skips. Measured on this table, per-slot offsets sum to ~5.5M skipped rows,
+ * which is ~2.2M RU a night to return 2,016 documents. That is a frame that
+ * costs more than the audit it feeds.
+ *
+ * So the draw SEEKS instead of skipping. `soldAt` is indexed and carries a
+ * composite index with `sport` and with `cardYear`, so a
+ * `c.soldAt >= @from ORDER BY c.soldAt` window is an INDEX SEEK: Cosmos pays
+ * for the rows it returns, not for the rows it passed over. The seed picks the
+ * WINDOW START across the pool's real date span rather than an ordinal
+ * position, which gives the same "move the window every day" property at a
+ * fraction of the cost.
+ *
+ * Every query is therefore: a year (and usually a sport) equality, a soldAt
+ * lower bound, and a TOP. Never a cross-partition COUNT, never an OFFSET, never
+ * an unbounded scan. 32 queries x ~63 rows is ~2,016 documents per run.
+ */
+
+/** The pool's sale-date span the frame seeks within. `sold_comps` holds ~8
+ *  years of CardHedge history plus current ingest; the window start is drawn
+ *  inside this range and the query takes the first N sales at or after it. */
+const FRAME_SEEK_FROM_MS = Date.parse("2018-01-01T00:00:00Z");
+
+/** A tiny deterministic PRNG (mulberry32). Same seed, same sequence. */
+function seededRandom(seed) {
+  let a = seed >>> 0;
+  return function next() {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/** The UTC day number -- the reproducibility key. */
+const utcDayOf = (nowMs) => Math.floor(Number(nowMs) / 86400000);
+
+/**
+ * The per-slot draw plan for one day. Pure: it takes the shard table and the
+ * clock and returns what to query, so a test can assert the frame without a
+ * database.
+ *
+ * Returns one entry per slot: the unit to read, the offset inside it, and how
+ * many rows to take.
+ */
+function buildSampleFrame({ shardTable, nowMs, target = 2000, perCardCap = 4 }) {
+  const slots = Array.isArray(shardTable?.slots) ? shardTable.slots : [];
+  if (!slots.length) return { plan: [], perSlot: 0, day: utcDayOf(nowMs), perCardCap, totalRows: 0 };
+  const perSlot = Math.max(1, Math.ceil(Number(target) / slots.length));
+  const day = utcDayOf(nowMs);
+  // Midnight UTC at the END of the seeded day: the seek span is the same for
+  // every run on that day, so two runs read the same window.
+  const dayEndMs = (day + 1) * 86400000;
+  const plan = [];
+  for (const slot of slots) {
+    const units = Array.isArray(slot.units) ? slot.units : [];
+    if (!units.length) continue;
+    // The BIGGEST unit in the slot carries the draw: it is the one whose row
+    // count can absorb a large offset, and the table packs slots so that unit
+    // is a real share of the corpus rather than a tail.
+    const unit = units.slice().sort((a, b) => Number(b.rows ?? 0) - Number(a.rows ?? 0))[0];
+    const rows = Math.max(0, Number(unit.rows ?? 0));
+    const rnd = seededRandom((day * 1000003) ^ (Number(slot.slot) * 7919));
+    // SEEK, DO NOT SKIP. The seed chooses a point in the pool's sale-date span
+    // and the query takes the first `perSlot` sales at or after it, which the
+    // soldAt index answers without charging for what it passed over.
+    // THE SPAN IS ANCHORED TO THE DAY, NOT THE CLOCK. Using `nowMs` raw made
+    // the window drift between two runs on the SAME day, which is exactly the
+    // reproducibility this frame promises -- caught by the pin.
+    const spanMs = Math.max(1, dayEndMs - FRAME_SEEK_FROM_MS);
+    const seekFrom = new Date(FRAME_SEEK_FROM_MS + Math.floor(rnd() * spanMs)).toISOString();
+    plan.push({ slot: Number(slot.slot), unit, seekFrom, take: perSlot, unitRows: rows });
+  }
+  return { plan, perSlot, day, perCardCap, totalRows: plan.length * perSlot };
+}
+
+/**
+ * The per-cardId reservoir. Feed rows in; it keeps at most `perCardCap` from
+ * any one card and reports what it dropped, so the banner can say the cap bit.
+ */
+function makeCardReservoir(perCardCap = 4) {
+  const perCard = new Map();
+  const kept = [];
+  let dropped = 0;
+  return {
+    offer(row) {
+      const key = str(row?.cardId) || str(row?.hobbyiqCardId) || `__${kept.length}`;
+      const n = perCard.get(key) ?? 0;
+      if (n >= perCardCap) { dropped++; return false; }
+      perCard.set(key, n + 1);
+      kept.push(row);
+      return true;
+    },
+    rows: () => kept,
+    distinctCards: () => perCard.size,
+    droppedToCap: () => dropped,
+  };
+}
+
+/**
+ * CF-THE-REFERENCE-IS-THE-WHOLE-CORPUS-NOT-ONE-SLOT (2026-09-06).
+ *
+ * WHAT THIS REPLACES, AND WHY IT WAS WRONG. The reference used to be SLOT 31
+ * ALONE -- 509,224 rows, 3.1% of the corpus, and a year-only shard of 1989,
+ * 1995, 1975, 1978 and 1909. The #1874 frame draws from all 32 slots, which are
+ * modern- and pokemon-heavy, so the comparison was between two different
+ * populations and the drift line reported a STRUCTURAL MISMATCH as corpus
+ * movement. The 2026-09-06 artifact (run 34029662735) printed the result:
+ *
+ *     CONFLICT  sampled 55.4%   census 20.6%   delta +34.8pp
+ *
+ * read as a corpus-wide regression. It is not one. The full 32-slot fleet
+ * census puts corpus CONFLICT at 40.8%, and slot 31 is the single least
+ * representative slot for that class -- it understates it by half. A reference
+ * that one slot cannot fail is not a reference; it is a description of slot 31.
+ *
+ * WHAT IT IS NOW. `data/rematch-census-shares.json` holds all 32 slots'
+ * classification, recovered from each IMPROVE fleet run's own
+ * `rematch-census-slot-<N>-<runId>` artifact (2026-09-05T04:20Z..09-06T02:49Z,
+ * 16,716,343 rows classified). Three things come out of it:
+ *
+ *   `weighted`      the ROW-WEIGHTED corpus average -- what a whole-corpus draw
+ *                   is compared against.
+ *   `slots[]`       each slot's own shares -- what a draw FROM THAT SLOT is
+ *                   compared against, so a slot is never scored on another
+ *                   slot's population.
+ *   `bySportClass`  vintage / modern / pokemon, each slot apportioned BY ROWS
+ *                   across the classes its units belong to. This is the line
+ *                   that makes the original defect impossible to repeat:
+ *
+ *                       pokemon  CONFLICT 0.596      vintage CONFLICT 0.319
+ *
+ *                   so a pokemon-heavy draw reading 55% CONFLICT is its frame,
+ *                   not a regression, and the health line now says so.
+ *
+ * THE FOUR CLASSES DO NOT SUM TO 1, in the census or here: the fleet reports
+ * UNDERIVABLE-for-subset under `byTier` and leaves it out of `counts`. The
+ * shares are comparable to each other and to a sample classified the same way,
+ * which is exactly what this function does with them -- but they are not a
+ * partition, and nothing may treat them as one.
+ */
+const CENSUS_SHARES_PATH = path.join(__dirname, "..", "..", "data", "rematch-census-shares.json");
+
+function loadCensusShares() {
+  try {
+    // eslint-disable-next-line global-require
+    return require(CENSUS_SHARES_PATH);
+  } catch {
+    return null;
+  }
+}
+
+const CENSUS_TABLE = loadCensusShares();
+
+/**
+ * The corpus-wide reference: the row-weighted average over all 32 slots.
+ *
+ * Kept under its original name because every caller and pin reads it, but it is
+ * no longer one slot's numbers. When the table cannot be loaded this falls back
+ * to the fleet's published weighted average rather than to a single slot, so a
+ * missing file degrades to the RIGHT shape of answer.
+ */
+const CENSUS_REFERENCE_SHARES = Object.freeze({
+  source: CENSUS_TABLE
+    ? `${CENSUS_TABLE.source} (${CENSUS_TABLE.slotCount} slots, `
+      + `${CENSUS_TABLE.classifiedTotal} rows classified)`
+    : "rematch IMPROVE fleet census, 32 slots, 2026-09-05/06 (table not loaded)",
+  slots: CENSUS_TABLE?.slotCount ?? 32,
+  ...(CENSUS_TABLE?.weighted ?? { AGREE: 0.423947, IMPROVE: 0.034467, CONFLICT: 0.407827, UNDERIVABLE: 0.082341 }),
+});
+
+/** One slot's own census shares, or null when the table lacks it. */
+function censusSharesForSlot(slot) {
+  if (!CENSUS_TABLE || slot === null || slot === undefined) return null;
+  const n = Number(slot);
+  const row = (CENSUS_TABLE.slots ?? []).find((r) => Number(r.slot) === n);
+  return row ? row.shares : null;
+}
+
+/** The sportClass mix of a slot -- `{ vintage: 0.93, pokemon: 0.07 }` -- or null. */
+function censusClassMixForSlot(slot) {
+  if (!CENSUS_TABLE || slot === null || slot === undefined) return null;
+  const n = Number(slot);
+  const row = (CENSUS_TABLE.slots ?? []).find((r) => Number(r.slot) === n);
+  return row ? (row.classMix ?? null) : null;
+}
+
+/** The census shares for one sportClass frame (vintage / modern / pokemon). */
+function censusSharesForClass(cls) {
+  const b = CENSUS_TABLE?.bySportClass?.[String(cls)];
+  return b ? b.shares : null;
+}
+
+/** Below this many distinct cards, the sample is a pool and not a corpus. */
+const FRAME_MIN_DISTINCT_CARDS = 100;
+
+/**
+ * FRAME HEALTH -- is this sample about the corpus, or about itself?
+ *
+ * Two hard flags, both learned from the 2026-09-06 artifact:
+ *   zero-AGREE          the corpus is ~47% AGREE. A sample with none of it
+ *                       cannot be a sample of the corpus.
+ *   too-few-cards       fewer than 100 distinct cards means one pool's rows
+ *                       are standing in for 16.7M.
+ * Plus a per-class drift note against the census reference, which is a NOTE and
+ * never a breach: the corpus legitimately moves, and this line exists so the
+ * movement is visible rather than assumed.
+ */
+const DRIFT_CLASSES = ["AGREE", "IMPROVE", "CONFLICT", "UNDERIVABLE"];
+
+/** Count a list of verdicts into a `{ AGREE, IMPROVE, ... }` tally. */
+function tallyClasses(verdicts) {
+  const out = {};
+  for (const v of verdicts) {
+    const k = String(v?.klass ?? "");
+    if (k) out[k] = (out[k] ?? 0) + 1;
+  }
+  return out;
+}
+
+/** The per-class drift of one tally against one reference. */
+function driftOf(byClass, total, reference) {
+  const drift = {};
+  for (const k of DRIFT_CLASSES) {
+    const got = total > 0 ? Number(byClass[k] ?? 0) / total : 0;
+    const ref = reference?.[k];
+    drift[k] = {
+      sampled: Number(got.toFixed(6)),
+      census: ref ?? null,
+      delta: ref === null || ref === undefined ? null : Number((got - ref).toFixed(6)),
+    };
+  }
+  return drift;
+}
+
+function frameHealth({
+  byClass = {}, distinctCards = 0, sampled = 0, reference = CENSUS_REFERENCE_SHARES,
+  verdicts = null,
+}) {
+  const flags = [];
+  const total = Number(sampled) || Object.values(byClass).reduce((a, b) => a + Number(b || 0), 0);
+  const agree = Number(byClass.AGREE ?? 0);
+  if (total > 0 && agree === 0) {
+    flags.push(`zero-AGREE: 0 of ${total} sampled rows AGREE, against a census share of `
+      + `${(reference.AGREE * 100).toFixed(1)}% -- the frame is not reaching the corpus`);
+  }
+  if (total > 0 && Number(distinctCards) < FRAME_MIN_DISTINCT_CARDS) {
+    flags.push(`too-few-cards: ${distinctCards} distinct card(s) across ${total} sampled rows `
+      + `(floor ${FRAME_MIN_DISTINCT_CARDS}) -- one pool is standing in for the corpus`);
+  }
+  const drift = driftOf(byClass, total, reference);
+
+  // -- PER-SLOT: EACH SLOT'S DRAW AGAINST ITS OWN CENSUS --------------------
+  //
+  // The corpus average is the right reference only for a draw shaped like the
+  // corpus. A slot's draw is shaped like THAT SLOT, and the slots differ
+  // enormously -- slot 7 is 3.3% AGREE, slot 6 is 63.6%. Comparing each slot to
+  // itself turns "the sample disagrees with the corpus" into "slot N moved",
+  // which is a finding a person can act on.
+  const bySlot = [];
+  if (Array.isArray(verdicts) && verdicts.length) {
+    const groups = new Map();
+    for (const v of verdicts) {
+      const slot = v?.__frameSlot;
+      if (slot === null || slot === undefined) continue;
+      const key = Number(slot);
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(v);
+    }
+    for (const [slot, rows] of [...groups.entries()].sort((a, b) => a[0] - b[0])) {
+      const ref = censusSharesForSlot(slot);
+      const tally = tallyClasses(rows);
+      bySlot.push({
+        slot,
+        sampled: rows.length,
+        byClass: tally,
+        census: ref,
+        drift: ref ? driftOf(tally, rows.length, ref) : null,
+      });
+    }
+  }
+
+  // -- PER-CLASS: FRAME HEALTH BY SPORTCLASS -------------------------------
+  //
+  // THE LINE THAT MAKES THE ORIGINAL DEFECT UNREPEATABLE. A draw's class mix is
+  // its own composition, and the classes have wildly different CONFLICT rates
+  // (pokemon 0.596, modern 0.418, vintage 0.319). Without this, a draw that
+  // happens to be pokemon-heavy reads as a corpus-wide regression -- which is
+  // precisely what "CONFLICT 55% vs 20.6%" was. Each slot's rows are
+  // apportioned across the classes its shard units belong to, so the expected
+  // share is the mix's own blend rather than any one class's number.
+  const byClassFrame = {};
+  const expected = {};
+  const mixWeights = {};
+  let mixTotal = 0;
+  for (const entry of bySlot) {
+    const mix = censusClassMixForSlot(entry.slot);
+    if (!mix) continue;
+    for (const [cls, w] of Object.entries(mix)) {
+      const n = entry.sampled * Number(w || 0);
+      mixWeights[cls] = (mixWeights[cls] ?? 0) + n;
+      mixTotal += n;
+      const b = byClassFrame[cls] ?? (byClassFrame[cls] = { sampledApprox: 0, byClass: {} });
+      b.sampledApprox += n;
+      for (const k of DRIFT_CLASSES) {
+        b.byClass[k] = (b.byClass[k] ?? 0) + Number(entry.byClass[k] ?? 0) * Number(w || 0);
+      }
+    }
+  }
+  const classHealth = [];
+  for (const [cls, b] of Object.entries(byClassFrame)) {
+    const ref = censusSharesForClass(cls);
+    const n = b.sampledApprox;
+    if (!(n > 0)) continue;
+    const got = Number(b.byClass.CONFLICT ?? 0) / n;
+    classHealth.push({
+      sportClass: cls,
+      sampledApprox: Number(n.toFixed(1)),
+      shareOfFrame: mixTotal > 0 ? Number((n / mixTotal).toFixed(4)) : null,
+      conflict: {
+        sampled: Number(got.toFixed(6)),
+        census: ref?.CONFLICT ?? null,
+        delta: ref ? Number((got - ref.CONFLICT).toFixed(6)) : null,
+      },
+    });
+  }
+  classHealth.sort((a, b) => (b.sampledApprox ?? 0) - (a.sampledApprox ?? 0));
+
+  // THE FRAME'S OWN EXPECTED SHARES, blended from its actual class mix. A draw
+  // is comparable to `weighted` only when its mix matches the corpus's; when it
+  // does not, this is the number it should have produced, and the gap between
+  // the two is the structural half that used to be read as drift.
+  if (mixTotal > 0) {
+    for (const k of DRIFT_CLASSES) {
+      let acc = 0;
+      let seen = 0;
+      for (const [cls, w] of Object.entries(mixWeights)) {
+        const ref = censusSharesForClass(cls);
+        if (!ref) continue;
+        acc += ref[k] * w;
+        seen += w;
+      }
+      if (seen > 0) expected[k] = Number((acc / seen).toFixed(6));
+    }
+  }
+
+  return {
+    healthy: flags.length === 0,
+    flags,
+    drift,
+    expectedForThisMix: Object.keys(expected).length ? expected : null,
+    bySlot,
+    bySportClass: classHealth,
+    referenceSlots: CENSUS_REFERENCE_SHARES.slots ?? null,
+    distinctCards: Number(distinctCards),
+    sampled: total,
+  };
+}
+
 module.exports = {
   INVARIANTS, INVARIANT_BY_ID,
   loadSetKeyFieldInvariant, loadIdentityBacking,
@@ -1036,6 +1562,9 @@ module.exports = {
   checkOneSaleOneAddress,
   // I6
   checkPoolIdentityCoherence, poolCollisionRates,
+  // exported for the mutation pins: reverting either of these restores one of
+  // the two false positives measured on run 34018932244.
+  singularise, buildSlugFinishIndex,
   // I7
   checkDeployHealth, REPRICE_JOB_NAME,
   // I8
@@ -1044,6 +1573,11 @@ module.exports = {
   // I9
   classifyStoredRow, rederivationRates, BREACHING_CLASSES,
   conflictKind, axisSignature, reasonCodes, NEEDS_CHECKLIST_REASON,
+  // I9 sampling frame (#1872)
+  buildSampleFrame, makeCardReservoir, frameHealth, seededRandom, utcDayOf,
+  CENSUS_REFERENCE_SHARES, FRAME_MIN_DISTINCT_CARDS,
+  CENSUS_TABLE, CENSUS_SHARES_PATH,
+  censusSharesForSlot, censusSharesForClass, censusClassMixForSlot,
   // I10
   checkPricedOnUnbackedIdentity,
   // thresholds

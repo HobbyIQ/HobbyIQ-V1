@@ -86,6 +86,7 @@ import {
   type ExactPoolSupremacyVerdict,
   type HoldingIdentityFields,
 } from "./exactPoolSupremacy.js";
+import { staleStampReasonFor, type StaleStampReason, type StampedHolding } from "./pricingContract.js";
 
 let _container: Container | null = null;
 let _initPromise: Promise<Container | null> | null = null;
@@ -9938,6 +9939,14 @@ export interface RepriceOptions {
    * `pricingSourceMeta.compsUsed` and compared against a live count for the
    * same identity. A holding with no persisted count is never skipped — an
    * unknown pool is not evidence of an unchanged one.
+   *
+   * CF-A-FRESHNESS-SKIP-MUST-NOT-HIDE-A-ROW-THE-RULES-NO-LONGER-COVER
+   * (Drew, 2026-09-06). The pool question is asked SECOND. A holding whose
+   * stamp is a refusal, or predates the current `PRICING_CONTRACT_VERSION`,
+   * is revisited without asking about its pool at all — for those rows the
+   * pool question is unanswerable, not merely expensive: an identity with no
+   * catalog row has no pool that could grow, and a ruling change moves no
+   * pool count. See `pricingContract.ts` for the full reasoning.
    */
   skipFreshOnlyWhenPoolUnchanged?: boolean;
 }
@@ -10171,7 +10180,40 @@ export async function repriceHoldingsForUser(
     if (opts.skipFreshOnlyWhenPoolUnchanged && fresh.length > 0) {
       const rescued: PortfolioHolding[] = [];
       const stillFresh: PortfolioHolding[] = [];
+      const staleStampCounts = new Map<StaleStampReason, number>();
       for (const h of fresh) {
+        // CF-A-FRESHNESS-SKIP-MUST-NOT-HIDE-A-ROW-THE-RULES-NO-LONGER-COVER
+        // (Drew, 2026-09-06). Asked BEFORE the pool question, because for the
+        // rows it catches the pool question cannot produce the right answer —
+        // it is not that the check is more expensive, it is that it is
+        // unanswerable.
+        //
+        // A holding whose identity names no catalog row has NO POOL, so its
+        // pool can never grow, so pool-growth can never re-admit it. #1784
+        // refuses such a row, and the refusal write carries the PRIOR pass's
+        // `compsUsed` forward (holdingValuation ~776) because a refusal
+        // measured no pool of its own. The live count then still matches that
+        // inherited number, `live <= persistedCount` reads TRUE, and the row
+        // is skipped — keeping a pre-#1784 published price forever. Two of
+        // user-67878bb5's holdings sat at $14.79 on
+        // `hiq:baseball:2026:bowman-chrome:cpa-jwh:refractor:auto:num-499`,
+        // a slug with no catalog row, while a sibling in the same document
+        // repriced normally.
+        //
+        // The same blindness covers any RULING change: #1784 moved no pool,
+        // so nothing about a pool count could have signalled it. A stamp that
+        // predates the current contract is revisited on that ground alone.
+        //
+        // Costs NOTHING — `staleStampReasonFor` is pure and reads only fields
+        // already on the row. The cost guard C-2 exists to protect is
+        // untouched: a healthy published row at the current contract falls
+        // straight through to the pool check below, exactly as before.
+        const staleStamp = staleStampReasonFor(h as StampedHolding);
+        if (staleStamp) {
+          staleStampCounts.set(staleStamp, (staleStampCounts.get(staleStamp) ?? 0) + 1);
+          rescued.push(h);
+          continue;
+        }
         let poolUnchanged = false;
         try {
           const persistedCount = (h as { pricingSourceMeta?: { compsUsed?: unknown } })
@@ -10198,6 +10240,11 @@ export async function repriceHoldingsForUser(
           userId,
           rescued: rescued.length,
           stillFresh: stillFresh.length,
+          // Broken out by GROUND, because the two rescues mean different work:
+          // pool growth is the cadence doing its job, while a stale stamp is a
+          // row the rules moved past and is the auditor's handle on how much
+          // of the corpus a ruling has yet to reach.
+          staleStamp: Object.fromEntries(staleStampCounts),
         }));
       }
       fresh = stillFresh;
@@ -10238,20 +10285,41 @@ export async function repriceHoldingsForUser(
   }
 
   for (const holding of candidates) {
-    // CF-EBAY-REVIEW-QUEUE (2026-07-12): skip pending-review rows. Those
-    // aren't real inventory yet — pricing them would fire the CompIQ
-    // engine with polluted / unconfirmed inputs, exactly what the review
-    // gate exists to prevent.
-    if ((holding as any).cardStatus === "pending-review") {
-      skipped += 1;
-      updates.push({
-        id: holding.id,
-        status: "skipped",
-        reason: "pending-review (awaiting user confirmation)",
-        cardId: null,
-      });
-      continue;
-    }
+    // CF-A-REVIEW-STATUS-IS-NOT-A-PRICING-STATUS (Drew, 2026-09-06, #1869).
+    //
+    // This skip used to `continue` on every `pending-review` row, and that is
+    // the whole defect. Two independent questions were answered by one field:
+    //
+    //   "does a HUMAN need to look at this row?"   -> cardStatus
+    //   "may a PRICE be published for this row?"   -> the one valuation path
+    //
+    // The review gate answered both, so a holding whose identity had already
+    // resolved sat frozen at whatever number the import wrote, for as long as
+    // nobody pressed Confirm. Measured read-only 2026-09-06 across all 12
+    // portfolio docs / 131 holdings: 53 rows sit at `pending-review`, and the
+    // two carrying a live `fairMarketValue` — 925ccfe7 and 4e70af40, both
+    // $14.79 on `hiq:baseball:2026:bowman-chrome:cpa-jwh:refractor:auto:num-499`
+    // — had been stranded ~49h on their import-time number. Neither carried a
+    // `withheld` block, so nothing on the row said a price was being refused;
+    // the number simply stopped moving. That reads to a user as a current
+    // valuation, which is exactly what it is not.
+    //
+    // The original comment's fear — "pricing them would fire the CompIQ engine
+    // with polluted / unconfirmed inputs" — is answered TODAY by the engine
+    // itself rather than by refusing to ask it. `valueHoldingThroughOneEntry`
+    // runs the #1784 identity gate (`mayPublishPrice`) before any number is
+    // published, and an unconfirmed or unbacked identity comes back as a
+    // `no-basis-refusal` that is PERSISTED as a withhold: null value, stated
+    // reason. A row the engine refuses is therefore left saying so, instead of
+    // left holding a stale number that no lane will ever revisit.
+    //
+    // So the gate narrows to what it is actually for. `pending-review` still
+    // means "a human has not confirmed this", it still keeps the row out of
+    // /holdings, /pnl and the analytics rollups (portfolioAnalytics's
+    // `countsTowardPortfolio`, unchanged), and confirm still promotes it. It no
+    // longer exempts the row from the ONE valuation path — because a review
+    // status decides who looks at a row, and the valuation path decides what
+    // its number is. That is one valuation path, not two.
     // CF-PORTFOLIO-HOLDING-IDENTITY-VALIDATION (2026-06-01): defense-in-depth
     // safety net. After the validation gate at addHolding/updateHolding, no
     // NEW null-identity rows can be persisted. But legacy/edge rows that

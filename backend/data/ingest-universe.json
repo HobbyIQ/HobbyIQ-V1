@@ -201775,7 +201775,7 @@
    "setKey": "topps",
    "estimatedCards": null,
    "seededStatus": "missing",
-   "seededNote": "sitemap-discovered 2026-09-05; cell baseball/topps/1948-1979; season=1956; set-11611; not yet fetched"
+   "seededNote": "sitemap-discovered 2026-09-05; cell baseball/topps/1948-1979; season=1956; set-11611; not yet fetched; 2026-09-06: the source serves its \"Checklist Not Found\" page for this id (HTTP 200, 56,371 bytes). The full sitemap (141,583 set URLs) carries NO other 1956 Topps baseball flagship id, so there is nothing to repoint to — the set is absent from the source, not mis-keyed here. Neighbours set-11601/11606/11608/11614 are live and parse. The lane records `unreachable` (terminal, recheckable): one request, then closed."
   },
   {
    "id": "sportscardchecklist::https://www.sportscardchecklist.com/set-138484/1956-topps-advertising-panels-baseball-trading-card-checklist",

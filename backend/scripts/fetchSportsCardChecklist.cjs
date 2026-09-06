@@ -747,6 +747,63 @@ function splitCardHeader(raw) {
  *   UNKNOWN LAYOUT  headers are present but none parsed, or the anchors
  *      disagree. OUR parser, and it stays a lane fault so someone comes back.
  */
+/**
+ * The host's own not-found marker. It renders the phrase in the <title>, in two
+ * meta tags and in the page body, so any one of them is enough; the alternation
+ * is anchored to the phrase rather than to a layout that may be restyled.
+ */
+/**
+ * CF-A-STALE-STAGED-FILE-MUST-NOT-OUTLIVE-ITS-CONVERTER (2026-09-06).
+ *
+ * A staged CSV WINS over a live fetch (CF-A-STAGED-FILE-WINS), which is right
+ * while the converter that wrote it is the converter we still believe in. It is
+ * wrong the moment a converter defect is fixed: the entry keeps re-ingesting the
+ * hollow file the broken converter produced, the verdict never moves, and the
+ * only way back is an operator remembering MODE=refetch by hand -- for entries
+ * nobody has yet identified as stale.
+ *
+ * That is exactly how the 1956 Topps recheck could have looked like a source
+ * problem forever. So every manifest this fetcher writes STAMPS the converter
+ * version, and the driver refuses to let a staged file whose stamp is older
+ * than the current one win. Bump this whenever a change alters the ROWS this
+ * converter emits or the verdict it reaches -- the stamp is a claim about
+ * output, not a build number.
+ *
+ * WHAT COUNTS AS "THIS CONVERTER". The staged CSV is produced by THIS file, but
+ * what a re-ingest of that CSV actually LANDS is decided downstream by
+ * ingest-checklist-csv-to-catalog.cjs and the clash/merge rules it reads from
+ * lib/subset-identity.cjs. A change to either of those changes the ROWS a stale
+ * verdict was recorded against just as surely as a change to the parser does,
+ * so THE VERSION COVERS THE WHOLE PIPE, not this file alone.
+ *
+ * That is not a theoretical scope note. v2 was stamped for two defects in this
+ * file, and the very next writer fix (#1878) left every stale verdict closed
+ * because nothing here had changed -- a pending-only walk for 1957 baseball
+ * reported "nothing intended" against entries the fix was written to re-open.
+ * The stamp existed precisely to prevent that and did not, because its scope
+ * was drawn around one file instead of one OUTPUT.
+ *
+ * BUMP THIS WHENEVER any of these change what a re-ingest produces:
+ *   - this file's parsing, slug canonicalisation, or zero-row verdicts
+ *   - ingest-checklist-csv-to-catalog.cjs's clash / merge / write rules
+ *   - lib/subset-identity.cjs's claim and rung-key rules
+ * The pin in tests/sccConverterVersionCoversTheWholePipe.test.ts hashes the
+ * functions that decide those things and fails when they move without a bump,
+ * so this comment cannot quietly become untrue.
+ *
+ * 1  original vintage lane
+ * 2  2026-09-06: the addslashes URL leak (#1848) and the "Checklist Not Found"
+ *    page no longer reported as an empty set (#1875).
+ * 3  2026-09-06: "Base Set" is a page heading, not a subset (#1878) -- the
+ *    writer's clash test now compares CLAIMS, so 407 checklist rows per product
+ *    that were refused against themselves now land. Stale `partial` verdicts
+ *    recorded under the old rule have to be re-attempted, which is what this
+ *    bump is for.
+ */
+const CONVERTER_VERSION = 3;
+
+const NOT_FOUND_RE = /Checklist Not Found|NOT FOUND\s*-\s*https?:\/\//i;
+
 function zeroCardReason(html, stats) {
   const h = String(html || "");
   const st = stats || {};
@@ -765,6 +822,43 @@ function zeroCardReason(html, stats) {
     // truncated or error response, not a set with nothing in it.
     if (h.length < 40000 || !/set-\d+|trading-card-checklist/i.test(h)) {
       return `no checklist on the page — the host did not serve a set page with HTTP 200 (${h.length} bytes)`;
+    }
+    // CF-A-404-IN-A-200-IS-NOT-AN-EMPTY-SET (2026-09-06, from the 1956 Topps
+    // baseball recheck, runs 34025742030 / 34025851336).
+    //
+    // This host serves its NOT-FOUND page with HTTP 200 and a `<title>` of
+    // "Checklist Not Found", echoing the requested URL in the body:
+    //
+    //   NOT FOUND - https://www.sportscardchecklist.com/set-11611/1956-topps-...
+    //
+    // Both guards above wave it through. It is 56,371 bytes, comfortably over
+    // the 40 KB floor, and the echoed URL makes `/trading-card-checklist/`
+    // match -- so a page that says "this set does not exist" fell to the branch
+    // below and was reported as "the source lists this set and carries no cards
+    // for it". The driver reads that as `emptyAtSource`, and `empty` is
+    // TERMINAL: the entry is closed against a claim the source never made.
+    //
+    // MEASURED, crawl_state, lane sportscardchecklist, 2026-09-06: all 16
+    // `empty` verdicts carry a 56-62 KB body in their reason string -- 16 of 16
+    // are this page, not one is a real empty set. They span basketball 1990s
+    // (6), baseball 1990s (6), baseball 1970s (2), 1980s (1) and 1950s (1).
+    //
+    // WHY THE SET IS MISSING AT ALL: the server keys on `set-<id>` and ignores
+    // the slug entirely (probed today -- set-11608 serves 1955 Topps, set-11614
+    // serves 1957, and set-11611 between them serves the not-found page). The
+    // sitemap advertised an id the site itself does not card. That is a real
+    // gap in the SOURCE, and it deserves its own verdict -- `unreachable`,
+    // which is terminal but recheckable -- rather than a false statement that
+    // the set exists and is empty.
+    //
+    // THE VINTAGE PAGE SHAPE IS FINE, and this is the other half of the
+    // finding: 1952, 1953, 1954 and 1957 Topps baseball all serve the SAME
+    // H5-header + hidden-input layout the 1990s pages use, and the converter
+    // parses them whole (1957: 417 headers, 417 hidden rows, 417 rows, Ted
+    // Williams at #1, 21 Double Print subsets). There is no second layout to
+    // teach it; there was a dead id being read as an empty set.
+    if (NOT_FOUND_RE.test(h)) {
+      return `the host served its "Checklist Not Found" page with HTTP 200 — this set id is not carded at the source (${h.length} bytes)`;
     }
     // Scaffolding absent on a page that IS ours: the source lists this set and
     // carries no cards for it. A verdict about the set -- nothing new to add.
@@ -985,6 +1079,10 @@ async function main() {
       // turns "insert-league-leaders" into a PARALLEL named "League Leaders" --
       // a subset minted as a finish, which is the exact split this lane avoids.
       parallelColumnAuthoritative: true,
+      // Read by the driver: a staged file written by an OLDER converter no
+      // longer wins over a live fetch. See CF-A-STALE-STAGED-FILE-MUST-NOT-
+      // OUTLIVE-ITS-CONVERTER.
+      converterVersion: CONVERTER_VERSION,
       cardRows: rows.length,
       ladderRows: 0,
       subsetRows: stats.withSubset,
@@ -1023,7 +1121,7 @@ if (require.main === module) {
 module.exports = {
   zeroCardReason, parseSetUrl, parallelFromSlug, parallelTailOf, splitParentAndSubset, splitCardHeader, buildRows, toCsv,
   extractCardHeaders, countHiddenRows, autoEvidence, unescapeCell,
-  SUBSET_TAGS, NOISE_TAGS, HEADER, SET_URL_RE,
+  SUBSET_TAGS, NOISE_TAGS, HEADER, SET_URL_RE, NOT_FOUND_RE, CONVERTER_VERSION,
   unescapeAddslashes, canonicalSlug, canonicalSetUrl,
   QUALIFIED_REFRACTOR, NESTED_PRODUCT_SLUGS, nestedProduct, SLUG_PARALLEL_TAIL, PARENT_BRANDS,
 };

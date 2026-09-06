@@ -84,6 +84,7 @@ const SKIP = {
   REMINT_UNCHANGED: "remint-lands-on-the-same-slug",
   AXIS: "remint-moves-more-than-the-product",
   PROTECTED: "protected-row-report-only",
+  WORDS_NAME_TWO_PLAYERS: "row-words-name-a-player-from-each-product",
 };
 
 /**
@@ -129,6 +130,72 @@ function deriveCollisionNumbers(fromClaims, toClaims) {
 }
 
 /**
+ * CF-THE-STORED-PLAYERNAME-IS-NOT-THE-EVIDENCE (#1849, Drew 2026-09-06).
+ *
+ * `playerKey` is EXACT equality after case/punctuation folding, and that is
+ * right for deciding who is one person. It is wrong as the only way to ASK
+ * whether a checklist claims a row, because the stored `playerName` on a sale
+ * is scraped, not curated. Measured over all 1,044 CPA-DT rows of 2025:
+ *
+ *     "Devin Taylor"            125 rows   clean
+ *     "Draft Devin Taylor"        1        product word glued to the name
+ *     "Devin Taylor Oakland"      1        team glued to the name
+ *     "Devin Taylor On Caes"      1        OCR mangling of a title fragment
+ *     "Devin Taylor Au"           2        the auto flag glued to the name
+ *     "Diego Tornes"              1        FLATLY WRONG -- the title reads
+ *                                          "Devin Taylor 2025 Bowman Chrome
+ *                                           Draft 1st Auto Oakland Athletics"
+ *
+ * Every one of those rows is a Devin Taylor sale that the exact fold reports
+ * as `to-key-checklist-does-not-name-this-player`, so the lane leaves it in
+ * Diego Tornes' pool -- two players' sales in one pool, which is exactly the
+ * defect the lane exists to end.
+ *
+ * The fix is NOT to loosen `playerKey`. Substring matching on identity would
+ * make "Devin Taylor" claim "Devin Taylorson", and three lanes share that
+ * primitive. Instead the CLAIMED name is looked for as a whole-word RUN inside
+ * the row's own words, and only under conditions that keep it a corroboration
+ * rather than a guess:
+ *
+ *   - the claimed name must appear as CONSECUTIVE WHOLE WORDS ("devin taylor"
+ *     inside "draft devin taylor"), never as a substring of a longer word, so
+ *     "taylorson" never satisfies a claim for "taylor";
+ *   - it must be at least two words, so a single-token checklist name can
+ *     never sweep in a whole product's rows;
+ *   - EXACTLY ONE of the two sides' claimed names may match. A row whose words
+ *     contain both products' players is ambiguous and is refused, never moved.
+ *
+ * `haystack` is the row's playerName AND its title, because on the wrong-name
+ * row above the title is the only place the truth appears -- and the title is
+ * what a human reads to adjudicate the same row.
+ */
+function nameAppearsInWords(claimedName, haystack) {
+  const words = (s) => String(s ?? "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim().split(/\s+/).filter(Boolean);
+  const need = words(claimedName);
+  const hay = words(haystack);
+  if (need.length < 2 || hay.length < need.length) return false;
+  for (let i = 0; i + need.length <= hay.length; i++) {
+    let ok = true;
+    for (let j = 0; j < need.length; j++) if (hay[i + j] !== need[j]) { ok = false; break; }
+    if (ok) return true;
+  }
+  return false;
+}
+
+/**
+ * Which of a side's claimed names the row's OWN WORDS name, as playerKeys.
+ * `claimNames` is the raw checklist spelling; the caller passes both sides so
+ * a row that names BOTH players can be refused rather than moved.
+ */
+function claimsNamedInRow(claimNames, haystack) {
+  const out = new Set();
+  for (const n of claimNames instanceof Set ? claimNames : []) {
+    if (nameAppearsInWords(n, haystack)) out.add(playerKey(n));
+  }
+  return out;
+}
+
+/**
  * THE PER-SALE DECISION.
  *
  * A sale sitting on `fromKey` moves to `toKey` when, and only when:
@@ -163,6 +230,10 @@ function planCrossProductSale({
   toClaimPlayers = null,
   isCollisionNumber = false,
   isProtected = false,
+  // The two sides' RAW checklist spellings, for CF-THE-STORED-PLAYERNAME-IS-
+  // NOT-THE-EVIDENCE. Absent, the plan behaves exactly as it did before.
+  fromClaimNames = null,
+  toClaimNames = null,
 }) {
   const id = String(row?.hobbyiqCardId ?? row?.cardId ?? "");
   const stem = idStem(id);
@@ -191,7 +262,35 @@ function planCrossProductSale({
     return { move: false, reason: SKIP.NOT_ON_FROM_KEY, dest: null, evidence: ev };
   }
 
-  const mine = playerKey(player);
+  let mine = playerKey(player);
+
+  // CF-THE-STORED-PLAYERNAME-IS-NOT-THE-EVIDENCE. The exact fold is asked
+  // FIRST and still decides whenever it can. Only when it cannot -- the field
+  // is dirty, or empty, or names the wrong person -- do the row's own WORDS
+  // (its playerName AND its title) get to corroborate a checklist claim.
+  //
+  // This never invents an identity: the candidate names are the two
+  // checklists' own spellings, and a row that names one player from EACH side
+  // is refused as undecidable rather than moved.
+  const readable = to.has(mine) || from.has(mine);
+  if (!readable && (fromClaimNames || toClaimNames)) {
+    const hay = `${player} ${String(row?.title ?? row?.rawTitle ?? "")}`;
+    const namedTo = claimsNamedInRow(toClaimNames, hay);
+    const namedFrom = claimsNamedInRow(fromClaimNames, hay);
+    if (namedTo.size + namedFrom.size === 1) {
+      const resolved = [...namedTo, ...namedFrom][0];
+      ev.playerResolvedFromWords = true;
+      ev.playerAsStored = player || null;
+      mine = resolved;
+    } else if (namedTo.size + namedFrom.size > 1) {
+      return {
+        move: false,
+        reason: SKIP.WORDS_NAME_TWO_PLAYERS,
+        dest: null,
+        evidence: { ...ev, namedPlayers: [...namedTo, ...namedFrom] },
+      };
+    }
+  }
 
   // CF-A-COLLISION-NUMBER-WITH-NO-PLAYER-PARKS. Asked FIRST among the identity
   // gates: on a collision number an unreadable player is undecidable, and no
@@ -337,6 +436,8 @@ module.exports = {
   idStem,
   parseScopeTriple,
   deriveCollisionNumbers,
+  nameAppearsInWords,
+  claimsNamedInRow,
   planCrossProductSale,
   planCrossProductCatalogRow,
 };
