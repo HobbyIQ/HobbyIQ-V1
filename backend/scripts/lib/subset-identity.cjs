@@ -40,6 +40,58 @@ function foldSubsetText(raw) {
  *  token overlap or a fuzzy score: subset names like "Base Set" and "Promos"
  *  share tokens with half the corpus, and a partial match would assign cards
  *  by coincidence. */
+/**
+ * CF-BASE-SET-IS-NOT-A-SUBSET (2026-09-06, run 34027488624).
+ *
+ * The 1957 Topps recheck read 417 checklist rows and wrote 9. The other 407
+ * were refused as "subset collisions" against incumbents whose subsetName was
+ * the literal "Base Set" -- Mantle #95, Mays #10, Aaron #20, every one the
+ * SAME card the checklist was bringing.
+ *
+ * "Base Set" is not a subset. It is a PAGE-SECTION HEADING that
+ * scrape-baseballcardpedia reads off the wiki nav -- its own comment says so:
+ * "BCP nests 'Base Set' under 'Checklist' (h1), so a plain topLevel check
+ * misses it". The scraper correctly maps that heading to `category: "base"`,
+ * and the label then rides along into subsetName where it means the exact
+ * opposite of a subset: it says "this row IS the base set".
+ *
+ * A checklist page for a base set states NO subset, and blank means unknown.
+ * So the collision test compared "unknown" against "Base Set" and concluded
+ * two different cards -- when both sides were saying the same thing.
+ *
+ * These labels are therefore NOT subset claims for the purpose of the clash
+ * test. The list is deliberately tiny and structural: only labels that name
+ * the base print of a product, never a real subset like "Rookies" or "Cards
+ * That Never Were". A guessed vocabulary here would silently merge real
+ * subsets, which is the harm #1741 was written for.
+ */
+const BASE_SECTION_LABELS = new Set([
+  "base",
+  "base set",
+  "base cards",
+  "base card",
+  "base set cards",
+  "checklist",
+  "checklist base set",
+]);
+
+/** Is this subsetName a structural "this is the base set" label rather than a
+ *  claim that the row belongs to a named subset? */
+function isBaseSectionLabel(subset) {
+  return BASE_SECTION_LABELS.has(foldSubsetText(subset));
+}
+
+/**
+ * The subset a row actually CLAIMS, for clash purposes: its subsetName unless
+ * that is a structural base-section label, in which case it claims none.
+ * Returns "" for "no subset claimed".
+ */
+function claimedSubsetOf(subset) {
+  const raw = String(subset === null || subset === undefined ? "" : subset).trim();
+  if (!raw) return "";
+  return isBaseSectionLabel(raw) ? "" : raw;
+}
+
 function titleNamesSubset(title, subset) {
   const t = foldSubsetText(title);
   const s = foldSubsetText(subset);
@@ -145,4 +197,5 @@ module.exports = {
   resolveSubsetFromTitle,
   subsetVerdict,
   rungKey,
+  BASE_SECTION_LABELS, isBaseSectionLabel, claimedSubsetOf,
 };
