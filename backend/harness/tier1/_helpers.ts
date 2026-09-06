@@ -14,6 +14,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect } from "vitest";
+import { FMV_RUNG_LABELS } from "../../src/services/compiq/fmvRung.js";
+import { LEGACY_ESTIMATE_SOURCES } from "../../src/services/compiq/legacyEstimateSources.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const TIER1_ROOT = __dirname;
@@ -574,6 +576,37 @@ const ALLOWED_SOURCES = new Set([
   "scarcity-prior-floor",         // Tier 5 — product-year cross-player anchor × parallel floor
   "reference-catalog-baseline",   // Tier 6 — era baseline × ladder tier
   "setdoc-baseline",              // Tier 7 — era × set-type baseline (last resort)
+
+  // CF-ONE-VALUATION-PATH (D16, #1483, 2026-08-30). When the ladder PRICES a
+  // card, `source` on the /price-by-id wire is no longer a source name at
+  // all — `toPriceByIdResponse` sets `source: v.rungLabel`, "the same name
+  // every other wire carries". The no-price branch still answers
+  // "no-recent-comps", which is why only the cases that ACQUIRED a pool went
+  // red: as their Bowman Draft Chrome comps landed they crossed from the
+  // refusal branch into the priced one and started naming a rung.
+  //
+  // This list is not extended by hand with the rung names, because that is
+  // the very mistake `FMV_RUNG_LABELS` exists to prevent (see fmvRung.ts:
+  // the persist gate that had never heard of `player-index-projection` and
+  // showed a $215.17 card as unpriced). The harness asks the vocabulary, so
+  // a rung added to the engine is admitted here by construction and the
+  // build-time exhaustiveness assertion keeps the vocabulary honest.
+  ...FMV_RUNG_LABELS,
+
+  // CF-THE-LEGACY-WIRE-HAS-A-VOCABULARY-TOO (2026-09-05). Asking
+  // FMV_RUNG_LABELS fixed the /price-by-id half and the harness STAYED RED,
+  // because `/search` never moved to the one valuation path: it still answers
+  // from the legacy CardHedge estimate pipeline, whose `est.source` the route
+  // reads as `(est.source as string | undefined) ?? "live"`. That pipeline
+  // answered "projected" -- `applyAutoProjectionFallbacks` relabels a
+  // comp-less autograph estimate it rescued from a sibling -- and no list
+  // held it.
+  //
+  // Two vocabularies are live at once, so the harness asks BOTH rather than
+  // keeping a private copy of either. When the free-text routes finish moving
+  // behind computeCanonicalValuation this spread becomes redundant and can go;
+  // until then, omitting it is what makes the harness reject good responses.
+  ...LEGACY_ESTIMATE_SOURCES,
 ]);
 
 export function expectWellFormed(
@@ -600,8 +633,25 @@ export function expectWellFormed(
   expect(testStartMs - ts).toBeLessThan(30 * 60_000); // not older than 30 min
 
   // Source must be one of the engine's known enum values.
+  //
+  // The failure NAMES the value. `expected false to be true` is what this
+  // assertion said for two days across two fixes, and neither the run log nor
+  // App Insights carried the offending string -- so each round cost a deploy
+  // to learn one word. A contract check that cannot say what broke it is a
+  // check that has to be debugged instead of read.
   if (resp.source !== undefined && resp.source !== null) {
-    expect(ALLOWED_SOURCES.has(resp.source as string)).toBe(true);
+    const got = resp.source as string;
+    expect(
+      ALLOWED_SOURCES.has(got),
+      `response source is "${got}", which no vocabulary declares. `
+        + `  rungLabel: ${JSON.stringify(resp.rungLabel ?? null)}  `
+        + `valueSource: ${JSON.stringify(resp.valueSource ?? null)}  `
+        + `fmvReason: ${JSON.stringify(resp.fmvReason ?? null)}. `
+        + "  If the engine emits it on purpose, declare it: a RUNG in "
+        + "fmvRung.ts (FMV_RUNG_LABELS), or a legacy free-text source in "
+        + "legacyEstimateSources.ts (LEGACY_ESTIMATE_SOURCES). Never paste it "
+        + "into this list -- the harness asks the vocabulary.",
+    ).toBe(true);
   }
 }
 

@@ -542,8 +542,31 @@ jobs:
           if grep -aq "UNVERIFIED" "$LOG"; then
             PROCEED=no; WHY="the report named an UNVERIFIED destination — a slug no checklist backs"
           fi
-          if ! grep -aqiE "would re-point|re-point|REDERIVE" "$LOG"; then
-            PROCEED=no; WHY="${WHY:-the report proposed no re-points}"
+          # CF-A-BANNER-IS-NOT-A-VERDICT (run 33998562094). This was
+          #
+          #   grep -aqiE "would re-point|re-point|REDERIVE"
+          #
+          # and the case-insensitive REDERIVE matched the lane's OWN banner --
+          # "MODE: rederive", "[mode] rederive — report only", even the script
+          # filename in "Script confirmed: .../rederive-holding-identity.cjs".
+          # So gate 3 said yes for all ten cells whose verdicts were AGREE or
+          # NO-MATCH: it was reading the dispatch, not the outcome.
+          #
+          # The verdict vocabulary is anchored and CASE-SENSITIVE: the script
+          # prints "  REDERIVE   <player>" at the head of a line, and its
+          # machine-readable SUMMARY carries "REDERIVE": n. Nothing in a banner
+          # matches either.
+          if ! grep -aqE '^[[:space:]]*REDERIVE |"REDERIVE":[[:space:]]*[1-9]' "$LOG"; then
+            # AGREE means the holding is ALREADY on the right identity, so
+            # there is nothing for an apply to write. That is a legitimate
+            # outcome, not a failure -- but running the apply anyway would be a
+            # write path executed on the strength of no proposed change.
+            PROCEED=no
+            if grep -aqE '^[[:space:]]*AGREE ' "$LOG"; then
+              WHY="${WHY:-every holding already carries the right identity (AGREE) — nothing to re-point}"
+            else
+              WHY="${WHY:-the report proposed no re-points}"
+            fi
           fi
           echo "proceed=$PROCEED" >> "$GITHUB_OUTPUT"
           echo "why=$WHY" >> "$GITHUB_OUTPUT"
@@ -580,43 +603,90 @@ jobs:
       # stuck must not decide whether other holdings proceed.
       - name: "Classify the holdings that did not re-point"
         id: classify
+        # FAIL-SAFE (run 33998562094). This step crashed on all ten cells and
+        # took the CELL down with it — after gate 3 had already said yes — so
+        # the rederive APPLY and the reprice were SKIPPED and nothing was
+        # written. A step that only DESCRIBES an outcome must never be able to
+        # prevent it: `continue-on-error` keeps a classify fault from failing
+        # the job, and the step traps its own errors and reports
+        # "classify: error" rather than dying.
+        continue-on-error: true
         if: ${{ !cancelled() && steps.gate_apply.outputs.proceed == 'yes' }}
         shell: bash
         run: |
-          set -uo pipefail
+          # NOT `set -e`: a miscount must not abort the cell. `set -u` is also
+          # dropped deliberately — an unset counter here is a reporting gap,
+          # not a reason to lose an apply (run 33998562094 lost ten of them to
+          # exactly that: "NM_FIELDS: unbound variable").
+          set +eu
           LOG=/tmp/rederive-report.log
-          [ -f "$LOG" ] || { echo "reasons=" >> "$GITHUB_OUTPUT"; echo "(no rederive report to classify)"; exit 0; }
+          if [ ! -f "$LOG" ]; then
+            echo "reasons=classify: no rederive report" >> "$GITHUB_OUTPUT"
+            echo "(no rederive report to classify)"
+            exit 0
+          fi
 
-          count() { grep -acF "$1" "$LOG" 2>/dev/null || echo 0; }
+          # ── THE ARITHMETIC BUG THIS FIXES ────────────────────────────────
+          #
+          # `grep -c` prints 0 AND EXITS 1 when nothing matches, so
+          #
+          #     N=$(grep -acF "x" "$LOG" || echo 0)
+          #
+          # ran the fallback TOO and produced the two-line string "0\n0". Then
+          # `$(( NM_ALL - NM_BLANK ))` saw it and bash said, verbatim:
+          #
+          #     line 9: 0
+          #     0: syntax error in expression (error token is "0")
+          #
+          # The `|| echo 0` was meant to guarantee a number and was the very
+          # thing that destroyed it. So every count now goes through ONE
+          # function that greps, takes the FIRST line only, keeps digits only,
+          # and defaults to 0 — a value that is an integer by construction.
+          num() {
+            local n
+            n=$(grep -acE "$1" "$LOG" 2>/dev/null | head -1 | tr -cd '0-9')
+            [ -n "$n" ] || n=0
+            printf '%s' "$n"
+          }
 
-          NM_BLANK=$(grep -aE "NO MATCH" "$LOG" | grep -acE 'from=(null|""|none|-)' || echo 0)
-          NM_ALL=$(count "NO MATCH")
-          NM_FIELDS=$(( NM_ALL - NM_BLANK )); [ "$NM_FIELDS" -lt 0 ] && NM_FIELDS=0
-          UV_NOROW=$(count "no catalog row backs it")
-          UV_PLAYER=$(count "player mismatch")
-          UV_CLAIM=$(count "destination does not carry it")
-          UV_HUMAN=$(count "a human's identity is never overwritten")
-          UV_CONF=$(grep -acE "NOT WRITTEN: conf " "$LOG" || echo 0)
+          AGREE=$(num "^[[:space:]]*AGREE ")
+          REDERIVE=$(num "^[[:space:]]*REDERIVE ")
+          NM_ALL=$(num "^[[:space:]]*NO MATCH")
+          NM_BLANK=$(grep -aE "^[[:space:]]*NO MATCH" "$LOG" 2>/dev/null \
+                      | grep -acE 'from=(null|""|none|-)[[:space:]]*$' | head -1 | tr -cd '0-9')
+          [ -n "$NM_BLANK" ] || NM_BLANK=0
+          NM_FIELDS=$(( NM_ALL - NM_BLANK ))
+          [ "$NM_FIELDS" -lt 0 ] && NM_FIELDS=0
+          UV_NOROW=$(num "no catalog row backs it")
+          UV_PLAYER=$(num "player mismatch")
+          UV_CLAIM=$(num "destination does not carry it")
+          UV_HUMAN=$(num "identity is never overwritten")
+          UV_CONF=$(num "NOT WRITTEN: conf ")
+          UV_ALL=$(num "^[[:space:]]*UNVERIFIED ")
 
           {
-            echo "### \`${{ matrix.cell.cell }}\` — what unlocks the holdings that stayed dark"
+            echo "### \`${{ matrix.cell.cell }}\` — the rederive verdicts"
             echo
-            echo "| n | why it did not re-point | what unlocks it |"
-            echo "|---:|---|---|"
-            [ "$NM_BLANK"  -gt 0 ] && echo "| $NM_BLANK | no match — the holding's fields are blank | **field recovery (#1811 lane)** |"
-            [ "$NM_FIELDS" -gt 0 ] && echo "| $NM_FIELDS | no match — fields present, matcher cannot place it | matcher work — report to Drew |"
-            [ "$UV_NOROW"  -gt 0 ] && echo "| $UV_NOROW | unverified — destination is a self-derived twin | **retire-self-derived-identities** |"
-            [ "$UV_PLAYER" -gt 0 ] && echo "| $UV_PLAYER | unverified — player mismatch (collision) | **parked** — needs a ruling |"
-            [ "$UV_CLAIM"  -gt 0 ] && echo "| $UV_CLAIM | unverified — holding claims a parallel/serial the row lacks | **parked** — needs a ruling |"
-            [ "$UV_HUMAN"  -gt 0 ] && echo "| $UV_HUMAN | unverified — user-authored identity | left alone by design |"
-            [ "$UV_CONF"   -gt 0 ] && echo "| $UV_CONF | unverified — confidence below the floor | matcher confidence — report only |"
+            echo "| n | verdict | meaning | what unlocks it |"
+            echo "|---:|---|---|---|"
+            [ "$REDERIVE" -gt 0 ] && echo "| $REDERIVE | REDERIVE | the identity moves | applied this run |"
+            [ "$AGREE"    -gt 0 ] && echo "| $AGREE | AGREE | already on the right identity | **nothing here** — the pool or the gate is the blocker |"
+            [ "$NM_BLANK" -gt 0 ] && echo "| $NM_BLANK | NO-MATCH | the holding's fields are blank | **field recovery (#1811 lane)** |"
+            [ "$NM_FIELDS" -gt 0 ] && echo "| $NM_FIELDS | NO-MATCH | fields present, matcher cannot place it | matcher work — report to Drew |"
+            [ "$UV_NOROW" -gt 0 ] && echo "| $UV_NOROW | UNVERIFIED | destination is a self-derived twin | **retire-self-derived-identities** |"
+            [ "$UV_PLAYER" -gt 0 ] && echo "| $UV_PLAYER | UNVERIFIED | player mismatch (collision) | **parked** — needs a ruling |"
+            [ "$UV_CLAIM" -gt 0 ] && echo "| $UV_CLAIM | UNVERIFIED | holding claims a parallel/serial the row lacks | **parked** — needs a ruling |"
+            [ "$UV_HUMAN" -gt 0 ] && echo "| $UV_HUMAN | UNVERIFIED | user-authored identity | left alone by design |"
+            [ "$UV_CONF"  -gt 0 ] && echo "| $UV_CONF | UNVERIFIED | confidence below the floor | matcher confidence — report only |"
             true
           } > /tmp/reasons.md
           cat /tmp/reasons.md >> "$GITHUB_STEP_SUMMARY"
           cat /tmp/reasons.md
 
-          SUM="no-match-blank=$NM_BLANK no-match-fields=$NM_FIELDS self-derived=$UV_NOROW collision=$UV_PLAYER over-claim=$UV_CLAIM human=$UV_HUMAN low-conf=$UV_CONF"
+          SUM="agree=$AGREE rederive=$REDERIVE no-match-blank=$NM_BLANK no-match-fields=$NM_FIELDS self-derived=$UV_NOROW collision=$UV_PLAYER over-claim=$UV_CLAIM human=$UV_HUMAN low-conf=$UV_CONF unverified-total=$UV_ALL"
           echo "reasons=$SUM" >> "$GITHUB_OUTPUT"
+          echo "agree=$AGREE" >> "$GITHUB_OUTPUT"
+          echo "rederive=$REDERIVE" >> "$GITHUB_OUTPUT"
           echo "CLASSIFY $SUM"
 
       # ── STEP D: the rederive APPLY ──────────────────────────────────────
