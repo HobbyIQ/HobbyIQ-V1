@@ -983,6 +983,95 @@ function gateStagedEntry(csvPaths, lane) {
 const CHILD_STDERR_LINES = 15;
 
 /**
+ * CF-A-DISCARDED-BANNER-IS-A-LOST-DIAGNOSIS (2026-09-06, run 34018058461).
+ *
+ * `run()` returns the child's stdout and every ingest call site threw it away.
+ * The child ingester prints an accounting banner — rows read, rows written, of
+ * which KEPT THE EXISTING ROW, rows skipped, subset clashes, failures — and
+ * none of it has ever reached a driver log.
+ *
+ * That cost a whole investigation. Run 34018058461 reported:
+ *
+ *   SHORT INGEST — compared 2,747 staged identities against
+ *   2020/topps-chrome-uefa-champions-league: 1,944 present, 803 missing
+ *
+ * and the log said nothing else. The child had ALREADY counted the answer:
+ * 803 rows landed on ids another product held, so `keptExisting` was 803 and
+ * its own banner said so, on a line nobody could see. Reading it would have
+ * named the cause in one line instead of a staged-CSV re-derivation.
+ *
+ * WHY NOT JUST TEE THE CHILD. Two of its lines are load-bearing to a machine
+ * elsewhere, and both would do damage repeated verbatim in the driver's log:
+ *
+ *   "stopped at the N-minute budget" — the workflow greps the WHOLE log for
+ *       /stopped at the .*budget/ and re-dispatches the lane when it matches.
+ *       A CHILD hitting its per-entry budget is normal and says nothing about
+ *       the driver's; teeing it raw invents a budget stop the driver never had
+ *       and triggers a spurious re-dispatch.
+ *   the reconciliation JSON — `reportWrites` emits an {"event":...} object the
+ *       workflow's other steps grep for. A second copy under a different job's
+ *       name is a false reading of a job that did not run.
+ *
+ * So this SELECTS the accounting lines, re-emits them INDENTED under the entry
+ * with a `child:` prefix, and passes nothing through verbatim. The prefix is
+ * what makes the collision impossible rather than unlikely: no grep in the
+ * workflow matches a prefixed line, and a reader can still see every number.
+ */
+const CHILD_BANNER_LINES = 24;
+/** The child's accounting lines — the numbers that explain a verdict. */
+const CHILD_BANNER_PATTERNS = [
+  /^\s*csv rows read\b/,
+  /^\s*catalog rows written\b/,
+  /^\s*of which kept the existing row\b/,
+  /^\s*rows skipped\b/,
+  /^\s*rows not reached\b/,
+  /^\s*numbered, parallel blank\b/,
+  /^\s*rows with card-line parallel\b/,
+  /^\s*rows with player-name parallel\b/,
+  /^\s*categories REFUSED, exploded\b/,
+  /^\s*files with nothing left\b/,
+  /^\s*files with no manifest\b/,
+  /^\s*subset clashes RESOLVED\b/,
+  /^\s*subset clashes NOT VACATED\b/,
+  /^\s*subset collisions REFUSED\b/,
+  /^\s*failed\b/,
+  /^!! EXPLODED category refused:/,
+];
+
+/**
+ * The child's accounting lines, selected and trimmed. Never the whole stream:
+ * see the two markers named above that must not be repeated verbatim.
+ *
+ * Returns [] for anything unreadable, so a surface that cannot be produced
+ * costs a quieter log and never an exception on the ingest path.
+ */
+function childBannerLines(stdout) {
+  if (!stdout) return [];
+  const out = [];
+  for (const raw of String(stdout).split(/\r?\n/)) {
+    const line = raw.replace(/\s+$/, "");
+    if (!line.trim()) continue;
+    if (!CHILD_BANNER_PATTERNS.some((re) => re.test(line))) continue;
+    // The explanatory "   <- ..." tail is for a human reading the child's own
+    // output; under an entry it is noise around the number.
+    out.push(line.replace(/\s{2,}<-.*$/, "").trim());
+    if (out.length >= CHILD_BANNER_LINES) break;
+  }
+  return out;
+}
+
+/**
+ * Print the child's accounting under the current entry. Indented to the
+ * entry's depth and prefixed, so it reads as the child's testimony rather than
+ * the driver's own verdict — and so no workflow grep can ever match it.
+ */
+function printChildBanner(stdout) {
+  const lines = childBannerLines(stdout);
+  for (const line of lines) console.log(`        child: ${line}`);
+  return lines.length;
+}
+
+/**
  * CF-A-COMMAND-FAILED-IS-NOT-A-DIAGNOSIS (2026-09-04).
  *
  * Backfill Runner 33839532087 aborted the bcp lane on a 3-streak and left
@@ -2356,7 +2445,7 @@ for (const lane of ACQUIRE_LANES) {
   }
 }
 
-module.exports = { collapsesToParent, streakAfter, RUNNER_SCOPE_VARS, gateStagedCsv, gateStagedEntry, ladderIsAttested, setKeyCandidates, canonicalSetKey, TERMINAL_STATUSES, LANES_WITH_SIBLING_PARALLEL_PAGES, ladderOnSiblingPages, allFilesAreParallelOfParent, CARTESIAN_MIN_RUNGS, CARTESIAN_MIN_CARDS, stagedCsvs, LANES_WITHOUT_PRINT_RUNS, LANES_WITH_BASELESS_PRODUCTS, LANES_WITH_VINTAGE_ERA_PRODUCTS, PARALLEL_ERA_FIRST_YEAR, ladderlessByEra, sourceLabelFor, splitCsv, isPersonName, setKeyFor, planFor, tcgdexModern, acquireStaged, ACQUIRE_LANES, LANE_ALIASES, LANE_SOURCE, LANE_MINUTES, CANONICAL_HEADER, CHILD_STDERR_LINES, cosmosSafeId, controlId, orderQueue, SYSTEMIC_FAILURE_STREAK, EMPTY_STATUS, SHORT_STATUS, STREAK_STATUSES, isStaged, stagedSourceRefs, stagedIndex, stagedFilesFor, acquireFromStaging };
+module.exports = { collapsesToParent, streakAfter, RUNNER_SCOPE_VARS, gateStagedCsv, gateStagedEntry, ladderIsAttested, setKeyCandidates, canonicalSetKey, TERMINAL_STATUSES, LANES_WITH_SIBLING_PARALLEL_PAGES, ladderOnSiblingPages, allFilesAreParallelOfParent, CARTESIAN_MIN_RUNGS, CARTESIAN_MIN_CARDS, stagedCsvs, LANES_WITHOUT_PRINT_RUNS, LANES_WITH_BASELESS_PRODUCTS, LANES_WITH_VINTAGE_ERA_PRODUCTS, PARALLEL_ERA_FIRST_YEAR, ladderlessByEra, sourceLabelFor, splitCsv, isPersonName, setKeyFor, planFor, tcgdexModern, acquireStaged, ACQUIRE_LANES, LANE_ALIASES, LANE_SOURCE, LANE_MINUTES, CANONICAL_HEADER, CHILD_STDERR_LINES, childBannerLines, CHILD_BANNER_PATTERNS, CHILD_BANNER_LINES, cosmosSafeId, controlId, orderQueue, SYSTEMIC_FAILURE_STREAK, EMPTY_STATUS, SHORT_STATUS, STREAK_STATUSES, isStaged, stagedSourceRefs, stagedIndex, stagedFilesFor, acquireFromStaging };
 if (require.main !== module) return;
 
 (async () => {
@@ -2744,13 +2833,18 @@ if (require.main !== module) return;
         verdict = { status: "failed", reason: `cleanliness gate: ${gate.reason}`, rowsCreated: 0, stats: gate.stats, laneProvenHealthy: gate.contentRefusal === true };
         console.log(`      REFUSED — ${gate.reason}`);
       } else {
-        run("ingest-checklist-csv-to-catalog.cjs", [], {
+        // THE CHILD'S OWN ACCOUNTING, surfaced. See
+        // CF-A-DISCARDED-BANNER-IS-A-LOST-DIAGNOSIS: `keptExisting` is the
+        // number that explains a short ingest, and it was being thrown away
+        // with the rest of this stream.
+        const ingestSaid = run("ingest-checklist-csv-to-catalog.cjs", [], {
           DIR: dir,
           SOURCE: sourceLabelFor(lane),
           BACKFILL_APPLY: "true",
           RUN_MINUTES: String(Math.max(2, Math.floor(left() / 60000 / 2))),
           CONCURRENCY: process.env.CONCURRENCY || "16",
         }, 20 * 60000);
+        printChildBanner(ingestSaid);
 
         // VERIFY BY READ. Not the ingest's claim -- a count from Cosmos.
         const after = await countCatalogRows(entry, csvPaths);
