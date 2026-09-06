@@ -728,7 +728,7 @@ on:
         default: "refractor"
         type: string
       setkey_like:
-        description: "Substring the setKey must contain (e.g. bowman). EMPTY = every setKey. Read by dedupe-catalog-partition-shadows and rehome-catalog-rows-to-own-partition."
+        description: "Substring the setKey must contain (e.g. bowman). EMPTY = every setKey. Read by dedupe-catalog-partition-shadows and rehome-catalog-rows-to-own-partition. For rematch-sold-comps it is half of the IN-SLOT ROW FILTER (2026-09-07): a PREFIX on the row's STORED setKey segment, `-` bounded, so `panini-prizm` selects `panini-prizm` and every `panini-prizm-*` specialization and nothing else. It narrows the rows a slot CLASSIFIES, never the rows a slot OWNS -- the measured 32-slot shard table is untouched and slots stay disjoint -- and the banner prints the filter plus the counts skipped-by-filter vs classified."
         required: false
         default: ""
         type: string
@@ -767,7 +767,7 @@ on:
         default: "0"
         type: string
       sports:
-        description: "For reslug-tcg-out-of-sports-namespace: which non-sport categories to sweep (comma-separated). Empty = all of them."
+        description: "For reslug-tcg-out-of-sports-namespace: which non-sport categories to sweep (comma-separated). Empty = all of them. For rematch-sold-comps it is the other half of the IN-SLOT ROW FILTER (2026-09-07): a comma list matched against the row's OWN sport segment (e.g. soccer). It exists because the shard table's SPORT_CLASSES names only baseball/football/basketball/pokemon -- every other vertical rides the `other` catch-all or an undifferentiated whole-year unit, so there was no dispatch that could read one sport's rows and nothing else. Filters the rows CLASSIFIED, not the rows OWNED."
         required: false
         default: ""
         type: string

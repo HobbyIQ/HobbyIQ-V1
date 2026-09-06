@@ -177,22 +177,66 @@ function budget({ minutes, reserveMs, verifyMs = 10 * 60 * 1000, startedAt = Dat
     const ac = new AbortController();
     let timer = null;
     try {
-      return await Promise.race([
-        // The caller receives the signal; passing it to the SDK is what makes
-        // the abandoned request cancellable instead of merely ignored.
-        run(ac.signal),
-        new Promise((_, rej) => {
-          // The cap timer is deliberately REF'd, and the `finally` below is
-          // what makes that safe. An unref'd cap is worse than no cap: if the
-          // query happens to hold no ref'd handle of its own, node exits the
-          // instant main() awaits -- BEFORE the cap fires -- and the operator
-          // loses the VERIFY BY READ line entirely rather than reading
-          // UNCONFIRMED. Silence is the one thing this whole change exists to
-          // prevent, so the cap holds the loop just long enough to report,
-          // and clearTimeout in the `finally` releases it either way.
-          timer = setTimeout(() => rej(new Error("verify-cap")), remaining);
-        }),
-      ]);
+      // ── THE CAP IS ARMED BEFORE run() IS CALLED ────────────────────────────
+      //
+      // CF-A-CAP-YOU-ARM-SECOND-IS-NOT-ARMED (2026-09-07). This used to be one
+      // `Promise.race([run(ac.signal), new Promise(...)])`, and array elements
+      // evaluate LEFT TO RIGHT: `run(ac.signal)` was CALLED, and an async
+      // function body runs synchronously until its first `await`, so everything
+      // run() did before it suspended happened while the cap timer DID NOT YET
+      // EXIST. Only when run() finally yielded was the second element
+      // constructed and the timer armed.
+      //
+      // MEASURED, and the first reading of it was wrong in a way worth
+      // recording. A callee that spins and THEN awaits does eventually get a
+      // line out of the old ordering: the spin ends, run() suspends, the timer
+      // is finally constructed with a `remaining` that has already elapsed, and
+      // it rejects on the next turn (1,888ms observed under a 300ms cap --
+      // late, but printed). So "the cap fires late" is not what the old
+      // ordering costs.
+      //
+      // What it costs is the cap ENTIRELY, for any callee that never reaches a
+      // suspension point: no await, no yield, no second race element, no timer,
+      // no line, forever. The old ordering makes the cap's existence contingent
+      // on the callee's control flow, which is exactly backwards -- the cap is
+      // the thing that is supposed to hold when the callee misbehaves.
+      //
+      // So the timeout promise is CONSTRUCTED FIRST, which arms the REF'd timer
+      // on the spot, and run() is invoked only afterwards. The window in which
+      // the cap is NOT ARMED is now empty rather than "however long the
+      // callee's prologue happens to take".
+      //
+      // WHAT THIS DOES AND DOES NOT BUY. It guarantees the cap is ARMED, not
+      // that it fires on time: a callee that blocks the event loop synchronously
+      // also blocks the timer callback, so a spinning prologue still delays the
+      // narration until it yields (measured: the 8s prologue under a 3s cap now
+      // NARRATES, where before it printed nothing at all, but still returns at
+      // 8s). No timer in node can pre-empt synchronous work. What is bought is
+      // the thing that matters here: the cap can no longer be silently skipped,
+      // so "the lane said nothing" stops being a reachable state and becomes
+      // evidence that the wedge is somewhere a cap was never covering.
+      const capPromise = new Promise((_, rej) => {
+        // The cap timer is deliberately REF'd, and the `finally` below is
+        // what makes that safe. An unref'd cap is worse than no cap: if the
+        // query happens to hold no ref'd handle of its own, node exits the
+        // instant main() awaits -- BEFORE the cap fires -- and the operator
+        // loses the VERIFY BY READ line entirely rather than reading
+        // UNCONFIRMED. Silence is the one thing this whole change exists to
+        // prevent, so the cap holds the loop just long enough to report,
+        // and clearTimeout in the `finally` releases it either way.
+        timer = setTimeout(() => rej(new Error("verify-cap")), remaining);
+      });
+      // Arming first means this promise now exists before anything can throw.
+      // The `finally` clears the timer on every path, so it cannot reject after
+      // we stop listening -- but a rejection nobody is attached to would crash
+      // the process on `unhandledRejection`, and that must not be a thing this
+      // helper can do. The no-op keeps it handled regardless of exit path.
+      capPromise.catch(() => {});
+      // The caller receives the signal; passing it to the SDK is what makes
+      // the abandoned request cancellable instead of merely ignored. Called
+      // INSIDE the try so a synchronous throw from run() is caught here and
+      // narrated, exactly as a rejected promise from it would be.
+      return await Promise.race([run(ac.signal), capPromise]);
     } catch (e) {
       capFired = true;
       narrate(`  VERIFY BY READ  ${label}: could not confirm within the cap (${String(e && e.message)})`);

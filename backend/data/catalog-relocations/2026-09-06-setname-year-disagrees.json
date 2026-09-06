@@ -1,0 +1,363 @@
+{
+ "generatedAt": "2026-09-06T21:00:00Z",
+ "forLane": "relocate-catalog-rows-by-list",
+ "reportOnlyUntil": "Drew's review - no apply is authorized by this PR",
+ "finding": "#1904 setName-year census. Of the card_catalog rows whose setName begins with a 4-digit (or split) year, 145,758 carry a leading year that disagrees with the row's own year/cardYear. The class is NOT one defect: 76,414 are split-season labels where the row year is a season year of the label (not a defect), 69,325 are a single ingest queue's product-year label defect (a FIELD question, deferred), 0 are retro/heritage design-year labels, and 19 -- the only rows whose SLUG year is wrong -- carry a TRUNCATED year segment (\"197\", \"198\", \"199\", \"201\", \"202\": a 4-digit year with its last digit lost). Those 19 are what this list carries.",
+ "rulings": [
+  "THE SLUG IS NEVER WRONG IN THE BIG CLASS, AND THAT IS MEASURED, NOT ASSUMED. Over all 144,822 hit rows carrying a parseable hiq slug, the slug's year segment equals the row's own `year` field 144,822 times (100%) and equals the setName's leading year 0 times. So for the 145,739 non-truncated rows there is no pool split to heal: the row, its slug and its field all agree, and only the setName's label disagrees. A relocation lane has nothing to move. That is why this list carries 19 entries and not 145,758.",
+  "CLASS (a) IS NOT A DEFECT (76,414 rows). A split-season product spells its year across the season boundary -- \"2024/25 Topps Chrome Basketball\". Per #1852 (CF-A-SPLIT-YEAR-IS-STILL-A-YEAR) the row year is a season year of that label. The census records WHICH season year: 75,896 rows sit on the SECOND (2024/25 -> 2025) and 0 on the first, so this corpus's convention is consistent, and consistency -- not which end is chosen -- is what keeps a product's cards in one pool. A further 13,358 split rows sit on NEITHER season year; those are counted in class (c), not here, because their row year disagrees with the label outright.",
+  "CLASS (d) IS EMPTY, AND THE ABSENCE IS THE EXPECTED RESULT (0 rows). A retro/heritage product's setName carries the PRODUCT year and the homaged design year lives in the subset or on the card, so \"2023 Topps Heritage\" on a 2023 row never disagrees in the first place and never enters this census. Screening all 145,758 hits for the #1890 homage vocabulary (heritage, archives, tribute, reprint, retro, buyback, commemorative, gallery, allen-ginter, gypsy-queen, big-league, topps-now) in setName or setKey returned 0 rows. The class the task asked about does not exist here, which CONFIRMS the doctrine rather than contradicting it.",
+  "CLASS (c) IS A FIELD DEFECT WITH ONE AUTHOR AND ONE CAUSE, AND IT IS DEFERRED (69,325 rows). 144,266 of 145,049 classified hits (99.5%) carry source `hobbymonitor-2026-09-04`, and the cause is upstream of the catalog: 38 entries in backend/data/ingest-universe.json carry a `year` that disagrees with their own `setName` (\"2024 Topps Finest Football\" queued as year 2025), because the hobbymonitor release URL ends in a PUBLICATION year -- `/release/2024-topps-finest-football2025`. fetchHobbyMonitorChecklist writes that `--year` and that `--set-name` into the same manifest, so every row it minted inherited the disagreement. The checklist corpus contradicts the year, not the name: for topps-finest/football, checklist sources hold 40,092 rows at 2024 while hobbymonitor holds 13,655 at 2025.",
+  "AND CLASS (c) MUST NOT BE FIXED PRODUCT-WIDE, WHICH IS WHY IT IS DEFERRED RATHER THAN LISTED. Point-reading 1,000 stratified rows across all 44 affected products: 574 have a row at the setName year, 549 of those are checklist authority -- and 120 of them hold a DIFFERENT PLAYER (21%). A blanket year rewrite would therefore drive one in five rows onto another card's address. The repair is per-card and needs a checklist-verified destination for each, so it is written up in `deferred` with its patchCatalogRowFields plan and not carried as entries here.",
+  "THE 19 ARE A DIFFERENT DEFECT AND THE ONLY TRUE RELOCATION. Their year segment is 3 digits -- \"198\" is not a year any product was issued in. Slug and field agree with each other and both disagree with the setName, so unlike class (c) there is no rival reading: the address is malformed, the setName states the year, and the destination is the same card at a well-formed address. Sources are ingest-auto-seed(-graded) and sales-attested-unnumbered, both DERIVED authority -- rows we generated, never a transcription.",
+  "AN OCCUPIED ADDRESS IS A COLLISION TO REPORT. 18 distinct ids (one appeared twice in the scan) were point-read individually: 5 destinations exist, 4 hold the SAME player and fold, and 1 holds a DIFFERENT card -- hiq:hockey:202:upper-deck:1 is Cole Caufield and hiq:hockey:2021:upper-deck:1 is Tim Horton (checklistcenter-2026-09-06, 3 sales resident). That row is EXCLUDED and reported, never routed around. 17 entries remain.",
+  "RETIRE IS A DELETE IN THIS LANE and no entry here is a retire: all 17 are reslugs. retireCatalogRow re-points nothing, so the cost line that usually applies does not arise -- moveCatalogRow re-points the row's own sales, and measured read-only there are none to re-point.",
+  "THE POOL LIST IS EMPTY BECAUSE THE POOL IS EMPTY, MEASURED TWO WAYS. Every one of the 18 slugs was counted both as a partition-bounded `cardId` count and as a cross-partition `hobbyiqCardId` count: 0 and 0. No sales list is shipped because there are no sales to move, and an empty file would misrepresent a measurement as an oversight."
+ ],
+ "census": {
+  "method": "read-only. One cross-partition query over card_catalog projecting id/setName/year/cardYear/source/sport/setKey, server-side narrowed to rows whose setName starts with \"1\" or \"2\" and whose LEFT(setName,4) differs from (year ?? cardYear); 143,625 rows, 699,767 RU, 254s. Then a card_catalog POINT READ per destination (the container partitions on /cardId) and partition-bounded COUNT(1) per pool address. No writes.",
+  "hits": 145758,
+  "byClass": {
+   "a-split-season-not-a-defect": 76414,
+   "b-slug-year-wrong-truncated": 19,
+   "c-setname-label-wrong-deferred": 69325,
+   "d-retro-design-year": 0
+  },
+  "bySource": {
+   "cardsight": 566,
+   "hobbymonitor-2026-09-04": 144266,
+   "cardhedge": 199,
+   "ingest-auto-seed-graded": 8,
+   "sales-attested-unnumbered": 9,
+   "ingest-auto-seed": 1
+  },
+  "byDelta": {
+   "1": 1,
+   "3": 1,
+   "4": 9,
+   "6": 1,
+   "7": 10,
+   "8": 23,
+   "1781": 2,
+   "1788": 6,
+   "1789": 1,
+   "1798": 1,
+   "1799": 1,
+   "1815": 4,
+   "1819": 3,
+   "-47": 25,
+   "-32": 473,
+   "-1": 55287,
+   "-34": 3,
+   "-11": 52,
+   "-27": 4,
+   "-26": 2,
+   "split-second-year": 75896,
+   "-2": 13100,
+   "-35": 15,
+   "-30": 4,
+   "-36": 8,
+   "-37": 10,
+   "-43": 34,
+   "-40": 6,
+   "-20": 3,
+   "-54": 2,
+   "-31": 7,
+   "-41": 3,
+   "-4": 2,
+   "-38": 6,
+   "-21": 1,
+   "-39": 7,
+   "-136": 2,
+   "-17": 2,
+   "-42": 8,
+   "-24": 3,
+   "-29": 5,
+   "-9": 1,
+   "-71": 1,
+   "-25": 2,
+   "-19": 2,
+   "-64": 2,
+   "-3": 2,
+   "-22": 1,
+   "-18": 1,
+   "-67": 1,
+   "-28": 1,
+   "-70": 1,
+   "-14": 1
+  },
+  "bySport": {
+   "baseball": 95,
+   "football": 55769,
+   "hockey": 142,
+   "basketball": 88997,
+   "soccer": 37,
+   "(none)": 9
+  },
+  "topCells": [
+   {
+    "cell": "2024/25 Panini Donruss Optic Basketball || rowYear=2025",
+    "rows": 24561
+   },
+   {
+    "cell": "2024 Topps Chrome Football || rowYear=2025",
+    "rows": 14030
+   },
+   {
+    "cell": "2024/25 Panini Select Basketball || rowYear=2025",
+    "rows": 13470
+   },
+   {
+    "cell": "2024 Panini Phoenix Football || rowYear=2025",
+    "rows": 11317
+   },
+   {
+    "cell": "2024 Panini Select Football || rowYear=2025",
+    "rows": 8897
+   },
+   {
+    "cell": "2024 Topps Resurgence Football || rowYear=2025",
+    "rows": 8122
+   },
+   {
+    "cell": "2023/24 Topps Royalty Basketball || rowYear=2025",
+    "rows": 7491
+   },
+   {
+    "cell": "2024 Topps Finest Football || rowYear=2025",
+    "rows": 7487
+   },
+   {
+    "cell": "2025/26 Topps Cosmic Chrome Basketball || rowYear=2026",
+    "rows": 7133
+   },
+   {
+    "cell": "2024/25 Panini Revolution Basketball || rowYear=2025",
+    "rows": 6247
+   },
+   {
+    "cell": "2024/25 Topps Finest Basketball || rowYear=2025",
+    "rows": 4650
+   },
+   {
+    "cell": "2024/25 Panini Noir Basketball || rowYear=2025",
+    "rows": 3225
+   },
+   {
+    "cell": "2024 Panini Contenders Football || rowYear=2025",
+    "rows": 2983
+   },
+   {
+    "cell": "2024/25 Panini Silhouette Basketball || rowYear=2025",
+    "rows": 2898
+   },
+   {
+    "cell": "2024/25 Topps Inception Basketball || rowYear=2025",
+    "rows": 2708
+   },
+   {
+    "cell": "2023/24 Topps Three Basketball || rowYear=2025",
+    "rows": 2480
+   },
+   {
+    "cell": "2024/25 Panini One & One Basketball || rowYear=2025",
+    "rows": 2126
+   },
+   {
+    "cell": "2024/25 Panini Haunted Hoops Basketball || rowYear=2025",
+    "rows": 2112
+   },
+   {
+    "cell": "2024/25 Panini Prizm Black Basketball || rowYear=2025",
+    "rows": 1748
+   },
+   {
+    "cell": "2024/25 Panini Origins Basketball || rowYear=2025",
+    "rows": 1685
+   }
+  ],
+  "slugYearEqualsRowYear": 144822,
+  "slugYearEqualsSetNameYear": 0,
+  "slugsParsed": 144822,
+  "splitSeasonOnSecondYear": 75896,
+  "splitSeasonOnFirstYear": 0,
+  "splitSeasonOnNeither": 13358,
+  "universeQueueEntriesWithDisagreeingYear": 38,
+  "classCSample": {
+   "sampled": 1000,
+   "distinctProducts": 44,
+   "twinExists": 574,
+   "twinChecklistAuthority": 549,
+   "twinSamePlayer": 415,
+   "twinDifferentPlayer": 120,
+   "rowsWithSalesOnWrongYearSlug": 21,
+   "salesOnWrongYearSlugs": 88,
+   "note": "stratified across every affected (sport,setKey,rowYear) product so the sample represents the class, not one product"
+  },
+  "truncated": {
+   "distinctIds": 18,
+   "pointRead": 18,
+   "destinationsVacant": 13,
+   "destinationsOccupiedSameCard": 4,
+   "destinationsOccupiedDifferentCard": 1,
+   "salesResidentOnWrongYearSlugs": 0,
+   "salesByHobbyiqCardId": 0
+  },
+  "reconciliationWith1904": {
+   "ticketFigure": 55514,
+   "nonSplitHitsMeasuredHere": 55964,
+   "note": "#1904 reported 55,514. Restricting THIS census to rows whose setName carries a PLAIN leading 4-digit year (no split-season label) gives 55,964 -- a 450-row difference consistent with catalog drift between the two runs. So the ticket counted the non-split shape, and the 76,414 split-season rows this scan also surfaced are additional to its figure, not a contradiction of it. The class the ticket named is the one this list calls (c) plus the 19 of (b).",
+   "nonSplitFromHobbymonitor": 55746
+  }
+ },
+ "deferred": {
+  "class": "c-setname-label-wrong",
+  "rows": 69325,
+  "dominantSource": "hobbymonitor-2026-09-04",
+  "whyNotInThisList": "A relocation lane cannot help: the slug already agrees with the row's year field, so there is no split pool to merge. The disagreement is between the row's YEAR (and the slug that carries it) and the row's own setName LABEL. Deciding which is right is a per-card checklist question -- 21% of the destinations at the setName year are held by a different player -- so no blanket write is safe.",
+  "causeUpstream": {
+   "file": "backend/data/ingest-universe.json",
+   "entriesWithDisagreeingYear": 38,
+   "mechanism": "The hobbymonitor release URL ends in a PUBLICATION year (/release/2024-topps-finest-football2025), and the queue entry took that as the product `year` while `setName` kept the true season. fetchHobbyMonitorChecklist.cjs writes both into one manifest (--year, --set-name), so every row it minted inherited the disagreement.",
+   "note": "Fixing the 38 queue entries stops the NEXT ingest from minting more; it does not move a single stored row."
+  },
+  "plan": {
+   "primitive": "patchCatalogRowFields",
+   "neverARawPatch": "#1614: a raw container.patch leaves searchTokens and the other derived fields stale and the row unfindable. patchCatalogRowFields is the only sanctioned write, and it REFUSES id/cardId/hobbyiqCardId by design -- which is exactly right here, because this repair must NOT move the row.",
+   "whichFieldMoves": "`setName` only -- the LABEL is what disagrees. The year field, the slug and the pool address all stay. That keeps the repair off the identity axis entirely and out of the rematch IMPROVE predicate's way.",
+   "openQuestionForDrew": "Which side is authoritative for these 38 products? The checklist corpus says the setName is right and the year is wrong (topps-finest/football: 40,092 checklist rows at 2024 vs 13,655 hobbymonitor rows at 2025). If Drew rules the YEAR is the defect, the repair is NOT a field patch at all -- it is a per-card moveCatalogRow onto a checklist-verified destination, and the 21% different-player rate says each destination must be point-read and player-matched first, exactly as the 19 truncated rows were here.",
+   "whatWouldBeNeededFirst": [
+    "a per-card destination point-read with a player match, as this list does for its 19",
+    "a decision on the split rows whose row year is neither season year of the label (13,358 rows)",
+    "the 38 queue entries corrected so the next ingest stops minting the disagreement"
+   ]
+  }
+ },
+ "poolList": {
+  "entries": 0,
+  "why": "Measured, not skipped. All 18 truncated slugs were counted twice -- partition-bounded COUNT(1) on cardId, and a cross-partition COUNT(1) on hobbyiqCardId -- and both returned 0. There are no sales on a wrong-year slug whose correct twin exists, so no pool list is shipped.",
+  "classCSalesNote": "The class-(c) sample DOES carry sales (88 across 21 of 1,000 sampled rows), but those slugs are not wrong-year addresses -- the slug agrees with the row's year -- so they are not relocation candidates and are not listed."
+ },
+ "provenance": {
+  "readOnly": true,
+  "writes": "none",
+  "measuredAt": "2026-09-06",
+  "container": "card_catalog + sold_comps"
+ },
+ "excluded": [
+  {
+   "id": "hiq:hockey:202:upper-deck:1:base:no-auto",
+   "wouldBe": "hiq:hockey:2021:upper-deck:1:base:no-auto",
+   "player": "Cole Caufield",
+   "occupiedBy": "Tim Horton",
+   "occupantSource": "checklistcenter-2026-09-06",
+   "salesOnWrongYearSlug": 0,
+   "salesOnDestination": 3,
+   "why": "REPORT-ONLY COLLISION. The destination is held by a DIFFERENT card: this row is Cole Caufield and hiq:hockey:2021:upper-deck:1:base:no-auto holds Tim Horton (source checklistcenter-2026-09-06, 3 sale(s) resident). An occupied address is a collision to report, never to route around, so this row is excluded from the reslug entries and left exactly where it is. Whether 2021 Upper Deck Star Rookies Hockey #1 is Cole Caufield or Tim Horton is a checklist question, not a year repair."
+  }
+ ],
+ "entries": [
+  {
+   "id": "hiq:football:199:pinnacle:122:base:no-auto:psa-10",
+   "action": "reslug",
+   "to": "hiq:football:1997:pinnacle:122:base:no-auto:psa-10",
+   "reason": "TRUNCATED YEAR SEGMENT. This row's year segment is \"199\" -- a 4-digit year with its last digit lost, not a year any product was issued in. The row's own setName states \"1997 Pinnacle Zenith Football\" and its year field carries the same truncated 199, so the slug and the field agree with each other and BOTH disagree with the product the row names. The card is real (Brian Dawkins, #122); only the address is malformed. Destination keeps sport, setKey, cardNumber, parallel, auto and grade verbatim and moves ONLY the year segment to 1997, the year the setName states. The destination hiq:football:1997:pinnacle:122:base:no-auto:psa-10 is VACANT (point-read 404), so the reslug moves this row to an address no other card holds. Measured read-only 2026-09-06: 0 sale(s) resident at the wrong-year slug and 0 at the destination. source=ingest-auto-seed-graded"
+  },
+  {
+   "id": "hiq:baseball:198:topps:23:base:no-auto:psa-8",
+   "action": "reslug",
+   "to": "hiq:baseball:1987:topps:23:base:no-auto:psa-8",
+   "reason": "TRUNCATED YEAR SEGMENT. This row's year segment is \"198\" -- a 4-digit year with its last digit lost, not a year any product was issued in. The row's own setName states \"1987 Topps Major League Leaders Minis Baseball\" and its year field carries the same truncated 198, so the slug and the field agree with each other and BOTH disagree with the product the row names. The card is real (Dwight Gooden, #23); only the address is malformed. Destination keeps sport, setKey, cardNumber, parallel, auto and grade verbatim and moves ONLY the year segment to 1987, the year the setName states. The destination hiq:baseball:1987:topps:23:base:no-auto:psa-8 is VACANT (point-read 404), so the reslug moves this row to an address no other card holds. Measured read-only 2026-09-06: 0 sale(s) resident at the wrong-year slug and 0 at the destination. source=ingest-auto-seed-graded"
+  },
+  {
+   "id": "hiq:baseball:198:1986-leaf-baseball:fred-mcgriff:base:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:1986:1986-leaf-baseball:fred-mcgriff:base:no-auto",
+   "reason": "TRUNCATED YEAR SEGMENT. This row's year segment is \"198\" -- a 4-digit year with its last digit lost, not a year any product was issued in. The row's own setName states \"1986 Leaf Baseball\" and its year field carries the same truncated 198, so the slug and the field agree with each other and BOTH disagree with the product the row names. The card is real (Fred McGriff); only the address is malformed. Destination keeps sport, setKey, cardNumber, parallel, auto and grade verbatim and moves ONLY the year segment to 1986, the year the setName states. The destination hiq:baseball:1986:1986-leaf-baseball:fred-mcgriff:base:no-auto is VACANT (point-read 404), so the reslug moves this row to an address no other card holds. Measured read-only 2026-09-06: 0 sale(s) resident at the wrong-year slug and 0 at the destination. source=sales-attested-unnumbered"
+  },
+  {
+   "id": "hiq:baseball:197:1978-kellogg-s-3-d-super-stars-baseball:nolan-ryan:base:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:1978:1978-kellogg-s-3-d-super-stars-baseball:nolan-ryan:base:no-auto",
+   "reason": "TRUNCATED YEAR SEGMENT. This row's year segment is \"197\" -- a 4-digit year with its last digit lost, not a year any product was issued in. The row's own setName states \"1978 Kellogg's 3-D Super Stars Baseball\" and its year field carries the same truncated 197, so the slug and the field agree with each other and BOTH disagree with the product the row names. The card is real (Nolan Ryan); only the address is malformed. Destination keeps sport, setKey, cardNumber, parallel, auto and grade verbatim and moves ONLY the year segment to 1978, the year the setName states. The destination hiq:baseball:1978:1978-kellogg-s-3-d-super-stars-baseball:nolan-ryan:base:no-auto is VACANT (point-read 404), so the reslug moves this row to an address no other card holds. Measured read-only 2026-09-06: 0 sale(s) resident at the wrong-year slug and 0 at the destination. source=sales-attested-unnumbered"
+  },
+  {
+   "id": "hiq:baseball:198:leaf:28:base:no-auto:psa-6",
+   "action": "reslug",
+   "to": "hiq:baseball:1986:leaf:28:base:no-auto:psa-6",
+   "reason": "TRUNCATED YEAR SEGMENT. This row's year segment is \"198\" -- a 4-digit year with its last digit lost, not a year any product was issued in. The row's own setName states \"1986 Leaf Baseball\" and its year field carries the same truncated 198, so the slug and the field agree with each other and BOTH disagree with the product the row names. The card is real (Fred McGriff, #28); only the address is malformed. Destination keeps sport, setKey, cardNumber, parallel, auto and grade verbatim and moves ONLY the year segment to 1986, the year the setName states. The destination hiq:baseball:1986:leaf:28:base:no-auto:psa-6 already exists and holds the SAME player (Fred McGriff, source baseballcardpedia-graded) -- the reslug FOLDS this row onto its own twin, which is the \"one card, one row, one pool\" end state. Measured read-only 2026-09-06: 0 sale(s) resident at the wrong-year slug and 0 at the destination. source=ingest-auto-seed-graded"
+  },
+  {
+   "id": "hiq:baseball:202:2021-weiss-schwarz-japanese-marvel:black-widow:base:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2021:2021-weiss-schwarz-japanese-marvel:black-widow:base:no-auto",
+   "reason": "TRUNCATED YEAR SEGMENT. This row's year segment is \"202\" -- a 4-digit year with its last digit lost, not a year any product was issued in. The row's own setName states \"2021 Weiss Schwarz Japanese Marvel\" and its year field carries the same truncated 202, so the slug and the field agree with each other and BOTH disagree with the product the row names. The card is real (Black Widow); only the address is malformed. Destination keeps sport, setKey, cardNumber, parallel, auto and grade verbatim and moves ONLY the year segment to 2021, the year the setName states. The destination hiq:baseball:2021:2021-weiss-schwarz-japanese-marvel:black-widow:base:no-auto is VACANT (point-read 404), so the reslug moves this row to an address no other card holds. Measured read-only 2026-09-06: 0 sale(s) resident at the wrong-year slug and 0 at the destination. source=sales-attested-unnumbered"
+  },
+  {
+   "id": "hiq:baseball:198:leaf:168:base:no-auto:psa-7",
+   "action": "reslug",
+   "to": "hiq:baseball:1986:leaf:168:base:no-auto:psa-7",
+   "reason": "TRUNCATED YEAR SEGMENT. This row's year segment is \"198\" -- a 4-digit year with its last digit lost, not a year any product was issued in. The row's own setName states \"1986 Leaf Baseball\" and its year field carries the same truncated 198, so the slug and the field agree with each other and BOTH disagree with the product the row names. The card is real (Wade Boggs, #168); only the address is malformed. Destination keeps sport, setKey, cardNumber, parallel, auto and grade verbatim and moves ONLY the year segment to 1986, the year the setName states. The destination hiq:baseball:1986:leaf:168:base:no-auto:psa-7 already exists and holds the SAME player (Wade Boggs, source baseballcardpedia-graded) -- the reslug FOLDS this row onto its own twin, which is the \"one card, one row, one pool\" end state. Measured read-only 2026-09-06: 0 sale(s) resident at the wrong-year slug and 0 at the destination. source=ingest-auto-seed-graded"
+  },
+  {
+   "id": "hiq:football:201:2016-panini-donruss-football:pat-mcafee:base:no-auto",
+   "action": "reslug",
+   "to": "hiq:football:2016:2016-panini-donruss-football:pat-mcafee:base:no-auto",
+   "reason": "TRUNCATED YEAR SEGMENT. This row's year segment is \"201\" -- a 4-digit year with its last digit lost, not a year any product was issued in. The row's own setName states \"2016 Panini Donruss Football\" and its year field carries the same truncated 201, so the slug and the field agree with each other and BOTH disagree with the product the row names. The card is real (Pat McAfee); only the address is malformed. Destination keeps sport, setKey, cardNumber, parallel, auto and grade verbatim and moves ONLY the year segment to 2016, the year the setName states. The destination hiq:football:2016:2016-panini-donruss-football:pat-mcafee:base:no-auto is VACANT (point-read 404), so the reslug moves this row to an address no other card holds. Measured read-only 2026-09-06: 0 sale(s) resident at the wrong-year slug and 0 at the destination. source=sales-attested-unnumbered"
+  },
+  {
+   "id": "hiq:football:199:topps-gold-label:20:base:no-auto:psa-10",
+   "action": "reslug",
+   "to": "hiq:football:1998:topps-gold-label:20:base:no-auto:psa-10",
+   "reason": "TRUNCATED YEAR SEGMENT. This row's year segment is \"199\" -- a 4-digit year with its last digit lost, not a year any product was issued in. The row's own setName states \"1998 Topps Gold Label Football\" and its year field carries the same truncated 199, so the slug and the field agree with each other and BOTH disagree with the product the row names. The card is real (Peyton Manning, #20); only the address is malformed. Destination keeps sport, setKey, cardNumber, parallel, auto and grade verbatim and moves ONLY the year segment to 1998, the year the setName states. The destination hiq:football:1998:topps-gold-label:20:base:no-auto:psa-10 is VACANT (point-read 404), so the reslug moves this row to an address no other card holds. Measured read-only 2026-09-06: 0 sale(s) resident at the wrong-year slug and 0 at the destination. source=ingest-auto-seed-graded"
+  },
+  {
+   "id": "hiq:baseball:198:1986-leaf-baseball:andres-galarraga:base:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:1986:1986-leaf-baseball:andres-galarraga:base:no-auto",
+   "reason": "TRUNCATED YEAR SEGMENT. This row's year segment is \"198\" -- a 4-digit year with its last digit lost, not a year any product was issued in. The row's own setName states \"1986 Leaf Baseball\" and its year field carries the same truncated 198, so the slug and the field agree with each other and BOTH disagree with the product the row names. The card is real (Andres Galarraga); only the address is malformed. Destination keeps sport, setKey, cardNumber, parallel, auto and grade verbatim and moves ONLY the year segment to 1986, the year the setName states. The destination hiq:baseball:1986:1986-leaf-baseball:andres-galarraga:base:no-auto is VACANT (point-read 404), so the reslug moves this row to an address no other card holds. Measured read-only 2026-09-06: 0 sale(s) resident at the wrong-year slug and 0 at the destination. source=sales-attested-unnumbered"
+  },
+  {
+   "id": "hiq:baseball:198:leaf:28:base:no-auto:psa-8",
+   "action": "reslug",
+   "to": "hiq:baseball:1986:leaf:28:base:no-auto:psa-8",
+   "reason": "TRUNCATED YEAR SEGMENT. This row's year segment is \"198\" -- a 4-digit year with its last digit lost, not a year any product was issued in. The row's own setName states \"1986 Leaf Baseball\" and its year field carries the same truncated 198, so the slug and the field agree with each other and BOTH disagree with the product the row names. The card is real (Fred McGriff, #28); only the address is malformed. Destination keeps sport, setKey, cardNumber, parallel, auto and grade verbatim and moves ONLY the year segment to 1986, the year the setName states. The destination hiq:baseball:1986:leaf:28:base:no-auto:psa-8 already exists and holds the SAME player (Fred McGriff, source baseballcardpedia-graded) -- the reslug FOLDS this row onto its own twin, which is the \"one card, one row, one pool\" end state. Measured read-only 2026-09-06: 0 sale(s) resident at the wrong-year slug and 0 at the destination. source=ingest-auto-seed-graded"
+  },
+  {
+   "id": "hiq:baseball:198:leaf:103:base:no-auto:psa-7",
+   "action": "reslug",
+   "to": "hiq:baseball:1986:leaf:103:base:no-auto:psa-7",
+   "reason": "TRUNCATED YEAR SEGMENT. This row's year segment is \"198\" -- a 4-digit year with its last digit lost, not a year any product was issued in. The row's own setName states \"1986 Leaf Baseball\" and its year field carries the same truncated 198, so the slug and the field agree with each other and BOTH disagree with the product the row names. The card is real (Don Mattingly, #103); only the address is malformed. Destination keeps sport, setKey, cardNumber, parallel, auto and grade verbatim and moves ONLY the year segment to 1986, the year the setName states. The destination hiq:baseball:1986:leaf:103:base:no-auto:psa-7 already exists and holds the SAME player (Don Mattingly, source baseballcardpedia-graded) -- the reslug FOLDS this row onto its own twin, which is the \"one card, one row, one pool\" end state. Measured read-only 2026-09-06: 0 sale(s) resident at the wrong-year slug and 0 at the destination. source=ingest-auto-seed-graded"
+  },
+  {
+   "id": "hiq:football:201:2016-panini-donruss-football:dak-prescott:base:no-auto",
+   "action": "reslug",
+   "to": "hiq:football:2016:2016-panini-donruss-football:dak-prescott:base:no-auto",
+   "reason": "TRUNCATED YEAR SEGMENT. This row's year segment is \"201\" -- a 4-digit year with its last digit lost, not a year any product was issued in. The row's own setName states \"2016 Panini Donruss Football\" and its year field carries the same truncated 201, so the slug and the field agree with each other and BOTH disagree with the product the row names. The card is real (Dak Prescott); only the address is malformed. Destination keeps sport, setKey, cardNumber, parallel, auto and grade verbatim and moves ONLY the year segment to 2016, the year the setName states. The destination hiq:football:2016:2016-panini-donruss-football:dak-prescott:base:no-auto is VACANT (point-read 404), so the reslug moves this row to an address no other card holds. Measured read-only 2026-09-06: 0 sale(s) resident at the wrong-year slug and 0 at the destination. source=sales-attested-unnumbered"
+  },
+  {
+   "id": "hiq:football:201:2016-panini-donruss-football:jared-goff:base:no-auto",
+   "action": "reslug",
+   "to": "hiq:football:2016:2016-panini-donruss-football:jared-goff:base:no-auto",
+   "reason": "TRUNCATED YEAR SEGMENT. This row's year segment is \"201\" -- a 4-digit year with its last digit lost, not a year any product was issued in. The row's own setName states \"2016 Panini Donruss Football\" and its year field carries the same truncated 201, so the slug and the field agree with each other and BOTH disagree with the product the row names. The card is real (Jared Goff); only the address is malformed. Destination keeps sport, setKey, cardNumber, parallel, auto and grade verbatim and moves ONLY the year segment to 2016, the year the setName states. The destination hiq:football:2016:2016-panini-donruss-football:jared-goff:base:no-auto is VACANT (point-read 404), so the reslug moves this row to an address no other card holds. Measured read-only 2026-09-06: 0 sale(s) resident at the wrong-year slug and 0 at the destination. source=sales-attested-unnumbered"
+  },
+  {
+   "id": "hiq:football:201:panini-rookies-and-stars:47:base:no-auto:psa-10",
+   "action": "reslug",
+   "to": "hiq:football:2016:panini-rookies-and-stars:47:base:no-auto:psa-10",
+   "reason": "TRUNCATED YEAR SEGMENT. This row's year segment is \"201\" -- a 4-digit year with its last digit lost, not a year any product was issued in. The row's own setName states \"2016 Panini Rookies and Stars Football\" and its year field carries the same truncated 201, so the slug and the field agree with each other and BOTH disagree with the product the row names. The card is real (Ben Roethlisberger, #47); only the address is malformed. Destination keeps sport, setKey, cardNumber, parallel, auto and grade verbatim and moves ONLY the year segment to 2016, the year the setName states. The destination hiq:football:2016:panini-rookies-and-stars:47:base:no-auto:psa-10 is VACANT (point-read 404), so the reslug moves this row to an address no other card holds. Measured read-only 2026-09-06: 0 sale(s) resident at the wrong-year slug and 0 at the destination. source=ingest-auto-seed-graded"
+  },
+  {
+   "id": "hiq:baseball:197:1978-kellogg-s-3-d-super-stars-baseball:lou-brock:base:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:1978:1978-kellogg-s-3-d-super-stars-baseball:lou-brock:base:no-auto",
+   "reason": "TRUNCATED YEAR SEGMENT. This row's year segment is \"197\" -- a 4-digit year with its last digit lost, not a year any product was issued in. The row's own setName states \"1978 Kellogg's 3-D Super Stars Baseball\" and its year field carries the same truncated 197, so the slug and the field agree with each other and BOTH disagree with the product the row names. The card is real (Lou Brock); only the address is malformed. Destination keeps sport, setKey, cardNumber, parallel, auto and grade verbatim and moves ONLY the year segment to 1978, the year the setName states. The destination hiq:baseball:1978:1978-kellogg-s-3-d-super-stars-baseball:lou-brock:base:no-auto is VACANT (point-read 404), so the reslug moves this row to an address no other card holds. Measured read-only 2026-09-06: 0 sale(s) resident at the wrong-year slug and 0 at the destination. source=sales-attested-unnumbered"
+  },
+  {
+   "id": "hiq:basketball:202:2021-panini-contenders-optic-basketball:cade-cunningham:base:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:2021:2021-panini-contenders-optic-basketball:cade-cunningham:base:no-auto",
+   "reason": "TRUNCATED YEAR SEGMENT. This row's year segment is \"202\" -- a 4-digit year with its last digit lost, not a year any product was issued in. The row's own setName states \"2021 Panini Contenders Optic Basketball\" and its year field carries the same truncated 202, so the slug and the field agree with each other and BOTH disagree with the product the row names. The card is real (Cade Cunningham); only the address is malformed. Destination keeps sport, setKey, cardNumber, parallel, auto and grade verbatim and moves ONLY the year segment to 2021, the year the setName states. The destination hiq:basketball:2021:2021-panini-contenders-optic-basketball:cade-cunningham:base:no-auto is VACANT (point-read 404), so the reslug moves this row to an address no other card holds. Measured read-only 2026-09-06: 0 sale(s) resident at the wrong-year slug and 0 at the destination. source=sales-attested-unnumbered"
+  }
+ ]
+}

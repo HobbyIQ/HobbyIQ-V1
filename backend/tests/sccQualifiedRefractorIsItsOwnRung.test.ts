@@ -80,6 +80,8 @@ const {
   autoEvidence,
   QUALIFIED_REFRACTOR,
   NESTED_PRODUCT_SLUGS,
+  SET_CARD_NUMBER_PREFIX,
+  applyCardNumberPrefix,
 } = require_(FETCHER);
 
 const html = (n: string) => fs.readFileSync(path.join(FIX, `${n}.trimmed.html`), "utf8");
@@ -99,9 +101,13 @@ function stage(url: string, fixture: string) {
   const parallel = parallelFromSlug(parsed.rest);
   const parent = splitParentAndSubset(parsed.rest, parallelTailOf(parsed.rest));
   const page = html(fixture);
+  // The SET KEY reaches buildRows exactly as it does in main(), because a
+  // ruled product may number its cards with its own prefix. Staging without
+  // it would test a pipeline the lane does not run.
   const { rows, stats } = buildRows(page, {
     parallel,
     isAuto: autoEvidence(page, parsed.rest),
+    setKey: parent.parentSetKey,
   });
   return { parsed, parallel, parent, rows, stats };
 }
@@ -128,7 +134,10 @@ describe("1997 Bowman's Best Preview Atomic Refractor mints at :atomic-refractor
 
   it("card 4 is Derek Jeter, and he carries the Atomic Refractor rung", () => {
     // Drew's withheld holding, from a checklist page rather than his own import.
-    const jeter = staged.rows.find((r: any) => r.cardNumber === "4");
+    // BBP4, not 4: Drew's 2026-09-06 ruling makes the Preview its own product
+    // and its cards carry the set's OWN numbering, which is what the market
+    // writes on every Preview sale.
+    const jeter = staged.rows.find((r: any) => r.cardNumber === "BBP4");
     expect(jeter).toBeTruthy();
     expect(jeter.player).toBe("Derek Jeter");
     expect(jeter.parallel).toBe("Atomic Refractor");
@@ -141,7 +150,10 @@ describe("1997 Bowman's Best Preview Atomic Refractor mints at :atomic-refractor
   it("the rung is in the PARALLEL column, never smuggled into the subset", () => {
     // "Atomic" in `subset` is the shape the old reader produced: it made the
     // page look like a subset of the base product rather than a rung of it.
-    expect(staged.parent.subset).toBe("Preview");
+    // "Atomic" in `subset` was the pre-#1846 shape. The subset is now EMPTY
+    // for a different reason (Drew, 2026-09-06): the Preview is the PRODUCT,
+    // so there is no subset left over to carry -- and still never a rung.
+    expect(staged.parent.subset).toBe("");
     expect(staged.parent.subset).not.toMatch(/atomic/i);
     expect(staged.rows.every((r: any) => r.subset === "")).toBe(true);
     expect(staged.rows.every((r: any) => r.category === "base")).toBe(true);
@@ -185,9 +197,9 @@ describe("the base page still stages base cards with a blank parallel", () => {
     expect(staged.rows.every((r: any) => r.parallel === "")).toBe(true);
   });
 
-  it("it is the same 20 cards, Jeter at 4", () => {
+  it("it is the same 20 cards, Jeter at BBP4", () => {
     expect(staged.rows).toHaveLength(20);
-    const jeter = staged.rows.find((r: any) => r.cardNumber === "4");
+    const jeter = staged.rows.find((r: any) => r.cardNumber === "BBP4");
     expect(jeter.player).toBe("Derek Jeter");
   });
 
@@ -203,38 +215,108 @@ describe("the base page still stages base cards with a blank parallel", () => {
 
 // ── the preview keeps the previewed product's key ────────────────────────────
 
-describe("a Bowman's Best Preview is priced as Bowman's Best, not as Bowman", () => {
+describe("a Bowman's Best Preview is its OWN product, not Bowman and not Bowman's Best", () => {
+  // SUPERSEDES #1846's destination, keeping its anchor. That PR moved the
+  // Preview off flagship Bowman and onto `bowmans-best`, which was the right
+  // direction and the wrong address: the insert has its own BBP numbering, so
+  // minting it on the parent's key put twenty different cards at twenty
+  // addresses Bowman's Best #1-#20 already owned (60 rows, 2026-09-06).
   it.each([BASE_URL, REFRACTOR_URL, ATOMIC_URL])(
-    "%s lands on bowmans-best",
+    "%s lands on bowmans-best-preview, with no subset left over",
     (url) => {
       const parsed = parseSetUrl(url);
       const parent = splitParentAndSubset(parsed.rest, parallelTailOf(parsed.rest));
-      expect(parent.parentSetKey).toBe("bowmans-best");
-      expect(parent.subset).toBe("Preview");
+      expect(parent.parentSetKey).toBe("bowmans-best-preview");
+      // The Preview IS the product now, so nothing remains to carry as a
+      // subset -- which is what keeps `sub-` out of the minted ids.
+      expect(parent.subset).toBe("");
     },
   );
 
-  it("THE COUNTER-CASE: the Stadium Club edition keeps topps-stadium-club", () => {
-    // Basketball and football cards packed out in Stadium Club, whose pool
-    // already spells them `topps-stadium-club`. Reparenting these would invent
-    // a baseball product's key for a basketball card.
-    const rest = "topps-stadium-club-bowmans-best-preview-atomic-refractors";
+  it("BOTH SPORTS reach the one key -- it is one insert", () => {
+    // The basketball edition was packed out in Stadium Club and is the SAME
+    // twenty-card product; the sport segment of the id keeps the rosters apart.
+    for (const rest of [
+      "topps-stadium-club-bowmans-best-preview",
+      "topps-stadium-club-bowmans-best-preview-refractors",
+      "topps-stadium-club-bowmans-best-preview-atomic-refractors",
+    ]) {
+      const parent = splitParentAndSubset(rest, parallelTailOf(rest));
+      expect(parent.parentSetKey).toBe("bowmans-best-preview");
+      expect(parent.subset).toBe("");
+    }
+  });
+
+  it("the card number is the SET's own, and the prefix comes from the set's convention", () => {
+    // The baseball pages print bare `1`..`20`; the basketball pages of the SAME
+    // insert print `BBP1`..`BBP20`. Both are the same twenty-card product, and
+    // the market writes BBP on every Preview sale -- so the bare number is the
+    // SOURCE's shorthand, and reading it verbatim is what put the insert inside
+    // the parent's number space.
+    const rows = stage(ATOMIC_URL, "1997-bowman-bowmans-best-preview-atomic-refractor").rows;
+    expect(rows.map((r: any) => r.cardNumber))
+      .toEqual(Array.from({ length: 20 }, (_, i) => `BBP${i + 1}`));
+    // The prefix is a property of the ruled KEY, never of a page.
+    expect(Object.keys(SET_CARD_NUMBER_PREFIX)).toEqual(["bowmans-best-preview"]);
+  });
+
+  it("a number that already carries the prefix is left alone -- re-parsing is idempotent", () => {
+    // The basketball pages arrive pre-prefixed. Applying it twice would mint
+    // `BBPBBP1`, so the rule is written to recognise what it would have added.
+    expect(applyCardNumberPrefix("BBP1", "bowmans-best-preview")).toBe("BBP1");
+    expect(applyCardNumberPrefix("bbp1", "bowmans-best-preview")).toBe("bbp1");
+    expect(applyCardNumberPrefix(applyCardNumberPrefix("1", "bowmans-best-preview"), "bowmans-best-preview"))
+      .toBe("BBP1");
+  });
+
+  it("ONLY a bare number, and ONLY under the ruled key -- CARD NUMBER IS VERBATIM elsewhere", () => {
+    // The narrowing, stated as the cases it refuses. A number shape we do not
+    // understand is left exactly as the source printed it, and no other
+    // product's numbering is touched at all.
+    expect(applyCardNumberPrefix("12a", "bowmans-best-preview")).toBe("12a");
+    expect(applyCardNumberPrefix("BNR-1", "bowmans-best-preview")).toBe("BNR-1");
+    expect(applyCardNumberPrefix("1", "bowmans-best")).toBe("1");
+    expect(applyCardNumberPrefix("1", "topps-stadium-club")).toBe("1");
+    expect(applyCardNumberPrefix("1", "")).toBe("1");
+  });
+
+  it("THE COUNTER-CASE: a Stadium Club page that is NOT the Preview keeps its key", () => {
+    // #1846's counter-case, on the slug it is still about. The Preview itself
+    // now reaches the ruled key from BOTH hosts (above) -- but that must not
+    // become "any slug naming Stadium Club and Bowman goes to the insert".
+    // A Stadium Club page that names no Preview keeps `topps-stadium-club`.
+    const rest = "topps-stadium-club-atomic-refractors";
     const parent = splitParentAndSubset(rest, parallelTailOf(rest));
     expect(parent.parentSetKey).toBe("topps-stadium-club");
-    expect(parent.subset).toBe("Bowmans Best Preview");
     // ...and it still gets the right RUNG, because that rule is independent.
     expect(parallelFromSlug(rest)).toBe("Atomic Refractor");
   });
 
-  it("the nested rule is anchored to the HOST brand, not the insert name", () => {
-    // Scope proved on the regex itself: an unanchored form is what would have
-    // taken Stadium Club with it.
-    expect(NESTED_PRODUCT_SLUGS).toHaveLength(1);
-    const [re, key] = NESTED_PRODUCT_SLUGS[0];
-    expect(key).toBe("bowmans-best");
-    expect(re.source.startsWith("^bowman-")).toBe(true);
-    expect(re.test("bowman-bowmans-best-preview")).toBe(true);
-    expect(re.test("topps-stadium-club-bowmans-best-preview")).toBe(false);
+  it("every nested rule is anchored to a HOST BRAND, never to the insert name", () => {
+    // Scope proved on the regexes themselves. Each rule names the brand the
+    // cards were packed out in; an unanchored form would claim any slug that
+    // merely CONTAINS the insert name, which is the leak #1846 pinned and
+    // which this ruling's second host makes it tempting to reintroduce.
+    expect(NESTED_PRODUCT_SLUGS).toHaveLength(3);
+    for (const [re] of NESTED_PRODUCT_SLUGS) {
+      expect(re.source.startsWith("^"), `${re.source} must be anchored`).toBe(true);
+    }
+    const keys = NESTED_PRODUCT_SLUGS.map(([, k]: [RegExp, string]) => k);
+    expect(keys).toEqual(["bowmans-best-preview", "bowmans-best-preview", "bowmans-best"]);
+
+    // ORDER IS LOAD-BEARING: the Preview rule is consulted before the shorter
+    // `bowman-bowmans-best` rule, or the parent claims the slug and the insert
+    // lands back inside the number space it collided with.
+    const previewRe = NESTED_PRODUCT_SLUGS[0][0];
+    const parentRe = NESTED_PRODUCT_SLUGS[2][0];
+    expect(previewRe.test("bowman-bowmans-best-preview-atomic-refractors")).toBe(true);
+    expect(parentRe.test("bowman-bowmans-best-preview-atomic-refractors")).toBe(true);
+    expect(NESTED_PRODUCT_SLUGS.findIndex(([r]: [RegExp, string]) => r === previewRe))
+      .toBeLessThan(NESTED_PRODUCT_SLUGS.findIndex(([r]: [RegExp, string]) => r === parentRe));
+
+    // The parent rule is still Bowman-only, so a Stadium Club slug that is not
+    // the Preview never reaches a baseball product's key.
+    expect(parentRe.test("topps-stadium-club-bowmans-best")).toBe(false);
   });
 
   it("bowmans-best is a RULED product key, so this invents no vocabulary", () => {
@@ -370,26 +452,81 @@ describe("drop the section reader and the Atomic Refractor rows are lost", () =>
         const parent = m.splitParentAndSubset(parsed.rest, m.parallelTailOf(parsed.rest));
         expect(parent.parentSetKey).toBe("bowman");
         expect(parent.subset).toBe("Bowmans Best Preview");
-        // The shipped fetcher puts it where the pool already prices it.
+        // The shipped fetcher puts it on the ruled key of its own.
         expect(splitParentAndSubset(parsed.rest, parallelTailOf(parsed.rest)).parentSetKey)
-          .toBe("bowmans-best");
+          .toBe("bowmans-best-preview");
       },
     );
   });
 
-  it("unanchor the nested rule -> Stadium Club is dragged onto a baseball key", () => {
-    // The scope pin as a mutation: the rule must not be keyed on the insert
-    // name alone, or it closes one split by opening another.
+  it("unanchor the PARENT rule -> a Stadium Club page is dragged onto a baseball key", () => {
+    // The scope pin as a mutation, on the rule it is still about. The Preview
+    // reaches its own key from both hosts by DESIGN; the parent's rule must
+    // stay Bowman-only, or an ordinary Stadium Club page whose slug merely
+    // contains "bowmans-best" lands on a baseball product's key.
     withMutant(
       '[/^bowman-(bowmans-best)(?:-|$)/, "bowmans-best"],',
       '[/(?:^|-)(bowmans-best)(?:-|$)/, "bowmans-best"],',
       "unanchored",
       (m) => {
-        const rest = "topps-stadium-club-bowmans-best-preview-atomic-refractors";
+        const rest = "topps-stadium-club-bowmans-best-atomic-refractors";
         expect(m.splitParentAndSubset(rest, m.parallelTailOf(rest)).parentSetKey)
           .toBe("bowmans-best");
         expect(splitParentAndSubset(rest, parallelTailOf(rest)).parentSetKey)
           .toBe("topps-stadium-club");
+      },
+    );
+  });
+
+  it("REORDER the nested rules -> the Preview lands back inside the parent's numbers", () => {
+    // The order pin as a mutation. With the parent's rule consulted first it
+    // claims `bowman-bowmans-best-preview...` on its own prefix, and the
+    // insert is minted onto `bowmans-best` again -- which is precisely the
+    // 2026-09-06 incident: 60 rows at addresses Bowman's Best #1-#20 owns.
+    withMutant(
+      [
+        '  [/^bowman-(bowmans-best-preview)(?:-|$)/, "bowmans-best-preview"],',
+        '  [/^topps-stadium-club-(bowmans-best-preview)(?:-|$)/, "bowmans-best-preview"],',
+        '  [/^bowman-(bowmans-best)(?:-|$)/, "bowmans-best"],',
+      ].join("\n"),
+      [
+        '  [/^bowman-(bowmans-best)(?:-|$)/, "bowmans-best"],',
+        '  [/^bowman-(bowmans-best-preview)(?:-|$)/, "bowmans-best-preview"],',
+        '  [/^topps-stadium-club-(bowmans-best-preview)(?:-|$)/, "bowmans-best-preview"],',
+      ].join("\n"),
+      "reordered",
+      (m) => {
+        const parsed = m.parseSetUrl(ATOMIC_URL);
+        expect(m.splitParentAndSubset(parsed.rest, m.parallelTailOf(parsed.rest)).parentSetKey)
+          .toBe("bowmans-best");
+        expect(splitParentAndSubset(parsed.rest, parallelTailOf(parsed.rest)).parentSetKey)
+          .toBe("bowmans-best-preview");
+      },
+    );
+  });
+
+  it("drop the BBP prefix -> the insert lands inside the parent's number space", () => {
+    // The card-number pin as a mutation, and the harm named as the rows it
+    // costs. The baseball pages print bare 1..20; without the set's own
+    // prefix those twenty cards are minted at 1..20 -- the numbers twenty
+    // DIFFERENT Bowman's Best cards already carry.
+    withMutant(
+      'const SET_CARD_NUMBER_PREFIX = { "bowmans-best-preview": "BBP" };',
+      'const SET_CARD_NUMBER_PREFIX = {};',
+      "noprefix",
+      (m) => {
+        const parsed = m.parseSetUrl(ATOMIC_URL);
+        const page = html("1997-bowman-bowmans-best-preview-atomic-refractor");
+        const parent = m.splitParentAndSubset(parsed.rest, m.parallelTailOf(parsed.rest));
+        const { rows } = m.buildRows(page, {
+          parallel: m.parallelFromSlug(parsed.rest),
+          isAuto: false,
+          setKey: parent.parentSetKey,
+        });
+        expect(rows.map((r: any) => r.cardNumber).slice(0, 3)).toEqual(["1", "2", "3"]);
+        // ...and the shipped fetcher numbers them as the market does.
+        expect(stage(ATOMIC_URL, "1997-bowman-bowmans-best-preview-atomic-refractor")
+          .rows.map((r: any) => r.cardNumber).slice(0, 3)).toEqual(["BBP1", "BBP2", "BBP3"]);
       },
     );
   });

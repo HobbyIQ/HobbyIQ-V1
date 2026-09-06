@@ -1469,3 +1469,111 @@ describe("condition compounds are never card numbers", () => {
     expect(parseListingIdentity("1972 Comspec Bob Lanier PSA EX-MT 6").cardNumber).toBeNull();
   });
 });
+
+// CF-BOWMAN-CHROME-DRAFT-KEEPS-DRAFT (Drew, 2026-09-06, #1860 / #1896).
+//
+// THE BUG THESE PIN. `inferSetKeyFromTitle`'s Bowman rules were ADJACENT
+// WORDS — /bowman\s+draft\s+chrome/ then /bowman\s+draft/ — so they read the
+// spelling "Bowman Draft Chrome" and missed the reversed "Bowman CHROME
+// Draft", which is the commoner eBay phrasing. Those titles fell past both
+// and were answered by the bare /bowman\s+chrome/ rule: DRAFT, the word that
+// names the product, was DROPPED.
+//
+// WHY IT MATTERS. Bowman, Bowman Chrome, Bowman Draft and Bowman Chrome
+// Sapphire are DIFFERENT products with different checklists. setKey becomes
+// the slug, the slug becomes cardId, and cardId is the sold_comps PARTITION
+// KEY — a dropped DRAFT files a real sale into another product's pool. On the
+// colliding card number CPA-DT it files it under another PERSON: cpa-dt is
+// Diego Tornes in bowman-chrome and Devin Taylor in bowman-draft.
+//
+// THE RULING. Chrome stock is a PROPERTY of the card; DRAFT is the product
+// line. A title that names Draft is a Bowman Draft card whichever side of
+// "Chrome" the word sits on. Both orders fold to the key the adjacent rule
+// already returned — "Bowman Draft Chrome", which the vocabulary nests under
+// bowman-draft. No new key is invented.
+describe("inferSetKeyFromTitle — a title that says DRAFT is a Bowman Draft card", () => {
+  it("the #1860 title: reversed order keeps DRAFT", () => {
+    // The live case. This returned "Bowman Chrome" before the fix.
+    expect(inferSetKeyFromTitle(
+      "2025 Bowman Chrome Draft 1st Refractor Auto /499 Devin Taylor #CPA-DT", "CPA-DT"))
+      .toBe("Bowman Draft Chrome");
+  });
+
+  it("and the GATE 1b holding's own listing title, verbatim", () => {
+    expect(inferSetKeyFromTitle(
+      "Devin Taylor 2025 Bowman Chrome Draft 1st Refractor Auto /499 Oakland Athletics"))
+      .toBe("Bowman Draft Chrome");
+  });
+
+  it("'Bowman Chrome DRAFT 1st' — the caps spelling — is the same card", () => {
+    expect(inferSetKeyFromTitle("2025 Bowman Chrome DRAFT 1st Gage Wood #BDC-100"))
+      .toBe("Bowman Draft Chrome");
+  });
+
+  it("the ORIGINAL word order still answers the same key", () => {
+    // Unchanged behaviour, pinned so the new rule cannot shadow it.
+    expect(inferSetKeyFromTitle("2025 Bowman Draft Chrome Gage Wood"))
+      .toBe("Bowman Draft Chrome");
+  });
+
+  it("MUTATION: reverse the order and the pre-fix parser drops DRAFT", () => {
+    // THE RED. `inferSetKeyFromTitle` is the one vocabulary; reverting the new
+    // rule leaves /bowman\s+chrome/ to answer the reversed spelling, and the
+    // key becomes "Bowman Chrome" — a different product's pool, and on CPA-DT
+    // a different person's card. These two keys must NEVER be equal for a
+    // title that says Draft.
+    const reversed = inferSetKeyFromTitle(
+      "2025 Bowman Chrome Draft 1st Refractor Auto /499 Devin Taylor #CPA-DT", "CPA-DT");
+    const adjacent = inferSetKeyFromTitle("2025 Bowman Draft Chrome Refractor Auto /499");
+    expect(reversed).toBe(adjacent);
+    expect(reversed).not.toBe("Bowman Chrome");
+  });
+
+  it("'Bowman Chrome' with NO Draft is still Bowman Chrome", () => {
+    // The rule must not widen the Draft product to the whole brand.
+    expect(inferSetKeyFromTitle("2025 Bowman Chrome Refractor Auto Diego Tornes #CPA-DT", "CPA-DT"))
+      .toBe("Bowman Chrome");
+    expect(inferSetKeyFromTitle("2026 Bowman Chrome Prospects Owen Carey")).toBe("Bowman Chrome");
+  });
+
+  it("NARROWNESS: a title that merely MENTIONS the MLB draft is not a Draft card", () => {
+    // THE LINE THIS MUST NOT CROSS, and the reason the rule is adjacency-based
+    // rather than "draft appears somewhere near bowman". Loosening it to a
+    // bare /draft/ would re-read every one of these as a Bowman Draft card —
+    // the flagship catch-all failure in reverse. DRAFT has to TOUCH "bowman"
+    // or "chrome": that is the product being spelled, not an event mentioned.
+    expect(inferSetKeyFromTitle("2025 Bowman Chrome Aaron Judge 2025 MLB Draft Pick RC"))
+      .toBe("Bowman Chrome");
+    expect(inferSetKeyFromTitle("2025 Bowman Chrome Refractor Draft Night Auto Judge"))
+      .toBe("Bowman Chrome");
+  });
+
+  it("Sapphire keeps its own key in BOTH orders", () => {
+    // Sapphire is a different product again, and it was spelled both ways too.
+    // "Bowman Chrome Draft Sapphire" previously fell to the brand-only
+    // fallback and answered "Bowman Chrome Sapphire" — another pool.
+    expect(inferSetKeyFromTitle("2025 Bowman Draft Sapphire Gage Wood"))
+      .toBe("Bowman Draft Sapphire");
+    expect(inferSetKeyFromTitle("2025 Bowman Chrome Draft Sapphire Gage Wood"))
+      .toBe("Bowman Draft Sapphire");
+    // ...and a Sapphire title with no Draft is untouched.
+    expect(inferSetKeyFromTitle("2026 Bowman Chrome Sapphire Owen Carey"))
+      .toBe("Bowman Chrome Sapphire");
+  });
+
+  it("Bowman University is untouched", () => {
+    // A different product whose name carries neither word; pinned because it
+    // sits in the same brand ladder.
+    const u = inferSetKeyFromTitle("2024 Bowman University Chrome Refractor Travis Hunter");
+    expect(u).not.toBe("Bowman Draft Chrome");
+  });
+
+  it("Bowman Draft PAPER still wins over the chrome-stock read", () => {
+    // The paper block runs BEFORE this ladder and must keep doing so —
+    // a paper Draft auto is not a Draft Chrome card.
+    expect(inferSetKeyFromTitle("2025 Bowman Draft Paper Prospect Auto Hartman"))
+      .toBe("Bowman Draft Paper");
+    expect(inferSetKeyFromTitle("2025 Bowman Chrome Draft Andrew Fischer", "BDA-AF"))
+      .toBe("Bowman Draft Paper");
+  });
+});

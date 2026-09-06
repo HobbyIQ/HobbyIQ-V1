@@ -1,443 +1,465 @@
 {
- "generatedAt": "2026-09-06T05:45:00Z",
+ "generatedAt": "2026-09-06T19:00:00Z",
  "forLane": "relocate-catalog-rows-by-list",
- "reportOnlyUntil": "Drew's ruling on a distinct `bowmans-best-preview` setKey",
+ "supersedes": "the 2026-09-06T05:45:00Z revision — 20 retire + 40 reslug onto the HOST product's key, with the 20 base rows deliberately omitted. MEASURED AGAIN read-only for this PR: the 40 `sub-`-segment ids it named NO LONGER EXIST (the fold lanes consolidated them since), and the product now holds exactly 60 clean BBP rows, three rungs per card, no `sub-` anywhere. Drew's ruling then moves the destination off the host key entirely, so all 60 move.",
  "rulings": [
-  "1997-98 Topps Stadium Club Bowman's Best Preview kept its OWN numbering (BBP1-BBP20), so unlike the baseball twin it never collided with the 1-240 base set.",
-  "The Atomic page wrote parallel 'Refractor' with the qualifier carried only in subsetName, and squatted the bare refractor address — pre-#1846 behaviour.",
-  "ORDER IS LOAD-BEARING: the 20 bare alias rows are retired FIRST, vacating the addresses the 20 Preview refractor rows then reslug onto. The lane applies entries top to bottom.",
-  "The 20 Atomic rows reslug to :atomic-refractor, never the plain rung — 'Atomic Refractor' is its own rung (parallelLadders).",
-  "The 20 bare BASE rows are correct as they stand and are deliberately OMITTED from this list.",
-  "The 240 OTHER rows carrying source sportscardchecklist-2026-09-04 in this product are the legitimate Stadium Club base checklist (Michael Jordan #118 among them) and are NOT in scope.",
-  "SEQUENCING WITH THE POOL LANE (#1853-era list data/pool-relocations/2026-09-06-bbp-basketball-rung-repoint.json, on main 2026-09-06). That list repoints 30 sold_comps rows onto 12 targets. SIX of those targets are addresses THIS list retires first (bbp1/3/4/7/10/12 :refractor:no-auto) before reslugging the Preview refractor row onto the same address — so the two lists AGREE on the end state but NOT on the order. Run the CATALOG list first and the pool list second: repointing sales onto an address that is then deleted and recreated leaves them pointing at a row that existed under a different document. Eight further pool targets are addresses this list reslugs ONTO (end state agrees), and four are base rows this list does not touch."
+  "CF-BOWMANS-BEST-PREVIEW-IS-ITS-OWN-PRODUCT (Drew, 2026-09-06): the 20-card BBP1-BBP20 insert is its own product key `bowmans-best-preview`, in BOTH sports it was packed out in.",
+  "ONE KEY FOR BOTH SPORTS. The sport segment already separates the basketball roster (BBP1 Allen Iverson ... BBP20 Tariq Abdul-Wahad) from the baseball one (BBP1 Frank Thomas ... BBP4 Derek Jeter). Two keys for one insert would be the split this ruling closes.",
+  "THE ALIAS ROWS AND THE `sub-` ROWS ARE ALREADY GONE. The prior revision's whole retire half existed to vacate addresses for its reslug half; measured today, the product holds 60 rows and not one carries a `sub-` segment or duplicates a rung. So this revision has NO retire entries — there is nothing left to retire, and naming ids that do not exist would be a list that reports success while doing nothing.",
+  "ALL 60 MOVE, INCLUDING THE 20 BASE ROWS. The prior revision omitted the base rows because they were correct while the Preview lived on the host's key. Under the ruled key, leaving them behind would ship two rungs of a card on one product and the third on another — the split pool in its purest form.",
+  "THE RUNG IS PRESERVED EXACTLY. `base` / `refractor` / `atomic-refractor`, 20 of each, read from each row's own stored parallel. Atomic Refractor is its own rung (parallelLadders.ts, /100) and never folds into the plain one.",
+  "EVERY TARGET IS VACANT. `bowmans-best-preview` holds ZERO catalog rows today. The lane refuses rather than merges on an occupied address, which is the check that catches a re-run after a re-mint.",
+  "THE 363 OTHER 1997 topps-stadium-club rows are the legitimate Stadium Club checklist (Michael Jordan #118 among them) and are NOT in scope.",
+  "THE FOOTBALL EDITION of this same insert (Bledsoe #BBP15) is a different checklist and is excluded, unchanged from the prior revision."
  ],
  "census": {
-  "productRowsTotal": 443,
-  "taggedWithSource": 320,
-  "previewShaped": 80,
-  "legitimateProperRows": 240,
-  "aliasRetired": 20,
-  "reslugPreviewRefractor": 20,
-  "reslugPreviewAtomic": 20,
-  "baseRowsLeftAlone": 20,
-  "expectedAfter": "60 preview rows, 3 per card, no sub- segment",
+  "productRowsTotal": 423,
+  "previewRows": 60,
+  "reslug": 60,
+  "retire": 0,
+  "rungBreakdown": {
+   "atomic-refractor": 20,
+   "base": 20,
+   "refractor": 20
+  },
+  "idsWithSubSegment": 0,
+  "priorRevisionIdsStillPresent": 40,
+  "targetKeyRowsToday": 0,
+  "expectedAfter": "60 rows on hiq:basketball:1997:bowmans-best-preview:*, three rungs per card; ZERO BBP rows left on topps-stadium-club",
   "poolLaneInteraction": {
    "poolList": "data/pool-relocations/2026-09-06-bbp-basketball-rung-repoint.json",
-   "poolRepointTargets": 12,
-   "targetsThisListRetiresFirst": 6,
-   "targetsThisListReslugsOnto": 8,
-   "targetsUntouched": 4,
-   "requiredOrder": "catalog list BEFORE pool list"
+   "note": "that list's 12 repoint targets were moved onto `bowmans-best-preview` in this same PR, so the two lists agree on the end state.",
+   "requiredOrder": "SCC re-mint -> catalog list -> pool list"
   }
  },
+ "excluded": [
+  {
+   "note": "363 other 1997 topps-stadium-club rows — the legitimate Stadium Club checklist. Deliberately NOT touched."
+  },
+  {
+   "note": "The Topps Stadium Club FOOTBALL edition of this insert (Drew Bledsoe #BBP15) — a different checklist, a different roster, not in scope."
+  }
+ ],
  "entries": [
   {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp1:atomic-refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:bowmans-best-preview:bbp1:atomic-refractor:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key, not a subset of the host it was packed out in. The Stadium Club host is provenance; the insert is the identity.",
+   "evidence": "Allen Iverson — 1997-98 Topps Stadium Club Bowmans Best Preview Basketball — cardNumber BBP1, parallel \"Atomic Refractor\", subsetName \"Bowmans Best Preview\"; source sportscardchecklist-2026-09-06"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp1:base:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:bowmans-best-preview:bbp1:base:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key, not a subset of the host it was packed out in. The Stadium Club host is provenance; the insert is the identity.",
+   "evidence": "Allen Iverson — 1997-98 Topps Stadium Club Bowmans Best Preview Basketball — cardNumber BBP1, parallel null, subsetName \"Bowmans Best Preview\"; source sportscardchecklist-2026-09-04"
+  },
+  {
    "id": "hiq:basketball:1997:topps-stadium-club:bbp1:refractor:no-auto",
-   "action": "retire",
-   "reason": "bare alias row minted by the Atomic page squatting the plain refractor address; the Preview refractor row reslugs onto it",
-   "evidence": "Allen Iverson — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP1, parallel Refractor, subsetName Bowmans Best Preview Atomic"
+   "action": "reslug",
+   "to": "hiq:basketball:1997:bowmans-best-preview:bbp1:refractor:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key, not a subset of the host it was packed out in. The Stadium Club host is provenance; the insert is the identity.",
+   "evidence": "Allen Iverson — 1997-98 Topps Stadium Club Bowmans Best Preview Basketball — cardNumber BBP1, parallel \"Refractor\", subsetName \"Bowmans Best Preview\"; source sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp10:atomic-refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:bowmans-best-preview:bbp10:atomic-refractor:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key, not a subset of the host it was packed out in. The Stadium Club host is provenance; the insert is the identity.",
+   "evidence": "Shaquille O'Neal — 1997-98 Topps Stadium Club Bowmans Best Preview Basketball — cardNumber BBP10, parallel \"Atomic Refractor\", subsetName \"Bowmans Best Preview\"; source sportscardchecklist-2026-09-06"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp10:base:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:bowmans-best-preview:bbp10:base:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key, not a subset of the host it was packed out in. The Stadium Club host is provenance; the insert is the identity.",
+   "evidence": "Shaquille O'Neal — 1997-98 Topps Stadium Club Bowmans Best Preview Basketball — cardNumber BBP10, parallel null, subsetName \"Bowmans Best Preview\"; source sportscardchecklist-2026-09-04"
   },
   {
    "id": "hiq:basketball:1997:topps-stadium-club:bbp10:refractor:no-auto",
-   "action": "retire",
-   "reason": "bare alias row minted by the Atomic page squatting the plain refractor address; the Preview refractor row reslugs onto it",
-   "evidence": "Shaquille O'Neal — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP10, parallel Refractor, subsetName Bowmans Best Preview Atomic"
+   "action": "reslug",
+   "to": "hiq:basketball:1997:bowmans-best-preview:bbp10:refractor:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key, not a subset of the host it was packed out in. The Stadium Club host is provenance; the insert is the identity.",
+   "evidence": "Shaquille O'Neal — 1997-98 Topps Stadium Club Bowmans Best Preview Basketball — cardNumber BBP10, parallel \"Refractor\", subsetName \"Bowmans Best Preview\"; source sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp11:atomic-refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:bowmans-best-preview:bbp11:atomic-refractor:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key, not a subset of the host it was packed out in. The Stadium Club host is provenance; the insert is the identity.",
+   "evidence": "Maurice Taylor — 1997-98 Topps Stadium Club Bowmans Best Preview Basketball — cardNumber BBP11, parallel \"Atomic Refractor\", subsetName \"Bowmans Best Preview\"; source sportscardchecklist-2026-09-06"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp11:base:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:bowmans-best-preview:bbp11:base:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key, not a subset of the host it was packed out in. The Stadium Club host is provenance; the insert is the identity.",
+   "evidence": "Maurice Taylor — 1997-98 Topps Stadium Club Bowmans Best Preview Basketball — cardNumber BBP11, parallel null, subsetName \"Bowmans Best Preview\"; source sportscardchecklist-2026-09-04"
   },
   {
    "id": "hiq:basketball:1997:topps-stadium-club:bbp11:refractor:no-auto",
-   "action": "retire",
-   "reason": "bare alias row minted by the Atomic page squatting the plain refractor address; the Preview refractor row reslugs onto it",
-   "evidence": "Maurice Taylor — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP11, parallel Refractor, subsetName Bowmans Best Preview Atomic"
+   "action": "reslug",
+   "to": "hiq:basketball:1997:bowmans-best-preview:bbp11:refractor:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key, not a subset of the host it was packed out in. The Stadium Club host is provenance; the insert is the identity.",
+   "evidence": "Maurice Taylor — 1997-98 Topps Stadium Club Bowmans Best Preview Basketball — cardNumber BBP11, parallel \"Refractor\", subsetName \"Bowmans Best Preview\"; source sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp12:atomic-refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:bowmans-best-preview:bbp12:atomic-refractor:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key, not a subset of the host it was packed out in. The Stadium Club host is provenance; the insert is the identity.",
+   "evidence": "Chauncey Billups — 1997-98 Topps Stadium Club Bowmans Best Preview Basketball — cardNumber BBP12, parallel \"Atomic Refractor\", subsetName \"Bowmans Best Preview\"; source sportscardchecklist-2026-09-06"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp12:base:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:bowmans-best-preview:bbp12:base:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key, not a subset of the host it was packed out in. The Stadium Club host is provenance; the insert is the identity.",
+   "evidence": "Chauncey Billups — 1997-98 Topps Stadium Club Bowmans Best Preview Basketball — cardNumber BBP12, parallel null, subsetName \"Bowmans Best Preview\"; source sportscardchecklist-2026-09-04"
   },
   {
    "id": "hiq:basketball:1997:topps-stadium-club:bbp12:refractor:no-auto",
-   "action": "retire",
-   "reason": "bare alias row minted by the Atomic page squatting the plain refractor address; the Preview refractor row reslugs onto it",
-   "evidence": "Chauncey Billups — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP12, parallel Refractor, subsetName Bowmans Best Preview Atomic"
+   "action": "reslug",
+   "to": "hiq:basketball:1997:bowmans-best-preview:bbp12:refractor:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key, not a subset of the host it was packed out in. The Stadium Club host is provenance; the insert is the identity.",
+   "evidence": "Chauncey Billups — 1997-98 Topps Stadium Club Bowmans Best Preview Basketball — cardNumber BBP12, parallel \"Refractor\", subsetName \"Bowmans Best Preview\"; source sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp13:atomic-refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:bowmans-best-preview:bbp13:atomic-refractor:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key, not a subset of the host it was packed out in. The Stadium Club host is provenance; the insert is the identity.",
+   "evidence": "Paul Grant — 1997-98 Topps Stadium Club Bowmans Best Preview Basketball — cardNumber BBP13, parallel \"Atomic Refractor\", subsetName \"Bowmans Best Preview\"; source sportscardchecklist-2026-09-06"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp13:base:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:bowmans-best-preview:bbp13:base:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key, not a subset of the host it was packed out in. The Stadium Club host is provenance; the insert is the identity.",
+   "evidence": "Paul Grant — 1997-98 Topps Stadium Club Bowmans Best Preview Basketball — cardNumber BBP13, parallel null, subsetName \"Bowmans Best Preview\"; source sportscardchecklist-2026-09-04"
   },
   {
    "id": "hiq:basketball:1997:topps-stadium-club:bbp13:refractor:no-auto",
-   "action": "retire",
-   "reason": "bare alias row minted by the Atomic page squatting the plain refractor address; the Preview refractor row reslugs onto it",
-   "evidence": "Paul Grant — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP13, parallel Refractor, subsetName Bowmans Best Preview Atomic"
+   "action": "reslug",
+   "to": "hiq:basketball:1997:bowmans-best-preview:bbp13:refractor:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key, not a subset of the host it was packed out in. The Stadium Club host is provenance; the insert is the identity.",
+   "evidence": "Paul Grant — 1997-98 Topps Stadium Club Bowmans Best Preview Basketball — cardNumber BBP13, parallel \"Refractor\", subsetName \"Bowmans Best Preview\"; source sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp14:atomic-refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:bowmans-best-preview:bbp14:atomic-refractor:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key, not a subset of the host it was packed out in. The Stadium Club host is provenance; the insert is the identity.",
+   "evidence": "Tony Battie — 1997-98 Topps Stadium Club Bowmans Best Preview Basketball — cardNumber BBP14, parallel \"Atomic Refractor\", subsetName \"Bowmans Best Preview\"; source sportscardchecklist-2026-09-06"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp14:base:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:bowmans-best-preview:bbp14:base:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key, not a subset of the host it was packed out in. The Stadium Club host is provenance; the insert is the identity.",
+   "evidence": "Tony Battie — 1997-98 Topps Stadium Club Bowmans Best Preview Basketball — cardNumber BBP14, parallel null, subsetName \"Bowmans Best Preview\"; source sportscardchecklist-2026-09-04"
   },
   {
    "id": "hiq:basketball:1997:topps-stadium-club:bbp14:refractor:no-auto",
-   "action": "retire",
-   "reason": "bare alias row minted by the Atomic page squatting the plain refractor address; the Preview refractor row reslugs onto it",
-   "evidence": "Tony Battie — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP14, parallel Refractor, subsetName Bowmans Best Preview Atomic"
+   "action": "reslug",
+   "to": "hiq:basketball:1997:bowmans-best-preview:bbp14:refractor:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key, not a subset of the host it was packed out in. The Stadium Club host is provenance; the insert is the identity.",
+   "evidence": "Tony Battie — 1997-98 Topps Stadium Club Bowmans Best Preview Basketball — cardNumber BBP14, parallel \"Refractor\", subsetName \"Bowmans Best Preview\"; source sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp15:atomic-refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:bowmans-best-preview:bbp15:atomic-refractor:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key, not a subset of the host it was packed out in. The Stadium Club host is provenance; the insert is the identity.",
+   "evidence": "Austin Croshere — 1997-98 Topps Stadium Club Bowmans Best Preview Basketball — cardNumber BBP15, parallel \"Atomic Refractor\", subsetName \"Bowmans Best Preview\"; source sportscardchecklist-2026-09-06"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp15:base:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:bowmans-best-preview:bbp15:base:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key, not a subset of the host it was packed out in. The Stadium Club host is provenance; the insert is the identity.",
+   "evidence": "Austin Croshere — 1997-98 Topps Stadium Club Bowmans Best Preview Basketball — cardNumber BBP15, parallel null, subsetName \"Bowmans Best Preview\"; source sportscardchecklist-2026-09-04"
   },
   {
    "id": "hiq:basketball:1997:topps-stadium-club:bbp15:refractor:no-auto",
-   "action": "retire",
-   "reason": "bare alias row minted by the Atomic page squatting the plain refractor address; the Preview refractor row reslugs onto it",
-   "evidence": "Austin Croshere — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP15, parallel Refractor, subsetName Bowmans Best Preview Atomic"
+   "action": "reslug",
+   "to": "hiq:basketball:1997:bowmans-best-preview:bbp15:refractor:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key, not a subset of the host it was packed out in. The Stadium Club host is provenance; the insert is the identity.",
+   "evidence": "Austin Croshere — 1997-98 Topps Stadium Club Bowmans Best Preview Basketball — cardNumber BBP15, parallel \"Refractor\", subsetName \"Bowmans Best Preview\"; source sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp16:atomic-refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:bowmans-best-preview:bbp16:atomic-refractor:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key, not a subset of the host it was packed out in. The Stadium Club host is provenance; the insert is the identity.",
+   "evidence": "Brevin Knight — 1997-98 Topps Stadium Club Bowmans Best Preview Basketball — cardNumber BBP16, parallel \"Atomic Refractor\", subsetName \"Bowmans Best Preview\"; source sportscardchecklist-2026-09-06"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp16:base:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:bowmans-best-preview:bbp16:base:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key, not a subset of the host it was packed out in. The Stadium Club host is provenance; the insert is the identity.",
+   "evidence": "Brevin Knight — 1997-98 Topps Stadium Club Bowmans Best Preview Basketball — cardNumber BBP16, parallel null, subsetName \"Bowmans Best Preview\"; source sportscardchecklist-2026-09-04"
   },
   {
    "id": "hiq:basketball:1997:topps-stadium-club:bbp16:refractor:no-auto",
-   "action": "retire",
-   "reason": "bare alias row minted by the Atomic page squatting the plain refractor address; the Preview refractor row reslugs onto it",
-   "evidence": "Brevin Knight — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP16, parallel Refractor, subsetName Bowmans Best Preview Atomic"
+   "action": "reslug",
+   "to": "hiq:basketball:1997:bowmans-best-preview:bbp16:refractor:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key, not a subset of the host it was packed out in. The Stadium Club host is provenance; the insert is the identity.",
+   "evidence": "Brevin Knight — 1997-98 Topps Stadium Club Bowmans Best Preview Basketball — cardNumber BBP16, parallel \"Refractor\", subsetName \"Bowmans Best Preview\"; source sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp17:atomic-refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:bowmans-best-preview:bbp17:atomic-refractor:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key, not a subset of the host it was packed out in. The Stadium Club host is provenance; the insert is the identity.",
+   "evidence": "Bobby Jackson — 1997-98 Topps Stadium Club Bowmans Best Preview Basketball — cardNumber BBP17, parallel \"Atomic Refractor\", subsetName \"Bowmans Best Preview\"; source sportscardchecklist-2026-09-06"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp17:base:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:bowmans-best-preview:bbp17:base:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key, not a subset of the host it was packed out in. The Stadium Club host is provenance; the insert is the identity.",
+   "evidence": "Bobby Jackson — 1997-98 Topps Stadium Club Bowmans Best Preview Basketball — cardNumber BBP17, parallel null, subsetName \"Bowmans Best Preview\"; source sportscardchecklist-2026-09-04"
   },
   {
    "id": "hiq:basketball:1997:topps-stadium-club:bbp17:refractor:no-auto",
-   "action": "retire",
-   "reason": "bare alias row minted by the Atomic page squatting the plain refractor address; the Preview refractor row reslugs onto it",
-   "evidence": "Bobby Jackson — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP17, parallel Refractor, subsetName Bowmans Best Preview Atomic"
+   "action": "reslug",
+   "to": "hiq:basketball:1997:bowmans-best-preview:bbp17:refractor:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key, not a subset of the host it was packed out in. The Stadium Club host is provenance; the insert is the identity.",
+   "evidence": "Bobby Jackson — 1997-98 Topps Stadium Club Bowmans Best Preview Basketball — cardNumber BBP17, parallel \"Refractor\", subsetName \"Bowmans Best Preview\"; source sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp18:atomic-refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:bowmans-best-preview:bbp18:atomic-refractor:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key, not a subset of the host it was packed out in. The Stadium Club host is provenance; the insert is the identity.",
+   "evidence": "Johnny Taylor — 1997-98 Topps Stadium Club Bowmans Best Preview Basketball — cardNumber BBP18, parallel \"Atomic Refractor\", subsetName \"Bowmans Best Preview\"; source sportscardchecklist-2026-09-06"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp18:base:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:bowmans-best-preview:bbp18:base:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key, not a subset of the host it was packed out in. The Stadium Club host is provenance; the insert is the identity.",
+   "evidence": "Johnny Taylor — 1997-98 Topps Stadium Club Bowmans Best Preview Basketball — cardNumber BBP18, parallel null, subsetName \"Bowmans Best Preview\"; source sportscardchecklist-2026-09-04"
   },
   {
    "id": "hiq:basketball:1997:topps-stadium-club:bbp18:refractor:no-auto",
-   "action": "retire",
-   "reason": "bare alias row minted by the Atomic page squatting the plain refractor address; the Preview refractor row reslugs onto it",
-   "evidence": "Johnny Taylor — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP18, parallel Refractor, subsetName Bowmans Best Preview Atomic"
+   "action": "reslug",
+   "to": "hiq:basketball:1997:bowmans-best-preview:bbp18:refractor:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key, not a subset of the host it was packed out in. The Stadium Club host is provenance; the insert is the identity.",
+   "evidence": "Johnny Taylor — 1997-98 Topps Stadium Club Bowmans Best Preview Basketball — cardNumber BBP18, parallel \"Refractor\", subsetName \"Bowmans Best Preview\"; source sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp19:atomic-refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:bowmans-best-preview:bbp19:atomic-refractor:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key, not a subset of the host it was packed out in. The Stadium Club host is provenance; the insert is the identity.",
+   "evidence": "Scot Pollard — 1997-98 Topps Stadium Club Bowmans Best Preview Basketball — cardNumber BBP19, parallel \"Atomic Refractor\", subsetName \"Bowmans Best Preview\"; source sportscardchecklist-2026-09-06"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp19:base:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:bowmans-best-preview:bbp19:base:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key, not a subset of the host it was packed out in. The Stadium Club host is provenance; the insert is the identity.",
+   "evidence": "Scot Pollard — 1997-98 Topps Stadium Club Bowmans Best Preview Basketball — cardNumber BBP19, parallel null, subsetName \"Bowmans Best Preview\"; source sportscardchecklist-2026-09-04"
   },
   {
    "id": "hiq:basketball:1997:topps-stadium-club:bbp19:refractor:no-auto",
-   "action": "retire",
-   "reason": "bare alias row minted by the Atomic page squatting the plain refractor address; the Preview refractor row reslugs onto it",
-   "evidence": "Scot Pollard — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP19, parallel Refractor, subsetName Bowmans Best Preview Atomic"
+   "action": "reslug",
+   "to": "hiq:basketball:1997:bowmans-best-preview:bbp19:refractor:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key, not a subset of the host it was packed out in. The Stadium Club host is provenance; the insert is the identity.",
+   "evidence": "Scot Pollard — 1997-98 Topps Stadium Club Bowmans Best Preview Basketball — cardNumber BBP19, parallel \"Refractor\", subsetName \"Bowmans Best Preview\"; source sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp2:atomic-refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:bowmans-best-preview:bbp2:atomic-refractor:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key, not a subset of the host it was packed out in. The Stadium Club host is provenance; the insert is the identity.",
+   "evidence": "Gary Payton — 1997-98 Topps Stadium Club Bowmans Best Preview Basketball — cardNumber BBP2, parallel \"Atomic Refractor\", subsetName \"Bowmans Best Preview\"; source sportscardchecklist-2026-09-06"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp2:base:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:bowmans-best-preview:bbp2:base:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key, not a subset of the host it was packed out in. The Stadium Club host is provenance; the insert is the identity.",
+   "evidence": "Gary Payton — 1997-98 Topps Stadium Club Bowmans Best Preview Basketball — cardNumber BBP2, parallel null, subsetName \"Bowmans Best Preview\"; source sportscardchecklist-2026-09-04"
   },
   {
    "id": "hiq:basketball:1997:topps-stadium-club:bbp2:refractor:no-auto",
-   "action": "retire",
-   "reason": "bare alias row minted by the Atomic page squatting the plain refractor address; the Preview refractor row reslugs onto it",
-   "evidence": "Gary Payton — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP2, parallel Refractor, subsetName Bowmans Best Preview Atomic"
+   "action": "reslug",
+   "to": "hiq:basketball:1997:bowmans-best-preview:bbp2:refractor:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key, not a subset of the host it was packed out in. The Stadium Club host is provenance; the insert is the identity.",
+   "evidence": "Gary Payton — 1997-98 Topps Stadium Club Bowmans Best Preview Basketball — cardNumber BBP2, parallel \"Refractor\", subsetName \"Bowmans Best Preview\"; source sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp20:atomic-refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:bowmans-best-preview:bbp20:atomic-refractor:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key, not a subset of the host it was packed out in. The Stadium Club host is provenance; the insert is the identity.",
+   "evidence": "Tariq Abdul-Wahad — 1997-98 Topps Stadium Club Bowmans Best Preview Basketball — cardNumber BBP20, parallel \"Atomic Refractor\", subsetName \"Bowmans Best Preview\"; source sportscardchecklist-2026-09-06"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp20:base:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:bowmans-best-preview:bbp20:base:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key, not a subset of the host it was packed out in. The Stadium Club host is provenance; the insert is the identity.",
+   "evidence": "Tariq Abdul-Wahad — 1997-98 Topps Stadium Club Bowmans Best Preview Basketball — cardNumber BBP20, parallel null, subsetName \"Bowmans Best Preview\"; source sportscardchecklist-2026-09-04"
   },
   {
    "id": "hiq:basketball:1997:topps-stadium-club:bbp20:refractor:no-auto",
-   "action": "retire",
-   "reason": "bare alias row minted by the Atomic page squatting the plain refractor address; the Preview refractor row reslugs onto it",
-   "evidence": "Tariq Abdul-Wahad — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP20, parallel Refractor, subsetName Bowmans Best Preview Atomic"
+   "action": "reslug",
+   "to": "hiq:basketball:1997:bowmans-best-preview:bbp20:refractor:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key, not a subset of the host it was packed out in. The Stadium Club host is provenance; the insert is the identity.",
+   "evidence": "Tariq Abdul-Wahad — 1997-98 Topps Stadium Club Bowmans Best Preview Basketball — cardNumber BBP20, parallel \"Refractor\", subsetName \"Bowmans Best Preview\"; source sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp3:atomic-refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:bowmans-best-preview:bbp3:atomic-refractor:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key, not a subset of the host it was packed out in. The Stadium Club host is provenance; the insert is the identity.",
+   "evidence": "Grant Hill — 1997-98 Topps Stadium Club Bowmans Best Preview Basketball — cardNumber BBP3, parallel \"Atomic Refractor\", subsetName \"Bowmans Best Preview\"; source sportscardchecklist-2026-09-06"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp3:base:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:bowmans-best-preview:bbp3:base:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key, not a subset of the host it was packed out in. The Stadium Club host is provenance; the insert is the identity.",
+   "evidence": "Grant Hill — 1997-98 Topps Stadium Club Bowmans Best Preview Basketball — cardNumber BBP3, parallel null, subsetName \"Bowmans Best Preview\"; source sportscardchecklist-2026-09-04"
   },
   {
    "id": "hiq:basketball:1997:topps-stadium-club:bbp3:refractor:no-auto",
-   "action": "retire",
-   "reason": "bare alias row minted by the Atomic page squatting the plain refractor address; the Preview refractor row reslugs onto it",
-   "evidence": "Grant Hill — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP3, parallel Refractor, subsetName Bowmans Best Preview Atomic"
+   "action": "reslug",
+   "to": "hiq:basketball:1997:bowmans-best-preview:bbp3:refractor:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key, not a subset of the host it was packed out in. The Stadium Club host is provenance; the insert is the identity.",
+   "evidence": "Grant Hill — 1997-98 Topps Stadium Club Bowmans Best Preview Basketball — cardNumber BBP3, parallel \"Refractor\", subsetName \"Bowmans Best Preview\"; source sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp4:atomic-refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:bowmans-best-preview:bbp4:atomic-refractor:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key, not a subset of the host it was packed out in. The Stadium Club host is provenance; the insert is the identity.",
+   "evidence": "Anfernee Hardaway — 1997-98 Topps Stadium Club Bowmans Best Preview Basketball — cardNumber BBP4, parallel \"Atomic Refractor\", subsetName \"Bowmans Best Preview\"; source sportscardchecklist-2026-09-06"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp4:base:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:bowmans-best-preview:bbp4:base:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key, not a subset of the host it was packed out in. The Stadium Club host is provenance; the insert is the identity.",
+   "evidence": "Anfernee Hardaway — 1997-98 Topps Stadium Club Bowmans Best Preview Basketball — cardNumber BBP4, parallel null, subsetName \"Bowmans Best Preview\"; source sportscardchecklist-2026-09-04"
   },
   {
    "id": "hiq:basketball:1997:topps-stadium-club:bbp4:refractor:no-auto",
-   "action": "retire",
-   "reason": "bare alias row minted by the Atomic page squatting the plain refractor address; the Preview refractor row reslugs onto it",
-   "evidence": "Anfernee Hardaway — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP4, parallel Refractor, subsetName Bowmans Best Preview Atomic"
+   "action": "reslug",
+   "to": "hiq:basketball:1997:bowmans-best-preview:bbp4:refractor:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key, not a subset of the host it was packed out in. The Stadium Club host is provenance; the insert is the identity.",
+   "evidence": "Anfernee Hardaway — 1997-98 Topps Stadium Club Bowmans Best Preview Basketball — cardNumber BBP4, parallel \"Refractor\", subsetName \"Bowmans Best Preview\"; source sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp5:atomic-refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:bowmans-best-preview:bbp5:atomic-refractor:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key, not a subset of the host it was packed out in. The Stadium Club host is provenance; the insert is the identity.",
+   "evidence": "Karl Malone — 1997-98 Topps Stadium Club Bowmans Best Preview Basketball — cardNumber BBP5, parallel \"Atomic Refractor\", subsetName \"Bowmans Best Preview\"; source sportscardchecklist-2026-09-06"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp5:base:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:bowmans-best-preview:bbp5:base:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key, not a subset of the host it was packed out in. The Stadium Club host is provenance; the insert is the identity.",
+   "evidence": "Karl Malone — 1997-98 Topps Stadium Club Bowmans Best Preview Basketball — cardNumber BBP5, parallel null, subsetName \"Bowmans Best Preview\"; source sportscardchecklist-2026-09-04"
   },
   {
    "id": "hiq:basketball:1997:topps-stadium-club:bbp5:refractor:no-auto",
-   "action": "retire",
-   "reason": "bare alias row minted by the Atomic page squatting the plain refractor address; the Preview refractor row reslugs onto it",
-   "evidence": "Karl Malone — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP5, parallel Refractor, subsetName Bowmans Best Preview Atomic"
+   "action": "reslug",
+   "to": "hiq:basketball:1997:bowmans-best-preview:bbp5:refractor:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key, not a subset of the host it was packed out in. The Stadium Club host is provenance; the insert is the identity.",
+   "evidence": "Karl Malone — 1997-98 Topps Stadium Club Bowmans Best Preview Basketball — cardNumber BBP5, parallel \"Refractor\", subsetName \"Bowmans Best Preview\"; source sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp6:atomic-refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:bowmans-best-preview:bbp6:atomic-refractor:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key, not a subset of the host it was packed out in. The Stadium Club host is provenance; the insert is the identity.",
+   "evidence": "Glen Rice — 1997-98 Topps Stadium Club Bowmans Best Preview Basketball — cardNumber BBP6, parallel \"Atomic Refractor\", subsetName \"Bowmans Best Preview\"; source sportscardchecklist-2026-09-06"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp6:base:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:bowmans-best-preview:bbp6:base:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key, not a subset of the host it was packed out in. The Stadium Club host is provenance; the insert is the identity.",
+   "evidence": "Glen Rice — 1997-98 Topps Stadium Club Bowmans Best Preview Basketball — cardNumber BBP6, parallel null, subsetName \"Bowmans Best Preview\"; source sportscardchecklist-2026-09-04"
   },
   {
    "id": "hiq:basketball:1997:topps-stadium-club:bbp6:refractor:no-auto",
-   "action": "retire",
-   "reason": "bare alias row minted by the Atomic page squatting the plain refractor address; the Preview refractor row reslugs onto it",
-   "evidence": "Glen Rice — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP6, parallel Refractor, subsetName Bowmans Best Preview Atomic"
+   "action": "reslug",
+   "to": "hiq:basketball:1997:bowmans-best-preview:bbp6:refractor:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key, not a subset of the host it was packed out in. The Stadium Club host is provenance; the insert is the identity.",
+   "evidence": "Glen Rice — 1997-98 Topps Stadium Club Bowmans Best Preview Basketball — cardNumber BBP6, parallel \"Refractor\", subsetName \"Bowmans Best Preview\"; source sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp7:atomic-refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:bowmans-best-preview:bbp7:atomic-refractor:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key, not a subset of the host it was packed out in. The Stadium Club host is provenance; the insert is the identity.",
+   "evidence": "Antoine Walker — 1997-98 Topps Stadium Club Bowmans Best Preview Basketball — cardNumber BBP7, parallel \"Atomic Refractor\", subsetName \"Bowmans Best Preview\"; source sportscardchecklist-2026-09-06"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp7:base:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:bowmans-best-preview:bbp7:base:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key, not a subset of the host it was packed out in. The Stadium Club host is provenance; the insert is the identity.",
+   "evidence": "Antoine Walker — 1997-98 Topps Stadium Club Bowmans Best Preview Basketball — cardNumber BBP7, parallel null, subsetName \"Bowmans Best Preview\"; source sportscardchecklist-2026-09-04"
   },
   {
    "id": "hiq:basketball:1997:topps-stadium-club:bbp7:refractor:no-auto",
-   "action": "retire",
-   "reason": "bare alias row minted by the Atomic page squatting the plain refractor address; the Preview refractor row reslugs onto it",
-   "evidence": "Antoine Walker — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP7, parallel Refractor, subsetName Bowmans Best Preview Atomic"
+   "action": "reslug",
+   "to": "hiq:basketball:1997:bowmans-best-preview:bbp7:refractor:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key, not a subset of the host it was packed out in. The Stadium Club host is provenance; the insert is the identity.",
+   "evidence": "Antoine Walker — 1997-98 Topps Stadium Club Bowmans Best Preview Basketball — cardNumber BBP7, parallel \"Refractor\", subsetName \"Bowmans Best Preview\"; source sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp8:atomic-refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:bowmans-best-preview:bbp8:atomic-refractor:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key, not a subset of the host it was packed out in. The Stadium Club host is provenance; the insert is the identity.",
+   "evidence": "Alonzo Mourning — 1997-98 Topps Stadium Club Bowmans Best Preview Basketball — cardNumber BBP8, parallel \"Atomic Refractor\", subsetName \"Bowmans Best Preview\"; source sportscardchecklist-2026-09-06"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp8:base:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:bowmans-best-preview:bbp8:base:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key, not a subset of the host it was packed out in. The Stadium Club host is provenance; the insert is the identity.",
+   "evidence": "Alonzo Mourning — 1997-98 Topps Stadium Club Bowmans Best Preview Basketball — cardNumber BBP8, parallel null, subsetName \"Bowmans Best Preview\"; source sportscardchecklist-2026-09-04"
   },
   {
    "id": "hiq:basketball:1997:topps-stadium-club:bbp8:refractor:no-auto",
-   "action": "retire",
-   "reason": "bare alias row minted by the Atomic page squatting the plain refractor address; the Preview refractor row reslugs onto it",
-   "evidence": "Alonzo Mourning — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP8, parallel Refractor, subsetName Bowmans Best Preview Atomic"
+   "action": "reslug",
+   "to": "hiq:basketball:1997:bowmans-best-preview:bbp8:refractor:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key, not a subset of the host it was packed out in. The Stadium Club host is provenance; the insert is the identity.",
+   "evidence": "Alonzo Mourning — 1997-98 Topps Stadium Club Bowmans Best Preview Basketball — cardNumber BBP8, parallel \"Refractor\", subsetName \"Bowmans Best Preview\"; source sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp9:atomic-refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:bowmans-best-preview:bbp9:atomic-refractor:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key, not a subset of the host it was packed out in. The Stadium Club host is provenance; the insert is the identity.",
+   "evidence": "Shareef Abdur-Rahim — 1997-98 Topps Stadium Club Bowmans Best Preview Basketball — cardNumber BBP9, parallel \"Atomic Refractor\", subsetName \"Bowmans Best Preview\"; source sportscardchecklist-2026-09-06"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp9:base:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:bowmans-best-preview:bbp9:base:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key, not a subset of the host it was packed out in. The Stadium Club host is provenance; the insert is the identity.",
+   "evidence": "Shareef Abdur-Rahim — 1997-98 Topps Stadium Club Bowmans Best Preview Basketball — cardNumber BBP9, parallel null, subsetName \"Bowmans Best Preview\"; source sportscardchecklist-2026-09-04"
   },
   {
    "id": "hiq:basketball:1997:topps-stadium-club:bbp9:refractor:no-auto",
-   "action": "retire",
-   "reason": "bare alias row minted by the Atomic page squatting the plain refractor address; the Preview refractor row reslugs onto it",
-   "evidence": "Shareef Abdur-Rahim — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP9, parallel Refractor, subsetName Bowmans Best Preview Atomic"
-  },
-  {
-   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview:bbp1:refractor:no-auto",
    "action": "reslug",
-   "to": "hiq:basketball:1997:topps-stadium-club:bbp1:refractor:no-auto",
-   "reason": "the subset segment was a collision work-around, not identity; BBP numbering is unique in this product so the bare address is correct",
-   "evidence": "Allen Iverson — 1997-98 Topps Stadium Club Bowmans Best Preview Refractors Basketball — cardNumber BBP1, parallel Refractor"
-  },
-  {
-   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview:bbp10:refractor:no-auto",
-   "action": "reslug",
-   "to": "hiq:basketball:1997:topps-stadium-club:bbp10:refractor:no-auto",
-   "reason": "the subset segment was a collision work-around, not identity; BBP numbering is unique in this product so the bare address is correct",
-   "evidence": "Shaquille O'Neal — 1997-98 Topps Stadium Club Bowmans Best Preview Refractors Basketball — cardNumber BBP10, parallel Refractor"
-  },
-  {
-   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview:bbp11:refractor:no-auto",
-   "action": "reslug",
-   "to": "hiq:basketball:1997:topps-stadium-club:bbp11:refractor:no-auto",
-   "reason": "the subset segment was a collision work-around, not identity; BBP numbering is unique in this product so the bare address is correct",
-   "evidence": "Maurice Taylor — 1997-98 Topps Stadium Club Bowmans Best Preview Refractors Basketball — cardNumber BBP11, parallel Refractor"
-  },
-  {
-   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview:bbp12:refractor:no-auto",
-   "action": "reslug",
-   "to": "hiq:basketball:1997:topps-stadium-club:bbp12:refractor:no-auto",
-   "reason": "the subset segment was a collision work-around, not identity; BBP numbering is unique in this product so the bare address is correct",
-   "evidence": "Chauncey Billups — 1997-98 Topps Stadium Club Bowmans Best Preview Refractors Basketball — cardNumber BBP12, parallel Refractor"
-  },
-  {
-   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview:bbp13:refractor:no-auto",
-   "action": "reslug",
-   "to": "hiq:basketball:1997:topps-stadium-club:bbp13:refractor:no-auto",
-   "reason": "the subset segment was a collision work-around, not identity; BBP numbering is unique in this product so the bare address is correct",
-   "evidence": "Paul Grant — 1997-98 Topps Stadium Club Bowmans Best Preview Refractors Basketball — cardNumber BBP13, parallel Refractor"
-  },
-  {
-   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview:bbp14:refractor:no-auto",
-   "action": "reslug",
-   "to": "hiq:basketball:1997:topps-stadium-club:bbp14:refractor:no-auto",
-   "reason": "the subset segment was a collision work-around, not identity; BBP numbering is unique in this product so the bare address is correct",
-   "evidence": "Tony Battie — 1997-98 Topps Stadium Club Bowmans Best Preview Refractors Basketball — cardNumber BBP14, parallel Refractor"
-  },
-  {
-   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview:bbp15:refractor:no-auto",
-   "action": "reslug",
-   "to": "hiq:basketball:1997:topps-stadium-club:bbp15:refractor:no-auto",
-   "reason": "the subset segment was a collision work-around, not identity; BBP numbering is unique in this product so the bare address is correct",
-   "evidence": "Austin Croshere — 1997-98 Topps Stadium Club Bowmans Best Preview Refractors Basketball — cardNumber BBP15, parallel Refractor"
-  },
-  {
-   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview:bbp16:refractor:no-auto",
-   "action": "reslug",
-   "to": "hiq:basketball:1997:topps-stadium-club:bbp16:refractor:no-auto",
-   "reason": "the subset segment was a collision work-around, not identity; BBP numbering is unique in this product so the bare address is correct",
-   "evidence": "Brevin Knight — 1997-98 Topps Stadium Club Bowmans Best Preview Refractors Basketball — cardNumber BBP16, parallel Refractor"
-  },
-  {
-   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview:bbp17:refractor:no-auto",
-   "action": "reslug",
-   "to": "hiq:basketball:1997:topps-stadium-club:bbp17:refractor:no-auto",
-   "reason": "the subset segment was a collision work-around, not identity; BBP numbering is unique in this product so the bare address is correct",
-   "evidence": "Bobby Jackson — 1997-98 Topps Stadium Club Bowmans Best Preview Refractors Basketball — cardNumber BBP17, parallel Refractor"
-  },
-  {
-   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview:bbp18:refractor:no-auto",
-   "action": "reslug",
-   "to": "hiq:basketball:1997:topps-stadium-club:bbp18:refractor:no-auto",
-   "reason": "the subset segment was a collision work-around, not identity; BBP numbering is unique in this product so the bare address is correct",
-   "evidence": "Johnny Taylor — 1997-98 Topps Stadium Club Bowmans Best Preview Refractors Basketball — cardNumber BBP18, parallel Refractor"
-  },
-  {
-   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview:bbp19:refractor:no-auto",
-   "action": "reslug",
-   "to": "hiq:basketball:1997:topps-stadium-club:bbp19:refractor:no-auto",
-   "reason": "the subset segment was a collision work-around, not identity; BBP numbering is unique in this product so the bare address is correct",
-   "evidence": "Scot Pollard — 1997-98 Topps Stadium Club Bowmans Best Preview Refractors Basketball — cardNumber BBP19, parallel Refractor"
-  },
-  {
-   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview:bbp2:refractor:no-auto",
-   "action": "reslug",
-   "to": "hiq:basketball:1997:topps-stadium-club:bbp2:refractor:no-auto",
-   "reason": "the subset segment was a collision work-around, not identity; BBP numbering is unique in this product so the bare address is correct",
-   "evidence": "Gary Payton — 1997-98 Topps Stadium Club Bowmans Best Preview Refractors Basketball — cardNumber BBP2, parallel Refractor"
-  },
-  {
-   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview:bbp20:refractor:no-auto",
-   "action": "reslug",
-   "to": "hiq:basketball:1997:topps-stadium-club:bbp20:refractor:no-auto",
-   "reason": "the subset segment was a collision work-around, not identity; BBP numbering is unique in this product so the bare address is correct",
-   "evidence": "Tariq Abdul-Wahad — 1997-98 Topps Stadium Club Bowmans Best Preview Refractors Basketball — cardNumber BBP20, parallel Refractor"
-  },
-  {
-   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview:bbp3:refractor:no-auto",
-   "action": "reslug",
-   "to": "hiq:basketball:1997:topps-stadium-club:bbp3:refractor:no-auto",
-   "reason": "the subset segment was a collision work-around, not identity; BBP numbering is unique in this product so the bare address is correct",
-   "evidence": "Grant Hill — 1997-98 Topps Stadium Club Bowmans Best Preview Refractors Basketball — cardNumber BBP3, parallel Refractor"
-  },
-  {
-   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview:bbp4:refractor:no-auto",
-   "action": "reslug",
-   "to": "hiq:basketball:1997:topps-stadium-club:bbp4:refractor:no-auto",
-   "reason": "the subset segment was a collision work-around, not identity; BBP numbering is unique in this product so the bare address is correct",
-   "evidence": "Anfernee Hardaway — 1997-98 Topps Stadium Club Bowmans Best Preview Refractors Basketball — cardNumber BBP4, parallel Refractor"
-  },
-  {
-   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview:bbp5:refractor:no-auto",
-   "action": "reslug",
-   "to": "hiq:basketball:1997:topps-stadium-club:bbp5:refractor:no-auto",
-   "reason": "the subset segment was a collision work-around, not identity; BBP numbering is unique in this product so the bare address is correct",
-   "evidence": "Karl Malone — 1997-98 Topps Stadium Club Bowmans Best Preview Refractors Basketball — cardNumber BBP5, parallel Refractor"
-  },
-  {
-   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview:bbp6:refractor:no-auto",
-   "action": "reslug",
-   "to": "hiq:basketball:1997:topps-stadium-club:bbp6:refractor:no-auto",
-   "reason": "the subset segment was a collision work-around, not identity; BBP numbering is unique in this product so the bare address is correct",
-   "evidence": "Glen Rice — 1997-98 Topps Stadium Club Bowmans Best Preview Refractors Basketball — cardNumber BBP6, parallel Refractor"
-  },
-  {
-   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview:bbp7:refractor:no-auto",
-   "action": "reslug",
-   "to": "hiq:basketball:1997:topps-stadium-club:bbp7:refractor:no-auto",
-   "reason": "the subset segment was a collision work-around, not identity; BBP numbering is unique in this product so the bare address is correct",
-   "evidence": "Antoine Walker — 1997-98 Topps Stadium Club Bowmans Best Preview Refractors Basketball — cardNumber BBP7, parallel Refractor"
-  },
-  {
-   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview:bbp8:refractor:no-auto",
-   "action": "reslug",
-   "to": "hiq:basketball:1997:topps-stadium-club:bbp8:refractor:no-auto",
-   "reason": "the subset segment was a collision work-around, not identity; BBP numbering is unique in this product so the bare address is correct",
-   "evidence": "Alonzo Mourning — 1997-98 Topps Stadium Club Bowmans Best Preview Refractors Basketball — cardNumber BBP8, parallel Refractor"
-  },
-  {
-   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview:bbp9:refractor:no-auto",
-   "action": "reslug",
-   "to": "hiq:basketball:1997:topps-stadium-club:bbp9:refractor:no-auto",
-   "reason": "the subset segment was a collision work-around, not identity; BBP numbering is unique in this product so the bare address is correct",
-   "evidence": "Shareef Abdur-Rahim — 1997-98 Topps Stadium Club Bowmans Best Preview Refractors Basketball — cardNumber BBP9, parallel Refractor"
-  },
-  {
-   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview-atomic:bbp1:refractor:no-auto",
-   "action": "reslug",
-   "to": "hiq:basketball:1997:topps-stadium-club:bbp1:atomic-refractor:no-auto",
-   "reason": "the Atomic page wrote parallel 'Refractor' with the qualifier only in subsetName; Atomic Refractor is its own rung and gets its own address",
-   "evidence": "Allen Iverson — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP1, stored parallel Refractor, subsetName Bowmans Best Preview Atomic"
-  },
-  {
-   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview-atomic:bbp10:refractor:no-auto",
-   "action": "reslug",
-   "to": "hiq:basketball:1997:topps-stadium-club:bbp10:atomic-refractor:no-auto",
-   "reason": "the Atomic page wrote parallel 'Refractor' with the qualifier only in subsetName; Atomic Refractor is its own rung and gets its own address",
-   "evidence": "Shaquille O'Neal — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP10, stored parallel Refractor, subsetName Bowmans Best Preview Atomic"
-  },
-  {
-   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview-atomic:bbp11:refractor:no-auto",
-   "action": "reslug",
-   "to": "hiq:basketball:1997:topps-stadium-club:bbp11:atomic-refractor:no-auto",
-   "reason": "the Atomic page wrote parallel 'Refractor' with the qualifier only in subsetName; Atomic Refractor is its own rung and gets its own address",
-   "evidence": "Maurice Taylor — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP11, stored parallel Refractor, subsetName Bowmans Best Preview Atomic"
-  },
-  {
-   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview-atomic:bbp12:refractor:no-auto",
-   "action": "reslug",
-   "to": "hiq:basketball:1997:topps-stadium-club:bbp12:atomic-refractor:no-auto",
-   "reason": "the Atomic page wrote parallel 'Refractor' with the qualifier only in subsetName; Atomic Refractor is its own rung and gets its own address",
-   "evidence": "Chauncey Billups — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP12, stored parallel Refractor, subsetName Bowmans Best Preview Atomic"
-  },
-  {
-   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview-atomic:bbp13:refractor:no-auto",
-   "action": "reslug",
-   "to": "hiq:basketball:1997:topps-stadium-club:bbp13:atomic-refractor:no-auto",
-   "reason": "the Atomic page wrote parallel 'Refractor' with the qualifier only in subsetName; Atomic Refractor is its own rung and gets its own address",
-   "evidence": "Paul Grant — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP13, stored parallel Refractor, subsetName Bowmans Best Preview Atomic"
-  },
-  {
-   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview-atomic:bbp14:refractor:no-auto",
-   "action": "reslug",
-   "to": "hiq:basketball:1997:topps-stadium-club:bbp14:atomic-refractor:no-auto",
-   "reason": "the Atomic page wrote parallel 'Refractor' with the qualifier only in subsetName; Atomic Refractor is its own rung and gets its own address",
-   "evidence": "Tony Battie — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP14, stored parallel Refractor, subsetName Bowmans Best Preview Atomic"
-  },
-  {
-   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview-atomic:bbp15:refractor:no-auto",
-   "action": "reslug",
-   "to": "hiq:basketball:1997:topps-stadium-club:bbp15:atomic-refractor:no-auto",
-   "reason": "the Atomic page wrote parallel 'Refractor' with the qualifier only in subsetName; Atomic Refractor is its own rung and gets its own address",
-   "evidence": "Austin Croshere — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP15, stored parallel Refractor, subsetName Bowmans Best Preview Atomic"
-  },
-  {
-   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview-atomic:bbp16:refractor:no-auto",
-   "action": "reslug",
-   "to": "hiq:basketball:1997:topps-stadium-club:bbp16:atomic-refractor:no-auto",
-   "reason": "the Atomic page wrote parallel 'Refractor' with the qualifier only in subsetName; Atomic Refractor is its own rung and gets its own address",
-   "evidence": "Brevin Knight — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP16, stored parallel Refractor, subsetName Bowmans Best Preview Atomic"
-  },
-  {
-   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview-atomic:bbp17:refractor:no-auto",
-   "action": "reslug",
-   "to": "hiq:basketball:1997:topps-stadium-club:bbp17:atomic-refractor:no-auto",
-   "reason": "the Atomic page wrote parallel 'Refractor' with the qualifier only in subsetName; Atomic Refractor is its own rung and gets its own address",
-   "evidence": "Bobby Jackson — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP17, stored parallel Refractor, subsetName Bowmans Best Preview Atomic"
-  },
-  {
-   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview-atomic:bbp18:refractor:no-auto",
-   "action": "reslug",
-   "to": "hiq:basketball:1997:topps-stadium-club:bbp18:atomic-refractor:no-auto",
-   "reason": "the Atomic page wrote parallel 'Refractor' with the qualifier only in subsetName; Atomic Refractor is its own rung and gets its own address",
-   "evidence": "Johnny Taylor — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP18, stored parallel Refractor, subsetName Bowmans Best Preview Atomic"
-  },
-  {
-   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview-atomic:bbp19:refractor:no-auto",
-   "action": "reslug",
-   "to": "hiq:basketball:1997:topps-stadium-club:bbp19:atomic-refractor:no-auto",
-   "reason": "the Atomic page wrote parallel 'Refractor' with the qualifier only in subsetName; Atomic Refractor is its own rung and gets its own address",
-   "evidence": "Scot Pollard — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP19, stored parallel Refractor, subsetName Bowmans Best Preview Atomic"
-  },
-  {
-   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview-atomic:bbp2:refractor:no-auto",
-   "action": "reslug",
-   "to": "hiq:basketball:1997:topps-stadium-club:bbp2:atomic-refractor:no-auto",
-   "reason": "the Atomic page wrote parallel 'Refractor' with the qualifier only in subsetName; Atomic Refractor is its own rung and gets its own address",
-   "evidence": "Gary Payton — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP2, stored parallel Refractor, subsetName Bowmans Best Preview Atomic"
-  },
-  {
-   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview-atomic:bbp20:refractor:no-auto",
-   "action": "reslug",
-   "to": "hiq:basketball:1997:topps-stadium-club:bbp20:atomic-refractor:no-auto",
-   "reason": "the Atomic page wrote parallel 'Refractor' with the qualifier only in subsetName; Atomic Refractor is its own rung and gets its own address",
-   "evidence": "Tariq Abdul-Wahad — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP20, stored parallel Refractor, subsetName Bowmans Best Preview Atomic"
-  },
-  {
-   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview-atomic:bbp3:refractor:no-auto",
-   "action": "reslug",
-   "to": "hiq:basketball:1997:topps-stadium-club:bbp3:atomic-refractor:no-auto",
-   "reason": "the Atomic page wrote parallel 'Refractor' with the qualifier only in subsetName; Atomic Refractor is its own rung and gets its own address",
-   "evidence": "Grant Hill — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP3, stored parallel Refractor, subsetName Bowmans Best Preview Atomic"
-  },
-  {
-   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview-atomic:bbp4:refractor:no-auto",
-   "action": "reslug",
-   "to": "hiq:basketball:1997:topps-stadium-club:bbp4:atomic-refractor:no-auto",
-   "reason": "the Atomic page wrote parallel 'Refractor' with the qualifier only in subsetName; Atomic Refractor is its own rung and gets its own address",
-   "evidence": "Anfernee Hardaway — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP4, stored parallel Refractor, subsetName Bowmans Best Preview Atomic"
-  },
-  {
-   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview-atomic:bbp5:refractor:no-auto",
-   "action": "reslug",
-   "to": "hiq:basketball:1997:topps-stadium-club:bbp5:atomic-refractor:no-auto",
-   "reason": "the Atomic page wrote parallel 'Refractor' with the qualifier only in subsetName; Atomic Refractor is its own rung and gets its own address",
-   "evidence": "Karl Malone — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP5, stored parallel Refractor, subsetName Bowmans Best Preview Atomic"
-  },
-  {
-   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview-atomic:bbp6:refractor:no-auto",
-   "action": "reslug",
-   "to": "hiq:basketball:1997:topps-stadium-club:bbp6:atomic-refractor:no-auto",
-   "reason": "the Atomic page wrote parallel 'Refractor' with the qualifier only in subsetName; Atomic Refractor is its own rung and gets its own address",
-   "evidence": "Glen Rice — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP6, stored parallel Refractor, subsetName Bowmans Best Preview Atomic"
-  },
-  {
-   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview-atomic:bbp7:refractor:no-auto",
-   "action": "reslug",
-   "to": "hiq:basketball:1997:topps-stadium-club:bbp7:atomic-refractor:no-auto",
-   "reason": "the Atomic page wrote parallel 'Refractor' with the qualifier only in subsetName; Atomic Refractor is its own rung and gets its own address",
-   "evidence": "Antoine Walker — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP7, stored parallel Refractor, subsetName Bowmans Best Preview Atomic"
-  },
-  {
-   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview-atomic:bbp8:refractor:no-auto",
-   "action": "reslug",
-   "to": "hiq:basketball:1997:topps-stadium-club:bbp8:atomic-refractor:no-auto",
-   "reason": "the Atomic page wrote parallel 'Refractor' with the qualifier only in subsetName; Atomic Refractor is its own rung and gets its own address",
-   "evidence": "Alonzo Mourning — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP8, stored parallel Refractor, subsetName Bowmans Best Preview Atomic"
-  },
-  {
-   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview-atomic:bbp9:refractor:no-auto",
-   "action": "reslug",
-   "to": "hiq:basketball:1997:topps-stadium-club:bbp9:atomic-refractor:no-auto",
-   "reason": "the Atomic page wrote parallel 'Refractor' with the qualifier only in subsetName; Atomic Refractor is its own rung and gets its own address",
-   "evidence": "Shareef Abdur-Rahim — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP9, stored parallel Refractor, subsetName Bowmans Best Preview Atomic"
-  }
- ],
- "excluded": [
-  {
-   "note": "20 bare BASE rows hiq:basketball:1997:topps-stadium-club:bbp<n>:base:no-auto — correct as they stand."
-  },
-  {
-   "note": "240 rows, source sportscardchecklist-2026-09-04 — the legitimate Stadium Club proper checklist. Deliberately NOT touched."
+   "to": "hiq:basketball:1997:bowmans-best-preview:bbp9:refractor:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key, not a subset of the host it was packed out in. The Stadium Club host is provenance; the insert is the identity.",
+   "evidence": "Shareef Abdur-Rahim — 1997-98 Topps Stadium Club Bowmans Best Preview Basketball — cardNumber BBP9, parallel \"Refractor\", subsetName \"Bowmans Best Preview\"; source sportscardchecklist-2026-09-04"
   }
  ]
 }

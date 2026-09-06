@@ -236,6 +236,85 @@ const SAMPLE_CAP = Number(process.env.SAMPLE_CAP || 500);
 /** At most this many lines from any ONE card, so no single pool can crowd the
  *  sample the way slot 27's did. 500 / 4 still leaves room for 125 cards. */
 const SAMPLE_PER_CARD_CAP = Math.max(1, Number(process.env.SAMPLE_PER_CARD_CAP || 4));
+/**
+ * THE IN-SLOT ROW FILTER (2026-09-07).
+ *
+ * WHY IT IS A ROW FILTER AND NOT A SHARD AXIS. The shard table is a MEASURED
+ * packing of 16.3M pool rows into 32 slots, and `feedback_shard_axis_must_be_
+ * guaranteed_and_measured` is explicit that the axis is re-measured, never
+ * re-typed. A `sports` axis cannot be added to it without re-measuring the
+ * whole packing -- and the sports that need narrowing are exactly the ones the
+ * table does NOT split on: SPORT_CLASSES names baseball, football, basketball
+ * and pokemon, so soccer, hockey and every other vertical live inside the
+ * catch-all "other" and inside undifferentiated whole-year units.
+ *
+ * So this narrows the rows a slot CLASSIFIES, never the rows a slot OWNS. The
+ * slot still reads its own query, still walks its own pages, and `rowInSlot`
+ * still decides membership first. A filtered run of slot N is a strict subset
+ * of an unfiltered run of slot N: the shard axis is untouched and two slots
+ * can no more overlap under a filter than without one.
+ *
+ *   SPORTS       comma list, matched against the row's OWN sport segment
+ *   SETKEY_LIKE  prefix/like on the row's STORED setKey segment
+ *
+ * BOTH READ THE STORED ROW, NOT THE DERIVATION. The filter decides which rows
+ * are examined; the classifier decides what they are. A filter that read the
+ * derived key would silently change WHICH rows a census counts as it changed
+ * what the deriver says, and two runs of the same dispatch would disagree.
+ *
+ * THE SETKEY SEGMENT IS READ FROM THE SLUG, and falls back to normalizing
+ * setName only when the slug cannot answer. `hiq:<sport>:<year>:<setKey>:...`
+ * is the address the row actually occupies, which is the thing a restem is
+ * scoped against -- `setName` is free text and two rows in one pool can spell
+ * it differently.
+ *
+ * `like` is a PREFIX, deliberately: `panini-prizm` selects `panini-prizm` and
+ * every `panini-prizm-*` specialization in one dispatch, which is the shape a
+ * family->product restem is scoped by. It is anchored at the start, so it can
+ * never select `donruss-panini-prizm`-shaped keys the caller did not name.
+ *
+ * COUNTED SEPARATELY FROM `otherSlot`. A row another slot owns and a row this
+ * slot owns but the filter excluded are two different facts, and the banner
+ * prints both: `filtered` is the population this dispatch declined to look at,
+ * and it is what tells a reader that a filtered run's small `seen` is the
+ * filter working rather than the shard being empty.
+ */
+const SPORTS_FILTER = String(process.env.SPORTS || "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+const SETKEY_LIKE = String(process.env.SETKEY_LIKE || "").trim().toLowerCase();
+const ROW_FILTER_ON = SPORTS_FILTER.length > 0 || SETKEY_LIKE.length > 0;
+
+/** The setKey segment of a `hiq:<sport>:<year>:<setKey>:...` slug, or "" when
+ *  the slug is not that shape. Read from the ADDRESS the row occupies. */
+function slugSetKeySegment(slug) {
+  const parts = String(slug ?? "").split(":");
+  // hiq | sport | year | setKey | ... -- fewer segments is not this shape.
+  return parts.length >= 4 && parts[0] === "hiq" ? String(parts[3] ?? "").toLowerCase() : "";
+}
+
+/**
+ * Does this row pass the in-slot filter? A row the filter excludes is counted
+ * and skipped before any derivation, catalog read or classification -- the
+ * filter is also what makes a narrow dispatch CHEAP.
+ */
+function rowPassesFilter(row, deps) {
+  if (!ROW_FILTER_ON) return true;
+  if (SPORTS_FILTER.length) {
+    const sport = String(row?.sport ?? "").trim().toLowerCase();
+    if (!SPORTS_FILTER.includes(sport)) return false;
+  }
+  if (SETKEY_LIKE) {
+    let seg = slugSetKeySegment(row?.cardId);
+    // A row whose slug is not the canonical shape still has a stored set name,
+    // and normalizing it is the same reading `storedIdentity` takes.
+    if (!seg && row?.setName && deps?.normalizeSetKey) {
+      try { seg = String(deps.normalizeSetKey(String(row.setName)) ?? "").toLowerCase(); } catch { seg = ""; }
+    }
+    if (!seg) return false;                       // cannot answer -> not selected
+    if (seg !== SETKEY_LIKE && !seg.startsWith(`${SETKEY_LIKE}-`)) return false;
+  }
+  return true;
+}
+
 
 const f = (n) => Number(n ?? 0).toLocaleString();
 const started = Date.now();
@@ -520,6 +599,16 @@ async function main() {
   console.log(`  this slot owns ${q.units.length} unit(s), ${f(expected)} rows measured at capture:`);
   for (const u of q.units) console.log(`    ${String(u.key).padEnd(28)} ${f(u.rows).padStart(11)}`);
   if (YEARS.length) console.log(`  YEARS filter: ${YEARS.join(",")}`);
+  // THE FILTER NAMES ITSELF BEFORE A ROW IS READ. A run whose log does not
+  // state its own scope cannot be audited after the fact -- the same reason
+  // the apply class scope prints above.
+  if (ROW_FILTER_ON) {
+    console.log(`  IN-SLOT ROW FILTER (narrows the rows this slot CLASSIFIES; the shard axis is untouched):`);
+    console.log(`    sports       ${SPORTS_FILTER.length ? SPORTS_FILTER.join(",") : "(any)"}   <- matched against the row's own sport`);
+    console.log(`    setkey_like  ${SETKEY_LIKE || "(any)"}   <- prefix on the row's STORED setKey segment`);
+  } else {
+    console.log(`  IN-SLOT ROW FILTER: none -- every row this slot owns is classified.`);
+  }
   // THE BANNER SAYS WHICH CLASSES ARE ARMED, BEFORE A ROW IS READ. A run whose
   // log does not name its own scope cannot be audited after the fact.
   if (MODE === "apply-improve") {
@@ -972,7 +1061,7 @@ async function main() {
   const yfvByDecade = new Map(), yfvBySetKey = new Map(), yfvBySport = new Map(), yfvSamples = [];
   const sfpByPair = new Map(), sfpBySetKey = new Map(), sfpSamples = [];
   let splitTotal = 0;
-  const stats = { seen: 0, otherSlot: 0, intended: 0, written: 0, skipped: 0, failed: 0, duplicatesLeft: 0, alreadyGone: 0, notReached: 0 };
+  const stats = { seen: 0, otherSlot: 0, filtered: 0, intended: 0, written: 0, skipped: 0, failed: 0, duplicatesLeft: 0, alreadyGone: 0, notReached: 0 };
   const bump = (m, k, n = 1) => m.set(k, (m.get(k) ?? 0) + n);
 
   /**
@@ -1037,6 +1126,10 @@ async function main() {
     const { resources } = await retry(() => it.fetchNext());
     for (const row of resources ?? []) {
       if (!rowInSlot(row, q.units)) { stats.otherSlot++; continue; }
+      // THE IN-SLOT ROW FILTER, applied after slot membership and before any
+      // derivation: a row this dispatch was not asked to look at costs no
+      // parser call and no catalog read. See SPORTS_FILTER above.
+      if (!rowPassesFilter(row, deps)) { stats.filtered++; continue; }
       if (LIMIT && stats.seen >= LIMIT) { stopReason = stopReason ?? `stopped at the LIMIT of ${f(LIMIT)} rows`; break page; }
       stats.seen++;
       const stored = storedIdentity(row, deps);
@@ -1203,6 +1296,12 @@ async function main() {
   const total = stats.seen;
   const pct = (n) => total ? `${((n / total) * 100).toFixed(2)}%` : "-";
   console.log(`\nCENSUS  slot ${SLOT}/${SLOTS}  rows classified ${f(total)}${stats.otherSlot ? `  (${f(stats.otherSlot)} matched the query's year/sport predicate but belong to other slots' hash parts)` : ""}`);
+  // SKIPPED-BY-FILTER AND CLASSIFIED ARE TWO NUMBERS, NEVER ONE. Without this
+  // line a filtered run looks like an empty shard; with it, the reader can see
+  // that the slot was full and this dispatch chose to look at part of it.
+  if (ROW_FILTER_ON) {
+    console.log(`  in-slot row filter: ${f(stats.filtered)} row(s) skipped by filter, ${f(stats.seen)} classified  (sports=${SPORTS_FILTER.join(",") || "any"} setkey_like=${SETKEY_LIKE || "any"})`);
+  }
   for (const klass of [K.AGREE, K.IMPROVE, K.CONFLICT, K.UNDERIVABLE]) {
     const prot = byTier.get(`${klass}/${K.PROTECTED}`) ?? 0, auto = byTier.get(`${klass}/${K.AUTO}`) ?? 0;
     console.log(`  ${klass.padEnd(12)} ${f(counts[klass]).padStart(11)}  ${pct(counts[klass]).padStart(7)}   AUTO ${f(auto).padStart(10)}  PROTECTED ${f(prot).padStart(6)}`);
@@ -1316,6 +1415,9 @@ async function main() {
     job: "rematch-sold-comps", mode: MODE, slot: SLOT, slots: SLOTS,
     axis: "(cardYear, sportClass, sha1(id) % parts)", measuredAt: SHARD_TABLE.measuredAt,
     units: q.units, expectedRows: expected, classified: total, otherSlot: stats.otherSlot,
+    // The filter is part of the census's identity: two censuses of the same
+    // slot are only comparable when they were taken through the same filter.
+    rowFilter: ROW_FILTER_ON ? { sports: SPORTS_FILTER, setkeyLike: SETKEY_LIKE || null, skipped: stats.filtered } : null,
     counts, byTier: Object.fromEntries(byTier), defects: Object.fromEntries(defects),
     // Subclass counts are INCLUDED in `counts` -- BASE-EVICTION is a narrowing
     // of CONFLICT, so an auditor summing both would double-count.
@@ -1986,6 +2088,9 @@ function revertVerdict(row) {
 module.exports = {
   unitsForSlot, unitPredicate, slotQuery, rowInSlot, storedIdentity, deriveIdentity,
   hashPartOf, SPORT_CLASSES, SHARD_TABLE, APPLY_SCOPE_RAW,
+  // THE IN-SLOT ROW FILTER, exported so its selection rule is pinned on the
+  // SHIPPED function rather than on a test's re-implementation of it.
+  rowPassesFilter, slugSetKeySegment, SPORTS_FILTER, SETKEY_LIKE, ROW_FILTER_ON,
   // The revert pass. `revertVerdict` is pure over one document, so the
   // SELECTION rule can be pinned with plain objects and no Cosmos at all;
   // `revertEvictions` is driven against the stubbed container the other apply
