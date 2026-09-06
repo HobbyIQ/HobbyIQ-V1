@@ -395,11 +395,81 @@ for (const cell of CELLS) {
 const SET_URL_RE =
   /\/set-(\d+)\/(\d{4})(?:-(\d{2}))?-(.+?)-(football|basketball|hockey|baseball)-trading-card-checklist\/?$/;
 
+/**
+ * CF-THE-ADDSLASHES-LEAK-IS-IN-THE-URL-TOO (2026-09-06, from the refused
+ * re-ingest of 1997 Bowman's Best set-13670 and set-13671).
+ *
+ * The BRAND_RE note above records that this source slugs Bowman's Best as
+ * `1994-bowman\s-best` -- a PHP addslashes pass leaking into the URL. That note
+ * made the brand PATTERN accept the backslash, which was right and not enough:
+ * the escaped remainder was then carried VERBATIM into `setName`, `sourceRef`
+ * and `derivedSetKey`, and every consumer downstream inherited it.
+ *
+ * WHAT IT COST, measured on the manifest today: 60 entries -- 45 `Bowman\s`
+ * and 15 `Mcdonald\s`, across baseball 1990s, hockey 2000s and basketball
+ * 1990s-2000s. On the two rung pages the coordinator dispatched:
+ *
+ *   rest = "bowman\s-best-atomic-refractors"
+ *     parallelFromSlug  -> "Atomic Refractor"      (correct)
+ *     splitParentAndSubset -> parentSetKey ""      (NO BRAND MATCHED)
+ *     => parallelOfParent = false
+ *
+ * and a rung page with no parent claim carries zero base cards, so the driver's
+ * zero-base gate refuses the whole file. That is the reconciliation the run
+ * printed: `intended 2 = written 0 + failed 2`. It is ALSO why these rows
+ * carried `setKey: bowman` -- `bowman\s-best` never matched the `bowmans-best`
+ * entry in PARENT_BRANDS, so the brand walk fell through to bare `bowman`. One
+ * cause, three symptoms.
+ *
+ * THE SITE ITSELF DROPS THE APOSTROPHE. Verified by fetch on 2026-09-06, all
+ * three forms return HTTP 200 because the server keys on `set-<id>` and is
+ * lenient about the slug -- so this is NOT a 404 fix. It is a fix for OUR
+ * parsers, which key on the slug text and are not lenient at all. The
+ * apostrophe-dropped spelling is the one the site's own canonical links use and
+ * the one the catalog already spells (`bowmans-best`), so that is what we store.
+ *
+ * `\'` and `\"` are stripped for the same reason: they are the other two escapes
+ * an addslashes pass emits, and a source that starts serving them would
+ * reproduce this bug in a new costume. `\\` collapses to a single backslash
+ * first so an already-doubled escape is not half-unescaped.
+ */
+function unescapeAddslashes(s) {
+  return String(s ?? "").replace(/\\(.)/g, "$1");
+}
+
+/**
+ * The slug as the SITE canonically spells it: addslashes undone, then the
+ * apostrophe DROPPED rather than turned into a separator.
+ *
+ * `bowman\s-best` -> `bowmans-best`, never `bowman-s-best`. The distinction is
+ * load-bearing: `bowman-s-best` is not what the catalog spells and would not
+ * match `bowmans-best` in PARENT_BRANDS either, so it would leave the same
+ * three symptoms with a tidier-looking slug.
+ */
+function canonicalSlug(rest) {
+  return unescapeAddslashes(rest).replace(/'/g, "");
+}
+
+/** The whole set URL with its slug canonicalised; the `set-<id>` is untouched. */
+function canonicalSetUrl(url) {
+  const u = String(url ?? "");
+  const m = SET_URL_RE.exec(u);
+  if (!m) return unescapeAddslashes(u).replace(/'/g, "");
+  const rest = canonicalSlug(m[4]);
+  const season = m[3] ? `${m[2]}-${m[3]}` : m[2];
+  const base = u.slice(0, u.indexOf(`/set-${m[1]}/`));
+  return `${base}/set-${m[1]}/${season}-${rest}-${m[5]}-trading-card-checklist`;
+}
+
 function classify(url) {
   const m = SET_URL_RE.exec(url);
   if (!m) return null;
   const year = Number(m[2]);
-  const rest = m[4];
+  // CANONICALISE AT THE BOUNDARY. Everything this function returns -- the slug
+  // remainder, the set name derived from it, the URL the lane will fetch --
+  // flows from `rest`, so undoing the escape here fixes all three at once and
+  // nothing downstream has to remember to.
+  const rest = canonicalSlug(m[4]);
   const sport = m[5];
   for (const cell of CELLS) {
     if (cell.sport !== sport) continue;
@@ -413,7 +483,13 @@ function classify(url) {
       season: m[3] ? `${year}-${m[3]}` : String(year),
       rest,
       sport,
-      url,
+      // THE URL THE LANE WILL FETCH, canonical. Storing the raw sitemap string
+      // here is what put the backslash into 60 manifest `sourceRef`s, and the
+      // fetcher parses that string to derive the rung and the parent product.
+      url: canonicalSetUrl(url),
+      // The sitemap's own spelling, kept so an escaped source is auditable
+      // rather than silently rewritten.
+      sourceUrlRaw: url,
     };
   }
   return null;
@@ -571,4 +647,5 @@ if (require.main === module) {
   main().catch((e) => { console.error("FATAL", e.message); process.exit(1); });
 }
 
-module.exports = { classify, setNameFrom, CELLS, BRAND_RE, SET_URL_RE, locs };
+module.exports = { classify, setNameFrom, CELLS, BRAND_RE, SET_URL_RE, locs,
+  unescapeAddslashes, canonicalSlug, canonicalSetUrl };
