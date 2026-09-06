@@ -583,8 +583,22 @@ async function auditRederivation(db, res, bud, nowMs) {
   const PER_CARD_CAP = Math.max(1, Number(process.env.I9_PER_CARD_CAP ?? 4));
   const frame = INV.buildSampleFrame({ shardTable: SHARD_TABLE, nowMs, target, perCardCap: PER_CARD_CAP });
   const reservoir = INV.makeCardReservoir(PER_CARD_CAP);
-  const SELECT = "c.id, c.cardId, c.hobbyiqCardId, c.title, c.source, c.parallel, c.setKey, "
-    + "c.cardYear, c.cardNumber, c.printRun";
+  // THE WHOLE DOCUMENT, BECAUSE THE CLASSIFIER READS THE WHOLE DOCUMENT (#1878).
+  //
+  // This was a 10-field projection, and it starved the classifier of eight of
+  // the fields it reads. `storedIdentity` reads row.setName (NOT row.setKey --
+  // the projection fetched the wrong field), row.sport, row.isAuto,
+  // row.gradeCompany and row.gradeValue; `provenanceTier` reads
+  // row.verifiedByUser, row.rekeyedReason and row.relocatedReason. Every one
+  // arrived undefined, so EVERY row looked like it had a blank setKey and a
+  // blank sport -- which is why 100% of the 1,178 CONFLICT rows in run
+  // 34027575655 carried `filled:setKey,sport`, and why the class table held
+  // zero AGREE on a corpus the census measures at 47.1% AGREE.
+  //
+  // The fleet reads `SELECT * FROM c` (rematch-sold-comps.cjs slotQuery). One
+  // classification path means one read shape: a projection is a second, silent
+  // definition of what a row is.
+  const SELECT = "*";
 
   if (!frame.plan.length) {
     res.notes.push("NOT RUN — the shard table carries no slots, so there is no frame to draw from");
@@ -638,16 +652,69 @@ async function auditRederivation(db, res, bud, nowMs) {
     return;
   }
 
+  // THE CHECKLIST GATE, AS THE FLEET ASKS IT (#1878).
+  //
+  // rematch-sold-comps.cjs point-reads the DERIVED slug in card_catalog and
+  // calls it backed when a named checklist source appears among
+  // source/sourceSystem/sources[], or the row carries `checklistBacked: true`.
+  // The auditor passed a hardcoded `false`, which made the second gate --
+  // "a match proves nothing unless checklist-backed" -- reject every
+  // strictly-more-specific row, so IMPROVE was unreachable by construction.
+  //
+  // Cached per slug: a sample of ~1,800 rows resolves to far fewer distinct
+  // destinations, and a point read is ~1 RU.
+  const cat = db.container("card_catalog");
+  const CHECKLIST_SOURCE_RE = /checklist|beckett|tcdb|insider|bcp|baseballcardpedia|tcgdex/i;
+  const backedCache = new Map();
+  const checklistBackedOf = async (slug) => {
+    if (!slug) return false;
+    if (backedCache.has(slug)) return backedCache.get(slug);
+    let resource = null;
+    try { resource = (await retry(() => cat.item(slug, slug).read())).resource ?? null; }
+    catch (e) { if (e?.code !== 404 && e?.statusCode !== 404) throw e; }
+    let backed = false;
+    if (resource) {
+      const named = [resource.source, resource.sourceSystem, ...(Array.isArray(resource.sources) ? resource.sources : [])];
+      const sourceText = `${String(resource.source ?? resource.sourceSystem ?? "")},`
+        + `${Array.isArray(resource.sources) ? resource.sources.join(",") : ""}`;
+      backed = named.some((x) => CLASSIFY.isStrictChecklistSource(x))
+        || CHECKLIST_SOURCE_RE.test(sourceText)
+        || resource.checklistBacked === true;
+    }
+    backedCache.set(slug, backed);
+    return backed;
+  };
+
   const verdicts = [];
   const needsChecklistRows = [];
+  let protectedSkipped = 0;
   for (const row of resources) {
     if (bud.outOfClock()) { res.notes.push(`stopped at ${verdicts.length}/${resources.length} — ${bud.stoppedAtBudget()}`); break; }
+    // THE THRESHOLD READS ONLY ROWS THE FLEET WOULD CLASSIFY (#1878).
+    //
+    // PROTECTED rows -- ebay-user-purchase/-sale, ebay-account,
+    // manual-user-entry, anything verifiedByUser, any Drew ruling or hand/D31
+    // relocation marker -- are report-only FOREVER for the rematch
+    // (project_great_rematch_program). A disagreement on a row no lane may ever
+    // move is not a corpus defect; counting it toward a rate that gates the
+    // fleet makes the number mean something it does not. They are COUNTED and
+    // NAMED, never silently dropped.
+    if (CLASSIFY.provenanceTier(row).tier !== CLASSIFY.AUTO) { protectedSkipped++; continue; }
     res.sample++;
     try {
+      // Derive FIRST so the checklist gate can be asked about the DERIVED
+      // slug -- the destination, which is what the fleet asks about -- and
+      // hand the same derivation to the classifier rather than repeating it.
+      const der = deriver.deriveIdentity(row, deriver.deps);
       const v = INV.classifyStoredRow(row, CLASSIFY, {
-        deriveIdentity: deriver.deriveIdentity,
         storedIdentity: deriver.storedIdentity,
         deriveDeps: deriver.deps,
+        derived: der && der.ok ? der.identity : null,
+        derivationReasons: der && der.ok ? [] : (der?.reasons ?? ["derivation-refused"]),
+        // THE SAME CHECKLIST GATE THE FLEET ASKS. Without it every
+        // strictly-more-specific row returns CONFLICT/not-checklist-backed and
+        // the class table cannot hold one IMPROVE.
+        checklistBacked: der && der.ok ? await checklistBackedOf(der.slug) : false,
       });
       verdicts.push(v);
       // A CONFLICT is the row-level finding. IMPROVE and UNDERIVABLE are
@@ -696,6 +763,16 @@ async function auditRederivation(db, res, bud, nowMs) {
   // breach: the corpus legitimately moves, and the point is that the movement
   // is VISIBLE. A zero-AGREE or single-pool sample is the frame failing, and
   // the rate it produced must not be read as a corpus rate.
+  if (protectedSkipped) {
+    // NAMED, NEVER SILENTLY DROPPED. The fleet may never move these rows, so
+    // they are outside the rate the threshold reads -- and saying how many were
+    // set aside is what keeps that exclusion honest.
+    res.notes.push(
+      `${f(protectedSkipped)} PROTECTED row(s) excluded from the rate — user-sourced, verified or `
+      + "ruled rows are report-only forever for the rematch, so a disagreement on one is not a "
+      + "corpus defect the fleet could act on",
+    );
+  }
   res.frameHealth = INV.frameHealth({
     byClass: rates.byClass,
     distinctCards: reservoir.distinctCards(),
@@ -924,6 +1001,11 @@ async function main() {
       byKind: r.byKind, notes: r.notes,
       ...(r.byCell ? { byCell: r.byCell } : {}),
       ...(r.byClass ? { byClass: r.byClass } : {}),
+      // The frame-health verdict travels WITH the rate it qualifies (#1878).
+      // It reached the banner but not the artifact, so anything reading the
+      // JSON -- which is how these findings are actually consumed -- saw the
+      // rate with no way to know the frame that produced it was broken.
+      ...(r.frameHealth ? { frameHealth: r.frameHealth } : {}),
       ...(r.byConflictKind ? { byConflictKind: r.byConflictKind } : {}),
       ...(r.byAxis ? { byAxis: r.byAxis } : {}),
       ...(r.byReason ? { byReason: r.byReason } : {}),
