@@ -272,6 +272,10 @@ async function main() {
     // evidence about where the card belongs.
     const CHECKLIST = /^(beckett|checklistcenter|checklistinsider|sportscardchecklist|tcdb|cardboardchecklist|cardboardconnection|bccp|baseballcardpedia)/i;
     const claims = { from: new Map(), to: new Map() };
+    // CF-THE-STORED-PLAYERNAME-IS-NOT-THE-EVIDENCE (#1849): the RAW checklist
+    // spellings, kept beside the folded keys so a row whose stored playerName
+    // is dirty can still be corroborated against the checklist's own words.
+    const claimNames = { from: new Map(), to: new Map() };
     const catalogPlayerAt = new Map(); // slug -> playerName, for the guard
     for (const [side, key] of [["from", t.fromKey], ["to", t.toKey]]) {
       await forEachPage(cat, {
@@ -288,6 +292,9 @@ async function main() {
           const s = claims[side].get(n) ?? new Set();
           s.add(p);
           claims[side].set(n, s);
+          const rawNames = claimNames[side].get(n) ?? new Set();
+          rawNames.add(str(r.playerName));
+          claimNames[side].set(n, rawNames);
         }
         return true;
       }, 1000);
@@ -349,6 +356,8 @@ async function main() {
           destPlayerName: destSlug ? (catalogPlayerAt.get(destSlug) ?? null) : null,
           fromClaimPlayers: claims.from.get(num) ?? new Set(),
           toClaimPlayers: claims.to.get(num) ?? new Set(),
+          fromClaimNames: claimNames.from.get(num) ?? new Set(),
+          toClaimNames: claimNames.to.get(num) ?? new Set(),
           isCollisionNumber: COLLISION.has(num),
           isProtected: isProtectedRow(row),
         });

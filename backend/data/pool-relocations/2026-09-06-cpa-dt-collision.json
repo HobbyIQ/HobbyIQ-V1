@@ -1,0 +1,167 @@
+{
+ "generatedAt": "2026-09-06",
+ "forLane": "relocate-pool-rows-by-list",
+ "rulings": [
+  "CF-CARDNUMBER-ALONE-IS-NOT-IDENTITY (Beckett initials collide). CPA-DT names FOUR different cards in 2025: Diego Tornes (bowman-chrome), Devin Taylor (bowman-draft), Drew Thorpe (topps-chrome-platinum) and Dallas Turner (football topps-chrome). The number decides nothing; the player the title names decides the product.",
+  "CF-A-COLLISION-SALE-WITH-A-READABLE-PLAYER-GOES-TO-THAT-PLAYERS-ROW (Drew, 2026-09-05). Every entry here names Devin Taylor in its TITLE, so it belongs on the bowman-draft row; none of the 314 rows measured had NO readable identity, so this list parks nothing.",
+  "THE TITLE IS THE EVIDENCE, THE STORED FIELD IS NOT. repair-cpa-draft-refile reads playerName off the row and folds it with an EXACT playerKey(). 12 of the 314 cpa-dt rows carry a dirty playerName ('Draft Devin Taylor', 'Devin Taylor Oakland', 'Devin Taylor On Caes'), and ONE carries an outright wrong one ('Diego Tornes' on a title that reads 'Devin Taylor 2025 Bowman Chrome Draft 1st Auto Oakland Athletics'). Those four rows are exactly the ones the lane skips as to-key-checklist-does-not-name-this-player.",
+  "A DESTINATION MUST BE CHECKLIST-BACKED. 5 further Taylor rows are NOT relocated because their destination row does not exist in card_catalog: 'bowman-draft:cpa-dt:refractor:auto' (3 rows) and 'bowman-draft:cpa-dt:refractor:auto:num-150' (2). They are recorded in `deferred`, not routed — a repair never mints an identity from a sale.",
+  "THIS LIST IS A SUPERSET OF THE LANE, NEVER A CONFLICT WITH IT. Replaying planCrossProductSale over the same 212 chrome-stem rows: the lane MOVEs 9, and every one of those 9 is in this list with the same destination; it moves nothing this list does not. The 4 extra are the dirty-playerName rows above.",
+  "THE PRINT RUN AND THE PARALLEL NEVER MOVE. Every entry changes segment 4 (the product) and nothing else, which is the axis onlyProductSegmentMoves() enforces."
+ ],
+ "census": {
+  "rowsMeasured": 314,
+  "partitionsMeasured": 13,
+  "byTitlePlayer": {
+   "Tornes": 174,
+   "Taylor": 134,
+   "none": 6
+  },
+  "byTitleProduct": {
+   "Chrome": 180,
+   "Chrome Draft": 134
+  },
+  "alreadyOnTheRightProduct": 296,
+  "relocated": 13,
+  "deferredNoChecklistDestination": 5,
+  "parked": 0,
+  "laneWouldMove": 9,
+  "laneMissesInThisList": 4,
+  "laneMovesNotInThisList": 0
+ },
+ "deferred": [
+  {
+   "id": "tca-ebay::158171463099",
+   "fromCardId": "hiq:baseball:2025:bowman-chrome:cpa-dt:refractor:auto",
+   "wouldBeCardId": "hiq:baseball:2025:bowman-draft:cpa-dt:refractor:auto",
+   "price": 30,
+   "deferReason": "the destination hiq:baseball:2025:bowman-draft:cpa-dt:refractor:auto has NO checklist-backed card_catalog row. The only plain Refractor CPA-DT the 2025 checklists name in ANY product is /499; a bare 'refractor:auto' and a 'refractor:auto:num-150' exist for no product. Routing here would mint an identity from a sale (CF-CATALOG-MATCH-IS-SELF-CONFIRMING), so the row stays where it is until a checklist names the card.",
+   "title": "2025 Bowman Draft Chrome- 1st Bowman Auto Devin Taylor CPA-DT (AU, RC)"
+  },
+  {
+   "id": "tca-ebay::267749590031",
+   "fromCardId": "hiq:baseball:2025:bowman-chrome:cpa-dt:refractor:auto",
+   "wouldBeCardId": "hiq:baseball:2025:bowman-draft:cpa-dt:refractor:auto",
+   "price": 45,
+   "deferReason": "the destination hiq:baseball:2025:bowman-draft:cpa-dt:refractor:auto has NO checklist-backed card_catalog row. The only plain Refractor CPA-DT the 2025 checklists name in ANY product is /499; a bare 'refractor:auto' and a 'refractor:auto:num-150' exist for no product. Routing here would mint an identity from a sale (CF-CATALOG-MATCH-IS-SELF-CONFIRMING), so the row stays where it is until a checklist names the card.",
+   "title": "2025 Bowman Draft Chrome Devin Taylor Auto CPA-DT - 1st Bowman"
+  },
+  {
+   "id": "tca-ebay::178323191785",
+   "fromCardId": "hiq:baseball:2025:bowman-chrome:cpa-dt:refractor:auto",
+   "wouldBeCardId": "hiq:baseball:2025:bowman-draft:cpa-dt:refractor:auto",
+   "price": 40,
+   "deferReason": "the destination hiq:baseball:2025:bowman-draft:cpa-dt:refractor:auto has NO checklist-backed card_catalog row. The only plain Refractor CPA-DT the 2025 checklists name in ANY product is /499; a bare 'refractor:auto' and a 'refractor:auto:num-150' exist for no product. Routing here would mint an identity from a sale (CF-CATALOG-MATCH-IS-SELF-CONFIRMING), so the row stays where it is until a checklist names the card.",
+   "title": "2025 Bowman Draft Chrome Devin Taylor Auto CPA-DT - 1st Bowman"
+  },
+  {
+   "id": "tca-ebay::358601482336",
+   "fromCardId": "hiq:baseball:2025:bowman-chrome:cpa-dt:refractor:auto:num-150",
+   "wouldBeCardId": "hiq:baseball:2025:bowman-draft:cpa-dt:refractor:auto:num-150",
+   "price": 31.99,
+   "deferReason": "the destination hiq:baseball:2025:bowman-draft:cpa-dt:refractor:auto:num-150 has NO checklist-backed card_catalog row. The only plain Refractor CPA-DT the 2025 checklists name in ANY product is /499; a bare 'refractor:auto' and a 'refractor:auto:num-150' exist for no product. Routing here would mint an identity from a sale (CF-CATALOG-MATCH-IS-SELF-CONFIRMING), so the row stays where it is until a checklist names the card.",
+   "title": "2025 Bowman Chrome Devin Taylor 1st Auto Mojo Refrwctor /150 #CPA-DT"
+  },
+  {
+   "id": "tca-ebay::198504910554",
+   "fromCardId": "hiq:baseball:2025:bowman-chrome:cpa-dt:refractor:auto:num-150",
+   "wouldBeCardId": "hiq:baseball:2025:bowman-draft:cpa-dt:refractor:auto:num-150",
+   "price": 110.99,
+   "deferReason": "the destination hiq:baseball:2025:bowman-draft:cpa-dt:refractor:auto:num-150 has NO checklist-backed card_catalog row. The only plain Refractor CPA-DT the 2025 checklists name in ANY product is /499; a bare 'refractor:auto' and a 'refractor:auto:num-150' exist for no product. Routing here would mint an identity from a sale (CF-CATALOG-MATCH-IS-SELF-CONFIRMING), so the row stays where it is until a checklist names the card.",
+   "title": "2025 1st Bowman Chrome HTA Choice Refractor /150 DEVIN TAYLOR Auto ⚡️ #CPA-DT"
+  }
+ ],
+ "entries": [
+  {
+   "id": "tca-ebay::157942013260",
+   "fromCardId": "hiq:baseball:2025:bowman-chrome:cpa-dt:refractor:auto:num-499",
+   "toCardId": "hiq:baseball:2025:bowman-draft:cpa-dt:refractor:auto:num-499",
+   "price": 40,
+   "evidence": "title states \"Bowman Chrome Draft\"/\"Bowman Draft\" and names Devin Taylor, whom the bowman-draft checklist claims at CPA-DT and the bowman-chrome checklist does not (bowman-chrome CPA-DT is Diego Tornes). Stored playerName \"Devin Taylor\" is clean. Title: Devin Taylor 2025 Bowman Chrome Draft #CPA-DT Refractor 1st RC Auto /499"
+  },
+  {
+   "id": "tca-ebay::257645937409",
+   "fromCardId": "hiq:baseball:2025:bowman-chrome:cpa-dt:refractor:auto:num-499",
+   "toCardId": "hiq:baseball:2025:bowman-draft:cpa-dt:refractor:auto:num-499",
+   "price": 96,
+   "evidence": "title states \"Bowman Chrome Draft\"/\"Bowman Draft\" and names Devin Taylor, whom the bowman-draft checklist claims at CPA-DT and the bowman-chrome checklist does not (bowman-chrome CPA-DT is Diego Tornes). Stored playerName \"Devin Taylor\" is clean. Title: 2025 Bowman Draft Chrome Prospect Refractor 180/499 Devin Taylor #CPA-DT Auto"
+  },
+  {
+   "id": "tca-ebay::EBAY-v1|366631087564|0",
+   "fromCardId": "hiq:baseball:2025:bowman-chrome:cpa-dt:base:auto",
+   "toCardId": "hiq:baseball:2025:bowman-draft:cpa-dt:base:auto",
+   "price": 40,
+   "evidence": "title states \"Bowman Chrome Draft\"/\"Bowman Draft\" and names Devin Taylor, whom the bowman-draft checklist claims at CPA-DT and the bowman-chrome checklist does not (bowman-chrome CPA-DT is Diego Tornes). Stored playerName \"Devin Taylor\" is clean. Title: 2025 Bowman Chrome Prospect Devin Taylor 1st Bowman Auto Athletics CPA-DT"
+  },
+  {
+   "id": "tca-ebay::237013364738",
+   "fromCardId": "hiq:baseball:2025:bowman-chrome:cpa-dt:base:auto",
+   "toCardId": "hiq:baseball:2025:bowman-draft:cpa-dt:base:auto",
+   "price": 26,
+   "evidence": "title states \"Bowman Chrome Draft\"/\"Bowman Draft\" and names Devin Taylor, whom the bowman-draft checklist claims at CPA-DT and the bowman-chrome checklist does not (bowman-chrome CPA-DT is Diego Tornes). Stored playerName \"Devin Taylor\" is clean. Title: 2025 Bowman Chrome Draft Devin Taylor Prospects Autograph #CPA-DT 1ST Bowman A’s"
+  },
+  {
+   "id": "ebay-user-purchase::377320105173-10083209150006",
+   "fromCardId": "hiq:baseball:2025:bowman-chrome:cpa-dt:base:auto",
+   "toCardId": "hiq:baseball:2025:bowman-draft:cpa-dt:base:auto",
+   "price": 31,
+   "evidence": "title states \"Bowman Chrome Draft\"/\"Bowman Draft\" and names Devin Taylor, whom the bowman-draft checklist claims at CPA-DT and the bowman-chrome checklist does not (bowman-chrome CPA-DT is Diego Tornes). Stored playerName \"Draft Devin Taylor\" is DIRTY, which is why the lane's exact playerKey() missed this row. Title: 2025 Bowman Draft Devin Taylor Chrome Auto 1st Prospect #CPA-DT Athletics"
+  },
+  {
+   "id": "ebay-user-purchase::800311570774-10086371812618",
+   "fromCardId": "hiq:baseball:2025:bowman-chrome:cpa-dt:base:auto",
+   "toCardId": "hiq:baseball:2025:bowman-draft:cpa-dt:base:auto",
+   "price": 36,
+   "evidence": "title states \"Bowman Chrome Draft\"/\"Bowman Draft\" and names Devin Taylor, whom the bowman-draft checklist claims at CPA-DT and the bowman-chrome checklist does not (bowman-chrome CPA-DT is Diego Tornes). Stored playerName \"Devin Taylor\" is clean. Title: 2025 Bowman Draft Chrome 1st Devin Taylor Prospect Autograph Auto A's Y224"
+  },
+  {
+   "id": "tca-ebay::206501167891",
+   "fromCardId": "hiq:baseball:2025:bowman-chrome:cpa-dt:base:auto",
+   "toCardId": "hiq:baseball:2025:bowman-draft:cpa-dt:base:auto",
+   "price": 25,
+   "evidence": "title states \"Bowman Chrome Draft\"/\"Bowman Draft\" and names Devin Taylor, whom the bowman-draft checklist claims at CPA-DT and the bowman-chrome checklist does not (bowman-chrome CPA-DT is Diego Tornes). Stored playerName \"Devin Taylor\" is clean. Title: 2025 Bowman Chrome Devin Taylor 1st Bowman Auto Athletics CPA-DT"
+  },
+  {
+   "id": "tca-ebay::158180759374",
+   "fromCardId": "hiq:baseball:2025:bowman-chrome:cpa-dt:base:auto",
+   "toCardId": "hiq:baseball:2025:bowman-draft:cpa-dt:base:auto",
+   "price": 38,
+   "evidence": "title states \"Bowman Chrome Draft\"/\"Bowman Draft\" and names Devin Taylor, whom the bowman-draft checklist claims at CPA-DT and the bowman-chrome checklist does not (bowman-chrome CPA-DT is Diego Tornes). Stored playerName \"Devin Taylor\" is clean. Title: Devin Taylor 2025 Bowman Chrome Draft #CPA-DT 1st RC Auto"
+  },
+  {
+   "id": "tca-ebay::278182511503",
+   "fromCardId": "hiq:baseball:2025:bowman-chrome:cpa-dt:base:auto",
+   "toCardId": "hiq:baseball:2025:bowman-draft:cpa-dt:base:auto",
+   "price": 27,
+   "evidence": "title states \"Bowman Chrome Draft\"/\"Bowman Draft\" and names Devin Taylor, whom the bowman-draft checklist claims at CPA-DT and the bowman-chrome checklist does not (bowman-chrome CPA-DT is Diego Tornes). Stored playerName \"Devin Taylor\" is clean. Title: DEVIN TAYLOR 2025 BOWMAN CHROME 1ST AUTOGRAPH #CPA-DT ATHLETICS AUTO Q5690"
+  },
+  {
+   "id": "tca-ebay::117307790271",
+   "fromCardId": "hiq:baseball:2025:bowman-chrome:cpa-dt:base:auto",
+   "toCardId": "hiq:baseball:2025:bowman-draft:cpa-dt:base:auto",
+   "price": 44.99,
+   "evidence": "title states \"Bowman Chrome Draft\"/\"Bowman Draft\" and names Devin Taylor, whom the bowman-draft checklist claims at CPA-DT and the bowman-chrome checklist does not (bowman-chrome CPA-DT is Diego Tornes). Stored playerName \"Devin Taylor Oakland\" is DIRTY, which is why the lane's exact playerKey() missed this row. Title: Devin Taylor 2025 Bowman Chrome Draft 1st Auto Oakland Athletics A’s #CPA-DT"
+  },
+  {
+   "id": "tca-ebay::178144951831",
+   "fromCardId": "hiq:baseball:2025:bowman-chrome:cpa-dt:base:auto",
+   "toCardId": "hiq:baseball:2025:bowman-draft:cpa-dt:base:auto",
+   "price": 14,
+   "evidence": "title states \"Bowman Chrome Draft\"/\"Bowman Draft\" and names Devin Taylor, whom the bowman-draft checklist claims at CPA-DT and the bowman-chrome checklist does not (bowman-chrome CPA-DT is Diego Tornes). Stored playerName \"Devin Taylor On Caes\" is DIRTY, which is why the lane's exact playerKey() missed this row. Title: 2025 Bowman Chrome Devin Taylor 1st Bowman On Caes Auto CPA-DT Athletics"
+  },
+  {
+   "id": "tca-ebay::117307790509",
+   "fromCardId": "hiq:baseball:2025:bowman-chrome:cpa-dt:base:auto",
+   "toCardId": "hiq:baseball:2025:bowman-draft:cpa-dt:base:auto",
+   "price": 44.99,
+   "evidence": "title states \"Bowman Chrome Draft\"/\"Bowman Draft\" and names Devin Taylor, whom the bowman-draft checklist claims at CPA-DT and the bowman-chrome checklist does not (bowman-chrome CPA-DT is Diego Tornes). Stored playerName \"Diego Tornes\" is clean. Title: Devin Taylor 2025 Bowman Chrome Draft 1st Auto Oakland Athletics A’s #CPA-DT"
+  },
+  {
+   "id": "ebay-user-purchase::407057413049-10082308788001",
+   "fromCardId": "hiq:baseball:2025:bowman-chrome:cpa-dt:blue-refractor:auto:num-150",
+   "toCardId": "hiq:baseball:2025:bowman-draft:cpa-dt:blue-refractor:auto:num-150",
+   "price": 315,
+   "evidence": "title states \"Bowman Chrome Draft\"/\"Bowman Draft\" and names Devin Taylor, whom the bowman-draft checklist claims at CPA-DT and the bowman-chrome checklist does not (bowman-chrome CPA-DT is Diego Tornes). Stored playerName \"Devin Taylor\" is clean. Title: Devin Taylor 2025 Bowman Chrome 1st Bowmam True Blue Refractor Auto /150 #CPA-DT"
+  }
+ ]
+}
