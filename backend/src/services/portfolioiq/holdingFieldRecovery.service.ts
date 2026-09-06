@@ -400,3 +400,94 @@ export function recoverHoldingFields({ holding }: RecoveryInput): RecoveryResult
     stillMissing,
   };
 }
+
+
+/**
+ * CF-A-STORED-SET-NAME-CAN-BE-WRONG-TOO (Drew, 2026-09-06, #1849 — GATE 1b's
+ * widening).
+ *
+ * THE PRODUCT THIS HOLDING'S OWN FREE TEXT NAMES, whether or not a set name is
+ * stored. `recoverHoldingFields` reads the title for a set name ONLY when the
+ * stored one is blank, which is right for recovery — a stored field is the
+ * user's claim and recovery fills blanks. GATE 1b's widened form needs the
+ * other question: when the checklist row a holding resolved to names a
+ * DIFFERENT PLAYER than the holding does, what product does the title itself
+ * say, so the correct row can be looked for instead of the holding merely
+ * parking?
+ *
+ * 4a82faed / 25bc5079 are the case. Both store `setName: "Bowman Chrome"` and
+ * both titles read
+ *
+ *     "Devin Taylor 2025 Bowman Chrome DRAFT 1st Refractor Auto /499 ..."
+ *
+ * The seller's eBay `Set` aspect dropped the word DRAFT; the title did not.
+ * `bowman-draft:cpa-dt:refractor:auto:num-499` is Devin Taylor, checklist
+ * backed, 8 sales; `bowman-chrome:cpa-dt:...` is DIEGO TORNES.
+ *
+ * WHY ASKING THE VOCABULARY ONCE IS NOT ENOUGH, AND WHERE THE FIX GOES.
+ * `inferSetKeyFromTitle` returns "Bowman Chrome" for that title, and it is not
+ * wrong to. Its Bowman rules are written as ADJACENT WORDS — `/bowman\s+draft/`
+ * — and this title spells the product "Bowman Chrome DRAFT", so DRAFT never
+ * sits beside "bowman" and `/bowman\s+chrome/` wins the ladder. Loosening that
+ * regex in the shared vocabulary would re-read every "... Bowman Chrome ...
+ * 2025 MLB Draft" and "... Draft Night ..." title in the corpus as a Bowman
+ * Draft card, which is the flagship-catch-all failure in reverse.
+ *
+ * So the disambiguation is asked HERE, at the gate, where it is scoped to one
+ * holding whose destination has ALREADY contradicted its player — a population
+ * of two today. The vocabulary is asked a SECOND question about the SAME text,
+ * with the product words reordered so its own adjacency rule can see them:
+ * "bowman chrome draft" -> "bowman draft chrome", which `inferSetKeyFromTitle`
+ * answers "Bowman Draft Chrome", and "bowman draft" for the paper spelling.
+ * It is still the ONE vocabulary answering — this function writes no product
+ * rule of its own, which is how a second parser gets born
+ * (feedback: holdingFieldNormalizer is THE standard).
+ *
+ * WHAT IT REFUSES:
+ *   - "Unknown" is a refusal, returned as null. The caller parks.
+ *   - A product that FOLDS TO THE ONE ALREADY STORED is not a second opinion
+ *     and offers the caller nothing to try — null.
+ *   - Nothing is invented: every answer traces to `inferSetKeyFromTitle` over
+ *     text this holding carries about itself, and the caller must still find a
+ *     real checklist row naming this player before anything is written.
+ *
+ * Pure: no I/O, no Cosmos, no clock.
+ */
+export function titleStatedProduct(
+  holding: Record<string, unknown>,
+): { setName: string; source: string; via: "title-parse" | "title-parse-reordered" } | null {
+  const stored = String(holding.setName ?? holding.product ?? "").trim();
+  const fold = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "");
+  const cardNumber = (holding.cardNumber as string) ?? null;
+
+  /** A product word the title carries but ADJACENCY hid. `bowman chrome draft`
+   *  is the same product as `bowman draft chrome` and the vocabulary already
+   *  knows the latter; only the ORDER defeated it. Applied to a copy of the
+   *  text, never to the holding. */
+  const reorderProductWords = (text: string): string | null => {
+    const lowered = text.toLowerCase();
+    // Only when BOTH words are present and the brand is Bowman — the one
+    // product family whose line word ("Draft") is routinely written after
+    // "Chrome" rather than before it.
+    if (!/\bbowman\b/.test(lowered)) return null;
+    if (!/\bdraft\b/.test(lowered)) return null;
+    if (/\bbowman\s+draft\b/.test(lowered)) return null;   // already adjacent
+    return text.replace(/\bbowman\b/i, "Bowman Draft");
+  };
+
+  for (const { text, source } of evidenceText(holding)) {
+    const direct = String(inferSetKeyFromTitle(text, cardNumber) ?? "").trim();
+    if (direct && !/^unknown$/i.test(direct) && (!stored || fold(direct) !== fold(stored))) {
+      return { setName: direct, source, via: "title-parse" };
+    }
+    // The direct read agreed with the stored name (or found nothing). Ask the
+    // SAME vocabulary about the SAME text with the product words reordered.
+    const reordered = reorderProductWords(text);
+    if (!reordered) continue;
+    const second = String(inferSetKeyFromTitle(reordered, cardNumber) ?? "").trim();
+    if (!second || /^unknown$/i.test(second)) continue;
+    if (stored && fold(second) === fold(stored)) continue;
+    return { setName: second, source, via: "title-parse-reordered" };
+  }
+  return null;
+}
