@@ -208,10 +208,36 @@ export function evidenceContradictsBase(holding: Record<string, unknown>): boole
 
 /** Free text this holding carries about itself, most authoritative first.
  *  The purchase listing title is the seller's own words about the physical
- *  card; the short description repeats them at length. */
+ *  card; the short description repeats them at length.
+ *
+ *  CF-THE-KEY-HAS-TO-BE-THE-ONE-THE-DOCUMENT-USES (2026-09-06, found proving
+ *  #1849 against the real holdings). This list read `purchaseTitle` and
+ *  `listingTitle`, and MEASURED ACROSS ALL 130 HOLDINGS both are on ZERO of
+ *  them. The seller's title is stored as `ebayListingTitle` — 41 holdings
+ *  carry it — and it was not read at all:
+ *
+ *    cardTitle             121
+ *    notes                 111
+ *    ebayShortDescription   96
+ *    ebayListingTitle       41   <- never consulted
+ *    purchaseTitle           0
+ *    listingTitle            0
+ *
+ *  4a82faed is exactly what that cost. Its `cardTitle` is the DERIVED string
+ *  "2025 Bowman Chrome Refractor Auto / 499 Devin Taylor #CPA-DT /499 Auto"
+ *  — built from the stored fields, so it repeats the wrong set name and
+ *  cannot contradict it. Its `ebayListingTitle` is the SELLER'S OWN words,
+ *  "Devin Taylor 2025 Bowman Chrome Draft 1st Refractor Auto /499 Oakland
+ *  Athletics", and that is the one string on the document carrying DRAFT.
+ *
+ *  It is ordered AHEAD of cardTitle for that reason: a title the seller typed
+ *  is evidence about the card, and one this system generated from the fields
+ *  under repair is a mirror. The dead keys are kept — costless, and a
+ *  document elsewhere may yet use them — but they are no longer the only
+ *  title spellings read. */
 function evidenceText(holding: Record<string, unknown>): Array<{ text: string; source: string }> {
   const out: Array<{ text: string; source: string }> = [];
-  for (const key of ["cardTitle", "purchaseTitle", "listingTitle", "ebayShortDescription", "notes"]) {
+  for (const key of ["ebayListingTitle", "cardTitle", "purchaseTitle", "listingTitle", "ebayShortDescription", "notes"]) {
     const v = holding[key];
     if (typeof v === "string" && v.trim()) out.push({ text: v.trim(), source: key });
   }

@@ -52,19 +52,30 @@ const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const SRC = readFileSync(
   join(__dirname, "..", "scripts", "comp-quality", "recheck-holding-identity.ts"), "utf8");
 
-/** The two holdings, as stored (the fields the gate reads). */
-const TAYLOR_TITLE =
-  "Devin Taylor 2025 Bowman Chrome DRAFT 1st Refractor Auto /499 Oakland Athletics";
+/** 4a82faed AS ACTUALLY STORED, read out of prod 2026-09-06. Every field is
+ *  verbatim — including the two titles, which say different things, and
+ *  that difference is the whole case:
+ *
+ *    cardTitle        DERIVED from the stored fields, so it repeats the wrong
+ *                     set name and can never contradict it.
+ *    ebayListingTitle THE SELLER'S OWN WORDS, and the only string on the
+ *                     document carrying DRAFT.
+ *
+ *  A fixture that put the seller's title in `cardTitle` would pass while the
+ *  real holding failed, so it does not. */
 const taylorHolding = {
   playerName: "Devin Taylor",
   cardYear: 2025,
   sport: "Baseball",
   setName: "Bowman Chrome",      // STORED, and wrong — the aspect dropped DRAFT
+  product: "Bowman Chrome",
   cardNumber: "CPA-DT",
-  parallel: "Refractor",
+  parallel: "Refractor Auto / 499",
   printRun: 499,
   isAuto: true,
-  cardTitle: TAYLOR_TITLE,
+  cardTitle: "2025 Bowman Chrome Refractor Auto / 499 Devin Taylor #CPA-DT /499 Auto",
+  ebayListingTitle:
+    "Devin Taylor 2025 Bowman Chrome Draft 1st Refractor Auto /499 Oakland Athletics",
 };
 
 describe("PIN 1 — a stored set name plus a contradicting player parks", () => {
@@ -118,7 +129,8 @@ describe("PIN 2 — a DRAFT title plus Taylor RESOLVES to the bowman-draft row",
     const out = titleStatedProduct(taylorHolding);
     expect(out).not.toBeNull();
     expect(out!.setName).toBe("Bowman Draft Chrome");
-    expect(out!.source).toBe("cardTitle");
+    // OFF THE SELLER'S TITLE, not the derived one — see the fixture.
+    expect(out!.source).toBe("ebayListingTitle");
   });
 
   it("and that product IS the setKey of the row the holding should reach", () => {
@@ -285,5 +297,64 @@ describe("PIN 4 — a rookie marker is not a different player", () => {
     expect(normalizePlayerForCompare("RC")).toBe("");
     expect(recoveredSetNameIsCorroborated("Mike Trout", "RC")).toBe(false);
     expect(recoveredSetNameIsCorroborated("RC", "RC")).toBe(false);
+  });
+});
+
+describe("PIN 5 — the evidence keys are the ones the documents actually use", () => {
+  // CF-THE-KEY-HAS-TO-BE-THE-ONE-THE-DOCUMENT-USES (2026-09-06), found while
+  // proving this ruling against the REAL holdings rather than a fixture.
+  //
+  // `evidenceText` read `purchaseTitle` and `listingTitle`. MEASURED ACROSS
+  // ALL 130 HOLDINGS, both are on ZERO of them. The seller's title is stored
+  // as `ebayListingTitle` — 41 holdings carry it — and it was never read:
+  //
+  //     cardTitle             121
+  //     notes                 111
+  //     ebayShortDescription   96
+  //     ebayListingTitle       41   <- never consulted
+  //     purchaseTitle           0
+  //     listingTitle            0
+  //
+  // So every recovery and every gate that reads "the holding's own free text"
+  // was reading a strict subset of it, and the subset excluded the one field
+  // written by a human who had the card in hand.
+  const SERVICE = readFileSync(
+    join(__dirname, "..", "src", "services", "portfolioiq", "holdingFieldRecovery.service.ts"), "utf8");
+
+  /** The literal key list `evidenceText` walks, in order. Anchored on the
+   *  `for (const key of [...]` line rather than the function's opening brace,
+   *  because the signature's own `Array<{...}>` return type carries a `]`. */
+  const evidenceKeys = (): string[] => {
+    const body = SERVICE.slice(SERVICE.indexOf("function evidenceText"));
+    const start = body.indexOf("for (const key of [");
+    const list = body.slice(start, body.indexOf("]", start));
+    return list.match(/"[a-zA-Z]+"/g) ?? [];
+  };
+
+  it("reads ebayListingTitle, and reads it BEFORE the derived cardTitle", () => {
+    const keys = evidenceKeys();
+    expect(keys).toContain('"ebayListingTitle"');
+    expect(keys.indexOf('"ebayListingTitle"')).toBeLessThan(keys.indexOf('"cardTitle"'));
+  });
+
+  it("MUTATION: reading only the derived title finds no other product", () => {
+    // 4a82faed's `cardTitle` is built FROM the stored fields, so it repeats
+    // "Bowman Chrome" and cannot contradict it. Drop `ebayListingTitle` from
+    // the list and the holding parks instead of resolving — the seller's own
+    // words, the only witness to DRAFT, go unread.
+    const derivedTitleOnly = {
+      ...taylorHolding,
+      ebayListingTitle: undefined,
+    };
+    expect(titleStatedProduct(derivedTitleOnly)).toBeNull();
+    // With it, the product is found.
+    expect(titleStatedProduct(taylorHolding)!.source).toBe("ebayListingTitle");
+  });
+
+  it("the short description is still read, and still after the titles", () => {
+    // 96 holdings carry one, and it is the witness 277b05a3 depends on.
+    const keys = evidenceKeys();
+    expect(keys).toContain('"ebayShortDescription"');
+    expect(keys.indexOf('"ebayShortDescription"')).toBeGreaterThan(keys.indexOf('"cardTitle"'));
   });
 });
