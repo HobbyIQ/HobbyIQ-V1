@@ -29,12 +29,19 @@
  *      keeps a pre-#1784 comp count, the live count still matches it, and
  *      `live <= persistedCount` reads TRUE. The holding is skipped. Forever.
  *
- *      Measured 2026-09-06 on user-67878bb5: 9 of 16 holdings frozen at
- *      2026-08-30 / 09-04, two of them still publishing $14.79 on
- *      `hiq:baseball:2026:bowman-chrome:cpa-jwh:refractor:auto:num-499` — a
- *      slug with NO catalog row — while a sibling in the same document was
- *      repriced at 04:24:58Z. The cadence was not broken for that user; it
- *      was working exactly as written, on a row the rules had moved past.
+ *      Measured read-only 2026-09-06 across the whole portfolio map: 131
+ *      holdings in 12 docs, 24 of them carrying a `withheld` block. Those 24
+ *      are the population the pool question can never re-admit on its own —
+ *      a refusal names no pool that could grow, and 15 of them were fresh at
+ *      the snapshot, i.e. actively being skipped.
+ *
+ *      (The rows that first drew the eye — user-67878bb5's 925ccfe7 /
+ *      4e70af40 at $14.79 — turned out to be a THIRD thing: the 08:40Z apply
+ *      run reported `freshSkipped: 0` and named both as `skipped:
+ *      pending-review`. They are an eBay auto-import never advanced past its
+ *      review gate, not a freshness skip and not a retention. The defect this
+ *      module fixes is real and measured, but those two rows are not an
+ *      instance of it.)
  *
  *   2. THE RULES CHANGED SINCE THE STAMP WAS WRITTEN. #1784 is the case in
  *      point: it did not change any pool, so no amount of pool-growth

@@ -677,6 +677,80 @@ describe("the retention rule, exercised directly", () => {
       .toEqual({ retained: true, value: 80 });
   });
 
+  // ── RULE 3: THE IDENTITY MUST BE ONE A PRICE MAY REST ON ─────────────────
+  //
+  // Added 2026-09-06 after #1865 deployed and the invariant auditor's I10
+  // (PRICED-ON-UNBACKED-IDENTITY) did NOT clear. Measured read-only that day:
+  // 10 of 131 holdings carry a live `fairMarketValue` beside a `withheld`
+  // block reading `no-checklist-match` (9) or `identity-not-in-catalog` (1).
+  // The refusals fired; the retention handed the numbers straight back.
+  //
+  // Rules 1 and 2 both ask "is this NUMBER sound". Neither can see the
+  // question #1784 asks, which is "is there a CARD here".
+
+  it("rule 3: an identity refusal retains NOTHING, however healthy the number", () => {
+    // $80 on a $100 basis passes rule 1 comfortably, and a family-baseline
+    // rung on another slug passes rule 2 — the exact shape that would have
+    // been retained a moment ago. The identity refusal overrides both.
+    //
+    // MUTATION: drop the `refusalReason` argument at the noBasisRefusalWrite
+    // call site, or delete the IDENTITY_REFUSALS branch, and this goes red.
+    for (const reason of ["no-checklist-match", "identity-not-in-catalog"] as const) {
+      expect(
+        retentionThroughFloor(row(80, "some:other:pool", "family-baseline"), facts(POOL), reason),
+      ).toEqual({ retained: false, because: "identity-not-priceable" });
+    }
+  });
+
+  it("rule 3 is the $300 CPAFC row: a healthy number does not survive its own withhold", () => {
+    // 8b38c810/9d88f672, the loudest of the ten. Its prior number was a real
+    // read filed under a slug the refusal does not name, so rules 1 and 2
+    // both wave it through; only the identity question refuses it.
+    const cpafc = row(300, "some:other:pool", "exact-pool-projection");
+    expect(retentionThroughFloor(cpafc, facts(null), "no-checklist-match"))
+      .toEqual({ retained: false, because: "identity-not-priceable" });
+    // 199fcbc9's pair: the SAME unbacked slug retaining $65 and $133.125.
+    // One card, two prices — and rule 3 refuses both without needing to know
+    // which (if either) was right.
+    for (const v of [65, 133.125]) {
+      expect(retentionThroughFloor(row(v, "some:other:pool", "family-baseline"), facts(null), "no-checklist-match"))
+        .toEqual({ retained: false, because: "identity-not-priceable" });
+    }
+  });
+
+  it("rule 3 leaves EVIDENCE refusals alone — the Maddux keeps its number", () => {
+    // A refusal about thin or migrating evidence names a real, checklist-backed
+    // card. #1781's retention is exactly right there and must not move.
+    //
+    // MUTATION: widen IDENTITY_REFUSALS to the whole NoBasisRefusalReason
+    // union and this goes red — which would be silently deleting live prices
+    // off perfectly good cards.
+    for (const reason of ["no-exact-pool", "no-exact-pool-at-tier", "pool-migrating", "confidence-gate"] as const) {
+      expect(
+        retentionThroughFloor(row(80, "some:other:pool", "family-baseline"), facts(POOL), reason),
+      ).toEqual({ retained: true, value: 80 });
+    }
+  });
+
+  it("rule 3 does not fire when no reason is given — the cost-basis floor lane is unchanged", () => {
+    // The floor refused on a BASIS, not on an identity, and has no
+    // NoBasisRefusalReason to give. Omitting the argument must mean "this
+    // refusal makes no claim about the identity", leaving the verdict as it
+    // was before rule 3 existed.
+    expect(retentionThroughFloor(row(80, "some:other:pool", "family-baseline"), facts(POOL)))
+      .toEqual({ retained: true, value: 80 });
+    expect(retentionThroughFloor(row(80, "some:other:pool", "family-baseline"), facts(POOL), null))
+      .toEqual({ retained: true, value: 80 });
+  });
+
+  it("rule 3 still yields to no-prior-value: absence is not a retention refusal", () => {
+    // A row with nothing to keep is `no-prior-value`, not
+    // `identity-not-priceable` — the two send a reader to different places
+    // and collapsing them would misreport why a row is blank.
+    expect(retentionThroughFloor(row(null, POOL, null), facts(POOL), "no-checklist-match"))
+      .toEqual({ retained: false, because: "no-prior-value" });
+  });
+
   it("a different pool's exact-pool read stands — this is the Ripken shape", () => {
     expect(retentionThroughFloor(row(80, "some:other:pool", "exact-pool-weighted-median"), facts(POOL)))
       .toEqual({ retained: true, value: 80 });
