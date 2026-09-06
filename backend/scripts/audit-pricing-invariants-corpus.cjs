@@ -627,7 +627,11 @@ async function auditRederivation(db, res, bud, nowMs) {
       return { resources: [] };
     });
     slotsRead++;
-    for (const row of resources) reservoir.offer(row);
+    // THE SLOT THE ROW CAME FROM TRAVELS WITH THE ROW. The reservoir pools
+    // every slot's draw into one list, and without this tag the per-slot
+    // comparison below has nothing to compare -- a sample drawn from 32
+    // different populations would again be scored against one number.
+    for (const row of resources) { row.__frameSlot = entry.slot; reservoir.offer(row); }
   }
 
   const resources = reservoir.rows();
@@ -716,6 +720,10 @@ async function auditRederivation(db, res, bud, nowMs) {
         // the class table cannot hold one IMPROVE.
         checklistBacked: der && der.ok ? await checklistBackedOf(der.slug) : false,
       });
+      // The slot rides along on the verdict so `frameHealth` can compare each
+      // slot's draw to THAT SLOT's own census, not to a corpus average that no
+      // single slot resembles.
+      if (v && typeof v === "object") v.__frameSlot = row.__frameSlot;
       verdicts.push(v);
       // A CONFLICT is the row-level finding. IMPROVE and UNDERIVABLE are
       // counted in the class table but are not breaches: IMPROVE is a queue,
@@ -777,9 +785,40 @@ async function auditRederivation(db, res, bud, nowMs) {
     byClass: rates.byClass,
     distinctCards: reservoir.distinctCards(),
     sampled: verdicts.length,
+    // The verdicts carry their slot, so each slot's draw is scored against its
+    // OWN census and the frame's sportClass mix is reported alongside.
+    verdicts,
   });
   for (const flag of res.frameHealth.flags) {
     res.notes.push(`FRAME UNHEALTHY -- ${flag}. The rate below is about the SAMPLE, not the corpus.`);
+  }
+  // FRAME HEALTH PER SPORTCLASS -- the line that stops a modern- or
+  // pokemon-heavy draw reading as a corpus-wide regression. The classes have
+  // very different CONFLICT rates (pokemon 0.60, modern 0.42, vintage 0.32), so
+  // a mix statement is the difference between "the corpus moved" and "we drew
+  // from a harder part of it".
+  const classLine = (res.frameHealth.bySportClass ?? [])
+    .map((c) => `${c.sportClass} ${(100 * (c.shareOfFrame ?? 0)).toFixed(0)}% of frame, `
+      + `CONFLICT ${(100 * c.conflict.sampled).toFixed(1)}% vs census `
+      + `${c.conflict.census === null ? "n/a" : `${(100 * c.conflict.census).toFixed(1)}%`}`)
+    .join("; ");
+  if (classLine) res.notes.push(`FRAME BY CLASS: ${classLine}`);
+  const exp = res.frameHealth.expectedForThisMix;
+  if (exp) {
+    res.notes.push(
+      `FRAME MIX EXPECTS AGREE ${(100 * exp.AGREE).toFixed(1)}% / CONFLICT ${(100 * exp.CONFLICT).toFixed(1)}% `
+      + `-- what THIS frame's class mix predicts, against the 32-slot corpus average of `
+      + `AGREE ${(100 * INV.CENSUS_REFERENCE_SHARES.AGREE).toFixed(1)}% / `
+      + `CONFLICT ${(100 * INV.CENSUS_REFERENCE_SHARES.CONFLICT).toFixed(1)}%. `
+      + "A gap here is the frame's shape, never corpus movement",
+    );
+  }
+  const movedSlots = (res.frameHealth.bySlot ?? [])
+    .filter((sl) => sl.drift && Math.abs(sl.drift.CONFLICT.delta ?? 0) > 0.25 && sl.sampled >= 20)
+    .map((sl) => `slot ${sl.slot} CONFLICT ${(100 * sl.drift.CONFLICT.sampled).toFixed(0)}% vs `
+      + `${(100 * sl.drift.CONFLICT.census).toFixed(0)}% (n=${sl.sampled})`);
+  if (movedSlots.length) {
+    res.notes.push(`SLOTS ADRIFT vs their OWN census: ${movedSlots.slice(0, 8).join("; ")}`);
   }
   // THE THRESHOLD MEASURES TRUE DISAGREEMENTS. Both numbers are printed, and
   // the note says which one the threshold reads — a threshold that quietly
@@ -903,11 +942,35 @@ async function main() {
       const fh = r.frameHealth;
       console.log(`  frame health: ${fh.healthy ? "OK" : "UNHEALTHY"}  `
         + `${f(fh.sampled)} rows / ${f(fh.distinctCards)} distinct cards`);
+      if (fh.referenceSlots) {
+        console.log(`    reference: row-weighted over ${fh.referenceSlots} census slots `
+          + "(a single-slot reference measures that slot, not the corpus)");
+      }
       for (const [k, d] of Object.entries(fh.drift)) {
         const got = (d.sampled * 100).toFixed(1), cen = d.census === null ? "?" : (d.census * 100).toFixed(1);
-        const delta = (d.delta * 100);
+        const delta = d.delta === null || d.delta === undefined ? null : d.delta * 100;
+        const exp = fh.expectedForThisMix?.[k];
         console.log(`    ${k.padEnd(14)} sample ${String(got).padStart(5)}%   census ${String(cen).padStart(5)}%   `
-          + `${delta >= 0 ? "+" : ""}${delta.toFixed(1)}pp`);
+          + `${delta === null ? "   n/a" : `${delta >= 0 ? "+" : ""}${delta.toFixed(1)}pp`}`
+          + `${exp === undefined ? "" : `   this mix expects ${(exp * 100).toFixed(1)}%`}`);
+      }
+      // PER-CLASS, so a frame that drew a harder part of the corpus says so
+      // rather than reporting the corpus as regressed.
+      for (const c of fh.bySportClass ?? []) {
+        const cen = c.conflict.census === null ? "  n/a" : `${(100 * c.conflict.census).toFixed(1)}%`;
+        console.log(`    class ${String(c.sportClass).padEnd(8)} ${(100 * (c.shareOfFrame ?? 0)).toFixed(0).padStart(3)}% of frame   `
+          + `CONFLICT ${(100 * c.conflict.sampled).toFixed(1)}%  vs census ${cen}`);
+      }
+      // PER-SLOT, worst first: a slot compared to ITSELF.
+      const adrift = (fh.bySlot ?? [])
+        .filter((sl) => sl.drift && sl.sampled >= 20)
+        .sort((a, b) => Math.abs(b.drift.CONFLICT.delta ?? 0) - Math.abs(a.drift.CONFLICT.delta ?? 0))
+        .slice(0, 6);
+      for (const sl of adrift) {
+        const d = sl.drift.CONFLICT;
+        console.log(`    slot ${String(sl.slot).padStart(2)}  n=${String(sl.sampled).padStart(3)}   `
+          + `CONFLICT ${(100 * d.sampled).toFixed(0)}%  vs its own census ${(100 * d.census).toFixed(0)}%   `
+          + `${(d.delta ?? 0) >= 0 ? "+" : ""}${(100 * (d.delta ?? 0)).toFixed(0)}pp`);
       }
       for (const flag of fh.flags) console.log(`    FLAG  ${flag}`);
     }

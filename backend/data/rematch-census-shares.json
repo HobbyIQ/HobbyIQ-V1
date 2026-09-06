@@ -1,0 +1,783 @@
+{
+ "_doc": "CF-THE-REFERENCE-IS-THE-WHOLE-CORPUS-NOT-ONE-SLOT (2026-09-06). Per-slot classification from the GREAT REMATCH IMPROVE fleet, recovered from each run's rematch-census-slot-<N>-<runId> artifact (file census-slot-<N>.json, fields classified + counts.*). One entry per shard-table slot, latest run per slot in the window 2026-09-05T04:20Z..2026-09-06T02:49Z. `weighted` is the row-weighted corpus average -- the reference a whole-corpus draw is compared against; `slots[].shares` is what a SINGLE-SLOT draw must be compared against instead. NOTE the four classes do not sum to 1: the runs report UNDERIVABLE-for-subset in byTier and leave it out of counts, so ~26% of rows are in none of the four. The shares are therefore comparable to each other and to a sample classified the same way, which is what frameHealth does.",
+ "source": "rematch IMPROVE fleet census artifacts, 32/32 slots, 2026-09-05/06",
+ "measuredAt": "2026-09-06",
+ "container": "sold_comps",
+ "slotCount": 32,
+ "classifiedTotal": 16716343,
+ "weighted": {
+  "AGREE": 0.423947,
+  "IMPROVE": 0.034467,
+  "CONFLICT": 0.407827,
+  "UNDERIVABLE": 0.082341
+ },
+ "bySportClass": {
+  "modern": {
+   "classified": 10204891,
+   "shares": {
+    "AGREE": 0.454652,
+    "IMPROVE": 0.029521,
+    "CONFLICT": 0.417793,
+    "UNDERIVABLE": 0.059831
+   },
+   "slots": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    23,
+    30
+   ]
+  },
+  "pokemon": {
+   "classified": 1714825,
+   "shares": {
+    "AGREE": 0.124836,
+    "IMPROVE": 0.065145,
+    "CONFLICT": 0.596306,
+    "UNDERIVABLE": 0.207865
+   },
+   "slots": [
+    0,
+    7,
+    8,
+    22
+   ]
+  },
+  "vintage": {
+   "classified": 4796627,
+   "shares": {
+    "AGREE": 0.465557,
+    "IMPROVE": 0.034023,
+    "CONFLICT": 0.319243,
+    "UNDERIVABLE": 0.085355
+   },
+   "slots": [
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    31
+   ]
+  }
+ },
+ "slots": [
+  {
+   "slot": 0,
+   "runId": 33947033673,
+   "measuredAt": "2026-09-05T05:32Z",
+   "classified": 514583,
+   "counts": {
+    "AGREE": 36981,
+    "IMPROVE": 20867,
+    "CONFLICT": 381423,
+    "UNDERIVABLE": 75312
+   },
+   "shares": {
+    "AGREE": 0.071866,
+    "IMPROVE": 0.040551,
+    "CONFLICT": 0.741227,
+    "UNDERIVABLE": 0.146355
+   },
+   "classMix": {
+    "pokemon": 0.925564,
+    "vintage": 0.074436
+   }
+  },
+  {
+   "slot": 1,
+   "runId": 33947039875,
+   "measuredAt": "2026-09-05T06:45Z",
+   "classified": 543045,
+   "counts": {
+    "AGREE": 245811,
+    "IMPROVE": 16160,
+    "CONFLICT": 274730,
+    "UNDERIVABLE": 6344
+   },
+   "shares": {
+    "AGREE": 0.452653,
+    "IMPROVE": 0.029758,
+    "CONFLICT": 0.505907,
+    "UNDERIVABLE": 0.011682
+   },
+   "classMix": {
+    "modern": 0.90493,
+    "vintage": 0.09507
+   }
+  },
+  {
+   "slot": 2,
+   "runId": 33947046563,
+   "measuredAt": "2026-09-05T07:07Z",
+   "classified": 528979,
+   "counts": {
+    "AGREE": 230522,
+    "IMPROVE": 20212,
+    "CONFLICT": 261561,
+    "UNDERIVABLE": 16603
+   },
+   "shares": {
+    "AGREE": 0.435787,
+    "IMPROVE": 0.038209,
+    "CONFLICT": 0.494464,
+    "UNDERIVABLE": 0.031387
+   },
+   "classMix": {
+    "modern": 1.0
+   }
+  },
+  {
+   "slot": 3,
+   "runId": 33947053469,
+   "measuredAt": "2026-09-05T06:02Z",
+   "classified": 511439,
+   "counts": {
+    "AGREE": 194724,
+    "IMPROVE": 4030,
+    "CONFLICT": 286688,
+    "UNDERIVABLE": 25997
+   },
+   "shares": {
+    "AGREE": 0.380737,
+    "IMPROVE": 0.00788,
+    "CONFLICT": 0.560552,
+    "UNDERIVABLE": 0.050831
+   },
+   "classMix": {
+    "modern": 1.0
+   }
+  },
+  {
+   "slot": 4,
+   "runId": 33951772443,
+   "measuredAt": "2026-09-05T08:02Z",
+   "classified": 507873,
+   "counts": {
+    "AGREE": 232643,
+    "IMPROVE": 2676,
+    "CONFLICT": 269158,
+    "UNDERIVABLE": 3396
+   },
+   "shares": {
+    "AGREE": 0.458073,
+    "IMPROVE": 0.005269,
+    "CONFLICT": 0.529971,
+    "UNDERIVABLE": 0.006687
+   },
+   "classMix": {
+    "modern": 0.889567,
+    "vintage": 0.110433
+   }
+  },
+  {
+   "slot": 5,
+   "runId": 33958157777,
+   "measuredAt": "2026-09-05T10:53Z",
+   "classified": 522236,
+   "counts": {
+    "AGREE": 293007,
+    "IMPROVE": 15895,
+    "CONFLICT": 181828,
+    "UNDERIVABLE": 27663
+   },
+   "shares": {
+    "AGREE": 0.561062,
+    "IMPROVE": 0.030436,
+    "CONFLICT": 0.348172,
+    "UNDERIVABLE": 0.05297
+   },
+   "classMix": {
+    "modern": 1.0
+   }
+  },
+  {
+   "slot": 6,
+   "runId": 33958171668,
+   "measuredAt": "2026-09-05T10:27Z",
+   "classified": 520671,
+   "counts": {
+    "AGREE": 330969,
+    "IMPROVE": 14167,
+    "CONFLICT": 166909,
+    "UNDERIVABLE": 8626
+   },
+   "shares": {
+    "AGREE": 0.635659,
+    "IMPROVE": 0.027209,
+    "CONFLICT": 0.320565,
+    "UNDERIVABLE": 0.016567
+   },
+   "classMix": {
+    "modern": 0.878793,
+    "vintage": 0.121207
+   }
+  },
+  {
+   "slot": 7,
+   "runId": 33951795542,
+   "measuredAt": "2026-09-05T07:59Z",
+   "classified": 521096,
+   "counts": {
+    "AGREE": 17256,
+    "IMPROVE": 62648,
+    "CONFLICT": 315459,
+    "UNDERIVABLE": 125483
+   },
+   "shares": {
+    "AGREE": 0.033115,
+    "IMPROVE": 0.120224,
+    "CONFLICT": 0.605376,
+    "UNDERIVABLE": 0.240806
+   },
+   "classMix": {
+    "modern": 0.122418,
+    "pokemon": 0.877582
+   }
+  },
+  {
+   "slot": 8,
+   "runId": 33961895810,
+   "measuredAt": "2026-09-05T11:21Z",
+   "classified": 508834,
+   "counts": {
+    "AGREE": 116143,
+    "IMPROVE": 26909,
+    "CONFLICT": 185716,
+    "UNDERIVABLE": 180066
+   },
+   "shares": {
+    "AGREE": 0.228253,
+    "IMPROVE": 0.052884,
+    "CONFLICT": 0.364983,
+    "UNDERIVABLE": 0.35388
+   },
+   "classMix": {
+    "pokemon": 0.869221,
+    "vintage": 0.130779
+   }
+  },
+  {
+   "slot": 9,
+   "runId": 33961902857,
+   "measuredAt": "2026-09-05T11:10Z",
+   "classified": 500532,
+   "counts": {
+    "AGREE": 248716,
+    "IMPROVE": 12974,
+    "CONFLICT": 225320,
+    "UNDERIVABLE": 13522
+   },
+   "shares": {
+    "AGREE": 0.496903,
+    "IMPROVE": 0.02592,
+    "CONFLICT": 0.450161,
+    "UNDERIVABLE": 0.027015
+   },
+   "classMix": {
+    "modern": 0.8623,
+    "vintage": 0.1377
+   }
+  },
+  {
+   "slot": 10,
+   "runId": 33961909053,
+   "measuredAt": "2026-09-05T12:43Z",
+   "classified": 504005,
+   "counts": {
+    "AGREE": 216179,
+    "IMPROVE": 17750,
+    "CONFLICT": 252382,
+    "UNDERIVABLE": 17694
+   },
+   "shares": {
+    "AGREE": 0.428922,
+    "IMPROVE": 0.035218,
+    "CONFLICT": 0.500753,
+    "UNDERIVABLE": 0.035107
+   },
+   "classMix": {
+    "modern": 0.982976,
+    "vintage": 0.017024
+   }
+  },
+  {
+   "slot": 11,
+   "runId": 33961915021,
+   "measuredAt": "2026-09-05T11:24Z",
+   "classified": 503242,
+   "counts": {
+    "AGREE": 107543,
+    "IMPROVE": 12277,
+    "CONFLICT": 354349,
+    "UNDERIVABLE": 28691
+   },
+   "shares": {
+    "AGREE": 0.2137,
+    "IMPROVE": 0.024396,
+    "CONFLICT": 0.704132,
+    "UNDERIVABLE": 0.057012
+   },
+   "classMix": {
+    "modern": 0.975126,
+    "vintage": 0.024874
+   }
+  },
+  {
+   "slot": 12,
+   "runId": 33991696735,
+   "measuredAt": "2026-09-05T22:13Z",
+   "classified": 502034,
+   "counts": {
+    "AGREE": 262339,
+    "IMPROVE": 10943,
+    "CONFLICT": 184914,
+    "UNDERIVABLE": 17280
+   },
+   "shares": {
+    "AGREE": 0.522552,
+    "IMPROVE": 0.021797,
+    "CONFLICT": 0.36833,
+    "UNDERIVABLE": 0.03442
+   },
+   "classMix": {
+    "modern": 0.845616,
+    "vintage": 0.154384
+   }
+  },
+  {
+   "slot": 13,
+   "runId": 33991708667,
+   "measuredAt": "2026-09-05T21:43Z",
+   "classified": 502606,
+   "counts": {
+    "AGREE": 250842,
+    "IMPROVE": 10036,
+    "CONFLICT": 183958,
+    "UNDERIVABLE": 18232
+   },
+   "shares": {
+    "AGREE": 0.499083,
+    "IMPROVE": 0.019968,
+    "CONFLICT": 0.366008,
+    "UNDERIVABLE": 0.036275
+   },
+   "classMix": {
+    "modern": 0.853689,
+    "vintage": 0.146311
+   }
+  },
+  {
+   "slot": 14,
+   "runId": 33966981635,
+   "measuredAt": "2026-09-05T14:37Z",
+   "classified": 503713,
+   "counts": {
+    "AGREE": 248822,
+    "IMPROVE": 16183,
+    "CONFLICT": 185640,
+    "UNDERIVABLE": 19120
+   },
+   "shares": {
+    "AGREE": 0.493976,
+    "IMPROVE": 0.032127,
+    "CONFLICT": 0.368543,
+    "UNDERIVABLE": 0.037958
+   },
+   "classMix": {
+    "modern": 0.844621,
+    "vintage": 0.155379
+   }
+  },
+  {
+   "slot": 15,
+   "runId": 33966990494,
+   "measuredAt": "2026-09-05T13:42Z",
+   "classified": 516121,
+   "counts": {
+    "AGREE": 259951,
+    "IMPROVE": 13371,
+    "CONFLICT": 179008,
+    "UNDERIVABLE": 63791
+   },
+   "shares": {
+    "AGREE": 0.503663,
+    "IMPROVE": 0.025907,
+    "CONFLICT": 0.346833,
+    "UNDERIVABLE": 0.123597
+   },
+   "classMix": {
+    "modern": 0.732533,
+    "vintage": 0.267467
+   }
+  },
+  {
+   "slot": 16,
+   "runId": 33997540601,
+   "measuredAt": "2026-09-05T23:31Z",
+   "classified": 520854,
+   "counts": {
+    "AGREE": 243073,
+    "IMPROVE": 12752,
+    "CONFLICT": 196340,
+    "UNDERIVABLE": 40671
+   },
+   "shares": {
+    "AGREE": 0.466682,
+    "IMPROVE": 0.024483,
+    "CONFLICT": 0.376958,
+    "UNDERIVABLE": 0.078085
+   },
+   "classMix": {
+    "modern": 0.836839,
+    "vintage": 0.163161
+   }
+  },
+  {
+   "slot": 17,
+   "runId": 33997553644,
+   "measuredAt": "2026-09-06T00:00Z",
+   "classified": 523323,
+   "counts": {
+    "AGREE": 264119,
+    "IMPROVE": 15673,
+    "CONFLICT": 189765,
+    "UNDERIVABLE": 9633
+   },
+   "shares": {
+    "AGREE": 0.504696,
+    "IMPROVE": 0.029949,
+    "CONFLICT": 0.362615,
+    "UNDERIVABLE": 0.018407
+   },
+   "classMix": {
+    "modern": 0.696717,
+    "vintage": 0.303283
+   }
+  },
+  {
+   "slot": 18,
+   "runId": 33997570779,
+   "measuredAt": "2026-09-05T23:56Z",
+   "classified": 512212,
+   "counts": {
+    "AGREE": 220246,
+    "IMPROVE": 24295,
+    "CONFLICT": 189166,
+    "UNDERIVABLE": 78505
+   },
+   "shares": {
+    "AGREE": 0.42999,
+    "IMPROVE": 0.047432,
+    "CONFLICT": 0.369312,
+    "UNDERIVABLE": 0.153267
+   },
+   "classMix": {
+    "modern": 0.825083,
+    "vintage": 0.174917
+   }
+  },
+  {
+   "slot": 19,
+   "runId": 33997638734,
+   "measuredAt": "2026-09-06T00:06Z",
+   "classified": 534269,
+   "counts": {
+    "AGREE": 256626,
+    "IMPROVE": 8997,
+    "CONFLICT": 171334,
+    "UNDERIVABLE": 40209
+   },
+   "shares": {
+    "AGREE": 0.480331,
+    "IMPROVE": 0.01684,
+    "CONFLICT": 0.320689,
+    "UNDERIVABLE": 0.07526
+   },
+   "classMix": {
+    "modern": 0.579357,
+    "vintage": 0.420643
+   }
+  },
+  {
+   "slot": 20,
+   "runId": 34000733526,
+   "measuredAt": "2026-09-06T01:28Z",
+   "classified": 542939,
+   "counts": {
+    "AGREE": 212745,
+    "IMPROVE": 22981,
+    "CONFLICT": 207523,
+    "UNDERIVABLE": 58839
+   },
+   "shares": {
+    "AGREE": 0.39184,
+    "IMPROVE": 0.042327,
+    "CONFLICT": 0.382222,
+    "UNDERIVABLE": 0.108371
+   },
+   "classMix": {
+    "modern": 0.665022,
+    "vintage": 0.334978
+   }
+  },
+  {
+   "slot": 21,
+   "runId": 34000768055,
+   "measuredAt": "2026-09-06T00:54Z",
+   "classified": 525481,
+   "counts": {
+    "AGREE": 306867,
+    "IMPROVE": 9908,
+    "CONFLICT": 122436,
+    "UNDERIVABLE": 21261
+   },
+   "shares": {
+    "AGREE": 0.583974,
+    "IMPROVE": 0.018855,
+    "CONFLICT": 0.232998,
+    "UNDERIVABLE": 0.04046
+   },
+   "classMix": {
+    "modern": 0.581322,
+    "vintage": 0.418678
+   }
+  },
+  {
+   "slot": 22,
+   "runId": 34000783679,
+   "measuredAt": "2026-09-06T00:27Z",
+   "classified": 598257,
+   "counts": {
+    "AGREE": 112514,
+    "IMPROVE": 24764,
+    "CONFLICT": 408179,
+    "UNDERIVABLE": 35491
+   },
+   "shares": {
+    "AGREE": 0.18807,
+    "IMPROVE": 0.041394,
+    "CONFLICT": 0.68228,
+    "UNDERIVABLE": 0.059324
+   },
+   "classMix": {
+    "modern": 0.293231,
+    "pokemon": 0.566565,
+    "vintage": 0.140204
+   }
+  },
+  {
+   "slot": 23,
+   "runId": 34000804675,
+   "measuredAt": "2026-09-06T00:29Z",
+   "classified": 533108,
+   "counts": {
+    "AGREE": 224800,
+    "IMPROVE": 3034,
+    "CONFLICT": 253081,
+    "UNDERIVABLE": 42076
+   },
+   "shares": {
+    "AGREE": 0.421678,
+    "IMPROVE": 0.005691,
+    "CONFLICT": 0.474727,
+    "UNDERIVABLE": 0.078926
+   },
+   "classMix": {
+    "modern": 0.606464,
+    "vintage": 0.393536
+   }
+  },
+  {
+   "slot": 24,
+   "runId": 34004057250,
+   "measuredAt": "2026-09-06T02:11Z",
+   "classified": 515306,
+   "counts": {
+    "AGREE": 277716,
+    "IMPROVE": 12581,
+    "CONFLICT": 160610,
+    "UNDERIVABLE": 17727
+   },
+   "shares": {
+    "AGREE": 0.538934,
+    "IMPROVE": 0.024415,
+    "CONFLICT": 0.311679,
+    "UNDERIVABLE": 0.034401
+   },
+   "classMix": {
+    "modern": 0.460772,
+    "vintage": 0.539228
+   }
+  },
+  {
+   "slot": 25,
+   "runId": 34004066958,
+   "measuredAt": "2026-09-06T02:16Z",
+   "classified": 517223,
+   "counts": {
+    "AGREE": 257559,
+    "IMPROVE": 25817,
+    "CONFLICT": 149863,
+    "UNDERIVABLE": 46504
+   },
+   "shares": {
+    "AGREE": 0.497965,
+    "IMPROVE": 0.049915,
+    "CONFLICT": 0.289745,
+    "UNDERIVABLE": 0.089911
+   },
+   "classMix": {
+    "vintage": 1.0
+   }
+  },
+  {
+   "slot": 26,
+   "runId": 34004076637,
+   "measuredAt": "2026-09-06T02:03Z",
+   "classified": 516524,
+   "counts": {
+    "AGREE": 163740,
+    "IMPROVE": 18191,
+    "CONFLICT": 164329,
+    "UNDERIVABLE": 77331
+   },
+   "shares": {
+    "AGREE": 0.317004,
+    "IMPROVE": 0.035218,
+    "CONFLICT": 0.318144,
+    "UNDERIVABLE": 0.149714
+   },
+   "classMix": {
+    "modern": 0.31611,
+    "vintage": 0.68389
+   }
+  },
+  {
+   "slot": 27,
+   "runId": 34004085402,
+   "measuredAt": "2026-09-06T02:29Z",
+   "classified": 548380,
+   "counts": {
+    "AGREE": 276102,
+    "IMPROVE": 21333,
+    "CONFLICT": 143764,
+    "UNDERIVABLE": 53087
+   },
+   "shares": {
+    "AGREE": 0.503487,
+    "IMPROVE": 0.038902,
+    "CONFLICT": 0.262161,
+    "UNDERIVABLE": 0.096807
+   },
+   "classMix": {
+    "modern": 0.346307,
+    "vintage": 0.653693
+   }
+  },
+  {
+   "slot": 28,
+   "runId": 34006926678,
+   "measuredAt": "2026-09-06T02:48Z",
+   "classified": 542816,
+   "counts": {
+    "AGREE": 266942,
+    "IMPROVE": 34446,
+    "CONFLICT": 134907,
+    "UNDERIVABLE": 52235
+   },
+   "shares": {
+    "AGREE": 0.491773,
+    "IMPROVE": 0.063458,
+    "CONFLICT": 0.248532,
+    "UNDERIVABLE": 0.09623
+   },
+   "classMix": {
+    "modern": 0.396911,
+    "vintage": 0.603089
+   }
+  },
+  {
+   "slot": 29,
+   "runId": 34006955164,
+   "measuredAt": "2026-09-06T02:49Z",
+   "classified": 544763,
+   "counts": {
+    "AGREE": 305772,
+    "IMPROVE": 19534,
+    "CONFLICT": 111157,
+    "UNDERIVABLE": 79988
+   },
+   "shares": {
+    "AGREE": 0.561294,
+    "IMPROVE": 0.035858,
+    "CONFLICT": 0.204047,
+    "UNDERIVABLE": 0.146831
+   },
+   "classMix": {
+    "modern": 0.390453,
+    "vintage": 0.609547
+   }
+  },
+  {
+   "slot": 30,
+   "runId": 33943261640,
+   "measuredAt": "2026-09-05T04:20Z",
+   "classified": 520655,
+   "counts": {
+    "AGREE": 165800,
+    "IMPROVE": 33544,
+    "CONFLICT": 221095,
+    "UNDERIVABLE": 53037
+   },
+   "shares": {
+    "AGREE": 0.318445,
+    "IMPROVE": 0.064427,
+    "CONFLICT": 0.424648,
+    "UNDERIVABLE": 0.101866
+   },
+   "classMix": {
+    "modern": 0.741595,
+    "vintage": 0.258405
+   }
+  },
+  {
+   "slot": 31,
+   "runId": 34007001399,
+   "measuredAt": "2026-09-06T02:46Z",
+   "classified": 509224,
+   "counts": {
+    "AGREE": 239777,
+    "IMPROVE": 11214,
+    "CONFLICT": 104791,
+    "UNDERIVABLE": 22028
+   },
+   "shares": {
+    "AGREE": 0.470867,
+    "IMPROVE": 0.022022,
+    "CONFLICT": 0.205786,
+    "UNDERIVABLE": 0.043258
+   },
+   "classMix": {
+    "vintage": 1.0
+   }
+  }
+ ]
+}
