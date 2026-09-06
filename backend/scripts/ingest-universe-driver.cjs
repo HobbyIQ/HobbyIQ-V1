@@ -261,6 +261,171 @@ const BACKOFF_STATUS = "backoff";
  *  that and is only ADVICE -- nothing is scheduled off it. */
 const BACKOFF_RETRY_MINUTES = Math.max(1, Number(process.env.SCC_BACKOFF_MINUTES || 30));
 
+/**
+ * CF-A-STREAK-IS-A-HYPOTHESIS-UNTIL-A-CONTROL-PAGE-ANSWERS (2026-09-06,
+ * run 34059282207).
+ *
+ * The SCC baseball 1970-1999 walk, slice SCC-BB-7099c, took three consecutive
+ * "a 200 carrying no checklist" verdicts on set-14739 / set-14740 / set-14741
+ * -- 1998 Topps Tek Pattern 21, 22 and 23 -- declared SYSTEMIC ABORT, and left
+ * 167 of its 170 entries unattempted. The walk chain stops on ABORT, so 1,870
+ * entries downstream were stranded.
+ *
+ * The abort had to choose between two readings and had no evidence for either:
+ *
+ *   (a) THE HOST IS SOFT-BLOCKING US. Every page comes back 200 with no
+ *       checklist -- the #1898 signature -- and the run's declining rows/pass
+ *       (1013, 800, 349) is what a tightening rate limit looks like.
+ *   (b) THESE THREE PAGES CARRY NO CHECKLIST. SCC lists ~90 "Pattern N" sets as
+ *       separate sets on CONSECUTIVE ids, so an id-ordered queue walks a
+ *       sibling cluster back to back. Three siblings that are all genuinely
+ *       uncarded make "3 consecutive" fire on three ordinary per-entry
+ *       verdicts, with nothing wrong with the lane at all.
+ *
+ * MEASURED 2026-09-06, by hand, paced, with this repo's own fetcher: all three
+ * Tek pages serve HTTP 200 with a FULL checklist -- 90 card headers, 90 hidden
+ * ebay_search rows, anchors agreeing, 90 rows parsed, exit 0 -- and so does the
+ * 1998 Topps base set (set-14620, 503 cards). Reading (a) was correct and
+ * reading (b) is false: three live pages were closed against a rate limit, and
+ * an era was stranded behind them.
+ *
+ * A STREAK IS A HYPOTHESIS. It says "the last N entries went badly"; it does
+ * NOT say why, and the two causes want opposite responses -- (a) wants the
+ * BACKOFF path, where nothing is marked unreachable and the next pending-only
+ * walk simply resumes, and (b) wants the run to CONTINUE, recording each
+ * sibling's own verdict. Guessing between them is what cost this run its era.
+ *
+ * So before any systemic abort, the lane FETCHES A CONTROL PAGE: a page this
+ * lane has already ingested with rows, which is therefore known to serve a
+ * checklist when the host is healthy. It is a direct experiment on the one
+ * question the streak cannot answer, and it costs exactly one paced fetch --
+ * against 167 stranded entries.
+ *
+ *   THE CONTROL SERVES A CHECKLIST  -> the host is UP. The streak was a run of
+ *      per-entry answers, so each entry keeps the verdict it earned and the
+ *      run CONTINUES. The streak resets, because the control is positive
+ *      evidence of lane health in exactly the sense streakAfter already means.
+ *   THE CONTROL ALSO FAILS          -> the host is refusing us. That is the
+ *      #1898 condition reached by a second route, so it takes the #1898 path:
+ *      BACKOFF, not ABORT. Nothing is marked unreachable, the verdict is
+ *      non-terminal, the walker's retry-after-30-minutes branch fires, and the
+ *      entries come back on the next pending-only walk.
+ *
+ * WHY NOT ABORT AT ALL. A lane whose pipe is genuinely severed -- credentials
+ * rejected, the scraper staging nothing and saying nothing -- must still stop
+ * rather than burn its budget, and the control probe answers that case too: a
+ * severed pipe cannot fetch the control either, so it backs off, which stops
+ * the run just as cleanly and without closing entries. ABORT survives only for
+ * the case the probe itself cannot run (no control page known for the lane),
+ * so a lane that has never ingested anything keeps the old behaviour.
+ */
+
+/**
+ * The control pages, per lane. A control must be a page the lane has ALREADY
+ * ingested with rows, so "it did not serve a checklist" is unambiguous
+ * evidence about the host rather than about the page.
+ *
+ * The list is PINNED rather than derived at probe time for one reason: the
+ * probe runs at the exact moment the host is misbehaving, and a probe that
+ * first has to query Cosmos for a candidate has two ways to fail for reasons
+ * that are not the host. A pinned page is one fetch, no dependencies, and the
+ * same page every time -- which also makes the probe's own result comparable
+ * across runs.
+ *
+ * Chosen for each lane: a large, long-lived flagship product, verified served
+ * on 2026-09-06.
+ *
+ *   sportscardchecklist  set-14620, 1998 Topps Baseball. Measured this day:
+ *      503 card headers, 503 rows, exit 0. It sits 119 ids below the Tek
+ *      cluster that took the lane down, so it is the same era and the same
+ *      shard of the host's id space as the entries it vouches for.
+ *
+ * A lane with no entry here does not probe and keeps the pre-existing ABORT.
+ * That is deliberate: inventing a control for a lane nobody has verified would
+ * make the probe's answer meaningless in exactly the direction that hurts --
+ * a control that is simply broken reads as a dead host and backs off forever.
+ */
+const CONTROL_PAGES = {
+  sportscardchecklist: {
+    url: "https://www.sportscardchecklist.com/set-14620/1998-topps-baseball-trading-card-checklist",
+    label: "1998 Topps Baseball (set-14620)",
+    year: 1998,
+    setKey: "topps",
+    setName: "1998 Topps Baseball",
+    sport: "baseball",
+  },
+};
+
+/**
+ * Decide what a streak MEANS, by experiment.
+ *
+ * Returns one of:
+ *   "continue"  the control served a checklist -- the host is up, the entries'
+ *               own verdicts stand, the run goes on.
+ *   "backoff"   the control failed too -- the host is refusing us.
+ *   "abort"     no control is known for this lane, so the streak keeps its old
+ *               reading.
+ *
+ * `fetchControl` is injected so a test can drive every branch without a
+ * network, and so the probe's I/O is the only thing a test has to stub.
+ */
+/**
+ * WHAT THE CONTROL PAGE CAN AND CANNOT VOUCH FOR.
+ *
+ * The probe asks one question -- IS THE HOST SERVING US? -- so it may only be
+ * consulted about a streak that could plausibly be the host. A streak of
+ * `unreachable` is exactly that: the host answered with something that was not
+ * a set page, which is either a soft block (the incident) or a run of dead ids
+ * (the sibling cluster), and the control page tells those apart.
+ *
+ * A streak of `failed` is NOT that. `failed` means OUR pipe broke -- the
+ * scraper staged nothing, acquisition handed back no file, the ingest child
+ * died. The host being up says nothing about any of it, and a probe that
+ * answered "the host is up, carry on" would keep a lane with a severed pipe
+ * running to the end of its budget writing `failed` onto entries that are
+ * fine. That is the case SYSTEMIC_FAILURE_STREAK was built for and it keeps
+ * its abort, unprobed.
+ *
+ * So the probe runs only when the streak is made of host-fault verdicts. This
+ * is the same line CF-A-CORRECT-REFUSAL-IS-NOT-A-LANE-FAILURE and #1735 draw,
+ * one rung further in: not "which verdicts vote", but "which verdicts a HOST
+ * PROBE is competent to overturn".
+ */
+const HOST_FAULT_STATUSES = new Set(["unreachable"]);
+
+async function probeControlPage(lane, fetchControl) {
+  const control = CONTROL_PAGES[lane];
+  if (!control) return { verdict: "abort", reason: "no control page is pinned for this lane" };
+  try {
+    const res = await fetchControl(control);
+    // A control that served rows is the whole point: it is the positive
+    // evidence the streak lacked.
+    if (res && res.rows > 0) {
+      return { verdict: "continue", reason: `the control page served ${f(res.rows)} cards — the host is up`, control, rows: res.rows };
+    }
+    return { verdict: "backoff", reason: `the control page served no checklist${res && res.detail ? ` (${res.detail})` : ""}`, control };
+  } catch (e) {
+    return { verdict: "backoff", reason: `the control page could not be fetched: ${String(e?.message || e).slice(0, 160)}`, control };
+  }
+}
+
+
+/**
+ * How many times a verdict tries to land before it is counted lost, and how
+ * long it waits between tries. See
+ * CF-A-VERDICT-THAT-DOES-NOT-LAND-IS-A-DOUBLE-FETCH at the write itself.
+ *
+ * Three attempts over ~7s total: enough to ride out a Cosmos 429 or a dropped
+ * socket, short enough that a genuinely dead control container still trips the
+ * tripwire inside a few entries rather than eating the run's budget. Tunable
+ * so a test can drive the retry path without spending the waits.
+ */
+const CONTROL_WRITE_ATTEMPTS = Math.max(1, Number(process.env.CONTROL_WRITE_ATTEMPTS || 3));
+const CONTROL_WRITE_BACKOFF_MS = String(process.env.CONTROL_WRITE_BACKOFF_MS || "2000,5000")
+  .split(",").map((n) => Math.max(0, Number(n) || 0));
+
+const sleepMs = (ms) => new Promise((r) => setTimeout(r, ms));
+
 const TERMINAL_STATUSES = new Set(["ingested", "unreachable", EMPTY_STATUS, "partial", SHORT_STATUS, REFUSED_STATUS]);
 
 /**
@@ -1266,6 +1431,49 @@ const RUNNER_SCOPE_VARS = ["LIMIT", "SLOT", "SLOTS", "SCAN_LIMIT", "MAX_ROWS"];
 
 
 
+
+/**
+ * The real control fetch: this lane's own fetcher, against the pinned page,
+ * into a throwaway directory. Deliberately the SAME code path the entries take
+ * -- a probe that fetched by some other route could answer "the host is up"
+ * about a request the lane never makes.
+ *
+ * Paced by the fetcher itself (jitteredPageDelay + the #1898 60s/180s retries),
+ * so the probe cannot itself be the request that tightens a rate limit. Its
+ * timeout is generous for that reason: two retry waits plus the fetch is
+ * comfortably over four minutes, and a probe killed by its own clock would read
+ * as a dead host and back off a healthy lane.
+ */
+function fetchControlPage(control) {
+  const dir = fs.mkdtempSync(path.join(WORKDIR_ROOT_FOR_PROBE(), "hiq-control-"));
+  const csv = path.join(dir, "control.csv");
+  try {
+    const out = run("fetchSportsCardChecklist.cjs", [
+      "--url", control.url,
+      "--out", csv,
+      "--year", String(control.year),
+      "--set-key", control.setKey,
+      "--set-name", control.setName,
+      "--sport", control.sport,
+    ], undefined, 9 * 60000);
+    // The fetcher's own banner is the measurement -- "rows=503 parsed=503".
+    const m = /\brows=(\d+)\b/.exec(String(out || ""));
+    const rows = m ? Number(m[1]) : 0;
+    return { rows, detail: `rows=${rows}` };
+  } catch (e) {
+    // Exit 9 is the fetcher's zero-row refusal and its message NAMES the cause
+    // (challenge page / not a set page / unknown layout). Any of them means the
+    // control did not serve, which is the answer the probe wanted.
+    return { rows: 0, detail: String(e?.message || e).slice(0, 200) };
+  } finally {
+    try { fs.rmSync(dir, { recursive: true, force: true }); } catch {}
+  }
+}
+
+/** WORKDIR is resolved at module load; the probe only needs a scratch parent. */
+function WORKDIR_ROOT_FOR_PROBE() {
+  try { fs.mkdirSync(WORKDIR, { recursive: true }); return WORKDIR; } catch { return os.tmpdir(); }
+}
 
 function run(script, args, env, timeoutMs) {
   const childEnv = { ...process.env, ...env };
@@ -2655,7 +2863,7 @@ for (const lane of ACQUIRE_LANES) {
   }
 }
 
-module.exports = { collapsesToParent, streakAfter, RUNNER_SCOPE_VARS, gateStagedCsv, gateStagedEntry, ladderIsAttested, setKeyCandidates, canonicalSetKey, TERMINAL_STATUSES, LANES_WITH_SIBLING_PARALLEL_PAGES, ladderOnSiblingPages, allFilesAreParallelOfParent, CARTESIAN_MIN_RUNGS, CARTESIAN_MIN_CARDS, stagedCsvs, LANES_WITHOUT_PRINT_RUNS, LANES_WITH_BASELESS_PRODUCTS, LANES_WITH_VINTAGE_ERA_PRODUCTS, PARALLEL_ERA_FIRST_YEAR, ladderlessByEra, sourceLabelFor, splitCsv, isPersonName, setKeyFor, planFor, tcgdexModern, acquireStaged, ACQUIRE_LANES, LANE_ALIASES, LANE_SOURCE, LANE_MINUTES, CANONICAL_HEADER, CHILD_STDERR_LINES, childBannerLines, CHILD_BANNER_PATTERNS, CHILD_BANNER_LINES, childCounters, childRefusedEverything, CHILD_COUNTERS, REFUSED_STATUS, cosmosSafeId, controlId, orderQueue, SYSTEMIC_FAILURE_STREAK, EMPTY_STATUS, SHORT_STATUS, STREAK_STATUSES, isStaged, stagedSourceRefs, stagedIndex, stagedFilesFor, acquireFromStaging, LANE_CONVERTER_VERSION, stagedConverterVersion, stagedIsCurrent, BACKOFF_STATUS, BACKOFF_RETRY_MINUTES };
+module.exports = { collapsesToParent, streakAfter, RUNNER_SCOPE_VARS, gateStagedCsv, gateStagedEntry, ladderIsAttested, setKeyCandidates, canonicalSetKey, TERMINAL_STATUSES, LANES_WITH_SIBLING_PARALLEL_PAGES, ladderOnSiblingPages, allFilesAreParallelOfParent, CARTESIAN_MIN_RUNGS, CARTESIAN_MIN_CARDS, stagedCsvs, LANES_WITHOUT_PRINT_RUNS, LANES_WITH_BASELESS_PRODUCTS, LANES_WITH_VINTAGE_ERA_PRODUCTS, PARALLEL_ERA_FIRST_YEAR, ladderlessByEra, sourceLabelFor, splitCsv, isPersonName, setKeyFor, planFor, tcgdexModern, acquireStaged, ACQUIRE_LANES, LANE_ALIASES, LANE_SOURCE, LANE_MINUTES, CANONICAL_HEADER, CHILD_STDERR_LINES, childBannerLines, CHILD_BANNER_PATTERNS, CHILD_BANNER_LINES, childCounters, childRefusedEverything, CHILD_COUNTERS, REFUSED_STATUS, cosmosSafeId, controlId, orderQueue, SYSTEMIC_FAILURE_STREAK, EMPTY_STATUS, SHORT_STATUS, STREAK_STATUSES, isStaged, stagedSourceRefs, stagedIndex, stagedFilesFor, acquireFromStaging, LANE_CONVERTER_VERSION, stagedConverterVersion, stagedIsCurrent, BACKOFF_STATUS, BACKOFF_RETRY_MINUTES, CONTROL_PAGES, probeControlPage, HOST_FAULT_STATUSES, CONTROL_WRITE_ATTEMPTS, CONTROL_WRITE_BACKOFF_MS };
 if (require.main !== module) return;
 
 (async () => {
@@ -2975,6 +3183,21 @@ if (require.main !== module) return;
   // The systemic-failure tripwire's state. A refusal is a per-entry verdict; a
   // STREAK of them is the lane. See CF-A-REFUSED-ENTRY-IS-NOT-A-BROKEN-LANE.
   let consecutiveFailures = 0, controlWriteFailures = 0, systemicAbort = null;
+  /**
+   * The control probe's record: every time the streak reached its limit, what
+   * the control page answered. It goes in the banner, because "the lane
+   * continued past a 3-streak" is a claim an operator must be able to check.
+   */
+  const controlProbes = [];
+  /** Injected so a test can drive both probe branches without a network. */
+  const CONTROL_FETCH = fetchControlPage;
+  /**
+   * WHAT THE CURRENT STREAK IS MADE OF. The probe is only competent over
+   * host-fault verdicts (see HOST_FAULT_STATUSES), so the loop has to remember
+   * the streak's composition, not just its length. Reset wherever the streak
+   * is -- one list, one lifetime.
+   */
+  let streakStatuses = [];
 
   for (let i = 0; i < take.length; i++) {
     const { entry, prior } = take[i];
@@ -3406,13 +3629,50 @@ if (require.main !== module) return;
     // lane keeps going. A run whose verdicts are not landing is still a real
     // problem, so it trips the systemic tripwire below rather than being
     // swallowed -- it is just no longer allowed to take the lane down at once.
-    try {
-      await writeControl(entry, { ...verdict, priorAttempts: prior?.attempts });
-    } catch (e) {
+    /**
+     * CF-A-VERDICT-THAT-DOES-NOT-LAND-IS-A-DOUBLE-FETCH (2026-09-06, run
+     * 34059282207: "control writes lost 1 (verdict earned, doc did not land)").
+     *
+     * A lost verdict is not a cosmetic gap in a report. The queue filter reads
+     * crawl_state, so an entry whose doc never landed is INDISTINGUISHABLE from
+     * one never attempted: the next pending-only walk takes it again and pays
+     * the whole fetch, parse, stage and ingest a second time to re-derive an
+     * answer we already had. On a lane whose budget is the binding constraint
+     * that is pure loss, and on a soft-blocked host it is an extra request at
+     * the exact moment we are trying to make fewer.
+     *
+     * A single attempt was always the wrong shape for this write. The failures
+     * it sees are Cosmos 429s and transient sockets -- the textbook retryable
+     * class -- and one try treats them as permanent. So the write is RETRIED,
+     * with a widening wait, and only a verdict that fails every attempt is
+     * counted lost. The counter still exists and still trips the tripwire: a
+     * run whose verdicts genuinely are not landing cannot resume from them and
+     * must stop.
+     */
+    let controlWritten = false;
+    let lastControlErr = null;
+    for (let attempt = 0; attempt < CONTROL_WRITE_ATTEMPTS; attempt++) {
+      try {
+        await writeControl(entry, { ...verdict, priorAttempts: prior?.attempts });
+        controlWritten = true;
+        if (attempt > 0) console.log(`      (control doc landed on attempt ${attempt + 1})`);
+        break;
+      } catch (e) {
+        lastControlErr = e;
+        const msg = String(e?.message || e).slice(0, 160);
+        if (attempt + 1 < CONTROL_WRITE_ATTEMPTS) {
+          const waitMs = CONTROL_WRITE_BACKOFF_MS[attempt] ?? CONTROL_WRITE_BACKOFF_MS[CONTROL_WRITE_BACKOFF_MS.length - 1];
+          console.log(`      control write failed (attempt ${attempt + 1}/${CONTROL_WRITE_ATTEMPTS}) — ${msg}; retrying in ${Math.round(waitMs / 1000)}s`);
+          await sleepMs(waitMs);
+        }
+      }
+    }
+    if (!controlWritten) {
       controlWriteFailures++;
-      const msg = String(e?.message || e).slice(0, 160);
-      console.log(`      CONTROL WRITE FAILED — ${msg}`);
-      console.log(`      (the entry's own verdict stands in this run's summary; the control doc did not land)`);
+      const msg = String(lastControlErr?.message || lastControlErr).slice(0, 160);
+      console.log(`      CONTROL WRITE FAILED after ${CONTROL_WRITE_ATTEMPTS} attempts — ${msg}`);
+      console.log(`      (the entry's own verdict stands in this run's summary; the control doc did not land,`);
+      console.log(`       so the next pending-only walk will take this entry again and re-fetch it)`);
     }
     try { fs.rmSync(dir, { recursive: true, force: true }); } catch {}
 
@@ -3446,14 +3706,68 @@ if (require.main !== module) return;
       console.log(`  this entry keeps a non-terminal \`${BACKOFF_STATUS}\` verdict and the next pending-only walk takes it again.`);
       break;
     }
+    const streakBefore = consecutiveFailures;
     consecutiveFailures = streakAfter(consecutiveFailures, verdict);
+    // The composition travels with the length: grown when the streak grew,
+    // emptied whenever it reset, so the two can never disagree.
+    streakStatuses = consecutiveFailures === 0 ? []
+      : consecutiveFailures > streakBefore ? [...streakStatuses, verdict.status]
+        : streakStatuses;
     if (consecutiveFailures >= SYSTEMIC_FAILURE_STREAK) {
-      systemicAbort = `${consecutiveFailures} consecutive entries failed or were unreachable — the lane, not the entries`;
-      notReached = take.length - (i + 1);
+      // CF-A-STREAK-IS-A-HYPOTHESIS-UNTIL-A-CONTROL-PAGE-ANSWERS. The streak
+      // has told us the last N entries went badly. It has NOT told us why, and
+      // the two causes want opposite responses. So ask the host directly,
+      // ONCE, with a page we have already ingested.
       console.log(`
+  ${consecutiveFailures} consecutive entries failed or were unreachable.`);
+      // ONLY A HOST-FAULT STREAK IS THE HOST'S TO ANSWER FOR. A streak of
+      // `failed` is our own pipe, and a control page cannot vouch for it --
+      // see HOST_FAULT_STATUSES. That streak keeps the abort it always had.
+      const hostFault = streakStatuses.length > 0 && streakStatuses.every((s) => HOST_FAULT_STATUSES.has(s));
+      let probe;
+      if (hostFault) {
+        console.log(`  PROBING A CONTROL PAGE before judging the lane — a streak is a hypothesis, not a diagnosis.`);
+        probe = await probeControlPage(lane, CONTROL_FETCH);
+      } else {
+        const kinds = [...new Set(streakStatuses)].join(", ");
+        probe = { verdict: "abort", reason: `the streak is our own pipe (${kinds}), which no control page can vouch for` };
+      }
+      if (probe.control) console.log(`  control: ${probe.control.label}`);
+
+      if (probe.verdict === "continue") {
+        // THE HOST IS UP. Every entry of the streak reached a verdict of its
+        // own by asking a host that was answering, so those verdicts stand and
+        // the run goes on. This is the sibling-cluster case: an id-ordered
+        // queue walking a run of pages the source genuinely does not card.
+        console.log(`  NOT SYSTEMIC — ${probe.reason}.`);
+        console.log(`  The ${consecutiveFailures} entries keep the verdicts they earned; the run continues.`);
+        controlProbes.push({ at: i + 1, verdict: "continue", rows: probe.rows ?? null });
+        consecutiveFailures = 0;
+      } else if (probe.verdict === "backoff") {
+        // THE HOST IS REFUSING US. Reached by a second route, but it is the
+        // #1898 condition and it takes the #1898 path: nothing is marked
+        // unreachable, the run stops cleanly, and the walker retries later.
+        const mins = Math.round(BACKOFF_RETRY_MINUTES);
+        controlProbes.push({ at: i + 1, verdict: "backoff", rows: probe.rows ?? 0 });
+        systemicAbort = `the control page did not serve either — the host is refusing this client; retry after ${mins} minutes`;
+        notReached = take.length - (i + 1);
+        console.log(`  SYSTEMIC — ${probe.reason}.`);
+        console.log(`
+  BACKING OFF — ${systemicAbort}`);
+        console.log(`  ${f(notReached)} entries of this run were not attempted. NOTHING was marked unreachable:`);
+        console.log(`  the next pending-only walk takes them again with no operator action.`);
+        break;
+      } else {
+        // No control is pinned for this lane, so the streak keeps its old
+        // reading. See CONTROL_PAGES for why this is not invented per-lane.
+        controlProbes.push({ at: i + 1, verdict: "abort", rows: null });
+        systemicAbort = `${consecutiveFailures} consecutive entries failed or were unreachable — the lane, not the entries (${probe.reason})`;
+        notReached = take.length - (i + 1);
+        console.log(`
   ABORTING THE LANE — ${systemicAbort}`);
-      console.log(`  ${f(notReached)} entries of this run were not attempted; the verdicts already written stand.`);
-      break;
+        console.log(`  ${f(notReached)} entries of this run were not attempted; the verdicts already written stand.`);
+        break;
+      }
     }
     if (controlWriteFailures >= SYSTEMIC_FAILURE_STREAK) {
       systemicAbort = `${controlWriteFailures} control-doc writes failed — the verdicts are not landing, so the run cannot resume from them`;
@@ -3508,7 +3822,20 @@ if (require.main !== module) return;
   console.log(`  rows created        ${f(rowsCreatedTotal)}   (verified by catalog read UNDER THIS RUN'S SOURCE, not claimed)`);
   const balanced = accounted + notReached === intended;
   console.log(`  RECONCILED          ${balanced ? "yes" : `NO — ${f(accounted)} + ${f(notReached)} != ${f(intended)}`}`);
-  if (controlWriteFailures) console.log(`  control writes lost  ${f(controlWriteFailures)}   (verdict earned, doc did not land)`);
+  if (controlWriteFailures) console.log(`  control writes lost  ${f(controlWriteFailures)}   (verdict earned, doc did not land after ${CONTROL_WRITE_ATTEMPTS} attempts)`);
+  // THE PROBE IS PART OF THE RECORD. "This run continued past a 3-streak" is a
+  // claim an operator must be able to check, and the control page's answer is
+  // the whole evidence for it. Printed only when a probe actually ran, so a
+  // healthy run's banner is unchanged.
+  if (controlProbes.length) {
+    console.log(`  control probes      ${f(controlProbes.length)}   (streak reached; the host was asked directly)`);
+    for (const p of controlProbes) {
+      const said = p.verdict === "continue" ? `served ${f(p.rows)} cards — NOT systemic, the run continued`
+        : p.verdict === "backoff" ? "did not serve — systemic, the lane backed off"
+          : "no control pinned for this lane — the streak kept its old reading";
+      console.log(`    at entry ${p.at}: the control page ${said}`);
+    }
+  }
   if (systemicAbort) console.log(`  SYSTEMIC ABORT      ${systemicAbort}`);
   if (!APPLY) console.log(`  (REPORT ONLY — nothing acquired, nothing written)`);
 

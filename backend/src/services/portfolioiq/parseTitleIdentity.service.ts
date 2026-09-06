@@ -2495,6 +2495,61 @@ export function resolveEnglishPokemonSetFromTitle(title: string): string | null 
   return resolvePokemonSetCodeFromTitle(hay, t);
 }
 
+/**
+ * THE YEAR-LIFT that every product rule in `inferSetKeyFromTitle` reads
+ * against, factored out so a caller outside this function can normalize a
+ * title the SAME way before asking a question about it.
+ *
+ * CF-THE-YEAR-DOES-NOT-SPLIT-THE-PRODUCT (Drew, 2026-08-31) is stated in full
+ * inside `inferSetKeyFromTitle`; this is that one transform and nothing else,
+ * so "Bowman 2025 Chrome Draft" and "2025 Bowman Chrome Draft" answer alike
+ * wherever the transform is applied.
+ */
+function liftInterposedYear(lowerTitle: string): string {
+  return lowerTitle.replace(
+    /\b(topps|bowman|panini|leaf|fleer|donruss|upper\s+deck|score|select)\s+((?:19|20)\d{2})\s+/g,
+    "$1 ",
+  );
+}
+
+/**
+ * DOES THIS TITLE SPELL THE BOWMAN **DRAFT** PRODUCT?
+ * (CF-BOWMAN-CHROME-DRAFT-KEEPS-DRAFT — Drew, 2026-09-06, #1911 then #1912.)
+ *
+ * THE ONE PLACE THE RULE LIVES. #1911 landed this test inline inside
+ * `inferSetKeyFromTitle`, where it decides a setKey. #1912 needs the SAME
+ * question answered by the rematch classifier, which must know whether a sale
+ * stored on a `bowman-chrome` slug is really a Draft card before it will let
+ * the ladder move it. That is one question, so it gets one implementation:
+ * the ladder rule below now CALLS this function, and the classifier reaches it
+ * through `scripts/lib/bowman-draft-title.cjs`, which bridges the compiled
+ * build rather than keeping a second regex.
+ *
+ * WHY THAT MATTERS MORE THAN TIDINESS. `catalogAuthority.service.ts`'s header
+ * records what a second copy of one predicate costs: five call sites answered
+ * one question five slightly different ways and one difference flipped 51
+ * card-number prefixes from "repair" to "blocked". A copy of THIS rule that
+ * drifted by one word would move sales between two products' comp pools —
+ * and on a colliding card number, onto another PERSON's card (cpa-dt is Diego
+ * Tornes in bowman-chrome and Devin Taylor in bowman-draft).
+ *
+ * NARROWNESS IS THE SAFETY, and it is unchanged from #1911. DRAFT must sit
+ * ADJACENT to "chrome" on one side or the other — that is the product being
+ * SPELLED, not the event being mentioned. A bare /draft/ near /bowman/ would
+ * re-read every "... Bowman Chrome ... 2025 MLB Draft" and "... Draft Night
+ * ..." title in the corpus as a Draft card, which is the flagship catch-all
+ * failure in reverse (project_flagship_catchall_swallows_specializations).
+ *
+ * Takes a RAW title and does its own normalization (lowercase + the year
+ * lift), so a caller cannot get a different answer by preparing the string
+ * differently than `inferSetKeyFromTitle` does.
+ */
+export function titleSpellsBowmanDraft(title: string | null | undefined): boolean {
+  const t = liftInterposedYear(String(title ?? "").toLowerCase());
+  if (!/\bbowman\b/.test(t)) return false;
+  return /chrome\s+draft\b/.test(t) || /draft\s+chrome\b/.test(t);
+}
+
 export function inferSetKeyFromTitle(title: string, cardNumber?: string | null): string {
   // CF-THE-YEAR-DOES-NOT-SPLIT-THE-PRODUCT (Drew, 2026-08-31). Every product
   // rule below is written as adjacent words (/topps\s+chrome/), but sellers —
@@ -2515,10 +2570,9 @@ export function inferSetKeyFromTitle(title: string, cardNumber?: string | null):
   // word precedes it, so "Topps 2024" reads as the product it names while a
   // genuine numeric token ("Topps Chrome 1989 Edition") is left alone.
   const raw = String(title ?? "").toLowerCase();
-  const t = raw.replace(
-    /\b(topps|bowman|panini|leaf|fleer|donruss|upper\s+deck|score|select)\s+((?:19|20)\d{2})\s+/g,
-    "$1 ",
-  );
+  // ONE definition of the year lift: `liftInterposedYear` above, which
+  // `titleSpellsBowmanDraft` also uses so both read a title the same way.
+  const t = liftInterposedYear(raw);
   const cn = String(cardNumber ?? "").toUpperCase();
 
   // CF-A-TCG-TITLE-IS-NOT-A-PANINI-COLOUR-WORD (2026-09-06), the companion to
@@ -2823,7 +2877,11 @@ export function inferSetKeyFromTitle(title: string, cardNumber?: string | null):
   //
   // Ordered ABOVE the bare /bowman\s+chrome/ rule, which is the rule that was
   // swallowing these titles.
-  if (/\bbowman\b/.test(t) && (/chrome\s+draft\b/.test(t) || /draft\s+chrome\b/.test(t))) {
+  // The rule itself now lives in `titleSpellsBowmanDraft` above, because the
+  // rematch classifier has to ask the SAME question (#1912) and a second copy
+  // of it would be free to drift. `t` is already lowercased and year-lifted
+  // here; the predicate redoes both on the raw title, which is idempotent.
+  if (titleSpellsBowmanDraft(t)) {
     // Sapphire never reaches here — the sapphire block far above claims any
     // title carrying the word, and it now reads both orders too. Kept as a
     // guard rather than a comment so a future reorder of these ladders cannot
