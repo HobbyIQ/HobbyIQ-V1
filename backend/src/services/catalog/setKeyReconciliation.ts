@@ -599,6 +599,236 @@ const RULED_DISTINCT: Readonly<Record<string, string>> = Object.freeze({
   // that really occurs).
   "black-diamond-rookie-edition":
     "Drew 2026-09-04: its OWN PRODUCT — a rookie-only Upper Deck release (194 checklist rows, all 2000, baseballcardpedia), never `upper-deck-black-diamond`. The destination pool is the base sets ('1999 Upper Deck Black Diamond Baseball', 857 rows), and a rookie-only checklist fused into a full veteran one prices both wrong. Pinned against CF-UD-INSERT-LINES, whose `(?:^|-)black-diamond` branch would otherwise capture it on the prefix.",
+  // ==========================================================================
+  // SOCCER LEAGUE/COMPETITION PRODUCTS — 66 fixed points (2026-09-06).
+  //
+  // WHAT WENT WRONG, measured. Backfill run 34018058461 ingested the 2020
+  // Topps Chrome UEFA Champions League checklist and reported:
+  //
+  //   SHORT INGEST — compared 2,747 staged identities against
+  //   2020/topps-chrome-uefa-champions-league: 1,944 present, 803 missing;
+  //   missing e.g. 1|base|0|, 1|refractor|0|, 1|purple refractor|0|250
+  //
+  // The 803 were not refused by any gate and not lost by any pipe. The staged
+  // CSV holds 2,747 rows over 2,747 DISTINCT identities and 2,747 DISTINCT
+  // slugs, and every row carries a card number and a player. They WERE
+  // written — to addresses another product already owned:
+  //
+  //   hiq:soccer:2020:topps-chrome:1:base:no-auto
+  //     -> setKey topps-chrome-match-attax-bundesliga, André Hahn
+  //   hiq:soccer:2020:topps-chrome:1:purple-refractor:no-auto:num-250
+  //     -> setKey topps-chrome-bundesliga, Marco Richter
+  //
+  // while the checklist says card 1 is Lionel Messi. `normalizeSetKey` folds
+  // topps-chrome-uefa-champions-league, topps-chrome-bundesliga AND
+  // topps-chrome-match-attax-bundesliga all to bare `topps-chrome`, so three
+  // 2020 soccer products share one slug namespace and their card 1s are one
+  // address. The merge kept the incumbent (equal authority, equal
+  // confidence), the count under this run's source came to 1,944, and the
+  // by-source verify — correctly — called the other 803 missing. Exactly 600
+  // landed on match-attax-bundesliga and 203 on bundesliga: 803, fully
+  // attributed, none unexplained.
+  //
+  // So the SHORT INGEST was a TRUE reading of real damage, not a miscount,
+  // and the defect is upstream of the ingester in the identity deriver.
+  //
+  // WHY THESE KEYS AND NOT THE CENSUS'S. Every one of the 66 is absent from
+  // the 2026-09-03 census data file — these products were acquired after it
+  // ran — so `buildTables` never saw them and the "a fixed point still has to
+  // earn it" branch never fired. Its sibling
+  // `topps-chrome-uefa-club-competitions` IS in the census (29,769 checklist
+  // rows), became a fixed point, and survives the collapse untouched. That
+  // contrast is the whole rule: the mechanism was right, and the data file
+  // was merely too old to carry these.
+  //
+  // THE EVIDENCE, COUNTED BY SOURCE (2026-09-06, card_catalog, sport=soccer):
+  // 178,281 strict checklist rows stand behind these 66 keys, every one from
+  // a checklistcenter pass. In each contested namespace the DESTINATION holds
+  // NO CHECKLIST-CENTER ROWS of its own in soccer — `topps` 0 of 399,
+  // `topps-chrome` 0 of 1,075, `topps-finest` 0 of 119,
+  // `topps-stadium-club` 0 of 344, `panini-mosaic` 0 of 193; the two
+  // destinations that DO carry soccer rows carry only derived and vendor
+  // ones (`panini-prizm`: 2,954 ingest-auto-seed + 1,488 hobbymonitor;
+  // `panini-select`: 862 ingest-auto-seed + 741 hobbymonitor). So no fold
+  // ruled here lands on a flagship a CHECKLIST stands behind, while all
+  //  rows on the ruled side are checklist-attested.
+  // CF-COUNT-BY-SOURCE-NOT-ROW-COUNT, applied exactly as the entries above
+  // apply it: the checklist is what confers the authority to be a fixed point.
+  //
+  // This is the doctrine already stated at the head of this file — Drew ruled
+  // 2026-09-03 that product-family collapse is forbidden — and these are 66
+  // products the vocabulary is still collapsing only because a data file
+  // predates them. A league release is not its flagship: 2020 Topps Chrome
+  // UEFA and 2020 Topps Chrome Bundesliga are different checklists with
+  // DIFFERENT PLAYERS at the same card numbers, which is the
+  // one-card-one-row-one-pool damage in its purest form.
+  //
+  // NOTE ON `leaf-ultimate`: the only one of the 66 with rows outside
+  // soccer (960 hockey, 2019, checklistcenter) alongside 7,173 soccer (2022).
+  // Both are checklist-backed, which makes it a real product in two verticals
+  // rather than a soccer artifact — distinct for the same reason, in both.
+
+  // -> `topps`  (22 products, 41,165 strict rows)
+  "topps-uefa-club-competitions":
+    "4,807 strict checklist rows (checklistcenter-2026-09-06), soccer. Collapses to `topps`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+  "topps-mls":
+    "4,612 strict checklist rows (checklistcenter-2026-09-05 + checklistcenter-2026-09-06), soccer. Collapses to `topps`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+  "topps-merlin-chrome-uefa-champions-league":
+    "4,102 strict checklist rows (checklistcenter-2026-09-06), soccer. Collapses to `topps`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+  "topps-tier-one-bundesliga":
+    "4,071 strict checklist rows (checklistcenter-2026-09-05 + checklistcenter-2026-09-06), soccer. Collapses to `topps`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+  "topps-uefa-superstars":
+    "3,375 strict checklist rows (checklistcenter-2026-09-06), soccer. Collapses to `topps`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+  "topps-merlin-collection-chrome":
+    "2,386 strict checklist rows (checklistcenter-2026-09-05), soccer. Collapses to `topps`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+  "topps-bundesliga":
+    "2,264 strict checklist rows (checklistcenter-2026-09-06), soccer. Collapses to `topps`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+  "topps-uefa-champions-league":
+    "2,253 strict checklist rows (checklistcenter-2026-09-06), soccer. Collapses to `topps`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+  "topps-uefa-champions-league-japan-edition":
+    "1,800 strict checklist rows (checklistcenter-2026-09-06), soccer. Collapses to `topps`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+  "topps-uefa-japan-edition":
+    "1,800 strict checklist rows (checklistcenter-2026-09-06), soccer. Collapses to `topps`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+  "topps-uefa-champions-league-jade-edition":
+    "1,730 strict checklist rows (checklistcenter-2026-09-06), soccer. Collapses to `topps`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+  "topps-jade-edition-uefa-club-competitions":
+    "1,527 strict checklist rows (checklistcenter-2026-09-06), soccer. Collapses to `topps`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+  "topps-match-attax-uefa":
+    "1,318 strict checklist rows (checklistcenter-2026-09-06), soccer. Collapses to `topps`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+  "topps-uefa-1st-edition-club-competitions":
+    "1,205 strict checklist rows (checklistcenter-2026-09-06), soccer. Collapses to `topps`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+  "topps-carnaval-uefa-club-competitions":
+    "1,200 strict checklist rows (checklistcenter-2026-09-06), soccer. Collapses to `topps`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+  "topps-uefa-1st-edition":
+    "953 strict checklist rows (checklistcenter-2026-09-06), soccer. Collapses to `topps`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+  "topps-bundesliga-japan-edition":
+    "853 strict checklist rows (checklistcenter-2026-09-06), soccer. Collapses to `topps`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+  "topps-liverpool-fc-team-set":
+    "386 strict checklist rows (checklistcenter-2026-09-06), soccer. Collapses to `topps`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+  "topps-atletico-madrid-team-set":
+    "364 strict checklist rows (checklistcenter-2026-09-06), soccer. Collapses to `topps`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+  "topps-renaissance-mls":
+    "92 strict checklist rows (checklistcenter-2026-09-06), soccer. Collapses to `topps`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+  "topps-juventus-team-set":
+    "65 strict checklist rows (checklistcenter-2026-09-05), soccer. Collapses to `topps`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+  "topps-deco-uefa":
+    "2 strict checklist rows (checklistcenter-2026-09-06), soccer. Collapses to `topps`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+
+  // -> `donruss-elite`  (5 products, 23,769 strict rows)
+  "donruss-elite-premier-league":
+    "7,418 strict checklist rows (checklistcenter-2026-09-06), soccer. Collapses to `donruss-elite`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+  "donruss-elite-serie-a":
+    "7,261 strict checklist rows (checklistcenter-2026-09-06), soccer. Collapses to `donruss-elite`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+  "donruss-elite-la-liga":
+    "4,404 strict checklist rows (checklistcenter-2026-09-06), soccer. Collapses to `donruss-elite`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+  "donruss-elite-fifa":
+    "4,008 strict checklist rows (checklistcenter-2026-09-06), soccer. Collapses to `donruss-elite`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+  "donruss-elite-laliga":
+    "678 strict checklist rows (checklistcenter-2026-09-06), soccer. Collapses to `donruss-elite`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+
+  // -> `topps-chrome`  (11 products, 22,787 strict rows)
+  "topps-chrome-uefa-champions-league":
+    "9,102 strict checklist rows (checklistcenter-2026-09-05 + checklistcenter-2026-09-06), soccer. Collapses to `topps-chrome`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+  "topps-chrome-bundesliga":
+    "5,448 strict checklist rows (checklistcenter-2026-09-05), soccer. Collapses to `topps-chrome`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+  "topps-chrome-spfl":
+    "2,317 strict checklist rows (checklistcenter-2026-09-05), soccer. Collapses to `topps-chrome`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+  "topps-chrome-match-attax-bundesliga":
+    "2,182 strict checklist rows (checklistcenter-2026-09-05), soccer. Collapses to `topps-chrome`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+  "topps-chrome-uefa-womens-champions-league":
+    "1,435 strict checklist rows (checklistcenter-2026-09-05), soccer. Collapses to `topps-chrome`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+  "topps-chrome-steve-aoki":
+    "983 strict checklist rows (checklistcenter-2026-09-05), soccer. Collapses to `topps-chrome`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+  "topps-chrome-atletico-de-madrid-team-set":
+    "320 strict checklist rows (checklistcenter-2026-09-05), soccer. Collapses to `topps-chrome`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+  "topps-chrome-paris-saint-germain":
+    "260 strict checklist rows (checklistcenter-2026-09-05), soccer. Collapses to `topps-chrome`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+  "topps-chrome-borussia-dortmund-team-set":
+    "260 strict checklist rows (checklistcenter-2026-09-05), soccer. Collapses to `topps-chrome`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+  "topps-chrome-bvb-borussia-dortmund":
+    "240 strict checklist rows (checklistcenter-2026-09-05), soccer. Collapses to `topps-chrome`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+  "topps-chrome-x-real-sociedad":
+    "240 strict checklist rows (checklistcenter-2026-09-05), soccer. Collapses to `topps-chrome`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+
+  // -> `topps-finest`  (3 products, 16,152 strict rows)
+  "topps-finest-bundesliga":
+    "7,055 strict checklist rows (checklistcenter-2026-09-05), soccer. Collapses to `topps-finest`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+  "topps-finest-uefa-champions-league":
+    "5,873 strict checklist rows (checklistcenter-2026-09-05), soccer. Collapses to `topps-finest`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+  "topps-finest-uefa-club-competitions":
+    "3,224 strict checklist rows (checklistcenter-2026-09-05), soccer. Collapses to `topps-finest`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+
+  // -> `score`  (5 products, 12,164 strict rows)
+  "score-premier-league":
+    "3,347 strict checklist rows (checklistcenter-2026-09-06), soccer. Collapses to `score`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+  "score-serie-a":
+    "3,076 strict checklist rows (checklistcenter-2026-09-06), soccer. Collapses to `score`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+  "score-ligue-1":
+    "2,919 strict checklist rows (checklistcenter-2026-09-06), soccer. Collapses to `score`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+  "score-fifa":
+    "2,784 strict checklist rows (checklistcenter-2026-09-06), soccer. Collapses to `score`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+  "score-la-liga":
+    "38 strict checklist rows (checklistcenter-2026-09-06), soccer. Collapses to `score`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+
+  // -> `panini-prizm`  (1 product, 11,900 strict rows)
+  "panini-prizm-fifa-world-cup-qatar":
+    "11,900 strict checklist rows (checklistcenter-2026-09-05), soccer. Collapses to `panini-prizm`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+
+  // -> `panini-mosaic`  (6 products, 11,128 strict rows)
+  "panini-mosaic-uefa-euro-2020":
+    "6,248 strict checklist rows (checklistcenter-2026-09-06), soccer. Collapses to `panini-mosaic`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+  "panini-mosaic-serie-a":
+    "1,760 strict checklist rows (checklistcenter-2026-09-06), soccer. Collapses to `panini-mosaic`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+  "panini-mosaic-laliga":
+    "1,420 strict checklist rows (checklistcenter-2026-09-06), soccer. Collapses to `panini-mosaic`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+  "panini-mosaic-premier-league":
+    "937 strict checklist rows (checklistcenter-2026-09-06), soccer. Collapses to `panini-mosaic`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+  "panini-mosaic-la-liga":
+    "589 strict checklist rows (checklistcenter-2026-09-06), soccer. Collapses to `panini-mosaic`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+  "panini-mosaic-fifa-road-to-world-cup":
+    "174 strict checklist rows (checklistcenter-2026-09-06), soccer. Collapses to `panini-mosaic`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+
+  // -> `topps-stadium-club`  (2 products, 9,270 strict rows)
+  "topps-stadium-club-chrome-uefa":
+    "7,017 strict checklist rows (checklistcenter-2026-09-06), soccer. Collapses to `topps-stadium-club`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+  "topps-stadium-club-chrome-bundesliga":
+    "2,253 strict checklist rows (checklistcenter-2026-09-06), soccer. Collapses to `topps-stadium-club`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+
+  // -> `leaf`  (1 product, 7,173 strict rows)
+  "leaf-ultimate":
+    "7,173 strict checklist rows (checklistcenter-2026-09-06), soccer. Collapses to `leaf`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+
+  // -> `panini-revolution`  (1 product, 6,510 strict rows)
+  "panini-revolution-premier-league":
+    "6,510 strict checklist rows (checklistcenter-2026-09-06), soccer. Collapses to `panini-revolution`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+
+  // -> `topps-museum-collection`  (3 products, 5,347 strict rows)
+  "topps-museum-collection-uefa-champions-league":
+    "2,952 strict checklist rows (checklistcenter-2026-09-05 + checklistcenter-2026-09-06), soccer. Collapses to `topps-museum-collection`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+  "topps-museum-collection-uefa":
+    "1,497 strict checklist rows (checklistcenter-2026-09-06), soccer. Collapses to `topps-museum-collection`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+  "topps-museum-collection-bundesliga":
+    "898 strict checklist rows (checklistcenter-2026-09-05), soccer. Collapses to `topps-museum-collection`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+
+  // -> `topps-chrome-sapphire`  (3 products, 4,482 strict rows)
+  "topps-chrome-sapphire-edition-uefa":
+    "2,660 strict checklist rows (checklistcenter-2026-09-05), soccer. Collapses to `topps-chrome-sapphire`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+  "topps-chrome-sapphire-bundesliga":
+    "1,106 strict checklist rows (checklistcenter-2026-09-05), soccer. Collapses to `topps-chrome-sapphire`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+  "topps-chrome-sapphire-edition-uefa-womens":
+    "716 strict checklist rows (checklistcenter-2026-09-05), soccer. Collapses to `topps-chrome-sapphire`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+
+  // -> `panini-select`  (1 product, 3,773 strict rows)
+  "panini-select-uefa-euro-preview":
+    "3,773 strict checklist rows (checklistcenter-2026-09-06), soccer. Collapses to `panini-select`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+
+  // -> `panini-national-treasures`  (1 product, 1,941 strict rows)
+  "panini-national-treasures-fifa-road-to-world-cup":
+    "1,941 strict checklist rows (checklistcenter-2026-09-06), soccer. Collapses to `panini-national-treasures`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
+
+  // -> `bowman`  (1 product, 720 strict rows)
+  "bowman-mls":
+    "720 strict checklist rows (checklistcenter-2026-09-05), soccer. Collapses to `bowman`, a namespace holding no strict soccer rows of its own — a distinct league/competition release landing where no checklist stands.",
 });
 
 /**
