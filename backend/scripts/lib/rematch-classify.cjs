@@ -2500,6 +2500,97 @@ const SPECIALIZATION_PARENTS = Object.freeze({
   // rematchSpecializationStated.test.ts pins exactly that about this table.
   "bowman-draft-paper": "bowman-draft",
   "bowman-draft-sapphire": "bowman-draft",
+  // -- The 66 soccer league/competition products (#1863, Drew 2026-09-06).
+  //    Every one is a productSetKeys.ts entry whose `parent` is named here, so
+  //    they are mirrored, not excepted, and the pin below compares them edge
+  //    by edge. `topps-tier-one` is carried too: it is the rung
+  //    `topps-tier-one-bundesliga` hangs from and #1863 filed that release
+  //    under the flagship it was collapsing INTO rather than the product it is
+  //    a release OF.
+  //
+  //    REACHABLE BY THIS SUBCLASS, which is the bar the note at the head of
+  //    this table sets: the distinguishing words are the competition the title
+  //    STATES ("UEFA Champions League", "Premier League", "Bundesliga"), and
+  //    the title parser now mints each key from exactly those words
+  //    (CF-A-LEAGUE-RELEASE-IS-NOT-ITS-FLAGSHIP). Before that it could not —
+  //    the parser stopped at the family word, the derived key never changed,
+  //    and this subclass was unreachable on every soccer row.
+  //
+  //    DELIBERATELY ABSENT FROM SAME_NUMBER_PARALLEL_SETS. These are not
+  //    coated reprints of a flagship checklist: 2020 Topps Chrome UEFA and
+  //    2020 Topps Chrome Bundesliga are different checklists with DIFFERENT
+  //    PLAYERS at the same card numbers, which is precisely why L5 must keep
+  //    asking whether the stored flagship's checklist lists the number.
+  "topps-uefa-club-competitions": "topps",
+  "topps-mls": "topps",
+  "topps-merlin-chrome-uefa-champions-league": "topps",
+  "topps-tier-one-bundesliga": "topps-tier-one",
+  "topps-uefa-superstars": "topps",
+  "topps-merlin-collection-chrome": "topps",
+  "topps-bundesliga": "topps",
+  "topps-uefa-champions-league": "topps",
+  "topps-uefa-champions-league-japan-edition": "topps",
+  "topps-uefa-japan-edition": "topps",
+  "topps-uefa-champions-league-jade-edition": "topps",
+  "topps-jade-edition-uefa-club-competitions": "topps",
+  "topps-match-attax-uefa": "topps",
+  "topps-uefa-1st-edition-club-competitions": "topps",
+  "topps-carnaval-uefa-club-competitions": "topps",
+  "topps-uefa-1st-edition": "topps",
+  "topps-bundesliga-japan-edition": "topps",
+  "topps-liverpool-fc-team-set": "topps",
+  "topps-atletico-madrid-team-set": "topps",
+  "topps-renaissance-mls": "topps",
+  "topps-juventus-team-set": "topps",
+  "topps-deco-uefa": "topps",
+  "donruss-elite-premier-league": "donruss-elite",
+  "donruss-elite-serie-a": "donruss-elite",
+  "donruss-elite-la-liga": "donruss-elite",
+  "donruss-elite-fifa": "donruss-elite",
+  "donruss-elite-laliga": "donruss-elite",
+  "topps-chrome-uefa-champions-league": "topps-chrome",
+  // Not one of the 66 — a fixed point since the 2026-09-03 census (29,769
+  // checklist rows), carrying the identical parser/table gap.
+  "topps-chrome-uefa-club-competitions": "topps-chrome",
+  "topps-chrome-bundesliga": "topps-chrome",
+  "topps-chrome-spfl": "topps-chrome",
+  "topps-chrome-match-attax-bundesliga": "topps-chrome",
+  "topps-chrome-uefa-womens-champions-league": "topps-chrome",
+  "topps-chrome-steve-aoki": "topps-chrome",
+  "topps-chrome-atletico-de-madrid-team-set": "topps-chrome",
+  "topps-chrome-paris-saint-germain": "topps-chrome",
+  "topps-chrome-borussia-dortmund-team-set": "topps-chrome",
+  "topps-chrome-bvb-borussia-dortmund": "topps-chrome",
+  "topps-chrome-x-real-sociedad": "topps-chrome",
+  "topps-finest-bundesliga": "topps-finest",
+  "topps-finest-uefa-champions-league": "topps-finest",
+  "topps-finest-uefa-club-competitions": "topps-finest",
+  "score-premier-league": "score",
+  "score-serie-a": "score",
+  "score-ligue-1": "score",
+  "score-fifa": "score",
+  "score-la-liga": "score",
+  "panini-prizm-fifa-world-cup-qatar": "panini-prizm",
+  "panini-mosaic-uefa-euro-2020": "panini-mosaic",
+  "panini-mosaic-serie-a": "panini-mosaic",
+  "panini-mosaic-laliga": "panini-mosaic",
+  "panini-mosaic-premier-league": "panini-mosaic",
+  "panini-mosaic-la-liga": "panini-mosaic",
+  "panini-mosaic-fifa-road-to-world-cup": "panini-mosaic",
+  "topps-stadium-club-chrome-uefa": "topps-stadium-club",
+  "topps-stadium-club-chrome-bundesliga": "topps-stadium-club",
+  "leaf-ultimate": "leaf",
+  "panini-revolution-premier-league": "panini-revolution",
+  "topps-museum-collection-uefa-champions-league": "topps-museum-collection",
+  "topps-museum-collection-uefa": "topps-museum-collection",
+  "topps-museum-collection-bundesliga": "topps-museum-collection",
+  "topps-chrome-sapphire-edition-uefa": "topps-chrome-sapphire",
+  "topps-chrome-sapphire-bundesliga": "topps-chrome-sapphire",
+  "topps-chrome-sapphire-edition-uefa-womens": "topps-chrome-sapphire",
+  "panini-select-uefa-euro-preview": "panini-select",
+  "panini-national-treasures-fifa-road-to-world-cup": "panini-national-treasures",
+  "bowman-mls": "bowman",
+  "topps-tier-one": "topps",
 });
 
 /** The keys whose ladder edge this module mirrors from productSetKeys.ts --

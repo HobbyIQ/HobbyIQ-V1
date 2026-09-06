@@ -2396,7 +2396,251 @@ export function titleSpellsBowmanDraft(title: string | null | undefined): boolea
   return /chrome\s+draft\b/.test(t) || /draft\s+chrome\b/.test(t);
 }
 
+/**
+ * CF-A-LEAGUE-RELEASE-IS-NOT-ITS-FLAGSHIP (Drew, 2026-09-06, #1863).
+ *
+ * THE DEFECT. #1863 ruled all 66 soccer league/competition products DISTINCT
+ * and made every one a `normalizeSetKey` FIXED POINT — but nothing was ever
+ * taught to MINT them. `inferSetKeyFromTitle` reads a title, and its ~40
+ * product rules stop at the family word: "2022 Panini Prizm World Cup Qatar
+ * Lionel Messi" matched `/prizm/`, returned "Panini Prizm", and the four words
+ * that name the actual product were never read. Measured on the 2022 soccer
+ * panini-prizm cell: 572 of 577 titles NAME their competition and all 577
+ * derived the bare family key.
+ *
+ * That silence is what blocks the repair. The rematch classifier only opens
+ * the SPECIALIZATION-STATED arm (#1725) when the derived key CHANGES, and a
+ * deriver that returns the stored key changes nothing — so every one of these
+ * rows classifies AGREE and the ladder is never consulted. #1907 found the
+ * restem blocked "a rung lower" than the row filter; this is that rung.
+ *
+ * WHY THE COMPETITION IS THE SPORT SIGNAL, and why no `sport` parameter is
+ * threaded here. The rule must fire for soccer only. It does — intrinsically.
+ * `inferSportFromTitle` (CF-SOCCER-NEVER-DETECTED, Drew 2026-08-15) already
+ * rules that these exact tokens ARE the evidence of soccer: its soccer branch
+ * tests `fifa|uefa|champions league|premier league|la liga|serie a|bundesliga|
+ * ligue 1|mls|copa|world cup|euro 20dd|...` and returns "soccer" on any of
+ * them. A title that states one of these competitions is a soccer title by
+ * this codebase's own measured ruling, so gating on the competition IS gating
+ * on the sport, read from the one input the deriver actually holds.
+ *
+ * Widening the signature instead was considered and refused for the reason
+ * productSetKeys.ts:251 already gives for `spellForSport`: two of this
+ * function's call sites (holdingFieldRecovery.ts:285 and :513) have no sport
+ * in scope, so a `sport` parameter would silently arrive `undefined` there and
+ * the rule would fire nowhere on that path — the documented anti-pattern. It
+ * also has to stay callable as `inferSetKeyFromTitle(title)`, which is how
+ * rematchSpecializationStated.test.ts pins that every ladder key is mintable.
+ *
+ * BLANK MEANS UNKNOWN, NEVER A GUESS (CF-EVERY-INGEST-USES-THE-ONE-CHECKLIST-
+ * FORMAT). A soccer title that states NO competition keeps the bare family
+ * key. This table only reads what the seller wrote; it never infers a
+ * competition from a year, a club, or a player, and a family with no matching
+ * competition falls straight through to the rules below unchanged.
+ *
+ * ONE TABLE, NOT FORTY REGEXES. Every destination is one of the 66 ruled keys
+ * and every one is checklist-attested (178,281 strict checklistcenter rows).
+ * No key is invented here — CF-NO-SYNTHETIC-PARALLELS applied to coverage:
+ * this teaches the parser to reach vocabulary that already exists.
+ */
+
+/** One ruled soccer product: the family the title's brand words resolve to,
+ *  the competition the title must STATE, and the #1863 key that names both.
+ *  `family` is matched against the key this function would otherwise have
+ *  returned (normalized), so the brand reading stays the existing rules' job
+ *  and this table only ever REFINES an answer, never invents one. */
+interface SoccerCompetitionProduct {
+  readonly family: string;
+  readonly competition: RegExp;
+  readonly setKey: string;
+}
+
+/**
+ * The 66 ruled keys, grouped by the family they currently collapse into and
+ * ordered MOST SPECIFIC FIRST within each family — the same ordering doctrine
+ * the Topps block below states ("Order: 3-word variants first"). The first
+ * match wins, so `topps-uefa-champions-league-japan-edition` must be tried
+ * before `topps-uefa-champions-league`, and that before `topps-uefa-1st-
+ * edition`; a shorter competition that is a prefix of a longer one would
+ * otherwise claim it.
+ */
+const SOCCER_COMPETITION_PRODUCTS: readonly SoccerCompetitionProduct[] = [
+  // -- panini-prizm ---------------------------------------------------------
+  // The Qatar release only. The 2025 FIFA product is a SEPARATE ruling
+  // (CF-SOCCER-PRIZM-IS-PRIZM-FIFA, productSetKeys.ts:167) applied by
+  // `spellForSport` on the slug seam, and is deliberately untouched here.
+  { family: "panini-prizm", competition: /\b(?:fifa\s+)?world\s+cup\s+qatar\b|\bqatar\s+world\s+cup\b/, setKey: "panini-prizm-fifa-world-cup-qatar" },
+
+  // -- topps-chrome ---------------------------------------------------------
+  { family: "topps-chrome", competition: /\bmatch\s*attax\b(?=[\s\S]*\bbundesliga\b)|\bbundesliga\b(?=[\s\S]*\bmatch\s*attax\b)/, setKey: "topps-chrome-match-attax-bundesliga" },
+  { family: "topps-chrome", competition: /\buefa\s+women'?s\s+champions\s+league\b|\bwomen'?s\s+champions\s+league\b/, setKey: "topps-chrome-uefa-womens-champions-league" },
+  // NOT one of the 66 — `topps-chrome-uefa-club-competitions` was already a
+  // fixed point from the 2026-09-03 census (29,769 checklist rows), which is
+  // why #1863's note names it as the sibling that "survives the collapse
+  // untouched". It survived normalizeSetKey; it did not survive the PARSER,
+  // which had no rule for it either, so its titles derived bare `topps-chrome`
+  // exactly like the 66. Measured on the 2026-09-06 read-only census: UEFA
+  // Club Competitions and UCC titles sitting on the bare family key.
+  // `UCC` is the market's abbreviation and productSetKeys.ts already reads it
+  // as one (`\bucc\b`, RX_OTHER_COMPETITION).
+  { family: "topps-chrome", competition: /\buefa\s+club\s+competitions?\b|\bclub\s+competitions?\b|\bucc\b/, setKey: "topps-chrome-uefa-club-competitions" },
+  { family: "topps-chrome", competition: /\buefa\s+champions\s+league\b|\bchampions\s+league\b|\bucl\b/, setKey: "topps-chrome-uefa-champions-league" },
+  { family: "topps-chrome", competition: /\bborussia\s+dortmund\b(?=[\s\S]*\bteam\s+set\b)/, setKey: "topps-chrome-borussia-dortmund-team-set" },
+  { family: "topps-chrome", competition: /\bbvb\b|\bborussia\s+dortmund\b/, setKey: "topps-chrome-bvb-borussia-dortmund" },
+  { family: "topps-chrome", competition: /\batl[eé]tico\s+de\s+madrid\b|\batletico\s+de\s+madrid\b|\batl[eé]tico\s+madrid\b|\batletico\s+madrid\b/, setKey: "topps-chrome-atletico-de-madrid-team-set" },
+  { family: "topps-chrome", competition: /\bparis\s+saint[-\s]?germain\b|\bpsg\b/, setKey: "topps-chrome-paris-saint-germain" },
+  { family: "topps-chrome", competition: /\breal\s+sociedad\b/, setKey: "topps-chrome-x-real-sociedad" },
+  { family: "topps-chrome", competition: /\bspfl\b|\bscottish\s+premiership\b/, setKey: "topps-chrome-spfl" },
+  { family: "topps-chrome", competition: /\bsteve\s+aoki\b/, setKey: "topps-chrome-steve-aoki" },
+  { family: "topps-chrome", competition: /\bbundesliga\b/, setKey: "topps-chrome-bundesliga" },
+
+  // -- topps-chrome-sapphire ------------------------------------------------
+  { family: "topps-chrome-sapphire", competition: /\buefa\s+women'?s\b|\bwomen'?s\s+champions\s+league\b/, setKey: "topps-chrome-sapphire-edition-uefa-womens" },
+  { family: "topps-chrome-sapphire", competition: /\bbundesliga\b/, setKey: "topps-chrome-sapphire-bundesliga" },
+  { family: "topps-chrome-sapphire", competition: /\buefa\b|\bchampions\s+league\b/, setKey: "topps-chrome-sapphire-edition-uefa" },
+
+  // -- topps-finest ---------------------------------------------------------
+  { family: "topps-finest", competition: /\buefa\s+club\s+competitions?\b|\bclub\s+competitions?\b/, setKey: "topps-finest-uefa-club-competitions" },
+  { family: "topps-finest", competition: /\buefa\s+champions\s+league\b|\bchampions\s+league\b|\bucl\b/, setKey: "topps-finest-uefa-champions-league" },
+  { family: "topps-finest", competition: /\bbundesliga\b/, setKey: "topps-finest-bundesliga" },
+
+  // -- topps-stadium-club ---------------------------------------------------
+  { family: "topps-stadium-club", competition: /\bbundesliga\b/, setKey: "topps-stadium-club-chrome-bundesliga" },
+  { family: "topps-stadium-club", competition: /\buefa\b|\bchampions\s+league\b/, setKey: "topps-stadium-club-chrome-uefa" },
+
+  // -- topps-museum-collection ----------------------------------------------
+  { family: "topps-museum-collection", competition: /\buefa\s+champions\s+league\b|\bchampions\s+league\b|\bucl\b/, setKey: "topps-museum-collection-uefa-champions-league" },
+  { family: "topps-museum-collection", competition: /\bbundesliga\b/, setKey: "topps-museum-collection-bundesliga" },
+  { family: "topps-museum-collection", competition: /\buefa\b/, setKey: "topps-museum-collection-uefa" },
+
+  // -- panini-mosaic --------------------------------------------------------
+  { family: "panini-mosaic", competition: /\broad\s+to\s+(?:the\s+)?world\s+cup\b|\bfifa\s+road\s+to\b/, setKey: "panini-mosaic-fifa-road-to-world-cup" },
+  { family: "panini-mosaic", competition: /\beuro\s+2020\b|\buefa\s+euro\b/, setKey: "panini-mosaic-uefa-euro-2020" },
+  { family: "panini-mosaic", competition: /\bpremier\s+league\b|\bepl\b/, setKey: "panini-mosaic-premier-league" },
+  { family: "panini-mosaic", competition: /\bserie\s+a\b/, setKey: "panini-mosaic-serie-a" },
+  // Both spellings are ruled keys with their own checklists; the title decides
+  // which, exactly as it is written. `laliga` is the competition's own
+  // one-word branding and `la liga` the two-word form.
+  { family: "panini-mosaic", competition: /\blaliga\b/, setKey: "panini-mosaic-laliga" },
+  { family: "panini-mosaic", competition: /\bla\s+liga\b/, setKey: "panini-mosaic-la-liga" },
+
+  // -- panini-select --------------------------------------------------------
+  { family: "panini-select", competition: /\buefa\s+euro\b(?=[\s\S]*\bpreview\b)|\beuro\s+preview\b/, setKey: "panini-select-uefa-euro-preview" },
+
+  // -- panini-revolution ----------------------------------------------------
+  { family: "panini-revolution", competition: /\bpremier\s+league\b|\bepl\b/, setKey: "panini-revolution-premier-league" },
+
+  // -- panini-national-treasures --------------------------------------------
+  { family: "panini-national-treasures", competition: /\broad\s+to\s+(?:the\s+)?world\s+cup\b|\bfifa\s+road\s+to\b/, setKey: "panini-national-treasures-fifa-road-to-world-cup" },
+
+  // -- donruss-elite --------------------------------------------------------
+  { family: "donruss-elite", competition: /\bpremier\s+league\b|\bepl\b/, setKey: "donruss-elite-premier-league" },
+  { family: "donruss-elite", competition: /\bserie\s+a\b/, setKey: "donruss-elite-serie-a" },
+  { family: "donruss-elite", competition: /\blaliga\b/, setKey: "donruss-elite-laliga" },
+  { family: "donruss-elite", competition: /\bla\s+liga\b/, setKey: "donruss-elite-la-liga" },
+  { family: "donruss-elite", competition: /\bfifa\b|\bworld\s+cup\b/, setKey: "donruss-elite-fifa" },
+
+  // -- score ----------------------------------------------------------------
+  { family: "score", competition: /\bpremier\s+league\b|\bepl\b/, setKey: "score-premier-league" },
+  { family: "score", competition: /\bserie\s+a\b/, setKey: "score-serie-a" },
+  { family: "score", competition: /\bligue\s*1\b/, setKey: "score-ligue-1" },
+  { family: "score", competition: /\bla\s*liga\b/, setKey: "score-la-liga" },
+  { family: "score", competition: /\bfifa\b|\bworld\s+cup\b/, setKey: "score-fifa" },
+
+  // -- topps-tier-one -------------------------------------------------------
+  // #1863 files this one under `topps` because that is the namespace its rows
+  // were COLLAPSING into, but the parser reads "Tier One" and answers
+  // `topps-tier-one` — a rung lower and a rule that already exists. The family
+  // here is the key the parser actually produces, not the one the census
+  // recorded the damage under; refining from the flagship would never fire.
+  { family: "topps-tier-one", competition: /\bbundesliga\b/, setKey: "topps-tier-one-bundesliga" },
+
+  // -- bowman ---------------------------------------------------------------
+  { family: "bowman", competition: /\bmls\b|\bmajor\s+league\s+soccer\b/, setKey: "bowman-mls" },
+
+  // -- leaf -----------------------------------------------------------------
+  // The one key of the 66 with rows outside soccer (960 hockey, 2019,
+  // checklistcenter, alongside 7,173 soccer 2022) — a real product in two
+  // verticals, ruled distinct in both. It is a PRODUCT NAME, not a
+  // competition, so it is gated on the product word alone and carries no
+  // soccer test: a hockey Leaf Ultimate title must reach it too.
+  { family: "leaf", competition: /\bultimate\b/, setKey: "leaf-ultimate" },
+
+  // -- topps (the flagship bucket: 22 products) ------------------------------
+  // Longest / most qualified first. Every one of these titles says "Topps" and
+  // then names a competition, an edition, or a team set.
+  { family: "topps", competition: /\bmerlin\b(?=[\s\S]*\bchrome\b)(?=[\s\S]*\b(?:uefa|champions\s+league)\b)/, setKey: "topps-merlin-chrome-uefa-champions-league" },
+  { family: "topps", competition: /\bmerlin\b/, setKey: "topps-merlin-collection-chrome" },
+  { family: "topps", competition: /\bjade\s+edition\b(?=[\s\S]*\bclub\s+competitions?\b)|\bclub\s+competitions?\b(?=[\s\S]*\bjade\s+edition\b)/, setKey: "topps-jade-edition-uefa-club-competitions" },
+  { family: "topps", competition: /\bjade\s+edition\b/, setKey: "topps-uefa-champions-league-jade-edition" },
+  { family: "topps", competition: /\bcarnaval\b/, setKey: "topps-carnaval-uefa-club-competitions" },
+  { family: "topps", competition: /\bdeco\b(?=[\s\S]*\buefa\b)|\buefa\b(?=[\s\S]*\bdeco\b)/, setKey: "topps-deco-uefa" },
+  { family: "topps", competition: /\brenaissance\b(?=[\s\S]*\bmls\b)|\bmls\b(?=[\s\S]*\brenaissance\b)/, setKey: "topps-renaissance-mls" },
+  { family: "topps", competition: /\bmatch\s*attax\b/, setKey: "topps-match-attax-uefa" },
+  { family: "topps", competition: /\bsuperstars\b(?=[\s\S]*\buefa\b)|\buefa\s+superstars\b/, setKey: "topps-uefa-superstars" },
+  { family: "topps", competition: /\bliverpool\b/, setKey: "topps-liverpool-fc-team-set" },
+  { family: "topps", competition: /\batl[eé]tico\s+(?:de\s+)?madrid\b|\batletico\s+(?:de\s+)?madrid\b/, setKey: "topps-atletico-madrid-team-set" },
+  { family: "topps", competition: /\bjuventus\b/, setKey: "topps-juventus-team-set" },
+  { family: "topps", competition: /\b(?:1st|first)\s+edition\b(?=[\s\S]*\bclub\s+competitions?\b)|\bclub\s+competitions?\b(?=[\s\S]*\b(?:1st|first)\s+edition\b)/, setKey: "topps-uefa-1st-edition-club-competitions" },
+  { family: "topps", competition: /\b(?:1st|first)\s+edition\b(?=[\s\S]*\buefa\b)|\buefa\b(?=[\s\S]*\b(?:1st|first)\s+edition\b)/, setKey: "topps-uefa-1st-edition" },
+  { family: "topps", competition: /\bbundesliga\b(?=[\s\S]*\bjapan\s+edition\b)|\bjapan\s+edition\b(?=[\s\S]*\bbundesliga\b)/, setKey: "topps-bundesliga-japan-edition" },
+  { family: "topps", competition: /\bjapan\s+edition\b(?=[\s\S]*\bchampions\s+league\b)|\bchampions\s+league\b(?=[\s\S]*\bjapan\s+edition\b)/, setKey: "topps-uefa-champions-league-japan-edition" },
+  { family: "topps", competition: /\bjapan\s+edition\b/, setKey: "topps-uefa-japan-edition" },
+  { family: "topps", competition: /\buefa\s+club\s+competitions?\b|\bclub\s+competitions?\b/, setKey: "topps-uefa-club-competitions" },
+  { family: "topps", competition: /\buefa\s+champions\s+league\b|\bchampions\s+league\b|\bucl\b/, setKey: "topps-uefa-champions-league" },
+  { family: "topps", competition: /\bbundesliga\b/, setKey: "topps-bundesliga" },
+  { family: "topps", competition: /\bmls\b|\bmajor\s+league\s+soccer\b/, setKey: "topps-mls" },
+];
+
+/** The families this table can refine, for the O(1) reject that keeps a
+ *  baseball title from walking the whole table. */
+const SOCCER_COMPETITION_FAMILIES: ReadonlySet<string> = new Set(
+  SOCCER_COMPETITION_PRODUCTS.map((p) => p.family),
+);
+
+/**
+ * Refine a family key into the ruled league/competition product the title
+ * STATES, or return it unchanged.
+ *
+ * `familyKey` is what the brand rules already decided, slugified — so this
+ * never reads the brand itself and cannot mint a product for a title whose
+ * manufacturer it misread. A family that states no competition, and every
+ * family not in the table, falls through unchanged: blank is unknown.
+ */
+export function refineSoccerCompetitionSetKey(familyKey: string, title: string): string {
+  const fam = slugify(String(familyKey ?? ""));
+  if (!SOCCER_COMPETITION_FAMILIES.has(fam)) return familyKey;
+  const t = String(title ?? "").toLowerCase();
+  for (const p of SOCCER_COMPETITION_PRODUCTS) {
+    if (p.family !== fam) continue;
+    if (p.competition.test(t)) return p.setKey;
+  }
+  return familyKey;
+}
+
+/**
+ * Infer the setKey a title states.
+ *
+ * ONE PARSER, TWO STAGES. The brand rules answer first — they are the ~40
+ * rules below, unchanged — and the ruled soccer league/competition table then
+ * REFINES that answer when the title names a competition
+ * (CF-A-LEAGUE-RELEASE-IS-NOT-ITS-FLAGSHIP). The refinement is applied HERE,
+ * once, rather than at each of the forty-odd `return` statements: a second
+ * copy of the rule at every exit is exactly how two readings of the same
+ * title start to disagree, and the note on `spellForEra` in productSetKeys.ts
+ * states the same principle for the slug seam.
+ *
+ * The refinement can only ever move a key DOWN its own family ladder, so a
+ * title that states no competition returns precisely what it returned before.
+ */
 export function inferSetKeyFromTitle(title: string, cardNumber?: string | null): string {
+  return refineSoccerCompetitionSetKey(inferFamilySetKeyFromTitle(title, cardNumber), title);
+}
+
+/** The brand rules: the historical body of `inferSetKeyFromTitle`, which
+ *  answers with the FAMILY a title names. Not exported — every caller wants
+ *  the refined answer, and a second entry point is a second parser. */
+function inferFamilySetKeyFromTitle(title: string, cardNumber?: string | null): string {
   // CF-THE-YEAR-DOES-NOT-SPLIT-THE-PRODUCT (Drew, 2026-08-31). Every product
   // rule below is written as adjacent words (/topps\s+chrome/), but sellers —
   // and CardHedge's own slab-derived titles — routinely write the brand, then
@@ -2792,6 +3036,15 @@ export function inferSetKeyFromTitle(title: string, cardNumber?: string | null):
   if (/panini\s+select|\bselect\b/i.test(t)) return "Panini Select";
   if (/panini\s+mosaic|\bmosaic\b/i.test(t)) return "Panini Mosaic";
   if (/panini\s+optic|donruss\s+optic/i.test(t) || (/\boptic\b/i.test(t) && noRivalBrand(t, /panini|donruss/i))) return "Panini Optic";
+  // Donruss Elite is a productSetKeys.ts entry and a normalizeSetKey fixed
+  // point with no parser rule, so every Elite title fell to the bare Donruss
+  // arm directly below and came back `panini-donruss` — a DIFFERENT product.
+  // It is listed here because the five ruled `donruss-elite-*` soccer releases
+  // (#1863: Premier League, Serie A, La Liga, LaLiga, FIFA — 23,769 strict
+  // checklist rows) can only be refined out of a family the parser can reach,
+  // and it was reaching the flagship instead. Ordered above the bare rule for
+  // the reason this block already states: most specific first.
+  if (/donruss\s+elite|panini\s+elite\b/i.test(t)) return "Donruss Elite";
   if (/panini\s+donruss|\bdonruss\b/i.test(t)) return "Panini Donruss";
   if (/panini\s+prizm|\bprizm\b/i.test(t)) return "Panini Prizm";
   if (/topps/.test(t)) return "Topps";
