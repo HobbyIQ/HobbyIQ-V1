@@ -199,11 +199,18 @@ describe("the rederive pass asks with the holding's set name and print run", () 
     // RECOVERED run (`rec.fields.printRun`), which is the same claim read from
     // a wider source; counting only the `h.printRun` spelling would fail on a
     // call that is more correct, not less.
+    //
+    // The GATE 1b widening (#1849) adds a FOURTH call — the title-product
+    // re-ask, made when the destination's player contradicts the holding's. It
+    // states the run as a ternary over both sources at once, because it fires
+    // whether or not recovery ran and must carry the claim either way. Same
+    // intent, a third spelling.
     const calls = src.split("await canonicalize(").length - 1;
     expect(calls).toBeGreaterThanOrEqual(2);
     const withStoredRun = src.split("printRun: typeof h.printRun").length - 1;
     const withRecoveredRun = src.split("printRun: typeof rec.fields.printRun").length - 1;
-    expect(withStoredRun + withRecoveredRun).toBe(calls);
+    const withEitherRun = src.split("printRun: recovery").length - 1;
+    expect(withStoredRun + withRecoveredRun + withEitherRun).toBe(calls);
   });
 });
 
