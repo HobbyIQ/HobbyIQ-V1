@@ -99,12 +99,19 @@ describe("a holding on a self-derived identity publishes NO number", () => {
     // of the very identity this refusal faults, so it is the same evidence one
     // pass older rather than an independent claim. It goes.
     const v = valuation(WITT_SLUG, "ebay-user-purchase", 224.75);
+    // Rule 2 on its own terms: asked with no refusal reason, the verdict is
+    // still the refused pool's own prior publish.
     expect(retentionThroughFloor(WITT, { pooledAs: WITT_SLUG }))
       .toEqual({ retained: false, because: "prior-is-the-refused-pool" });
     const { holding } = noBasisRefusalWrite(WITT, "no-checklist-match", v, NOW);
     expect(holding.fairMarketValue).toBeNull();
     expect(withheldOf(holding).retained).toBeNull();
-    expect(withheldOf(holding).retentionRefused).toBe("prior-is-the-refused-pool");
+    // REVISED 2026-09-06 (rule 3). Through an IDENTITY refusal the reported
+    // reason is now `identity-not-priceable`: it is asked first, because when
+    // the identity is refused there is no card for the number to be the price
+    // of and the pool's provenance is beside the point. The row's fate —
+    // nothing retained — is unchanged, which is what this test is about.
+    expect(withheldOf(holding).retentionRefused).toBe("identity-not-priceable");
     // And the estimate slot is cleared with it — `computeDisplayValue` reads
     // `estimatedValue` BEFORE falling through to cost basis, so a stale
     // estimate left standing just moves the same undefended number one field
@@ -113,12 +120,52 @@ describe("a holding on a self-derived identity publishes NO number", () => {
     expect((holding as unknown as Record<string, unknown>).isEstimate).toBe(false);
   });
 
-  it("5979f485 (Jeter) KEEPS a prior a different body of evidence produced", () => {
-    // The retention is RULED, not automatic — and the rule cuts both ways. A
-    // sibling estimate reached other cards' sales, so the identity refusal
-    // says nothing about it and it stands, labelled.
+  it("5979f485 (Jeter) drops its prior too — an unbacked identity retains NOTHING", () => {
+    // REVERSED 2026-09-06 (rule 3, "absent beats wrong" — Drew). This test
+    // previously asserted the opposite: that a sibling estimate stands
+    // through an identity refusal because it "reached other cards' sales, so
+    // the identity refusal says nothing about it".
+    //
+    // That reasoning answers the wrong question. Rules 1 and 2 ask whether
+    // the NUMBER is sound — against a basis, against a pool. An identity
+    // refusal is not a claim about the number at all: it says there is no
+    // card here that a price can be the price OF. A sibling estimate for a
+    // card no checklist confirms is a number about nothing, and the fact that
+    // it came from an independent body of evidence makes it no more
+    // attachable to an identity we cannot name.
+    //
+    // This holding is not hypothetical. The 2026-09-06 read-only census found
+    // 5979f485 live on `1997:bowmans-best:bbp4:atomic-refractor` at $133.125
+    // beside a `no-checklist-match` withhold — and its twin 437f010d on the
+    // SAME unbacked slug at $65. One card, two retained prices, neither of
+    // them a claim the catalog can stand behind. Ten such rows in 131.
+    //
+    // MUTATION: delete rule 3 from `retentionThroughFloor` and this goes red.
     const v = valuation(JETER_SLUG, "ebay-user-purchase", 106.5);
     const { holding } = noBasisRefusalWrite(JETER, "no-checklist-match", v, NOW);
+    expect(holding.fairMarketValue).toBeNull();
+    expect(withheldOf(holding).retained).toBeNull();
+    expect(withheldOf(holding).retentionRefused).toBe("identity-not-priceable");
+    // The number is not destroyed — it is REPORTED, never published. A
+    // withhold does not destroy evidence.
+    expect(withheldOf(holding).reason).toBe("no-checklist-match");
+    // No rung is claimed for a number that no longer stands.
+    expect(withheldOf(holding).retainedRung).toBeNull();
+    // And the estimate slot goes with it, so the same undefended number
+    // cannot reappear one field over.
+    expect((holding as unknown as Record<string, unknown>).estimatedValue).toBeNull();
+  });
+
+  it("an EVIDENCE refusal still keeps an independent prior — rule 3 is not a blanket erase", () => {
+    // The doctrine the Jeter test used to carry, restated where it is true.
+    // `no-exact-pool` names a real, checklist-backed card whose evidence is
+    // thin; #1781's retention is exactly right there and rule 3 must not
+    // touch it.
+    //
+    // MUTATION: widen IDENTITY_REFUSALS to the whole NoBasisRefusalReason
+    // union and this goes red — silently deleting live prices off good cards.
+    const v = valuation(JETER_SLUG, "beckett", 106.5);
+    const { holding } = noBasisRefusalWrite(JETER, "no-exact-pool", v, NOW);
     expect(holding.fairMarketValue).toBe(106.5);
     expect(withheldOf(holding).retained).toBe(106.5);
     expect(withheldOf(holding).retentionRefused).toBeNull();

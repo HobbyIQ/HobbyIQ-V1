@@ -59,6 +59,7 @@
  */
 import type { PortfolioHolding } from "../../types/portfolioiq.types.js";
 import type { PersistedPricingLabels } from "../compiq/valuationLabels.js";
+import { PRICING_CONTRACT_VERSION } from "./pricingContract.js";
 
 /**
  * The rung a write names, or its explicit refusal to name one.
@@ -280,6 +281,14 @@ export function writeHoldingValuation(
         // construction on EVERY path that reaches this helper.
         ...(w.meta.labels ? { labels: w.meta.labels } : {}),
         ...(w.meta.selfAnchored !== undefined ? { selfAnchored: w.meta.selfAnchored } : {}),
+        // CF-A-FRESHNESS-SKIP-MUST-NOT-HIDE-A-ROW-THE-RULES-NO-LONGER-COVER
+        // (Drew, 2026-09-06). Stamped HERE, unconditionally, for the same
+        // reason the withheld-clear happens here: this is the one choke point
+        // every write already passes through, so the contract a number was
+        // produced under can never be a thing a call site remembered. Not a
+        // caller-supplied field — a lane cannot claim a contract it did not
+        // run under.
+        contractVersion: PRICING_CONTRACT_VERSION,
       }
     : undefined;
 

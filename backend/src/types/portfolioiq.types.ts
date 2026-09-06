@@ -278,6 +278,21 @@ export interface PortfolioHolding {
      *  CF-COMP-COUNT-IS-THE-POOL. Null/absent when no published sale is the
      *  owner's, which is the universal case. */
     selfAnchored?: { own: number; total: number } | null;
+    /** CF-A-FRESHNESS-SKIP-MUST-NOT-HIDE-A-ROW-THE-RULES-NO-LONGER-COVER
+     *  (Drew, 2026-09-06). The pricing contract this stamp was produced
+     *  under — `PRICING_CONTRACT_VERSION` in
+     *  services/portfolioiq/pricingContract.ts, whose header carries the
+     *  reasoning and the bump rule. Written by the writer that decided the
+     *  price, at the same time as the price.
+     *
+     *  The nightly cadence's freshness skip reads it: a holding may be
+     *  skipped on age + an unchanged pool ONLY when its stamp is a published
+     *  price at the CURRENT contract. Absent → the stamp predates #1784's
+     *  identity gate, which is exactly the population that gate was meant to
+     *  re-judge and which no amount of pool-growth checking can re-admit.
+     *
+     *  A plain string here, like `method`, to keep types.ts import-free. */
+    contractVersion?: string;
   };
   // CF-RUNG-LABEL (D4 "one valuation path", PR 1 — 2026-08-29). The
   // machine-readable name of the RUNG that produced this holding's current

@@ -373,7 +373,12 @@ describe("C. a withheld price carries a withheld stamp — and only that", () =>
     // GRIFFEY's prior $1,850 came from `exact-pool-projection` on the very
     // slug the refusal names — the refused identity's OWN pool read, one pass
     // older. Rule 2 refuses it, exactly as it refuses the Chipper $2.
-    const { holding, prose } = noBasisRefusalWrite(GRIFFEY, "identity-not-in-catalog", null, NOW);
+    //
+    // The reason is `no-exact-pool` — an EVIDENCE refusal — so that rule 2 is
+    // what is on trial here. Under an identity refusal rule 3 (2026-09-06)
+    // answers first and this row would read `identity-not-priceable`, which
+    // is a different rule proving itself; the test below covers that.
+    const { holding, prose } = noBasisRefusalWrite(GRIFFEY, "no-exact-pool", null, NOW);
     const meta = holding.pricingSourceMeta as Record<string, unknown>;
     const withheld = meta.withheld as Record<string, unknown>;
 
@@ -388,13 +393,40 @@ describe("C. a withheld price carries a withheld stamp — and only that", () =>
 
     // MUTATION CHECK: drop the `withheld` block and this goes red.
     expect(meta.withheld).toBeDefined();
-    expect(withheld.reason).toBe("identity-not-in-catalog");
+    expect(withheld.reason).toBe("no-exact-pool");
     // Nothing was computed, so no number is borrowed as "proposed".
     expect(withheld.proposed).toBeNull();
     // The decision is LABELLED on the row, not only in a log that rolls.
     expect((holding as unknown as Record<string, unknown>).fmvRetainedReason).toBe(prose);
     expect((holding as unknown as Record<string, unknown>).fmvRetainedAt).toBe(NOW);
     expect(prose).toContain("no price was published");
+  });
+
+  it("RULE 3: an identity refusal retains nothing, even where rules 1 and 2 would have kept it", () => {
+    // CF-ABSENT-BEATS-WRONG (Drew, 2026-09-06). The cross-identity Griffey
+    // below is the shape rules 1 and 2 BOTH wave through — a healthy $1,850
+    // reached by a family baseline, not by the refused pool. Under an
+    // identity refusal it is still refused, because the question is no longer
+    // whether the number is sound: there is no card for it to be the price of.
+    //
+    // This is the corpus defect measured 2026-09-06: 10 of 131 holdings
+    // carrying a live fairMarketValue beside a `no-checklist-match` /
+    // `identity-not-in-catalog` withhold.
+    //
+    // MUTATION: delete rule 3 from `retentionThroughFloor` and this goes red.
+    const crossIdentity = {
+      ...GRIFFEY,
+      fmvRung: "family-baseline",
+      pricingSourceMeta: { ...(GRIFFEY.pricingSourceMeta as object), method: "family-baseline" },
+    } as unknown as PortfolioHolding;
+    for (const reason of ["identity-not-in-catalog", "no-checklist-match"] as const) {
+      const { holding } = noBasisRefusalWrite(crossIdentity, reason, null, NOW);
+      const withheld = (holding.pricingSourceMeta as Record<string, unknown>).withheld as Record<string, unknown>;
+      expect(holding.fairMarketValue).toBeNull();
+      expect(withheld.retained).toBeNull();
+      expect(withheld.retentionRefused).toBe("identity-not-priceable");
+      expect(withheld.reason).toBe(reason);
+    }
   });
 
   it("a cross-identity prior survives the refusal — the rule is not a blanket erase", () => {
@@ -406,7 +438,10 @@ describe("C. a withheld price carries a withheld stamp — and only that", () =>
       fmvRung: "family-baseline",
       pricingSourceMeta: { ...(GRIFFEY.pricingSourceMeta as object), method: "family-baseline" },
     } as unknown as PortfolioHolding;
-    const { holding } = noBasisRefusalWrite(crossIdentity, "identity-not-in-catalog", null, NOW);
+    // An EVIDENCE refusal: the card is real and named, only its pool is thin.
+    // That is where "not a blanket erase" is the doctrine — an identity
+    // refusal is a different claim and rule 3 answers it (test above).
+    const { holding } = noBasisRefusalWrite(crossIdentity, "no-exact-pool", null, NOW);
     const withheld = (holding.pricingSourceMeta as Record<string, unknown>).withheld as Record<string, unknown>;
     expect(holding.fairMarketValue).toBe(1850);
     expect(withheld.retained).toBe(1850);
@@ -448,7 +483,10 @@ describe("C. a withheld price carries a withheld stamp — and only that", () =>
       fmvRung: "family-baseline",
       pricingSourceMeta: { slug: "some:other:pool", method: "family-baseline", compsUsed: 2, confidence: 0.1 },
     } as unknown as PortfolioHolding;
-    const { holding, prose } = noBasisRefusalWrite(belowFloor, "identity-not-in-catalog", null, NOW);
+    // Again an EVIDENCE refusal, so rule 1 is what is on trial: under an
+    // identity refusal rule 3 answers first and the reason would be
+    // `identity-not-priceable`.
+    const { holding, prose } = noBasisRefusalWrite(belowFloor, "no-exact-pool", null, NOW);
     const withheld = (holding.pricingSourceMeta as Record<string, unknown>).withheld as Record<string, unknown>;
     expect(holding.fairMarketValue).toBeNull();
     expect(withheld.retentionRefused).toBe("prior-fails-floor");

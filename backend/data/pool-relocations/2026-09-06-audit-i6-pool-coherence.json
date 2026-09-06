@@ -1,0 +1,127 @@
+{
+ "generatedAt": "2026-09-06T08:00:00Z",
+ "forLane": "relocate-pool-rows-by-list.cjs",
+ "reportOnlyUntil": "Drew's review - no apply is authorized by this PR",
+ "finding": "I6 POOL-IDENTITY-COHERENCE, pricing-invariant audit run 34018932244 (2026-09-06T07:22:25Z)",
+ "rulings": [
+  "The audit reported 24 rows; they are 23 DISTINCT sales - tca-ebay::237048906564 appears twice in rows[]. Every count below is over the 23.",
+  "40% OF THE FINDING IS THE CHECKER, NOT THE DATA. 9 of 23 are false positives of two kinds: (a) the title's PLURAL against a singular slug segment ('Refractors' vs orange-refractor, 'Prizms' vs silver-prizm), and (b) the family test reducing a compound segment to its colour and then reporting the rest as unstated - 'light-blue-die-cut-prizm' was flagged for lacking die-cut, 'blue-x-fractor' and 'gold-x-fractor' for lacking x-fractor. Those rows need no relocation; the checker needs a substring test before a family test.",
+  "SPORT IS THE REAL DEFECT UNDER THE FINISH FLAG. 6 of 23 are sport misfiles the finish test caught only incidentally - Devin Lloyd (Bowman University is a FOOTBALL product filed in baseball), Jordyn Brooks, Tua Tagovailoa and CeeDee Lamb (football filed in baseball), Josh Giddey and Mitchell Robinson (basketball filed in baseball). In these the flagged word ('chrome', 'prizm') is a product/stock word, not a missing parallel.",
+  "PRODUCT WORDS ARE NOT FINISHES. 'Prizm DRAFT PICKS' is a different product from flagship Prizm, and 'Diamond Kings' is a named INSERT - neither is a parallel. 3 of 23 are product/subset misfiles on that basis.",
+  "PARK WHERE NO DESTINATION ROW EXISTS - NEVER MINT (CF-NO-SYNTHETIC-PARALLELS-ONLY-ACTUALS). 10 of the 14 actionable rows park: green-velocity does not exist at football donruss-optic #107/#152/#156 (only PINK velocity /79 does), no raw reactive-orange or reactive-blue Mosaic row exists (only GRADED children), no 2019 Mosaic #229 row exists at all, and no 2019 Bo Jackson Prizm Draft Picks row exists at any number.",
+  "A RAW SALE IS NEVER FILED ONTO A GRADED IDENTITY. Justin Herbert's reactive-orange rows all exist but every one is a graded child (psa-9/psa-10), so that sale parks rather than landing on a grade it did not state.",
+  "4 RELOCATE ENTRIES CARRY A CHECKLIST-BACKED DESTINATION, point-read against card_catalog 2026-09-06 and verified to name the SAME player: Devin Lloyd, Clayton Kershaw, Josh Giddey and Mitchell Robinson. Two of them also move the sale off ANOTHER player's pool - the Devin Lloyd sale currently sits on Ronald Acuna's row, and the Joe Burrow #2 sale (parked) sits on Patrick Mahomes II's."
+ ],
+ "census": {
+  "auditRowsReported": 24,
+  "distinctSales": 23,
+  "duplicateInArtifact": 1,
+  "byClass": {
+   "productMisfile": 3,
+   "sportMisfile": 6,
+   "finishMissing": 6,
+   "falsePositive": 8
+  },
+  "entries": 15,
+  "relocate": 4,
+  "parked": 11,
+  "noActionFalsePositives": 8,
+  "note": "every destination and every 404 below was point-read against card_catalog read-only on 2026-09-06"
+ },
+ "provenance": {
+  "auditRun": "34018932244",
+  "checkerDefect": "kind title-states-finish-slug-lacks compares title tokens against the slug's parallel segment reduced to a colour FAMILY; a substring test against the raw segment would have dropped 9 of these 23 before they were reported."
+ },
+ "entries": [
+  {
+   "id": "tca-ebay::127954242938",
+   "fromCardId": "hiq:baseball:2019:panini-prizm:15:pink-pulsar-prizm:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "The title says 'Panini Prizm DRAFT PICKS', a different product from the flagship panini-prizm the slug names, and panini-prizm-draft-picks is a real setKey (264,738 rows). But 2019 panini-prizm-draft-picks #15 is Josh Jung / Adley Rutschman, not Bo Jackson, and no 2019 Bo Jackson row exists in that product at any number. So the product word IS the defect the checker caught - 'prizms' is a product token here, not a missing finish - but no checklist-backed destination exists. PARK, never mint. | title: '2019 Panini Prizm Draft Picks #15 Bo Jackson Prizms Pink Pulsar' | slug: hiq:baseball:2019:panini-prizm:15:pink-pulsar-prizm:no-auto"
+  },
+  {
+   "id": "tca-ebay::167964411848",
+   "fromCardId": "hiq:baseball:2021:bowman:62:gold-refractor:no-auto:num-50",
+   "toCardId": "hiq:football:2021:bowman:62:chrome-prospects-gold-refractor:no-auto:num-50",
+   "evidence": "Bowman University is a FOOTBALL/college product and the slug files this in BASEBALL, so sport AND product are wrong - the 'chrome' the checker flagged is the least of it. The checklist-backed destination exists and names the same player and print run: hiq:football:2021:bowman:62:chrome-prospects-gold-refractor:no-auto:num-50 (Devin Lloyd, checklistcenter-2026-09-05, /50). The incumbent at the current baseball address is RONALD ACUNA - a different player entirely, so this sale is also inflating Acuna's pool. | title: '2021-22 Bowman University #62 Devin Lloyd Chrome Gold #/50' | slug: hiq:baseball:2021:bowman:62:gold-refractor:no-auto:num-50"
+  },
+  {
+   "id": "tca-ebay::298643625291",
+   "fromCardId": "hiq:football:2020:panini-select:146:green-prizm:no-auto:num-5",
+   "parkIdentityUnverified": true,
+   "evidence": "Title states 'Die-Cut' and the slug's green-prizm carries no die-cut. Panini Select Premier Level IS the die-cut tier, so the finish is genuinely unstated in the slug. The catalog row at the current address exists and is the right player (Joe Burrow, checklistcenter-2026-09-05) but names parallel 'Green Prizm' with no die-cut sibling at #146, so there is no distinct destination row to move to. PARK for a checklist decision on whether Premier Level die-cut is its own parallel. | title: 'Panini Select 2020 Premier Level Joe Burrow #146 RC Neon Green Prizm Die-Cut' | slug: hiq:football:2020:panini-select:146:green-prizm:no-auto:num-5"
+  },
+  {
+   "id": "tca-ebay::800069468603",
+   "fromCardId": "hiq:baseball:2020:donruss-optic:107:green-velocity-optic:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Jordyn Brooks is a FOOTBALL player and the slug files this in BASEBALL. The football twin of the address is the right identity family - football/2020/donruss-optic/#107 is Jordyn Brooks, checklistcenter-2026-09-05 - but the only velocity parallel that exists there is PINK Velocity /79; hiq:football:2020:donruss-optic:107:green-velocity:no-auto 404s. So the sport is provably wrong while the parallel has no checklist-backed home. PARK. | title: '2020 Donruss Optic JORDYN BROOKS #107 Rookie Green Velocity Prizm' | slug: hiq:baseball:2020:donruss-optic:107:green-velocity-optic:no-auto"
+  },
+  {
+   "id": "tca-ebay::800583231998",
+   "fromCardId": "hiq:baseball:2018:donruss-optic:14:purple-prizm:no-auto",
+   "toCardId": "hiq:baseball:2018:donruss-optic:14:purple:no-auto",
+   "evidence": "The flagged word 'diamond' is from 'Diamond Kings', a named INSERT, not a finish. The slug's own address 404s in card_catalog, while the checklist-backed Kershaw row at this number is hiq:baseball:2018:donruss-optic:14:purple:no-auto (Clayton Kershaw, checklistcenter-html). Same player, same product, same number - the sale belongs on the row that actually exists. | title: '2018 Panini Donruss Optic - Diamond Kings Clayton Kershaw #14 Purple Prizm' | slug: hiq:baseball:2018:donruss-optic:14:purple-prizm:no-auto"
+  },
+  {
+   "id": "tca-ebay::800525932944",
+   "fromCardId": "hiq:football:2020:panini-select:2:blue-prizm:no-auto:num-175",
+   "parkIdentityUnverified": true,
+   "evidence": "Title states 'Die-Cut' and the slug's blue-prizm carries none. Worse, the catalog row at this address is PATRICK MAHOMES II (checklistcenter-2026-09-05) while the sale is Joe Burrow - so the address is wrong on the player axis too. No Burrow blue-prizm die-cut row exists at #2. PARK: the destination has to be minted from a checklist, never guessed. | title: 'PSA 8 Panini 2020 Select Joe Burrow Bengals Die-Cut Light Blue Prizm RC' | slug: hiq:football:2020:panini-select:2:blue-prizm:no-auto:num-175"
+  },
+  {
+   "id": "tca-ebay::206523678519",
+   "fromCardId": "hiq:baseball:2021:donruss-optic:152:blue-velocity-optic:no-auto",
+   "toCardId": "hiq:basketball:2021:donruss-optic:152:blue-velocity:no-auto",
+   "evidence": "Josh Giddey is a BASKETBALL player and the slug files this in BASEBALL. The checklist-backed destination exists with the same number and the same parallel: hiq:basketball:2021:donruss-optic:152:blue-velocity:no-auto (Josh Giddey, checklistcenter-2026-09-05). The flagged 'prizm' is Panini's stock word for an Optic velocity card, not a missing finish - the real defect is the sport. | title: '2021-22 Panini Donruss Optic - Rated Rookie Blue Velocity Prizm #152 Josh Giddey' | slug: hiq:baseball:2021:donruss-optic:152:blue-velocity-optic:no-auto"
+  },
+  {
+   "id": "tca-ebay::297423487135",
+   "fromCardId": "hiq:baseball:2019:panini-prizm:178:orange-ice:no-auto",
+   "toCardId": "hiq:basketball:2019:panini-prizm:178:prizms-orange-ice:no-auto",
+   "evidence": "Mitchell Robinson is a BASKETBALL player and the slug files this in BASEBALL. The checklist-backed destination exists and stores the finish the title states: hiq:basketball:2019:panini-prizm:178:prizms-orange-ice:no-auto (Mitchell Robinson, 'Prizms Orange Ice', hobbymonitor-2026-09-04). The flagged 'prizms' is exactly the word the destination parallel carries. | title: '2019-20 Panini Prizm #178 Mitchell Robinson Prizms Orange Ice' | slug: hiq:baseball:2019:panini-prizm:178:orange-ice:no-auto"
+  },
+  {
+   "id": "tca-ebay::327332644286",
+   "fromCardId": "hiq:football:2020:donruss-optic:152:green-velocity-optic:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Tua Tagovailoa is a FOOTBALL player and the slug files this in BASEBALL. The football identity family is right - football/2020/donruss-optic/#152 is Tua, checklistcenter-2026-09-05 - but the only velocity parallel there is PINK Velocity /79; hiq:football:2020:donruss-optic:152:green-velocity:no-auto 404s. Sport provably wrong, parallel with no checklist-backed home. PARK. | title: '2020 Panini Donruss Optic -  Tua Tagovailoa #152 Green Velocity Prizm RC PSA 10' | slug: hiq:football:2020:donruss-optic:152:green-velocity-optic:no-auto"
+  },
+  {
+   "id": "tca-ebay::297927206209",
+   "fromCardId": "hiq:basketball:2019:panini-mosaic:8:blue-prizm:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "'Reactive' is a real Mosaic finish word and the slug's blue-prizm lacks it, so the flag is correct. But 2019 panini-mosaic #8 holds only four rows and every one is a GRADED child (mosaic-genesis, camo-pink, base x2) - there is no raw reactive-blue row to move to. PARK rather than mint. | title: '2019 Panini Mosaic Lebron James Reactive Blue Prizm #8 Parallel PSA 10 Gem Mint' | slug: hiq:basketball:2019:panini-mosaic:8:blue-prizm:no-auto"
+  },
+  {
+   "id": "tca-ebay::168665916030",
+   "fromCardId": "hiq:football:2020:panini-select:246:blue-prizm:no-auto:num-75",
+   "parkIdentityUnverified": true,
+   "evidence": "Title states 'Die-Cut' (Panini Select Club Level) and the slug's blue-prizm carries none. The catalog row at the address exists and is the right player (Joe Burrow, checklistcenter-2026-09-05, 'Blue Prizm', /75) but no die-cut sibling exists at #246. PARK for a checklist decision on whether Club Level die-cut is its own parallel. | title: '2020 Panini Select - Club Level Joe Burrow #246 Blue Prizm Die-Cut (RC)' | slug: hiq:football:2020:panini-select:246:blue-prizm:no-auto:num-75"
+  },
+  {
+   "id": "tca-ebay::366640883026",
+   "fromCardId": "hiq:football:2020:panini-mosaic:204:orange-prizm:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "'Reactive' is a real Mosaic finish and the slug's orange-prizm lacks it. The catalog does hold reactive-orange rows for this exact card (Justin Herbert, football/2020/panini-mosaic #204) - but ALL of them are GRADED children (psa-10, psa-9, and a mosaic-reactive-orange psa-10); the raw hiq:football:2020:panini-mosaic:204:reactive-orange:no-auto 404s. A raw sale must not be filed onto a graded identity, so PARK until the raw row exists. | title: '2020 Panini Mosaic Reactive Orange Prizm RC Justin Herbert #204 PSA 10' | slug: hiq:football:2020:panini-mosaic:204:orange-prizm:no-auto"
+  },
+  {
+   "id": "tca-ebay::267770782687",
+   "fromCardId": "hiq:basketball:2019:panini-mosaic:229:blue-prizm:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "'Reactive' is a real Mosaic finish and the slug's blue-prizm lacks it. No 2019 panini-mosaic #229 row exists in the catalog at all - RJ Barrett's 2019 Mosaic rows are at #270 - so the slug's own number is unattested and no destination exists. PARK. | title: 'Panini 2019-20 Mosaic Rookies #229 RJ Barrett Reactive Blue Prizm PSA 10 Knicks' | slug: hiq:basketball:2019:panini-mosaic:229:blue-prizm:no-auto"
+  },
+  {
+   "id": "tca-ebay::377439640852",
+   "fromCardId": "hiq:baseball:2019:donruss-optic:14:silver-prizm:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "The flagged words are 'diamond' and 'holo'. 'Diamond Kings' is a named INSERT, not a finish, so this is a product/subset misfile like the Kershaw row. But unlike Kershaw, no 2019 donruss-optic #14 Ohtani row exists - the catalog's Ohtani optic rows are hiq:baseball:2019:donruss-optic:14:red-cracked-ice:no-auto:num-7 (a different parallel) and #164 rows. hiq:baseball:2019:donruss-optic:14:silver:no-auto 404s. PARK. | title: 'Shohei Ohtani 2019 Donruss Optic DIAMOND KINGS Holo SILVER Prizm Insert Card #14' | slug: hiq:baseball:2019:donruss-optic:14:silver-prizm:no-auto"
+  },
+  {
+   "id": "tca-ebay::278303674184",
+   "fromCardId": "hiq:football:2020:donruss-optic:156:green-velocity-optic:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "CeeDee Lamb is a FOOTBALL player and the slug files this in BASEBALL. The football family is right - football/2020/donruss-optic/#156 is CeeDee Lamb, checklistcenter-2026-09-05 - but the only velocity parallel there is PINK Velocity /79; hiq:football:2020:donruss-optic:156:green-velocity:no-auto 404s. PARK. | title: '2020 Panini Donruss Optic CeeDee Lamb Green Velocity Prizm RC #156 BGS 9.5' | slug: hiq:football:2020:donruss-optic:156:green-velocity-optic:no-auto"
+  }
+ ]
+}

@@ -61,6 +61,10 @@ const APPLY = process.env.BACKFILL_APPLY === "true" || process.env.APPLY === "tr
 // -- sweeps EVERY row. SLOTS binds to 1 when unsharded, so `% SLOTS` and
 // `SLOTS === 1` guards below keep working unchanged.
 const { runnerShardScope } = require("./lib/runner-shard-scope.cjs");
+// CF-A-FOLD-NEVER-CHANGES-THE-PLAYER, the EVIDENCE half.
+const {
+  gatherPlayerEvidence, gatherRivalRows, describePlayerEvidence, playerKeyOf,
+} = require(path.join(__dirname, "lib", "player-evidence.cjs"));
 // CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809): the one exit path.
 const { finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
 const SHARD_SCOPE = runnerShardScope({ label: "fold-unnumbered-twins" });
@@ -123,7 +127,11 @@ async function main() {
 
   // Pass 2: for each candidate, does an un-numbered twin exist, and is it
   // NOT itself a checklist row? Point reads on the twin id (partition = id).
-  const stats = { candidates: 0, otherShard: 0, noTwin: 0, ambiguous: 0, twinIsChecklist: 0, sameSourceListsBoth: 0, folded: 0, foldedVendor: 0, foldedOneOfOne: 0, foldedCrossSource: 0, salesRepointed: 0, gradedRetired: 0, failed: 0, notReached: 0 };
+  const stats = { candidates: 0, otherShard: 0, noTwin: 0, ambiguous: 0, twinIsChecklist: 0, sameSourceListsBoth: 0, folded: 0, foldedVendor: 0, foldedOneOfOne: 0, foldedCrossSource: 0, salesRepointed: 0, gradedRetired: 0, refusedDifferentPlayer: 0, contendedPairs: 0, failed: 0, notReached: 0 };
+  /** CF-A-FOLD-NEVER-CHANGES-THE-PLAYER: every refused pair, in full. */
+  const refusals = [];
+  /** Every contended pair with what the arms saw and which decided. */
+  const contendedLines = [];
   const examples = [];
   let stopReason = null;
   let i = 0;
@@ -146,7 +154,38 @@ async function main() {
     const numbered = decision.target;
     if (examples.length < 20) examples.push(`  ${base}  [${twin.source}] -> ${numbered.id}  [${numbered.source}]  (${decision.kind})`);
     try {
-      const res = await moveCatalogRow(cat, twin, numbered.id, { printRun: numbered.printRun }, { reason: decision.reason, dryRun: !APPLY, salesContainer: pool, retry });
+      // CF-A-FOLD-NEVER-CHANGES-THE-PLAYER, the EVIDENCE half. The seam is only
+      // consulted for a different-player collision, so the arms are gathered
+      // only for one. `numbered` is already in hand, so detecting contention
+      // costs no read, and an uncontended fold pays nothing.
+      const contended = !!String(twin.playerName ?? "").trim()
+        && !!String(numbered.playerName ?? "").trim()
+        && playerKeyOf(twin.playerName) !== playerKeyOf(numbered.playerName);
+      let evidence = null;
+      if (contended) {
+        const rivals = await gatherRivalRows(cat, numbered.id, { retry });
+        evidence = await gatherPlayerEvidence(pool, twin, numbered, {
+          incomingSlug: twin.id, incumbentSlug: numbered.id, rivals, retry,
+        });
+      }
+      const res = await moveCatalogRow(cat, twin, numbered.id, { printRun: numbered.printRun }, { reason: decision.reason, dryRun: !APPLY, salesContainer: pool, retry, ...(evidence ? { playerEvidence: evidence } : {}) });
+      if (contended) {
+        stats.contendedPairs++;
+        contendedLines.push(
+          `  ${String(res?.action).toUpperCase().padEnd(8)} ${twin.id} -> ${numbered.id}: ` +
+          describePlayerEvidence(twin, numbered, evidence, res),
+        );
+      }
+      // CF-A-FOLD-NEVER-CHANGES-THE-PLAYER. The twin and the numbered row name
+      // DIFFERENT PLAYERS and nothing corroborates either, so moveCatalogRow
+      // wrote nothing at all. A SKIP, never a fold -- counting it as folded
+      // would claim a write that did not happen. Named in full, because
+      // settling the pair is the whole point of refusing it.
+      if (res?.action === "refused") {
+        stats.refusedDifferentPlayer++;
+        refusals.push(`  REFUSED ${twin.id} -> ${numbered.id}: "${res.refusal?.incomingPlayer}" vs "${res.refusal?.incumbentPlayer}" -- neither corroborated; NOTHING written`);
+        continue;
+      }
       stats.folded++;
       if (decision.kind === "vendor") stats.foldedVendor++; else if (decision.kind === "one-of-one") stats.foldedOneOfOne++; else stats.foldedCrossSource++;
       stats.salesRepointed += res?.salesRepointed ?? 0;
@@ -164,8 +203,15 @@ async function main() {
   console.log(`    vendor/user twins      ${f(stats.foldedVendor)}   | 1/1 by definition ${f(stats.foldedOneOfOne)}   | cross-source ${f(stats.foldedCrossSource)}`);
   console.log(`  failed                   ${f(stats.failed)}`);
   console.log(`  not reached              ${f(stats.notReached)}`);
+  console.log(`  REFUSED: different player ${f(stats.refusedDifferentPlayer)}   <- twin and numbered row name different people, neither corroborated; NOTHING written`);
   if (examples.length) { console.log(`  examples:`); for (const e of examples) console.log(e); }
-  if (APPLY) reportWrites({ job: "fold-unnumbered-twins", intended: stats.candidates, written: stats.folded, skipped: stats.noTwin + stats.ambiguous + stats.twinIsChecklist + stats.sameSourceListsBoth, failed: stats.failed });
+  if (refusals.length) {
+    console.log(`\n  REFUSED -- different players at one address, neither corroborated (${f(refusals.length)}). Nothing was written for any of these:`);
+    for (const r of refusals) console.log(r);
+  }
+  // A REFUSAL IS SKIPPED, never written: the row was adjudicated and the
+  // adjudication said "write nothing".
+  if (APPLY) reportWrites({ job: "fold-unnumbered-twins", intended: stats.candidates, written: stats.folded, skipped: stats.noTwin + stats.ambiguous + stats.twinIsChecklist + stats.sameSourceListsBoth + stats.refusedDifferentPlayer, failed: stats.failed });
   if (stopReason) console.log(`\n${stopReason}`);
 }
 

@@ -133,6 +133,10 @@ const { relocateSoldComp, stripSystem, contentHashOf } = require(path.join(__dir
 const { runnerShardScope } = require(path.join(__dirname, "lib", "runner-shard-scope.cjs"));
 const { cardShardIndex } = require(path.join(__dirname, "lib", "card-shard-axis.cjs"));
 const { budget, finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
+// CF-A-FOLD-NEVER-CHANGES-THE-PLAYER, the EVIDENCE half.
+const {
+  gatherPlayerEvidence, gatherRivalRows, describePlayerEvidence, playerKeyOf,
+} = require(path.join(__dirname, "lib", "player-evidence.cjs"));
 
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
 const str = (v) => String(v ?? "").trim();
@@ -273,6 +277,8 @@ async function main() {
     pool: { scanned: 0, move: 0, moved: 0, skip: {} },
     refusals: [],
     moveFailures: [],
+    /** CF-A-FOLD-NEVER-CHANGES-THE-PLAYER: what the arms saw, per contended pair. */
+    contendedEvidence: [],
     canary: {},
   };
   const bump = (o, k) => { o[k] = (o[k] ?? 0) + 1; };
@@ -432,6 +438,32 @@ async function main() {
         // nothing, and returns the counts a real run would, which means every
         // guard inside the mover now runs in REPORT too. A report that cannot
         // fail the way the apply fails is not a rehearsal.
+        // CF-A-FOLD-NEVER-CHANGES-THE-PLAYER, the EVIDENCE half. This lane
+        // folds twins too, so it owes the same evidence. The incumbent is point
+        // read here and handed on as `known` -- the mover would have read it
+        // anyway, so this is the SAME read moved earlier, not a second one
+        // (CF-DO-NOT-LOOK-TWICE). Evidence is gathered only when the two rows
+        // actually name different people.
+        let twin = null;
+        try {
+          const { resource } = await retry(() => cat.item(plan.dest, plan.dest).read());
+          twin = resource ?? null;
+        } catch (e) {
+          if (e?.code !== 404) throw e;
+          twin = null;
+        }
+        const contended = !!twin
+          && !!String(row.playerName ?? "").trim()
+          && !!String(twin.playerName ?? "").trim()
+          && playerKeyOf(row.playerName) !== playerKeyOf(twin.playerName);
+        let evidence = null;
+        if (contended) {
+          const rivals = await gatherRivalRows(cat, plan.dest, { retry });
+          evidence = await gatherPlayerEvidence(pool, row, twin, {
+            incomingSlug: row.id, incumbentSlug: plan.dest, rivals, retry,
+          });
+        }
+
         let res;
         try {
           res = await retry(() => moveCatalogRow(cat, row, plan.dest, { setKey: destSetKey }, {
@@ -440,6 +472,8 @@ async function main() {
             repointNormalizedSetKey: true,
             dryRun: !APPLY,
             retry,
+            known: twin,
+            ...(evidence ? { playerEvidence: evidence } : {}),
           }));
         } catch (e) {
           // FAIL CLOSED, PER ROW. One row the mover refuses is a `failed` row
@@ -450,6 +484,29 @@ async function main() {
           bump(report.keyMismatch.skip, `move-refused:${String(e?.message ?? e).slice(0, 90)}`);
           if (report.moveFailures.length < 50) {
             report.moveFailures.push({ id: row.id, dest: plan.dest, error: String(e?.message ?? e).slice(0, 200) });
+          }
+          continue;
+        }
+        if (contended) {
+          report.keyMismatch.contendedPairs = (report.keyMismatch.contendedPairs ?? 0) + 1;
+          if (report.contendedEvidence.length < 200) {
+            report.contendedEvidence.push(
+              `${String(res.action).toUpperCase()} ${row.id} -> ${plan.dest}: ` +
+              describePlayerEvidence(row, twin, evidence, res),
+            );
+          }
+        }
+        // A REFUSAL IS A SKIP, NEVER A MOVE. moveCatalogRow returned before its
+        // first write, so counting it under `moved` would claim a write that
+        // did not happen and the reconciliation would flag the arithmetic.
+        if (res.action === "refused") {
+          report.keyMismatch.refusedDifferentPlayer = (report.keyMismatch.refusedDifferentPlayer ?? 0) + 1;
+          bump(report.keyMismatch.skip, "refused:different-player");
+          if (report.moveFailures.length < 50) {
+            report.moveFailures.push({
+              id: row.id, dest: plan.dest,
+              error: `REFUSED different player: "${res.refusal?.incomingPlayer}" vs "${res.refusal?.incumbentPlayer}" -- neither corroborated; NOTHING written`,
+            });
           }
           continue;
         }
