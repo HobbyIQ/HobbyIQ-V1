@@ -1367,6 +1367,17 @@ function acquireEntry(entry, dir) {
         ]);
       } catch (err) {
         const said = String(err?.message || err);
+        // CF-A-404-IN-A-200-IS-NOT-AN-EMPTY-SET (2026-09-06). The host answers a
+        // set id it does not card with its "Checklist Not Found" page, served
+        // 200 at ~56 KB. That is the SOURCE not having the set -- an address
+        // that does not resolve -- and not a set page that exists and lists no
+        // cards. `unreachable` is the honest verdict: terminal, so the walker
+        // stops re-fetching a dead id, and recheckable, so a source that later
+        // cards the set is picked up. Ordered BEFORE the `nothing new to add`
+        // test so the specific reason wins over the general one.
+        if (/Checklist Not Found|not carded at the source/.test(said)) {
+          throw new Error(`sportscardchecklist does not card this set id (HTTP 404-equivalent: its "Checklist Not Found" page served with 200) — ${said.slice(0, 200)}`);
+        }
         if (/nothing new to add/.test(said)) {
           const e = new Error(`sportscardchecklist lists this set but cards none of it — ${said.slice(0, 200)}`);
           e.emptyAtSource = true;
@@ -1738,9 +1749,59 @@ function acquireEntry(entry, dir) {
  * place: the child is handed a DIR and the caller deletes that DIR when the
  * entry is done, and pointing it at the repo would delete committed work.
  */
+/**
+ * CF-A-STALE-STAGED-FILE-MUST-NOT-OUTLIVE-ITS-CONVERTER (2026-09-06).
+ *
+ * The converter version each lane currently emits. A staged file whose manifest
+ * stamps an OLDER version is not re-ingested as-is: the driver falls through to
+ * a live fetch, so a converter fix re-opens the entries it affects WITHOUT an
+ * operator having to remember MODE=refetch for a population nobody has listed
+ * yet.
+ *
+ * A lane absent here is unversioned and keeps the plain staged-wins rule, so
+ * this narrows nothing for lanes that have not opted in. A staged file with NO
+ * stamp on a lane that IS listed is treated as version 0 -- written before the
+ * stamp existed, therefore older than anything current.
+ */
+const LANE_CONVERTER_VERSION = { sportscardchecklist: 2 };
+
+/** The converter version a staged manifest claims, or 0 when it claims none. */
+function stagedConverterVersion(manifestPath) {
+  try {
+    const m = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+    const v = Number(m && m.converterVersion);
+    return Number.isFinite(v) && v > 0 ? v : 0;
+  } catch { return 0; }
+}
+
+/**
+ * Is every staged file for this entry current enough to win over a live fetch?
+ *
+ * Returns { ok, current, stale } -- `stale` names the files and the versions
+ * they carry, so the banner can say WHY a staged file was passed over rather
+ * than silently fetching and looking like the staged-wins rule broke.
+ */
+function stagedIsCurrent(lane, staged) {
+  const current = LANE_CONVERTER_VERSION[lane];
+  if (!current) return { ok: true, current: null, stale: [] };
+  const stale = staged
+    .map((s) => ({ file: path.basename(s.csv), version: stagedConverterVersion(s.manifest) }))
+    .filter((x) => x.version < current);
+  return { ok: stale.length === 0, current, stale };
+}
+
 function acquireFromStaging(entry, dir) {
   const staged = stagedFilesFor(entry);
   if (!staged.length) return null;
+  // A STAGED FILE ONLY WINS WHILE ITS CONVERTER IS CURRENT. Returning null here
+  // is exactly what a missing staged file does, so the caller falls through to
+  // the live fetch with no other change in behaviour.
+  const fresh = stagedIsCurrent(String(entry?.lane || entry?.source || ""), staged);
+  if (!fresh.ok) {
+    console.log(`      STAGED IGNORED — converter v${fresh.current} is current; staged file(s) carry ` +
+      `${fresh.stale.map((x) => `${x.file}=v${x.version || "unstamped"}`).join(", ")} — re-fetching live`);
+    return null;
+  }
   fs.mkdirSync(dir, { recursive: true });
   const out = [];
   for (const s of staged) {
@@ -2445,7 +2506,7 @@ for (const lane of ACQUIRE_LANES) {
   }
 }
 
-module.exports = { collapsesToParent, streakAfter, RUNNER_SCOPE_VARS, gateStagedCsv, gateStagedEntry, ladderIsAttested, setKeyCandidates, canonicalSetKey, TERMINAL_STATUSES, LANES_WITH_SIBLING_PARALLEL_PAGES, ladderOnSiblingPages, allFilesAreParallelOfParent, CARTESIAN_MIN_RUNGS, CARTESIAN_MIN_CARDS, stagedCsvs, LANES_WITHOUT_PRINT_RUNS, LANES_WITH_BASELESS_PRODUCTS, LANES_WITH_VINTAGE_ERA_PRODUCTS, PARALLEL_ERA_FIRST_YEAR, ladderlessByEra, sourceLabelFor, splitCsv, isPersonName, setKeyFor, planFor, tcgdexModern, acquireStaged, ACQUIRE_LANES, LANE_ALIASES, LANE_SOURCE, LANE_MINUTES, CANONICAL_HEADER, CHILD_STDERR_LINES, childBannerLines, CHILD_BANNER_PATTERNS, CHILD_BANNER_LINES, cosmosSafeId, controlId, orderQueue, SYSTEMIC_FAILURE_STREAK, EMPTY_STATUS, SHORT_STATUS, STREAK_STATUSES, isStaged, stagedSourceRefs, stagedIndex, stagedFilesFor, acquireFromStaging };
+module.exports = { collapsesToParent, streakAfter, RUNNER_SCOPE_VARS, gateStagedCsv, gateStagedEntry, ladderIsAttested, setKeyCandidates, canonicalSetKey, TERMINAL_STATUSES, LANES_WITH_SIBLING_PARALLEL_PAGES, ladderOnSiblingPages, allFilesAreParallelOfParent, CARTESIAN_MIN_RUNGS, CARTESIAN_MIN_CARDS, stagedCsvs, LANES_WITHOUT_PRINT_RUNS, LANES_WITH_BASELESS_PRODUCTS, LANES_WITH_VINTAGE_ERA_PRODUCTS, PARALLEL_ERA_FIRST_YEAR, ladderlessByEra, sourceLabelFor, splitCsv, isPersonName, setKeyFor, planFor, tcgdexModern, acquireStaged, ACQUIRE_LANES, LANE_ALIASES, LANE_SOURCE, LANE_MINUTES, CANONICAL_HEADER, CHILD_STDERR_LINES, childBannerLines, CHILD_BANNER_PATTERNS, CHILD_BANNER_LINES, cosmosSafeId, controlId, orderQueue, SYSTEMIC_FAILURE_STREAK, EMPTY_STATUS, SHORT_STATUS, STREAK_STATUSES, isStaged, stagedSourceRefs, stagedIndex, stagedFilesFor, acquireFromStaging, LANE_CONVERTER_VERSION, stagedConverterVersion, stagedIsCurrent };
 if (require.main !== module) return;
 
 (async () => {
@@ -2604,7 +2665,7 @@ if (require.main !== module) return;
   console.log(`  scope         years=${years.join(",") || "(all)"}  sports=${sports.join(",") || "(all)"}  ${RECHECK ? "RECHECK (re-attempt verdicted entries)" : "pending only"}`);
   // The two signals are separate and the banner says which is armed, because
   // "why did it re-scrape" must be answerable from the log alone.
-  console.log(`  staged        ${REFETCH ? "REFETCH (MODE=refetch) — live fetch forced, any staged CSV is IGNORED" : "a gate-clean staged CSV WINS (no fetch); MODE=refetch forces the live fetch"}`);
+  console.log(`  staged        ${REFETCH ? "REFETCH (MODE=refetch) — live fetch forced, any staged CSV is IGNORED" : `a gate-clean staged CSV WINS (no fetch) while its converter is current${LANE_CONVERTER_VERSION[lane] ? ` (v${LANE_CONVERTER_VERSION[lane]})` : ""}; MODE=refetch forces the live fetch`}`);
   console.log(`  budget        ${RUN_MS / 60000}m  →  N=${f(LIMIT)} entries @ ~${perEntryMin}m each`);
   console.log(`  mode          ${APPLY ? "APPLY" : "REPORT ONLY (no acquisition, no writes)"}\n`);
 
