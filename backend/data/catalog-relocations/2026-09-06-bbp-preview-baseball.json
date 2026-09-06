@@ -1,389 +1,172 @@
 {
- "generatedAt": "2026-09-06T05:45:00Z",
+ "generatedAt": "2026-09-06T19:00:00Z",
  "forLane": "relocate-catalog-rows-by-list",
- "reportOnlyUntil": "Drew's ruling on a distinct `bowmans-best-preview` setKey",
+ "supersedes": "the 2026-09-06T05:45:00Z revision, which named 60 rows for RETIRE. MEASURED AGAIN read-only against prod on 2026-09-06 for this PR: NONE of those 60 ids still exists. The fold and dedup lanes merged since (#1838, #1876) left 19 Preview-signalled rows on scc-2026-09-06, at different addresses. A list is a list of ids, so a list whose ids are gone is not a conservative list -- it is a no-op that reports success. These 19 are the rows that are actually there.",
  "rulings": [
-  "1997 Bowman's Best Preview is a NAMED INSERT (BBP1-BBP20 on PSA/Beckett), not a parallel rung of Bowman's Best.",
-  "The reader's NESTED_PRODUCT_SLUGS reparented it onto `bowmans-best` and the page's own 1..20 numbering was kept, so 60 rows landed inside the parent's number space.",
-  "These 60 are retired rather than reslugged: the correct destination key is the pending ruling, and a reslug onto a key nobody has ruled would mint a phantom product.",
-  "RETIRE IS A DELETE. No card_catalog field excludes a row from the MATCH paths (catalogVisibility.ts:23-25), so a soft label would leave these rows resolving.",
-  "The 232 OTHER rows carrying source sportscardchecklist-2026-09-06 in this product are the legitimate Bowman's Best proper checklist and are NOT in scope."
+  "CF-BOWMANS-BEST-PREVIEW-IS-ITS-OWN-PRODUCT (Drew, 2026-09-06): the 20-card BBP1-BBP20 insert is its own product key `bowmans-best-preview`, in BOTH sports. The host it was packed out in (1997 Bowman) is provenance, not identity.",
+  "RESLUG, NOT RETIRE — and that is the change this revision makes to the shape as well as the ids. The prior revision retired because 'the correct destination key is the pending ruling, and a reslug onto a key nobody has ruled would mint a phantom product'. Drew has now ruled the key, so the destination exists and the rows can MOVE. A retire deletes and hands the row's sales to the rematch; a reslug carries the row and re-points its sales, which is strictly less loss when a correct destination is known.",
+  "THE NUMBER MOVES WITH THE ROW. Each row is re-addressed at `bbp<n>`, the number the card actually carries and the number every Preview sale in the pool is written with. The bare 1-20 it was minted at is Bowman's Best's own number space.",
+  "MEASURED, NOT ASSUMED: no Preview row currently SHARES an address with a non-Preview Bowman's Best row (checked read-only, 2026-09-06 — 0 collisions among the 19). The number-space collision the incident created was closed by the fold lanes before this PR; what remains is 19 rows on the wrong PRODUCT, which is what this list moves.",
+  "EVERY TARGET IS VACANT. `bowmans-best-preview` holds ZERO catalog rows today, so no reslug can be refused for an occupied address. The lane refuses rather than merges if that ever changes.",
+  "THE CHECKLIST IS 20 CARDS AND ONLY 19 ROWS SURVIVE, unevenly across rungs (8 base, 5 refractor, 3 atomic, 3 stored with parallel 'Base'). This list does NOT invent the missing rows: the SCC re-mint does, from the source pages, which is why the re-mint runs FIRST. This list moves what is stored; it never mints.",
+  "THE 4,024 OTHER 1997 `bowmans-best` rows — the baseballcardpedia scrape and the proper Bowman's Best checklist — are NOT in scope. The 134 baseballcardpedia rows whose id carries a BBP number are the exploded card-BACK scrape (their `parallel` column holds player names, 'Promos' subset) and are a separate defect with a separate lane."
  ],
  "census": {
-  "productRowsTotal": 3984,
-  "taggedWithSource": 292,
-  "previewShaped": 60,
-  "legitimateProperRows": 232,
-  "bareAddresses": 42,
-  "subSegmentAddresses": 18,
-  "collidedWithADifferentPlayer": 2,
-  "collisionNote": "both are distinguished by a further id segment (:auto and :num-169), so no two rows share one address"
+  "productRowsTotal": 4043,
+  "previewRowsFromTheIncident": 19,
+  "reslug": 19,
+  "retire": 0,
+  "rungBreakdown": {
+   "atomic-refractor": 3,
+   "base": 11,
+   "refractor": 5
+  },
+  "idsWithSubSegment": 3,
+  "priorRevisionIdsStillPresent": 0,
+  "targetKeyRowsToday": 0,
+  "addressCollisionsWithNonPreviewRows": 0
  },
- "entries": [
-  {
-   "id": "hiq:baseball:1997:bowmans-best:1:atomic-refractor:no-auto",
-   "action": "retire",
-   "reason": "named insert reparented onto bowmans-best with parent numbering; re-mint under the ruled key",
-   "evidence": "Frank Thomas — 1997 Bowman Bowmans Best Preview Atomic Refractor Baseball — cardNumber 1, parallel Atomic Refractor, subsetName Preview; source sportscardchecklist-2026-09-06"
-  },
-  {
-   "id": "hiq:baseball:1997:bowmans-best:1:base:no-auto",
-   "action": "retire",
-   "reason": "named insert reparented onto bowmans-best with parent numbering; re-mint under the ruled key",
-   "evidence": "Frank Thomas — 1997 Bowman Bowmans Best Preview Baseball — cardNumber 1, parallel (base), subsetName Preview; source sportscardchecklist-2026-09-06"
-  },
-  {
-   "id": "hiq:baseball:1997:bowmans-best:1:refractor:no-auto",
-   "action": "retire",
-   "reason": "named insert reparented onto bowmans-best with parent numbering; re-mint under the ruled key",
-   "evidence": "Frank Thomas — 1997 Bowman Bowmans Best Preview Refractor Baseball — cardNumber 1, parallel Refractor, subsetName Preview; source sportscardchecklist-2026-09-06"
-  },
-  {
-   "id": "hiq:baseball:1997:bowmans-best:10:base:no-auto",
-   "action": "retire",
-   "reason": "named insert reparented onto bowmans-best with parent numbering; re-mint under the ruled key",
-   "evidence": "Jeff Bagwell — 1997 Bowman Bowmans Best Preview Baseball — cardNumber 10, parallel (base), subsetName Preview; source sportscardchecklist-2026-09-06"
-  },
-  {
-   "id": "hiq:baseball:1997:bowmans-best:10:refractor:no-auto",
-   "action": "retire",
-   "reason": "named insert reparented onto bowmans-best with parent numbering; re-mint under the ruled key",
-   "evidence": "Jeff Bagwell — 1997 Bowman Bowmans Best Preview Refractor Baseball — cardNumber 10, parallel Refractor, subsetName Preview; source sportscardchecklist-2026-09-06"
-  },
-  {
-   "id": "hiq:baseball:1997:bowmans-best:11:base:no-auto",
-   "action": "retire",
-   "reason": "named insert reparented onto bowmans-best with parent numbering; re-mint under the ruled key",
-   "evidence": "Wilton Guerrero — 1997 Bowman Bowmans Best Preview Baseball — cardNumber 11, parallel (base), subsetName Preview; source sportscardchecklist-2026-09-06"
-  },
-  {
-   "id": "hiq:baseball:1997:bowmans-best:11:refractor:no-auto",
-   "action": "retire",
-   "reason": "named insert reparented onto bowmans-best with parent numbering; re-mint under the ruled key",
-   "evidence": "Wilton Guerrero — 1997 Bowman Bowmans Best Preview Refractor Baseball — cardNumber 11, parallel Refractor, subsetName Preview; source sportscardchecklist-2026-09-06"
-  },
-  {
-   "id": "hiq:baseball:1997:bowmans-best:12:atomic-refractor:no-auto",
-   "action": "retire",
-   "reason": "named insert reparented onto bowmans-best with parent numbering; re-mint under the ruled key",
-   "evidence": "Scott Rolen — 1997 Bowman Bowmans Best Preview Atomic Refractor Baseball — cardNumber 12, parallel Atomic Refractor, subsetName Preview; source sportscardchecklist-2026-09-06"
-  },
-  {
-   "id": "hiq:baseball:1997:bowmans-best:12:base:no-auto",
-   "action": "retire",
-   "reason": "named insert reparented onto bowmans-best with parent numbering; re-mint under the ruled key",
-   "evidence": "Scott Rolen — 1997 Bowman Bowmans Best Preview Baseball — cardNumber 12, parallel (base), subsetName Preview; source sportscardchecklist-2026-09-06"
-  },
-  {
-   "id": "hiq:baseball:1997:bowmans-best:12:refractor:no-auto",
-   "action": "retire",
-   "reason": "named insert reparented onto bowmans-best with parent numbering; re-mint under the ruled key",
-   "evidence": "Scott Rolen — 1997 Bowman Bowmans Best Preview Refractor Baseball — cardNumber 12, parallel Refractor, subsetName Preview; source sportscardchecklist-2026-09-06"
-  },
-  {
-   "id": "hiq:baseball:1997:bowmans-best:13:atomic-refractor:no-auto",
-   "action": "retire",
-   "reason": "named insert reparented onto bowmans-best with parent numbering; re-mint under the ruled key",
-   "evidence": "Todd Walker — 1997 Bowman Bowmans Best Preview Atomic Refractor Baseball — cardNumber 13, parallel Atomic Refractor, subsetName Preview; source sportscardchecklist-2026-09-06"
-  },
-  {
-   "id": "hiq:baseball:1997:bowmans-best:14:atomic-refractor:no-auto",
-   "action": "retire",
-   "reason": "named insert reparented onto bowmans-best with parent numbering; re-mint under the ruled key",
-   "evidence": "Ruben Rivera — 1997 Bowman Bowmans Best Preview Atomic Refractor Baseball — cardNumber 14, parallel Atomic Refractor, subsetName Preview; source sportscardchecklist-2026-09-06"
-  },
-  {
-   "id": "hiq:baseball:1997:bowmans-best:14:base:no-auto",
-   "action": "retire",
-   "reason": "named insert reparented onto bowmans-best with parent numbering; re-mint under the ruled key",
-   "evidence": "Ruben Rivera — 1997 Bowman Bowmans Best Preview Baseball — cardNumber 14, parallel (base), subsetName Preview; source sportscardchecklist-2026-09-06"
-  },
-  {
-   "id": "hiq:baseball:1997:bowmans-best:15:atomic-refractor:no-auto",
-   "action": "retire",
-   "reason": "named insert reparented onto bowmans-best with parent numbering; re-mint under the ruled key",
-   "evidence": "Andruw Jones — 1997 Bowman Bowmans Best Preview Atomic Refractor Baseball — cardNumber 15, parallel Atomic Refractor, subsetName Preview; source sportscardchecklist-2026-09-06"
-  },
-  {
-   "id": "hiq:baseball:1997:bowmans-best:15:refractor:no-auto",
-   "action": "retire",
-   "reason": "named insert reparented onto bowmans-best with parent numbering; re-mint under the ruled key",
-   "evidence": "Andruw Jones — 1997 Bowman Bowmans Best Preview Refractor Baseball — cardNumber 15, parallel Refractor, subsetName Preview; source sportscardchecklist-2026-09-06"
-  },
-  {
-   "id": "hiq:baseball:1997:bowmans-best:16:atomic-refractor:no-auto",
-   "action": "retire",
-   "reason": "named insert reparented onto bowmans-best with parent numbering; re-mint under the ruled key",
-   "evidence": "Nomar Garciaparra — 1997 Bowman Bowmans Best Preview Atomic Refractor Baseball — cardNumber 16, parallel Atomic Refractor, subsetName Preview; source sportscardchecklist-2026-09-06"
-  },
-  {
-   "id": "hiq:baseball:1997:bowmans-best:16:refractor:no-auto",
-   "action": "retire",
-   "reason": "named insert reparented onto bowmans-best with parent numbering; re-mint under the ruled key",
-   "evidence": "Nomar Garciaparra — 1997 Bowman Bowmans Best Preview Refractor Baseball — cardNumber 16, parallel Refractor, subsetName Preview; source sportscardchecklist-2026-09-06"
-  },
-  {
-   "id": "hiq:baseball:1997:bowmans-best:17:atomic-refractor:no-auto",
-   "action": "retire",
-   "reason": "named insert reparented onto bowmans-best with parent numbering; re-mint under the ruled key",
-   "evidence": "Vladimir Guerrero — 1997 Bowman Bowmans Best Preview Atomic Refractor Baseball — cardNumber 17, parallel Atomic Refractor, subsetName Preview; source sportscardchecklist-2026-09-06"
-  },
-  {
-   "id": "hiq:baseball:1997:bowmans-best:17:refractor:no-auto",
-   "action": "retire",
-   "reason": "named insert reparented onto bowmans-best with parent numbering; re-mint under the ruled key",
-   "evidence": "Vladimir Guerrero — 1997 Bowman Bowmans Best Preview Refractor Baseball — cardNumber 17, parallel Refractor, subsetName Preview; source sportscardchecklist-2026-09-06"
-  },
-  {
-   "id": "hiq:baseball:1997:bowmans-best:18:base:no-auto",
-   "action": "retire",
-   "reason": "named insert reparented onto bowmans-best with parent numbering; re-mint under the ruled key",
-   "evidence": "Miguel Tejada — 1997 Bowman Bowmans Best Preview Baseball — cardNumber 18, parallel (base), subsetName Preview; source sportscardchecklist-2026-09-06"
-  },
-  {
-   "id": "hiq:baseball:1997:bowmans-best:18:refractor:no-auto",
-   "action": "retire",
-   "reason": "named insert reparented onto bowmans-best with parent numbering; re-mint under the ruled key",
-   "evidence": "Miguel Tejada — 1997 Bowman Bowmans Best Preview Refractor Baseball — cardNumber 18, parallel Refractor, subsetName Preview; source sportscardchecklist-2026-09-06"
-  },
-  {
-   "id": "hiq:baseball:1997:bowmans-best:19:atomic-refractor:no-auto",
-   "action": "retire",
-   "reason": "named insert reparented onto bowmans-best with parent numbering; re-mint under the ruled key",
-   "evidence": "Bartolo Colon — 1997 Bowman Bowmans Best Preview Atomic Refractor Baseball — cardNumber 19, parallel Atomic Refractor, subsetName Preview; source sportscardchecklist-2026-09-06"
-  },
-  {
-   "id": "hiq:baseball:1997:bowmans-best:19:base:no-auto",
-   "action": "retire",
-   "reason": "named insert reparented onto bowmans-best with parent numbering; re-mint under the ruled key",
-   "evidence": "Bartolo Colon — 1997 Bowman Bowmans Best Preview Baseball — cardNumber 19, parallel (base), subsetName Preview; source sportscardchecklist-2026-09-06"
-  },
-  {
-   "id": "hiq:baseball:1997:bowmans-best:19:refractor:no-auto",
-   "action": "retire",
-   "reason": "named insert reparented onto bowmans-best with parent numbering; re-mint under the ruled key",
-   "evidence": "Bartolo Colon — 1997 Bowman Bowmans Best Preview Refractor Baseball — cardNumber 19, parallel Refractor, subsetName Preview; source sportscardchecklist-2026-09-06"
-  },
-  {
-   "id": "hiq:baseball:1997:bowmans-best:2:atomic-refractor:no-auto",
-   "action": "retire",
-   "reason": "named insert reparented onto bowmans-best with parent numbering; re-mint under the ruled key",
-   "evidence": "Ken Griffey Jr. — 1997 Bowman Bowmans Best Preview Atomic Refractor Baseball — cardNumber 2, parallel Atomic Refractor, subsetName Preview; source sportscardchecklist-2026-09-06"
-  },
-  {
-   "id": "hiq:baseball:1997:bowmans-best:2:base:no-auto",
-   "action": "retire",
-   "reason": "named insert reparented onto bowmans-best with parent numbering; re-mint under the ruled key",
-   "evidence": "Ken Griffey Jr. — 1997 Bowman Bowmans Best Preview Baseball — cardNumber 2, parallel (base), subsetName Preview; source sportscardchecklist-2026-09-06"
-  },
-  {
-   "id": "hiq:baseball:1997:bowmans-best:2:refractor:no-auto",
-   "action": "retire",
-   "reason": "named insert reparented onto bowmans-best with parent numbering; re-mint under the ruled key",
-   "evidence": "Ken Griffey Jr. — 1997 Bowman Bowmans Best Preview Refractor Baseball — cardNumber 2, parallel Refractor, subsetName Preview; source sportscardchecklist-2026-09-06"
-  },
-  {
-   "id": "hiq:baseball:1997:bowmans-best:20:refractor:no-auto",
-   "action": "retire",
-   "reason": "named insert reparented onto bowmans-best with parent numbering; re-mint under the ruled key",
-   "evidence": "Katsuhiro Maeda — 1997 Bowman Bowmans Best Preview Refractor Baseball — cardNumber 20, parallel Refractor, subsetName Preview; source sportscardchecklist-2026-09-06"
-  },
-  {
-   "id": "hiq:baseball:1997:bowmans-best:3:atomic-refractor:no-auto",
-   "action": "retire",
-   "reason": "named insert reparented onto bowmans-best with parent numbering; re-mint under the ruled key",
-   "evidence": "Barry Bonds — 1997 Bowman Bowmans Best Preview Atomic Refractor Baseball — cardNumber 3, parallel Atomic Refractor, subsetName Preview; source sportscardchecklist-2026-09-06"
-  },
-  {
-   "id": "hiq:baseball:1997:bowmans-best:3:refractor:no-auto",
-   "action": "retire",
-   "reason": "named insert reparented onto bowmans-best with parent numbering; re-mint under the ruled key",
-   "evidence": "Barry Bonds — 1997 Bowman Bowmans Best Preview Refractor Baseball — cardNumber 3, parallel Refractor, subsetName Preview; source sportscardchecklist-2026-09-06"
-  },
-  {
-   "id": "hiq:baseball:1997:bowmans-best:4:atomic-refractor:no-auto",
-   "action": "retire",
-   "reason": "named insert reparented onto bowmans-best with parent numbering; re-mint under the ruled key",
-   "evidence": "Derek Jeter — 1997 Bowman Bowmans Best Preview Atomic Refractor Baseball — cardNumber 4, parallel Atomic Refractor, subsetName Preview; source sportscardchecklist-2026-09-06"
-  },
-  {
-   "id": "hiq:baseball:1997:bowmans-best:4:base:no-auto",
-   "action": "retire",
-   "reason": "named insert reparented onto bowmans-best with parent numbering; re-mint under the ruled key",
-   "evidence": "Derek Jeter — 1997 Bowman Bowmans Best Preview Baseball — cardNumber 4, parallel (base), subsetName Preview; source sportscardchecklist-2026-09-06"
-  },
-  {
-   "id": "hiq:baseball:1997:bowmans-best:5:atomic-refractor:no-auto",
-   "action": "retire",
-   "reason": "named insert reparented onto bowmans-best with parent numbering; re-mint under the ruled key",
-   "evidence": "Chipper Jones — 1997 Bowman Bowmans Best Preview Atomic Refractor Baseball — cardNumber 5, parallel Atomic Refractor, subsetName Preview; source sportscardchecklist-2026-09-06"
-  },
-  {
-   "id": "hiq:baseball:1997:bowmans-best:5:refractor:no-auto",
-   "action": "retire",
-   "reason": "named insert reparented onto bowmans-best with parent numbering; re-mint under the ruled key",
-   "evidence": "Chipper Jones — 1997 Bowman Bowmans Best Preview Refractor Baseball — cardNumber 5, parallel Refractor, subsetName Preview; source sportscardchecklist-2026-09-06"
-  },
-  {
-   "id": "hiq:baseball:1997:bowmans-best:6:atomic-refractor:no-auto",
-   "action": "retire",
-   "reason": "named insert reparented onto bowmans-best with parent numbering; re-mint under the ruled key",
-   "evidence": "Mark McGwire — 1997 Bowman Bowmans Best Preview Atomic Refractor Baseball — cardNumber 6, parallel Atomic Refractor, subsetName Preview; source sportscardchecklist-2026-09-06"
-  },
-  {
-   "id": "hiq:baseball:1997:bowmans-best:6:refractor:no-auto",
-   "action": "retire",
-   "reason": "named insert reparented onto bowmans-best with parent numbering; re-mint under the ruled key",
-   "evidence": "Mark McGwire — 1997 Bowman Bowmans Best Preview Refractor Baseball — cardNumber 6, parallel Refractor, subsetName Preview; source sportscardchecklist-2026-09-06"
-  },
-  {
-   "id": "hiq:baseball:1997:bowmans-best:7:atomic-refractor:no-auto",
-   "action": "retire",
-   "reason": "named insert reparented onto bowmans-best with parent numbering; re-mint under the ruled key",
-   "evidence": "Cal Ripken Jr. — 1997 Bowman Bowmans Best Preview Atomic Refractor Baseball — cardNumber 7, parallel Atomic Refractor, subsetName Preview; source sportscardchecklist-2026-09-06"
-  },
-  {
-   "id": "hiq:baseball:1997:bowmans-best:8:atomic-refractor:no-auto",
-   "action": "retire",
-   "reason": "named insert reparented onto bowmans-best with parent numbering; re-mint under the ruled key",
-   "evidence": "Kenny Lofton — 1997 Bowman Bowmans Best Preview Atomic Refractor Baseball — cardNumber 8, parallel Atomic Refractor, subsetName Preview; source sportscardchecklist-2026-09-06"
-  },
-  {
-   "id": "hiq:baseball:1997:bowmans-best:8:base:no-auto",
-   "action": "retire",
-   "reason": "named insert reparented onto bowmans-best with parent numbering; re-mint under the ruled key",
-   "evidence": "Kenny Lofton — 1997 Bowman Bowmans Best Preview Baseball — cardNumber 8, parallel (base), subsetName Preview; source sportscardchecklist-2026-09-06"
-  },
-  {
-   "id": "hiq:baseball:1997:bowmans-best:9:atomic-refractor:no-auto",
-   "action": "retire",
-   "reason": "named insert reparented onto bowmans-best with parent numbering; re-mint under the ruled key",
-   "evidence": "Gary Sheffield — 1997 Bowman Bowmans Best Preview Atomic Refractor Baseball — cardNumber 9, parallel Atomic Refractor, subsetName Preview; source sportscardchecklist-2026-09-06"
-  },
-  {
-   "id": "hiq:baseball:1997:bowmans-best:9:base:no-auto",
-   "action": "retire",
-   "reason": "named insert reparented onto bowmans-best with parent numbering; re-mint under the ruled key",
-   "evidence": "Gary Sheffield — 1997 Bowman Bowmans Best Preview Baseball — cardNumber 9, parallel (base), subsetName Preview; source sportscardchecklist-2026-09-06"
-  },
-  {
-   "id": "hiq:baseball:1997:bowmans-best:9:refractor:no-auto",
-   "action": "retire",
-   "reason": "named insert reparented onto bowmans-best with parent numbering; re-mint under the ruled key",
-   "evidence": "Gary Sheffield — 1997 Bowman Bowmans Best Preview Refractor Baseball — cardNumber 9, parallel Refractor, subsetName Preview; source sportscardchecklist-2026-09-06"
-  },
-  {
-   "id": "hiq:baseball:1997:bowmans-best:sub-preview:10:atomic-refractor:no-auto",
-   "action": "retire",
-   "reason": "named insert reparented onto bowmans-best with parent numbering; re-mint under the ruled key",
-   "evidence": "Jeff Bagwell — 1997 Bowman Bowmans Best Preview Atomic Refractor Baseball — cardNumber 10, parallel Atomic Refractor, subsetName Preview; source sportscardchecklist-2026-09-06"
-  },
-  {
-   "id": "hiq:baseball:1997:bowmans-best:sub-preview:11:atomic-refractor:no-auto",
-   "action": "retire",
-   "reason": "named insert reparented onto bowmans-best with parent numbering; re-mint under the ruled key",
-   "evidence": "Wilton Guerrero — 1997 Bowman Bowmans Best Preview Atomic Refractor Baseball — cardNumber 11, parallel Atomic Refractor, subsetName Preview; source sportscardchecklist-2026-09-06"
-  },
-  {
-   "id": "hiq:baseball:1997:bowmans-best:sub-preview:13:base:no-auto",
-   "action": "retire",
-   "reason": "named insert reparented onto bowmans-best with parent numbering; re-mint under the ruled key",
-   "evidence": "Todd Walker — 1997 Bowman Bowmans Best Preview Baseball — cardNumber 13, parallel (base), subsetName Preview; source sportscardchecklist-2026-09-06"
-  },
-  {
-   "id": "hiq:baseball:1997:bowmans-best:sub-preview:13:refractor:no-auto",
-   "action": "retire",
-   "reason": "named insert reparented onto bowmans-best with parent numbering; re-mint under the ruled key",
-   "evidence": "Todd Walker — 1997 Bowman Bowmans Best Preview Refractor Baseball — cardNumber 13, parallel Refractor, subsetName Preview; source sportscardchecklist-2026-09-06"
-  },
-  {
-   "id": "hiq:baseball:1997:bowmans-best:sub-preview:14:refractor:no-auto",
-   "action": "retire",
-   "reason": "named insert reparented onto bowmans-best with parent numbering; re-mint under the ruled key",
-   "evidence": "Ruben Rivera — 1997 Bowman Bowmans Best Preview Refractor Baseball — cardNumber 14, parallel Refractor, subsetName Preview; source sportscardchecklist-2026-09-06"
-  },
-  {
-   "id": "hiq:baseball:1997:bowmans-best:sub-preview:15:base:no-auto",
-   "action": "retire",
-   "reason": "named insert reparented onto bowmans-best with parent numbering; re-mint under the ruled key",
-   "evidence": "Andruw Jones — 1997 Bowman Bowmans Best Preview Baseball — cardNumber 15, parallel (base), subsetName Preview; source sportscardchecklist-2026-09-06"
-  },
-  {
-   "id": "hiq:baseball:1997:bowmans-best:sub-preview:16:base:no-auto",
-   "action": "retire",
-   "reason": "named insert reparented onto bowmans-best with parent numbering; re-mint under the ruled key",
-   "evidence": "Nomar Garciaparra — 1997 Bowman Bowmans Best Preview Baseball — cardNumber 16, parallel (base), subsetName Preview; source sportscardchecklist-2026-09-06"
-  },
-  {
-   "id": "hiq:baseball:1997:bowmans-best:sub-preview:17:base:no-auto",
-   "action": "retire",
-   "reason": "named insert reparented onto bowmans-best with parent numbering; re-mint under the ruled key",
-   "evidence": "Vladimir Guerrero — 1997 Bowman Bowmans Best Preview Baseball — cardNumber 17, parallel (base), subsetName Preview; source sportscardchecklist-2026-09-06"
-  },
-  {
-   "id": "hiq:baseball:1997:bowmans-best:sub-preview:18:atomic-refractor:no-auto",
-   "action": "retire",
-   "reason": "named insert reparented onto bowmans-best with parent numbering; re-mint under the ruled key",
-   "evidence": "Miguel Tejada — 1997 Bowman Bowmans Best Preview Atomic Refractor Baseball — cardNumber 18, parallel Atomic Refractor, subsetName Preview; source sportscardchecklist-2026-09-06"
-  },
-  {
-   "id": "hiq:baseball:1997:bowmans-best:sub-preview:20:atomic-refractor:no-auto",
-   "action": "retire",
-   "reason": "named insert reparented onto bowmans-best with parent numbering; re-mint under the ruled key",
-   "evidence": "Katsuhiro Maeda — 1997 Bowman Bowmans Best Preview Atomic Refractor Baseball — cardNumber 20, parallel Atomic Refractor, subsetName Preview; source sportscardchecklist-2026-09-06"
-  },
-  {
-   "id": "hiq:baseball:1997:bowmans-best:sub-preview:20:base:no-auto",
-   "action": "retire",
-   "reason": "named insert reparented onto bowmans-best with parent numbering; re-mint under the ruled key",
-   "evidence": "Katsuhiro Maeda — 1997 Bowman Bowmans Best Preview Baseball — cardNumber 20, parallel (base), subsetName Preview; source sportscardchecklist-2026-09-06"
-  },
-  {
-   "id": "hiq:baseball:1997:bowmans-best:sub-preview:3:base:no-auto",
-   "action": "retire",
-   "reason": "named insert reparented onto bowmans-best with parent numbering; re-mint under the ruled key",
-   "evidence": "Barry Bonds — 1997 Bowman Bowmans Best Preview Baseball — cardNumber 3, parallel (base), subsetName Preview; source sportscardchecklist-2026-09-06"
-  },
-  {
-   "id": "hiq:baseball:1997:bowmans-best:sub-preview:4:refractor:no-auto",
-   "action": "retire",
-   "reason": "named insert reparented onto bowmans-best with parent numbering; re-mint under the ruled key",
-   "evidence": "Derek Jeter — 1997 Bowman Bowmans Best Preview Refractor Baseball — cardNumber 4, parallel Refractor, subsetName Preview; source sportscardchecklist-2026-09-06"
-  },
-  {
-   "id": "hiq:baseball:1997:bowmans-best:sub-preview:5:base:no-auto",
-   "action": "retire",
-   "reason": "named insert reparented onto bowmans-best with parent numbering; re-mint under the ruled key",
-   "evidence": "Chipper Jones — 1997 Bowman Bowmans Best Preview Baseball — cardNumber 5, parallel (base), subsetName Preview; source sportscardchecklist-2026-09-06"
-  },
-  {
-   "id": "hiq:baseball:1997:bowmans-best:sub-preview:6:base:no-auto",
-   "action": "retire",
-   "reason": "named insert reparented onto bowmans-best with parent numbering; re-mint under the ruled key",
-   "evidence": "Mark McGwire — 1997 Bowman Bowmans Best Preview Baseball — cardNumber 6, parallel (base), subsetName Preview; source sportscardchecklist-2026-09-06"
-  },
-  {
-   "id": "hiq:baseball:1997:bowmans-best:sub-preview:7:base:no-auto",
-   "action": "retire",
-   "reason": "named insert reparented onto bowmans-best with parent numbering; re-mint under the ruled key",
-   "evidence": "Cal Ripken Jr. — 1997 Bowman Bowmans Best Preview Baseball — cardNumber 7, parallel (base), subsetName Preview; source sportscardchecklist-2026-09-06"
-  },
-  {
-   "id": "hiq:baseball:1997:bowmans-best:sub-preview:7:refractor:no-auto",
-   "action": "retire",
-   "reason": "named insert reparented onto bowmans-best with parent numbering; re-mint under the ruled key",
-   "evidence": "Cal Ripken Jr. — 1997 Bowman Bowmans Best Preview Refractor Baseball — cardNumber 7, parallel Refractor, subsetName Preview; source sportscardchecklist-2026-09-06"
-  },
-  {
-   "id": "hiq:baseball:1997:bowmans-best:sub-preview:8:refractor:no-auto",
-   "action": "retire",
-   "reason": "named insert reparented onto bowmans-best with parent numbering; re-mint under the ruled key",
-   "evidence": "Kenny Lofton — 1997 Bowman Bowmans Best Preview Refractor Baseball — cardNumber 8, parallel Refractor, subsetName Preview; source sportscardchecklist-2026-09-06"
-  }
- ],
  "excluded": [
   {
-   "note": "232 rows, source sportscardchecklist-2026-09-06, baseball/1997/bowmans-best, setName '1997 Bowman\\s Best ... Baseball' — the legitimate proper checklist. Deliberately NOT touched."
+   "note": "4024 other 1997 bowmans-best rows — the proper Bowman's Best checklist and the baseballcardpedia scrape. Not in scope."
+  },
+  {
+   "note": "134 baseballcardpedia rows carrying a BBP cardNumber with player names in the `parallel` column ('Promos' subset) — the exploded card-BACK scrape, a separate defect with its own lane."
+  }
+ ],
+ "entries": [
+  {
+   "id": "hiq:baseball:1997:bowmans-best:10:atomic-refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:1997:bowmans-best-preview:bbp10:atomic-refractor:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key. This row was minted onto the PARENT's key carrying the source page's bare 1-20 numbering, which is Bowman's Best's own number space; it moves to the ruled key at the card's own BBP number.",
+   "evidence": "Jeff Bagwell — 1997 Bowman Bowmans Best Preview Baseball — cardNumber 10, parallel \"Atomic Refractor\", subsetName \"Preview\"; source sportscardchecklist-2026-09-06"
+  },
+  {
+   "id": "hiq:baseball:1997:bowmans-best:13:base:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:1997:bowmans-best-preview:bbp13:base:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key. This row was minted onto the PARENT's key carrying the source page's bare 1-20 numbering, which is Bowman's Best's own number space; it moves to the ruled key at the card's own BBP number.",
+   "evidence": "Todd Walker — 1997 Bowman Bowmans Best Preview Baseball — cardNumber 13, parallel null, subsetName \"Preview\"; source sportscardchecklist-2026-09-06"
+  },
+  {
+   "id": "hiq:baseball:1997:bowmans-best:13:refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:1997:bowmans-best-preview:bbp13:refractor:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key. This row was minted onto the PARENT's key carrying the source page's bare 1-20 numbering, which is Bowman's Best's own number space; it moves to the ruled key at the card's own BBP number.",
+   "evidence": "Todd Walker — 1997 Bowman Bowmans Best Preview Baseball — cardNumber 13, parallel \"Refractor\", subsetName \"Preview\"; source sportscardchecklist-2026-09-06"
+  },
+  {
+   "id": "hiq:baseball:1997:bowmans-best:14:refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:1997:bowmans-best-preview:bbp14:refractor:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key. This row was minted onto the PARENT's key carrying the source page's bare 1-20 numbering, which is Bowman's Best's own number space; it moves to the ruled key at the card's own BBP number.",
+   "evidence": "Ruben Rivera — 1997 Bowman Bowmans Best Preview Baseball — cardNumber 14, parallel \"Refractor\", subsetName \"Preview\"; source sportscardchecklist-2026-09-06"
+  },
+  {
+   "id": "hiq:baseball:1997:bowmans-best:15:base:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:1997:bowmans-best-preview:bbp15:base:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key. This row was minted onto the PARENT's key carrying the source page's bare 1-20 numbering, which is Bowman's Best's own number space; it moves to the ruled key at the card's own BBP number.",
+   "evidence": "Andruw Jones — 1997 Bowman Bowmans Best Preview Baseball — cardNumber 15, parallel null, subsetName \"Preview\"; source sportscardchecklist-2026-09-06"
+  },
+  {
+   "id": "hiq:baseball:1997:bowmans-best:16:base:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:1997:bowmans-best-preview:bbp16:base:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key. This row was minted onto the PARENT's key carrying the source page's bare 1-20 numbering, which is Bowman's Best's own number space; it moves to the ruled key at the card's own BBP number.",
+   "evidence": "Nomar Garciaparra — 1997 Bowman Bowmans Best Preview Baseball — cardNumber 16, parallel null, subsetName \"Preview\"; source sportscardchecklist-2026-09-06"
+  },
+  {
+   "id": "hiq:baseball:1997:bowmans-best:17:base:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:1997:bowmans-best-preview:bbp17:base:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key. This row was minted onto the PARENT's key carrying the source page's bare 1-20 numbering, which is Bowman's Best's own number space; it moves to the ruled key at the card's own BBP number.",
+   "evidence": "Vladimir Guerrero — 1997 Bowman Bowmans Best Preview Baseball — cardNumber 17, parallel null, subsetName \"Preview\"; source sportscardchecklist-2026-09-06"
+  },
+  {
+   "id": "hiq:baseball:1997:bowmans-best:18:atomic-refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:1997:bowmans-best-preview:bbp18:atomic-refractor:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key. This row was minted onto the PARENT's key carrying the source page's bare 1-20 numbering, which is Bowman's Best's own number space; it moves to the ruled key at the card's own BBP number.",
+   "evidence": "Miguel Tejada — 1997 Bowman Bowmans Best Preview Baseball — cardNumber 18, parallel \"Atomic Refractor\", subsetName \"Preview\"; source sportscardchecklist-2026-09-06"
+  },
+  {
+   "id": "hiq:baseball:1997:bowmans-best:20:atomic-refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:1997:bowmans-best-preview:bbp20:atomic-refractor:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key. This row was minted onto the PARENT's key carrying the source page's bare 1-20 numbering, which is Bowman's Best's own number space; it moves to the ruled key at the card's own BBP number.",
+   "evidence": "Katsuhiro Maeda — 1997 Bowman Bowmans Best Preview Baseball — cardNumber 20, parallel \"Atomic Refractor\", subsetName \"Preview\"; source sportscardchecklist-2026-09-06"
+  },
+  {
+   "id": "hiq:baseball:1997:bowmans-best:20:base:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:1997:bowmans-best-preview:bbp20:base:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key. This row was minted onto the PARENT's key carrying the source page's bare 1-20 numbering, which is Bowman's Best's own number space; it moves to the ruled key at the card's own BBP number.",
+   "evidence": "Katsuhiro Maeda — 1997 Bowman Bowmans Best Preview Baseball — cardNumber 20, parallel null, subsetName \"Preview\"; source sportscardchecklist-2026-09-06"
+  },
+  {
+   "id": "hiq:baseball:1997:bowmans-best:3:base:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:1997:bowmans-best-preview:bbp3:base:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key. This row was minted onto the PARENT's key carrying the source page's bare 1-20 numbering, which is Bowman's Best's own number space; it moves to the ruled key at the card's own BBP number.",
+   "evidence": "Barry Bonds — 1997 Bowman Bowmans Best Preview Baseball — cardNumber 3, parallel null, subsetName \"Preview\"; source sportscardchecklist-2026-09-06"
+  },
+  {
+   "id": "hiq:baseball:1997:bowmans-best:4:refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:1997:bowmans-best-preview:bbp4:refractor:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key. This row was minted onto the PARENT's key carrying the source page's bare 1-20 numbering, which is Bowman's Best's own number space; it moves to the ruled key at the card's own BBP number.",
+   "evidence": "Derek Jeter — 1997 Bowman Bowmans Best Preview Baseball — cardNumber 4, parallel \"Refractor\", subsetName \"Preview\"; source sportscardchecklist-2026-09-06"
+  },
+  {
+   "id": "hiq:baseball:1997:bowmans-best:6:base:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:1997:bowmans-best-preview:bbp6:base:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key. This row was minted onto the PARENT's key carrying the source page's bare 1-20 numbering, which is Bowman's Best's own number space; it moves to the ruled key at the card's own BBP number.",
+   "evidence": "Mark McGwire — 1997 Bowman Bowmans Best Preview Baseball — cardNumber 6, parallel null, subsetName \"Preview\"; source sportscardchecklist-2026-09-06"
+  },
+  {
+   "id": "hiq:baseball:1997:bowmans-best:7:base:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:1997:bowmans-best-preview:bbp7:base:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key. This row was minted onto the PARENT's key carrying the source page's bare 1-20 numbering, which is Bowman's Best's own number space; it moves to the ruled key at the card's own BBP number.",
+   "evidence": "Cal Ripken Jr. — 1997 Bowman Bowmans Best Preview Baseball — cardNumber 7, parallel null, subsetName \"Preview\"; source sportscardchecklist-2026-09-06"
+  },
+  {
+   "id": "hiq:baseball:1997:bowmans-best:7:refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:1997:bowmans-best-preview:bbp7:refractor:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key. This row was minted onto the PARENT's key carrying the source page's bare 1-20 numbering, which is Bowman's Best's own number space; it moves to the ruled key at the card's own BBP number.",
+   "evidence": "Cal Ripken Jr. — 1997 Bowman Bowmans Best Preview Baseball — cardNumber 7, parallel \"Refractor\", subsetName \"Preview\"; source sportscardchecklist-2026-09-06"
+  },
+  {
+   "id": "hiq:baseball:1997:bowmans-best:8:refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:1997:bowmans-best-preview:bbp8:refractor:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key. This row was minted onto the PARENT's key carrying the source page's bare 1-20 numbering, which is Bowman's Best's own number space; it moves to the ruled key at the card's own BBP number.",
+   "evidence": "Kenny Lofton — 1997 Bowman Bowmans Best Preview Baseball — cardNumber 8, parallel \"Refractor\", subsetName \"Preview\"; source sportscardchecklist-2026-09-06"
+  },
+  {
+   "id": "hiq:baseball:1997:bowmans-best:sub-preview:1:base:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:1997:bowmans-best-preview:bbp1:base:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key. This row was minted onto the PARENT's key carrying the source page's bare 1-20 numbering, which is Bowman's Best's own number space; it moves to the ruled key at the card's own BBP number.",
+   "evidence": "Frank Thomas — 1997 Bowman Bowmans Best Preview Baseball — cardNumber 1, parallel \"Base\", subsetName \"Preview\"; source sportscardchecklist-2026-09-06"
+  },
+  {
+   "id": "hiq:baseball:1997:bowmans-best:sub-preview:11:base:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:1997:bowmans-best-preview:bbp11:base:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key. This row was minted onto the PARENT's key carrying the source page's bare 1-20 numbering, which is Bowman's Best's own number space; it moves to the ruled key at the card's own BBP number.",
+   "evidence": "Wilton Guerrero — 1997 Bowman Bowmans Best Preview Baseball — cardNumber 11, parallel \"Base\", subsetName \"Preview\"; source sportscardchecklist-2026-09-06"
+  },
+  {
+   "id": "hiq:baseball:1997:bowmans-best:sub-preview:9:base:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:1997:bowmans-best-preview:bbp9:base:no-auto",
+   "reason": "Drew 2026-09-06: Bowman's Best Preview is its OWN product key. This row was minted onto the PARENT's key carrying the source page's bare 1-20 numbering, which is Bowman's Best's own number space; it moves to the ruled key at the card's own BBP number.",
+   "evidence": "Gary Sheffield — 1997 Bowman Bowmans Best Preview Baseball — cardNumber 9, parallel \"Base\", subsetName \"Preview\"; source sportscardchecklist-2026-09-06"
   }
  ]
 }

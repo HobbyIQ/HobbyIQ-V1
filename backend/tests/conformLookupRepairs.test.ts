@@ -62,13 +62,30 @@ describe("RC3a — a card number is the same number spaced or not", () => {
 });
 
 describe("RC3b — setAgrees ignores tokens the holding accounts for elsewhere", () => {
-  // Holding 437f010d: Derek Jeter 1997 Bowman's Best Preview #BBP4 Atomic
-  // Refractor PSA 7. setName AND product both read "Bowmans Best Preview
-  // Atomic Refractor" — the eBay parse glued the subset word and the parallel
-  // name into the set field. Its candidate row is checklist-backed
-  // (baseballcardpedia, playerSlug derek-jeter) with an exact rung, and it
-  // still reported "set no-match".
-  it("passes when the parallel name was glued into the set field", () => {
+  /**
+   * DREW RULED "PREVIEW" A PRODUCT (2026-09-06), so this pin flipped — and the
+   * flip is the ruling working, not a regression.
+   *
+   * Holding 437f010d is Derek Jeter 1997 Bowman's Best Preview #BBP4 Atomic
+   * Refractor PSA 7. Its setName and product both read "Bowmans Best Preview
+   * Atomic Refractor": the eBay parse glued the insert name AND the parallel
+   * name into the set field. This test used to assert that such a holding
+   * AGREES with a plain `bowmans-best` row, because "preview" sat on
+   * SUBSET_WORDS — a checklist section, excusable as set text.
+   *
+   * It is not a section. It is a twenty-card product with its own BBP
+   * numbering, and `productSetKeys` now declares `bowmans-best-preview`, which
+   * puts "preview" into PRODUCT_WORDS — the set that is NEVER excused. So the
+   * holding no longer agrees with the parent's row, which is exactly the
+   * outcome the ruling exists to produce: a Preview holding must not conform
+   * onto a Bowman's Best row and price off the wrong pool. It conforms onto
+   * its own product's row instead, once the SCC re-mint creates it.
+   *
+   * This is the same guard-scope line the negative below already draws:
+   * "Sapphire", "Draft" and "Chrome" name products and are never excused. As
+   * of the ruling, "preview" is one of them.
+   */
+  it("a Preview holding no longer agrees with the PARENT product's row", () => {
     expect(
       conform.setAgrees(
         "Bowmans Best Preview Atomic Refractor",
@@ -76,17 +93,32 @@ describe("RC3b — setAgrees ignores tokens the holding accounts for elsewhere",
         "1997 Bowmans Best Baseball",
         { parallel: "Atomic Refractor" },
       ),
+    ).toBe(false);
+  });
+
+  it("...and DOES agree with its own product's row, parallel word excused as before", () => {
+    // The relaxation this describe block is about is untouched: "atomic" and
+    // "refractor" are still explained by the holding's own parallel field, so
+    // the only reason the case above fails is the PRODUCT word.
+    expect(
+      conform.setAgrees(
+        "Bowmans Best Preview Atomic Refractor",
+        "bowmans-best-preview",
+        "1997 Bowman Bowmans Best Preview Baseball",
+        { parallel: "Atomic Refractor" },
+      ),
     ).toBe(true);
   });
 
   it("still requires the set to agree when nothing accounts for the extra word", () => {
-    // Same text, but the holding's parallel does NOT say atomic/refractor, so
-    // those words are unexplained product text and must still fail.
+    // Same text against its own product, but the holding's parallel does NOT
+    // say atomic/refractor, so those words are unexplained product text and
+    // must still fail.
     expect(
       conform.setAgrees(
         "Bowmans Best Preview Atomic Refractor",
-        "bowmans-best",
-        "1997 Bowmans Best Baseball",
+        "bowmans-best-preview",
+        "1997 Bowman Bowmans Best Preview Baseball",
         { parallel: "" },
       ),
     ).toBe(false);

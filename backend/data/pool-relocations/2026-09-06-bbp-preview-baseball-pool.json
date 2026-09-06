@@ -1,0 +1,158 @@
+{
+ "generatedAt": "2026-09-06T19:00:00Z",
+ "forLane": "relocate-pool-rows-by-list",
+ "subject": "1997 Bowman's Best Preview (baseball) — 16 sales off two host keys onto the ruled product key",
+ "rulings": [
+  "CF-BOWMANS-BEST-PREVIEW-IS-ITS-OWN-PRODUCT (Drew, 2026-09-06): the 20-card BBP1-BBP20 insert is its own product key `bowmans-best-preview`. The baseball edition was packed out in 1997 Bowman; the host is provenance, not identity.",
+  "THE SPLIT IS LIVE AND IN BOTH DIRECTIONS. Measured read-only in sold_comps on 2026-09-06 over every 1997 Preview sale sitting on an identity-slug partition: 12 sales across 11 `:bowman:` keys and 4 across 3 `:bowmans-best:` keys. One product, two spellings, and neither of them is the product's own key. Every one of the 16 carries a BBP number, which no flagship Bowman card and no Bowman's Best card has — which is the evidence that they are one product.",
+  "THE TITLE DECIDES THE RUNG, never the stored parallel and never the stored slug. Two rows are on the wrong rung today and this list corrects them, each quoting the title it was read from: `tca-ebay::128017210073` reads \"BOWMAN'S BEST PREVIEW ATOMIC REFRACTOR #BBP2\" and sits at `:refractor:`; `tca-ebay::314237835656` reads \"BOWMAN'S BEST PREV DEREK JETER #BBP4 ATOMIC REF\" and sits at `:base:`. Both say Atomic in their own titles.",
+  "EVERY ENTRY IS A REPOINT OR A RETIRE-MARKER — no partition moves and no document is deleted. The engine reads `hobbyiqCardId`, so a repoint is the whole edit and this list cannot half-move a row; the one retire sets `flaggedWrong`, which every FMV read already excludes.",
+  "ONE SALE, ONE ADDRESS. `tca-ebay::314237835656` — a $65 PSA 7 Jeter #BBP4 — is stored under TWO partitions with the same document id, at `:atomic-refractor:` and at `:base:`, because the pre-#1846 reader read its \"ATOMIC REF\" title two ways. Repointing both would land one sale on one address twice. Its title says Atomic, so the `:atomic-refractor:` copy is repointed and the `:base:` copy is retired as superseded.",
+  "SCOPE IS THE 1997 INSERT ONLY. `BBP` is reused by later products — 2000/2007/2011/2012 Bowman all have BBP-numbered cards that are NOT this insert (2011 `bowman:bbp9:base` alone holds 53 sales) — so the scope is pinned to 1997 and to the two host keys the Preview actually sits on. The 1996 Preview sales are a separate year with their own checklist and are excluded, named.",
+  "RUN THE CATALOG LIST AND THE SCC RE-MINT FIRST. A sale repointed at an address the catalog has not created yet is a sale pointing at nothing."
+ ],
+ "census": {
+  "salesInScope": 16,
+  "fromBowmanKey": 12,
+  "fromBowmansBestKey": 4,
+  "distinctFromKeys": 14,
+  "rungsCorrectedByTitle": 1,
+  "repoints": 15,
+  "retiredAsDuplicate": 1,
+  "targetRungBreakdown": {
+   "base": 5,
+   "refractor": 2,
+   "atomic-refractor": 8
+  },
+  "sourceBreakdown": {
+   "tca-ebay": 9,
+   "cardhedge": 5,
+   "ebay-user-purchase": 2
+  }
+ },
+ "excluded": [
+  {
+   "note": "The 1996 Bowman's Best Preview sales (10 on identity slugs across `bowman` and `bowmans-best`) — a different year with its own checklist page. Out of scope until that year's pages are minted."
+  },
+  {
+   "note": "Every BBP-numbered sale from 2000 and later (2000/2007/2011/2012/2021/2022/2023/2025 Bowman, Bowman Chrome, Bowman Draft, Topps) — a DIFFERENT insert reusing the prefix. 2011 `hiq:baseball:2011:bowman:bbp9:base:no-auto` alone holds 53 sales."
+  },
+  {
+   "note": "426 sales on opaque CardHedge vendor partitions whose titles name 1997 Bowman's Best and a BBP number. They are not on identity slugs, so their product is decided by the rematch against the re-minted checklist, not by this list."
+  }
+ ],
+ "entries": [
+  {
+   "id": "tca-ebay::298567845119",
+   "fromCardId": "hiq:baseball:1997:bowman:bbp1:base:no-auto",
+   "price": 0.75,
+   "evidence": "rung unchanged; only the PRODUCT moves. Stored on `bowman` at #BBP1; the Preview is its own product (Drew 2026-09-06). Title: \"1997 Bowman\\\\'s Best - Previews Frank Thomas #BBP1 Chicago White Sox\"",
+   "repointHobbyiqCardId": "hiq:baseball:1997:bowmans-best-preview:bbp1:base:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1674005029152x736393419550995100::2026-07-14T01:12:00+00:00::325",
+   "fromCardId": "hiq:baseball:1997:bowman:bbp10:refractor:no-auto",
+   "price": 3.25,
+   "evidence": "rung unchanged; only the PRODUCT moves. Stored on `bowman` at #BBP10; the Preview is its own product (Drew 2026-09-06). Title: \"1997 1997 Bowman's Best Baseball #BBP10 Refractor\"",
+   "repointHobbyiqCardId": "hiq:baseball:1997:bowmans-best-preview:bbp10:refractor:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1674004994986x148633778009474400::2026-07-15T02:08:00+00:00::16250",
+   "fromCardId": "hiq:baseball:1997:bowman:bbp2:atomic-refractor:no-auto",
+   "price": 162.5,
+   "evidence": "rung unchanged; only the PRODUCT moves. Stored on `bowman` at #BBP2; the Preview is its own product (Drew 2026-09-06). Title: \"1997 1997 Bowman's Best Baseball #BBP2 Atomic Refractor\"",
+   "repointHobbyiqCardId": "hiq:baseball:1997:bowmans-best-preview:bbp2:atomic-refractor:no-auto"
+  },
+  {
+   "id": "tca-ebay::318708894351",
+   "fromCardId": "hiq:baseball:1997:bowman:bbp2:base:no-auto",
+   "price": 2.5,
+   "evidence": "rung unchanged; only the PRODUCT moves. Stored on `bowman` at #BBP2; the Preview is its own product (Drew 2026-09-06). Title: \"1997 Bowman\\\\'s Best Preview Ken Griffey Jr Seattle Mariners #BBP2 ⚾\"",
+   "repointHobbyiqCardId": "hiq:baseball:1997:bowmans-best-preview:bbp2:base:no-auto"
+  },
+  {
+   "id": "tca-ebay::387254536932",
+   "fromCardId": "hiq:baseball:1997:bowman:bbp2:base:no-auto",
+   "price": 3.95,
+   "evidence": "rung unchanged; only the PRODUCT moves. Stored on `bowman` at #BBP2; the Preview is its own product (Drew 2026-09-06). Title: \"1997 Ken Griffey Jr Bowman\\\\'s Best Preview #BBP2 Free Shipping (E1167)\"",
+   "repointHobbyiqCardId": "hiq:baseball:1997:bowmans-best-preview:bbp2:base:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1674004994381x746895036655056900::2026-07-16T22:16:00+00:00::19900",
+   "fromCardId": "hiq:baseball:1997:bowman:bbp3:atomic-refractor:no-auto",
+   "price": 199,
+   "evidence": "rung unchanged; only the PRODUCT moves. Stored on `bowman` at #BBP3; the Preview is its own product (Drew 2026-09-06). Title: \"1997 1997 Bowman's Best Baseball #BBP3 Atomic Refractor\"",
+   "repointHobbyiqCardId": "hiq:baseball:1997:bowmans-best-preview:bbp3:atomic-refractor:no-auto"
+  },
+  {
+   "id": "tca-ebay::314237835656",
+   "fromCardId": "hiq:baseball:1997:bowman:bbp4:atomic-refractor:no-auto",
+   "price": 65,
+   "evidence": "rung unchanged; only the PRODUCT moves. Stored on `bowman` at #BBP4; the Preview is its own product (Drew 2026-09-06). Title: \"1997 BOWMAN\\\\'S BEST PREV DEREK JETER #BBP4 ATOMIC REF~PSA 7/ MINT SLAB~POP 2/ 94^\"",
+   "repointHobbyiqCardId": "hiq:baseball:1997:bowmans-best-preview:bbp4:atomic-refractor:no-auto"
+  },
+  {
+   "id": "tca-ebay::314237835656",
+   "fromCardId": "hiq:baseball:1997:bowman:bbp4:base:no-auto",
+   "price": 65,
+   "evidence": "ONE SALE, TWO PARTITIONS — the same eBay item id is stored at :base: and at :atomic-refractor:. The title states atomic refractor, so the copy at :atomic-refractor: is the sale and this one is superseded; repointing both would count one $65 sale twice. Title: \"1997 BOWMAN\\\\'S BEST PREV DEREK JETER #BBP4 ATOMIC REF~PSA 7/ MINT SLAB~POP 2/ 94^\"",
+   "retireSupersededBy": "hiq:baseball:1997:bowmans-best-preview:bbp4:atomic-refractor:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1674005028549x905846442239794700::2026-07-17T01:05:00+00:00::1600",
+   "fromCardId": "hiq:baseball:1997:bowman:bbp6:atomic-refractor:no-auto",
+   "price": 16,
+   "evidence": "rung unchanged; only the PRODUCT moves. Stored on `bowman` at #BBP6; the Preview is its own product (Drew 2026-09-06). Title: \"1997 1997 Bowman's Best Baseball #BBP6 Atomic Refractor\"",
+   "repointHobbyiqCardId": "hiq:baseball:1997:bowmans-best-preview:bbp6:atomic-refractor:no-auto"
+  },
+  {
+   "id": "tca-ebay::157333744919",
+   "fromCardId": "hiq:baseball:1997:bowman:bbp6:base:no-auto",
+   "price": 2.75,
+   "evidence": "rung unchanged; only the PRODUCT moves. Stored on `bowman` at #BBP6; the Preview is its own product (Drew 2026-09-06). Title: \"1997 Bowman\\\\'s Best Preview Mark Mcgwire #BBP6\"",
+   "repointHobbyiqCardId": "hiq:baseball:1997:bowmans-best-preview:bbp6:base:no-auto"
+  },
+  {
+   "id": "tca-ebay::287513422385",
+   "fromCardId": "hiq:baseball:1997:bowman:bbp6:refractor:no-auto",
+   "price": 23,
+   "evidence": "rung unchanged; only the PRODUCT moves. Stored on `bowman` at #BBP6; the Preview is its own product (Drew 2026-09-06). Title: \"MARK MCGWIRE 1997 BOWMAN\\\\'S BEST PREVIEW REFRACTOR BASEBALL PSA 9 CRACKED CASE\"",
+   "repointHobbyiqCardId": "hiq:baseball:1997:bowmans-best-preview:bbp6:refractor:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1674005022396x622715579691317800::2026-07-14T12:42:00+00:00::3999",
+   "fromCardId": "hiq:baseball:1997:bowman:bbp7:atomic-refractor:no-auto",
+   "price": 39.99,
+   "evidence": "rung unchanged; only the PRODUCT moves. Stored on `bowman` at #BBP7; the Preview is its own product (Drew 2026-09-06). Title: \"1997 1997 Bowman's Best Baseball #BBP7 Atomic Refractor\"",
+   "repointHobbyiqCardId": "hiq:baseball:1997:bowmans-best-preview:bbp7:atomic-refractor:no-auto"
+  },
+  {
+   "id": "tca-ebay::287521635468",
+   "fromCardId": "hiq:baseball:1997:bowmans-best:bbp2:base:no-auto",
+   "price": 5,
+   "evidence": "rung unchanged; only the PRODUCT moves. Stored on `bowmans-best` at #BBP2; the Preview is its own product (Drew 2026-09-06). Title: \"1997 Bowmans Best: #BBP2 Ken Griffey Jr great condition and RARE\"",
+   "repointHobbyiqCardId": "hiq:baseball:1997:bowmans-best-preview:bbp2:base:no-auto"
+  },
+  {
+   "id": "tca-ebay::128017210073",
+   "fromCardId": "hiq:baseball:1997:bowmans-best:bbp2:refractor:no-auto",
+   "price": 225,
+   "evidence": "RUNG CORRECTED from :refractor: — the title states atomic refractor. Stored on `bowmans-best` at #BBP2; the Preview is its own product (Drew 2026-09-06). Title: \"1997 BOWMAN\\\\'S BEST PREVIEW ATOMIC REFRACTOR #BBP2 KEN GRIFFEY JR. PSA 8\"",
+   "repointHobbyiqCardId": "hiq:baseball:1997:bowmans-best-preview:bbp2:atomic-refractor:no-auto"
+  },
+  {
+   "id": "ebay-user-purchase::314237835656-10083258870724",
+   "fromCardId": "hiq:baseball:1997:bowmans-best:bbp4:atomic-refractor:no-auto",
+   "price": 65,
+   "evidence": "rung unchanged; only the PRODUCT moves. Stored on `bowmans-best` at #BBP4; the Preview is its own product (Drew 2026-09-06). Title: \"1997 Bowman Bowman's Best Prev Derek Jeter Atomic #BBP4\"",
+   "repointHobbyiqCardId": "hiq:baseball:1997:bowmans-best-preview:bbp4:atomic-refractor:no-auto"
+  },
+  {
+   "id": "ebay-user-purchase::336382627114-10083117555426",
+   "fromCardId": "hiq:baseball:1997:bowmans-best:bbp4:atomic-refractor:no-auto",
+   "price": 150,
+   "evidence": "rung unchanged; only the PRODUCT moves. Stored on `bowmans-best` at #BBP4; the Preview is its own product (Drew 2026-09-06). Title: \"1997 Bowman Bowman's Best Refractor Derek Jeter Preview Atomic #BBP4\"",
+   "repointHobbyiqCardId": "hiq:baseball:1997:bowmans-best-preview:bbp4:atomic-refractor:no-auto"
+  }
+ ]
+}
