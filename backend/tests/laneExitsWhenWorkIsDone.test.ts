@@ -904,3 +904,175 @@ describe("the unrefd cap really is the hang (mutation)", () => {
     expect(r.timedOut).toBe(false);
   });
 });
+
+// ── 11. A DATA CHANNEL IS NOT A LOG ────────────────────────────────────────
+//
+// CF-A-DATA-CHANNEL-IS-NOT-A-LOG (#1846).
+//
+// The nightly acquire-for-withheld-holdings, run 34019169292 (07:26Z, cron
+// 20 7, on main). Its read-only plan step did everything right: it walked 131
+// holdings across 12 portfolio docs, found 13 withheld on identity grounds,
+// built 15 acquisition cells and printed
+//
+//   RECONCILED  YES  cells=15 matched=11 needs-source=2 unreadable=2 tonight=10
+//
+// to STDERR, because in MODE=json this lane routes every human line through
+// `note()` precisely so stdout stays one parseable document. The workflow step
+// even carries the comment saying so. And the next step died anyway:
+//
+//   jq: parse error: Invalid literal at line 739, column 11
+//   ##[error]Process completed with exit code 5
+//
+// Line 739 of the captured stdout was not a truncated write, not a partial
+// document and not a stray console.log in the lane. The uploaded artifact
+// proves it: the JSON closed cleanly with `}` on line 738, and line 739 was
+//
+//   finishLane: exiting code 0
+//
+// — THIS FILE'S OWN operator proof, written by the shared helper to fd 1,
+// unconditionally, after main() had returned. Nothing the lane could do
+// suppressed it. The pipeline stopped before ingest: nothing was written, no
+// dispatch was made, ten matched cells went unacquired.
+//
+// WHY THE FIX IS NOT "SEND IT TO STDERR". Section 8's proof exists because the
+// runner reads a lane as `node <script>.cjs | tee /tmp/backfill.log` — stdout
+// only. Moving the line to stderr for every lane would keep it on the
+// operator's screen and delete it from the artifact the gates and the
+// post-mortems read, re-creating the silence #1809 exists to prevent.
+//
+// So the destination is the LANE'S to declare, and the DEFAULT DOES NOT MOVE.
+// Both pins below are needed: one alone would be satisfied by a fix that
+// breaks the other.
+describe("finishLane narrates to the fd the lane names, and stdout stays the default", () => {
+  it("MODE=json output parses: the exit line is not appended to the document", () => {
+    const r = runNode(`
+      ${LIB_REQUIRE}
+      (async () => {
+        // Exactly the lane's shape: the document, then the helper's exit.
+        process.stdout.write(JSON.stringify({ tonight: [1, 2, 3], counts: { matched: 11 } }, null, 2) + "\\n");
+        await finishLane(0, { narrateTo: "stderr" });
+      })();
+    `);
+    expect(r.timedOut).toBe(false);
+    expect(r.status).toBe(0);
+
+    // THE ASSERTION THE WORKFLOW ACTUALLY MAKES. `jq` is not on this box, but
+    // JSON.parse rejects the identical trailing-literal input — this is the
+    // step that went red, reproduced.
+    let parsed: { tonight: number[] } | null = null;
+    expect(
+      () => { parsed = JSON.parse(r.stdout) as { tonight: number[] }; },
+      "stdout must be ONE parseable document; run 34019169292 died on `jq: parse error: "
+        + "Invalid literal at line 739, column 11`, which was the exit line",
+    ).not.toThrow();
+    expect(parsed!.tonight).toHaveLength(3);
+
+    // And the proof is not LOST — it moved, it did not vanish. A fix that
+    // deletes the line to make the parse pass fails here.
+    expect(
+      r.stderr,
+      "the operator's proof must still be written, on the other fd",
+    ).toContain("finishLane: exiting code 0");
+  });
+
+  it("the DEFAULT is still stdout — the runner tees stdout, so the proof must land there", () => {
+    const r = runNode(`
+      ${LIB_REQUIRE}
+      (async () => {
+        console.log("reconciled: intended 202,189 = written 694 + skipped 201,495");
+        await finishLane(0);
+      })();
+    `);
+    expect(r.timedOut).toBe(false);
+    expect(
+      r.stdout,
+      "`| tee /tmp/backfill.log` captures STDOUT; a blanket move to stderr deletes the "
+        + "proof from every gate's log and re-opens #1809",
+    ).toContain("finishLane: exiting code 0");
+    expect(r.stderr).not.toContain("finishLane: exiting code 0");
+  });
+
+  it("the verify-cap notice follows the same fd — it would break the parse too", () => {
+    // The other line finishLane writes. It was a console.log, i.e. fd 1
+    // regardless of what the lane asked for, so a capped verify in a json run
+    // would have broken the document the same way the exit line did.
+    const r = runNode(`
+      ${LIB_REQUIRE}
+      // The lane declares the fd ONCE and both helpers take it. budget() needs
+      // it too: its VERIFY BY READ line is printed from inside capped(), long
+      // before finishLane is reached, so it lands ABOVE the document.
+      const b = budget({ minutes: 1, reserveMs: 1000, verifyMs: 1, narrateTo: "stderr" });
+      (async () => {
+        // Force the cap to fire: a verify t0 already past the cap.
+        await b.capped(Date.now() - 60_000, "rows", async () => 1);
+        process.stdout.write(JSON.stringify({ tonight: [] }, null, 2) + "\\n");
+        await finishLane(0, { budget: b, narrateTo: "stderr" });
+      })();
+    `);
+    expect(r.timedOut).toBe(false);
+    expect(() => JSON.parse(r.stdout)).not.toThrow();
+    expect(r.stderr).toContain("VERIFY BY READ");
+    expect(r.stderr).toContain("the verify cap fired");
+  });
+
+  // MUTATION. Hard-code fd 1 back into the helper's narration and the json
+  // document stops parsing — the exact failure of run 34019169292.
+  it("MUTATION: narrate to fd 1 regardless of the lane, and the document is unparseable again", () => {
+    const r = runNode(`
+      const fs = require("node:fs");
+      (async () => {
+        process.stdout.write(JSON.stringify({ tonight: [1, 2, 3] }, null, 2) + "\\n");
+        // The OLD body: fd 1, whatever the lane asked for.
+        fs.writeSync(1, "finishLane: exiting code 0\\n");
+        process.exit(0);
+      })();
+    `);
+    expect(
+      () => JSON.parse(r.stdout),
+      "the mutation did NOT break the parse, so this pin would not have caught run 34019169292",
+    ).toThrow();
+  });
+
+  // The lane must actually USE it. A helper that can narrate to stderr and a
+  // lane that never asks it to is the same red run tomorrow night.
+  it("acquire-for-withheld-holdings declares stderr in MODE=json", () => {
+    const src = fs.readFileSync(
+      path.join(BACKEND, "scripts", "acquire-for-withheld-holdings.cjs"),
+      "utf8",
+    );
+    expect(src, "the lane must name the fd").toMatch(/narrateTo/);
+    expect(src, "and it must pick stderr from the json mode it already computes")
+      .toMatch(/JSON_MODE\s*\?\s*"stderr"\s*:\s*"stdout"/);
+
+    // BOTH tails — the success path and the FATAL path. A fatal in json mode
+    // corrupts the document just as thoroughly, and the workflow's `jq` cannot
+    // tell a crashed lane from a polluted one: it just says parse error.
+    //
+    // Sliced from each call site to the end of its line rather than matched
+    // with a brace regex: the success tail spreads `{ ...(ctx || {}) }`, and a
+    // `[^}]*` stops dead at the inner brace.
+    const tails = [...src.matchAll(/finishLane\([01],/g)].map((m) =>
+      src.slice(m.index!, src.indexOf("\n", m.index!)));
+    expect(tails.length, "both the success and the failure tail call finishLane").toBe(2);
+    for (const t of tails) expect(t, `${t} must carry narrateTo`).toMatch(/narrateTo/);
+
+    // And the budget's own cap lines take the same fd.
+    expect(src, "budget() narrates too — its VERIFY BY READ line is on the same stream")
+      .toMatch(/budget\(\{[\s\S]{0,900}?narrateTo/);
+  });
+
+  // The workflow reads the FILE the lane wrote, not the stdout capture. Belt
+  // and braces: even a future stray print cannot break the plan step.
+  it("the workflow parses the plan FILE, not the stdout capture", () => {
+    const wf = fs.readFileSync(
+      path.join(BACKEND, "..", ".github", "workflows", "acquire-for-withheld-holdings.yml"),
+      "utf8",
+    );
+    expect(wf, "OUT= is the lane's verified file and the step must read it")
+      .toMatch(/cp\s+\/tmp\/acquisition-plan\.json\s+\/tmp\/plan\.json/);
+    expect(
+      wf,
+      "the raw stdout redirect is what made a log line a parse error",
+    ).not.toMatch(/acquire-for-withheld-holdings\.cjs\s*>\s*\/tmp\/plan\.json/);
+  });
+});

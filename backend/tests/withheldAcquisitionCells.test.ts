@@ -20,6 +20,7 @@ import { describe, it, expect } from "vitest";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { createRequire } from "node:module";
+import { spawnSync } from "node:child_process";
 
 const require_ = createRequire(__filename);
 const ROOT = path.join(__dirname, "..", "..");
@@ -843,5 +844,120 @@ describe("gate 3 gates on the rederive VERDICTS", () => {
 
   it("UNVERIFIED still refuses, ahead of everything", () => {
     expect(gate).toMatch(/UNVERIFIED/);
+  });
+});
+
+// ── 6. IN MODE=json, STDOUT IS THE DOCUMENT AND NOTHING ELSE ───────────────
+//
+// CF-A-DATA-CHANNEL-IS-NOT-A-LOG (#1846). Run 34019169292 — the first
+// unattended night this workflow ran — planned correctly and then died on the
+// step that reads the plan:
+//
+//   jq: parse error: Invalid literal at line 739, column 11
+//   ##[error]Process completed with exit code 5
+//
+// Line 739 was `finishLane: exiting code 0`. The JSON closed on 738. Ten
+// matched cells went unacquired because a log line was appended to a document.
+//
+// laneExitsWhenWorkIsDone.test.ts pins the HELPER's half (the exit line and the
+// verify-cap notice take the fd the lane names, default stdout). This pins the
+// LANE's half, and it does it by RUNNING the real script's MODE=json path
+// against a fake Cosmos rather than by reading its source: a source scan for
+// `console.log` cannot tell a suppressed call from a live one, and the defect
+// that actually shipped was not in this file's source at all.
+describe("MODE=json emits ONE parseable document on stdout", () => {
+  /** The lane, run for real, with @azure/cosmos swapped for a fake. The
+   *  require is intercepted through the module cache under the exact absolute
+   *  specifier the lane resolves, so no path in the script changes. */
+  function runLaneAsJson(extraSource = ""): { stdout: string; stderr: string; status: number | null } {
+    const cosmosPath = require_.resolve(path.join(BACKEND, "node_modules/@azure/cosmos"));
+    const probe = `
+      const Module = require("node:module");
+      const COSMOS = ${JSON.stringify(cosmosPath)};
+      // Two portfolio docs, one holding each, both withheld on identity
+      // grounds — enough to produce cells, a ranking and a tonight[] list.
+      const HOLDINGS = {
+        h1: { id: "h1", year: 2026, setKey: "bowman-chrome", sport: "baseball",
+              playerName: "Some Player", cardNumber: "BCP-1",
+              hobbyiqCardId: "hiq:baseball:2026:bowman-chrome:bcp-1",
+              pricingSourceMeta: { withheld: { reason: "no-checklist-match" } } },
+      };
+      const DOCS = [
+        { id: "u1", userId: "u1", holdings: HOLDINGS },
+        { id: "u2", userId: "u2", holdings: { h2: { ...HOLDINGS.h1, id: "h2" } } },
+      ];
+      const answer = (sql) => /COUNT/i.test(String(sql && sql.query || sql)) ? [7] : DOCS;
+      const container = () => ({
+        items: { query: (q) => ({ fetchAll: async () => ({ resources: answer(q) }) }) },
+      });
+      require.cache[COSMOS] = new Module(COSMOS, null);
+      require.cache[COSMOS].filename = COSMOS;
+      require.cache[COSMOS].loaded = true;
+      require.cache[COSMOS].exports = {
+        CosmosClient: class { database() { return { container }; } dispose() {} },
+      };
+      ${extraSource}
+      require(${JSON.stringify(path.join(BACKEND, "scripts", "acquire-for-withheld-holdings.cjs"))});
+    `;
+    const file = path.join(
+      fs.mkdtempSync(path.join(require("node:os").tmpdir(), "acq-json-")),
+      "probe.cjs",
+    );
+    fs.writeFileSync(file, probe);
+    const r = spawnSync(process.execPath, [file], {
+      encoding: "utf8",
+      timeout: 60_000,
+      killSignal: "SIGKILL",
+      cwd: BACKEND,
+      env: {
+        ...process.env,
+        MODE: "json",
+        TOP: "10",
+        OUT: "",
+        BACKFILL_APPLY: "",
+        COSMOS_CONNECTION_STRING: "AccountEndpoint=https://fake.invalid:443/;AccountKey=Zm9v;",
+      },
+    });
+    return { stdout: r.stdout ?? "", stderr: r.stderr ?? "", status: r.status };
+  }
+
+  it("the whole of stdout is the plan — JSON.parse, the way the workflow's jq reads it", () => {
+    const r = runLaneAsJson();
+    expect(r.status, r.stderr.slice(-2000)).toBe(0);
+
+    let plan: { tonight: unknown[]; counts: Record<string, number> } | null = null;
+    expect(
+      () => { plan = JSON.parse(r.stdout) as typeof plan; },
+      "stdout must be ONE document. Run 34019169292 died here on `jq: parse error: "
+        + "Invalid literal at line 739, column 11` — line 739 being the helper's exit line.",
+    ).not.toThrow();
+    expect(plan, "the parse produced no plan").not.toBeNull();
+    expect(Array.isArray(plan!.tonight), "the workflow slices .tonight with jq").toBe(true);
+    expect(plan!.counts, "the ledger step reads .counts").toBeTruthy();
+  });
+
+  it("the banner, the reconcile AND the exit line all went to stderr instead", () => {
+    const r = runLaneAsJson();
+    // Not merely absent from stdout — PRESENT on stderr. A fix that silenced
+    // the lane would pass a stdout-only assertion and blind the operator.
+    expect(r.stderr).toContain("acquire-for-withheld-holdings");
+    expect(r.stderr).toContain("RECONCILED");
+    expect(r.stderr, "CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE still needs its proof")
+      .toContain("finishLane: exiting code");
+    expect(r.stdout).not.toContain("RECONCILED");
+    expect(r.stdout).not.toContain("finishLane: exiting code");
+  });
+
+  // MUTATION. The pin the task asked for: any stray line on stdout in json
+  // mode — a debug print, a library banner, a helper that ignores the mode —
+  // must turn this red. It is injected rather than committed, so the mutation
+  // is exercised on every run instead of living in a comment.
+  it("MUTATION: one stray console.log on stdout and the document stops parsing", () => {
+    const r = runLaneAsJson(`console.log("  scanned 131 holdings");`);
+    expect(
+      () => JSON.parse(r.stdout),
+      "a stray stdout line did NOT break the parse, so this pin would not have caught "
+        + "run 34019169292",
+    ).toThrow();
   });
 });
