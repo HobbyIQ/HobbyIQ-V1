@@ -1,0 +1,449 @@
+{
+ "generatedAt": "2026-09-06",
+ "forLane": "relocate-pool-rows-by-list.cjs",
+ "subject": "1997-98 Topps Stadium Club Bowman's Best Preview (basketball), BBP1-BBP20",
+ "rulings": [
+  "CF-A-QUALIFIED-REFRACTOR-IS-NOT-A-REFRACTOR (#1846, af7cb34, merged 2026-09-06): Atomic Refractor is its OWN rung at `:atomic-refractor:`, never a plain `:refractor:` with the word 'Atomic' pushed into the subset. The 80 catalog rows in this product were minted 2026-09-04, BEFORE that reader landed, so they carry the pre-fix shape.",
+  "THE CHECKLIST IS 20 CARDS. Fetched read-only 2026-09-06, all three sibling SCC pages serve 20 card headers, BBP1-BBP20, with the SAME 20-player roster (BBP1 Allen Iverson ... BBP20 Tariq Abdul-Wahad): set-30234 (base), set-30235 (Refractors), set-30236 (Atomic Refractors). The '10 cards' suggestion is REFUTED by all three pages.",
+  "NO SUBSET CLASH, SO NO `sub-` SEGMENT. CF-A-SUBSET-IS-PART-OF-THE-IDENTITY-WHEN-IT-HAS-TO-BE puts `:sub-` in a slug ONLY when a cardNumber clashes ACROSS subsets within the product. Measured: the 320 rows of 1997 basketball topps-stadium-club hold 240 plain-numeric base cards and BBP1-BBP20; no BBP number appears in any other subset. The three setNames are ONE subset at THREE parallel rungs, so the clash the segment exists for does not exist here and every `sub-bowmans-best-preview*` id in this product is a defect, not an identity.",
+  "THE PARALLEL AXIS CARRIES THE RUNG. The end state is exactly 3 rows per card -- `:bbp<n>:base:no-auto`, `:bbp<n>:refractor:no-auto`, `:bbp<n>:atomic-refractor:no-auto` -- 60 rows for 20 cards. This is the same shape #1846 pinned for the baseball edition and what today's reader already derives for these three URLs (verified by driving splitParentAndSubset/parallelFromSlug on the live slugs: parentSetKey topps-stadium-club, subset 'Bowmans Best Preview', parallel ''/'Refractor'/'Atomic Refractor').",
+  "THE TITLE DECIDES THE RUNG for a pool row, never the stored parallel. Every entry carries its own title evidence; a title spelling 'Atomic' is atomic-refractor, one spelling 'Refractor' without it is refractor, one spelling neither is base.",
+  "THE CHECKLIST DECIDES THE SPORT. The Stadium Club FOOTBALL edition of this same insert (Drew Bledsoe #BBP15) is a DIFFERENT checklist and is EXCLUDED, not dragged onto the basketball roster -- the same host-brand scoping #1846 pinned so Stadium Club would not follow Bowman.",
+  "EVERY ENTRY IS A REPOINT, NOT A RELOCATE. 25 of the 30 sit on opaque CardHedge vendor partitions (`1653269830987x...`), which are not identity slugs; the pricing engine reads hobbyiqCardId. No partition moves and no document is deleted, so this list cannot half-move a row."
+ ],
+ "census": {
+  "checklistCards": 20,
+  "checklistNumbering": "BBP1-BBP20",
+  "sourcesAgreeing": [
+   "sportscardchecklist set-30234",
+   "sportscardchecklist set-30235",
+   "sportscardchecklist set-30236"
+  ],
+  "catalogRowsInProduct": 80,
+  "catalogGradedChildren": 0,
+  "catalogRowsFromOtherSources": 0,
+  "poolRowsTitled": 58,
+  "entries": 30,
+  "excluded": 28,
+  "byShape": {
+   "repoint": 30,
+   "relocate": 0
+  },
+  "byRung": {
+   "refractor": 11,
+   "base": 15,
+   "atomic-refractor": 4
+  }
+ },
+ "catalogPlan": {
+  "note": "CATALOG ROWS ARE NOT MOVED BY THIS LANE and no existing lane fits -- see the PR body. This block is the REPORT of what the 80 rows should become, for the follow-up that owns the catalog write.",
+  "keep": {
+   "count": 20,
+   "shape": "hiq:basketball:1997:topps-stadium-club:bbp<n>:base:no-auto",
+   "action": "KEEP as-is; clear the misleading subsetName 'Bowmans Best Preview' only if the follow-up decides to, which patchCatalogRowFields may do (subsetName is not an addressing field)"
+  },
+  "reslug": [
+   {
+    "count": 20,
+    "from": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview:bbp<n>:refractor:no-auto",
+    "to": "hiq:basketball:1997:topps-stadium-club:bbp<n>:refractor:no-auto",
+    "why": "plain Refractor rung; the `sub-` segment is a defect because no BBP number clashes across subsets. NOTE: the target slug is currently OCCUPIED by the Atomic alias row below, so the retire MUST land before this move."
+   },
+   {
+    "count": 20,
+    "from": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview-atomic:bbp<n>:refractor:no-auto",
+    "to": "hiq:basketball:1997:topps-stadium-club:bbp<n>:atomic-refractor:no-auto",
+    "why": "Atomic Refractor is its own rung per #1846; 'Atomic' belongs in the parallel, not the subset"
+   }
+  ],
+  "retireAsAlias": {
+   "count": 20,
+   "shape": "hiq:basketball:1997:topps-stadium-club:bbp<n>:refractor:no-auto (setName '...Atomic Refractors Basketball')",
+   "why": "one card on two rows: this is the SECOND row the Atomic page minted, and it squats the plain-Refractor slug space. Retire as an alias of the atomic row -- a MARKER (retired/flaggedWrong), never a delete."
+  },
+  "endState": "60 rows: 20 base + 20 refractor + 20 atomic-refractor, no `sub-` segment anywhere in this product.",
+  "writeHelper": "moveCatalogRow, NOT patchCatalogRowFields -- patchCatalogRowFields hard-refuses id/cardId/hobbyiqCardId (UNPATCHABLE) because changing where a row lives is a move. patchCatalogRowFields is correct only for the non-addressing fields (parallel, subsetName, setName)."
+ },
+ "excluded": [
+  {
+   "id": "cardhedge::ch-daily::1715710976142x492841643512954900::2026-07-20T02:11:00+00:00::1550",
+   "fromCardId": "1715710976142x492841643512954900",
+   "price": 15.5,
+   "why": "vendor partition, hobbyiqCardId already correct"
+  },
+  {
+   "id": "cardhedge::ch-daily::1742862553081x700482887106875800",
+   "fromCardId": "1715710976142x492841643512954900",
+   "price": 11.5,
+   "why": "vendor partition, hobbyiqCardId already correct"
+  },
+  {
+   "id": "cardhedge::ch-daily::1751150064913x795688781569494000",
+   "fromCardId": "1715710976142x492841643512954900",
+   "price": 15,
+   "why": "vendor partition, hobbyiqCardId already correct"
+  },
+  {
+   "id": "cardhedge::ch-daily::1788229054310x301445890363916350",
+   "fromCardId": "1715710976142x492841643512954900",
+   "price": 96,
+   "why": "vendor partition, hobbyiqCardId already correct"
+  },
+  {
+   "id": "cardhedge::ch-daily::1677504986614x122501642045882370::2026-07-26T23:58:00+00:00::300",
+   "fromCardId": "1677504986614x122501642045882370",
+   "price": 3,
+   "why": "FOOTBALL edition of the same insert — a different checklist, not BBP1-BBP20 basketball. Title: 1997 Topps Stadium Club Football #BBP15 Refractor"
+  },
+  {
+   "id": "cardhedge::ch-daily::1785113108485x567974635471689660",
+   "fromCardId": "1677504986614x122501642045882370",
+   "price": 3,
+   "why": "FOOTBALL edition of the same insert — a different checklist, not BBP1-BBP20 basketball. Title: Drew Bledsoe 1997 Stadium Club Bowman's Best Preview Refractor #BBP15 - Raw"
+  },
+  {
+   "id": "cardhedge::ch-daily::1712932433696x799447232807436300::2026-07-11T05:15:00+00:00::190",
+   "fromCardId": "1712932433696x799447232807436300",
+   "price": 1.9,
+   "why": "vendor partition, hobbyiqCardId already correct"
+  },
+  {
+   "id": "cardhedge::ch-daily::1712932433696x799447232807436300::2026-07-16T04:02:00+00:00::429",
+   "fromCardId": "1712932433696x799447232807436300",
+   "price": 4.29,
+   "why": "vendor partition, hobbyiqCardId already correct"
+  },
+  {
+   "id": "cardhedge::ch-daily::1712932433696x799447232807436300::2026-07-20T02:24:00+00:00::1305",
+   "fromCardId": "1712932433696x799447232807436300",
+   "price": 13.05,
+   "why": "vendor partition, hobbyiqCardId already correct"
+  },
+  {
+   "id": "cardhedge::ch-daily::1712932433696x799447232807436300::2026-07-21T10:22:00+00:00::1499",
+   "fromCardId": "1712932433696x799447232807436300",
+   "price": 14.99,
+   "why": "vendor partition, hobbyiqCardId already correct"
+  },
+  {
+   "id": "cardhedge::ch-daily::1712932433696x799447232807436300::2026-07-09T01:09:00+00:00::130",
+   "fromCardId": "1712932433696x799447232807436300",
+   "price": 1.3,
+   "why": "vendor partition, hobbyiqCardId already correct"
+  },
+  {
+   "id": "cardhedge::ch-daily::1785977168660x409983260667810240",
+   "fromCardId": "1703033935932x413540709455364100",
+   "price": 21.5,
+   "why": "vendor partition, hobbyiqCardId already correct"
+  },
+  {
+   "id": "cardhedge::ch-daily::1748711977909x958154785668621300",
+   "fromCardId": "1712932433696x799447232807436300",
+   "price": 2,
+   "why": "vendor partition, hobbyiqCardId already correct"
+  },
+  {
+   "id": "cardhedge::ch-daily::1751526700533x876806752212003600",
+   "fromCardId": "1703033935932x413540709455364100",
+   "price": 24.99,
+   "why": "vendor partition, hobbyiqCardId already correct"
+  },
+  {
+   "id": "cardhedge::ch-daily::1750661751341x219744212815218500",
+   "fromCardId": "1703033935932x413540709455364100",
+   "price": 10,
+   "why": "vendor partition, hobbyiqCardId already correct"
+  },
+  {
+   "id": "cardhedge::ch-daily::1755505385041x912667031107941000",
+   "fromCardId": "1712932433696x799447232807436300",
+   "price": 10,
+   "why": "vendor partition, hobbyiqCardId already correct"
+  },
+  {
+   "id": "cardhedge::ch-daily::1757560608268x384541758965595300",
+   "fromCardId": "1712932433696x799447232807436300",
+   "price": 2.99,
+   "why": "vendor partition, hobbyiqCardId already correct"
+  },
+  {
+   "id": "cardhedge::ch-daily::1786766790184x261947758832072670",
+   "fromCardId": "1703033935932x413540709455364100",
+   "price": 1.99,
+   "why": "vendor partition, hobbyiqCardId already correct"
+  },
+  {
+   "id": "cardhedge::ch-daily::1787013347092x155925429987967330",
+   "fromCardId": "1703033935932x413540709455364100",
+   "price": 2.49,
+   "why": "vendor partition, hobbyiqCardId already correct"
+  },
+  {
+   "id": "cardhedge::ch-daily::1787787371875x953230409170113800",
+   "fromCardId": "1712932433696x799447232807436300",
+   "price": 14,
+   "why": "vendor partition, hobbyiqCardId already correct"
+  },
+  {
+   "id": "cardhedge::ch-daily::1787864976599x208933941114016100",
+   "fromCardId": "1712932433696x799447232807436300",
+   "price": 12.5,
+   "why": "vendor partition, hobbyiqCardId already correct"
+  },
+  {
+   "id": "cardhedge::ch-daily::1788393285994x544348595796555000",
+   "fromCardId": "1712932433696x799447232807436300",
+   "price": 3,
+   "why": "vendor partition, hobbyiqCardId already correct"
+  },
+  {
+   "id": "cardhedge::ch-daily::1787938933388x124001806153235520",
+   "fromCardId": "1712932433696x799447232807436300",
+   "price": 10.79,
+   "why": "vendor partition, hobbyiqCardId already correct"
+  },
+  {
+   "id": "tca-ebay::278241005439",
+   "fromCardId": "hiq:basketball:1997:topps-stadium-club:bbp5:refractor:no-auto",
+   "price": 3.75,
+   "why": "already at the correct address on both identity fields"
+  },
+  {
+   "id": "tca-ebay::820010870974",
+   "fromCardId": "hiq:basketball:1997:topps-stadium-club:bbp1:base:no-auto",
+   "price": 6.5,
+   "why": "already at the correct address on both identity fields"
+  },
+  {
+   "id": "tca-ebay::EBAY-v1|407159368756|0",
+   "fromCardId": "hiq:basketball:1997:topps-stadium-club:bbp1:base:no-auto",
+   "price": 12.5,
+   "why": "already at the correct address on both identity fields"
+  },
+  {
+   "id": "tca-ebay::147549894829",
+   "fromCardId": "hiq:basketball:1997:topps-stadium-club:bbp1:base:no-auto",
+   "price": 100,
+   "why": "already at the correct address on both identity fields"
+  },
+  {
+   "id": "tca-ebay::178265389253",
+   "fromCardId": "hiq:basketball:1997:topps-stadium-club:bbp1:base:no-auto",
+   "price": 10.38,
+   "why": "already at the correct address on both identity fields"
+  }
+ ],
+ "entries": [
+  {
+   "id": "cardhedge::ch-daily::1735916942806x284889520531349760",
+   "fromCardId": "1653269833571x357847710955533100",
+   "price": 10,
+   "evidence": "1997-98 Topps Stadium Club Bowman's Best Preview #BBP1, rung \"refractor\" stated in the title. SCC set-30234/30235/30236 all serve 20 cards BBP1-BBP20 with the same roster. Title: \"1997-98 Topps Stadium Club Bowman's Best Previews Refractor #BBP1 Allen Iverson - Raw 10\"",
+   "repointHobbyiqCardId": "hiq:basketball:1997:topps-stadium-club:bbp1:refractor:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1739926482355x437766920927938240",
+   "fromCardId": "1653269833571x357847710955533100",
+   "price": 14.99,
+   "evidence": "1997-98 Topps Stadium Club Bowman's Best Preview #BBP1, rung \"refractor\" stated in the title. SCC set-30234/30235/30236 all serve 20 cards BBP1-BBP20 with the same roster. Title: \"1997-98 Stadium Club #BBP1 Allen Iverson Bowman's Best Preview Refractor - Raw 10\"",
+   "repointHobbyiqCardId": "hiq:basketball:1997:topps-stadium-club:bbp1:refractor:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1746492564218x620088137529476200",
+   "fromCardId": "1653269833571x357847710955533100",
+   "price": 29,
+   "evidence": "1997-98 Topps Stadium Club Bowman's Best Preview #BBP1, rung \"refractor\" stated in the title. SCC set-30234/30235/30236 all serve 20 cards BBP1-BBP20 with the same roster. Title: \"1997-98 Stadium Club Allen Iverson Bowman's Best Preview Refractor #BBP1 PSA 9\"",
+   "repointHobbyiqCardId": "hiq:basketball:1997:topps-stadium-club:bbp1:refractor:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1748397327658x198318415566918430",
+   "fromCardId": "1653269833571x357847710955533100",
+   "price": 27,
+   "evidence": "1997-98 Topps Stadium Club Bowman's Best Preview #BBP1, rung \"refractor\" stated in the title. SCC set-30234/30235/30236 all serve 20 cards BBP1-BBP20 with the same roster. Title: \"1997-98 Stadium Club Allen Iverson Bowman's Best Preview Refractor #BBP1 PSA 8\"",
+   "repointHobbyiqCardId": "hiq:basketball:1997:topps-stadium-club:bbp1:refractor:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1741096254823x906033457525096000",
+   "fromCardId": "1653269831716x976002131577301800",
+   "price": 2.99,
+   "evidence": "1997-98 Topps Stadium Club Bowman's Best Preview #BBP7, rung \"refractor\" stated in the title. SCC set-30234/30235/30236 all serve 20 cards BBP1-BBP20 with the same roster. Title: \"1997-98 Stadium Club #BBP7 Antoine Walker Bowman's Best Preview Refractors - Raw 10\"",
+   "repointHobbyiqCardId": "hiq:basketball:1997:topps-stadium-club:bbp7:refractor:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1747441862955x409879507272717060",
+   "fromCardId": "1653269856245x597615968192927400",
+   "price": 10,
+   "evidence": "1997-98 Topps Stadium Club Bowman's Best Preview #BBP3, rung \"base\" stated in the title. SCC set-30234/30235/30236 all serve 20 cards BBP1-BBP20 with the same roster. Title: \"1997-98 Stadium Club Members Only Bowman's Best Preview #BBP3 GRANT HILL Pistons - Raw 10\"",
+   "repointHobbyiqCardId": "hiq:basketball:1997:topps-stadium-club:bbp3:base:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1749840434525x241097494215944300",
+   "fromCardId": "1653007972993x285830448560265400",
+   "price": 18,
+   "evidence": "1997-98 Topps Stadium Club Bowman's Best Preview #BBP1, rung \"base\" stated in the title. SCC set-30234/30235/30236 all serve 20 cards BBP1-BBP20 with the same roster. Title: \"EL60 Allen Iverson 1997-98 Topps 98 Stadium Club #BBP1 Bowman's Best Preview - Raw 10\"",
+   "repointHobbyiqCardId": "hiq:basketball:1997:topps-stadium-club:bbp1:base:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1757809381480x730084492418678700",
+   "fromCardId": "1653269843611x718263865355264000",
+   "price": 108.35,
+   "evidence": "1997-98 Topps Stadium Club Bowman's Best Preview #BBP10, rung \"refractor\" stated in the title. SCC set-30234/30235/30236 all serve 20 cards BBP1-BBP20 with the same roster. Title: \"1997-98 Stadium Club Shaquille O'Neal Bowmans Best Preview Refractor BBP10 PSA 9\"",
+   "repointHobbyiqCardId": "hiq:basketball:1997:topps-stadium-club:bbp10:refractor:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1753213258288x416567963367768400",
+   "fromCardId": "1653269846055x153809989697430980",
+   "price": 2.99,
+   "evidence": "1997-98 Topps Stadium Club Bowman's Best Preview #BBP4, rung \"base\" stated in the title. SCC set-30234/30235/30236 all serve 20 cards BBP1-BBP20 with the same roster. Title: \"1997-98 Stadium Club Bowman's Best Previews Anfernee Hardaway #BBP4 Magic 🔥 - Raw 10\"",
+   "repointHobbyiqCardId": "hiq:basketball:1997:topps-stadium-club:bbp4:base:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1738753113208x889677581177933200",
+   "fromCardId": "1653269841077x527817303324091800",
+   "price": 3,
+   "evidence": "1997-98 Topps Stadium Club Bowman's Best Preview #BBP10, rung \"base\" stated in the title. SCC set-30234/30235/30236 all serve 20 cards BBP1-BBP20 with the same roster. Title: \"SHAQUILLE O'NEAL 1997-98 Stadium Club-Bowman's Best Preview #BBP10 LA Lakers - Raw 10\"",
+   "repointHobbyiqCardId": "hiq:basketball:1997:topps-stadium-club:bbp10:base:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1740336520553x279758758169659240",
+   "fromCardId": "1653269841077x527817303324091800",
+   "price": 2.25,
+   "evidence": "1997-98 Topps Stadium Club Bowman's Best Preview #BBP10, rung \"base\" stated in the title. SCC set-30234/30235/30236 all serve 20 cards BBP1-BBP20 with the same roster. Title: \"1997-98 Topps Stadium Club - Bowman's Best Previews #BBP10 Shaquille O'Neal - Raw 10\"",
+   "repointHobbyiqCardId": "hiq:basketball:1997:topps-stadium-club:bbp10:base:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1741588118533x167457522437907600",
+   "fromCardId": "1653269841077x527817303324091800",
+   "price": 2.25,
+   "evidence": "1997-98 Topps Stadium Club Bowman's Best Preview #BBP10, rung \"base\" stated in the title. SCC set-30234/30235/30236 all serve 20 cards BBP1-BBP20 with the same roster. Title: \"Shaquille O’Neal 1997-98 Stadium Club Bowman’s Best Preview #BBP10 - Los Angeles - Raw 10\"",
+   "repointHobbyiqCardId": "hiq:basketball:1997:topps-stadium-club:bbp10:base:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1745456935761x473615822902536700",
+   "fromCardId": "1653269854390x863456757981499500",
+   "price": 4.25,
+   "evidence": "1997-98 Topps Stadium Club Bowman's Best Preview #BBP12, rung \"refractor\" stated in the title. SCC set-30234/30235/30236 all serve 20 cards BBP1-BBP20 with the same roster. Title: \"1997-98 Stadium Club Chauncey Billups Bowman's Best Preview Refractor RC #BBP12 - Raw 10\"",
+   "repointHobbyiqCardId": "hiq:basketball:1997:topps-stadium-club:bbp12:refractor:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1749001580654x122796874202117940",
+   "fromCardId": "1653269841077x527817303324091800",
+   "price": 1.76,
+   "evidence": "1997-98 Topps Stadium Club Bowman's Best Preview #BBP10, rung \"base\" stated in the title. SCC set-30234/30235/30236 all serve 20 cards BBP1-BBP20 with the same roster. Title: \"1997-98 Topps 98 Stadium Club Shaquille O'Neal Bowman's Best Preview #BBP10 - Raw 10\"",
+   "repointHobbyiqCardId": "hiq:basketball:1997:topps-stadium-club:bbp10:base:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1749520250655x462979633639412100",
+   "fromCardId": "1653269841077x527817303324091800",
+   "price": 4.9,
+   "evidence": "1997-98 Topps Stadium Club Bowman's Best Preview #BBP10, rung \"base\" stated in the title. SCC set-30234/30235/30236 all serve 20 cards BBP1-BBP20 with the same roster. Title: \"1997-98 Topps 98 Stadium Club Shaquille O'Neal Bowman's Best Preview #BBP10 - Raw 10\"",
+   "repointHobbyiqCardId": "hiq:basketball:1997:topps-stadium-club:bbp10:base:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1754351867626x326467786455384640",
+   "fromCardId": "1653269841077x527817303324091800",
+   "price": 2.49,
+   "evidence": "1997-98 Topps Stadium Club Bowman's Best Preview #BBP10, rung \"base\" stated in the title. SCC set-30234/30235/30236 all serve 20 cards BBP1-BBP20 with the same roster. Title: \"1997-98 Topps Stadium Club - Bowman's Best Previews Shaquille O'Neal #BBP10 - Raw 10\"",
+   "repointHobbyiqCardId": "hiq:basketball:1997:topps-stadium-club:bbp10:base:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1752079360218x553647470482704300",
+   "fromCardId": "1653269841077x527817303324091800",
+   "price": 25,
+   "evidence": "1997-98 Topps Stadium Club Bowman's Best Preview #BBP10, rung \"base\" stated in the title. SCC set-30234/30235/30236 all serve 20 cards BBP1-BBP20 with the same roster. Title: \"1997-98 Topps Stadium Club - Bowman's Best Previews Shaquille O'Neal #BBP10 - Raw 10\"",
+   "repointHobbyiqCardId": "hiq:basketball:1997:topps-stadium-club:bbp10:base:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1786918918063x165718624817445820",
+   "fromCardId": "1653269854390x863456757981499500",
+   "price": 4,
+   "evidence": "1997-98 Topps Stadium Club Bowman's Best Preview #BBP12, rung \"refractor\" stated in the title. SCC set-30234/30235/30236 all serve 20 cards BBP1-BBP20 with the same roster. Title: \"1997-98 Stadium Club - Bowmans Best Preview Refractor Chauncey Billups RC #BBP12 - Raw\"",
+   "repointHobbyiqCardId": "hiq:basketball:1997:topps-stadium-club:bbp12:refractor:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1787707654703x691092572532356700",
+   "fromCardId": "1653269839706x633065261151693200",
+   "price": 17,
+   "evidence": "1997-98 Topps Stadium Club Bowman's Best Preview #BBP5, rung \"atomic-refractor\" stated in the title. SCC set-30234/30235/30236 all serve 20 cards BBP1-BBP20 with the same roster. Title: \"1997-98 Stadium Club #BBP5 Karl Malone Bowman's Best Preview Atomic Refractor - Raw\"",
+   "repointHobbyiqCardId": "hiq:basketball:1997:topps-stadium-club:bbp5:atomic-refractor:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1787703798393x760319288218129800",
+   "fromCardId": "1653269839706x633065261151693200",
+   "price": 13.95,
+   "evidence": "1997-98 Topps Stadium Club Bowman's Best Preview #BBP5, rung \"atomic-refractor\" stated in the title. SCC set-30234/30235/30236 all serve 20 cards BBP1-BBP20 with the same roster. Title: \"1997-98 Stadium Club #BBP5 Karl Malone Bowman's Best Preview Atomic Refractor HS - Raw\"",
+   "repointHobbyiqCardId": "hiq:basketball:1997:topps-stadium-club:bbp5:atomic-refractor:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1788297678533x630495005894915200",
+   "fromCardId": "1653269841077x527817303324091800",
+   "price": 5.5,
+   "evidence": "1997-98 Topps Stadium Club Bowman's Best Preview #BBP10, rung \"base\" stated in the title. SCC set-30234/30235/30236 all serve 20 cards BBP1-BBP20 with the same roster. Title: \"1997-98 Stadium Club #BBP10 Shaquille O'Neal Bowman's Best Preview KE - Raw\"",
+   "repointHobbyiqCardId": "hiq:basketball:1997:topps-stadium-club:bbp10:base:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1788286241812x229383458339591940",
+   "fromCardId": "1653269841077x527817303324091800",
+   "price": 4.75,
+   "evidence": "1997-98 Topps Stadium Club Bowman's Best Preview #BBP10, rung \"base\" stated in the title. SCC set-30234/30235/30236 all serve 20 cards BBP1-BBP20 with the same roster. Title: \"1997-98 Topps Stadium Club Bowman's Best Previews Shaquille O'Neal #BBP10 HOF - Raw\"",
+   "repointHobbyiqCardId": "hiq:basketball:1997:topps-stadium-club:bbp10:base:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1788284529552x107314551772514700",
+   "fromCardId": "1653269841077x527817303324091800",
+   "price": 6,
+   "evidence": "1997-98 Topps Stadium Club Bowman's Best Preview #BBP10, rung \"base\" stated in the title. SCC set-30234/30235/30236 all serve 20 cards BBP1-BBP20 with the same roster. Title: \"1997-98 Topps Stadium Club Bowman's Best Previews #BBP10 Shaquille O'Neal HOF - Raw\"",
+   "repointHobbyiqCardId": "hiq:basketball:1997:topps-stadium-club:bbp10:base:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1788212579726x863584299158318500",
+   "fromCardId": "1653269841077x527817303324091800",
+   "price": 3.99,
+   "evidence": "1997-98 Topps Stadium Club Bowman's Best Preview #BBP10, rung \"base\" stated in the title. SCC set-30234/30235/30236 all serve 20 cards BBP1-BBP20 with the same roster. Title: \"SHAQUILLE O'NEAL 1997-98 BOWMANS BEST PREVIEWS CARD BBP10 LAKERS STADIUM CLUB - Raw\"",
+   "repointHobbyiqCardId": "hiq:basketball:1997:topps-stadium-club:bbp10:base:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1788207057318x581838516830577300",
+   "fromCardId": "1653269841077x527817303324091800",
+   "price": 7.83,
+   "evidence": "1997-98 Topps Stadium Club Bowman's Best Preview #BBP10, rung \"base\" stated in the title. SCC set-30234/30235/30236 all serve 20 cards BBP1-BBP20 with the same roster. Title: \"1997-98 Topps Stadium Club - Bowman's Best Previews Shaquille O'Neal #BBP10 - Raw\"",
+   "repointHobbyiqCardId": "hiq:basketball:1997:topps-stadium-club:bbp10:base:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1737740220197x403188541449054140",
+   "fromCardId": "1653269834599x966732349183770500",
+   "price": 4.5,
+   "evidence": "1997-98 Topps Stadium Club Bowman's Best Preview #BBP3, rung \"refractor\" stated in the title. SCC set-30234/30235/30236 all serve 20 cards BBP1-BBP20 with the same roster. Title: \"1997-98 Topps Stadium Club - Bowman's Best Previews Refractor #BBP3 Grant Hill - Raw 10\"",
+   "repointHobbyiqCardId": "hiq:basketball:1997:topps-stadium-club:bbp3:refractor:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1738023882766x833468330312801900",
+   "fromCardId": "1653269830987x716710574254064900",
+   "price": 45.16,
+   "evidence": "1997-98 Topps Stadium Club Bowman's Best Preview #BBP1, rung \"atomic-refractor\" stated in the title. SCC set-30234/30235/30236 all serve 20 cards BBP1-BBP20 with the same roster. Title: \"1997-98 Stadium Club Bowman's Best Previews Atomic Refractor #BBP1 Allen Iverson - Raw 10\"",
+   "repointHobbyiqCardId": "hiq:basketball:1997:topps-stadium-club:bbp1:atomic-refractor:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1738271930494x317570427111617340",
+   "fromCardId": "1653269830987x716710574254064900",
+   "price": 60,
+   "evidence": "1997-98 Topps Stadium Club Bowman's Best Preview #BBP1, rung \"atomic-refractor\" stated in the title. SCC set-30234/30235/30236 all serve 20 cards BBP1-BBP20 with the same roster. Title: \"1997-98 Stadium Club #BBP1 Allen Iverson Bowman's Best Preview Atomic Refractors - Raw 10\"",
+   "repointHobbyiqCardId": "hiq:basketball:1997:topps-stadium-club:bbp1:atomic-refractor:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1785322767975x966673260025135500",
+   "fromCardId": "1653269845069x804705348630159600",
+   "price": 10,
+   "evidence": "1997-98 Topps Stadium Club Bowman's Best Preview #BBP4, rung \"refractor\" stated in the title. SCC set-30234/30235/30236 all serve 20 cards BBP1-BBP20 with the same roster. Title: \"1997-98 Stadium Club #BBP4 Anfernee Hardaway Bowman's Best Preview Refractor - Raw\"",
+   "repointHobbyiqCardId": "hiq:basketball:1997:topps-stadium-club:bbp4:refractor:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1746443271477x837025028292168800",
+   "fromCardId": "1653269845069x804705348630159600",
+   "price": 8.25,
+   "evidence": "1997-98 Topps Stadium Club Bowman's Best Preview #BBP4, rung \"refractor\" stated in the title. SCC set-30234/30235/30236 all serve 20 cards BBP1-BBP20 with the same roster. Title: \"1997 Topps Stadium Club Bowman's Best Previews Refractor Anfernee Hardaway #BBP4 - Raw 10\"",
+   "repointHobbyiqCardId": "hiq:basketball:1997:topps-stadium-club:bbp4:refractor:no-auto"
+  }
+ ]
+}
