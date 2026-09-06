@@ -2071,6 +2071,9 @@ function isStrictChecklistSource(raw) {
 // `scripts/lib/source-corroboration.cjs`. A second copy of one predicate is the
 // exact failure catalogAuthority's header records.
 const CORROBORATION = require("./source-corroboration.cjs");
+// The ONE "does this title spell the Bowman DRAFT product?" rule, bridged
+// from the compiled parser rather than copied. See bowman-draft-title.cjs.
+const BOWMAN_DRAFT_TITLE = require("./bowman-draft-title.cjs");
 
 /**
  * L3, ROW-AWARE. May THIS ROW prove a specialization lists a card?
@@ -2463,6 +2466,40 @@ const SPECIALIZATION_PARENTS = Object.freeze({
   "pacific-prism": "pacific",
   "pacific-crown-collection": "pacific",
   "pacific-gold-crown-die-cuts": "pacific",
+  // -- Bowman Draft and its registered children (CF-BOWMAN-CHROME-DRAFT-
+  //    KEEPS-DRAFT, Drew 2026-09-06, #1912). All four are productSetKeys.ts
+  //    entries whose immediate `parent` is named here, so they are mirrored,
+  //    not excepted -- `bowman-draft` parent `bowman`, and Chrome/Paper/
+  //    Sapphire parent `bowman-draft`.
+  //
+  //    THIS IS THE `upper-deck-black-diamond` SHAPE AGAIN, and that is why
+  //    the mirror now has a table-equality pin. `bowman-draft` was already a
+  //    declared DISTINCT product, already the `to` of a ruled collapse pair
+  //    (`bowman-draft-picks-and-prospects -> bowman-draft`) and already a
+  //    productSetKeys.ts entry parented to `bowman` -- every table but this
+  //    one. `specializationAncestry` reads ONLY the mirror, so the ladder
+  //    returned [] and L1 failed on rows every other table agrees about.
+  //    rematchSpecializationStated.test.ts now compares this table against
+  //    productSetKeys.ts for EVERY declared parent, so the next missing
+  //    entry is a red test rather than a census surprise.
+  //
+  //    NOT in SAME_NUMBER_PARALLEL_SETS, deliberately: Bowman Draft runs its
+  //    own numbering (BDC-/CPA- prefixes) against the flagship's, so the
+  //    number still carries information and L5 must keep asking whether the
+  //    stored flagship lists it. That is the leg that protects the CPA-DT
+  //    collision -- cpa-dt is Diego Tornes in bowman-chrome and Devin Taylor
+  //    in bowman-draft.
+  "bowman-draft": "bowman",
+  // `bowman-draft-chrome` is DELIBERATELY ABSENT, and its absence is the
+  // ruling. normalizeSetKey("bowman-draft-chrome") is "bowman-draft" -- the
+  // key is a productSetKeys.ts entry (the parser answers the NAME "Bowman
+  // Draft Chrome") but NOT a normalizeSetKey fixed point, so no stored or
+  // derived identity in the corpus can ever carry it: every such title
+  // normalizes to `bowman-draft`. A ruled key that is not a fixed point is
+  // not a ruling, it is a rename waiting to fire, and
+  // rematchSpecializationStated.test.ts pins exactly that about this table.
+  "bowman-draft-paper": "bowman-draft",
+  "bowman-draft-sapphire": "bowman-draft",
 });
 
 /** The keys whose ladder edge this module mirrors from productSetKeys.ts --
@@ -2470,6 +2507,124 @@ const SPECIALIZATION_PARENTS = Object.freeze({
 const LADDER_MIRRORED_KEYS = Object.freeze(
   Object.keys(SPECIALIZATION_PARENTS).filter((k) => k !== "bowman-tiffany"),
 );
+
+/**
+ * THE RULED SIBLING PAIRS (Drew, 2026-09-06 -- CF-BOWMAN-CHROME-DRAFT-KEEPS-
+ * DRAFT, #1912).
+ *
+ * L1 asks whether the derived key is a strict DESCENDANT of the stored one on
+ * the ladder, and that question is right for every pair the subclass was built
+ * for: `topps` -> `topps-traded-tiffany` is a refinement of the stored
+ * answer, so the title merely has to prove the extra words.
+ *
+ * IT IS THE WRONG QUESTION FOR THIS ONE PAIR, AND THE CENSUS IS WHY. #1911
+ * measured 10,146 sold_comps rows (2019-2026; 2023: 2,725, 2024: 3,208, 2025:
+ * 1,526) sitting on `bowman-chrome` slugs whose OWN TITLE says "Chrome
+ * Draft". The parser used to read those titles as `bowman-chrome` and the
+ * stored slug is that stale answer. Now that #1911 reads them correctly, the
+ * re-derivation answers `bowman-draft` -- and `bowman-chrome` and
+ * `bowman-draft` are SIBLINGS under `bowman`, not ancestor and descendant.
+ * So L1 fails BY CONSTRUCTION, every one of those rows classifies CONFLICT,
+ * and the fix #1911 landed cannot reach the rows it was landed for.
+ *
+ * Drew has already ruled this direction twice: Bowman Draft is a DISTINCT
+ * product from Bowman Chrome (project_bowman_setkey_taxonomy), and the
+ * repair-cpa-draft-refile lane moved 2024/2025 `bowman-chrome` -> `bowman-
+ * draft` sales on that ruling. This table is that ruling stated where the
+ * ladder can read it.
+ *
+ * WHAT MAKES IT SAFE IS THAT IT WIDENS L1 AND NOTHING ELSE.
+ *
+ *   - The pair is ONE-DIRECTIONAL. `bowman-chrome` -> `bowman-draft` is
+ *     declared; the reverse is not, and never fires. A sale stored on
+ *     `bowman-draft` whose title says only "Bowman Chrome" is NOT moved back
+ *     -- the stale-slug population runs one way, and a row already on the
+ *     Draft product is where the ruling wants it.
+ *   - It is gated on the TITLE, through the ONE parser rule. `titleGate`
+ *     below is #1911's own `titleSpellsBowmanDraft`, reached through the
+ *     compiled build (scripts/lib/bowman-draft-title.cjs). There is no second
+ *     regex here and there must never be one: this module and the parser have
+ *     to agree about what "spells the Draft product" means, or a row moves on
+ *     one reading and is priced on another. The predicate demands DRAFT
+ *     ADJACENT to "chrome", so "2025 Bowman Chrome Aaron Judge 2025 MLB Draft"
+ *     -- prose about the event -- does not qualify.
+ *   - The DERIVED key must be `bowman-draft` or one of its registered
+ *     children (`bowman-draft-chrome`, `bowman-draft-sapphire` per
+ *     productSetKeys.ts), so a derivation that wandered somewhere else in the
+ *     family cannot ride this door.
+ *   - L2 through L5 are UNCHANGED and all still have to hold. L5 is the one
+ *     that matters most here: Bowman Draft runs its own numbering, so the
+ *     stored flagship's checklist is still asked whether it lists this card,
+ *     and a YES still refuses. That is what keeps the CPA-DT collision safe --
+ *     cpa-dt is Diego Tornes in bowman-chrome and Devin Taylor in
+ *     bowman-draft, and a row whose number the stored product really does list
+ *     is not moved on a title alone.
+ *
+ * NOT `RULED_COLLAPSE_PAIRS`. That table is the REFUSAL half -- every pair in
+ * it is a collapse `derivationCollapsesProduct` refuses, and its own pin
+ * asserts `writable === false` for each. Putting this pair there would harden
+ * the CONFLICT rather than lift it, which is the opposite of the ruling. The
+ * two tables read the same ladder in opposite directions and are deliberately
+ * separate.
+ */
+const RULED_SIBLING_PAIRS = Object.freeze([
+  Object.freeze({
+    from: "bowman-chrome",
+    to: "bowman-draft",
+    // The registered children of `to` a derivation may legitimately answer.
+    // Kept explicit rather than computed so widening it is a decision someone
+    // makes on purpose; the pins compare each against productSetKeys.ts's own
+    // parent edges AND against normalizeSetKey.
+    //
+    // `bowman-draft-chrome` IS NOT HERE, and its absence is measured rather
+    // than an oversight. It is a real productSetKeys.ts entry -- the PARSER
+    // answers the NAME "Bowman Draft Chrome" for exactly the titles this
+    // ruling is about -- but `normalizeSetKey("bowman-draft-chrome")` is
+    // `bowman-draft`, so the key is not a fixed point and NO stored or
+    // derived identity in the corpus can carry it: `storedIdentity` and the
+    // deriver both normalize, and every one of these titles arrives here as
+    // `bowman-draft`. Listing a key the classifier can never be handed would
+    // be a rule that reads as coverage and does nothing, so the destination is
+    // the key the corpus actually uses.
+    toChildren: Object.freeze(["bowman-draft-sapphire"]),
+    titleGate: "titleSpellsBowmanDraft",
+    ruled: true,
+    // #1911's census, all years: 10,146 rows on bowman-chrome slugs whose
+    // title states Chrome Draft. 2023 alone is 2,725 and is the cell #1912's
+    // read-only census measures.
+    est: 10146,
+  }),
+]);
+
+/** The ruled sibling pair for this stored -> derived direction, or null.
+ *
+ *  ONE-DIRECTIONAL BY CONSTRUCTION: only `from` -> `to` (or one of `to`'s
+ *  registered children) matches, so the reverse direction finds nothing. */
+function ruledSiblingPair(from, to) {
+  const f = lower(from), t = lower(to);
+  if (!f || !t) return null;
+  return RULED_SIBLING_PAIRS.find(
+    (p) => p.from === f && (p.to === t || p.toChildren.includes(t)),
+  ) ?? null;
+}
+
+/** The title gates a ruled sibling pair may name, by name -- each one a
+ *  function this module BRIDGES rather than re-implements. A pair whose gate
+ *  is not in here is refused rather than silently ungated. */
+const SIBLING_TITLE_GATES = Object.freeze({
+  titleSpellsBowmanDraft: (title) => BOWMAN_DRAFT_TITLE.titleSpellsBowmanDraft(title),
+});
+
+/** Does this stored -> derived direction have a RULED sibling pair whose title
+ *  gate this row's title passes? The title is the whole evidence for a sibling
+ *  move, so a pair with no passing gate is not a pair at all. */
+function ruledSiblingMove(from, to, title) {
+  const pair = ruledSiblingPair(from, to);
+  if (!pair) return null;
+  const gate = SIBLING_TITLE_GATES[pair.titleGate];
+  if (typeof gate !== "function") return null;
+  return gate(title) ? pair : null;
+}
 
 /**
  * SAME-NUMBER PARALLEL SETS, MIRRORED from productSetKeys.ts.
@@ -2623,8 +2778,18 @@ function specializationStatedEvidence({
   const title = str(row?.title);
   const storedKey = lower(stored?.setKey), derivedKey = lower(derived?.setKey);
 
-  // L1 -- the ladder, and only the ladder.
-  const ladder = isSpecializationOf(derivedKey, storedKey);
+  // L1 -- the ladder, PLUS the ruled sibling pairs.
+  //
+  // The ladder is still the general rule and still the only thing that lets an
+  // unenumerated pair through. A RULED SIBLING PAIR is the named exception to
+  // it (CF-BOWMAN-CHROME-DRAFT-KEEPS-DRAFT, Drew 2026-09-06): a stored key and
+  // a derived key that are SIBLINGS under one parent, where the stored key is
+  // a stale parser answer and the TITLE says which product the card really is.
+  // See RULED_SIBLING_PAIRS for why the ladder cannot express it and what
+  // keeps it narrow -- the gate is the parser's own rule, the direction is
+  // one-way, and L2 through L5 below are untouched.
+  const sibling = ruledSiblingMove(storedKey, derivedKey, title);
+  const ladder = !!sibling || isSpecializationOf(derivedKey, storedKey);
   if (!ladder) failed.push("not-a-ladder-specialization");
 
   // L2 -- every distinguishing word, stated in the title. Only meaningful
@@ -5133,6 +5298,10 @@ module.exports = {
   SELLER_NAME_AUTO, AUTO_WITNESS_RE, LEGACY_AUTO_WITNESS_RE, SELLER_SHOP_TOKEN_RE,
   autographWitnessIsSellerNameOnly, sellerNameAutoEvidence,
   SPECIALIZATION_STATED, SPECIALIZATION_PARENTS, LADDER_MIRRORED_KEYS,
+  // THE RULED SIBLING PAIRS (2026-09-06) -- the table, its lookup and the
+  // gated move, exported piece by piece so a pin can drive one alone and the
+  // mutation check can revert the table alone.
+  RULED_SIBLING_PAIRS, ruledSiblingPair, ruledSiblingMove, SIBLING_TITLE_GATES,
   SAME_NUMBER_PARALLEL_SETS, isSameNumberParallelSet,
   STRICT_CHECKLIST_SOURCES, STRICT_PUBLISHER_LANES, normalizeCatalogSource, isStrictChecklistSource,
   isStrictChecklistRow,
