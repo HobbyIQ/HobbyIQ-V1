@@ -114,7 +114,7 @@ const WATCHED: Array<{ file: string; label: string; fn: string; hash: string }> 
 /** The recorded behaviour hash for each watched function, at CONVERTER_VERSION 4. */
 const RECORDED: Record<string, string> = {
   "subset-identity:claimedSubsetOf": "def8b0f7187288a3",
-  "subset-identity:isBaseSectionLabel": "5f89a5eff2a078ec",
+  "subset-identity:isBaseSectionLabel": "e1d58052f029a93e",
   "subset-identity:foldSubsetText": "4c33bdf4b3715ea5",
   "subset-identity:rungKey": "9526fcf87cecbb79",
   "fetcher:zeroCardReason": "8ed6926f87249ce6",
@@ -141,9 +141,9 @@ function currentHashes(): Record<string, string> {
 
 // ── the bump itself ──────────────────────────────────────────────────────────
 
-describe("the SCC converter is at v4, because the Preview mints different rows", () => {
-  it("the fetcher stamps v4", () => {
-    expect(CONVERTER_VERSION).toBe(4);
+describe("the SCC converter is at v5, because the Preview mints different rows", () => {
+  it("the fetcher stamps v5", () => {
+    expect(CONVERTER_VERSION).toBe(5);
   });
 
   it("the driver's lane table agrees -- a disagreement re-opens nothing", () => {
@@ -153,17 +153,30 @@ describe("the SCC converter is at v4, because the Preview mints different rows",
     expect(LANE_CONVERTER_VERSION.sportscardchecklist).toBe(CONVERTER_VERSION);
   });
 
-  it("v4 names its reason, in the file a reader lands on", () => {
+  it("v5 names its reason, and the history stays cumulative", () => {
     // The reason has to be READABLE where the version is, or the next person
-    // to see a stale verdict re-open cannot tell which change re-opened it.
+    // to see a stale verdict re-open cannot tell WHICH change re-opened it --
+    // which matters more than usual here, because v4 and v5 were stamped the
+    // same day for unrelated reasons.
     const src = fs.readFileSync(FETCHER, "utf8");
     // v3's reason is still there -- the history is cumulative, not replaced.
     expect(src).toContain("#1878");
     expect(src).toContain("Base Set");
-    // v4: Drew's Bowman's Best Preview ruling changes the setKey AND the
+    // v4: "Inserts" is a page heading, not a subset name (#1894).
+    expect(src).toContain("#1894");
+    expect(src).toContain("Inserts");
+    // v5: Drew's Bowman's Best Preview ruling changes the setKey AND the
     // cardNumber on every row of the six Preview pages.
     expect(src).toContain("Bowman's Best Preview is its own product key");
     expect(src).toContain("BBP prefix");
+  });
+
+  it("v4 names #1894 and the heading it folded", () => {
+    // The same fold as v3, one heading over: eight SP Authentic insert pages
+    // refused entirely against bcp rows tagged with the section word.
+    const src = fs.readFileSync(FETCHER, "utf8");
+    expect(src).toContain("#1894");
+    expect(src).toContain('"Inserts" is a page heading');
   });
 
   it("the version history is append-only -- v1 and v2 keep their entries", () => {
@@ -195,7 +208,7 @@ describe("a change to the deciding code cannot land without answering the versio
     expect(Object.keys(now).sort()).toEqual(Object.keys(RECORDED).sort());
   });
 
-  it("no watched function has moved since v3 was recorded", () => {
+  it("no watched function has moved since v4 was recorded", () => {
     const now = currentHashes();
     const moved = Object.keys(RECORDED)
       .filter((k) => now[k] !== RECORDED[k])
@@ -309,11 +322,13 @@ describe("a converter bump re-opens the verdicts recorded under the old one", ()
     // ...and for SCC: unstamped and older re-open, current does not.
     expect(staleByConverterProbe("sportscardchecklist", { status: "partial" })).toBe(true);
     expect(staleByConverterProbe("sportscardchecklist", { status: "partial", converterVersion: 2 })).toBe(true);
-    // v3 NOW RE-OPENS, and that is the whole point of the v4 bump: a verdict
-    // recorded against the six Preview pages at v3 was recorded against a
-    // different setKey and a different cardNumber on every row.
+    // TWO BUMPS, ONE DAY, AND BOTH RE-OPEN. v4 was the eight SP Authentic
+    // refusals (#1894); v5 is the six Preview pages, which now mint a
+    // different setKey and a different cardNumber on every row. A verdict
+    // recorded under EITHER earlier version is stale.
     expect(staleByConverterProbe("sportscardchecklist", { status: "partial", converterVersion: 3 })).toBe(true);
-    expect(staleByConverterProbe("sportscardchecklist", { status: "partial", converterVersion: 4 })).toBe(false);
+    expect(staleByConverterProbe("sportscardchecklist", { status: "partial", converterVersion: 4 })).toBe(true);
+    expect(staleByConverterProbe("sportscardchecklist", { status: "partial", converterVersion: 5 })).toBe(false);
   });
 
   it("the run says how many it re-opened, so the effect is visible", () => {

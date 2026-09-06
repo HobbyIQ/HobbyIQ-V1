@@ -25,6 +25,8 @@ import {
 import { resolveVertical } from "./resolveVertical.service.js";
 import { cardNumberInClause, computeHobbyIqCardId, slugify, normalizeSetKey as canonicalNormalizeSetKey } from "./hobbyIqCardId.service.js";
 import { playerTheTitleAllows } from "./playerTheTitleAllows.js";
+import { yearTheTitleAllows } from "./yearTheTitleAllows.js";
+import { extractYearFromTitle } from "./slugRederivation.service.js";
 import { canonicalizeParallelName, variationParallelsForCard } from "../catalog/catalogMatcher.service.js";
 import { canonicalVariationName, pickVariationForMarker, reduceVariationStockToCatalog, variationNameFromSlug } from "../catalog/variationVocabulary.js";
 import { qualifiedSetKeyFromTitle } from "../catalog/productQualifiers.js";
@@ -480,6 +482,12 @@ export interface VendorPersistResult {
   /** The vendor's player was not adopted because the title's reading is fuller
    *  or the vendor's was an abbreviation of it. Same person either way. */
   playerVendorOverruled?: number;
+  /** CF-THE-YEAR-IS-THE-CARDS-YEAR-NOT-THE-SALES: the vendor's card-year field
+   *  was discarded -- either the title stated a different year (the title wins)
+   *  or the title was silent and the vendor's value was indistinguishable from
+   *  the sale year, in which case NOTHING is adopted and the row is skipped as
+   *  UNDERIVABLE. Absent beats wrong. */
+  yearVendorOverruled?: number;
   /** D28: the title stated an explicit `#X` and the vendor field / LLM said
    *  something else. The title won; this is how often it mattered. */
   cardNumberVendorDisagreed?: number;
@@ -658,7 +666,34 @@ export async function persistVendorSalesToPool(
     // the fragile parseListingIdentity call for the corresponding field.
     const parsed = parseListingIdentity(title, identity.cardNumberRe);
     let cardNumber = identity.cardNumber ?? parsed.cardNumber;
-    let cardYear = identity.cardYear ?? guessCardYearFromTitle(title);
+    // CF-THE-YEAR-IS-THE-CARDS-YEAR-NOT-THE-SALES (Drew, 2026-09-06). This line
+    // was `identity.cardYear ?? guessCardYearFromTitle(title)` -- the same `??`
+    // shape the player fix below removed, on a third field. The vendor's year
+    // won whenever it was present, and for auction-house archive rows arriving
+    // through TCA (collectrea, Goldin) that field is the year of the AUCTION.
+    // The title could not object even in principle: the old guess matched
+    // TWENTY-hundreds only, so every vintage year 1909-1999 was invisible to
+    // it. That is how a 1952 Topps Mantle that sold for $54,000 came to sit in
+    // hiq:baseball:2015:topps:311. MEASURED over the 930 verified entries of
+    // the #1890 census: the old guess returned null on 929 and the slug year
+    // equalled the SALE year on 929. The two readings are now COMPARED and the
+    // title's stated year wins. See yearTheTitleAllows.ts.
+    const yearDecision = yearTheTitleAllows(
+      identity.cardYear,
+      extractYearFromTitle(title),
+      soldAt ? Number(String(soldAt).slice(0, 4)) : null,
+    );
+    let cardYear = yearDecision.cardYear;
+    if (yearDecision.vendorOverruled) {
+      result.yearVendorOverruled = (result.yearVendorOverruled ?? 0) + 1;
+      console.log(JSON.stringify({
+        event: "year_vendor_overruled",
+        source, title,
+        outcome: yearDecision.outcome,
+        vendorYear: yearDecision.vendorYear,
+        titleYear: yearDecision.titleYear,
+      }));
+    }
     // CF-THE-TITLE-OUTRANKS-THE-VENDOR-PLAYER (Drew, 2026-09-04). This line was
     // a nullish-coalesce of the vendor's field over the title's guess, which
     // means the vendor's attribution won whenever it was present and the title
@@ -1791,17 +1826,6 @@ export function persistVendorSalesInBackground(
       error: (err as Error)?.message ?? String(err),
     }));
   });
-}
-
-/** Best-effort year extraction from a title. Recognizes leading 4-digit
- *  year (2015-2027 range). Returns null when nothing plausible found. */
-function guessCardYearFromTitle(title: string): number | null {
-  const m = title.match(/\b(20\d{2})\b/);
-  if (m) {
-    const y = Number(m[1]);
-    if (y >= 2000 && y <= 2030) return y;
-  }
-  return null;
 }
 
 /** Best-effort player-name guess. Delegates to parseCardQuery — the

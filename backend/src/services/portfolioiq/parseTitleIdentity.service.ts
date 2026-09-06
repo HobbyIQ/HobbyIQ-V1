@@ -2094,6 +2094,16 @@ function capFirst(s: string): string {
 const RIVAL_BRAND_WORDS = /\b(?:upper\s*deck|bowman'?s?|topps|fleer|donruss|score|skybox|pinnacle|leaf|panini|pacific|flair|ultra|playoff|sage|press\s+pass)\b/i;
 
 /** True when `t` names no manufacturer other than the ones in `own`. */
+/** CF-A-TCG-TITLE-IS-NOT-A-PANINI-COLOUR-WORD (2026-09-06).
+ *
+ *  The verticals the sports brand rules have no jurisdiction over. Lifted
+ *  verbatim out of the guard further down this file that already used it, so
+ *  ONE list decides the question in both places — the same reason
+ *  `normalizeSetKey` consults one product table rather than keeping two
+ *  vocabularies in sync by hand.
+ */
+const TCG_VERTICAL_TITLE = /\b(pokemon|pok[eé]?mon|pok\s?mon|yugioh|yu-?gi-?oh|magic\s+the\s+gathering|\bmtg\b|dragon\s*ball|one\s+piece|weiss\s+schwarz|digimon|star\s+wars|halo|final\s+fantasy|ultraman|kaiju|godzilla|marvel|dc\s+comics|funko|topps\s+wacky|garbage\s+pail|hearthstone|lorcana|flesh\s+and\s+blood)\b/;
+
 function noRivalBrand(t: string, own: RegExp | null = null): boolean {
   const hits = t.match(new RegExp(RIVAL_BRAND_WORDS.source, "gi")) ?? [];
   if (hits.length === 0) return true;
@@ -2144,6 +2154,29 @@ const POKEMON_ALIASES_LONGEST_FIRST: ReadonlyArray<readonly [string, string]> = 
     .sort((a, b) => b[0].length - a[0].length)
     .map(([alias, key]) => Object.freeze([alias, key]) as readonly [string, string]),
 );
+
+/** The same aliases, bucketed by their FIRST segment.
+ *
+ *  An alias can only match a title that contains its first segment as a
+ *  segment, so the title's own segments select every candidate worth testing
+ *  and the rest are never touched. The lists preserve the longest-first order
+ *  of the array above; the caller re-sorts across buckets because a title's
+ *  candidates arrive from several of them.
+ *
+ *  This is a pure index over POKEMON_ALIASES_LONGEST_FIRST — same entries, same
+ *  answers — added because the resolver moved onto the hot path (see
+ *  `resolveEnglishPokemonSetFromTitle`). */
+const POKEMON_ALIASES_BY_FIRST_SEGMENT: ReadonlyMap<string, ReadonlyArray<readonly [string, string]>> = (() => {
+  const m = new Map<string, Array<readonly [string, string]>>();
+  for (const entry of POKEMON_ALIASES_LONGEST_FIRST) {
+    const first = entry[0].split("-")[0];
+    if (!first) continue;
+    const bucket = m.get(first);
+    if (bucket) bucket.push(entry);
+    else m.set(first, [entry]);
+  }
+  return m;
+})();
 
 /** CF-THE-SET-CODE-IS-THE-KEY (2026-09-05).
  *
@@ -2274,7 +2307,35 @@ export function resolveEnglishPokemonSetFromTitle(title: string): string | null 
   // The NAME answers first: it is the more specific signal, and every name
   // alias was already ruled. The code is the fallback for the titles the name
   // table cannot see, which is the census population.
-  for (const [alias, key] of POKEMON_ALIASES_LONGEST_FIRST) {
+  //
+  // INDEXED BY FIRST SEGMENT, and the ANSWER IS IDENTICAL to the linear scan it
+  // replaces. Every alias contains at least one segment, so an alias that could
+  // match this title is always reachable from one of the title's own segments;
+  // candidates are still tried LONGEST FIRST, so a specialized product is never
+  // shadowed by the flagship whose name is its prefix.
+  //
+  // WHY IT HAD TO STOP BEING A SCAN. This function used to run only in the
+  // "Unknown" fallback; CF-A-TCG-TITLE-IS-NOT-A-PANINI-COLOUR-WORD now runs it
+  // for EVERY title that names a TCG vertical, and 1,497 `includes` per title
+  // measured 2.0ms against 0.035ms for a sports title — 55x — which timed the
+  // 254-title Pokemon corpus suite out at 30s. Same answers, ~1% of the work.
+  // The candidates are GATHERED first and only then walked longest-first: the
+  // buckets are per-segment, so trying each bucket as it is found would let a
+  // short alias from an early segment beat a longer one from a later segment
+  // and re-introduce the family collapse this ordering exists to prevent.
+  const candidates: Array<readonly [string, string]> = [];
+  const seen = new Set<string>();
+  for (const seg of new Set(hay.split("-").filter(Boolean))) {
+    const bucket = POKEMON_ALIASES_BY_FIRST_SEGMENT.get(seg);
+    if (!bucket) continue;
+    for (const entry of bucket) {
+      if (seen.has(entry[0])) continue;
+      seen.add(entry[0]);
+      candidates.push(entry);
+    }
+  }
+  candidates.sort((a, b) => b[0].length - a[0].length);
+  for (const [alias, key] of candidates) {
     if (hay.includes("-" + alias + "-")) return key;
   }
   return resolvePokemonSetCodeFromTitle(hay, t);
@@ -2305,6 +2366,41 @@ export function inferSetKeyFromTitle(title: string, cardNumber?: string | null):
     "$1 ",
   );
   const cn = String(cardNumber ?? "").toUpperCase();
+
+  // CF-A-TCG-TITLE-IS-NOT-A-PANINI-COLOUR-WORD (2026-09-06), the companion to
+  // CF-THE-ENGLISH-SET-CODE-IS-THE-KEY.
+  //
+  // THE DEFECT. The TCG guard that resolves a Pokemon set from its title sat
+  // BELOW forty-odd sports product rules, and most of those rules read a bare
+  // colour or theme word with no brand beside it — `\bobsidian\b`,
+  // `\bzenith\b`, `\borigins\b`, `\bselect\b`, `\bprizm\b`. A title that says
+  // "Pokemon" in so many words was therefore claimed by Panini before the
+  // Pokemon vocabulary was ever consulted:
+  //
+  //   "2023 Pokemon Obsidian Flames Charizard ex 125/197" -> Panini Obsidian
+  //   "2023 Pokemon Crown Zenith Giratina VSTAR"          -> Panini Zenith
+  //   "2015 Pokemon XY Ancient Origins"                   -> Panini Origins
+  //
+  // Every one of those is a real Pokemon set with a tcgdex code, an alias, and
+  // a scraped checklist already in card_catalog. The census measured 2,600
+  // live pool rows sitting in Panini and Leaf pools because of this ordering.
+  // A wrong key is worse than no key: it passes the slug guard and fuses a
+  // Pokemon sale into another brand's pool (CF-ONE-CARD-ONE-ROW-ONE-POOL).
+  //
+  // THE FIX IS THE ORDER, NOT A NEW RULE. A title that names a TCG vertical is
+  // asked of the TCG vocabulary FIRST, and only a MISS falls through to the
+  // sports rules — so nothing that used to resolve stops resolving, and the
+  // "Unknown" placeholder is still reached at the original guard below. This
+  // is CF-NO-CROSS-VERTICAL-FALLBACK, which `resolveSetKeyForSlug` already
+  // enforces on its own branch, applied to the one deriver left outside it.
+  //
+  // Scoped to a title that NAMES the vertical, so a sports title is untouched.
+  if (TCG_VERTICAL_TITLE.test(t)) {
+    const enSet = resolveEnglishPokemonSetFromTitle(raw);
+    if (enSet) return enSet;
+    const jaSet = resolveJapanesePokemonSetCodeFromTitle(raw);
+    if (jaSet) return jaSet;
+  }
 
   // Bowman Paper detection — title-first, then cardNumber-prefix fallback.
   // Must run BEFORE the plain /bowman/ rules below so a "2026 Bowman
@@ -2592,7 +2688,7 @@ export function inferSetKeyFromTitle(title: string, cardNumber?: string | null):
   // For obviously non-sports contexts, return a truthful placeholder
   // so the LLM-provided setName wins downstream (persistVendorSalesToPool
   // uses `?? inferSetKeyFromTitle` for the fallback).
-  if (/\b(pokemon|pok[eé]?mon|pok\s?mon|yugioh|yu-?gi-?oh|magic\s+the\s+gathering|\bmtg\b|dragon\s*ball|one\s+piece|weiss\s+schwarz|digimon|star\s+wars|halo|final\s+fantasy|ultraman|kaiju|godzilla|marvel|dc\s+comics|funko|topps\s+wacky|garbage\s+pail|hearthstone|lorcana|flesh\s+and\s+blood)\b/.test(t)) {
+  if (TCG_VERTICAL_TITLE.test(t)) {
     // CF-THE-POKEMON-VOCABULARY-WAS-NEVER-REACHABLE-FROM-THE-TITLE
     // (2026-09-04, follow-on to V6 / #1624).
     //

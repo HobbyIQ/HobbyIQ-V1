@@ -373,19 +373,40 @@ describe("the rederive pass wires recovery in without losing its gates", () => {
     expect(SRC).toContain("identityRecoveredFields");
   });
 
-  it("corroborates a RECOVERED set name against the destination's player", () => {
+  it("corroborates EVERY destination against the holding's player", () => {
+    // WIDENED 2026-09-06 (Drew, #1849). This pin used to assert the OPPOSITE
+    // — that the gate was reached only when the set name was RECOVERED,
+    // because "a STORED set name is the holding's own claim and this pass has
+    // never second-guessed it". 4a82faed / 25bc5079 retired that scope: they
+    // store `setName: "Bowman Chrome"`, carry `recoveredFields: []`, skipped
+    // the gate, and matched Diego Tornes' cpa-dt row while their own titles
+    // say Devin Taylor. The user's stated set name does not outrank the
+    // checklist's player.
+    //
+    // The full ruling and its mutation pins live in
+    // tests/gate1bStoredSetNames.test.ts.
     expect(SRC).toMatch(/GATE 1b/);
+    // The corroboration is the `if` itself — nothing nests it behind a
+    // recovered-only branch.
+    expect(SRC).toMatch(
+      /if \(!recoveredSetNameIsCorroborated\(h\.playerName, backing\.playerName\)\) \{/);
+    // `setNameWasRecovered` survives only to shape the refusal's REASON, and
+    // is now declared INSIDE the contradiction branch where it cannot gate it.
     expect(SRC).toMatch(/setNameWasRecovered/);
-    // Scoped to recovered set names: a STORED set name is the holding's own
-    // claim and this pass has never second-guessed it.
-    expect(SRC).toMatch(/const setNameWasRecovered = \(recovery\?\.recovered \?\? \[\]\)\.some/);
   });
 
-  it("asks GATE 2 about the RECOVERED claim, not the stored one", () => {
+  it("asks GATE 2 about the RECOVERED claim, and about the WRITTEN destination", () => {
     // Asked about the stored fields, GATE 2 reads a recovered "Diamond
-    // Dominance" as a dropped axis on a destination that spells it — refusing
-    // the very move recovery exists to enable.
-    expect(SRC).toMatch(/droppedSpecificityAxes\(\s*\n?\s*recovery \? \{ \.\.\.h, \.\.\.recovery\.fields \} : h, to\)/);
+    // Dominance" as a dropped axis on a destination that spells it —
+    // refusing the very move recovery exists to enable. The CLAIM is still the
+    // recovered one.
+    //
+    // The SLUG changed with the GATE 1b widening (#1849): that gate may
+    // substitute the title's product for a stored set name that contradicted
+    // the checklist's player, and `to` is then the row being moved AWAY from.
+    // Gating the abandoned slug would let a dropped axis through on the one
+    // actually written.
+    expect(SRC).toMatch(/droppedSpecificityAxes\(\s*\n?\s*recovery \? \{ \.\.\.h, \.\.\.recovery\.fields \} : h, destination\)/);
   });
 
   it("still never seeds the catalog and still verifies its writes", () => {
