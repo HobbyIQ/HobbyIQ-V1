@@ -167,12 +167,18 @@ async function main() {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) { console.error("FATAL: COSMOS_CONNECTION_STRING not set"); process.exit(1); }
 
-  const db = new CosmosClient({
+  // Held in a named binding so `finishLane` can dispose it: the SDK's
+  // keep-alive sockets are what kept lanes alive past a clean reconciliation
+  // until the step hit the ceiling (#1809).
+  const client = new CosmosClient({
     connectionString: conn,
     connectionPolicy: {
       retryOptions: { maxRetryAttemptsOnThrottledRequests: 60, maxWaitTimeInSeconds: 300 },
     },
-  }).database(process.env.COSMOS_DATABASE || "hobbyiq");
+  });
+  // The CLIENT is what owns the sockets; `.database()` returns a handle that
+  // cannot be disposed, so the two are kept apart deliberately.
+  const db = client.database(process.env.COSMOS_DATABASE || "hobbyiq");
   const port = db.container("portfolio");
   const cat = db.container("card_catalog");
   const pool = db.container("sold_comps");
@@ -474,14 +480,31 @@ async function main() {
     + `needs-source=${f(plan.counts.needsSource)} unreadable=${f(plan.counts.unreadable)} `
     + `tonight=${f(actionable.length)}`);
   note("  (read-only: nothing was written, nothing was dispatched, nothing was repriced)");
+  // The budget marker, printed literally when the clock ran out mid-scan, so
+  // the runner's relaunch gate reads the same phrase here as on every other
+  // lane (CF-RELAUNCH-ONLY-ON-BUDGET).
+  if (B.outOfClock()) note(`  ${B.stoppedAtBudget()}`);
+  // The context finishLane disposes and reports from. The CLIENT is what owns
+  // the sockets — a `.database()` handle cannot be disposed — so the two are
+  // deliberately kept apart above.
+  return { client, budget: B };
 }
 
 // CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809). Success exits too: a lane
 // that lets the loop drain is betting every library released every handle.
 // This lane landed alongside #1828's rewrite of the other 63 tails and so
 // shipped with the old bare `main().catch(...)`.
+//
+// MERGE NOTE (#1832 vs #1842). Both branches conformed this tail and they
+// agreed on the shape; this keeps main's `ctx || {}` call style. The one
+// difference worth preserving is what `main()` HANDS BACK: main's conformance
+// chained `new CosmosClient({...}).database(...)` inline, so no client binding
+// existed and `finishLane` had nothing to dispose — it exited, but it never
+// closed a socket. This lane keeps the client and the database handle apart
+// and returns `{ client, budget }`, so the disposal and the verify-cap notice
+// are real rather than nominal.
 main()
   .then((ctx) => finishLane(0, ctx || {}))
   .catch(async (e) => { console.error("FATAL", e && e.message);
-    await finishLane(1);
+    await finishLane(1, { budget: B });
   });
