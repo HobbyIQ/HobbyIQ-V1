@@ -1,0 +1,727 @@
+{
+ "capturedAt": "2026-09-06",
+ "note": "Read-only capture of every card_catalog row in hiq:basketball:1997:topps-stadium-club whose id contains 'bbp'. 80 rows, one source, zero graded children.",
+ "query": "SELECT ... FROM c WHERE STARTSWITH(c.id,'hiq:basketball:1997:topps-stadium-club:') AND CONTAINS(LOWER(c.id),'bbp')",
+ "rows": [
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp1:base:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Basketball",
+   "cardNumber": "BBP1",
+   "parallel": null,
+   "subsetName": "Bowmans Best Preview",
+   "subsetInId": false,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp1:refractor:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball",
+   "cardNumber": "BBP1",
+   "parallel": "Refractor",
+   "subsetName": "Bowmans Best Preview Atomic",
+   "subsetInId": false,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp10:base:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Basketball",
+   "cardNumber": "BBP10",
+   "parallel": null,
+   "subsetName": "Bowmans Best Preview",
+   "subsetInId": false,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp10:refractor:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball",
+   "cardNumber": "BBP10",
+   "parallel": "Refractor",
+   "subsetName": "Bowmans Best Preview Atomic",
+   "subsetInId": false,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp11:base:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Basketball",
+   "cardNumber": "BBP11",
+   "parallel": null,
+   "subsetName": "Bowmans Best Preview",
+   "subsetInId": false,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp11:refractor:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball",
+   "cardNumber": "BBP11",
+   "parallel": "Refractor",
+   "subsetName": "Bowmans Best Preview Atomic",
+   "subsetInId": false,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp12:base:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Basketball",
+   "cardNumber": "BBP12",
+   "parallel": null,
+   "subsetName": "Bowmans Best Preview",
+   "subsetInId": false,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp12:refractor:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball",
+   "cardNumber": "BBP12",
+   "parallel": "Refractor",
+   "subsetName": "Bowmans Best Preview Atomic",
+   "subsetInId": false,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp13:base:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Basketball",
+   "cardNumber": "BBP13",
+   "parallel": null,
+   "subsetName": "Bowmans Best Preview",
+   "subsetInId": false,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp13:refractor:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball",
+   "cardNumber": "BBP13",
+   "parallel": "Refractor",
+   "subsetName": "Bowmans Best Preview Atomic",
+   "subsetInId": false,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp14:base:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Basketball",
+   "cardNumber": "BBP14",
+   "parallel": null,
+   "subsetName": "Bowmans Best Preview",
+   "subsetInId": false,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp14:refractor:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball",
+   "cardNumber": "BBP14",
+   "parallel": "Refractor",
+   "subsetName": "Bowmans Best Preview Atomic",
+   "subsetInId": false,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp15:base:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Basketball",
+   "cardNumber": "BBP15",
+   "parallel": null,
+   "subsetName": "Bowmans Best Preview",
+   "subsetInId": false,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp15:refractor:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball",
+   "cardNumber": "BBP15",
+   "parallel": "Refractor",
+   "subsetName": "Bowmans Best Preview Atomic",
+   "subsetInId": false,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp16:base:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Basketball",
+   "cardNumber": "BBP16",
+   "parallel": null,
+   "subsetName": "Bowmans Best Preview",
+   "subsetInId": false,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp16:refractor:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball",
+   "cardNumber": "BBP16",
+   "parallel": "Refractor",
+   "subsetName": "Bowmans Best Preview Atomic",
+   "subsetInId": false,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp17:base:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Basketball",
+   "cardNumber": "BBP17",
+   "parallel": null,
+   "subsetName": "Bowmans Best Preview",
+   "subsetInId": false,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp17:refractor:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball",
+   "cardNumber": "BBP17",
+   "parallel": "Refractor",
+   "subsetName": "Bowmans Best Preview Atomic",
+   "subsetInId": false,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp18:base:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Basketball",
+   "cardNumber": "BBP18",
+   "parallel": null,
+   "subsetName": "Bowmans Best Preview",
+   "subsetInId": false,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp18:refractor:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball",
+   "cardNumber": "BBP18",
+   "parallel": "Refractor",
+   "subsetName": "Bowmans Best Preview Atomic",
+   "subsetInId": false,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp19:base:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Basketball",
+   "cardNumber": "BBP19",
+   "parallel": null,
+   "subsetName": "Bowmans Best Preview",
+   "subsetInId": false,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp19:refractor:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball",
+   "cardNumber": "BBP19",
+   "parallel": "Refractor",
+   "subsetName": "Bowmans Best Preview Atomic",
+   "subsetInId": false,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp2:base:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Basketball",
+   "cardNumber": "BBP2",
+   "parallel": null,
+   "subsetName": "Bowmans Best Preview",
+   "subsetInId": false,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp2:refractor:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball",
+   "cardNumber": "BBP2",
+   "parallel": "Refractor",
+   "subsetName": "Bowmans Best Preview Atomic",
+   "subsetInId": false,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp20:base:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Basketball",
+   "cardNumber": "BBP20",
+   "parallel": null,
+   "subsetName": "Bowmans Best Preview",
+   "subsetInId": false,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp20:refractor:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball",
+   "cardNumber": "BBP20",
+   "parallel": "Refractor",
+   "subsetName": "Bowmans Best Preview Atomic",
+   "subsetInId": false,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp3:base:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Basketball",
+   "cardNumber": "BBP3",
+   "parallel": null,
+   "subsetName": "Bowmans Best Preview",
+   "subsetInId": false,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp3:refractor:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball",
+   "cardNumber": "BBP3",
+   "parallel": "Refractor",
+   "subsetName": "Bowmans Best Preview Atomic",
+   "subsetInId": false,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp4:base:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Basketball",
+   "cardNumber": "BBP4",
+   "parallel": null,
+   "subsetName": "Bowmans Best Preview",
+   "subsetInId": false,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp4:refractor:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball",
+   "cardNumber": "BBP4",
+   "parallel": "Refractor",
+   "subsetName": "Bowmans Best Preview Atomic",
+   "subsetInId": false,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp5:base:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Basketball",
+   "cardNumber": "BBP5",
+   "parallel": null,
+   "subsetName": "Bowmans Best Preview",
+   "subsetInId": false,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp5:refractor:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball",
+   "cardNumber": "BBP5",
+   "parallel": "Refractor",
+   "subsetName": "Bowmans Best Preview Atomic",
+   "subsetInId": false,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp6:base:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Basketball",
+   "cardNumber": "BBP6",
+   "parallel": null,
+   "subsetName": "Bowmans Best Preview",
+   "subsetInId": false,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp6:refractor:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball",
+   "cardNumber": "BBP6",
+   "parallel": "Refractor",
+   "subsetName": "Bowmans Best Preview Atomic",
+   "subsetInId": false,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp7:base:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Basketball",
+   "cardNumber": "BBP7",
+   "parallel": null,
+   "subsetName": "Bowmans Best Preview",
+   "subsetInId": false,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp7:refractor:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball",
+   "cardNumber": "BBP7",
+   "parallel": "Refractor",
+   "subsetName": "Bowmans Best Preview Atomic",
+   "subsetInId": false,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp8:base:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Basketball",
+   "cardNumber": "BBP8",
+   "parallel": null,
+   "subsetName": "Bowmans Best Preview",
+   "subsetInId": false,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp8:refractor:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball",
+   "cardNumber": "BBP8",
+   "parallel": "Refractor",
+   "subsetName": "Bowmans Best Preview Atomic",
+   "subsetInId": false,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp9:base:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Basketball",
+   "cardNumber": "BBP9",
+   "parallel": null,
+   "subsetName": "Bowmans Best Preview",
+   "subsetInId": false,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp9:refractor:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball",
+   "cardNumber": "BBP9",
+   "parallel": "Refractor",
+   "subsetName": "Bowmans Best Preview Atomic",
+   "subsetInId": false,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview-atomic:bbp1:refractor:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball",
+   "cardNumber": "BBP1",
+   "parallel": "Refractor",
+   "subsetName": "Bowmans Best Preview Atomic",
+   "subsetInId": true,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview-atomic:bbp10:refractor:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball",
+   "cardNumber": "BBP10",
+   "parallel": "Refractor",
+   "subsetName": "Bowmans Best Preview Atomic",
+   "subsetInId": true,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview-atomic:bbp11:refractor:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball",
+   "cardNumber": "BBP11",
+   "parallel": "Refractor",
+   "subsetName": "Bowmans Best Preview Atomic",
+   "subsetInId": true,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview-atomic:bbp12:refractor:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball",
+   "cardNumber": "BBP12",
+   "parallel": "Refractor",
+   "subsetName": "Bowmans Best Preview Atomic",
+   "subsetInId": true,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview-atomic:bbp13:refractor:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball",
+   "cardNumber": "BBP13",
+   "parallel": "Refractor",
+   "subsetName": "Bowmans Best Preview Atomic",
+   "subsetInId": true,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview-atomic:bbp14:refractor:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball",
+   "cardNumber": "BBP14",
+   "parallel": "Refractor",
+   "subsetName": "Bowmans Best Preview Atomic",
+   "subsetInId": true,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview-atomic:bbp15:refractor:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball",
+   "cardNumber": "BBP15",
+   "parallel": "Refractor",
+   "subsetName": "Bowmans Best Preview Atomic",
+   "subsetInId": true,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview-atomic:bbp16:refractor:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball",
+   "cardNumber": "BBP16",
+   "parallel": "Refractor",
+   "subsetName": "Bowmans Best Preview Atomic",
+   "subsetInId": true,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview-atomic:bbp17:refractor:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball",
+   "cardNumber": "BBP17",
+   "parallel": "Refractor",
+   "subsetName": "Bowmans Best Preview Atomic",
+   "subsetInId": true,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview-atomic:bbp18:refractor:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball",
+   "cardNumber": "BBP18",
+   "parallel": "Refractor",
+   "subsetName": "Bowmans Best Preview Atomic",
+   "subsetInId": true,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview-atomic:bbp19:refractor:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball",
+   "cardNumber": "BBP19",
+   "parallel": "Refractor",
+   "subsetName": "Bowmans Best Preview Atomic",
+   "subsetInId": true,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview-atomic:bbp2:refractor:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball",
+   "cardNumber": "BBP2",
+   "parallel": "Refractor",
+   "subsetName": "Bowmans Best Preview Atomic",
+   "subsetInId": true,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview-atomic:bbp20:refractor:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball",
+   "cardNumber": "BBP20",
+   "parallel": "Refractor",
+   "subsetName": "Bowmans Best Preview Atomic",
+   "subsetInId": true,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview-atomic:bbp3:refractor:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball",
+   "cardNumber": "BBP3",
+   "parallel": "Refractor",
+   "subsetName": "Bowmans Best Preview Atomic",
+   "subsetInId": true,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview-atomic:bbp4:refractor:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball",
+   "cardNumber": "BBP4",
+   "parallel": "Refractor",
+   "subsetName": "Bowmans Best Preview Atomic",
+   "subsetInId": true,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview-atomic:bbp5:refractor:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball",
+   "cardNumber": "BBP5",
+   "parallel": "Refractor",
+   "subsetName": "Bowmans Best Preview Atomic",
+   "subsetInId": true,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview-atomic:bbp6:refractor:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball",
+   "cardNumber": "BBP6",
+   "parallel": "Refractor",
+   "subsetName": "Bowmans Best Preview Atomic",
+   "subsetInId": true,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview-atomic:bbp7:refractor:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball",
+   "cardNumber": "BBP7",
+   "parallel": "Refractor",
+   "subsetName": "Bowmans Best Preview Atomic",
+   "subsetInId": true,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview-atomic:bbp8:refractor:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball",
+   "cardNumber": "BBP8",
+   "parallel": "Refractor",
+   "subsetName": "Bowmans Best Preview Atomic",
+   "subsetInId": true,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview-atomic:bbp9:refractor:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball",
+   "cardNumber": "BBP9",
+   "parallel": "Refractor",
+   "subsetName": "Bowmans Best Preview Atomic",
+   "subsetInId": true,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview:bbp1:refractor:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Refractors Basketball",
+   "cardNumber": "BBP1",
+   "parallel": "Refractor",
+   "subsetName": "Bowmans Best Preview",
+   "subsetInId": true,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview:bbp10:refractor:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Refractors Basketball",
+   "cardNumber": "BBP10",
+   "parallel": "Refractor",
+   "subsetName": "Bowmans Best Preview",
+   "subsetInId": true,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview:bbp11:refractor:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Refractors Basketball",
+   "cardNumber": "BBP11",
+   "parallel": "Refractor",
+   "subsetName": "Bowmans Best Preview",
+   "subsetInId": true,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview:bbp12:refractor:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Refractors Basketball",
+   "cardNumber": "BBP12",
+   "parallel": "Refractor",
+   "subsetName": "Bowmans Best Preview",
+   "subsetInId": true,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview:bbp13:refractor:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Refractors Basketball",
+   "cardNumber": "BBP13",
+   "parallel": "Refractor",
+   "subsetName": "Bowmans Best Preview",
+   "subsetInId": true,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview:bbp14:refractor:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Refractors Basketball",
+   "cardNumber": "BBP14",
+   "parallel": "Refractor",
+   "subsetName": "Bowmans Best Preview",
+   "subsetInId": true,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview:bbp15:refractor:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Refractors Basketball",
+   "cardNumber": "BBP15",
+   "parallel": "Refractor",
+   "subsetName": "Bowmans Best Preview",
+   "subsetInId": true,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview:bbp16:refractor:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Refractors Basketball",
+   "cardNumber": "BBP16",
+   "parallel": "Refractor",
+   "subsetName": "Bowmans Best Preview",
+   "subsetInId": true,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview:bbp17:refractor:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Refractors Basketball",
+   "cardNumber": "BBP17",
+   "parallel": "Refractor",
+   "subsetName": "Bowmans Best Preview",
+   "subsetInId": true,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview:bbp18:refractor:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Refractors Basketball",
+   "cardNumber": "BBP18",
+   "parallel": "Refractor",
+   "subsetName": "Bowmans Best Preview",
+   "subsetInId": true,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview:bbp19:refractor:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Refractors Basketball",
+   "cardNumber": "BBP19",
+   "parallel": "Refractor",
+   "subsetName": "Bowmans Best Preview",
+   "subsetInId": true,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview:bbp2:refractor:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Refractors Basketball",
+   "cardNumber": "BBP2",
+   "parallel": "Refractor",
+   "subsetName": "Bowmans Best Preview",
+   "subsetInId": true,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview:bbp20:refractor:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Refractors Basketball",
+   "cardNumber": "BBP20",
+   "parallel": "Refractor",
+   "subsetName": "Bowmans Best Preview",
+   "subsetInId": true,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview:bbp3:refractor:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Refractors Basketball",
+   "cardNumber": "BBP3",
+   "parallel": "Refractor",
+   "subsetName": "Bowmans Best Preview",
+   "subsetInId": true,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview:bbp4:refractor:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Refractors Basketball",
+   "cardNumber": "BBP4",
+   "parallel": "Refractor",
+   "subsetName": "Bowmans Best Preview",
+   "subsetInId": true,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview:bbp5:refractor:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Refractors Basketball",
+   "cardNumber": "BBP5",
+   "parallel": "Refractor",
+   "subsetName": "Bowmans Best Preview",
+   "subsetInId": true,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview:bbp6:refractor:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Refractors Basketball",
+   "cardNumber": "BBP6",
+   "parallel": "Refractor",
+   "subsetName": "Bowmans Best Preview",
+   "subsetInId": true,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview:bbp7:refractor:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Refractors Basketball",
+   "cardNumber": "BBP7",
+   "parallel": "Refractor",
+   "subsetName": "Bowmans Best Preview",
+   "subsetInId": true,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview:bbp8:refractor:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Refractors Basketball",
+   "cardNumber": "BBP8",
+   "parallel": "Refractor",
+   "subsetName": "Bowmans Best Preview",
+   "subsetInId": true,
+   "source": "sportscardchecklist-2026-09-04"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview:bbp9:refractor:no-auto",
+   "setName": "1997-98 Topps Stadium Club Bowmans Best Preview Refractors Basketball",
+   "cardNumber": "BBP9",
+   "parallel": "Refractor",
+   "subsetName": "Bowmans Best Preview",
+   "subsetInId": true,
+   "source": "sportscardchecklist-2026-09-04"
+  }
+ ]
+}
