@@ -129,6 +129,21 @@ function fakePool(seed: Record<string, unknown>[], opts: { pinFields?: string[] 
         store.set(key(String(next.id), String(next.cardId)), next);
         return { resource: { ...next } };
       },
+      // The read-back's fallback (2026-09-06). It is reached now that a read
+      // which does not SHOW THE WRITE is retried past instead of accepted, so
+      // the fake has to answer it the way Cosmos would: the row as STORED --
+      // which, when a field is pinned, is still the row that fails
+      // verification. Without this the container simply lacks `query` and the
+      // helper dies on a missing function rather than reporting a verdict.
+      query: (spec: { parameters?: { name: string; value: unknown }[] }) => ({
+        fetchAll: async () => {
+          const p = Object.fromEntries((spec.parameters ?? []).map((x) => [x.name, x.value]));
+          const resources = [...store.values()].filter(
+            (d) => d.id === p["@id"] && d.cardId === p["@pk"],
+          );
+          return { resources };
+        },
+      }),
     },
   };
 }
@@ -203,7 +218,11 @@ describe("the real lane, driven against a fake container", () => {
 
     expect(res.ok).toBe(false);
     expect(res.stage).toBe("verify");
-    expect(String(res.error)).toMatch(/read-back differs/i);
+    // "found nothing" since 2026-09-06: the pinned row is not the keeper, so
+    // no read -- retried point reads or the fallback query -- can show the
+    // write, and the helper reports that rather than handing back a row it
+    // could not verify. The verdict that matters is unchanged: verify FAILED.
+    expect(String(res.error)).toMatch(/read-back (differs|found nothing)/i);
     // CF-A-SALE-IS-NEVER-LOST: a failed verify deletes NOTHING.
     expect(res.deleted).toHaveLength(0);
     expect(pool.store.has(`${FROM} ${gonzalezRow().id}`)).toBe(true);
