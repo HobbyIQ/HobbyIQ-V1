@@ -188,13 +188,26 @@ vi.mock("@azure/cosmos", () => {
     // (otherwise every row dedups and never reaches the write), while the
     // per-card price/grade cohort query returns the bait distribution — the
     // exact input a resurrected resolveGradeTierByPrice would consume.
+    //
+    // CF-ONE-SALE-ONE-ADDRESS (#1836) added a THIRD query to the write path:
+    // a cross-partition point read on the bare `id` that refuses the write
+    // when the same sale id is already resident under a different `cardId`.
+    // This mock routed by text and had no arm for it, so the probe fell
+    // through to PRICE_BAND_BAIT — bait rows carry no `cardId`, every one of
+    // them read as a twin at a different address, and every write in this
+    // suite was refused. These fixtures are FRESH sale ids that exist nowhere,
+    // so the truthful answer is an empty result; anything else would be this
+    // mock inventing a twin the scenario does not have.
     query: (spec: { query?: string } | string) => {
       const sql = typeof spec === "string" ? spec : (spec?.query ?? "");
       const isDedupProbe = sql.includes("c.contentHash");
+      const isTwinAddressProbe = /\bc\.cardId\b/.test(sql) && /\bc\.id\s*=\s*@id\b/.test(sql);
       const isCatalogProbe = sql.includes("card_catalog") || sql.includes("COUNT(1)");
       return {
         fetchAll: async () => ({
-          resources: isDedupProbe ? [] : isCatalogProbe ? [1] : PRICE_BAND_BAIT,
+          resources: isDedupProbe || isTwinAddressProbe
+            ? []
+            : isCatalogProbe ? [1] : PRICE_BAND_BAIT,
         }),
       };
     },
