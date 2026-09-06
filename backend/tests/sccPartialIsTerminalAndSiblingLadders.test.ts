@@ -72,8 +72,11 @@ describe("`partial` is a verdict, not a queue position", () => {
     // `short-ingest` joined them on 2026-09-06
     // (CF-AN-ENTRY-THAT-LANDED-ROWS-IS-NOT-A-FAILURE): its rows ARE in the
     // catalog, so re-attempting re-ingests what is already there.
+    // `refused` joined them the same day
+    // (CF-A-TOTAL-REFUSAL-IS-NOT-A-GREEN-INGEST): the merge guard is
+    // deterministic, so re-attempting reproduces a decision already made.
     expect([...TERMINAL_STATUSES].sort()).toEqual(
-      ["empty", "ingested", "partial", "short-ingest", "unreachable"].sort(),
+      ["empty", "ingested", "partial", "refused", "short-ingest", "unreachable"].sort(),
     );
     expect(TERMINAL_STATUSES.has("partial")).toBe(true);
   });
@@ -360,8 +363,8 @@ describe("the pins fail against a driver whose declarations are emptied", () => 
   it("drop `partial` from TERMINAL_STATUSES -> the lane re-walks its partials", () => {
     withMutant(
       DRIVER,
-      'const TERMINAL_STATUSES = new Set(["ingested", "unreachable", EMPTY_STATUS, "partial", SHORT_STATUS]);',
-      'const TERMINAL_STATUSES = new Set(["ingested", "unreachable", EMPTY_STATUS, SHORT_STATUS]);',
+      'const TERMINAL_STATUSES = new Set(["ingested", "unreachable", EMPTY_STATUS, "partial", SHORT_STATUS, REFUSED_STATUS]);',
+      'const TERMINAL_STATUSES = new Set(["ingested", "unreachable", EMPTY_STATUS, SHORT_STATUS, REFUSED_STATUS]);',
       "terminal",
       (m) => {
         expect(m.TERMINAL_STATUSES.has("partial")).toBe(false);

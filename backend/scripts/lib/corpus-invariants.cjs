@@ -136,7 +136,13 @@ const INVARIANTS = [
   },
   {
     id: "I9", name: "SHADOW-REDERIVATION", subject: "sold_comps",
-    defaultSample: 2000, threshold: 0, rate: 0.35,
+    defaultSample: 2000, threshold: 0,
+    // CF-THE-ALARM-IS-DRIFT-NOT-LEVEL (Drew, 2026-09-06). `rate` is GONE as a
+    // gate: I9 breaches on DRIFT from its own reference, per sportClass, and
+    // `driftPoints` below is that threshold. The old absolute 0.35 is kept as
+    // `reportRate` -- printed as a trend note, never evaluated.
+    driftPoints: 0.05,
+    reportRate: 0.35,
     summary: "a re-derivation of a stored row's identity agrees with the slug it is filed under",
   },
   {
@@ -703,7 +709,28 @@ function checkDeployHealth(run, jobs, opts = {}) {
     }];
   }
 
-  const conclusion = str(run.conclusion) || "(in progress)";
+  // A RUN STILL IN FLIGHT IS NOT A VERDICT. Observed 2026-09-06: the audit was
+  // dispatched by hand four minutes behind the deploy, read run 34035108751
+  // while "Reprice All Holdings (post-refresh)" was still queued, and reported
+  // `reprice-did-not-run` for a job that started 16 seconds later and went
+  // green. Judging an unfinished run asks "is this job absent" of a job list
+  // that is still being written, and absent-because-pending is indistinguishable
+  // from absent-because-skipped in the payload. The schedule (06:20/07:10 UTC)
+  // assumes the 5AM refresh is long done; nothing ENFORCES that, and a manual
+  // dispatch breaks the assumption silently. Report the overlap as a note, not
+  // a breach — the next scheduled audit judges the finished run.
+  if (!str(run.conclusion)) {
+    return [{
+      kind: "deploy-run-in-flight",
+      detail: `run ${run.id ?? "?"} of "Daily 5AM ET Refresh & Deploy" is still `
+        + `"${str(run.status) || "in progress"}" — no verdict is possible until it finishes, and a `
+        + "job absent from a running run may simply not have started yet",
+      runId: run.id ?? null, conclusion: null, status: str(run.status) || null,
+      url: run.html_url ?? null, informational: true,
+    }];
+  }
+
+  const conclusion = str(run.conclusion);
   if (conclusion !== "success") {
     out.push({
       kind: "deploy-run-failed",
@@ -1097,11 +1124,113 @@ function checkPricedOnUnbackedIdentity(holding, catalogRows, backing) {
  * threshold decides paging, never whether a row is listed
  * (feedback_never_dismiss_small_numbers_as_noise).
  */
+/**
+ * CF-THE-ALARM-IS-DRIFT-NOT-LEVEL (Drew, 2026-09-06).
+ *
+ * I9 used to breach on an ABSOLUTE rate: TRUE-DISAGREEMENT over 35% of the
+ * sample. That number cannot tell "the corpus got worse last night" from "the
+ * frame drew a harder part of the corpus", and the two look identical in the
+ * digest. The 2026-09-06 artifact is the proof: 50.28% against a 35% threshold,
+ * reported as a breach, on a corpus whose own measured CONFLICT share is 40.8%
+ * and whose pokemon slots sit at 59.6%. A draw weighted toward pokemon is over
+ * 35% by construction and always will be -- so the alarm fired on the frame's
+ * composition and would have gone on firing every night, which is an alarm that
+ * carries no information.
+ *
+ * The alarm is now DRIFT AGAINST ITS OWN REFERENCE, per sportClass. Each
+ * class's sampled share is compared to that class's row-weighted census share
+ * from `data/rematch-census-shares.json` (#1888), and a breach is a class more
+ * than `driftPoints` (5 points) ABOVE its own reference. A night that
+ * reproduces its reference is clean at any absolute level; a night 6 points
+ * worse in one class is a breach that NAMES that class, which is where somebody
+ * would go to look.
+ *
+ * LIKE FOR LIKE, AND WHY THIS MEASURES CONFLICT.
+ *
+ * The reference is a CONFLICT share, because the fleet census emits
+ * `counts.CONFLICT` and does not split TRUE-DISAGREEMENT from NEEDS-CHECKLIST.
+ * The nightly audit does split them. Comparing the audit's TRUE-DISAGREEMENT to
+ * a census CONFLICT would be comparing a subset to its superset and would
+ * understate drift by the NEEDS-CHECKLIST share -- 5.1 points on the
+ * 2026-09-06 artifact, which is the entire threshold. So the DRIFT is measured
+ * CONFLICT-to-CONFLICT, and TRUE-DISAGREEMENT keeps its own trend line beside
+ * it. If the census one day emits the kind split, the change is one line in
+ * `evaluateDrift` -- read a TRUE-DISAGREEMENT reference instead of CONFLICT --
+ * and the pins here say which number is being compared, so the swap cannot be
+ * made silently.
+ *
+ * ONE-SIDED ON PURPOSE. Only a class ABOVE its reference breaches. A night that
+ * comes in BELOW is the corpus improving -- usually a repair landing -- and an
+ * alarm that fires on getting better trains people to silence it.
+ *
+ * A class needs `MIN_CLASS_ROWS` sampled rows before it can breach: a 5-point
+ * move on nine rows is one row, and the frame draws unevenly across classes.
+ * Classes below the floor are reported and never gate.
+ */
+const MIN_CLASS_ROWS = 40;
+
+/**
+ * The per-sportClass drift of one night's classification against the census.
+ *
+ * `byClassFrame` is `frameHealth().bySportClass` -- each entry already carries
+ * the class's sampled CONFLICT share, its census share and the delta, computed
+ * from the frame's own row-apportioned class mix.
+ */
+function evaluateDrift(id, { byClassFrame = [], sample = 0, breaches = 0 } = {}) {
+  const inv = INVARIANT_BY_ID.get(id);
+  if (!inv || typeof inv.driftPoints !== "number") return null;
+  const limit = Number(inv.driftPoints);
+  const over = [];
+  const belowFloor = [];
+  for (const c of byClassFrame) {
+    const d = c?.conflict?.delta;
+    const n = Number(c?.sampledApprox ?? 0);
+    if (d === null || d === undefined || c?.conflict?.census === null) continue;
+    if (n < MIN_CLASS_ROWS) { belowFloor.push({ sportClass: c.sportClass, sampledApprox: n, delta: d }); continue; }
+    if (d > limit) {
+      over.push({
+        sportClass: c.sportClass,
+        sampled: c.conflict.sampled,
+        census: c.conflict.census,
+        delta: d,
+        sampledApprox: n,
+      });
+    }
+  }
+  if (!over.length) return null;
+  over.sort((a, b) => b.delta - a.delta);
+  const worst = over[0];
+  const named = over
+    .map((o) => `${o.sportClass} ${(100 * o.sampled).toFixed(1)}% vs its census `
+      + `${(100 * o.census).toFixed(1)}% (+${(100 * o.delta).toFixed(1)}pp, n~${Math.round(o.sampledApprox)})`)
+    .join("; ");
+  return {
+    id,
+    name: inv.name,
+    breaches: Number(breaches ?? 0),
+    sample: Number(sample ?? 0),
+    rate: Number(sample) > 0 ? Number(breaches) / Number(sample) : null,
+    threshold: limit,
+    thresholdKind: "drift-points",
+    worstClass: worst.sportClass,
+    classes: over,
+    belowFloor,
+    message: `${id} ${inv.name}: CONFLICT drifted more than `
+      + `${(100 * limit).toFixed(0)}pp above its own census reference in `
+      + `${over.length === 1 ? "class" : `${over.length} classes`} — ${named}`,
+  };
+}
+
 function evaluateThreshold(id, { breaches, sample }) {
   const inv = INVARIANT_BY_ID.get(id);
   if (!inv) return null;
   const n = Number(breaches ?? 0);
   const s = Number(sample ?? 0);
+  // A DRIFT INVARIANT IS NEVER GATED ON ITS ABSOLUTE LEVEL. Its level is a
+  // trend line; `evaluateDrift` is the alarm, and the caller must ask it.
+  // Returning null here rather than falling through to the count branch is what
+  // stops `threshold: 0` from turning every finding into a breach.
+  if (typeof inv.driftPoints === "number") return null;
   if (typeof inv.rate === "number") {
     if (s <= 0) return null;
     const rate = n / s;
@@ -1560,5 +1689,5 @@ module.exports = {
   // I10
   checkPricedOnUnbackedIdentity,
   // thresholds
-  evaluateThreshold,
+  evaluateThreshold, evaluateDrift, MIN_CLASS_ROWS,
 };
