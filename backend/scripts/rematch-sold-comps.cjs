@@ -254,6 +254,21 @@ const SHARD_TABLE = require(path.join(__dirname, "..", "data", "rematch-shard-ta
 // CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809): the one exit path.
 const { finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
 
+/**
+ * EVERY APPLY KIND, IN ONE LIST.
+ *
+ * The banner, the per-class reconcile and the disarmed report all walk this.
+ * It used to be `[K.IMPROVE, K.BASE_EVICTION]` written out at four call sites,
+ * which is four places a new scope has to be remembered -- and a scope missing
+ * from the RECONCILE is a scope that can write without balancing, which is the
+ * one thing `everyWriteJobReconciles` exists to prevent. One list, four
+ * readers.
+ */
+const APPLY_KINDS = [
+  K.IMPROVE, K.BASE_EVICTION,
+  K.GRADE_FROM_TITLE, K.YEAR_FROM_TITLE_VINTAGE, K.SPORT_FROM_PRODUCT,
+];
+
 /** The units this slot owns. */
 function unitsForSlot(slot, table = SHARD_TABLE) {
   const row = (table.slots ?? []).find((s) => Number(s.slot) === Number(slot));
@@ -509,7 +524,7 @@ async function main() {
   // log does not name its own scope cannot be audited after the fact.
   if (MODE === "apply-improve") {
     console.log(`  APPLY CLASS SCOPE: scope=${JSON.stringify(APPLY_SCOPE_RAW)} -> ${[...ARMED].join(" + ")}`);
-    for (const kind of [K.IMPROVE, K.BASE_EVICTION]) {
+    for (const kind of APPLY_KINDS) {
       console.log(`    ${kind.padEnd(15)} ${ARMED.has(kind) ? "ARMED   -- candidates of this class may be written" : "DISARMED -- candidates of this class are counted and never written"}`);
     }
   } else {
@@ -562,6 +577,7 @@ async function main() {
   const backedCache = new Map();
   const strictCache = new Map();
   const catRowCache = new Map();
+  const productSportCache = new Map();
   /** The catalog row for a slug, cached, or null. One read serves both
    *  predicates -- the strict gate must not double the census's catalog RU. */
   const catRow = async (slug) => {
@@ -868,6 +884,77 @@ async function main() {
     };
   };
 
+  /**
+   * YEAR-FROM-TITLE-VINTAGE's one catalog fact, GATED THE SAME WAY.
+   *
+   * The destination is the derived identity at the TITLE'S year, and it is
+   * checked only for a row that could possibly qualify: a modern slug year, a
+   * vintage title year, a vintage-capable setKey, no retro marker. Every other
+   * row -- essentially all of 16.3M -- pays nothing but pure string work, for
+   * the reason `specInputs` above states: a census that issues a catalog read
+   * per row is not a census.
+   */
+  const vintageInputs = async (row, stored, der) => {
+    if (!der?.ok) return { vintageDestBacked: null };
+    const slugYear = K.slugYearSegment(row?.cardId) ?? stored?.cardYear ?? null;
+    const titleYear = K.firstStatedYear(row?.title);
+    if (!(slugYear >= 2015) || titleYear === null || titleYear >= 1990) return { vintageDestBacked: null };
+    const setKey = String(stored?.setKey ?? "").toLowerCase();
+    if (!K.VINTAGE_CAPABLE_SETKEYS.has(setKey)) return { vintageDestBacked: null };
+    if (K.RETRO_SETKEY_RE.test(setKey) || K.RETRO_TITLE_RE.test(String(row?.title ?? ""))) return { vintageDestBacked: null };
+    // The destination is the DERIVED slug -- the deriver already reads the
+    // title's year, so `der.slug` IS the identity at the right year. Asking
+    // the catalog about it is the CF-CATALOG-MATCH-IS-SELF-CONFIRMING gate:
+    // unbacked is a PARK, never a move (#1890's fifth ruling).
+    return { vintageDestBacked: await checklistBacked(der.slug) };
+  };
+
+  /**
+   * SPORT-FROM-PRODUCT's two facts.
+   *
+   * `productSport` is read from the PRODUCT'S OWN CHECKLIST -- the sport
+   * segment of the checklist-backed catalog rows for this (year, setKey) --
+   * never from the player and never from the title's team words. That is the
+   * ruling stated as a lookup: a 2025 Topps Baseball First Pitch card is a
+   * baseball card because the BASEBALL checklist lists it.
+   *
+   * Gated on a real sport disagreement, so a row whose sport already agrees
+   * (virtually all of them) costs nothing.
+   */
+  const productSportFor = async (stored) => {
+    const year = stored?.cardYear, setKey = String(stored?.setKey ?? "").toLowerCase();
+    if (!year || !setKey) return null;
+    const key = `psport:${year}:${setKey}`;
+    if (productSportCache.has(key)) return productSportCache.get(key);
+    let answer = null;
+    try {
+      const { resources } = await retry(() => cat.items.query({
+        query: "SELECT TOP 40 c.sport FROM c WHERE c.cardYear = @y AND c.setKey = @k AND IS_DEFINED(c.sport)",
+        parameters: [{ name: "@y", value: Number(year) }, { name: "@k", value: setKey }],
+      }, { maxItemCount: 40 }).fetchNext());
+      const seen = new Set((resources ?? []).map((r) => String(r.sport ?? "").toLowerCase()).filter(Boolean));
+      // A PRODUCT THAT ANSWERS WITH TWO SPORTS HAS NOT ANSWERED. The checklist
+      // itself is then saying the product is multi-sport, which is the same
+      // verdict MULTI_SPORT_SETKEYS reaches by name -- and this catches the
+      // ones the list does not know about yet.
+      answer = seen.size === 1 ? [...seen][0] : null;
+    } catch { answer = null; }
+    productSportCache.set(key, answer);
+    return answer;
+  };
+  const sportInputs = async (row, stored, der) => {
+    const none = { productSport: null, sportDestBacked: null };
+    if (!der?.ok) return none;
+    const storedSport = String(stored?.sport ?? "").toLowerCase();
+    const derivedSport = String(der.identity?.sport ?? "").toLowerCase();
+    if (!derivedSport || storedSport === derivedSport) return none;
+    const setKey = String(stored?.setKey ?? "").toLowerCase();
+    if (K.MULTI_SPORT_SETKEYS.has(setKey)) return none;
+    const ps = await productSportFor(stored);
+    if (!ps || ps !== derivedSport) return { productSport: ps, sportDestBacked: null };
+    return { productSport: ps, sportDestBacked: await checklistBacked(der.slug) };
+  };
+
   // ── page the shard ────────────────────────────────────────────────────────
   const counts = { [K.AGREE]: 0, [K.IMPROVE]: 0, [K.CONFLICT]: 0, [K.UNDERIVABLE]: 0 };
   const byTier = new Map(), defects = new Map(), reasons = new Map(), samples = new Map(), subclasses = new Map();
@@ -880,6 +967,10 @@ async function main() {
   // never be summed with them. See SLUG_SHAPE_DEFECTS in the classifier for
   // why each one stops at a count.
   const slugShapeCounts = new Map(), slugShapeByClass = new Map(), slugShapeSamples = new Map();
+  // The three ruled scopes of 2026-09-06, each reporting its own shape.
+  const gftByGrader = new Map(), gftByGrade = new Map(), gftBySport = new Map(), gftSamples = [];
+  const yfvByDecade = new Map(), yfvBySetKey = new Map(), yfvBySport = new Map(), yfvSamples = [];
+  const sfpByPair = new Map(), sfpBySetKey = new Map(), sfpSamples = [];
   let splitTotal = 0;
   const stats = { seen: 0, otherSlot: 0, intended: 0, written: 0, skipped: 0, failed: 0, duplicatesLeft: 0, alreadyGone: 0, notReached: 0 };
   const bump = (m, k, n = 1) => m.set(k, (m.get(k) ?? 0) + n);
@@ -988,6 +1079,13 @@ async function main() {
         // CF-A-SUBSET-IS-PART-OF-THE-IDENTITY-WHEN-IT-HAS-TO-BE: the catalog's
         // answer, never the title's. Empty for effectively every row.
         clashSubsets: await clashSubsetsFor(stored),
+        // THE THREE RULED SCOPES OF 2026-09-06. Supplied at BOTH call sites
+        // for the reason `spec` above states: a gate that disagrees with
+        // itself between the census and the apply is a gate nobody can
+        // audit. Each helper is cost-gated on a pure string test first, so
+        // a row that cannot qualify issues no catalog read at all.
+        ...(await vintageInputs(row, stored, der)),
+        ...(await sportInputs(row, stored, der)),
       });
       counts[res.klass]++;
       // THE SPLIT-IDENTITY SIGNAL, tallied ACROSS classes (Drew 2026-09-02).
@@ -1012,6 +1110,28 @@ async function main() {
         if (arr.length < 20) arr.push(`${row.id}  ${row.cardId}  [${res.klass}/${res.tier}]  printRun=${JSON.stringify(row.printRun ?? null)}  "${String(row.title ?? "").slice(0, 60)}"`);
       }
       if (res.subclass) bump(subclasses, `${res.klass}/${res.subclass}/${res.tier}`);
+      // THE THREE RULED SCOPES REPORT THEIR OWN SHAPE, NOT JUST THEIR COUNT.
+      // A count says how many; these say WHAT -- which grader, which grade,
+      // which decade, which sport pair -- which is what a report-first
+      // dispatch is read for before anything is armed.
+      if (res.subclass === K.GRADE_FROM_TITLE) {
+        const e = res.gradeFromTitleEvidence ?? {};
+        bump(gftByGrader, String(e.gradeCompany ?? "?"));
+        bump(gftByGrade, `${e.gradeCompany ?? "?"} ${e.gradeValue ?? "?"}`);
+        bump(gftBySport, String(row.sport ?? "?"));
+        if (gftSamples.length < 30) gftSamples.push(`${String(`${e.gradeCompany} ${e.gradeValue}`).padEnd(9)} [${String(row.sport ?? "?").padEnd(10)}] ${row.cardId}  "${String(row.title ?? "").slice(0, 96)}"`);
+      } else if (res.subclass === K.YEAR_FROM_TITLE_VINTAGE) {
+        const e = res.vintageYearEvidence ?? {};
+        bump(yfvByDecade, String(e.decade ?? "?"));
+        bump(yfvBySetKey, String(e.setKey ?? "?"));
+        bump(yfvBySport, String(row.sport ?? "?"));
+        if (yfvSamples.length < 30) yfvSamples.push(`${e.slugYear} -> ${e.titleYear} (${e.decade})  [${String(row.sport ?? "?").padEnd(10)}] ${row.cardId}  "${String(row.title ?? "").slice(0, 88)}"`);
+      } else if (res.subclass === K.SPORT_FROM_PRODUCT) {
+        const e = res.sportFromProductEvidence ?? {};
+        bump(sfpByPair, String(e.pair ?? "?"));
+        bump(sfpBySetKey, String(e.setKey ?? "?"));
+        if (sfpSamples.length < 30) sfpSamples.push(`${String(e.pair).padEnd(24)} ${row.cardId}  "${String(row.title ?? "").slice(0, 92)}"`);
+      }
       bump(byTier, `${res.klass}/${res.tier}`);
       for (const a of K.defectAxes(res)) bump(defects, `${res.klass}  ${a}`);
       for (const r of res.reasons) bump(reasons, `${res.klass}  ${r}`);
@@ -1050,8 +1170,30 @@ async function main() {
           disarmed[kind] = (disarmed[kind] ?? 0) + 1;
           bump(reasons, `apply  not-armed-by-scope:${kind}`);
         } else if (K.writableUnderScope(res, ARMED)) {
-          if (res.klass === K.IMPROVE) improvable.push({ kind: K.IMPROVE, row, stored, slug: der.slug, identity: der.identity });
-          else if (res.subclass === K.BASE_EVICTION) improvable.push({ kind: K.BASE_EVICTION, row, stored, slug: der.baseSlug, identity: der.baseIdentity });
+          // THE QUEUE IS BUILT ON THE APPLY KIND, NOT ON THE CLASS. The three
+          // 2026-09-06 scopes all carry `klass === IMPROVE`, so a test on the
+          // class would file them as ordinary improves and write them to
+          // `der.slug` -- which for GRADE-FROM-TITLE is the row's OWN address
+          // (a no-op that reports as a write) and for the other two is right
+          // only by accident. `applyKindOf` is the one place the kind is
+          // decided, and it is the one thing this branch reads.
+          if (kind === K.GRADE_FROM_TITLE) {
+            // A FIELD BACKFILL HAS NO DESTINATION. The slug is the row's own,
+            // and what travels is the two grade fields the classifier read.
+            improvable.push({
+              kind, row, stored, slug: row.cardId, identity: stored,
+              gradeFields: {
+                gradeCompany: res.gradeFromTitleEvidence?.gradeCompany ?? null,
+                gradeValue: res.gradeFromTitleEvidence?.gradeValue ?? null,
+              },
+            });
+          } else if (kind === K.YEAR_FROM_TITLE_VINTAGE || kind === K.SPORT_FROM_PRODUCT) {
+            improvable.push({ kind, row, stored, slug: der.slug, identity: der.identity });
+          } else if (kind === K.IMPROVE) {
+            improvable.push({ kind: K.IMPROVE, row, stored, slug: der.slug, identity: der.identity });
+          } else if (kind === K.BASE_EVICTION) {
+            improvable.push({ kind: K.BASE_EVICTION, row, stored, slug: der.baseSlug, identity: der.baseIdentity });
+          }
         }
       }
     }
@@ -1077,6 +1219,53 @@ async function main() {
   if (beAuto || beProt) {
     console.log(`\n  BASE-EVICTION  ${f(beAuto + beProt)} rows: on a parallel slug, own parallel field blank/Base, title names no finish,`);
     console.log(`                 checklist-backed base destination exists. ${f(beAuto)} AUTO (writable under audit), ${f(beProt)} PROTECTED (never).`);
+  }
+  // ── THE THREE RULED SCOPES OF 2026-09-06 ──────────────────────────────────
+  //
+  // Each prints its counts BY THE THING THAT MATTERS FOR ITS RULING and a
+  // 30-row sample with titles, because report-first means a human reads the
+  // shape before anything is armed. A block prints only when the scope found
+  // rows, so a slot that matched none stays silent instead of printing three
+  // empty tables.
+  const topOf = (m, n = 12) => [...m].sort((a, b) => b[1] - a[1]).slice(0, n).map(([k, v]) => `${k} ${f(v)}`).join(" | ");
+  {
+    const gftAuto = subclasses.get(`${K.IMPROVE}/${K.GRADE_FROM_TITLE}/${K.AUTO}`) ?? 0;
+    const gftProt = subclasses.get(`${K.IMPROVE}/${K.GRADE_FROM_TITLE}/${K.PROTECTED}`) ?? 0;
+    if (gftAuto || gftProt) {
+      console.log(`\n  GRADE-FROM-TITLE  ${f(gftAuto + gftProt)} rows: grade fields EMPTY, title states a grader token + numeral.`);
+      console.log(`                    A FIELD BACKFILL, NOT A RE-KEY -- the address never moves. filterByGrade reads a`);
+      console.log(`                    field-empty row as RAW, so each of these is a graded sale priced into the raw pool.`);
+      console.log(`                    ${f(gftAuto)} AUTO (writable under audit), ${f(gftProt)} PROTECTED (never).`);
+      console.log(`                    by grader:  ${topOf(gftByGrader)}`);
+      console.log(`                    by grade:   ${topOf(gftByGrade, 14)}`);
+      console.log(`                    by sport:   ${topOf(gftBySport)}`);
+      if (gftSamples.length) { console.log(`                    sample (${gftSamples.length}):`); for (const s of gftSamples) console.log(`                      ${s}`); }
+    }
+  }
+  {
+    const yAuto = subclasses.get(`${K.IMPROVE}/${K.YEAR_FROM_TITLE_VINTAGE}/${K.AUTO}`) ?? 0;
+    const yProt = subclasses.get(`${K.IMPROVE}/${K.YEAR_FROM_TITLE_VINTAGE}/${K.PROTECTED}`) ?? 0;
+    if (yAuto || yProt) {
+      console.log(`\n  YEAR-FROM-TITLE-VINTAGE  ${f(yAuto + yProt)} rows: slug year >= 2015 is the SALE year; the title states a pre-1990`);
+      console.log(`                           issue year, the setKey is vintage-capable, no retro marker, destination checklist-backed.`);
+      console.log(`                           ${f(yAuto)} AUTO (writable under audit), ${f(yProt)} PROTECTED (never).`);
+      console.log(`                           by decade:  ${topOf(yfvByDecade)}`);
+      console.log(`                           by setKey:  ${topOf(yfvBySetKey)}`);
+      console.log(`                           by sport:   ${topOf(yfvBySport)}`);
+      if (yfvSamples.length) { console.log(`                           sample (${yfvSamples.length}):`); for (const s of yfvSamples) console.log(`                             ${s}`); }
+    }
+  }
+  {
+    const sAuto = subclasses.get(`${K.IMPROVE}/${K.SPORT_FROM_PRODUCT}/${K.AUTO}`) ?? 0;
+    const sProt = subclasses.get(`${K.IMPROVE}/${K.SPORT_FROM_PRODUCT}/${K.PROTECTED}`) ?? 0;
+    if (sAuto || sProt) {
+      console.log(`\n  SPORT-FROM-PRODUCT  ${f(sAuto + sProt)} rows: a card's sport is the PRODUCT's sport, read from the product's own`);
+      console.log(`                      checklist -- never from the player. Multi-sport products are refused BY NAME.`);
+      console.log(`                      ${f(sAuto)} AUTO (writable under audit), ${f(sProt)} PROTECTED (never).`);
+      console.log(`                      by sport pair: ${topOf(sfpByPair)}`);
+      console.log(`                      by setKey:     ${topOf(sfpBySetKey)}`);
+      if (sfpSamples.length) { console.log(`                      sample (${sfpSamples.length}):`); for (const s of sfpSamples) console.log(`                        ${s}`); }
+    }
   }
   // SPLIT-IDENTITY: reported as its own block, not as a class. A split row
   // has already been counted under whichever derivation class it landed in;
@@ -1175,11 +1364,10 @@ async function main() {
   }
 
   // ── apply-improve ─────────────────────────────────────────────────────────
-  const nImprove = improvable.filter((c) => c.kind === K.IMPROVE).length;
-  const nEvict = improvable.filter((c) => c.kind === K.BASE_EVICTION).length;
-  console.log(`\nAPPLY-IMPROVE  ${APPLY ? "APPLYING" : "REPORT ONLY -- nothing written"}  candidates ${f(improvable.length)} (IMPROVE ${f(nImprove)} + BASE-EVICTION ${f(nEvict)})  concurrency ${CONCURRENCY}`);
+  const byKind = APPLY_KINDS.map((k) => `${k} ${f(improvable.filter((c) => c.kind === k).length)}`).join(" + ");
+  console.log(`\nAPPLY-IMPROVE  ${APPLY ? "APPLYING" : "REPORT ONLY -- nothing written"}  candidates ${f(improvable.length)} (${byKind})  concurrency ${CONCURRENCY}`);
   console.log(`  class scope    scope=${JSON.stringify(APPLY_SCOPE_RAW)} -> ${[...ARMED].join(" + ")}`);
-  for (const kind of [K.IMPROVE, K.BASE_EVICTION]) {
+  for (const kind of APPLY_KINDS) {
     const held = disarmed[kind] ?? 0;
     if (!ARMED.has(kind)) console.log(`    ${kind.padEnd(15)} DISARMED -- ${f(held)} writable candidate(s) NOT queued and NOT written`);
   }
@@ -1191,7 +1379,7 @@ async function main() {
    *  total -- a scoped apply has to be able to prove it wrote nothing of the
    *  class it disarmed. */
   const perClass = {};
-  for (const kind of [K.IMPROVE, K.BASE_EVICTION]) perClass[kind] = { intended: 0, written: 0, skipped: 0, failed: 0, notReached: 0 };
+  for (const kind of APPLY_KINDS) perClass[kind] = { intended: 0, written: 0, skipped: 0, failed: 0, notReached: 0 };
   for (const c of improvable) perClass[c.kind].intended++;
   /**
    * THE WRITE LEDGER -- pool -> the ids this run actually moved (2026-09-04).
@@ -1275,6 +1463,13 @@ async function main() {
         // classifier cannot see a clash it is not told about. The clash map is
         // per (year, setKey) and cached, so the re-check costs nothing new.
         clashSubsets: await clashSubsetsFor(stored),
+        // THE THREE RULED SCOPES OF 2026-09-06. Supplied at BOTH call sites
+        // for the reason `spec` above states: a gate that disagrees with
+        // itself between the census and the apply is a gate nobody can
+        // audit. Each helper is cost-gated on a pure string test first, so
+        // a row that cannot qualify issues no catalog read at all.
+        ...(await vintageInputs(fresh, stored, der)),
+        ...(await sportInputs(fresh, stored, der)),
       });
       // The class is decided again on what is there NOW, and it must come back
       // as the SAME kind the census queued. A row the census saw as an eviction
@@ -1290,6 +1485,73 @@ async function main() {
         bump(reasons, `apply  no-longer-writable:${res.klass}${res.subclass ? `/${res.subclass}` : ""}/${res.tier}`);
         continue;
       }
+      // ── THE FIELD BACKFILL: A WRITE THAT IS NOT A RE-KEY ─────────────────
+      //
+      // GRADE-FROM-TITLE stamps two FIELDS at the row's existing address. It
+      // must not go through `relocateSoldComp`: that function's whole job is
+      // to move a row between partitions, and there is no move here. The row
+      // keeps its id, its cardId, its partition and its pool membership; what
+      // changes is that `filterByGrade` stops reading it as raw.
+      //
+      // It reconciles through the SAME per-class counters as every other kind
+      // -- `everyWriteJobReconciles` does not care what shape the write is,
+      // only that intended = written + skipped + failed + not reached -- and
+      // it notes the pool ONCE in the ledger, on both sides, because the
+      // canary's question ("did this shard touch this pool?") is answered YES
+      // for a field write too: the pool's RAW membership changed even though
+      // its row membership did not.
+      if (cand.kind === K.GRADE_FROM_TITLE) {
+        const g = res.gradeFromTitleEvidence ?? {};
+        if (!g.gradeCompany || !(g.gradeValue > 0)) {
+          stats.skipped++; perClass[cand.kind].skipped++;
+          bump(reasons, "apply  refused:grade-evidence-incomplete");
+          continue;
+        }
+        // A ROW THAT ALREADY CARRIES A GRADE IS NEVER RE-STAMPED. The
+        // classifier's G1 says the same thing, and this is the belt to that
+        // brace: between the census and now another writer may have stamped
+        // it, and overwriting would be a grade CHANGE -- a rival reading this
+        // lane has no authority to settle.
+        if (fresh.gradeCompany || (fresh.gradeValue !== null && fresh.gradeValue !== undefined && fresh.gradeValue !== "")) {
+          stats.skipped++; perClass[cand.kind].skipped++;
+          bump(reasons, "apply  refused:grade-already-present-since-census");
+          continue;
+        }
+        if (!APPLY) {
+          stats.written++; perClass[cand.kind].written++;
+          ledgerNote(fresh.cardId, fresh.id, "from"); ledgerNote(fresh.cardId, fresh.id, "to");
+          bump(reasons, `apply  would-write:${cand.kind}`);
+          if (applied.length < 20) applied.push(`  WOULD STAMP ${fresh.id}  ${fresh.cardId}   raw -> ${g.gradeCompany} ${g.gradeValue}   (fields only, no re-key)`);
+          continue;
+        }
+        try {
+          const patch = [
+            { op: "set", path: "/gradeCompany", value: g.gradeCompany },
+            { op: "set", path: "/gradeValue", value: g.gradeValue },
+            { op: "set", path: "/gradeStampedAt", value: new Date().toISOString() },
+            { op: "set", path: "/gradeStampedReason", value: `GREAT REMATCH (2026-09-06): GRADE-FROM-TITLE -- title states "${g.gradeCompany} ${g.gradeValue}" and the row's grade fields were empty; address unchanged` },
+          ];
+          await retry(() => pool.item(fresh.id, fresh.cardId).patch(patch));
+          // VERIFY BY READ, ON THE ROW ITSELF. The #1850 read-back contract:
+          // a write is not done because the call returned, it is done because
+          // the value is there when you look.
+          const back = (await retry(() => pool.item(fresh.id, fresh.cardId).read())).resource ?? null;
+          if (!back || String(back.gradeCompany ?? "").toUpperCase() !== g.gradeCompany || Number(back.gradeValue) !== Number(g.gradeValue)) {
+            stats.failed++; perClass[cand.kind].failed++;
+            bump(reasons, "apply  failed:grade-stamp-not-visible-on-read-back");
+            continue;
+          }
+          stats.written++; perClass[cand.kind].written++;
+          ledgerNote(fresh.cardId, fresh.id, "from"); ledgerNote(fresh.cardId, fresh.id, "to");
+          bump(reasons, `apply  wrote:${cand.kind}`);
+          if (applied.length < 20) applied.push(`  STAMPED ${fresh.id}  ${fresh.cardId}   raw -> ${g.gradeCompany} ${g.gradeValue}   (fields only, no re-key)`);
+        } catch (e) {
+          stats.failed++; perClass[cand.kind].failed++;
+          console.log(`  FAILED grade stamp ${fresh.id}: ${String(e?.message ?? e).slice(0, 110)}`);
+        }
+        continue;
+      }
+
       const target = cand.kind === K.BASE_EVICTION ? der.baseSlug : der.slug;
       const identity = cand.kind === K.BASE_EVICTION ? der.baseIdentity : der.identity;
       if (target === fresh.cardId) { stats.skipped++; perClass[cand.kind].skipped++; bump(reasons, "apply  already-at-target"); continue; }
@@ -1334,6 +1596,18 @@ async function main() {
         const e = res.evidence ?? {};
         keep.rekeyedReason = `GREAT REMATCH (2026-09-02): CONFLICT/BASE-EVICTION -- slug parallel "${e.storedSlugParallel}" unsupported: stored parallel field ${JSON.stringify(e.storedParallelField)}, title "${e.titleQuoted}" names no finish, checklist-backed base destination ${e.baseDestSlug}`;
         keep.baseEvictionEvidence = e;
+      } else if (cand.kind === K.YEAR_FROM_TITLE_VINTAGE) {
+        // The evidence travels WITH the row, quoted, for the reason the
+        // eviction's does: a reason that only names the subclass is not
+        // auditable after the fact. Drew must be able to read, from the row
+        // alone, which year moved and what the title said.
+        const e = res.vintageYearEvidence ?? {};
+        keep.rekeyedReason = `GREAT REMATCH (2026-09-06): YEAR-FROM-TITLE-VINTAGE -- the slug year ${e.slugYear} is the SALE year; the title "${e.titleQuoted}" states ${e.titleYear}, setKey ${e.setKey} is vintage-capable, no retro marker, destination checklist-backed`;
+        keep.vintageYearEvidence = e;
+      } else if (cand.kind === K.SPORT_FROM_PRODUCT) {
+        const e = res.sportFromProductEvidence ?? {};
+        keep.rekeyedReason = `GREAT REMATCH (2026-09-06): SPORT-FROM-PRODUCT -- a card's sport is the PRODUCT's sport; ${e.pair} on setKey ${e.setKey}, product sport read from its own checklist, destination checklist-backed. Title "${e.titleQuoted}"`;
+        keep.sportFromProductEvidence = e;
       } else {
         keep.rekeyedReason = `GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled ${res.axes.filled.join(",")}`;
       }
@@ -1369,7 +1643,7 @@ async function main() {
   // with a nonzero write is a scope failure that exits nonzero.
   console.log(`\n  PER CLASS (scope=${JSON.stringify(APPLY_SCOPE_RAW)} -> ${[...ARMED].join(" + ")}):`);
   let classDrift = 0;
-  for (const kind of [K.IMPROVE, K.BASE_EVICTION]) {
+  for (const kind of APPLY_KINDS) {
     const c = perClass[kind];
     const armed = ARMED.has(kind);
     const acc = c.written + c.skipped + c.failed + c.notReached;

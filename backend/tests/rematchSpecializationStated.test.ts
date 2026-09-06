@@ -369,11 +369,15 @@ ${line}
   });
 
   it("every IMPROVE arm calls allImproveRefusals — none restates its pushes", () => {
-    // THREE CALL sites and exactly one definition:
+    // SIX CALL sites and exactly one definition:
     //   1. the ordinary IMPROVE arm
     //   2. SPECIALIZATION-STATED (this file's subject)
     //   3. SELLER-NAME-AUTO (CF-A-SELLER-NAME-IS-NOT-A-SIGNATURE, 2026-09-04),
     //      which rides the same gate from the AGREE path.
+    //   4. GRADE-FROM-TITLE (Drew, 2026-09-06) — the field backfill, which
+    //      also rides the gate from the AGREE path.
+    //   5. YEAR-FROM-TITLE-VINTAGE (Drew, 2026-09-06) — from the CONFLICT path.
+    //   6. SPORT-FROM-PRODUCT (Drew, 2026-09-06) — from the CONFLICT path.
     //
     // The NUMBER is incidental; the invariant is that it equals the number of
     // arms and that the definition stays singular. A new arm that restated the
@@ -384,7 +388,7 @@ ${line}
     // `const refusals = ` is what distinguishes a call from the
     // `function allImproveRefusals({` declaration, which contains the same
     // characters.
-    expect(src.split("const refusals = allImproveRefusals({").length - 1).toBe(3);
+    expect(src.split("const refusals = allImproveRefusals({").length - 1).toBe(6);
     expect(src.split("function allImproveRefusals").length - 1).toBe(1);
   });
 
