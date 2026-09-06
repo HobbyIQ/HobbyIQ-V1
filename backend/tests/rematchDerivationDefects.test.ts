@@ -478,3 +478,82 @@ describe("MUTATION CHECK: each derivation guard is load-bearing", () => {
     }
   });
 });
+
+/**
+ * CF-AN-ABSENT-YEAR-IS-NOT-A-RIVAL-YEAR (2026-09-06, I9 run 34029662735).
+ *
+ * I9 reported ~345 rows carrying `changed:cardYear` and they read like a data
+ * defect. They are not. On the tca-ebay/cardsight population the `year` FIELD
+ * is ABSENT -- measured 1,576/1,576 rows over two pools -- while `cardYear`
+ * already equals the year segment of the slug the row is filed under
+ * (1,576/1,576). The deriver mirrors a year onto a row that never carried one,
+ * and comparing a mirrored value against a field the row never had must not
+ * report a disagreement about WHICH CARD this is.
+ *
+ * THE RULE IS EQUALITY-GATED, AND THAT IS THE WHOLE SAFETY ARGUMENT. Absence
+ * alone is what makes the stored side not-an-answer; EQUALITY is what makes the
+ * derivation agreement rather than a rival. A 1955 Koufax filed on a `:2023:`
+ * slug still reports `changed:cardYear`, because there the two sides genuinely
+ * name different cards -- 60 of 90 rows in that pool, and every one of them
+ * must stay a finding.
+ *
+ * MEASURED IMPACT, STATED HONESTLY: over 1,576 re-derived rows, 1,523 already
+ * classified `same` before this change and 53 genuinely disagree. The rule
+ * reclassified ZERO rows in the pools measured. It is a GUARD that pins the
+ * intended reading against a future deriver that starts mirroring years onto
+ * absent-year rows, not a repair that moves a population today.
+ */
+describe("an absent year is not a rival year", () => {
+  const SLUG = "hiq:baseball:2023:topps:123:base:no-auto";
+  const base = (o: Record<string, unknown>) => ({
+    sport: "baseball", setKey: "topps", cardNumber: "123", parallel: "Base",
+    isAuto: false, printRun: null, gradeCompany: "PSA", gradeValue: 4, ...o,
+  });
+  const classify = (row: Record<string, unknown>, storedYear: unknown, derivedYear: unknown) =>
+    K.classifyRow({
+      row, stored: base({ cardYear: storedYear }) as Identity,
+      derived: base({ cardYear: derivedYear }) as Identity,
+      storedSlug: SLUG, checklistBacked: true,
+    });
+
+  it("absent year + cardYear equal to the slug year + derived agrees -> AGREE", () => {
+    const v = classify({ title: "2023 Topps #123", cardId: SLUG, hobbyiqCardId: SLUG }, 2023, 2023);
+    expect(v.axes.same).toContain("cardYear");
+    expect(v.axes.changed).not.toContain("cardYear");
+    expect(v.klass).toBe("AGREE");
+  });
+
+  it("MUTATION -- a derived year that DISAGREES is still changed", () => {
+    // The 1955 Koufax on a :2023: slug. Dropping the equality gate and folding
+    // on absence alone would hide 60 of 90 rows in that pool.
+    const v = classify({ title: "1955 Topps #123 Koufax", cardId: SLUG, hobbyiqCardId: SLUG }, 2023, 1955);
+    expect(v.axes.changed).toContain("cardYear");
+    expect(v.axes.same).not.toContain("cardYear");
+    expect(v.klass).toBe("CONFLICT");
+  });
+
+  it("MUTATION -- a PRESENT year field is a real answer and still changes", () => {
+    // The fold is gated on the row's own `year` being absent. A row that
+    // STATES a year has given a rival reading, and it must keep reporting one.
+    const v = classify({ title: "1955 Topps #123", year: 2023, cardId: SLUG, hobbyiqCardId: SLUG }, 2023, 1955);
+    expect(v.axes.changed).toContain("cardYear");
+    expect(v.klass).toBe("CONFLICT");
+  });
+
+  it("no year anywhere and the derivation states one -> filled, not changed", () => {
+    const v = classify({ title: "2023 Topps #123", cardId: SLUG, hobbyiqCardId: SLUG }, null, 2023);
+    expect(v.axes.filled).toContain("cardYear");
+    expect(v.axes.changed).not.toContain("cardYear");
+  });
+
+  it("MUTATION -- the slug echo is required, not just the absence", () => {
+    // cardYear 1999 on a :2023: slug is NOT the address echoed into the field,
+    // so it is a real stored answer. A mutant that folded on absence alone
+    // would call this AGREE.
+    const v = classify({ title: "1999 Topps #123", cardId: SLUG, hobbyiqCardId: SLUG }, 1999, 1999);
+    expect(v.axes.same).toContain("cardYear");
+    // ...and when it disagrees it must still change.
+    const w = classify({ title: "1955 Topps #123", cardId: SLUG, hobbyiqCardId: SLUG }, 1999, 1955);
+    expect(w.axes.changed).toContain("cardYear");
+  });
+});

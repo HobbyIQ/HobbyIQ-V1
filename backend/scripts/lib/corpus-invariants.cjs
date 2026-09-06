@@ -1268,15 +1268,98 @@ function makeCardReservoir(perCardCap = 4) {
 }
 
 /**
- * The CENSUS shares the frame is measured against -- slot 31's real full-slot
- * classification, 509,224 rows, 2026-09-06 02:46Z (run 34007001399). These are
- * the numbers a healthy frame should roughly reproduce; a sample that does not
- * is reporting on itself.
+ * CF-THE-REFERENCE-IS-THE-WHOLE-CORPUS-NOT-ONE-SLOT (2026-09-06).
+ *
+ * WHAT THIS REPLACES, AND WHY IT WAS WRONG. The reference used to be SLOT 31
+ * ALONE -- 509,224 rows, 3.1% of the corpus, and a year-only shard of 1989,
+ * 1995, 1975, 1978 and 1909. The #1874 frame draws from all 32 slots, which are
+ * modern- and pokemon-heavy, so the comparison was between two different
+ * populations and the drift line reported a STRUCTURAL MISMATCH as corpus
+ * movement. The 2026-09-06 artifact (run 34029662735) printed the result:
+ *
+ *     CONFLICT  sampled 55.4%   census 20.6%   delta +34.8pp
+ *
+ * read as a corpus-wide regression. It is not one. The full 32-slot fleet
+ * census puts corpus CONFLICT at 40.8%, and slot 31 is the single least
+ * representative slot for that class -- it understates it by half. A reference
+ * that one slot cannot fail is not a reference; it is a description of slot 31.
+ *
+ * WHAT IT IS NOW. `data/rematch-census-shares.json` holds all 32 slots'
+ * classification, recovered from each IMPROVE fleet run's own
+ * `rematch-census-slot-<N>-<runId>` artifact (2026-09-05T04:20Z..09-06T02:49Z,
+ * 16,716,343 rows classified). Three things come out of it:
+ *
+ *   `weighted`      the ROW-WEIGHTED corpus average -- what a whole-corpus draw
+ *                   is compared against.
+ *   `slots[]`       each slot's own shares -- what a draw FROM THAT SLOT is
+ *                   compared against, so a slot is never scored on another
+ *                   slot's population.
+ *   `bySportClass`  vintage / modern / pokemon, each slot apportioned BY ROWS
+ *                   across the classes its units belong to. This is the line
+ *                   that makes the original defect impossible to repeat:
+ *
+ *                       pokemon  CONFLICT 0.596      vintage CONFLICT 0.319
+ *
+ *                   so a pokemon-heavy draw reading 55% CONFLICT is its frame,
+ *                   not a regression, and the health line now says so.
+ *
+ * THE FOUR CLASSES DO NOT SUM TO 1, in the census or here: the fleet reports
+ * UNDERIVABLE-for-subset under `byTier` and leaves it out of `counts`. The
+ * shares are comparable to each other and to a sample classified the same way,
+ * which is exactly what this function does with them -- but they are not a
+ * partition, and nothing may treat them as one.
+ */
+const CENSUS_SHARES_PATH = path.join(__dirname, "..", "..", "data", "rematch-census-shares.json");
+
+function loadCensusShares() {
+  try {
+    // eslint-disable-next-line global-require
+    return require(CENSUS_SHARES_PATH);
+  } catch {
+    return null;
+  }
+}
+
+const CENSUS_TABLE = loadCensusShares();
+
+/**
+ * The corpus-wide reference: the row-weighted average over all 32 slots.
+ *
+ * Kept under its original name because every caller and pin reads it, but it is
+ * no longer one slot's numbers. When the table cannot be loaded this falls back
+ * to the fleet's published weighted average rather than to a single slot, so a
+ * missing file degrades to the RIGHT shape of answer.
  */
 const CENSUS_REFERENCE_SHARES = Object.freeze({
-  source: "rematch census slot 31/32, 509,224 rows, 2026-09-06 (run 34007001399)",
-  AGREE: 0.471, IMPROVE: 0.022, CONFLICT: 0.206, UNDERIVABLE: 0.043,
+  source: CENSUS_TABLE
+    ? `${CENSUS_TABLE.source} (${CENSUS_TABLE.slotCount} slots, `
+      + `${CENSUS_TABLE.classifiedTotal} rows classified)`
+    : "rematch IMPROVE fleet census, 32 slots, 2026-09-05/06 (table not loaded)",
+  slots: CENSUS_TABLE?.slotCount ?? 32,
+  ...(CENSUS_TABLE?.weighted ?? { AGREE: 0.423947, IMPROVE: 0.034467, CONFLICT: 0.407827, UNDERIVABLE: 0.082341 }),
 });
+
+/** One slot's own census shares, or null when the table lacks it. */
+function censusSharesForSlot(slot) {
+  if (!CENSUS_TABLE || slot === null || slot === undefined) return null;
+  const n = Number(slot);
+  const row = (CENSUS_TABLE.slots ?? []).find((r) => Number(r.slot) === n);
+  return row ? row.shares : null;
+}
+
+/** The sportClass mix of a slot -- `{ vintage: 0.93, pokemon: 0.07 }` -- or null. */
+function censusClassMixForSlot(slot) {
+  if (!CENSUS_TABLE || slot === null || slot === undefined) return null;
+  const n = Number(slot);
+  const row = (CENSUS_TABLE.slots ?? []).find((r) => Number(r.slot) === n);
+  return row ? (row.classMix ?? null) : null;
+}
+
+/** The census shares for one sportClass frame (vintage / modern / pokemon). */
+function censusSharesForClass(cls) {
+  const b = CENSUS_TABLE?.bySportClass?.[String(cls)];
+  return b ? b.shares : null;
+}
 
 /** Below this many distinct cards, the sample is a pool and not a corpus. */
 const FRAME_MIN_DISTINCT_CARDS = 100;
@@ -1293,7 +1376,37 @@ const FRAME_MIN_DISTINCT_CARDS = 100;
  * never a breach: the corpus legitimately moves, and this line exists so the
  * movement is visible rather than assumed.
  */
-function frameHealth({ byClass = {}, distinctCards = 0, sampled = 0, reference = CENSUS_REFERENCE_SHARES }) {
+const DRIFT_CLASSES = ["AGREE", "IMPROVE", "CONFLICT", "UNDERIVABLE"];
+
+/** Count a list of verdicts into a `{ AGREE, IMPROVE, ... }` tally. */
+function tallyClasses(verdicts) {
+  const out = {};
+  for (const v of verdicts) {
+    const k = String(v?.klass ?? "");
+    if (k) out[k] = (out[k] ?? 0) + 1;
+  }
+  return out;
+}
+
+/** The per-class drift of one tally against one reference. */
+function driftOf(byClass, total, reference) {
+  const drift = {};
+  for (const k of DRIFT_CLASSES) {
+    const got = total > 0 ? Number(byClass[k] ?? 0) / total : 0;
+    const ref = reference?.[k];
+    drift[k] = {
+      sampled: Number(got.toFixed(6)),
+      census: ref ?? null,
+      delta: ref === null || ref === undefined ? null : Number((got - ref).toFixed(6)),
+    };
+  }
+  return drift;
+}
+
+function frameHealth({
+  byClass = {}, distinctCards = 0, sampled = 0, reference = CENSUS_REFERENCE_SHARES,
+  verdicts = null,
+}) {
   const flags = [];
   const total = Number(sampled) || Object.values(byClass).reduce((a, b) => a + Number(b || 0), 0);
   const agree = Number(byClass.AGREE ?? 0);
@@ -1305,12 +1418,113 @@ function frameHealth({ byClass = {}, distinctCards = 0, sampled = 0, reference =
     flags.push(`too-few-cards: ${distinctCards} distinct card(s) across ${total} sampled rows `
       + `(floor ${FRAME_MIN_DISTINCT_CARDS}) -- one pool is standing in for the corpus`);
   }
-  const drift = {};
-  for (const k of ["AGREE", "IMPROVE", "CONFLICT", "UNDERIVABLE"]) {
-    const got = total > 0 ? Number(byClass[k] ?? 0) / total : 0;
-    drift[k] = { sampled: got, census: reference[k] ?? null, delta: got - (reference[k] ?? 0) };
+  const drift = driftOf(byClass, total, reference);
+
+  // -- PER-SLOT: EACH SLOT'S DRAW AGAINST ITS OWN CENSUS --------------------
+  //
+  // The corpus average is the right reference only for a draw shaped like the
+  // corpus. A slot's draw is shaped like THAT SLOT, and the slots differ
+  // enormously -- slot 7 is 3.3% AGREE, slot 6 is 63.6%. Comparing each slot to
+  // itself turns "the sample disagrees with the corpus" into "slot N moved",
+  // which is a finding a person can act on.
+  const bySlot = [];
+  if (Array.isArray(verdicts) && verdicts.length) {
+    const groups = new Map();
+    for (const v of verdicts) {
+      const slot = v?.__frameSlot;
+      if (slot === null || slot === undefined) continue;
+      const key = Number(slot);
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(v);
+    }
+    for (const [slot, rows] of [...groups.entries()].sort((a, b) => a[0] - b[0])) {
+      const ref = censusSharesForSlot(slot);
+      const tally = tallyClasses(rows);
+      bySlot.push({
+        slot,
+        sampled: rows.length,
+        byClass: tally,
+        census: ref,
+        drift: ref ? driftOf(tally, rows.length, ref) : null,
+      });
+    }
   }
-  return { healthy: flags.length === 0, flags, drift, distinctCards: Number(distinctCards), sampled: total };
+
+  // -- PER-CLASS: FRAME HEALTH BY SPORTCLASS -------------------------------
+  //
+  // THE LINE THAT MAKES THE ORIGINAL DEFECT UNREPEATABLE. A draw's class mix is
+  // its own composition, and the classes have wildly different CONFLICT rates
+  // (pokemon 0.596, modern 0.418, vintage 0.319). Without this, a draw that
+  // happens to be pokemon-heavy reads as a corpus-wide regression -- which is
+  // precisely what "CONFLICT 55% vs 20.6%" was. Each slot's rows are
+  // apportioned across the classes its shard units belong to, so the expected
+  // share is the mix's own blend rather than any one class's number.
+  const byClassFrame = {};
+  const expected = {};
+  const mixWeights = {};
+  let mixTotal = 0;
+  for (const entry of bySlot) {
+    const mix = censusClassMixForSlot(entry.slot);
+    if (!mix) continue;
+    for (const [cls, w] of Object.entries(mix)) {
+      const n = entry.sampled * Number(w || 0);
+      mixWeights[cls] = (mixWeights[cls] ?? 0) + n;
+      mixTotal += n;
+      const b = byClassFrame[cls] ?? (byClassFrame[cls] = { sampledApprox: 0, byClass: {} });
+      b.sampledApprox += n;
+      for (const k of DRIFT_CLASSES) {
+        b.byClass[k] = (b.byClass[k] ?? 0) + Number(entry.byClass[k] ?? 0) * Number(w || 0);
+      }
+    }
+  }
+  const classHealth = [];
+  for (const [cls, b] of Object.entries(byClassFrame)) {
+    const ref = censusSharesForClass(cls);
+    const n = b.sampledApprox;
+    if (!(n > 0)) continue;
+    const got = Number(b.byClass.CONFLICT ?? 0) / n;
+    classHealth.push({
+      sportClass: cls,
+      sampledApprox: Number(n.toFixed(1)),
+      shareOfFrame: mixTotal > 0 ? Number((n / mixTotal).toFixed(4)) : null,
+      conflict: {
+        sampled: Number(got.toFixed(6)),
+        census: ref?.CONFLICT ?? null,
+        delta: ref ? Number((got - ref.CONFLICT).toFixed(6)) : null,
+      },
+    });
+  }
+  classHealth.sort((a, b) => (b.sampledApprox ?? 0) - (a.sampledApprox ?? 0));
+
+  // THE FRAME'S OWN EXPECTED SHARES, blended from its actual class mix. A draw
+  // is comparable to `weighted` only when its mix matches the corpus's; when it
+  // does not, this is the number it should have produced, and the gap between
+  // the two is the structural half that used to be read as drift.
+  if (mixTotal > 0) {
+    for (const k of DRIFT_CLASSES) {
+      let acc = 0;
+      let seen = 0;
+      for (const [cls, w] of Object.entries(mixWeights)) {
+        const ref = censusSharesForClass(cls);
+        if (!ref) continue;
+        acc += ref[k] * w;
+        seen += w;
+      }
+      if (seen > 0) expected[k] = Number((acc / seen).toFixed(6));
+    }
+  }
+
+  return {
+    healthy: flags.length === 0,
+    flags,
+    drift,
+    expectedForThisMix: Object.keys(expected).length ? expected : null,
+    bySlot,
+    bySportClass: classHealth,
+    referenceSlots: CENSUS_REFERENCE_SHARES.slots ?? null,
+    distinctCards: Number(distinctCards),
+    sampled: total,
+  };
 }
 
 module.exports = {
@@ -1341,6 +1555,8 @@ module.exports = {
   // I9 sampling frame (#1872)
   buildSampleFrame, makeCardReservoir, frameHealth, seededRandom, utcDayOf,
   CENSUS_REFERENCE_SHARES, FRAME_MIN_DISTINCT_CARDS,
+  CENSUS_TABLE, CENSUS_SHARES_PATH,
+  censusSharesForSlot, censusSharesForClass, censusClassMixForSlot,
   // I10
   checkPricedOnUnbackedIdentity,
   // thresholds
