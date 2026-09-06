@@ -72,7 +72,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const backend = path.join(__dirname, "..");
 const { CosmosClient } = require(path.join(backend, "node_modules/@azure/cosmos"));
-const { budget } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
+const { budget, finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
 const { runnerShardScope } = require(path.join(__dirname, "lib", "runner-shard-scope.cjs"));
 
 // CF-A-SCRIPT-WITH-NO-WRITE-PATH-REFUSES-AN-APPLY. Read it, refuse it, exit 3
@@ -89,7 +89,13 @@ if (String(process.env.BACKFILL_APPLY || "").trim().toLowerCase() === "true") {
 
 const cs = process.env.COSMOS_CONNECTION_STRING;
 if (!cs) { console.error("missing COSMOS_CONNECTION_STRING"); process.exit(1); }
-const pool = new CosmosClient(cs).database("hobbyiq").container("sold_comps");
+// The CLIENT is held in its own binding, apart from the container handle. A
+// `.container()` handle cannot be disposed — only the client owns the SDK's
+// keep-alive sockets — so chaining the two inline would leave `finishLane`
+// with nothing to close: it would still exit, but it would never release a
+// socket (the distinction #1842 drew on its own tail).
+const client = new CosmosClient(cs);
+const pool = client.database("hobbyiq").container("sold_comps");
 
 const OUT = String(process.env.OUT || "").trim();
 const PAGE = Math.max(100, Number(process.env.PAGE || 2000));
@@ -302,8 +308,17 @@ const money = (n) => "$" + Math.round(Number(n ?? 0)).toLocaleString("en-US");
     console.log("  these counts are a FLOOR, not a total — the sports above did not finish their pages.");
   }
   if (stoppedEarly) {
-    // The exact phrase the runner greps (CF-RELAUNCH-ONLY-ON-BUDGET, #1361).
-    console.log(`  ${B.stoppedAtBudget()} with sports left to walk`);
+    // THE MARKER IS A LITERAL, and must be. The runner's self-relaunch step for
+    // this lane is keyed on "stopped at the … budget", and
+    // everyWriteJobReconciles checks BOTH directions: a printer with no
+    // relaunch (the fleet stops silently, green) and a relaunch whose script
+    // never prints the marker (it waits for a line that never comes). Building
+    // the phrase at runtime out of `B.stoppedAtBudget()` satisfied the RUNTIME
+    // grep but not the SOURCE pin — the relaunch step added alongside this lane
+    // was keyed on a marker this file never contained, so a budget stop would
+    // have ended the census mid-shard with a green run. Same shape, and the
+    // same fix, as repair-cpa-draft-refile.
+    console.log(`  stopped at the ${B.RUN_MINUTES}-minute budget with sports left to walk`);
   }
   console.log("  (read-only: nothing was written, nothing was dispatched)");
 
@@ -323,4 +338,19 @@ const money = (n) => "$" + Math.round(Number(n ?? 0)).toLocaleString("en-US");
     fs.writeFileSync(OUT, JSON.stringify(doc, null, 1));
     console.log("\n  census written to " + OUT);
   }
-})().catch((e) => { console.error("ERR", e.stack || e.message); process.exit(1); });
+  // What finishLane disposes and reports from. A read-only lane still holds
+  // the SDK's sockets, and this lane's pages are cross-partition reads: the
+  // very shape whose abandoned request kept run 33960686247 alive to the
+  // ceiling after it had already reconciled clean.
+  return { client, budget: B };
+})()
+  // CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809). SUCCESS exits too. A lane
+  // that ends by letting the event loop drain is betting that every library it
+  // touched released every handle, and that bet costs a runner's ceiling and
+  // the exit code of a census whose numbers were already correct. READ ONLY
+  // does not exempt it: the handle that hangs is a *read*.
+  .then((ctx) => finishLane(0, ctx || {}))
+  .catch(async (e) => {
+    console.error("ERR", e.stack || e.message);
+    await finishLane(1, { client });
+  });
