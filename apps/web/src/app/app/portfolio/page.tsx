@@ -280,6 +280,15 @@ function PortfolioPageBody() {
   const withheldTotal = data.items.filter((h) => withheldOf(h) != null).length;
   const mostlyWithheld = withheldTotal > 0 && withheldTotal >= data.items.length / 2;
 
+  // CF-REPRICE-IS-VISIBLE-PER-ROW (Drew, 2026-09-05), audit item 6.
+  //
+  // A reprice run is already non-blocking and polled (CF-PORTFOLIO-REFRESH-
+  // ASYNC), and the header says one is in flight — but the LIST said nothing,
+  // so a row showing a stale price and a row about to change looked the same
+  // for the ~40s the run takes. This is the same `busy` the header computes,
+  // ORing the server's per-worker view with our own dispatch.
+  const repricing = autoRefreshing || refreshing || data.valuation?.repricing === true;
+
   const healthFiltered = activeFilter
     ? data.items.filter((h) => matchesHealthFilter(h, activeFilter))
     : data.items;
@@ -308,7 +317,10 @@ function PortfolioPageBody() {
             on the other instance.
           */}
           {(() => {
-            const busy = autoRefreshing || refreshing || data.valuation?.repricing === true;
+            // One computation, shared with the per-row indicator, so the
+            // header and the rows can never disagree about whether a run is
+            // in flight.
+            const busy = repricing;
             const asOf = formatAsOf(
               data.valuation?.newestValuationAt ?? data.valuation?.oldestValuationAt,
             );
@@ -689,7 +701,7 @@ function PortfolioPageBody() {
                 className="w-4 h-4 flex-shrink-0"
               />
               <div className="flex-1 min-w-0">
-                <HoldingRow h={h} />
+                <HoldingRow h={h} repricing={repricing} />
               </div>
             </label>
           ) : (
@@ -699,7 +711,7 @@ function PortfolioPageBody() {
             // the MISSING-identity fixer a sibling of that anchor instead of
             // a descendant of it.
             <div key={h.id} className="block">
-              <HoldingRow h={h} href={`/app/portfolio/${encodeURIComponent(h.id)}`} />
+              <HoldingRow h={h} href={`/app/portfolio/${encodeURIComponent(h.id)}`} repricing={repricing} />
             </div>
           ),
         )}
@@ -889,7 +901,16 @@ function SortDirBtn({ value, onChange }: { value: SortDir; onChange: (d: SortDir
 // covering it — replacing the outer <Link> that used to wrap this component
 // and swallow the "Fix identity" link into an invalid nested <a>. Omitted in
 // select mode, where the row is a checkbox <label> and must not navigate.
-function HoldingRow({ h, href }: { h: PortfolioHolding; href?: string }) {
+function HoldingRow({
+  h,
+  href,
+  repricing = false,
+}: {
+  h: PortfolioHolding;
+  href?: string;
+  /** CF-REPRICE-IS-VISIBLE-PER-ROW (Drew, 2026-09-05): a run is in flight. */
+  repricing?: boolean;
+}) {
   const rowLink = href ? (
     <RowStretchedLink href={href} label={`Open ${formatCardTitle(h)}`} />
   ) : null;
@@ -926,6 +947,14 @@ function HoldingRow({ h, href }: { h: PortfolioHolding; href?: string }) {
   // CF-WITHHELD-SAYS-WHY (Drew, 2026-09-05). Why the engine refused to publish
   // a price for this row, when it did. Null on a published row.
   const withheld = withheldOf(h);
+  // CF-REPRICE-IS-VISIBLE-PER-ROW (Drew, 2026-09-05), audit item 6.
+  //
+  // Shown ONLY on rows a run could actually change: one with no published
+  // value. A row already showing a price keeps showing it — the run may
+  // confirm the same number, and putting a spinner on a good price would
+  // make a working portfolio look broken for the ~40s a run takes. This is
+  // the "never a frozen page" rule applied per row rather than globally.
+  const pricePending = repricing && value == null;
 
   // CF-MOBILE-HOLDING-CARD (Drew, 2026-09-04: the mobile list is "horrible
   // looking"). At ~390px the single flex row put the title, the grade, the
@@ -979,9 +1008,27 @@ function HoldingRow({ h, href }: { h: PortfolioHolding; href?: string }) {
         labels={h.pricingLabels}
         selfAnchored={h.selfAnchored}
       />
+      {/* CF-REPRICE-IS-VISIBLE-PER-ROW (Drew, 2026-09-05): this row has no
+          value and a run is working. Says the honest thing — we are looking —
+          instead of leaving a dash that reads as a settled verdict. It
+          replaces the reason chips below for the duration, because "checking"
+          and "we refused" are different claims and showing both at once says
+          neither. */}
+      {pricePending && (
+        <span
+          className="px-1.5 py-0.5 rounded text-[10px] font-medium"
+          style={{
+            background: "color-mix(in oklab, var(--color-accent) 12%, transparent)",
+            color: "var(--color-accent)",
+          }}
+          data-price-pending="true"
+        >
+          CHECKING PRICE…
+        </span>
+      )}
       {/* CF-WITHHELD-SAYS-WHY: the reason, in the owner's words, beside the
           dash that would otherwise be the only thing said. */}
-      {withheld && (
+      {withheld && !pricePending && (
         <span
           className="px-1.5 py-0.5 rounded text-[10px] font-medium"
           style={{
@@ -1055,7 +1102,7 @@ function HoldingRow({ h, href }: { h: PortfolioHolding; href?: string }) {
           and declined to publish it. Calling that "missing" told the owner
           their data was broken when the guard was working as designed. A
           refused row carries its reason chip above instead. */}
-      {value == null && withheld == null && vs !== "estimated" && vs !== "pending" && (
+      {value == null && withheld == null && !pricePending && vs !== "estimated" && vs !== "pending" && (
         <>
           <span
             className="px-1.5 py-0.5 rounded text-[10px] font-medium"
