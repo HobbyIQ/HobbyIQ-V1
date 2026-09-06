@@ -302,8 +302,102 @@ function planSaleRefile({
   };
 }
 
+
+/**
+ * ── THE CANARY MUST ATTRIBUTE ITS OWN WRITES (2026-09-06) ──────────────────
+ *
+ * Run 34009971035 refiled 1,835 sales exactly as ruled and was failed by its
+ * own canary: four anchors moved (cpa-ag 16->5, cpa-em 17->8, cpa-hl 87->7,
+ * cpa-wa 91->15) and the gate called it "a collision may have been merged".
+ *
+ * Nothing merged. Those four anchors ARE the pools the sales lane empties.
+ * The anchors are `hiq:<sport>:<year>:bowman-chrome:<collision-number>:base:auto`
+ * -- the Chrome side of the nine collision numbers -- and a CPA sale whose
+ * player is claimed by the Bowman checklist alone leaves exactly that address
+ * for `...:bowman:<number>:base:auto`. The canary was anchored INSIDE the
+ * lane's own write scope, so it fired on the lane succeeding.
+ *
+ * This is #1711/#1727 arriving in a second lane, and it takes the same fix:
+ * CF-VERDICTS-ARE-ATTRIBUTED. A delta is only damage when the lane's own write
+ * ledger cannot explain it. The lane records, per pool, the rows it moved OUT
+ * (`fromCount`) and IN (`toCount`); the gate then asks of each anchor:
+ *
+ *   the ledger does not name this pool   -> any delta is ANOTHER writer's.
+ *                                           sold_comps has many (CardHedge,
+ *                                           the dedup cron, the ingest lanes)
+ *                                           and this lane did not write here,
+ *                                           so it cannot be this lane's damage.
+ *                                           A delta is a NOTE, never a fail.
+ *   the ledger names it, and the delta    -> ATTRIBUTED. The lane did exactly
+ *   equals what the ledger says it did       what it set out to do. PASS.
+ *   the ledger names it, and the delta    -> UNEXPLAINED. Rows moved that this
+ *   does NOT equal the ledger's arithmetic   lane cannot account for. FAIL.
+ *   no ledger at all                      -> STRICT, every anchor treated as
+ *                                           touched and any delta fails. A
+ *                                           gate degrades CLOSED: a checker
+ *                                           that cannot attribute must not
+ *                                           hand out passes it did not earn.
+ *
+ * `expected = before - fromCount + toCount`. An anchor that lost precisely the
+ * rows the lane moved out of it has not been damaged; it has been drained on
+ * purpose, and the attribution table prints the arithmetic so a reader can see
+ * that rather than take the verdict on trust.
+ *
+ * `touch` is deliberately three-valued and MUST NOT carry a default:
+ *   null       no ledger      -> strict
+ *   undefined  ledger exists, does not name this pool -> untouched
+ *   {...}      the lane wrote here -> attributed
+ * A default of `null` would silently turn the common relaxing case into the
+ * strict one and the attribution would never fire (see rematch-canary-check).
+ */
+function attributeCanary(slug, before, after, touch) {
+  // Absence of the argument is a caller with no ledger -- the strict reading.
+  const noLedger = arguments.length < 4 || touch === null;
+  const from = touch ? Number(touch.fromCount ?? 0) : 0;
+  const to = touch ? Number(touch.toCount ?? 0) : 0;
+
+  // An anchor we could not re-read is UNCONFIRMED. A count we did not take
+  // cannot clear the canary, and it cannot condemn it either.
+  if (after === null || after === undefined) {
+    return { slug, before, after: null, verdict: "UNCONFIRMED", ok: false, unread: true,
+             from: 0, to: 0, expected: null, delta: null,
+             note: "not re-read under the verify cap -- unread, not unchanged" };
+  }
+
+  const delta = after - before;
+  if (delta === 0) {
+    return { slug, before, after, verdict: "UNCHANGED", ok: true, unread: false,
+             from, to, expected: before, delta: 0, note: "" };
+  }
+
+  if (noLedger) {
+    return { slug, before, after, verdict: "UNEXPLAINED", ok: false, unread: false,
+             from: 0, to: 0, expected: before, delta,
+             note: "no write ledger -- cannot attribute, so the delta stands as damage" };
+  }
+
+  // UNTOUCHED: the ledger exists and does not name this pool. This lane wrote
+  // nothing here, so whatever moved belongs to another writer.
+  if (touch === undefined) {
+    return { slug, before, after, verdict: "OTHER-WRITER", ok: true, unread: false,
+             from: 0, to: 0, expected: before, delta,
+             note: "this lane wrote NO rows in this pool -- the change belongs to another writer" };
+  }
+
+  const expected = before - from + to;
+  if (after === expected) {
+    return { slug, before, after, verdict: "ATTRIBUTED", ok: true, unread: false,
+             from, to, expected, delta,
+             note: `this lane moved ${from} row(s) out and ${to} in -- the delta is its own intended refile` };
+  }
+
+  return { slug, before, after, verdict: "UNEXPLAINED", ok: false, unread: false,
+           from, to, expected, delta,
+           note: `this lane moved out ${from} / in ${to}, so ${expected} was expected -- ${after - expected} row(s) it cannot account for` };
+}
+
 module.exports = {
   REASON_LONG, SKIP,
   idStem, playerKey, foldNumber, isStaleGenericField, onlyProductSegmentMoves,
-  planCatalogRefile, planSaleRefile,
+  planCatalogRefile, planSaleRefile, attributeCanary,
 };

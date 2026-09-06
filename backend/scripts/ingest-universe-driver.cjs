@@ -227,6 +227,10 @@ function streakAfter(streak, verdict) {
 }
 
 const f = (n) => Number(n).toLocaleString();
+// CF-AN-UNANSWERABLE-COUNT-SAYS-SO. `f(null)` is "0", and a count we could not
+// take must never print as a measured zero -- that is the conflation the
+// acquire lane's Gate 1 was rewritten for (0 rows created vs 3,810 present).
+const fOrUnknown = (n) => (n === null || n === undefined ? "not measured" : f(n));
 const left = () => RUN_MS - (Date.now() - STARTED);
 
 /**
@@ -2706,8 +2710,14 @@ if (require.main !== module) return;
        * subtraction of two different products' counts rather than a
        * measurement of this run. It is read here, from the same csvPaths
        * `after` will use, so the two ends of the delta name one product.
+       *
+       * The SAME argument governs `beforeUnderSource`
+       * (CF-ROWS-CREATED-IS-COUNTED-BY-SOURCE, #1856): it is the other end of
+       * the by-source delta and resolves its key the same way, so it must be
+       * read from the same csvPaths or the delta straddles two products.
        */
       const before = await countCatalogRows(entry, csvPaths);
+      const beforeUnderSource = await countCatalogRowsBySource(entry, sourceLabelFor(lane), csvPaths).catch(() => null);
       const gate = gateStagedEntry(csvPaths, lane);
       if (csvPaths.length > 1) {
         console.log(`      ${f(csvPaths.length)} staged scope files: ${csvPaths.map((p) => path.basename(p)).join(", ")}`);
@@ -2744,40 +2754,24 @@ if (require.main !== module) return;
 
         // VERIFY BY READ. Not the ingest's claim -- a count from Cosmos.
         const after = await countCatalogRows(entry, csvPaths);
-        const created = (after ?? 0) - (before ?? 0);
 
-        // AND VERIFY BY SOURCE. `after` counts every row of the product,
-        // synthetic ones included; this counts only what this run's source
-        // wrote. See CF-THE-VERIFICATION-MUST-COUNT-THE-ROWS-THIS-RUN-WROTE.
+        // VERIFY BY SOURCE. `after` counts every row of the product, whoever
+        // wrote it; this counts only what this run's source wrote. See
+        // CF-THE-VERIFICATION-MUST-COUNT-THE-ROWS-THIS-RUN-WROTE.
         rowsUnderSource = await countCatalogRowsBySource(entry, sourceLabelFor(lane), csvPaths).catch(() => null);
+
+        // CF-ROWS-CREATED-IS-COUNTED-BY-SOURCE. The delta under THIS run's
+        // source tag, never the whole-product delta. When the by-source read
+        // is unavailable at either end `created` is null -- "not measured" --
+        // rather than a whole-product number wearing the by-source label: an
+        // unanswerable count must say so, not fall back to the wrong one.
+        const created = (rowsUnderSource === null || beforeUnderSource === null)
+          ? null
+          : rowsUnderSource - beforeUnderSource;
+        rowsCreatedTotal += Math.max(0, created ?? 0);
         if (rowsUnderSource !== null) {
           console.log(`      under source ${sourceLabelFor(lane)}: ${f(rowsUnderSource)} rows (of ${f(after ?? 0)} for the product)`);
         }
-        /**
-         * CF-ROWS-CREATED-IS-THE-NUMBER-THE-ENTRIES-PRINTED (2026-09-06).
-         *
-         * The banner's "rows created ... (verified by catalog read, not
-         * claimed)" summed `after - before`, and run 33997480307 printed ZERO
-         * under twelve per-entry lines that each named thousands. Two reasons,
-         * and the by-source count is the answer to both:
-         *
-         *   a difference of two whole-product counts is only this run's work
-         *   when nothing else writes between the reads, and on a collapsed key
-         *   the two numbers were six figures of other products' rows;
-         *
-         *   an entry re-ingesting rows a previous pass already landed creates
-         *   nothing and yet HAS its rows under this source, which is the thing
-         *   the operator is asking about.
-         *
-         * `countCatalogRowsBySource` counts exactly the rows stamped with THIS
-         * run's source label under the key the child wrote. That is the
-         * verified catalog delta of this run, and it is the same number the
-         * per-entry lines print -- so the summary now sums to what the entries
-         * say, instead of contradicting them. The whole-product delta is kept
-         * on the control doc as `rowsCreated`, where the truncation rules still
-         * read it.
-         */
-        rowsCreatedTotal += rowsUnderSource ?? Math.max(0, created);
 
         /**
          * CF-EVERY-STAGED-ROW-OR-IT-IS-NOT-INGESTED (2026-09-04).
@@ -2960,7 +2954,7 @@ if (require.main !== module) return;
             ? "base-only, no parallel ladder"
             : "ladder present but zero print runs";
           verdict = { status: "partial", reason: why, rowsCreated: created, rowsInCatalog: after, rowsStaged: staged, stats: gate.stats };
-          console.log(`      PARTIAL — ${why} (${f(created)} rows created, ${f(after)} in catalog)`);
+          console.log(`      PARTIAL — ${why} (${fOrUnknown(created)} rows created under ${sourceLabelFor(lane)}, ${f(after)} in catalog)`);
         } else {
           const note = printRunsExpected
             ? `${f(gate.stats.withPrintRun)} with print runs`
@@ -2978,7 +2972,7 @@ if (require.main !== module) return;
                 ? "; base-only is the shape of a PARENT page — this source publishes each rung as its own set page, and the manifest declares the siblings"
                 : "";
           verdict = { status: "ingested", reason: null, rowsCreated: created, rowsInCatalog: after, rowsStaged: staged, stats: gate.stats };
-          console.log(`      INGESTED — ${f(created)} rows created, ${f(after)} in catalog of ${f(staged)} staged, ${note}${era}`);
+          console.log(`      INGESTED — ${fOrUnknown(created)} rows created under ${sourceLabelFor(lane)}, ${f(after)} in catalog of ${f(staged)} staged, ${note}${era}`);
         }
       }
     } catch (e) {
@@ -3100,7 +3094,7 @@ if (require.main !== module) return;
   }
   console.log(`    not reached       ${f(notReached)}   (budget stop, counted directly)`);
   console.log(`  written             ${f(APPLY ? written : 0)}   (control docs upserted)`);
-  console.log(`  rows created        ${f(rowsCreatedTotal)}   (verified by catalog read, not claimed)`);
+  console.log(`  rows created        ${f(rowsCreatedTotal)}   (verified by catalog read UNDER THIS RUN'S SOURCE, not claimed)`);
   const balanced = accounted + notReached === intended;
   console.log(`  RECONCILED          ${balanced ? "yes" : `NO — ${f(accounted)} + ${f(notReached)} != ${f(intended)}`}`);
   if (controlWriteFailures) console.log(`  control writes lost  ${f(controlWriteFailures)}   (verdict earned, doc did not land)`);

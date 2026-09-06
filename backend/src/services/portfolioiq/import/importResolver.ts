@@ -216,10 +216,18 @@ export async function resolveImportRow(
   const setName = str(norm.setName) ?? str(norm.product);
   const player = str(norm.playerName);
   const isAuto = norm.isAuto === true;
+  // THE NORMALIZER ALREADY SPLIT THIS, so read its answer rather than redoing
+  // the work (CF-A-PARALLEL-FIELD-HOLDS-ONLY-THE-PARALLEL, 2026-09-05).
+  // `normalizeHoldingFields` moves a "/50" out of the parallel and onto
+  // `printRun` for every caller, which is what makes the split ONE rule
+  // instead of one-per-importer. `splitPrintRunFromParallel` stays as the
+  // fallback for the shapes the normalizer declines — a bare serial the
+  // normalizer leaves whole, say — and for callers that reach it directly.
   const split = splitPrintRunFromParallel(norm.parallel);
   const parallel = split.parallel;
   const printRun =
     printRunFromSerial(input.serialNumber)
+    ?? (typeof norm.printRun === "number" ? norm.printRun : null)
     ?? split.printRun
     ?? extractPrintRunFromTitle(input.cardTitle);
   const cardNumber = cleanCardNumber(norm.cardNumber);

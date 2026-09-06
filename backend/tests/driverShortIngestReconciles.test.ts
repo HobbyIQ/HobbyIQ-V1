@@ -151,12 +151,23 @@ describe("B. an entry that landed rows is not a failure", () => {
     expect(src).toMatch(/verdicts\[EMPTY_STATUS\] \+ verdicts\[SHORT_STATUS\]/);
   });
 
-  it("rows created is the by-source count the entries printed", () => {
+  it("rows created is a BY-SOURCE delta, and both ends read the same key", () => {
     const src = fs.readFileSync(DRIVER_SRC, "utf8");
     // The banner said 0 under twelve lines each naming thousands, because it
-    // summed a whole-product delta across a collapsed key.
-    expect(src).toMatch(/rowsCreatedTotal \+= rowsUnderSource \?\? Math\.max\(0, created\)/);
-    expect(src).not.toMatch(/rowsCreatedTotal \+= Math\.max\(0, created\);/);
+    // summed a WHOLE-PRODUCT delta across a collapsed key. #1856 reached the
+    // same defect from the SCC Bowman's Best incident ("4,003 rows created"
+    // for 200 staged cards) and landed the stronger instrument: a delta of two
+    // BY-SOURCE counts, null when either end is unreadable rather than a
+    // whole-product number wearing the by-source label. That is the one
+    // implementation; this pin holds it, and adds the half it needs from here.
+    expect(src).toMatch(/const created = \(rowsUnderSource === null \|\| beforeUnderSource === null\)/);
+    expect(src).toMatch(/: rowsUnderSource - beforeUnderSource;/);
+    expect(src).not.toMatch(/const created = \(after \?\? 0\) - \(before \?\? 0\);/);
+    // BOTH ends of that delta must resolve the key the same way, so
+    // `beforeUnderSource` is read from the same csvPaths `rowsUnderSource` is
+    // -- a delta whose ends name two products measures nothing.
+    expect(src).toMatch(/const beforeUnderSource = await countCatalogRowsBySource\(entry, sourceLabelFor\(lane\), csvPaths\)/);
+    expect(src).not.toMatch(/countCatalogRowsBySource\(entry, sourceLabelFor\(lane\)\)\.catch/);
   });
 });
 
