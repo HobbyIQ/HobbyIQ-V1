@@ -655,6 +655,44 @@ on:
           # the destination must be NAMED. Scopes are 2023-2025; it does not
           # overlap the Bowman refile's baseball:2026:bowman-chrome.
           - repair-cpa-draft-refile
+          # repair-clc-signature-unsigned -- the clc rows whose parallel SAYS
+          # the card is signed and whose flag says it is not.
+          #
+          # #1831 stopped the MINT: the converter's auto decision now reads the
+          # WHOLE Set value, so "Jumbo Rookie Signature Swatches Gold Prizm" is
+          # an autograph. It moved nothing already stored.
+          #
+          # RE-MEASURED 2026-09-06, per (sport, year), read-only: 79,000
+          # actionable rows -- NOT the 74,448 #1831 reported, because a
+          # `checklistcenter-2026-09-05` pass staged 4,552 more before the fix
+          # merged. The first post-fix pass (checklistcenter-2026-09-06,
+          # 942,188 rows) contributes ZERO, which is the fix confirmed on
+          # stored data. Biggest cells: baseball:2023 43,915, baseball:2026
+          # 13,374, baseball:2025 12,835.
+          #
+          # A RE-INGEST CANNOT FIX THESE: isAuto is segment 6 of the canonical
+          # id, so the fixed converter mints at the `:auto` address and leaves
+          # the wrong `:no-auto` row standing beside it -- a second row and a
+          # split pool. patchCatalogRowFields refuses the field by design
+          # (changing where a row LIVES is a move), so the lane calls
+          # moveCatalogRow, which folds onto an existing `:auto` twin rather
+          # than duplicating it.
+          #
+          # scope is REQUIRED and is a comma-separated list of cells as
+          # sport:year. There is no 'all' in any mode and the inherited
+          # `scope=refractor` is REFUSED (exit 2). `mode` selects the lane:
+          # catalog | sales | both (default both).
+          #
+          # THE SALES ARE MEASURED AND ARE (TODAY) NONE: 26,209 actionable
+          # slugs across the two largest cells hold ZERO sold_comps rows, read
+          # exhaustively on BOTH identity fields (a control over unrestricted
+          # clc rows in the same cell found 139/300 slugs with 609 sales, so
+          # the reader works). The matcher never routes an auto sale to a
+          # `:no-auto` address, so the pool stayed empty rather than wrong.
+          # When a sale does exist it rides ONLY if its own title states an
+          # autograph -- a title that says nothing is PARKED, never moved,
+          # and parked rows are their own term in the reconciliation.
+          - repair-clc-signature-unsigned
       apply:
         description: "Actually write (true) or dry-run only (false)"
         required: true
@@ -734,7 +772,7 @@ on:
         default: ""
         type: string
       parents_only:
-        description: "Two meanings, and only ONE script reads the value itself. For rehome-catalog-rows-to-own-partition: only move identity rows, skipping graded rows (which are regenerable from their parent). For every lane on the SHARD line (repair-tiffany-*, retire-self-derived-identities, repair-bowman-product-refile, rekey-product-setkey, repair-finish-collision-refile, reslug-ruled-alias, repair-cpa-draft-refile) it is the SHARD OPT-IN: pass true with slot=0 so slot 0 of a real fan-out is a chosen shard rather than the runner's inherited default. Slots 1..15 shard on their non-zero slot and do not need it. Leave false for a full sweep."
+        description: "Two meanings, and only ONE script reads the value itself. For rehome-catalog-rows-to-own-partition: only move identity rows, skipping graded rows (which are regenerable from their parent). For every lane on the SHARD line (repair-tiffany-*, retire-self-derived-identities, repair-bowman-product-refile, rekey-product-setkey, repair-finish-collision-refile, reslug-ruled-alias, repair-cpa-draft-refile, repair-clc-signature-unsigned) it is the SHARD OPT-IN: pass true with slot=0 so slot 0 of a real fan-out is a chosen shard rather than the runner's inherited default. Slots 1..15 shard on their non-zero slot and do not need it. Leave false for a full sweep."
         required: false
         default: false
         type: boolean
@@ -932,6 +970,36 @@ jobs:
             fi
           done
           echo "Scope confirmed: ${#PRODUCTS[@]} product(s)."
+
+      # THE CLC SIGNATURE REPAIR NAMES ITS SCOPE, in both modes.
+      #
+      # This lane moves rows across a 79,000-row measured population, and a move
+      # re-points sales and retires graded children. A whole-source write refuses
+      # without its name (feedback_a_whole_source_retire_needs_its_name), and the
+      # refusal covers REPORT too: a report over an unnamed scope is how an apply
+      # over an unnamed scope gets authorised.
+      #
+      # Its scope axis is the CELL -- sport:year -- not the product triple the
+      # refile lanes take, because the defect is a converter vocabulary gap that
+      # cuts across 88 products within a cell.
+      - name: The clc signature repair names its scope
+        if: ${{ inputs.script == 'repair-clc-signature-unsigned' }}
+        shell: bash
+        run: |
+          SCOPE='${{ inputs.scope }}'
+          if [ -z "$SCOPE" ] || [ "$SCOPE" = "refractor" ] || [ "$SCOPE" = "all" ]; then
+            echo "::error::repair-clc-signature-unsigned requires scope = a comma-separated list of cells as sport:year. Got '$SCOPE' (the runner default 'refractor' and 'all' are refused - this lane has no whole-corpus mode)."
+            exit 1
+          fi
+          IFS=',' read -ra CELLS <<< "$SCOPE"
+          for C in "${CELLS[@]}"; do
+            C="$(echo "$C" | tr -d '[:space:]')"
+            if ! echo "$C" | grep -Eq '^[a-z]+:[0-9]{4}$'; then
+              echo "::error::'$C' is not a cell (expected sport:year, e.g. baseball:2023)."
+              exit 1
+            fi
+          done
+          echo "Scope confirmed: ${#CELLS[@]} cell(s)."
 
       # Same lesson as every other lane one layer down: the FIVE-ASSERTION
       # predicate lives in a lib so the tests pin the code that runs. A dispatch
@@ -1505,7 +1573,7 @@ jobs:
           # this very expression and asserts every script it names is in the
           # dropdown whitelist AND calls runnerShardScope without alwaysShard.
           # Drop a script from the line and that suite turns red.
-          SHARD: ${{ (inputs.script == 'repair-tiffany-pool-enumeration' || inputs.script == 'repair-tiffany-rung-to-product' || inputs.script == 'retire-self-derived-identities' || inputs.script == 'repair-bowman-product-refile' || inputs.script == 'rekey-product-setkey' || inputs.script == 'repair-finish-collision-refile' || inputs.script == 'reslug-ruled-alias' || inputs.script == 'repair-cpa-draft-refile') && inputs.parents_only == true && 'true' || '' }}
+          SHARD: ${{ (inputs.script == 'repair-tiffany-pool-enumeration' || inputs.script == 'repair-tiffany-rung-to-product' || inputs.script == 'retire-self-derived-identities' || inputs.script == 'repair-bowman-product-refile' || inputs.script == 'rekey-product-setkey' || inputs.script == 'repair-finish-collision-refile' || inputs.script == 'reslug-ruled-alias' || inputs.script == 'repair-cpa-draft-refile' || inputs.script == 'repair-clc-signature-unsigned') && inputs.parents_only == true && 'true' || '' }}
           # Optional year scoping (ingest-checklists-end-to-end, rehome-catalog-
           # rows-to-own-partition, dedupe-catalog-partition-shadows, merge-bare-
           # colour-parallels, repair-refractor-mislabel).
@@ -3473,6 +3541,38 @@ jobs:
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-finish-collision-refile -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f limit="${{ inputs.limit }}" -f parents_only="${{ inputs.parents_only }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (refiled=${N:-0}) — done, no re-dispatch."
+          fi
+
+      # CF-RELAUNCH-ONLY-ON-BUDGET (#1361). The gate is the MARKER the lane
+      # prints from its OWN clock under the step ceiling -- never a progress
+      # count. A relaunch keyed on "moved > 0" never fires on a slot whose
+      # remaining rows are all refusals, and one keyed on a marker that always
+      # printed would loop forever; the lane prints it ONLY when it stopped
+      # short, so the loop terminates when the slot drains.
+      #
+      # The continuation forwards parents_only along with slot/slots: a slot-0
+      # continuation that dropped the opt-in would rebind as the runner's
+      # inherited default and widen from one shard to a full sweep mid-fleet
+      # (pinned by shardOptInWhitelist.test.ts).
+      #
+      # The repair is convergent: a moved row is isAuto=true and no longer
+      # matches the candidate predicate, so the relaunch resumes rather than
+      # repeating.
+      - name: Self-relaunch the clc signature repair until the slot is clean
+        if: ${{ !cancelled() && inputs.script == 'repair-clc-signature-unsigned' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        working-directory: backend
+        run: |
+          set +e
+          N=$(grep -aoE "^  REPAIRED to the address the checklist names +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
+          echo "repaired=${N:-0}"
+          if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
+            echo "::notice::budget hit (repaired=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-clc-signature-unsigned -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f mode="${{ inputs.mode }}" -f limit="${{ inputs.limit }}" -f parents_only="${{ inputs.parents_only }}"
+          else
+            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (repaired=${N:-0}) — done, no re-dispatch."
           fi
 
       - name: Self-relaunch the Bowman product refile until the slot is clean

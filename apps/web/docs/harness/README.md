@@ -105,3 +105,27 @@ about. The nesting is invalid and load-bearing but silent at runtime — which
 is why the committed unit test
 (`src/components/HoldingRowLink.test.tsx`) asserts structure rather than
 watching for a console message.
+
+## withheld-check.mjs
+
+CF-WITHHELD-SAYS-WHY / CF-MOBILE-390-DETAIL. Stubs FOUR holdings, one per
+withheld reason, because the whole point is that they must not look alike.
+Covers `/app/portfolio` and `/app/portfolio/h_floor` at 390px and 1280px.
+
+Exits non-zero unless, at both widths: each reason shows its OWN words; the
+collapsed sentence "cost-basis check" appears nowhere; a refused row is not
+labelled MISSING; the engine's vocabulary (`no-checklist-match`, …) never
+reaches the glass; there is no horizontal overflow on either page; and the
+detail page explains the refusal, quotes the refused number *inside* its
+sentence, and says what would unlock a price.
+
+The load-bearing assertion is #4: on the LIST the refused `$2` must not be
+rendered text at all (it is a tooltip), while on the DETAIL it must appear
+alongside the `$29.45` basis it was measured against. That is the line
+between explaining a refusal and quietly republishing the number it refused.
+
+```sh
+BASE=http://127.0.0.1:3111 \
+SHOTS=<repo>/apps/web/docs/screenshots \
+node withheld-check.mjs
+```
