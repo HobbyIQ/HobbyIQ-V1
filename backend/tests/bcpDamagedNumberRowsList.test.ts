@@ -117,6 +117,16 @@ describe("#1899 bcp split-card-line rows: the catalog list", () => {
     expect(list.census.bySource["baseballcardpedia-graded"]).toBe(253);
   });
 
+  it("the class is baseball-only — the probe that says so is recorded", () => {
+    // baseballcardpedia is a BASEBALL wiki. 42 further slices of football,
+    // basketball and hockey (36,746 rows) carry none of this shape, so the
+    // baseball-only scope of the census is a measurement and not an omission.
+    const probe = list.census.otherSportsProbe;
+    expect(probe.hits).toBe(0);
+    expect(probe.rowsScanned).toBeGreaterThan(30_000);
+    expect(Object.keys(list.census.bySource).every((s) => s.startsWith("baseballcardpedia"))).toBe(true);
+  });
+
   it("NO sale is at risk — the retire costs nothing, and that was measured", () => {
     // retireCatalogRow re-points nothing, so a retire normally hands the row's
     // sales to the rematch. Here there are none to hand over.

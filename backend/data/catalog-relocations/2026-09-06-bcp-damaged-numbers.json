@@ -9,8 +9,9 @@
   "A TWIN IS THE SAME CARD, NOT THE SAME PLAYER. A player-only match proposed 223 retires including 'Derek Jeter' -> #3 :refractor:, 'Alex Rodriguez' -> #4 :gold: and 'Cal Ripken Jr.' -> #4C -- different rungs and a different number, i.e. 167 rows would have been retired onto a card they are not. The twin test used here demands same sport/year/setKey AND same parallel AND same isAuto AND the same grade segment, and it refuses when more than one candidate matches. That leaves 56 twins out of 721.",
   "RETIRE IS A DELETE in this lane (catalogVisibility.ts:23-25 - every state is matchable, only visibility is tiered), and retireCatalogRow re-points nothing. The cost is normally that the retired row's sales become unplaced; here that cost is ZERO -- see the census.",
   "NO SALES ARE AT RISK. Every one of the 721 slugs was point-counted in sold_comps on BOTH c.hobbyiqCardId and c.cardId: all zero. The query form was proved live on the same run (':sp-authentic:' returns 15,356 sales, ':this:' returns 0), so the zero is a measurement and not a broken query. There is therefore NO companion pool list for this finding.",
-  "THE 665 WITHOUT A TWIN ARE NOT RETIRED. 443 of them are not cards at all -- 192 carry cardNumber 'This' and playerName 'page was last edited on <date>', the baseballcardpedia page FOOTER scraped as a card line; the rest are parallel/insert headings ('Printing Plates', 'Framed White Refractor', 'Sparkle (common)') and prose. The other 222 are person-shaped rows that are the ONLY row for that identity, so retiring them would lose the card. Both groups are DEFERRED, not actioned: this lane has no park action (classifyEntry accepts 'retire' and 'reslug' only, relocate-catalog-rows-by-list.cjs:151-152), and identityUnverified is a sold_comps field with no card_catalog equivalent. They are listed in `deferred` with reasons and NOTHING is minted for them.",
-  "PRIOR ART, UNMERGED. Commit 78aa88bf ('a page footer is not a card - 17 wiki-scrape rows retired') retired this exact footer shape, but it is NOT on main -- it sits on fix/derive-builds-search-fields-0901-0150. The 192 footer rows measured here are still live."
+  "THE 665 WITHOUT A TWIN ARE NOT RETIRED. 435 of them are not cards at all -- 191 carry cardNumber 'This' and playerName 'page was last edited on <date>', the baseballcardpedia page FOOTER scraped as a card line; the rest are parallel/insert headings ('Printing Plates', 'Framed White Refractor', 'Sparkle (common)') and prose. The other 230 are person-shaped rows that are the ONLY row for that identity, so retiring them would lose the card. Both groups are DEFERRED, not actioned: this lane has no park action (classifyEntry accepts 'retire' and 'reslug' only, relocate-catalog-rows-by-list.cjs:151-152), and identityUnverified is a sold_comps field with no card_catalog equivalent. They are listed in `deferred` with reasons and NOTHING is minted for them.",
+  "THE CLASS IS BASEBALL-ONLY. A bounded probe of 42 further slices (football, basketball and hockey x 1998/2000/2005 x the majors, 36,746 rows) found ZERO rows of this shape. baseballcardpedia is a baseball wiki, and the damage does not appear outside the sport it scrapes.",
+  "PRIOR ART, UNMERGED. Commit 78aa88bf ('a page footer is not a card - 17 wiki-scrape rows retired') retired this exact footer shape, but it is NOT on main -- it sits on fix/derive-builds-search-fields-0901-0150. The 191 footer rows measured here are still live."
  ],
  "census": {
   "slicesRead": 162,
@@ -31,6 +32,13 @@
   "deferredPageFurniture": 435,
   "deferredAmbiguousTwin": 20,
   "salesOnDamagedSlugs": 0,
+  "otherSportsProbe": {
+   "slices": 42,
+   "rowsScanned": 36746,
+   "hits": 0,
+   "scope": "football / basketball / hockey x 1998, 2000, 2005 x the majors (topps, upper-deck, bowman, donruss, fleer, score, hoops, skybox, o-pee-chee)",
+   "reading": "the class is BASEBALL-ONLY, which is what a baseball wiki should produce. No football/basketball/hockey row carries the shape."
+  },
   "note": "measured read-only 2026-09-06; every count above is from the run that produced this file"
  },
  "scraperStatus": {
