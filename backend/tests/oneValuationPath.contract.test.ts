@@ -20,6 +20,7 @@ import request from "supertest";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { PRICING_CONTRACT_VERSION } from "../src/services/portfolioiq/pricingContract.js";
 
 process.env.COMPIQ_CORPUS_DISABLED = "1";
 process.env.CANONICAL_FMV_ENABLED = "true";
@@ -666,7 +667,7 @@ describe("D17 — the portfolio persist site: what is written is what the routes
     // on the API for any caller that asks. The contract this suite exists
     // to hold is untouched: what is PERSISTED is exactly what the routes
     // SERVE, labels included — here, both empty.
-    expect(hld.pricingSourceMeta).toEqual({ slug: GOLD, method: pb.rungLabel, compsUsed: pb.compsUsed, labels: [], selfAnchored: null, confidence: cf.confidence });
+    expect(hld.pricingSourceMeta).toEqual({ slug: GOLD, method: pb.rungLabel, compsUsed: pb.compsUsed, labels: [], selfAnchored: null, confidence: cf.confidence, contractVersion: PRICING_CONTRACT_VERSION });
     expect(hld.predictedPrice).toBe(pb.predictedPrice);
     expect(hld.estimateBasis).toMatch(/^unified: Raw window=/);
     expect(hld.estimateBasis).toContain("id=hobbyiqCardId");
@@ -692,7 +693,7 @@ describe("D17 — the portfolio persist site: what is written is what the routes
     // on the API for any caller that asks. The contract this suite exists
     // to hold is untouched: what is PERSISTED is exactly what the routes
     // SERVE, labels included — here, both empty.
-    expect(again.pricingSourceMeta).toEqual({ slug: GOLD, method: pb.rungLabel, compsUsed: pb.compsUsed, labels: [], selfAnchored: null, confidence: cf.confidence });
+    expect(again.pricingSourceMeta).toEqual({ slug: GOLD, method: pb.rungLabel, compsUsed: pb.compsUsed, labels: [], selfAnchored: null, confidence: cf.confidence, contractVersion: PRICING_CONTRACT_VERSION });
     // No second engine, no legacy chain, on either site.
     expect(h.calls.estimate).toBe(0);
     expect(h.calls.curve).toBe(0);
@@ -732,7 +733,7 @@ describe("D17 — the portfolio persist site: what is written is what the routes
     // on the API for any caller that asks. The contract this suite exists
     // to hold is untouched: what is PERSISTED is exactly what the routes
     // SERVE, labels included — here, both empty.
-    expect(hld.pricingSourceMeta).toEqual({ slug: GOLD, method: psa10.pb.rungLabel, compsUsed: psa10.pb.compsUsed, labels: [], selfAnchored: null, confidence: psa10.cf.confidence });
+    expect(hld.pricingSourceMeta).toEqual({ slug: GOLD, method: psa10.pb.rungLabel, compsUsed: psa10.pb.compsUsed, labels: [], selfAnchored: null, confidence: psa10.cf.confidence, contractVersion: PRICING_CONTRACT_VERSION });
   });
 
   it("(slug, PSA 8 — no pool at the tier): the same entry's grade-curve-estimate is persisted as an ESTIMATE under its rung — never the engine's cross-grade rescale as observed", async () => {
@@ -759,7 +760,7 @@ describe("D17 — the portfolio persist site: what is written is what the routes
     // serve, not as a literal — that keeps this a persist-equals-serve pin
     // (which is this suite's whole thesis) instead of a float that any future
     // calibration rebase would have to hand-edit.
-    expect(hld.pricingSourceMeta).toEqual({ slug: GOLD, method: "grade-curve-estimate", compsUsed: 0, labels: [{ code: "fallback-rung", text: expect.stringContaining("no sales of this exact card at this grade") }], selfAnchored: null, confidence: psa8.cf.confidence });
+    expect(hld.pricingSourceMeta).toEqual({ slug: GOLD, method: "grade-curve-estimate", compsUsed: 0, labels: [{ code: "fallback-rung", text: expect.stringContaining("no sales of this exact card at this grade") }], selfAnchored: null, confidence: psa8.cf.confidence, contractVersion: PRICING_CONTRACT_VERSION });
     expect(hld.estimateBasis).toMatch(/^Estimated from this card's own Raw sales/);
     await refresh(id);
     const again = await stored(id);

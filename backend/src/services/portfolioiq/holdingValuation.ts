@@ -270,7 +270,7 @@ function refusalFacts(
  * exactly the two reasons this function now checks.
  *
  * THE RULE. A refusal may retain a prior value only when that value is a claim
- * the refusal does not itself contradict. Two conditions, both required:
+ * the refusal does not itself contradict. Three conditions, all required:
  *
  *   1. THE KEPT VALUE MUST ITSELF PASS THE FLOOR. Judged by the same
  *      `costBasisFloor` predicate against the same basis. A retained number
@@ -282,6 +282,52 @@ function refusalFacts(
  *      just blocked) under an exact-pool rung, its number is the same evidence
  *      that just failed, one pass older. The floor's fault is with the POOL;
  *      a number drawn from that pool does not become sound by being stale.
+ *   3. THE IDENTITY MUST BE ONE A PRICE MAY REST ON. Added 2026-09-06 after
+ *      #1865 shipped and the invariant auditor's I10
+ *      (PRICED-ON-UNBACKED-IDENTITY) did NOT clear.
+ *
+ *      Measured read-only that day: 10 of 131 holdings carry a live
+ *      `fairMarketValue` beside a `withheld` block whose reason is
+ *      `no-checklist-match` (9) or `identity-not-in-catalog` (1) — a refusal
+ *      and a published number on the same row. The refusals all fired
+ *      correctly. The retention then handed the number straight back. The
+ *      loudest is 8b38c810/9d88f672, $300 on
+ *      `hiq:baseball:2023:bowman-chrome:cpafc:refractor:auto:num-499`; the
+ *      clearest is 199fcbc9's pair 437f010d / 5979f485, the SAME unbacked
+ *      slug retaining $65 and $133.125 — one card, two prices, neither of
+ *      them a claim the catalog can stand behind.
+ *
+ *      (The two rows that first drew the eye — 925ccfe7 / 4e70af40 at $14.79
+ *      on `…:cpa-jwh:refractor:auto:num-499` — turned out NOT to be this bug
+ *      and not the freshness skip either. The 08:40Z apply run reported
+ *      `freshSkipped: 0` and named both explicitly as
+ *      `skipped: pending-review (awaiting user confirmation)`; their meta
+ *      carries no `withheld` block at all. They are an eBay auto-import that
+ *      self-verified the identity (`catalogVerified: true`, confidence 0.98)
+ *      and was never advanced past `cardStatus: "pending-review"`, so their
+ *      $14.79 is simply the import-time number, untouched. That is a separate
+ *      defect in the import's review gate and is NOT fixed here.)
+ *
+ *      Conditions 1 and 2 both ask "IS THIS NUMBER SOUND?" — they weigh a
+ *      figure against a basis and against a pool. Neither can see the
+ *      question #1784 actually asks, which is not about the number at all:
+ *      IS THERE A CARD HERE? An identity no checklist confirms has nothing
+ *      for a price to be the price OF, so there is no version of the prior
+ *      number that survives — it was a price for a card we cannot name.
+ *      Passing the floor is beside the point when the subject of the claim
+ *      is what is in doubt.
+ *
+ *      ABSENT BEATS WRONG (Drew, 2026-09-06). A withheld price is null plus a
+ *      reason. A retained $14.79 on an unnameable card is a number a user
+ *      spends, sells and reports against, and it is worse than a blank —
+ *      which is exactly what the doctrine "price only checklist-matched
+ *      identities" means when the identity check finally says no.
+ *
+ *      Scoped to the IDENTITY refusals only (`no-checklist-match`,
+ *      `identity-not-in-catalog`). A `no-exact-pool` or `pool-migrating`
+ *      refusal names a real, checklist-backed card whose EVIDENCE is
+ *      temporarily thin, and #1781's retention is exactly right there — the
+ *      $240 Maddux keeps its number. Nothing about those branches changes.
  *
  * When either fails, NOTHING is retained as a price. `fairMarketValue` is
  * null, `estimatedValue` is cleared with it — leaving a stale estimate behind
@@ -305,10 +351,23 @@ function refusalFacts(
  * the rung it was priced under, as evidence rather than as a live claim.
  */
 
+/**
+ * The refusal reasons that fault the IDENTITY rather than the evidence — the
+ * two states `mayPublishPrice` rejects for having no checklist behind them.
+ * A prior number can never stand through one of these: there is no card for
+ * it to be the price of. Kept as a set beside the rule that reads it so the
+ * two cannot drift, and deliberately NOT the whole `NoBasisRefusalReason`
+ * union — the evidence refusals keep #1781's retention untouched.
+ */
+const IDENTITY_REFUSALS: ReadonlySet<string> = new Set([
+  "no-checklist-match",
+  "identity-not-in-catalog",
+]);
+
 /** Why a prior value could not be retained, or the value that stood. */
 export type RetentionVerdict =
   | { retained: true; value: number }
-  | { retained: false; because: "no-prior-value" | "prior-fails-floor" | "prior-is-the-refused-pool" };
+  | { retained: false; because: "no-prior-value" | "prior-fails-floor" | "prior-is-the-refused-pool" | "identity-not-priceable" };
 
 /**
  * Whether the prior value on a holding may stand through a refusal.
@@ -335,12 +394,39 @@ export type RetentionVerdict =
 export function retentionThroughFloor(
   holding: PortfolioHolding,
   entry: { pooledAs: string | null },
+  /**
+   * The refusal's own reason, when the caller has one. Condition 3 reads it
+   * and nothing else does.
+   *
+   * OPTIONAL, and that is deliberate: the cost-basis floor lane genuinely has
+   * no `NoBasisRefusalReason` to give — it refused on a BASIS, not on an
+   * identity — and must keep its existing verdict unchanged. Omitting the
+   * argument therefore means "this refusal makes no claim about the
+   * identity", which is the honest reading and leaves every existing caller
+   * behaving exactly as before.
+   */
+  refusalReason?: NoBasisRefusalReason | null,
 ): RetentionVerdict {
   const prior = typeof holding.fairMarketValue === "number" && Number.isFinite(holding.fairMarketValue)
     && holding.fairMarketValue > 0
     ? holding.fairMarketValue
     : null;
   if (prior === null) return { retained: false, because: "no-prior-value" };
+
+  // 3. THE IDENTITY MUST BE ONE A PRICE MAY REST ON. Asked FIRST of the three
+  //    substantive conditions, because it is not a question about the number:
+  //    when the identity itself is refused there is no card for any number to
+  //    be the price of, so neither the floor's verdict nor the pool's
+  //    provenance can rescue it. "Absent beats wrong."
+  //
+  //    This is the SAME vocabulary `identityBacking` uses — the two identity
+  //    refusals are precisely the states `mayPublishPrice` rejects for having
+  //    no checklist behind them. A refusal about EVIDENCE
+  //    (`no-exact-pool`, `no-exact-pool-at-tier`, `pool-migrating`,
+  //    `confidence-gate`) names a real card and keeps #1781's retention.
+  if (refusalReason && IDENTITY_REFUSALS.has(refusalReason)) {
+    return { retained: false, because: "identity-not-priceable" };
+  }
 
   // 1. The kept number faces the SAME floor, against the SAME basis. Not a
   //    second predicate — `costBasisFloor` itself, so the two cannot drift.
@@ -683,7 +769,11 @@ export function noBasisRefusalWrite(
     ?? (typeof (holding as { hobbyiqCardId?: unknown }).hobbyiqCardId === "string"
       ? ((holding as { hobbyiqCardId: string }).hobbyiqCardId).trim() || null
       : null);
-  const verdict = retentionThroughFloor(holding, { pooledAs: refusedPool });
+  // The REASON is passed, so condition 3 can see an identity refusal. Without
+  // it this lane asks only "is the number sound", and $300 on a slug with no
+  // checklist behind it answers yes — which is how 10 of 131 holdings came to
+  // publish a number through their own `no-checklist-match` withhold.
+  const verdict = retentionThroughFloor(holding, { pooledAs: refusedPool }, reason);
   const kept = verdict.retained ? verdict.value : null;
   const retentionClause = verdict.retained
     ? `prior $${round2(kept as number)} retained`
