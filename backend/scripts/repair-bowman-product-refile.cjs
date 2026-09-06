@@ -112,6 +112,7 @@ const backend = path.resolve(__dirname, "..");
 const B = require(path.join(__dirname, "lib", "bowman-product-refile.cjs"));
 const { relocateSoldComp, stripSystem, contentHashOf } = require(path.join(__dirname, "lib", "relocate-sold-comp.cjs"));
 const { runnerShardScope } = require(path.join(__dirname, "lib", "runner-shard-scope.cjs"));
+const { cardShardIndex } = require(path.join(__dirname, "lib", "card-shard-axis.cjs"));
 const { budget, finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
 
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
@@ -174,10 +175,14 @@ async function forEachPage(container, spec, onPage, pageSize = 400) {
   } while (token);
 }
 
+// CF-A-MOVE-LANE-SHARDS-BY-CARD-NOT-BY-ROW (2026-09-05). The unit is the CARD,
+// not the row: a graded child `${parent}:${tier}` starts with the same id stem
+// the scan reads, so hashing the ROW scattered one card's parent, its children
+// and its destination across up to five slots while moveCatalogRow was
+// re-pointing that card's sales and retiring those same children. See
+// lib/card-shard-axis.cjs for the measured interleavings.
 function shardIndex(id) {
-  const crypto = require("crypto");
-  return parseInt(crypto.createHash("sha1").update(String(id ?? "")).digest("hex").slice(0, 8), 16)
-    % Math.max(1, SHARD_SCOPE.SLOTS);
+  return cardShardIndex(id, SHARD_SCOPE.SLOTS);
 }
 
 /** Every row on either key -- the pool reader ORs both fields, so a count that
@@ -206,7 +211,7 @@ async function main() {
     `  MODE            ${APPLY ? "APPLY (writes)" : "REPORT ONLY (no writes)"}`,
     `  SCOPE           ${SCOPE_PRODUCTS.join(", ") || "(none)"}`,
     `  LANES           ${MODE}`,
-    `  SHARD           slot ${SHARD_SCOPE.SLOT} of ${SHARD_SCOPE.SLOTS}${SHARD_SCOPE.sharding ? "" : " (not sharded)"}`,
+    `  SHARD           slot ${SHARD_SCOPE.SLOT} of ${SHARD_SCOPE.SLOTS}${SHARD_SCOPE.SHARDED ? "" : " (not sharded)"}`,
     `  LIMIT           ${LIMIT || "(none)"}`,
     `  CLOCK           ${CLOCK.describe()}`,
     "══════════════════════════════════════════════════════════════════",
@@ -292,7 +297,7 @@ async function main() {
       await forEachPage(cat, spec, async (rows) => {
         for (const row of rows) {
           if (outOfTime()) return false;
-          if (SHARD_SCOPE.sharding && shardIndex(row.id) !== SHARD_SCOPE.SLOT) continue;
+          if (SHARD_SCOPE.SHARDED && shardIndex(row.id) !== SHARD_SCOPE.SLOT) continue;
           report.keyMismatch.scanned++;
           batch.push(row);
           if (LIMIT && report.keyMismatch.scanned >= LIMIT) return false;
@@ -457,7 +462,7 @@ async function main() {
       }, async (rows) => {
         for (const r of rows) {
           if (outOfTime()) return false;
-          if (SHARD_SCOPE.sharding && shardIndex(r.id) !== SHARD_SCOPE.SLOT) continue;
+          if (SHARD_SCOPE.SHARDED && shardIndex(r.id) !== SHARD_SCOPE.SLOT) continue;
           report.pool.scanned++;
           sales.push(r);
           if (LIMIT && report.pool.scanned >= LIMIT) return false;
