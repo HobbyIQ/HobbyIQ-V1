@@ -222,10 +222,18 @@ async function main() {
     salesRepointed: 0, salesRelocated: 0, salesRelocateFailed: 0,
     gradedRetired: 0, holdingsRepointed: 0, holdingDocsWalked: 0, holdingsWalked: 0,
     survivorNotIncumbent: 0, failed: 0, notReached: 0,
+    // CF-A-FOLD-NEVER-CHANGES-THE-PLAYER. The twin and the target name
+    // DIFFERENT PLAYERS and nothing corroborates either, so the fold was
+    // refused and NOTHING was written -- not the catalog row, not one sale.
+    // A SKIP, never a write.
+    refusedDifferentPlayer: 0,
   };
   const byFamily = new Map();  // family -> { groups, twins, unnumbered, differentN, ghost }
   const byKind = { "unnumbered-twin": 0, "respelled-same-print-run": 0, "no-auto-ghost": 0 };
   const samples = [], pinnedSamples = [], rivalSamples = [];
+  /** Every refused pair, in full -- a pair truncated out of the log is a pair
+   *  nobody can settle, and settling them is the whole point of refusing. */
+  const refusals = [];
   const r2Contradictions = [];
   let stopReason = null;
 
@@ -295,6 +303,29 @@ async function main() {
       else if (samples.length < 20) samples.push(line);
 
       try {
+        // CF-A-FOLD-NEVER-CHANGES-THE-PLAYER. ASK FIRST, RELOCATE AFTER.
+        //
+        // A fold whose twin and target name DIFFERENT PLAYERS, with nothing
+        // corroborating either, is REFUSED by moveCatalogRow and writes
+        // nothing. But `relocatePartitionKeyedSales` below runs BEFORE the
+        // move and is a real write (upsert -> read-back -> delete), so asking
+        // afterwards would strand those sales on a target the catalog row
+        // never joined -- the exact "sale pointing at a row that does not
+        // exist" the module's ORDER IS THE INVARIANT header exists to prevent.
+        //
+        // So the refusal is discovered on a DRY RUN first, which reads the
+        // incumbent and runs the whole arbitration without writing. One extra
+        // point read per twin, and only on the folds that actually happen.
+        const probe = await moveCatalogRow(
+          cat, twin, target.id, { printRun: printRunOf(target) },
+          { reason: d.reason, dryRun: true, retry },
+        );
+        if (probe?.action === "refused") {
+          stats.refusedDifferentPlayer++;
+          refusals.push(`  REFUSED ${twin.id} -> ${target.id}: "${probe.refusal?.incomingPlayer}" vs "${probe.refusal?.incumbentPlayer}" -- neither corroborated; NOTHING written`);
+          continue;
+        }
+
         // Sales whose PARTITION KEY is the twin slug cannot be patched in
         // place; they are relocated. Everything else the move re-points.
         const relocated = await relocatePartitionKeyedSales(pool, twin.id, target.id, stats);
@@ -340,6 +371,7 @@ async function main() {
   console.log(`    no-auto ghost            ${f(stats.noAutoGhost)}   <- CPA is auto by definition`);
   console.log(`  left alone: twin is checklist ${f(stats.twinIsChecklist)}  |  is the target ${f(stats.twinIsTarget)}  |  different identity ${f(stats.differentIdentity)}`);
   console.log(`  RIVAL /N (reported, NOT folded) ${f(stats.rivalPrintRun)}   <- a real second print run is a second card; a human rules on these`);
+  console.log(`  REFUSED: different player  ${f(stats.refusedDifferentPlayer)}   <- twin and target name different people and neither is corroborated; NOTHING written`);
   console.log(`  sales re-pointed (patch)   ${f(stats.salesRepointed)}`);
   console.log(`  sales relocated (re-key)   ${f(stats.salesRelocated)}   <- partition key was the twin slug; upsert-verify-delete`);
   console.log(`  sales relocate failed      ${f(stats.salesRelocateFailed)}`);
@@ -373,6 +405,11 @@ async function main() {
     for (const r of rivalSamples) console.log(r);
   }
 
+  if (refusals.length) {
+    console.log(`\n  REFUSED -- different players at one address, neither corroborated (${f(refusals.length)}). Nothing was written for any of these:`);
+    for (const r of refusals) console.log(r);
+  }
+
   if (r2Contradictions.length) {
     console.log(`\n  R2 CONTRADICTION REPORT (read-only -- nothing applied, ${f(r2Contradictions.length)} case(s)):`);
     for (const c of [...new Set(r2Contradictions)]) console.log(c);
@@ -385,9 +422,12 @@ async function main() {
     // never folded into `skipped` -- a slice is not a sibling counter.
     reportWrites({
       job: "fold-checklist-numbered-twins",
-      intended: stats.twinsFolded + stats.noChecklistNumbered + stats.ambiguous + stats.twinIsChecklist + stats.twinIsTarget + stats.differentIdentity + stats.rivalPrintRun + stats.failed,
+      // A REFUSAL IS INTENDED AND SKIPPED. The row was adopted and adjudicated;
+      // the adjudication said "write nothing". Counting it as written would
+      // claim a write that did not happen.
+      intended: stats.twinsFolded + stats.noChecklistNumbered + stats.ambiguous + stats.twinIsChecklist + stats.twinIsTarget + stats.differentIdentity + stats.rivalPrintRun + stats.refusedDifferentPlayer + stats.failed,
       written: stats.twinsFolded,
-      skipped: stats.noChecklistNumbered + stats.ambiguous + stats.twinIsChecklist + stats.twinIsTarget + stats.differentIdentity + stats.rivalPrintRun,
+      skipped: stats.noChecklistNumbered + stats.ambiguous + stats.twinIsChecklist + stats.twinIsTarget + stats.differentIdentity + stats.rivalPrintRun + stats.refusedDifferentPlayer,
       failed: stats.failed,
     });
     console.log(`  written sub-totals (not skipped): un-numbered ${f(stats.unnumberedTwin)} | respelled-same-/N ${f(stats.respelledSamePrintRun)} | ghost ${f(stats.noAutoGhost)}`);

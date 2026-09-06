@@ -52,6 +52,7 @@ import { buildSearchText, buildSearchTokens } from "../portfolioiq/searchIndexin
 import { authorityRank } from "./catalogAuthority.service.js";
 import { canonicalCardName } from "./canonicalCardName.js";
 import { productAncestry } from "./productSetKeys.js";
+import { corroborationOf, type CorroborationRow } from "./sourceCorroboration.js";
 
 /** A catalog row as it comes back from Cosmos: the typed fields plus whatever
  *  else the writer stamped on it. Extra fields travel with the row. */
@@ -62,13 +63,41 @@ export type CatalogRowDoc = CardCatalogEntry & Record<string, unknown>;
 export type CatalogOpsRetry = <T>(fn: () => Promise<T>) => Promise<T>;
 const noRetry: CatalogOpsRetry = (fn) => fn();
 
-export type MoveCatalogRowAction = "move" | "fold" | "replace" | "noop";
+export type MoveCatalogRowAction = "move" | "fold" | "replace" | "noop" | "refused";
+
+/**
+ * The evidence a caller has already gathered about WHO holds a card number,
+ * handed to the survivor rule so it can settle a different-player collision
+ * without doing I/O of its own (CF-DO-NOT-LOOK-TWICE).
+ *
+ * Two arms, and either one is enough:
+ *
+ *   `rivals`  the other catalog rows at this identity cell, for
+ *             `corroborationOf` -- a second STRICT source that names the same
+ *             player is the strongest evidence there is;
+ *   `titlePlayerCounts`  the refereeing the audit already did: for the card
+ *             number under dispute, how many sold_comps titles name each
+ *             player. The market's majority is the second arm.
+ */
+export interface PlayerEvidence {
+  /** Catalog rows at the same identity cell, from either side. Passed straight
+   *  to `corroborationOf`. */
+  rivals?: readonly CorroborationRow[] | null;
+  /** playerName -> number of refereed sale titles at THIS card number. Keys are
+   *  compared by `playerKeyOf`, so punctuation never splits a person. */
+  titlePlayerCounts?: Readonly<Record<string, number>> | null;
+}
 
 export interface MoveCatalogRowOptions {
   /** Stamped on every re-pointed sale (`reslugedReason`) and on the moved row
    *  (`movedReason`). Required: a move with no reason is a move nobody can
    *  audit. */
   reason: string;
+  /** CF-A-FOLD-NEVER-CHANGES-THE-PLAYER. What the caller knows about who holds
+   *  this card number, for the different-player arbitration. Omitted means
+   *  "I gathered nothing", and a different-player collision is then REFUSED --
+   *  never folded on the tiebreak ladder. */
+  playerEvidence?: PlayerEvidence | null;
   /** Also stamp `normalizedSetKey` on re-pointed sales with the survivor's
    *  setKey. Set on setKey renames; leave off for parallel/number moves. */
   repointNormalizedSetKey?: boolean;
@@ -87,15 +116,35 @@ export interface MoveCatalogRowOptions {
 export interface MoveCatalogRowResult {
   /** move: nothing was at newSlug. replace: the incoming row won the
    *  collision. fold: the incumbent won and absorbed the old row. noop:
-   *  newSlug is the row's own id. */
+   *  newSlug is the row's own id. refused: the two rows name DIFFERENT PLAYERS
+   *  and nothing corroborates either -- NOTHING WAS WRITTEN. */
   action: MoveCatalogRowAction;
   newSlug: string;
   salesRepointed: number;
   gradedChildrenRetired: number;
-  /** Whose fields now sit at newSlug. */
+  /** Whose fields now sit at newSlug. `null` on a noop and on a REFUSAL. */
   survivor: "incoming" | "incumbent" | null;
   /** Why -- the "say what you chose" line, in words a script can print. */
   decision: string;
+  /** Set on `action: "refused"` only: the two names the caller must settle,
+   *  so a report can list the pair without re-reading either row. */
+  refusal?: {
+    reason: "different-player-uncorroborated";
+    incomingPlayer: string | null;
+    incumbentPlayer: string | null;
+  };
+  /** Set when a fold or replace was decided by CORROBORATION rather than by
+   *  the tiebreak ladder -- the loser named a different player and lost on
+   *  evidence. The losing row is retired by MARKER, never deleted, and the
+   *  caller stamps it: this names which side lost and why. */
+  playerArbitration?: {
+    winner: "incoming" | "incumbent";
+    /** How the winner was corroborated. */
+    by: "second-source" | "sale-titles";
+    winningPlayer: string | null;
+    losingPlayer: string | null;
+    detail: string;
+  };
 }
 
 export interface RetireCatalogRowOptions {
@@ -451,19 +500,213 @@ function salesCounter(row: CatalogRowDoc): number {
 }
 
 /**
+ * A player name reduced to the letters and digits that identify it, so
+ * "T.J. Hockenson" and "TJ Hockenson" are one person and a punctuation
+ * difference is never a disagreement. The same reduction sourceCorroboration
+ * uses, deliberately: two spellings of one predicate is the bug this repo has
+ * already paid for twice.
+ */
+function playerKeyOf(name: unknown): string {
+  return String(name ?? "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+/**
+ * CF-A-FOLD-NEVER-CHANGES-THE-PLAYER (Drew, 2026-09-05 — the donruss-optic
+ * arbitration).
+ *
+ * THE DEFECT. `chooseSurvivor` ranks source authority, then vendorIds, then
+ * sales, then confidence, then "the incumbent keeps its address". It never
+ * compares `playerName`. So when two transcriptions of one printed checklist
+ * put DIFFERENT PLAYERS at the same (number, parallel), the ladder settles it
+ * on a criterion that has nothing to do with who is on the card — and the
+ * loser's row is ABSORBED, silently, with no marker and no report.
+ *
+ * MEASURED, not hypothesised. football/2024 donruss-optic, read-only
+ * 2026-09-05: of 186 alias->destination twin pairs, 181 (97.3%) name a
+ * different player at a BYTE-IDENTICAL parallel. Both sides classify CHECKLIST
+ * rank 3 (`hobbymonitor` sits in that regex beside `checklistinsider`), so
+ * authority ties, vendorIds tie, sales tie, confidence ties, and all 186 fold
+ * to the incumbent. The incumbent is `hobbymonitor`, and refereed against real
+ * sold_comps titles it is the side the market CONTRADICTS: alias 24 numbers,
+ * dest 5. #1795 found the same source wrong-player-prone in panini-score, with
+ * the polarity flipped — there hobbymonitor was the incoming row.
+ *
+ * That the polarity flips is the whole point. A rule that said "hobbymonitor
+ * loses" would be a rule about one source's position in one dispatch, and it
+ * would have been RIGHT in #1795 and WRONG here. The durable rule is about
+ * EVIDENCE.
+ *
+ * THE RULE. A different-player collision is not a tiebreak. It is a
+ * CONTRADICTION, and contradictions are settled by corroboration or not at all:
+ *
+ *   1. a SECOND STRICT SOURCE at the identity cell that names one side's
+ *      player — this is `corroborationOf` verbatim, the predicate
+ *      sourceCorroboration.ts already owns, and NOT a second rule spelling the
+ *      same question differently (that mistake cost 51 card-number prefixes and
+ *      baseballcardpedia's 918,828 rows, both recorded in catalogAuthority's
+ *      header);
+ *   2. failing that, the SALE TITLES' majority at that card number — the
+ *      refereeing the audit already did, handed in rather than re-derived.
+ *
+ * A row whose player a second source CONTRADICTS loses, whichever side of the
+ * move it is on. `corroborationOf` returns `player-disagrees` for exactly that,
+ * and `checklistBacked: false` with it.
+ *
+ * WHEN NEITHER SIDE IS CORROBORATED, REFUSE BY NAME. Not "keep the incumbent",
+ * which is the defect; not "prefer the newer scrape", which is a coin toss
+ * wearing a reason. The pair is reported with both names and NOTHING IS
+ * WRITTEN — no upsert, no sale re-pointed, no graded child retired, no delete.
+ * CF-ABSENT-BEATS-WRONG: an unmoved row is a row a human can still adjudicate;
+ * a folded one has already lost its rival's fields.
+ *
+ * A CONTRADICTION DISQUALIFIES THE ROW, NOT THE CARD (Drew). The losing copy is
+ * retired by MARKER and never deleted — `moveCatalogRow`'s existing order does
+ * that already for the fold case (the loser's sales are re-pointed to the
+ * survivor before its row goes), and `playerArbitration` on the result names
+ * the loser so the caller can stamp it and a reader can find it later.
+ *
+ * WHY THIS LIVES IN chooseSurvivor AND NOT IN THE SCRIPT. `RETIRE_UNTWINNED`
+ * guards the MOVE branch in rekey-product-setkey and NOTHING guards FOLD, in
+ * that script or any other caller of this module. Putting the guard in the one
+ * shape every catalog move goes through is the same reasoning that produced
+ * this module: fifteen copies of one operation had four defects spread between
+ * them, and a guard in one copy is a guard in one copy.
+ *
+ * ONE SIDE MISSING A NAME IS NOT A DISAGREEMENT. bccp carries `playerName:
+ * null` on most rows; requiring a name match against a row that has none would
+ * manufacture a contradiction out of a blank field. Both sides must name
+ * someone for the arm to fire at all — the same "both carry one" clause
+ * sourceCorroboration's header states.
+ *
+ * AN AUTHORITY GAP IS ALREADY AN ANSWER, and it is checked BEFORE this runs.
+ * The conflict this rule exists for is two rows of the SAME class contradicting
+ * each other — two transcriptions of one printed line, which is why nothing on
+ * the ladder could separate them. When the classes differ, catalogAuthority has
+ * already ruled that "a derived row must never outvote a checklist", and a
+ * derived row's guess at a player name is not evidence against a checklist's:
+ * `ingest-auto-seed` naming "Aaron Judge (seed)" against a Beckett row's "Aaron
+ * Judge" is a seed artefact, not a rival numbering, and refusing it would strand
+ * every such pair for a human to read one at a time. So the caller checks rank
+ * first and only asks this question inside one authority class.
+ */
+function arbitratePlayer(
+  incoming: CatalogRowDoc,
+  incumbent: CatalogRowDoc,
+  evidence: PlayerEvidence | null | undefined,
+):
+  | { kind: "not-a-conflict" }
+  | { kind: "decided"; survivor: "incoming" | "incumbent"; decision: string; arbitration: NonNullable<MoveCatalogRowResult["playerArbitration"]> }
+  | { kind: "refuse"; decision: string; refusal: NonNullable<MoveCatalogRowResult["refusal"]> } {
+  const nameIn = incoming.playerName ? String(incoming.playerName).trim() : "";
+  const nameInc = incumbent.playerName ? String(incumbent.playerName).trim() : "";
+  const keyIn = playerKeyOf(nameIn);
+  const keyInc = playerKeyOf(nameInc);
+  // Both sides must name someone, and they must differ, for this to be the
+  // conflict the rule is about. Everything else is the ordinary ladder.
+  if (!keyIn || !keyInc || keyIn === keyInc) return { kind: "not-a-conflict" };
+
+  const rivals = evidence?.rivals ?? null;
+
+  // ARM 1 -- a second strict source at the identity cell. `corroborationOf` is
+  // asked about each side in turn, and its `player-disagrees` verdict is a
+  // contradiction that DISQUALIFIES that copy.
+  const corrIn = corroborationOf(incoming as CorroborationRow, rivals);
+  const corrInc = corroborationOf(incumbent as CorroborationRow, rivals);
+  const inCorroborated = corrIn.verdict === "corroborated";
+  const incCorroborated = corrInc.verdict === "corroborated";
+  const inContradicted = corrIn.verdict === "player-disagrees";
+  const incContradicted = corrInc.verdict === "player-disagrees";
+
+  if (inCorroborated !== incCorroborated || inContradicted !== incContradicted) {
+    // A side wins arm 1 when it is corroborated and the other is not, or when
+    // the other is CONTRADICTED and it is not. Both readings point the same way
+    // and are checked together so a corroborated-vs-contradicted pair is not
+    // decided twice.
+    const inWins = (inCorroborated && !incCorroborated) || (incContradicted && !inContradicted);
+    const incWins = (incCorroborated && !inCorroborated) || (inContradicted && !incContradicted);
+    if (inWins !== incWins) {
+      const survivor = inWins ? "incoming" : "incumbent";
+      const winName = inWins ? nameIn : nameInc;
+      const loseName = inWins ? nameInc : nameIn;
+      const winCorr = inWins ? corrIn : corrInc;
+      const loseCorr = inWins ? corrInc : corrIn;
+      const detail = winCorr.verdict === "corroborated"
+        ? `a second strict source (${winCorr.corroboratedBy ?? "?"}) names "${winName}" at this cell`
+        : `the rival copy is CONTRADICTED at this cell by ${loseCorr.contradictedBy ?? "a second strict source"}`;
+      return {
+        kind: "decided",
+        survivor,
+        decision: `different players at one address: ${detail}; "${loseName}" loses -- CF-A-FOLD-NEVER-CHANGES-THE-PLAYER`,
+        arbitration: { winner: survivor, by: "second-source", winningPlayer: winName, losingPlayer: loseName, detail },
+      };
+    }
+  }
+
+  // ARM 2 -- the sale titles' majority at this card number. The audit already
+  // counted them; this reads its tally rather than re-deriving one.
+  const counts = evidence?.titlePlayerCounts ?? null;
+  if (counts) {
+    let nIn = 0;
+    let nInc = 0;
+    for (const [name, n] of Object.entries(counts)) {
+      const k = playerKeyOf(name);
+      const v = Number(n) || 0;
+      if (k === keyIn) nIn += v;
+      else if (k === keyInc) nInc += v;
+    }
+    if (nIn !== nInc && (nIn > 0 || nInc > 0)) {
+      const inWins = nIn > nInc;
+      const survivor = inWins ? "incoming" : "incumbent";
+      const winName = inWins ? nameIn : nameInc;
+      const loseName = inWins ? nameInc : nameIn;
+      const winN = inWins ? nIn : nInc;
+      const loseN = inWins ? nInc : nIn;
+      const detail = `the market names "${winName}" at this number in ${winN} refereed sale titles vs ${loseN} for "${loseName}"`;
+      return {
+        kind: "decided",
+        survivor,
+        decision: `different players at one address: ${detail} -- CF-A-FOLD-NEVER-CHANGES-THE-PLAYER`,
+        arbitration: { winner: survivor, by: "sale-titles", winningPlayer: winName, losingPlayer: loseName, detail },
+      };
+    }
+  }
+
+  // NEITHER SIDE IS CORROBORATED. Refuse, by name.
+  return {
+    kind: "refuse",
+    decision:
+      `REFUSED: "${nameIn}" (incoming) and "${nameInc}" (incumbent) are different players at one address and ` +
+      `neither is corroborated by a second strict source or by the sale titles -- nothing written ` +
+      `(CF-A-FOLD-NEVER-CHANGES-THE-PLAYER)`,
+    refusal: { reason: "different-player-uncorroborated", incomingPlayer: nameIn || null, incumbentPlayer: nameInc || null },
+  };
+}
+
+/**
  * Who keeps the address when a row already sits at newSlug.
  *
- * Authority first, and it is decisive: the incoming row NEVER loses to a
+ * AUTHORITY FIRST, and it is decisive: the incoming row NEVER loses to a
  * lower-authority incumbent, and never beats a higher one. catalogAuthority
  * says a derived row "must never outvote a checklist"; the `if (!existing)`
- * scripts let it, every time. Within a class: more vendorIds, then more
- * observed sales, then confidence, then the incumbent keeps its address --
+ * scripts let it, every time.
+ *
+ * THEN THE PLAYER, and it is not a tiebreak: two rows OF THE SAME CLASS naming
+ * different people at one address are contradicting each other about what card
+ * this is, and `arbitratePlayer` settles that by corroboration or refuses it
+ * outright. That is the fix — see its header. Only once the two rows agree
+ * about WHO is on the card do the remaining rungs mean anything.
+ *
+ * Then, within a class and once the player is settled: more vendorIds, then
+ * more observed sales, then confidence, then the incumbent keeps its address --
  * it is already at the canonical slug and rewriting it gains nothing.
  */
 function chooseSurvivor(
   incoming: CatalogRowDoc,
   incumbent: CatalogRowDoc,
-): { survivor: "incoming" | "incumbent"; decision: string } {
+  evidence?: PlayerEvidence | null,
+):
+  | { survivor: "incoming" | "incumbent"; decision: string; arbitration?: NonNullable<MoveCatalogRowResult["playerArbitration"]> }
+  | { survivor: null; decision: string; refusal: NonNullable<MoveCatalogRowResult["refusal"]> } {
   const rankIn = authorityRank(incoming.source);
   const rankInc = authorityRank(incumbent.source);
   const tag = (row: CatalogRowDoc, rank: number) => `${String(row.source ?? "?")} (rank ${rank})`;
@@ -471,6 +714,12 @@ function chooseSurvivor(
     return rankIn > rankInc
       ? { survivor: "incoming", decision: `authority: incoming ${tag(incoming, rankIn)} outranks incumbent ${tag(incumbent, rankInc)}` }
       : { survivor: "incumbent", decision: `authority: incumbent ${tag(incumbent, rankInc)} outranks incoming ${tag(incoming, rankIn)}` };
+  }
+  // SAME CLASS. Now a different player is a contradiction, not a tiebreak.
+  const player = arbitratePlayer(incoming, incumbent, evidence);
+  if (player.kind === "refuse") return { survivor: null, decision: player.decision, refusal: player.refusal };
+  if (player.kind === "decided") {
+    return { survivor: player.survivor, decision: player.decision, arbitration: player.arbitration };
   }
   const vIn = Object.keys(incoming.vendorIds ?? {}).length;
   const vInc = Object.keys(incumbent.vendorIds ?? {}).length;
@@ -631,6 +880,7 @@ export async function moveCatalogRow(
   let survivor: "incoming" | "incumbent";
   let decision: string;
   let doc: CatalogRowDoc;
+  let playerArbitration: MoveCatalogRowResult["playerArbitration"];
   const stamp = rehome
     ? { rehomedFrom: oldPk, rehomedReason: reason, rehomedAt: now }
     : { movedFrom: oldId, movedReason: reason, movedAt: now };
@@ -640,9 +890,25 @@ export async function moveCatalogRow(
     decision = `no row at ${newSlug}`;
     doc = { ...incoming, ...stamp, observedAt: earliest(oldRow.observedAt) ?? now, lastSeenAt: now };
   } else {
-    const choice = chooseSurvivor(incoming, incumbent);
+    const choice = chooseSurvivor(incoming, incumbent, opts.playerEvidence);
+    // CF-A-FOLD-NEVER-CHANGES-THE-PLAYER. A refusal returns BEFORE the first
+    // write. Nothing is upserted, no sale is re-pointed, no graded child is
+    // retired and the old row is not deleted: both copies stay exactly where
+    // they are, and the pair is reported by name for a human to settle.
+    if (choice.survivor === null) {
+      return {
+        action: "refused",
+        newSlug,
+        salesRepointed: 0,
+        gradedChildrenRetired: 0,
+        survivor: null,
+        decision: `${choice.decision}  [${oldId} vs ${newSlug}]`,
+        refusal: choice.refusal,
+      };
+    }
     survivor = choice.survivor;
     decision = choice.decision;
+    playerArbitration = choice.arbitration;
     // observedAt / firstSeenAt: the card was first seen when EITHER row first
     // saw it. vendorIds: a union, the survivor's value winning a key clash.
     const observedAt = earliest(oldRow.observedAt, incumbent.observedAt) ?? now;
@@ -666,6 +932,21 @@ export async function moveCatalogRow(
         observedAt,
         ...(firstSeenAt ? { firstSeenAt } : {}),
         lastSeenAt: now,
+      };
+    }
+    // CF-A-CONTRADICTION-DISQUALIFIES-THE-ROW-NOT-THE-CARD. When the two copies
+    // named different players, the loser is not merely absorbed: the survivor
+    // records WHO it beat and on what evidence, so a reader who later doubts
+    // the call can find the discarded name without a diff of a deleted row.
+    // A MARKER, never a delete of the card: the surviving row is the card.
+    if (playerArbitration) {
+      doc = {
+        ...doc,
+        playerArbitratedAt: now,
+        playerArbitratedBy: playerArbitration.by,
+        playerArbitrationDetail: playerArbitration.detail,
+        supersededPlayerName: playerArbitration.losingPlayer,
+        supersededReason: `different-player collision at ${newSlug}: ${reason}`,
       };
     }
   }
@@ -718,7 +999,7 @@ export async function moveCatalogRow(
   // 4. The old row, last -- on a rehome, the copy in the foreign partition.
   if (!dryRun) await deleteTolerant(container, oldId, oldPk, retry);
 
-  return { action, newSlug, salesRepointed, gradedChildrenRetired, survivor, decision };
+  return { action, newSlug, salesRepointed, gradedChildrenRetired, survivor, decision, ...(playerArbitration ? { playerArbitration } : {}) };
 }
 
 /**
