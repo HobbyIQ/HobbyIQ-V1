@@ -1022,6 +1022,197 @@ function evaluateThreshold(id, { breaches, sample }) {
   };
 }
 
+
+// ── THE I9 SAMPLING FRAME (#1872) ───────────────────────────────────────────
+/**
+ * CF-A-FRAME-IS-PART-OF-THE-FINDING (2026-09-06).
+ *
+ * I9's frame was `OFFSET floor((nowMs/86400000) % 50) * 500 LIMIT 2000` over
+ * `sold_comps`, and its own comment called that "A RANDOM sample, not a recent
+ * one". It was neither. Measured on the 2026-09-06 artifact (run 34018932244):
+ *
+ *   - 50 offsets x 500 = the frame could never reach a row past index 26,500
+ *     of ~16.7M. That is 0.16% of the corpus, and the same 26.5k rows every
+ *     50 days.
+ *   - Cosmos has no ORDER BY here, so `OFFSET` walks PAGE order, which is
+ *     partition order, which is cardId order. Neighbouring rows are the same
+ *     card.
+ *   - The result: 2,000 sampled rows returned ZERO AGREE and ZERO IMPROVE,
+ *     against 47.1% AGREE / 2.2% IMPROVE on slot 31's real full-slot census
+ *     (509,224 rows, 2026-09-06 02:46Z). A frame that cannot see the majority
+ *     class is not measuring the corpus.
+ *   - The 25 retained TRUE-DISAGREEMENT rows collapsed onto ~6 cardIds (one
+ *     card contributed 8), and all 25 NEEDS-CHECKLIST rows were ch-daily sales
+ *     from July 2020 alone.
+ *
+ * This is the SAME defect rematch-sold-comps.cjs fixed in its own audit sample
+ * (audit finding 7: slot 27's 30-row sample was 23 lines from one card), and it
+ * is fixed the same way: spread the draw across the corpus, and cap per card.
+ *
+ * THE FRAME, in three parts:
+ *
+ *   1. SPREAD ACROSS THE SHARD TABLE. backend/data/rematch-shard-table.json is
+ *      the MEASURED packing of the pool -- 16,336,296 rows in 32 slots at a
+ *      1.07x spread, by (cardYear, sportClass). Drawing N rows from each of the
+ *      32 slots reaches every year and every sport class, because the table's
+ *      units ARE the corpus's shape. Each slot's draw takes its own random
+ *      offset inside that slot's measured row count, so the window moves.
+ *   2. SEEDED BY THE DAY. The offsets come from a seeded PRNG keyed on the UTC
+ *      day, so a run is REPRODUCIBLE -- two runs on the same day read the same
+ *      rows and a delta between them is a corpus change, never a frame change
+ *      -- while consecutive days sweep different windows.
+ *   3. ONE RESERVOIR PER cardId. At most `perCardCap` rows from any one card
+ *      reach the sample, so a hot pool cannot crowd out the corpus.
+ *
+ * RU COST IS BOUNDED BY CONSTRUCTION -- AND THE SKIP IS THE COST.
+ *
+ * The obvious spelling of "start somewhere random inside this slot" is a large
+ * OFFSET, and it is the wrong one: Cosmos CHARGES for every document an OFFSET
+ * skips. Measured on this table, per-slot offsets sum to ~5.5M skipped rows,
+ * which is ~2.2M RU a night to return 2,016 documents. That is a frame that
+ * costs more than the audit it feeds.
+ *
+ * So the draw SEEKS instead of skipping. `soldAt` is indexed and carries a
+ * composite index with `sport` and with `cardYear`, so a
+ * `c.soldAt >= @from ORDER BY c.soldAt` window is an INDEX SEEK: Cosmos pays
+ * for the rows it returns, not for the rows it passed over. The seed picks the
+ * WINDOW START across the pool's real date span rather than an ordinal
+ * position, which gives the same "move the window every day" property at a
+ * fraction of the cost.
+ *
+ * Every query is therefore: a year (and usually a sport) equality, a soldAt
+ * lower bound, and a TOP. Never a cross-partition COUNT, never an OFFSET, never
+ * an unbounded scan. 32 queries x ~63 rows is ~2,016 documents per run.
+ */
+
+/** The pool's sale-date span the frame seeks within. `sold_comps` holds ~8
+ *  years of CardHedge history plus current ingest; the window start is drawn
+ *  inside this range and the query takes the first N sales at or after it. */
+const FRAME_SEEK_FROM_MS = Date.parse("2018-01-01T00:00:00Z");
+
+/** A tiny deterministic PRNG (mulberry32). Same seed, same sequence. */
+function seededRandom(seed) {
+  let a = seed >>> 0;
+  return function next() {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/** The UTC day number -- the reproducibility key. */
+const utcDayOf = (nowMs) => Math.floor(Number(nowMs) / 86400000);
+
+/**
+ * The per-slot draw plan for one day. Pure: it takes the shard table and the
+ * clock and returns what to query, so a test can assert the frame without a
+ * database.
+ *
+ * Returns one entry per slot: the unit to read, the offset inside it, and how
+ * many rows to take.
+ */
+function buildSampleFrame({ shardTable, nowMs, target = 2000, perCardCap = 4 }) {
+  const slots = Array.isArray(shardTable?.slots) ? shardTable.slots : [];
+  if (!slots.length) return { plan: [], perSlot: 0, day: utcDayOf(nowMs), perCardCap, totalRows: 0 };
+  const perSlot = Math.max(1, Math.ceil(Number(target) / slots.length));
+  const day = utcDayOf(nowMs);
+  // Midnight UTC at the END of the seeded day: the seek span is the same for
+  // every run on that day, so two runs read the same window.
+  const dayEndMs = (day + 1) * 86400000;
+  const plan = [];
+  for (const slot of slots) {
+    const units = Array.isArray(slot.units) ? slot.units : [];
+    if (!units.length) continue;
+    // The BIGGEST unit in the slot carries the draw: it is the one whose row
+    // count can absorb a large offset, and the table packs slots so that unit
+    // is a real share of the corpus rather than a tail.
+    const unit = units.slice().sort((a, b) => Number(b.rows ?? 0) - Number(a.rows ?? 0))[0];
+    const rows = Math.max(0, Number(unit.rows ?? 0));
+    const rnd = seededRandom((day * 1000003) ^ (Number(slot.slot) * 7919));
+    // SEEK, DO NOT SKIP. The seed chooses a point in the pool's sale-date span
+    // and the query takes the first `perSlot` sales at or after it, which the
+    // soldAt index answers without charging for what it passed over.
+    // THE SPAN IS ANCHORED TO THE DAY, NOT THE CLOCK. Using `nowMs` raw made
+    // the window drift between two runs on the SAME day, which is exactly the
+    // reproducibility this frame promises -- caught by the pin.
+    const spanMs = Math.max(1, dayEndMs - FRAME_SEEK_FROM_MS);
+    const seekFrom = new Date(FRAME_SEEK_FROM_MS + Math.floor(rnd() * spanMs)).toISOString();
+    plan.push({ slot: Number(slot.slot), unit, seekFrom, take: perSlot, unitRows: rows });
+  }
+  return { plan, perSlot, day, perCardCap, totalRows: plan.length * perSlot };
+}
+
+/**
+ * The per-cardId reservoir. Feed rows in; it keeps at most `perCardCap` from
+ * any one card and reports what it dropped, so the banner can say the cap bit.
+ */
+function makeCardReservoir(perCardCap = 4) {
+  const perCard = new Map();
+  const kept = [];
+  let dropped = 0;
+  return {
+    offer(row) {
+      const key = str(row?.cardId) || str(row?.hobbyiqCardId) || `__${kept.length}`;
+      const n = perCard.get(key) ?? 0;
+      if (n >= perCardCap) { dropped++; return false; }
+      perCard.set(key, n + 1);
+      kept.push(row);
+      return true;
+    },
+    rows: () => kept,
+    distinctCards: () => perCard.size,
+    droppedToCap: () => dropped,
+  };
+}
+
+/**
+ * The CENSUS shares the frame is measured against -- slot 31's real full-slot
+ * classification, 509,224 rows, 2026-09-06 02:46Z (run 34007001399). These are
+ * the numbers a healthy frame should roughly reproduce; a sample that does not
+ * is reporting on itself.
+ */
+const CENSUS_REFERENCE_SHARES = Object.freeze({
+  source: "rematch census slot 31/32, 509,224 rows, 2026-09-06 (run 34007001399)",
+  AGREE: 0.471, IMPROVE: 0.022, CONFLICT: 0.206, UNDERIVABLE: 0.043,
+});
+
+/** Below this many distinct cards, the sample is a pool and not a corpus. */
+const FRAME_MIN_DISTINCT_CARDS = 100;
+
+/**
+ * FRAME HEALTH -- is this sample about the corpus, or about itself?
+ *
+ * Two hard flags, both learned from the 2026-09-06 artifact:
+ *   zero-AGREE          the corpus is ~47% AGREE. A sample with none of it
+ *                       cannot be a sample of the corpus.
+ *   too-few-cards       fewer than 100 distinct cards means one pool's rows
+ *                       are standing in for 16.7M.
+ * Plus a per-class drift note against the census reference, which is a NOTE and
+ * never a breach: the corpus legitimately moves, and this line exists so the
+ * movement is visible rather than assumed.
+ */
+function frameHealth({ byClass = {}, distinctCards = 0, sampled = 0, reference = CENSUS_REFERENCE_SHARES }) {
+  const flags = [];
+  const total = Number(sampled) || Object.values(byClass).reduce((a, b) => a + Number(b || 0), 0);
+  const agree = Number(byClass.AGREE ?? 0);
+  if (total > 0 && agree === 0) {
+    flags.push(`zero-AGREE: 0 of ${total} sampled rows AGREE, against a census share of `
+      + `${(reference.AGREE * 100).toFixed(1)}% -- the frame is not reaching the corpus`);
+  }
+  if (total > 0 && Number(distinctCards) < FRAME_MIN_DISTINCT_CARDS) {
+    flags.push(`too-few-cards: ${distinctCards} distinct card(s) across ${total} sampled rows `
+      + `(floor ${FRAME_MIN_DISTINCT_CARDS}) -- one pool is standing in for the corpus`);
+  }
+  const drift = {};
+  for (const k of ["AGREE", "IMPROVE", "CONFLICT", "UNDERIVABLE"]) {
+    const got = total > 0 ? Number(byClass[k] ?? 0) / total : 0;
+    drift[k] = { sampled: got, census: reference[k] ?? null, delta: got - (reference[k] ?? 0) };
+  }
+  return { healthy: flags.length === 0, flags, drift, distinctCards: Number(distinctCards), sampled: total };
+}
+
 module.exports = {
   INVARIANTS, INVARIANT_BY_ID,
   loadSetKeyFieldInvariant, loadIdentityBacking,
@@ -1044,6 +1235,9 @@ module.exports = {
   // I9
   classifyStoredRow, rederivationRates, BREACHING_CLASSES,
   conflictKind, axisSignature, reasonCodes, NEEDS_CHECKLIST_REASON,
+  // I9 sampling frame (#1872)
+  buildSampleFrame, makeCardReservoir, frameHealth, seededRandom, utcDayOf,
+  CENSUS_REFERENCE_SHARES, FRAME_MIN_DISTINCT_CARDS,
   // I10
   checkPricedOnUnbackedIdentity,
   // thresholds
