@@ -316,6 +316,117 @@ describe("I6 POOL-IDENTITY-COHERENCE", () => {
     }, CLASSIFY)).toEqual([]);
   });
 
+  // ── the two FALSE POSITIVES this check reported on run 34018932244 ────────
+  //
+  // The 2026-09-06 corpus artifact reported 24 I6 rows. Triage found 8 of the
+  // 23 distinct sales were THIS CHECK'S OWN defects, not mislabelled sales.
+  // Every title and slug below is copied verbatim from that artifact.
+
+  it("PLURAL: 'Refractors' in the title does not contradict `orange-refractor`", () => {
+    // FINISH_TOKENS carries `refractor` AND `refractors` as separate members,
+    // so the plural title word matched nothing in a naively split slug and the
+    // sale was reported as filed against a finish it states one `s` away.
+    expect(INV.checkPoolIdentityCoherence({
+      id: "tca-ebay::298263273820",
+      cardId: "hiq:football:2014:topps-chrome:30:orange-refractor:no-auto",
+      title: "2014 Topps Chrome #30 Troy Polamalu Orange Refractors",
+      parallel: "Orange Refractor",
+    }, CLASSIFY)).toEqual([]);
+  });
+
+  it("PLURAL: 'Prizms' does not contradict `silver-prizm`", () => {
+    expect(INV.checkPoolIdentityCoherence({
+      id: "tca-ebay::266507158191",
+      cardId: "hiq:basketball:2012:panini-prizm:203:silver-prizm:no-auto",
+      title: "Klay Thompson 2012-13 Panini Prizm #203 Silver Prizms Rookie Card RC BGS 9.5 GEM",
+      parallel: "Silver Prizm",
+    }, CLASSIFY)).toEqual([]);
+  });
+
+  it("HYPHEN: `light-blue-die-cut-prizm` is not lacking die-cut — it spells it", () => {
+    // The title word is one token (`die-cut`); the slug is split on every
+    // non-alphanumeric, so it became [light, blue, die, cut, prizm] and the
+    // hyphenated form matched none of them. The check reported a slug segment
+    // as lacking a word printed inside it.
+    expect(INV.checkPoolIdentityCoherence({
+      id: "tca-ebay::198604410404",
+      cardId: "hiq:basketball:2013:panini-prizm:241:light-blue-die-cut-prizm:no-auto:num-199",
+      title: "2013-14 Panini Prizm Karl Malone #241 Light Blue Die-Cut Prizm 075/199 HOF",
+      parallel: "Light Blue Die-Cut Prizm",
+    }, CLASSIFY)).toEqual([]);
+  });
+
+  it("HYPHEN: `gold-x-fractor` and `blue-x-fractor` are not lacking x-fractor", () => {
+    // The same defect on the pair that made `237048906564` the artifact's
+    // duplicated row.
+    expect(INV.checkPoolIdentityCoherence({
+      id: "tca-ebay::237048906564",
+      cardId: "hiq:baseball:2003:topps-finest:27:gold-x-fractor:no-auto",
+      title: "2003 Topps Finest - Magglio Ordonez #27 Gold X-Fractor /199 (Z)",
+      parallel: "Gold X-Fractor",
+    }, CLASSIFY)).toEqual([]);
+    expect(INV.checkPoolIdentityCoherence({
+      id: "tca-ebay::257665984700",
+      cardId: "hiq:mma:2012:topps-finest:fm-dc:blue-x-fractor:no-auto:num-188",
+      title: "2012 Topps Finest UFC Moments Blue X-Fractor /188 Daniel Cormier #FM-DC 1o4y",
+      parallel: "Blue X-Fractor",
+    }, CLASSIFY)).toEqual([]);
+  });
+
+  it("MUTATION: without singularising, the plural rows go red again", () => {
+    // Reverting `singularise` to identity restores false positive (1). The
+    // assertion is on the MECHANISM rather than the check, so the pin names
+    // what a reverter would have to break.
+    expect(INV.singularise("refractors")).toBe("refractor");
+    expect(INV.singularise("prizms")).toBe("prizm");
+    // ...and it is deliberately conservative: no 3-letter word is touched, and
+    // `-es` only collapses after a sibilant, so ordinary finish words survive.
+    expect(INV.singularise("ice")).toBe("ice");
+    expect(INV.singularise("gold")).toBe("gold");
+    expect(INV.singularise("finest")).toBe("finest");
+  });
+
+  it("MUTATION: without the joined-pair index, the hyphenated rows go red again", () => {
+    // Reverting `buildSlugFinishIndex` to a bare split restores false positive
+    // (2): `diecut` and `xfractor` are exactly the forms a naive split loses.
+    const idx = INV.buildSlugFinishIndex(
+      "hiq:basketball:2013:panini-prizm:241:light-blue-die-cut-prizm:no-auto:num-199",
+    );
+    expect(idx.has("diecut"), "adjacent parts die+cut must be joined").toBe(true);
+    expect(idx.has("die")).toBe(true);
+    expect(idx.has("cut")).toBe(true);
+    const idx2 = INV.buildSlugFinishIndex("hiq:baseball:2003:topps-finest:27:gold-x-fractor:no-auto");
+    expect(idx2.has("xfractor"), "adjacent parts x+fractor must be joined").toBe(true);
+  });
+
+  it("EVERY TRUE POSITIVE STILL FIRES — the fix widens the slug, never the silence", () => {
+    // The whole risk of this repair is silencing a real finding. These are the
+    // genuine breaches from the same artifact, one per class that triage kept:
+    // a sport misfile, a finish genuinely absent, and a product misfile.
+    const stillFlagged = [
+      // sport misfile: Bowman University is a FOOTBALL product filed in baseball
+      ["tca-ebay::167964411848", "hiq:baseball:2021:bowman:62:gold-refractor:no-auto:num-50",
+        "2021-22 Bowman University #62 Devin Lloyd Chrome Gold #/50", "Gold Refractor"],
+      // finish genuinely absent: `reactive` appears nowhere in the slug
+      ["tca-ebay::366640883026", "hiq:football:2020:panini-mosaic:204:orange-prizm:no-auto",
+        "2020 Panini Mosaic Reactive Orange Prizm RC Justin Herbert #204 PSA 10", "Orange Prizm"],
+      ["tca-ebay::267770782687", "hiq:basketball:2019:panini-mosaic:229:blue-prizm:no-auto",
+        "Panini 2019-20 Mosaic Rookies #229 RJ Barrett Reactive Blue Prizm PSA 10 Knicks", "Blue Prizm"],
+      // product misfile: `diamond` (Diamond Kings) is absent from the slug
+      ["tca-ebay::800583231998", "hiq:baseball:2018:donruss-optic:14:purple-prizm:no-auto",
+        "2018 Panini Donruss Optic - Diamond Kings Clayton Kershaw #14 Purple Prizm", "Purple Prizm"],
+      // die-cut genuinely absent: the slug says `blue-prizm` and nothing more
+      ["tca-ebay::168665916030", "hiq:football:2020:panini-select:246:blue-prizm:no-auto:num-75",
+        "2020 Panini Select - Club Level Joe Burrow #246 Blue Prizm Die-Cut (RC)", "Blue Prizm"],
+    ] as const;
+    for (const [id, cardId, title, parallel] of stillFlagged) {
+      const v = INV.checkPoolIdentityCoherence({ id, cardId, title, parallel }, CLASSIFY);
+      expect(v, `${id} must still breach`).toHaveLength(1);
+      expect(v[0].kind).toBe("title-states-finish-slug-lacks");
+      expect(v[0].unstatedFinish.length).toBeGreaterThan(0);
+    }
+  });
+
   it("the per-pool RATE is what the digest reports, sorted worst first", () => {
     const rates = INV.poolCollisionRates(
       [
@@ -840,6 +951,70 @@ describe("findings carry the ids a repair lane needs, without re-querying", () =
     ), { userId: "u1", holdingId: "h" });
     expect(res.rows[0].backing).toBe("no-catalog-row");
     expect(res.rows[0].shown).toBe(425);
+  });
+
+  // ── ONE SALE, ONE ARTIFACT ROW ────────────────────────────────────────────
+
+  it("the SAME sale breaching the SAME invariant at the SAME pool is listed ONCE", () => {
+    // Run 34018932244 reported 24 I6 rows that were 23 distinct sales:
+    // tca-ebay::237048906564 appeared twice, byte-identical, because the
+    // sampling query does not deduplicate and the sale is resident twice.
+    // A reader counts two defects and a triager writes two list entries for
+    // one card.
+    const res = lane.makeResult("I6");
+    const finding = [{
+      kind: "title-states-finish-slug-lacks",
+      detail: "d",
+      id: "tca-ebay::237048906564",
+      pool: "hiq:baseball:2003:topps-finest:27:gold-x-fractor:no-auto",
+      unstatedFinish: ["x-fractor"],
+    }];
+    const ref = {
+      id: "tca-ebay::237048906564",
+      slug: "hiq:baseball:2003:topps-finest:27:gold-x-fractor:no-auto",
+      title: "2003 Topps Finest - Magglio Ordonez #27 Gold X-Fractor /199 (Z)",
+    };
+    lane.record(res, finding, ref);
+    lane.record(res, finding, ref);
+    expect(res.rows).toHaveLength(1);
+    // `breaches` still counts BOTH — the dedupe bounds what the artifact
+    // carries, it does not revise the corpus's breach count.
+    expect(res.breaches).toBe(2);
+    expect(res.byKind["title-states-finish-slug-lacks"]).toBe(2);
+  });
+
+  it("but I5's two ADDRESSES for one sale are still two distinct rows", () => {
+    // The dedupe key is (kind, id, pool), never id alone: I5 exists precisely
+    // BECAUSE one sale can be resident under two partition keys, and collapsing
+    // those would blind the audit to its own finding.
+    const res = lane.makeResult("I6");
+    const mk = (pool: string) => [{
+      kind: "title-states-finish-slug-lacks", detail: "d", id: "tca-ebay::1", pool,
+    }];
+    lane.record(res, mk("hiq:baseball:2025:bowman:1:base:no-auto"),
+      { id: "tca-ebay::1", slug: "hiq:baseball:2025:bowman:1:base:no-auto" });
+    lane.record(res, mk("hiq:baseball:2025:topps:1:base:no-auto"),
+      { id: "tca-ebay::1", slug: "hiq:baseball:2025:topps:1:base:no-auto" });
+    expect(res.rows).toHaveLength(2);
+  });
+
+  it("and one sale breaching TWO invariants is not collapsed either", () => {
+    const res = lane.makeResult("I6");
+    lane.record(res, [{ kind: "kind-a", detail: "d", id: "tca-ebay::1", pool: "p" }],
+      { id: "tca-ebay::1", slug: "p" });
+    lane.record(res, [{ kind: "kind-b", detail: "d", id: "tca-ebay::1", pool: "p" }],
+      { id: "tca-ebay::1", slug: "p" });
+    expect(res.rows).toHaveLength(2);
+  });
+
+  it("the dedupe bookkeeping never reaches the artifact JSON", () => {
+    // The whole result object is JSON.stringify'd into the artifact, so a
+    // plain `res.rowKeys = new Set()` would serialise as a mystery
+    // `"rowKeys": {}` on every invariant.
+    const res = lane.makeResult("I6");
+    lane.record(res, [{ kind: "k", detail: "d", id: "s1", pool: "p" }], { id: "s1", slug: "p" });
+    expect(Object.keys(res)).not.toContain("rowKeys");
+    expect(JSON.stringify(res)).not.toContain("rowKeys");
   });
 
   it("the digest prints FULL ids and the partition key, never an 8-char prefix", () => {
