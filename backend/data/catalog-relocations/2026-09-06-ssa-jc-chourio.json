@@ -1,0 +1,59 @@
+{
+ "generatedAt": "2026-09-06T13:55:00Z",
+ "forLane": "relocate-catalog-rows-by-list",
+ "reportOnlyUntil": "Drew's review - no apply is authorized by this PR",
+ "finding": "SSA-JC 2025 Bowman Chrome Sapphire is the Jackson Chourio autograph (RULING, Drew 2026-09-06). Picks up the row I3 (#1866) excluded as report-only.",
+ "ordering": "CATALOG FIRST, POOL SECOND. This list retires the Caglianone identity; the companion backend/data/pool-relocations/2026-09-06-ssa-jc-chourio.json then routes the sales. Running the pool list first would repoint rows onto an address whose rival row still exists, and running this list alone leaves the sales unplaced for the rematch.",
+ "rulings": [
+  "CF-COUNT-BY-SOURCE-NOT-ROW-COUNT (Drew, 2026-09-06 ruling). SSA-JC in 2025 Bowman Chrome Sapphire is the Jackson Chourio AUTOGRAPH. beckett, baseballcardpedia, checklistcenter and catalog-explode all read it as Chourio and as an auto; only checklistinsider-2026-08-27 assigns it to Jac Caglianone. The Caglianone row is a MISREAD and is retired.",
+  "THE RIVAL INGEST CONTRADICTS ITSELF. Caglianone's own 2025 sapphire card numbers in the SAME checklistinsider-2026-08-27 ingest are BCP-103, BCP-154, BSS-7 and CPS-JCA. No source outside that one ingest ever puts him at SSA-JC in 2025. His only checklist-backed SSA-JC is 2024 bowman-draft-sapphire - a different card, a different year, and it is NOT touched by this list.",
+  "THE CHECKLIST SAYS THE CARD IS AN AUTO. Sapphire Selections Autographs is an autograph insert; the surviving identity is therefore the :auto one. The retired rows are no-auto, which is the second half of the same 'Insider layout mints autos UNSIGNED' defect - the misread is wrong about the player AND about the signature.",
+  "NOTHING IS RESLUGGED. The Chourio destination hiq:baseball:2025:bowman-chrome-sapphire:ssa-jc:base:auto already exists from beckett-scraped-2026-08-26, so no entry reslugs onto an occupied address and this list mints no identity. There is no duplicate Chourio twin at the base:auto address to fold - the 2025 base:auto address is held by exactly one row.",
+  "RETIRE IS A DELETE in this lane (catalogVisibility.ts:23-25 - every state is matchable, only visibility is tiered), and retireCatalogRow re-points nothing. The base row's three graded children (bgs-9-5, psa-10, sgc-9-5) are deleted with it and are named as entries here rather than discovered during the apply.",
+  "THE COST, STATED. One sale is RESIDENT at the retired family's addresses: none at base:no-auto, and the single resident row at base:auto is handled by the pool list. The 20 vendor-partitioned sales are REPOINTED by the companion pool list, not left to the rematch. See that file for the routing.",
+  "CORRECTION TO THE #1866 EXCLUSION NOTE. The excluded block recorded 16 sales whose titles split 10 'Bowman Sapphire' / 6 'Bowman Chrome Sapphire'. Measured again here read-only 2026-09-06: that split is on the PRODUCT WORDS, not the player - not one of those 16 titles names any player at all. The player is carried by the vendor partition and by the titled auto sales sitting beside them in the same partition. That is what the pool list routes on."
+ ],
+ "census": {
+  "catalogRowsRetired": 4,
+  "byRole": {
+   "base-no-auto": 1,
+   "graded-children": 3
+  },
+  "stampedBy": {
+   "checklistinsider-2026-08-27": 1,
+   "checklistinsider-2026-08-27-graded": 3
+  },
+  "survivingChourioIdentity": "hiq:baseball:2025:bowman-chrome-sapphire:ssa-jc:base:auto",
+  "survivingChourioSource": "beckett-scraped-2026-08-26",
+  "reslugEntries": 0,
+  "duplicateChourioTwinsToFold": 0,
+  "salesResidentAtRetiredAddresses": 0,
+  "note": "measured read-only 2026-09-06; sales counts are rows RESIDENT at the address (cardId partition). The 2025 base:no-auto partition holds zero resident rows - every sale that reads that identity lives in a vendor-id partition and is handled by the pool list."
+ },
+ "entries": [
+  {
+   "id": "hiq:baseball:2025:bowman-chrome-sapphire:ssa-jc:base:no-auto",
+   "action": "retire",
+   "reason": "SSA-JC in 2025 Bowman Chrome Sapphire is the Jackson Chourio AUTOGRAPH, not a Jac Caglianone no-auto. RULING (Drew, 2026-09-06). This row is a checklistinsider misread and is retired.",
+   "evidence": "Jac Caglianone - 2025 Bowman Chrome Sapphire #SSA-JC, parallel Base, isAuto false, setKey field 'bowman-sapphire' against id stem 'bowman-chrome-sapphire', source checklistinsider-2026-08-27. Count by source, 2025 Bowman Chrome Sapphire SSA-JC: beckett-checklist (8 rows), beckett-checklist-graded (11), baseballcardpedia (6), beckett-scraped-2026-08-25/26 (+graded) (3), checklistcenter-2026-08-29 (3), catalog-explode-actuals-2026-08-12 (3) and ingest-auto-seed (1) ALL read SSA-JC as Jackson Chourio and as an AUTO (Sapphire Selections Autographs). checklistinsider-2026-08-27 is the ONLY source that assigns SSA-JC to Jac Caglianone, and it mints him no-auto. In that SAME checklistinsider-2026-08-27 ingest Caglianone's own 2025 sapphire numbers are BCP-103 (8 rows), BCP-154 (6), BSS-7 (8) and CPS-JCA (8) - never SSA-JC on any other source. Caglianone's only checklist-backed SSA-JC anywhere is 2024 bowman-draft-sapphire (beckett-checklist-2026-08-29), a different card in a different year. This is the documented 'Insider layout mints autos UNSIGNED' defect (reference_checklist_xlsx_source_shapes): the row is wrong about the PLAYER and wrong about the AUTO flag. The surviving Chourio identity hiq:baseball:2025:bowman-chrome-sapphire:ssa-jc:base:auto ALREADY EXISTS (source beckett-scraped-2026-08-26), so nothing is reslugged onto a vacant address and no identity is minted from a sale."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman-chrome-sapphire:ssa-jc:base:no-auto:bgs-9-5",
+   "action": "retire",
+   "reason": "SSA-JC in 2025 Bowman Chrome Sapphire is the Jackson Chourio AUTOGRAPH, not a Jac Caglianone no-auto. RULING (Drew, 2026-09-06). This row is a checklistinsider misread and is retired. Graded child (BGS 9.5) of the retired base row; retireCatalogRow deletes graded children with the parent, so it is named here for the record rather than discovered during the apply.",
+   "evidence": "Jac Caglianone - 2025 Bowman Chrome Sapphire #SSA-JC, parallel Base, isAuto false, setKey field 'bowman-sapphire' against id stem 'bowman-chrome-sapphire', source checklistinsider-2026-08-27-graded. Count by source, 2025 Bowman Chrome Sapphire SSA-JC: beckett-checklist (8 rows), beckett-checklist-graded (11), baseballcardpedia (6), beckett-scraped-2026-08-25/26 (+graded) (3), checklistcenter-2026-08-29 (3), catalog-explode-actuals-2026-08-12 (3) and ingest-auto-seed (1) ALL read SSA-JC as Jackson Chourio and as an AUTO (Sapphire Selections Autographs). checklistinsider-2026-08-27 is the ONLY source that assigns SSA-JC to Jac Caglianone, and it mints him no-auto. In that SAME checklistinsider-2026-08-27 ingest Caglianone's own 2025 sapphire numbers are BCP-103 (8 rows), BCP-154 (6), BSS-7 (8) and CPS-JCA (8) - never SSA-JC on any other source. Caglianone's only checklist-backed SSA-JC anywhere is 2024 bowman-draft-sapphire (beckett-checklist-2026-08-29), a different card in a different year. This is the documented 'Insider layout mints autos UNSIGNED' defect (reference_checklist_xlsx_source_shapes): the row is wrong about the PLAYER and wrong about the AUTO flag. The surviving Chourio identity hiq:baseball:2025:bowman-chrome-sapphire:ssa-jc:base:auto ALREADY EXISTS (source beckett-scraped-2026-08-26), so nothing is reslugged onto a vacant address and no identity is minted from a sale."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman-chrome-sapphire:ssa-jc:base:no-auto:psa-10",
+   "action": "retire",
+   "reason": "SSA-JC in 2025 Bowman Chrome Sapphire is the Jackson Chourio AUTOGRAPH, not a Jac Caglianone no-auto. RULING (Drew, 2026-09-06). This row is a checklistinsider misread and is retired. Graded child (PSA 10) of the retired base row; retireCatalogRow deletes graded children with the parent, so it is named here for the record rather than discovered during the apply.",
+   "evidence": "Jac Caglianone - 2025 Bowman Chrome Sapphire #SSA-JC, parallel Base, isAuto false, setKey field 'bowman-sapphire' against id stem 'bowman-chrome-sapphire', source checklistinsider-2026-08-27-graded. Count by source, 2025 Bowman Chrome Sapphire SSA-JC: beckett-checklist (8 rows), beckett-checklist-graded (11), baseballcardpedia (6), beckett-scraped-2026-08-25/26 (+graded) (3), checklistcenter-2026-08-29 (3), catalog-explode-actuals-2026-08-12 (3) and ingest-auto-seed (1) ALL read SSA-JC as Jackson Chourio and as an AUTO (Sapphire Selections Autographs). checklistinsider-2026-08-27 is the ONLY source that assigns SSA-JC to Jac Caglianone, and it mints him no-auto. In that SAME checklistinsider-2026-08-27 ingest Caglianone's own 2025 sapphire numbers are BCP-103 (8 rows), BCP-154 (6), BSS-7 (8) and CPS-JCA (8) - never SSA-JC on any other source. Caglianone's only checklist-backed SSA-JC anywhere is 2024 bowman-draft-sapphire (beckett-checklist-2026-08-29), a different card in a different year. This is the documented 'Insider layout mints autos UNSIGNED' defect (reference_checklist_xlsx_source_shapes): the row is wrong about the PLAYER and wrong about the AUTO flag. The surviving Chourio identity hiq:baseball:2025:bowman-chrome-sapphire:ssa-jc:base:auto ALREADY EXISTS (source beckett-scraped-2026-08-26), so nothing is reslugged onto a vacant address and no identity is minted from a sale."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman-chrome-sapphire:ssa-jc:base:no-auto:sgc-9-5",
+   "action": "retire",
+   "reason": "SSA-JC in 2025 Bowman Chrome Sapphire is the Jackson Chourio AUTOGRAPH, not a Jac Caglianone no-auto. RULING (Drew, 2026-09-06). This row is a checklistinsider misread and is retired. Graded child (SGC 9.5) of the retired base row; retireCatalogRow deletes graded children with the parent, so it is named here for the record rather than discovered during the apply.",
+   "evidence": "Jac Caglianone - 2025 Bowman Chrome Sapphire #SSA-JC, parallel Base, isAuto false, setKey field 'bowman-sapphire' against id stem 'bowman-chrome-sapphire', source checklistinsider-2026-08-27-graded. Count by source, 2025 Bowman Chrome Sapphire SSA-JC: beckett-checklist (8 rows), beckett-checklist-graded (11), baseballcardpedia (6), beckett-scraped-2026-08-25/26 (+graded) (3), checklistcenter-2026-08-29 (3), catalog-explode-actuals-2026-08-12 (3) and ingest-auto-seed (1) ALL read SSA-JC as Jackson Chourio and as an AUTO (Sapphire Selections Autographs). checklistinsider-2026-08-27 is the ONLY source that assigns SSA-JC to Jac Caglianone, and it mints him no-auto. In that SAME checklistinsider-2026-08-27 ingest Caglianone's own 2025 sapphire numbers are BCP-103 (8 rows), BCP-154 (6), BSS-7 (8) and CPS-JCA (8) - never SSA-JC on any other source. Caglianone's only checklist-backed SSA-JC anywhere is 2024 bowman-draft-sapphire (beckett-checklist-2026-08-29), a different card in a different year. This is the documented 'Insider layout mints autos UNSIGNED' defect (reference_checklist_xlsx_source_shapes): the row is wrong about the PLAYER and wrong about the AUTO flag. The surviving Chourio identity hiq:baseball:2025:bowman-chrome-sapphire:ssa-jc:base:auto ALREADY EXISTS (source beckett-scraped-2026-08-26), so nothing is reslugged onto a vacant address and no identity is minted from a sale."
+  }
+ ]
+}
