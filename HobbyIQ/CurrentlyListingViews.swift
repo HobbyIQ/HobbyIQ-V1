@@ -25,6 +25,11 @@ struct CurrentlyListingSection: View {
     let product: String?
     let player: String
     let cardNumber: String?
+    /// CF-CARD-TITLE-NEVER-DOUBLES-THE-YEAR (Drew, 2026-09-06, backend
+    /// PR #1904): the card title composed ONCE server-side, passed down by
+    /// a caller that has it. Defaulted so every existing call site keeps
+    /// compiling and simply falls back to `displayTitle`'s own join.
+    var displayName: String? = nil
 
     @State private var response: ListingRangeResponse?
     @State private var showSheet: Bool = false
@@ -145,10 +150,30 @@ struct CurrentlyListingSection: View {
         }
     }
 
+    /// CF-CARD-TITLE-NEVER-DOUBLES-THE-YEAR (Drew, 2026-09-06, backend
+    /// PR #1904): when the caller hands down the title the engine already
+    /// composed, render that and compose nothing. Otherwise fall back to
+    /// the join below — but strip a leading year off `product` first,
+    /// because the holding's `setName` flows in here verbatim
+    /// (PortfolioHoldingDetailSheet passes `product: card.setName`) and it
+    /// routinely leads with its own year, which is how "2006 2006 Bowman
+    /// Draft" gets rendered. Same strip the portfolio hero and inventory
+    /// rows already apply to the same field.
     private var displayTitle: String {
+        if let composed = displayName?.trimmingCharacters(in: .whitespacesAndNewlines),
+           composed.isEmpty == false {
+            return composed
+        }
         var parts: [String] = []
-        if let cardYear { parts.append(String(cardYear)) }
-        if let product, product.isEmpty == false { parts.append(product) }
+        let year = cardYear.map(String.init) ?? ""
+        if year.isEmpty == false { parts.append(year) }
+        if let product {
+            let stripped = PortfolioHoldingHeroCard.stripLeadingYear(
+                from: product.trimmingCharacters(in: .whitespacesAndNewlines),
+                year: year
+            )
+            if stripped.isEmpty == false { parts.append(stripped) }
+        }
         parts.append(player)
         if let parallel, parallel.isEmpty == false { parts.append(parallel) }
         return parts.joined(separator: " ")
