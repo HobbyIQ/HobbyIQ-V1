@@ -513,6 +513,49 @@ function categoryOf(section) {
   return "insert:" + s;
 }
 
+/**
+ * CF-A-SPLIT-YEAR-IS-STILL-A-YEAR (2026-09-06, run 33997480307).
+ *
+ * A checklistcenter section head states the whole product before the subset:
+ * "2020 Topps Chrome - Base Image Variation Set". The subset is what is wanted,
+ * so the reader stripped a leading year, a trailing "Set"/"Checklist", and then
+ * everything up to the first hyphen.
+ *
+ * Every hockey and soccer product spells its year across the season boundary --
+ * "2020-21", "2021-22" -- and BOTH strips then miss their target:
+ *
+ *   `^\d{4}\s+`   wants whitespace after the year and finds "-";
+ *   `^[^-]*-\s*`  stops at the FIRST hyphen, which is now the one INSIDE the
+ *                 year, so it eats "2020-" and leaves the product standing.
+ *
+ *   "2020-21 Topps Stadium Club Chrome UEFA - Base Rookie Image Variations Auto Set"
+ *     -> "21 Topps Stadium Club Chrome UEFA - Base Rookie Image Variations Auto"
+ *
+ * That string is then read as the subset's variation finish and emitted as the
+ * PARALLEL of every card in the subset, and the cleanliness gate refused the
+ * file for "6 rows whose parallel is a card line" -- because "21 Topps ..."
+ * matches `^\d+\s+[A-Za-z]` exactly as a card line does. The gate was right; the
+ * name it refused was never a parallel, it was the page's own title with four
+ * characters bitten off the front. Measured on the two refused pages of run
+ * 33997480307: 20 rows on 2020-21 Topps Chrome UEFA Champions League and 6 on
+ * 2020-21 Topps Stadium Club Chrome UEFA.
+ *
+ * The fix reads the year as the source writes it -- four digits, optionally with
+ * a two- or four-digit season tail -- and only then drops the product prefix at
+ * the " - " that separates it from the subset. The separator is the SPACED
+ * hyphen the page uses between product and subset, never a hyphen inside a token
+ * ("2020-21", "X-Fractor", "Mini-Diamond"), so a title carrying no such
+ * separator keeps all of its words rather than losing its first one.
+ */
+const SECTION_YEAR = /^(?:19|20)\d{2}(?:\s*[-\/]\s*(?:\d{2}|(?:19|20)\d{2}))?\s+/;
+function sectionTitleWithoutProduct(title) {
+  const t = String(title ?? "").replace(/\s+/g, " ").trim().replace(SECTION_YEAR, "").replace(/\s+(Set|Checklist)$/i, "");
+  // The product/subset separator is a SPACED hyphen. Splitting on a bare "-"
+  // would cut "Mini-Diamond" and "X-Fractor" in half.
+  const cut = t.indexOf(" - ");
+  return (cut >= 0 ? t.slice(cut + 3) : t).trim();
+}
+
 /** The html path: a subset's ladder applied to that subset's own cards.
  *  Returns the CSV rows and the counters; writes nothing. */
 /**
@@ -568,7 +611,7 @@ function convertHtml(html, product) {
   // nothing about a cross-join. The gate is per subset: a subset whose ladder
   // exceeds PAR_MAX rungs or whose card list exceeds NUM_MAX numbers is what a
   // roster-for-ladder mistake looks like, and only that subset is refused.
-  const plainTitle = (s) => s.title.replace(/^\d{4}\s+/, "").replace(/\s+(Set|Checklist)$/i, "").replace(/^[^-]*-\s*/, "");
+  const plainTitle = (s) => sectionTitleWithoutProduct(s.title);
   const numsOf = (s) => new Set(s.cards.map((c) => c.num));
   for (const sub of subsets) {
     let category = sub.category ?? categoryOf(plainTitle(sub));
@@ -801,6 +844,6 @@ function main() {
   console.log(`\n[clc-convert] ${REPORT ? "would write" : "written"}=${f(written)} (xlsx ${f(viaXlsx)}, html ${f(viaHtml)})  rows=${f(rows)}  ladderRows=${f(ladderRowsTotal)}  refused-or-empty=${f(refused)}  unnumbered rosters=${f(unnumberedTotal)}  no page cached=${f(noPage)}  rung candidates rejected=${f(rejectedTotal)}`);
 }
 
-module.exports = { unnumberedRoster, namesAnAuto, AUTO_WORDS, clean, splitRungs, ladderFamily, applyFamily, sectionPrintRun, sectionHeadLine, parseCardLine, parseLadderText, parseLadders, parseHtml, convertHtml, parseXlsxRows, readXlsxRows, parseXlsx, convertXlsx, sectionsOf, sectionSplit, productMeta, categoryOf };
+module.exports = { sectionTitleWithoutProduct, unnumberedRoster, namesAnAuto, AUTO_WORDS, clean, splitRungs, ladderFamily, applyFamily, sectionPrintRun, sectionHeadLine, parseCardLine, parseLadderText, parseLadders, parseHtml, convertHtml, parseXlsxRows, readXlsxRows, parseXlsx, convertXlsx, sectionsOf, sectionSplit, productMeta, categoryOf };
 
 if (require.main === module) main();
